@@ -1,4 +1,8 @@
 {
+ "mail": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "rs-calendrier": {
   "rail": 1000,
   "tientDans1000": true

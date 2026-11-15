@@ -1,0 +1,41 @@
+/* Maquette « Boîte mail » dans le dashboard : l'entrée du rail, la liste et l'e-mail ouvert. Jetons du §3 ; pas d'ombre,
+ * pas de pilule ; le gras réservé aux chiffres clés (ici : aucun). Un non-lu se dit par le point et l'encre, pas le gras. */
+.ml-rail { margin-top: 6px; }
+.ml-adr { font-size: 12px; margin-right: 6px; }
+.rs-onglets .btn--primary .ico { stroke: #fff; }
+.ml { display: grid; grid-template-columns: 430px 1fr; gap: 16px; align-items: start; }
+.ml-g { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+.ml-q-b { display: flex; align-items: center; gap: 8px; margin: 12px 12px 8px; padding: 0 10px; height: 36px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
+.ml-q-in { flex: 1; border: 0; outline: 0; font: inherit; font-size: 13px; color: var(--ink); background: transparent; }
+.ml-filtres { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 10px; border-bottom: 1px solid var(--line); }
+.ml-filtres .rs-puce { padding: 4px 9px; font-size: 12px; }
+.ml-liste { display: grid; }
+.ml-l { padding: 10px 14px 11px; border-bottom: 1px solid var(--row-line); cursor: pointer; }
+.ml-l:hover { background: var(--paper); }
+.ml-l.on { padding-left: 11px; border-left: 3px solid var(--accent); background: rgba(141, 29, 44, 0.05); }
+.ml-l-h { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted-2); }
+.ml-l.nonlu .ml-l-h { color: var(--ink); }
+.ml-q { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.ml-obj { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 13px; color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-l.nonlu .ml-obj { color: var(--ink); }
+.ml-pt { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--accent); }
+.ml-ext { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.ml-ext > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.ml-ext .ico { width: 13px; height: 13px; flex-basis: 13px; }
+.ml-et { flex: none; padding: 1px 6px; border-radius: 4px; background: var(--chip); color: var(--muted-2); font-size: 10.5px; }
+.ml-r { padding: 16px 20px 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.ml-r-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--row-line); }
+.ml-r-obj { margin: 0 0 6px; font-size: 19px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.ml-r-de { font-size: 12.5px; color: var(--ink); }
+.ml-r-de .muted { font-size: 12px; }
+.ml-r-act { display: flex; gap: 6px; flex: none; }
+.ml-lien { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--table-head); font-size: 12.5px; color: var(--muted-2); }
+.ml-lien .ico { color: var(--accent); }
+.ml-lien a { margin-left: auto; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.ml-b { font-weight: 400; color: var(--ink); }
+.ml-corps { font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+.ml-pjs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.ml-pj { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--ink); min-width: 0; }
+.ml-pj > span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ml-pj small { display: block; font-size: 10.5px; color: var(--muted); }
+.ml-rep { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 8px; font-size: 13px; }

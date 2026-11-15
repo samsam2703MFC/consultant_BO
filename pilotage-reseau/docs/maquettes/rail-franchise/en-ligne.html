@@ -51,6 +51,7 @@
   <p class="intro">Le dashboard magasin, au bureau, avec un rail à gauche. La proposition en cours montre les chiffres réels de
     Halle, lus au cockpit le dimanche 15 novembre 2026 à 09:46 ; les autres maquettes, des exemples. Un clic sur une capture l’ouvre en grand.</p>
   <nav id="onglets">
+    <a href="#mail">Boîte mail</a>
     <a href="#taches">Tâches : recherche</a>
     <a href="#reseaux">Réseaux sociaux</a>
     <a href="#marketing">Calendrier des posts</a>
@@ -61,8 +62,16 @@
   </nav>
 </header>
 <main>
+  <section id="s-mail">
+    <h2>Boîte mail dans le dashboard <span class="etat cours">maquette à valider</span></h2>
+    <p class="sous">« Boîte mail » au-dessus des groupes du rail, avec le nombre de non lus. La page : Réception, Envoyés, Brouillons, Archives ;
+      la recherche et les filtres ; la liste ; l’e-mail ouvert avec ses pièces jointes, et un lien vers ce que le dashboard connaît (ici, la campagne).</p>
+    <p class="note">Les e-mails sont des exemples. Le cockpit envoie des e-mails aujourd’hui, il n’en lit pas : le coder demande une lecture de la boîte côté serveur.</p>
+    <figure><figcaption>Boîte mail · Réception</figcaption><img src="mail.png" alt="La boîte mail dans le dashboard"></figure>
+  </section>
+
   <section id="s-taches">
-    <h2>Tâches : chercher une tâche <span class="etat cours">codé, à valider avant la mise en ligne</span></h2>
+    <h2>Tâches : chercher une tâche <span class="etat cours">en ligne depuis le 15/11/2026</span></h2>
     <p class="sous">« Retours du contrôle qualité » (des retours anciens) quitte l’onglet Tâches. À sa place, « Chercher une tâche » : un mot montre
       chaque tâche de la semaine qui le contient, ses sept jours avec la photo, le statut et la note du contrôle, et ses notes des 30 derniers jours.</p>
     <p class="note">Le vrai dashboard, chiffres réels de Halle (dimanche 15/11), recherche « comptoir » : 17 tâches, 54 photos. Aucun nom de personne affiché.</p>
@@ -136,9 +145,9 @@
 <div class="loupe" id="loupe" role="dialog" aria-label="Capture en grand"><button class="fermer" type="button">Fermer</button><img alt=""></div>
 <script>
   // Les vues se nomment dans l'adresse (#marketing, #reel, #b, #propre, #propositions) ; sans nom, la demande en cours.
-  const VUES = ['taches', 'reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
+  const VUES = ['mail', 'taches', 'reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
   function montrer() {
-    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'taches';
+    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'mail';
     VUES.forEach(n => document.getElementById('s-' + n).classList.toggle('on', n === v));
     document.querySelectorAll('#onglets a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
   }

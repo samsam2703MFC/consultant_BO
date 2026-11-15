@@ -14,6 +14,22 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
+## Boîte mail dans le dashboard (`mail.png`) — maquette, à valider
+
+Demande du 15/11/2026 : « au-dessus, mettre dans le rail : boîte mail » ; choix : une maquette d'une boîte dans le
+dashboard. **Boîte mail** au-dessus des groupes du rail, avec le nombre de non lus ; la page dans le dashboard : les
+dossiers en onglets (Réception, Envoyés, Brouillons, Archives), l'adresse du magasin, « Écrire » ; à gauche la recherche,
+des filtres (non lus, le réseau, commandes, avec pièce jointe) et la liste (un point bordeaux pour un non-lu, pas de
+gras) ; à droite l'e-mail ouvert, ses pièces jointes, Répondre, Transférer, Archiver. Quand un e-mail parle de ce que le
+dashboard connaît (une campagne, une commande, une visite), un lien y mène (« Ouvrir la campagne dans Réseaux
+sociaux › »).
+
+Tous les e-mails sont des **exemples** ; aucun nom de personne. Aujourd'hui le cockpit **envoie** des e-mails
+(`src/smtp.php`, `src/ca_mail.php`) mais n'en lit aucun. **Pour la coder** : une lecture de la boîte côté serveur (IMAP)
+et l'envoi par le SMTP du cockpit ; les accès de chaque boîte dans `erp_cles` (secrets, jamais dans le code). Ne pas
+reprendre le mot de passe que `GET /shops` de l'ERP rend en clair (`email_password`) : il ne devrait pas sortir de l'ERP.
+Icône ajoutée au catalogue du §8.4 : l'enveloppe (`M3 5h18v14H3zM3 6l9 7 9-7`). Générer : `node generer-mail.js`.
+
 ## Tâches : chercher une tâche, à la place des retours du contrôle qualité (`taches-recherche.png`) — en ligne le 15/11/2026
 
 Demande du 15/11/2026 : « retirer Retours du contrôle qualité, ce sont des anciens ; seulement une search bar de la

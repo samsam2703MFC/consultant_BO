@@ -14,7 +14,7 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/rail-franchise/';
   // reel.html se capture avec capturer-reel.js (le cockpit en ligne, en lecture). Ici, ses lectures resteraient en attente
   // ; la route ne sert plus qu'à ne rien lire par erreur.
   await p.route('**/api/cockpit/**', () => {});
-  for (const m of ['rs-calendrier', 'rs-meta', 'rs-instagram', 'rs-campagnes', 'rs-creer', 'marketing', 'final', 'a', 'b', 'b-coach', 'b-semaine', 'b-mois', 'b-trimestre', 'b-annee', 'c', 'b1', 'b2', 'b3']) {
+  for (const m of ['mail', 'rs-calendrier', 'rs-meta', 'rs-instagram', 'rs-campagnes', 'rs-creer', 'marketing', 'final', 'a', 'b', 'b-coach', 'b-semaine', 'b-mois', 'b-trimestre', 'b-annee', 'c', 'b1', 'b2', 'b3']) {
     await p.setViewportSize({ width: 1440, height: 1000 });
     await p.goto(BASE + m + '.html', { waitUntil: 'networkidle' });
     await p.evaluate(() => document.fonts.ready);
