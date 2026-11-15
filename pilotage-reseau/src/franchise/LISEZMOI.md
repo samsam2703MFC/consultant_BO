@@ -18,8 +18,9 @@ base et le même déploiement.
 
 | Fichier | Page du dashboard | Routes |
 |---|---|---|
-| `offres_client.php` | Vendre › Offres | `/exploitation/offres-client`, `…/employes`, `…/pdf` — l'API Client offers de TF Buddy, par le compte admin ERP ; chaque offre relue doit être du magasin |
-| `dashboard_marketing.php` | Marketing › Mon marketing ; Marketing › Réseaux sociaux | `GET /dashboard/marketing` (le hub du marketing pour le magasin) ; `GET /dashboard/social/ouvrir` (un lien court de l'API Social du Marketing, jeton de service : l'espace boutique en mode intégré) |
+| `offres_client.php` | Vendre › Offres | `/exploitation/offres-client`, `…/employes`, `…/pdf` — l'API Client offers de TF Buddy, par le compte admin ERP ; chaque offre relue doit être du magasin. La marge de l'offre se calcule à l'écran avec les coûts de recette de `/exploitation/promos-magasin/produits` |
+| `offres_newsletter.php` | Vendre › Offres › Newsletter | `/dashboard/marketing/newsletter*` — le module newsletter du cockpit (`src/newsletter*.php`), au rôle du magasin vérifié contre la session, affiché par `public/assets/js/newsletter.js` ; sans la base des candidats à la franchise ; mode test tant que la marque n'envoie pas |
+| `dashboard_marketing.php` | Marketing › Mon marketing ; Marketing › Réseaux sociaux | `GET /dashboard/marketing/campagnes` (les campagnes en cours du magasin et leur note de campagne, `mktBriefDonnees`, réduite au magasin) et `…/campagnes/annexe` (un document joint) ; `GET /dashboard/marketing` (le hub du marketing pour le magasin) ; `GET /dashboard/social/ouvrir` (un lien court de l'API Social du Marketing, jeton de service : l'espace boutique en mode intégré) |
 | `catalogues_magasin.php` | Marketing › Mon catalogue | `/dashboard/catalogues/*` — relais vers l'API d'intégration du Marketing |
 | `tresorerie.php` | Les chiffres › Trésorerie | `/tresorerie/*` — table `pil_tresorerie_plan` |
 | `dashboard_semaine.php` | la semaine jour par jour (téléphone) | `/exploitation/semaine-jours` |

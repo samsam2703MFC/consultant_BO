@@ -50,6 +50,78 @@ function ep_dashboard_marketing(): array
     ];
 }
 
+/* --- Mon marketing : les campagnes en cours, décrites (15/11/2026) -------------------------------------------------- */
+
+/**
+ * GET /dashboard/marketing/campagnes?shop=4 — Mon marketing (15/11/2026, « c'est seulement les campagnes en cours et la
+ * description complète de ce qui s'y passe ») : les campagnes EN COURS du magasin (celles du hub, src/marketing_hub.php,
+ * mhCampagnes), chacune avec la note de campagne que le réseau envoie au franchisé (src/mkt_brief.php, mktBriefDonnees) :
+ * le levier et ce sur quoi elle se juge, l'objectif du magasin (sa référence, sa cible, les clients et le chiffre
+ * attendus, son budget de la période), le mot du responsable quand il est écrit, le calendrier, la communication canal
+ * par canal, les formats, les documents joints. Réduite à CE magasin : ni les chiffres ni les noms des autres magasins.
+ */
+function ep_dashboard_marketing_campagnes(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    if (!preg_match('/^\d{1,6}$/', $shop)) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!function_exists('mhCampagnes') || !function_exists('mktBriefDonnees')) { http_response_code(503); return ['error' => 'les campagnes ne sont pas chargées']; }
+    $auj = date('Y-m-d');
+    $out = [];
+    foreach ((array) (mhCampagnes($shop, $auj)['liste'] ?? []) as $c) {
+        if (($c['phase'] ?? '') !== 'en_cours') { continue; }
+        $d = null; $note = null;
+        try { $d = mktBriefDonnees((int) $c['id']); } catch (Throwable $e) { $note = 'la note de la campagne ne se lit pas : ' . $e->getMessage(); }
+        $d = is_array($d) ? $d : [];
+        $ligne = null;
+        foreach ((array) ($d['lignes'] ?? []) as $l) { if ((string) ($l['id'] ?? '') === $shop) { $ligne = $l; } }
+        if (is_array($ligne)) { unset($ligne['id'], $ligne['nom']); }
+        $du = (string) ($c['debut'] ?? ''); $au = (string) ($c['fin'] ?? '');
+        $jours = $du !== '' && $au !== '' ? (int) round((strtotime($au) - strtotime($du)) / 86400) + 1 : null;
+        $jour = $du !== '' ? (int) round((strtotime($auj) - strtotime($du)) / 86400) + 1 : null;
+        $mot = is_array($d['mot'] ?? null) && trim((string) ($d['mot']['texte'] ?? '')) !== '' ? $d['mot'] : null;
+        $out[] = [
+            'id' => (int) $c['id'], 'nom' => (string) $c['nom'], 'type' => (string) ($c['type'] ?? ''), 'typeCouleur' => (string) ($c['typeCouleur'] ?? ''),
+            'statut' => (string) ($c['statutNom'] ?? ''), 'du' => $du, 'au' => $au, 'jours' => $jours, 'jour' => $jour,
+            'image' => $c['image'] ?? null,
+            'portee' => (string) ($d['portee'] ?? ($c['reseau'] ? 'Réseau' : 'Magasins désignés')),
+            'nMagasins' => count((array) ($d['magasinIds'] ?? [])),
+            'levier' => (string) ($d['levier'] ?? ''), 'iconePath' => (string) ($d['iconePath'] ?? ''),
+            'kpi' => ['nom' => (string) ($d['kpiNom'] ?? ''), 'unite' => (string) ($d['kpiUnite'] ?? ''), 'decimales' => (int) ($d['kpiDecimales'] ?? 0),
+                'mesure' => (bool) ($d['kpiMesure'] ?? false), 'objectifPct' => $d['objectifPct'] ?? null],
+            'magasin' => $ligne,
+            'mot' => $mot,
+            'budget' => $d['budget'] ?? null,
+            'etapes' => array_values((array) ($d['etapes'] ?? [])),
+            'canaux' => array_values((array) ($d['canaux'] ?? [])),
+            'investis' => array_values(array_map(static fn ($x) => array_intersect_key((array) $x, array_flip(['nom', 'couleur', 'montant', 'unite', 'kpi', 'calcul', 'raison'])), (array) ($d['investis'] ?? []))),
+            'formats' => array_values((array) ($d['formats'] ?? [])),
+            // Les documents qui partent avec la note du franchisé : ceux-là seulement, et s'ils sont encore sur le serveur.
+            'annexes' => array_values(array_map(static fn ($a) => ['id' => (int) $a['id'], 'nom' => (string) $a['nom'], 'type' => (string) ($a['type'] ?? ''), 'taille' => (string) ($a['tailleTxt'] ?? '')],
+                array_filter((array) ($d['annexes'] ?? []), static fn ($a) => !empty($a['enMail']) && !empty($a['existe'])))),
+            'note' => $note,
+        ];
+    }
+    return ['shop' => $shop, 'aujourdhui' => $auj, 'campagnes' => $out, 'genere' => date('c')];
+}
+
+/**
+ * GET /dashboard/marketing/campagnes/annexe?shop=4&id=12 — un document joint à la note d'une campagne en cours du magasin
+ * (le PDF, servi par ep_mkt_annexe_fichier). Seuls les documents qui partent avec la note du franchisé s'ouvrent ici.
+ */
+function ep_dashboard_marketing_annexe(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    $id = (int) ($_GET['id'] ?? 0);
+    if (!preg_match('/^\d{1,6}$/', $shop) || $id <= 0) { http_response_code(400); return ['error' => 'shop et id attendus']; }
+    if (!function_exists('ep_mkt_annexe_fichier')) { http_response_code(503); return ['error' => 'les annexes ne sont pas chargées']; }
+    $a = Db::row('SELECT campaign_id, in_mail FROM mar_campagne_annexe WHERE id = ?', [$id]);
+    $enCours = array_column(array_filter((array) (mhCampagnes($shop, date('Y-m-d'))['liste'] ?? []), static fn ($c) => ($c['phase'] ?? '') === 'en_cours'), 'id');
+    if ($a === null || !(int) $a['in_mail'] || !in_array((int) $a['campaign_id'], array_map('intval', $enCours), true)) {
+        http_response_code(404); return ['error' => 'document inconnu pour ce magasin'];
+    }
+    return ep_mkt_annexe_fichier($id);
+}
+
 /**
  * Les routes du marketing du magasin. Les écritures de posts (POST …/posts, …/media, …/posts/{id}/soumettre, mises en ligne
  * le 15/11/2026) sont retirées le même jour : elles écrivaient l'ancienne table du cockpit (mar_social_post), que le
@@ -60,6 +132,8 @@ function dmRoute(string $method, string $path): ?array
 {
     if ($path !== '/dashboard/marketing' && !str_starts_with($path, '/dashboard/marketing/')) { return null; }
     if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
+    if ($method === 'GET' && $path === '/dashboard/marketing/campagnes') { return ep_dashboard_marketing_campagnes(); }
+    if ($method === 'GET' && $path === '/dashboard/marketing/campagnes/annexe') { return ep_dashboard_marketing_annexe(); }
     // Vendre › Offres › Newsletter : le module newsletter du cockpit, au rôle du magasin (src/franchise/offres_newsletter.php).
     if (($n = dnRoute($method, $path)) !== null) { return $n; }
     http_response_code(404);
