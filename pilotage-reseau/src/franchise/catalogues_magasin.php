@@ -26,6 +26,8 @@ declare(strict_types=1);
  *   GET    /dashboard/catalogues/produits                  → …/catalogue-products
  *   GET    /dashboard/catalogues/medias?page=&q=            → …/catalogue-media?perPage=24&page=&filter[name][like]=
  *          (les images de la médiathèque que la boutique peut mettre à la place libre d'une page : réseau et siennes)
+ *   POST   /dashboard/catalogues/medias {name, contentBase64} → …/catalogue-media
+ *          (une photo que la boutique importe, pour une page ou la vignette d'une promotion — 15/11/2026)
  *   GET    /dashboard/catalogues                           → …/catalogues?perPage=100&sort=-updatedAt
  *   POST   /dashboard/catalogues                           → …/catalogues
  *   GET    /dashboard/catalogues/{id}                      → …/catalogues/{id}
@@ -166,6 +168,11 @@ function cmRoute(string $method, string $path): ?array
         $requete = ['page' => ctype_digit($page) && (int) $page > 0 ? (int) $page : 1, 'perPage' => 24];
         $q = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80);
         if ($q !== '') { $requete['filter'] = ['name' => ['like' => $q]]; }
+    } elseif ($suite === '/medias' && $method === 'POST') {
+        // Une photo importée par la boutique (15/11/2026) : dans la médiathèque du Marketing, rangée à SA boutique.
+        $cible = '/catalogue-media';
+        $b = body();
+        $corps = ['name' => mb_substr(trim((string) ($b['name'] ?? '')), 0, 120), 'contentBase64' => (string) ($b['contentBase64'] ?? '')];
     } elseif ($suite === '' && $method === 'GET') {
         $cible = '/catalogues';
         $requete = ['perPage' => 100, 'sort' => '-updatedAt'];

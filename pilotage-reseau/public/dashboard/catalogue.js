@@ -600,6 +600,7 @@
   }
   function changement(S, ev) {
     const t = ev.target;
+    if (t.dataset.cmfichier !== undefined) { importer(S, t); return; }
     if (t.dataset.cm === 'pcat') { S.pages[+t.dataset.i].category = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'pgamme') { S.pages[+t.dataset.i].gamme = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { rendre(S); }
@@ -887,10 +888,57 @@
       + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Validation ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
   }
+  /* --- importer une photo (15/11/2026, « changer ou importer de la médiathèque une photo ou une illustration pour les
+   * bundles ou les promotions ») : le fichier, réduit dans le navigateur (2 000 px de côté au plus), part dans la
+   * médiathèque du Marketing, rangé à MA boutique (POST …/catalogues/medias), puis est choisi pour la vignette ou la page. */
+  function boutonImport(S, cible) {
+    return '<label class="cm-btn cm-import' + (S.importEnCours ? ' off' : '') + '" title="Une photo de votre ordinateur ou de votre téléphone : elle entre dans la médiathèque de votre boutique">'
+      + (S.importEnCours ? 'Import…' : 'Importer une photo') + '<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden data-cmfichier="' + esc(cible) + '"' + (S.importEnCours ? ' disabled' : '') + '></label>';
+  }
+  function etatImport(S) { return S.importErr ? '<div class="cm-msg err">' + esc(S.importErr) + '</div>' : ''; }
+  /** Une image réduite à 2 000 px de côté (JPEG, ou PNG si elle a de la transparence) : [base64, type]. */
+  function reduireImage(fichier) {
+    return new Promise((ok, ko) => {
+      const lu = new FileReader();
+      lu.onerror = () => ko(new Error('Le fichier ne se lit pas.'));
+      lu.onload = () => {
+        const img = new Image();
+        img.onerror = () => ko(new Error('Ce fichier n’est pas une image lisible (PNG, JPEG, WebP, GIF).'));
+        img.onload = () => {
+          const k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+          if (k === 1 && fichier.size <= 2500000) { return ok([String(lu.result).split(',')[1] || '', fichier.type]); }
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          const png = fichier.type === 'image/png';
+          ok([c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.88).split(',')[1] || '', png ? 'image/png' : 'image/jpeg']);
+        };
+        img.src = String(lu.result);
+      };
+      lu.readAsDataURL(fichier);
+    });
+  }
+  function importer(S, input) {
+    const f = input.files && input.files[0], cible = String(input.dataset.cmfichier || '');
+    if (!f) { return; }
+    S.importEnCours = true; S.importErr = null; rendre(S);
+    reduireImage(f).then(([b64]) => {
+      if (b64.length > 6600000) { throw new Error('Image trop lourde, même réduite : 5 Mo au plus.'); }
+      return appel('POST', '/medias' + qs(S), { name: f.name.replace(/\.[a-z0-9]+$/i, '').slice(0, 120), contentBase64: b64 });
+    }).then(j => {
+      const m = j.data || {};
+      S.medias = [{ id: m.id, name: m.name, url: m.url, thumbnailUrl: m.thumbnailUrl }].concat((S.medias || []).filter(x => +x.id !== +m.id));
+      S.mediaUrls = S.mediaUrls || {}; S.mediaUrls[m.id] = m.thumbnailUrl || m.url;
+      const [type, cle] = cible.split(':');
+      if (type === 'offre') { S.offresImg[cle] = +m.id; S.choixOffre = null; }
+      if (type === 'page' && S.pages[+cle]) { const p = S.pages[+cle]; p.filler = 'photo'; p.fillerMediaId = +m.id; S.choixPhoto = null; S.modifie = true; }
+    }).catch(e => { S.importErr = 'La photo n’est pas importée : ' + (e && e.message ? e.message : e) + (e && e.details && e.details[0] ? ' (' + e.details[0].message + ')' : ''); })
+      .finally(() => { S.importEnCours = false; rendre(S); });
+  }
   /** Le choix de l'image d'une vignette d'offre : les images de la médiathèque du réseau et de ma boutique. */
   function rendreMediasOffre(S, id) {
     let h = '<div class="cm-medias"><div class="cm-lig"><input type="search" class="cm-rech" data-cm="mediasQ" placeholder="Chercher une image" value="' + esc(S.mediasQ) + '">'
-      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button><span class="sp"></span><button class="cm-btn" data-cm="offreImg" data-v="' + esc(id) + '">Fermer</button></div>';
+      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button>' + boutonImport(S, 'offre:' + id) + '<span class="sp"></span><button class="cm-btn" data-cm="offreImg" data-v="' + esc(id) + '">Fermer</button></div>' + etatImport(S);
     if (S.mediasErr) { return h + bandeauErreur(S.mediasErr, 'La médiathèque n’a pas pu être lue') + '</div>'; }
     if (!S.medias) { return h + '<div class="cm-vide">Lecture de la médiathèque…</div></div>'; }
     if (!S.medias.length) { return h + '<div class="cm-vide">Aucune image dans la médiathèque du réseau ni de ma boutique.</div></div>'; }
@@ -899,7 +947,7 @@
   /** Le choix de la photo de la place libre : les images de la médiathèque du réseau et de ma boutique. */
   function rendreMedias(S, i) {
     let h = '<div class="cm-medias"><div class="cm-lig"><input type="search" class="cm-rech" data-cm="mediasQ" placeholder="Chercher une photo" value="' + esc(S.mediasQ) + '">'
-      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button><span class="sp"></span><button class="cm-btn" data-cm="photoFermer">Fermer</button></div>';
+      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button>' + boutonImport(S, 'page:' + i) + '<span class="sp"></span><button class="cm-btn" data-cm="photoFermer">Fermer</button></div>' + etatImport(S);
     if (S.mediasErr) { return h + bandeauErreur(S.mediasErr, 'La médiathèque n’a pas pu être lue') + '</div>'; }
     if (!S.medias) { return h + '<div class="cm-vide">Lecture de la médiathèque…</div></div>'; }
     if (!S.medias.length) { return h + '<div class="cm-vide">Aucune photo dans la médiathèque du réseau ni de ma boutique.</div></div>'; }
