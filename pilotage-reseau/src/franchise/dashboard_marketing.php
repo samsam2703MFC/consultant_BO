@@ -160,23 +160,11 @@ function ep_dashboard_marketing_ventes_periode(): array
     foreach ($pids as $pid) {
         $x = $p[$pid] ?? null; $c = $prix[$pid] ?? null;
         $q = $x !== null ? (float) $x[2] : 0.0; $ca = $x !== null ? (float) $x[3] : 0.0;
-        $caHt = null; $marge = null; $motif = null;
-        if ($c !== null && $c['ht'] !== null && $c['ttc'] !== null && $c['ttc'] > 0) { $caHt = $ca * $c['ht'] / $c['ttc']; }
-        if ($q <= 0) { $marge = 0.0; }
-        elseif ($c === null || $c['ht'] === null) { $motif = 'prix du catalogue inconnu'; }
-        elseif ($c['cout'] === null) { $motif = 'coût de la recette manquant'; }
-        elseif ($c['cout'] >= $c['ht'] || $c['cout'] < 0.05 * $c['ht']) { $motif = 'recette à vérifier'; }
-        elseif ($caHt !== null) {
-            // Un produit vendu aussi en portions ou en variantes (prix moyen encaissé loin du prix de la pièce entière) :
-            // pièces × coût de la recette entière gonflerait le coût ; on applique alors le taux de marge de la recette.
-            $prixMoyen = $ca / $q;
-            if ($c['ttc'] !== null && abs($prixMoyen / $c['ttc'] - 1) <= 0.15) { $marge = $caHt - $q * $c['cout']; $methode = 'pieces'; }
-            else { $marge = $caHt * (1 - $c['cout'] / $c['ht']); $methode = 'taux'; }
-        }
+        // La règle de marge des pages Analyse (daMarge, src/franchise/dashboard_analyse.php) : la même partout.
+        [$caHt, $marge, $motif, $methode] = daMarge($q, $ca, $c);
         $out[(string) $pid] = ['q' => round($q, 1), 'ca' => round($ca, 2), 'caHt' => $caHt !== null ? round($caHt, 2) : null,
             'marge' => $marge !== null ? round($marge, 2) : null, 'margePct' => $marge !== null && $caHt ? round(100 * $marge / $caHt, 1) : null, 'motif' => $motif,
-            'methode' => $methode ?? null];
-        unset($methode);
+            'methode' => $methode];
         $tot['q'] += $q; $tot['ca'] += $ca; $tot['caHt'] += (float) ($caHt ?? 0);
         if ($marge !== null) { $tot['marge'] += $marge; } elseif ($q > 0) { $tot['sansMarge']++; }
     }

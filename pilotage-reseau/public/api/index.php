@@ -155,6 +155,7 @@ require __DIR__ . '/../../src/franchise/offres_client.php';     // Vendre › Of
 require __DIR__ . '/../../src/franchise/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
 require __DIR__ . '/../../src/franchise/offres_newsletter.php';  // Vendre › Offres › Newsletter : le module newsletter, au rôle du magasin (15/11/2026)
 require __DIR__ . '/../../src/franchise/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
+require __DIR__ . '/../../src/franchise/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -389,6 +390,8 @@ function route(string $method, string $path): mixed
     if (($c = dsRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Boîte mail (15/11/2026) : la boîte du magasin, verrouillée par son propre mot de passe (src/franchise/boite_mail.php).
     if (($c = bmRoute($method, $path)) !== null) { return $c; }
+    // Vendre › Analyse (15/11/2026) : les lectures propres aux pages Analyse (src/franchise/dashboard_analyse.php).
+    if (($c = daRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.

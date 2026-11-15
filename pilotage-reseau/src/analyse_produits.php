@@ -539,6 +539,8 @@ function adCalculer(array $tranches, array $lu, int $sid, array $catDe, array $g
             + ['evo' => $evo, 'prix' => $c !== null && $c['ttc'] !== null ? round($c['ttc'], 2) : null,
                 // Le prix HT du catalogue (13/11/2026) : la fiche produit ouverte d'ici en tire marge, coefficient et simulateur.
                 'prixHt' => $c !== null && $c['ht'] !== null ? round($c['ht'], 2) : null,
+                // Le coût de la recette du jour (15/11/2026) : la fiche de Vendre › Analyse en tire la marge par pièce.
+                'cout' => $c !== null && $c['cout'] !== null ? round($c['cout'], 3) : null,
                 'prixEncaisse' => array_sum($x['q']) > 0 ? round(array_sum(array_slice($x['v'], AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1)) / max(0.0001, array_sum(array_slice($x['q'], AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1))), 2) : null,
                 'marge' => $marge, 'margeSemaine' => $margeSem, 'margeMotif' => $motif];
     }
