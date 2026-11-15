@@ -418,7 +418,7 @@ function ep_ventes_mensuel(): array
     }
     unset($m3);
     // Les charges du réseau, en % du CA (15/11/2026, la valeur du magasin) : le modèle de Budget › Paramètres (réglage
-    // `budgetCharges`), le « % validé », à défaut le « % réseau ». La catégorie que le palier « Marge brute » retranche
+    // `budgetCharges`, recopié du compte de résultat du CRM), le « % validé », à défaut (vide ou 0) le « % réseau ». La catégorie que le palier « Marge brute » retranche
     // (la matière) est marquée : la valeur la remplace par le coût matière réel du magasin.
     $normes = null;
     $modele = setting('budgetCharges');
@@ -432,7 +432,11 @@ function ep_ventes_mensuel(): array
         foreach ($modele['categories'] as $cat) {
             $nomCat = (string) ($cat['nom'] ?? '');
             foreach ((array) ($cat['lignes'] ?? []) as $l) {
-                $pct = isset($l['pct']) && is_numeric($l['pct']) ? (float) $l['pct'] : (isset($l['pctTheo']) && is_numeric($l['pctTheo']) ? (float) $l['pctTheo'] : null);
+                // Le « % validé » s'il est posé ; à 0 ou vide, le « % réseau » du compte de résultat du CRM (une ligne neuve du
+                // CRM arrive avec un % validé à 0 : « Rémunération », 20 % réseau, le 15/11/2026).
+                $val = isset($l['pct']) && is_numeric($l['pct']) ? (float) $l['pct'] : null;
+                $res = isset($l['pctTheo']) && is_numeric($l['pctTheo']) ? (float) $l['pctTheo'] : null;
+                $pct = $val !== null && $val > 0 ? $val : ($res ?? $val);
                 if ($pct === null) { continue; }
                 $lignes[] = ['categorie' => $nomCat, 'poste' => (string) ($l['poste'] ?? ''), 'pct' => $pct, 'matiere' => $catMatiere !== null && $nomCat === $catMatiere];
             }
