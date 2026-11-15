@@ -1190,6 +1190,9 @@
   function maPageCtrl() {
     let h = `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
     h += `<button type="button" class="ma-rc" data-vue="reclamation">✎ Réclamer un produit au fournisseur</button>`;
+    // Le helpdesk (15/11/2026) : une demande au bureau, dans la fenêtre de l'assistant (son avatar la transmet).
+    hdLire(false);
+    h += `<button type="button" class="ma-rc hd-rc" data-iaouvrir="d">✉ Une demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()} ouverte${hdOuvertes() > 1 ? 's' : ''}</span>` : ''}</button>`;
     return h;
   }
 
@@ -5514,8 +5517,9 @@
     if (!b) { b = document.createElement('div'); b.id = 'db-ia'; document.body.appendChild(b); }
     return b;
   }
-  function iaOuvrir() {
+  function iaOuvrir(mode) {
     IA.ouvert = true;
+    if (mode === 'd') { IA.mode = 'd'; hdLire(false); } else if (IA.mode === 'd' && !(IA.questions && IA.questions.actif)) { IA.mode = 'd'; }
     if (!IA.questions) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; iaRendre(); }).catch(() => { IA.questions = { tuiles: [], groupes: [] }; iaRendre(); }); }
     iaRendre();
     setTimeout(() => { const i = document.querySelector('#db-ia input'); if (i) { i.focus(); } }, 30);
@@ -5574,6 +5578,94 @@
     }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }
+  /* --- Le helpdesk (15/11/2026, maquette C de docs/maquettes/helpdesk-franchises, « intégrer dans un avatar ») ---------
+   * La demande au bureau vit dans la fenêtre de l'assistant, troisième mode : l'avatar choisi (Pierre ou le Coach) la
+   * transmet. Le sujet (les six domaines du helpdesk), le titre, la demande, jusqu'à quatre photos, et « un passage du
+   * consultant ? » ; en dessous, « Mes demandes » : le statut de chacune et la réponse du bureau.
+   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases). */
+  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'toutes' };
+  function hdLire(force) {
+    if (HLP.chargement || (HLP.d && !force && HLP.shop === S.shop)) { return; }
+    HLP.chargement = true; HLP.shop = S.shop;
+    lire('/helpdesk/magasin?shop=' + encodeURIComponent(S.shop)).then(d => { HLP.d = d; HLP.err = d && d.erreur ? d.erreur : null; })
+      .catch(e => { HLP.err = e.message; }).then(() => { HLP.chargement = false; if (IA.ouvert) { iaRendre(); } else { rendre(); } });
+  }
+  function hdOuvertes() { return HLP.d && HLP.shop === S.shop ? (HLP.d.demandes || []).filter(x => x.ouverte).length : 0; }
+  const HD_ETAT = { NEW: ['att', 'Envoyée'], IN_PROGRESS: ['sans', 'En cours'], RESOLVED: ['ok', 'Résolue'], CLOSED: ['ok', 'Fermée'], CANCELLED: ['ko', 'Annulée'] };
+  function hdCarte(x) {
+    const e = HD_ETAT[x.statut] || ['att', x.statutNom];
+    const j = x.cree ? Math.max(0, Math.round((Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5)) : null;
+    const rep = x.reponse ? `<div class="rep ok"><b>Le bureau${x.reponseLe ? ' · ' + esc(fD(String(x.reponseLe).slice(0, 10))) : ''} :</b> ${esc(x.reponse)}</div>`
+      : (x.visite ? `<div class="rep att">Reprise dans la visite${x.visite.consultant ? ' de ' + esc(x.visite.consultant) : ''}${x.visite.le ? ' du ' + esc(fD(x.visite.le)) : ''} — réponse après la visite</div>`
+        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — pas encore lue par le bureau</div>`
+          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}</div>` : '')));
+    return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e[0]}">${esc(e[1])}</span><span class="d">${esc(fD(x.cree.slice(0, 10)))} · ${esc(x.ref.replace('CASE-', ''))}</span></div>
+      <b class="ref">${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
+  }
+  function hdVue() {
+    const t = iaTons().length ? iaTonCle() : '';
+    const qui = (t && iaNomTon(t)) || 'L’assistant';
+    const dom = (HLP.d && HLP.d.domaines) || { strategy: 'Stratégie', product: 'Produit', operational_activities: 'Activités opérationnelles', sales: 'Ventes', app_development: 'Application', social_media: 'Réseaux sociaux' };
+    const F = HLP.f;
+    let h = `<div class="hd-qui"><span class="ia-av hd-av">${t ? iaVisage(t, 56) : iaIcone(26)}</span><p><b>${esc(qui)}</b> transmet votre demande au bureau : une question, un besoin, un changement dans la caisse, un passage du consultant. La réponse revient ici.</p></div>`;
+    if (HLP.msg) { h += `<div class="${HLP.msg.ok ? 'hd-ok' : 'rc-err'}">${esc(HLP.msg.t)}</div>`; }
+    h += `<div class="hd-cols2"><div class="rc-form hd-form">
+      <div class="rc-champ"><label>Le sujet</label><div class="rc-puces">${Object.entries(dom).map(([k, n]) => `<button type="button" data-hddom="${esc(k)}" class="${F.domaine === k ? 'on' : ''}">${esc(n)}</button>`).join('')}</div></div>
+      <div class="rc-champ"><label for="hd-titre">Le titre</label><input id="hd-titre" class="rc-in" data-hd="titre" maxlength="190" autocomplete="off" placeholder="En quelques mots" value="${esc(F.titre)}"></div>
+      <div class="rc-champ"><label for="hd-desc">La demande</label><textarea id="hd-desc" class="rc-in" data-hd="desc" rows="4" maxlength="8000" placeholder="Ce dont vous avez besoin, le plus précisément possible…">${esc(F.desc)}</textarea></div>
+      <div class="rc-champ"><label>Photos <em>facultatif · 4 au plus</em></label><div class="rc-photos">${F.photos.map((p, i) => `<div class="ph"><img src="${esc(p)}" alt=""><button type="button" data-hdphotox="${i}" aria-label="Retirer">✕</button></div>`).join('')}${F.photos.length < 4 ? '<button type="button" class="plus" data-hdphoto="1"><b>＋</b>Ajouter</button>' : ''}</div></div>
+      <div class="rc-champ"><label>Un passage du consultant ?</label><div class="rc-puces"><button type="button" data-hdpass="1" class="${F.passage ? 'on' : ''}">Oui, à la prochaine visite</button><button type="button" data-hdpass="0" class="${F.passage ? '' : 'on'}">Non, une réponse suffit</button></div></div>
+      <button type="button" class="rc-prise hd-envoi" data-hdenvoyer="1"${HLP.envoi ? ' disabled' : ''}><span>${HLP.envoi ? 'Envoi…' : 'Envoyer au bureau'}</span></button></div>`;
+    const L = (HLP.d && HLP.d.demandes) || [];
+    const n = k => L.filter(x => (k === 'ouvertes' ? x.ouverte : !!x.reponse)).length;
+    const vis = HLP.filtre === 'ouvertes' ? L.filter(x => x.ouverte) : (HLP.filtre === 'rep' ? L.filter(x => x.reponse) : L);
+    h += `<div class="rc-hist hd-hist"><div class="rc-lab">Mes demandes</div>`;
+    if (HLP.chargement && !HLP.d) { h += '<div class="rc-pt">lecture de vos demandes…</div>'; }
+    else if (HLP.err) { h += `<div class="rc-err">${esc(HLP.err)}</div>`; }
+    else if (!L.length) { h += '<div class="rc-pt">Aucune demande envoyée pour l’instant.</div>'; }
+    else {
+      const sans = L.filter(x => x.ouverte && !x.reponse && x.cree && (Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5 > 30).length;
+      h += `<div class="rc-resume"><b>${n('ouvertes')}</b> ouverte${n('ouvertes') > 1 ? 's' : ''}${sans ? ' · ' + sans + ' sans réponse depuis plus de 30 jours' : ''}</div>
+        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.map(hdCarte).join('')}`;
+    }
+    return h + '</div></div>';
+  }
+  /** Une photo réduite à 1600 px de côté, en JPEG : la demande part vite, même du téléphone. */
+  function hdReduire(fichier) {
+    return new Promise((ok, ko) => {
+      const r = new FileReader();
+      r.onerror = () => ko(new Error('photo illisible'));
+      r.onload = () => { const img = new Image(); img.onerror = () => ko(new Error('photo illisible')); img.onload = () => {
+        const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/jpeg', 0.85)); }; img.src = r.result; };
+      r.readAsDataURL(fichier);
+    });
+  }
+  function hdLier(b) {
+    b.querySelectorAll('[data-hddom]').forEach(e => e.addEventListener('click', () => { HLP.f.domaine = e.dataset.hddom; HLP.msg = null; iaRendre(); }));
+    b.querySelectorAll('[data-hdpass]').forEach(e => e.addEventListener('click', () => { HLP.f.passage = e.dataset.hdpass === '1'; iaRendre(); }));
+    b.querySelectorAll('[data-hdfiltre]').forEach(e => e.addEventListener('click', () => { HLP.filtre = e.dataset.hdfiltre; iaRendre(); }));
+    b.querySelectorAll('[data-hd]').forEach(e => e.addEventListener('input', () => { HLP.f[e.dataset.hd] = e.value; }));
+    b.querySelectorAll('[data-hdphotox]').forEach(e => e.addEventListener('click', () => { HLP.f.photos.splice(+e.dataset.hdphotox, 1); iaRendre(); }));
+    b.querySelectorAll('[data-hdphoto]').forEach(e => e.addEventListener('click', () => {
+      const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
+      i.addEventListener('change', () => { const f = i.files && i.files[0]; if (!f) { return; }
+        hdReduire(f).then(u => { if (HLP.f.photos.length < 4) { HLP.f.photos.push(u); } iaRendre(); }).catch(er => { HLP.msg = { ok: false, t: er.message }; iaRendre(); }); });
+      i.click();
+    }));
+    b.querySelectorAll('[data-hdenvoyer]').forEach(e => e.addEventListener('click', () => {
+      const F = HLP.f;
+      if (!F.domaine) { HLP.msg = { ok: false, t: 'Choisissez le sujet de la demande.' }; iaRendre(); return; }
+      if (!F.titre.trim() || !F.desc.trim()) { HLP.msg = { ok: false, t: 'Le titre et la demande sont requis.' }; iaRendre(); return; }
+      HLP.envoi = true; HLP.msg = null; iaRendre();
+      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: F.domaine, titre: F.titre.trim(), description: F.desc.trim(), passage: F.passage, photos: F.photos })
+        .then(r => { if (r && r.ok === false) { throw new Error(r.error || 'refusée'); }
+          HLP.f = { domaine: '', titre: '', desc: '', passage: false, photos: [] }; HLP.msg = { ok: true, t: '✓ Demande envoyée au bureau' + (r && r.ref ? ' (' + r.ref + ')' : '') + '. La réponse s’affichera ici.' }; HLP.d = null; hdLire(true); })
+        .catch(er => { HLP.msg = { ok: false, t: 'La demande n’est pas partie : ' + er.message }; })
+        .then(() => { HLP.envoi = false; iaRendre(); });
+    }));
+  }
   function iaRendre() {
     const b = iaBoite();
     if (!IA.ouvert) { b.innerHTML = ''; document.body.classList.remove('ia-ouvert'); return; }
@@ -5581,17 +5673,17 @@
     const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
     b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
       <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
-        <span class="ia-modes">${[['b', 'Bilan'], ['a', 'Conversation']].map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
+        <span class="ia-modes">${(IA.questions && IA.questions.actif ? [['b', 'Bilan'], ['a', 'Conversation'], ['d', 'Demande au bureau']] : [['d', 'Demande au bureau']]).map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
-      ${iaChoixTon()}
-      ${IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`}</div>`;
+      ${IA.mode === 'd' ? '' : iaChoixTon()}
+      ${IA.mode === 'd' ? `<div class="ia-b">${hdVue()}</div>` : (IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`)}</div>`;
     const f = b.querySelector('.ia-fil');
     if (f && basAvant) { f.scrollTop = f.scrollHeight; }
     b.querySelectorAll('[data-iafermer]').forEach(e => e.addEventListener('click', iaFermer));
     b.querySelectorAll('[data-iamode]').forEach(e => e.addEventListener('click', ev => {
       ev.stopPropagation();
       const q = e.dataset.iaq;
-      if (q) { iaDemander(q, e.dataset.iamode, 'suite'); } else { IA.mode = e.dataset.iamode; iaRendre(); }
+      if (q) { iaDemander(q, e.dataset.iamode, 'suite'); } else { IA.mode = e.dataset.iamode; if (IA.mode === 'd') { hdLire(false); } iaRendre(); }
     }));
     // L'origine de la question part avec elle (gardée au cockpit, pour décider des agents spécialisés).
     b.querySelectorAll('[data-iaq]:not([data-iamode])').forEach(e => e.addEventListener('click', () => iaDemander(e.dataset.iaq, null, e.classList.contains('ia-tq') ? 'tuile' : 'liste')));
@@ -5601,6 +5693,7 @@
       iaRendre();
     }));
     b.querySelectorAll('[data-iaaller]').forEach(e => e.addEventListener('click', () => iaAller(e.dataset.iaaller)));
+    hdLier(b);
     b.querySelectorAll('[data-iaform]').forEach(fm => {
       const i = fm.querySelector('input');
       i.addEventListener('input', () => { IA.saisie = i.value; });
@@ -6479,7 +6572,7 @@
     let h = '';
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
+      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : `<button class="db-btn-ia" data-iaouvrir="d">${iaIcone(17)}Demande au bureau</button>`}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
@@ -9620,7 +9713,7 @@
     b2bRendre();
     cmdmRendre();
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
-    $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', iaOuvrir));
+    $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => iaOuvrir(b.dataset.iaouvrir === 'd' ? 'd' : null)));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
