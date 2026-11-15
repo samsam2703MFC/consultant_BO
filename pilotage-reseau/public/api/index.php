@@ -380,6 +380,8 @@ function route(string $method, string $path): mixed
     if (($c = cmRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Mon marketing (15/11/2026) : le hub du marketing, pour le magasin de la requête (src/dashboard_marketing.php).
     if (($c = dmRoute($method, $path)) !== null) { return $c; }
+    // Dashboard › Réseaux sociaux (15/11/2026) : l'espace boutique du Marketing, ouvert pour le magasin de la session.
+    if (($c = dsRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.

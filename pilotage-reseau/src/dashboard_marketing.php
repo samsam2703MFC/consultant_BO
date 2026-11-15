@@ -63,3 +63,47 @@ function dmRoute(string $method, string $path): ?array
     http_response_code(404);
     return ['error' => 'route inconnue'];
 }
+
+/* --- Réseaux sociaux : l'espace boutique du Marketing, dans le cockpit (15/11/2026) ---------------------------------- */
+
+/*
+ * Décision du 15/11/2026 : « tout doit se faire dans le cockpit franchisé » — le calendrier, la création d'un post (le
+ * parcours du Marketing : modèles du réseau, produit et promotion du catalogue, visuel, quota, répétition, validation du
+ * réseau), les commentaires, les messages, les avis Google, les opérations et la grille Instagram sont les pages de
+ * l'espace boutique du Marketing, affichées dans le dashboard en mode intégré. Le cockpit ne lit ni n'écrit leurs tables :
+ * il demande à l'API Social du Marketing (jeton de service de l'ERP) un lien court qui ouvre la session de SA boutique.
+ *
+ *   GET /dashboard/social/ouvrir?shop=4&page=publier    → {url} : l'adresse que le cadre du dashboard ouvre
+ */
+const DS_PAGES = ['calendrier', 'publier', 'commentaires', 'messages', 'avis-google', 'operations', 'instagram'];
+
+/** L'adresse de l'API Social du Marketing : celle du Marketing (mar_api_url), « …/api » → « …/social/api/v1/social ». */
+function dsAdresseSocial(): string
+{
+    $m = function_exists('cmAdresseMarketing') ? cmAdresseMarketing() : '';
+    return $m === '' ? '' : (string) preg_replace('#/api$#', '', $m) . '/social/api/v1/social';
+}
+
+function dsRoute(string $method, string $path): ?array
+{
+    if ($path !== '/dashboard/social/ouvrir') { return null; }
+    if ($method !== 'GET') { http_response_code(405); return ['error' => 'méthode non admise']; }
+    [$shop, $err] = cmBoutique();
+    if ($err !== null) { return ['error' => $err['error']['message'] ?? 'magasin']; }
+    $page = in_array((string) ($_GET['page'] ?? ''), DS_PAGES, true) ? (string) $_GET['page'] : 'calendrier';
+    $base = dsAdresseSocial();
+    $jeton = function_exists('erpCle') ? erpCle('erp_jeton_service') : '';
+    if ($base === '' || $jeton === '') {
+        http_response_code(503);
+        return ['error' => 'Le lien avec le Marketing n’est pas réglé : l’adresse du Marketing (mar_api_url) et le jeton de service (erp_jeton_service) d’erp_cles, au siège.'];
+    }
+    [$code, $j] = cmAppel($base . '/integration/franchise/sessions', 'POST', ['shop' => (string) $shop, 'page' => $page], $jeton);
+    if ($code === 0) { http_response_code(502); return ['error' => 'Le Marketing ne répond pas : réessayez dans un instant.']; }
+    if ($code === 401) { http_response_code(502); return ['error' => 'Le Marketing refuse le jeton de service : il doit être le même des deux côtés (erp_cles).']; }
+    if ($code === 404 && !is_array($j)) { http_response_code(502); return ['error' => 'Le Marketing ne sait pas encore ouvrir l’espace boutique dans le cockpit (mise à jour à déployer).']; }
+    if ($code < 200 || $code >= 300 || !is_array($j) || !is_string($j['url'] ?? null) || !str_starts_with($j['url'], '/')) {
+        http_response_code($code >= 400 && $code < 500 ? $code : 502);
+        return ['error' => is_array($j) && isset($j['error']) && is_string($j['error']) ? $j['error'] : 'Réponse du Marketing illisible.'];
+    }
+    return ['url' => $j['url'], 'page' => $page, 'expire' => $j['expire'] ?? null];
+}

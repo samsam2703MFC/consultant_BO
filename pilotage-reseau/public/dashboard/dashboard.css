@@ -3272,3 +3272,11 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-av.db-av--api{justify-content:center;min-width:42px;padding:0 10px;font-size:11px;letter-spacing:.12em;color:var(--muted-2)}
 .db-av.db-av--api:hover{color:var(--accent)}
 @media (max-width:1300px){.db-nav--rail .db-vt h1{font-size:20px}.db-nav--rail .db-vt{margin-right:8px}}
+/* Réseaux sociaux (15/11/2026) : le cadre de l'espace boutique, sous la barre, hors de #dash (il ne se recharge pas). */
+#db-reseaux{max-width:1440px;margin:0 auto;padding:0 22px 16px}
+body.db-rail-on #db-reseaux{max-width:none;margin:0 0 0 246px;padding:0 24px 16px}
+body.db-vue-social #dash{padding-bottom:0}
+.rx-onglets{margin:2px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.rx-onglets .page-tabs{margin:0;border:0}
+.rx-cadre{display:block;width:100%;min-height:520px;border:1px solid var(--line);border-radius:12px;background:#faf7f2}
+@media print{#db-reseaux{display:none}}

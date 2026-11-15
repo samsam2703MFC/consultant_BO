@@ -7,9 +7,8 @@
  *   GET …/dashboard/marketing?shop=                       le hub du marketing, pour ce magasin (src/dashboard_marketing.php)
  *   GET …/exploitation/objectifs-produits?shop=&date=     les objectifs produits des campagnes en cours
  * Rien n'est inventé : un bloc sans donnée le dit, et dit pourquoi (par exemple, la page Facebook pas encore reliée).
- * Deux onglets (15/11/2026, « tout doit se faire dans le cockpit franchisé », plus de lien vers l'espace boutique) :
- *   Vue d'ensemble · Calendrier des posts (le mois, les posts du magasin, les campagnes). « Nouveau post » reviendra avec
- *   la page « Publier » du Marketing affichée ici.
+ * Les posts, le calendrier et la publication sont la page « Réseaux sociaux » du dashboard (reseaux.js : l'espace boutique
+ * du Marketing, dans le cockpit) ; la carte du même nom y mène.
  *
  * `window.DashMarketing.racine(shop, {apiBase, postsUrl})` rend l'élément du module, gardé d'un rendu à l'autre.
  */
@@ -59,7 +58,7 @@
     const a = ((d.avis || {}).magasins || [])[0] || null, cible = (d.avis || {}).cible;
     return `<div class="mm-kpis">
       <div><span class="k">Campagnes en cours</span><span class="v">${n0(c.enCours || 0)}</span><span class="s">${n0(c.aVenir || 0)} à venir · ${n0(c.terminees || 0)} terminée${(c.terminees || 0) > 1 ? 's' : ''}</span></div>
-      <div><span class="k">Posts publiés ce mois</span><span class="v">${n0(s.publiesMois || 0)}</span><span class="s">${n0(s.total || 0)} post${(s.total || 0) > 1 ? 's' : ''} du magasin · ${n0(s.aTraiter || 0)} à traiter</span></div>
+      <div><span class="k">Avis 5★ pour la cible</span><span class="v">${a && a.avis5Requis != null ? n0(a.avis5Requis) : '—'}</span><span class="s">${a && cible != null ? 'pour passer de ' + nf1.format(a.note) + ' à ' + nf1.format(cible) : 'fiche non reliée'}</span></div>
       <div><span class="k">Note Google</span><span class="v">${a && a.note != null ? nf1.format(a.note) : '—'}</span><span class="s">${a ? n0(a.avis) + ' avis' : 'fiche non reliée'}${cible != null ? ' · cible ' + nf1.format(cible) : ''}</span></div>
       <div><span class="k">E-mails envoyés</span><span class="v">${n0(e.envoyes || 0)}</span><span class="s">${e.tauxOuverture != null ? 'ouverture ' + nf1.format(e.tauxOuverture) + ' %' : 'pas encore d’envoi'}</span></div></div>`;
   }
@@ -95,21 +94,11 @@
   }
 
   function social(d) {
-    const S = d.social || {}, P = S.publication || {}, M = d.meta || {};
-    const L = (S.liste || []).slice().sort((a, b) => String(b.publierLe || b.soumisLe || '').localeCompare(String(a.publierLe || a.soumisLe || '')));
-    const res = P.reseaux || {};
-    const page = M.page;
-    const etat = !M.pret ? 'La connexion à Meta n’est pas encore configurée par le bureau : ni publication automatique, ni statistiques Facebook et Instagram.'
-      : (!page || !page.pageConnue ? 'La page Facebook du magasin n’est pas encore reliée par le bureau.'
-        : (page.statut !== 'connectee' ? 'La page Facebook du magasin est connue mais pas encore connectée.' : ''));
-    const lien = `<span class="mm-liens"><button type="button" class="mm-lienb" data-mmong="calendrier">Calendrier des posts</button></span>`;
-    return `<section class="mm-carte"><div class="mm-carte-h"><h2>Réseaux sociaux</h2>${lien}</div>
-      <div class="mm-pub"><span>Publication ${P.reelle ? (P.auto ? 'automatique' : 'à la main') : 'pas encore active'}</span>
-        ${['facebook', 'instagram'].map(r => `<span class="mm-res${res[r] ? ' on' : ''}">${r === 'facebook' ? 'Facebook' : 'Instagram'} ${res[r] ? 'actif' : 'inactif'}</span>`).join('')}</div>
-      ${etat ? `<p class="mm-note">${esc(etat)}</p>` : ''}
-      ${S.dispo === false ? `<p class="mm-mu">Les posts ne se lisent pas : ${esc(S.raison || 'indisponibles')}.</p>`
-        : (L.length ? `<table class="mm-t"><thead><tr><th>Date</th><th>Post</th><th>Réseaux</th><th>État</th></tr></thead><tbody>${L.slice(0, 12).map(p => `<tr><td>${esc(dCourt(p.publierLe || p.soumisLe || ''))}</td><td>${esc(String(p.message || '').slice(0, 90))}${String(p.message || '').length > 90 ? '…' : ''}</td><td>${esc((p.reseaux || []).map(r => r === 'facebook' ? 'Facebook' : r === 'instagram' ? 'Instagram' : r).join(', ') || '—')}</td><td><span class="mm-st ${esc(p.statut)}">${esc(STATUTS_POST[p.statut] || p.statut)}</span></td></tr>`).join('')}</tbody></table>`
-          : '<p class="mm-mu">Pas de post du magasin dans le cockpit.</p>')}
+    const S = d.social || {}, P = S.publication || {}, M = d.meta || {}, res = P.reseaux || {};
+    return `<section class="mm-carte"><div class="mm-carte-h"><h2>Réseaux sociaux</h2><button type="button" class="mm-lienb" data-mmaller="social">Ouvrir Réseaux sociaux</button></div>
+      <p class="mm-mu" style="margin-top:0">Le calendrier, les posts (modèles du réseau, produit et promotion du catalogue, visuel), les commentaires, les messages et la grille Instagram : la page « Réseaux sociaux », l’espace boutique du Marketing dans le cockpit.</p>
+      ${M.pret === false ? '<p class="mm-note">La connexion à Meta n’est pas encore configurée par le bureau : la publication automatique et les statistiques Facebook et Instagram attendent.</p>' : ''}
+      <div class="mm-pub">${['facebook', 'instagram'].map(r => `<span class="mm-res${res[r] ? ' on' : ''}">${r === 'facebook' ? 'Facebook' : 'Instagram'} ${res[r] ? 'actif' : 'inactif'}</span>`).join('')}</div>
     </section>`;
   }
 
@@ -135,58 +124,11 @@
       ${L.length ? `<ul class="mm-mails">${L.slice(0, 5).map(x => `<li><span>${esc(x.nom)}${x.objet ? ' · ' + esc(x.objet) : ''}</span><span class="mm-mu">${esc(x.statut)}${x.envoiLe ? ' · ' + esc(dCourt(x.envoiLe)) : ''}</span></li>`).join('')}</ul>` : '<p class="mm-mu">Pas encore de campagne e-mail pour le magasin.</p>'}</section>`;
   }
 
-  /* --- le calendrier des posts --------------------------------------------------------------------------------- */
-  const datePost = p => String(p.publierLe || ((p.publications || [])[0] || {}).prevuLe || (p.publie || {}).le || p.soumisLe || '');
-  function calendrier(d) {
-    const S = d.social || {}, L = S.liste || [], C = (d.campagnes || {}).liste || [];
-    const m = st.mois || auj().slice(0, 7), an = +m.slice(0, 4), mo = +m.slice(5, 7) - 1;
-    const premier = new Date(an, mo, 1), n = new Date(an, mo + 1, 0).getDate(), dec = (premier.getDay() + 6) % 7;
-    const iso = j => m + '-' + String(j).padStart(2, '0');
-    const parJour = {};
-    L.forEach(p => { const k = datePost(p).slice(0, 10); if (k.slice(0, 7) === m) { (parJour[k] = parJour[k] || []).push(p); } });
-    const camps = C.filter(c => c.debut && c.fin && c.debut.slice(0, 7) <= m && c.fin.slice(0, 7) >= m);
-    let cases = '';
-    for (let i = 0; i < dec; i++) { cases += '<div class="mm-cj vide"></div>'; }
-    for (let j = 1; j <= n; j++) {
-      const k = iso(j), P = (parJour[k] || []).sort((a, b) => datePost(a).localeCompare(datePost(b)));
-      const enCamp = camps.filter(c => c.debut <= k && c.fin >= k);
-      cases += `<div class="mm-cj${k === auj() ? ' auj' : ''}">
-        <div class="mm-cj-h"><span>${j}</span>${enCamp.map(c => `<i class="mm-cbar" style="background:${esc(c.typeCouleur || 'var(--prize)')}" title="${esc(c.nom)}"></i>`).join('')}</div>
-        ${P.map(p => `<button type="button" class="mm-cp ${esc(p.statut)}${st.post === p.id ? ' on' : ''}" data-mmpost="${esc(p.id)}"><span>${esc(datePost(p).slice(11, 16) || '')}</span>${esc(String(p.message || '').slice(0, 28))}</button>`).join('')}
-</div>`;
-    }
-    const sel = L.find(p => p.id === st.post);
-    const nav = d2 => { const t = new Date(an, mo + d2, 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); };
-    return `<section class="mm-carte"><div class="mm-carte-h"><div class="mm-mnav"><button type="button" class="db-btn" data-mmmois="${nav(-1)}" aria-label="Mois précédent">‹</button><h2 class="mm-mtit">${MOIS_L[mo]} ${an}</h2><button type="button" class="db-btn" data-mmmois="${nav(1)}" aria-label="Mois suivant">›</button></div>
-        <span class="mm-legende">${['brouillon', 'a_valider', 'valide', 'publie', 'refuse'].map(k => `<span class="mm-cp ${k}">${STATUTS_POST[k]}</span>`).join('')}</span></div>
-      ${camps.length ? `<div class="mm-camps">${camps.map(c => `<span><i style="background:${esc(c.typeCouleur || 'var(--prize)')}"></i>${esc(c.nom)} · ${dCourt(c.debut)} → ${dCourt(c.fin)}</span>`).join('')}</div>` : ''}
-      <div class="mm-cal">${JOURS_C.map(j => `<div class="mm-cjn">${j}</div>`).join('')}${cases}</div>
-      ${L.length ? '' : '<p class="mm-mu">Pas de post du magasin dans le cockpit ce mois-ci.</p>'}</section>
-      ${sel ? detailPost(sel) : ''}`;
-  }
-  function detailPost(p) {
-    const ecarts = (p.ecarts || []).filter(e => e.statut !== 'ignore');
-    const dec = p.decision || {};
-    return `<section class="mm-carte mm-post"><div class="mm-carte-h"><h2>Le post du ${esc(dFr(datePost(p).slice(0, 10)))}${datePost(p).slice(11, 16) ? ' à ' + esc(datePost(p).slice(11, 16)) : ''}</h2><span class="mm-st ${esc(p.statut)}">${esc(STATUTS_POST[p.statut] || p.statut)}</span></div>
-      <p class="mm-msg">${esc(p.message || '')}</p>
-      ${(p.medias || []).length ? `<div class="mm-medias">${p.medias.map(x => `<img src="${esc(x.url)}" alt="${esc(x.alt || '')}">`).join('')}</div>` : ''}
-      <p class="mm-mu">${esc((p.reseaux || []).map(r => RES_L[r] || r).join(' · ') || 'Facebook')}${p.format ? ' · ' + esc(p.format) : ''}</p>
-      ${p.agent && p.agent.note != null ? `<div class="mm-ctrl"><b>Contrôle : ${esc(p.agent.note)}/5</b>${p.agent.resume ? ' — ' + esc(p.agent.resume) : ''}</div>` : ''}
-      ${ecarts.length ? `<ul class="mm-ecarts">${ecarts.map(e => `<li class="g${esc(e.gravite)}"><span>${esc(e.regle || e.type || '')}</span>${esc(e.message || '')}</li>`).join('')}</ul>` : ''}
-      ${dec.le ? `<div class="mm-ctrl">Décision du bureau : ${esc(dec.note != null ? dec.note + '/5 · ' : '')}${esc(dec.commentaire || '')}</div>` : ''}
-      ${(p.publications || []).length ? `<ul class="mm-pubs">${p.publications.map(x => `<li>${esc(RES_L[x.reseau] || x.reseau)} : ${esc(x.statut)}${x.publieLe ? ' le ' + esc(dFr(x.publieLe.slice(0, 10))) : (x.prevuLe ? ' pour le ' + esc(dFr(x.prevuLe.slice(0, 10))) : '')}${x.erreur ? ' — ' + esc(x.erreur) : ''}</li>`).join('')}</ul>` : ''}
-</section>`;
-  }
-
   function html() {
     if (st.err && !st.d) { return `<div class="db-err">Le marketing du magasin ne se lit pas : ${esc(st.err)} <button type="button" class="db-btn" data-mmrelire="1">Relire</button></div>`; }
     if (!st.d) { return '<div class="db-sk" style="height:70px;margin-bottom:12px"></div><div class="db-sk" style="height:320px"></div>'; }
     const d = st.d;
-    // « Nouveau post » retiré (15/11/2026) : il écrivait l'ancienne table du cockpit, que le Marketing ne lit pas. Il revient
-    // quand la page « Publier » du Marketing s'affichera ici (mode intégré, session ouverte par le cockpit).
-    const tabs = `<div class="mm-onglets"><div class="page-tabs">${[['apercu', 'Vue d’ensemble'], ['calendrier', 'Calendrier des posts']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-mmong="${k}">${l}</button>`).join('')}</div></div>`;
-    if (st.onglet === 'calendrier') { return tabs + (st.envoi && st.envoi.ok ? `<div class="mm-ok">${esc(st.envoi.texte)}</div>` : '') + calendrier(d); }
-    return tabs + kpis(d) + aFaire(d) + `<div class="mm-grille"><div class="mm-col">${campagnes(d)}${social(d)}</div><div class="mm-col">${avis(d)}${emailing(d)}</div></div>`
+    return kpis(d) + aFaire(d) + `<div class="mm-grille"><div class="mm-col">${campagnes(d)}${social(d)}</div><div class="mm-col">${avis(d)}${emailing(d)}</div></div>`
       + `<p class="mm-pied">Le marketing du magasin, lu à ${esc(String(d.genere || '').slice(11, 16) || '—')} · <button type="button" class="mm-lienb" data-mmrelire="1">relire</button></p>`;
   }
 
@@ -197,9 +139,7 @@
     const on = (sel, ev, fn) => st.el.querySelectorAll(sel).forEach(b => b.addEventListener(ev, fn));
     on('[data-mmphase]', 'click', e => { st.phase = e.currentTarget.dataset.mmphase; rendre(); });
     on('[data-mmrelire]', 'click', () => charger(true));
-    on('[data-mmong]', 'click', e => { st.onglet = e.currentTarget.dataset.mmong; if (st.onglet !== 'nouveau') { st.envoi = st.envoi && st.envoi.ok ? st.envoi : null; } rendre(); });
-    on('[data-mmmois]', 'click', e => { st.mois = e.currentTarget.dataset.mmmois; st.post = null; rendre(); });
-    on('[data-mmpost]', 'click', e => { st.post = st.post === e.currentTarget.dataset.mmpost ? null : e.currentTarget.dataset.mmpost; rendre(); });
+    on('[data-mmaller]', 'click', e => { if (st.aller) { st.aller(e.currentTarget.dataset.mmaller); } });
     if (dans) { const b = st.el.querySelector('#' + dans); if (b) { b.focus(); if (pos != null && b.setSelectionRange) { try { b.setSelectionRange(pos, pos); } catch (x) { /* sans curseur */ } } } }
   }
 
@@ -207,6 +147,7 @@
     racine(shop, o) {
       o = o || {};
       if (o.apiBase) { st.api = o.apiBase; }
+      if (o.aller) { st.aller = o.aller; }
       if (!st.el || String(st.shop) !== String(shop)) {
         st.shop = String(shop); st.el = document.createElement('div'); st.el.className = 'mm-racine';
         Object.assign(st, { d: null, err: null, obj: null, objErr: null, phase: 'en_cours' });
