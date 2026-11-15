@@ -6637,7 +6637,10 @@
     const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
     const ia = IA.questions && IA.questions.actif;
     const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
-    return `<div class="db-nav db-nav--rail"><div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>
+    // Les onglets qui ont leur propre en-tête (Promotions, Primes, Trésorerie, Mon catalogue, le module des visites) : pas de
+    // second titre dans la barre (15/11/2026, « Mon catalogue » deux fois l'un sous l'autre).
+    const propre = ['promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
       ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
       <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
       ${av(`data-iaouvrir="${ia ? '1' : 'd'}"`, '', iaIcone(18), 'Coach', ia ? 'assistant' : 'demande au bureau')}
