@@ -6577,7 +6577,7 @@
    * - le rail : les mêmes onglets, dans le même ordre, rangés en groupes ; le plan d'action et la campagne (des vues du
    *   dashboard qui n'avaient pas d'onglet) ; en haut, l'objectif du jour (/exploitation/jour, la lecture jourM de la
    *   page ; le trait : la projection de fin de journée) et la note Google (/marketing/avis, face à la cible du réseau) ;
-   *   « Cockpit › Résultat » en lien de retour ;
+   *   pas de lien vers le cockpit (« Cockpit › Résultat », retiré le 15/11/2026) ;
    * - la barre du haut : le magasin et l'onglet, la date, « Relire », puis la valeur en vignette, le coach (l'assistant) et
    *   la revue du soir, deux avatars de même taille et de même forme. */
   const RAIL_MIN = 1024;
@@ -6596,7 +6596,6 @@
     etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
     brochures: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16',
     personnes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
-    retour: 'M19 12H5M12 19l-7-7 7-7',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
@@ -6654,7 +6653,6 @@
   function railHtml() {
     return `
       <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
-      <div class="sidebar__back"><a href="../#/resultat">${railIco(RAIL_ICO.retour)}Cockpit › Résultat</a></div>
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
       <div class="sidebar__groups">${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
@@ -6732,7 +6730,7 @@
     else {
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : `<button class="db-btn-ia" data-iaouvrir="d">${iaIcone(17)}Demande au bureau</button>`}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
+      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : `<button class="db-btn-ia" data-iaouvrir="d">${iaIcone(17)}Demande au bureau</button>`}</div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
