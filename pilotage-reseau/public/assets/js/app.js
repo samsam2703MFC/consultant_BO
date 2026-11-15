@@ -13,6 +13,7 @@ import { valsFidelite } from './fidelite-vals.js';
 import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
+import { valsHelpdesk, nbDemandesOuvertes } from './helpdesk-vals.js';
 import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
@@ -369,6 +370,8 @@ class App {
       budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
       // Produits › Paramétrage (14/11/2026) : la fiche d'un produit, tous ses champs, ses gammes, ses prix, ses liaisons.
       paramProduits: 'produits/parametrage',
+      // Le helpdesk des franchisés (15/11/2026) : les demandes au bureau, reprises en mission de visite.
+      demandesFranchises: 'franchises/demandes',
       // Benchmark (14/11/2026) : importer un concurrent (PDF ou internet par l'IA), le classer par code postal.
       benchmark: 'benchmark',
       planogramme: 'planogramme', analyse: 'analyse',
@@ -1145,6 +1148,7 @@ class App {
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       benchmark: ['Benchmark concurrents', 'Les prix d’un concurrent, lus dans son PDF ou cherchés sur internet par l’IA, rapprochés de nos produits et encodés dans le benchmark de TFBuddy ; chaque concurrent rangé sur le magasin et le franchisé que son code postal désigne.'],
+      demandesFranchises: ['Demandes des franchisés', 'Le helpdesk du panel : les demandes que les franchisés adressent au bureau. Les lire, les attribuer, y répondre — le franchisé lit la réponse dans son dashboard — et les reprendre en mission d’une visite du magasin, à contrôler sur place.'],
       paramProduits: ['Paramétrage des produits', 'Tout ce que le panel tient d’un produit, sur une page : ses champs, ses saisons et gammes, son prix dans chaque magasin, et les liaisons de l’API qui le touchent. Chaque changement se vérifie, s’écrit au panel avec le compte consultant, se relit et se note au registre.'],
       structure: ['Structure de gamme', 'Par catégorie, sur les ventes réseau de douze mois : le standard (80 % du CA, 6 au plus), les quatre saisons et trois périodes (4 au plus), et ce qui sort — moins de 3 % de sa catégorie. Ce qui est retenu devient l’assortiment obligatoire.'],
       promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
@@ -1388,6 +1392,7 @@ class App {
       // la fiche, et le classement du réseau en est un onglet — une seule entrée.
       // Libellé du rail sur une ligne (design system §8.1).
       ['Franchisés', [
+        ['demandesFranchises', 'Demandes des franchisés', nbDemandesOuvertes(this)],
         ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
         // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
         // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
@@ -1548,7 +1553,7 @@ class App {
 
     ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
-      assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
+      assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
@@ -1993,6 +1998,7 @@ class App {
     // Recettes à corriger : une surface de travail, toute la largeur de l'écran (14/11/2026, « utiliser toute la largeur »).
     if (common.isVerifR) { valsVerification(this, common); common.large = true; }
     if (common.isParamProd) { valsParamProduits(this, common); common.large = true; }
+    if (common.isHelpdesk) { valsHelpdesk(this, common); common.large = true; }
     if (common.isBench) { valsBenchmark(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
