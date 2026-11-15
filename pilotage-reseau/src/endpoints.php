@@ -4691,6 +4691,8 @@ function ep_pwa_task_detail(): array
         // se discute sans savoir de quel service ni de quelle personne il
         // vient — et l'heure dit souvent à elle seule ce qui s'est passé.
         'faitLe' => null, 'faitPar' => null,
+        // L'heure STANDARD de la tâche (celle de sa checklist) : la ponctualité de la photo se juge contre elle.
+        'heure' => null,
         'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
         'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
         // Référence : la photo de la fiche technique du produit contrôlé, pour
@@ -4720,6 +4722,7 @@ function ep_pwa_task_detail(): array
             $out['statut']       = $t['status'] ?? null;
             $out['faitLe']       = ($t['completed_at'] ?? null) !== null ? substr((string) $t['completed_at'], 0, 16) : null;
             $out['faitPar']      = trim((string) ($t['completed_by'] ?? '')) ?: null;
+            $out['heure']        = preg_match('/^\d{2}:\d{2}/', (string) ($t['execution_time'] ?? '')) ? substr((string) $t['execution_time'], 0, 5) : null;
             foreach (['product_id', 'id_product', 'productId'] as $pk) {
                 if (!empty($t[$pk]) && is_numeric($t[$pk])) { $out['produitId'] = (int) $t[$pk]; break; }
             }
@@ -8179,9 +8182,14 @@ function ep_ia_note(): array
     $sig = setting('signalement', []);
     $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : signalementDefaut()['niveaux'];
 
+    // L'heure de la photo contre l'heure standard de la checklist : calculée ici (src/ia_assistant.php), pas
+    // devinée par le modèle ; il la reçoit pour la dire au magasin quand la photo est en retard.
+    $ponct = function_exists('iaPonctualite') ? iaPonctualite($d['heure'] ?? null, $d['faitLe'] ?? null) : null;
+    $out['ponctualite'] = $ponct;
     $ctx = trim(($d['checklist'] ? 'checklist « ' . $d['checklist'] . ' »' : '')
         . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
-        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : ''));
+        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : '')
+        . ($ponct !== null ? ', ' . $ponct['phrase'] : ''), ', ');
     // Ce que le réseau attend du rayon (consigne du back office, sinon critères par défaut), et sa photo type
     // quand le produit n'a pas de fiche technique : l'IA juge par comparaison, comme le consultant.
     $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;

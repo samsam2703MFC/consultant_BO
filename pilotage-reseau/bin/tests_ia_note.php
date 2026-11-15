@@ -52,6 +52,7 @@ verifie('la consigne du back office prime', str_contains($propre, 'Six quiches e
 verifie('un rayon ajouté sans consigne : les règles communes seules', rvCriteresIa(['cle' => 'glaces', 'nom' => 'Glaces', 'consigne' => null]) === RV_CRITERES_COMMUNS);
 verifie('chaque rayon du panel a ses critères', count(array_filter(RV_DEFAUT, fn ($n) => isset(RV_CRITERES_IA[rvCle($n)]))) === count(RV_DEFAUT));
 verifie('le rayon d’une tâche « Photo du comptoir - Quiches »', (rvRayonDe('Photo du comptoir - Quiches', [$quiches])['cle'] ?? '') === 'quiches');
+verifie('« Photo du comptoir après-midi - Quiches » : le même rayon', (rvRayonDe('Photo du comptoir après-midi - Quiches', [$quiches])['cle'] ?? '') === 'quiches');
 
 echo "La requête\n";
 $reponse = $json(['niveau' => 4, 'constats' => ['Comptoir garni'], 'commentaire' => 'Rien à corriger.', 'confiance' => 'haute']);

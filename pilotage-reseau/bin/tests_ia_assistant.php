@@ -125,10 +125,23 @@ $GLOBALS['BODY'] = ['shopId' => 3, 'taskId' => 777, 'date' => '2026-11-01', 'ret
 $r = wr_ia_lecons();
 verifie('correction inconnue : 404', http_response_code() === 404 && isset($r['error']));
 
+echo "La ponctualité\n";
+$p = iaPonctualite('07:00', '2026-11-15 06:38');
+verifie('22 min avant l’heure standard : à l’heure', $p['etat'] === 'heure' && $p['ecart'] === -22 && $p['verdict'] === 'à l’heure (22 min avant)', json_encode($p, JSON_UNESCAPED_UNICODE));
+verifie('la phrase que lit le modèle', $p['phrase'] === 'photo prise à 06:38, heure standard de la checklist 07:00 : à l’heure (22 min avant)');
+verifie('dans la tolérance : à l’heure', iaPonctualite('07:00', '07:15')['etat'] === 'heure' && iaPonctualite('07:00', '07:15')['verdict'] === 'à l’heure (15 min après, toléré)');
+$p = iaPonctualite('07:00:00', '2026-11-15 08:10:42');
+verifie('au-delà : en retard, en heures et minutes', $p['etat'] === 'retard' && $p['verdict'] === 'en retard de 1 h 10');
+verifie('plus d’une heure avant : très en avance', iaPonctualite('14:30', '12:45')['etat'] === 'avance');
+verifie('sans heure standard ou sans photo : rien', iaPonctualite(null, '06:38') === null && iaPonctualite('07:00', null) === null && iaPonctualite('7h', '06:38') === null);
+$GLOBALS['IA'] = $IA_OK(4) + ['ponctualite' => iaPonctualite('07:00', '2026-11-15 07:40')];
+$r = $proposer(['shopId' => 5, 'taskId' => 1300, 'date' => $J]);
+verifie('la ponctualité gardée avec la proposition', ($r['proposition']['ponctualite']['etat'] ?? '') === 'retard' && $r['proposition']['ponctualite']['prevue'] === '07:00');
+
 echo "La journée et l'accord\n";
 $_GET['date'] = $J;
 $j = ep_ia_propositions();
-verifie('les propositions de la journée', count($j['propositions']) === 2 && $j['date'] === $J);
+verifie('les propositions de la journée', count($j['propositions']) === 3 && $j['date'] === $J);
 $a = $j['accord'];
 // Dans la fenêtre : 1211 (4→4), 1209 (4→3, proposée 4 après « refaire ») et les leçons d'octobre et novembre.
 verifie('le taux d’accord compte les notes identiques', $a['notees'] >= 2 && $a['pareil'] >= 1 && $a['pct'] !== null, json_encode($a));

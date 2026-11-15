@@ -20,6 +20,8 @@ declare(strict_types=1);
 
 const IA_LECONS_MAX = 6;        // corrections envoyées en exemple avec une photo
 const IA_ACCORD_JOURS = 30;     // fenêtre du taux d'accord affiché
+const IA_TOLERANCE_MIN = 15;    // retard toléré sur l'heure standard de la checklist (le même à l'écran, app.js)
+const IA_AVANCE_MAX = 60;       // au-delà, une photo « très en avance » : le comptoir était-il prêt ?
 
 function ensureIaAssistant(): void
 {
@@ -39,6 +41,8 @@ function ensureIaAssistant(): void
         . 'motif VARCHAR(300) NULL,'
         . 'modele VARCHAR(80) NULL,'
         . 'lecons_vues TINYINT NOT NULL DEFAULT 0,' // combien de leçons accompagnaient la photo
+        . 'heure_prevue CHAR(5) NULL,'              // l'heure standard de la checklist
+        . 'heure_prise CHAR(5) NULL,'               // l'heure de la photo
         . 'propose_le DATETIME NOT NULL,'
         . 'note_finale TINYINT NULL,'               // la note du consultant, quand elle est posée
         . 'commentaire_final TEXT NULL,'
@@ -67,6 +71,29 @@ function iaNomNiveau(?int $n): ?string
     return iaBareme()[$n]['nom'] ?? ($n . '/5');
 }
 
+/**
+ * La ponctualité d'une photo : son heure contre l'heure standard de la checklist. À l'heure jusqu'à
+ * IA_TOLERANCE_MIN minutes de retard ; « en retard » au-delà ; « très en avance » plus de IA_AVANCE_MAX minutes
+ * avant (le comptoir n'était peut-être pas prêt). `phrase` est ce que le modèle lit.
+ *
+ * @param ?string $prevue  HH:MM
+ * @param ?string $prise   AAAA-MM-JJ HH:MM ou HH:MM
+ */
+function iaPonctualite(?string $prevue, ?string $prise): ?array
+{
+    $hm = static fn (?string $v): ?string => is_string($v) && preg_match('/(\d{2}):(\d{2})(?::\d{2})?$/', trim($v), $m) ? $m[1] . ':' . $m[2] : null;
+    $p = $hm($prevue); $f = $hm($prise !== null && strlen(trim($prise)) > 5 ? substr(trim($prise), 11, 5) : $prise);
+    if ($p === null || $f === null) { return null; }
+    $min = static fn (string $x): int => (int) substr($x, 0, 2) * 60 + (int) substr($x, 3, 2);
+    $ecart = $min($f) - $min($p);
+    $etat = $ecart > IA_TOLERANCE_MIN ? 'retard' : ($ecart < -IA_AVANCE_MAX ? 'avance' : 'heure');
+    $duree = static function (int $m): string { $m = abs($m); return $m >= 60 ? intdiv($m, 60) . ' h ' . sprintf('%02d', $m % 60) : $m . ' min'; };
+    $verdict = $etat === 'retard' ? 'en retard de ' . $duree($ecart)
+        : ($etat === 'avance' ? 'très en avance (' . $duree($ecart) . ' avant)' : 'à l’heure' . ($ecart < 0 ? ' (' . $duree($ecart) . ' avant)' : ($ecart > 0 ? ' (' . $duree($ecart) . ' après, toléré)' : '')));
+    return ['prevue' => $p, 'prise' => $f, 'ecart' => $ecart, 'etat' => $etat, 'verdict' => $verdict, 'tolerance' => IA_TOLERANCE_MIN,
+        'phrase' => 'photo prise à ' . $f . ', heure standard de la checklist ' . $p . ' : ' . $verdict];
+}
+
 /** Une ligne de pil_cq_ia telle que l'écran la lit. */
 function iaPropositionLigne(array $r): array
 {
@@ -85,6 +112,7 @@ function iaPropositionLigne(array $r): array
         'noteFinale' => $finale, 'nomFinal' => iaNomNiveau($finale), 'commentaireFinal' => $r['commentaire_final'],
         'raison' => $r['raison'], 'validePar' => $r['valide_par'], 'valideLe' => $r['valide_le'],
         'lecon' => (bool) (int) $r['lecon'],
+        'ponctualite' => iaPonctualite($r['heure_prevue'] ?? null, $r['heure_prise'] ?? null),
     ];
 }
 
@@ -175,13 +203,14 @@ function wr_ia_proposer(): array
         http_response_code(503);
         return ['error' => (string) $r['motif']];
     }
+    $ponct = is_array($r['ponctualite'] ?? null) ? $r['ponctualite'] : null;
     Db::exec('REPLACE INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, commentaire, motif,'
-        . ' modele, lecons_vues, propose_le, lecon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)',
+        . ' modele, lecons_vues, propose_le, heure_prevue, heure_prise, lecon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)',
         [$shopId, $taskId, $date, $r['tache'] ?? null, $r['rayon'] ?? null,
          ($r['etat'] ?? '') === 'ok' ? $r['niveau'] : null, $r['confiance'] ?? null,
          json_encode(array_values((array) ($r['constats'] ?? [])), JSON_UNESCAPED_UNICODE),
          $r['commentaire'] ?? null, ($r['etat'] ?? '') === 'ok' ? null : mb_substr((string) ($r['motif'] ?? 'pas de proposition'), 0, 300),
-         $r['modele'] ?? null, (int) ($r['leconsVues'] ?? 0), date('Y-m-d H:i:s')]);
+         $r['modele'] ?? null, (int) ($r['leconsVues'] ?? 0), date('Y-m-d H:i:s'), $ponct['prevue'] ?? null, $ponct['prise'] ?? null]);
     $ligne = Db::row('SELECT * FROM pil_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]);
     return ['ok' => true, 'proposition' => iaPropositionLigne($ligne ?? []), 'cache' => false]
         + (!empty($r['avertissement']) ? ['avertissement' => $r['avertissement']] : []);

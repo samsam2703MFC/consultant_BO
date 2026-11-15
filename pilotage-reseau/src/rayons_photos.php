@@ -126,7 +126,8 @@ function rvListe(): array
  */
 function rvRayonDe(string $libelle, ?array $rayons = null): ?array
 {
-    $reste = (string) preg_replace('/^(photo du )?comptoirs?\s*/', '', rvNorm($libelle));
+    // « Photo du comptoir après-midi - Pâtisseries » : le moment de la journée n'est pas le rayon.
+    $reste = (string) preg_replace('/^(photo du )?comptoirs?\s*(?:(?:apres midi|matin|midi|soir)\s+)?/', '', rvNorm($libelle));
     if ($reste === '') { return null; }
     $sing = static fn (string $x): string => (string) preg_replace('/s\b/', '', $x);
     $prefixe = null; $long = 0;

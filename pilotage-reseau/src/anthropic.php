@@ -76,6 +76,9 @@ final class Anthropic
         . "5. Les constats (quatre au plus) décrivent ce qui est visible, l'écart d'abord s'il y en a un. Le commentaire"
         . " (deux phrases au plus) s'adresse au magasin : ce qu'il doit corriger, ou qu'il n'y a rien à corriger. Ne"
         . " demande de reprendre la photo que si le sujet n'y est pas.\n"
+        . "6. Le contexte peut donner l'heure de la photo et l'heure standard de la checklist, avec le verdict de"
+        . " ponctualité déjà calculé. Une photo en retard se signale dans un constat et dans le commentaire au magasin ;"
+        . " le retard ne change pas le niveau, qui juge ce que la photo montre.\n"
         . "N'invente aucun niveau hors barème.";
 
     /**
