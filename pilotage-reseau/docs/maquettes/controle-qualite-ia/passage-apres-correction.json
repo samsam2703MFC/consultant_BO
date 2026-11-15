@@ -1,0 +1,603 @@
+{
+  "source": "cockpit en ligne, GET /ia/note après la correction du 15/11/2026",
+  "jours": {
+    "2026-10-01": {
+      "3-1213": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Boissons",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "moyenne",
+          "constats": [
+            "Le frigo vertical central affiche des boissons mais le remplissage des étagères du bas n'est pas visible clairement",
+            "Un frigo vitré noir à droite semble vide ou très peu garni, ce qui pourrait concerner le rayon boissons",
+            "Luminosité très faible sur la photo, qui limite la vérification de l'alignement des bouteilles/canettes et de la propreté des vitres",
+            "Aucun objet étranger à la vente visible dans la zone boissons"
+          ],
+          "commentaire": "Vérifier que tous les frigos destinés aux boissons sont bien garnis, le frigo vitré à droite paraît vide sur la photo. Reprendre une photo avec un meilleur éclairage pour confirmer l'état du rayon.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4
+      },
+      "3-1214": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Épicerie",
+        "avant": {
+          "n": 3,
+          "conf": null,
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "moyenne",
+          "constats": [
+            "Étagères d'épicerie bien garnies (bocaux, confitures, bouteilles) sans espace vide visible",
+            "Produits alignés, présentation soignée",
+            "Aucun objet étranger à la vente visible sur les rayonnages",
+            "Éléments décoratifs (citrouilles) présents mais ne nuisent pas à la lisibilité du rayon"
+          ],
+          "commentaire": "Le rayon épicerie est correctement garni et rangé, conforme à l'attendu. Rien à reprendre sur ce point.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4.4
+      },
+      "3-1211": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Quiches",
+        "avant": {
+          "n": 2,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "faible",
+          "constats": [
+            "Le rayon « Quiches » n'est pas clairement identifiable sur la photo : on distingue surtout des sandwichs, salades en barquettes, viennoiseries et pains",
+            "Quelques petits contenants ronds sont visibles au centre mais impossibles à identifier formellement comme des quiches",
+            "Le cadrage et l'angle ne permettent pas de confirmer la présence ni l'état du comptoir à quiches"
+          ],
+          "commentaire": "Reprendre une photo centrée sur le comptoir des quiches pour pouvoir évaluer son état (garnissage, propreté, papier de cuisson). L'image actuelle ne permet pas de juger ce rayon spécifiquement.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": "Le modèle annonce une confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même."
+        },
+        "consultants": 4
+      },
+      "3-1209": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Tartes",
+        "avant": {
+          "n": 2,
+          "conf": "haute",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 2,
+          "nom": "Non conforme — majeur",
+          "confiance": "haute",
+          "constats": [
+            "Un ventilateur est posé directement sur le comptoir, au milieu des tartes : objet étranger à la vente visible sur le rayon",
+            "Le reste du comptoir est bien garni et varié (tartes aux fruits, tartes au chocolat, etc.)",
+            "Présentation globalement rangée et propre en dehors de cet élément"
+          ],
+          "commentaire": "Retirer le ventilateur du comptoir : un objet étranger à la vente ne doit pas être visible au milieu des produits. Le garnissage et la variété des tartes sont corrects par ailleurs.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4
+      },
+      "3-1210": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Traiteur",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Vitrine réfrigérée bien garnie : sandwiches, salades et barquettes alignés en rangées régulières",
+            "Compartiment du haut avec bacs de salades/taboulés également rempli",
+            "Aucun objet étranger visible sur le comptoir lui-même",
+            "Produits d'apparence fraîche et propre, rangement cohérent"
+          ],
+          "commentaire": "Le comptoir traiteur est bien rempli et rangé, conforme à l'attendu. Rien à signaler sur le rayon lui-même.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 3.8
+      },
+      "3-1207": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Viennoiseries",
+        "avant": {
+          "n": 3,
+          "conf": "haute",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "moyenne",
+          "constats": [
+            "Plaques de viennoiseries bien remplies, variétés groupées par sorte (chaussons, croissants, pains au chocolat, etc.)",
+            "Pas de trou ni d'emplacement vide visible sur le rayon viennoiseries",
+            "Aucun objet étranger à la vente visible sur le comptoir",
+            "Angle de prise de vue en plongée, légèrement de biais, mais le rayon reste lisible"
+          ],
+          "commentaire": "Rayon viennoiseries conforme : bien garni et rangé par sorte. Rien à reprendre sur ce point.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4
+      },
+      "3-1206": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "Photo du comptoir - Pains & Boulangerie",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "moyenne",
+          "constats": [
+            "Paniers de baguettes et pains ronds bien garnis sur la gauche du comptoir",
+            "Plusieurs variétés de pains visibles (pain tranché, pains ronds, baguettes)",
+            "Four et chariot de rangement en arrière-plan, hors du comptoir de vente, sans impact sur l'évaluation",
+            "Pas d'objet étranger à la vente visible sur le comptoir pain lui-même"
+          ],
+          "commentaire": "Le rayon pain est garni et correctement présenté, rien à signaler sur ce point. Veiller à maintenir ce niveau de remplissage au fil de la journée.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4
+      },
+      "3-1267": {
+        "shop": "Atelier by Max & Sandra - Gosselies",
+        "tache": "étiquetage des prix et allergènes",
+        "avant": {
+          "n": 1,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 2,
+          "nom": "Non conforme — majeur",
+          "confiance": "moyenne",
+          "constats": [
+            "Quelques étiquettes noires visibles près des pains, mais texte illisible sur la photo",
+            "Plusieurs tartes au premier plan n'affichent aucune étiquette de prix ou d'allergène visible",
+            "Aucune mention d'allergènes clairement lisible sur les produits présentés",
+            "Présentation du rayon elle-même rangée et garnie"
+          ],
+          "commentaire": "L'étiquetage des prix et allergènes doit être systématique et lisible sur chaque produit, notamment les tartes qui en sont dépourvues sur cette photo. Compléter l'affichage réglementaire manquant.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 3.6
+      },
+      "4-1213": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Boissons",
+        "avant": {
+          "n": 4,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Étagères du frigo globalement bien garnies : eaux, sodas (Coca, Sprite, Fanta), bière sans alcool, jus alignés par référence",
+            "Vitre du frigo propre, pas de traces ni de reflets gênants",
+            "Quelques espaces vides visibles en bas à droite de l'étagère inférieure, sans produit",
+            "Aucun objet étranger à la vente visible dans le rayon"
+          ],
+          "commentaire": "Rayon boissons conforme : présentation rangée et propre. Compléter les quelques espaces vides en bas à droite pour une présentation optimale.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4.2
+      },
+      "4-1214": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Épicerie",
+        "avant": {
+          "n": 2,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "faible",
+          "constats": [
+            "Le sujet attendu est une étagère de rayon épicerie, or la photo montre des sachets posés sur un comptoir/plan de travail, pas une étagère",
+            "Sachets alignés face visible, mais répartition en plusieurs petits groupes avec espaces entre eux",
+            "Extincteur et poteaux de balisage visibles en arrière-plan, sans lien avec le rayon lui-même",
+            "Aucune étagère garnie n'apparaît dans le cadre, empêchant une évaluation fiable du critère demandé"
+          ],
+          "commentaire": "La photo ne montre pas d'étagère de rayon épicerie mais des sachets posés sur un comptoir : merci de recadrer sur l'étagère elle-même pour permettre le contrôle. Si ce comptoir sert de présentation, veillez à resserrer les sachets pour éviter les espaces vides entre les groupes.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": "Le modèle annonce une confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même."
+        },
+        "consultants": 4
+      },
+      "4-1211": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Quiches",
+        "avant": {
+          "n": 1,
+          "conf": "haute",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 1,
+          "nom": "Non conforme — critique",
+          "confiance": "faible",
+          "constats": [
+            "Le comptoir visible présente des pizzas, pas des quiches",
+            "Aucune quiche n'est identifiable sur la photo",
+            "Le rayon contrôlé par la tâche (quiches) n'apparaît pas dans le cadre"
+          ],
+          "commentaire": "La photo montre le rayon pizzas et non le rayon quiches attendu par cette tâche. Merci de reprendre une photo du comptoir des quiches.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": "Le modèle annonce une confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même."
+        },
+        "consultants": 4
+      },
+      "4-1209": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Tartes",
+        "avant": {
+          "n": 2,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "moyenne",
+          "constats": [
+            "Le comptoir n'est garni que sur une partie de sa longueur, plusieurs emplacements vides sont visibles à l'avant et à l'arrière de la vitrine",
+            "Quelques tartes présentes mais espacées, ne couvrant pas toute la surface du comptoir",
+            "Propreté et rangement corrects sur la zone garnie"
+          ],
+          "commentaire": "Le comptoir doit être garni de tartes sur toute sa longueur, les emplacements vides sont à combler. Sinon la présentation des tartes visibles est propre et rangée.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 3.8
+      },
+      "4-1210": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Traiteur",
+        "avant": {
+          "n": 2,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 2,
+          "nom": "Non conforme — majeur",
+          "confiance": "moyenne",
+          "constats": [
+            "Vitrine réfrigérée du rayon traiteur très peu garnie : seulement quelques pièces disposées sur la grille, la majeure partie de la surface reste vide.",
+            "Espaces vides nets visibles au centre et à gauche de la vitrine réfrigérée.",
+            "Les étagères du haut (pretzels, viennoiseries emballées) sont bien remplies mais ne relèvent pas du rayon traiteur contrôlé.",
+            "Aucun objet étranger à la vente visible dans la vitrine."
+          ],
+          "commentaire": "La vitrine réfrigérée du rayon traiteur doit être regarnie, les espaces vides sont trop importants. Réapprovisionner pour couvrir l'ensemble de la surface de présentation.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 3.8
+      },
+      "4-1207": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Viennoiseries",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Comptoir bien garni, plaques remplies de viennoiseries variées (croissants, pains au chocolat, chaussons)",
+            "Viennoiseries rangées par sorte, présentation ordonnée",
+            "Produits entiers, aspect propre et appétissant",
+            "Aucun objet étranger à la vente visible sur le comptoir"
+          ],
+          "commentaire": "Comptoir conforme : rayon viennoiseries bien rempli et rangé par sorte. Rien à corriger sur ce rayon.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4
+      },
+      "4-1206": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Pains & Boulangerie",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Comptoir garni : rangée de pains ronds alignés, baguettes et pain long à gauche, paniers de pains et viennoiseries bien remplis",
+            "Aucun objet étranger à la vente visible sur le comptoir",
+            "Présentation propre et rangée, pas d'emplacement vide apparent",
+            "Arrière-plan avec chariots de réserve, sans impact sur l'évaluation du comptoir"
+          ],
+          "commentaire": "Comptoir pains et boulangerie conforme : bien garni et rangé, sans objet parasite. Rien à reprendre.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": 4.2
+      }
+    },
+    "2026-11-15": {
+      "4-1212": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Biscuiterie",
+        "avant": {
+          "n": null,
+          "conf": null,
+          "motif": "réponse non exploitable du modèle"
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "faible",
+          "constats": [
+            "Le rayon biscuiterie n'est pas clairement identifiable sur la photo : seuls quelques sachets emballés (étiquetés 'Madeleines' et autre) sont visibles en haut à gauche, partiellement coupés",
+            "La majorité du cadrage montre des quiches/tartes salées et une ardoise de prix, hors sujet de la tâche",
+            "Des cartons empilés sont visibles sur l'étagère du haut, non identifiables comme biscuiterie",
+            "Impossible de juger le rangement, la propreté ou le remplissage du présentoir à biscuits faute de vue dégagée sur ce rayon"
+          ],
+          "commentaire": "Reprendre une photo cadrée sur le rayon biscuiterie (boîtes, sachets, biscuits) pour permettre le contrôle. Le cadrage actuel montre surtout le comptoir de tartes salées.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": "Le modèle annonce une confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même."
+        },
+        "consultants": null
+      },
+      "4-1213": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Boissons",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "moyenne",
+          "constats": [
+            "Étagère du bas (sodas en canette) bien remplie et alignée (Sprite, Fanta, Red Bull, etc.)",
+            "Étagère du haut (eaux en bouteille) complète",
+            "Étagère intermédiaire (jus, canettes) présente un espace vide entre les jus et les canettes de soda rouges",
+            "Présence de produits non-boissons (sandwichs, viennoiseries) sur une étagère du même meuble, ce qui n'est pas attendu dans le rayon boissons"
+          ],
+          "commentaire": "Le rayon boissons est globalement bien garni mais un espace vide est visible sur l'étagère des jus. Veiller aussi à ne pas mélanger des produits alimentaires (sandwichs) avec les boissons sur le même meuble.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      },
+      "4-1214": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Épicerie",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "moyenne",
+          "constats": [
+            "Étagères partiellement remplies : espaces vides visibles à droite de l'étagère du bas et entre les groupes de sachets sur le niveau supérieur",
+            "Sachets globalement alignés mais pas parfaitement uniformes en rangées",
+            "Aucun objet étranger à la vente visible sur les étagères",
+            "Pas de comptoir visible sur la photo, seul le rayon épicerie est montré, conforme au sujet attendu"
+          ],
+          "commentaire": "Compléter les étagères pour supprimer les espaces vides, notamment en bas à droite et sur le niveau supérieur. Réaligner les sachets pour une présentation plus homogène.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      },
+      "4-1208": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Pâtisseries",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Plaques bien remplies: éclairs, croissants, chaussons, carrés et gâteaux individuels présents en quantité",
+            "Produits entiers, sans trace visible d'affaissement ou d'abîme",
+            "Présentation rangée par type de produit",
+            "Aucun objet étranger à la vente visible dans la vitrine"
+          ],
+          "commentaire": "Comptoir pâtisseries bien garni et rangé, rien à signaler. Continuer à maintenir ce niveau de remplissage.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      },
+      "4-1211": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Quiches",
+        "avant": {
+          "n": 2,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Comptoir garni de plusieurs quiches variées (légumes, lorraine, etc.)",
+            "Quiches entamées présentes mais cela reste conforme aux règles de vente au quart",
+            "Papier de cuisson visible sous chaque quiche, présentation correcte",
+            "Pas d'emplacement vide ni d'objet étranger visible dans la vitrine"
+          ],
+          "commentaire": "Rayon quiches bien garni et propre, aucun écart visible. Rien à corriger.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      },
+      "4-1209": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Tartes",
+        "avant": {
+          "n": 2,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 3,
+          "nom": "Non conforme — mineur",
+          "confiance": "moyenne",
+          "constats": [
+            "Quatre tartes visibles mais espacées avec de larges zones vides entre elles sur le comptoir",
+            "Une tarte est entamée (quart manquant), ce qui est normal selon la politique de vente au quart",
+            "Aucun objet étranger à la vente visible",
+            "Présentation globalement propre mais manque de densité sur la longueur du comptoir"
+          ],
+          "commentaire": "Le comptoir n'est pas garni sur toute sa longueur, avec des espaces vides entre les tartes. Il faudrait compléter l'offre pour occuper l'ensemble du linéaire.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      },
+      "4-1207": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Viennoiseries",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Comptoir garni, sans emplacement vide visible",
+            "Viennoiseries rangées par sorte (chaussons, croissants, pains au chocolat, escargots)",
+            "Pas d'objet étranger à la vente visible sur le comptoir",
+            "Arrière-boutique visible en fond (chariot, four) mais hors du périmètre évalué"
+          ],
+          "commentaire": "Présentation conforme : comptoir rempli et rangé par sorte. Rien à corriger sur ce point.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      },
+      "4-1206": {
+        "shop": "Atelier by - Halle",
+        "tache": "Photo du comptoir - Pains & Boulangerie",
+        "avant": {
+          "n": 3,
+          "conf": "moyenne",
+          "motif": null
+        },
+        "apres": {
+          "etat": "ok",
+          "niveau": 4,
+          "nom": "Conforme",
+          "confiance": "haute",
+          "constats": [
+            "Comptoir vitré bien garni : pains, viennoiseries, brioches en quantité, sans trou visible",
+            "Paniers et étagères à l'arrière-plan remplis de pains variés",
+            "Aucun objet étranger à la vente visible sur le comptoir",
+            "Présentation un peu dense/empilée par endroits mais pas de désordre franc"
+          ],
+          "commentaire": "Comptoir conforme : bien garni et varié, sans vide ni objet parasite. Veiller à garder une présentation aérée pour une lisibilité optimale des produits.",
+          "motif": null,
+          "modele": "claude-sonnet-5",
+          "avertissement": null
+        },
+        "consultants": null
+      }
+    }
+  }
+}

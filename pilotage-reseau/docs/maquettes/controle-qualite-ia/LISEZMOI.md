@@ -42,3 +42,18 @@ la page ; la mesure de l'accord sur l'historique (`mac_task_review`).
 
 Régénérer : serveur statique sur 8099 depuis `pilotage-reseau/`, puis
 `node docs/maquettes/controle-qualite-ia/generer.js`.
+
+## Passages réels du modèle (15/11/2026)
+
+Bouton « Proposer » du cockpit en ligne (`GET /ia/note`, clé d'`erp_cles`, `claude-sonnet-5`), sans rien écrire au panel.
+
+| Fichier | Ce que c'est |
+|---|---|
+| `passage-reel.json` | Premier passage, 19 photos du 01/10 (4 introuvables : le panel ne liste plus ces tâches à cette date) |
+| `passage-2026-11-15.json` | Premier passage, 8 photos du 15/11 (Halle) |
+| `passage-apres-correction.json` | Les 23 mêmes photos après la correction (règles, critères des rayons, schéma) |
+
+Avant : 1 conforme sur 22 notées, 1 échec (« réponse non exploitable »), le cadrage et les prix pénalisés.
+Après : 11 conformes sur 23, aucun échec ; les écarts restants portent sur le comptoir (objet étranger, vides,
+mauvais rayon photographié). La moyenne « consultants » de `passage-reel.json` est celle des notes passées sur la
+même tâche du même magasin, pas la note de ces photos (elles n'ont pas été notées).
