@@ -135,6 +135,8 @@ function ep_dashboard_marketing_annee(): array
  * (apTranches2, product-category-groups, gravées une fois closes). La marge réalisée : le CA HT encaissé (le CA TTC au
  * rapport HT/TTC du produit) moins la quantité × le coût de la recette du jour (adPrixCatalogue, products/available) —
  * la règle de « Développement » : une recette qui coûte plus que le prix, ou moins de 5 % de celui-ci, n'est pas crue.
+ * Un produit dont le prix moyen encaissé s'écarte de plus de 15 % du prix de la pièce entière (vendu aussi en portions
+ * ou en variantes) : CA HT × le taux de marge de la recette (`methode: taux`), au lieu de pièces × coût (`pieces`).
  */
 function ep_dashboard_marketing_ventes_periode(): array
 {
@@ -164,9 +166,17 @@ function ep_dashboard_marketing_ventes_periode(): array
         elseif ($c === null || $c['ht'] === null) { $motif = 'prix du catalogue inconnu'; }
         elseif ($c['cout'] === null) { $motif = 'coût de la recette manquant'; }
         elseif ($c['cout'] >= $c['ht'] || $c['cout'] < 0.05 * $c['ht']) { $motif = 'recette à vérifier'; }
-        elseif ($caHt !== null) { $marge = $caHt - $q * $c['cout']; }
+        elseif ($caHt !== null) {
+            // Un produit vendu aussi en portions ou en variantes (prix moyen encaissé loin du prix de la pièce entière) :
+            // pièces × coût de la recette entière gonflerait le coût ; on applique alors le taux de marge de la recette.
+            $prixMoyen = $ca / $q;
+            if ($c['ttc'] !== null && abs($prixMoyen / $c['ttc'] - 1) <= 0.15) { $marge = $caHt - $q * $c['cout']; $methode = 'pieces'; }
+            else { $marge = $caHt * (1 - $c['cout'] / $c['ht']); $methode = 'taux'; }
+        }
         $out[(string) $pid] = ['q' => round($q, 1), 'ca' => round($ca, 2), 'caHt' => $caHt !== null ? round($caHt, 2) : null,
-            'marge' => $marge !== null ? round($marge, 2) : null, 'margePct' => $marge !== null && $caHt ? round(100 * $marge / $caHt, 1) : null, 'motif' => $motif];
+            'marge' => $marge !== null ? round($marge, 2) : null, 'margePct' => $marge !== null && $caHt ? round(100 * $marge / $caHt, 1) : null, 'motif' => $motif,
+            'methode' => $methode ?? null];
+        unset($methode);
         $tot['q'] += $q; $tot['ca'] += $ca; $tot['caHt'] += (float) ($caHt ?? 0);
         if ($marge !== null) { $tot['marge'] += $marge; } elseif ($q > 0) { $tot['sansMarge']++; }
     }

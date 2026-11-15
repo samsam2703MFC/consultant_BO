@@ -131,7 +131,7 @@
     const cell = (v, k) => !D ? `<td class="n">${V && V.err ? '—' : '<span class="db-sk cal-sk"></span>'}</td>` : `<td class="n">${k(v)}</td>`;
     const corps = lignes.map(l => `<tr><td class="cat">${esc(l.cat)}</td><td>${esc(l.nom)}${l.prix != null ? `<small>${eur2(l.prix)} TTC aujourd’hui</small>` : ''}</td>
       ${cell(l.v, v => v ? nf1(v.q) : '0')}${cell(l.v, v => v ? eur2(v.ca) : eur2(0))}${cell(l.v, v => v && v.caHt != null ? eur2(v.caHt) : '—')}
-      ${cell(l.v, v => !v ? eur2(0) : v.marge != null ? eur2(v.marge) : `<span class="cal-motif" title="${esc(v.motif || '')}">${esc(v.motif || '—')}</span>`)}${cell(l.v, v => v && v.margePct != null ? nf1(v.margePct) + ' %' : '—')}</tr>`).join('');
+      ${cell(l.v, v => !v ? eur2(0) : v.marge != null ? eur2(v.marge) + (v.methode === 'taux' ? '<small title="Vendu aussi en portions ou en variantes : le taux de marge de la recette, appliqué au CA HT">au taux de la recette</small>' : '') : `<span class="cal-motif" title="${esc(v.motif || '')}">${esc(v.motif || '—')}</span>`)}${cell(l.v, v => v && v.margePct != null ? nf1(v.margePct) + ' %' : '—')}</tr>`).join('');
     const T = D && D.total;
     return `<div class="cal-drop">${tete}
       ${V && V.err ? `<p class="cal-alerte">Les ventes de l’an dernier ne se lisent pas : ${esc(V.err)}.</p>` : ''}
@@ -141,7 +141,7 @@
         <tbody>${corps}</tbody>
         ${T ? `<tfoot><tr><td colspan="2">La gamme, ${V && V.repli ? 'cette année' : 'l’an dernier'} sur la saison${T.sansMarge ? ` <small>${T.sansMarge} produit${T.sansMarge > 1 ? 's' : ''} sans marge calculable (recette ou prix à vérifier) : hors total de la marge</small>` : ''}</td>
           <td class="n">${nf1(T.q)}</td><td class="n">${eur2(T.ca)}</td><td class="n">${eur2(T.caHt)}</td><td class="n">${eur2(T.marge)}</td><td class="n">${T.margePct != null ? nf1(T.margePct) + ' %' : '—'}</td></tr></tfoot>` : ''}</table>
-      <p class="cal-src">Ventes du magasin au panel ; marge réalisée = CA HT encaissé − quantité × coût de la recette du jour.</p></div>`;
+      <p class="cal-src">Ventes du magasin au panel ; marge réalisée = CA HT encaissé − quantité × coût de la recette du jour (un produit vendu aussi en portions ou en variantes : le CA HT × le taux de marge de sa recette).</p></div>`;
   }
   const jourMois = mmjj => /^\d{2}-\d{2}$/.test(mmjj || '') ? (+mmjj.slice(3)) + ' ' + MOIS_C[+mmjj.slice(0, 2) - 1] : '—';
   const isoCourt = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? jourMois(iso.slice(5, 10)) : '—';
