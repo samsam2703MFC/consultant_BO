@@ -34,6 +34,21 @@ declare(strict_types=1);
  *   GET    /dashboard/catalogues/{id}/document?lang=fr|nl  → …/catalogues/{id}/document
  *   POST   /dashboard/catalogues/{id}/impression {lang}    → …/catalogues/{id}/print-links
  *
+ * L'assistant du franchisé (15/11/2026, client : « choix du catalogue, ensuite les gammes, la présentation, validation et
+ * exportation PDF ») — pour un de MES catalogues ({base} = /dashboard/catalogues) ou un catalogue de la MARQUE préparé
+ * pour ma boutique ({base} = /dashboard/catalogues/marque) :
+ *   GET    {base}/{id}/verifications?lang=           → …/{catalogues|brand-catalogues}/{id}/checks (les points à voir)
+ *   PUT    {base}/{id}/verifications/{code} {seen}   → …/{id}/checks/{code}
+ *   POST   {base}/{id}/imprime {quantity}            → …/{id}/prints (« Marquer imprimé · N ex. », charte figée)
+ *   GET    {base}/{id}/lien                          → …/{id}/public-links (le lien permanent du catalogue en ligne)
+ *   POST   {base}/{id}/lien                          → …/{id}/public-links (« Nouveau lien » : l'ancien est révoqué)
+ * Les catalogues de la marque reçus :
+ *   GET    /dashboard/catalogues/marque              → …/brand-catalogues?perPage=50
+ *   GET    /dashboard/catalogues/marque/{id}[/document?lang=]
+ *   PUT    /dashboard/catalogues/marque/{id}/reception {status: pris}   (« Le prendre tel quel »)
+ *   POST   /dashboard/catalogues/marque/{id}/adaptation                 (« L'adapter à ma boutique » : une copie à moi)
+ *   POST   /dashboard/catalogues/marque/{id}/impression {lang}          (lien d'impression de MA version)
+ *
  * Réglages (aucun écrit en dur) :
  *   - l'adresse de l'API du Marketing : `mar_api_url` d'erp_cles (portail commun, comme rec_api_url / pil_api_url ;
  *     ex. « https://<hôte>/marketing/api »), à défaut `marketingApi` de config/config.php ;
@@ -167,6 +182,36 @@ function cmRoute(string $method, string $path): ?array
     } elseif (preg_match('#^/(\d{1,10})/impression$#', $suite, $m) && $method === 'POST') {
         $cible = '/catalogues/' . $m[1] . '/print-links';
         $corps = ['lang' => (body()['lang'] ?? 'fr') === 'nl' ? 'nl' : 'fr'];
+    } elseif ($suite === '/marque' && $method === 'GET') {
+        $cible = '/brand-catalogues';
+        $requete = ['perPage' => 50];
+    } elseif (preg_match('#^/marque/(\d{1,10})$#', $suite, $m) && $method === 'GET') {
+        $cible = '/brand-catalogues/' . $m[1];
+    } elseif (preg_match('#^/marque/(\d{1,10})/document$#', $suite, $m) && $method === 'GET') {
+        $cible = '/brand-catalogues/' . $m[1] . '/document';
+        $requete = ['lang' => ($_GET['lang'] ?? 'fr') === 'nl' ? 'nl' : 'fr'];
+    } elseif (preg_match('#^/marque/(\d{1,10})/reception$#', $suite, $m) && $method === 'PUT') {
+        $cible = '/brand-catalogues/' . $m[1] . '/reception';
+        $corps = ['status' => (string) (body()['status'] ?? '')];
+    } elseif (preg_match('#^/marque/(\d{1,10})/adaptation$#', $suite, $m) && $method === 'POST') {
+        $cible = '/brand-catalogues/' . $m[1] . '/adaptations';
+        $corps = [];
+    } elseif (preg_match('#^/marque/(\d{1,10})/impression$#', $suite, $m) && $method === 'POST') {
+        $cible = '/brand-catalogues/' . $m[1] . '/print-links';
+        $corps = ['lang' => (body()['lang'] ?? 'fr') === 'nl' ? 'nl' : 'fr'];
+    } elseif (preg_match('#^(/marque)?/(\d{1,10})/verifications$#', $suite, $m) && $method === 'GET') {
+        $cible = ($m[1] !== '' ? '/brand-catalogues/' : '/catalogues/') . $m[2] . '/checks';
+        $requete = ['lang' => ($_GET['lang'] ?? 'fr') === 'nl' ? 'nl' : 'fr'];
+    } elseif (preg_match('#^(/marque)?/(\d{1,10})/verifications/([a-z0-9-]{1,60})$#', $suite, $m) && $method === 'PUT') {
+        $cible = ($m[1] !== '' ? '/brand-catalogues/' : '/catalogues/') . $m[2] . '/checks/' . $m[3];
+        $corps = ['seen' => (body()['seen'] ?? null) === true];
+    } elseif (preg_match('#^(/marque)?/(\d{1,10})/imprime$#', $suite, $m) && $method === 'POST') {
+        $cible = ($m[1] !== '' ? '/brand-catalogues/' : '/catalogues/') . $m[2] . '/prints';
+        $q = body()['quantity'] ?? null;
+        $corps = ['quantity' => is_int($q) ? $q : (is_string($q) && ctype_digit($q) ? (int) $q : 0)];
+    } elseif (preg_match('#^(/marque)?/(\d{1,10})/lien$#', $suite, $m) && in_array($method, ['GET', 'POST'], true)) {
+        $cible = ($m[1] !== '' ? '/brand-catalogues/' : '/catalogues/') . $m[2] . '/public-links';
+        if ($method === 'POST') { $corps = []; }
     } else {
         return cmErreur(404, 'RESOURCE_NOT_FOUND', 'Route inconnue.');
     }
