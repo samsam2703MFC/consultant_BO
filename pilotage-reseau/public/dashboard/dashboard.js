@@ -6721,7 +6721,9 @@
     // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
     // le catalogue, qui relèvent du Marketing.
     // Mon marketing (15/11/2026, « faire le total du marketing ») : tout le marketing du magasin sur une page (marketing.js).
-    ['Marketing', [['marketing', 'Mon marketing', 'pub'], ['posts', 'Calendrier des posts', 'calEd'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
+    // Plus de lien vers l'espace boutique (15/11/2026, « pas de liens dans le rail, tout doit se faire dans le cockpit
+    // franchisé ») : le calendrier des posts est un onglet de Mon marketing.
+    ['Marketing', [['marketing', 'Mon marketing', 'pub'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
   ];
   const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : 'Dashboard'; };
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
@@ -6867,7 +6869,7 @@
     if (S.vue === 'tresorerie') { h += '<div id="db-tresorerie"></div>'; $.innerHTML = h; brancher(); monterTresorerie(); return; }
     // Offres : l'élément du module, gardé d'un rendu à l'autre comme Mon catalogue.
     if (S.vue === 'offres') { h += '<div id="db-offres"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-offres'); if (p && window.DashOffres) { p.replaceWith(window.DashOffres.racine(S.shop, { apiBase: API, nomShop: nomShop(), onCompte: n => { if (S.ofN !== n) { S.ofN = n; railMaj(avecRail()); } } })); } else if (p) { p.innerHTML = '<div class="db-err">Le module des offres n’a pas été chargé.</div>'; } return; }
-    if (S.vue === 'marketing') { h += '<div id="db-marketing"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-marketing'); if (p && window.DashMarketing) { p.replaceWith(window.DashMarketing.racine(S.shop, { apiBase: API, postsUrl: postsUrl() })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du marketing n’a pas été chargé.</div>'; } return; }
+    if (S.vue === 'marketing') { h += '<div id="db-marketing"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-marketing'); if (p && window.DashMarketing) { p.replaceWith(window.DashMarketing.racine(S.shop, { apiBase: API })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du marketing n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }

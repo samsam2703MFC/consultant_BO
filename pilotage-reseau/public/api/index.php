@@ -379,7 +379,7 @@ function route(string $method, string $path): mixed
     // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
     if (($c = cmRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Mon marketing (15/11/2026) : le hub du marketing, pour le magasin de la requête (src/dashboard_marketing.php).
-    if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
+    if (($c = dmRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
