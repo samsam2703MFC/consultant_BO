@@ -27,3 +27,4 @@
 2026-11-15T19:12:01Z Boîte mail du magasin (IMAP/SMTP OVH, modèles, messages automatiques, créer une offre depuis un e-mail)
 2026-11-15T19:25:32Z Mon marketing : calendrier de l'année ; Mon catalogue : importer une photo (promotions, bundles, pages)
 2026-11-15T19:36:28Z Contrôle des tâches : assistant de notation (manuelle ou assistée), ponctualité, leçons
+2026-11-15T19:52:44Z Calendrier lisible et illustré, liste des saisons chiffrée N-1, barre de défilement ruby
