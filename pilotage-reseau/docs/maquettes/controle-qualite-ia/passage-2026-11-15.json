@@ -1,0 +1,146 @@
+{
+  "date": "2026-11-15",
+  "source": "cockpit en ligne, GET /ia/note (bouton « Proposer »), clé et réglage du serveur",
+  "p": {
+    "4-1212": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Biscuiterie",
+      "faitLe": "2026-11-15 06:39",
+      "etat": "attente",
+      "n": null,
+      "nom": null,
+      "conf": null,
+      "constats": [],
+      "commentaire": null,
+      "motif": "réponse non exploitable du modèle",
+      "modele": null
+    },
+    "4-1213": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Boissons",
+      "faitLe": "2026-11-15 06:39",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Étagère du milieu (sandwichs/snacks) presque vide avec espaces non réapprovisionnés",
+        "Rangées de boissons (eaux, jus, sodas, canettes) bien remplies et organisées",
+        "Reflet/vitre gênant légèrement la lisibilité du cliché",
+        "Angle de prise de vue correct, meuble globalement visible"
+      ],
+      "commentaire": "Le rayon boissons est correctement approvisionné et rangé, mais l'étagère des produits alimentaires juste au-dessus est quasi vide et nuit à l'impression générale du meuble. Recomposer cette étagère avant de reprendre la photo si celle-ci doit aussi valider la présentation globale du comptoir.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    },
+    "4-1214": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Épicerie",
+      "faitLe": "2026-11-15 06:40",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Étagère avec sachets de café/épicerie, pas de comptoir visible sur la photo",
+        "Rangement par étagères homogène mais sans étiquetage prix visible",
+        "Sol et zone en bas d'étagère vides, aspect un peu inachevé",
+        "Cadrage en angle, lumière correcte mais sujet 'comptoir' non identifiable clairement"
+      ],
+      "commentaire": "La photo montre un meuble de rangement d'épicerie, pas un comptoir à proprement parler. Vérifier l'intitulé de la tâche et reprendre la photo en cadrant le comptoir attendu, avec étiquetage prix visible.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    },
+    "4-1208": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Pâtisseries",
+      "faitLe": "2026-11-15 06:37",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Rangées de pâtisseries partiellement vides à l'avant (plaques clairsemées, places libres visibles)",
+        "Étiquetage produits/prix absent ou non visible",
+        "Cadrage en contre-plongée légèrement de travers, reflet sur la vitre",
+        "Présentation générale correcte : variété visible (éclairs, croissants, parts de gâteaux)"
+      ],
+      "commentaire": "Réassortir les plaques avant le prochain cliché et ajouter l'étiquetage prix/produits. Reprendre la photo avec un cadrage plus droit et sans reflet.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    },
+    "4-1211": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Quiches",
+      "faitLe": "2026-11-15 06:38",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "moyenne",
+      "constats": [
+        "Plusieurs quiches/tartes entamées avec parts manquantes, présentation peu engageante",
+        "Papiers de cuisson visibles et froissés sous les produits",
+        "Disposition désordonnée, pas d'alignement ni d'étiquetage visible",
+        "Vitrine encombrée, certains produits se chevauchent"
+      ],
+      "commentaire": "La présentation en vitrine manque de soin (produits entamés, papiers visibles, rangement désordonné). À reprendre pour une mise en valeur conforme aux standards du réseau.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    },
+    "4-1209": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Tartes",
+      "faitLe": "2026-11-15 06:38",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "moyenne",
+      "constats": [
+        "Une tarte est entamée/coupée, visuel non présentable en vitrine",
+        "Éclairage faible, photo assombrie sur les bords",
+        "Cadrage en angle, perspective peu flatteuse pour le produit",
+        "Espacement irrégulier entre les tartes sur le présentoir"
+      ],
+      "commentaire": "La tarte entamée ne doit pas apparaître sur une photo de présentation de comptoir. Reprendre la photo avec un meilleur éclairage, un cadrage plus droit et uniquement des produits entiers.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    },
+    "4-1207": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Viennoiseries",
+      "faitLe": "2026-11-15 06:37",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Présentation des viennoiseries correcte, variété visible (croissants, pains au chocolat, chaussons, torsades glacées)",
+        "Cadrage englobe l'arrière-boutique (chariots, évier, zone de production) ce qui n'est pas conforme à un cadrage soigné de comptoir client",
+        "Étiquettes/prix absents ou non visibles",
+        "Angle de prise de vue plongeant, peu valorisant pour le produit"
+      ],
+      "commentaire": "Le produit est correctement garni et varié, mais le cadrage inclut l'arrière-boutique au lieu de se concentrer sur le comptoir. Reprendre la photo avec un angle plus frontal et un cadrage resserré sur la vitrine uniquement.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    },
+    "4-1206": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Pains & Boulangerie",
+      "faitLe": "2026-11-15 06:36",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Photo prise en angle/diagonale, cadrage peu professionnel pour une photo de comptoir",
+        "Éclairage faible, teintes orangées qui nuisent à la lisibilité des produits",
+        "Étagères de pains en arrière-plan floues et peu mises en valeur",
+        "Comptoir principal correctement garni (pains, viennoiseries, cookies visibles)",
+        "Présence d'éléments hors sujet (prise électrique, structure métallique au plafond) dans le cadre"
+      ],
+      "commentaire": "Le contenu du comptoir est correct mais la prise de vue (angle, luminosité, cadrage) ne met pas assez en valeur les produits. Reprendre la photo de face avec un meilleur éclairage et un cadrage centré sur le comptoir.",
+      "motif": null,
+      "modele": "claude-sonnet-5"
+    }
+  }
+}
