@@ -283,3 +283,4 @@
 .cal-motif { font-size: 11px; color: #9A5E0C; }
 .cal-sk { display: inline-block; width: 56px; height: 12px; vertical-align: middle; }
 .cal-src { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
+.cal-note { margin: 4px 0 10px; padding: 8px 12px; border-radius: 8px; background: var(--table-head); font-size: 12px; color: var(--ink); }

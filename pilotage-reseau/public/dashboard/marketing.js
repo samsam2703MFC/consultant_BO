@@ -89,20 +89,37 @@
   }
   /** Le panel connaît un produit par son identifiant (pwaId), le catalogue par sa référence. */
   const pidDe = r => { const p = st.catalogue && st.catalogue[String(r)]; return p && p.pwaId ? +p.pwaId : +r; };
+  /** La saison de l'année regardée : [du, au] (à cheval : de N à N+1). */
+  function fenetreN(s, an) {
+    if (!/^\d{2}-\d{2}$/.test(s.debut || '') || !/^\d{2}-\d{2}$/.test(s.fin || '')) { return null; }
+    return s.debut <= s.fin ? [an + '-' + s.debut, an + '-' + s.fin] : [an + '-' + s.debut, (an + 1) + '-' + s.fin];
+  }
+  /**
+   * Les chiffres d'une saison : l'an dernier sur la même période. Sans aucune vente l'an dernier (un magasin qui n'était
+   * pas ouvert, une gamme absente), ceux de cette année si la saison a commencé — et la liste le dit.
+   */
   function chargerVentes(s) {
     const f = fenetreN1(s, st.an); if (!f || !(s.produits || []).length) { return; }
     const cle = s.id + ':' + f[0];
     if (st.ventes[cle]) { return; }
-    st.ventes[cle] = { du: f[0], au: f[1] };
-    lire('/dashboard/marketing/ventes-periode?shop=' + encodeURIComponent(st.shop) + '&du=' + f[0] + '&au=' + f[1] + '&pids=' + s.produits.map(pidDe).join(','))
-      .then(d => { st.ventes[cle].d = d; }).catch(e => { st.ventes[cle].err = e.message; }).finally(rendre);
+    const V = st.ventes[cle] = { du: f[0], au: f[1] };
+    const lireP = (du, au) => lire('/dashboard/marketing/ventes-periode?shop=' + encodeURIComponent(st.shop) + '&du=' + du + '&au=' + au + '&pids=' + s.produits.map(pidDe).join(','));
+    lireP(f[0], f[1]).then(d => {
+      V.d = d;
+      const g = fenetreN(s, st.an), a = auj();
+      if (d.total && !d.total.q && g && g[0] <= a) {
+        return lireP(g[0], g[1] < a ? g[1] : a).then(d2 => { if (d2.total && d2.total.q) { V.n1Vide = true; V.repli = { du: g[0], au: g[1] < a ? g[1] : a }; V.d = d2; } else { V.vide = true; } });
+      }
+      if (d.total && !d.total.q) { V.vide = true; }
+    }).catch(e => { V.err = e.message; }).finally(rendre);
   }
   const eur2 = v => v == null || isNaN(v) ? '—' : new Intl.NumberFormat('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v).replace(/[  ]/g, ' ') + ' €';
   const dLongue = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? (+iso.slice(8, 10)) + ' ' + MOIS_C[+iso.slice(5, 7) - 1] + ' ' + iso.slice(0, 4) : '—';
   /** La liste d'une saison, sur toute la largeur : catégorie, produit, et ce qu'il a fait l'an dernier sur la saison. */
   function listeSaison(s, img) {
     const n = (s.produits || []).length, f = fenetreN1(s, st.an), V = f ? st.ventes[s.id + ':' + f[0]] : null;
-    const tete = `<div class="cal-drop-h"><img src="${esc(img)}" alt=""><div><b>${esc(s.nom)}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)} · ${n} produit${n > 1 ? 's' : ''} au panel${f ? ` · les chiffres : l’an dernier, du ${dLongue(f[0])} au ${dLongue(f[1])}` : ''}</small></div>
+    const quand = V && V.repli ? `cette année, du ${dLongue(V.repli.du)} au ${dLongue(V.repli.au)}` : f ? `l’an dernier, du ${dLongue(f[0])} au ${dLongue(f[1])}` : '';
+    const tete = `<div class="cal-drop-h"><img src="${esc(img)}" alt=""><div><b>${esc(s.nom)}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)} · ${n} produit${n > 1 ? 's' : ''} au panel${quand ? ' · les chiffres : ' + quand : ''}</small></div>
       <button type="button" class="cal-x" data-calsaison="${s.id}" aria-label="Fermer">×</button></div>${s.alerte ? `<p class="cal-alerte">⚠ ${esc(s.alerte)}</p>` : ''}`;
     if (!n) { return `<div class="cal-drop">${tete}<p class="mc-mu">Pas de produit rattaché à cette gamme au panel.</p></div>`; }
     const D = V && V.d, P = D ? D.produits : {};
@@ -118,9 +135,11 @@
     const T = D && D.total;
     return `<div class="cal-drop">${tete}
       ${V && V.err ? `<p class="cal-alerte">Les ventes de l’an dernier ne se lisent pas : ${esc(V.err)}.</p>` : ''}
-      <table class="cal-t"><thead><tr><th>Catégorie</th><th>Produit</th><th class="n">Qté vendue N-1</th><th class="n">CA TTC N-1</th><th class="n">CA HT N-1</th><th class="n">Marge réalisée</th><th class="n">Marge %</th></tr></thead>
+      ${V && V.n1Vide ? `<p class="cal-note">Aucune vente du magasin sur cette saison l’an dernier (le magasin n’était pas encore ouvert, ou la gamme n’y était pas) : voici les chiffres de cette année, du ${dLongue(V.repli.du)} au ${dLongue(V.repli.au)}.</p>` : ''}
+      ${V && V.vide ? `<p class="cal-note">Aucune vente du magasin sur cette saison l’an dernier${fenetreN(s, st.an) && fenetreN(s, st.an)[0] <= auj() ? ', ni cette année' : ' — et elle n’a pas encore commencé cette année'} : le magasin n’était peut-être pas encore ouvert, ou la gamme n’y était pas.</p>` : ''}
+      <table class="cal-t"><thead><tr><th>Catégorie</th><th>Produit</th><th class="n">Qté vendue ${V && V.repli ? 'N' : 'N-1'}</th><th class="n">CA TTC ${V && V.repli ? 'N' : 'N-1'}</th><th class="n">CA HT ${V && V.repli ? 'N' : 'N-1'}</th><th class="n">Marge réalisée</th><th class="n">Marge %</th></tr></thead>
         <tbody>${corps}</tbody>
-        ${T ? `<tfoot><tr><td colspan="2">La gamme, l’an dernier sur la saison${T.sansMarge ? ` <small>${T.sansMarge} produit${T.sansMarge > 1 ? 's' : ''} sans marge calculable (recette ou prix à vérifier) : hors total de la marge</small>` : ''}</td>
+        ${T ? `<tfoot><tr><td colspan="2">La gamme, ${V && V.repli ? 'cette année' : 'l’an dernier'} sur la saison${T.sansMarge ? ` <small>${T.sansMarge} produit${T.sansMarge > 1 ? 's' : ''} sans marge calculable (recette ou prix à vérifier) : hors total de la marge</small>` : ''}</td>
           <td class="n">${nf1(T.q)}</td><td class="n">${eur2(T.ca)}</td><td class="n">${eur2(T.caHt)}</td><td class="n">${eur2(T.marge)}</td><td class="n">${T.margePct != null ? nf1(T.margePct) + ' %' : '—'}</td></tr></tfoot>` : ''}</table>
       <p class="cal-src">Ventes du magasin au panel ; marge réalisée = CA HT encaissé − quantité × coût de la recette du jour.</p></div>`;
   }
