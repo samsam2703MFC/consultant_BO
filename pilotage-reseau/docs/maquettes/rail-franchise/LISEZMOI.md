@@ -14,7 +14,18 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
-## Le calendrier des posts dans le rail (`marketing.png`) — maquette, à valider
+## Le calendrier des posts dans le rail (`marketing.png`) — validé, en ligne en partie le 15/11/2026
+
+**En ligne** (branche de déploiement, commit `03f4731`, mis en ligne par `e196229`) : le groupe Marketing du rail
+(Calendrier des posts, Fidélité, Mon catalogue). « Calendrier des posts ↗ » ouvre l'espace boutique du magasin
+(`/marketing/franchise/calendrier?shop=<magasin>`) **dans un nouvel onglet** : l'espace a son propre rail (logo,
+« Espace boutique », choix de la boutique, menu « Mes réseaux »), qui ferait un second rail dans le dashboard (§9).
+L'adresse vient de `config.php` (`espaceBoutiqueUrl`, écrit par `bin/deploy.sh`, `/marketing/franchise/` par défaut),
+rendue par `GET /meta` ; sans adresse, l'entrée ne s'affiche pas.
+
+**Reste à faire pour la page dans le dashboard, comme sur la maquette** : le mode incorporé de l'espace boutique au
+Marketing (point 1 ci-dessous), puis, au dashboard, une vue qui l'affiche dans un cadre gardé d'un rendu à l'autre.
+
 
 Demande du 15/11/2026 : « rajouter dans le rail le marketing franchisé, post calendar ». Le rail en ligne gagne un
 groupe **Marketing** : **Calendrier des posts**, Fidélité et Mon catalogue (ces deux-là quittent Vendre : ils relèvent
