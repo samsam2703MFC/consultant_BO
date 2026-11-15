@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -213,7 +213,7 @@
     if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
-      if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
+      if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set((S.vue === 'semaine' ? friseSemaines().flat() : friseJours()).map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
       if (S.vue === 'mois') { lireAux(clePerf(), cheminPerf(), force); }
     }
     // Le stock est vivant : il se relit avec la page, et la page se relit
@@ -5245,8 +5245,10 @@
       return `<tr><td>${esc(c.nom)}<div class="db-mini">${esc(c.type || '—')} · ${c.source === 'tfbuddy' ? 'TFBuddy' : (c.source === 'import' ? 'relevé importé, à encoder' : 'relevé web du cockpit')}</div></td>
         <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-cl ${k[0]}">${esc(quoi)}</span></td></tr>`;
     }).join('');
-    return `<div class="db-card"><div class="ct"><span class="db-lab">Les concurrents du magasin, par code postal</span><span class="db-mini">franchisé ${esc(P.franchise || '—')} · CP ${esc(P.cp || '?')} · zone de ${P.zone.n} codes postaux · ${n('zone')} dans la zone, ${n('hors') + n('ailleurs')} hors zone, ${n('national')} nationaux, ${n('inconnu')} sans code postal · zones réglées dans le cockpit, Benchmark</span></div>
-      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Code postal</th><th>Classement</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+    // Une liste déroulante, fermée par défaut (15/11/2026) : l'en-tête et ses compteurs ; un clic montre le tableau.
+    const ouvert = !!S.bmCpOuvert;
+    return `<div class="db-card"><div class="ct bm-cp-t" data-bmcp="1" role="button" tabindex="0" aria-expanded="${ouvert}"><span class="db-lab">Les concurrents du magasin, par code postal</span><span class="db-mini">franchisé ${esc(P.franchise || '—')} · CP ${esc(P.cp || '?')} · zone de ${P.zone.n} codes postaux · ${n('zone')} dans la zone, ${n('hors') + n('ailleurs')} hors zone, ${n('national')} nationaux, ${n('inconnu')} sans code postal · zones réglées dans le cockpit, Benchmark</span><span class="bm-cp-dr">${ouvert ? 'replier ▴' : 'voir les ' + P.concurrents.length + ' concurrents ▾'}</span></div>
+      ${ouvert ? `<div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Code postal</th><th>Classement</th></tr></thead><tbody>${lignes}</tbody></table></div>` : ''}</div>`;
   }
   /** Le formulaire d'un prix vu en magasin — posé dans TFBuddy, rattaché au produit affiché. */
   function bmFormulaire() {
@@ -5281,6 +5283,11 @@
     box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
   }
   function bmBrancher() {
+    $.querySelectorAll('[data-bmcp]').forEach(b => {
+      const basculer = () => { S.bmCpOuvert = !S.bmCpOuvert; rendre(); };
+      b.addEventListener('click', basculer);
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); } });
+    });
     $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; urlMaj(); rendre(); }));
     $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
     const q = $.querySelector('[data-bmq]');
@@ -6556,12 +6563,10 @@
     etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
     brochures: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16',
     personnes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
-    formulaires: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5',
-    campagnes: 'M3 11l14-7v16L3 13zM7 14v5',
     retour: 'M19 12H5M12 19l-7-7 7-7',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
-  // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing, les assistants).
+  // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
     ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
@@ -6570,7 +6575,6 @@
     // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
     // le catalogue, qui relèvent du Marketing.
     ['Marketing', [['posts', 'Calendrier des posts', 'calEd'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
-    ['Assistants', [['actions', 'Plan d’action', 'formulaires'], ['campagne', 'Campagne', 'campagnes']]],
   ];
   const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : 'Dashboard'; };
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
@@ -6637,9 +6641,9 @@
     const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
     const ia = IA.questions && IA.questions.actif;
     const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
-    // Les onglets qui ont leur propre en-tête (Promotions, Primes, Trésorerie, Mon catalogue, le module des visites) : pas de
-    // second titre dans la barre (15/11/2026, « Mon catalogue » deux fois l'un sous l'autre).
-    const propre = ['promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
+    // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
+    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
       ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
       <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
@@ -8223,6 +8227,18 @@
    * Au bureau, sous les onglets : en Opérationnel les 14 jours autour du jour regardé, en Semaine les
    * 8 semaines, en Mois les 12 mois de l'année. Chaque période est un bouton qui montre déjà son chiffre. */
   const JOURS_FR = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
+  /** Les sept semaines de la frise de la vue Semaine (15/11/2026) : les six d'avant et celle de la date, lundi → dimanche. */
+  function friseSemaines() {
+    const J = friseJours(), out = [];
+    for (let k = 6; k >= 0; k--) { out.push(J.map(d => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() - 7 * k); return iso(t); })); }
+    return out;
+  }
+  /** Le numéro de semaine ISO d'une date (le jeudi de la semaine fait foi). */
+  function semIso(s) {
+    const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const j4 = new Date(d.getFullYear(), 0, 4, 12);
+    return 1 + Math.round(((d - j4) / 864e5 - 3 + (j4.getDay() + 6) % 7) / 7);
+  }
   function finMois(ym) { const f = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0, 12); const d = iso(f); return d > AUJ ? AUJ : d; }
   // La semaine active seulement, du lundi au dimanche (10/10/2026) : quatorze cases ne se lisaient pas sur tablette.
   function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; t.setDate(t.getDate() - (t.getDay() + 6) % 7); for (let i = 0; i < 7; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
@@ -8235,8 +8251,28 @@
       : `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
     const sk = n => Array.from({ length: n }, () => '<div class="fr-c sk"><span class="db-sk" style="width:60%"></span><span class="db-sk" style="width:80%;height:14px"></span></div>').join('');
     let chips = '', tete = '';
-    if (S.vue === 'ops' || S.vue === 'semaine') {
-      // En Semaine aussi (10/10/2026) : les sept jours de la semaine choisie ; un clic ouvre le jour en Opérationnel.
+    if (S.vue === 'semaine') {
+      // Les semaines (15/11/2026, « dans Semaine, ça doit être les semaines ») : les six d'avant et celle choisie ; un clic
+      // ouvre la semaine. Le chiffre et l'objectif d'une semaine : la somme de ses jours (la même lecture, frJ, que les jours).
+      const W = friseSemaines(), J = W[W.length - 1], lus = {};
+      let attente = false;
+      [...new Set(W.flat().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => {
+        const P = S.aux['frJ|' + ym]; if (!P) { attente = true; return; }
+        const mg = (P.magasins || []).find(x => String(x.shopId) === String(S.shop));
+        ((mg && mg.jours) || []).forEach(j => { lus[j.date] = j; });
+      });
+      const totS = J.reduce((t, d) => t + (lus[d] && lus[d].ca != null && d <= AUJ ? +lus[d].ca : 0), 0);
+      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]) + (totS ? ' · ' + fE(totS) : '');
+      chips = attente && !Object.keys(lus).length ? sk(7) : W.map(w => {
+        const vus = w.filter(d => d <= AUJ && lus[d] && lus[d].ca != null), cours = w[0] <= AUJ && AUJ <= w[6], on = w[0] === J[0];
+        const lib = 'S' + semIso(w[0]);
+        if (!vus.length) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${esc(fdC(w[0]))} · ${w[0] > AUJ ? 'à venir' : 'pas de vente'}</small></div>`; }
+        const ca = vus.reduce((t, d) => t + +lus[d].ca, 0), obj = vus.reduce((t, d) => t + (+lus[d].objectif || 0), 0);
+        const p = obj ? 100 * ca / obj : null;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${w[6] > AUJ ? AUJ : w[6]}" title="semaine du ${esc(fdC(w[0]))} au ${esc(fdC(w[6]))}"><span class="n">${lib}${cours ? '<em>en cours</em>' : ''}<i class="dot" style="background:${cours ? '#1d1d1b' : col(p)}"></i></span><b>${fK(ca)}</b><small>${esc(fdC(w[0]))}${p != null ? ' · ' + fP0(p) + ' obj.' : ''}</small></button>`;
+      }).join('');
+    } else if (S.vue === 'ops') {
+      // Les sept jours de la semaine choisie, en Opérationnel.
       const ops = S.vue === 'ops', J = friseJours(), lus = {};
       let attente = false;
       [...new Set(J.map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => {
