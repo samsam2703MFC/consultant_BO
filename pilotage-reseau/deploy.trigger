@@ -85,3 +85,4 @@
 2026-11-16 20:08:24 [333] Usuń paletę + zakładka krótka data
 2026-11-16 20:17:59 [334-335] Stan ogólny + dostęp Stany i palety
 2026-11-16 20:24:20 [336] Stan ogólny : jauge visuelle
+2026-11-16 20:49:20 [337] Pilne w Dzisiaj i zadania
