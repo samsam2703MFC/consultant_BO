@@ -42,3 +42,4 @@
 2026-11-16T10:11:47Z [297] server.sh : mode PHP en conteneur (serveur local) — vérification du mode normal
 2026-11-16T10:29:37Z P&L court hors TVA (jour, semaine, mois) et onglet Frais : TVA comprise et taux de chaque frais
 2026-11-16T11:02:29Z Ventes par catégorie hors TVA : marge, taux et coefficient sur le net
+2026-11-16T11:07:35Z [299] tablette bureau toujours appairée, Tablety en session Produkcja
