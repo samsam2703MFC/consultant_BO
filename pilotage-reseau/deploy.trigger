@@ -63,3 +63,4 @@
 2026-11-16T15:45:51Z [311] CMR : case 22 (auteur de l'expédition) et 23 (chauffeur) signées, page Mój podpis
 2026-11-16T18:04:56Z [312] Zamówienia : valeurs (Finanse/CEO), payé / non payé, rappel e-mail / SMS, onglet Do obsłużenia retiré
 2026-11-16T18:20:34Z [313] SMS par SMSAPI (comme le CRM), Ustawienia › SMS, historique e-mails / SMS par client (onglet Wysyłki)
+2026-11-16T18:25:02Z [314] Licznik stron par profil (moyennes jour / semaine) + [315] Zamówienia : somme par tournée
