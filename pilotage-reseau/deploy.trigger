@@ -51,3 +51,4 @@
 2026-11-16T13:24:59Z [303] blocage Logistyka commandes sans transport + assistant
 2026-11-16T13:34:55Z [304] scrollbar 3 px Ruby
 2026-11-16T14:03:30Z [305] contrôle palettes / commande (tablette d'emballage)
+2026-11-16T14:12:48Z [306] transport : camion, chauffeur, trasy
