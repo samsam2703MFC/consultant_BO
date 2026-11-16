@@ -225,7 +225,8 @@
     // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
     // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
     // clients pro (21/10/2026).
-    if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
+    // Les douze dernières semaines face au N-1 : en Semaine, et en Mois aussi (16/11/2026, Sam : « ce graphique aussi dans le mois »).
+    if (S.vue === 'semaine' || S.vue === 'mois') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
       if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set((S.vue === 'semaine' ? friseSemaines().flat() : friseJours()).map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
@@ -8402,7 +8403,8 @@
   /** Les jours : la barre du CA, le trait de l'objectif du jour, la couleur de l'atteinte ; la journée en cours hachurée. */
   function qbJours(m) {
     const J = Array.isArray(m.jours) ? m.jours : [];
-    if (!J.length) { return ''; }
+    // Une première réponse rapide peut arriver sans le détail des jours : la place est gardée, le graphique suit.
+    if (!J.length) { return `<div class="db-card qb-jours-c"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">lecture des jours…</span></div><div class="db-sk" style="height:200px;margin:14px 16px"></div></div>`; }
     const peu = J.length <= 7;
     const mx = Math.max(1, ...J.map(j => Math.max(j.ca || 0, j.objectif || 0))) * 1.1;
     const pj = j => j.objectif ? 100 * (j.ca || 0) / j.objectif : null;
@@ -8460,7 +8462,7 @@
       ['canaux', 'Canaux, commandes et promotions', () => splitCarte(m) + offresCarte()],
       ['invendus', 'Invendus', () => invCarte(false), m.invendusPieces ? fN(m.invendusPieces) + ' pièces · ' + fE(m.invendus || 0) : ''],
       ['calendrier', sem ? 'Le calendrier de la semaine' : 'Le calendrier du mois', () => periodeCalendrier(m) + (sem ? '' : periodeProfil(m))],
-      // Les douze dernières semaines restent visibles (16/11/2026, Sam : « garder ») : voir qbPage.
+      // Les douze dernières semaines restent visibles, en Semaine et en Mois (16/11/2026, Sam) : voir qbPage.
       sem || S.date.slice(0, 7) !== AUJ.slice(0, 7) ? null : ['tendance', 'Le résultat jour par jour', () => rendRentab()],
       ['heures', 'Le détail heure par heure', () => st ? rendHeures(st) : squelette(2)],
     ].filter(Boolean);
@@ -8481,7 +8483,7 @@
     return `${qbChiffre(m, d)}${qbJours(m)}
       <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
         <div class="qb-pile">${qbHeures(st, ks)}${qbTop(st)}</div></div>
-      ${S.vue === 'semaine' ? `<div class="qb-douze">${rendSemaines()}</div>` : ''}
+      <div class="qb-douze">${rendSemaines()}</div>
       ${qbPlus(m, d, st)}`;
   }
   /** Le profil des jours du mois (moyenne par jour de la semaine) : sorti de rendPeriode le 16/11/2026. */
