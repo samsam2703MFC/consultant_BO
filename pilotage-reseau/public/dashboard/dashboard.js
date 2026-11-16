@@ -234,7 +234,7 @@
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
     if (S.vue === 'ops') { opCharger(force); }
     else if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
-    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
+    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); if (du <= AUJ && AUJ <= au) { lireAux('taches|' + AUJ, '/pwa/tasks?date=' + AUJ, force); } }
     if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     if (S.vue === 'mois') { lireAux(cleCanM(), cheminCanM(), force); lireAux(cleLev(), cheminLev(), force); }
     if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
@@ -6447,7 +6447,9 @@
     if (D.api && D.api.erreur && !tachesJour(D).length) { h += `<div class="db-alerte">Le panel n’a pas répondu pour ce jour : ${esc(D.api.erreur)}</div>`; }
     const T = tachesJour(D), CL = tjChecklists(D), niveaux = D.repartition || (R && R.niveaux) || [];
     const f = T.filter(tjFaite).length, p = tjPct(f, T.length), sp = T.filter(tjSansPhoto).length;
-    const ph = T.filter(t => t.photoRequise), phR = ph.filter(tjFaite).length;
+    // Une tâche à photo : demandée, ou déjà rendue (une photo, une note, à contrôler) — une tâche notée arrivait sans
+    // drapeau et sortait du compte (16/11/2026 : « Photos rendues 0 / 3 » avec sept photos notées).
+    const ph = T.filter(t => t.photoRequise || t.photo || t.note != null || t.statut === 'notee' || t.statut === 'aControler'), phR = ph.filter(tjFaite).length;
     const notees = T.filter(t => t.note != null), ctl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider');
     const dern = R && Array.isArray(R.retours) && R.retours.length ? R.retours[0] : null;
     const ncL = R && Array.isArray(R.nc) ? R.nc : null, ncRep = ncL ? ncL.filter(n => n.suite && n.suite.conforme).length : 0;
@@ -8932,11 +8934,18 @@
     } else {
       const li = (d.lignes || []).find(x => String(x.shopId) === String(S.shop));
       const J = li ? (li.jours || []).filter(j => j.releve && j.j <= AUJ) : [];
+      // La journée en cours n'est relevée qu'une fois close (con_tache_jour, le cron) : elle se compte en direct, sur
+      // les tâches obligatoires du jour (16/11/2026 : un lundi, la semaine disait « pas de relevé » avec sept photos notées).
+      const [duP, auP] = bornes();
+      if (duP <= AUJ && AUJ <= auP && !J.some(j => j.j === AUJ)) {
+        const TA = tachesJour(S.aux['taches|' + AUJ]);
+        if (TA.length) { const fA = TA.filter(tacheFaite).length; J.push({ j: AUJ, releve: true, enCours: true, faites: fA, pasFaites: TA.length - fA, part: Math.round(100 * fA / TA.length) }); }
+      }
       if (!J.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches de la période</div><div class="s">pas de relevé pour ce magasin sur la période</div></div></div>`; }
       const nF = J.reduce((a, j) => a + (j.faites || 0), 0), nN = J.reduce((a, j) => a + (j.pasFaites || 0), 0), tot = nF + nN;
       const teinte = p => p == null ? '' : (p >= 80 ? 'f' : (p >= 40 ? 'm' : (p > 0 ? 'n' : 'b')));
       const mauvais = J.filter(j => (j.part || 0) < 40).length;
-      corps = `<div class="db-bt tit"><div class="k">Les tâches ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</div><div class="s">${J.length} jour(s) relevé(s) · ${tot ? Math.round(100 * nF / tot) : 0} % faites · bloquantes : voir le jour</div></div>
+      corps = `<div class="db-bt tit"><div class="k">Les tâches ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</div><div class="s">${J.length} jour(s) relevé(s)${J.some(j => j.enCours) ? ', dont aujourd’hui en cours' : ''} · ${tot ? Math.round(100 * nF / tot) : 0} % faites · bloquantes : voir le jour</div></div>
         ${tuileT('Faites', nF + '<small>/ ' + tot + '</small>', Math.round(nF / Math.max(1, J.length)) + ' par jour en moyenne', 'ok')}
         ${tuileT('Non faites', nN + '<small>/ ' + tot + '</small>', Math.round(nN / Math.max(1, J.length)) + ' par jour en moyenne', 'wa')}
         ${tuileT('Jours sous 40 %', String(mauvais), mauvais ? 'jour(s) où moins de 40 % des tâches sont faites' : 'aucun jour en dessous', mauvais ? 'ko' : '')}
