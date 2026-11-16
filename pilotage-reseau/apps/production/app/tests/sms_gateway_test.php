@@ -118,6 +118,22 @@ try {
     $reply = [200, ['error' => 14, 'message' => 'Invalid sender']];
     $r = $sms->send('+48600100200', 'Test', ['customer' => 7, 'context' => 'payment_reminder', 'ref' => 50]);
     expectS($r['status'] === 'failed' && str_contains($r['error'], '(14)') && str_contains($r['error'], 'nadawca'), 'błąd SMSAPI ze wskazówką (14 : nadawca)');
+    // [320] Nadawca odrzucony : drugi POST bez « from », SMS wysłany z nadawcą domyślnym, uwaga w dzienniku.
+    $n0 = count($calls);
+    $replies = [[200, ['error' => 14, 'message' => 'Invalid from field']], [200, ['count' => 1, 'list' => [['id' => 'SMSAPI-3']]]]];
+    SmsGateway::$http = function (string $url, ?array $fields, string $token) use (&$calls, &$replies) { $calls[] = [$url, $fields, $token]; return array_shift($replies); };
+    $r = $sms->send('+48600100200', 'Test nadawcy', ['customer' => 7, 'context' => 'test']);
+    expectS($r['status'] === 'sent' && $r['provider_id'] === 'SMSAPI-3' && str_contains((string) $r['error'], 'domyślnym') && count($calls) === $n0 + 2
+        && isset($calls[$n0][1]['from']) && !isset($calls[$n0 + 1][1]['from']), '[320] nadawca odrzucony (14) : ponowna wysyłka z nadawcą domyślnym');
+    SmsGateway::$http = function (string $url, ?array $fields, string $token) use (&$calls, &$reply) {
+        $calls[] = [$url, $fields, $token];
+        if ($fields === null) {
+            if ($token === 'zly-token-0123456789abcd') return [401, ['error' => 101, 'message' => 'Authorization failed']];
+            if ($token === 'polski-token-0123456789') return str_contains($url, 'smsapi.pl') ? [200, ['username' => 'slfood-pl', 'points' => 50]] : [401, ['error' => 101, 'message' => 'Authorization failed']];
+            return [200, ['username' => 'slfood', 'points' => 120.5]];
+        }
+        return $reply;
+    };
     $reply = [200, ['count' => 1, 'list' => [['id' => 'SMSAPI-2']]]];
 
     // Kopia testowa i wyłącznik : tylko zapis.

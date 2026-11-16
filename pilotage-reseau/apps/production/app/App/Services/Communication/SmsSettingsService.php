@@ -98,7 +98,7 @@ final class SmsSettingsService
         $this->admin($userId);
         $r = $this->sms->send($phone, 'ERP : SMS próbny (Ustawienia › SMS) ' . date('d.m.Y H:i') . '.', ['context' => 'test', 'author' => 'settings:' . $userId]);
         if ($r['status'] === 'failed') throw new CustomException('SMS nie wysłany : ' . $r['error'], 'errors', 502);
-        return ['message' => $r['status'] === 'sent' ? 'SMS próbny wysłany.' : 'SMS zapisany, nie wysłany : ' . ($this->sms->blocker() ?? '—') . '.', 'state' => $this->state($userId)];
+        return ['message' => $r['status'] === 'sent' ? 'SMS próbny wysłany' . ($r['error'] ? ' (' . $r['error'] . ').' : '.') : 'SMS zapisany, nie wysłany : ' . ($this->sms->blocker() ?? '—') . '.', 'state' => $this->state($userId)];
     }
 
     private function admin(int $userId): void

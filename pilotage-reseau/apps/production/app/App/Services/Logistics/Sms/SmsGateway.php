@@ -123,8 +123,15 @@ final class SmsGateway implements SmsTransport
             $from = trim($this->params->get('sms.from', ''));
             if ($from !== '') $fields['from'] = $from;
             [$code, $res] = $this->call('/sms.do', $fields);
+            $note = null;
+            // [320] Nadawca odrzucony (14 : nazwa niezatwierdzona w SMSAPI) : SMS ponownie z nadawcą domyślnym konta — nie ginie.
+            if (isset($fields['from']) && is_array($res) && (int) ($res['error'] ?? 0) === 14) {
+                unset($fields['from']);
+                [$code, $res] = $this->call('/sms.do', $fields);
+                $note = 'nadawca « ' . trim($this->params->get('sms.from', '')) . ' » niezatwierdzony w SMSAPI — wysłany z nadawcą domyślnym konta';
+            }
             $result = $code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])
-                ? ['status' => 'sent', 'provider_id' => (string) ($res['list'][0]['id'] ?? '') ?: null, 'error' => null]
+                ? ['status' => 'sent', 'provider_id' => (string) ($res['list'][0]['id'] ?? '') ?: null, 'error' => $note]
                 : ['status' => 'failed', 'provider_id' => null, 'error' => self::error($code, $res)];
         }
         $this->log->log(['id_customer' => isset($context['customer']) ? (int) $context['customer'] : null, 'context' => (string) ($context['context'] ?? 'other'),
