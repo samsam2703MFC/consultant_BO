@@ -35,9 +35,12 @@ declare(strict_types=1);
  *   GET  /dashboard/boite/modeles?shop=        POST {shop, action: creer|modifier|supprimer, id, nom, objet, corps}
  *   GET  /dashboard/boite/automatiques?shop=   POST {shop, regle, actif, objet, corps, jours}
  *   GET  /dashboard/boite/cron?jeton=          l'horloge des messages automatiques (bin/boite_cron.sh, toutes les 10 min)
+ *   GET|POST /dashboard/boite/automatisations, POST …/automatisations/essai   Paramètres › Mails et automatisations
+ *        (src/franchise/automatisations.php : le rappel la veille du retrait, par e-mail et SMS)
  */
 
 require_once __DIR__ . '/boite_protocole.php';
+require_once __DIR__ . '/automatisations.php';   // Paramètres › Mails et automatisations (16/11/2026) : ses routes sont celles de la boîte
 
 const BM_PREFIXE = '/dashboard/boite';
 const BM_IMAP_OVH = 'ssl0.ovh.net:993:ssl';
@@ -190,6 +193,8 @@ function bmRoute(string $method, string $path): ?array
         if ($method === 'POST' && $sous === '/envoyer') { return bmEnvoyerRoute($shop, $c, $b); }
         if ($sous === '/modeles') { return $method === 'POST' ? bmModelesEcrire($shop, $b) : bmModeles($shop); }
         if ($sous === '/automatiques') { return $method === 'POST' ? bmAutoEcrire($shop, $b) : bmAuto($shop); }
+        if ($sous === '/automatisations') { return $method === 'POST' ? auEcrire($shop, $c, $b) : auLire($shop, $c); }
+        if ($method === 'POST' && $sous === '/automatisations/essai') { return auEssai($shop, $c, $b); }
     } catch (BmRefus $e) {
         return bmErreur(401, 'Le serveur de la boîte refuse les accès gardés : le mot de passe a peut-être changé. Reliez la boîte à nouveau.', ['etat' => 'refusee']);
     } catch (RuntimeException $e) {
@@ -573,7 +578,7 @@ function bmRegles(string $shop): array
 
 function bmAuto(string $shop): array
 {
-    $j = array_map(static fn ($r) => ['regle' => $r['regle'], 'nom' => BM_REGLES[$r['regle']]['nom'] ?? $r['regle'], 'destinataire' => $r['destinataire'],
+    $j = array_map(static fn ($r) => ['regle' => $r['regle'], 'nom' => BM_REGLES[$r['regle']]['nom'] ?? (AU_AUTOS[$r['regle']]['nom'] ?? $r['regle']), 'destinataire' => $r['destinataire'],
         'objet' => $r['objet'], 'le' => $r['envoye_le'], 'erreur' => $r['erreur']],
         Db::rows('SELECT * FROM pil_boite_journal WHERE shop_id = ? ORDER BY envoye_le DESC, id DESC LIMIT 40', [$shop]));
     $h = setting('boiteHorloge', []);
@@ -628,6 +633,8 @@ function bmCron(): array
         try { $rapport[$shop] = bmTourner($shop, $c); }
         catch (Throwable $e) { $rapport[$shop] = 'erreur : ' . $e->getMessage(); }
     }
+    // Les automatisations du magasin (Paramètres › Mails et automatisations) : le rappel la veille du retrait.
+    try { $rapport['automatisations'] = auCron(); } catch (Throwable $e) { $rapport['automatisations'] = 'erreur : ' . $e->getMessage(); }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['boiteHorloge', json_encode(['le' => date('c'), 'rapport' => $rapport], JSON_UNESCAPED_UNICODE)]);
     return ['ok' => true, 'rapport' => $rapport];
 }
