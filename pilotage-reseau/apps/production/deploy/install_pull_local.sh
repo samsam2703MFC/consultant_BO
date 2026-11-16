@@ -61,6 +61,17 @@ if [[ ${#need[@]} -gt 0 ]]; then
   DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600 install -y -qq "${need[@]}"
 fi
 
+# --- 1 bis. PHP : 8.1 ou plus pour l'ERP. Sinon (Ubuntu 20.04 : PHP 7.4, plus de paquet PHP 8), PHP 8.3 en
+# conteneur Docker pour l'ERP seul (deploy/php_docker.sh) ; le PHP du serveur et les autres sites restent tels quels. [297]
+PHP_DOCKER=""
+APV_SRV="$(ls /etc/apache2/mods-enabled 2>/dev/null | sed -n 's/^php\([0-9]\.[0-9]*\)\.load$/\1/p' | head -1)"
+if [[ -n "$APV_SRV" && "${APV_SRV//./}" -lt 81 ]] || ! php -r 'exit(PHP_VERSION_ID >= 80100 ? 0 : 1);' 2>/dev/null; then
+  command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 \
+    || fail "PHP du serveur trop ancien (l'ERP demande 8.1+) et Docker absent : installer PHP 8.1+ ou Docker."
+  PHP_DOCKER="1"
+  log "PHP du serveur trop ancien : l'ERP tournera avec PHP 8.3 en conteneur Docker (erp-production-php)."
+fi
+
 # --- 2. Accès à GitHub (sortie HTTPS) ----------------------------------------
 git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null \
   || fail "Branche ${BRANCH} introuvable sur ${REPO_URL} (adresse, branche, ou accès sortant vers github.com ?)."
@@ -83,6 +94,8 @@ ERP_COHABITATION="${COHAB}"
 ERP_DB_NAME="${DBNAME}"
 # Compte MySQL de cette version (jamais celui de l'ERP d'origine) ; vide = erp_v2.
 ERP_COHAB_DB_USER=""
+# PHP 8.3 en conteneur Docker pour l'ERP (1 = PHP du serveur trop ancien). [297]
+ERP_PHP_DOCKER="${PHP_DOCKER}"
 ERP_MAIL_MODE="log_only"
 # Bouton « Entrer » sans mot de passe : laisser vide (chacun se connecte avec son login ERP).
 ERP_ENTREE_LIBRE=""

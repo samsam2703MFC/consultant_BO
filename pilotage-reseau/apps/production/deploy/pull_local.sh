@@ -79,7 +79,14 @@ git -C "$CHECKOUT" reset --quiet --hard "$new"
 git -C "$CHECKOUT" clean -fdq          # garde vendor/ (ignoré par Git) : composer install plus rapide
 
 # --- 2. Dépendances PHP (le runner GitHub le fait pour le serveur en ligne) ---------
-COMPOSER="$(command -v composer || true)"
+# [297] PHP du serveur trop ancien (ERP_PHP_DOCKER=1) : PHP 8.3 en conteneur (deploy/php_docker.sh), composer aussi.
+if [[ "${ERP_PHP_DOCKER:-}" == "1" ]]; then
+  ERP_TARGET="${ERP_TARGET:-/var/www/production}" PULL_DIR="$PULL_DIR" bash "$CHECKOUT/$APP_PATH/deploy/php_docker.sh" \
+    || { echo "$new $(date +%s)" > "$STATE/failed"; log "ÉCHEC : PHP 8.3 en conteneur (détail ci-dessus)."; exit 1; }
+  COMPOSER="/usr/local/bin/composer-erp"
+else
+  COMPOSER="$(command -v composer || true)"
+fi
 [[ -n "$COMPOSER" ]] || { log "composer introuvable : relancer install_pull_local.sh."; exit 1; }
 COMPOSER_ALLOW_SUPERUSER=1 "$COMPOSER" install --working-dir="$CHECKOUT/$APP_PATH/app/public" \
   --no-dev --no-interaction --no-progress --optimize-autoloader --quiet
@@ -88,7 +95,7 @@ COMPOSER_ALLOW_SUPERUSER=1 "$COMPOSER" install --working-dir="$CHECKOUT/$APP_PAT
 if ERP_URL="$ERP_URL" ERP_TARGET="${ERP_TARGET:-/var/www/production}" ERP_ALIAS="${ERP_ALIAS:-/production}" \
    ERP_ENTREE_LIBRE="${ERP_ENTREE_LIBRE:-}" ERP_SANDBOX_OUVERT="${ERP_SANDBOX_OUVERT:-}" ERP_TFB_DEMO="${ERP_TFB_DEMO:-}" \
    ERP_COHABITATION="${ERP_COHABITATION:-}" ERP_DB_NAME="${ERP_DB_NAME:-erp}" ERP_MAIL_MODE="${ERP_MAIL_MODE:-}" \
-   ERP_COHAB_DB_USER="${ERP_COHAB_DB_USER:-}" \
+   ERP_COHAB_DB_USER="${ERP_COHAB_DB_USER:-}" ERP_PHP_DOCKER="${ERP_PHP_DOCKER:-}" \
    bash "$SERVER_SH"; then
   echo "$new" > "$STATE/deployed"
   rm -f "$STATE/failed"

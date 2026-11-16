@@ -79,3 +79,26 @@ Ce qui change par rapport à une installation normale (`COHABITATION=1` dans le 
 **Bascule** (quand l'ERP d'origine est arrêté) : mettre `COHABITATION=0` dans `/var/www/production/app/.env`,
 puis `cd /var/www/production/app && sudo php Bin/tfb_migrate.php apply` (les 14 migrations mises de côté passent,
 après sauvegarde) et rallumer les envois dans Ustawienia › Parametry.
+
+## Serveur au PHP trop ancien : PHP 8.3 en conteneur Docker
+
+L'ERP demande PHP 8.1 ou plus. Sur Ubuntu 20.04 (PHP 7.4), il n'existe plus de paquet PHP 8 (le dépôt ondrej/php a vidé
+focal en juin 2025). Si Docker est présent, `install_pull_local.sh` le détecte et écrit `ERP_PHP_DOCKER="1"` dans
+`/etc/erp-pull.conf` :
+
+- `deploy/php_docker.sh` (lancé à chaque livraison) construit l'image `erp-production-php` (PHP 8.3 FPM, pdo_mysql,
+  mbstring, curl, gd, zip, intl, opcache, pdftotext, composer 2 — `deploy/php-docker/`) et démarre le conteneur
+  `erp-production-php` : réseau de l'hôte (MariaDB en 127.0.0.1), php-fpm sur `127.0.0.1:9083`, mêmes chemins que
+  l'hôte (`/var/www/production`, `/opt/erp_pull`), redémarrage automatique ;
+- Apache garde son PHP pour les autres sites (phpMyAdmin…) et passe seulement les `.php` de `/production` au conteneur
+  (`proxy_fcgi`) ;
+- `php-erp` et `composer-erp` (`/usr/local/bin`) : `docker exec` dans ce conteneur — composer, migrations, tâches cron
+  (lancées par root, exécutées en `www-data`).
+
+Les autres conteneurs du serveur (ancien ERP…) ne sont pas touchés.
+
+| Besoin | Commande |
+|---|---|
+| État du conteneur | `sudo docker ps --filter name=erp-production-php` |
+| Journal PHP | `sudo docker logs --tail 50 erp-production-php` |
+| Lancer un script de l'ERP | `cd /var/www/production/app && sudo php-erp Bin/tfb_migrate.php status` |

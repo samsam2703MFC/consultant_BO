@@ -59,6 +59,10 @@ installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install o
 # Le PHP en ligne de commande n'est pas forcément celui d'Apache (constaté ici :
 # CLI 8.4, et php-mysql / php-gd signalés absents à chaque livraison du
 # cockpit) : on vise la version qu'Apache charge réellement.
+# [297] ERP_PHP_DOCKER=1 (serveur local au PHP trop ancien) : PHP 8.3 en conteneur (deploy/php_docker.sh, lancé par
+# pull_local.sh) ; Apache garde son PHP pour les autres sites et passe les .php de l'ERP au conteneur (proxy_fcgi).
+PHP_DOCKER="${ERP_PHP_DOCKER:-}"
+PHP_FPM_ADDR="127.0.0.1:9083"
 APV="$(ls /etc/apache2/mods-enabled 2>/dev/null | sed -n 's/^php\([0-9]\.[0-9]*\)\.load$/\1/p' | head -1)"
 FPM=""
 if [[ -z "$APV" ]]; then
@@ -66,7 +70,10 @@ if [[ -z "$APV" ]]; then
   [[ -z "$APV" ]] || FPM="php${APV}-fpm"
 fi
 need=()
-if [[ -n "$APV" ]]; then
+if [[ "$PHP_DOCKER" == "1" ]]; then
+  [[ -x /usr/local/bin/php-erp ]] || fail "PHP en conteneur demandé (ERP_PHP_DOCKER=1) mais /usr/local/bin/php-erp absent : lancer deploy/php_docker.sh."
+  log "PHP de l'ERP : $(/usr/local/bin/php-erp -r 'echo PHP_VERSION;') en conteneur (erp-production-php) ; Apache ${APV:-?} pour les autres sites."
+elif [[ -n "$APV" ]]; then
   log "PHP d'Apache : ${APV}${FPM:+ (FPM)} ; PHP en ligne de commande : $(php -r 'echo PHP_VERSION;' 2>/dev/null || echo absent)"
   [[ "${APV//./}" -ge 81 ]] || fail "Apache utilise PHP ${APV} : l'ERP demande PHP 8.1 ou plus."
   for p in cli mysql mbstring curl gd zip xml; do
@@ -93,6 +100,10 @@ if [[ ${#need[@]} -gt 0 ]]; then
 fi
 PHPBIN="php"
 if [[ -n "$APV" ]] && command -v "php${APV}" >/dev/null; then PHPBIN="php${APV}"; fi
+[[ "$PHP_DOCKER" != "1" ]] || PHPBIN="/usr/local/bin/php-erp"
+# Tâches cron : www-data avec le PHP du serveur ; en conteneur, root lance docker exec -u www-data.
+CRON_RUN="www-data cd ${ERP_TARGET}/app && ${PHPBIN}"
+[[ "$PHP_DOCKER" != "1" ]] || CRON_RUN="root cd ${ERP_TARGET}/app && ERP_PHP_USER=www-data ${PHPBIN}"
 
 # --- 2. Refuser de livrer du code qui ne se charge pas -------------------
 log "Contrôle de syntaxe avec le PHP d'Apache ($("$PHPBIN" -r 'echo PHP_VERSION;'))…"
@@ -459,7 +470,7 @@ if [[ -f "$IMPORT_OK" ]]; then
         "${ADMIN[@]}" -e "DROP DATABASE IF EXISTS \`${tmpdb}\`;"
       fi
     fi
-    poller_line="*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/poller.php >> /var/log/production-erp-mail.log 2>&1"
+    poller_line="*/5 * * * * ${CRON_RUN} Bin/poller.php >> /var/log/production-erp-mail.log 2>&1"
   fi
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
@@ -473,18 +484,18 @@ if [[ -f "$IMPORT_OK" ]]; then
   # boîtes mail des utilisateurs (Poczta) : nouveaux messages.
   cat > /etc/cron.d/production-erp-mail <<CRON
 # ERP /production — e-mails automatiques (écrit par apps/production/deploy/server.sh)
-*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
-*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
+*/5 * * * * ${CRON_RUN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
+*/5 * * * * ${CRON_RUN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
 # Prognoza 13 tygodni : gamy i sprzedaż sklepów z panelu TF Buddy (GET), raz w tygodniu (po poniedziałku 6:00)
-10 6 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
+10 6 * * * ${CRON_RUN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
 # Zadania stanowisk : zadania automatyczne (cron), zaliczenie po kreatorach, przypomnienia i przełożeni
-*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/task_cron.php >> /var/log/production-erp-mail.log 2>&1
+*/5 * * * * ${CRON_RUN} Bin/task_cron.php >> /var/log/production-erp-mail.log 2>&1
 # Boutiques des franchisés (si rebranchées : deploy/boutiques.reconnect) : commandes et réclamations toutes les 5 minutes
 ${poller_line}
 # HR : bilan des notes du mois à l'administrateur, le dernier jour du mois après 18 h (une fois)
-5 18 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/hr_month_summary.php >> /var/log/production-erp-mail.log 2>&1
+5 18 * * * ${CRON_RUN} Bin/hr_month_summary.php >> /var/log/production-erp-mail.log 2>&1
 # HR : rappel des follow-ups ouverts dans la cloche du responsable (à partir du terme), chaque matin
-10 7 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/hr_followups.php >> /var/log/production-erp-mail.log 2>&1
+10 7 * * * ${CRON_RUN} Bin/hr_followups.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log
@@ -524,6 +535,17 @@ else
   rm -f "$HTPASSWD"
   ACCESS="    Require all granted"
 fi
+# [297] PHP en conteneur : les .php de l'ERP vont au php-fpm du conteneur (les autres sites gardent le PHP d'Apache).
+FPM_HANDLER=""
+if [[ "$PHP_DOCKER" == "1" ]]; then
+  if ! apache2ctl -M 2>/dev/null | grep -q proxy_fcgi_module; then
+    a2enmod proxy proxy_fcgi >/dev/null
+    RESTART_APACHE=1; NEW_PHP_EXT=1
+  fi
+  FPM_HANDLER="    <FilesMatch \"\\.php\$\">
+        SetHandler \"proxy:fcgi://${PHP_FPM_ADDR}\"
+    </FilesMatch>"
+fi
 newconf="$(mktemp)"
 # Fichiers statiques (CSS, JS, polices, images, libellés JSON) gardés par le navigateur : une page en
 # charge ~33, et chacun redemandé à chaque page repasse par le contrôle du mot de passe (bcrypt) —
@@ -535,6 +557,8 @@ CACHE="    <IfModule mod_headers.c>
             Header set Cache-Control \"private, max-age=300, stale-while-revalidate=86400\"
         </FilesMatch>
     </IfModule>"
+[[ -z "$FPM_HANDLER" ]] || CACHE="${CACHE}
+${FPM_HANDLER}"
 cat > "$newconf" <<APACHE
 # ERP (apps/production de consultant_BO) — écrit par apps/production/deploy/server.sh
 Alias ${ERP_ALIAS} ${ERP_TARGET}/app/public
@@ -568,6 +592,8 @@ if [[ "${RESTART_APACHE:-0}" == "1" ]]; then
   fi
   if [[ "${NEW_PHP_EXT:-0}" == "1" ]]; then systemctl restart apache2; else systemctl reload apache2; fi
 fi
+# PHP en conteneur : php-fpm relit le code livré (cache opcache vidé).
+[[ "$PHP_DOCKER" != "1" ]] || docker kill -s USR2 erp-production-php >/dev/null 2>&1 || true
 
 # --- 7. Recette locale ---------------------------------------------------
 body="$(mktemp)"
