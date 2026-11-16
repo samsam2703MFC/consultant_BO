@@ -497,6 +497,10 @@ function ep_pwa_tasks(): array
                     ? substr((string) $apiTaches[$sid . '|' . $tid]['completed_at'], 0, 16) : null,
                 'faitePar'    => trim((string) ($apiTaches[$sid . '|' . $tid]['completed_by'] ?? '')) ?: null,
                 'statut'      => $valide ? 'notee' : 'aControler',
+                // Une note porte sur une photo rendue (16/11/2026) : la tâche notée garde `photo` et `photoRequise`, sinon le
+                // dashboard magasin la sortait du compte des photos (« Photos rendues 0 / 3 » avec sept photos notées).
+                'photo'       => true,
+                'photoRequise' => true,
                 // La checklist aussi pour une tâche notée : la fiche franchisé range les tâches du jour par checklist.
                 'checklist'   => trim((string) ($apiTaches[$sid . '|' . $tid]['checklist_name'] ?? '')) ?: null,
                 // Le drapeau du panel aussi (20/10/2026) : sans lui, le relevé gardait une tâche notée pour
