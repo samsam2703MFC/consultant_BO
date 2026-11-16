@@ -24,15 +24,15 @@ declare(strict_types=1);
  *   POST /dashboard/boite/automatisations {shop, auto: rappel_retrait, actif, canal: email|sms|les2, heure: HH:MM,
  *        recent: bool, objet, corps, sms}
  *   POST /dashboard/boite/automatisations/essai {shop, auto, tel?}  un essai : l'e-mail à la boîte du magasin, le SMS au numéro donné
- * L'horloge : bmCron (bin/boite_cron.sh, toutes les 10 minutes) appelle auCron().
+ * L'horloge : bmCron (bin/boite_cron.sh, toutes les 10 minutes) appelle amCron().
  */
 
-const AU_AUTOS = [
+const AM_AUTOS = [
     'rappel_retrait' => ['nom' => 'Rappel la veille du retrait', 'pour' => 'Clients'],
 ];
 
 /** Le réglage de départ du rappel : éteint, les deux canaux, 17:00. */
-const AU_RAPPEL = [
+const AM_RAPPEL = [
     'actif' => false, 'canal' => 'les2', 'heure' => '17:00', 'recent' => true,
     'objet' => 'Votre commande de demain, {heure} · {magasin}',
     'corps' => "Bonjour {prenom},\n\nVotre commande vous attend demain, {jour}, à partir de {heure}.\n{paiement}\n\nUn changement ? Répondez simplement à cet e-mail.\n\nÀ demain,\n{magasin}",
@@ -40,21 +40,21 @@ const AU_RAPPEL = [
 ];
 
 /** Les variables des messages, et ce qu'elles valent. */
-const AU_VARIABLES = [
+const AM_VARIABLES = [
     '{prenom}' => 'le prénom du client', '{nom}' => 'son nom', '{magasin}' => 'le nom du magasin', '{jour}' => 'le jour du retrait (mardi 17 novembre)',
     '{heure}' => 'l’heure du retrait', '{total}' => 'le montant de la commande', '{paiement}' => '« Elle est déjà réglée. » ou « Reste à payer au retrait : … »',
     '{commande}' => 'le n° de la commande',
 ];
-const AU_HEURE_MIN = '12:00';
-const AU_HEURE_MAX = '21:00';
-const AU_SMS_MAX = 306;        // deux SMS au plus (153 signes chacun en GSM)
+const AM_HEURE_MIN = '12:00';
+const AM_HEURE_MAX = '21:00';
+const AM_SMS_MAX = 306;        // deux SMS au plus (153 signes chacun en GSM)
 
-const AU_JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-const AU_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const AM_JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const AM_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 /* --- le réglage (pil_auto_reglage) ------------------------------------------------------------------------------ */
 
-function auTables(): void
+function amTables(): void
 {
     static $fait = false;
     if ($fait) { return; }
@@ -64,17 +64,17 @@ function auTables(): void
 }
 
 /** Le réglage d'une automatisation du magasin, le réglage de départ complété. */
-function auReglage(string $shop, string $auto): array
+function amReglage(string $shop, string $auto): array
 {
     $r = Db::row('SELECT actif, reglage FROM pil_auto_reglage WHERE shop_id = ? AND auto = ?', [$shop, $auto]);
     $g = $r !== null ? json_decode((string) $r['reglage'], true) : null;
-    $out = array_merge(AU_RAPPEL, is_array($g) ? array_intersect_key($g, AU_RAPPEL) : []);
+    $out = array_merge(AM_RAPPEL, is_array($g) ? array_intersect_key($g, AM_RAPPEL) : []);
     $out['actif'] = $r !== null && (int) $r['actif'] === 1;
     return $out;
 }
 
 /** Valide un réglage reçu. Rend [réglage, erreur|null]. */
-function auValider(array $actuel, array $b): array
+function amValider(array $actuel, array $b): array
 {
     $g = $actuel;
     if (array_key_exists('actif', $b)) { $g['actif'] = (bool) $b['actif']; }
@@ -84,11 +84,11 @@ function auValider(array $actuel, array $b): array
     }
     if (array_key_exists('heure', $b)) {
         $h = (string) $b['heure'];
-        if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h) || $h < AU_HEURE_MIN || $h > AU_HEURE_MAX) { return [null, 'L’heure d’envoi : entre ' . AU_HEURE_MIN . ' et ' . AU_HEURE_MAX . '.']; }
+        if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h) || $h < AM_HEURE_MIN || $h > AM_HEURE_MAX) { return [null, 'L’heure d’envoi : entre ' . AM_HEURE_MIN . ' et ' . AM_HEURE_MAX . '.']; }
         $g['heure'] = $h;
     }
     if (array_key_exists('recent', $b)) { $g['recent'] = (bool) $b['recent']; }
-    foreach (['objet' => 200, 'corps' => 5000, 'sms' => AU_SMS_MAX] as $k => $max) {
+    foreach (['objet' => 200, 'corps' => 5000, 'sms' => AM_SMS_MAX] as $k => $max) {
         if (!array_key_exists($k, $b)) { continue; }
         $v = trim(str_replace("\r", '', (string) $b[$k]));
         if (mb_strlen($v) > $max) { return [null, ['objet' => 'L’objet', 'corps' => 'Le texte de l’e-mail', 'sms' => 'Le SMS'][$k] . ' dépasse ' . $max . ' signes.']; }
@@ -100,13 +100,13 @@ function auValider(array $actuel, array $b): array
 }
 
 /** POST /dashboard/boite/automatisations */
-function auEcrire(string $shop, array $c, array $b): array
+function amEcrire(string $shop, array $c, array $b): array
 {
-    auTables();
+    amTables();
     $auto = (string) ($b['auto'] ?? '');
-    if (!isset(AU_AUTOS[$auto])) { return bmErreur(422, 'automatisation inconnue'); }
-    $actuel = auReglage($shop, $auto);
-    [$g, $err] = auValider($actuel, $b);
+    if (!isset(AM_AUTOS[$auto])) { return bmErreur(422, 'automatisation inconnue'); }
+    $actuel = amReglage($shop, $auto);
+    [$g, $err] = amValider($actuel, $b);
     if ($err !== null) { return bmErreur(422, $err); }
     $actif = (bool) $g['actif'];
     unset($g['actif']);
@@ -120,14 +120,14 @@ function auEcrire(string $shop, array $c, array $b): array
         $n = Db::exec('UPDATE pil_boite_auto SET actif = 0, maj_le = NOW() WHERE shop_id = ? AND regle = ? AND actif = 1', [$shop, 'rappel']);
         if ($n) { $note = 'Le « Rappel la veille de la commande » des offres (Boîte mail › Messages automatiques) est éteint : celui-ci couvre toutes les commandes.'; }
     }
-    if ($actif !== $actuel['actif']) { journalAdd('Magasin ' . $shop, 'Automatisations', null, '« ' . AU_AUTOS[$auto]['nom'] . ' » ' . ($actif ? 'allumé' : 'éteint')); }
-    return ['ok' => true, 'note' => $note] + auLire($shop, $c);
+    if ($actif !== $actuel['actif']) { journalAdd('Magasin ' . $shop, 'Automatisations', null, '« ' . AM_AUTOS[$auto]['nom'] . ' » ' . ($actif ? 'allumé' : 'éteint')); }
+    return ['ok' => true, 'note' => $note] + amLire($shop, $c);
 }
 
 /* --- les commandes de demain ------------------------------------------------------------------------------------ */
 
 /** Les commandes du panel à retirer ce jour-là, ni remises ni annulées. null : le panel ne répond pas. */
-function auCommandes(int $sid, string $jour): ?array
+function amCommandes(int $sid, string $jour): ?array
 {
     $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $jour, 25);
     // Sans commande, le panel répond {status: error, description: NO_ORDERS_FOR_PICKUP_DATE} : une liste vide.
@@ -145,14 +145,14 @@ function auCommandes(int $sid, string $jour): ?array
 }
 
 /** « mardi 17 novembre » */
-function auJourLong(string $j): string
+function amJourLong(string $j): string
 {
     $t = strtotime($j . ' 12:00:00');
-    return AU_JOURS[(int) date('w', $t)] . ' ' . (int) date('j', $t) . ' ' . AU_MOIS[(int) date('n', $t) - 1];
+    return AM_JOURS[(int) date('w', $t)] . ' ' . (int) date('j', $t) . ' ' . AM_MOIS[(int) date('n', $t) - 1];
 }
 
 /** Les variables d'une commande. */
-function auVars(array $o, string $magasin): array
+function amVars(array $o, string $magasin): array
 {
     $cl = is_array($o['client'] ?? null) ? $o['client'] : [];
     $prenom = trim((string) ($cl['name'] ?? ''));
@@ -162,13 +162,13 @@ function auVars(array $o, string $magasin): array
     $total = round((float) ($o['total_value'] ?? 0), 2);
     $eur = number_format($total, 2, ',', ' ') . ' €';
     $paye = (int) ($o['id_transaction'] ?? 0) > 0;
-    return ['prenom' => $prenom, 'nom' => $nom, 'magasin' => $magasin, 'jour' => auJourLong(substr($q, 0, 10)), 'heure' => substr($q, 11, 5),
+    return ['prenom' => $prenom, 'nom' => $nom, 'magasin' => $magasin, 'jour' => amJourLong(substr($q, 0, 10)), 'heure' => substr($q, 11, 5),
         'total' => $eur, 'paiement' => $paye ? 'Elle est déjà réglée.' : ($total > 0 ? 'Reste à payer au retrait : ' . $eur . '.' : ''),
         'commande' => (string) ($o['id'] ?? '')];
 }
 
 /** Un modèle rempli ; une variable inconnue reste telle quelle, une variable vide s'efface (et l'espace double avec). */
-function auRemplir(string $t, array $v): string
+function amRemplir(string $t, array $v): string
 {
     $s = (string) preg_replace_callback('/\{(prenom|nom|magasin|jour|heure|total|paiement|commande)\}/', static fn ($m) => (string) ($v[$m[1]] ?? ''), $t);
     $s = (string) preg_replace('/[ \t]{2,}/', ' ', $s);
@@ -176,7 +176,7 @@ function auRemplir(string $t, array $v): string
 }
 
 /** Où joindre le client d'une commande : [e-mail|null, téléphone international|null]. */
-function auContacts(array $o): array
+function amContacts(array $o): array
 {
     $cl = is_array($o['client'] ?? null) ? $o['client'] : [];
     $mail = strtolower(trim((string) ($cl['email'] ?? '')));
@@ -187,7 +187,7 @@ function auContacts(array $o): array
 }
 
 /** Les canaux d'un envoi : ce que le réglage demande, ce que la fiche permet. */
-function auCanaux(string $canal, ?string $mail, ?string $tel): array
+function amCanaux(string $canal, ?string $mail, ?string $tel): array
 {
     $m = $canal !== 'sms' && $mail !== null;
     $s = $canal !== 'email' && $tel !== null;
@@ -199,7 +199,7 @@ function auCanaux(string $canal, ?string $mail, ?string $tel): array
 }
 
 /** La commande passée moins de 24 h avant son retrait : la confirmation suffit. */
-function auTropRecente(array $o): bool
+function amTropRecente(array $o): bool
 {
     $a = strtotime((string) ($o['accepting_timestamp'] ?? ''));
     $p = strtotime((string) ($o['pick_up_datetime'] ?? ''));
@@ -207,7 +207,7 @@ function auTropRecente(array $o): bool
 }
 
 /** Le journal d'une commande : [canal => {le, erreur}]. */
-function auJournalCommande(string $shop, string $cleBase): array
+function amJournalCommande(string $shop, string $cleBase): array
 {
     $out = [];
     foreach (Db::rows('SELECT cle, envoye_le, erreur FROM pil_boite_journal WHERE shop_id = ? AND cle LIKE ?', [$shop, $cleBase . ':%']) as $r) {
@@ -217,26 +217,26 @@ function auJournalCommande(string $shop, string $cleBase): array
 }
 
 /** Envoie le rappel d'une commande, canal par canal, une seule fois chacun. Rend [canal => envoyé|déjà|erreur]. */
-function auEnvoyerRappel(string $shop, array $c, array $o, array $g): array
+function amEnvoyerRappel(string $shop, array $c, array $o, array $g): array
 {
-    [$mail, $tel] = auContacts($o);
-    $k = auCanaux($g['canal'], $mail, $tel);
-    $v = auVars($o, $c['nom']);
+    [$mail, $tel] = amContacts($o);
+    $k = amCanaux($g['canal'], $mail, $tel);
+    $v = amVars($o, $c['nom']);
     $base = 'rappel_retrait:' . (int) ($o['id'] ?? 0) . ':' . substr((string) $o['pick_up_datetime'], 0, 10);
     $out = [];
     foreach (['email' => $mail, 'sms' => $tel] as $canal => $a) {
         if (!$k[$canal]) { continue; }
         $cle = $base . ':' . $canal;
         if (Db::row('SELECT id FROM pil_boite_journal WHERE shop_id = ? AND cle = ?', [$shop, $cle]) !== null) { $out[$canal] = 'déjà'; continue; }
-        $objet = $canal === 'email' ? auRemplir($g['objet'], $v) : 'SMS';
+        $objet = $canal === 'email' ? amRemplir($g['objet'], $v) : 'SMS';
         Db::exec('INSERT INTO pil_boite_journal (shop_id, regle, cle, destinataire, objet, envoye_le) VALUES (?, ?, ?, ?, ?, NOW())',
             [$shop, 'rappel_retrait', $cle, (string) $a, mb_substr($objet, 0, 255)]);
         $err = null;
         try {
             if ($canal === 'email') {
-                bmEnvoyer($shop, $c, [['nom' => trim($v['prenom'] . ' ' . $v['nom']), 'adresse' => (string) $mail]], [], $objet, auRemplir($g['corps'], $v));
+                bmEnvoyer($shop, $c, [['nom' => trim($v['prenom'] . ' ' . $v['nom']), 'adresse' => (string) $mail]], [], $objet, amRemplir($g['corps'], $v));
             } else {
-                $r = smsPartir((string) $tel, auRemplir($g['sms'], $v));
+                $r = smsPartir((string) $tel, amRemplir($g['sms'], $v));
                 if (!$r['ok']) { $err = (string) $r['erreur']; }
             }
         } catch (Throwable $e) { $err = $e->getMessage(); }
@@ -247,33 +247,33 @@ function auEnvoyerRappel(string $shop, array $c, array $o, array $g): array
 }
 
 /** Le rappel d'un magasin, une fois : à partir de l'heure choisie et jusqu'à 22:00, les commandes de demain. */
-function auTournerRappel(string $shop, array $c, array $g, ?int $maintenant = null): array
+function amTournerRappel(string $shop, array $c, array $g, ?int $maintenant = null): array
 {
     $t = $maintenant ?? time();
     $h = date('H:i', $t);
     if ($h < $g['heure'] || $h >= '22:00') { return ['attente' => $g['heure']]; }
     $demain = date('Y-m-d', strtotime('+1 day', $t));
-    $L = auCommandes((int) $shop, $demain);
+    $L = amCommandes((int) $shop, $demain);
     if ($L === null) { return ['erreur' => 'les commandes ne se lisent pas au panel']; }
     $out = [];
     foreach ($L as $o) {
-        if ($g['recent'] && auTropRecente($o)) { continue; }
-        $out[(string) ($o['id'] ?? '?')] = auEnvoyerRappel($shop, $c, $o, $g);
+        if ($g['recent'] && amTropRecente($o)) { continue; }
+        $out[(string) ($o['id'] ?? '?')] = amEnvoyerRappel($shop, $c, $o, $g);
     }
     return $out;
 }
 
 /** L'horloge : chaque magasin qui a une automatisation allumée. Appelée par bmCron. */
-function auCron(): array
+function amCron(): array
 {
-    auTables();
+    amTables();
     $rapport = [];
     foreach (Db::rows('SELECT shop_id, auto FROM pil_auto_reglage WHERE actif = 1') as $r) {
         $shop = (string) $r['shop_id'];
         $c = bmCompte($shop);
         if ($c === null) { $rapport[$shop][$r['auto']] = 'boîte non reliée'; continue; }
         try {
-            if ($r['auto'] === 'rappel_retrait') { $rapport[$shop][$r['auto']] = auTournerRappel($shop, $c, auReglage($shop, 'rappel_retrait')); }
+            if ($r['auto'] === 'rappel_retrait') { $rapport[$shop][$r['auto']] = amTournerRappel($shop, $c, amReglage($shop, 'rappel_retrait')); }
         } catch (Throwable $e) { $rapport[$shop][$r['auto']] = 'erreur : ' . $e->getMessage(); }
     }
     return $rapport;
@@ -282,19 +282,19 @@ function auCron(): array
 /* --- la lecture de l'écran -------------------------------------------------------------------------------------- */
 
 /** GET /dashboard/boite/automatisations */
-function auLire(string $shop, array $c): array
+function amLire(string $shop, array $c): array
 {
-    auTables();
-    $g = auReglage($shop, 'rappel_retrait');
+    amTables();
+    $g = amReglage($shop, 'rappel_retrait');
     $demain = date('Y-m-d', strtotime('+1 day'));
-    $L = auCommandes((int) $shop, $demain);
+    $L = amCommandes((int) $shop, $demain);
     $cmd = [];
     foreach ($L ?? [] as $o) {
-        [$mail, $tel] = auContacts($o);
-        $k = auCanaux($g['canal'], $mail, $tel);
-        $v = auVars($o, $c['nom']);
-        $j = auJournalCommande($shop, 'rappel_retrait:' . (int) ($o['id'] ?? 0) . ':' . $demain);
-        $recente = $g['recent'] && auTropRecente($o);
+        [$mail, $tel] = amContacts($o);
+        $k = amCanaux($g['canal'], $mail, $tel);
+        $v = amVars($o, $c['nom']);
+        $j = amJournalCommande($shop, 'rappel_retrait:' . (int) ($o['id'] ?? 0) . ':' . $demain);
+        $recente = $g['recent'] && amTropRecente($o);
         $etat = $recente ? 'recente' : (!$k['email'] && !$k['sms'] ? 'injoignable' : 'prevu');
         foreach ($j as $x) { $etat = $x['erreur'] !== null ? 'erreur' : 'envoye'; if ($x['erreur'] !== null) { break; } }
         $cmd[] = ['id' => (int) ($o['id'] ?? 0), 'heure' => $v['heure'], 'client' => trim($v['prenom'] . ' ' . ($v['nom'] !== '' ? mb_substr($v['nom'], 0, 1) . '.' : '')),
@@ -310,30 +310,30 @@ function auLire(string $shop, array $c): array
     return [
         'shop' => $shop, 'boite' => $c['adresse'], 'magasin' => $c['nom'], 'horloge' => is_array($h) ? ($h['le'] ?? null) : null,
         'sms' => function_exists('smsFournisseur') ? smsFournisseur() : null,
-        'rappel' => ['reglage' => $g, 'variables' => AU_VARIABLES, 'smsMax' => AU_SMS_MAX, 'heures' => [AU_HEURE_MIN, AU_HEURE_MAX],
+        'rappel' => ['reglage' => $g, 'variables' => AM_VARIABLES, 'smsMax' => AM_SMS_MAX, 'heures' => [AM_HEURE_MIN, AM_HEURE_MAX],
             'offresAllume' => $offres !== null && (int) $offres['actif'] === 1,
-            'demain' => ['jour' => $demain, 'lib' => auJourLong($demain), 'lu' => $L !== null, 'commandes' => $cmd], 'journal' => $journal],
+            'demain' => ['jour' => $demain, 'lib' => amJourLong($demain), 'lu' => $L !== null, 'commandes' => $cmd], 'journal' => $journal],
     ];
 }
 
 /** POST /dashboard/boite/automatisations/essai {shop, auto, tel?} : l'e-mail à la boîte du magasin, le SMS au numéro donné. */
-function auEssai(string $shop, array $c, array $b): array
+function amEssai(string $shop, array $c, array $b): array
 {
-    auTables();
+    amTables();
     if ((string) ($b['auto'] ?? '') !== 'rappel_retrait') { return bmErreur(422, 'automatisation inconnue'); }
-    [$g, $err] = auValider(auReglage($shop, 'rappel_retrait'), $b);
+    [$g, $err] = amValider(amReglage($shop, 'rappel_retrait'), $b);
     if ($err !== null) { return bmErreur(422, $err); }
     $demain = date('Y-m-d', strtotime('+1 day'));
     $exemple = ['id' => 0, 'pick_up_datetime' => $demain . ' 08:30:00', 'total_value' => 68.4, 'id_transaction' => 0, 'client' => ['name' => 'Camille', 'surname' => 'Exemple']];
-    $v = auVars($exemple, $c['nom']);
+    $v = amVars($exemple, $c['nom']);
     $out = ['ok' => true, 'email' => null, 'sms' => null];
     if ($g['canal'] !== 'sms') {
-        try { bmEnvoyer($shop, $c, [['nom' => $c['nom'], 'adresse' => $c['adresse']]], [], '[Essai] ' . auRemplir($g['objet'], $v), auRemplir($g['corps'], $v)); $out['email'] = 'envoyé à ' . $c['adresse']; }
+        try { bmEnvoyer($shop, $c, [['nom' => $c['nom'], 'adresse' => $c['adresse']]], [], '[Essai] ' . amRemplir($g['objet'], $v), amRemplir($g['corps'], $v)); $out['email'] = 'envoyé à ' . $c['adresse']; }
         catch (Throwable $e) { $out['email'] = 'échec : ' . $e->getMessage(); $out['ok'] = false; }
     }
     $tel = trim((string) ($b['tel'] ?? ''));
     if ($g['canal'] !== 'email' && $tel !== '') {
-        $r = smsPartir($tel, auRemplir($g['sms'], $v));
+        $r = smsPartir($tel, amRemplir($g['sms'], $v));
         $out['sms'] = $r['ok'] ? 'envoyé au ' . (function_exists('smsLisible') ? smsLisible($r['a']) : (string) $r['a']) : 'échec : ' . $r['erreur'];
         if (!$r['ok']) { $out['ok'] = false; }
     }

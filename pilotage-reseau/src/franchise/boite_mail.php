@@ -193,8 +193,8 @@ function bmRoute(string $method, string $path): ?array
         if ($method === 'POST' && $sous === '/envoyer') { return bmEnvoyerRoute($shop, $c, $b); }
         if ($sous === '/modeles') { return $method === 'POST' ? bmModelesEcrire($shop, $b) : bmModeles($shop); }
         if ($sous === '/automatiques') { return $method === 'POST' ? bmAutoEcrire($shop, $b) : bmAuto($shop); }
-        if ($sous === '/automatisations') { return $method === 'POST' ? auEcrire($shop, $c, $b) : auLire($shop, $c); }
-        if ($method === 'POST' && $sous === '/automatisations/essai') { return auEssai($shop, $c, $b); }
+        if ($sous === '/automatisations') { return $method === 'POST' ? amEcrire($shop, $c, $b) : amLire($shop, $c); }
+        if ($method === 'POST' && $sous === '/automatisations/essai') { return amEssai($shop, $c, $b); }
     } catch (BmRefus $e) {
         return bmErreur(401, 'Le serveur de la boîte refuse les accès gardés : le mot de passe a peut-être changé. Reliez la boîte à nouveau.', ['etat' => 'refusee']);
     } catch (RuntimeException $e) {
@@ -578,7 +578,7 @@ function bmRegles(string $shop): array
 
 function bmAuto(string $shop): array
 {
-    $j = array_map(static fn ($r) => ['regle' => $r['regle'], 'nom' => BM_REGLES[$r['regle']]['nom'] ?? (AU_AUTOS[$r['regle']]['nom'] ?? $r['regle']), 'destinataire' => $r['destinataire'],
+    $j = array_map(static fn ($r) => ['regle' => $r['regle'], 'nom' => BM_REGLES[$r['regle']]['nom'] ?? (AM_AUTOS[$r['regle']]['nom'] ?? $r['regle']), 'destinataire' => $r['destinataire'],
         'objet' => $r['objet'], 'le' => $r['envoye_le'], 'erreur' => $r['erreur']],
         Db::rows('SELECT * FROM pil_boite_journal WHERE shop_id = ? ORDER BY envoye_le DESC, id DESC LIMIT 40', [$shop]));
     $h = setting('boiteHorloge', []);
@@ -634,7 +634,7 @@ function bmCron(): array
         catch (Throwable $e) { $rapport[$shop] = 'erreur : ' . $e->getMessage(); }
     }
     // Les automatisations du magasin (Paramètres › Mails et automatisations) : le rappel la veille du retrait.
-    try { $rapport['automatisations'] = auCron(); } catch (Throwable $e) { $rapport['automatisations'] = 'erreur : ' . $e->getMessage(); }
+    try { $rapport['automatisations'] = amCron(); } catch (Throwable $e) { $rapport['automatisations'] = 'erreur : ' . $e->getMessage(); }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['boiteHorloge', json_encode(['le' => date('c'), 'rapport' => $rapport], JSON_UNESCAPED_UNICODE)]);
     return ['ok' => true, 'rapport' => $rapport];
 }
