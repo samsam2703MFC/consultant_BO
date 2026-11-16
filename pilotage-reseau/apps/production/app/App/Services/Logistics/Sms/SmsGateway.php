@@ -134,16 +134,34 @@ final class SmsGateway implements SmsTransport
     }
 
     /** Konto SMSAPI (GET /profile) : czy token działa — bez wysyłania SMS. @return array{ok:bool, message:string, points:?float} */
-    public function profile(?string $token = null): array
+    public function profile(?string $token = null, ?string $base = null): array
     {
         $token ??= $this->token()['token'];
         if ($token === '') return ['ok' => false, 'message' => 'brak tokenu SMSAPI', 'points' => null];
-        [$code, $res] = $this->call('/profile', null, $token);
+        [$code, $res] = $this->call('/profile', null, $token, $base);
         if ($code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])) {
             $pts = isset($res['points']) ? (float) $res['points'] : null;
             return ['ok' => true, 'message' => trim((string) ($res['username'] ?? ($res['name'] ?? 'konto SMSAPI'))), 'points' => $pts];
         }
         return ['ok' => false, 'message' => self::error($code, $res), 'points' => null];
+    }
+
+    /**
+     * [319] Token sprawdzony na platformach SMSAPI (sms.bases : .com i .pl) — bieżąca najpierw.
+     * @return array{ok:bool, base:?string, message:string, points:?float, tried:array<string,string>}
+     */
+    public function probe(string $token): array
+    {
+        $bases = array_values(array_unique(array_filter(array_merge([$this->base()],
+            preg_split('/[\s,;]+/', $this->params->get('sms.bases', '')) ?: []), fn($b) => str_starts_with((string) $b, 'https://'))));
+        $tried = [];
+        foreach ($bases as $b) {
+            $b = rtrim($b, '/');
+            $p = $this->profile($token, $b);
+            if ($p['ok']) return ['ok' => true, 'base' => $b, 'message' => $p['message'], 'points' => $p['points'], 'tried' => $tried];
+            $tried[$b] = $p['message'];
+        }
+        return ['ok' => false, 'base' => null, 'message' => implode(' · ', array_map(fn($b, $m) => parse_url($b, PHP_URL_HOST) . ' : ' . $m, array_keys($tried), $tried)), 'points' => null, 'tried' => $tried];
     }
 
     /** Numer w formacie E.164 (+32…, +48…) ; bez prefiksu : parametr sms.default_prefix (jak w CRM : Belgia). */
@@ -162,10 +180,10 @@ final class SmsGateway implements SmsTransport
         return strlen($d) >= 9 && strlen($d) <= 15 ? '+' . $d : null;
     }
 
-    private function call(string $path, ?array $fields, ?string $token = null): array
+    private function call(string $path, ?array $fields, ?string $token = null, ?string $base = null): array
     {
         $token ??= $this->token()['token'];
-        $url = $this->base() . $path;
+        $url = ($base ?? $this->base()) . $path;
         if (self::$http !== null) return (self::$http)($url, $fields, $token);
         $ch = curl_init($url);
         if ($fields !== null) curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query($fields)]);

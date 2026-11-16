@@ -54,17 +54,24 @@ final class SmsSettingsService
             throw new CustomException($source === 'env' ? 'Token jest ustawiony w pliku .env serwera — zmiana tylko tam.'
                 : 'Token jest we wspólnej tabeli kluczy ERP (erp_cles, smsapi_token) — zmiana tylko tam.', 'errors', 409);
         }
-        $token = trim($token);
+        // Wklejony token : bez « Bearer », cudzysłowów i spacji.
+        $token = trim(preg_replace('/^\s*(authorization:\s*)?bearer\s+/i', '', trim($token)) ?? '', " \t\n\r\0\x0B\"'");
+        $warning = null;
         if ($token === '') {
             $this->secrets->delete(SmsGateway::SECRET);
         } else {
-            if (strlen($token) < 20 || preg_match('/\s/', $token)) throw new CustomException('To nie wygląda na token SMSAPI (OAuth, bez spacji).', 'errors', 422);
-            $p = $this->sms->profile($token);
-            if (!$p['ok']) throw new CustomException('SMSAPI odrzuca token : ' . $p['message'], 'errors', 422);
+            if (strlen($token) < 10 || preg_match('/\s/', $token)) throw new CustomException('To nie wygląda na token SMSAPI (jeden ciąg znaków, bez spacji).', 'errors', 422);
+            // [319] Sprawdzenie na platformach .com i .pl ; właściwa zapamiętana. Token zapisany także, gdy SMSAPI go nie
+            // potwierdzi (np. token bez uprawnienia « profile ») — z ostrzeżeniem ; błąd wysyłki pokaże się przy SMS próbnym.
+            $p = $this->sms->probe($token);
+            if ($p['ok'] && $p['base'] !== $this->sms->base()) $this->params->setValue('sms.base', $p['base'], $userId);
+            if (!$p['ok']) $warning = 'Token zapisany, ale SMSAPI go nie potwierdziło (' . $p['message'] . '). Sprawdź : token OAuth z uprawnieniami « sms » i « profile », z właściwego konta (smsapi.com / smsapi.pl). Potem SMS próbny.';
             $this->secrets->put(SmsGateway::SECRET, $this->cipher->encrypt($token), substr($token, -4), $userId);
         }
         $this->sms->forget();
-        return $this->state($userId, true);
+        $state = $this->state($userId, true);
+        $state['message'] = $warning ?? ($token === '' ? 'Token usunięty.' : 'Token zapisany i potwierdzony przez SMSAPI (' . parse_url($this->sms->base(), PHP_URL_HOST) . ').');
+        return $state;
     }
 
     public function save(int $userId, array $in): array

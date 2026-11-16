@@ -71,7 +71,7 @@
         const recent = (s.recent || []).map((r) => `<tr><td class="text-nowrap">${esc(String(r.created_at).slice(0, 16))}</td><td>${esc(CONTEXTS[r.context] || r.context)}</td>
             <td>${r.id_customer ? `<a href="${root}/clients/${r.id_customer}/space?tab=messages">${esc(r.company || '#' + r.id_customer)}</a>` : '<span class="text-muted">—</span>'}</td>
             <td>${esc(r.recipient)}</td><td><span class="sm-st ${(STATUS[r.status] || ['', ''])[1]}">${esc((STATUS[r.status] || [r.status])[0])}</span>${r.error ? ' <span class="small text-danger">' + esc(r.error) + '</span>' : ''}</td></tr>`).join('');
-        app.innerHTML = `${msg ? `<div class="alert alert-info">${esc(msg)}</div>` : ''}
+        app.innerHTML = `${msg ? `<div class="alert ${/nie potwierdzi|odrzuca|nie wysłany|Błąd/.test(msg) ? 'alert-warning' : 'alert-info'}">${esc(msg)}</div>` : ''}
         <div class="card"><div class="card-body d-flex align-items-center gap-3 flex-wrap">
             <span class="badge ${live ? 'bg-success' : 'bg-secondary'}" style="font-size:13px">${live ? 'SMS wychodzą do odbiorców' : 'SMS tylko zapisywane'}</span>
             <span class="text-muted">${live ? 'SMSAPI · ' + esc(s.base) : esc(s.blocker || '')}</span>
