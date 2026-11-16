@@ -76,6 +76,12 @@ async function entourer(p, sel) {
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 4 / 3 });
+  // En http (le https du serveur coupé), la garde des pages (assets/js/garde.js, 13/11/2026) renverrait vers https et la
+  // page resterait blanche : pour la capture seule, elle est remplacée par une garde qui laisse la page s'afficher
+  // (l'API est en accès « ouvert » sur le serveur ; rien n'est écrit).
+  if (BASE.startsWith('http:')) {
+    await ctx.route('**/assets/js/garde.js', r => r.fulfill({ contentType: 'application/javascript', body: 'window.ACCES = { connecte: true, role: "siege", nom: "Captures" };' }));
+  }
   const pages = {};
   for (const plan of PLANS) {
     if (SEULES.length && !SEULES.includes(plan.nom)) continue;
