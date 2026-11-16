@@ -58,3 +58,4 @@
 2026-11-16T15:00:33Z Dashboard : panneau Valeur du magasin sans débordement (libellés des vignettes limités aux vignettes)
 2026-11-16T15:08:39Z Paramètres › Mails et automatisations : rappel la veille du retrait (e-mail et SMS)
 2026-11-16T15:11:55Z [310] tablette chauffeur : palettes QR + photo, Coś nie tak, CMR signé, documents du point, étiquettes palettes
+2026-11-16T15:12:14Z URGENT : API rétablie (automatisations : auReglage en double)
