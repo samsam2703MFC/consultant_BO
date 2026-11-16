@@ -134,9 +134,15 @@ try {
     $state = $s->state(2);
     expectE($state['enabled'] && $state['clocked_in'] && $state['since'] === substr($in['data']['clock']['clock_in'], 11, 5) && $state['first_name'] === 'Ewa' && $state['plan_minutes'] >= 60,
         'barre du haut : « W pracy od … »');
-    $pdo->exec("UPDATE n_prod_clock SET clock_in = NOW() - INTERVAL 500 MINUTE WHERE id = {$in['data']['clock']['id']}");
-    $state = $s->state(2);
-    expectE($state['minutes'] >= 499 && $state['overtime_minutes'] === max(0, $state['minutes'] - $state['plan_minutes']), 'Zakończ dzień : minutes du jour et heures sup.');
+    // Horloge fixe : entrée à 06:00, « maintenant » à 14:20 le même jour (500 min). Avec NOW() de MySQL et l'heure de PHP,
+    // le test dépendait de l'heure du lancement (avant 08:20, l'entrée tombait la veille) et du fuseau de chacun.
+    $clockId = (int) $in['data']['clock']['id'];
+    $clockIn = (string) $pdo->query("SELECT clock_in FROM n_prod_clock WHERE id = {$clockId}")->fetchColumn();
+    $pdo->exec("UPDATE n_prod_clock SET clock_in = '2026-11-10 06:00:00' WHERE id = {$clockId}");
+    $state = $s->state(2, new DateTimeImmutable('2026-11-10 14:20:00'));
+    expectE($state['minutes'] === 500 && $state['plan_minutes'] === 480 && $state['overtime_minutes'] === 20 && $state['day'] === '2026-11-10' && $state['now'] === '14:20',
+        'Zakończ dzień : minutes du jour et heures sup.');
+    $pdo->exec("UPDATE n_prod_clock SET clock_in = " . $pdo->quote($clockIn) . " WHERE id = {$clockId}"); // la sortie du soir suit l'entrée réelle
 
     // 3. Soir : même QR → sortie (marchandise « Nie ») → verrou
     $q2 = $s->qr(2, $base);
