@@ -6,6 +6,8 @@ return function(RouteCollector $r) {
 
     $r->addRoute('GET', '/logistics', ['controller' => $c, 'method' => 'day']);
     $r->addRoute('GET', '/logistics/week', ['controller' => $c, 'method' => 'week']);
+    // [296] Stany i palety : magazyn → palety w budowie → gotowe → wysłane, skład palety, śledzenie partii.
+    $r->addRoute('GET', '/logistics/stock', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'index']);
     // Plan logistyki na 12 tygodni [200] : prognoza palet, ciężarówki (przeciągnij), święta PL / BE, urlopy kierowców.
     $pl = App\Controllers\Web\Logistics\LogisticsPlanController::class;
     $r->addRoute('GET', '/logistics/plan', ['controller' => $pl, 'method' => 'index']);

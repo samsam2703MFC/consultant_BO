@@ -45,6 +45,8 @@ final class Rail
         'clients' => ['Klienci', 'bi-shop', 'Sprzedaż', '/clients', ['/price-lists'], null],
         'complaints' => ['Reklamacje i zwroty', 'bi-arrow-counterclockwise', 'Sprzedaż', '/franchise-complaints', ['/client-complaints'], 'complaints'],
         'invoicing' => ['Faktury i płatności', 'bi-cash-stack', 'Sprzedaż', '/finances/payments-day', ['/finances/payment-proofs', '/communication/compose/reminder'], null],
+        // [296] Stany i palety (makieta 53) : droga kartonu magazyn → paleta → wysyłka, skład palety, śledzenie partii.
+        'stock_pallets' => ['Stany i palety', 'bi-boxes', 'Logistyka', '/logistics/stock', [], null],
         'shipping_day' => ['Dzień wysyłki', 'bi-calendar-check', 'Logistyka', '/logistics', [], null],
         'trucks' => ['Ciężarówki', 'bi-calendar-range', 'Logistyka', '/logistics/plan', [], null],
         'shipments' => ['Wysyłki i dokumenty', 'bi-file-earmark-text', 'Logistyka', '/shipments', ['/shipping-transport-documents', '/shipping-documents', '/archive'], null],

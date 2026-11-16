@@ -1,0 +1,207 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Stany i palety{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading sp-head">
+        <div class="page-title">
+            <h3><i class="bi bi-boxes"></i> Stany i palety</h3>
+            <p class="text-subtitle text-muted">Droga kartonu od lewej do prawej : magazyn → palety w budowie → gotowe do wysyłki → wysłane (dzień, wyjazd, u kogo).
+                Klik na paletę : jej skład. Partia (produkt + dzień produkcji) : u których klientów jest.</p>
+        </div>
+        <form class="sp-search" method="get" action="{{ root }}/logistics/stock">
+            <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Paleta (P-123) albo klient…" aria-label="Szukaj palety albo klienta">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Szukaj</button>
+            {% if q %}<a class="btn btn-light" href="{{ root }}/logistics/stock">Wyczyść</a>{% endif %}
+        </form>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.sp-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.sp-search{display:flex;gap:8px;align-items:center}.sp-search .form-control{min-width:280px}
+.sp-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+@media (max-width:1200px){.sp-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sp-col{background:var(--at-surface-2,#F8F4EE);border-radius:14px;padding:10px;min-width:0}
+.sp-ch{margin:2px 4px 10px;font-size:13px}.sp-ch b{font-size:20px;margin-left:6px;font-variant-numeric:tabular-nums}.sp-ch small{display:block;color:var(--at-muted)}
+.sp-card{display:block;background:#fff;border:1px solid var(--at-line);border-radius:10px;padding:8px 10px;margin-bottom:7px;font-size:13px;color:inherit;text-decoration:none}
+a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
+.sp-card.is-sel{outline:2px solid var(--at-brand,#8D1D2C)}
+.sp-card .row1{display:flex;justify-content:space-between;gap:8px}.sp-card .n{font-variant-numeric:tabular-nums;color:var(--at-muted);white-space:nowrap}
+.sp-sub{font-size:12px;color:var(--at-muted)}
+.sp-bar{height:5px;border-radius:4px;background:var(--at-line);margin-top:6px;overflow:hidden}.sp-bar i{display:block;height:100%;background:var(--at-brand,#8D1D2C)}
+.sp-warn{background:rgba(196,30,58,.06);border-color:rgba(196,30,58,.25)}.sp-warn b{color:var(--at-danger,#C41E3A)}
+.sp-empty{font-size:12px;color:var(--at-muted);padding:6px 4px}
+.sp-col details summary{color:var(--at-brand,#8D1D2C);font-size:12px;cursor:pointer;padding:2px 4px;list-style:none}
+.sp-col details[open] summary{margin-bottom:6px}
+.sp-more{display:inline-block;color:var(--at-brand,#8D1D2C);font-size:12px;padding:2px 4px}
+.sp-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:1100px){.sp-split{grid-template-columns:1fr}}
+.sp-split .card{margin:0}
+.sp-k{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--at-muted);margin-bottom:10px}
+.sp-pill{border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;text-transform:none;letter-spacing:0}
+.sp-s1{background:#f6ead6;color:#8a5a12}.sp-s2{background:#e8eef7;color:#2c5282}.sp-s3{background:#eef3ee;color:#2E7D4F}.sp-s0{background:#f6ead6;color:#8a5a12}
+.sp-table{width:100%;border-collapse:collapse;font-size:13px}
+.sp-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:7px 8px;text-align:left;white-space:nowrap}
+.sp-table td{border-bottom:1px solid var(--at-line);padding:7px 8px;vertical-align:top}
+.sp-table td:not(:first-child){white-space:nowrap}
+.sp-table th.n,.sp-table td.n{text-align:right;font-variant-numeric:tabular-nums}
+.sp-pal{display:grid;grid-template-columns:170px minmax(0,1fr);gap:14px}
+@media (max-width:700px){.sp-pal{grid-template-columns:1fr}}
+.sp-stack{display:flex;flex-direction:column-reverse;gap:3px;width:150px;margin:2px auto 0;height:220px}
+.sp-stack div{border-radius:3px;color:#fff;font-size:10.5px;padding:0 6px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;min-height:16px}
+.sp-l0{background:#8D1D2C}.sp-l1{background:#a8475a}.sp-l2{background:#c47b5a}.sp-l3{background:#d9a05b}.sp-l4{background:#2E7D4F}.sp-lo{background:#7a736a}
+.sp-steps{display:flex;margin:4px 0 14px}
+.sp-steps div{flex:1;text-align:center;font-size:11px;color:var(--at-muted);position:relative;padding-top:16px}
+.sp-steps div:before{content:'';position:absolute;top:4px;left:50%;width:10px;height:10px;border-radius:50%;background:var(--at-line-2,#d9d2c8);transform:translateX(-50%);z-index:1}
+.sp-steps div:after{content:'';position:absolute;top:8px;left:50%;width:100%;height:2px;background:var(--at-line,#e6e0d8)}
+.sp-steps div:last-child:after{display:none}
+.sp-steps div.on:before{background:#2E7D4F}.sp-steps div.on:after{background:#2E7D4F}
+.sp-steps b{display:block;color:var(--at-ink,#1c1a17);font-size:12px;font-variant-numeric:tabular-nums}
+.sp-trace{display:flex;gap:8px;align-items:center;margin-bottom:10px}.sp-trace .form-control{max-width:200px}
+.sp-hint{color:var(--at-muted);font-size:13px;padding:18px 4px}
+.sp-trace{flex-wrap:wrap}
+.sp-days{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.sp-day{border:1px solid var(--at-line);border-radius:8px;padding:3px 8px;font-size:12px;color:inherit;text-decoration:none;text-align:center;font-variant-numeric:tabular-nums}
+.sp-day small{display:block;color:var(--at-muted);font-size:10.5px}.sp-day.on{background:var(--at-brand,#8D1D2C);border-color:var(--at-brand,#8D1D2C);color:#fff}.sp-day.on small{color:rgba(255,255,255,.8)}
+</style>
+
+{% set statusClass = {1: 'sp-s1', 2: 'sp-s2', 3: 'sp-s3'} %}
+{% set keep = (trace ? '&product=' ~ trace.id_product ~ '&made=' ~ trace.made_on : '') %}
+
+<div class="sp-flow">
+    {# --- Magazyn --- #}
+    <div class="sp-col">
+        <div class="sp-ch">Magazyn <b>{{ in_store }}</b><small>kartonów · {{ products }} produktów</small></div>
+        {% for g in groups %}
+            <div class="sp-card">
+                <div class="row1"><b>{{ g.name }}</b><span class="n">{{ g.in_store }} kart.</span></div>
+                <div class="sp-sub">{{ g.products }} produktów{% if g.on_pallet %} · {{ g.on_pallet }} kart. na paletach{% endif %}</div>
+                <div class="sp-bar"><i style="width:{{ g.share }}%"></i></div>
+            </div>
+        {% else %}
+            <div class="sp-empty">Magazyn pusty.</div>
+        {% endfor %}
+        {% if expiring %}
+            <details class="sp-card sp-warn">
+                <summary style="color:inherit;padding:0"><b><i class="bi bi-exclamation-triangle"></i> {{ expiring|length }} {{ expiring|length == 1 ? 'partia ważna' : 'partii ważnych' }} &lt; {{ expiry_days }} dni</b>
+                    <div class="sp-sub">{{ expiring|slice(0, 2)|map(e => e.name)|join(', ') }}{% if expiring|length > 2 %}, …{% endif %}</div></summary>
+                <table class="sp-table" style="margin-top:6px">
+                    {% for e in expiring %}<tr><td>{{ e.name }}<div class="sp-sub"><a href="{{ root }}/logistics/stock?product={{ e.id_product }}&made={{ e.made_on }}">partia z {{ e.made_on|date('d.m') }}</a></div></td>
+                        <td class="n">{{ e.cartons }} kart.</td><td class="n">{{ e.expires|date('d.m') }}</td></tr>{% endfor %}
+                </table>
+            </details>
+        {% endif %}
+    </div>
+
+    {# --- Palety w budowie / gotowe --- #}
+    {% for col in [
+        {title: 'Na paletach — w budowie', list: building, cartons: building_cartons, empty: 'Żadna paleta nie jest w budowie.'},
+        {title: 'Gotowe do wysyłki', list: ready, cartons: ready_cartons, empty: 'Brak palet gotowych do wysyłki.'}
+    ] %}
+    <div class="sp-col">
+        <div class="sp-ch">{{ col.title }} <b>{{ col.list|length }}</b><small>palet · {{ col.cartons }} kartonów</small></div>
+        {% for p in col.list|slice(0, 8) %}
+            {% include 'logistics/_stock_pallet_card.twig' %}
+        {% else %}
+            <div class="sp-empty">{{ col.empty }}</div>
+        {% endfor %}
+        {% if col.list|length > 8 %}
+            <details><summary>+ {{ col.list|length - 8 }} palet</summary>
+                {% for p in col.list|slice(8) %}{% include 'logistics/_stock_pallet_card.twig' %}{% endfor %}
+            </details>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {# --- Wysłane --- #}
+    <div class="sp-col">
+        <div class="sp-ch">Wysłane <b>{{ shipped.total }}</b><small>palet od {{ shipped.since|date('d.m') }} · {{ shipped.customers }} klientów</small></div>
+        {% for d in shipped.days %}
+            <div class="sp-card">
+                <div class="row1"><b>{{ d.date|date('d.m') }}{% if d.left_at %} · {{ d.left_at|date('H:i') }}{% endif %}</b><span class="n">{{ d.pallets }} pal.</span></div>
+                {% if d.vehicles %}<div class="sp-sub"><i class="bi bi-truck"></i> {{ d.vehicles|join(', ') }}</div>{% endif %}
+                <div class="sp-sub">{% for c in d.customers %}<span class="sp-cust">{{ c.name }}</span> — {{ c.pallets }} pal.{% if c.delivered_at %} <i class="bi bi-check2" title="Dostarczona {{ c.delivered_at|date('d.m H:i') }}"></i>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>
+            </div>
+        {% else %}
+            <div class="sp-empty">Brak wysłanych palet w tym okresie.</div>
+        {% endfor %}
+        <a class="sp-more" href="{{ root }}/shipments">{% if shipped.more %}+ {{ shipped.more }} dni · {% endif %}Historia ▸</a>
+    </div>
+</div>
+
+<div class="sp-split">
+    {# --- Skład palety --- #}
+    <div class="card"><div class="card-body">
+        {% if pallet %}
+            <div class="sp-k"><span>Skład palety {{ pallet.code }} · <span class="sp-cust">{{ pallet.customer }}</span></span><span class="sp-pill {{ statusClass[pallet.status] ?? 'sp-s0' }}">{{ pallet.state }}</span></div>
+            <div class="sp-steps">
+                {% for s in pallet.steps %}<div class="{{ s.at ? 'on' }}"><b>{{ s.at ? s.at|date('d.m H:i') : '—' }}</b>{{ s.label }}</div>{% endfor %}
+            </div>
+            <div class="sp-pal">
+                <div>
+                    <div class="sp-stack">
+                        {% for l in pallet.layers %}<div class="{{ l.other is defined ? 'sp-lo' : 'sp-l' ~ loop.index0 }}" style="flex:{{ max(l.pct, 6) }} 0 0" title="{{ l.name }} : {{ l.cartons }} kart.">{{ l.name|length > 16 ? l.name|slice(0, 15) ~ '…' : l.name }} ×{{ l.cartons }}</div>{% endfor %}
+                    </div>
+                    <div class="sp-sub" style="text-align:center;margin-top:6px">{{ pallet.cartons }} kartonów · {{ pallet.products }} produktów<br>dzień wysyłki {{ pallet.delivery_date|date('d.m.Y') }}{% if pallet.vehicle %}<br><i class="bi bi-truck"></i> {{ pallet.vehicle }}{% endif %}</div>
+                </div>
+                <table class="sp-table">
+                    <thead><tr><th>Produkt</th><th class="n">Kart.</th><th title="Dzień produkcji (etykieta kartonu)">Partia</th><th>Ważne do</th></tr></thead>
+                    <tbody>
+                    {% for l in pallet.lines %}
+                        <tr><td>{{ l.name }}</td><td class="n">{{ l.cartons }}</td><td>{% if l.made_on %}<a href="{{ root }}/logistics/stock?pallet={{ pallet.id }}&product={{ l.id_product }}&made={{ l.made_on }}" title="Śledzenie partii">{{ l.made_on|date('d.m.Y') }}</a>{% else %}—{% endif %}</td><td>{{ l.expires ? l.expires|date('d.m.Y') : '—' }}</td></tr>
+                    {% else %}
+                        <tr><td colspan="4" class="sp-sub">Paleta bez kartonów.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="sp-k"><span>Skład palety</span></div>
+            <div class="sp-hint"><i class="bi bi-hand-index"></i> Kliknij paletę w kolumnie (w budowie albo gotową) albo wpisz jej numer (P-123) w wyszukiwarce : produkty, partie, daty ważności i warstwy palety.</div>
+        {% endif %}
+    </div></div>
+
+    {# --- Śledzenie partii (produkt + dzień etykiety) --- #}
+    <div class="card"><div class="card-body">
+        <div class="sp-k"><span>Śledzenie partii</span><span>wycofanie produktu / reklamacja</span></div>
+        <form class="sp-trace" method="get" action="{{ root }}/logistics/stock">
+            {% if pallet %}<input type="hidden" name="pallet" value="{{ pallet.id }}">{% endif %}
+            <select class="form-select" name="product" aria-label="Produkt" style="max-width:320px">
+                <option value="">Produkt…</option>
+                {% for p in trace_products %}<option value="{{ p.id }}"{{ trace and trace.id_product == p.id ? ' selected' }}>{{ p.name }}</option>{% endfor %}
+            </select>
+            <input class="form-control" type="date" name="made" value="{{ trace ? trace.made_on }}" aria-label="Dzień produkcji" style="max-width:160px">
+            <button class="btn btn-outline-primary" type="submit">Pokaż</button>
+        </form>
+        {% if trace %}
+            {% if trace.days %}
+                <div class="sp-days">{% for d in trace.days %}<a class="sp-day{{ d.made_on == trace.made_on ? ' on' }}" href="{{ root }}/logistics/stock?{{ pallet ? 'pallet=' ~ pallet.id ~ '&' }}product={{ trace.id_product }}&made={{ d.made_on }}">{{ d.made_on|date('d.m') }}<small>{{ d.cartons }} kart.</small></a>{% endfor %}</div>
+            {% endif %}
+            {% if trace.day %}
+                <div style="margin:8px 0"><b>{{ trace.name }}</b> · produkcja {{ trace.made_on|date('d.m.Y') }} · <b>{{ trace.day.cartons }} kart.</b>{% if trace.day.expires %} · ważne do {{ trace.day.expires|date('d.m.Y') }}{% endif %}</div>
+                {% if trace.customers %}<div class="sp-sub" style="margin-bottom:8px">Wysłana do : <span class="sp-cust">{{ trace.customers|join(', ') }}</span></div>{% endif %}
+                <table class="sp-table">
+                    <thead><tr><th>Paleta</th><th>Klient</th><th>Wysłana</th><th class="n">Kartony z partii</th><th>Stan</th></tr></thead>
+                    <tbody>
+                    {% for p in trace.pallets %}
+                        <tr><td><a href="{{ root }}/logistics/stock?pallet={{ p.id }}{{ keep }}"><b>{{ p.code }}</b></a></td><td class="sp-cust">{{ p.customer }}</td>
+                            <td>{{ p.left_at ? p.left_at|date('d.m H:i') : p.delivery_date|date('d.m.Y') }}</td><td class="n">{{ p.lot_cartons }}</td>
+                            <td><span class="sp-pill {{ statusClass[p.status] ?? 'sp-s0' }}">{{ p.delivered_at ? 'dostarczona' : p.state }}</span></td></tr>
+                    {% endfor %}
+                    {% if trace.day.in_store %}<tr><td>—</td><td>Magazyn</td><td>—</td><td class="n">{{ trace.day.in_store }}</td><td><span class="sp-pill sp-s1">u nas</span></td></tr>{% endif %}
+                    {% if not trace.pallets and not trace.day.in_store %}<tr><td colspan="5" class="sp-sub">Kartony tej partii bez palety (wysłane przed skanowaniem palet).</td></tr>{% endif %}
+                    </tbody>
+                </table>
+            {% elseif trace.made_on %}
+                <div class="sp-hint">Brak kartonów {{ trace.name }} z dnia {{ trace.made_on|date('d.m.Y') }} — wybierz dzień powyżej.</div>
+            {% else %}
+                <div class="sp-hint">Brak kartonów produktu {{ trace.name }}.</div>
+            {% endif %}
+        {% else %}
+            <div class="sp-hint">Wybierz produkt i dzień produkcji (z etykiety kartonu) : palety i klienci, do których poszła partia, oraz ile kartonów jest jeszcze w magazynie. Bez dnia : ostatnie dni produkcji.</div>
+        {% endif %}
+    </div></div>
+</div>
+{% endblock %}

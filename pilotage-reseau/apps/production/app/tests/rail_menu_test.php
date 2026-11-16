@@ -20,7 +20,8 @@ function expectRail(bool $condition, string $message): void
 }
 
 // --- Bez bazy : układ ----------------------------------------------------------------------------------------------------
-expectRail(count(Rail::ITEMS) === 30 && Rail::count() === 30, 'menu wspólne : 30 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR, [277] + Lista płac, [281] + Kontrola ; [286] Dzisiaj i zadania = jedna pozycja)');
+expectRail(count(Rail::ITEMS) === 31 && Rail::count() === 31, 'menu wspólne : 31 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR, [277] + Lista płac, [281] + Kontrola ; [286] Dzisiaj i zadania = jedna pozycja ; [296] + Stany i palety)');
+expectRail(Rail::itemFor('/logistics/stock') === 'stock_pallets' && Rail::itemFor('/logistics') === 'shipping_day' && \App\Core\Web\PageAccess::keyFor('/logistics/stock') === 'logistics', '[296] Stany i palety : pozycja railu (nie Dzień wysyłki) i prawo « logistics »');
 expectRail(Rail::itemFor('/time/month') === 'time' && Rail::itemFor('/time') === 'time' && \App\Core\Web\PageAccess::keyFor('/time/overtime') === 'time', '[262] Czas pracy : pozycja railu i prawo « time »');
 expectRail(array_keys(array_filter(array_map(fn($i) => $i[2], Rail::ITEMS), fn($s) => !in_array($s, Rail::SECTIONS, true))) === [], 'sekcje pozycji znane');
 foreach (array_keys(PageTabs::GROUPS) as $group) {
@@ -164,8 +165,8 @@ try {
     $res = $access()->saveMenuState(3, ['reset' => true], 1);
     expectRail($access()->railMenu(3) === null && $res['states']['mail'] === 'menu', 'całe menu : bez własnego menu');
     $m = $access()->menuMatrix();
-    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 30,
-        'macierz : stanowiska biurowe + bez stanowiska × 30 pozycji');
+    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 31,
+        'macierz : stanowiska biurowe + bez stanowiska × 31 pozycji');
     echo "rail_menu_test: OK\n";
 } finally {
     $_SESSION = [];
