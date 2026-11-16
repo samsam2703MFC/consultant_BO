@@ -83,3 +83,4 @@
 2026-11-16 19:58:57 [332] Załadunek épuré
 2026-11-16 20:02:50 [322] KSeF : duplicat 440 = facture acceptée
 2026-11-16 20:08:24 [333] Usuń paletę + zakładka krótka data
+2026-11-16 20:17:59 [334-335] Stan ogólny + dostęp Stany i palety
