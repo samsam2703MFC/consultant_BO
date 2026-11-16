@@ -465,7 +465,7 @@
       "nl": "In de rail, Les chiffres › Frais: de kosten van de maand zoals ingegeven in het panel, post per post; ‹ en › wisselen van maand.\nVoor elke post: « TVA comprise ? » (btw inbegrepen?) Oui (ja) of Non (nee), en het tarief (0, 6, 12 of 21 %).\nOui: het ingegeven bedrag is dat van de factuur, btw inbegrepen; de W&V haalt de btw eraf aan het aangeduide tarief.\nNon: het bedrag is al exclusief btw, of de kost heeft geen btw (huur niet onderworpen, verzekeringen, bankkosten: 0 %).\nDe keuze blijft bewaard voor de post, van maand tot maand; nog eens op de keuze klikken zet hem terug op aan te duiden.\nEen post die nog aan te duiden is, blijft oranje en telt zoals ingegeven in de W&V.\nOnderaan wat het verandert: de algemene kosten van de dag en van de maand, ingegeven en exclusief btw."
      },
      "critique": false,
-     "photo": null,
+     "photo": "dash-frais.jpg",
      "video": null
     }
    ]
