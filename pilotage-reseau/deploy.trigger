@@ -59,3 +59,4 @@
 2026-11-16T15:08:39Z Paramètres › Mails et automatisations : rappel la veille du retrait (e-mail et SMS)
 2026-11-16T15:11:55Z [310] tablette chauffeur : palettes QR + photo, Coś nie tak, CMR signé, documents du point, étiquettes palettes
 2026-11-16T15:12:14Z URGENT : API rétablie (automatisations : auReglage en double)
+2026-11-16T15:42:10Z Déploiement : test de fonctionnement avant de livrer
