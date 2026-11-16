@@ -67,9 +67,12 @@ a:hover { color: var(--at-primary-dark); }
 .text-danger { color: var(--at-danger) !important; }
 .border-primary { border-color: var(--at-primary) !important; }
 ::selection { background: var(--at-primary-soft); }
-::-webkit-scrollbar { width: 10px; height: 10px; }
+/* [304] Barre de défilement verticale : 3 px, Ruby (horizontale inchangée). Firefox : fine, Ruby. */
+::-webkit-scrollbar { width: 3px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--at-line-2); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:vertical { background: var(--at-primary); border: 0; border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
+@supports not selector(::-webkit-scrollbar) { html, body, * { scrollbar-width: thin; scrollbar-color: var(--at-primary) transparent; } }
 
 /* --- Menu latéral -------------------------------------------------------- */
 .sidebar-wrapper {
