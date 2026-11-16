@@ -33,7 +33,10 @@ class OrderController extends BaseController
         private OrderSupplementPusherService $supplementPusherService,
         private OrderTimelineService $orderTimelineService,
         private OrderCreationService $creation,
-        private \App\Services\Shipping\ShippingIssueService $shippingIssues
+        private \App\Services\Shipping\ShippingIssueService $shippingIssues,
+        private \App\Services\Client\Order\OrderPaymentService $payments,
+        private \App\Services\Organization\PageAccessService $access,
+        private \App\Services\Logistics\LogisticsService $logistics
     )
     {
     }
@@ -60,8 +63,32 @@ class OrderController extends BaseController
         }
         unset($order);
 
+        // [315] Trasa klienta w dniu wysyłki (jak w « Dzień wysyłki ») : sumy na trasę pod nagłówkiem dnia, zamówienia dnia według tras.
+        $byDate = [];
+        foreach ($pending as $order) $byDate[(string) $order['expected_shipping_date']][] = (int) $order['id_customer'];
+        $tourOf = [];
+        foreach ($byDate as $date => $ids) {
+            try {
+                $tourOf[$date] = $this->logistics->tourNames((string) $date, $ids);
+            } catch (\Throwable $e) {
+                error_log('[orders-tours] ' . $e->getMessage());
+                $tourOf[$date] = [];
+            }
+        }
+        foreach ($pending as $i => &$order) {
+            $order['tour'] = $tourOf[(string) $order['expected_shipping_date']][(int) $order['id_customer']]['name'] ?? null;
+            $order['_pos'] = $i;
+        }
+        unset($order);
+        usort($pending, fn($a, $b) => [(string) $a['expected_shipping_date'], $a['tour'] === null, (string) $a['tour'], $a['_pos']]
+            <=> [(string) $b['expected_shipping_date'], $b['tour'] === null, (string) $b['tour'], $b['_pos']]);
+
         $data['pending']     = $pending;
         $data['batchCounts'] = $batchCounts;
+        // [312] Wartości zamówień : tylko profil Finanse i CEO ; ostatnie przypomnienie o płatności (e-mail / SMS).
+        $uid = user('id') ? (int) user('id') : null;
+        $data['showValues'] = $this->access->seesOrderValues($uid);
+        $data['lastReminders'] = $this->payments->lastReminders(array_column($pending, 'id_proforma'));
         $data['orderStatusCodes'] = [
             'in_transit' => CustomerOrderStatus::IN_TRANSIT,
             'archived' => CustomerOrderStatus::ARCHIVED,
@@ -361,6 +388,34 @@ class OrderController extends BaseController
         $result = $this->orderService->update($id, $data);
 
         return $this->handleAjaxResponse($result, 'Zamówienie zaktualizowane', 'Nie udało się zaktualizować zamówienia');
+    }
+
+    /** [312] POST /ajax/client-orders/{id}/paid {paid: bool} : przełącznik opłacona / nieopłacona (proforma zamówienia). */
+    public function ajaxSetPaid($id)
+    {
+        try {
+            $paid = (bool) ($this->getJson(Request::createFromGlobals())['paid'] ?? false);
+            return $this->json($this->payments->setPaid((int) $id, $paid));
+        } catch (CustomException $e) {
+            return $this->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+        } catch (\Throwable $e) {
+            error_log('[order-paid] ' . $e->getMessage());
+            return $this->json(['message' => 'Nie udało się zapisać płatności.'], 500);
+        }
+    }
+
+    /** [312] POST /ajax/client-orders/{id}/remind {channel: email|sms} : ponowne przypomnienie o płatności. */
+    public function ajaxRemind($id)
+    {
+        try {
+            $channel = (string) ($this->getJson(Request::createFromGlobals())['channel'] ?? '');
+            return $this->json($this->payments->remind((int) $id, $channel, user('id') ? (int) user('id') : null));
+        } catch (CustomException $e) {
+            return $this->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+        } catch (\Throwable $e) {
+            error_log('[order-remind] ' . $e->getMessage());
+            return $this->json(['message' => 'Nie udało się wysłać przypomnienia : ' . $e->getMessage()], 500);
+        }
     }
 
     public function ajaxNotifyIntegrated($id)

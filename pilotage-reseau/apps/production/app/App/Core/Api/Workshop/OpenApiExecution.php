@@ -80,7 +80,8 @@ final class OpenApiExecution
             'DELETE /kiosk/pallets/entries/{id:\d+}' => ['tag' => 'kiosk', 'id' => 'kioskPalletDelete', 'summary' => 'Cofnij wpis / Annuler une saisie', 'response' => 'Pallets', 'errors' => [401, 403, 404],
                 'query' => ['vehicle_id' => ['type' => 'integer', 'description' => 'transport de la vue renvoyée']],
                 'description' => 'Seulement une saisie de la tablette (les cartons scannés sur palette ne s\'annulent pas ici).'],
-            'POST /driver/run' => ['tag' => 'kiosk', 'id' => 'driverRun', 'summary' => 'Start / koniec trasy / Départ / fin de tournée', 'body' => 'DriverRunInput', 'response' => 'DriverRun', 'errors' => [400, 401, 403, 422]],
+            'POST /driver/run' => ['tag' => 'kiosk', 'id' => 'driverRun', 'summary' => 'Start / koniec trasy / Départ / fin de tournée', 'body' => 'DriverRunInput', 'response' => 'DriverRun', 'errors' => [400, 401, 403, 422],
+                'description' => 'start : le chauffeur signe une fois (case 23 du CMR, transporteur) — signature posée sur tous les CMR de sa tournée du jour ; sign : signature ajoutée ou refaite après le départ.'],
             'GET /kiosk/receiving' => ['tag' => 'kiosk', 'id' => 'kioskReceiving', 'summary' => 'Tablet pakowania : kontrola przyjęć dnia / Tablette d\'emballage : contrôle des réceptions du jour', 'response' => 'ReceivingDay', 'errors' => [401, 403],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'jour (défaut : aujourd\'hui ; au plus 30 jours en arrière)']],
                 'description' => 'Toute tablette appairée : commandes fournisseurs livrées ce jour (date de livraison ou réception ce jour, due = true) et commandes ouvertes en retard (14 jours), contrôle du jour par commande, compteurs, types de non-conformité et décisions, personnes pointées (opérateur).'],
@@ -267,7 +268,8 @@ final class OpenApiExecution
                 'mode' => ['type' => 'string', 'enum' => ['atelier', 'driver']], 'vehicle_id' => $nInt, 'active' => $bool, 'new_pairing_code' => $bool]],
             'DriverVehicleChoice' => ['type' => 'object', 'properties' => ['id' => $int, 'label' => $str, 'carrier' => $nStr, 'driver' => $nStr]],
             'DriverRunInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'vehicle_id', 'action'], 'properties' => ['date' => ['type' => 'string', 'format' => 'date'],
-                'vehicle_id' => $int, 'action' => ['type' => 'string', 'enum' => ['start', 'finish']], 'driver_name' => ['type' => 'string', 'maxLength' => 100, 'nullable' => true]]],
+                'vehicle_id' => $int, 'action' => ['type' => 'string', 'enum' => ['start', 'finish', 'sign']], 'driver_name' => ['type' => 'string', 'maxLength' => 100, 'nullable' => true],
+                'signature' => ['type' => 'string', 'nullable' => true, 'description' => 'data:image/png;base64,… podpis kierowcy (pole 23 CMR) : obowiązkowy przy pierwszym starcie trasy dnia i przy sign']]],
             'DriverLoadingCheckInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'vehicle_id', 'slot', 'loaded'], 'properties' => [
                 'date' => ['type' => 'string', 'format' => 'date'], 'vehicle_id' => $int, 'slot' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 99], 'loaded' => ['type' => 'boolean']]],
             'DriverLoadSlot' => ['type' => 'object', 'properties' => ['slot' => $int, 'customer_id' => $int, 'stop' => $nInt, 'pallet_id' => $nInt, 'loaded' => ['type' => 'boolean']]],
@@ -324,7 +326,7 @@ final class OpenApiExecution
                     'check' => ['type' => 'object', 'description' => 'Kontrola z zamówieniem / Contrôle par rapport à la commande', 'properties' => ['ok' => ['type' => 'boolean'], 'missing' => $int, 'over' => $int]]]]],
                 'entries' => ['type' => 'object', 'description' => 'produit → saisies {id, cartons, at, who, source}', 'additionalProperties' => ['type' => 'array', 'items' => ['type' => 'object']]],
                 'people' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str, 'group' => $nStr, 'since' => $dt]]]]],
-            'DriverRun' => ['type' => 'object', 'properties' => ['driver_name' => $nStr, 'started_at' => $nStr, 'finished_at' => $nStr]],
+            'DriverRun' => ['type' => 'object', 'properties' => ['driver_name' => $nStr, 'started_at' => $nStr, 'finished_at' => $nStr, 'cmr_signed_at' => $nStr]],
             'DriverStopInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'customer_id', 'status'], 'properties' => [
                 'date' => ['type' => 'string', 'format' => 'date'], 'customer_id' => $int, 'vehicle_id' => $nInt, 'status' => ['type' => 'string', 'enum' => ['delivered', 'problem']],
                 'receipt_mode' => ['type' => 'string', 'enum' => ['tablet', 'cmr', 'absent'], 'nullable' => true, 'description' => 'tablet : signature sur la tablette ; cmr : signature dans la case 24 du CMR ; absent : client absent, photo après livraison obligatoire'],

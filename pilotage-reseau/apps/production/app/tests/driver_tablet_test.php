@@ -254,8 +254,35 @@ try {
     expectDrv($stop['status'] === 'arrived' && $stop['arrived_at'] === $arrivedAt && count($stop['photos']['before']) === 2 && $stop['photos']['after'] === []
         && $day['data']['counts']['arrived'] === 1 && $day['data']['counts']['delivered'] === 0 && $day['data']['max_photos'] === 6, 'day shows the arrival and photos');
 
-    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Ktoś inny'], $driver);
-    expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal', 'run started, driver = person identified with the PIN (typed name ignored)');
+    // [311] Start trasy : podpis kierowcy obowiązkowy (pole 23 CMR, przewoźnik).
+    $sigPng = function (): string { $im = imagecreatetruecolor(600, 200); imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
+        imageline($im, 20, 150, 580, 40, imagecolorallocate($im, 0, 0, 0)); ob_start(); imagepng($im); return 'data:image/png;base64,' . base64_encode((string) ob_get_clean()); };
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start'], $driver);
+    expectDrv($s === 422 && $codes($b) === ['signature:REQUIRED'], 'first start of the day needs the driver signature (CMR box 23)');
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Ktoś inny', 'signature' => $sigPng()], $driver);
+    expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal' && $b['data']['cmr_signed_at'] !== null,
+        'run started with the driver signature, driver = person identified with the PIN (typed name ignored)');
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'sign'], $driver);
+    expectDrv($s === 422 && $codes($b) === ['signature:REQUIRED'], 're-sign needs a signature');
+    [$s] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start'], $driver);
+    expectDrv($s === 200, 'start again (already signed) needs no new signature');
+    // Pola 22 i 23 CMR : wystawca wysyłki z ERP (zapisany podpis) i kierowca trasy.
+    $pdo->exec("SET @mode := @@SESSION.sql_mode");
+    $pdo->exec("SET SESSION sql_mode = ''");
+    $pdo->exec("INSERT INTO document_cmr (id, id_document_wz, id_customer, id_carrier, id_carrier_vehicle) VALUES (901, 1, 3, 1, 5)");
+    $pdo->exec("SET SESSION sql_mode = @mode");
+    $pdo->exec("INSERT INTO shipment_log (id, shipment_date, id_customer, id_wz, id_cmr, id_wdt, id_diff, id_employee) VALUES (951, '{$today}', 3, 1, 901, 1, 1, 1)");
+    $sigRepo = $container->get(App\Repositories\Document\CmrSignatureRepository::class);
+    expectDrv($sigRepo->sender(901) === null, 'no issuer recorded → box 22 stays empty');
+    $sigRepo->setIssuer(951, 1);
+    expectDrv($sigRepo->sender(901) === null, 'issuer without a saved signature → box 22 stays empty');
+    $sigRepo->saveUserSignature(1, base64_decode(substr($sigPng(), 22)));
+    $sender = $sigRepo->sender(901);
+    $carrier = $sigRepo->carrier(901);
+    expectDrv($sender && $sender['name'] === 'Anna K.' && str_starts_with($sender['signature'], "\x89PNG"), 'box 22 : issuer name and saved signature');
+    expectDrv($carrier && $carrier['name'] === 'Jan Kowal' && str_starts_with($carrier['signature'], "\x89PNG"), 'box 23 : driver signature of the tour');
+    $pdo->exec('DELETE FROM shipment_log WHERE id = 951');
+    $pdo->exec('DELETE FROM document_cmr WHERE id = 901');
 
     // --- Dostawa : podpis obowiązkowy, potem zapis z podpisem i zdjęciem
     $png = function (int $w, int $h): string { $im = imagecreatetruecolor($w, $h); imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));

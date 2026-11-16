@@ -122,7 +122,7 @@ class DeliveryNoticeService
                 if ($n['phone'] === '') $problems[] = "{$c['name']} : brak numeru telefonu.";
                 elseif (!$n['sms']['template']) $problems[] = "{$c['name']} : brak szablonu SMS « delivery_details_sms ».";
                 else {
-                    $result = $this->sms->send($n['phone'], $n['sms']['body']);
+                    $result = $this->sms->send($n['phone'], $n['sms']['body'], ['customer' => $id, 'context' => 'delivery_notice', 'author' => $author]);
                     $this->notices->insert(['ship_date' => $date, 'id_customer' => $id, 'channel' => 'sms', 'language' => $n['language'], 'recipient' => $n['phone'],
                         'body' => $n['sms']['body'], 'status' => $result['status'], 'provider' => $this->sms->name(), 'error' => $result['error'], 'created_by' => $author]);
                     $sent[] = ['customer' => $c['name'], 'channel' => 'sms', 'status' => $result['status'], 'recipient' => $n['phone']];

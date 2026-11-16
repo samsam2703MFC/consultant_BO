@@ -118,7 +118,7 @@ class DashboardController extends BaseController
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */
     public function ajaxCounters()
     {
-        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'queue' => $this->queueBadge(), 'profit' => $this->profitBadge(),
+        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'profit' => $this->profitBadge(),
             'time' => $this->timeBadge()]);
     }
 
@@ -176,12 +176,6 @@ class DashboardController extends BaseController
                 'ok' => $t['staff_ok'],
             ];
         });
-    }
-
-    /** [253] Licznik « Do obsłużenia » (pozycja Zamówienia i jej zakładka), najwyżej raz na 5 minut na sesję. */
-    private function queueBadge(): int
-    {
-        return (int) $this->sessionCached('tfb_queue_badge', fn() => $this->today->queueTotal());
     }
 
     /** Wynik liczony najwyżej raz na 5 minut na sesję ; błąd = null. */

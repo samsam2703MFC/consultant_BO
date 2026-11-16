@@ -199,5 +199,14 @@
   "incident_info": "Dostawa trwa dalej. Zgłoszenie trafia do « Różnice i problemy dostaw » (Logistyka) i do dzwonka osoby odpowiedzialnej.",
   "incident_photo_required": "Zrób zdjęcie.",
   "incident_save": "Zapisz zgłoszenie",
-  "incident_saved": "Zgłoszenie zapisane — logistyka widzi je od razu."
+  "incident_saved": "Zgłoszenie zapisane — logistyka widzi je od razu.",
+  "cmr_sign_title": "Podpis kierowcy na CMR",
+  "cmr_sign_help": "Twój podpis trafia do pola 23 (przewoźnik) wszystkich CMR tej trasy. Pole 22 podpisuje wystawca faktury w ERP, pole 24 — odbiorca.",
+  "cmr_sign_label": "Podpis przewoźnika — {name}",
+  "cmr_sign_start": "Podpisz i zacznij trasę",
+  "cmr_sign_save": "Zapisz podpis",
+  "cmr_sign_first": "Podpisz się w polu.",
+  "cmr_sign_button": "Podpisz CMR (pole 23)",
+  "cmr_signed": "CMR podpisane {time}",
+  "cmr_sign_saved": "Podpis na CMR zapisany."
 }

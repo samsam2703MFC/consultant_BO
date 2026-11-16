@@ -24,8 +24,8 @@ $builder->addDefinitions([
     App\Services\Client\Order\OrderQueueService::class => autowire()
         ->constructorParameter('invoices', get(App\Services\Workshop\Supply\InvoiceService::class))
         ->constructorParameter('buy', get(App\Services\Workshop\Supply\BuyService::class)),
-    // SMS do klientów (logistyka) : bez skonfigurowanego dostawcy tylko zapis w historii.
-    App\Services\Logistics\Sms\SmsTransport::class => get(App\Services\Logistics\Sms\LogOnlySmsTransport::class),
+    // SMS : bramka SMSAPI (jak CRM) ; bez tokenu albo na kopii testowej tylko zapis (n_sms_log).
+    App\Services\Logistics\Sms\SmsTransport::class => get(App\Services\Logistics\Sms\SmsGateway::class),
 
 ]);
 

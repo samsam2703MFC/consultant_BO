@@ -3,10 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Logistics\Sms;
 
-/**
- * Tryb bez dostawcy SMS (parametr sms.provider = log_only) : treść i numer zapisane w historii powiadomień,
- * nic nie wychodzi do klienta. Dostawcę (np. bramkę SMS z kluczem API) podłącza się, implementując SmsTransport.
- */
+/** Bez dostawcy SMS : treść zapisana w historii, nic nie wychodzi (testy ; w ERP domyślnie SmsGateway). */
 final class LogOnlySmsTransport implements SmsTransport
 {
     public function name(): string
@@ -19,7 +16,7 @@ final class LogOnlySmsTransport implements SmsTransport
         return false;
     }
 
-    public function send(string $to, string $text): array
+    public function send(string $to, string $text, array $context = []): array
     {
         return ['status' => 'logged', 'provider_id' => null, 'error' => null];
     }

@@ -41,7 +41,7 @@ final class Rail
         'suppliers' => ['Dostawcy', 'bi-truck-front', 'Zakupy', '/material-suppliers', [], null],
         'products' => ['Produkty', 'bi-box-seam', 'Produkt', '/workshop/products', ['/product-categories', '/products'], null],
         'packaging' => ['Opakowania', 'bi-recycle', 'Produkt', '/products/cartons', [], null],
-        'orders' => ['Zamówienia', 'bi-receipt', 'Sprzedaż', '/client-orders', [], 'queue'],
+        'orders' => ['Zamówienia', 'bi-receipt', 'Sprzedaż', '/client-orders', ['/client-orders/queue'], null],
         'clients' => ['Klienci', 'bi-shop', 'Sprzedaż', '/clients', ['/price-lists'], null],
         'complaints' => ['Reklamacje i zwroty', 'bi-arrow-counterclockwise', 'Sprzedaż', '/franchise-complaints', ['/client-complaints'], 'complaints'],
         'invoicing' => ['Faktury i płatności', 'bi-cash-stack', 'Sprzedaż', '/finances/payments-day', ['/finances/payment-proofs', '/communication/compose/reminder'], null],
@@ -53,7 +53,7 @@ final class Rail
         'tours' => ['Trasy', 'bi-signpost-split', 'Logistyka', '/logistics/tours', ['/logistics/vehicles'], null],
         'shipments' => ['Wysyłki i dokumenty', 'bi-file-earmark-text', 'Logistyka', '/shipments', ['/shipping-transport-documents', '/shipping-documents', '/archive'], null],
         'settings' => ['Ustawienia', 'bi-gear', 'Administracja', '/settings', ['/other-settings', '/settings/languages', '/settings/ksef', '/settings/panel-api',
-            '/settings/mail-footers', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
+            '/settings/mail-footers', '/settings/sms', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
             '/organization/positions', '/product-carriers', '/task-forms'], null],
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji

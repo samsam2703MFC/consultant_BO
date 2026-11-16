@@ -199,5 +199,14 @@
   "incident_info": "La livraison continue. Le signalement arrive dans « Écarts et problèmes de livraison » (Logistique) et dans la cloche du responsable.",
   "incident_photo_required": "Prenez une photo.",
   "incident_save": "Enregistrer le signalement",
-  "incident_saved": "Signalement enregistré — la logistique le voit tout de suite."
+  "incident_saved": "Signalement enregistré — la logistique le voit tout de suite.",
+  "cmr_sign_title": "Signature du chauffeur sur le CMR",
+  "cmr_sign_help": "Votre signature va dans la case 23 (transporteur) de tous les CMR de cette tournée. La case 22 est signée par la personne qui établit la facture dans l'ERP, la case 24 par le réceptionnaire.",
+  "cmr_sign_label": "Signature du transporteur — {name}",
+  "cmr_sign_start": "Signer et commencer la tournée",
+  "cmr_sign_save": "Enregistrer la signature",
+  "cmr_sign_first": "Signez dans le cadre.",
+  "cmr_sign_button": "Signer le CMR (case 23)",
+  "cmr_signed": "CMR signés {time}",
+  "cmr_sign_saved": "Signature CMR enregistrée."
 }
