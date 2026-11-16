@@ -8441,7 +8441,8 @@
       <div class="qb-hl" style="${cols}">${L.map(l => `<span>${l.h} h</span>`).join('')}</div>
       <p class="qb-note">ventes de l’heure en moyenne par jour ouvert · dessous : sa marge nette (ventes − matière − rémunération)</p></div>`;
   }
-  /** Ce qui rapporte : les trois produits à la plus forte marge brute hors TVA de la période (les catégories des heures). */
+  /** Ce qui rapporte : les trois produits à la plus forte marge brute hors TVA de la période (les catégories des heures).
+   * Au Mois seulement (16/11/2026, Sam : « week : take off » — sur une semaine, trop peu pour dire ce qui rapporte). */
   function qbTop(st) {
     const P = [];
     ((st && st.categories) || []).forEach(c => (c.produits || []).forEach(p => { const mg = p.mHt != null ? p.mHt : p.m; if (mg != null) { P.push({ nom: p.nom, mg, t: p.tauxHt != null ? p.tauxHt : p.taux }); } }));
@@ -8482,7 +8483,7 @@
   function qbPage(m, d, st, ks) {
     return `${qbChiffre(m, d)}${qbJours(m)}
       <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
-        <div class="qb-pile">${qbHeures(st, ks)}${qbTop(st)}</div></div>
+        <div class="qb-pile">${qbHeures(st, ks)}${S.vue === 'mois' ? qbTop(st) : ''}</div></div>
       <div class="qb-douze">${rendSemaines()}</div>
       ${qbPlus(m, d, st)}`;
   }
