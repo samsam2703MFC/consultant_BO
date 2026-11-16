@@ -1,0 +1,19 @@
+--- a/pilotage-reseau/public/dashboard/dashboard.js
++++ b/pilotage-reseau/public/dashboard/dashboard.js
+@@ -7137,6 +7137,7 @@
+       ${tete}
+       ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
+       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
++      ${m.royalties == null ? '' : ligne('− Redevances (royalties)', fP(m.royaltiesPct) + ' du CA hors TVA · marque, marketing, assistance', fE(-m.royalties), fP(m.royaltiesPct), '#8a5a2b', barre(m.royaltiesPct), false, 'taux du magasin · ici 5 % de test')}
+       ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#A32014' : '#B0792A') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
+       ${ligne('− Main-d’œuvre', se.labour != null ? 'seuil ' + fP(se.labour) : '', m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
+       ${ligne(ht ? '− Frais généraux hors TVA' : '− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false, noteFrais)}
+@@ -8481,6 +8482,8 @@
+   }
+   /** La page Semaine ou Mois du bureau, en quatre blocs. */
+   function qbPage(m, d, st, ks) {
++    const ROY = { 5: 5 };   // MAQUETTE : le taux de redevance de test (Sam, 16/11/2026 : « teste pour Harmonie 5 % »)
++    if (ROY[S.shop] && m.caHt != null && m.net != null && !m._roy) { m._roy = 1; m.royaltiesPct = ROY[S.shop]; m.royalties = m.caHt * ROY[S.shop] / 100; m.net -= m.royalties; m.netPct = 100 * m.net / m.caHt; }
+     return `${qbChiffre(m, d)}${qbJours(m)}
+       <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
+         <div class="qb-pile">${qbHeures(st, ks)}${S.vue === 'mois' ? qbTop(st) : ''}</div></div>
