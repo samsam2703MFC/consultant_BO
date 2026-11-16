@@ -63,7 +63,7 @@ try {
         ('2026-11-02', 7, 'mail', 'fr', 'sklep@example.invalid', 'Mail', 'queued', NULL, '2026-11-01 15:00:00')");
     $pdo->exec("INSERT INTO n_proforma_sms (id_proforma, id_order, recipient, language, body, status, provider, created_by, created_at) VALUES
         (50, 9, '0476123456', 'fr', 'Rappel proforma', 'logged', 'log_only', 'order_list:2', '2026-11-03 10:00:00')");
-    foreach (['198_sms_gateway_client_log.sql', '198_sms_gateway_client_log.sql'] as $f) {
+    foreach (['198_sms_gateway_client_log.sql', '198_sms_gateway_client_log.sql', '200_sms_live_cohabitation.sql', '201_sms_api_bases.sql'] as $f) {
         foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
     }
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();
@@ -76,7 +76,12 @@ try {
     $reply = [200, ['count' => 1, 'list' => [['id' => 'SMSAPI-1', 'points' => 0.16]]]];
     SmsGateway::$http = function (string $url, ?array $fields, string $token) use (&$calls, &$reply) {
         $calls[] = [$url, $fields, $token];
-        if ($fields === null) return $token === 'zly-token-0123456789abcd' ? [401, ['error' => 101, 'message' => 'Authorization failed']] : [200, ['username' => 'slfood', 'points' => 120.5]];
+        if ($fields === null) {
+            if ($token === 'zly-token-0123456789abcd') return [401, ['error' => 101, 'message' => 'Authorization failed']];
+            // Konto polskie : token przyjmowany tylko przez api.smsapi.pl.
+            if ($token === 'polski-token-0123456789') return str_contains($url, 'smsapi.pl') ? [200, ['username' => 'slfood-pl', 'points' => 50]] : [401, ['error' => 101, 'message' => 'Authorization failed']];
+            return [200, ['username' => 'slfood', 'points' => 120.5]];
+        }
         return $reply;
     };
     SmsGateway::$modeOverride = 'live';
@@ -129,9 +134,12 @@ try {
     $forbidden = null;
     try { $settings->saveKey(2, 'dobry-token-0123456789abcdef'); } catch (CustomException $e) { $forbidden = $e->getCode(); }
     expectS($forbidden === 403, 'token : tylko administrator');
-    $refused = null;
-    try { $settings->saveKey(1, 'zly-token-0123456789abcd'); } catch (CustomException $e) { $refused = $e->getMessage(); }
-    expectS($refused !== null && str_contains($refused, '101') && $count("SELECT COUNT(*) FROM n_app_secret WHERE code = 'smsapi_token'") === 0, 'token odrzucony przez SMSAPI (/profile) : nie zapisany');
+    $st = $settings->saveKey(1, 'Bearer zly-token-0123456789abcd');
+    expectS(str_contains($st['message'], 'nie potwierdziło') && str_contains($st['message'], '101') && $st['configured'] && $st['hint'] === 'abcd'
+        && $count("SELECT COUNT(*) FROM n_app_secret WHERE code = 'smsapi_token'") === 1, '[319] token niepotwierdzony : zapisany z ostrzeżeniem (« Bearer » usunięte), obie platformy sprawdzone');
+    $st = $settings->saveKey(1, ' polski-token-0123456789 ');
+    expectS($st['profile']['ok'] && $st['base'] === 'https://api.smsapi.pl' && str_contains($st['message'], 'api.smsapi.pl'), '[319] konto polskie : platforma .pl wykryta i zapamiętana');
+    $c->get(App\Repositories\Workshop\ParamRepository::class)->setValue('sms.base', 'https://api.smsapi.com', 1);
     $state = $settings->saveKey(1, 'dobry-token-0123456789abcdef');
     $stored = (string) $pdo->query("SELECT secret FROM n_app_secret WHERE code = 'smsapi_token'")->fetchColumn();
     expectS($state['source'] === 'settings' && $state['hint'] === 'cdef' && $state['profile']['ok'] && $state['profile']['points'] === 120.5 && !str_contains($stored, 'dobry-token')
@@ -166,7 +174,7 @@ try {
 
 
     // [318] Serwer atelier (współistnienie) : SMS naprawdę mimo e-maili w trybie testowym — tylko z przełącznikiem ; kopia testowa nigdy.
-    $pdo->exec("INSERT IGNORE INTO n_prod_param (code, value, default_value, value_type, unit, description_pl, description_fr) VALUES ('sms.live_cohab', '0', '0', 'bool', NULL, 'x', 'x')");
+
     SmsGateway::$modeOverride = null;
     $_ENV['MAIL_DELIVERY_MODE'] = 'log_only';
     $_ENV['COHABITATION'] = '1';
