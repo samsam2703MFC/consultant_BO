@@ -28,6 +28,9 @@
     };
     let lang = store.get(LANG_KEY) === 'fr' ? 'fr' : 'pl';
     let labels = {};
+    // [299] Otwarty z sesji ERP : serwer sparował go od razu (nowy token tylko, gdy przeglądarka nie miała ważnego).
+    const erpDevice = el.dataset.erpDevice || '';
+    if (erpDevice) store.set(DEVICE_KEY, erpDevice);
     let device = store.get(DEVICE_KEY);
     let paired = !!device;
     let sections = [];
@@ -94,7 +97,16 @@
         const err = new Error(((json.errors || []).map(x => x.message).join(' ')) || json.message || t('error'));
         err.code = json.description;
         err.fields = (json.errors || []).map(x => x.field);
-        if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; clearTimers(); renderPairing(err.message); }
+        if (err.code === 'DEVICE_UNAUTHENTICATED') {
+            // [299] Sesja ERP : strona sama paruje się na nowo (raz na minutę najwyżej), bez ekranu z kodem.
+            let last = 0;
+            try { last = Number(window.sessionStorage.getItem('tfb.office.repair') || 0); } catch (e) { /* brak */ }
+            if (el.dataset.erpSession && Date.now() - last > 60000) {
+                try { window.sessionStorage.setItem('tfb.office.repair', String(Date.now())); } catch (e) { /* brak */ }
+                store.set(DEVICE_KEY, null);
+                location.reload();
+            } else { paired = false; clearTimers(); renderPairing(err.message); }
+        }
         // Tablet pracowni albo kierowcy : jego własna strona (/kiosk przekierowuje tablet kierowcy na /driver).
         // Tablet kierowcy : jego trasa (każdy inny tablet otwiera ekran biurowy).
         if (err.code === 'DEVICE_NOT_OFFICE') { store.set(HOME_KEY, null); location.replace(root + '/tablet/driver'); }

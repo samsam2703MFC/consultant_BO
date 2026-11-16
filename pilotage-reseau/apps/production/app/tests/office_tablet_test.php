@@ -341,6 +341,30 @@ try {
     $row = $pdo->query("SELECT mode, id_group FROM n_prod_device WHERE id = {$atelierId}")->fetch();
     expectOff($s === 200 && $row['mode'] === 'office' && $row['id_group'] === null, 'device switched to office mode, group removed');
 
+    // --- [299] Tablet biurowy otwarty z sesji ERP : sparowany od razu, bez kodu ; tablet stały nietknięty
+    $kioskSvc = $container->get(KioskAuthService::class);
+    $before = (int) $pdo->query("SELECT COUNT(*) FROM n_prod_device WHERE token_hash IS NOT NULL")->fetchColumn();
+    $p1 = $kioskSvc->erpOfficePairing(1, 'manager', '');
+    expectOff($p1 !== null && strlen($p1['device_token']) === 64 && $p1['device']['name'] === 'Tablet biurowy · manager', 'ERP session: office tablet paired without a code');
+    $row = $pdo->query("SELECT mode, id_group, created_by, active FROM n_prod_device WHERE id = {$p1['device']['id']}")->fetch();
+    expectOff($row['mode'] === 'office' && $row['id_group'] === null && (int) $row['created_by'] === 1 && (int) $row['active'] === 1, 'ERP session: own office device (mode office, no group)');
+    [$s, $b] = $call('GET', '/kiosk/office/sections', null, ['X-Device-Token' => $p1['device_token']]);
+    expectOff($s === 200, 'ERP session: the new token opens the office screen');
+    expectOff($kioskSvc->erpOfficePairing(1, 'manager', $p1['device_token']) === null, 'ERP session: valid token kept (no re-pairing)');
+    $p2 = $kioskSvc->erpOfficePairing(1, 'manager', 'stale-token');
+    expectOff($p2 !== null && $p2['device']['id'] === $p1['device']['id'] && $p2['device_token'] !== $p1['device_token'], 'ERP session: lost token → same device paired again');
+    expectOff((int) $pdo->query("SELECT COUNT(*) FROM n_prod_device WHERE token_hash IS NOT NULL")->fetchColumn() === $before + 1, 'ERP session: other tablets keep their pairing');
+    $pdo->exec("UPDATE n_prod_device SET active = 0 WHERE id = {$p1['device']['id']}");
+    expectOff($kioskSvc->erpOfficePairing(1, 'manager', '') === null, 'ERP session: a tablet blocked by the administrator is not re-paired');
+    expectOff($kioskSvc->erpOfficePairing(0, '', '') === null, 'no ERP session: usual pairing by code');
+
+    // --- [299] Sesja Produkcja : Tablety w menu i w uprawnieniach
+    $kp = $pdo->query("SELECT id FROM n_position WHERE code = 'KIEROWNIK_PRODUKCJI'")->fetchColumn();
+    if ($kp !== false) {
+        expectOff((int) $pdo->query("SELECT COUNT(*) FROM n_page_access WHERE id_position = {$kp} AND page_key = 'tablet'")->fetchColumn() === 1, 'Produkcja session: Tablety page access');
+        expectOff((int) $pdo->query("SELECT COUNT(*) FROM n_position_menu WHERE id_position = {$kp} AND item = 'tablets'")->fetchColumn() === 1, 'Produkcja session: Tablety in the menu');
+    }
+
     echo "office_tablet_test: OK\n";
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");

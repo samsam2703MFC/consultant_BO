@@ -38,6 +38,12 @@ final class ExecutionRepository extends WorkshopRepository
         return $this->all('SELECT * FROM n_prod_device WHERE token_hash = ?', [$hash])[0] ?? null;
     }
 
+    /** [299] Tablette de bureau d'un utilisateur, appairée depuis sa session ERP (nom « Tablet biurowy · login »). */
+    public function erpOfficeDevice(int $userId, string $name): ?array
+    {
+        return $this->all("SELECT * FROM n_prod_device WHERE mode = 'office' AND created_by = ? AND name = ? ORDER BY id LIMIT 1", [$userId, $name])[0] ?? null;
+    }
+
     public function deviceByPairing(string $hash): ?array
     {
         return $this->all('SELECT * FROM n_prod_device WHERE pairing_code_hash = ? AND pairing_expires_at > NOW()', [$hash])[0] ?? null;

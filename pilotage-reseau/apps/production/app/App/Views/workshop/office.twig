@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="Biuro">
 </head>
 <body>
-<main id="tfbOffice" class="kiosk office" data-root="{{ root }}" data-api-base="{{ api_base }}" aria-live="polite">
+<main id="tfbOffice" class="kiosk office" data-root="{{ root }}" data-api-base="{{ api_base }}"{% if erp_device %} data-erp-device="{{ erp_device }}"{% endif %}{% if erp_session %} data-erp-session="1"{% endif %} aria-live="polite">
     <p class="kiosk-muted">Wczytywanie… / Chargement…</p>
 </main>
 <script src="{{ root }}/assets/js/workshop/clock-questions.js?v={{ asset_v() }}"></script>

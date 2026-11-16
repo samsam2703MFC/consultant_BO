@@ -201,6 +201,40 @@ final class KioskAuthService
             'mode' => $device['mode'] ?? 'atelier']];
     }
 
+    /**
+     * [299] Tablette de bureau ouverte depuis l'ERP par un utilisateur connecté (droit Tablety ou Czas pracy) : appairée
+     * d'office, sans code, et réappairée seule si le navigateur perd son jeton. Chaque utilisateur a sa propre tablette
+     * de bureau (« Tablet biurowy · login », mode office) : la tablette fixe appairée par code n'est jamais touchée.
+     * Rien à faire si le navigateur a déjà un jeton valide ; une tablette bloquée par l'administrateur (active = 0)
+     * n'est pas réappairée (écran d'appairage habituel).
+     * @return array{device_token:string, device:array{id:int, name:string}}|null
+     */
+    public function erpOfficePairing(int $userId, string $login, string $currentToken): ?array
+    {
+        if ($userId <= 0) return null;
+        if ($currentToken !== '') {
+            $current = $this->repo->deviceByToken(hash('sha256', $currentToken));
+            if ($current !== null && (int) $current['active']) return null;
+        }
+        $name = mb_substr('Tablet biurowy · ' . ($login !== '' ? $login : '#' . $userId), 0, 100);
+        $device = $this->repo->erpOfficeDevice($userId, $name);
+        if ($device !== null && !(int) $device['active']) return null;
+        $token = bin2hex(random_bytes(32));
+        $data = ['token_hash' => hash('sha256', $token), 'pairing_code_hash' => null, 'pairing_expires_at' => null, 'last_seen_at' => date('Y-m-d H:i:s')];
+        $context = new ApiContext('erp-office-' . bin2hex(random_bytes(4)), new Translator('pl'), $userId);
+        $id = $this->tx->execute(function () use ($device, $data, $name, $userId, $context) {
+            if ($device === null) {
+                $id = $this->repo->insert($data + ['name' => $name, 'mode' => 'office', 'id_group' => null, 'created_by' => $userId, 'active' => 1]);
+                $this->audit->record($context, 'create', 'device', $id, null, ['name' => $name, 'mode' => 'office', 'erp_session' => true]);
+                return $id;
+            }
+            $this->repo->update((int) $device['id'], $data);
+            $this->audit->record($context, 'pairing', 'device', (int) $device['id'], null, ['erp_session' => true]);
+            return (int) $device['id'];
+        });
+        return ['device_token' => $token, 'device' => ['id' => (int) $id, 'name' => $name]];
+    }
+
     /** Tablette appairée (jeton en en-tête ou en cookie) : nom et groupe — la tablette vérifie au démarrage qu'elle est appairée. */
     public function device(ApiContext $context): array
     {

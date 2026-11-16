@@ -2,11 +2,14 @@
 namespace App\Controllers\Web\Workshop;
 
 use App\Core\Api\Workshop\ApiException;
+use App\Core\Api\Workshop\WorkshopApiKernel;
 use App\Core\Api\Workshop\Translator;
 use App\Core\Api\Workshop\WorkshopConfig;
 use App\Core\Routes\Api\WorkshopApiRoutes;
 use App\Core\Web\BaseController;
 use App\Services\Workshop\Auth\AuthService;
+use App\Services\Organization\PageAccessService;
+use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\TimesheetService;
 
 /**
@@ -15,7 +18,8 @@ use App\Services\Workshop\Execution\TimesheetService;
  */
 class WorkshopUiController extends BaseController
 {
-    public function __construct(private AuthService $auth, private WorkshopConfig $config, private TimesheetService $timesheets)
+    public function __construct(private AuthService $auth, private WorkshopConfig $config, private TimesheetService $timesheets,
+                                private KioskAuthService $kiosk, private PageAccessService $access)
     {
     }
 
@@ -141,9 +145,24 @@ class WorkshopUiController extends BaseController
     }
 
     /** Tablet biurowy (PWA) : dział → nazwisko → osobisty kod QR (osoba + dzień) zatwierdzany telefonem ; sama powłoka. */
+    /**
+     * Tablet biurowy. [299] Otwarty z sesji ERP (prawo do Tablety albo Czas pracy) : sparowany od razu, bez kodu — także
+     * gdy przeglądarka zgubi parowanie (zob. KioskAuthService::erpOfficePairing). Bez sesji : zwykłe parowanie kodem.
+     */
     public function office()
     {
-        $this->view('workshop/office', ['api_base' => $this->apiBase()]);
+        $pairing = null;
+        $uid = (int) user('id');
+        if ($uid > 0 && ($this->access->canSee($uid, '/workshop/execution') || $this->access->canSee($uid, '/time'))) {
+            $cookie = trim((string) ($_COOKIE[WorkshopApiKernel::DEVICE_COOKIE] ?? ''));
+            $pairing = $this->kiosk->erpOfficePairing($uid, (string) (user('login') ?: ''), $cookie);
+            if ($pairing !== null && !headers_sent()) {
+                $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+                setcookie(WorkshopApiKernel::DEVICE_COOKIE, $pairing['device_token'], ['expires' => time() + 400 * 86400,
+                    'path' => rtrim((string) (parse_url(ROOT, PHP_URL_PATH) ?: ''), '/') ?: '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Strict']);
+            }
+        }
+        $this->view('workshop/office', ['api_base' => $this->apiBase(), 'erp_device' => $pairing['device_token'] ?? '', 'erp_session' => $uid > 0]);
     }
 
     /** Telefon : wejście / wyjście po zeskanowaniu kodu QR z tabletu (strona publiczna, dane przez API). */
