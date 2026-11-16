@@ -70,3 +70,4 @@
 2026-11-16T18:45:00Z [318] SMS réels possibles sur le serveur de l'atelier (interrupteur Ustawienia › SMS)
 2026-11-16T18:52:09Z Dashboard Mois : les douze dernières semaines face au N-1
 2026-11-16T18:54:40Z [319] SMS : jeton enregistré, smsapi.com et smsapi.pl
+2026-11-16T18:56:31Z Dashboard Semaine : sans « Ce qui rapporte »
