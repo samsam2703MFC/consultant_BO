@@ -24,6 +24,7 @@ base et le même déploiement.
 | `boite_mail.php`, `boite_protocole.php` | Boîte mail (en tête du rail) | `/dashboard/boite*` — la boîte e-mail OVH du magasin (IMAP, MIME, SMTP écrits à la main, sans extension imap) : dossiers, lecture, pièces jointes, répondre/écrire/transférer, modèles (`pil_boite_modele`), messages automatiques (`pil_boite_auto`, `pil_boite_journal`, `pil_boite_etat` ; horloge `bin/boite_cron.sh`, 10 min). Accès dans `erp_cles` (`pil_boite_{shop}_adresse`, `…_mot_de_passe`), posés par le magasin (« Relier la boîte »). **Verrou** : la boîte s'ouvre avec SON mot de passe (cookie signé `cockpit_b{shop}`), même quand l'API est « ouverte » ; ses routes ne passent jamais par le cache `_cache`. Tests : `php bin/tests_boite_mail.php` (+ un IMAP et un SMTP de test, voir l'en-tête) |
 | `catalogues_magasin.php` | Marketing › Mon catalogue | `/dashboard/catalogues/*` — relais vers l'API d'intégration du Marketing |
 | `tresorerie.php` | Les chiffres › Trésorerie | `/tresorerie/*` — table `pil_tresorerie_plan` |
+| `frais.php` | Les chiffres › Frais | `GET /exploitation/frais`, `POST /exploitation/frais/tva` — les frais du mois au panel, « TVA comprise ? » et le taux de chaque poste (table `pil_frais_tva`). Le calcul est dans `src/pnl_ht.php`, partagé avec le siège : le P&L hors TVA de Résultat (jour, semaine, mois). Tests : `php bin/tests_pnl_ht.php` |
 | `dashboard_semaine.php` | la semaine jour par jour (téléphone) | `/exploitation/semaine-jours` |
 | `temps_morts.php` | La journée › Temps morts | `/exploitation/temps-morts` |
 
@@ -49,5 +50,5 @@ l'API dit, route par route, le fichier et la fonction qui la servent.
 - **Le déploiement** : celui du cockpit (`bin/deploy.sh`, `deploy.trigger`). `bin/deploy.sh`, `bin/tests.php`,
   `bin/tests_primes.php`, `bin/carte_sources.php` et `src/marketing_sources.php` lisent `src/franchise/*.php` comme
   `src/*.php`.
-- **Les tests** : `php bin/tests_tresorerie.php`, `php bin/tests_temps_morts.php`, `php bin/tests_boite_mail.php` ; l'espace boutique intégré est
+- **Les tests** : `php bin/tests_tresorerie.php`, `php bin/tests_pnl_ht.php`, `php bin/tests_temps_morts.php`, `php bin/tests_boite_mail.php` ; l'espace boutique intégré est
   testé côté Marketing (`api/social/bin/tests.php`, cas « cockpit »).

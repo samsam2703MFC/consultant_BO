@@ -3312,3 +3312,38 @@ body.db-vue-social{overflow:hidden}
 .tj-ph.vide.lit{animation:tj-lit 1.1s ease-in-out infinite alternate}
 @keyframes tj-lit{from{opacity:.5}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.tj-ph.vide.lit{animation:none}}
+/* Le P&L court hors TVA (16/11/2026) : le lien « Frais ▸ » sous la ligne des frais généraux. */
+.db-cl-lien{color:var(--accent);cursor:pointer;white-space:nowrap}
+.db-cl-lien:hover{text-decoration:underline}
+/* L'onglet Frais (16/11/2026, maquette docs/maquettes/frais-tva) : les frais du mois, « TVA comprise ? » et le taux. */
+.fx-nav{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.fx-mois{display:inline-flex;align-items:center;min-width:130px;justify-content:center;font-size:14px}
+.fx-intro{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--muted);max-width:900px}
+.fx-intro b{font-weight:400;color:var(--ink)}
+.fx-tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fx-tuiles .db-tui{min-height:92px}
+.fx-tuiles .fx-warn .v{color:var(--prize-ink)}
+.fx-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.fx-t th{padding:9px 12px;text-align:left;font-weight:400;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);border-bottom:1px solid var(--color-border-tertiary);white-space:nowrap}
+.fx-t td{padding:9px 12px;border-bottom:.5px dashed var(--color-border-tertiary);vertical-align:middle}
+.fx-t td:first-child{min-width:190px}
+.fx-t .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fx-t .sub{display:block;margin-top:2px;font-size:10.5px;color:var(--color-text-muted)}
+.fx-t .mu{color:var(--color-text-muted)}
+.fx-t tr.ai td{background:rgba(176,121,42,.06)}
+.fx-t tr.enc td{opacity:.55}
+.fx-t tr.tot td{background:var(--total-line);border-bottom:none}
+.fx-t .seg{padding:2px}
+.fx-t .seg button{padding:4px 9px;font-size:11.5px;white-space:nowrap;cursor:pointer}
+.fx-t .seg.vide button{color:var(--muted)}
+.fx-g2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}
+.fx-g2>.db-card{margin-bottom:0}
+.fx-l{display:grid;grid-template-columns:minmax(0,1fr) 128px 128px;gap:10px;padding:8px 16px;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px;align-items:baseline}
+.fx-l:last-child{border-bottom:none}
+.fx-l .n{text-align:right;font-variant-numeric:tabular-nums}
+.fx-l.th{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.fx-l .sub{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px}
+.fx-leg{padding:10px 16px 14px;font-size:12px;line-height:1.55}
+.fx-leg p{margin:0 0 8px}
+.fx-leg b{font-weight:400;color:var(--accent)}
+@media (max-width:900px){.fx-tuiles{grid-template-columns:1fr 1fr}.fx-g2{grid-template-columns:1fr}}

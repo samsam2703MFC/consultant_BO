@@ -2820,6 +2820,39 @@ revérifie tout).
 
 ### `GET /exploitation/jour` et `/exploitation/periode` — le calcul gardé (04/10/2026)
 
+**Le P&L hors TVA (16/11/2026, `src/pnl_ht.php`, maquette `docs/maquettes/frais-tva`).** Le P&L du jour, de la semaine
+et du mois se lit hors TVA. Le CA encaissé reste TTC (`ca`, `realise` : objectifs, panier, écarts) ; les champs du P&L
+se rapportent au CA hors TVA :
+- `caHt` (et `realiseHt` sur une étendue) = CA × (1 − TVA ÷ TTC des tickets) ; `tva`, `tvaPart` (% du TTC), `tvaSource`.
+  La TVA vient des tickets du jour (`tax_amount_after_discount` de `/shops/{id}/transactions?date=`, la liste déjà lue
+  pour le split pro : le relevé `svP{shop}:{jour}` porte désormais `b.tva` et `b.caT`, le TTC des tickets dont la TVA
+  est lue), sinon de la caisse gravée (`ceo_verif_ca` : `caisse_tva` ÷ `caisse_ttc`), sinon du taux habituel du magasin
+  sur huit semaines, sinon de 6 % (vente à emporter alimentaire) ;
+- `coutMatiere` (inchangé : coût de recette, ou CA − `margin_value` du panel), `margeBrute` = `caHt` − `coutMatiere` ;
+- `overhead` = frais du jour × (hors TVA ÷ saisi) des frais du mois (onglet Frais) ; `overheadSaisi`, `overheadTva`,
+  `fraisSource`, `fraisAIndiquer` (postes sans choix, comptés tels que saisis) ;
+- `net` = `margeBrute` − invendus − main-d'œuvre − `overhead` ; tous les `…Pct` en % de `caHt` ; `pnlBase` = `ht`.
+- La série du mois (`serie[]`) et la semaine (`semaine[]`) de `/exploitation/jour` portent `caHt`, leur `net` hors TVA
+  et `netPct` en % de `caHt`. Le réseau : `caHt`, `tva`, les `…Pct` sur la somme des `caHt`.
+- La carte « Ventes par catégorie » reste en TTC (les ventes des tickets) : son total se cale sur CA − coût matière.
+- Le dossier PDF du mois et la tablette (`vbPnlLigne` : `ca` = la base des %, `caTtc`, `horsTva`) suivent.
+
+### `GET /exploitation/frais` et `POST /exploitation/frais/tva` — l'onglet Frais (16/11/2026)
+
+Code : `src/franchise/frais.php` (les routes), `src/pnl_ht.php` (le calcul, partagé avec le siège).
+`GET /exploitation/frais?shop=4[&mois=AAAA-MM][&rafraichir=1]` : les frais du mois tels que le panel les rend
+(`/shops/{id}/owner/costs?period=AAAA-MM`, gardés `phF:{shop}:{mois}` une heure, six pour un mois passé ; la forme de la
+réponse n'étant pas documentée, liste à la racine ou sous `items`, `costs`, `lines`, `data`, `rows`), face au choix de
+chaque poste : `lignes[]` {`poste`, `cle`, `type`, `montant`, `tva` (true, false, null = à indiquer), `taux`, `ht`,
+`tvaMontant`, `aIndiquer`, `majLe`, `majPar`}, `saisi`, `ht`, `tva`, `part` (hors TVA ÷ saisi), `postes`, `aIndiquer`,
+`aIndiquerEur`, `lu`, `luLe`, `jour` {`saisi`, `ht`} (les frais que le panel alloue à aujourd'hui), `taux` (0, 6, 12, 21).
+
+`POST /exploitation/frais/tva {shop, poste, tva, taux}` : le choix d'un poste, gardé d'un mois à l'autre dans
+`pil_frais_tva` (clé : magasin et libellé en minuscules ; `tva_comprise` 1, 0 ou NULL, `taux`, `maj_le`, `maj_par`).
+`tva: true` sans taux vaut 21 %, `false` sans taux 0 %, `null` remet le poste à indiquer ; taux entre 0 et 30 %. Le
+Résultat gardé d'aujourd'hui part périmé (servi, refait en arrière-plan). Le panel n'est pas modifié. Routes sous
+`/exploitation` : un franchisé n'y lit et n'y écrit que ses magasins.
+
 **Main-d'œuvre de la semaine et du mois (10/10/2026).** `/exploitation/periode` additionne le coût du personnel de chaque jour tel que le panel l'alloue (`/shops/{id}/statistics/daily-summary` : `employee_cost`, et `shop_cost` pour les frais). `/pnl?period=month` rend le personnel cumulé du 1er à aujourd'hui, pas le mois entier. Le répartir sur les 31 jours d'octobre donnait 1 257,69 € pour Halle au 10/10 au lieu d'environ 3 900 €. Ce cumul ne sert plus qu'en repli, divisé par les jours ouverts écoulés. Un jour lu deux jours plus tard est gardé (`dsJ:{magasin}:{jour}`). `labourSource` dit d'où vient le chiffre. Le tableau « Le duel, chiffre par chiffre » de l'onglet Opérationnel ne garde que CA, clients et panier.
 
 **Dashboard magasin, Semaine et Mois (10/10/2026).** Plus de barre du stock (elle reste dans Opérationnel). « Ta place dans le réseau » classe le B2B (`caPro`, la part `partPro` dessous) à la place des messages du panel, qui ne sont plus lus.
