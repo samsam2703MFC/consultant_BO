@@ -22,20 +22,20 @@
     const fill = (p, places) => places ? Math.round(p / places * 100) : null;
 
     function step1() {
-        if (!D.uncovered) return tw.done('Wszystkie zamówienia mają transport', 'dziś i jutro · zadanie zaliczone — sprawdź jeszcze kierowców (krok 3)');
+        if (!D.uncovered) return tw.done('Wszystkie wysyłki mają transport', 'wysyłka dziś i jutro · zadanie zaliczone — sprawdź jeszcze kierowców (krok 3)');
         const rows = D.days.map((d, i) => ({cls: d.unassigned.length ? 'click hl' : '', attr: d.unassigned.length ? `data-otw-day="${i}"` : '',
             cells: [`<b>${esc(d.label)}</b>`, String(d.customers), d.unassigned.length ? tw.pill(d.unassigned.length + ' bez transportu', 'bad') : tw.pill('OK', 'ok'),
                 pal(d.unassigned.reduce((s, c) => s + c.pallets, 0)), d.unassigned.map(c => esc(c.name)).join(', ') || '—']}));
-        return `<p class="tw-lead">Klienci z zamówieniem na dziś i jutro, którzy nie mają pojazdu. Dopóki ktoś zostaje bez transportu, ERP jest zablokowany dla Logistyki.</p>
-            ${tw.table([{label: 'Dzień'}, {label: 'Klienci', num: true}, {label: 'Stan'}, {label: 'Palety bez transportu', num: true}, {label: 'Klienci bez transportu'}], rows)}`;
+        return `<p class="tw-lead">Klienci z <b>wysyłką</b> dziś i jutro (data wysyłki zamówienia, nie data zamówienia), którzy nie mają pojazdu. Dopóki ktoś zostaje bez transportu, ERP jest zablokowany dla Logistyki.</p>
+            ${tw.table([{label: 'Dzień wysyłki'}, {label: 'Klienci', num: true}, {label: 'Stan'}, {label: 'Palety bez transportu', num: true}, {label: 'Klienci bez transportu'}], rows)}`;
     }
 
     function step2() {
         const d = D.days[dayIdx];
-        if (!d.unassigned.length) return tw.alert(`Na ${esc(d.label)} każdy klient ma transport.`, 'ok', 'bi-check-circle');
+        if (!d.unassigned.length) return tw.alert(`Wysyłka ${esc(d.label)} : każdy klient ma transport.`, 'ok', 'bi-check-circle');
         const sel = d.unassigned.filter(c => picked.has(c.id));
         const add = sel.reduce((s, c) => s + c.pallets, 0);
-        const tabs = D.days.map((x, i) => `<button type="button" class="tw-btn ${i === dayIdx ? '' : 'ghost'} sm" data-otw-tab="${i}">${esc(x.label)}${x.unassigned.length ? ' · ' + x.unassigned.length : ''}</button>`).join(' ');
+        const tabs = D.days.map((x, i) => `<button type="button" class="tw-btn ${i === dayIdx ? '' : 'ghost'} sm" data-otw-tab="${i}">Wysyłka ${esc(x.label)}${x.unassigned.length ? ' · ' + x.unassigned.length : ''}</button>`).join(' ');
         const clients = d.unassigned.map(c => `<label class="otw-cl ${picked.has(c.id) ? 'is-on' : ''}"><input type="checkbox" data-otw-pick="${c.id}" ${picked.has(c.id) ? 'checked' : ''}>
             <span class="otw-cl-t"><b>${esc(c.name)}</b>${c.town ? ' · ' + esc(c.town) : ''}<small>${c.orders} ${tw.plural(c.orders, 'zamówienie', 'zamówienia', 'zamówień')}</small></span>${tw.pill(pal(c.pallets), 'bad')}</label>`).join('');
         const fleet = d.fleet.length ? d.fleet.map(v => {
@@ -48,7 +48,7 @@
         }).join('') + (vehForm ? vehicleForm(false) : `<button type="button" class="tw-btn ghost sm" data-otw-vopen><i class="bi bi-plus-lg"></i> Dodaj pojazd</button>`)
             : vehicleForm(true);
         return `<p>${tabs}</p>
-            <p class="tw-lead"><b>${esc(d.label)} · ${d.unassigned.length} ${tw.plural(d.unassigned.length, 'klient', 'klientów', 'klientów')} bez transportu.</b> Zaznacz klientów, potem wybierz pojazd po prawej.</p>
+            <p class="tw-lead"><b>Wysyłka ${esc(d.label)} · ${d.unassigned.length} ${tw.plural(d.unassigned.length, 'klient', 'klientów', 'klientów')} bez transportu.</b> Zaznacz klientów, potem wybierz pojazd po prawej.</p>
             <div class="otw-cols"><div>${clients}</div><div>${fleet}</div></div>
             <p class="otw-act"><button type="button" class="tw-btn" data-otw-assign ${!sel.length || !vehicle || busy ? 'disabled' : ''}>${sel.length && vehicle
                 ? `Przypisz ${sel.length} ${tw.plural(sel.length, 'klienta', 'klientów', 'klientów')} (${pal(add)}) do ${esc(d.fleet.find(v => v.id === vehicle)?.label || '')}` : 'Zaznacz klientów i pojazd'}</button></p>`;
@@ -102,7 +102,7 @@
 
     function step3() {
         const list = usedVehicles();
-        if (!list.length) return tw.alert('Żaden pojazd nie wiezie jeszcze zamówień na dziś i jutro — wróć do kroku 2.', '', 'bi-info-circle');
+        if (!list.length) return tw.alert('Żaden pojazd nie wiezie jeszcze wysyłki dziś i jutro — wróć do kroku 2.', '', 'bi-info-circle');
         const noDrivers = !(D.drivers || []).length;
         if (noDrivers && drvForm === null) { const first = list.find(u => !vInfo(u.id).driver_id); if (first) openDriverForm(first.id); }
         const tours = D.tours || [];
@@ -146,8 +146,8 @@
         }));
         const left = D.uncovered;
         return `${left ? tw.alert(`Zostaje ${left} ${tw.plural(left, 'klient', 'klientów', 'klientów')} bez transportu — wróć do kroku 2.`, '', 'bi-exclamation-triangle')
-                : tw.done('Wszystkie zamówienia mają transport', 'dziś i jutro · zadanie zaliczone — ERP odblokowany')}
-            ${rows.length ? tw.table([{label: 'Dzień'}, {label: 'Transport'}, {label: 'Kierowca'}, {label: 'Klienci'}, {label: 'Palety', num: true}, {label: 'Zapełnienie', num: true}], rows) : ''}`;
+                : tw.done('Wszystkie wysyłki mają transport', 'wysyłka dziś i jutro · zadanie zaliczone — ERP odblokowany')}
+            ${rows.length ? tw.table([{label: 'Dzień wysyłki'}, {label: 'Transport'}, {label: 'Kierowca'}, {label: 'Klienci'}, {label: 'Palety', num: true}, {label: 'Zapełnienie', num: true}], rows) : ''}`;
     }
 
     function render() {
@@ -155,7 +155,7 @@
         const labels = {1: 'Dalej : przypisz do transportu', 2: 'Dalej : kierowca i trasa', 3: 'Dalej : sprawdź'};
         const next = step < LAST ? {label: labels[step], attr: 'data-otw-next', disabled: step === 1 && !D.uncovered && !usedVehicles().length}
             : (D.uncovered ? {label: 'Wróć do przypisywania', attr: 'data-otw-back2'} : {label: 'Wróć do ERP', attr: 'data-otw-home', final: true});
-        app.innerHTML = tw.frame({title: 'Transport dla zamówień', sub: `dziś i jutro · krok ${step} z ${LAST} · ${D.uncovered ? D.uncovered + ' bez transportu' : 'wszystko przypisane'}`,
+        app.innerHTML = tw.frame({title: 'Transport dla zamówień', sub: `wysyłka dziś i jutro · krok ${step} z ${LAST} · ${D.uncovered ? D.uncovered + ' bez transportu' : 'wszystko przypisane'}`,
             steps: STEPS, step, reached, body, prev: step > 1 ? 'Wstecz' : null, next, later: false});
     }
 

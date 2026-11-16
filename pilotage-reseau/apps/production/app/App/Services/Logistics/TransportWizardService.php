@@ -13,7 +13,7 @@ use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 
 /**
- * [303] Asystent « Transport dla zamówień » (makieta 56). Zamówienia na dziś i na jutro, których klient nie ma pojazdu
+ * [303] Asystent « Transport dla zamówień » (makieta 56). Zamówienia z wysyłką dziś i jutro (expected_shipping_date — data wysyłki, nie data zamówienia), których klient nie ma pojazdu
  * (LogisticsService::day()['unassigned'] — ta sama reguła co w Dniu wysyłki : przydział dnia, pojazd trasy, ostatni CMR).
  * Logistyka zaznacza klientów i przypisuje ich do pojazdu z floty (przydział dnia, jak w Dniu wysyłki). Dopóki zostaje
  * klient bez transportu, zadanie obowiązkowe Logistyki (orders_transport) blokuje ERP.
@@ -38,7 +38,7 @@ final class TransportWizardService
     ) {
     }
 
-    /** Dni sprawdzane : dziś i jutro. @return list<string> */
+    /** Dni wysyłki sprawdzane : dziś i jutro. @return list<string> */
     public function dates(?\DateTimeImmutable $now = null): array
     {
         $now ??= new \DateTimeImmutable('today');
@@ -185,7 +185,7 @@ final class TransportWizardService
     public function assign(array $in, ?int $userId, ?\DateTimeImmutable $now = null): int
     {
         $date = (string) ($in['date'] ?? '');
-        if (!in_array($date, $this->dates($now), true)) throw new CustomException('Ten dzień nie jest w asystencie (dziś i jutro).', 'errors', 422);
+        if (!in_array($date, $this->dates($now), true)) throw new CustomException('Ten dzień wysyłki nie jest w asystencie (dziś i jutro).', 'errors', 422);
         $vehicle = (int) ($in['vehicle_id'] ?? 0);
         if ($vehicle <= 0) throw new CustomException('Wybierz transport.', 'errors', 422);
         $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($in['customers'] ?? [])), fn($i) => $i > 0)));
