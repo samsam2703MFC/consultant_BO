@@ -405,6 +405,21 @@ final class KioskAuthService
         return $this->qrPayload(['dev' => $deviceId, 'emp' => $employeeId, 'day' => date('Y-m-d')], $base, $ttl) + ['refresh_s' => max(10, $ttl - 15)];
     }
 
+    /** [300] QR de connexion à l'ERP : numéro de la demande (lgn), sans personne — le téléphone dit qui se connecte. */
+    public function erpLoginQr(int $deviceId, int $requestId, string $base, int $ttl): array
+    {
+        $ttl = max(30, min(600, $ttl));
+        return $this->qrPayload(['dev' => $deviceId, 'lgn' => $requestId, 'day' => date('Y-m-d')], $base, $ttl) + ['refresh_s' => max(10, $ttl - 20)];
+    }
+
+    /** [300] Demande de connexion portée par un QR valide (null : QR d'une tablette ou personnel). */
+    public function loginRequestOf(string $qr): ?int
+    {
+        $this->deviceFromQr($qr);
+        $claims = $this->jwt()->decode($qr, self::QR_AUDIENCE);
+        return isset($claims['lgn']) && (int) $claims['lgn'] > 0 ? (int) $claims['lgn'] : null;
+    }
+
     /** Jeton signé, adresse {base}/kiosk/scan#t=… (le fragment n'est jamais envoyé au serveur) et matrice du QR. */
     private function qrPayload(array $claims, string $base, int $ttl): array
     {

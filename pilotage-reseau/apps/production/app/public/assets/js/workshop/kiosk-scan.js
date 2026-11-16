@@ -38,6 +38,8 @@
     const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }));
     const fmt = (n) => Number(n).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 2});
     // Osobisty kod QR (tablet biurowy) : jeton z osobą (emp) — tylko do wyświetlenia, serwer sprawdza sam.
+    // [300] Kod QR ze strony logowania ERP (lgn) : telefon odbija wejście i otwiera sesję na komputerze.
+    const loginQr = () => { try { return !!JSON.parse(atob(qr.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).lgn; } catch (e) { return false; } };
     const personalQr = () => { try { return !!JSON.parse(atob(qr.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).emp; } catch (e) { return false; } };
 
     async function loadLabels() {
@@ -291,6 +293,7 @@
 
     // --- Un geste : ENTRÉE / SORTIE ------------------------------------------------------------------------
     async function renderClock(info) {
+        if (loginQr()) return renderLogin(info);
         el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('loading'))}</p></section>`;
         let me;
         try {
@@ -319,6 +322,53 @@
             if (questions.length || sign) renderQuestions(questions, direction, null, sign, me.questions?.catalog);
             else clockTap(e.currentTarget, direction, [], null);
         });
+    }
+
+    // --- [300] Logowanie do ERP : wejście (pytania, podpis) i otwarcie sesji na komputerze ------------------------
+    async function renderLogin(info) {
+        el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('loading'))}</p></section>`;
+        let me, p;
+        try {
+            me = await api('GET', '/kiosk/phone/me');
+            p = await api('GET', '/kiosk/phone/erp-login');
+        } catch (err) {
+            if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }
+            return message(err.message, true);
+        }
+        store.set(NAME_KEY, me.employee.name);
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-phone-main">
+                <h2>${esc(t('hello', {name: me.employee.name}))}</h2>
+                ${info ? `<p class="kiosk-status">${esc(info)}</p>` : ''}
+                <p class="kiosk-muted">${esc(t('login_computer', {browser: p.browser || '—'}))}</p>
+                <p class="kiosk-status">${esc(t('login_session', {account: p.account, session: p.session}))}</p>
+                ${p.clocked_in ? `<p class="kiosk-muted">${esc(t('since', {time: p.since, hours: fmt(me.clock ? me.clock.hours : 0)}))}</p>` : ''}
+                <button type="button" class="kiosk-btn kiosk-big is-ok" data-login>${esc(t(p.clocked_in ? 'login_open' : 'login_in_open'))}</button>
+                <p class="kiosk-error" data-error></p>
+                <p class="kiosk-muted">${esc(t('login_not_you'))}</p>
+            </section>
+            <button type="button" class="kiosk-btn is-small kiosk-phone-forget" data-forget>${esc(t('not_me'))}</button>`;
+        el.querySelector('[data-login]').addEventListener('click', async (e) => {
+            if (!p.clocked_in) {
+                const questions = me.questions?.in || [];
+                const sign = !!me.signature?.in;
+                if (questions.length || sign) return renderQuestions(questions, 'in', null, sign, me.questions?.catalog);
+                return clockTap(e.currentTarget, 'in', [], null);
+            }
+            e.currentTarget.disabled = true;
+            openErp(e.currentTarget);
+        });
+    }
+
+    async function openErp(button) {
+        try {
+            const r = await api('POST', '/kiosk/phone/erp-login');
+            if (navigator.vibrate) navigator.vibrate(80);
+            message(t('login_opened', {session: r.session}));
+        } catch (err) {
+            if (button) button.disabled = false;
+            const box = el.querySelector('[data-error]');
+            if (box) box.textContent = err.message; else message(err.message, true);
+        }
     }
 
     // Osobisty kod QR innej osoby : ten telefon jest zarejestrowany na kogoś innego. Jeśli to jednak telefon osoby
@@ -411,6 +461,7 @@
         try {
             const r = await api('POST', '/kiosk/phone/clock', {direction, client_uuid: pending.uuid, answers, ...(signature ? {signature} : {})});
             pending = null;
+            if (loginQr() && direction === 'in') return openErp(null);
             if (navigator.vibrate) navigator.vibrate(80);
             const done = direction === 'in' ? t('welcome') : t('bye', {hours: fmt(r.clock.hours)});
             // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.

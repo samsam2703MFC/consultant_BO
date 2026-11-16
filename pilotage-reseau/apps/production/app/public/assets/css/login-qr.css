@@ -1,0 +1,19 @@
+/* [300] Logowanie kodem QR (makieta 55) : kod w dużym kwadracie, kroki, link do hasła. */
+.lq-lead { color: #7a736b; font-size: 15px; line-height: 1.45; margin: -1.5rem 0 1.25rem; max-width: 26rem; }
+.lq-qr { position: relative; width: 260px; height: 260px; padding: 10px; background: #fff; border: 1px solid #e3ddd3; border-radius: 16px; }
+.lq-qr canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+.lq-done { position: absolute; inset: 0; border-radius: 16px; background: rgba(58, 143, 91, .94); color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: .4rem; font-size: 15px; }
+.lq-done[hidden] { display: none; }
+.lq-done span { font-size: 54px; line-height: 1; }
+.lq-meta { font-size: 13px; color: #7a736b; margin: .75rem 0 0; display: flex; align-items: center; gap: .5rem; }
+.lq-meta::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #3a8f5b; flex: none; }
+.lq-meta.is-err { color: #8D1D2C; } .lq-meta.is-err::before { background: #8D1D2C; }
+.lq-steps { list-style: none; padding: 0; margin: 1.25rem 0 0; font-size: 14px; color: #3b3732; }
+.lq-steps li { display: flex; align-items: center; gap: .6rem; margin: .45rem 0; }
+.lq-steps b { display: inline-flex; width: 22px; height: 22px; border-radius: 7px; background: #8D1D2C; color: #fff; font-size: 12px;
+    align-items: center; justify-content: center; flex: none; }
+.lq-link { display: block; margin-top: 1.5rem; padding: .9rem 0 0; border: 0; border-top: 1px solid #e8e2d8; background: none; color: #8D1D2C;
+    font-size: 13px; text-align: left; width: 100%; cursor: pointer; }
+.lq-link:hover { text-decoration: underline; }
+#loginPassword[hidden], .lq[hidden] { display: none; }

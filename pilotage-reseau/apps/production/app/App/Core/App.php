@@ -50,8 +50,9 @@ class App
         // produkcji (/kiosk, /kiosk/scan telefonu : sama powłoka, dane wyłącznie przez API z tokenem tabletu
         // albo kodem QR z tabletu), tablet kierowcy (/driver), tablet biurowy (/office) i tablet pakowania (/tablet/packing) :
         // dane przez API z tokenem tabletu ;
-        // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila.
-        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing'], true)
+        // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila ;
+        // [300] logowanie kodem QR (/ajax/login-qr, /ajax/login-qr/status) : kod i oczekiwanie tej przeglądarki.
+        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing', '/ajax/login-qr', '/ajax/login-qr/status'], true)
             && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)) {
             if (str_starts_with($uri, '/ajax/')) {
                 http_response_code(401);

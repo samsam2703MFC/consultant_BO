@@ -864,5 +864,11 @@
   "leave_od_short": "sur demande",
   "leave_cancel": "Annuler la demande",
   "leave_none": "Aucun congé ni demande.",
-  "leave_cancelled": "Demande annulée."
+  "leave_cancelled": "Demande annulée.",
+  "login_computer": "Connexion à l’ERP · ordinateur : {browser}",
+  "login_session": "{account} · session {session}",
+  "login_in_open": "J’entre et j’ouvre l’ERP",
+  "login_open": "Ouvrir l’ERP",
+  "login_opened": "Entrée enregistrée — ERP ouvert sur l’ordinateur (session {session}).",
+  "login_not_you": "Ce n’est pas vous devant cet ordinateur ? Ne validez pas."
 }

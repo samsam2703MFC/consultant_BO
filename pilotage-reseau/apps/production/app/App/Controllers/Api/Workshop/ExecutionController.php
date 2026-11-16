@@ -32,6 +32,7 @@ final class ExecutionController
 
     public function __construct(
         private KioskAuthService $kiosk,
+        private \App\Services\Organization\ErpLoginService $erpLogin,
         private ExecutionService $execution,
         private TimesheetService $timesheets,
         private \App\Services\Workshop\Time\TimeService $time,
@@ -130,6 +131,22 @@ final class ExecutionController
             $status = in_array((int) $e->getCode(), [403, 404, 409], true) ? (int) $e->getCode() : 422;
             throw new ApiException('COMP_DAY_REFUSED', $status, [], ['detail' => $e->getMessage()]);
         }
+    }
+
+    /** [300] Logowanie do ERP kodem QR (strona logowania) : co otworzy zatwierdzenie na tym telefonie. */
+    public function erpLoginPreview(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->erpLogin->preview($this->loginRequest($request), (int) $request->context->employeeId));
+    }
+
+    public function erpLogin(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->erpLogin->approve($this->loginRequest($request), (int) $request->context->employeeId));
+    }
+
+    private function loginRequest(ApiRequest $request): int
+    {
+        return $this->kiosk->loginRequestOf(trim((string) $request->http->headers->get('X-Qr-Token', ''))) ?? throw new ApiException('QR_INVALID', 401);
     }
 
     /** [288] Urlop z telefonu : saldo i wnioski osoby zidentyfikowanej telefonem. */

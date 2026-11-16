@@ -20394,6 +20394,124 @@
                 ]
             }
         },
+        "/kiosk/phone/erp-login": {
+            "get": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Logowanie do ERP kodem QR : co się otworzy / Connexion ERP par QR : ce qui s'ouvrira",
+                "operationId": "phoneErpLoginPreview",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ErpLogin"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[300] QR de la page de connexion (lgn) : compte ERP lié à la personne du téléphone, session ouverte, entrée déjà pointée ou non. 409 ERP_LOGIN_NO_ACCOUNT sans compte lié.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Logowanie do ERP kodem QR : zatwierdź / Connexion ERP par QR : valider",
+                "operationId": "phoneErpLogin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ErpLogin"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[300] L'entrée doit être pointée (409 ERP_LOGIN_CLOCK_FIRST) ; le navigateur qui affiche le QR ouvre le compte, une fois.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/phone/leave": {
             "get": {
                 "tags": [
@@ -30815,6 +30933,26 @@
                     },
                     "questions": {
                         "$ref": "#/components/schemas/ClockQuestions"
+                    }
+                }
+            },
+            "ErpLogin": {
+                "type": "object",
+                "properties": {
+                    "account": {
+                        "type": "string"
+                    },
+                    "session": {
+                        "type": "string"
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    },
+                    "since": {
+                        "type": "string"
+                    },
+                    "browser": {
+                        "type": "string"
                     }
                 }
             },

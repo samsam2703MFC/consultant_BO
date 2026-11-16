@@ -39,6 +39,12 @@ final class PageAccessService
         'ZAKUPY' => ['Zakupy', 'bi-cart3'],
     ];
 
+    /** [300] Nom de la session d'un poste (liste sous l'avatar, connexion par QR). */
+    public static function areaName(string $code, string $name): string
+    {
+        return self::SESSION_AREAS[$code][0] ?? $name;
+    }
+
     public function __construct(private PageAccessRepository $repo)
     {
     }

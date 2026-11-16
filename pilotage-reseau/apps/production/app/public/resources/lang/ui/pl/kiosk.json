@@ -864,5 +864,11 @@
   "leave_od_short": "na żądanie",
   "leave_cancel": "Anuluj wniosek",
   "leave_none": "Brak urlopów i wniosków.",
-  "leave_cancelled": "Wniosek anulowany."
+  "leave_cancelled": "Wniosek anulowany.",
+  "login_computer": "Logowanie do ERP · komputer : {browser}",
+  "login_session": "{account} · sesja {session}",
+  "login_in_open": "Wchodzę i otwieram ERP",
+  "login_open": "Otwórz ERP",
+  "login_opened": "Wejście zapisane — ERP otwarte na komputerze (sesja {session}).",
+  "login_not_you": "To nie Ty przy tym komputerze ? Nie zatwierdzaj."
 }
