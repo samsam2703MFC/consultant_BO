@@ -7225,7 +7225,12 @@
     const plan = Array.isArray(m.planning) ? m.planning : [];
     // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
     // c'est elle qui colore le treemap. Sans tickets lus, repli sur l'écart à la référence du panel.
-    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs, q: c.q, vC: c.vChiffre, nSans: c.nSans || 0, vSans: c.vSans || 0, produits: Array.isArray(c.produits) ? c.produits : [] })) : [];
+    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs, q: c.q, vC: c.vChiffre, nSans: c.nSans || 0, vSans: c.vSans || 0, produits: Array.isArray(c.produits) ? c.produits : [],
+      ht: c.vHt != null ? { ca: c.vHt, m: c.mHt, taux: c.tauxHt, vC: c.vChiffreHt, vSans: c.vSansHt || 0 } : null })) : [];
+    // Hors TVA (16/11/2026, « le coefficient doit être calculé sur le net, pas le brut ») : la liste et le treemap lisent le
+    // CA, la marge, le taux et le coefficient hors TVA ; les onglets Promotions et Portions gardent les prix de caisse (TTC).
+    const catsH = catsM.map(c => c.ht ? Object.assign({}, c, c.ht, { ttc: true }) : c);
+    const enHt = catsH.some(c => c.ttc);
     const parMarge = catsM.length > 0;
     const lc = parMarge ? MARGES : ECARTS;
     // Les tickets ne sont pas encore lus : le squelette, plutôt qu'un premier
@@ -7234,8 +7239,8 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
-      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.coutMatiere != null ? m.ca - m.coutMatiere : m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie${enHt && parMarge && !['promo', 'portion'].includes(S.cVue) ? ' · hors TVA' : ''}</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsH : cats)}</div>` : accordeon(parMarge ? catsH : cats, parMarge, m && m.ca != null && m.margeBrute != null ? (enHt && m.caHt != null ? { ca: m.caHt, m: m.margeBrute, A: st && st.aCompleter ? Object.assign({}, st.aCompleter, { caLignes: (st.aCompleter.caLignes || 0) * (1 - (m.tvaPart || 0) / 100), caTickets: (st.aCompleter.caTickets || 0) * (1 - (m.tvaPart || 0) / 100) }) : null } : { ca: m.ca, m: m.coutMatiere != null ? m.ca - m.coutMatiere : m.margeBrute, A: st && st.aCompleter }) : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -8072,14 +8077,15 @@
         <span class="n mg ${clM(x.taux)}">${parMarge ? (x.m == null ? '<span class="mu" title="coût matière inconnu">?</span>' : fE(x.m)) : (x.delta != null ? (x.delta >= 0 ? '+' : '') + fP(x.delta) : '<span class="mu">—</span>')}</span>
         <span class="n ${clM(x.taux)}">${parMarge ? (x.taux != null ? fP0(x.taux) : '') : ''}</span>
         <span class="n coef ${clM(x.taux)}">${parMarge ? (x.m == null ? '<span class="mu" title="coût matière inconnu">?</span>' : coefTxt(coef(x.ca, x.m))) : ''}</span></div>`;
-    const entete = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Poids dans le CA</span><span class="n">CA</span><span class="n">Part</span><span class="n">${parMarge ? 'Marge brute' : 'vs réf.'}</span><span class="n">${parMarge ? 'Taux' : ''}</span><span class="n">${parMarge ? 'Coef' : ''}</span></div>`;
+    const entete = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Poids dans le CA</span><span class="n">${cats.some(c => c.ttc) ? 'CA HT' : 'CA'}</span><span class="n">Part</span><span class="n">${parMarge ? 'Marge brute' : 'vs réf.'}</span><span class="n">${parMarge ? 'Taux' : ''}</span><span class="n">${parMarge ? 'Coef' : ''}</span></div>`;
     const produits = c => {
       const L = c.produits || [];
       if (!L.length) { return `<div class="db-autres">Le détail par produit se lit sur les tickets : pas encore disponible pour cette catégorie.</div>`; }
       // A (10/10/2026) : un bundle rangé dans la catégorie de son produit porte son étiquette, son prix et sa part.
       const subP = p => p.bundle ? fN(p.bundle.n) + ' bundle' + (p.bundle.n > 1 ? 's' : '') + (p.bundle.prix != null ? ' à ' + fU(p.bundle.prix) : '') + (p.bundle.part < 100 ? ' · ' + p.bundle.part + ' % du bundle dans cette catégorie' : '')
         : (p.q != null ? p.q + ' vendu' + (p.q > 1 ? 's' : '') : '');
-      return L.map(p => ligne('p', null, { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux, bundle: !!p.bundle }, c.ca, subP(p), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
+      // Hors TVA quand la catégorie l'est (catsH) ; la fiche produit garde le CA de caisse (data-fv, TTC).
+      return L.map(p => ligne('p', null, c.ttc && p.vHt != null ? { nom: p.nom, ca: p.vHt, part: p.part, m: p.mHt, taux: p.tauxHt, bundle: !!p.bundle } : { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux, bundle: !!p.bundle }, c.ca, subP(p), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
     };
     const rows = fams.map(f => {
       const kg = 'g:' + f.nom;

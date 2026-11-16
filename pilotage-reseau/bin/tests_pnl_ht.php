@@ -43,6 +43,8 @@ final class PanelApi {
   static function configured() { return true; }
   static function getParallele(array $ch, int $f = 4): array { $o = []; foreach ($ch as $k => $c) { self::$appels++; $o[$k] = self::$reponse; } return $o; }
   static function get(string $c) { return self::$ds; }
+  static array $catalogue = [];
+  static function produitsDisponibles(int $s): array { return self::$catalogue; }
 }
 
 Db::exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
@@ -132,6 +134,15 @@ $P0 = phPnl(2628.0, 6 / 106, null, 77.0, 567.0, 447.0, null);
 verifie('sans coût matière : ni marge, ni résultat', $P0['margeBrute'] === null && $P0['net'] === null && $P0['overhead'] === 447.0);
 verifie('un jour de série : marge − TVA − main-d’œuvre − frais hors TVA', proche((float) phNetJour(1593.0, 2628.0, 6 / 106, 567.0, 447.0, 0.93674), 1593 - 148.75 - 567 - 418.72));
 verifie('un jour de série sans main-d’œuvre : rien', phNetJour(1593.0, 2628.0, 0.05, null, 447.0, 1.0) === null);
+
+echo "Ventes par catégorie : le hors TVA de chaque produit\n";
+// Le catalogue : le croissant à 6 %, le jus à 21 % ; un produit inconnu prend la part habituelle du magasin.
+PanelApi::$catalogue = [['id' => 11, 'tax_value_percent' => 6], ['id' => 12, 'tax_val_perc' => '21'], ['id' => 13]];
+$H = phHtProduit(4);
+verifie('un produit à 6 % : TTC ÷ 1,06', proche($H(11, 10.60), 10.00));
+verifie('une portion « 12:moitié » prend le taux de son produit', proche($H('12:moitié', 12.10), 10.00));
+verifie('un produit sans taux : la part habituelle du magasin', proche($H(13, 100.0), 100 * (1 - 160 / 3000), 0.001));
+verifie('le taux du catalogue se garde', is_array(setting('phTvaP:4')) && (setting('phTvaP:4')['t'][11] ?? null) == 6);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
