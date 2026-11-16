@@ -45,3 +45,4 @@
 2026-11-16T11:07:35Z [299] tablette bureau toujours appairée, Tablety en session Produkcja
 2026-11-16T11:24:58Z [300] connexion ERP par QR
 2026-11-16T11:27:31Z Tâches : photos notées comptées, journée en cours dans la semaine
+2026-11-16T11:32:28Z [300] connexion QR : section → nom → QR
