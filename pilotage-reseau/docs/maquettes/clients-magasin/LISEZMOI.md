@@ -86,15 +86,41 @@ Sur la v2 : « essaie d'avoir des tiles identiques, surtout en hauteur », « le
    dans la maquette Mails et automatisations.
 4. Les automatisations à faire d'abord : dossier comptable du mois, rappel la veille du retrait, commande prête.
 
+## Vérification du Swagger (16/11/2026)
+
+Lu sur le Swagger de production (`https://atelierby.tfbuddy.com/api/swagger/openapi.json`, 933 routes) et celui de test
+(`https://test.tfbuddy.com/docs/openapi.json`, 1 259 routes).
+
+**Ce qui s'écrit :**
+
+| Route | Champs | Remarque |
+|---|---|---|
+| `PATCH /clients/{clientId}` (multipart, 204) | `name`, `surname`, `company_name`, `tax_number`, `street`, `street_number`, `zip`, `city`, `locality`, `comment`, `phone`, `email`, `invoice_name`, `invoice_address`, `invoice_postal_code`, `invoice_city`, `invoice_country`, `iban`, `peppol_identifier`, `preferred_auth_method`, `locale` | **la fiche globale** : la modifier la change pour tous les magasins du réseau ; TVA et téléphone normalisés, 409 s'ils sont déjà à un autre client |
+| `PATCH /shops/{shopId}/clients/{clientId}` (multipart, 204) | `client_type`, `service_mode`, `credit_enabled`, `credit_limit`, `score`, `id_b2b_client_type`, `id_b2b_client_sector`, `status` | le profil du client **chez ce magasin** ; ne crée pas de profil manquant |
+| `PATCH /panel/shops/{shopId}/b2b/clients/{id}` (JSON, 200) | `can_deferral` + `company_name`, `tax_number`, `email`, `phone`, adresse | documentée au Swagger de test seulement ; écrit la fiche globale |
+| `PUT /panel/shops/{shopId}/b2b/clients/{clientId}/credit` (JSON, 200) | `credit_enabled`, `credit_limit` | idem |
+
+**Ce qui ne s'écrit pas** (aucune route après la création ; `POST /clients` les prend seulement à la création) : la
+remise personnelle (`personal_discount_percent`), l'échéance (`payment_terms`, `b2b_payment_terms`), la remise webshop
+(`b2b_web_discount`), le franco (`b2b_franco`), le plafond (`b2b_credit_ceiling`), le segment (`b2b_segment`), les
+lignes de facture (`billing_lines`), la livraison au bureau (`office_delivery`), la carte de fidélité
+(`fidelity_active`).
+
+**Sécurité** : ces routes ne vérifient qu'un jeton valide (« checkAuth alone does not enforce an application, role,
+permission, shop ») : le cockpit doit lui-même n'ouvrir l'écriture qu'aux clients qui ont un profil chez le magasin.
+L'identité du proxy de cette session lit `/shops/4/clients/…` mais reçoit 401 sur `/clients/{id}` : la fiche globale
+demande peut-être un autre jeton (à essayer avec celui du cockpit, sur un client de test).
+
+**Conséquence pour la maquette** : dans « Ses conditions », seuls le paiement différé, le crédit et sa limite (et le
+type, le secteur, le service, le statut) sont modifiables ; la remise personnelle, l'échéance, la remise webshop, le
+franco, la livraison au bureau et les lignes de facture restent en lecture tant que TF Buddy n'ouvre pas de route. Et
+l'identité, le contact et l'adresse d'un client sont ceux du réseau : le magasin qui les corrige les corrige pour tous.
+
 ## Reste à vérifier avant de coder
 
-- La route d'écriture de la fiche client au panel (`PUT`/`PATCH /shops/{id}/clients/{id}`) et les champs qu'elle
-  accepte.
+- Le jeton qui écrit la fiche globale (`PATCH /clients/{id}`) : essai sur un client de test.
 - Le choix e-mail / SMS pour les commandes : gardé au cockpit (table `pil_`), la fiche du panel n'ayant pas ce champ.
 - La liste : tous les clients venus au moins une fois au magasin, ou seulement ceux qui ont un `profile` chez lui.
-
-s commandes : gardé au cockpit (table `pil_`), la fiche du panel n'ayant pas ce champ.
-4. La liste : tous les clients venus au moins une fois au magasin, ou seulement ceux qui ont un `profile` chez lui ?
 
 ## Fichiers
 
