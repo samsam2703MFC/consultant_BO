@@ -1,0 +1,78 @@
+/* Maquette « Paramètres › Mails et automatisations » : ce qui n'existe pas encore dans dashboard.css. */
+body{margin:0;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text);font-size:13px}
+body.db-rail-on{position:relative;min-height:100vh}
+body.db-rail-on .db-rail{position:absolute;bottom:0;min-height:100vh}
+.mq-neuf{margin-left:auto;padding:1px 6px;border-radius:5px;background:var(--prize-soft);color:var(--prize-ink);font-size:9.5px;letter-spacing:.04em;white-space:nowrap}
+.mq-pied{margin:18px 0 0;font-size:10.5px;line-height:1.5;color:var(--color-text-muted);max-width:1100px}
+.mq-vigs{display:flex;gap:8px}
+.mq-vig{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:118px}
+.mq-vig .o{color:var(--muted-2);font-size:15px}
+.mq-vig .k{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.mq-vig .v{display:block;font-size:13px;white-space:nowrap}
+.mq-vig:nth-child(4) .v{color:var(--accent)}
+.px-intro{margin:0 0 12px;font-size:12.5px;line-height:1.5;color:var(--muted);max-width:980px}
+.px-tabs{display:flex;gap:4px;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.px-tabs button{border:0;background:none;padding:9px 14px;font:inherit;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.px-tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.px-tabs .n{display:inline-block;margin-left:6px;padding:0 6px;border-radius:9px;background:var(--chip);font-size:10.5px;color:var(--muted)}
+.px-tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+.px-tuiles .db-tui{min-height:88px}
+.px-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.px-t th{padding:9px 12px;text-align:left;font-weight:400;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);border-bottom:1px solid var(--color-border-tertiary);white-space:nowrap}
+.px-t td{padding:10px 12px;border-bottom:.5px dashed var(--color-border-tertiary);vertical-align:middle}
+.px-t tr:last-child td{border-bottom:none}
+.px-t .sub{display:block;margin-top:2px;font-size:10.5px;color:var(--color-text-muted);line-height:1.35}
+.px-t .mu{color:var(--color-text-muted)}
+.px-t tr.sel td{background:rgba(141,29,44,.04)}
+.px-chip{display:inline-flex;align-items:center;gap:5px;margin:2px 4px 2px 0;padding:3px 8px;border-radius:12px;background:var(--chip);font-size:11px;white-space:nowrap}
+.px-chip.pdf{background:rgba(141,29,44,.08);color:var(--accent)}
+.px-chip.mail{background:rgba(31,95,139,.08);color:#1f5f8b}
+.px-chip.ajout{background:none;border:1px dashed var(--line);color:var(--muted)}
+.px-chip b{font-weight:400;color:var(--muted)}
+.px-sw{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.px-sw i{position:relative;width:32px;height:18px;border-radius:9px;background:#d9d4cc;flex:0 0 32px}
+.px-sw i::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.px-sw.on i{background:#3f7a52}.px-sw.on i::after{left:16px}
+.px-sw.lock{color:var(--faint)}
+.px-ouvrir{color:var(--accent);white-space:nowrap}
+.px-g2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px}
+.px-g2>.db-card{margin-bottom:0}
+.px-mx{width:100%;border-collapse:collapse;font-size:12px}
+.px-mx th{padding:8px 6px;font-weight:400;font-size:10px;letter-spacing:.04em;color:var(--color-text-muted);text-align:center;border-bottom:1px solid var(--color-border-tertiary);vertical-align:bottom;line-height:1.25}
+.px-mx th:first-child{text-align:left;padding-left:16px}
+.px-mx td{padding:9px 6px;text-align:center;border-bottom:.5px dashed var(--color-border-tertiary)}
+.px-mx td:first-child{text-align:left;padding-left:16px}
+.px-mx td .sub{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.px-ok{display:inline-flex;width:18px;height:18px;border-radius:5px;align-items:center;justify-content:center;background:#3f7a52;color:#fff;font-size:11px}
+.px-no{display:inline-flex;width:18px;height:18px;border-radius:5px;border:1px solid #d9d4cc}
+.px-regle{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:11px 16px;border-bottom:.5px dashed var(--color-border-tertiary)}
+.px-regle:last-child{border-bottom:none}
+.px-regle .t{font-size:12.5px}
+.px-regle .sub{display:block;margin-top:3px;font-size:11px;color:var(--color-text-muted);line-height:1.4}
+/* écran B */
+.px-b{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:12px;align-items:start}
+.px-f{padding:12px 16px 14px}
+.px-f .lab{display:block;margin:0 0 5px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.px-f .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.px-in{display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px}
+.px-in.w{display:flex;width:100%;box-sizing:border-box}
+.px-ta{display:block;width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px;line-height:1.5;color:var(--ink)}
+.px-var{display:inline-block;padding:0 5px;border-radius:4px;background:rgba(141,29,44,.08);color:var(--accent);font-size:11.5px}
+.px-cases{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:12px}
+.px-cases span{display:flex;gap:7px;align-items:center}
+.px-mail{margin:12px 16px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+.px-mail .tete{padding:10px 14px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted);line-height:1.6}
+.px-mail .tete b{font-weight:400;color:var(--ink)}
+.px-mail .corps{padding:14px 18px;font-size:12.5px;line-height:1.55}
+.px-mail .logo{font-size:15px;letter-spacing:.24em;color:var(--ink);margin-bottom:10px}
+.px-mail .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.px-mail h3{margin:3px 0 10px;font-size:17px;font-weight:700}
+.px-mail ul{margin:6px 0 10px;padding-left:18px}
+.px-pj{display:flex;gap:12px;align-items:center;margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.px-pdf{width:46px;height:60px;border-radius:4px;background:#fff;border:1px solid var(--line);position:relative;flex:0 0 46px}
+.px-pdf::before{content:'PDF';position:absolute;bottom:5px;left:5px;font-size:9px;color:#fff;background:var(--accent);padding:1px 4px;border-radius:3px}
+.px-pdf::after{content:'';position:absolute;top:8px;left:7px;right:7px;height:22px;background:repeating-linear-gradient(#e7e1d8 0 2px,transparent 2px 6px)}
+.px-j td .ok{color:#3f7a52}.px-j td .vide{color:var(--muted)}.px-j td .ko{color:#A32014}
+.px-btns{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px}
+.px-btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:12.5px}
+.px-btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
