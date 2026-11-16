@@ -95,6 +95,11 @@ final class LogisticsService
             if ($placeholder) $l['cpp'] = 0;
             $byCustomer[$id] ??= ['id' => $id, 'name' => $l['customer'], 'town' => $l['town'], 'country' => $l['country'], 'orders' => [], 'lines' => []];
             $byCustomer[$id]['orders'][(int) $l['order_id']] = (int) $l['status'];
+            // [331] Zamówienia klienta : kartony i palety (udział : kartony ÷ kartony na paletę) — makieta 61 B.
+            $oid = (int) $l['order_id'];
+            $byCustomer[$id]['order_list'][$oid] ??= ['id' => $oid, 'cartons' => 0.0, 'pallets' => 0.0];
+            $byCustomer[$id]['order_list'][$oid]['cartons'] += (float) $l['cartons'];
+            if ((int) $l['cpp'] > 0) $byCustomer[$id]['order_list'][$oid]['pallets'] += (float) $l['cartons'] / (int) $l['cpp'];
             $byCustomer[$id]['lines'][] = $l;
             $cpp = (int) $l['cpp'];
             $layers = (int) $l['cpl'] * (int) $l['lpp'];
@@ -136,6 +141,9 @@ final class LogisticsService
             $customers[$id] = $calc + [
                 'id' => $id, 'name' => $c['name'], 'town' => $c['town'], 'country' => $c['country'],
                 'orders' => count($c['orders']), 'order_ids' => array_keys($c['orders']),
+                'order_list' => array_values(array_map(fn($o) => ['id' => $o['id'], 'cartons' => round($o['cartons'], 1), 'pallets' => round($o['pallets'], 1)], $c['order_list'] ?? [])),
+                // [331] Kolejność dostaw zmieniona na ten dzień (inna niż stała trasa).
+                'stop_custom' => $a !== null && $a['stop'] !== null && $tourId !== null && $a['stop'] !== ($stops[$tourId][$id] ?? null),
                 'palletised' => count(array_filter($c['orders'], fn($s) => $s >= 3)) === count($c['orders']),
                 'scanned' => $scanned[$id] ?? 0,
                 'vehicle_id' => $vehicleId, 'vehicle_source' => $source, 'stop' => $stop,
@@ -449,6 +457,24 @@ final class LogisticsService
         // Trasa dnia taka jak trasa klienta : bez wyjątku na ten dzień.
         if ($tourSet && ($this->tourMap($date)[1][$customerId] ?? null) === $tourId) $tourSet = false;
         $this->repo->saveAssignment($date, $customerId, $tourSet, $tourId, $vehicleSet, $vehicleId, $stop, $userId);
+    }
+
+    /**
+     * [331] Kolejność dostaw na ten dzień (makieta 61 B, przeciągnij i upuść) : $customerIds w kolejności rozładunku → przystanki 1…n
+     * tylko na ten dzień ; trasa i pojazd klienta bez zmian, stała trasa bez zmian. $reset : powrót do kolejności stałej trasy.
+     * @param list<int> $customerIds
+     */
+    public function reorderStops(string $date, array $customerIds, bool $reset, ?int $userId): void
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) throw new CustomException('Nieprawidłowa data.', 'errors', 422);
+        $ids = array_values(array_unique(array_filter(array_map('intval', $customerIds), fn($id) => $id > 0)));
+        if (!$ids || count($ids) > 99) throw new CustomException('Brak klientów do ułożenia.', 'errors', 422);
+        $current = $this->repo->assignments($date);
+        foreach ($ids as $i => $id) {
+            if (!$this->repo->customerExists($id)) throw new CustomException('Nie znaleziono klienta.', 'errors', 404);
+            $a = $current[$id] ?? ['tour_set' => false, 'tour' => null, 'vehicle_set' => false, 'vehicle' => null];
+            $this->repo->saveAssignment($date, $id, $a['tour_set'], $a['tour'], $a['vehicle_set'], $a['vehicle'], $reset ? null : $i + 1, $userId);
+        }
     }
 
     // --- Trasy -------------------------------------------------------------------------------------

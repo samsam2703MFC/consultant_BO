@@ -52,6 +52,31 @@
 .lt-fill{text-align:right}.lt-fill strong{display:block;font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
 .lt-bar{height:6px;border-radius:4px;background:#eee7de;margin-top:8px;overflow:hidden}.lt-bar i{display:block;height:100%;background:#2E7D4F}
 .lt-fill.is-over strong{color:var(--at-danger,#C41E3A)}.lt-fill.is-over .lt-bar i{background:var(--at-danger,#C41E3A)}
+.lt61{display:block}
+.lt61-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}
+.lt61-head .lt-fill{min-width:140px}
+.lt61-k{display:flex;justify-content:space-between;gap:12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--at-muted,#78716C);margin-bottom:16px}
+.lt61-truck{display:flex;align-items:stretch}
+.lt61-door{width:28px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--at-muted,#78716C);border:2px dashed #cfc6ba;border-right:0;border-radius:6px 0 0 6px}
+.lt61-trailer{flex:1;position:relative;display:flex;gap:5px;border:2px solid #cfc6ba;padding:6px;background:#fbf9f6;min-height:96px}
+.lt61-blk{position:relative;min-width:64px;border-radius:8px;color:#fff;padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none;overflow:hidden}
+.lt61-blk b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lt61-blk span{font-size:12px;opacity:.92;white-space:nowrap}
+.lt61-blk .lt61-st{position:absolute;top:6px;right:8px;background:rgba(0,0,0,.28);border-radius:6px;font-size:11px;font-weight:700;padding:0 6px;opacity:1}
+.lt61-blk.is-drag{opacity:.45;outline:2px dashed #fff}
+.lt61-trailer.is-saving{opacity:.6;pointer-events:none}
+.lt61-free{border:1.5px dashed #ddd5ca;border-radius:8px}
+.lt61-cab{width:54px;border:2px solid #cfc6ba;border-left:0;border-radius:0 18px 8px 0;background:#fff;position:relative}
+.lt61-cab:after{content:'';position:absolute;right:8px;top:12px;width:20px;height:15px;border-radius:3px 9px 3px 3px;background:#e8eef7}
+.lt61-arrows{display:flex;justify-content:space-between;font-size:12px;color:var(--at-primary,#8D1D2C);margin:8px 0 14px;padding:0 58px 0 32px}
+.lt61-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.lt61-card{display:flex;flex-direction:column;justify-content:flex-start;text-align:left;border:1px solid #eee7de;border-radius:12px;padding:10px 12px;background:#fff;color:inherit}
+.lt61-card[aria-expanded=true]{border-color:var(--at-primary,#8D1D2C);box-shadow:0 0 0 1px var(--at-primary,#8D1D2C)}
+.lt61-ch{display:flex;align-items:center;gap:8px;margin-bottom:6px}.lt61-ch b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt61-row,.lt61-tot{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0;border-top:1px solid #f4efe8;font-variant-numeric:tabular-nums}
+.lt61-row span{color:var(--at-muted,#78716C)}
+.lt61-tot{font-weight:700;font-size:13px}
+.lt61-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+.lt61-chg{margin-left:auto;background:#fff6e5;border:1px solid #f0d9a8;color:#8a5a12;border-radius:8px;padding:5px 10px;font-size:12.5px}
 .lt-chips{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px}
 @media (max-width:900px){.lt-chips{grid-column:1}}
 .lt-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--at-line,#e6e0d8);border-radius:8px;padding:4px 10px 4px 6px;font-size:13px;background:#fff;color:inherit}
@@ -162,26 +187,6 @@
     {# --- [329] Trasy i klienci (makieta 59) : jedna ciężarówka = jedna linia, miejsca palet w kolorze klienta,
          klik na klienta : jego palety narysowane + trasa / pojazd / kolejność. --------------------------------- #}
     {% set ltColors = ['#8D1D2C', '#2c5282', '#2E7D4F', '#d9a05b', '#7c4d8a', '#c47b5a', '#3b7a8a', '#a8475a'] %}
-    {% macro trailer(cids, by_id, places, colors) %}
-        {% set slots = [] %}
-        {% for cid in cids %}{% set cust = by_id[cid] %}{% set ci = loop.index0 %}
-            {% for ct in cust.carton_types %}{% for p in ct.pallets %}{% set slots = slots|merge([{c: colors[ci % colors|length], mixed: p.kind != 'full', who: cust.name}]) %}{% endfor %}{% endfor %}
-        {% endfor %}
-        {% set cap = places > 0 ? places : slots|length %}
-        {% set shown = max(cap, 2) %}
-        <div class="lt-truck" role="img" aria-label="{{ slots|length }} palet{{ places > 0 ? ' na ' ~ places ~ ' miejsc' : '' }}">
-            <div class="lt-trailer" style="grid-template-columns:repeat({{ (shown / 2)|round(0, 'ceil') }},1fr)">
-                {% for i in 0..(shown - 1) %}
-                    {% set sl = slots[i] ?? null %}
-                    {% if sl %}<i class="lt-s" title="{{ sl.who }}" style="background:{{ sl.mixed ? 'repeating-linear-gradient(45deg,' ~ sl.c ~ ' 0 4px,' ~ sl.c ~ '66 4px 8px)' : sl.c }}"></i>{% else %}<i class="lt-s is-free"></i>{% endif %}
-                {% endfor %}
-                {% if places > 0 and slots|length > places %}<span class="lt-over-tag">+{{ slots|length - places }} pal. nie mieści się</span>{% endif %}
-            </div>
-            <div class="lt-cab"></div>
-        </div>
-        <div class="lt-wheels"><i></i><i></i><i></i></div>
-    {% endmacro %}
-    {% import _self as lt %}
     {% set overTours = tours|filter(x => x.places and x.pallets > x.places)|length %}
     <div class="card lt-card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -194,28 +199,60 @@
             </ul>
         </div>
         <div class="card-body pt-0">
+            {# [331] Makieta 61 B : naczepa z góry, drzwi z lewej ; klient = blok szerokości jego palet ; przeciągnij → kolejność dostaw
+               na ten dzień (załadunek odwrotnie : ostatni klient pierwszy przy kabinie). Pod spodem zamówienia klientów. #}
             {% for tour in tours %}
             {% set over = tour.places and tour.pallets > tour.places %}
-            <section class="lt-tour" data-lt-tour aria-label="Trasa {{ tour.name }}">
-                <div class="lt-name">
-                    <span class="lt-dot" style="background:{{ tour.color ?: '#8d1d2c' }}"></span>
-                    <div><strong>{{ tour.name }}</strong>
-                        <span class="at-sub">wyjazd {{ tour.departure }}{% for v in tour.vehicles %} · {{ v.label }}{% else %} · <a href="{{ root }}/logistics/tours">dodaj pojazd</a>{% endfor %}</span>
-                        <span class="at-sub">{{ tour.customers|length|plural_pl('klient', 'klientów', 'klientów') }}</span></div>
+            {% set custom = tour.customers|filter(cid => by_id[cid].stop_custom ?? false)|length %}
+            <section class="lt-tour lt61" data-lt-tour data-tour="{{ tour.id }}" aria-label="Trasa {{ tour.name }}">
+                <div class="lt61-head">
+                    <div class="lt-name">
+                        <span class="lt-dot" style="background:{{ tour.color ?: '#8d1d2c' }}"></span>
+                        <div><strong>{{ tour.name }}</strong>
+                            <span class="at-sub">wyjazd {{ tour.departure }}{% for v in tour.vehicles %} · {{ v.label }}{% else %} · <a href="{{ root }}/logistics/tours">dodaj pojazd</a>{% endfor %} · {{ tour.customers|length|plural_pl('klient', 'klientów', 'klientów') }}</span></div>
+                    </div>
+                    <div class="lt-fill{{ over ? ' is-over' : '' }}">
+                        <strong>{{ tour.pallets }}{{ tour.places ? ' / ' ~ tour.places : '' }}</strong>
+                        <span class="at-sub">palet{{ tour.fill_pct is not null ? ' · ' ~ tour.fill_pct|round ~ ' %' : '' }} · {{ tour.weight_kg|number_format(0, ',', ' ') }} kg</span>
+                    </div>
                 </div>
-                <div>{{ lt.trailer(tour.customers, by_id, tour.places, ltColors) }}</div>
-                <div class="lt-fill{{ over ? ' is-over' : '' }}">
-                    <strong>{{ tour.pallets }}{{ tour.places ? '/' ~ tour.places : '' }}</strong>
-                    <span class="at-sub">{{ tour.fill_pct is not null ? tour.fill_pct|round ~ ' % · ' : '' }}{{ tour.weight_kg|number_format(0, ',', ' ') }} kg</span>
-                    {% if tour.places %}<div class="lt-bar"><i style="width:{{ min(100, tour.fill_pct ?? 0)|round(1) }}%"></i></div>{% endif %}
+                {% if tour.customers %}
+                <div class="lt61-k"><span>Naczepa z góry · przeciągnij klienta, aby zmienić kolejność</span><span>1 = pierwsza dostawa = przy drzwiach</span></div>
+                <div class="lt61-truck">
+                    <div class="lt61-door">drzwi</div>
+                    <div class="lt61-trailer" data-lt-drop>
+                        {% for cid in tour.customers %}{% set c = by_id[cid] %}
+                            <div class="lt61-blk" draggable="true" data-cid="{{ cid }}" style="flex:{{ max(c.pallets, 1) }} 1 0;background:{{ ltColors[loop.index0 % ltColors|length] }}" title="{{ c.name }} — {{ c.pallets }} pal. · przeciągnij">
+                                <span class="lt61-st">{{ loop.index }}</span><b>{{ c.name }}</b><span>{{ c.pallets }} pal.</span>
+                            </div>
+                        {% endfor %}
+                        {% if tour.places > tour.pallets %}<div class="lt61-free" style="flex:{{ tour.places - tour.pallets }} 1 0"></div>{% endif %}
+                        {% if over %}<span class="lt-over-tag">+{{ tour.pallets - tour.places }} pal. nie mieści się</span>{% endif %}
+                    </div>
+                    <div class="lt61-cab"></div>
                 </div>
-                <div class="lt-chips">
+                <div class="lt61-arrows"><span>← rozładunek : 1 → {{ tour.customers|length }}</span><span>załadunek : {{ tour.customers|length }} → 1 →</span></div>
+                <div class="lt61-cards">
                     {% for cid in tour.customers %}{% set c = by_id[cid] %}
-                        <button type="button" class="lt-chip{{ (c.pallets_over ?? 0) or c.missing_cpp ? ' is-warn' : '' }}" data-lt-open="{{ cid }}" aria-expanded="false"><span class="lt-n" style="background:{{ ltColors[loop.index0 % ltColors|length] }}">{{ c.stop ?: loop.index }}</span>{{ c.name }} <b>{{ c.pallets }} pal.</b></button>
-                    {% else %}
-                        <span class="at-sub">Brak zamówień klientów tej trasy na ten dzień.</span>
+                        <button type="button" class="lt61-card" data-lt-open="{{ cid }}" aria-expanded="false">
+                            <span class="lt61-ch"><span class="lt-n" style="background:{{ ltColors[loop.index0 % ltColors|length] }}">{{ loop.index }}</span><b>{{ c.name }}</b>{% if (c.pallets_over ?? 0) or c.missing_cpp %}<i class="bi bi-exclamation-triangle lt-warn"></i>{% endif %}</span>
+                            {% for o in c.order_list %}
+                                <span class="lt61-row"><span>#{{ o.id }} · {{ o.cartons|number_format(0, ',', ' ') }} kart.</span><b>{{ o.pallets|number_format(1, ',', ' ') }} pal.</b></span>
+                            {% endfor %}
+                            <span class="lt61-tot"><span>Razem</span><span>{{ c.pallets }} pal.</span></span>
+                        </button>
                     {% endfor %}
                 </div>
+                <div class="lt61-bar">
+                    {% for v in tour.vehicles %}<a class="btn btn-primary btn-sm" href="{{ root }}/logistics/loading-list?date={{ date }}&amp;vehicle={{ v.id }}" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Lista załadunku{{ tour.vehicles|length > 1 ? ' · ' ~ v.label : '' }} (PDF)</a>{% endfor %}
+                    {% if custom %}
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-lt-reset>Wróć do stałej trasy</button>
+                        <span class="lt61-chg">↕ inna kolejność niż stała trasa — tylko na ten dzień</span>
+                    {% endif %}
+                </div>
+                {% else %}
+                    <p class="at-sub mb-0">Brak zamówień klientów tej trasy na ten dzień.</p>
+                {% endif %}
                 {% for cid in tour.customers %}
                     {% include 'logistics/_customer_card.twig' with {c: by_id[cid], color: ltColors[loop.index0 % ltColors|length]} %}
                 {% endfor %}
@@ -292,6 +329,43 @@
         at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
         if (res.ok) window.setTimeout(() => window.location.reload(), 500);
     };
+    // [331] Przeciągnij klienta w naczepie (makieta 61 B) → kolejność dostaw na ten dzień ; załadunek odwrotnie.
+    document.querySelectorAll('[data-lt-drop]').forEach(trailer => {
+        let dragged = null;
+        const order = () => [...trailer.querySelectorAll('.lt61-blk')].map(b => Number(b.dataset.cid));
+        let before = order();
+        trailer.addEventListener('dragstart', (e) => {
+            dragged = e.target.closest('.lt61-blk');
+            if (!dragged) return;
+            before = order();
+            dragged.classList.add('is-drag');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragged.dataset.cid);
+        });
+        trailer.addEventListener('dragover', (e) => {
+            if (!dragged) return;
+            e.preventDefault();
+            const over = e.target.closest('.lt61-blk');
+            if (!over || over === dragged) return;
+            const r = over.getBoundingClientRect();
+            over.parentNode.insertBefore(dragged, e.clientX < r.left + r.width / 2 ? over : over.nextSibling);
+        });
+        trailer.addEventListener('drop', (e) => e.preventDefault());
+        trailer.addEventListener('dragend', () => {
+            if (!dragged) return;
+            dragged.classList.remove('is-drag');
+            dragged = null;
+            const now = order();
+            trailer.querySelectorAll('.lt61-blk').forEach((b, i) => { b.querySelector('.lt61-st').textContent = i + 1; });
+            if (now.join() === before.join()) return;
+            trailer.classList.add('is-saving');
+            at.send('/ajax/logistics/stops', 'PUT', {date, customers: now}).then(reload);
+        });
+    });
+    document.querySelectorAll('[data-lt-reset]').forEach(btn => btn.addEventListener('click', () => {
+        const ids = [...btn.closest('[data-lt-tour]').querySelectorAll('.lt61-blk')].map(b => Number(b.dataset.cid));
+        at.send('/ajax/logistics/stops', 'PUT', {date, customers: ids, reset: true}).then(reload);
+    }));
     // [329] Klik na klienta (makieta 59) : jego palety i ustawienia ; drugi klik zamyka.
     document.querySelectorAll('[data-lt-open]').forEach(chip => chip.addEventListener('click', () => {
         const box = chip.closest('[data-lt-tour]');
