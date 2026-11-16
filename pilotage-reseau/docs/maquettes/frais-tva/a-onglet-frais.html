@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Dashboard magasin › Frais : avec ou sans TVA, et le taux</title>
+<!-- Dashboard magasin, rail du bureau, groupe « Les chiffres » › Frais (nouvel onglet). Les frais du mois tels que le
+     panel les rend (/shops/{id}/owner/costs?period=AAAA-MM) ; pour chaque poste, le franchisé dit si le montant saisi
+     contient la TVA et à quel taux. Le P&L court s'en sert pour ramener les frais généraux hors TVA (maquette B). -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="frais.css">
+<script src="donnees.js"></script><script src="coque.js"></script>
+</head><body><script>
+const TAUX = [0, 6, 12, 21];
+const seg = (opts, on, cls) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on ' + (cls || '') : ''}">${l}</button>`).join('')}</span>`;
+const lignes = FRAIS.map(l => {
+  const [poste, type, m, avec, taux, note] = l;
+  const ht = fraisHt(l), tva = m - ht, ai = avec === null;
+  return `<tr class="${ai ? 'ai' : ''}"><td>${poste}<span class="sub">${type}${note ? ' · ' + note : ''}</span></td>
+    <td class="n">${eur(m)}</td>
+    <td>${seg([[true, 'Oui'], [false, 'Non']], avec, avec ? 'oui' : '')}</td>
+    <td>${seg(TAUX.map(t => [t, t + ' %']), taux)}</td>
+    <td class="n">${ai ? '<span class="mu">' + eur(m) + '</span>' : eur(ht)}</td>
+    <td class="n">${ai ? '<span class="tag-warn">à indiquer</span>' : (tva > 0.004 ? eur(tva) : '<span class="mu">—</span>')}</td></tr>`;
+}).join('');
+const T = FRAIS_TOT;
+const corps = `
+  <p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b style="font-weight:400">contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre.</p>
+  <div class="db-tuiles fx-tuiles">
+    <div class="db-tui"><div class="k">Frais saisis au panel</div><div class="v">${eur(T.saisi)}</div><div class="s">${FRAIS.length} postes · novembre 2026</div></div>
+    <div class="db-tui"><div class="k">Frais hors TVA</div><div class="v">${eur(T.ht)}</div><div class="s">ce que le P&amp;L compte · ${pc(100 * T.part)} du saisi</div></div>
+    <div class="db-tui"><div class="k">TVA comprise dans les frais</div><div class="v">${eur(T.tva)}</div><div class="s">récupérable : retirée des frais généraux</div></div>
+    <div class="db-tui warn"><div class="k">À indiquer</div><div class="v">${T.aIndiquer} poste</div><div class="s">${eur(T.aIndiquerEur)} comptés tels que saisis, en attendant</div></div>
+  </div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les frais du mois</span><span class="mu" style="font-size:11px;margin-left:auto">source : le panel, frais du magasin · ${FRAIS.length} postes</span></div>
+    <table class="fx-t"><thead><tr><th>Poste</th><th class="n">Saisi au panel</th><th>TVA comprise ?</th><th>Taux de TVA</th><th class="n">Hors TVA</th><th class="n">TVA</th></tr></thead>
+    <tbody>${lignes}
+      <tr class="tot"><td>Total du mois<span class="sub">${FRAIS.length - T.aIndiquer} postes indiqués sur ${FRAIS.length}</span></td><td class="n">${eur(T.saisi)}</td><td></td><td></td><td class="n">${eur(T.ht)}</td><td class="n">${eur(T.tva)}</td></tr>
+    </tbody></table></div>
+  <div class="fx-g2">
+    <div class="db-card"><div class="ct"><span class="db-lab">Ce que ça change dans le P&amp;L court</span></div>
+      <div class="fx-l th"><span></span><span class="n">saisi</span><span class="n">hors TVA</span></div>
+      <div class="fx-l"><span>Frais généraux du jour<span class="sub">les frais du mois répartis par le panel sur les jours d’ouverture</span></span><span class="n">${eur(JOUR.fraisSaisis, 0)}</span><span class="n">${eur(JOUR.fraisHt, 0)}</span></div>
+      <div class="fx-l"><span>Frais généraux du mois</span><span class="n">${eur(T.saisi, 0)}</span><span class="n">${eur(T.ht, 0)}</span></div>
+      <div class="fx-l"><span>Part des frais dans le CA du jour<span class="sub">seuil du réseau 13,5 %</span></span><span class="n">${pc(JOUR.avant.oh)}<span class="sub">sur le CA TTC</span></span><span class="n">${pc(100 * JOUR.fraisHt / JOUR.ht)}<span class="sub">sur le CA hors TVA</span></span></div>
+    </div>
+    <div class="db-card"><div class="ct"><span class="db-lab">Comment remplir</span></div>
+      <div class="fx-leg">
+        <p><b>Oui</b> : le montant saisi au panel est celui de la facture, TVA comprise. Le P&amp;L en retire la TVA au taux indiqué (21 % l’énergie et les services, 6 % l’eau).</p>
+        <p><b>Non</b> : le montant est déjà hors TVA (un contrat de leasing saisi hors TVA), ou le frais n’en a pas — loyer non soumis, assurances, frais bancaires : taux 0 %.</p>
+        <p style="margin:0">Un poste pas encore indiqué compte tel que saisi et reste en orange, ici et sous la ligne « Frais généraux » du P&amp;L.</p>
+      </div></div>
+  </div>`;
+coque({ actif: 'frais', titre: 'Frais', corps,
+  periode: '<span class="db-lab">Mois</span><button class="db-btn">‹</button><span class="db-sel" style="display:inline-flex;align-items:center;padding:0 10px">novembre 2026</span><button class="db-btn">›</button>',
+  pied: 'Maquette du 16/11/2026 · total des frais réel (Halle, septembre 2026 : 13 042,65 € au panel), lignes d’exemple : la vraie liste se lit au panel, poste par poste. Les choix « TVA comprise » et « taux » sont gardés par le cockpit, magasin par magasin, et le panel n’est pas modifié.' });
+</script></body></html>

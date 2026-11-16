@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Dashboard magasin › Opérationnel : le P&L court hors TVA</title>
+<!-- Dashboard magasin › Opérationnel › « Le P&L court de la journée », refait hors TVA : le CA encaissé (TTC) en tête,
+     la TVA des tickets retirée, puis tout se rapporte au CA hors TVA ; les frais généraux hors TVA (onglet Frais). À
+     droite, la même journée avant et après. Chiffres de la carte du 16/11/2026, TVA à 6 % pour l'exemple. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="frais.css">
+<script src="donnees.js"></script><script src="coque.js"></script>
+</head><body><script>
+const J = JOUR, S = J.seuils, A = J.avant;
+const fE = v => (v < 0 ? '−' : '') + Math.round(Math.abs(v)).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+const fS = v => (v < 0 ? '− ' : '+ ') + Math.round(Math.abs(v)).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+const P = v => 100 * v / J.ht;
+const feu = (v, s) => v <= s ? '#3f7a52' : (v <= s * 1.3 ? '#B0792A' : '#A32014');
+const feuRes = p => p >= 15 ? '#3f7a52' : (p >= 5 ? '#B0792A' : '#A32014');
+const ligne = (lib, sous, v, pct, coul, w, fort, note, cls) => `<div class="db-cl${fort ? ' fort' : ''}${cls ? ' ' + cls : ''}"><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${Math.min(100, Math.abs(w)).toFixed(1)}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
+const fr = FRAIS_TOT;
+const cascade = `<div class="db-cascade">
+  ${ligne('Chiffre d’affaires encaissé', J.clients + ' clients · panier ' + J.panier.toFixed(2).replace('.', ',') + ' € hors pro · TVA comprise', fE(J.ttc), '', '#c9c4bc', 100 * J.ttc / J.ht, false, 'ce que la caisse a encaissé', 'ttc')}
+  ${ligne('− TVA des tickets', pc(100 * J.tva / J.ttc) + ' du TTC · lue ticket par ticket', fE(-J.tva), '', '#c9c4bc', P(J.tva), false, 'reversée à l’État', 'ttc')}
+  ${ligne('= Chiffre d’affaires hors TVA', '', fE(J.ht), '100 %', 'var(--color-text)', 100, true, '')}
+  ${ligne('− Coût matière', 'seuil ' + pc(S.food), fE(-J.matiere), pc(P(J.matiere)), feu(P(J.matiere), S.food), P(J.matiere), false, '')}
+  ${ligne('= Marge brute', '', fE(J.mb), pc(P(J.mb)), 'var(--color-text)', P(J.mb), true, '')}
+  ${ligne('− Invendus et poubelle', J.pieces + ' pièces', fE(-J.invendus), pc(P(J.invendus)), '#B0792A', P(J.invendus), false, '<span class="clic">les saisies ▸</span>')}
+  ${ligne('− Main-d’œuvre', 'seuil ' + pc(S.labour), fE(-J.labour), pc(P(J.labour)), feu(P(J.labour), S.labour), P(J.labour), false, '')}
+  ${ligne('− Frais généraux hors TVA', 'seuil ' + pc(S.overhead), fE(-J.fraisHt), pc(P(J.fraisHt)), feu(P(J.fraisHt), S.overhead), P(J.fraisHt), false, fE(J.fraisSaisis) + ' saisis, ' + fE(J.fraisSaisis - J.fraisHt) + ' de TVA retirée · ' + fr.aIndiquer + ' poste à indiquer <span class="clic">Frais ▸</span>')}
+  ${ligne('= Résultat hors TVA', '', fS(J.net), pc(P(J.net)), feuRes(P(J.net)), P(J.net), true, '')}
+</div>`;
+const L = (lib, av, ap, sous) => `<div class="fx-l"><span>${lib}${sous ? `<span class="sub">${sous}</span>` : ''}</span><span class="n">${av}</span><span class="n">${ap}</span></div>`;
+const comp = `<div class="fx-l th"><span></span><span class="n">avant · sur le TTC</span><span class="n">après · hors TVA</span></div>
+  ${L('Chiffre d’affaires du P&amp;L', fE(A.ca), fE(J.ht), 'la base des pourcentages')}
+  ${L('Coût matière', pc(A.mat), `<span style="color:${feu(P(J.matiere), S.food)}">${pc(P(J.matiere))}</span>`, 'seuil 40,0 % : dessous avant, dessus après')}
+  ${L('Marge brute', fE(A.mb) + ' · ' + pc(A.mbPct), fE(J.mb) + ' · ' + pc(P(J.mb)))}
+  ${L('Invendus et poubelle', pc(A.inv), pc(P(J.invendus)))}
+  ${L('Main-d’œuvre', pc(A.lab), pc(P(J.labour)))}
+  ${L('Frais généraux', fE(J.fraisSaisis) + ' · ' + pc(A.oh), fE(J.fraisHt) + ' · ' + pc(P(J.fraisHt)), 'hors TVA d’après l’onglet Frais')}
+  ${L('<b style="font-weight:400">Résultat</b>', fS(A.net) + ' · ' + pc(A.netPct), `<b style="font-weight:400;color:${feuRes(P(J.net))}">${fS(J.net)} · ${pc(P(J.net))}</b>`, 'la TVA comptée en recette, puis retirée')}`;
+const corps = `
+  <div class="db-sec">Résultat — la journée<small>budget du jour, référence des mêmes jours, P&amp;L court hors TVA</small></div>
+  <div class="fx-g2" style="grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)">
+    <div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée · hors TVA</span></div>${cascade}</div>
+    <div class="db-card"><div class="ct"><span class="db-lab">La même journée, avant et après</span></div>${comp}
+      <div class="fx-leg" style="padding-top:12px;color:var(--color-text-muted)">Restent TTC : le CA des tuiles, l’objectif du jour, le panier et la valeur du magasin — le budget est posé en TTC, la caisse encaisse en TTC. Seul le P&amp;L passe hors TVA, au jour, à la semaine et au mois.</div></div>
+  </div>`;
+coque({ actif: 'ops', titre: 'Opérationnel', corps,
+  periode: '<span class="db-lab">Date</span><button class="db-btn">‹</button><span class="db-sel" style="display:inline-flex;align-items:center;padding:0 10px">lundi 16/11/2026</span><button class="db-btn">›</button>',
+  pied: 'Maquette du 16/11/2026 · la journée de la carte envoyée (CA 2 628 €, 187 clients) · TVA des tickets à 6 % pour l’exemple : en vrai, la TVA de chaque ticket du panel (la caisse la porte, ticket par ticket) · frais généraux hors TVA au prorata des frais du mois indiqués dans l’onglet Frais (maquette A).' });
+</script></body></html>
