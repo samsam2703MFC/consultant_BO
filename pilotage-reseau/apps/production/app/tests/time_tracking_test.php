@@ -184,8 +184,8 @@ try {
     $time->correctClock($aMon, null, '2026-11-02 14:05', 'Korekta wyjścia', 3);
     expectTm($time->day('2026-11-02', $now)['validated'] === null && $count("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'clock' AND action = 'correct'") === 2, 'correction logged, day to validate again');
     $time->validateDay('2026-11-02', 3, $now);
-    $manual = $time->addClock(13, '2026-11-04 06:00', '2026-11-04 14:00', 'Zapomniane odbicie', 3);
-    expectTm($manual['source'] === 'manual' && str_starts_with(refusal(fn() => $time->addClock(13, '2026-11-20 06:00', '2026-11-20 14:00', 'x', 3)), '422'), 'manual clock (not in the future)');
+    $manual = $time->addClock(13, '2026-11-04 06:00', '2026-11-04 14:00', 'Zapomniane odbicie', 3, $now);
+    expectTm($manual['source'] === 'manual' && str_starts_with(refusal(fn() => $time->addClock(13, '2026-11-20 06:00', '2026-11-20 14:00', 'x', 3, $now)), '422'), 'manual clock (not in the future)');
 
     // --- Semaine : au-delà de 40 h (paramètre abaissé à 30 h pour le test)
     $pdo->exec("UPDATE n_prod_param SET value = '1800' WHERE code = 'time.week_plan_min'");
@@ -219,21 +219,21 @@ try {
     ob_start();
     imagepng($im);
     $png = 'data:image/png;base64,' . base64_encode((string) ob_get_clean());
-    expectTm(str_starts_with(refusal(fn() => $time->signComp($comp['id'], $png, 12, null, null)), '403'), 'another person cannot sign');
-    expectTm(refusal(fn() => $time->signComp($comp['id'], 'not-an-image', 11, null, null)) === 'VALIDATION_FAILED', 'invalid signature image refused');
-    $signed = $time->signComp($comp['id'], $png, 11, null, null);
+    expectTm(str_starts_with(refusal(fn() => $time->signComp($comp['id'], $png, 12, null, null, $now)), '403'), 'another person cannot sign');
+    expectTm(refusal(fn() => $time->signComp($comp['id'], 'not-an-image', 11, null, null, $now)) === 'VALIDATION_FAILED', 'invalid signature image refused');
+    $signed = $time->signComp($comp['id'], $png, 11, null, null, $now);
     expectTm($signed['status'] === 'signed' && $count("SELECT COUNT(*) FROM n_prod_signature WHERE purpose = 'comp_day' AND ref = '{$comp['id']}' AND id_employee = 11 AND storage = 'db'") === 1,
         'signed at the tablet: signature stored (comp_day)');
     expectTm($count("SELECT minutes FROM n_time_absence WHERE id_employee = 11 AND type = 'wn' AND date_from = '2026-11-16' AND id_comp = {$comp['id']}") === 120, 'signed comp day → calendar « wolne za nadgodziny » 2:00');
     $b = $time->bankFor(11, null, $now);
     expectTm($b['bank'] === 210 && $b['oldest'] === ['day' => '2026-11-07', 'minutes' => 210] && $b['deadline'] === '2027-02-07', 'FIFO: 03.11 recovered first, 3:30 left from 07.11');
-    expectTm(str_starts_with(refusal(fn() => $time->signComp($comp['id'], $png, 11, null, null)), '409'), 'signed only once');
+    expectTm(str_starts_with(refusal(fn() => $time->signComp($comp['id'], $png, 11, null, null, $now)), '409'), 'signed only once');
     $mon16 = array_column($time->day('2026-11-16', strtotime('2026-11-16 18:00:00'))['people'], null, 'employee_id')[11];
     expectTm($mon16['plan'] === 360 && $mon16['absence']['type'] === 'wn', 'partial comp day: plan 8:00 − 2:00 = 6:00');
     $time->cancelComp($comp['id'], 3, $now);
     expectTm($time->bankFor(11, null, $now)['bank'] === 330 && $count('SELECT COUNT(*) FROM n_time_absence WHERE id_comp IS NOT NULL') === 0, 'cancelled future comp day: bank back, calendar entry removed');
     $comp2 = $time->proposeComp(11, '2026-11-17', 330, 3, $now);
-    $time->signComp($comp2['id'], $png, null, null, 3);
+    $time->signComp($comp2['id'], $png, null, null, 3, $now);
     expectTm($time->bankFor(11, null, $now)['bank'] === 0 && $time->overtime($now)['kpis']['recovered_month'] === 330, 'signed in the ERP (in front of the manager): bank recovered');
     $time->cancelComp($comp2['id'], 3, $now);
 
@@ -260,7 +260,7 @@ try {
     $cal = $time->calendar('2026-11-16', 14, $now);
     expectTm($cal['absent']['2026-11-18'] === 2 && $cal['warnings'] === [['date' => '2026-11-18', 'group' => 'Piekarnia', 'count' => 2]], 'calendar: 2 absent in Piekarnia on 18.11 → warning');
     $wnId = (int) $time->proposeComp(11, '2026-11-25', 60, 3, $now)['id'];
-    $time->signComp($wnId, $png, 11, null, null);
+    $time->signComp($wnId, $png, 11, null, null, $now);
     $wnAbsence = (int) $pdo->query("SELECT id FROM n_time_absence WHERE id_comp = {$wnId}")->fetchColumn();
     expectTm(str_starts_with(refusal(fn() => $time->deleteAbsence($wnAbsence, 3)), '409'), 'comp day not deleted from the calendar (cancel it in Nadgodziny)');
 

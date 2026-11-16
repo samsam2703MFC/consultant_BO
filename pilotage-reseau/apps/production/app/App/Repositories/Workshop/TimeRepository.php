@@ -265,10 +265,11 @@ final class TimeRepository extends WorkshopRepository
     }
 
     /** Signature du jour : seulement depuis « proposé » (une seule fois). */
-    public function markCompSigned(int $id, int $signatureId): bool
+    /** $signedAt : heure de la signature donnée par le service (même horloge que le calcul de la banque). */
+    public function markCompSigned(int $id, int $signatureId, string $signedAt): bool
     {
-        $stmt = $this->db->prepare("UPDATE n_time_comp SET status = 'signed', id_signature = ?, signed_at = NOW() WHERE id = ? AND status = 'proposed'");
-        $stmt->execute([$signatureId, $id]);
+        $stmt = $this->db->prepare("UPDATE n_time_comp SET status = 'signed', id_signature = ?, signed_at = ? WHERE id = ? AND status = 'proposed'");
+        $stmt->execute([$signatureId, $signedAt, $id]);
         return $stmt->rowCount() === 1;
     }
 

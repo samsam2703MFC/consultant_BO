@@ -397,7 +397,8 @@ final class TimeService
         return $this->repo->clock($clockId);
     }
 
-    public function addClock(int $employeeId, string $in, string $out, string $note, ?int $userId): array
+    /** Pointage manuel ; $now : horloge injectée (jamais dans le futur par rapport à elle). */
+    public function addClock(int $employeeId, string $in, string $out, string $note, ?int $userId, ?int $now = null): array
     {
         $this->employeeOrFail($employeeId);
         $note = self::cleanNote($note) ?? throw new CustomException('Odbicie ręczne : wpisz powód (np. zapomniane odbicie).', 'errors', 422);
@@ -405,7 +406,7 @@ final class TimeService
         $out = self::dateTime($out, 'wyjścia');
         if ($out <= $in) throw new CustomException('Wyjście musi być po wejściu.', 'errors', 422);
         if (strtotime($out) - strtotime($in) > 20 * 3600) throw new CustomException('Odbicie dłuższe niż 20 h — sprawdź datę wyjścia.', 'errors', 422);
-        if ($in > date('Y-m-d H:i:s')) throw new CustomException('Odbicie ręczne nie może być w przyszłości.', 'errors', 422);
+        if ($in > date('Y-m-d H:i:s', $now ?? time())) throw new CustomException('Odbicie ręczne nie może być w przyszłości.', 'errors', 422);
         $this->checkMonthOpen(substr($in, 0, 10));
         $id = $this->tx->execute(function () use ($employeeId, $in, $out, $note, $userId) {
             $id = $this->clocks->clockIn($employeeId, $in, null, null, 'manual', $note);
@@ -708,20 +709,23 @@ final class TimeService
      * Signature d'un jour de récupération (PNG data URL) : à l'écran du kierownik ($employeeId null) ou à la tablette
      * de bureau après le PIN ($employeeId = personne identifiée, qui doit être celle du jour). Le jour devient une
      * absence « wolne za nadgodziny » du calendrier et réduit la banque.
+     * $now : heure de la signature (horloge injectée, comme les autres méthodes) ; elle date signed_at, que la banque
+     * compare à son jour de calcul ($asOf).
      */
-    public function signComp(int $compId, mixed $image, ?int $employeeId, ?int $deviceId, ?int $userId): array
+    public function signComp(int $compId, mixed $image, ?int $employeeId, ?int $deviceId, ?int $userId, ?int $now = null): array
     {
+        $now ??= time();
         $comp = $this->repo->comp($compId) ?? throw new CustomException('Nie znaleziono dnia wolnego.', 'errors', 404);
         if ($employeeId !== null && (int) $comp['id_employee'] !== $employeeId) throw new CustomException('Ten dzień wolny dotyczy innej osoby.', 'errors', 403);
         if ($comp['status'] !== 'proposed') throw new CustomException($comp['status'] === 'signed' ? 'Ten dzień wolny jest już podpisany.' : 'Ten dzień wolny został anulowany.', 'errors', 409);
         $png = ExecutionService::decodePng($image);
         $owner = (int) $comp['id_employee'];
-        return $this->tx->execute(function () use ($comp, $compId, $png, $owner, $deviceId, $userId) {
+        return $this->tx->execute(function () use ($comp, $compId, $png, $owner, $deviceId, $userId, $now) {
             $hash = hash('sha256', $png);
             $stored = $this->storage->store($owner, $png, $hash);
             $sig = $this->clocks->insertSignature(['id_employee' => $owner, 'purpose' => 'comp_day', 'ref' => (string) $compId, 'id_device' => $deviceId, 'sha256' => $hash] + $stored);
-            if (!$this->repo->markCompSigned($compId, $sig)) throw new CustomException('Ten dzień wolny jest już podpisany.', 'errors', 409);
-            $this->insertAbsence($owner, 'wn', $comp['day'], $comp['day'], 'Odbiór nadgodzin (podpis ' . date('d.m.Y H:i') . ')', $userId, (int) $comp['minutes'], $compId);
+            if (!$this->repo->markCompSigned($compId, $sig, date('Y-m-d H:i:s', $now))) throw new CustomException('Ten dzień wolny jest już podpisany.', 'errors', 409);
+            $this->insertAbsence($owner, 'wn', $comp['day'], $comp['day'], 'Odbiór nadgodzin (podpis ' . date('d.m.Y H:i', $now) . ')', $userId, (int) $comp['minutes'], $compId);
             $this->log->record($userId, 'sign', 'time_comp', $compId, null, ['employee_id' => $owner, 'day' => $comp['day'], 'minutes' => (int) $comp['minutes'], 'signature_id' => $sig, 'sha256' => $hash, 'device_id' => $deviceId], null);
             return $this->compRow($compId);
         });
