@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -163,6 +163,8 @@
     if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // La trésorerie (14/11/2026) : le module lit et écrit lui-même (tresorerie.js) ; « ↻ Relire » relit ses repères.
     if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
+    // Les frais du magasin et leur TVA (16/11/2026) : les frais du mois au panel, le choix de chaque poste.
+    if (S.vue === 'frais') { S.frMois = S.frMois || AUJ.slice(0, 7); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(cleFR(), cheminFR(), force); rendre(); return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
     if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
@@ -1329,6 +1331,8 @@
     const avecNet = passes.filter(j => NET[j.date] && NET[j.date].net != null);
     const complet = avecNet.length && passes.every(j => (NET[j.date] && NET[j.date].net != null) || j.aujourdhui);
     const netSem = m.net != null ? m.net : (complet ? avecNet.reduce((a, j) => a + NET[j.date].net, 0) : null);
+    // Le résultat se lit hors TVA (16/11/2026) : en % du réalisé hors TVA de la semaine (ou de ses jours additionnés).
+    const baseNet = m.net != null ? (m.realiseHt || realise) : (complet ? avecNet.reduce((a, j) => a + (NET[j.date].caHt || NET[j.date].ca || 0), 0) : realise);
     const dessous = passes.filter(j => j.objectif && j.ca < j.objectif && !j.aujourdhui), dessus = passes.filter(j => j.objectif && j.ca >= j.objectif);
     const jl = j => (j.court || fD(j.date)).replace(/\s+\d+$/, '');
     const rc = maRang(d, m, 'realise');
@@ -1338,8 +1342,8 @@
       v: fE(realise) + (m.attendu ? ` <small class="mu">/ ${fE(m.attendu)}</small>` : ''),
       s: (att != null ? fP(att) + ' de l’objectif à ce jour' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
       apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
-    T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
-      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
+    T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(baseNet ? 100 * netSem / baseNet : null),
+      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (baseNet ? ' · ' + fPS(100 * netSem / baseNet) + ' des ventes hors TVA' : '') : 'P&amp;L incomplet' });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct, maSeuilMat(d)), v: fP(m.coutMatierePct), s: maSeuilLib(d) + ' · la semaine' });
     T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
       v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
@@ -1355,7 +1359,7 @@
     let h = `<div class="ma-dam"><table><tr><th class="l">la semaine</th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date))}</th>`).join('')}</tr>`;
     if (!R.sansChiffre) h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
     const jmLu = !!S.aux['jourM|' + S.date];
-    h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net(x.ca ? 100 * x.net / x.ca : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
+    h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net((x.caHt || x.ca) ? 100 * x.net / (x.caHt || x.ca) : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
     h += ligne('Contrôles', j => { const c = X[j.date] && X[j.date].controles; return c ? cell(c.total ? (auj(j) && c.rendus < c.total ? 'o' : MA.ctrl(c.rendus, c.total)) : 'n', c.total ? c.rendus + '/' + c.total : '—') : cell('n', SJ ? '—' : '…'); });
     h += ligne('Notés', j => { const c = X[j.date] && X[j.date].controles; return c ? (c.nc ? cell('r', c.nc + ' NC') : (c.notes ? cell('v', String(c.notes)) : cell('n', '—'))) : cell('n', SJ ? '—' : '…'); });
     h += ligne('Poubelle', j => { const p = X[j.date] && X[j.date].poubelle; if (!p) { return cell('n', SJ ? '—' : '…'); } if (!p.pieces) { return cell('n', '0'); }
@@ -6695,6 +6699,96 @@
   }
   document.addEventListener('keydown', e => { if (S.rv && e.key === 'Escape') { rvFermer(); } });
 
+  /* --- Frais (16/11/2026, maquette docs/maquettes/frais-tva) -----------------------------------------------------------
+   * Les frais du magasin du mois, tels que saisis au panel (GET /exploitation/frais) ; pour chaque poste, « TVA comprise ? »
+   * (oui, non) et le taux. Le P&L court s'en sert pour ramener les frais généraux hors TVA (src/pnl_ht.php). Le choix se
+   * garde pour le poste, d'un mois à l'autre (POST /exploitation/frais/tva). Cliquer à nouveau le choix fait le défait. */
+  const FR_EC = {};
+  function cleFR() { return 'frais|' + S.shop + '|' + S.frMois; }
+  function cheminFR() { return '/exploitation/frais?shop=' + encodeURIComponent(S.shop) + '&mois=' + S.frMois; }
+  const frMoisLib = ym => MOIS[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
+  function frMoisPas(n) { const t = new Date(+S.frMois.slice(0, 4), +S.frMois.slice(5, 7) - 1 + n, 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); }
+  function rendFrais() {
+    S.frMois = S.frMois || AUJ.slice(0, 7);
+    const k = cleFR(), D = S.aux[k], ceMois = AUJ.slice(0, 7);
+    const nav = `<div class="fx-nav"><span class="db-lab">Mois</span><button class="db-btn" data-frm="-1" aria-label="mois précédent">‹</button><span class="fx-mois">${esc(frMoisLib(S.frMois))}</span><button class="db-btn" data-frm="1" aria-label="mois suivant"${S.frMois >= ceMois ? ' disabled' : ''}>›</button>${S.frMois !== ceMois ? '<button class="db-btn" data-frm="0">Ce mois-ci</button>' : ''}</div>`;
+    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre.</p>`;
+    if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])}</div></div>`; }
+    if (!D) { return h + squelette(6) + '</div>'; }
+    if (D.indispo) { return h + `<div class="db-alerte">${esc(D.motif || 'frais indisponibles')}</div></div>`; }
+    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div></div>`; }
+    if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div></div>`; }
+    const TAUX = D.taux || [0, 6, 12, 21];
+    const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
+    const lignes = D.lignes.map((l, i) => {
+      const ai = l.aIndiquer;
+      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}${l.majLe ? `<span class="sub">indiqué le ${esc(fD(l.majLe.slice(0, 10)))}${l.majPar ? ' · ' + esc(l.majPar) : ''}</span>` : ''}</td>
+        <td class="n">${fU(l.montant)}</td>
+        <td>${seg([[true, 'Oui'], [false, 'Non']], l.tva, v => `data-frt="${i}" data-v="${v}" title="${v ? 'le montant saisi contient la TVA' : 'le montant est hors TVA, ou sans TVA'}"`)}</td>
+        <td>${seg(TAUX.map(t => [+t, nf(+t, 0) + ' %']), l.taux == null ? null : +l.taux, v => `data-frx="${i}" data-v="${v}"`)}</td>
+        <td class="n">${ai ? `<span class="mu">${fU(l.montant)}</span>` : fU(l.ht)}</td>
+        <td class="n">${ai ? '<span class="tag-warn">à indiquer</span>' : (l.tvaMontant > 0.004 ? fU(l.tvaMontant) : '<span class="mu">—</span>')}</td></tr>`;
+    }).join('');
+    const ai = D.aIndiquer || 0;
+    h += `<div class="db-tuiles fx-tuiles">
+      ${tuile('Frais saisis au panel', fU(D.saisi), D.postes + ' poste' + (D.postes > 1 ? 's' : '') + ' · ' + esc(frMoisLib(S.frMois)))}
+      ${tuile('Frais hors TVA', fU(D.ht), 'ce que le P&amp;L compte' + (D.part != null ? ' · ' + fP(100 * D.part) + ' du saisi' : ''))}
+      ${tuile('TVA comprise dans les frais', fU(D.tva), 'récupérable : retirée des frais généraux')}
+      ${tuile('À indiquer', ai ? ai + ' poste' + (ai > 1 ? 's' : '') : 'aucun', ai ? fU(D.aIndiquerEur) + ' comptés tels que saisis, en attendant' : 'chaque poste est indiqué', ai ? 'fx-warn' : '')}
+    </div>`;
+    if (S.err.frEcr) { h += `<div class="db-err">Enregistrement : ${esc(S.err.frEcr)}</div>`; }
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Les frais du mois</span><span class="db-mini">source : le panel, frais du magasin · ${D.postes} poste${D.postes > 1 ? 's' : ''}${D.luLe ? ' · lus à ' + esc(D.luLe.slice(11, 16)) : ''}</span></div>
+      <div class="table-scroll"><table class="fx-t"><thead><tr><th>Poste</th><th class="n">Saisi au panel</th><th>TVA comprise ?</th><th>Taux de TVA</th><th class="n">Hors TVA</th><th class="n">TVA</th></tr></thead>
+      <tbody>${lignes}
+        <tr class="tot"><td>Total du mois<span class="sub">${D.postes - ai} poste${D.postes - ai > 1 ? 's' : ''} indiqué${D.postes - ai > 1 ? 's' : ''} sur ${D.postes}</span></td><td class="n">${fU(D.saisi)}</td><td></td><td></td><td class="n">${fU(D.ht)}</td><td class="n">${fU(D.tva)}</td></tr>
+      </tbody></table></div></div>`;
+    // Ce que ça change dans le P&L court : les frais du jour (le panel les alloue à aujourd'hui), ceux du mois, et leur
+    // part dans le CA du jour si le Résultat d'aujourd'hui est lu (le rail le lit).
+    const JM = S.frMois === ceMois && S.date === AUJ ? magasin(S.aux['jourM|' + AUJ]) : null;
+    const L = (lib, a, b, sous) => `<div class="fx-l"><span>${lib}${sous ? `<span class="sub">${sous}</span>` : ''}</span><span class="n">${a}</span><span class="n">${b}</span></div>`;
+    h += `<div class="fx-g2"><div class="db-card"><div class="ct"><span class="db-lab">Ce que ça change dans le P&amp;L court</span></div>
+        <div class="fx-l th"><span></span><span class="n">saisi</span><span class="n">hors TVA</span></div>
+        ${D.jour ? L('Frais généraux du jour', fE(D.jour.saisi), fE(D.jour.ht), 'les frais du mois que le panel alloue à aujourd’hui') : ''}
+        ${L('Frais généraux du mois', fE(D.saisi), fE(D.ht))}
+        ${JM && JM.caHt != null && JM.overheadSaisi != null && JM.ca ? L('Part des frais dans le CA du jour', fP(100 * JM.overheadSaisi / JM.ca) + '<span class="sub">sur le CA TTC</span>', fP(JM.overheadPct) + '<span class="sub">sur le CA hors TVA</span>', (S.aux['jourM|' + AUJ].seuils || {}).overhead != null ? 'seuil du réseau ' + fP(S.aux['jourM|' + AUJ].seuils.overhead) : '') : ''}
+      </div>
+      <div class="db-card"><div class="ct"><span class="db-lab">Comment remplir</span></div><div class="fx-leg">
+        <p><b>Oui</b> : le montant saisi au panel est celui de la facture, TVA comprise. Le P&amp;L en retire la TVA au taux indiqué (21 % l’énergie et les services, 6 % l’eau).</p>
+        <p><b>Non</b> : le montant est déjà hors TVA (un contrat saisi hors TVA), ou le frais n’en a pas — loyer non soumis, assurances, frais bancaires : taux 0 %.</p>
+        <p style="margin:0">Un poste pas encore indiqué compte tel que saisi et reste en orange, ici et sous la ligne « Frais généraux » du P&amp;L. Recliquer le choix le remet à indiquer.</p>
+      </div></div></div></div>`;
+    return h;
+  }
+  function frBrancher() {
+    $.querySelectorAll('[data-frm]').forEach(b => b.addEventListener('click', () => {
+      const n = +b.dataset.frm, ce = AUJ.slice(0, 7);
+      S.frMois = n === 0 ? ce : frMoisPas(n); if (S.frMois > ce) { S.frMois = ce; }
+      delete S.err.frEcr; charger(false);
+    }));
+    const D = S.aux[cleFR()];
+    if (!D || !Array.isArray(D.lignes)) { return; }
+    const choisir = (i, tva, taux) => {
+      const l = D.lignes[i]; if (!l || FR_EC[l.cle]) { return; }
+      FR_EC[l.cle] = true; delete S.err.frEcr; rendre();
+      ecrire('/exploitation/frais/tva', { shop: S.shop, poste: l.poste, tva: tva, taux: taux })
+        .then(() => {
+          // Le Résultat se refait au serveur avec les nouveaux frais hors TVA : on le relira.
+          Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+          lireAux(cleFR(), cheminFR(), true);
+        })
+        .catch(e => { S.err.frEcr = e.message; })
+        .finally(() => { delete FR_EC[l.cle]; rendre(); });
+    };
+    $.querySelectorAll('[data-frt]').forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.frt, l = D.lignes[i], v = b.dataset.v === 'true';
+      if (l.tva === v) { choisir(i, null, null); return; }
+      choisir(i, v, v ? (l.taux > 0 ? +l.taux : (D.tauxOui || 21)) : (l.tva === false && l.taux != null ? +l.taux : 0));
+    }));
+    $.querySelectorAll('[data-frx]').forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.frx, l = D.lignes[i], t = +b.dataset.v;
+      choisir(i, l.tva == null ? t > 0 : l.tva, t);
+    }));
+  }
   /* --- Le rail (15/11/2026, maquette docs/maquettes/rail-franchise, « le vrai dashboard avec un rail à côté ») ------------
    * Au bureau (1 024 px et plus), hors cadre : l'en-tête et la rangée d'onglets cèdent la place à un rail à gauche (le §8
    * du design system commun, global.css) et à une barre du haut. Le contenu des onglets ne change pas.
@@ -6730,12 +6824,13 @@
     reseaux: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
     // Boîte mail (15/11/2026) : l'enveloppe du §8.4.
     mail: 'M3 5h18v14H3zM3 6l9 7 9-7',
+    frais: 'M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
-    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
+    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds'], ['frais', 'Frais', 'frais']]],
     // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
     // Analyse (15/11/2026, « go E et F, A en entrée ») : le magasin, ses familles et ses produits, question par question (analyse.js).
     ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
@@ -6800,10 +6895,10 @@
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
@@ -6897,10 +6992,10 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['frais', 'Frais'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
@@ -6919,6 +7014,7 @@
     if (S.vue === 'social') { h += window.DashReseaux ? '' : '<div class="db-err">Le module des réseaux sociaux n’a pas été chargé.</div>'; $.innerHTML = h; brancher(); reseauxMaj(true); return; }
     if (S.vue === 'analyse') { h += '<div id="db-analyse-p"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-analyse-p'); if (p && window.DashAnalyse) { p.replaceWith(window.DashAnalyse.racine(S.shop, { apiBase: API })); if (S.intention) { const i = S.intention; S.intention = null; window.DashAnalyse.ouvrir(i); } } else if (p) { p.innerHTML = '<div class="db-err">Le module d’analyse n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'marketing') { h += '<div id="db-marketing"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-marketing'); if (p && window.DashMarketing) { p.replaceWith(window.DashMarketing.racine(S.shop, { apiBase: API, aller: v => { S.vue = v; urlMaj(); charger(false); } })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du marketing n’a pas été chargé.</div>'; } return; }
+    if (S.vue === 'frais') { h += rendFrais(); $.innerHTML = h; brancher(); frBrancher(); return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
@@ -6988,23 +7084,37 @@
     const titre = cmp ? `${cmp.titre} : ${fmt(dern)}` : `dernier même jour : ${fmt(dern)}`;
     return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="${titre}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} ${lib}</span>`}</div>`;
   }
+  /* Le P&L court hors TVA (16/11/2026, src/pnl_ht.php, maquette docs/maquettes/frais-tva) : le CA encaissé (TTC) en tête,
+   * la TVA des tickets retirée, puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA (onglet Frais).
+   * Une réponse d'avant (sans `caHt`) garde l'ancienne cascade. */
   function cascade(m, d) {
     const se = (d && d.seuils) || {};
     const ca = m.ca != null ? m.ca : m.realise;
+    const ht = m.caHt != null;
+    const base = ht ? m.caHt : ca;
     const feu = (v, s) => v == null || s == null ? 'var(--color-text-muted)' : (v <= s ? '#3f7a52' : (v <= s * 1.3 ? '#B0792A' : '#A32014'));
     const feuRes = p => p == null ? 'var(--color-text-muted)' : (p >= 15 ? '#3f7a52' : (p >= 5 ? '#B0792A' : '#A32014'));
-    const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (ca ? 100 * m.margeBrute / ca : null);
+    const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (base ? 100 * m.margeBrute / base : null);
     const barre = p => Math.min(Math.abs(p || 0), 100).toFixed(1);
     const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
+    const clients = m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '';
+    const gris = '#c9c4bc', barreCa = v => base ? Math.min(100, 100 * v / base).toFixed(1) : '0';
+    const tete = ht
+      ? `${ligne('Chiffre d’affaires encaissé', [clients, 'TVA comprise'].filter(Boolean).join(' · '), fE(ca), '', gris, barreCa(ca), false, 'ce que la caisse a encaissé')}
+      ${ligne('− TVA des tickets', fP(m.tvaPart) + ' du TTC · ' + esc(m.tvaSource || ''), fE(-m.tva), '', gris, barreCa(m.tva), false, 'reversée à l’État')}
+      ${ligne('= Chiffre d’affaires hors TVA', '', fE(m.caHt), '100 %', 'var(--color-text)', 100, true, '')}`
+      : ligne('Chiffre d’affaires', clients, fE(ca), '100 %', 'var(--color-text)', 100, true, '');
+    const noteFrais = ht && m.overheadSaisi != null
+      ? `${fE(m.overheadSaisi)} saisis, ${fE(m.overheadTva || 0)} de TVA retirée${m.fraisAIndiquer ? ' · ' + m.fraisAIndiquer + ' poste' + (m.fraisAIndiquer > 1 ? 's' : '') + ' à indiquer' : ''} <span class="db-cl-lien" data-vue="frais" role="button" tabindex="0" title="${esc(m.fraisSource || '')}">Frais ▸</span>` : '';
     return `<div class="db-cascade">
-      ${ligne('Chiffre d’affaires', m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
+      ${tete}
       ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
       ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#A32014' : '#B0792A') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
       ${ligne('− Main-d’œuvre', se.labour != null ? 'seuil ' + fP(se.labour) : '', m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
-      ${ligne('− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
-      ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
+      ${ligne(ht ? '− Frais généraux hors TVA' : '− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false, noteFrais)}
+      ${ligne(ht ? '= Résultat hors TVA' : '= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
     </div>`;
   }
   function cascadeVieille(m) {
@@ -7125,7 +7235,7 @@
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
       : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
-      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.coutMatiere != null ? m.ca - m.coutMatiere : m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
