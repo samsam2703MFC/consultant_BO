@@ -94,8 +94,9 @@
 .pp-mixed { margin: 10px 6px 0; padding: 10px 12px; border-radius: 10px; background: rgba(201, 163, 107, .16); font-variant-numeric: tabular-nums; }
 .pp-mixed b { display: block; font-size: 15px; } .pp-mixed ol { margin: 6px 0 2px; padding-left: 0; list-style: none; font-size: 15px; }
 .pp-mixed li { padding: 3px 0; } .pp-mixed small { color: var(--k-muted, #6b6b6b); font-size: 13px; }
-/* Panel z boku przypięty do ekranu (klawiatura zawsze cała widoczna, lista przewija się obok). */
-.pp-side { display: flex; flex-direction: column; gap: 12px; position: fixed; z-index: 20; top: 76px; bottom: 12px; right: max(16px, calc((100vw - 1180px) / 2 + 16px)); width: 370px; overflow-y: auto; box-shadow: 0 8px 30px rgba(34, 34, 34, .14); }
+/* Panel z boku : w prawej kolumnie, pod nagłówkiem i paskiem klientów (nie zasłania ich), przyklejony przy przewijaniu
+   (klawiatura zawsze cała widoczna, lista przewija się obok). */
+.pp-side { display: flex; flex-direction: column; gap: 12px; position: sticky; z-index: 20; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; box-shadow: 0 8px 30px rgba(34, 34, 34, .14); }
 .pp-side-head { display: flex; align-items: flex-start; gap: 8px; }
 .pp-side-head h3 { margin: 0; font-size: 18px; }
 .pp-side-head p { margin: 3px 0 0; font-size: 13.5px; }
@@ -132,7 +133,7 @@
 .pp-none { padding: 12px; margin: 0; }
 @media (max-width: 1000px) {
     .pp-main.has-side { grid-template-columns: minmax(0, 1fr); }
-    .pp-side { z-index: 25; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 82vh; border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px rgba(34, 34, 34, .25); }
+    .pp-side { position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 82vh; border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px rgba(34, 34, 34, .25); }
     .pp-head, .pp-row { grid-template-columns: minmax(0, 1fr) 84px 84px 84px 60px; }
     .pp-head { font-size: 10.5px; letter-spacing: .02em; }
     .pk-switch button, .pk-dayseg button { padding: 6px 8px; font-size: 13px; }
