@@ -52,3 +52,4 @@
 2026-11-16T13:34:55Z [304] scrollbar 3 px Ruby
 2026-11-16T14:03:30Z [305] contrôle palettes / commande (tablette d'emballage)
 2026-11-16T14:12:48Z [306] transport : camion, chauffeur, trasy
+2026-11-16T14:14:02Z [307] transport : dzień wysyłki
