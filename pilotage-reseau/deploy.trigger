@@ -55,3 +55,5 @@
 2026-11-16T14:14:02Z [307] transport : dzień wysyłki
 2026-11-16T14:26:41Z [308] capacité camion en lecture seule
 2026-11-16T14:35:45Z [309] kierowcy etat / zlecenie + umowa na przewóz
+2026-11-16T15:00:33Z Dashboard : panneau Valeur du magasin sans débordement (libellés des vignettes limités aux vignettes)
+2026-11-16T15:08:39Z Paramètres › Mails et automatisations : rappel la veille du retrait (e-mail et SMS)
