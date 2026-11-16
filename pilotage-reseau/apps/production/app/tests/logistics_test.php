@@ -72,7 +72,7 @@ $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_gene
 try {
     foreach (['n_prod_param', 'carrier', 'carrier_vehicle', 'n_vehicle', 'n_tour', 'n_tour_vehicle', 'n_tour_customer', 'n_shipping_assignment', 'customer', 'customer_order',
                  'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'raw_material',
-                 'category_product', 'n_mixed_pallet', 'n_mixed_pallet_item', 'user'] as $table) {
+                 'category_product', 'n_mixed_pallet', 'n_mixed_pallet_item', 'user', 'n_prod_employee', 'production_employee', 'n_position'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -184,6 +184,17 @@ try {
         && (int) $pdo->query('SELECT COUNT(*) FROM n_tour_customer WHERE id_customer = 3')->fetchColumn() === 2, 'inne dni tygodnia : klient w obu trasach');
     $service->updateTour($t2, ['days' => [2, 6]], 1);
     expectLogi(count(array_filter($service->tours()['warnings'], fn($w) => str_contains($w, 'Jan Kowalski') && str_contains($w, 'wt.'))) === 1, 'dni trasy zmienione później : ostrzeżenie');
+    // [306] Kierowca zwykle na trasie : pracownik aktywny ; brak → ostrzeżenie.
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (71, 'Piotr', 'Kierowca', 0, 1)");
+    $pdo->exec("INSERT INTO n_prod_employee (id, id_production_employee, active) VALUES (701, 71, 1)");
+    $service->updateTour($t1, ['driver_id' => '701'], 1);
+    $tt = array_column($service->tours()['tours'], null, 'id');
+    expectLogi($tt[$t1]['driver_id'] === 701 && $tt[$t1]['driver'] === 'Piotr Kierowca' && in_array(701, array_column($service->tours()['drivers'], 'id'), true),
+        '[306] trasa : kierowca zwykle ten sam');
+    expectLogi(count(array_filter($service->tours()['warnings'], fn($w) => str_contains($w, 'nie ma kierowcy'))) >= 1, '[306] trasa bez kierowcy : ostrzeżenie');
+    expectLogi($refused(fn() => $service->updateTour($t1, ['driver_id' => '9999'], 1)), '[306] kierowca spoza pracowników odrzucony');
+    $service->updateTour($t1, ['driver_id' => ''], 1);
+    expectLogi(array_column($service->tours()['tours'], null, 'id')[$t1]['driver_id'] === null, '[306] kierowca trasy usunięty (puste)');
     expectLogi($refused(fn() => $service->createTour(['name' => 'Opole'], 1)), 'nazwa trasy zajęta');
     expectLogi($refused(fn() => $service->createTour(['name' => ' '], 1)), 'nazwa trasy wymagana');
     expectLogi($refused(fn() => $service->createTour(['name' => 'X', 'days' => []], 1)), 'co najmniej jeden dzień');

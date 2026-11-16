@@ -311,7 +311,10 @@ final class OpenApiExecution
                 'vehicles' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'label' => $str, 'carrier' => $nStr, 'departure' => $str, 'customers' => $int]]],
                 'vehicle_id' => $nInt, 'customer_id' => $nInt,
                 'clients' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'n' => $int, 'name' => $str, 'town' => $nStr, 'ordered' => $int, 'on_pallet' => $int, 'left' => $int,
-                    'lines' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/PalletLine']]]]],
+                    'lines' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/PalletLine']],
+                    'extra' => ['type' => 'array', 'description' => 'Na palecie, nie zamówione / Sur palette, non commandé', 'items' => ['type' => 'object', 'properties' => [
+                        'product_id' => $int, 'name' => $str, 'category' => $nStr, 'ordered' => $int, 'on_pallet' => $int, 'scanned' => $int, 'entered' => $int]]],
+                    'check' => ['type' => 'object', 'description' => 'Kontrola z zamówieniem / Contrôle par rapport à la commande', 'properties' => ['ok' => ['type' => 'boolean'], 'missing' => $int, 'over' => $int]]]]],
                 'entries' => ['type' => 'object', 'description' => 'produit → saisies {id, cartons, at, who, source}', 'additionalProperties' => ['type' => 'array', 'items' => ['type' => 'object']]],
                 'people' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str, 'group' => $nStr, 'since' => $dt]]]]],
             'DriverRun' => ['type' => 'object', 'properties' => ['driver_name' => $nStr, 'started_at' => $nStr, 'finished_at' => $nStr]],

@@ -12,6 +12,12 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'index']);
     $r->addRoute('GET', '/ajax/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'data']);
     $r->addRoute('POST', '/ajax/logistics/transport-wizard/assign', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'assign']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/vehicle', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'addVehicle']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/driver', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'linkDriver']);
+    // [309] Umowa zlecenia na przewóz towaru (kierowca na zlecenie) : DOCX albo PDF w karcie HR.
+    $r->addRoute('GET', '/logistics/drivers/{id:\d+}/contract-docx', ['controller' => App\Controllers\Web\Logistics\DriverContractController::class, 'method' => 'docx']);
+    $r->addRoute('POST', '/ajax/logistics/drivers/{id:\d+}/contract-pdf', ['controller' => App\Controllers\Web\Logistics\DriverContractController::class, 'method' => 'pdf']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/new-driver', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'addDriver']);
     // Plan logistyki na 12 tygodni [200] : prognoza palet, ciężarówki (przeciągnij), święta PL / BE, urlopy kierowców.
     $pl = App\Controllers\Web\Logistics\LogisticsPlanController::class;
     $r->addRoute('GET', '/logistics/plan', ['controller' => $pl, 'method' => 'index']);

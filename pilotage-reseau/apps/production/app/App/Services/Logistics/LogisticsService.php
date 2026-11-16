@@ -468,8 +468,14 @@ final class LogisticsService
         $tours = [];
         foreach ($this->repo->tours() as $t) {
             $tours[(int) $t['id']] = $t + ['id' => (int) $t['id'], 'active' => (bool) (int) $t['active'], 'weekdays' => (int) $t['weekdays'],
-                'days' => $this->dayLabels((int) $t['weekdays']), 'day_list' => $this->dayList((int) $t['weekdays']), 'vehicles' => [], 'customers' => [], 'places' => 0];
+                'days' => $this->dayLabels((int) $t['weekdays']), 'day_list' => $this->dayList((int) $t['weekdays']), 'vehicles' => [], 'customers' => [], 'places' => 0,
+                'driver_id' => $t['id_driver'] !== null ? (int) $t['id_driver'] : null, 'driver' => null];
         }
+        // [306] Kierowca zwykle na trasie (pracownik).
+        $drivers = $this->repo->driverChoices();
+        $driverNames = array_column($drivers, 'name', 'id');
+        foreach ($tours as &$t) if ($t['driver_id'] !== null) $t['driver'] = $driverNames[$t['driver_id']] ?? null;
+        unset($t);
         foreach ($this->repo->tourVehicles() as $tv) {
             $tid = (int) $tv['id_tour'];
             $v = $vehicles[(int) $tv['id_carrier_vehicle']] ?? null;
@@ -500,6 +506,7 @@ final class LogisticsService
         }
         foreach ($tours as $t) {
             if ($t['active'] && !array_filter($t['vehicles'], fn($v) => $v['active'])) $warnings[] = "Trasa {$t['name']} nie ma pojazdu w użyciu.";
+            if ($t['active'] && $t['driver_id'] === null) $warnings[] = "Trasa {$t['name']} nie ma kierowcy.";
         }
         return [
             'tours' => array_values($tours),
@@ -507,6 +514,7 @@ final class LogisticsService
             'customers' => $this->repo->customers(),
             'weekdays' => self::WEEKDAYS,
             'default_departure' => $this->params->get('planning.default_departure_time', '20:00'),
+            'drivers' => $drivers,
             'warnings' => $warnings,
         ];
     }
@@ -603,6 +611,13 @@ final class LogisticsService
             $time = trim((string) $input['departure_time']);
             if ($time !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time)) throw new CustomException('Godzina wyjazdu: GG:MM.', 'errors', 422);
             $data['departure_time'] = $time === '' ? null : $time . ':00';
+        }
+        if (array_key_exists('driver_id', $input)) {
+            // [306] Kierowca zwykle na trasie : aktywny pracownik albo puste.
+            $raw = trim((string) $input['driver_id']);
+            $driver = $raw === '' ? null : filter_var($raw, FILTER_VALIDATE_INT);
+            if ($driver === false || ($driver !== null && !$this->repo->activeEmployeeExists($driver))) throw new CustomException('Kierowca : wybierz pracownika z listy.', 'errors', 422);
+            $data['id_driver'] = $driver;
         }
         if (array_key_exists('color', $input)) {
             $color = strtolower(trim((string) $input['color']));

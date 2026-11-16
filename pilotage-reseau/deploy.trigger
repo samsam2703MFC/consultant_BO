@@ -49,3 +49,9 @@
 2026-11-16T11:39:15Z [301] date de mise à jour dans l'en-tête
 2026-11-16T11:46:27Z [302] tablette emballage : panneau sans collision
 2026-11-16T13:24:59Z [303] blocage Logistyka commandes sans transport + assistant
+2026-11-16T13:34:55Z [304] scrollbar 3 px Ruby
+2026-11-16T14:03:30Z [305] contrôle palettes / commande (tablette d'emballage)
+2026-11-16T14:12:48Z [306] transport : camion, chauffeur, trasy
+2026-11-16T14:14:02Z [307] transport : dzień wysyłki
+2026-11-16T14:26:41Z [308] capacité camion en lecture seule
+2026-11-16T14:35:45Z [309] kierowcy etat / zlecenie + umowa na przewóz

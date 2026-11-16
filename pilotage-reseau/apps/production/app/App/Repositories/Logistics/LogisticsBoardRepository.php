@@ -157,6 +157,19 @@ final class LogisticsBoardRepository extends WorkshopRepository
             ->execute([$date, $productId, $packed, $baseCount, $userId, $deviceId]);
     }
 
+    /** @return array<int, array{name: string, category: ?string}> nazwy produktów (kontrola palet z zamówieniem) */
+    public function productNames(array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all('SELECT fp.id, fp.name, cat.name AS category FROM final_product fp LEFT JOIN category_product cat ON cat.id = fp.id_category
+             WHERE fp.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) as $r) {
+            $out[(int) $r['id']] = ['name' => (string) $r['name'], 'category' => $r['category']];
+        }
+        return $out;
+    }
+
     public function productExists(int $id): bool
     {
         return (bool) $this->all('SELECT 1 AS x FROM final_product WHERE id = ?', [$id]);
