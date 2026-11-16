@@ -198,6 +198,11 @@ final class PageTabs
             ['/logistics/plan', 'Plan 12 tygodni', 'bi-calendar-range'],
             ['/logistics/week', 'Tydzień : ciężarówki', 'bi-calendar-week'],
         ]],
+        // [306] Trasy : klienci stali, pojazd i kierowca zwykle ci sami ; pojazdy (pojemność, kierowca).
+        'tours' => ['label' => 'Trasy', 'section' => 'Logistyka', 'icon' => 'bi-signpost-split', 'tabs' => [
+            ['/logistics/tours', 'Trasy', 'bi-signpost-split'],
+            ['/logistics/vehicles', 'Pojazdy i kierowcy', 'bi-truck'],
+        ]],
         // Jedna lista wysyłek z filtrem rodzaju dokumentu (dawniej Wysyłki, Dokumenty transportowe i Archiwum WZ / CMR / WDT / różnic)
         // oraz archiwum list kompletacyjnych.
         'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka', 'icon' => 'bi-file-earmark-text', 'tabs' => [

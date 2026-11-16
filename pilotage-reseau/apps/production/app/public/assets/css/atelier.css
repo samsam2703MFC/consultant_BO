@@ -4107,3 +4107,22 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .otw-veh .tw-gbar, .otw-veh [class*="gbar"] { margin: 7px 0 3px; }
 .otw-act { display: flex; justify-content: flex-end; margin-top: 12px; }
 .otw-veh .tw-gbar { display: block; width: 100%; }
+/* [306] Mini-asystenci « Dodaj pojazd » / « Dodaj kierowcę » i krok « Kierowca i trasa » */
+.otw-mini { border: 1px dashed #c9b9a6; border-radius: 12px; padding: 12px 14px; background: #fffaf5; margin-bottom: 9px; }
+.otw-mini-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.otw-mini .tw-field { margin-bottom: 9px; }
+.otw-mini-a { display: flex; justify-content: flex-end; gap: 8px; margin: 4px 0 0; }
+.otw-drv { border: 1px solid #eadfd3; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+.otw-drv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
+.otw-drv-h .tw-pill { margin-left: auto; }
+.otw-drv-f { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.otw-drv-f .tw-field { margin-bottom: 0; }
+.otw-drv-b { display: flex; gap: 8px; padding-bottom: 2px; }
+.otw-ro { display: flex; align-items: center; min-height: 44px; color: #6f6860; font-size: 13.5px; }
+.otw-drv .otw-mini { margin: 12px 0 0; }
+@media (max-width: 900px) { .otw-drv-f { grid-template-columns: minmax(0, 1fr); } }
+
+/* [306] Trasy : pojazd i kierowca zwykle ci sami (pod nazwą trasy). */
+.at-tour-usual { display: block; margin-top: 3px; font-size: 13px; color: #3c3833; }
+.at-tour-usual .bi { color: var(--at-primary); }
+.at-tour-missing { color: #b42318; font-weight: 600; }

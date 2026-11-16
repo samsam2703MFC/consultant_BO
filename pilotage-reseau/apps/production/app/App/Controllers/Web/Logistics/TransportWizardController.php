@@ -41,4 +41,37 @@ final class TransportWizardController extends BaseController
             return $this->jsonError($e);
         }
     }
+
+    /** [306] POST {vehicle_id} (włącz) albo {carrier_id, regis_num} (nowy) + {pallet_places, departure_time} */
+    public function addVehicle()
+    {
+        try {
+            $id = $this->wizard->addVehicle($this->getJson(Request::createFromGlobals()), (int) user('id') ?: null);
+            return $this->json(['message' => 'Pojazd jest we flocie.', 'vehicle_id' => $id, 'data' => $this->wizard->data()]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** [306] POST {vehicle_id, driver_id?, driver_phone?, tour_id?} */
+    public function linkDriver()
+    {
+        try {
+            $this->wizard->linkDriver($this->getJson(Request::createFromGlobals()), (int) user('id') ?: null);
+            return $this->json(['message' => 'Kierowca i trasa zapisane.', 'data' => $this->wizard->data()]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** [306] POST {name, surname, section_id, pin?, driver_phone?, vehicle_id?} */
+    public function addDriver()
+    {
+        try {
+            $r = $this->wizard->addDriver($this->getJson(Request::createFromGlobals()), (int) user('id') ?: null);
+            return $this->json(['message' => 'Kierowca dodany.', 'driver_id' => $r['id'], 'problems' => $r['problems'], 'data' => $this->wizard->data()]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
 }

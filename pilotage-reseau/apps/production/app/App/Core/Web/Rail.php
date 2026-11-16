@@ -49,10 +49,12 @@ final class Rail
         'stock_pallets' => ['Stany i palety', 'bi-boxes', 'Logistyka', '/logistics/stock', [], null],
         'shipping_day' => ['Dzień wysyłki', 'bi-calendar-check', 'Logistyka', '/logistics', [], null],
         'trucks' => ['Ciężarówki', 'bi-calendar-range', 'Logistyka', '/logistics/plan', [], null],
+        // [306] Trasy : stali klienci, ciężarówka zwykle ta sama, kierowca zwykle ten sam (z Administracji › Ustawienia).
+        'tours' => ['Trasy', 'bi-signpost-split', 'Logistyka', '/logistics/tours', ['/logistics/vehicles'], null],
         'shipments' => ['Wysyłki i dokumenty', 'bi-file-earmark-text', 'Logistyka', '/shipments', ['/shipping-transport-documents', '/shipping-documents', '/archive'], null],
         'settings' => ['Ustawienia', 'bi-gear', 'Administracja', '/settings', ['/other-settings', '/settings/languages', '/settings/ksef', '/settings/panel-api',
             '/settings/mail-footers', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
-            '/organization/positions', '/logistics/tours', '/logistics/vehicles', '/product-carriers', '/task-forms'], null],
+            '/organization/positions', '/product-carriers', '/task-forms'], null],
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
         // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.
