@@ -89,24 +89,7 @@
         {% endif %}
     </div>
 
-    {# --- Rodzaje kartonów dnia --------------------------------------------------- #}
-    {% if carton_types %}
-    <div class="card">
-        <div class="card-header"><h4 class="card-title mb-0">Palety dnia według rodzaju kartonu</h4></div>
-        <div class="card-body pt-0">
-            <ul class="at-logi-ctype-sum">
-                {% for ct in carton_types %}
-                    <li>
-                        <span class="at-pallet-mini is-full" aria-hidden="true"></span>
-                        <strong>{{ ct.name ?: 'Karton nieokreślony' }}</strong>
-                        <span>{{ ct.pallets|plural_pl('paleta', 'palety', 'palet') }}</span>
-                        <span class="at-sub">{{ ct.full }} pełne + {{ ct.mixed }} {{ settings.mixed ? 'mieszane' : 'niepełne' }} · {{ ct.cartons|number_format(0, ',', ' ') }} kart. · {{ ct.customers|plural_pl('klient', 'klientów', 'klientów') }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    {% endif %}
+    {# [328] « Palety dnia według rodzaju kartonu » usunięte. #}
 
     {# --- Klienci : palety (wizualnie) i pojazd --------------------------------------- #}
     <div class="card">
