@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Repositories\Logistics;
 
+use App\Domain\Client\Order\OpenOrders;
+use App\Domain\Stock\StockLevels;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
@@ -151,6 +153,28 @@ final class StockPalletRepository extends WorkshopRepository
     }
 
     /** @return array{0: string, 1: list<string>} */
+    /**
+     * [334] Stan ogólny : par produit en stock ou commandé — cartons au magasin (1), sur palette (2), commandes ouvertes
+     * (OpenOrders, comme Stan magazynu), stocks min. / max. en vigueur (pièces, StockLevels) et pièces par carton.
+     */
+    public function generalStock(): array
+    {
+        return $this->all("SELECT fp.id, fp.name, COALESCE(cp.name, 'Bez kategorii') AS category, fp.ppc,
+                COALESCE(cs.free, 0) AS free, COALESCE(cs.pallet, 0) AS pallet, COALESCE(oo.cartons, 0) AS ordered,
+                " . StockLevels::columns('ps') . "
+            FROM final_product fp
+            LEFT JOIN category_product cp ON cp.id = fp.id_category
+            LEFT JOIN n_prod_item i ON i.id_final_product = fp.id AND i.item_type = 'product'
+            LEFT JOIN n_prod_product_settings ps ON ps.id_item = i.id
+            " . StockLevels::join('i') . "
+            LEFT JOIN (SELECT id_product, SUM(status = 1) AS free, SUM(status = 2) AS pallet FROM carton_stock
+                       WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
+            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
+                       JOIN customer_order_product cop ON cop.id_order = co.id WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
+            WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL
+            ORDER BY cp.name IS NULL, cp.name, fp.name");
+    }
+
     /** [333] Cartons dont la dernière palette est $id. @return list<int> */
     public function palletCartonIds(int $id): array
     {

@@ -70,6 +70,12 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
 .sp-trace{flex-wrap:wrap}
 .sp-days{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
 .sp-day{border:1px solid var(--at-line);border-radius:8px;padding:3px 8px;font-size:12px;color:inherit;text-decoration:none;text-align:center;font-variant-numeric:tabular-nums}
+.sp-gen-cat td{background:var(--at-surface-2,#F8F4EE);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted)}
+.sp-gen tfoot th{border-top:2px solid var(--at-line);font-variant-numeric:tabular-nums}
+.sp-gen tfoot th.n{text-align:right}
+.sp-gauge{display:inline-block;width:90px;height:8px;border-radius:5px;background:#eee7de;overflow:hidden;vertical-align:middle}
+.sp-gauge i{display:block;height:100%;background:#2E7D4F}.sp-gauge.is-over i{background:var(--at-danger,#C41E3A)}.sp-gauge.is-low i{background:#d9a05b}
+.sp-gauge-t{margin-left:6px;color:var(--at-muted);font-variant-numeric:tabular-nums}
 .sp-del{display:flex;flex-direction:column;gap:8px;border:1px solid rgba(196,30,58,.3);background:rgba(196,30,58,.04);border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px}
 .sp-del label{display:flex;gap:8px;align-items:center;margin:0}
 .sp-del [data-sp-del-go]{background:var(--at-danger,#C41E3A);border-color:var(--at-danger,#C41E3A);color:#fff}
@@ -81,6 +87,7 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
 
 <nav class="sp-tabs" aria-label="Widok">
     <a class="sp-tab{{ tab == 'flow' ? ' on' }}" href="{{ root }}/logistics/stock">Magazyn i palety<b>{{ building|length + ready|length }}</b></a>
+    <a class="sp-tab{{ tab == 'general' ? ' on' }}" href="{{ root }}/logistics/stock?tab=general">Stan ogólny</a>
     <a class="sp-tab{{ tab == 'shipped' ? ' on' }}" href="{{ root }}/logistics/stock?tab=shipped">Wysłane<b>{{ shipped.total }}</b></a>
     <a class="sp-tab{{ tab == 'expiring' ? ' on' }}" href="{{ root }}/logistics/stock?tab=expiring">Ważne &lt; {{ expiry_days }} dni<b>{{ expiring|length }}</b></a>
 </nav>
@@ -122,6 +129,29 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
     {% endfor %}
 
 </div>
+{% elseif tab == 'general' %}
+{# --- [334] Stan ogólny : stan − zamówione = zostaje po wysyłce ; wskaźnik względem stanu maks. --- #}
+<div class="card"><div class="card-body">
+    <table class="sp-table sp-gen">
+        <thead><tr><th>Produkt</th><th class="n">Stan</th><th class="n">Zamówione</th><th class="n">Na paletach</th><th class="n">Zostaje po wysyłce</th><th>Wobec stanu maks.</th></tr></thead>
+        <tbody>
+        {% for cat in general.categories %}
+            <tr class="sp-gen-cat"><td colspan="6">{{ cat.name }}</td></tr>
+            {% for r in cat.rows %}
+                <tr><td>{{ r.name }}</td><td class="n">{{ r.stock }}</td><td class="n">{{ r.ordered ?: '—' }}</td><td class="n">{{ r.pallet ?: '—' }}</td>
+                    <td class="n"><b class="{{ r.state == 'short' ? 'text-danger' }}">{{ r.left }}</b></td>
+                    <td>{% if r.state == 'short' %}<small class="text-danger">brak {{ -r.left }} kart.</small>
+                        {% elseif r.max %}<span class="sp-gauge is-{{ r.state }}" title="zostaje {{ r.left }} / maks. {{ r.max }} kart."><i style="width:{{ min(100, r.pct) }}%"></i></span><small class="sp-gauge-t">{{ r.pct }} %</small>
+                        {% else %}<small class="sp-sub">brak maks.</small>{% endif %}</td></tr>
+            {% endfor %}
+        {% else %}
+            <tr><td colspan="6" class="sp-sub">Brak stanu i zamówień.</td></tr>
+        {% endfor %}
+        </tbody>
+        {% if general.categories %}<tfoot><tr><th>Razem</th><th class="n">{{ general.totals.stock }}</th><th class="n">{{ general.totals.ordered }}</th><th class="n">{{ general.totals.pallet }}</th><th class="n">{{ general.totals.left }}</th><th></th></tr></tfoot>{% endif %}
+    </table>
+    <p class="sp-sub mt-2 mb-0">Kartony. Stan = magazyn + na paletach ; zostaje po wysyłce = stan − zamówione. Wskaźnik : zielony do stanu maks., czerwony powyżej (za dużo w zapasie), pomarańczowy poniżej stanu min.</p>
+</div></div>
 {% elseif tab == 'expiring' %}
 {# --- [333] Partie ważne krócej niż N dni : osobna zakładka --- #}
 <div class="card"><div class="card-body">
