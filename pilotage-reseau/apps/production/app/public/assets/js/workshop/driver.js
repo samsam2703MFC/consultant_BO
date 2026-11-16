@@ -333,7 +333,9 @@
                     ${d.counts.problem ? `<span class="driver-state is-problem">${esc(t('problems', {n: d.counts.problem}))}</span>` : ''}</div></div>
                 <div class="driver-run-actions"><span class="driver-name">${esc(t('driver_name'))}<strong>${esc(session ? session.name : (run.driver_name || ''))}</strong></span>
                     ${!run.started_at ? `<button type="button" class="kiosk-btn is-primary" data-run="start">${esc(t('start_run'))}</button>`
-                        : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span>`
+                        : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span>
+                            ${run.cmr_signed_at ? `<span class="driver-state is-ok" title="${esc(t('cmr_sign_help'))}">✍ ${esc(t('cmr_signed', {time: hhmm(run.cmr_signed_at)}))}</span>`
+                                : `<button type="button" class="kiosk-btn is-primary" data-run="sign">✍ ${esc(t('cmr_sign_button'))}</button>`}`
                         : `<span class="driver-state is-ok">${esc(t('finished', {from: hhmm(run.started_at), to: hhmm(run.finished_at)}))}</span>`}
                     <button type="button" class="kiosk-btn ${d.loading && d.loading.loaded < d.loading.total ? 'is-primary' : ''}" data-loading ${d.loading ? '' : 'disabled'}>⛟ ${esc(d.loading ? t('loading_plan_n', {loaded: d.loading.loaded, total: d.loading.total}) : t('loading_plan_none'))}</button>
                     <button type="button" class="kiosk-btn" data-docs>${esc(t('documents'))}</button>
@@ -387,15 +389,37 @@
         });
     }
 
-    async function runAction(b, action) {
+    async function runAction(b, action, signature) {
         if (action === 'finish' && !window.confirm(t('finish_confirm'))) return false;
+        // [311] Start trasy : kierowca podpisuje się raz — pole 23 CMR (przewoźnik) wszystkich CMR trasy z dnia.
+        if ((action === 'start' && !(data.run || {}).cmr_signed_at || action === 'sign') && !signature) { openCarrierSign(b, action); return false; }
         b.disabled = true;
         try {
-            await api('POST', '/driver/run', {date, vehicle_id: vehicle, action});
-            toast(t(action === 'start' ? 'run_started' : 'run_finished'));
+            await api('POST', '/driver/run', Object.assign({date, vehicle_id: vehicle, action}, signature ? {signature} : {}));
+            toast(t(action === 'start' ? 'run_started' : action === 'sign' ? 'cmr_sign_saved' : 'run_finished'));
             await load();
             return true;
         } catch (err) { b.disabled = false; toast(err.message, true); return false; }
+    }
+
+    /** [311] Podpis kierowcy (przewoźnika) : pole 23 wszystkich CMR trasy z dnia ; pole 22 = wystawca z ERP, pole 24 = odbiorca. */
+    function openCarrierSign(button, action) {
+        const box = sheet(t('cmr_sign_title'), `<form class="kiosk-form driver-form" data-form>
+            <p class="kiosk-muted">${esc(t('cmr_sign_help'))}</p>
+            <div><span class="driver-label">${esc(t('cmr_sign_label', {name: session ? session.name : ''}))}</span>
+                <canvas class="kiosk-sign driver-sign" data-pad width="900" height="300" aria-label="${esc(t('cmr_sign_label', {name: ''}))}"></canvas>
+                <button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div>
+            <p class="kiosk-error" data-error></p>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button>
+                <button class="kiosk-btn is-primary" data-confirm>${esc(t(action === 'start' ? 'cmr_sign_start' : 'cmr_sign_save'))}</button></div></form>`);
+        const pad = signaturePad(box);
+        box.querySelector('[data-form]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!pad.strokes) { box.querySelector('[data-error]').textContent = t('cmr_sign_first'); return; }
+            const confirm = box.querySelector('[data-confirm]');
+            confirm.disabled = true;
+            if (await runAction(button, action, pad.canvas.toDataURL('image/png'))) box.remove(); else confirm.disabled = false;
+        });
     }
 
     // --- [310] Koniec trasy : podsumowanie punktów, raport PDF, « Zakończ trasę » ----------------------------------
