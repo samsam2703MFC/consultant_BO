@@ -61,3 +61,4 @@
 2026-11-16T15:12:14Z URGENT : API rétablie (automatisations : auReglage en double)
 2026-11-16T15:42:10Z Déploiement : test de fonctionnement avant de livrer
 2026-11-16T15:45:51Z [311] CMR : case 22 (auteur de l'expédition) et 23 (chauffeur) signées, page Mój podpis
+2026-11-16T18:04:56Z [312] Zamówienia : valeurs (Finanse/CEO), payé / non payé, rappel e-mail / SMS, onglet Do obsłużenia retiré
