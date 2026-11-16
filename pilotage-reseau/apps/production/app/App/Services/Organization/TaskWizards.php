@@ -25,6 +25,8 @@ final class TaskWizards
         'production_day_closed' => ['Zatwierdzenia produkcji', '/production/follow-up', 'dzień zatwierdzony na tabletach', 1],
         'day_shipped' => ['Wysyłka dnia', '/shipping/wizard', 'wszystkie palety dnia z dokumentami', 1],
         'logistics_plan_approved' => ['Plan logistyki 13 tygodni', '/logistics/plan', 'tydzień planu zatwierdzony', 1],
+        // [303] Zamówienia dziś / jutro bez transportu → asystent (makieta 56).
+        'orders_transport' => ['Transport dla zamówień', '/logistics/transport-wizard', 'każde zamówienie na dziś i jutro ma transport', 3],
         'month_closed' => ['Zamknięcie miesiąca', '/month-close', 'miesiąc zamknięty (8 kroków)', 8],
         'services_closed' => ['Koszty usług miesiąca', '/finances/costs', 'miesiąc zamknięty w Finansach', 1],
         // Tablety [229] : zadanie dnia stanowiska pracowni, zaliczane przez zatwierdzenie na tablecie.
@@ -61,6 +63,7 @@ final class TaskWizards
         'production_day_closed' => 'gdy dzień jest zatwierdzony na tabletach (zatwierdzenia produkcji)',
         'day_shipped' => 'gdy wszystkie palety dnia mają dokumenty (wysyłka dnia)',
         'logistics_plan_approved' => 'gdy tydzień planu logistyki jest zatwierdzony',
+        'orders_transport' => 'gdy każde zamówienie na dziś i jutro ma transport (asystent « Transport dla zamówień »)',
         'month_closed' => 'gdy poprzedni miesiąc jest zamknięty (zamknięcie miesiąca, 8 kroków)',
         'services_closed' => 'gdy koszty usług poprzedniego miesiąca są zamknięte (Finanse)',
         'group_day_closed' => 'gdy grupa stanowiska zatwierdzi dzień na tablecie produkcji',
@@ -174,6 +177,11 @@ final class TaskWizards
                 if ($r['products'] === 0 && $r['pallets'] === 0) $out = ['done' => true, 'summary' => 'brak wysyłek tego dnia'] + $out;
                 elseif ($r['products'] > 0 && $r['done'] >= $r['products']) $out = ['done' => true, 'summary' => $r['products'] . ' ' . self::pl($r['products'], 'produkt', 'produkty', 'produktów') . ' · ' . self::num($r['packed']) . ' szt. spakowane'] + $out;
                 elseif ($r['packed'] > 0) $out = ['step' => 1, 'step_label' => self::num($r['packed']) . ' z ' . self::num($r['base']) . ' szt. spakowane'] + $out;
+                break;
+            case 'orders_transport':
+                $n = $this->container->get(\App\Services\Logistics\TransportWizardService::class)->uncovered();
+                if ($n === 0) $out = ['done' => true, 'summary' => 'każde zamówienie na dziś i jutro ma transport'] + $out;
+                else $out['step_label'] = $n . ' ' . self::pl($n, 'klient', 'klientów', 'klientów') . ' bez transportu';
                 break;
             case 'route_done':
                 $r = $this->repo->routeDay($day);

@@ -26,7 +26,8 @@ final class TaskLockService
 
     public function __construct(private TaskLockRepository $repo, private PositionRepository $positions, private PositionTaskService $tasks,
         private PageAccessService $access, private AppNotificationService $notifications, private HrRepository $hr,
-        private \App\Repositories\Organization\UserLeaveRepository $leaves)
+        private \App\Repositories\Organization\UserLeaveRepository $leaves,
+        private \App\Services\Logistics\TransportWizardService $transport)
     {
     }
 
@@ -54,6 +55,10 @@ final class TaskLockService
             if ($this->repo->unblocked($userId, (int) $t['id'], $today->format('Y-m-d'))) continue;
             $period = $this->tasks->taskPeriod($t, $today);
             if ($period) $this->positions->ensureOccurrence((int) $t['id'], $period['key'], $period['due']);
+            // [303] Transport dla zamówień : nowe zamówienie bez transportu po zaliczeniu → zadanie znowu otwarte (sprawdzane co 2 min).
+            if ($period && ($t['auto_code'] ?? '') === \App\Services\Logistics\TransportWizardService::CODE && $this->transportMissing()) {
+                $this->positions->reopenAuto((int) $t['id'], $period['key']);
+            }
             foreach ($this->repo->openOccurrences((int) $t['id'], $from, $today->format('Y-m-d')) as $o) {
                 $at = self::blockAt($t, (string) $o['due_date']);
                 if ($now < $at) continue;
@@ -69,6 +74,21 @@ final class TaskLockService
     }
 
     /** Moment où une occurrence non faite bloque l'ERP. */
+    /** [303] Klienci z zamówieniem na dziś / jutro bez pojazdu ? Wynik w sesji na 2 min (Dzień wysyłki liczony 2 razy). */
+    private function transportMissing(): bool
+    {
+        $c = $_SESSION['TRANSPORT_CHECK'] ?? null;
+        if (is_array($c) && ($c['at'] ?? 0) > time() - 120) return (bool) $c['missing'];
+        try {
+            $missing = $this->transport->uncovered() > 0;
+        } catch (\Throwable $e) {
+            error_log('[transport-check] ' . $e->getMessage());
+            $missing = false;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) $_SESSION['TRANSPORT_CHECK'] = ['at' => time(), 'missing' => $missing];
+        return $missing;
+    }
+
     public static function blockAt(array $task, string $dueDate): DateTimeImmutable
     {
         $next = ($task['block_mode'] ?? 'due') === 'next_day';

@@ -237,6 +237,13 @@ final class PositionRepository extends WorkshopRepository
     }
 
     /** Zadanie zaliczone samo (kreator zakończony) : bez osoby, z notatką. */
+    /** [303] Zadanie zaliczone automatycznie, którego warunek znowu nie jest spełniony (np. nowe zamówienie bez transportu) : znowu otwarte. */
+    public function reopenAuto(int $taskId, string $periodKey): void
+    {
+        $this->db->prepare("UPDATE n_task_occurrence SET status = 'open', done_at = NULL, note = NULL, summary = NULL WHERE id_task = ? AND period_key = ? AND status = 'done' AND done_by IS NULL")
+            ->execute([$taskId, $periodKey]);
+    }
+
     public function autoDone(int $occurrenceId, string $note, ?string $summary = null): void
     {
         $this->db->prepare("UPDATE n_task_occurrence SET status = 'done', done_by = NULL, done_at = ?, note = ?, summary = ? WHERE id = ? AND status = 'open'")

@@ -1,0 +1,19 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Transport dla zamówień{% endblock %}
+
+{% block content %}
+{# [303] Asystent « Transport dla zamówień » (makieta 56) : App\Services\Logistics\TransportWizardService — widok w
+   assets/js/logistics/transport-wizard.js, rama asystenta w assets/js/organization/task-wizard.js. Zadanie obowiązkowe
+   Logistyki (orders_transport) blokuje ERP, dopóki klient z zamówieniem na dziś / jutro nie ma pojazdu. #}
+<section class="section">
+    <div id="otwApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="otwBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/logistics/transport-wizard.js?v={{ asset_v() }}"></script>
+{% endblock %}

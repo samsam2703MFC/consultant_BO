@@ -8,6 +8,10 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/logistics/week', ['controller' => $c, 'method' => 'week']);
     // [296] Stany i palety : magazyn → palety w budowie → gotowe → wysłane, skład palety, śledzenie partii.
     $r->addRoute('GET', '/logistics/stock', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'index']);
+    // [303] Asystent « Transport dla zamówień » (makieta 56) : zadanie obowiązkowe Logistyki, gdy zamówienia dziś / jutro nie mają transportu.
+    $r->addRoute('GET', '/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/assign', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'assign']);
     // Plan logistyki na 12 tygodni [200] : prognoza palet, ciężarówki (przeciągnij), święta PL / BE, urlopy kierowców.
     $pl = App\Controllers\Web\Logistics\LogisticsPlanController::class;
     $r->addRoute('GET', '/logistics/plan', ['controller' => $pl, 'method' => 'index']);

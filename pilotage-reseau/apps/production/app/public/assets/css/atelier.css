@@ -4092,3 +4092,15 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 /* [301] En-tête : date et heure de la dernière mise à jour du serveur (à gauche de la cloche). */
 .at-deployed { font-size: 11.5px; color: #8a837a; white-space: nowrap; display: inline-flex; align-items: center; gap: .3rem; }
 .at-deployed i { font-size: 12px; }
+
+/* [303] Asystent « Transport dla zamówień » (makieta 56) : klienci bez transportu ↔ pojazdy floty. */
+.otw-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; margin-top: 10px; }
+@media (max-width: 900px) { .otw-cols { grid-template-columns: minmax(0, 1fr); } }
+.otw-cl { display: flex; align-items: center; gap: 10px; border: 1px solid #eadfd3; border-radius: 10px; padding: 9px 12px; margin-bottom: 7px; background: #fff; cursor: pointer; }
+.otw-cl.is-on { border-color: #8D1D2C; background: #fbf4f5; }
+.otw-cl-t { flex: 1; min-width: 0; } .otw-cl small { display: block; color: #8a837a; font-size: 12px; }
+.otw-veh { display: block; width: 100%; text-align: left; border: 2px solid #e3ddd3; border-radius: 12px; padding: 11px 13px; margin-bottom: 9px; background: #fff; cursor: pointer; }
+.otw-veh.is-on { border-color: #8D1D2C; box-shadow: 0 0 0 3px rgba(141, 29, 44, .08); }
+.otw-veh .tw-gbar, .otw-veh [class*="gbar"] { margin: 7px 0 3px; }
+.otw-act { display: flex; justify-content: flex-end; margin-top: 12px; }
+.otw-veh .tw-gbar { display: block; width: 100%; }
