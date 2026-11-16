@@ -193,8 +193,8 @@
       "nl": "Verkoop per categorie"
      },
      "texte": {
-      "fr": "Groupe › catégorie › produit : un toucher sur ▸ déplie.\nPour chaque ligne : chiffre d’affaires, part du total, marge brute, taux de marge, coefficient (prix de vente ÷ coût).\nLa couleur du taux : sous 40 %, 40–50, 50–60, 60–70, 70 % et plus en or ; gris = coût matière inconnu (recette à compléter au panel).\nAutres lectures : Treemap (le poids d’un coup d’œil), Promotions, Portions.",
-      "nl": "Groep › categorie › product: een tik op ▸ klapt open.\nVoor elke lijn: omzet, aandeel in het totaal, brutomarge, margepercentage, coëfficiënt (verkoopprijs ÷ kost).\nDe kleur van het percentage: onder 40 %, 40–50, 50–60, 60–70, 70 % en meer in goud; grijs = grondstofkost onbekend (recept aan te vullen in het panel).\nAndere lezingen: Treemap (het gewicht in één oogopslag), Promoties, Porties."
+      "fr": "Groupe › catégorie › produit : un toucher sur ▸ déplie.\nPour chaque ligne, hors TVA : chiffre d’affaires, part du total, marge brute, taux de marge, coefficient (prix de vente hors TVA ÷ coût d’achat de la recette).\nLa couleur du taux : sous 40 %, 40–50, 50–60, 60–70, 70 % et plus en or ; gris = coût matière inconnu (recette à compléter au panel).\nAutres lectures : Treemap (le poids d’un coup d’œil), Promotions, Portions.\nLes onglets Promotions et Portions gardent les prix de caisse, TVA comprise.",
+      "nl": "Groep › categorie › product: een tik op ▸ klapt open.\nVoor elke lijn, exclusief btw: omzet, aandeel in het totaal, brutomarge, margepercentage, coëfficiënt (verkoopprijs exclusief btw ÷ aankoopkost van het recept).\nDe kleur van het percentage: onder 40 %, 40–50, 50–60, 60–70, 70 % en meer in goud; grijs = grondstofkost onbekend (recept aan te vullen in het panel).\nAndere lezingen: Treemap (het gewicht in één oogopslag), Promoties, Porties.\nDe tabbladen Promoties en Porties houden de kassaprijzen, btw inbegrepen."
      },
      "critique": false,
      "photo": "dash-categories.jpg",
