@@ -64,12 +64,12 @@ final class TransportWizardController extends BaseController
         }
     }
 
-    /** [306] POST {name, surname, section_id, pin?, driver_phone?, vehicle_id?} */
+    /** [306/309] POST {cooperation: etat|zlecenie, name, surname, section_id, pin?, phone?, vehicle_id?, + karta HR (etat) albo dane umowy (zlecenie)} */
     public function addDriver()
     {
         try {
             $r = $this->wizard->addDriver($this->getJson(Request::createFromGlobals()), (int) user('id') ?: null);
-            return $this->json(['message' => 'Kierowca dodany.', 'driver_id' => $r['id'], 'problems' => $r['problems'], 'data' => $this->wizard->data()]);
+            return $this->json(['message' => 'Kierowca dodany.', 'driver_id' => $r['id'], 'cooperation' => $r['cooperation'], 'problems' => $r['problems'], 'data' => $this->wizard->data()]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

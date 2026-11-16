@@ -13,6 +13,7 @@
     // Mini-asystenci [306] : pojazd (formularz otwarty, tryb, wartości) i kierowca (pojazd, którego formularz jest otwarty).
     let vehForm = false, vf = {};
     let drvForm = null, df = {};
+    let lastDriver = null;   // [309] ostatnio dodany kierowca (umowa zlecenia)
     const sel = {};   // krok 3 : pojazd → {driver_id, tour_id} wybrane, jeszcze nie zapisane
     const STEPS = ['Dni bez transportu', 'Przypisz do transportu', 'Kierowca i trasa', 'Sprawdź i zatwierdź'];
     const LAST = STEPS.length;
@@ -96,22 +97,67 @@
         return [...out.values()];
     };
 
+    // [309] « Dodaj kierowcę » (makieta 57) : najpierw rodzaj współpracy — etat (umowa o pracę, pełna karta HR) albo
+    // zlecenie (tylko dane do umowy zlecenia na przewóz towaru). vid = 0 : bez pojazdu albo pojazd z listy.
     function driverForm(vid) {
-        const opt = (D.sections || []).map(x => `<option value="${x.id}" ${String(x.id) === String(df.section_id) ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-        const f = (lab, html) => `<div class="tw-field"><label>${lab}</label>${html}</div>`;
+        const f = (lab, html, wide) => `<div class="tw-field${wide ? ' otw-wide' : ''}"><label>${lab}</label>${html}</div>`;
+        const inp = (k, attrs = '') => `<input class="form-control" data-otw-df="${k}" value="${esc(df[k] || '')}" ${attrs}>`;
+        const sel = (k, opts, empty) => `<select class="form-select" data-otw-df="${k}">${empty !== undefined ? `<option value="">${esc(empty)}</option>` : ''}${Object.entries(opts).map(([v, l]) => `<option value="${esc(v)}" ${String(df[k] ?? '') === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+        const ck = (k, label) => `<label class="otw-ck"><input type="checkbox" data-otw-df="${k}" ${df[k] ? 'checked' : ''}> ${esc(label)}</label>`;
+        const sections = Object.fromEntries((D.sections || []).map(x => [x.id, x.name]));
+        const coop = `<div class="otw-coop">
+            <button type="button" class="otw-coop-o ${df.cooperation === 'etat' ? 'is-on' : ''}" data-otw-coop="etat"><b>Kierowca etatowy</b><small>umowa o pracę · pełna karta HR</small></button>
+            <button type="button" class="otw-coop-o ${df.cooperation === 'zlecenie' ? 'is-on' : ''}" data-otw-coop="zlecenie"><b>Kierowca na zlecenie</b><small>umowa zlecenia · tylko dane do umowy</small></button></div>`;
+        const vehicles = (D.vehicles || []).filter(v => v.active);
+        const vehicleSel = vid ? '' : f('Pojazd (opcjonalnie)', `<select class="form-select" data-otw-df="vehicle_id"><option value="">— bez pojazdu —</option>${vehicles.map(v => `<option value="${v.id}" ${String(df.vehicle_id || '') === String(v.id) ? 'selected' : ''}>${esc(v.label)}</option>`).join('')}</select>`);
+        const tail = `<div class="otw-sec">Tablet i dział</div><div class="tw-grid2">${f('Dział', sel('section_id', sections))}${f('PIN tabletu kierowcy (4–6 cyfr, opcjonalnie)', inp('pin', 'type="password" inputmode="numeric" autocomplete="new-password" maxlength="6"'))}</div>${vehicleSel}`;
+        let body = '';
+        if (df.cooperation === 'zlecenie') {
+            body = `<div class="otw-sec">Dane do umowy zlecenia</div>
+                <div class="tw-grid2">${f('Imię', inp('name', 'maxlength="60"'))}${f('Nazwisko', inp('surname', 'maxlength="60"'))}</div>
+                <div class="tw-grid2">${f('PESEL', inp('pesel', 'inputmode="numeric" maxlength="11" autocomplete="off"'))}${f('Telefon (CMR)', inp('phone', 'maxlength="30"'))}</div>
+                ${f('Adres zamieszkania', inp('address', 'maxlength="300"'))}
+                <div class="tw-grid2">${f('Nr rachunku', inp('bank', 'maxlength="40" autocomplete="off"'))}${f('Prawo jazdy kat.', inp('licence', 'maxlength="20" placeholder="np. C+E"'))}</div>
+                <div class="tw-grid2">${f('Wynagrodzenie za przewóz', `<div class="otw-pay">${sel('pay_basis', D.pay_bases || {}, '— podstawa —')}${inp('pay_amount', 'inputmode="decimal" placeholder="kwota brutto zł"')}</div>`)}
+                    ${f('Okres umowy', `<div class="otw-pay">${inp('date_from', 'type="date"')}${inp('date_to', 'type="date"')}</div>`)}</div>
+                ${ck('student', 'uczeń / student < 26 lat (bez ZUS)')}${tail}`;
+        } else if (df.cooperation === 'etat') {
+            body = `<div class="otw-sec">Osoba</div>
+                <div class="tw-grid2">${f('Imię', inp('name', 'maxlength="60"'))}${f('Nazwisko', inp('surname', 'maxlength="60"'))}</div>
+                <div class="tw-grid2">${f('Data urodzenia', inp('birth_date', 'type="date"'))}${f('Płeć', sel('gender', {K: 'K', M: 'M'}, '—'))}</div>
+                <div class="tw-grid2">${f('PESEL', inp('pesel', 'inputmode="numeric" maxlength="11" autocomplete="off"'))}${f('Telefon', inp('phone', 'maxlength="30"'))}</div>
+                ${f('Adres', inp('address', 'maxlength="300"'))}
+                <div class="tw-grid2">${f('Kontakt awaryjny', inp('emergency', 'maxlength="200"'))}${f('Rozmiar odzieży', sel('clothing_size', Object.fromEntries((D.sizes || []).map(x => [x, x])), '—'))}</div>
+                <div class="otw-sec">Umowa i płaca</div>
+                <div class="tw-grid2">${f('Rodzaj umowy', sel('contract_type', D.contract_types || {}, '— wybierz —'))}${f('Data zatrudnienia', inp('hire_date', 'type="date"'))}</div>
+                <div class="tw-grid2">${f('Koniec umowy (określona / próbna)', inp('contract_end', 'type="date"'))}${f('Wymiar', inp('work_time', 'maxlength="30" placeholder="pełny etat"'))}</div>
+                <div class="tw-grid2">${f('Wynagrodzenie', `<div class="otw-pay">${sel('pay_type', {monthly: 'miesięcznie', hourly: 'za godzinę'}, '—')}${inp('pay_amount', 'inputmode="decimal" placeholder="kwota brutto zł"')}</div>`)}${f('Nr rachunku', inp('bank', 'maxlength="40" autocomplete="off"'))}</div>
+                <div class="tw-grid2">${f('Badania lekarskie do', inp('medical_until', 'type="date"'))}${f('Prawo jazdy kat.', inp('licence', 'maxlength="20" placeholder="np. C+E"'))}</div>
+                <div class="otw-cks">${ck('pit2', 'PIT-2')}${ck('kup_raised', 'podwyższone KUP')}${ck('young_relief', 'ulga dla młodych < 26')}</div>${tail}`;
+        }
         return `<div class="otw-mini">
-            <div class="otw-mini-h"><b><i class="bi bi-person-plus"></i> Dodaj kierowcę</b><span class="tw-note">pracownik · stanowisko Kierowca-dostawca · od razu kierowca tego pojazdu</span></div>
-            <div class="tw-grid2">${f('Imię', `<input class="form-control" data-otw-df="name" maxlength="60" value="${esc(df.name || '')}">`)}${f('Nazwisko', `<input class="form-control" data-otw-df="surname" maxlength="60" value="${esc(df.surname || '')}">`)}</div>
-            <div class="tw-grid2">${f('Dział', `<select class="form-select" data-otw-df="section_id">${opt}</select>`)}${f('Telefon (na CMR, opcjonalnie)', `<input class="form-control" data-otw-df="driver_phone" maxlength="30" value="${esc(df.driver_phone || '')}">`)}</div>
-            ${f('PIN tabletu kierowcy (4–6 cyfr, opcjonalnie)', `<input class="form-control" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" data-otw-df="pin" value="${esc(df.pin || '')}">`)}
+            <div class="otw-mini-h"><b><i class="bi bi-person-plus"></i> Dodaj kierowcę</b><span class="tw-note">pracownik · stanowisko Kierowca-dostawca${vid ? ' · od razu kierowca tego pojazdu' : ''}</span></div>
+            ${coop}${body}
             <p class="otw-mini-a"><button type="button" class="tw-btn ghost sm" data-otw-dclose>Anuluj</button>
-                <button type="button" class="tw-btn sm" data-otw-dsave="${vid}" ${busy ? 'disabled' : ''}>Dodaj kierowcę i przypisz</button></p></div>`;
+                ${df.cooperation ? `<button type="button" class="tw-btn sm" data-otw-dsave="${vid}" ${busy ? 'disabled' : ''}>${df.cooperation === 'zlecenie' ? 'Dodaj i przygotuj umowę →' : 'Dodaj kierowcę (umowa o pracę w karcie HR)'}</button>` : ''}</p></div>`;
+    }
+
+    // [309] Kierowca na zlecenie dodany : umowa zlecenia na przewóz (DOCX albo PDF w karcie HR).
+    function contractBox() {
+        if (!lastDriver || lastDriver.cooperation !== 'zlecenie') return '';
+        return tw.alert(`<b>${esc(lastDriver.name)}</b> — kierowca na zlecenie. Umowa zlecenia na przewóz towaru z jego danymi :`, 'ok', 'bi-file-earmark-text',
+            `<span class="otw-cbtn"><a class="tw-btn ghost sm" href="${at.root}/logistics/drivers/${lastDriver.id}/contract-docx">DOCX</a>
+             <button type="button" class="tw-btn sm" data-otw-cpdf="${lastDriver.id}" ${busy ? 'disabled' : ''}>PDF do karty HR</button></span>`);
     }
 
     function step3() {
         const list = usedVehicles();
-        if (!list.length) return tw.alert('Żaden pojazd nie wiezie jeszcze wysyłki dziś i jutro — wróć do kroku 2.', '', 'bi-info-circle');
         const noDrivers = !(D.drivers || []).length;
+        // [309] Bez pojazdu na dziś / jutro : « Dodaj kierowcę » i tak dostępne (pojazd opcjonalny).
+        if (!list.length) {
+            return `${contractBox()}${tw.alert('Żaden pojazd nie wiezie jeszcze wysyłki dziś i jutro — przypisz klientów w kroku 2. Kierowcę możesz dodać już teraz.', '', 'bi-info-circle')}
+                ${drvForm === 0 ? driverForm(0) : `<p><button type="button" class="tw-btn ghost" data-otw-dopen="0"><i class="bi bi-person-plus"></i> Dodaj kierowcę</button></p>`}`;
+        }
         if (noDrivers && drvForm === null) { const first = list.find(u => !vInfo(u.id).driver_id); if (first) openDriverForm(first.id); }
         const tours = D.tours || [];
         const rows = list.map(u => {
@@ -126,7 +172,7 @@
             const dirty = ((sel[u.id] || {}).driver_id !== undefined && String(sel[u.id].driver_id) !== String(v.driver_id ?? '')) || !!(sel[u.id] || {}).tour_id;
             return `<div class="otw-drv">
                 <div class="otw-drv-h"><b><i class="bi bi-truck"></i> ${esc(u.label)}</b><span class="tw-note">${esc(u.days.join(', '))} · ${u.customers} ${tw.plural(u.customers, 'klient', 'klientów', 'klientów')}</span>
-                    ${v.driver_id ? tw.pill('Kierowca : ' + (personName(v.driver_id) || v.driver || '—'), 'ok') : tw.pill('Brak kierowcy', 'bad')}</div>
+                    ${v.driver_id ? tw.pill('Kierowca : ' + (personName(v.driver_id) || v.driver || '—') + coopLabel(v.driver_id), 'ok') : tw.pill('Brak kierowcy', 'bad')}</div>
                 <div class="otw-drv-f">
                     <div class="tw-field"><label>Kierowca</label><select class="form-select" data-otw-drv="${u.id}"><option value="">— wybierz kierowcę —</option>
                         ${(D.drivers || []).length ? `<optgroup label="Kierowcy">${opts(D.drivers)}</optgroup>` : ''}
@@ -138,11 +184,12 @@
                         <button type="button" class="tw-btn ghost sm" data-otw-dopen="${u.id}"><i class="bi bi-person-plus"></i> Nowy kierowca</button></div></div>
                 ${drvForm === u.id ? driverForm(u.id) : ''}</div>`;
         }).join('');
-        return `<p class="tw-lead">Kto prowadzi pojazd i na jakiej trasie. Kierowca widzi swoje palety i klientów na tablecie kierowcy, a jego nazwisko trafia na CMR.</p>
+        return `${contractBox()}<p class="tw-lead">Kto prowadzi pojazd i na jakiej trasie. Kierowca widzi swoje palety i klientów na tablecie kierowcy, a jego nazwisko trafia na CMR.</p>
             ${noDrivers ? tw.alert('Brak kierowców w ERP — dodaj kierowcę (pracownik ze stanowiskiem Kierowca-dostawca).', '', 'bi-person-exclamation') : ''}${rows}`;
     }
 
-    function openDriverForm(vid) { drvForm = vid; df = {section_id: D.default_section || ''}; }
+    function openDriverForm(vid) { drvForm = vid; df = {section_id: D.default_section || '', cooperation: null}; }
+    const coopLabel = (id) => { const c = (D.driver_info || {})[id]?.cooperation; return c === 'zlecenie' ? ' · zlecenie' : (c === 'etat' ? ' · etat' : ''); };
 
     function step4() {
         const rows = [];
@@ -161,7 +208,7 @@
     function render() {
         const body = [step1, step2, step3, step4][step - 1]();
         const labels = {1: 'Dalej : przypisz do transportu', 2: 'Dalej : kierowca i trasa', 3: 'Dalej : sprawdź'};
-        const next = step < LAST ? {label: labels[step], attr: 'data-otw-next', disabled: step === 1 && !D.uncovered && !usedVehicles().length}
+        const next = step < LAST ? {label: labels[step], attr: 'data-otw-next'}
             : (D.uncovered ? {label: 'Wróć do przypisywania', attr: 'data-otw-back2'} : {label: 'Wróć do ERP', attr: 'data-otw-home', final: true});
         app.innerHTML = tw.frame({title: 'Transport dla zamówień', sub: `wysyłka dziś i jutro · krok ${step} z ${LAST} · ${D.uncovered ? D.uncovered + ' bez transportu' : 'wszystko przypisane'}`,
             steps: STEPS, step, reached, body, prev: step > 1 ? 'Wstecz' : null, next, later: false});
@@ -181,7 +228,7 @@
         const tr = e.target.closest('[data-otw-tour]');
         if (tr) { (sel[tr.dataset.otwTour] ??= {}).tour_id = tr.value ? Number(tr.value) : null; render(); return; }
         const dsel = e.target.closest('[data-otw-df]');
-        if (dsel) df[dsel.dataset.otwDf] = dsel.value;
+        if (dsel) df[dsel.dataset.otwDf] = dsel.type === 'checkbox' ? dsel.checked : dsel.value;
     });
     // Pola tekstowe : bez przerysowania (kursor zostaje) ; przycisk « Dodaj pojazd » włącza się sam.
     app.addEventListener('input', (e) => {
@@ -192,7 +239,7 @@
             if (b) b.disabled = busy || !(vf.mode === 'existing' ? vf.vehicle_id : (vf.carrier_id && String(vf.regis_num).trim()));
         }
         const d = e.target.closest('[data-otw-df]');
-        if (d) df[d.dataset.otwDf] = d.value;
+        if (d && d.type !== 'checkbox') df[d.dataset.otwDf] = d.value;
     });
     app.addEventListener('click', async (e) => {
         const day = e.target.closest('[data-otw-day]');
@@ -229,15 +276,28 @@
             if (res.ok) { at.notify(true, res.message); D = res.data; delete sel[id]; }
             render(); return;
         }
+        const coopBtn = e.target.closest('[data-otw-coop]');
+        if (coopBtn) { df.cooperation = coopBtn.dataset.otwCoop; render(); return; }
+        const cpdf = e.target.closest('[data-otw-cpdf]');
+        if (cpdf) {
+            if (busy) return;
+            busy = true; render();
+            const res = await tw.post(`/ajax/logistics/drivers/${cpdf.dataset.otwCpdf}/contract-pdf`, {});
+            busy = false;
+            if (res.ok) at.notify(true, res.message);
+            render(); return;
+        }
         const dsave = e.target.closest('[data-otw-dsave]');
         if (dsave) {
             if (busy) return;
+            const vid = Number(dsave.dataset.otwDsave) || Number(df.vehicle_id) || 0;
             busy = true; render();
-            const res = await tw.post('/ajax/logistics/transport-wizard/new-driver', {...df, vehicle_id: Number(dsave.dataset.otwDsave)});
+            const res = await tw.post('/ajax/logistics/transport-wizard/new-driver', {...df, vehicle_id: vid || null});
             busy = false;
             if (res.ok) {
                 at.notify(true, res.message + ((res.problems || []).length ? ' Do uzupełnienia : ' + res.problems.join(' ') : ''));
-                D = res.data; drvForm = -1; df = {}; delete sel[Number(dsave.dataset.otwDsave)];
+                lastDriver = {id: res.driver_id, cooperation: res.cooperation, name: `${df.name || ''} ${df.surname || ''}`.trim()};
+                D = res.data; drvForm = -1; df = {}; delete sel[vid];
             }
             render(); return;
         }

@@ -460,6 +460,7 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-pill-warn { background: rgba(242, 201, 160, 0.45); color: var(--at-on-abricot); }
 .at-pill-danger { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
 .at-pill-muted { background: var(--at-bg-2); color: var(--at-muted); }
+.at-pill-info { background: rgba(31, 79, 122, 0.10); color: #1f4f7a; }
 .at-empty { margin: 0; padding: 14px 0; color: var(--at-muted); font-size: 13px; }
 .at-link { font-size: 12.5px; font-weight: 500; }
 
@@ -4127,3 +4128,19 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .at-tour-usual { display: block; margin-top: 3px; font-size: 13px; color: #3c3833; }
 .at-tour-usual .bi { color: var(--at-primary); }
 .at-tour-missing { color: #b42318; font-weight: 600; }
+
+/* [309] Kierowcy : umowa zlecenia na przewóz (Pojazdy i kierowcy). */
+.at-drv-table td { vertical-align: top; }
+.at-drv-ok { color: #2E7D4F; } .at-drv-bad { color: #b42318; font-weight: 600; }
+
+/* [309] Dodaj kierowcę : etat / zlecenie (makieta 57). */
+.otw-coop { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 2px 0 10px; }
+.otw-coop-o { text-align: left; border: 2px solid #e3ddd3; border-radius: 12px; padding: 10px 12px; background: #fff; cursor: pointer; }
+.otw-coop-o b { display: block; font-size: 14px; } .otw-coop-o small { color: #8a837a; font-size: 12px; }
+.otw-coop-o.is-on { border-color: #8D1D2C; background: #fbf4f5; }
+.otw-sec { font-size: 11px; font-weight: 700; color: #8D1D2C; text-transform: uppercase; letter-spacing: .06em; margin: 10px 0 6px; }
+.otw-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.otw-ck { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 14px 8px 0; }
+.otw-cks { display: flex; flex-wrap: wrap; }
+.otw-cbtn { display: inline-flex; gap: 8px; margin-left: auto; }
+@media (max-width: 700px) { .otw-coop { grid-template-columns: 1fr; } }

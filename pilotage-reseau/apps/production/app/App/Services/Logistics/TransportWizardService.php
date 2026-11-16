@@ -11,6 +11,8 @@ use App\Services\Employee\EmployeeCreationService;
 use App\Services\Employee\ProductionEmployeeService;
 use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Workshop\Execution\KioskAuthService;
+use App\Services\Hr\HrService;
+use App\Domain\Payroll\BankXml;
 
 /**
  * [303] Asystent « Transport dla zamówień » (makieta 56). Zamówienia z wysyłką dziś i jutro (expected_shipping_date — data wysyłki, nie data zamówienia), których klient nie ma pojazdu
@@ -35,6 +37,8 @@ final class TransportWizardService
         private ProductionSectionService $sections,
         private EmployeeRepository $employees,
         private PositionRepository $positions,
+        private HrService $hr,
+        private DriverContractService $contracts,
     ) {
     }
 
@@ -102,7 +106,11 @@ final class TransportWizardService
         return ['vehicles' => $vehicles, 'carriers' => array_map(fn($c) => ['id' => (int) $c['id'], 'name' => trim((string) $c['name'])], $v['carriers']),
             'default_places' => $v['default_places'], 'default_departure' => $v['default_departure'],
             'drivers' => $choices['drivers'], 'other_employees' => $choices['other_employees'], 'tours' => $choices['tour_choices'],
-            'sections' => $sections, 'default_section' => $default ?? ($sections[0]['id'] ?? null)];
+            'sections' => $sections, 'default_section' => $default ?? ($sections[0]['id'] ?? null),
+            // [309] Kierowcy : współpraca (etat / zlecenie), umowa ; listy formularza « Dodaj kierowcę ».
+            'driver_info' => array_column($this->contracts->drivers(), null, 'id'), 'pay_bases' => DriverContractService::PAY,
+            'contract_types' => ['nieokreslony' => 'na czas nieokreślony', 'okreslony' => 'na czas określony', 'probny' => 'okres próbny'],
+            'sizes' => HrService::SIZES];
     }
 
     /**
@@ -162,12 +170,18 @@ final class TransportWizardService
     }
 
     /**
-     * [306] Mini-asystent « Dodaj kierowcę » : pracownik (imię, nazwisko, dział ; koszt uzupełnia administrator), stanowisko
-     * Kierowca-dostawca, PIN tabletu kierowcy (opcjonalnie) ; vehicle_id → od razu kierowca tego pojazdu.
-     * @return array{id:int, problems:list<string>} id = profil pracownika (n_prod_employee)
+     * [306/309] Mini-asystent « Dodaj kierowcę » (makieta 57) : najpierw rodzaj współpracy.
+     *  - etat : umowa o pracę, pełna karta HR (osoba, umowa, płaca — HrService::save, dane wrażliwe zaszyfrowane) ;
+     *  - zlecenie : tylko dane do umowy zlecenia na przewóz (PESEL, adres, rachunek, prawo jazdy, wynagrodzenie za kurs /
+     *    godzinę / km / ryczałt, okres) ; umowę przygotowuje potem Logistyka (DriverContractService).
+     * Zawsze : pracownik (dział ; koszt pracodawcy uzupełnia administrator), stanowisko Kierowca-dostawca, PIN tabletu
+     * kierowcy (opcjonalnie) ; vehicle_id → od razu kierowca tego pojazdu.
+     * @return array{id:int, cooperation:string, problems:list<string>} id = profil pracownika (n_prod_employee)
      */
     public function addDriver(array $in, ?int $userId): array
     {
+        $coop = (string) ($in['cooperation'] ?? 'etat');
+        if (!in_array($coop, ['etat', 'zlecenie'], true)) throw new CustomException('Wybierz : kierowca etatowy albo na zlecenie.', 'errors', 422);
         $name = trim((string) ($in['name'] ?? ''));
         $surname = trim((string) ($in['surname'] ?? ''));
         if ($name === '' || $surname === '' || mb_strlen($name) > 60 || mb_strlen($surname) > 60) throw new CustomException('Podaj imię i nazwisko kierowcy.', 'errors', 422);
@@ -175,14 +189,75 @@ final class TransportWizardService
         if (!in_array($section, array_column($this->setup()['sections'], 'id'), true)) throw new CustomException('Wybierz dział.', 'errors', 422);
         $pin = trim((string) ($in['pin'] ?? ''));
         if ($pin !== '' && !preg_match('/^\d{4,6}$/', $pin)) throw new CustomException('PIN : 4 do 6 cyfr.', 'errors', 422);
+        [$hr, $driver] = $this->driverInput($coop, $in);
+
         $position = $this->positions->idByCode(KioskAuthService::DRIVER_POSITION);
         $peId = (int) $this->staff->insert(['name' => $name, 'surname' => $surname, 'cost' => '0', 'id_section' => $section]);
         $problems = $this->staffCreation->complete($peId, ['position_id' => $position !== null ? (string) $position : '', 'pin' => $pin], $userId);
         if ($position === null) $problems[] = 'Stanowisko : brak « Kierowca-dostawca » (Stanowiska i zadania).';
         $problems[] = 'Płaca : koszt pracodawcy uzupełnia administrator (Płace i premie › Budżet personelu).';
         $profile = $this->employees->ensureProfile($peId);
-        if ((int) ($in['vehicle_id'] ?? 0) > 0) $this->linkDriver(['vehicle_id' => $in['vehicle_id'], 'driver_id' => $profile, 'driver_phone' => $in['driver_phone'] ?? ''], $userId);
-        return ['id' => $profile, 'problems' => $problems];
+        try {
+            $this->hr->save($profile, $hr, $userId, true);
+        } catch (CustomException $e) {
+            $fields = $e->getErrors()['fields'] ?? [];
+            $problems[] = 'Karta HR : ' . ($fields ? implode(' ', array_values($fields)) : $e->getMessage()) . ' — uzupełnij w HR.';
+        }
+        $this->contracts->saveDriverData($profile, $driver['licence'], $driver['basis'], $driver['amount'], $userId);
+        if ((int) ($in['vehicle_id'] ?? 0) > 0) $this->linkDriver(['vehicle_id' => $in['vehicle_id'], 'driver_id' => $profile, 'driver_phone' => $in['phone'] ?? ($in['driver_phone'] ?? '')], $userId);
+        return ['id' => $profile, 'cooperation' => $coop, 'problems' => $problems];
+    }
+
+    /**
+     * Pola karty HR i dane transportowe z formularza, sprawdzone przed utworzeniem pracownika (bez połowicznego kierowcy).
+     * @return array{0: array, 1: array{licence: ?string, basis: ?string, amount: ?float}}
+     */
+    private function driverInput(string $coop, array $in): array
+    {
+        $t = fn(string $k) => trim((string) ($in[$k] ?? ''));
+        $errors = [];
+        $date = function (string $k) use ($t, &$errors): string {
+            $v = $t($k);
+            if ($v !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) || !strtotime($v))) $errors[] = 'Data : RRRR-MM-DD.';
+            return $v;
+        };
+        $pesel = preg_replace('/\s+/', '', $t('pesel'));
+        if ($pesel !== '' && !HrService::peselOk($pesel)) $errors[] = 'PESEL : 11 cyfr, zła suma kontrolna.';
+        if ($t('bank') !== '' && BankXml::iban($t('bank')) === null) $errors[] = 'Numer rachunku : 26 cyfr (suma kontrolna).';
+        $amount = null;
+        if ($t('pay_amount') !== '') {
+            $v = str_replace([' ', ','], ['', '.'], $t('pay_amount'));
+            if (!is_numeric($v) || (float) $v <= 0 || (float) $v > 1_000_000) $errors[] = 'Wynagrodzenie : kwota brutto większa od 0.';
+            else $amount = round((float) $v, 2);
+        }
+        $common = ['phone' => $t('phone'), 'pesel' => $pesel, 'address' => $t('address'), 'bank' => $t('bank')];
+        if ($coop === 'zlecenie') {
+            $basis = $t('pay_basis');
+            $from = $date('date_from');
+            $to = $date('date_to');
+            if ($pesel === '' || $t('address') === '' || $from === '' || !isset(DriverContractService::PAY[$basis]) || $amount === null || $t('licence') === '') {
+                $errors[] = 'Kierowca na zlecenie : PESEL, adres, prawo jazdy, wynagrodzenie (podstawa i kwota) i początek umowy są potrzebne do umowy.';
+            }
+            if ($from !== '' && $to !== '' && $to < $from) $errors[] = 'Koniec umowy przed początkiem.';
+            if ($errors) throw new CustomException(implode(' ', array_unique($errors)), 'errors', 422);
+            $hr = $common + ['contract_type' => 'zlecenie', 'hire_date' => $from, 'contract_end' => $to, 'student' => !empty($in['student'])];
+            // Godzina → stawka godzinowa w karcie (lista płac) ; ryczałt → wynagrodzenie miesięczne ; kurs / km : tylko w umowie.
+            if ($basis === 'godzina') $hr += ['pay_type' => 'hourly', 'pay_amount' => (string) $amount];
+            if ($basis === 'ryczalt') $hr += ['pay_type' => 'monthly', 'pay_amount' => (string) $amount];
+            return [$hr, ['licence' => $t('licence'), 'basis' => $basis, 'amount' => $amount]];
+        }
+        $contract = $t('contract_type');
+        if (!in_array($contract, ['nieokreslony', 'okreslony', 'probny'], true)) $errors[] = 'Rodzaj umowy o pracę : na czas nieokreślony, określony albo okres próbny.';
+        if ($date('hire_date') === '') $errors[] = 'Podaj datę zatrudnienia.';
+        $date('birth_date'); $date('contract_end'); $date('medical_until');
+        $payType = $t('pay_type');
+        if ($payType !== '' && !in_array($payType, ['monthly', 'hourly'], true)) $errors[] = 'Wynagrodzenie : miesięcznie albo za godzinę.';
+        if ($errors) throw new CustomException(implode(' ', array_unique($errors)), 'errors', 422);
+        $hr = $common + ['contract_type' => $contract, 'hire_date' => $t('hire_date'), 'contract_end' => $t('contract_end'), 'birth_date' => $t('birth_date'),
+            'gender' => $t('gender'), 'emergency' => $t('emergency'), 'clothing_size' => $t('clothing_size'), 'work_time' => $t('work_time'),
+            'medical_until' => $t('medical_until'), 'pay_type' => $payType, 'pay_amount' => $amount !== null ? (string) $amount : '',
+            'pit2' => !empty($in['pit2']), 'kup_raised' => !empty($in['kup_raised']), 'young_relief' => !empty($in['young_relief'])];
+        return [$hr, ['licence' => $t('licence') ?: null, 'basis' => null, 'amount' => null]];
     }
 
     /** Klienci dnia → pojazd z floty (przydział dnia). @return int liczba przypisanych */
