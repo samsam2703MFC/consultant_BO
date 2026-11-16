@@ -57,3 +57,4 @@
 2026-11-16T14:35:45Z [309] kierowcy etat / zlecenie + umowa na przewóz
 2026-11-16T15:00:33Z Dashboard : panneau Valeur du magasin sans débordement (libellés des vignettes limités aux vignettes)
 2026-11-16T15:08:39Z Paramètres › Mails et automatisations : rappel la veille du retrait (e-mail et SMS)
+2026-11-16T15:11:55Z [310] tablette chauffeur : palettes QR + photo, Coś nie tak, CMR signé, documents du point, étiquettes palettes

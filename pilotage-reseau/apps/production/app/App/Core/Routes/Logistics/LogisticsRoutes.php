@@ -60,6 +60,7 @@ return function(RouteCollector $r) {
     $d = App\Controllers\Web\Logistics\DeliveryDocumentsController::class;
     $r->addRoute('GET', '/logistics/documents', ['controller' => $d, 'method' => 'index']);
     $r->addRoute('GET', '/ajax/logistics/documents/day.pdf', ['controller' => $d, 'method' => 'dayPdf']);
+    $r->addRoute('GET', '/logistics/documents/pallet-labels.pdf', ['controller' => $d, 'method' => 'palletLabels']);
     // Dostawy : potwierdzenia z tabletu kierowcy (odbiorca, podpis, zdjęcie, palety), PDF potwierdzenia.
     $p = App\Controllers\Web\Logistics\DeliveryProofController::class;
     $r->addRoute('GET', '/logistics/deliveries', ['controller' => $p, 'method' => 'index']);

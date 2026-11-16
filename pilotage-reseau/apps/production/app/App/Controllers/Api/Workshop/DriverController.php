@@ -72,6 +72,27 @@ final class DriverController
         return new ApiResult(['filename' => $file['filename'], 'content_base64' => base64_encode($file['content'])]);
     }
 
+    /** [310] Skan palety (QR albo numer) + zdjęcie palety. */
+    public function palletScan(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->driver->palletScan($request->context, $request->body()), 201);
+    }
+
+    /** [310] « Coś nie tak » : zgłoszenie ze zdjęciem. */
+    public function incident(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->driver->incident($request->context, $request->body()), 201);
+    }
+
+    /** [310] Dokument punktu (CMR, WZ, WDT) z fakturowania — JSON z plikiem base64. */
+    public function stopDocument(ApiRequest $request): ApiResult
+    {
+        $customer = (string) ($request->query('customer_id') ?? '');
+        if (!ctype_digit($customer)) throw ApiException::validation([['field' => 'customer_id', 'code' => 'REQUIRED', 'params' => []]]);
+        $file = $this->driver->stopDocument($request->context, $this->date($request, true), (int) $customer, (string) ($request->query('type') ?? ''));
+        return new ApiResult(['filename' => $file['filename'], 'content_base64' => base64_encode($file['content'])]);
+    }
+
     private function date(ApiRequest $request, bool $required): ?string
     {
         $date = $request->query('date');

@@ -863,6 +863,7 @@ class CMRService implements IDocument
         $pdf->MultiCell(53, 6, '', 'TR', 0, 0, 0, '', '', true);
         $pdf->SetLineStyle(array('width' => 0, 'color' => array(0, 0, 0)));
 
+        $box24 = [$pdf->GetX(), $pdf->GetY()];
         $pdf->MultiCell(6, 6, "<b>24</b>", 'TL', 0, 0, 0, '', '', true, false, true);
         $pdf->MultiCell(25, 6, "Przesyłkę otrzymano\nGoods received\n\nMiejscowość\nPlace", 'T', 'L', 0, 0, '', '', true);
         $pdf->MultiCell(37, 6, "\n\n\ndnia\non", 'TR', 'L', 0, 0, '', '', true);
@@ -879,6 +880,8 @@ class CMRService implements IDocument
 
         $pdf->MultiCell(6, 21, "", 'B', 0, 0, 0, '', '', true);
         $pdf->MultiCell(62, 21, "Podpis i stempel odbiorcy\nSignature and stamp of the consignee", 'BR', 0, 0, 0, '', '', true, 0, false, true, 21, 'B');
+        // [310] Odbiór na tablecie kierowcy : podpis odbiorcy, nazwisko, miejscowość i data w polu 24 (reszta CMR bez zmian).
+        if (!empty($data['receipt']['signature'])) $this->stampReceipt($pdf, $box24, $data['receipt']);
 
 
         $pdf->StartTransform();
@@ -906,6 +909,37 @@ class CMRService implements IDocument
         $pdf->StopTransform();
 
         return $pdf;
+    }
+
+    /**
+     * [310] CMR z fakturowania podpisany na tablecie kierowcy : ten sam dokument, podpis odbiorcy w polu 24.
+     * $receipt = [signature (PNG), name, place, at (d.m.Y H:i)].
+     */
+    public function buildSignedFromId(TCPDFService $pdf, int $id, array $receipt): array
+    {
+        $cmrData = $this->cmrRepository->first(['id' => $id]) ?: throw new CustomException("CMR_NOT_FOUND", 'errors', 404);
+        $cmrPackageData = $this->cmrPackagesRepository->getByIdCMR($id) ?: throw new CustomException("CMR_PACKAGE_NOT_FOUND", 'errors', 404);
+        $wzData = $this->wzRepository->first(['id' => $cmrData['id_document_wz']]) ?: throw new CustomException("WZ_NOT_FOUND", 'errors', 404);
+        $this->renderDocument($pdf, ['cmrData' => $cmrData, 'cmrPackageData' => $cmrPackageData, 'wzData' => $wzData, 'receipt' => $receipt]);
+        return ['file_string' => $pdf, 'filename' => 'CMR_' . $cmrData['doc_num'] . '_podpisany.pdf'];
+    }
+
+    /** Pole 24 : miejscowość i data u góry, podpis odbiorcy i nazwisko w części « podpis i stempel odbiorcy ». */
+    private function stampReceipt(TCPDFService $pdf, array $box, array $r): void
+    {
+        [$x, $y] = $box;
+        $keepX = $pdf->GetX();
+        $keepY = $pdf->GetY();
+        // Odbiorca obok « Przesyłkę otrzymano », miejsce i data obok « Miejsce », podpis pod nimi (nad « Podpis i stempel »).
+        $pdf->SetTextColor(31, 79, 122);
+        $pdf->SetFont('dejavusans', 'B', 7);
+        if (!empty($r['name'])) $pdf->Text($x + 30, $y + 2.6, mb_substr((string) $r['name'], 0, 34));
+        $pdf->SetFont('dejavusans', '', 6.5);
+        if (!empty($r['place'])) $pdf->Text($x + 19.5, $y + 9.2, mb_substr((string) $r['place'], 0, 10));
+        if (!empty($r['at'])) $pdf->Text($x + 35, $y + 9.2, (string) $r['at']);
+        $pdf->Image('@' . $r['signature'], $x + 22, $y + 12.4, 42, 9, 'PNG', '', '', true, 300, '', false, false, 0, 'CM');
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetXY($keepX, $keepY);
     }
 
     public function buildDocumentFromId(TCPDFService $pdf, int $id): array

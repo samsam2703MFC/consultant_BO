@@ -4,6 +4,7 @@ namespace App\Controllers\Web\Logistics;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Services\Communication\DocumentDistributionService;
+use App\Services\Logistics\PalletLabelService;
 use App\Services\Shipping\ShippingDocumentService;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,7 +16,7 @@ class DeliveryDocumentsController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private DocumentDistributionService $distribution, private ShippingDocumentService $documents) {}
+    public function __construct(private DocumentDistributionService $distribution, private ShippingDocumentService $documents, private PalletLabelService $labels) {}
 
     public function index()
     {
@@ -32,6 +33,21 @@ class DeliveryDocumentsController extends BaseController
             return new Response($file['file_string'], 200, [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'attachment; filename=' . $file['filename'],
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** [310] Etykiety palet z QR (A5, jedna paleta na stronę) : dzień albo jeden klient. */
+    public function palletLabels()
+    {
+        try {
+            $customer = isset($_GET['customer']) && (int) $_GET['customer'] > 0 ? (int) $_GET['customer'] : null;
+            $file = $this->labels->pdf((string) ($_GET['date'] ?? ''), $customer);
+            return new Response($file['file_string'], 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename=' . $file['filename'],
             ]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
