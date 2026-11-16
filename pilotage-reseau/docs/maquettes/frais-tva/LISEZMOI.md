@@ -1,6 +1,8 @@
 # Dashboard magasin › Frais, et le P&L court hors TVA
 
-**Statut : maquette du 16/11/2026, à valider. Rien n'est codé.**
+**Statut : codé le 16/11/2026** (demande « code it, push it »), avec les choix proposés ci-dessous. Code :
+`src/pnl_ht.php`, `/exploitation/jour` et `/exploitation/periode`, `public/dashboard/dashboard.js` (onglet `frais`,
+carte du P&L) ; routes : `docs/contrat-api.md` ; tests : `php bin/tests_pnl_ht.php`. Maquette du même jour.
 
 Demandes (16/11/2026) : « le P&L refaire sans TVA », puis « faire un onglet dans le rail avec leur frais, et marquer
 si oui ou non c'est avec ou sans TVA, et le taux », puis « faire une maquette (en screenshot) ».
@@ -45,12 +47,13 @@ des frais est réel (Halle, septembre 2026, 13 042,65 €), les lignes de frais 
 4. Les choix « TVA comprise » et « taux » se gardent au cockpit (table `pil_frais_tva`, par magasin et par poste),
    d'un mois à l'autre ; le panel n'est pas modifié.
 
-## À trancher avant de coder
+## Restait à trancher (codé avec ces choix)
 
 - Le coût matière : on suppose que la marge du panel (`margin_value`) est calculée sur le CA TTC (CA − coût de
   recette), comme le recalcul depuis les tickets. Si elle l'est sur le hors TVA, le « coût matière » d'aujourd'hui
   contient la TVA ; à vérifier sur un jour avec le compte consultant.
-- Qui remplit l'onglet Frais : le franchisé seul, ou aussi le consultant depuis le cockpit.
+- Qui remplit l'onglet Frais : le franchisé dans son dashboard, et le siège (qui ouvre tous les dashboards) ; le nom
+  de qui a indiqué s'affiche sous le poste.
 - La vraie liste des frais : celle du panel (`/shops/{id}/owner/costs?period=AAAA-MM`), postes et types à relire.
 
 ## Fichiers
