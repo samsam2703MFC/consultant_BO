@@ -1,6 +1,6 @@
 # Dashboard magasin › Semaine et Mois : plus lisible, moins de données
 
-**Statut : maquettes du 16/11/2026, à choisir. Rien n'est codé.**
+**Statut : maquettes du 16/11/2026. Choix de Sam : A · Quatre blocs, codée le 16/11/2026 (public/dashboard/dashboard.js : qbPage ; bureau seulement, le téléphone garde sa vue).**
 
 Demande (16/11/2026, sur `dashboard/?shop=5&vue=semaine`) : « proposer pour semaine et mois quelque chose de plus
 lisible, moins de données (car beaucoup de redondance), 3 ou 4 maquettes en screenshots ».

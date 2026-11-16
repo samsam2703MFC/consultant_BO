@@ -7045,6 +7045,21 @@
       a4Viser();
       return;
     }
+    // Semaine et Mois (16/11/2026, maquette A « quatre blocs ») : le chiffre, les jours, le résultat, les heures ; le reste
+    // replié sous la page (qbPage). La note du jour, les tâches, le réseau, les leviers… s'y ouvrent à la demande.
+    if (S.vue === 'semaine' || S.vue === 'mois') {
+      if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
+      if (!d && !S.err[kr]) { h += squelette(3); }
+      else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
+      else if (m) { h += qbPage(m, d, st, ks); }
+      h += cqLoupe(false);
+      $.innerHTML = h;
+      brancher();
+      qbBrancher();
+      noteRestaurer(garde);
+      cqRestaurer(cqPos);
+      return;
+    }
     h += rendNC();
     if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
     // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
@@ -8342,7 +8357,157 @@
     // couleur, la jauge vers l'objectif, le titre et la légende. Le CA se juge face à l'objectif CA
     // du jour, les clients face à l'objectif clients (objectif CA ÷ panier moyen de la période).
     // La journée en cours n'est pas jugée (hachurée) ; un jour futur montre son objectif.
-    if (jours.length) {
+    h += periodeCalendrier(m);
+    // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
+    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span></div>${cascade(m, d)}</div>`;
+    const prof = sem ? '' : periodeProfil(m);
+    h += prof ? `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">${pl}${prof}</div>` : pl;
+    if (S.vue === 'mois') { h += rendRentab(); }
+    if (S.vue === 'semaine') { h += rendSemaines(); }
+    return h;
+  }
+
+  /* --- Semaine et Mois en quatre blocs (16/11/2026, maquette A choisie par Sam : docs/maquettes/semaine-mois/) ---------
+   * « Plus lisible, moins de données » : le chiffre (une jauge et quatre tuiles), les jours, le résultat, les heures et
+   * ce qui rapporte — chaque chiffre une seule fois. Le reste se replie sous la page (qbPlus) : il ne se dessine qu'ouvert.
+   * Bureau seulement : le téléphone garde sa vue (rendMobile). */
+  const QB_PAL = [[110, '#3f7a52'], [100, '#6aa84f'], [90, '#d8c79f'], [75, '#F5B26B'], [-Infinity, '#F08A2C']];
+  const qbTeinte = p => (QB_PAL.find(x => p >= x[0]) || QB_PAL[4])[1];
+  function qbChiffre(m, d) {
+    const sem = S.vue === 'semaine', se = (d && d.seuils) || {}, R = (d && d.reseau) || {};
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca), nJ = Math.max(1, passes.length);
+    const restants = jours.filter(j => !j.passe && !j.ferme && !j.aujourdhui);
+    const sansO = m.objectif == null, enCours = !sansO && m.attendu != null && m.attendu < m.objectif - 0.5;
+    const att = sansO || !m.attendu ? null : 100 * m.realise / m.attendu;
+    const proj = sansO || !m.attendu ? null : m.realise / m.attendu * m.objectif;
+    const base = Math.max(m.realise || 0, m.objectif || 0, 1);
+    const repere = enCours ? m.attendu : m.objectif;
+    const jauge = sansO ? '<p class="qb-l mu">Pas de budget pour cette période : pas d’objectif.</p>'
+      : `<div class="qb-barre"><i style="width:${Math.min(100, 100 * m.realise / base).toFixed(1)}%;background:${qbTeinte(att)}"></i><b style="left:${Math.min(100, 100 * repere / base).toFixed(1)}%" title="${enCours ? 'attendu à ce jour' : 'objectif'}"></b></div>
+        <div class="qb-l"><span>${enCours ? 'attendu à ce jour ' + fE(m.attendu) + ' · objectif ' + fE(m.objectif) : 'objectif ' + fE(m.objectif)}</span><span class="${m.realise >= repere ? 'ok' : 'ko'}">${fS(m.realise - repere)}</span></div>
+        ${enCours && proj != null ? `<div class="qb-l mu"><span>au rythme actuel : ${fK(proj)} en fin de ${sem ? 'semaine' : 'mois'}</span><span>${restants.length ? 'reste ' + fE(Math.max(0, m.reste)) + ' en ' + restants.length + ' jour' + (restants.length > 1 ? 's' : '') : ''}</span></div>` : ''}`;
+    const P = panDe(m);
+    const t = (k, v, sous, cl) => `<div class="qb-tui"><span class="k">${k}</span><span class="v${cl ? ' ' + cl : ''}">${v}</span><span class="s">${sous}</span></div>`;
+    return `<div class="qb-heros">
+      <div class="db-card qb-jauge"><span class="k">Chiffre d’affaires · ${esc(libPeriode())}</span>
+        <div class="v">${fE(m.realise)}${att != null ? `<small>${fN(att)} % de l’objectif${enCours ? ' à ce jour' : ''}</small>` : ''}</div>${jauge}</div>
+      <div class="qb-tuiles">
+        ${t('Clients', fN(m.tickets), fN(m.tickets / nJ) + ' par jour ouvert')}
+        ${t('Panier moyen', P.v == null ? '—' : fU(P.v), [panSous(P.base), R.panier != null ? 'réseau ' + fU(R.panier) : ''].filter(Boolean).join(' · '), R.panier != null && P.v != null && P.v < R.panier ? 'ko' : '')}
+        ${t('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + (se.food != null ? ' (seuil ' + fP(se.food) + ')' : ''))}
+        ${t(m.caHt != null ? 'Résultat hors TVA' : 'Résultat', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes' + (R.netPct != null ? ' · réseau ' + fP(R.netPct) : ''), m.net == null ? '' : (m.net >= 0 ? 'ok' : 'ko'))}
+      </div></div>`;
+  }
+  /** Les jours : la barre du CA, le trait de l'objectif du jour, la couleur de l'atteinte ; la journée en cours hachurée. */
+  function qbJours(m) {
+    const J = Array.isArray(m.jours) ? m.jours : [];
+    if (!J.length) { return ''; }
+    const peu = J.length <= 7;
+    const mx = Math.max(1, ...J.map(j => Math.max(j.ca || 0, j.objectif || 0))) * 1.1;
+    const pj = j => j.objectif ? 100 * (j.ca || 0) / j.objectif : null;
+    const jug = J.filter(j => j.passe && !j.aujourdhui && !j.ferme && j.ca != null && j.objectif);
+    const fort = jug.length ? jug.reduce((a, b) => pj(b) > pj(a) ? b : a) : null, faible = jug.length ? jug.reduce((a, b) => pj(b) < pj(a) ? b : a) : null;
+    const cols = `grid-template-columns:repeat(${J.length},minmax(0,1fr))`;
+    const barres = J.map(j => {
+      const ob = j.objectif ? `<b style="bottom:${(100 * j.objectif / mx).toFixed(1)}%"></b>` : '';
+      if (j.ferme) { return `<div class="c ferme" title="${esc(j.court)} : fermé"><span class="v">fermé</span></div>`; }
+      if (!j.passe && !j.aujourdhui) { return `<div class="c fut" title="${esc(j.court)} : objectif ${fE(j.objectif)}">${j.objectif ? `<i class="obj" style="height:${(100 * j.objectif / mx).toFixed(1)}%"></i>` : ''}</div>`; }
+      const p = pj(j), coul = j.aujourdhui ? 'repeating-linear-gradient(135deg,#c9c1b4 0 5px,#e8e1d6 5px 10px)' : (p == null ? '#c9c4bc' : qbTeinte(p));
+      return `<div class="c" title="${esc(j.court)} : ${fE(j.ca)}${j.objectif ? ' · ' + fN(p) + ' % de ' + fE(j.objectif) : ''} · ${fN(j.tickets || 0)} clients">${peu ? `<span class="v">${fN(j.ca || 0)}</span>` : ''}<i style="height:${(100 * (j.ca || 0) / mx).toFixed(1)}%;background:${coul}"></i>${ob}</div>`;
+    }).join('');
+    const libs = J.map(j => `<span>${esc(peu ? j.court : String(+j.date.slice(8, 10)))}${peu ? `<small>${j.ferme ? '' : (j.passe || j.aujourdhui ? fN(j.tickets || 0) + ' clients' + (pj(j) != null && !j.aujourdhui ? ' · ' + fN(pj(j)) + ' %' : ' · en cours') : 'objectif ' + fK(j.objectif))}</small>` : ''}</span>`).join('');
+    const mini = fort && faible && fort !== faible ? esc(fort.court) + ' au plus haut (' + fN(pj(fort)) + ' %) · ' + esc(faible.court) + ' au plus bas (' + fN(pj(faible)) + ' %)' : '';
+    const leg = QB_PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + QB_PAL[i - 1][0] + ' %')}</span>`).join('');
+    return `<div class="db-card qb-jours-c"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">${mini}</span></div>
+      <div class="qb-jours" style="${cols}">${barres}</div><div class="qb-jl" style="${cols}">${libs}</div>
+      <div class="qb-leg">${leg}<span><i class="tr"></i>objectif du jour</span><span><i class="hach"></i>en cours</span></div></div>`;
+  }
+  /** Les heures : une bande — la couleur dit la marge nette de l'heure, le chiffre ses ventes (moyenne par jour ouvert). */
+  function qbHeures(st, ks) {
+    const tete = `<div class="ct"><span class="db-lab">Les heures — une journée type</span>`;
+    if (S.err[ks]) { return `<div class="db-card">${tete}</div><div class="db-err" style="margin:12px">Heures : ${esc(S.err[ks])}</div></div>`; }
+    if (!st) { return `<div class="db-card">${tete}</div><div class="db-sk" style="height:110px;margin:14px"></div></div>`; }
+    const L = (st.heures || []).filter(l => l.ca > 0);
+    if (!L.length) { return `<div class="db-card">${tete}</div><p class="db-note" style="padding:14px 16px">Aucune heure vendue sur cette période.</p></div>`; }
+    const teinte = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : (pct < 40 ? '#A8B545' : '#3f7a52')));
+    const best = L.reduce((a, b) => b.moy.res > a.moy.res ? b : a), worst = L.reduce((a, b) => b.moy.res < a.moy.res ? b : a);
+    const cols = `grid-template-columns:repeat(${L.length},minmax(0,1fr))`;
+    return `<div class="db-card">${tete}<span class="db-mini">${best.h}–${best.h + 1} h rapporte le plus (${fS(best.moy.res)} par jour) · ${worst.h}–${worst.h + 1} h ${worst.moy.res < 0 ? 'perd' : 'rapporte le moins'} (${fS(worst.moy.res)})</span></div>
+      <div class="qb-h" style="${cols}">${L.map(l => { const pct = l.moy.ca > 0 ? 100 * l.moy.res / l.moy.ca : null;
+        return `<div style="background:${teinte(pct)}" title="${l.h} – ${l.h + 1} h · ventes ${fE(l.moy.ca)} · marge nette ${fS(l.moy.res)} par jour ouvert">${fN(l.moy.ca)} €<small>${fS(l.moy.res).replace(' €', '')}</small></div>`; }).join('')}</div>
+      <div class="qb-hl" style="${cols}">${L.map(l => `<span>${l.h} h</span>`).join('')}</div>
+      <p class="qb-note">ventes de l’heure en moyenne par jour ouvert · dessous : sa marge nette (ventes − matière − rémunération)</p></div>`;
+  }
+  /** Ce qui rapporte : les trois produits à la plus forte marge brute hors TVA de la période (les catégories des heures). */
+  function qbTop(st) {
+    const P = [];
+    ((st && st.categories) || []).forEach(c => (c.produits || []).forEach(p => { const mg = p.mHt != null ? p.mHt : p.m; if (mg != null) { P.push({ nom: p.nom, mg, t: p.tauxHt != null ? p.tauxHt : p.taux }); } }));
+    P.sort((a, b) => b.mg - a.mg);
+    if (!P.length) { return ''; }
+    return `<div class="db-card"><div class="ct"><span class="db-lab">Ce qui rapporte</span><span class="db-mini">les 3 produits à la plus forte marge brute hors TVA</span></div>
+      <div class="qb-top">${P.slice(0, 3).map((p, i) => `<div><span class="mu">${i + 1}</span><span>${esc(p.nom)}</span><span class="n">${fE(p.mg)}</span><span class="n mu">${p.t != null ? fP(p.t) : ''}</span></div>`).join('')}</div></div>`;
+  }
+  /** Le reste, replié : une rangée de puces ; une puce ouverte dessine sa section dessous (gardé d'une visite à l'autre). */
+  const QB_PLUS_CLE = 'dbQbPlus';
+  function qbOuverts() { try { const o = JSON.parse(localStorage.getItem(QB_PLUS_CLE) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  function qbPlus(m, d, st) {
+    const sem = S.vue === 'semaine', O = qbOuverts();
+    const L = [
+      ['reseau', 'Ma place dans le réseau', () => rendBench(m, d)],
+      ['taches', 'Tâches et contrôles', () => rendNC() + rendTaches() + rendCQ(false)],
+      sem ? null : ['leviers', 'Les six leviers', () => rendLeviers()],
+      ['canaux', 'Canaux, commandes et promotions', () => splitCarte(m) + offresCarte()],
+      ['invendus', 'Invendus', () => invCarte(false), m.invendusPieces ? fN(m.invendusPieces) + ' pièces · ' + fE(m.invendus || 0) : ''],
+      ['calendrier', sem ? 'Le calendrier de la semaine' : 'Le calendrier du mois', () => periodeCalendrier(m) + (sem ? '' : periodeProfil(m))],
+      sem ? ['tendance', 'Les 12 dernières semaines', () => rendSemaines()] : (S.date.slice(0, 7) === AUJ.slice(0, 7) ? ['tendance', 'Le résultat jour par jour', () => rendRentab()] : null),
+      ['heures', 'Le détail heure par heure', () => st ? rendHeures(st) : squelette(2)],
+    ].filter(Boolean);
+    const puces = L.map(([k, t, , n]) => `<button type="button" class="qb-puce${O[k] ? ' on' : ''}" data-qbplus="${k}" aria-expanded="${O[k] ? 'true' : 'false'}">${esc(t)}${n ? `<small>${esc(n)}</small>` : ''}<span>${O[k] ? '▴' : '▾'}</span></button>`).join('');
+    const ouvertes = L.filter(([k]) => O[k]).map(([k, t, f]) => `<div class="qb-sec" data-qbsec="${k}"><div class="db-sec">${esc(t)}</div>${f()}</div>`).join('');
+    return `<div class="qb-plus">${puces}</div>${ouvertes}`;
+  }
+  function qbBrancher() {
+    $.querySelectorAll('[data-qbplus]').forEach(b => b.addEventListener('click', () => {
+      const O = qbOuverts(), k = b.dataset.qbplus;
+      if (O[k]) { delete O[k]; } else { O[k] = true; }
+      try { localStorage.setItem(QB_PLUS_CLE, JSON.stringify(O)); } catch (e) { /* stockage plein ou fermé : l'état ne se garde pas */ }
+      rendre();
+    }));
+  }
+  /** La page Semaine ou Mois du bureau, en quatre blocs. */
+  function qbPage(m, d, st, ks) {
+    return `${qbChiffre(m, d)}${qbJours(m)}
+      <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
+        <div class="qb-pile">${qbHeures(st, ks)}${qbTop(st)}</div></div>
+      ${qbPlus(m, d, st)}`;
+  }
+  /** Le profil des jours du mois (moyenne par jour de la semaine) : sorti de rendPeriode le 16/11/2026. */
+  function periodeProfil(m) {
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca);
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    if (!passes.length) { return ''; }
+    {
+      const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      const par = {}; passes.forEach(j => { (par[j.jour] = par[j.jour] || []).push(j); });
+      const profil = Object.keys(par).map(Number).sort().map(w => { const l = par[w]; return { nom: NOMJ[w], ca: l.reduce((a, j) => a + j.ca, 0) / l.length, o: l.reduce((a, j) => a + (j.objectif || 0), 0) / l.length }; });
+      const mx = Math.max(1, ...profil.map(p => Math.max(p.ca, p.o)));
+      const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
+      return `<div class="db-card"><div class="ct"><span class="db-lab">Le profil des jours</span><span class="db-mini">moyenne par jour de la semaine · le trait noir = objectif du jour${pire ? ' · le ' + pire.nom.toLowerCase() + ' est le point faible du mois' : ''}</span></div>
+        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o && p.ca >= p.o ? '#8D1D2C' : '#B8B2A8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : (p.ca >= p.o ? '#3f7a52' : '#A32014')}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div></div>`;
+    }
+  }
+  /** Le calendrier de la période (maquette A du 10/10/2026) : sorti de rendPeriode le 16/11/2026 pour la mise en page
+   * « quatre blocs », où il se replie sous la page. */
+  function periodeCalendrier(m) {
+    const sem = S.vue === 'semaine';
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca);
+    const record = passes.length ? passes.reduce((a, b) => b.ca > a.ca ? b : a) : null;
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    if (!jours.length) { return ''; }
+    {
       const cv = ['ca', 'att', 'cli'].includes(S.calVal) ? S.calVal : 'ca';
       // Le panier total, clients pro compris (21/10/2026) : l'objectif clients se compare aux clients du jour, pro compris.
       const pan = m.panier || null;
@@ -8383,29 +8548,12 @@
       const totA = m.attendu ? 100 * m.realise / m.attendu : null;
       const SEG = [['ca', 'CA', fE(m.realise), m.attendu ? 'sur ' + fE(m.attendu) + ' attendus' : 'pas d’objectif'], ['att', 'Atteinte', totA != null ? fN(totA) + ' %' : '—', 'de l’objectif à date'], ['cli', 'Clients', fN(m.tickets), totObjCli ? 'sur ' + fN(totObjCli) + ' attendus' : '']];
       const leg = PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + PAL[i - 1][0] + ' %')}</span>`).join('');
-      h += `<div class="db-card cal-a"><div class="cal-hd"><div class="cal-t">${X.t}<small>${X.s}</small></div>
+      return `<div class="db-card cal-a"><div class="cal-hd"><div class="cal-t">${X.t}<small>${X.s}</small></div>
         <div class="cal-seg" title="ce que montre le calendrier">${SEG.map(o => `<button data-calval="${o[0]}" class="${cv === o[0] ? 'on' : ''}"><span>${o[1]}</span><b>${o[2]}</b><small>${o[3]}</small></button>`).join('')}</div></div>
         <div class="db-cal cal-a-g">${cases}</div>
         <div class="db-perleg"><span class="cal-q">Couleur et jauge = ${X.leg}</span>${leg}<span><i class="cal-tr"></i>le trait : 100 % de l’objectif</span><span>hachuré : la journée en cours, pas encore jugée</span></div></div>`;
     }
-    // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
-    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span></div>${cascade(m, d)}</div>`;
-    let prof = '';
-    if (!sem && passes.length) {
-      const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-      const par = {}; passes.forEach(j => { (par[j.jour] = par[j.jour] || []).push(j); });
-      const profil = Object.keys(par).map(Number).sort().map(w => { const l = par[w]; return { nom: NOMJ[w], ca: l.reduce((a, j) => a + j.ca, 0) / l.length, o: l.reduce((a, j) => a + (j.objectif || 0), 0) / l.length }; });
-      const mx = Math.max(1, ...profil.map(p => Math.max(p.ca, p.o)));
-      const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
-      prof = `<div class="db-card"><div class="ct"><span class="db-lab">Le profil des jours</span><span class="db-mini">moyenne par jour de la semaine · le trait noir = objectif du jour${pire ? ' · le ' + pire.nom.toLowerCase() + ' est le point faible du mois' : ''}</span></div>
-        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o && p.ca >= p.o ? '#8D1D2C' : '#B8B2A8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : (p.ca >= p.o ? '#3f7a52' : '#A32014')}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div></div>`;
-    }
-    h += prof ? `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">${pl}${prof}</div>` : pl;
-    if (S.vue === 'mois') { h += rendRentab(); }
-    if (S.vue === 'semaine') { h += rendSemaines(); }
-    return h;
   }
-
   /**
    * Les douze dernières semaines, face au N-1 (19/10/2026, la courbe de Résultat › Trafic clients, demande de Sam) : une
    * mesure de chaque semaine close sur celle de la même semaine un an plus tôt en pointillé, la bande entre les deux —
