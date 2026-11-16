@@ -87,6 +87,8 @@ COMPOSER_ALLOW_SUPERUSER=1 "$COMPOSER" install --working-dir="$CHECKOUT/$APP_PAT
 # --- 3. Installation : exactement celle du serveur en ligne ------------------------
 if ERP_URL="$ERP_URL" ERP_TARGET="${ERP_TARGET:-/var/www/production}" ERP_ALIAS="${ERP_ALIAS:-/production}" \
    ERP_ENTREE_LIBRE="${ERP_ENTREE_LIBRE:-}" ERP_SANDBOX_OUVERT="${ERP_SANDBOX_OUVERT:-}" ERP_TFB_DEMO="${ERP_TFB_DEMO:-}" \
+   ERP_COHABITATION="${ERP_COHABITATION:-}" ERP_DB_NAME="${ERP_DB_NAME:-erp}" ERP_MAIL_MODE="${ERP_MAIL_MODE:-}" \
+   ERP_COHAB_DB_USER="${ERP_COHAB_DB_USER:-}" \
    bash "$SERVER_SH"; then
   echo "$new" > "$STATE/deployed"
   rm -f "$STATE/failed"

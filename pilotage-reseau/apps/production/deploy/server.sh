@@ -31,6 +31,17 @@ ERP_IMPORT_DIR="${ERP_IMPORT_DIR:-/root/erp_import}"
 # ouvert déclaré explicitement (ERP_SANDBOX_OUVERT=1 : sans mot de passe navigateur).
 ERP_ENTREE_LIBRE="${ERP_ENTREE_LIBRE:-}"
 ERP_SANDBOX_OUVERT="${ERP_SANDBOX_OUVERT:-}"
+# [295] Mode cohabitation (serveur local de l'atelier) : cette version tourne sur la base de l'ERP d'origine, qui reste
+# en service. ERP_COHABITATION=1 + ERP_DB_NAME = la base de l'ERP d'origine : aucun import, aucune donnée coupée ou
+# remplacée, mots de passe inchangés, migrations qui touchent les tables d'origine laissées pour la bascule
+# (app/migrations/cohabitation_skip.txt), envois automatiques coupés à l'installation (Ustawienia › Parametry).
+COHAB="${ERP_COHABITATION:-}"
+if [[ "$COHAB" == "1" ]]; then
+  [[ -n "${ERP_DB_NAME:-}" ]] || { printf '::error title=ERP::%s\n' "Cohabitation : ERP_DB_NAME (base de l'ERP d'origine) obligatoire."; exit 1; }
+  ERP_OLD_DB_NAME="$ERP_DB_NAME"
+  # Compte MySQL propre à cette version : celui de l'ERP d'origine n'est jamais modifié (ALTER USER plus bas).
+  ERP_DB_USER="${ERP_COHAB_DB_USER:-erp_v2}"
+fi
 HTPASSWD_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/acces_test.htpasswd"
 HTPASSWD="/etc/apache2/production-erp.htpasswd"
 APACHE_CONF="/etc/apache2/conf-available/production-erp.conf"
@@ -217,6 +228,17 @@ fi
 
 "${ADMIN[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" \
   || fail "Le compte MySQL ${ADMIN_KIND} ne peut pas créer la base ${ERP_DB_NAME} : créez-la à la main puis relancez."
+# Cohabitation : un compte MySQL qui existe déjà et que cette installation n'a pas créé peut être celui de l'ERP
+# d'origine — on n'y touche pas (ALTER USER changerait son mot de passe et couperait l'ERP d'origine).
+if [[ "$COHAB" == "1" && "$(envget DB_USER)" == "$ERP_DB_USER" ]]; then
+  mkdir -p "$ERP_IMPORT_DIR"; chmod 700 "$ERP_IMPORT_DIR"
+  cohab_mark="$ERP_IMPORT_DIR/.cohab_db_user"
+  exists="$("${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM mysql.user WHERE user = '${ERP_DB_USER}'" 2>/dev/null || true)"
+  if [[ "$(cat "$cohab_mark" 2>/dev/null)" != "$ERP_DB_USER" ]]; then
+    [[ "${exists:-1}" == "0" ]] || fail "Cohabitation : le compte MySQL ${ERP_DB_USER} existe déjà (peut-être celui de l'ERP d'origine) — rien n'est modifié. Choisir un autre nom (ERP_COHAB_DB_USER dans /etc/erp-pull.conf) et supprimer ${ENV_FILE}."
+    echo "$ERP_DB_USER" > "$cohab_mark"; chmod 600 "$cohab_mark"
+  fi
+fi
 grant_err="$(mktemp)"
 if [[ "$(envget DB_USER)" != "$ERP_DB_USER" ]]; then
   log "L'ERP utilise le compte MySQL $(envget DB_USER) (choisi à un passage précédent)."
@@ -262,7 +284,13 @@ if [[ "$IS_MYSQL" == "1" && -z "$(envget DB_SQL_MODE)" ]]; then
   log "MySQL ${dbver} : mode SQL de MariaDB 10.3 pour l'ERP (DB_SQL_MODE)."
 fi
 
-if [[ "$tables" -gt 0 && -f "$IMPORT_OK" ]]; then
+if [[ "$COHAB" == "1" ]]; then
+  # Base de l'ERP d'origine : jamais d'import, jamais de DROP, rien de coupé ni de remplacé.
+  [[ "$tables" -gt 0 ]] || fail "Cohabitation : la base ${ERP_DB_NAME} est vide — ERP_DB_NAME doit être la base de l'ERP d'origine."
+  [[ -f "$IMPORT_OK" ]] || { date -u +%FT%TZ > "$IMPORT_OK"; chmod 600 "$IMPORT_OK"; }
+  [[ "$(envget COHABITATION)" == "1" ]] || set_env COHABITATION "1"
+  log "Cohabitation : base de l'ERP d'origine ${ERP_DB_NAME} (${tables} tables) — aucun import, aucune donnée remplacée."
+elif [[ "$tables" -gt 0 && -f "$IMPORT_OK" ]]; then
   log "Base ${ERP_DB_NAME} déjà remplie (${tables} tables) : aucun import."
 else
   if [[ -f "$INCOMING/erp.zip.enc" && ! -f "$TKEY" ]]; then
@@ -369,6 +397,13 @@ if [[ -f "$IMPORT_OK" ]]; then
   fi
   ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php apply ) \
     || fail "Migrations du module atelier (migrations/tfb) en échec : voir le message ci-dessus."
+  if [[ "$COHAB" == "1" ]]; then
+    # Envois automatiques coupés à la première installation (l'ERP d'origine reste le seul à envoyer) ; ensuite, c'est
+    # l'interrupteur de Ustawienia › Parametry qui décide (updated_by n'est plus NULL).
+    "${ADMIN[@]}" "$ERP_DB_NAME" -e "UPDATE n_prod_param SET value = '0', updated_by = 0 WHERE code = 'system.auto_send' AND updated_by IS NULL;"
+    skipped="$( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php status | grep -c '^skipped' || true )"
+    log "Cohabitation : ${skipped} migration(s) laissée(s) pour la bascule (app/migrations/cohabitation_skip.txt)."
+  fi
   # Mots de passe des comptes : bcrypt (ceux encore en clair, idempotent ; même mot de passe pour se connecter).
   ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/hash_passwords.php ) \
     || fail "Chiffrement des mots de passe des comptes en échec : voir le message ci-dessus."
@@ -383,7 +418,8 @@ if [[ -f "$IMPORT_OK" ]]; then
   # Les e-mails (log_only) et KSeF (test, sans jeton) restent coupés.
   RECONNECT_FLAG="$SRC/deploy/boutiques.reconnect"
   poller_line=""
-  if [[ -f "$RECONNECT_FLAG" ]]; then
+  # Cohabitation : l'ERP d'origine (et le serveur en ligne) gardent les boutiques — pas de récupération ici.
+  if [[ -f "$RECONNECT_FLAG" && "$COHAB" != "1" ]]; then
     want="$(tr -d '[:space:]' < "$RECONNECT_FLAG")|$(cat "$IMPORT_OK" 2>/dev/null)"
     done_mark="$ERP_IMPORT_DIR/.boutiques_reconnect"
     if [[ "$(cat "$done_mark" 2>/dev/null)" != "$want" ]]; then
@@ -428,7 +464,9 @@ if [[ -f "$IMPORT_OK" ]]; then
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
   mail_mode="${ERP_MAIL_MODE:-log_only}"
-  [[ "$mail_mode" == "redirect" || "$mail_mode" == "log_only" ]] || mail_mode="log_only"
+  # Cohabitation : base réelle de l'atelier — envoi réel possible, seulement sur demande explicite (ERP_MAIL_MODE=live).
+  if [[ "$COHAB" == "1" && "$mail_mode" == "live" ]]; then :;
+  else [[ "$mail_mode" == "redirect" || "$mail_mode" == "log_only" ]] || mail_mode="log_only"; fi
   [[ "$(envget MAIL_DELIVERY_MODE)" == "$mail_mode" ]] || set_env MAIL_DELIVERY_MODE "$mail_mode"
   [[ "$mail_mode" != "redirect" ]] || set_env MAIL_REDIRECT_TO "${ERP_MAIL_REDIRECT_TO:-}"
   # Toutes les 5 minutes : événements → messages, puis file d'envoi (selon le mode ci-dessus) ;

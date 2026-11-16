@@ -8,13 +8,17 @@
 #     --repo  https://github.com/<compte>/<dépôt>.git \
 #     --url   http://<adresse-du-serveur-local>/production \
 #     [--branch <branche de déploiement>] [--every 5] [--demo]
+#     [--cohabitation --db <base de l'ERP d'origine>]
+#
+# --cohabitation : cette version tourne sur la base de l'ERP d'origine, qui reste en service (voir SERVEUR_LOCAL.md) :
+# aucun import, données d'origine intactes, mêmes mots de passe, envois automatiques coupés au départ.
 #
 # Pose : paquets manquants (git, apache2, composer, rsync, unzip, curl), /etc/erp-pull.conf (root seul),
 # /etc/cron.d/erp-pull (toutes les N minutes), puis lance une première livraison (deploy/pull_local.sh).
 # Aucune adresse ni secret n'est écrit dans le dépôt : tout va dans /etc/erp-pull.conf.
 set -euo pipefail
 
-REPO_URL=""; ERP_URL=""; BRANCH="claude/deploiement-application-serveur-lmz1bm"; EVERY=5; DEMO=""
+REPO_URL=""; ERP_URL=""; BRANCH="claude/deploiement-application-serveur-lmz1bm"; EVERY=5; DEMO=""; COHAB=""; DBNAME=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo)   REPO_URL="$2"; shift 2 ;;
@@ -22,6 +26,8 @@ while [[ $# -gt 0 ]]; do
     --branch) BRANCH="$2"; shift 2 ;;
     --every)  EVERY="$2"; shift 2 ;;
     --demo)   DEMO="1"; shift ;;
+    --cohabitation) COHAB="1"; shift ;;
+    --db)     DBNAME="$2"; shift 2 ;;
     *) echo "Option inconnue : $1" >&2; exit 2 ;;
   esac
 done
@@ -35,6 +41,10 @@ fail() { printf '\033[1;31m[erp-pull]\033[0m %s\n' "$*" >&2; exit 1; }
 [[ "$ERP_URL" =~ ^https?://[^/]+(/.*)?$ ]] || fail "--url : adresse complète attendue (http://… ou https://…)."
 ERP_ALIAS="/${ERP_URL#*://*/}"
 [[ "$ERP_URL" =~ ^https?://[^/]+$ ]] && ERP_ALIAS="/production" && ERP_URL="${ERP_URL}/production"
+if [[ "$COHAB" == "1" ]]; then
+  [[ "$DBNAME" =~ ^[A-Za-z0-9_]+$ ]] || fail "--cohabitation : --db <nom de la base de l'ERP d'origine> obligatoire (lettres, chiffres, _)."
+  [[ -z "$DEMO" ]] || fail "--cohabitation et --demo ne vont pas ensemble (base réelle)."
+fi
 command -v apt-get >/dev/null 2>&1 || fail "Serveur sans apt-get : ce script vise Debian / Ubuntu (deploy/server.sh aussi)."
 
 # --- 1. Paquets -------------------------------------------------------------
@@ -68,6 +78,12 @@ ERP_TARGET="/var/www/production"
 PULL_DIR="/opt/erp_pull"
 # Données de démonstration du module atelier (1 = oui). Laisser vide sur un serveur réel.
 ERP_TFB_DEMO="${DEMO}"
+# Cohabitation avec l'ERP d'origine (1) et sa base ; e-mails : log_only (rien ne part) ou live (envoi réel).
+ERP_COHABITATION="${COHAB}"
+ERP_DB_NAME="${DBNAME}"
+# Compte MySQL de cette version (jamais celui de l'ERP d'origine) ; vide = erp_v2.
+ERP_COHAB_DB_USER=""
+ERP_MAIL_MODE="log_only"
 # Bouton « Entrer » sans mot de passe : laisser vide (chacun se connecte avec son login ERP).
 ERP_ENTREE_LIBRE=""
 ERP_SANDBOX_OUVERT=""
