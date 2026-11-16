@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>B — Clients › fiche d'un client particulier</title>
-<!-- v2 du 16/11/2026 : la fiche d'un client refaite dans l'esprit de la fiche Fidélité (rendFideliteClient) : son niveau
-     de fidélité et son évolution, sa carte de fidélité et où il en est, comment il achète, ses radars (récurrence, type
-     d'achat) face à la moyenne du magasin, ses habitudes ; puis sa fiche du panel, modifiable par le magasin et
-     enregistrée au panel, ses commandes et ses messages. Valeurs d'exemple. -->
+<!-- v2 lean du 16/11/2026 : la fiche d'un client dans l'esprit de la fiche Fidélité (rendFideliteClient), en trois
+     rangées de cartes de même hauteur : sa carte, son niveau, comment il achète ; ses deux radars et ses commandes ;
+     sa fiche, modifiable par le magasin et enregistrée au panel (les champs de l'API en info-bulle). Valeurs d'exemple. -->
 <link rel="stylesheet" href="/public/assets/ds/global.css">
 <link rel="stylesheet" href="/public/dashboard/dashboard.css">
 <link rel="stylesheet" href="../parametres-mails/mails.css">
@@ -13,76 +12,62 @@
 <script src="clients.js"></script>
 </head><body><script>
 const coul = NIV.fidele[1];
-const tete = `<div class="db-card fd-tete cl-ft"><div class="fd-id"><span class="fd-av">C</span><div><b>Camille Lambert</b><span>C-004821 · premier ticket reconnu le 03/03/2024 · dernier passage aujourd’hui 08:12</span>
-    <div class="tags"><span class="cl-tag">Particulier</span><span class="cl-tag ok">carte de fidélité</span><span class="cl-tag ok">app</span><span class="cl-tag ok">webshop</span><span class="cl-tag">FR</span></div></div></div>
+const tete = `<div class="db-card fd-tete cl-ft"><div class="fd-id"><span class="fd-av">C</span><div><b>Camille Lambert</b><span>C-004821 · cliente depuis mars 2024 · dernier passage aujourd’hui 08:12</span></div></div>
   <div class="fd-k"><div><b style="color:${coul}">Fidèle</b><span>2 fois par semaine<br>sur 30 jours</span></div>
-    <div><b>38</b><span>passages<br>sur 180 jours</span></div><div><b>612 €</b><span>dépensés sur 12 mois<br>12,75 € par passage</span></div>
-    <div><b>6 / 48</b><span>en commande<br>42 au comptoir</span></div></div></div>`;
+    <div><b>38</b><span>passages<br>sur 180 jours</span></div><div><b>612 €</b><span>sur 12 mois<br>12,75 € par passage</span></div>
+    <div><b>7 / 10</b><span>sur sa carte<br>plus que 3 timbres</span></div></div></div>`;
 
-// Sa carte de fidélité (fdCarteClient) : la carte à timbres et la carte à points.
+// Rangée 1 : sa carte, son niveau, comment elle achète.
 const tps = Array.from({ length: 10 }, (_, i) => `<i class="${i < 7 ? 'f' : ''}"></i>`).join('');
-const cartes = carte('Sa carte de fidélité', 'lue dans l’ERP · tous magasins', `<div class="cl-cartes">
+const cartes = carte('Sa carte de fidélité', 'lue dans l’ERP', `<div class="cl-cartes">
     <div class="fdc-carte" style="background:${CARTES.vienno.coul}"><div class="nm">Carte viennoiseries</div><div class="rc">10 timbres · une viennoiserie offerte</div>
-      <div class="fdc-tps">${tps}</div><div class="bas"><span>7 / 10 · plus que 3 timbres</span><span>dernier timbre aujourd’hui</span></div></div>
-    <div class="fdc-carte" style="background:${CARTES.points.coul}"><div class="nm">Points L’Atelier</div><div class="rc">1 point par euro · 150 points = 5 € offerts</div>
-      <div class="fdc-pts">96 pts<small>54 pts du palier</small></div><div class="cl-pal"><i style="width:64%"></i></div></div>
-    <div class="fdc-kv"><span>Inscrite</span><b>le 03/03/2024 au magasin de Halle</b><span>Récompenses reçues</span><b>4 viennoiseries · 2 × 5 €</b>
-      <span>Carte scannée en caisse</span><b>41 tickets sur 48 · 85 %</b><span>Champ du panel</span><b><span class="cl-api" style="display:inline">client.fidelity_active · fidelity_linked_at</span></b></div>
-  </div>`);
+      <div class="fdc-tps">${tps}</div><div class="bas"><span>7 / 10 · plus que 3</span><span>dernier timbre aujourd’hui</span></div></div>
+    <div class="fdc-carte" style="background:${CARTES.points.coul}"><div class="nm">Points L’Atelier</div><div class="rc">150 points = 5 € offerts</div>
+      <div class="fdc-pts">96 pts<small>54 du palier</small></div><div class="cl-pal"><i style="width:64%"></i></div></div></div>
+  <div class="cl-ligne" style="margin-top:auto"><span>scannée <b>85 %</b> du temps</span><span><b>6</b> récompenses reçues</span></div>`);
+const niveau = carte('Son niveau de fidélité', 'sur 30 jours', echelle('fidele', coul)
+  + '<p class="cl-ech-n">Encore 1 passage par semaine pour passer Fanbase.</p>'
+  + moisNiv([['juil.', 'hebdo'], ['août', 'regulier'], ['sept.', 'hebdo'], ['oct.', 'fidele'], ['nov.', 'fidele']]));
+const art = [['Croissant', 31], ['Baguette tradition', 24], ['Pain au chocolat', 14]];
+const achete = `<div class="db-card"><div class="fd-can" style="margin:0;padding-bottom:12px"><div class="fd-can-h"><b>Comment elle achète</b><span>surtout au comptoir</span></div>
+    <div class="fd-can-b"><i style="width:77%;background:${CANAUX.comptoir[1]}"></i><i style="width:13%;background:${CANAUX.commande[1]}"></i><i style="width:10%;background:${CANAUX.webshop[1]}"></i></div>
+    <div class="fd-can-l"><span><i style="background:${CANAUX.comptoir[1]}"></i>Comptoir <b>77 %</b></span><span><i style="background:${CANAUX.commande[1]}"></i>Commande <b>13 %</b></span><span><i style="background:${CANAUX.webshop[1]}"></i>Webshop <b>10 %</b></span></div></div>
+  <div class="ct" style="border-top:1px solid var(--color-border-tertiary)"><span class="db-lab">Ses habitudes</span></div>
+  <p class="cl-hab-l" style="margin-top:10px">Surtout le <b>samedi matin</b> · panier moyen <b>12,75 €</b></p>
+  <div class="cl-top3">${art.map(([a, q]) => `<div class="fd-hb"><span>${a}</span><i><b style="width:${Math.round(100 * q / 31)}%"></b></i><span class="n">${q}</span></div>`).join('')}</div></div>`;
 
-// Son niveau : l'échelle des profils, et mois par mois.
-const ech = Object.keys(NIV).map(k => `<div class="${k === 'fidele' ? 'on' : ''}"><i style="background:${NIV[k][1]}"></i><span>${NIV[k][0]}${k === 'fidele' ? ' <b style="font-weight:400">· Camille</b>' : ''}</span><small>${NIV[k][2]}</small></div>`).join('');
-const mois = [['Novembre', 9, 'fidele', 'à mi-mois'], ['Octobre', 8, 'fidele', ''], ['Septembre', 5, 'hebdo', ''], ['Août', 2, 'regulier', 'vacances'], ['Juillet', 6, 'hebdo', '']]
-  .map(([m, n, k, s]) => `<div class="fd-mo"><span>${m}</span><span class="r">${n} passages</span><span><i class="fd-pt" style="background:${NIV[k][1]}"></i>${NIV[k][0]}</span><small class="r">${s}</small></div>`).join('');
-const niveau = carte('Son niveau de fidélité', 'sur 30 jours · comme Fidélité › Profils', `<div class="cl-ech">${ech}</div>
-    <p class="cl-ech-n">Encore 1 passage par semaine pour passer Fanbase.</p><div class="fd-mos">${mois}</div>`);
-
-// Ses habitudes (jour, moment, ce qu'elle prend).
-const J = ['L', 'M', 'M', 'J', 'V', 'S', 'D'], pj = [2, 4, 1, 3, 5, 19, 4], mx = Math.max(...pj);
-const art = [['Croissant', 31], ['Baguette tradition', 24], ['Pain au chocolat', 14], ['Tarte aux pommes', 6], ['Pain gris', 5]];
-const habitudes = carte('Ses habitudes', '', `<div class="cl-hab"><p class="fd-lab">Jour de passage</p><div class="fd-bj">${pj.map((n, i) => `<div><i style="height:${Math.round(100 * n / mx)}%"></i><b>${n}</b><span>${J[i]}</span></div>`).join('')}</div>
-    <p class="fd-lab">Moment</p><p class="fd-mom">matin 31 · midi 9 · après-midi 8</p>
-    <p class="fd-lab">Ce qu’elle prend</p>${art.map(([a, q]) => `<div class="fd-hb"><span>${a}</span><i><b style="width:${Math.round(100 * q / 31)}%"></b></i><span class="n">${q}</span></div>`).join('')}</div>`);
-
-const rad = carte('Récurrence', 'face à la moyenne du magasin', radar([{ v: { frequence: 46, recence: 30, anciennete: 50, panier: 49, diversite: 52, comptoir: 50 }, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 },
+// Rangée 2 : les radars, ses commandes et ses tickets.
+const rad = carte('Récurrence', 'face à la moyenne', radar([{ v: { frequence: 46, recence: 30, anciennete: 50, panier: 49, diversite: 52, comptoir: 50 }, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 },
   { v: { frequence: 78, recence: 100, anciennete: 88, panier: 21, diversite: 67, comptoir: 87 }, c: coul, fond: 0.16, w: 2.2 }], AXES, 280) + legende(coul, 'Camille'), 'fd-c');
-const typ = carte('Type d’achat', 'part de ses achats', radar([{ v: { pain: 34, vienno: 30, antigaspi: 8, tartes: 12, gouter: 8, sale: 8 }, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 },
+const typ = carte('Type d’achat', 'face à la moyenne', radar([{ v: { pain: 34, vienno: 30, antigaspi: 8, tartes: 12, gouter: 8, sale: 8 }, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 },
   { v: { pain: 36, vienno: 44, antigaspi: 2, tartes: 14, gouter: 4, sale: 0 }, c: coul, fond: 0.16, w: 2.2 }], FAMILLES, 280, 50) + legende(coul, 'Camille'), 'fd-c');
+const tk = [['aujourd’hui 08:12', '2 croissants, 1 baguette', '5,30 €'], ['samedi 14/11 09:40', 'tarte aux pommes Ø 28 cm', '21,00 €'], ['jeudi 12/11 08:05', '4 pains au chocolat, 1 pain gris', '8,90 €'],
+  ['samedi 07/11 09:15', '2 croissants, 1 baguette tradition', '5,90 €'], ['mardi 03/11 08:20', '1 pain au chocolat', '1,40 €'], ['samedi 31/10 10:02', 'gâteau 6 parts', '24,00 €'], ['jeudi 29/10 08:10', '2 croissants', '2,60 €']];
+const cmd = `<div class="db-card"><div class="ct"><span class="db-lab">Ses commandes</span></div>
+    <table class="px-t px-j"><tbody>
+      <tr><td><b style="font-weight:400">demain 08:30</b><span class="sub">gâteau 12 parts, 24 mini-viennoiseries · rappel ce soir 17:00, e-mail et SMS</span></td><td style="text-align:right;white-space:nowrap">68,40 €<span class="sub" style="color:var(--accent)">acompte 20 €</span></td></tr>
+      <tr><td>samedi 12/09<span class="sub">tarte 28 cm, 12 mini-quiches</span></td><td style="text-align:right">39,60 €<span class="sub">retirée</span></td></tr></tbody></table>
+    <div class="ct" style="border-top:1px solid var(--color-border-tertiary)"><span class="db-lab">Ses tickets</span><span class="db-mini">48 sur 12 mois</span></div>
+    <div class="cl-defile court"><table class="px-t px-j"><tbody>${tk.map(([d, a, m]) => `<tr><td style="white-space:nowrap">${d}</td><td class="mu">${a}</td><td style="text-align:right;white-space:nowrap">${m}</td></tr>`).join('')}</tbody></table></div></div>`;
 
-// La fiche du panel : ce que le magasin modifie, ce que le panel garde.
-const fiche = carte('Sa fiche', '<span class="cl-ecrit">✎ modifiable · enregistrée au panel</span>', `<div class="cl-champs">
+// Rangée 3 : sa fiche, modifiable et enregistrée au panel.
+const fiche = `<div class="db-card"><div class="ct"><span class="db-lab">Sa fiche</span><span class="cl-ecrit">✎ modifiable · enregistrée au panel</span></div><div class="cl-champs q4">
     ${champ('Prénom', 'Camille', 'client.name')}${champ('Nom', 'Lambert', 'client.surname')}
-    ${champ('E-mail', 'c.lambert@exemple.be <span class="cl-ok">✓ vérifié</span>', 'client.email · client.verified_at', { plein: true })}
-    ${champ('Téléphone', '+32 470 00 00 01 <span class="cl-ok">✓ SMS possible</span>', 'client.phone_prefix · client.phone · client.phone_e164', { plein: true, mod: '+32 470 00 00 00' })}
-    ${champ('Langue', 'Français', 'client.locale', { sel: true })}${champ('Service', 'à emporter', 'profile.service_mode', { sel: true })}
-    ${champ('Rue', 'Rue de l’Exemple', 'client.street')}${champ('Numéro', '12', 'client.street_number')}
-    ${champ('Code postal', '1500', 'client.zip')}${champ('Ville', 'Halle', 'client.city')}
+    ${champ('E-mail', 'c.lambert@exemple.be <span class="cl-ok">✓</span>', 'client.email · client.verified_at')}
+    ${champ('Téléphone', '+32 470 00 00 01', 'client.phone_prefix · client.phone · client.phone_e164', { mod: '…00 00' })}
+    ${champ('Langue', 'Français', 'client.locale', { sel: true })}${champ('Adresse', 'Rue de l’Exemple 12, 1500 Halle', 'client.street · street_number · zip · city')}
+    <div class="cl-c" title="gardé au cockpit (la fiche du panel n’a pas ce champ)" style="grid-column:span 2"><div class="k">Messages pour ses commandes</div><div class="cl-sw"><span class="px-sw on"><i></i>e-mail</span><span class="px-sw on"><i></i>SMS</span></div></div>
     ${champ('Note du magasin', 'Préfère les gâteaux peu sucrés. Allergie aux fruits à coque : le dire au retrait.', 'client.comment', { plein: true, ta: true })}
-    <div class="cl-c plein"><div class="k">Ses messages pour les commandes</div><div class="cl-sw"><span class="px-sw on"><i></i>e-mail</span><span class="px-sw on"><i></i>SMS</span><span class="db-mini">confirmation, rappel la veille</span></div><span class="cl-api">gardé au cockpit (la fiche du panel n’a pas ce champ)</span></div>
-  </div><div class="cl-enr"><span class="db-mini">1 champ modifié · le panel garde l’historique (client.updated_at)</span><span class="cl-enr-b"><span class="px-btn">Annuler</span><span class="px-btn p">Enregistrer au panel</span></span></div>`);
-const L = [['Code client', 'C-004821', 'client_code'], ['Identifiant public', 'A7K-29Q', 'public_id'], ['Membre depuis', 'mars 2024', 'member_since'], ['Venue par', 'le webshop', 'source_channel'],
-  ['Magasin principal · préféré', 'Halle · Halle', 'id_main_shop · preferred_shop_id'], ['Arrivée au magasin', '03/03/2024', 'profile.joined_at'], ['Score du panel', '82 / 100', 'profile.score'],
-  ['Webshop · app', '<span class="cl-ok">✓</span> compte · <span class="cl-ok">✓</span> installée', 'webshop_user · pwa_user'], ['Dernière connexion', 'hier 21:14', 'last_login_at'],
-  ['Connexion préférée', 'lien par e-mail', 'preferred_auth_method'], ['Active · bloquée', 'oui · non', 'active · blocked'], ['Fusionnée dans', '—', 'merged_into_id'],
-  ['Créée · modifiée', '03/03/2024 · 12/11/2026', 'create_timestamp · updated_at']];
-const lus = carte('Ce que le panel garde', '<span class="cl-ecrit lu">lecture seule</span>', `<table class="cl-lus"><tbody>${L.map(([k, v, a]) => `<tr><td>${k}</td><td>${v}<span class="cl-api">${a}</span></td></tr>`).join('')}</tbody></table>`);
-const cmd = carte('Ses commandes', 'commandes clients du panel', `<table class="px-t px-j"><tbody>
-    <tr><td><b style="font-weight:400">demain 08:30</b><span class="sub">gâteau 12 parts, 24 mini-viennoiseries · acompte 20 €</span></td><td style="text-align:right">68,40 €<span class="sub" style="color:var(--accent)">à venir</span></td></tr>
-    <tr><td>samedi 12/09 10:00<span class="sub">tarte 28 cm, 12 mini-quiches</span></td><td style="text-align:right">39,60 €<span class="sub">retirée</span></td></tr></tbody></table>`)
-  + carte('Ses derniers tickets', 'du plus récent au plus ancien', `<table class="px-t px-j"><tbody>
-    <tr><td>aujourd’hui 08:12<span class="sub">comptoir · carte scannée</span></td><td class="mu">2 croissants, 1 baguette</td><td style="text-align:right">5,30 €</td></tr>
-    <tr><td>samedi 14/11 09:40<span class="sub">comptoir · carte scannée</span></td><td class="mu">tarte aux pommes Ø 28 cm</td><td style="text-align:right">21,00 €</td></tr>
-    <tr><td>jeudi 12/11 08:05<span class="sub">webshop</span></td><td class="mu">4 pains au chocolat, 1 pain gris</td><td style="text-align:right">8,90 €</td></tr></tbody></table>`)
-  + carte('Les messages', 'Paramètres › Mails et automatisations', `<table class="px-t px-j"><tbody>
-    <tr><td>aujourd’hui 17:00</td><td class="mu">rappel la veille du retrait · e-mail et SMS</td><td><span class="vide">prévu</span></td></tr>
-    <tr><td>hier 11:42</td><td class="mu">confirmation de commande · e-mail</td><td><span class="ok">✓ envoyé</span></td></tr></tbody></table>`);
+  </div>
+  <div class="cl-ligne"><span>Au panel : <b>C-004821</b> · venue par <b>le webshop</b> · app et webshop <b>✓</b> · score <b>82</b></span><span class="px-ouvrir">Tous les champs du panel ▾</span></div>
+  <div class="cl-enr"><span class="db-mini">1 champ modifié</span><span class="cl-enr-b"><span class="px-btn">Annuler</span><span class="px-btn p">Enregistrer au panel</span></span></div></div>`;
 
 const corps = `
   <p class="fd-retour"><span class="db-lien" style="color:var(--accent)">‹ Retour aux clients</span></p>
   ${tete}
-  <div class="cl-g3f">${cartes}${niveau}<div class="cl-col">${canaux({ comptoir: 37, commande: 6, webshop: 5, livraison: 0 }, 'Achète surtout au comptoir.')}<div style="height:12px"></div>${habitudes}</div></div>
-  <div class="cl-g3r">${rad}${typ}<div class="cl-col">${cmd}</div></div>
-  <div class="cl-g2">${fiche}${lus}</div>`;
+  <div class="cl-g3">${cartes}${niveau}${achete}</div><div style="height:12px"></div>
+  <div class="cl-g3">${rad}${typ}${cmd}</div><div style="height:12px"></div>
+  ${fiche}`;
 coque({ actif: 'clients', titre: 'Clients', kicker: 'Atelier by - Halle · Vendre', corps,
-  pied: 'Maquette v2 du 16/11/2026 · valeurs d’exemple. En haut, la fiche Fidélité du dashboard (niveau sur 30 jours, passages, radars face à la moyenne, habitudes : src/fidelite_profils.php), la carte et son solde lus dans l’ERP (cartes à timbres ou à points). En bas, la fiche du panel (/shops/{id}/clients/{id}, blocs client et profile) : le magasin modifie l’identité, le contact, l’adresse, la langue et la note, et les enregistre au panel ; le reste se lit. Les champs en petit sont ceux de l’API.' });
+  pied: 'Maquette v2 (lean) du 16/11/2026 · valeurs d’exemple. Niveau, radars et habitudes : la fiche Fidélité (src/fidelite_profils.php) ; carte et solde : l’ERP ; la fiche : le panel (/shops/{id}/clients/{id}), modifiée par le magasin et enregistrée au panel, chaque champ de l’API en info-bulle. Les tickets défilent dans leur carte (filet Ruby de 3 px).' });
 </script></body></html>

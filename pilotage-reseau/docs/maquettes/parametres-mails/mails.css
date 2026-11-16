@@ -116,3 +116,14 @@ tr.px-gris td{color:var(--faint)}
 tr.px-gris td>*:not(.px-bientot),tr.px-gris .px-chip{opacity:.55}
 div.px-gris{opacity:.45}
 .px-bientot{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:6px;background:var(--chip);color:var(--muted);letter-spacing:.02em}
+
+/* Les barres de défilement (16/11/2026, Sam) : un filet Ruby de 3 px, sans fond ni flèches. Chromium lit les
+   pseudo-éléments ; Firefox, qui ne les connaît pas, prend la barre fine en Ruby. */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#8D1D2C;border-radius:0}
+::-webkit-scrollbar-button,::-webkit-scrollbar-corner{display:none;width:0;height:0;background:transparent}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:#8D1D2C transparent}}
+/* Maquettes : le rail fait toute la hauteur de la page capturée ; il ne défile pas (sinon son filet Ruby court sur
+   toute la hauteur et se lit comme une bordure). */
+body.db-rail-on .db-rail{overflow:visible}

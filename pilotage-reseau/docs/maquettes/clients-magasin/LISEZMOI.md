@@ -51,6 +51,23 @@ réelle (`GET /ventes/tickets?client=1` › `champsFiche`, les noms seuls) :
 
 Noms, numéros et montants d'exemple.
 
+## Lean UX et tuiles identiques (16/11/2026)
+
+Sur la v2 : « essaie d'avoir des tiles identiques, surtout en hauteur », « les scrollbars se font via une ligne de
+3 px en Ruby », « lean UX ».
+
+- **Tuiles** : les sept tuiles de la liste (six niveaux et « Avec une carte ») ont la même largeur, la même hauteur et
+  les mêmes six lignes (nom, nombre, part, condition sur deux lignes réservées, barre, part avec une carte) : les
+  lignes s'alignent d'une tuile à l'autre. Dans les fiches, les cartes d'une même rangée ont la même hauteur (le bouton
+  « Enregistrer au panel » en bas de la sienne) ; le niveau mois par mois : cinq barres égales.
+- **Barres de défilement** : un filet Ruby `#8D1D2C` de 3 px, sans fond ni flèches (`mails.css`, pour toutes les
+  maquettes) ; la liste des clients et les tickets défilent dans leur carte.
+- **Lean** : la liste passe à six colonnes (client, niveau, carte, dernier passage, 12 mois, à faire) ; la colonne
+  « À faire » dit la seule chose à faire (commande demain, lui proposer la carte, récompense à offrir, ajouter un
+  e-mail, facture à faire, TVA invalide). Les fiches : trois rangées au plus, les champs de l'API en info-bulle
+  (plus en petit sous chaque valeur), « Ce que le panel garde » replié en une ligne (« Tous les champs du panel ▾ »),
+  les envois et les doublons sortis de l'écran.
+
 ## D'où viennent le niveau et la carte
 
 - **Le niveau** : le profil de l'onglet Fidélité (`src/fidelite_profils.php`) : les seuils et couleurs se règlent au

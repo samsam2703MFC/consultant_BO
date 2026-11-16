@@ -66,6 +66,11 @@ function canaux(c, phrase) {
 // Un champ de la fiche, modifiable (o.mod : modifié, pas encore enregistré) ou en lecture (o.lu).
 function champ(k, v, api, o = {}) {
   const val = o.lu ? `<div class="cl-ro">${v}</div>` : `<div class="cl-in${o.mod ? ' mod' : ''}${o.ta ? ' ta' : ''}">${v}${o.sel ? '<span class="dd">▾</span>' : ''}</div>`;
-  return `<div class="cl-c${o.plein ? ' plein' : ''}"><div class="k">${k}${o.mod ? '<span class="cl-modif">modifié · était ' + o.mod + '</span>' : ''}</div>${val}<span class="cl-api">${api}</span></div>`;
+  return `<div class="cl-c${o.plein ? ' plein' : ''}" title="${api}"><div class="k">${k}${o.mod ? '<span class="cl-modif">modifié · était ' + o.mod + '</span>' : ''}</div>${val}<span class="cl-api">${api}</span></div>`;
 }
 const carte = (titre, mini, corps, cl) => `<div class="db-card${cl ? ' ' + cl : ''}"><div class="ct"><span class="db-lab">${titre}</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div>${corps}</div>`;
+
+// Le niveau mois par mois : une barre de la couleur du niveau par mois (la couleur se lit sur l'échelle) : [mois, niveau].
+const moisNiv = M => `<p class="cl-mois-t">Ces cinq derniers mois</p><div class="cl-mois">${M.map(([m, k]) => `<div title="${NIV[k][0]}"><i style="background:${NIV[k][1]}"></i>${m}</div>`).join('')}</div>`;
+// L'échelle des niveaux, le niveau du client encadré.
+const echelle = (moi, coul) => `<div class="cl-ech">${Object.keys(NIV).map(k => `<div class="${k === moi ? 'on' : ''}"${k === moi ? ` style="background:${coul}12;box-shadow:inset 0 0 0 1.5px ${coul}"` : ''}><i style="background:${NIV[k][1]}"></i><span>${NIV[k][0]}</span><small>${NIV[k][2]}</small></div>`).join('')}</div>`;

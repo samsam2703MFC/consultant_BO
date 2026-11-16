@@ -16,46 +16,43 @@ const ok = '<span class="cl-ok">✓</span>', non = '<span class="mu">—</span>'
 // Les niveaux : [clé, clients, avec une carte].
 const N = [['fanbase', 38, 35], ['fidele', 74, 66], ['hebdo', 162, 131], ['regulier', 248, 176], ['occasionnel', 316, 190], ['decouverte', 446, 198]];
 const tot = N.reduce((a, x) => a + x[1], 0), avec = N.reduce((a, x) => a + x[2], 0);
-const tuiles = N.map(([k, n, c]) => `<div class="fd-tui"><span class="fd-tn"><i style="background:${NIV[k][1]}"></i>${NIV[k][0]}</span><b>${n}</b>
-    <small>${Math.round(100 * n / tot)} % des clients · ${NIV[k][2]}</small><div class="fd-bar"><i style="width:${Math.round(100 * c / n)}%;background:${NIV[k][1]}"></i></div>
-    <span class="cc">${Math.round(100 * c / n)} % avec une carte</span></div>`).join('')
-  + `<div class="fd-tui carte"><span class="fd-tn"><i class="fdc-ic" style="background:#8D1D2C;width:18px;height:12px;border-radius:3px"></i>Carte de fidélité</span><b>${Math.round(100 * avec / tot)} %</b>
-    <small>${avec.toLocaleString('fr-FR')} clients ont une carte · ${tot - avec} n’en ont pas</small><div class="fd-bar"><i style="width:${Math.round(100 * avec / tot)}%;background:var(--prize)"></i></div>
-    <span class="cc" style="color:var(--accent)">42 viennent chaque semaine sans carte : à leur proposer en caisse</span></div>`;
-// [nom, code, type, segment, niveau, sous-niveau, évolution, carte, sans carte, e-mail, tél, langue, dernier passage, rythme, 12 mois, tickets, pro, statut, sélectionné]
+// Une tuile = toujours les mêmes six lignes (nom, nombre, part, condition sur deux lignes, barre, carte) : même hauteur, lignes alignées.
+const tuile = (pastille, nom, v, part, cond, pct, coulBarre, bas, cl) => `<div class="fd-tui cl-tui${cl ? ' ' + cl : ''}"><span class="fd-tn">${pastille}${nom}</span><b>${v}</b>
+    <span class="l1">${part}</span><span class="l2">${cond}</span><div class="fd-bar"><i style="width:${pct}%;background:${coulBarre}"></i></div><span class="l1 cc">${bas}</span></div>`;
+const tuiles = N.map(([k, n, c]) => tuile(`<i style="background:${NIV[k][1]}"></i>`, NIV[k][0], n, `${Math.round(100 * n / tot)} % des clients`, NIV[k][2], Math.round(100 * c / n), NIV[k][1], `${Math.round(100 * c / n)} % avec une carte`)).join('')
+  + tuile('<i class="fdc-ic" style="background:#8D1D2C;width:16px;height:11px;border-radius:3px"></i>', 'Avec une carte', Math.round(100 * avec / tot) + ' %', `${avec} clients sur ${tot.toLocaleString('fr-FR')}`,
+    `${tot - avec} sans carte, dont 42 chaque semaine`, Math.round(100 * avec / tot), 'var(--prize)', 'à proposer en caisse', 'carte');
+// Lean (16/11/2026) : six colonnes. [nom, type, niveau, évolution, carte (null = pas de carte), dernier passage, rythme, 12 mois, à faire, à faire en rouge]
 const C = [
-  ['Camille Lambert', 'C-004821', 'Particulier', '', 'fidele', '9 passages ces 30 jours', null, ['vienno', 7], null, true, true, 'FR', 'aujourd’hui 08:12', 'le samedi surtout', '612 €', 48, null, 'commande demain 08:30', true],
-  ['Café du Parc', 'P-000112', 'Pro', 'Horeca', 'fanbase', '14 passages ces 30 jours', null, null, '<span class="cl-pas">pas de carte · client pro</span><span class="sub">sa remise de 10 % en tient lieu</span>', true, true, 'FR', 'lundi 16/11 07:10', 'du lundi au samedi', '13 920 €', 162, ['✓', '✓', '✓', '10 %'], 'commande demain 07:15'],
-  ['Sophie Dubois', 'C-006140', 'Particulier', '', 'fidele', '8 passages ces 30 jours', ['up', 'Hebdo en octobre'], null, '<span class="cl-pas prop">✕ pas de carte</span><span class="sub" style="color:var(--accent)">vient 2 fois par semaine : à lui proposer</span>', true, false, 'FR', 'hier 17:40', 'le mardi et le vendredi', '344 €', 31, null, ''],
-  ['Jan Claes', 'C-003310', 'Particulier', '', 'hebdo', '5 passages ces 30 jours', null, ['points', 128], null, true, true, 'NL', 'jeudi 12/11 09:05', 'le jeudi', '488 €', 39, null, 'commande demain 10:00'],
-  ['Marie Wouters', 'C-005092', 'Particulier', '', 'regulier', '3 passages ces 30 jours', ['up', 'Occasionnel en octobre'], ['vienno', 10], null, false, true, 'NL', 'vendredi 13/11 11:30', 'un vendredi sur deux', '214 €', 17, null, 'pas d’e-mail · commande demain'],
-  ['Résidence Les Tilleuls', 'P-000118', 'Pro', 'Collectivité', 'hebdo', '4 passages ces 30 jours', null, null, '<span class="cl-pas">pas de carte · client pro</span><span class="sub">remise de 8 %</span>', true, true, 'FR', 'mardi 10/11 06:50', 'le mardi', '9 840 €', 96, ['✓', '✓', '✓', '8 %'], ''],
-  ['Crèche Les Petits Pas', 'P-000121', 'Pro', 'Collectivité', 'regulier', '3 passages ces 30 jours', null, null, '<span class="cl-pas">pas de carte · client pro</span>', true, false, 'FR', 'lundi 16/11 07:30', 'le lundi', '4 210 €', 52, ['✓', '—', '✓', '—'], 'facture d’octobre à faire'],
-  ['Bureau Notaire Exemple', 'P-000124', 'Pro', 'Entreprise', 'occasionnel', '1 passage ces 30 jours', null, null, '<span class="cl-pas">pas de carte · client pro</span>', true, true, 'FR', 'mercredi 11/11 12:15', 'en livraison au bureau', '2 980 €', 24, ['✓', '✓', '—', '5 %'], ''],
-  ['Thomas Peeters', 'C-002207', 'Particulier', '', 'decouverte', 'aucun passage ces 30 jours', ['down', 'Hebdo en septembre'], ['vienno', 2], null, false, false, '—', '22/09 08:40', 'perdu de vue depuis 55 jours', '96 €', 11, null, 'fiche à compléter'],
-  ['Lucas Martin', 'C-007015', 'Particulier', '', 'decouverte', '1er passage le 10/11', null, null, '<span class="cl-pas prop">✕ pas de carte</span><span class="sub">nouveau client : à lui proposer</span>', true, true, 'FR', 'mardi 10/11 12:02', 'venu une fois', '18 €', 1, null, ''],
-  ['Société Événements Exemple', 'P-000130', 'Pro', 'Entreprise', 'occasionnel', '1 passage ces 30 jours', null, null, '<span class="cl-pas">pas de carte · client pro</span>', true, true, 'FR', 'vendredi 30/10', 'chaque mois', '1 760 €', 9, ['✕ invalide', '—', '—', '—'], 'TVA invalide : compté au comptoir']
+  ['Camille Lambert', 'Particulier', 'fidele', null, ['vienno', 7], 'aujourd’hui 08:12', 'le samedi surtout', '612 €', 'commande demain 08:30'],
+  ['Café du Parc', 'Pro · Horeca', 'fanbase', null, 'pro', 'lundi 16/11', 'du lundi au samedi', '13 920 €', 'commande demain 07:15'],
+  ['Sophie Dubois', 'Particulier', 'fidele', ['up', 'octobre'], null, 'hier 17:40', 'le mardi et le vendredi', '344 €', 'lui proposer la carte'],
+  ['Jan Claes', 'Particulier', 'hebdo', null, ['points', 128], 'jeudi 12/11', 'le jeudi', '488 €', 'commande demain 10:00'],
+  ['Marie Wouters', 'Particulier', 'regulier', ['up', 'octobre'], ['vienno', 10], 'vendredi 13/11', 'un vendredi sur deux', '214 €', 'récompense à offrir'],
+  ['Résidence Les Tilleuls', 'Pro · Collectivité', 'hebdo', null, 'pro', 'mardi 10/11', 'le mardi', '9 840 €', ''],
+  ['Crèche Les Petits Pas', 'Pro · Collectivité', 'regulier', null, 'pro', 'lundi 16/11', 'le lundi', '4 210 €', 'facture d’octobre à faire', true],
+  ['Bureau Notaire Exemple', 'Pro · Entreprise', 'occasionnel', null, 'pro', 'mercredi 11/11', 'en livraison au bureau', '2 980 €', ''],
+  ['Thomas Peeters', 'Particulier', 'decouverte', ['down', 'septembre'], ['vienno', 2], '22/09', 'perdu de vue · 55 jours', '96 €', 'ajouter un e-mail', true],
+  ['Lucas Martin', 'Particulier', 'decouverte', null, null, 'mardi 10/11', 'venu une fois', '18 €', 'lui proposer la carte'],
+  ['Société Événements Exemple', 'Pro · Entreprise', 'occasionnel', null, 'pro', 'vendredi 30/10', 'chaque mois', '1 760 €', 'TVA invalide', true],
+  ['Nadia El Amrani', 'Particulier', 'hebdo', null, ['vienno', 4], 'samedi 14/11', 'le samedi', '402 €', ''],
+  ['Pierre Lemaire', 'Particulier', 'regulier', null, ['points', 41], 'dimanche 08/11', 'deux dimanches par mois', '176 €', ''],
+  ['Elise Janssens', 'Particulier', 'occasionnel', ['down', 'août'], ['vienno', 6], 'samedi 24/10', 'une fois par mois', '95 €', '']
 ];
-const lignes = C.map(r => {
-  const pro = r[2] === 'Pro', p = r[16];
-  const evo = r[6] ? `<span class="cl-evo ${r[6][0]}">${r[6][0] === 'up' ? '↑' : '↓'} était ${r[6][1]}</span>` : '';
-  return `<tr class="${r[18] ? 'tr-sel' : ''}"><td><span class="nom">${r[0]}</span><span class="sub">${r[1]} · ${pro ? `<span style="color:var(--prize-ink)">Pro · ${r[3]}</span>` : 'Particulier'}</span></td>
-    <td>${nivTag(r[4])}${evo}<span class="sub">${NIV[r[4]][2]} · ${r[5]}</span></td>
-    <td>${r[7] ? carteCell(r[7]) : r[8]}</td>
-    <td>${r[9] ? ok + ' e-mail' : '<span class="cl-ko">✕ e-mail</span>'}<span class="sub">${r[10] ? '✓ SMS' : '✕ SMS'} · ${r[11]}</span></td>
-    <td>${r[12]}<span class="sub">${r[13]}</span></td>
-    <td style="text-align:right;white-space:nowrap">${r[14]}<span class="sub">${r[15]} ticket${r[15] > 1 ? 's' : ''}</span></td>
-    <td>${pro && p ? `<span class="sub" style="margin:0">TVA ${p[0]} · Peppol ${p[1]}</span><span class="sub">différé ${p[2]} · remise ${p[3]}</span>` : non}</td>
-    <td>${r[17] ? `<span class="sub" style="margin:0;color:${/à faire|invalide|compléter|pas d’e-mail/.test(r[17]) ? '#A32014' : 'var(--accent)'}">${r[17]}</span>` : ''}<span class="px-ouvrir" style="display:block;margin-top:3px">Ouvrir ▸</span></td></tr>`;
-}).join('');
+const lignes = C.map(([nom, type, k, evo, ca, der, ry, eur, af, rouge]) => `<tr class="${nom === 'Camille Lambert' ? 'tr-sel' : ''}">
+    <td><span class="nom">${nom}</span><span class="sub"${type.startsWith('Pro') ? ' style="color:var(--prize-ink)"' : ''}>${type}</span></td>
+    <td>${nivTag(k)}${evo ? `<span class="sub"><span class="cl-evo ${evo[0]}" style="margin:0">${evo[0] === 'up' ? '↑' : '↓'} depuis ${evo[1]}</span></span>` : ''}</td>
+    <td>${ca === 'pro' ? '<span class="cl-pas">client pro · sa remise</span>' : ca ? carteCell(ca) : '<span class="cl-pas prop">✕ pas de carte</span>'}</td>
+    <td>${der}<span class="sub">${ry}</span></td>
+    <td style="text-align:right">${eur}</td>
+    <td>${af ? `<span class="cl-af${rouge ? ' ko' : ''}">${af}</span>` : ''}</td><td class="cl-chev">›</td></tr>`).join('');
 const corps = `
-  <div class="px-top"><p class="px-intro">Les clients reliés au magasin, particuliers et pros. Pour chacun : son niveau de fidélité (les profils de l’onglet Fidélité), sa carte de fidélité et où il en est, comment le joindre, son rythme et ses achats. La fiche s’ouvre, se modifie ici et s’enregistre au panel.</p><span class="px-btn p">+ Nouveau client</span></div>
-  <div class="px-tabs"><button class="on">Tous<span class="n">1 284</span></button><button>Particuliers<span class="n">1 236</span></button><button>Pros<span class="n">48</span></button><button>Avec une carte<span class="n">796</span></button><button>Sans carte<span class="n">488</span></button><button>À compléter<span class="n">312</span></button><button>Doublons<span class="n">6</span></button></div>
-  <div class="db-sec" style="margin-top:4px">Les niveaux de fidélité<small style="font-family:var(--font-ui);font-size:12px;color:var(--color-text-muted)">le rythme des 30 derniers jours, comme Fidélité › Profils · un niveau filtre la liste</small></div>
+  <div class="px-top"><p class="px-intro">Vos clients, leur niveau de fidélité et leur carte. Une ligne ouvre la fiche.</p><span class="px-btn p">+ Nouveau client</span></div>
+  <div class="px-tabs"><button class="on">Tous<span class="n">1 284</span></button><button>Particuliers<span class="n">1 236</span></button><button>Pros<span class="n">48</span></button><button>Sans carte<span class="n">488</span></button><button>À compléter<span class="n">312</span></button></div>
   <div class="cl-nivs">${tuiles}</div>
-  <div class="cl-filtres"><span class="px-in" style="min-width:230px">🔍 Nom, société, e-mail, téléphone, n° de TVA…</span><span class="px-in">Niveau : tous ▾</span><span class="seg"><button class="is-on">Toutes les cartes</button><button>Avec une carte</button><button>Sans carte</button><button>Récompense prête</button></span><span class="px-in">Segment pro ▾</span><span class="px-in">Langue ▾</span><span style="flex:1"></span><span class="px-in">Exporter ▾</span></div>
-  <div class="db-card"><div class="ct"><span class="db-lab">Les clients</span><span class="db-mini">les plus fidèles d’abord · une ligne ouvre la fiche</span></div>
-    <table class="px-t cl-t"><thead><tr><th>Client</th><th>Niveau de fidélité</th><th>Carte de fidélité</th><th>Joindre</th><th>Dernier passage · rythme</th><th style="text-align:right">12 mois</th><th>Pro</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`;
+  <div class="cl-filtres"><span class="px-in" style="min-width:300px">🔍 Nom, e-mail, téléphone, n° de TVA…</span><span class="px-in">Niveau ▾</span><span class="px-in">Carte ▾</span><span style="flex:1"></span><span class="px-in">Exporter ▾</span></div>
+  <div class="db-card"><div class="cl-defile"><table class="px-t cl-t"><thead><tr><th>Client</th><th>Niveau</th><th>Carte</th><th>Dernier passage</th><th style="text-align:right">12 mois</th><th>À faire</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
+    <div class="cl-ligne"><span><b>1 284</b> clients · les plus fidèles d’abord</span></div></div>`;
 coque({ actif: 'clients', titre: 'Clients', corps,
-  pied: 'Maquette v2 du 16/11/2026 · noms, codes et chiffres d’exemple. Le niveau de fidélité est le profil de l’onglet Fidélité (src/fidelite_profils.php : Fanbase, Fidèle, Hebdo, Régulier, Occasionnel, Découverte, réglables au cockpit), la carte et son solde viennent de l’ERP (Fidélité › cartes, timbres ou points), la fiche du panel (/shops/{id}/clients/{id} : blocs client et profile ; client.fidelity_active, client.fidelity_linked_at). « Doublons » : les fiches fusionnées au panel (client.merged_into_id).' });
+  pied: 'Maquette v2 (lean) du 16/11/2026 · noms et chiffres d’exemple. Niveau : le profil de l’onglet Fidélité (src/fidelite_profils.php) ; carte et solde : l’ERP (Fidélité › cartes) ; fiche : le panel (/shops/{id}/clients/{id}). Barres de défilement : un filet Ruby de 3 px.' });
 </script></body></html>
