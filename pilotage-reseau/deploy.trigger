@@ -47,3 +47,4 @@
 2026-11-16T11:27:31Z Tâches : photos notées comptées, journée en cours dans la semaine
 2026-11-16T11:32:28Z [300] connexion QR : section → nom → QR
 2026-11-16T11:39:15Z [301] date de mise à jour dans l'en-tête
+2026-11-16T11:46:27Z [302] tablette emballage : panneau sans collision
