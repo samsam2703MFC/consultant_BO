@@ -44,3 +44,4 @@
 2026-11-16T11:02:29Z Ventes par catégorie hors TVA : marge, taux et coefficient sur le net
 2026-11-16T11:07:35Z [299] tablette bureau toujours appairée, Tablety en session Produkcja
 2026-11-16T11:24:58Z [300] connexion ERP par QR
+2026-11-16T11:27:31Z Tâches : photos notées comptées, journée en cours dans la semaine
