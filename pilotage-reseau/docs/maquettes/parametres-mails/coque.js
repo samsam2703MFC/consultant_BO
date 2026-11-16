@@ -44,6 +44,6 @@ function barre(titre, kicker) {
 }
 function coque(o) {
   document.body.classList.add('db-rail-on');
-  document.body.innerHTML = rail('mails') + `<div id="dash">${barre(o.titre, o.kicker)}${o.corps}<p class="mq-pied">${o.pied}</p></div>`;
+  document.body.innerHTML = rail(o.actif || 'mails') + `<div id="dash">${barre(o.titre, o.kicker)}${o.corps}<p class="mq-pied">${o.pied}</p></div>`;
   document.body.dataset.pret = '1';
 }

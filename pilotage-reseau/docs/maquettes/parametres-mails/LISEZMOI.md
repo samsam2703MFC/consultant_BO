@@ -1,6 +1,6 @@
 # Dashboard magasin › Paramètres › Mails et automatisations
 
-**Statut : maquette v2 du 16/11/2026, à valider. Rien n'est codé.**
+**Statut : maquette v3 du 16/11/2026, à valider. Rien n'est codé.**
 
 Demandes (16/11/2026) : « Rajouter dans le rail : paramètre. Mail / automatisation (envoi des rapports à qui / template /
 fichier PDF / …), faire maquette en screenshot », puis, sur la v1 : « c'est aussi pour envoyer les rapports aux comptables
@@ -23,11 +23,9 @@ dans un onglet à part (« Reçus du réseau »).
 
   En dessous : les prochains envois (ce qui partira tout seul, et à qui), et « Nouvelle automatisation » à partir d'un
   modèle (comptable, clients d'une commande, clients pro, équipe, fournisseur, moi).
-- `b-comptable.png` : le dossier comptable du mois ouvert. Quand (le 1er jour ouvré, 07:00, pour le mois clos, en
-  attendant que le mois soit lu en caisse), à qui (le comptable, copie à moi), l'e-mail (objet et message avec
-  variables), les fichiers joints : le **PDF** du dossier (CA TTC, hors TVA et TVA jour par jour, TVA par taux, frais avec
-  leur TVA, ventes pro à facturer, corrections après encaissement) et l'**Excel** des ventes jour par jour. L'aperçu, un
-  essai, « Envoyer maintenant » pour un mois passé, le journal.
+- `b-comptable.png` : le dossier comptable du mois ouvert (v3) : il part dès que les factures du mois sont faites ;
+  les revenus du mois en PDF et les factures du mois en PDF ; la liste des factures du mois (faites, à faire) ;
+  l'aperçu, un essai, « Envoyer maintenant » pour un mois passé, le journal.
 - `c-rappel-commande.png` : le rappel la veille du retrait. Quand (la veille à 17:00, seulement les commandes
   confirmées), à qui (le client de la commande, l'e-mail de sa fiche ; prévenir s'il n'en a pas), l'e-mail avec ses
   variables (client, date et heure de retrait, articles, acompte, reste à payer, adresse), le **bon de commande en PDF**,
@@ -48,12 +46,25 @@ Noms, adresses, commandes et chiffres d'exemple.
 L'envoi part de la **boîte mail du magasin** (src/franchise/boite_mail.php, son SMTP) : les réponses des clients et du
 comptable y arrivent.
 
+## v3 (16/11/2026) : les réponses
+
+- « Le dossier compta, ce sont les revenus mensuels et le fichier PDF, disponible parce que les factures ont été
+  faites » : le dossier part **dès que les factures du mois sont faites** (au plus tard le 5, en le disant s'il en
+  manque), avec **les revenus du mois** (TTC, hors TVA, TVA par taux, jour par jour, comptoir et pro séparés) et **les
+  factures du mois en PDF** (un seul PDF ou un par facture). Plus d'Excel.
+- « Choix un ou l'autre ou les deux » : chaque envoi aux clients part **par e-mail, par SMS ou les deux** ; un client
+  sans e-mail reçoit le SMS seul, et l'inverse.
+- « Envoyer un SMS quand la commande est prête (relié avec ses clients) » : nouvelle automatisation **Commande prête**,
+  un SMS au téléphone de la fiche du client dès que la commande est marquée prête.
+- « SMS par l'API SMS » : les SMS partent par l'API SMS du cockpit (`src/sms.php`, Twilio, déjà utilisée pour les primes
+  des vendeuses ; réglée dans `config.php`).
+
 ## À trancher avant de coder
 
-1. Les automatisations à faire d'abord (proposition : dossier comptable du mois, rappel la veille du retrait).
-2. Le dossier comptable : son contenu exact avec le comptable (PDF, Excel, ou les deux ; le P&L dedans ou non).
-3. Les clients sans e-mail : seulement prévenir le magasin, ou aussi un SMS ?
-4. Qui peut régler ces envois : le franchisé seul, ou aussi le consultant ?
+1. Les automatisations à faire d'abord (proposition : dossier comptable du mois, rappel la veille du retrait, commande
+   prête).
+2. « Commande prête » : où la commande est-elle marquée prête (la caisse, l'onglet Commandes du dashboard) ?
+3. Qui peut régler ces envois : le franchisé seul, ou aussi le consultant ?
 
 ## Fichiers
 

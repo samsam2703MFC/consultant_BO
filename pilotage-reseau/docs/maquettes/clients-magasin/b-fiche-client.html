@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Clients › fiche d'un client particulier</title>
+<!-- La fiche d'un client particulier, refaite entièrement sur les champs de la fiche du panel (/shops/{id}/clients/{id},
+     blocs `client` et `profile`) : chaque valeur porte, en petit, le champ de l'API d'où elle vient. Ce que le dashboard
+     ajoute : les achats (tickets), les commandes, et les envois (e-mail, SMS). Valeurs d'exemple. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="clients.css">
+<script src="../parametres-mails/coque.js"></script>
+</head><body><script>
+RAIL[3][1].splice(4, 0, ['clients', 'Clients', 'personnes', 'nouveau']);
+const f = (k, v, api, plein) => `<div class="cl-c${plein ? ' plein' : ''}"><div class="k">${k}</div><div class="v">${v}</div><span class="cl-api">${api}</span></div>`;
+const carte = (titre, mini, champs, un) => `<div class="db-card"><div class="ct"><span class="db-lab">${titre}</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div><div class="cl-champs${un ? ' un' : ''}">${champs}</div></div>`;
+const tete = `<div class="db-card cl-tete"><div class="cl-av">CL</div><div><h2>Camille Lambert</h2>
+  <div class="s">Code client C-004821 · membre depuis mars 2024 · venue par le webshop · magasin principal : Halle</div>
+  <div class="tags"><span class="cl-tag ok">actif</span><span class="cl-tag ok">fidélité</span><span class="cl-tag ok">app</span><span class="cl-tag">Particulier</span><span class="cl-tag">FR</span></div></div>
+  <div class="cl-kpis"><div><div class="k">12 mois</div><div class="v">612 €</div></div><div><div class="k">Tickets</div><div class="v">48</div></div><div><div class="k">Panier</div><div class="v">12,75 €</div></div><div><div class="k">Score</div><div class="v">82</div></div></div></div>`;
+const col1 = carte('Identité et contact', 'écrit au panel', [
+  f('Prénom', 'Camille', 'client.name'), f('Nom', 'Lambert', 'client.surname'),
+  f('E-mail', 'c.lambert@exemple.be <span class="cl-ok">✓ vérifié le 12/03/2024</span>', 'client.email · client.verified_at', true),
+  f('Téléphone', '+32 470 00 00 00 <span class="cl-ok">✓ SMS possible</span>', 'client.phone_prefix · client.phone · client.phone_e164', true),
+  f('Langue', 'Français', 'client.locale'), f('Connexion préférée', 'lien par e-mail', 'client.preferred_auth_method'),
+  f('Code client', 'C-004821', 'client.client_code'), f('Identifiant public', 'A7K-29Q', 'client.public_id')
+].join('')) + carte('Adresse', '', [
+  f('Rue', 'Rue de l’Exemple', 'client.street'), f('Numéro', '12', 'client.street_number'),
+  f('Code postal', '1500', 'client.zip'), f('Ville', 'Halle', 'client.city'), f('Localité', 'Halle-centre', 'client.locality')
+].join(''));
+const col2 = carte('Le lien avec le magasin', 'le profil du client chez Halle', [
+  f('Type', 'Particulier', 'profile.client_type'), f('Service', 'à emporter', 'profile.service_mode'),
+  f('Score', '82 / 100', 'profile.score'), f('Statut', '<span class="cl-ok">actif</span>', 'profile.status'),
+  f('Arrivé au magasin', '03/03/2024', 'profile.joined_at'), f('Magasin principal · préféré', 'Halle · Halle', 'client.id_main_shop · client.preferred_shop_id')
+].join('')) + carte('Fidélité et comptes', '', [
+  f('Fidélité', '<span class="cl-ok">✓ active</span> depuis le 03/03/2024', 'client.fidelity_active · client.fidelity_linked_at', true),
+  f('Membre depuis', 'mars 2024', 'client.member_since'), f('Origine', 'webshop', 'client.source_channel'),
+  f('Webshop', '<span class="cl-ok">✓ compte</span>', 'client.webshop_user'), f('App', '<span class="cl-ok">✓ installée</span>', 'client.pwa_user'),
+  f('Dernière connexion', 'hier 21:14', 'client.last_login_at'), f('Profil à compléter', 'non', 'client.needs_profile_completion')
+].join('')) + carte('Notes et état de la fiche', '', [
+  f('Note du magasin', 'Préfère les gâteaux peu sucrés. Allergie aux fruits à coque : le dire au retrait.', 'client.comment', true),
+  f('Active · bloquée', 'oui · non', 'client.active · client.blocked'), f('Fusionnée dans', '—', 'client.merged_into_id'),
+  f('Créée le', '03/03/2024', 'client.create_timestamp'), f('Modifiée le', '12/11/2026', 'client.updated_at')
+].join(''));
+const col3 = `<div class="db-card"><div class="ct"><span class="db-lab">Ses achats</span><span class="db-mini">tickets du magasin</span></div>
+    <div class="cl-champs">${[f('Dernier passage', 'aujourd’hui 08:12', 'tickets'), f('Fréquence', 'chaque semaine, le samedi surtout', 'tickets'),
+      f('Ses produits', 'croissant, baguette tradition, tarte aux pommes', 'lignes de tickets', true)].join('')}</div>
+    <table class="px-t px-j"><thead><tr><th>Jour</th><th>Ticket</th><th style="text-align:right">Montant</th></tr></thead><tbody>
+      <tr><td>aujourd’hui 08:12</td><td class="mu">2 croissants, 1 baguette</td><td style="text-align:right">5,30 €</td></tr>
+      <tr><td>samedi 14/11 09:40</td><td class="mu">tarte aux pommes Ø 28 cm</td><td style="text-align:right">21,00 €</td></tr>
+      <tr><td>samedi 07/11 10:02</td><td class="mu">4 pains au chocolat, 1 pain gris</td><td style="text-align:right">8,90 €</td></tr></tbody></table></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Ses commandes</span><span class="db-mini">commandes clients du panel</span></div>
+    <table class="px-t px-j"><tbody>
+      <tr><td><b style="font-weight:400">demain 08:30</b><span class="sub">gâteau 12 parts, 24 mini-viennoiseries · acompte 20 €</span></td><td style="text-align:right">68,40 €<span class="sub" style="color:var(--accent)">à venir</span></td></tr>
+      <tr><td>samedi 12/09 10:00<span class="sub">tarte 28 cm, 12 mini-quiches</span></td><td style="text-align:right">39,60 €<span class="sub">retirée</span></td></tr></tbody></table></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les messages</span><span class="db-mini">Paramètres › Mails et automatisations</span></div>
+    <div class="px-f"><div class="row">${'<span class="px-sw on"><i></i>e-mail</span>'} <span style="width:10px"></span>${'<span class="px-sw on"><i></i>SMS</span>'}<span class="db-mini">pour ses commandes</span></div>
+    <table class="px-t px-j"><tbody>
+      <tr><td>aujourd’hui 17:00</td><td class="mu">rappel la veille du retrait · e-mail et SMS</td><td><span class="vide">prévu</span></td></tr>
+      <tr><td>hier 11:42</td><td class="mu">confirmation de commande · e-mail</td><td><span class="ok">✓ envoyé</span></td></tr></tbody></table></div></div>`;
+const corps = `
+  <p class="px-intro" style="margin-bottom:12px"><span style="color:var(--accent)">‹ Les clients</span> · fiche d’un client particulier — chaque valeur porte en petit le champ de la fiche du panel d’où elle vient.</p>
+  ${tete}
+  <div class="cl-g3"><div class="cl-col">${col1}</div><div class="cl-col">${col2}</div><div class="cl-col">${col3}</div></div>
+  <div class="px-btns" style="padding:0"><span class="px-btn">Voir au panel</span><span class="px-btn">Nouvelle commande</span><span class="px-btn p">Enregistrer au panel</span></div>`;
+coque({ actif: 'clients', titre: 'Clients', kicker: 'Atelier by - Halle · Vendre', corps,
+  pied: 'Maquette du 16/11/2026 · valeurs d’exemple. Les champs en petit sont ceux de la fiche client du panel (/shops/{id}/clients/{id}, blocs client et profile, lus le 16/11/2026). Le choix e-mail / SMS pour les commandes est gardé au cockpit (la fiche du panel n’a pas ce champ).' });
+</script></body></html>

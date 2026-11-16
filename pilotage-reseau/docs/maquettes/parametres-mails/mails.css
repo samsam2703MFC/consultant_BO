@@ -104,3 +104,9 @@ body.db-rail-on .db-rail{position:absolute;bottom:0;min-height:100vh}
 body.db-rail-on{min-height:max(100vh,1250px)}
 .px-btns{flex-wrap:wrap}
 .px-btn{white-space:nowrap}
+.px-chip.sms{background:rgba(63,122,82,.1);color:#3f7a52}
+.px-sms{margin:12px 16px 16px;display:flex;gap:16px;align-items:flex-start}
+.px-tel{width:230px;flex:0 0 230px;border:1px solid var(--line);border-radius:22px;background:#fff;padding:14px 12px 18px}
+.px-tel .h{font-size:10.5px;color:var(--muted);text-align:center;margin-bottom:10px}
+.px-bulle{background:#ecebe8;border-radius:14px 14px 14px 4px;padding:9px 11px;font-size:12px;line-height:1.45;margin-bottom:6px}
+.px-cpt{font-size:10.5px;color:var(--muted)}
