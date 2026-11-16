@@ -26342,6 +26342,52 @@
                                     "items": {
                                         "$ref": "#/components/schemas/PalletLine"
                                     }
+                                },
+                                "extra": {
+                                    "type": "array",
+                                    "description": "Na palecie, nie zamówione / Sur palette, non commandé",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "product_id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "category": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "ordered": {
+                                                "type": "integer"
+                                            },
+                                            "on_pallet": {
+                                                "type": "integer"
+                                            },
+                                            "scanned": {
+                                                "type": "integer"
+                                            },
+                                            "entered": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "check": {
+                                    "type": "object",
+                                    "description": "Kontrola z zamówieniem / Contrôle par rapport à la commande",
+                                    "properties": {
+                                        "ok": {
+                                            "type": "boolean"
+                                        },
+                                        "missing": {
+                                            "type": "integer"
+                                        },
+                                        "over": {
+                                            "type": "integer"
+                                        }
+                                    }
                                 }
                             }
                         }

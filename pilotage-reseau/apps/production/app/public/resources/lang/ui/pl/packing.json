@@ -164,5 +164,17 @@
   "rc_ocr_nothing": "Nie znaleziono partii ani terminu na zdjęciu — wpisz ręcznie.",
   "rc_ocr_unavailable": "Odczyt tekstu niedostępny — wpisz ręcznie.",
   "rc_ocr_lot": "LOT",
-  "rc_ocr_date": "Data"
+  "rc_ocr_date": "Data",
+  "check_btn": "Kontrola z zamówieniem",
+  "check_title": "Kontrola palet z zamówieniem",
+  "check_sub": "{n} produktów",
+  "check_ok": "Zgodne",
+  "check_diff": "Rozbieżności",
+  "check_col_diff": "Różnica",
+  "check_not_ordered": "nie zamówione",
+  "check_missing_n": "{n} produkt(ów) ma za mało kartonów",
+  "check_over_n": "{n} produkt(ów) ma nadmiar kartonów",
+  "check_hint": "Popraw palety przed wyjazdem (dotknij braku, aby dołożyć).",
+  "check_all_ok": "Palety zgodne z zamówieniem.",
+  "check_back": "Wróć do paletyzacji"
 }

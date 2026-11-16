@@ -68,6 +68,15 @@ final class LogisticsBoardService
         foreach ($packing as $pid => $p) $pendingLeft[$pid] = max(0, $p['packed'] - max(0, ($now[$pid] ?? 0) - $p['base_count']));
         $pending = $pendingLeft;
 
+        // Kontrola z zamówieniem : kartony na paletach klienta, których produktu klient nie zamówił (np. skan pomyłkowy).
+        $orderedOf = [];
+        foreach ($lines as $l) $orderedOf[(int) $l['id_customer']][(int) $l['id_product']] = true;
+        $extraIds = [];
+        foreach ([$scanned, $entered] as $src) foreach ($src as $cid => $products) foreach ($products as $pid => $n) {
+            if ($n > 0 && empty($orderedOf[$cid][$pid])) $extraIds[$pid] = true;
+        }
+        $extraNames = $extraIds ? $this->repo->productNames(array_keys($extraIds)) : [];
+
         $customers = [];
         foreach ($order as $cid) {
             $rows = [];
@@ -92,10 +101,25 @@ final class LogisticsBoardService
                 'vehicle' => $truck ? ['id' => (int) $truck['id'], 'label' => $truck['label']] : null,
                 'departure' => $truck['departure'] ?? $day['settings']['default_departure'],
                 'planned_pallets' => (int) ($c['pallets'] ?? 0), 'weight_kg' => (float) ($c['weight_kg'] ?? 0),
-                'lines' => $rows,
+                'lines' => $rows, 'extra' => $this->extraLines($cid, $orderedOf[$cid] ?? [], $scanned, $entered, $extraNames),
             ];
         }
         return ['day' => $day, 'customers' => $customers, 'pending' => $pending];
+    }
+
+    /** Produkty na paletach klienta spoza zamówienia (zamówione 0) : nazwa, kartony zeskanowane i wpisane. */
+    private function extraLines(int $cid, array $ordered, array $scanned, array $entered, array $names): array
+    {
+        $out = [];
+        foreach (array_keys(($scanned[$cid] ?? []) + ($entered[$cid] ?? [])) as $pid) {
+            $sc = $scanned[$cid][$pid] ?? 0;
+            $en = $entered[$cid][$pid] ?? 0;
+            if (!empty($ordered[$pid]) || $sc + $en <= 0) continue;
+            $out[] = ['product_id' => $pid, 'name' => $names[$pid]['name'] ?? ('#' . $pid), 'category' => $names[$pid]['category'] ?? null,
+                'ordered' => 0, 'on_pallet' => $sc + $en, 'scanned' => $sc, 'entered' => $en];
+        }
+        usort($out, fn($a, $b) => [(string) $a['category'], $a['name']] <=> [(string) $b['category'], $b['name']]);
+        return $out;
     }
 
     private function sum(array $rows, string $key): int
@@ -279,8 +303,13 @@ final class LogisticsBoardService
             usort($lines, fn($a, $b) => [$a['left'] === 0, (string) $a['category'], $a['name']] <=> [$b['left'] === 0, (string) $b['category'], $b['name']]);
             $ordered = $this->sum($lines, 'ordered');
             $left = $this->sum($lines, 'left');
+            // Kontrola z zamówieniem : produkty z brakami, z nadmiarem (także spoza zamówienia).
+            $extra = $c['extra'] ?? [];
+            $check = ['missing' => count(array_filter($lines, fn($l) => $l['left'] > 0)),
+                'over' => count(array_filter($lines, fn($l) => $l['over'] > 0)) + count($extra)];
+            $check['ok'] = $check['missing'] === 0 && $check['over'] === 0;
             $clients[] = ['id' => $cid, 'n' => count($clients) + 1, 'name' => $c['name'], 'town' => $c['town'], 'vehicle' => $c['vehicle'],
-                'ordered' => $ordered, 'on_pallet' => $ordered - $left, 'left' => $left, 'lines' => $lines];
+                'ordered' => $ordered, 'on_pallet' => $ordered - $left, 'left' => $left, 'lines' => $lines, 'extra' => $extra, 'check' => $check];
         }
         $ids = array_column($clients, 'id');
         if ($customerId === null || !in_array($customerId, $ids, true)) {
