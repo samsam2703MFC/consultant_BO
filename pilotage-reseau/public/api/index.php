@@ -73,6 +73,7 @@ require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
+require __DIR__ . '/../../src/pnl_ht.php';                // Le P&L hors TVA et l'onglet Frais du dashboard (16/11/2026)
 require __DIR__ . '/../../src/franchise/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rayons_photos.php';
@@ -640,6 +641,7 @@ function route(string $method, string $path): mixed
             $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
+            $path === '/exploitation/frais'           => ep_exploitation_frais(),
             $path === '/tresorerie/references'        => ep_tresorerie_references(),
             $path === '/tresorerie/plan'              => ep_tresorerie_plan(),
             $path === '/tresorerie/budget'            => ep_tresorerie_budget(),
@@ -827,6 +829,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/tva') { return wr_exploitation_frais_tva(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
