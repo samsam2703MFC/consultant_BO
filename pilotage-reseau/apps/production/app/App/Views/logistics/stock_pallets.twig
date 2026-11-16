@@ -70,6 +70,9 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
 .sp-trace{flex-wrap:wrap}
 .sp-days{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
 .sp-day{border:1px solid var(--at-line);border-radius:8px;padding:3px 8px;font-size:12px;color:inherit;text-decoration:none;text-align:center;font-variant-numeric:tabular-nums}
+.sp-del{display:flex;flex-direction:column;gap:8px;border:1px solid rgba(196,30,58,.3);background:rgba(196,30,58,.04);border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px}
+.sp-del label{display:flex;gap:8px;align-items:center;margin:0}
+.sp-del [data-sp-del-go]{background:var(--at-danger,#C41E3A);border-color:var(--at-danger,#C41E3A);color:#fff}
 .sp-day small{display:block;color:var(--at-muted);font-size:10.5px}.sp-day.on{background:var(--at-brand,#8D1D2C);border-color:var(--at-brand,#8D1D2C);color:#fff}.sp-day.on small{color:rgba(255,255,255,.8)}
 </style>
 
@@ -79,6 +82,7 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
 <nav class="sp-tabs" aria-label="Widok">
     <a class="sp-tab{{ tab == 'flow' ? ' on' }}" href="{{ root }}/logistics/stock">Magazyn i palety<b>{{ building|length + ready|length }}</b></a>
     <a class="sp-tab{{ tab == 'shipped' ? ' on' }}" href="{{ root }}/logistics/stock?tab=shipped">Wysłane<b>{{ shipped.total }}</b></a>
+    <a class="sp-tab{{ tab == 'expiring' ? ' on' }}" href="{{ root }}/logistics/stock?tab=expiring">Ważne &lt; {{ expiry_days }} dni<b>{{ expiring|length }}</b></a>
 </nav>
 
 {% if tab == 'flow' %}
@@ -95,16 +99,6 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
         {% else %}
             <div class="sp-empty">Magazyn pusty.</div>
         {% endfor %}
-        {% if expiring %}
-            <details class="sp-card sp-warn">
-                <summary style="color:inherit;padding:0"><b><i class="bi bi-exclamation-triangle"></i> {{ expiring|length }} {{ expiring|length == 1 ? 'partia ważna' : 'partii ważnych' }} &lt; {{ expiry_days }} dni</b>
-                    <div class="sp-sub">{{ expiring|slice(0, 2)|map(e => e.name)|join(', ') }}{% if expiring|length > 2 %}, …{% endif %}</div></summary>
-                <table class="sp-table" style="margin-top:6px">
-                    {% for e in expiring %}<tr><td>{{ e.name }}<div class="sp-sub"><a href="{{ root }}/logistics/stock?product={{ e.id_product }}&made={{ e.made_on }}">partia z {{ e.made_on|date('d.m') }}</a></div></td>
-                        <td class="n">{{ e.cartons }} kart.</td><td class="n">{{ e.expires|date('d.m') }}</td></tr>{% endfor %}
-                </table>
-            </details>
-        {% endif %}
     </div>
 
     {# --- Palety w budowie / gotowe --- #}
@@ -128,6 +122,23 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
     {% endfor %}
 
 </div>
+{% elseif tab == 'expiring' %}
+{# --- [333] Partie ważne krócej niż N dni : osobna zakładka --- #}
+<div class="card"><div class="card-body">
+    {% if expiring %}
+    <table class="sp-table">
+        <thead><tr><th>Produkt</th><th>Partia</th><th class="n">Kartony</th><th class="n">Na paletach</th><th>Ważne do</th></tr></thead>
+        <tbody>
+        {% for e in expiring %}
+            <tr><td>{{ e.name }}</td><td><a href="{{ root }}/logistics/stock?product={{ e.id_product }}&made={{ e.made_on }}">{{ e.made_on|date('d.m.Y') }}</a></td>
+                <td class="n">{{ e.cartons }}</td><td class="n">{{ e.on_pallet ?? 0 }}</td><td><b class="{{ e.expires <= 'now'|date_modify('+7 days')|date('Y-m-d') ? 'text-danger' }}">{{ e.expires|date('d.m.Y') }}</b></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="sp-empty">Brak partii z krótką datą.</div>
+    {% endif %}
+</div></div>
 {% else %}
 {# --- [327] Wysłane : osobna zakładka --- #}
 <div class="sp-ch">Wysłane <b>{{ shipped.total }}</b><small>palet od {{ shipped.since|date('d.m') }} · {{ shipped.customers }} klientów</small></div>
@@ -149,7 +160,18 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
     {# --- Skład palety --- #}
     <div class="card"><div class="card-body">
         {% if pallet %}
-            <div class="sp-k"><span>Skład palety {{ pallet.code }} · <span class="sp-cust">{{ pallet.customer }}</span></span><span class="sp-pill {{ statusClass[pallet.status] ?? 'sp-s0' }}">{{ pallet.state }}</span></div>
+            <div class="sp-k"><span>Skład palety {{ pallet.code }} · <span class="sp-cust">{{ pallet.customer }}</span></span>
+                <span class="d-flex gap-2 align-items-center"><span class="sp-pill {{ statusClass[pallet.status] ?? 'sp-s0' }}">{{ pallet.state }}</span>
+                {% if pallet.status in [1, 2] %}<button type="button" class="btn btn-sm btn-outline-danger" data-sp-del-open><i class="bi bi-trash"></i> Usuń paletę</button>{% endif %}</span></div>
+            {% if pallet.status in [1, 2] %}
+            <div class="sp-del" data-sp-del="{{ pallet.id }}" hidden>
+                <b>Usunąć paletę {{ pallet.code }} ({{ pallet.cartons }} kart.) ?</b>
+                <label><input type="radio" name="spDelMode" value="stock" checked> Kartony wracają do magazynu</label>
+                <label><input type="radio" name="spDelMode" value="delete"> Usuń też kartony</label>
+                <input class="form-control form-control-sm" data-sp-del-reason maxlength="255" placeholder="Powód (opcjonalnie)">
+                <span class="d-flex gap-2"><button type="button" class="btn btn-sm btn-danger" data-sp-del-go>Usuń</button><button type="button" class="btn btn-sm btn-light" data-sp-del-open>Anuluj</button></span>
+            </div>
+            {% endif %}
             <div class="sp-steps">
                 {% for s in pallet.steps %}<div class="{{ s.at ? 'on' }}"><b>{{ s.at ? s.at|date('d.m H:i') : '—' }}</b>{{ s.label }}</div>{% endfor %}
             </div>
@@ -218,4 +240,27 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
         {% endif %}
     </div></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    // [333] Usunięcie palety : kartony do magazynu albo usunięte (potwierdzenie w ramce).
+    const box = document.querySelector('[data-sp-del]');
+    if (!box) return;
+    document.querySelectorAll('[data-sp-del-open]').forEach(b => b.addEventListener('click', () => { box.hidden = !box.hidden; }));
+    box.querySelector('[data-sp-del-go]').addEventListener('click', (e) => {
+        const mode = box.querySelector('input[name=spDelMode]:checked').value;
+        if (mode === 'delete' && !window.confirm('Kartony zostaną usunięte ze stanu. Kontynuować ?')) return;
+        e.target.disabled = true;
+        at.send(`/ajax/logistics/stock/pallets/${box.dataset.spDel}`, 'DELETE', {mode, reason: box.querySelector('[data-sp-del-reason]').value})
+            .then((res) => {
+                at.notify(res.ok, res.message || (res.ok ? 'Usunięto' : 'Błąd'));
+                if (res.ok) window.setTimeout(() => { window.location.href = '{{ root }}/logistics/stock'; }, 600);
+                else e.target.disabled = false;
+            });
+    });
+})();
+</script>
 {% endblock %}
