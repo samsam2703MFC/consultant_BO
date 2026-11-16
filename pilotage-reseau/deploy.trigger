@@ -65,3 +65,4 @@
 2026-11-16T18:20:34Z [313] SMS par SMSAPI (comme le CRM), Ustawienia › SMS, historique e-mails / SMS par client (onglet Wysyłki)
 2026-11-16T18:25:02Z [314] Licznik stron par profil (moyennes jour / semaine) + [315] Zamówienia : somme par tournée
 2026-11-16T18:36:41Z [316] Zamówienia : colonnes alignées
+2026-11-16T18:32:57Z Dashboard : Semaine et Mois en quatre blocs
