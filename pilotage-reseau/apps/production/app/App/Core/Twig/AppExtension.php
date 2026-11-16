@@ -22,6 +22,7 @@ class AppExtension extends AbstractExtension
             // Wersja zasobów (?v=) : JS, CSS i etykiety mają długą pamięć w przeglądarce (stale-while-revalidate),
             // nowy adres po każdym wdrożeniu — inaczej stary skrypt spotyka nowe etykiety (klucze zamiast tekstów).
             new TwigFunction('asset_v', [ self::class, 'assetVersion' ]),
+            new TwigFunction('deployed_at', [ self::class, 'deployedAt' ]),
             // Zakładki grupy stron (BDO, PPWR, zwroty, archiwum) nad nagłówkiem ; lista grup dla railu i wyszukiwarki.
             new TwigFunction('page_tabs_html', fn(mixed $date = null) => \App\Core\Web\PageTabs::html(ROOT, null, is_string($date) ? $date : null), ['is_safe' => ['html']]),
             new TwigFunction('page_tab_groups', fn() => \App\Core\Web\PageTabs::GROUPS),
@@ -78,6 +79,21 @@ class AppExtension extends AbstractExtension
     }
 
     /** Najnowsza data zmiany skryptów modułu, arkuszy stylów i etykiet (raz na żądanie). */
+    /**
+     * [301] Dernière livraison du serveur : fichier DEPLOYED écrit par deploy/server.sh (« epoch commit ») ; sans lui,
+     * date du fichier le plus récent des ressources. @return array{at:string, title:string}
+     */
+    public static function deployedAt(): array
+    {
+        static $out = null;
+        if ($out !== null) return $out;
+        $file = dirname(__DIR__, 3) . '/DEPLOYED';
+        $parts = is_file($file) ? preg_split('/\s+/', trim((string) @file_get_contents($file))) : [];
+        $ts = ctype_digit((string) ($parts[0] ?? '')) ? (int) $parts[0] : (int) self::assetVersion();
+        $commit = preg_match('/^[0-9a-f]{7,40}$/', (string) ($parts[1] ?? '')) ? $parts[1] : '';
+        return $out = ['at' => $ts > 0 ? date('d.m.Y H:i', $ts) : '', 'title' => 'Ostatnia aktualizacja serwera' . ($commit !== '' ? ' · ' . $commit : '')];
+    }
+
     public static function assetVersion(): string
     {
         static $version = null;

@@ -68,6 +68,11 @@
             {% endif %}
             <ul class="navbar-nav {{ eday ? '' : 'ms-auto' }} mb-2 mb-lg-0">
 
+                {% set dep = deployed_at() %}
+                {% if dep.at %}
+                {# [301] Dernière mise à jour du serveur (à gauche de la cloche). #}
+                <li class="nav-item d-none d-md-flex align-items-center me-3"><span class="at-deployed" title="{{ dep.title }}"><i class="bi bi-arrow-repeat"></i> Aktualizacja {{ dep.at }}</span></li>
+                {% endif %}
                 <li class="nav-item dropdown me-3" id="atBell" data-root="{{ root }}">
                     <a class="nav-link at-bell-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside"
                        aria-expanded="false" aria-label="Powiadomienia">

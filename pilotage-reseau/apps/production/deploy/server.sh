@@ -120,6 +120,8 @@ rsync -a --delete --exclude '/.env' --exclude '*.log' --exclude 'cron_log.txt' \
 # Szablony Twig z datą teraz : rsync zachowuje datę checkoutu na runnerze, starszą niż szablon
 # skompilowany przez zapytanie w trakcie wdrożenia — auto_reload uznałby wtedy stary cache za aktualny.
 find "$ERP_TARGET/app/App/Views" -type f -name '*.twig' -exec touch {} +
+# [301] Date et commit de la livraison (affichés dans l'en-tête de l'ERP : « Aktualizacja … »).
+printf '%s %s\n' "$(date +%s)" "${ERP_COMMIT:-$(git -C "$SRC" rev-parse --short=8 HEAD 2>/dev/null || true)}" > "$ERP_TARGET/app/DEPLOYED"
 chown -R root:root "$ERP_TARGET/app"
 mkdir -p "$ERP_TARGET/app/App/Log"
 chown www-data:www-data "$ERP_TARGET/app/App/Log"
