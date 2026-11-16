@@ -41,7 +41,7 @@ final class Rail
         'suppliers' => ['Dostawcy', 'bi-truck-front', 'Zakupy', '/material-suppliers', [], null],
         'products' => ['Produkty', 'bi-box-seam', 'Produkt', '/workshop/products', ['/product-categories', '/products'], null],
         'packaging' => ['Opakowania', 'bi-recycle', 'Produkt', '/products/cartons', [], null],
-        'orders' => ['Zamówienia', 'bi-receipt', 'Sprzedaż', '/client-orders', [], 'queue'],
+        'orders' => ['Zamówienia', 'bi-receipt', 'Sprzedaż', '/client-orders', ['/client-orders/queue'], null],
         'clients' => ['Klienci', 'bi-shop', 'Sprzedaż', '/clients', ['/price-lists'], null],
         'complaints' => ['Reklamacje i zwroty', 'bi-arrow-counterclockwise', 'Sprzedaż', '/franchise-complaints', ['/client-complaints'], 'complaints'],
         'invoicing' => ['Faktury i płatności', 'bi-cash-stack', 'Sprzedaż', '/finances/payments-day', ['/finances/payment-proofs', '/communication/compose/reminder'], null],

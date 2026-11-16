@@ -154,8 +154,8 @@ final class PageTabs
         ]],
         // --- Sprzedaż
         'orders' => ['label' => 'Zamówienia', 'section' => 'Sprzedaż', 'icon' => 'bi-receipt', 'tabs' => [
+            // [312] « Do obsłużenia » usunięte z zakładek (strona dalej pod bezpośrednim adresem).
             ['/client-orders', 'Zamówienia klientów', 'bi-receipt'],
-            ['/client-orders/queue', 'Do obsłużenia', 'bi-inbox'],
         ]],
         'clients' => ['label' => 'Klienci', 'section' => 'Sprzedaż', 'icon' => 'bi-shop', 'tabs' => [
             ['/clients', 'Klienci', 'bi-shop'],
@@ -245,7 +245,7 @@ final class PageTabs
     ];
 
     /** [253] Liczniki na zakładkach (data-count : /ajax/rail-counters) — ta sama liczba co przy pozycji railu. */
-    public const TAB_COUNTS = ['/mail' => 'mail', '/franchise-complaints' => 'complaints', '/client-orders/queue' => 'queue'];
+    public const TAB_COUNTS = ['/mail' => 'mail', '/franchise-complaints' => 'complaints'];
 
     /** Bieżąca ścieżka trasy (jak w App::run : z parametru url). */
     public static function currentPath(): string
