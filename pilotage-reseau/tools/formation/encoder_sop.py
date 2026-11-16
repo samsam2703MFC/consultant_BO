@@ -136,7 +136,7 @@ def main():
                     'titre': contenu['titre'], 'objectif': contenu['objectif'], 'contenu': contenu, 'par': a.par})
                 if c >= 300 or (r or {}).get('id') != sid:
                     sys.exit(f'  création refusée ou identifiant inattendu ({c}) : {r}')
-                print('  créé :', r['id'])
+                print('  créé :', r['id'], '· code', r.get('code') or '—')   # un fichier sans code reçoit le premier libre (foCodeAuto)
                 actuel = {'classement': {}, 'moment': doc.get('moment')}
         elif code >= 300:
             sys.exit(f'  lecture impossible ({code}) : {actuel}')
