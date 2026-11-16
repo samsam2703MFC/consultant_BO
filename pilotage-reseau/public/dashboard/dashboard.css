@@ -3304,8 +3304,9 @@ body.db-vue-social{overflow:hidden}
 .db-nav--rail .db-avs .db-av__o{width:24px;height:24px;flex:0 0 24px;display:grid;place-items:center;color:#5c5852}
 .db-nav--rail .db-avs .db-av__o svg{width:20px;height:20px}
 .db-nav--rail .db-avs .db-av__t{display:flex;flex-direction:column;min-width:0;text-align:left}
-.db-nav--rail .db-avs .k{font-size:9.5px;line-height:1.15;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.db-nav--rail .db-avs .v{margin-top:1px;font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Les libellés des vignettes seulement : le panneau « Valeur du magasin » (.db-vpop), ouvert dans la vignette, a ses propres .k et .v (16/11/2026, « collision, le texte dépasse »). */
+.db-nav--rail .db-avs :is(.db-av,.db-vign) .k{font-size:9.5px;line-height:1.15;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-nav--rail .db-avs :is(.db-av,.db-vign) .v{margin-top:1px;font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-nav--rail .db-avs .db-av--api:hover .v{color:var(--accent)}
 
 /* La case photo d'une tâche faite ou notée, pendant que les photos se lisent (15/11/2026) : elle palpite, la photo s'y pose. */

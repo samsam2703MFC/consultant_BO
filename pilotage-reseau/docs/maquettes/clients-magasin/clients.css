@@ -1,0 +1,142 @@
+/* Maquette « Clients du magasin » (16/11/2026) : ce qui s'ajoute à ../parametres-mails/mails.css. */
+.cl-api{display:block;margin-top:1px;font:400 9.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:#b3aca2;letter-spacing:0}
+.cl-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.cl-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.cl-g3>.db-card,.cl-g2>.db-card,.cl-col>.db-card{margin-bottom:12px}
+.cl-champs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 14px;padding:12px 16px 14px}
+.cl-champs.un{grid-template-columns:1fr}
+.cl-c .k{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.cl-c .v{font-size:13px;margin-top:2px;line-height:1.35}
+.cl-c .v .mu{color:var(--muted)}
+.cl-c.plein{grid-column:1 / -1}
+.cl-ok{color:#3f7a52}.cl-ko{color:#A32014}.cl-wa{color:var(--prize-ink)}
+.cl-tete{display:flex;gap:16px;align-items:center;padding:16px;margin-bottom:12px}
+.cl-av{width:56px;height:56px;border-radius:50%;background:rgba(141,29,44,.08);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 56px}
+.cl-av.pro{border-radius:12px;background:rgba(176,121,42,.12);color:var(--prize-ink)}
+.cl-tete h2{margin:0;font-size:22px;font-weight:400;letter-spacing:-.01em}
+.cl-tete .s{font-size:12px;color:var(--muted);margin-top:3px}
+.cl-tete .tags{margin-top:6px}
+.cl-kpis{display:flex;gap:22px;margin-left:auto}
+.cl-kpis div{text-align:right}
+.cl-kpis .k{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.cl-kpis .v{font-size:20px;font-variant-numeric:tabular-nums}
+.cl-tag{display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:var(--chip)}
+.cl-tag.ok{background:rgba(63,122,82,.12);color:#3f7a52}
+.cl-tag.pro{background:rgba(176,121,42,.14);color:var(--prize-ink)}
+.cl-tag.ko{background:rgba(163,32,20,.08);color:#A32014}
+.cl-jauge{height:8px;border-radius:4px;background:var(--chip);position:relative;margin:6px 0 4px}
+.cl-jauge i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--prize)}
+.cl-jauge b{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink)}
+.cl-filtres{display:flex;gap:8px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+.cl-t td{padding:9px 12px}
+.cl-t .nom{font-size:13px}
+.cl-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+/* v2 (16/11/2026) : la vue Fidélité dans les clients — niveaux, carte, champs modifiables. */
+.cl-niv{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap}
+.cl-niv i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.cl-carte{display:inline-flex;align-items:center;font-size:12.5px;white-space:nowrap}
+.cl-carte .fdc-ic{width:18px;height:12px}
+.cl-pas{font-size:12.5px;color:var(--muted)}
+.cl-pas.prop{color:var(--accent)}
+.cl-nivs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.25fr);gap:10px;margin-bottom:14px}
+.cl-nivs .fd-tui{cursor:default}
+.cl-nivs .fd-tui>b{font-size:24px}
+.cl-nivs .fd-tui small{font-size:11px;color:var(--color-text-muted);line-height:1.35}
+.cl-nivs .fd-tui .cc{font-size:11.5px;color:var(--ink);margin-top:2px}
+.cl-nivs .fd-tui.carte{background:#fbf6ef;border-color:#ead8bd}
+.cl-nivs .fd-tui.carte>b{color:var(--prize-ink)}
+.cl-t td .sub .fdc-dots{vertical-align:0}
+.cl-t .tr-sel td{background:#fcf9f5}
+.cl-evo{font-size:10.5px;padding:1px 6px;border-radius:5px;margin-left:4px;white-space:nowrap}
+.cl-evo.up{background:rgba(63,122,82,.12);color:#3f7a52}.cl-evo.down{background:rgba(163,32,20,.08);color:#A32014}
+
+/* La fiche, dans l'esprit de la fiche Fidélité. */
+.cl-g3f{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;margin-bottom:12px}
+.cl-g3r{display:grid;grid-template-columns:300px 300px minmax(0,1fr);gap:12px;align-items:start;margin-bottom:12px}
+.cl-g3f>.db-card,.cl-g3r>.db-card,.cl-col>.db-card{margin-bottom:12px}
+.cl-g3f .cl-col>.db-card:last-child,.cl-g3r .cl-col>.db-card:last-child{margin-bottom:0}
+.fd-tete.cl-ft{margin-bottom:12px}
+.fd-tete .tags{margin-top:5px}
+.fd-av.pro{border-radius:12px;background:rgba(176,121,42,.12);color:var(--prize-ink)}
+.cl-cartes{display:grid;gap:10px;padding:12px 14px}
+.cl-cartes .fdc-carte{padding:14px 16px}
+.cl-cartes .fdc-tps{grid-template-columns:repeat(10,1fr);gap:6px;margin-top:10px}
+.cl-cartes .fdc-pts{font-size:26px;margin-top:8px}
+.cl-cartes .fdc-pts small{font-size:12px;opacity:.85;margin-left:6px}
+.cl-pal{height:6px;border-radius:3px;background:rgba(255,255,255,.3);margin-top:8px;overflow:hidden}.cl-pal i{display:block;height:100%;background:#fff}
+.cl-cartes .fdc-kv{margin-top:2px;padding:0 2px}
+.cl-ech{display:grid;gap:4px;padding:12px 14px 4px}
+.cl-ech div{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;padding:6px 10px;border-radius:8px;font-size:12.5px;color:var(--color-text-muted)}
+.cl-ech div i{width:10px;height:10px;border-radius:50%}
+.cl-ech div.on{background:rgba(176,48,72,.07);color:var(--ink);box-shadow:inset 0 0 0 1.5px #B03048}
+.cl-ech div small{font-size:11px}
+.cl-ech-n{margin:6px 14px 0;font-size:12px;color:var(--accent)}
+.cl-c .k{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.cl-in{display:flex;align-items:center;justify-content:space-between;min-height:32px;margin-top:3px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px;line-height:1.3}
+.cl-in.ta{align-items:flex-start;padding:8px 10px;min-height:54px}
+.cl-in .dd{color:var(--muted);margin-left:8px}
+.cl-in.mod{border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,29,44,.08)}
+.cl-modif{font-size:9.5px;letter-spacing:0;text-transform:none;color:var(--accent)}
+.cl-ro{font-size:13px;margin-top:3px;line-height:1.35}
+.cl-ecrit{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#3f7a52;background:rgba(63,122,82,.1);border-radius:10px;padding:2px 8px}
+.cl-ecrit.lu{color:var(--muted);background:var(--chip)}
+.cl-enr{display:flex;align-items:center;gap:10px;padding:10px 16px 14px;border-top:1px solid var(--color-border-tertiary)}
+.cl-enr{flex-wrap:wrap;justify-content:flex-end}
+.cl-enr .db-mini{flex:1 1 220px}
+.cl-lus{width:100%;border-collapse:collapse;font-size:12.5px}
+.cl-lus td{padding:6px 16px;border-top:1px solid var(--color-border-tertiary);vertical-align:top}
+.cl-lus td:first-child{color:var(--color-text-muted);width:44%}
+.cl-lus .cl-api{display:inline;margin-left:6px}
+.cl-hab{padding:4px 0 10px}
+.cl-hab .fd-lab{margin:10px 14px 6px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.cl-sw{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.cl-enr-b{display:flex;gap:8px;margin-left:auto}
+
+/* Tuiles identiques (16/11/2026, Sam : « des tiles identiques, surtout en hauteur ») : sept colonnes égales, six lignes
+   fixes par tuile, la condition sur deux lignes réservées. */
+.cl-nivs{grid-template-columns:repeat(7,minmax(0,1fr));align-items:stretch}
+.cl-tui{gap:3px}
+.cl-tui .fd-tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex}
+.cl-tui>b{margin-top:4px}
+.cl-tui .l1{display:block;font-size:11.5px;line-height:16px;height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--color-text-muted)}
+.cl-tui .l2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;line-height:15px;height:30px;color:var(--color-text-muted)}
+.cl-tui .fd-bar{margin:4px 0 2px}
+.cl-tui .l1.cc{color:var(--ink)}
+.cl-tui.carte .l1.cc{color:var(--accent)}
+
+/* Les cartes côte à côte d'une fiche : même hauteur par rangée, le bouton « Enregistrer » en bas de sa carte. */
+.cl-g3f,.cl-g3r,.cl-g3,.cl-g2{align-items:stretch}
+.cl-g3f>.db-card,.cl-g3r>.db-card,.cl-g3>.db-card,.cl-g2>.db-card{margin-bottom:0}
+.cl-col{display:flex;flex-direction:column}
+.cl-col>.db-card:last-child{flex:1 1 auto}
+.cl-g3f .db-card,.cl-g3r .db-card,.cl-g3 .db-card,.cl-g2 .db-card{display:flex;flex-direction:column}
+.cl-enr{margin-top:auto}
+
+/* Lean UX (16/11/2026) : moins de colonnes et de cartes ; les champs de l'API en info-bulle ; les longues listes défilent
+   dans leur carte (filet Ruby de 3 px). */
+.cl-api{display:none}
+.cl-defile{max-height:520px;overflow:auto}
+.cl-defile thead th{position:sticky;top:0;z-index:1;background:var(--color-background-secondary, #f7f4ef)}
+.cl-defile.court{max-height:190px}
+.cl-af{font-size:12px;color:var(--accent);white-space:nowrap}
+.cl-af.ko{color:#A32014}
+.cl-chev{color:var(--faint);font-size:16px;text-align:right}
+.cl-mois{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:4px 14px 14px}
+.cl-mois div{border:1px solid var(--color-border-tertiary);border-radius:8px;padding:6px 7px;font-size:11px;color:var(--color-text-muted);height:44px;box-sizing:border-box}
+.cl-mois div b{display:flex;align-items:center;gap:5px;font-weight:400;font-size:11.5px;color:var(--ink);margin-top:2px;white-space:nowrap;overflow:hidden}
+.cl-mois div b i{width:8px;height:8px;border-radius:50%;flex:none}
+.cl-ligne{display:flex;flex-wrap:wrap;gap:4px 14px;padding:10px 16px;font-size:12px;color:var(--color-text-muted);border-top:1px solid var(--color-border-tertiary)}
+.cl-ligne b{font-weight:400;color:var(--ink)}
+.cl-ligne .px-ouvrir{margin-left:auto}
+.cl-champs.q4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cl-sous{grid-column:1 / -1;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-top:4px}
+.cl-sous:first-child{margin-top:0}
+.cl-top3{padding:2px 0 12px}
+.cl-hab-l{margin:0 14px 8px;font-size:12px;color:var(--color-text-muted)}.cl-hab-l b{font-weight:400;color:var(--ink)}
+/* Le niveau mois par mois : cinq barres égales de la couleur du niveau. */
+.cl-mois-t{margin:10px 14px 6px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.cl-mois{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:0 14px 14px}
+.cl-mois div{border:0;border-radius:0;padding:0;height:auto;font-size:11px;color:var(--color-text-muted);text-align:center}
+.cl-mois div i{display:block;height:8px;border-radius:4px;margin-bottom:4px}
+.cl-defile.court{max-height:160px}
