@@ -63,7 +63,7 @@ final class OrderPaymentService
         $lang = isset(self::SMS[$o['language']]) ? $o['language'] : 'fr';
         $amount = $o['proforma_amount'] !== null ? number_format((float) $o['proforma_amount'], 2, ',', ' ') : '—';
         $body = strtr(self::SMS[$lang], ['{company}' => $this->repo->companyName() ?: '—', '{num}' => (string) $o['doc_num'], '{amount}' => $amount, '{currency}' => strtoupper((string) $o['currency'])]);
-        $result = $this->sms->send($phone, $body);
+        $result = $this->sms->send($phone, $body, ['customer' => (int) $o['id_customer'], 'context' => 'payment_reminder', 'ref' => (int) $o['id_proforma'], 'author' => $author]);
         $this->repo->logSms(['id_proforma' => (int) $o['id_proforma'], 'id_order' => $orderId, 'recipient' => mb_substr($phone, 0, 40), 'language' => $lang,
             'body' => mb_substr($body, 0, 400), 'status' => $result['status'], 'provider' => $this->sms->name(), 'error' => $result['error'], 'created_by' => $author]);
         if ($result['status'] === 'failed') throw new CustomException('SMS nie wysłany : ' . ($result['error'] ?: 'błąd bramki') . '.', 'errors', 502);

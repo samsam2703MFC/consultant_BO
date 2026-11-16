@@ -70,7 +70,7 @@ try {
         App\Services\Logistics\Sms\SmsTransport::class => new class implements App\Services\Logistics\Sms\SmsTransport {
             public function name(): string { return 'test'; }
             public function delivers(): bool { return false; }
-            public function send(string $to, string $text): array { throw new RuntimeException('Aucun SMS pendant les tests.'); }
+            public function send(string $to, string $text, array $context = []): array { throw new RuntimeException('Aucun SMS pendant les tests.'); }
         },
         App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
             public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string

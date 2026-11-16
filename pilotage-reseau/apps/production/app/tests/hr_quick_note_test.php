@@ -31,7 +31,7 @@ final class TestSms implements App\Services\Logistics\Sms\SmsTransport
     public array $sent = [];
     public function name(): string { return 'test'; }
     public function delivers(): bool { return false; }
-    public function send(string $to, string $text): array { $this->sent[] = [$to, $text]; return ['status' => 'logged', 'provider_id' => null, 'error' => null]; }
+    public function send(string $to, string $text, array $context = []): array { $this->sent[] = [$to, $text]; return ['status' => 'logged', 'provider_id' => null, 'error' => null]; }
 }
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
