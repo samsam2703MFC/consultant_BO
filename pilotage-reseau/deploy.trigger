@@ -67,3 +67,4 @@
 2026-11-16T18:36:41Z [316] Zamówienia : colonnes alignées
 2026-11-16T18:32:57Z Dashboard : Semaine et Mois en quatre blocs
 2026-11-16T18:38:35Z [317] Zamówienia : tournée en sous-titre, colonne Wysyłka retirée
+2026-11-16T18:45:00Z [318] SMS réels possibles sur le serveur de l'atelier (interrupteur Ustawienia › SMS)
