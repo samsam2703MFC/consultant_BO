@@ -38,6 +38,14 @@ return [
         'bic'              => null,
     ],
 
+    // Dashboard › Mon catalogue (src/franchise/catalogues_magasin.php) : l'adresse de l'API du portail Marketing, quand la clé
+    // commune « mar_api_url » d'erp_cles n'est pas posée (elle prime). Ex. : https://<hôte>/marketing/api
+    'marketingApi' => null,
+
+    // L'accès à l'API (src/acces.php) : 'console' exige une session de la console franchisé (en ligne, posé par
+    // bin/deploy.sh) ; 'ouvert' la laisse ouverte (banc, poste de développement).
+    'acces' => (getenv('COCKPIT_ACCES') ?: 'ouvert') === 'console' ? 'console' : 'ouvert',
+
     // Écran de connexion intégré. false (défaut) : accès ouvert — les
     // utilisateurs arrivent redirigés depuis l'ERP, qui porte l'auth.
     // true : mot de passe défini au premier lancement, session 30 jours.

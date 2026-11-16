@@ -179,8 +179,7 @@ function psTickets(array $sids, string $date): array
 {
     $chemins = [];
     foreach ($sids as $sid) { $chemins[(string) $sid] = '/shops/' . $sid . '/transactions?date=' . $date; }
-    $noms = function_exists('venteEmployes') ? venteEmployes() : [];
-    $out = [];
+    $lus = [];
     foreach (PanelApi::getParallele($chemins, 4) as $sid => $liste) {
         if (!is_array($liste)) { continue; }
         $T = [];
@@ -188,12 +187,18 @@ function psTickets(array $sids, string $date): array
             if (!is_array($t)) { continue; }
             $ts = (string) ($t['insert_timestamp'] ?? '');
             if (strlen($ts) < 16) { continue; }
-            $ide = (int) ($t['id_employee'] ?? 0);
-            $T[] = [60 * (int) substr($ts, 11, 2) + (int) substr($ts, 14, 2), $ide,
-                $ide > 0 ? ($noms[$ide]['nom'] ?? ('Employé ' . $ide)) : '',
+            $T[] = [60 * (int) substr($ts, 11, 2) + (int) substr($ts, 14, 2), (int) ($t['id_employee'] ?? 0),
                 (float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0)];
         }
-        $out[(string) $sid] = $T;
+        $lus[(string) $sid] = $T;
+    }
+    // Un nom pour chaque vendeur des tickets : un compte que le cockpit ne connaît pas encore se relit au panel
+    // (venteEmployesConnus, 14/11/2026) plutôt que de partir dans l'e-mail sous « Employé 145 ».
+    $ids = array_merge([], ...array_map(fn ($T) => array_column($T, 1), array_values($lus)));
+    $noms = function_exists('venteEmployesConnus') ? venteEmployesConnus($ids) : (function_exists('venteEmployes') ? venteEmployes() : []);
+    $out = [];
+    foreach ($lus as $sid => $T) {
+        $out[$sid] = array_map(fn ($t) => [$t[0], $t[1], $t[1] > 0 ? ($noms[$t[1]]['nom'] ?? ('Employé ' . $t[1])) : '', $t[2]], $T);
     }
     return $out;
 }

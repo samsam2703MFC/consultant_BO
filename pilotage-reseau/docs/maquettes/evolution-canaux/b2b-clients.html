@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Cockpit CEO — L'Atelier by</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/controles-photo.css">
+
+
+<style>/* capture pleine page : le corps défile avec la fenêtre */.workspace{height:auto!important;overflow:visible!important;min-height:100vh}.app__body{overflow:visible!important}/* la colonne « part » en plus : pas de retour à la ligne */.rr-tb.ev-an td,.rr-tb.ev-an th{white-space:nowrap}.rr-tb.ev-an td:last-child{white-space:normal}</style></head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item is-active" aria-current="page">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Résultat</h1>
+      </div>
+      <div class="topbar__actions">
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body">
+    <div class="shell-page">
+      <p class="shell-sub page-intro">La journée, la semaine et le mois du réseau, face à l’objectif et au compte de résultat. L’objectif vient du budget mensuel réparti par la pondération réseau des jours ; l’écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.</p>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div data-screen="resultat" style="display:flex;flex-direction:column;gap:14px">
+    
+    
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">Chaque magasin depuis sa première vente : le trafic clients et le chiffre d’affaires, mois après mois, face au N-1 — en total ou par jour ouvert, tout, comptoir ou B2B.</div>
+      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:6px"><button data-h="36" class="" style="border-width: medium; border-style: none; border-color: currentcolor; border-image: none; cursor: pointer; font-family: var(--font-ui); font-size: 12.5px; font-weight: 400; padding: 7px 18px; border-radius: 6px; background: transparent; color: var(--color-text-muted);"><i class="rj-ok">✓</i>Jour</button><button data-h="37" class="" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:7px 18px;border-radius:6px;background:transparent;color:var(--color-text-muted)"><i class="rj-ok">✓</i>Semaine</button><button data-h="38" class="" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:7px 18px;border-radius:6px;background:transparent;color:var(--color-text-muted)"><i class="rj-ok">✓</i>Mois</button><button data-h="39" class="" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:7px 18px;border-radius:6px;background:transparent;color:var(--color-text-muted)"><i class="rj-ok">✓</i>Analyse réseau</button><button data-h="36" class="rj-on" style="border-width: medium; border-style: none; border-color: currentcolor; border-image: none; cursor: pointer; font-family: var(--font-ui); font-size: 12.5px; font-weight: 400; padding: 7px 18px; border-radius: 6px; background: var(--color-primary); color: rgb(255, 255, 255);"><i class="rj-ok">✓</i>Évolution magasin</button></div>
+    </div>
+    
+    
+  <div id="mq-contenu"><div class="rr" style="position:relative;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">
+    <span style="position:absolute;top:-11px;right:14px;background:#2b2724;color:#fff;font:600 10.5px var(--font-ui);letter-spacing:.08em;padding:4px 10px;border-radius:12px">MAQUETTE · PART B2B FICTIVE</span><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-family:var(--font-display);font-size:18px">Évolution magasin</span><span style="font-size:11.5px;color:var(--color-text-muted)">4 magasins · depuis juillet 2024 · mois par mois, face au N-1</span><span style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="font-size:11px;color:var(--color-text-muted)">ventes</span><span style="box-shadow:0 0 0 2px #1f5f8b33;border-radius:9px"><div class="rr-ong"><button class="">Tout</button><button class="">Comptoir</button><button class="on">B2B</button></div></span><div class="rr-ong"><button class="on">Trafic clients</button><button class="">Chiffre d’affaires</button></div><div class="rr-ong"><button class="">Par jour ouvert</button><button class="on">Total</button></div></span></div><div style="font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);font-size:10px;margin:-6px 0 -6px;text-transform:none;letter-spacing:0">sous chaque mois : l’écart au N-1, en %</div>
+    <div style="font-size:11px;color:var(--color-text-muted);margin:-2px 0 -4px;display:flex;align-items:center;gap:6px"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1f5f8b"></i>B2B : les tickets des clients pro à TVA valide · 8,4 % du CA du réseau sur 12 mois · une commande pro = un ticket</div>
+    
+    <div class="rm-bloc ev-mag">
+      <div class="ev-tete"><b>Corbais</b><span style="font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:#1f5f8b;border-radius:5px;padding:2px 7px;align-self:center">B2B</span><span>depuis juillet 2024 (premières ventes, 4 j) · 27 mois pleins · 8 385 commandes pro · 393,1 k€ de CA · panier pro 46,88 € · meilleur mois : décembre 2024 (487)</span></div>
+      <div class="rm-card"><div class="rm-s6"><div><svg viewBox="0 0 880 262" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    
+    <line x1="54" x2="862" y1="220.0" y2="220.0" stroke="rgba(34,34,34,.16)"/><text x="46" y="223.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">0,0</text><line x1="54" x2="862" y1="155.3" y2="155.3" stroke="rgba(34,34,34,.07)"/><text x="46" y="158.8" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">200</text><line x1="54" x2="862" y1="90.7" y2="90.7" stroke="rgba(34,34,34,.07)"/><text x="46" y="94.2" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">400</text><line x1="54" x2="862" y1="26.0" y2="26.0" stroke="rgba(34,34,34,.07)"/><text x="46" y="29.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">600</text>
+    <text x="59.0" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2024</text><line x1="227.1" x2="227.1" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="232.1" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2025</text><line x1="573.4" x2="573.4" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="578.4" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2026</text>
+    <polygon points="443.6,168.3 472.4,120.4 472.4,91.6 443.6,161.2" fill="rgba(163,32,20,.13)"/><polygon points="472.4,120.4 493.8,112.3 493.8,112.3 472.4,91.6" fill="rgba(163,32,20,.13)"/><polygon points="493.8,112.3 501.3,109.4 501.3,119.4 493.8,112.3" fill="rgba(63,122,82,.16)"/><polygon points="501.3,109.4 530.1,103.0 530.1,104.6 501.3,119.4" fill="rgba(63,122,82,.16)"/><polygon points="530.1,103.0 536.2,95.8 536.2,95.8 530.1,104.6" fill="rgba(63,122,82,.16)"/><polygon points="536.2,95.8 559.0,68.7 559.0,62.5 536.2,95.8" fill="rgba(163,32,20,.13)"/><polygon points="559.0,68.7 587.9,129.1 587.9,124.0 559.0,62.5" fill="rgba(163,32,20,.13)"/><polygon points="587.9,129.1 616.7,133.7 616.7,131.7 587.9,124.0" fill="rgba(163,32,20,.13)"/><polygon points="616.7,133.7 636.0,132.6 636.0,132.6 616.7,131.7" fill="rgba(163,32,20,.13)"/><polygon points="636.0,132.6 645.6,132.1 645.6,133.0 636.0,132.6" fill="rgba(63,122,82,.16)"/><polygon points="645.6,132.1 674.4,102.6 674.4,132.1 645.6,133.0" fill="rgba(63,122,82,.16)"/><polygon points="674.4,102.6 703.3,113.3 703.3,118.8 674.4,132.1" fill="rgba(63,122,82,.16)"/><polygon points="703.3,113.3 732.1,82.9 732.1,115.9 703.3,118.8" fill="rgba(63,122,82,.16)"/><polygon points="732.1,82.9 754.4,157.4 754.4,157.4 732.1,115.9" fill="rgba(63,122,82,.16)"/><polygon points="754.4,157.4 761.0,179.3 761.0,169.6 754.4,157.4" fill="rgba(163,32,20,.13)"/><polygon points="761.0,179.3 777.3,168.8 777.3,168.8 761.0,169.6" fill="rgba(163,32,20,.13)"/><polygon points="777.3,168.8 789.9,160.8 789.9,168.3 777.3,168.8" fill="rgba(63,122,82,.16)"/><polygon points="789.9,160.8 818.7,103.0 818.7,120.4 789.9,168.3" fill="rgba(63,122,82,.16)"/><polygon points="818.7,103.0 847.6,109.1 847.6,109.4 818.7,120.4" fill="rgba(63,122,82,.16)"/>
+    <polyline points="443.6,161.2 472.4,91.6 501.3,119.4 530.1,104.6 559.0,62.5 587.9,124.0 616.7,131.7 645.6,133.0 674.4,132.1 703.3,118.8 732.1,115.9 761.0,169.6 789.9,168.3 818.7,120.4 847.6,109.4" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>
+    <polyline points="97.3,161.2 126.1,91.6 155.0,119.4 183.9,104.6 212.7,62.5 241.6,124.0 270.4,131.7 299.3,133.0 328.1,132.1 357.0,118.8 385.9,115.9 414.7,169.6 443.6,168.3 472.4,120.4 501.3,109.4 530.1,103.0 559.0,68.7 587.9,129.1 616.7,133.7 645.6,132.1 674.4,102.6 703.3,113.3 732.1,82.9 761.0,179.3 789.9,160.8 818.7,103.0 847.6,109.1" fill="none" stroke="#1f5f8b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    
+    <circle cx="443.6" cy="161.2" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>août 2025 · N-1 : 182</title></circle><circle cx="472.4" cy="91.6" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>sept. 2025 · N-1 : 397</title></circle><circle cx="501.3" cy="119.4" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>oct. 2025 · N-1 : 311</title></circle><circle cx="530.1" cy="104.6" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>nov. 2025 · N-1 : 357</title></circle><circle cx="559.0" cy="62.5" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>déc. 2025 · N-1 : 487</title></circle><circle cx="587.9" cy="124.0" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>janv. 2026 · N-1 : 297</title></circle><circle cx="616.7" cy="131.7" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>févr. 2026 · N-1 : 273</title></circle><circle cx="645.6" cy="133.0" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>mars 2026 · N-1 : 269</title></circle><circle cx="674.4" cy="132.1" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>avr. 2026 · N-1 : 272</title></circle><circle cx="703.3" cy="118.8" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>mai 2026 · N-1 : 313</title></circle><circle cx="732.1" cy="115.9" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>juin 2026 · N-1 : 322</title></circle><circle cx="761.0" cy="169.6" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>juil. 2026 · N-1 : 156</title></circle><circle cx="789.9" cy="168.3" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>août 2026 · N-1 : 160</title></circle><circle cx="818.7" cy="120.4" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>sept. 2026 · N-1 : 308</title></circle><circle cx="847.6" cy="109.4" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>oct. 2026 · N-1 : 342</title></circle>
+    <circle cx="68.4" cy="219.4" r="3.6" fill="#fff" stroke="#1f5f8b" stroke-width="1.6"><title>juil. 2024 · 2</title></circle><circle cx="97.3" cy="161.2" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2024 · 182</title></circle><circle cx="126.1" cy="91.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2024 · 397</title></circle><circle cx="155.0" cy="119.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2024 · 311</title></circle><circle cx="183.9" cy="104.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>nov. 2024 · 357</title></circle><circle cx="212.7" cy="62.5" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>déc. 2024 · 487</title></circle><circle cx="241.6" cy="124.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>janv. 2025 · 297</title></circle><circle cx="270.4" cy="131.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>févr. 2025 · 273</title></circle><circle cx="299.3" cy="133.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mars 2025 · 269</title></circle><circle cx="328.1" cy="132.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>avr. 2025 · 272</title></circle><circle cx="357.0" cy="118.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2025 · 313</title></circle><circle cx="385.9" cy="115.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2025 · 322</title></circle><circle cx="414.7" cy="169.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2025 · 156</title></circle><circle cx="443.6" cy="168.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2025 · 160</title></circle><circle cx="472.4" cy="120.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2025 · 308</title></circle><circle cx="501.3" cy="109.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2025 · 342</title></circle><circle cx="530.1" cy="103.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>nov. 2025 · 362</title></circle><circle cx="559.0" cy="68.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>déc. 2025 · 468</title></circle><circle cx="587.9" cy="129.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>janv. 2026 · 281</title></circle><circle cx="616.7" cy="133.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>févr. 2026 · 267</title></circle><circle cx="645.6" cy="132.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mars 2026 · 272</title></circle><circle cx="674.4" cy="102.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>avr. 2026 · 363</title></circle><circle cx="703.3" cy="113.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2026 · 330</title></circle><circle cx="732.1" cy="82.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2026 · 424</title></circle><circle cx="761.0" cy="179.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2026 · 126</title></circle><circle cx="789.9" cy="160.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2026 · 183</title></circle><circle cx="818.7" cy="103.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2026 · 362</title></circle><circle cx="847.6" cy="109.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2026 · 343</title></circle>
+    <text x="212.7" y="54.5" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">487</text><text x="761.0" y="194.3" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">126</text><text x="847.6" y="101.1" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">343</text>
+    <text x="75.4" y="213.4" font-size="9.5" text-anchor="start" fill="#7a736a" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">2 · 4 j</text>
+    <text x="68.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="97.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="126.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="155.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="183.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="212.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="241.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="270.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="299.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="328.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="357.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="385.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="414.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="443.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="443.6" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−12</text><text x="472.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="472.4" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−22</text><text x="501.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="501.3" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+10</text><text x="530.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="530.1" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#7A5207" style="font-family:var(--font-ui)">+1</text><text x="559.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="559.0" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−4</text><text x="587.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="587.9" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−5</text><text x="616.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="616.7" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#7A5207" style="font-family:var(--font-ui)">−2</text><text x="645.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="645.6" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#7A5207" style="font-family:var(--font-ui)">+1</text><text x="674.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="674.4" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+33</text><text x="703.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="703.3" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+5</text><text x="732.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="732.1" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+32</text><text x="761.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="761.0" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−19</text><text x="789.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="789.9" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+14</text><text x="818.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="818.7" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+18</text><text x="847.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="847.6" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#7A5207" style="font-family:var(--font-ui)">0</text>
+    <text x="46" y="252" font-size="9" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">vs N-1</text>
+  </svg>
+        <div class="rm-leg">
+          <span><i style="background:#1f5f8b;border-radius:50%"></i>commandes pro du mois (tickets)</span>
+          <span><svg width="20" height="9" style="vertical-align:-1px;margin-right:4px" aria-hidden="true"><line x1="0" x2="20" y1="4.5" y2="4.5" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="4 3"/></svg>N-1 : le même mois un an plus tôt (pointillé), dès août 2025</span>
+          <span><i style="background:rgba(63,122,82,.35)"></i><i style="background:rgba(163,32,20,.3);margin-left:-2px"></i>gagné / perdu face au N-1</span>
+          <span><i style="background:#fff;border:1.6px solid #1f5f8b;border-radius:50%;width:6px;height:6px"></i>mois d’ouverture, incomplet : hors courbe</span>
+          
+          
+        </div></div>
+        <div class="rm-s6t ev-t4"><div class="t good"><div class="k">12 mois vs N-1</div><div class="v">+6 %</div><div class="s">3 781 contre 3 556 · nov. 25 → oct. 26</div></div><div class="t good"><div class="k">3 derniers mois vs N-1</div><div class="v">+10 %</div><div class="s">août → oct. : 888 contre 810</div></div><div class="t "><div class="k">Part du CA · 12 mois</div><div class="v">9,7 %</div><div class="s">contre 9,3 % un an plus tôt · plafond 40 %</div></div><div class="t good"><div class="k">nov. en cours · 11 j</div><div class="v">156</div><div class="s"><b style="color:#3f7a52">+22 %</b> face aux mêmes 11 jours de novembre 2025 (128)</div></div></div>
+      </div></div>
+    </div>
+    <div class="rm-bloc ev-mag">
+      <div class="ev-tete"><b>Gosselies</b><span style="font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:#1f5f8b;border-radius:5px;padding:2px 7px;align-self:center">B2B</span><span>depuis janvier 2025 · 22 mois pleins · 3 277 commandes pro · 139,2 k€ de CA · panier pro 42,48 € · meilleur mois : décembre 2025 (231)</span></div>
+      <div class="rm-card"><div class="rm-s6"><div><svg viewBox="0 0 880 262" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    <rect x="54" y="24" width="173.1" height="196.0" fill="rgba(34,34,34,.035)"/><text x="140.6" y="123.0" font-size="10.5" text-anchor="middle" fill="#a59d92" style="font-family:var(--font-ui)">pas encore ouvert</text>
+    <line x1="54" x2="862" y1="220.0" y2="220.0" stroke="rgba(34,34,34,.16)"/><text x="46" y="223.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">0,0</text><line x1="54" x2="862" y1="155.3" y2="155.3" stroke="rgba(34,34,34,.07)"/><text x="46" y="158.8" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">100</text><line x1="54" x2="862" y1="90.7" y2="90.7" stroke="rgba(34,34,34,.07)"/><text x="46" y="94.2" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">200</text><line x1="54" x2="862" y1="26.0" y2="26.0" stroke="rgba(34,34,34,.07)"/><text x="46" y="29.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">300</text>
+    <text x="59.0" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2024</text><line x1="227.1" x2="227.1" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="232.1" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2025</text><line x1="573.4" x2="573.4" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="578.4" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2026</text>
+    <polygon points="587.9,109.4 616.7,136.6 616.7,146.3 587.9,124.9" fill="rgba(63,122,82,.16)"/><polygon points="616.7,136.6 645.6,102.3 645.6,118.5 616.7,146.3" fill="rgba(63,122,82,.16)"/><polygon points="645.6,102.3 674.4,132.7 674.4,139.2 645.6,118.5" fill="rgba(63,122,82,.16)"/><polygon points="674.4,132.7 703.3,112.7 703.3,125.6 674.4,139.2" fill="rgba(63,122,82,.16)"/><polygon points="703.3,112.7 732.1,127.5 732.1,128.2 703.3,125.6" fill="rgba(63,122,82,.16)"/><polygon points="732.1,127.5 761.0,169.6 761.0,183.8 732.1,128.2" fill="rgba(63,122,82,.16)"/><polygon points="761.0,169.6 789.9,161.2 789.9,167.0 761.0,183.8" fill="rgba(63,122,82,.16)"/><polygon points="789.9,161.2 793.2,157.4 793.2,157.4 789.9,167.0" fill="rgba(63,122,82,.16)"/><polygon points="793.2,157.4 818.7,128.8 818.7,84.8 793.2,157.4" fill="rgba(163,32,20,.13)"/><polygon points="818.7,128.8 839.8,101.9 839.8,101.9 818.7,84.8" fill="rgba(163,32,20,.13)"/><polygon points="839.8,101.9 847.6,92.0 847.6,108.1 839.8,101.9" fill="rgba(63,122,82,.16)"/>
+    <polyline points="587.9,124.9 616.7,146.3 645.6,118.5 674.4,139.2 703.3,125.6 732.1,128.2 761.0,183.8 789.9,167.0 818.7,84.8 847.6,108.1" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>
+    <polyline points="241.6,124.9 270.4,146.3 299.3,118.5 328.1,139.2 357.0,125.6 385.9,128.2 414.7,183.8 443.6,167.0 472.4,84.8 501.3,108.1 530.1,99.1 559.0,70.6 587.9,109.4 616.7,136.6 645.6,102.3 674.4,132.7 703.3,112.7 732.1,127.5 761.0,169.6 789.9,161.2 818.7,128.8 847.6,92.0" fill="none" stroke="#1f5f8b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    
+    <circle cx="587.9" cy="124.9" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>janv. 2026 · N-1 : 147</title></circle><circle cx="616.7" cy="146.3" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>févr. 2026 · N-1 : 114</title></circle><circle cx="645.6" cy="118.5" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>mars 2026 · N-1 : 157</title></circle><circle cx="674.4" cy="139.2" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>avr. 2026 · N-1 : 125</title></circle><circle cx="703.3" cy="125.6" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>mai 2026 · N-1 : 146</title></circle><circle cx="732.1" cy="128.2" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>juin 2026 · N-1 : 142</title></circle><circle cx="761.0" cy="183.8" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>juil. 2026 · N-1 : 56</title></circle><circle cx="789.9" cy="167.0" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>août 2026 · N-1 : 82</title></circle><circle cx="818.7" cy="84.8" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>sept. 2026 · N-1 : 209</title></circle><circle cx="847.6" cy="108.1" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>oct. 2026 · N-1 : 173</title></circle>
+    <circle cx="241.6" cy="124.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>janv. 2025 · 147</title></circle><circle cx="270.4" cy="146.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>févr. 2025 · 114</title></circle><circle cx="299.3" cy="118.5" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mars 2025 · 157</title></circle><circle cx="328.1" cy="139.2" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>avr. 2025 · 125</title></circle><circle cx="357.0" cy="125.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2025 · 146</title></circle><circle cx="385.9" cy="128.2" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2025 · 142</title></circle><circle cx="414.7" cy="183.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2025 · 56</title></circle><circle cx="443.6" cy="167.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2025 · 82</title></circle><circle cx="472.4" cy="84.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2025 · 209</title></circle><circle cx="501.3" cy="108.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2025 · 173</title></circle><circle cx="530.1" cy="99.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>nov. 2025 · 187</title></circle><circle cx="559.0" cy="70.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>déc. 2025 · 231</title></circle><circle cx="587.9" cy="109.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>janv. 2026 · 171</title></circle><circle cx="616.7" cy="136.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>févr. 2026 · 129</title></circle><circle cx="645.6" cy="102.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mars 2026 · 182</title></circle><circle cx="674.4" cy="132.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>avr. 2026 · 135</title></circle><circle cx="703.3" cy="112.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2026 · 166</title></circle><circle cx="732.1" cy="127.5" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2026 · 143</title></circle><circle cx="761.0" cy="169.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2026 · 78</title></circle><circle cx="789.9" cy="161.2" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2026 · 91</title></circle><circle cx="818.7" cy="128.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2026 · 141</title></circle><circle cx="847.6" cy="92.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2026 · 198</title></circle>
+    <text x="559.0" y="62.6" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">231</text><text x="414.7" y="198.8" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">56</text><text x="847.6" y="84.0" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">198</text>
+    
+    <text x="68.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="97.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="126.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="155.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="183.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="212.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="241.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="270.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="299.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="328.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="357.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="385.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="414.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="443.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="472.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="501.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="530.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="559.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="587.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="587.9" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+16</text><text x="616.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="616.7" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+13</text><text x="645.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="645.6" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+16</text><text x="674.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="674.4" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+8</text><text x="703.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="703.3" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+14</text><text x="732.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="732.1" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#7A5207" style="font-family:var(--font-ui)">+1</text><text x="761.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="761.0" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+39*</text><text x="789.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="789.9" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+11</text><text x="818.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="818.7" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−33</text><text x="847.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="847.6" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+14</text>
+    <text x="46" y="252" font-size="9" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">vs N-1</text>
+  </svg>
+        <div class="rm-leg">
+          <span><i style="background:#1f5f8b;border-radius:50%"></i>commandes pro du mois (tickets)</span>
+          <span><svg width="20" height="9" style="vertical-align:-1px;margin-right:4px" aria-hidden="true"><line x1="0" x2="20" y1="4.5" y2="4.5" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="4 3"/></svg>N-1 : le même mois un an plus tôt (pointillé), dès janvier 2026</span>
+          <span><i style="background:rgba(63,122,82,.35)"></i><i style="background:rgba(163,32,20,.3);margin-left:-2px"></i>gagné / perdu face au N-1</span>
+          
+          
+          <span>* le N-1 a eu des jours fermés — « Par jour ouvert » les neutralise</span>
+        </div></div>
+        <div class="rm-s6t ev-t4"><div class="t good"><div class="k">10 mois vs N-1</div><div class="v">+6 %</div><div class="s">1 434 contre 1 351 · janv. 26 → oct. 26</div></div><div class="t bad"><div class="k">3 derniers mois vs N-1</div><div class="v">−7 %</div><div class="s">août → oct. : 430 contre 464</div></div><div class="t "><div class="k">Part du CA · 12 mois</div><div class="v">11,5 %</div><div class="s">contre 10,9 % un an plus tôt · plafond 40 %</div></div><div class="t good"><div class="k">nov. en cours · 11 j</div><div class="v">74</div><div class="s"><b style="color:#3f7a52">+14 %</b> face aux mêmes 11 jours de novembre 2025 (65)</div></div></div>
+      </div></div>
+    </div>
+    <div class="rm-bloc ev-mag">
+      <div class="ev-tete"><b>Sombreffe</b><span style="font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:#1f5f8b;border-radius:5px;padding:2px 7px;align-self:center">B2B</span><span>depuis avril 2025 (premières ventes, 6 j) · 18 mois pleins · 1 302 commandes pro · 48,8 k€ de CA · panier pro 37,45 € · meilleur mois : décembre 2025 (106)</span></div>
+      <div class="rm-card"><div class="rm-s6"><div><svg viewBox="0 0 880 262" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    <rect x="54" y="24" width="259.7" height="196.0" fill="rgba(34,34,34,.035)"/><text x="183.9" y="123.0" font-size="10.5" text-anchor="middle" fill="#a59d92" style="font-family:var(--font-ui)">pas encore ouvert</text>
+    <line x1="54" x2="862" y1="220.0" y2="220.0" stroke="rgba(34,34,34,.16)"/><text x="46" y="223.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">0,0</text><line x1="54" x2="862" y1="155.3" y2="155.3" stroke="rgba(34,34,34,.07)"/><text x="46" y="158.8" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">50</text><line x1="54" x2="862" y1="90.7" y2="90.7" stroke="rgba(34,34,34,.07)"/><text x="46" y="94.2" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">100</text><line x1="54" x2="862" y1="26.0" y2="26.0" stroke="rgba(34,34,34,.07)"/><text x="46" y="29.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">150</text>
+    <text x="59.0" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2024</text><line x1="227.1" x2="227.1" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="232.1" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2025</text><line x1="573.4" x2="573.4" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="578.4" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2026</text>
+    <polygon points="703.3,137.2 717.7,118.5 717.7,118.5 703.3,125.6" fill="rgba(163,32,20,.13)"/><polygon points="717.7,118.5 732.1,99.7 732.1,111.4 717.7,118.5" fill="rgba(63,122,82,.16)"/><polygon points="732.1,99.7 761.0,174.7 761.0,177.3 732.1,111.4" fill="rgba(63,122,82,.16)"/><polygon points="761.0,174.7 765.1,174.5 765.1,174.5 761.0,177.3" fill="rgba(63,122,82,.16)"/><polygon points="765.1,174.5 789.9,173.4 789.9,157.9 765.1,174.5" fill="rgba(163,32,20,.13)"/><polygon points="789.9,173.4 798.7,153.1 798.7,153.1 789.9,157.9" fill="rgba(163,32,20,.13)"/><polygon points="798.7,153.1 818.7,107.5 818.7,142.4 798.7,153.1" fill="rgba(63,122,82,.16)"/><polygon points="818.7,107.5 847.6,110.1 847.6,111.4 818.7,142.4" fill="rgba(63,122,82,.16)"/>
+    <polyline points="703.3,125.6 732.1,111.4 761.0,177.3 789.9,157.9 818.7,142.4 847.6,111.4" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>
+    <polyline points="357.0,125.6 385.9,111.4 414.7,177.3 443.6,157.9 472.4,142.4 501.3,111.4 530.1,93.3 559.0,82.9 587.9,125.6 616.7,146.3 645.6,133.3 674.4,130.8 703.3,137.2 732.1,99.7 761.0,174.7 789.9,173.4 818.7,107.5 847.6,110.1" fill="none" stroke="#1f5f8b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    
+    <circle cx="703.3" cy="125.6" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>mai 2026 · N-1 : 73</title></circle><circle cx="732.1" cy="111.4" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>juin 2026 · N-1 : 84</title></circle><circle cx="761.0" cy="177.3" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>juil. 2026 · N-1 : 33</title></circle><circle cx="789.9" cy="157.9" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>août 2026 · N-1 : 48</title></circle><circle cx="818.7" cy="142.4" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>sept. 2026 · N-1 : 60</title></circle><circle cx="847.6" cy="111.4" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>oct. 2026 · N-1 : 84</title></circle>
+    <circle cx="328.1" cy="213.5" r="3.6" fill="#fff" stroke="#1f5f8b" stroke-width="1.6"><title>avr. 2025 · 5</title></circle><circle cx="357.0" cy="125.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2025 · 73</title></circle><circle cx="385.9" cy="111.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2025 · 84</title></circle><circle cx="414.7" cy="177.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2025 · 33</title></circle><circle cx="443.6" cy="157.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2025 · 48</title></circle><circle cx="472.4" cy="142.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2025 · 60</title></circle><circle cx="501.3" cy="111.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2025 · 84</title></circle><circle cx="530.1" cy="93.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>nov. 2025 · 98</title></circle><circle cx="559.0" cy="82.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>déc. 2025 · 106</title></circle><circle cx="587.9" cy="125.6" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>janv. 2026 · 73</title></circle><circle cx="616.7" cy="146.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>févr. 2026 · 57</title></circle><circle cx="645.6" cy="133.3" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mars 2026 · 67</title></circle><circle cx="674.4" cy="130.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>avr. 2026 · 69</title></circle><circle cx="703.3" cy="137.2" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2026 · 64</title></circle><circle cx="732.1" cy="99.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2026 · 93</title></circle><circle cx="761.0" cy="174.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2026 · 35</title></circle><circle cx="789.9" cy="173.4" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2026 · 36</title></circle><circle cx="818.7" cy="107.5" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2026 · 87</title></circle><circle cx="847.6" cy="110.1" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2026 · 85</title></circle>
+    <text x="559.0" y="74.9" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">106</text><text x="414.7" y="192.3" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">33</text><text x="847.6" y="102.1" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">85</text>
+    <text x="335.1" y="207.5" font-size="9.5" text-anchor="start" fill="#7a736a" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">5 · 6 j</text>
+    <text x="68.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="97.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="126.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="155.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="183.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="212.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="241.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="270.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="299.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="328.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="357.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="385.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="414.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="443.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="472.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="501.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="530.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="559.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="587.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="616.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="645.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="674.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="703.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="703.3" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−12</text><text x="732.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="732.1" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+11</text><text x="761.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="761.0" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+6*</text><text x="789.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="789.9" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#A32014" style="font-family:var(--font-ui)">−25</text><text x="818.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="818.7" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#3f7a52" style="font-family:var(--font-ui)">+45</text><text x="847.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="847.6" y="252" font-size="9.5" font-weight="600" text-anchor="middle" fill="#7A5207" style="font-family:var(--font-ui)">+1</text>
+    <text x="46" y="252" font-size="9" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">vs N-1</text>
+  </svg>
+        <div class="rm-leg">
+          <span><i style="background:#1f5f8b;border-radius:50%"></i>commandes pro du mois (tickets)</span>
+          <span><svg width="20" height="9" style="vertical-align:-1px;margin-right:4px" aria-hidden="true"><line x1="0" x2="20" y1="4.5" y2="4.5" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="4 3"/></svg>N-1 : le même mois un an plus tôt (pointillé), dès mai 2026</span>
+          <span><i style="background:rgba(63,122,82,.35)"></i><i style="background:rgba(163,32,20,.3);margin-left:-2px"></i>gagné / perdu face au N-1</span>
+          <span><i style="background:#fff;border:1.6px solid #1f5f8b;border-radius:50%;width:6px;height:6px"></i>mois d’ouverture, incomplet : hors courbe</span>
+          
+          <span>* le N-1 a eu des jours fermés — « Par jour ouvert » les neutralise</span>
+        </div></div>
+        <div class="rm-s6t ev-t4"><div class="t good"><div class="k">6 mois vs N-1</div><div class="v">+5 %</div><div class="s">400 contre 382 · mai 26 → oct. 26</div></div><div class="t good"><div class="k">3 derniers mois vs N-1</div><div class="v">+8 %</div><div class="s">août → oct. : 208 contre 192</div></div><div class="t "><div class="k">Part du CA · 12 mois</div><div class="v">5,1 %</div><div class="s">contre 4,6 % un an plus tôt · plafond 40 %</div></div><div class="t good"><div class="k">nov. en cours · 11 j</div><div class="v">45</div><div class="s"><b style="color:#3f7a52">+22 %</b> face aux mêmes 11 jours de novembre 2025 (37)</div></div></div>
+      </div></div>
+    </div>
+    <div class="rm-bloc ev-mag">
+      <div class="ev-tete"><b>Halle</b><span style="font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:#1f5f8b;border-radius:5px;padding:2px 7px;align-self:center">B2B</span><span>depuis février 2026 (premières ventes, 7 j) · 8 mois pleins · 228 commandes pro · 13,1 k€ de CA · panier pro 57,28 € · meilleur mois : octobre 2026 (39)</span></div>
+      <div class="rm-card"><div class="rm-s6"><div><svg viewBox="0 0 880 262" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    <rect x="54" y="24" width="548.3" height="196.0" fill="rgba(34,34,34,.035)"/><text x="328.1" y="123.0" font-size="10.5" text-anchor="middle" fill="#a59d92" style="font-family:var(--font-ui)">pas encore ouvert</text>
+    <line x1="54" x2="862" y1="220.0" y2="220.0" stroke="rgba(34,34,34,.16)"/><text x="46" y="223.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">0,0</text><line x1="54" x2="862" y1="181.2" y2="181.2" stroke="rgba(34,34,34,.07)"/><text x="46" y="184.7" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">10</text><line x1="54" x2="862" y1="142.4" y2="142.4" stroke="rgba(34,34,34,.07)"/><text x="46" y="145.9" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">20</text><line x1="54" x2="862" y1="103.6" y2="103.6" stroke="rgba(34,34,34,.07)"/><text x="46" y="107.1" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">30</text><line x1="54" x2="862" y1="64.8" y2="64.8" stroke="rgba(34,34,34,.07)"/><text x="46" y="68.3" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">40</text><line x1="54" x2="862" y1="26.0" y2="26.0" stroke="rgba(34,34,34,.07)"/><text x="46" y="29.5" font-size="10" text-anchor="end" fill="#8a8378" style="font-family:var(--font-ui)">50</text>
+    <text x="59.0" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2024</text><line x1="227.1" x2="227.1" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="232.1" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2025</text><line x1="573.4" x2="573.4" y1="12" y2="220.0" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/><text x="578.4" y="19" font-size="11" font-weight="600" fill="#1c1a17" style="font-family:var(--font-ui)">2026</text>
+    
+    
+    <polyline points="645.6,115.2 674.4,126.9 703.3,95.8 732.1,123.0 761.0,161.8 789.9,157.9 818.7,95.8 847.6,68.7" fill="none" stroke="#1f5f8b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    
+    
+    <circle cx="616.7" cy="208.4" r="3.6" fill="#fff" stroke="#1f5f8b" stroke-width="1.6"><title>févr. 2026 · 3</title></circle><circle cx="645.6" cy="115.2" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mars 2026 · 27</title></circle><circle cx="674.4" cy="126.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>avr. 2026 · 24</title></circle><circle cx="703.3" cy="95.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>mai 2026 · 32</title></circle><circle cx="732.1" cy="123.0" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juin 2026 · 25</title></circle><circle cx="761.0" cy="161.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>juil. 2026 · 15</title></circle><circle cx="789.9" cy="157.9" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>août 2026 · 16</title></circle><circle cx="818.7" cy="95.8" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>sept. 2026 · 32</title></circle><circle cx="847.6" cy="68.7" r="3.2" fill="#1f5f8b" stroke="#1f5f8b" stroke-width="0"><title>oct. 2026 · 39</title></circle>
+    <text x="847.6" y="60.7" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">39</text><text x="761.0" y="176.8" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f5f8b" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">15</text>
+    <text x="623.7" y="202.4" font-size="9.5" text-anchor="start" fill="#7a736a" style="font-family:var(--font-ui);paint-order:stroke;stroke:#fff;stroke-width:3px">3 · 7 j</text>
+    <text x="68.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="97.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="126.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="155.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="183.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="212.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="241.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="270.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="299.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="328.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="357.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="385.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="414.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="443.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="472.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="501.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text><text x="530.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">nov.</text><text x="559.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">déc.</text><text x="587.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">janv.</text><text x="616.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">févr.</text><text x="645.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mars</text><text x="674.4" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">avr.</text><text x="703.3" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">mai</text><text x="732.1" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juin</text><text x="761.0" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">juil.</text><text x="789.9" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">août</text><text x="818.7" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">sept.</text><text x="847.6" y="235" font-size="10" font-weight="400" text-anchor="middle" fill="#3b3731" style="font-family:var(--font-ui)">oct.</text>
+    
+  </svg>
+        <div class="rm-leg">
+          <span><i style="background:#1f5f8b;border-radius:50%"></i>commandes pro du mois (tickets)</span>
+          <span>pas encore de N-1 : premières ventes en février 2026 — la ligne N-1 apparaîtra en février 2027</span>
+          
+          <span><i style="background:#fff;border:1.6px solid #1f5f8b;border-radius:50%;width:6px;height:6px"></i>mois d’ouverture, incomplet : hors courbe</span>
+          
+          
+        </div></div>
+        <div class="rm-s6t ev-t4"><div class="t "><div class="k">Vs N-1</div><div class="v">—</div><div class="s">pas encore de N-1 — il arrive en février 2027</div></div><div class="t "><div class="k">3 derniers mois</div><div class="v">87</div><div class="s"><b style="color:#3f7a52">+21 %</b> face aux 3 d’avant</div></div><div class="t "><div class="k">Part du CA · 8 mois</div><div class="v">2,9 %</div><div class="s">plafond 40 %</div></div><div class="t "><div class="k">nov. en cours · 11 j</div><div class="v">15</div><div class="s">pas de N-1 : premier novembre</div></div></div>
+      </div></div>
+    </div>
+    <div class="rm-bloc"><div style="font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>Trimestre par trimestre · B2B</span><span style="font-weight:400;text-transform:none;letter-spacing:0">chaque trimestre face au même trimestre un an plus tôt · seuls les mois qui ont un N-1 comptent dans l’écart</span></div><div class="rm-card">
+    <table class="rr-tb ev-an"><tr><th>Magasin</th><th>Trimestre</th><th>Commandes pro</th><th>vs N-1</th><th>CA B2B</th><th>vs N-1</th><th>Panier pro</th><th>vs N-1</th><th>Part du CA</th><th>Jours vendus</th><th>Comparé sur</th></tr>
+    <tr class="ev-prem"><td>Corbais</td><td><b style="font-weight:400">T3 2024</b> <span style="color:var(--color-text-muted)">juil. → sept. · ouverture</span></td><td>581</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>25,0 k€</td><td></td><td>42,96 €</td><td></td><td>8,2 %</td><td>65</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T4 2024</b> <span style="color:var(--color-text-muted)">oct. → déc.</span></td><td>1 155</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>54,9 k€</td><td></td><td>47,54 €</td><td></td><td>10,7 %</td><td>92</td><td style="color:var(--color-text-muted)">—</td></tr><tr class="ev-an1"><td></td><td><b style="font-weight:400">T1 2025</b> <span style="color:var(--color-text-muted)">janv. → mars</span></td><td>839</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>40,8 k€</td><td></td><td>48,68 €</td><td></td><td>9,1 %</td><td>90</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T2 2025</b> <span style="color:var(--color-text-muted)">avr. → juin</span></td><td>907</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>40,1 k€</td><td></td><td>44,16 €</td><td></td><td>8,9 %</td><td>91</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2025</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>624</td><td><span class="rr-pill" style="background:#A32014">−19 %</span></td><td>30,9 k€</td><td><span class="rr-pill" style="background:#A32014">−5 %</span></td><td>49,50 €</td><td><span class="rr-pill" style="background:#3f7a52">+18 %</span></td><td>7,4 %</td><td>92</td><td style="color:var(--color-text-muted)">2 mois : août → sept.</td></tr><tr class=""><td></td><td><b style="font-weight:400">T4 2025</b> <span style="color:var(--color-text-muted)">oct. → déc.</span></td><td>1 172</td><td><span class="rr-pill" style="background:#7A5207">+1 %</span></td><td>55,6 k€</td><td><span class="rr-pill" style="background:#7A5207">+1 %</span></td><td>47,47 €</td><td><span class="rr-pill" style="background:#7A5207">±0 %</span></td><td>11,4 %</td><td>92</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class="ev-an1"><td></td><td><b style="font-weight:400">T1 2026</b> <span style="color:var(--color-text-muted)">janv. → mars</span></td><td>820</td><td><span class="rr-pill" style="background:#7A5207">−2 %</span></td><td>41,7 k€</td><td><span class="rr-pill" style="background:#7A5207">+2 %</span></td><td>50,82 €</td><td><span class="rr-pill" style="background:#3f7a52">+4 %</span></td><td>9,1 %</td><td>90</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=""><td></td><td><b style="font-weight:400">T2 2026</b> <span style="color:var(--color-text-muted)">avr. → juin</span></td><td>1 117</td><td><span class="rr-pill" style="background:#3f7a52">+23 %</span></td><td>48,4 k€</td><td><span class="rr-pill" style="background:#3f7a52">+21 %</span></td><td>43,30 €</td><td><span class="rr-pill" style="background:#7A5207">−2 %</span></td><td>10,2 %</td><td>91</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2026</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>671</td><td><span class="rr-pill" style="background:#3f7a52">+8 %</span></td><td>32,5 k€</td><td><span class="rr-pill" style="background:#3f7a52">+5 %</span></td><td>48,46 €</td><td><span class="rr-pill" style="background:#7A5207">−2 %</span></td><td>7,8 %</td><td>92</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=" ev-cours"><td></td><td><b style="font-weight:400">T4 2026</b> <span style="color:var(--color-text-muted)">oct. → 11 nov.</span></td><td>499</td><td><span class="rr-pill" style="background:#3f7a52">+6 %</span></td><td>23,2 k€</td><td><span class="rr-pill" style="background:#3f7a52">+4 %</span></td><td>46,53 €</td><td><span class="rr-pill" style="background:#7A5207">−2 %</span></td><td>10,8 %</td><td>42</td><td style="color:var(--color-text-muted)">tout le trimestre à date</td></tr><tr class="ev-prem"><td>Gosselies</td><td><b style="font-weight:400">T1 2025</b> <span style="color:var(--color-text-muted)">janv. → mars</span></td><td>418</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>17,3 k€</td><td></td><td>41,50 €</td><td></td><td>10,8 %</td><td>90</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T2 2025</b> <span style="color:var(--color-text-muted)">avr. → juin</span></td><td>413</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>17,6 k€</td><td></td><td>42,58 €</td><td></td><td>11,0 %</td><td>91</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2025</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>347</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>14,1 k€</td><td></td><td>40,49 €</td><td></td><td>9,9 %</td><td>85</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T4 2025</b> <span style="color:var(--color-text-muted)">oct. → déc.</span></td><td>591</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>25,7 k€</td><td></td><td>43,53 €</td><td></td><td>13,2 %</td><td>92</td><td style="color:var(--color-text-muted)">—</td></tr><tr class="ev-an1"><td></td><td><b style="font-weight:400">T1 2026</b> <span style="color:var(--color-text-muted)">janv. → mars</span></td><td>482</td><td><span class="rr-pill" style="background:#3f7a52">+15 %</span></td><td>20,7 k€</td><td><span class="rr-pill" style="background:#3f7a52">+19 %</span></td><td>42,88 €</td><td><span class="rr-pill" style="background:#3f7a52">+3 %</span></td><td>11,8 %</td><td>90</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=""><td></td><td><b style="font-weight:400">T2 2026</b> <span style="color:var(--color-text-muted)">avr. → juin</span></td><td>444</td><td><span class="rr-pill" style="background:#3f7a52">+8 %</span></td><td>19,5 k€</td><td><span class="rr-pill" style="background:#3f7a52">+11 %</span></td><td>43,88 €</td><td><span class="rr-pill" style="background:#3f7a52">+3 %</span></td><td>11,5 %</td><td>91</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2026</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>310</td><td><span class="rr-pill" style="background:#A32014">−11 %</span></td><td>13,1 k€</td><td><span class="rr-pill" style="background:#A32014">−7 %</span></td><td>42,17 €</td><td><span class="rr-pill" style="background:#3f7a52">+4 %</span></td><td>8,9 %</td><td>92</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=" ev-cours"><td></td><td><b style="font-weight:400">T4 2026</b> <span style="color:var(--color-text-muted)">oct. → 11 nov.</span></td><td>272</td><td><span class="rr-pill" style="background:#3f7a52">+14 %</span></td><td>11,3 k€</td><td><span class="rr-pill" style="background:#3f7a52">+12 %</span></td><td>41,52 €</td><td><span class="rr-pill" style="background:#7A5207">−2 %</span></td><td>13,1 %</td><td>42</td><td style="color:var(--color-text-muted)">tout le trimestre à date</td></tr><tr class="ev-prem"><td>Sombreffe</td><td><b style="font-weight:400">T2 2025</b> <span style="color:var(--color-text-muted)">avr. → juin · ouverture</span></td><td>162</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>6 265 €</td><td></td><td>38,67 €</td><td></td><td>5,5 %</td><td>65</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2025</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>141</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>5 550 €</td><td></td><td>39,36 €</td><td></td><td>3,6 %</td><td>88</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T4 2025</b> <span style="color:var(--color-text-muted)">oct. → déc.</span></td><td>288</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>10,2 k€</td><td></td><td>35,53 €</td><td></td><td>5,9 %</td><td>92</td><td style="color:var(--color-text-muted)">—</td></tr><tr class="ev-an1"><td></td><td><b style="font-weight:400">T1 2026</b> <span style="color:var(--color-text-muted)">janv. → mars</span></td><td>197</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>7 161 €</td><td></td><td>36,35 €</td><td></td><td>4,8 %</td><td>90</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T2 2026</b> <span style="color:var(--color-text-muted)">avr. → juin</span></td><td>226</td><td><span class="rr-pill" style="background:#7A5207">±0 %</span></td><td>8 864 €</td><td><span class="rr-pill" style="background:#7A5207">−1 %</span></td><td>39,22 €</td><td><span class="rr-pill" style="background:#7A5207">−1 %</span></td><td>5,6 %</td><td>91</td><td style="color:var(--color-text-muted)">2 mois : mai → juin</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2026</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>158</td><td><span class="rr-pill" style="background:#3f7a52">+12 %</span></td><td>5 900 €</td><td><span class="rr-pill" style="background:#3f7a52">+6 %</span></td><td>37,34 €</td><td><span class="rr-pill" style="background:#A32014">−5 %</span></td><td>4,0 %</td><td>92</td><td style="color:var(--color-text-muted)">tout le trimestre</td></tr><tr class=" ev-cours"><td></td><td><b style="font-weight:400">T4 2026</b> <span style="color:var(--color-text-muted)">oct. → 11 nov.</span></td><td>130</td><td><span class="rr-pill" style="background:#3f7a52">+7 %</span></td><td>4 780 €</td><td><span class="rr-pill" style="background:#3f7a52">+11 %</span></td><td>36,77 €</td><td><span class="rr-pill" style="background:#7A5207">+3 %</span></td><td>5,9 %</td><td>42</td><td style="color:var(--color-text-muted)">tout le trimestre à date</td></tr><tr class="ev-prem"><td>Halle</td><td><b style="font-weight:400">T1 2026</b> <span style="color:var(--color-text-muted)">févr. → mars · ouverture</span></td><td>30</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>1 660 €</td><td></td><td>55,33 €</td><td></td><td>3,0 %</td><td>38</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T2 2026</b> <span style="color:var(--color-text-muted)">avr. → juin</span></td><td>81</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>4 983 €</td><td></td><td>61,52 €</td><td></td><td>3,1 %</td><td>91</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=""><td></td><td><b style="font-weight:400">T3 2026</b> <span style="color:var(--color-text-muted)">juil. → sept.</span></td><td>63</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>3 535 €</td><td></td><td>56,11 €</td><td></td><td>2,4 %</td><td>91</td><td style="color:var(--color-text-muted)">—</td></tr><tr class=" ev-cours"><td></td><td><b style="font-weight:400">T4 2026</b> <span style="color:var(--color-text-muted)">oct. → 11 nov.</span></td><td>54</td><td><span style="color:var(--color-text-muted)">pas de N-1</span></td><td>2 881 €</td><td></td><td>53,36 €</td><td></td><td>3,5 %</td><td>42</td><td style="color:var(--color-text-muted)">—</td></tr>
+    </table></div></div>
+    <div style="font-size:10.5px;color:var(--color-text-muted)">Source : panel (margin-heatmap, par jour) · B2B : relevé des tickets (clients pro à TVA valide) · N-1 = même mois un an plus tôt, arrêté au même jour servi.</div></div></div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>

@@ -63,6 +63,20 @@ function fpSchema(): void
         . 'quand DATETIME NOT NULL, montant DECIMAL(10,2) NOT NULL DEFAULT 0, commande TINYINT NOT NULL DEFAULT 0,'
         . 'familles VARCHAR(255) NULL,'                      // {"pain":2,…} une fois les lignes lues
         . 'KEY k_shop_jour (shop_id, jour), KEY k_client (shop_id, client_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Le canal de chaque ticket (12/11/2026, Sam : « s'il commande au comptoir ou plutôt sur le webshop ») : comptoir (vente
+    // directe), commande (prise au comptoir) ou webshop. Les anciens tickets sans commande sont des ventes directes ; les
+    // anciennes commandes restent sans canal jusqu'à la relecture de leur journée (fpLireJours).
+    $col = Db::row("SELECT COUNT(*) n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ceo_fid_ticket' AND COLUMN_NAME = 'canal'");
+    if ((int) ($col['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_fid_ticket ADD COLUMN canal VARCHAR(10) NULL AFTER commande');
+        Db::exec("UPDATE ceo_fid_ticket SET canal = 'comptoir' WHERE commande = 0");
+    }
+    // Familles, deuxième règle (12/11/2026) : le catalogue gardé et les familles déjà lues se refont une fois.
+    if ((int) setting('fidFamillesRegle', 1) < 2) {
+        Db::exec("DELETE FROM ceo_app_setting WHERE `key` = 'fidProfilsCatalogue'");
+        Db::exec('UPDATE ceo_fid_ticket SET familles = NULL WHERE familles IS NOT NULL');
+        Db::exec("INSERT INTO ceo_app_setting VALUES ('fidFamillesRegle', '2') ON DUPLICATE KEY UPDATE value = VALUES(value)");
+    }
     if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_profil')['n'] ?? 0) === 0) {
         foreach (FP_DEFAUTS as [$nom, $n, $u, $c]) {
             Db::exec('INSERT INTO ceo_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,1,NOW(),?)', [$nom, $n, $u, $c, 'profils de départ']);
@@ -123,13 +137,17 @@ function fpProfils(bool $actifsSeuls = false): array
  * Les tickets identifiés, par l'API
  * ------------------------------------------------------------------------- */
 /** La famille d'achat d'un article, par le libellé « catégorie » du catalogue. */
-function fpFamilleDe(string $lib): string
+function fpFamilleDe(string $cat, string $nom = ''): string
 {
-    if (preg_match('/réduction/iu', $lib)) { return 'antigaspi'; }
-    if (preg_match('/quiche|soupe|boisson|sandwich|traiteur|salade/iu', $lib)) { return 'sale'; }
-    if (preg_match('/viennoiserie/iu', $lib)) { return 'vienno'; }
-    if (preg_match('/pâtisserie individuelle|cookie|cake|individuel|brownie|brook|merveilleux/iu', $lib)) { return 'gouter'; }
-    if (preg_match('/pain|boulangerie|pistolet|baguette/iu', $lib)) { return 'pain'; }
+    // La catégorie de l'ERP d'abord, le nom du produit seulement sans catégorie (12/11/2026, sonde anti-gaspi de Halle :
+    // « Viennoiserie réduction » regroupe les mini-viennoiseries, pas de l'anti-gaspi ; le « Sandwich » de la Petite
+    // Boulangerie est un petit pain, pas du salé). L'anti-gaspi, c'est la catégorie « Anti-Gaspi ».
+    $t = trim($cat) !== '' ? $cat : $nom;
+    if (preg_match('/anti.?gaspi/iu', $t)) { return 'antigaspi'; }
+    if (preg_match('/viennoiserie/iu', $t)) { return 'vienno'; }
+    if (preg_match('/pain|boulangerie|pistolet|baguette/iu', $t)) { return 'pain'; }
+    if (preg_match('/quiche|soupe|boisson|sandwich|traiteur|salade|snacking|plat|poke|wrap|assiette|catering|fromage|pâtes|self|vin/iu', $t)) { return 'sale'; }
+    if (preg_match('/pâtisserie individuelle|cookie|cake|brownie|brook|merveilleux|biscuit|financier|mignardise|yaourt|glace/iu', $t)) { return 'gouter'; }
     return 'tartes';
 }
 
@@ -148,8 +166,7 @@ function fpCatalogue(): array
     foreach (PanelApi::liste(is_array($rp['corps']) ? $rp['corps'] : []) as $p) {
         $id = (int) ($p['id'] ?? 0);
         if ($id <= 0) { continue; }
-        $lib = (string) ($p['category_name'] ?? ($nomCat[(int) ($p['id_category'] ?? 0)] ?? '')) . ' ' . (string) ($p['name'] ?? '');
-        $v[$id] = fpFamilleDe($lib);
+        $v[$id] = fpFamilleDe((string) ($p['category_name'] ?? ($nomCat[(int) ($p['id_category'] ?? 0)] ?? '')), (string) ($p['name'] ?? ''));
     }
     if ($v !== []) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['fidProfilsCatalogue', json_encode(['le' => time(), 'v' => $v])]);
@@ -167,7 +184,7 @@ function fpLignes(mixed $corps): array
         if (!is_array($p)) { continue; }
         $q = max(1, (float) ($p['quantity'] ?? 1));
         $nom = trim((string) ($p['product_display_name'] ?? $p['product_name'] ?? ''));
-        $fam = $cat[(int) ($p['id_product'] ?? 0)] ?? fpFamilleDe($nom);
+        $fam = $cat[(int) ($p['id_product'] ?? 0)] ?? fpFamilleDe('', $nom);
         $f[$fam] = ($f[$fam] ?? 0) + $q;
         $art[] = ['nom' => $nom, 'q' => round($q, 1)];
     }
@@ -188,6 +205,8 @@ function fpLireJours(int $sid, string $du, string $au): array
     foreach (Db::rows('SELECT jour, lu_le FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $r) {
         $lus[$r['jour']] = substr((string) $r['lu_le'], 0, 10) > $r['jour'];
     }
+    // Une journée dont une commande n'a pas encore de canal se relit une fois.
+    foreach (Db::rows('SELECT DISTINCT jour FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND canal IS NULL', [$sid, $du, $au]) as $r) { $lus[$r['jour']] = false; }
     $chemins = [];
     for ($j = $au; $j >= $du; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
         if (!empty($lus[$j])) { continue; }
@@ -214,11 +233,13 @@ function fpLireJours(int $sid, string $du, string $au): array
         // Les tickets déjà gardés gardent leurs familles ; les nouveaux s'ajoutent.
         $deja = array_column(Db::rows('SELECT id FROM ceo_fid_ticket WHERE shop_id = ? AND jour = ?', [$sid, $j]), 'id', 'id');
         foreach ($garder as $tid => $t) {
-            if (isset($deja[$tid])) { continue; }
-            $cmd = strtolower((string) ($t['source'] ?? '')) === 'webshop' || (int) ($t['order_ref'] ?? 0) > 0 || trim((string) ($t['po_hash'] ?? '')) !== '';
-            Db::exec('INSERT IGNORE INTO ceo_fid_ticket (id, shop_id, jour, client_id, quand, montant, commande) VALUES (?,?,?,?,?,?,?)',
+            $web = strtolower((string) ($t['source'] ?? '')) === 'webshop';
+            $cmd = $web || (int) ($t['order_ref'] ?? 0) > 0 || trim((string) ($t['po_hash'] ?? '')) !== '';
+            $canal = $web ? 'webshop' : ($cmd ? 'commande' : 'comptoir');
+            if (isset($deja[$tid])) { Db::exec('UPDATE ceo_fid_ticket SET canal = ? WHERE id = ? AND canal IS NULL', [$canal, $tid]); continue; }
+            Db::exec('INSERT IGNORE INTO ceo_fid_ticket (id, shop_id, jour, client_id, quand, montant, commande, canal) VALUES (?,?,?,?,?,?,?,?)',
                 [$tid, $sid, $j, (int) $t['id_client'], substr((string) ($t['insert_timestamp'] ?? $j . ' 12:00:00'), 0, 19),
-                    round((float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0), 2), $cmd ? 1 : 0]);
+                    round((float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0), 2), $cmd ? 1 : 0, $canal]);
         }
         // Un ticket annulé ou corrigé disparaît de la liste : il disparaît aussi d'ici.
         foreach ($deja as $tid) { if (!isset($garder[(int) $tid])) { Db::exec('DELETE FROM ceo_fid_ticket WHERE id = ?', [(int) $tid]); } }
@@ -403,6 +424,82 @@ function ep_fidelite_profils_magasin(): array
     return fpMagasin($sid, true);
 }
 
+/**
+ * La tendance des profils (12/11/2026, Sam : « un troisième graphique : l'augmentation ou la diminution du nombre de ce
+ * type de récurrence ; un toggle 30 – 90 – 180 jours »). À des dates régulières de la période (chaque jour sur 30 jours,
+ * tous les 3 jours sur 90, chaque semaine sur 180), le profil de chaque client est recalculé tel qu'il était ce jour-là :
+ * clients scannés sur la mémoire avant cette date, rythme sur la fenêtre avant cette date. Les tickets viennent du même
+ * cache (ceo_fid_ticket) ; les journées manquantes se lisent à l'API, les plus récentes d'abord.
+ */
+function fpTendance(int $sid, int $jours): array
+{
+    $R = fpReglages();
+    $profils = fpProfils(true);
+    $au = date('Y-m-d');
+    $du = date('Y-m-d', strtotime($au . ' -' . ($jours + $R['memoire'] - 1) . ' days'));
+    [, $reste] = fpLireJours($sid, $du, $au);
+    $J = [];
+    foreach (Db::rows('SELECT DISTINCT client_id, jour FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $t) {
+        $J[(int) $t['client_id']][] = (string) $t['jour'];
+    }
+    $pas = $jours <= 30 ? 1 : ($jours <= 90 ? 3 : 7);
+    $dates = [];
+    for ($k = $jours; $k > 0; $k -= $pas) { $dates[] = date('Y-m-d', strtotime($au . ' -' . $k . ' days')); }
+    $dates[] = $au;
+    $base = end($profils)['id'];
+    $points = [];
+    foreach ($dates as $D) {
+        $debM = date('Y-m-d', strtotime($D . ' -' . ($R['memoire'] - 1) . ' days'));
+        $debF = date('Y-m-d', strtotime($D . ' -' . ($R['fenetre'] - 1) . ' days'));
+        $cnt = array_fill_keys(array_column($profils, 'id'), 0);
+        $tot = 0;
+        foreach ($J as $L) {
+            $vu = false; $nF = 0;
+            foreach ($L as $j) {
+                if ($j > $D || $j < $debM) { continue; }
+                $vu = true;
+                if ($j >= $debF) { $nF++; }
+            }
+            if (!$vu) { continue; }
+            $tot++;
+            $rythme = $nF * 30 / $R['fenetre'];
+            $id = $base;
+            foreach ($profils as $p) { if ($p['unite'] !== 'base' && $rythme >= $p['seuil']) { $id = $p['id']; break; } }
+            $cnt[$id]++;
+        }
+        $points[] = ['date' => $D, 'scannes' => $tot, 'parProfil' => $cnt];
+    }
+    return ['shop' => (string) $sid, 'jours' => $jours, 'pas' => $pas, 'fenetre' => $R['fenetre'], 'memoire' => $R['memoire'], 'aLire' => $reste, 'points' => $points];
+}
+
+/** GET /fidelite/profils/tendance?shop=&jours=30|90|180 : le nombre de clients de chaque profil, date après date. */
+function ep_fidelite_profils_tendance(): array
+{
+    $sid = fpShop();
+    if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant (?shop=)']; }
+    $j = (int) ($_GET['jours'] ?? 90);
+    return fpTendance($sid, in_array($j, [30, 90, 180], true) ? $j : 90);
+}
+
+/**
+ * La part des tickets scannés (12/11/2026, Sam : « par défaut c'est aujourd'hui ; en dessous le mois et l'année en
+ * moyenne »). Aujourd'hui, depuis le 1er du mois, depuis le 1er janvier : tickets identifiés sur tickets, lus dans le
+ * même cache (ceo_fid_jour). Les journées manquantes de l'année se lisent à l'API, les plus récentes d'abord.
+ */
+function ep_fidelite_scan(): array
+{
+    $sid = fpShop();
+    if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant (?shop=)']; }
+    $au = date('Y-m-d');
+    [, $reste] = fpLireJours($sid, date('Y-01-01'), $au);
+    $part = static function (string $du) use ($sid, $au): array {
+        $r = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
+        $t = (int) $r['t']; $i = (int) $r['i'];
+        return ['du' => $du, 'tickets' => $t, 'identifies' => $i, 'jours' => (int) $r['j'], 'part' => $t > 0 ? round(100 * $i / $t, 1) : null];
+    };
+    return ['shop' => (string) $sid, 'jour' => $part($au), 'mois' => $part(date('Y-m-01')), 'annee' => $part(date('Y-01-01')), 'aLire' => $reste];
+}
+
 /** GET /fidelite/client?shop=&client= : l'historique d'un client sur 180 jours, ticket par ticket. */
 function ep_fidelite_client(): array
 {
@@ -414,7 +511,20 @@ function ep_fidelite_client(): array
     $au = date('Y-m-d');
     $du = date('Y-m-d', strtotime($au . ' -179 days'));
     [, $reste] = fpLireJours($sid, $du, $au);
-    $T = Db::rows('SELECT id, jour, quand, montant, commande FROM ceo_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $cid, $du, $au]);
+    $T = Db::rows('SELECT id, jour, quand, montant, commande, canal FROM ceo_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $cid, $du, $au]);
+    // Comment il achète : vente au comptoir, commande prise au comptoir, webshop (et, le temps de la relecture, commande sans canal).
+    $canaux = ['comptoir' => 0, 'commande' => 0, 'webshop' => 0, 'inconnu' => 0];
+    foreach ($T as $t) { $canaux[isset($canaux[$t['canal'] ?? '']) ? $t['canal'] : 'inconnu']++; }
+    // La livraison au bureau ne se voit que sur les commandes de l'ERP (`fulfilment_mode`, lues par coCommandes, gardées
+    // 10 minutes) : quand elles répondent, les commandes du client s'y comptent une fois chacune — commande au comptoir,
+    // webshop (retrait) ou livraison — et le comptoir reste celui des tickets.
+    $canaux['livraison'] = 0;
+    $cmds = function_exists('coCommandes') ? coCommandes($sid, $du) : null;
+    $siennes = is_array($cmds) ? array_values(array_filter($cmds, static fn ($c) => (int) ($c['cli'] ?? 0) === $cid)) : [];
+    if ($siennes !== []) {
+        $canaux = ['comptoir' => $canaux['comptoir'], 'commande' => 0, 'webshop' => 0, 'livraison' => 0, 'inconnu' => 0];
+        foreach ($siennes as $c) { $canaux[['compt' => 'commande', 'cc' => 'webshop', 'liv' => 'livraison'][$c['canal']] ?? 'commande']++; }
+    }
     if ($T === []) { return ['error' => 'aucun ticket rattaché à ce client sur 180 jours', 'aLire' => $reste]; }
     // Les lignes de ses tickets, lues ici : les articles ne se gardent pas.
     $ch = [];
@@ -459,7 +569,7 @@ function ep_fidelite_client(): array
         'profils' => fpProfils(true), 'moyenne' => $m['moyenne'], 'axes' => FP_AXES, 'famillesLib' => FP_FAMILLES,
         'tk' => $C['tk'], 'eur' => round($C['eur'], 2), 'cmd' => $C['cmd'], 'parJour' => $parJour, 'moments' => $moment,
         'articles' => array_slice(array_map(static fn ($k, $v) => ['nom' => $k, 'q' => round($v, 1)], array_keys($art), $art), 0, 10),
-        'parMois' => $parMois, 'tickets' => array_reverse($tickets), 'aLire' => $reste] + $x;
+        'parMois' => $parMois, 'tickets' => array_reverse($tickets), 'canaux' => $canaux, 'aLire' => $reste] + $x;
 }
 
 /** POST /fidelite/profils : {profils:[{id?, nom, n, unite, couleur, actif, supprimer?}], fenetre?, memoire?, qui}. */

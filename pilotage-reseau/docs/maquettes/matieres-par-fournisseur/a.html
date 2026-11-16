@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Matières par fournisseur ou catégorie — Cockpit CEO (maquette réelle)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="mf.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group"><div class="sidebar__group-label">Vérification</div><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg><span class="sidebar__item-label">Audit des flux</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Matières ↔ recettes</span></button><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg><span class="sidebar__item-label">Recettes à corriger</span></button></div><div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Recettes à corriger</h1>
+      </div>
+      <div class="topbar__actions"><span class="mf-pill">Maquette réelle · lue en ligne le 14/11 · rien n’est écrit</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="vr mf">
+  <div class="vr-haut"><div class="vm-bascule"><button>Recettes à corriger</button><button class="on">Matières premières</button></div><span class="vr-sp"></span><span class="vr-lu">Lu en ligne le 14/11 · 400 matières dans les recettes vendues</span></div>
+  <div class="vr-card">
+    <div class="vr-fil mf-fil"><div class="vm-bascule"><button class="on">Par fournisseur</button><button class="">Par catégorie</button></div><select class="vr-sel mf-sel"><option>SLFood (183)</option><option>Aucun fournisseur lié (164)</option><option>Centrale d’achats – Atelier By (14)</option><option>Rawette (13)</option><option>Bruyerre S.A. (12)</option><option>CDT (9)</option><option>Berdiff s.a. (5)</option></select><select class="vr-sel"><option>Toutes les catégories</option></select><input class="vm-q" placeholder="Chercher une matière…"><span class="vr-sp"></span><button class="vr-btn">Exporter</button></div>
+    <div class="vm-kpis"><div class="vm-kpi "><div class="k">Matières</div><div class="v">183</div><div class="s">chez SLFood</div></div><div class="vm-kpi ok"><div class="k">Alignées</div><div class="v">101</div><div class="s">les 4 magasins à 10 % près du prix de référence</div></div><div class="vm-kpi att"><div class="k">Écart &gt; 10 %</div><div class="v">72</div><div class="s">au moins un magasin s’écarte</div></div><div class="vm-kpi ko"><div class="k">Sans prix en magasin</div><div class="v">5</div><div class="s">au moins un magasin ne la chiffre pas</div></div><div class="vm-kpi mu"><div class="k">Sans prix de référence</div><div class="v">4</div><div class="s">pas de liste en vigueur ni de prix général</div></div></div>
+    <div class="vr-tw"><table class="vr-t mf-t"><thead><tr><th style="width:8px"></th><th class="g">Matière</th><th>Prix fournisseur<small>par unité, hors TVA</small></th><th>Corbais<small>prix du magasin · écart</small></th><th>Gosselies<small>prix du magasin · écart</small></th><th>Sombreffe<small>prix du magasin · écart</small></th><th>Halle<small>prix du magasin · écart</small></th><th>Recettes<small>n · CA 30 j</small></th><th></th></tr></thead><tbody>
+    <tr class="mf-g"><td colspan="10">Petite Boulangerie <span>14 matières · 64 889 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Baguette Tradition 500 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,425 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,425 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,425 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,466 €<small>✓ +3 %</small></span></td><td><span class="mf-c ok">1,466 €<small>✓ +3 %</small></span></td>
+    <td class="mf-mu">28 · 43 275 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Sandwich 35 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,2654 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,2654 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,2654 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">0,2331 €<small>−12 %</small></span></td><td><span class="mf-c att">0,2331 €<small>−12 %</small></span></td>
+    <td class="mf-mu">4 · 8 198 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Sandwich 70 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,2218 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,2218 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,2218 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">0,1982 €<small>−11 %</small></span></td><td><span class="mf-c ok">0,2218 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">3 · 5 762 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pistolet à l'Ancienne</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,2943 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,2943 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,2943 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,2821 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">0,2943 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">3 · 4 082 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Baguette Poivre &amp; Sel</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,522 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,522 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,522 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,464 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">1,464 €<small>✓ −4 %</small></span></td>
+    <td class="mf-mu">1 · 874 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cinnamon rolls</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9465 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9465 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9465 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9465 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9465 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 865 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Brioche tressée au chocolat (cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,019 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,019 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,926 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">2,926 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">3,019 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 625 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Craquelin</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,964 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,964 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,727 €<small>−12 %</small></span></td><td><span class="mf-c att">1,727 €<small>−12 %</small></span></td><td><span class="mf-c ok">1,964 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 279 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cramique</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,992 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,992 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,753 €<small>−12 %</small></span></td><td><span class="mf-c att">1,753 €<small>−12 %</small></span></td><td><span class="mf-c att">1,753 €<small>−12 %</small></span></td>
+    <td class="mf-mu">1 · 263 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Brioche tressée au sucre perlé (cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,657 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,657 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,657 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">2,333 €<small>−12 %</small></span></td><td><span class="mf-c att">2,333 €<small>−12 %</small></span></td>
+    <td class="mf-mu">1 · 255 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Ciabatta</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,540 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,540 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,485 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">1,485 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">1,485 €<small>✓ −4 %</small></span></td>
+    <td class="mf-mu">1 · 211 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Brioche tressée au raisin (cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,622 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,622 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,622 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">2,254 €<small>−14 %</small></span></td><td><span class="mf-c ok">2,622 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 189 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Briochette Sucre</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5076 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,4663 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">0,4663 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">0,4663 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">0,4663 €<small>✓ −8 %</small></span></td>
+    <td class="mf-mu">1 · 7 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Brioche Crue 400g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,045 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,794 €<small>−12 %</small></span></td><td><span class="mf-c att">1,794 €<small>−12 %</small></span></td><td><span class="mf-c att">1,794 €<small>−12 %</small></span></td><td><span class="mf-c att">1,794 €<small>−12 %</small></span></td>
+    <td class="mf-mu">1 · 4 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Viennoiserie Ind. <span>10 matières · 43 899 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain au Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,8047 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,8047 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,8047 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7856 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,8047 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">3 · 18 665 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Croissant</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,6989 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,6989 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,6989 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,6838 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,6838 €<small>✓ −2 %</small></span></td>
+    <td class="mf-mu">3 · 11 938 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Beurre 90</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,7397 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,7225 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,7397 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7225 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,7397 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 3 022 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Suisse</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,7883 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,7727 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,7883 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7727 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,7883 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 367 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Huit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9658 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9658 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9658 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9504 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,9658 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 129 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Baulus</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,7609 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,7609 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7609 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7466 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,7609 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 564 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Gosette Pomme</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9700 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9700 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9700 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9085 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">0,9700 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 239 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Tortillon</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5533 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,5533 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,5533 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,5428 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">0,5533 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 087 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Croissant Amandes</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9056 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9056 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9056 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9031 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,9031 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 1 061 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Crookie (cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,7336 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,7075 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">0,7336 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7075 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">0,7075 €<small>✓ −4 %</small></span></td>
+    <td class="mf-mu">1 · 827 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tartes - 28 <span>24 matières · 39 097 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Brownies - 28⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,478 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,739 €<small>✓ −9 %</small></span></td><td><span class="mf-c ok">8,478 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,739 €<small>✓ −9 %</small></span></td><td><span class="mf-c ok">8,478 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">2 · 6 115 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Frangipane &amp; Poire – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,775 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">9,237 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">9,775 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,237 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">9,775 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 4 678 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Brookie - 28⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,941 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,899 €<small>−10 %</small></span></td><td><span class="mf-c ok">9,941 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">8,899 €<small>−10 %</small></span></td><td><span class="mf-c ok">9,941 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 3 325 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Moelleux Chocolat - 28</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,664 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,664 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">8,664 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,664 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">8,664 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 3 192 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Fromage - 28⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,591 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,448 €<small>−12 %</small></span></td><td><span class="mf-c ok">9,591 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">8,448 €<small>−12 %</small></span></td><td><span class="mf-c ok">9,591 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 3 166 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Pomme Amandes 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,525 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">6,194 €<small>−27 %</small></span></td><td><span class="mf-c att">6,194 €<small>−27 %</small></span></td><td><span class="mf-c att">6,194 €<small>−27 %</small></span></td><td><span class="mf-c ok">8,525 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 529 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Riz – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,183 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,124 €<small>−12 %</small></span></td><td><span class="mf-c att">8,124 €<small>−12 %</small></span></td><td><span class="mf-c att">8,124 €<small>−12 %</small></span></td><td><span class="mf-c ok">9,183 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 412 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Pomme Tranches 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,713 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">5,095 €<small>−34 %</small></span></td><td><span class="mf-c ok">7,713 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">5,095 €<small>−34 %</small></span></td><td><span class="mf-c ok">7,713 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 396 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Poires &amp; Chocolat 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>10,08 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">6,943 €<small>−31 %</small></span></td><td><span class="mf-c ok">10,08 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">6,943 €<small>−31 %</small></span></td><td><span class="mf-c ok">10,08 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 542 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Pommes Parisienne -28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>10,06 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">7,887 €<small>−22 %</small></span></td><td><span class="mf-c ok">10,06 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">7,887 €<small>−22 %</small></span></td><td><span class="mf-c ok">10,06 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 355 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Fond de pâte – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,300 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">3,861 €<small>+17 %</small></span></td><td><span class="mf-c att">3,861 €<small>+17 %</small></span></td><td><span class="mf-c att">3,861 €<small>+17 %</small></span></td><td><span class="mf-c att">3,861 €<small>+17 %</small></span></td>
+    <td class="mf-mu">1 · 1 032 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cerise 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,888 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">7,728 €<small>−13 %</small></span></td><td><span class="mf-c att">7,728 €<small>−13 %</small></span></td><td><span class="mf-c att">7,728 €<small>−13 %</small></span></td><td><span class="mf-c ok">8,888 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 004 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e mu"></td><td class="g nom"><b>Abricot 28 Ø</b><small>€ / kg · centrale</small></td>
+    <td class="mf-r"><span class="mf-mu">colis en pièces : poids à poser</span></td>
+    <td><span class="mf-c ">6,44 €</span></td><td><span class="mf-c ">6,44 €</span></td><td><span class="mf-c ">6,44 €</span></td><td><span class="mf-c ">6,44 €</span></td>
+    <td class="mf-mu">1 · 857 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Riz Croustillant – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>11,09 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">9,183 €<small>−17 %</small></span></td><td><span class="mf-c ok">11,09 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">9,183 €<small>−17 %</small></span></td><td><span class="mf-c att">9,183 €<small>−17 %</small></span></td>
+    <td class="mf-mu">1 · 777 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Frangipane – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,167 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,541 €<small>✓ −7 %</small></span></td><td><span class="mf-c ok">9,167 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,541 €<small>✓ −7 %</small></span></td><td><span class="mf-c ok">9,167 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 680 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Abricot &amp; Rhubarbe 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,849 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,091 €<small>✓ −10 %</small></span></td><td><span class="mf-c ok">7,849 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,091 €<small>✓ −10 %</small></span></td><td><span class="mf-c ok">7,091 €<small>✓ −10 %</small></span></td>
+    <td class="mf-mu">1 · 619 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Groseille 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>6,211 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">4,034 €<small>−35 %</small></span></td><td><span class="mf-c ok">6,211 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">4,034 €<small>−35 %</small></span></td><td><span class="mf-c ok">6,211 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 600 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Frangipane &amp; Pommes – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,916 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,845 €<small>−11 %</small></span></td><td><span class="mf-c ok">9,916 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">8,845 €<small>−11 %</small></span></td><td><span class="mf-c ok">9,916 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 574 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Abricot &amp; Cerise 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,646 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,104 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">8,104 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">8,104 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">9,264 €<small>✓ +7 %</small></span></td>
+    <td class="mf-mu">1 · 559 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Frangipane &amp; Abricots – 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,622 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ok">9,622 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 512 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Rhubarbe Parisienne -28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>14,18 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">7,563 €<small>−47 %</small></span></td><td><span class="mf-c ok">14,18 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">7,563 €<small>−47 %</small></span></td><td><span class="mf-c att">7,563 €<small>−47 %</small></span></td>
+    <td class="mf-mu">1 · 426 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Rhubarbe &amp; Fraises 28 Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>6,561 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">7,470 €<small>+14 %</small></span></td><td><span class="mf-c att">7,470 €<small>+14 %</small></span></td><td><span class="mf-c att">7,470 €<small>+14 %</small></span></td><td><span class="mf-c ok">6,561 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 408 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Rhubarbe - 28⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,018 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,619 €<small>✓ +9 %</small></span></td><td><span class="mf-c ok">7,619 €<small>✓ +9 %</small></span></td><td><span class="mf-c ok">7,619 €<small>✓ +9 %</small></span></td><td><span class="mf-c ok">7,619 €<small>✓ +9 %</small></span></td>
+    <td class="mf-mu">1 · 259 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Plusieurs Fruits</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,146 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,146 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,146 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,146 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,146 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 80 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Pain <span>5 matières · 24 145 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Doré 600 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,364 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td><td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td><td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td>
+    <td class="mf-mu">1 · 7 641 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Carré 10 Céréales 600 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,364 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td><td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td>
+    <td class="mf-mu">1 · 6 856 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Demi-Gris 600 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,364 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td><td><span class="mf-c ok">1,273 €<small>✓ −7 %</small></span></td>
+    <td class="mf-mu">1 · 5 784 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pavé Seigle &amp; Froment 600 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,878 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,878 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,878 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,878 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">1,878 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 275 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Fermier Seigle &amp; Levain 600 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,364 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,606 €<small>+18 %</small></span></td><td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,606 €<small>+18 %</small></span></td><td><span class="mf-c ok">1,364 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 590 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Quiches <span>12 matières · 21 003 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche Lorraine</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,832 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,832 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,832 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,832 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">8,832 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 4 137 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Quiche saumon &amp; épinard</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>12,86 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,865 €<small>−31 %</small></span></td><td><span class="mf-c att">8,865 €<small>−31 %</small></span></td><td><span class="mf-c att">8,865 €<small>−31 %</small></span></td><td><span class="mf-c att">8,865 €<small>−31 %</small></span></td>
+    <td class="mf-mu">1 · 2 708 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche Greque</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,527 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,527 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,527 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,353 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">8,353 €<small>✓ −2 %</small></span></td>
+    <td class="mf-mu">1 · 2 608 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche Jambon &amp; Chicon</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,283 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">9,283 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,283 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,283 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">9,283 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 859 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Quiche roquette, chèvre &amp; miel</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>13,40 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">9,538 €<small>−29 %</small></span></td><td><span class="mf-c att">9,538 €<small>−29 %</small></span></td><td><span class="mf-c att">9,538 €<small>−29 %</small></span></td><td><span class="mf-c att">9,538 €<small>−29 %</small></span></td>
+    <td class="mf-mu">1 · 1 697 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche boeufs &amp; curry de légumes</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,660 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,660 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,660 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,660 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,660 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 611 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche Montagnarde</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>6,587 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">6,587 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">6,587 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">6,587 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">6,587 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 1 498 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche aux champignons</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,833 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,833 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,833 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,833 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">7,833 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 1 383 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche lardons, chèvre &amp; tomates</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,797 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">9,797 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,797 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,797 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">9,797 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 1 328 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche feta, aubergine &amp; citron</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,747 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,747 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,747 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">8,747 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">8,747 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 864 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Quiche Poulet &amp; Gorgonzola</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,070 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,070 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,070 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,070 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,070 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 670 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Tian de Legumes - 19⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,231 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,653 €<small>✓ +5 %</small></span></td><td><span class="mf-c ok">8,653 €<small>✓ +5 %</small></span></td><td><span class="mf-c ok">8,653 €<small>✓ +5 %</small></span></td><td><span class="mf-c ok">8,653 €<small>✓ +5 %</small></span></td>
+    <td class="mf-mu">1 · 640 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Viennoiserie réduction <span>7 matières · 11 408 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Mini - Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5037 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,5037 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,5037 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4742 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">0,5037 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">3 · 4 378 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Mini - Croissant</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,4132 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,4132 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4132 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,3902 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">0,4132 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">4 · 3 365 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Mini - Huit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,4688 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,4688 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4688 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4452 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">0,4688 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 937 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Mini - Frangipane</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,6484 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,6484 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,6303 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">0,6303 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">0,6484 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 895 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Mini - Pomme</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,6343 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,6343 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,6343 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">0,5610 €<small>−12 %</small></span></td><td><span class="mf-c ok">0,6343 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 780 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Mini - Baulus</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,3929 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,3929 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4002 €<small>✓ +2 %</small></span></td><td><span class="mf-c att">0,3247 €<small>−17 %</small></span></td><td><span class="mf-c att">0,4812 €<small>+22 %</small></span></td>
+    <td class="mf-mu">1 · 766 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Mini - Rhubarbe</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,6920 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,6920 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,7066 €<small>✓ +2 %</small></span></td><td><span class="mf-c ok">0,7066 €<small>✓ +2 %</small></span></td><td><span class="mf-c ok">0,6920 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 287 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tartissières - 19Ø <span>5 matières · 9 538 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Fromage &amp; Spéculoos - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,232 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">9,232 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,232 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,415 €<small>✓ −9 %</small></span></td><td><span class="mf-c ok">9,232 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 3 875 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Citron Meringué - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,912 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,912 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,912 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,492 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">8,912 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 591 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Caramel beurre sale &amp; Chocolat - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,353 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,025 €<small>−14 %</small></span></td><td><span class="mf-c att">8,025 €<small>−14 %</small></span></td><td><span class="mf-c att">8,025 €<small>−14 %</small></span></td><td><span class="mf-c att">8,025 €<small>−14 %</small></span></td>
+    <td class="mf-mu">1 · 1 900 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Fromage Citron &amp; Coulis Framboise - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,850 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,850 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,850 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">7,660 €<small>−13 %</small></span></td><td><span class="mf-c att">7,660 €<small>−13 %</small></span></td>
+    <td class="mf-mu">1 · 774 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Passion Sauvage - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,108 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,672 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">8,672 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">8,672 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">8,672 €<small>✓ −5 %</small></span></td>
+    <td class="mf-mu">1 · 398 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Noël <span>6 matières · 9 396 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cougnou Sucre 200 g. - Cru</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9831 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9831 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,9831 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9831 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,9831 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 3 723 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cougnou Sucre &amp; Chocolat 200 g. - Cru</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,124 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,124 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">1,124 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,124 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">1,124 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 2 893 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cougnou Sucre &amp; Raisin 200 g. - Cru</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9524 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9524 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">0,9524 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,9524 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">0,9524 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 2 253 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cougnou - Nature 400 g. - Cru</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,408 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ko">sans prix</span></td>
+    <td class="mf-mu">1 · 325 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cougnou Sucre &amp; Canelle 200 g. - Cru</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,490 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,475 €<small>✓ −1 %</small></span></td><td><span class="mf-c att">0,9540 €<small>−36 %</small></span></td><td><span class="mf-c att">0,9540 €<small>−36 %</small></span></td><td><span class="mf-c att">0,9540 €<small>−36 %</small></span></td>
+    <td class="mf-mu">1 · 154 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Sapin de Noel en pain d'épice - 250 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,527 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,527 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,527 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,527 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,527 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 48 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Fond à garnir <span>4 matières · 9 108 € de CA</span></td></tr><tr><td class="mf-e mu"></td><td class="g nom"><b>Crème pâtissière (Poche)</b><small>€ / kg · centrale</small></td>
+    <td class="mf-r"><span class="mf-mu">colis en pièces : poids à poser</span></td>
+    <td><span class="mf-c ">4 218,75 €</span></td><td><span class="mf-c ">4 218,75 €</span></td><td><span class="mf-c ">4 218,75 €</span></td><td><span class="mf-c ">4 218,75 €</span></td>
+    <td class="mf-mu">7 · 5 681 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Eclair</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,3349 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,3349 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,3349 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,3349 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,3349 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 3 128 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Sablé breton</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,455 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,455 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,455 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,455 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,455 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">3 · 290 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Sablé Plougatel Individuel</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,4160 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,4160 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4160 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4160 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,4160 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 10 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Cookies <span>6 matières · 7 264 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cookie Chocolat Lait</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,478 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,478 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,478 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,257 €<small>−15 %</small></span></td><td><span class="mf-c ok">1,478 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 330 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cookie Chocolat Blanc</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,428 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,428 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,428 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,257 €<small>−12 %</small></span></td><td><span class="mf-c ok">1,428 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 441 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cookie Caramel &amp; Noix de Pecan - 100g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,314 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,314 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,314 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,102 €<small>−16 %</small></span></td><td><span class="mf-c att">1,102 €<small>−16 %</small></span></td>
+    <td class="mf-mu">1 · 953 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cookie Chocolat Noir</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,494 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,494 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,257 €<small>−16 %</small></span></td><td><span class="mf-c att">1,257 €<small>−16 %</small></span></td><td><span class="mf-c ok">1,494 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 933 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cookie Double Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,494 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,494 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,330 €<small>−11 %</small></span></td><td><span class="mf-c att">1,330 €<small>−11 %</small></span></td><td><span class="mf-c ok">1,494 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 806 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cookie Avoine Raisins et Noisette (cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,154 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,154 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,154 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">0,9488 €<small>−18 %</small></span></td><td><span class="mf-c ok">1,154 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 801 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Pain Tradition <span>10 matières · 5 890 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Foccacia - Aromates</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,771 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,771 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,771 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,719 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">1,771 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 371 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Tradition - 4 Céréales</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,184 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,184 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,184 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,097 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">2,184 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">2 · 902 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Tradition Olives</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,202 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,202 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,202 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,125 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">2,202 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 849 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Tradition Noix &amp; Raisins</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,401 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,401 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,401 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,301 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">2,401 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 760 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Noisettes Tradition 350 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,963 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,963 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,963 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,875 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">2,963 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 646 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Paix au Noix &amp; Sésame</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,641 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,641 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,582 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">1,582 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">1,641 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 602 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Pain Oignons et Lardons Tradition 350 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,334 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,334 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,334 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,305 €<small>✓ −1 %</small></span></td><td><span class="mf-c ok">2,334 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 477 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Foccacia - Olives Vertes &amp; Noires</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,847 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,847 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,847 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,801 €<small>✓ −2 %</small></span></td><td><span class="mf-c ok">1,801 €<small>✓ −2 %</small></span></td>
+    <td class="mf-mu">1 · 162 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Foccacia - Pesto Rosso</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,897 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,842 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">1,897 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,842 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">1,842 €<small>✓ −3 %</small></span></td>
+    <td class="mf-mu">1 · 67 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Blanc (Pauvre en Gluten) 600 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,304 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,206 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">2,206 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">2,206 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">2,206 €<small>✓ −4 %</small></span></td>
+    <td class="mf-mu">1 · 55 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tartissières - 12Ø <span>5 matières · 5 132 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Fromage &amp; Spéculoos (12⌀)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,873 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,873 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,873 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,580 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">3,580 €<small>✓ −8 %</small></span></td>
+    <td class="mf-mu">1 · 2 189 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Citron Meringué (12⌀)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,779 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,779 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,779 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,534 €<small>✓ −6 %</small></span></td><td><span class="mf-c ok">3,534 €<small>✓ −6 %</small></span></td>
+    <td class="mf-mu">1 · 1 391 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Passion Sauvage (12⌀)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,849 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,560 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">3,560 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">3,560 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">3,560 €<small>✓ −8 %</small></span></td>
+    <td class="mf-mu">1 · 784 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Mousse Chocolat &amp; Caramel (12⌀)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,660 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">3,161 €<small>−14 %</small></span></td><td><span class="mf-c ok">3,660 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">3,161 €<small>−14 %</small></span></td><td><span class="mf-c att">3,161 €<small>−14 %</small></span></td>
+    <td class="mf-mu">1 · 585 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Fromage &amp; Fruits Rouges Meringués (12⌀)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><span class="mf-mu">pas de prix en vigueur</span></td>
+    <td><span class="mf-c ">3,450 €</span></td><td><span class="mf-c ">3,450 €</span></td><td><span class="mf-c ">3,450 €</span></td><td><span class="mf-c ko">sans prix</span></td>
+    <td class="mf-mu">1 · 183 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Entremets - Individuel <span>9 matières · 5 047 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Merveilleux (30 pieces)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,885 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,805 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">1,885 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,492 €<small>−21 %</small></span></td><td><span class="mf-c att">1,492 €<small>−21 %</small></span></td>
+    <td class="mf-mu">1 · 1 285 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Coeur Brookie Individuel</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,875 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">sans prix</span></td><td><span class="mf-c ok">1,875 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">1,875 €<small>✓ 0 %</small></span></td><td><span class="mf-c ko">sans prix</span></td>
+    <td class="mf-mu">1 · 659 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Bombe Chocolat Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,889 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,823 €<small>✓ −3 %</small></span></td><td><span class="mf-c ok">1,889 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">3,068 €<small>+62 %</small></span></td><td><span class="mf-c att">3,068 €<small>+62 %</small></span></td>
+    <td class="mf-mu">1 · 649 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Misérable Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,667 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,118 €<small>−33 %</small></span></td><td><span class="mf-c ok">1,667 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,118 €<small>−33 %</small></span></td><td><span class="mf-c att">1,118 €<small>−33 %</small></span></td>
+    <td class="mf-mu">1 · 631 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Duo Framboise &amp; Passion Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,116 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,492 €<small>+34 %</small></span></td><td><span class="mf-c ok">1,116 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,492 €<small>+34 %</small></span></td><td><span class="mf-c att">1,492 €<small>+34 %</small></span></td>
+    <td class="mf-mu">1 · 595 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Javanais Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,738 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,738 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,797 €<small>✓ +2 %</small></span></td><td><span class="mf-c ok">2,797 €<small>✓ +2 %</small></span></td><td><span class="mf-c ok">2,797 €<small>✓ +2 %</small></span></td>
+    <td class="mf-mu">1 · 590 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Duo Chocolat Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,211 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,751 €<small>+45 %</small></span></td><td><span class="mf-c ok">1,211 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,751 €<small>+45 %</small></span></td><td><span class="mf-c att">1,751 €<small>+45 %</small></span></td>
+    <td class="mf-mu">1 · 480 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Opéra Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,030 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">22,64 €<small>+1 015 %</small></span></td><td><span class="mf-c ok">1,900 €<small>✓ −6 %</small></span></td><td><span class="mf-c ko">22,64 €<small>+1 015 %</small></span></td><td><span class="mf-c ko">22,64 €<small>+1 015 %</small></span></td>
+    <td class="mf-mu">1 · 95 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Duo Chocolat &amp; Passion Ind.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,931 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,931 €<small>✓ −0 %</small></span></td><td><span class="mf-c att">1,596 €<small>−17 %</small></span></td><td><span class="mf-c att">1,596 €<small>−17 %</small></span></td><td><span class="mf-c att">2,443 €<small>+26 %</small></span></td>
+    <td class="mf-mu">1 · 63 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Entremets - 190Ø <span>3 matières · 4 537 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Duo Chocolat - 180⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,057 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,057 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,057 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">9,637 €<small>+20 %</small></span></td><td><span class="mf-c ok">8,057 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 2 481 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Duo Framboise &amp; Passion - 180⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>9,003 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">9,003 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,003 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">9,637 €<small>✓ +7 %</small></span></td><td><span class="mf-c ok">9,003 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 878 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Framboise &amp; Chocolat - 180⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,800 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,800 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,800 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,800 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">8,800 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 178 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tartes <span>5 matières · 4 403 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Abricot - 22⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>5,804 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">5,804 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">5,804 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">5,804 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">5,804 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">2 · 2 006 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cerise - 22⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,643 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,643 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,643 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,643 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,643 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 032 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Fond Pâte Grasse (4cm) - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,828 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,828 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">1,828 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">1,828 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">1,828 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">2 · 797 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Bleuet - 19⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,417 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">6,709 €<small>✓ −10 %</small></span></td><td><span class="mf-c ok">6,709 €<small>✓ −10 %</small></span></td><td><span class="mf-c ok">6,709 €<small>✓ −10 %</small></span></td><td><span class="mf-c ok">6,709 €<small>✓ −10 %</small></span></td>
+    <td class="mf-mu">1 · 302 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Brownies - 22⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,182 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,182 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,182 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,182 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7,182 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 266 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Entremets - 4/6 personnes <span>8 matières · 3 720 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø -  Duo Framboise &amp; Passion</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>5,217 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">5,217 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">6,466 €<small>+24 %</small></span></td><td><span class="mf-c att">6,466 €<small>+24 %</small></span></td><td><span class="mf-c ok">5,217 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 243 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Entremet 120Ø -  Duo Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,962 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,962 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,558 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">4,558 €<small>✓ −8 %</small></span></td><td><span class="mf-c ok">4,962 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 1 161 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø - Miserable</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,372 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,372 €<small>✓ −0 %</small></span></td><td><span class="mf-c att">8,490 €<small>+15 %</small></span></td><td><span class="mf-c att">8,490 €<small>+15 %</small></span></td><td><span class="mf-c att">8,490 €<small>+15 %</small></span></td>
+    <td class="mf-mu">1 · 507 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø - Caramel &amp; Noisette</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>6,623 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,490 €<small>+28 %</small></span></td><td><span class="mf-c att">8,490 €<small>+28 %</small></span></td><td><span class="mf-c att">8,490 €<small>+28 %</small></span></td><td><span class="mf-c att">8,490 €<small>+28 %</small></span></td>
+    <td class="mf-mu">1 · 292 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø - Tiramisu</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>5,416 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">6,424 €<small>+19 %</small></span></td><td><span class="mf-c att">6,424 €<small>+19 %</small></span></td><td><span class="mf-c att">6,424 €<small>+19 %</small></span></td><td><span class="mf-c att">6,424 €<small>+19 %</small></span></td>
+    <td class="mf-mu">1 · 235 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø - Bombe Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>5,439 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">5,439 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">5,220 €<small>✓ −4 %</small></span></td><td><span class="mf-c att">8,558 €<small>+57 %</small></span></td><td><span class="mf-c att">8,558 €<small>+57 %</small></span></td>
+    <td class="mf-mu">1 · 193 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø - Framboise &amp; Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>5,222 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">6,424 €<small>+23 %</small></span></td><td><span class="mf-c att">6,424 €<small>+23 %</small></span></td><td><span class="mf-c att">6,424 €<small>+23 %</small></span></td><td><span class="mf-c att">6,424 €<small>+23 %</small></span></td>
+    <td class="mf-mu">1 · 75 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Entremet 120Ø - Bombe Citron</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,372 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">8,490 €<small>+15 %</small></span></td><td><span class="mf-c att">6,093 €<small>−17 %</small></span></td><td><span class="mf-c att">6,093 €<small>−17 %</small></span></td><td><span class="mf-c att">8,490 €<small>+15 %</small></span></td>
+    <td class="mf-mu">1 · 15 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tartes au sucre <span>1 matière · 3 568 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Tarte Sucre Blanc - 22Ø</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,078 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,078 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,078 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,078 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">3,078 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">4 · 3 568 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Cake 100g. <span>5 matières · 3 151 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cake Marbré - 300g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,915 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,915 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">2,915 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,915 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,915 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 866 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cake Pomme &amp; Pralin - 300 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,339 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,339 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,339 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">3,339 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">3,339 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 616 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cake Nature - 300g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,118 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,118 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,118 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,118 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,118 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 608 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cake Chocolat - 300 g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,901 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,901 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,901 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">3,901 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">3,901 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 535 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cake Citron - 300g.</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,083 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,083 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,083 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">3,083 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">3,083 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 527 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Pâtisserie individuelle <span>4 matières · 2 670 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Choux - emb</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,1736 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,1736 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,1736 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,1736 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,1736 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">2 · 2 068 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Mousse Chocolat  - (280 ml)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,342 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,342 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,342 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,342 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,342 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">2 · 480 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Tiramisu  - (280 ml)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,083 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,083 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">2,083 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">2,083 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">2,083 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 105 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Mousse Passion &amp; Coulis Framboise - (280 ml)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,466 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,143 €<small>−22 %</small></span></td><td><span class="mf-c att">1,143 €<small>−22 %</small></span></td><td><span class="mf-c att">1,211 €<small>−17 %</small></span></td><td><span class="mf-c att">1,143 €<small>−22 %</small></span></td>
+    <td class="mf-mu">1 · 17 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Soupes <span>4 matières · 1 805 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Soupe Carotte &amp; Gigembre</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>6,177 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">4,145 €<small>−33 %</small></span></td><td><span class="mf-c att">4,145 €<small>−33 %</small></span></td><td><span class="mf-c att">1,902 €<small>−69 %</small></span></td><td><span class="mf-c att">1,902 €<small>−69 %</small></span></td>
+    <td class="mf-mu">2 · 840 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Soupe Courgette</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,302 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">9,098 €<small>+295 %</small></span></td><td><span class="mf-c ko">9,098 €<small>+295 %</small></span></td><td><span class="mf-c ko">9,098 €<small>+295 %</small></span></td><td><span class="mf-c ko">9,098 €<small>+295 %</small></span></td>
+    <td class="mf-mu">1 · 555 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Soupe Potiron &amp; Citron (6 x 1l.)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>6,980 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">5,228 €<small>−25 %</small></span></td><td><span class="mf-c att">5,228 €<small>−25 %</small></span></td><td><span class="mf-c att">5,228 €<small>−25 %</small></span></td><td><span class="mf-c att">5,228 €<small>−25 %</small></span></td>
+    <td class="mf-mu">1 · 322 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Soupe Tomate &amp; Boulettes</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,302 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,302 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,902 €<small>−17 %</small></span></td><td><span class="mf-c att">1,902 €<small>−17 %</small></span></td><td><span class="mf-c att">1,902 €<small>−17 %</small></span></td>
+    <td class="mf-mu">1 · 88 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Matières premières (Emballage) <span>2 matières · 1 388 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Étiquette Kraft Eco 50 mm |  Logo</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,1000 €</b><small>prix général du panel</small></td>
+    <td><span class="mf-c att">0,0300 €<small>−70 %</small></span></td><td><span class="mf-c att">0,0300 €<small>−70 %</small></span></td><td><span class="mf-c att">0,0300 €<small>−70 %</small></span></td><td><span class="mf-c ko">sans prix</span></td>
+    <td class="mf-mu">2 · 1 182 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Boite Lunch - Rectangle ( 44 x 29 x 55) | KraftEco</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,720 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">0,0255 €<small>−99 %</small></span></td><td><span class="mf-c att">0,0255 €<small>−99 %</small></span></td><td><span class="mf-c att">0,0255 €<small>−99 %</small></span></td><td><span class="mf-c att">0,0255 €<small>−99 %</small></span></td>
+    <td class="mf-mu">2 · 207 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Plat Prepare - Chaud <span>7 matières · 1 323 € de CA</span></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Lasagne Jambon &amp; Bolognaise</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,653 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,653 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">3,846 €<small>−17 %</small></span></td><td><span class="mf-c ko">14,87 €<small>+220 %</small></span></td><td><span class="mf-c att">3,846 €<small>−17 %</small></span></td>
+    <td class="mf-mu">1 · 346 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cannelloni - Poulet Estragon</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9835 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,9835 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">0,9835 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">0,9835 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">0,9835 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 227 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Sauce tomate maison</b><small>€ / kg · centrale</small></td>
+    <td class="mf-r"><b>7 681,67 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7 681,67 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">7 681,67 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">7 681,67 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">7 681,67 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 225 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cannelloni - Ricotta &amp; Epinard</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,8596 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,8596 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,8596 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,8596 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,8596 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 202 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Choux Farcis (12 pieces)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5625 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,5625 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,5625 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,5625 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">0,5625 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 135 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e mu"></td><td class="g nom"><b>Sauce champignon maison</b><small>€ / kg · centrale</small></td>
+    <td class="mf-r"><span class="mf-mu">colis en pièces : poids à poser</span></td>
+    <td><span class="mf-c ">4,72 €</span></td><td><span class="mf-c ">4,72 €</span></td><td><span class="mf-c ">4,72 €</span></td><td><span class="mf-c ">4,72 €</span></td>
+    <td class="mf-mu">1 · 135 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Cannelloni - Pancetta,  Chêvre &amp; Courgette</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,255 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,255 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">1,255 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">1,255 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">1,255 €<small>✓ −0 %</small></span></td>
+    <td class="mf-mu">1 · 52 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Pâtisserie <span>2 matières · 838 € de CA</span></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Plaque Biscuit Crème Fraiche Fruits</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>21,85 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">43,83 €<small>+101 %</small></span></td><td><span class="mf-c ko">43,83 €<small>+101 %</small></span></td><td><span class="mf-c ko">43,83 €<small>+101 %</small></span></td><td><span class="mf-c ko">43,83 €<small>+101 %</small></span></td>
+    <td class="mf-mu">1 · 457 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Plaque Biscuit Crème Fraiche Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>22,43 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">43,88 €<small>+96 %</small></span></td><td><span class="mf-c att">43,88 €<small>+96 %</small></span></td><td><span class="mf-c att">43,88 €<small>+96 %</small></span></td><td><span class="mf-c att">43,88 €<small>+96 %</small></span></td>
+    <td class="mf-mu">1 · 381 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Financier <span>4 matières · 753 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Tendresse au Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,277 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,099 €<small>−14 %</small></span></td><td><span class="mf-c ok">1,277 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,099 €<small>−14 %</small></span></td><td><span class="mf-c att">1,099 €<small>−14 %</small></span></td>
+    <td class="mf-mu">1 · 264 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Financier au Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,6546 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,6478 €<small>✓ −1 %</small></span></td><td><span class="mf-c ok">0,6478 €<small>✓ −1 %</small></span></td><td><span class="mf-c ok">0,6478 €<small>✓ −1 %</small></span></td><td><span class="mf-c ok">0,6478 €<small>✓ −1 %</small></span></td>
+    <td class="mf-mu">1 · 212 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Tendresse aux Framboises</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,214 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,021 €<small>−16 %</small></span></td><td><span class="mf-c ok">1,214 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">1,021 €<small>−16 %</small></span></td><td><span class="mf-c att">1,021 €<small>−16 %</small></span></td>
+    <td class="mf-mu">1 · 177 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Financier aux Amandes</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5747 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">0,5507 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">0,5507 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">0,5507 €<small>✓ −4 %</small></span></td><td><span class="mf-c ok">0,5507 €<small>✓ −4 %</small></span></td>
+    <td class="mf-mu">1 · 99 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Biscuiterie <span>6 matières · 735 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Damier 100g. - Biscuit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,977 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,421 €<small>−28 %</small></span></td><td><span class="mf-c att">1,421 €<small>−28 %</small></span></td><td><span class="mf-c att">1,421 €<small>−28 %</small></span></td><td><span class="mf-c att">1,421 €<small>−28 %</small></span></td>
+    <td class="mf-mu">1 · 279 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Lepoard 100g. - Biscuit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,747 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,542 €<small>−12 %</small></span></td><td><span class="mf-c att">1,542 €<small>−12 %</small></span></td><td><span class="mf-c att">1,542 €<small>−12 %</small></span></td><td><span class="mf-c att">1,542 €<small>−12 %</small></span></td>
+    <td class="mf-mu">1 · 162 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Amandes &amp; Cannelles - 100g. - Biscuit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>1,836 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">1,736 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">1,736 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">1,736 €<small>✓ −5 %</small></span></td><td><span class="mf-c ok">1,736 €<small>✓ −5 %</small></span></td>
+    <td class="mf-mu">1 · 142 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Swirl 100g. - Biscuit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,005 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">1,399 €<small>−30 %</small></span></td><td><span class="mf-c att">1,399 €<small>−30 %</small></span></td><td><span class="mf-c att">1,399 €<small>−30 %</small></span></td><td><span class="mf-c att">1,399 €<small>−30 %</small></span></td>
+    <td class="mf-mu">1 · 103 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Pecan 100g. - Biscuit</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,641 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">2,059 €<small>−22 %</small></span></td><td><span class="mf-c att">2,183 €<small>−17 %</small></span></td><td><span class="mf-c att">2,183 €<small>−17 %</small></span></td><td><span class="mf-c att">2,059 €<small>−22 %</small></span></td>
+    <td class="mf-mu">1 · 29 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Spéculoos de Noel</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>2,449 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">2,449 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,449 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,449 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">2,449 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 20 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Mignardise <span>5 matières · 671 € de CA</span></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Javanais - Mignardise (emb.)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5187 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td><td><span class="mf-c att">0,4244 €<small>−18 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td>
+    <td class="mf-mu">1 · 566 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Tiramisu - Mignardise (emb)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,3890 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ko">42,45 €<small>+10 813 %</small></span></td><td><span class="mf-c ok">0,4244 €<small>✓ +9 %</small></span></td><td><span class="mf-c att">0,3215 €<small>−17 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+10 813 %</small></span></td>
+    <td class="mf-mu">1 · 84 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Bavarois Framboise - Mignardise (emb)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5187 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">0,4200 €<small>−19 %</small></span></td><td><span class="mf-c att">0,4442 €<small>−14 %</small></span></td><td><span class="mf-c att">0,4287 €<small>−17 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td>
+    <td class="mf-mu">1 · 8 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Chocolat &amp; Caramel - Mignardise (emb.)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5187 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">0,8490 €<small>+64 %</small></span></td><td><span class="mf-c att">0,4246 €<small>−18 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td>
+    <td class="mf-mu">1 · 8 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ko"></td><td class="g nom"><b>Bavarois Chocolat - Mignardise	(emb)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,5187 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">0,4200 €<small>−19 %</small></span></td><td><span class="mf-c att">0,4328 €<small>−17 %</small></span></td><td><span class="mf-c att">0,4287 €<small>−17 %</small></span></td><td><span class="mf-c ko">42,45 €<small>+8 085 %</small></span></td>
+    <td class="mf-mu">1 · 6 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Granola <span>5 matières · 565 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Granola - Noisette &amp; Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,180 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,180 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,180 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,180 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,180 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">3 · 239 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Granola - Banane &amp; Chocolat</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,629 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,629 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,629 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,629 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,629 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 169 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Granola - Pommes &amp; Canelle</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,694 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,694 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,694 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,694 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,371 €<small>✓ −9 %</small></span></td>
+    <td class="mf-mu">1 · 94 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Granola - Citron &amp; Bleuet</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,530 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,549 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">4,549 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">4,549 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">4,549 €<small>✓ +0 %</small></span></td>
+    <td class="mf-mu">1 · 36 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Granola - Noisette &amp; Miel</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>3,678 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">3,678 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,678 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,678 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">3,678 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 28 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tarte Fruits Frais <span>1 matière · 387 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>Fond Crème - 20⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>4,309 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">4,309 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,309 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,309 €<small>✓ 0 %</small></span></td><td><span class="mf-c ok">4,309 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">2 · 387 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Tartocake - 22Ø <span>2 matières · 192 € de CA</span></td></tr><tr><td class="mf-e ok"></td><td class="g nom"><b>TartoCake - Cerise &amp; Pistache</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>8,672 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">8,672 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">8,672 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">8,672 €<small>✓ +0 %</small></span></td><td><span class="mf-c ok">8,672 €<small>✓ 0 %</small></span></td>
+    <td class="mf-mu">1 · 161 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Cake Yaourt Pommes - 19⌀</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>7,780 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c ok">7,780 €<small>✓ 0 %</small></span></td><td><span class="mf-c att">6,310 €<small>−19 %</small></span></td><td><span class="mf-c att">6,430 €<small>−17 %</small></span></td><td><span class="mf-c att">6,310 €<small>−19 %</small></span></td>
+    <td class="mf-mu">1 · 32 €</td><td><button class="mf-b">Fiche</button></td></tr><tr class="mf-g"><td colspan="10">Boulangerie <span>2 matières · 85 € de CA</span></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Hotdog - Maxi (Cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9323 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">0,0944 €<small>−90 %</small></span></td><td><span class="mf-c att">0,0944 €<small>−90 %</small></span></td><td><span class="mf-c att">0,0944 €<small>−90 %</small></span></td><td><span class="mf-c att">0,0944 €<small>−90 %</small></span></td>
+    <td class="mf-mu">2 · 61 €</td><td><button class="mf-b">Fiche</button></td></tr><tr><td class="mf-e att"></td><td class="g nom"><b>Hamburger - Maxi (Cru)</b><small>€ / pce · centrale</small></td>
+    <td class="mf-r"><b>0,9323 €</b><small>liste du fournisseur</small></td>
+    <td><span class="mf-c att">0,0944 €<small>−90 %</small></span></td><td><span class="mf-c ok">0,9323 €<small>✓ −0 %</small></span></td><td><span class="mf-c ok">0,9323 €<small>✓ −0 %</small></span></td><td><span class="mf-c att">0,0944 €<small>−90 %</small></span></td>
+    <td class="mf-mu">1 · 24 €</td><td><button class="mf-b">Fiche</button></td></tr>
+    </tbody></table></div>
+    <div class="vr-pied"><b>Le prix fournisseur</b> : la liste de prix en vigueur de la référence liée à la matière au panel (prix du colis ÷ taille), sinon le prix général du panel. <b>Chaque magasin</b> : son prix, et son écart au prix fournisseur (✓ à 10 % près, orange au-delà, rouge au-delà de ×2 ou sans prix). « Fiche » ouvre la fiche de la matière (paramètres et prix, modifiables).</div>
+  </div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>

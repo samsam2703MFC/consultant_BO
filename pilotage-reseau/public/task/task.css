@@ -25,6 +25,8 @@ body{margin:0;background:var(--tk-fond);font-family:var(--font-ui);color:var(--i
 .tk-btn.danger{color:var(--danger);border-color:rgba(179,38,30,.4)}
 .tk-btn.ghost{background:transparent;border-color:transparent;color:var(--muted-2);text-decoration:none}
 .tk-btn.ghost:hover{background:rgba(34,34,34,.05)}
+/* Effacer, retirer : discret, rouge au survol seulement (docs/DESIGN_SYSTEM.md, « Survol d'un bouton destructeur »). */
+.tk-btn.ghost.danger:hover:not(:disabled){background:rgba(179,38,30,.07);color:var(--danger)}
 .tk-btn.mini{font-size:11px;padding:4px 9px;border-radius:7px}
 a.tk-btn{display:inline-flex;align-items:center}
 .tk-lien{border:none;background:none;padding:0;color:var(--accent);cursor:pointer;font:400 11px var(--font-ui);text-decoration:underline;text-underline-offset:2px}
@@ -232,7 +234,7 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .dc-sous{font-size:12.5px;color:var(--muted);margin-bottom:8px}
 .dc-moment{font:400 10px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:26px 0 2px;padding-bottom:6px;border-bottom:1px solid var(--tk-trait)}
 .dc-s{padding:16px 0 10px;scroll-margin-top:12px}
-.dc-s.vise .dc-h2>span:not(.dc-code){text-decoration:underline;text-decoration-color:rgba(141,29,44,.35);text-underline-offset:5px}
+.dc-s.vise .dc-h2>span:not(.dc-code):not(.dc-flash){text-decoration:underline;text-decoration-color:rgba(141,29,44,.35);text-underline-offset:5px}
 .dc-h2{font:400 21px var(--font-display);display:flex;gap:10px;align-items:center;margin:0 0 7px}
 .dc-h2 .tk-btn{margin-left:4px;opacity:.7}.dc-h2 .tk-btn:hover{opacity:1}
 .dc-code{font:400 11px var(--font-ui);letter-spacing:.05em;color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap}
@@ -249,11 +251,30 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .dc-l:hover,.dc-l.ici{background:var(--table-head)}
 .dc-l.sel{background:rgba(141,29,44,.05)}
 .dc-l.pause .dc-nom>button{color:var(--muted)}
+.dc-l.pause .dc-props,.dc-l.pause .dc-dp{opacity:.38}
+/* Active / en pause (15/11/2026) : l'interrupteur du design system (§7.11 : piste --chip, allumé --prize) à la taille
+ * d'une vignette, sans libellé, en bout de ligne. .dc-fin garde les vignettes et l'interrupteur sur la même ligne. */
+.dc-fin{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.dc-on{flex:0 0 auto;position:relative;width:26px;height:15px;padding:0;border:none;border-radius:999px;background:var(--chip);cursor:pointer;transition:background .15s ease}
+.dc-on::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(28,26,23,.25);transition:transform .15s ease}
+.dc-on[aria-checked="true"]{background:var(--prize)}
+.dc-on[aria-checked="true"]::after{transform:translateX(11px)}
+.dc-on:hover{box-shadow:0 0 0 3px rgba(176,121,42,.18)}
+.dc-on:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dc-on:disabled{opacity:.55;cursor:progress}
+/* La checklist en pause (toutes ses tâches en pause) : son titre en gris ; ses lignes le sont déjà. L'interrupteur
+ * du titre s'aligne sur la colonne de ceux des tâches (le retrait de 8 px des lignes). */
+.dc-on-cl{margin-left:auto;margin-right:8px}
+.dc-s.pause .dc-h2>span:not(.dc-code):not(.dc-flash),.dc-s.pause .dc-meta,.dc-s.pause .dc-desc{color:var(--muted)}
+.dc-s.pause .dc-h2 .dc-code{opacity:.45}
+.dc-s.pause .dc-qui{opacity:.55}
+.dc-s>.tk-msg{margin:0 0 8px;font-size:12px;padding:8px 12px}
+.dc-som-i.pz{color:var(--faint)}
 .dc-cb{margin:0;flex:0 0 auto;accent-color:var(--accent)}
 .dc-nom{flex:1 1 240px;min-width:0;font-size:14px;line-height:1.35}
 .dc-nom>button{border:none;background:none;padding:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
 .dc-nom>button:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
-.dc-flash{margin-left:8px;font-size:11px;color:var(--tk-ok)}.dc-flash.ko{color:var(--tk-ko)}
+.dc-flash{margin-left:8px;font-size:11px;color:var(--tk-ok)}.dc-flash:not(.ko){white-space:nowrap}.dc-flash.ko{color:var(--tk-ko)}
 .dc-props{display:grid;grid-template-columns:58px 124px 92px 100px 172px 196px;gap:6px;align-items:center;justify-items:start;flex:0 0 auto}
 .dc-ancre{position:relative;display:inline-flex;max-width:100%}
 .dc-v,.dc-b{display:inline-flex;align-items:center;gap:6px;max-width:100%;font:400 11px var(--font-ui);border-radius:6px;padding:3px 7px;white-space:nowrap;cursor:pointer;border:1px solid transparent;background:var(--chip);color:var(--muted-2);overflow:hidden;text-overflow:ellipsis}
@@ -315,7 +336,7 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .dc-dd.rg{width:420px}
 /* Changer une tâche de checklist (09/11/2026) : « Checklist 2.1.01 ▾ » */
 .dc-dp-v,.dc-nom .dc-dp-v{display:inline-flex;align-items:center;gap:6px;font:400 11px var(--font-ui);border-radius:6px;padding:2px 6px 2px 8px;border:1px solid var(--tk-trait2);background:#fff;color:var(--muted);white-space:nowrap;cursor:pointer}
-.dc-dp{display:inline-block;vertical-align:1px;margin-left:4px}.dc-dp-v{opacity:.55}.dc-l:hover .dc-dp-v,.dc-dp-v.open,.dc-l.sel .dc-dp-v{opacity:1}.dc-dp-v{padding:2px 4px 2px 6px!important;gap:4px!important}
+.dc-dp{flex:0 0 132px}.dc-dp-v{opacity:.55}.dc-l:hover .dc-dp-v,.dc-dp-v.open,.dc-l.sel .dc-dp-v{opacity:1}.dc-dp-v{padding:2px 4px 2px 6px!important;gap:4px!important}
 .dc-dp-v .dc-code{font-size:10px;padding:2px 6px}
 .dc-dp-v:hover,.dc-nom .dc-dp-v:hover{text-decoration:none;border-color:var(--ink);color:var(--ink)}.dc-dp-v.open{border-color:var(--ink);box-shadow:0 0 0 3px rgba(43,38,34,.1)}
 .tk-selbar .dc-ancre{position:relative}

@@ -25,6 +25,38 @@ declare(strict_types=1);
 /** Les rayons que le panel photographie chaque jour (tâches « Photo du comptoir - … »), dans l'ordre du comptoir. */
 const RV_DEFAUT = ['Pains & Boulangerie', 'Viennoiseries', 'Pâtisseries', 'Tartes', 'Quiches', 'Traiteur', 'Biscuiterie', 'Épicerie', 'Boissons'];
 
+/**
+ * CE QU'EST UN COMPTOIR CONFORME, pour la proposition de note de l'IA (Anthropic::noterPhoto). Les règles
+ * communes valent pour tous les rayons ; pour chaque rayon, la consigne posée au back office PRIME, et ces
+ * critères par défaut ne servent que tant qu'elle est vide. Ils viennent des photos rendues (quiches et tartes
+ * vendues au quart, d'après l'affiche de Halle ; épicerie sur étagère ; boissons en frigo) : à valider par le
+ * réseau, et à remplacer par la consigne du rayon dès qu'elle est écrite.
+ */
+const RV_CRITERES_COMMUNS = "Un comptoir conforme est garni (pas de plateau ni d'emplacement vide), rangé, propre, et sans objet"
+    . " étranger à la vente (outil, ventilateur, carton, sac, chiffon, téléphone).";
+const RV_CRITERES_IA = [
+    'pains-boulangerie' => 'Pains et baguettes présentés en nombre, paniers et étagères remplis.',
+    'viennoiseries'     => 'Plaques remplies, viennoiseries entières et rangées par sorte.',
+    'patisseries'       => 'Plaques remplies, pâtisseries entières, sans produit abîmé ni affaissé.',
+    'tartes'            => "Comptoir garni de tartes sur toute sa longueur. Les tartes se vendent aussi au quart : une tarte"
+        . " entamée n'est pas un écart.",
+    'quiches'           => "Comptoir garni de quiches. Les quiches se vendent aussi au quart : une quiche entamée n'est pas un"
+        . " écart. Le papier de cuisson sous les quiches fait partie de la présentation.",
+    'traiteur'          => 'Vitrine réfrigérée remplie, bacs et barquettes alignés.',
+    'biscuiterie'       => 'Boîtes, sachets et biscuits rangés, présentoir rempli.',
+    'epicerie'          => "L'épicerie est une étagère, pas un comptoir : étagères remplies, produits alignés face visible.",
+    'boissons'          => 'Le rayon boissons est un frigo : étagères remplies, bouteilles et canettes alignées, vitre propre.',
+];
+
+/** Les critères que l'IA reçoit pour un rayon ; '' pour une tâche qui n'est pas une photo de comptoir. */
+function rvCriteresIa(?array $rv): string
+{
+    if ($rv === null) { return ''; }
+    $propre = trim((string) ($rv['consigne'] ?? ''));
+    $rayon = $propre !== '' ? $propre : (RV_CRITERES_IA[(string) ($rv['cle'] ?? '')] ?? '');
+    return RV_CRITERES_COMMUNS . ($rayon !== '' ? "\nRayon « " . (string) ($rv['nom'] ?? '') . ' » : ' . $rayon : '');
+}
+
 function ensureRayonsPhotos(): void
 {
     static $fait = false;
@@ -94,7 +126,8 @@ function rvListe(): array
  */
 function rvRayonDe(string $libelle, ?array $rayons = null): ?array
 {
-    $reste = (string) preg_replace('/^(photo du )?comptoirs?\s*/', '', rvNorm($libelle));
+    // « Photo du comptoir après-midi - Pâtisseries » : le moment de la journée n'est pas le rayon.
+    $reste = (string) preg_replace('/^(photo du )?comptoirs?\s*(?:(?:apres midi|matin|midi|soir)\s+)?/', '', rvNorm($libelle));
     if ($reste === '') { return null; }
     $sing = static fn (string $x): string => (string) preg_replace('/s\b/', '', $x);
     $prefixe = null; $long = 0;

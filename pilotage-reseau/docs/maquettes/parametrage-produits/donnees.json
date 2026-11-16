@@ -1,0 +1,986 @@
+{
+ "periodes": [
+  {
+   "id": 14,
+   "name": "🥖 Gamme Standard",
+   "from_md": 101,
+   "to_md": 1231,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 0
+  },
+  {
+   "id": 19,
+   "name": "Gamme Bureau",
+   "from_md": 101,
+   "to_md": 101,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 0
+  },
+  {
+   "id": 13,
+   "name": "🎉 Gamme Saint-Valentin (14 Février)",
+   "from_md": 214,
+   "to_md": 216,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 4,
+   "name": "🌸 Gamme Printanière (Mars à Mai)",
+   "from_md": 301,
+   "to_md": 501,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 12,
+   "name": "🐣 Gamme Pascale (Mars-Avril)",
+   "from_md": 315,
+   "to_md": 415,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 11,
+   "name": "🌷 Gamme Fête des Mères (2e dimanche de Mai)",
+   "from_md": 507,
+   "to_md": 514,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 5,
+   "name": "test",
+   "from_md": 601,
+   "to_md": 901,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 6,
+   "name": "Automnale",
+   "from_md": 901,
+   "to_md": 1101,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 8,
+   "name": "Noël & Nouvel An",
+   "from_md": 1018,
+   "to_md": 115,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 10,
+   "name": "Épiphanie",
+   "from_md": 1101,
+   "to_md": 115,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 7,
+   "name": "❄️ Gamme Hivernale (Décembre à Février)",
+   "from_md": 1201,
+   "to_md": 201,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 17,
+   "name": "🍦 Icône - Gamme Glace (Avril - Septembre)",
+   "from_md": 104,
+   "to_md": 103,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 15,
+   "name": "🥞 Chandeleur – Fête des crêpes",
+   "from_md": 124,
+   "to_md": 208,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  },
+  {
+   "id": 16,
+   "name": "📦 Gamme B.-2-B. ",
+   "from_md": 317,
+   "to_md": 317,
+   "is_recurring": 0,
+   "is_active": 1,
+   "webshop_active": 0
+  },
+  {
+   "id": 9,
+   "name": "Saint-Nicolas",
+   "from_md": 1018,
+   "to_md": 1210,
+   "is_recurring": 1,
+   "is_active": 1,
+   "webshop_active": 1
+  }
+ ],
+ "categories": [
+  {
+   "id": 51000,
+   "name": "Anti-Gaspi",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Vente"
+  },
+  {
+   "id": 81115,
+   "name": "Assiette",
+   "is_active": 0,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 81122,
+   "name": "B.2.B - Cartons",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Administartif"
+  },
+  {
+   "id": 23200,
+   "name": "Bases",
+   "is_active": 0,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Patisserie"
+  },
+  {
+   "id": 32000,
+   "name": "Biscuiterie",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 81111,
+   "name": "Boissons chaudes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 34000,
+   "name": "Boissons froides",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 10000,
+   "name": "Boulangerie",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15611,
+   "name": "Cake",
+   "is_active": 1,
+   "price_coefficient": "2.5000",
+   "production_area_name": "Production Patisserie"
+  },
+  {
+   "id": 15610,
+   "name": "Cake",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 26000,
+   "name": "Catering",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 81120,
+   "name": "Chandeleur",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 33000,
+   "name": "Chocolaterie",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 71110,
+   "name": "Composition",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 32100,
+   "name": "Cookies",
+   "is_active": 1,
+   "price_coefficient": "3.0000",
+   "production_area_name": ""
+  },
+  {
+   "id": 81126,
+   "name": "Cougnou",
+   "is_active": 1,
+   "price_coefficient": "2.5000",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 11220,
+   "name": "Croutes Fruits Frais",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 61200,
+   "name": "Décor - Chocolat",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 22200,
+   "name": "Découpe",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 52000,
+   "name": "Dessert",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15200,
+   "name": "Entremets - 190Ø",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15100,
+   "name": "Entremets - 4/6 personnes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15300,
+   "name": "Entremets - Individuel",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 31000,
+   "name": "Épicerie",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 23300,
+   "name": "Extra",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 23400,
+   "name": "Extra - Payant",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Vente"
+  },
+  {
+   "id": 81116,
+   "name": "Extra - Traiteur",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 40000,
+   "name": "Fêtes & Occasions",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 32200,
+   "name": "Financier",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Patisserie"
+  },
+  {
+   "id": 61100,
+   "name": "Fond à garnir",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 22000,
+   "name": "Fromages & Salaisons",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11200,
+   "name": "Fruits Frais",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 23100,
+   "name": "Garnitures",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15600,
+   "name": "Gateaux de Voyage",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 81123,
+   "name": "Glace by Rawette",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Vente"
+  },
+  {
+   "id": 69000,
+   "name": "Main-d'œuvre",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 60000,
+   "name": "Matières premières",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15500,
+   "name": "Mignardise",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 24000,
+   "name": "Mini Sandwiches",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 41000,
+   "name": "Noël",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 12000,
+   "name": "Pain",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 12100,
+   "name": "Pain Tradition",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 42000,
+   "name": "Pâques",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 31100,
+   "name": "Pâtes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15000,
+   "name": "Pâtisserie",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 15400,
+   "name": "Pâtisserie individuelle",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 13000,
+   "name": "Petite Boulangerie",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 21100,
+   "name": "Plat Prepare - Chaud",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 26200,
+   "name": "Plateau Dejeuner",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 56100,
+   "name": "Plateau Sandwich",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 22100,
+   "name": "Plateaux",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 21000,
+   "name": "Plats prepare",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 21400,
+   "name": "Poke",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 35000,
+   "name": "Produits régionaux",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 14100,
+   "name": "Quiches",
+   "is_active": 1,
+   "price_coefficient": "2.5000",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 81121,
+   "name": "Saint-Valentin",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Patisserie"
+  },
+  {
+   "id": 81117,
+   "name": "Salade de pâtes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 21300,
+   "name": "Salades",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 81118,
+   "name": "Salades féculentes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 23000,
+   "name": "Sandwiches garnis",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 30000,
+   "name": "Self-Service",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 21500,
+   "name": "Snacking",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 21200,
+   "name": "Soupes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 43000,
+   "name": "St-Valentin",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11210,
+   "name": "Tarte Fruits Frais",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11000,
+   "name": "Tartes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11500,
+   "name": "Tartes",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 81125,
+   "name": "Tartes – Ø 28 cm",
+   "is_active": 1,
+   "price_coefficient": "2.7000",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 11310,
+   "name": "Tartes au sucre",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11100,
+   "name": "Tartissières",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11101,
+   "name": "Tartissières - 12Ø",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11102,
+   "name": "Tartissières - 19Ø",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 11400,
+   "name": "Tartocake - 22Ø",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 81110,
+   "name": "Technique",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": ""
+  },
+  {
+   "id": 20000,
+   "name": "Traiteur",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 16000,
+   "name": "Viennoiserie",
+   "is_active": 1,
+   "price_coefficient": "2.6500",
+   "production_area_name": "Vente"
+  },
+  {
+   "id": 16100,
+   "name": "Viennoiserie Ind.",
+   "is_active": 1,
+   "price_coefficient": "2.6500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 16200,
+   "name": "Viennoiserie réduction ",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Boulangerie"
+  },
+  {
+   "id": 81119,
+   "name": "Vins et Bières",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Vente"
+  },
+  {
+   "id": 25000,
+   "name": "Wrapps",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Traiteur"
+  },
+  {
+   "id": 81124,
+   "name": "Yaourt Petit Déjeuner",
+   "is_active": 1,
+   "price_coefficient": "2.1500",
+   "production_area_name": "Production Patisserie"
+  }
+ ],
+ "groupes": [
+  {
+   "id_brand": 1,
+   "id": 25,
+   "name": "Boissons"
+  },
+  {
+   "id_brand": 1,
+   "id": 26,
+   "name": "Traiteur"
+  },
+  {
+   "id_brand": 1,
+   "id": 27,
+   "name": "Tartes"
+  },
+  {
+   "id_brand": 1,
+   "id": 28,
+   "name": "Épicerie"
+  },
+  {
+   "id_brand": 1,
+   "id": 29,
+   "name": "Boulangerie"
+  },
+  {
+   "id_brand": 1,
+   "id": 30,
+   "name": "Viennoiserie"
+  },
+  {
+   "id_brand": 1,
+   "id": 31,
+   "name": "Biscuiterie"
+  },
+  {
+   "id_brand": 1,
+   "id": 32,
+   "name": "Quiches"
+  },
+  {
+   "id_brand": 1,
+   "id": 33,
+   "name": "Pâtisserie"
+  },
+  {
+   "id_brand": 1,
+   "id": 34,
+   "name": "Fêtes & Occasions"
+  },
+  {
+   "id_brand": 1,
+   "id": 35,
+   "name": "Bundle & Promotion"
+  },
+  {
+   "id_brand": 1,
+   "id": 36,
+   "name": "B. 2 B."
+  }
+ ],
+ "stockage": [
+  {
+   "id": 30,
+   "name": "Comptoir Frigo - 1",
+   "description": "2°C – 4°C"
+  },
+  {
+   "id": 31,
+   "name": "Saladette",
+   "description": "2°C – 4°C"
+  },
+  {
+   "id": 32,
+   "name": "Comptoir Tartes",
+   "description": "À température ambiante"
+  },
+  {
+   "id": 33,
+   "name": "Comptoir Frigo - 2",
+   "description": "2°C – 4°C"
+  },
+  {
+   "id": 34,
+   "name": "Comptoir Frigo - 3",
+   "description": "2°C – 4°C"
+  },
+  {
+   "id": 35,
+   "name": "Frigo – Composition et Recette",
+   "description": "0°C – 4°C"
+  },
+  {
+   "id": 36,
+   "name": "Zone de Picking",
+   "description": "À température ambiante"
+  },
+  {
+   "id": 37,
+   "name": "Comptoir Sec- 1",
+   "description": "À température ambiante"
+  }
+ ],
+ "clesProduit": [
+  "id_brand",
+  "id",
+  "name",
+  "id_category",
+  "tax_val_perc",
+  "is_divisible",
+  "is_active",
+  "single_weight",
+  "is_vegetarian",
+  "id_recipe",
+  "id_positioning",
+  "id_storage",
+  "is_prepared_before_sales",
+  "is_pdm",
+  "sector_id",
+  "preparation_lead_time_hours",
+  "nutriscore",
+  "allergene",
+  "suggested_sale_price",
+  "quantity_per_label",
+  "is_piece_based",
+  "id_package",
+  "shelf_life_minutes",
+  "label_size",
+  "storage_temperature",
+  "shelf_life_category",
+  "reheating_time_minutes",
+  "reheating_temperature_celsius",
+  "expected_margin",
+  "min_coefficient",
+  "webshop_active",
+  "click_and_collect",
+  "office_delivery",
+  "production_planning_enabled",
+  "is_personalization_addon",
+  "is_mandatory_assortment",
+  "webshop_bulk_quantity_enabled",
+  "category_name",
+  "positioning_name",
+  "positioning_description",
+  "storage_name",
+  "storage_description",
+  "sector_name",
+  "required_competences"
+ ],
+ "fiche": {
+  "pid": 6700228,
+  "nom": "Pommes Tranches",
+  "cat": "Tartes – Ø 28 cm",
+  "rid": 524,
+  "recette": {
+   "nom": "Pommes Tranches",
+   "rendement": 1,
+   "coutNet": 5.3691,
+   "complet": true,
+   "luDans": "Corbais",
+   "total": 5.3691,
+   "lignes": [
+    {
+     "mid": 425,
+     "nom": "Abricotage",
+     "q": 100,
+     "u": "g",
+     "prix": 0.002741,
+     "src": "LOCAL",
+     "cout": 0.2741,
+     "sous": null,
+     "part": 5.1,
+     "prixMagasins": {
+      "2": 0.0027,
+      "3": 0.0027,
+      "5": 0.0027,
+      "4": 0.0027
+     }
+    },
+    {
+     "mid": 659,
+     "nom": "Pomme Tranches 28 Ø",
+     "q": 1,
+     "u": "pcs",
+     "prix": 5.095,
+     "src": "LOCAL",
+     "cout": 5.095,
+     "sous": null,
+     "part": 94.9,
+     "prixMagasins": {
+      "2": 5.095,
+      "3": 7.7125,
+      "5": 5.095,
+      "4": 7.7125
+     }
+    }
+   ]
+  },
+  "magasins": [
+   {
+    "id": "2",
+    "nom": "Corbais",
+    "present": true,
+    "cout": 5.3691,
+    "prixHt": 18.77,
+    "coef": 3.5,
+    "food": 28.6,
+    "divisible": false,
+    "part": 0
+   },
+   {
+    "id": "3",
+    "nom": "Gosselies",
+    "present": true,
+    "cout": 7.9866,
+    "prixHt": 20.66,
+    "coef": 2.59,
+    "food": 38.7,
+    "divisible": false,
+    "part": 0
+   },
+   {
+    "id": "5",
+    "nom": "Sombreffe",
+    "present": true,
+    "cout": 5.3691,
+    "prixHt": 20.66,
+    "coef": 3.85,
+    "food": 26,
+    "divisible": false,
+    "part": 0
+   },
+   {
+    "id": "4",
+    "nom": "Halle",
+    "present": true,
+    "cout": 7.9866,
+    "prixHt": 19.72,
+    "coef": 2.47,
+    "food": 40.5,
+    "divisible": false,
+    "part": 0
+   }
+  ],
+  "signalements": [
+   {
+    "cle": "reseau:6700228",
+    "regle": "reseau",
+    "pid": 6700228,
+    "ca": 1120.8,
+    "shops": [
+     "3",
+     "4"
+    ],
+    "detail": "7,99 € à Halle ; médiane des autres magasins 5,37 € (+49 %).",
+    "nom": "Pommes Tranches",
+    "cat": "Tartes – Ø 28 cm",
+    "rid": 524,
+    "corr": {
+     "sid": 4,
+     "magasin": "Halle",
+     "cout": 7.9866,
+     "mediane": 5.3691
+    },
+    "magasins": [
+     "Gosselies",
+     "Halle"
+    ],
+    "nomRegle": "Coût hors norme du réseau",
+    "formule": false,
+    "depuis": "2026-10-31"
+   }
+  ],
+  "lienPanel": "https://atelierby.tfbuddy.com/panel/products/6700228",
+  "lu": "2026-11-14T10:33:46+01:00",
+  "source": "recette : /shops/{id}/recipes/{recette}/cost (gardée 24 h) · prix : /shops/{id}/materials · produit : /shops/{id}/products/available · lecture seule"
+ }
+}

@@ -322,6 +322,9 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .tb-moments button small{font:400 12px 'Gotham',system-ui,sans-serif;color:var(--muted)}
 .tb-moments button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .tb-moments button.on b{color:var(--accent)}
+.tb-sousman{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tb-sousman button{min-height:0;padding:12px 14px}
+.tb-sousman button b{font-size:16px}
 @media (max-width:900px){.tb-moments{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* La vidéo d'une étape (assistant de création, 06/11/2026). */
@@ -344,3 +347,4 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .tb-acces h2{font:400 20px 'Gotham',system-ui,sans-serif;margin:4px 0 6px;text-transform:none;letter-spacing:normal;color:var(--ink)}
 .tb-acces p{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 10px}
 .tb-acces .erreur{margin:6px 0}
+.tb-moments.tb-sousman{grid-template-columns:repeat(3,minmax(0,1fr))}

@@ -1,0 +1,30 @@
+/* La fenêtre « API » du dashboard (15/11/2026) : un fond, une boîte bordée, sans ombre (§2). */
+.api-modale { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; }
+.api-fond { position: absolute; inset: 0; background: rgba(28, 26, 23, 0.32); }
+.api-boite { position: relative; display: flex; flex-direction: column; width: min(1100px, calc(100vw - 48px)); height: min(820px, calc(100vh - 48px)); border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+.api-h { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px 18px 10px; border-bottom: 1px solid var(--row-line); }
+.api-k { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.api-h h2 { margin: 2px 0 0; font-size: 19px; font-weight: 400; color: var(--ink); text-transform: none; letter-spacing: -0.01em; }
+.api-x { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted-2); font-size: 17px; line-height: 1; cursor: pointer; }
+.api-o { display: flex; align-items: center; gap: 12px; padding: 6px 18px; border-bottom: 1px solid var(--line); }
+.api-o .page-tabs { margin: 0; border: 0; }
+.api-o input { margin-left: auto; width: 300px; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 12.5px; }
+.api-corps { flex: 1; overflow: auto; padding: 10px 18px 18px; }
+.api-mu { margin: 6px 0 10px; font-size: 11.5px; color: var(--muted); }
+.api-ko { color: var(--stop); font-size: 11px; }
+.api-g { margin: 14px 0 4px; font-size: 11px; font-weight: 400; letter-spacing: 0.08em; color: var(--muted); }
+.api-t { width: 100%; border-collapse: collapse; font-size: 12px; }
+.api-t th { position: sticky; top: -10px; padding: 7px 8px; text-align: left; font-weight: 400; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--table-head); border-bottom: 1px solid var(--line); }
+.api-t td { padding: 7px 8px; border-top: 1px solid var(--row-line); color: var(--ink); vertical-align: top; }
+.api-t .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.api-t small { display: block; margin-top: 2px; font-size: 10.5px; color: var(--muted); word-break: break-word; }
+.api-t code { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.api-p { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+.api-p small { font-family: var(--font-ui, 'Gotham', Helvetica, Arial, sans-serif); word-break: normal; }
+.api-ms { white-space: nowrap; width: 1%; }
+.api-m { display: inline-block; min-width: 42px; margin-right: 3px; padding: 1px 5px; border-radius: 4px; background: var(--chip); color: var(--muted-2); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
+.api-m.POST, .api-m.PUT, .api-m.PATCH { background: var(--prize-soft); color: var(--prize-ink); }
+.api-m.DELETE { background: var(--stop-soft); color: var(--stop); }
+.api-s { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; white-space: nowrap; }
+.api-s.ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+.api-s.ko { background: var(--stop-soft); color: var(--stop); }

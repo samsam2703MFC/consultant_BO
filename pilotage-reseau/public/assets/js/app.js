@@ -10,7 +10,11 @@ import { valsFF, valsCQM } from './franchises-vals.js';
 import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
 import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsFidelite } from './fidelite-vals.js';
+import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
+import { valsParamProduits } from './produit-parametrage-vals.js';
+import { valsHelpdesk, nbDemandesOuvertes } from './helpdesk-vals.js';
+import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
 import { valsVerifMatieres } from './verification-matieres-vals.js';
@@ -359,9 +363,17 @@ class App {
       resultatJour: 'resultat',
       // Le cadre des tâches du panel (07/11/2026) : la page task/ dans l'écran, « ?checklist=43 ».
       cadreTaches: 'checklists',
+      // L'audit des fournisseurs (12/11/2026) : la page audits/ dans l'écran (formulaire, campagnes, résultats, copies).
+      audits: 'audits',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', visibilite: 'visibilite', budget: 'budget', encodage: 'budget/encodage',
       budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
+      // Produits › Paramétrage (14/11/2026) : la fiche d'un produit, tous ses champs, ses gammes, ses prix, ses liaisons.
+      paramProduits: 'produits/parametrage',
+      // Le helpdesk des franchisés (15/11/2026) : les demandes au bureau, reprises en mission de visite.
+      demandesFranchises: 'franchises/demandes',
+      // Benchmark (14/11/2026) : importer un concurrent (PDF ou internet par l'IA), le classer par code postal.
+      benchmark: 'benchmark',
       planogramme: 'planogramme', analyse: 'analyse',
       anaprod: 'catalogue/analyse', prixvolume: 'catalogue/prix',
       manque: 'catalogue/manque',
@@ -372,6 +384,8 @@ class App {
       fonds: 'fonds',
       mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
       suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
+      // L'entraînement de l'IA (15/11/2026) : rayon par rayon, consigne, photos modèles, leçons.
+      iaEntrainement: 'suivi/entrainement',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
@@ -385,6 +399,8 @@ class App {
       tablette: 'tablette',
       // La fidélité du client (24/10/2026) : le programme et l'analyse des clients.
       fidelite: 'fidelity',
+      // Les coachs de l'assistant du dashboard magasin (12/11/2026).
+      assistantCoachs: 'assistant',
       // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
       primesApp: 'primes',
       // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
@@ -1133,6 +1149,9 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      benchmark: ['Benchmark concurrents', 'Les prix d’un concurrent, lus dans son PDF ou cherchés sur internet par l’IA, rapprochés de nos produits et encodés dans le benchmark de TFBuddy ; chaque concurrent rangé sur le magasin et le franchisé que son code postal désigne.'],
+      demandesFranchises: ['Demandes des franchisés', 'Le helpdesk du panel : les demandes que les franchisés adressent au bureau. Les lire, les attribuer, y répondre — le franchisé lit la réponse dans son dashboard — et les reprendre en mission d’une visite du magasin, à contrôler sur place.'],
+      paramProduits: ['Paramétrage des produits', 'Tout ce que le panel tient d’un produit, sur une page : ses champs, ses saisons et gammes, son prix dans chaque magasin, et les liaisons de l’API qui le touchent. Chaque changement se vérifie, s’écrit au panel avec le compte consultant, se relit et se note au registre.'],
       structure: ['Structure de gamme', 'Par catégorie, sur les ventes réseau de douze mois : le standard (80 % du CA, 6 au plus), les quatre saisons et trois périodes (4 au plus), et ce qui sort — moins de 3 % de sa catégorie. Ce qui est retenu devient l’assortiment obligatoire.'],
       promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
       promoEdition: ['Édition', 'Le formulaire du dashboard magasin, avec le magasin à choisir — ou tous les magasins : une promotion « X achetés + Y » s’écrit au panel, réservée au magasin ou pour tout le réseau, sans validation.'],
@@ -1140,8 +1159,10 @@ class App {
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
+      assistantCoachs: ['Assistant · coachs', 'Les deux coachs de l’assistant du dashboard magasin, Pierre et le Coach : leur ton, ce sur quoi chacun met l’accent et ce qu’il vérifie — budget, trafic, contrôles qualité. Et les questions que les franchisés leur posent.'],
       // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
       cadreTaches: ['Cadre des tâches', ''],
+      audits: ['Audit fournisseurs', ''],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
@@ -1173,7 +1194,7 @@ class App {
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], iaEntrainement: ['Entraînement de l’IA', 'Rayon par rayon : ce que l’IA doit voir (la consigne), le comptoir parfait de chaque magasin (la photo modèle), ce qu’elle a appris de vos corrections — et à quel point elle est d’accord avec vous.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
     if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
@@ -1181,7 +1202,7 @@ class App {
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
-        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
+        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel'], ['iaEntrainement', 'Entraînement de l’IA']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
         [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['clientMystere', 'Client mystère'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
@@ -1354,9 +1375,15 @@ class App {
         // La page la plus regardée du réseau n'avait pas d'entrée : on
         // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
         ['ext:dashboard/', 'Dashboard magasin ↗', 0],
+        // Benchmark (14/11/2026, Sam : « dans le rail Benchmark ») : importer les prix d'un concurrent (PDF ou internet
+        // par l'IA), les rapprocher de nos produits, classer chaque concurrent sur son magasin et son franchisé par code postal.
+        ['benchmark', 'Benchmark', 0],
         // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
         // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
         ['cadreTaches', 'Cadre des tâches', 0],
+        // L'audit des fournisseurs et prestataires (12/11/2026, Sam : « dans le cockpit consultant, Pilotage ») :
+        // les franchisés notent chaque fournisseur référencé ; résultats et copie au fournisseur.
+        ['audits', 'Audit fournisseurs', 0],
         // Ouvertures, fermetures et reports de caisse, par magasin et par
         // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
         ['ext:caisse/', 'Caisse ↗', 0]]],
@@ -1367,6 +1394,7 @@ class App {
       // la fiche, et le classement du réseau en est un onglet — une seule entrée.
       // Libellé du rail sur une ligne (design system §8.1).
       ['Franchisés', [
+        ['demandesFranchises', 'Demandes des franchisés', nbDemandesOuvertes(this)],
         ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
         // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
         // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
@@ -1386,6 +1414,7 @@ class App {
           ['budgetparam', 'Paramètres du budget', 0]] },
         { sub: 'Suivi journalier', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
+          ['iaEntrainement', 'Entraînement de l’IA', 0],
           ['controlesQualite', 'Contrôles qualité du mois', 0],
           ['mktObjectifs', 'Objectifs', 0],
           ['reputation', 'Note Google et avis', 0],
@@ -1423,6 +1452,7 @@ class App {
         ['verifRecettes', 'Recettes à corriger', ((S.vrData || {}).d || {}).total || 0],
         ['verifEvol', 'Évolution', 0]]],
       ['Produits', [
+        ['paramProduits', 'Paramétrage produits', 0],
         ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
           ['anaprod', 'manque', 'prixvolume', 'analyse']],
         ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']]]],
@@ -1457,7 +1487,9 @@ class App {
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
         // La fidélité du client (24/10/2026, maquettes docs/maquettes/fidelite : le Programme de C, les Clients de B).
-        ['fidelite', 'Fidélité', 0]]],
+        ['fidelite', 'Fidélité', 0],
+        // L'assistant du dashboard magasin (12/11/2026) : les deux coachs (ton, accents, vérifications) et les questions posées.
+        ['assistantCoachs', 'Assistant · coachs', 0]]],
       // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
       // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
       // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
@@ -1522,12 +1554,12 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
-      assortiment: 'isAsso', structure: 'isStruct', planogramme: 'isPlano', fonds: 'isFonds',
+      assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
-      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', visibilite: 'isVisib' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1940,6 +1972,7 @@ class App {
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isCadreT) { this.valsCadreTaches(common); } else { this._ctSrc = null; }
+    if (common.isAudits) { this.valsAudits(common); }
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
     // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
@@ -1950,6 +1983,7 @@ class App {
     if (common.isApiModule) { this.valsApiModule(common); }
     if (common.isPointages) { this.valsPointages(common); }
     if (common.isFid) { valsFidelite(this, common); }
+    if (common.isAsc) { valsAssistantCoachs(this, common); }
     if (common.isPromoTab) { valsPromoTableau(this, common); }
     if (common.isPromoEd) { valsPromoEdition(this, common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
@@ -1959,12 +1993,17 @@ class App {
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
+    if (common.isIaEnt) { this.iaStatut(); this.valsIaEntrainement(common); }
     if (common.isKpiT) this.valsKpiT(common);
     // --- contrôle des posts Facebook
     if (common.isBrandGuard) this.valsBrandGuard(common);
     if (common.isInvendus) this.valsInvendus(common);
     if (common.isInventaires) this.valsInventaires(common);
-    if (common.isVerifR) { valsVerification(this, common); }
+    // Recettes à corriger : une surface de travail, toute la largeur de l'écran (14/11/2026, « utiliser toute la largeur »).
+    if (common.isVerifR) { valsVerification(this, common); common.large = true; }
+    if (common.isParamProd) { valsParamProduits(this, common); common.large = true; }
+    if (common.isHelpdesk) { valsHelpdesk(this, common); common.large = true; }
+    if (common.isBench) { valsBenchmark(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
     if (common.isVerifEvol) { valsVerifEvol(this, common); }
@@ -9307,6 +9346,24 @@ class App {
     // use the whole screen ») — la classe app__body--wide du design system.
     common.large = true;
   }
+  /**
+   * L'audit des fournisseurs (12/11/2026) : la page audits/ en mode intégré (?embed=1), comme le cadre des tâches.
+   * La source ne change pas d'un rendu à l'autre (la saisie de la page ne se perd pas) ; la page dit sa hauteur
+   * (postMessage auHauteur) et le cadre la prend : une seule barre de défilement, celle du cockpit.
+   */
+  valsAudits(common){
+    if (!this._auEcoute) {
+      this._auEcoute = true;
+      window.addEventListener('message', ev => {
+        if (ev.origin !== location.origin || !ev.data || typeof ev.data.auHauteur !== 'number' || this.state.screen !== 'audits') { return; }
+        this._auHaut = Math.max(480, Math.min(30000, Math.round(ev.data.auHauteur)));
+        const cadre = document.querySelector('iframe[data-au]');
+        if (cadre) { cadre.style.height = this._auHaut + 'px'; }
+      });
+    }
+    common.au = { src: 'audits/?embed=1', haut: this._auHaut || 900 };
+    common.large = true;
+  }
   valsTablette(common){
     const S = this.state;
     const ms = this.open();
@@ -10022,7 +10079,11 @@ class App {
   }
   /**
    * Les valeurs de l'onglet : un graphique par magasin — le trafic clients ou
-   * le chiffre d'affaires (l'onglet choisi), en total ou par jour ouvert.
+   * le chiffre d'affaires (l'onglet choisi), en total ou par jour ouvert ; sur
+   * toutes les ventes, le comptoir seul ou le B2B seul (13/11/2026 : B2B = les
+   * tickets des clients pro à TVA valide, `pro` de chaque mois ; comptoir = le
+   * reste ; un mois dont le pro n'est pas lu sur tous ses jours sort de la
+   * courbe de ces deux-là).
    *
    * Trois règles, les mêmes partout :
    *  - le mois d'OUVERTURE (moins de 75 % des jours vendus) n'est pas sur la
@@ -10040,7 +10101,10 @@ class App {
     const S = this.state, D = this.D.rev;
     // Par jour ouvert par défaut (demande du 11/11/2026) : la lecture qui neutralise les fermetures.
     const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'total' ? 'total' : 'jour';
-    const out = { quoi, mode, chargement: !D, erreur: D && D.erreur ? D.erreur : '',
+    // Les ventes (13/11/2026) : tout, le comptoir seul ou le B2B seul — la bascule d'Analyse réseau.
+    const canal = S.evCanal === 'comptoir' || S.evCanal === 'b2b' ? S.evCanal : 'tout', b2b = canal === 'b2b';
+    const out = { quoi, mode, canal, coul: b2b ? '#1f5f8b' : '#8D1D2C', chargement: !D, erreur: D && D.erreur ? D.erreur : '',
+      canaux: [['tout', 'Tout'], ['comptoir', 'Comptoir'], ['b2b', 'B2B']].map(o => ({ nom: o[1], on: o[0] === canal, go: () => this.setState({ evCanal: o[0] }) })),
       quois: [['clients', 'Trafic clients'], ['ca', 'Chiffre d’affaires']].map(o => ({ nom: o[1], on: o[0] === quoi, go: () => this.setState({ evQuoi: o[0] }) })),
       modes: [['jour', 'Par jour ouvert'], ['total', 'Total']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
       relire: () => this.evCharge(true) };
@@ -10051,15 +10115,24 @@ class App {
     const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
     const fK = n => Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(2).replace('.', ',') + ' M€' : (Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fI(n) + ' €');
     const fE2 = n => n.toFixed(2).replace('.', ',') + ' €';
+    const fP1 = n => n.toFixed(1).replace('.', ',') + ' %';
+    const fD1 = n => Math.abs(n) < 10 ? n.toFixed(1).replace('.', ',') : fI(n);   // 2,4 commandes pro par jour
     const pc = (a, b) => b ? 100 * (a - b) / b : null;
     const sg = v => v == null ? '—' : (v >= 0.5 ? '+' : (v <= -0.5 ? '−' : '±')) + Math.abs(Math.round(v)) + ' %';
     const col = v => v == null ? '#B8B2A8' : (v >= 3 ? '#3f7a52' : (v <= -3 ? '#A32014' : '#7A5207'));
     const parJour = mode === 'jour';
     // Le format d'une valeur de l'onglet : un total ou une moyenne par jour vendu.
-    const fmt = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : fK) : fI;
-    const fAxe = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : (n => Math.round(n / 1000) + ' k€')) : fI;
-    const unite = quoi === 'ca' ? (parJour ? 'CA par jour ouvert' : 'CA du mois') : (parJour ? 'clients par jour ouvert' : 'clients du mois (tickets)');
-    const g = x => quoi === 'ca' ? x.ca : x.clients;
+    const fmt = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : fK) : (b2b && parJour ? fD1 : fI);
+    const fAxe = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : (n => Math.abs(n) >= 10000 ? Math.round(n / 1000) + ' k€' : fI(n) + ' €')) : (b2b && parJour ? fD1 : fI);
+    const NOMS = { tout: ['clients', 'CA'], comptoir: ['clients au comptoir', 'CA comptoir'], b2b: ['commandes pro', 'CA B2B'] }[canal];
+    const unite = quoi === 'ca' ? NOMS[1] + (parJour ? ' par jour ouvert' : ' du mois')
+      : NOMS[0] + (parJour ? ' par jour ouvert' : ' du mois') + ' (tickets)';
+    // Le B2B d'un mois (ou de son N-1) n'est utilisable que si tous ses jours vendus ont leur pro lu : sinon le
+    // comptoir porterait le pro des jours manquants. Un tel mois sort de la courbe en Comptoir et en B2B.
+    const split = o => !!(o && o.pro && o.pro.joursLus >= o.jours);
+    const lire = (o, q) => canal === 'tout' ? o[q] : (!split(o) ? null : (b2b ? o.pro[q] : Math.max(0, o[q] - o.pro[q])));
+    const qk = quoi === 'ca' ? 'ca' : 'clients';
+    const g = x => lire(x, qk), g1 = x => lire(x.n1, qk);
     const prep = x => {
       const ref = x.enCours ? x.joursServis : x.joursMois;
       const partiel = !x.enCours && x.jours < 0.75 * x.joursMois;
@@ -10067,17 +10140,20 @@ class App {
       return Object.assign({}, x, { partiel, n1Ok: !!(x.n1 && !n1Partiel && !partiel),
         n1Court: !!(x.n1 && !n1Partiel && !partiel && x.n1.jours < x.jours - 2) });
     };
-    // La valeur d'un mois et de son N-1 dans la lecture choisie ; la somme d'une liste de mois, idem.
-    const v = x => parJour ? (x.jours ? g(x) / x.jours : null) : g(x);
-    const v1 = x => !x.n1Ok ? null : (parJour ? (x.n1.jours ? (quoi === 'ca' ? x.n1.ca : x.n1.clients) / x.n1.jours : null) : (quoi === 'ca' ? x.n1.ca : x.n1.clients));
-    const somme = (L, f) => { const a = L.reduce((t, x) => t + f(x), 0); return a; };
+    // La valeur d'un mois et de son N-1 dans la lecture choisie (null : pas lue sur ce canal).
+    const v = x => { const a = g(x); return a == null ? null : (parJour ? (x.jours ? a / x.jours : null) : a); };
+    const v1 = x => { if (!x.n1Ok) { return null; } const a = g1(x); return a == null ? null : (parJour ? (x.n1.jours ? a / x.n1.jours : null) : a); };
+    const somme = (L, f) => L.reduce((t, x) => t + f(x), 0);
     const ecartListe = L => {
-      if (!L.length || L.some(x => !x.n1Ok)) { return null; }
-      const n = somme(L, g), n1 = somme(L, x => quoi === 'ca' ? x.n1.ca : x.n1.clients);
+      if (!L.length || L.some(x => v(x) == null || v1(x) == null)) { return null; }
+      const n = somme(L, g), n1 = somme(L, g1);
       if (!parJour) { return { e: pc(n, n1), n, n1 }; }
       const j = somme(L, x => x.jours), j1 = somme(L, x => x.n1.jours);
       return { e: pc(n / j, n1 / j1), n: n / j, n1: n1 / j1 };
     };
+    // La part B2B du CA d'une liste de mois (et de leurs N-1), sur les mois dont le pro est lu.
+    const partPro = L => { const M2 = L.filter(split), t = somme(M2, x => x.ca); return t > 0 ? 100 * somme(M2, x => x.pro.ca) / t : null; };
+    const partPro1 = L => { const M2 = L.filter(x => x.n1Ok && split(x.n1)), t = somme(M2, x => x.n1.ca); return t > 0 ? 100 * somme(M2, x => x.n1.pro.ca) / t : null; };
     const lab = x => MC[x.mo] + ' ' + String(x.an).slice(2);
     // UN axe pour tous les graphiques : du premier mois vendu du réseau au mois
     // en cours (exclu en total, où il n'est pas sur la courbe). Les années
@@ -10089,80 +10165,111 @@ class App {
       k = mo === 12 ? (y + 1) + '-01' : y + '-' + String(mo + 1).padStart(2, '0');
     }
     const axeG = parJour ? axe : axe.filter(k => k !== fin);
+    const reseau12 = []; let nonLus = 0, closTotal = 0;
     out.magasins = D.magasins.map(m => {
       const M = m.mois.map(prep);
-      const clos = M.filter(x => !x.enCours && !x.partiel);
+      const closTous = M.filter(x => !x.enCours && !x.partiel);
+      // En Comptoir et en B2B, seuls les mois dont le pro est lu comptent ; les autres sont dits.
+      const clos = closTous.filter(x => v(x) != null);
+      const sansPro = canal === 'tout' ? [] : M.filter(x => !x.partiel && !split(x));
       const cur = M.find(x => x.enCours) || null;
       const prem = M[0];
-      const premN1 = M.find(x => x.n1Ok) || null;
+      const premN1 = M.find(x => x.n1Ok && v1(x) != null) || null;
       const nom = this.rrCourt(m.nom);
+      reseau12.push(...closTous.slice(-12));
+      closTotal += closTous.slice(-12).length; nonLus += closTous.slice(-12).filter(x => !split(x)).length;
       // Les tuiles de droite.
-      const d12 = clos.slice(-12), avec12 = d12.filter(x => x.n1Ok);
+      const d12 = clos.slice(-12), avec12 = d12.filter(x => v1(x) != null);
       const e12 = ecartListe(avec12);
       const t3 = clos.slice(-3), e3 = t3.length === 3 ? ecartListe(t3) : null;
-      const avecN1 = clos.filter(x => x.n1Ok), dessus = avecN1.filter(x => v(x) >= v1(x));
+      const avecN1 = clos.filter(x => v1(x) != null), dessus = avecN1.filter(x => v(x) >= v1(x));
+      const p12 = partPro(closTous.slice(-12)), p12n1 = partPro1(closTous.slice(-12));
       const tuiles = [
         e12 ? { k: (avec12.length === 12 ? '12 mois' : avec12.length + ' mois') + ' vs N-1', v: sg(e12.e), s: fmt(e12.n) + ' contre ' + fmt(e12.n1) + (parJour ? ' par jour' : '') + ' · ' + lab(avec12[0]) + ' → ' + lab(avec12[avec12.length - 1]), cls: e12.e >= 0 ? 'good' : 'bad' }
-          : { k: 'Vs N-1', v: '—', s: 'pas encore de N-1 — il arrive en ' + ML[prem.mo] + ' ' + (prem.an + 1) },
+          : { k: 'Vs N-1', v: '—', s: canal !== 'tout' && !clos.length ? 'B2B pas encore lu'
+            : (canal !== 'tout' && M.some(x => x.n1Ok) ? 'pas de N-1 lu sur ce canal' : 'pas encore de N-1 — il arrive en ' + ML[prem.mo] + ' ' + (prem.an + 1)) },
         e3 ? { k: '3 derniers mois vs N-1', v: sg(e3.e), s: MC[t3[0].mo] + ' → ' + MC[t3[2].mo] + ' : ' + fmt(e3.n) + ' contre ' + fmt(e3.n1), cls: e3.e >= 0 ? 'good' : 'bad' }
           : (() => { const a = clos.slice(-3), b = clos.slice(-6, -3); const va = parJour ? somme(a, g) / Math.max(1, somme(a, x => x.jours)) : somme(a, g), vb = parJour ? somme(b, g) / Math.max(1, somme(b, x => x.jours)) : somme(b, g);
             return { k: '3 derniers mois', v: a.length ? fmt(va) : '—', s: b.length === 3 ? '<b style="color:' + col(pc(va, vb)) + '">' + sg(pc(va, vb)) + '</b> face aux 3 d’avant' : '' }; })(),
-        avecN1.length ? { k: 'Mois au-dessus du N-1', v: dessus.length + ' / ' + avecN1.length, s: dessus.length ? (dessus.length > 4 ? '… ' : '') + dessus.slice(-4).map(lab).join(', ') : 'aucun', cls: dessus.length * 2 >= avecN1.length ? 'good' : 'bad' }
-          : { k: 'Mois au-dessus du N-1', v: '—', s: 'pas encore de N-1' },
-        cur ? (() => { const e = cur.n1Ok ? pc(v(cur), v1(cur)) : null;
-          return { k: MC[cur.mo] + ' en cours · ' + cur.jours + ' j', v: fmt(v(cur)),
-            s: e == null ? (cur.n1 ? 'N-1 incomplet' : 'pas de N-1 : premier ' + ML[cur.mo]) : '<b style="color:' + col(e) + '">' + sg(e) + '</b> face aux mêmes ' + cur.joursServis + ' jours de ' + ML[cur.mo] + ' ' + (cur.an - 1) + ' (' + fmt(v1(cur)) + ')',
+        // En B2B, la 3e tuile dit la part du CA, face au plafond des visites (40 %).
+        b2b ? { k: 'Part du CA · ' + (closTous.slice(-12).filter(split).length || '') + ' mois', v: p12 == null ? '—' : fP1(p12),
+            s: (p12n1 != null ? 'contre ' + fP1(p12n1) + ' un an plus tôt · ' : '') + 'plafond 40 %', cls: '' }
+          : (avecN1.length ? { k: 'Mois au-dessus du N-1', v: dessus.length + ' / ' + avecN1.length, s: dessus.length ? (dessus.length > 4 ? '… ' : '') + dessus.slice(-4).map(lab).join(', ') : 'aucun', cls: dessus.length * 2 >= avecN1.length ? 'good' : 'bad' }
+            : { k: 'Mois au-dessus du N-1', v: '—', s: 'pas encore de N-1' }),
+        cur ? (() => { const vc = v(cur), e = vc != null && cur.n1Ok && v1(cur) != null ? pc(vc, v1(cur)) : null;
+          return { k: MC[cur.mo] + ' en cours · ' + cur.jours + ' j', v: vc == null ? '—' : fmt(vc),
+            s: vc == null ? 'B2B pas encore lu sur tous ses jours' : (e == null ? (cur.n1 ? 'N-1 incomplet' : 'pas de N-1 : premier ' + ML[cur.mo]) : '<b style="color:' + col(e) + '">' + sg(e) + '</b> face aux mêmes ' + cur.joursServis + ' jours de ' + ML[cur.mo] + ' ' + (cur.an - 1) + ' (' + fmt(v1(cur)) + ')'),
             cls: e == null ? '' : (e >= 0 ? 'good' : 'bad') }; })()
           : { k: 'Mois en cours', v: '—', s: 'pas de vente lue ce mois-ci' }
       ];
       const best = clos.length ? clos.reduce((a, b) => v(b) > v(a) ? b : a) : null;
-      const totC = somme(M, x => x.clients), totCa = somme(M, x => x.ca), totJ = somme(M, x => x.jours);
+      // Les faits du magasin, sur les mois lus du canal.
+      const ML2 = M.filter(x => canal === 'tout' || split(x));
+      const totC = somme(ML2, x => lire(x, 'clients')), totCa = somme(ML2, x => lire(x, 'ca')), totJ = somme(ML2, x => x.jours);
+      const nomC = b2b ? 'commandes pro' : 'clients';
       const faits = [
         'depuis ' + ML[prem.mo] + ' ' + prem.an + (prem.partiel ? ' (premières ventes, ' + prem.jours + ' j)' : ''),
-        clos.length + ' mois pleins',
-        parJour ? fI(totC / Math.max(1, totJ)) + ' clients par jour ouvert' : fI(totC) + ' clients',
-        parJour ? fI(totCa / Math.max(1, totJ)) + ' € par jour ouvert' : fK(totCa) + ' de CA',
-        'panier ' + fE2(totCa / Math.max(1, totC)),
+        closTous.length + ' mois pleins',
+        ML2.length ? (parJour ? (b2b ? fD1(totC / Math.max(1, totJ)) : fI(totC / Math.max(1, totJ))) + ' ' + nomC + ' par jour ouvert' : fI(totC) + ' ' + nomC) : '',
+        ML2.length ? (parJour ? fI(totCa / Math.max(1, totJ)) + ' € par jour ouvert' : fK(totCa) + ' de CA') : '',
+        totC ? (b2b ? 'panier pro ' : (canal === 'comptoir' ? 'panier comptoir ' : 'panier ')) + fE2(totCa / totC) : '',
+        canal === 'tout' && p12 != null ? 'dont B2B ' + fP1(p12) + ' sur 12 mois' : '',
+        canal === 'comptoir' && p12 != null ? fP1(100 - p12) + ' du CA sur 12 mois' : '',
         best ? 'meilleur mois : ' + ML[best.mo] + ' ' + best.an + ' (' + fmt(v(best)) + ')' : ''
       ].filter(Boolean);
-      const svg = this.evGraphe(M, axeG, v, v1, fmt, fAxe, parJour, MC);
+      const svg = this.evGraphe(M, axeG, v, v1, fmt, fAxe, parJour, MC, out.coul);
+      const sansL = sansPro.filter(x => !x.enCours);
       return { id: m.id, nom, nomLong: m.nom, faits, tuiles, svg,
+        tag: canal === 'tout' ? '' : (b2b ? 'B2B' : 'Comptoir'),
+        sansPro: sansL.length ? sansL.length + ' mois sans B2B lu sur tous leurs jours, hors courbe (' + lab(sansL[0]) + (sansL.length > 1 ? ' → ' + lab(sansL[sansL.length - 1]) : '') + ')' : '',
         avecN1: !!premN1, n1Txt: premN1 ? 'N-1 : le même mois un an plus tôt (pointillé), dès ' + ML[premN1.mo] + ' ' + premN1.an
-          : 'pas encore de N-1 : premières ventes en ' + ML[prem.mo] + ' ' + prem.an + ' — la ligne N-1 apparaîtra en ' + ML[prem.mo] + ' ' + (prem.an + 1),
-        ouverture: M.some(x => x.partiel), etoile: !parJour && M.some(x => x.n1Court) };
+          : (canal !== 'tout' && M.some(x => x.n1Ok) ? 'pas de N-1 lu sur ce canal' : 'pas encore de N-1 : premières ventes en ' + ML[prem.mo] + ' ' + prem.an + ' — la ligne N-1 apparaîtra en ' + ML[prem.mo] + ' ' + (prem.an + 1)),
+        ouverture: M.some(x => x.partiel), etoile: !parJour && M.some(x => x.n1Court && v1(x) != null) };
     });
     out.unite = unite;
     out.chipTxt = 'sous chaque mois : l’écart au N-1, en %' + (parJour ? ' — par jour ouvert : le mois ÷ ses jours de vente, le N-1 ÷ les siens' : '');
+    // La ligne du canal : ce qu'il compte, sa part du CA du réseau sur les 12 derniers mois lus, et ce qui manque.
+    const pR = partPro(reseau12);
+    const manque = nonLus ? ' · B2B lu sur ' + (closTotal - nonLus) + ' mois-magasin sur ' + closTotal : '';
+    out.canalInfo = canal === 'tout' ? (pR != null ? 'Tout : tous les tickets de caisse · dont B2B ' + fP1(pR) + ' du CA du réseau sur 12 mois' + manque : '')
+      : (b2b ? 'B2B : les tickets des clients pro à TVA valide' : 'Comptoir : tous les tickets sauf ceux des clients pro à TVA valide — un pro sans TVA valide reste au comptoir')
+        + (pR != null ? ' · ' + fP1(b2b ? pR : 100 - pR) + ' du CA du réseau sur 12 mois' : '') + manque;
     // Trimestre par trimestre (demande du 11/11/2026, à la place de l'année par
     // année) : chaque trimestre face au même trimestre un an plus tôt, à
     // périmètre comparable — seuls les mois qui ont un N-1 comptent dans l'écart.
+    // En Comptoir et en B2B, seuls les mois dont le pro est lu.
     out.trimestres = [];
     D.magasins.forEach(m => {
-      const M = m.mois.map(prep);
+      const M = m.mois.map(prep).filter(x => canal === 'tout' || split(x));
       const tri = x => x.an * 10 + Math.ceil(x.mo / 3);
+      const C = x => lire(x, 'clients'), CA = x => lire(x, 'ca'), C1 = x => lire(x.n1, 'clients'), CA1 = x => lire(x.n1, 'ca');
       [...new Set(M.map(tri))].forEach((t, i) => {
-        const ms = M.filter(x => tri(x) === t), cmp = ms.filter(x => x.n1Ok);
-        const c = somme(ms, x => x.clients), ca = somme(ms, x => x.ca), j = somme(ms, x => x.jours);
-        const cC = somme(cmp, x => x.clients), caC = somme(cmp, x => x.ca), jC = somme(cmp, x => x.jours);
-        const c1 = somme(cmp, x => x.n1.clients), ca1 = somme(cmp, x => x.n1.ca), j1 = somme(cmp, x => x.n1.jours);
+        const ms = M.filter(x => tri(x) === t), cmp = ms.filter(x => x.n1Ok && C1(x) != null);
+        const c = somme(ms, C), ca = somme(ms, CA), j = somme(ms, x => x.jours);
+        const cC = somme(cmp, C), caC = somme(cmp, CA), jC = somme(cmp, x => x.jours);
+        const c1 = somme(cmp, C1), ca1 = somme(cmp, CA1), j1 = somme(cmp, x => x.n1.jours);
         const ec = c1 ? (parJour ? pc(cC / jC, c1 / j1) : pc(cC, c1)) : null, eca = ca1 ? (parJour ? pc(caC / jC, ca1 / j1) : pc(caC, ca1)) : null;
-        const ep = c1 ? pc(caC / cC, ca1 / c1) : null;
+        const ep = c1 && cC ? pc(caC / cC, ca1 / c1) : null;
         const cur = ms.find(x => x.enCours);
         const dernier = cmp[cmp.length - 1];
+        const pp = partPro(ms);
         out.trimestres.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, nouvelAn: i > 0 && t % 10 === 1, enCours: !!cur,
           lab: 'T' + (t % 10) + ' ' + Math.floor(t / 10),
           per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]) + (ms.some(x => x.partiel) ? ' · ouverture' : ''),
-          clients: parJour ? fI(c / Math.max(1, j)) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
+          clients: parJour ? (b2b ? fD1(c / Math.max(1, j)) : fI(c / Math.max(1, j))) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
+          part: pp == null ? '—' : fP1(pp),
           ec: ec == null ? '' : sg(ec), ecCoul: col(ec), eca: eca == null ? '' : sg(eca), ecaCoul: col(eca), ep: ep == null ? '' : sg(ep), epCoul: col(ep),
           sansN1: !cmp.length,
           cmp: !cmp.length ? '' : (cmp.length === ms.length ? 'tout le trimestre' + (cur ? ' à date' : '')
             : cmp.length + ' mois : ' + MC[cmp[0].mo] + (cmp.length > 1 ? ' → ' + (dernier.enCours ? dernier.jours + ' ' : '') + MC[dernier.mo] : '')) });
       });
     });
-    out.colClients = parJour ? 'Clients / jour' : 'Clients';
-    out.colCa = parJour ? 'CA / jour' : 'CA';
+    out.colClients = (b2b ? 'Commandes pro' : 'Clients') + (parJour ? ' / jour' : '');
+    out.colCa = (b2b ? 'CA B2B' : (canal === 'comptoir' ? 'CA comptoir' : 'CA')) + (parJour ? ' / jour' : '');
+    out.colPanier = b2b ? 'Panier pro' : (canal === 'comptoir' ? 'Panier comptoir' : 'Panier');
+    out.colPart = canal === 'tout' ? 'Part B2B' : (b2b ? 'Part du CA' : '');
     out.sousTitre = D.magasins.length + ' magasin' + (D.magasins.length > 1 ? 's' : '') + ' · depuis ' + ML[+D.du.slice(5, 7)] + ' ' + D.du.slice(0, 4) + ' · mois par mois, face au N-1';
-    out.source = D.source || '';
+    out.source = (D.source || '') + (canal !== 'tout' && D.sourcePro ? ' · ' + D.sourcePro : '');
     return out;
   }
   /**
@@ -10173,7 +10280,7 @@ class App {
    * s'alignent d'un graphique à l'autre. Rend la géométrie ; le dessin est
    * dans svgEvolution.
    */
-  evGraphe(M, axe, v, v1, fmt, fAxe, parJour, MC){
+  evGraphe(M, axe, v, v1, fmt, fAxe, parJour, MC, coul){
     const W = 880, H = 262, ml = 54, mr = 18, mt = 26, mb = 42;  // marges fixes : même tracé partout
     const parMois = {}; M.forEach(x => { parMois[x.mois] = x; });
     const L = axe.map(k => parMois[k] || { vide: true, mois: k, an: +k.slice(0, 4), mo: +k.slice(5, 7) });
@@ -10186,6 +10293,7 @@ class App {
     const vals = [];
     L.forEach((x, i) => { if (surCourbe[i] && n[i] != null) { vals.push(n[i]); } if (n1[i] != null) { vals.push(n1[i]); } });
     if (!vals.length) { L.forEach((x, i) => { if (n[i] != null) { vals.push(n[i]); } }); }
+    if (!vals.length) { return null; }   // rien de lu sur ce canal (le B2B d'avant les relevés)
     const vmin = Math.min(...vals), vmax = Math.max(...vals), et = (vmax - vmin) || Math.abs(vmax) || 1;
     let lo = Math.max(0, vmin - et * 0.25), hi = vmax + et * 0.18;
     const r = (hi - lo) / 4, p10 = Math.pow(10, Math.floor(Math.log10(r))), st = [1, 2, 2.5, 5, 10].map(k => k * p10).find(k => k >= r);
@@ -10193,7 +10301,7 @@ class App {
     const X = i => ml + (i + 0.5) * pas;
     const Y = val => mt + (hi - Math.max(lo, val)) / (hi - lo || 1) * (H - mt - mb);
     const f1 = x => x.toFixed(1);
-    const out = { W, H, ml, mr, mt, hb: H - mb + 15, hc: H - mb + 32, grad: [], seps: [], aires: [], segs1: [], segs: [], cour: null, pts1: [], pts: [], labels: [], notes: [], cats: [] };
+    const out = { W, H, ml, mr, mt, coul: coul || '#8D1D2C', hb: H - mb + 15, hc: H - mb + 32, grad: [], seps: [], aires: [], segs1: [], segs: [], cour: null, pts1: [], pts: [], labels: [], notes: [], cats: [] };
     for (let y = lo; y <= hi + 1e-6; y += st) { out.grad.push({ y: f1(Y(y)), t: fAxe(y), base: y === lo }); }
     // Avant la première vente du magasin : une bande vide, dite comme telle.
     const iPrem = L.findIndex(x => !x.vide);
@@ -10222,7 +10330,7 @@ class App {
       if (n1[i] != null) { out.pts1.push({ x: f1(X(i)), y: f1(Y(n1[i])), titre: titre(x) + ' · N-1 : ' + fmt(n1[i]) + (parJour ? ' par jour (' + x.n1.jours + ' j)' : '') }); }
       if (n[i] == null) { return; }
       const vide = x.partiel || x.enCours;
-      out.pts.push({ x: f1(X(i)), y: f1(Y(n[i])), vide, titre: titre(x) + ' · ' + fmt(n[i]) + (parJour ? ' par jour (' + x.jours + ' j vendus)' : '') + (x.n1Ok ? ' · N-1 : ' + fmt(n1[i]) : '') });
+      out.pts.push({ x: f1(X(i)), y: f1(Y(n[i])), vide, titre: titre(x) + ' · ' + fmt(n[i]) + (parJour ? ' par jour (' + x.jours + ' j vendus)' : '') + (n1[i] != null ? ' · N-1 : ' + fmt(n1[i]) : '') });
       if (x.partiel) { out.notes.push({ x: f1(X(i) + 7), y: f1(Y(n[i]) - 6), t: fmt(n[i]) + ' · ' + x.jours + ' j' }); }
     });
     // Les valeurs écrites : le plus haut, le plus bas, le dernier mois plein.
@@ -12919,11 +13027,20 @@ class App {
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
   ctrlOpenTask(shopId, taskId, date, tacheNom){
-    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
+    // En mode assisté, la proposition de l'IA est déjà là : elle s'affiche et
+    // pré-remplit le niveau et le commentaire (un avis déjà posé prime).
+    const jIa = this.iaMode() === 'assiste' && this._iaJ ? this._iaJ[date] : null;
+    const pr = jIa ? jIa.map[String(shopId) + '|' + String(taskId)] : null;
+    const pre = pr && pr.niveau != null && pr.etat === 'propose' ? pr : null;
+    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, envoi: false, rep: [],
+      note: pre ? pre.niveau : null, comment: pre ? (pre.commentaire || '') : '',
+      ia: pre ? this.iaVersVolet(pre) : null, iaPre: !!pre, raisonIa: '' } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
       .then(d => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === taskId)
         ? { ctrlDet: Object.assign({}, s.ctrlDet, { chargement: false, d: d || null,
-            note: (d && d.avis && d.avis.note) || null, comment: (d && d.avis && d.avis.comment) || '',
+            // Un avis déjà posé prime ; sinon ce qui est à l'écran (la proposition, ou ce que le consultant a déjà changé).
+            note: (d && d.avis && d.avis.note) || s.ctrlDet.note || null,
+            comment: (d && d.avis && d.avis.comment) || s.ctrlDet.comment || '',
             // Repères déjà posés : ils reviennent avec le détail, on ne les
             // relit pas dans un second appel.
             rep: ((d && d.reperes) || {}).liste || [] }) }
@@ -13167,9 +13284,12 @@ class App {
     }
     const d = dt.d || {};
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
+    // Une note qui s'écarte de la proposition de l'IA emporte la raison du consultant : c'est la leçon.
+    const raisonIa = dt.ia && dt.ia.niveau != null && note !== dt.ia.niveau ? String(dt.raisonIa || '').trim() : '';
     write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
-      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
+      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null, raisonIa })
       .then(() => {
+        this.iaApresNote(dt.shopId, dt.taskId, dt.date, note);
         // La modale RESTE ouverte : on la fermait d'office, et comme la
         // fermeture attendait le rechargement complet de la journée (4 à 5 s
         // sur /pwa/tasks), l'écran semblait se fermer tout seul, longtemps
@@ -13254,7 +13374,8 @@ class App {
   /** Le rayon d'un libellé : au pluriel près, sinon par le début du nom, à la frontière d'un mot. */
   rvDe(libelle){
     const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, ' ').trim();
-    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*/, ''); if (!reste) { return null; }
+    // « Photo du comptoir après-midi - Pâtisseries » : le moment de la journée n'est pas le rayon.
+    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*(?:(?:apres midi|matin|midi|soir)\s+)?/, ''); if (!reste) { return null; }
     const sing = x => x.replace(/s\b/g, '');
     let pre = null, long = 0;
     for (const r of this._rv || []) {
@@ -13307,19 +13428,23 @@ class App {
    * repère — au-dessus du seuil, le barème n'en exige pas. Le même chemin
    * que le volet : le détail de la tâche pour les identifiants du panel
    * (checklist, completion), puis la note ; la carte prend la note tout de
-   * suite, la journée se recharge derrière.
+   * suite, la journée se recharge derrière. En mode assisté, la même voie
+   * valide la proposition de l'IA : sa note et son commentaire (exigé sous
+   * le seuil).
    */
-  ctrlNoteRapide(shopId, taskId, date, nom, note){
+  ctrlNoteRapide(shopId, taskId, date, nom, note, comment){
     const k = shopId + '|' + taskId;
     const marque = on => this.setState(s => ({ ctrlRapide: Object.assign({}, s.ctrlRapide, { [k]: on }) }));
     if ((this.state.ctrlRapide || {})[k]) { return; }
     marque(true);
+    const texte = String(comment || '');
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
-      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: '',
+      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: texte,
         checklistId: (d && d.checklistId) || null, completionId: (d && d.completionId) || null }))
       .then(r => {
         if (r && r.error) { throw new Error(r.error); }
-        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: '' });
+        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: texte });
+        this.iaApresNote(shopId, taskId, date, note);
         marque(false);
         this.notify('Note ' + note + '/5 enregistrée — ' + nom);
         readOne('/pwa/tasks?date=' + encodeURIComponent(date))
@@ -13368,10 +13493,20 @@ class App {
     const resume = (!P ? 'lecture des photos…'
       : avec.length ? avec.length + ' photo' + (avec.length > 1 ? 's' : '') + ' rendue' + (avec.length > 1 ? 's' : '') + plage + (qui ? ' par ' + qui : '')
       : (P.erreur ? 'photos indisponibles' : 'aucune photo rendue'))
-      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '');
+      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '')
+      + (this.iaMode() === 'assiste' && this._iaJ && this._iaJ[pt.date] ? (() => {
+        const n = L.filter(t => t.e.c === 'ctl' && ((this._iaJ[pt.date].map[String(s.shopId) + '|' + String(t.taskId)] || {}).etat === 'propose')).length;
+        return n ? ' · ' + n + ' note' + (n > 1 ? 's' : '') + ' proposée' + (n > 1 ? 's' : '') + ' par l’IA' : ''; })() : '');
     // La note rapide : les niveaux au-dessus du seuil, ceux qui n'exigent ni
     // commentaire ni repère — 4 et 5 dans le barème partagé.
     const rapides = this.zNiveaux().filter(lv => lv.n >= seuil).sort((a, b) => a.n - b.n);
+    // L'assistant (mode assisté) : chaque photo à contrôler porte la note proposée par l'IA ; celles qui n'en ont
+    // pas encore partent en file. Les gestes manuels restent sur les cartes sans proposition.
+    const IA = this.iaMode() === 'assiste' ? this.iaPropsLire(pt.date) : null;
+    const prDe = t => IA ? IA.map[String(s.shopId) + '|' + String(t.taskId)] || null : null;
+    const enFile = t => { const k = pt.date + '|' + s.shopId + '|' + t.taskId;
+      return !!((this._iaEnCours || {})[k] || (this._iaFile || []).some(q => q.k === k)); };
+    if (IA) { this.iaDemander(pt.date, L.filter(t => t.e.c === 'ctl' && t.p && !prDe(t)).map(t => ({ shopId: s.shopId, taskId: t.taskId }))); }
     const cartes = F.map(t => {
       const reps = t.p && Array.isArray(t.p.reperes) ? t.p.reperes : [];
       const rp = reps.map(r => ({ st: 'left:' + (r.x * 100).toFixed(1) + '%;top:' + (r.y * 100).toFixed(1) + '%;width:' + (r.l * 100).toFixed(1) + '%;height:' + (r.h * 100).toFixed(1) + '%;border-color:' + ((this.zNiveau(r.niveau || t.note || 3) || {}).couleur || '#B0792A') }));
@@ -13385,12 +13520,14 @@ class App {
       return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe), type: ry && ry.photo ? ry.photo : null,
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
         constat, photo: t.p ? t.p.photo : null, reperes: rp,
+        ponct: t.e.c !== 'ko' && t.e.c !== 'mu' ? this.ponctualite(t.heure, t.faitLe) : null,
         attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
         videTxt: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible'),
         bouton: t.e.c === 'ctl' ? 'Noter…' : (t.note != null ? 'Renoter' : ''),
         envoi: !!((S.ctrlRapide || {})[s.shopId + '|' + t.taskId]),
         rapides: t.e.c === 'ctl' ? rapides.map(lv => ({ n: lv.n, nom: lv.nom || (lv.n + '/5'), coul: lv.couleur || '#3f7a52',
           pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, lv.n) })) : [],
+        ia: IA && t.e.c === 'ctl' && t.p ? this.iaCarte(prDe(t), s, t, seuil, enFile(t)) : null,
         open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache) };
     });
     // Les flèches font défiler le rail d'une largeur, sans rendu : le DOM reste.
@@ -13505,6 +13642,13 @@ class App {
       const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
       shops.forEach(s2 => { s2.cq = this.ctrlCartes(brut[String(s2.shopId)] || { shopId: s2.shopId, taches: [] }, pt, garde, seuilC, nomNiveau); });
     }
+    // --- L'assistant de notation : le mode (manuel / assisté), la bande, la validation finale, les leçons.
+    common.iaMode = this.iaMode();
+    common.iaManuel = () => this.iaSetMode('manuel');
+    common.iaAssiste = () => this.iaSetMode('assiste');
+    common.ia = common.ctrlVue === 'photos' && common.iaMode === 'assiste' && S.screen === 'controle' && this.source === 'api'
+      ? this.valsIaBande(pt, shops, garde, seuilC) : null;
+    common.iaRecap = common.ia && S.iaRecap ? this.valsIaRecap(common.ia, seuilC) : null;
 
     // --- Photos types des rayons : le back office du comptoir attendu. Les
     // rayons que le panel photographie aujourd'hui sans photo type connue
@@ -13584,6 +13728,17 @@ class App {
           ? ('Prise' + (d.faitLe ? ' le ' + this.fDA(String(d.faitLe).slice(0, 10)) + ' à ' + String(d.faitLe).slice(11, 16) : '')
              + (d.faitPar ? ' par ' + d.faitPar : ''))
           : '',
+        // La photo contre l'heure standard de sa checklist : l'heure fait partie du contrôle.
+        ponct: this.ponctualite(d.heure, d.faitLe),
+        // Les références d'une photo de comptoir : le planogramme du rayon, puis ses photos d'exemple (ce magasin
+        // d'abord). Une photo de comptoir peut devenir une photo d'exemple, ou la photo du planogramme.
+        exemples: (d.exemples || []).slice(0, 3).map(ex => ({ photo: ex.photo, shop: this.iaNomMagasin(ex.shopId), date: ex.date ? this.fD(ex.date) : '' })),
+        nExemples: (d.exemples || []).length,
+        estExemple: (d.exemples || []).some(ex => String(ex.taskId) === String(dt.taskId) && ex.date === dt.date && String(ex.shopId) === String(dt.shopId)),
+        shopNom: this.iaNomMagasin(dt.shopId),
+        prendreExemple: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'exemple') : null,
+        prendrePlano: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'planogramme') : null,
+        modeleBusy: (this.state.iaModeleBusy || {})[dt.shopId + '|' + dt.taskId + '|' + dt.date] || '',
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
         avisComment: a.comment || '',
@@ -13767,6 +13922,12 @@ class App {
         iaModele: (dt.ia && dt.ia.modele) || '',
         iaConstats: (dt.ia && dt.ia.constats) || [],
         iaAvert: (dt.ia && dt.ia.avertissement) || '',
+        iaPre: !!dt.iaPre,
+        iaLecons: (dt.ia && dt.ia.leconsVues) || 0,
+        // Le consultant note autrement que l'IA : il peut dire pourquoi, l'assistant en fera une leçon.
+        iaChange: !!(dt.ia && dt.ia.niveau != null && dt.note != null && dt.note !== dt.ia.niveau),
+        raisonIa: dt.raisonIa || '',
+        setRaisonIa: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { raisonIa: v }) })); },
         iaGo: () => this.ctrlIaProposer(),
         // Reprendre ne valide pas : cela remplit le formulaire, l'envoi reste
         // un geste distinct. Le commentaire proposé complète le vôtre sans
@@ -14236,16 +14397,527 @@ class App {
     readOne('/ia/statut').then(st => { this._iaStEnCours = false;
       this.D.iaStatut = st || { configure: false }; this.setState({}); });
   }
-  /** Demande une proposition d'évaluation sur la photo ouverte. */
+  /**
+   * Demande une proposition d'évaluation sur la photo ouverte. Elle passe par
+   * l'assistant (POST /ia/proposer) : gardée au serveur, elle rejoint ensuite
+   * la note posée — c'est ainsi que l'assistant apprend, même en mode manuel.
+   * « Réanalyser » la refait.
+   */
   ctrlIaProposer(){
     const dt = this.state.ctrlDet;
     if (!dt || dt.iaBusy) { return; }
+    const refaire = !!dt.ia;
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: true, ia: null }) }));
-    readOne('/ia/note?shop=' + encodeURIComponent(dt.shopId) + '&task=' + encodeURIComponent(dt.taskId)
-      + '&date=' + encodeURIComponent(dt.date))
-      .then(r => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
-        ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
-            ia: r || { motif: 'assistance injoignable' } }) } : {}));
+    write(this.source, 'POST', '/ia/proposer', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date, refaire })
+      .then(r => {
+        const pr = r && r.ok !== false && r.proposition ? r.proposition : null;
+        if (pr) { this.iaRetenir(pr); }
+        this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
+          ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
+              ia: pr ? this.iaVersVolet(pr, r.avertissement) : { motif: (r && r.error) || 'assistance injoignable' } }) } : {});
+      });
+  }
+  /* --- L'assistant de notation (src/ia_assistant.php) ------------------------
+   *
+   * Deux modes, au choix et gardés dans ce navigateur : MANUEL, la page telle
+   * qu'elle était ; ASSISTÉ, où l'IA propose une note pour chaque photo à
+   * contrôler. Le consultant valide ou corrige — sur la carte, dans le volet,
+   * ou toutes à la fin dans « Valider ce que l'IA a proposé ». Rien ne part au
+   * panel sans son geste. Les propositions sont gardées au serveur (payées une
+   * fois, relues au rechargement) ; quand le consultant note autrement, la
+   * correction devient une leçon que l'IA reçoit avec les photos suivantes du
+   * même rayon. */
+  iaMode(){
+    if (this._iaMode === undefined) {
+      let m = ''; try { m = localStorage.getItem('cockpit.ctrlMode') || ''; } catch (e) { /* navigation privée */ }
+      this._iaMode = m === 'assiste' ? 'assiste' : 'manuel';
+    }
+    return this._iaMode;
+  }
+  iaSetMode(m){
+    this._iaMode = m === 'assiste' ? 'assiste' : 'manuel';
+    try { localStorage.setItem('cockpit.ctrlMode', this._iaMode); } catch (e) { /* navigation privée */ }
+    this.setState({});
+  }
+  /** Les propositions d'une journée, lues une fois puis tenues à jour ici : { map, accord, lecons, configure }. */
+  iaPropsLire(date){
+    if (!date || this.source !== 'api') { return null; }
+    this._iaJ = this._iaJ || {}; this._iaJLu = this._iaJLu || {};
+    if (this._iaJ[date]) { return this._iaJ[date]; }
+    if (!this._iaJLu[date]) {
+      this._iaJLu[date] = true;
+      readOne('/ia/propositions?date=' + encodeURIComponent(date)).then(r => {
+        delete this._iaJLu[date];
+        const map = {}; ((r && r.propositions) || []).forEach(p => { map[p.shopId + '|' + p.taskId] = p; });
+        this._iaJ[date] = { map, accord: (r && r.accord) || null, lecons: (r && r.lecons) || 0, configure: !!(r && r.configure), indispo: !r };
+        this.setState({});
+      });
+    }
+    return null;
+  }
+  /** Une proposition reçue rejoint la journée chargée. */
+  iaRetenir(pr){
+    const j = this._iaJ && this._iaJ[pr.date];
+    if (j) { j.map[pr.shopId + '|' + pr.taskId] = pr; }
+  }
+  /** Les propositions manquantes partent en file, trois à la fois ; une photo n'est demandée qu'une fois par visite. */
+  iaDemander(date, cles){
+    const j = this._iaJ && this._iaJ[date];
+    if (!j || j.configure === false) { return; }
+    this._iaFile = this._iaFile || []; this._iaEnCours = this._iaEnCours || {}; this._iaTente = this._iaTente || {};
+    cles.forEach(c => {
+      const k = date + '|' + c.shopId + '|' + c.taskId;
+      if (j.map[c.shopId + '|' + c.taskId] || this._iaEnCours[k] || this._iaTente[k]) { return; }
+      this._iaTente[k] = true; this._iaFile.push({ date, shopId: String(c.shopId), taskId: String(c.taskId), k });
+    });
+    this.iaPomper();
+  }
+  iaPomper(){
+    this._iaFile = this._iaFile || []; this._iaEnCours = this._iaEnCours || {};
+    while (Object.keys(this._iaEnCours).length < 3 && this._iaFile.length) {
+      const q = this._iaFile.shift();
+      this._iaEnCours[q.k] = true;
+      write(this.source, 'POST', '/ia/proposer', { shopId: q.shopId, taskId: q.taskId, date: q.date }).then(r => {
+        delete this._iaEnCours[q.k];
+        const j = this._iaJ && this._iaJ[q.date];
+        if (r && r.ok !== false && r.proposition) { this.iaRetenir(r.proposition); }
+        else if (j) {
+          j.map[q.shopId + '|' + q.taskId] = { shopId: q.shopId, taskId: q.taskId, date: q.date, etat: 'echec', niveau: null,
+            motif: (r && r.error) || 'assistance injoignable' };
+          // Sans clé, inutile de vider la file photo par photo.
+          if (r && r.status === 503) { j.configure = false; this._iaFile = this._iaFile.filter(x => x.date !== q.date); }
+        }
+        this.setState({});
+        this.iaPomper();
+      });
+    }
+  }
+  /** Combien de propositions restent à venir pour une journée (file + en cours). */
+  iaAttente(date){
+    return (this._iaFile || []).filter(q => q.date === date).length
+      + Object.keys(this._iaEnCours || {}).filter(k => k.startsWith(date + '|')).length;
+  }
+  /** Redemander une proposition (échec, ou « Réanalyser » depuis la carte). */
+  iaRefaire(date, shopId, taskId){
+    const j = this._iaJ && this._iaJ[date]; const k = date + '|' + shopId + '|' + taskId;
+    if (j) { delete j.map[shopId + '|' + taskId]; j.configure = true; }
+    if (this._iaTente) { delete this._iaTente[k]; }
+    this.iaDemander(date, [{ shopId, taskId }]);
+    this.setState({});
+  }
+  /** La note du consultant posée : la proposition passe « validée » ou « corrigée », les leçons se relisent. */
+  iaApresNote(shopId, taskId, date, note){
+    const j = this._iaJ && this._iaJ[date];
+    const pr = j ? j.map[String(shopId) + '|' + String(taskId)] : null;
+    if (pr && pr.niveau != null) {
+      pr.noteFinale = note; pr.etat = note === pr.niveau ? 'valide' : 'corrige';
+      // Le taux d'accord et le compte des leçons se relisent au serveur.
+      readOne('/ia/propositions?date=' + encodeURIComponent(date)).then(r => {
+        if (!r || !this._iaJ || !this._iaJ[date]) { return; }
+        (r.propositions || []).forEach(p => { this._iaJ[date].map[p.shopId + '|' + p.taskId] = p; });
+        this._iaJ[date].accord = r.accord || this._iaJ[date].accord; this._iaJ[date].lecons = r.lecons || 0;
+        this.setState({});
+      });
+    }
+    this._iaLecons = undefined;
+  }
+  /**
+   * La ponctualité d'une photo : son heure contre l'heure STANDARD de sa
+   * checklist. Les mêmes seuils que le serveur (src/ia_assistant.php,
+   * iaPonctualite) : à l'heure jusqu'à 15 min de retard, en retard au-delà,
+   * « très en avance » plus d'une heure avant. Rend { etat, txt, long } ou null.
+   */
+  ponctualite(heure, faitLe){
+    const hm = v => { const m = /(\d{2}):(\d{2})(?::\d{2})?$/.exec(String(v || '').trim()); return m ? +m[1] * 60 + +m[2] : null; };
+    const prevue = hm(heure); const prise = hm(String(faitLe || '').length > 5 ? String(faitLe).slice(11, 16) : faitLe);
+    if (prevue == null || prise == null) { return null; }
+    const ecart = prise - prevue;
+    const duree = m => { m = Math.abs(m); return m >= 60 ? Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; };
+    const etat = ecart > 15 ? 'retard' : (ecart < -60 ? 'avance' : 'heure');
+    const std = String(heure).slice(0, 5);
+    return { etat, ecart,
+      txt: etat === 'retard' ? '+' + duree(ecart) + ' sur ' + std : (etat === 'avance' ? 'très tôt (std ' + std + ')' : 'à l’heure (std ' + std + ')'),
+      long: 'heure standard de la checklist ' + std + ' : ' + (etat === 'retard' ? 'en retard de ' + duree(ecart)
+        : etat === 'avance' ? 'très en avance (' + duree(ecart) + ' avant) — le comptoir était-il prêt ?'
+        : 'à l’heure' + (ecart < 0 ? ' (' + duree(ecart) + ' avant)' : ecart > 0 ? ' (' + duree(ecart) + ' après, toléré)' : '')) };
+  }
+  /** La forme que le volet lit (bloc « Assistance à la notation »). */
+  iaVersVolet(pr, avert){
+    return { niveau: pr.niveau, nom: pr.nom, constats: pr.constats || [], commentaire: pr.commentaire || '',
+      confiance: pr.confiance || '', modele: pr.modele || '', motif: pr.niveau == null ? (pr.motif || 'pas de proposition') : '',
+      avertissement: avert || (pr.confiance === 'faible' ? 'Confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même.' : ''),
+      leconsVues: pr.leconsVues || 0 };
+  }
+  /**
+   * Ce que la carte d'une photo à contrôler montre en mode assisté : la note
+   * proposée en clair (« IA · 4/5 Conforme »), le premier constat, la
+   * confiance, et deux gestes — valider la note proposée, ou corriger dans le
+   * volet. Confiance faible : pas de validation en un clic.
+   */
+  iaCarte(pr, s, t, seuil, attente){
+    const open = () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache);
+    if (!pr || attente) {
+      return { cls: 'iaatt', badge: 'IA · …', constat: attente ? 'note en cours de proposition…' : 'en attente de l’assistant', constatCls: 'ia rv', conf: '', manuel: true };
+    }
+    if (pr.niveau == null) {
+      return { cls: 'iarv', badge: 'IA · —', constat: 'pas de proposition — ' + (pr.motif || 'motif inconnu'), constatCls: 'ia rv', conf: '', manuel: true,
+        refaire: () => this.iaRefaire(t.date, s.shopId, t.taskId) };
+    }
+    const lv = this.zNiveaux().find(v => v.n === pr.niveau) || { nom: pr.nom || (pr.niveau + '/5'), couleur: '#7a736a' };
+    const faible = pr.confiance === 'faible';
+    const nomCourt = pr.niveau >= seuil ? String(lv.nom) : String(lv.nom).split(/[—–-]/).pop().trim();
+    const comment = String(pr.commentaire || '');
+    // Sous le seuil, une note exige un commentaire : sans commentaire proposé, on corrige dans le volet.
+    const direct = !faible && (pr.niveau >= seuil || comment.trim() !== '');
+    return { cls: faible ? 'iarv' : 'ia' + pr.niveau, badge: 'IA · ' + pr.niveau + '/5 ' + nomCourt,
+      constat: (pr.constats || [])[0] || comment || nomCourt, constatCls: 'ia ' + (faible ? 'rv' : (pr.niveau < seuil ? 'nc' : 'ok')),
+      conf: faible ? 'confiance faible — à juger vous-même' : 'confiance ' + (pr.confiance || '?') + (pr.leconsVues ? ' · ' + pr.leconsVues + ' leçon' + (pr.leconsVues > 1 ? 's' : '') : ''),
+      valider: direct ? { lib: 'Valider ' + pr.niveau + '/5', coul: lv.couleur || '#3f7a52',
+        titre: 'Valider la note proposée : ' + lv.nom + (comment ? ' — « ' + comment + ' »' : ''),
+        pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, pr.niveau, comment) } : null,
+      corriger: { lib: faible || !direct ? 'Noter…' : 'Corriger…', pick: open } };
+  }
+  /**
+   * La bande de l'assistant : où en est l'IA sur les photos à contrôler des
+   * boutiques affichées, ce qu'elle propose (écarts, à revoir, conformes), le
+   * taux d'accord avec les notes du consultant, la validation finale et les
+   * leçons.
+   */
+  valsIaBande(pt, shops, garde, seuil){
+    const S = this.state;
+    const dispo = (this.D.iaStatut || {}).configure === true;
+    const J = this.iaPropsLire(pt.date);
+    const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
+    const nomT = x => String(x || '').replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+    const items = [];
+    shops.forEach(sh => {
+      const s = brut[String(sh.shopId)]; if (!s) { return; }
+      const P = this.ctrlPhotosLire(s.shopId, pt.date);
+      const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
+      (s.taches || []).filter(garde).forEach(t => {
+        if (t.note != null || !(t.statut === 'aControler' || t.statut === 'aValider')) { return; }
+        const p = ph[String(t.taskId)]; if (!p) { return; }
+        items.push({ k: s.shopId + '|' + t.taskId, shopId: String(s.shopId), taskId: String(t.taskId), date: t.date || pt.date,
+          shop: s.shop, tache: t.tache, nom: nomT(t.tache), heure: t.faitLe ? String(t.faitLe).slice(11, 16) : '', photo: p.photo,
+          checklistId: p.checklistId || null, completionId: p.completionId || null, ponct: this.ponctualite(t.heure, t.faitLe),
+          pr: J ? J.map[String(s.shopId) + '|' + String(t.taskId)] || null : null });
+      });
+    });
+    const prets = items.filter(i => i.pr && i.pr.etat === 'propose' && i.pr.niveau != null);
+    const faible = i => i.pr.confiance === 'faible';
+    const nConf = prets.filter(i => !faible(i) && i.pr.niveau >= seuil).length;
+    const nEcart = prets.filter(i => !faible(i) && i.pr.niveau < seuil).length;
+    const nRevoir = prets.filter(faible).length;
+    const nEchec = items.filter(i => i.pr && i.pr.niveau == null).length;
+    const attente = J ? this.iaAttente(pt.date) : 0;
+    const a = J && J.accord;
+    const accord = !a ? '' : a.notees
+      ? 'Accord avec vos notes (' + a.jours + ' j) : ' + a.pct + ' % sur ' + a.notees
+        + (a.tropSevere || a.tropIndulgente ? ' · plus sévère que vous ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '')
+      : 'Accord avec vos notes : mesuré dès vos premières validations';
+    const pl = (n, s1, s2) => n + ' ' + (n > 1 ? s2 : s1);
+    const etat = !dispo ? 'Aucune clé Anthropic au serveur (Paramètres › Assistance IA) : l’IA ne peut rien proposer.'
+      : !J ? 'Lecture des propositions…'
+      : J.configure === false ? 'La clé Anthropic du serveur est refusée ou absente : l’IA ne peut rien proposer.'
+      : !items.length ? 'Aucune photo à contrôler dans cette sélection.'
+      : attente ? 'L’IA note les photos… ' + (items.length - attente) + ' / ' + items.length
+      : pl(prets.length, 'note proposée', 'notes proposées') + ' sur ' + pl(items.length, 'photo à contrôler', 'photos à contrôler') + '.';
+    const nomN = n => ((this.zNiveaux().find(v => v.n === n) || {}).nom) || (n + '/5');
+    const nomShop = id => ((pt.shops || []).find(x => String(x.shopId) === String(id)) || {}).shop || ('Boutique ' + id);
+    const Lc = S.iaLeconsOuvert ? this.iaLeconsLire() : null;
+    return { dispo: dispo && !!J && J.configure !== false, etat, attente: attente > 0,
+      pct: items.length ? Math.round(100 * (items.length - attente) / items.length) : 0, accord, items, prets,
+      tuiles: [{ cls: 'nc', n: nEcart, lib: nEcart > 1 ? 'écarts proposés' : 'écart proposé' },
+        { cls: 'rv', n: nRevoir, lib: 'à revoir · confiance faible' },
+        { cls: 'ok', n: nConf, lib: nConf > 1 ? 'conformes proposées' : 'conforme proposée' }]
+        .concat(nEchec ? [{ cls: 'rv', n: nEchec, lib: 'sans proposition' }] : [])
+        .concat((() => { const n = items.filter(i => i.ponct && i.ponct.etat === 'retard').length;
+          return n ? [{ cls: 'nc', n, lib: (n > 1 ? 'photos prises' : 'photo prise') + ' en retard sur l’heure standard' }] : []; })()),
+      peutValider: prets.length > 0,
+      valider: () => this.setState({ iaRecap: { edits: {}, envoi: false } }),
+      valiLib: 'Valider ce que l’IA a proposé (' + prets.length + ')',
+      leconsN: J ? J.lecons : 0,
+      leconsOuvert: !!S.iaLeconsOuvert,
+      leconsBasculer: () => this.setState({ iaLeconsOuvert: !S.iaLeconsOuvert }),
+      leconsChargement: !!S.iaLeconsOuvert && !Lc,
+      leconsMax: (Lc && Lc.max) || 6,
+      lecons: Lc ? (Lc.lecons || []).map(l => ({ date: this.fD(l.date), shop: nomShop(l.shopId), tache: nomT(l.tache),
+        ia: nomN(l.niveau), vous: nomN(l.noteFinale), raison: l.raison || '', constat: (l.constats || [])[0] || '',
+        retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })) : [] };
+  }
+  /** La validation finale : une ligne par note proposée, modifiable avant l'envoi. */
+  valsIaRecap(ia, seuil){
+    const R = this.state.iaRecap || {}; const E = R.edits || {};
+    const niv = this.zNiveaux().slice().sort((a, b) => b.n - a.n);
+    const maj = (k, champ) => e => {
+      const v = champ === 'inclus' ? !!e.target.checked : (champ === 'note' ? +e.target.value : String(e.target.value));
+      this.setState(s => ({ iaRecap: Object.assign({}, s.iaRecap, { edits: Object.assign({}, (s.iaRecap || {}).edits,
+        { [k]: Object.assign({}, ((s.iaRecap || {}).edits || {})[k], { [champ]: v }) }) }) }));
+    };
+    const tous = on => () => this.setState(s => { const ed = Object.assign({}, (s.iaRecap || {}).edits);
+      ia.prets.forEach(i => { ed[i.k] = Object.assign({}, ed[i.k], { inclus: on }); });
+      return { iaRecap: Object.assign({}, s.iaRecap, { edits: ed }) }; });
+    const lignes = ia.prets.map(i => {
+      const e = E[i.k] || {};
+      const note = e.note != null ? e.note : i.pr.niveau;
+      const comment = e.comment != null ? e.comment : (i.pr.commentaire || '');
+      const inclus = e.inclus != null ? e.inclus : i.pr.confiance !== 'faible';
+      const lv = niv.find(v => v.n === note) || {};
+      return { k: i.k, shopId: i.shopId, taskId: i.taskId, date: i.date, checklistId: i.checklistId, completionId: i.completionId,
+        shop: i.shop, nom: i.nom, heure: i.heure, photo: i.photo, note, comment, inclus, raison: e.raison || '', ponct: i.ponct,
+        change: note !== i.pr.niveau, propose: i.pr.niveau + '/5 · ' + (i.pr.nom || ''), confiance: i.pr.confiance || '',
+        faible: i.pr.confiance === 'faible', constats: (i.pr.constats || []).slice(0, 3), couleur: lv.couleur || '#7a736a',
+        sousSeuil: note < seuil, manqueComment: inclus && note < seuil && !String(comment).trim(), erreur: (R.erreurs || {})[i.k] || '',
+        niveaux: niv.map(v => ({ n: v.n, nom: v.n + '/5 · ' + v.nom, sel: v.n === note })),
+        setInclus: maj(i.k, 'inclus'), setNote: maj(i.k, 'note'), setComment: maj(i.k, 'comment'), setRaison: maj(i.k, 'raison'),
+        ouvrir: () => { if (!R.envoi) { this.setState({ iaRecap: null }); this.ctrlOpenTask(i.shopId, i.taskId, i.date, i.tache); } } };
+    });
+    const n = lignes.filter(l => l.inclus).length;
+    return { lignes, n, nCorr: lignes.filter(l => l.inclus && l.change).length, nManque: lignes.filter(l => l.manqueComment).length,
+      envoi: !!R.envoi, faits: R.faits || 0, total: R.total || 0,
+      tout: tous(true), aucun: tous(false),
+      fermer: () => { if (!R.envoi) { this.setState({ iaRecap: null }); } },
+      envoyer: () => this.iaRecapEnvoyer(lignes),
+      envoyerLib: R.envoi ? 'Envoi… ' + (R.faits || 0) + ' / ' + (R.total || 0) : 'Valider et envoyer (' + n + ')' };
+  }
+  /** Les leçons (GET /ia/lecons), lues à l'ouverture du panneau. */
+  iaLeconsLire(){
+    if (this._iaLecons !== undefined || this._iaLeconsLu) { return this._iaLecons || null; }
+    this._iaLeconsLu = true;
+    readOne('/ia/lecons').then(r => { this._iaLeconsLu = false; this._iaLecons = r || { lecons: [], indispo: true }; this.setState({}); });
+    return null;
+  }
+  iaLeconRetenir(l, retenir){
+    write(this.source, 'POST', '/ia/lecons', { shopId: l.shopId, taskId: l.taskId, date: l.date, retenir }).then(r => {
+      if (r && r.ok !== false && Array.isArray(r.lecons)) { this._iaLecons = r; }
+      else { this.notify('Échec — ' + ((r && r.error) || 'leçon inchangée')); }
+      const j = this._iaJ && this._iaJ[l.date]; if (j && r && r.retenues != null) { j.lecons = r.retenues; }
+      Object.keys(this._iaJ || {}).forEach(d => { if (r && r.retenues != null) { this._iaJ[d].lecons = r.retenues; } });
+      this.setState({});
+      this.notify(retenir ? 'Leçon reprise — l’IA la recevra de nouveau' : 'Leçon écartée — l’IA ne la recevra plus');
+    });
+  }
+  /* --- L'entraînement de l'IA (écran « Entraînement de l'IA », GET /ia/entrainement) -----------------
+   *
+   * Rayon par rayon : la consigne (ce que l'IA doit voir), la photo modèle de
+   * chaque magasin et la photo type du réseau, les leçons, l'accord. Une
+   * photo notée Exemplaire est candidate au modèle ; c'est le consultant qui
+   * la prend, jamais l'IA. */
+  iaEntLire(forcer){
+    if (!forcer && (this._iaEnt !== undefined || this._iaEntLu)) { return this._iaEnt || null; }
+    this._iaEntLu = true;
+    readOne('/ia/entrainement').then(r => { this._iaEntLu = false; this._iaEnt = r || { indispo: true, rayons: [], candidates: [] }; this.setState({}); });
+    return this._iaEnt || null;
+  }
+  /** Le nom court d'un magasin (« Halle ») : la journée chargée, sinon le référentiel. */
+  iaNomMagasin(id){
+    const s = ((this.D.pwaTasks || {}).shops || []).find(x => String(x.shopId) === String(id));
+    const st = (this.D.stores || []).find(x => String(x.id) === String(id));
+    const nom = (s && s.shop) || (st && st.nom) || ('Magasin ' + id);
+    return nom.indexOf(' - ') >= 0 ? nom.slice(nom.lastIndexOf(' - ') + 3).trim() : nom;
+  }
+  /**
+   * Prendre la photo d'une tâche pour son rayon : comme photo d'EXEMPLE
+   * (portée « exemple », plusieurs par rayon), ou comme photo du PLANOGRAMME
+   * (portée « planogramme », une par rayon).
+   */
+  iaPrendreModele(shopId, taskId, date, portee){
+    const k = shopId + '|' + taskId + '|' + date;
+    if ((this.state.iaModeleBusy || {})[k]) { return; }
+    this.setState(s => ({ iaModeleBusy: Object.assign({}, s.iaModeleBusy, { [k]: portee }) }));
+    write(this.source, 'POST', '/ia/modeles', { shopId, taskId, date, portee }).then(r => {
+      this.setState(s => { const b = Object.assign({}, s.iaModeleBusy); delete b[k]; return { iaModeleBusy: b }; });
+      if (!r || r.ok === false) { this.notify('Photo refusée — ' + ((r && r.error) || 'serveur injoignable')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      // La photo du planogramme a pu changer : la liste des rayons se relit.
+      if (portee === 'planogramme') { this._rv = undefined; }
+      const ry = (r.rayons || []).find(x => x.cle === r.rayon) || {};
+      this.notify((portee === 'planogramme' ? 'Photo du planogramme' : 'Photo d’exemple') + (ry.nom ? ' « ' + ry.nom + ' »' : '')
+        + (portee === 'planogramme' ? '' : ' (' + this.iaNomMagasin(shopId) + ')') + ' — l’IA la reçoit désormais avec chaque photo du rayon');
+      // Le volet ouvert sur cette tâche montre la nouvelle référence.
+      const dt = this.state.ctrlDet;
+      if (dt && String(dt.shopId) === String(shopId) && String(dt.taskId) === String(taskId) && dt.date === date) {
+        readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
+          .then(d => this.setState(s => (s.ctrlDet && String(s.ctrlDet.taskId) === String(taskId) && d ? { ctrlDet: Object.assign({}, s.ctrlDet, { d }) } : {})));
+      }
+      this.setState({});
+    });
+  }
+  iaRetirerExemple(rayon, nomRayon, ex){
+    if (!window.confirm('Retirer cette photo d’exemple « ' + nomRayon + ' » (' + this.iaNomMagasin(ex.shopId) + ', ' + this.fD(ex.date) + ') ?')) { return; }
+    write(this.source, 'POST', '/ia/modeles', { rayon, shopId: ex.shopId, taskId: ex.taskId, date: ex.date, retirer: true }).then(r => {
+      if (!r || r.ok === false) { this.notify('Échec — ' + ((r && r.error) || 'exemple inchangé')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      this.notify('Photo d’exemple retirée — ' + nomRayon + ', ' + this.iaNomMagasin(ex.shopId));
+      this.setState({});
+    });
+  }
+  /** Déposer (ou retirer) la photo du planogramme d'un rayon depuis l'entraînement : la page se relit ensuite. */
+  iaPlanoFichier(nom){
+    return e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!f) { return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { this.notify('Photo en JPEG, PNG ou WebP'); return; }
+      this.rvReduire(f).then(data => this.rvEcrire(nom, { data }, 'Photo du planogramme posée — ' + nom)).then(() => this.iaEntLire(true))
+        .catch(() => this.notify('Image illisible — essayez un autre fichier'));
+    };
+  }
+  /* --- L'assistant d'entraînement (POST /ia/analyser) ---------------------------------------------
+   * Pour un rayon (ou une tâche) et une période : ce qui va, ce qui ne va pas, les désaccords, une
+   * consigne proposée, les conseils aux magasins, les photos à prendre en exemple. La dernière
+   * analyse de chaque sujet est gardée au serveur. */
+  iaAnaLire(forcer){
+    if (!forcer && (this._iaAna !== undefined || this._iaAnaLu)) { return this._iaAna || null; }
+    this._iaAnaLu = true;
+    readOne('/ia/analyses').then(r => { this._iaAnaLu = false; this._iaAna = r || { sujets: [], analyses: {}, indispo: true }; this.setState({}); });
+    return this._iaAna || null;
+  }
+  iaAnalyser(sujet, jours){
+    if (!sujet || this.state.iaAnaBusy) { return; }
+    this.setState({ iaAnaBusy: sujet, iaAnaSujet: sujet, iaAnaErreur: '' });
+    write(this.source, 'POST', '/ia/analyser', { sujet, jours }).then(r => {
+      if (r && r.ok !== false && r.analyse) {
+        this._iaAna = this._iaAna || { sujets: [], analyses: {} };
+        this._iaAna.analyses = Object.assign({}, this._iaAna.analyses, { [sujet]: r.analyse });
+        this.setState({ iaAnaBusy: '' });
+        this.notify('Analyse prête — ' + (r.analyse.nom || sujet) + ' : ' + r.analyse.nb + ' photos relues');
+      } else {
+        this.setState({ iaAnaBusy: '', iaAnaErreur: (r && r.error) || 'analyse impossible — serveur injoignable' });
+      }
+    });
+  }
+  /** Le panneau de l'assistant d'entraînement, sur la page Entraînement de l'IA. */
+  valsIaAnalyse(E){
+    const S = this.state;
+    const A = this.iaAnaLire();
+    if (!A) { return { chargement: true }; }
+    const sujets = A.sujets || [];
+    const parDefaut = (sujets.slice().sort((a, b) => b.n - a.n)[0] || {}).cle || '';
+    const cle = S.iaAnaSujet || parDefaut;
+    const jours = S.iaAnaJours || 30;
+    const su = sujets.find(x => x.cle === cle) || {};
+    const an = ((A.analyses || {})[cle]) || null;
+    const rv = (E.rayons || []).find(r => r.cle === cle) || null;
+    const groupe = (t, lib) => ({ lib, opts: sujets.filter(x => x.type === t).map(x => ({ val: x.cle, nom: x.nom + ' — ' + x.n + ' photo' + (x.n > 1 ? 's' : '') + ' évaluée' + (x.n > 1 ? 's' : ''), sel: x.cle === cle })) });
+    const FREQ = { souvent: 'souvent', parfois: 'parfois', rare: 'rare' };
+    return { chargement: false,
+      groupes: [groupe('rayon', 'Rayons'), groupe('tache', 'Autres tâches')].filter(g => g.opts.length),
+      setSujet: e => this.setState({ iaAnaSujet: e.target.value, iaAnaErreur: '' }),
+      periodes: [7, 14, 30, 90].map(n => ({ val: n, nom: n + ' jours', sel: n === jours })),
+      setJours: e => this.setState({ iaAnaJours: +e.target.value }),
+      busy: S.iaAnaBusy === cle, autreBusy: !!S.iaAnaBusy && S.iaAnaBusy !== cle,
+      peut: (su.n || 0) >= (A.min || 3),
+      manque: (su.n || 0) < (A.min || 3) ? 'Il faut ' + (A.min || 3) + ' photos évaluées au moins sur ce sujet : passez des photos en mode assisté.' : '',
+      erreur: S.iaAnaErreur || '',
+      lancer: () => this.iaAnalyser(cle, jours),
+      lib: an ? 'Relancer l’analyse' : 'Analyser les photos',
+      an: !an ? null : {
+        meta: 'Analyse du ' + this.fD(String(an.le || '').slice(0, 10)) + ' ' + String(an.le || '').slice(11, 16) + ' · ' + an.nb + ' photo' + (an.nb > 1 ? 's' : '') + ' sur ' + an.jours + ' jours (' + an.notees + ' notée' + (an.notees > 1 ? 's' : '') + ' par le consultant)',
+        synthese: an.synthese || '',
+        va: an.ce_qui_va || [],
+        vaPas: (an.ce_qui_ne_va_pas || []).map(v => ({ constat: v.constat, freq: FREQ[v.frequence] || v.frequence, freqCls: v.frequence, magasins: (v.magasins || []).join(', ') })),
+        desaccords: an.desaccords || [],
+        consigne: an.consigne_proposee || '',
+        reprendre: rv && an.consigne_proposee ? () => {
+          if (rv.consigne && !window.confirm('Remplacer la consigne actuelle du rayon « ' + rv.nom + ' » par la consigne proposée ?')) { return; }
+          this.rvEcrire(rv.nom, { consigne: an.consigne_proposee }, 'Consigne reprise — ' + rv.nom).then(() => this.iaEntLire(true));
+        } : null,
+        dejaReprise: !!(rv && rv.consigne && rv.consigne.trim() === String(an.consigne_proposee || '').trim()),
+        conseils: an.conseils_magasins || [],
+        exemples: (an.exemples_suggeres || []).map(x => {
+          const P = this.ctrlPhotosLire(x.shopId, x.date);
+          const ph = ((P && P.photos) || []).find(p => String(p.taskId) === String(x.taskId));
+          const dejaEx = !!(rv && (rv.exemples || []).some(m => String(m.shopId) === String(x.shopId) && String(m.taskId) === String(x.taskId) && m.date === x.date));
+          return { photo: ph ? ph.photo : null, attente: !P, magasin: x.magasin, date: this.fD(x.date), pourquoi: x.pourquoi, deja: dejaEx,
+            busy: ((S.iaModeleBusy || {})[x.shopId + '|' + x.taskId + '|' + x.date]) || '',
+            prendre: () => this.iaPrendreModele(x.shopId, x.taskId, x.date, 'exemple') };
+        }) } };
+  }
+  valsIaEntrainement(common){
+    const S = this.state;
+    const E = this.iaEntLire();
+    this.rvLire();
+    const nomN = n => ((this.zNiveaux().find(v => v.n === n) || {}).nom) || (n + '/5');
+    const nomT = x => String(x || '').replace(/^Photo du comptoir\s*-\s*/i, '');
+    const busy = S.iaModeleBusy || {};
+    if (!E) { common.iaEnt = { chargement: true }; return; }
+    const A = E.accord || {};
+    const nPlanos = (E.rayons || []).filter(r => r.planogramme).length;
+    const nExemples = (E.rayons || []).reduce((a, r) => a + (r.exemples || []).length, 0);
+    const nLecons = (E.rayons || []).reduce((a, r) => a + (r.lecons || []).filter(l => l.lecon).length, 0);
+    const candidates = (E.candidates || []).map(c => {
+      const P = this.ctrlPhotosLire(c.shopId, c.date);
+      const ph = ((P && P.photos) || []).find(p => String(p.taskId) === String(c.taskId));
+      const k = c.shopId + '|' + c.taskId + '|' + c.date;
+      return { photo: ph ? ph.photo : null, attente: !P, shop: this.iaNomMagasin(c.shopId), rayon: nomT(c.tache), date: this.fD(c.date),
+        note: (c.nomFinal || nomN(c.noteFinale)), par: c.validePar || '', busy: busy[k] || '',
+        exemple: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'exemple'),
+        planogramme: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'planogramme') };
+    });
+    const rayons = (E.rayons || []).map(r => {
+      const a = r.accord || {};
+      const lec = (r.lecons || []);
+      return { cle: r.cle, nom: r.nom, consigne: r.consigne || '', defaut: r.criteresDefaut || '',
+        setConsigne: e => { const v = String(e.target.value).trim(); if (v !== (r.consigne || '')) {
+          this.rvEcrire(r.nom, { consigne: v }, v ? 'Consigne enregistrée — ' + r.nom : 'Consigne retirée — ' + r.nom).then(() => this.iaEntLire(true)); } },
+        accord: a.notees ? a.pct + ' % d’accord sur ' + a.notees + ' photo' + (a.notees > 1 ? 's' : '') : 'pas encore de note comparée',
+        accordCls: !a.notees ? '' : a.pct >= 80 ? 'ok' : a.pct >= 60 ? 'moy' : 'nc',
+        ecarts: a.notees && (a.tropSevere || a.tropIndulgente) ? 'IA plus sévère ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '',
+        // 1. La photo du planogramme (une par rayon), 2. les photos d'exemple (plusieurs, chacune de son magasin).
+        planogramme: r.planogramme || null,
+        planoFichier: this.iaPlanoFichier(r.nom),
+        planoBusy: !!(S.rvBusy || {})[r.nom],
+        planoRetirer: r.planogramme ? () => { if (window.confirm('Retirer la photo du planogramme « ' + r.nom + ' » ?')) {
+          this.rvEcrire(r.nom, { data: '' }, 'Photo du planogramme retirée — ' + r.nom).then(() => this.iaEntLire(true)); } } : null,
+        exemples: (r.exemples || []).map(m => ({ photo: m.photo, shop: this.iaNomMagasin(m.shopId), date: m.date ? this.fD(m.date) : '',
+          par: m.par || '', retirer: () => this.iaRetirerExemple(r.cle, r.nom, m) })),
+        lecons: lec.slice(0, 5).map(l => ({ date: this.fD(l.date), shop: this.iaNomMagasin(l.shopId), ia: nomN(l.niveau), vous: nomN(l.noteFinale),
+          raison: l.raison || '', retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })),
+        leconsPlus: Math.max(0, lec.length - 5),
+        // L'assistant d'entraînement sur ce rayon : le choisir et remonter au panneau (l'analyse se lance d'un clic, là-haut).
+        versAnalyse: () => { this.setState({ iaAnaSujet: r.cle, iaAnaErreur: '' });
+          setTimeout(() => { const el = document.querySelector('.ia-ana'); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 60); } };
+    });
+    common.iaEnt = { chargement: false, indispo: !!E.indispo, dispo: (this.D.iaStatut || {}).configure === true,
+      kpis: [
+        { k: 'Accord avec vos notes', v: A.notees ? A.pct + ' %' : '—', s: A.notees ? 'sur ' + A.notees + ' photos notées en ' + A.jours + ' jours' : 'mesuré dès vos premières notes en mode assisté' },
+        { k: 'Leçons retenues', v: String(nLecons), s: 'vos corrections, envoyées à l’IA (les ' + (E.leconsMax || 6) + ' dernières par rayon)' },
+        { k: 'Planogrammes · exemples', v: nPlanos + ' / ' + (E.rayons || []).length + ' · ' + nExemples, s: 'rayons avec leur photo du planogramme · photos d’exemple (' + (E.exemplesEnvoyes || 2) + ' envoyées avec chaque photo)' },
+        { k: 'Photos parfaites à trier', v: String(candidates.length), s: 'notées « ' + (E.nomNiveauModele || 'Exemplaire') + ' » ces 30 jours' }],
+      communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
+      ana: this.valsIaAnalyse(E),
+      versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
+  }
+  /**
+   * « Valider ce que l'IA a proposé » : chaque ligne cochée part au panel,
+   * une à une, avec la note et le commentaire tels que le consultant les a
+   * laissés ; une note changée emporte sa raison (la leçon). Une ligne
+   * refusée reste affichée avec son motif, les autres partent.
+   */
+  async iaRecapEnvoyer(lignes){
+    const R = this.state.iaRecap;
+    if (!R || R.envoi) { return; }
+    const sel = lignes.filter(l => l.inclus);
+    if (!sel.length) { this.notify('Aucune ligne cochée.'); return; }
+    if (sel.some(l => l.manqueComment)) { this.notify('Commentaire obligatoire sous le seuil — complétez les lignes signalées.'); return; }
+    this.setState(s => ({ iaRecap: Object.assign({}, s.iaRecap, { envoi: true, faits: 0, total: sel.length, erreurs: {} }) }));
+    let bons = 0, corriges = 0; const erreurs = {};
+    for (const l of sel) {
+      const r = await write(this.source, 'POST', '/pwa/tasks/review', { shopId: l.shopId, taskId: l.taskId, date: l.date, note: l.note,
+        comment: l.comment, checklistId: l.checklistId || null, completionId: l.completionId || null, raisonIa: l.change ? l.raison : '' });
+      if (r && r.ok !== false) {
+        bons++; if (l.change) { corriges++; }
+        this.ctrlPatchLigne({ shopId: l.shopId, taskId: l.taskId, date: l.date, note: l.note, comment: l.comment });
+        this.iaApresNote(l.shopId, l.taskId, l.date, l.note);
+      } else { erreurs[l.k] = (r && r.error) || 'note refusée'; }
+      this.setState(s => (s.iaRecap ? { iaRecap: Object.assign({}, s.iaRecap, { faits: bons + Object.keys(erreurs).length, erreurs: Object.assign({}, erreurs) }) } : {}));
+    }
+    const nErr = Object.keys(erreurs).length;
+    this.notify(bons + ' note' + (bons > 1 ? 's' : '') + ' envoyée' + (bons > 1 ? 's' : '') + (corriges ? ', dont ' + corriges + ' corrigée' + (corriges > 1 ? 's' : '') : '')
+      + (nErr ? ' — ' + nErr + ' refusée' + (nErr > 1 ? 's' : '') : ''));
+    this.setState(s => (nErr ? { iaRecap: Object.assign({}, s.iaRecap, { envoi: false }) } : { iaRecap: null }));
+    const date = sel[0].date;
+    readOne('/pwa/tasks?date=' + encodeURIComponent(date)).then(pt => { if (pt) { this.D.pwaTasks = pt; this.setState({}); } }).catch(() => {});
   }
   /* --- suivi des tâches ------------------------------------------------------------- */
   /**
@@ -14563,9 +15235,28 @@ class App {
           this.setState({ caNet: Object.assign({}, c1, { envoi: false, msg: r.ok ? { ok: true, txt: 'Envoyé à ' + r.a + ' : « ' + r.sujet + ' ».' } : { ok: false, txt: 'Pas envoyé : ' + (r.error || 'HTTP ' + r.status) } }) });
         });
       } };
+    // L'interrupteur général (14/11/2026, Sam : « inactive tous les rapports ») : suspendus, aucun rapport ne part de
+    // l'horloge ; chaque ligne garde sa case « actif », la reprise remet tout comme avant.
+    const susp = (rd && rd.suspension) || null;
     common.rapGen = {
       chargement: !rz || rz.chargement,
       cronUrl: (rd && rd.cronUrl) || '',
+      suspension: susp ? {
+        suspendu: !!susp.suspendu,
+        txt: susp.suspendu
+          ? 'Envois automatiques suspendus' + (susp.depuis ? ' depuis le ' + dateRun(susp.depuis) : '') + ' — aucun rapport ne part, ni aux magasins ni au réseau. Chaque rapport garde son réglage ; les envois à la main restent possibles.'
+          : 'Envois automatiques en marche : chaque rapport actif part à son heure.',
+        bouton: susp.suspendu ? 'Reprendre les envois' : 'Tout suspendre',
+        occupe: !!S.rapSuspOccupe,
+        basculer: () => {
+          if (this.state.rapSuspOccupe) { return; }
+          this.setState({ rapSuspOccupe: true });
+          this.api('POST', '/rapports/suspension', { suspendu: !susp.suspendu }).then(r => {
+            this.setState({ rapSuspOccupe: false });
+            this.notify(r && r.ok ? (susp.suspendu ? 'Envois repris' : 'Tous les rapports sont suspendus') : 'Pas enregistré : ' + ((r && r.error) || 'erreur'));
+            this.rapCharge(true);
+          });
+        } } : null,
       indispo: rz && !rz.chargement && !rd ? 'La lecture de /rapports a échoué — voir Diagnostic API.' : '',
       lignes: ((rd && rd.rapports) || []).map(r => {
         const defs = (rd && rd.blocs) || {}, levs = (rd && rd.leviers) || {};

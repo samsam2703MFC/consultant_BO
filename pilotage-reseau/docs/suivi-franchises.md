@@ -91,3 +91,10 @@ ouverte ; sans session, elle dit au franchisé de demander son lien personnel.
   mystère, langue d'un magasin, jeton, le SMS de la validation (texte des quatre langues, GSM, copie) (sans base).
 - Le parcours complet se rejoue sur une base locale : planifier, préparer, ordre du jour, visite sur tablette,
   brouillon, adapter, envoyer, correction du franchisé, validation, client mystère et ses suites, horloge.
+
+## Délais des points proposés à la visite = ceux du réseau (13/11/2026)
+
+- Client : « Règles du réseau » (la tablette proposait J+1 pour un P0 et J+3 pour un P1). `/visites/app` rend
+  `delaisPoints` {P0, P1, P2} lus dans les règles (`suRegles()['delais']` : p0 2 · p1 7 · p2 14, Suivi › Qui fait quoi) ;
+  la tablette (`visites.js`, `delaiPoint`) les pose comme échéance d'office d'un écart proposé et de « + Ajouter une
+  action », et changer la priorité d'un point déplace son échéance si elle était encore celle de l'ancienne priorité.

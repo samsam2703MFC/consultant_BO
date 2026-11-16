@@ -106,6 +106,10 @@ function ep_meta(): array
         // system §8.3) : jamais écrite en dur. config/config.php ('erpUrl'),
         // sinon COCKPIT_ERP_URL, sinon le réglage erpUrl ; absente = pas de lien.
         'erpUrl'           => (string) (Db::config()['erpUrl'] ?? '') ?: ((string) (getenv('COCKPIT_ERP_URL') ?: '') ?: (string) setting('erpUrl', '')),
+        // L'espace boutique du Marketing (/marketing/franchise/) : l'entrée « Calendrier des posts ↗ » du rail du
+        // dashboard franchisé (15/11/2026). config.php ('espaceBoutiqueUrl', écrit par bin/deploy.sh), sinon
+        // COCKPIT_ESPACE_BOUTIQUE_URL, sinon le réglage espaceBoutiqueUrl ; absente = pas d'entrée.
+        'espaceBoutiqueUrl' => (string) (Db::config()['espaceBoutiqueUrl'] ?? '') ?: ((string) (getenv('COCKPIT_ESPACE_BOUTIQUE_URL') ?: '') ?: (string) setting('espaceBoutiqueUrl', '')),
         // L'utilisateur, et — quand le compte API en est un — l'identifiant
         // consultant qui lui correspond : c'est lui qui dit « mes tâches ».
         'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => ''])
@@ -1948,13 +1952,18 @@ function ep_exploitation_equipe_heures(): array
     $cle = 'eqH' . $sid . ':' . $date;
     $c = setting($cle);
     // `v` 2 : les heures portent leurs articles ; `v` 3 : la liste des tickets à la minute. Un relevé plus ancien se refait.
-    if (is_array($c) && (int) ($c['v'] ?? 0) >= 3 && isset($c['p'], $c['q']) && (date('Y-m-d', (int) $c['q']) > $date || (int) $c['q'] > time() - 600)) {
+    // Un jour clos se garde — sauf s'il y reste un vendeur sans nom (« Employé 145 », 14/11/2026) : il se relit, dix minutes
+    // au plus tôt après le relevé, le temps que le panel connaisse la personne.
+    $sansNomC = is_array($c) && preg_grep('/^Employé \d+$/u', array_map('strval', (array) ($c['n'] ?? []))) !== [];
+    if (is_array($c) && (int) ($c['v'] ?? 0) >= 3 && isset($c['p'], $c['q']) && ((date('Y-m-d', (int) $c['q']) > $date && !$sansNomC) || (int) $c['q'] > time() - 600)) {
         return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $c['p'], 'sansNom' => $c['s'] ?? null, 'noms' => $c['n'] ?? [], 'tickets' => $c['t'] ?? [], 'aLire' => 0, 'lu' => date('H:i', (int) $c['q'])];
     }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'compte du panel non configuré']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'le panel n’a pas rendu les tickets du jour']; }
-    $noms = function_exists('venteEmployes') ? venteEmployes() : [];
+    // Un nom pour chaque vendeur des tickets : un compte inconnu du cockpit se relit au panel (venteEmployesConnus).
+    $ids = array_map(static fn ($t) => is_array($t) ? (int) ($t['id_employee'] ?? 0) : 0, analyseListe($liste));
+    $noms = function_exists('venteEmployesConnus') ? venteEmployesConnus($ids) : (function_exists('venteEmployes') ? venteEmployes() : []);
     $T = [];
     foreach (analyseListe($liste) as $t) {
         if (!is_array($t)) { continue; }
@@ -4682,6 +4691,8 @@ function ep_pwa_task_detail(): array
         // se discute sans savoir de quel service ni de quelle personne il
         // vient — et l'heure dit souvent à elle seule ce qui s'est passé.
         'faitLe' => null, 'faitPar' => null,
+        // L'heure STANDARD de la tâche (celle de sa checklist) : la ponctualité de la photo se juge contre elle.
+        'heure' => null,
         'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
         'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
         // Référence : la photo de la fiche technique du produit contrôlé, pour
@@ -4691,6 +4702,8 @@ function ep_pwa_task_detail(): array
         // TYPE du rayon, posée dans le cockpit (src/rayons_photos.php). Chemin
         // local, à part de photoRef que le rapport PDF et l'IA téléchargent.
         'rayon' => null,
+        // Les photos d'EXEMPLE du rayon, jugées parfaites par le consultant (src/ia_assistant.php), ce magasin d'abord.
+        'exemples' => [],
         // Repères posés sur la photo. Lus AVANT l'API : ils sont locaux, ils
         // doivent revenir même si le panel ne répond pas.
         'reperes' => annotationLire($shopId, $taskId, $date),
@@ -4711,6 +4724,7 @@ function ep_pwa_task_detail(): array
             $out['statut']       = $t['status'] ?? null;
             $out['faitLe']       = ($t['completed_at'] ?? null) !== null ? substr((string) $t['completed_at'], 0, 16) : null;
             $out['faitPar']      = trim((string) ($t['completed_by'] ?? '')) ?: null;
+            $out['heure']        = preg_match('/^\d{2}:\d{2}/', (string) ($t['execution_time'] ?? '')) ? substr((string) $t['execution_time'], 0, 5) : null;
             foreach (['product_id', 'id_product', 'productId'] as $pk) {
                 if (!empty($t[$pk]) && is_numeric($t[$pk])) { $out['produitId'] = (int) $t[$pk]; break; }
             }
@@ -4750,6 +4764,12 @@ function ep_pwa_task_detail(): array
     }
     if ($out['tache'] !== null && function_exists('rvRayonDeTache') && ($rv = rvRayonDeTache($out['tache'])) !== null) {
         $out['rayon'] = ['cle' => $rv['cle'], 'nom' => $rv['nom'], 'photo' => $rv['photo'], 'consigne' => $rv['consigne']];
+        // Les photos d'exemple du rayon (src/ia_assistant.php), celles de ce magasin d'abord : le volet les montre,
+        // la proposition de l'IA les reçoit après le planogramme.
+        foreach (function_exists('iaExemplesPour') ? iaExemplesPour((string) $rv['cle'], $shopId, 6) : [] as $ex) {
+            $out['exemples'][] = ['photo' => $ex['photo'], 'date' => $ex['source_jour'], 'taskId' => (string) $ex['source_task'],
+                'shopId' => (string) $ex['shop_id'], 'memeMagasin' => (int) $ex['shop_id'] === $shopId, 'par' => $ex['par']];
+        }
     }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;
@@ -8170,11 +8190,39 @@ function ep_ia_note(): array
     $sig = setting('signalement', []);
     $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : signalementDefaut()['niveaux'];
 
+    // L'heure de la photo contre l'heure standard de la checklist : calculée ici (src/ia_assistant.php), pas
+    // devinée par le modèle ; il la reçoit pour la dire au magasin quand la photo est en retard.
+    $ponct = function_exists('iaPonctualite') ? iaPonctualite($d['heure'] ?? null, $d['faitLe'] ?? null) : null;
+    $out['ponctualite'] = $ponct;
     $ctx = trim(($d['checklist'] ? 'checklist « ' . $d['checklist'] . ' »' : '')
         . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
-        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : ''));
+        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : '')
+        . ($ponct !== null ? ', ' . $ponct['phrase'] : ''), ', ');
+    // Ce que le réseau attend du rayon (consigne du back office, sinon critères par défaut), et sa photo type
+    // quand le produit n'a pas de fiche technique : l'IA juge par comparaison, comme le consultant.
+    $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
+    $regles = ['criteres' => function_exists('rvCriteresIa') ? rvCriteresIa($rv) : ''];
+    // Les références d'une photo de comptoir (src/ia_assistant.php) : la photo du PLANOGRAMME du rayon, puis ses
+    // photos d'EXEMPLE jugées parfaites par le consultant — celles de ce magasin d'abord.
+    $regles['refs'] = [];
+    if (empty($d['photoRef']) && $rv !== null) {
+        if (!empty($rv['photo'])) {
+            $regles['refs'][] = ['chemin' => __DIR__ . '/../public/' . $rv['photo'], 'lib' => 'Photo du PLANOGRAMME du rayon « ' . $rv['nom'] . ' » (la présentation attendue par le réseau) :'];
+        }
+        foreach ((array) ($d['exemples'] ?? []) as $i => $ex) {
+            if ($i >= (defined('IA_EXEMPLES_ENVOYES') ? IA_EXEMPLES_ENVOYES : 2)) { break; }
+            $regles['refs'][] = ['chemin' => __DIR__ . '/../public/' . $ex['photo'], 'lib' => 'Photo d’EXEMPLE jugée parfaite par le consultant ('
+                . (!empty($ex['memeMagasin']) ? 'ce magasin' : 'un autre magasin') . ', ' . ($ex['date'] ?? '?') . ') :'];
+        }
+    }
+    $out['references'] = count($regles['refs']);
+    // Les corrections du consultant sur ce rayon (src/ia_assistant.php) : l'IA s'aligne sur ses décisions.
+    $regles['exemples'] = function_exists('iaLeconsPour') ? iaLeconsPour($rv['cle'] ?? null, (string) ($d['tache'] ?? '')) : [];
+    $out['tache'] = $d['tache'] ?? null;
+    $out['rayon'] = $rv['cle'] ?? null;
+    $out['leconsVues'] = count($regles['exemples']);
     $r = Anthropic::noterPhoto((string) ($d['tache'] ?? ('Tâche #' . $taskId)),
-        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx);
+        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx, $regles);
 
     $out['modele'] = $r['modele'];
     // L'état du connecteur : une proposition rendue est un succès, un refus du

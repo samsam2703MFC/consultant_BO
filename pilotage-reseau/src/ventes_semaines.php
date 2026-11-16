@@ -202,6 +202,11 @@ function vsComptoirPeriodes(int $sid, array $periodes, array $lignes, array $lu)
  * Chaque mois porte ses jours vendus (`jours`) et ceux de son N-1 : l'écran
  * en tire la lecture « par jour ouvert », qui neutralise les fermetures. Le
  * mois en cours s'arrête à aujourd'hui, son N-1 au même jour.
+ *
+ * Chaque mois et son N-1 portent aussi `pro` {clients, ca, joursLus} (13/11/2026,
+ * la bascule « ventes : Tout | Comptoir | B2B ») : les tickets des clients pro à
+ * TVA valide de ses jours vendus (vsProJours). Le comptoir, c'est le reste ;
+ * l'écran ne le calcule que si `joursLus` couvre tous les jours vendus.
  */
 function ep_ventes_evolution(): array
 {
@@ -215,7 +220,20 @@ function ep_ventes_evolution(): array
         $n1Vu = false;
         foreach ($shops as $s) {
             $sid = (int) $s['id'];
-            $m = vsMagasin($sid, $periodes, vsLireMagasin($sid, $periodes));
+            $lu = vsLireMagasin($sid, $periodes);
+            $m = vsMagasin($sid, $periodes, $lu);
+            // Les jours vendus de chaque mois et de son N-1, dans la source qui les a comptés : le B2B se lit sur
+            // ces jours-là, une fois pour toute l'année (vsProJours).
+            $vendus = static fn (?string $src, string $d1, string $d2): array => $src === null ? []
+                : array_values(array_filter(array_map('strval', array_keys($lu[$src] ?? [])), static fn ($j) => $j >= $d1 && $j <= $d2));
+            $jours = []; $tous = [];
+            foreach ($m['periodes'] as $i => $p) {
+                if ($p['futur'] || $p['source'] === null) { continue; }
+                $P = $periodes[$i];
+                $jours[$i] = [$vendus($p['source'], $P['du'], $P['jusqua']), $p['n1'] === null ? [] : $vendus($p['n1']['source'], $P['du1'], $P['au1'])];
+                foreach (array_merge($jours[$i][0], $jours[$i][1]) as $j) { $tous[$j] = true; }
+            }
+            $pro = vsProJours($sid, array_keys($tous));
             foreach ($m['periodes'] as $i => $p) {
                 if ($p['futur'] || $p['source'] === null) { continue; }
                 $P = $periodes[$i];
@@ -224,8 +242,9 @@ function ep_ventes_evolution(): array
                 $par[$sid]['mois'][substr($P['du'], 0, 7)] = [
                     'mois' => substr($P['du'], 0, 7), 'an' => (int) substr($P['du'], 0, 4), 'mo' => (int) $P['iso'], 'lab' => $P['lab'],
                     'enCours' => $P['enCours'], 'joursMois' => (int) date('t', strtotime($P['du'])), 'joursServis' => $P['joursServis'],
-                    'clients' => $p['tickets'], 'ca' => $p['ca'], 'jours' => $p['jours'], 'source' => $p['source'],
-                    'n1' => $p['n1'] === null ? null : ['clients' => $p['n1']['tickets'], 'ca' => $p['n1']['ca'], 'jours' => $p['n1']['jours'], 'source' => $p['n1']['source']]];
+                    'clients' => $p['tickets'], 'ca' => $p['ca'], 'jours' => $p['jours'], 'source' => $p['source'], 'pro' => vsProSomme($pro, $jours[$i][0]),
+                    'n1' => $p['n1'] === null ? null : ['clients' => $p['n1']['tickets'], 'ca' => $p['n1']['ca'], 'jours' => $p['n1']['jours'], 'source' => $p['n1']['source'],
+                        'pro' => vsProSomme($pro, $jours[$i][1])]];
             }
             if ($m['totalN1'] !== null) { $n1Vu = true; }
         }
@@ -240,7 +259,140 @@ function ep_ventes_evolution(): array
     // Le plus ancien d'abord : l'histoire du réseau se lit dans l'ordre des ouvertures.
     usort($magasins, static fn ($a, $b) => strcmp($a['premier'], $b['premier']) ?: strcmp($a['nom'], $b['nom']));
     return ['aujourdhui' => $auj, 'du' => $magasins === [] ? null : min(array_column($magasins, 'premier')),
-        'magasins' => $magasins, 'source' => vsSourceTexte($sources, 'mois')];
+        'magasins' => $magasins, 'source' => vsSourceTexte($sources, 'mois'),
+        'sourcePro' => 'B2B : tickets des clients pro à TVA valide — relevé des tickets du panel depuis le ' . date('d/m/Y', strtotime(defined('SV_DEBUT') ? SV_DEBUT : $auj))
+            . ', copie de caisse avant (client marqué pro) ; comptoir = le reste'];
+}
+
+/* --- Le B2B de l'Évolution magasin (13/11/2026) ---------------------------------------------------------------------
+ * La bascule « ventes : Tout | Comptoir | B2B » de Résultat › Évolution magasin. Le B2B, ce sont les tickets des
+ * clients pro à TVA valide (vpTvaValides, la règle de tout le cockpit) ; le comptoir, le reste du total.
+ *
+ * Deux sources, jour par jour, dans cet ordre :
+ *  - le relevé des tickets du panel (`svP{shop}:{jour}`, clé `b`, vpLu) — celui du dashboard et d'Analyse réseau ;
+ *    il n'existe que depuis SV_DEBUT ; un jour du mois en cours qui n'est pas relevé se lit (vpJour, quelques listes) ;
+ *  - la copie de caisse (`transaction` ⨝ `client.is_b2b`, comme la prime B2B) pour tout l'historique d'avant. Un mois
+ *    clos que la copie couvre se grave brut, client par client (`vsPro{shop}:{AAAA-MM}`) : le filtre TVA s'applique à
+ *    chaque lecture, une fiche complétée plus tard fait revenir ses tickets au pro.
+ * Un jour qu'aucune des deux ne connaît n'est pas lu : il manque à `joursLus`, il ne compte pas pour zéro. */
+
+const VS_PRO_LISTES = 8;   // listes du panel lues au plus par magasin pour compléter le mois en cours
+
+/**
+ * Le B2B d'un magasin, jour par jour, sur ses jours vendus : [date => ['ca' => float, 'clients' => int]] pour chaque
+ * jour dont le pro est connu (zéro compris).
+ */
+function vsProJours(int $sid, array $jours): array
+{
+    $jours = array_values(array_unique(array_map('strval', $jours)));
+    if ($jours === []) { return []; }
+    sort($jours);
+    $auj = date('Y-m-d'); $moisC = substr($auj, 0, 7);
+    $deb = defined('SV_DEBUT') ? SV_DEBUT : '9999-12-31';
+    // 1. La copie de caisse, mois par mois : gravée pour un mois clos, relue sinon (une lecture pour les mois à lire).
+    $brut = []; $aLire = [];
+    foreach (array_unique(array_map(static fn ($j) => substr($j, 0, 7), $jours)) as $ym) {
+        $c = $ym < $moisC ? setting('vsPro' . $sid . ':' . $ym) : null;
+        if (is_array($c) && isset($c['j']) && is_array($c['j'])) { foreach ($c['j'] as $j => $v) { $brut[(string) $j] = (array) $v; } continue; }
+        $aLire[] = $ym;
+    }
+    if ($aLire !== []) {
+        sort($aLire);
+        $lu = vsProCopie($sid, $aLire[0] . '-01', date('Y-m-t', strtotime(end($aLire) . '-01')));
+        if ($lu !== null) {
+            $copieAu = vsCopieAu();
+            foreach ($aLire as $ym) {
+                $mois = array_filter($lu, static fn ($j) => substr((string) $j, 0, 7) === $ym, ARRAY_FILTER_USE_KEY);
+                foreach ($mois as $j => $v) { $brut[(string) $j] = $v; }
+                // Gravé seulement si la copie va au-delà du mois : un mois que la copie n'a pas fini reste à relire.
+                if ($ym < $moisC && $copieAu !== null && $copieAu > date('Y-m-t', strtotime($ym . '-01')) && function_exists('svGrave')) {
+                    try { svGrave('vsPro' . $sid . ':' . $ym, ['j' => $mois]); } catch (Throwable $e) { /* relu la prochaine fois */ }
+                }
+            }
+        }
+    }
+    // 2. Le filtre TVA : un client pro sans TVA valide reste au comptoir ; une fiche illisible garde l'avis du panel.
+    $cles = [];
+    foreach ($brut as $v) { foreach ($v as $k => $x) { $cles[(string) $k] = true; } }
+    $ok = $cles !== [] && function_exists('vpTvaValides') ? vpTvaValides($sid, array_keys($cles)) : [];
+    $out = [];
+    foreach ($jours as $j) {
+        if (!isset($brut[$j])) { continue; }
+        $ca = 0.0; $n = 0;
+        foreach ($brut[$j] as $k => $x) {
+            if (($ok[(string) $k] ?? null) === false) { continue; }
+            $ca += (float) ($x[0] ?? 0); $n += (int) ($x[1] ?? 0);
+        }
+        $out[$j] = ['ca' => round($ca, 2), 'clients' => $n];
+    }
+    // 3. Le relevé du panel prime là où il existe ; un jour du mois en cours sans relevé valable se lit.
+    if (function_exists('vpLu')) {
+        $appels = 0;
+        foreach ($jours as $j) {
+            if ($j < $deb) { continue; }
+            $b = vpLu($sid, $j);
+            if ($b === null && substr($j, 0, 7) === $moisC && function_exists('vpJour')) { $b = vpJour($sid, $j, true, $appels, VS_PRO_LISTES); }
+            if ($b === null || !is_array($b['t'] ?? null)) { continue; }
+            $ca = 0.0;
+            foreach ($b['t'] as $t) { $ca += (float) ($t[2] ?? 0); }   // le montant de caisse : le comptoir en est le reste
+            $out[$j] = ['ca' => round($ca, 2), 'clients' => count($b['t'])];
+        }
+    }
+    ksort($out);
+    return $out;
+}
+
+/** Le B2B d'une liste de jours vendus : la somme des jours connus, et combien le sont. */
+function vsProSomme(array $pro, array $jours): array
+{
+    $s = ['clients' => 0, 'ca' => 0.0, 'joursLus' => 0];
+    foreach ($jours as $j) {
+        $x = $pro[(string) $j] ?? null;
+        if ($x === null) { continue; }
+        $s['clients'] += (int) $x['clients']; $s['ca'] += (float) $x['ca']; $s['joursLus']++;
+    }
+    $s['ca'] = round($s['ca'], 2);
+    return $s;
+}
+
+/**
+ * La copie de caisse d'un magasin entre deux dates, jour par jour : [date => [clé de compte => [CA, tickets]]] — les
+ * clients marqués pro seulement ; un jour vendu sans ticket pro a sa ligne, vide (la copie le connaît : zéro, pas
+ * « pas lu »). Une lecture par an civil touché, comme vsCaisseJours. Null si la base ne répond pas.
+ */
+function vsProCopie(int $sid, string $d1, string $d2): ?array
+{
+    $out = []; $lu = false;
+    for ($y = (int) substr($d1, 0, 4); $y <= (int) substr($d2, 0, 4); $y++) {
+        $a = max($d1, $y . '-01-01'); $b = min($d2, $y . '-12-31');
+        try {
+            $rows = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */ DATE(t.insert_timestamp) j, IF(k.is_b2b = 1, t.id_client, 0) cli,
+                                     SUM(t.total_gross_amount_after_discount) ca, COUNT(DISTINCT t.ticket_key) n
+                                FROM `transaction` t LEFT JOIN client k ON k.id = t.id_client
+                               WHERE t.id_shop = ? AND t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                               GROUP BY j, cli", [$sid, $a . ' 00:00:00', date('Y-m-d', strtotime($b . ' +1 day')) . ' 00:00:00']);
+        } catch (Throwable $e) { continue; }
+        $lu = true;
+        foreach ($rows as $r) {
+            $j = substr((string) ($r['j'] ?? ''), 0, 10);
+            if ($j === '') { continue; }
+            $out[$j] = $out[$j] ?? [];
+            $cli = (int) ($r['cli'] ?? 0);
+            if ($cli > 0 && (int) ($r['n'] ?? 0) > 0) { $out[$j]['c' . $cli] = [round((float) ($r['ca'] ?? 0), 2), (int) $r['n']]; }
+        }
+    }
+    return $lu ? $out : null;
+}
+
+/** Le dernier jour de la copie de caisse (lu une fois par requête, `$relire` le relit) ; null si la base ne répond pas. */
+function vsCopieAu(bool $relire = false): ?string
+{
+    static $au = false;
+    if ($au !== false && !$relire) { return $au; }
+    try { $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(insert_timestamp) le FROM `transaction`'); }
+    catch (Throwable $e) { return $au = null; }
+    $le = $r === null ? '' : (string) ($r['le'] ?? '');
+    return $au = ($le === '' ? null : substr($le, 0, 10));
 }
 
 function vsParams(): array

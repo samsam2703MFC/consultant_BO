@@ -850,6 +850,8 @@ function ep_visites_app(): array
         'boutiques' => $e['boutiques'], 'consultants' => array_map(fn ($c) => $c + ['profil' => function_exists('vcProfilDe') ? vcProfilDe($c['id']) : '', 'profilNom' => function_exists('vcProfilDe') ? vcProfilNom(vcProfilDe($c['id'])) : ''], viConsultants()),
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $e['plans'],
         'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'photosQuestions' => viPhotos(), 'charte' => viCharte(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
+        // Les délais de correction des points (13/11/2026) : ceux des règles du réseau (Suivi › Qui fait quoi), proposés par la tablette.
+        'delaisPoints' => (static function (): array { $d = function_exists('suRegles') ? (suRegles()['delais'] ?? []) : []; return ['P0' => (int) ($d['p0'] ?? 2), 'P1' => (int) ($d['p1'] ?? 7), 'P2' => (int) ($d['p2'] ?? 14)]; })(),
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
         // Les repères sur photo (05/11/2026) : le barème de gravité du Contrôle des tâches (réglage « signalement »), ses couleurs.
         'reperesNiveaux' => viReperesNiveaux(),
@@ -1626,6 +1628,8 @@ function viHorloge(bool $force = false): array
     }
     // Le suivi des franchisés : ordre du jour des visites annoncées, rapports en retard, relances.
     if (function_exists('suHorloge')) { try { suHorloge($fait); } catch (Throwable $e) { $fait['suiviErreur'] = $e->getMessage(); } }
+    // L'audit des fournisseurs : relances des franchisés qui n'ont pas répondu, clôture à la date dite (src/audits.php).
+    if (function_exists('auHorloge')) { try { auHorloge($fait); } catch (Throwable $e) { $fait['auditsErreur'] = $e->getMessage(); } }
     $etat['dernier'] = date('Y-m-d H:i:s');
     viSettingSet('visitesCron', $etat);
     return ['ok' => true, 'fait' => $fait, 'etat' => $etat];
