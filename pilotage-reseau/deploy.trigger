@@ -72,3 +72,4 @@
 2026-11-16T18:54:40Z [319] SMS : jeton enregistré, smsapi.com et smsapi.pl
 2026-11-16T18:56:31Z Dashboard Semaine : sans « Ce qui rapporte »
 2026-11-16T18:57:45Z [320] SMS : expéditeur refusé → expéditeur par défaut
+2026-11-16T19:04:47Z Barre de défilement ruby 3 px (cockpit + menu ERP)
