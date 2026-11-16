@@ -1,0 +1,93 @@
+{
+ "source": "cockpit, GET /exploitation/pro/detail?shop=5&date=… du 01/11 au 14/11/2026 (le 14 lu en cours de journée) : les tickets de GUEST (SA Global University for Environment and Safety Training), montant de caisse",
+ "du": "2026-11-01",
+ "au": "2026-11-14",
+ "jours": [
+  {
+   "date": "2026-11-01",
+   "lu": true,
+   "ca": 0,
+   "tickets": 0
+  },
+  {
+   "date": "2026-11-02",
+   "lu": true,
+   "ca": 293.67,
+   "tickets": 1
+  },
+  {
+   "date": "2026-11-03",
+   "lu": true,
+   "ca": 852.7,
+   "tickets": 2
+  },
+  {
+   "date": "2026-11-04",
+   "lu": true,
+   "ca": 718.7,
+   "tickets": 1
+  },
+  {
+   "date": "2026-11-05",
+   "lu": true,
+   "ca": 1235.75,
+   "tickets": 1
+  },
+  {
+   "date": "2026-11-06",
+   "lu": true,
+   "ca": 250.1,
+   "tickets": 1
+  },
+  {
+   "date": "2026-11-07",
+   "lu": true,
+   "ca": 0,
+   "tickets": 0
+  },
+  {
+   "date": "2026-11-08",
+   "lu": true,
+   "ca": 0,
+   "tickets": 0
+  },
+  {
+   "date": "2026-11-09",
+   "lu": true,
+   "ca": 151.45,
+   "tickets": 2
+  },
+  {
+   "date": "2026-11-10",
+   "lu": true,
+   "ca": 165.65,
+   "tickets": 1
+  },
+  {
+   "date": "2026-11-11",
+   "lu": true,
+   "ca": 0,
+   "tickets": 0
+  },
+  {
+   "date": "2026-11-12",
+   "lu": true,
+   "ca": 53.65,
+   "tickets": 1
+  },
+  {
+   "date": "2026-11-13",
+   "lu": true,
+   "ca": 0,
+   "tickets": 0
+  },
+  {
+   "date": "2026-11-14",
+   "lu": true,
+   "ca": 0,
+   "tickets": 0
+  }
+ ],
+ "ca": 3721.67,
+ "tickets": 10
+}

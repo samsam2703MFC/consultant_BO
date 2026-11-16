@@ -1,0 +1,202 @@
+{
+ "shop": "5",
+ "vue": "mois",
+ "n": 6,
+ "du": "2026-05-01",
+ "au": "2026-10-31",
+ "aujourdhui": "2026-11-14",
+ "semaines": [
+  {
+   "lab": "mai",
+   "iso": 5,
+   "du": "2026-05-01",
+   "au": "2026-05-31",
+   "enCours": false,
+   "futur": false,
+   "joursServis": 31,
+   "ca": 50096.35,
+   "tickets": 4186,
+   "jours": 31,
+   "source": "panel",
+   "panier": 11.97,
+   "n1": {
+    "du": "2025-05-01",
+    "ca": 53979.29,
+    "tickets": 4668,
+    "jours": 29,
+    "source": "panel",
+    "articles": 17746
+   },
+   "n1Mois": {
+    "ca": 53979.29,
+    "tickets": 4668,
+    "jours": 29,
+    "source": "panel",
+    "articles": 17746
+   },
+   "articles": 16649
+  },
+  {
+   "lab": "juin",
+   "iso": 6,
+   "du": "2026-06-01",
+   "au": "2026-06-30",
+   "enCours": false,
+   "futur": false,
+   "joursServis": 30,
+   "ca": 56811.15,
+   "tickets": 4453,
+   "jours": 30,
+   "source": "panel",
+   "panier": 12.76,
+   "n1": {
+    "du": "2025-06-01",
+    "ca": 55060.7,
+    "tickets": 4686,
+    "jours": 30,
+    "source": "panel",
+    "articles": 18027
+   },
+   "n1Mois": {
+    "ca": 55060.7,
+    "tickets": 4686,
+    "jours": 30,
+    "source": "panel",
+    "articles": 18027
+   },
+   "articles": 17320
+  },
+  {
+   "lab": "juil.",
+   "iso": 7,
+   "du": "2026-07-01",
+   "au": "2026-07-31",
+   "enCours": false,
+   "futur": false,
+   "joursServis": 31,
+   "ca": 45161.1,
+   "tickets": 4189,
+   "jours": 31,
+   "source": "panel",
+   "panier": 10.78,
+   "n1": {
+    "du": "2025-07-01",
+    "ca": 49577.5,
+    "tickets": 4269,
+    "jours": 27,
+    "source": "panel",
+    "articles": 16712
+   },
+   "n1Mois": {
+    "ca": 49577.5,
+    "tickets": 4269,
+    "jours": 27,
+    "source": "panel",
+    "articles": 16712
+   },
+   "articles": 14746
+  },
+  {
+   "lab": "août",
+   "iso": 8,
+   "du": "2026-08-01",
+   "au": "2026-08-31",
+   "enCours": false,
+   "futur": false,
+   "joursServis": 31,
+   "ca": 47874.4,
+   "tickets": 4333,
+   "jours": 31,
+   "source": "panel",
+   "panier": 11.05,
+   "n1": {
+    "du": "2025-08-01",
+    "ca": 57613.1,
+    "tickets": 4815,
+    "jours": 31,
+    "source": "panel",
+    "articles": 19748
+   },
+   "n1Mois": {
+    "ca": 57613.1,
+    "tickets": 4815,
+    "jours": 31,
+    "source": "panel",
+    "articles": 19748
+   },
+   "articles": 15700
+  },
+  {
+   "lab": "sept.",
+   "iso": 9,
+   "du": "2026-09-01",
+   "au": "2026-09-30",
+   "enCours": false,
+   "futur": false,
+   "joursServis": 30,
+   "ca": 55747.1,
+   "tickets": 4394,
+   "jours": 30,
+   "source": "panel",
+   "panier": 12.69,
+   "n1": {
+    "du": "2025-09-01",
+    "ca": 48262.3,
+    "tickets": 4298,
+    "jours": 30,
+    "source": "panel",
+    "articles": 16304
+   },
+   "n1Mois": {
+    "ca": 48262.3,
+    "tickets": 4298,
+    "jours": 30,
+    "source": "panel",
+    "articles": 16304
+   },
+   "articles": 15941
+  },
+  {
+   "lab": "oct.",
+   "iso": 10,
+   "du": "2026-10-01",
+   "au": "2026-10-31",
+   "enCours": false,
+   "futur": false,
+   "joursServis": 31,
+   "ca": 57503.65,
+   "tickets": 4442,
+   "jours": 31,
+   "source": "panel",
+   "panier": 12.95,
+   "n1": {
+    "du": "2025-10-01",
+    "ca": 51098,
+    "tickets": 4590,
+    "jours": 31,
+    "source": "panel",
+    "articles": 17198
+   },
+   "n1Mois": {
+    "ca": 51098,
+    "tickets": 4590,
+    "jours": 31,
+    "source": "panel",
+    "articles": 17198
+   },
+   "articles": 16957
+  }
+ ],
+ "total": {
+  "ca": 313193.75,
+  "tickets": 25997,
+  "jours": 184
+ },
+ "totalN1": {
+  "ca": 315590.89,
+  "tickets": 27326,
+  "jours": 178
+ },
+ "n1Motif": null,
+ "source": "panel (margin-heatmap, par jour) · N-1 = même mois un an plus tôt, arrêté au même jour servi"
+}

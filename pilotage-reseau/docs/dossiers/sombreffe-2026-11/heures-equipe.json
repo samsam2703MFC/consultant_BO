@@ -1,0 +1,267 @@
+{
+ "source": "cockpit, GET /exploitation/jour?date=… jour par jour (Sombreffe) : heures du planning du panel, personnel du P&L du jour, CA ; les totaux seuls, sans les noms ni les taux de chacun",
+ "shop": "5",
+ "jours": [
+  {
+   "date": "2026-10-16",
+   "heures": 21,
+   "heuresFranchise": 0,
+   "personnel": 517.25,
+   "personnelSource": "mesure",
+   "ca": 1263.5,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-17",
+   "heures": 20,
+   "heuresFranchise": 0,
+   "personnel": 195.5,
+   "personnelSource": "mesure",
+   "ca": 2565.2,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-18",
+   "heures": 20,
+   "heuresFranchise": 0,
+   "personnel": 195.5,
+   "personnelSource": "mesure",
+   "ca": 2043.2,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-19",
+   "heures": 19,
+   "heuresFranchise": 0,
+   "personnel": 470.75,
+   "personnelSource": "mesure",
+   "ca": 1657.4,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-20",
+   "heures": 16.5,
+   "heuresFranchise": 0,
+   "personnel": 268.25,
+   "personnelSource": "mesure",
+   "ca": 1776.13,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-21",
+   "heures": 18.5,
+   "heuresFranchise": 0,
+   "personnel": 436,
+   "personnelSource": "mesure",
+   "ca": 1760.5,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-22",
+   "heures": 16,
+   "heuresFranchise": 0,
+   "personnel": 410.75,
+   "personnelSource": "mesure",
+   "ca": 1357.4,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-23",
+   "heures": 16,
+   "heuresFranchise": 0,
+   "personnel": 185.5,
+   "personnelSource": "mesure",
+   "ca": 1477.32,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-24",
+   "heures": 24,
+   "heuresFranchise": 0,
+   "personnel": 483,
+   "personnelSource": "mesure",
+   "ca": 1835.1,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-25",
+   "heures": 25,
+   "heuresFranchise": 0,
+   "personnel": 510,
+   "personnelSource": "mesure",
+   "ca": 1905.1,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-26",
+   "heures": 19,
+   "heuresFranchise": 0,
+   "personnel": 316.5,
+   "personnelSource": "mesure",
+   "ca": 1329.94,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-27",
+   "heures": 18.5,
+   "heuresFranchise": 0,
+   "personnel": 326,
+   "personnelSource": "mesure",
+   "ca": 1351.25,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-28",
+   "heures": 18,
+   "heuresFranchise": 0,
+   "personnel": 213.75,
+   "personnelSource": "mesure",
+   "ca": 1136.55,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-29",
+   "heures": 19,
+   "heuresFranchise": 0,
+   "personnel": 464.75,
+   "personnelSource": "mesure",
+   "ca": 1457.5,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-30",
+   "heures": 19,
+   "heuresFranchise": 0,
+   "personnel": 470.75,
+   "personnelSource": "mesure",
+   "ca": 1612.66,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-10-31",
+   "heures": 20,
+   "heuresFranchise": 0,
+   "personnel": 195.5,
+   "personnelSource": "mesure",
+   "ca": 2226.35,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-01",
+   "heures": 20,
+   "heuresFranchise": 0,
+   "personnel": 425,
+   "personnelSource": "mesure",
+   "ca": 1940.1,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-02",
+   "heures": 20.5,
+   "heuresFranchise": 0,
+   "personnel": 500.25,
+   "personnelSource": "mesure",
+   "ca": 1653.77,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-03",
+   "heures": 21,
+   "heuresFranchise": 0,
+   "personnel": 513.75,
+   "personnelSource": "mesure",
+   "ca": 2517.8,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-04",
+   "heures": 23.5,
+   "heuresFranchise": 0,
+   "personnel": 483,
+   "personnelSource": "mesure",
+   "ca": 2292.7,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-05",
+   "heures": 21.5,
+   "heuresFranchise": 0,
+   "personnel": 325.25,
+   "personnelSource": "mesure",
+   "ca": 2490.55,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-06",
+   "heures": 20.5,
+   "heuresFranchise": 0,
+   "personnel": 504.5,
+   "personnelSource": "mesure",
+   "ca": 1925.4,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-07",
+   "heures": 25.5,
+   "heuresFranchise": 0,
+   "personnel": 518.5,
+   "personnelSource": "mesure",
+   "ca": 2976.4,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-08",
+   "heures": 25.5,
+   "heuresFranchise": 0,
+   "personnel": 289,
+   "personnelSource": "mesure",
+   "ca": 2939,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-09",
+   "heures": 23.5,
+   "heuresFranchise": 0,
+   "personnel": 483.75,
+   "personnelSource": "mesure",
+   "ca": 1779.55,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-10",
+   "heures": 24,
+   "heuresFranchise": 0,
+   "personnel": 483.75,
+   "personnelSource": "mesure",
+   "ca": 1902.35,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-11",
+   "heures": 22,
+   "heuresFranchise": 0,
+   "personnel": 353.5,
+   "personnelSource": "mesure",
+   "ca": 1401.2,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-12",
+   "heures": 23.5,
+   "heuresFranchise": 0,
+   "personnel": 483.75,
+   "personnelSource": "mesure",
+   "ca": 1619.95,
+   "planningSource": "panel"
+  },
+  {
+   "date": "2026-11-13",
+   "heures": 23,
+   "heuresFranchise": 0,
+   "personnel": 558,
+   "personnelSource": "mesure",
+   "ca": 1521.3,
+   "planningSource": "panel"
+  }
+ ]
+}

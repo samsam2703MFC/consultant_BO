@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sombreffe, comptoir et B2B</title>
+<style>
+/* Design system L'Atelier By (docs/DESIGN_SYSTEM.md) : papier, blocs blancs bordés, un seul bordeaux, pas de gras
+   hors valeurs de KPI, rectangles aux coins arrondis. Mise en page : une colonne de lecture, du résumé au détail. */
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Medium.otf') format('opentype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: swap; }
+:root {
+  --ink: #1c1a17; --muted-2: #5c5852; --muted: #7a736a; --faint: #B8B2A8;
+  --paper: #faf7f2; --table-head: #FBF9F5; --total-line: #F8F4EE; --chip: #EDE7DE; --line: #e6e0d8;
+  --row-line: rgba(34, 34, 34, 0.06);
+  --accent: #8D1D2C; --b2b: #1f5f8b;
+  --green: #3f7a52; --stop: #A32014; --prize-soft: #F6E7CE; --prize-ink: #7A5207;
+  --font: 'Gotham', Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+body { margin: 0; background: var(--paper); }
+.rp { font-family: var(--font); font-weight: 400; color: var(--ink); font-size: 13px; line-height: 1.5;
+  max-width: 1080px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 48px; display: grid; gap: 18px; }
+.rp h1, .rp h2, .rp h3, .rp th, .rp b, .rp strong { font-weight: 400; }
+.rp-kicker { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.rp-titre { font-size: 26px; letter-spacing: -.01em; margin: 4px 0 2px; text-wrap: balance; }
+.rp-sous { font-size: 12.5px; color: var(--muted); }
+.rp-alerte { background: var(--prize-soft); color: var(--prize-ink); border-radius: 6px; padding: 12px 16px;
+  font-size: 13px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.rp-alerte .rp-alerte-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+.rp-carte { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.rp-h2 { font-size: .95rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.rp-h3 { font-size: 15px; margin: 0; }
+.rp-p { margin: 0; max-width: 72ch; color: var(--ink); }
+.rp-aide { font-size: 12px; color: var(--muted); margin: 0; max-width: 90ch; }
+.rp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.rp-kpi { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: #fff; display: grid; gap: 4px; align-content: start; }
+.rp-kpi-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.rp-kpi-v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.rp-kpi-s { font-size: 11.5px; color: var(--muted); }
+.rp-kpi.good .rp-kpi-v { color: var(--green); }
+.rp-kpi.bad .rp-kpi-v { color: var(--stop); }
+.rp-points { margin: 0; padding-left: 18px; display: grid; gap: 8px; max-width: 80ch; }
+.rp-faits { font-size: 12.5px; color: var(--muted-2); }
+.rp-tete { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.rp-tete .rp-h3 { font-size: 18px; }
+.rp-onglets { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); align-items: center; }
+.rp-onglet { border: 1px solid rgba(34, 34, 34, .14); border-radius: 6px; padding: 2px 8px; color: var(--muted-2); }
+.rp-onglet.on { border-color: var(--accent); background: rgba(141, 29, 44, .05); color: var(--accent); }
+.rp-graphe { position: relative; min-width: 0; }
+.rp-graphe svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rp-bulle { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--line); border-radius: 6px;
+  padding: 8px 10px; font-size: 12px; line-height: 1.45; color: var(--ink); min-width: 160px; display: none; z-index: 2;
+  font-variant-numeric: tabular-nums; }
+.rp-bulle .t { color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.rp-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 11.5px; color: var(--muted); align-items: center; }
+.rp-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-sw { display: inline-block; width: 18px; height: 0; border-top: 2.6px solid var(--accent); }
+.rp-sw.n1 { border-top: 2px dashed var(--faint); }
+.rp-sw.aire { width: 14px; height: 10px; border: 0; border-radius: 2px; background: linear-gradient(90deg, rgba(63,122,82,.28) 50%, rgba(163,32,20,.22) 50%); }
+.rp-table-zone { overflow-x: auto; }
+.rp-table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.rp-table th { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: left;
+  background: var(--table-head); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.rp-table td { padding: 7px 10px; border-bottom: 1px solid var(--row-line); white-space: nowrap; }
+.rp-table .num { text-align: right; }
+.rp-table tfoot td { background: var(--total-line); border-bottom: 0; }
+.rp-table .dim { color: var(--faint); }
+.up { color: var(--green); } .down { color: var(--stop); }
+.rp-deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.rp-part { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.rp-barre { position: relative; display: flex; gap: 2px; height: 26px; border-radius: 4px; overflow: visible; }
+.rp-barre .seg { height: 100%; border-radius: 4px; }
+.rp-barre .plafond { position: absolute; top: -6px; bottom: -6px; border-left: 1.5px dashed var(--ink); }
+.rp-barre .plafond span { position: absolute; top: -18px; left: 4px; font-size: 11px; color: var(--muted-2); white-space: nowrap; }
+.rp-chiffres { display: flex; gap: 8px 24px; flex-wrap: wrap; font-size: 12.5px; }
+.rp-chiffres span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-point { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.rp-ouvert { background: var(--prize-soft); color: var(--prize-ink); border-radius: 6px; padding: 12px 16px; display: grid; gap: 6px; }
+.rp-ouvert .rp-alerte-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+.rp-pistes { margin: 0; padding-left: 20px; display: grid; gap: 10px; max-width: 82ch; }
+.rp-pistes li::marker { color: var(--muted); }
+.rp-sources { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 100ch; }
+.rp-pied { font-size: 11.5px; color: var(--muted); }
+.rp-renvoi { font-style: normal; color: var(--muted-2); }
+.rp [hidden] { display: none !important; }
+.rp-serre td, .rp-serre th { padding-left: 6px; padding-right: 6px; }
+/* La part B2B d'un trimestre : une barre fine, à l'échelle du plafond B2B (30 %), le plafond en trait. */
+.rp-jauge { position: relative; height: 8px; min-width: 120px; background: var(--chip); border-radius: 2px; }
+.rp-jauge i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--b2b); border-radius: 2px; }
+/* Les quatre parties : un grand numéro, le titre, une ligne qui dit ce qu'on y trouve. */
+.rp-partie { display: flex; gap: 16px; align-items: baseline; padding: 18px 0 2px; border-top: 1px solid var(--line); }
+.rp-partie-n { font-size: 34px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rp-partie-titre { font-size: 22px; letter-spacing: -.01em; margin: 0 0 2px; }
+/* Le mot d'ouverture : la voix de celui qui signe le rapport, en grand, sans encadré ni gras. */
+.rp-ouverture { padding: 6px 0 4px; }
+.rp-note { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink); max-width: 62ch; }
+.rp-ouverture p { margin: 0; font-size: 18px; line-height: 1.5; letter-spacing: -.005em; color: var(--ink); max-width: 62ch; text-wrap: pretty; }
+.rp-annexes { padding-top: 8px; }
+.rp-chaleur { border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
+.rp-chaleur th { background: none; border-bottom: 0; padding: 4px 4px; text-align: center; }
+.rp-chaleur th.jour, .rp-chaleur td.jour { text-align: left; padding-right: 10px; }
+.rp-chaleur td { border-bottom: 0; padding: 0; }
+.rp-chaleur td.c { min-width: 42px; height: 30px; text-align: center; border-radius: 4px; font-size: 12px; cursor: default; }
+.rp-chaleur td.vide { color: var(--faint); text-align: center; }
+.rp-chaleur tr.moy td.jour { color: var(--muted-2); }
+.rp-chaleur tr.moy td.c { outline: 1px solid var(--line); outline-offset: -1px; }
+.rp-chaleur tfoot td { background: none; color: var(--muted); font-size: 11.5px; text-align: center; padding-top: 6px; }
+.rp-chaleur tfoot td.jour { text-align: left; }
+.rp-ramp { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #F8EEEF, #8D1D2C); }
+.rp-table tr.moi td { background: var(--total-line); }
+/* Une page par étape (13/11/2026, Sam : « le moins de texte possible, seulement des puces », « 1 page par étape ») :
+   quatre pages, une par étape, puis les annexes en tableaux ; les paragraphes deviennent des puces (fin du script). */
+.rp-aide, .rp-renvoi, .rp-partie .rp-sous, #evolution-legende span:nth-child(n+4), #tc-niveaux, #ev-comptoir-note, #ev-b2b-note { display: none !important; }
+.rp-page { display: grid; gap: 10px; min-width: 0; }
+.rp-points { gap: 4px; }
+.rp-chaleur td.c { height: 17px; font-size: 10.5px; }
+#page-1 #pe-kpis { display: none !important; }
+.rp-sources { display: block; columns: 2; column-gap: 28px; max-width: none; }
+/* Les trois axes (13/11/2026) : le trafic × le panier, le résultat de chaque case, la part du personnel. */
+.rp-grille { table-layout: fixed; border-collapse: separate; border-spacing: 4px; }
+.rp-grille th, .rp-grille td { text-align: center; vertical-align: middle; white-space: normal; border: 0; }
+.rp-grille thead th { background: var(--table-head); border-radius: 6px; padding: 8px 4px; font-size: 11.5px; }
+.rp-grille tbody th { background: var(--table-head); border-radius: 6px; padding: 8px 6px; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+.rp-grille .sous { display: block; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.rp-grille td.axe { padding: 30px 6px; border-radius: 6px; }
+.rp-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rp-plan > li { display: grid; grid-template-columns: 36px 1fr; align-items: baseline; break-inside: avoid; }
+.rp-plan .n { font-size: 26px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rp-plan .t { font-size: 16px; color: var(--ink); }
+.rp-plan .fort { color: var(--accent); }
+#b2b-cadre { display: grid; gap: 4px; margin-top: 8px; }
+#b2b-cadre .rp-points { columns: 1 !important; display: grid; gap: 2px; color: var(--prize-ink); }
+.rp-plan .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.rp-plan .h { font-size: 14.5px; color: var(--accent); margin-top: 3px; }
+@media print { .rp-plan { gap: 6px; } .rp-plan .q { margin-top: 2px; gap: 0; } .rp-plan .h { margin-top: 1px; } }   /* l’étape 4 sur sa page */
+.rp-plan .q { margin: 4px 0 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
+.rp-vignette { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; background: #fff; padding: 12px 16px; break-inside: avoid; }
+.rp-schema { margin: 0; break-inside: avoid; }
+#fin-schema svg { max-width: 820px; margin: 0 auto; }
+#fin-table td.num, #fin-table th.num { width: 20%; }
+#fin-table tr.ens td { font-size: 14px; }
+.rp-schema svg { display: block; width: 100%; max-width: 760px; height: auto; }
+.rp-vignette-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+.rp-vignette-cols { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; }
+.rp-vignette-h { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.rp-vignette-liste { margin: 0; padding-left: 20px; display: grid; gap: 3px; font-size: 14px; }
+.rp-vignette-sans .rp-vignette-liste { color: var(--stop); padding-left: 18px; }
+@media print { #gestion-intro, #marque-texte { columns: 1; } }   /* une puce seule tient sur une ligne */
+#repere { margin-top: 18px; }
+#repere .rp-kpis { margin: 8px 0 10px; }
+.repere-graphes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 8px; break-inside: avoid; }
+.repere-g-titre { font-size: 12px; color: var(--muted-2); margin-bottom: 2px; }
+.repere-note { font-size: 11.5px; color: var(--muted); margin: 0; }
+/* le repère de Halle retiré (14/11/2026) : la grille reprend toute sa hauteur à l’impression */
+.axe-v { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.axe-s { font-size: 11px; color: var(--muted); }
+.axe-g { font-size: 14px; color: var(--green); margin-top: 6px; }
+.axe-p { font-size: 11.5px; color: var(--muted-2); margin-top: 2px; }
+.axe-p.ok { color: var(--green); }
+.rp-sources li { break-inside: avoid; margin-bottom: 3px; }   /* le tableau des temps morts est passé en annexe E (13/11/2026) */
+.rp-jauge { min-width: 50px; }
+#b2b-top-table td:first-child { white-space: normal; }
+.rp-ouverture p { font-size: 15px; max-width: none; }
+.rp-kpi { padding: 9px 12px; } .rp-kpi-v { font-size: 19px; }
+.rp-carte { gap: 8px; padding: 12px 16px; }
+.rp-table td { padding: 3px 8px; } .rp-table th { padding: 5px 8px; } .rp-table { font-size: 12px; }
+.rp-points, .rp-pistes { display: block; columns: 2; column-gap: 28px; max-width: none; }
+.rp-points li, .rp-pistes li { break-inside: avoid; margin-bottom: 3px; }
+#ev-graphes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }   /* un graphique par ligne (13/11/2026) */
+#p1-milieu { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: start; }
+#pe-kpis { grid-template-columns: 1fr 1fr; }
+.rp-annexe-titre { font-size: 22px; margin: 0; }
+@media print {
+  .rp { font-size: 12px; line-height: 1.35; gap: 10px; }
+  .rp-h3 { font-size: 13px; } .rp-partie-n { font-size: 28px; } .rp-partie-titre { font-size: 19px; }
+  .rp-partie { padding-top: 0; break-after: avoid; }
+  #page-2, #page-3, #page-4, #annexes { break-before: page; }
+  #pieces, #page-fin { break-before: page; }   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
+  #evolution-tuiles { grid-template-columns: repeat(4, 1fr); }   /* l’annexe simplifiée : les tuiles du cockpit, quatre de front */
+}
+/* Lisible imprimé (13/11/2026, Sam : « trop petit, illisible ») : au PDF (échelle 0,8), le texte courant fait environ
+   8 points, les tableaux 7,5, les étiquettes des graphiques 7. */
+@media print {
+  .rp { font-size: 13.5px; line-height: 1.4; }
+  .rp-table { font-size: 12.5px; } .rp-table th { font-size: 11px; }
+  .rp-kpi-k { font-size: 11px; } .rp-kpi-s { font-size: 12px; } .rp-kpi-v { font-size: 21px; }
+  .rp-h2 { font-size: 14px; } .rp-h3 { font-size: 14px; }
+  .rp-graphe svg text { font-size: 10.5px; }
+  .rp-chaleur td.c { font-size: 11.5px; height: 20px; min-width: 34px; }
+  .rp-chaleur th { font-size: 10.5px; padding: 3px 2px; }
+  .rp-table td, .rp-table th { white-space: normal; }               /* le texte va à la ligne, */
+  .rp-table td.num, .rp-table th.num { white-space: nowrap; }       /* les nombres restent sur une ligne */
+  .rp-serre { font-size: 11px; } .rp-serre td, .rp-serre th { padding: 3px 4px; }
+  .rp-chaleur td.c { min-width: 32px; }
+  #probleme .rp-deux { grid-template-columns: minmax(0, 1fr); }   /* un bloc par ligne, comme les graphiques */
+  /* Au PDF, les blocs s'empilent en disposition simple : Chromium coupe mal une grille d'une page à l'autre (un
+     graphique chevauchait le bloc suivant, 13/11/2026). Les rangées de chiffres clés restent en grille. */
+  .rp, .rp-page, .rp-carte, #ev-graphes, #p1-milieu, .rp-deux { display: block; }
+  .rp > *, .rp-page > *, .rp-carte > *, #ev-graphes > *, #p1-milieu > *, .rp-deux > * { margin-bottom: 10px; }
+  .rp-carte > *:last-child, .rp-deux > *:last-child { margin-bottom: 0; }
+  #cibles, #cv-paliers { font-size: 12px; }
+  .rp-legende { font-size: 12px; }
+  .rp-alerte, .rp-ouvert { font-size: 13px; }
+}
+/* Impression et PDF (pdf.js) : A4, papier blanc, rien de coupé, une carte peut passer d'une page à l'autre mais pas un
+   tableau de chiffres clés, un graphique, une ligne ou une note. */
+@media print {
+  body { background: #fff; }
+  .rp { padding: 0; gap: 12px; max-width: none; }
+  .rp * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rp-carte { padding: 14px 16px; break-inside: auto; }
+  .rp-kpis, .rp-kpi, .rp-graphe, .rp-alerte, .rp-ouvert, .rp-part, .rp-table tr, .rp-points li, .rp-pistes li, #note-redacteur { break-inside: avoid; }
+  .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
+  .rp-table-zone { overflow: visible; }
+  .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
+  .rp-partie { border-top: 0; padding-top: 0; }   /* un thème par page */
+  .rp-bulle { display: none !important; }
+}
+</style>
+</head>
+<body>
+<main class="rp" id="rapport">
+  <!-- PAGE 1 · L'ÉTAT DES LIEUX -->
+  <section class="rp-page" id="page-1">
+    <header id="entete">
+      <div class="rp-kicker">Pilotage réseau · rapport magasin</div>
+      <h1 class="rp-titre">Sombreffe, comptoir et B2B</h1>
+      <div class="rp-sous" id="sous-titre"></div>
+    </header>
+    <section class="rp-ouverture" id="ouverture"><p id="ouverture-texte"></p></section>
+    <div class="rp-alerte" id="soins-intensifs"></div>
+    <header class="rp-partie" id="partie-1"><div class="rp-partie-n">1</div><div><h2 class="rp-partie-titre">L’état des lieux</h2></div></header>
+    <section class="rp-carte" id="essentiel">
+      <div class="rp-kpis" id="essentiel-kpis"></div>
+      <ul class="rp-points" id="essentiel-points" hidden></ul>   <!-- retirées le 13/11/2026 (Sam) -->
+    </section>
+    <section class="rp-carte" id="evolution">
+      <div class="rp-tete"><h2 class="rp-h3">Évolution magasin</h2><span class="rp-sous" id="evolution-releve"></span></div>
+      <div class="rp-faits" id="evolution-faits"></div>
+      <div id="ev-graphes">
+        <div class="rp-part" id="ev-comptoir"><h3 class="rp-h3" id="ev-comptoir-titre"></h3><p class="rp-aide" id="ev-comptoir-note"></p>
+          <div class="rp-graphe" id="graphe-comptoir"><div class="rp-bulle"></div></div></div>
+        <div class="rp-part" id="ev-trafic"><h3 class="rp-h3">Trafic : les clients du mois</h3>
+          <div class="rp-graphe" id="graphe-clients"><div class="rp-bulle"></div></div></div>
+        <div class="rp-part" id="ev-b2b"><h3 class="rp-h3">B2B seul : le CA des clients pro</h3><p class="rp-aide" id="ev-b2b-note"></p>
+          <div class="rp-graphe" id="graphe-b2b"><div class="rp-bulle"></div></div></div>
+      </div>
+      <div class="rp-legende" id="evolution-legende">
+        <span><i class="rp-sw"></i>le mois</span>
+        <span><i class="rp-sw n1"></i>N-1 : le même mois un an plus tôt</span>
+        <span><i class="rp-sw aire"></i>gagné / perdu face au N-1</span>
+        <span>mois d’ouverture, incomplet : hors courbe</span>
+        <span>* le N-1 a eu plus de 2 jours fermés</span>
+      </div>
+    </section>
+    <div id="p1-milieu">
+      <section class="rp-carte" id="comptoir-b2b">
+        <h2 class="rp-h2">Comptoir et B2B</h2>
+        <div class="rp-part" id="part-b2b">
+          <div style="height:12px"></div>
+          <div class="rp-barre" id="barre-b2b"></div>
+          <div class="rp-chiffres" id="chiffres-b2b"></div>
+          <p class="rp-aide" id="aide-b2b"></p>
+        </div>
+        <div class="rp-part" id="b2b-trimestres" hidden>
+          <div class="rp-table-zone"><table class="rp-table" id="b2b-trim-table"></table></div>
+          <p class="rp-aide" id="b2b-trim-note"></p>
+        </div>
+      </section>
+      <section class="rp-carte" id="personnel">
+        <h2 class="rp-h2">Frais de personnel, % du CA</h2>
+        <div class="rp-kpis" id="pe-kpis"></div>
+        <div class="rp-graphe" id="graphe-personnel"><div class="rp-bulle"></div></div>
+        <div class="rp-table-zone"><table class="rp-table" id="pe-reseau"></table></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- PAGE 2 · LE PROBLÈME -->
+  <section class="rp-page" id="page-2">
+    <header class="rp-partie" id="partie-2"><div class="rp-partie-n">2</div><div><h2 class="rp-partie-titre">Le problème</h2></div></header>
+    <section class="rp-carte" id="probleme">
+      <ol class="rp-pistes" id="probleme-points"></ol>
+      <div class="rp-alerte" id="tm-constat"></div>
+      <div class="rp-deux">
+        <div class="rp-part" id="question-panier" hidden>   <!-- retiré le 13/11/2026 (Sam) --><h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3><p class="rp-p" id="question-texte"></p></div>
+        <div class="rp-part" id="b2b-top" hidden><h3 class="rp-h3" id="b2b-top-titre"></h3>
+          <div class="rp-table-zone"><table class="rp-table" id="b2b-top-table"></table></div>
+          <div class="rp-alerte" id="b2b-cadre" hidden></div>
+          <div class="rp-table-zone" id="guest-marge-zone" hidden><table class="rp-table rp-serre" id="guest-marge"></table></div>
+          <div class="rp-part" id="guest-questions-zone" hidden><h3 class="rp-h3">GUEST : les questions</h3><ol class="rp-pistes" id="guest-questions"></ol></div></div>   <!-- GUEST, à cadrer : 14/11/2026 (Sam) -->
+      </div>
+      <div class="rp-deux">
+        <div class="rp-part" id="panier" hidden>   <!-- simplifié le 14/11/2026 (Sam) : une ligne dans la liste --><h3 class="rp-h3" id="panier-mag-titre"></h3><ul class="rp-points" id="panier-points"></ul>
+          <div class="rp-table-zone"><table class="rp-table rp-serre" id="panier-magasins"></table></div></div>
+        <div class="rp-part" id="tc-releve-zone" hidden>   <!-- simplifié le 14/11/2026 (Sam) : la ligne 4 de la liste --><h3 class="rp-h3" id="tc-releve-titre"></h3>
+          <div class="rp-table-zone"><table class="rp-table rp-serre" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- PAGE 3 · VERS QUOI ON TEND -->
+  <section class="rp-page" id="page-3">
+    <header class="rp-partie" id="partie-3"><div class="rp-partie-n">3</div><div><h2 class="rp-partie-titre">Vers quoi on tend</h2></div></header>
+    <section class="rp-carte" id="axes" hidden>
+      <div class="rp-kpis" id="axes-tuiles"></div>
+      <h2 class="rp-h3" id="axes-titre"></h2>
+      <div class="rp-table-zone"><table class="rp-table rp-grille" id="axes-table"></table></div>
+      <ul class="rp-points" id="axes-points"></ul>
+      <div id="repere" data-masque="1" hidden>   <!-- le repère de Halle (14/11/2026), retiré le 14/11/2026 (Sam) : gardé, pas montré -->
+        <h2 class="rp-h3" id="repere-titre"></h2>
+        <div class="rp-kpis" id="repere-tuiles"></div>
+        <div class="repere-graphes">   <!-- graphique demandé le 14/11/2026 (Sam) -->
+          <div><div class="repere-g-titre">Clients par jour, semaine par semaine</div><div class="rp-graphe" id="graphe-repere-clients"></div></div>
+          <div><div class="repere-g-titre">Panier au comptoir, semaine par semaine</div><div class="rp-graphe" id="graphe-repere-panier"></div></div>
+        </div>
+        <p class="repere-note" id="repere-note"></p>
+      </div>
+    </section>
+    <section class="rp-carte" id="soins" hidden>   <!-- remplacé par les trois axes le 13/11/2026 (Sam) -->
+      <h2 class="rp-h2">D’où l’on part</h2>
+      <p class="rp-p" id="soins-intro"></p>
+      <div class="rp-kpis" id="soins-reperes"></div>
+      <h3 class="rp-h3">Où l’on va : les clients par jour</h3>
+      <p class="rp-p" id="cv-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table" id="cv-paliers"></table></div>
+      <p class="rp-aide" id="cv-calcul"></p>
+      <h3 class="rp-h3">Les cibles</h3>
+      <div class="rp-table-zone"><table class="rp-table" id="cibles"></table></div>
+    </section>
+    <section class="rp-carte" id="theorique" data-masque="1" hidden>   <!-- remplacé par les trois axes le 13/11/2026 (Sam) -->
+      <h2 class="rp-h2" id="theo-titre"></h2>
+      <ul class="rp-points" id="theo-points"></ul>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="theo-table"></table></div>
+      <h3 class="rp-h3">Avec plus de clients : + 5 et + 10 clients par jour</h3>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="theo-plus"></table></div>
+    </section>
+  </section>
+
+  <!-- PAGE 4 · COMMENT ON VA Y ARRIVER -->
+  <section class="rp-page" id="page-4">
+    <header class="rp-partie" id="partie-4"><div class="rp-partie-n">4</div><div><h2 class="rp-partie-titre">Comment on va y arriver</h2></div></header>
+    <div class="rp-alerte" id="cout-relance"></div>
+    <section class="rp-carte" id="plan" hidden>   <!-- dicté le 14/11/2026 (Sam) -->
+      <h2 class="rp-h2">Le plan, en cinq points</h2>
+      <ol class="rp-plan" id="plan-liste"></ol>
+    </section>
+    <section class="rp-carte" id="gestion">
+      <h2 class="rp-h2">4.1 · La structure de gestion</h2>
+      <p class="rp-p" id="gestion-intro"></p>
+      <div class="rp-part" id="marque"><h3 class="rp-h3">La marque participe, sous conditions</h3><p class="rp-p" id="marque-texte"></p>
+        <div class="rp-table-zone"><table class="rp-table" id="marque-conditions"></table></div></div>
+      <div class="rp-vignette" id="pourquoi" hidden>   <!-- dicté le 14/11/2026 (Sam) -->
+        <div class="rp-vignette-k" id="pourquoi-titre"></div>
+        <div class="rp-vignette-cols">
+          <div><div class="rp-vignette-h">En le faisant</div><ol class="rp-vignette-liste" id="pourquoi-avec"></ol></div>
+          <div class="rp-vignette-sans"><div class="rp-vignette-h">Sans le faire</div><ul class="rp-vignette-liste" id="pourquoi-sans"></ul></div>
+        </div>
+      </div>
+      <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">Les frais, les budgets, la trésorerie</h3>
+      <figure class="rp-schema" id="cf-schema">   <!-- la semaine de trésorerie, 14/11/2026 (Sam) -->
+        <svg viewBox="0 0 800 134" role="img" aria-label="Le lundi, le chiffre de la semaine paie tout : 500 euros pour soi d’abord, puis toutes les factures. Du mardi au dimanche, on refait ce chiffre, jusqu’à l’objectif de chiffre d’affaires de la semaine." style="font-family:var(--font)">
+          <text x="20" y="16" font-size="13" fill="#1c1a17">Lundi : on paie tout</text>
+          <text x="318" y="16" font-size="13" fill="#1c1a17">Du mardi au dimanche : on fait du chiffre</text>
+          <line x1="20" x2="690" y1="34" y2="34" stroke="#3f7a52" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <line x1="20" x2="690" y1="112" y2="112" stroke="rgba(34,34,34,.2)"/>
+          <rect x="20" y="34" width="56" height="16" fill="#8D1D2C"/>
+          <rect x="20" y="50" width="56" height="62" fill="#A32014" fill-opacity=".75"/>
+          <text x="48" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Lun</text>
+          <text x="88" y="46" font-size="12.5" fill="#8D1D2C">1. d’abord 500 € pour soi</text>
+          <text x="88" y="85" font-size="12.5" fill="#A32014">2. ensuite toutes les factures</text>
+          <rect x="318" y="99.0" width="40" height="13.0" rx="3" fill="#3f7a52" fill-opacity="0.45"/><text x="338" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Mar</text><rect x="380" y="86.0" width="40" height="26.0" rx="3" fill="#3f7a52" fill-opacity="0.54"/><text x="400" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Mer</text><rect x="442" y="73.0" width="40" height="39.0" rx="3" fill="#3f7a52" fill-opacity="0.63"/><text x="462" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Jeu</text><rect x="504" y="60.0" width="40" height="52.0" rx="3" fill="#3f7a52" fill-opacity="0.72"/><text x="524" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Ven</text><rect x="566" y="47.0" width="40" height="65.0" rx="3" fill="#3f7a52" fill-opacity="0.81"/><text x="586" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Sam</text><rect x="628" y="34.0" width="40" height="78.0" rx="3" fill="#3f7a52" fill-opacity="0.90"/><text x="648" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Dim</text>
+          <text x="700" y="38" font-size="12" fill="#3f7a52">objectif de CA</text>
+          <text x="700" y="53" font-size="12" fill="#3f7a52">de la semaine</text>
+          <text x="700" y="92" font-size="12" fill="#5c5852">le lundi suivant,</text>
+          <text x="700" y="107" font-size="12" fill="#5c5852">tout est payé</text>
+        </svg>
+      </figure>
+        <ul class="rp-points" id="cf-points"></ul></div>
+      <div class="rp-part" id="suivi" hidden><h3 class="rp-h3">Le suivi, chaque semaine</h3>   <!-- retiré le 14/11/2026 (Sam) -->
+        <div class="rp-table-zone"><table class="rp-table rp-serre" id="soins-suivi"></table></div></div>
+    </section>
+    <section class="rp-carte" id="pieces" hidden>   <!-- 14/11/2026 (Sam) : de l’annexe à l’étape 4, avec la simulation -->
+      <h2 class="rp-h2">Les ventes additionnelles : les pièces vendues</h2>
+      <h3 class="rp-h3">Pièces vendues, mai → octobre 2026, face au N-1</h3>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="pieces-table"></table></div>
+      <h3 class="rp-h3" id="pieces-sim-titre"></h3>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="pieces-sim"></table></div>
+      <ul class="rp-points" id="pieces-points"></ul>
+    </section>
+    <section class="rp-carte" id="taches" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+      <h2 class="rp-h2">4.2 · Les tâches et les checklists</h2>
+      <p class="rp-p" id="tc-intro"></p>
+      <div class="rp-deux">
+        <div class="rp-part" id="tc-checklist"><h3 class="rp-h3">La checklist : à quoi elle sert</h3><ul class="rp-points" id="tc-checklist-points"></ul></div>
+        <div class="rp-part" id="tc-taches"><h3 class="rp-h3">Les tâches : à quoi elles servent</h3><ul class="rp-points" id="tc-taches-points"></ul>
+          <div class="rp-table-zone"><table class="rp-table" id="tc-niveaux"></table></div></div>
+      </div>
+      <div class="rp-alerte" id="tc-sombreffe"></div>
+    </section>
+    <section class="rp-carte" id="developpement" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+      <h2 class="rp-h2">4.3 · Le développement</h2>
+      <div class="rp-part" id="chantier-ventes"><p class="rp-p" id="cv-aide"></p></div>
+      <div class="rp-part" id="pistes-zone"><h3 class="rp-h3">Les pistes</h3><ol class="rp-pistes" id="pistes"></ol></div>
+    </section>
+    <section class="rp-carte" id="note-redacteur" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+      <h2 class="rp-h2">Note du rédacteur</h2>
+      <p class="rp-note" id="note-redacteur-texte"></p>
+    </section>
+  </section>
+
+  <!-- ANNEXES -->
+  <header class="rp-annexes" id="annexes">
+    <h2 class="rp-annexe-titre">Annexe · mois par mois</h2>   <!-- simplifiée le 14/11/2026 (Sam) -->
+  </header>
+  <section class="rp-carte" id="annexe-a">
+    <p class="rp-p" id="oo-intro" hidden></p>
+    <div class="rp-deux">
+      <div class="rp-part" id="trafic"><h3 class="rp-h3">Clients par jour ouvert</h3><div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div></div>
+      <div class="rp-part" id="comparable" hidden><h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
+        <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div><p class="rp-aide" id="comp-note"></p></div>
+    </div>
+    <h3 class="rp-h3">Mai → octobre 2026, face au N-1</h3>   <!-- les six mois seuls, 14/11/2026 (Sam) -->
+    <div class="rp-table-zone"><table class="rp-table rp-serre" id="oo-table"></table></div>
+    <p class="rp-aide" id="oo-note"></p>
+    <div class="rp-deux" id="annexe-bas">
+      <div class="rp-part" hidden><h3 class="rp-h3">Trimestre par trimestre</h3><div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div></div>
+      <div class="rp-part"><h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3><div class="rp-kpis" id="evolution-tuiles"></div></div>
+    </div>
+  </section>
+  <section class="rp-page" id="page-fin" hidden>   <!-- la dernière page : les trois axes ensemble, 14/11/2026 (Sam) -->
+    <header class="rp-annexes"><div class="rp-kicker">Sombreffe, comptoir et B2B</div>
+      <h2 class="rp-annexe-titre">Les trois axes ensemble : qu’est-ce que ça peut donner ?</h2></header>
+    <section class="rp-carte">
+      <figure class="rp-schema" id="fin-schema"></figure>
+      <h3 class="rp-h3">Chaque axe seul, puis les trois ensemble : le résultat d’un mois</h3>
+      <div class="rp-table-zone"><table class="rp-table" id="fin-table"></table></div>
+      <ul class="rp-points" id="fin-points"></ul>
+    </section>
+  </section>
+  <section class="rp-carte" id="annexe-b" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2">B · Les clients B2B</h2>
+    <div class="rp-ouvert" id="a-completer"></div>
+    <div class="rp-part" id="b2b-6mois" hidden><h3 class="rp-h3" id="b2b-6mois-titre"></h3><p class="rp-p" id="b2b-6mois-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="b2b-6mois-table"></table></div><p class="rp-aide" id="b2b-6mois-note"></p></div>
+    <div class="rp-part" id="b2b-clients" hidden><h3 class="rp-h3">Les clients B2B, année par année</h3><p class="rp-p" id="b2b-clients-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="b2b-clients-table"></table></div><p class="rp-aide" id="b2b-clients-note"></p></div>
+  </section>
+  <section class="rp-carte" id="annexe-c" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2">C · Le trafic de Sombreffe au panier du plus bas des autres magasins</h2>
+    <h3 class="rp-h3" id="panier-mois-titre"></h3>
+    <div class="rp-table-zone"><table class="rp-table rp-serre" id="panier-mois"></table></div>
+  </section>
+  <section class="rp-carte" id="semaines" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2">D · Les dix dernières semaines</h2>
+    <p class="rp-p" id="sem-intro"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
+  </section>
+  <section class="rp-carte" id="annexe-e" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2" id="temps-morts">E · Temps morts au comptoir</h2>
+    <div class="rp-kpis" id="tm-kpis"></div>
+    <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
+    <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
+    <div class="rp-legende" id="tm-legende"></div>
+    <p class="rp-p" id="tm-intro"></p>
+    <ul class="rp-points" id="tm-points"></ul>
+    <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
+    <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
+  </section>
+  <section class="rp-carte" id="annexe-f" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2">F · Frais de personnel, mois par mois</h2>
+    <p class="rp-p" id="pe-intro"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="pe-table"></table></div>
+    <p class="rp-aide" id="pe-note"></p>
+    <div class="rp-ouvert" id="pe-completer" hidden></div>
+  </section>
+  <section class="rp-carte" id="annexe-g" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2">G · La journée en checklists</h2>
+    <div class="rp-table-zone"><table class="rp-table" id="tc-journee"></table></div>
+    <p class="rp-aide" id="tc-semaine"></p>
+  </section>
+  <section class="rp-carte" id="sources" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
+    <h2 class="rp-h2">H · Sources et méthode</h2>
+    <ul class="rp-sources" id="sources-liste"></ul>
+  </section>
+  <div class="rp-pied" id="pied" hidden></div>
+</main>
+<script>
+const D = /*__DONNEES__*/null;
+
+/* --- Formats : 1 234 € (espace fine insécable), 12,5 %, signe moins typographique. --- */
+const FINE = ' ', INS = ' ', MOINS = '−';
+const grp = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, FINE);
+const eur = n => grp(n) + INS + '€';
+const eur2 = n => n.toFixed(2).replace('.', ',') + INS + '€';
+const k1 = n => (n / 1000).toFixed(1).replace('.', ',') + INS + 'k€';
+const dec = (n, d = 1) => n.toFixed(d).replace('.', ',');
+const sgn = n => (n > 0.05 ? '+' : n < -0.05 ? MOINS : '');
+const pct = (n, d = 1) => n == null ? '—' : sgn(n) + dec(Math.abs(n), d) + INS + '%';
+const cls = n => n == null ? 'dim' : (n >= 0 ? 'up' : 'down');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = id => document.getElementById(id);
+const insec = t => t.replace(/ (%|€|k€|h\b|min\b|j\b)/g, INS + '$1');
+const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const dateL = iso => { const [a, m, j] = iso.split('-').map(Number); return j + ' ' + MOIS_L[m - 1] + ' ' + a; };
+const dateC = iso => { const [a, m, j] = iso.split('-'); return j + '/' + m; };
+
+const B = D.b2b, O = D.oct, T = D.total, C = D.comparable, DEP = D.depart;
+const trim = lab => D.trim.find(t => t.lab === lab);
+const trimAvant = trim('oct. → déc. 25'), trimEte = trim('juil. → sept. 26');
+const ecC = k => (C.n[k] / C.n1[k] - 1) * 100;
+const PE6 = (() => {
+  const pe = D.personnel; if (!pe) { return null; }
+  const s6 = (a, b) => { const L = pe.mois.filter(m => !m.indispo && m.mois >= a && m.mois <= b); const ca = L.reduce((x, m) => x + m.ca, 0), lab = L.reduce((x, m) => x + m.labour, 0); return { n: L.length, ca, lab, pct: ca ? lab / ca * 100 : null }; };
+  const n = s6('2026-05', '2026-10'), n1 = s6('2025-05', '2025-10');
+  return n.n === 6 && n1.n === 6 ? { n, n1 } : null;
+})();
+const B2BX = (() => {
+  const bd = D.b2bDetail;
+  if (!bd || !bd.societes.length) { return null; }
+  const M6 = Object.keys(bd.mois).sort().slice(-6), nMois = M6.length;
+  const SOC = bd.societes.map(c => ({ ...c, total: M6.reduce((a, ym) => a + ((c.mois[ym] || {}).ca || 0), 0) })).sort((a, b) => b.total - a.total);
+  const tot = SOC.reduce((a, c) => a + c.total, 0), top = SOC[0];
+  const so = c => ((c.mois['2026-09'] || {}).ca || 0) + ((c.mois['2026-10'] || {}).ca || 0);
+  const mS = D.serie.find(m => m.k === '2026-09'), mO = D.serie.find(m => m.k === '2026-10');
+  const ok = m => m && m.pro && m.pro.complet && m.n1pro && m.n1pro.complet;
+  const sept = ok(mS) && ok(mO) ? { b26: mS.pro.ca + mO.pro.ca, b25: mS.n1pro.ca + mO.n1pro.ca, bS: mS.pro.ca, bO: mO.pro.ca,
+    c26: (mS.ca - mS.pro.ca) + (mO.ca - mO.pro.ca), c25: (mS.n1.ca - mS.n1pro.ca) + (mO.n1.ca - mO.n1pro.ca) } : null;
+  return { tot, top, topPct: top.total / tot * 100, topSO: so(top), sansTop: (tot - top.total) / nMois, sept, nMois,
+    oct: mO && mO.pro ? mO.pro.ca : null, octPart: mO && mO.pro ? mO.pro.ca / mO.ca * 100 : null };
+})();
+
+/* --- En-tête et bandeau --- */
+$('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026';
+// 6 semaines de suivi intensif (14/11/2026, Sam) : du lundi d'entrée au dimanche de la sixième semaine.
+const finSoins = (() => { const d = new Date(D.soinsIntensifs + 'T12:00:00'); d.setDate(d.getDate() + 6 * 7 - 1); return d.toISOString().slice(0, 10); })();
+$('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</span><span>' + esc(insec(
+  `6 semaines de suivi intensif, du lundi ${dateL(D.soinsIntensifs)} au dimanche ${dateL(finSoins)}.`)) + '</span>';
+
+$('ouverture-texte').textContent = insec(D.ouverture);
+$('note-redacteur-texte').textContent = insec(D.noteRedacteur);
+
+/* --- L'essentiel --- */
+const kpi = (k, v, s, c = '') => `<div class="rp-kpi ${c}"><div class="rp-kpi-k">${esc(k)}</div><div class="rp-kpi-v">${esc(v)}</div><div class="rp-kpi-s">${esc(s)}</div></div>`;
+$('essentiel-kpis').innerHTML = [
+  kpi('CA · mai 25 → oct. 26', k1(T.ca), '18 mois · ' + grp(T.clients) + ' clients · panier ' + eur2(T.panier)),
+  kpi('Part du B2B', dec(B.part) + INS + '%', '≈ ' + k1(B.b2b12) + ' sur 12 mois · plafond ' + dec(D.plafond, 0) + INS + '%'),
+  kpi('Clients / jour · mai → oct.', dec(C.n.cliJour, 0), 'contre ' + dec(C.n1.cliJour, 0) + ' de mai à oct. 25 (' + pct(ecC('cliJour')) + ')', 'bad'),
+  kpi('Panier · oct. 26', eur2(O.pan26), 'contre ' + eur2(O.pan25) + ' en oct. 25 (' + pct(O.vsPan) + ')', 'good'),
+].join('');
+$('essentiel-points').innerHTML = [
+  `Sombreffe est un magasin de comptoir : le B2B pèse ${dec(B.part)} % du CA des 12 derniers mois, environ ${k1(B.b2b12)}, très loin du plafond de ${dec(D.plafond, 0)} %.`,
+  `Sur les six mois présents dans les deux années (mai → octobre), 2026 fait ${pct(ecC('ca'))} de CA et ${pct(ecC('clients'))} de clients face à 2025, avec ${C.n.jours - C.n1.jours} jours ouverts de plus ; par jour ouvert, ${pct(ecC('caJour'))} de CA et ${pct(ecC('cliJour'))} de clients.`,
+  `Le trafic recule : ${dec(trimAvant.cliJour, 0)} clients par jour ouvert d’octobre à décembre 2025, ${dec(trimEte.cliJour, 0)} de juillet à septembre 2026, ${dec(O.cli26, 0)} en octobre 2026 contre ${dec(O.cli25, 0)} un an plus tôt.`,
+  B2BX && B2BX.sept
+    ? `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients. La hausse vient du B2B : ${k1(B2BX.oct)} en octobre, ${dec(B2BX.octPart, 0)} % du CA, surtout d’un seul client. Sans le B2B, le comptoir de septembre et octobre recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} % face à 2025.`
+    : `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+
+/* --- Évolution magasin (le bloc du cockpit) --- */
+$('evolution-releve').textContent = 'relevé au cockpit le ' + D.cockpit.releve;
+$('evolution-faits').textContent = D.cockpit.faits;
+$('evolution-tuiles').innerHTML = D.cockpit.tuiles.map(t => kpi(t.k, t.v, t.s, t.cls)).join('');
+
+/* La bulle d'un graphique : placée dans le cadre, jamais dehors. */
+function bulle(zone, html, x, y) {
+  const b = zone.querySelector('.rp-bulle');
+  if (html == null) { b.style.display = 'none'; return; }
+  b.innerHTML = html; b.style.display = 'block';
+  const W = zone.clientWidth, bw = b.offsetWidth, bh = b.offsetHeight;
+  b.style.left = Math.max(0, Math.min(W - bw, x + 12)) + 'px';
+  b.style.top = Math.max(0, y - bh - 10) + 'px';
+}
+
+/* Un graphique mois par mois, N plein et N-1 en pointillé, comme Résultat › Évolution magasin du cockpit.
+   cfg : val (mois → valeur | null), val1 (mois → valeur N-1 | null), axe (valeur → graduation), etiq (valeur → étiquette),
+   tip (valeur → bulle), nom (dans la bulle), zero (l'axe part de 0), couleur. */
+function grapheMois(id, cfg) {
+  const zone = $(id);
+  const W = Math.max(320, zone.clientWidth), etroit = W < 640, C = cfg.couleur || '#8D1D2C';
+  const H = etroit ? 200 : 200, ml = 50, mr = 12, mt = 22, mb = 44;
+  const S = D.serie, n = S.length, pas = (W - ml - mr) / n, x = i => ml + pas * (i + 0.5);
+  const pleins = S.map((m, i) => ({ m, i, v: m.ouverture ? null : cfg.val(m) })).filter(o => o.v != null);
+  const avec = S.map((m, i) => ({ m, i, v: cfg.val(m), w: cfg.val1(m) })).filter(o => o.v != null && o.w != null);
+  const tout = pleins.map(o => o.v).concat(avec.map(o => o.w));
+  if (!tout.length) { zone.querySelector('svg')?.remove(); return; }
+  // Des graduations rondes : 4 ou 5 pas de 1, 2 ou 5 × 10^k.
+  const lo = cfg.zero ? 0 : Math.min(...tout), hi = Math.max(...tout), brut = (hi - lo) / 4 || hi / 4 || 1;
+  const p10 = Math.pow(10, Math.floor(Math.log10(brut))), pasY = [1, 2, 5, 10].map(k => k * p10).find(k => k >= brut);
+  const ymin = cfg.zero ? 0 : Math.floor(lo / pasY) * pasY, ymax = Math.ceil(hi / pasY) * pasY || pasY, hP = H - mt - mb;
+  const y = v => mt + (ymax - v) / (ymax - ymin) * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">`;
+  const avant = S.filter(m => m.ca == null).length;
+  if (avant) { s += `<rect x="${ml}" y="${mt}" width="${pas * avant}" height="${hP}" fill="rgba(34,34,34,.035)"/><text x="${ml + pas * avant / 2}" y="${mt + hP / 2}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${etroit || pas * avant < 140 ? 'fermé' : 'pas encore ouvert'}</text>`; }
+  for (let v = ymin; v <= ymax + 1e-9; v += pasY) {
+    s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v === ymin ? '.16' : '.07'})"/><text x="${ml - 8}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${esc(cfg.axe(v))}</text>`;
+  }
+  S.forEach((m, i) => { if (m.lab === 'janv.') {
+    if (i > 0) { s += `<line x1="${ml + pas * i}" x2="${ml + pas * i}" y1="${mt - 4}" y2="${mt + hP}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>`; }
+    s += `<text x="${ml + pas * i + 4}" y="${mt - 8}" font-size="11" fill="#1c1a17" style="${ft}">${m.an}</text>`;
+  } });
+  for (let k = 0; k < avec.length - 1; k++) {
+    const a = avec[k], b = avec[k + 1];
+    if (b.i !== a.i + 1) { continue; }
+    const da = a.v - a.w, db = b.v - b.w;
+    const poly = (pts, pos) => { s += `<polygon points="${pts.map(q => q.join(',')).join(' ')}" fill="${pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`; };
+    if ((da >= 0) === (db >= 0)) { poly([[x(a.i), y(a.v)], [x(b.i), y(b.v)], [x(b.i), y(b.w)], [x(a.i), y(a.w)]], da >= 0); }
+    else { const t = da / (da - db), xc = x(a.i) + t * pas, yc = y(a.v + t * (b.v - a.v)); poly([[x(a.i), y(a.v)], [xc, yc], [x(a.i), y(a.w)]], da >= 0); poly([[xc, yc], [x(b.i), y(b.v)], [x(b.i), y(b.w)]], db >= 0); }
+  }
+  if (avec.length) {
+    s += `<polyline points="${avec.map(o => x(o.i) + ',' + y(o.w)).join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
+    avec.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.w)}" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"/>`; });
+  }
+  // La courbe, coupée là où un mois manque (un mois dont le B2B n'est pas lu en entier, par exemple).
+  let seg = [];
+  const trait = () => { if (seg.length > 1) { s += `<polyline points="${seg.join(' ')}" fill="none" stroke="${C}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`; } seg = []; };
+  pleins.forEach((o, k) => { if (k && o.i !== pleins[k - 1].i + 1) { trait(); } seg.push(x(o.i) + ',' + y(o.v)); });
+  trait();
+  pleins.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.v)}" r="3.2" fill="${C}"/>`; });
+  const max = pleins.reduce((a, o) => o.v > a.v ? o : a), min = pleins.reduce((a, o) => o.v < a.v ? o : a), der = pleins[pleins.length - 1];
+  [[max, -10], [min, y(min.v) + 18 > mt + hP - 4 ? -10 : 18], [der, -10]].filter((e, k, L) => L.findIndex(f => f[0] === e[0]) === k).forEach(([o, dy]) => {
+    s += `<text x="${x(o.i)}" y="${y(o.v) + dy}" font-size="10.5" text-anchor="middle" fill="${C}" style="${ft};${halo}">${esc(cfg.etiq(o.v))}</text>`;
+  });
+  const ouv = S.findIndex(m => m.ouverture);
+  if (ouv >= 0 && cfg.val(S[ouv]) != null && !cfg.zero) {   // pas sur le B2B : la note y touche les étiquettes
+    s += `<circle cx="${x(ouv)}" cy="${y(ymin) - 6}" r="3.6" fill="#fff" stroke="${C}" stroke-width="1.6"/><text x="${x(ouv) + 7}" y="${y(ymin) - 12}" font-size="9.5" fill="#7a736a" style="${ft};${halo}">${esc(cfg.tip(cfg.val(S[ouv])))} · ${S[ouv].jours} j</text>`;
+  }
+  const hb = H - mb + 16, hc = H - mb + 32;
+  S.forEach((m, i) => {
+    const montre = !etroit || ['janv.', 'avr.', 'juil.', 'oct.'].includes(m.lab);
+    if (montre) { s += `<text x="${x(i)}" y="${hb}" font-size="10" text-anchor="middle" fill="#3b3731" style="${ft}">${m.lab}</text>`; }
+    const v = cfg.val(m), w = cfg.val1(m);
+    if (v != null && w) {
+      const e = (v / w - 1) * 100, r = Math.round(e), etoile = m.n1 && m.n1.jours < m.jours - 2 ? '*' : '';
+      s += `<text x="${x(i)}" y="${hc + (etroit && i % 2 ? 11 : 0)}" font-size="${etroit ? 8.5 : 9.5}" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
+    }
+  });
+  if (avec.length) { s += `<text x="${ml - 8}" y="${hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>`; }
+  S.forEach((m, i) => { if (cfg.val(m) != null) { s += `<rect class="hit" data-i="${i}" x="${ml + pas * i}" y="${mt}" width="${pas}" height="${hP + 34}" fill="transparent"/>`; } });
+  s += `<line class="guide" x1="0" x2="0" y1="${mt}" y2="${mt + hP}" stroke="rgba(34,34,34,.25)" visibility="hidden"/></svg>`;
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s);
+  const svg = zone.querySelector('svg'), guide = svg.querySelector('.guide');
+  svg.querySelectorAll('.hit').forEach(r => {
+    r.addEventListener('pointerenter', () => {
+      const m = S[+r.dataset.i], xi = x(+r.dataset.i), v = cfg.val(m), w = cfg.val1(m);
+      guide.setAttribute('x1', xi); guide.setAttribute('x2', xi); guide.setAttribute('visibility', 'visible');
+      let h = `<div class="t">${esc(m.lab)} ${m.an}${m.ouverture ? ' · ouverture' : ''}</div><div>${esc(cfg.nom)} ${esc(cfg.tip(v))} · ${m.jours} j</div>`;
+      if (w) { h += `<div>N-1 ${esc(cfg.tip(w))}</div><div class="${cls(v / w - 1)}">${pct((v / w - 1) * 100)} face au N-1</div>`; }
+      const k = W / svg.getBoundingClientRect().width;
+      bulle(zone, h, xi / k, y(Math.max(v, w || 0)) / k);
+    });
+    r.addEventListener('pointerleave', () => { guide.setAttribute('visibility', 'hidden'); bulle(zone, null); });
+  });
+}
+
+/* Deux magasins, semaine par semaine (le repère de Halle, 14/11/2026) : une courbe chacun, la valeur de chaque
+   semaine (au-dessus pour le plus haut des deux, en dessous pour l'autre), le nom au bout de la courbe, et la coupure
+   entre les 4 premières et les 4 dernières semaines. */
+function grapheDeux(id, cfg) {
+  const zone = $(id);
+  const W = Math.max(300, zone.clientWidth), H = 180, ml = 36, mr = 66, mt = 26, mb = 32;
+  const n = cfg.semaines.length, pas = (W - ml - mr) / n, x = i => ml + pas * (i + 0.5);
+  const tout = cfg.series.flatMap(s => s.vals), lo = Math.min(...tout), hi = Math.max(...tout), brut = (hi - lo) / 4 || 1;
+  const p10 = Math.pow(10, Math.floor(Math.log10(brut))), pasY = [1, 2, 5, 10].map(k => k * p10).find(k => k >= brut);
+  const ymin = Math.floor((lo - (hi - lo) * 0.25) / pasY) * pasY, ymax = Math.ceil((hi + (hi - lo) * 0.12) / pasY) * pasY, hP = H - mt - mb;
+  const y = v => mt + (ymax - v) / (ymax - ymin) * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">`;
+  for (let v = ymin; v <= ymax + 1e-9; v += pasY) {
+    s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${Math.abs(v - ymin) < 1e-9 ? '.16' : '.07'})"/><text x="${ml - 6}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${esc(cfg.axe(v))}</text>`;
+  }
+  const xc = ml + pas * n / 2;
+  s += `<line x1="${xc}" x2="${xc}" y1="${mt - 14}" y2="${mt + hP}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>`
+    + `<text x="${ml + pas * n / 4}" y="${mt - 16}" font-size="10" text-anchor="middle" fill="#8a8378" style="${ft}">4 premières</text>`
+    + `<text x="${ml + pas * n * 3 / 4}" y="${mt - 16}" font-size="10" text-anchor="middle" fill="#8a8378" style="${ft}">4 dernières</text>`;
+  cfg.series.forEach((S, k) => {
+    const autre = cfg.series[1 - k];
+    s += `<polyline points="${S.vals.map((v, i) => x(i) + ',' + y(v)).join(' ')}" fill="none" stroke="${S.couleur}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    S.vals.forEach((v, i) => {
+      const haut = v > autre.vals[i] || (v === autre.vals[i] && k === 0);
+      s += `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${S.couleur}"/><text x="${x(i)}" y="${y(v) + (haut ? -8 : 15)}" font-size="10" text-anchor="middle" fill="${S.couleur}" style="${ft};${halo}">${esc(cfg.etiq(v))}</text>`;
+    });
+  });
+  // Les noms au bout des courbes, écartés s'ils se touchent.
+  const bouts = cfg.series.map(S => ({ S, yy: y(S.vals[n - 1]) })).sort((a, b) => a.yy - b.yy);
+  if (bouts[1].yy - bouts[0].yy < 13) { const m = (bouts[0].yy + bouts[1].yy) / 2; bouts[0].yy = m - 6.5; bouts[1].yy = m + 6.5; }
+  bouts.forEach(o => { s += `<text x="${x(n - 1) + 10}" y="${o.yy + 3.5}" font-size="10.5" fill="${o.S.couleur}" style="${ft}">${esc(o.S.nom)}</text>`; });
+  cfg.semaines.forEach((w, i) => {
+    s += `<text x="${x(i)}" y="${H - mb + 15}" font-size="9.5" text-anchor="middle" fill="#3b3731" style="${ft}">${esc(w.lab)}</text>`
+      + `<text x="${x(i)}" y="${H - mb + 27}" font-size="9" text-anchor="middle" fill="#8a8378" style="${ft}">${esc(dateC(w.du))}</text>`;
+  });
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s + '</svg>');
+}
+
+/* Le B2B tant que le cockpit n'a pas donné son détail mensuel : la seule valeur réelle, la moyenne des 12 derniers
+   mois clos (la part du cockpit appliquée à leur CA), tracée comme une moyenne sur ces 12 mois, rien de plus. */
+function grapheB2bMoyenne() {
+  const zone = $('graphe-b2b'), W = Math.max(320, zone.clientWidth), etroit = W < 640, C = '#1f5f8b';
+  const H = etroit ? 200 : 180, ml = 50, mr = 12, mt = 22, mb = 44, S = D.serie, n = S.length, pas = (W - ml - mr) / n;
+  const x = i => ml + pas * (i + 0.5), v = D.b2b.parMois, pasY = 1000, ymax = Math.ceil(v * 1.6 / pasY) * pasY, hP = H - mt - mb;
+  const y = w => mt + (ymax - w) / ymax * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
+  const i0 = S.findIndex(m => m.k === '2025-11'), i1 = S.findIndex(m => m.k === '2026-10'), xa = ml + pas * i0, xb = ml + pas * (i1 + 1);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="B2B : la moyenne mensuelle des 12 derniers mois">`;
+  const avant = S.filter(m => m.ca == null).length;
+  if (avant) { s += `<rect x="${ml}" y="${mt}" width="${pas * avant}" height="${hP}" fill="rgba(34,34,34,.035)"/><text x="${ml + pas * avant / 2}" y="${mt + hP / 2}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${etroit || pas * avant < 140 ? 'fermé' : 'pas encore ouvert'}</text>`; }
+  for (let w = 0; w <= ymax; w += pasY) { s += `<line x1="${ml}" x2="${W - mr}" y1="${y(w)}" y2="${y(w)}" stroke="rgba(34,34,34,${w ? '.07' : '.16'})"/><text x="${ml - 8}" y="${y(w) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${w ? w / 1000 + ' k€' : '0 €'}</text>`; }
+  S.forEach((m, i) => { if (m.lab === 'janv.') {
+    if (i > 0) { s += `<line x1="${ml + pas * i}" x2="${ml + pas * i}" y1="${mt - 4}" y2="${mt + hP}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>`; }
+    s += `<text x="${ml + pas * i + 4}" y="${mt - 8}" font-size="11" fill="#1c1a17" style="${ft}">${m.an}</text>`;
+  } });
+  // La moyenne : une bande sur les 12 mois qu'elle couvre, son niveau, son chiffre.
+  s += `<rect x="${xa}" y="${y(v)}" width="${xb - xa}" height="${y(0) - y(v)}" fill="rgba(31,95,139,.10)"/>`
+    + `<line x1="${xa}" x2="${xb}" y1="${y(v)}" y2="${y(v)}" stroke="${C}" stroke-width="2.6" stroke-dasharray="7 4"/>`
+    + `<text x="${(xa + xb) / 2}" y="${y(v) - 8}" font-size="10.5" text-anchor="middle" fill="${C}" style="${ft};${halo}">moyenne : ≈ ${esc(k1(v))} par mois · ${esc(dec(D.b2b.part))} % du CA</text>`;
+  const iMai = S.findIndex(m => m.k === '2025-05');
+  if (iMai >= 0 && iMai < i0) { s += `<text x="${(ml + pas * iMai + xa) / 2}" y="${y(v) - 8}" font-size="9.5" text-anchor="middle" fill="#a59d92" style="${ft}">non chiffré</text>`; }
+  const hb = H - mb + 16;
+  S.forEach((m, i) => { if (!etroit || ['janv.', 'avr.', 'juil.', 'oct.'].includes(m.lab)) { s += `<text x="${x(i)}" y="${hb}" font-size="10" text-anchor="middle" fill="#3b3731" style="${ft}">${m.lab}</text>`; } });
+  s += `<rect class="hit" x="${xa}" y="${mt}" width="${xb - xa}" height="${hP}" fill="transparent"/></svg>`;
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s);
+  const svg = zone.querySelector('svg');
+  svg.querySelector('.hit').addEventListener('pointerenter', () => {
+    const k = W / svg.getBoundingClientRect().width;
+    bulle(zone, `<div class="t">nov. 25 → oct. 26</div><div>B2B ≈ ${esc(k1(D.b2b.b2b12))} sur 12 mois</div><div>≈ ${esc(k1(v))} par mois en moyenne</div><div>${esc(dec(D.b2b.part))} % du CA (cockpit)</div>`, (xa + xb) / 2 / k, y(v) / k);
+  });
+  svg.querySelector('.hit').addEventListener('pointerleave', () => bulle(zone, null));
+}
+
+/* Les trois graphiques de l'Évolution magasin : le CA sans B2B (le comptoir), le trafic, le B2B seul. */
+const proOk = p => p && p.complet;
+function grapheEvolution() {
+  if (D.proLu) {
+    grapheMois('graphe-comptoir', { nom: 'CA comptoir', aria: 'CA du comptoir, sans le B2B, mois par mois, face au N-1',
+      val: m => m.ca != null && proOk(m.pro) ? m.ca - m.pro.ca : null, val1: m => m.n1 && proOk(m.n1pro) ? m.n1.ca - m.n1pro.ca : null,
+      axe: v => v / 1000 + ' k€', etiq: k1, tip: eur });
+    grapheMois('graphe-b2b', { nom: 'CA B2B', aria: 'CA des clients pro, mois par mois, face au N-1', couleur: '#1f5f8b', zero: true,
+      val: m => m.ca != null && proOk(m.pro) ? m.pro.ca : null, val1: m => m.n1 && proOk(m.n1pro) ? m.n1pro.ca : null,
+      axe: v => v >= 1000 ? v / 1000 + ' k€' : v + ' €', etiq: v => v >= 1000 ? k1(v) : eur(v), tip: eur });
+  } else {
+    grapheMois('graphe-comptoir', { nom: 'CA', aria: 'CA total du mois, B2B compris, face au N-1',
+      val: m => m.ca, val1: m => m.n1 ? m.n1.ca : null, axe: v => v / 1000 + ' k€', etiq: k1, tip: eur });
+    grapheB2bMoyenne();
+  }
+  grapheMois('graphe-clients', { nom: 'Clients', aria: 'Clients du mois, face au N-1',
+    val: m => m.clients, val1: m => m.n1 ? m.n1.clients : null, axe: v => grp(v), etiq: v => grp(v), tip: v => grp(v) });
+}
+if (D.proLu) {
+  $('ev-comptoir-titre').textContent = 'CA sans B2B : le comptoir';
+  $('ev-comptoir-note').textContent = insec('Le CA total moins le B2B, les tickets des clients pro à TVA valide. Un mois dont le B2B n’est pas lu sur tous ses jours sort de la courbe.');
+  $('ev-b2b-note').textContent = insec('Les tickets des clients pro à TVA valide, mois par mois, face au même mois un an plus tôt.');
+} else {
+  $('ev-comptoir-titre').textContent = 'CA du mois, B2B compris';
+  $('ev-comptoir-note').textContent = insec(`En attendant la séparation comptoir / B2B, le CA total : le B2B en pèse ${dec(D.b2b.part)} % sur 12 mois.`);
+  $('ev-b2b-note').textContent = insec(`La moyenne réelle des 12 derniers mois : ≈ ${k1(D.b2b.b2b12)} de B2B, ${dec(D.b2b.part)} % du CA. Le détail mois par mois, face au N-1, s’y dessinera avec la réponse de la route /ventes/evolution du cockpit.`);
+}
+
+/* --- Octobre à octobre --- */
+$('oo-intro').textContent = `Les dix-huit mois pleins depuis l’ouverture : ${k1(T.ca)} de CA, ${grp(T.clients)} clients, ${eur(T.caJour)} de CA par jour ouvert. Le N-1 commence en mai 2026 : le magasin a ouvert fin avril 2025.`;
+const L = D.lignes;
+$('oo-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th class="num">Clients</th><th class="num">Clients / jour</th><th class="num">CA</th><th class="num">CA / jour</th><th class="num">Panier</th><th class="num">CA vs N-1</th><th class="num">Clients vs N-1</th><th class="num">Panier vs N-1</th></tr></thead><tbody>'
+  + L.filter(l => l.k >= '2026-05' && l.k <= '2026-10').map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${l.jours}</td><td class="num">${grp(l.clients)}</td><td class="num">${dec(l.cliJour, 0)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caJour)}</td><td class="num">${eur2(l.panier)}</td>`
+    + `<td class="num ${cls(l.vsCa)}">${pct(l.vsCa)}${l.n1Fermes ? '*' : ''}</td><td class="num ${cls(l.vsCli)}">${pct(l.vsCli)}</td><td class="num ${cls(l.vsPanier)}">${pct(l.vsPanier)}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>Mai → oct. 26</td><td class="num">${C.n.jours}</td><td class="num">${grp(C.n.clients)}</td><td class="num">${dec(C.n.cliJour, 0)}</td><td class="num">${eur(C.n.ca)}</td><td class="num">${eur(C.n.caJour)}</td><td class="num">${eur2(C.n.panier)}</td>`
+  + `<td class="num ${cls(ecC('ca'))}">${pct(ecC('ca'))}</td><td class="num ${cls(ecC('clients'))}">${pct(ecC('clients'))}</td><td class="num ${cls(ecC('panier'))}">${pct(ecC('panier'))}</td></tr></tfoot>`;
+/* --- Les pièces vendues par mois, face au N-1 (14/11/2026, Sam) --- */
+if (D.pieces && D.pieces.length) {
+  const PI = D.pieces, lab = k => (L.find(l => l.k === k) || { lab: k }).lab;
+  const som = (f) => PI.reduce((a, m) => a + f(m), 0);
+  const tot = { jours: som(m => m.jours), clients: som(m => m.clients), ca: som(m => m.ca), pieces: som(m => m.pieces),
+    n1: PI.every(m => m.n1) ? { jours: som(m => m.n1.jours), clients: som(m => m.n1.clients), pieces: som(m => m.n1.pieces) } : null };
+  const ligne = (nom, m, pied) => {
+    const e = m.n1 ? (m.pieces / m.n1.pieces - 1) * 100 : null, court = !pied && m.n1 && m.n1.jours < m.jours - 2;
+    const t = pied ? 'td' : 'td';
+    return `<tr><${t}>${esc(nom)}</${t}><td class="num">${m.jours}</td><td class="num">${grp(m.pieces)}</td><td class="num">${grp(m.pieces / m.jours)}</td>`
+      + `<td class="num">${m.n1 ? grp(m.n1.pieces) : '—'}</td><td class="num ${cls(e)}">${pct(e)}${court ? '*' : ''}</td>`
+      + `<td class="num">${dec(m.pieces / m.clients, 2)}</td><td class="num">${m.n1 ? dec(m.n1.pieces / m.n1.clients, 2) : '—'}</td><td class="num">${eur2(m.ca / m.pieces)}</td></tr>`;
+  };
+  $('pieces-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th class="num">Pièces</th><th class="num">Pièces / jour</th><th class="num">Pièces N-1</th><th class="num">Pièces vs N-1</th>'
+    + '<th class="num">Pièces par client</th><th class="num">Par client N-1</th><th class="num">Prix d’une pièce</th></tr></thead><tbody>'
+    + PI.map(m => ligne(lab(m.k), m, false)).join('') + '</tbody><tfoot>' + ligne('Mai → oct. 26', tot, true) + '</tfoot>';
+  // La simulation (14/11/2026, Sam) : 2, 4 et 6 % sur le PRIX, pas sur le volume. Pièces et clients égaux : la matière ne
+  // bouge pas, tout le CA en plus va au résultat ; personnel et frais généraux inchangés.
+  const nM = PI.length, pM = tot.pieces / nM, caM = tot.ca / nM, prix = tot.ca / tot.pieces;
+  const persP = PE6 ? PE6.n.pct : null;   // la part du P&L, mai → oct. 26
+  $('pieces-sim-titre').textContent = 'Simulation : 2 %, 4 % et 6 % sur le prix, à volume égal, sur le CA d’un mois';
+  $('pieces-sim').innerHTML = '<thead><tr><th>Prix</th><th class="num">Prix d’une pièce</th><th class="num">Pièces / mois</th><th class="num">CA / mois</th>'
+    + '<th class="num">CA en plus / mois</th><th class="num">par an</th><th class="num">Résultat en plus / mois</th>' + (persP ? '<th class="num">Personnel</th>' : '') + '</tr></thead><tbody>'
+    + [0, 2, 4, 6].map(x => {
+      const k = 1 + x / 100, ca = caM * k, plus = ca - caM;
+      return `<tr class="${x ? '' : 'moi'}"><td>${x ? '+' + x + INS + '%' : 'Aujourd’hui'}</td><td class="num">${eur2(prix * k)}</td><td class="num">${grp(pM)}</td><td class="num">${eur(ca)}</td>`
+        + `<td class="num ${x ? 'up' : ''}">${x ? '+' + eur(plus) : '—'}</td><td class="num ${x ? 'up' : ''}">${x ? '+' + k1(plus * 12) : '—'}</td><td class="num ${x ? 'up' : ''}">${x ? '+' + eur(plus) : '—'}</td>`
+        + (persP ? `<td class="num">${dec(persP / k)} % du CA</td>` : '') + '</tr>';
+    }).join('') + '</tbody>';
+  $('pieces-points').innerHTML = [
+    `En magasin : +2 %, c’est ≈ ${dec(prix * 0.02 * 100, 0)} centimes de plus par pièce ; +6 %, ≈ ${dec(prix * 0.06 * 100, 0)} centimes.`,
+    `À volume égal, la matière ne change pas : tout le CA en plus va au résultat. Base : le mois moyen de mai à octobre 2026, ${grp(pM)} pièces à ${eur2(prix)}.`,
+  ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+  $('pieces').hidden = false;
+}
+const courts = L.filter(l => l.n1Fermes), juil = L.find(l => l.k === '2026-07');
+$('oo-note').textContent = courts.map(l => `* ${l.lab} : le N-1 a eu des jours fermés. Par jour ouvert, l’écart est de ${pct(l.vsCaJour)}.`).join(' ');
+
+$('trim-table').innerHTML = '<thead><tr><th>Période</th><th class="num">Clients / jour</th><th class="num">CA / jour</th><th class="num">Panier</th></tr></thead><tbody>'
+  + D.trim.map(t => `<tr><td>${esc(t.lab)}</td><td class="num">${dec(t.cliJour, 0)}</td><td class="num">${eur(t.caJour)}</td><td class="num">${eur2(t.panier)}</td></tr>`).join('') + '</tbody>';
+
+function grapheTrafic() {
+  const zone = $('graphe-trafic');
+  const W = Math.max(300, zone.clientWidth), H = 150, ml = 30, mr = 6, mt = 18, mb = 26;
+  const n = L.length, pas = (W - ml - mr) / n, lb = Math.min(28, pas * 0.62);
+  const vmax = 180, hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP;
+  const ft = 'font-family:var(--font)';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Clients par jour ouvert, d’octobre 2025 à octobre 2026">`;
+  [0, 50, 100, 150].forEach(v => { s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v ? '.07' : '.16'})"/><text x="${ml - 6}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${v}</text>`; });
+  const vmaxL = L.reduce((a, l) => l.cliJour > a.cliJour ? l : a), vminL = L.reduce((a, l) => l.cliJour < a.cliJour ? l : a);
+  L.forEach((l, i) => {
+    const cx = ml + pas * (i + 0.5), h = y(0) - y(l.cliJour);
+    // Barre ancrée sur l'axe, coins arrondis en haut seulement.
+    s += `<path d="M${cx - lb / 2},${y(0)} V${y(l.cliJour) + 4} Q${cx - lb / 2},${y(l.cliJour)} ${cx - lb / 2 + 4},${y(l.cliJour)} H${cx + lb / 2 - 4} Q${cx + lb / 2},${y(l.cliJour)} ${cx + lb / 2},${y(l.cliJour) + 4} V${y(0)} Z" fill="#8D1D2C" opacity="${i === n - 1 ? 1 : 0.55}"/>`;
+    if (l === vmaxL || l === vminL || i === 0 || i === n - 1) { s += `<text x="${cx}" y="${y(l.cliJour) - 5}" font-size="10" text-anchor="middle" fill="#1c1a17" style="${ft}">${dec(l.cliJour, 0)}</text>`; }
+    if (W >= 520 || i % 3 === 0 || i === n - 1) { s += `<text x="${cx}" y="${H - 8}" font-size="9.5" text-anchor="middle" fill="#3b3731" style="${ft}">${esc(l.lab.split(' ')[0])}</text>`; }
+    s += `<rect class="hit" data-i="${i}" x="${ml + pas * i}" y="${mt}" width="${pas}" height="${hP}" fill="transparent"/>`;
+  });
+  s += '</svg>';
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s);
+  const svg = zone.querySelector('svg');
+  svg.querySelectorAll('.hit').forEach(r => {
+    r.addEventListener('pointerenter', () => {
+      const l = L[+r.dataset.i], k = W / svg.getBoundingClientRect().width;
+      bulle(zone, `<div class="t">${esc(l.lab)}</div><div>${dec(l.cliJour, 1)} clients par jour ouvert</div><div>${grp(l.clients)} clients sur ${l.jours} jours</div>${l.vsCli != null ? `<div class="${cls(l.vsCli)}">${pct(l.vsCli)} de clients face au N-1</div>` : ''}`,
+        (ml + pas * (+r.dataset.i + 0.5)) / k, y(l.cliJour) / k);
+    });
+    r.addEventListener('pointerleave', () => bulle(zone, null));
+  });
+}
+
+const compL = [['CA', 'ca', eur], ['Jours ouverts', 'jours', v => String(v)], ['Clients', 'clients', grp], ['Clients par jour', 'cliJour', v => dec(v, 1)], ['CA par jour', 'caJour', eur], ['Panier', 'panier', eur2]];
+$('comp-table').innerHTML = '<thead><tr><th></th><th class="num">2025</th><th class="num">2026</th><th class="num">Écart</th></tr></thead><tbody>'
+  + compL.map(([lab, k, f]) => `<tr><td>${esc(lab)}</td><td class="num">${f(C.n1[k])}</td><td class="num">${f(C.n[k])}</td>`
+    + (k === 'jours' ? `<td class="num">+${C.n[k] - C.n1[k]}</td>` : `<td class="num ${cls(ecC(k))}">${pct(ecC(k))}</td>`) + '</tr>').join('') + '</tbody>';
+$('comp-note').textContent = 'En 2025, le magasin a eu des jours fermés en mai et en juillet : « par jour ouvert » compare à jours égaux.';
+
+/* --- Le panier moyen face aux autres magasins (mois où les quatre sont ouverts) --- */
+const PA = D.panierAutres, moisCL = k => { const [a, m] = k.split('-'); return ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][+m - 1] + ' ' + a.slice(2); };
+const perPA = moisCL(PA.du) + ' → ' + moisCL(PA.au);
+const moiPA = PA.magasins.find(m => m.moi);
+$('panier-mag-titre').textContent = 'Panier moyen · ' + perPA + ' (' + PA.nbMois + ' mois)';
+$('panier-magasins').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Clients / jour</th><th class="num">CA</th><th class="num">Panier</th><th class="num">vs Sombreffe</th></tr></thead><tbody>'
+  + PA.magasins.map(m => `<tr${m.moi ? ' class="moi"' : ''}><td>${esc(m.nom)}${m.nom === PA.bas.nom ? ' · le plus bas des autres' : ''}</td><td class="num">${dec(m.cliJour, 0)}</td><td class="num">${k1(m.ca)}</td><td class="num">${eur2(m.panier)}</td><td class="num ${m.moi ? 'dim' : cls(m.panier - moiPA.panier)}">${m.moi ? '—' : pct((m.panier / moiPA.panier - 1) * 100)}</td></tr>`).join('')
+  + '</tbody>';
+$('panier-mois-titre').textContent = 'Le trafic de Sombreffe au panier de ' + PA.bas.nom + ' (' + eur2(PA.bas.panier) + ')';
+$('panier-mois').innerHTML = '<thead><tr><th>Mois</th><th class="num">Clients</th><th class="num">Panier</th><th class="num">CA réel</th><th class="num">CA au panier ' + esc(PA.bas.nom) + '</th><th class="num">Écart</th></tr></thead><tbody>'
+  + PA.mois.map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${grp(l.clients)}</td><td class="num">${eur2(l.panier)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caBas)}</td><td class="num ${cls(l.ecart)}">${sgn(l.ecart)}${eur(Math.abs(l.ecart))}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>${PA.nbMois} mois</td><td class="num">${grp(PA.clients)}</td><td class="num">${eur2(PA.ca / PA.clients)}</td><td class="num">${eur(PA.ca)}</td><td class="num">${eur(PA.caBas)}</td><td class="num ${cls(PA.ecart)}">${sgn(PA.ecart)}${eur(Math.abs(PA.ecart))}</td></tr></tfoot>`;
+$('panier-points').innerHTML = [
+  `Panier de Sombreffe : ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${perPA}).`,
+  `Le plus bas des autres : ${esc(PA.bas.nom)}, ${eur2(PA.bas.panier)} (${pct((PA.bas.panier / moiPA.panier - 1) * 100)}).`,
+  `Au panier de ${esc(PA.bas.nom)}, les ${grp(PA.clients)} clients de Sombreffe auraient fait ${k1(PA.caBas)} au lieu de ${k1(PA.ca)} : ${sgn(PA.ecart)}${k1(Math.abs(PA.ecart))} en ${PA.nbMois} mois, ≈ ${sgn(PA.ecartAn)}${k1(Math.abs(PA.ecartAn))} par an.`,
+].map(t => '<li>' + t + '</li>').join('');
+
+/* --- Comptoir et B2B --- */
+const partC = 100 - B.part;
+$('barre-b2b').innerHTML = `<div class="seg" style="width:calc(${partC}% - 2px);background:#8D1D2C"></div><div class="seg" style="width:${B.part}%;background:var(--b2b)"></div>`
+  + `<div class="plafond" style="left:${D.plafond}%"><span>plafond B2B ${dec(D.plafond, 0)}${INS}%</span></div>`;
+$('chiffres-b2b').innerHTML = `<span><i class="rp-point" style="background:#8D1D2C"></i>Comptoir ${dec(partC)}${INS}% · ≈ ${esc(k1(B.comptoir12))}</span>`
+  + `<span><i class="rp-point" style="background:var(--b2b)"></i>B2B ${dec(B.part)}${INS}% · ≈ ${esc(k1(B.b2b12))}, soit ≈ ${esc(k1(B.parMois))} par mois</span>`
+  + `<span>Plafond : ${dec(D.plafond, 0)}${INS}% du CA en B2B ; aucun client au-delà de ${dec(D.plafondClient, 0)}${INS}% du B2B</span>`;   // 14/11/2026 (Sam)
+$('aide-b2b').textContent = `12 derniers mois clos : novembre 2025 → octobre 2026, ${k1(B.ca12)} de CA. B2B : les tickets des clients pro à TVA valide ; comptoir : tout le reste. Un point de part B2B vaut environ ${k1(B.unPoint)} par an.`;
+if (B.corrige) {
+  $('aide-b2b').textContent += insec(` Le cockpit affiche ${dec(B.partCockpit)} % : il compte août et septembre 2026 à zéro, alors que les tickets du panel, relus un par un, portent du B2B. Ce rapport prend les tickets relus.`);
+}
+$('question-texte').textContent = insec(`Avec le panier de 2025, les clients de septembre et d’octobre 2026 auraient fait ${k1(B.ecart)} de moins (${k1(B.ecartSept)} en septembre, ${k1(B.ecartOct)} en octobre). `
+  + `Pour que le B2B l’explique à lui seul, il aurait dû gagner ces ${k1(B.ecart)} sur deux mois face à 2025 : environ ${dec(B.partDeLAnnee, 0)} % de tout le B2B des 12 derniers mois. `
+  + `C’est possible si une ou deux sociétés ont passé de grosses commandes. Sinon, c’est le panier du comptoir qui a monté (prix, produits d’automne, commandes). `
+  + `Les semaines montrent une hausse par à-coups (S39 à S42, puis S45), ce qui ressemble davantage à de grosses commandes qu’à une hausse de prix, qui relèverait toutes les semaines.`);
+{
+  const mS = D.serie.find(m => m.k === '2026-09'), mO = D.serie.find(m => m.k === '2026-10');
+  const ok = m => m && m.pro && m.pro.complet && m.n1pro && m.n1pro.complet;
+  if (ok(mS) && ok(mO)) {
+    const b26 = mS.pro.ca + mO.pro.ca, b25 = mS.n1pro.ca + mO.n1pro.ca, dB = b26 - b25, reste = B.ecart - dB;
+    $('question-texte').textContent = insec(`Avec le panier de 2025, les clients de septembre et d’octobre 2026 auraient fait ${k1(B.ecart)} de moins. `
+      + `Relu ticket par ticket, le B2B de ces deux mois fait ${k1(b26)} (septembre ${eur(mS.pro.ca)}, octobre ${eur(mO.pro.ca)}), contre ${k1(b25)} un an plus tôt : `
+      + (dB >= B.ecart ? `il explique toute la hausse, et plus : ${k1(dB)} de B2B en plus pour ${k1(B.ecart)} de hausse. ` : dB > 0 ? `il explique ${k1(dB)} de la hausse, soit ${dec(dB / B.ecart * 100, 0)} %. ` : 'il n’explique pas la hausse. ')
+      + (B2BX ? `Un seul client en fait l’essentiel : ${B2BX.top.nom}, ${k1(B2BX.topSO)} sur ces deux mois. ` : '')
+      + (reste > 0 ? `Le reste, environ ${k1(reste)}, vient du comptoir.` : (() => { const c26 = (mS.ca - mS.pro.ca) + (mO.ca - mO.pro.ca), c25 = (mS.n1.ca - mS.n1pro.ca) + (mO.n1.ca - mO.n1pro.ca); return `Sans le B2B, le comptoir recule : ${k1(c26)} en septembre et octobre 2026, contre ${k1(c25)} un an plus tôt (${pct((c26 / c25 - 1) * 100)}).`; })()));
+  }
+}
+{
+  const manque = [];
+  if (!D.proLu) { manque.push('Le comptoir et le B2B mois par mois, face au N-1 : la réponse de la route /ventes/evolution du cockpit.'); }
+  if (!D.b2bClients && !D.b2bDetail) { manque.push('Les clients B2B, avec leur volume.'); }
+  else if (!D.b2bClients) { manque.push('Les clients B2B de 2025, pour le tableau année par année.'); }
+  if (manque.length) { $('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec(manque.join(' '))) + '</span>'; }
+  else { $('a-completer').hidden = true; }
+}
+
+/* --- Les dix dernières semaines --- */
+const SEM = D.semaines;
+$('sem-intro').textContent = 'Le nombre de clients bouge peu d’une semaine à l’autre ; le CA, lui, saute de 18 à 28 % certaines semaines (S39 à S42, S45) et reste à plat les autres (S43, S44).';
+$('sem-table').innerHTML = '<thead><tr><th>Semaine</th><th>Du</th><th class="num">Clients</th><th class="num">CA</th><th class="num">Panier</th><th class="num">Panier N-1</th><th class="num">CA vs N-1</th><th class="num">Clients vs N-1</th></tr></thead><tbody>'
+  + SEM.map(w => `<tr><td>${esc(w.lab)}${w.enCours ? ' · en cours (' + w.jours + ' j)' : ''}</td><td>${dateC(w.du)} → ${dateC(w.au)}</td><td class="num">${grp(w.clients)}</td><td class="num">${eur(w.ca)}</td><td class="num">${eur2(w.panier)}</td><td class="num">${eur2(w.n1panier)}</td>`
+    + `<td class="num ${cls(w.vsCa)}">${pct(w.vsCa)}</td><td class="num ${cls(w.vsCli)}">${pct(w.vsCli)}</td></tr>`).join('') + '</tbody>';
+
+/* --- Temps morts au comptoir (seuil 10 min, 8 semaines) --- */
+const TM = D.tempsMorts, TS = TM.semaine, JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const hm = m => { m = Math.round(m); return m < 60 ? m + INS + 'min' : Math.floor(m / 60) + INS + 'h' + INS + String(m % 60).padStart(2, '0'); };
+const HEURES = Object.keys(TS.heures).map(Number).sort((a, b) => a - b);
+const APM = TM.apresMidi;
+$('tm-intro').textContent = `Un temps mort : au moins ${TM.seuil} minutes sans ticket entre deux clients, entre le premier et le dernier ticket du jour. `
+  + `Mesuré sur ${TM.semaines} semaines pleines, du ${dateC(TM.du)} au ${dateC(TM.au)}/${TM.au.slice(0, 4)}, chaque jour de la semaine compté ${TM.semaines} fois.`;
+$('tm-kpis').innerHTML = [
+  kpi('Temps morts par jour', dec(TS.nb), `au moins ${TM.seuil} min sans client · ${dec(TS.tickets, 0)} tickets par jour`),
+  kpi('Sans client par jour', hm(TS.min), `${dec(TS.pct, 0)} % de l’ouverture (${hm(TS.ouvert)} du premier au dernier ticket)`, 'bad'),
+  kpi('Après-midi sans client', dec(APM.pct, 0) + INS + '%', `de 14 h à 18 h · ${dec(APM.tk)} tickets par heure`, 'bad'),
+  kpi('Plus long trou du jour', hm(TS.plusLong), `en moyenne, le plus souvent vers ${TS.plusLongHeure} h`),
+].join('');
+
+// La couleur d'une case : un seul ton, du rose pâle (0 %) au bordeaux (100 %).
+const RAMPE = [[248, 238, 239], [141, 29, 44]];
+const teinte = p => { const t = Math.max(0, Math.min(1, p / 100)); return 'rgb(' + RAMPE[0].map((c, i) => Math.round(c + (RAMPE[1][i] - c) * t)).join(',') + ')'; };
+const encre = p => p >= 58 ? '#fff' : '#1c1a17';
+const caseTm = (h, x, bord, jour) => {
+  if (!x) { return '<td class="vide">—</td>'; }
+  return `<td class="c" style="background:${teinte(x.pct)};color:${encre(x.pct)}" data-j="${esc(jour)}" data-h="${h}" data-pct="${x.pct}" data-min="${x.min}" data-nb="${x.nb}" data-tk="${x.tk}">${Math.round(x.pct)}${bord ? '*' : ''}</td>`;
+};
+$('tm-table').innerHTML = '<thead><tr><th class="jour"></th>' + HEURES.map(h => `<th>${h} h</th>`).join('') + '</tr></thead><tbody>'
+  + TM.jours.map((j, i) => `<tr><td class="jour">${JOURS[i]}</td>` + HEURES.map(h => caseTm(h, j.heures[h], j.bords && (h === j.bords[0] || h === j.bords[1]), JOURS[i])).join('') + '</tr>').join('')
+  + '<tr class="moy"><td class="jour">Moyenne</td>' + HEURES.map(h => caseTm(h, TS.heures[h], h === HEURES[0] || h === HEURES[HEURES.length - 1], 'Moyenne des 7 jours')).join('') + '</tr>'
+  + '</tbody><tfoot><tr><td class="jour">Tickets / heure</td>' + HEURES.map(h => `<td>${dec(TS.heures[h].tk)}</td>`).join('') + '</tr></tfoot>';
+$('tm-legende').innerHTML = '<span>0 %</span><span class="rp-ramp"></span><span>100 % de l’heure sans client</span>'
+  + '<span>* heure d’ouverture ou de fermeture : surestimée si le magasin ouvre ou ferme à la demi-heure</span>';
+(() => {
+  const zone = $('tm-carte');
+  zone.querySelectorAll('td.c').forEach(td => {
+    td.addEventListener('pointerenter', () => {
+      const r = td.getBoundingClientRect(), z = zone.getBoundingClientRect(), v = td.dataset;
+      bulle(zone, `<div class="t">${esc(v.j)} · ${v.h} h</div><div>${dec(+v.pct)} % de l’heure sans client</div><div>${dec(+v.min)} min · ${dec(+v.nb)} temps mort${+v.nb >= 2 ? 's' : ''}</div><div>${dec(+v.tk)} tickets dans l’heure</div>`,
+        r.left - z.left + r.width / 2, r.top - z.top);
+    });
+    td.addEventListener('pointerleave', () => bulle(zone, null));
+  });
+})();
+const lienHeure = j => j.plusLongHeure != null ? `${hm(j.plusLong)}, vers ${j.plusLongHeure} h` : hm(j.plusLong);
+$('tm-jours').innerHTML = '<thead><tr><th>Jour</th><th class="num">Temps morts</th><th class="num">Sans client</th><th class="num">Part de l’ouverture</th><th class="num">Plus long trou</th><th class="num">Tickets</th></tr></thead><tbody>'
+  + TM.jours.map((j, i) => `<tr><td>${JOURS[i]}</td><td class="num">${dec(j.nb)}</td><td class="num">${hm(j.min)}</td><td class="num">${dec(j.pct, 0)} %</td><td class="num">${lienHeure(j)}</td><td class="num">${dec(j.tickets, 0)}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>Moyenne</td><td class="num">${dec(TS.nb)}</td><td class="num">${hm(TS.min)}</td><td class="num">${dec(TS.pct, 0)} %</td><td class="num">${lienHeure(TS)}</td><td class="num">${dec(TS.tickets, 0)}</td></tr></tfoot>`;
+const RES = TM.reseau.slice().sort((a, b) => b.nb - a.nb);
+$('tm-reseau').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Temps morts / jour</th><th class="num">Sans client</th><th class="num">Part</th><th class="num">Tickets / jour</th></tr></thead><tbody>'
+  + RES.map(m => `<tr class="${m.shop === '5' ? 'moi' : ''}"><td>${esc(m.nom)}</td><td class="num">${dec(m.nb)}</td><td class="num">${hm(m.min)}</td><td class="num">${dec(m.pct, 0)} %</td><td class="num">${dec(m.tickets, 0)}</td></tr>`).join('') + '</tbody>';
+const semaineJ = TM.jours.slice(0, 5), weJ = TM.jours.slice(5);
+const nbMin = a => Math.min(...a.map(j => j.nb)), nbMax = a => Math.max(...a.map(j => j.nb));
+const apmH = ['14', '15', '16', '17'].filter(h => TS.heures[h]).map(h => TS.heures[h].pct);
+const gainApm = (10 - APM.tk) * APM.heures;
+$('tm-points').innerHTML = [
+  `L’après-midi est le grand creux : de 14 h à 18 h, ${dec(Math.min(...apmH), 0)} à ${dec(Math.max(...apmH), 0)} % de chaque heure se passe sans client. Le comptoir y fait ${dec(APM.tk)} tickets par heure, contre ${dec(TS.heures['12'].tk)} à midi.`,
+  `Le midi est plein : ${dec(TS.heures['12'].pct, 0)} % de l’heure sans client à 12 h, ${dec(TS.heures['11'].pct, 0)} % à 11 h. Le matin, de 8 h à 11 h, est entre les deux (${dec(TS.heures['8'].pct, 0)} à ${dec(Math.max(TS.heures['9'].pct, TS.heures['10'].pct), 0)} %).`,
+  `Le week-end remplit le comptoir : ${dec(weJ[0].nb)} temps morts le samedi et ${dec(weJ[1].nb)} le dimanche, contre ${dec(nbMin(semaineJ))} à ${dec(nbMax(semaineJ))} en semaine. Jeudi et vendredi sont les jours les plus creux : ${hm(TM.jours[3].min)} et ${hm(TM.jours[4].min)} sans client.`,
+  `Sombreffe a le plus de temps morts du réseau : ${dec(TS.nb)} par jour et ${dec(TS.pct, 0)} % de son ouverture sans client, contre ${dec(RES.find(m => m.shop === '2').nb)} et ${dec(RES.find(m => m.shop === '2').pct, 0)} % à Corbais.`,
+  `Repère : sous 10 tickets dans l’heure, plus de la moitié de l’heure se passe sans client. Amener l’après-midi de ${dec(APM.tk)} à 10 tickets par heure, c’est environ ${dec(gainApm, 0)} clients de plus par jour.`,
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+
+$('tm-constat').innerHTML = `<span class="rp-alerte-k">Constat terrain · ${esc(D.constat.le)}</span><span>${esc(insec(D.constat.texte + ` Les chiffres le montrent : de 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client, avec ${dec(APM.tk)} tickets et ${eur(APM.ca)} de CA par heure, contre ${dec(TS.heures['12'].tk)} tickets et ${eur(TS.heures['12'].ca)} à midi.`))}</span>`;
+
+/* --- Tâches et checklist --- */
+const TC = D.taches, hFr = h => h ? h.replace(':00', ' h').replace(':', ' h ') : '—';
+const ckNom = code => (TC.journee.concat(TC.semaineMois).find(c => c.code === code) || {}).nom || code;
+const ckH = code => hFr((TC.journee.find(c => c.code === code) || {}).heure);
+$('tc-intro').textContent = 'La checklist dit quoi faire et quand ; la tâche prouve que c’est fait.';
+$('tc-checklist-points').innerHTML = [   // court (13/11/2026)
+  `Une checklist par moment, avec son heure : ouverture ${ckH('1.1.01')}, recuisson ${ckH('1.3.01')}, fermeture ${ckH('1.4.01')}.`,
+  'Un code unique, le même partout (1.3.01 : vente, après-midi).',
+  'Ne rien oublier, faire pareil chaque jour, former.',
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+$('tc-taches-points').innerHTML = [   // court (13/11/2026)
+  'Faite dans l’application des employés : l’heure, qui, la photo.',
+  `Notée de 1 à 5 ; sous ${TC.seuil}, une non-conformité, suivie jusqu’à correction.`,
+  'La preuve : le bureau voit la vitrine comme le client.',
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+$('tc-niveaux').innerHTML = '<thead><tr><th class="num">Note</th><th>Niveau</th><th>Effet</th></tr></thead><tbody>'
+  + [[5, 'Exemplaire', 'clôturée'], [4, 'Conforme', 'clôturée'], [3, 'Non conforme, mineur', 'clôturée et signalée'], [2, 'Non conforme, majeur', 'clôturée et signalée'], [1, 'Non conforme, critique', 'clôturée et signalée']]
+    .map(([n, nom, eff]) => `<tr><td class="num">${n}</td><td>${esc(nom)}</td><td class="${n < TC.seuil ? 'down' : ''}">${esc(eff)}</td></tr>`).join('') + '</tbody>';
+$('tc-sombreffe').innerHTML = `<span class="rp-alerte-k">Pourquoi c’est important à Sombreffe</span><span>${esc(insec(`1.3.01 « ${ckNom('1.3.01')} » à ${ckH('1.3.01')} et 1.3.02 « ${ckNom('1.3.02')} » à ${ckH('1.3.02')}, chaque jour, photo comprise : la preuve que la cuisson a repris.`))}</span>`;
+const APRES = ['1.3.01', '1.3.02'];
+$('tc-journee').innerHTML = '<thead><tr><th>Heure</th><th>Code</th><th>Checklist</th></tr></thead><tbody>'
+  + TC.journee.map(c => `<tr class="${APRES.includes(c.code) ? 'moi' : ''}"><td>${esc(hFr(c.heure))}</td><td>${esc(c.code)}</td><td>${esc(c.nom)}</td></tr>`).join('') + '</tbody>';
+$('tc-semaine').textContent = 'Et chaque semaine ou chaque mois : ' + TC.semaineMois.map(c => c.code + ' ' + c.nom).join(', ') + '.';
+const RL = TC.releve, RS = RL.find(r => r.shop === '5');
+$('tc-releve-titre').textContent = 'Les tâches du jeudi ' + dateL(TC.releveLe).replace(/^1 /, '1er ');
+$('tc-releve').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Tâches rendues</th><th class="num">Obligatoires rendues</th><th class="num">Photos</th></tr></thead><tbody>'
+  + RL.map(r => `<tr class="${r.shop === '5' ? 'moi' : ''}"><td>${esc(r.nom)}</td><td class="num ${r.rendues ? '' : 'down'}">${r.rendues} / ${r.taches}</td><td class="num ${r.obligatoiresRendues ? '' : 'down'}">${r.obligatoiresRendues} / ${r.obligatoires}</td><td class="num">${r.photos}</td></tr>`).join('') + '</tbody>';
+$('tc-releve-note').textContent = `Ce jour-là, Sombreffe n’a rendu aucune de ses ${RS.taches} tâches, dont ${RS.obligatoires} obligatoires. C’est un seul jour, relevé au panel avant la nomenclature du 08/11 : il montre ce que voit le bureau quand rien n’est rendu. Le suivi se lit chaque jour dans le dashboard magasin, onglet Tâches : obligatoires faites, photos rendues, non-conformités sur 30 jours.`;
+
+/* --- Le problème --- */
+const aout = L.find(l => l.k === '2026-08');
+$('probleme-points').innerHTML = [   // une ligne par constat (13/11/2026, Sam : « simplifier les puces »)
+  `Trafic en baisse : ${dec(C.n.cliJour, 0)} clients par jour contre ${dec(C.n1.cliJour, 0)} en 2025 (${pct(ecC('cliJour'), 0)}).`,
+  `Après-midi vide : ${dec(APM.pct, 0)} % du temps sans client de 14 h à 18 h.`,
+  'Plus de cuisson l’après-midi (constat terrain).',
+  `Tâches non rendues : ${RS.rendues} sur ${RS.taches} le ${dateC(TC.releveLe)}.`,
+  B2BX && B2BX.sept ? `Hausse de septembre-octobre : le B2B ; sans lui, le comptoir recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} %.`
+                    : `Octobre : ${pct(O.vsCa, 0)} de CA, mais ${pct(O.vsCli, 0)} de clients.`,
+  B2BX ? `B2B : ${dec(B2BX.topPct, 0)} % pour un seul client ; plafond ${dec(D.plafondClient, 0)} % par client.` : null,
+  `Panier : ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${PA.bas.nom} : ${eur2(PA.bas.panier)}).`,   // 14/11/2026
+  `Été faible : juillet ${pct(juil.vsCa, 0)}, août ${pct(aout.vsCa, 0)}.`,
+  PE6 ? `Personnel : ${dec(PE6.n.pct)} % du CA (${dec(PE6.n1.pct)} % en 2025 ; seuil ${dec(D.seuilPersonnel, 0)} %).` : null,
+].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
+
+/* --- La part du B2B par trimestre : le CA des ventes, le B2B de chaque mois (relu, sinon la copie de caisse) --- */
+{
+  const T = {};
+  D.serie.filter(m => m.ca != null).forEach(m => {
+    const q = Math.floor((+m.k.slice(5) - 1) / 3) + 1, cle = m.an + '-T' + q;
+    const t = T[cle] = T[cle] || { an: m.an, q, mois: [], ca: 0, b2b: 0, lus: true, ouverture: false };
+    t.mois.push(m.lab); t.ca += m.ca; t.ouverture = t.ouverture || m.ouverture;
+    if (m.pro && m.pro.complet) { t.b2b += m.pro.ca; } else { t.lus = false; }
+  });
+  const LQ = Object.values(T);
+  if (LQ.some(t => t.lus)) {
+    const nomQ = t => `${t.q === 1 ? '1er' : t.q + 'e'} trimestre ${t.an}`;
+    $('b2b-trim-table').innerHTML = '<thead><tr><th>Trimestre</th><th class="num">CA</th><th class="num">Comptoir</th><th class="num">B2B</th><th class="num">Part B2B</th><th></th></tr></thead><tbody>'
+      + LQ.map(t => {
+        const part = t.lus ? t.b2b / t.ca * 100 : null;
+        return `<tr><td>${esc('T' + t.q + ' ' + t.an + (t.ouverture ? ' (dès le 25/04)' : t.mois.length < 3 ? ' (' + t.mois.join(', ') + ')' : ''))}</td><td class="num">${eur(t.ca)}</td>`
+          + (t.lus ? `<td class="num">${eur(t.ca - t.b2b)}</td><td class="num">${eur(t.b2b)}</td><td class="num">${dec(part)} %</td>`
+                   + `<td><div class="rp-jauge" title="${dec(part)} % sur un plafond de ${dec(D.plafond, 0)} %"><i style="width:${Math.min(100, part / D.plafond * 100)}%"></i></div></td>`
+                   : '<td class="num dim" colspan="4">B2B pas lu sur tous les jours</td>') + '</tr>';
+      }).join('') + '</tbody>';
+    $('b2b-trim-note').textContent = insec(`La barre est à l’échelle du plafond B2B de ${dec(D.plafond, 0)} % (barre pleine). Le B2B de chaque mois : les tickets relus un par un quand ils le sont, sinon la copie de caisse du cockpit ; le CA : les ventes du mois (les tickets).`);
+    $('b2b-trimestres').hidden = false;
+  }
+}
+
+/* --- Les clients B2B, mois par mois (le détail jour par jour du cockpit, s'il est là) --- */
+const BD = D.b2bDetail;
+if (BD && BD.societes.length) {
+  const MS = Object.keys(BD.mois).sort().slice(-6), labM = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab.split(' ')[0];
+  const caMois = ym => (D.lignes.find(l => l.k === ym) || {}).ca;
+  const SOC = BD.societes.map(c => { const t = MS.reduce((a, ym) => a + ((c.mois[ym] || {}).ca || 0), 0), n = MS.reduce((a, ym) => a + ((c.mois[ym] || {}).tickets || 0), 0);
+    return { ...c, total: t, tickets: n }; }).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
+  const totB2b = SOC.reduce((a, c) => a + c.total, 0), MAXS = 15;
+  const vus = SOC.slice(0, MAXS), reste = SOC.slice(MAXS);
+  const premierM = MS[0], dernierM = MS[MS.length - 1];
+  $('b2b-6mois-titre').textContent = `Les clients B2B, ${labM(premierM)} → ${(D.lignes.find(l => l.k === dernierM) || { lab: dernierM }).lab}, mois par mois`;
+  const top3 = SOC.slice(0, 3).reduce((a, c) => a + c.total, 0);
+  $('b2b-6mois-texte').textContent = insec(`${SOC.length} sociétés ont acheté en B2B sur la période, pour ${k1(totB2b)}. Les trois premières font ${dec(top3 / totB2b * 100, 0)} % du B2B : ${SOC.slice(0, 3).map(c => c.nom).join(', ')}.`);
+  const cel = v => v ? eur(v) : '<span class="dim">—</span>';
+  const ligne = (nom, c, cls = '') => `<tr class="${cls}"><td>${esc(nom)}</td>` + MS.map(ym => `<td class="num">${cel((c.mois[ym] || {}).ca)}</td>`).join('')
+    + `<td class="num">${eur(c.total)}</td><td class="num">${c.tickets}</td><td class="num">${dec(c.total / totB2b * 100)} %</td><td>${c.dernier ? esc(dateC(c.dernier)) : ''}</td></tr>`;
+  const somme = L => { const r = { total: 0, tickets: 0, mois: {} }; L.forEach(c => { r.total += c.total; r.tickets += c.tickets; MS.forEach(ym => { const x = c.mois[ym]; if (x) { r.mois[ym] = r.mois[ym] || { ca: 0 }; r.mois[ym].ca += x.ca; } }); }); return r; };
+  $('b2b-6mois-table').innerHTML = '<thead><tr><th>Société</th>' + MS.map(ym => `<th class="num">${esc(labM(ym))}</th>`).join('') + '<th class="num">Total</th><th class="num">Tickets</th><th class="num">Part du B2B</th><th>Dernier</th></tr></thead><tbody>'
+    + vus.map(c => ligne(c.nom, c)).join('') + (reste.length ? ligne(`et ${reste.length} autres`, somme(reste), 'dim') : '')
+    + '</tbody><tfoot>' + ligne('Total B2B', somme(SOC)).replace('<tr class="">', '<tr>')
+    + '<tr><td>Part du CA du magasin</td>' + MS.map(ym => `<td class="num">${BD.mois[ym].ca && caMois(ym) ? dec(BD.mois[ym].ca / caMois(ym) * 100) + ' %' : '—'}</td>`).join('') + '<td class="num">' + dec(totB2b / MS.reduce((a, ym) => a + (caMois(ym) || 0), 0) * 100) + ' %</td><td></td><td></td><td></td></tr></tfoot>';
+  const incomplets = MS.filter(ym => BD.mois[ym].jours < BD.mois[ym].joursMois);
+  $('b2b-6mois-note').textContent = insec('Relu au cockpit ticket par ticket, jour par jour (route /exploitation/pro/detail) : les tickets des clients pro à TVA valide, au montant de caisse. '
+    + (incomplets.length ? `Mois incomplets : ${incomplets.map(labM).join(', ')}. ` : 'Tous les jours de la période sont lus. ')
+    + 'La part du CA rapporte le B2B au CA des ventes du mois (les tickets).');
+  $('b2b-6mois').hidden = false;
+}
+
+/* --- Les clients B2B, année par année (l'export de la copie de caisse, s'il est là) --- */
+const BC = D.b2bClients;
+if (BC && BC.clients.length) {
+  const tot = k => BC.clients.reduce((a, c) => a + c[k], 0), MAXL = 15;
+  const vus = BC.clients.slice(0, MAXL), reste = BC.clients.slice(MAXL);
+  $('b2b-clients-texte').textContent = insec(`${BC.clients.length} clients marqués pro au panel ont acheté à Sombreffe depuis l’ouverture. Sur les 12 derniers mois (novembre 2025 → octobre 2026), ils font ${k1(tot('ca12'))}, soit ${dec(tot('ca12') / BC.ca12Magasin * 100)} % du CA du magasin.`);
+  const ligne = (nom, c, cls = '') => `<tr class="${cls}"><td>${esc(nom)}</td><td class="num">${c.ca2025 ? eur(c.ca2025) : '—'}</td><td class="num">${c.cmd2025 || '—'}</td><td class="num">${c.ca2026 ? eur(c.ca2026) : '—'}</td><td class="num">${c.cmd2026 || '—'}</td>`
+    + `<td class="num">${c.ca12 ? eur(c.ca12) : '—'}</td><td class="num">${c.ca12 ? dec(c.ca12 / BC.ca12Magasin * 100, 2) + INS + '%' : '—'}</td><td>${c.dernier ? esc(dateC(String(c.dernier).slice(0, 10)) + '/' + String(c.dernier).slice(2, 4)) : ''}</td>`
+    + (BC.colTva ? `<td>${esc(c.tva && c.tva !== 'NULL' ? c.tva : '—')}</td>` : '') + '</tr>';
+  const somme = L => ({ ca2025: L.reduce((a, c) => a + c.ca2025, 0), cmd2025: L.reduce((a, c) => a + c.cmd2025, 0), ca2026: L.reduce((a, c) => a + c.ca2026, 0), cmd2026: L.reduce((a, c) => a + c.cmd2026, 0), ca12: L.reduce((a, c) => a + c.ca12, 0) });
+  $('b2b-clients-table').innerHTML = '<thead><tr><th>Client</th><th class="num">CA 2025</th><th class="num">Cmd 2025</th><th class="num">CA 2026</th><th class="num">Cmd 2026</th><th class="num">12 mois</th><th class="num">Part du CA</th><th>Dernier achat</th>' + (BC.colTva ? '<th>TVA</th>' : '') + '</tr></thead><tbody>'
+    + vus.map(c => ligne(c.nom, c)).join('') + (reste.length ? ligne(`et ${reste.length} autres`, somme(reste), 'dim') : '')
+    + '</tbody><tfoot>' + ligne('Total B2B', somme(BC.clients)).replace('<tr class="">', '<tr>') + '</tfoot>';
+  $('b2b-clients-note').textContent = BC.source === 'detail'
+    ? insec('Cmd : commandes (tickets). Relu au cockpit ticket par ticket, jour par jour : 2025 depuis l’ouverture, fin avril ; 2026 de janvier à octobre. Les tickets des clients pro à TVA valide, au montant de caisse.')
+    : 'Cmd : commandes (tickets). 2025 depuis l’ouverture, fin avril ; 2026 jusqu’au dernier jour de la copie de caisse. Le cockpit ne compte en B2B que les clients à TVA valide : un client marqué pro sans TVA valide y reste au comptoir.';
+  $('b2b-clients').hidden = false;
+}
+
+/* --- Frais de personnel face au CA (le P&L du panel, s'il est là) --- */
+const PE = D.personnel, SEUIL_P = D.seuilPersonnel;
+if (PE && PE.cumul.mois) {
+  const ML = PE.mois.filter(m => !m.indispo), dernierP = ML[ML.length - 1];
+  const maxP = ML.reduce((a, m) => m.labourPct > a.labourPct ? m : a), minP = ML.reduce((a, m) => m.labourPct < a.labourPct ? m : a);
+  const moisC = ym => { const l = D.lignes.find(x => x.k === ym); return l ? l.lab : ym; };
+  $('pe-intro').textContent = insec(`Les frais de personnel du P&L du panel, mois par mois, face au chiffre d’affaires du même P&L, sur ${PE.cumul.mois} mois lus. Repère : le seuil du réseau pour les frais de personnel hors rémunération du franchisé, ${dec(SEUIL_P, 0)} % du CA.`);
+  $('pe-kpis').innerHTML = [
+    kpi(`Personnel · ${PE.cumul.mois} mois`, dec(PE.cumul.labourPct) + INS + '%', `${k1(PE.cumul.labour)} sur ${k1(PE.cumul.ca)} de CA`, PE.cumul.labourPct > SEUIL_P ? 'bad' : 'good'),
+    kpi('Dernier mois · ' + moisC(dernierP.mois), dec(dernierP.labourPct) + INS + '%', `${eur(dernierP.labour)} de personnel`, dernierP.labourPct > SEUIL_P ? 'bad' : 'good'),
+    kpi('Mois le plus lourd', dec(maxP.labourPct) + INS + '%', moisC(maxP.mois)),
+    kpi('Mois le plus léger', dec(minP.labourPct) + INS + '%', moisC(minP.mois)),
+  ].join('');
+  const n1 = ym => { const [a, m] = ym.split('-'); const x = PE.mois.find(z => z.mois === (+a - 1) + '-' + m && !z.indispo); return x ? x.labourPct : null; };
+  $('pe-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">CA</th><th class="num">Frais de personnel</th><th class="num">% du CA</th><th class="num">Même mois N-1</th><th class="num">Écart</th></tr></thead><tbody>'
+    + PE.mois.map(m => m.indispo ? `<tr><td>${esc(moisC(m.mois))}</td><td class="num dim" colspan="5">non lu au panel</td></tr>`
+      : `<tr><td>${esc(moisC(m.mois))}</td><td class="num">${eur(m.ca)}</td><td class="num">${eur(m.labour)}</td><td class="num ${m.labourPct > SEUIL_P ? 'down' : ''}">${dec(m.labourPct)} %</td>`
+        + (n1(m.mois) != null ? `<td class="num">${dec(n1(m.mois))} %</td><td class="num ${m.labourPct - n1(m.mois) > 0 ? 'down' : 'up'}">${sgn(m.labourPct - n1(m.mois))}${dec(Math.abs(m.labourPct - n1(m.mois)))} pt</td>` : '<td class="num dim">—</td><td class="num dim">—</td>') + '</tr>').join('')
+    + `</tbody><tfoot><tr><td>${PE.cumul.mois} mois</td><td class="num">${eur(PE.cumul.ca)}</td><td class="num">${eur(PE.cumul.labour)}</td><td class="num">${dec(PE.cumul.labourPct)} %</td><td></td><td></td></tr></tfoot>`;
+  $('pe-note').textContent = insec(`Source : le P&L quotidien du panel additionné par mois (route /analyse/pnl/mois du cockpit). En rouge, un mois au-dessus du seuil de ${dec(SEUIL_P, 0)} %. Le CA du P&L peut différer de quelques euros de celui des ventes (les tickets).`);
+  window.grapheP = () => {
+    const zone = $('graphe-personnel'), W = Math.max(300, zone.clientWidth), H = 150, ml = 34, mr = 6, mt = 16, mb = 24;
+    const n = PE.mois.length, pas = (W - ml - mr) / n, lb = Math.min(26, pas * 0.6);
+    const vmax = Math.max(SEUIL_P + 10, Math.ceil(maxP.labourPct / 10) * 10), hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP, ft = 'font-family:var(--font)';
+    let sv = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Frais de personnel en % du CA, mois par mois">`;
+    for (let v = 0; v <= vmax; v += 10) { sv += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v ? '.07' : '.16'})"/><text x="${ml - 6}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${v} %</text>`; }
+    PE.mois.forEach((m, i) => {
+      const cx = ml + pas * (i + 0.5);
+      if (!m.indispo) {
+        const yt = y(m.labourPct);
+        sv += `<path d="M${cx - lb / 2},${y(0)} V${yt + 4} Q${cx - lb / 2},${yt} ${cx - lb / 2 + 4},${yt} H${cx + lb / 2 - 4} Q${cx + lb / 2},${yt} ${cx + lb / 2},${yt + 4} V${y(0)} Z" fill="${m.labourPct > SEUIL_P ? '#A32014' : '#8D1D2C'}" opacity="${m === dernierP ? 1 : 0.6}"/>`;
+        if (m === maxP || m === minP || m === dernierP) { sv += `<text x="${cx}" y="${yt - 5}" font-size="10" text-anchor="middle" fill="#1c1a17" style="${ft}">${dec(m.labourPct, 0)}</text>`; }
+      }
+      if (W >= 520 || i % 3 === 0 || i === n - 1) { sv += `<text x="${cx}" y="${H - 8}" font-size="9.5" text-anchor="middle" fill="#3b3731" style="${ft}">${esc(moisC(m.mois).split(' ')[0])}</text>`; }
+    });
+    sv += `<line x1="${ml}" x2="${W - mr}" y1="${y(SEUIL_P)}" y2="${y(SEUIL_P)}" stroke="#1c1a17" stroke-dasharray="4 3"/><text x="${ml + 4}" y="${y(SEUIL_P) - 4}" font-size="10" text-anchor="start" fill="#1c1a17" style="${ft};paint-order:stroke;stroke:#fff;stroke-width:3px">seuil ${dec(SEUIL_P, 0)} %</text></svg>`;
+    zone.querySelector('svg')?.remove(); zone.insertAdjacentHTML('beforeend', sv);
+  };
+} else {
+  ['pe-kpis', 'graphe-personnel', 'pe-table', 'pe-note'].forEach(id => { $(id).hidden = true; });
+  $('pe-intro').textContent = insec(`Les frais de personnel face au chiffre d’affaires, mois par mois sur les 18 mois, viennent du P&L du panel. Repère : le seuil du réseau pour les frais de personnel hors rémunération du franchisé, ${dec(SEUIL_P, 0)} % du CA.`);
+  $('pe-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le P&L mois par mois de Sombreffe, de mai 2025 à octobre 2026 : la route /analyse/pnl/mois du cockpit (shop 5, du 2025-05 au 2026-10). Une fois reçu, le tableau des 18 mois et son graphique se remplissent ici.')) + '</span>';
+  $('pe-completer').hidden = false;
+  $('personnel').classList.add('rp-attente');
+}
+
+/* --- Le résultat théorique : 15 % de personnel, panier dans la moyenne basse --- */
+if (D.theorique) {
+  const T = D.theorique, R = T.reel, H = T.theo, lab = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab;
+  const gain = c => c.resultat - R.resultat;
+  $('theo-titre').textContent = `Le résultat théorique, avec le même nombre de clients : ${dec(T.seuil, 0)} % de personnel, panier à ${eur2(T.bas.panier)}`;
+  $('theo-plus').innerHTML = '<thead><tr><th>Clients</th><th class="num">Par jour</th><th class="num">Par mois</th><th class="num">CA par mois</th><th class="num">Résultat par mois</th><th class="num">Par trimestre</th><th class="num">Par an</th><th class="num">% du CA</th></tr></thead><tbody>'
+    + T.scenarios.map(c => `<tr class="${c.plus === 10 ? 'moi' : ''}"><td>${c.plus ? '+ ' + c.plus + ' par jour' : 'Le même nombre'}</td><td class="num">${dec(c.cliJour, 0)}</td><td class="num">${grp(c.clients)}</td>`
+      + `<td class="num">${eur(c.ca)}</td><td class="num">${eur(c.resultat)}</td><td class="num">${eur(c.resultat * 3)}</td><td class="num">${eur(c.resultat * 12)}</td><td class="num">${dec(c.resultat / c.ca * 100)} %</td></tr>`).join('')
+    + '</tbody>';
+  $('theo-points').innerHTML = [   // court (13/11/2026)
+    `Même trafic, panier à ${eur2(T.bas.panier)} (${T.bas.nom}), personnel à ${dec(T.seuil, 0)} % du CA.`,
+    `Matière à ${dec(T.tauxMatiere, 0)} % du CA (taux budget du réseau) ; frais généraux du P&L.`,
+    `Résultat : ${sgn(gain(H))}${eur(Math.abs(gain(H)))} par mois, ${sgn(gain(H))}${k1(Math.abs(gain(H) * 12))} par an.`,
+  ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+  const lignesT = [['Clients', c => grp(c.clients)], ['Panier', c => eur2(c.panier)], ['CA', c => eur(c.ca)], [`Matière et emballage (${dec(T.tauxMatiere, 0)} %)`, c => eur(c.matiere)],
+    ['Personnel', c => eur(c.personnel)], ['Frais généraux', c => eur(c.fg)], ['Résultat', c => eur(c.resultat)], ['Résultat, % du CA', c => dec(c.resultat / c.ca * 100) + ' %']];
+  const fois = (c, k) => ({ clients: c.clients * k, panier: c.panier, ca: c.ca * k, matiere: c.matiere * k, personnel: c.personnel * k, fg: c.fg * k, resultat: c.resultat * k });
+  $('theo-table').innerHTML = '<thead><tr><th></th><th class="num">Un mois, aujourd’hui</th><th class="num">Un mois, théorique</th><th class="num">Un trimestre</th><th class="num">Une année</th><th class="num">Écart sur l’année</th></tr></thead><tbody>'
+    + lignesT.map(([nom, f], i) => {
+      const ecart = ['CA', 'Personnel', 'Résultat'].includes(nom) ? (k => k(H) * 12 - k(R) * 12) : null;
+      const cle = { 'CA': c => c.ca, 'Personnel': c => c.personnel, 'Résultat': c => c.resultat }[nom];
+      return `<tr class="${nom === 'Résultat' ? 'moi' : ''}"><td>${esc(nom)}</td><td class="num">${esc(f(R))}</td><td class="num">${esc(f(H))}</td><td class="num">${esc(f(fois(H, 3)))}</td><td class="num">${esc(f(fois(H, 12)))}</td>`
+        + `<td class="num ${cle ? cls(nom === 'Personnel' ? -(cle(H) - cle(R)) : cle(H) - cle(R)) : ''}">${cle ? sgn(cle(H) - cle(R)) + eur(Math.abs((cle(H) - cle(R)) * 12)) : ''}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+/* --- Vers quoi on tend : trois axes (13/11/2026, Sam) — le trafic, le panier, et le personnel qui tend vers 15 % de
+   lui-même quand le magasin vend plus, à équipe égale. Base : le mois moyen de février à octobre 2026. --- */
+if (D.theorique) {
+  const T = D.theorique, R = T.reel, jm = R.clients / T.cliJour, tm = T.tauxMatiere / 100, seuil = D.seuilPersonnel;
+  const res = (dc, dp) => { const ca = (T.cliJour + dc) * jm * (R.panier + dp); return { ca, r: ca * (1 - tm) - R.personnel - R.fg, p: R.personnel / ca * 100 }; };
+  const DC = [0, 5, 10, 15], DP = [0, 0.5, 1, 2], b = res(0, 0), max = res(15, 2);
+  const euroP = v => (v % 1 ? dec(v, 2) : String(v)) + INS + '€';
+  $('axes-tuiles').innerHTML = [
+    kpi('1 · Le trafic', '+5 · +10 · +15', `clients par jour ; aujourd’hui ${dec(T.cliJour, 0)}`),
+    kpi('2 · Le panier', '+0,50 · +1 · +2 €', `aujourd’hui ${eur2(R.panier)}`),
+    kpi('3 · Le personnel', `→ ${dec(seuil, 0)} %`, `aujourd’hui ${dec(b.p)} % du CA ; il baisse tout seul quand le magasin vend plus`),
+  ].join('');
+  $('axes-titre').textContent = 'Le résultat d’un mois, selon le trafic et le panier, à équipe égale';
+  const vert = g => `rgba(63, 122, 82, ${(0.07 + 0.33 * g / (max.r - b.r)).toFixed(3)})`;
+  $('axes-table').innerHTML = '<thead><tr><th>Clients par jour<span class="sous">panier →</span></th>'
+    + DP.map(dp => `<th>${dp ? '+' + euroP(dp).replace('.', ',') : 'Panier d’aujourd’hui'}<span class="sous">${eur2(R.panier + dp)}</span></th>`).join('') + '</tr></thead><tbody>'
+    + DC.map(dc => `<tr><th>${dc ? '+' + dc + ' par jour' : 'Trafic d’aujourd’hui'}<span class="sous">${dec(T.cliJour + dc, 0)} clients</span></th>`
+      + DP.map(dp => {
+        const c = res(dc, dp), g = c.r - b.r, ici = !dc && !dp;
+        return `<td class="axe" style="background:${ici ? 'var(--total-line)' : vert(g)}"><div class="axe-v">${eur(c.r)}</div><div class="axe-s">par mois</div>`
+          + `<div class="axe-g">${ici ? '<span style="color:var(--muted)">aujourd’hui</span>' : '+' + k1(g * 12) + ' par an'}</div>`
+          + `<div class="axe-p ${c.p <= seuil ? 'ok' : ''}">personnel ${dec(c.p)} %</div></td>`;
+      }).join('') + '</tr>').join('') + '</tbody>';
+  $('axes-points').innerHTML = [
+    `De ${eur(b.r)} à ${eur(max.r)} par mois : +15 clients par jour et +2 € de panier, c’est +${k1((max.r - b.r) * 12)} par an.`,
+    `À équipe égale (${eur(R.personnel)} de personnel par mois), le personnel passe sous ${dec(seuil, 0)} % du CA à partir de ${k1(R.personnel / (seuil / 100))} de CA par mois.`,
+    `Hypothèses : matière à ${dec(T.tauxMatiere, 0)} % du CA (taux budget du réseau), frais généraux du P&L (${eur(R.fg)} par mois) ; base : le mois moyen de février à octobre 2026.`,
+  ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+  // Le repère : ce que Halle a fait ces 8 dernières semaines, appliqué à Sombreffe avec le même calcul que la grille.
+  if (D.repere && !$('repere').dataset.masque) {
+    const P = D.repere, RH = P.halle, RM = P.moi, dc = RH.apres - RH.avant, dp = RH.panierComptoir - RM.panierComptoir, h = res(dc, dp);
+    $('repere-titre').textContent = `Le repère : ${P.nom}, les 8 dernières semaines (${dateC(RH.du)} → ${dateC(RH.au)}/${RH.au.slice(0, 4)})`;
+    $('repere-tuiles').innerHTML = [
+      kpi(`${P.nom} · les clients par jour`, `+${dec(dc)}`, `${dec(RH.avant, 0)} → ${dec(RH.apres, 0)} : 4 premières → 4 dernières semaines (${pct((RH.apres / RH.avant - 1) * 100)}) ; Sombreffe ${dec(RM.avant, 0)} → ${dec(RM.apres, 0)}`, 'good'),
+      kpi(`${P.nom} · le panier au comptoir`, eur2(RH.panierComptoir), `Sombreffe ${eur2(RM.panierComptoir)} : ${eur2(dp)} de moins par client ; ${dec(RH.articles)} articles par client contre ${dec(RM.articles)}`),
+      kpi(`Sombreffe au rythme de ${P.nom}`, eur(h.r), `par mois, contre ${eur(b.r)} : +${k1((h.r - b.r) * 12)} par an ; personnel ${dec(h.p)} % ; même calcul que la grille`, 'good'),
+    ].join('');
+    // Les deux magasins semaine par semaine (14/11/2026) : Sombreffe en bordeaux, Halle en gris foncé.
+    const SER = c => [{ nom: P.nom, couleur: '#5c5852', vals: RH.semaines.map(c) }, { nom: 'Sombreffe', couleur: '#8D1D2C', vals: RM.semaines.map(c) }];
+    window.grapheRepere = () => {
+      grapheDeux('graphe-repere-clients', { aria: `Clients par jour, ${P.nom} face à Sombreffe, 8 semaines`, semaines: RH.semaines, series: SER(w => w.cliJour), etiq: v => dec(v, 0), axe: v => String(v) });
+      grapheDeux('graphe-repere-panier', { aria: `Panier au comptoir, ${P.nom} face à Sombreffe, 8 semaines`, semaines: RH.semaines, series: SER(w => w.panierComptoir), etiq: v => dec(v, 2), axe: v => dec(v, 0) + INS + '€' });
+    };
+    $('repere-note').textContent = insec(`${P.nom} n’a pas de N-1 : premières ventes le ${dateC(P.ouverture)}/${P.ouverture.slice(0, 4)}.`);
+    $('repere').hidden = false;
+  }
+  $('axes').hidden = false;
+}
+
+/* --- La dernière page : les trois axes ensemble (14/11/2026, Sam) — le prix (à volume égal), le trafic (au panier
+   d'aujourd'hui) et le personnel (des heures en moins, à 24 € l'heure). Même base et même calcul que le grand tableau. --- */
+if (D.theorique && PE6 && D.coutHeure) {
+  const T = D.theorique, R = T.reel, jm = R.clients / T.cliJour, tm = T.tauxMatiere / 100;
+  const hTot = Math.round((PE6.n.lab - PE6.n.ca * D.seuilPersonnel / 100) / PE6.n.n / D.coutHeure);
+  const PX = [2, 4, 6], DC = [5, 10, 15], DH = [1, 2, 3].map(k => Math.round(hTot * k / 3));
+  const calc = (dc, px, dh) => { const vol = (T.cliJour + dc) * jm * R.panier, ca = vol * (1 + px / 100), pers = R.personnel - dh * D.coutHeure;
+    return { ca, r: ca - vol * tm - pers - R.fg, p: pers / ca * 100 }; };
+  const base = calc(0, 0, 0), N = ['Petit pas', 'Moyen', 'Fort'];
+  const ens = [0, 1, 2].map(i => calc(DC[i], PX[i], DH[i]));
+  // Le schéma : trois axes depuis le centre, trois paliers, un triangle par palier ; à droite, le résultat de chacun.
+  const cx = 255, cy = 225, Lg = 150, ang = [-90, 150, 30].map(a => a * Math.PI / 180);
+  const pt = (a, k) => [cx + Math.cos(ang[a]) * Lg * k / 3, cy + Math.sin(ang[a]) * Lg * k / 3];
+  const vert = ['rgba(63,122,82,.10)', 'rgba(63,122,82,.16)', 'rgba(63,122,82,.24)'];
+  let s = `<svg viewBox="0 0 820 400" role="img" aria-label="Trois axes : le prix, le trafic, le personnel. Ensemble, le résultat d’un mois passe de ${eur(base.r)} à ${eur(ens[0].r)}, ${eur(ens[1].r)} puis ${eur(ens[2].r)}." style="font-family:var(--font)">`;
+  [2, 1, 0].forEach(i => { s += `<polygon points="${[0, 1, 2].map(a => pt(a, i + 1).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="${vert[2 - i]}" stroke="#3f7a52" stroke-width="${i === 2 ? 2 : 1.2}" stroke-opacity=".8"/>`; });
+  const noms = [['Le prix', 'à volume égal'], ['Le trafic', 'au panier d’aujourd’hui'], ['Le personnel', `à ${dec(D.coutHeure, 0)} € l’heure`]];
+  const pas = [PX.map(x => '+' + x + ' %'), DC.map(x => '+' + x + ' clients / jour'), DH.map(x => '−' + x + ' h / mois')];
+  [0, 1, 2].forEach(a => {
+    const [tx, ty] = pt(a, 3), [ex, ey] = pt(a, 3.3);
+    s += `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#8D1D2C" stroke-width="1.6"/>`;
+    // Le nom de l'axe : au-dessus de la pointe pour le prix, sous la pointe pour les deux autres.
+    const ny = a === 0 ? ey - 20 : ty + 40;
+    s += `<text x="${tx.toFixed(1)}" y="${ny.toFixed(1)}" font-size="14" text-anchor="middle" fill="#8D1D2C">${esc(noms[a][0])}</text>`
+      + `<text x="${tx.toFixed(1)}" y="${(ny + 15).toFixed(1)}" font-size="11" text-anchor="middle" fill="#7a736a">${esc(noms[a][1])}</text>`;
+    [1, 2, 3].forEach(k => {
+      const [px_, py_] = pt(a, k);
+      s += `<circle cx="${px_.toFixed(1)}" cy="${py_.toFixed(1)}" r="3.4" fill="#8D1D2C"/>`;
+      const off = a === 0 ? [10, 4, 'start'] : a === 1 ? [-9, 4, 'end'] : [9, 4, 'start'];
+      s += `<text x="${(px_ + off[0]).toFixed(1)}" y="${(py_ + off[1]).toFixed(1)}" font-size="11.5" text-anchor="${off[2]}" fill="#1c1a17" style="paint-order:stroke;stroke:#fff;stroke-width:3px">${esc(insec(pas[a][k - 1]))}</text>`;
+    });
+  });
+  s += `<circle cx="${cx}" cy="${cy}" r="4" fill="#1c1a17"/><text x="${cx}" y="${cy + 16}" font-size="10.5" text-anchor="middle" fill="#5c5852" style="paint-order:stroke;stroke:#fff;stroke-width:3px">aujourd’hui</text>`;
+  // À droite : aujourd'hui, puis les trois paliers.
+  const bx = 515;
+  s += `<text x="${bx}" y="58" font-size="12" fill="#7a736a">Le résultat d’un mois</text>`
+    + `<rect x="${bx}" y="70" width="295" height="52" rx="8" fill="#F8F4EE"/><text x="${bx + 16}" y="92" font-size="12" fill="#5c5852">Aujourd’hui</text>`
+    + `<text x="${bx + 16}" y="113" font-size="20" fill="#1c1a17">${esc(eur(base.r))}</text>`;
+  ens.forEach((c, i) => {
+    const y0 = 134 + i * 76;
+    s += `<rect x="${bx}" y="${y0}" width="295" height="66" rx="8" fill="${vert[i]}" stroke="#3f7a52" stroke-opacity=".5"/>`
+      + `<text x="${bx + 16}" y="${y0 + 20}" font-size="12" fill="#3f7a52">${esc(N[i])} : ${esc(insec(`+${PX[i]} %, +${DC[i]} clients, −${DH[i]} h`))}</text>`
+      + `<text x="${bx + 16}" y="${y0 + 46}" font-size="22" fill="#3f7a52" font-weight="700">${esc(eur(c.r))}</text>`
+      + `<text x="${bx + 150}" y="${y0 + 46}" font-size="12" fill="#3f7a52">+${esc(k1((c.r - base.r) * 12))} par an</text>`;
+  });
+  $('fin-schema').innerHTML = s + '</svg>';
+  // Le tableau : chaque axe seul (le gain), puis les trois ensemble.
+  const g = (dc, px, dh) => calc(dc, px, dh).r - base.r;
+  $('fin-table').innerHTML = `<thead><tr><th></th>${N.map(n => `<th class="num">${n}</th>`).join('')}</tr></thead><tbody>`
+    + [[`Le prix : +${PX.join(', +')} %`, i => g(0, PX[i], 0)], [`Le trafic : +${DC.join(', +')} clients par jour`, i => g(DC[i], 0, 0)], [`Le personnel : −${DH.join(', −')} h par mois`, i => g(0, 0, DH[i])]]
+      .map(([nom, f]) => `<tr><td>${esc(insec(nom))}</td>${[0, 1, 2].map(i => `<td class="num up">+${eur(f(i))} / mois</td>`).join('')}</tr>`).join('')
+    + `<tr class="moi ens"><td>Les trois ensemble : le résultat d’un mois</td>${ens.map(c => `<td class="num">${eur(c.r)}</td>`).join('')}</tr>`
+    + `<tr><td>En plus sur l’année</td>${ens.map(c => `<td class="num up">+${k1((c.r - base.r) * 12)}</td>`).join('')}</tr>`
+    + `<tr><td>Personnel, % du CA (aujourd’hui ${dec(base.p)} %)</td>${ens.map(c => `<td class="num ${c.p <= D.seuilPersonnel ? 'up' : ''}">${dec(c.p)} %</td>`).join('')}</tr></tbody>`;
+  $('fin-points').innerHTML = [
+    `Base : le mois moyen de février à octobre 2026, ${eur(base.r)} de résultat, comme le grand tableau de l’étape 3.`,
+    `Le prix : à volume égal, tout va au résultat. Le trafic : au panier d’aujourd’hui (${eur2(R.panier)}), matière à ${dec(tm * 100, 0)} %. Le personnel : ${hTot} h par mois en tout pour viser ${dec(D.seuilPersonnel, 0)} %, à ${dec(D.coutHeure, 0)} € l’heure.`,
+  ].map(x => `<li>${esc(insec(x))}</li>`).join('');
+  $('page-fin').hidden = false;
+}
+
+/* --- Le personnel des quatre magasins --- */
+if (D.personnelReseau && D.personnelReseau.length) {
+  $('pe-reseau').innerHTML = '<thead><tr><th>Magasin</th><th class="num">CA mai → oct. 26</th><th class="num">Personnel</th><th class="num">% du CA</th><th class="num">Tous les mois lus</th></tr></thead><tbody>'
+    + D.personnelReseau.map(m => `<tr class="${m.shop === '5' ? 'moi' : ''}"><td>${esc(m.nom)}${m.shop === '5' ? ' (ce magasin)' : ''}</td><td class="num">${eur(m.ca6)}</td><td class="num">${eur(m.lab6)}</td>`
+      + `<td class="num ${m.pct6 > D.seuilPersonnel ? 'down' : 'up'}">${dec(m.pct6)} %</td><td class="num">${m.pctTout != null ? dec(m.pctTout) + ' %' : '—'} <span class="dim">(${m.nMois} mois)</span></td></tr>`).join('') + '</tbody>';
+}
+
+/* --- Le B2B : les cinq premiers clients des six derniers mois --- */
+if (D.b2bDetail && D.b2bDetail.societes.length) {
+  const M6 = Object.keys(D.b2bDetail.mois).sort().slice(-6);
+  const S6 = D.b2bDetail.societes.map(c => ({ nom: c.nom, dernier: c.dernier, t: M6.reduce((a, ym) => a + ((c.mois[ym] || {}).ca || 0), 0), n: M6.reduce((a, ym) => a + ((c.mois[ym] || {}).tickets || 0), 0) }))
+    .filter(c => c.t > 0).sort((a, b) => b.t - a.t);
+  const tot = S6.reduce((a, c) => a + c.t, 0), lab = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab;
+  $('b2b-top-titre').textContent = `Le B2B : les 5 premiers clients, ${lab(M6[0])} → ${lab(M6[M6.length - 1])}`;
+  $('b2b-top-table').innerHTML = '<thead><tr><th>Société</th><th class="num">CA</th><th class="num">Tickets</th><th class="num">Part du B2B<span class="dim"> · plafond ' + dec(D.plafondClient, 0) + INS + '%</span></th></tr></thead><tbody>'
+    + S6.slice(0, 5).map(c => `<tr><td>${esc(c.nom)}</td><td class="num">${eur(c.t)}</td><td class="num">${c.n}</td><td class="num ${c.t / tot * 100 > D.plafondClient ? 'down' : ''}">${dec(c.t / tot * 100)} %</td></tr>`).join('')
+    + `</tbody><tfoot><tr><td>${S6.length} sociétés</td><td class="num">${eur(tot)}</td><td class="num">${S6.reduce((a, c) => a + c.n, 0)}</td><td class="num">100 %</td></tr></tfoot>`;
+  $('b2b-top').hidden = false;
+  // GUEST : un bon client, à cadrer par le webshop (14/11/2026, Sam).
+  const CB = D.cadreB2b, g = CB && S6.find(c => c.nom.toUpperCase().includes(CB.motif));
+  if (g) {
+    $('b2b-cadre').innerHTML = `<span class="rp-alerte-k">${esc(CB.client)} : un bon client, à cadrer</span><ul class="rp-points">`
+      + CB.points   // ses chiffres sont dans le tableau juste au-dessus (simplifié le 14/11/2026)
+        .map(t => `<li>${esc(insec(t))}</li>`).join('') + '</ul>';
+    $('b2b-cadre').hidden = false;
+    // Ce que GUEST rapporte (14/11/2026, Sam) : CA, CA par jour livrable, food cost à 45 %, marge brute.
+    const jl = CB.joursSemaine * CB.semainesMois, fc = CB.foodCost / 100, G = D.b2bDetail.societes.find(c => c.nom.toUpperCase().includes(CB.motif));
+    const lignesG = ['2026-09', '2026-10'].filter(ym => G && G.mois[ym]).map(ym => ({ nom: lab(ym), ca: G.mois[ym].ca, j: jl }));
+    if (CB.novembre) {   // le mois en cours : ses jours livrables écoulés (2 semaines au 14/11)
+      const sem = Math.floor((new Date(CB.novembre.au + 'T12:00:00') - new Date(CB.novembre.du + 'T12:00:00')) / 864e5 + 1) / 7;
+      lignesG.push({ nom: `nov. 26, au ${dateC(CB.novembre.au)}`, ca: CB.novembre.ca, j: Math.round(sem * CB.joursSemaine) });
+    }
+    $('guest-marge').innerHTML = `<thead><tr><th>GUEST</th><th class="num">CA</th><th class="num">Jours livrables</th><th class="num">CA par jour livrable</th>`
+      + `<th class="num">Food cost ${dec(CB.foodCost, 0)} %</th><th class="num">Marge brute</th><th class="num">Marge brute par jour livrable</th></tr></thead><tbody>`
+      + lignesG.map(l => `<tr><td>${esc(l.nom)}</td><td class="num">${eur(l.ca)}</td><td class="num">${dec(l.j, l.j % 1 ? 1 : 0)}</td><td class="num">${eur(l.ca / l.j)}</td>`
+        + `<td class="num">${eur(l.ca * fc)}</td><td class="num">${eur(l.ca * (1 - fc))}</td><td class="num">${eur(l.ca * (1 - fc) / l.j)}</td></tr>`).join('') + '</tbody>';
+    $('guest-marge-zone').hidden = false;
+    if (CB.questions) {   // 14/11/2026 (Sam)
+      $('guest-questions').innerHTML = CB.questions.map(q => `<li>${esc(insec(q))}</li>`).join('');
+      $('guest-questions-zone').hidden = false;
+    }
+  }
+}
+
+/* --- Soins intensifs --- */
+const N = DEP.n, N1 = DEP.n1, ec = (a, b) => (a / b - 1) * 100;
+$('soins-intro').textContent = insec(`Départ : les quatre dernières semaines complètes (${DEP.labs[0]} à ${DEP.labs[DEP.labs.length - 1]}), face aux mêmes semaines de 2025.`);
+$('soins-reperes').innerHTML = [
+  kpi('Clients par jour ouvert', dec(N.cliJour, 1), 'contre ' + dec(N1.cliJour, 1) + ' en 2025 (' + pct(ec(N.cliJour, N1.cliJour)) + ')', ec(N.cliJour, N1.cliJour) >= 0 ? 'good' : 'bad'),
+  kpi('CA par jour ouvert', eur(N.caJour), 'contre ' + eur(N1.caJour) + ' en 2025 (' + pct(ec(N.caJour, N1.caJour)) + ')', ec(N.caJour, N1.caJour) >= 0 ? 'good' : 'bad'),
+  kpi('Panier', eur2(N.panier), 'contre ' + eur2(N1.panier) + ' en 2025 (' + pct(ec(N.panier, N1.panier)) + ')'),
+  kpi('Part du B2B', dec(B.part) + INS + '%', 'sur 12 mois ; la part de ces 4 semaines reste à lire'),
+].join('');
+const objCli = Math.ceil(N1.cliJour);
+const OBJ = D.objectifs, PALIER = OBJ.palier, base = N.cliJour + PALIER, objectif = OBJ.courtTerme, normalise = OBJ.normalise;
+const enPlus = c => Math.round(c - N.cliJour);   // clients par jour de plus qu'au départ
+const MQ = D.marque;
+$('marque-texte').textContent = insec('Sa participation dépend de ce que le magasin tient chaque jour.');
+$('marque-conditions').innerHTML = '<thead><tr><th>Condition</th><th>Ce qui est attendu</th><th>Où ça se vérifie</th></tr></thead><tbody>'
+  + MQ.conditions.map(c => `<tr><td>${esc(c.quoi)}</td><td>${esc(c.comment)}</td><td>${esc(c.ou)}</td></tr>`).join('')
+  + '<tr><td class="dim">…</td><td class="dim">liste à compléter</td><td></td></tr></tbody>';
+/* --- La vignette : pourquoi les contrôles qualité et la structure (14/11/2026, Sam) --- */
+if (D.pourquoi) {
+  $('pourquoi-titre').textContent = D.pourquoi.titre;
+  $('pourquoi-avec').innerHTML = D.pourquoi.avec.map(t => `<li>${esc(insec(t))}</li>`).join('');
+  $('pourquoi-sans').innerHTML = D.pourquoi.sans.map(t => `<li>${esc(insec(t))}</li>`).join('');
+  $('pourquoi').hidden = false;
+}
+/* --- Le plan en cinq points (14/11/2026, Sam) : le texte dicté, et sous un point le chiffre de départ du rapport --- */
+if (D.plan) {
+  const depart = {
+    personnel: PE6 ? `aujourd’hui ${dec(PE6.n.pct)} % du CA (mai → oct. 26) ; seuil ${dec(D.seuilPersonnel, 0)} %` : '',
+    personnelHeures: PE6 && D.coutHeure ? (() => {   // 14/11/2026 (Sam) : le nombre d'heures à récupérer par mois, à 24 € l'heure
+      const trop = (PE6.n.lab - PE6.n.ca * D.seuilPersonnel / 100) / PE6.n.n, h = trop / D.coutHeure;
+      return { fort: `≈ ${grp(h)} heures à récupérer par mois, ≈ ${dec(h / (365 / 12), 0)} h par jour, à CA égal`,
+        base: `${dec(PE6.n.pct)} % du CA (mai → oct. 26), seuil ${dec(D.seuilPersonnel, 0)} % : ${eur(trop)} de trop par mois ; à ${dec(D.coutHeure, 0)} € l’heure, charges comprises (taux du réseau)` };
+    })() : null,
+    ventes: `${dec(N.cliJour, 0)} clients par jour au départ ; ${objectif} à court terme, puis ${normalise}`,
+    prix: `panier ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${perPA})`,
+    additionnelles: D.repere ? `aujourd’hui ${dec(D.repere.moi.articles)} articles par client (8 dernières semaines)` : '',
+  };
+  $('plan-liste').innerHTML = D.plan.points.map((p, i) => `<li><span class="n">${i + 1}</span><div>`
+    + `<div class="t">${p.fort ? `<span class="fort">${esc(p.fort)} : </span>` + esc(insec(p.titre.charAt(0).toLowerCase() + p.titre.slice(1))) : esc(insec(p.titre))}</div>`
+    + (p.questions ? `<ul class="q">${p.questions.map(q => `<li>${esc(insec(q))}</li>`).join('')}</ul>` : '')
+    + (p.k === 'personnel' && depart.personnelHeures ? `<div class="h">${esc(insec(depart.personnelHeures.fort))}</div>` : '')
+    + (depart[p.k] && !(p.k === 'personnel' && depart.personnelHeures) ? `<div class="s">${esc(insec(depart[p.k]))}</div>` : '')
+    + (p.k === 'personnel' && depart.personnelHeures ? `<div class="s">${esc(insec(depart.personnelHeures.base))}</div>` : '') + '</div></li>').join('');
+  $('plan').hidden = false;
+}
+$('cout-relance').innerHTML = `<span class="rp-alerte-k">À retenir</span><span>${esc(insec('Redynamiser un magasin, ça coûte cher. D’où les deux chantiers menés ensemble : les ventes pour regagner les clients, les frais et la trésorerie pour tenir pendant ce temps.'))}</span>`;
+const parMois = n => n * B.panier12 * 365 / 12, parAn = n => n * B.panier12 * 365;
+$('cv-texte').textContent = insec(`Trois paliers : la base (+${PALIER} par jour), le court terme (${objectif} par jour), le normalisé (${normalise} par jour).`);
+$('cv-paliers').innerHTML = '<thead><tr><th>Palier</th><th class="num">Clients / jour</th><th class="num">En plus</th><th class="num">CA en plus / mois</th><th class="num">par an</th></tr></thead><tbody>'
+  + [['Départ (' + DEP.labs[0] + ' à ' + DEP.labs[DEP.labs.length - 1] + ')', N.cliJour, 0], ['La base', base, PALIER], ['Objectif court terme', objectif, enPlus(objectif)], ['Objectif normalisé', normalise, enPlus(normalise)]]
+    .map(([lab, c, n]) => `<tr class="${c === objectif ? 'moi' : ''}"><td>${esc(lab)}</td><td class="num">${dec(c, 0)}</td><td class="num">${n ? '+' + n : '—'}</td><td class="num">${n ? '≈ ' + k1(parMois(n)) : '—'}</td><td class="num">${n ? '≈ ' + k1(parAn(n)) : '—'}</td></tr>`).join('') + '</tbody>';
+$('cv-calcul').textContent = insec(`Le CA en plus se compte au panier moyen des 12 derniers mois (${eur2(B.panier12)}), sur 365 jours ouverts.`);
+const h9 = Math.round(Math.min(TS.heures['9'].pct, TS.heures['10'].pct)), h10 = Math.round(Math.max(TS.heures['9'].pct, TS.heures['10'].pct));
+$('cv-aide').textContent = insec(`L’après-midi : de ${dec(APM.tk)} à 10 tickets par heure, c’est ≈ ${dec((10 - APM.tk) * APM.heures, 0)} clients de plus par jour. Le matin, de 9 h à 11 h : ${h9 === h10 ? h9 : h9 + ' à ' + h10} % du temps sans client. Le B2B : ${dec(B.part)} % du CA, plafond ${dec(D.plafond, 0)} %.`);
+$('gestion-intro').textContent = insec(`Soins intensifs : 6 semaines de suivi intensif, du lundi ${dateL(D.soinsIntensifs)} au dimanche ${dateL(finSoins)}.`);   // 14/11/2026 (Sam)
+const PEc = D.personnel && D.personnel.cumul.mois ? D.personnel : null;
+$('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui</th><th>Visé</th></tr></thead><tbody>'
+  + [
+    ['Clients par jour ouvert', dec(N.cliJour, 1), `${dec(base, 0)} (la base), puis ${objectif} (court terme), puis ${normalise} (normalisé)`],
+    ['Après-midi sans client, 14 h → 18 h', dec(APM.pct, 0) + ' %', 'moins de 50 %, 10 tickets par heure'],
+    ['Cuisson de l’après-midi', 'arrêtée', 'chaque jour, checklist 1.3.01 à 14 h'],
+    ['Tâches obligatoires rendues', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour, photo comprise'],
+    ['Frais de personnel', PE6 ? dec(PE6.n.pct) + ' % (mai → oct. 26)' : PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', PE6 ? `vers ${dec(SEUIL_P, 0)} % du CA, le seuil du réseau` : `sous ${dec(SEUIL_P, 0)} % du CA`],
+    ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} % ; aucun client au-delà de ${dec(D.plafondClient, 0)} % du B2B`],
+    ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget ; le lundi, 500 € pour soi, puis toutes les factures'],
+  ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(insec(r[1]))}</td><td>${esc(insec(r[2]))}</td></tr>`).join('') + '</tbody>';
+$('cf-points').innerHTML = [   // court (13/11/2026) ; le lundi, dicté le 14/11/2026 (Sam)
+  'Budgets : chaque poste dans son budget ; ce qui dépasse se coupe.',
+  'Trésorerie : un plan semaine par semaine.',
+  'L’objectif premier : faire son objectif de chiffre d’affaires.',   // le lundi : dans le schéma (14/11/2026)
+  'En visite : tout est-il payé à temps ?',
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+$('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th><th class="num">Départ</th><th>Repère proposé</th></tr></thead><tbody>'
+  + [
+    ['Cuisson de l’après-midi', 'Dashboard magasin, onglet Tâches : checklists 1.3.01 et 1.3.02, photo de 14 h 30', 'arrêtée', 'faites chaque jour, photo comprise'],
+    ['Tâches obligatoires rendues', 'Dashboard magasin, onglet Tâches', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour (condition de la marque)'],
+    ['Clients par jour ouvert, face au N-1', 'Résultat › Évolution magasin, trafic clients, par jour ouvert', dec(N.cliJour, 1), `la base : ${dec(base, 0)} par jour ; court terme : ${objectif} ; normalisé : ${normalise}`],
+    ['Panier hors clients pro', 'Dashboard magasin, panier moyen (hors B2B)', 'à lire', 'savoir si la hausse du panier tient au comptoir'],
+    ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', `B2B sous ${dec(D.plafond, 0)} % du CA ; aucun client au-delà de ${dec(D.plafondClient, 0)} % du B2B`],
+    ['CA par jour ouvert, face au N-1', 'Résultat › Évolution magasin, chiffre d’affaires, par jour ouvert', eur(N.caJour), 'rester au-dessus du N-1 à jours égaux'],
+    ['Temps morts, après-midi sans client', 'Dashboard magasin, onglet Temps morts', dec(TS.nb) + ' / jour · ' + dec(APM.pct, 0) + ' %', 'moins de la moitié de l’après-midi sans client'],
+    ['Frais de personnel, % du CA', 'P&L du panel, mini P&L de la visite', D.personnel && D.personnel.cumul.mois ? dec(D.personnel.mois.filter(m => !m.indispo).slice(-1)[0].labourPct) + ' %' : 'à lire', `sous ${dec(D.seuilPersonnel, 0)} % du CA`],
+    ['Budgets des charges', 'Budget du cockpit, mini P&L de la visite', 'à lire', 'chaque poste dans son budget'],
+    ['Plan de trésorerie', 'Plan de trésorerie du magasin, météo financière en visite', 'à faire', 'le lundi : 500 € pour soi, puis toutes les factures'],
+    ['Encodage des produits', 'Panel', 'à vérifier', 'tous les produits encodés (condition de la marque)'],
+    ['Suivi des règles du réseau', 'Visite', 'à vérifier', 'appliquées (condition de la marque)'],
+  ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('') + '</tbody>';
+const gainCli = objCli - N.cliJour;
+$('pistes').innerHTML = [   // court (13/11/2026)
+  `Reprendre la cuisson l’après-midi : 10 tickets par heure de 14 h à 18 h, ≈ ${dec(gainApm, 0)} clients de plus par jour.`,
+  `Regagner le comptoir : ${dec(base, 0)}, puis ${objectif}, puis ${normalise} clients par jour.`,
+  PE6 ? `Ramener le personnel de ${dec(PE6.n.pct)} % vers ${dec(D.seuilPersonnel, 0)} % du CA.` : `Ramener le personnel vers ${dec(D.seuilPersonnel, 0)} % du CA.`,
+  'Tenir budgets et trésorerie : le lundi, 500 € pour soi, puis toutes les factures.',
+  'Une offre l’après-midi, du lundi au vendredi.',
+  `Préparer l’été 2027 (juillet ${pct(L.find(l => l.k === '2026-07').vsCa, 0)}, août ${pct(L.find(l => l.k === '2026-08').vsCa, 0)}).`,
+  B2BX ? `B2B : trouver d’autres clients, aucun au-delà de ${dec(D.plafondClient, 0)} % du B2B.` : `Développer le B2B : ${dec(B.part)} %, plafond ${dec(D.plafond, 0)} %.`,
+  'Suivre les indicateurs chaque semaine.',
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+
+/* --- Sources --- */
+$('sources-liste').innerHTML = [
+  `Bloc « Évolution magasin » : cockpit, Résultat › Évolution magasin, ventes : Tout, chiffre d’affaires, total ; relevé le ${D.cockpit.releve}.`,
+  `Mois et semaines : ventes du panel par jour (margin-heatmap), via /ventes/evolution et /ventes/semaines, lues le ${D.lu.split('-').reverse().join('/')}. Clients = tickets de caisse.`,
+  `B2B : tickets des clients pro à TVA valide ; comptoir = total moins B2B. La part de ${dec(B.part)} % est celle du cockpit sur les 12 derniers mois clos ; les montants en k€ l’appliquent au CA de ces 12 mois.`,
+  `N-1 : le même mois, ou la même semaine, un an plus tôt. Avril 2025, mois d’ouverture (6 jours), n’est pas comparé.`,
+  `L’écart de septembre-octobre : CA réel moins clients du mois × panier du même mois en 2025.`,
+  `Temps morts : seuil ${TM.seuil} min, ${TM.semaines} semaines du ${dateC(TM.du)} au ${dateC(TM.au)}/${TM.au.slice(0, 4)}, tickets par heure du panel lus le ${TM.luLe}. Les minutes des tickets sont tirées dans leur heure (500 tirages par journée) ; vérifié sur les tickets réels d’une semaine, le résultat tombe juste en moyenne (423 temps morts mesurés pour 422 estimés). L’onglet Temps morts du dashboard magasin les mesure ticket par ticket.`,
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+$('pied').textContent = 'Rapport établi le 13 novembre 2026 · pilotage réseau L’Atelier By.';
+
+/* --- Version courte : chaque paragraphe en puces, une phrase par puce --- */
+document.querySelectorAll('p.rp-p').forEach(p => {
+  const t = p.textContent.trim(); if (!t) { return; }
+  const ph = t.split(/(?<=[.!?])\s+(?=[A-ZÀ-ÝÉ«0-9])/);
+  const ul = document.createElement('ul'); ul.className = 'rp-points'; ul.id = p.id; ul.hidden = p.hidden;
+  ul.innerHTML = ph.map(x => '<li>' + esc(x) + '</li>').join(''); p.replaceWith(ul);
+});
+
+/* --- Dessins, redessinés à la largeur --- */
+function dessiner() { grapheEvolution(); grapheTrafic(); if (window.grapheP) { window.grapheP(); } if (window.grapheRepere) { window.grapheRepere(); } }
+dessiner();
+let attente; window.addEventListener('resize', () => { clearTimeout(attente); attente = setTimeout(dessiner, 120); });
+</script>
+</body>
+</html>
