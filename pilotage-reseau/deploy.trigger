@@ -46,3 +46,4 @@
 2026-11-16T11:24:58Z [300] connexion ERP par QR
 2026-11-16T11:27:31Z Tâches : photos notées comptées, journée en cours dans la semaine
 2026-11-16T11:32:28Z [300] connexion QR : section → nom → QR
+2026-11-16T11:39:15Z [301] date de mise à jour dans l'en-tête
