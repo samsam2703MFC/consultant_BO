@@ -76,3 +76,31 @@ body.db-rail-on .db-rail{position:absolute;bottom:0;min-height:100vh}
 .px-btns{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px}
 .px-btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:12.5px}
 .px-btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+/* v2 (16/11/2026) : les automatisations du magasin vers l'extérieur. */
+.px-top{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.px-top .px-intro{margin:0;flex:1}
+.px-auto td:first-child{min-width:230px}
+.px-qui{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:2px 0}
+.px-qui i{display:inline-block;width:8px;height:8px;border-radius:50%}
+.px-grp td{background:var(--paper);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:7px 12px}
+.px-chip.xls{background:rgba(63,122,82,.1);color:#3f7a52}
+.px-tl{padding:4px 16px 10px}
+.px-tl .e{display:grid;grid-template-columns:96px 12px minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);align-items:start}
+.px-tl .e:last-child{border-bottom:none}
+.px-tl .q{font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.px-tl .q small{display:block;font-size:10.5px;color:var(--muted)}
+.px-tl .p{width:10px;height:10px;border-radius:50%;margin-top:4px}
+.px-tl .t{font-size:12.5px}
+.px-tl .t small{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4}
+.px-neuf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 16px 14px}
+.px-neuf div{padding:10px 12px;border:1px dashed var(--line);border-radius:10px;font-size:12px;line-height:1.4}
+.px-neuf div b{display:block;font-weight:400;color:var(--ink);margin-bottom:3px}
+.px-neuf div span{color:var(--muted);font-size:11px}
+.px-cmd{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.px-cmd td{padding:4px 0;border-bottom:1px solid #eee7dc}
+.px-cmd td.n{text-align:right;font-variant-numeric:tabular-nums}
+.px-pjs{display:grid;gap:8px;margin-top:12px}
+.px-pdf.xls::before{content:'XLS';background:#3f7a52}
+body.db-rail-on{min-height:max(100vh,1250px)}
+.px-btns{flex-wrap:wrap}
+.px-btn{white-space:nowrap}

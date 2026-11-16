@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Mails et automatisations › Dossier comptable du mois</title>
+<!-- Une automatisation ouverte : le dossier comptable du mois, au comptable, le 1er jour ouvré. Quand, à qui, l'e-mail,
+     les fichiers joints (le PDF du dossier, l'Excel des ventes jour par jour), l'aperçu et le journal. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="mails.css">
+<script src="coque.js"></script>
+</head><body><script>
+const sw = (on, txt) => `<span class="px-sw${on ? ' on' : ''}"><i></i>${txt}</span>`;
+const v = t => `<span class="px-var">{{${t}}}</span>`;
+const casee = (on, t) => `<span>${on ? '<span class="px-ok">✓</span>' : '<span class="px-no"></span>'}${t}</span>`;
+const gauche = `
+  <div class="db-card"><div class="ct"><span class="db-lab">Quand</span></div><div class="px-f">
+    <div class="row"><span class="px-in">Chaque mois ▾</span><span class="px-in">le 1er jour ouvré ▾</span><span class="px-in">07:00</span><span class="px-in">pour le mois clos ▾</span></div>
+    <div class="row" style="margin:0">${sw(true, 'Attendre que le mois soit entièrement lu en caisse (sinon, réessayer chaque heure)')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">À qui</span></div><div class="px-f">
+    <div class="row"><span class="px-chip">Comptable <b>· compta@fiduciaire-exemple.be</b> ✕</span><span class="px-chip ajout">+ une adresse</span></div>
+    <div class="row" style="margin:0">${sw(true, 'Une copie à moi')}<span style="width:16px"></span>${sw(false, 'Copie au consultant du réseau')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">L’e-mail</span><span class="db-mini">modèle « Au comptable »</span></div><div class="px-f">
+    <span class="lab">Objet</span>
+    <div class="row"><span class="px-in w">${v('société')}&nbsp;· Dossier comptable ${v('mois')}</span></div>
+    <span class="lab">Message</span>
+    <div class="row"><div class="px-ta">Bonjour,<br>vous trouverez ci-joint le dossier comptable de ${v('mois')} de ${v('magasin')} : le chiffre d’affaires hors TVA et la TVA jour par jour et par taux, les frais du mois et les ventes aux clients pro à facturer.<br>Bonne journée,<br>${v('signature')}</div></div>
+    <div class="row" style="margin:0"><span class="lab" style="margin:0 8px 0 0">Variables</span>${['société', 'magasin', 'mois', 'total_ht', 'tva', 'signature'].map(v).join(' ')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les fichiers joints</span></div><div class="px-f">
+    <div class="row">${sw(true, 'PDF')}<span class="px-in" style="flex:1">Dossier_${v('magasin')}_${v('mois')}.pdf</span></div>
+    <div class="px-cases" style="margin:0 0 12px 40px">${casee(true, 'CA TTC, hors TVA et TVA, jour par jour')}${casee(true, 'la TVA par taux (6, 12, 21 %)')}${casee(true, 'les frais du mois, avec leur TVA')}${casee(true, 'les ventes pro à facturer, par client')}${casee(true, 'les corrections après encaissement')}${casee(false, 'le P&L du mois')}</div>
+    <div class="row">${sw(true, 'Excel')}<span class="px-in" style="flex:1">Ventes_${v('magasin')}_${v('mois')}.xlsx</span></div>
+    <div class="px-cases" style="margin:0 0 4px 40px">${casee(true, 'une ligne par jour : TTC, HT, TVA par taux, tickets')}${casee(false, 'une ligne par ticket')}</div>
+  </div></div>`;
+const droite = `
+  <div class="db-card"><div class="ct"><span class="db-lab">Aperçu</span><span class="db-mini">l’e-mail du 01/12 · données d’octobre pour l’exemple</span></div>
+    <div class="px-mail">
+      <div class="tete">De <b>Atelier by Halle</b> · À <b>compta@fiduciaire-exemple.be</b> · Cc <b>moi</b><br>Objet <b>SRL Exemple · Dossier comptable octobre 2026</b></div>
+      <div class="corps">
+        <div class="logo">L’ATELIER</div>
+        <div class="k">Dossier comptable · octobre 2026</div>
+        <h3>48 210 € hors TVA</h3>
+        Bonjour,<br>vous trouverez ci-joint le dossier comptable d’octobre 2026 d’Atelier by Halle : le chiffre d’affaires hors TVA et la TVA jour par jour et par taux, les frais du mois et les ventes aux clients pro à facturer.
+        <table class="px-cmd"><tr><td>Chiffre d’affaires TTC</td><td class="n">51 103 €</td></tr><tr><td>TVA 6 %</td><td class="n">2 731 €</td></tr><tr><td>TVA 21 %</td><td class="n">162 €</td></tr><tr><td>Ventes pro à facturer · 5 clients</td><td class="n">3 480 €</td></tr></table>
+        <div class="px-pjs"><div class="px-pj" style="margin:0"><span class="px-pdf"></span><span>Dossier_Halle_2026-10.pdf<br><span style="color:var(--muted);font-size:11px">6 pages · A4 · 0,8 Mo</span></span></div>
+          <div class="px-pj" style="margin:0"><span class="px-pdf xls"></span><span>Ventes_Halle_2026-10.xlsx<br><span style="color:var(--muted);font-size:11px">31 lignes · 24 Ko</span></span></div></div>
+      </div>
+    </div>
+    <div class="px-btns"><span class="px-btn">Voir les fichiers</span><span class="px-btn">Envoyer un essai à moi</span><span class="px-btn">Envoyer maintenant (octobre)</span><span class="px-btn p">Enregistrer</span></div>
+  </div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Journal des envois</span></div>
+    <table class="px-t px-j"><thead><tr><th>Quand</th><th>Mois</th><th>Résultat</th></tr></thead><tbody>
+      <tr><td>lun. 02/11 · 07:00</td><td>octobre 2026</td><td><span class="ok">✓ envoyé</span> · PDF 6 p. · Excel 31 lignes</td></tr>
+      <tr><td>jeu. 01/10 · 07:00 → 09:00</td><td>septembre 2026</td><td><span class="vide">mois pas encore lu à 07:00</span> · <span class="ok">✓ envoyé à 09:00</span></td></tr>
+      <tr><td>lun. 01/09 · 07:00</td><td>août 2026</td><td><span class="ok">✓ envoyé</span> · PDF 6 p. · Excel 31 lignes</td></tr>
+    </tbody></table></div>`;
+const corps = `
+  <div class="px-tabs"><button class="on">Automatisations<span class="n">8</span></button><button>Modèles d’e-mail<span class="n">8</span></button><button>Destinataires<span class="n">3</span></button><button>Journal des envois</button><button>Reçus du réseau<span class="n">7</span></button></div>
+  <p class="px-intro" style="margin-bottom:14px"><span style="color:var(--accent)">‹ Les automatisations</span> · <span class="px-qui"><i style="background:#6B4FBB"></i>Comptable</span> · <b style="font-weight:400;color:var(--ink)">Dossier comptable du mois</b> — le mois clos, au comptable, le 1er jour ouvré. ${sw(true, 'actif')}</p>
+  <div class="px-b"><div>${gauche}</div><div>${droite}</div></div>`;
+coque({ titre: 'Mails et automatisations', kicker: 'Atelier by - Halle · Paramètres', corps,
+  pied: 'Maquette v2 du 16/11/2026 · société, adresses et chiffres d’exemple. Le dossier reprend ce que le cockpit calcule déjà : CA hors TVA et TVA ticket par ticket, TVA par taux du catalogue, frais du mois avec leur TVA (onglet Frais), ventes pro différées (B2B), corrections après encaissement (Vérification).' });
+</script></body></html>
