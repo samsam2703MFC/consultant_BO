@@ -22,7 +22,9 @@ final class StockPalletController extends BaseController
         $made = isset($_GET['made']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $_GET['made']) ? (string) $_GET['made'] : null;
         $data = $this->stock->overview(mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80), $id('pallet'), $id('product'), $made);
         // [327] Wysłane w osobnej zakładce : główny widok = magazyn → w budowie → gotowe.
-        $data['tab'] = in_array($_GET['tab'] ?? '', ['shipped', 'expiring'], true) ? $_GET['tab'] : 'flow';
+        $data['tab'] = in_array($_GET['tab'] ?? '', ['shipped', 'expiring', 'general'], true) ? $_GET['tab'] : 'flow';
+        // [334] Stan ogólny : stan − zamówione → zostaje po wysyłce, względem stanu maks.
+        if ($data['tab'] === 'general') $data['general'] = $this->stock->generalStock();
         $this->view('logistics/stock_pallets', $data);
     }
 

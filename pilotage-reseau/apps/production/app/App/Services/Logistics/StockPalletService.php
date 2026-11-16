@@ -96,6 +96,33 @@ final class StockPalletService
     }
 
     /**
+     * [334] Stan ogólny (kartony) : stan = magazyn + na paletach ; zamówione = zamówienia otwarte ; zostaje po wysyłce =
+     * stan − zamówione ; wskaźnik : zostaje względem stanu maks. produktu (karta produktu, stany w kartonach = sztuki ÷ ppc).
+     * @return array{categories: list<array>, totals: array}
+     */
+    public function generalStock(): array
+    {
+        $cats = [];
+        $tot = ['stock' => 0, 'ordered' => 0, 'pallet' => 0, 'left' => 0];
+        foreach ($this->repo->generalStock() as $r) {
+            $ppc = (int) $r['ppc'];
+            $stock = (int) $r['free'] + (int) $r['pallet'];
+            $ordered = (int) round((float) $r['ordered']);
+            $left = $stock - $ordered;
+            $max = $r['stock_max'] !== null && $ppc > 0 ? (int) round((float) $r['stock_max'] / $ppc) : null;
+            $min = $r['stock_min'] !== null && $ppc > 0 ? (int) round((float) $r['stock_min'] / $ppc) : null;
+            $row = ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'stock' => $stock, 'ordered' => $ordered, 'pallet' => (int) $r['pallet'],
+                'left' => $left, 'max' => $max ?: null, 'min' => $min,
+                'pct' => $max ? (int) round(max(0, $left) / $max * 100) : null,
+                'state' => $left < 0 ? 'short' : ($max && $left > $max ? 'over' : ($min !== null && $left < $min ? 'low' : 'ok'))];
+            $cats[$r['category']] ??= ['name' => (string) $r['category'], 'rows' => []];
+            $cats[$r['category']]['rows'][] = $row;
+            foreach (['stock', 'ordered', 'pallet', 'left'] as $k) $tot[$k] += $row[$k];
+        }
+        return ['categories' => array_values($cats), 'totals' => $tot];
+    }
+
+    /**
      * [333] Usunięcie palety (w budowie albo gotowej) : $mode « stock » — kartony wracają do magazynu ; « delete » — kartony
      * usunięte razem z paletą. Paleta wysłana : odmowa. Dziennik : n_pallet_deletion.
      * @return array{cartons:int, mode:string}
