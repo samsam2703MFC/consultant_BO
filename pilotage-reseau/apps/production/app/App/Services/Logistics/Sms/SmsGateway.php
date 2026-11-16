@@ -174,6 +174,17 @@ final class SmsGateway implements SmsTransport
     /** Numer w formacie E.164 (+32…, +48…) ; bez prefiksu : parametr sms.default_prefix (jak w CRM : Belgia). */
     public function e164(string $raw): ?string
     {
+        // [321] Pole z kilkoma numerami (« 0476 12 34 56 / 0478… », « …; … », « … lub … ») : pierwszy czytelny numer.
+        $parts = preg_split('/\s*(?:[\/,;|\n]|\s-\s|\s(?:lub|ou|of|or)\s)\s*/iu', trim($raw)) ?: [$raw];
+        if (count($parts) > 1) {
+            foreach ($parts as $part) if (($n = $this->e164One($part)) !== null) return $n;
+            return null;
+        }
+        return $this->e164One($raw);
+    }
+
+    private function e164One(string $raw): ?string
+    {
         $s = (string) preg_replace('/[^\d+]/', '', $raw);
         if ($s === '' || $s === '+') return null;
         if (str_starts_with($s, '00')) $s = '+' . substr($s, 2);
