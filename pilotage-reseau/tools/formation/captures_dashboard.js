@@ -26,6 +26,8 @@ const PLANS = [
   { nom: 'dash-heures', vue: 'ops', cibles: ['.db-card.op-bloc >> nth=0'] },
   { nom: 'dash-duel', vue: 'ops', cibles: ['.db-card.op-bloc >> nth=1'] },
   { nom: 'dash-pl', vue: 'ops', cibles: ['.db-card:has(.db-cascade)'] },
+  // L'onglet Frais (16/11/2026) : les frais du mois, « TVA comprise ? » et le taux de chaque poste (ART-PIL-01 partie 28, SOP 5.7).
+  { nom: 'dash-frais', vue: 'frais', cibles: ['.fx-tuiles', '.db-card:has(.fx-t)'], top: true },
   { nom: 'dash-categories', vue: 'ops', cibles: ['.db-card:has(.db-acc)'] },
   { nom: 'dash-journee', vue: 'ops', cibles: ['.db-card.op-bloc:has(.op-jr)'] },
   { nom: 'dash-vitrine', vue: 'ops', cibles: ['.db-card.vt'] },
