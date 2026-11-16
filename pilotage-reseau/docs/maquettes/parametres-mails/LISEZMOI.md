@@ -1,6 +1,6 @@
 # Dashboard magasin › Paramètres › Mails et automatisations
 
-**Statut : maquette v3.1 du 16/11/2026, à valider. Rien n'est codé.**
+**Statut : maquette v3.1 du 16/11/2026, validée (« code: ok »). Codé : le rappel la veille du retrait (16/11/2026, `src/franchise/automatisations.php`, `public/dashboard/automatisations.js`). À coder : le dossier comptable du mois ; « Commande prête » attend la tablette.**
 
 Demandes (16/11/2026) : « Rajouter dans le rail : paramètre. Mail / automatisation (envoi des rapports à qui / template /
 fichier PDF / …), faire maquette en screenshot », puis, sur la v1 : « c'est aussi pour envoyer les rapports aux comptables
