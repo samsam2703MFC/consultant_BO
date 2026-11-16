@@ -110,3 +110,9 @@ body.db-rail-on{min-height:max(100vh,1250px)}
 .px-tel .h{font-size:10.5px;color:var(--muted);text-align:center;margin-bottom:10px}
 .px-bulle{background:#ecebe8;border-radius:14px 14px 14px 4px;padding:9px 11px;font-size:12px;line-height:1.45;margin-bottom:6px}
 .px-cpt{font-size:10.5px;color:var(--muted)}
+
+/* v3.1 (16/11/2026) : « Commande prête », via la tablette pour le moment, en gris. */
+tr.px-gris td{color:var(--faint)}
+tr.px-gris td>*:not(.px-bientot),tr.px-gris .px-chip{opacity:.55}
+div.px-gris{opacity:.45}
+.px-bientot{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:6px;background:var(--chip);color:var(--muted);letter-spacing:.02em}

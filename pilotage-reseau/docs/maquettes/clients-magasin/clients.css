@@ -31,3 +31,64 @@
 .cl-t td{padding:9px 12px}
 .cl-t .nom{font-size:13px}
 .cl-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+/* v2 (16/11/2026) : la vue Fidélité dans les clients — niveaux, carte, champs modifiables. */
+.cl-niv{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap}
+.cl-niv i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.cl-carte{display:inline-flex;align-items:center;font-size:12.5px;white-space:nowrap}
+.cl-carte .fdc-ic{width:18px;height:12px}
+.cl-pas{font-size:12.5px;color:var(--muted)}
+.cl-pas.prop{color:var(--accent)}
+.cl-nivs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.25fr);gap:10px;margin-bottom:14px}
+.cl-nivs .fd-tui{cursor:default}
+.cl-nivs .fd-tui>b{font-size:24px}
+.cl-nivs .fd-tui small{font-size:11px;color:var(--color-text-muted);line-height:1.35}
+.cl-nivs .fd-tui .cc{font-size:11.5px;color:var(--ink);margin-top:2px}
+.cl-nivs .fd-tui.carte{background:#fbf6ef;border-color:#ead8bd}
+.cl-nivs .fd-tui.carte>b{color:var(--prize-ink)}
+.cl-t td .sub .fdc-dots{vertical-align:0}
+.cl-t .tr-sel td{background:#fcf9f5}
+.cl-evo{font-size:10.5px;padding:1px 6px;border-radius:5px;margin-left:4px;white-space:nowrap}
+.cl-evo.up{background:rgba(63,122,82,.12);color:#3f7a52}.cl-evo.down{background:rgba(163,32,20,.08);color:#A32014}
+
+/* La fiche, dans l'esprit de la fiche Fidélité. */
+.cl-g3f{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;margin-bottom:12px}
+.cl-g3r{display:grid;grid-template-columns:300px 300px minmax(0,1fr);gap:12px;align-items:start;margin-bottom:12px}
+.cl-g3f>.db-card,.cl-g3r>.db-card,.cl-col>.db-card{margin-bottom:12px}
+.cl-g3f .cl-col>.db-card:last-child,.cl-g3r .cl-col>.db-card:last-child{margin-bottom:0}
+.fd-tete.cl-ft{margin-bottom:12px}
+.fd-tete .tags{margin-top:5px}
+.fd-av.pro{border-radius:12px;background:rgba(176,121,42,.12);color:var(--prize-ink)}
+.cl-cartes{display:grid;gap:10px;padding:12px 14px}
+.cl-cartes .fdc-carte{padding:14px 16px}
+.cl-cartes .fdc-tps{grid-template-columns:repeat(10,1fr);gap:6px;margin-top:10px}
+.cl-cartes .fdc-pts{font-size:26px;margin-top:8px}
+.cl-cartes .fdc-pts small{font-size:12px;opacity:.85;margin-left:6px}
+.cl-pal{height:6px;border-radius:3px;background:rgba(255,255,255,.3);margin-top:8px;overflow:hidden}.cl-pal i{display:block;height:100%;background:#fff}
+.cl-cartes .fdc-kv{margin-top:2px;padding:0 2px}
+.cl-ech{display:grid;gap:4px;padding:12px 14px 4px}
+.cl-ech div{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;padding:6px 10px;border-radius:8px;font-size:12.5px;color:var(--color-text-muted)}
+.cl-ech div i{width:10px;height:10px;border-radius:50%}
+.cl-ech div.on{background:rgba(176,48,72,.07);color:var(--ink);box-shadow:inset 0 0 0 1.5px #B03048}
+.cl-ech div small{font-size:11px}
+.cl-ech-n{margin:6px 14px 0;font-size:12px;color:var(--accent)}
+.cl-c .k{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.cl-in{display:flex;align-items:center;justify-content:space-between;min-height:32px;margin-top:3px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px;line-height:1.3}
+.cl-in.ta{align-items:flex-start;padding:8px 10px;min-height:54px}
+.cl-in .dd{color:var(--muted);margin-left:8px}
+.cl-in.mod{border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,29,44,.08)}
+.cl-modif{font-size:9.5px;letter-spacing:0;text-transform:none;color:var(--accent)}
+.cl-ro{font-size:13px;margin-top:3px;line-height:1.35}
+.cl-ecrit{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#3f7a52;background:rgba(63,122,82,.1);border-radius:10px;padding:2px 8px}
+.cl-ecrit.lu{color:var(--muted);background:var(--chip)}
+.cl-enr{display:flex;align-items:center;gap:10px;padding:10px 16px 14px;border-top:1px solid var(--color-border-tertiary)}
+.cl-enr{flex-wrap:wrap;justify-content:flex-end}
+.cl-enr .db-mini{flex:1 1 220px}
+.cl-lus{width:100%;border-collapse:collapse;font-size:12.5px}
+.cl-lus td{padding:6px 16px;border-top:1px solid var(--color-border-tertiary);vertical-align:top}
+.cl-lus td:first-child{color:var(--color-text-muted);width:44%}
+.cl-lus .cl-api{display:inline;margin-left:6px}
+.cl-hab{padding:4px 0 10px}
+.cl-hab .fd-lab{margin:10px 14px 6px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.cl-sw{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.cl-enr-b{display:flex;gap:8px;margin-left:auto}

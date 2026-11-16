@@ -1,68 +1,76 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>C — Clients › fiche d'un client pro</title>
-<!-- La fiche d'un client pro, sur les champs de la fiche du panel : la société et sa TVA (contrôlée), Peppol, la
-     facturation, les conditions B2B (paiement différé, remises, franco, crédit), le contact, puis ce que le magasin en
-     voit : les achats différés du mois face au crédit, les factures en PDF, les envois. Valeurs d'exemple. -->
+<!-- v2 du 16/11/2026 : la fiche d'un client pro dans l'esprit de la fiche Fidélité (son niveau, comment il achète, son
+     type d'achat face à la moyenne), sa carte (un pro n'en a pas : sa remise en tient lieu), puis ses conditions
+     (paiement différé, remises, franco, crédit), sa société et sa TVA, sa facturation : modifiables par le magasin et
+     enregistrées au panel, sauf le plafond de crédit du réseau. Valeurs d'exemple. -->
 <link rel="stylesheet" href="/public/assets/ds/global.css">
 <link rel="stylesheet" href="/public/dashboard/dashboard.css">
 <link rel="stylesheet" href="../parametres-mails/mails.css">
 <link rel="stylesheet" href="clients.css">
 <script src="../parametres-mails/coque.js"></script>
+<script src="clients.js"></script>
 </head><body><script>
-RAIL[3][1].splice(4, 0, ['clients', 'Clients', 'personnes', 'nouveau']);
-const f = (k, v, api, plein) => `<div class="cl-c${plein ? ' plein' : ''}"><div class="k">${k}</div><div class="v">${v}</div><span class="cl-api">${api}</span></div>`;
-const carte = (titre, mini, champs) => `<div class="db-card"><div class="ct"><span class="db-lab">${titre}</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div><div class="cl-champs">${champs}</div></div>`;
-const tete = `<div class="db-card cl-tete"><div class="cl-av pro">CP</div><div><h2>Café du Parc</h2>
-  <div class="s">Code client P-000112 · client du magasin depuis janvier 2025 · contact : Luc Dubois</div>
-  <div class="tags"><span class="cl-tag pro">Pro · Horeca</span><span class="cl-tag ok">TVA valide</span><span class="cl-tag ok">Peppol vérifié</span><span class="cl-tag ok">paiement différé</span><span class="cl-tag">remise 10 %</span></div></div>
-  <div class="cl-kpis"><div><div class="k">12 mois</div><div class="v">13 920 €</div></div><div><div class="k">Ce mois · différé</div><div class="v">1 180 €</div></div><div><div class="k">Part du B2B</div><div class="v">31 %</div></div></div></div>`;
-const col1 = carte('La société et sa TVA', 'écrit au panel', [
-  f('Société', 'Café du Parc SRL', 'client.company_name', true),
-  f('Numéro de TVA', 'BE 0000.000.097 <span class="cl-ok">✓ valide (clé 97)</span>', 'client.tax_number', true),
-  f('Peppol', '0208:0000000097 <span class="cl-ok">✓ vérifié</span>', 'client.peppol_identifier · client.peppol_verified', true),
-  f('Client pro', '<span class="cl-ok">✓ oui</span>', 'client.is_b2b'), f('Segment', 'Horeca', 'client.b2b_segment'),
-  f('Type · secteur', 'Café · Restauration', 'profile.id_b2b_client_type · profile.id_b2b_client_sector', true),
-  f('Maison mère', '—', 'client.company_client_id'), f('Service · bureau', '— · —', 'client.department_id · client.office_id')
-].join('')) + carte('Le contact', '', [
-  f('Prénom · nom', 'Luc Dubois', 'client.name · client.surname', true),
-  f('E-mail', 'commandes@cafe-exemple.be', 'client.email', true), f('Téléphone', '+32 2 000 00 00', 'client.phone_e164'),
-  f('Langue', 'Français', 'client.locale')
-].join(''));
-const col2 = carte('La facturation', '', [
-  f('Nom sur la facture', 'Café du Parc SRL', 'client.invoice_name', true),
-  f('Adresse', 'Place de l’Exemple 3', 'client.invoice_address', true), f('Code postal · ville', '1500 · Halle', 'client.invoice_postal_code · client.invoice_city'),
-  f('Pays', 'Belgique', 'client.invoice_country'), f('IBAN', 'BE00 0000 0000 0000', 'client.iban', true),
-  f('Échéance', '30 jours fin de mois', 'client.payment_terms · client.b2b_payment_terms'), f('Lignes de facture', 'détaillées par ticket', 'client.billing_lines')
-].join('')) + carte('Les conditions', 'paiement, remises, crédit', [
-  f('Paiement différé', '<span class="cl-ok">✓ autorisé</span>', 'client.can_deferral'), f('Remise personnelle', '10 %', 'client.personal_discount_percent'),
-  f('Remise webshop', '5 %', 'client.b2b_web_discount'), f('Franco de livraison', 'dès 50 €', 'client.b2b_franco'),
-  f('Crédit', '<span class="cl-ok">✓ ouvert</span> · limite 1 500 €', 'profile.credit_enabled · profile.credit_limit', true),
-  f('Plafond du réseau', '2 000 €', 'client.b2b_credit_ceiling'), f('Livraison au bureau', 'non', 'client.office_delivery')
-].join(''));
-const col3 = `<div class="db-card"><div class="ct"><span class="db-lab">Ce mois-ci en différé</span><span class="db-mini">tickets à facturer · remise déduite</span></div>
+const coul = NIV.fanbase[1];
+const tete = `<div class="db-card fd-tete cl-ft"><div class="fd-id"><span class="fd-av pro">CP</span><div><b>Café du Parc</b><span>P-000112 · client du magasin depuis janvier 2025 · contact : Luc Dubois · dernier passage lundi 16/11 07:10</span>
+    <div class="tags"><span class="cl-tag pro">Pro · Horeca</span><span class="cl-tag ok">TVA valide</span><span class="cl-tag ok">Peppol vérifié</span><span class="cl-tag ok">paiement différé</span><span class="cl-tag">remise 10 %</span></div></div></div>
+  <div class="fd-k"><div><b style="color:${coul}">Fanbase</b><span>3 fois par semaine ou plus<br>sur 30 jours</span></div>
+    <div><b>78</b><span>passages<br>sur 180 jours</span></div><div><b>13 920 €</b><span>sur 12 mois<br>85,90 € par passage</span></div>
+    <div><b>1 180 €</b><span>ce mois en différé<br>sur 1 500 € de crédit</span></div></div></div>`;
+
+const carteF = carte('Sa carte de fidélité', 'lue dans l’ERP', `<div class="fdc-pas"><b>Pas de carte de fidélité : client pro.</b><span>Sa remise personnelle de 10 % en tient lieu. Un pro ne gagne ni timbres ni points (client.fidelity_active : non).</span></div>`);
+const niveau = carte('Son niveau de fidélité', 'sur 30 jours', `<div class="cl-ech">${Object.keys(NIV).map(k => `<div class="${k === 'fanbase' ? 'on' : ''}" style="${k === 'fanbase' ? 'background:rgba(141,29,44,.06);box-shadow:inset 0 0 0 1.5px ' + coul : ''}"><i style="background:${NIV[k][1]}"></i><span>${NIV[k][0]}</span><small>${NIV[k][2]}</small></div>`).join('')}</div>
+  <div class="fd-mos">${[['Novembre', 14], ['Octobre', 23], ['Septembre', 22]].map(([m, n]) => `<div class="fd-mo"><span>${m}</span><span class="r">${n} passages</span><span><i class="fd-pt" style="background:${coul}"></i>Fanbase</span><small class="r"></small></div>`).join('')}</div>`);
+const typ = carte('Type d’achat', 'face à la moyenne des pros', radar([{ v: { pain: 30, vienno: 34, antigaspi: 2, tartes: 10, gouter: 12, sale: 12 }, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 },
+  { v: { pain: 18, vienno: 72, antigaspi: 0, tartes: 4, gouter: 6, sale: 0 }, c: coul, fond: 0.16, w: 2.2 }], FAMILLES, 260, 80) + legende(coul, 'Café du Parc').replace('Moyenne du magasin', 'Moyenne des pros'), 'fd-c');
+
+// Les conditions : modifiables par le magasin (réponse du 16/11/2026), sauf le plafond du réseau.
+const cond = carte('Les conditions', '<span class="cl-ecrit">✎ modifiables · enregistrées au panel</span>', `<div class="cl-champs">
+    <div class="cl-c"><div class="k">Paiement différé</div><div class="cl-sw"><span class="px-sw on"><i></i>autorisé</span></div><span class="cl-api">client.can_deferral</span></div>
+    ${champ('Échéance', '30 jours fin de mois', 'client.payment_terms · b2b_payment_terms', { sel: true })}
+    ${champ('Remise personnelle', '12 %', 'client.personal_discount_percent', { mod: '10 %' })}${champ('Remise webshop', '5 %', 'client.b2b_web_discount')}
+    ${champ('Franco de livraison', 'dès 50 €', 'client.b2b_franco')}
+    <div class="cl-c"><div class="k">Livraison au bureau</div><div class="cl-sw"><span class="px-sw"><i></i>non</span></div><span class="cl-api">client.office_delivery</span></div>
+    <div class="cl-c"><div class="k">Crédit</div><div class="cl-sw"><span class="px-sw on"><i></i>ouvert</span></div><span class="cl-api">profile.credit_enabled</span></div>
+    ${champ('Limite de crédit', '1 500 €', 'profile.credit_limit')}
+    ${champ('Plafond du réseau', '2 000 € <span class="mu">· fixé par le réseau</span>', 'client.b2b_credit_ceiling', { lu: true, plein: true })}
+    ${champ('Lignes de facture', 'détaillées par ticket', 'client.billing_lines', { sel: true, plein: true })}
+  </div><div class="cl-enr"><span class="db-mini">1 champ modifié · la nouvelle remise vaut dès le prochain ticket</span><span class="cl-enr-b"><span class="px-btn">Annuler</span><span class="px-btn p">Enregistrer au panel</span></span></div>`);
+const soc = carte('La société et sa TVA', '<span class="cl-ecrit">✎ modifiable</span>', `<div class="cl-champs">
+    ${champ('Société', 'Café du Parc SRL', 'client.company_name', { plein: true })}
+    ${champ('Numéro de TVA', 'BE 0000.000.097 <span class="cl-ok">✓ valide (clé 97)</span>', 'client.tax_number', { plein: true })}
+    ${champ('Peppol', '0208:0000000097 <span class="cl-ok">✓ vérifié</span>', 'client.peppol_identifier · peppol_verified', { plein: true, lu: true })}
+    ${champ('Segment', 'Horeca', 'client.b2b_segment', { sel: true })}${champ('Type · secteur', 'Café · Restauration', 'profile.id_b2b_client_type · id_b2b_client_sector', { sel: true })}
+  </div>`) + carte('Le contact', '<span class="cl-ecrit">✎ modifiable</span>', `<div class="cl-champs">
+    ${champ('Prénom', 'Luc', 'client.name')}${champ('Nom', 'Dubois', 'client.surname')}
+    ${champ('E-mail', 'commandes@cafe-exemple.be', 'client.email', { plein: true })}${champ('Téléphone', '+32 2 000 00 00', 'client.phone_e164')}${champ('Langue', 'Français', 'client.locale', { sel: true })}
+  </div>`);
+const fact = carte('La facturation', '<span class="cl-ecrit">✎ modifiable</span>', `<div class="cl-champs">
+    ${champ('Nom sur la facture', 'Café du Parc SRL', 'client.invoice_name', { plein: true })}${champ('Adresse', 'Place de l’Exemple 3', 'client.invoice_address', { plein: true })}
+    ${champ('Code postal', '1500', 'client.invoice_postal_code')}${champ('Ville', 'Halle', 'client.invoice_city')}
+    ${champ('Pays', 'Belgique', 'client.invoice_country', { sel: true })}${champ('IBAN', 'BE00 0000 0000 0000', 'client.iban')}
+  </div>`);
+const mois = `<div class="db-card"><div class="ct"><span class="db-lab">Ce mois-ci en différé</span><span class="db-mini">tickets à facturer · remise déduite</span></div>
     <div class="px-f"><div class="cl-c"><div class="k">Encours face au crédit</div><div class="v">1 180 € sur 1 500 €</div></div>
     <div class="cl-jauge"><i style="width:78.7%"></i><b style="left:100%;margin-left:-2px"></b></div><span class="db-mini">reste 320 € avant la limite · facturé le 1er du mois</span></div>
-    <table class="px-t px-j"><thead><tr><th>Jour</th><th>Ticket</th><th style="text-align:right">À facturer</th></tr></thead><tbody>
-      <tr><td>lun. 16/11 07:10</td><td class="mu">60 croissants, 40 pains au chocolat</td><td style="text-align:right">94,50 €</td></tr>
-      <tr><td>sam. 14/11 07:05</td><td class="mu">60 croissants, 30 pains au chocolat</td><td style="text-align:right">84,15 €</td></tr>
-      <tr><td>ven. 13/11 07:12</td><td class="mu">40 croissants, 4 baguettes</td><td style="text-align:right">49,10 €</td></tr>
-      <tr><td colspan="2" class="mu">et 11 autres tickets</td><td style="text-align:right">952,25 €</td></tr></tbody></table></div>
+    <table class="px-t px-j"><tbody>
+      <tr><td style="white-space:nowrap">lun. 16/11<span class="sub">07:10</span></td><td class="mu">60 croissants, 40 pains au chocolat</td><td style="text-align:right;white-space:nowrap">94,50 €</td></tr>
+      <tr><td style="white-space:nowrap">sam. 14/11<span class="sub">07:05</span></td><td class="mu">60 croissants, 30 pains au chocolat</td><td style="text-align:right;white-space:nowrap">84,15 €</td></tr>
+      <tr><td colspan="2" class="mu">et 12 autres tickets</td><td style="text-align:right;white-space:nowrap">1 001,35 €</td></tr></tbody></table></div>
   <div class="db-card"><div class="ct"><span class="db-lab">Ses factures</span><span class="db-mini">au panel, en PDF</span></div>
     <table class="px-t px-j"><tbody>
       <tr><td>F-2026-0112 · octobre<span class="sub">14 tickets</span></td><td style="text-align:right">1 240,30 €<span class="sub"><span class="ok">payée le 09/11</span> · PDF</span></td></tr>
-      <tr><td>F-2026-0101 · septembre<span class="sub">12 tickets</span></td><td style="text-align:right">1 085,60 €<span class="sub"><span class="ok">payée le 07/10</span> · PDF</span></td></tr>
-      <tr><td>F-2026-0088 · août<span class="sub">9 tickets</span></td><td style="text-align:right">812,40 €<span class="sub"><span class="ok">payée le 10/09</span> · PDF</span></td></tr></tbody></table></div>
+      <tr><td>F-2026-0101 · septembre<span class="sub">12 tickets</span></td><td style="text-align:right">1 085,60 €<span class="sub"><span class="ok">payée le 07/10</span> · PDF</span></td></tr></tbody></table></div>
   <div class="db-card"><div class="ct"><span class="db-lab">Les envois</span><span class="db-mini">Paramètres › Mails et automatisations</span></div>
     <table class="px-t px-j"><tbody>
       <tr><td>01/12 08:00</td><td class="mu">relevé mensuel des achats différés · e-mail + PDF</td><td><span class="vide">prévu</span></td></tr>
-      <tr><td>aujourd’hui 17:00</td><td class="mu">rappel de la commande de demain 07:15 · e-mail</td><td><span class="vide">prévu</span></td></tr>
-      <tr><td>01/11 08:00</td><td class="mu">relevé d’octobre · e-mail + PDF</td><td><span class="ok">✓ envoyé</span></td></tr></tbody></table></div>`;
+      <tr><td>aujourd’hui 17:00</td><td class="mu">rappel de la commande de demain 07:15 · e-mail</td><td><span class="vide">prévu</span></td></tr></tbody></table></div>`;
 const corps = `
-  <p class="px-intro" style="margin-bottom:12px"><span style="color:var(--accent)">‹ Les clients</span> · fiche d’un client pro — chaque valeur porte en petit le champ de la fiche du panel d’où elle vient.</p>
+  <p class="fd-retour"><span class="db-lien" style="color:var(--accent)">‹ Retour aux clients</span></p>
   ${tete}
-  <div class="cl-g3"><div class="cl-col">${col1}</div><div class="cl-col">${col2}</div><div class="cl-col">${col3}</div></div>
-  <div class="px-btns" style="padding:0"><span class="px-btn">Voir au panel</span><span class="px-btn">Nouvelle commande</span><span class="px-btn">Faire la facture du mois</span><span class="px-btn p">Enregistrer au panel</span></div>`;
+  <div class="cl-g3f"><div class="cl-col">${canaux({ commande: 118, comptoir: 44, webshop: 0, livraison: 0 }, 'Achète surtout en commande au comptoir.')}<div style="height:12px"></div>${carteF}</div>${niveau}${typ}</div>
+  <div class="cl-g3"><div class="cl-col">${cond}</div><div class="cl-col">${soc}${fact}</div><div class="cl-col">${mois}</div></div>`;
 coque({ actif: 'clients', titre: 'Clients', kicker: 'Atelier by - Halle · Vendre', corps,
-  pied: 'Maquette du 16/11/2026 · société, numéros et montants d’exemple. Les champs en petit sont ceux de la fiche client du panel (/shops/{id}/clients/{id}, lus le 16/11/2026) ; la TVA se contrôle comme dans le B2B du cockpit (clé modulo 97 pour la Belgique) ; les achats différés et la remise viennent des tickets (B2B) ; les factures de /shops/{id}/invoices.' });
+  pied: 'Maquette v2 du 16/11/2026 · société, numéros et montants d’exemple. Le niveau et le type d’achat comme dans l’onglet Fidélité ; les conditions, la société, le contact et la facturation se modifient au magasin et s’enregistrent au panel (/shops/{id}/clients/{id}) — sauf le plafond de crédit du réseau et la vérification Peppol. La TVA se contrôle comme dans le B2B du cockpit (clé modulo 97 pour la Belgique) ; les achats différés et la remise viennent des tickets ; les factures de /shops/{id}/invoices.' });
 </script></body></html>

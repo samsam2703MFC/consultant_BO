@@ -1,6 +1,6 @@
 # Dashboard magasin › Paramètres › Mails et automatisations
 
-**Statut : maquette v3 du 16/11/2026, à valider. Rien n'est codé.**
+**Statut : maquette v3.1 du 16/11/2026, à valider. Rien n'est codé.**
 
 Demandes (16/11/2026) : « Rajouter dans le rail : paramètre. Mail / automatisation (envoi des rapports à qui / template /
 fichier PDF / …), faire maquette en screenshot », puis, sur la v1 : « c'est aussi pour envoyer les rapports aux comptables
@@ -59,12 +59,15 @@ comptable y arrivent.
 - « SMS par l'API SMS » : les SMS partent par l'API SMS du cockpit (`src/sms.php`, Twilio, déjà utilisée pour les primes
   des vendeuses ; réglée dans `config.php`).
 
-## À trancher avant de coder
+## v3.1 (16/11/2026) : les réponses
 
-1. Les automatisations à faire d'abord (proposition : dossier comptable du mois, rappel la veille du retrait, commande
-   prête).
-2. « Commande prête » : où la commande est-elle marquée prête (la caisse, l'onglet Commandes du dashboard) ?
-3. Qui peut régler ces envois : le franchisé seul, ou aussi le consultant ?
+- Les automatisations à faire d'abord : **dossier comptable du mois, rappel la veille du retrait, commande prête**.
+- « Commande prête » : la commande se marque prête **via la tablette pour le moment** ; l'automatisation est en gris
+  (« à venir ») dans la liste et dans l'aperçu SMS, en attendant.
+
+## Reste à trancher
+
+- Qui peut régler ces envois : le franchisé seul, ou aussi le consultant ?
 
 ## Fichiers
 

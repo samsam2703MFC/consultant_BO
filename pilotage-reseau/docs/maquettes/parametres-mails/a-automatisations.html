@@ -11,14 +11,14 @@
 </head><body><script>
 const sw = (on, txt) => `<span class="px-sw${on ? ' on' : ''}"><i></i>${txt || (on ? 'actif' : 'éteint')}</span>`;
 const pj = t => t.startsWith('Excel') ? `<span class="px-chip xls">${t}</span>` : (t.startsWith('PDF') ? `<span class="px-chip pdf">${t}</span>` : `<span class="px-chip mail">${t}</span>`);
-// [envoi, contenu, quand, à qui, canal (m = e-mail, s = SMS), pièces jointes, actif, dernier envoi, sélectionné, note]
+// [envoi, contenu, quand, à qui, canal (m = e-mail, s = SMS), pièces jointes, actif, dernier envoi, sélectionné, note, en gris (pas encore)]
 const G = [
   ['Comptable', '#6B4FBB', [
     ['Dossier comptable du mois', 'les revenus du mois (TTC, hors TVA, TVA par taux) et les factures du mois en PDF', 'dès que les factures du mois sont faites · au plus tard le 5', 'compta@fiduciaire-exemple.be', 'm', ['PDF revenus du mois', 'PDF factures du mois'], true, '02/11 07:00 · envoyé', true]]],
   ['Clients', '#8D1D2C', [
     ['Confirmation de commande', 'dès que la commande est enregistrée : articles, jour et heure de retrait, acompte', 'à la commande', 'le client de la commande', 'm', ['PDF bon de commande'], true, 'aujourd’hui 11:42 · 1 envoi'],
     ['Rappel la veille du retrait', 'la commande, l’heure de retrait, l’adresse du magasin, ce qui reste à payer', 'la veille · 17:00', 'le client de la commande', 'ms', ['PDF bon de commande'], true, 'hier 17:00 · 3 e-mails, 3 SMS', false, 'demain : 4 commandes'],
-    ['Commande prête', 'un SMS court : la commande est prête, l’heure, l’adresse', 'dès que la commande est marquée prête', 'le client de la commande (son téléphone)', 's', [], true, 'aujourd’hui 10:12 · 2 SMS'],
+    ['Commande prête', 'un SMS court : la commande est prête, l’heure, l’adresse', 'dès que la commande est marquée prête sur la tablette', 'le client de la commande (son téléphone)', 's', [], false, 'jamais envoyé', false, '', 'via la tablette pour le moment'],
     ['Merci et avis Google', 'le lendemain du retrait : merci, et le lien vers la fiche Google du magasin', 'le lendemain · 10:00', 'le client de la commande', 'm', [], false, 'jamais envoyé']]],
   ['Clients pro', '#B0792A', [
     ['Relevé mensuel des achats différés', 'chaque ticket en paiement différé du mois, remise personnelle déduite, total à payer', 'le 1er du mois · 08:00', 'chaque client pro (son e-mail au panel)', 'm', ['PDF relevé'], true, '01/11 08:00 · 5 envois']]],
@@ -28,11 +28,10 @@ const G = [
     ['Résumé de la journée', 'CA, objectif, résultat hors TVA, poubelle, tâches et contrôles du jour', 'chaque soir · 21:00', 'franchise.halle@exemple.be', 'm', [], true, 'hier 21:00 · envoyé']]]
 ];
 const canal = c => c === 'ms' ? '<span class="px-chip mail">e-mail</span><span class="px-chip sms">SMS</span>' : (c === 's' ? '<span class="px-chip sms">SMS</span>' : '<span class="px-chip mail">e-mail</span>');
-const lignes = G.map(([g, c, L]) => `<tr class="px-grp"><td colspan="7"><span class="px-qui"><i style="background:${c}"></i>${g}</span></td></tr>` + L.map(r => `<tr class="${r[8] ? 'sel' : ''}">
-  <td>${r[0]}<span class="sub">${r[1]}</span></td><td>${r[2]}${r[9] ? `<span class="sub" style="color:var(--accent)">${r[9]}</span>` : ''}</td><td>${r[3]}</td><td>${canal(r[4])}</td><td>${r[5].length ? r[5].map(pj).join('') : '<span class="mu">—</span>'}</td><td>${sw(r[6])}<span class="sub">${r[7]}</span></td><td><span class="px-ouvrir">Ouvrir ▸</span></td></tr>`).join('')).join('');
+const lignes = G.map(([g, c, L]) => `<tr class="px-grp"><td colspan="7"><span class="px-qui"><i style="background:${c}"></i>${g}</span></td></tr>` + L.map(r => `<tr class="${r[8] ? 'sel' : ''}${r[10] ? ' px-gris' : ''}">
+  <td>${r[0]}<span class="sub">${r[1]}</span></td><td>${r[2]}${r[9] ? `<span class="sub" style="color:var(--accent)">${r[9]}</span>` : ''}</td><td>${r[3]}</td><td>${canal(r[4])}</td><td>${r[5].length ? r[5].map(pj).join('') : '<span class="mu">—</span>'}</td><td>${r[10] ? `<span class="px-bientot">à venir</span><span class="sub">${r[10]}</span>` : sw(r[6]) + `<span class="sub">${r[7]}</span>`}</td><td><span class="px-ouvrir">${r[10] ? 'Voir ▸' : 'Ouvrir ▸'}</span></td></tr>`).join('')).join('');
 const tl = [
   ['aujourd’hui', '17:00', '#8D1D2C', 'Rappel la veille du retrait · e-mail et SMS', 'aux 4 clients des commandes de demain · Mme Lambert, M. Claes, Café du Parc, Mme Wouters'],
-  ['demain', 'au fil', '#8D1D2C', 'Commande prête · SMS', 'à chaque client, dès que sa commande est marquée prête'],
   ['vendredi 20/11', '16:00', '#3f7a52', 'Planning de la semaine prochaine', 'aux 7 personnes du planning'],
   ['dès les factures faites', '≤ 05/12', '#6B4FBB', 'Dossier comptable de novembre', 'au comptable · revenus du mois + factures du mois en PDF'],
   ['mardi 01/12', '08:00', '#B0792A', 'Relevé des achats différés de novembre', 'aux 5 clients pro qui ont acheté en différé']
@@ -41,7 +40,7 @@ const corps = `
   <div class="px-top"><p class="px-intro">Les e-mails que le magasin envoie tout seul : au comptable en fin de mois, aux clients la veille de leur commande ou quand elle est prête, aux clients pro, à l’équipe, à soi-même. Pour chacun : à qui, quand, par e-mail, par SMS ou les deux, le modèle du message et les fichiers joints.</p><span class="px-btn p">+ Nouvelle automatisation</span></div>
   <div class="px-tabs"><button class="on">Automatisations<span class="n">8</span></button><button>Modèles d’e-mail<span class="n">8</span></button><button>Destinataires<span class="n">3</span></button><button>Journal des envois</button><button>Reçus du réseau<span class="n">7</span></button></div>
   <div class="db-tuiles px-tuiles">
-    <div class="db-tui"><div class="k">Automatisations actives</div><div class="v">6 / 8</div><div class="s">2 éteintes · à allumer quand elles sont prêtes</div></div>
+    <div class="db-tui"><div class="k">Automatisations actives</div><div class="v">6 / 8</div><div class="s">1 éteinte · « Commande prête » à venir, via la tablette pour le moment</div></div>
     <div class="db-tui"><div class="k">Envois ce mois-ci</div><div class="v">61 · 23 SMS</div><div class="s">58 e-mails envoyés · 2 clients sans e-mail · 1 refusé, renvoyé</div></div>
     <div class="db-tui"><div class="k">Prochain envoi</div><div class="v">17:00</div><div class="s">rappel aux 4 clients des commandes de demain</div></div>
     <div class="db-tui"><div class="k">Fin du mois</div><div class="v">≤ 05/12</div><div class="s">dossier comptable dès les factures faites · relevés pro le 01/12</div></div>
