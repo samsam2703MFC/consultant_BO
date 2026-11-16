@@ -121,7 +121,9 @@ final class TaskCronService
         $now ??= self::now();
         $this->tasks->ensureCurrent($now);
         $ran = [];
-        foreach ($this->repo->cronTasks() as $task) {
+        // [295] Interrupteur des envois automatiques (Ustawienia › Parametry) : à 0, les actions automatiques des tâches
+        // (recalculs, envois) attendent ; les rappels dans la cloche continuent.
+        foreach (\App\Core\AutoSend::enabled() ? $this->repo->cronTasks() : [] as $task) {
             if (!$this->due($task, $now)) continue;
             $ran[] = $this->run($task, $now);
         }
