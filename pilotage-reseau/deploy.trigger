@@ -74,3 +74,4 @@
 2026-11-16T18:57:45Z [320] SMS : expéditeur refusé → expéditeur par défaut
 2026-11-16T19:04:47Z Barre de défilement ruby 3 px (cockpit + menu ERP)
 2026-11-16T19:06:29Z [321] SMS commandes : premier numéro lisible
+2026-11-16T19:12:57Z Dashboard : « Ce qui rapporte » retiré
