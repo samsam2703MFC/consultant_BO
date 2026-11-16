@@ -11,6 +11,8 @@ use RuntimeException;
  * une seule fois chacune. Chaque fichier appliqué est enregistré avec son empreinte : un
  * fichier modifié après coup bloque la suite (on écrit une nouvelle migration à la place).
  * Un verrou MySQL empêche deux exécutions simultanées.
+ * [295] Mode cohabitation : les numéros de migrations/cohabitation_skip.txt sont « skipped » (ni appliqués ni
+ * enregistrés) tant que COHABITATION=1 — ils passent à la bascule.
  */
 final class MigrationRunner
 {
@@ -20,8 +22,24 @@ final class MigrationRunner
     private const LEGACY_TABLE = 'tfb_' . 'schema_migration';
     private const LOCK = 'tfb_migrate';
 
-    public function __construct(private PDO $db, private string $directory)
+    /** @var array<string,string> numéro => raison (vide hors cohabitation) */
+    private array $skip = [];
+
+    public function __construct(private PDO $db, private string $directory, ?bool $cohabitation = null)
     {
+        if ($cohabitation ?? \App\Core\Cohabitation::on()) {
+            $this->skip = self::skipList(dirname(rtrim($directory, '/')) . '/cohabitation_skip.txt');
+        }
+    }
+
+    /** @return array<string,string> numéro (3 chiffres) => raison */
+    public static function skipList(string $file): array
+    {
+        $out = [];
+        foreach (is_file($file) ? (file($file, FILE_IGNORE_NEW_LINES) ?: []) : [] as $line) {
+            if (preg_match('/^\s*(\d{3})\s+(.*)$/', $line, $m)) $out[$m[1]] = trim($m[2]);
+        }
+        return $out;
     }
 
     /** @return list<array{version:string,name:string,checksum:string,state:string,applied_at:?string}> */
@@ -37,7 +55,7 @@ final class MigrationRunner
         foreach ($this->files() as $version => $file) {
             $checksum = hash_file('sha256', $file);
             $done = $applied[$version] ?? null;
-            $state = $done === null ? 'pending' : ($done['checksum'] === $checksum ? 'applied' : 'drift');
+            $state = $done === null ? (isset($this->skip[$version]) ? 'skipped' : 'pending') : ($done['checksum'] === $checksum ? 'applied' : 'drift');
             $rows[] = [
                 'version' => $version,
                 'name' => basename($file),

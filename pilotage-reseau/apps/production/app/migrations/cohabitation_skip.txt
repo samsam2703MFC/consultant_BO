@@ -1,0 +1,19 @@
+# [295] Mode cohabitation (COHABITATION=1 dans .env) : migrations de migrations/tfb NON appliquées tant que l'ERP
+# d'origine travaille sur la même base. Elles changent la forme ou le sens de ses tables, ou réécrivent ses données.
+# Elles restent « en attente » et passent à la bascule (COHABITATION=0 puis php Bin/tfb_migrate.php apply).
+# Format : numéro, puis la raison. Tout le reste (tables n_*, index, colonnes ajoutées avec valeur par défaut,
+# nouveaux modèles d'e-mail, clés primaires invisibles, collation) s'applique : l'ERP d'origine ne le voit pas.
+021  raw_material.id_category réaffectées (anciennes catégories)
+034  final_product.stock_minimum recopié depuis les cartes produit
+057  final_product.pre_calculated_raw_price_per_carton recopié depuis les recettes
+072  proformas de plus de 90 jours passées au statut « archived », inconnu de l'ERP d'origine
+074  suppression des copies de sauvegarde faites à la main dans l'ERP d'origine
+076  suppression des lignes orphelines + clés étrangères (suppressions refusées pour l'ERP d'origine)
+077  dates des documents : texte → DATE (proformas AAAA/MM/JJ → AAAA-MM-JJ)
+115  noms des produits réécrits
+127  recettes des produits test ramenées au carton
+144  coûts fixes « (leasing) » renommés
+158  raw_material.waste_perc : « wykorzystanie » → « odpad » (sens inversé) — perte : n_raw_material_loss (183)
+159  coûts des recettes recalculés avec la perte
+100  index de performance — deux portent sur des dates encore en texte (077) ; les autres : 184
+132  suppression de 22 anciennes propositions de produits test (2023–2024) dans test_product
