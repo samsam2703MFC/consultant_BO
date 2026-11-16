@@ -2834,7 +2834,12 @@ se rapportent au CA hors TVA :
 - `net` = `margeBrute` − invendus − main-d'œuvre − `overhead` ; tous les `…Pct` en % de `caHt` ; `pnlBase` = `ht`.
 - La série du mois (`serie[]`) et la semaine (`semaine[]`) de `/exploitation/jour` portent `caHt`, leur `net` hors TVA
   et `netPct` en % de `caHt`. Le réseau : `caHt`, `tva`, les `…Pct` sur la somme des `caHt`.
-- La carte « Ventes par catégorie » reste en TTC (les ventes des tickets) : son total se cale sur CA − coût matière.
+- La carte « Ventes par catégorie » (16/11/2026, « le coefficient doit être calculé sur le net, pas le brut ») : la Liste et
+  le Treemap se lisent hors TVA. `GET /ventes/stats` porte, pour chaque catégorie et chaque produit, `vHt` (le CA sans la
+  TVA du produit : `tax_value_percent` du catalogue, gardé `phTvaP:{shop}` six heures ; à défaut la part habituelle du
+  magasin), `mHt` (= `vHt` − coût de recette), `tauxHt`, et pour la catégorie `vChiffreHt`, `vSansHt`. Le coefficient de la
+  carte = CA hors TVA ÷ coût, comme celui du catalogue. Le total se cale sur `caHt` et `margeBrute` du P&L. Les champs TTC
+  (`v`, `m`, `taux`) restent : les onglets Promotions et Portions et la fiche produit comparent des prix de caisse.
 - Le dossier PDF du mois et la tablette (`vbPnlLigne` : `ca` = la base des %, `caTtc`, `horsTva`) suivent.
 
 ### `GET /exploitation/frais` et `POST /exploitation/frais/tva` — l'onglet Frais (16/11/2026)

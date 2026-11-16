@@ -116,6 +116,56 @@ function phTvaSourceLib(array $srcs): string
     return 'lue ticket par ticket sur ' . $lus . ' jour' . ($lus > 1 ? 's' : '') . ' sur ' . $sur . ', les autres au ' . $reste;
 }
 
+/* --- le hors TVA d'une vente de produit (Ventes par catégorie) ----------------------------------------------------- */
+
+/**
+ * Le taux de TVA de chaque produit au catalogue du magasin : [pid => %] (`tax_value_percent` de
+ * /shops/{id}/products/available), gardé six heures dans `phTvaP:{shop}` ; un panel muet ressert la dernière lecture.
+ */
+function phTvaProduits(int $sid): array
+{
+    static $memo = [];
+    if (isset($memo[$sid])) { return $memo[$sid]; }
+    $cle = 'phTvaP:' . $sid;
+    $g = null;
+    try { $g = setting($cle); } catch (Throwable $e) { /* sans réglages */ }
+    if (is_array($g) && isset($g['q'], $g['t']) && is_array($g['t']) && (int) $g['q'] > time() - 21600) { return $memo[$sid] = $g['t']; }
+    $out = [];
+    if (class_exists('PanelApi') && PanelApi::configured()) {
+        try { $lignes = PanelApi::produitsDisponibles($sid); } catch (Throwable $e) { $lignes = []; }
+        foreach ($lignes as $l) {
+            if (!is_array($l)) { continue; }
+            $pid = 0;
+            foreach (['id', 'product_id', 'id_product'] as $k) { if (isset($l[$k]) && is_numeric($l[$k])) { $pid = (int) $l[$k]; break; } }
+            $t = null;
+            foreach (['tax_value_percent', 'tax_val_perc'] as $k) { if (isset($l[$k]) && is_numeric($l[$k])) { $t = (float) $l[$k]; break; } }
+            if ($pid > 0 && $t !== null && $t >= 0 && $t <= 30) { $out[$pid] = $t; }
+        }
+    }
+    if ($out !== []) {
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['q' => time(), 't' => $out])]); }
+        catch (Throwable $e) { /* relu la prochaine fois */ }
+        return $memo[$sid] = $out;
+    }
+    return $memo[$sid] = (is_array($g) && isset($g['t']) && is_array($g['t'])) ? $g['t'] : [];
+}
+
+/**
+ * Le hors TVA d'une vente de produit (16/11/2026, « le coefficient doit être calculé sur le net, pas le brut ») : une
+ * fonction (identifiant du produit — « 123 », ou « 123:portion » —, montant TTC) → montant hors TVA. Le taux du produit
+ * au catalogue ; à défaut la part habituelle de TVA du magasin, sinon 6 %.
+ */
+function phHtProduit(int $sid): Closure
+{
+    $taux = phTvaProduits($sid);
+    $repli = phTvaHabituelle($sid, date('Y-m-d')) ?? phPartDefaut();
+    return static function (int|string $id, float $v) use ($taux, $repli): float {
+        $pid = is_int($id) ? $id : (int) explode(':', $id)[0];
+        $t = $taux[$pid] ?? null;
+        return $t !== null ? $v / (1 + (float) $t / 100) : $v * (1 - $repli);
+    };
+}
+
 /* --- les frais et leur TVA ------------------------------------------------------------------------------------------ */
 
 function ensureFraisTva(): void
