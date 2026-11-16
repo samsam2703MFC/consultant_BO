@@ -86,20 +86,20 @@
 
                     <!-- Tabela zamówień -->
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size: .875rem;">
+                        <table class="table table-hover align-middle mb-0 at-orders" style="font-size: .875rem;">
                             <thead class="table-light">
                                 <tr>
                                     <th style="width:3%" class="ps-3">
                                         <input type="checkbox" class="form-check-input" onClick="togglePending(this)" checked>
                                     </th>
-                                    <th style="width:25%">Firma</th>
-                                    <th style="width:23%">Opis</th>
-                                    <th style="width:10%">Data zamówienia</th>
-                                    <th style="width:10%">Wysyłka</th>
-                                    <th style="width:7%" class="text-end">Waga</th>
+                                    <th style="width:24%">Firma</th>
+                                    <th style="width:<?= !empty($showValues) ? 13 : 22 ?>%">Opis</th>
+                                    <th style="width:9%" class="text-center">Data zamówienia</th>
+                                    <th style="width:9%" class="text-center">Wysyłka</th>
+                                    <th style="width:9%" class="text-end">Waga</th>
                                     <?php if (!empty($showValues)): ?><th style="width:9%" class="text-end">Wartość</th><?php endif; ?>
-                                    <th style="width:12%" class="text-center">Płatność</th>
-                                    <th style="width:12%" class="text-end pe-3">Akcje</th>
+                                    <th style="width:14%" class="text-start">Płatność</th>
+                                    <th style="width:10%" class="text-end pe-3">Akcje</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -129,17 +129,22 @@
 
                                     <?php if ($pending[$i]['expected_shipping_date'] != @$pending[$i - 1]['expected_shipping_date'] || $i == 0): ?>
                                         <tr class="table-secondary">
-                                            <td colspan="<?= $cols ?>" class="ps-3 py-2">
+                                            <td colspan="<?= !empty($showValues) ? $cols - 3 : $cols ?>" class="ps-3 py-2">
                                                 <i class="bi bi-calendar-event me-2 text-secondary"></i>
                                                 <strong class="text-secondary">
                                                     <?= day_label_pl($pending[$i]['expected_shipping_date']) ?>
                                                 </strong>
-                                                <?php if (!empty($showValues)): ?>
-                                                    <?php foreach ($dayTotals as $k => $v): [$d, $cur] = explode('|', $k); if ($d !== $pending[$i]['expected_shipping_date']) continue; ?>
-                                                        <span class="float-end pe-3 text-secondary">Razem : <strong><?= $money($v, $cur) ?></strong></span>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
                                             </td>
+                                            <?php if (!empty($showValues)): ?>
+                                                <!-- Suma dnia w kolumnie « Wartość » -->
+                                                <td class="text-end text-nowrap py-2 at-num">
+                                                    <span class="small text-secondary d-block">Razem</span>
+                                                    <?php foreach ($dayTotals as $k => $v): [$d, $cur] = explode('|', $k); if ($d !== $pending[$i]['expected_shipping_date']) continue; ?>
+                                                        <strong class="text-secondary d-block"><?= $money($v, $cur) ?></strong>
+                                                    <?php endforeach; ?>
+                                                </td>
+                                                <td colspan="2"></td>
+                                            <?php endif; ?>
                                         </tr>
                                         <?php $dayTours = $tourTotals[$pending[$i]['expected_shipping_date']] ?? []; ?>
                                         <?php if (count($dayTours) > 1 || !isset($dayTours[''])): ?>
@@ -204,7 +209,7 @@
                                                 <?= htmlspecialchars($pending[$i]['company']) ?>
                                             <?php endif; ?>
                                             <?php if (!empty($pending[$i]['tour'])): ?>
-                                                <span class="at-tour-tag" title="Trasa w dniu wysyłki"><i class="bi bi-signpost-split"></i> <?= htmlspecialchars($pending[$i]['tour']) ?></span>
+                                                <br><span class="at-tour-tag" title="Trasa w dniu wysyłki"><i class="bi bi-signpost-split"></i> <?= htmlspecialchars($pending[$i]['tour']) ?></span>
                                             <?php endif; ?>
                                             <?php if (!empty($pending[$i]['proforma_stale'])): ?>
                                                 <span class="badge bg-warning text-dark ms-1" title="Zamówienie zostało zmienione po wystawieniu proformy">Proforma nieaktualna</span>
@@ -229,15 +234,13 @@
                                         </td>
 
                                         <!-- Data wysyłki -->
-                                        <td class="text-nowrap small">
+                                        <td class="text-nowrap small text-center">
                                             <i class="bi bi-truck me-1 text-primary"></i><?= $pending[$i]['expected_shipping_date'] ?>
                                         </td>
 
                                         <!-- Waga -->
-                                        <td class="text-end text-nowrap small">
-                                            <span class="badge bg-light text-dark border">
-                                                <i class="bi bi-box me-1"></i><?= $pending[$i]['totalSumKg'] ?> kg
-                                            </span>
+                                        <td class="text-end text-nowrap small at-num">
+                                            <?= number_format((float) ($pending[$i]['totalSumKg'] ?? 0), 2, ',', ' ') ?> kg
                                         </td>
 
                                         <?php
@@ -248,12 +251,12 @@
                                         ?>
                                         <?php if (!empty($showValues)): ?>
                                         <!-- [312] Wartość netto (profil Finanse / CEO) -->
-                                        <td class="text-end text-nowrap fw-semibold">
+                                        <td class="text-end text-nowrap fw-semibold at-num">
                                             <?= !empty($pending[$i]['is_freebie']) ? '<span class="text-muted">gratis</span>' : $money($pending[$i]['order_value'] ?? 0, $pending[$i]['currency'] ?? 'EUR') ?>
                                         </td>
                                         <?php endif; ?>
                                         <!-- [312] Płatność : przełącznik opłacona / nieopłacona + ponowne przypomnienie (e-mail / SMS) -->
-                                        <td class="text-center">
+                                        <td class="text-start">
                                             <?php if (!empty($pending[$i]['is_freebie'])): ?>
                                                 <span class="at-pill at-pill-muted">Gratis</span>
                                             <?php elseif (is_null($idProforma)): ?>
@@ -699,7 +702,10 @@
 .at-tour-chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #E7DFD5;border-radius:8px;padding:4px 10px;margin:3px 6px 3px 0;font-size:13px;color:#44403C}
 .at-tour-chip.is-none{color:#78716C;border-style:dashed}
 .at-tour-chip .at-tour-val{font-weight:700;color:#8D1D2C}
-.at-tour-tag{display:inline-block;margin-left:6px;font-size:11.5px;color:#5f5852;background:#F1EBE3;border-radius:6px;padding:1px 7px;white-space:nowrap}
+.at-orders td,.at-orders th{vertical-align:middle}
+.at-orders .at-num{font-variant-numeric:tabular-nums}
+.at-orders thead th{white-space:nowrap}
+.at-tour-tag{display:inline-block;margin:3px 0 0;font-size:11.5px;color:#5f5852;background:#F1EBE3;border-radius:6px;padding:1px 7px;white-space:nowrap}
 .at-pay-switch input:not(:checked) ~ .at-pay-text{color:#B45309;font-weight:600}
 .at-pay-remind{border:1px solid #e3ddd8;background:#fff;border-radius:8px;width:30px;height:28px;display:inline-grid;place-items:center;color:#8D1D2C}
 .at-pay-remind:hover{background:#fbf3f3}
