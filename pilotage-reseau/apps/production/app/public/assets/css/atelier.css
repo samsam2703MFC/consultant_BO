@@ -4111,6 +4111,7 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .otw-mini { border: 1px dashed #c9b9a6; border-radius: 12px; padding: 12px 14px; background: #fffaf5; margin-bottom: 9px; }
 .otw-mini-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .otw-mini .tw-field { margin-bottom: 9px; }
+.otw-cap { margin: 2px 0 10px; font-size: 13.5px; color: #3c3833; } .otw-cap .bi { color: var(--at-primary); }
 .otw-mini-a { display: flex; justify-content: flex-end; gap: 8px; margin: 4px 0 0; }
 .otw-drv { border: 1px solid #eadfd3; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
 .otw-drv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }

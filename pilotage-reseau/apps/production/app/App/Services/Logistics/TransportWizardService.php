@@ -106,20 +106,24 @@ final class TransportWizardService
     }
 
     /**
-     * [306] Mini-asystent « Dodaj pojazd » : vehicle_id = włącz pojazd istniejący (miejsca paletowe, wyjazd) ; inaczej nowy
-     * pojazd (przewoźnik, numer, miejsca, wyjazd — ta sama walidacja co Logistyka › Pojazdy). @return int id pojazdu
+     * [306] Mini-asystent « Dodaj pojazd » : vehicle_id = włącz pojazd istniejący ; inaczej nowy pojazd (przewoźnik, numer —
+     * ta sama walidacja co Logistyka › Pojazdy). [308] Pojemność (miejsca paletowe) i wyjazd zmienia się tylko w parametrach
+     * pojazdu (Logistyka › Trasy › Pojazdy i kierowcy) : asystent ich nie przyjmuje. Pojazd bez pojemności dostaje domyślną
+     * (logistics.default_pallet_places), jak nowy pojazd. @return int id pojazdu
      */
     public function addVehicle(array $in, ?int $userId): int
     {
-        $data = ['pallet_places' => $in['pallet_places'] ?? null, 'active' => true];
-        // Wyjazd pusty : pojazd istniejący zachowuje swój (nowy — domyślny z parametrów).
-        if (trim((string) ($in['departure_time'] ?? '')) !== '') $data['departure_time'] = (string) $in['departure_time'];
+        $default = (int) $this->logistics->vehicles()['default_places'];
         $existing = (int) ($in['vehicle_id'] ?? 0);
         if ($existing > 0) {
-            $this->logistics->saveVehicle($existing, $data, $userId);
+            $known = null;
+            foreach ($this->logistics->vehicles()['vehicles'] as $v) if ((int) $v['id'] === $existing) $known = $v;
+            if ($known === null) throw new CustomException('Nie znaleziono pojazdu.', 'errors', 404);
+            $places = $known['pallet_places'] !== null ? (int) $known['pallet_places'] : $default;
+            $this->logistics->saveVehicle($existing, ['pallet_places' => $places, 'active' => true], $userId);
             return $existing;
         }
-        return $this->vehicles->create(['carrier_id' => $in['carrier_id'] ?? null, 'regis_num' => $in['regis_num'] ?? ''] + $data, $userId)['id'];
+        return $this->vehicles->create(['carrier_id' => $in['carrier_id'] ?? null, 'regis_num' => $in['regis_num'] ?? '', 'pallet_places' => $default, 'active' => true], $userId)['id'];
     }
 
     /**

@@ -54,11 +54,20 @@
                 ? `Przypisz ${sel.length} ${tw.plural(sel.length, 'klienta', 'klientów', 'klientów')} (${pal(add)}) do ${esc(d.fleet.find(v => v.id === vehicle)?.label || '')}` : 'Zaznacz klientów i pojazd'}</button></p>`;
     }
 
+    // [308] Pojemność i wyjazd : tylko do odczytu — zmienia się je w parametrach pojazdu (Pojazdy i kierowcy).
+    function capacityNote() {
+        const v = vf.mode === 'existing' ? vInfo(Number(vf.vehicle_id)) : {};
+        const places = v.places || D.default_places || 33;
+        const dep = v.departure || D.default_departure || '';
+        return `<p class="otw-cap"><i class="bi bi-box-seam"></i> Pojemność <b>${nf(places)} pal.</b>${v.places ? '' : ' (domyślna)'}${dep ? ` · wyjazd <b>${esc(String(dep).slice(0, 5))}</b>` : ''}
+            <span class="tw-note">— zmiana tylko w parametrach pojazdu : <a href="${at.root}/logistics/vehicles" target="_blank" rel="noopener">Pojazdy i kierowcy</a></span></p>`;
+    }
+
     // [306] Mini-asystent « Dodaj pojazd » : włącz pojazd, który już jest w ERP, albo nowy (przewoźnik, numer).
     function vehicleForm(empty) {
         const off = (D.vehicles || []).filter(v => !v.active);
         if (!vf.mode) vf = {mode: off.length ? 'existing' : 'new', vehicle_id: off[0]?.id || '', carrier_id: '', regis_num: '',
-            pallet_places: String(off[0]?.places || D.default_places || 33), departure_time: ''};
+};
         const opt = (list, cur, label) => list.map(x => `<option value="${x.id}" ${String(x.id) === String(cur) ? 'selected' : ''}>${esc(label(x))}</option>`).join('');
         const field = (lab, html) => `<div class="tw-field"><label>${lab}</label>${html}</div>`;
         const who = vf.mode === 'existing'
@@ -72,8 +81,7 @@
                 <button type="button" class="${vf.mode === 'new' ? 'on' : ''}" data-otw-vmode="new">Nowy pojazd</button></span>` : ''}</div>
             ${empty ? `<p class="tw-note">Brak pojazdów we flocie. ${off.length ? 'Włącz pojazd, który już jest w ERP, albo dodaj nowy.' : 'Dodaj pierwszy pojazd.'}</p>` : ''}
             ${who}
-            <div class="tw-grid2">${field('Miejsca paletowe', `<input class="form-control" type="number" min="1" max="100" data-otw-vf="pallet_places" value="${esc(vf.pallet_places)}">`)}
-                ${field('Wyjazd (GG:MM)', `<input class="form-control" type="time" data-otw-vf="departure_time" value="${esc(vf.departure_time)}" placeholder="${esc(D.default_departure || '')}">`)}</div>
+            ${capacityNote()}
             <p class="otw-mini-a">${empty ? '' : '<button type="button" class="tw-btn ghost sm" data-otw-vclose>Anuluj</button>'}
                 <button type="button" class="tw-btn sm" data-otw-vsave ${ok && !busy ? '' : 'disabled'}>${vf.mode === 'existing' ? 'Włącz pojazd' : 'Dodaj pojazd'}</button></p></div>`;
     }
@@ -166,7 +174,6 @@
         const f = e.target.closest('[data-otw-vf]');
         if (f && f.tagName === 'SELECT') {
             vf[f.dataset.otwVf] = f.value;
-            if (f.dataset.otwVf === 'vehicle_id') vf.pallet_places = String(vInfo(Number(f.value)).places || D.default_places || 33);
             render(); return;
         }
         const dr = e.target.closest('[data-otw-drv]');
@@ -202,7 +209,7 @@
         if (e.target.closest('[data-otw-vsave]')) {
             if (busy) return;
             busy = true; render();
-            const body = {pallet_places: vf.pallet_places, departure_time: vf.departure_time || ''};
+            const body = {};
             Object.assign(body, vf.mode === 'existing' ? {vehicle_id: Number(vf.vehicle_id)} : {carrier_id: Number(vf.carrier_id), regis_num: vf.regis_num});
             const res = await tw.post('/ajax/logistics/transport-wizard/vehicle', body);
             busy = false;
