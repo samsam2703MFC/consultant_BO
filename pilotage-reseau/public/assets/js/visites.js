@@ -1591,11 +1591,11 @@
     pnlHtml(P, S, arrete) {
       if (!P) { return '<div class="xs mu" style="margin-top:10px">Mini P&L indisponible sur cette étendue.</div>'; }
       const p1 = x => x == null ? '—' : String(x).replace('.', ',') + ' %';
-      const L = [['CA', P.ca, 100, null], ['Coût matière', P.coutMatiere, P.coutMatierePct, S.food], ['Marge brute', P.margeBrute, P.margeBrutePct, null],
+      const L = [[P.horsTva ? 'CA hors TVA' : 'CA', P.ca, 100, null], ['Coût matière', P.coutMatiere, P.coutMatierePct, S.food], ['Marge brute', P.margeBrute, P.margeBrutePct, null],
         P.avecInvendus ? ['Invendus', P.invendus, P.invendusPct, null] : null, ['Personnel', P.labour, P.labourPct, S.labour], ['Frais généraux', P.overhead, P.overheadPct, S.overhead],
         ['Résultat net', P.net, P.netPct, null]].filter(Boolean);
       const rows = L.map(([lab, v, pc, seuil], i) => { const net = i === L.length - 1; const ko = seuil != null && pc != null && pc > seuil;
-        return `<tr class="${net ? 'net' : ''}"><td>${lab}</td><td class="r"><b class="${net && v != null ? (v < 0 ? 'dn' : 'up') : ''}">${eur(v)}</b></td><td class="r ${ko ? 'dn' : net && pc != null ? (pc < 0 ? 'dn' : 'up') : 'mu'}">${lab === 'CA' ? '' : p1(pc)}</td><td class="r xs mu">${seuil != null ? '≤ ' + p1(seuil) : ''}</td></tr>`; }).join('');
+        return `<tr class="${net ? 'net' : ''}"><td>${lab}</td><td class="r"><b class="${net && v != null ? (v < 0 ? 'dn' : 'up') : ''}">${eur(v)}</b></td><td class="r ${ko ? 'dn' : net && pc != null ? (pc < 0 ? 'dn' : 'up') : 'mu'}">${i === 0 ? '' : p1(pc)}</td><td class="r xs mu">${seuil != null ? '≤ ' + p1(seuil) : ''}</td></tr>`; }).join('');
       return `<div class="pnl"><div class="row"><b class="sm">Mini P&L</b><span class="xs mu">du ${fmtD(P.du)} au ${fmtD(P.au)}${P.mois ? ' · ' + P.mois + ' mois' : ''}</span></div>
         <table class="tbl pnl-t"><tr><th></th><th class="r">€</th><th class="r">% du CA</th><th class="r">seuil</th></tr>${rows}</table>
         <div class="xs mu">${P.avecInvendus ? 'Tel que Résultat le calcule : net = marge brute − invendus − personnel − frais généraux' : 'Mois clos au P&L mensuel du panel (sans les invendus, qu’il ne porte pas), le mois en cours à Résultat'}${arrete && P.au > arrete ? ' · à date, aujourd’hui compris (le budget s’arrête à la veille)' : ''}${P.motif ? ' · ' + esc(P.motif) : ''}.</div></div>`;

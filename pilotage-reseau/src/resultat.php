@@ -347,6 +347,9 @@ function exPeriodeCalcul(): array
     $joursE = [];
     for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursE[] = $d; }
     $proJ = function_exists('vpJoursLus') ? vpJoursLus(array_map(static fn ($s) => (int) $s['id'], $shops), $joursE, 30) : null;
+    // Le P&L hors TVA (16/11/2026, src/pnl_ht.php) : la part hors TVA des frais de chaque mois touché (onglet Frais).
+    $avecHt = function_exists('phTvaJours') && function_exists('phPnl');
+    $fraisParts = $avecHt ? phFraisParts(array_map(static fn ($s) => (int) $s['id'], $shops), array_keys($moisTouches)) : [];
 
     $joursMoisC = (int) date('t', strtotime($auj));
     $premierC   = new DateTimeImmutable(date('Y-m-01', strtotime($auj)));
@@ -426,6 +429,9 @@ function exPeriodeCalcul(): array
         $ohManque = $ohJ === null && $labJ !== null;
         if ($ohManque) { $ohJ = 0.0; }
 
+        // La part de TVA du CA de chaque jour : les tickets gravés (le pro de l'étendue), sinon la caisse, sinon le taux habituel.
+        $tvaJ = $avecHt ? phTvaJours($id, $joursE, $proJ[$id] ?? []) : [];
+        $realiseHt = 0.0; $ohHt = 0.0; $tvaSrcs = [];
         $jours = []; $objectif = 0.0; $attendu = 0.0; $prevu = 0.0; $realise = 0.0; $tickets = 0; $mb = 0.0;
         $caMb = 0.0; $matEstimes = 0; $matInconnus = 0;   // la matière : le CA des jours qui la portent, les jours recomposés, les jours sans tickets
         $labour = 0.0; $oh = 0.0; $joursOuvertsPasses = 0; $joursHorsMoisC = 0; $sansBudget = [];
@@ -446,13 +452,17 @@ function exPeriodeCalcul(): array
             $x = $parJour[$d] ?? null;
             $ouvert = $passe && $x !== null && $x['ouvert'];
             if ($ouvert) { $ouvertUnJour = true; }
+            $partTvaD = (float) ($tvaJ[$d]['part'] ?? 0.0);
             $ligne = ['date' => $d, 'jour' => $wd, 'court' => PJ_COURTS[$wd] . ' ' . (int) substr($d, 8, 2),
                 'objectif' => $obj !== null ? round($obj, 2) : null, 'ferme' => $ferme, 'passe' => $passe,
-                'ca' => $ouvert ? round($x['ca'], 2) : null, 'tickets' => $ouvert ? $x['tickets'] : null,
+                'ca' => $ouvert ? round($x['ca'], 2) : null, 'caHt' => $ouvert ? round($x['ca'] * (1 - $partTvaD), 2) : null,
+                'tickets' => $ouvert ? $x['tickets'] : null,
                 'aujourdhui' => $d === $auj];
             if ($obj !== null) { $objectif += $obj; if ($passe) { $attendu += $obj; } else { $prevu += $obj; } }
             if ($ouvert) {
                 $realise += $x['ca']; $tickets += $x['tickets'];
+                $realiseHt += $x['ca'] * (1 - $partTvaD);
+                if (isset($tvaJ[$d])) { $tvaSrcs[] = (string) $tvaJ[$d]['src']; }
                 $mbJ = $x['mb'];
                 if (!$x['mbConnu'] && function_exists('svMatiereJour')) {
                     $zeroM = 0; $eM = svMatiereJour($id, $d, $zeroM, 0);
@@ -474,7 +484,7 @@ function exPeriodeCalcul(): array
                     $joursOuvertsPasses++;
                     $labD ??= $labJ; $ohD ??= $ohJ;
                 } else { $joursHorsMoisC++; }
-                if ($labD !== null && $ohD !== null) { $labour += $labD; $oh += $ohD; } else { $joursSansCout++; }
+                if ($labD !== null && $ohD !== null) { $labour += $labD; $oh += $ohD; $ohHt += $ohD * ($fraisParts[$id][$ym]['part'] ?? 1.0); } else { $joursSansCout++; }
             }
             $jours[] = $ligne;
         }
@@ -525,6 +535,19 @@ function exPeriodeCalcul(): array
                 : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles')),
             'joursOuverts' => array_keys($wdOuverts),
             'jours' => $jours] + resProSplit($proJ === null ? null : $pro, $realise, $tickets);
+        // Hors TVA (16/11/2026) : le réalisé sans la TVA de ses tickets, les frais sans leur TVA ; les % du P&L sur le
+        // réalisé hors TVA. Le réalisé, l'objectif, l'attendu et le panier restent TTC.
+        if ($avecHt && $realise > 0) {
+            $fpM = [];
+            foreach (array_keys($moisTouches) as $ymF) { if (isset($fraisParts[$id][$ymF])) { $fpM[] = $fraisParts[$id][$ymF]; } }
+            $aiF = array_sum(array_map(static fn ($f) => (int) ($f['aIndiquer'] ?? 0), $fpM));
+            $fpLib = count($fpM) === 1 ? $fpM[0] : ($fpM === [] ? null : ['lu' => true, 'part' => 1.0, 'aIndiquer' => $aiF]);
+            $pnlHt = phPnl($realise, 1 - $realiseHt / $realise, $fc, $inv['cout'] !== null ? (float) $inv['cout'] : null,
+                $netOk ? $labour : null, $netOk ? $oh : null, $oh > 0 ? $ohHt / $oh : null);
+            $iL = count($lignes) - 1;
+            $lignes[$iL] = array_merge($lignes[$iL], $pnlHt, ['realiseHt' => $pnlHt['caHt'], 'tvaSource' => phTvaSourceLib($tvaSrcs),
+                'fraisSource' => phFraisSourceLib($fpLib), 'fraisAIndiquer' => $fpM === [] ? null : $aiF, 'pnlBase' => 'ht']);
+        }
         // Les clients manquants se comptent au comptoir : (CA comptoir − attendu)
         // ÷ panier comptoir, le CA pro exclu — quand tous les jours sont lus.
         if (!$objAucun && function_exists('vpClientsComptoir')) {
@@ -543,7 +566,7 @@ function exPeriodeCalcul(): array
 
     // Réseau : la somme de ce qui est connu. Un magasin sans objectif ne
     // compte pas pour zéro dans l'objectif — la ligne le dit.
-    $t = ['objectif' => 0.0, 'attendu' => 0.0, 'prevu' => 0.0, 'realise' => 0.0, 'tickets' => 0, 'fc' => 0.0,
+    $t = ['objectif' => 0.0, 'attendu' => 0.0, 'prevu' => 0.0, 'realise' => 0.0, 'realiseHt' => 0.0, 'tickets' => 0, 'fc' => 0.0,
         'mb' => 0.0, 'labour' => 0.0, 'oh' => 0.0, 'net' => 0.0, 'inv' => 0.0, 'invPieces' => 0.0];
     $nObj = 0; $nOuv = 0; $netComplet = true; $realiseObj = 0.0; $invLus = 0; $invDeclarent = 0;
     $parJourR = [];
@@ -555,7 +578,7 @@ function exPeriodeCalcul(): array
             $proAucun = false; $proR['jours'] += $l['proJours']; $proR['lus'] += $l['proJoursLus'];
             $proR['ca'] += (float) ($l['caPro'] ?? 0); $proR['tk'] += (int) ($l['ticketsPro'] ?? 0);
         }
-        $t['realise'] += $l['realise']; $t['tickets'] += $l['tickets']; $t['fc'] += (float) ($l['coutMatiere'] ?? 0); $t['mb'] += (float) ($l['margeBrute'] ?? 0);
+        $t['realise'] += $l['realise']; $t['realiseHt'] += (float) ($l['realiseHt'] ?? $l['realise']); $t['tickets'] += $l['tickets']; $t['fc'] += (float) ($l['coutMatiere'] ?? 0); $t['mb'] += (float) ($l['margeBrute'] ?? 0);
         if (($l['invendus'] ?? null) !== null) { $invLus++; $t['inv'] += (float) $l['invendus']; $t['invPieces'] += (float) ($l['invendusPieces'] ?? 0); if (!empty($l['invendusDeclare'])) { $invDeclarent++; } }
         if ($l['objectif'] !== null) {
             $nObj++; $t['objectif'] += $l['objectif']; $t['attendu'] += $l['attendu']; $t['prevu'] += $l['prevu']; $realiseObj += $l['realise'];
@@ -583,8 +606,11 @@ function exPeriodeCalcul(): array
     $ca = $t['realise'];
     $panierR = $t['tickets'] > 0 ? $ca / $t['tickets'] : null;
     $ecartR = $nObj ? $realiseObj - $t['attendu'] : null;
-    $pctR = static fn (?float $v) => ($v !== null && $ca > 0) ? round($v / $ca * 100, 1) : null;
+    // Les % du P&L du réseau se rapportent au réalisé hors TVA (16/11/2026).
+    $caP = $t['realiseHt'] > 0 ? $t['realiseHt'] : $ca;
+    $pctR = static fn (?float $v) => ($v !== null && $caP > 0) ? round($v / $caP * 100, 1) : null;
     $out['reseau'] = ['magasins' => $nOuv, 'magasinsAvecObjectif' => $nObj,
+        'realiseHt' => round($t['realiseHt'], 2), 'caHt' => round($t['realiseHt'], 2), 'tva' => round($ca - $t['realiseHt'], 2), 'pnlBase' => 'ht',
         'objectif' => $nObj ? round($t['objectif'], 2) : null,
         'attendu' => $nObj ? round($t['attendu'], 2) : null,
         'prevu' => $nObj ? round($t['prevu'], 2) : null,

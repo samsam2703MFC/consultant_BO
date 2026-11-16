@@ -2223,6 +2223,11 @@ function exJourCalcul(): array
         }
     }
 
+    // Le P&L hors TVA (16/11/2026, src/pnl_ht.php) : la part hors TVA des frais de chaque mois touché (onglet Frais),
+    // une lecture des frais du panel par magasin, gardée une heure.
+    $fraisParts = function_exists('phFraisParts')
+        ? phFraisParts(array_map(static fn ($s) => (int) $s['id'], $shops), array_unique([substr($date, 0, 7), substr($lundiSem, 0, 7)])) : [];
+
     /** La ventilation d'une réponse category-sales : [magasin => [catégorie => CA]]. */
     $lireCats = static function ($cs): array {
         $par = [];
@@ -2392,16 +2397,28 @@ function exJourCalcul(): array
             $e = svMatiereJour($id, $j, $zeroMb, 0);
             return $e !== null ? (float) $d['ca'] - (float) $e['estime'] : null;
         };
+        // Le P&L hors TVA (16/11/2026, src/pnl_ht.php) : la part de TVA du CA de chaque jour lu (les tickets du jour
+        // regardé, sinon la caisse gravée, sinon le taux habituel) et la part hors TVA des frais de son mois.
+        $avecHt = function_exists('phTvaJours') && function_exists('phPnl');
+        $tvaJ = $avecHt ? phTvaJours($id, array_merge(array_keys($parJour), [$date]), [$date => $proLu[$id] ?? null]) : [];
+        $partTvaDe = static fn (string $j): float => (float) ($tvaJ[$j]['part'] ?? 0.0);
+        $partFraisDe = static fn (string $j): ?float => $fraisParts[$id][substr($j, 0, 7)]['part'] ?? null;
+        // Le résultat hors TVA d'un jour : marge du panel − TVA du CA − main-d'œuvre − frais hors TVA.
+        $netDe = static fn (?float $mbJ, string $j, float $caJ): ?float => $avecHt
+            ? phNetJour($mbJ, $caJ, $partTvaDe($j), $labJ, $ohJ, $partFraisDe($j))
+            : (($mbJ !== null && $labJ !== null && $ohJ !== null) ? $mbJ - $labJ - $ohJ : null);
         $serie = [];
         foreach ($parJour as $j => $d) {
             if (!str_starts_with($j, $moisAff)) { continue; }   // la série montre le MOIS
             $mbJ = $d['ouvert'] ? $mbDe($j, $d) : null;
-            $net = ($d['ouvert'] && $mbJ !== null && $labJ !== null && $ohJ !== null) ? $mbJ - $labJ - $ohJ : null;
+            $net = $d['ouvert'] ? $netDe($mbJ, $j, (float) $d['ca']) : null;
+            $caHtJ = (float) $d['ca'] * (1 - $partTvaDe($j));
             $serie[] = ['date' => $j, 'ouvert' => $d['ouvert'],
                 'ca' => $d['ouvert'] ? round($d['ca'], 2) : null,
+                'caHt' => $d['ouvert'] ? round($caHtJ, 2) : null,
                 'tickets' => $d['ouvert'] ? $d['tickets'] : null,
                 'net' => $net !== null ? round($net, 2) : null,
-                'netPct' => ($net !== null && $d['ca'] > 0) ? round($net / $d['ca'] * 100, 1) : null];
+                'netPct' => ($net !== null && $caHtJ > 0) ? round($net / $caHtJ * 100, 1) : null];
         }
 
         $jour = $parJour[$date] ?? null;
@@ -2464,6 +2481,15 @@ function exJourCalcul(): array
         $inv = $invM[$id] ?? ['cout' => null, 'pieces' => null, 'declare' => null, 'source' => 'panel muet'];
         $invCout = $inv['cout'] ?? 0.0;
         $net = ($fc !== null && $labour !== null && $oh !== null) ? $ca - $fc - $invCout - $labour - $oh : null;
+        // Hors TVA (16/11/2026) : le CA sans la TVA de ses tickets, les frais sans leur TVA ; les % sur le CA hors TVA.
+        $pnlHt = null;
+        if ($avecHt) {
+            $fpJ = $fraisParts[$id][substr($date, 0, 7)] ?? null;
+            $pnlHt = phPnl((float) $ca, $partTvaDe($date), $fc, $inv['cout'] !== null ? (float) $inv['cout'] : null, $labour, $oh, $fpJ['part'] ?? null)
+                + ['tvaSource' => phTvaSourceLib([(string) ($tvaJ[$date]['src'] ?? 'defaut')]),
+                   'fraisSource' => phFraisSourceLib($fpJ), 'fraisAIndiquer' => $fpJ['aIndiquer'] ?? null, 'pnlBase' => 'ht'];
+            $net = $pnlHt['net'];
+        }
 
         // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
         // Une catégorie absente d'un jour de référence OUVERT compte zéro : ne
@@ -2658,10 +2684,12 @@ function exJourCalcul(): array
             $d6 = $parJour[$j6] ?? null;
             $ouv6 = $d6 !== null && $d6['ouvert'];
             $mb6 = $ouv6 ? $mbDe($j6, $d6) : null;
-            $net6 = ($ouv6 && $mb6 !== null && $labJ !== null && $ohJ !== null) ? $mb6 - $labJ - $ohJ : null;
+            $net6 = $ouv6 ? $netDe($mb6, $j6, (float) $d6['ca']) : null;
             if ($j6 === $date && $net !== null) { $net6 = $net; }
             $semaine[] = ['date' => $j6, 'wd' => $wd6, 'passe' => $j6 <= $date, 'aujourdhui' => $j6 === $date,
-                'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null, 'tickets' => $ouv6 ? $d6['tickets'] : null,
+                'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null,
+                'caHt' => $ouv6 ? round((float) $d6['ca'] * (1 - $partTvaDe($j6)), 2) : null,
+                'tickets' => $ouv6 ? $d6['tickets'] : null,
                 'net' => $net6 !== null ? round($net6, 2) : null, 'objectif' => $obj6];
         }
         // Les ventes PAR HEURE du jour (déjà lues par la route des heures) et
@@ -2805,6 +2833,7 @@ function exJourCalcul(): array
             // Le split pro / comptoir : les tickets des clients pro du panel,
             // le reste du CA de la ligne au comptoir.
             + (function_exists('vpSplit') ? vpSplit($proLu[$id] ?? null, (float) $ca, (int) $tickets) : []);
+        if ($pnlHt !== null) { $lignes[count($lignes) - 1] = array_merge($lignes[count($lignes) - 1], $pnlHt); }
         // Les clients manquants du jour se comptent au comptoir (CA pro exclu).
         if (function_exists('vpClientsComptoir')) {
             $iL = count($lignes) - 1;
@@ -2820,7 +2849,7 @@ function exJourCalcul(): array
     $out['magasins'] = $lignes;
 
     // --- Réseau : la somme de ce qui est connu, jamais une extrapolation.
-    $t = ['ca' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
+    $t = ['ca' => 0.0, 'caHt' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
         'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0, 'invendus' => 0.0, 'invendusPieces' => 0.0];
     $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = []; $invLus = 0; $invDeclarent = 0;
     $pro = ['ca' => 0.0, 'tickets' => 0, 'caMag' => 0.0, 'ticketsMag' => 0, 'n' => 0];
@@ -2831,7 +2860,7 @@ function exJourCalcul(): array
             $pro['n']++; $pro['ca'] += $l['caPro']; $pro['tickets'] += (int) $l['ticketsPro'];
             $pro['caMag'] += $l['ca']; $pro['ticketsMag'] += (int) $l['tickets'];
         }
-        $t['ca'] += $l['ca']; $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
+        $t['ca'] += $l['ca']; $t['caHt'] += (float) ($l['caHt'] ?? $l['ca']); $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
         $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
         if (($l['invendus'] ?? null) !== null) { $invLus++; $t['invendus'] += (float) $l['invendus']; $t['invendusPieces'] += (float) ($l['invendusPieces'] ?? 0); if (!empty($l['invendusDeclare'])) { $invDeclarent++; } }
         if ($l['refCa'] === null) { $refComplet = false; }
@@ -2855,7 +2884,9 @@ function exJourCalcul(): array
     }
     usort($catsR, fn ($a, $b) => $b['ca'] <=> $a['ca']);
     $ca = $t['ca'];
-    $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'tickets' => $t['tickets'],
+    // Les % du P&L du réseau se rapportent au CA hors TVA (16/11/2026) ; CA, panier et écarts restent sur le TTC.
+    $caP = $t['caHt'] > 0 ? $t['caHt'] : $ca;
+    $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'caHt' => round($t['caHt'], 2), 'tva' => round($ca - $t['caHt'], 2), 'pnlBase' => 'ht', 'tickets' => $t['tickets'],
         'produits' => $t['produits'],
         'refCa' => $refComplet ? round($t['refCa'], 2) : null,
         'refJours' => $refMin,
@@ -2863,20 +2894,20 @@ function exJourCalcul(): array
         'panier' => $t['tickets'] > 0 ? round($ca / $t['tickets'], 2) : null,
         'produitsParClient' => $t['tickets'] > 0 ? round($t['produits'] / $t['tickets'], 2) : null,
         'coutMatiere' => round($t['coutMatiere'], 2),
-        'coutMatierePct' => $ca > 0 ? round($t['coutMatiere'] / $ca * 100, 1) : null,
+        'coutMatierePct' => $caP > 0 ? round($t['coutMatiere'] / $caP * 100, 1) : null,
         'margeBrute' => round($t['margeBrute'], 2),
-        'margeBrutePct' => $ca > 0 ? round($t['margeBrute'] / $ca * 100, 1) : null,
+        'margeBrutePct' => $caP > 0 ? round($t['margeBrute'] / $caP * 100, 1) : null,
         'invendus' => $invLus ? round($t['invendus'], 2) : null,
-        'invendusPct' => ($invLus && $ca > 0) ? round($t['invendus'] / $ca * 100, 1) : null,
+        'invendusPct' => ($invLus && $caP > 0) ? round($t['invendus'] / $caP * 100, 1) : null,
         'invendusPieces' => $invLus ? round($t['invendusPieces'], 1) : null,
         'invendusDeclare' => $invLus ? $invDeclarent > 0 : null,
         'invendusSource' => $invLus ? ($invDeclarent . ' magasin' . ($invDeclarent > 1 ? 's' : '') . ' sur ' . $ouverts . ' déclare' . ($invDeclarent > 1 ? 'nt' : '') . ' la poubelle') : 'panel muet',
         'labour' => $netComplet ? round($t['labour'], 2) : null,
-        'labourPct' => ($netComplet && $ca > 0) ? round($t['labour'] / $ca * 100, 1) : null,
+        'labourPct' => ($netComplet && $caP > 0) ? round($t['labour'] / $caP * 100, 1) : null,
         'overhead' => $netComplet ? round($t['overhead'], 2) : null,
-        'overheadPct' => ($netComplet && $ca > 0) ? round($t['overhead'] / $ca * 100, 1) : null,
+        'overheadPct' => ($netComplet && $caP > 0) ? round($t['overhead'] / $caP * 100, 1) : null,
         'net' => $netComplet ? round($t['net'], 2) : null,
-        'netPct' => ($netComplet && $ca > 0) ? round($t['net'] / $ca * 100, 1) : null,
+        'netPct' => ($netComplet && $caP > 0) ? round($t['net'] / $caP * 100, 1) : null,
         // Le split du réseau sur les magasins dont les tickets sont lus :
         // `proMagasins` < `magasins` dit qu'il en manque.
         'caPro' => $pro['n'] ? round($pro['ca'], 2) : null,
