@@ -19803,6 +19803,245 @@
                 ]
             }
         },
+        "/driver/pallets": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Skan palety (QR + zdjęcie) / Scan d'une palette (QR + photo)",
+                "operationId": "driverPalletScan",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverPalletResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "QR de l'étiquette palette (TFBPAL:numéro) ou numéro saisi ; photo obligatoire. Palette d'un autre client : DRIVER_PALLET_OTHER_CUSTOMER ; numéro inconnu ce jour-là : DRIVER_PALLET_UNKNOWN. Le même numéro rescanné remplace la photo.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverPalletInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/incidents": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Coś nie tak (zdjęcie + opis) / Quelque chose ne va pas (photo + description)",
+                "operationId": "driverIncident",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverIncidentResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Ne bloque pas la livraison. Va dans la file des écarts d'expédition et dans la cloche de l'ERP (Zgłoszenie kierowcy).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverIncidentInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/stop-document": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "CMR / WZ / faktura klienta (PDF) / CMR / WZ / facture du client (PDF)",
+                "operationId": "driverStopDocument",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DocumentFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Documents générés à la facturation (shipment_log). cmr : le CMR signé (case 24) quand il existe.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "customer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "cmr",
+                                "wz",
+                                "wdt"
+                            ]
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/driver/report": {
             "get": {
                 "tags": [
@@ -26470,6 +26709,22 @@
                             "problem"
                         ]
                     },
+                    "receipt_mode": {
+                        "type": "string",
+                        "enum": [
+                            "tablet",
+                            "cmr",
+                            "absent"
+                        ],
+                        "nullable": true,
+                        "description": "tablet : signature sur la tablette ; cmr : signature dans la case 24 du CMR ; absent : client absent, photo après livraison obligatoire"
+                    },
+                    "pallets_note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true,
+                        "description": "obligatoire si toutes les palettes ne sont pas scannées"
+                    },
                     "reason": {
                         "type": "string",
                         "enum": [
@@ -26577,7 +26832,8 @@
                         "type": "string",
                         "enum": [
                             "before",
-                            "after"
+                            "after",
+                            "temperature"
                         ]
                     },
                     "photo": {
@@ -26606,6 +26862,175 @@
                         "type": "string",
                         "maxLength": 100,
                         "nullable": true
+                    }
+                }
+            },
+            "DriverPalletInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "pallet_no",
+                    "photo"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "pallet_no": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "numéro lu dans le QR TFBPAL:numéro ou saisi"
+                    },
+                    "method": {
+                        "type": "string",
+                        "enum": [
+                            "qr",
+                            "manual"
+                        ],
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,… (driver.photo_max_kb)"
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "example": "2026-10-26 21:35:00",
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    },
+                    "lat": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "lng": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverPalletResult": {
+                "type": "object",
+                "properties": {
+                    "stop_id": {
+                        "type": "integer"
+                    },
+                    "pallet_no": {
+                        "type": "integer"
+                    },
+                    "scanned": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "pallet_scans": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "DriverIncidentInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "kind",
+                    "photo"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "pallet_damaged",
+                            "closed",
+                            "temperature",
+                            "missing_goods",
+                            "refused",
+                            "other"
+                        ]
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,… (driver.photo_max_kb)"
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "example": "2026-10-26 21:35:00",
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    },
+                    "lat": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "lng": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverIncidentResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "stop_id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "recorded_at": {
+                        "type": "string"
                     }
                 }
             },

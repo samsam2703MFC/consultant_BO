@@ -38,7 +38,7 @@ final class ShippingIssueRepository extends WorkshopRepository
     public function newDeliveryProblems(string $since): array
     {
         return $this->all("SELECT s.id, s.id_customer, s.ship_date FROM n_delivery_stop s
-            WHERE s.status = 'problem' AND s.ship_date >= ? AND NOT EXISTS (SELECT 1 FROM n_shipping_issue i WHERE i.id_delivery_stop = s.id)
+            WHERE (s.status = 'problem' OR EXISTS (SELECT 1 FROM n_delivery_incident di WHERE di.id_stop = s.id)) AND s.ship_date >= ? AND NOT EXISTS (SELECT 1 FROM n_shipping_issue i WHERE i.id_delivery_stop = s.id)
             ORDER BY s.ship_date, s.id", [$since]);
     }
 

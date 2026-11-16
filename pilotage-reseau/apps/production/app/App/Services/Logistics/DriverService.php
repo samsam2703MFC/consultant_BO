@@ -14,6 +14,9 @@ use App\Repositories\Workshop\ParamRepository;
 use App\Services\Client\Order\OrderFulfilmentService;
 use App\Services\Notification\AppNotificationService;
 use App\Services\Shipping\ShippingDocumentService;
+use App\Services\Document\CMRService;
+use App\Services\Document\WDTService;
+use App\Services\Document\WZService;
 use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
@@ -24,6 +27,10 @@ use App\Services\Utils\TCPDFService;
  * potwierdzenie dostawy (zdjęcia po rozładunku, odbiorca, podpis, palety oddane i zwrócone) albo problem (przyczyna,
  * notatka, zdjęcie → dzwonek w ERP). Raport PDF dostawy i trasy (zdjęcia przed / po z godziną, podpis) na tablecie i w ERP.
  * W ERP : potwierdzenia dnia (Logistyka › Dostawy), status u klienta w załadunku dnia.
+ * [310] (makieta 58) : dokumenty punktu (CMR, WZ, faktura WDT z fakturowania) w PDF, rozładunek palet (skan QR + zdjęcie
+ * każdej palety, obowiązkowe ; cudza paleta odrzucona), zgłoszenia « Coś nie tak » (zdjęcie + opis, nie blokują dostawy),
+ * zdjęcie temperatury zamrażarki przed otwarciem (opcjonalne), odbiór : podpis na tablecie, podpis w polu 24 CMR (PDF
+ * podpisany zapisany przy postoju) albo klient nieobecny (zdjęcie po dostawie obowiązkowe).
  */
 final class DriverService
 {
@@ -34,7 +41,13 @@ final class DriverService
     ];
     private const MAX_SIGNATURE_BYTES = 300_000;
     /** rodzaj zdjęcia z tabletu => rodzaj w bazie */
-    private const PHOTO_KINDS = ['before' => 'photo_before', 'after' => 'photo_after'];
+    private const PHOTO_KINDS = ['before' => 'photo_before', 'after' => 'photo_after', 'temperature' => 'photo_temperature'];
+    /** [310] Odbiór : podpis na tablecie, podpis w CMR, klient nieobecny. */
+    public const RECEIPT_MODES = ['tablet', 'cmr', 'absent'];
+    /** [310] « Coś nie tak » : rodzaje zgłoszeń. */
+    public const INCIDENTS = ['pallet_damaged' => ['Uszkodzona paleta', 'Palette abîmée'], 'closed' => ['Brak miejsca / zamknięte', 'Pas de place / fermé'],
+        'temperature' => ['Temperatura', 'Température'], 'missing_goods' => ['Brakujący towar', 'Marchandise manquante'],
+        'refused' => ['Odmowa przyjęcia', 'Refus'], 'other' => ['Inne', 'Autre']];
     /** Zdjęcia postojów wczytane dla listy ERP (presentErpStop). */
     private array $media = [];
 
@@ -49,6 +62,9 @@ final class DriverService
         private CustomerDeliveryInfoService $deliveryInfo,
         private OrderFulfilmentService $fulfilment,
         private LogisticsBoardService $board,
+        private CMRService $cmr,
+        private WZService $wz,
+        private WDTService $wdt,
     ) {
     }
 
@@ -81,12 +97,18 @@ final class DriverService
             $recorded = [];
             foreach ($this->deliveries->stops($date) as $s) $recorded[(int) $s['id_customer']] = $s;
             $media = $this->deliveries->mediaIndex(array_column($recorded, 'id'));
+            $scans = $this->deliveries->palletScans(array_column($recorded, 'id'));
+            $incidents = $this->deliveries->incidents(array_column($recorded, 'id'));
             $n = 0;
             foreach ($ids as $cid) {
                 $c = $plan['by_id'][$cid];
                 $r = $recorded[$cid] ?? null;
-                $stops[] = $this->presentStop(++$n, $c, $info[$cid] ?? [], $docs[$cid] ?? [], $r, $r ? ($media[(int) $r['id']] ?? []) : [],
+                $stop = $this->presentStop(++$n, $c, $info[$cid] ?? [], $docs[$cid] ?? [], $r, $r ? ($media[(int) $r['id']] ?? []) : [],
                     $numbers[$cid] ?? [], $instructions[$cid] ?? [], $lang);
+                // [310] Rozładunek palet i zgłoszenia punktu.
+                $stop['pallet_scans'] = $r ? ($scans[(int) $r['id']] ?? []) : [];
+                $stop['incidents'] = array_map(fn($x) => $x + ['label' => self::INCIDENTS[$x['kind']][$lang] ?? $x['kind']], $r ? ($incidents[(int) $r['id']] ?? []) : []);
+                $stops[] = $stop;
             }
         }
         $run = $vehicleId !== null ? $this->deliveries->run($date, $vehicleId) : null;
@@ -110,6 +132,7 @@ final class DriverService
             ],
             'max_photos' => $this->maxPhotos(),
             'reasons' => array_map(fn($k) => ['code' => $k, 'label' => self::REASON_LABELS[$k][$context->translator->lang() === 'fr' ? 1 : 0]], self::REASONS),
+            'incident_kinds' => array_map(fn($k) => ['code' => $k, 'label' => self::INCIDENTS[$k][$lang]], array_keys(self::INCIDENTS)),
         ];
     }
 
@@ -203,19 +226,22 @@ final class DriverService
     {
         $device = $this->driverDevice($context);
         $v = (new Validator($body))->only(['date', 'customer_id', 'vehicle_id', 'status', 'reason', 'receiver_name', 'pallets_delivered', 'pallets_returned',
-                'note', 'signature', 'photo', 'lat', 'lng', 'recorded_at', 'driver_name', 'client_uuid'])
+                'note', 'signature', 'photo', 'lat', 'lng', 'recorded_at', 'driver_name', 'client_uuid', 'receipt_mode', 'pallets_note'])
             ->date('date', true, false)->integer('customer_id', true, 1)->integer('vehicle_id', false, 1, null, true)
             ->choice('status', ['delivered', 'problem'])->choice('reason', self::REASONS, false, true)
             ->string('receiver_name', 100, false, true)->integer('pallets_delivered', false, 0, 99, true)->integer('pallets_returned', false, 0, 99, true)
             ->string('note', 500, false, true)->decimal('lat', false, -90, 90, true)->decimal('lng', false, -180, 180, true)
-            ->datetime('recorded_at')->string('driver_name', 100, false, true)->string('client_uuid', 64, false, true);
+            ->datetime('recorded_at')->string('driver_name', 100, false, true)->string('client_uuid', 64, false, true)
+            ->choice('receipt_mode', self::RECEIPT_MODES, false, true)->string('pallets_note', 255, false, true);
         $status = $v->value('status');
-        if ($status === 'delivered' && $v->value('receiver_name') === null) $v->add('receiver_name', 'REQUIRED');
+        // [310] Odbiór : tablet (domyślnie, jak dotąd), CMR (podpis w polu 24) albo klient nieobecny (bez podpisu).
+        $mode = $status === 'delivered' ? ($v->value('receipt_mode') ?? 'tablet') : null;
+        if ($status === 'delivered' && $mode !== 'absent' && $v->value('receiver_name') === null) $v->add('receiver_name', 'REQUIRED');
         if ($status === 'problem' && $v->value('reason') === null) $v->add('reason', 'REQUIRED');
         $signature = $photo = null;
         if ($v->hasRaw('signature') && $v->raw('signature') !== null) {
             $signature = $this->image($v, 'signature', ['image/png'], self::MAX_SIGNATURE_BYTES);
-        } elseif ($status === 'delivered') {
+        } elseif ($status === 'delivered' && $mode !== 'absent') {
             $v->add('signature', 'REQUIRED');
         }
         if ($v->hasRaw('photo') && $v->raw('photo') !== null) {
@@ -230,6 +256,25 @@ final class DriverService
         $customer = $plan['by_id'][$customerId] ?? throw ApiException::validation([['field' => 'customer_id', 'code' => 'DRIVER_CUSTOMER_NOT_PLANNED', 'params' => ['id' => $customerId]]]);
         $recordedAt = $v->value('recorded_at');
         if ($recordedAt === null || abs(strtotime($recordedAt) - time()) > 2 * 86400) $recordedAt = date('Y-m-d H:i:s');
+        $existing = $this->deliveries->stopFor($date, $customerId);
+        $cmrId = null;
+        if ($status === 'delivered') {
+            // [310] Każda paleta punktu zeskanowana (ze zdjęciem) albo uzasadnienie braku.
+            $numbers = $this->deliveries->palletNumbers($date)[$customerId] ?? [];
+            $scanned = $existing ? array_column($this->deliveries->palletScans([(int) $existing['id']])[(int) $existing['id']] ?? [], 'pallet_no') : [];
+            $missing = array_values(array_diff($numbers, $scanned));
+            if ($missing && $v->value('pallets_note') === null) {
+                throw ApiException::validation([['field' => 'pallets_note', 'code' => 'DRIVER_PALLETS_NOT_SCANNED', 'params' => ['missing' => implode(', ', $missing)]]]);
+            }
+            // Klient nieobecny : zdjęcie po dostawie obowiązkowe.
+            if ($mode === 'absent' && (!$existing || $this->deliveries->countMedia((int) $existing['id'], 'photo_after') === 0)) {
+                throw ApiException::validation([['field' => 'photo', 'code' => 'DRIVER_ABSENT_PHOTO_REQUIRED', 'params' => []]]);
+            }
+            if ($mode === 'cmr') {
+                foreach ($this->deliveries->shipments($date, $customerId) as $sh) if ($sh['id_cmr']) $cmrId = (int) $sh['id_cmr'];
+                if ($cmrId === null) throw ApiException::validation([['field' => 'receipt_mode', 'code' => 'DRIVER_CMR_MISSING', 'params' => []]]);
+            }
+        }
 
         $data = [
             'ship_date' => $date, 'id_customer' => $customerId,
@@ -238,11 +283,21 @@ final class DriverService
             'receiver_name' => $v->value('receiver_name'), 'pallets_delivered' => $v->value('pallets_delivered'), 'pallets_returned' => $v->value('pallets_returned'),
             'note' => $v->value('note'), 'lat' => $v->value('lat'), 'lng' => $v->value('lng'), 'recorded_at' => $recordedAt,
             'driver_name' => $this->driverName($context, $v->value('driver_name')), 'id_device' => (int) $device['id'],
+            'receipt_mode' => $mode, 'pallets_note' => $status === 'delivered' ? $v->value('pallets_note') : null,
         ];
-        $stopId = $this->tx->execute(function () use ($data, $signature, $photo) {
+        // [310] CMR z fakturowania podpisany w polu 24 (PDF zapisany przy postoju).
+        $signedCmr = null;
+        if ($cmrId !== null && $signature) {
+            $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
+            $this->cmr->buildSignedFromId($pdf, $cmrId, ['signature' => $signature[1], 'name' => $data['receiver_name'],
+                'place' => $customer['town'] ?? null, 'at' => date('d.m.Y H:i', strtotime($recordedAt))]);
+            $signedCmr = $pdf->Output('', 'S');
+        }
+        $stopId = $this->tx->execute(function () use ($data, $signature, $photo, $signedCmr) {
             $id = $this->deliveries->saveStop($data);
             if ($signature) $this->deliveries->replaceMedia($id, 'signature', $signature[0], $signature[1]);
             if ($photo) $this->deliveries->replaceMedia($id, 'photo', $photo[0], $photo[1]);
+            if ($signedCmr !== null) $this->deliveries->replaceMedia($id, 'cmr_signed', 'application/pdf', $signedCmr);
             return $id;
         });
         // Livraison confirmée : commandes de ce client pour ce jour « Zrealizowane » (P1) ; n'empêche jamais l'enregistrement.
@@ -313,6 +368,120 @@ final class DriverService
             $id = $this->deliveries->addMedia($stopId, $kind, $image[0], $image[1], $takenAt, $uuid);
             return ['id' => $id, 'stop_id' => $stopId, 'kind' => $v->value('kind'), 'taken_at' => $takenAt, 'count' => $this->deliveries->countMedia($stopId, $kind)];
         });
+    }
+
+    /**
+     * [310] Rozładunek : skan QR palety (albo numer wpisany ręcznie) + zdjęcie palety (obowiązkowe). Paleta innego klienta
+     * → odmowa z nazwą właściwego klienta ; nieznana → odmowa. Ponowny skan tej samej palety = ten sam zapis.
+     */
+    public function palletScan(ApiContext $context, array $body): array
+    {
+        $device = $this->driverDevice($context);
+        $v = (new Validator($body))->only(['date', 'customer_id', 'vehicle_id', 'pallet_no', 'method', 'photo', 'taken_at', 'client_uuid', 'lat', 'lng', 'driver_name'])
+            ->date('date', true, false)->integer('customer_id', true, 1)->integer('vehicle_id', false, 1, null, true)->integer('pallet_no', true, 1)
+            ->choice('method', ['qr', 'manual'], false, true)->datetime('taken_at')->string('client_uuid', 64, false, true)
+            ->decimal('lat', false, -90, 90, true)->decimal('lng', false, -180, 180, true)->string('driver_name', 100, false, true);
+        $image = null;
+        if ($v->hasRaw('photo') && $v->raw('photo') !== null) {
+            $image = $this->image($v, 'photo', ['image/jpeg', 'image/png'], max(100, (int) $this->params->get('driver.photo_max_kb', '1500')) * 1024);
+        } else {
+            $v->add('photo', 'REQUIRED');
+        }
+        $v->throwIfInvalid();
+        $date = $v->value('date');
+        $this->checkDate($date);
+        $customerId = (int) $v->value('customer_id');
+        $palletNo = (int) $v->value('pallet_no');
+        $plan = $this->logistics->day($date);
+        $customer = $plan['by_id'][$customerId] ?? throw ApiException::validation([['field' => 'customer_id', 'code' => 'DRIVER_CUSTOMER_NOT_PLANNED', 'params' => ['id' => $customerId]]]);
+        if (!in_array($palletNo, $this->deliveries->palletNumbers($date)[$customerId] ?? [], true)) {
+            $owner = $this->deliveries->palletOwner($date, $palletNo);
+            throw $owner
+                ? ApiException::validation([['field' => 'pallet_no', 'code' => 'DRIVER_PALLET_OTHER_CUSTOMER', 'params' => ['pallet' => $palletNo, 'customer' => (string) $owner['customer']]]])
+                : ApiException::validation([['field' => 'pallet_no', 'code' => 'DRIVER_PALLET_UNKNOWN', 'params' => ['pallet' => $palletNo]]]);
+        }
+        $takenAt = $v->value('taken_at');
+        if ($takenAt === null || abs(strtotime($takenAt) - time()) > 2 * 86400) $takenAt = date('Y-m-d H:i:s');
+        $driver = $this->driverName($context, $v->value('driver_name'));
+        return $this->tx->execute(function () use ($device, $v, $date, $customerId, $customer, $palletNo, $takenAt, $image, $driver) {
+            $stopId = $this->stopOrArrival($device, $date, $customerId, $customer, $v->value('vehicle_id'), $takenAt, $v->value('lat'), $v->value('lng'), $driver);
+            $uuid = $v->value('client_uuid');
+            $mediaId = $this->deliveries->addMedia($stopId, 'photo_pallet', $image[0], $image[1], $takenAt, $uuid, $palletNo);
+            $this->deliveries->addPalletScan($stopId, $palletNo, $v->value('method') ?? 'qr', $mediaId, $takenAt, $v->value('lat'), $v->value('lng'), $driver, $uuid);
+            $scans = $this->deliveries->palletScans([$stopId])[$stopId] ?? [];
+            return ['stop_id' => $stopId, 'pallet_no' => $palletNo, 'scanned' => count($scans), 'total' => count($this->deliveries->palletNumbers($date)[$customerId] ?? []),
+                'pallet_scans' => $scans];
+        });
+    }
+
+    /** [310] « Coś nie tak » : rodzaj, opis i zdjęcie (obowiązkowe) ; dostawa trwa dalej ; dzwonek Logistyki + kolejka różnic. */
+    public function incident(ApiContext $context, array $body): array
+    {
+        $device = $this->driverDevice($context);
+        $v = (new Validator($body))->only(['date', 'customer_id', 'vehicle_id', 'kind', 'note', 'photo', 'taken_at', 'client_uuid', 'lat', 'lng', 'driver_name'])
+            ->date('date', true, false)->integer('customer_id', true, 1)->integer('vehicle_id', false, 1, null, true)
+            ->choice('kind', array_keys(self::INCIDENTS))->string('note', 500, false, true)->datetime('taken_at')->string('client_uuid', 64, false, true)
+            ->decimal('lat', false, -90, 90, true)->decimal('lng', false, -180, 180, true)->string('driver_name', 100, false, true);
+        $image = null;
+        if ($v->hasRaw('photo') && $v->raw('photo') !== null) {
+            $image = $this->image($v, 'photo', ['image/jpeg', 'image/png'], max(100, (int) $this->params->get('driver.photo_max_kb', '1500')) * 1024);
+        } else {
+            $v->add('photo', 'REQUIRED');
+        }
+        $v->throwIfInvalid();
+        $date = $v->value('date');
+        $this->checkDate($date);
+        $customerId = (int) $v->value('customer_id');
+        $plan = $this->logistics->day($date);
+        $customer = $plan['by_id'][$customerId] ?? throw ApiException::validation([['field' => 'customer_id', 'code' => 'DRIVER_CUSTOMER_NOT_PLANNED', 'params' => ['id' => $customerId]]]);
+        $takenAt = $v->value('taken_at');
+        if ($takenAt === null || abs(strtotime($takenAt) - time()) > 2 * 86400) $takenAt = date('Y-m-d H:i:s');
+        $driver = $this->driverName($context, $v->value('driver_name'));
+        $kind = (string) $v->value('kind');
+        $result = $this->tx->execute(function () use ($device, $v, $date, $customerId, $customer, $kind, $takenAt, $image, $driver) {
+            $stopId = $this->stopOrArrival($device, $date, $customerId, $customer, $v->value('vehicle_id'), $takenAt, $v->value('lat'), $v->value('lng'), $driver);
+            $uuid = $v->value('client_uuid');
+            $id = $this->deliveries->addIncident($stopId, $kind, $v->value('note'), $takenAt, $driver, $uuid);
+            $this->deliveries->addMedia($stopId, 'photo_incident', $image[0], $image[1], $takenAt, $uuid, null, $id);
+            return ['id' => $id, 'stop_id' => $stopId];
+        });
+        $this->notifications->publish('delivery_problem', 'warning', 'Zgłoszenie kierowcy',
+            $customer['name'] . ' : ' . self::INCIDENTS[$kind][0] . ($v->value('note') ? ' — ' . $v->value('note') : '') . '.', '/logistics/deliveries?date=' . $date,
+            ['id_stop' => $result['stop_id'], 'id_customer' => $customerId, 'date' => $date], 'delivery_incident:' . $result['id']);
+        return $result + ['kind' => $kind, 'recorded_at' => $takenAt];
+    }
+
+    /**
+     * [310] Dokument punktu z fakturowania (« Wyślij dzień ») : CMR, WZ albo faktura WDT klienta w dniu ; CMR podpisany
+     * na tablecie, gdy jest. @return array{filename: string, content: string}
+     */
+    public function stopDocument(ApiContext $context, string $date, int $customerId, string $type): array
+    {
+        $this->driverDevice($context);
+        $this->checkDate($date);
+        $type = strtolower($type);
+        if (!in_array($type, ['cmr', 'wz', 'wdt'], true)) throw ApiException::validation([['field' => 'type', 'code' => 'INVALID_CHOICE', 'params' => []]]);
+        if ($type === 'cmr' && ($stop = $this->deliveries->stopFor($date, $customerId))) {
+            foreach ($this->deliveries->stopDetail((int) $stop['id'])['media'] ?? [] as $m) {
+                if ($m['kind'] !== 'cmr_signed') continue;
+                $file = $this->deliveries->media((int) $m['id']);
+                if ($file) return ['filename' => 'CMR_podpisany_' . $date . '.pdf', 'content' => $file['content']];
+            }
+        }
+        $ids = array_filter(array_map(fn($sh) => $sh['id_' . $type] ? (int) $sh['id_' . $type] : null, $this->deliveries->shipments($date, $customerId)));
+        if (!$ids) throw ApiException::notFound('document', $customerId);
+        $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
+        foreach ($ids as $id) ($type === 'cmr' ? $this->cmr : ($type === 'wz' ? $this->wz : $this->wdt))->buildDocumentFromId($pdf, $id);
+        return ['filename' => strtoupper($type) . '_' . $date . '_' . $customerId . '.pdf', 'content' => $pdf->Output('', 'S')];
+    }
+
+    /** Postój klienta w dniu : istniejący albo nowy « na miejscu » (pierwsza czynność kierowcy u klienta). */
+    private function stopOrArrival(array $device, string $date, int $customerId, array $customer, $vehicleId, string $at, $lat, $lng, ?string $driver): int
+    {
+        $stop = $this->deliveries->stopFor($date, $customerId);
+        if ($stop !== null) return (int) $stop['id'];
+        return $this->deliveries->saveStop(['ship_date' => $date, 'id_customer' => $customerId, 'id_carrier_vehicle' => $vehicleId ?? $customer['vehicle_id'],
+            'status' => 'arrived', 'recorded_at' => $at, 'arrived_at' => $at, 'lat' => $lat, 'lng' => $lng, 'driver_name' => $driver, 'id_device' => (int) $device['id']]);
     }
 
     /** Raport PDF trasy (albo jednego klienta) dla kierowcy, w języku tabletu. */
@@ -528,13 +697,26 @@ final class DriverService
             . ($s['pallets_delivered'] !== null ? ' · ' . $t('dostarczone : ', 'livrées : ') . $s['pallets_delivered'] : '')];
         if ($s['pallets_returned'] !== null) $rows[] = [$t('Palety zwrócone (EUR)', 'Palettes rendues (EUR)'), (string) $s['pallets_returned']];
         if ($docs) $rows[] = [$t('Dokumenty', 'Documents'), implode(', ', array_map(fn($d) => $d['type'] . ' ' . $d['num'], $docs))];
+        // [310] Rozładunek palet, odbiór, zgłoszenia.
+        $scans = $this->deliveries->palletScans([(int) $s['id']])[(int) $s['id']] ?? [];
+        if ($numbers || $scans) $rows[] = [$t('Palety zeskanowane', 'Palettes scannées'), count($scans) . ' / ' . count($numbers)
+            . ($scans ? ' · ' . implode(', ', array_map(fn($x) => $x['pallet_no'] . ($x['method'] === 'manual' ? '*' : ''), $scans)) : '')];
+        if (!empty($s['pallets_note'])) $rows[] = [$t('Brak palety — uzasadnienie', 'Palette manquante — motif'), (string) $s['pallets_note']];
+        if (!empty($s['receipt_mode'])) $rows[] = [$t('Odbiór', 'Réception'), match ($s['receipt_mode']) {
+            'cmr' => $t('podpis w CMR (pole 24)', 'signature sur le CMR (case 24)'), 'absent' => $t('klient nieobecny — zdjęcie po dostawie', 'client absent — photo après livraison'),
+            default => $t('podpis na tablecie', 'signature sur la tablette')}];
+        foreach ($this->deliveries->incidents([(int) $s['id']])[(int) $s['id']] ?? [] as $inc) {
+            $rows[] = [$t('Zgłoszenie', 'Signalement') . ' ' . $dt($inc['recorded_at']), (self::INCIDENTS[$inc['kind']][$i] ?? $inc['kind']) . ($inc['note'] ? ' — ' . $inc['note'] : '')];
+        }
         if ($s['note']) $rows[] = [$t('Uwagi', 'Remarques'), (string) $s['note']];
         if ($s['lat'] !== null && $s['lng'] !== null) $rows[] = [$t('Położenie', 'Position'), $s['lat'] . ', ' . $s['lng']];
         $pdf->brandTable([['label' => $t('Dostawa', 'Livraison'), 'w' => 1.3], ['label' => '', 'w' => 4]], $rows);
 
         $groups = [];
         foreach ($s['media'] as $m) $groups[$m['kind']][] = $m;
-        foreach ([['photo_before', $t('Zdjęcia przed rozładunkiem', 'Photos avant déchargement')], ['photo_after', $t('Zdjęcia po rozładunku', 'Photos après déchargement')],
+        foreach ([['photo_temperature', $t('Temperatura zamrażarki (przed otwarciem)', 'Température du congélateur (avant ouverture)')],
+                     ['photo_before', $t('Zdjęcia przed rozładunkiem', 'Photos avant déchargement')], ['photo_pallet', $t('Palety (zdjęcie przy skanie)', 'Palettes (photo au scan)')],
+                     ['photo_after', $t('Zdjęcia po rozładunku', 'Photos après déchargement')], ['photo_incident', $t('Zgłoszenia', 'Signalements')],
                      ['photo', $t('Zdjęcie', 'Photo')]] as [$kind, $label]) {
             if (!empty($groups[$kind])) $this->photoGrid($pdf, $groups[$kind], $label);
         }
@@ -681,7 +863,9 @@ final class DriverService
             'status' => $recorded['status'] ?? null,
             'recorded_at' => $recorded['recorded_at'] ?? null,
             'arrived_at' => $recorded['arrived_at'] ?? null,
-            'photos' => ['before' => $media['photo_before'] ?? [], 'after' => $media['photo_after'] ?? []],
+            'photos' => ['before' => $media['photo_before'] ?? [], 'after' => $media['photo_after'] ?? [], 'temperature' => $media['photo_temperature'] ?? []],
+            'receipt_mode' => $recorded['receipt_mode'] ?? null, 'pallets_note' => $recorded['pallets_note'] ?? null,
+            'has_signed_cmr' => !empty($media['cmr_signed']),
             'receiver_name' => $recorded['receiver_name'] ?? null,
             'reason' => $recorded['reason'] ?? null,
             'note' => $recorded['note'] ?? null,
