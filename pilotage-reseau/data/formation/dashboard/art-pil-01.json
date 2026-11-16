@@ -73,8 +73,8 @@
       "nl": "De tabbladen"
      },
      "texte": {
-      "fr": "Opérationnel : aujourd’hui, heure par heure.\nTâches : les checklists du jour, faites ou non, et ce qu’en dit le contrôle qualité.\nSemaine et Mois : le résultat de la période, jour par jour.\nTrimestre et Année : le cap, face au plan de développement.\nPromotions : les offres en caisse et ce qu’elles rapportent.\nPrimes : où en est chaque vendeuse, prime par prime.\nConcurrence : nos prix face à ceux relevés autour du magasin.\nTemps morts : les minutes sans client, entre le premier et le dernier ticket.\nSous les onglets, la frise : une case par jour (ou par mois, par trimestre) ; ‹ et › changent de période, un toucher ouvre la case.\nEn tête, « Revue du soir » ouvre la revue de fin de journée (partie « La revue du soir »).",
-      "nl": "Operationeel: vandaag, uur per uur.\nTaken: de checklists van de dag, gedaan of niet, en wat de kwaliteitscontrole ervan zegt.\nWeek en Maand: het resultaat van de periode, dag per dag.\nKwartaal en Jaar: de koers, tegenover het ontwikkelingsplan.\nPromoties: de acties in de kassa en wat ze opbrengen.\nPremies: waar elke verkoopster staat, premie per premie.\nConcurrentie: onze prijzen tegenover die rond de winkel opgenomen.\nDode tijd: de minuten zonder klant, tussen het eerste en het laatste ticket.\nOnder de tabbladen de tijdlijn: één vak per dag (of per maand, per kwartaal); ‹ en › wisselen van periode, een tik opent het vak.\nBovenaan opent « Avondronde » de ronde van het einde van de dag (deel « De avondronde »)."
+      "fr": "Opérationnel : aujourd’hui, heure par heure.\nTâches : les checklists du jour, faites ou non, et ce qu’en dit le contrôle qualité.\nSemaine et Mois : le résultat de la période, jour par jour.\nTrimestre et Année : le cap, face au plan de développement.\nFrais : les frais du mois, saisis avec ou sans TVA, et leur taux.\nPromotions : les offres en caisse et ce qu’elles rapportent.\nPrimes : où en est chaque vendeuse, prime par prime.\nConcurrence : nos prix face à ceux relevés autour du magasin.\nTemps morts : les minutes sans client, entre le premier et le dernier ticket.\nSous les onglets, la frise : une case par jour (ou par mois, par trimestre) ; ‹ et › changent de période, un toucher ouvre la case.\nEn tête, « Revue du soir » ouvre la revue de fin de journée (partie « La revue du soir »).",
+      "nl": "Operationeel: vandaag, uur per uur.\nTaken: de checklists van de dag, gedaan of niet, en wat de kwaliteitscontrole ervan zegt.\nWeek en Maand: het resultaat van de periode, dag per dag.\nKwartaal en Jaar: de koers, tegenover het ontwikkelingsplan.\nFrais (kosten): de kosten van de maand, ingegeven met of zonder btw, en hun tarief.\nPromoties: de acties in de kassa en wat ze opbrengen.\nPremies: waar elke verkoopster staat, premie per premie.\nConcurrentie: onze prijzen tegenover die rond de winkel opgenomen.\nDode tijd: de minuten zonder klant, tussen het eerste en het laatste ticket.\nOnder de tabbladen de tijdlijn: één vak per dag (of per maand, per kwartaal); ‹ en › wisselen van periode, een tik opent het vak.\nBovenaan opent « Avondronde » de ronde van het einde van de dag (deel « De avondronde »)."
      },
      "critique": false,
      "photo": "dash-frise.jpg",
@@ -175,12 +175,12 @@
     {
      "numero": "9",
      "titre": {
-      "fr": "Le P&L court de la journée",
-      "nl": "De korte W&V van de dag"
+      "fr": "Le P&L court de la journée, hors TVA",
+      "nl": "De korte W&V van de dag, exclusief btw"
      },
      "texte": {
-      "fr": "Chiffre d’affaires − coût matière = marge brute.\nMarge brute − invendus et poubelle − main-d’œuvre − frais généraux = résultat.\nLe seuil du coût matière est le taux matière du réseau posé au cockpit, Budget › Paramètres (catégorie Matière première & Emballage) : on le change là, le dashboard suit.\nMain-d’œuvre et frais généraux : les seuils de la Table KPI (33 % et 13,5 % du chiffre d’affaires).\nLa main-d’œuvre est celle du planning du jour ; les heures du franchisé sont indiquées à part.\nLe matin, le résultat est toujours négatif : les coûts de toute la journée sont posés, le chiffre d’affaires ne l’est pas encore. Il se lit le soir.",
-      "nl": "Omzet − grondstofkost = brutomarge.\nBrutomarge − onverkocht en afval − personeelskost − algemene kosten = resultaat.\nDe drempel van de grondstofkost is het grondstofpercentage van het netwerk, ingesteld in de cockpit, Budget › Parameters (categorie Grondstoffen & Verpakking): je wijzigt het daar, het dashboard volgt.\nPersoneelskost en algemene kosten: de drempels van de KPI-tabel (33 % en 13,5 % van de omzet).\nDe personeelskost is die van de planning van de dag; de uren van de franchisenemer staan apart vermeld.\n’s Ochtends is het resultaat altijd negatief: de kosten van de hele dag staan er al, de omzet nog niet. Je leest het ’s avonds."
+      "fr": "Tout se lit hors TVA. En tête, le chiffre d’affaires encaissé (TVA comprise), puis la TVA des tickets, reversée à l’État : reste le chiffre d’affaires hors TVA, la base de tous les pourcentages.\nChiffre d’affaires hors TVA − coût matière = marge brute.\nMarge brute − invendus et poubelle − main-d’œuvre − frais généraux hors TVA = résultat hors TVA.\nLa TVA est lue ticket par ticket ; sinon le taux habituel du magasin, et la ligne le dit.\nLes frais généraux perdent leur TVA d’après l’onglet Frais (partie « Frais — les frais du mois et leur TVA ») ; un poste pas encore indiqué compte tel que saisi.\nLe seuil du coût matière est le taux matière du réseau posé au cockpit, Budget › Paramètres (catégorie Matière première & Emballage) : on le change là, le dashboard suit.\nMain-d’œuvre et frais généraux : les seuils de la Table KPI, écrits sous chaque ligne.\nLa main-d’œuvre est celle du planning du jour ; les heures du franchisé sont indiquées à part.\nLe matin, le résultat est toujours négatif : les coûts de toute la journée sont posés, le chiffre d’affaires ne l’est pas encore. Il se lit le soir.\nRestent TVA comprise : le chiffre d’affaires des tuiles, l’objectif, le panier et la valeur du magasin.",
+      "nl": "Alles lees je exclusief btw. Bovenaan de geïnde omzet (btw inbegrepen), daarna de btw van de tickets, die naar de Staat gaat: wat overblijft is de omzet exclusief btw, de basis van alle percentages.\nOmzet exclusief btw − grondstofkost = brutomarge.\nBrutomarge − onverkocht en afval − personeelskost − algemene kosten exclusief btw = resultaat exclusief btw.\nDe btw wordt ticket per ticket gelezen; anders het gewone percentage van de winkel, en de lijn zegt het.\nDe algemene kosten verliezen hun btw volgens het tabblad Frais (deel « Frais — de kosten van de maand en hun btw »); een post die nog niet aangeduid is, telt zoals ingegeven.\nDe drempel van de grondstofkost is het grondstofpercentage van het netwerk, ingesteld in de cockpit, Budget › Parameters (categorie Grondstoffen & Verpakking): je wijzigt het daar, het dashboard volgt.\nPersoneelskost en algemene kosten: de drempels van de KPI-tabel, onder elke lijn vermeld.\nDe personeelskost is die van de planning van de dag; de uren van de franchisenemer staan apart vermeld.\n’s Ochtends is het resultaat altijd negatief: de kosten van de hele dag staan er al, de omzet nog niet. Je leest het ’s avonds.\nBlijven btw inbegrepen: de omzet van de tegels, de doelstelling, het gemiddelde ticket en de waarde van de winkel."
      },
      "critique": true,
      "photo": "dash-pl.jpg",
@@ -363,8 +363,8 @@
       "nl": "Het resultaat van de periode"
      },
      "texte": {
-      "fr": "CA de la période et objectif (budget validé), attendu à ce jour.\nAtteinte : la part de l’attendu à ce jour, et les clients manquants.\nProjection : où la période finira au rythme actuel. Reste à faire : par jour restant.\nPar jour ouvert, marge brute (et coût matière face au seuil de Budget › Paramètres), résultat net, record de la période.",
-      "nl": "Omzet van de periode en doelstelling (gevalideerd budget), verwacht tot vandaag.\nBereikt: het deel van het verwachte tot vandaag, en de ontbrekende klanten.\nProjectie: waar de periode eindigt aan het huidige ritme. Nog te doen: per resterende dag.\nPer open dag, brutomarge (en grondstofkost tegenover de drempel van Budget › Parameters), nettoresultaat, record van de periode."
+      "fr": "CA de la période et objectif (budget validé), attendu à ce jour.\nAtteinte : la part de l’attendu à ce jour, et les clients manquants.\nProjection : où la période finira au rythme actuel. Reste à faire : par jour restant.\nPar jour ouvert, marge brute (et coût matière face au seuil de Budget › Paramètres), résultat net, record de la période.\nLe P&L de la période se lit hors TVA, comme celui de la journée.",
+      "nl": "Omzet van de periode en doelstelling (gevalideerd budget), verwacht tot vandaag.\nBereikt: het deel van het verwachte tot vandaag, en de ontbrekende klanten.\nProjectie: waar de periode eindigt aan het huidige ritme. Nog te doen: per resterende dag.\nPer open dag, brutomarge (en grondstofkost tegenover de drempel van Budget › Parameters), nettoresultaat, record van de periode.\nDe W&V van de periode lees je exclusief btw, zoals die van de dag."
      },
      "critique": false,
      "photo": "dash-resultat.jpg",
@@ -447,11 +447,25 @@
       "nl": "De rendabiliteit dag per dag (tabblad Maand)"
      },
      "texte": {
-      "fr": "Le P&L du mois, puis le résultat net de chaque jour en une ligne de cases.\nUne case : un jour ; sa couleur dit s’il a gagné ou perdu de l’argent.\nLe profil des jours dit quel jour de la semaine porte le mois et lequel le freine.",
-      "nl": "De W&V van de maand, daarna het nettoresultaat van elke dag in één rij vakjes.\nEén vak: één dag; de kleur zegt of die dag geld verdiend of verloren heeft.\nHet profiel van de dagen zegt welke weekdag de maand draagt en welke hem afremt."
+      "fr": "Le P&L du mois (hors TVA), puis le résultat net de chaque jour en une ligne de cases.\nUne case : un jour ; sa couleur dit s’il a gagné ou perdu de l’argent.\nLe profil des jours dit quel jour de la semaine porte le mois et lequel le freine.",
+      "nl": "De W&V van de maand (exclusief btw), daarna het nettoresultaat van elke dag in één rij vakjes.\nEén vak: één dag; de kleur zegt of die dag geld verdiend of verloren heeft.\nHet profiel van de dagen zegt welke weekdag de maand draagt en welke hem afremt."
      },
      "critique": false,
      "photo": "dash-rentab.jpg",
+     "video": null
+    },
+    {
+     "numero": "28",
+     "titre": {
+      "fr": "Frais — les frais du mois et leur TVA",
+      "nl": "Frais — de kosten van de maand en hun btw"
+     },
+     "texte": {
+      "fr": "Dans le rail, Les chiffres › Frais : les frais du mois tels qu’ils sont saisis au panel, poste par poste ; ‹ et › changent de mois.\nPour chaque poste : « TVA comprise ? » Oui ou Non, et le taux (0, 6, 12 ou 21 %).\nOui : le montant saisi est celui de la facture, TVA comprise ; le P&L en retire la TVA au taux indiqué.\nNon : le montant est déjà hors TVA, ou le frais n’en a pas (loyer non soumis, assurances, frais bancaires : 0 %).\nLe choix se garde pour le poste, d’un mois à l’autre ; recliquer le choix le remet à indiquer.\nUn poste à indiquer reste en orange et compte tel que saisi dans le P&L.\nEn bas, ce que ça change : les frais généraux du jour et du mois, saisis et hors TVA.",
+      "nl": "In de rail, Les chiffres › Frais: de kosten van de maand zoals ingegeven in het panel, post per post; ‹ en › wisselen van maand.\nVoor elke post: « TVA comprise ? » (btw inbegrepen?) Oui (ja) of Non (nee), en het tarief (0, 6, 12 of 21 %).\nOui: het ingegeven bedrag is dat van de factuur, btw inbegrepen; de W&V haalt de btw eraf aan het aangeduide tarief.\nNon: het bedrag is al exclusief btw, of de kost heeft geen btw (huur niet onderworpen, verzekeringen, bankkosten: 0 %).\nDe keuze blijft bewaard voor de post, van maand tot maand; nog eens op de keuze klikken zet hem terug op aan te duiden.\nEen post die nog aan te duiden is, blijft oranje en telt zoals ingegeven in de W&V.\nOnderaan wat het verandert: de algemene kosten van de dag en van de maand, ingegeven en exclusief btw."
+     },
+     "critique": false,
+     "photo": null,
      "video": null
     }
    ]
@@ -463,7 +477,7 @@
    },
    "etapes": [
     {
-     "numero": "28",
+     "numero": "29",
      "titre": {
       "fr": "Le trimestre",
       "nl": "Het kwartaal"
@@ -477,7 +491,7 @@
      "video": null
     },
     {
-     "numero": "29",
+     "numero": "30",
      "titre": {
       "fr": "L’année",
       "nl": "Het jaar"
@@ -491,7 +505,7 @@
      "video": null
     },
     {
-     "numero": "30",
+     "numero": "31",
      "titre": {
       "fr": "La heatmap des mois",
       "nl": "De heatmap van de maanden"
@@ -513,7 +527,7 @@
    },
    "etapes": [
     {
-     "numero": "31",
+     "numero": "32",
      "titre": {
       "fr": "Concurrence",
       "nl": "Concurrentie"
@@ -527,7 +541,7 @@
      "video": null
     },
     {
-     "numero": "32",
+     "numero": "33",
      "titre": {
       "fr": "Temps morts",
       "nl": "Dode tijd"
@@ -549,7 +563,7 @@
    },
    "etapes": [
     {
-     "numero": "33",
+     "numero": "34",
      "titre": {
       "fr": "Promotions",
       "nl": "Promoties"
@@ -563,7 +577,7 @@
      "video": null
     },
     {
-     "numero": "34",
+     "numero": "35",
      "titre": {
       "fr": "Primes",
       "nl": "Premies"
@@ -577,7 +591,7 @@
      "video": null
     },
     {
-     "numero": "35",
+     "numero": "36",
      "titre": {
       "fr": "Au téléphone",
       "nl": "Op de telefoon"
@@ -744,6 +758,25 @@
     ]
    },
    "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Dans le P&L court, pourquoi la ligne « − TVA des tickets » est-elle retirée du chiffre d’affaires ?",
+    "nl": "Waarom wordt in de korte W&V de lijn « − TVA des tickets » (btw van de tickets) van de omzet afgetrokken?"
+   },
+   "choix": {
+    "fr": [
+     "C’est une remise accordée aux clients",
+     "Elle est reversée à l’État : le résultat et les pourcentages se lisent sur le chiffre d’affaires hors TVA",
+     "C’est la TVA payée sur les frais généraux"
+    ],
+    "nl": [
+     "Het is een korting voor de klanten",
+     "Ze gaat naar de Staat: het resultaat en de percentages lees je op de omzet exclusief btw",
+     "Het is de btw betaald op de algemene kosten"
+    ]
+   },
+   "bonne": 1
   }
  ]
 }
