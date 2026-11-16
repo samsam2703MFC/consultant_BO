@@ -217,6 +217,17 @@ final class PalletCalculator
             foreach ($type['pallets'] as &$p) {
                 $items = array_map(fn($it) => ['cartons' => $it['cartons']] + ($data[(int) ($it['product_id'] ?? 0)] ?? []), $p['items']);
                 $p['load'] = PalletLoad::measure($items, $limits);
+                // [330] Szczegóły palety (makieta 60) : warstwy, kartony na warstwę i waga każdego produktu.
+                foreach ($p['items'] as $i => &$it) {
+                    $d = $items[$i];
+                    $cpl = (int) ($d['cpl'] ?? 0);
+                    $ppc = (float) ($d['ppc'] ?? 0);
+                    $g = (float) ($d['weight_g'] ?? 0);
+                    $it['cpl'] = $cpl > 0 ? $cpl : null;
+                    $it['layers'] = $cpl > 0 ? (int) ceil((float) $it['cartons'] / $cpl - 1e-9) : null;
+                    $it['kg'] = $ppc > 0 && $g > 0 ? round((float) $it['cartons'] * ($ppc * $g + (float) ($d['tare_g'] ?? 0)) / 1000, 1) : null;
+                }
+                unset($it);
                 $kg += $p['load']['kg'];
                 if ($p['load']['height_mm'] !== null) $maxH = max($maxH ?? 0, $p['load']['height_mm']);
                 if ($p['load']['over_kg'] || $p['load']['over_height'] || $p['load']['over_truck']) $over++;

@@ -14,30 +14,34 @@
         {% elseif (c.mixed_pallets ?? 0) >= 2 %}<a class="at-sub" href="{{ root }}/products/cartons/mixed?date={{ date }}&amp;customer={{ c.id }}"><i class="bi bi-layers"></i> {{ c.mixed_pallets }} niepełne — sprawdź paletę mieszaną</a>{% endif %}
     </div>
     <div>
+        {# [330] Makieta 60 : wszystkie palety tej samej szerokości, wysokość = prawdziwa wysokość, 4 wyrównane wiersze ; klik → szczegóły. #}
+        {% set layerColors = ['#c47b5a', '#d9a05b', '#a8475a', '#7c4d8a', '#3b7a8a', '#2E7D4F', '#8D1D2C', '#b0846a'] %}
+        {% set pals = [] %}
+        {% for ct in c.carton_types %}{% for p in ct.pallets %}{% set pals = pals|merge([p|merge({format: ct.name})]) %}{% endfor %}{% endfor %}
+        {% set limitMm = pals|reduce((m, p) => max(m, (p.load.max_height_mm ?? 0)), 0) ?: 1800 %}
+        {% set scaleMm = max(limitMm, pals|reduce((m, p) => max(m, (p.load.height_mm ?? 0)), 0)) %}
         <ol class="lt-pals" aria-label="Palety {{ c.name }}">
-            {% set n = 0 %}
-            {% for ct in c.carton_types %}
-                {% for p in ct.pallets %}
-                    {% set n = n + 1 %}
-                    {% set ld = p.load ?? null %}
-                    {% set over = ld and (ld.over_kg or ld.over_height or ld.over_truck) %}
-                    {% set total = p.items|reduce((s, i) => s + i.cartons, 0) %}
-                    {% set label = p.kind == 'stack' ? 'warstwy · ' ~ p.items|length ~ ' prod.' : (p.items|length > 1 ? 'mix · ' ~ p.items|length ~ ' prod.' : p.items[0].product) %}
-                    <li class="lt-pal{{ over ? ' is-over' : '' }}" title="{{ p.items|map(i => i.product ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}">
-                        <div class="lt-box">
-                            {% if p.kind == 'full' %}
-                                <div style="flex:1 0 0;background:{{ col }}"></div>
-                            {% else %}
-                                {% set fill = p.kind == 'stack' ? 1 : p.fill %}
-                                {% for i in p.items %}<div style="flex:{{ (total > 0 ? i.cartons / total : 1) * fill * 100 }} 0 0;background:{{ ['#c47b5a', '#d9a05b', '#a8475a', '#7c4d8a', '#3b7a8a'][loop.index0 % 5] }}"></div>{% endfor %}
-                                {% if fill < 1 %}<div style="flex:{{ (1 - fill) * 100 }} 0 0"></div>{% endif %}
-                            {% endif %}
-                        </div>
-                        <div class="lt-base"></div>
-                        <b>{{ n }}</b>{{ label|length > 16 ? label|slice(0, 15) ~ '…' : label }}
-                        {% if ld %}<span class="{{ over ? 'lt-warn' : '' }}">{{ ld.kg|number_format(0, ',', ' ') }} kg{{ over ? ' ⚠' : '' }}</span>{% else %}<span>{{ total|number_format(0, ',', ' ') }} kart.</span>{% endif %}
-                    </li>
-                {% endfor %}
+            {% for p in pals %}
+                {% set ld = p.load ?? null %}
+                {% set over = ld and (ld.over_kg or ld.over_height or ld.over_truck) %}
+                {% set total = p.items|reduce((s, i) => s + i.cartons, 0) %}
+                {% set label = p.kind == 'stack' ? 'warstwy · ' ~ p.items|length ~ ' prod.' : (p.items|length > 1 ? 'mix · ' ~ p.items|length ~ ' prod.' : p.items[0].product) %}
+                {% set hPct = ld and ld.height_mm ? min(100, ld.height_mm / scaleMm * 100) : (p.kind == 'full' ? 70 : max(15, (p.fill ?? 1) * 70)) %}
+                <li><button type="button" class="lt-pal{{ over ? ' is-over' : '' }}" data-lt-pal="{{ c.id }}-{{ loop.index }}" aria-expanded="false" title="{{ p.items|map(i => i.product ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}">
+                    <span class="lt-stage" style="--lim:{{ (1 - limitMm / scaleMm) * 100 }}%">
+                        <span class="lt-box" style="height:{{ hPct }}%">
+                            {% if p.kind == 'full' %}<i style="flex:1 0 0;background:{{ col }}"></i>
+                            {% else %}{% for i in p.items %}<i style="flex:{{ total > 0 ? i.cartons / total * 100 : 1 }} 0 0;background:{{ layerColors[loop.index0 % layerColors|length] }}"></i>{% endfor %}{% endif %}
+                        </span>
+                    </span>
+                    <span class="lt-base"></span>
+                    <span class="lt-lbl">
+                        <b>P{{ loop.index }}</b>
+                        <span>{{ label }}</span>
+                        <span class="{{ ld and ld.over_kg ? 'lt-warn' : '' }}">{{ ld and ld.kg ? ld.kg|number_format(0, ',', ' ') ~ ' kg' : total|number_format(0, ',', ' ') ~ ' kart.' }}{{ ld and ld.over_kg ? ' ⚠' : '' }}</span>
+                        <span class="{{ ld and (ld.over_height or ld.over_truck) ? 'lt-warn' : '' }}">{{ ld and ld.height_mm ? (ld.height_mm / 1000)|number_format(2, ',', ' ') ~ ' m' : '— m' }}</span>
+                    </span>
+                </button></li>
             {% endfor %}
         </ol>
         <div class="lt-edit">
@@ -63,4 +67,63 @@
             <label class="at-sub mb-0" title="Klient na stałe w tej trasie (kolejne dni tygodnia trasy)"><input type="checkbox" class="form-check-input" data-field="remember" {{ c.tour_member ? 'checked' : '' }} {{ c.tour_id ? '' : 'disabled' }}> na stałe w trasie</label>
         </div>
     </div>
+    {% for p in pals %}
+        {% set ld = p.load ?? null %}
+        {% set total = p.items|reduce((s, i) => s + i.cartons, 0) %}
+        {% set kindLabel = p.kind == 'full' ? 'pełna' : (p.kind == 'stack' ? 'mieszana (warstwy)' : (p.items|length > 1 ? 'mieszana' : 'niepełna')) %}
+        <div class="lt-pd" data-lt-pd="{{ c.id }}-{{ loop.index }}" hidden>
+            <div>
+                <div class="lt-pd-k">Paleta P{{ loop.index }} · widok z boku</div>
+                <div class="lt-side">
+                    <span class="lt-side-lim" style="bottom:{{ min(100, limitMm / scaleMm * 100) }}%"><em>limit {{ (limitMm / 1000)|number_format(2, ',', ' ') }} m</em></span>
+                    <div class="lt-side-box" style="height:{{ ld and ld.height_mm ? min(100, ld.height_mm / scaleMm * 100) : 70 }}%">
+                        {% for i in p.items %}
+                            <div style="flex:{{ i.layers ?? (total > 0 ? i.cartons / total * 10 : 1) }} 0 0;background:{{ p.kind == 'full' ? col : layerColors[loop.index0 % layerColors|length] }}"><span>{{ i.product }}</span><span>{{ i.layers ? '×' ~ i.layers : '' }}</span></div>
+                        {% endfor %}
+                    </div>
+                    <div class="lt-base"></div>
+                </div>
+            </div>
+            <div>
+                <div class="lt-pd-title">P{{ loop.index }} · {{ kindLabel }} · {{ p.items|length|plural_pl('produkt', 'produkty', 'produktów') }}</div>
+                <div class="at-sub mb-2">{{ p.format ?: 'karton nieokreślony' }}{{ ld and ld.layers ? ' · ' ~ ld.layers ~ ' warstw' : '' }} · {{ total|number_format(0, ',', ' ') }} kartonów · warstwy od dołu</div>
+                <table class="lt-pd-table">
+                    <thead><tr><th>Produkt</th><th class="n">Warstwy</th><th class="n">Kart. / warstwa</th><th class="n">Kartony</th><th class="n">Waga</th></tr></thead>
+                    <tbody>
+                    {% for i in p.items %}
+                        <tr><td><i class="lt-sw" style="background:{{ p.kind == 'full' ? col : layerColors[loop.index0 % layerColors|length] }}"></i>{{ i.product }}</td>
+                            <td class="n">{{ i.layers ?? '—' }}</td><td class="n">{{ i.cpl ?? '—' }}</td><td class="n">{{ i.cartons|number_format(0, ',', ' ') }}</td>
+                            <td class="n">{{ i.kg is not null ? i.kg|number_format(0, ',', ' ') ~ ' kg' : '—' }}</td></tr>
+                    {% endfor %}
+                    <tr class="lt-pd-sum"><td><b>Razem</b> <span class="at-sub">+ paleta</span></td><td class="n"><b>{{ ld.layers ?? '' }}</b></td><td></td><td class="n"><b>{{ total|number_format(0, ',', ' ') }}</b></td>
+                        <td class="n"><b class="{{ ld and ld.over_kg ? 'lt-warn' : '' }}">{{ ld and ld.kg ? ld.kg|number_format(0, ',', ' ') ~ ' kg' : '—' }}</b></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                {% if ld %}
+                    {% set kgPct = ld.max_kg ? ld.kg / ld.max_kg * 100 : 0 %}
+                    <div class="lt-gauge"><div class="t"><span>Waga</span><b class="{{ ld.over_kg ? 'lt-warn' : '' }}">{{ ld.kg|number_format(0, ',', ' ') }} / {{ ld.max_kg|number_format(0, ',', ' ') }} kg</b></div>
+                        <div class="lt-gbar"><i class="{{ ld.over_kg ? 'is-over' : '' }}" style="width:{{ min(100, kgPct)|round(1) }}%"></i></div>
+                        {% if ld.over_kg %}<div class="lt-warn small mt-1">+{{ (ld.kg - ld.max_kg)|number_format(0, ',', ' ') }} kg ponad limit palety</div>{% endif %}
+                        {% if not ld.known_kg %}<div class="at-sub small mt-1">waga niepełna : brak gramatury w karcie produktu</div>{% endif %}</div>
+                    {% if ld.height_mm %}
+                        <div class="lt-gauge"><div class="t"><span>Wysokość</span><b class="{{ ld.over_height or ld.over_truck ? 'lt-warn' : '' }}">{{ (ld.height_mm / 1000)|number_format(2, ',', ' ') }} / {{ (ld.max_height_mm / 1000)|number_format(2, ',', ' ') }} m</b></div>
+                            <div class="lt-gbar"><i class="{{ ld.over_height ? 'is-over' : '' }}" style="width:{{ min(100, ld.height_mm / ld.max_height_mm * 100)|round(1) }}%"></i></div>
+                            {% if ld.over_truck %}<div class="lt-warn small mt-1">wyższa niż wnętrze pojazdu</div>{% endif %}</div>
+                    {% else %}
+                        <div class="lt-gauge"><div class="t"><span>Wysokość</span><b>—</b></div><div class="at-sub small">brak wysokości kartonu / kartonów na warstwę</div></div>
+                    {% endif %}
+                {% endif %}
+                <div class="lt-pd-btns">
+                    {% if p.kind == 'stack' and p.mixed_id is defined %}
+                        <a class="btn btn-primary btn-sm" href="{{ root }}/products/cartons/mixed/label?pallet={{ p.mixed_id }}" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Etykieta palety (PDF)</a>
+                    {% endif %}
+                    {% if p.kind != 'full' %}
+                        <a class="btn btn-outline-primary btn-sm" href="{{ root }}/products/cartons/mixed?date={{ date }}&amp;customer={{ c.id }}"><i class="bi bi-layers"></i> {{ p.kind == 'stack' ? 'Zmień warstwy' : 'Paleta mieszana — warstwy' }}</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 </article>
