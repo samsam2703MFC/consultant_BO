@@ -100,7 +100,7 @@ final class MigrationRunner
                 $sql = (string) file_get_contents($files[$row['version']]);
                 foreach (self::splitStatements($sql) as $i => $statement) {
                     try {
-                        $this->db->exec($statement);
+                        $this->exec($statement);
                     } catch (\PDOException $e) {
                         throw new RuntimeException(sprintf('%s, statement %d: %s', $row['name'], $i + 1, $e->getMessage()), 0, $e);
                     }
@@ -114,6 +114,58 @@ final class MigrationRunner
         } finally {
             $this->db->query("SELECT RELEASE_LOCK('" . self::LOCK . "')");
         }
+    }
+
+    /**
+     * [298] Exécute une instruction ; si le serveur refuse la syntaxe (MariaDB 10.3 / MySQL 5.7 : « INSERT … SELECT
+     * <valeurs> WHERE NOT EXISTS (…) » sans FROM), la rejoue une fois avec « FROM DUAL ». Le fichier et son empreinte ne
+     * changent pas : les bases qui l'ont déjà appliqué ne voient aucune différence.
+     */
+    private function exec(string $statement): void
+    {
+        try {
+            $this->db->exec($statement);
+        } catch (\PDOException $e) {
+            $compat = ($e->errorInfo[1] ?? null) === 1064 ? self::withFromDual($statement) : null;
+            if ($compat === null) throw $e;
+            $this->db->exec($compat);
+        }
+    }
+
+    /**
+     * « SELECT <liste> WHERE … » sans FROM au niveau principal → « SELECT <liste> FROM DUAL WHERE … ». Null si
+     * l'instruction n'a pas cette forme (chaînes, commentaires et parenthèses ignorés pour trouver le niveau principal).
+     */
+    public static function withFromDual(string $sql): ?string
+    {
+        $len = strlen($sql);
+        $depth = 0;
+        $quote = null;
+        $selectAt = null;
+        $hasFrom = false;
+        for ($i = 0; $i < $len; $i++) {
+            $c = $sql[$i];
+            if ($quote !== null) {
+                if ($c === '\\') { $i++; continue; }
+                if ($c === $quote) {
+                    if (($sql[$i + 1] ?? '') === $quote) { $i++; continue; }
+                    $quote = null;
+                }
+                continue;
+            }
+            if ($c === "'" || $c === '"' || $c === '`') { $quote = $c; continue; }
+            if ($c === '(') { $depth++; continue; }
+            if ($c === ')') { $depth--; continue; }
+            if ($depth !== 0 || !ctype_alpha($c) || ($i > 0 && (ctype_alnum($sql[$i - 1]) || $sql[$i - 1] === '_'))) continue;
+            $word = strtoupper(substr($sql, $i, 6));
+            if (str_starts_with($word, 'SELECT') && !ctype_alnum($sql[$i + 6] ?? ' ')) { $selectAt = $i; $hasFrom = false; continue; }
+            if ($selectAt === null) continue;
+            if (str_starts_with($word, 'FROM') && !ctype_alnum($sql[$i + 4] ?? ' ')) { $hasFrom = true; continue; }
+            if (str_starts_with($word, 'WHERE') && !ctype_alnum($sql[$i + 5] ?? ' ')) {
+                return $hasFrom ? null : substr($sql, 0, $i) . 'FROM DUAL ' . substr($sql, $i);
+            }
+        }
+        return null;
     }
 
     /** @return array<string,string> version => chemin, triés */

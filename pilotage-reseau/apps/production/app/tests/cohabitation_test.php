@@ -53,4 +53,12 @@ expectCo(!AutoSend::enabled($db), '0 : envois coupés');
 $db->exec("UPDATE n_prod_param SET value = '1'");
 expectCo(AutoSend::enabled($db), '1 : envois actifs');
 
+// [298] MariaDB 10.3 (serveur local) : « INSERT … SELECT <valeurs> WHERE NOT EXISTS » sans FROM refusé → FROM DUAL ajouté
+$fd = fn(string $q) => MigrationRunner::withFromDual($q);
+expectCo($fd("INSERT INTO t (a, b) SELECT 'x (WHERE) y', 1\nWHERE NOT EXISTS (SELECT 1 FROM t WHERE a = 'x')")
+    === "INSERT INTO t (a, b) SELECT 'x (WHERE) y', 1\nFROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t WHERE a = 'x')", 'FROM DUAL avant le WHERE principal (chaînes et sous-requête ignorées)');
+expectCo($fd("INSERT INTO t (a) SELECT 'it''s', 2 WHERE NOT EXISTS (SELECT 1 FROM t)") === "INSERT INTO t (a) SELECT 'it''s', 2 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t)", 'apostrophe doublée');
+expectCo($fd("INSERT INTO t (a) SELECT a FROM u WHERE b = 1") === null, 'SELECT avec FROM : rien à changer');
+expectCo($fd("UPDATE t SET a = 1 WHERE b = 2") === null && $fd("CREATE TABLE x (wherever INT)") === null, 'autres instructions : rien à changer');
+
 echo "cohabitation_test: OK\n";
