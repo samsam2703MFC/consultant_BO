@@ -333,6 +333,7 @@
             p = await api('GET', '/kiosk/phone/erp-login');
         } catch (err) {
             if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }
+            if (err.code === 'QR_OTHER_PERSON') return renderOtherPerson(err.message);
             return message(err.message, true);
         }
         store.set(NAME_KEY, me.employee.name);

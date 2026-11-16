@@ -10,9 +10,9 @@ final class ErpLoginRepository extends WorkshopRepository
 {
     protected string $table = 'n_erp_login_request';
 
-    public function create(string $nonceHash, string $expiresAt, ?string $userAgent): int
+    public function create(string $nonceHash, string $expiresAt, ?string $userAgent, ?int $forEmployee = null): int
     {
-        $this->db->prepare('INSERT INTO n_erp_login_request (nonce_hash, expires_at, user_agent) VALUES (?, ?, ?)')->execute([$nonceHash, $expiresAt, $userAgent]);
+        $this->db->prepare('INSERT INTO n_erp_login_request (nonce_hash, expires_at, user_agent, id_for_employee) VALUES (?, ?, ?, ?)')->execute([$nonceHash, $expiresAt, $userAgent, $forEmployee]);
         return (int) $this->db->lastInsertId();
     }
 
@@ -47,6 +47,14 @@ final class ErpLoginRepository extends WorkshopRepository
     public function userOfEmployee(int $employeeId): ?array
     {
         return $this->all('SELECT u.* FROM n_user_employee ue JOIN user u ON u.id = ue.id_user WHERE ue.id_employee = ?', [$employeeId])[0] ?? null;
+    }
+
+    /** Personnes actives de Czas pracy avec un compte ERP lié (choix sur la page de connexion). */
+    public function linkedPeople(): array
+    {
+        return $this->all('SELECT ue.id_user, e.id AS employee_id, pe.name, pe.surname FROM n_user_employee ue
+                           JOIN n_prod_employee e ON e.id = ue.id_employee AND e.active = 1 JOIN production_employee pe ON pe.id = e.id_production_employee
+                           ORDER BY pe.name, pe.surname');
     }
 
     /** Premier poste du compte (nom de la session). */

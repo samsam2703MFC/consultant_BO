@@ -392,6 +392,26 @@ try {
     [$s] = $call('GET', '/kiosk/phone/erp-login', null, ['X-Qr-Token' => $olaQr, 'X-Phone-Token' => $olaPhone]);
     expectOff($s === 401, 'office personal QR is not a login QR');
 
+    // --- [300] Écran de droite : section → nom → QR de cette personne
+    $secs = $login->sections();
+    expectOff(count($secs) === 1 && $secs[0]['people'] === [['id' => $ola, 'name' => 'Ola B.']], 'sections: linked people only, short names');
+    $threw = false;
+    try { $login->qr(null, $base, null, 80); } catch (InvalidArgumentException $e) { $threw = true; }
+    expectOff($threw, 'no QR for a person without a linked account');
+    $pdo->exec("UPDATE n_prod_clock SET clock_out = NOW() WHERE id_employee = {$ola} AND clock_out IS NULL");
+    $r2 = $login->qr(null, $base, null, $ola);
+    expectOff($login->qr($r2['request'], $base, null, null)['request']['id'] !== $r2['request']['id'], 'other choice → new request');
+    $r2 = $login->qr(null, $base, null, $ola);
+    $claims = json_decode(base64_decode(strtr(explode('.', $tokenOf($r2['qr']))[1], '-_', '+/')), true);
+    expectOff($claims['emp'] === $ola && $claims['lgn'] === $r2['request']['id'], 'QR carries the chosen person');
+    $ph = ['X-Qr-Token' => $tokenOf($r2['qr']), 'X-Phone-Token' => $olaPhone];
+    [$s, $b] = $call('GET', '/kiosk/phone/people', null, ['X-Qr-Token' => $tokenOf($r2['qr'])]);
+    expectOff($s === 200 && array_column($b['data'], 'id') === [$ola], 'first scan: only the chosen person (PIN)');
+    [, $me] = $call('GET', '/kiosk/phone/me', null, $ph);
+    $call('POST', '/kiosk/phone/clock', ['direction' => 'in', 'answers' => $yes($me['data']['questions']['in']), 'signature' => $signature], $ph);
+    [$s, $b] = $call('POST', '/kiosk/phone/erp-login', null, $ph);
+    expectOff($s === 200 && (int) ($login->poll($r2['request'])['id'] ?? 0) === 1, 'chosen person: phone validates, browser opens the account');
+
     // --- [299] Sesja Produkcja : Tablety w menu i w uprawnieniach
     $kp = $pdo->query("SELECT id FROM n_position WHERE code = 'KIEROWNIK_PRODUKCJI'")->fetchColumn();
     if ($kp !== false) {

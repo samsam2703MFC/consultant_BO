@@ -33,23 +33,52 @@ final class ErpLoginService
      * QR pour le navigateur. $current = demande gardée dans sa session [id, nonce] : réutilisée tant qu'elle vaut encore
      * 30 s et n'est pas validée, sinon nouvelle demande. @return array{request:array{id:int, nonce:string}, qr:array}
      */
-    public function qr(?array $current, string $base, ?string $userAgent): array
+    /**
+     * Page de connexion, écran de droite : sections (session ouverte) → personnes avec un compte lié, « Anna S. ».
+     * Ordre : Produkcja, Finanse, autres, Administracja. @return list<array{name:string, people:list<array{id:int, name:string}>}>
+     */
+    public function sections(): array
     {
+        $by = [];
+        foreach ($this->repo->linkedPeople() as $p) {
+            $area = $this->sessionName((int) $p['id_user']);
+            $by[$area][] = ['id' => (int) $p['employee_id'], 'name' => self::shortName((string) $p['name'], (string) $p['surname'])];
+        }
+        $rank = fn(string $a) => ['Produkcja' => 0, 'Finanse' => 1, 'Administracja' => 9][$a] ?? 5;
+        uksort($by, fn($a, $b) => [$rank($a), $a] <=> [$rank($b), $b]);
+        $out = [];
+        foreach ($by as $name => $people) $out[] = ['name' => $name, 'people' => $people];
+        return $out;
+    }
+
+    /** « Anna S. » : prénom et initiale (la page de connexion n'est pas protégée). */
+    public static function shortName(string $name, string $surname): string
+    {
+        $i = mb_substr(trim($surname), 0, 1);
+        return trim(trim($name) . ($i !== '' ? ' ' . mb_strtoupper($i) . '.' : ''));
+    }
+
+    public function qr(?array $current, string $base, ?string $userAgent, ?int $forEmployee = null): array
+    {
+        if ($forEmployee !== null && !in_array($forEmployee, array_column($this->repo->linkedPeople(), 'employee_id'), false)) {
+            throw new \InvalidArgumentException('Nieznana osoba.');
+        }
         $device = (int) $this->params->get('erp.qr_device_id', '0');
         if ($device <= 0) throw new \RuntimeException('Brak urządzenia kodów QR (migracja 174).');
         $ttl = max(60, min(600, (int) $this->params->get('erp.login_qr_ttl_s', '180')));
         $row = $current ? $this->repo->request((int) $current['id']) : null;
         $valid = $row && hash_equals($row['nonce_hash'], hash('sha256', (string) $current['nonce'])) && $row['approved_at'] === null
-            && strtotime((string) $row['expires_at']) - time() > 30;
+            && strtotime((string) $row['expires_at']) - time() > 30
+            && ($row['id_for_employee'] !== null ? (int) $row['id_for_employee'] : null) === $forEmployee;
         if (!$valid) {
             $this->repo->purge();
             $nonce = bin2hex(random_bytes(32));
             $ua = $userAgent !== null ? mb_substr(trim(preg_replace('/\s+/', ' ', $userAgent)), 0, 160) : null;
-            $current = ['id' => $this->repo->create(hash('sha256', $nonce), date('Y-m-d H:i:s', time() + $ttl), $ua), 'nonce' => $nonce];
+            $current = ['id' => $this->repo->create(hash('sha256', $nonce), date('Y-m-d H:i:s', time() + $ttl), $ua, $forEmployee), 'nonce' => $nonce];
             $row = $this->repo->request($current['id']);
         }
         $left = max(30, strtotime((string) $row['expires_at']) - time());
-        return ['request' => ['id' => (int) $current['id'], 'nonce' => (string) $current['nonce']], 'qr' => $this->kiosk->erpLoginQr($device, (int) $current['id'], $base, $left)];
+        return ['request' => ['id' => (int) $current['id'], 'nonce' => (string) $current['nonce']], 'qr' => $this->kiosk->erpLoginQr($device, (int) $current['id'], $base, $left, $forEmployee)];
     }
 
     /** Navigateur qui attend : compte à ouvrir quand le téléphone a validé (une seule fois), sinon null. */
@@ -75,7 +104,8 @@ final class ErpLoginService
     /** Téléphone : validation (l'entrée doit être pointée). */
     public function approve(int $requestId, int $employeeId): array
     {
-        $this->pending($requestId);
+        $row = $this->pending($requestId);
+        if ($row['id_for_employee'] !== null && (int) $row['id_for_employee'] !== $employeeId) throw new ApiException('QR_INVALID', 401);
         $user = $this->repo->userOfEmployee($employeeId) ?? throw new ApiException('ERP_LOGIN_NO_ACCOUNT', 409);
         if ($this->repo->openClock($employeeId) === null) throw new ApiException('ERP_LOGIN_CLOCK_FIRST', 409);
         if (!$this->repo->approve($requestId, $employeeId, (int) $user['id'])) throw new ApiException('QR_EXPIRED', 401);

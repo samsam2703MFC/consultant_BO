@@ -24,11 +24,18 @@ class LoginController extends BaseController
         try { return $this->qrLogin->enabled(); } catch (\Throwable $e) { return false; }
     }
 
+    /** [300] Écran de droite : sections → personnes (compte lié). */
+    private function qrSections(): array
+    {
+        try { return $this->qrLogin->sections(); } catch (\Throwable $e) { error_log('[login-qr] ' . $e->getMessage()); return []; }
+    }
+
     /** GET /ajax/login-qr?base=… : kod dla tej przeglądarki (demande gardée dans sa session). */
     public function qr()
     {
         try {
-            $r = $this->qrLogin->qr($_SESSION['ERP_LOGIN_QR'] ?? null, (string) ($_GET['base'] ?? ''), $_SERVER['HTTP_USER_AGENT'] ?? null);
+            $for = ctype_digit((string) ($_GET['employee'] ?? '')) ? (int) $_GET['employee'] : null;
+            $r = $this->qrLogin->qr($_SESSION['ERP_LOGIN_QR'] ?? null, (string) ($_GET['base'] ?? ''), $_SERVER['HTTP_USER_AGENT'] ?? null, $for);
             $_SESSION['ERP_LOGIN_QR'] = $r['request'];
             return $this->json(['data' => $r['qr']]);
         } catch (\Throwable $e) {
@@ -60,7 +67,8 @@ class LoginController extends BaseController
 
     public function index()
     {
-        $this->view('auth/login', ['entreeLibre' => $this->entreeLibre() !== '', 'qrLogin' => $this->qrEnabled()]);
+        $qr = $this->qrEnabled();
+        $this->view('auth/login', ['entreeLibre' => $this->entreeLibre() !== '', 'qrLogin' => $qr, 'qrSections' => $qr ? $this->qrSections() : []]);
     }
 
     public function login()
@@ -81,7 +89,8 @@ class LoginController extends BaseController
 
         if($login === '' || $password === '' || !$this->loginService->login($login, $password)) {
             $this->errors[] = "Nieprawidłowy login lub hasło.";
-            $this->view('auth/login', ['qrLogin' => $this->qrEnabled(), 'showPassword' => true]);
+            $qr = $this->qrEnabled();
+            $this->view('auth/login', ['qrLogin' => $qr, 'qrSections' => $qr ? $this->qrSections() : [], 'showPassword' => true]);
         } else {
             header('Location: ' . ROOT . '/home');
         }

@@ -405,11 +405,13 @@ final class KioskAuthService
         return $this->qrPayload(['dev' => $deviceId, 'emp' => $employeeId, 'day' => date('Y-m-d')], $base, $ttl) + ['refresh_s' => max(10, $ttl - 15)];
     }
 
-    /** [300] QR de connexion à l'ERP : numéro de la demande (lgn), sans personne — le téléphone dit qui se connecte. */
-    public function erpLoginQr(int $deviceId, int $requestId, string $base, int $ttl): array
+    /** [300] QR de connexion à l'ERP : numéro de la demande (lgn) et, si choisie sur la page, la personne (emp). */
+    public function erpLoginQr(int $deviceId, int $requestId, string $base, int $ttl, ?int $employeeId = null): array
     {
         $ttl = max(30, min(600, $ttl));
-        return $this->qrPayload(['dev' => $deviceId, 'lgn' => $requestId, 'day' => date('Y-m-d')], $base, $ttl) + ['refresh_s' => max(10, $ttl - 20)];
+        // Personne choisie sur la page (emp) : seul son téléphone valide (QR_OTHER_PERSON), premier scan : son PIN seulement.
+        $claims = ['dev' => $deviceId, 'lgn' => $requestId] + ($employeeId !== null ? ['emp' => $employeeId] : []) + ['day' => date('Y-m-d')];
+        return $this->qrPayload($claims, $base, $ttl) + ['refresh_s' => max(10, $ttl - 20)];
     }
 
     /** [300] Demande de connexion portée par un QR valide (null : QR d'une tablette ou personnel). */

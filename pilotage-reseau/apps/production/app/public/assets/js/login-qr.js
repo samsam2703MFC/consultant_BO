@@ -1,6 +1,7 @@
 /*
  * [300] Logowanie do ERP kodem QR (makieta 55). Strona logowania : kod dla tej przeglądarki (odnawiany sam) ; osoba
  * skanuje go telefonem, odbija wejście i zatwierdza na telefonie → ta strona otwiera jej sesję (konto powiązane z osobą).
+ * Ekran po prawej (#loginSections) : sekcja → nazwisko → kod tej osoby (tylko jej telefon go zatwierdza).
  * « Nie mam telefonu » : formularz hasła (zapasowy).
  */
 (function () {
@@ -13,6 +14,11 @@
     const canvas = box.querySelector('[data-lq-qr]');
     const meta = box.querySelector('[data-lq-meta]');
     const pad = (n) => String(n).padStart(2, '0');
+    const choose = !!box.dataset.choose;
+    const who = box.querySelector('[data-lq-who]');
+    const empty = box.querySelector('[data-lq-empty]');
+    const sections = document.getElementById('loginSections');
+    let employee = null;
     let timer = null, poll = null, tick = null, expires = 0, done = false;
 
     function draw(q) {
@@ -33,7 +39,7 @@
 
     async function refresh() {
         try {
-            const q = await get('/ajax/login-qr?base=' + encodeURIComponent(base));
+            const q = await get('/ajax/login-qr?base=' + encodeURIComponent(base) + (employee ? '&employee=' + employee : ''));
             if (done) return;
             draw(q);
             expires = Date.now() + q.expires_in * 1000;
@@ -59,7 +65,7 @@
     }
 
     function start() {
-        if (done) return;
+        if (done || (choose && !employee)) return;
         refresh();
         poll = setInterval(check, 2000);
         tick = setInterval(() => {
@@ -76,5 +82,25 @@
         const f = pw.querySelector('input[name=login]'); if (f) f.focus();
     });
     pw.querySelector('[data-lq-back]').addEventListener('click', () => { pw.hidden = true; box.hidden = false; start(); });
+    // Sekcja → nazwisko : kod tej osoby po lewej (nowy kod przy zmianie osoby).
+    if (sections) {
+        sections.addEventListener('click', (e) => {
+            const tab = e.target.closest('[data-lq-sec]');
+            if (tab) {
+                sections.querySelectorAll('[data-lq-sec]').forEach(b => b.classList.toggle('is-on', b === tab));
+                sections.querySelectorAll('[data-lq-people]').forEach(d => { d.hidden = d.dataset.lqPeople !== tab.dataset.lqSec; });
+                return;
+            }
+            const b = e.target.closest('[data-lq-person]');
+            if (!b || done) return;
+            sections.querySelectorAll('[data-lq-person]').forEach(x => x.classList.toggle('is-on', x === b));
+            employee = b.dataset.lqPerson;
+            who.textContent = 'Kod dla : ' + b.dataset.name + ' · ' + b.dataset.section;
+            who.hidden = false; empty.hidden = true;
+            pw.hidden = true; box.hidden = false;
+            stop(); expires = 0; meta.textContent = 'Wczytywanie kodu…';
+            start();
+        });
+    }
     if (!box.hidden) start();
 })();
