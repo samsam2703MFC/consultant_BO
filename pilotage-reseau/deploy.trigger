@@ -37,3 +37,4 @@
 2026-11-15T20:59:37Z Analyse : la période au choix (serveur)
 2026-11-15T21:04:50Z Analyse : la période au choix (écran)
 2026-11-15T21:14:27Z Analyse : la période dans l'adresse
+2026-11-16T08:16:54Z [295] mode cohabitation (serveur local), perte en n_raw_material_loss, interrupteur envois automatiques
