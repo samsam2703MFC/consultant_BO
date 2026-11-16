@@ -81,3 +81,4 @@
 2026-11-16 19:47:46 [330] Palety klienta (makieta 60)
 2026-11-16 19:56:09 [331] Załadunek (makieta 61 B)
 2026-11-16 19:58:57 [332] Załadunek épuré
+2026-11-16 20:02:50 [322] KSeF : duplicat 440 = facture acceptée
