@@ -89,6 +89,24 @@ final class PageAccessService
         return $p['ceo'] || ($p['admin'] && ViewSession::ceo());
     }
 
+    /** [312] Stanowisko Finanse (« Administracja i fakturowanie ») : wartości zamówień i płatności. */
+    public const FINANCE_POSITION = 'ADMINISTRACJA';
+
+    /**
+     * [312] Wartości zamówień klientów : tylko profil Finanse i profil CEO — konto CEO, administrator z profilem CEO albo
+     * w sesji Finanse, osoba ze stanowiskiem Finanse. Administrator w pełnym widoku ich nie widzi (wybiera profil).
+     */
+    public function seesOrderValues(?int $userId): bool
+    {
+        if (!$userId) return false;
+        if ($this->ceoView($userId)) return true;
+        $p = $this->profile($userId);
+        $positionId = $p['admin'] ? $this->viewPosition($userId) : $this->repo->userPosition($userId);
+        if ($positionId === null) return false;
+        $codes = array_column($this->repo->positions(), 'code', 'id');
+        return ($codes[$positionId] ?? null) === self::FINANCE_POSITION;
+    }
+
     /** [281] Konta CEO (powiadomienia o prośbach o odblokowanie). @return list<int> */
     public function ceoUsers(): array
     {
