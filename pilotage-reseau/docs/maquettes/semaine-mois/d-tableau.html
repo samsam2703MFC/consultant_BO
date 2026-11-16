@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D · Le tableau — Dashboard magasin › Semaine et Mois</title>
+<!-- Direction D (16/11/2026) : un seul tableau, chaque indicateur une fois, face à la période d'avant, à N-1, à l'objectif ou au seuil, et au réseau ; puis les jours. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="sm.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="donnees.js"></script>
+<script src="blocs.js"></script>
+</head><body><script>
+const c = X.cmp, S = P === 'semaine';
+const spark = (L, L2) => { const all = L.concat(L2), mn = Math.min(...all), mx = Math.max(...all), w = 110, h = 26;
+  const pts = A => A.map((v, i) => (i * w / (A.length - 1)).toFixed(1) + ',' + (h - 2 - (v - mn) / (mx - mn) * (h - 4)).toFixed(1)).join(' ');
+  return `<svg class="sm-spark" width="${w}" height="${h}"><polyline points="${pts(L2)}" fill="none" stroke="#b8b2a8" stroke-dasharray="3 2" stroke-width="1.2"/><polyline points="${pts(L)}" fill="none" stroke="#8D1D2C" stroke-width="1.8"/></svg>`; };
+// [libellé, sous-titre, moi, avant, n1, cible, réseau, format, plus haut = mieux ?, sparkline]
+const pc = v => fP(v), eu = v => fE(v), nb = v => fN(v), pa = v => v.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €', at = v => v == null ? '—' : v + ' %';
+const R = [
+  ['Chiffre d’affaires', 'TVA comprise', X.ca, c.avant.ca, c.n1.ca, X.objectif, c.reseau.ca, eu, true, S ? null : spark(X.tendance, X.tendanceN1)],
+  ['Atteinte de l’objectif', 'objectif réparti par jour', att(), c.avant.atteinte, null, 100, c.reseau.atteinte, at, true],
+  ['Clients', 'tickets', X.clients, c.avant.clients, c.n1.clients, null, c.reseau.clients, nb, true, S ? spark(X.tendance, X.tendanceN1) : null],
+  ['Panier moyen', 'hors clients pro', X.panier, c.avant.panier, c.n1.panier, null, c.reseau.panier, pa, true],
+  ['Marge brute', 'ventes − matière, hors TVA', X.mbPct, c.avant.mbPct, c.n1.mbPct, 100 - SEUILS.matiere, c.reseau.mbPct, pc, true, null, true],
+  ['Main-d’œuvre', '% des ventes hors TVA', X.moPct, c.avant.moPct, c.n1.moPct, SEUILS.mo, c.reseau.moPct, pc, false, null, true],
+  ['Frais généraux', '% des ventes hors TVA', X.fraisPct, c.avant.fraisPct, c.n1.fraisPct, SEUILS.frais, c.reseau.fraisPct, pc, false, null, true],
+  ['Invendus', `${X.invendusPcs} pièces · ${fE(X.invendus)}`, X.invendusPct, c.avant.invendusPct, c.n1.invendusPct, null, c.reseau.invendusPct, pc, false],
+  ['Résultat hors TVA', fE(X.net), X.netPct, c.avant.netPct, c.n1.netPct, 0, c.reseau.netPct, pc, true, null, true]];
+const lignes = R.map(([l, s, moi, av, n1, cib, res, f, haut, sp, sep], i) => {
+  const bon = cib == null ? null : haut ? moi >= cib : moi <= cib;
+  const d = (v) => { if (v == null) { return '—'; } const e = f === pc ? Math.round((moi - v) * 10) / 10 : ecart(moi, v); const ok = haut ? e >= 0 : e <= 0;
+    return `${f(v)}<small class="e ${ok ? 'sm-ok' : 'sm-ko'}">${f === pc ? (e > 0 ? '+' : e < 0 ? '−' : '') + Math.abs(e).toLocaleString('fr-FR') + ' pt' : sgn(e)}</small>`; };
+  return `<tr class="${i === 4 ? 'sep' : ''}"><td>${l}<small>${s}</small>${sp ? `<div style="margin-top:4px">${sp}</div>` : ''}</td><td class="moi ${bon == null ? '' : bon ? 'sm-ok' : 'sm-ko'}">${f(moi)}</td><td>${d(av)}</td><td>${d(n1)}</td><td>${cib == null ? '—' : (haut ? '≥ ' : '≤ ') + f(cib)}</td><td>${d(res)}</td></tr>`;
+}).join('');
+const corps = `${frise()}
+  ${carte(S ? 'La semaine en un tableau' : 'Le mois en un tableau', 'sous chaque comparaison : l’écart de ' + X.court + ' · vert = mieux', `<table class="sm-t"><thead><tr><th>Indicateur</th><th>${X.court}</th><th>${X.avant}</th><th>${X.n1}</th><th>Objectif ou seuil</th><th>Réseau · moyenne</th></tr></thead><tbody>${lignes}</tbody></table>`)}
+  <div style="height:12px"></div>${jours(true)}
+  ${plus(PLUS())}`;
+coque({ actif: P, titre: X.titre, kicker: 'Atelier by Harmonie - Sombreffe · ' + X.lib, corps, pied: piedSM('D · Le tableau') });
+</script></body></html>

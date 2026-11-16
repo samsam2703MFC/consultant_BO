@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C · Le récit — Dashboard magasin › Semaine et Mois</title>
+<!-- Direction C (16/11/2026) : la période en une phrase, puis ce qui a marché, ce qui coince et quoi faire ; deux graphiques seulement (les jours, le résultat). Les phrases se calculent à partir des chiffres (seuils du réseau, objectif du jour, panier du réseau). -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="sm.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="donnees.js"></script>
+<script src="blocs.js"></script>
+</head><body><script>
+const c = X.cmp, J = X.jours, pj = j => Math.round(100 * j[1] / j[2]);
+const JL = { 'lun.': 'lundi', 'mar.': 'mardi', 'mer.': 'mercredi', 'jeu.': 'jeudi', 'ven.': 'vendredi', 'sam.': 'samedi', 'dim.': 'dimanche' }, jl = j => JL[j] || j;
+const S = P === 'semaine';
+const tri = J.slice().sort((a, b) => pj(b) - pj(a)), hauts = J.filter(j => pj(j) >= 100).length;
+const haut = att() >= 100, lien = haut === (X.net >= 0) ? 'et' : 'mais';
+const phrase = `${S ? 'Semaine' : 'Octobre'} ${haut ? 'au-dessus' : 'en dessous'} de l’objectif (<b>${att()} %</b>), ${lien} ${X.net < 0 ? '<b class="sm-ko">à perte : ' + fE(X.net) + '</b>' : 'bénéficiaire : <b class="sm-ok">' + fE(X.net) + '</b>'}. Les frais généraux pèsent <b>${fP(X.fraisPct)}</b> des ventes pour un seuil de ${fP(SEUILS.frais)}, la main-d’œuvre <b>${fP(X.moPct)}</b> pour ${SEUILS.mo} %.`;
+const pt = (i, coul, t, s) => `<div><span class="i" style="background:${coul}">${i}</span><span>${t}<small>${s}</small></span></div>`;
+const fin = J.slice(-6), finP = Math.round(100 * fin.reduce((a, j) => a + j[1], 0) / fin.reduce((a, j) => a + j[2], 0));
+const marche = S ? [
+  ['Le week-end', `samedi ${pj(J[5])} %, dimanche ${pj(J[6])} % de l’objectif · ${fE(J[5][1] + J[6][1])} en deux jours`],
+  ['Plus de clients que la semaine d’avant', `${fN(X.clients)} (${sgn(ecart(X.clients, c.avant.clients))} vs ${X.avant})`],
+  ['Invendus contenus', `${fP(X.invendusPct)} des ventes · ${X.invendusPcs} pièces`]] : [
+  [`${hauts} jours sur ${J.length} au-dessus de l’objectif`, `le meilleur : le ${tri[0][0]} (${pj(tri[0])} %)`],
+  ['Les clients pro', `${fP(X.proPct)} du chiffre d’affaires · ${fE(X.pro)}`],
+  ['Invendus contenus', `${fP(X.invendusPct)} des ventes · ${X.invendusPcs} pièces`]];
+const coince = S ? [
+  ['Frais généraux', `${fP(X.fraisPct)} des ventes (seuil ${fP(SEUILS.frais)}) · ${fE(X.frais)} sur la semaine`],
+  [`Le ${jl(tri[6][0])} et le ${jl(tri[5][0])} sous l’objectif`, `${jl(tri[6][0])} ${pj(tri[6])} %, ${jl(tri[5][0])} ${pj(tri[5])} %`],
+  ['Le panier', `${X.panier.toLocaleString('fr-FR')} € — le réseau est à ${c.reseau.panier.toLocaleString('fr-FR')} € (${X.rang.panier})`]] : [
+  ['Frais généraux', `${fP(X.fraisPct)} des ventes (seuil ${fP(SEUILS.frais)}) · ${fE(X.frais)} sur le mois`],
+  ['La fin du mois', `du ${fin[0][0]} au ${fin[5][0]} : ${finP} % de l’objectif`],
+  ['Le panier', `${X.panier.toLocaleString('fr-FR')} € — le réseau est à ${c.reseau.panier.toLocaleString('fr-FR')} € (${X.rang.panier})`]];
+const faire = S ? [
+  ['Revoir les frais généraux', 'onglet Frais : chaque poste, sa TVA, ce qui peut baisser', 'Ouvrir Frais ▸'],
+  [`Le ${jl(tri[6][0])} : une offre sur le creux de l’après-midi`, '14–17 h rapporte le moins', 'Créer une promotion ▸'],
+  ['Le panier : la vente additionnelle', 'boisson + viennoiserie au comptoir, objectif +1 € par client', 'Voir les primes ▸']] : [
+  ['Revoir les frais fixes avec le consultant', `${fE(X.frais)} de frais généraux pour ${fE(X.caHt)} de ventes hors TVA`, 'Ouvrir Frais ▸'],
+  ['Préparer la fin de mois', 'relancer les clients pro et les commandes avant le 25', 'Voir les clients pro ▸'],
+  ['Le panier : la vente additionnelle', 'objectif +1 € par client, soit ' + fE(X.clients) + ' sur le mois', 'Voir les primes ▸']];
+const corps = `${frise()}
+  <div class="db-card sm-titre"><span class="k">${X.lib}</span><p>${phrase}</p></div>
+  <div class="sm-g3">
+    ${carte('Ce qui a marché', '', `<div class="sm-pts">${marche.map(([t, s]) => pt('✓', '#2e7d32', t, s)).join('')}</div>`, 'sm-ct-ok')}
+    ${carte('Ce qui coince', '', `<div class="sm-pts">${coince.map(([t, s]) => pt('!', '#A32014', t, s)).join('')}</div>`, 'sm-ct-ko')}
+    ${carte(S ? 'À faire cette semaine' : 'À faire ce mois-ci', '', `<div class="sm-pts">${faire.map(([t, s, a], i) => pt(i + 1, 'var(--accent)', t, s + `<br><span class="sm-act">${a}</span>`)).join('')}</div>`, 'sm-ct-do')}
+  </div>
+  <div class="sm-g2" style="margin-top:12px">${jours(true)}${resultat(true)}</div>
+  ${plus(PLUS())}`;
+coque({ actif: P, titre: X.titre, kicker: 'Atelier by Harmonie - Sombreffe · ' + X.lib, corps, pied: piedSM('C · Le récit') + ' Les actions proposées sont d’exemple.' });
+</script></body></html>
