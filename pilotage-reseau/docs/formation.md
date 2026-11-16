@@ -1064,3 +1064,20 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
      l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
   5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
      `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».
+
+## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026)
+
+- Client : « faire une mini formation pour expliquer les leviers de développement du chiffre d'affaires et l'intégrer
+  dans le manuel opératoire », puis « dans la formation gestion il y a le pôle achat et le pôle vente » → FO-41 Gestion
+  financière avancée, pôle vente.
+- **Article du manuel** `art-fo41-vente`, « Pôle vente : les leviers du chiffre d'affaires » (NL « Verkoop: de
+  hefbomen van de omzet ») : CA = clients × panier, panier = articles × prix ; le trafic, le panier, le prix (gestes,
+  où les lire au dashboard, ce que chacun rapporte au résultat), les trois ensemble (le triangle du dossier Sombreffe,
+  sur un magasin type), la même équipe qui pèse moins, un levier par semaine. 6 sections, 15 parties, 9 photos (six
+  schémas `lev-*.jpg`, trois captures du dashboard déjà au serveur), 4 points critiques, quiz de 5 questions.
+- Classement : FO-41, D7.4, Formation continue, P7 à P12, C-PILOTAGE.Finance et .Vente ; accès `tous` (bouton
+  « Manuel opératoire » de la tablette) ; code donné à la création (`foCodeAuto`).
+- Source : `data/formation/gestion/` (voir son `LISEZMOI.md`) ; schémas : `tools/formation/schemas_leviers.js` ;
+  l'encodeur affiche maintenant le code reçu à la création. **v1.0 « à valider », pas encore encodée** (l'adresse de
+  l'API du cockpit n'était pas dans la session) ; contenu passé par `foContenu` / `foContenuErreur` (aucune erreur) et
+  vu sur la vraie tablette (`sop/tablette.html?sop=art-fo41-vente&apercu=1`) avec un faux serveur, FR et NL.
