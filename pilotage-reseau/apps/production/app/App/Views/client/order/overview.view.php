@@ -93,9 +93,8 @@
                                         <input type="checkbox" class="form-check-input" onClick="togglePending(this)" checked>
                                     </th>
                                     <th style="width:24%">Firma</th>
-                                    <th style="width:<?= !empty($showValues) ? 13 : 22 ?>%">Opis</th>
+                                    <th style="width:<?= !empty($showValues) ? 22 : 31 ?>%">Opis</th>
                                     <th style="width:9%" class="text-center">Data zamówienia</th>
-                                    <th style="width:9%" class="text-center">Wysyłka</th>
                                     <th style="width:9%" class="text-end">Waga</th>
                                     <?php if (!empty($showValues)): ?><th style="width:9%" class="text-end">Wartość</th><?php endif; ?>
                                     <th style="width:14%" class="text-start">Płatność</th>
@@ -105,7 +104,8 @@
                             <tbody>
                             <?php
                                 // [312] Wartości (profil Finanse / CEO) : suma dnia wysyłki w nagłówku dnia.
-                                $cols = 8 + (!empty($showValues) ? 1 : 0);
+                                // [316] Bez kolumny « Wysyłka » : data wysyłki = nagłówek dnia (bez powtarzania w każdym wierszu).
+                                $cols = 7 + (!empty($showValues) ? 1 : 0);
                                 $dayTotals = [];
                                 // [315] Sumy na trasę w dniu wysyłki : zamówienia, kg, (Finanse / CEO) wartość według waluty.
                                 $tourTotals = [];
@@ -129,12 +129,16 @@
 
                                     <?php if ($pending[$i]['expected_shipping_date'] != @$pending[$i - 1]['expected_shipping_date'] || $i == 0): ?>
                                         <tr class="table-secondary">
-                                            <td colspan="<?= !empty($showValues) ? $cols - 3 : $cols ?>" class="ps-3 py-2">
+                                            <?php $dayKg = array_sum(array_column($tourTotals[$pending[$i]['expected_shipping_date']] ?? [], 'kg')); ?>
+                                            <td colspan="<?= !empty($showValues) ? $cols - 4 : $cols - 3 ?>" class="ps-3 py-2">
                                                 <i class="bi bi-calendar-event me-2 text-secondary"></i>
                                                 <strong class="text-secondary">
                                                     <?= day_label_pl($pending[$i]['expected_shipping_date']) ?>
                                                 </strong>
                                             </td>
+                                            <!-- Waga dnia w kolumnie « Waga » -->
+                                            <td class="text-end text-nowrap small py-2 at-num"><strong class="text-secondary"><?= $kgFmt($dayKg) ?></strong></td>
+                                            <?php if (empty($showValues)): ?><td colspan="2"></td><?php endif; ?>
                                             <?php if (!empty($showValues)): ?>
                                                 <!-- Suma dnia w kolumnie « Wartość » -->
                                                 <td class="text-end text-nowrap py-2 at-num">
@@ -146,20 +150,27 @@
                                                 <td colspan="2"></td>
                                             <?php endif; ?>
                                         </tr>
-                                        <?php $dayTours = $tourTotals[$pending[$i]['expected_shipping_date']] ?? []; ?>
-                                        <?php if (count($dayTours) > 1 || !isset($dayTours[''])): ?>
-                                            <tr class="at-tour-sum">
-                                                <td colspan="<?= $cols ?>" class="ps-3 py-1">
-                                                    <?php foreach ($dayTours as $tourName => $tt): ?>
-                                                        <span class="at-tour-chip<?= $tourName === '' ? ' is-none' : '' ?>">
-                                                            <i class="bi bi-signpost-split me-1"></i><strong><?= htmlspecialchars($tourName === '' ? 'Bez trasy' : $tourName) ?></strong>
-                                                            <span><?= $tt['orders'] ?> zam. · <?= count($tt['customers']) ?> kl. · <?= $kgFmt($tt['kg']) ?></span>
-                                                            <?php if (!empty($showValues)): foreach ($tt['value'] as $cur => $v): ?><span class="at-tour-val"><?= $money($v, $cur) ?></span><?php endforeach; endif; ?>
-                                                        </span>
-                                                    <?php endforeach; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endif; ?>
+                                    <?php endif; ?>
+
+                                    <?php
+                                        // [316] Trasa : podtytuł nad jej zamówieniami (zamiast etykiety w każdym wierszu), sumy w kolumnach Waga / Wartość.
+                                        $dayTours = $tourTotals[$pending[$i]['expected_shipping_date']] ?? [];
+                                        $tourKey = $pending[$i]['tour'] ?? '';
+                                        $newTour = $i === 0 || $pending[$i]['expected_shipping_date'] != $pending[$i - 1]['expected_shipping_date'] || ($pending[$i - 1]['tour'] ?? '') !== $tourKey;
+                                    ?>
+                                    <?php if ($newTour && (count($dayTours) > 1 || !isset($dayTours['']))): $tt = $dayTours[$tourKey]; ?>
+                                        <tr class="at-tour-sum<?= $tourKey === '' ? ' is-none' : '' ?>">
+                                            <td></td>
+                                            <td colspan="<?= $cols - (!empty($showValues) ? 5 : 4) ?>" class="py-1">
+                                                <i class="bi bi-signpost-split me-1"></i><strong><?= htmlspecialchars($tourKey === '' ? 'Bez trasy' : $tourKey) ?></strong>
+                                                <span class="at-tour-meta"><?= $tt['orders'] ?> zam. · <?= count($tt['customers']) ?> kl.</span>
+                                            </td>
+                                            <td class="text-end text-nowrap small py-1 at-num"><?= $kgFmt($tt['kg']) ?></td>
+                                            <?php if (!empty($showValues)): ?>
+                                                <td class="text-end text-nowrap py-1 at-num at-tour-val"><?php foreach ($tt['value'] as $cur => $v): ?><span class="d-block"><?= $money($v, $cur) ?></span><?php endforeach; ?></td>
+                                            <?php endif; ?>
+                                            <td colspan="2"></td>
+                                        </tr>
                                     <?php endif; ?>
 
                                     <?php
@@ -208,9 +219,6 @@
                                             <?php else: ?>
                                                 <?= htmlspecialchars($pending[$i]['company']) ?>
                                             <?php endif; ?>
-                                            <?php if (!empty($pending[$i]['tour'])): ?>
-                                                <br><span class="at-tour-tag" title="Trasa w dniu wysyłki"><i class="bi bi-signpost-split"></i> <?= htmlspecialchars($pending[$i]['tour']) ?></span>
-                                            <?php endif; ?>
                                             <?php if (!empty($pending[$i]['proforma_stale'])): ?>
                                                 <span class="badge bg-warning text-dark ms-1" title="Zamówienie zostało zmienione po wystawieniu proformy">Proforma nieaktualna</span>
                                             <?php endif; ?>
@@ -233,10 +241,6 @@
                                             <?= $pending[$i]['create_order_time'] ?>
                                         </td>
 
-                                        <!-- Data wysyłki -->
-                                        <td class="text-nowrap small text-center">
-                                            <i class="bi bi-truck me-1 text-primary"></i><?= $pending[$i]['expected_shipping_date'] ?>
-                                        </td>
 
                                         <!-- Waga -->
                                         <td class="text-end text-nowrap small at-num">
@@ -698,14 +702,13 @@
 .at-pay-switch input:checked + .at-pay-track::after{transform:translateX(14px)}
 .at-pay-switch input:focus-visible + .at-pay-track{outline:2px solid #8D1D2C;outline-offset:2px}
 .at-pay-switch input:checked ~ .at-pay-text{color:#2E7D4F;font-weight:600}
-.at-tour-sum td{background:#FBF7F5;border-bottom:1px solid #EFE8DF}
-.at-tour-chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #E7DFD5;border-radius:8px;padding:4px 10px;margin:3px 6px 3px 0;font-size:13px;color:#44403C}
-.at-tour-chip.is-none{color:#78716C;border-style:dashed}
-.at-tour-chip .at-tour-val{font-weight:700;color:#8D1D2C}
+.at-tour-sum td{background:#FBF7F5;border-bottom:1px solid #EFE8DF;font-size:.82rem;color:#44403C}
+.at-tour-sum.is-none td{color:#78716C}
+.at-tour-sum .at-tour-meta{color:#78716C;margin-left:8px}
+.at-tour-sum .at-tour-val{font-weight:700;color:#8D1D2C}
 .at-orders td,.at-orders th{vertical-align:middle}
 .at-orders .at-num{font-variant-numeric:tabular-nums}
 .at-orders thead th{white-space:nowrap}
-.at-tour-tag{display:inline-block;margin:3px 0 0;font-size:11.5px;color:#5f5852;background:#F1EBE3;border-radius:6px;padding:1px 7px;white-space:nowrap}
 .at-pay-switch input:not(:checked) ~ .at-pay-text{color:#B45309;font-weight:600}
 .at-pay-remind{border:1px solid #e3ddd8;background:#fff;border-radius:8px;width:30px;height:28px;display:inline-grid;place-items:center;color:#8D1D2C}
 .at-pay-remind:hover{background:#fbf3f3}
