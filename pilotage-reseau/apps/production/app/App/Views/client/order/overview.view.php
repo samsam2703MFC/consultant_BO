@@ -107,10 +107,21 @@
                                 // [312] Wartości (profil Finanse / CEO) : suma dnia wysyłki w nagłówku dnia.
                                 $cols = 8 + (!empty($showValues) ? 1 : 0);
                                 $dayTotals = [];
+                                // [315] Sumy na trasę w dniu wysyłki : zamówienia, kg, (Finanse / CEO) wartość według waluty.
+                                $tourTotals = [];
                                 foreach ($pending ?? [] as $o) {
                                     $k = $o['expected_shipping_date'] . '|' . strtoupper((string) ($o['currency'] ?? 'EUR'));
                                     $dayTotals[$k] = ($dayTotals[$k] ?? 0) + (float) ($o['order_value'] ?? 0);
+                                    $t = &$tourTotals[$o['expected_shipping_date']][$o['tour'] ?? ''];
+                                    $t ??= ['orders' => 0, 'kg' => 0.0, 'customers' => [], 'value' => []];
+                                    $t['orders']++;
+                                    $t['kg'] += (float) ($o['totalSumKg'] ?? 0);
+                                    $t['customers'][(int) ($o['id_customer'] ?? 0)] = true;
+                                    $cur = strtoupper((string) ($o['currency'] ?? 'EUR'));
+                                    $t['value'][$cur] = ($t['value'][$cur] ?? 0) + (float) ($o['order_value'] ?? 0);
+                                    unset($t);
                                 }
+                                $kgFmt = fn($v) => number_format((float) $v, 0, ',', ' ') . ' kg';
                                 $money = fn($v, $cur) => number_format((float) $v, 2, ',', ' ') . ' ' . (strtoupper((string) $cur) === 'EUR' ? '€' : strtoupper((string) $cur));
                             ?>
                             <?php if (!empty($pending)): ?>
@@ -130,6 +141,20 @@
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
+                                        <?php $dayTours = $tourTotals[$pending[$i]['expected_shipping_date']] ?? []; ?>
+                                        <?php if (count($dayTours) > 1 || !isset($dayTours[''])): ?>
+                                            <tr class="at-tour-sum">
+                                                <td colspan="<?= $cols ?>" class="ps-3 py-1">
+                                                    <?php foreach ($dayTours as $tourName => $tt): ?>
+                                                        <span class="at-tour-chip<?= $tourName === '' ? ' is-none' : '' ?>">
+                                                            <i class="bi bi-signpost-split me-1"></i><strong><?= htmlspecialchars($tourName === '' ? 'Bez trasy' : $tourName) ?></strong>
+                                                            <span><?= $tt['orders'] ?> zam. · <?= count($tt['customers']) ?> kl. · <?= $kgFmt($tt['kg']) ?></span>
+                                                            <?php if (!empty($showValues)): foreach ($tt['value'] as $cur => $v): ?><span class="at-tour-val"><?= $money($v, $cur) ?></span><?php endforeach; endif; ?>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
                                     <?php endif; ?>
 
                                     <?php
@@ -177,6 +202,9 @@
                                                 <span class="badge bg-warning text-dark ms-1">DOMÓWIENIE</span>
                                             <?php else: ?>
                                                 <?= htmlspecialchars($pending[$i]['company']) ?>
+                                            <?php endif; ?>
+                                            <?php if (!empty($pending[$i]['tour'])): ?>
+                                                <span class="at-tour-tag" title="Trasa w dniu wysyłki"><i class="bi bi-signpost-split"></i> <?= htmlspecialchars($pending[$i]['tour']) ?></span>
                                             <?php endif; ?>
                                             <?php if (!empty($pending[$i]['proforma_stale'])): ?>
                                                 <span class="badge bg-warning text-dark ms-1" title="Zamówienie zostało zmienione po wystawieniu proformy">Proforma nieaktualna</span>
@@ -667,6 +695,11 @@
 .at-pay-switch input:checked + .at-pay-track::after{transform:translateX(14px)}
 .at-pay-switch input:focus-visible + .at-pay-track{outline:2px solid #8D1D2C;outline-offset:2px}
 .at-pay-switch input:checked ~ .at-pay-text{color:#2E7D4F;font-weight:600}
+.at-tour-sum td{background:#FBF7F5;border-bottom:1px solid #EFE8DF}
+.at-tour-chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #E7DFD5;border-radius:8px;padding:4px 10px;margin:3px 6px 3px 0;font-size:13px;color:#44403C}
+.at-tour-chip.is-none{color:#78716C;border-style:dashed}
+.at-tour-chip .at-tour-val{font-weight:700;color:#8D1D2C}
+.at-tour-tag{display:inline-block;margin-left:6px;font-size:11.5px;color:#5f5852;background:#F1EBE3;border-radius:6px;padding:1px 7px;white-space:nowrap}
 .at-pay-switch input:not(:checked) ~ .at-pay-text{color:#B45309;font-weight:600}
 .at-pay-remind{border:1px solid #e3ddd8;background:#fff;border-radius:8px;width:30px;height:28px;display:inline-grid;place-items:center;color:#8D1D2C}
 .at-pay-remind:hover{background:#fbf3f3}

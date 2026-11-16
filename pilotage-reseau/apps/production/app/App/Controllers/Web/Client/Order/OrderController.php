@@ -35,7 +35,8 @@ class OrderController extends BaseController
         private OrderCreationService $creation,
         private \App\Services\Shipping\ShippingIssueService $shippingIssues,
         private \App\Services\Client\Order\OrderPaymentService $payments,
-        private \App\Services\Organization\PageAccessService $access
+        private \App\Services\Organization\PageAccessService $access,
+        private \App\Services\Logistics\LogisticsService $logistics
     )
     {
     }
@@ -61,6 +62,26 @@ class OrderController extends BaseController
                 : null;
         }
         unset($order);
+
+        // [315] Trasa klienta w dniu wysyłki (jak w « Dzień wysyłki ») : sumy na trasę pod nagłówkiem dnia, zamówienia dnia według tras.
+        $byDate = [];
+        foreach ($pending as $order) $byDate[(string) $order['expected_shipping_date']][] = (int) $order['id_customer'];
+        $tourOf = [];
+        foreach ($byDate as $date => $ids) {
+            try {
+                $tourOf[$date] = $this->logistics->tourNames((string) $date, $ids);
+            } catch (\Throwable $e) {
+                error_log('[orders-tours] ' . $e->getMessage());
+                $tourOf[$date] = [];
+            }
+        }
+        foreach ($pending as $i => &$order) {
+            $order['tour'] = $tourOf[(string) $order['expected_shipping_date']][(int) $order['id_customer']]['name'] ?? null;
+            $order['_pos'] = $i;
+        }
+        unset($order);
+        usort($pending, fn($a, $b) => [(string) $a['expected_shipping_date'], $a['tour'] === null, (string) $a['tour'], $a['_pos']]
+            <=> [(string) $b['expected_shipping_date'], $b['tour'] === null, (string) $b['tour'], $b['_pos']]);
 
         $data['pending']     = $pending;
         $data['batchCounts'] = $batchCounts;

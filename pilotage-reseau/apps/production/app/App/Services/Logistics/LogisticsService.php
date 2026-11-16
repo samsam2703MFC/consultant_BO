@@ -571,6 +571,25 @@ final class LogisticsService
     }
 
     /** [trasy, klient => trasa w ten dzień tygodnia, trasa => [klient => kolejność]] */
+    /**
+     * [315] Trasa klientów na dzień wysyłki (jak w « Dzień wysyłki ») : przydział dnia, inaczej stała trasa klienta w tym dniu tygodnia.
+     * @param list<int> $customerIds
+     * @return array<int, array{id:int, name:string, color:?string}> klient => trasa (klienci bez trasy pominięci)
+     */
+    public function tourNames(string $date, array $customerIds): array
+    {
+        if (!$customerIds || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return [];
+        [$tours, $members] = $this->tourMap($date);
+        $assignments = $this->repo->assignments($date);
+        $out = [];
+        foreach (array_unique(array_map('intval', $customerIds)) as $id) {
+            $a = $assignments[$id] ?? null;
+            $tid = $a !== null && $a['tour_set'] ? $a['tour'] : ($members[$id] ?? null);
+            if ($tid !== null && isset($tours[$tid])) $out[$id] = ['id' => (int) $tid, 'name' => (string) $tours[$tid]['name'], 'color' => $tours[$tid]['color'] ?? null];
+        }
+        return $out;
+    }
+
     private function tourMap(string $date): array
     {
         $weekBit = 1 << ((int) date('N', strtotime($date)) - 1);
