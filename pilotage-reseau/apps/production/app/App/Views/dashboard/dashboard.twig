@@ -343,7 +343,8 @@
             </div>
         </div>
 
-        {# --- Do zrobienia ------------------------------------------------------ #}
+        {# --- Do zrobienia ([324] nie dla Administracja i fakturowanie) ---------- #}
+        {% if not hide_todo %}
         <div class="col-12">
             <div class="card">
                 <div class="card-header"><h4 class="card-title">Do zrobienia</h4></div>
@@ -370,6 +371,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     {% endif %}

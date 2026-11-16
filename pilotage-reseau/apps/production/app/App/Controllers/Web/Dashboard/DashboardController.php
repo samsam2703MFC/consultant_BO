@@ -98,6 +98,8 @@ class DashboardController extends BaseController
         // [284] Produkcja (stanowisko albo sesja kierownika produkcji) : Dzisiaj = tylko zadania (bez wskaźników, rentowności
         // grup, planu wysyłek, « Do zrobienia » i ostatnich zamówień — są w swoich modułach).
         $data['tasks_focus'] = ($week['user']['position_code'] ?? null) === 'KIEROWNIK_PRODUKCJI';
+        // [324] Administracja i fakturowanie (finanse) : bez karty « Do zrobienia » — sprawy są w Mój tydzień i w modułach.
+        $data['hide_todo'] = ($week['user']['position_code'] ?? null) === 'ADMINISTRACJA';
         // [285] Minuty zadań (przydziela administrator, makieta 39) widzi tylko administrator — pracownik widzi swoje zadania.
         // Na razie także administrator w sesji stanowiska (widok operatora) ich nie widzi.
         $data['show_minutes'] = $this->access->showTaskMinutes($userId);
