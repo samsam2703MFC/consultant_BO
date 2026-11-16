@@ -372,40 +372,6 @@
         </div>
     </div>
 
-    {# --- Ostatnie zamówienia --------------------------------------------------- #}
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0">Ostatnie zamówienia</h4>
-            <a class="at-link" href="{{ root }}/client-orders">Wszystkie zamówienia</a>
-        </div>
-        <div class="card-body pt-0">
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead>
-                        <tr><th>Nr</th><th>Klient</th><th>Wpłynęło</th><th>Wysyłka</th><th class="text-end">Kartony</th><th>Proforma</th></tr>
-                    </thead>
-                    <tbody>
-                    {% for o in latest %}
-                        <tr>
-                            <td><a href="{{ root }}/client-orders/{{ o.id }}/edit">#{{ o.id }}</a></td>
-                            <td>{{ o.company }}</td>
-                            <td>{{ o.create_order_date }}</td>
-                            <td>{{ o.expected_shipping_date }}</td>
-                            <td class="text-end">{{ o.cartons|number_format(0, ',', ' ') }}</td>
-                            <td>
-                                {% if o.proforma_status == 'paid' %}<span class="at-pill at-pill-ok">Opłacona</span>
-                                {% elseif o.proforma_status == 'issued' %}<span class="at-pill at-pill-warn">Nieopłacona</span>
-                                {% elseif o.proforma_status == 'cancelled' %}<span class="at-pill at-pill-muted">Anulowana</span>
-                                {% elseif o.proforma_status == 'archived' %}<span class="at-pill at-pill-muted">Zarchiwizowana</span>
-                                {% else %}<span class="at-pill at-pill-muted">Brak</span>{% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
     {% endif %}
 </section>
 {% endblock %}
