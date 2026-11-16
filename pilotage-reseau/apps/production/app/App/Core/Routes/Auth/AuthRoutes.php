@@ -17,4 +17,8 @@ return function(RouteCollector $r) {
         'controller' => App\Controllers\Web\Auth\LoginController::class,
         'method'     => 'login'
     ]);
+
+    // [300] Logowanie kodem QR (makieta 55) : kod dla tej przeglądarki i oczekiwanie na zatwierdzenie telefonem.
+    $r->addRoute('GET', '/ajax/login-qr', ['controller' => App\Controllers\Web\Auth\LoginController::class, 'method' => 'qr']);
+    $r->addRoute('GET', '/ajax/login-qr/status', ['controller' => App\Controllers\Web\Auth\LoginController::class, 'method' => 'qrStatus']);
 };

@@ -358,6 +358,40 @@ try {
     expectOff($kioskSvc->erpOfficePairing(1, 'manager', '') === null, 'ERP session: a tablet blocked by the administrator is not re-paired');
     expectOff($kioskSvc->erpOfficePairing(0, '', '') === null, 'no ERP session: usual pairing by code');
 
+    // --- [300] Logowanie do ERP kodem QR : przeglądarka → QR → telefon (wejście) → sesja konta powiązanego z osobą
+    $login = $container->get(App\Services\Organization\ErpLoginService::class);
+    expectOff($login->enabled(), 'QR login available (ERP QR device present)');
+    $r1 = $login->qr(null, $base, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36');
+    expectOff(strlen($r1['request']['nonce']) === 64 && str_starts_with($r1['qr']['url'], $base . '/kiosk/scan#t=') && $r1['qr']['expires_in'] <= 180, 'QR for this browser');
+    expectOff((string) $pdo->query("SELECT nonce_hash FROM n_erp_login_request WHERE id = {$r1['request']['id']}")->fetchColumn() === hash('sha256', $r1['request']['nonce']), 'only the hash of the browser secret is stored');
+    $again = $login->qr($r1['request'], $base, null);
+    expectOff($again['request']['id'] === $r1['request']['id'], 'same request reused while it is still valid');
+    $lh = ['X-Qr-Token' => $tokenOf($r1['qr']), 'X-Phone-Token' => $olaPhone];
+    [$s, $b] = $call('GET', '/kiosk/phone/erp-login', null, $lh);
+    expectOff($s === 409 && $b['description'] === 'ERP_LOGIN_NO_ACCOUNT', 'phone: no ERP account linked to the person');
+    $pdo->exec("INSERT INTO n_user_employee (id_user, id_employee) VALUES (1, {$ola})");
+    $pdo->exec("UPDATE n_prod_clock SET clock_out = NOW() WHERE id_employee = {$ola} AND clock_out IS NULL");
+    [$s, $b] = $call('GET', '/kiosk/phone/erp-login', null, $lh);
+    expectOff($s === 200 && $b['data']['account'] === 'Anna K.' && $b['data']['clocked_in'] === false && $b['data']['browser'] === 'Chrome · Windows', 'phone: account, browser, not clocked in yet');
+    [$s, $b] = $call('POST', '/kiosk/phone/erp-login', null, $lh);
+    expectOff($s === 409 && $b['description'] === 'ERP_LOGIN_CLOCK_FIRST', 'phone: clock in first');
+    expectOff($login->poll($r1['request']) === null, 'browser still waiting');
+    [, $me] = $call('GET', '/kiosk/phone/me', null, $lh);
+    [$s, $in] = $call('POST', '/kiosk/phone/clock', ['direction' => 'in', 'answers' => $yes($me['data']['questions']['in']), 'signature' => $signature], $lh);
+    expectOff($s === 200 && $in['data']['clock']['clock_out'] === null, 'clock in from the login QR');
+    [$s, $b] = $call('POST', '/kiosk/phone/erp-login', null, ['X-Qr-Token' => $tokenOf($r1['qr']), 'X-Phone-Token' => $janPhone]);
+    expectOff(in_array($s, [401, 409], true) && in_array($b['description'], ['ERP_LOGIN_NO_ACCOUNT', 'PHONE_REVOKED'], true), 'a revoked phone opens nothing');
+    [$s, $b] = $call('POST', '/kiosk/phone/erp-login', null, $lh);
+    expectOff($s === 200 && is_string($b['data']['session']), 'phone: login approved');
+    [$s, $b] = $call('POST', '/kiosk/phone/erp-login', null, $lh);
+    expectOff($s === 401 && $b['description'] === 'QR_EXPIRED', 'a QR approves only once');
+    expectOff($login->poll(['id' => $r1['request']['id'], 'nonce' => str_repeat('0', 64)]) === null, 'another browser (wrong secret) gets nothing');
+    $user = $login->poll($r1['request']);
+    expectOff(is_array($user) && (int) $user['id'] === 1, 'browser opens the linked account');
+    expectOff($login->poll($r1['request']) === null, 'session opened only once');
+    [$s] = $call('GET', '/kiosk/phone/erp-login', null, ['X-Qr-Token' => $olaQr, 'X-Phone-Token' => $olaPhone]);
+    expectOff($s === 401, 'office personal QR is not a login QR');
+
     // --- [299] Sesja Produkcja : Tablety w menu i w uprawnieniach
     $kp = $pdo->query("SELECT id FROM n_position WHERE code = 'KIEROWNIK_PRODUKCJI'")->fetchColumn();
     if ($kp !== false) {

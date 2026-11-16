@@ -341,6 +341,9 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/phone/signatures', ExecutionController::class, 'sign', 'phone'],
             ['POST', '/kiosk/phone/comps/{id:\d+}/sign', ExecutionController::class, 'signComp', 'phone'],
             // [288] Urlop z telefonu (makieta 49) : saldo, wniosek od–do, « Moje urlopy », anulowanie wniosku do zatwierdzenia.
+            // [300] Logowanie do ERP kodem QR ze strony logowania : podgląd i zatwierdzenie (po odbiciu wejścia).
+            ['GET', '/kiosk/phone/erp-login', ExecutionController::class, 'erpLoginPreview', 'phone'],
+            ['POST', '/kiosk/phone/erp-login', ExecutionController::class, 'erpLogin', 'phone'],
             ['GET', '/kiosk/phone/leave', ExecutionController::class, 'phoneLeave', 'phone'],
             ['POST', '/kiosk/phone/leave', ExecutionController::class, 'requestLeave', 'phone'],
             ['DELETE', '/kiosk/phone/leave/{id:\d+}', ExecutionController::class, 'cancelLeave', 'phone'],

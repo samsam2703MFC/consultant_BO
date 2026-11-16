@@ -107,6 +107,8 @@
     "DATA_SHEET_UNKNOWN_PARAM": "Le paramètre « {code} » ne fait pas partie de ce tableau.",
     "DATA_SHEET_TOUR_NOT_FOUND": "La tournée n° {id} n’existe pas — effacez le numéro pour ajouter une nouvelle tournée.",
     "DEVICE_NOT_DRIVER": "Cette tablette n’est pas une tablette chauffeur — changez son mode dans la gestion des tablettes.",
+    "ERP_LOGIN_NO_ACCOUNT": "Aucun compte ERP lié à vous — demandez à l'administrateur (Utilisateurs › personne de Czas pracy).",
+    "ERP_LOGIN_CLOCK_FIRST": "Pointez d'abord votre entrée, l'ERP s'ouvrira ensuite.",
     "QR_OTHER_PERSON": "Ce QR code est pour : {name}. Ce téléphone est enregistré au nom d’une autre personne — scannez le code avec votre téléphone.",
     "DEVICE_NOT_OFFICE": "Une tablette chauffeur n’ouvre pas l’écran de bureau — changez son type en « Tablette de bureau » dans la gestion des tablettes.",
     "LEAVE_REQUEST_REFUSED": "Congé : {detail}",

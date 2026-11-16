@@ -107,6 +107,8 @@
     "DATA_SHEET_UNKNOWN_PARAM": "Parametr « {code} » nie należy do tej tabeli.",
     "DATA_SHEET_TOUR_NOT_FOUND": "Nie ma trasy nr {id} — usuń numer, aby dodać nową trasę.",
     "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami.",
+    "ERP_LOGIN_NO_ACCOUNT": "Brak konta ERP powiązanego z Tobą — poproś administratora (Użytkownicy › osoba w Czasie pracy).",
+    "ERP_LOGIN_CLOCK_FIRST": "Najpierw odbij wejście, potem ERP się otworzy.",
     "QR_OTHER_PERSON": "Ten kod QR jest dla: {name}. Ten telefon jest zarejestrowany na inną osobę — zeskanuj kod swoim telefonem.",
     "DEVICE_NOT_OFFICE": "Tablet kierowcy nie otwiera ekranu biurowego — w zarządzaniu tabletami zmień rodzaj na « Tablet biurowy ».",
     "LEAVE_REQUEST_REFUSED": "Urlop : {detail}",
