@@ -48,3 +48,4 @@
 2026-11-16T11:32:28Z [300] connexion QR : section → nom → QR
 2026-11-16T11:39:15Z [301] date de mise à jour dans l'en-tête
 2026-11-16T11:46:27Z [302] tablette emballage : panneau sans collision
+2026-11-16T13:24:59Z [303] blocage Logistyka commandes sans transport + assistant
