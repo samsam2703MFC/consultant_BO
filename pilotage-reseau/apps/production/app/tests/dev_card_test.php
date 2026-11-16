@@ -236,7 +236,7 @@ try {
     foreach (['n_dev_card', 'n_dev_card_frame', 'n_ai_prompt', 'n_prod_group', 'n_prod_param', 'n_app_secret', 'test_product', 'test_product_status', 'test_product_type',
                  'production_sections', 'product_recipe', 'n_dev_product', 'n_dev_product_photo', 'n_dev_trial', 'n_dev_trial_photo', 'n_prod_employee', 'production_employee',
                  'final_product', 'user', 'test_product_changelog', 'test_product_stage', 'n_mgr_launch', 'category_product',
-                 'raw_material', 'unit', 'product_recipe_connection', 'erp_company_other_settings', 'n_store_price_config', 'n_dev_ingredient_map',
+                 'raw_material', 'n_raw_material_loss', 'unit', 'product_recipe_connection', 'erp_company_other_settings', 'n_store_price_config', 'n_dev_ingredient_map',
                  'product_recipe_type'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }

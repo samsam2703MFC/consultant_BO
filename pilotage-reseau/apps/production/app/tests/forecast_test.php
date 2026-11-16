@@ -113,7 +113,7 @@ $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_gene
 try {
     foreach (['customer', 'customer_order', 'customer_order_product', 'final_product', 'category_product', 'product_recipe', 'n_prod_item', 'n_prod_product_settings',
                  'n_prod_group', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_workstation', 'n_stock_period', 'n_stock_period_item', 'n_prod_param',
-                 'n_prod_employee', 'user', 'raw_material', 'unit', 'category_material', 'supplier', 'n_mp_supply', 'n_mp_count', 'n_po', 'n_po_line', 'n_po_receipt',
+                 'n_prod_employee', 'user', 'raw_material', 'n_raw_material_loss', 'unit', 'category_material', 'supplier', 'n_mp_supply', 'n_mp_count', 'n_po', 'n_po_line', 'n_po_receipt',
                  'carton_stock', 'flattened_recipe_ingredient', 'n_mp_offer', 'n_forecast_run', 'n_forecast_panel_read', 'n_forecast_panel_link', 'n_forecast_client_excluded',
                  'cost_month', 'cost_month_employee', 'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics',
                  'cost_month_section', 'production_sections', 'n_section_target', 'document_wdt', 'document_wdt_product', 'n_wdt_superseded', 'erp_company_other_settings'] as $table) {

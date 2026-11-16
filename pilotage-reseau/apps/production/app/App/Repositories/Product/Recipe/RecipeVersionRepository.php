@@ -49,7 +49,7 @@ final class RecipeVersionRepository extends WorkshopRepository
             if (!isset($out[(int) $p['id_recipe']])) continue;
             $out[(int) $p['id_recipe']]['preparations'][] = ['id' => (int) $p['id_preparation_type'], 'name' => (string) $p['name'], 'seconds' => (int) $p['duration_second']];
         }
-        foreach ($this->all("SELECT f.recipe_id, f.material_id, f.quantity, m.price_per_unit, m.waste_perc
+        foreach ($this->all("SELECT f.recipe_id, f.material_id, f.quantity, m.price_per_unit, " . \App\Services\Material\MaterialLoss::column('m') . " AS waste_perc
                 FROM flattened_recipe_ingredient f LEFT JOIN raw_material m ON m.id = f.material_id
                 WHERE f.recipe_id IN ({$in}) ORDER BY f.recipe_id, f.material_id", $ids) as $f) {
             $id = (int) $f['recipe_id'];
