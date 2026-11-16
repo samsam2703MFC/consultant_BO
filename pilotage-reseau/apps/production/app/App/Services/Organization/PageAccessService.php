@@ -107,6 +107,21 @@ final class PageAccessService
         return ($codes[$positionId] ?? null) === self::FINANCE_POSITION;
     }
 
+    /**
+     * [314] Profil do licznika stron : « ceo » (konto CEO albo administrator w profilu CEO), kod stanowiska sesji
+     * administratora, « admin » (pełny widok), kod stanowiska osoby albo « none ».
+     */
+    public function trackingProfile(?int $userId): string
+    {
+        if (!$userId) return 'none';
+        if ($this->ceoView($userId)) return 'ceo';
+        $p = $this->profile($userId);
+        $positionId = $p['admin'] ? $this->viewPosition($userId) : $this->repo->userPosition($userId);
+        if ($positionId === null) return 'admin';
+        $codes = array_column($this->repo->positions(), 'code', 'id');
+        return (string) ($codes[$positionId] ?? 'none');
+    }
+
     /** [281] Konta CEO (powiadomienia o prośbach o odblokowanie). @return list<int> */
     public function ceoUsers(): array
     {

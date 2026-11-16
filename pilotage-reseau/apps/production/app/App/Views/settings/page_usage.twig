@@ -6,17 +6,18 @@
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Licznik stron</h3>
-            <p class="text-subtitle text-muted">Które strony ERP są używane, przez kogo i jak często — po miesiącu widać, co uprościć w menu</p>
+            <p class="text-subtitle text-muted">Które strony ERP są używane, przez kogo i jaki profil (stanowisko, CEO, administrator), średnio na dzień i na tydzień</p>
         </div>
         <div class="at-logi-week-nav">
             {% for p in periods %}
-                <a class="btn {{ p == days ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ root }}/settings/page-usage?days={{ p }}">{{ p ? p ~ ' dni' : 'Od początku' }}</a>
+                <a class="btn {{ p == days ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ root }}/settings/page-usage?days={{ p }}{{ profile ? '&profile=' ~ profile|url_encode }}">{{ p ? p ~ ' dni' : 'Od początku' }}</a>
             {% endfor %}
         </div>
     </div>
 {% endblock %}
 
 {% block content %}
+<style>.pu-prof-chip{display:inline-block;background:#F1EBE3;border-radius:6px;padding:1px 7px;margin:1px 3px 1px 0;white-space:nowrap}.pu-prof td,.pu-prof th{white-space:nowrap}</style>
 <section class="section at-page-usage">
     <div class="at-tiles">
         <div class="at-tile">
@@ -41,9 +42,40 @@
         </div>
     </div>
 
+    {% if profiles %}
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title mb-0">Profile : kto otwiera ERP</h4>
+            <p class="text-muted small mb-0">Profil w chwili otwarcia strony : stanowisko osoby, sesja stanowiska administratora, profil CEO albo pełny widok administratora. Średnio : wyświetlenia ÷ {{ span }} {{ span == 1 ? 'dzień' : 'dni' }} okresu (tydzień = 7 dni). Kliknij profil → jego strony.</p>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle pu-prof">
+                    <thead><tr><th>Profil</th><th class="text-end">Osoby</th><th class="text-end">Wyświetlenia</th><th class="text-end">Średnio / dzień</th><th class="text-end">Średnio / tydzień</th><th class="text-end">Dni z użyciem</th><th class="text-end">Stron</th><th>Najczęściej</th><th class="text-end">Ostatnio</th></tr></thead>
+                    <tbody>
+                    {% for pr in profiles %}
+                        <tr class="{{ profile == pr.profile ? 'table-active' }}">
+                            <td><a class="fw-semibold" href="{{ root }}/settings/page-usage?days={{ days }}&profile={{ pr.profile|url_encode }}">{{ profile_names[pr.profile] ?? pr.profile }}</a></td>
+                            <td class="text-end">{{ pr.users }}</td>
+                            <td class="text-end"><strong>{{ pr.views|number_format(0, ',', ' ') }}</strong></td>
+                            <td class="text-end">{{ (pr.views / span)|number_format(1, ',', ' ') }}</td>
+                            <td class="text-end">{{ (pr.views / span * 7)|number_format(1, ',', ' ') }}</td>
+                            <td class="text-end">{{ pr.days }}</td>
+                            <td class="text-end">{{ pr.pages }}</td>
+                            <td class="small"><span class="font-monospace">{{ pr.top_route }}</span> <span class="text-muted">({{ pr.top_views }})</span></td>
+                            <td class="text-end small text-nowrap">{{ pr.last_at ? pr.last_at|date('d.m H:i') : '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h4 class="card-title mb-0">Strony według wyświetleń</h4>
+            <h4 class="card-title mb-0">Strony według wyświetleń{% if profile %} · {{ profile_names[profile] ?? profile }} <a class="btn btn-sm btn-outline-secondary ms-2" href="{{ root }}/settings/page-usage?days={{ days }}">wszystkie profile</a>{% endif %}</h4>
             <input type="search" class="form-control form-control-sm" style="max-width: 260px" placeholder="Filtruj strony…" id="puFilter">
         </div>
         <div class="card-body pt-0">
@@ -54,7 +86,10 @@
                             <th>Strona</th>
                             <th>Adres</th>
                             <th class="text-end">Wyświetlenia</th>
-                            <th class="text-end">Dni z użyciem</th>
+                            <th class="text-end text-nowrap">Śr. / dzień</th>
+                            <th class="text-end text-nowrap">Śr. / tydzień</th>
+                            <th class="text-end text-nowrap">Dni z użyciem</th>
+                            <th>Profile</th>
                             <th>Kto (wyświetlenia)</th>
                             <th class="text-end">Ostatnio</th>
                         </tr>
@@ -69,12 +104,15 @@
                                 <strong>{{ r.views|number_format(0, ',', ' ') }}</strong>
                                 <div class="progress mt-1" style="height: 4px; min-width: 80px;"><div class="progress-bar" style="width: {{ top ? (r.views / top * 100)|round(1) : 0 }}%"></div></div>
                             </td>
+                            <td class="text-end">{{ (r.views / span)|number_format(1, ',', ' ') }}</td>
+                            <td class="text-end">{{ (r.views / span * 7)|number_format(1, ',', ' ') }}</td>
                             <td class="text-end">{{ r.days }}</td>
+                            <td class="small">{% for code, v in r.profiles|slice(0, 3, true) %}<span class="pu-prof-chip">{{ profile_names[code] ?? code }} {{ v }}</span>{% endfor %}{% if r.profiles|length > 3 %} <span class="text-muted">+{{ r.profiles|length - 3 }}</span>{% endif %}</td>
                             <td class="small" title="{{ r.who|join(', ') }}">{{ r.users|plural_pl('osoba', 'osoby', 'osób') }} · <span class="text-muted">{{ r.who|slice(0, 3)|join(', ') }}{{ r.who|length > 3 ? '…' : '' }}</span></td>
                             <td class="text-end small text-nowrap">{{ r.last_at|date('d.m H:i') }}</td>
                         </tr>
                     {% else %}
-                        <tr><td colspan="6" class="at-empty">Brak wyświetleń w tym okresie — licznik zapisuje każde otwarcie strony od wdrożenia.</td></tr>
+                        <tr><td colspan="9" class="at-empty">Brak wyświetleń w tym okresie — licznik zapisuje każde otwarcie strony od wdrożenia.</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>

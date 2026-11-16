@@ -10,7 +10,7 @@ class App
 
 	/**
 	 * Licznik stron (Ustawienia › Licznik stron) : jedno wyświetlenie strony na trasę z parametrami
-	 * zastąpionymi nazwami (/products/{id}/edit), dzień i użytkownika. Błąd licznika nie zatrzymuje strony.
+	 * zastąpionymi nazwami (/products/{id}/edit), dzień, użytkownika i profil [314]. Błąd licznika nie zatrzymuje strony.
 	 */
 	private function countPageView($container, string $uri, array $vars): void
 	{
@@ -21,7 +21,9 @@ class App
 				if ($name !== false && $segment !== '') $segment = '{' . $name . '}';
 			}
 			$route = implode('/', $segments) ?: '/';
-			$container->get(\App\Repositories\Settings\PageViewRepository::class)->hit($route, $uri, (int) (user('id') ?? 0));
+			$userId = (int) (user('id') ?? 0);
+			$profile = $userId ? $container->get(\App\Services\Organization\PageAccessService::class)->trackingProfile($userId) : 'none';
+			$container->get(\App\Repositories\Settings\PageViewRepository::class)->hit($route, $uri, $userId, $profile);
 		} catch (\Throwable $e) {
 			error_log('[page-view] ' . $e->getMessage());
 		}
