@@ -54,7 +54,8 @@ class ShippingService
         private DifferenceSettlementService              $differenceSettlementService,
         private ShipmentPackagingService                 $shipmentPackagingService,
         private OrderFulfilmentService                   $fulfilment,
-        private \App\Repositories\Client\Complaint\ReturnsRepository $returns
+        private \App\Repositories\Client\Complaint\ReturnsRepository $returns,
+        private \App\Repositories\Document\CmrSignatureRepository $cmrSignatures
     )
     {
     }
@@ -254,6 +255,9 @@ class ShippingService
                 throw new CustomException("INSERT_SHIPMENT_LOG_FAILED", 'errors', 500);
             }
             $shipmentLogId = $resInsertShipmentLog;
+            // [311] Wystawca wysyłki (osoba zalogowana) : jej zapisany podpis trafia do pola 22 CMR.
+            $issuer = function_exists('user') ? (int) (user('id') ?: 0) : 0;
+            if ($issuer > 0) $this->cmrSignatures->setIssuer((int) $shipmentLogId, $issuer);
 
             $this->shipmentPackagingService->createSnapshot(
                 (int)$shipmentLogId,

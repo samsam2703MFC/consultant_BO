@@ -5,6 +5,7 @@ use App\Exceptions\CustomException;
 use App\Interfaces\IDocument;
 use App\Repositories\Document\Cmr\CMRPackagesRepository;
 use App\Repositories\Document\Cmr\CMRRepository;
+use App\Repositories\Document\CmrSignatureRepository;
 use App\Repositories\Document\Wz\WZRepository;
 use App\Services\Utils\TCPDFService;
 
@@ -17,8 +18,8 @@ class CMRService implements IDocument
     public function __construct(
         CMRRepository $cmrRepository,
         CMRPackagesRepository $cmrPackagesRepository,
-        WZRepository $wzRepository
-
+        WZRepository $wzRepository,
+        private CmrSignatureRepository $signatures
     )
     {
         $this->cmrRepository = $cmrRepository;
@@ -855,10 +856,12 @@ class CMRService implements IDocument
         $pdf->MultiCell(89, 4, '', 'BR', '', 0, 0, '', '', true);
         $pdf->Ln(4);
 
+        $box22 = [$pdf->GetX(), $pdf->GetY()];
         $pdf->MultiCell(6, 6, "<b>22</b>", 'TL', 0, 0, 0, '', '', true, false, true);
         $pdf->MultiCell(57, 6, '', 'TR', 0, 0, 0, '', '', true);
 
         $pdf->SetLineStyle(array('width' => 0.6, 'color' => array(0, 0, 0)));
+        $box23 = [$pdf->GetX(), $pdf->GetY()];
         $pdf->MultiCell(6, 6, "<b>23</b>", 'TL', 0, 0, 0, '', '', true, false, true);
         $pdf->MultiCell(53, 6, '', 'TR', 0, 0, 0, '', '', true);
         $pdf->SetLineStyle(array('width' => 0, 'color' => array(0, 0, 0)));
@@ -882,6 +885,9 @@ class CMRService implements IDocument
         $pdf->MultiCell(62, 21, "Podpis i stempel odbiorcy\nSignature and stamp of the consignee", 'BR', 0, 0, 0, '', '', true, 0, false, true, 21, 'B');
         // [310] Odbiór na tablecie kierowcy : podpis odbiorcy, nazwisko, miejscowość i data w polu 24 (reszta CMR bez zmian).
         if (!empty($data['receipt']['signature'])) $this->stampReceipt($pdf, $box24, $data['receipt']);
+        // [311] Pole 22 : podpis osoby, która wystawiła wysyłkę (zapisany w ERP) ; pole 23 : podpis kierowcy ze startu trasy.
+        if (!empty($data['sender']['signature'])) $this->stampParty($pdf, $box22, $data['sender'], 49);
+        if (!empty($data['carrier']['signature'])) $this->stampParty($pdf, $box23, $data['carrier'], 45);
 
 
         $pdf->StartTransform();
@@ -920,11 +926,35 @@ class CMRService implements IDocument
         $cmrData = $this->cmrRepository->first(['id' => $id]) ?: throw new CustomException("CMR_NOT_FOUND", 'errors', 404);
         $cmrPackageData = $this->cmrPackagesRepository->getByIdCMR($id) ?: throw new CustomException("CMR_PACKAGE_NOT_FOUND", 'errors', 404);
         $wzData = $this->wzRepository->first(['id' => $cmrData['id_document_wz']]) ?: throw new CustomException("WZ_NOT_FOUND", 'errors', 404);
-        $this->renderDocument($pdf, ['cmrData' => $cmrData, 'cmrPackageData' => $cmrPackageData, 'wzData' => $wzData, 'receipt' => $receipt]);
+        $this->renderDocument($pdf, ['cmrData' => $cmrData, 'cmrPackageData' => $cmrPackageData, 'wzData' => $wzData, 'receipt' => $receipt] + $this->partySignatures($id));
         return ['file_string' => $pdf, 'filename' => 'CMR_' . $cmrData['doc_num'] . '_podpisany.pdf'];
     }
 
     /** Pole 24 : miejscowość i data u góry, podpis odbiorcy i nazwisko w części « podpis i stempel odbiorcy ». */
+    /** [311] Podpisy pól 22 (nadawca) i 23 (przewoźnik) ; brak → pola puste, jak dawniej. */
+    private function partySignatures(int $cmrId): array
+    {
+        try {
+            return ['sender' => $this->signatures->sender($cmrId), 'carrier' => $this->signatures->carrier($cmrId)];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /** Nazwisko u góry pola, podpis nad « Podpis i stempel ». */
+    private function stampParty(TCPDFService $pdf, array $box, array $p, float $width): void
+    {
+        [$x, $y] = $box;
+        $keepX = $pdf->GetX();
+        $keepY = $pdf->GetY();
+        $pdf->SetTextColor(31, 79, 122);
+        $pdf->SetFont('dejavusans', 'B', 7);
+        if (!empty($p['name'])) $pdf->Text($x + 8, $y + 2.6, mb_substr((string) $p['name'], 0, 34));
+        $pdf->Image('@' . $p['signature'], $x + 8, $y + 8.5, $width, 11, 'PNG', '', '', true, 300, '', false, false, 0, 'CM');
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetXY($keepX, $keepY);
+    }
+
     private function stampReceipt(TCPDFService $pdf, array $box, array $r): void
     {
         [$x, $y] = $box;
@@ -962,7 +992,7 @@ class CMRService implements IDocument
         $this->renderDocument($pdf, [
             'cmrData' => $cmrData,
             'cmrPackageData' => $cmrPackageData,
-            'wzData' => $wzData]);
+            'wzData' => $wzData] + $this->partySignatures($id));
 
         return ['file_string' => $pdf, "filename" => 'CMR_' . $cmrData['doc_num'] . '.pdf'];
     }

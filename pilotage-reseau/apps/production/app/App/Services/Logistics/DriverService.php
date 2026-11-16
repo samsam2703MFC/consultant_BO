@@ -65,6 +65,7 @@ final class DriverService
         private CMRService $cmr,
         private WZService $wz,
         private WDTService $wdt,
+        private \App\Repositories\Document\CmrSignatureRepository $cmrSignatures,
     ) {
     }
 
@@ -121,7 +122,8 @@ final class DriverService
                 'pallets' => $v['pallets'], 'departure' => $v['departure']], $fleet),
             'vehicle' => $vehicle ? $vehicle + ['departure' => $truck['departure'] ?? null, 'loading_from' => $truck['loading_from'] ?? null,
                 'pallets' => $truck['pallets'] ?? 0, 'weight_kg' => $truck['weight_kg'] ?? 0, 'places' => $truck['places'] ?? null] : null,
-            'run' => $run ? ['driver_name' => $run['driver_name'], 'started_at' => $run['started_at'], 'finished_at' => $run['finished_at']] : null,
+            'run' => $run ? ['driver_name' => $run['driver_name'], 'started_at' => $run['started_at'], 'finished_at' => $run['finished_at'],
+                'cmr_signed_at' => ($vehicleId !== null ? $this->cmrSignatures->runSignature($date, $vehicleId) : null)['signed_at'] ?? null] : null,
             'loading' => $vehicleId !== null ? $this->board->driverSummary($date, $vehicleId) : null,
             'stops' => $stops,
             'counts' => [
@@ -192,30 +194,42 @@ final class DriverService
         ];
     }
 
+    /**
+     * Start / koniec trasy ; [311] przy starcie kierowca podpisuje się raz (pole 23 CMR = przewoźnik) — podpis trafia do
+     * wszystkich CMR jego trasy z dnia ; « sign » : podpis złożony później (trasa rozpoczęta wcześniej) albo poprawiony.
+     */
     public function run(ApiContext $context, array $body): array
     {
         $device = $this->driverDevice($context);
-        $v = (new Validator($body))->only(['date', 'vehicle_id', 'action', 'driver_name'])
-            ->date('date', true, false)->integer('vehicle_id', true, 1)->choice('action', ['start', 'finish'])->string('driver_name', 100, false, true);
-        $v->throwIfInvalid();
+        $v = (new Validator($body))->only(['date', 'vehicle_id', 'action', 'driver_name', 'signature'])
+            ->date('date', true, false)->integer('vehicle_id', true, 1)->choice('action', ['start', 'finish', 'sign'])->string('driver_name', 100, false, true);
         $date = $v->value('date');
-        $this->checkDate($date);
         $vehicleId = (int) $v->value('vehicle_id');
+        $signature = null;
+        if ($v->hasRaw('signature') && $v->raw('signature') !== null) {
+            $signature = $this->image($v, 'signature', ['image/png'], self::MAX_SIGNATURE_BYTES);
+        } elseif ($v->value('action') === 'sign' || ($v->value('action') === 'start' && $date && $vehicleId
+            && !($this->deliveries->run($date, $vehicleId)['started_at'] ?? null) && !$this->cmrSignatures->runSignature($date, $vehicleId))) {
+            $v->add('signature', 'REQUIRED');
+        }
+        $v->throwIfInvalid();
+        $this->checkDate($date);
         if (!isset($this->deliveries->vehicles()[$vehicleId])) throw ApiException::validation([['field' => 'vehicle_id', 'code' => 'REFERENCE_NOT_FOUND', 'params' => ['id' => $vehicleId]]]);
         $data = ['id_device' => (int) $device['id']];
         $driver = $this->driverName($context, $v->value('driver_name'));
         if ($driver !== null) $data['driver_name'] = $driver;
         $current = $this->deliveries->run($date, $vehicleId);
-        if ($v->value('action') === 'start') {
+        if ($v->value('action') !== 'sign') {
             $data['started_at'] = $current['started_at'] ?? date('Y-m-d H:i:s');
-            $data['finished_at'] = null;
-        } else {
-            $data['started_at'] = $current['started_at'] ?? date('Y-m-d H:i:s');
-            $data['finished_at'] = date('Y-m-d H:i:s');
+            $data['finished_at'] = $v->value('action') === 'finish' ? date('Y-m-d H:i:s') : null;
         }
-        $this->deliveries->saveRun($date, $vehicleId, $data);
+        $this->tx->execute(function () use ($date, $vehicleId, $data, $signature, $driver, $device) {
+            $this->deliveries->saveRun($date, $vehicleId, $data);
+            if ($signature) $this->cmrSignatures->saveRunSignature($date, $vehicleId, $signature[1], $driver, (int) $device['id']);
+        });
         $run = $this->deliveries->run($date, $vehicleId);
-        return ['driver_name' => $run['driver_name'], 'started_at' => $run['started_at'], 'finished_at' => $run['finished_at']];
+        return ['driver_name' => $run['driver_name'], 'started_at' => $run['started_at'], 'finished_at' => $run['finished_at'],
+            'cmr_signed_at' => $this->cmrSignatures->runSignature($date, $vehicleId)['signed_at'] ?? null];
     }
 
     /**

@@ -18694,6 +18694,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
+                "description": "start : le chauffeur signe une fois (case 23 du CMR, transporteur) — signature posée sur tous les CMR de sa tournée du jour ; sign : signature ajoutée ou refaite après le départ.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -25768,13 +25769,19 @@
                         "type": "string",
                         "enum": [
                             "start",
-                            "finish"
+                            "finish",
+                            "sign"
                         ]
                     },
                     "driver_name": {
                         "type": "string",
                         "maxLength": 100,
                         "nullable": true
+                    },
+                    "signature": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "data:image/png;base64,… podpis kierowcy (pole 23 CMR) : obowiązkowy przy pierwszym starcie trasy dnia i przy sign"
                     }
                 }
             },
@@ -26677,6 +26684,10 @@
                         "nullable": true
                     },
                     "finished_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cmr_signed_at": {
                         "type": "string",
                         "nullable": true
                     }

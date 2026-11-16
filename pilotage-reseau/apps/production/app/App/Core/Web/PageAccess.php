@@ -94,7 +94,9 @@ final class PageAccess
     public const CEO_WRITES = ['/logout', '/ajax/view-session', '/ajax/activity/', '/ajax/app-notifications', '/ajax/notifications', '/ajax/tasks/unblock/',
         '/ajax/organization/execution/remind/', '/ajax/organization/team-tasks/remind', '/ajax/control/', '/ajax/search',
         // [289] Urlopy : CEO zatwierdza urlopy osób z biura (i składa własny).
-        '/ajax/my-leave'];
+        '/ajax/my-leave',
+        // [311] Własny podpis do dokumentów (pole 22 CMR).
+        '/ajax/my-signature'];
 
     /** [281] Czy konto CEO widzi pozycję katalogu. */
     public static function ceoSees(string $key): bool
