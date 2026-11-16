@@ -469,7 +469,9 @@ function vbPnlLigne(?array $l, string $cle, string $du, string $au): ?array
 {
     if ($l === null || !isset($l[$cle]) || !is_numeric($l[$cle])) { return null; }
     $n = static fn ($v): ?float => $v !== null && is_numeric($v) ? round((float) $v) : null;
-    return ['du' => $du, 'au' => $au, 'ca' => $n($l[$cle]), 'coutMatiere' => $n($l['coutMatiere'] ?? null), 'coutMatierePct' => $l['coutMatierePct'] ?? null,
+    // Le P&L hors TVA (16/11/2026) : `ca` = la base des pourcentages, le CA hors TVA quand Résultat le donne ; `caTtc` l'encaissé.
+    return ['du' => $du, 'au' => $au, 'ca' => $n($l['caHt'] ?? $l[$cle]), 'caTtc' => $n($l[$cle]), 'horsTva' => isset($l['caHt']),
+        'coutMatiere' => $n($l['coutMatiere'] ?? null), 'coutMatierePct' => $l['coutMatierePct'] ?? null,
         'margeBrute' => $n($l['margeBrute'] ?? null), 'margeBrutePct' => $l['margeBrutePct'] ?? null,
         'invendus' => $n($l['invendus'] ?? null), 'invendusPct' => $l['invendusPct'] ?? null,
         'labour' => $n($l['labour'] ?? null), 'labourPct' => $l['labourPct'] ?? null, 'overhead' => $n($l['overhead'] ?? null), 'overheadPct' => $l['overheadPct'] ?? null,

@@ -205,17 +205,26 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
         // Le compte de résultat du mois.
         $casc = [
             ['Ventes TTC', $m['realise'], null, '', true],
+        ];
+        // Hors TVA (16/11/2026, src/pnl_ht.php) : la TVA des tickets retirée, les % sur les ventes hors TVA, les frais
+        // généraux sans leur TVA.
+        if (isset($m['realiseHt'])) {
+            $casc[] = ['− TVA des tickets', -(float) ($m['tva'] ?? 0), null, '', false];
+            $casc[] = ['Ventes hors TVA', $m['realiseHt'], 100.0, '', true];
+        }
+        $casc = array_merge($casc, [
             ['− Coût matière', $m['coutMatiere'] === null ? null : -$m['coutMatiere'], $m['coutMatierePct'], $feu($m['coutMatierePct'], (float) $seuils['food']), false],
             ['− Main-d’œuvre', $m['labour'] === null ? null : -$m['labour'], $m['labourPct'], $feu($m['labourPct'], (float) $seuils['labour']), false],
             ['− Frais généraux', $m['overhead'] === null ? null : -$m['overhead'], $m['overheadPct'], $feu($m['overheadPct'], (float) $seuils['overhead']), false],
-            ['Résultat', $m['net'], $m['netPct'], $feuRes($m['netPct']), true],
-        ];
+            [isset($m['realiseHt']) ? 'Résultat hors TVA' : 'Résultat', $m['net'], $m['netPct'], $feuRes($m['netPct']), true],
+        ]);
+        if (isset($m['realiseHt'])) { $casc[count($casc) - 2][0] = '− Frais généraux hors TVA'; }
         $h .= '<div class="sec">Le compte de résultat du mois</div><table class="t" cellpadding="0" cellspacing="0">';
         foreach ($casc as [$lib, $v, $pc, $cl, $fort]) {
             $w = $pc === null ? 0 : (int) min(100, abs((float) $pc));
             $coul = $cl === 'ok' ? '#3f7a52' : ($cl === 'wa' ? '#7A5207' : ($cl === 'acc' ? '#8D1D2C' : '#7a736a'));
             $h .= '<tr' . ($fort ? ' style="font-weight:400"' : '') . '><td class="l" width="34%">' . $e($lib) . '</td>'
-                . '<td class="l"><span class="barre"><i style="width:' . ($lib === 'Ventes TTC' ? 100 : $w) . '%;background:' . ($lib === 'Ventes TTC' ? '#1c1a17' : $coul) . '"></i></span></td>'
+                . '<td class="l"><span class="barre"><i style="width:' . (str_starts_with($lib, 'Ventes') ? 100 : $w) . '%;background:' . (str_starts_with($lib, 'Ventes') ? '#1c1a17' : $coul) . '"></i></span></td>'
                 . '<td width="22%">' . ($v === null ? '—' : ($v < 0 ? '− ' : '') . number_format(abs((float) $v), 0, ',', ' ') . ' €') . '</td>'
                 . '<td width="12%" class="' . $cl . '">' . ($pc === null ? '' : $pct($pc)) . '</td></tr>';
         }

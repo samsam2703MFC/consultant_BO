@@ -40,3 +40,5 @@
 2026-11-16T08:16:54Z [295] mode cohabitation (serveur local), perte en n_raw_material_loss, interrupteur envois automatiques
 2026-11-16T09:25:04Z [296] Stany i palety : magazyn, palety, wysyłki, skład palety, śledzenie partii
 2026-11-16T10:11:47Z [297] server.sh : mode PHP en conteneur (serveur local) — vérification du mode normal
+2026-11-16T10:29:37Z P&L court hors TVA (jour, semaine, mois) et onglet Frais : TVA comprise et taux de chaque frais
+2026-11-16T11:02:29Z Ventes par catégorie hors TVA : marge, taux et coefficient sur le net
