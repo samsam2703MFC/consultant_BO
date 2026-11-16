@@ -1202,23 +1202,26 @@ if (D.theorique) {
 }
 
 /* --- La dernière page : les trois axes ensemble (14/11/2026, Sam) — le prix (à volume égal), le trafic (au panier
-   d'aujourd'hui) et le personnel (des heures en moins, à 24 € l'heure). Même base et même calcul que le grand tableau. --- */
-if (D.theorique && PE6 && D.coutHeure) {
+   d'aujourd'hui) et le panier (au prix d'aujourd'hui) : les trois leviers du chiffre d'affaires, CA = clients × articles
+   par client × prix de l'article. Le panier remplace le personnel (16/11/2026, Sam : « changer le personnel en
+   panier ») ; l'équipe reste égale, sa part du CA baisse d'elle-même. Même base et même calcul que le grand tableau :
+   la matière suit le volume (le trafic, le panier), pas le prix. --- */
+if (D.theorique) {
   const T = D.theorique, R = T.reel, jm = R.clients / T.cliJour, tm = T.tauxMatiere / 100;
-  const hTot = Math.round((PE6.n.lab - PE6.n.ca * D.seuilPersonnel / 100) / PE6.n.n / D.coutHeure);
-  const PX = [2, 4, 6], DC = [5, 10, 15], DH = [1, 2, 3].map(k => Math.round(hTot * k / 3));
-  const calc = (dc, px, dh) => { const vol = (T.cliJour + dc) * jm * R.panier, ca = vol * (1 + px / 100), pers = R.personnel - dh * D.coutHeure;
-    return { ca, r: ca - vol * tm - pers - R.fg, p: pers / ca * 100 }; };
+  const PX = [2, 4, 6], DC = [5, 10, 15], DP = [0.5, 1, 2];
+  const calc = (dc, px, dp) => { const vol = (T.cliJour + dc) * jm * (R.panier + dp), ca = vol * (1 + px / 100);
+    return { ca, r: ca - vol * tm - R.personnel - R.fg, p: R.personnel / ca * 100 }; };
   const base = calc(0, 0, 0), N = ['Petit pas', 'Moyen', 'Fort'];
-  const ens = [0, 1, 2].map(i => calc(DC[i], PX[i], DH[i]));
+  const ens = [0, 1, 2].map(i => calc(DC[i], PX[i], DP[i]));
+  const euroP = v => '+' + (v % 1 ? dec(v, 2) : String(v)) + INS + '€';
   // Le schéma : trois axes depuis le centre, trois paliers, un triangle par palier ; à droite, le résultat de chacun.
   const cx = 255, cy = 225, Lg = 150, ang = [-90, 150, 30].map(a => a * Math.PI / 180);
   const pt = (a, k) => [cx + Math.cos(ang[a]) * Lg * k / 3, cy + Math.sin(ang[a]) * Lg * k / 3];
   const vert = ['rgba(63,122,82,.10)', 'rgba(63,122,82,.16)', 'rgba(63,122,82,.24)'];
-  let s = `<svg viewBox="0 0 820 400" role="img" aria-label="Trois axes : le prix, le trafic, le personnel. Ensemble, le résultat d’un mois passe de ${eur(base.r)} à ${eur(ens[0].r)}, ${eur(ens[1].r)} puis ${eur(ens[2].r)}." style="font-family:var(--font)">`;
+  let s = `<svg viewBox="0 0 820 400" role="img" aria-label="Trois axes : le prix, le trafic, le panier. Ensemble, le résultat d’un mois passe de ${eur(base.r)} à ${eur(ens[0].r)}, ${eur(ens[1].r)} puis ${eur(ens[2].r)}." style="font-family:var(--font)">`;
   [2, 1, 0].forEach(i => { s += `<polygon points="${[0, 1, 2].map(a => pt(a, i + 1).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="${vert[2 - i]}" stroke="#3f7a52" stroke-width="${i === 2 ? 2 : 1.2}" stroke-opacity=".8"/>`; });
-  const noms = [['Le prix', 'à volume égal'], ['Le trafic', 'au panier d’aujourd’hui'], ['Le personnel', `à ${dec(D.coutHeure, 0)} € l’heure`]];
-  const pas = [PX.map(x => '+' + x + ' %'), DC.map(x => '+' + x + ' clients / jour'), DH.map(x => '−' + x + ' h / mois')];
+  const noms = [['Le prix', 'à volume égal'], ['Le trafic', 'au panier d’aujourd’hui'], ['Le panier', 'au prix d’aujourd’hui']];
+  const pas = [PX.map(x => '+' + x + ' %'), DC.map(x => '+' + x + ' clients / jour'), DP.map(x => euroP(x) + ' / client')];
   [0, 1, 2].forEach(a => {
     const [tx, ty] = pt(a, 3), [ex, ey] = pt(a, 3.3);
     s += `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#8D1D2C" stroke-width="1.6"/>`;
@@ -1242,22 +1245,23 @@ if (D.theorique && PE6 && D.coutHeure) {
   ens.forEach((c, i) => {
     const y0 = 134 + i * 76;
     s += `<rect x="${bx}" y="${y0}" width="295" height="66" rx="8" fill="${vert[i]}" stroke="#3f7a52" stroke-opacity=".5"/>`
-      + `<text x="${bx + 16}" y="${y0 + 20}" font-size="12" fill="#3f7a52">${esc(N[i])} : ${esc(insec(`+${PX[i]} %, +${DC[i]} clients, −${DH[i]} h`))}</text>`
+      + `<text x="${bx + 16}" y="${y0 + 20}" font-size="12" fill="#3f7a52">${esc(N[i])} : ${esc(insec(`+${PX[i]} %, +${DC[i]} clients, ${euroP(DP[i])}`))}</text>`
       + `<text x="${bx + 16}" y="${y0 + 46}" font-size="22" fill="#3f7a52" font-weight="700">${esc(eur(c.r))}</text>`
       + `<text x="${bx + 150}" y="${y0 + 46}" font-size="12" fill="#3f7a52">+${esc(k1((c.r - base.r) * 12))} par an</text>`;
   });
   $('fin-schema').innerHTML = s + '</svg>';
   // Le tableau : chaque axe seul (le gain), puis les trois ensemble.
-  const g = (dc, px, dh) => calc(dc, px, dh).r - base.r;
+  const g = (dc, px, dp) => calc(dc, px, dp).r - base.r;
   $('fin-table').innerHTML = `<thead><tr><th></th>${N.map(n => `<th class="num">${n}</th>`).join('')}</tr></thead><tbody>`
-    + [[`Le prix : +${PX.join(', +')} %`, i => g(0, PX[i], 0)], [`Le trafic : +${DC.join(', +')} clients par jour`, i => g(DC[i], 0, 0)], [`Le personnel : −${DH.join(', −')} h par mois`, i => g(0, 0, DH[i])]]
+    + [[`Le prix : +${PX.join(', +')} %`, i => g(0, PX[i], 0)], [`Le trafic : +${DC.join(', +')} clients par jour`, i => g(DC[i], 0, 0)], [`Le panier : ${DP.map(euroP).join(', ')} par client`, i => g(0, 0, DP[i])]]
       .map(([nom, f]) => `<tr><td>${esc(insec(nom))}</td>${[0, 1, 2].map(i => `<td class="num up">+${eur(f(i))} / mois</td>`).join('')}</tr>`).join('')
     + `<tr class="moi ens"><td>Les trois ensemble : le résultat d’un mois</td>${ens.map(c => `<td class="num">${eur(c.r)}</td>`).join('')}</tr>`
     + `<tr><td>En plus sur l’année</td>${ens.map(c => `<td class="num up">+${k1((c.r - base.r) * 12)}</td>`).join('')}</tr>`
     + `<tr><td>Personnel, % du CA (aujourd’hui ${dec(base.p)} %)</td>${ens.map(c => `<td class="num ${c.p <= D.seuilPersonnel ? 'up' : ''}">${dec(c.p)} %</td>`).join('')}</tr></tbody>`;
   $('fin-points').innerHTML = [
     `Base : le mois moyen de février à octobre 2026, ${eur(base.r)} de résultat, comme le grand tableau de l’étape 3.`,
-    `Le prix : à volume égal, tout va au résultat. Le trafic : au panier d’aujourd’hui (${eur2(R.panier)}), matière à ${dec(tm * 100, 0)} %. Le personnel : ${hTot} h par mois en tout pour viser ${dec(D.seuilPersonnel, 0)} %, à ${dec(D.coutHeure, 0)} € l’heure.`,
+    `Le prix : à volume égal, tout va au résultat. Le trafic : au panier d’aujourd’hui (${eur2(R.panier)}). Le panier : plus d’articles par client, au prix d’aujourd’hui. Le trafic et le panier coûtent leur matière (${dec(tm * 100, 0)} %), le prix non.`,
+    `À équipe égale (${eur(R.personnel)} de personnel par mois) : le personnel passe de ${dec(base.p)} % à ${dec(ens[2].p)} % du CA sans une heure de moins.`,
   ].map(x => `<li>${esc(insec(x))}</li>`).join('');
   $('page-fin').hidden = false;
 }
