@@ -8460,7 +8460,8 @@
       ['canaux', 'Canaux, commandes et promotions', () => splitCarte(m) + offresCarte()],
       ['invendus', 'Invendus', () => invCarte(false), m.invendusPieces ? fN(m.invendusPieces) + ' pièces · ' + fE(m.invendus || 0) : ''],
       ['calendrier', sem ? 'Le calendrier de la semaine' : 'Le calendrier du mois', () => periodeCalendrier(m) + (sem ? '' : periodeProfil(m))],
-      sem ? ['tendance', 'Les 12 dernières semaines', () => rendSemaines()] : (S.date.slice(0, 7) === AUJ.slice(0, 7) ? ['tendance', 'Le résultat jour par jour', () => rendRentab()] : null),
+      // Les douze dernières semaines restent visibles (16/11/2026, Sam : « garder ») : voir qbPage.
+      sem || S.date.slice(0, 7) !== AUJ.slice(0, 7) ? null : ['tendance', 'Le résultat jour par jour', () => rendRentab()],
       ['heures', 'Le détail heure par heure', () => st ? rendHeures(st) : squelette(2)],
     ].filter(Boolean);
     const puces = L.map(([k, t, , n]) => `<button type="button" class="qb-puce${O[k] ? ' on' : ''}" data-qbplus="${k}" aria-expanded="${O[k] ? 'true' : 'false'}">${esc(t)}${n ? `<small>${esc(n)}</small>` : ''}<span>${O[k] ? '▴' : '▾'}</span></button>`).join('');
@@ -8480,6 +8481,7 @@
     return `${qbChiffre(m, d)}${qbJours(m)}
       <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
         <div class="qb-pile">${qbHeures(st, ks)}${qbTop(st)}</div></div>
+      ${S.vue === 'semaine' ? `<div class="qb-douze">${rendSemaines()}</div>` : ''}
       ${qbPlus(m, d, st)}`;
   }
   /** Le profil des jours du mois (moyenne par jour de la semaine) : sorti de rendPeriode le 16/11/2026. */

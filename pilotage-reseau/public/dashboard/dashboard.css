@@ -3402,3 +3402,4 @@ body.db-vue-social{overflow:hidden}
 .qb-puce.on{border-color:var(--color-primary);color:var(--color-primary)}
 .qb-sec{margin-top:8px}
 @media (max-width:1150px){.qb-heros,.qb-g2{grid-template-columns:1fr}.qb-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qb-douze{margin-top:12px}
