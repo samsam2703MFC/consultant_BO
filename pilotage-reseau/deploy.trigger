@@ -76,3 +76,4 @@
 2026-11-16T19:06:29Z [321] SMS commandes : premier numéro lisible
 2026-11-16T19:12:57Z Dashboard : « Ce qui rapporte » retiré
 2026-11-16 19:19:30 [323] Dzisiaj sans « Ostatnie zamówienia »
+2026-11-16 19:30:40 [324-328] Dzisiaj finance, Klienci aktywni, Wolumen, Stany i palety, Logistyka dnia
