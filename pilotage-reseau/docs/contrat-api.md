@@ -2839,6 +2839,7 @@ se rapportent au CA hors TVA :
 
 ### `GET /exploitation/frais` et `POST /exploitation/frais/tva` — l'onglet Frais (16/11/2026)
 
+Code : `src/franchise/frais.php` (les routes), `src/pnl_ht.php` (le calcul, partagé avec le siège).
 `GET /exploitation/frais?shop=4[&mois=AAAA-MM][&rafraichir=1]` : les frais du mois tels que le panel les rend
 (`/shops/{id}/owner/costs?period=AAAA-MM`, gardés `phF:{shop}:{mois}` une heure, six pour un mois passé ; la forme de la
 réponse n'étant pas documentée, liste à la racine ou sous `items`, `costs`, `lines`, `data`, `rows`), face au choix de

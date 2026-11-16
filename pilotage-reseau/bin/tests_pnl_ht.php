@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Tests du P&L hors TVA et de l'onglet Frais (src/pnl_ht.php, 16/11/2026) — base SQLite en mémoire, panel en doublure.
+ * Tests du P&L hors TVA et de l'onglet Frais (src/pnl_ht.php, src/franchise/frais.php, 16/11/2026) — base SQLite en mémoire, panel en doublure.
  *
  *   php bin/tests_pnl_ht.php
  *
@@ -48,6 +48,7 @@ final class PanelApi {
 Db::exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
 Db::exec('CREATE TABLE ceo_verif_ca (shop_id INT, jour TEXT, caisse_ttc REAL, caisse_tva REAL, PRIMARY KEY (shop_id, jour))');
 require __DIR__ . '/../src/pnl_ht.php';
+require __DIR__ . '/../src/franchise/frais.php';
 require __DIR__ . '/../src/ventes_pro.php';
 
 echo "La TVA des tickets dans le relevé du jour\n";

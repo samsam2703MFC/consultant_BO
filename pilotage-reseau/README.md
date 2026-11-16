@@ -464,7 +464,7 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   (`src/endpoints.php`), lue par le jour, la période et le téléphone (qui avait 35 % en dur). Main-d'œuvre et
   frais généraux restent ceux de la table `kpi` ; repli 32 / 33 / 13,5. Les six leviers du Mois, eux, gardent les
   seuils d'alerte de la Table KPI (`ceo_kpi_def`).
-- **P&L court hors TVA et onglet Frais** (16/11/2026, `src/pnl_ht.php`, maquette `docs/maquettes/frais-tva`) : le
+- **P&L court hors TVA et onglet Frais** (16/11/2026, `src/pnl_ht.php` et `src/franchise/frais.php`, maquette `docs/maquettes/frais-tva`) : le
   P&L du jour, de la semaine et du mois se lit hors TVA. Le CA encaissé (TTC) en tête, la TVA des tickets retirée
   (lue ticket par ticket dans la liste du jour, sinon la caisse gravée `ceo_verif_ca`, sinon le taux habituel du
   magasin, sinon 6 %), puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA, d'après l'onglet

@@ -1,7 +1,7 @@
 # Dashboard magasin › Frais, et le P&L court hors TVA
 
 **Statut : codé le 16/11/2026** (demande « code it, push it »), avec les choix proposés ci-dessous. Code :
-`src/pnl_ht.php`, `/exploitation/jour` et `/exploitation/periode`, `public/dashboard/dashboard.js` (onglet `frais`,
+`src/pnl_ht.php`, `src/franchise/frais.php`, `/exploitation/jour` et `/exploitation/periode`, `public/dashboard/dashboard.js` (onglet `frais`,
 carte du P&L) ; routes : `docs/contrat-api.md` ; tests : `php bin/tests_pnl_ht.php`. Maquette du même jour.
 
 Demandes (16/11/2026) : « le P&L refaire sans TVA », puis « faire un onglet dans le rail avec leur frais, et marquer
