@@ -1,0 +1,63 @@
+/* Dashboard magasin › Paramètres › Mails et automatisations (16/11/2026) : automatisations.js. Préfixe au-. */
+.au-racine{display:block}
+.au-intro{margin:0 0 12px;font-size:13px;color:var(--muted-2)}
+.au-flash{margin:0 0 12px;padding:9px 12px;border-radius:9px;font-size:12.5px}
+.au-flash.ok{background:rgba(63,122,82,.1);color:#2f5e3e}.au-flash.ko{background:rgba(163,32,20,.08);color:#A32014}
+.au-ok{color:#3f7a52}.au-ko{color:#A32014}
+
+/* Quatre tuiles identiques : mêmes lignes, même hauteur. */
+.au-tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.au-tui{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;min-width:0}
+.au-tui .k{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.au-tui b{font-weight:400;font-size:20px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.au-tui .s{font-size:11.5px;line-height:16px;height:32px;overflow:hidden;color:var(--muted-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.au-tui.on b{color:#3f7a52}
+
+.au-liste{margin-bottom:6px}
+.au-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.au-t th{text-align:left;font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 14px;background:var(--color-background-secondary)}
+.au-t td{padding:9px 14px;border-top:1px solid var(--color-border-tertiary);vertical-align:middle}
+.au-t td b{font-weight:400}.au-t td small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.au-t .n{text-align:right;white-space:nowrap}
+.au-t tr.sel td{background:#fcf9f5}
+.au-t tr.gris td{color:var(--faint)}.au-t tr.gris td>*{opacity:.6}.au-t tr.gris .au-chip.g{opacity:1}
+.au-t td .bx-bascule{display:inline-block;vertical-align:middle;margin-right:8px}
+.au-etat{font-size:12px;color:var(--muted-2)}
+.au-chip{display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:10px;background:var(--chip);font-size:11px;white-space:nowrap}
+.au-chip.m{background:#e8eef8;color:#1f4e8c}.au-chip.s{background:rgba(63,122,82,.12);color:#2f5e3e}.au-chip.p{background:rgba(141,29,44,.08);color:var(--accent)}
+.au-chip.g{background:var(--chip);color:var(--muted)}
+
+/* Le réglage et l'aperçu : deux colonnes, cartes empilées. */
+.au-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.au-col>.db-card{margin-bottom:12px}
+.au-f{padding:12px 16px 14px;display:grid;gap:10px}
+.au-row{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.au-row .bx-in{width:auto}
+.au-lab{display:grid;gap:4px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.au-lab .bx-in{text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
+.au-f textarea.bx-in{width:100%;resize:vertical;line-height:1.45}
+.au-f input.bx-in{width:100%}
+.au-seg{display:inline-flex;padding:3px;border-radius:9px;background:var(--chip);gap:2px;justify-self:start}
+.au-seg button{border:0;background:none;padding:6px 14px;border-radius:7px;font:inherit;font-size:12.5px;color:var(--muted-2);cursor:pointer}
+.au-seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.au-vars{display:flex;flex-wrap:wrap;gap:4px}
+.au-var{font:400 11px ui-monospace,SFMono-Regular,Menlo,monospace;padding:2px 6px;border-radius:5px;background:rgba(141,29,44,.06);color:var(--accent);cursor:help}
+.au-off{opacity:.45}
+.au-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.au-actions .au-tel{width:220px}
+.au-modif{margin:6px 0 0;text-align:right;font-size:11.5px;color:var(--accent)}
+
+.au-mail{margin:12px 16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.au-mail .h{padding:9px 12px;background:var(--color-background-secondary);font-size:12px;color:var(--muted-2)}.au-mail .h b{font-weight:400;color:var(--ink)}
+.au-mail .c{padding:12px;font-size:13px;line-height:1.55}
+.au-sms{margin:0 16px 14px;padding:12px;border-radius:12px;background:#f2efe9}
+.au-sms .h{font-size:10.5px;color:var(--muted);margin-bottom:6px}
+.au-sms .b{display:inline-block;max-width:85%;padding:9px 12px;border-radius:14px 14px 14px 4px;background:#fff;font-size:12.5px;line-height:1.45}
+.au-defile{max-height:300px;overflow:auto}
+.au-defile thead th{position:sticky;top:0;z-index:1}
+.au-vide{margin:0;padding:14px 16px;font-size:12.5px;color:var(--muted-2)}
+
+.au-porte{max-width:560px;margin:40px auto;padding:22px 24px;display:grid;gap:8px;justify-items:start}
+.au-porte b{font-weight:400;font-size:16px}.au-porte p{margin:0;font-size:13px;color:var(--muted-2)}
+
+@media (max-width:1100px){.au-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}.au-g2{grid-template-columns:1fr}}
