@@ -81,6 +81,8 @@
             <div class="card mb-0"><div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-sliders"></i> Wysyłka</h4></div><div class="card-body">
                 <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="smOn" ${s.enabled ? 'checked' : ''} ${dis}>
                     <label class="form-check-label" for="smOn">Wysyłaj SMS przez SMSAPI <span class="text-muted small">(wyłączone = tylko zapis w historii)</span></label></div>
+                ${s.cohab_switch ? `<div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="smLive" ${s.live_cohab ? 'checked' : ''} ${dis}>
+                    <label class="form-check-label" for="smLive"><strong>SMS naprawdę z tego serwera</strong> <span class="text-muted small d-block">Serwer atelier działa obok starego ERP : e-maile zostają w trybie testowym (bez podwójnych wysyłek), SMS wychodzą do odbiorców.</span></label></div>` : ''}
                 <label class="form-label mb-1" for="smFrom">Nadawca</label>
                 <input class="form-control mb-1" id="smFrom" maxlength="11" value="${esc(s.from)}" placeholder="domyślny nadawca konta" ${dis}>
                 <p class="small text-muted">Nazwa zatwierdzona w SMSAPI (2–11 znaków). Puste = nadawca domyślny konta.</p>
@@ -116,7 +118,7 @@
         q('[data-change]')?.addEventListener('click', () => { q('[data-keyform]').hidden = false; });
         q('[data-del]')?.addEventListener('click', () => { if (window.confirm('Usunąć token SMSAPI ? SMS-y będą tylko zapisywane.')) act(call('PUT', '/ajax/settings/sms/key', {key: ''})); });
         q('[data-savekey]')?.addEventListener('click', () => act(call('PUT', '/ajax/settings/sms/key', {key: q('#smKey').value})));
-        q('[data-save]')?.addEventListener('click', () => act(call('PUT', '/ajax/settings/sms', {enabled: q('#smOn').checked, from: q('#smFrom').value, prefix: q('#smPrefix').value})));
+        q('[data-save]')?.addEventListener('click', () => act(call('PUT', '/ajax/settings/sms', Object.assign({enabled: q('#smOn').checked, from: q('#smFrom').value, prefix: q('#smPrefix').value}, q('#smLive') ? {live_cohab: q('#smLive').checked} : {}))));
         q('[data-test]')?.addEventListener('click', () => {
             const phone = q('#smTest').value.trim();
             if (phone && window.confirm('Wysłać SMS próbny na ' + phone + ' ?')) act(call('POST', '/ajax/settings/sms/test', {phone}));

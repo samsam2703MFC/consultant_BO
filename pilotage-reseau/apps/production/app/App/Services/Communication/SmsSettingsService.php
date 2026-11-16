@@ -31,6 +31,8 @@ final class SmsSettingsService
             'source' => $t['source'],
             'hint' => $t['hint'],
             'enabled' => $this->sms->enabled(),
+            'cohab_switch' => $this->sms->cohabitationSwitch(),
+            'live_cohab' => $this->params->get('sms.live_cohab', '0') === '1',
             'mode' => $this->sms->mode(),
             'delivers' => $this->sms->delivers(),
             'blocker' => $this->sms->blocker(),
@@ -79,6 +81,7 @@ final class SmsSettingsService
             $this->params->setValue('sms.default_prefix', $prefix, $userId);
         }
         if (array_key_exists('enabled', $in)) $this->params->setValue('sms.provider', !empty($in['enabled']) ? 'smsapi' : 'log_only', $userId);
+        if (array_key_exists('live_cohab', $in) && $this->sms->cohabitationSwitch()) $this->params->setValue('sms.live_cohab', !empty($in['live_cohab']) ? '1' : '0', $userId);
         return $this->state($userId);
     }
 

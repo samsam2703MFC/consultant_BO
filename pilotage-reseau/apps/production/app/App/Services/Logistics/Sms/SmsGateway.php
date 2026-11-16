@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Logistics\Sms;
 
+use App\Core\Cohabitation;
 use App\Repositories\Communication\SmsLogRepository;
 use App\Repositories\Translation\AppSecretRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -59,9 +60,28 @@ final class SmsGateway implements SmsTransport
         return rtrim($env !== '' ? $env : trim($this->params->get('sms.base', '')), '/');
     }
 
+    /**
+     * Tryb wysyłki SMS : jak e-maile (MAIL_DELIVERY_MODE), z jednym wyjątkiem [318] — serwer atelier w trybie
+     * współistnienia (COHABITATION=1, prawdziwa baza) może wysyłać SMS naprawdę, gdy administrator włączy
+     * sms.live_cohab, choć e-maile zostają w trybie testowym. Kopia testowa (bez współistnienia) : nigdy.
+     */
     public function mode(): string
     {
+        if (self::$modeOverride !== null) return self::$modeOverride;
+        $mail = $this->mailMode();
+        if ($mail !== 'live' && Cohabitation::on() && $this->params->get('sms.live_cohab', '0') === '1') return 'live';
+        return $mail;
+    }
+
+    public function mailMode(): string
+    {
         return self::$modeOverride ?? (new MailDeliveryPolicy())->mode();
+    }
+
+    /** [318] Czy przełącznik « SMS naprawdę na serwerze atelier » ma sens (współistnienie, e-maile w trybie testowym). */
+    public function cohabitationSwitch(): bool
+    {
+        return Cohabitation::on() && $this->mailMode() !== 'live';
     }
 
     public function enabled(): bool
@@ -85,7 +105,9 @@ final class SmsGateway implements SmsTransport
         if ($this->token()['token'] === '') return 'brak tokenu SMSAPI';
         if (!$this->enabled()) return 'wyłączone w Ustawieniach (sms.provider = log_only)';
         if ($this->base() === '') return 'brak adresu API (parametr sms.base)';
-        if ($this->mode() !== 'live') return 'kopia testowa ERP (tryb wysyłki ' . $this->mode() . ') — SMS tylko zapisane';
+        if ($this->mode() !== 'live') return $this->cohabitationSwitch()
+            ? 'serwer atelier : e-maile w trybie testowym — włącz « SMS naprawdę z tego serwera » poniżej'
+            : 'kopia testowa ERP (tryb wysyłki ' . $this->mode() . ') — SMS tylko zapisane';
         return null;
     }
 

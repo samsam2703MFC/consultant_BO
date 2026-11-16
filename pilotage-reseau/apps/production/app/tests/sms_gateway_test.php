@@ -164,6 +164,22 @@ try {
     $onlySms = $c->get(ClientMessageLogService::class)->log(7, ['channel' => 'sms', 'period' => 'all']);
     expectS($onlySms['rows'] && !array_filter($onlySms['rows'], fn($r) => $r['channel'] !== 'sms') && $onlySms['counts']['sms'] >= 1, 'filtr : tylko SMS ; liczniki 30 dni');
 
+
+    // [318] Serwer atelier (współistnienie) : SMS naprawdę mimo e-maili w trybie testowym — tylko z przełącznikiem ; kopia testowa nigdy.
+    $pdo->exec("INSERT IGNORE INTO n_prod_param (code, value, default_value, value_type, unit, description_pl, description_fr) VALUES ('sms.live_cohab', '0', '0', 'bool', NULL, 'x', 'x')");
+    SmsGateway::$modeOverride = null;
+    $_ENV['MAIL_DELIVERY_MODE'] = 'log_only';
+    $_ENV['COHABITATION'] = '1';
+    $g = $c->make(SmsGateway::class);
+    expectS(!$g->delivers() && $g->cohabitationSwitch() && str_contains((string) $g->blocker(), 'serwer atelier'), 'współistnienie bez przełącznika : SMS tylko zapisane, wskazówka');
+    $c->get(SmsSettingsService::class)->save(1, ['live_cohab' => true]);
+    $g = $c->make(SmsGateway::class);
+    expectS($g->mode() === 'live' && $g->delivers() && $g->mailMode() === 'log_only', 'współistnienie + przełącznik : SMS naprawdę, e-maile dalej testowe');
+    $_ENV['COHABITATION'] = '0';
+    $g = $c->make(SmsGateway::class);
+    expectS(!$g->delivers() && !$g->cohabitationSwitch(), 'kopia testowa (bez współistnienia) : przełącznik bez skutku');
+    unset($_ENV['MAIL_DELIVERY_MODE'], $_ENV['COHABITATION']);
+
     echo "sms_gateway_test: OK\n";
 } finally {
     SmsGateway::$http = null;
