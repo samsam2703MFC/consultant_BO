@@ -112,6 +112,18 @@ class LogisticsController extends BaseController
         }
     }
 
+    /** [331] PUT /ajax/logistics/stops {date, customers: [id…], reset?} : kolejność dostaw na ten dzień. */
+    public function reorderStops()
+    {
+        try {
+            $in = $this->getJson(Request::createFromGlobals());
+            $this->logistics->reorderStops((string) ($in['date'] ?? ''), (array) ($in['customers'] ?? []), !empty($in['reset']), $this->userId());
+            return $this->json(['message' => !empty($in['reset']) ? 'Przywrócono kolejność stałej trasy.' : 'Zapisano kolejność dostaw na ten dzień.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     public function saveVehicle($id)
     {
         try {

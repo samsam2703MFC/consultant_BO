@@ -72,6 +72,7 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/logistics/notices/preview', ['controller' => $n, 'method' => 'preview']);
     $r->addRoute('POST', '/ajax/logistics/notices/send', ['controller' => $n, 'method' => 'send']);
     $r->addRoute('PUT', '/ajax/logistics/assignments', ['controller' => $c, 'method' => 'assign']);
+    $r->addRoute('PUT', '/ajax/logistics/stops', ['controller' => $c, 'method' => 'reorderStops']);
     $r->addRoute('POST', '/ajax/logistics/vehicles', ['controller' => $c, 'method' => 'addVehicle']);
     $r->addRoute('PUT', '/ajax/logistics/vehicles/{id:\d+}', ['controller' => $c, 'method' => 'saveVehicle']);
     $r->addRoute('POST', '/ajax/logistics/tours', ['controller' => $c, 'method' => 'createTour']);
