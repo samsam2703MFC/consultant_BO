@@ -5824,6 +5824,12 @@ la couverture seule à droite, les doubles pages (2-3, 4-5…), la dernière seu
 les pastilles des doubles pages ; « Agrandir » l'ouvre en grand (Échap ferme). Rien n'est lu en plus : le document de
 l'étape.
 
+**Couverture et dernière page** (17/11/2026, Marketing v1.9) : l'aperçu reprend la police et la couleur du titre et du
+sous-titre de la couverture (`titleFont`/`titleColor`, `subtitleFont`/`subtitleColor` : Vank · Gotham · Playwrite DEVA,
+rubis · abricot · or · crème · encre · blanc, choisis dans la charte), et à la dernière page l'e-mail de la boutique
+(ERP) et son second téléphone (`DocShop.email`, `.phone2`). Le QR mène au webshop direct de la boutique quand la charte
+le porte ; son logo remplace celui de la charte (`charter.logoUrl` du document).
+
 **Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
 disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le
 nom de la gamme et son illustration, ensuite catégorie produit (possibilité ou pas en lettres manuscrites), ensuite les
