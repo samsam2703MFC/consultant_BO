@@ -37,7 +37,7 @@ function graphe(w, h, mini, serie, ref, libs, opts = {}) {
     if (!mini) {
       s += `<text x="${cx(i).toFixed(1)}" y="${h - 9}" font-size="11" text-anchor="middle" fill="${COUL.axe}">${libs[i]}</text>`;
       // L'étiquette au-dessus de la colonne ET du point de l'an passé, sur un halo blanc : jamais sous la ligne.
-      if (i === der || i === creux) { const yy = Math.min(y(v), ref ? y(ref[i]) : y(v)) - 10; s += `<text x="${cx(i).toFixed(1)}" y="${yy.toFixed(1)}" font-size="12" text-anchor="middle" fill="${COUL.encre}" font-weight="600" stroke="${COUL.fond}" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${fN(v)}</text>`; }
+      if ((opts.etiquettes || [der, creux]).includes(i)) { const yy = Math.min(y(v), ref ? y(ref[i]) : y(v)) - 10; s += `<text x="${cx(i).toFixed(1)}" y="${yy.toFixed(1)}" font-size="12" text-anchor="middle" fill="${COUL.encre}" font-weight="600" stroke="${COUL.fond}" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${fN(v)}</text>`; }
     }
   });
   if (ref) {
@@ -50,10 +50,10 @@ function graphe(w, h, mini, serie, ref, libs, opts = {}) {
   return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block" role="img" aria-label="${opts.titre || 'graphique'}">${s}</svg>`;
 }
 /** La légende : une pastille pour une série en colonnes, un trait pour une ligne, un aplat pour une bande. Texte à l'encre. */
-const legende = L => `<div class="gr-leg">${L.map(([t, k, c]) => `<span>${k === 'trait' ? `<i class="k-trait" style="background:${c}"></i>` : k === 'bande' ? `<i style="background:${c};opacity:.22"></i>` : `<i style="background:${c}"></i>`}${t}</span>`).join('')}</div>`;
+const legende = L => `<div class="gr-leg">${L.map(([t, k, c]) => `<span>${k === 'trait' ? `<i class="k-trait" style="background:${c}"></i>` : k === 'tirets' ? `<i class="k-trait" style="background:repeating-linear-gradient(90deg,${c} 0 3px,transparent 3px 7px)"></i>` : k === 'bande' ? `<i style="background:${c};opacity:.22"></i>` : `<i style="background:${c}"></i>`}${t}</span>`).join('')}</div>`;
 const AVATAR = '/public/dashboard/avatars/pierre.svg';
 function tete(mode) {
-  const M = [['bilan', 'Bilan'], ['conv', 'Conversation'], ['modeles', 'Mes modèles', true], ['bureau', 'Demande au bureau']];
+  const M = [['bilan', 'Bilan'], ['conv', 'Conversation'], ['graphiques', 'Graphiques', true], ['modeles', 'Mes modèles', true], ['bureau', 'Demande au bureau']];
   return `<div class="gr-tete"><img src="${AVATAR}" alt=""><div><b>Pierre</b><small>votre assistant · Atelier by Harmonie - Sombreffe</small></div>
     <div class="gr-modes">${M.map(([k, l, n]) => `<span class="${k === mode ? 'on' : ''}">${l}${n ? '<span class="neuf">nouveau</span>' : ''}</span>`).join('')}</div><span class="gr-x">×</span></div>`;
 }

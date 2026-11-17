@@ -20,16 +20,17 @@ const fPt = v => (v > 0 ? '+ ' : v < 0 ? '− ' : '') + Math.abs(v).toLocaleStri
  *  léger ; la moyenne du réseau en ligne grise pleine ; le magasin en ligne de 2 px, un voile à 10 %, des points de 8 px
  *  cerclés de blanc. Les libellés à l'encre : la famille, puis « 22,0 % · réseau 17,5 % ». */
 function radar(T) {
-  const n = R.axes.length, cx = T / 2, Rr = T / 2 - 132, cy = Rr + 58, MX = 32, Hh = cy + Rr + 56;
+  // Le rayon laisse 128 px de chaque côté : « Boissons & épicerie » à gauche et « 11,4 % · réseau 21,1 % » à droite tiennent.
+  const n = R.axes.length, cx = T / 2, Rr = T / 2 - 128, cy = Rr + 58, MX = 32, Hh = cy + Rr + 56;
   const a = i => -Math.PI / 2 + 2 * Math.PI * i / n;
   const p = (i, v) => [cx + Rr * Math.min(v, MX) / MX * Math.cos(a(i)), cy + Rr * Math.min(v, MX) / MX * Math.sin(a(i))];
   const poly = V => V.map((v, i) => p(i, v).map(x => x.toFixed(1)).join(',')).join(' ');
   const chemin = V => 'M' + V.map((v, i) => p(i, v).map(x => x.toFixed(1)).join(',')).join('L') + 'Z';
   let s = '';
   [8, 16, 24, 32].forEach(r => { s += `<polygon points="${poly(R.axes.map(() => r))}" fill="none" stroke="${COUL.grille}" stroke-width="1"/>`; });
-  // Les graduations sur la bissectrice des deux premiers axes : elles ne touchent ni un axe ni un libellé.
-  const ag = -Math.PI / 2 + Math.PI / n;
-  [8, 16, 24, 32].forEach(r => { s += `<text x="${(cx + Rr * r / MX * Math.cos(ag) + 3).toFixed(1)}" y="${(cy + Rr * r / MX * Math.sin(ag) - 2).toFixed(1)}" font-size="9.5" fill="#b3aca2">${r} %</text>`; });
+  // Les graduations sur la bissectrice de Viennoiserie et Tartes : loin de tous les libellés, détourées de blanc.
+  const ag = -Math.PI / 2 + 3 * Math.PI / n;
+  [8, 16, 24, 32].forEach(r => { s += `<text x="${(cx + Rr * r / MX * Math.cos(ag) + 3).toFixed(1)}" y="${(cy + Rr * r / MX * Math.sin(ag) - 2).toFixed(1)}" font-size="9.5" fill="#a39c92" stroke="${COUL.fond}" stroke-width="3" paint-order="stroke">${r} %</text>`; });
   R.axes.forEach((t, i) => { const [x, y] = p(i, MX); s += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${COUL.grille}" stroke-width="1"/>`; });
   s += `<path d="${chemin(R.max)} ${chemin(R.min)}" fill="${COUL.bande}" fill-opacity=".16" fill-rule="evenodd"><title>Le réseau, du plus bas au plus haut</title></path>`;
   s += `<polygon points="${poly(R.moy)}" fill="none" stroke="${COUL.ref}" stroke-width="2" stroke-linejoin="round"/>`;
@@ -55,8 +56,8 @@ const liste = `<div class="gr-ecarts"><div class="gr-ecarts-t">L’écart au ré
 const reponse = `<div class="gr-moi">Montre-moi la structure de mes ventes par catégorie, face au réseau</div>
   <div class="gr-rep"><p>En octobre, votre vente est la plus « boulangerie » du réseau (22,0 % du CA contre 17,5 % en moyenne) et la seule à passer par des <b style="font-weight:400">bundles et promotions : 21,6 %</b>. Les tartes (11,4 % contre 21,1 %), le traiteur (12,3 % contre 19,7 %) et la viennoiserie (13,6 % contre 20,1 %) pèsent moins qu’ailleurs.</p>
     <div class="gr-types"><span class="on">◎ Radar</span><span>▥ Barres</span><span>☰ Tableau</span><span style="margin-left:auto">Mesure : <b style="font-weight:400;color:var(--ink)">part du CA ▾</b> · Période : <b style="font-weight:400;color:var(--ink)">octobre 2026 ▾</b></span></div>
-    <div class="gr-graph" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:center;padding:10px 16px">
-      <div>${radar(620)}${legende([['Sombreffe', 'trait', COUL.moi], ['Le réseau : moyenne des 3 autres magasins', 'trait', COUL.ref], ['Du plus bas au plus haut', 'bande', COUL.bande]])}</div>
+    <div class="gr-graph" style="display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:14px;align-items:center;padding:10px 16px">
+      <div>${radar(480)}${legende([['Sombreffe', 'trait', COUL.moi], ['Le réseau : moyenne des 3 autres magasins', 'trait', COUL.ref], ['Du plus bas au plus haut', 'bande', COUL.bande]])}</div>
       ${liste}</div>
     <div class="gr-k"><div><b>21,6 %</b><span>en bundles et promotions · réseau 0 %</span></div><div><b>− 9,7 pt</b><span>tartes : 11,4 % contre 21,1 %</span></div><div><b>− 7,4 pt</b><span>traiteur : 12,3 % contre 19,7 %</span></div></div>
     <p style="margin:0">À savoir : une partie de vos viennoiseries et de votre boulangerie se vend dans les bundles ; leur part réelle est donc un peu plus haute que ce que montre le radar.</p>

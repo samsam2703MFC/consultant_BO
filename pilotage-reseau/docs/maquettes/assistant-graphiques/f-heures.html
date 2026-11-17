@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F · Ventes et rentabilité de l’heure — L'assistant fait des graphiques</title>
+<!-- Écran F (17/11/2026) : les ventes de chaque heure et sa marge nette (ventes − matière − rémunération), en moyenne par jour ouvert d'octobre 2026, deux graphiques alignés sur les mêmes heures (une échelle chacun, jamais deux axes sur un graphique). Chiffres réels : /ventes/stats?vue=mois. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+<script src="graphes2.js"></script>
+<script src="donnees2.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const actions = (suites) => `<div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites">${(suites || []).map(t => `<span>${t}</span>`).join('')}</span></div>`;
+const ouvrir = (fil) => document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil">${fil}</div></div></div>`);
+const H = D2.heures, libs = H.map(h => h[0] + ' h'), tot = H.reduce((a, h) => a + h[1], 0), res = H.reduce((a, h) => a + h[2], 0);
+const pic = H.reduce((a, h) => h[1] > a[1] ? h : a), perte = H.filter(h => h[2] < 0);
+const fil = `<div class="gr-moi">Montre-moi mes ventes et la rentabilité de chaque heure en octobre</div>
+  <div class="gr-rep"><p>En moyenne, une journée d’octobre fait <b style="font-weight:400">${fE(tot)}</b> de ventes et <b style="font-weight:400">${fE(res)}</b> de marge nette. Le midi porte la journée : <b style="font-weight:400">12–13 h</b> fait ${fE(pic[1])} de ventes (${Math.round(100 * pic[1] / tot)} %) et ${fE(pic[2])} de marge nette. Seule l’heure de 6–7 h perd de l’argent.</p>
+    <div class="gr-types"><span class="on">▥ Colonnes</span><span>☰ Tableau</span><span style="margin-left:auto">Période : <b style="font-weight:400;color:var(--ink)">octobre 2026 ▾</b> · <b style="font-weight:400;color:var(--ink)">moyenne par jour ▾</b></span></div>
+    <div class="gr-graph"><h5 style="margin:0 0 2px;font-weight:400;font-size:12.5px">Les ventes de l’heure <small style="color:#8a847c">€ par jour</small></h5>${graphe(730, 220, false, H.map(h => h[1]), null, libs, { titre: 'Ventes par heure', etiquettes: [H.indexOf(pic), H.length - 1] })}
+      <h5 style="margin:10px 0 2px;font-weight:400;font-size:12.5px">Sa marge nette <small style="color:#8a847c">ventes − matière − rémunération, € par jour</small></h5>${colDiv(730, 190, H.map(h => h[2]), { libs, titre: 'Marge nette par heure' })}
+      ${legende([['L’heure rapporte', 'col', COUL.froid], ['L’heure perd de l’argent', 'col', COUL.moi]])}</div>
+    <div class="gr-k"><div><b>${fE(pic[1])}</b><span>de 12 à 13 h · ${Math.round(100 * pic[1] / tot)} % des ventes du jour</span></div><div><b>${fE(res)}</b><span>de marge nette par jour · ${Math.round(100 * res / tot)} % des ventes</span></div><div><b>${perte.map(h => h[0] + '–' + (h[0] + 1) + ' h').join(', ')}</b><span>${fE(perte[0][2])} par jour : l’ouverture coûte plus qu’elle ne vend</span></div></div>
+    <p style="margin:0">À creuser : de 14 à 18 h, les ventes tombent sous 120 € de l’heure, mais chaque heure reste rentable (+ 38 à + 62 €).</p>
+    <div class="gr-src">Source : tickets du panel et rémunération du planning, heure par heure · octobre 2026, 31 jours ouverts · c’était le bloc « Les heures » de la vue Mois</div>
+    ${actions(['Et le samedi seulement ?', 'Comparer à septembre'])}</div>`;
+ouvrir(fil);
+</script></body></html>

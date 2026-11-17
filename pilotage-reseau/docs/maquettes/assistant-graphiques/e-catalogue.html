@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E · Le catalogue des graphiques — L'assistant fait des graphiques</title>
+<!-- Écran E (17/11/2026, Sam : « proposer d'autres graphiques… toutes les graphiques disponibles dans le dashboard, comme ça on allège les pages ») : tous les graphiques, rangés par famille ; chacun dit où il vit aujourd'hui dans le dashboard. Vignettes sur les chiffres réels de Sombreffe. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+<script src="graphes2.js"></script>
+<script src="donnees2.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const actions = (suites) => `<div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites">${(suites || []).map(t => `<span>${t}</span>`).join('')}</span></div>`;
+const ouvrir = (fil) => document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil">${fil}</div></div></div>`);
+const H = D2.heures, mL = D2.trafic.mois.map(moisLib);
+const t = (vig, titre, ou, neuf) => `<div class="gr-ct${neuf ? ' neuf' : ''}"><div class="vig">${vig}</div><div class="t">${titre}</div><div class="s">${ou ? 'aujourd’hui : <b>' + ou + '</b>' : 'nouveau dans le cockpit'}</div></div>`;
+const R = { moi: [22.0, 13.6, 11.4, 12.3, 4.7, 7.2, 3.4, 3.6, 21.6], moy: [17.5, 20.1, 21.1, 19.7, 6.4, 6.5, 3.5, 4.4, 0.0] };
+const S46 = [[1780, 1511], [1902, 1663], [1401, 1670], [1620, 1672], [1521, 1705], [2399, 2110], [2517, 2185]];
+const groupes = [
+  ['Les ventes', 'quand et quoi', [
+    t(graphe(300, 90, true, H.map(h => h[1]), null, H.map(h => h[0])), 'Les ventes par heure', 'Semaine, Mois › Les heures'),
+    t(colDiv(300, 90, H.map(h => h[2]), { mini: true }), 'La rentabilité de l’heure', 'Semaine, Mois › Les heures'),
+    t(graphe(300, 90, true, S46.map(x => x[0]), S46.map(x => x[1]), ['L', 'M', 'M', 'J', 'V', 'S', 'D']), 'Le CA de chaque jour face à l’objectif', 'Semaine, Mois › Les jours'),
+    t(ligne(300, 90, D2.baguette.pieces, { mini: true, enCours: true, min0: true }), 'L’évolution d’un produit ou d’une catégorie', 'Vendre › Analyse'),
+    t(radarMini(300, 90, R.moi, R.moy), 'La structure des ventes face au réseau', null, true),
+    t(barresH([22, 21.6, 13.6, 12.3, 11.4].map(v => ({ v })), { mini: true }), 'Les ventes par catégorie', 'Opérationnel › Catégories'),
+    t(ligne(300, 90, [12.95, 12.95, 11.49], { mini: true }), 'Le panier moyen', 'Semaine › Les 12 semaines'),
+    t(graphe(300, 90, true, CLI, N1, SEM), 'Les clients par semaine face au N-1', 'Semaine, Mois › Les 12 semaines'),
+  ]],
+  ['Le magasin et ses clients', 'trafic, réputation', [
+    t(ligne(300, 90, D2.trafic.v, { mini: true }), 'Le trafic du magasin, mois par mois', 'Mois › Les six leviers'),
+    t(ligne(300, 90, D2.google.note, { mini: true, cible: { v: 4.6 } }), 'La note Google, mois par mois', 'le rail › Note Google', true),
+  ]],
+  ['Le résultat', 'où va l’argent', [
+    t(cascadeMini(300, 72, [53985, 23718, 543, 11918, 18700]), 'Le P&L en cascade', 'Semaine, Mois › Le résultat'),
+    t(ligne(300, 90, D2.leviers.food, { mini: true }), 'Matière, main-d’œuvre, frais, mois par mois', 'Mois › Les six leviers'),
+  ]],
+  ['Les tâches et les contrôles', 'ce qui est fait', [
+    t(graphe(300, 90, true, [8, 7, 9, 6, 10, 7, 9], null, ['L', 'M', 'M', 'J', 'V', 'S', 'D'], {}), 'Les tâches faites, jour par jour', 'Tâches'),
+    t(ligne(300, 90, [62, 68, 71, 66, 74, 70], { mini: true }), 'Les photos validées au contrôle', 'Tâches › Contrôles'),
+  ]],
+  ['Les pertes', 'ce qui part à la poubelle', [
+    t(barresH(D2.poubelle.slice(0, 5).map(r => ({ v: r[3] })), { mini: true }), 'Le taux de poubelle par catégorie', 'Opérationnel › Invendus', true),
+    t(graphe(300, 90, true, [41, 52, 38, 66, 49, 71, 53], null, ['L', 'M', 'M', 'J', 'V', 'S', 'D'], {}), 'Les invendus jour par jour', 'Semaine › Invendus'),
+  ]],
+];
+// La première famille sur toute la largeur ; les suivantes, deux par deux sur une rangée.
+const bloc = ([g, s, L], col) => `<div><h4>${g}<small>${s}</small></h4><div class="g" style="grid-template-columns:repeat(${col},minmax(0,1fr))">${L.join('')}</div></div>`;
+const paires = []; for (let i = 1; i < groupes.length; i += 2) { paires.push(`<div class="gr-paire">${bloc(groupes[i], 2)}${groupes[i + 1] ? bloc(groupes[i + 1], 2) : '<div></div>'}</div>`); }
+const corps = `<div class="gr-cat"><div class="gr-cat-h"><p>Tous les graphiques du dashboard, à la demande : la page garde l’essentiel, l’assistant dessine le reste, pour ce magasin et la période choisie. Chacun se télécharge, s’enregistre comme modèle ou s’épingle.</p><span class="gr-in" style="min-width:270px">🔍 Chercher un graphique…</span></div>
+  ${bloc(groupes[0], 4)}${paires.join('')}</div>`;
+document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('graphiques')}${corps}</div>`);
+</script></body></html>
