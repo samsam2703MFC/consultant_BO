@@ -8,9 +8,9 @@ final class EmailAccountService
 {
     /** [341] Usages des comptes d'envoi (une adresse par usage) : libellé PL et adresse proposée. */
     public const PURPOSES = [
-        'finance' => ['label' => 'Faktury, proformy i przypomnienia o płatności', 'hint' => 'accounting@'],
-        'logistics' => ['label' => 'Informacje logistyczne : dostawy, wysyłki, potwierdzenia zamówień', 'hint' => 'logistyka@'],
-        'production' => ['label' => 'Produkcja : niezgodności, zakupy i odpowiedzi dostawców', 'hint' => 'produkcja@'],
+        'finance' => ['label' => 'Faktury, proformy i przypomnienia o płatności', 'hint' => 'accounting@', 'position' => 'ADMINISTRACJA'],
+        'logistics' => ['label' => 'Informacje logistyczne : dostawy, wysyłki, potwierdzenia zamówień', 'hint' => 'logistyka@', 'position' => 'LOGISTYKA'],
+        'production' => ['label' => 'Produkcja : niezgodności, zakupy i odpowiedzi dostawców', 'hint' => 'produkcja@', 'position' => 'KIEROWNIK_PRODUKCJI'],
     ];
 
     /** [341] Type de message → usage ; tout le reste part du compte finance. */
@@ -22,6 +22,7 @@ final class EmailAccountService
 
     public function __construct(private EmailAccountRepository $accounts, private SmtpTransport $transport) {}
     public function active(): array { return $this->accounts->active(); }
+    public function positions(): array { return $this->accounts->positions(); }
     /** Usage d'un type de message (finance par défaut). */
     public static function purposeOf(string $messageType): string { return self::TYPE_PURPOSE[$messageType] ?? 'finance'; }
     /** Compte actif de l'usage, sinon le compte par défaut (finance). */
@@ -52,7 +53,9 @@ final class EmailAccountService
         if ($smtpSecret === '' && trim((string)($old['smtp_secret'] ?? '')) === '') throw new InvalidArgumentException('Podaj hasło aplikacji SMTP.');
         if ($imapSecret === '' && trim((string)($old['imap_secret'] ?? '')) === '') throw new InvalidArgumentException('Podaj hasło aplikacji IMAP.');
         $payload = [
-            'name'=>trim($data['name']),'purpose'=>$purpose,'from_name'=>trim($data['from_name']),'from_email'=>trim($data['from_email']),'reply_to_email'=>trim($data['reply_to_email']),
+            'name'=>trim($data['name']),'purpose'=>$purpose,
+            // [345] Poczta tego stanowiska w ERP ('' = żadne)
+            'position_code'=>in_array((string)($data['position_code'] ?? ''), array_column($this->accounts->positions(), 'code'), true) ? (string)$data['position_code'] : null,'from_name'=>trim($data['from_name']),'from_email'=>trim($data['from_email']),'reply_to_email'=>trim($data['reply_to_email']),
             'smtp_host'=>trim($data['smtp_host']),'smtp_port'=>(int)($data['smtp_port'] ?: 587),'smtp_encryption'=>in_array($data['smtp_encryption'] ?? '', ['tls','ssl'], true) ? $data['smtp_encryption'] : 'tls','smtp_username'=>trim($data['smtp_username']),
             'imap_host'=>trim($data['imap_host']),'imap_port'=>(int)($data['imap_port'] ?: 993),'imap_username'=>trim($data['imap_username']),'is_active'=>1,
             // Legacy columns from migration 030 remain required on installations that have not yet applied migration 038.

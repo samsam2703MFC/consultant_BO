@@ -19,6 +19,8 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);
 }
 
+// [345] Skrzynki stanowisk (accounting@, logistyka@, produkcja@) skopiowane z kont wysyłki przed pobraniem.
+try { $container->get(App\Services\Mail\PositionMailboxService::class)->provision(); } catch (Throwable $e) { /* konto do poprawy w Konfiguracji poczty */ }
 $service = $container->get(App\Services\Mail\UserMailService::class);
 $stats = ['mailboxes' => 0, 'new' => 0, 'errors' => 0];
 // [270] Skrzynki wstrzymane przez administratora są pomijane.

@@ -24,6 +24,12 @@ $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); ?>
         <div class="col-md-4"><label class="form-label">Nazwa konfiguracji</label><input class="form-control" name="name" required value="<?= $e($a['name'] ?? ('OVH ' . $meta['hint'])) ?>"></div>
         <div class="col-md-4"><label class="form-label">Nazwa nadawcy</label><input class="form-control" name="from_name" required value="<?= $e($a['from_name'] ?? 'SL Food') ?>"></div>
         <div class="col-md-4"><label class="form-label">Adres nadawcy (From)</label><input class="form-control" type="email" name="from_email" required value="<?= $e($a['from_email'] ?? '') ?>" placeholder="<?= $e($meta['hint']) ?>…"></div>
+        <div class="col-md-4"><label class="form-label">Poczta w ERP dla stanowiska</label>
+            <?php $pc = array_key_exists('position_code', $a) ? (string) $a['position_code'] : (string) ($meta['position'] ?? ''); ?>
+            <select class="form-select" name="position_code"><option value="">— żadne —</option>
+                <?php foreach ($positions as $p): ?><option value="<?= $e($p['code']) ?>" <?= $pc === $p['code'] ? 'selected' : '' ?>><?= $e($p['name_pl']) ?></option><?php endforeach; ?>
+            </select>
+            <div class="form-text">Skrzynka tego adresu pojawi się w « Poczcie » osób na tym stanowisku (bez wpisywania hasła).</div></div>
         <div class="col-md-4"><label class="form-label">Odpowiedzi na adres (Reply-To)</label><input class="form-control" type="email" name="reply_to_email" required value="<?= $e($a['reply_to_email'] ?? '') ?>"></div>
         <div class="col-12"><h5 class="mt-2 mb-0">Wysyłka (SMTP)</h5></div>
         <div class="col-md-4"><label class="form-label">Serwer</label><input class="form-control" name="smtp_host" required value="<?= $e($a['smtp_host'] ?? 'ssl0.ovh.net') ?>"></div>
