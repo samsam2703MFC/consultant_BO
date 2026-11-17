@@ -5801,6 +5801,20 @@ Passer à une autre mise en page retire `product`. Le dashboard passe au Marketi
 (`X-Forwarded-Host`) : les dessins du document (en-tête, repli des vignettes) s'ouvrent dans le navigateur au lieu de
 pointer vers 127.0.0.1.
 
+**L'assistant de mise en page** (17/11/2026, Sam : « la mise en page sous forme d'assistant, catégorie par catégorie
+sélectionnée ; la dernière page est la mise en page finale, où l'on déplace une catégorie en drag and drop » ; « code
+comme les maquettes », `docs/maquettes/assistant-mise-en-page`). L'étape 3 a des sous-étapes : une par catégorie choisie
+à l'étape 2 (dans son ordre), puis « Mise en page finale ». Une catégorie : 4 mises en page (1 vedette + 4 · 2 par
+largeur · 1 par largeur · 2 grandes) avec le nombre de pages que chacune donne (rouge au-delà de 2), les aperçus de ses
+pages côte à côte, « un produit seul sur une page, avec sa promotion » (une pleine page avant les autres, son produit),
+gabarit et catégorie manuscrite. Choisir refait les pages de la catégorie à la place des anciennes ; les pages libres
+(sans produit, ni présentation) font la place, sinon le catalogue prend 2 pages de plus (16 au plus, dit). La mise en
+page finale : les pages dans l'ordre en blocs (une catégorie et ses pages, présentation, Notre sélection, pages libres),
+qui se glissent par ⠿ (ou ‹ ›) ; les pages de la marque restent fixes ; nombre de pages (sans retirer une page qui
+porte des produits), format, langues ; « Réglages page par page » ouvre la liste détaillée d'avant (place libre, gamme,
+présentations, répartition automatique). Rien ne part avant « Validation » : un seul `PUT` (pages, format, langues, et
+`pageCount` s'il a changé). Le produit d'une pleine page est relu (`adopter`) et renvoyé (`pagesCorps`).
+
 **Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
 disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le
 nom de la gamme et son illustration, ensuite catégorie produit (possibilité ou pas en lettres manuscrites), ensuite les
