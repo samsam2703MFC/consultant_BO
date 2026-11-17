@@ -659,3 +659,13 @@ button.cm-pas{cursor:pointer}
 .cm-zoom__p{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-size:12px}
 .cm-zoom__p .cm-ap{cursor:zoom-out}
 .cm-zoom__x{background:#fff}
+
+/* Une seule rangée de choix (17/11/2026) : les mises en page en dessin, par la place des produits sur la largeur. */
+.cm-lay{grid-template-columns:repeat(6,minmax(0,1fr))}
+.cm-lay button{padding:7px 4px 6px;gap:2px}
+.cm-lay button .mini{width:30px;height:42px;padding:3px;gap:2px}
+.cm-lay button span{font-size:11.5px;color:var(--color-text);line-height:1.2;text-align:center}
+.cm-lay button small{font-size:10px;color:var(--color-text-muted);text-align:center;line-height:1.2}
+.cm-lay button.on span{color:var(--color-primary)}
+.cm-lay button:disabled{opacity:.4;cursor:default}
+@media (max-width:1280px){.cm-lay{grid-template-columns:repeat(3,minmax(0,1fr))}}

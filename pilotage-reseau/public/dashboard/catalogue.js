@@ -28,6 +28,11 @@
     presentation_liste: { label: 'Présentation + liste', cap: 8 },
   };
   const estPres = l => l === 'presentation' || l === 'presentation_liste';
+  /** Les mises en page dites par la place des produits sur la largeur (17/11/2026) : le nom court, ce qu'elle tient. */
+  const DISPOS = {
+    liste: ['1 par largeur', 'liste avec prix · 12'], grille: ['2 par largeur', 'grille 2 × 3 · 6'], mosaique: ['2 grandes', 'vignettes 2 × 2 · 4'],
+    vedette: ['1 vedette + 4', 'la vedette en haut · 5'], presentation: ['Présentation', 'la gamme seule'], presentation_liste: ['Présentation + liste', 'la gamme · 8'],
+  };
   /** Les variantes de gabarit (2-3 possibilités pour chaque mise en page), les mêmes que le Marketing. */
   const GABARITS = {
     produits: { A: ['Classique', 'fond papier, titre centré'], B: ['Bandeau', 'bandeau de couleur, titre à gauche'], C: ['Épuré', 'fond blanc, titre à gauche'] },
@@ -916,9 +921,11 @@
       }
       h += '<div class="cm-pg cm-pg--ap' + (pres ? ' pres' : '') + '"><span class="no">' + (i + 3) + '</span>' + apercuPage(S, i, (portes.ids || [])[i] || [])
         + '<div class="cm-pg-c">' + corps + '</div>'
-        + '<div class="ctl"><div class="cm-seg cm-types">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '"' + (estPres(l) && !gs.length ? ' disabled' : '') + '>' + LAYOUTS[l].label + '</button>').join('') + '</div>'
-        + (pres ? '' : '<div class="cm-gab cm-ent" role="group" aria-label="Titre et illustration de la page ' + (i + 3) + '">' + Object.keys(ENTETES).map(t => '<button data-cm="entete" data-i="' + i + '" data-v="' + t + '" class="' + ((p.header || 'titre') === t ? 'on' : '') + '" title="' + esc(ENTETES[t][0] + ' — ' + ENTETES[t][1] + ' (le dessin de la famille de la catégorie, sinon celui de la gamme)') + '">' + vignetteEntete(t) + '<span>' + esc(ENTETES[t][0]) + '</span></button>').join('') + '</div>'
-          + '<div class="cm-script"><span title="Le nom de la catégorie, sous celui de la gamme, en lettres manuscrites (Playwrite, la police manuscrite de la marque)">Catégorie manuscrite</span><div class="cm-seg">'
+        // Une seule rangée de choix (17/11/2026, Sam : « pas deux lignes de choix ; des propositions de comment les produits
+        // se présentent sur la page, 1 - 2 - 3 par largeur ») : chaque mise en page en dessin, avec ce qu'elle tient. Le
+        // choix de l'en-tête (titre + pictogramme, bandeau illustré, grande illustration) n'est plus proposé : la page garde le sien.
+        + '<div class="ctl"><div class="cm-gab cm-lay" role="group" aria-label="Comment les produits se présentent sur la page ' + (i + 3) + '">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '"' + (estPres(l) && !gs.length ? ' disabled' : '') + ' title="' + esc(DISPOS[l][0] + ' — ' + DISPOS[l][1]) + '">' + mini(l, p.template) + '<span>' + esc(DISPOS[l][0]) + '</span><small>' + esc(DISPOS[l][1]) + '</small></button>').join('') + '</div>'
+        + (pres ? '' : '<div class="cm-script"><span title="Le nom de la catégorie, sous celui de la gamme, en lettres manuscrites (Playwrite, la police manuscrite de la marque)">Catégorie manuscrite</span><div class="cm-seg">'
           + [['0', 'Non'], ['1', 'Oui']].map(o => '<button data-cm="script" data-i="' + i + '" data-v="' + o[0] + '" class="' + ((!!p.script) === (o[0] === '1') ? 'on' : '') + '">' + o[1] + '</button>').join('') + '</div></div>')
         + '<div class="cm-gab" role="group" aria-label="Gabarit de la page ' + (i + 3) + '">' + ['A', 'B', 'C'].map(t => '<button data-cm="gabarit" data-i="' + i + '" data-v="' + t + '" class="' + ((p.template || 'A') === t ? 'on' : '') + '" title="' + t + ' · ' + GABARITS[fam][t][0] + ' — ' + GABARITS[fam][t][1] + '">' + vignette(fam, t) + '<span>' + t + ' · ' + GABARITS[fam][t][0] + '</span></button>').join('') + '</div></div>'
         + '<div class="mv"><button class="cm-btn" data-cm="monter" data-v="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Monter">↑</button><button class="cm-btn" data-cm="descendre" data-v="' + i + '"' + (i === S.pages.length - 1 ? ' disabled' : '') + ' aria-label="Descendre">↓</button></div></div>';
