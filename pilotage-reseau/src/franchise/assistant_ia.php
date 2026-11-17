@@ -18,6 +18,8 @@ declare(strict_types=1);
  *   aia_visuel          chaque graphique ou tableau proposé : la demande du modèle et les chiffres relus
  *   aia_modele          les graphiques qu'un magasin garde comme modèles : la demande seulement, rejouée à l'ouverture
  *                       sur une période qui glisse avec le temps
+ *   aia_cache           les lectures lentes des outils, gardées un temps (prix et coûts des produits, relevés de la
+ *                       concurrence)
  *   aia_manuel_passage  le manuel opératoire découpé en passages (en-tête, étapes, points critiques, quiz) pour la
  *                       recherche ; refait quand le manuel change (signature des versions)
  *
@@ -43,7 +45,12 @@ declare(strict_types=1);
  *   GET  /assistant/magasin/modeles/{id}?shop=               le rejouer, chiffres du jour
  *   POST /assistant/magasin/modeles/{id}/supprimer {shop}    le retirer
  *   POST /assistant/magasin/pdf {shop, question | visuels, images}   la réponse en PDF A4 (moteur du cockpit, rapPdfRendu)
+ *
+ * LE COACH VENTE (17/11/2026) : ses outils — les prix de la concurrence, les points forts et faibles, les promotions en
+ * cours — et le visuel des prix relevés sont dans src/franchise/assistant_vente.php.
  */
+
+require_once __DIR__ . '/assistant_vente.php';
 
 const AIA_PROF_MODELE = 'claude-haiku-5-5';   // l'agent rapide (Sam, 17/11/2026 : « mettre un agent rapide »)
 const AIA_PROF_EFFORT = 'low';
@@ -63,10 +70,11 @@ const AIA_DONNEES = [
     'produits' => 'les produits les plus vendus',
     'categories' => 'les catégories vendues',
     'classement_reseau' => 'le classement des magasins du réseau (anonyme)',
+    'prix_concurrence' => 'le prix d’un produit face aux concurrents relevés',
     'manuel' => 'un tableau tiré du manuel opératoire',
 ];
 const AIA_MESURES = ['ca' => ['Chiffre d’affaires', '€'], 'tickets' => ['Clients', 'clients'], 'panier' => ['Panier moyen', '€'],
-    'quantite' => ['Quantité vendue', 'pièces'], 'part' => ['Part des ventes', '%']];
+    'quantite' => ['Quantité vendue', 'pièces'], 'part' => ['Part des ventes', '%'], 'prix' => ['Prix TTC', '€']];
 const AIA_COMPARER = ['aucune', 'an_passe', 'reseau'];
 const AIA_VISUELS_MAX = 2;
 const AIA_POINTS_MAX = ['ventes_par_jour' => 62, 'ventes_par_semaine' => 78, 'ventes_par_mois' => 18];
@@ -154,6 +162,11 @@ function aiaSchema(): void
         ouvertures INT NOT NULL DEFAULT 0,
         KEY k_shop (shop_id, cree_le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS aia_cache (
+        cle VARCHAR(80) NOT NULL PRIMARY KEY,
+        lu_le DATETIME NOT NULL,
+        valeur MEDIUMTEXT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     Db::exec('CREATE TABLE IF NOT EXISTS aia_manuel_passage (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         sop_id VARCHAR(32) NOT NULL,
@@ -222,6 +235,20 @@ function aiaProfesseurModele(): array
     $m = trim((string) ($r['modele'] ?? '')) ?: AIA_PROF_MODELE;
     $e = in_array($r['effort'] ?? '', ['low', 'medium', 'high'], true) ? (string) $r['effort'] : AIA_PROF_EFFORT;
     return ['modele' => $m, 'effort' => $e];
+}
+
+/** Une lecture lente gardée $ttl secondes (aia_cache) ; si elle échoue, la dernière gardée ressert. Null si rien. */
+function aiaCache(string $cle, int $ttl, callable $calc): mixed
+{
+    try { aiaSchema(); $r = Db::row('SELECT valeur, lu_le FROM aia_cache WHERE cle = ?', [$cle]); }
+    catch (Throwable $e) { $r = null; }
+    $v = $r !== null ? json_decode((string) $r['valeur'], true) : null;
+    if ($v !== null && strtotime((string) $r['lu_le']) > time() - $ttl) { return $v; }
+    $n = $calc();
+    if ($n === null) { return $v; }
+    try { Db::exec('INSERT INTO aia_cache (cle, lu_le, valeur) VALUES (?, NOW(), ?) ON DUPLICATE KEY UPDATE lu_le = NOW(), valeur = VALUES(valeur)', [$cle, json_encode($n, JSON_UNESCAPED_UNICODE)]); }
+    catch (Throwable $e) { /* sans mémoire : on relira */ }
+    return $n;
 }
 
 /* ---------------------------------------------------------------------------
@@ -562,6 +589,8 @@ Le manuel opératoire et les visuels — règles communes :
 - Dans un visuel, tu ne recopies AUCUN chiffre de vente : tu décris la demande, le dashboard relit les chiffres dans l'historique (18 mois et la journée en cours). `mesure` : ca (chiffre d'affaires), tickets (clients), panier (panier moyen hors clients pro), quantite (pièces, pour les produits), part (part des ventes en %, pour les catégories). `du` et `au` en AAAA-MM-JJ. `comparer` : aucune, an_passe (la même période un an plus tôt) ou reseau (la moyenne des magasins, sans nom ; pour les catégories, compare les parts). `jours_semaine` (1 = lundi … 7 = dimanche, vide = tous), `heure_debut` et `heure_fin` (fin non comprise, null = toute la journée), `categorie` (un mot du nom, vide = toutes), `limite` (0 = par défaut) filtrent comme les outils. `entetes` et `lignes` restent vides.
 - Seule exception : `donnees` = manuel. Tu remplis alors `entetes` et `lignes` en recopiant exactement un document lu (pas de chiffre inventé, pas de calcul), `forme` = tableau, `mesure` = ca, `comparer` = aucune, les autres champs vides ou nuls.
 - `titre` du visuel : ce qu'il montre, en 4 à 8 mots (« Mes samedis depuis un an », « Températures de cuisson »).
+- Les prix et les bundles : prix_concurrence (les prix relevés chez les concurrents, face au prix et à la marge du magasin), forces_faiblesses (les catégories et produits où le magasin est au-dessus ou en dessous du réseau, avec leur marge) et promotions_en_cours (les promotions et bundles en place). Une adaptation de prix se propose chiffrée : prix actuel → prix proposé, la marge avant et après, l'écart aux concurrents proches à taille et qualité comparables ; jamais sous le coût de recette. Un bundle se propose complet : son contenu (un point fort qui attire, un point faible à faire découvrir ou une boisson), son prix, ce que le client y gagne, la marge qui reste (somme des prix hors TVA − somme des coûts), le moment de la journée où le pousser ; vérifie d'abord qu'il n'existe pas déjà. Ce sont des propositions à valider, pas des décisions. Les concurrents sont des commerces hors réseau : tu peux les nommer.
+- Le visuel `prix_concurrence` (barres ou tableau) montre le prix d'un produit du magasin face à chaque concurrent relevé : `categorie` = un mot du nom du produit (« croissant »), `mesure` = prix, les dates vides.
 TXT;
 
 /** Les questions toutes prêtes du Professeur : quatre tuiles, puis trois documents par famille du manuel. */
@@ -621,12 +650,14 @@ function aiaDemande(array $v): ?array
     $f = in_array($v['forme'] ?? '', AIA_FORMES, true) ? (string) $v['forme'] : 'tableau';
     $m = isset(AIA_MESURES[$v['mesure'] ?? '']) ? (string) $v['mesure'] : 'ca';
     if ($d === 'manuel') { $f = 'tableau'; }
+    if ($d === 'prix_concurrence') { $f = $f === 'tableau' ? 'tableau' : 'barres'; $m = 'prix'; }
     if (in_array($d, ['produits', 'categories', 'classement_reseau'], true) && $f !== 'tableau') { $f = 'barres'; }
     if ($d === 'produits' && !in_array($m, ['ca', 'quantite'], true)) { $m = 'ca'; }
     if ($d === 'categories' && !in_array($m, ['ca', 'part'], true)) { $m = 'ca'; }
     if (in_array($d, ['ventes_par_heure', 'ventes_par_jour', 'ventes_par_semaine', 'ventes_par_mois', 'classement_reseau'], true) && !in_array($m, ['ca', 'tickets', 'panier'], true)) { $m = 'ca'; }
+    if ($d === 'manuel') { $m = 'ca'; }
     $c = in_array($v['comparer'] ?? '', AIA_COMPARER, true) ? (string) $v['comparer'] : 'aucune';
-    if ($d === 'produits' || $d === 'classement_reseau' || $d === 'manuel') { $c = 'aucune'; }
+    if ($d === 'produits' || $d === 'classement_reseau' || $d === 'manuel' || $d === 'prix_concurrence') { $c = 'aucune'; }
     if ($d === 'categories' && $c === 'an_passe') { $c = 'aucune'; }
     if ($d === 'categories' && $c === 'reseau') { $m = 'part'; }
     $h = static fn ($x) => is_int($x) || (is_string($x) && ctype_digit($x)) ? (int) $x : null;
@@ -727,6 +758,7 @@ function aiaVisuel(array $D, int $sid): array|string
         return $base + ['periode' => null, 'libelles' => [], 'series' => [], 'source' => 'le manuel opératoire du réseau',
             'tableau' => ['entetes' => $D['entetes'], 'lignes' => array_map(static fn ($l) => array_pad(array_slice($l, 0, $n), $n, ''), $D['lignes'])]];
     }
+    if ($D['donnees'] === 'prix_concurrence') { return aivVisuelPrix($base, $D['categorie'], $sid); }
     $P = aiaPeriode($D);
     if (is_string($P)) { return $P; }
     $per = amPeriodeTexte($P);
@@ -971,7 +1003,7 @@ function aiaFmt(mixed $x, string $mesure): string
     if (!is_int($x) && !is_float($x)) { return (string) $x; }
     $n = static fn (float $v, int $d) => number_format($v, $d, ',', "\u{00A0}");
     return match ($mesure) {
-        'panier' => $n($x, 2) . "\u{00A0}€",
+        'panier', 'prix' => $n($x, 2) . "\u{00A0}€",
         'part' => $n($x, 1) . "\u{00A0}%",
         'tickets' => $n($x, $x < 20 && fmod((float) $x, 1.0) !== 0.0 ? 1 : 0),
         'quantite' => $n($x, fmod((float) $x, 1.0) !== 0.0 ? 1 : 0) . "\u{00A0}pcs",

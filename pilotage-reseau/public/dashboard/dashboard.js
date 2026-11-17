@@ -5643,7 +5643,7 @@
     if (!T.length) { return ''; }
     return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, T.length > 3 ? 64 : 96)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
   }
-  const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
+  const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions', concurrence: 'Voir la concurrence' };
   /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
    * étincelle dedans. Sur le bouton, dans l'entête, à côté de chaque réponse ; quand l'assistant lit, l'étincelle pulse. */
   const iaIcone = (taille, cls) => `<svg class="ia-icone${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" width="${taille || 16}" height="${taille || 16}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11A2.5 2.5 0 0 1 20 6v7.5a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5V6a2.5 2.5 0 0 1 2.5-2.5z"/><path class="etin" d="M12 6.4l.95 2.35 2.35.95-2.35.95L12 13l-.95-2.35-2.35-.95 2.35-.95z" fill="currentColor" stroke-width="1"/></svg>`;
@@ -5736,7 +5736,7 @@
     if (x == null || x === '') { return '—'; }
     if (typeof x !== 'number') { return String(x); }
     switch (v.mesure) {
-      case 'panier': return nf(x, 2) + ' €';
+      case 'panier': case 'prix': return nf(x, 2) + ' €';
       case 'part': return nf(x, 1) + ' %';
       case 'tickets': return nf(x, x < 20 && x % 1 ? 1 : 0);
       case 'quantite': return nf(x, x % 1 ? 1 : 0) + ' pcs';
@@ -5886,12 +5886,14 @@
   }
   /** Les questions toutes prêtes de l'assistant choisi : celles du Professeur viennent du manuel. */
   const iaProf = () => iaTonCle() === 'professeur';
-  const iaQ = () => { const Q = IA.questions || {}; return iaProf() && Q.professeur ? Q.professeur : Q; };
+  const iaQ = () => { const Q = IA.questions || {}, k = iaTonCle(); return (Q.parTon && Q.parTon[k]) || (k === 'professeur' && Q.professeur) || Q; };
   const iaLit = k => (k === 'professeur' ? 'ouvre le manuel opératoire…' : 'lit les chiffres du magasin…');
   function iaSaisie(haut) {
     const occupe = IA.fil.some(t => t.attente), p = iaProf();
+    const v = iaTonCle() === 'vente';
     const ph = p ? (haut ? 'Posez votre question sur le manuel : « comment fermer la caisse ? », « à quelle température cuire les croissants ? »…' : 'Posez votre question sur le manuel…')
-      : (haut ? 'Posez votre question : « quel est mon jour le plus faible ? », « que mettre en avant samedi ? »…' : 'Posez votre question sur votre magasin…');
+      : v ? (haut ? 'Posez votre question : « mon croissant est-il bien placé face aux concurrents ? », « quel bundle pour le matin ? »…' : 'Vos prix, vos bundles, vos ventes…')
+        : (haut ? 'Posez votre question : « quel est mon jour le plus faible ? », « que mettre en avant samedi ? »…' : 'Posez votre question sur votre magasin…');
     return `<form class="ia-saisie${haut ? ' haut' : ''}" data-iaform="1"><input type="text" maxlength="500" placeholder="${ph}" value="${esc(IA.saisie)}"${occupe ? ' disabled' : ''}>
       <button class="db-btn ia-envoi" type="submit"${occupe ? ' disabled' : ''}>${haut ? 'Demander' : '→'}</button></form>`;
   }

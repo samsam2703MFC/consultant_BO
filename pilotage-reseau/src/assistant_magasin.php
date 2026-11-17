@@ -41,7 +41,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/franchise/assistant_ia.php';
 
 const AM_MODELE = 'claude-opus-5-5';
-const AM_ECRANS = ['produits', 'taches', 'semaine', 'mois', 'fidelite', 'ops', 'promos', 'aucun'];
+const AM_ECRANS = ['produits', 'taches', 'semaine', 'mois', 'fidelite', 'ops', 'promos', 'concurrence', 'aucun'];
 const AM_QUESTIONS = [
     'tuiles' => [
         ['Comment s’est passée ma semaine ?', 'ventes, équipe, contrôles, clients'],
@@ -94,12 +94,14 @@ const AM_COACHS = [
     ],
     'vente' => [
         'nom' => 'Coach Vente',
-        'dit' => 'expert en vente : panier, produits, heures fortes',
-        'ton' => "Coach business de pointe, expert de la vente au comptoir en boulangerie-pâtisserie. Tu vouvoies le franchisé. Direct et concret, sans dureté : un chef des ventes qui a ouvert cent magasins. Tu ramènes tout à trois leviers : faire venir des clients, faire monter le panier (la vente additionnelle : la boisson avec la viennoiserie, la tarte du week-end, le plateau à commander), et avoir le bon produit à la bonne heure. Chaque conseil est un geste de vente à faire au comptoir dès aujourd'hui, avec le chiffre qui le justifie. Va chercher les ventes par heure et les produits avec les outils plutôt que de t'arrêter à la fiche.",
+        // Sam, 17/11/2026 : « ciblé sur les ventes, l'adaptation des prix par rapport à la concurrence, la création de bundles
+        // par rapport à vos points forts et points faibles » (outils : src/franchise/assistant_vente.php).
+        'dit' => 'expert en vente : prix face à la concurrence, bundles, panier',
+        'ton' => "Coach business de pointe, expert de la vente au comptoir en boulangerie-pâtisserie. Tu vouvoies le franchisé. Direct et concret, sans dureté : un chef des ventes qui a ouvert cent magasins. Tu travailles trois sujets : 1) les VENTES, le panier, les produits et les heures fortes (ventes_par_heure, produits_vendus) ; 2) les PRIX face à la CONCURRENCE (prix_concurrence) : où le magasin est plus cher ou moins cher que les concurrents proches, à taille et qualité comparables, et quel prix adapter, chiffré, sans jamais passer sous le coût de recette ; 3) les BUNDLES bâtis sur les POINTS FORTS et FAIBLES du magasin (forces_faiblesses, promotions_en_cours) : un produit fort qui attire, un produit faible à faire découvrir ou une boisson, le prix, la marge qui reste, le moment où le pousser. Chaque conseil est un geste de vente à faire dès aujourd'hui ou une proposition à valider, avec le chiffre qui le justifie. Va chercher les outils plutôt que de t'arrêter à la fiche.",
         'accents' => [
             'budget' => ['niveau' => 'suivi', 'verifie' => "Le mois face au budget, traduit en clients ou en euros de panier à trouver par jour restant."],
-            'trafic' => ['niveau' => 'fort', 'verifie' => "Le panier moyen face au réseau et à la même période passée ; les heures et les jours où il décroche ; les produits qui le portent et ceux qui manquent face au magasin le mieux classé ; une vente additionnelle précise à pousser."],
-            'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon."],
+            'trafic' => ['niveau' => 'fort', 'verifie' => "Le panier moyen face au réseau ; les catégories et produits où le magasin est fort ou faible face au réseau ; les prix face aux concurrents proches ; un bundle ou une vente additionnelle précise à pousser, avec sa marge."],
+            'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon, les étiquettes de prix."],
         ],
     ],
 ];
@@ -127,9 +129,9 @@ Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au mome
 - Le personnage change la manière de dire, jamais les faits : mêmes chiffres, mêmes règles, quel que soit le ton. Quel que soit le personnage : aucune insulte, aucune grossièreté, aucune humiliation ; on s'en prend aux résultats, jamais à la personne.
 - La fiche porte le budget du magasin (objectif de CA du mois, du jour et de la semaine, saisi au cockpit) : l'écart au budget se calcule depuis ces valeurs ; sans budget saisi, dis-le.
 - Quand c'est utile, propose deux priorités, trois au plus, de la plus rentable à la plus simple ; chacune : un titre d'action, un constat d'une phrase parlée avec un chiffre arrondi, le gain s'il se calcule simplement (« environ 1 000 € par semaine », sinon vide), et l'écran du dashboard où agir.
-- Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos, aucun.
+- Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos (promotions et bundles), concurrence (les prix relevés chez les concurrents), aucun.
 - Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche ou les outils doivent permettre d'y répondre.
-- Le coût matière n'est souvent pas renseigné : sans lui, ne parle ni de marge ni de résultat.
+- La fiche ne porte pas le coût matière : la marge d'un produit se lit avec prix_concurrence ou forces_faiblesses (coût de recette du magasin, sinon du réseau) ; sans coût, n'en parle pas. Ne parle pas du résultat du magasin.
 TXT;
 
 /** Le schéma de la réponse : il sert le bilan (B) et la conversation (A). */
@@ -196,7 +198,7 @@ function amFaits(int $sid): array
             'panier' => round((float) ($d['avg_basket'] ?? 0), 2), 'salaires' => $sal[$j] ?? null];
     }
     $f['joursParJour'] = $jours;
-    $f['coutMatiere'] = 'non renseigné dans l’ERP : ni marge ni résultat calculables';
+    $f['coutMatiere'] = 'pas dans cette fiche : la marge produit par produit se lit avec les outils prix_concurrence et forces_faiblesses (coût de recette)';
     // Les cibles du réseau (seuils t1 bon, t2 moyen, t3 bas).
     $ci = PanelApi::sondeGet('/consultant/shops/' . $sid . '/targets', 20);
     $f['cibles'] = [];
@@ -303,11 +305,12 @@ function amJour(string $d): string
 const AM_TOURS = 6;          // appels au modèle au plus pour une question (le dernier sans outil)
 const AM_SECONDES = 100;     // au-delà, le tour suivant est le dernier
 
-/** Les outils, tels que le modèle les voit : les trois de l'historique des ventes, puis les trois du manuel opératoire
- *  (aiaOutilsManuel). Ordre et texte fixes : ils font partie du préfixe mis en cache. */
+/** Les outils, tels que le modèle les voit : les trois de l'historique des ventes, les trois du manuel opératoire
+ *  (aiaOutilsManuel), les trois du Coach Vente (aivOutils : prix de la concurrence, points forts et faibles, promotions).
+ *  Ordre et texte fixes : ils font partie du préfixe mis en cache. */
 function amOutils(): array
 {
-    return array_merge(amOutilsVentes(), aiaOutilsManuel());
+    return array_merge(amOutilsVentes(), aiaOutilsManuel(), aivOutils());
 }
 
 function amOutilsVentes(): array
@@ -560,7 +563,7 @@ function amOutil(string $nom, array $in, int $demandeur): array
             'classement_reseau' => amOutilClassement($demandeur, $in),
             'ventes_par_heure' => amOutilHeures($demandeur, $in),
             'produits_vendus' => amOutilProduits($demandeur, $in),
-            default => aiaOutil($nom, $in) ?? ['erreur' => 'outil inconnu : ' . $nom],
+            default => aiaOutil($nom, $in) ?? aivOutil($nom, $in, $demandeur) ?? ['erreur' => 'outil inconnu : ' . $nom],
         };
     } catch (Throwable $e) {
         error_log('assistant, outil ' . $nom . ' : ' . $e->getMessage());
@@ -747,7 +750,9 @@ function ep_assistant_questions(): array
         $av = ($f = amAvatar($k)) !== null ? 'avatars/' . $f : null;
         $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit, 'avatar' => $av, 'manuel' => $k === 'professeur'];
     }
-    return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'professeur' => aiaQuestionsProfesseur(),
+    $prof = aiaQuestionsProfesseur();
+    // Les questions propres à un assistant (`parTon`) : le Professeur (le manuel) et le Coach Vente (prix, bundles, ventes).
+    return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'professeur' => $prof, 'parTon' => ['professeur' => $prof, 'vente' => AIV_QUESTIONS],
         'actif' => class_exists('Anthropic') && Anthropic::configured()];
 }
 
