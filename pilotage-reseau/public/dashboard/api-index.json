@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-17T06:28:37Z",
+ "genere": "2026-11-17T07:01:25Z",
  "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -36,7 +36,7 @@
    ],
    "fichiers": [
     "analyse.js:148",
-    "dashboard.js:7894"
+    "dashboard.js:7896"
    ],
    "magasin": true,
    "routes": [
@@ -57,7 +57,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7883"
+    "dashboard.js:7885"
    ],
    "magasin": true,
    "routes": [
@@ -99,7 +99,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7865"
+    "dashboard.js:7867"
    ],
    "magasin": true,
    "routes": [
@@ -142,7 +142,7 @@
    ],
    "fichiers": [
     "analyse.js:140",
-    "dashboard.js:7862"
+    "dashboard.js:7864"
    ],
    "magasin": true,
    "routes": [
@@ -163,7 +163,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7871"
+    "dashboard.js:7873"
    ],
    "magasin": true,
    "routes": [
@@ -194,7 +194,7 @@
      ],
      "chemin": "/assistant/magasin",
      "handler": "wr_assistant_magasin",
-     "source": "src/assistant_magasin.php:753",
+     "source": "src/assistant_magasin.php:766",
      "resume": "shop, question, ton, fil:[{q, r}], origine, conversation} → {reponse:{titre, resume, chiffres, points, priorites, conclusion, suites, visuels, sources}, question, luLe, modele, ton}. `ton` : un coach ou « professeur » (le manuel, l'agent rapide)."
     }
    ]
@@ -206,7 +206,7 @@
    ],
    "fichiers": [
     "dashboard.js:5658",
-    "dashboard.js:6059"
+    "dashboard.js:6061"
    ],
    "magasin": true,
    "routes": [
@@ -216,7 +216,7 @@
      ],
      "chemin": "/assistant/magasin/questions",
      "handler": "ep_assistant_questions",
-     "source": "src/assistant_magasin.php:733",
+     "source": "src/assistant_magasin.php:744",
      "resume": "Les questions toutes prêtes, et si l'assistant est branché (sans clé, le dashboard ne montre pas le bouton)."
     }
    ]
@@ -842,7 +842,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6931"
+    "dashboard.js:6933"
    ],
    "magasin": true,
    "routes": [
@@ -863,7 +863,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:6996"
+    "dashboard.js:6998"
    ],
    "magasin": true,
    "routes": [
@@ -1425,7 +1425,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6070"
+    "dashboard.js:6072"
    ],
    "magasin": true,
    "routes": [
@@ -1446,7 +1446,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6072"
+    "dashboard.js:6074"
    ],
    "magasin": true,
    "routes": [
@@ -1467,7 +1467,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6068"
+    "dashboard.js:6070"
    ],
    "magasin": true,
    "routes": [
@@ -1488,7 +1488,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6078"
+    "dashboard.js:6080"
    ],
    "magasin": true,
    "routes": [
@@ -1509,7 +1509,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6066"
+    "dashboard.js:6068"
    ],
    "magasin": true,
    "routes": [
@@ -1530,7 +1530,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6076"
+    "dashboard.js:6078"
    ],
    "magasin": true,
    "routes": [
@@ -1551,7 +1551,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6074"
+    "dashboard.js:6076"
    ],
    "magasin": true,
    "routes": [
@@ -1572,7 +1572,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10141"
+    "dashboard.js:10143"
    ],
    "magasin": true,
    "routes": [
@@ -1593,7 +1593,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10171",
+    "dashboard.js:10173",
     "dashboard.js:2179"
    ],
    "magasin": true,
@@ -1615,7 +1615,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9588"
+    "dashboard.js:9590"
    ],
    "magasin": true,
    "routes": [
@@ -1636,7 +1636,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9586"
+    "dashboard.js:9588"
    ],
    "magasin": true,
    "routes": [
@@ -1658,8 +1658,8 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:5934",
-    "dashboard.js:6008"
+    "dashboard.js:5936",
+    "dashboard.js:6010"
    ],
    "magasin": true,
    "routes": [
@@ -1689,7 +1689,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7308"
+    "dashboard.js:7310"
    ],
    "magasin": true,
    "routes": [
@@ -2134,8 +2134,8 @@
     "dashboard.js:239",
     "dashboard.js:240",
     "dashboard.js:2457",
-    "dashboard.js:6493",
-    "dashboard.js:9339"
+    "dashboard.js:6495",
+    "dashboard.js:9341"
    ],
    "magasin": true,
    "routes": [
@@ -2156,7 +2156,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9130"
+    "dashboard.js:9132"
    ],
    "magasin": true,
    "routes": [
@@ -2198,9 +2198,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6496",
-    "dashboard.js:9047",
-    "dashboard.js:9061"
+    "dashboard.js:6498",
+    "dashboard.js:9049",
+    "dashboard.js:9063"
    ],
    "magasin": true,
    "routes": [
@@ -2221,9 +2221,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6621",
-    "dashboard.js:9340",
-    "dashboard.js:9349"
+    "dashboard.js:6623",
+    "dashboard.js:9342",
+    "dashboard.js:9351"
    ],
    "magasin": true,
    "routes": [
@@ -2245,9 +2245,9 @@
     "PUT"
    ],
    "fichiers": [
-    "dashboard.js:6736",
-    "dashboard.js:6759",
-    "dashboard.js:6783"
+    "dashboard.js:6738",
+    "dashboard.js:6761",
+    "dashboard.js:6785"
    ],
    "magasin": true,
    "routes": [
@@ -2269,7 +2269,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10754"
+    "dashboard.js:10756"
    ],
    "magasin": true,
    "routes": [
@@ -2509,7 +2509,7 @@
    ],
    "fichiers": [
     "dashboard.js:229",
-    "dashboard.js:8892"
+    "dashboard.js:8894"
    ],
    "magasin": true,
    "routes": [

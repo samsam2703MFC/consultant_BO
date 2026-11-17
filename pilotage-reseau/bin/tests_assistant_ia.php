@@ -198,6 +198,37 @@ verifie('chaque champ d’un visuel est requis, aucun champ libre', $it['additio
 Db::$reglages['assistantProfesseur'] = json_encode(['modele' => 'claude-opus-5-5', 'effort' => 'medium']);
 verifie('le réglage change le modèle du Professeur', aiaProfesseurModele() === ['modele' => 'claude-opus-5-5', 'effort' => 'medium']);
 
+echo "Le Coach Vente : les prix de la concurrence\n";
+verifie('le prix au kilo d’une baguette de 280 g à 1,90 €', aivPrixKg(1.9, 'kg', 0.28) === 6.79 && aivPrixKg(4.99, 'g', 500) === 9.98 && aivPrixKg(1.65, 'piece', 1.65) === null);
+verifie('la taille dite', aivTaille('kg', 0.28) === '280 g' && aivTaille('g', 500) === '500 g' && aivTaille('piece', 1.7) === 'la pièce' && aivTaille('cm', 28) === 'Ø 28 cm');
+$B = ['releves' => [
+        ['concurrent' => 'Dumont Partners', 'type' => 'bakery', 'distance' => 2, 'produit' => 'Croissant', 'monProduit' => 1610006, 'monProduitNom' => 'Croissant', 'prix' => 1.65, 'unite' => 'piece', 'taille' => 1.65, 'vuLe' => '2026-01-22', 'notes' => "feuilletage\nmagnifique", 'source' => 'api'],
+        ['concurrent' => 'La Mignardise', 'type' => 'bakery', 'distance' => 0.9, 'produit' => 'croissant beurre', 'monProduit' => 1610006, 'prix' => 1.5, 'unite' => 'piece', 'vuLe' => '2026-02-04', 'source' => 'api'],
+        ['concurrent' => 'Dumont Partners', 'type' => 'bakery', 'distance' => 2, 'produit' => 'baguette', 'monProduit' => 1300003, 'prix' => 1.9, 'unite' => 'kg', 'taille' => 0.28, 'vuLe' => '2026-01-22', 'source' => 'api'],
+        ['concurrent' => 'Inconnu', 'produit' => 'gratuit', 'prix' => 0],
+    ], 'referentiel' => [['concurrent' => 'Aldi', 'type' => 'GMS', 'distance' => null, 'produit' => 'Croissant au beurre', 'monProduit' => 1610006, 'prix' => 0.65, 'unite' => 'piece', 'vuLe' => '2026-11-07', 'source' => 'referentiel']]];
+$prod = [1610006 => ['nom' => 'Croissant', 'prixTtc' => 1.7, 'margePct' => 71.2, 'cout' => 0.46]];
+$G = aivGrouperReleves($B, $prod, '', 12);
+verifie('les relevés rangés par produit du magasin, le plus relevé en tête', count($G) === 2 && $G[0]['monProduit'] === 'Croissant' && $G[0]['prixConcurrents'] === ['min' => 0.65, 'max' => 1.65, 'releves' => 3], json_encode($G, JSON_UNESCAPED_UNICODE));
+verifie('mon prix et ma marge face aux concurrents, le plus proche d’abord', $G[0]['monPrixTtc'] === 1.7 && $G[0]['maMargePct'] === 71.2 && $G[0]['concurrents'][0]['commerce'] === 'La Mignardise'
+    && $G[0]['concurrents'][2]['source'] === 'relevé web' && $G[0]['concurrents'][1]['qualiteNotee'] === 'feuilletage magnifique');
+verifie('un relevé sans prix est écarté ; la baguette au kilo', $G[1]['concurrents'][0]['prixAuKg'] === 6.79 && $G[1]['concurrents'][0]['taille'] === '280 g' && count($G[1]['concurrents']) === 1);
+verifie('le filtre par produit', count(aivGrouperReleves($B, $prod, 'baguette')) === 1 && aivGrouperReleves($B, $prod, 'tarte') === []);
+
+echo "Le Coach Vente : les points forts et faibles\n";
+// [pid, portion, nom, quantité, ventes, quantité pro, ventes pro] : le magasin, puis le reste du réseau.
+$moi = [[1, 0, 'Croissant', 300, 510.0, 0, 0], [2, 0, 'Baguette', 200, 400.0, 0, 0], [3, 0, 'Tarte au sucre', 10, 90.0, 0, 0]];
+$res = [[1, 0, 'Croissant', 900, 1500.0, 0, 0], [2, 0, 'Baguette', 300, 600.0, 0, 0], [3, 0, 'Tarte au sucre', 200, 1900.0, 0, 0]];
+$cat = [1 => ['cat' => 'Viennoiserie'], 2 => ['cat' => 'Pains'], 3 => ['cat' => 'Tartes']];
+$F = aivForces($moi, $res, $cat, [1 => ['prixTtc' => 1.7, 'margePct' => 71.2], 3 => ['prixTtc' => 18.0, 'margePct' => 55.0]]);
+verifie('les parts : la baguette pèse 40 % chez vous, 15 % au réseau', $F['pointsForts'][0]['produit'] === 'Baguette' && $F['pointsForts'][0]['partMagasin'] === 40.0 && $F['pointsForts'][0]['partReseau'] === 15.0, json_encode($F['pointsForts'], JSON_UNESCAPED_UNICODE));
+verifie('le point faible : la tarte au sucre (9 % contre 47,5 %), avec sa marge', $F['pointsFaibles'][0]['produit'] === 'Tarte au sucre' && $F['pointsFaibles'][0]['ecartPts'] === -38.5 && $F['pointsFaibles'][0]['margePct'] === 55.0);
+verifie('les catégories rangées de la plus forte à la plus faible', array_column($F['categories'], 'categorie') === ['Pains', 'Viennoiserie', 'Tartes'] && $F['ventesMagasin'] === 1000.0);
+verifie('les meilleures marges : celles qui sont connues', array_column($F['meilleuresMarges'], 'produit') === ['Croissant', 'Tarte au sucre']);
+$D2 = aiaDemande(['donnees' => 'prix_concurrence', 'forme' => 'courbe', 'mesure' => 'ca', 'categorie' => 'croissant', 'comparer' => 'reseau'] + $base);
+verifie('le visuel des prix : en barres, en prix, sans comparaison', $D2['forme'] === 'barres' && $D2['mesure'] === 'prix' && $D2['comparer'] === 'aucune' && $D2['categorie'] === 'croissant');
+verifie('le Coach Vente a ses questions', count(AIV_QUESTIONS['tuiles']) === 4 && str_contains(AM_COACHS['vente']['ton'], 'prix_concurrence') && mb_strlen(AM_COACHS['vente']['ton']) <= 1200);
+
 echo "La réponse en PDF\n";
 $png = 'data:image/png;base64,' . base64_encode("\x89PNG\r\n\x1a\n" . str_repeat("\0", 40));
 verifie('un PNG en data-URI est accepté', aiaPngValide($png) === $png);
