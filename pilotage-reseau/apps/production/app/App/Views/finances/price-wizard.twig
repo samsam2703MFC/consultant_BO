@@ -5,14 +5,15 @@
 {% block page_heading %}
     <div class="page-heading">
         <div class="page-title">
-            <h3>Asystent cen</h3>
-            <p class="text-subtitle text-muted mb-0">Po zatwierdzeniu faktur : przelicz koszty i marże, nowe ceny wg marży bazowej i współczynnika surowców każdej kategorii, publikacja od daty — w ERP, na stronie franczyzy i e-mailem do klientów.</p>
+            <h3>Ścieżka cen — od faktur KSeF do cennika klientów</h3>
+            <p class="text-subtitle text-muted mb-0">Co czwartek, 4 kroki : ceny z faktur KSeF → ceny katalogowe (koszt receptur po nowych cenach vs koszt przy ostatnim cenniku, próg ±3 % : podwyżka albo obniżka) → zmiana cennika od daty (ceny klientów, rabaty zachowane) → e-mail z cennikiem do klientów.</p>
         </div>
     </div>
 {% endblock %}
 
 {% block content %}
-{# Kreator cen [218] (makieta zatwierdzona) : 1. koszty i marże, 2. nowe ceny, 3. publikacja od daty.
+{# Kreator cen [218] → Ścieżka cen [351] (makieta 66 B) : 2. sprawdź ceny katalogowe, 3. zatwierdź zmianę cennika, 4. e-mail
+   do klientów (krok 1 = asystent faktur) ; « Koszty i marże (szczegóły) » = dawny krok 1 (#step=1).
    App\Services\Finances\PriceWizardService (kroki), PricePublicationService (e-mail, zmiana w dniu, strona franczyzy). #}
 <section class="section" id="priceWizardApp" data-root="{{ root }}">
     <div class="kw" data-pw-body><p class="at-empty">Ładowanie…</p></div>
@@ -21,5 +22,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ root }}/assets/js/finances/price-path.js?v={{ asset_v() }}"></script>
 <script src="{{ root }}/assets/js/finances/price-wizard.js?v={{ asset_v() }}"></script>
 {% endblock %}

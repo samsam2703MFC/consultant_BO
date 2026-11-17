@@ -2831,6 +2831,48 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .pw-detail { text-align: left; font-size: 13px; max-height: 60vh; overflow: auto; }
 .pw-params { display: grid; gap: 10px; text-align: left; } .pw-params label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
 @media (max-width: 1199.98px) { .pw-pub, .pw-rule3 { grid-template-columns: minmax(0, 1fr); } .pw-q { width: 100%; } }
+/* [351] Ścieżka cen (makieta 66 B) : pasek 4 kroków (asystent faktur + Kreator cen) i krok 2 « Sprawdź ceny katalogowe ». */
+.pp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--at-line); border-radius: 14px; overflow: hidden; background: #fff; }
+.pp-step { display: block; padding: 12px 16px; border: 0; border-right: 1px solid var(--at-line); background: #fff; color: var(--at-text); text-align: left; text-decoration: none; min-height: 64px; font: inherit; }
+.pp-step:last-child { border-right: 0; } a.pp-step:hover, button.pp-step:hover { background: #fbf8f5; color: var(--at-text); }
+.pp-step b { display: flex; align-items: center; gap: 8px; font-size: 14px; } .pp-step small { display: block; color: var(--at-muted); font-size: 12px; margin-top: 2px; }
+.pp-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: #efe9e3; color: var(--at-muted); }
+.pp-where { display: block; font-size: 11px; color: #9a9089; margin-bottom: 3px; }
+.kw-card h5 .pw-hbtn { font-size: 13px; font-weight: 600; }
+.pp-step.done b { color: #1f7a3a; } .pp-step.done .pp-n { background: #1f7a3a; color: #fff; }
+.pp-step.todo .pp-n { background: rgba(154,23,48,.12); color: #9a1730; }
+.pp-step.cur { background: #fbf4f5; } .pp-step.cur b { color: #8e1f2f; } .pp-step.cur .pp-n { background: #8e1f2f; color: #fff; }
+.pw-prm { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #faf7f4; border-radius: 12px; padding: 8px 14px; font-size: 13px; margin: 8px 0 0; }
+.pw-prm label { display: flex; align-items: center; gap: 6px; margin: 0; } .pw-prm .kw-in { width: 62px; min-height: 36px; font-weight: 600; }
+.pw-mut { color: var(--at-muted); font-size: 12px; }
+.pw-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.pw-tiles > div { background: #faf7f4; border-radius: 12px; padding: 12px 14px; } .pw-tiles span { display: block; font-size: 12px; color: var(--at-muted); }
+.pw-tiles b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; } .pw-tiles small { color: var(--at-muted); font-size: 12px; }
+.pw-tiles .up { background: #fdf0ef; } .pw-tiles .up b { color: #b42318; } .pw-tiles .down { background: #edf6ef; } .pw-tiles .down b { color: #1f7a3a; }
+.pw-link { border: 0; background: none; padding: 0; color: #2b5f9e; font-size: 12px; text-decoration: underline; }
+.kw-t.pt { table-layout: fixed; min-width: 1240px; }
+.pt th.c { text-align: center; border-bottom: 2px solid var(--at-line); color: #5d554f; } .pt tr.h1 th { border-bottom: 0; padding-bottom: 2px; }
+.pt th.num, .pt td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pt td.mut { color: #8a817a; } .pt td.ar { text-align: center; padding: 0; }
+.pt td:nth-child(3), .pt th:nth-child(3), .pt td:nth-child(7), .pt th:nth-child(7), .pt td:nth-child(11), .pt th:nth-child(11) { border-left: 1px solid #efe8e1; }
+.pt tr.h1 th:nth-child(3), .pt tr.h1 th:nth-child(4), .pt tr.h1 th:nth-child(5) { border-left: 1px solid #efe8e1; } .pt tr.h1 th:nth-child(6) { border-left: 0; }
+.pt tr.grp td { background: #faf7f4; font-weight: 700; font-size: 12.5px; border-left: 0 !important; } .pt tr.grp-up td { color: #b42318; } .pt tr.grp-down td { color: #1f7a3a; }
+.pt tr.grp-same .pw-tog { color: var(--at-muted); font-weight: 700; min-height: 28px; }
+.pt tr.off td { opacity: .55; } .pt tr.off td:first-child { opacity: 1; }
+.pt tbody tr:not(.grp):hover td { background: #fbf8f5; }
+.pt .pw-prod b { display: block; } .pt .pw-prod small, .pt .why small { white-space: normal; }
+.pt .kw-in.pw-price { width: 88px; min-height: 36px; }
+.pw-ar { font-size: 15px; font-weight: 700; } .pw-ar.up { color: #b42318; } .pw-ar.down { color: #1f7a3a; } .pw-ar.eq { color: #a39a92; }
+.pw-pill { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--at-bg-2); color: var(--at-muted); }
+.pw-pill.up { background: #fde8e6; color: #b42318; } .pw-pill.down { background: #e5f3e8; color: #1f7a3a; }
+.pw-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; padding: 3px 8px; font-size: 12.5px; font-weight: 600; margin: 0 4px 3px 0; }
+.pw-chip.cu { background: #fdf0ef; color: #9b1c1c; border: 1px solid #f6d3cf; } .pw-chip.cd { background: #edf6ef; color: #1f6b33; border: 1px solid #cfe7d6; }
+.pw-src { display: block; color: #8a817a; font-size: 11px; margin-top: 1px; }
+.pw-tag { display: inline-block; font-size: 11px; border-radius: 6px; padding: 1px 7px; margin: 0 4px 3px 0; background: #f1ede8; color: #5d554f; }
+.pw-tag.warn { background: #fff3d6; color: #7a5a00; } .pw-tag.new { background: #eef3ff; color: #2d4a8a; } .pw-tag.bad { background: rgba(154,23,48,.1); color: #9a1730; }
+.pw-yellow { background: #fff3d6; border-radius: 10px; padding: 9px 12px; font-size: 12.5px; color: #5c4400; margin-top: 10px; }
+.pw-sel { font-size: 12.5px; color: var(--at-muted); margin-top: 8px; }
+@media (max-width: 991.98px) { .pp, .pw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pp-step:nth-child(2) { border-right: 0; } }
 
 /* [219] Dzisiaj « Mój tydzień » : zadania stałe stanowiska dzień po dniu (kolor kategorii, minuty, link, zrobione). */
 .wk-card { margin-bottom: 14px; }

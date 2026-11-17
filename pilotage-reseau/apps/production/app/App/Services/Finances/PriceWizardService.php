@@ -8,6 +8,7 @@ use App\Exceptions\CustomException;
 use App\Repositories\Analysis\MarginRecalcRepository;
 use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Finances\PriceWizardRepository;
+use App\Repositories\Organization\LightWizardRepository;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Communication\DocumentDistributionService;
 use App\Services\Finances\StorePrice\StoreSellabilityService;
@@ -23,11 +24,22 @@ use App\Services\Recipe\RecipeCostRecalculationService;
  *  3. publikacja od daty — ceny klientów : równe standardowej idą za nią, wynegocjowane o ten sam % (rabat zachowany),
  *     ten sam limit ; e-mail z cennikiem przed datą, strona franczyzy w dniu zmiany (PricePublicationService).
  * Ceny w EUR za karton (cennik standardowy) ; koszty z marż kategorii (PLN) przeliczone kursem.
+ *
+ * Ścieżka cen [351] (makieta 66 B, co czwartek) : krok 2 nie liczy już « do ceny celu », tylko porównuje koszt surowców
+ * kartonu dziś z kosztem przy ostatnim cenniku (n_price_cost_baseline) : wzrost ≥ prices.cost_up_pct → podwyżka,
+ * spadek ≥ prices.cost_down_pct → obniżka (nowość : ceny mogą spaść), w progu → bez zmian. Nowa cena zachowuje marżę %
+ * na koszcie pełnym (cena × koszt pełny dziś ÷ koszt pełny przy bazie), z limitem +cap % / −cut % naraz, zaokrąglona
+ * w górę (podwyżka) albo w dół (obniżka, nigdy poniżej ceny celu z reguły kategorii). Po planie baza opublikowanych
+ * produktów = koszt dziś ; odznaczone zostają przy starej bazie (zmiana kosztu się kumuluje).
  */
 final class PriceWizardService
 {
     private const SALES_MONTHS = 12;
     private const PAGE = '/finances/price-wizard';
+    /** [351] Zadanie « Ścieżka cen (czwartek) » : zalicza się samo (TaskWizards). */
+    public const PATH_CODE = 'price_path_done';
+    /** [351] Baza z n_margin_recalc.old_cost_carton tylko, gdy przeliczenie młodsze niż tyle dni. */
+    private const BASE_RECALC_DAYS = 60;
 
     public function __construct(
         private ProductMarginService $margins,
@@ -39,6 +51,7 @@ final class PriceWizardService
         private StoreSellabilityService $sellability,
         private PageAccessService $access,
         private DocumentDistributionService $distribution,
+        private LightWizardRepository $wizardDone,
     ) {
     }
 
@@ -47,12 +60,19 @@ final class PriceWizardService
         if (!$this->access->canSee($userId, self::PAGE)) throw new CustomException('Brak dostępu do marż i cen.', 'errors', 403);
     }
 
-    /** @return array{cap_pct: float, round_eur: float, material_coef_default: float, notice_days: int, keep_discount: bool, interval_days: int} */
+    /**
+     * @return array{cap_pct: float, cut_pct: float, up_pct: float, down_pct: float, round_eur: float, material_coef_default: float,
+     *     notice_days: int, keep_discount: bool, interval_days: int}
+     */
     public function params(): array
     {
         $num = fn(string $code, string $def) => (float) str_replace(',', '.', (string) $this->params->get($code, $def));
         return [
             'cap_pct' => max(0.0, $num('prices.client_cap_pct', '8')),
+            // [351] Obniżka najwyżej −cut % naraz ; progi zmiany kosztu surowców od ostatniego cennika.
+            'cut_pct' => min(99.0, max(0.0, $num('prices.client_cut_pct', '8'))),
+            'up_pct' => max(0.0, $num('prices.cost_up_pct', '3')),
+            'down_pct' => max(0.0, $num('prices.cost_down_pct', '3')),
             'round_eur' => max(0.01, $num('prices.client_round_eur', '0.05')),
             'material_coef_default' => max(0.0, $num('prices.material_coef_default', '2.5')),
             'notice_days' => max(0, (int) $num('prices.notice_days', '7')),
@@ -91,6 +111,60 @@ final class PriceWizardService
     public static function maxPrice(float $cur, array $p): float
     {
         return self::roundUp($cur * (1 + $p['cap_pct'] / 100), $p['round_eur']);
+    }
+
+    /** [351] Zaokrąglenie w dół do kroku (obniżka). */
+    public static function roundDown(float $v, float $step): float
+    {
+        return round(floor(round($v / $step, 6)) * $step, 2);
+    }
+
+    /** [351] Najniższa dozwolona nowa cena : −cut % naraz (do grosza w górę — nigdy poza limitem). */
+    public static function minPrice(float $cur, array $p): float
+    {
+        return self::roundUp($cur * (1 - ($p['cut_pct'] ?? 8.0) / 100), 0.01);
+    }
+
+    /**
+     * [351] Reguła ścieżki cen dla jednej ceny standardowej : koszt surowców kartonu dziś ($foodNow) wobec kosztu przy
+     * ostatnim cenniku ($foodBase), oba w PLN ; $fullNow = koszt pełny dziś (PLN), $cur = cena (EUR), $target = cena celu
+     * z reguły kategorii (EUR, dolna granica obniżki) albo null.
+     *  - zmiana ≥ +up_pct  → up / cap : cena × koszt pełny dziś ÷ (koszt pełny dziś − zmiana kosztu), najwyżej +cap %, w górę do kroku ;
+     *  - zmiana ≤ −down_pct → down : ta sama formuła (niżej), nie niżej niż −cut % ani cena celu, w dół do kroku ;
+     *    wynik ≥ obecna → keep z held = target (cena celu nie pozwala) albo round (zaokrąglenie) ;
+     *  - w progu → keep ; brak kosztu albo ceny → none.
+     * @return array{cost_pct: ?float, raw: ?float, new: float, status: string, limited: bool, held: ?string, gap_pct: ?float}
+     */
+    public static function pathRule(float $foodNow, float $foodBase, float $fullNow, float $cur, ?float $target, array $p): array
+    {
+        $out = ['cost_pct' => null, 'raw' => null, 'new' => $cur, 'status' => 'none', 'limited' => false, 'held' => null, 'gap_pct' => null];
+        if ($cur <= 0 || $foodBase <= 0 || $foodNow <= 0) return $out;
+        $delta = $foodNow - $foodBase;
+        $pct = $delta / $foodBase * 100;
+        $den = $fullNow - $delta;
+        // Marża % na koszcie pełnym zachowana : cena × pełny dziś ÷ pełny przy bazie (bez kosztu pełnego : jak koszt surowców).
+        $raw = $fullNow > 0 && $den > 0 ? $cur * $fullNow / $den : $cur * $foodNow / $foodBase;
+        $out = ['cost_pct' => round($pct, 1), 'raw' => round($raw, 4), 'status' => 'keep'] + $out;
+        $step = $p['round_eur'];
+        if ($pct >= $p['up_pct'] - 1e-9) {
+            $cap = $cur * (1 + $p['cap_pct'] / 100);
+            $limited = $raw > $cap + 0.005;
+            $new = max($cur, self::roundUp(min($raw, $cap), $step));
+            if ($new <= $cur + 0.004) return $out;
+            return ['new' => $new, 'status' => $limited ? 'cap' : 'up', 'limited' => $limited, 'gap_pct' => $limited ? round(($raw - $new) / $new * 100, 1) : 0.0] + $out;
+        }
+        if ($pct <= -$p['down_pct'] + 1e-9) {
+            $floor = $cur * (1 - ($p['cut_pct'] ?? 8.0) / 100);
+            $limited = $raw < $floor - 0.005;
+            $lowest = self::roundUp($floor, $step);
+            $byTarget = $target !== null && $target > 0 ? self::roundUp($target, $step) : 0.0;
+            $new = max(self::roundDown($raw, $step), $lowest, $byTarget);
+            if ($new >= $cur - 0.004) return ['held' => $byTarget >= $cur - 0.004 ? 'target' : 'round'] + $out;
+            $held = $byTarget > 0 && abs($new - $byTarget) < 0.005 && $byTarget > self::roundDown($raw, $step) + 0.004 ? 'target' : null;
+            return ['new' => $new, 'status' => 'down', 'limited' => $limited && $held === null && abs($new - $lowest) < 0.005, 'held' => $held,
+                'gap_pct' => round(($raw - $new) / $new * 100, 1)] + $out;
+        }
+        return $out;
     }
 
     // ── Krok 1 : koszty i marże ──────────────────────────────────────────────────────────────────────────────
@@ -200,7 +274,12 @@ final class PriceWizardService
 
     // ── Krok 2 : nowe ceny standardowe ───────────────────────────────────────────────────────────────────────
 
-    /** Krok 2 : kategorie (marża bazowa, współczynnik) i propozycje cen wszystkich produktów z ceną standardową. */
+    /**
+     * Krok 2 [351] « Sprawdź ceny katalogowe » : każdy produkt z ceną standardową — koszt surowców kartonu przy ostatnim
+     * cenniku (baza) → dziś, zmiana %, propozycja (podwyżka / obniżka / bez zmian w progu), marża na surowcach przed → po,
+     * przyczyny (surowce receptury, których cena zmieniła się od bazy, z numerem faktury). Kategorie : marża bazowa
+     * i współczynnik (cena celu = dolna granica obniżki).
+     */
     public function prices(int $months = 12): array
     {
         $p = $this->params();
@@ -209,52 +288,185 @@ final class PriceWizardService
         $rules = $this->repo->rules();
         $planned = $this->repo->plannedProducts();
         $recent = $p['interval_days'] > 0 ? $this->repo->recentStandardChanges(date('Y-m-d H:i:s', strtotime('-' . $p['interval_days'] . ' days'))) : [];
-        $ids = [];
-        foreach ($result['categories'] ?? [] as $cat) foreach ($cat['products'] as $pr) if (!empty($pr['has_data'])) $ids[] = (int) $pr['product_id'];
-        $be = $this->belgium($ids);
+        $foods = [];
+        foreach ($result['categories'] ?? [] as $cat) foreach ($cat['products'] as $pr) {
+            if (!empty($pr['has_data']) && $rate > 0) $foods[(int) $pr['product_id']] = (float) $pr['foodcost'];
+        }
+        $base = $this->baselines($foods);
+        $causes = $this->causes(array_keys($foods), $base);
+        $be = $this->belgium(array_keys($foods));
         $categories = [];
-        $t = ['up' => 0, 'cap' => 0, 'keep' => 0, 'none' => 0, 'planned' => 0, 'recent' => 0, 'products' => 0];
+        $products = [];
+        $t = ['up' => 0, 'cap' => 0, 'down' => 0, 'keep' => 0, 'held' => 0, 'none' => 0, 'planned' => 0, 'recent' => 0, 'products' => 0, 'up_pct' => [], 'down_pct' => []];
         foreach ($result['categories'] ?? [] as $cat) {
             $cid = (int) $cat['category_id'];
             $coef = array_key_exists($cid, $rules) ? $rules[$cid] : null;
             $coefEff = $coef ?? ($p['material_coef_default'] > 0 ? $p['material_coef_default'] : null);
             $margin = (float) $cat['target_margin'];
-            $products = [];
+            $n = 0;
             foreach ($cat['products'] as $pr) {
-                if (empty($pr['has_data']) || $rate <= 0) continue;
                 $id = (int) $pr['product_id'];
+                if (!isset($foods[$id])) continue;
+                $n++;
                 $cur = round((float) $pr['sale_price_eur'], 2);
-                $food = (float) $pr['foodcost'] / $rate;
-                $full = (float) $pr['total_cost'] / $rate;
-                $r = self::rule($food, $full, $cur, $margin, $coefEff, $p);
+                $foodNow = (float) $pr['foodcost'];
+                $fullNow = (float) $pr['total_cost'];
+                $foodBase = isset($base[$id]) ? (float) $base[$id]['food'] : $foodNow;
+                // Cena celu (reguła kategorii [218]) : dolna granica obniżki.
+                $goal = self::rule($foodNow / $rate, $fullNow / $rate, $cur, $margin, $coefEff, $p);
+                $r = self::pathRule($foodNow, $foodBase, $fullNow, $cur, $goal['target'], $p);
                 $status = $r['status'];
                 if (isset($planned[$id])) $status = 'planned';
                 elseif (isset($recent[$id]) && in_array($status, ['up', 'cap'], true)) $status = 'recent';
                 $t[$status]++;
+                if ($status === 'keep' && $r['held'] !== null) $t['held']++;
+                if (in_array($status, ['up', 'cap'], true)) $t['up_pct'][] = ($r['new'] - $cur) / $cur * 100;
+                if ($status === 'down') $t['down_pct'][] = ($r['new'] - $cur) / $cur * 100;
                 $t['products']++;
-                $qty = (float) $pr['avg_sold_qty_per_month'];
-                $products[] = ['id' => $id, 'name' => $pr['name'], 'food' => round($food, 2), 'full' => round($full, 2), 'cur' => $cur,
-                    'by_margin' => $r['by_margin'], 'by_coef' => $r['by_coef'], 'target' => $r['target'], 'new' => $r['new'], 'max' => self::maxPrice($cur, $p),
-                    'status' => $status, 'gap_pct' => $r['gap_pct'], 'qty' => round($qty, 1),
-                    'margin_now' => $cur > 0 ? round(($cur - $full) / $cur * 100, 1) : null,
-                    'margin_new' => $r['new'] > 0 ? round(($r['new'] - $full) / $r['new'] * 100, 1) : null,
-                    'planned' => $planned[$id] ?? null, 'recent' => $recent[$id] ?? null,
-                    'be' => $be[$id] ?? null];
+                $mat = fn(float $price, float $food) => $price > 0 ? round(($price * $rate - $food) / ($price * $rate) * 100, 1) : null;
+                $products[] = ['id' => $id, 'name' => $pr['name'], 'category' => $cat['category_name'], 'id_category' => $cid,
+                    'qty' => round((float) $pr['avg_sold_qty_per_month'], 1), 'cur' => $cur,
+                    'food_base' => round($foodBase, 2), 'food_now' => round($foodNow, 2), 'full_now' => round($fullNow, 2),
+                    'cost_pct' => $r['cost_pct'], 'raw' => $r['raw'] !== null ? round($r['raw'], 2) : null, 'new' => $r['new'],
+                    'status' => $status, 'limited' => $r['limited'], 'held' => $r['held'], 'gap_pct' => $r['gap_pct'],
+                    'target' => $goal['target'], 'max' => self::maxPrice($cur, $p), 'min' => self::minPrice($cur, $p),
+                    'margin_before' => $mat($cur, $foodBase), 'margin_after' => $mat($r['new'], $foodNow),
+                    'base_at' => $base[$id]['set_at'] ?? null, 'reasons' => $causes[$id] ?? [],
+                    'planned' => $planned[$id] ?? null, 'recent' => $recent[$id] ?? null, 'be' => $be[$id] ?? null];
             }
-            if (!$products) continue;
-            usort($products, fn($a, $b) => [self::rank($a['status']), $a['name']] <=> [self::rank($b['status']), $b['name']]);
-            $categories[] = ['id' => $cid, 'name' => $cat['category_name'], 'margin' => $margin, 'coef' => $coef, 'coef_effective' => $coefEff,
-                'products' => $products];
+            if ($n === 0) continue;
+            $categories[] = ['id' => $cid, 'name' => $cat['category_name'], 'margin' => $margin, 'coef' => $coef, 'coef_effective' => $coefEff, 'products' => $n];
         }
         usort($categories, fn($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
+        usort($products, fn($a, $b) => [self::rank($a['status']), self::order($a), $a['name']] <=> [self::rank($b['status']), self::order($b), $b['name']]);
+        $avg = fn(array $v) => $v ? round(array_sum($v) / count($v), 1) : null;
+        $t['up_pct'] = $avg($t['up_pct']);
+        $t['down_pct'] = $avg($t['down_pct']);
         $sp = $this->sellability->params();
-        return ['params' => $p, 'rate' => $rate, 'categories' => $categories, 'totals' => $t,
-            'be_params' => ['multiplier' => $sp['multiplier'], 'limit' => $sp['limit']]];
+        return ['params' => $p, 'rate' => $rate, 'categories' => $categories, 'products' => $products, 'totals' => $t,
+            'reviewed' => $this->reviewedThisWeek(), 'be_params' => ['multiplier' => $sp['multiplier'], 'limit' => $sp['limit']]];
     }
 
     private static function rank(string $status): int
     {
-        return ['cap' => 0, 'up' => 1, 'recent' => 2, 'planned' => 3, 'keep' => 4, 'none' => 5][$status] ?? 6;
+        return ['cap' => 0, 'up' => 0, 'recent' => 1, 'down' => 2, 'planned' => 3, 'keep' => 4, 'none' => 5][$status] ?? 6;
+    }
+
+    /** Kolejność w grupie : największa zmiana kosztu najpierw (podwyżki malejąco, obniżki rosnąco, reszta wg |zmiany|). */
+    private static function order(array $p): float
+    {
+        $pct = (float) ($p['cost_pct'] ?? 0);
+        return match ($p['status']) { 'up', 'cap', 'recent' => -$pct, 'down' => $pct, default => -abs($pct) };
+    }
+
+    /**
+     * [351] Baza kosztu produktów : istniejąca albo zapisana raz — n_margin_recalc.old_cost_carton, gdy przeliczenie
+     * młodsze niż 60 dni (data bazy = przeliczenie wcześniejsze), inaczej koszt dziś.
+     * @param array<int, float> $foods produkt => koszt surowców kartonu dziś (PLN)
+     * @return array<int, array{food: float, set_at: string, id_publication: ?int}>
+     */
+    private function baselines(array $foods): array
+    {
+        $base = $this->repo->baselines(array_keys($foods));
+        $missing = array_diff_key($foods, $base);
+        if (!$missing) return $base;
+        $recalc = $this->recalc->last();
+        $since = date('Y-m-d H:i:s', strtotime('-' . self::BASE_RECALC_DAYS . ' days'));
+        $now = date('Y-m-d H:i:s');
+        $before = [];
+        $rows = [];
+        foreach ($missing as $id => $food) {
+            $r = $recalc[$id] ?? null;
+            if ($r !== null && (string) $r['recalculated_at'] >= $since && (float) $r['old_cost_carton'] > 0) {
+                $at = (string) $r['recalculated_at'];
+                $before[$at] ??= $this->repo->runBefore($at) ?? date('Y-m-d H:i:s', strtotime($at . ' -31 days'));
+                $rows[$id] = ['food' => (float) $r['old_cost_carton'], 'set_at' => $before[$at]];
+            } elseif ($food > 0) {
+                $rows[$id] = ['food' => $food, 'set_at' => $now];
+            }
+        }
+        $this->repo->initBaselines($rows);
+        foreach ($rows as $id => $r) $base[$id] = ['food' => round($r['food'], 4), 'set_at' => $r['set_at'], 'id_publication' => null];
+        return $base;
+    }
+
+    /**
+     * [351] Przyczyny : surowce receptury, których cena zmieniła się od daty bazy produktu (największa zmiana najpierw),
+     * najwyżej 3, z numerem ostatniej faktury z cenami do kartoteki.
+     * @return array<int, list<array{name: string, pct: ?float, invoice: ?string}>>
+     */
+    private function causes(array $ids, array $base): array
+    {
+        $ingredients = $this->repo->ingredientsOf($ids);
+        $now = date('Y-m-d H:i:s');
+        $byFrom = [];
+        foreach ($ids as $id) if (isset($base[$id]) && $base[$id]['set_at'] < $now) $byFrom[$base[$id]['set_at']][] = $id;
+        $out = [];
+        foreach ($byFrom as $from => $pids) {
+            $materials = $this->repo->materialChanges((string) $from, $now);
+            if (!$materials) continue;
+            $invoices = $this->repo->invoiceOfMaterials(array_keys($materials), (string) $from);
+            foreach ($pids as $pid) {
+                $reasons = [];
+                foreach (array_unique($ingredients[$pid] ?? []) as $mid) {
+                    if (isset($materials[$mid]) && $materials[$mid]['pct'] !== null) $reasons[] = $materials[$mid] + ['invoice' => $invoices[$mid] ?? null];
+                }
+                usort($reasons, fn($a, $b) => abs((float) $b['pct']) <=> abs((float) $a['pct']));
+                if ($reasons) $out[$pid] = array_map(fn($m) => ['name' => $m['name'], 'pct' => $m['pct'], 'invoice' => $m['invoice']], array_slice($reasons, 0, 3));
+            }
+        }
+        return $out;
+    }
+
+    /** [351] Przeliczenie kosztów receptur przed krokiem 2, gdy ceny surowców zmieniły się od ostatniego przeliczenia. */
+    public function recalcIfPending(?int $userId): ?array
+    {
+        $last = $this->repo->lastRuns()[0] ?? null;
+        if ($last === null || !$this->repo->materialChanges((string) $last['run_at'], date('Y-m-d H:i:s'))) return null;
+        return $this->recalculate($userId);
+    }
+
+    /** [351] Poniedziałek tego tygodnia i następnego (okres zadania tygodniowego). @return array{0: string, 1: string} */
+    public static function week(?string $today = null): array
+    {
+        $t = strtotime($today ?? date('Y-m-d'));
+        $from = date('Y-m-d', strtotime('-' . ((int) date('N', $t) - 1) . ' days', $t));
+        return [$from, date('Y-m-d', strtotime($from . ' +7 days'))];
+    }
+
+    /** [351] Ścieżka cen zaliczona w tym tygodniu (publikacja albo « sprawdzone — bez zmian »). */
+    public function reviewedThisWeek(): ?array
+    {
+        [$from, $to] = self::week();
+        try {
+            return $this->wizardDone->done(self::PATH_CODE, $from, $to);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /** [351] « Sprawdzone — bez zmian w tym tygodniu » (krok 2, nic nie zaznaczone) : zadanie czwartkowe zaliczone. */
+    public function markReviewed(?int $userId): array
+    {
+        $this->assertAccess($userId);
+        $this->wizardDone->markDone(self::PATH_CODE, date('Y-m-d'), 'ceny katalogowe sprawdzone — bez zmian w tym tygodniu', $userId);
+        return $this->reviewedThisWeek() ?? [];
+    }
+
+    /**
+     * [351] Stan kroków 2–4 ścieżki w tym tygodniu (pasek ścieżki) : zaliczenie, ostatnia publikacja tygodnia, e-maile.
+     * Krok 1 (faktury) : GET /supply/invoices/assistant-status (kontroler dokłada przy ?inv=1).
+     */
+    public function pathStatus(): array
+    {
+        [$from, $to] = self::week();
+        $pub = $this->repo->publicationsCreated($from . ' 00:00:00', $to . ' 00:00:00')[0] ?? null;
+        $planned = array_values(array_filter($this->repo->publications(10), fn($x) => $x['status'] === 'planned'));
+        return ['week' => ['from' => $from, 'to' => $to], 'reviewed' => $this->reviewedThisWeek(),
+            'publication' => $pub === null ? null : ['id' => (int) $pub['id'], 'date' => (string) $pub['effective_date'], 'status' => (string) $pub['status'],
+                'products' => (int) $pub['products'], 'emails' => (int) $pub['emails'], 'emails_done' => (int) $pub['emails_done'],
+                'notify' => (bool) $pub['notify_email'], 'notice_date' => date('Y-m-d', strtotime($pub['effective_date'] . ' -' . (int) $pub['notice_days'] . ' days'))],
+            'planned' => array_map(fn($x) => ['id' => (int) $x['id'], 'date' => (string) $x['effective_date']], $planned)];
     }
 
     /** Współczynnik sklepu w Belgii (cena w sklepie netto ÷ cena fabryczna za sztukę) przy obecnej cenie. @return array<int, float> */
@@ -292,11 +504,13 @@ final class PriceWizardService
         return $n;
     }
 
-    /** Parametry reguły (administrator) : limit podwyżki, zaokrąglenie, domyślny współczynnik, wyprzedzenie e-maila. */
+    /** Parametry reguły (administrator) : progi kosztu [351], limit podwyżki i obniżki, zaokrąglenie, domyślny współczynnik, wyprzedzenie e-maila. */
     public function saveParams(array $input, ?int $userId): array
     {
         if (!$this->access->isAdmin($userId)) throw new CustomException('Parametry zmienia administrator.', 'errors', 403);
-        $labels = ['cap_pct' => ['prices.client_cap_pct', 'Limit podwyżki'], 'round_eur' => ['prices.client_round_eur', 'Zaokrąglenie'],
+        $labels = ['cap_pct' => ['prices.client_cap_pct', 'Maks. podwyżka naraz'], 'cut_pct' => ['prices.client_cut_pct', 'Maks. obniżka naraz'],
+            'up_pct' => ['prices.cost_up_pct', 'Próg wzrostu kosztu'], 'down_pct' => ['prices.cost_down_pct', 'Próg spadku kosztu'],
+            'round_eur' => ['prices.client_round_eur', 'Zaokrąglenie'],
             'material_coef_default' => ['prices.material_coef_default', 'Domyślny współczynnik'], 'notice_days' => ['prices.notice_days', 'Wyprzedzenie e-maila']];
         $values = [];
         foreach ($labels as $key => [$code, $label]) {
@@ -318,7 +532,9 @@ final class PriceWizardService
 
     /**
      * Wybrane ceny standardowe → ceny klientów i klienci (kanały, efekt). Serwer sprawdza każdą cenę : produkt aktywny,
-     * bez innej zaplanowanej zmiany, wyżej niż obecna, najwyżej limit podwyżki.
+     * bez innej zaplanowanej zmiany, inna niż obecna, podwyżka najwyżej +cap %, obniżka najwyżej −cut % [351].
+     * Ceny klientów : równe standardowej idą za nią ; wynegocjowane o ten sam % (rabat zachowany), te same limity,
+     * zaokrąglenie w górę (podwyżka) albo w dół (obniżka).
      * @param list<array{product_id: mixed, price: mixed, manual?: mixed}> $raw
      */
     public function build(array $raw): array
@@ -340,14 +556,18 @@ final class PriceWizardService
             if (isset($planned[$id])) throw new CustomException('« ' . $s['name'] . ' » ma już zaplanowaną zmianę ceny od ' . date('d.m.Y', strtotime($planned[$id]['date'])) . '.', 'errors', 409);
             $cur = round($s['price'], 2);
             if ($cur <= 0) throw new CustomException('« ' . $s['name'] . ' » nie ma ceny standardowej.', 'errors', 422);
-            if ($w['price'] <= $cur + 0.004) continue;
+            if (abs($w['price'] - $cur) < 0.005) continue;
             $max = self::maxPrice($cur, $p);
             if ($w['price'] > $max + 0.004) {
                 throw new CustomException('« ' . $s['name'] . ' » : najwyżej +' . self::num($p['cap_pct'], 1) . ' % naraz (do ' . self::num($max, 2) . ' €).', 'errors', 422);
             }
+            $min = self::minPrice($cur, $p);
+            if ($w['price'] < $min - 0.004) {
+                throw new CustomException('« ' . $s['name'] . ' » : obniżka najwyżej −' . self::num($p['cut_pct'], 1) . ' % naraz (od ' . self::num($min, 2) . ' €).', 'errors', 422);
+            }
             $standard[$id] = ['id' => $id, 'name' => $s['name'], 'old' => $cur, 'new' => $w['price'], 'manual' => $w['manual']];
         }
-        if (!$standard) throw new CustomException('Żadna z wybranych cen nie jest wyższa od obecnej.', 'errors', 422);
+        if (!$standard) throw new CustomException('Żadna z wybranych cen nie różni się od obecnej.', 'errors', 422);
 
         $qty = $this->monthlyCartons();
         $byClient = [];
@@ -355,14 +575,19 @@ final class PriceWizardService
         foreach ($this->repo->clientPrices(array_keys($standard)) as $row) {
             $s = $standard[$row['id_product']];
             $cur = round($row['price'], 2);
+            $up = $s['new'] > $s['old'];
             if (abs($cur - $s['old']) < 0.005) {
                 $new = $s['new'];
-            } else {
+            } elseif ($up) {
                 $target = $cur * $s['new'] / $s['old'];
                 if (!$p['keep_discount']) $target = max($target, $s['new']);
                 $new = max($cur, self::roundUp(min($target, $cur * (1 + $p['cap_pct'] / 100)), $p['round_eur']));
+            } else {
+                // [351] Obniżka : ten sam % (rabat zachowany), najwyżej −cut %, w dół do kroku.
+                $target = $cur * $s['new'] / $s['old'];
+                $new = min($cur, max(self::roundDown($target, $p['round_eur']), self::roundUp($cur * (1 - $p['cut_pct'] / 100), $p['round_eur'])));
             }
-            if ($new <= $cur + 0.004) continue;
+            if (abs($new - $cur) < 0.005) continue;
             $cid = $row['id_customer'];
             $month = ($new - $cur) * ($qty[$cid][$row['id_product']] ?? 0.0);
             $items[] = ['id_product' => $row['id_product'], 'id_customer' => $cid, 'old' => $cur, 'new' => $new, 'manual' => false,
@@ -384,12 +609,13 @@ final class PriceWizardService
         }
         usort($clients, fn($a, $b) => [$b['franchise'], $b['month_eur'], $a['name']] <=> [$a['franchise'], $a['month_eur'], $b['name']]);
         $pcts = array_map(fn($s) => ($s['new'] - $s['old']) / $s['old'] * 100, $standard);
+        $ups = count(array_filter($pcts, fn($v) => $v > 0));
         return [
             'params' => $p,
             'standard' => array_values($standard),
             'items' => $items,
             'clients' => $clients,
-            'totals' => ['products' => count($standard), 'avg_pct' => round(array_sum($pcts) / count($pcts), 1),
+            'totals' => ['products' => count($standard), 'avg_pct' => round(array_sum($pcts) / count($pcts), 1), 'up' => $ups, 'down' => count($pcts) - $ups,
                 'client_prices' => count($items), 'followers' => count(array_filter($items, fn($i) => $i['follower'])),
                 'clients' => count($clients), 'franchise' => count(array_filter($clients, fn($c) => $c['franchise'])),
                 'emails' => count(array_filter($clients, fn($c) => $c['email'] !== '')),
@@ -424,8 +650,24 @@ final class PriceWizardService
             'products' => count($b['standard']), 'client_prices' => count($items) - count($b['standard']),
             'avg_pct' => $b['totals']['avg_pct'], 'month_eur' => round(array_sum(array_column($clients, 'month_eur')), 2), 'created_by' => $userId,
         ], $items, $rows);
+        // [351] Baza kosztu opublikowanych cen standardowych = koszt surowców dziś ; zadanie czwartkowe zaliczone.
+        $foods = [];
+        foreach ($this->margins->calculateCategoryOverview(self::SALES_MONTHS)['categories'] ?? [] as $cat) {
+            foreach ($cat['products'] as $pr) $foods[(int) $pr['product_id']] = (float) $pr['foodcost'];
+        }
+        $this->repo->setBaselines(array_filter(array_intersect_key($foods, array_flip(array_column($b['standard'], 'id'))), fn($v) => $v > 0), $id, date('Y-m-d H:i:s'));
+        $ups = $b['totals']['up'];
+        $downs = $b['totals']['down'];
+        try {
+            $n = count($b['standard']);
+            $this->wizardDone->markDone(self::PATH_CODE, date('Y-m-d'), 'cennik od ' . date('d.m', strtotime($date)) . ' : ' . $n . ' '
+                . ($n === 1 ? 'cena' : (in_array($n % 10, [2, 3, 4], true) && !in_array($n % 100, [12, 13, 14], true) ? 'ceny' : 'cen'))
+                . ($ups ? ' · ' . $ups . ' ▲' : '') . ($downs ? ' · ' . $downs . ' ▼' : ''), $userId);
+        } catch (\Throwable $e) {
+            error_log('[price-wizard] price_path_done: ' . $e->getMessage());
+        }
         $notice = date('Y-m-d', strtotime($date . ' -' . $b['params']['notice_days'] . ' days'));
-        return ['id' => $id, 'date' => $date, 'products' => count($b['standard']), 'client_prices' => count($items) - count($b['standard']),
+        return ['id' => $id, 'date' => $date, 'up' => $ups, 'down' => $downs, 'products' => count($b['standard']), 'client_prices' => count($items) - count($b['standard']),
             'clients' => count($clients), 'emails' => count(array_filter($rows, fn($r) => $r['email'])), 'sites' => count(array_filter($rows, fn($r) => $r['site'])),
             'notice_date' => $notice < date('Y-m-d') ? date('Y-m-d') : $notice,
             'message' => 'Zaplanowano zmianę ' . count($b['standard']) . ' cen standardowych i ' . (count($items) - count($b['standard'])) . ' cen klientów od '
