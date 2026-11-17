@@ -729,14 +729,22 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
 /* ---------------------------------------------------------------------------
  * Les routes
  * ------------------------------------------------------------------------- */
+/** Le fichier du portrait d'un assistant dans public/dashboard/avatars/ : {clé}.svg, sinon {clé}.png (17/11/2026 : le Coach
+ *  Vente, un PNG de 480 px) ; null sans portrait (l'écran montre alors l'icône). */
+function amAvatar(string $k): ?string
+{
+    foreach (['svg', 'png'] as $x) { if (is_file(__DIR__ . '/../public/dashboard/avatars/' . $k . '.' . $x)) { return $k . '.' . $x; } }
+    return null;
+}
+
 /** Les questions toutes prêtes, et si l'assistant est branché (sans clé, le dashboard ne montre pas le bouton). */
 function ep_assistant_questions(): array
 {
     $tons = [];
     // Les coachs, puis le Professeur (17/11/2026), qui répond sur le manuel opératoire.
     foreach (amCoachs() + ['professeur' => AIA_PROF] as $k => ['nom' => $nom, 'dit' => $dit]) {
-        // Le portrait, s'il existe (public/dashboard/avatars/{clé}.svg, 12/11/2026 : celui de Pierre) ; sinon l'icône.
-        $av = is_file(__DIR__ . '/../public/dashboard/avatars/' . $k . '.svg') ? 'avatars/' . $k . '.svg' : null;
+        // Le portrait, s'il existe (public/dashboard/avatars/{clé}.svg ou .png, 12/11/2026 : celui de Pierre) ; sinon l'icône.
+        $av = ($f = amAvatar($k)) !== null ? 'avatars/' . $f : null;
         $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit, 'avatar' => $av, 'manuel' => $k === 'professeur'];
     }
     return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'professeur' => aiaQuestionsProfesseur(),
@@ -782,7 +790,7 @@ function wr_assistant_magasin(): array
 function ep_assistant_coachs(): array
 {
     $av = [];
-    foreach (array_keys(AM_COACHS) as $k) { $av[$k] = is_file(__DIR__ . '/../public/dashboard/avatars/' . $k . '.svg') ? 'dashboard/avatars/' . $k . '.svg' : null; }
+    foreach (array_keys(AM_COACHS) as $k) { $av[$k] = ($f = amAvatar($k)) !== null ? 'dashboard/avatars/' . $f : null; }
     return ['coachs' => amCoachs(), 'defauts' => AM_COACHS, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT];
 }
 
