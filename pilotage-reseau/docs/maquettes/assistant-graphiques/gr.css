@@ -1,0 +1,80 @@
+/* Maquette « L'assistant fait des graphiques » (17/11/2026). Préfixe gr-. Avec ../parametres-mails/mails.css (la coque). */
+.gr-fond{position:absolute;inset:0;background:rgba(34,30,26,.42);z-index:20}
+.gr-mod{position:absolute;z-index:21;left:50%;top:40px;transform:translateX(-50%);width:1120px;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden;font-size:13px}
+.gr-tete{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--color-border-tertiary)}
+.gr-tete img{width:40px;height:40px;border-radius:12px;background:#f3eee7}
+.gr-tete b{font-weight:400;font-size:16px}.gr-tete small{display:block;font-size:11.5px;color:var(--color-text-muted)}
+.gr-modes{display:flex;gap:2px;margin-left:24px}
+.gr-modes span{padding:7px 12px;border-radius:8px;font-size:12.5px;color:var(--color-text-muted)}
+.gr-modes span.on{background:#f5ece9;color:var(--accent)}
+.gr-modes span .neuf{font-size:9.5px;background:var(--prize-soft,#f6e7ce);color:var(--prize-ink,#7a5a12);border-radius:5px;padding:1px 5px;margin-left:5px}
+.gr-x{margin-left:auto;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--color-text-muted)}
+.gr-corps{display:grid;grid-template-columns:270px 1fr;min-height:640px}
+.gr-gauche{border-right:1px solid var(--color-border-tertiary);padding:16px;background:#fbf9f6}
+.gr-gauche .lab{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin:4px 0 8px}
+.gr-q{display:block;padding:8px 10px;border-radius:8px;font-size:12.5px;margin-bottom:4px;color:var(--ink)}
+.gr-q.gr{border:1px solid #eadfd3;background:#fff}
+.gr-q i{font-style:normal;color:var(--accent);margin-right:6px}
+.gr-fil{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.gr-moi{align-self:flex-end;max-width:70%;background:#f5ece9;border-radius:14px 14px 4px 14px;padding:10px 14px;font-size:13px}
+.gr-rep{border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px}
+.gr-rep p{margin:0 0 10px;line-height:1.5}
+.gr-types{display:flex;gap:4px;margin-bottom:8px}
+.gr-types span{padding:4px 10px;border:1px solid var(--line);border-radius:14px;font-size:11.5px;color:var(--color-text-muted)}
+.gr-types span.on{border-color:var(--accent);color:var(--accent)}
+.gr-graph{border:1px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px 6px;background:#fff}
+.gr-leg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);margin:4px 2px 2px}
+.gr-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.gr-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.gr-k div{border:1px solid var(--color-border-tertiary);border-radius:10px;padding:9px 12px}
+.gr-k b{display:block;font-weight:400;font-size:19px}.gr-k span{font-size:11px;color:var(--color-text-muted)}
+.gr-src{font-size:11px;color:var(--color-text-muted);margin-top:6px}
+.gr-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border-tertiary);position:relative}
+.gr-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px;color:var(--ink)}
+.gr-btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.gr-btn.on{border-color:var(--accent);color:var(--accent)}
+.gr-menu{position:absolute;left:0;top:50px;width:290px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,.12);padding:6px;z-index:3}
+.gr-menu div{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;padding:8px;border-radius:7px}
+.gr-menu div:first-child{background:#f8f3ee}
+.gr-menu div i{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;color:#fff}
+.gr-menu div b{font-weight:400}.gr-menu div small{display:block;font-size:11px;color:var(--color-text-muted)}
+.gr-suites{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.gr-suites span{padding:6px 10px;border:1px solid var(--line);border-radius:16px}
+/* B : enregistrer comme modèle */
+.gr-dlg{position:absolute;z-index:4;right:22px;top:70px;width:470px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.18);overflow:hidden}
+.gr-dlg h3{margin:0;padding:14px 18px;font-weight:400;font-size:15px;border-bottom:1px solid var(--color-border-tertiary)}
+.gr-dlg .c{padding:14px 18px;display:grid;gap:12px}
+.gr-dlg .f{display:grid;gap:4px}
+.gr-dlg .f>span{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.gr-in{display:flex;align-items:center;justify-content:space-between;min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.gr-garde{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:12.5px;padding:10px 12px;background:#fbf9f6;border-radius:10px}
+.gr-garde span{color:var(--color-text-muted)}
+.gr-seg{display:inline-flex;padding:3px;border-radius:9px;background:var(--chip);gap:2px}
+.gr-seg span{padding:5px 12px;border-radius:7px;font-size:12px;color:var(--color-text-muted)}
+.gr-seg span.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.gr-sw{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.4}
+.gr-sw i{flex:0 0 34px;height:20px;border-radius:10px;background:#3f7a52;position:relative;margin-top:1px}
+.gr-sw i::after{content:'';position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff}
+.gr-sw i.off{background:#d9d4cc}.gr-sw i.off::after{left:2px}
+.gr-sw small{display:block;color:var(--color-text-muted);font-size:11.5px}
+.gr-dlg .pied{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-border-tertiary)}
+/* C : mes modèles */
+.gr-mods{padding:18px 22px}
+.gr-mods h4{margin:4px 0 10px;font-weight:400;font-size:14px;display:flex;align-items:baseline;gap:10px}
+.gr-mods h4 small{font-size:11.5px;color:var(--color-text-muted)}
+.gr-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.gr-mt{border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.gr-mt .vig{height:120px;background:#fbf9f6;border-bottom:1px solid var(--color-border-tertiary);padding:8px}
+.gr-mt .t{padding:10px 12px 4px;font-size:13px}
+.gr-mt .s{padding:0 12px;font-size:11.5px;color:var(--color-text-muted);height:32px;line-height:16px;overflow:hidden}
+.gr-mt .tags{padding:6px 12px 0;display:flex;gap:5px;flex-wrap:wrap;min-height:24px}
+.gr-mt .tags span{font-size:10.5px;padding:2px 7px;border-radius:9px;background:var(--chip)}
+.gr-mt .tags span.prog{background:rgba(63,122,82,.12);color:#2f5e3e}
+.gr-mt .a{display:flex;gap:6px;padding:10px 12px 12px;margin-top:auto}
+.gr-mt .a span{font-size:11.5px;padding:5px 9px;border:1px solid var(--line);border-radius:7px}
+.gr-mt .a span.p{background:var(--accent);border-color:var(--accent);color:#fff}
+/* Le fond et la fenêtre au-dessus du rail ; le menu « Télécharger » déborde sans être coupé. */
+.gr-fond{z-index:200}
+.gr-mod{z-index:201;overflow:visible}
+.gr-tete{border-radius:16px 16px 0 0}
+.gr-fond{z-index:1000}.gr-mod{z-index:1001}

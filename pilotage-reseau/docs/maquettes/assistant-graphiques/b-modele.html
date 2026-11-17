@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Enregistrer comme modèle — L'assistant fait des graphiques</title>
+<!-- Écran B (17/11/2026) : « Enregistrer comme modèle » garde la demande, pas les chiffres : la question, le graphique, la mesure, la période glissante, le magasin ; on peut le programmer (chaque lundi, en PDF par e-mail). -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const tot = CLI.reduce((a, b) => a + b, 0), totN1 = N1.reduce((a, b) => a + b, 0), ec = Math.round(1000 * (tot - totN1) / totN1) / 10;
+const sous = CLI.filter((v, i) => v < N1[i]).length;
+const reponse = `<div class="gr-moi">Montre-moi mes clients par semaine depuis septembre, face à l’an passé</div>
+  <div class="gr-rep"><p>Sur ces douze semaines, vous avez reçu <b style="font-weight:400">${fN(tot)} clients</b>, ${Math.abs(ec).toLocaleString('fr-FR')} % de moins qu’un an plus tôt. Les deux dernières semaines repartent : S45 et S46 sont au-dessus de 1 100 clients.</p>
+    <div class="gr-types"><span class="on">▥ Barres</span><span>⟋ Courbe</span><span>☰ Tableau</span><span style="margin-left:auto">Mesure : <b style="font-weight:400;color:var(--ink)">clients ▾</b></span></div>
+    <div class="gr-graph">${graphe(760, 250, false)}<div class="gr-leg"><span><i style="background:#8D1D2C"></i>clients de la semaine</span><span><i style="background:#c98a92"></i>sous l’an passé</span><span><i style="border-top:2px dashed #7d776f;height:0;border-radius:0;vertical-align:3px"></i>même semaine en 2025</span></div></div>
+    <div class="gr-k"><div><b>${fN(tot)}</b><span>clients sur 12 semaines</span></div><div><b>${ec.toLocaleString('fr-FR')} %</b><span>face à l’an passé (${fN(totN1)})</span></div><div><b>${sous} / 12</b><span>semaines sous l’an passé</span></div></div>
+    <p style="margin:0">Le creux de S43–S44 (vacances d’automne) pèse le plus : − 59 et − 60 clients face à 2025.</p>
+    <div class="gr-src">Source : les tickets du panel, semaine par semaine (Historique des ventes, 18 mois) · même semaine décalée de 364 jours</div>
+    __ACTIONS__
+  </div>`;
+const actions = `<div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn on">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span></div>`;
+const dlg = `<div class="gr-dlg"><h3>Enregistrer comme modèle</h3><div class="c">
+  <div class="f"><span>Nom du modèle</span><div class="gr-in">Mes clients par semaine face au N-1</div></div>
+  <div class="f"><span>Ce que le modèle garde</span><div class="gr-garde">
+    <span>La demande</span><b style="font-weight:400">clients par semaine, face à l’an passé</b>
+    <span>Le graphique</span><b style="font-weight:400">barres + ligne pointillée N-1</b>
+    <span>La période</span><b style="font-weight:400">les 12 dernières semaines <span class="mu">(glisse avec le temps)</span></b>
+    <span>Le magasin</span><b style="font-weight:400">Atelier by Harmonie - Sombreffe</b></div>
+    <small class="mu" style="font-size:11.5px">Les chiffres ne sont pas figés : chaque ouverture refait le graphique avec les ventes du jour.</small></div>
+  <div class="f"><span>Pour qui</span><div><span class="gr-seg"><span class="on">Moi</span><span>Mon équipe</span><span>Tout le réseau</span></span></div></div>
+  <div class="gr-sw"><i></i><span>Me l’envoyer chaque lundi à 8:00<small>en PDF, depuis la boîte mail du magasin · se règle aussi dans Paramètres › Mails et automatisations</small></span></div>
+  <div class="gr-sw"><i class="off"></i><span>L’épingler en bas de la vue Semaine<small>il s’y redessine à chaque visite</small></span></div>
+  </div><div class="pied"><span class="gr-btn">Annuler</span><span class="gr-btn p">Enregistrer le modèle</span></div></div>`;
+document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod" style="position:absolute">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil" style="opacity:.55">${reponse.replace('__ACTIONS__', actions)}</div></div>${dlg}</div>`);
+</script></body></html>
