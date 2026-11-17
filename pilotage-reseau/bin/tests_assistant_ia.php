@@ -243,5 +243,25 @@ verifie('le PDF porte la question, la réponse, le graphique et son tableau', st
 verifie('le PDF dit les documents du manuel lus et la phrase de finition', str_contains($html, 'Fermeture du magasin (v1.2, publié)') && str_contains($html, 'Gardez l’élan.'));
 verifie('sans image, le tableau reste', !str_contains(aiaPdfHtml(['titre' => 't'], [$V], [], [], []), '<img src="data:image/png') && str_contains(aiaPdfHtml(['titre' => 't'], [$V], [], [], []), '<td>S40</td>'));
 
+// Le radar (17/11/2026, « un spider sur les marges et les catégories »).
+verifie('les catégories en radar se comparent au réseau, en parts', ($r = aiaDemande(['donnees' => 'categories', 'forme' => 'radar', 'mesure' => 'ca', 'comparer' => 'aucune'] + $base))['forme'] === 'radar'
+    && $r['mesure'] === 'part' && $r['comparer'] === 'reseau');
+verifie('les marges des catégories : en radar, en %, face au réseau', ($r = aiaDemande(['donnees' => 'marges_categories', 'forme' => 'courbe', 'mesure' => 'ca', 'comparer' => 'an_passe'] + $base))['forme'] === 'radar'
+    && $r['mesure'] === 'marge' && $r['comparer'] === 'reseau', json_encode($r));
+verifie('les marges se lisent aussi en barres ou en tableau', aiaDemande(['donnees' => 'marges_categories', 'forme' => 'barres'] + $base)['forme'] === 'barres' && aiaDemande(['donnees' => 'marges_categories', 'forme' => 'tableau'] + $base)['forme'] === 'tableau');
+verifie('un radar d’autre chose devient un graphique ordinaire', aiaDemande(['donnees' => 'produits', 'forme' => 'radar'] + $base)['forme'] === 'barres' && aiaDemande(['donnees' => 'ventes_par_heure', 'forme' => 'radar'] + $base)['forme'] === 'colonnes');
+verifie('la marge ne se demande que pour les catégories', aiaDemande(['donnees' => 'ventes_par_jour', 'mesure' => 'marge'] + $base)['mesure'] === 'ca');
+verifie('moins de trois branches : le radar devient des barres', aiaRadarOuBarres(['forme' => 'radar', 'libelles' => ['a', 'b']])['forme'] === 'barres' && aiaRadarOuBarres(['forme' => 'radar', 'libelles' => ['a', 'b', 'c']])['forme'] === 'radar' && aiaRadarOuBarres('rien') === 'rien');
+// La marge brute par catégorie : chaque magasin avec ses prix et ses coûts, pondérée par les ventes hors TVA.
+$acc = [];
+$prodM = [1 => ['prixTtc' => 2.12, 'prixHt' => 2.0, 'cout' => 0.5, 'categorie' => 'Viennoiserie'], 2 => ['prixTtc' => 10.6, 'prixHt' => 10.0, 'cout' => 4.0, 'categorie' => 'Pâtisserie'],
+    3 => ['prixTtc' => 3.0, 'prixHt' => 2.83, 'cout' => null, 'categorie' => 'Pain'], 4 => ['prixTtc' => 1.06, 'prixHt' => 1.0, 'cout' => 0.4, 'categorie' => 'Viennoiserie']];
+aivMargesAjouter($acc, [[1, 0, 'Croissant', 100, 212.0], [2, 0, 'Tarte', 10, 106.0], [3, 0, 'Pain', 50, 150.0], [4, 0, 'Mini', 100, 106.0], [9, 0, 'Inconnu', 5, 20.0]], $prodM, [2 => ['cat' => 'Pâtisseries fines']]);
+verifie('la marge d’une catégorie : ventes HT × (prix HT − coût) ÷ prix HT, additionnées', abs($acc['Viennoiserie']['marge'] - (200 * 0.75 + 100 * 0.6)) < 0.001 && abs($acc['Viennoiserie']['ht'] - 300) < 0.001 && $acc['Viennoiserie']['n'] === 2, json_encode($acc));
+verifie('la catégorie du catalogue d’abord ; sans coût ou sans fiche, le produit ne compte pas', isset($acc['Pâtisseries fines']) && !isset($acc['Pâtisserie']) && !isset($acc['Pain']) && count($acc) === 2);
+$pct = aivMargesPct($acc);
+verifie('la marge en %, les catégories par ventes décroissantes', $pct === ['Viennoiserie' => 70.0, 'Pâtisseries fines' => 60.0], json_encode($pct));
+verifie('les marges s’écrivent en %', aiaFmt(62.45, 'marge') === "62,5\u{00A0}%");
+
 echo "\n" . ($ko === 0 ? "Tout est vert : $ok vérifications." : "$ko échec(s), $ok réussite(s).") . "\n";
 exit($ko === 0 ? 0 : 1);

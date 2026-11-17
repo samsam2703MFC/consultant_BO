@@ -13,7 +13,9 @@ declare(strict_types=1);
  *                        le plus par euro vendu
  *   promotions_en_cours  les promotions et bundles du magasin au panel : la règle en mots, le prix, le contenu, la période
  *
- * et un visuel : `prix_concurrence` (barres : le prix du magasin, puis chaque concurrent relevé pour ce produit).
+ * et deux visuels : `prix_concurrence` (barres : le prix du magasin, puis chaque concurrent relevé pour ce produit) et
+ * `marges_categories` (radar, 17/11/2026, Sam : « un spider sur les marges et les catégories ») : la marge brute de chaque
+ * catégorie du magasin face à celle du reste du réseau, chaque magasin compté avec SES prix et SES coûts de recette.
  *
  * La marge d'un produit : prix hors TVA − coût de recette (du magasin, sinon du réseau), comme Vendre › Offres
  * (pmProduits). Les concurrents sont des commerces hors réseau, relevés par le réseau : ils sont nommés. Les autres
@@ -204,14 +206,104 @@ function aivOutilForces(int $sid, array $in): array
     $M = hvProduits([$sid], $P['du'], $P['au']);
     $R = hvProduits($autres, $P['du'], $P['au']);
     $out = ['periode' => amPeriodeTexte($P), 'reseau' => 'les ' . count($autres) . ' autres magasins actifs, ensemble (sans nom)']
-        + aivForces($M['produits'], $R['produits'], function_exists('svCatalogue') ? svCatalogue() : [], aivProduits($sid))
+        + aivForces($M['produits'], $R['produits'], function_exists('svCatalogue') ? svCatalogue() : [], aivProduits($sid));
+    // La marge brute de chaque catégorie, du magasin et du réseau (17/11/2026) : ce que le radar des marges montre.
+    try {
+        $Mg = aivMarges($sid, $P['du'], $P['au']);
+        $pm = aivMargesPct($Mg['moi']); $pr = aivMargesPct($Mg['reseau']);
+        foreach ($out['categories'] as &$c) { $c['margeMagasinPct'] = $pm[$c['categorie']] ?? null; $c['margeReseauPct'] = $pr[$c['categorie']] ?? null; }
+        unset($c);
+    } catch (Throwable $e) { error_log('aiv marges : ' . $e->getMessage()); }
+    $out = $out
         + ['lecture' => 'ecartPts = part du magasin − part du réseau, en points ; un point fort attire (on le met en tête d’un bundle), un point faible se fait découvrir '
-            . '(on l’ajoute à prix doux, ou on le retire) ; la marge d’un bundle = somme des prix hors TVA de son prix − somme des coûts de recette.'];
+            . '(on l’ajoute à prix doux, ou on le retire) ; la marge d’un bundle = somme des prix hors TVA de son prix − somme des coûts de recette ; '
+            . 'margeMagasinPct et margeReseauPct : la marge brute de la catégorie (prix hors TVA − coût de recette, pondérée par les ventes), du magasin et du réseau.'];
     if (($c = amCouverture($M['couverture'], $M['aujourdhui'])) !== null) { $out['couverture'] = $c; }
     return $out;
 }
 
-/** L'outil promotions_en_cours : les promotions et bundles du panel qui touchent ce magasin, en cours ou à venir. */
+/**
+ * La marge brute par catégorie (fonction pure, testée) : ajoute à $acc les ventes d'UN magasin, avec SES prix et SES coûts.
+ * Pour chaque produit vendu : ventes hors TVA = ventes × prix HT ÷ prix TTC ; marge = ventes hors TVA × (prix HT − coût)
+ * ÷ prix HT. $ventes : hvProduits()['produits'] ; $prod : aivProduits ; $cat : svCatalogue. Un produit sans prix ou sans
+ * coût de recette n'est pas compté. $acc : [catégorie => ['marge' => €, 'ht' => €, 'n' => produits comptés]].
+ */
+function aivMargesAjouter(array &$acc, array $ventes, array $prod, array $cat): void
+{
+    foreach ($ventes as $x) {
+        $pid = (int) $x[0]; $v = (float) $x[4];
+        $f = $prod[$pid] ?? null;
+        if ($f === null || $v <= 0 || !is_numeric($f['prixHt'] ?? null) || !is_numeric($f['cout'] ?? null) || (float) $f['prixHt'] <= 0) { continue; }
+        $ht = (float) $f['prixHt'];
+        $vht = is_numeric($f['prixTtc'] ?? null) && (float) $f['prixTtc'] > 0 ? $v * $ht / (float) $f['prixTtc'] : $v;
+        $c = trim((string) ($cat[$pid]['cat'] ?? '')) ?: (trim((string) ($f['categorie'] ?? '')) ?: 'sans catégorie');
+        $acc[$c]['marge'] = ($acc[$c]['marge'] ?? 0.0) + $vht * ($ht - (float) $f['cout']) / $ht;
+        $acc[$c]['ht'] = ($acc[$c]['ht'] ?? 0.0) + $vht;
+        $acc[$c]['n'] = ($acc[$c]['n'] ?? 0) + 1;
+    }
+}
+
+/** La marge brute en % de chaque catégorie ([catégorie => %]), dans l'ordre des ventes hors TVA, décroissantes. */
+function aivMargesPct(array $acc): array
+{
+    uasort($acc, static fn ($a, $b) => ($b['ht'] ?? 0) <=> ($a['ht'] ?? 0));
+    $out = [];
+    foreach ($acc as $c => $x) { if (($x['ht'] ?? 0) > 0) { $out[(string) $c] = round(100 * $x['marge'] / $x['ht'], 1); } }
+    return $out;
+}
+
+/**
+ * Les marges par catégorie du magasin et du reste du réseau (les autres magasins actifs, chacun avec ses prix et ses
+ * coûts), sur une période ; gardées une heure (aia_cache). ['moi' => acc, 'reseau' => acc, 'magasins' => n comptés].
+ */
+function aivMarges(int $sid, string $du, string $au, array $jours = [], ?int $hd = null, ?int $hf = null): array
+{
+    $cle = 'marges:' . $sid . ':' . md5(json_encode([$du, $au, $jours, $hd, $hf]));
+    $r = aiaCache($cle, 3600, static function () use ($sid, $du, $au, $jours, $hd, $hf) {
+        $cat = function_exists('svCatalogue') ? svCatalogue() : [];
+        $moi = []; $res = []; $n = 0;
+        aivMargesAjouter($moi, hvProduits([$sid], $du, $au, $jours, $hd, $hf)['produits'], aivProduits($sid), $cat);
+        foreach (amMagasinsActifs() as $s) {
+            if ($s === $sid) { continue; }
+            $P = aivProduits($s);
+            if ($P === []) { continue; }
+            aivMargesAjouter($res, hvProduits([$s], $du, $au, $jours, $hd, $hf)['produits'], $P, $cat);
+            $n++;
+        }
+        return ['moi' => $moi, 'reseau' => $res, 'magasins' => $n];
+    });
+    return is_array($r) ? $r + ['moi' => [], 'reseau' => [], 'magasins' => 0] : ['moi' => [], 'reseau' => [], 'magasins' => 0];
+}
+
+/** Le visuel `marges_categories` : la marge brute des catégories du magasin face au réseau (radar, barres ou tableau). */
+function aivVisuelMarges(array $base, array $D, array $P, int $sid): array|string
+{
+    $Mg = aivMarges($sid, $P['du'], $P['au'], $P['jours'], $P['hd'], $P['hf']);
+    $pm = aivMargesPct($Mg['moi']);
+    if ($pm === []) { return 'aucune marge lisible : les produits vendus n’ont pas encore de coût de recette'; }
+    $pr = aivMargesPct($Mg['reseau']);
+    $filtre = aiaNorm($D['categorie']);
+    $cats = array_values(array_filter(array_keys($pm), static fn ($c) => $filtre === '' || str_contains(aiaNorm($c), $filtre)));
+    $cats = array_slice($cats, 0, $D['limite'] ?: 8);
+    if ($cats === []) { return 'aucune catégorie de ce nom n’a de marge lisible'; }
+    $series = [['nom' => 'Mon magasin', 'role' => 'moi', 'valeurs' => array_map(static fn ($c) => $pm[$c], $cats)]];
+    if ($D['comparer'] === 'reseau' && $Mg['magasins'] > 0) {
+        $series[] = ['nom' => 'Le réseau', 'role' => 'ref', 'valeurs' => array_map(static fn ($c) => $pr[$c] ?? null, $cats)];
+    }
+    $lignes = [];
+    foreach ($cats as $i => $c) {
+        $lignes[] = array_merge([$c], array_map(static fn ($s) => $s['valeurs'][$i], $series), [round($Mg['moi'][$c]['ht'] ?? 0, 2)]);
+    }
+    $per = amPeriodeTexte($P);
+    return $base + ['periode' => 'du ' . date('d/m/Y', strtotime($P['du'])) . ' au ' . date('d/m/Y', strtotime($P['au'])) . (isset($per['jours']) ? ' · ' . $per['jours'] : ''),
+        'libelles' => $cats, 'series' => $series, 'surligne' => null,
+        'tableau' => ['entetes' => array_merge(['Catégorie'], array_map(static fn ($s) => $s['nom'], $series), ['Ventes HT du magasin']), 'lignes' => $lignes, 'mesures' => array_merge(['', ], array_fill(0, count($series), 'marge'), ['ca'])],
+        'source' => 'les tickets du panel ; pour chaque magasin, ses prix et ses coûts de recette (Recette & marge)',
+        'note' => trim('Marge brute : prix hors TVA − coût de recette, pondérée par les ventes ; remises non déduites. Les produits sans coût de recette ne comptent pas.'
+            . ($D['comparer'] === 'reseau' && $Mg['magasins'] > 0 ? ' Le réseau : les ' . $Mg['magasins'] . ' autres magasins actifs, ensemble (sans nom).' : ''))];
+}
+
+/** L'outil promotions_en_cours :  les promotions et bundles du panel qui touchent ce magasin, en cours ou à venir. */
 function aivOutilPromos(int $sid): array
 {
     if (!function_exists('pvRegles')) { return ['erreur' => 'les promotions ne se lisent pas ici']; }

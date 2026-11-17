@@ -5739,7 +5739,7 @@
     if (typeof x !== 'number') { return String(x); }
     switch (v.mesure) {
       case 'panier': case 'prix': return nf(x, 2) + ' €';
-      case 'part': return nf(x, 1) + ' %';
+      case 'part': case 'marge': return nf(x, 1) + ' %';
       case 'tickets': return nf(x, x < 20 && x % 1 ? 1 : 0);
       case 'quantite': return nf(x, x % 1 ? 1 : 0) + ' pcs';
       default: return fE(x);
@@ -5760,8 +5760,8 @@
     let x = 0; const items = v.series.map(s => { const lg = 26 + s.nom.length * 6.3; const r = { s, x }; x += lg + 16; return r; });
     const x0 = Math.max(4, (w - x + 16) / 2);
     return items.map(({ s, x: dx }) => {
-      const cx = x0 + dx, sw = s.role === 'moi' && v.forme !== 'courbe' ? `<rect x="${cx}" y="${y - 9}" width="10" height="10" rx="2" fill="${IA_C.moi}"/>` : `<line x1="${cx}" x2="${cx + 16}" y1="${y - 4}" y2="${y - 4}" stroke="${s.role === 'moi' ? IA_C.moi : IA_C.ref}" stroke-width="2.5" stroke-linecap="round"/>`;
-      return sw + `<text x="${cx + (s.role === 'moi' && v.forme !== 'courbe' ? 15 : 22)}" y="${y}" font-size="11.5" fill="#5b5650">${esc(s.nom)}</text>`;
+      const cx = x0 + dx, sw = s.role === 'moi' && v.forme !== 'courbe' && v.forme !== 'radar' ? `<rect x="${cx}" y="${y - 9}" width="10" height="10" rx="2" fill="${IA_C.moi}"/>` : `<line x1="${cx}" x2="${cx + 16}" y1="${y - 4}" y2="${y - 4}" stroke="${s.role === 'moi' ? IA_C.moi : IA_C.ref}" stroke-width="2.5" stroke-linecap="round"/>`;
+      return sw + `<text x="${cx + (s.role === 'moi' && v.forme !== 'courbe' && v.forme !== 'radar' ? 15 : 22)}" y="${y}" font-size="11.5" fill="#5b5650">${esc(s.nom)}</text>`;
     }).join('');
   }
   function iaDessin(v, w) {
@@ -5769,7 +5769,8 @@
     const svg = (h, s) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;font-family:${ff}" font-family="${ff}" role="img" aria-label="${esc(v.titre)}"><rect width="${w}" height="${h}" fill="#fff"/>${s}</svg>`;
     const L = v.libelles || [], M = (v.series || [])[0] || { valeurs: [] }, R = (v.series || [])[1] || null, n = L.length;
     const leg = (v.series || []).length > 1;
-    if (v.forme === 'barres') {
+    if (v.forme === 'radar' && n >= 3) { return iaRadar(v, w, svg); }
+    if (v.forme === 'barres' || v.forme === 'radar') {
       const rowH = R ? 30 : 24, lab = Math.min(Math.round(w * 0.42), Math.max(...L.map(l => String(l).length)) * 6.6 + 10), val = 72;
       const W = w - lab - val - 8, top = 6, h = top + n * rowH + (leg ? 30 : 8);
       const mx = Math.max(...M.valeurs.concat(R ? R.valeurs : []).map(x => x || 0)) || 1;
@@ -5825,11 +5826,51 @@
     }
     return svg(h, s + iaLegende(v, w, h - 6));
   }
+  /* Le radar (17/11/2026, Sam : « un spider sur les marges et les catégories ») : une branche par catégorie, le magasin en
+   * Ruby, le réseau en gris ; au bout de chaque branche, la catégorie et ses valeurs. La part des ventes part de zéro ; la
+   * marge part d'un plancher, écrit au centre, pour que les écarts entre catégories se voient. */
+  function iaRadar(v, w, svg) {
+    const L = v.libelles || [], S = v.series || [], M = S[0] || { valeurs: [] }, R = S[1] || null, n = L.length, leg = S.length > 1;
+    const tous = M.valeurs.concat(R ? R.valeurs : []).filter(x => x != null);
+    const mx = Math.max(...tous, 0), mn = Math.min(...tous, mx);
+    const lo = v.mesure === 'marge' ? Math.max(0, Math.floor((mn - (mx - mn) * 0.6 - 5) / 10) * 10) : 0;
+    const T = iaGrad(Math.max(1, mx * (v.mesure === 'marge' ? 1.02 : 1.05) - lo)).map(t => lo + t), hi = T[T.length - 1] || lo + 1;
+    const etroit = w < 560, l2 = (m, r) => iaFmt(v, m) + (R && !etroit ? ' · réseau ' + (r == null ? '—' : nf(r, 1)) : '');
+    const lab = Math.min(etroit ? 92 : 150, Math.max(...L.map((l, i) => Math.max(String(l).length * 6.8, l2(M.valeurs[i], R ? R.valeurs[i] : null).length * 6.1))) + 6);
+    const RR = Math.max(56, Math.min(150, w / 2 - lab - 16)), haut = 48, cx = w / 2, cy = haut + RR, h = cy + RR + 50 + (leg ? 26 : 0);
+    const ang = i => -Math.PI / 2 + 2 * Math.PI * i / n;
+    const ray = x => RR * (Math.min(hi, Math.max(lo, x == null ? lo : x)) - lo) / (hi - lo);
+    const pt = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
+    const poly = r => L.map((l, i) => pt(i, r).map(z => z.toFixed(1)).join(',')).join(' ');
+    let s = '';
+    T.forEach((t, k) => { if (t > lo) { s += `<polygon points="${poly(ray(t))}" fill="none" stroke="${k === T.length - 1 ? '#d9d2c7' : IA_C.grille}"/>`; } });
+    L.forEach((l, i) => { const [x, y] = pt(i, RR); s += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${IA_C.grille}"/>`; });
+    // Les graduations, le long de la branche du haut (le plancher au centre, s'il n'est pas zéro).
+    T.forEach(t => { if (t > lo || lo > 0) { s += `<text x="${(cx + 5).toFixed(1)}" y="${(cy - ray(t) + (t > lo ? -3 : 12)).toFixed(1)}" font-size="10.5" fill="${IA_C.axe}" stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke" style="font-variant-numeric:tabular-nums">${esc(['part', 'marge'].includes(v.mesure) ? nf(t, t % 1 ? 1 : 0) + '\u00a0%' : iaFmt(v, t))}</text>`; } });
+    const forme = (ser, c, fond) => `<polygon points="${ser.valeurs.map((x, i) => pt(i, ray(x)).map(z => z.toFixed(1)).join(',')).join(' ')}" fill="${c}" fill-opacity="${fond}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`;
+    const bulle = i => `${esc(L[i])} : ${esc(iaFmt(v, M.valeurs[i]))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}`;
+    if (R) { s += forme(R, IA_C.ref, 0.06); }
+    s += forme(M, IA_C.moi, 0.14);
+    if (R) { R.valeurs.forEach((x, i) => { if (x != null) { const [a, b] = pt(i, ray(x)); s += `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="3" fill="${IA_C.ref}" stroke="#fff" stroke-width="1.5"><title>${bulle(i)}</title></circle>`; } }); }
+    M.valeurs.forEach((x, i) => { if (x != null) { const [a, b] = pt(i, ray(x)); s += `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="4" fill="${IA_C.moi}" stroke="#fff" stroke-width="2"><title>${bulle(i)}</title></circle>`; } });
+    // Au bout de chaque branche : la catégorie, puis la valeur du magasin (et celle du réseau, si la place le permet).
+    L.forEach((l, i) => {
+      const a = ang(i), co = Math.cos(a), si = Math.sin(a), [x, y] = pt(i, RR + 12);
+      const anc = Math.abs(co) < 0.3 ? 'middle' : (co > 0 ? 'start' : 'end');
+      const y1 = si < -0.6 ? y - 17 : (si > 0.6 ? y + 11 : y - 3);
+      const max = Math.floor(lab / 6.8), nom = String(l).length > max ? String(l).slice(0, max - 1) + '…' : String(l);
+      s += `<text x="${x.toFixed(1)}" y="${y1.toFixed(1)}" font-size="12" text-anchor="${anc}" fill="${IA_C.encre}">${esc(nom)}<title>${bulle(i)}</title></text>`;
+      s += `<text x="${x.toFixed(1)}" y="${(y1 + 14).toFixed(1)}" font-size="11" text-anchor="${anc}" fill="#5b5650" style="font-variant-numeric:tabular-nums">${esc(l2(M.valeurs[i], R ? R.valeurs[i] : null))}</text>`;
+    });
+    return svg(h, s + iaLegende(v, w, h - 8));
+  }
   function iaTableau(v) {
     const T = v.tableau || { entetes: [], lignes: [] };
+    // La mesure de chaque colonne, quand elles diffèrent (les marges en %, les ventes en €).
+    const mc = i => (T.mesures && T.mesures[i] ? { mesure: T.mesures[i] } : v);
     const num = T.entetes.map((e, i) => i > 0 && T.lignes.some(l => typeof l[i] === 'number'));
     return `<div class="ia-tab"><table><thead><tr>${T.entetes.map((e, i) => `<th${num[i] ? ' class="n"' : ''}>${esc(e)}</th>`).join('')}</tr></thead>
-      <tbody>${T.lignes.map(l => `<tr>${l.map((c, i) => `<td${i && typeof c === 'number' ? ' class="n"' : ''}>${esc(i ? iaFmt(v, c) : c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+      <tbody>${T.lignes.map(l => `<tr>${l.map((c, i) => `<td${i && typeof c === 'number' ? ' class="n"' : ''}>${esc(i ? iaFmt(mc(i), c) : c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   /** Les visuels d'une réponse ; `cle` : le rang de la réponse dans le fil (la vue choisie et les messages s'y rangent). */
   function iaVisuels(r, cle) {

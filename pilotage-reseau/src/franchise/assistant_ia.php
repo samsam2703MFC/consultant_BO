@@ -61,7 +61,7 @@ const AIA_PROF = [
     'dit' => 'le manuel opératoire : gestes, recettes, standards',
 ];
 const AIA_REGLAGES = ['assistantCoachs', 'assistantMagasin', 'assistantProfesseur', 'assistantSel'];
-const AIA_FORMES = ['colonnes', 'courbe', 'barres', 'tableau'];
+const AIA_FORMES = ['colonnes', 'courbe', 'barres', 'radar', 'tableau'];
 const AIA_DONNEES = [
     'ventes_par_heure' => 'les ventes heure par heure (moyenne par jour ouvert)',
     'ventes_par_jour' => 'les ventes jour par jour',
@@ -69,12 +69,13 @@ const AIA_DONNEES = [
     'ventes_par_mois' => 'les ventes mois par mois',
     'produits' => 'les produits les plus vendus',
     'categories' => 'les catégories vendues',
+    'marges_categories' => 'la marge brute des catégories, face au réseau',
     'classement_reseau' => 'le classement des magasins du réseau (anonyme)',
     'prix_concurrence' => 'le prix d’un produit face aux concurrents relevés',
     'manuel' => 'un tableau tiré du manuel opératoire',
 ];
 const AIA_MESURES = ['ca' => ['Chiffre d’affaires', '€'], 'tickets' => ['Clients', 'clients'], 'panier' => ['Panier moyen', '€'],
-    'quantite' => ['Quantité vendue', 'pièces'], 'part' => ['Part des ventes', '%'], 'prix' => ['Prix TTC', '€']];
+    'quantite' => ['Quantité vendue', 'pièces'], 'part' => ['Part des ventes', '%'], 'prix' => ['Prix TTC', '€'], 'marge' => ['Marge brute', '%']];
 const AIA_COMPARER = ['aucune', 'an_passe', 'reseau'];
 const AIA_VISUELS_MAX = 2;
 const AIA_POINTS_MAX = ['ventes_par_jour' => 62, 'ventes_par_semaine' => 78, 'ventes_par_mois' => 18];
@@ -583,10 +584,11 @@ Le manuel opératoire et les visuels — règles communes :
   · une évolution dans le temps → `courbe` (ventes_par_jour, ventes_par_semaine, ventes_par_mois ; `colonnes` si 14 points ou moins) ;
   · un moment de la journée → `colonnes` (ventes_par_heure) ;
   · un classement → `barres` (produits, categories, classement_reseau) ;
+  · des points forts et des points faibles, les catégories ou les marges face au réseau → `radar` : `categories` (la part des ventes de chaque catégorie, `comparer` = reseau) et `marges_categories` (la marge brute de chaque catégorie, `mesure` = marge, `comparer` = reseau) ; à la question « mes points forts et mes points faibles », propose ces deux radars ;
   · un détail à lire ligne à ligne → `tableau` (toutes les données s'y prêtent) ;
   · une liste de valeurs d'un document du manuel (températures, durées, doses, produits et rayons) → `tableau` avec `donnees` = manuel.
   Pas de visuel pour une réponse qui tient en une phrase, ni deux visuels qui disent la même chose.
-- Dans un visuel, tu ne recopies AUCUN chiffre de vente : tu décris la demande, le dashboard relit les chiffres dans l'historique (18 mois et la journée en cours). `mesure` : ca (chiffre d'affaires), tickets (clients), panier (panier moyen hors clients pro), quantite (pièces, pour les produits), part (part des ventes en %, pour les catégories). `du` et `au` en AAAA-MM-JJ. `comparer` : aucune, an_passe (la même période un an plus tôt) ou reseau (la moyenne des magasins, sans nom ; pour les catégories, compare les parts). `jours_semaine` (1 = lundi … 7 = dimanche, vide = tous), `heure_debut` et `heure_fin` (fin non comprise, null = toute la journée), `categorie` (un mot du nom, vide = toutes), `limite` (0 = par défaut) filtrent comme les outils. `entetes` et `lignes` restent vides.
+- Dans un visuel, tu ne recopies AUCUN chiffre de vente : tu décris la demande, le dashboard relit les chiffres dans l'historique (18 mois et la journée en cours). `mesure` : ca (chiffre d'affaires), tickets (clients), panier (panier moyen hors clients pro), quantite (pièces, pour les produits), part (part des ventes en %, pour les catégories), marge (marge brute en %, pour marges_categories). `du` et `au` en AAAA-MM-JJ. `comparer` : aucune, an_passe (la même période un an plus tôt) ou reseau (la moyenne des magasins, sans nom ; pour les catégories, compare les parts). `jours_semaine` (1 = lundi … 7 = dimanche, vide = tous), `heure_debut` et `heure_fin` (fin non comprise, null = toute la journée), `categorie` (un mot du nom, vide = toutes), `limite` (0 = par défaut) filtrent comme les outils. `entetes` et `lignes` restent vides.
 - Seule exception : `donnees` = manuel. Tu remplis alors `entetes` et `lignes` en recopiant exactement un document lu (pas de chiffre inventé, pas de calcul), `forme` = tableau, `mesure` = ca, `comparer` = aucune, les autres champs vides ou nuls.
 - `titre` du visuel : ce qu'il montre, en 4 à 8 mots (« Mes samedis depuis un an », « Températures de cuisson »).
 - Les prix et les bundles : prix_concurrence (les prix relevés chez les concurrents, face au prix et à la marge du magasin), forces_faiblesses (les catégories et produits où le magasin est au-dessus ou en dessous du réseau, avec leur marge) et promotions_en_cours (les promotions et bundles en place). Une adaptation de prix se propose chiffrée : prix actuel → prix proposé, la marge avant et après, l'écart aux concurrents proches à taille et qualité comparables ; jamais sous le coût de recette. Un bundle se propose complet : son contenu (un point fort qui attire, un point faible à faire découvrir ou une boisson), son prix, ce que le client y gagne, la marge qui reste (somme des prix hors TVA − somme des coûts), le moment de la journée où le pousser ; vérifie d'abord qu'il n'existe pas déjà. Ce sont des propositions à valider, pas des décisions. Les concurrents sont des commerces hors réseau : tu peux les nommer.
@@ -651,7 +653,12 @@ function aiaDemande(array $v): ?array
     $m = isset(AIA_MESURES[$v['mesure'] ?? '']) ? (string) $v['mesure'] : 'ca';
     if ($d === 'manuel') { $f = 'tableau'; }
     if ($d === 'prix_concurrence') { $f = $f === 'tableau' ? 'tableau' : 'barres'; $m = 'prix'; }
-    if (in_array($d, ['produits', 'categories', 'classement_reseau'], true) && $f !== 'tableau') { $f = 'barres'; }
+    // Le radar (17/11/2026, « un spider sur les marges et les catégories ») : les catégories et leurs marges, face au réseau.
+    if ($f === 'radar' && !in_array($d, ['categories', 'marges_categories'], true)) { $f = in_array($d, ['produits', 'classement_reseau', 'prix_concurrence'], true) ? 'barres' : 'colonnes'; }
+    if (in_array($d, ['produits', 'categories', 'classement_reseau'], true) && !in_array($f, ['tableau', 'radar'], true)) { $f = 'barres'; }
+    if ($d === 'marges_categories' && in_array($f, ['colonnes', 'courbe'], true)) { $f = 'radar'; }
+    if ($d === 'marges_categories') { $m = 'marge'; }
+    if ($m === 'marge' && $d !== 'marges_categories') { $m = 'ca'; }
     if ($d === 'produits' && !in_array($m, ['ca', 'quantite'], true)) { $m = 'ca'; }
     if ($d === 'categories' && !in_array($m, ['ca', 'part'], true)) { $m = 'ca'; }
     if (in_array($d, ['ventes_par_heure', 'ventes_par_jour', 'ventes_par_semaine', 'ventes_par_mois', 'classement_reseau'], true) && !in_array($m, ['ca', 'tickets', 'panier'], true)) { $m = 'ca'; }
@@ -660,6 +667,8 @@ function aiaDemande(array $v): ?array
     if ($d === 'produits' || $d === 'classement_reseau' || $d === 'manuel' || $d === 'prix_concurrence') { $c = 'aucune'; }
     if ($d === 'categories' && $c === 'an_passe') { $c = 'aucune'; }
     if ($d === 'categories' && $c === 'reseau') { $m = 'part'; }
+    if ($f === 'radar' && $d === 'categories') { $m = 'part'; $c = 'reseau'; }
+    if ($d === 'marges_categories' && $c === 'an_passe') { $c = 'reseau'; }
     $h = static fn ($x) => is_int($x) || (is_string($x) && ctype_digit($x)) ? (int) $x : null;
     return [
         'forme' => $f, 'titre' => mb_substr(trim((string) ($v['titre'] ?? '')) ?: AIA_DONNEES[$d], 0, 120), 'donnees' => $d, 'mesure' => $m,
@@ -761,6 +770,7 @@ function aiaVisuel(array $D, int $sid): array|string
     if ($D['donnees'] === 'prix_concurrence') { return aivVisuelPrix($base, $D['categorie'], $sid); }
     $P = aiaPeriode($D);
     if (is_string($P)) { return $P; }
+    if ($D['donnees'] === 'marges_categories') { return aiaRadarOuBarres(aivVisuelMarges($base, $D, $P, $sid)); }
     $per = amPeriodeTexte($P);
     $periode = 'du ' . date('d/m/Y', strtotime($P['du'])) . ' au ' . date('d/m/Y', strtotime($P['au'])) . (isset($per['jours']) ? ' · ' . $per['jours'] : '') . (isset($per['heures']) ? ' · ' . $per['heures'] : '');
     $moi = ['nom' => 'Mon magasin', 'role' => 'moi'];
@@ -838,13 +848,21 @@ function aiaVisuel(array $D, int $sid): array|string
             [$C, $tot] = $lire([$sid]);
             if ($tot <= 0) { return 'aucune vente lue sur la période'; }
             arsort($C);
-            $C = array_slice($C, 0, $D['limite'] ?: 8, true);
-            $libs = array_keys($C);
-            $moi['valeurs'] = array_map(static fn ($v) => $D['mesure'] === 'part' ? round(100 * $v / $tot, 1) : round($v, 2), array_values($C));
             if ($D['comparer'] === 'reseau') {
+                // Face au réseau, les catégories qui pèsent chez l'un OU chez l'autre : une catégorie que le réseau vend et
+                // que le magasin vend peu est justement un point faible (17/11/2026).
                 [$C2, $t2] = $lire(amMagasinsActifs());
+                $poids = [];
+                foreach (array_keys($C + $C2) as $c) { $poids[$c] = max(($C[$c] ?? 0) / $tot, $t2 > 0 ? ($C2[$c] ?? 0) / $t2 : 0); }
+                arsort($poids);
+                $libs = array_map('strval', array_keys(array_slice($poids, 0, $D['limite'] ?: 8, true)));
+                $moi['valeurs'] = array_map(static fn ($c) => round(100 * ($C[$c] ?? 0) / $tot, 1), $libs);
                 $ref = ['nom' => 'Le réseau', 'role' => 'ref', 'valeurs' => array_map(static fn ($c) => $t2 > 0 ? round(100 * ($C2[$c] ?? 0) / $t2, 1) : null, $libs)];
+                break;
             }
+            $C = array_slice($C, 0, $D['limite'] ?: 8, true);
+            $libs = array_map('strval', array_keys($C));
+            $moi['valeurs'] = array_map(static fn ($v) => $D['mesure'] === 'part' ? round(100 * $v / $tot, 1) : round($v, 2), array_values($C));
             break;
         case 'classement_reseau':
             $res = amOutilClassement($sid, ['du' => $P['du'], 'au' => $P['au'], 'indicateur' => $D['mesure'], 'jours_semaine' => $P['jours'], 'heure_fin' => $P['hf']]);
@@ -868,8 +886,15 @@ function aiaVisuel(array $D, int $sid): array|string
         array_map(static fn ($s) => $s['nom'], $series));
     $lignes = [];
     foreach ($libs as $i => $l) { $lignes[] = array_merge([$l], array_map(static fn ($s) => $s['valeurs'][$i] ?? null, $series)); }
-    return $base + ['periode' => $periode, 'libelles' => array_values($libs), 'series' => $series, 'surligne' => $surligne,
-        'tableau' => ['entetes' => $ent, 'lignes' => $lignes], 'source' => $source, 'note' => $note !== null && trim($note) !== '' ? trim($note) : null];
+    return aiaRadarOuBarres($base + ['periode' => $periode, 'libelles' => array_values($libs), 'series' => $series, 'surligne' => $surligne,
+        'tableau' => ['entetes' => $ent, 'lignes' => $lignes], 'source' => $source, 'note' => $note !== null && trim($note) !== '' ? trim($note) : null]);
+}
+
+/** Un radar demande au moins trois axes : avec moins de trois catégories, il devient un graphique en barres. */
+function aiaRadarOuBarres(array|string $v): array|string
+{
+    if (is_array($v) && ($v['forme'] ?? '') === 'radar' && count($v['libelles'] ?? []) < 3) { $v['forme'] = 'barres'; }
+    return $v;
 }
 
 /** Les visuels d'une réponse : chacun construit, gardé (aia_visuel) ; ceux qui ne se lisent pas sont écartés. */
@@ -1004,7 +1029,7 @@ function aiaFmt(mixed $x, string $mesure): string
     $n = static fn (float $v, int $d) => number_format($v, $d, ',', "\u{00A0}");
     return match ($mesure) {
         'panier', 'prix' => $n($x, 2) . "\u{00A0}€",
-        'part' => $n($x, 1) . "\u{00A0}%",
+        'part', 'marge' => $n($x, 1) . "\u{00A0}%",
         'tickets' => $n($x, $x < 20 && fmod((float) $x, 1.0) !== 0.0 ? 1 : 0),
         'quantite' => $n($x, fmod((float) $x, 1.0) !== 0.0 ? 1 : 0) . "\u{00A0}pcs",
         default => $n(round((float) $x), 0) . "\u{00A0}€",
@@ -1069,7 +1094,7 @@ function aiaPdfHtml(array $r, array $vis, array $sources, array $images, array $
             . ($img !== null ? '<img src="' . $img . '" alt="">' : '')
             . '<table class="tab"><tr>' . implode('', array_map(static fn ($x, $i) => '<th' . ($num[$i] ? ' class="n"' : '') . '>' . $e($x) . '</th>', $T['entetes'], array_keys($T['entetes']))) . '</tr>'
             . implode('', array_map(static fn ($l) => '<tr>' . implode('', array_map(static fn ($c, $i) => '<td' . ($i > 0 && (is_int($c) || is_float($c)) ? ' class="n"' : '') . '>'
-                . $e($i > 0 ? aiaFmt($c, (string) ($v['mesure'] ?? 'ca')) : $c) . '</td>', $l, array_keys($l))) . '</tr>', $T['lignes'])) . '</table>'
+                . $e($i > 0 ? aiaFmt($c, (string) (($T['mesures'][$i] ?? '') ?: ($v['mesure'] ?? 'ca'))) : $c) . '</td>', $l, array_keys($l))) . '</tr>', $T['lignes'])) . '</table>'
             . '<div class="src">Source : ' . $e($v['source'] ?? '') . (!empty($v['note']) ? ' · ' . $e($v['note']) : '') . '</div></div>';
     }
     $PR = is_array($r['priorites'] ?? null) ? $r['priorites'] : [];
