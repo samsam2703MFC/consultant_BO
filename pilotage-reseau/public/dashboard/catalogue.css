@@ -189,7 +189,7 @@
 .cat-grid--2x3{grid-template-rows:repeat(3,minmax(0,1fr))}
 .cat-grid--2x2{grid-template-rows:repeat(2,minmax(0,1fr))}
 .cat-list{display:grid;gap:calc(var(--u) * 2.6mm)}
-.cat-row{display:grid;grid-template-columns:calc(var(--u) * 11mm) auto 1fr auto;gap:calc(var(--u) * 2.4mm);align-items:center}
+.cat-row{display:grid;grid-template-columns:calc(var(--u) * 11mm) auto auto 1fr auto;gap:calc(var(--u) * 2.4mm);align-items:center}
 .cat-row .cat-photo{width:calc(var(--u) * 13mm);height:calc(var(--u) * 11mm);border-radius:calc(var(--u) * 1.5mm)}
 .cat-row .cat-name{font-size:calc(var(--u) * 4.2mm);max-width:calc(var(--u) * 78mm)}
 .cat-row i{align-self:end;margin-bottom:calc(var(--u) * 1.6mm);border-bottom:.3mm dotted currentColor;opacity:.4}
@@ -294,7 +294,7 @@
 .cat-pres--liste .cat-pres__title { margin-top: calc(var(--u) * 2mm); font-size: calc(var(--u) * 10mm); max-height: calc(var(--u) * 21mm); }
 .cat-pres--liste .cat-pres__rule { margin-top: calc(var(--u) * 3.5mm); }
 .cat-pres--liste .cat-pres__text { margin-top: calc(var(--u) * 3.5mm); max-height: calc(var(--u) * 13mm); font-size: calc(var(--u) * 3.8mm); }
-.cat-pres--liste .cat-row { grid-template-columns: calc(var(--u) * 10mm) auto 1fr auto; }
+.cat-pres--liste .cat-row { grid-template-columns: calc(var(--u) * 10mm) auto auto 1fr auto; }
 .cat-pres--liste .cat-row .cat-photo { width: calc(var(--u) * 10mm); height: calc(var(--u) * 8.5mm); }
 .cat-pres--liste .cat-row .cat-name { font-size: calc(var(--u) * 3.9mm); }
 .cat-pres--liste .cat-row .cat-price { font-size: calc(var(--u) * 3.8mm); }
@@ -645,9 +645,9 @@ button.cm-pas{cursor:pointer}
 }
 
 /* L'aperçu de chaque page à l'étape 3 (17/11/2026) : la page composée, à la place du schéma ; un clic l'agrandit. */
-.cm-pg.cm-pg--ap{grid-template-columns:24px 132px minmax(0,1fr) auto;align-items:start;row-gap:10px}
+.cm-pg.cm-pg--ap{grid-template-columns:30px auto minmax(0,1fr) auto;align-items:start;row-gap:10px}
 .cm-pg.cm-pg--ap .no{padding-top:6px;grid-row:1 / span 2}
-.cm-pg.cm-pg--ap .cm-ap{grid-row:1 / span 2}
+.cm-pg.cm-pg--ap>.cm-ap,.cm-pg.cm-pg--ap>.cm-ap-duo{grid-row:1 / span 2}
 .cm-pg.cm-pg--ap .cm-pg-c{grid-column:3;grid-row:1}
 .cm-pg.cm-pg--ap .ctl{grid-column:3 / span 2;grid-row:2}
 .cm-pg.cm-pg--ap .mv{grid-column:4;grid-row:1}
@@ -669,3 +669,32 @@ button.cm-pas{cursor:pointer}
 .cm-lay button.on span{color:var(--color-primary)}
 .cm-lay button:disabled{opacity:.4;cursor:default}
 @media (max-width:1280px){.cm-lay{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Le poids et les allergènes de chaque produit (17/11/2026, obligatoires) ; leur légende à l'avant-dernière page —
+   les règles de catalogue-pages.css du Marketing, recopiées. */
+.cat-facts{display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u) * 1.4mm);font-size:calc(var(--u) * 2.9mm);line-height:1;color:var(--i)}
+.cat-card__text .cat-facts:empty{display:none}
+.cat-card--big .cat-facts,.cat-row .cat-facts{justify-content:flex-start}
+.cat-weight{letter-spacing:.02em;opacity:.8;white-space:nowrap}
+.cat-als{display:inline-flex;gap:calc(var(--u) * .7mm)}
+.cat-al{width:calc(var(--u) * 3.4mm);height:calc(var(--u) * 3.4mm);color:var(--p);flex:none}
+.cat-row .cat-facts{font-size:calc(var(--u) * 2.7mm)}
+.cat-allegend{flex:0 0 auto;margin-top:auto;padding-top:calc(var(--u) * 4mm);border-top:.3mm solid color-mix(in srgb,var(--i) 18%,transparent)}
+.cat-allegend__title{font-family:'Vank','GothamPrint',serif;font-size:calc(var(--u) * 4.2mm);letter-spacing:.04em;text-transform:uppercase;color:var(--p)}
+.cat-allegend__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(var(--u) * 1.8mm) calc(var(--u) * 4mm);margin-top:calc(var(--u) * 2.6mm)}
+.cat-allegend__item{display:flex;align-items:center;gap:calc(var(--u) * 2mm);font-size:calc(var(--u) * 3.3mm);color:var(--i)}
+.cat-allegend__item .cat-al{width:calc(var(--u) * 5mm);height:calc(var(--u) * 5mm)}
+.cat-allegend__note{margin:calc(var(--u) * 3mm) 0 0;font-size:calc(var(--u) * 2.8mm);line-height:1.4;color:var(--i);opacity:.75}
+
+/* Une catégorie sur deux pages : les deux aperçus côte à côte, celui de la rangée cerclé (17/11/2026). */
+.cm-ap-duo{display:flex;gap:6px}
+.cm-ap-duo>div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:var(--color-text-muted)}
+.cm-ap-duo>div.moi .cm-ap{box-shadow:0 0 0 2px var(--color-primary)}
+.cm-ap-duo>div.moi span{color:var(--color-primary)}
+/* Glisser-déposer les pages : la poignée, la page prise, l'endroit où elle va. */
+.cm-pg .no{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cm-poignee{cursor:grab;font-size:15px;line-height:1;color:var(--color-text-muted);padding:3px 4px;border-radius:5px;user-select:none}
+.cm-poignee:hover{background:var(--color-background-secondary);color:var(--color-text)}
+.cm-pg.glisse{opacity:.45}
+.cm-pg.depot-avant{box-shadow:0 -3px 0 0 var(--color-primary)}
+.cm-pg.depot-apres{box-shadow:0 3px 0 0 var(--color-primary)}

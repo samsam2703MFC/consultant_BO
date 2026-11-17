@@ -105,6 +105,10 @@
       el.addEventListener('click', ev => clic(etats[shop], ev));
       el.addEventListener('input', ev => saisie(etats[shop], ev));
       el.addEventListener('change', ev => changement(etats[shop], ev));
+      el.addEventListener('dragstart', ev => glisserDebut(etats[shop], ev));
+      el.addEventListener('dragover', ev => glisserSur(etats[shop], ev));
+      el.addEventListener('drop', ev => deposer(etats[shop], ev));
+      el.addEventListener('dragend', () => glisserFin(etats[shop]));
     }
     return etats[shop];
   }
@@ -825,7 +829,7 @@
     return [doc, m];
   }
   function pageLocale(S, p, ids, m) {
-    const fiche = id => { const x = produits(S).find(q => +q.id === +id); return x ? { name: x.name, priceCents: x.priceCents, oldPriceCents: x.oldPriceCents != null ? x.oldPriceCents : null, imageUrl: x.imageUrl || null } : null; };
+    const fiche = id => { const x = produits(S).find(q => +q.id === +id); return x ? { name: x.name, priceCents: x.priceCents, oldPriceCents: x.oldPriceCents != null ? x.oldPriceCents : null, imageUrl: x.imageUrl || null, weightGrams: x.weightGrams != null ? x.weightGrams : null, allergens: x.allergens || [] } : null; };
     const prods = ids.map(fiche).filter(Boolean);
     if (estPres(p.layout)) {
       const t = nomGamme(S, p.gamme), d = m['g:' + t] || {};
@@ -844,6 +848,55 @@
       return '<button type="button" class="cm-ap" data-cm="zoomPage" data-v="' + i + '" title="Voir la page ' + (i + 3) + ' en grand">' + feuille(pseudo, 0, largeur || 128, true) + '</button>';
     } catch (e) { return mini(p.layout, p.template); }
   }
+  /** Les pages de la même catégorie que la page i, dans l'ordre ; une présentation, « Notre sélection » sont seules. */
+  function pagesSoeurs(S, i) {
+    const p = S.pages[i];
+    if (estPres(p.layout) || p.category == null) { return [i]; }
+    const k = q => String(q.category);   // la catégorie seule : ses pages, quelle que soit leur gamme
+    return S.pages.map((q, j) => j).filter(j => !estPres(S.pages[j].layout) && S.pages[j].category != null && k(S.pages[j]) === k(p));
+  }
+  /** L'aperçu d'une rangée (17/11/2026, Sam : « si j'ai plus d'une page — 2 au plus —, les mettre l'une à côté de l'autre ») :
+   * une catégorie sur deux pages les montre côte à côte, celle de la rangée cerclée ; au-delà, la page seule. */
+  function apercusRangee(S, i, ids) {
+    const soeurs = pagesSoeurs(S, i);
+    if (soeurs.length !== 2) { return apercuPage(S, i, ids[i] || []); }
+    return '<div class="cm-ap-duo">' + soeurs.map(j => '<div class="' + (j === i ? 'moi' : '') + '">' + apercuPage(S, j, ids[j] || [], 96) + '<span>p. ' + (j + 3) + '</span></div>').join('') + '</div>';
+  }
+  /* Glisser-déposer les pages (17/11/2026, Sam : « en drag and drop, remonter ou descendre les pages du catalogue ») :
+   * la poignée ⠿ d'une rangée la prend ; posée au-dessus ou au-dessous d'une autre, la page s'y range. Les pages de la
+   * marque ne bougent pas. Les flèches ↑ ↓ restent. */
+  function glisserDebut(S, ev) {
+    const h = ev.target.closest && ev.target.closest('[data-pgdrag]');
+    if (!h) { return; }
+    S.glisse = +h.dataset.pgdrag;
+    try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(S.glisse)); const r = h.closest('.cm-pg'); if (r) { ev.dataTransfer.setDragImage(r, 30, 30); } } catch (e) { /* navigateur ancien */ }
+    const r = h.closest('.cm-pg'); if (r) { setTimeout(() => r.classList.add('glisse'), 0); }
+  }
+  function cibleDepot(S, ev) {
+    const r = ev.target.closest && ev.target.closest('.cm-pg[data-pg]');
+    if (!r || S.glisse == null) { return null; }
+    const b = r.getBoundingClientRect();
+    return { r, i: +r.dataset.pg, apres: ev.clientY > b.top + b.height / 2 };
+  }
+  function glisserSur(S, ev) {
+    const c = cibleDepot(S, ev);
+    if (!c) { return; }
+    ev.preventDefault();
+    S.el.querySelectorAll('.cm-pg.depot-avant,.cm-pg.depot-apres').forEach(x => { if (x !== c.r) { x.classList.remove('depot-avant', 'depot-apres'); } });
+    c.r.classList.toggle('depot-avant', !c.apres); c.r.classList.toggle('depot-apres', c.apres);
+  }
+  function deposer(S, ev) {
+    const c = cibleDepot(S, ev);
+    if (!c) { return; }
+    ev.preventDefault();
+    const de = S.glisse; let vers = c.i + (c.apres ? 1 : 0);
+    S.glisse = null;
+    if (de == null || !S.pages[de]) { rendre(S); return; }
+    if (vers > de) { vers--; }
+    if (vers !== de) { const [p] = S.pages.splice(de, 1); S.pages.splice(vers, 0, p); S.modifie = true; S.zoomPage = null; }
+    rendre(S);
+  }
+  function glisserFin(S) { if (S.glisse != null) { S.glisse = null; rendre(S); } }
   /** La page agrandie (un clic sur son aperçu), et ses voisines de la même catégorie. */
   function rendreZoom(S) {
     if (S.zoomPage == null || !S.pages || !S.pages[S.zoomPage]) { return ''; }
@@ -919,7 +972,7 @@
           if (S.choixPhoto === i) { corps += rendreMedias(S, i); }
         }
       }
-      h += '<div class="cm-pg cm-pg--ap' + (pres ? ' pres' : '') + '"><span class="no">' + (i + 3) + '</span>' + apercuPage(S, i, (portes.ids || [])[i] || [])
+      h += '<div class="cm-pg cm-pg--ap' + (pres ? ' pres' : '') + (S.glisse === i ? ' glisse' : '') + '" data-pg="' + i + '"><span class="no"><span class="cm-poignee" draggable="true" data-pgdrag="' + i + '" title="Glisser pour déplacer la page" aria-label="Déplacer la page ' + (i + 3) + '">⠿</span>' + (i + 3) + '</span>' + apercusRangee(S, i, portes.ids || [])
         + '<div class="cm-pg-c">' + corps + '</div>'
         // Une seule rangée de choix (17/11/2026, Sam : « pas deux lignes de choix ; des propositions de comment les produits
         // se présentent sur la page, 1 - 2 - 3 par largeur ») : chaque mise en page en dessin, avec ce qu'elle tient. Le
@@ -1192,6 +1245,7 @@
       + (haut ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '<img class="cat-logo cat-brand__logo" src="' + esc(logo(doc)) + '" alt="">')
       + '<div class="cat-brand__title">' + esc(p.title) + '</div><div class="cat-brand__rule"></div><div class="cat-brand__text">'
       + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div>'
+      + (p.slot === 'penultimate' && (p.allergens || []).length ? legendeAllergenes(p.allergens, doc.version.lang) : '')
       + (bas ? '<div class="cat-brand__visual cat-brand__visual--bottom"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '') + '</div>';
   }
   /** La photo du webshop ; sans elle, le dessin de la famille de la page (sinon l'illustration de l'en-tête) — rendu de
@@ -1221,17 +1275,37 @@
       + '<div class="cat-offer__text"><div class="cat-name">' + esc(o.name) + '</div>' + (noms && !rang ? '<div class="cat-offer__items">' + esc(noms + plus) + '</div>' : '')
       + (o.deal ? '<div class="cat-offer__deal">' + esc(o.deal) + '</div>' : '') + (o.priceCents != null ? prixHtml(o, lang) : '') + dispoHtml(o.period) + '</div></div>';
   }
+  /* Le poids et les allergènes de chaque produit (17/11/2026, obligatoires ; rendu de `Facts`, CataloguePages.tsx) et
+   * leur légende à l'avant-dernière page (`AllergenLegend`). Pictogrammes : ceux de la tablette (d'après Lucide, ISC). */
+  const ALLERGENES = { gluten: '<path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>', crustaces: '<path d="M10 2a3.28 3.28 0 003.227 1.798l6.17-.561A1 1 0 1119.614 8H8.5a6.44 6.44 0 00-5.63 9.75A6.5 6.5 0 008.5 21c1.38 0 2-.5 2.5-1"/><path d="M10 8a8.5 8.5 0 000 8"/><path d="M11 22c-.5-.5-1.12-1-2.5-1a1 1 0 010-5H12a7 7 0 007-7V8"/><path d="M13 12h.01"/><path d="M8 16c-2 0-4.5-4-4-6"/>', oeufs: '<path d="M12 2C8 2 4 8 4 14a8 8 0 0 0 16 0c0-6-4-12-8-12"/>', poisson: '<path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z"/><path d="M18 12v.5"/><path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/><path d="M10.46 7.26C10.2 5.88 9.17 4.24 8 3h5.8a2 2 0 0 1 1.98 1.67l.23 1.4"/><path d="m16.01 17.93-.23 1.4A2 2 0 0 1 13.8 21H9.5a5.96 5.96 0 0 0 1.49-3.98"/>', arachides: '<path transform="translate(12 12) rotate(-40) scale(1.08) translate(-12 -12)" d="M12 2.5c2.6 0 4.5 2 4.5 4.6 0 1.6-.8 2.6-1.3 3.6-.4.8 0 1.4.6 2.3.6.9 1.2 2 1.2 3.4 0 3-2.3 5.1-5 5.1s-5-2.1-5-5.1c0-1.4.6-2.5 1.2-3.4.6-.9 1-1.5.6-2.3-.5-1-1.3-2-1.3-3.6 0-2.6 1.9-4.6 4.5-4.6Z"/><path transform="translate(12 12) rotate(-40) scale(1.08) translate(-12 -12)" d="M10.5 6.5h.01M13.5 8h.01M10.5 15.5h.01M13.5 17h.01"/>', soja: '<path d="M10.165 6.598C9.954 7.478 9.64 8.36 9 9c-.64.64-1.521.954-2.402 1.165A6 6 0 0 0 8 22c7.732 0 14-6.268 14-14a6 6 0 0 0-11.835-1.402Z"/><path d="M5.341 10.62a4 4 0 1 0 5.279-5.28"/>', lait: '<path d="M8 2h8"/><path d="M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2"/><path d="M7 15a6.472 6.472 0 0 1 5 0 6.47 6.47 0 0 0 5 0"/>', fruits_coque: '<path d="M16.847 5.847 20 9a7.23 7.23 0 011.551 7.516C21.241 17.352 21 17.932 21 19v1a1 1 0 01-1 1h-1c-1.069 0-1.648.242-2.485.552A7.2 7.2 0 019.002 20l-3.155-3.153"/><path d="M18.21 5.43c-1.71.69-5.07 1.07-6.71 1.07.46 1.38.91 2.74.61 4.88a.88.88 0 01-.73.74c-1.78.28-3.54-.17-4.88-.62 0 1.64-.38 5-1.07 6.71-.21.52-.82.55-1.17.12A10 10 0 0118.33 4.26c.43.35.4.97-.12 1.17"/><path d="M4.93 4.93 3 3a.7.7 0 010-1"/>', celeri: '<path d="M2 22c1.25-.987 2.27-1.975 3.9-2.2a5.56 5.56 0 0 1 3.8 1.5 4 4 0 0 0 6.187-2.353 3.5 3.5 0 0 0 3.69-5.116A3.5 3.5 0 0 0 20.95 8 3.5 3.5 0 1 0 16 3.05a3.5 3.5 0 0 0-5.831 1.373 3.5 3.5 0 0 0-5.116 3.69 4 4 0 0 0-2.348 6.155C3.499 15.42 4.409 16.712 4.2 18.1 3.926 19.743 3.014 20.732 2 22"/><path d="M2 22 17 7"/>', moutarde: '<rect x="7" y="5" width="10" height="3" rx="1"/><path d="M8 8v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V8"/><path d="M8 13h8"/><path d="M14.5 5 18 1.5"/>', sesame: '<path transform="translate(12 7.5)" d="M0-4.8c1.7 2 2.5 3.6 2.5 4.9a2.5 2.5 0 0 1-5 0c0-1.3.8-2.9 2.5-4.9Z"/><path transform="translate(6.8 16.2) rotate(-40)" d="M0-4.8c1.7 2 2.5 3.6 2.5 4.9a2.5 2.5 0 0 1-5 0c0-1.3.8-2.9 2.5-4.9Z"/><path transform="translate(17.2 16.2) rotate(40)" d="M0-4.8c1.7 2 2.5 3.6 2.5 4.9a2.5 2.5 0 0 1-5 0c0-1.3.8-2.9 2.5-4.9Z"/>', sulfites: '<path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/>', lupin: '<circle cx="12" cy="12" r="3"/><path d="M12 16.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 1 1 4.5 4.5 4.5 4.5 0 1 1-4.5 4.5"/><path d="M12 7.5V9"/><path d="M7.5 12H9"/><path d="M16.5 12H15"/><path d="M12 16.5V15"/><path d="m8 8 1.88 1.88"/><path d="M14.12 9.88 16 8"/><path d="m8 16 1.88-1.88"/><path d="M14.12 14.12 16 16"/>', mollusques: '<path d="M14 11a2 2 0 1 1-4 0 4 4 0 0 1 8 0 6 6 0 0 1-12 0 8 8 0 0 1 16 0 10 10 0 1 1-20 0 11.93 11.93 0 0 1 2.42-7.22 2 2 0 1 1 3.16 2.44"/>' };
+  const ALLERGENES_NOMS = { gluten: ['Gluten', 'Gluten'], crustaces: ['Crustacés', 'Schaaldieren'], oeufs: ['Œufs', 'Eieren'], poisson: ['Poisson', 'Vis'], arachides: ['Arachides', 'Pinda’s'], soja: ['Soja', 'Soja'], lait: ['Lait', 'Melk'], fruits_coque: ['Fruits à coque', 'Noten'], celeri: ['Céleri', 'Selderij'], moutarde: ['Moutarde', 'Mosterd'], sesame: ['Sésame', 'Sesam'], sulfites: ['Sulfites', 'Sulfieten'], lupin: ['Lupin', 'Lupine'], mollusques: ['Mollusques', 'Weekdieren'] };
+  const pictoAllergene = (c, lang) => ALLERGENES[c] ? '<svg class="cat-al" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="' + esc((ALLERGENES_NOMS[c] || [c])[lang === 'nl' ? 1 : 0]) + '"><title>' + esc((ALLERGENES_NOMS[c] || [c])[lang === 'nl' ? 1 : 0]) + '</title>' + ALLERGENES[c] + '</svg>' : '';
+  function poidsTexte(g, lang) {
+    if (!(g > 0)) { return null; }
+    return g >= 1000 ? (g / 1000).toLocaleString(lang === 'nl' ? 'nl-BE' : 'fr-BE', { maximumFractionDigits: 2 }) + '\u00a0kg' : g + '\u00a0g';
+  }
+  function faits(pr, lang) {
+    const w = poidsTexte(pr.weightGrams, lang), al = pr.allergens || [];
+    return '<span class="cat-facts">' + (w ? '<span class="cat-weight">' + esc(w) + '</span>' : '') + (al.length ? '<span class="cat-als">' + al.map(c => pictoAllergene(c, lang)).join('') + '</span>' : '') + '</span>';
+  }
+  function legendeAllergenes(codes, lang) {
+    const nl = lang === 'nl';
+    return '<div class="cat-allegend"><div class="cat-allegend__title">' + (nl ? 'Allergenen' : 'Allergènes') + '</div><div class="cat-allegend__grid">'
+      + codes.map(c => '<span class="cat-allegend__item">' + pictoAllergene(c, lang) + esc((ALLERGENES_NOMS[c] || [c])[nl ? 1 : 0]) + '</span>').join('') + '</div>'
+      + '<p class="cat-allegend__note">' + (nl ? 'De pictogrammen naast elk product tonen de allergenen van het recept (verordening EU 1169/2011). Sporen worden niet vermeld: vraag de volledige lijst in de winkel.'
+        : 'Les pictogrammes à côté de chaque produit indiquent les allergènes de sa recette (règlement UE 1169/2011). Les traces ne sont pas indiquées : demandez la liste complète en boutique.') + '</p></div>';
+  }
   function carte(pr, lang, grand, repli) {
     if (pr.kind === 'offer') { return offreCarte(pr, lang, grand, false, repli); }
     return '<div class="cat-card' + (grand ? ' cat-card--big' : '') + (pr.oldPriceCents != null ? ' cat-card--promo' : '') + '">'
       + (pr.promo ? '<span class="cat-offer__badge cat-card__badge">' + esc(pr.promo.label) + '</span>' : '') + photo(pr, repli)
-      + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>' + prixHtml(pr, lang) + '</div></div>';
+      + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>' + faits(pr, lang) + prixHtml(pr, lang) + '</div></div>';
   }
   /** Une image livrée avec le Marketing (dessin de saison, de famille) : son adresse absolue, rendue par le document. */
   const dessin = (url) => /^(https?:)?\/\//.test(String(url || '')) ? url : null;
   function liste(pr, lang, repli) {
     return '<div class="cat-list">' + pr.map(x => x.kind === 'offer' ? offreCarte(x, lang, false, true, repli)
-      : '<div class="cat-row">' + photo(x, repli) + '<span class="cat-name">' + esc(x.name) + '</span><i></i>' + prixHtml(x, lang) + '</div>').join('') + '</div>';
+      : '<div class="cat-row">' + photo(x, repli) + '<span class="cat-name">' + esc(x.name) + '</span>' + faits(x, lang) + '<i></i>' + prixHtml(x, lang) + '</div>').join('') + '</div>';
   }
   /** La disponibilité de la page en pied de page (rendu de `AvailabilityFooter`, composé par le Marketing). */
   const piedDispo = t => t ? '<div class="cat-foot">' + esc(t) + '</div>' : '';
