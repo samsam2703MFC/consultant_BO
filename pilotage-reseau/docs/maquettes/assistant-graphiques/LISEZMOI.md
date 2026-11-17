@@ -25,6 +25,14 @@ suite. Il lit la fiche de faits du magasin et trois outils en lecture seule sur 
 - `c-mes-modeles.png` — **Mes modèles**, nouvel onglet de l'assistant : mes modèles et les modèles du réseau (proposés
   par le siège), chacun avec sa vignette ; Ouvrir le refait avec les ventes du jour ; Télécharger ; Programmer.
 
+- `d-radar.png` — **la structure des ventes en radar, face au réseau** (Sam, 17/11/2026 : « montrer la structure des
+  ventes en spider (catégorie) par rapport au réseau »). La part de chaque famille dans le CA d'octobre 2026 : Sombreffe
+  en plein, la moyenne des trois autres magasins en pointillé, la bande grise du plus bas au plus haut ; à côté, les
+  écarts au réseau du plus fort au plus faible. Chiffres **réels** (`/ventes/stats?vue=mois&date=2026-10-31`, 31 jours
+  lus sur 31 dans chaque magasin, catégories regroupées par famille du catalogue) : boulangerie 22,0 % contre 17,5 %,
+  bundles et promotions 21,6 % (seul magasin), tartes 11,4 % contre 21,1 %, traiteur 12,3 % contre 19,7 %,
+  viennoiserie 13,6 % contre 20,1 %. Les autres magasins ne sont pas nommés (règle de l'assistant).
+
 ## Comment le coder sans que l'IA invente
 
 - Le modèle ne dessine pas : il choisit dans le schéma de réponse un **graphique** (`type`, `mesure`, `periode`,

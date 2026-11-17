@@ -78,3 +78,4 @@
 .gr-mod{z-index:201;overflow:visible}
 .gr-tete{border-radius:16px 16px 0 0}
 .gr-fond{z-index:1000}.gr-mod{z-index:1001}
+.gr-leg{flex-wrap:wrap;justify-content:center}.gr-leg span{white-space:nowrap}
