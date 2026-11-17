@@ -186,8 +186,8 @@
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <div class="card border">
-                                        <div class="card-header bg-primary text-white">
-                                            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Produkty w zamówieniu</h5>
+                                        <div class="card-header">
+                                            <h4 class="card-title mb-0"><i class="bi bi-box-seam"></i> Produkty w zamówieniu</h4>
                                         </div>
                                         <div class="card-body">
                                             <div class="table-responsive">
