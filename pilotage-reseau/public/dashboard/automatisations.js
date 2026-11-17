@@ -18,7 +18,7 @@
   const CANAUX = [['email', 'E-mail'], ['sms', 'SMS'], ['les2', 'Les deux']];
   const CHAMPS = ['canal', 'heure', 'recent', 'objet', 'corps', 'sms'];
 
-  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, etat: null, d: null, err: null, form: null, occupe: false, flash: null, tel: '' };
+  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, etat: null, d: null, err: null, form: null, occupe: false, flash: null, tel: '', eq: { nom: '', adresse: '' } };
 
   /* --- lectures et écritures ------------------------------------------------------------------------------------ */
   const url = (p, prm) => st.api + p + '?' + new URLSearchParams(Object.assign({ shop: st.shop }, prm || {})).toString();
@@ -64,6 +64,16 @@
     }).catch(e => flash(false, e.message)).finally(() => { st.occupe = false; rendre(); });
   }
 
+  /* L'équipe (17/11/2026) : les personnes du magasin qui reçoivent la fiche d'une promotion lancée (Promotions › bundles). */
+  function equipe(action, plus) {
+    st.occupe = true; rendre();
+    return ecrire('/dashboard/boite/equipe', Object.assign({ action }, plus)).then(d => {
+      st.d = Object.assign({}, st.d, { equipe: d.equipe });
+      if (action === 'ajouter') { st.eq = { nom: '', adresse: '' }; }
+      flash(true, action === 'ajouter' ? 'Ajouté à l’équipe.' : 'Retiré de l’équipe.');
+    }).catch(e => flash(false, e.message)).finally(() => { st.occupe = false; rendre(); });
+  }
+
   /* --- les messages, comme le serveur les remplit ---------------------------------------------------------------- */
   function remplir(t, v) {
     let s = String(t || '').replace(/\{(prenom|nom|magasin|jour|heure|total|paiement|commande)\}/g, (m, k) => v[k] == null ? '' : v[k]);
@@ -104,6 +114,7 @@
     return `<div class="db-card au-liste"><div class="ct"><span class="db-lab">Les automatisations du magasin</span><span class="db-mini">depuis ${esc(st.d.boite)}</span></div>
       <table class="au-t"><thead><tr><th>Envoi</th><th>À qui</th><th>Quand</th><th>Canal</th><th>État</th></tr></thead><tbody>
       ${ligne('Rappel la veille du retrait', 'le jour, l’heure, le montant et ce qui reste à payer', 'le client de chaque commande', 'la veille · ' + g.heure, canauxChips(g.canal), bascule(g.actif, 'data-au-actif="1"') + `<span class="au-etat">${g.actif ? 'allumé' : 'éteint'}</span>`, 'sel')}
+      ${ligne('Fiche d’une promotion', 'le bundle, les dates, la caisse, comment le proposer (PDF)', 'l’équipe du magasin', 'au lancement d’un bundle (Promotions)', chip('e-mail', 'm') + chip('PDF', 'p'), `<span class="au-etat">${(st.d.equipe || []).length ? (st.d.equipe || []).length + ' personne' + ((st.d.equipe || []).length > 1 ? 's' : '') : 'aucune adresse'}</span>`)}
       ${ligne('Dossier comptable du mois', 'les revenus du mois et les factures du mois en PDF', 'le comptable', 'dès que les factures du mois sont faites', chip('e-mail', 'm') + chip('PDF', 'p'), chip('à venir', 'g'), 'gris')}
       ${ligne('Commande prête', 'un SMS dès que la commande est marquée prête', 'le client de la commande', 'via la tablette pour le moment', chip('SMS', 's'), chip('à venir', 'g'), 'gris')}
       <tr><td><b>Accusé de réception, relance d’une offre</b><small>les réponses automatiques de la boîte</small></td><td>qui écrit au magasin</td><td colspan="2">réglés dans la boîte mail</td><td><button type="button" class="bx-lien" data-au="auto-boite">Messages automatiques ▸</button></td></tr>
@@ -148,6 +159,15 @@
       <div class="db-card"><div class="ct"><span class="db-lab">Ce qui est parti</span><span class="db-mini">les 30 derniers rappels</span></div>
         ${J.length ? `<div class="au-defile"><table class="au-t"><tbody>${J.map(x => `<tr><td>${esc(jm(x.le))} ${esc(hm(x.le))}</td><td>${x.canal === 'sms' ? chip('SMS', 's') : chip('e-mail', 'm')}</td><td>commande n° ${x.commande}</td><td>${x.erreur ? `<span class="au-ko" title="${esc(x.erreur)}">échec</span>` : '<span class="au-ok">parti</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="au-vide">Rien n’est encore parti.</p>'}</div>`;
   }
+  function carteEquipe() {
+    const E = st.d.equipe || [];
+    return `<div class="db-sec">L’équipe</div><div class="db-card au-eq"><div class="ct"><span class="db-lab">Qui reçoit les fiches des promotions</span><span class="db-mini">${E.length} personne${E.length > 1 ? 's' : ''} · depuis ${esc(st.d.boite)}</span></div>
+      <p class="bx-mu" style="margin:10px 16px">Quand un bundle du Coach Vente est lancé (Promotions), sa fiche PDF part à ces adresses : le bundle, les dates, la caisse et les phrases pour le proposer. Ni marge ni coefficient.</p>
+      ${E.length ? `<table class="au-t"><tbody>${E.map(x => `<tr><td><b>${esc(x.nom)}</b></td><td>${esc(x.adresse)}</td><td style="text-align:right"><button type="button" class="bx-lien" data-au-eqx="${x.id}"${st.occupe ? ' disabled' : ''}>Retirer</button></td></tr>`).join('')}</tbody></table>` : '<p class="au-vide">Personne pour l’instant.</p>'}
+      <div class="au-eq-f"><input class="bx-in" data-au-eq="nom" placeholder="Prénom et initiale (Lina K.)" maxlength="80" value="${esc(st.eq.nom)}">
+        <input class="bx-in" data-au-eq="adresse" type="email" placeholder="adresse e-mail" maxlength="190" value="${esc(st.eq.adresse)}">
+        <button type="button" class="db-btn prim" data-au="eq-ajouter"${st.occupe || !st.eq.nom.trim() || !st.eq.adresse.trim() ? ' disabled' : ''}>Ajouter</button></div></div>`;
+  }
   function html() {
     if (st.err && !st.etat) { return `<div class="db-err">${esc(st.err)}</div>`; }
     if (!st.etat) { return '<div class="db-sk" style="height:320px"></div>'; }
@@ -159,6 +179,7 @@
     return `<div class="au">
       <p class="au-intro">Ce que le magasin envoie tout seul à ses clients, et bientôt à son comptable : depuis sa boîte mail et par SMS, à l’heure dite.</p>
       ${fl}${tuiles()}${liste()}
+      ${carteEquipe()}
       <div class="db-sec">Rappel la veille du retrait</div>
       <div class="au-g2"><div class="au-col">${reglage()}</div><div class="au-col">${apercu()}</div></div></div>`;
   }
@@ -177,6 +198,9 @@
     on('[data-au-tel]', 'input', e => { st.tel = e.currentTarget.value; });
     on('[data-au="enregistrer"]', 'click', () => enregistrer());
     on('[data-au="essai"]', 'click', essai);
+    on('[data-au-eq]', 'input', e => { st.eq[e.currentTarget.dataset.auEq] = e.currentTarget.value; const b = st.el.querySelector('[data-au="eq-ajouter"]'); if (b) { b.disabled = st.occupe || !st.eq.nom.trim() || !st.eq.adresse.trim(); } });
+    on('[data-au="eq-ajouter"]', 'click', () => equipe('ajouter', { nom: st.eq.nom, adresse: st.eq.adresse }));
+    on('[data-au-eqx]', 'click', e => equipe('retirer', { id: +e.currentTarget.dataset.auEqx }));
   }
   /* En tapant : l'aperçu, le compteur et le bouton suivent sans redessiner le champ (le curseur reste où il est). */
   let tVivant = null;

@@ -37,6 +37,7 @@ declare(strict_types=1);
  *   GET  /dashboard/boite/cron?jeton=          l'horloge des messages automatiques (bin/boite_cron.sh, toutes les 10 min)
  *   GET|POST /dashboard/boite/automatisations, POST …/automatisations/essai   Paramètres › Mails et automatisations
  *        (src/franchise/automatisations.php : le rappel la veille du retrait, par e-mail et SMS)
+ *   POST /dashboard/boite/equipe {shop, action, nom, adresse, id}   l'équipe qui reçoit les fiches des promotions (17/11/2026)
  */
 
 require_once __DIR__ . '/boite_protocole.php';
@@ -195,6 +196,7 @@ function bmRoute(string $method, string $path): ?array
         if ($sous === '/automatiques') { return $method === 'POST' ? bmAutoEcrire($shop, $b) : bmAuto($shop); }
         if ($sous === '/automatisations') { return $method === 'POST' ? amEcrire($shop, $c, $b) : amLire($shop, $c); }
         if ($method === 'POST' && $sous === '/automatisations/essai') { return amEssai($shop, $c, $b); }
+        if ($method === 'POST' && $sous === '/equipe') { return amEquipeEcrire($shop, $c, $b); }
     } catch (BmRefus $e) {
         return bmErreur(401, 'Le serveur de la boîte refuse les accès gardés : le mot de passe a peut-être changé. Reliez la boîte à nouveau.', ['etat' => 'refusee']);
     } catch (RuntimeException $e) {

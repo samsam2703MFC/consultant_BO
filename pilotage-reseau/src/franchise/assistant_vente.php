@@ -22,6 +22,8 @@ declare(strict_types=1);
  * magasins du réseau, eux, restent anonymes : forces_faiblesses ne rend que « le réseau ».
  */
 
+require_once __DIR__ . '/bundles.php';   // les bundles du Coach Vente (17/11/2026) : onglet Promotions
+
 const AIV_PERIODE_JOURS = 56;          // forces_faiblesses : huit semaines par défaut
 const AIV_PART_MIN = 1.0;              // un produit compte à partir de 1 % des ventes (du magasin ou du réseau)
 const AIV_BENCH_JOURS = 7;             // un relevé de la concurrence gardé par le dashboard sert une semaine
