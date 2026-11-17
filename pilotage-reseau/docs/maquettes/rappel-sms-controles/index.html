@@ -467,56 +467,63 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
         <div>
           <div class="crumb">Franchisés · évaluation et suivi › Suivi journalier et opérations › Rappels SMS des contrôles</div>
           <h1>Rappels SMS des contrôles qualité</h1>
-          <p>Une checklist du contrôle qualité (les tâches photo obligatoires) n’est pas complète une heure après son heure : le franchisé reçoit un SMS, vous en recevez la copie. Le programme s’ouvre franchisé par franchisé.</p>
+          <p>Une checklist du contrôle qualité (les tâches photo obligatoires) n’est pas complète une heure après son heure (marge de 15 min) : la personne sur place reçoit un rappel, puis un deuxième ; au troisième, le franchisé aussi. Vous recevez la copie. Le programme s’ouvre franchisé par franchisé.</p>
         </div>
-        <div class="etiquette">maquette · mardi 17/11/2026, 08:15 · tâches réelles du 11 au 17/11 · numéros masqués</div>
+        <div class="etiquette">maquette · mardi 17/11/2026, 08:20 · tâches et horaires réels du 11 au 17/11 · prénoms d’équipe d’exemple · numéros masqués</div>
       </div>
       <div class="tuiles">
         <div class="tuile"><span class="k">Dans le programme</span><span class="v">2 / 4</span><span class="s">Gosselies et Sombreffe · depuis le 18/11</span></div>
-        <div class="tuile chaud"><span class="k">Auraient reçu, sur 7 jours</span><span class="v">34 SMS</span><span class="s">17 chacun : 2 à 3 par jour · tâches réelles du 11 au 17/11</span></div>
-        <div class="tuile"><span class="k">Rattrapés après le rappel</span><span class="v ko">0 / 34</span><span class="s">Gosselies coche sans photo · Sombreffe ne rend rien</span></div>
-        <div class="tuile"><span class="k">Copies chez vous</span><span class="v">34</span><span class="s">une par SMS, ou un récapitulatif chaque soir</span></div>
+        <div class="tuile chaud"><span class="k">Auraient reçu, sur 7 jours</span><span class="v">108 SMS</span><span class="s">74 aux personnes sur place · 34 aux franchisés (3ᵉ rappel)</span></div>
+        <div class="tuile"><span class="k">Checklists rattrapées</span><span class="v ko">0 / 34</span><span class="s">après un rappel · Gosselies coche sans photo, Sombreffe ne rend rien</span></div>
+        <div class="tuile"><span class="k">Copies chez vous</span><span class="v">108</span><span class="s">par semaine · ou 7 récapitulatifs, un par soir</span></div>
       </div>
       <div class="barre">
-        <div class="etat"><i></i>Rappels en marche · prochain passage à 15:30 pour « Photos des comptoirs (après-midi) » de 14:30 · fournisseur SMS : SMSAPI</div><span class="sp"></span>
+        <div class="etat"><i></i>Rappels en marche · prochain passage à 09:15 : 3ᵉ rappel « Chambre froide », 2ᵉ « Photos des comptoirs » · fournisseur SMS : SMSAPI</div><span class="sp"></span>
         <button class="btn" data-toast="Maquette : un SMS d’essai part à votre numéro, avec le texte de Sombreffe">Envoyer un essai à mon numéro</button>
         <button class="btn p" data-toast="Maquette : réglages enregistrés">Enregistrer</button>
       </div>
       <div class="carte">
           <h2>Les franchisés <small>le programme s’ouvre un par un</small></h2>
-          <p class="aide">Le GSM et la langue viennent de « Qui fait quoi ». Hors programme, rien ne part : la colonne de droite dit ce qui serait parti.</p>
+          <p class="aide">La personne sur place vient du planning du jour, son GSM de sa fiche employé ; le GSM du franchisé de « Qui fait quoi ». Hors programme, rien ne part : la colonne de droite dit ce qui serait parti.</p>
           <table class="t">
-            <thead><tr><th>Magasin</th><th>Dans le programme</th><th>GSM du franchisé</th><th>Ce matin · mar. 17/11</th><th>7 derniers jours</th></tr></thead>
+            <thead><tr><th>Magasin</th><th>Dans le programme</th><th>Sur place ce matin</th><th>Franchisé · 3ᵉ rappel</th><th>Ce matin · mar. 17/11</th><th>7 derniers jours</th></tr></thead>
             <tbody>
-              <tr class="on"><td class="nom"><b>Gosselies</b><small>Max &amp; Sandra · FR</small></td>
+              <tr class="on"><td class="nom"><b>Gosselies</b><small>FR</small></td>
                 <td><span class="bascule on"><i></i><b>Oui</b></span><small>depuis le 18/11 · par Sam V.</small></td>
-                <td>0471 •• •• 52<small>Qui fait quoi</small></td>
-                <td><div class="ck"><span><span class="h">06:00</span><span class="pil ko">0/1 photo</span> SMS à 07:00</span><span><span class="h">07:00</span><span class="pil ko">0/9 photos</span> SMS à 08:00</span></div></td>
-                <td><b>17 rappels</b> · 0 rattrapé<div class="mini7" title="11 → 17/11"><i style="height:24px"></i><i style="height:16px"></i><i style="height:16px"></i><i style="height:24px"></i><i style="height:24px"></i><i style="height:16px"></i><i style="height:16px"></i></div><small>tâches cochées sans photo (le 15/11 : tout à 16:57)</small></td></tr>
-              <tr class="on"><td class="nom"><b>Sombreffe</b><small>Harmonie · FR</small></td>
+                <td>Sandra C. · 06:30–12:00<small>franchisée, ouvre elle-même : elle reçoit les trois</small></td>
+                <td>Max &amp; Sandra<small>0471 •• •• 52 · Qui fait quoi</small></td>
+                <td><div class="ck"><span><span class="h">06:00</span><span class="pil ko">0/1 photo</span> 2ᵉ rappel à 08:15</span><span><span class="h">07:00</span><span class="pil ko">0/9 photos</span> 1ᵉʳ rappel à 08:15</span></div></td>
+                <td><b>37 + 17 SMS</b> · 0 rattrapé<div class="mini7"><i style="height:26px"></i><i style="height:16px"></i><i style="height:16px"></i><i style="height:26px"></i><i style="height:26px"></i><i style="height:16px"></i><i style="height:16px"></i></div><small>sur place + franchisé · cochées sans photo</small></td></tr>
+              <tr class="on"><td class="nom"><b>Sombreffe</b><small>FR</small></td>
                 <td><span class="bascule on"><i></i><b>Oui</b></span><small>depuis le 18/11 · par Sam V.</small></td>
-                <td>0476 •• •• 18<small>Qui fait quoi</small></td>
-                <td><div class="ck"><span><span class="h">06:00</span><span class="pil ko">0/1 photo</span> SMS à 07:00</span><span><span class="h">07:00</span><span class="pil ko">0/9 photos</span> SMS à 08:00</span></div></td>
-                <td><b>17 rappels</b> · 0 rattrapé<div class="mini7"><i style="height:24px"></i><i style="height:16px"></i><i style="height:16px"></i><i style="height:24px"></i><i style="height:24px"></i><i style="height:16px"></i><i style="height:16px"></i></div><small>aucune photo rendue de la semaine</small></td></tr>
+                <td>Julie V. · 06:30–13:00<small>ouverture ; relève Lina K. à 13:00</small></td>
+                <td>Harmonie<small>0476 •• •• 18 · Qui fait quoi</small></td>
+                <td><div class="ck"><span><span class="h">06:00</span><span class="pil ko">0/1 photo</span> 2ᵉ rappel à 08:15</span><span><span class="h">07:00</span><span class="pil ko">0/9 photos</span> 1ᵉʳ rappel à 08:15</span></div></td>
+                <td><b>37 + 17 SMS</b> · 0 rattrapé<div class="mini7"><i style="height:26px"></i><i style="height:16px"></i><i style="height:16px"></i><i style="height:26px"></i><i style="height:26px"></i><i style="height:16px"></i><i style="height:16px"></i></div><small>aucune photo rendue de la semaine</small></td></tr>
               <tr><td class="nom"><b>Halle</b><small>NL</small></td>
                 <td><span class="bascule"><i></i><b>Non</b></span><small>pas encore</small></td>
-                <td>0495 •• •• 07<small>Qui fait quoi</small></td>
-                <td><div class="ck"><span><span class="h">06:00</span><span class="pil att">photo à 07:07</span> 7 min après</span><span><span class="h">07:00</span><span class="pil ok">9/9 à 07:29</span></span></div></td>
-                <td>aurait reçu <b>16</b> · 3 rattrapés<div class="mini7"><i class="g" style="height:24px"></i><i class="g" style="height:16px"></i><i class="g" style="height:16px"></i><i class="g" style="height:24px"></i><i class="g" style="height:24px"></i><i class="g" style="height:16px"></i><i class="g" style="height:8px"></i></div><small>souvent une seule photo manque (Traiteur, 15/11)</small></td></tr>
-              <tr><td class="nom"><b>Corbais</b><small>Berlo · FR</small></td>
+                <td>l’équipe d’ouverture<small>04:00–12:00</small></td>
+                <td>—<small>0495 •• •• 07</small></td>
+                <td><div class="ck"><span><span class="h">06:00</span><span class="pil ok">photo à 07:07</span> dans la marge : pas de rappel</span><span><span class="h">07:00</span><span class="pil ok">9/9 à 07:29</span></span></div></td>
+                <td>aurait reçu <b>33 + 15</b> · 3 rattrapés<div class="mini7"><i class="g" style="height:26px"></i><i class="g" style="height:16px"></i><i class="g" style="height:16px"></i><i class="g" style="height:26px"></i><i class="g" style="height:26px"></i><i class="g" style="height:16px"></i><i class="z"></i></div><small>une photo manque souvent (Traiteur, 15/11)</small></td></tr>
+              <tr><td class="nom"><b>Corbais</b><small>FR</small></td>
                 <td><span class="bascule"><i></i><b>Non</b></span><small>pas encore</small></td>
-                <td>0472 •• •• 64<small>Qui fait quoi</small></td>
+                <td>l’équipe d’ouverture<small>04:00–13:00</small></td>
+                <td>—<small>0472 •• •• 64</small></td>
                 <td><div class="ck"><span><span class="h">06:00</span><span class="pil">0/1 photo</span></span><span><span class="h">07:00</span><span class="pil">0/9 photos</span></span></div></td>
-                <td>aurait reçu <b>17</b> · 0 rattrapé<div class="mini7"><i class="g" style="height:24px"></i><i class="g" style="height:16px"></i><i class="g" style="height:16px"></i><i class="g" style="height:24px"></i><i class="g" style="height:24px"></i><i class="g" style="height:16px"></i><i class="g" style="height:16px"></i></div><small>aucune photo rendue de la semaine</small></td></tr>
+                <td>aurait reçu <b>37 + 17</b> · 0 rattrapé<div class="mini7"><i class="g" style="height:26px"></i><i class="g" style="height:16px"></i><i class="g" style="height:16px"></i><i class="g" style="height:26px"></i><i class="g" style="height:26px"></i><i class="g" style="height:16px"></i><i class="g" style="height:16px"></i></div><small>aucune photo rendue de la semaine</small></td></tr>
             </tbody>
           </table>
-          <div class="lgd"><span>barres : SMS par jour, du mer. 11 au mar. 17/11</span><span>· Ruby : dans le programme</span><span>· gris : ce qui serait parti</span></div>
-          <p class="note">Un franchisé qui entre dans le programme reçoit d’abord un SMS de bienvenue (« À partir de demain, un rappel… ») : le premier rappel ne le surprend pas.</p>
+          <div class="lgd"><span>barres : SMS par jour, du mer. 11 au mar. 17/11 (sur place + franchisé)</span><span>· Ruby : dans le programme</span><span>· gris : ce qui serait parti</span></div>
+          <p class="note">Un franchisé qui entre dans le programme reçoit d’abord un SMS de bienvenue, son équipe aussi (« À partir de demain, un rappel… ») : le premier rappel ne surprend personne. Une checklist faite entre deux rappels arrête la suite.</p>
       </div>
       <div class="trois-rs">
           <div class="carte">
             <h2>La règle</h2>
-            <div class="regle"><div><b>Rappel</b><div class="rq xs">après l’heure de la checklist</div></div><div class="rv"><input class="inp" value="60"> minutes</div></div>
+            <div class="regle"><div><b>1ᵉʳ rappel</b><div class="rq xs">à la personne sur place</div></div><div class="rv"><input class="inp" value="60"> min après l’heure + marge <input class="inp" value="15"> min</div></div>
+            <div class="regle"><div><b>2ᵉ rappel</b><div class="rq xs">à la personne sur place</div></div><div class="rv"><input class="inp" value="60"> min après le 1ᵉʳ</div></div>
+            <div class="regle"><div><b>3ᵉ rappel</b><div class="rq xs">sur place et au franchisé</div></div><div class="rv"><input class="inp" value="60"> min après le 2ᵉ · le dernier</div></div>
+            <div class="regle"><div><b>La personne sur place</b><div class="rq xs">le planning du jour</div></div><div class="rv" style="flex-direction:column;align-items:flex-start;gap:4px"><span>en poste à l’heure du rappel ; si plusieurs : celle qui a ouvert</span><span class="xs mu">personne au planning, ou sans GSM : le franchisé reçoit à sa place</span></div></div>
             <div class="regle" style="align-items:start"><div><b>Les checklists suivies</b><div class="rq xs">du contrôle qualité : tâches photo obligatoires</div></div>
               <div>
                 <div class="cl"><span class="hr">06:00</span><span><b>2.2.01 · Chambre froide et étiquetage</b><small>1 photo · tous les jours (et 11:00 le mercredi)</small></span><span class="bascule on"><i></i></span></div>
@@ -524,7 +531,8 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
                 <div class="cl"><span class="hr">14:30</span><span><b>1.3.02 · Photos des comptoirs (après-midi)</b><small>4 photos · samedi et dimanche</small></span><span class="bascule on"><i></i></span></div>
               </div></div>
             <div class="regle"><div><b>Une checklist est faite</b><div class="rq xs">au moment du rappel</div></div><div class="rv"><label class="radio"><input type="radio" checked> toutes ses photos rendues</label><label class="radio"><input type="radio"> au moins une</label><span class="xs mu">cochée sans photo : ne compte pas</span></div></div>
-            <div class="regle"><div><b>Au plus</b></div><div class="rv"><input class="inp" value="3"> SMS par jour et par magasin</div></div>
+            <div class="regle"><div><b>Plusieurs en retard</b></div><div class="rv">un seul SMS les cite toutes</div></div>
+            <div class="regle"><div><b>Au plus</b></div><div class="rv"><input class="inp" value="8"> SMS par personne et par jour</div></div>
             <div class="regle"><div><b>Envoi</b></div><div class="rv">de <input class="inp" style="width:70px" value="06:00"> à <input class="inp" style="width:70px" value="21:00"> · jamais un jour sans tâche</div></div>
             <p class="note">Le soir, l’e-mail de 19:00 « Contrôle qualité non réalisé » part toujours, comme aujourd’hui (Reporting automatisé).</p>
           </div>
@@ -537,12 +545,13 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
           <div class="carte">
             <h2>Le texte du SMS <small>la langue suit le magasin</small></h2>
             <div class="lang" style="margin:4px 0 10px"><button class="on">Français</button><button>Nederlands</button><button>Copie</button></div>
-            <div class="sms-ed">L’Atelier by - <code>{magasin}</code> : il manque <code>{manque}</code> photo(s) du controle "<code>{checklist}</code>" de <code>{heure}</code>. Prenez-les maintenant sur la tablette. Merci !</div>
-            <div class="vars"><code>{magasin}</code><code>{checklist}</code><code>{heure}</code><code>{manque}</code><code>{total}</code></div>
-            <div class="compte"><span>Pour Sombreffe, ce matin : <b>134 / 160 caractères · 1 SMS</b></span><span>sans accent hors de l’alphabet SMS</span></div>
+            <div class="lang" style="margin:0 0 8px"><button class="on">1ᵉʳ et 2ᵉ rappel</button><button>3ᵉ · franchisé</button></div>
+            <div class="sms-ed">L’Atelier by - <code>{magasin}</code>, rappel <code>{n}</code>/3 : il manque <code>{manque}</code> photo(s) du controle "<code>{checklist}</code>" de <code>{heure}</code>. Prenez-les maintenant sur la tablette. Merci !</div>
+            <div class="vars"><code>{magasin}</code><code>{n}</code><code>{checklist}</code><code>{heure}</code><code>{manque}</code><code>{total}</code><code>{sur_place}</code></div>
+            <div class="compte"><span>Pour Sombreffe, 07:15 : <b>143 / 160 caractères · 1 SMS</b></span><span>sans accent hors de l’alphabet SMS</span></div>
           </div>
       </div>
-      <div class="repris"><b>Repris de l’existant</b> · les tâches et leurs photos du panel (<code>/pwa/tasks</code>, comme le dashboard et l’e-mail de 19:00) · le GSM et la langue du franchisé (Qui fait quoi) · l’envoi de SMS (SMSAPI, src/sms.php) et la copie à Sam, comme le SMS du rapport de visite.</div>
+      <div class="repris"><b>Repris de l’existant</b> · les tâches et leurs photos du panel (<code>/pwa/tasks</code>, comme le dashboard et l’e-mail de 19:00) · le planning du jour (qui est en poste, comme « Le jour ») · le GSM des employés (celui du SMS des primes) · le GSM et la langue du franchisé (Qui fait quoi) · l’envoi de SMS (SMSAPI, src/sms.php) et la copie à Sam, comme le SMS du rapport de visite.</div>
     </section>
 
     <!-- =================================================================== B. JOURNAL -->
@@ -551,36 +560,44 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
         <div>
           <div class="crumb">Franchisés · évaluation et suivi › Suivi journalier et opérations › Rappels SMS des contrôles</div>
           <h1>Le journal des rappels</h1>
-          <p>Chaque passage, heure par heure : l’état de la checklist au moment du rappel, le SMS parti, la copie, et si les photos sont arrivées ensuite.</p>
+          <p>Sombreffe et Gosselies, le dimanche 15/11, rappel par rappel : la checklist en retard, à qui le SMS est parti, la copie, et ce qui est arrivé ensuite.</p>
         </div>
-        <div class="etiquette">simulation sur le dimanche 15/11/2026 · tâches réelles · Gosselies et Sombreffe dans le programme</div>
+        <div class="etiquette">simulation sur le dimanche 15/11/2026 · tâches et horaires réels · prénoms d’équipe d’exemple</div>
       </div>
       <div class="barre">
-        <div class="onglets"><button>mer. 11</button><button>jeu. 12</button><button>ven. 13</button><button>sam. 14</button><button class="on">dim. 15 <span>6</span></button><button>lun. 16</button><button>mar. 17</button></div><span class="sp"></span>
-        <div class="etat"><i style="background:var(--rouge)"></i>6 SMS · 6 copies · 0 rattrapé</div>
+        <div class="onglets"><button>mer. 11</button><button>jeu. 12</button><button>ven. 13</button><button>sam. 14</button><button class="on">dim. 15 <span>20</span></button><button>lun. 16</button><button>mar. 17</button></div><span class="sp"></span>
+        <div class="etat"><i style="background:var(--rouge)"></i>Sombreffe : 10 SMS (7 sur place, 3 à la franchisée) · Gosselies : 10 · 0 photo rattrapée</div>
       </div>
       <div class="carte">
+        <h2>Sombreffe <small>sur place : Julie V. (06:30–13:00), puis Lina K. (13:00–18:00) · franchisée : Harmonie</small></h2>
         <table class="t jr">
-          <thead><tr><th>Magasin</th><th>Au moment du rappel</th><th>SMS</th><th>Copie</th><th>Ensuite</th></tr></thead>
+          <thead><tr><th>Rappel</th><th>Checklists en retard</th><th>Parti à</th><th>Copie</th><th>Ensuite</th></tr></thead>
           <tbody>
-            <tr class="vague"><td colspan="5">07:00 · rappel de « 2.2.01 · Chambre froide et étiquetage » de 06:00<small>1 photo : étiquetage des prix et allergènes</small></td></tr>
-            <tr><td class="nom"><b>Gosselies</b></td><td><span class="pil ko">0/1 photo</span></td><td><span class="etat-sms envoye">✉ parti à 07:00</span><small>au 0471 •• •• 52 · FR</small></td><td>Sam V. · 07:00</td><td><span class="pil att">cochée à 16:57, sans photo</span></td></tr>
-            <tr><td class="nom"><b>Sombreffe</b></td><td><span class="pil ko">0/1 photo</span></td><td><span class="etat-sms envoye">✉ parti à 07:00</span><small>au 0476 •• •• 18 · FR</small></td><td>Sam V. · 07:00</td><td><span class="pil ko">rien de la journée</span></td></tr>
-            <tr class="hors"><td class="nom"><b>Halle</b><small>hors programme</small></td><td><span class="pil">0/1 photo</span></td><td><span class="etat-sms mu">— rien n’est parti</span></td><td></td><td>cochée le 16/11 à 07:01, sans photo</td></tr>
-            <tr class="hors"><td class="nom"><b>Corbais</b><small>hors programme</small></td><td><span class="pil">0/1 photo</span></td><td><span class="etat-sms mu">— rien n’est parti</span></td><td></td><td>rien de la journée</td></tr>
-            <tr class="vague"><td colspan="5">08:00 · rappel de « 1.1.02 · Photos des comptoirs » de 07:00<small>9 photos : un comptoir chacune</small></td></tr>
-            <tr><td class="nom"><b>Gosselies</b></td><td><span class="pil ko">0/9 photos</span></td><td><span class="etat-sms envoye">✉ parti à 08:00</span><small>« il manque 9 photos »</small></td><td>Sam V. · 08:00</td><td><span class="pil att">cochées à 16:57, sans photo</span></td></tr>
-            <tr><td class="nom"><b>Sombreffe</b></td><td><span class="pil ko">0/9 photos</span></td><td><span class="etat-sms envoye">✉ parti à 08:00</span><small>« il manque 9 photos »</small></td><td>Sam V. · 08:00</td><td><span class="pil ko">rien de la journée</span></td></tr>
-            <tr class="hors"><td class="nom"><b>Halle</b><small>hors programme</small></td><td><span class="pil att">8/9 photos</span><div class="manq">manque : Traiteur (cochée à 06:38, sans photo)</div></td><td><span class="etat-sms mu">— rien n’est parti</span></td><td></td><td>8 photos notées par le consultant</td></tr>
-            <tr class="hors"><td class="nom"><b>Corbais</b><small>hors programme</small></td><td><span class="pil">0/9 photos</span></td><td><span class="etat-sms mu">— rien n’est parti</span></td><td></td><td>rien de la journée</td></tr>
-            <tr class="vague"><td colspan="5">15:30 · rappel de « 1.3.02 · Photos des comptoirs (après-midi) » de 14:30<small>4 photos : pains, pâtisseries, quiches, tartes</small></td></tr>
-            <tr><td class="nom"><b>Gosselies</b></td><td><span class="pil ko">0/4 photos</span></td><td><span class="etat-sms envoye">✉ parti à 15:30</span><small>3ᵉ et dernier SMS du jour</small></td><td>Sam V. · 15:30</td><td><span class="pil att">cochées à 16:57, sans photo</span></td></tr>
-            <tr><td class="nom"><b>Sombreffe</b></td><td><span class="pil ko">0/4 photos</span></td><td><span class="etat-sms envoye">✉ parti à 15:30</span><small>3ᵉ et dernier SMS du jour</small></td><td>Sam V. · 15:30</td><td><span class="pil ko">rien de la journée</span></td></tr>
-            <tr class="hors"><td class="nom"><b>Halle</b><small>hors programme</small></td><td><span class="pil">0/4 photos</span></td><td><span class="etat-sms mu">— rien n’est parti</span></td><td></td><td>cochées le 16/11, sans photo</td></tr>
-            <tr class="hors"><td class="nom"><b>Corbais</b><small>hors programme</small></td><td><span class="pil">0/4 photos</span></td><td><span class="etat-sms mu">— rien n’est parti</span></td><td></td><td>rien de la journée</td></tr>
+            <tr><td class="nom"><b>07:15</b></td><td><span class="pil ko">1ᵉʳ</span> Chambre froide et étiquetage (06:00) · 0/1 photo</td><td><span class="etat-sms envoye">✉ Julie V.</span><small>sur place</small></td><td>Sam V.</td><td rowspan="4"><span class="pil ko">aucune photo de la journée</span></td></tr>
+            <tr><td class="nom"><b>08:15</b></td><td><span class="pil ko">2ᵉ</span> Chambre froide (06:00) · 0/1<br><span class="pil ko">1ᵉʳ</span> Photos des comptoirs (07:00) · 0/9</td><td><span class="etat-sms envoye">✉ Julie V.</span><small>un seul SMS pour les deux</small></td><td>Sam V.</td></tr>
+            <tr><td class="nom"><b>09:15</b></td><td><span class="pil neuf">3ᵉ</span> Chambre froide (06:00) · 0/1<br><span class="pil ko">2ᵉ</span> Photos des comptoirs (07:00) · 0/9</td><td><span class="etat-sms envoye">✉ Julie V. + Harmonie</span><small>la franchisée : la chambre froide</small></td><td>Sam V. ×2</td></tr>
+            <tr><td class="nom"><b>10:15</b></td><td><span class="pil neuf">3ᵉ</span> Photos des comptoirs (07:00) · 0/9</td><td><span class="etat-sms envoye">✉ Julie V. + Harmonie</span><small>le dernier pour cette checklist</small></td><td>Sam V. ×2</td></tr>
+            <tr><td class="nom"><b>15:45</b></td><td><span class="pil ko">1ᵉʳ</span> Photos des comptoirs (après-midi) (14:30) · 0/4</td><td><span class="etat-sms envoye">✉ Lina K.</span><small>sur place depuis 13:00</small></td><td>Sam V.</td><td rowspan="3"><span class="pil ko">aucune photo</span></td></tr>
+            <tr><td class="nom"><b>16:45</b></td><td><span class="pil ko">2ᵉ</span> Photos des comptoirs (après-midi) · 0/4</td><td><span class="etat-sms envoye">✉ Lina K.</span></td><td>Sam V.</td></tr>
+            <tr><td class="nom"><b>17:45</b></td><td><span class="pil neuf">3ᵉ</span> Photos des comptoirs (après-midi) · 0/4</td><td><span class="etat-sms envoye">✉ Lina K. + Harmonie</span></td><td>Sam V. ×2</td></tr>
           </tbody>
         </table>
-        <p class="note">« Ensuite » se relit au passage suivant et le soir : une photo arrivée après le SMS compte comme rattrapée. Le journal garde chaque SMS (heure, numéro, texte, réponse du fournisseur) dans la table du programme.</p>
+      </div>
+      <div class="carte">
+        <h2>Gosselies <small>sur place : Sandra C. (06:30–12:00), Max D. (08:00–14:30) — les franchisés eux-mêmes</small></h2>
+        <table class="t jr">
+          <thead><tr><th>Rappel</th><th>Checklists en retard</th><th>Parti à</th><th>Copie</th><th>Ensuite</th></tr></thead>
+          <tbody>
+            <tr><td class="nom"><b>07:15</b></td><td><span class="pil ko">1ᵉʳ</span> Chambre froide (06:00) · 0/1</td><td><span class="etat-sms envoye">✉ Sandra C.</span><small>franchisée, seule en poste</small></td><td>Sam V.</td><td rowspan="4"><span class="pil att">tout coché à 16:57, sans photo</span></td></tr>
+            <tr><td class="nom"><b>08:15</b></td><td><span class="pil ko">2ᵉ</span> Chambre froide · <span class="pil ko">1ᵉʳ</span> Photos des comptoirs (07:00) · 0/9</td><td><span class="etat-sms envoye">✉ Sandra C.</span><small>a ouvert ; Max D. arrive à 08:00</small></td><td>Sam V.</td></tr>
+            <tr><td class="nom"><b>09:15</b></td><td><span class="pil neuf">3ᵉ</span> Chambre froide · <span class="pil ko">2ᵉ</span> Photos des comptoirs</td><td><span class="etat-sms envoye">✉ Sandra C. + Max D.</span><small>sur place et franchisés : un SMS chacun</small></td><td>Sam V. ×2</td></tr>
+            <tr><td class="nom"><b>10:15</b></td><td><span class="pil neuf">3ᵉ</span> Photos des comptoirs · 0/9</td><td><span class="etat-sms envoye">✉ Sandra C. + Max D.</span></td><td>Sam V. ×2</td></tr>
+            <tr><td class="nom"><b>15:45</b></td><td><span class="pil ko">1ᵉʳ</span> Photos des comptoirs (après-midi) (14:30) · 0/4</td><td><span class="etat-sms envoye">✉ Inès B.</span><small>en poste jusqu’à 16:00</small></td><td>Sam V.</td><td rowspan="3"><span class="pil att">cochées à 16:57, sans photo</span></td></tr>
+            <tr><td class="nom"><b>16:45</b></td><td><span class="pil ko">2ᵉ</span> Photos des comptoirs (après-midi) · 0/4</td><td><span class="etat-sms envoye">✉ Max D.</span><small>plus personne au planning : le franchisé</small></td><td>Sam V.</td></tr>
+            <tr><td class="nom"><b>17:45</b></td><td><span class="pil neuf">3ᵉ</span> Photos des comptoirs (après-midi) · 0/4</td><td><span class="etat-sms envoye">✉ Sandra C. + Max D.</span></td><td>Sam V. ×2</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Hors programme ce jour-là : Halle et Corbais auraient reçu chacun 7 SMS sur place et 3 au franchisé. Une photo arrivée après un rappel arrête les suivants.</p>
       </div>
     </section>
 
@@ -590,42 +607,46 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
         <div>
           <div class="crumb">Franchisés · évaluation et suivi › Suivi journalier et opérations › Rappels SMS des contrôles</div>
           <h1>Ce que reçoivent le franchisé et vous</h1>
-          <p>Dimanche 15/11, avec les tâches réelles : Sombreffe reçoit trois rappels, vous recevez la copie de chacun. Halle, quand il entrera dans le programme, le reçoit en néerlandais.</p>
+          <p>Dimanche 15/11 à Sombreffe : Julie V., sur place, reçoit les rappels ; au troisième, Harmonie, la franchisée, aussi. Vous recevez la copie de chacun.</p>
         </div>
-        <div class="etiquette">simulation · numéros masqués</div>
+        <div class="etiquette">simulation · prénoms d’équipe d’exemple · numéros masqués</div>
       </div>
       <div class="tels">
-        <div><div class="tel"><div class="ecr"><div class="bar"><span>08:01</span><span>●●● ⌁ ▮</span></div>
-          <div class="qui"><span class="pp">L</span><b>L’Atelier by</b><small>SMS · le franchisé de Sombreffe</small></div>
-          <div class="fil"><div class="quand">Dimanche 07:00</div>
-            <div class="bul">L’Atelier by - Sombreffe : il manque 1 photo du controle "Chambre froide et étiquetage" de 06:00. Prenez-la maintenant sur la tablette. Merci !</div>
-            <div class="quand">Dimanche 08:00</div>
-            <div class="bul">L’Atelier by - Sombreffe : il manque 9 photos du controle "Photos des comptoirs" de 07:00. Prenez-les maintenant sur la tablette. Merci !</div>
-            <div class="quand">Dimanche 15:30</div>
-            <div class="bul">L’Atelier by - Sombreffe : il manque 4 photos du controle "Photos des comptoirs (après-midi)" de 14:30. Prenez-les maintenant sur la tablette. Merci !</div></div>
-          <div class="saisie">Message texte</div></div></div><div class="tel-l legende" style="text-align:center;font:600 11.5px var(--f-ui);color:var(--gris);margin-top:10px">Le franchisé · Sombreffe · FR</div></div>
-        <div><div class="tel"><div class="ecr"><div class="bar"><span>08:01</span><span>●●● ⌁ ▮</span></div>
-          <div class="qui"><span class="pp">L</span><b>L’Atelier by</b><small>SMS · le franchisé de Halle</small></div>
-          <div class="fil"><div class="quand">Zondag 08:00</div>
-            <div class="bul">L’Atelier by - Halle: er ontbreekt 1 foto van de controle "Photos des comptoirs" van 07:00. Neem ze nu op de tablet. Bedankt!</div></div>
-          <div class="saisie">Sms-bericht</div></div></div><div style="text-align:center;font:600 11.5px var(--f-ui);color:var(--gris);margin-top:10px">Halle · NL · quand il entrera dans le programme</div></div>
-        <div><div class="tel"><div class="ecr"><div class="bar"><span>15:31</span><span>●●● ⌁ ▮</span></div>
+        <div><div class="tel"><div class="ecr"><div class="bar"><span>10:16</span><span>●●● ⌁ ▮</span></div>
+          <div class="qui"><span class="pp">L</span><b>L’Atelier by</b><small>SMS · Julie V., sur place</small></div>
+          <div class="fil"><div class="quand">Dimanche 07:15</div>
+            <div class="bul">L’Atelier by - Sombreffe, rappel 1/3 : il manque 1 photo du controle "Chambre froide et étiquetage" de 06:00. Sur la tablette, maintenant. Merci !</div>
+            <div class="quand">Dimanche 08:15</div>
+            <div class="bul">L’Atelier by - Sombreffe : il manque 10 photos ("Chambre froide" 2/3, "Photos des comptoirs" 1/3). Sur la tablette, maintenant. Merci !</div>
+            <div class="quand">Dimanche 09:15</div>
+            <div class="bul">L’Atelier by - Sombreffe : dernier rappel "Chambre froide" (Harmonie prévenue). "Photos des comptoirs" 2/3 : 0/9.</div>
+            <div class="quand">Dimanche 10:15</div>
+            <div class="bul">L’Atelier by - Sombreffe : dernier rappel "Photos des comptoirs" 0/9 (Harmonie prévenue).</div></div>
+          <div class="saisie">Message texte</div></div></div><div style="text-align:center;font:600 11.5px var(--f-ui);color:var(--gris);margin-top:10px">La personne sur place · 1ᵉʳ, 2ᵉ et 3ᵉ rappels</div></div>
+        <div><div class="tel"><div class="ecr"><div class="bar"><span>10:16</span><span>●●● ⌁ ▮</span></div>
+          <div class="qui"><span class="pp">L</span><b>L’Atelier by</b><small>SMS · Harmonie, la franchisée</small></div>
+          <div class="fil"><div class="quand">Dimanche 09:15</div>
+            <div class="bul">L’Atelier by - Sombreffe, 3e rappel : la photo du controle "Chambre froide et étiquetage" de 06:00 n’est toujours pas faite. Julie V. (sur place) a reçu 2 rappels.</div>
+            <div class="quand">Dimanche 10:15</div>
+            <div class="bul">L’Atelier by - Sombreffe, 3e rappel : 0/9 photos du controle "Photos des comptoirs" de 07:00. Julie V. (sur place) a reçu 2 rappels.</div></div>
+          <div class="saisie">Message texte</div></div></div><div style="text-align:center;font:600 11.5px var(--f-ui);color:var(--gris);margin-top:10px">La franchisée · le 3ᵉ rappel seulement</div></div>
+        <div><div class="tel"><div class="ecr"><div class="bar"><span>10:16</span><span>●●● ⌁ ▮</span></div>
           <div class="qui"><span class="pp">L</span><b>L’Atelier by</b><small>SMS · votre GSM, Sam</small></div>
-          <div class="fil"><div class="quand">Dimanche 07:00</div>
-            <div class="bul">Copie - Gosselies : 0/1 photo (Chambre froide, 06:00). Rappel envoyé.</div>
-            <div class="bul">Copie - Sombreffe : 0/1 photo (Chambre froide, 06:00). Rappel envoyé.</div>
-            <div class="quand">Dimanche 08:00</div>
-            <div class="bul">Copie - Gosselies : 0/9 photos (comptoirs, 07:00). Rappel envoyé.</div>
-            <div class="bul">Copie - Sombreffe : 0/9 photos (comptoirs, 07:00). Rappel envoyé.</div>
-            <div class="quand">Dimanche 15:30</div>
-            <div class="bul">Copie - Gosselies : 0/4 photos (comptoirs après-midi, 14:30). Rappel envoyé.</div>
-            <div class="bul">Copie - Sombreffe : 0/4 photos (comptoirs après-midi, 14:30). Rappel envoyé.</div></div>
+          <div class="fil"><div class="quand">Dimanche 07:15</div>
+            <div class="bul">Copie - Sombreffe, rappel 1/3 à Julie V. : Chambre froide (06:00), 0/1.</div>
+            <div class="bul">Copie - Gosselies, rappel 1/3 à Sandra C. : Chambre froide (06:00), 0/1.</div>
+            <div class="quand">Dimanche 08:15</div>
+            <div class="bul">Copie - Sombreffe à Julie V. : Chambre froide 2/3, comptoirs 1/3 (0/9).</div>
+            <div class="bul">Copie - Gosselies à Sandra C. : Chambre froide 2/3, comptoirs 1/3 (0/9).</div>
+            <div class="quand">Dimanche 09:15</div>
+            <div class="bul">Copie - Sombreffe, 3e rappel à Julie V. et Harmonie : Chambre froide (06:00).</div>
+            <div class="bul">Copie - Gosselies, 3e rappel à Sandra C. et Max D. : Chambre froide (06:00).</div></div>
           <div class="saisie">Message texte</div></div></div><div style="text-align:center;font:600 11.5px var(--f-ui);color:var(--gris);margin-top:10px">Vous, en copie · chaque SMS</div></div>
       </div>
       <div class="carte" style="max-width:820px;margin:6px auto 0">
         <h2>Ou un récapitulatif chaque soir <small>si vous choisissez « un récapitulatif à 21:00 »</small></h2>
-        <div class="sms-ed">Rappels controles 15/11 - 6 SMS. Gosselies : 3 (0 rattrapé, coché sans photo à 16:57). Sombreffe : 3 (0 rattrapé). Détail dans le cockpit.</div>
-        <div class="compte"><span><b>141 / 160 caractères · 1 SMS par soir</b> au lieu de 6 copies</span></div>
+        <div class="sms-ed">Rappels controles 15/11 - 20 SMS. Sombreffe : 10, 0 photo rattrapée. Gosselies : 10, tout coché sans photo à 16:57. Détail dans le cockpit.</div>
+        <div class="compte"><span><b>139 / 160 caractères · 1 SMS par soir</b> au lieu de 20 copies</span></div>
       </div>
     </section>
   </main>
