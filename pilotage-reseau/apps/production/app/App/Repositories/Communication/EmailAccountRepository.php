@@ -6,7 +6,7 @@ use App\Core\Helpers\BaseRepository;
 class EmailAccountRepository extends BaseRepository
 {
     protected string $table = 'communication_email_account';
-    protected $allowedColumns = ['name','purpose','from_name','from_email','reply_to_email','smtp_host','smtp_port','smtp_encryption','smtp_username','smtp_secret_encrypted','smtp_secret','imap_host','imap_port','imap_username','imap_secret_encrypted','imap_secret','is_active','last_tested_at','last_synced_at'];
+    protected $allowedColumns = ['name','purpose','position_code','from_name','from_email','reply_to_email','smtp_host','smtp_port','smtp_encryption','smtp_username','smtp_secret_encrypted','smtp_secret','imap_host','imap_port','imap_username','imap_secret_encrypted','imap_secret','is_active','last_tested_at','last_synced_at'];
 
     /** Compte par défaut : celui de la finance, sinon le premier compte actif. */
     public function active(): array { return $this->forPurpose('finance') ?: $this->first(['is_active' => 1]); }
@@ -15,6 +15,11 @@ class EmailAccountRepository extends BaseRepository
     {
         try { return $this->first(['is_active' => 1, 'purpose' => $purpose]); }
         catch (\Throwable) { return []; } // colonne purpose absente (migration 204 pas encore passée)
+    }
+    /** [345] Stanowiska ERP (kod, nazwa) do wyboru « Poczta w ERP dla stanowiska ». */
+    public function positions(): array
+    {
+        try { return $this->query('SELECT code, name_pl FROM n_position ORDER BY name_pl') ?: []; } catch (\Throwable) { return []; }
     }
     /** @return list<array> tous les comptes actifs (réception IMAP de chaque adresse) */
     public function allActive(): array { return $this->query("SELECT * FROM {$this->table} WHERE is_active = 1 ORDER BY id") ?: []; }

@@ -110,6 +110,7 @@ final class UserMailService
             $data['sent_folder'] = null;
         }
         $data['last_error'] = null;
+        $data['id_email_account'] = null; // [345] ustawiona ręcznie : już nie skrzynka stanowiska
         $this->repo->saveMailbox($userId, $data);
         return $this->state($userId);
     }

@@ -12,14 +12,21 @@ class CommunicationController extends BaseController
 {
     public function __construct(private CommunicationService $service, private EmailAccountService $emailAccounts, private CommunicationEmailDeliveryWorker $deliveryWorker,
                                 private \App\Repositories\Client\ClientRepository $clients, private \App\Services\Communication\PaymentReminderAutoService $autoReminders,
-                                private \App\Services\Communication\CommunicationImapSyncWorker $imapSync) {}
+                                private \App\Services\Communication\CommunicationImapSyncWorker $imapSync,
+                                private \App\Services\Mail\PositionMailboxService $positionBoxes) {}
     private function author(): ?string { $user = GlobalRegistry::get('user'); return $user ? $user->getDisplayName() : null; }
     public function templates() { $this->view('communication/templates', ['templates' => $this->service->templates(), 'languages' => $this->service->languages(), 'templateTypes' => $this->service->templateTypes()]); }
     /** [341] Un compte d'envoi par usage : finance (accounting@), logistyka@, produkcja@. */
-    public function emailSettings() { $this->view('communication/email-settings', ['accounts' => $this->emailAccounts->byPurpose(), 'purposes' => EmailAccountService::PURPOSES]); }
+    public function emailSettings() { $this->view('communication/email-settings', ['accounts' => $this->emailAccounts->byPurpose(), 'purposes' => EmailAccountService::PURPOSES,
+        'positions' => $this->emailAccounts->positions()]); }
     public function saveEmailSettings()
     {
-        try { $this->emailAccounts->save($_POST); header('Location: ' . ROOT . '/communication/email-settings?saved=1'); exit; }
+        try {
+            $this->emailAccounts->save($_POST);
+            // [345] Skrzynka adresu od razu w Poczcie osób na wybranym stanowisku.
+            try { $this->positionBoxes->provision(); } catch (\Throwable $e) { error_log('[mail] position boxes : ' . $e->getMessage()); }
+            header('Location: ' . ROOT . '/communication/email-settings?saved=1'); exit;
+        }
         catch (\Throwable $e) { $this->errors[] = $e->getMessage(); $this->emailSettings(); }
     }
     /** [341] « Pobierz odpowiedzi teraz » : odczyt skrzynek wszystkich aktywnych kont (jak cron co 5 minut). */

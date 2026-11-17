@@ -15,7 +15,8 @@ use Symfony\Component\HttpFoundation\Request;
 class MailController extends BaseController
 {
     public function __construct(private UserMailService $mail, private DeepLTranslator $translator,
-        private \App\Services\Finances\PaymentProof\PaymentProofService $proofs, private \App\Services\Organization\PageAccessService $access) {}
+        private \App\Services\Finances\PaymentProof\PaymentProofService $proofs, private \App\Services\Organization\PageAccessService $access,
+        private \App\Services\Mail\PositionMailboxService $positionBoxes, private \App\Repositories\Mail\UserMailRepository $boxes) {}
 
     public function index()
     {
@@ -29,45 +30,47 @@ class MailController extends BaseController
 
     public function state()
     {
-        return $this->run(fn() => $this->mail->state($this->userId()));
+        // [345] Skrzynki stanowisk (accounting@, logistyka@, produkcja@) aktualne przy otwarciu Poczty.
+        try { $this->positionBoxes->provision(); } catch (\Throwable) {}
+        return $this->run(fn() => $this->mail->state($this->mailUser()));
     }
 
     public function saveSettings()
     {
-        return $this->run(fn() => $this->mail->saveMailbox($this->userId(), $this->getJson(Request::createFromGlobals())));
+        return $this->run(fn() => $this->mail->saveMailbox($this->mailUser(), $this->getJson(Request::createFromGlobals())));
     }
 
     public function deleteSettings()
     {
         return $this->run(function () {
-            $this->mail->deleteMailbox($this->userId());
+            $this->mail->deleteMailbox($this->mailUser());
             return ['message' => 'Skrzynka odłączona, wiadomości usunięte z ERP (w skrzynce zostają).'];
         });
     }
 
     public function test()
     {
-        return $this->run(fn() => $this->mail->test($this->userId()));
+        return $this->run(fn() => $this->mail->test($this->mailUser()));
     }
 
     public function sync()
     {
-        return $this->run(fn() => $this->mail->sync($this->userId()));
+        return $this->run(fn() => $this->mail->sync($this->mailUser()));
     }
 
     public function messages()
     {
-        return $this->run(fn() => $this->mail->list($this->userId(), (string) ($_GET['folder'] ?? 'INBOX'), mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 100), (int) ($_GET['page'] ?? 1)));
+        return $this->run(fn() => $this->mail->list($this->mailUser(), (string) ($_GET['folder'] ?? 'INBOX'), mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 100), (int) ($_GET['page'] ?? 1)));
     }
 
     public function message($id)
     {
         return $this->run(function () use ($id) {
-            $m = $this->mail->open($this->userId(), (int) $id);
+            $m = $this->mail->open($this->mailUser(), (int) $id);
             // Wpłata z e-maila [233] : « Zweryfikuj wpłatę », gdy wiadomość od klienta z proformą niezapłaconą (prawo « Płatności dnia »).
             $m['payment'] = null;
             if ($this->access->canSee($this->userId(), '/finances/payments-day')) {
-                try { $m['payment'] = $this->proofs->mailHint($this->userId(), (int) $id); } catch (\Throwable $e) { error_log('[mail] payment hint : ' . $e->getMessage()); }
+                try { $m['payment'] = $this->proofs->mailHint($this->mailUser(), (int) $id); } catch (\Throwable $e) { error_log('[mail] payment hint : ' . $e->getMessage()); }
             }
             return $m;
         });
@@ -75,17 +78,17 @@ class MailController extends BaseController
 
     public function send()
     {
-        return $this->run(fn() => $this->mail->send($this->userId(), $this->getJson(Request::createFromGlobals())));
+        return $this->run(fn() => $this->mail->send($this->mailUser(), $this->getJson(Request::createFromGlobals())));
     }
 
     public function translateMessage($id)
     {
-        return $this->run(fn() => $this->mail->translate($this->userId(), (int) $id, (string) ($this->getJson(Request::createFromGlobals())['target'] ?? 'pl')));
+        return $this->run(fn() => $this->mail->translate($this->mailUser(), (int) $id, (string) ($this->getJson(Request::createFromGlobals())['target'] ?? 'pl')));
     }
 
     public function contactLang()
     {
-        return $this->run(fn() => $this->mail->contactLang($this->userId(), mb_substr((string) ($_GET['email'] ?? ''), 0, 1000)));
+        return $this->run(fn() => $this->mail->contactLang($this->mailUser(), mb_substr((string) ($_GET['email'] ?? ''), 0, 1000)));
     }
 
     public function translateStatus()
@@ -171,7 +174,7 @@ class MailController extends BaseController
     public function attachment($id, $index)
     {
         try {
-            $file = $this->mail->attachment($this->userId(), (int) $id, (int) $index);
+            $file = $this->mail->attachment($this->mailUser(), (int) $id, (int) $index);
         } catch (CustomException $e) {
             http_response_code($e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 404);
             return htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
@@ -196,6 +199,21 @@ class MailController extends BaseController
             error_log('[mail] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return $this->json(['message' => 'Błąd serwera — operacja nie została wykonana.'], 500);
         }
+    }
+
+    /**
+     * [345] Czyja skrzynka : administrator w sesji stanowiska (np. Finanse) widzi skrzynkę osoby na tym stanowisku
+     * (accounting@) ; poza sesją i dla pozostałych — własną.
+     */
+    private function mailUser(): int
+    {
+        $id = $this->userId();
+        $position = $this->access->viewPosition($id);
+        if ($position !== null) {
+            $owner = $this->boxes->mailboxOwnerForPosition($position);
+            if ($owner !== null) return $owner;
+        }
+        return $id;
     }
 
     private function userId(): int
