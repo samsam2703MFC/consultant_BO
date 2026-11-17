@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H · Le taux de poubelle par catégorie — L'assistant fait des graphiques</title>
+<!-- Écran H (17/11/2026) : pour chaque catégorie, la part de la marchandise produite qui part à la poubelle (ventes perdues ÷ (ventes + ventes perdues)), octobre 2026, les dix catégories les plus touchées. Chiffres réels : /exploitation/invendus/detail et /ventes/stats. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+<script src="graphes2.js"></script>
+<script src="donnees2.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const actions = (suites) => `<div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites">${(suites || []).map(t => `<span>${t}</span>`).join('')}</span></div>`;
+const ouvrir = (fil) => document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil">${fil}</div></div></div>`);
+const P = D2.poubelle, T = D2.poubelleTot;
+const rows = P.map(r => ({ t: r[0], v: r[3], lib: fD(r[3]) + ' %', sous: fE(r[1]) + ' jetés · ' + fE(r[2]) + ' vendus', titre: r[0] + ' : ' + fD(r[3]) + ' % jeté' }));
+const fil = `<div class="gr-moi">Quelles catégories partent le plus à la poubelle ?</div>
+  <div class="gr-rep"><p>En octobre, <b style="font-weight:400">${T[0]} pièces</b> sont parties à la poubelle : ${fE(T[2])} de ventes perdues, ${fE(T[1])} de coût de production. En proportion, ce sont les <b style="font-weight:400">salades</b> qui partent le plus (une sur sept), puis les petites tartes et les entremets 4/6 personnes (une sur dix). En euros, les tartes Ø 28 cm pèsent le plus : ${fE(P[4][1])} jetés.</p>
+    <div class="gr-types"><span class="on">▤ Barres</span><span>☰ Tableau</span><span style="margin-left:auto">Mesure : <b style="font-weight:400;color:var(--ink)">part jetée ▾</b> · Période : <b style="font-weight:400;color:var(--ink)">octobre 2026 ▾</b></span></div>
+    <div class="gr-graph"><h5 style="margin:0 0 8px;font-weight:400;font-size:12.5px">La part jetée de chaque catégorie <small style="color:#8a847c">ventes perdues ÷ (ventes + ventes perdues), au prix de vente</small></h5>${barresH(rows)}</div>
+    <div class="gr-k"><div><b>${T[0]} pièces</b><span>jetées en octobre · ${fE(T[1])} de coût</span></div><div><b>15,3 %</b><span>des salades jetées : la plus haute part</span></div><div><b>${fE(P[4][1])}</b><span>de tartes Ø 28 cm jetées : le plus gros montant</span></div></div>
+    <div class="gr-src">Source : les invendus déclarés en caisse et les tickets du panel, octobre 2026 · catégories vendues pour plus de 150 € · c’était la carte « Invendus et poubelle »</div>
+    ${actions(['Quels produits dans les salades ?', 'Le même sur 3 mois'])}</div>`;
+ouvrir(fil);
+</script></body></html>

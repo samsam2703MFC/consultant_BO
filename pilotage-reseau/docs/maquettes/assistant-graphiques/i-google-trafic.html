@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>I · La note Google et le trafic — L'assistant fait des graphiques</title>
+<!-- Écran I (17/11/2026) : deux graphiques côte à côte, chacun sa propre échelle — la note Google relevée chaque mois depuis août 2026 face à la cible du réseau (4,6), et le trafic (clients par jour) sur 12 mois, avec l'an passé là où il existe. Chiffres réels : /leviers/magasins, /marketing/avis. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+<script src="graphes2.js"></script>
+<script src="donnees2.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const actions = (suites) => `<div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites">${(suites || []).map(t => `<span>${t}</span>`).join('')}</span></div>`;
+const ouvrir = (fil) => document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil">${fil}</div></div></div>`);
+const G = D2.google, Tr = D2.trafic;
+const fil = `<div class="gr-moi">Comment évoluent ma note Google et mon trafic ?</div>
+  <div class="gr-rep"><p>La note Google est passée de <b style="font-weight:400">4,8 à 4,7</b> en octobre, avec six avis de plus (74) : elle reste au-dessus de la cible du réseau (4,6). Le trafic tourne autour de <b style="font-weight:400">145 clients par jour</b> ; novembre (152) est sous novembre 2025 (168), la plus forte baisse face à l’an passé.</p>
+    <div class="gr-2">
+      <div class="gr-graph"><h5>La note Google<small>relevée chaque mois depuis août 2026</small></h5>${ligne(346, 230, G.note, { libs: G.mois.map(moisLib), fmt: v => fD(v), cible: { v: G.cible, lib: 'cible 4,6' }, etiquettes: [0, 3], titre: 'Note Google' })}
+        ${legende([['Note du mois', 'trait', COUL.moi], ['Cible du réseau', 'trait', COUL.ref]])}
+        <div class="gr-avis">Nombre d’avis : ${G.mois.map((m, i) => `${moisLib(m)} ${G.avis[i]}`).join(' · ')}</div></div>
+      <div class="gr-graph"><h5>Le trafic du magasin<small>clients par jour · l’an passé d’août à novembre</small></h5>${ligne(346, 230, Tr.v, { libs: Tr.mois.map(m => moisLib(m).slice(0, 1).toUpperCase()), ref: Tr.n1, fmt: v => fD(v, 0), etiquettes: [0, 11], titre: 'Trafic' })}
+        ${legende([['Clients par jour', 'trait', COUL.moi], ['Le même mois, l’an passé', 'trait', COUL.ref]])}</div>
+    </div>
+    <div class="gr-k"><div><b>4,7 ★</b><span>74 avis · cible du réseau 4,6</span></div><div><b>152</b><span>clients par jour en novembre</span></div><div><b>− 9,5 %</b><span>face à novembre 2025 (168)</span></div></div>
+    <div class="gr-src">Source : le relevé mensuel de la note Google (depuis août 2026) et les tickets du panel · c’étaient la note du rail et le levier « Trafic » des six leviers</div>
+    ${actions(['Lire les derniers avis', 'Comparer le trafic au réseau'])}</div>`;
+ouvrir(fil);
+</script></body></html>

@@ -394,6 +394,8 @@ function route(string $method, string $path): mixed
     if (($c = bmRoute($method, $path)) !== null) { return $c; }
     // Vendre › Analyse (15/11/2026) : les lectures propres aux pages Analyse (src/franchise/dashboard_analyse.php).
     if (($c = daRoute($method, $path)) !== null) { return $c; }
+    // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
+    if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.

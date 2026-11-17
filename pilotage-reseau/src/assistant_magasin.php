@@ -29,7 +29,16 @@ declare(strict_types=1);
  * medium). Réponse contrainte par un schéma (`output_config.format`) ; un refus de sécurité passe au modèle de repli
  * côté serveur (`fallbacks: "default"`). Les outils tournent en boucle : AM_TOURS appels au plus, AM_SECONDES avant
  * le dernier, qui se fait sans outil (`tool_choice: none`) pour rendre une réponse quoi qu'il arrive.
+ *
+ * Depuis le 17/11/2026 (src/franchise/assistant_ia.php) : les tables aia_ (réglages, fiche, conversations, questions,
+ * visuels, modèles, passages du manuel) ; le manuel opératoire entier pour tous les agents (manuel_sommaire,
+ * manuel_chercher, manuel_lire) ; le Professeur, l'agent rapide du manuel (Claude Haiku 5.5, effort bas, réglage
+ * `assistantProfesseur`) ; les tableaux et graphiques que l'agent propose selon la question (`visuels` : la demande ; le
+ * serveur relit les chiffres) et les documents lus (`sources`).
  */
+
+// Les tables aia_, le manuel opératoire, le Professeur, les tableaux et graphiques (17/11/2026).
+require_once __DIR__ . '/franchise/assistant_ia.php';
 
 const AM_MODELE = 'claude-opus-5-5';
 const AM_ECRANS = ['produits', 'taches', 'semaine', 'mois', 'fidelite', 'ops', 'promos', 'aucun'];
@@ -54,7 +63,7 @@ const AM_QUESTIONS = [
  * pointe, le ton est différent ; dans le cockpit : sur quoi il met l'accent, ce qu'il vérifie — par rapport au budget,
  * au trafic, aux tâches réalisées »). Le franchisé choisit le sien dans la modale ; le CEO règle chacun dans le cockpit
  * (ERP franchisé › Assistant coachs) : son ton, et pour chaque axe le poids (accent fort, suivi, n'en parle pas) et ce
- * qu'il vérifie. Le réglage `assistantCoachs` (ceo_app_setting) recouvre les valeurs ci-dessous, champ par champ.
+ * qu'il vérifie. Le réglage `assistantCoachs` (aia_reglage, 17/11/2026 ; avant ceo_app_setting) recouvre les valeurs ci-dessous, champ par champ.
  * Le personnage ne change que la manière de dire : les chiffres, les règles et le schéma restent les mêmes. Le Coach
  * porte un nom inventé (il ne parle au nom d'aucune personne réelle) et il est rude sans insulter : cette limite-là
  * n'est pas réglable, elle est écrite dans AM_SYSTEME.
@@ -129,7 +138,7 @@ function amSchema(): array
     $txt = ['type' => 'string'];
     return [
         'type' => 'object', 'additionalProperties' => false,
-        'required' => ['titre', 'resume', 'chiffres', 'points', 'priorites', 'conclusion', 'suites'],
+        'required' => ['titre', 'resume', 'chiffres', 'points', 'priorites', 'conclusion', 'suites', 'visuels', 'sources'],
         'properties' => [
             'titre' => $txt,
             'resume' => $txt,
@@ -141,6 +150,10 @@ function amSchema(): array
                 'properties' => ['titre' => $txt, 'constat' => $txt, 'gain' => $txt, 'ecran' => ['type' => 'string', 'enum' => AM_ECRANS]]]],
             'conclusion' => $txt,
             'suites' => ['type' => 'array', 'items' => $txt],
+            // Les tableaux et graphiques proposés (la demande seulement : le serveur relit les chiffres) et les documents
+            // du manuel lus (17/11/2026, src/franchise/assistant_ia.php).
+            'visuels' => aiaSchemaVisuels(),
+            'sources' => ['type' => 'array', 'items' => $txt],
         ],
     ];
 }
@@ -159,9 +172,7 @@ function amKpis(int $sid, string $du, string $au): ?array
 /** La fiche de faits d'un magasin, gardée 10 minutes : une conversation ne relit pas l'ERP à chaque question. */
 function amFaits(int $sid): array
 {
-    $cle = 'assistantFaits|' . $sid;
-    $m = setting($cle, null);
-    if (is_array($m) && ($m['le'] ?? 0) > time() - 600 && is_array($m['v'] ?? null)) { return $m['v']; }
+    if (($m = aiaFicheLire($sid)) !== null) { return $m; }
     $auj = date('Y-m-d'); $hier = date('Y-m-d', strtotime('-1 day'));
     $lundi = date('Y-m-d', strtotime('monday this week'));
     $lundiP = date('Y-m-d', strtotime($lundi . ' -7 days')); $dimP = date('Y-m-d', strtotime($lundi . ' -1 day'));
@@ -242,7 +253,7 @@ function amFaits(int $sid): array
                 'profils' => array_map(static fn ($p) => ['profil' => $p['nom'], 'condition' => $p['condition'], 'clients' => $p['clients'], 'part' => $p['part'] . ' %', 'panier' => $p['panier']], $m2['profils'])];
         } catch (Throwable $e) { $f['fidelite'] = 'illisible : ' . $e->getMessage(); }
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['le' => time(), 'v' => $f], JSON_UNESCAPED_UNICODE)]);
+    aiaFicheEcrire($sid, $f);
     return $f;
 }
 
@@ -292,8 +303,14 @@ function amJour(string $d): string
 const AM_TOURS = 6;          // appels au modèle au plus pour une question (le dernier sans outil)
 const AM_SECONDES = 100;     // au-delà, le tour suivant est le dernier
 
-/** Les trois outils, tels que le modèle les voit. Ordre et texte fixes : ils font partie du préfixe mis en cache. */
+/** Les outils, tels que le modèle les voit : les trois de l'historique des ventes, puis les trois du manuel opératoire
+ *  (aiaOutilsManuel). Ordre et texte fixes : ils font partie du préfixe mis en cache. */
 function amOutils(): array
+{
+    return array_merge(amOutilsVentes(), aiaOutilsManuel());
+}
+
+function amOutilsVentes(): array
 {
     $date = static fn (string $quoi) => ['type' => 'string', 'description' => $quoi . ' (AAAA-MM-JJ) : au plus 18 mois en arrière, au plus aujourd’hui.'];
     $magasin = ['type' => 'string', 'description' => '« moi » (le magasin du franchisé), « reseau » (tous les magasins ensemble) ou la ref d’un autre magasin, rendue par classement_reseau.'];
@@ -334,10 +351,12 @@ function amOutils(): array
 /** Le sel des références anonymes : tiré une fois, gardé en base, jamais montré. */
 function amSel(): string
 {
-    $s = setting('assistantSel');
-    if (is_string($s) && strlen($s) >= 32) { return $s; }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = value', ['assistantSel', json_encode(bin2hex(random_bytes(16)))]);
-    return (string) setting('assistantSel');
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $s = aiaReglage('assistantSel');
+    if (is_string($s) && strlen($s) >= 32) { return $memo = $s; }
+    aiaReglageEcrire('assistantSel', bin2hex(random_bytes(16)), 'Assistant');
+    return $memo = (string) aiaReglage('assistantSel');
 }
 
 /** Les magasins actifs du réseau. */
@@ -541,7 +560,7 @@ function amOutil(string $nom, array $in, int $demandeur): array
             'classement_reseau' => amOutilClassement($demandeur, $in),
             'ventes_par_heure' => amOutilHeures($demandeur, $in),
             'produits_vendus' => amOutilProduits($demandeur, $in),
-            default => ['erreur' => 'outil inconnu : ' . $nom],
+            default => aiaOutil($nom, $in) ?? ['erreur' => 'outil inconnu : ' . $nom],
         };
     } catch (Throwable $e) {
         error_log('assistant, outil ' . $nom . ' : ' . $e->getMessage());
@@ -555,7 +574,7 @@ function amOutil(string $nom, array $in, int $demandeur): array
 /** Les coachs tels que le cockpit les a réglés : le réglage `assistantCoachs` sur les valeurs d'AM_COACHS, champ par champ. */
 function amCoachs(): array
 {
-    $r = setting('assistantCoachs', []);
+    $r = aiaReglage('assistantCoachs', []);
     $r = is_array($r) ? $r : [];
     $out = [];
     foreach (AM_COACHS as $k => $d) {
@@ -599,7 +618,8 @@ function amAppel(array $corps, array $c): array
     $ch = curl_init('https://api.anthropic.com/v1/messages');
     curl_setopt_array($ch, [
         CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'x-api-key: ' . $c['cle'], 'anthropic-version: 2023-06-01', 'anthropic-beta: server-side-fallback-2026-07-01'],
+        CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'x-api-key: ' . $c['cle'], 'anthropic-version: 2023-06-01'],
+            isset($corps['fallbacks']) ? ['anthropic-beta: server-side-fallback-2026-07-01'] : [],
             ($c['espace'] ?? '') !== '' ? ['anthropic-workspace-id: ' . $c['espace']] : []),
         CURLOPT_POSTFIELDS => json_encode($corps, JSON_UNESCAPED_UNICODE), CURLOPT_TIMEOUT => 120, CURLOPT_CONNECTTIMEOUT => 10,
     ]);
@@ -626,18 +646,37 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
     $appel ??= 'amAppel';
     $c = Anthropic::config();
     if ($c['cle'] === '') { return ['erreur' => 'L’assistant n’est pas branché : aucune clé Anthropic dans les Paramètres du cockpit.']; }
-    $r = setting('assistantMagasin', []);
-    $r = is_array($r) ? $r : [];
-    $modele = trim((string) ($r['modele'] ?? '')) ?: AM_MODELE;
-    $effort = in_array($r['effort'] ?? '', ['low', 'medium', 'high'], true) ? $r['effort'] : 'medium';
-    // La fiche ouvre la conversation, marquée pour le cache : les questions de suite la relisent sans la repayer.
+    $prof = $ton === 'professeur';
+    if ($prof) {
+        // Le Professeur, l'agent rapide (17/11/2026) : Claude Haiku 5.5 par défaut, effort bas, sans repli côté serveur
+        // (Haiku n'en a pas) ; il démarre sur le sommaire du manuel, sans lire l'ERP.
+        ['modele' => $modele, 'effort' => $effort] = aiaProfesseurModele();
+        $tours = AIA_PROF_TOURS; $secondes = AIA_PROF_SECONDES;
+        $contexte = "Sommaire du manuel opératoire du réseau (id · code · type · titre — objectif) :\n" . ($faits['sommaire'] ?? aiaManuelSommaireTexte());
+        $systeme = [['type' => 'text', 'text' => AIA_SYSTEME_PROF], ['type' => 'text', 'text' => AIA_CONSIGNES, 'cache_control' => ['type' => 'ephemeral']]];
+    } else {
+        $r = aiaReglage('assistantMagasin', []);
+        $r = is_array($r) ? $r : [];
+        $modele = trim((string) ($r['modele'] ?? '')) ?: AM_MODELE;
+        $effort = in_array($r['effort'] ?? '', ['low', 'medium', 'high'], true) ? $r['effort'] : 'medium';
+        $tours = AM_TOURS; $secondes = AM_SECONDES;
+        $contexte = "Fiche de faits du magasin (JSON) :\n" . json_encode($faits, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        // Les outils et le bloc commun viennent avant le personnage : changer d'assistant ne repaie que lui.
+        $systeme = [['type' => 'text', 'text' => AM_SYSTEME], ['type' => 'text', 'text' => AIA_CONSIGNES, 'cache_control' => ['type' => 'ephemeral']],
+            ['type' => 'text', 'text' => "Ton personnage :\n" . amPersona($ton)]];
+    }
+    // La fiche (ou le sommaire) ouvre la conversation, marquée pour le cache : les questions de suite la relisent sans la repayer.
     $messages = [['role' => 'user', 'content' => [
-        ['type' => 'text', 'text' => "Fiche de faits du magasin (JSON) :\n" . json_encode($faits, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'cache_control' => ['type' => 'ephemeral']],
+        ['type' => 'text', 'text' => $contexte, 'cache_control' => ['type' => 'ephemeral']],
     ]]];
     foreach (array_slice($fil, -6) as $t) {
         if (!is_array($t) || trim((string) ($t['q'] ?? '')) === '' || !is_array($t['r'] ?? null)) { continue; }
+        // Les visuels déjà montrés repartent en demandes, sans leurs chiffres : le modèle n'a pas à les relire.
+        $rep = $t['r'];
+        if (isset($rep['visuels'])) { $rep['visuels'] = aiaVisuelsPourFil($rep['visuels']); }
+        if (isset($rep['sources']) && is_array($rep['sources'])) { $rep['sources'] = array_values(array_filter(array_map(static fn ($x) => is_array($x) ? ($x['id'] ?? null) : $x, $rep['sources']), 'is_string')); }
         $messages[count($messages) - 1]['content'][] = ['type' => 'text', 'text' => 'Question : ' . mb_substr((string) $t['q'], 0, 400)];
-        $messages[] = ['role' => 'assistant', 'content' => [['type' => 'text', 'text' => json_encode($t['r'], JSON_UNESCAPED_UNICODE)]]];
+        $messages[] = ['role' => 'assistant', 'content' => [['type' => 'text', 'text' => json_encode($rep, JSON_UNESCAPED_UNICODE)]]];
         $messages[] = ['role' => 'user', 'content' => []];
     }
     $dernier = count($messages) - 1;
@@ -645,25 +684,24 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
     $corps = [
         'model' => $modele,
         'max_tokens' => 16000,
-        // Les outils et le bloc commun viennent avant le personnage : changer d'assistant ne repaie que lui.
         'tools' => amOutils(),
-        'system' => [['type' => 'text', 'text' => AM_SYSTEME, 'cache_control' => ['type' => 'ephemeral']],
-            ['type' => 'text', 'text' => "Ton personnage :\n" . amPersona($ton)]],
+        'system' => $systeme,
         'output_config' => ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => amSchema()]],
-        'fallbacks' => 'default',
     ];
+    // Le repli côté serveur sur un refus de sécurité : les modèles qui l'acceptent (pas Haiku).
+    if (!str_starts_with($modele, 'claude-haiku')) { $corps['fallbacks'] = 'default'; }
     $t0 = microtime(true);
     $usage = ['input_tokens' => 0, 'cache_creation_input_tokens' => 0, 'cache_read_input_tokens' => 0, 'output_tokens' => 0];
     $outils = [];
     for ($tour = 1; ; $tour++) {
-        $fin = $tour >= AM_TOURS || microtime(true) - $t0 > AM_SECONDES;
+        $fin = $tour >= $tours || microtime(true) - $t0 > $secondes;
         if ($fin) { $corps['tool_choice'] = ['type' => 'none']; }   // le dernier tour répond avec ce qu'il a
         $corps['messages'] = $messages;
         [$rep, $obj, $err] = $appel($corps, $c);
         if ($err !== null) { return ['erreur' => $err]; }
         foreach ($usage as $k => $v) { $usage[$k] = $v + (int) ($rep['usage'][$k] ?? 0); }
         $stop = (string) ($rep['stop_reason'] ?? '');
-        if ($stop === 'refusal') { return ['erreur' => 'L’assistant a décliné cette question. Reformulez-la sur les chiffres du magasin.']; }
+        if ($stop === 'refusal') { return ['erreur' => 'L’assistant a décliné cette question. Reformulez-la sur les chiffres du magasin ou sur le manuel.']; }
         if ($stop === 'max_tokens') { return ['erreur' => 'La réponse a été coupée : posez une question plus précise.']; }
         if ($stop === 'tool_use' && !$fin) {
             $messages[] = ['role' => 'assistant', 'content' => $obj->content ?? []];
@@ -695,15 +733,23 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
 function ep_assistant_questions(): array
 {
     $tons = [];
-    foreach (amCoachs() as $k => ['nom' => $nom, 'dit' => $dit]) {
+    // Les coachs, puis le Professeur (17/11/2026), qui répond sur le manuel opératoire.
+    foreach (amCoachs() + ['professeur' => AIA_PROF] as $k => ['nom' => $nom, 'dit' => $dit]) {
         // Le portrait, s'il existe (public/dashboard/avatars/{clé}.svg, 12/11/2026 : celui de Pierre) ; sinon l'icône.
         $av = is_file(__DIR__ . '/../public/dashboard/avatars/' . $k . '.svg') ? 'avatars/' . $k . '.svg' : null;
-        $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit, 'avatar' => $av];
+        $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit, 'avatar' => $av, 'manuel' => $k === 'professeur'];
     }
-    return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'actif' => class_exists('Anthropic') && Anthropic::configured()];
+    return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'professeur' => aiaQuestionsProfesseur(),
+        'actif' => class_exists('Anthropic') && Anthropic::configured()];
 }
 
-/** POST /assistant/magasin {shop, question, ton, fil:[{q, r}]} → {reponse:{titre, resume, chiffres, points, priorites, suites}, luLe, ton}. */
+/**
+ * POST /assistant/magasin {shop, question, ton, fil:[{q, r}], origine, conversation}
+ *   → {reponse:{titre, resume, chiffres, points, priorites, conclusion, suites, visuels, sources}, question, luLe, modele, ton}.
+ * `ton` : un coach ou « professeur » (le manuel, l'agent rapide). `conversation` : la clé du fil, tirée par le navigateur
+ * (aia_conversation). Les visuels reviennent construits (chiffres relus, gardés dans aia_visuel), les sources avec le titre
+ * de chaque document.
+ */
 function wr_assistant_magasin(): array
 {
     $b = body();
@@ -711,17 +757,25 @@ function wr_assistant_magasin(): array
     $q = trim(preg_replace('/\s+/u', ' ', (string) ($b['question'] ?? '')));
     if ($sid <= 0 || $q === '') { http_response_code(422); return ['error' => 'magasin ou question manquant']; }
     if (mb_strlen($q) > 500) { http_response_code(422); return ['error' => 'question trop longue (500 caractères au plus)']; }
-    $faits = amFaits($sid);
-    $ton = isset(AM_COACHS[$b['ton'] ?? '']) ? (string) $b['ton'] : AM_TON_DEFAUT;
+    $ton = isset(AM_COACHS[$b['ton'] ?? '']) || ($b['ton'] ?? '') === 'professeur' ? (string) $b['ton'] : AM_TON_DEFAUT;
+    // Le Professeur ne lit pas l'ERP : il démarre tout de suite, sur le sommaire du manuel.
+    $faits = $ton === 'professeur' ? ['aujourdhui' => date('Y-m-d') . ' (' . amJour(date('Y-m-d')) . ')', 'luLe' => null, 'sommaire' => aiaManuelSommaireTexte()] : amFaits($sid);
     $fil = is_array($b['fil'] ?? null) ? $b['fil'] : [];
     $orig = in_array($b['origine'] ?? '', AM_ORIGINES, true) ? (string) $b['origine'] : 'libre';
+    $conv = aiaConversation($sid, $ton, (string) ($b['conversation'] ?? ''), $q);
     $t0 = microtime(true);
     $r = amDemander($faits, $q, $fil, $ton, $sid);
-    amGarder($sid, $ton, $orig, $q, count($fil), $r, (int) round((microtime(true) - $t0) * 1000));
+    $ms = (int) round((microtime(true) - $t0) * 1000);
+    $demandes = $r['reponse']['visuels'] ?? [];
+    $qid = aiaGarderQuestion($conv, $sid, $ton, $orig, $q, count($fil), $r, $ms, is_array($demandes) ? min(AIA_VISUELS_MAX, count($demandes)) : 0);
     if (isset($r['erreur'])) { http_response_code(502); return ['error' => $r['erreur']]; }
+    $reponse = $r['reponse'];
+    $reponse['visuels'] = aiaVisuels($demandes, $sid, $qid);
+    $reponse['sources'] = aiaSources($reponse['sources'] ?? []);
     $avec = !empty($r['outils']) ? ' · outils : ' . implode(', ', array_unique($r['outils'])) : '';
-    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' (' . amCoachs()[$ton]['nom'] . ') : « ' . mb_substr($q, 0, 120) . ' »' . $avec); }
-    return ['reponse' => $r['reponse'], 'luLe' => $faits['luLe'] ?? null, 'modele' => $r['modele'], 'ton' => $ton];
+    $qui = $ton === 'professeur' ? AIA_PROF['nom'] : amCoachs()[$ton]['nom'];
+    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' (' . $qui . ') : « ' . mb_substr($q, 0, 120) . ' »' . $avec); }
+    return ['reponse' => $reponse, 'question' => $qid, 'luLe' => $faits['luLe'] ?? null, 'modele' => $r['modele'], 'ton' => $ton];
 }
 
 /** GET /assistant/coachs → les coachs réglés, leurs valeurs de départ, les axes et les niveaux (cockpit). */
@@ -759,70 +813,33 @@ function wr_assistant_coachs(): array
         }
         if ($c) { $reg[$k] = $c; }
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['assistantCoachs', json_encode($reg, JSON_UNESCAPED_UNICODE)]);
+    aiaReglageEcrire('assistantCoachs', $reg, $qui);
     if (function_exists('journalAdd')) { journalAdd($qui, 'Assistant', null, 'Coachs de l’assistant publiés' . ($reg ? ' (' . implode(', ', array_map(static fn ($k) => AM_COACHS[$k]['nom'], array_keys($reg))) . ' réglés)' : ' (valeurs de départ)')); }
     return ['ok' => true] + ep_assistant_coachs();
 }
 
 /* --- Les questions posées (12/11/2026, Sam : « garde toutes les demandes dans une table, pour après créer des agents
  * spécifiques ») ---------------------------------------------------------------------------------------------------
- * Chaque question part dans ceo_assistant_question : le magasin, le coach, d'où elle vient (tuile du bilan, liste toute
- * prête, question de suite, question libre), son rang dans la conversation, la réponse (JSON), le modèle, les jetons et
- * la durée — l'échec aussi, avec son message. `theme` reste vide : il se remplira quand on rangera les questions pour
- * décider des agents spécialisés. Les questions ne portent pas de nom de personne : le magasin et l'heure suffisent. */
+ * Chaque question part dans aia_question (17/11/2026 ; avant : ceo_assistant_question, reprise une fois) : le magasin,
+ * l'agent, d'où elle vient (tuile du bilan, liste toute prête, question de suite, question libre), son rang et sa
+ * conversation, la réponse (JSON), le modèle, les jetons, la durée, les outils, les visuels — l'échec aussi, avec son
+ * message. `theme` reste vide : il se remplira quand on rangera les questions pour décider des agents spécialisés. Les
+ * questions ne portent pas de nom de personne : le magasin et l'heure suffisent. Écriture : aiaGarderQuestion. */
 const AM_ORIGINES = ['tuile', 'liste', 'suite', 'libre'];
-
-function amQuestionsSchema(): void
-{
-    static $fait = false;
-    if ($fait) { return; }
-    $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_assistant_question (
-        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        cree_le DATETIME NOT NULL,
-        shop_id INT NOT NULL,
-        coach VARCHAR(20) NOT NULL,
-        origine VARCHAR(10) NOT NULL,
-        rang SMALLINT NOT NULL DEFAULT 0,
-        question VARCHAR(500) NOT NULL,
-        reponse MEDIUMTEXT NULL,
-        modele VARCHAR(60) NULL,
-        jetons_entree INT NULL,
-        jetons_sortie INT NULL,
-        duree_ms INT NULL,
-        erreur VARCHAR(300) NULL,
-        theme VARCHAR(40) NULL,
-        KEY k_date (cree_le), KEY k_shop (shop_id, cree_le)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-}
-
-/** Garde une question et ce qu'elle a donné. Une panne d'écriture ne coûte jamais la réponse au franchisé. */
-function amGarder(int $sid, string $coach, string $orig, string $q, int $rang, array $r, int $ms): void
-{
-    try {
-        amQuestionsSchema();
-        $u = is_array($r['usage'] ?? null) ? $r['usage'] : [];
-        $entree = isset($u['input_tokens']) ? (int) $u['input_tokens'] + (int) ($u['cache_creation_input_tokens'] ?? 0) + (int) ($u['cache_read_input_tokens'] ?? 0) : null;
-        Db::exec('INSERT INTO ceo_assistant_question (cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_sortie, duree_ms, erreur)
-                  VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$sid, $coach, $orig, $rang, $q, isset($r['reponse']) ? json_encode($r['reponse'], JSON_UNESCAPED_UNICODE) : null, $r['modele'] ?? null,
-             $entree, isset($u['output_tokens']) ? (int) $u['output_tokens'] : null, $ms, isset($r['erreur']) ? mb_substr((string) $r['erreur'], 0, 300) : null]);
-    } catch (Throwable $e) { error_log('ceo_assistant_question : ' . $e->getMessage()); }
-}
 
 /** GET /assistant/questions-posees?jours=30 → les questions de la période : totaux, les plus posées, les dernières. */
 function ep_assistant_questions_posees(): array
 {
-    amQuestionsSchema();
+    aiaSchema();
     $j = max(1, min(365, (int) ($_GET['jours'] ?? 30)));
     $du = date('Y-m-d 00:00:00', strtotime('-' . ($j - 1) . ' days'));
     $noms = [];
     foreach (fidMagasins() as $m) { $noms[(int) $m['id']] = (string) $m['nom']; }
-    $C = amCoachs();
-    $tot = Db::row('SELECT COUNT(*) n, COUNT(DISTINCT shop_id) mags, SUM(erreur IS NOT NULL) ko, ROUND(AVG(duree_ms)) ms, SUM(jetons_sortie) sortie FROM ceo_assistant_question WHERE cree_le >= ?', [$du]) ?: [];
-    $par = static fn (string $col) => Db::rows("SELECT $col k, COUNT(*) n FROM ceo_assistant_question WHERE cree_le >= ? GROUP BY $col ORDER BY n DESC", [$du]);
-    $top = Db::rows('SELECT LOWER(question) q, MIN(question) libelle, COUNT(*) n, COUNT(DISTINCT shop_id) mags, MAX(cree_le) dernier FROM ceo_assistant_question WHERE cree_le >= ? GROUP BY LOWER(question) ORDER BY n DESC, dernier DESC LIMIT 15', [$du]);
-    $der = Db::rows('SELECT id, cree_le, shop_id, coach, origine, rang, question, erreur, duree_ms FROM ceo_assistant_question WHERE cree_le >= ? ORDER BY id DESC LIMIT 60', [$du]);
+    $C = amCoachs() + ['professeur' => AIA_PROF];
+    $tot = Db::row('SELECT COUNT(*) n, COUNT(DISTINCT shop_id) mags, SUM(erreur IS NOT NULL) ko, ROUND(AVG(duree_ms)) ms, SUM(jetons_sortie) sortie FROM aia_question WHERE cree_le >= ?', [$du]) ?: [];
+    $par = static fn (string $col) => Db::rows("SELECT $col k, COUNT(*) n FROM aia_question WHERE cree_le >= ? GROUP BY $col ORDER BY n DESC", [$du]);
+    $top = Db::rows('SELECT LOWER(question) q, MIN(question) libelle, COUNT(*) n, COUNT(DISTINCT shop_id) mags, MAX(cree_le) dernier FROM aia_question WHERE cree_le >= ? GROUP BY LOWER(question) ORDER BY n DESC, dernier DESC LIMIT 15', [$du]);
+    $der = Db::rows('SELECT id, cree_le, shop_id, coach, origine, rang, question, erreur, duree_ms FROM aia_question WHERE cree_le >= ? ORDER BY id DESC LIMIT 60', [$du]);
     return [
         'jours' => $j,
         'total' => (int) ($tot['n'] ?? 0), 'magasins' => (int) ($tot['mags'] ?? 0), 'echecs' => (int) ($tot['ko'] ?? 0),
