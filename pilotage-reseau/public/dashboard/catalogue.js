@@ -1751,11 +1751,13 @@
       return '<svg class="cat-qr" viewBox="0 0 ' + (n + 4) + ' ' + (n + 4) + '" width="' + mm + 'mm" height="' + mm + 'mm" shape-rendering="crispEdges" aria-label="' + esc(url) + '"><rect width="' + (n + 4) + '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
     } catch (e) { return ''; }
   }
+  /** Les coordonnées de la boutique à la dernière page : adresse, horaires, téléphone(s), e-mail (Marketing v1.9 ; rendu de `Back`). */
+  const coordonnees = (s, lang) => [s.address, s.hours ? (lang === 'nl' ? 'Open ' + s.hours : 'Ouvert ' + s.hours) : '', [s.phone, s.phone2 || ''].filter(Boolean).join(' · '), s.email || ''].filter(Boolean);
   function dos(doc, p) {
     const lang = doc.version.lang, s = p.shop;
     if (p.template === 'B') {
       // Boutique en avant (maquette A3, gabarit B) : l'adresse et les horaires en grand, le QR plus petit en bas.
-      const lignes = s ? [s.address, s.hours ? (lang === 'nl' ? 'Open ' + s.hours : 'Ouvert ' + s.hours) : '', s.phone].filter(Boolean) : [];
+      const lignes = s ? coordonnees(s, lang) : [];
       return '<div class="cat-back cat-back--B"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
         + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '')
         + '<div class="cat-back__shopB"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>' + lignes.map(x => '<p>' + esc(x) + '</p>').join('') + '</div>'
@@ -1770,7 +1772,7 @@
     }
     h += '<div class="cat-back__shop"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>';
     if (s) {
-      const lignes = [s.address, s.hours ? (lang === 'nl' ? 'Open ' + s.hours : 'Ouvert ' + s.hours) : '', s.phone].filter(Boolean);
+      const lignes = coordonnees(s, lang);
       h += '<p>' + lignes.map(esc).join('<br>') + '</p>';
     } else {
       h += '<p>' + esc((lang === 'nl' ? 'Al onze winkels op ' : 'Toutes nos boutiques sur ') + (p.host || '')) + '</p>';
