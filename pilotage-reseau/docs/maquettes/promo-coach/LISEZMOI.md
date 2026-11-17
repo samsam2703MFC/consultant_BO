@@ -51,6 +51,9 @@ petite **jauge du coefficient avec la marge du ticket dessus** (×4,42, marge du
 seul ×2,23), trois chiffres (+22,3 pts, +2,08 € par ticket, +330 € par mois) et « Préparer la fiche ». Plus de bulle du
 coach, de liste des meilleurs, de bloc de quatre tuiles. `python3 generer_simulateur_lean.py` refait les deux écrans.
 
+Puis (« un petit point de couleur, des rectangles aux coins arrondis ») : chaque produit est un rectangle blanc aux coins
+arrondis ; la couleur, du noir à l'or, n'est plus qu'un petit point devant son nom.
+
 ## La fiche, le lancement, l'équipe (écrans A, B, C)
 
 Les écrans A et B sont posés sur l'onglet Promotions **en ligne** (Halle) : la carte « Où les promotions sont utilisées »

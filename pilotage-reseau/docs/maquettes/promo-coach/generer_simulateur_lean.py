@@ -72,7 +72,7 @@ def ecran(xnom=None, ynom=None, prix=None):
                 pills += f'<button class="sl-p fam">{r["nomc"]}</button>'
             else:
                 c = cand[r['nom']]; col, clair = teinte(c['pts'] / best) if c['pts'] > 0 else ('#141210', False)
-                pills += f'<button class="sl-p c{" clair" if clair else ""}{" sel" if r is Y else ""}" style="background:{col}">{r["nomc"]}<small>{("+" + nf(c["pts"], 0)) if c["pts"] > 0 else "−"}</small></button>'
+                pills += f'<button class="sl-p c{" sel" if r is Y else ""}"><i style="background:{col}"></i>{r["nomc"]}<small>{("+" + nf(c["pts"], 0)) if c["pts"] > 0 else "−"}</small></button>'
         groupes += f'<div class="sl-g"><span>{g}</span><div>{pills}</div></div>'
     if X is None:
         droite = '<aside class="sl-d vide"><p>Cliquez le produit qui attire&nbsp;:<br>les autres se colorent, du noir à l’or.</p></aside>'
@@ -80,8 +80,9 @@ def ecran(xnom=None, ynom=None, prix=None):
     else:
         c = couple(X, Y, prix)
         zb = 'ok' if c['coef'] >= SEUILS[1] else ('att' if c['coef'] >= SEUILS[0] else 'ko')
+        coly = teinte(cand[Y['nom']]['pts'] / best)[0]
         droite = f'''<aside class="sl-d">
-        <div class="sl-duo"><b>{X["nomc"]}</b><span>+</span><b class="or">{Y["nomc"]}</b></div>
+        <div class="sl-duo"><b class="x">{X["nomc"]}</b><span>+</span><b><i style="background:{coly}"></i>{Y["nomc"]}</b></div>
         <div class="sl-prix"><button>−</button><div><b>{eur(c["prix"])}</b><span>au lieu de {eur(c["sep"])} · −{pct(c["remisePct"], 0)}</span></div><button>+</button></div>
         {jauge(X["coef"], c["coef"], c["mBpct"])}
         <p class="sl-seul"><i></i>{X["nomc"].lower()} seul : ×{nf(X["coef"], 2)} · {pct(X["m"])}</p>
@@ -89,7 +90,7 @@ def ecran(xnom=None, ynom=None, prix=None):
         <button class="bd-btn go sl-go">Préparer la fiche ›</button>
         <p class="sl-note">* si 1 client sur 10 prend le bundle</p></aside>'''
         aide = f'{X["nomc"]} · {pct(X["m"])} de marge'
-    leg = ''.join(f'<i style="background:{teinte(k / 6)[0]}"></i>' for k in range(7))
+    leg = ''.join(f'<i style="background:{teinte(k / 5)[0]}"></i>' for k in range(6))
     return f'''<section class="db-card bd sl" id="pc">
 <header class="sl-h"><img src="avatars/vente.png" alt=""><div><b>Simulateur de couples</b><span>{aide}</span></div>
   <span class="sl-leg">baisse {leg} monte la marge</span>
