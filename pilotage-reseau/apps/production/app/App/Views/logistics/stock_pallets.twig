@@ -234,7 +234,7 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
                     <thead><tr><th>Produkt</th><th class="n">Kart.</th><th title="Dzień produkcji (etykieta kartonu)">Partia</th><th>Ważne do</th></tr></thead>
                     <tbody>
                     {% for l in pallet.lines %}
-                        <tr><td>{{ l.name }}</td><td class="n">{{ l.cartons }}</td><td>{% if l.made_on %}<a href="{{ root }}/logistics/stock?pallet={{ pallet.id }}&product={{ l.id_product }}&made={{ l.made_on }}" title="Śledzenie partii">{{ l.made_on|date('d.m.Y') }}</a>{% else %}—{% endif %}</td><td>{{ l.expires ? l.expires|date('d.m.Y') : '—' }}</td></tr>
+                        <tr><td>{{ l.name }}</td><td class="n">{{ l.cartons }}</td><td>{% if l.made_on %}<a href="{{ root }}/workshop/traceability?product={{ l.id_product }}&made={{ l.made_on }}#lot" title="Śledzenie partii">{{ l.made_on|date('d.m.Y') }}</a>{% else %}—{% endif %}</td><td>{{ l.expires ? l.expires|date('d.m.Y') : '—' }}</td></tr>
                     {% else %}
                         <tr><td colspan="4" class="sp-sub">Paleta bez kartonów.</td></tr>
                     {% endfor %}
@@ -247,45 +247,10 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
         {% endif %}
     </div></div>
 
-    {# --- Śledzenie partii (produkt + dzień etykiety) --- #}
-    <div class="card"><div class="card-body">
-        <div class="sp-k"><span>Śledzenie partii</span><span>wycofanie produktu / reklamacja</span></div>
-        <form class="sp-trace" method="get" action="{{ root }}/logistics/stock">
-            {% if pallet %}<input type="hidden" name="pallet" value="{{ pallet.id }}">{% endif %}
-            <select class="form-select" name="product" aria-label="Produkt" style="max-width:320px">
-                <option value="">Produkt…</option>
-                {% for p in trace_products %}<option value="{{ p.id }}"{{ trace and trace.id_product == p.id ? ' selected' }}>{{ p.name }}</option>{% endfor %}
-            </select>
-            <input class="form-control" type="date" name="made" value="{{ trace ? trace.made_on }}" aria-label="Dzień produkcji" style="max-width:160px">
-            <button class="btn btn-outline-primary" type="submit">Pokaż</button>
-        </form>
-        {% if trace %}
-            {% if trace.days %}
-                <div class="sp-days">{% for d in trace.days %}<a class="sp-day{{ d.made_on == trace.made_on ? ' on' }}" href="{{ root }}/logistics/stock?{{ pallet ? 'pallet=' ~ pallet.id ~ '&' }}product={{ trace.id_product }}&made={{ d.made_on }}">{{ d.made_on|date('d.m') }}<small>{{ d.cartons }} kart.</small></a>{% endfor %}</div>
-            {% endif %}
-            {% if trace.day %}
-                <div style="margin:8px 0"><b>{{ trace.name }}</b> · produkcja {{ trace.made_on|date('d.m.Y') }} · <b>{{ trace.day.cartons }} kart.</b>{% if trace.day.expires %} · ważne do {{ trace.day.expires|date('d.m.Y') }}{% endif %}</div>
-                {% if trace.customers %}<div class="sp-sub" style="margin-bottom:8px">Wysłana do : <span class="sp-cust">{{ trace.customers|join(', ') }}</span></div>{% endif %}
-                <table class="sp-table">
-                    <thead><tr><th>Paleta</th><th>Klient</th><th>Wysłana</th><th class="n">Kartony z partii</th><th>Stan</th></tr></thead>
-                    <tbody>
-                    {% for p in trace.pallets %}
-                        <tr><td><a href="{{ root }}/logistics/stock?pallet={{ p.id }}{{ keep }}"><b>{{ p.code }}</b></a></td><td class="sp-cust">{{ p.customer }}</td>
-                            <td>{{ p.left_at ? p.left_at|date('d.m H:i') : p.delivery_date|date('d.m.Y') }}</td><td class="n">{{ p.lot_cartons }}</td>
-                            <td><span class="sp-pill {{ statusClass[p.status] ?? 'sp-s0' }}">{{ p.delivered_at ? 'dostarczona' : p.state }}</span></td></tr>
-                    {% endfor %}
-                    {% if trace.day.in_store %}<tr><td>—</td><td>Magazyn</td><td>—</td><td class="n">{{ trace.day.in_store }}</td><td><span class="sp-pill sp-s1">u nas</span></td></tr>{% endif %}
-                    {% if not trace.pallets and not trace.day.in_store %}<tr><td colspan="5" class="sp-sub">Kartony tej partii bez palety (wysłane przed skanowaniem palet).</td></tr>{% endif %}
-                    </tbody>
-                </table>
-            {% elseif trace.made_on %}
-                <div class="sp-hint">Brak kartonów {{ trace.name }} z dnia {{ trace.made_on|date('d.m.Y') }} — wybierz dzień powyżej.</div>
-            {% else %}
-                <div class="sp-hint">Brak kartonów produktu {{ trace.name }}.</div>
-            {% endif %}
-        {% else %}
-            <div class="sp-hint">Wybierz produkt i dzień produkcji (z etykiety kartonu) : palety i klienci, do których poszła partia, oraz ile kartonów jest jeszcze w magazynie. Bez dnia : ostatnie dni produkcji.</div>
-        {% endif %}
+    {# [350] Śledzenie partii → Produkcja › Partie i identyfikowalność (numery partii z tabletów + palety i klienci). #}
+    <div class="card"><div class="card-body d-flex flex-wrap align-items-center gap-2 justify-content-between">
+        <div class="sp-k mb-0"><span>Śledzenie partii</span><span>wycofanie produktu / reklamacja</span></div>
+        <a class="btn btn-outline-primary btn-sm" href="{{ root }}/workshop/traceability#lot"><i class="bi bi-upc-scan"></i> Produkcja › Partie i identyfikowalność</a>
     </div></div>
 </div>
 {% endblock %}
