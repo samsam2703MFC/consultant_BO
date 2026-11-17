@@ -163,7 +163,7 @@
 .cat-cover{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(var(--u) * 14mm) calc(var(--u) * 13mm) 0;color:var(--s)}
 .cat-logo{height:calc(var(--u) * 10mm);width:auto;max-width:78%;object-fit:contain;object-position:left center}
 .cat-logo--white{filter:brightness(0) invert(1)}
-.cat-cover__title{margin-top:calc(var(--u) * 12mm);padding-top:calc(var(--u) * 4mm);max-height:calc(var(--u) * 76mm);overflow:hidden;font-family:'CmVank','CmPrint',serif;font-size:calc(var(--u) * 21mm);line-height:1;letter-spacing:.01em;text-transform:uppercase;white-space:pre-line;overflow-wrap:anywhere}
+.cat-cover__title{margin-top:calc(var(--u) * 12mm);padding:calc(var(--u) * 4mm) 0 .16em;max-height:calc(var(--u) * 80mm);overflow:hidden;font-family:'CmVank','CmPrint',serif;font-size:calc(var(--u) * 21mm * var(--fs, 1));line-height:1.06;letter-spacing:.01em;text-transform:uppercase;white-space:pre-line;overflow-wrap:anywhere}
 .cat-cover__sub{margin-top:calc(var(--u) * 6mm);font-weight:500;font-size:calc(var(--u) * 3.4mm);letter-spacing:.24em;text-transform:uppercase;opacity:.9}
 .cat-cover__shop{margin-top:calc(var(--u) * 2mm);font-size:calc(var(--u) * 3.2mm);letter-spacing:.18em;text-transform:uppercase;opacity:.85}
 .cat-cover__visual{position:absolute;left:calc(-1 * var(--b));right:calc(-1 * var(--b));bottom:calc(-1 * var(--b));height:calc(var(--u) * 92mm + var(--b));overflow:hidden}
@@ -519,7 +519,7 @@
 .cat-cover__drawB { max-width: calc(var(--u) * 70mm); max-height: 100%; width: auto; height: 100%; object-fit: contain; }
 .cat-cover__photoB { width: 100%; height: 100%; object-fit: cover; border-radius: calc(var(--u) * 3mm); }
 .cat-cover__kicker { font-weight: 500; font-size: calc(var(--u) * 3.1mm); letter-spacing: 0.3em; text-transform: uppercase; color: var(--a); }
-.cat-cover--B .cat-cover__title { margin-top: calc(var(--u) * 2mm); padding-top: 0; color: var(--p); font-size: calc(var(--u) * 19mm); max-height: calc(var(--u) * 40mm); }
+.cat-cover--B .cat-cover__title { margin-top: calc(var(--u) * 2mm); padding-top: 0.16em; color: var(--p); font-size: calc(var(--u) * 19mm * var(--fs, 1)); max-height: calc(var(--u) * 48mm); }
 .cat-cover__rule { width: calc(var(--u) * 14mm); border-top: 0.6mm solid var(--a); margin: calc(var(--u) * 5mm) auto calc(var(--u) * 4mm); }
 .cat-cover__subB { font-weight: 500; font-size: calc(var(--u) * 4.2mm); line-height: 1.35; max-width: calc(var(--u) * 100mm); }
 .cat-cover__shopB { margin-top: auto; padding-top: calc(var(--u) * 6mm); font-weight: 500; font-size: calc(var(--u) * 3mm); letter-spacing: 0.22em; text-transform: uppercase; }
@@ -532,7 +532,7 @@
 .cat-cover__band { flex: 1 1 0; min-height: 0; background: var(--p); color: var(--s); margin: 0 calc(-1 * var(--b)) calc(-1 * var(--b)); padding: calc(var(--u) * 8mm) calc(var(--u) * 13mm + var(--b)) calc(var(--u) * 9mm + var(--b)); display: flex; flex-direction: column; }
 .cat-cover--C .cat-logo { height: calc(var(--u) * 7mm); }
 .cat-cover--C .cat-cover__kicker { margin-top: calc(var(--u) * 5mm); color: var(--s); opacity: 0.85; }
-.cat-cover--C .cat-cover__title { margin-top: calc(var(--u) * 2mm); padding-top: 0; font-size: calc(var(--u) * 15mm); max-height: calc(var(--u) * 34mm); }
+.cat-cover--C .cat-cover__title { margin-top: calc(var(--u) * 2mm); padding-top: 0.16em; font-size: calc(var(--u) * 15mm * var(--fs, 1)); max-height: calc(var(--u) * 40mm); }
 .cat-cover--C .cat-cover__shop { margin-top: auto; }
 
 /* Page 2 / avant-dernière, gabarit C · image en bas, pleine largeur. */

@@ -1592,7 +1592,7 @@
   function styleCouv(font, color) {
     const f = POLICES_COUV[font], c = /^#[0-9A-Fa-f]{6}$/.test(String(color || '')) ? color : null;
     if (!f && !c) { return ''; }
-    return ' style="' + (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (font === 'playwrite' ? 'text-transform:none;letter-spacing:0;line-height:1.25;' : font === 'gotham' ? 'font-weight:500;letter-spacing:.02em;' : '') + (c ? 'color:' + c + ';' : '') + '"';
+    return ' style="' + (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (font === 'playwrite' ? 'text-transform:none;letter-spacing:0;line-height:1.5;--fs:.55;' : font === 'gotham' ? 'font-weight:500;letter-spacing:.02em;line-height:1.08;--fs:.6;' : '') + (c ? 'color:' + c + ';' : '') + '"';
   }
   /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration · C Photo. */
   function couverture(doc, p) {
