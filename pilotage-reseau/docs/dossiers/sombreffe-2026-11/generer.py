@@ -430,6 +430,14 @@ def main():
             {'k': 'prix', 'titre': 'Augmenter tes prix.'},
             {'k': 'additionnelles', 'titre': 'Les ventes additionnelles.', 'fort': 'Très important'}]},
         # GUEST (Global University for Environment and Safety Training), dicté le 14/11/2026 : un bon client, à cadrer.
+        # Les paires, fournies par le bureau le 17/11/2026 : un produit qui attire mais rapporte peu, avec un produit qui
+        # rapporte beaucoup, et une petite remise. Chiffres repris tels quels ; la dernière ligne est arrivée sans ses
+        # marges ni ses montants, et la note du « par mois* » n'a pas été fournie (None : « — » dans le rapport).
+        'paires': {'le': '17/11/2026', 'lignes': [
+            {'paire': 'Pain au chocolat + café', 'avant': 4.20, 'apres': 3.80, 'margeAvant': 55.1, 'margeApres': 73.5, 'ticket': 1.65, 'mois': 261},
+            {'paire': 'Couque au beurre + cappuccino', 'avant': 4.60, 'apres': 4.10, 'margeAvant': 56.4, 'margeApres': 78.5, 'ticket': 2.08, 'mois': 173},
+            {'paire': 'Pain doré + couque à la crème', 'avant': 6.40, 'apres': 5.90, 'margeAvant': 53.5, 'margeApres': 64.8, 'ticket': 2.15, 'mois': 162},
+            {'paire': 'Baguette Tradition + éclair', 'avant': 5.20, 'apres': 4.80, 'margeAvant': None, 'margeApres': None, 'ticket': None, 'mois': None}]},
         'cadreB2b': {'le': '14/11/2026', 'client': 'GUEST', 'motif': 'GLOBAL UNIVERSITY FOR ENVIRONMENT AND SAFETY TRAINING',
                      # Le point 1, dicté le 14/11/2026 (Sam) : ce que GUEST rapporte, établi exactement.
                      'points': ['Établir exactement ce qu’il rapporte (développement spécifique), sauf s’il commande via le webshop.',
