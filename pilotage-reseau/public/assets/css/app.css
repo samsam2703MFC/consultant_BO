@@ -5,9 +5,13 @@ a:hover { color: #6f1622; text-decoration: underline; }
 /* Coquille (§6.1) : l'intro de l'écran sous la barre supérieure. Les jetons,
    les composants et le rail viennent de assets/ds/global.css. */
 .page-intro { margin: 0 0 16px; max-width: 760px; font-size:12.5px; line-height: 1.5; color: var(--muted); }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(34,34,34,.18); border-radius:8px; border: 2px solid transparent; background-clip: content-box; }
-::-webkit-scrollbar-track { background: transparent; }
+/* Barre de défilement verticale : un fil ruby de 3 px (comme l'ERP et le dashboard magasin). Chrome ignore ::-webkit-scrollbar
+   dès que scrollbar-width est posé, d'où le @supports : seul Firefox, qui ne connaît pas ce sélecteur, reçoit « thin ». */
+::-webkit-scrollbar { width: 3px; height: 6px; }
+::-webkit-scrollbar-thumb { background: rgba(34,34,34,.18); border-radius: 8px; }
+::-webkit-scrollbar-thumb:vertical { background: #8D1D2C; border-radius: 3px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+@supports not selector(::-webkit-scrollbar) { html, html * { scrollbar-width: thin; scrollbar-color: #8D1D2C transparent; } }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes panelIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }

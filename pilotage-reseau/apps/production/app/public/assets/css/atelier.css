@@ -73,6 +73,9 @@ a:hover { color: var(--at-primary-dark); }
 ::-webkit-scrollbar-thumb:vertical { background: var(--at-primary); border: 0; border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 @supports not selector(::-webkit-scrollbar) { html, body, * { scrollbar-width: thin; scrollbar-color: var(--at-primary) transparent; } }
+/* Menu latéral (Perfect Scrollbar) : le même fil ruby de 3 px que la page. */
+.ps__rail-y, .ps__rail-y:hover, .ps .ps__rail-y.ps--clicking { width: 5px; background: transparent !important; opacity: 1; }
+.ps__thumb-y, .ps__rail-y:hover > .ps__thumb-y, .ps__rail-y:focus > .ps__thumb-y, .ps__rail-y.ps--clicking .ps__thumb-y { width: 3px; right: 1px; background: var(--at-primary); border-radius: 3px; }
 
 /* --- Menu latéral -------------------------------------------------------- */
 .sidebar-wrapper {

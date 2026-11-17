@@ -53,10 +53,11 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <select class="form-select form-select-sm" id="select_option"
                             onchange="displaySelected(this.value)" style="width: auto;">
-                        <option value="-1" <?= !isset($_GET['type']) ? 'selected' : '' ?>>Wszyscy</option>
-                        <option value="active"     <?= ($_GET['type'] ?? '') === 'active'     ? 'selected' : '' ?>>Aktywni</option>
-                        <option value="inactive"   <?= ($_GET['type'] ?? '') === 'inactive'   ? 'selected' : '' ?>>Nieaktywni</option>
-                        <option value="franchisee" <?= ($_GET['type'] ?? '') === 'franchisee' ? 'selected' : '' ?>>Franczyzobiorcy</option>
+                        <?php $clientType = $type ?? 'active'; ?>
+                        <option value="all"        <?= $clientType === 'all'        ? 'selected' : '' ?>>Wszyscy</option>
+                        <option value="active"     <?= $clientType === 'active'     ? 'selected' : '' ?>>Aktywni</option>
+                        <option value="inactive"   <?= $clientType === 'inactive'   ? 'selected' : '' ?>>Nieaktywni</option>
+                        <option value="franchisee" <?= $clientType === 'franchisee' ? 'selected' : '' ?>>Franczyzobiorcy</option>
                     </select>
                     <a href="<?= ROOT ?>/clients/new" class="btn btn-primary btn-sm">
                         <i class="bi bi-plus me-1"></i>Nowy klient
@@ -182,7 +183,8 @@
 
     function displaySelected(type) {
         const url = new URL(window.location.href);
-        if (type === '-1') {
+        // [325] Bez parametru = aktywni ; « Wszyscy » → type=all.
+        if (type === 'active') {
             url.searchParams.delete('type');
         } else {
             url.searchParams.set('type', type);

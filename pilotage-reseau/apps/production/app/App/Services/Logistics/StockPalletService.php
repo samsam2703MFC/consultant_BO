@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Logistics;
 
 use App\Repositories\Logistics\StockPalletRepository;
+use App\Exceptions\CustomException;
 use DateTimeImmutable;
 
 /**
@@ -92,6 +93,59 @@ final class StockPalletService
             ['label' => 'dostarczona', 'at' => $dep['delivered_at'] ?? null],
         ];
         return $card;
+    }
+
+    /**
+     * [334] Stan ogólny (kartony) : stan = magazyn + na paletach ; zamówione = zamówienia otwarte ; zostaje po wysyłce =
+     * stan − zamówione ; wskaźnik : zostaje względem stanu maks. produktu (karta produktu, stany w kartonach = sztuki ÷ ppc).
+     * @return array{categories: list<array>, totals: array}
+     */
+    public function generalStock(): array
+    {
+        $cats = [];
+        $tot = ['stock' => 0, 'ordered' => 0, 'pallet' => 0, 'left' => 0];
+        foreach ($this->repo->generalStock() as $r) {
+            $ppc = (int) $r['ppc'];
+            $stock = (int) $r['free'] + (int) $r['pallet'];
+            $ordered = (int) round((float) $r['ordered']);
+            $left = $stock - $ordered;
+            $max = $r['stock_max'] !== null && $ppc > 0 ? (int) round((float) $r['stock_max'] / $ppc) : null;
+            $min = $r['stock_min'] !== null && $ppc > 0 ? (int) round((float) $r['stock_min'] / $ppc) : null;
+            $row = ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'stock' => $stock, 'ordered' => $ordered, 'pallet' => (int) $r['pallet'],
+                'left' => $left, 'max' => $max ?: null, 'min' => $min,
+                'pct' => $max ? (int) round(max(0, $left) / $max * 100) : null,
+                'state' => $left < 0 ? 'short' : ($max && $left > $max ? 'over' : ($min !== null && $left < $min ? 'low' : 'ok'))];
+            $cats[$r['category']] ??= ['name' => (string) $r['category'], 'rows' => []];
+            $cats[$r['category']]['rows'][] = $row;
+            foreach (['stock', 'ordered', 'pallet', 'left'] as $k) $tot[$k] += $row[$k];
+        }
+        return ['categories' => array_values($cats), 'totals' => $tot];
+    }
+
+    /**
+     * [333] Usunięcie palety (w budowie albo gotowej) : $mode « stock » — kartony wracają do magazynu ; « delete » — kartony
+     * usunięte razem z paletą. Paleta wysłana : odmowa. Dziennik : n_pallet_deletion.
+     * @return array{cartons:int, mode:string}
+     */
+    public function deletePallet(int $id, string $mode, ?string $reason, ?int $userId): array
+    {
+        if (!in_array($mode, ['stock', 'delete'], true)) throw new CustomException('Wybierz : kartony do magazynu albo usuń kartony.', 'errors', 422);
+        $p = $this->repo->pallet($id) ?? throw new CustomException('Nie znaleziono palety.', 'errors', 404);
+        if (!in_array((int) $p['status'], [1, 2], true)) throw new CustomException('Paleta wysłana — nie można jej usunąć.', 'errors', 409);
+        $ids = $this->repo->palletCartonIds($id);
+        $detail = array_map(static fn(array $r) => ['product' => (int) $r['id_product'], 'name' => (string) $r['name'], 'made_on' => (string) $r['made_on'], 'cartons' => (int) $r['cartons']],
+            $this->repo->composition($id));
+        try {
+            $this->repo->deletePallet($id, $ids, $mode === 'delete', [
+                'id_customer' => (int) $p['id_customer'] ?: null, 'customer' => $p['customer'] ?? null, 'delivery_date' => $p['delivery_date'] ?? null,
+                'detail' => json_encode($detail, JSON_UNESCAPED_UNICODE), 'reason' => $reason !== null && trim($reason) !== '' ? mb_substr(trim($reason), 0, 255) : null,
+                'user' => $userId,
+            ]);
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'pallet-not-open') throw new CustomException('Paleta została już wysłana albo usunięta.', 'errors', 409);
+            throw $e;
+        }
+        return ['cartons' => count($ids), 'mode' => $mode];
     }
 
     /**

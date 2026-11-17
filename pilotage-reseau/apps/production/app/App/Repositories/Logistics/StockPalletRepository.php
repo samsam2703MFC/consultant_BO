@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace App\Repositories\Logistics;
 
+use App\Domain\Client\Order\OpenOrders;
+use App\Domain\Stock\StockLevels;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
- * [296] Stany i palety : la route d'un carton, en lecture seule, depuis les cartons scannés.
+ * [296] Stany i palety : la route d'un carton, depuis les cartons scannés ; seule écriture : suppression d'une palette [333].
  * carton_stock.status : 1 = magasin, 2 = sur palette (encore chez nous), 3 = parti.
  * palets_delivery.status : 1 = palette en préparation (tablette pakowania), 2 = prête (attend les documents), 3 = partie.
  * Un carton déplacé d'une palette à l'autre compte sur sa dernière palette (carton_pallet_connection, plus grand id_key).
@@ -151,6 +153,71 @@ final class StockPalletRepository extends WorkshopRepository
     }
 
     /** @return array{0: string, 1: list<string>} */
+    /**
+     * [334] Stan ogólny : par produit en stock ou commandé — cartons au magasin (1), sur palette (2), commandes ouvertes
+     * (OpenOrders, comme Stan magazynu), stocks min. / max. en vigueur (pièces, StockLevels) et pièces par carton.
+     */
+    public function generalStock(): array
+    {
+        return $this->all("SELECT fp.id, fp.name, COALESCE(cp.name, 'Bez kategorii') AS category, fp.ppc,
+                COALESCE(cs.free, 0) AS free, COALESCE(cs.pallet, 0) AS pallet, COALESCE(oo.cartons, 0) AS ordered,
+                " . StockLevels::columns('ps') . "
+            FROM final_product fp
+            LEFT JOIN category_product cp ON cp.id = fp.id_category
+            LEFT JOIN n_prod_item i ON i.id_final_product = fp.id AND i.item_type = 'product'
+            LEFT JOIN n_prod_product_settings ps ON ps.id_item = i.id
+            " . StockLevels::join('i') . "
+            LEFT JOIN (SELECT id_product, SUM(status = 1) AS free, SUM(status = 2) AS pallet FROM carton_stock
+                       WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
+            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
+                       JOIN customer_order_product cop ON cop.id_order = co.id WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
+            WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL
+            ORDER BY cp.name IS NULL, cp.name, fp.name");
+    }
+
+    /** [333] Cartons dont la dernière palette est $id. @return list<int> */
+    public function palletCartonIds(int $id): array
+    {
+        return array_map('intval', array_column($this->all("SELECT cpc.id_carton FROM carton_pallet_connection cpc
+            WHERE cpc.id_palet = ? AND cpc.id_key = (SELECT MAX(x.id_key) FROM carton_pallet_connection x WHERE x.id_carton = cpc.id_carton)", [$id]), 'id_carton'));
+    }
+
+    /**
+     * [333] Supprime une palette encore chez nous (statut 1 ou 2) : ses cartons retournent au magasin ($deleteCartons = false)
+     * ou sont supprimés ; liens carton ↔ palette des cartons effacés ; trace dans n_pallet_deletion. Une transaction.
+     * @param list<int> $cartonIds
+     */
+    public function deletePallet(int $id, array $cartonIds, bool $deleteCartons, array $log): void
+    {
+        $own = !$this->db->inTransaction();
+        if ($own) $this->db->beginTransaction();
+        try {
+            $st = $this->db->prepare('SELECT status FROM palets_delivery WHERE id_palet = ? FOR UPDATE');
+            $st->execute([$id]);
+            $status = $st->fetchColumn();
+            if ($status === false || !in_array((int) $status, [1, 2], true)) throw new \RuntimeException('pallet-not-open');
+            foreach (array_chunk($cartonIds, 500) as $chunk) {
+                $in = implode(',', array_fill(0, count($chunk), '?'));
+                if ($deleteCartons) {
+                    $this->db->prepare("DELETE FROM carton_stock WHERE id_carton IN ({$in}) AND status IN (1, 2)")->execute($chunk);
+                } else {
+                    $this->db->prepare("UPDATE carton_stock SET status = 1, date_pallet = NULL WHERE id_carton IN ({$in}) AND status = 2")->execute($chunk);
+                }
+                $this->db->prepare("DELETE FROM carton_pallet_connection WHERE id_carton IN ({$in})")->execute($chunk);
+            }
+            $this->db->prepare('DELETE FROM carton_pallet_connection WHERE id_palet = ?')->execute([$id]);
+            $this->db->prepare('DELETE FROM palets_delivery WHERE id_palet = ? AND status IN (1, 2)')->execute([$id]);
+            $this->db->prepare('INSERT INTO n_pallet_deletion (id_palet, id_customer, customer, delivery_date, pallet_status, mode, cartons, detail, reason, created_by)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$id, $log['id_customer'], $log['customer'], $log['delivery_date'], (int) $status, $deleteCartons ? 'delete' : 'stock',
+                    count($cartonIds), $log['detail'], $log['reason'], $log['user']]);
+            if ($own) $this->db->commit();
+        } catch (\Throwable $e) {
+            if ($own && $this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
+    }
+
     private function clientFilter(?string $client): array
     {
         $client = trim((string) $client);

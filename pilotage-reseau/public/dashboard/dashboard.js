@@ -8441,16 +8441,8 @@
       <div class="qb-hl" style="${cols}">${L.map(l => `<span>${l.h} h</span>`).join('')}</div>
       <p class="qb-note">ventes de l’heure en moyenne par jour ouvert · dessous : sa marge nette (ventes − matière − rémunération)</p></div>`;
   }
-  /** Ce qui rapporte : les trois produits à la plus forte marge brute hors TVA de la période (les catégories des heures).
-   * Au Mois seulement (16/11/2026, Sam : « week : take off » — sur une semaine, trop peu pour dire ce qui rapporte). */
-  function qbTop(st) {
-    const P = [];
-    ((st && st.categories) || []).forEach(c => (c.produits || []).forEach(p => { const mg = p.mHt != null ? p.mHt : p.m; if (mg != null) { P.push({ nom: p.nom, mg, t: p.tauxHt != null ? p.tauxHt : p.taux }); } }));
-    P.sort((a, b) => b.mg - a.mg);
-    if (!P.length) { return ''; }
-    return `<div class="db-card"><div class="ct"><span class="db-lab">Ce qui rapporte</span><span class="db-mini">les 3 produits à la plus forte marge brute hors TVA</span></div>
-      <div class="qb-top">${P.slice(0, 3).map((p, i) => `<div><span class="mu">${i + 1}</span><span>${esc(p.nom)}</span><span class="n">${fE(p.mg)}</span><span class="n mu">${p.t != null ? fP(p.t) : ''}</span></div>`).join('')}</div></div>`;
-  }
+  // « Ce qui rapporte » (les 3 produits à la plus forte marge brute hors TVA) : retiré du dashboard, Semaine puis Mois
+  // (16/11/2026, Sam : « take off »).
   /** Le reste, replié : une rangée de puces ; une puce ouverte dessine sa section dessous (gardé d'une visite à l'autre). */
   const QB_PLUS_CLE = 'dbQbPlus';
   function qbOuverts() { try { const o = JSON.parse(localStorage.getItem(QB_PLUS_CLE) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
@@ -8483,7 +8475,7 @@
   function qbPage(m, d, st, ks) {
     return `${qbChiffre(m, d)}${qbJours(m)}
       <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
-        <div class="qb-pile">${qbHeures(st, ks)}${S.vue === 'mois' ? qbTop(st) : ''}</div></div>
+        <div class="qb-pile">${qbHeures(st, ks)}</div></div>
       <div class="qb-douze">${rendSemaines()}</div>
       ${qbPlus(m, d, st)}`;
   }

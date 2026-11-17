@@ -21,8 +21,14 @@
 <style>
 .sp-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
 .sp-search{display:flex;gap:8px;align-items:center}.sp-search .form-control{min-width:280px}
-.sp-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
-@media (max-width:1200px){.sp-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sp-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.sp-tabs{display:flex;gap:6px;margin:0 0 12px}
+.sp-tab{border:1px solid var(--at-line);border-radius:8px;padding:6px 14px;font-size:13px;color:inherit;text-decoration:none;background:#fff}
+.sp-tab b{margin-left:6px;font-variant-numeric:tabular-nums}
+.sp-tab.on{background:var(--at-brand,#8D1D2C);border-color:var(--at-brand,#8D1D2C);color:#fff}
+.sp-shipped{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-bottom:16px}
+.sp-shipped .sp-card{margin:0}
+@media (max-width:1100px){.sp-flow{grid-template-columns:1fr}}
 .sp-col{background:var(--at-surface-2,#F8F4EE);border-radius:14px;padding:10px;min-width:0}
 .sp-ch{margin:2px 4px 10px;font-size:13px}.sp-ch b{font-size:20px;margin-left:6px;font-variant-numeric:tabular-nums}.sp-ch small{display:block;color:var(--at-muted)}
 .sp-card{display:block;background:#fff;border:1px solid var(--at-line);border-radius:10px;padding:8px 10px;margin-bottom:7px;font-size:13px;color:inherit;text-decoration:none}
@@ -64,12 +70,39 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
 .sp-trace{flex-wrap:wrap}
 .sp-days{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
 .sp-day{border:1px solid var(--at-line);border-radius:8px;padding:3px 8px;font-size:12px;color:inherit;text-decoration:none;text-align:center;font-variant-numeric:tabular-nums}
+.sp-gen-cat td{background:var(--at-surface-2,#F8F4EE);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted)}
+.sp-gen tfoot th{border-top:2px solid var(--at-line);font-variant-numeric:tabular-nums}
+.sp-gen tfoot th.n{text-align:right}
+.sp-bar2{position:relative;display:inline-flex;width:220px;height:16px;border-radius:6px;background:#f1ebe3;overflow:visible;vertical-align:middle}
+.sp-bar2 i{display:block;height:100%}.sp-bar2 i:first-child{border-radius:6px 0 0 6px}
+.sp-bar2 i.k{background:#2E7D4F}.sp-bar2 i.k.is-low{background:#d9a05b}.sp-bar2 i.k.is-over{background:var(--at-danger,#C41E3A)}
+.sp-bar2 i.r{background:repeating-linear-gradient(45deg,#b9afa4 0 4px,#d9d2c8 4px 8px)}
+.sp-bar2 i.g{background:repeating-linear-gradient(45deg,rgba(196,30,58,.55) 0 4px,rgba(196,30,58,.15) 4px 8px)}
+.sp-bar2 b{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px}
+.sp-bar2 b.mx{background:#1c1a17}.sp-bar2 b.mn{background:#d9a05b}
+.sp-bar2-t{margin-left:8px;color:var(--at-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sp-legend2{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--at-muted);margin-bottom:10px}
+.sp-legend2 i{display:inline-block;width:14px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+.sp-gauge{display:inline-block;width:90px;height:8px;border-radius:5px;background:#eee7de;overflow:hidden;vertical-align:middle}
+.sp-gauge i{display:block;height:100%;background:#2E7D4F}.sp-gauge.is-over i{background:var(--at-danger,#C41E3A)}.sp-gauge.is-low i{background:#d9a05b}
+.sp-gauge-t{margin-left:6px;color:var(--at-muted);font-variant-numeric:tabular-nums}
+.sp-del{display:flex;flex-direction:column;gap:8px;border:1px solid rgba(196,30,58,.3);background:rgba(196,30,58,.04);border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px}
+.sp-del label{display:flex;gap:8px;align-items:center;margin:0}
+.sp-del [data-sp-del-go]{background:var(--at-danger,#C41E3A);border-color:var(--at-danger,#C41E3A);color:#fff}
 .sp-day small{display:block;color:var(--at-muted);font-size:10.5px}.sp-day.on{background:var(--at-brand,#8D1D2C);border-color:var(--at-brand,#8D1D2C);color:#fff}.sp-day.on small{color:rgba(255,255,255,.8)}
 </style>
 
 {% set statusClass = {1: 'sp-s1', 2: 'sp-s2', 3: 'sp-s3'} %}
 {% set keep = (trace ? '&product=' ~ trace.id_product ~ '&made=' ~ trace.made_on : '') %}
 
+<nav class="sp-tabs" aria-label="Widok">
+    <a class="sp-tab{{ tab == 'flow' ? ' on' }}" href="{{ root }}/logistics/stock">Magazyn i palety<b>{{ building|length + ready|length }}</b></a>
+    <a class="sp-tab{{ tab == 'general' ? ' on' }}" href="{{ root }}/logistics/stock?tab=general">Stan ogólny</a>
+    <a class="sp-tab{{ tab == 'shipped' ? ' on' }}" href="{{ root }}/logistics/stock?tab=shipped">Wysłane<b>{{ shipped.total }}</b></a>
+    <a class="sp-tab{{ tab == 'expiring' ? ' on' }}" href="{{ root }}/logistics/stock?tab=expiring">Ważne &lt; {{ expiry_days }} dni<b>{{ expiring|length }}</b></a>
+</nav>
+
+{% if tab == 'flow' %}
 <div class="sp-flow">
     {# --- Magazyn --- #}
     <div class="sp-col">
@@ -83,16 +116,6 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
         {% else %}
             <div class="sp-empty">Magazyn pusty.</div>
         {% endfor %}
-        {% if expiring %}
-            <details class="sp-card sp-warn">
-                <summary style="color:inherit;padding:0"><b><i class="bi bi-exclamation-triangle"></i> {{ expiring|length }} {{ expiring|length == 1 ? 'partia ważna' : 'partii ważnych' }} &lt; {{ expiry_days }} dni</b>
-                    <div class="sp-sub">{{ expiring|slice(0, 2)|map(e => e.name)|join(', ') }}{% if expiring|length > 2 %}, …{% endif %}</div></summary>
-                <table class="sp-table" style="margin-top:6px">
-                    {% for e in expiring %}<tr><td>{{ e.name }}<div class="sp-sub"><a href="{{ root }}/logistics/stock?product={{ e.id_product }}&made={{ e.made_on }}">partia z {{ e.made_on|date('d.m') }}</a></div></td>
-                        <td class="n">{{ e.cartons }} kart.</td><td class="n">{{ e.expires|date('d.m') }}</td></tr>{% endfor %}
-                </table>
-            </details>
-        {% endif %}
     </div>
 
     {# --- Palety w budowie / gotowe --- #}
@@ -115,27 +138,85 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
     </div>
     {% endfor %}
 
-    {# --- Wysłane --- #}
-    <div class="sp-col">
-        <div class="sp-ch">Wysłane <b>{{ shipped.total }}</b><small>palet od {{ shipped.since|date('d.m') }} · {{ shipped.customers }} klientów</small></div>
-        {% for d in shipped.days %}
-            <div class="sp-card">
-                <div class="row1"><b>{{ d.date|date('d.m') }}{% if d.left_at %} · {{ d.left_at|date('H:i') }}{% endif %}</b><span class="n">{{ d.pallets }} pal.</span></div>
-                {% if d.vehicles %}<div class="sp-sub"><i class="bi bi-truck"></i> {{ d.vehicles|join(', ') }}</div>{% endif %}
-                <div class="sp-sub">{% for c in d.customers %}<span class="sp-cust">{{ c.name }}</span> — {{ c.pallets }} pal.{% if c.delivered_at %} <i class="bi bi-check2" title="Dostarczona {{ c.delivered_at|date('d.m H:i') }}"></i>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>
-            </div>
-        {% else %}
-            <div class="sp-empty">Brak wysłanych palet w tym okresie.</div>
-        {% endfor %}
-        <a class="sp-more" href="{{ root }}/shipments">{% if shipped.more %}+ {{ shipped.more }} dni · {% endif %}Historia ▸</a>
-    </div>
 </div>
+{% elseif tab == 'general' %}
+{# --- [334] Stan ogólny : stan − zamówione = zostaje po wysyłce ; wskaźnik względem stanu maks. --- #}
+<div class="card"><div class="card-body">
+    <div class="sp-legend2"><span><i style="background:#2E7D4F"></i>zostaje po wysyłce</span><span><i style="background:repeating-linear-gradient(45deg,#b9afa4 0 4px,#d9d2c8 4px 8px)"></i>zarezerwowane na zamówienia</span><span><i style="background:repeating-linear-gradient(45deg,rgba(196,30,58,.55) 0 4px,rgba(196,30,58,.15) 4px 8px)"></i>brakuje do zamówień</span><span><i style="width:2px;background:#1c1a17"></i>stan maks.</span><span><i style="width:2px;background:#d9a05b"></i>stan min.</span><span><i style="background:#d9a05b"></i>poniżej min.</span><span><i style="background:#C41E3A"></i>ponad maks.</span></div>
+    <table class="sp-table sp-gen">
+        <thead><tr><th>Produkt</th><th class="n">Stan</th><th class="n">Zamówione</th><th class="n">Na paletach</th><th class="n">Zostaje po wysyłce</th><th>Zostaje · zamówione · maks.</th></tr></thead>
+        <tbody>
+        {% for cat in general.categories %}
+            <tr class="sp-gen-cat"><td colspan="6">{{ cat.name }}</td></tr>
+            {% for r in cat.rows %}
+                <tr><td>{{ r.name }}</td><td class="n">{{ r.stock }}</td><td class="n">{{ r.ordered ?: '—' }}</td><td class="n">{{ r.pallet ?: '—' }}</td>
+                    <td class="n"><b class="{{ r.state == 'short' ? 'text-danger' }}">{{ r.left }}</b></td>
+                    <td>{% set sc = max(r.stock, r.ordered, r.max ?: 0, 1) %}{% set keep = max(r.left, 0) %}{% set res = min(r.ordered, r.stock) %}{% set gap = max(r.ordered - r.stock, 0) %}
+                        <span class="sp-bar2" title="zostaje {{ r.left }} · zamówione {{ r.ordered }}{{ r.min is not null ? ' · min. ' ~ r.min : '' }}{{ r.max ? ' · maks. ' ~ r.max : '' }} (kart.)">
+                            <i class="k is-{{ r.state }}" style="width:{{ keep / sc * 100 }}%"></i><i class="r" style="width:{{ res / sc * 100 }}%"></i><i class="g" style="width:{{ gap / sc * 100 }}%"></i>
+                            {% if r.min %}<b class="mn" style="left:{{ min(100, r.min / sc * 100) }}%"></b>{% endif %}
+                            {% if r.max %}<b class="mx" style="left:{{ min(100, r.max / sc * 100) }}%"></b>{% endif %}
+                        </span>
+                        <small class="sp-bar2-t {{ r.state == 'short' ? 'text-danger' : (r.state == 'over' ? 'text-danger' : '') }}">{{ r.state == 'short' ? 'brak ' ~ (-r.left) : (r.max ? r.pct ~ ' % maks.' : 'bez maks.') }}</small></td></tr>
+            {% endfor %}
+        {% else %}
+            <tr><td colspan="6" class="sp-sub">Brak stanu i zamówień.</td></tr>
+        {% endfor %}
+        </tbody>
+        {% if general.categories %}<tfoot><tr><th>Razem</th><th class="n">{{ general.totals.stock }}</th><th class="n">{{ general.totals.ordered }}</th><th class="n">{{ general.totals.pallet }}</th><th class="n">{{ general.totals.left }}</th><th></th></tr></tfoot>{% endif %}
+    </table>
+    <p class="sp-sub mt-2 mb-0">Kartony. Stan = magazyn + na paletach ; zostaje po wysyłce = stan − zamówione.</p>
+</div></div>
+{% elseif tab == 'expiring' %}
+{# --- [333] Partie ważne krócej niż N dni : osobna zakładka --- #}
+<div class="card"><div class="card-body">
+    {% if expiring %}
+    <table class="sp-table">
+        <thead><tr><th>Produkt</th><th>Partia</th><th class="n">Kartony</th><th class="n">Na paletach</th><th>Ważne do</th></tr></thead>
+        <tbody>
+        {% for e in expiring %}
+            <tr><td>{{ e.name }}</td><td><a href="{{ root }}/logistics/stock?product={{ e.id_product }}&made={{ e.made_on }}">{{ e.made_on|date('d.m.Y') }}</a></td>
+                <td class="n">{{ e.cartons }}</td><td class="n">{{ e.on_pallet ?? 0 }}</td><td><b class="{{ e.expires <= 'now'|date_modify('+7 days')|date('Y-m-d') ? 'text-danger' }}">{{ e.expires|date('d.m.Y') }}</b></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="sp-empty">Brak partii z krótką datą.</div>
+    {% endif %}
+</div></div>
+{% else %}
+{# --- [327] Wysłane : osobna zakładka --- #}
+<div class="sp-ch">Wysłane <b>{{ shipped.total }}</b><small>palet od {{ shipped.since|date('d.m') }} · {{ shipped.customers }} klientów</small></div>
+<div class="sp-shipped">
+    {% for d in shipped.days %}
+        <div class="sp-card">
+            <div class="row1"><b>{{ d.date|date('d.m') }}{% if d.left_at %} · {{ d.left_at|date('H:i') }}{% endif %}</b><span class="n">{{ d.pallets }} pal.</span></div>
+            {% if d.vehicles %}<div class="sp-sub"><i class="bi bi-truck"></i> {{ d.vehicles|join(', ') }}</div>{% endif %}
+            <div class="sp-sub">{% for c in d.customers %}<span class="sp-cust">{{ c.name }}</span> — {{ c.pallets }} pal.{% if c.delivered_at %} <i class="bi bi-check2" title="Dostarczona {{ c.delivered_at|date('d.m H:i') }}"></i>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>
+        </div>
+    {% else %}
+        <div class="sp-empty">Brak wysłanych palet w tym okresie.</div>
+    {% endfor %}
+</div>
+<p><a class="sp-more" href="{{ root }}/shipments">{% if shipped.more %}+ {{ shipped.more }} dni · {% endif %}Historia ▸</a></p>
+{% endif %}
 
 <div class="sp-split">
     {# --- Skład palety --- #}
     <div class="card"><div class="card-body">
         {% if pallet %}
-            <div class="sp-k"><span>Skład palety {{ pallet.code }} · <span class="sp-cust">{{ pallet.customer }}</span></span><span class="sp-pill {{ statusClass[pallet.status] ?? 'sp-s0' }}">{{ pallet.state }}</span></div>
+            <div class="sp-k"><span>Skład palety {{ pallet.code }} · <span class="sp-cust">{{ pallet.customer }}</span></span>
+                <span class="d-flex gap-2 align-items-center"><span class="sp-pill {{ statusClass[pallet.status] ?? 'sp-s0' }}">{{ pallet.state }}</span>
+                {% if pallet.status in [1, 2] %}<button type="button" class="btn btn-sm btn-outline-danger" data-sp-del-open><i class="bi bi-trash"></i> Usuń paletę</button>{% endif %}</span></div>
+            {% if pallet.status in [1, 2] %}
+            <div class="sp-del" data-sp-del="{{ pallet.id }}" hidden>
+                <b>Usunąć paletę {{ pallet.code }} ({{ pallet.cartons }} kart.) ?</b>
+                <label><input type="radio" name="spDelMode" value="stock" checked> Kartony wracają do magazynu</label>
+                <label><input type="radio" name="spDelMode" value="delete"> Usuń też kartony</label>
+                <input class="form-control form-control-sm" data-sp-del-reason maxlength="255" placeholder="Powód (opcjonalnie)">
+                <span class="d-flex gap-2"><button type="button" class="btn btn-sm btn-danger" data-sp-del-go>Usuń</button><button type="button" class="btn btn-sm btn-light" data-sp-del-open>Anuluj</button></span>
+            </div>
+            {% endif %}
             <div class="sp-steps">
                 {% for s in pallet.steps %}<div class="{{ s.at ? 'on' }}"><b>{{ s.at ? s.at|date('d.m H:i') : '—' }}</b>{{ s.label }}</div>{% endfor %}
             </div>
@@ -204,4 +285,27 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
         {% endif %}
     </div></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    // [333] Usunięcie palety : kartony do magazynu albo usunięte (potwierdzenie w ramce).
+    const box = document.querySelector('[data-sp-del]');
+    if (!box) return;
+    document.querySelectorAll('[data-sp-del-open]').forEach(b => b.addEventListener('click', () => { box.hidden = !box.hidden; }));
+    box.querySelector('[data-sp-del-go]').addEventListener('click', (e) => {
+        const mode = box.querySelector('input[name=spDelMode]:checked').value;
+        if (mode === 'delete' && !window.confirm('Kartony zostaną usunięte ze stanu. Kontynuować ?')) return;
+        e.target.disabled = true;
+        at.send(`/ajax/logistics/stock/pallets/${box.dataset.spDel}`, 'DELETE', {mode, reason: box.querySelector('[data-sp-del-reason]').value})
+            .then((res) => {
+                at.notify(res.ok, res.message || (res.ok ? 'Usunięto' : 'Błąd'));
+                if (res.ok) window.setTimeout(() => { window.location.href = '{{ root }}/logistics/stock'; }, 600);
+                else e.target.disabled = false;
+            });
+    });
+})();
+</script>
 {% endblock %}

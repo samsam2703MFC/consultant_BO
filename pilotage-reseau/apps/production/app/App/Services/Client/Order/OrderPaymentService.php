@@ -58,7 +58,8 @@ final class OrderPaymentService
             return ['channel' => 'email', 'message' => 'Przypomnienie ' . $level . '/5 (proforma ' . $o['doc_num'] . ', PDF w załączniku) w kolejce e-maili.'];
         }
         if ($channel !== 'sms') throw new CustomException('Wybierz e-mail albo SMS.', 'errors', 422);
-        $phone = trim((string) ($o['phone_head'] ?: $o['phone_alt'] ?: ''));
+        // [321] Telefon główny, a gdy nieczytelny — drugi (bramka bierze pierwszy czytelny numer).
+        $phone = implode(' ; ', array_filter([trim((string) $o['phone_head']), trim((string) $o['phone_alt'])]));
         if ($phone === '') throw new CustomException('Brak numeru telefonu klienta (fiche klienta : telefon).', 'errors', 422);
         $lang = isset(self::SMS[$o['language']]) ? $o['language'] : 'fr';
         $amount = $o['proforma_amount'] !== null ? number_format((float) $o['proforma_amount'], 2, ',', ' ') : '—';

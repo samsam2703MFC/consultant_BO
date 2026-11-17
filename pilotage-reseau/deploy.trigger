@@ -71,3 +71,18 @@
 2026-11-16T18:52:09Z Dashboard Mois : les douze dernières semaines face au N-1
 2026-11-16T18:54:40Z [319] SMS : jeton enregistré, smsapi.com et smsapi.pl
 2026-11-16T18:56:31Z Dashboard Semaine : sans « Ce qui rapporte »
+2026-11-16T18:57:45Z [320] SMS : expéditeur refusé → expéditeur par défaut
+2026-11-16T19:04:47Z Barre de défilement ruby 3 px (cockpit + menu ERP)
+2026-11-16T19:06:29Z [321] SMS commandes : premier numéro lisible
+2026-11-16T19:12:57Z Dashboard : « Ce qui rapporte » retiré
+2026-11-16 19:19:30 [323] Dzisiaj sans « Ostatnie zamówienia »
+2026-11-16 19:30:40 [324-328] Dzisiaj finance, Klienci aktywni, Wolumen, Stany i palety, Logistyka dnia
+2026-11-16 19:35:53 [329] Trasy i klienci (makieta 59)
+2026-11-16 19:47:46 [330] Palety klienta (makieta 60)
+2026-11-16 19:56:09 [331] Załadunek (makieta 61 B)
+2026-11-16 19:58:57 [332] Załadunek épuré
+2026-11-16 20:02:50 [322] KSeF : duplicat 440 = facture acceptée
+2026-11-16 20:08:24 [333] Usuń paletę + zakładka krótka data
+2026-11-16 20:17:59 [334-335] Stan ogólny + dostęp Stany i palety
+2026-11-16 20:24:20 [336] Stan ogólny : jauge visuelle
+2026-11-16 20:49:20 [337] Pilne w Dzisiaj i zadania

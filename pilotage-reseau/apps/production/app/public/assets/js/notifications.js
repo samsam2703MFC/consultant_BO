@@ -76,6 +76,8 @@
 
     var urgentOpen = false;
     try { urgentOpen = window.sessionStorage.getItem('atUrgentOpen') === '1'; } catch (e) { /* tryb prywatny */ }
+    // [337] Dzisiaj i zadania : lista pilnych rozwinięta, dopóki osoba jej nie zwinie.
+    if (banner && banner.dataset.open === '1') { try { urgentOpen = window.sessionStorage.getItem('atUrgentOpen') !== '0'; } catch (e) { urgentOpen = true; } }
 
     function urgentCount(n) {
         var few = n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14);
