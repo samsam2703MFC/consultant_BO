@@ -33,7 +33,7 @@ final class HrService
 
     public function __construct(private HrRepository $repo, private HrCipher $cipher, private TimeRepository $time, private StaffContactCipher $contacts,
         private ParamRepository $params, private AppNotificationService $notifications, private OutgoingMessageService $outgoing,
-        private \App\Services\Workshop\Time\TimeService $timeService)
+        private \App\Services\Workshop\Time\TimeService $timeService, private ClockReminderService $clock)
     {
     }
 
@@ -41,18 +41,26 @@ final class HrService
     {
         return ['retire_k' => max(40, min(80, (int) $this->params->get('hr.retire_age_k', '60'))), 'retire_m' => max(40, min(80, (int) $this->params->get('hr.retire_age_m', '65'))),
             'alert_days' => max(1, min(180, (int) $this->params->get('hr.alert_days', '30'))),
-            'succession_months' => max(6, min(60, (int) $this->params->get('hr.succession_months', '24')))];
+            'succession_months' => max(6, min(60, (int) $this->params->get('hr.succession_months', '24'))),
+            // [348] SMS « brak wejścia » : opóźnienie et texte communs à toutes les fiches.
+            'clock_sms_delay' => $this->clock->delay(), 'clock_sms_text' => $this->clock->defaultText()];
     }
 
     public function saveRules(array $in, int $userId): array
     {
-        foreach (['retire_k' => 'hr.retire_age_k', 'retire_m' => 'hr.retire_age_m', 'alert_days' => 'hr.alert_days', 'succession_months' => 'hr.succession_months'] as $k => $code) {
+        // [348] Domyślna treść SMS (vide = texte d'origine) : vérifiée avant toute écriture.
+        $smsText = array_key_exists('clock_sms_text', $in) ? trim(str_replace("\r", '', (string) $in['clock_sms_text'])) : null;
+        if ($smsText !== null && mb_strlen($smsText) > ClockReminderService::MAX_TEXT) throw new CustomException('Treść SMS : najwyżej ' . ClockReminderService::MAX_TEXT . ' znaków.',
+            'errors', 422, ['fields' => ['clock_sms_text' => 'Najwyżej ' . ClockReminderService::MAX_TEXT . ' znaków.']]);
+        foreach (['retire_k' => 'hr.retire_age_k', 'retire_m' => 'hr.retire_age_m', 'alert_days' => 'hr.alert_days', 'succession_months' => 'hr.succession_months',
+                     'clock_sms_delay' => 'hr.clock_sms_delay'] as $k => $code) {
             if (!array_key_exists($k, $in)) continue;
             $v = filter_var($in[$k], FILTER_VALIDATE_INT);
-            [$min, $max] = ['alert_days' => [1, 180], 'succession_months' => [6, 60]][$k] ?? [40, 80];
+            [$min, $max] = ['alert_days' => [1, 180], 'succession_months' => [6, 60], 'clock_sms_delay' => [1, 240]][$k] ?? [40, 80];
             if ($v === false || $v < $min || $v > $max) throw new CustomException("Wartość od {$min} do {$max}.", 'errors', 422, ['fields' => [$k => "Od {$min} do {$max}."]]);
             $this->params->setValue($code, (string) $v, $userId);
         }
+        if ($smsText !== null) $this->params->setValue('hr.clock_sms_text', $smsText !== '' ? $smsText : ClockReminderService::DEFAULT_TEXT, $userId);
         return $this->rules();
     }
 
@@ -140,7 +148,9 @@ final class HrService
         $person = $this->person($employeeId, $today, $canPay);
         $this->repo->log($viewer, $employeeId, 'card');
         return ['person' => $person, 'documents' => array_map(fn($d) => self::docRow($d, $viewer, $admin), $this->repo->documents($employeeId)),
-            'notes' => array_map(fn($n) => $this->noteRow($n, $viewer, $admin), $this->repo->notes($employeeId, null, null, $admin, $viewer))];
+            'notes' => array_map(fn($n) => $this->noteRow($n, $viewer, $admin), $this->repo->notes($employeeId, null, null, $admin, $viewer)),
+            // [348] Grafik tygodnia i przypomnienie o wejściu (zapis osobny : PUT /ajax/hr/people/{id}/schedule).
+            'clock' => $this->clock->card($employeeId)];
     }
 
     public function person(int $employeeId, ?DateTimeImmutable $today = null, bool $canPay = false): array

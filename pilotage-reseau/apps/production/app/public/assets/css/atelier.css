@@ -3871,6 +3871,30 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .pay-card { margin-bottom: 14px; }
 @media (max-width: 900px) { .hr-tpl, .pay-grid { grid-template-columns: 1fr; } .hr-tpl-extra { grid-template-columns: 1fr 1fr; } }
 
+/* [348] Karta pracownika › Grafik tygodnia i przypomnienie o wejściu : grille CSS (pas de tableau, tient en étroit). */
+.hr-wk { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); gap: 4px 5px; align-items: center; margin-top: 10px; }
+.hr-wk-h { font-size: 11px; font-weight: 600; color: var(--at-muted); text-align: center; letter-spacing: .04em; }
+.hr-wk-h.is-we { color: #a99f93; }
+.hr-wk-l { font-size: 11.5px; color: var(--at-muted); }
+.hr-wk .form-control { padding: 3px 1px; font-size: 12.5px; text-align: center; font-variant-numeric: tabular-nums; min-width: 0; }
+.hr-wk-n { font-size: 11.5px; text-align: center; color: var(--at-ink, #2b2b2b); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hr-wk-n.is-off { color: var(--at-muted); }
+.hr-wk-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 12.5px; margin: 8px 0 2px; }
+.hr-wk-sum .btn-link { padding: 0; font-size: 12.5px; }
+.tm-dialog-body label.hr-sms-on { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 12px 0 0; color: var(--at-ink, #2b2b2b); font-size: 12.5px; }
+.tm-dialog-body label.hr-sms-on .form-check-input { margin: 0; float: none; align-self: center; }
+.hr-sms-on .tm-sub { display: inline; }
+.hr-sms-help { display: flex; flex-wrap: wrap; gap: 2px 6px; font-size: 11.5px; color: var(--at-muted); margin-top: 3px; }
+.hr-sms-help .btn-link { padding: 0; font-size: 11.5px; }
+.hr-sms-help .is-long { color: #B54708; font-weight: 600; }
+.hr-sms-meta { font-size: 12px; color: var(--at-muted); margin-top: 10px; line-height: 1.6; }
+.hr-sms-meta b { color: var(--at-ink, #2b2b2b); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hr-sms-meta .hr-miss { font-weight: 600; }
+.hr-settings .hr-f-wide { grid-column: 1 / -1; }
+@media (max-width: 520px) { .hr-wk { grid-template-columns: 24px repeat(7, minmax(0, 1fr)); gap: 3px 2px; } .hr-wk .form-control { font-size: 11px; padding: 3px 0; } }
+/* [348] Czas pracy › Dzień : SMS « brak wejścia » envoyé ce jour. */
+.tm-sms { color: #B54708; font-size: 12px; white-space: nowrap; margin-left: 4px; }
+
 /* [279] HR › Szybka notatka (makieta 44) + follow-upy */
 .hr-qn { display: grid; grid-template-columns: 1.45fr 1fr; gap: 0; padding: 0 !important; }
 .hr-qn-l { padding: 16px 20px; }

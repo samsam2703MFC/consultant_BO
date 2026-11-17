@@ -502,6 +502,8 @@ ${poller_line}
 5 18 * * * ${CRON_RUN} Bin/hr_month_summary.php >> /var/log/production-erp-mail.log 2>&1
 # HR : rappel des follow-ups ouverts dans la cloche du responsable (à partir du terme), chaque matin
 10 7 * * * ${CRON_RUN} Bin/hr_followups.php >> /var/log/production-erp-mail.log 2>&1
+# HR : SMS « brak wejścia » (grafik tygodnia, karta pracownika) — chaque minute, un SMS par personne et par jour au plus
+* * * * * ${CRON_RUN} Bin/hr_clock_reminder.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log

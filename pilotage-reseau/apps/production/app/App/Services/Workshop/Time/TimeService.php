@@ -6,6 +6,7 @@ namespace App\Services\Workshop\Time;
 use App\Core\TransactionManager;
 use App\Domain\Logistics\Holidays;
 use App\Exceptions\CustomException;
+use App\Repositories\Hr\HrClockRepository;
 use App\Repositories\Workshop\AuditLogRepository;
 use App\Repositories\Workshop\ExecutionRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -76,6 +77,7 @@ final class TimeService
         private TransactionManager $tx,
         private AuditLogRepository $log,
         private SignatureStorage $storage,
+        private HrClockRepository $hrClock,
     ) {
     }
 
@@ -231,6 +233,8 @@ final class TimeService
         $validated = $this->repo->validatedDays($day, date('Y-m-d', strtotime($day . ' +1 day')))[$day] ?? null;
         $proposed = [];
         foreach ($this->repo->comps(null, 'proposed') as $c) $proposed[(int) $c['id_employee']][] = $c;
+        // [348] SMS « brak wejścia » envoyés ce jour (HR › grafik tygodnia) ; base avant la migration 207 : aucun.
+        try { $smsSent = $this->hrClock->remindersOn($day); } catch (\PDOException) { $smsSent = []; }
 
         $people = [];
         $counts = ['total' => 0, 'present' => 0, 'open' => 0, 'need_overtime' => 0, 'overtime' => 0, 'absent' => 0, 'need_absence' => 0, 'leave' => 0, 'worked' => 0];
@@ -269,6 +273,7 @@ final class TimeService
                 // [263] Towar zabrany przy wyjściu (odpowiedź « Tak » na tablecie / telefonie) : co.
                 'took' => implode(' · ', array_filter(array_map(fn($k) => $k['took'] === null ? null : ($k['took'] !== '' ? $k['took'] : 'tak'), $c['clocks']))) ?: null,
                 'comp_proposed' => array_map(fn($x) => ['id' => (int) $x['id'], 'day' => $x['day'], 'minutes' => (int) $x['minutes']], $proposed[$id] ?? []),
+                'clock_sms' => $smsSent[$id] ?? null,
             ];
         }
         $rank = ['open' => 0, 'need_overtime' => 1, 'need_absence' => 2, 'ok' => 3];
