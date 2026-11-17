@@ -499,6 +499,8 @@
 .cat-head-bandeau .cat-h--grande .cat-h__top, .cat-head-bandeau .cat-h:not(.cat-h--grande) .cat-h__top { align-items: center; }
 
 .cm-pg .mini.mosaique{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+/* Pleine page : un grand produit, sa promotion dessous */
+.cm-pg .mini.pleine{grid-template-columns:1fr;grid-template-rows:3fr 1fr}.cm-pg .mini.pleine i:last-child{border-color:var(--color-primary)}
 .cm-ent{margin-bottom:6px}
 /* L'image d'une vignette d'offre (médiathèque) et la catégorie manuscrite d'une page. */
 .cm-offre-img{display:flex;align-items:center;gap:8px;margin-top:6px}
@@ -661,14 +663,14 @@ button.cm-pas{cursor:pointer}
 .cm-zoom__x{background:#fff}
 
 /* Une seule rangée de choix (17/11/2026) : les mises en page en dessin, par la place des produits sur la largeur. */
-.cm-lay{grid-template-columns:repeat(6,minmax(0,1fr))}
+.cm-lay{grid-template-columns:repeat(7,minmax(0,1fr))}
 .cm-lay button{padding:7px 4px 6px;gap:2px}
 .cm-lay button .mini{width:30px;height:42px;padding:3px;gap:2px}
 .cm-lay button span{font-size:11.5px;color:var(--color-text);line-height:1.2;text-align:center}
 .cm-lay button small{font-size:10px;color:var(--color-text-muted);text-align:center;line-height:1.2}
 .cm-lay button.on span{color:var(--color-primary)}
 .cm-lay button:disabled{opacity:.4;cursor:default}
-@media (max-width:1280px){.cm-lay{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:1280px){.cm-lay{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 /* Le poids et les allergènes de chaque produit (17/11/2026, obligatoires) ; leur légende à l'avant-dernière page —
    les règles de catalogue-pages.css du Marketing, recopiées. */
@@ -698,3 +700,22 @@ button.cm-pas{cursor:pointer}
 .cm-pg.glisse{opacity:.45}
 .cm-pg.depot-avant{box-shadow:0 -3px 0 0 var(--color-primary)}
 .cm-pg.depot-apres{box-shadow:0 3px 0 0 var(--color-primary)}
+
+/* ---------- pleine page : un seul produit et sa promotion (17/11/2026, la feuille du Marketing) ---------- */
+.cat-full { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 4mm); }
+.cat-full__visual { position: relative; flex: 1 1 0; min-height: 0; display: flex; }
+.cat-full__visual .cat-photo { flex: 1 1 0; min-height: 0; width: 100%; height: 100%; border-radius: calc(var(--u) * 3mm); }
+.cat-full__visual .cat-photo--img { background: #fff; }
+.cat-full__visual .cat-photo--img img { object-fit: contain; }
+.cat-full__badge { position: absolute; top: calc(var(--u) * 3.4mm); left: calc(var(--u) * 3.4mm); z-index: 1; font-size: calc(var(--u) * 5mm); padding: calc(var(--u) * 1.6mm) calc(var(--u) * 3.4mm); }
+.cat-full__text { flex: 0 0 auto; display: grid; gap: calc(var(--u) * 1.8mm); justify-items: center; text-align: center; }
+.cat-full__name { font-size: calc(var(--u) * 9mm); line-height: 1; }
+/* Le produit seul : ses faits et son prix en grand (la vignette de l'offre dessous garde les siens). */
+.cat-full__text .cat-facts { font-size: calc(var(--u) * 3.6mm); gap: calc(var(--u) * 2mm); }
+.cat-full__text .cat-al { width: calc(var(--u) * 4.6mm); height: calc(var(--u) * 4.6mm); }
+.cat-full__text .cat-price { font-size: calc(var(--u) * 10mm); }
+.cat-full__text .cat-old { font-size: calc(var(--u) * 6mm); }
+.cat-full__text .cat-avail { font-size: calc(var(--u) * 3.4mm); }
+.cat-full__offer { flex: 0 0 auto; display: grid; gap: calc(var(--u) * 1.6mm); }
+.cat-full__also { font-weight: 500; font-size: calc(var(--u) * 3mm); letter-spacing: 0.16em; text-transform: uppercase; color: var(--p); }
+.cat-t-C .cat-full__text { text-align: left; justify-items: start; }

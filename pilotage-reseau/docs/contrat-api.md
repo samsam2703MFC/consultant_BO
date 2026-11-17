@@ -5791,6 +5791,16 @@ l'illustration de la catégorie (dessin de sa famille, sinon de la gamme, sinon 
 vignettes ; étape 4 et PDF : le rendu de `CataloguePages.tsx` (`Heading`, `cat-grid--mosaique`). Plus de défilement
 interne (liste des photos de la médiathèque) : la page entière défile.
 
+**Pleine page** (17/11/2026, client : « une possibilité de produit pleine page, 1 seul produit et sa promotion ») :
+`layout: pleine` (1 produit) et le champ de page `product`, le produit que la page montre seul (Marketing v1.8 ;
+seulement avec `pleine`, sinon 422 `pages[i].product`). Le Marketing le réserve à sa page avec sa promotion (la
+première vignette cochée qui le contient) ; sans `product`, le premier de sa catégorie ; absent de la version :
+`PAGE_PRODUCT_MISSING`. Étape 3 : 7e dessin « Pleine page · 1 produit et sa promo », puis la liste « Le premier de la
+catégorie » + les produits choisis de la catégorie, et la ligne « « X » seul sur la page · avec sa promotion « Y » ».
+Passer à une autre mise en page retire `product`. Le dashboard passe au Marketing l'hôte de sa page
+(`X-Forwarded-Host`) : les dessins du document (en-tête, repli des vignettes) s'ouvrent dans le navigateur au lieu de
+pointer vers 127.0.0.1.
+
 **Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
 disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le
 nom de la gamme et son illustration, ensuite catégorie produit (possibilité ou pas en lettres manuscrites), ensuite les

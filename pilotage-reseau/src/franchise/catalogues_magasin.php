@@ -112,6 +112,11 @@ function cmAppel(string $url, string $methode, ?array $corps, string $jeton): ar
     $essai = static function (array $opts = []) use ($url, $methode, $corps, $jeton): array {
         $ch = curl_init($url);
         $h = ['Accept: application/json', 'X-Service-Token: ' . $jeton];
+        // Les dessins du document (en-tête, repli des vignettes) sont des adresses absolues que le Marketing compose avec
+        // l'hôte qu'il voit : l'appel interne lui montrerait 127.0.0.1, que le navigateur ne joint pas. On lui passe celui
+        // de la page du dashboard (MediaService::publicUrl lit X-Forwarded-Host).
+        $hote = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        if (preg_match('/^[A-Za-z0-9.-]+(:\d+)?$/', $hote) === 1) { $h[] = 'X-Forwarded-Host: ' . $hote; }
         $o = [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 25, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_CUSTOMREQUEST => $methode,
             CURLOPT_FOLLOWLOCATION => false];
         if ($corps !== null) {
@@ -140,8 +145,9 @@ function cmAppel(string $url, string $methode, ?array $corps, string $jeton): ar
 
 /**
  * Ne garde du corps que les champs que le Marketing accepte d'une boutique (jamais une boutique, jamais un prix). Les
- * pages intérieures (`pages`) partent telles quelles — {layout, category, template, gamme, text, textNl, filler, header, script,
- * fillerMediaId} : le Marketing les valide champ par champ (422 nommé), y compris la photo d'une autre boutique. Les
+ * pages intérieures (`pages`) partent telles quelles — {layout, category, product, template, gamme, text, textNl, filler, header,
+ * script, fillerMediaId} : le Marketing les valide champ par champ (422 nommé), y compris la photo d'une autre boutique
+ * (`product` : le produit d'une pleine page, `layout: pleine`, 17/11/2026). Les
  * promotions cochées (`offers` : [{type, id, on, mediaId}] — `mediaId` : l'image de la médiathèque de la vignette) et `showAvailability` aussi : une promotion que TFBuddy ne rend pas
  * pour la boutique (celle d'une autre, finie, inconnue) est refusée par le Marketing (422 `offers[i].id`).
  */
