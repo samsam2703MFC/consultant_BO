@@ -81,6 +81,8 @@ try {
     // [279] Szybka notatka (rodzaj, temat, dla kogo, follow-up) : migration 172.
     foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/172_hr_quick_note.sql')) as $sql) $pdo->exec($sql);
     foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/179_hr_clothing_size.sql')) as $sql) $pdo->exec($sql);
+    // [348] Grafik tygodnia et SMS « brak wejścia » (lus par la fiche) : migration 207.
+    foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/207_hr_clock_reminder.sql')) as $sql) $pdo->exec($sql);
 
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active) VALUES (1, 'PIEKARNIA', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, 1)");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost) VALUES (1, 'Jan', 'Testowy', 8000), (2, 'Ewa', 'Testowa', 7000), (3, 'Olek', 'Dawny', 6000)");

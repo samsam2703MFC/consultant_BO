@@ -25,7 +25,8 @@ class WorkshopUiController extends BaseController
 
     public function products()
     {
-        $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+        $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'),
+            'can_toggle' => $this->access->canToggleProducts(user('id') ? (int) user('id') : null)]);
     }
 
     /** Magazyn › Stan magazynu (zakładki Magazyn) : widok « levels » aplikacji kart produktów. */

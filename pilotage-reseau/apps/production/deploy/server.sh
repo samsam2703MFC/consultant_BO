@@ -477,6 +477,8 @@ if [[ -f "$IMPORT_OK" ]]; then
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
   mail_mode="${ERP_MAIL_MODE:-log_only}"
+  # [343] Décision du propriétaire versionnée (deploy/mail_live.cohabitation) : cohabitation → envoi réel.
+  if [[ "$COHAB" == "1" && -f "$SRC/deploy/mail_live.cohabitation" ]]; then mail_mode="live"; fi
   # Cohabitation : base réelle de l'atelier — envoi réel possible, seulement sur demande explicite (ERP_MAIL_MODE=live).
   if [[ "$COHAB" == "1" && "$mail_mode" == "live" ]]; then :;
   else [[ "$mail_mode" == "redirect" || "$mail_mode" == "log_only" ]] || mail_mode="log_only"; fi
@@ -488,6 +490,8 @@ if [[ -f "$IMPORT_OK" ]]; then
 # ERP /production — e-mails automatiques (écrit par apps/production/deploy/server.sh)
 */5 * * * * ${CRON_RUN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
 */5 * * * * ${CRON_RUN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
+# Odpowiedzi na adresy ERP (accounting@, logistyka@, produkcja@ — Konfiguracja poczty e-mail)
+*/5 * * * * ${CRON_RUN} Bin/communication_imap_sync.php >> /var/log/production-erp-mail.log 2>&1
 # Prognoza 13 tygodni : gamy i sprzedaż sklepów z panelu TF Buddy (GET), raz w tygodniu (po poniedziałku 6:00)
 10 6 * * * ${CRON_RUN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
 # Zadania stanowisk : zadania automatyczne (cron), zaliczenie po kreatorach, przypomnienia i przełożeni
@@ -498,6 +502,8 @@ ${poller_line}
 5 18 * * * ${CRON_RUN} Bin/hr_month_summary.php >> /var/log/production-erp-mail.log 2>&1
 # HR : rappel des follow-ups ouverts dans la cloche du responsable (à partir du terme), chaque matin
 10 7 * * * ${CRON_RUN} Bin/hr_followups.php >> /var/log/production-erp-mail.log 2>&1
+# HR : SMS « brak wejścia » (grafik tygodnia, karta pracownika) — chaque minute, un SMS par personne et par jour au plus
+* * * * * ${CRON_RUN} Bin/hr_clock_reminder.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log

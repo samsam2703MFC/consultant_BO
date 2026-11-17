@@ -30,6 +30,7 @@ class DashboardController extends BaseController
         private \App\Repositories\Workshop\TimeRepository $time,
         private GroupWeekProfitService $groupWeeks,
         private \App\Services\Organization\PageAccessService $access,
+        private \App\Services\Workshop\Supply\InvoiceService $invoices,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -102,6 +103,14 @@ class DashboardController extends BaseController
         $data['hide_todo'] = ($week['user']['position_code'] ?? null) === 'ADMINISTRACJA';
         // [285] Minuty zadań (przydziela administrator, makieta 39) widzi tylko administrator — pracownik widzi swoje zadania.
         // Na razie także administrator w sesji stanowiska (widok operatora) ich nie widzi.
+        // [349] Przycisk asystenta « Ceny z faktur zakupu » : czerwony (pozycje do sprawdzenia / faktury do zatwierdzenia)
+        // albo zielony — dla osób z dostępem do Zaopatrzenia.
+        $data['invoice_assistant'] = null;
+        try {
+            if ($userId && $this->access->canSee($userId, '/workshop/supply')) $data['invoice_assistant'] = $this->invoices->assistantStatus();
+        } catch (\Throwable $e) {
+            error_log('[today] invoice assistant: ' . $e->getMessage());
+        }
         $data['show_minutes'] = $this->access->showTaskMinutes($userId);
         if (!$data['show_minutes'] && is_array($data['week'])) $data['week'] = self::withoutMinutes($data['week']);
         $this->view('dashboard/dashboard', $data);

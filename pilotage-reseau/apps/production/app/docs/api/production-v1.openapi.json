@@ -9640,6 +9640,66 @@
                 "x-permission": "prod.supply.read"
             }
         },
+        "/supply/invoices/assistant-status": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Stan asystenta « Ceny z faktur zakupu » / État de l'assistant des prix d'achat",
+                "operationId": "getInvoicePriceAssistantStatus",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceAssistantStatus"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[349] Bouton rouge / vert : lignes à vérifier (todo), factures prêtes à valider (ready, prix pas encore dans les fiches), litigieuses, plus ancienne date en attente, dernière validation (last_done). done = rien à vérifier ni à valider.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
         "/supply/invoices/wizard/check-safe": {
             "post": {
                 "tags": [
@@ -12700,6 +12760,78 @@
                                 36
                             ],
                             "description": "défaut : 24"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/materials/{id}/price-impact": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Efekt nowej ceny surowca / Effet d'un nouveau prix matière",
+                "operationId": "getMaterialPriceImpact",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaterialPriceImpact"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[349] Query : price (zł / unité de base, obligatoire), old (prix de base, sinon fiche), invoice (facture exclue de « dernière facture »), supplier (exclu des « autres fournisseurs »). Produits avec la matière dans la recette (coût / pièce, marge sur matières avant / après, effet / mois sur 3 mois de commandes), dernière facture, meilleur autre fournisseur 90 jours.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
                         }
                     },
                     {
@@ -35836,6 +35968,65 @@
                     "force": {
                         "type": "boolean",
                         "description": "valider malgré les avertissements (facture seule)"
+                    }
+                }
+            },
+            "InvoiceAssistantStatus": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "invoices": {
+                        "type": "integer"
+                    },
+                    "todo": {
+                        "type": "integer"
+                    },
+                    "ready": {
+                        "type": "integer"
+                    },
+                    "disputed": {
+                        "type": "integer"
+                    },
+                    "oldest": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "done": {
+                        "type": "boolean"
+                    },
+                    "last_done": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "MaterialPriceImpact": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "new_price": {
+                        "type": "number"
+                    },
+                    "old_price": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "change_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "effect_month": {
+                        "type": "number"
+                    },
+                    "use_month": {
+                        "type": "number"
                     }
                 }
             },

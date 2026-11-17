@@ -1004,6 +1004,19 @@
         + (p.prices_kept && p.prices_kept.length ? ' ' + t('inv.prices_kept', {list: p.prices_kept.join(', ')}) : '')
         + (p.prices_held && p.prices_held.length ? ' ' + t('inv.prices_held', {list: p.prices_held.join(', ')}) : '');
 
+    // [349] Przycisk asystenta « Ceny z faktur zakupu » : czerwony (pozycje do sprawdzenia, faktury do zatwierdzenia), zielony (zrobione).
+    async function paintAssistant(btn) {
+        if (!btn) return;
+        let st;
+        try { st = await api.get('/supply/invoices/assistant-status'); } catch (err) { return; }
+        if (!btn.isConnected) return;
+        const d2 = (v) => v ? `${v.slice(8, 10)}.${v.slice(5, 7)}` : '';
+        const sub = st.done ? (st.last_done ? t('kw.btn.done_at', {d: d2(st.last_done), h: st.last_done.slice(11, 16)}) : t('kw.btn.nothing'))
+            : [st.todo ? t('kw.btn.todo', {n: st.todo}) : '', st.ready ? t('kw.btn.ready', {n: st.ready}) : '', st.oldest ? t('kw.btn.since', {d: d2(st.oldest)}) : ''].filter(Boolean).join(' · ');
+        btn.className = `at-asst-btn ${st.done ? 'is-done' : 'is-todo'}`;
+        btn.innerHTML = `<span class="ic">${st.done ? '✓' : '!'}</span><span>${esc(st.done ? t('kw.btn.done') : t('kw.btn.title'))}<small>${esc(sub)}</small></span>`;
+    }
+
     function bindInvoices() {
         const d = data.invoices;
         el.querySelectorAll('[data-istatus]').forEach(b => b.addEventListener('click', () => { state.istatus = b.dataset.istatus; load(); }));
@@ -1012,6 +1025,7 @@
         el.querySelector('[data-rules]').addEventListener('click', (e) => { e.preventDefault(); state.inv = 'rules'; load(); });
         el.querySelector('[data-mappings]')?.addEventListener('click', (e) => { e.preventDefault(); openInvoice('map'); });
         el.querySelector('[data-wizard]')?.addEventListener('click', (e) => { e.preventDefault(); openInvoice('wizard'); });
+        paintAssistant(el.querySelector('[data-wizard]'));
         el.querySelectorAll('[data-classify]').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); classify(Number(b.dataset.classify), b.dataset.action); }));
         el.querySelectorAll('[data-to-goods]').forEach(b => b.addEventListener('click', (e) => {
             e.stopPropagation();

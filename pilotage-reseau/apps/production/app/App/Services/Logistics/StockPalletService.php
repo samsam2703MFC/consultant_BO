@@ -61,8 +61,8 @@ final class StockPalletService
             'groups' => $groups,
             'expiring' => $expiring,
             'expiry_days' => self::EXPIRY_DAYS,
-            'building' => array_map([$this, 'card'], $building),
-            'ready' => array_map([$this, 'card'], $ready),
+            'building' => $this->withOrders(array_map([$this, 'card'], $building)),
+            'ready' => $this->withOrders(array_map([$this, 'card'], $ready)),
             'building_cartons' => (int) array_sum(array_column($building, 'cartons')),
             'ready_cartons' => (int) array_sum(array_column($ready, 'cartons')),
             'shipped' => $shipped,
@@ -82,7 +82,7 @@ final class StockPalletService
             'expires' => self::date($r['expires']), 'cartons' => (int) $r['cartons'],
         ], $this->repo->composition($id));
         $dep = $this->repo->departures([[(string) $p['delivery_date'], (int) $p['id_customer']]])[0] ?? null;
-        $card = $this->card($p);
+        $card = $this->withOrders([$this->card($p)])[0];
         $card['lines'] = $lines;
         $card['layers'] = self::layers($lines);
         $card['vehicle'] = $dep['vehicle'] ?? null;
@@ -152,6 +152,12 @@ final class StockPalletService
      * Une partie (produit + jour d'étiquette) : palettes et clients, cartons encore au magasin. Sans jour : les derniers
      * jours de fabrication du produit (le plus récent est choisi).
      */
+    /** [350] Produkty z kartonami (lista wyboru śledzenia partii). */
+    public function traceProducts(): array
+    {
+        return $this->repo->productsWithCartons();
+    }
+
     public function trace(int $productId, ?string $madeOn = null): ?array
     {
         $name = $this->repo->productName($productId);
@@ -222,6 +228,15 @@ final class StockPalletService
     }
 
     /** Carte d'une palette (colonnes, suivi de partie). */
+    /** [346] Winieta palety : zamówienie(a) klienta na dzień wysyłki palety (puste = brak zamówienia). */
+    private function withOrders(array $cards): array
+    {
+        $map = $this->repo->ordersForPallets(array_map(fn($c) => [$c['id_customer'], substr($c['delivery_date'], 0, 10)], $cards));
+        foreach ($cards as &$c) $c['orders'] = $map[$c['id_customer'] . '|' . substr($c['delivery_date'], 0, 10)] ?? [];
+        unset($c);
+        return $cards;
+    }
+
     private function card(array $p): array
     {
         $status = (int) $p['status'];

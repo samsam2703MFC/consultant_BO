@@ -36,7 +36,7 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['final_product', 'production_sections', 'carton_stock', 'carton_pallet_connection', 'palets_delivery', 'customer',
-                 'n_shipping_assignment', 'carrier_vehicle', 'n_delivery_run', 'n_delivery_stop'] as $table) {
+                 'n_shipping_assignment', 'carrier_vehicle', 'n_delivery_run', 'n_delivery_stop', 'customer_order'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -68,6 +68,11 @@ try {
     $pdo->exec("INSERT INTO n_delivery_run (ship_date, id_carrier_vehicle, started_at) VALUES ('2026-11-10', 7, '2026-11-10 06:40:00')");
     $pdo->exec("INSERT INTO n_delivery_stop (ship_date, id_customer, status, recorded_at) VALUES ('2026-11-10', 53, 'delivered', '2026-11-10 15:10:00')");
 
+    // [346] Zamówienia : A na 16.11 (dwa : #71 i #72, #73 zarchiwizowane), B — brak na 17.11 (zamówienie na inny dzień).
+    $pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shipping_date, create_order_date) VALUES
+        (71, 51, 1, '2026-11-16', '2026-11-10'), (72, 51, 1, '2026-11-16 00:00:00', '2026-11-11'), (73, 51, 5, '2026-11-16', '2026-11-09'),
+        (74, 52, 1, '2026-11-20', '2026-11-12')");
+
     $svc = new StockPalletService(new StockPalletRepository($pdo));
     $today = new DateTimeImmutable('2026-11-16');
     $o = $svc->overview('', null, null, null, $today);
@@ -88,6 +93,8 @@ try {
     expectSp($o['building'][0]['first_at'] === '2026-11-16 08:10:00', 'en préparation : premier carton posé');
     expectSp(array_column($o['ready'], 'code') === ['P-2'] && $o['ready'][0]['customer'] === 'Klient B', 'prête : P-2 (Klient B)');
     expectSp($o['building_cartons'] === 2 && $o['ready_cartons'] === 1, 'cartons des colonnes');
+    expectSp($o['building'][0]['orders'] === [71, 72], '[346] P-1 : zamówienia #71 + #72 (A, 16.11 ; zarchiwizowane pominięte)');
+    expectSp($o['ready'][0]['orders'] === [], '[346] P-2 : brak zamówienia B na 17.11');
 
     // --- Palettes parties (31 jours) : le 10.11 seulement, camion et départ de la tablette chauffeur
     expectSp($o['shipped']['total'] === 2 && $o['shipped']['customers'] === 2 && count($o['shipped']['days']) === 1, 'parties : 2 palettes, 2 clients, 1 jour (septembre exclu)');

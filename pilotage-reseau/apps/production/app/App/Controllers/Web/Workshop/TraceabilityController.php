@@ -12,10 +12,13 @@ use App\Repositories\Workshop\ParamRepository;
  * i opakowań (numer, data przydatności, zdjęcie etykiety) ; wyszukiwanie po numerze partii wyrobu
  * lub surowca (wycofanie z rynku : w których partiach wyrobu jest dana partia surowca) ; dokąd poszła partia
  * (P22) : kartony produktu oklejone w dniu produkcji (+ trace.label_days), palety, klienci, WZ.
+ * [350] Śledzenie partii (produkt + dzień produkcji z etykiety : palety, klienci, kartony w magazynie) — tutaj, w Produkcji
+ * (wcześniej w Logistyka › Stany i palety) : ?product=&made=.
  */
 class TraceabilityController extends BaseController
 {
-    public function __construct(private OutputRepository $outputs, private GroupRepository $groups, private ParamRepository $params)
+    public function __construct(private OutputRepository $outputs, private GroupRepository $groups, private ParamRepository $params,
+                                private \App\Services\Logistics\StockPalletService $pallets)
     {
     }
 
@@ -67,7 +70,16 @@ class TraceabilityController extends BaseController
         foreach ($recall as &$c) { $c['dates'] = array_keys($c['dates']); sort($c['dates']); $c['products'] = array_keys($c['products']); }
         unset($c);
         usort($recall, fn($a, $b) => $b['cartons'] <=> $a['cartons']);
-        $this->view('workshop/traceability', [
+        // [350] Śledzenie partii : produkt + dzień produkcji (etykieta kartonu) → palety, klienci, stan.
+        $traceProduct = (int) ($_GET['product'] ?? 0) ?: null;
+        $traceDay = $valid($_GET['made'] ?? null) ? $_GET['made'] : null;
+        $lot = ['trace' => null, 'trace_products' => []];
+        try {
+            $lot = ['trace' => $traceProduct ? $this->pallets->trace($traceProduct, $traceDay) : null, 'trace_products' => $this->pallets->traceProducts()];
+        } catch (\Throwable $e) {
+            error_log('[traceability] lot: ' . $e->getMessage());
+        }
+        $this->view('workshop/traceability', $lot + [
             'rows' => $rows, 'from' => $from, 'to' => $to, 'group' => $groupId, 'q' => $search, 'error' => $error,
             'groups' => $this->groups->list(true), 'recall' => $recall, 'label_days' => $labelDays ?? 1,
             'totals' => [

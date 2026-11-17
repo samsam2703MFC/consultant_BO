@@ -93,6 +93,9 @@ class OrderController extends BaseController
             'in_transit' => CustomerOrderStatus::IN_TRANSIT,
             'archived' => CustomerOrderStatus::ARCHIVED,
         ];
+        $data['order_notice'] = $_SESSION['order_notice'] ?? null;
+        $data['order_notice_link'] = $_SESSION['order_notice_link'] ?? null;
+        unset($_SESSION['order_notice'], $_SESSION['order_notice_link']);
         $this->view("client/order/overview", $data);
     }
 
@@ -309,6 +312,17 @@ class OrderController extends BaseController
                     }
                     if (!empty($result['supplement_id'])) {
                         $this->supplementPusherService->push((int)$result['supplement_id']);
+                    }
+                    // [340] Nieopłacona proforma ze wszystkimi pozycjami zamówienia (nowa, gdy zamówienie się zmieniło).
+                    try {
+                        $new = $this->orderService->refreshUnpaidProformaIfStale((int) $id);
+                        if ($new !== null) {
+                            $_SESSION['order_notice'] = "Proforma zaktualizowana do zamówienia #" . (int) $id . " : nowa proforma {$new['number']} (poprzednia anulowana).";
+                            // [344] Od razu : wyślij nową proformę klientowi.
+                            $_SESSION['order_notice_link'] = ['label' => 'Wyślij nową proformę klientowi', 'url' => '/communication/compose/proforma/' . (int) $new['id']];
+                        }
+                    } catch (\Throwable $e) {
+                        $_SESSION['order_notice'] = "Zamówienie #" . (int) $id . " zapisane, ale proformy nie udało się zaktualizować : " . $e->getMessage() . ". Użyj « Wygeneruj nową proformę » na liście zamówień.";
                     }
                     header('Location: ' . ROOT . '/client-orders');
                     exit;

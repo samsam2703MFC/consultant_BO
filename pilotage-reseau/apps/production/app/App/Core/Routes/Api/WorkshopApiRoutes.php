@@ -180,6 +180,7 @@ final class WorkshopApiRoutes
             ['PUT', '/supply/buy/materials/{id:\d+}/suppliers', BuyController::class, 'saveSuppliers', 'prod.supply.write'],
             ['GET', '/supply/invoices', InvoiceController::class, 'list', 'prod.supply.read'],
             ['GET', '/supply/invoices/wizard', InvoiceController::class, 'wizard', 'prod.supply.read'],
+            ['GET', '/supply/invoices/assistant-status', InvoiceController::class, 'assistantStatus', 'prod.supply.read'],
             ['POST', '/supply/invoices/wizard/check-safe', InvoiceController::class, 'checkSafe', 'prod.supply.write'],
             ['POST', '/supply/invoices/wizard/process', InvoiceController::class, 'processChecked', 'prod.supply.write'],
             ['POST', '/supply/invoices/{id:\d+}/lines/{lineId:\d+}/check', InvoiceController::class, 'checkLine', 'prod.supply.write'],
@@ -221,6 +222,7 @@ final class WorkshopApiRoutes
             ['DELETE', '/supply/mappings/{id:\d+}', InvoiceController::class, 'deleteMapping', 'prod.supply.write'],
             ['GET', '/supply/prices', InvoiceController::class, 'prices', 'prod.supply.read'],
             ['GET', '/supply/materials/{id:\d+}/prices', InvoiceController::class, 'materialPrices', 'prod.supply.read'],
+            ['GET', '/supply/materials/{id:\d+}/price-impact', InvoiceController::class, 'priceImpact', 'prod.supply.read'],
             // Jednostka surowca z formularza przypisania faktury (kg / g / szt / l / ml) — od razu na karcie surowca.
             ['PATCH', '/supply/materials/{id:\d+}/unit', InvoiceController::class, 'changeMaterialUnit', 'prod.supply.write'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],

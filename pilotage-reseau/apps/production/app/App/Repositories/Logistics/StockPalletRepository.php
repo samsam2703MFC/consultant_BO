@@ -62,6 +62,26 @@ final class StockPalletRepository extends WorkshopRepository
             ORDER BY pd.delivery_date, pd.id_palet DESC", $params);
     }
 
+    /**
+     * [346] Zamówienia do palet : ten sam klient i ta sama data wysyłki (zamówienie nie zarchiwizowane).
+     * @param list<array{0:int,1:string}> $pairs [id_customer, data]
+     * @return array<string, list<int>> "klient|data" => numery zamówień
+     */
+    public function ordersForPallets(array $pairs): array
+    {
+        $pairs = array_values(array_filter($pairs, fn($p) => $p[0] > 0 && $p[1] !== ''));
+        if (!$pairs) return [];
+        $customers = array_values(array_unique(array_map(fn($p) => (int) $p[0], $pairs)));
+        $dates = array_values(array_unique(array_map(fn($p) => substr((string) $p[1], 0, 10), $pairs)));
+        $rows = $this->all('SELECT id, id_customer, DATE(expected_shipping_date) AS d FROM customer_order
+            WHERE status <> 5 AND id_customer IN (' . implode(',', array_fill(0, count($customers), '?')) . ')
+              AND DATE(expected_shipping_date) IN (' . implode(',', array_fill(0, count($dates), '?')) . ')
+            ORDER BY id', array_merge($customers, $dates));
+        $out = [];
+        foreach ($rows as $r) $out[(int) $r['id_customer'] . '|' . $r['d']][] = (int) $r['id'];
+        return $out;
+    }
+
     /** Palettes parties depuis $from : par jour et client (nombre de palettes, cartons). */
     public function shippedSince(string $from, ?string $client = null): array
     {

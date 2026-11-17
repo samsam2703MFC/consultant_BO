@@ -90,3 +90,15 @@
 2026-11-17 06:28:38 Assistant IA : la réponse en PDF, tableau du manuel par le Professeur
 2026-11-17 06:51:42 Assistant : le portrait du Coach Vente
 2026-11-17 07:01:35 Coach Vente : prix face à la concurrence, bundles sur points forts et faibles
+2026-11-17T07:46:37Z [338] Nowe zamówienie : chevauchements
+2026-11-17T07:59:35Z [339] Produits et catégories : activer / désactiver
+2026-11-17T08:09:14Z [340] Proforma à jour après modification de la commande
+2026-11-17T08:32:57Z [341] Un compte d'envoi par usage
+2026-11-17T08:37:34Z [342] Réception des réponses toutes les 5 minutes
+2026-11-17T08:40:02Z [343] Cohabitation : envoi réel des e-mails
+2026-11-17T08:54:48Z [344] Proforma : renvoyer
+2026-11-17T09:13:42Z [345] Poczta par profil
+2026-11-17T09:20:58Z [346] Palette : commande et livraison
+- 2026-11-17T09:39:31Z [347] Poczta : choix d'une boîte déjà configurée
+- 2026-11-17T10:13:20Z [349] prix des factures d'achat (bouton, effet) + [348] horaire et SMS brak wejścia
+- 2026-11-17T10:59:19Z [350] Śledzenie partii dans Produkcja › Partie i identyfikowalność
