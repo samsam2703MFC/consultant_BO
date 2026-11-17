@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Hr;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
+use App\Services\Hr\ClockReminderService;
 use App\Services\Hr\ContractTemplateService;
 use App\Services\Hr\HrQuickNoteService;
 use App\Services\Hr\HrService;
@@ -22,7 +23,7 @@ final class HrController extends BaseController
     use JsonErrors;
 
     public function __construct(private HrService $hr, private PageAccessService $access, private ContractTemplateService $templates,
-        private HrQuickNoteService $quick, private HrSuccessionService $succession)
+        private HrQuickNoteService $quick, private HrSuccessionService $succession, private ClockReminderService $clock)
     {
     }
 
@@ -69,6 +70,12 @@ final class HrController extends BaseController
     public function save($id)
     {
         return $this->guarded(fn() => $this->hr->save((int) $id, $this->input(), $this->userId(), $this->canPay()));
+    }
+
+    /** [348] Grafik tygodnia i przypomnienie o wejściu : zapis osobny (mêmes droits que la fiche). */
+    public function saveSchedule($id)
+    {
+        return $this->guarded(fn() => $this->clock->save((int) $id, $this->input(), $this->userId()));
     }
 
     /** [288] Zostało urlopu (korekta salda) — tableau des employés actifs. */

@@ -16,7 +16,7 @@ final class ClientMessageLogService
     public const CHANNELS = ['' => 'E-maile i SMS', 'email' => 'Tylko e-maile', 'sms' => 'Tylko SMS'];
     public const PERIODS = ['3m' => 'Ostatnie 3 miesiące', '12m' => 'Ostatnie 12 miesięcy', 'all' => 'Wszystkie'];
     private const LIMIT = 300;
-    private const SMS_KINDS = ['delivery_notice' => 'Informacja o dostawie', 'payment_reminder' => 'Przypomnienie o płatności', 'hr_note' => 'Notatka HR', 'test' => 'SMS próbny', 'other' => 'SMS'];
+    private const SMS_KINDS = ['delivery_notice' => 'Informacja o dostawie', 'payment_reminder' => 'Przypomnienie o płatności', 'hr_note' => 'Notatka HR', 'clock_reminder' => 'HR : brak wejścia (grafik)', 'test' => 'SMS próbny', 'other' => 'SMS'];
     private const EXTRA_KINDS = ['mailbox' => 'Poczta (wiadomość napisana)', 'task_reminder' => 'Przypomnienie zadania', 'supplier_order' => 'Zamówienie u dostawcy'];
 
     public function __construct(private ClientMessageLogRepository $repo) {}

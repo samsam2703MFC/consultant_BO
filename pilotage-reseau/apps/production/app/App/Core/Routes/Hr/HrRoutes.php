@@ -18,6 +18,8 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/ajax/hr/people/{id:\d+}', ['controller' => $c, 'method' => 'card']);
     $r->addRoute('PUT', '/ajax/hr/people/{id:\d+}', ['controller' => $c, 'method' => 'save']);
     $r->addRoute('PUT', '/ajax/hr/people/{id:\d+}/leave', ['controller' => $c, 'method' => 'saveLeave']);
+    // [348] Grafik tygodnia i SMS « brak wejścia »
+    $r->addRoute('PUT', '/ajax/hr/people/{id:\d+}/schedule', ['controller' => $c, 'method' => 'saveSchedule']);
     $r->addRoute('POST', '/ajax/hr/people/{id:\d+}/documents', ['controller' => $c, 'method' => 'upload']);
     $r->addRoute('POST', '/ajax/hr/people/{id:\d+}/notes', ['controller' => $c, 'method' => 'addNote']);
     $r->addRoute('DELETE', '/ajax/hr/documents/{id:\d+}', ['controller' => $c, 'method' => 'deleteDocument']);
