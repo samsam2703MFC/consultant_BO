@@ -42,6 +42,15 @@ L'or est relatif au produit cliqué : le plus doré est le meilleur partenaire d
 simulateur remplace-t-il « Les couples proposés » ou vit-il à côté (montré : deux onglets) ? Les tuiles : les 26 produits
 les plus vendus et ceux à 78 % et plus (montré), ou tout le catalogue avec une recherche ?
 
+### Version légère (17/11/2026, « plus lean, moins lourd, refaire l'UX ») — `sl-a-avant.png`, `sl-b-couple.png`
+
+Une ligne d'en-tête (le titre, le produit cliqué, la légende noir → or, « Proposés | Simulateur ») ; les produits en
+**pastilles**, une ligne par famille, sans chiffres avant le clic ; après le clic, chaque pastille prend sa couleur et ses
+points de marge (+22), la même famille passe en pointillé. À droite, un seul panneau : le couple, le prix (− / +), une
+petite **jauge du coefficient avec la marge du ticket dessus** (×4,42, marge du ticket 77,4 % ; le trait gris : le produit
+seul ×2,23), trois chiffres (+22,3 pts, +2,08 € par ticket, +330 € par mois) et « Préparer la fiche ». Plus de bulle du
+coach, de liste des meilleurs, de bloc de quatre tuiles. `python3 generer_simulateur_lean.py` refait les deux écrans.
+
 ## La fiche, le lancement, l'équipe (écrans A, B, C)
 
 Les écrans A et B sont posés sur l'onglet Promotions **en ligne** (Halle) : la carte « Où les promotions sont utilisées »
