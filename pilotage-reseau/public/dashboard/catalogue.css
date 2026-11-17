@@ -643,4 +643,19 @@ button.cm-pas{cursor:pointer}
 @media (max-width:820px){
   .cm-et5,.cm-recu__pas,.cm-modes,.cm-imp3,.cm-diff,.cm-rep{grid-template-columns:1fr}
 }
-.cm-import{display:inline-flex;align-items:center;margin-left:6px}.cm-import.off{opacity:.5;pointer-events:none}
+
+/* L'aperçu de chaque page à l'étape 3 (17/11/2026) : la page composée, à la place du schéma ; un clic l'agrandit. */
+.cm-pg.cm-pg--ap{grid-template-columns:24px 132px minmax(0,1fr) auto;align-items:start;row-gap:10px}
+.cm-pg.cm-pg--ap .no{padding-top:6px;grid-row:1 / span 2}
+.cm-pg.cm-pg--ap .cm-ap{grid-row:1 / span 2}
+.cm-pg.cm-pg--ap .cm-pg-c{grid-column:3;grid-row:1}
+.cm-pg.cm-pg--ap .ctl{grid-column:3 / span 2;grid-row:2}
+.cm-pg.cm-pg--ap .mv{grid-column:4;grid-row:1}
+.cm-ap{all:unset;cursor:zoom-in;display:block;border-radius:3px;transition:box-shadow .15s}
+.cm-ap:hover{box-shadow:0 0 0 2px var(--color-primary)}
+.cm-ap .cm-feuille{pointer-events:none}
+.cm-zoom{position:fixed;inset:0;z-index:80;background:rgba(24,18,20,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;cursor:zoom-out}
+.cm-zoom__in{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;max-height:calc(100vh - 110px);overflow:auto}
+.cm-zoom__p{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-size:12px}
+.cm-zoom__p .cm-ap{cursor:zoom-out}
+.cm-zoom__x{background:#fff}
