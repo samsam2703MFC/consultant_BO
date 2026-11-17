@@ -2777,6 +2777,17 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .kw-check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; } .kw-check input { width: 18px; height: 18px; }
 .kw-conv { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; } .kw-in { width: 90px; min-height: 40px; border: 1px solid var(--at-line-2); border-radius: 8px; padding: 0 8px; font-weight: 700; text-align: right; background: #fff; }
 .kw-price { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; } .kw-price b { text-align: right; font-variant-numeric: tabular-nums; }
+/* [349] Efekt ceny z faktury (makieta 65) */
+.kw-impact { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--at-line, #ece6e0); }
+.kw-impact h6 { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); margin: 12px 0 6px; }
+.kw-imp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.kw-imp-tiles > div { background: #faf7f4; border-radius: 10px; padding: 8px 10px; }
+.kw-imp-tiles span { display: block; font-size: 12px; color: var(--at-muted); }
+.kw-imp-tiles b { font-size: 17px; font-variant-numeric: tabular-nums; } .kw-imp-tiles b small { font-size: 12px; font-weight: 400; }
+.kw-imp-tiles small { display: block; font-size: 11px; color: var(--at-muted); }
+.kw-imp-tiles .up b { color: #b42318; } .kw-imp-tiles .down b { color: #1f7a3a; }
+.kw-imp-t td small { display: block; color: var(--at-muted); font-size: 11px; } .kw-imp-t tr.tot td { border-top: 1px solid var(--at-line, #ece6e0); }
+@media (max-width: 991.98px) { .kw-imp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kw-up { color: #8e1f2f; font-weight: 700; } .kw-down { color: #1f5a37; font-weight: 700; }
 .kw-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
 .kw-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 10px; font-weight: 600; border: 1px solid var(--at-line-2); background: #fff; color: var(--at-text); white-space: nowrap; }
@@ -4147,3 +4158,9 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .otw-cks { display: flex; flex-wrap: wrap; }
 .otw-cbtn { display: inline-flex; gap: 8px; margin-left: auto; }
 @media (max-width: 700px) { .otw-coop { grid-template-columns: 1fr; } }
+/* [349] Przycisk asystenta (czerwony = do zrobienia, zielony = zrobione) — Dzisiaj, Zaopatrzenie › Faktury */
+.at-asst-btn { display: inline-flex; align-items: center; gap: 9px; border-radius: 10px; padding: 6px 12px; font-weight: 600; font-size: 13px; line-height: 1.25; color: #fff; text-decoration: none; }
+.at-asst-btn small { display: block; font-weight: 400; font-size: 11px; opacity: .92; }
+.at-asst-btn .ic { width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .2); display: grid; place-items: center; font-size: 13px; flex: none; }
+.at-asst-btn.is-todo { background: #b42318; } .at-asst-btn.is-done { background: #1f7a3a; }
+.at-asst-btn:hover, .at-asst-btn:focus { color: #fff; filter: brightness(1.08); }

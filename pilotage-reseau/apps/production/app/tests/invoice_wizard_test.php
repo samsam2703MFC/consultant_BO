@@ -133,6 +133,27 @@ try {
     // Słód : podwyżka ujawniona przez przypisanie — przypisanie zostaje, linia czeka na decyzję o cenie (bez sprawdzenia).
     $malt = $line($m1, 'SŁÓD');
     expectWizError(fn() => $svc->checkLine($m1['id'], $malt['id'], ['action' => 'check', 'raw_material_id' => 901], $ctx), 'INVOICE_PRICE_UP_PENDING', 'price up needs a decision');
+
+    // [349] Przycisk asystenta : czerwony (pozycje do sprawdzenia, M/2 gotowa do zatwierdzenia).
+    $st = $svc->assistantStatus();
+    expectWiz(!$st['done'] && $st['todo'] >= 1 && $st['ready'] === 1 && $st['invoices'] === 2 && $st['oldest'] !== null && $st['last_done'] === null, 'assistant status: red (lines to check, one invoice ready)');
+    // [349] Efekt ceny słodu : produkt z 500 g słodu na karton (10 szt.), 30 kartonów w 3 mies., cena 20 EUR × 4,3 ; koszt surowców 30 zł.
+    $pdo->exec("INSERT INTO erp_company_other_settings (id, exchange_rate_euro) VALUES (1, 4.3)");
+    $pdo->exec("INSERT INTO final_product (id, name, id_recipe, ppc, standard_price, pre_calculated_raw_price_per_carton, active) VALUES (5001, 'Chleb słodowy', 77, 10, 20, 30, 1), (5002, 'Stary chleb', 78, 10, 20, 30, 0)");
+    $pdo->exec("INSERT INTO flattened_recipe_ingredient (recipe_id, material_id, quantity) VALUES (77, 901, 500), (78, 901, 900)");
+    $pdo->exec("INSERT INTO customer_order (id, expected_shipping_date) VALUES (601, CURDATE() - INTERVAL 10 DAY)");
+    $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton) VALUES (601, 5001, 30)");
+    $impact = $c->get(App\Services\Workshop\Supply\InvoicePriceImpactService::class);
+    $im = $impact->impact(901, 0.0058, 0.0052, $m1['id'], 7);
+    $pr = $im['products'][0] ?? null;
+    expectWiz($im['products_count'] === 1 && $pr['id'] === 5001, 'impact: only the active product with malt');
+    expectWiz(abs($pr['delta_carton'] - 0.30) < 1e-6 && abs($pr['delta_piece'] - 0.03) < 1e-6 && abs($pr['cartons_month'] - 10.0) < 1e-6, 'impact: +0.30 zł / carton, +0.03 zł / piece, 10 cartons / month');
+    expectWiz(abs($pr['margin_before'] - 65.1) < 0.05 && abs($pr['margin_after'] - 64.8) < 0.05, 'impact: margin on materials 65.1 → 64.8 %');
+    expectWiz(abs($im['effect_month'] - 3.0) < 1e-6 && abs($im['use_month'] - 5000) < 1e-6 && abs($im['change_pct'] - 11.54) < 0.01, 'impact: +3 zł / month, 5 kg / month, +11.5 %');
+    expectWiz($im['last_invoice'] === null && $im['other_best'] === null, 'impact: no other invoice nor other supplier yet');
+    $pdo->exec("INSERT INTO raw_material_price_changelog (id_raw_material, id_supplier, pack_price, package_size_in_base_unit, timestamp) VALUES (901, 8, 50, 10000, NOW() - INTERVAL 5 DAY)");
+    $im = $impact->impact(901, 0.0058, 0.0052, $m1['id'], 7);
+    expectWiz($im['other_best'] !== null && abs($im['other_best']['price'] - 0.005) < 1e-9 && $im['other_best']['supplier'] === 'Hurtownia inna', 'impact: cheaper other supplier (5,00 zł/kg) shown');
     $malt = $line($inv($svc->wizard($ctx), 'M/1'), 'SŁÓD');
     expectWiz($malt['material']['id'] === 901 && $malt['state'] === 'todo' && $malt['reason'] === 'price' && $malt['check'] === null && $malt['up']['decision'] === null, 'malt mapped, waiting for the price decision');
     $w = $svc->checkLine($m1['id'], $malt['id'], ['action' => 'check', 'price' => 'accept'], $ctx);
@@ -166,6 +187,9 @@ try {
     expectWizError(fn() => $svc->checkLine($m2['id'], $m2['lines'][0]['id'], ['action' => 'nope'], $ctx), 'VALIDATION_FAILED', 'unknown action');
 
     // --- Krok 3 : zatwierdzenie (ceny, przyjęcie z faktury, akceptacja)
+    // [349] Efekt nowej ceny słodu w planie (zużycie 5 kg / mies. × 0,60 zł/kg = 3 zł / mies.).
+    $pm = array_values(array_filter($inv($svc->wizard($ctx), 'M/1')['plan']['prices'], fn($p) => $p['raw_material_id'] === 901))[0];
+    expectWiz(abs($pm['effect_month'] - 3.0) < 0.01, 'step 3: malt price effect +3 zł / month');
     $r = $svc->processChecked(['ids' => [$m1['id'], $m2['id']]], $ctx);
     expectWiz(count($r['processed']) === 2 && !$r['errors'] && $r['totals']['invoices'] === 0, 'both processed, wizard empty');
     $p1 = array_values(array_filter($r['processed'], fn($x) => $x['id'] === $m1['id']))[0];
@@ -173,6 +197,8 @@ try {
     expectWiz(abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 901')->fetchColumn() - 0.0058) < 0.00001, 'malt base price 5.80 zł/kg');
     expectWiz((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 902')->fetchColumn() >= 0.022 - 1e-9, 'butter: lower price held (base price never drops)');
     expectWiz((int) $pdo->query("SELECT COUNT(*) FROM n_inv WHERE status = 'accepted' AND id_po IS NOT NULL")->fetchColumn() === 2, 'both accepted with a receipt order from the invoice');
+    $st = $svc->assistantStatus();
+    expectWiz($st['done'] && $st['todo'] === 0 && $st['ready'] === 0 && $st['last_done'] !== null, 'assistant status: green after approval, last approval time');
     $r = $svc->processChecked(['ids' => [$m1['id']]], $ctx);
     expectWiz($r['errors'][0]['code'] === 'INVOICE_CLOSED', 'closed invoice refused');
     expectWizError(fn() => $svc->processChecked(['ids' => []], $ctx), 'VALIDATION_FAILED', 'ids required');
