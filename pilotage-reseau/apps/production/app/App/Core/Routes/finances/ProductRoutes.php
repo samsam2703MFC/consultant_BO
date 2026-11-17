@@ -57,6 +57,11 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/ajax/price-wizard/costs', ['controller' => $pw, 'method' => 'costs']);
     $r->addRoute('POST', '/ajax/price-wizard/recalculate', ['controller' => $pw, 'method' => 'recalculate']);
     $r->addRoute('GET', '/ajax/price-wizard/prices', ['controller' => $pw, 'method' => 'prices']);
+    // [351] Ścieżka cen : pasek ścieżki, wejście w krok 2 (przeliczenie, gdy trzeba), « bez zmian w tym tygodniu », « Wyślij teraz »
+    $r->addRoute('GET', '/ajax/price-wizard/path', ['controller' => $pw, 'method' => 'path']);
+    $r->addRoute('POST', '/ajax/price-wizard/check', ['controller' => $pw, 'method' => 'check']);
+    $r->addRoute('POST', '/ajax/price-wizard/reviewed', ['controller' => $pw, 'method' => 'reviewed']);
+    $r->addRoute('POST', '/ajax/price-wizard/publications/{id:\d+}/send-now', ['controller' => $pw, 'method' => 'sendNow']);
     $r->addRoute('PUT', '/ajax/price-wizard/categories', ['controller' => $pw, 'method' => 'saveCategories']);
     $r->addRoute('PUT', '/ajax/price-wizard/params', ['controller' => $pw, 'method' => 'saveParams']);
     $r->addRoute('POST', '/ajax/price-wizard/preview', ['controller' => $pw, 'method' => 'preview']);

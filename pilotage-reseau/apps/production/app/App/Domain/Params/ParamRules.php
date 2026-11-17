@@ -38,6 +38,10 @@ final class ParamRules
         // Kreator cen [218]
         'prices.material_coef_default' => [1, 10, false],
         'prices.notice_days' => [0, 60, true],
+        // Ścieżka cen [351] : progi zmiany kosztu surowców (podwyżka / obniżka) i największa obniżka naraz
+        'prices.cost_up_pct' => [0.5, 50, false],
+        'prices.cost_down_pct' => [0.5, 50, false],
+        'prices.client_cut_pct' => [0.5, 50, false],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

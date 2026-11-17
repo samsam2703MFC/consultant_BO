@@ -105,3 +105,4 @@
 2026-11-17 12:17:47 Assistant IA en pleine page, entrée Ruby sur Abricot sous la Boîte mail
 2026-11-17 12:31:52 Assistant : radar des catégories et des marges face au réseau
 2026-11-17 12:38:02 Radar sans la branche « sans catégorie »
+- 2026-11-17T12:44:34Z [351] Ścieżka cen (factures → prix ±3 % → tarif → e-mail, jeudi)

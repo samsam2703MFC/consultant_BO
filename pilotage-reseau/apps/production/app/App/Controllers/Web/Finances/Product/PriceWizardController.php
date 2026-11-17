@@ -8,6 +8,8 @@ use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Finances\PricePublicationService;
 use App\Services\Finances\PriceWizardService;
+use App\Services\Workshop\Supply\InvoiceService;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,12 +17,14 @@ use Symfony\Component\HttpFoundation\Response;
  * Kreator cen [218] (Finanse › Marże i koszty › Kreator cen) : 1. koszty i marże po fakturach, 2. nowe ceny wg marży
  * bazowej i współczynnika surowców kategorii, 3. publikacja od daty (ERP, strona franczyzy, e-mail z cennikiem).
  * Dostęp : strona « Marże i koszty » (PageAccess) ; parametry reguły : administrator.
+ * [351] Ścieżka cen (4 kroki, makieta 66 B) : pasek ścieżki (/path), krok 2 z przeliczeniem kosztów, gdy ceny surowców
+ * zmieniły się (/check), « Sprawdzone — bez zmian » (/reviewed), krok 4 « Wyślij teraz » (/publications/{id}/send-now).
  */
 final class PriceWizardController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private PriceWizardService $wizard, private PricePublicationService $publications)
+    public function __construct(private PriceWizardService $wizard, private PricePublicationService $publications, private ContainerInterface $container)
     {
     }
 
@@ -50,6 +54,47 @@ final class PriceWizardController extends BaseController
     public function prices()
     {
         return $this->respond(fn() => ['data' => $this->wizard->prices($this->months())]);
+    }
+
+    /** [351] POST /ajax/price-wizard/check : wejście w krok 2 — przeliczenie receptur, gdy ceny surowców się zmieniły, potem ceny. */
+    public function check()
+    {
+        return $this->respond(function () {
+            $r = $this->wizard->recalcIfPending($this->userId());
+            return ['recalc' => $r, 'data' => $this->wizard->prices($this->months())];
+        });
+    }
+
+    /** [351] POST /ajax/price-wizard/reviewed : « Sprawdzone — bez zmian w tym tygodniu » (zadanie czwartkowe). */
+    public function reviewed()
+    {
+        return $this->respond(fn() => ['message' => 'Zapisano : ceny katalogowe sprawdzone — bez zmian w tym tygodniu.', 'data' => $this->wizard->markReviewed($this->userId())]);
+    }
+
+    /** [351] GET /ajax/price-wizard/path?inv=1 : stan kroków ścieżki (krok 1 = stan asystenta faktur, jak /supply/invoices/assistant-status). */
+    public function path()
+    {
+        return $this->respond(function () {
+            $out = $this->wizard->pathStatus();
+            if (($_GET['inv'] ?? '1') !== '0') {
+                try {
+                    $out['inv'] = $this->container->get(InvoiceService::class)->assistantStatus('pl');
+                } catch (\Throwable $e) {
+                    error_log('[price-wizard] path inv: ' . $e->getMessage());
+                    $out['inv'] = null;
+                }
+            }
+            return ['data' => $out];
+        });
+    }
+
+    /** [351] POST /ajax/price-wizard/publications/{id}/send-now : e-maile publikacji od razu do kolejki wysyłki. */
+    public function sendNow($id)
+    {
+        return $this->respond(function () use ($id) {
+            $r = $this->publications->sendNow((int) $id);
+            return ['message' => $r['message'], 'result' => $r, 'data' => $this->publications->detail((int) $id), 'publications' => $this->publications->publications()];
+        });
     }
 
     /** PUT /ajax/price-wizard/categories {rows: [{id, margin, coef}]} : marża bazowa i współczynnik kategorii. */

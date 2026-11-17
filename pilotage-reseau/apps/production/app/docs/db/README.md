@@ -1940,6 +1940,28 @@ tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_pro
   congé ; rappels : « (urlop — zastępuje …) ». Après le congé, plus rien à faire : le calcul se fait au jour (`UserLeaveRepository::delegations`).
 - Solde : `time.leave_days` (26) moins les congés de l'année (demandés + validés, urlop et na żądanie).
 
+## [351] Ścieżka cen : faktury KSeF → ceny katalogowe ±3 % → cennik → e-mail (migration 208)
+
+- Parcours en 4 étapes, une seule barre (`assets/js/finances/price-path.js`, même barre dans l'asystent faktur et le Kreator
+  cen) : 1. asystent faktur (statut : `GET /supply/invoices/assistant-status`), 2. « Sprawdź ceny katalogowe »
+  (`/finances/price-wizard#step=2`), 3. « Zatwierdź zmianę cennika » (`build()` / `plan()`), 4. « Wyślij e-mail do klientów ».
+  L'ancienne étape « Koszty i marże » reste en `#step=1` (lien « Koszty i marże (szczegóły) »).
+- `n_price_cost_baseline` (id_product PK, food_cost = coût matières du carton en PLN au dernier tarif, set_at = date du coût
+  de base, id_publication, prev_* = base précédente rétablie si la publication est annulée). Initialisée une fois :
+  `n_margin_recalc.old_cost_carton` si recalculé il y a moins de 60 jours (set_at = recalcul précédent), sinon coût actuel.
+  Après `plan()` : base des produits publiés (prix standard) = coût du jour ; produits décochés ou dans le seuil gardent leur base.
+- Règle de l'étape 2 (`PriceWizardService::pathRule`) : variation = (coût du jour − base) ÷ base. ≥ `prices.cost_up_pct` (3) →
+  hausse : prix × coût complet du jour ÷ (coût complet du jour − variation) (marge % sur coût complet gardée), au plus
+  `prices.client_cap_pct` (8), arrondi vers le haut ; ≤ −`prices.cost_down_pct` (3) → baisse : même formule, au plus
+  −`prices.client_cut_pct` (8), jamais sous le prix cible de la catégorie (marge de base / coefficient), arrondi vers le bas ;
+  sinon sans changement. Prix clients : égaux au standard → suivent ; négociés → même % (remise gardée), mêmes limites.
+- Ajax : `GET /ajax/price-wizard/path` (statut des étapes, `inv` = assistant-status), `POST …/check` (recalcul des recettes si
+  des prix matières ont changé depuis le dernier recalcul, puis l'étape 2), `POST …/reviewed` (« Sprawdzone — bez zmian w tym
+  tygodniu »), `POST …/publications/{id}/send-now` (e-mails de la publication mis en file tout de suite, par
+  `PricePublicationService::notice()` — la file respecte `MAIL_DELIVERY_MODE`).
+- Tâche « Ścieżka cen (czwartek) » : poste KIEROWNIK_PRODUKCJI, hebdomadaire jeudi, 20 min, `auto_code = price_path_done`
+  (`n_wizard_done`) : publication planifiée dans la semaine ou « Sprawdzone — bez zmian w tym tygodniu ».
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
