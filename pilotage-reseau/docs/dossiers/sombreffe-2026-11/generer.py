@@ -468,6 +468,10 @@ def main():
     gabarit = (ICI / 'gabarit.html').read_text(encoding='utf-8')
     html = gabarit.replace('/*__DONNEES__*/null', json.dumps(donnees, ensure_ascii=False))
     (ICI / 'rapport.html').write_text(html, encoding='utf-8')
+    # Le PDF « Développement » (17/11/2026, Sam) : le même gabarit, les seules parties du développement des ventes,
+    # pour la réunion du jeudi 19/11/2026.
+    dev = dict(donnees, mode='developpement', reunion='2026-11-19')
+    (ICI / 'developpement.html').write_text(gabarit.replace('/*__DONNEES__*/null', json.dumps(dev, ensure_ascii=False)), encoding='utf-8')
 
     # Contrôles à l'écran (pas dans le rapport).
     print(f"18 mois : {total['ca']:.0f} € · {total['clients']} clients · panier {total['panier']:.2f}")

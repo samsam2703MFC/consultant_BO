@@ -137,6 +137,7 @@ body { margin: 0; background: var(--paper); }
 .rp-plan .q { margin: 4px 0 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
 .rp-vignette { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; background: #fff; padding: 12px 16px; break-inside: avoid; }
 .rp-schema { margin: 0; break-inside: avoid; }
+.rp-dev-tete { display: grid; gap: 8px; margin-bottom: 14px; }
 #fin-schema svg { max-width: 820px; margin: 0 auto; }
 #fin-table td.num, #fin-table th.num { width: 20%; }
 #fin-table tr.ens td { font-size: 14px; }
@@ -176,7 +177,8 @@ body { margin: 0; background: var(--paper); }
   .rp-h3 { font-size: 13px; } .rp-partie-n { font-size: 28px; } .rp-partie-titre { font-size: 19px; }
   .rp-partie { padding-top: 0; break-after: avoid; }
   #page-2, #page-3, #page-4, #annexes { break-before: page; }
-  #pieces, #page-fin { break-before: page; }   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
+  #pieces, #page-fin { break-before: page; }
+  .mode-dev #page-3, .mode-dev #pieces { break-before: auto; }   /* la version « Développement » : la tête et les trois axes sur la même page, le plan et les pièces ensemble */   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
   #evolution-tuiles { grid-template-columns: repeat(4, 1fr); }   /* l’annexe simplifiée : les tuiles du cockpit, quatre de front */
 }
 /* Lisible imprimé (13/11/2026, Sam : « trop petit, illisible ») : au PDF (échelle 0,8), le texte courant fait environ
@@ -221,6 +223,11 @@ body { margin: 0; background: var(--paper); }
 </head>
 <body>
 <main class="rp" id="rapport">
+  <header class="rp-dev-tete" id="dev-tete" hidden>   <!-- la version « Développement », 17/11/2026 (Sam) -->
+    <div class="rp-kicker" id="dev-kicker"></div>
+    <h1 class="rp-titre">Sombreffe, le développement des ventes</h1>
+    <div class="rp-alerte" id="dev-soins"></div>
+  </header>
   <!-- PAGE 1 · L'ÉTAT DES LIEUX -->
   <section class="rp-page" id="page-1">
     <header id="entete">
@@ -1271,7 +1278,7 @@ if (D.theorique && PE6 && D.coutHeure) {
     + `<tr><td>En plus sur l’année</td>${ens.map(c => `<td class="num up">+${k1((c.r - base.r) * 12)}</td>`).join('')}</tr>`
     + `<tr><td>Personnel, % du CA (aujourd’hui ${dec(base.p)} %)</td>${ens.map(c => `<td class="num ${c.p <= D.seuilPersonnel ? 'up' : ''}">${dec(c.p)} %</td>`).join('')}</tr></tbody>`;
   $('fin-points').innerHTML = [
-    `Base : le mois moyen de février à octobre 2026, ${eur(base.r)} de résultat, comme le grand tableau de l’étape 3.`,
+    `Base : le mois moyen de février à octobre 2026, ${eur(base.r)} de résultat, comme le grand tableau ${D.mode === 'developpement' ? 'de la partie 1' : 'de l’étape 3'}.`,
     `Le prix : à volume égal, tout va au résultat. Le trafic : au panier d’aujourd’hui (${eur2(R.panier)}), matière à ${dec(tm * 100, 0)} %. Le personnel : ${hTot} h par mois en tout pour viser ${dec(D.seuilPersonnel, 0)} %, à ${dec(D.coutHeure, 0)} € l’heure.`,
   ].map(x => `<li>${esc(insec(x))}</li>`).join('');
   $('page-fin').hidden = false;
@@ -1438,6 +1445,21 @@ document.querySelectorAll('p.rp-p').forEach(p => {
   const ul = document.createElement('ul'); ul.className = 'rp-points'; ul.id = p.id; ul.hidden = p.hidden;
   ul.innerHTML = ph.map(x => '<li>' + esc(x) + '</li>').join(''); p.replaceWith(ul);
 });
+
+/* --- La version « Développement » (17/11/2026, Sam) : pour la réunion du jeudi 19/11, les seules parties du
+   développement des ventes — les trois axes et la grille, le plan, les pièces, la simulation du prix, les paires, et les
+   trois axes ensemble. Le reste du rapport est caché, pas retiré. --- */
+if (D.mode === 'developpement') {
+  document.body.classList.add('mode-dev');
+  document.title = 'Sombreffe, le développement des ventes';
+  ['page-1', 'page-2', 'annexes', 'annexe-a', 'cout-relance', 'gestion'].forEach(id => { const e = $(id); if (e) { e.hidden = true; } });
+  $('dev-kicker').textContent = `Pilotage réseau · réunion du jeudi ${dateL(D.reunion)}`;
+  $('dev-soins').innerHTML = $('soins-intensifs').innerHTML;
+  $('partie-3').querySelector('.rp-partie-n').textContent = '1';
+  $('partie-4').querySelector('.rp-partie-n').textContent = '2';
+  $('page-fin').querySelector('.rp-kicker').textContent = 'Sombreffe, le développement des ventes';
+  $('dev-tete').hidden = false;
+}
 
 /* --- Dessins, redessinés à la largeur --- */
 function dessiner() { grapheEvolution(); grapheTrafic(); if (window.grapheP) { window.grapheP(); } if (window.grapheRepere) { window.grapheRepere(); } }

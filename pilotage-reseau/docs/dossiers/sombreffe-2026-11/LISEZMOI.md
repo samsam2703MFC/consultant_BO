@@ -8,9 +8,17 @@ Le rapport d'entrée en soins intensifs de Sombreffe (magasin 5), mai 2025 → o
 | `gabarit.html` | la page : styles, textes, graphiques (les chiffres viennent de `generer.py`) |
 | `rapport.html` | la page générée, publiée telle quelle |
 | `pdf.js` | `rapport.html` → `Sombreffe-rapport-2026-11.pdf` (A4, Gotham, « Page x / y ») |
+| `developpement.html` | la version « Développement » (réunion du 19/11/2026) : les trois axes et la grille, le plan, les pièces, la simulation du prix, les paires, les trois axes ensemble |
+| `Sombreffe-developpement-2026-11.pdf` | son PDF, 3 pages |
 
 ```bash
 python3 pilotage-reseau/docs/dossiers/sombreffe-2026-11/generer.py && node pilotage-reseau/docs/dossiers/sombreffe-2026-11/pdf.js
+```
+
+La version « Développement » :
+
+```bash
+node pilotage-reseau/docs/dossiers/sombreffe-2026-11/pdf.js developpement.html Sombreffe-developpement-2026-11.pdf "Sombreffe, le développement des ventes · réunion du 19/11/2026"
 ```
 
 ## Les données à déposer ici

@@ -9,7 +9,11 @@ const fs = require('fs');
 const path = require('path');
 
 const ICI = __dirname;
-const SORTIE = path.join(ICI, 'Sombreffe-rapport-2026-11.pdf');
+// node pdf.js [entrée.html] [sortie.pdf] [texte du pied] — par défaut le rapport ; la version « Développement » :
+//   node pdf.js developpement.html Sombreffe-developpement-2026-11.pdf "Sombreffe, le développement des ventes · réunion du 19/11/2026"
+const ENTREE = path.join(ICI, process.argv[2] || 'rapport.html');
+const SORTIE = path.join(ICI, process.argv[3] || 'Sombreffe-rapport-2026-11.pdf');
+const PIED = process.argv[4] || 'Sombreffe, comptoir et B2B · rapport du 13/11/2026';
 const POLICES = path.join(ICI, '..', '..', '..', 'public', 'assets', 'ds', 'fonts');
 const ECHELLE = 0.8;           // 186 mm utiles ÷ 0,8 ≈ 880 px : l’état des lieux tient sans couper un graphique (13/11/2026)
 const LARGEUR = 880;
@@ -25,7 +29,7 @@ const LARGEUR = 880;
     const page = await navigateur.newPage({ viewport: { width: LARGEUR, height: 1200 } });
     const erreurs = [];
     page.on('pageerror', e => erreurs.push(String(e)));
-    await page.goto('file://' + path.join(ICI, 'rapport.html'));
+    await page.goto('file://' + ENTREE);
     await page.evaluate(() => document.fonts.ready);
     await page.emulateMedia({ media: 'print' });
     const debordent = await page.evaluate(() => [...document.querySelectorAll('.rp-table-zone, .rp-graphe')]
@@ -33,7 +37,7 @@ const LARGEUR = 880;
     if (erreurs.length) { throw new Error('la page a échoué : ' + erreurs.join(' | ')); }
     if (debordent.length) { console.warn('déborde de la page :', debordent.join(', ')); }
     const pied = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:7.5px;color:#7a736a;width:100%;padding:0 12mm;'
-      + 'display:flex;justify-content:space-between"><span>Sombreffe, comptoir et B2B · rapport du 13/11/2026</span>'
+      + 'display:flex;justify-content:space-between"><span>' + PIED + '</span>'
       + '<span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span></div>';
     await page.pdf({ path: SORTIE, format: 'A4', printBackground: true, scale: ECHELLE, displayHeaderFooter: true,
       headerTemplate: '<div></div>', footerTemplate: pied, margin: { top: '12mm', bottom: '16mm', left: '12mm', right: '12mm' } });
