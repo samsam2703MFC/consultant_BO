@@ -108,3 +108,4 @@
 - 2026-11-17T12:44:34Z [351] Ścieżka cen (factures → prix ±3 % → tarif → e-mail, jeudi)
 2026-11-17 13:25:52 Promotions : les bundles du Coach Vente (constat, couples, prix, fiche, lancement) et l'équipe des Paramètres
 2026-11-17 13:49:44 Mon catalogue : plus d'import de photo, l'aperçu de chaque page à la mise en page
+2026-11-17 14:38:41 Mon catalogue : une seule rangée de choix, les mises en page en dessin
