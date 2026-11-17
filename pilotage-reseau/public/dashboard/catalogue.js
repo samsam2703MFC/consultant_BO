@@ -1586,8 +1586,17 @@
   const logo = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
   /** Le logo sur le papier (couverture B) : celui de la charte, sinon le logo officiel en couleur. */
   const logoSombre = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
+  /** La police et la couleur choisies pour un texte de la couverture (charte, Marketing v1.9 ; rendu de `coverStyle`,
+   * CataloguePages.tsx) : l'attribut style, vide sans choix (celles du gabarit). */
+  const POLICES_COUV = { vank: "'Vank','CmVank','GothamPrint',serif", gotham: "'GothamPrint','CmPrint',system-ui,sans-serif", playwrite: "'Playwrite','CmScript',cursive" };
+  function styleCouv(font, color) {
+    const f = POLICES_COUV[font], c = /^#[0-9A-Fa-f]{6}$/.test(String(color || '')) ? color : null;
+    if (!f && !c) { return ''; }
+    return ' style="' + (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (font === 'playwrite' ? 'text-transform:none;letter-spacing:0;line-height:1.25;' : font === 'gotham' ? 'font-weight:500;letter-spacing:.02em;' : '') + (c ? 'color:' + c + ';' : '') + '"';
+  }
   /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration · C Photo. */
   function couverture(doc, p) {
+    const st = styleCouv(p.titleFont, p.titleColor), ss = styleCouv(p.subtitleFont, p.subtitleColor);
     const dessin = p.imageUrl || p.noVisual ? null : (p.drawingUrl || null);
     const boutique = p.eyebrow ? '<div class="cat-cover__' + (p.template === 'B' ? 'shopB' : 'shop') + '">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '';
     const kicker = p.kicker ? '<div class="cat-cover__kicker">' + esc(p.kicker) + '</div>' : '';
@@ -1595,17 +1604,17 @@
       return '<div class="cat-cover cat-cover--B"><img class="cat-logo cat-logo--dark cat-cover__logoB" src="' + esc(logoSombre(doc)) + '" alt=""><div class="cat-cover__art">'
         + (p.imageUrl ? '<img class="cat-cover__photoB" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawB" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
         + kicker + '<div class="cat-cover__title">' + esc(p.title) + '</div><div class="cat-cover__rule"></div>'
-        + (p.subtitle ? '<div class="cat-cover__subB">' + esc(p.subtitle) + '</div>' : '') + boutique + '</div>';
+        + (p.subtitle ? '<div class="cat-cover__subB"' + ss + '>' + esc(p.subtitle) + '</div>' : '') + boutique + '</div>';
     }
     if (p.template === 'C') {
       return '<div class="cat-cover cat-cover--C"><div class="cat-cover__top">'
         + (p.imageUrl ? '<img class="cat-cover__photoC" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawC" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
-        + '<div class="cat-cover__band"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">' + kicker + '<div class="cat-cover__title">' + esc(p.title) + '</div>'
-        + (p.subtitle ? '<div class="cat-cover__sub">' + esc(p.subtitle) + '</div>' : '') + boutique + '</div></div>';
+        + '<div class="cat-cover__band"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">' + kicker + '<div class="cat-cover__title"' + st + '>' + esc(p.title) + '</div>'
+        + (p.subtitle ? '<div class="cat-cover__sub"' + ss + '>' + esc(p.subtitle) + '</div>' : '') + boutique + '</div></div>';
     }
     return '<div class="cat-cover"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">'
-      + '<div class="cat-cover__title">' + esc(p.title) + '</div>'
-      + (p.subtitle ? '<div class="cat-cover__sub">' + esc(p.subtitle) + '</div>' : '')
+      + '<div class="cat-cover__title"' + st + '>' + esc(p.title) + '</div>'
+      + (p.subtitle ? '<div class="cat-cover__sub"' + ss + '>' + esc(p.subtitle) + '</div>' : '')
       + (p.eyebrow ? '<div class="cat-cover__shop">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '')
       + (p.imageUrl ? '<div class="cat-cover__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : dessin ? '<img class="cat-cover__drawing" src="' + esc(dessin) + '" alt="">' : '') + '</div>';
   }
