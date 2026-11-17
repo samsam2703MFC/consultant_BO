@@ -1250,7 +1250,12 @@ function ep_promos_magasin_demandes(): array
  */
 function wr_promos_magasin(): array
 {
-    $b = body();
+    return pmEnregistrer(body());
+}
+
+/** L'enregistrement lui-même, depuis un corps de requête (17/11/2026 : aussi appelé par les bundles du Coach Vente). */
+function pmEnregistrer(array $b): array
+{
     $shop = (int) ($b['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $action = ($b['action'] ?? 'brouillon') === 'envoyer' ? 'envoyer' : 'brouillon';

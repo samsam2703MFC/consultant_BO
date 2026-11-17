@@ -4,6 +4,29 @@ Demande de Sam : « enlever le tableau [la liste des promotions de l'onglet Prom
 de l'Assistant IA, avec une promotion pré-encodée ; si le franchisé valide, la promotion part pour 1 mois à partir de
 lundi prochain (standard), et on en fait un PDF envoyé par mail à l'équipe. »
 
+## Avant la fiche : créer un bundle qui monte la marge (17/11/2026, phases 1 à 3)
+
+Demande de Sam : « le but est de créer des bundles (les phases avant la création dans le formulaire proposé) pour
+augmenter la marge : coupler des produits qui ont une faible marge avec des produits à grande valeur ajoutée, pour
+augmenter la marge de base. »
+
+| Écran | Ce qu'il montre |
+|---|---|
+| `p1-constat.png` | 1 · Le constat : la marge de base de Halle (58,5 %), la part des pièces vendues sous cette marge (57 %) et à 78 % et plus (3,4 %) ; le nuage de chaque produit (marge × pièces vendues, échelle log), la zone « ils font le volume, pas la marge » et la zone « grande valeur ajoutée, peu vendus » ; les deux listes. |
+| `p2-couples.png` | 2 · Les couples : chaque couple = un produit qui attire (faible marge, gros volume) + un produit qui rapporte (forte marge) ; séparés → prix du bundle, la marge du ticket avant → après, la marge en plus par ticket, par mois si 1 client sur 10 le prend, le moment. Les couples choisis : la marge en plus par mois et la nouvelle marge de base. |
+| `p3-prix.png` | 3 · Le prix du couple choisi : la marge du bundle selon son prix (3,30 € → 4,20 €), la zone de remise conseillée (8 à 12 %), la marge du produit seul en repère ; à droite, le prix retenu et ses garde-fous. « Préparer la fiche du bundle » ouvre l'écran A (la fiche pré-encodée), puis B (lancement) et C (l'équipe). |
+
+Vrais chiffres de Halle : `halle.json` (pièces vendues du 19/10 au 17/11/2026, GET /analyse/produits?mois=1 ; prix et
+coûts de recette, /exploitation/promos-magasin/produits) ; `python3 generer.py` refait p1, p2 et p3. La marge de base :
+somme (prix HT − coût) × pièces ÷ somme prix HT × pièces, sur les 181 produits chiffrés. « En plus / ticket » : la
+marge du bundle moins celle du produit qui attire vendu seul. La prise (1 client sur 10) est une hypothèse.
+
+À trancher aussi : les règles du Coach Vente pour former un couple (le produit qui attire : sous la marge de base et au
+moins 300 pièces par mois ? le produit qui rapporte : 78 % de marge et plus ?), la remise conseillée (8 à 12 %), la
+prise par défaut (1 client sur 10), et si l'on peut choisir plusieurs couples d'un coup (une fiche par couple).
+
+## La fiche, le lancement, l'équipe (écrans A, B, C)
+
 Les écrans A et B sont posés sur l'onglet Promotions **en ligne** (Halle) : la carte « Où les promotions sont utilisées »
 reste, la liste des promotions est retirée et remplacée par la carte du Coach Vente.
 

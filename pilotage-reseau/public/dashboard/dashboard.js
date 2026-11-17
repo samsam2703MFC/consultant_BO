@@ -3885,34 +3885,25 @@
     let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
       <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
       <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div></div>
-      <div class="pm-lecture">Lecture seule : les promotions se créent et se modifient au cockpit, dans <b>Promotions › Édition</b>.</div>`;
+      <div class="pm-lecture">Le Coach Vente prépare vos bundles avec vos prix et vos coûts : vous validez, la promotion passe en caisse le lundi qui suit et l’équipe reçoit sa fiche. Les autres promotions se créent au cockpit (<b>Promotions › Édition</b>).</div>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
     if (S.pmBonV) { h += rendPmBonCodes(); }
     if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
     if (!P) { return h + squelette(3); }
-    const L = pmLignes();
-    const parSorte = L.filter(l => S.pmSorte === 'tout' || l.sorte === S.pmSorte);
-    const q = (S.pmQ || '').trim().toLowerCase();
-    const f = PM_FILTRES.find(x => x[0] === S.pmF) || PM_FILTRES[0];
-    const vues = parSorte.filter(l => f[2](l.etat) && (!q || (l.nom + ' ' + l.texte).toLowerCase().includes(q)));
     h += rendPmCanaux();
-    h += `<div class="db-card pm-liste"><div class="pm-filtres">
-      <div class="db-ong">${PM_FILTRES.map(x => { const n = parSorte.filter(l => x[2](l.etat)).length; return `<button data-pmf-st="${x[0]}" class="${x[0] === f[0] ? 'on' : ''}">${x[1]} <small>${n}</small></button>`; }).join('')}</div>
-      <select class="pm-in" data-pmsorte="1">${[['tout', 'Toutes les sortes'], ['xy', 'X achetés + Y'], ['bundle', 'Bundles']].map(o => `<option value="${o[0]}"${S.pmSorte === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
-      <input class="pm-in pm-cherche" type="search" placeholder="Chercher une promotion…" value="${esc(S.pmQ || '')}" data-pmq="1">
-      <span class="pm-colsw"><button class="db-btn" data-pmcols="1" aria-expanded="${!!S.pmColsOuv}">Colonnes ▾</button>${S.pmColsOuv ? `<div class="pm-menu pm-cols"><div class="db-lab">Colonnes affichées</div>${PM_COLS.map(c => `<label><input type="checkbox" data-pmcol="${c[0]}"${pmColsVues().includes(c[0]) ? ' checked' : ''}${c[0] === 'nom' ? ' disabled' : ''}> ${c[1]}</label>`).join('')}<button class="pm-lien" data-pmcolsraz="1">Revenir aux colonnes par défaut</button></div>` : ''}</span></div>`;
-    if (!vues.length) {
-      h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'}</div>`;
-    } else {
-      const cols = PM_COLS.filter(c => pmColsVues().includes(c[0]));
-      h += `<div class="pm-large"><table class="pm-tab pm-tab2"><thead><tr>${cols.map(c => `<th class="${c[2]}"${c[4] ? ` title="${esc(c[4])}"` : ''}>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${vues.map(l => {
-        const v = pmValeurs(l), cle = l.src + ':' + l.id, ouvert = S.pmMenu === cle;
-        return `<tr>${cols.map(c => `<td class="${c[2]}">${v[c[0]]}</td>`).join('')}<td class="pm-act">${v.actions ? `<button class="pm-dots${ouvert ? ' on' : ''}" data-pmmenu="${esc(cle)}" aria-label="actions" aria-expanded="${ouvert}">${PM_ICO_DOTS}</button>${ouvert ? `<div class="pm-menu">${v.actions}</div>` : ''}` : ''}</td></tr>`;
-      }).join('')}</tbody></table></div>`;
-    }
-    // Le paragraphe d'explication sous la liste est retiré (23/10/2026, Sam) ; reste l'erreur du panel, s'il y en a une.
-    h += `${P.erreurPanel ? `<div class="pm-pied db-mini"><b>${esc(P.erreurPanel)}</b></div>` : ''}</div>`;
+    // Les bundles du Coach Vente (17/11/2026, Sam : « enlever le tableau, mettre là un assistant venant de l'Assistant IA
+    // avec une promotion pré-encodée », puis « créer des bundles qui montent la marge » ; maquette docs/maquettes/promo-coach) :
+    // la liste des promotions laisse la place au module (bundles.js), monté après le rendu (bndMonter).
+    h += '<div id="db-bundles"></div>';
+    if (P.erreurPanel) { h += `<div class="pm-pied db-mini"><b>${esc(P.erreurPanel)}</b></div>`; }
     return h;
+  }
+  /** Le module des bundles, gardé d'un rendu à l'autre (son état, sa phase). */
+  function bndMonter() {
+    const p = document.getElementById('db-bundles');
+    if (!p) { return; }
+    if (!window.DashBundles) { p.innerHTML = '<div class="db-err">Le module des bundles n’a pas été chargé.</div>'; return; }
+    p.replaceWith(window.DashBundles.racine(S.shop, { apiBase: API, aller: allerVers, coach: () => { IA.ton = 'vente'; try { localStorage.setItem('dbIaTon', 'vente'); } catch (e) { /* stockage refusé */ } iaPage('a'); } }));
   }
 
   /* --- Où les promotions sont utilisées (18/10/2026, maquette C, le coefficient en plus) ---------------------------
@@ -7352,7 +7343,7 @@
     if (S.vue === 'frais') { h += rendFrais(); $.innerHTML = h; brancher(); frBrancher(); return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
-    if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
+    if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); bndMonter(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     // Sur le rail, le détail de la valeur est le panneau de la vignette (15/11/2026) ; sans rail, le tiroir d'avant.

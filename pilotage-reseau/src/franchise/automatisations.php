@@ -25,6 +25,11 @@ declare(strict_types=1);
  *        recent: bool, objet, corps, sms}
  *   POST /dashboard/boite/automatisations/essai {shop, auto, tel?}  un essai : l'e-mail à la boîte du magasin, le SMS au numéro donné
  * L'horloge : bmCron (bin/boite_cron.sh, toutes les 10 minutes) appelle amCron().
+ *
+ * L'ÉQUIPE (17/11/2026, les bundles du Coach Vente : « les adresses de l'équipe, une liste dans les Paramètres ») : les
+ * personnes du magasin qui reçoivent la fiche d'une promotion lancée (src/franchise/bundles.php). Table pil_equipe_mail,
+ * réglée boîte ouverte comme le reste (ce sont des adresses personnelles) :
+ *   POST /dashboard/boite/equipe {shop, action: ajouter|retirer, nom, adresse, id}
  */
 
 const AM_AUTOS = [
@@ -61,6 +66,46 @@ function amTables(): void
     $fait = true;
     Db::exec('CREATE TABLE IF NOT EXISTS pil_auto_reglage (shop_id VARCHAR(16) NOT NULL, auto VARCHAR(30) NOT NULL, actif TINYINT(1) NOT NULL DEFAULT 0,'
         . ' reglage TEXT NOT NULL, maj_le DATETIME NOT NULL, PRIMARY KEY (shop_id, auto), KEY k_actif (actif)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS pil_equipe_mail (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
+        . ' nom VARCHAR(80) NOT NULL, adresse VARCHAR(190) NOT NULL, cree_le DATETIME NOT NULL, UNIQUE KEY u_adresse (shop_id, adresse)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/* --- l'équipe (pil_equipe_mail) ---------------------------------------------------------------------------------- */
+
+/** L'équipe du magasin : [{id, nom, adresse}], par nom. */
+function amEquipe(string $shop): array
+{
+    try { amTables(); $L = Db::rows('SELECT id, nom, adresse FROM pil_equipe_mail WHERE shop_id = ? ORDER BY nom, id', [$shop]); }
+    catch (Throwable $e) { return []; }
+    return array_map(static fn ($r) => ['id' => (int) $r['id'], 'nom' => (string) $r['nom'], 'adresse' => (string) $r['adresse']], $L);
+}
+
+/** Une personne de l'équipe, propre : [nom, adresse, erreur|null] (fonction pure, testée). */
+function amEquipeValider(array $b): array
+{
+    $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 80);
+    $a = strtolower(trim((string) ($b['adresse'] ?? '')));
+    if ($nom === '') { return [null, null, 'Le prénom (et l’initiale du nom) de la personne.']; }
+    if (!filter_var($a, FILTER_VALIDATE_EMAIL) || mb_strlen($a) > 190) { return [null, null, 'Une adresse e-mail valide.']; }
+    return [$nom, $a, null];
+}
+
+/** POST /dashboard/boite/equipe {shop, action: ajouter|retirer, nom, adresse, id} */
+function amEquipeEcrire(string $shop, array $c, array $b): array
+{
+    amTables();
+    $action = (string) ($b['action'] ?? '');
+    if ($action === 'retirer') {
+        Db::exec('DELETE FROM pil_equipe_mail WHERE shop_id = ? AND id = ?', [$shop, (int) ($b['id'] ?? 0)]);
+    } elseif ($action === 'ajouter') {
+        if (count(amEquipe($shop)) >= 40) { return bmErreur(422, 'Quarante personnes au plus.'); }
+        [$nom, $a, $err] = amEquipeValider($b);
+        if ($err !== null) { return bmErreur(422, $err); }
+        Db::exec('INSERT INTO pil_equipe_mail (shop_id, nom, adresse, cree_le) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE nom = VALUES(nom)', [$shop, $nom, $a]);
+    } else {
+        return bmErreur(422, 'action inconnue');
+    }
+    return ['ok' => true] + amLire($shop, $c);
 }
 
 /** Le réglage d'une automatisation du magasin, le réglage de départ complété. */
@@ -309,6 +354,7 @@ function amLire(string $shop, array $c): array
     $offres = Db::row('SELECT actif FROM pil_boite_auto WHERE shop_id = ? AND regle = ?', [$shop, 'rappel']);
     return [
         'shop' => $shop, 'boite' => $c['adresse'], 'magasin' => $c['nom'], 'horloge' => is_array($h) ? ($h['le'] ?? null) : null,
+        'equipe' => amEquipe($shop),
         'sms' => function_exists('smsFournisseur') ? smsFournisseur() : null,
         'rappel' => ['reglage' => $g, 'variables' => AM_VARIABLES, 'smsMax' => AM_SMS_MAX, 'heures' => [AM_HEURE_MIN, AM_HEURE_MAX],
             'offresAllume' => $offres !== null && (int) $offres['actif'] === 1,
