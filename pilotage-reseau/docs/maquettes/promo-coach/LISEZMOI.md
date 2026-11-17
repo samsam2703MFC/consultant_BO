@@ -25,6 +25,23 @@ marge du bundle moins celle du produit qui attire vendu seul. La prise (1 client
 moins 300 pièces par mois ? le produit qui rapporte : 78 % de marge et plus ?), la remise conseillée (8 à 12 %), la
 prise par défaut (1 client sur 10), et si l'on peut choisir plusieurs couples d'un coup (une fiche par couple).
 
+## Le simulateur de couples (17/11/2026, écrans S-A et S-B)
+
+Demande de Sam : « pour les couples, un simulateur, avec un bloc de marge sur une jauge coefficient ; quand je clique sur
+un produit, un code couleur entre noir et or avec le produit à apparier pour augmenter la marge ».
+
+| Écran | Ce qu'il montre |
+|---|---|
+| `s-a-pain-au-chocolat.png` | Phase 2, onglet « Le simulateur » (à côté de « Les couples proposés »). Les produits du magasin en tuiles, famille par famille. 1er clic : le produit qui attire (Pain au chocolat, cadre Ruby) ; tous les autres prennent leur couleur, du **noir** (le bundle baisse la marge du ticket) à l'**or** (il la monte le plus), en points de marge du ticket au prix conseillé ; la même famille est hachurée (ils se remplacent). 2e clic : le partenaire (Cappuccino). À droite : le prix (une réglette de 10 en 10 centimes, la remise conseillée en rouge), **la jauge du coefficient du ticket** (×1 → ×6, rouge sous ×1,67, orange jusqu'à ×2,5, vert au-delà ; l'aiguille grise du produit seul ×2,23, l'aiguille Ruby du bundle ×4,42) et **le bloc de marge** (marge du ticket 55,1 % → 77,4 %, en € HT 0,99 € → 3,07 €, par mois, la marge de base) ; les trois partenaires les plus dorés ; « Préparer la fiche ». |
+| `s-b-baguette.png` | Le même simulateur après un clic sur Baguette Tradition (29,4 %, ×1,42 : rouge) : les couleurs se refont pour elle ; avec un cappuccino à 4,50 €, le ticket passe à 63,3 % et ×2,73 (vert). |
+
+L'or est relatif au produit cliqué : le plus doré est le meilleur partenaire de CE produit. Les chiffres : `halle.json` ;
+`python3 generer_simulateur.py` refait les deux écrans.
+
+À trancher : la couleur se fait-elle sur les points de marge du ticket (montré) ou sur les euros de marge en plus ? Le
+simulateur remplace-t-il « Les couples proposés » ou vit-il à côté (montré : deux onglets) ? Les tuiles : les 26 produits
+les plus vendus et ceux à 78 % et plus (montré), ou tout le catalogue avec une recherche ?
+
 ## La fiche, le lancement, l'équipe (écrans A, B, C)
 
 Les écrans A et B sont posés sur l'onglet Promotions **en ligne** (Halle) : la carte « Où les promotions sont utilisées »

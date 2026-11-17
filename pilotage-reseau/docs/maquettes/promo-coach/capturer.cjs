@@ -9,21 +9,22 @@ const css = fs.readFileSync(__dirname + '/maquette.css', 'utf8');
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
-  for (const nom of ['p1-constat', 'p2-couples', 'p3-prix', 'a-proposition', 'b-validee']) {
+  for (const nom of ['p1-constat', 'p2-couples', 'p3-prix', 's-a-pain-au-chocolat', 's-b-baguette', 'a-proposition', 'b-validee']) {
     if (process.env.SEUL && process.env.SEUL !== nom) { continue; }
     const p = await ctx.newPage(); const err = [];
     p.on('pageerror', e => err.push(e.message));
     await p.route('**/garde.js*', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
     await p.goto(EN_LIGNE, { waitUntil: 'networkidle', timeout: 180000 }).catch(() => {});
-    await p.waitForSelector('.pm-liste', { timeout: 60000 });
+    // Depuis la mise en ligne des bundles (17/11/2026), la liste est remplacée par le module : c'est lui qu'on remplace.
+    await p.waitForSelector('.pm-liste, .bd-racine .bd-h', { timeout: 120000 });
     await p.waitForTimeout(1500);
     await p.evaluate(([html, css]) => {
       const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
-      const l = document.querySelector('.pm-liste'); const d = document.createElement('div'); d.innerHTML = html; l.replaceWith(...d.childNodes);
+      const l = document.querySelector('.pm-liste') || document.querySelector('.bd-racine'); const d = document.createElement('div'); d.innerHTML = html; l.replaceWith(...d.childNodes);
       const t = document.querySelector('.pm-lecture');
       if (t) { t.textContent = 'Le Coach Vente prépare vos promotions avec vos prix et vos coûts : vous validez, elle passe en caisse le lundi suivant et l’équipe reçoit sa fiche.'; }
       // Les phases du bundle se lisent sans la carte « Où les promotions sont utilisées » au-dessus : elle est repliée.
-      if (document.getElementById('pc') && document.querySelector('.bn')) { const cn = document.querySelector('.cn-card'); if (cn) { cn.style.display = 'none'; } }
+      if (document.getElementById('pc') && document.querySelector('.bn, .sm-c')) { const cn = document.querySelector('.cn-card'); if (cn) { cn.style.display = 'none'; } }
     }, [fs.readFileSync(__dirname + '/' + nom + '.html', 'utf8'), css]);
     await p.evaluate('document.fonts.ready');
     await p.waitForTimeout(800);
