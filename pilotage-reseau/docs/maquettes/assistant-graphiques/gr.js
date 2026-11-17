@@ -4,23 +4,53 @@ const SEM = ['S35', 'S36', 'S37', 'S38', 'S39', 'S40', 'S41', 'S42', 'S43', 'S44
 const CLI = [1000, 999, 1071, 1000, 1023, 1036, 1040, 1059, 941, 936, 1149, 1172];
 const N1 = [1060, 953, 1021, 1021, 1023, 1074, 1074, 1051, 1000, 996, 1159, 1213];
 const fN = v => Math.round(v).toLocaleString('fr-FR').replace(/ /g, ' ');
-/** Barres (cette année) et ligne pointillée (N-1). w × h en px ; mini : sans textes. */
+/* Les couleurs des graphiques (17/11/2026, « soigner les graphiques ») — validées par scripts/validate_palette.js du
+   skill dataviz, en clair et en sombre : la série du magasin #A82E40 (le Ruby un cran plus clair : #8D1D2C sort de la
+   bande de clarté), le pôle froid #1B6FA8 ; la référence (l'an passé, le réseau) en gris, en retrait, jamais en
+   couleur de série. Le texte ne prend jamais la couleur d'une série. */
+const COUL = { moi: '#A82E40', froid: '#1B6FA8', ref: '#8a847c', bande: '#8a847c', grille: '#ece6dc', axe: '#9a948b', encre: '#2b2724', doux: '#8a847c', fond: '#ffffff' };
+/** Des graduations rondes : 0, 400, 800, 1 200… */
+function graduations(max, n = 4) {
+  const brut = max / n, p = Math.pow(10, Math.floor(Math.log10(brut))), m = brut / p;
+  const pas = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  const T = []; for (let v = 0; v <= max + pas * 0.001; v += pas) { T.push(v); }
+  if (T[T.length - 1] < max) { T.push(T[T.length - 1] + pas); }
+  return T;
+}
+/** Une colonne : 4 px d'arrondi en haut, carrée sur la ligne de base. */
+const colonne = (x, y, w, base, r = 4) => { r = Math.min(r, w / 2, Math.max(0, base - y)); return `M${x.toFixed(1)},${base.toFixed(1)}V${(y + r).toFixed(1)}Q${x.toFixed(1)},${y.toFixed(1)} ${(x + r).toFixed(1)},${y.toFixed(1)}H${(x + w - r).toFixed(1)}Q${(x + w).toFixed(1)},${y.toFixed(1)} ${(x + w).toFixed(1)},${(y + r).toFixed(1)}V${base.toFixed(1)}Z`; };
+/** Colonnes (le magasin) et ligne grise (la référence : même semaine l'an passé). Une seule échelle. w × h en px réels.
+ *  mini : la vignette, sans texte. Les étiquettes : la dernière valeur et le creux seulement ; le reste à l'axe et au survol. */
 function graphe(w, h, mini, serie, ref, libs, opts = {}) {
   serie = serie || CLI; ref = ref === undefined ? N1 : ref; libs = libs || SEM;
-  const pad = mini ? [6, 6, 6, 6] : [18, 10, 26, 34], mn = 0, mx = Math.max(...serie, ...(ref || [0])) * 1.12;
-  const W = w - pad[1] - pad[3], H = h - pad[0] - pad[2], n = serie.length, bw = W / n;
-  const y = v => pad[0] + H - (v - mn) / (mx - mn) * H, x = i => pad[3] + i * bw;
+  const n = serie.length, T = graduations(Math.max(...serie, ...(ref || [0])) * 1.04);
+  const pad = mini ? [8, 8, 6, 8] : [24, 92, 30, 46], mx = T[T.length - 1];
+  const W = w - pad[1] - pad[3], H = h - pad[0] - pad[2], bw = W / n, base = pad[0] + H;
+  const y = v => pad[0] + H - v / mx * H, cx = i => pad[3] + i * bw + bw / 2;
+  const larg = Math.min(mini ? 14 : 24, bw - (mini ? 4 : 10));
   let s = '';
-  if (!mini) { [0.25, 0.5, 0.75, 1].forEach(f => { const v = mx * f; s += `<line x1="${pad[3]}" x2="${w - pad[1]}" y1="${y(v)}" y2="${y(v)}" stroke="#eee7dd"/><text x="${pad[3] - 6}" y="${y(v) + 4}" font-size="10" text-anchor="end" fill="#9a948b">${fN(v)}</text>`; }); }
+  if (!mini) { T.forEach(v => { s += `<line x1="${pad[3]}" x2="${w - pad[1] + 6}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="${v === 0 ? '#d9d2c7' : COUL.grille}" stroke-width="1"/><text x="${pad[3] - 8}" y="${(y(v) + 4).toFixed(1)}" font-size="11" text-anchor="end" fill="${COUL.axe}" style="font-variant-numeric:tabular-nums">${fN(v)}</text>`; }); }
+  else { s += `<line x1="${pad[3]}" x2="${w - pad[1]}" y1="${base}" y2="${base}" stroke="#e2dbd0"/>`; }
+  const creux = serie.indexOf(Math.min(...serie)), der = n - 1;
   serie.forEach((v, i) => {
-    const bas = ref && v < ref[i];
-    s += `<rect x="${(x(i) + bw * 0.18).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${(pad[0] + H - y(v)).toFixed(1)}" rx="${mini ? 1.5 : 3}" fill="${opts.couleur || (bas ? '#c98a92' : '#8D1D2C')}"/>`;
-    if (!mini) { s += `<text x="${(x(i) + bw / 2).toFixed(1)}" y="${(y(v) - 5).toFixed(1)}" font-size="10.5" text-anchor="middle" fill="#3a3631">${fN(v)}</text><text x="${(x(i) + bw / 2).toFixed(1)}" y="${h - 8}" font-size="10.5" text-anchor="middle" fill="#9a948b">${libs[i]}</text>`; }
+    s += `<path d="${colonne(cx(i) - larg / 2, y(v), larg, base, mini ? 2 : 4)}" fill="${opts.couleur || COUL.moi}"><title>${libs[i]} : ${fN(v)}${ref ? ' · l’an passé ' + fN(ref[i]) : ''}</title></path>`;
+    if (!mini) {
+      s += `<text x="${cx(i).toFixed(1)}" y="${h - 9}" font-size="11" text-anchor="middle" fill="${COUL.axe}">${libs[i]}</text>`;
+      // L'étiquette au-dessus de la colonne ET du point de l'an passé, sur un halo blanc : jamais sous la ligne.
+      if (i === der || i === creux) { const yy = Math.min(y(v), ref ? y(ref[i]) : y(v)) - 10; s += `<text x="${cx(i).toFixed(1)}" y="${yy.toFixed(1)}" font-size="12" text-anchor="middle" fill="${COUL.encre}" font-weight="600" stroke="${COUL.fond}" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${fN(v)}</text>`; }
+    }
   });
-  if (ref) { s += `<polyline points="${ref.map((v, i) => (x(i) + bw / 2).toFixed(1) + ',' + y(v).toFixed(1)).join(' ')}" fill="none" stroke="#7d776f" stroke-width="${mini ? 1.2 : 1.6}" stroke-dasharray="4 3"/>`;
-    if (!mini) { s += ref.map((v, i) => `<circle cx="${(x(i) + bw / 2).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="#fff" stroke="#7d776f" stroke-width="1.4"/>`).join(''); } }
-  return `<svg width="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block">${s}</svg>`;
+  if (ref) {
+    s += `<polyline points="${ref.map((v, i) => cx(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ')}" fill="none" stroke="${COUL.ref}" stroke-width="${mini ? 1.5 : 2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (!mini) {
+      s += ref.map((v, i) => `<circle cx="${cx(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="${COUL.ref}" stroke="${COUL.fond}" stroke-width="2"><title>${libs[i]} 2025 : ${fN(v)}</title></circle>`).join('');
+      s += `<text x="${(cx(der) + 14).toFixed(1)}" y="${(y(ref[der]) + 4).toFixed(1)}" font-size="11.5" fill="${COUL.doux}">${fN(ref[der])} en 2025</text>`;
+    }
+  }
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block" role="img" aria-label="${opts.titre || 'graphique'}">${s}</svg>`;
 }
+/** La légende : une pastille pour une série en colonnes, un trait pour une ligne, un aplat pour une bande. Texte à l'encre. */
+const legende = L => `<div class="gr-leg">${L.map(([t, k, c]) => `<span>${k === 'trait' ? `<i class="k-trait" style="background:${c}"></i>` : k === 'bande' ? `<i style="background:${c};opacity:.22"></i>` : `<i style="background:${c}"></i>`}${t}</span>`).join('')}</div>`;
 const AVATAR = '/public/dashboard/avatars/pierre.svg';
 function tete(mode) {
   const M = [['bilan', 'Bilan'], ['conv', 'Conversation'], ['modeles', 'Mes modèles', true], ['bureau', 'Demande au bureau']];

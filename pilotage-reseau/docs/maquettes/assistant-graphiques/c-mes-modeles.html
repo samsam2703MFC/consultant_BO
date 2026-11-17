@@ -16,13 +16,13 @@ const T = (vig, t, s, tags, prog) => `<div class="gr-mt"><div class="vig">${vig}
   <div class="a"><span class="p">Ouvrir</span><span>⤓ Télécharger</span><span>${prog ? 'Programmé' : 'Programmer'}</span></div></div>`;
 const mes = [
   T(graphe(300, 104, true), 'Mes clients par semaine face au N-1', 'les 12 dernières semaines · barres + N-1', ['chaque lundi 8:00 · PDF'], true),
-  T(graphe(300, 104, true, H, null, HL, { couleur: '#B0792A' }), 'Clients par heure, le samedi', 'moyenne des 4 derniers samedis', ['épinglé en Semaine']),
-  T(graphe(300, 104, true, PAN, null, PANL, { couleur: '#1B6FA8' }), 'Le panier moyen mois par mois', 'depuis janvier · hors clients pro', []),
+  T(graphe(300, 104, true, H, null, HL), 'Clients par heure, le samedi', 'moyenne des 4 derniers samedis', ['épinglé en Semaine']),
+  T(graphe(300, 104, true, PAN, null, PANL), 'Le panier moyen mois par mois', 'depuis janvier · hors clients pro', []),
 ];
 const reseau = [
-  T(graphe(300, 104, true, [57.5, 55.7, 47.9, 45.2, 56.8, 50.1].reverse(), [54.2, 52.6, 45.5, 46.0, 53.1, 52.8].reverse(), null, { couleur: '#3f7a52' }), 'Le CA des 6 derniers mois face au N-1', 'proposé par le réseau · votre magasin', ['du réseau']),
-  T(graphe(300, 104, true, [326, 274, 259, 230, 198, 176, 160, 150, 141, 132], null, null, { couleur: '#8D1D2C' }), 'Les 10 produits qui rapportent le plus', 'marge brute hors TVA · le mois en cours', ['du réseau']),
-  T(graphe(300, 104, true, [2.1, 1.6, 1.0, 2.2, 1.4, 1.8, 2.6], null, null, { couleur: '#9a948b' }), 'Les invendus jour par jour', 'pièces jetées et leur coût · la semaine', ['du réseau']),
+  T(graphe(300, 104, true, [57.5, 55.7, 47.9, 45.2, 56.8, 50.1].reverse(), [54.2, 52.6, 45.5, 46.0, 53.1, 52.8].reverse(), null), 'Le CA des 6 derniers mois face au N-1', 'proposé par le réseau · votre magasin', ['du réseau']),
+  T(graphe(300, 104, true, [326, 274, 259, 230, 198, 176, 160, 150, 141, 132], null, null), 'Les 10 produits qui rapportent le plus', 'marge brute hors TVA · le mois en cours', ['du réseau']),
+  T(graphe(300, 104, true, [2.1, 1.6, 1.0, 2.2, 1.4, 1.8, 2.6], null, null), 'Les invendus jour par jour', 'pièces jetées et leur coût · la semaine', ['du réseau']),
 ];
 const corps = `<div class="gr-mods"><h4>Mes modèles <small>3 · ils se refont avec les ventes du jour à chaque ouverture</small></h4><div class="gr-grille">${mes.join('')}</div>
   <h4>Les modèles du réseau <small>proposés par le siège · à ouvrir ou à copier dans mes modèles</small></h4><div class="gr-grille">${reseau.join('')}</div></div>`;

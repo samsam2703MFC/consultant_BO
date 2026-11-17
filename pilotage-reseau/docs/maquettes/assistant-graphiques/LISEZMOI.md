@@ -33,6 +33,21 @@ suite. Il lit la fiche de faits du magasin et trois outils en lecture seule sur 
   bundles et promotions 21,6 % (seul magasin), tartes 11,4 % contre 21,1 %, traiteur 12,3 % contre 19,7 %,
   viennoiserie 13,6 % contre 20,1 %. Les autres magasins ne sont pas nommés (règle de l'assistant).
 
+## Les graphiques soignés (17/11/2026, « soigner les graphiques »)
+
+Repris avec la méthode dataviz, à suivre aussi pour le code :
+- **Couleurs validées** (`scripts/validate_palette.js`, clair et sombre) : la série du magasin en Ruby un cran plus clair
+  `#A82E40` (le `#8D1D2C` de la marque sort de la bande de clarté d'une série), le pôle froid `#1B6FA8` ; la référence
+  (l'an passé, le réseau) en gris, en retrait. Un écart au réseau n'est ni bon ni mauvais : deux teintes opposées
+  (Ruby au-dessus, bleu en dessous), pas de rouge/vert.
+- **Colonnes** de 24 px au plus, arrondies en haut et carrées à la base, d'une seule couleur ; **l'an passé** en ligne
+  grise pleine de 2 px (plus de pointillé), points de 8 px cerclés de blanc.
+- **Une seule échelle**, graduations rondes (0, 500, 1 000, 1 500), grille en filets pleins et discrets.
+- **Étiquettes choisies** : la dernière semaine et le creux, sur un halo blanc ; le reste à l'axe et au survol (chaque
+  colonne et chaque point portent leur valeur au survol). Le texte reste à l'encre, jamais dans la couleur des séries.
+- **Radar** : bande du réseau en aplat léger, moyenne en ligne grise, le magasin en ligne de 2 px et voile de 10 % ;
+  libellés « 22,0 % · réseau 17,5 % » ; graduations sur la bissectrice, à l'écart des axes ; légende complète.
+
 ## Comment le coder sans que l'IA invente
 
 - Le modèle ne dessine pas : il choisit dans le schéma de réponse un **graphique** (`type`, `mesure`, `periode`,

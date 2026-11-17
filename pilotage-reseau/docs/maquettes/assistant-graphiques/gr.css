@@ -79,3 +79,19 @@
 .gr-tete{border-radius:16px 16px 0 0}
 .gr-fond{z-index:1000}.gr-mod{z-index:1001}
 .gr-leg{flex-wrap:wrap;justify-content:center}.gr-leg span{white-space:nowrap}
+/* Graphiques soignés (17/11/2026) : la légende à l'encre, les clés de couleur à côté. */
+.gr-graph{padding:14px 16px 10px}
+.gr-leg{gap:18px;font-size:12px;color:#5b5650;margin:8px 0 2px}
+.gr-leg i{width:10px;height:10px;border-radius:3px}
+.gr-leg i.k-trait{width:16px;height:2px;border-radius:1px;vertical-align:3px}
+.gr-mt .vig{padding:12px 14px 6px}
+.gr-ecarts{font-size:12.5px}
+.gr-ecarts-t{font-size:11.5px;color:#5b5650;margin:0 0 8px}
+.gr-ecarts .l{display:grid;grid-template-columns:128px 1fr 64px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #f1ece4;color:#2b2724}
+.gr-ecarts .b{position:relative;height:10px}
+.gr-ecarts .b i{position:absolute;top:0;bottom:0}
+.gr-ecarts .b b{position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:#d9d2c7}
+.gr-ecarts .n{text-align:right;font-variant-numeric:tabular-nums}
+.gr-ecarts-l{display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:11.5px;color:#5b5650}
+.gr-ecarts-l i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.gr-leg{gap:8px 16px;font-size:11.5px}

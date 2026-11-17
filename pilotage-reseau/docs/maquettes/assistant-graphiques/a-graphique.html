@@ -15,7 +15,7 @@ const sous = CLI.filter((v, i) => v < N1[i]).length;
 const reponse = `<div class="gr-moi">Montre-moi mes clients par semaine depuis septembre, face à l’an passé</div>
   <div class="gr-rep"><p>Sur ces douze semaines, vous avez reçu <b style="font-weight:400">${fN(tot)} clients</b>, ${Math.abs(ec).toLocaleString('fr-FR')} % de moins qu’un an plus tôt. Les deux dernières semaines repartent : S45 et S46 sont au-dessus de 1 100 clients.</p>
     <div class="gr-types"><span class="on">▥ Barres</span><span>⟋ Courbe</span><span>☰ Tableau</span><span style="margin-left:auto">Mesure : <b style="font-weight:400;color:var(--ink)">clients ▾</b></span></div>
-    <div class="gr-graph">${graphe(760, 250, false)}<div class="gr-leg"><span><i style="background:#8D1D2C"></i>clients de la semaine</span><span><i style="background:#c98a92"></i>sous l’an passé</span><span><i style="border-top:2px dashed #7d776f;height:0;border-radius:0;vertical-align:3px"></i>même semaine en 2025</span></div></div>
+    <div class="gr-graph">${graphe(1000, 280, false, null, undefined, null, { titre: 'Clients par semaine, 2026 face à 2025' })}${legende([['Clients de la semaine, 2026', 'col', COUL.moi], ['Même semaine en 2025', 'trait', COUL.ref]])}</div>
     <div class="gr-k"><div><b>${fN(tot)}</b><span>clients sur 12 semaines</span></div><div><b>${ec.toLocaleString('fr-FR')} %</b><span>face à l’an passé (${fN(totN1)})</span></div><div><b>${sous} / 12</b><span>semaines sous l’an passé</span></div></div>
     <p style="margin:0">Le creux de S43–S44 (vacances d’automne) pèse le plus : − 59 et − 60 clients face à 2025.</p>
     <div class="gr-src">Source : les tickets du panel, semaine par semaine (Historique des ventes, 18 mois) · même semaine décalée de 364 jours</div>
