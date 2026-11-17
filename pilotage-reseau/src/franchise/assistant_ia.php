@@ -42,6 +42,7 @@ declare(strict_types=1);
  *   POST /assistant/magasin/modeles {shop, visuel, nom}      garder un visuel comme modèle
  *   GET  /assistant/magasin/modeles/{id}?shop=               le rejouer, chiffres du jour
  *   POST /assistant/magasin/modeles/{id}/supprimer {shop}    le retirer
+ *   POST /assistant/magasin/pdf {shop, question | visuels, images}   la réponse en PDF A4 (moteur du cockpit, rapPdfRendu)
  */
 
 const AIA_PROF_MODELE = 'claude-haiku-5-5';   // l'agent rapide (Sam, 17/11/2026 : « mettre un agent rapide »)
@@ -542,7 +543,8 @@ Le sommaire du manuel est joint (chaque document : son id, son code, son type, s
   · `priorites` : vide, sauf une erreur fréquente à corriger (écran « aucun ») ;
   · `conclusion` : le point critique à ne pas oublier, en une phrase ;
   · `suites` : 2 ou 3 questions courtes sur le manuel, que le sommaire permet de traiter ;
-  · `sources` : les id des documents lus.
+  · `sources` : les id des documents lus ;
+  · `visuels` : UN tableau (`donnees` = manuel) dès que le document lu liste des produits, des postes ou des moments avec leurs valeurs (programmes, températures, durées, doses, quantités, fréquences, rayons) : une ligne par produit, les colonnes du document, recopiées telles quelles ; vide pour un geste qui tient en quelques étapes.
 TXT;
 
 /** Le bloc commun à tous les agents : le manuel, les tableaux et graphiques, les sources. */
@@ -959,9 +961,147 @@ function wr_aia_modele_supprimer(int $id): array
     return ['ok' => true];
 }
 
-/** Les routes des modèles (le reste de l'assistant est routé dans public/api/index.php). */
+/* ---------------------------------------------------------------------------
+ * La réponse en PDF (17/11/2026, Sam : « output pdf »)
+ * ------------------------------------------------------------------------- */
+/** Une valeur d'un visuel, comme à l'écran (iaFmt de dashboard.js). */
+function aiaFmt(mixed $x, string $mesure): string
+{
+    if ($x === null || $x === '') { return '—'; }
+    if (!is_int($x) && !is_float($x)) { return (string) $x; }
+    $n = static fn (float $v, int $d) => number_format($v, $d, ',', "\u{00A0}");
+    return match ($mesure) {
+        'panier' => $n($x, 2) . "\u{00A0}€",
+        'part' => $n($x, 1) . "\u{00A0}%",
+        'tickets' => $n($x, $x < 20 && fmod((float) $x, 1.0) !== 0.0 ? 1 : 0),
+        'quantite' => $n($x, fmod((float) $x, 1.0) !== 0.0 ? 1 : 0) . "\u{00A0}pcs",
+        default => $n(round((float) $x), 0) . "\u{00A0}€",
+    };
+}
+
+/** Une image de graphique envoyée par l'écran : un PNG en data-URI, 3 Mo au plus ; null sinon. */
+function aiaPngValide(mixed $d): ?string
+{
+    if (!is_string($d) || !str_starts_with($d, 'data:image/png;base64,') || strlen($d) > 4_000_000) { return null; }
+    $b = base64_decode(substr($d, 22), true);
+    return $b !== false && str_starts_with($b, "\x89PNG\r\n\x1a\n") ? $d : null;
+}
+
+/**
+ * Le document A4 d'une réponse (gabarit du design system, src/doc.php) : la question, la réponse, ses chiffres, ses
+ * points, chaque visuel (l'image du graphique telle que l'écran l'a dessinée, puis son tableau : les chiffres restent
+ * lisibles même sans image), les priorités, les documents du manuel lus, la phrase de finition. Tables et styles en
+ * ligne : wkhtmltopdf rend mal le flexbox.
+ *
+ * $r : la réponse (titre, resume, chiffres, points, priorites, conclusion) ; $vis : les visuels construits, avec leur id ;
+ * $sources : aiaSources ; $images : {id du visuel: data-URI PNG} ; $m : {magasin, question, agent, le}.
+ */
+function aiaPdfHtml(array $r, array $vis, array $sources, array $images, array $m): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $ink = defined('DOC_INK') ? DOC_INK : '#1c1a17'; $mut = defined('DOC_MUTED') ? DOC_MUTED : '#7a736a';
+    $line = defined('DOC_LINE') ? DOC_LINE : '#e6e0d8'; $ruby = defined('DOC_RUBY') ? DOC_RUBY : '#8D1D2C'; $head = defined('DOC_HEAD') ? DOC_HEAD : '#fbf9f5';
+    $lab = static fn (string $t) => '<div class="doc-label" style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:' . $mut . ';margin:18px 0 6px">' . $e($t) . '</div>';
+    $h = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' . $e($r['titre'] ?? 'Réponse de l’assistant') . '</title><style>'
+        . (function_exists('docCss') ? docCss() : '')
+        . 'h1{font-size:18px;font-weight:700;margin:4px 0 6px;color:' . $ink . '}'
+        . '.res{font-size:12.5px;line-height:1.55;margin:0 0 4px}'
+        . '.k{width:100%;border-collapse:collapse;margin:10px 0 4px}.k td{border:1px solid ' . $line . ';padding:8px 10px;vertical-align:top;width:33%}'
+        . '.k b{display:block;font-size:15px;font-weight:700}.k span{font-size:9.5px;color:' . $mut . '}'
+        . 'ul.pts{margin:6px 0 0;padding-left:16px}ul.pts li{margin:3px 0;font-size:11px}ul.pts b{color:' . $ruby . ';font-weight:400}'
+        . '.vis{border:1px solid ' . $line . ';padding:10px 12px;margin:12px 0 0;page-break-inside:avoid}'
+        . '.vis .t{font-size:12.5px;font-weight:700}.vis .p{font-size:9.5px;color:' . $mut . ';margin-bottom:6px}'
+        . '.vis img{width:100%;display:block;margin:4px 0 8px}'
+        . '.tab{width:100%;border-collapse:collapse;font-size:9.5px}.tab th{background:' . $head . ';color:' . $mut . ';font-weight:400;text-align:left;padding:4px 6px;border-bottom:1px solid ' . $line . '}'
+        . '.tab td{padding:3px 6px;border-top:1px solid ' . $line . '}.tab .n{text-align:right;white-space:nowrap}'
+        . '.src{font-size:8.5px;color:' . $mut . ';margin-top:5px}'
+        . '.pr{width:100%;border-collapse:collapse;margin-top:4px}.pr td{padding:6px 8px;border-top:1px solid ' . $line . ';vertical-align:top;font-size:10.5px}'
+        . '.pr .n{width:18px;color:' . $ruby . ';font-weight:700}.pr .g{color:#3f7a52}'
+        . '.fin{border-left:3px solid ' . $ruby . ';padding:6px 12px;margin:16px 0 0;font-size:12px}'
+        . '.pied{margin-top:18px;font-size:8.5px;color:' . $mut . '}'
+        . '</style></head><body>';
+    $h .= function_exists('docEntete') ? docEntete('Réponse de l’assistant', trim(($m['magasin'] ?? '') . ' · ' . ($m['le'] ?? '') . ' · ' . ($m['agent'] ?? ''), ' ·')) : '';
+    $h .= $lab('La question') . '<p style="margin:0;font-size:12px">« ' . $e($m['question'] ?? '') . ' »</p>';
+    $h .= $lab('La réponse') . '<h1>' . $e($r['titre'] ?? '') . '</h1><p class="res">' . $e($r['resume'] ?? '') . '</p>';
+    $K = array_slice(is_array($r['chiffres'] ?? null) ? $r['chiffres'] : [], 0, 3);
+    if ($K) { $h .= '<table class="k"><tr>' . implode('', array_map(static fn ($c) => '<td><b>' . $e($c['valeur'] ?? '') . '</b><span>' . $e($c['libelle'] ?? '') . '</span></td>', $K)) . '</tr></table>'; }
+    $P = is_array($r['points'] ?? null) ? $r['points'] : [];
+    if ($P) { $h .= '<ul class="pts">' . implode('', array_map(static fn ($p) => '<li><b>' . $e($p['titre'] ?? '') . '</b> ' . $e($p['texte'] ?? '') . '</li>', $P)) . '</ul>'; }
+    foreach ($vis as $v) {
+        $T = is_array($v['tableau'] ?? null) ? $v['tableau'] : ['entetes' => [], 'lignes' => []];
+        $num = [];
+        foreach ($T['entetes'] as $i => $x) { $num[$i] = $i > 0 && (bool) array_filter($T['lignes'], static fn ($l) => is_int($l[$i] ?? null) || is_float($l[$i] ?? null)); }
+        $img = isset($v['id']) ? ($images[(string) $v['id']] ?? null) : null;
+        $h .= '<div class="vis"><div class="t">' . $e($v['titre'] ?? '') . '</div>'
+            . '<div class="p">' . $e(trim(($v['periode'] ?? '') . (($v['donnees'] ?? '') !== 'manuel' && !empty($v['mesureNom']) ? ' · ' . $v['mesureNom'] : ''), ' ·')) . '</div>'
+            . ($img !== null ? '<img src="' . $img . '" alt="">' : '')
+            . '<table class="tab"><tr>' . implode('', array_map(static fn ($x, $i) => '<th' . ($num[$i] ? ' class="n"' : '') . '>' . $e($x) . '</th>', $T['entetes'], array_keys($T['entetes']))) . '</tr>'
+            . implode('', array_map(static fn ($l) => '<tr>' . implode('', array_map(static fn ($c, $i) => '<td' . ($i > 0 && (is_int($c) || is_float($c)) ? ' class="n"' : '') . '>'
+                . $e($i > 0 ? aiaFmt($c, (string) ($v['mesure'] ?? 'ca')) : $c) . '</td>', $l, array_keys($l))) . '</tr>', $T['lignes'])) . '</table>'
+            . '<div class="src">Source : ' . $e($v['source'] ?? '') . (!empty($v['note']) ? ' · ' . $e($v['note']) : '') . '</div></div>';
+    }
+    $PR = is_array($r['priorites'] ?? null) ? $r['priorites'] : [];
+    if ($PR) {
+        $h .= $lab('Les priorités') . '<table class="pr">' . implode('', array_map(static fn ($p, $i) => '<tr><td class="n">' . ($i + 1) . '</td><td><b>' . $e($p['titre'] ?? '') . '</b><br>' . $e($p['constat'] ?? '')
+            . (!empty($p['gain']) ? '<br><span class="g">' . $e($p['gain']) . '</span>' : '') . '</td></tr>', $PR, array_keys($PR))) . '</table>';
+    }
+    if ($sources) {
+        $h .= $lab('Lu dans le manuel opératoire') . '<p style="margin:0;font-size:10.5px">' . implode(' · ', array_map(static fn ($s) => $e(($s['code'] ? $s['code'] . ' · ' : '') . $s['titre'] . ' (v' . $s['version'] . ', ' . $s['statut'] . ')'), $sources)) . '</p>';
+    }
+    if (!empty($r['conclusion'])) { $h .= '<div class="fin">' . $e($r['conclusion']) . '</div>'; }
+    $h .= '<p class="pied">Rédigé par l’assistant (' . $e($m['agent'] ?? '') . ') à partir des chiffres du magasin et du manuel opératoire du réseau. Vérifiez avant d’agir.</p>';
+    return $h . '</body></html>';
+}
+
+/**
+ * POST /assistant/magasin/pdf {shop, question?, visuels?: [id], images?: {id: data-URI PNG}} → le PDF A4.
+ * `question` : une réponse gardée (aia_question) et ses visuels ; `visuels` : un ou des visuels seuls (un modèle ouvert).
+ * Les images sont les graphiques dessinés par l'écran ; sans elles, le PDF garde les tableaux.
+ */
+function wr_aia_pdf(): array
+{
+    $b = body();
+    $sid = ctype_digit((string) ($b['shop'] ?? '')) ? (int) $b['shop'] : 0;
+    if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant']; }
+    aiaSchema();
+    $qid = ctype_digit((string) ($b['question'] ?? '')) ? (int) $b['question'] : 0;
+    $agents = (function_exists('amCoachs') ? amCoachs() : []) + ['professeur' => AIA_PROF];
+    if ($qid > 0) {
+        $q = Db::row('SELECT id, cree_le, coach, question, reponse FROM aia_question WHERE id = ? AND shop_id = ?', [$qid, $sid]);
+        $r = $q !== null ? json_decode((string) $q['reponse'], true) : null;
+        if (!is_array($r)) { http_response_code(404); return ['error' => 'réponse inconnue pour ce magasin']; }
+        $V = Db::rows('SELECT id, resultat FROM aia_visuel WHERE question_id = ? AND shop_id = ? AND resultat IS NOT NULL ORDER BY id', [$qid, $sid]);
+        $meta = ['question' => (string) $q['question'], 'agent' => (string) ($agents[$q['coach']]['nom'] ?? $q['coach']), 'le' => date('d/m/Y à H:i', strtotime((string) $q['cree_le']))];
+        $sources = aiaSources($r['sources'] ?? []);
+    } else {
+        $ids = array_values(array_filter(array_map('intval', is_array($b['visuels'] ?? null) ? array_slice($b['visuels'], 0, 4) : []), static fn ($x) => $x > 0));
+        if ($ids === []) { http_response_code(422); return ['error' => 'réponse ou visuel manquant']; }
+        $V = Db::rows('SELECT id, resultat FROM aia_visuel WHERE shop_id = ? AND resultat IS NOT NULL AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY id', array_merge([$sid], $ids));
+        if ($V === []) { http_response_code(404); return ['error' => 'visuel inconnu pour ce magasin']; }
+        $r = ['titre' => mb_substr(trim((string) ($b['titre'] ?? '')), 0, 120) ?: 'Mes modèles', 'resume' => 'Le modèle, refait avec les chiffres du jour.'];
+        $meta = ['question' => 'Mes modèles', 'agent' => 'Mes modèles', 'le' => date('d/m/Y à H:i')];
+        $sources = [];
+    }
+    $vis = [];
+    foreach ($V as $x) { $y = json_decode((string) $x['resultat'], true); if (is_array($y)) { $vis[] = ['id' => (int) $x['id']] + $y; } }
+    $images = [];
+    foreach (is_array($b['images'] ?? null) ? array_slice($b['images'], 0, 4, true) : [] as $id => $d) { if (($ok = aiaPngValide($d)) !== null) { $images[(string) $id] = $ok; } }
+    $nom = 'Magasin ' . $sid;
+    if (function_exists('fidMagasins')) { foreach (fidMagasins() as $x) { if ((int) $x['id'] === $sid) { $nom = (string) $x['nom']; } } }
+    $html = aiaPdfHtml($r, $vis, $sources, $images, $meta + ['magasin' => $nom]);
+    $pdf = function_exists('rapPdfRendu') ? rapPdfRendu($html, ['magasin' => $nom, 'rapport' => 'Assistant — ' . ($r['titre'] ?? ''), 'genere' => date('d/m/Y à H:i'), 'envoye' => '']) : null;
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    $fichier = 'assistant-' . (trim((string) preg_replace('/[^a-z0-9]+/', '-', aiaNorm((string) ($r['titre'] ?? 'reponse'))), '-') ?: 'reponse') . '.pdf';
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="' . $fichier . '"');
+    echo $pdf;
+    exit;
+}
+
+/** Les routes des modèles et du PDF (le reste de l'assistant est routé dans public/api/index.php). */
 function aiaRoute(string $method, string $path): ?array
 {
+    if ($method === 'POST' && $path === '/assistant/magasin/pdf') { return wr_aia_pdf(); }
     if (!str_starts_with($path, '/assistant/magasin/modeles')) { return null; }
     if ($method === 'GET' && $path === '/assistant/magasin/modeles') { return ep_aia_modeles(); }
     if ($method === 'POST' && $path === '/assistant/magasin/modeles') { return wr_aia_modele_enregistrer(); }
