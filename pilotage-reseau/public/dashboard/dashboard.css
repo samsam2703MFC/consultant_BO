@@ -2921,6 +2921,15 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 /* L'assistant (12/11/2026, maquettes docs/maquettes/assistant-ia-magasin) : bilan, puis conversation pour creuser. */
 .db-btn-ia{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--color-primary);background:var(--color-primary);color:#fff;border-radius:8px;padding:6px 13px;font:400 12.5px var(--font-ui);cursor:pointer}
 .db-btn-ia:hover{background:#6f1622}
+.db-btn-ia.on{background:#6f1622;border-color:#6f1622}
+/* L'assistant en pleine page (17/11/2026) : la fenêtre posée dans la page, à toute la largeur. En Conversation, elle
+ * tient dans l'écran (hauteur posée par iaPageHauteur) : le fil défile, la saisie reste en bas. */
+.ia-page{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.ia-page.ma{min-height:520px}
+.ia-page .ia-b{overflow:visible;padding:18px 22px 22px}
+.ia-page .ia-corps{grid-template-columns:300px 1fr}
+.ia-page .ia-h b{font-size:15px}
+.ia-page .ia-ton{flex:1 1 0;min-width:0}
 body.ia-ouvert{overflow:hidden}
 .ia-voile{position:fixed;inset:0;z-index:60;background:rgba(24,18,20,.42)}
 .ia-modale{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 40px)}
@@ -3169,6 +3178,13 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-rech i.att{background:var(--prize)}
 .db-rech b{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink)}
 .db-rail-ext{margin-left:auto;font-size:11px;color:var(--faint)}
+/* L'assistant IA du rail (17/11/2026) : une entrée comme les autres, sous la Boîte mail, en Ruby sur l'Abricot de la
+ * marque (#F2C9A0) ; ouverte, en gras comme toute entrée active. */
+.db-rail-ia{margin-top:4px}
+.db-rail-ia button.sidebar__item{background:#F2C9A0;color:var(--accent)}
+.db-rail-ia button.sidebar__item:hover{background:#EDBA88}
+.db-rail-ia button.sidebar__item.is-active{background:#EDBA88;color:var(--accent)}
+.db-rail-ia .ia-icone{width:16px;height:16px}
 .db-retoiles{display:inline-flex;gap:1px;color:var(--prize)}
 .db-retoiles svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
 .db-retoiles svg.on{fill:currentColor}

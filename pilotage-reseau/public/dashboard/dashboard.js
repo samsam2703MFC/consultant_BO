@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'assistant'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -154,6 +154,8 @@
     if (S.vue === 'boite') { rendre(); if (force && window.DashBoite) { window.DashBoite.relire(); } return; }
     // Paramètres › Mails et automatisations (16/11/2026) : le module lit et écrit lui-même (automatisations.js).
     if (S.vue === 'mails') { rendre(); if (force && window.DashAuto) { window.DashAuto.relire(); } return; }
+    // L'assistant en pleine page (17/11/2026) : il lit ses questions et ses modèles ; les chiffres, il les lit à la question.
+    if (S.vue === 'assistant') { if (!IA.modeles) { iaModelesLire(); } rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
@@ -5631,7 +5633,7 @@
    * des réponses ; la liste vient de GET /assistant/magasin/questions (tons). */
   let tonGarde = '';
   try { tonGarde = localStorage.getItem('dbIaTon') || ''; } catch (e) { /* stockage refusé */ }
-  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde, conv: '', reg: {}, vues: {}, modMsg: {}, modeles: null, pdf: {} };
+  const IA = { ouvert: false, mode: 'b', pm: 'b', fil: [], questions: null, saisie: '', ton: tonGarde, conv: '', reg: {}, vues: {}, modMsg: {}, modeles: null, pdf: {} };
   const iaTons = () => (IA.questions && IA.questions.tons) || [];
   const iaTonCle = () => (iaTons().some(t => t.cle === IA.ton) ? IA.ton : ((IA.questions && IA.questions.tonDefaut) || ''));
   const iaNomTon = k => { const t = iaTons().find(x => x.cle === k); return t ? t.nom : ''; };
@@ -5669,7 +5671,7 @@
   function iaDemander(q, mode, origine) {
     q = String(q || '').trim();
     if (!q || IA.fil.some(t => t.attente)) { return; }
-    if (mode) { IA.mode = mode; }
+    if (mode) { if (IA.ouvert) { IA.mode = mode; } else { IA.pm = mode; } }
     const fil = IA.fil.filter(t => t.r && !t.modele).map(t => ({ q: t.q, r: t.r }));
     const t = { q, attente: true, ton: iaTonCle() };
     IA.fil.push(t); IA.saisie = '';
@@ -5859,7 +5861,7 @@
   }
   /* Mes modèles (aia_modele) : la demande d'un visuel gardée ; l'ouvrir la refait avec les chiffres du jour. */
   function iaModelesLire() {
-    lire('/assistant/magasin/modeles?shop=' + encodeURIComponent(S.shop)).then(d => { IA.modeles = (d && d.modeles) || []; if (IA.ouvert) { iaRendre(); } }).catch(() => { IA.modeles = []; });
+    lire('/assistant/magasin/modeles?shop=' + encodeURIComponent(S.shop)).then(d => { IA.modeles = (d && d.modeles) || []; if (IA.ouvert || iaSurPage()) { iaRendre(); } }).catch(() => { IA.modeles = []; });
   }
   function iaModeleGarder(k) {
     const v = IA.reg[k];
@@ -5900,7 +5902,7 @@
   function iaBilan() {
     const Q = iaQ(), dern = IA.fil[IA.fil.length - 1], k = IA.fil.length - 1;
     let h = iaSaisie(true);
-    h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
+    h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t).replace(/ ([?!:;»])/g, '\u00a0$1')}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
     h += iaMesModeles();
     if (!dern) { return h + `<p class="ia-vide">Choisissez une question, ou posez la vôtre. ${iaProf() ? 'Le Professeur lit le manuel opératoire du réseau, document par document.' : 'L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question, et le manuel opératoire.'} Il propose un tableau ou un graphique quand il aide.</p>`; }
     if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 64, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} ${iaLit(dern.ton)} « ${esc(dern.q)} »</p></div>`; }
@@ -6014,26 +6016,76 @@
         .then(() => { HLP.envoi = false; iaRendre(); });
     }));
   }
+  /* L'assistant en pleine page (17/11/2026, Sam : « le mettre sous Boîte mail et l'ouvrir en pleine page ») : l'onglet
+   * « assistant » du rail. Le même assistant que la fenêtre (le même fil, les mêmes modèles), en Bilan ou en Conversation ;
+   * la fenêtre reste pour la demande au bureau et pour le téléphone, qui n'a pas la page. */
+  const iaSurPage = () => S.vue === 'assistant' && !EMBED && !EMBED_PM && !estMobile();
+  function iaPage(mode) {
+    if (mode === 'a' || mode === 'b') { IA.pm = mode; }
+    if (IA.ouvert) { IA.ouvert = false; iaRendre(); }
+    if (!IA.modeles) { iaModelesLire(); }
+    if (S.vue === 'assistant') { iaRendre(); return; }
+    S.vue = 'assistant'; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); window.scrollTo(0, 0);
+  }
+  function iaCorps(m) { return m === 'd' ? `<div class="ia-b">${hdVue()}</div>` : (m === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`); }
+  /** Les graphiques se dessinent à la largeur réelle de leur cadre : les textes gardent leur taille (17/11/2026). */
+  function iaDessiner(b) { b.querySelectorAll('[data-iagraphe]').forEach(el => { const v = IA.reg[el.dataset.iagraphe]; if (v) { el.innerHTML = iaDessin(v, Math.max(260, Math.floor(el.clientWidth))); } }); }
+  /** La conversation tient dans l'écran : le fil défile, la saisie reste en bas. */
+  function iaPageHauteur(p) {
+    if (!p.classList.contains('ma')) { p.style.height = ''; return; }
+    const haut = p.getBoundingClientRect().top + window.scrollY;
+    p.style.height = Math.max(520, window.innerHeight - haut - 24) + 'px';
+  }
   function iaRendre() {
     const b = iaBoite();
-    if (!IA.ouvert) { b.innerHTML = ''; document.body.classList.remove('ia-ouvert'); return; }
-    document.body.classList.add('ia-ouvert');
-    const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
-    b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
+    if (!IA.ouvert) { b.innerHTML = ''; document.body.classList.remove('ia-ouvert'); }
+    else {
+      document.body.classList.add('ia-ouvert');
+      const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
+      b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
       <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · ${iaProf() && IA.mode !== 'd' ? 'le Professeur lit le manuel opératoire du réseau' : 'il lit les chiffres de votre magasin et le manuel opératoire'}</span></div>
         <span class="ia-modes">${(IA.questions && IA.questions.actif ? [['b', 'Bilan'], ['a', 'Conversation'], ['d', 'Demande au bureau']] : [['d', 'Demande au bureau']]).map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
       ${IA.mode === 'd' ? '' : iaChoixTon()}
-      ${IA.mode === 'd' ? `<div class="ia-b">${hdVue()}</div>` : (IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`)}</div>`;
-    // Les graphiques se dessinent à la largeur réelle de leur cadre : les textes gardent leur taille (17/11/2026).
-    b.querySelectorAll('[data-iagraphe]').forEach(el => { const v = IA.reg[el.dataset.iagraphe]; if (v) { el.innerHTML = iaDessin(v, Math.max(260, Math.floor(el.clientWidth))); } });
-    const f = b.querySelector('.ia-fil');
+      ${iaCorps(IA.mode)}</div>`;
+      iaDessiner(b);
+      const f = b.querySelector('.ia-fil');
+      if (f && basAvant) { f.scrollTop = f.scrollHeight; }
+      iaLier(b, false);
+    }
+    const p = document.getElementById('db-ia-page');
+    if (p && iaSurPage()) { iaPageRendre(p); }
+  }
+  function iaPageRendre(p) {
+    const m = IA.pm === 'a' ? 'a' : 'b';
+    if (!IA.questions) { p.className = 'ia-page'; p.innerHTML = IA.qErr ? `<div class="db-err">L’assistant ne répond pas : ${esc(IA.qErr)}</div>` : '<div class="db-attente">Lecture de l’assistant…</div>'; return; }
+    if (!IA.questions.actif) { p.className = 'ia-page'; p.innerHTML = '<div class="db-card"><p class="ia-vide">L’assistant n’est pas encore ouvert pour ce magasin. La demande au bureau reste dans sa vignette, en haut de la page.</p></div>'; return; }
+    const filEl = p.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
+    const enCours = IA.fil.some(t => t.attente);
+    p.className = 'ia-page ' + (m === 'a' ? 'ma' : 'mb');
+    p.innerHTML = `<header class="ia-h"><span class="ia-ic">${iaIcone(20, enCours ? 'lit' : '')}</span><div><b>${iaProf() ? 'Le Professeur lit le manuel opératoire du réseau' : 'Il lit les chiffres de votre magasin dans l’ERP et le manuel opératoire'}</b><span>${m === 'a' ? 'Les questions toutes prêtes à gauche, le fil à droite' : 'Une question, sa réponse : résumé, chiffres, tableau ou graphique, priorités'}</span></div>
+        <span class="ia-modes">${[['b', 'Bilan'], ['a', 'Conversation']].map(([k, l]) => `<button class="${m === k ? 'on' : ''}" data-iamode="${k}">${l}</button>`).join('')}</span></header>
+      ${iaChoixTon()}${iaCorps(m)}`;
+    iaPageHauteur(p);
+    iaDessiner(p);
+    const f = p.querySelector('.ia-fil');
     if (f && basAvant) { f.scrollTop = f.scrollHeight; }
+    iaLier(p, true);
+    // Le rail suit : l'icône du bouton pulse pendant que l'assistant lit.
+    const r = document.querySelector('#db-rail .db-rail-ia .ia-icone');
+    if (r) { r.classList.toggle('lit', enCours); }
+  }
+  /** Les gestes de l'assistant, dans la fenêtre (page = false) ou dans la page. */
+  function iaLier(b, page) {
     b.querySelectorAll('[data-iafermer]').forEach(e => e.addEventListener('click', iaFermer));
     b.querySelectorAll('[data-iamode]').forEach(e => e.addEventListener('click', ev => {
       ev.stopPropagation();
-      const q = e.dataset.iaq;
-      if (q) { iaDemander(q, e.dataset.iamode, 'suite'); } else { IA.mode = e.dataset.iamode; if (IA.mode === 'd') { hdLire(false); } iaRendre(); }
+      const q = e.dataset.iaq, m = e.dataset.iamode;
+      if (q) { iaDemander(q, m, 'suite'); return; }
+      if (page) { IA.pm = m; iaRendre(); return; }
+      // Au bureau, le Bilan et la Conversation de la fenêtre mènent à la page ; au téléphone, ils restent dans la fenêtre.
+      if (m !== 'd' && !estMobile() && IA.questions && IA.questions.actif) { iaPage(m); return; }
+      IA.mode = m; if (m === 'd') { hdLire(false); } iaRendre();
     }));
     // L'origine de la question part avec elle (gardée au cockpit, pour décider des agents spécialisés).
     b.querySelectorAll('[data-iaq]:not([data-iamode])').forEach(e => e.addEventListener('click', () => iaDemander(e.dataset.iaq, null, e.classList.contains('ia-tq') ? 'tuile' : 'liste')));
@@ -6050,15 +6102,19 @@
     b.querySelectorAll('[data-iapdf]').forEach(e => e.addEventListener('click', () => iaPdf(e.dataset.iapdf)));
     b.querySelectorAll('[data-iamodo]').forEach(e => e.addEventListener('click', () => iaModeleOuvrir(e.dataset.iamodo)));
     b.querySelectorAll('[data-iamodx]').forEach(e => e.addEventListener('click', () => iaModeleRetirer(e.dataset.iamodx)));
-    hdLier(b);
+    if (!page) { hdLier(b); }
     b.querySelectorAll('[data-iaform]').forEach(fm => {
       const i = fm.querySelector('input');
       i.addEventListener('input', () => { IA.saisie = i.value; });
       fm.addEventListener('submit', ev => { ev.preventDefault(); iaDemander(i.value, null, 'libre'); });
     });
   }
+  window.addEventListener('resize', () => { const p = document.getElementById('db-ia-page'); if (p && iaSurPage()) { iaPageHauteur(p); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && IA.ouvert) { iaFermer(); } });
-  if (!EMBED && !EMBED_PM) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; if (q && q.actif) { rendre(); } }).catch(() => {}); }
+  if (!EMBED && !EMBED_PM) {
+    lire('/assistant/magasin/questions').then(q => { IA.questions = q; if ((q && q.actif) || S.vue === 'assistant') { rendre(); } })
+      .catch(e => { IA.qErr = e.message; if (S.vue === 'assistant') { rendre(); } });
+  }
   /* --- Fidélité (12/11/2026, maquettes B et C de docs/maquettes/fidelite-v3) --------------------------------------
    * Les profils de fréquence du magasin, réglés au cockpit (ERP franchisé › Fidélité › Profils clients) : la part des
    * clients scannés de chaque profil et, sous chaque vignette, sa condition ; les radars du profil choisi face à la
@@ -7072,7 +7128,7 @@
     // Paramètres (16/11/2026, maquette docs/maquettes/parametres-mails/) : ce que le magasin envoie tout seul.
     ['Paramètres', [['mails', 'Mails et automatisations', 'auto']]],
   ];
-  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : 'Dashboard'; };
+  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : 'Dashboard'; };
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
   function postsUrl() {
     const b = String((S.aux.meta || {}).espaceBoutiqueUrl || '');
@@ -7114,20 +7170,28 @@
     const a = n.querySelector('.sidebar__item.is-active');
     if (a && n.dataset.vu !== S.vue) { n.dataset.vu = S.vue; a.scrollIntoView({ block: 'nearest' }); }
   }
+  /** L'assistant IA (17/11/2026, Sam : « la majorité des tableaux sont dans l'assistant : le mettre sous Boîte mail et
+   * l'ouvrir en pleine page » ; puis « une entrée normale du rail, texte Ruby, en surbrillance abricot ») : une entrée du
+   * rail comme les autres, sous la Boîte mail, en Ruby sur fond Abricot. */
+  function railIa() {
+    if (!(IA.questions && IA.questions.actif)) { return ''; }
+    const on = S.vue === 'assistant';
+    return `<div class="db-rail-ia"><button type="button" class="sidebar__item${on ? ' is-active' : ''}" data-vue="assistant"${on ? ' aria-current="page"' : ''}>${iaIcone(16, IA.fil.some(t => t.attente) ? 'lit' : '')}<span class="sidebar__item-label">Assistant IA</span></button></div>`;
+  }
   function railHtml() {
     return `
       <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
-      <div class="sidebar__groups"><div class="sidebar__group db-rail-boite"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button></div>${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
+      <div class="sidebar__groups"><div class="sidebar__group db-rail-boite"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button></div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
         : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}</button>`).join('')}</div>`).join('')}</div>`;
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
@@ -7141,7 +7205,6 @@
     const v = valeurMagasin(), val = !v ? '…' : (!v.n ? '—' : fE(v.valeur));
     const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
     const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
-    const ia = IA.questions && IA.questions.actif;
     const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
     // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
@@ -7152,7 +7215,6 @@
     return `<div class="db-nav db-nav--rail">${haut.trim() ? haut + '<span style="flex:1"></span>' : ''}
       <span class="db-avs">${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
       <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="db-av__o">${VIGN_ICO.valeur}</span><span class="db-av__t"><span class="k">Valeur du magasin</span><span class="v">${val}</span></span></button></span>
-      ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}
       ${window.DashApi ? av('data-apiouvrir="1" title="Les appels de cette page à l’API et l’index de l’API du cockpit franchisé"', ' db-av--api', VIGN_ICO.api, 'API', window.DashApi.n() + ' appel' + (window.DashApi.n() > 1 ? 's' : '')) : ''}</span></div>`;
@@ -7219,15 +7281,16 @@
     else {
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
+      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia${S.vue === 'assistant' ? ' on' : ''}" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['frais', 'Frais'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
+    if (S.vue === 'assistant') { h += '<div id="db-ia-page" class="ia-page"></div>'; $.innerHTML = h; brancher(); iaRendre(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
@@ -10577,7 +10640,8 @@
     b2bRendre();
     cmdmRendre();
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
-    $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => iaOuvrir(b.dataset.iaouvrir === 'd' ? 'd' : null)));
+    // L'assistant s'ouvre en pleine page au bureau (17/11/2026) ; la fenêtre reste pour la demande au bureau et au téléphone.
+    $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => { if (b.dataset.iaouvrir === 'd') { iaOuvrir('d'); } else if (estMobile()) { iaOuvrir(null); } else { iaPage(null); } }));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
