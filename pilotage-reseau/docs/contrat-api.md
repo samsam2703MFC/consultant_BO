@@ -5813,7 +5813,16 @@ page finale : les pages dans l'ordre en blocs (une catégorie et ses pages, pré
 qui se glissent par ⠿ (ou ‹ ›) ; les pages de la marque restent fixes ; nombre de pages (sans retirer une page qui
 porte des produits), format, langues ; « Réglages page par page » ouvre la liste détaillée d'avant (place libre, gamme,
 présentations, répartition automatique). Rien ne part avant « Validation » : un seul `PUT` (pages, format, langues, et
-`pageCount` s'il a changé). Le produit d'une pleine page est relu (`adopter`) et renvoyé (`pagesCorps`).
+`pageCount` s'il a changé). Le produit d'une pleine page est relu (`adopter`) et renvoyé (`pagesCorps`). À chaque
+catégorie, sous le résumé, la liste de ses produits (photo, nom, prix) avec un interrupteur montré · caché : le choix de
+l'étape 2, enregistré avec les pages (`products`) ; le dernier montré reste.
+
+**Feuilleter** (17/11/2026, Sam : « un catalogue à feuilleter en simulation dans l'export en PDF, pour être sûr que
+tout est bien à sa place »). En tête de l'étape 5, le document (`…/document`, la langue choisie) comme imprimé et plié :
+la couverture seule à droite, les doubles pages (2-3, 4-5…), la dernière seule à gauche. La page tourne autour du pli
+(3D, sans animation si le système le demande) ; ‹ ›, les flèches du clavier, un clic sur la page de gauche ou de droite,
+les pastilles des doubles pages ; « Agrandir » l'ouvre en grand (Échap ferme). Rien n'est lu en plus : le document de
+l'étape.
 
 **Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
 disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le

@@ -833,3 +833,35 @@ button.cm-pas{cursor:pointer}
 .mep-tg.on i{left:15px}
 .mep-tg:disabled{opacity:.45;cursor:default}
 .mep-tg:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+
+/* ---------- Feuilleter (étape 5, 17/11/2026) : le catalogue comme imprimé et plié, la page tourne autour du pli ---------- */
+.fb{display:grid;gap:12px;margin-bottom:14px}
+.fb .h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fb-scene{display:flex;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at 50% 40%,#F4EFE8 0,#E6DED3 100%);border-radius:12px;padding:26px 14px}
+.fb-nav{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--color-border-secondary);background:#fff;font-size:22px;line-height:1;color:var(--color-primary);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.fb-nav:disabled{opacity:.3;cursor:default}
+.fb-livre{position:relative;display:flex;perspective:2600px;outline:none;filter:drop-shadow(0 12px 22px rgba(36,28,26,.25))}
+.fb-livre:focus-visible{box-shadow:0 0 0 3px rgba(141,29,44,.35);border-radius:4px}
+.fb-g,.fb-d{width:var(--w);height:var(--h);position:relative;overflow:hidden;background:#fff;cursor:pointer}
+.fb-livre.sans-g .fb-g,.fb-livre.sans-d .fb-d{background:transparent;cursor:default;visibility:hidden}
+.fb-g .cm-feuille,.fb-d .cm-feuille,.fb-face .cm-feuille{border-radius:0;box-shadow:none}
+/* Le pli : une ombre douce de part et d'autre du milieu. */
+.fb-pli{position:absolute;top:0;bottom:0;left:calc(var(--w) - 24px);width:48px;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,0) 0,rgba(0,0,0,.10) 46%,rgba(0,0,0,.18) 50%,rgba(0,0,0,.10) 54%,rgba(0,0,0,0) 100%)}
+.fb-livre.sans-g .fb-pli,.fb-livre.sans-d .fb-pli{opacity:.5}
+.fb-tourne{position:absolute;top:0;width:var(--w);height:var(--h);transform-style:preserve-3d;transition:transform .75s cubic-bezier(.35,.1,.25,1);z-index:2}
+.fb-tourne.vers-g{left:var(--w);transform-origin:left center}
+.fb-tourne.vers-g.tourne{transform:rotateY(-180deg)}
+.fb-tourne.vers-d{left:0;transform-origin:right center}
+.fb-tourne.vers-d.tourne{transform:rotateY(180deg)}
+.fb-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:#fff;overflow:hidden}
+.fb-face.verso{transform:rotateY(180deg)}
+.fb-face:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.12),rgba(0,0,0,0) 30%)}
+.fb-tourne.vers-d .fb-face.recto:after,.fb-tourne.vers-g .fb-face.verso:after{background:linear-gradient(270deg,rgba(0,0,0,.12),rgba(0,0,0,0) 30%)}
+.fb-bas{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.fb-ou{font-size:12.5px;color:var(--color-text-muted)}
+.fb-pls{display:flex;gap:4px;flex-wrap:wrap}
+.fb-pls button{border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;font:inherit;font-size:11.5px;padding:3px 9px;cursor:pointer;color:#5c5852}
+.fb-pls button.on{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.fb-plein{position:fixed;inset:0;z-index:60;background:rgba(36,28,26,.62);display:grid;place-items:center;padding:20px}
+.fb-plein .fb{margin:0;max-width:calc(100vw - 40px)}
+@media (prefers-reduced-motion:reduce){.fb-tourne{transition:none}}
