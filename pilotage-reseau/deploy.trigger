@@ -97,3 +97,4 @@
 2026-11-17T08:37:34Z [342] Réception des réponses toutes les 5 minutes
 2026-11-17T08:40:02Z [343] Cohabitation : envoi réel des e-mails
 2026-11-17T08:54:48Z [344] Proforma : renvoyer
+2026-11-17T09:13:42Z [345] Poczta par profil
