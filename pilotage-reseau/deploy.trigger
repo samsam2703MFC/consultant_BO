@@ -113,3 +113,4 @@
 2026-11-17 15:37:05 Mon catalogue : la mise en page « Pleine page », un seul produit et sa promotion
 2026-11-17 16:05:49 Mon catalogue : la mise en page en assistant, catégorie par catégorie, puis la mise en page finale
 2026-11-17 16:14:37 Mon catalogue : la liste des produits de chaque catégorie, montré · caché
+2026-11-17 16:28:58 Mon catalogue : feuilleter le catalogue à l'étape Export PDF

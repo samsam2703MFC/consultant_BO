@@ -110,6 +110,7 @@
       el.addEventListener('dragover', ev => glisserSur(etats[shop], ev));
       el.addEventListener('drop', ev => deposer(etats[shop], ev));
       el.addEventListener('dragend', () => glisserFin(etats[shop]));
+      el.addEventListener('keydown', ev => { if ((ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') && ev.target.closest && ev.target.closest('.fb')) { ev.preventDefault(); feuilleter(etats[shop], ev.key === 'ArrowRight' ? 1 : -1); } else if (ev.key === 'Escape' && etats[shop].fbGrand) { etats[shop].fbGrand = false; rendre(etats[shop]); } });
     }
     return etats[shop];
   }
@@ -601,6 +602,9 @@
     else if (a === 'mepGab' || a === 'mepScript') { mepPages(S, +b.dataset.c).forEach(i => { if (a === 'mepGab') { S.pages[i].template = v; } else { S.pages[i].script = v === '1'; } }); S.modifie = true; rendre(S); }
     else if (a === 'mepNb') { mepNbPages(S, +v); }
     else if (a === 'mepProdOn') { mepMontrer(S, +b.dataset.c, +v); }
+    else if (a === 'fb') { feuilleter(S, +v); }
+    else if (a === 'fbAller') { if (!S.fbAnim) { S.fb = +v; rendre(S); } }
+    else if (a === 'fbGrand') { S.fbGrand = !S.fbGrand; rendre(S); const l = S.el.querySelector(S.fbGrand ? '.fb-plein .fb-livre' : '.fb-livre'); if (l) { l.focus({ preventScroll: !S.fbGrand }); } }
     else if (a === 'mepBloc') { mepBouger(S, +v, +b.dataset.n, +b.dataset.d); }
     else if (a === 'mepLangs') { S.langs = v.split(','); if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; } S.modifie = true; rendre(S); }
     else if (a === 'mepDetail') { S.mepDetail = !S.mepDetail; S.zoomPage = null; rendre(S); }
@@ -1430,7 +1434,7 @@
     const livret = S.imp.mode === 'livret';
     const langs = S.imp.langue === 'fr+nl' ? ['FR', 'NL'] : [String(S.imp.langue || 'fr').toUpperCase()];
     const imp = c.print && c.print.quantity ? c.print : (c.status === 'imprime' && c.printQty ? { quantity: c.printQty } : null);
-    let h = '<div class="cm-corps"><div class="cm-col">';
+    let h = rendreFeuilleter(S, doc, k) + '<div class="cm-corps"><div class="cm-col">';
     h += '<section class="cm-pan"><div class="h"><span class="k">Comment je l’imprime ?</span></div><div class="cm-modes">'
       + '<button class="cm-mode' + (!livret ? ' on' : '') + '" data-cm="impmode" data-v="imprimeur"><span class="il il-imp" aria-hidden="true"><i></i><i></i></span><b>Chez un imprimeur</b><ul><li>PDF imprimeur : fond perdu 3 mm, traits de coupe</li><li>pages dans l’ordre, couleurs pour l’impression</li><li>à envoyer à mon imprimeur</li></ul></button>'
       + '<button class="cm-mode' + (livret ? ' on' : '') + '" data-cm="impmode" data-v="livret"><span class="il il-livret" aria-hidden="true"><i></i><i></i></span><b>Sur mon imprimante</b><ul><li>feuilles A4 recto verso, 2 pages par face</li><li>plier au milieu : un livret A5</li><li>pour une petite quantité</li></ul></button>'
@@ -1452,6 +1456,65 @@
       + '</aside></div>';
     h += rendreDiffuser(S, doc);
     return h;
+  }
+  /* --- Feuilleter (17/11/2026, Sam : « un catalogue à feuilleter en simulation dans l'export en PDF, pour être sûr que
+   * tout est bien à sa place ») : le document du Marketing, page par page comme imprimé et plié — la couverture seule à
+   * droite, puis les doubles pages (2-3, 4-5…), la dernière seule à gauche. La page tourne (3D) ; ‹ › , les flèches du
+   * clavier, un clic sur la page de gauche ou de droite ; « Agrandir » l'ouvre en grand. ---------------------------- */
+  /** Les doubles pages d'un catalogue de n pages : [gauche, droite], null = rien de ce côté. */
+  function planches(n) {
+    const out = [[null, 0]];
+    for (let i = 1; i < n - 1; i += 2) { out.push([i, i + 1 < n ? i + 1 : null]); }
+    if (n > 1 && n % 2 === 0) { out.push([n - 1, null]); }
+    return out;
+  }
+  const libellePlanche = (pl, n) => pl[0] == null ? 'Couverture' : pl[1] == null ? (pl[0] === n - 1 ? 'Dernière page' : 'Page ' + (pl[0] + 1)) : 'Pages ' + (pl[0] + 1) + '-' + (pl[1] + 1);
+  /** La largeur d'une page du livre : à l'écran de l'étape, ou en grand (selon la fenêtre). */
+  function largeurFb(S, doc) {
+    const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5, r = f.h / f.w;
+    if (!S.fbGrand) { return 300; }
+    return Math.max(260, Math.min(620, Math.floor((window.innerHeight - 190) / r), Math.floor((window.innerWidth - 140) / 2)));
+  }
+  function rendreFeuilleter(S, doc, k) {
+    if (!doc) { return '<section class="cm-pan fb"><div class="h"><span class="k">Feuilleter mon catalogue</span></div><div class="cm-vide">' + (S.docErr[k] ? esc(S.docErr[k].message) : 'Composition du catalogue…') + '</div></section>'; }
+    const n = doc.pages.length, pl = planches(n);
+    S.fb = Math.max(0, Math.min(pl.length - 1, S.fb || 0));
+    const W = largeurFb(S, doc), f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5, H = Math.round(W * f.h / f.w);
+    const [g, d] = pl[S.fb], page = i => i == null ? '' : feuille(doc, i, W, true);
+    const langues = S.langs.length > 1 ? '<div class="cm-seg">' + S.langs.map(l => '<button data-cm="lang" data-v="' + l + '" class="' + (S.lang === l ? 'on' : '') + '">' + l.toUpperCase() + '</button>').join('') + '</div>' : '';
+    const livre = '<div class="fb-scene"><button class="fb-nav" data-cm="fb" data-v="-1"' + (S.fb === 0 ? ' disabled' : '') + ' aria-label="Page précédente">‹</button>'
+      + '<div class="fb-livre' + (g == null ? ' sans-g' : '') + (d == null ? ' sans-d' : '') + '" tabindex="0" aria-label="Le catalogue, ' + esc(libellePlanche(pl[S.fb], n)) + ' — flèches gauche et droite pour tourner les pages" style="--w:' + W + 'px;--h:' + H + 'px">'
+      + '<div class="fb-g" data-cm="fb" data-v="-1">' + page(g) + '</div><div class="fb-d" data-cm="fb" data-v="1">' + page(d) + '</div><i class="fb-pli" aria-hidden="true"></i></div>'
+      + '<button class="fb-nav" data-cm="fb" data-v="1"' + (S.fb === pl.length - 1 ? ' disabled' : '') + ' aria-label="Page suivante">›</button></div>'
+      + '<div class="fb-bas"><span class="fb-ou">' + esc(libellePlanche(pl[S.fb], n)) + ' · ' + n + ' pages</span><div class="fb-pls">' + pl.map((x, i) => '<button data-cm="fbAller" data-v="' + i + '" class="' + (i === S.fb ? 'on' : '') + '" title="' + esc(libellePlanche(x, n)) + '">' + (x[0] == null ? '1' : x[1] == null ? String(x[0] + 1) : (x[0] + 1) + '-' + (x[1] + 1)) + '</button>').join('') + '</div></div>';
+    const tete = '<div class="h"><span class="k">Feuilleter mon catalogue</span><span class="cm-cpt" style="margin-left:10px">comme imprimé et plié : la couverture, puis les doubles pages</span><span class="sp"></span>' + langues
+      + '<button class="cm-btn" data-cm="fbGrand">' + (S.fbGrand ? 'Fermer' : 'Agrandir') + '</button></div>';
+    if (S.fbGrand) { return '<section class="cm-pan fb"><div class="h"><span class="k">Feuilleter mon catalogue</span><span class="sp"></span><button class="cm-btn" data-cm="fbGrand">Agrandir</button></div><div class="cm-cpt">Ouvert en grand.</div></section><div class="fb-plein" role="dialog" aria-label="Feuilleter mon catalogue"><section class="cm-pan fb">' + tete + livre + '</section></div>'; }
+    return '<section class="cm-pan fb">' + tete + livre + '</section>';
+  }
+  /** Tourner une page : la feuille tourne autour du pli (recto : la page qu'on quitte ; verso : celle qui arrive), puis le livre se redessine. */
+  function feuilleter(S, sens) {
+    const k = S.cat ? S.cat.owner + S.cat.id + '|' + S.lang : null, doc = k ? S.doc[k] : null;
+    if (!doc || S.fbAnim) { return; }
+    const pl = planches(doc.pages.length), i = S.fb || 0, j = i + sens;
+    if (j < 0 || j >= pl.length) { return; }
+    const livre = S.el.querySelector('.fb-livre');
+    const calme = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!livre || calme) { S.fb = j; rendre(S); return; }
+    const W = largeurFb(S, doc), page = x => x == null ? '' : feuille(doc, x, W, true);
+    const [g0, d0] = pl[i], [g1, d1] = pl[j];
+    // Dessous, la page qui sera découverte ; la feuille qui tourne porte celle qu'on quitte et, au dos, celle qui arrive.
+    if (sens > 0) { livre.querySelector('.fb-d').innerHTML = page(d1); livre.classList.toggle('sans-d', d1 == null); }
+    else { livre.querySelector('.fb-g').innerHTML = page(g1); livre.classList.toggle('sans-g', g1 == null); }
+    const leaf = document.createElement('div');
+    leaf.className = 'fb-tourne ' + (sens > 0 ? 'vers-g' : 'vers-d');
+    leaf.innerHTML = '<div class="fb-face recto">' + page(sens > 0 ? d0 : g0) + '</div><div class="fb-face verso">' + page(sens > 0 ? g1 : d1) + '</div>';
+    livre.appendChild(leaf);
+    S.fbAnim = true;
+    const fin = () => { if (!S.fbAnim) { return; } S.fbAnim = false; S.fb = j; rendre(S); const l = S.el.querySelector('.fb-livre'); if (l) { l.focus({ preventScroll: true }); } };
+    leaf.addEventListener('transitionend', fin, { once: true });
+    setTimeout(fin, 1200);   // sans transitionend (onglet caché) : on n'attend pas
+    requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('tourne')));
   }
   function rendreDiffuser(S, doc) {
     const l = S.lien;
