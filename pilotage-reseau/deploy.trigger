@@ -101,3 +101,4 @@
 2026-11-17T09:20:58Z [346] Palette : commande et livraison
 - 2026-11-17T09:39:31Z [347] Poczta : choix d'une boîte déjà configurée
 - 2026-11-17T10:13:20Z [349] prix des factures d'achat (bouton, effet) + [348] horaire et SMS brak wejścia
+- 2026-11-17T10:59:19Z [350] Śledzenie partii dans Produkcja › Partie i identyfikowalność
