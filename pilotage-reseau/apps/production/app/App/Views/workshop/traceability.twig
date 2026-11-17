@@ -30,6 +30,9 @@
 
     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
+    {# [350] Śledzenie partii (wcześniej Logistyka › Stany i palety) : produkt + dzień produkcji → palety, klienci, magazyn. #}
+    {% include 'workshop/_lot_trace.twig' %}
+
     {% if q and totals.material_hits %}
         <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>
             Partia surowca <strong>„{{ q }}”</strong> użyta w <strong>{{ totals.material_hits|plural_pl('partii wyrobu', 'partiach wyrobu', 'partiach wyrobu') }}</strong> w tym okresie — lista poniżej (do wycofania / blokady).</div>

@@ -152,6 +152,12 @@ final class StockPalletService
      * Une partie (produit + jour d'étiquette) : palettes et clients, cartons encore au magasin. Sans jour : les derniers
      * jours de fabrication du produit (le plus récent est choisi).
      */
+    /** [350] Produkty z kartonami (lista wyboru śledzenia partii). */
+    public function traceProducts(): array
+    {
+        return $this->repo->productsWithCartons();
+    }
+
     public function trace(int $productId, ?string $madeOn = null): ?array
     {
         $name = $this->repo->productName($productId);
