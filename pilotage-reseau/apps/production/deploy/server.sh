@@ -488,6 +488,8 @@ if [[ -f "$IMPORT_OK" ]]; then
 # ERP /production — e-mails automatiques (écrit par apps/production/deploy/server.sh)
 */5 * * * * ${CRON_RUN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
 */5 * * * * ${CRON_RUN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
+# Odpowiedzi na adresy ERP (accounting@, logistyka@, produkcja@ — Konfiguracja poczty e-mail)
+*/5 * * * * ${CRON_RUN} Bin/communication_imap_sync.php >> /var/log/production-erp-mail.log 2>&1
 # Prognoza 13 tygodni : gamy i sprzedaż sklepów z panelu TF Buddy (GET), raz w tygodniu (po poniedziałku 6:00)
 10 6 * * * ${CRON_RUN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
 # Zadania stanowisk : zadania automatyczne (cron), zaliczenie po kreatorach, przypomnienia i przełożeni

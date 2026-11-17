@@ -7,11 +7,16 @@ $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); ?>
 <section class="section">
 <?php if (($_GET['saved'] ?? '') === '1'): ?><div class="alert alert-success">Konfiguracja została zapisana. Hasła nie są ponownie wyświetlane.</div><?php endif; ?>
 <?php if (!empty($errors)): ?><div class="alert alert-danger"><?= implode('<br>', array_map($e, $errors)) ?></div><?php endif; ?>
+<div class="card mb-4"><div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <button type="button" class="btn btn-outline-primary" data-sync><i class="bi bi-arrow-repeat"></i> Pobierz odpowiedzi teraz</button>
+    <span class="form-text mb-0" data-sync-feedback>Odpowiedzi na wszystkie adresy pobierane są automatycznie co 5 minut.</span>
+</div></div>
 <?php foreach ($purposes as $purpose => $meta): $a = $accounts[$purpose] ?? []; $new = empty($a); ?>
 <div class="card mb-4" id="konto-<?= $e($purpose) ?>">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h4 class="card-title mb-0"><?= $e($meta['label']) ?></h4>
         <span class="badge <?= $new ? 'bg-secondary' : 'bg-success' ?>"><?= $new ? 'Nie skonfigurowano (' . $e($meta['hint']) . ')' : $e($a['from_email']) ?></span>
+        <?php if (!$new): ?><span class="form-text mb-0">Ostatnie pobranie odpowiedzi : <?= !empty($a['last_synced_at']) ? $e(date('d.m.Y H:i', strtotime($a['last_synced_at']))) : '—' ?></span><?php endif; ?>
     </div>
     <div class="card-body">
     <form method="post" action="<?= ROOT ?>/communication/email-settings" class="row g-3">
@@ -43,6 +48,13 @@ $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); ?>
 <p class="form-text text-warning">Hasła SMTP i IMAP są zapisywane w bazie bez szyfrowania. Dostęp do bazy należy ograniczyć.</p>
 </section><?php $this->view('page_components/footer'); ?>
 <script>
+document.querySelector('[data-sync]').addEventListener('click', async (ev) => {
+    const b = ev.currentTarget, out = document.querySelector('[data-sync-feedback]');
+    b.disabled = true; out.textContent = '…';
+    const r = await fetch('<?= ROOT ?>/ajax/communication/email-settings/sync', {method: 'POST'});
+    const d = await r.json().catch(() => ({}));
+    out.textContent = d.message || 'Błąd'; b.disabled = false;
+});
 document.querySelectorAll('[data-test]').forEach(b => b.addEventListener('click', async () => {
     const card = b.closest('form'), out = card.querySelector('[data-test-feedback]');
     out.textContent = '…';

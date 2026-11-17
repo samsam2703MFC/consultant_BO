@@ -11,7 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 class CommunicationController extends BaseController
 {
     public function __construct(private CommunicationService $service, private EmailAccountService $emailAccounts, private CommunicationEmailDeliveryWorker $deliveryWorker,
-                                private \App\Repositories\Client\ClientRepository $clients, private \App\Services\Communication\PaymentReminderAutoService $autoReminders) {}
+                                private \App\Repositories\Client\ClientRepository $clients, private \App\Services\Communication\PaymentReminderAutoService $autoReminders,
+                                private \App\Services\Communication\CommunicationImapSyncWorker $imapSync) {}
     private function author(): ?string { $user = GlobalRegistry::get('user'); return $user ? $user->getDisplayName() : null; }
     public function templates() { $this->view('communication/templates', ['templates' => $this->service->templates(), 'languages' => $this->service->languages(), 'templateTypes' => $this->service->templateTypes()]); }
     /** [341] Un compte d'envoi par usage : finance (accounting@), logistyka@, produkcja@. */
@@ -20,6 +21,16 @@ class CommunicationController extends BaseController
     {
         try { $this->emailAccounts->save($_POST); header('Location: ' . ROOT . '/communication/email-settings?saved=1'); exit; }
         catch (\Throwable $e) { $this->errors[] = $e->getMessage(); $this->emailSettings(); }
+    }
+    /** [341] « Pobierz odpowiedzi teraz » : odczyt skrzynek wszystkich aktywnych kont (jak cron co 5 minut). */
+    public function syncEmailAccounts()
+    {
+        try {
+            $r = $this->imapSync->syncActive(100);
+            $lines = [];
+            foreach ($r['accounts'] as $address => $a) $lines[] = $address . ' : ' . (isset($a['error']) ? 'błąd — ' . $a['error'] : 'nowe ' . $a['imported']);
+            return $this->json(['message' => 'Pobrano nowych wiadomości : ' . $r['imported'] . '. ' . implode(' · ', $lines)]);
+        } catch (\Throwable $e) { return $this->json(['message' => $e->getMessage()], 422); }
     }
     public function testEmailSettings()
     {
