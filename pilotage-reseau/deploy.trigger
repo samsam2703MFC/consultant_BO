@@ -93,3 +93,4 @@
 2026-11-17T07:46:37Z [338] Nowe zamówienie : chevauchements
 2026-11-17T07:59:35Z [339] Produits et catégories : activer / désactiver
 2026-11-17T08:09:14Z [340] Proforma à jour après modification de la commande
+2026-11-17T08:32:57Z [341] Un compte d'envoi par usage
