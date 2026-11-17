@@ -56,6 +56,16 @@ final class PageAccessService
     }
 
     /**
+     * [339] Activer / désactiver les produits et les catégories de l'ERP : administrateur et production
+     * (Kierownik produkcji, rôle prod_admin / prod_manager du module).
+     */
+    public function canToggleProducts(?int $userId): bool
+    {
+        if (!$userId) return false;
+        return $this->isAdmin($userId) || $this->repo->isProductionManager($userId);
+    }
+
+    /**
      * Minutes allouées aux tâches : seulement l'administrateur en vue complète. En sesja d'un poste (vue opérateur)
      * et pour tout autre compte, elles sont masquées pour le moment.
      */

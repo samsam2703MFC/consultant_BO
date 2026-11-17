@@ -544,5 +544,10 @@
   "pal.semi": "Półprodukt nie ma palety — przejdź dalej.",
   "lv.period": "Okres wyjątkowy : {name} — stany wyjątkowe do {to}",
   "lv.period_help": "Stan okresu « {name} » (do {to}) ; potem wraca stan normalny",
-  "lv.normal": "norm. {v}"
+  "lv.normal": "norm. {v}",
+  "cat.activate": "Włącz kategorię",
+  "cat.deactivate": "Wyłącz kategorię",
+  "cat.activate_confirm": "Włączyć kategorię « {name} » ? {n} nieaktywnych produktów stanie się aktywnych w ERP.",
+  "cat.deactivate_confirm": "Wyłączyć kategorię « {name} » ? {n} aktywnych produktów stanie się nieaktywnych w ERP (znikną z zamówień i cenników).",
+  "cat.toggled": "Zmieniono produktów: {n}."
 }
