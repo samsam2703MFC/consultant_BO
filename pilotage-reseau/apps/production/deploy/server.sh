@@ -477,6 +477,8 @@ if [[ -f "$IMPORT_OK" ]]; then
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
   mail_mode="${ERP_MAIL_MODE:-log_only}"
+  # [343] Décision du propriétaire versionnée (deploy/mail_live.cohabitation) : cohabitation → envoi réel.
+  if [[ "$COHAB" == "1" && -f "$SRC/deploy/mail_live.cohabitation" ]]; then mail_mode="live"; fi
   # Cohabitation : base réelle de l'atelier — envoi réel possible, seulement sur demande explicite (ERP_MAIL_MODE=live).
   if [[ "$COHAB" == "1" && "$mail_mode" == "live" ]]; then :;
   else [[ "$mail_mode" == "redirect" || "$mail_mode" == "log_only" ]] || mail_mode="log_only"; fi
