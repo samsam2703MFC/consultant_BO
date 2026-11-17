@@ -782,7 +782,8 @@ button.cm-pas{cursor:pointer}
 .mep-gab.on{border-color:var(--color-primary);color:var(--color-primary)}
 .mep-pied{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--color-border-tertiary);padding-top:12px}
 .mep-pied .sp{flex:1}
-.mep-cote{background:#fff;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px;display:grid;gap:10px;font-size:12.5px;position:sticky;top:12px}
+.mep-col{display:grid;gap:14px;align-content:start;min-width:0}
+.mep-cote{background:#fff;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px;display:grid;gap:10px;font-size:12.5px}
 .mep-cote h3{margin:0;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-muted);font-weight:500}
 .mep-jauge{height:8px;border-radius:999px;background:#EDE7DE;overflow:hidden;display:flex;gap:2px}
 .mep-jauge i{display:block;height:100%}
@@ -813,4 +814,22 @@ button.cm-pas{cursor:pointer}
 .mep-th .cm-ap{padding:0;border:0;background:none;cursor:zoom-in}
 .mep-vide{width:92px;height:130px;border:1.5px dashed #C9C1B5;border-radius:4px;display:grid;place-items:center;text-align:center;font-size:10.5px;color:var(--color-text-muted);padding:8px;background:#FBF8F4}
 .mep-vide--m{display:block;padding:0}
-@media (max-width:1280px){.mep-corps{grid-template-columns:minmax(0,1fr)}.mep-cote{position:static}.mep-lays{grid-template-columns:repeat(2,minmax(0,1fr))}.mep-opts{grid-template-columns:1fr}}
+@media (max-width:1280px){.mep-corps{grid-template-columns:minmax(0,1fr)}.mep-lays{grid-template-columns:repeat(2,minmax(0,1fr))}.mep-opts{grid-template-columns:1fr}}
+/* Les produits de la catégorie, montrés ou non : un mini interrupteur par produit (17/11/2026). */
+.mep-prods{background:#fff;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 12px 10px;display:grid;gap:6px;font-size:12px}
+.mep-prods h3{margin:0 4px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-muted);font-weight:500}
+.mep-prods .mep-cpt{margin:0 4px 4px;font-size:12px;color:var(--color-text-muted)}
+.mep-tab{width:100%;border-collapse:collapse}
+.mep-tab td{padding:5px 4px;border-top:1px solid #F0EBE4;vertical-align:middle}
+.mep-tab td.ph{width:30px}
+.mep-tab td.ph img{display:block;width:28px;height:28px;object-fit:contain;border-radius:5px;background:#F6F1E9}
+.mep-tab td.nm{line-height:1.25}
+.mep-tab td.px{white-space:nowrap;color:var(--color-text-muted);text-align:right;font-variant-numeric:tabular-nums}
+.mep-tab tr.off td.nm,.mep-tab tr.off td.px{color:#b3ada5}
+.mep-tab tr.off td.ph img{opacity:.4}
+.mep-tg{position:relative;display:block;width:30px;height:17px;border-radius:999px;border:0;background:#D9D2C7;cursor:pointer;padding:0;transition:background .15s}
+.mep-tg i{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+.mep-tg.on{background:var(--color-primary)}
+.mep-tg.on i{left:15px}
+.mep-tg:disabled{opacity:.45;cursor:default}
+.mep-tg:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}

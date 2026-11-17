@@ -346,11 +346,16 @@
     return appel('PUT', '/' + S.cat.id + qs(S), { title: titre }).then(j => { const ch = S.choix, pg = S.pages; adopter(S, j.data); S.choix = ch; S.pages = pg; });
   }
   /** Étape 2 → 3 : les produits ; la mise en page est refaite d'après eux (répartition automatique du Marketing). */
-  function enregistrerProduits(S, suite) {
+  /** Les produits à enregistrer : ceux du catalogue (dans son ordre) que ma boutique vend, puis les nouveaux cochés. */
+  function lignesProduits(S) {
     const vendus = new Set(produits(S).map(p => +p.id));
     const lignes = []; const vus = new Set();
     (S.cat.products || []).forEach(p => { if (vendus.has(+p.id) && !vus.has(+p.id)) { vus.add(+p.id); lignes.push({ id: +p.id, on: !!S.choix[p.id] }); } });
     produits(S).forEach(p => { if (S.choix[p.id] && !vus.has(+p.id)) { vus.add(+p.id); lignes.push({ id: +p.id, on: true }); } });
+    return lignes;
+  }
+  function enregistrerProduits(S, suite) {
+    const lignes = lignesProduits(S);
     const avant = JSON.stringify((S.cat.products || []).map(p => [+p.id, p.on !== false]));
     const apres = JSON.stringify(lignes.map(p => [p.id, p.on]));
     // Sans `pages` : le Marketing garde ma mise en page et donne SA page à une catégorie ajoutée (une page vide, sinon
@@ -371,7 +376,8 @@
   function enregistrerPages(S, suite) {
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
     if (S.cat && +S.cat.pageCount !== S.nbPages) { corps.pageCount = S.nbPages; }   // l'assistant ajoute ou retire 2 pages avec les pages
-    const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
+    if (S.choixModifie) { corps.products = lignesProduits(S); }   // les produits montrés ou cachés dans l'assistant (étape 3)
+    const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { S.choixModifie = false; adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
   function repartir(S, nb) {
@@ -594,6 +600,7 @@
     else if (a === 'mepPleine') { mepPoser(S, +b.dataset.c, { pleine: v === '1' }); }
     else if (a === 'mepGab' || a === 'mepScript') { mepPages(S, +b.dataset.c).forEach(i => { if (a === 'mepGab') { S.pages[i].template = v; } else { S.pages[i].script = v === '1'; } }); S.modifie = true; rendre(S); }
     else if (a === 'mepNb') { mepNbPages(S, +v); }
+    else if (a === 'mepProdOn') { mepMontrer(S, +b.dataset.c, +v); }
     else if (a === 'mepBloc') { mepBouger(S, +v, +b.dataset.n, +b.dataset.d); }
     else if (a === 'mepLangs') { S.langs = v.split(','); if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; } S.modifie = true; rendre(S); }
     else if (a === 'mepDetail') { S.mepDetail = !S.mepDetail; S.zoomPage = null; rendre(S); }
@@ -1192,12 +1199,36 @@
       + (inner - pris > 0 ? '<div>' + mepPt('#D9D2C7') + '<span>Pages libres</span><span class="n">' + (inner - pris) + '</span></div>' : '') + '</div>'
       + '<div class="mep-note">' + (finale ? 'L’ordre des pages est celui de l’impression : la page 3 suit la page 2 de la marque.' : 'Une étape par catégorie choisie, dans l’ordre de l’étape 2.') + ' Les 4 pages de la marque (couverture, page 2, avant-dernière, dernière) ne bougent pas.</div></aside>';
   }
+  /**
+   * Les produits de la catégorie, montrés ou non (17/11/2026, Sam : « un tableau avec la liste des produits et un mini
+   * toggle on/off, show or not ») : tous ceux que ma boutique vend dans la catégorie ; l'interrupteur coche ou décoche le
+   * produit (le choix de l'étape 2), et les pages de la catégorie se refont. Le dernier montré reste : une catégorie se
+   * retire à l'étape 2.
+   */
+  function mepProduits(S, c) {
+    const liste = produits(S).filter(p => p.categoryId != null && +p.categoryId === +c);
+    const on = liste.filter(p => S.choix && S.choix[p.id]).length;
+    return '<section class="mep-prods"><h3>Produits · ' + esc(nomCat(S, c)) + '</h3><div class="mep-cpt">' + on + ' montré' + (on > 1 ? 's' : '') + ' sur ' + liste.length + '</div>'
+      + '<table class="mep-tab"><tbody>' + liste.map(p => {
+        const o = !!(S.choix && S.choix[p.id]), dernier = o && on === 1;
+        return '<tr class="' + (o ? 'on' : 'off') + '"><td class="ph">' + (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="" loading="lazy">' : '') + '</td><td class="nm">' + esc(p.name) + '</td><td class="px">' + esc(prix(p.priceCents, 'fr')) + '</td>'
+          + '<td><button class="mep-tg' + (o ? ' on' : '') + '" role="switch" aria-checked="' + o + '" aria-label="' + esc((o ? 'Cacher ' : 'Montrer ') + p.name) + '" data-cm="mepProdOn" data-c="' + c + '" data-v="' + p.id + '"'
+          + (dernier || S.occupe ? ' disabled' : '') + ' title="' + (dernier ? 'Le dernier produit montré : pour retirer la catégorie, décochez-la à l’étape 2' : o ? 'Ne plus le montrer dans le catalogue' : 'Le montrer dans le catalogue') + '"><i></i></button></td></tr>';
+      }).join('') + '</tbody></table></section>';
+  }
+  /** Montrer ou cacher un produit : son choix change, et les pages de sa catégorie se refont (sa pleine page oublie un produit caché). */
+  function mepMontrer(S, c, id) {
+    if (!S.choix) { return; }
+    S.choix[id] = !S.choix[id]; S.choixModifie = true;
+    if (mepCompte(S, c) > 0) { mepPoser(S, c, !S.choix[id] && mepEtat(S, c).produit === id ? { produit: null } : {}); return; }
+    S.modifie = true; rendre(S);
+  }
   function rendreMep(S) {
     const cats = mepCats(S);
     if (S.mep == null || S.mep > cats.length) { S.mep = 0; }
     const portes = remplir(S), finale = S.mep >= cats.length;
     return '<div class="mep">' + mepSous(S, cats) + '<div class="mep-corps"><section class="mep-pan">' + (finale ? mepFinale(S, cats, portes) : mepCategorie(S, cats, S.mep, portes))
-      + '</section>' + mepCote(S, cats, portes, finale) + '</div></div>' + rendreZoom(S);
+      + '</section><div class="mep-col">' + mepCote(S, cats, portes, finale) + (finale ? '' : mepProduits(S, cats[S.mep])) + '</div></div></div>' + rendreZoom(S);
   }
   function rendreE3(S) {
     const prods = produits(S), ids = new Set(choisis(S));
