@@ -9,7 +9,7 @@ const css = fs.readFileSync(__dirname + '/maquette.css', 'utf8');
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
-  for (const nom of ['a-proposition', 'b-validee']) {
+  for (const nom of ['p1-constat', 'p2-couples', 'p3-prix', 'a-proposition', 'b-validee']) {
     if (process.env.SEUL && process.env.SEUL !== nom) { continue; }
     const p = await ctx.newPage(); const err = [];
     p.on('pageerror', e => err.push(e.message));
@@ -22,6 +22,8 @@ const css = fs.readFileSync(__dirname + '/maquette.css', 'utf8');
       const l = document.querySelector('.pm-liste'); const d = document.createElement('div'); d.innerHTML = html; l.replaceWith(...d.childNodes);
       const t = document.querySelector('.pm-lecture');
       if (t) { t.textContent = 'Le Coach Vente prépare vos promotions avec vos prix et vos coûts : vous validez, elle passe en caisse le lundi suivant et l’équipe reçoit sa fiche.'; }
+      // Les phases du bundle se lisent sans la carte « Où les promotions sont utilisées » au-dessus : elle est repliée.
+      if (document.getElementById('pc') && document.querySelector('.bn')) { const cn = document.querySelector('.cn-card'); if (cn) { cn.style.display = 'none'; } }
     }, [fs.readFileSync(__dirname + '/' + nom + '.html', 'utf8'), css]);
     await p.evaluate('document.fonts.ready');
     await p.waitForTimeout(800);
