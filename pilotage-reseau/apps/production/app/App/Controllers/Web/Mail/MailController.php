@@ -32,7 +32,25 @@ class MailController extends BaseController
     {
         // [345] Skrzynki stanowisk (accounting@, logistyka@, produkcja@) aktualne przy otwarciu Poczty.
         try { $this->positionBoxes->provision(); } catch (\Throwable) {}
-        return $this->run(fn() => $this->mail->state($this->mailUser()));
+        return $this->run(function () {
+            $user = $this->mailUser();
+            // [347] Konta firmowe już skonfigurowane (accounting@, logistyka@, produkcja@) do wyboru w Ustawieniach skrzynki.
+            return $this->mail->state($user) + ['company_accounts' => $this->positionBoxes->choices($user, $this->access->isAdmin($this->userId()))];
+        });
+    }
+
+    /** [347] Wybór skonfigurowanego konta firmowego jako skrzynki (bez wpisywania serwera i hasła). */
+    public function chooseAccount()
+    {
+        return $this->run(function () {
+            $in = $this->getJson(Request::createFromGlobals());
+            $user = $this->mailUser();
+            $admin = $this->access->isAdmin($this->userId());
+            if (!$admin) $this->mail->assertSelfManaged($user);
+            $this->positionBoxes->choose($user, (int) ($in['account_id'] ?? 0), $admin);
+            $test = $this->mail->test($user);
+            return ['message' => 'Skrzynka firmowa podłączona.', 'test' => $test];
+        });
     }
 
     public function saveSettings()

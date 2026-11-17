@@ -5,6 +5,7 @@ namespace App\Services\Mail;
 
 use App\Repositories\Communication\EmailAccountRepository;
 use App\Repositories\Mail\UserMailRepository;
+use App\Exceptions\CustomException;
 
 /**
  * [345] Adres wysyłki ↔ stanowisko (Konfiguracja poczty e-mail) : skrzynka accounting@ w Poczcie osób na stanowisku
@@ -22,21 +23,26 @@ final class PositionMailboxService
     public function provision(): array
     {
         $stats = ['linked' => 0, 'updated' => 0, 'removed' => 0];
+        $active = [];
+        foreach ($this->accounts->allActive() as $a) $active[(int) $a['id']] = $a;
         $wanted = []; // id_user => konto
-        foreach ($this->accounts->allActive() as $a) {
+        foreach ($active as $a) {
             $code = (string) ($a['position_code'] ?? '');
             if ($code === '') continue;
             foreach ($this->repo->usersWithPosition($code) as $userId) $wanted[$userId] ??= $a;
         }
+        // [347] Konto wybrane w Ustawieniach skrzynki : wybór osoby wygrywa ze stanowiskiem.
+        $chosen = [];
+        foreach ($this->repo->positionMailboxes() as $b) if ($b['chosen']) $chosen[$b['id_user']] = $b['id_email_account'];
+        foreach ($chosen as $userId => $accountId) {
+            if (isset($active[$accountId])) $wanted[$userId] = $active[$accountId];
+            else unset($wanted[$userId]); // konto wyłączone lub usunięte : skrzynka znika niżej
+        }
         foreach ($wanted as $userId => $a) {
             $box = $this->repo->mailbox($userId);
             if ($box !== null && $box['id_email_account'] === null) continue; // skrzynka osobista
-            $data = $this->boxData($a);
-            if ($box !== null && $this->same($box, $data, $a)) continue;
-            if ($box !== null && ($box['email'] !== $data['email'] || $box['imap_host'] !== $data['imap_host'])) $this->repo->deleteMailbox($userId);
-            $this->repo->saveMailbox($userId, $data + ['imap_secret' => $this->cipher->encrypt((string) $a['imap_secret']),
-                'smtp_secret' => $this->cipher->encrypt((string) $a['smtp_secret'])]);
-            $box === null ? $stats['linked']++ : $stats['updated']++;
+            $r = $this->apply($userId, $a, $box, isset($chosen[$userId]));
+            if ($r !== null) $stats[$r]++;
         }
         foreach ($this->repo->positionMailboxes() as $b) {
             if (!isset($wanted[$b['id_user']]) || (int) $wanted[$b['id_user']]['id'] !== $b['id_email_account']) {
@@ -45,6 +51,49 @@ final class PositionMailboxService
             }
         }
         return $stats;
+    }
+
+    /**
+     * [347] Konta firmowe do wyboru w Ustawieniach skrzynki (bez haseł) : administrator — wszystkie aktywne,
+     * pozostali — konta swojego stanowiska.
+     * @return list<array{id:int, email:string, name:?string, purpose:?string, position:?string, ready:bool}>
+     */
+    public function choices(int $userId, bool $admin): array
+    {
+        $mine = $admin ? null : $this->repo->userPositionCodes($userId);
+        $names = array_column($this->accounts->positions(), 'name_pl', 'code');
+        $out = [];
+        foreach ($this->accounts->allActive() as $a) {
+            $code = (string) ($a['position_code'] ?? '');
+            if ($mine !== null && ($code === '' || !in_array($code, $mine, true))) continue;
+            $out[] = ['id' => (int) $a['id'], 'email' => strtolower((string) $a['from_email']), 'name' => $a['from_name'] ?? null,
+                'purpose' => $a['purpose'] ?? null, 'position' => $code !== '' ? ($names[$code] ?? $code) : null,
+                'ready' => trim((string) $a['imap_host']) !== '' && (string) $a['imap_secret'] !== '' && (string) $a['smtp_secret'] !== ''];
+        }
+        return $out;
+    }
+
+    /** [347] Wybór konta firmowego jako skrzynki osoby (dane dostępu kopiowane, hasła zaszyfrowane). */
+    public function choose(int $userId, int $accountId, bool $admin): void
+    {
+        $ids = array_column($this->choices($userId, $admin), 'id');
+        if (!in_array($accountId, $ids, true)) throw new CustomException('To konto nie jest dostępne do wyboru.', 'errors', 403);
+        $a = $this->accounts->find($accountId);
+        if (trim((string) $a['imap_host']) === '' || (string) $a['imap_secret'] === '') {
+            throw new CustomException('Konto ' . $a['from_email'] . ' nie ma jeszcze serwera IMAP lub hasła — uzupełnij je w Konfiguracji poczty e-mail.', 'errors', 422);
+        }
+        $this->apply($userId, $a, $this->repo->mailbox($userId), true, true);
+    }
+
+    /** Kopiuje konto do skrzynki osoby ; zwraca « linked », « updated » albo null (bez zmian). */
+    private function apply(int $userId, array $a, ?array $box, bool $chosen, bool $force = false): ?string
+    {
+        $data = $this->boxData($a) + ['account_chosen' => $chosen ? 1 : 0];
+        if (!$force && $box !== null && $this->same($box, $data, $a)) return null;
+        if ($box !== null && ($box['email'] !== $data['email'] || $box['imap_host'] !== $data['imap_host'])) $this->repo->deleteMailbox($userId);
+        $this->repo->saveMailbox($userId, $data + ['imap_secret' => $this->cipher->encrypt((string) $a['imap_secret']),
+            'smtp_secret' => $this->cipher->encrypt((string) $a['smtp_secret'])]);
+        return $box === null ? 'linked' : 'updated';
     }
 
     private function boxData(array $a): array
@@ -68,7 +117,7 @@ final class PositionMailboxService
         foreach (['email', 'display_name', 'imap_host', 'imap_port', 'imap_security', 'imap_username', 'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $k) {
             if ((string) $box[$k] !== (string) $data[$k]) return false;
         }
-        return (int) $box['id_email_account'] === (int) $a['id']
+        return (int) $box['id_email_account'] === (int) $a['id'] && (int) ($box['account_chosen'] ?? 0) === (int) $data['account_chosen']
             && $this->cipher->decrypt($box['imap_secret']) === (string) $a['imap_secret']
             && $this->cipher->decrypt($box['smtp_secret']) === (string) $a['smtp_secret'];
     }

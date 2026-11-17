@@ -111,6 +111,7 @@ final class UserMailService
         }
         $data['last_error'] = null;
         $data['id_email_account'] = null; // [345] ustawiona ręcznie : już nie skrzynka stanowiska
+        $data['account_chosen'] = 0;
         $this->repo->saveMailbox($userId, $data);
         return $this->state($userId);
     }
@@ -498,7 +499,7 @@ final class UserMailService
         return $userId;
     }
 
-    private function assertSelfManaged(int $userId): void
+    public function assertSelfManaged(int $userId): void
     {
         if ($this->repo->adminPolicy($userId)['managed']) throw new CustomException('Twoją skrzynkę ustawia administrator.', 'errors', 403);
     }
@@ -639,6 +640,7 @@ final class UserMailService
     {
         return [
             'email' => $b['email'], 'display_name' => $b['display_name'], 'provider' => $b['provider'] ?: 'other',
+            'id_email_account' => isset($b['id_email_account']) ? (int) $b['id_email_account'] : null,
             'imap_host' => $b['imap_host'], 'imap_port' => (int) $b['imap_port'], 'imap_security' => $b['imap_security'], 'imap_username' => $b['imap_username'],
             'smtp_host' => $b['smtp_host'], 'smtp_port' => (int) $b['smtp_port'], 'smtp_security' => $b['smtp_security'], 'smtp_username' => $b['smtp_username'],
             'has_imap_password' => !empty($b['imap_secret']), 'has_smtp_password' => !empty($b['smtp_secret']), 'tls_verify' => (bool) $b['tls_verify'],
