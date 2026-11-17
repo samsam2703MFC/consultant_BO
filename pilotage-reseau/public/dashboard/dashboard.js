@@ -5631,7 +5631,7 @@
    * des réponses ; la liste vient de GET /assistant/magasin/questions (tons). */
   let tonGarde = '';
   try { tonGarde = localStorage.getItem('dbIaTon') || ''; } catch (e) { /* stockage refusé */ }
-  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde, conv: '', reg: {}, vues: {}, modMsg: {}, modeles: null };
+  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde, conv: '', reg: {}, vues: {}, modMsg: {}, modeles: null, pdf: {} };
   const iaTons = () => (IA.questions && IA.questions.tons) || [];
   const iaTonCle = () => (iaTons().some(t => t.cle === IA.ton) ? IA.ton : ((IA.questions && IA.questions.tonDefaut) || ''));
   const iaNomTon = k => { const t = iaTons().find(x => x.cle === k); return t ? t.nom : ''; };
@@ -5675,8 +5675,38 @@
     IA.fil.push(t); IA.saisie = '';
     iaRendre();
     ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton, origine: origine || 'libre', conversation: iaConv() })
-      .then(d => { t.r = d.reponse; t.luLe = d.luLe; }).catch(e => { t.err = e.message; })
+      .then(d => { t.r = d.reponse; t.luLe = d.luLe; t.qid = d.question; }).catch(e => { t.err = e.message; })
       .finally(() => { t.attente = false; iaRendre(); });
+  }
+  /* La réponse en PDF (17/11/2026, Sam : « output pdf ») : le serveur compose la page A4 (gabarit du cockpit) depuis la
+   * réponse gardée ; l'écran lui envoie ses graphiques en PNG, dessinés à 900 px, pour qu'ils sortent tels qu'à l'écran. */
+  function iaPngData(v) {
+    return new Promise(ok => {
+      const img = new Image(), w = 900, svg = iaDessin(v, w), h = +((svg.match(/height="(\d+)"/) || [])[1] || 260);
+      img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); ok(c.toDataURL('image/png')); };
+      img.onerror = () => ok(null);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+  function iaPdf(i) {
+    const t = IA.fil[+i];
+    if (!t || !t.r || (IA.pdf[i] && IA.pdf[i].encours)) { return; }
+    IA.pdf[i] = { encours: true }; iaRendre();
+    const V = (t.r.visuels || []).filter(v => v.id && (v.series || []).length && v.forme !== 'tableau');
+    Promise.all(V.map(v => iaPngData(v).then(d => [v.id, d]))).then(L => {
+      const images = {}; L.forEach(([id, d]) => { if (d) { images[id] = d; } });
+      return fetch(API + '/assistant/magasin/pdf', { method: 'POST', headers: { Accept: 'application/pdf, application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ shop: S.shop, question: t.qid || null, visuels: t.qid ? [] : (t.r.visuels || []).map(v => v.id).filter(Boolean), titre: t.r.titre || '', images }) });
+    }).then(r => {
+      const ty = r.headers.get('Content-Type') || '';
+      if (r.ok && ty.includes('pdf')) { return r.blob().then(b => { iaTelecharger('assistant-' + iaFichier(t.r) + '.pdf', b); IA.pdf[i] = null; }); }
+      return r.json().catch(() => ({})).then(j => { throw new Error((j && j.error) || ('HTTP ' + r.status)); });
+    }).catch(e => { IA.pdf[i] = { err: 'PDF impossible : ' + e.message }; }).finally(() => { if (IA.pdf[i]) { IA.pdf[i].encours = false; } iaRendre(); });
+  }
+  function iaBoutonPdf(i, classe) {
+    const t = IA.fil[i], x = IA.pdf[i];
+    if (!t || !t.r || (!t.qid && !(t.r.visuels || []).some(v => v.id))) { return ''; }
+    return `<button class="${classe}" data-iapdf="${i}"${x && x.encours ? ' disabled' : ''}>${x && x.encours ? 'PDF en cours…' : '⤓ PDF'}</button>${x && x.err ? `<span class="ia-pdf-err">${esc(x.err)}</span>` : ''}`;
   }
   function iaAller(ecran) { iaFermer(); S.vue = ecran; S.fdClient = null; urlMaj(); charger(false); window.scrollTo(0, 0); }
   function iaChiffres(r) { return (r.chiffres || []).length ? `<div class="ia-k">${r.chiffres.slice(0, 4).map(c => `<div><b>${esc(c.valeur)}</b><span>${esc(c.libelle)}</span></div>`).join('')}</div>` : ''; }
@@ -5844,7 +5874,7 @@
     const t = { q: '★ ' + m.nom, attente: true, ton: iaTonCle(), modele: true };
     IA.fil.push(t); iaRendre();
     lire('/assistant/magasin/modeles/' + encodeURIComponent(id) + '?shop=' + encodeURIComponent(S.shop))
-      .then(d => { t.r = { titre: m.nom, resume: 'Votre modèle, refait avec les chiffres du jour.', chiffres: [], points: [], priorites: [], suites: [], sources: [], visuels: [d.visuel] }; })
+      .then(d => { t.r = { titre: m.nom, resume: 'Votre modèle, refait avec les chiffres du jour.', chiffres: [], points: [], priorites: [], suites: [], sources: [], visuels: [d.visuel] }; t.visIds = [d.visuel.id]; })
       .catch(e => { t.err = e.message; }).finally(() => { t.attente = false; iaRendre(); });
   }
   function iaModeleRetirer(id) {
@@ -5877,7 +5907,7 @@
     h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[dern.modele ? 'Mes modèles' : iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
       <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + k)}${iaPrios(r, false)}${iaSources(r)}${iaFin(r)}
       ${iaSuites(r)}
-      <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin et du manuel. Vérifiez avant d’agir.</span><button class="db-btn" data-iamode="a">Continuer en conversation ›</button></div></section>`;
+      <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin et du manuel. Vérifiez avant d’agir.</span><span class="ia-pied-bt">${iaBoutonPdf(k, 'db-btn')}<button class="db-btn" data-iamode="a">Continuer en conversation ›</button></span></div></section>`;
     return h;
   }
   function iaConversation() {
@@ -5888,7 +5918,7 @@
       if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 64, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} ${iaLit(t.ton)}</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 72)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) && !t.modele ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + i)}${iaPrios(r, true)}${iaSources(r)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 72)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) && !t.modele ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + i)}${iaPrios(r, true)}${iaSources(r)}${iaFin(r)}<p class="ia-src">${t.luLe ? `Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}` : ''}${iaBoutonPdf(i, 'ia-lien')}</p></div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
     }).join('') || `<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>`;
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin et du manuel opératoire. Vérifiez avant d’agir.</p></section></div>`;
   }
@@ -6015,6 +6045,7 @@
     b.querySelectorAll('[data-iacsv]').forEach(e => e.addEventListener('click', () => { const v = IA.reg[e.dataset.iacsv]; if (v) { iaCsv(v); } }));
     b.querySelectorAll('[data-iapng]').forEach(e => e.addEventListener('click', () => { const v = IA.reg[e.dataset.iapng]; if (v) { iaPng(v, e.closest('.ia-vis').querySelector('.ia-graphe')); } }));
     b.querySelectorAll('[data-iamod]').forEach(e => e.addEventListener('click', () => iaModeleGarder(e.dataset.iamod)));
+    b.querySelectorAll('[data-iapdf]').forEach(e => e.addEventListener('click', () => iaPdf(e.dataset.iapdf)));
     b.querySelectorAll('[data-iamodo]').forEach(e => e.addEventListener('click', () => iaModeleOuvrir(e.dataset.iamodo)));
     b.querySelectorAll('[data-iamodx]').forEach(e => e.addEventListener('click', () => iaModeleRetirer(e.dataset.iamodx)));
     hdLier(b);

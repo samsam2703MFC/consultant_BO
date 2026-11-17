@@ -198,5 +198,19 @@ verifie('chaque champ d’un visuel est requis, aucun champ libre', $it['additio
 Db::$reglages['assistantProfesseur'] = json_encode(['modele' => 'claude-opus-5-5', 'effort' => 'medium']);
 verifie('le réglage change le modèle du Professeur', aiaProfesseurModele() === ['modele' => 'claude-opus-5-5', 'effort' => 'medium']);
 
+echo "La réponse en PDF\n";
+$png = 'data:image/png;base64,' . base64_encode("\x89PNG\r\n\x1a\n" . str_repeat("\0", 40));
+verifie('un PNG en data-URI est accepté', aiaPngValide($png) === $png);
+verifie('une image qui n’est pas un PNG est refusée', aiaPngValide('data:image/png;base64,' . base64_encode('<svg/>')) === null && aiaPngValide('data:image/svg+xml;base64,AAAA') === null && aiaPngValide(42) === null);
+verifie('les valeurs comme à l’écran', aiaFmt(1234.4, 'ca') === "1\u{00A0}234\u{00A0}€" && aiaFmt(12.5, 'panier') === "12,50\u{00A0}€" && aiaFmt(12.4, 'tickets') === '12,4' && aiaFmt(700.0, 'tickets') === '700' && aiaFmt(null, 'ca') === '—');
+$V['id'] = 7;
+$html = aiaPdfHtml(['titre' => 'Vos semaines', 'resume' => 'Vos clients reviennent.', 'chiffres' => [['valeur' => '12 426', 'libelle' => 'clients']], 'points' => [['titre' => 'La reprise', 'texte' => 'S45 & S46.']],
+    'priorites' => [['titre' => 'Midi', 'constat' => 'La vitrine pleine.', 'gain' => '', 'ecran' => 'aucun']], 'conclusion' => 'Gardez l’élan.'],
+    [$V], aiaSources(['ferm']), ['7' => $png], ['magasin' => 'Sombreffe', 'question' => 'Mes clients <par> semaine ?', 'agent' => 'Mr. Pierre', 'le' => '17/11/2026 à 10:42']);
+verifie('le PDF porte la question, la réponse, le graphique et son tableau', str_contains($html, 'Mes clients &lt;par&gt; semaine ?') && str_contains($html, 'Vos semaines') && str_contains($html, '<img src="data:image/png')
+    && str_contains($html, '<td>S37</td><td class="n">700</td><td class="n">630</td>') && str_contains($html, 'S45 &amp; S46.'), mb_substr($html, -1500));
+verifie('le PDF dit les documents du manuel lus et la phrase de finition', str_contains($html, 'Fermeture du magasin (v1.2, publié)') && str_contains($html, 'Gardez l’élan.'));
+verifie('sans image, le tableau reste', !str_contains(aiaPdfHtml(['titre' => 't'], [$V], [], [], []), '<img src="data:image/png') && str_contains(aiaPdfHtml(['titre' => 't'], [$V], [], [], []), '<td>S40</td>'));
+
 echo "\n" . ($ko === 0 ? "Tout est vert : $ok vérifications." : "$ko échec(s), $ok réussite(s).") . "\n";
 exit($ko === 0 ? 0 : 1);
