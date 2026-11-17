@@ -106,3 +106,4 @@
 2026-11-17 12:31:52 Assistant : radar des catégories et des marges face au réseau
 2026-11-17 12:38:02 Radar sans la branche « sans catégorie »
 - 2026-11-17T12:44:34Z [351] Ścieżka cen (factures → prix ±3 % → tarif → e-mail, jeudi)
+2026-11-17 13:25:52 Promotions : les bundles du Coach Vente (constat, couples, prix, fiche, lancement) et l'équipe des Paramètres
