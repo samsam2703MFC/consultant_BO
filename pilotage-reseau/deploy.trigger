@@ -115,3 +115,4 @@
 2026-11-17 16:14:37 Mon catalogue : la liste des produits de chaque catégorie, montré · caché
 2026-11-17 16:28:58 Mon catalogue : feuilleter le catalogue à l'étape Export PDF
 2026-11-17 18:54:21 Mon catalogue : police et couleur de la couverture, e-mail et second téléphone à l'aperçu
+2026-11-17 19:06:58 Mon catalogue : titre de couverture non coupé à l'aperçu
