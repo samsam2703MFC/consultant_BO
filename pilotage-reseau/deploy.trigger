@@ -102,3 +102,4 @@
 - 2026-11-17T09:39:31Z [347] Poczta : choix d'une boîte déjà configurée
 - 2026-11-17T10:13:20Z [349] prix des factures d'achat (bouton, effet) + [348] horaire et SMS brak wejścia
 - 2026-11-17T10:59:19Z [350] Śledzenie partii dans Produkcja › Partie i identyfikowalność
+2026-11-17 12:17:47 Assistant IA en pleine page, entrée Ruby sur Abricot sous la Boîte mail
