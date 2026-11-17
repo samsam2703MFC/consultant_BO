@@ -24,6 +24,7 @@
     grille: { label: 'Grille 2 × 3', cap: 6 },
     liste: { label: 'Liste avec prix', cap: 12 },
     mosaique: { label: 'Grandes vignettes 2 × 2', cap: 4 },
+    pleine: { label: 'Pleine page', cap: 1 },
     presentation: { label: 'Présentation seule', cap: 0 },
     presentation_liste: { label: 'Présentation + liste', cap: 8 },
   };
@@ -31,7 +32,7 @@
   /** Les mises en page dites par la place des produits sur la largeur (17/11/2026) : le nom court, ce qu'elle tient. */
   const DISPOS = {
     liste: ['1 par largeur', 'liste avec prix · 12'], grille: ['2 par largeur', 'grille 2 × 3 · 6'], mosaique: ['2 grandes', 'vignettes 2 × 2 · 4'],
-    vedette: ['1 vedette + 4', 'la vedette en haut · 5'], presentation: ['Présentation', 'la gamme seule'], presentation_liste: ['Présentation + liste', 'la gamme · 8'],
+    pleine: ['Pleine page', '1 produit et sa promo'], vedette: ['1 vedette + 4', 'la vedette en haut · 5'], presentation: ['Présentation', 'la gamme seule'], presentation_liste: ['Présentation + liste', 'la gamme · 8'],
   };
   /** Les variantes de gabarit (2-3 possibilités pour chaque mise en page), les mêmes que le Marketing. */
   const GABARITS = {
@@ -46,7 +47,7 @@
     grande: ['Grande illustration', 'grande illustration en haut, puis le titre'],
   };
   /** Une rangée entière libre : la place libre peut prendre une photo ou l'illustration (la règle du Marketing). */
-  const remplissable = (l, n) => l === 'grille' ? n <= 4 : l === 'vedette' ? n <= 3 : l === 'liste' ? n <= 9 : l === 'mosaique' ? n <= 2 : false;
+  const remplissable = (l, n) => l === 'grille' ? n <= 4 : l === 'vedette' ? n <= 3 : l === 'liste' ? n <= 9 : l === 'mosaique' ? n <= 2 : l === 'pleine' ? n === 0 : false;
   /** Rangées de la grille restées libres, que la place libre prend en pleine largeur. */
   const rangsLibres = (l, n) => l === 'grille' ? 3 - Math.ceil(n / 2) : l === 'vedette' ? 2 - Math.ceil(Math.max(0, n - 1) / 2) : l === 'mosaique' ? 2 - Math.ceil(n / 2) : 0;
   const STATUTS = { brouillon: 'Brouillon', pret: 'PDF prêt', imprime: 'Imprimé' };
@@ -244,11 +245,17 @@
     const ordreCat = {}; prods.forEach(p => { if (!(p.cat in ordreCat)) { ordreCat[p.cat] = Object.keys(ordreCat).length; } });
     const parCat = prods.slice().sort((a, b) => ordreCat[a.cat] - ordreCat[b.cat]);
     const pris = new Set(), parPage = [];
-    const out = (S.pages || []).map(p => {
+    // Pleine page (17/11/2026) : le produit choisi pour elle lui est réservé — les pages d'avant ne le prennent pas.
+    const reserve = new Map();
+    (S.pages || []).forEach((p, i) => { if (p.layout === 'pleine' && p.product != null && prods.some(x => x.id === +p.product) && !reserve.has(+p.product)) { reserve.set(+p.product, i); } });
+    const out = (S.pages || []).map((p, i) => {
       const cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 6;
       const liste = estPres(p.layout) ? prods : parCat;
       let n = 0; const mes = [];
+      const mien = p.layout === 'pleine' ? Array.from(reserve).find(e => e[1] === i) : null;
+      if (mien) { pris.add(mien[0]); parPage.push([mien[0]]); return 1; }
       for (const x of liste) {
+        if (reserve.has(x.id)) { continue; }
         if (n >= cap) { break; }
         if (pris.has(x.id) || (p.category != null && x.cat !== +p.category) || (p.gamme != null && !x.gammes.includes(+p.gamme))) { continue; }
         pris.add(x.id); n++; mes.push(x.id);
@@ -387,6 +394,7 @@
       if (g == null) { S.msg = { type: 'inf', titre: 'Aucune gamme au webshop de ma boutique : pas de page de présentation possible.' }; rendre(S); return; }
       p.gamme = g; p.category = null; p.filler = null; p.fillerMediaId = null;
     }
+    if (l !== 'pleine') { delete p.product; }   // le produit choisi ne vaut que pour une pleine page (le Marketing le refuse ailleurs)
     p.layout = l; S.modifie = true; rendre(S);
   }
   /** Les gammes proposées pour une page : celles du catalogue d'abord, puis les autres de ma boutique. */
@@ -616,6 +624,7 @@
     const t = ev.target;
     if (t.dataset.cm === 'pcat') { S.pages[+t.dataset.i].category = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'pgamme') { S.pages[+t.dataset.i].gamme = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
+    if (t.dataset.cm === 'pprod') { const q = S.pages[+t.dataset.i]; if (t.value === '') { delete q.product; } else { q.product = +t.value; } S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { rendre(S); }
     if (t.dataset.cm === 'langs') { const l = t.value; S.langs = t.checked ? Array.from(new Set(S.langs.concat(l))) : S.langs.filter(x => x !== l); if (!S.langs.length) { S.langs = ['fr']; } S.modifie = true; rendre(S); }
   }
@@ -835,6 +844,7 @@
       const t = nomGamme(S, p.gamme), d = m['g:' + t] || {};
       return { kind: 'presentation', layout: p.layout, template: p.template || 'A', title: t, text: (S.lang === 'nl' ? p.textNl : p.text) || '', drawingUrl: d.d || null, imageUrl: d.i || null, products: p.layout === 'presentation_liste' ? prods.slice(0, 8) : [] };
     }
+    if (p.layout === 'pleine' && prods.length) { const o = offreDe(S, ids[0]); if (o) { prods.push(Object.assign({ kind: 'offer' }, o)); } }
     const titre = p.category == null ? (S.lang === 'nl' ? 'Onze selectie' : 'Notre sélection') : nomCat(S, p.category), d = m['c:' + titre] || {};
     const filler = p.filler === 'photo' ? { kind: 'photo', imageUrl: (S.mediaUrls || {})[p.fillerMediaId] || null } : p.filler === 'illustration' ? { kind: 'illustration', drawingUrl: d.f || d.d || null } : null;
     return { kind: 'products', layout: p.layout, template: p.template || 'A', header: p.header || 'titre', script: !!p.script, title: titre,
@@ -907,6 +917,7 @@
   }
   function mini(layout, tpl) {
     if (estPres(layout)) { return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true"><b></b><i></i>' + (layout === 'presentation_liste' ? '<u></u><u></u><u></u>' : '') + '</span>'; }
+    if (layout === 'pleine') { return '<span class="mini pleine t' + esc(tpl || 'A') + '" aria-hidden="true"><i></i><i></i></span>'; }
     const n = layout === 'vedette' ? 5 : layout === 'mosaique' ? 4 : 6;
     return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true">' + '<i></i>'.repeat(n) + '</span>';
   }
@@ -963,7 +974,8 @@
         corps += '<div class="cm-lig"><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
           + options.map(c => '<option value="' + c + '"' + (+p.category === +c ? ' selected' : '') + '>' + esc(nomCat(S, c)) + '</option>').join('') + '</select>'
           + (gs.length ? '<select class="cm-sel" data-cm="pgamme" data-i="' + i + '" aria-label="Gamme de la page ' + (i + 3) + '"><option value=""' + (p.gamme == null ? ' selected' : '') + '>Toutes les gammes</option>' + gs.map(g => '<option value="' + g + '"' + (+p.gamme === g ? ' selected' : '') + '>' + esc(nomGamme(S, g)) + '</option>').join('') + '</select>' : '') + '</div>'
-          + '<div class="cm-cpt" style="margin-top:4px">' + porte + ' produit' + (porte > 1 ? 's' : '') + ' sur ' + cap + ' places' + (p.category == null ? ' · les produits qui restent' : ' · ' + n + ' choisi' + (n > 1 ? 's' : '') + ' dans cette catégorie') + '</div>';
+          + (p.layout === 'pleine' ? choixProduit(S, p, i, portes.ids ? portes.ids[i] : [])
+            : '<div class="cm-cpt" style="margin-top:4px">' + porte + ' produit' + (porte > 1 ? 's' : '') + ' sur ' + cap + ' places' + (p.category == null ? ' · les produits qui restent' : ' · ' + n + ' choisi' + (n > 1 ? 's' : '') + ' dans cette catégorie') + '</div>');
         if (remplissable(p.layout, porte) || p.filler) {
           corps += '<div class="cm-place"><span class="l" title="Quand la page n’est pas pleine, une photo de la médiathèque ou l’illustration de la gamme prend la place libre">Place libre</span><div class="cm-seg">'
             + [['', 'Rien'], ['photo', 'Photo'], ['illustration', 'Illustration']].map(o => '<button data-cm="place" data-i="' + i + '" data-v="' + o[0] + '" class="' + ((p.filler || '') === o[0] ? 'on' : '') + '">' + o[1] + '</button>').join('') + '</div>'
@@ -993,6 +1005,19 @@
       + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Validation ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>' + rendreZoom(S);
   }
+  /** Pleine page (17/11/2026, Sam : « un seul produit et sa promotion ») : le produit qu'elle montre, parmi ceux choisis dans
+   * sa catégorie ; « le premier de la catégorie » sinon. Sa promotion (la première offre cochée qui le contient) est dite. */
+  function choixProduit(S, p, i, ids) {
+    const ch = new Set(choisis(S));
+    const liste = produits(S).filter(x => ch.has(+x.id) && (p.category == null || +x.categoryId === +p.category));
+    const montre = ids && ids.length ? produits(S).find(x => +x.id === +ids[0]) : null;
+    const o = montre ? offreDe(S, montre.id) : null;
+    return '<div class="cm-lig cm-pleine"><select class="cm-sel" data-cm="pprod" data-i="' + i + '" aria-label="Produit de la page ' + (i + 3) + '"><option value=""' + (p.product == null ? ' selected' : '') + '>Le premier de la catégorie</option>'
+      + liste.map(x => '<option value="' + x.id + '"' + (+p.product === +x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select></div>'
+      + '<div class="cm-cpt" style="margin-top:4px">' + (montre ? '« ' + esc(montre.name) + ' » seul sur la page' + (o ? ' · avec sa promotion « ' + esc(o.name) + ' »' : ' · pas de promotion cochée pour lui') : 'aucun produit choisi dans cette catégorie') + '</div>';
+  }
+  /** La promotion d'un produit : la première offre cochée qui le contient (la règle du Marketing pour la pleine page). */
+  const offreDe = (S, id) => offres(S).find(o => o.type !== 'scheduledDiscount' && (o.productIds || []).some(x => +x === +id) && offreOn(S, o)) || null;
   /* Plus d'import de photo (17/11/2026, Sam : « retirer l'importation de photos, seulement la médiathèque ») : la vignette
    * d'une offre et la place libre d'une page se choisissent dans la médiathèque du réseau et de ma boutique, rien d'autre. */
   /** Le choix de l'image d'une vignette d'offre : les images de la médiathèque du réseau et de ma boutique. */
@@ -1307,6 +1332,15 @@
     return '<div class="cat-list">' + pr.map(x => x.kind === 'offer' ? offreCarte(x, lang, false, true, repli)
       : '<div class="cat-row">' + photo(x, repli) + '<span class="cat-name">' + esc(x.name) + '</span>' + faits(x, lang) + '<i></i>' + prixHtml(x, lang) + '</div>').join('') + '</div>';
   }
+  /** Pleine page (rendu de `FullPage`, CataloguePages.tsx) : le produit en grand — photo, nom, poids et allergènes, prix
+   * barré par sa remise, son badge et sa période —, puis « Aussi en promotion » et la vignette de son offre. */
+  function pleinePage(pr, lang, repli) {
+    const x = pr.find(q => q.kind !== 'offer'), offs = pr.filter(q => q.kind === 'offer');
+    if (!x) { return offs.map(o => offreCarte(o, lang, true, false, repli)).join(''); }
+    return '<div class="cat-full' + (x.oldPriceCents != null ? ' cat-full--promo' : '') + '"><div class="cat-full__visual">' + (x.promo ? '<span class="cat-offer__badge cat-full__badge">' + esc(x.promo.label) + '</span>' : '') + photo(x, repli) + '</div>'
+      + '<div class="cat-full__text"><div class="cat-name cat-full__name">' + esc(x.name) + '</div>' + faits(x, lang) + prixHtml(x, lang) + (x.promo && x.promo.period ? dispoHtml(x.promo.period) : '') + '</div>'
+      + offs.map(o => '<div class="cat-full__offer"><div class="cat-full__also">' + (lang === 'nl' ? 'Ook in promotie' : 'Aussi en promotion') + '</div>' + offreCarte(o, lang, false, true, repli) + '</div>').join('') + '</div>';
+  }
   /** La disponibilité de la page en pied de page (rendu de `AvailabilityFooter`, composé par le Marketing). */
   const piedDispo = t => t ? '<div class="cat-foot">' + esc(t) + '</div>' : '';
   /** La place libre : la photo de la médiathèque, ou l'illustration (rendu de `Filler`, CataloguePages.tsx). */
@@ -1323,6 +1357,8 @@
       b = f ? placeLibre(f, 'flex:1 1 0') : '<div class="cat-empty">' + (lang === 'nl' ? 'Lege pagina' : 'Page vide') + '</div>';
     } else if (p.layout === 'liste') {
       b = liste(pr, lang, r) + (f ? placeLibre(f, 'flex:1 1 0') : '');
+    } else if (p.layout === 'pleine') {
+      b = pleinePage(pr, lang, r);
     } else if (p.layout === 'mosaique') {
       b = '<div class="cat-grid cat-grid--2x2 cat-grid--mosaique">' + pr.map(x => carte(x, lang, false, r)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
     } else if (p.layout === 'vedette') {

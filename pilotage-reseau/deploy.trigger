@@ -110,3 +110,4 @@
 2026-11-17 13:49:44 Mon catalogue : plus d'import de photo, l'aperçu de chaque page à la mise en page
 2026-11-17 14:38:41 Mon catalogue : une seule rangée de choix, les mises en page en dessin
 2026-11-17 14:54:09 Mon catalogue : pages côte à côte, glisser-déposer, poids et allergènes à l'aperçu
+2026-11-17 15:37:05 Mon catalogue : la mise en page « Pleine page », un seul produit et sa promotion
