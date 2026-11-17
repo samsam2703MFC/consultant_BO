@@ -64,7 +64,7 @@
   const ETAPES = [
     ['Catalogue', 'reçu de la marque, le mien, ou nouveau'],
     ['Gammes', 'mes gammes, mes produits, à mes prix'],
-    ['Présentation', 'pages par 2, gabarits, en-têtes'],
+    ['Présentation', 'catégorie par catégorie, puis l’ordre'],
     ['Validation', 'ce qui s’imprimera'],
     ['Export PDF', 'imprimer, QR, affiche'],
   ];
@@ -175,7 +175,7 @@
     S.choix = {}; (c.products || []).forEach(p => { S.choix[p.id] = p.on !== false; });
     S.pages = (c.pages || []).map(p => ({ layout: p.layout, category: p.category == null ? null : +p.category, template: p.template || 'A',
       gamme: p.gamme == null ? null : +p.gamme, text: p.text || '', textNl: p.textNl || '', filler: p.filler || null, fillerMediaId: p.fillerMediaId == null ? null : +p.fillerMediaId,
-      header: ENTETES[p.header] ? p.header : 'titre', script: p.script === true }));
+      header: ENTETES[p.header] ? p.header : 'titre', script: p.script === true, ...(p.layout === 'pleine' && p.product != null ? { product: +p.product } : {}) }));
     S.format = c.format || 'A5';
     S.nbPages = NB_PAGES.includes(+c.pageCount) ? +c.pageCount : 8;
     S.langs = (c.langs && c.langs.length ? c.langs : ['fr']).slice();
@@ -183,6 +183,7 @@
     // Promotions de TFBuddy : les choix explicites ; une offre absente est cochée si elle touche un produit coché.
     S.offres = {}; S.offresImg = {}; (c.offers || []).forEach(o => { S.offres[o.type + '-' + o.id] = !!o.on; if (o.mediaId != null) { S.offresImg[o.type + '-' + o.id] = +o.mediaId; } });
     S.choixOffre = null;
+    if (!S.cat || S.mepCat !== c.id) { S.mep = null; S.mepDetail = false; S.mepCat = c.id; }
     S.dispo = c.showAvailability !== false;
     S.modifie = false;
   }
@@ -207,6 +208,7 @@
   function pagesCorps(S) {
     return S.pages.map(p => {
       const o = { layout: p.layout, category: estPres(p.layout) ? null : p.category };
+      if (p.layout === 'pleine' && p.product != null) { o.product = +p.product; }   // le produit de la pleine page (Marketing v1.8)
       if (p.template && p.template !== 'A') { o.template = p.template; }
       if (p.gamme != null) { o.gamme = p.gamme; }
       if (estPres(p.layout)) {
@@ -302,6 +304,7 @@
   /** Ce qu'une étape lit en arrivant. */
   function entrer(S) {
     if (S.etape >= 3) { chargerDoc(S); }
+    if (S.etape === 3 && S.mep == null) { S.mep = 0; }
     if (S.etape >= 4) { chargerVerif(S); }
     if (S.etape === 5) { S.lien = undefined; chargerLien(S); if (!S.imp.langue || (S.imp.langue !== 'fr+nl' && !S.langs.includes(S.imp.langue))) { S.imp.langue = S.langs.length > 1 ? 'fr+nl' : S.langs[0]; } }
     if (S.etape === 1 && !S.liste) { chargerListe(S); }
@@ -367,6 +370,7 @@
   }
   function enregistrerPages(S, suite) {
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
+    if (S.cat && +S.cat.pageCount !== S.nbPages) { corps.pageCount = S.nbPages; }   // l'assistant ajoute ou retire 2 pages avec les pages
     const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
@@ -585,6 +589,14 @@
     else if (a === 'entete') { S.pages[+b.dataset.i].header = v; S.modifie = true; rendre(S); }
     else if (a === 'gabarit') { S.pages[+b.dataset.i].template = v; S.modifie = true; rendre(S); }
     else if (a === 'zoomPage') { S.zoomPage = +v; rendre(S); }
+    else if (a === 'mep') { S.mep = +v; S.zoomPage = null; S.msg = null; rendre(S); const t = S.el.querySelector('.mep'); if (t && t.getBoundingClientRect().top < 0) { t.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }
+    else if (a === 'mepLay') { mepPoser(S, +b.dataset.c, { layout: v }); }
+    else if (a === 'mepPleine') { mepPoser(S, +b.dataset.c, { pleine: v === '1' }); }
+    else if (a === 'mepGab' || a === 'mepScript') { mepPages(S, +b.dataset.c).forEach(i => { if (a === 'mepGab') { S.pages[i].template = v; } else { S.pages[i].script = v === '1'; } }); S.modifie = true; rendre(S); }
+    else if (a === 'mepNb') { mepNbPages(S, +v); }
+    else if (a === 'mepBloc') { mepBouger(S, +v, +b.dataset.n, +b.dataset.d); }
+    else if (a === 'mepLangs') { S.langs = v.split(','); if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; } S.modifie = true; rendre(S); }
+    else if (a === 'mepDetail') { S.mepDetail = !S.mepDetail; S.zoomPage = null; rendre(S); }
     else if (a === 'zoomFermer') { S.zoomPage = null; rendre(S); }
     else if (a === 'place') {
       const p = S.pages[+b.dataset.i];
@@ -624,6 +636,7 @@
     const t = ev.target;
     if (t.dataset.cm === 'pcat') { S.pages[+t.dataset.i].category = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'pgamme') { S.pages[+t.dataset.i].gamme = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
+    if (t.dataset.cm === 'mepProd') { mepPoser(S, +t.dataset.c, { pleine: true, produit: t.value === '' ? null : +t.value }); }
     if (t.dataset.cm === 'pprod') { const q = S.pages[+t.dataset.i]; if (t.value === '') { delete q.product; } else { q.product = +t.value; } S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { rendre(S); }
     if (t.dataset.cm === 'langs') { const l = t.value; S.langs = t.checked ? Array.from(new Set(S.langs.concat(l))) : S.langs.filter(x => x !== l); if (!S.langs.length) { S.langs = ['fr']; } S.modifie = true; rendre(S); }
@@ -692,7 +705,7 @@
     if (S.etape === 1) { h += rendreCatalogues(S); }
     else if ((S.etape === 2 || S.etape === 3) && estRecu(S)) { h += rendreVerrou(S); }
     else if (S.etape === 2) { h += S.cat ? rendreE2(S) : rendreE1(S); }
-    else if (S.etape === 3) { h += rendreE3(S); }
+    else if (S.etape === 3) { h += S.mepDetail ? rendreE3(S) : rendreMep(S); }
     else if (S.etape === 4) { h += rendreValidation(S); }
     else { h += rendreExport(S); }
     return h;
@@ -876,6 +889,15 @@
    * la poignée ⠿ d'une rangée la prend ; posée au-dessus ou au-dessous d'une autre, la page s'y range. Les pages de la
    * marque ne bougent pas. Les flèches ↑ ↓ restent. */
   function glisserDebut(S, ev) {
+    // Mise en page finale : un bloc (une catégorie et ses pages) se prend par sa poignée.
+    const hb = ev.target.closest && ev.target.closest('[data-blocdrag]');
+    if (hb) {
+      S.glisseBloc = { de: +hb.dataset.blocdrag, n: +hb.dataset.n };
+      const r = hb.closest('.mep-bloc');
+      try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', 'bloc ' + S.glisseBloc.de); if (r) { ev.dataTransfer.setDragImage(r, 20, 20); } } catch (e) { /* navigateur ancien */ }
+      if (r) { setTimeout(() => r.classList.add('glisse'), 0); }
+      return;
+    }
     const h = ev.target.closest && ev.target.closest('[data-pgdrag]');
     if (!h) { return; }
     S.glisse = +h.dataset.pgdrag;
@@ -888,7 +910,22 @@
     const b = r.getBoundingClientRect();
     return { r, i: +r.dataset.pg, apres: ev.clientY > b.top + b.height / 2 };
   }
+  /** Le bloc sous le pointeur, et le côté où le bloc pris se poserait (avant · après, sur la largeur). */
+  function cibleBloc(S, ev) {
+    const r = ev.target.closest && ev.target.closest('.mep-bloc[data-bloc]');
+    if (!r || !S.glisseBloc) { return null; }
+    const b = r.getBoundingClientRect();
+    return { r, de: +r.dataset.bloc, n: +r.dataset.n, apres: ev.clientX > b.left + b.width / 2 };
+  }
   function glisserSur(S, ev) {
+    if (S.glisseBloc) {
+      const cb = cibleBloc(S, ev);
+      if (!cb) { return; }
+      ev.preventDefault();
+      S.el.querySelectorAll('.mep-bloc.depot-avant,.mep-bloc.depot-apres').forEach(x => { if (x !== cb.r) { x.classList.remove('depot-avant', 'depot-apres'); } });
+      cb.r.classList.toggle('depot-avant', !cb.apres); cb.r.classList.toggle('depot-apres', cb.apres);
+      return;
+    }
     const c = cibleDepot(S, ev);
     if (!c) { return; }
     ev.preventDefault();
@@ -896,6 +933,12 @@
     c.r.classList.toggle('depot-avant', !c.apres); c.r.classList.toggle('depot-apres', c.apres);
   }
   function deposer(S, ev) {
+    if (S.glisseBloc) {
+      const cb = cibleBloc(S, ev), g = S.glisseBloc;
+      S.glisseBloc = null;
+      if (cb) { ev.preventDefault(); mepDeplacer(S, g.de, g.n, cb.apres ? cb.de + cb.n : cb.de); }
+      rendre(S); return;
+    }
     const c = cibleDepot(S, ev);
     if (!c) { return; }
     ev.preventDefault();
@@ -906,7 +949,7 @@
     if (vers !== de) { const [p] = S.pages.splice(de, 1); S.pages.splice(vers, 0, p); S.modifie = true; S.zoomPage = null; }
     rendre(S);
   }
-  function glisserFin(S) { if (S.glisse != null) { S.glisse = null; rendre(S); } }
+  function glisserFin(S) { if (S.glisse != null || S.glisseBloc) { S.glisse = null; S.glisseBloc = null; rendre(S); } }
   /** La page agrandie (un clic sur son aperçu), et ses voisines de la même catégorie. */
   function rendreZoom(S) {
     if (S.zoomPage == null || !S.pages || !S.pages[S.zoomPage]) { return ''; }
@@ -945,13 +988,224 @@
     (t === 'grande' ? [25, 37] : [17, 29, 41]).forEach(y => { [4, 21].forEach(x => { h += '<rect x="' + x + '" y="' + y + '" width="15" height="' + (t === 'grande' ? 10 : 9) + '" rx="1.5" fill="none" stroke="currentColor" stroke-width="1"/>'; }); });
     return h + '</svg>';
   }
+  /* --- L'assistant de mise en page (17/11/2026, Sam : « la mise en page sous forme d'assistant, catégorie par catégorie
+   * sélectionnée ; la dernière page de l'assistant est la mise en page finale, où l'on déplace une catégorie en glisser-
+   * déposer » ; « code comme les maquettes », docs/maquettes/assistant-mise-en-page). Une sous-étape par catégorie choisie
+   * à l'étape 2, puis la mise en page finale ; « Réglages page par page » ouvre la liste détaillée (rendreE3). ---------- */
+  const MEP_LAYOUTS = ['vedette', 'grille', 'liste', 'mosaique'];
+  const MEP_COULEURS = ['#8D1D2C', '#B0792A', '#3f7a52', '#2F5D8A', '#7A4E8C', '#A0522D'];
+  /** Les catégories de l'assistant : celles des produits choisis, dans l'ordre de l'étape 2 (« Notre sélection » n'en est pas une). */
+  const mepCats = S => catsChoisies(S).filter(c => c != null);
+  const mepCouleur = (S, c) => { const i = mepCats(S).indexOf(+c); return i >= 0 && i < MEP_COULEURS.length ? MEP_COULEURS[i] : '#9a948c'; };
+  const mepPt = col => '<i class="mep-pt" style="background:' + col + '"></i>';
+  function mepCompte(S, c) { const ids = new Set(choisis(S)); return produits(S).filter(p => ids.has(+p.id) && p.categoryId != null && +p.categoryId === +c).length; }
+  /** Les pages d'une catégorie (hors présentations), dans l'ordre du catalogue. */
+  const mepPages = (S, c) => (S.pages || []).map((p, i) => i).filter(i => !estPres(S.pages[i].layout) && S.pages[i].category != null && +S.pages[i].category === +c);
+  /** Une page libre : ni présentation, ni produit — « Notre sélection » vide, ou une catégorie dont rien n'est choisi. */
+  function mepLibre(S, i, portes) {
+    const p = S.pages[i];
+    return !estPres(p.layout) && !(portes[i] > 0) && (p.category == null || !mepCats(S).includes(+p.category));
+  }
+  const PAGE_VIDE = () => ({ layout: 'grille', category: null, template: 'A', gamme: null, text: '', textNl: '', filler: null, fillerMediaId: null, header: 'titre', script: false });
+  /** Le réglage d'une catégorie, lu dans ses pages : sa pleine page (et son produit), la mise en page des autres, gabarit, manuscrite. */
+  function mepEtat(S, c) {
+    const idx = mepPages(S, c);
+    const pl = idx.find(i => S.pages[i].layout === 'pleine'), autre = idx.find(i => S.pages[i].layout !== 'pleine');
+    return { idx, pleine: pl != null, produit: pl != null && S.pages[pl].product != null ? +S.pages[pl].product : null, layout: autre != null ? S.pages[autre].layout : null,
+      template: idx.length ? (S.pages[idx[0]].template || 'A') : null, script: idx.length ? !!S.pages[idx[0]].script : false };
+  }
+  /**
+   * Refait les pages d'une catégorie : sa pleine page (au choix, avec son produit), puis assez de pages de la mise en page
+   * choisie pour ses autres produits. Elles prennent la place des anciennes (une nouvelle catégorie : avant les catégories
+   * qui la suivent à l'étape 2, sinon avant les pages libres de la fin). Les pages libres font la place ; au-delà, le
+   * catalogue prend 2 pages de plus (16 au plus), comme le Marketing quand une catégorie arrive.
+   */
+  function mepPoser(S, c, reglage) {
+    const e = mepEtat(S, c), n = mepCompte(S, c), cats = mepCats(S);
+    const r = Object.assign({ layout: e.layout && MEP_LAYOUTS.includes(e.layout) ? e.layout : 'grille', pleine: e.pleine, produit: e.produit }, reglage);
+    const modele = e.idx.length ? S.pages[e.idx[0]] : ((S.pages || []).find(p => !estPres(p.layout) && p.category != null) || PAGE_VIDE());
+    const tpl = e.template || modele.template || 'A', script = e.idx.length ? e.script : !!modele.script;
+    const portes0 = remplir(S), libres0 = new Set((S.pages || []).filter((p, i) => mepLibre(S, i, portes0)));
+    // Les anciennes pages se reprennent (place libre, gamme…) : la pleine page pour la pleine page, les autres ensuite.
+    const anciennes = e.idx.map(i => S.pages[i]), prises = new Set();
+    const reprise = l => { const q = anciennes.find(p => p.layout === l && !prises.has(p)) || anciennes.find(p => !prises.has(p)); if (q) { prises.add(q); } return q ? Object.assign({}, q) : PAGE_VIDE(); };
+    const nouvelles = [];
+    if (r.pleine) {
+      const q = Object.assign(reprise('pleine'), { layout: 'pleine', category: +c, template: tpl, script, filler: null, fillerMediaId: null });
+      if (r.produit != null) { q.product = +r.produit; } else { delete q.product; }
+      nouvelles.push(q);
+    }
+    const reste = Math.max(0, n - (r.pleine ? 1 : 0));
+    const k = reste ? Math.ceil(reste / LAYOUTS[r.layout].cap) : (r.pleine ? 0 : 1);
+    for (let j = 0; j < k; j++) { const q = Object.assign(reprise(r.layout), { layout: r.layout, category: +c, template: tpl, script }); delete q.product; nouvelles.push(q); }
+    const pages = (S.pages || []).filter((p, i) => !e.idx.includes(i));
+    let ou = e.idx.length ? e.idx[0] : -1;
+    if (ou < 0) {
+      const apres = cats.slice(cats.indexOf(+c) + 1);
+      ou = pages.findIndex(p => !estPres(p.layout) && p.category != null && apres.includes(+p.category));
+      if (ou < 0) { ou = pages.length; while (ou > 0 && libres0.has(pages[ou - 1])) { ou--; } }
+    }
+    pages.splice(ou, 0, ...nouvelles);
+    // La place : les pages restées libres (de la fin d'abord), puis 2 pages de plus.
+    const garde = S.pages; S.pages = pages;
+    const portes = remplir(S);
+    const libres = new Set(pages.filter((p, i) => mepLibre(S, i, portes)));
+    let nb = S.nbPages;
+    for (let t = pages.length - 1; t >= 0 && pages.length > nb - PAGES_MARQUE; t--) { if (libres.has(pages[t])) { pages.splice(t, 1); } }
+    const max = NB_PAGES[NB_PAGES.length - 1];
+    while (pages.length > nb - PAGES_MARQUE && nb < max) { nb += 2; }
+    if (pages.length > nb - PAGES_MARQUE) {
+      S.pages = garde;
+      S.msg = { type: 'err', titre: 'Plus de place : un catalogue a ' + max + ' pages au plus. Pour « ' + nomCat(S, c) + ' », choisissez une mise en page plus dense, ou moins de produits à l’étape 2.' };
+      rendre(S); return;
+    }
+    while (pages.length < nb - PAGES_MARQUE) { pages.push(PAGE_VIDE()); }
+    S.msg = nb > S.nbPages ? { type: 'inf', titre: '« ' + nomCat(S, c) + ' » demande plus de place : le catalogue passe à ' + nb + ' pages (toujours par 2).' } : null;
+    S.nbPages = nb; S.modifie = true; S.zoomPage = null;
+    rendre(S);
+  }
+  /** Le nombre de pages à la mise en page finale : les pages libres de la fin partent, ou des pages vides s'ajoutent. */
+  function mepNbPages(S, nb) {
+    const portes = remplir(S), pages = S.pages.slice();
+    for (let t = pages.length - 1; t >= 0 && pages.length > nb - PAGES_MARQUE; t--) { if (mepLibre(S, S.pages.indexOf(pages[t]), portes)) { pages.splice(t, 1); } }
+    if (pages.length > nb - PAGES_MARQUE) { S.msg = { type: 'err', titre: 'À ' + nb + ' pages, des produits n’auraient plus de place : retirez des produits à l’étape 2, ou choisissez des mises en page plus denses.' }; rendre(S); return; }
+    while (pages.length < nb - PAGES_MARQUE) { pages.push(PAGE_VIDE()); }
+    S.pages = pages; S.nbPages = nb; S.modifie = true; S.msg = null; rendre(S);
+  }
+  /** Les blocs de la mise en page finale : les pages qui se suivent d'une même catégorie (ou libres) font un bloc. */
+  function mepBlocs(S, portes) {
+    const out = [];
+    (S.pages || []).forEach((p, i) => {
+      const libre = mepLibre(S, i, portes);
+      const cle = estPres(p.layout) ? 'g' + i : libre ? 'libre' : p.category == null ? 'sel' : 'c' + p.category;
+      const der = out[out.length - 1];
+      if (der && der.cle === cle && !estPres(p.layout)) { der.n++; } else { out.push({ cle, de: i, n: 1, p, libre }); }
+    });
+    return out;
+  }
+  /** Déplace un bloc (pages de..de+n) avant la position `vers` (un index de page, compté avant le retrait). */
+  function mepDeplacer(S, de, n, vers) {
+    if (vers >= de && vers <= de + n) { return false; }
+    const pris = S.pages.slice(de, de + n), reste = S.pages.slice(0, de).concat(S.pages.slice(de + n));
+    reste.splice(vers > de ? vers - n : vers, 0, ...pris);
+    S.pages = reste; S.modifie = true; S.zoomPage = null;
+    return true;
+  }
+  /** Les flèches d'un bloc (sans souris) : avant le bloc précédent, après le suivant. */
+  function mepBouger(S, de, n, d) {
+    const blocs = mepBlocs(S, remplir(S)), k = blocs.findIndex(x => x.de === de);
+    const voisin = blocs[k + d];
+    if (k < 0 || !voisin) { return; }
+    mepDeplacer(S, de, n, d < 0 ? voisin.de : voisin.de + voisin.n);
+    rendre(S);
+  }
+
+  function mepSous(S, cats) {
+    const fin = cats.length;
+    const e = cats.map((c, i) => [i, esc(nomCat(S, c)), mepCompte(S, c) + ' produit' + (mepCompte(S, c) > 1 ? 's' : '')]).concat([[fin, 'Mise en page finale', 'l’ordre, en glisser-déposer']]);
+    return '<div class="mep-sous" style="grid-template-columns:repeat(' + Math.min(e.length, 6) + ',minmax(0,1fr))">' + e.map(x => {
+      const on = x[0] === S.mep, fait = x[0] < S.mep;
+      return '<button class="mep-ss' + (on ? ' on' : fait ? ' fait' : '') + (x[0] === fin ? ' fin' : '') + '" data-cm="mep" data-v="' + x[0] + '"><span class="no">' + (fait ? '✓' : x[0] === fin ? '⠿' : x[0] + 1) + '</span><span style="min-width:0"><span class="l">' + x[1] + '</span><span class="d">' + x[2] + '</span></span></button>';
+    }).join('') + '</div>';
+  }
+  const mepSeg = (action, c, choix, cur) => '<span class="mep-seg">' + choix.map(o => '<button data-cm="' + action + '"' + (c != null ? ' data-c="' + c + '"' : '') + ' data-v="' + o[0] + '" class="' + (String(cur) === String(o[0]) ? 'on' : '') + '">' + o[1] + '</button>').join('') + '</span>';
+  /** « Un produit seul sur une page, avec sa promotion » : non · oui, et le produit (le premier de la catégorie, sinon celui choisi). */
+  function mepPleine(S, c, e, portes) {
+    let h = '<div class="mep-opt' + (e.pleine ? ' on' : '') + '"><div class="t"><span><span class="mep-pt mep-pt--r"></span>Un produit seul sur une page, avec sa promotion</span><span class="sp"></span>' + mepSeg('mepPleine', c, [['0', 'Non'], ['1', 'Oui']], e.pleine ? '1' : '0') + '</div>';
+    if (!e.pleine) { return h + '<div class="s">Une page de plus, avant les autres : le produit en grand, son poids, ses allergènes, son prix barré par sa remise et l’offre qui le contient.</div></div>'; }
+    const ch = new Set(choisis(S)), liste = produits(S).filter(x => ch.has(+x.id) && x.categoryId != null && +x.categoryId === +c);
+    const ip = e.idx.find(i => S.pages[i].layout === 'pleine'), vu = ip != null && portes.ids && portes.ids[ip] && portes.ids[ip][0] != null ? produits(S).find(x => +x.id === +portes.ids[ip][0]) : null;
+    const o = vu ? offreDe(S, vu.id) : null;
+    return h + '<select class="cm-sel mep-sel" data-cm="mepProd" data-c="' + c + '" aria-label="Le produit de la pleine page"><option value=""' + (e.produit == null ? ' selected' : '') + '>Le premier de la catégorie</option>'
+      + liste.map(x => '<option value="' + x.id + '"' + (+e.produit === +x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select>'
+      + '<div class="s">' + (vu ? '« ' + esc(vu.name) + ' » seul sur sa page · ' + (o ? 'avec sa promotion « ' + esc(o.name) + ' », imprimée dessous.' : 'pas de promotion cochée pour lui : la page montre son prix. Avec une offre (bundle, « 2+1 ») qui le contient, elle s’imprime dessous.') : 'Aucun produit choisi dans cette catégorie.') + '</div></div>';
+  }
+  function mepCategorie(S, cats, rang, portes) {
+    const c = cats[rang], total = cats.length, e = mepEtat(S, c), n = mepCompte(S, c), ids = portes.ids || [];
+    const reste = Math.max(0, n - (e.pleine ? 1 : 0));
+    let h = '<div class="mep-kick">Étape 3 · Présentation — catégorie ' + (rang + 1) + ' sur ' + total + '</div>'
+      + '<div class="mep-tit"><h2>' + esc(nomCat(S, c)) + '</h2><span>' + n + ' produit' + (n > 1 ? 's' : '') + ' choisi' + (n > 1 ? 's' : '') + ' à l’étape 2</span></div>';
+    if (e.pleine) { h += mepPleine(S, c, e, portes); }
+    if (!e.pleine || reste > 0) {
+      h += '<div class="mep-q">' + (e.pleine ? (reste > 1 ? 'Et les ' + reste + ' autres ?' : 'Et l’autre ?') : 'Comment présenter ' + (n > 1 ? 'ces ' + n + ' produits' : 'ce produit') + ' ?') + '</div>'
+        + '<div class="mep-lays">' + MEP_LAYOUTS.map(l => {
+          const nb = Math.max(1, Math.ceil(reste / LAYOUTS[l].cap));
+          return '<button class="mep-lay' + (e.layout === l ? ' on' : '') + (nb > 2 ? ' trop' : '') + '" data-cm="mepLay" data-c="' + c + '" data-v="' + l + '"' + (S.occupe ? ' disabled' : '') + '>' + mini(l, e.template || 'A')
+            + '<b>' + esc(DISPOS[l][0]) + '</b><small>' + esc(DISPOS[l][1]) + '</small><em>' + nb + ' page' + (nb > 1 ? 's' : '') + (nb > 2 ? ' · plus de 2' : '') + '</em></button>';
+        }).join('') + '</div>';
+    }
+    h += '<div class="mep-aps">' + (e.idx.length ? e.idx.map(i => '<div class="mep-ap">' + apercuPage(S, i, ids[i] || [], e.idx.length > 2 ? 160 : 210)
+      + '<span>page <b>' + (i + 3) + '</b> · ' + (S.pages[i].layout === 'pleine' ? 'pleine page' : (portes[i] || 0) + ' produit' + ((portes[i] || 0) > 1 ? 's' : '')) + '</span></div>').join('')
+      : '<div class="mep-rien">Pas encore de page pour cette catégorie : choisissez une mise en page.</div>') + '</div>';
+    const gab = '<div class="mep-opt"><div class="t">Gabarit</div><div class="mep-gabs">' + ['A', 'B', 'C'].map(t => '<button class="mep-gab' + ((e.template || 'A') === t ? ' on' : '') + '" data-cm="mepGab" data-c="' + c + '" data-v="' + t + '"' + (e.idx.length ? '' : ' disabled') + ' title="' + esc(GABARITS.produits[t][1]) + '">' + t + ' · ' + esc(GABARITS.produits[t][0]) + '</button>').join('') + '</div>'
+      + (e.pleine ? '' : '<div class="t">Catégorie manuscrite<span class="sp"></span>' + mepSeg('mepScript', c, [['0', 'Non'], ['1', 'Oui']], e.script ? '1' : '0') + '</div>') + '</div>';
+    h += '<div class="mep-opts">' + (e.pleine ? gab + '<div class="mep-opt"><div class="t">Catégorie manuscrite<span class="sp"></span>' + mepSeg('mepScript', c, [['0', 'Non'], ['1', 'Oui']], e.script ? '1' : '0') + '</div></div>' : mepPleine(S, c, e, portes) + gab) + '</div>';
+    const inner = S.nbPages - PAGES_MARQUE, libres = (S.pages || []).filter((p, i) => mepLibre(S, i, portes)).length;
+    const prec = rang === 0 ? '<button class="cm-btn" data-cm="etape" data-v="2">‹ Gammes</button>' : '<button class="cm-btn" data-cm="mep" data-v="' + (rang - 1) + '">‹ ' + esc(nomCat(S, cats[rang - 1])) + '</button>';
+    const suiv = '<button class="cm-btn pri" data-cm="mep" data-v="' + (rang + 1) + '">' + (rang < total - 1 ? esc(nomCat(S, cats[rang + 1])) : 'Mise en page finale') + ' ›</button>';
+    return h + '<div class="mep-pied">' + prec + '<span class="sp"></span><span class="cm-cpt">' + e.idx.length + ' page' + (e.idx.length > 1 ? 's' : '') + ' · ' + (inner - libres) + ' pages de produits sur ' + inner + (libres ? ' · ' + libres + ' libre' + (libres > 1 ? 's' : '') : '') + '</span>' + suiv + '</div>';
+  }
+  function mepFinale(S, cats, portes) {
+    const ids = portes.ids || [], blocs = mepBlocs(S, portes), [doc] = dessinsDoc(S), nb = S.nbPages;
+    const marque = (j, no) => '<div class="mep-th">' + (doc && doc.pages && doc.pages[j] ? feuille(doc, j, 92, true) : '<span class="mep-vide mep-vide--m"></span>') + '<span>' + no + '</span></div>';
+    const np = doc && doc.pages ? doc.pages.length : 0;
+    const nomBloc = b => b.cle === 'libre' ? (b.n > 1 ? 'Pages libres' : 'Page libre') : b.cle === 'sel' ? 'Notre sélection' : estPres(b.p.layout) ? 'Présentation · ' + nomGamme(S, b.p.gamme) : nomCat(S, b.p.category);
+    let h = '<div class="mep-kick">Étape 3 · Présentation — la mise en page finale</div>'
+      + '<div class="mep-tit"><h2>Mon catalogue</h2><span>' + nb + ' pages ' + esc(S.format) + ' · je glisse une catégorie pour changer l’ordre, ses pages la suivent</span></div>'
+      + '<div class="mep-fin">'
+      + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(0, 1) + marque(1, 2) + '</div></div>'
+      + blocs.map((b, k) => {
+        const col = b.cle.charAt(0) === 'c' ? mepCouleur(S, b.p.category) : null;
+        const pp = Array.from({ length: b.n }, (x, j) => b.de + j).map(i => '<div class="mep-th">' + (b.libre && !S.pages[i].filler ? '<div class="mep-vide">Photo ou illustration de la gamme · ou −2 pages</div>' : apercuPage(S, i, ids[i] || [], 92)) + '</div>').join('');
+        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"><div class="h">'
+          + '<span class="mep-poi" draggable="true" data-blocdrag="' + b.de + '" data-n="' + b.n + '" title="Glisser pour déplacer" aria-label="Déplacer « ' + esc(nomBloc(b)) + ' »">⠿</span>' + (col ? mepPt(col) : '') + '<span class="nm">' + esc(nomBloc(b)) + '</span>'
+          + '<span class="pg">p. ' + (b.de + 3) + (b.n > 1 ? '-' + (b.de + b.n + 2) : '') + '</span>'
+          + '<button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="-1"' + (k === 0 ? ' disabled' : '') + ' aria-label="Avant">‹</button><button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="1"' + (k === blocs.length - 1 ? ' disabled' : '') + ' aria-label="Après">›</button>'
+          + '</div><div class="pp">' + pp + '</div></div>';
+      }).join('')
+      + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(np - 2, nb - 1) + marque(np - 1, nb) + '</div></div></div>'
+      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris) · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
+    // Ce qui n'a pas de place, dit (la règle du Marketing).
+    const sansPage = catsChoisies(S).filter(c => c != null && !(S.pages || []).some(p => !estPres(p.layout) && p.category != null && +p.category === +c));
+    if (sansPage.length) { h += '<div class="cm-msg inf">' + sansPage.map(c => '« ' + esc(nomCat(S, c)) + ' »').join(', ') + (sansPage.length > 1 ? ' n’ont' : ' n’a') + ' pas de page : ' + (sansPage.length > 1 ? 'leurs' : 'ses') + ' produits vont en « Notre sélection » s’il y en a une.</div>'; }
+    if (portes.sansPlace) { h += '<div class="cm-msg inf">' + portes.sansPlace + ' produit' + (portes.sansPlace > 1 ? 's' : '') + ' choisi' + (portes.sansPlace > 1 ? 's' : '') + ' sans place dans les pages : choisissez une mise en page plus dense pour sa catégorie, ou ajoutez 2 pages.</div>'; }
+    const inner = nb - PAGES_MARQUE, utiles = (S.pages || []).filter((p, i) => !mepLibre(S, i, portes)).length;
+    const liste = (S.prod && Array.isArray(S.prod.pageCounts) && S.prod.pageCounts.length ? S.prod.pageCounts : NB_PAGES).map(Number);
+    h += '<div class="mep-opts"><div class="mep-opt"><div class="t">Nombre de pages<span class="sp"></span><span class="mep-seg">' + liste.map(x => '<button data-cm="mepNb" data-v="' + x + '" class="' + (x === nb ? 'on' : '') + '"' + (x - PAGES_MARQUE < utiles || S.occupe ? ' disabled' : '') + '>' + x + '</button>').join('') + '</span></div>'
+      + '<div class="s">Toujours par 2, dont 4 de la marque. ' + (inner - utiles > 1 ? 'À ' + (nb - 2) + ' pages, 2 pages libres partent.' : utiles === inner ? 'Toutes les pages de produits sont prises.' : '1 page libre : une photo ou l’illustration de la gamme la prend.') + '</div></div>'
+      + '<div class="mep-opt"><div class="t">Format<span class="sp"></span>' + mepSeg('format', null, [['A5', 'A5'], ['A4', 'A4']], S.format) + '</div>'
+      + '<div class="t">Langues<span class="sp"></span>' + mepSeg('mepLangs', null, [['fr', 'FR'], ['fr,nl', 'FR + NL']], S.langs.includes('nl') ? 'fr,nl' : 'fr') + '</div></div></div>';
+    const prec = cats.length ? '<button class="cm-btn" data-cm="mep" data-v="' + (cats.length - 1) + '">‹ ' + esc(nomCat(S, cats[cats.length - 1])) + '</button>' : '<button class="cm-btn" data-cm="etape" data-v="2">‹ Gammes</button>';
+    return h + '<div class="mep-pied">' + prec + '<button class="cm-btn" data-cm="mepDetail">Réglages page par page</button><span class="sp"></span><span class="cm-cpt">' + (S.modifie ? 'non enregistré : « Validation » enregistre' : 'chaque catégorie se reprend en haut') + '</span>'
+      + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Validation ›') + '</button></div>';
+  }
+  function mepCote(S, cats, portes, finale) {
+    const inner = S.nbPages - PAGES_MARQUE;
+    const parts = cats.map(c => [c, mepPages(S, c)]);
+    const autres = (S.pages || []).map((p, i) => i).filter(i => !mepLibre(S, i, portes) && (estPres(S.pages[i].layout) || S.pages[i].category == null || !cats.includes(+S.pages[i].category))).length;
+    const pris = parts.reduce((s, x) => s + x[1].length, 0) + autres;
+    const plage = l => l.length ? 'p. ' + (l[0] + 3) + (l.length > 1 ? '-' + (l[l.length - 1] + 3) : '') : 'pas de page';
+    return '<aside class="mep-cote"><h3>Mon catalogue · ' + S.nbPages + ' pages ' + esc(S.format) + '</h3><div><b>' + pris + ' page' + (pris > 1 ? 's' : '') + ' de produits sur ' + inner + '</b></div>'
+      + '<div class="mep-jauge">' + parts.map(x => '<i style="width:' + (100 * x[1].length / inner) + '%;background:' + mepCouleur(S, x[0]) + '"></i>').join('') + (autres ? '<i style="width:' + (100 * autres / inner) + '%;background:#9a948c"></i>' : '') + '</div>'
+      + '<div class="mep-lg">' + parts.map((x, k) => '<button data-cm="mep" data-v="' + k + '">' + mepPt(mepCouleur(S, x[0])) + '<span>' + esc(nomCat(S, x[0])) + '</span><span class="n">' + (finale ? plage(x[1]) : x[1].length ? x[1].length + ' page' + (x[1].length > 1 ? 's' : '') + (k < S.mep ? ' ✓' : '') : 'pas de page') + '</span></button>').join('')
+      + (autres ? '<div>' + mepPt('#9a948c') + '<span>Présentations, Notre sélection</span><span class="n">' + autres + ' page' + (autres > 1 ? 's' : '') + '</span></div>' : '')
+      + (inner - pris > 0 ? '<div>' + mepPt('#D9D2C7') + '<span>Pages libres</span><span class="n">' + (inner - pris) + '</span></div>' : '') + '</div>'
+      + '<div class="mep-note">' + (finale ? 'L’ordre des pages est celui de l’impression : la page 3 suit la page 2 de la marque.' : 'Une étape par catégorie choisie, dans l’ordre de l’étape 2.') + ' Les 4 pages de la marque (couverture, page 2, avant-dernière, dernière) ne bougent pas.</div></aside>';
+  }
+  function rendreMep(S) {
+    const cats = mepCats(S);
+    if (S.mep == null || S.mep > cats.length) { S.mep = 0; }
+    const portes = remplir(S), finale = S.mep >= cats.length;
+    return '<div class="mep">' + mepSous(S, cats) + '<div class="mep-corps"><section class="mep-pan">' + (finale ? mepFinale(S, cats, portes) : mepCategorie(S, cats, S.mep, portes))
+      + '</section>' + mepCote(S, cats, portes, finale) + '</div></div>' + rendreZoom(S);
+  }
   function rendreE3(S) {
     const prods = produits(S), ids = new Set(choisis(S));
     const parCat = {}; prods.forEach(p => { if (ids.has(+p.id)) { const k = p.categoryId == null ? 'null' : String(p.categoryId); parCat[k] = (parCat[k] || 0) + 1; } });
     const cats = catsChoisies(S);
     const portes = remplir(S);
     const gs = gammesCatalogue(S);
-    let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><span class="k">Mise en page</span><span class="sp"></span><button class="cm-btn" data-cm="repartir"' + (S.occupe ? ' disabled' : '') + '>↺ Répartir automatiquement</button></div>';
+    let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><button class="cm-btn" data-cm="mepDetail">‹ L’assistant</button><span class="k" style="margin-left:10px">Réglages page par page</span><span class="sp"></span><button class="cm-btn" data-cm="repartir"' + (S.occupe ? ' disabled' : '') + '>↺ Répartir automatiquement</button></div>';
     h += '<div class="cm-reglages">' + segPages(S, 'Nombre de pages · toujours par 2 · dont 4 de la marque') + '<div class="cm-champ"><span>Format</span><div class="cm-seg">' + ['A5', 'A4'].map(f => '<button data-cm="format" data-v="' + f + '" class="' + (S.format === f ? 'on' : '') + '">' + f + '</button>').join('') + '</div></div>'
       + '<div class="cm-champ"><span>Langues</span><div class="cm-cases">' + [['fr', 'Français'], ['nl', 'Néerlandais']].map(l => '<label><input type="checkbox" data-cm="langs" value="' + l[0] + '"' + (S.langs.includes(l[0]) ? ' checked' : '') + '> ' + l[1] + '</label>').join('') + '</div></div></div>';
     h += '<div class="cm-pages">';
