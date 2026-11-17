@@ -6,6 +6,8 @@
  * 3. Zatwierdź faktury : ze wszystkimi pozycjami sprawdzonymi — ceny do kartoteki, przyjęcie na stan, akceptacja.
  * API : GET /supply/invoices/wizard, POST /supply/invoices/{id}/lines/{lineId}/check, POST …/wizard/check-safe, POST …/wizard/process.
  * Etykiety kw.* w supply.json.
+ * [351] Ścieżka cen : pasek 4 kroków na górze (price-path.js, krok 1 = ten asystent, stan z /supply/invoices/assistant-status),
+ * w kroku 3 « Dalej : 2. Sprawdź ceny katalogowe → » do Kreatora cen (/finances/price-wizard#step=2).
  */
 (function () {
     'use strict';
@@ -30,6 +32,7 @@
         let materials = null;      // wszystkie surowce (lista wyboru), wczytane przy pierwszej potrzebie
         let busy = false;
         const chosen = new Set();  // krok 3 : wybrane faktury (domyślnie wszystkie gotowe)
+        const PP = {inv: null, path: null}; // [351] stan ścieżki cen (krok 1 : assistant-status, kroki 2–4 : Kreator cen)
 
         const setStep = (s) => {
             step = s;
@@ -74,6 +77,23 @@
             if (materials) return;
             try { materials = (await api.get('/supply/materials')).rows; } catch (err) { materials = []; ui.notify(false, errText(err)); }
             render();
+        }
+
+        // --- [351] Pasek ścieżki cen -------------------------------------------------------------------------
+        // Krok 1 na żywo z liczb kreatora (todo, gotowe), ostatnie zatwierdzenie z assistant-status.
+        const pathBar = () => {
+            if (!window.TfbPricePath) return '';
+            const T = W && W.totals;
+            const inv = T ? {todo: T.todo, ready: T.ready, done: !T.todo && !T.ready, last_done: PP.inv ? PP.inv.last_done : null} : PP.inv;
+            return window.TfbPricePath.html({cur: 1, root: api.root, inv, path: PP.path, lang: api.lang, here: 'invoices',
+                threshold: PP.path && PP.path.threshold});
+        };
+        const paintPath = () => { const n = host.querySelector('.pp'); if (n) n.outerHTML = pathBar(); };
+        async function loadPath() {
+            if (!window.TfbPricePath) return;
+            try { PP.inv = await api.get('/supply/invoices/assistant-status'); } catch (err) { PP.inv = null; }
+            PP.path = await window.TfbPricePath.load(api.root, false);
+            paintPath();
         }
 
         // --- Wspólne ------------------------------------------------------------------------------------------
@@ -261,13 +281,14 @@
                     <tbody>${ready.map(i => row(i, true)).join('')}${waiting.map(i => row(i, false)).join('')}</tbody></table></div>` : `<p class="at-empty mb-0">${esc(t('kw.empty'))}</p>`}
                 ${sel.length ? `<div class="kw-note">${esc(t('kw.s3.summary', {p: prices, r: receive, n: sel.length}))}${effTxt(effSum) ? ` <b class="${effSum > 0 ? 'kw-up' : 'kw-down'}">${esc(t('kw.imp.effect_total', {v: effTxt(effSum)}))}</b>` : ''}</div>` : ''}
                 <div class="kw-foot"><button type="button" class="kw-btn" data-kw-step="2">← ${esc(t('kw.back_lines'))}</button>
-                    ${W.can_write ? `<button type="button" class="kw-btn pri" data-kw-process ${sel.length ? '' : 'disabled'}>${esc(t('kw.process', {n: sel.length, s: money(sum)}))}</button>` : ''}</div></div>`;
+                    <span class="kw-do">${W.can_write && ready.length ? `<button type="button" class="kw-btn pri" data-kw-process ${sel.length ? '' : 'disabled'}>${esc(t('kw.process', {n: sel.length, s: money(sum)}))}</button>` : ''}
+                    <a class="kw-btn ${ready.length && W.can_write ? '' : 'pri'}" href="${api.root}/finances/price-wizard#step=2" data-kw-path-next>${esc(t('kw.path.next'))} →</a></span></div></div>`;
         }
 
         function render() {
             if (!W) { host.innerHTML = `<p class="text-muted">${esc(t('loading'))}</p>`; return; }
             const y = window.scrollY;
-            host.innerHTML = `<div class="kw">${steps()}${step === 1 ? stepOne() : (step === 2 ? stepTwo() : stepThree())}</div>`;
+            host.innerHTML = `<div class="kw">${pathBar()}${steps()}${step === 1 ? stepOne() : (step === 2 ? stepTwo() : stepThree())}</div>`;
             window.scrollTo(0, y);
             if (step === 2 && cur) {
                 const x = find(cur);
@@ -504,11 +525,12 @@
                 const res = await act(() => api.post('/supply/invoices/wizard/process', {ids}));
                 if (res) {
                     ui.notify(!res.errors.length, t('kw.processed', {n: res.processed.length}) + (res.errors.length ? ' ' + t('kw.process_errors', {list: res.errors.map(x => (x.number || '#' + x.id) + ' (' + x.code + ')').join(', ')}) : ''));
-                    // Nowe ceny surowców w kartotece → Kreator cen [218] : koszty i marże, nowe ceny, publikacja od daty.
+                    loadPath();
+                    // Nowe ceny surowców w kartotece → ścieżka cen [351], krok 2 : ceny katalogowe (przeliczenie receptur przy wejściu).
                     if (res.processed.length && window.Swal) {
                         const next = await Swal.fire({icon: 'success', title: t('kw.processed', {n: res.processed.length}), text: t('kw.next_prices'), showCancelButton: true,
                             confirmButtonText: t('kw.go_prices'), cancelButtonText: t('kw.stay'), confirmButtonColor: '#8e1f2f'});
-                        if (next.isConfirmed) window.location.href = api.root + '/finances/price-wizard';
+                        if (next.isConfirmed) window.location.href = api.root + '/finances/price-wizard#step=2';
                     }
                 }
             }
@@ -550,6 +572,7 @@
         document.addEventListener('keydown', onKey);
         render();
         load();
+        loadPath();
     }
 
     window.TfbInvoiceWizard = {mount};

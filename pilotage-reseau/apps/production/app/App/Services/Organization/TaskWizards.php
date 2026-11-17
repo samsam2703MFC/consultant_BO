@@ -21,6 +21,8 @@ final class TaskWizards
         'inv_checked' => ['Asystent faktur', '/workshop/supply#tab=invoices&inv=wizard', 'pozycje faktur sprawdzone', 1],
         'costs_recalc' => ['Asystent cen — koszty i marże', '/finances/price-wizard', 'koszty i marże przeliczone', 3],
         'prices_planned' => ['Asystent cen — nowe ceny', '/finances/price-wizard#step=2', 'nowe ceny zaplanowane', 3],
+        // [351] Ścieżka cen (co czwartek) : faktury KSeF → ceny katalogowe ±3 % → cennik → e-mail (makieta 66 B).
+        'price_path_done' => ['Ścieżka cen', '/finances/price-wizard#step=2', 'cennik zaplanowany albo ceny sprawdzone bez zmian w tygodniu', 4],
         'week_plan_validated' => ['Plan produkcji tygodnia', '/production/plan-wizard', 'plan tygodnia zatwierdzony', 2],
         'production_day_closed' => ['Zatwierdzenia produkcji', '/production/follow-up', 'dzień zatwierdzony na tabletach', 1],
         'day_shipped' => ['Wysyłka dnia', '/shipping/wizard', 'wszystkie palety dnia z dokumentami', 1],
@@ -57,6 +59,7 @@ final class TaskWizards
         'inv_checked' => 'gdy pozycje faktur są sprawdzone (asystent faktur)',
         'costs_recalc' => 'gdy koszty i marże są przeliczone (asystent cen, krok 1)',
         'prices_planned' => 'gdy nowe ceny są zaplanowane (asystent cen, krok 3)',
+        'price_path_done' => 'gdy w tygodniu zaplanowano zmianę cennika albo zapisano « Sprawdzone — bez zmian w tym tygodniu » (ścieżka cen, krok 2)',
         'buy_sent' => 'gdy zapytania ofertowe są wysłane (zakupy tygodnia)',
         'forecast_approved' => 'gdy prognoza 13 tygodni jest zatwierdzona (Produkcja › Prognoza)',
         'week_plan_validated' => 'gdy plan produkcji tygodnia jest zatwierdzony (asystent planu)',
@@ -213,6 +216,7 @@ final class TaskWizards
                 break;
             case 'nc_reviewed':
             case 'material_costs_reviewed':
+            case 'price_path_done':
             case 'yield_reviewed':
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 break;
