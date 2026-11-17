@@ -98,3 +98,4 @@
 2026-11-17T08:40:02Z [343] Cohabitation : envoi réel des e-mails
 2026-11-17T08:54:48Z [344] Proforma : renvoyer
 2026-11-17T09:13:42Z [345] Poczta par profil
+2026-11-17T09:20:58Z [346] Palette : commande et livraison
