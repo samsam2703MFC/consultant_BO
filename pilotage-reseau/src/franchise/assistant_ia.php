@@ -853,7 +853,8 @@ function aiaVisuel(array $D, int $sid): array|string
                 // que le magasin vend peu est justement un point faible (17/11/2026).
                 [$C2, $t2] = $lire(amMagasinsActifs());
                 $poids = [];
-                foreach (array_keys($C + $C2) as $c) { $poids[$c] = max(($C[$c] ?? 0) / $tot, $t2 > 0 ? ($C2[$c] ?? 0) / $t2 : 0); }
+                // Les produits sans catégorie au catalogue ne font pas une branche : rien à en tirer.
+                foreach (array_keys($C + $C2) as $c) { if ((string) $c !== 'sans catégorie') { $poids[$c] = max(($C[$c] ?? 0) / $tot, $t2 > 0 ? ($C2[$c] ?? 0) / $t2 : 0); } }
                 arsort($poids);
                 $libs = array_map('strval', array_keys(array_slice($poids, 0, $D['limite'] ?: 8, true)));
                 $moi['valeurs'] = array_map(static fn ($c) => round(100 * ($C[$c] ?? 0) / $tot, 1), $libs);

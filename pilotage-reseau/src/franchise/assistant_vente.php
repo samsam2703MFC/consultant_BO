@@ -283,7 +283,7 @@ function aivVisuelMarges(array $base, array $D, array $P, int $sid): array|strin
     if ($pm === []) { return 'aucune marge lisible : les produits vendus n’ont pas encore de coût de recette'; }
     $pr = aivMargesPct($Mg['reseau']);
     $filtre = aiaNorm($D['categorie']);
-    $cats = array_values(array_filter(array_keys($pm), static fn ($c) => $filtre === '' || str_contains(aiaNorm($c), $filtre)));
+    $cats = array_values(array_filter(array_map('strval', array_keys($pm)), static fn ($c) => $c !== 'sans catégorie' && ($filtre === '' || str_contains(aiaNorm($c), $filtre))));
     $cats = array_slice($cats, 0, $D['limite'] ?: 8);
     if ($cats === []) { return 'aucune catégorie de ce nom n’a de marge lisible'; }
     $series = [['nom' => 'Mon magasin', 'role' => 'moi', 'valeurs' => array_map(static fn ($c) => $pm[$c], $cats)]];
