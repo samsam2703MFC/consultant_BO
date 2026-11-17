@@ -387,7 +387,14 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
 .tel .bul { align-self: flex-start; max-width: 86%; background: #E9E9EB; color: #000; border-radius: 18px; padding: 8px 12px; }
 .tel .legende { text-align: center; font: 600 11.5px var(--f-ui); color: var(--gris); margin-top: 10px; }
 .tel .saisie { margin: 8px 10px 14px; border: 1px solid #D1D1D6; border-radius: 18px; height: 34px; color: #C7C7CC; font: 400 13px -apple-system, Arial; display: flex; align-items: center; padding: 0 12px; }
-.trois-rs { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.trois-rs { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.sel-s { display: inline-flex; align-items: center; border: 0.5px solid var(--trait-2); border-radius: 999px; padding: 3px 10px; font: 600 11.5px var(--f-ui); background: #fff; white-space: nowrap; }
+.inp.xs { width: 46px; padding: 3px 6px; font-size: 12px; }
+.hr-b { font: 700 13px var(--f-ui); background: var(--beige-2); border-radius: 8px; padding: 4px 9px; display: inline-block; }
+.rp { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+.rp-h { font: 700 14px var(--f-ui); color: var(--rouge); }
+.rp-r { font-size: 11.5px; color: var(--gris); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+table.cks th small { display: block; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .trois-rs .regle { grid-template-columns: minmax(120px, 150px) minmax(0, 1fr); }
 @media (max-width: 1260px) { .trois-rs { grid-template-columns: minmax(0, 1fr); } .tels { grid-template-columns: repeat(2, minmax(0, 340px)); } }
 
@@ -467,7 +474,7 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
         <div>
           <div class="crumb">Franchisés · évaluation et suivi › Suivi journalier et opérations › Rappels SMS des contrôles</div>
           <h1>Rappels SMS des contrôles qualité</h1>
-          <p>Une checklist du contrôle qualité (les tâches photo obligatoires) n’est pas complète une heure après son heure (marge de 15 min) : la personne sur place reçoit un rappel, puis un deuxième ; au troisième, le franchisé aussi. Vous recevez la copie. Le programme s’ouvre franchisé par franchisé.</p>
+          <p>Chaque checklist du contrôle qualité (les tâches photo obligatoires), à chacune de ses heures d’application, a ses rappels : le premier après l’heure et une marge, puis les suivants, chacun à qui il faut — la personne sur place, puis le franchisé aussi. Vous recevez la copie. Le programme s’ouvre franchisé par franchisé.</p>
         </div>
         <div class="etiquette">maquette · mardi 17/11/2026, 08:20 · tâches et horaires réels du 11 au 17/11 · prénoms d’équipe d’exemple · numéros masqués</div>
       </div>
@@ -517,26 +524,25 @@ table.t td.nom b { font-size: 13.5px; font-weight: 600; display: block; }
           <div class="lgd"><span>barres : SMS par jour, du mer. 11 au mar. 17/11 (sur place + franchisé)</span><span>· Ruby : dans le programme</span><span>· gris : ce qui serait parti</span></div>
           <p class="note">Un franchisé qui entre dans le programme reçoit d’abord un SMS de bienvenue, son équipe aussi (« À partir de demain, un rappel… ») : le premier rappel ne surprend personne. Une checklist faite entre deux rappels arrête la suite.</p>
       </div>
+      <div class="carte">
+        <h2>Les checklists et leurs rappels <small>chaque checklist, à chaque heure d’application, a ses rappels</small></h2>
+        <p class="aide">Les checklists du contrôle qualité et leurs heures viennent du panel (tâches photo obligatoires). Le 1ᵉʳ rappel part après l’heure d’application, plus la marge ; chaque suivant, l’écart réglé après le précédent. Une photo arrivée entre deux rappels arrête la suite.</p>
+        <table class="t cks">
+          <thead><tr><th>Checklist</th><th>Heure d’application</th><th>Rappels</th><th>1ᵉʳ rappel <small>après l’heure</small></th><th>2ᵉ rappel <small>après le 1ᵉʳ</small></th><th>3ᵉ rappel <small>après le 2ᵉ</small></th><th>Faite quand</th></tr></thead>
+          <tbody><tr><td class="nom"><b>2.2.01 · Chambre froide et étiquetage</b><small>1 photo : étiquetage des prix et allergènes</small></td><td><span class="hr-b">06:00</span><small>tous les jours</small></td><td><span class="bascule on"><i></i></span></td><td><div class="rp"><span class="rp-h">07:15</span><span class="rp-r"><input class="inp xs" value="60"> min + <input class="inp xs" value="15"> marge</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">08:15</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">09:15</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place + franchisé ▾</span></div></td><td><span class="sel-s">toutes ses photos ▾</span><small>cochée sans photo : ne compte pas</small></td></tr><tr><td class="nom"><b>2.2.01 · Chambre froide et étiquetage</b><small>1 photo : chambre froide négative</small></td><td><span class="hr-b">11:00</span><small>le mercredi</small></td><td><span class="bascule on"><i></i></span></td><td><div class="rp"><span class="rp-h">12:15</span><span class="rp-r"><input class="inp xs" value="60"> min + <input class="inp xs" value="15"> marge</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">13:15</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">14:15</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place + franchisé ▾</span></div></td><td><span class="sel-s">toutes ses photos ▾</span><small>cochée sans photo : ne compte pas</small></td></tr><tr><td class="nom"><b>1.1.02 · Photos des comptoirs</b><small>9 photos : un comptoir chacune</small></td><td><span class="hr-b">07:00</span><small>tous les jours</small></td><td><span class="bascule on"><i></i></span></td><td><div class="rp"><span class="rp-h">08:15</span><span class="rp-r"><input class="inp xs" value="60"> min + <input class="inp xs" value="15"> marge</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">09:15</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">10:15</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place + franchisé ▾</span></div></td><td><span class="sel-s">toutes ses photos ▾</span><small>cochée sans photo : ne compte pas</small></td></tr><tr><td class="nom"><b>1.3.02 · Photos des comptoirs (après-midi)</b><small>4 photos : pains, pâtisseries, quiches, tartes</small></td><td><span class="hr-b">14:30</span><small>samedi et dimanche</small></td><td><span class="bascule on"><i></i></span></td><td><div class="rp"><span class="rp-h">15:45</span><span class="rp-r"><input class="inp xs" value="60"> min + <input class="inp xs" value="15"> marge</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">16:45</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place ▾</span></div></td><td><div class="rp"><span class="rp-h">17:45</span><span class="rp-r"><input class="inp xs" value="60"> min</span><span class="sel-s">sur place + franchisé ▾</span></div></td><td><span class="sel-s">toutes ses photos ▾</span><small>cochée sans photo : ne compte pas</small></td></tr></tbody>
+        </table>
+        <div class="lgd" style="margin-top:8px"><span>Un rappel se retire par sa liste (« aucun ») · les heures se recalculent quand on change un écart</span></div>
+      </div>
       <div class="trois-rs">
           <div class="carte">
-            <h2>La règle</h2>
-            <div class="regle"><div><b>1ᵉʳ rappel</b><div class="rq xs">à la personne sur place</div></div><div class="rv"><input class="inp" value="60"> min après l’heure + marge <input class="inp" value="15"> min</div></div>
-            <div class="regle"><div><b>2ᵉ rappel</b><div class="rq xs">à la personne sur place</div></div><div class="rv"><input class="inp" value="60"> min après le 1ᵉʳ</div></div>
-            <div class="regle"><div><b>3ᵉ rappel</b><div class="rq xs">sur place et au franchisé</div></div><div class="rv"><input class="inp" value="60"> min après le 2ᵉ · le dernier</div></div>
+            <h2>Pour toutes les checklists</h2>
             <div class="regle"><div><b>La personne sur place</b><div class="rq xs">le planning du jour</div></div><div class="rv" style="flex-direction:column;align-items:flex-start;gap:4px"><span>en poste à l’heure du rappel ; si plusieurs : celle qui a ouvert</span><span class="xs mu">personne au planning, ou sans GSM : le franchisé reçoit à sa place</span></div></div>
-            <div class="regle" style="align-items:start"><div><b>Les checklists suivies</b><div class="rq xs">du contrôle qualité : tâches photo obligatoires</div></div>
-              <div>
-                <div class="cl"><span class="hr">06:00</span><span><b>2.2.01 · Chambre froide et étiquetage</b><small>1 photo · tous les jours (et 11:00 le mercredi)</small></span><span class="bascule on"><i></i></span></div>
-                <div class="cl"><span class="hr">07:00</span><span><b>1.1.02 · Photos des comptoirs</b><small>9 photos · tous les jours</small></span><span class="bascule on"><i></i></span></div>
-                <div class="cl"><span class="hr">14:30</span><span><b>1.3.02 · Photos des comptoirs (après-midi)</b><small>4 photos · samedi et dimanche</small></span><span class="bascule on"><i></i></span></div>
-              </div></div>
-            <div class="regle"><div><b>Une checklist est faite</b><div class="rq xs">au moment du rappel</div></div><div class="rv"><label class="radio"><input type="radio" checked> toutes ses photos rendues</label><label class="radio"><input type="radio"> au moins une</label><span class="xs mu">cochée sans photo : ne compte pas</span></div></div>
-            <div class="regle"><div><b>Plusieurs en retard</b></div><div class="rv">un seul SMS les cite toutes</div></div>
+            <div class="regle"><div><b>Plusieurs en retard</b></div><div class="rv">au même moment : un seul SMS les cite toutes</div></div>
             <div class="regle"><div><b>Au plus</b></div><div class="rv"><input class="inp" value="8"> SMS par personne et par jour</div></div>
             <div class="regle"><div><b>Envoi</b></div><div class="rv">de <input class="inp" style="width:70px" value="06:00"> à <input class="inp" style="width:70px" value="21:00"> · jamais un jour sans tâche</div></div>
             <p class="note">Le soir, l’e-mail de 19:00 « Contrôle qualité non réalisé » part toujours, comme aujourd’hui (Reporting automatisé).</p>
           </div>
-          <div class="carte">
+<div class="carte">
             <h2>En copie</h2>
             <div class="copie"><span class="av">SV</span><span style="flex:1"><b>Sam V.</b> · vous<small class="xs mu" style="display:block">+32 4•• •• •• ••</small></span><button class="btn s" data-toast="Maquette : numéro retiré">Retirer</button></div>
             <button class="ajout" data-toast="Maquette : un nom, un numéro">+ Ajouter un numéro</button>

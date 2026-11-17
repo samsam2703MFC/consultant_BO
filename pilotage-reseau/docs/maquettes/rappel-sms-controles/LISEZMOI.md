@@ -1,6 +1,6 @@
 # Rappels SMS des contrôles qualité — maquette
 
-**Statut : maquette v2 du 17/11/2026 (destinataires et marge réglés par Sam), à valider. Rien n'est codé.**
+**Statut : maquette v3 du 17/11/2026 (destinataires, marge, réglage par checklist : réponses de Sam), à valider. Rien n'est codé.**
 
 Demande de Sam (17/11/2026) : « dans le système des tâches, si un franchisé n'a pas fait ses contrôles qualité 1 h après
 l'heure demandée sur la checklist, on lui envoie un SMS de rappel. Vu qu'on ne commence pas avec tout le monde en même
@@ -12,7 +12,7 @@ Où : cockpit › Franchisés · évaluation et suivi › Suivi journalier et op
 
 | Écran | Capture | Ce qu'il montre |
 |---|---|---|
-| A · Réglages | `a-reglages.png` | le programme franchisé par franchisé (bascule, la personne sur place, le franchisé, ce matin, 7 derniers jours), la règle des trois rappels, la copie, le texte des SMS |
+| A · Réglages | `a-reglages.png` | le programme franchisé par franchisé (bascule, la personne sur place, le franchisé, ce matin, 7 derniers jours) ; les checklists et leurs rappels, une ligne par heure d'application ; ce qui vaut pour toutes ; la copie ; le texte des SMS |
 | B · Journal | `b-journal.png` | le dimanche 15/11, rappel par rappel, à Sombreffe et à Gosselies : les checklists en retard, à qui le SMS est parti, la copie, ce qui est arrivé ensuite |
 | C · Les SMS | `c-sms.png` | ce que reçoivent la personne sur place, la franchisée (3ᵉ rappel) et Sam en copie ; l'autre choix : un récapitulatif le soir |
 
@@ -25,12 +25,16 @@ Réponses : « le 1er et 2e rappel à la personne sur place, le 3e aux deux » ;
   11:00 le mercredi), « 1.1.02 · Photos des comptoirs » (07:00, 9 photos), « 1.3.02 · Photos des comptoirs
   (après-midi) » (14:30, 4 photos, le week-end). Chacune s'allume ou s'éteint. Une checklist est faite quand **toutes**
   ses photos sont rendues ; **cochée sans photo, elle ne compte pas**.
-- **Trois rappels par checklist**, chacun réglable :
-  1. **1ᵉʳ rappel** : 60 min après l'heure de la checklist **+ marge de 15 min** (07:15 pour une checklist de 06:00) →
-     à la **personne sur place** ;
-  2. **2ᵉ rappel** : 60 min plus tard → à la personne sur place ;
-  3. **3ᵉ rappel** : 60 min plus tard → à la **personne sur place et au franchisé**. C'est le dernier.
-  Une photo arrivée entre deux rappels arrête la suite.
+- **Les rappels se règlent checklist par checklist, à chaque heure d'application** (Sam, 17/11 : « les rappels sont
+  liés aux diverses checklists et leur heure d'application, donc le paramétrage doit aussi être lié aux checklists ») :
+  une ligne par checklist et par heure — « Chambre froide et étiquetage » à 06:00 tous les jours et à 11:00 le
+  mercredi, « Photos des comptoirs » à 07:00, « Photos des comptoirs (après-midi) » à 14:30 le week-end. Sur chaque
+  ligne : la bascule, et pour chacun des trois rappels son délai, son destinataire, l'heure qui en résulte ; « faite
+  quand » (toutes ses photos, par défaut). Les valeurs de départ, les mêmes partout :
+  1. **1ᵉʳ rappel** : 60 min après l'heure d'application **+ marge de 15 min** (07:15 pour 06:00) → **sur place** ;
+  2. **2ᵉ rappel** : 60 min après le 1ᵉʳ → sur place ;
+  3. **3ᵉ rappel** : 60 min après le 2ᵉ → **sur place + franchisé**. C'est le dernier.
+  Un rappel se retire (« aucun ») ; une photo arrivée entre deux rappels arrête la suite.
 - **La personne sur place** : celle du planning du jour, en poste à l'heure du rappel ; si plusieurs, celle qui a ouvert ;
   son GSM est celui de sa fiche employé (celui du SMS des primes). Personne au planning, ou pas de GSM : le franchisé
   reçoit à sa place. Quand le franchisé ouvre lui-même (Gosselies), il reçoit les trois.
@@ -56,9 +60,7 @@ autant de copies chez Sam**. Le dimanche 15/11 : 10 SMS par magasin (journal, é
 
 ## Questions ouvertes
 
-1. « 1ᵉʳ, 2ᵉ, 3ᵉ rappel » s'entend ici **par checklist** (trois relances de la même checklist). L'autre lecture — le 1ᵉʳ
-   et le 2ᵉ SMS de la journée à la personne sur place, le 3ᵉ de la journée aux deux, un seul rappel par checklist —
-   enverrait trois fois moins de SMS (17 par magasin et par semaine) mais ne préviendrait le franchisé que le week-end.
+1. ~~Rappels par checklist ou par journée~~ : par checklist et par heure d'application (réponse de Sam, 17/11).
 2. La copie : chaque SMS (jusqu'à 108 par semaine pour deux magasins) ou le récapitulatif du soir ?
 3. Le GSM des employés : il doit être rempli dans leur fiche (sinon, le franchisé reçoit à leur place).
 
