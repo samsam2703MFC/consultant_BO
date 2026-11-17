@@ -44,6 +44,12 @@
             {% if f0.late|length %}<span class="at-count is-late">zaległe {{ f0.late|length }}</span>{% endif %}
             <span class="at-count is-done">zrobione {{ week.totals.done }}</span>
             {% endif %}
+            {% if invoice_assistant %}{% set ia = invoice_assistant %}
+            {# [349] Asystent « Ceny z faktur zakupu » (makieta 65) : czerwony = do zrobienia, zielony = zrobione #}
+            <a class="at-asst-btn {{ ia.done ? 'is-done' : 'is-todo' }}" href="{{ root }}/workshop/supply#tab=invoices&inv=wizard" data-invoice-assistant>
+                <span class="ic">{{ ia.done ? '✓' : '!' }}</span><span>{{ ia.done ? 'Ceny z faktur sprawdzone' : 'Asystent : ceny z faktur zakupu' }}
+                <small>{% if ia.done %}{{ ia.last_done ? 'ostatnio ' ~ ia.last_done|date('d.m H:i') : 'nic do sprawdzenia' }}{% else %}{{ ia.todo ? ia.todo ~ ' poz. do sprawdzenia' : '' }}{{ ia.todo and ia.ready ? ' · ' : '' }}{{ ia.ready ? ia.ready ~ ' fakt. do zatwierdzenia' : '' }}{{ ia.oldest ? ' · od ' ~ ia.oldest|date('d.m') : '' }}{% endif %}</small></span></a>
+            {% endif %}
             <a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
         </div>
     </div>
