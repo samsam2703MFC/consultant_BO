@@ -234,19 +234,21 @@
     prods.sort((a, b) => (rang[a.id] ?? 1e6) - (rang[b.id] ?? 1e6));
     const ordreCat = {}; prods.forEach(p => { if (!(p.cat in ordreCat)) { ordreCat[p.cat] = Object.keys(ordreCat).length; } });
     const parCat = prods.slice().sort((a, b) => ordreCat[a.cat] - ordreCat[b.cat]);
-    const pris = new Set();
+    const pris = new Set(), parPage = [];
     const out = (S.pages || []).map(p => {
       const cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 6;
       const liste = estPres(p.layout) ? prods : parCat;
-      let n = 0;
+      let n = 0; const mes = [];
       for (const x of liste) {
         if (n >= cap) { break; }
         if (pris.has(x.id) || (p.category != null && x.cat !== +p.category) || (p.gamme != null && !x.gammes.includes(+p.gamme))) { continue; }
-        pris.add(x.id); n++;
+        pris.add(x.id); n++; mes.push(x.id);
       }
+      parPage.push(mes);
       return n;
     });
     out.sansPlace = prods.filter(x => !pris.has(x.id)).length;
+    out.ids = parPage;   // les produits de chaque page, dans l'ordre : l'aperçu de la page (apercuPage)
     return out;
   }
 
@@ -283,7 +285,8 @@
   }
   /** Ce qu'une étape lit en arrivant. */
   function entrer(S) {
-    if (S.etape >= 4) { chargerDoc(S); chargerVerif(S); }
+    if (S.etape >= 3) { chargerDoc(S); }
+    if (S.etape >= 4) { chargerVerif(S); }
     if (S.etape === 5) { S.lien = undefined; chargerLien(S); if (!S.imp.langue || (S.imp.langue !== 'fr+nl' && !S.langs.includes(S.imp.langue))) { S.imp.langue = S.langs.length > 1 ? 'fr+nl' : S.langs[0]; } }
     if (S.etape === 1 && !S.liste) { chargerListe(S); }
   }
@@ -564,6 +567,8 @@
     else if (a === 'script') { S.pages[+b.dataset.i].script = v === '1'; S.modifie = true; rendre(S); }
     else if (a === 'entete') { S.pages[+b.dataset.i].header = v; S.modifie = true; rendre(S); }
     else if (a === 'gabarit') { S.pages[+b.dataset.i].template = v; S.modifie = true; rendre(S); }
+    else if (a === 'zoomPage') { S.zoomPage = +v; rendre(S); }
+    else if (a === 'zoomFermer') { S.zoomPage = null; rendre(S); }
     else if (a === 'place') {
       const p = S.pages[+b.dataset.i];
       if (v === 'photo') { S.choixPhoto = S.choixPhoto === +b.dataset.i ? null : +b.dataset.i; if (!S.medias) { chargerMedias(S); } rendre(S); }
@@ -600,7 +605,6 @@
   }
   function changement(S, ev) {
     const t = ev.target;
-    if (t.dataset.cmfichier !== undefined) { importer(S, t); return; }
     if (t.dataset.cm === 'pcat') { S.pages[+t.dataset.i].category = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'pgamme') { S.pages[+t.dataset.i].gamme = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { rendre(S); }
@@ -802,6 +806,47 @@
     return h + '</div>';
   }
 
+  /* L'aperçu d'une page à l'étape 3 (17/11/2026, Sam : « au choix dans la liste, je dois voir la page ou les pages de la
+   * catégorie ») : la page composée ici même, comme la composera le Marketing (mêmes rendus : page(), feuille()), avec
+   * les produits que la répartition lui donne (remplir), leurs photos et leurs prix du webshop ; la charte et les dessins
+   * des familles viennent du document enregistré (chargerDoc), s'il est lu. Elle suit la catégorie, la gamme, la mise en
+   * page, l'en-tête, le gabarit et la place libre, sans attendre l'enregistrement. Un clic l'agrandit. */
+  function dessinsDoc(S) {
+    const doc = S.cat ? S.doc[S.cat.owner + S.cat.id + '|' + S.lang] : null, m = {};
+    ((doc && doc.pages) || []).forEach(p => {
+      if (p.kind === 'products') { m['c:' + p.title] = { d: p.drawingUrl, f: p.familyDrawingUrl, g: p.gammeImageUrl }; }
+      if (p.kind === 'presentation') { m['g:' + p.title] = { d: p.drawingUrl, i: p.imageUrl }; }
+    });
+    return [doc, m];
+  }
+  function pageLocale(S, p, ids, m) {
+    const fiche = id => { const x = produits(S).find(q => +q.id === +id); return x ? { name: x.name, priceCents: x.priceCents, oldPriceCents: x.oldPriceCents != null ? x.oldPriceCents : null, imageUrl: x.imageUrl || null } : null; };
+    const prods = ids.map(fiche).filter(Boolean);
+    if (estPres(p.layout)) {
+      const t = nomGamme(S, p.gamme), d = m['g:' + t] || {};
+      return { kind: 'presentation', layout: p.layout, template: p.template || 'A', title: t, text: (S.lang === 'nl' ? p.textNl : p.text) || '', drawingUrl: d.d || null, imageUrl: d.i || null, products: p.layout === 'presentation_liste' ? prods.slice(0, 8) : [] };
+    }
+    const titre = p.category == null ? (S.lang === 'nl' ? 'Onze selectie' : 'Notre sélection') : nomCat(S, p.category), d = m['c:' + titre] || {};
+    const filler = p.filler === 'photo' ? { kind: 'photo', imageUrl: (S.mediaUrls || {})[p.fillerMediaId] || null } : p.filler === 'illustration' ? { kind: 'illustration', drawingUrl: d.f || d.d || null } : null;
+    return { kind: 'products', layout: p.layout, template: p.template || 'A', header: p.header || 'titre', script: !!p.script, title: titre,
+      gammeTitle: p.gamme != null ? nomGamme(S, p.gamme) : null, products: prods, filler, drawingUrl: d.d || null, familyDrawingUrl: d.f || null, gammeImageUrl: d.g || null };
+  }
+  function apercuPage(S, i, ids, largeur) {
+    const p = S.pages[i];
+    try {
+      const [doc, m] = dessinsDoc(S);
+      const pseudo = { catalogue: { format: S.format }, charter: (doc && doc.charter) || {}, version: { lang: S.lang || 'fr' }, pages: [pageLocale(S, p, ids, m)] };
+      return '<button type="button" class="cm-ap" data-cm="zoomPage" data-v="' + i + '" title="Voir la page ' + (i + 3) + ' en grand">' + feuille(pseudo, 0, largeur || 128, true) + '</button>';
+    } catch (e) { return mini(p.layout, p.template); }
+  }
+  /** La page agrandie (un clic sur son aperçu), et ses voisines de la même catégorie. */
+  function rendreZoom(S) {
+    if (S.zoomPage == null || !S.pages || !S.pages[S.zoomPage]) { return ''; }
+    const p = S.pages[S.zoomPage], ids = remplir(S).ids || [];
+    const memes = S.pages.map((q, j) => j).filter(j => !estPres(S.pages[j].layout) && !estPres(p.layout) ? S.pages[j].category === p.category && (S.pages[j].gamme || null) === (p.gamme || null) : j === S.zoomPage);
+    return '<div class="cm-zoom" data-cm="zoomFermer"><div class="cm-zoom__in">' + memes.map(j => '<div class="cm-zoom__p">' + apercuPage(S, j, ids[j] || [], memes.length > 1 ? 380 : 460) + '<span>Page ' + (j + 3) + '</span></div>').join('')
+      + '</div><button type="button" class="cm-btn cm-zoom__x" data-cm="zoomFermer">Fermer</button></div>';
+  }
   function mini(layout, tpl) {
     if (estPres(layout)) { return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true"><b></b><i></i>' + (layout === 'presentation_liste' ? '<u></u><u></u><u></u>' : '') + '</span>'; }
     const n = layout === 'vedette' ? 5 : layout === 'mosaique' ? 4 : 6;
@@ -869,7 +914,7 @@
           if (S.choixPhoto === i) { corps += rendreMedias(S, i); }
         }
       }
-      h += '<div class="cm-pg' + (pres ? ' pres' : '') + '"><span class="no">' + (i + 3) + '</span>' + mini(p.layout, p.template)
+      h += '<div class="cm-pg cm-pg--ap' + (pres ? ' pres' : '') + '"><span class="no">' + (i + 3) + '</span>' + apercuPage(S, i, (portes.ids || [])[i] || [])
         + '<div class="cm-pg-c">' + corps + '</div>'
         + '<div class="ctl"><div class="cm-seg cm-types">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '"' + (estPres(l) && !gs.length ? ' disabled' : '') + '>' + LAYOUTS[l].label + '</button>').join('') + '</div>'
         + (pres ? '' : '<div class="cm-gab cm-ent" role="group" aria-label="Titre et illustration de la page ' + (i + 3) + '">' + Object.keys(ENTETES).map(t => '<button data-cm="entete" data-i="' + i + '" data-v="' + t + '" class="' + ((p.header || 'titre') === t ? 'on' : '') + '" title="' + esc(ENTETES[t][0] + ' — ' + ENTETES[t][1] + ' (le dessin de la famille de la catégorie, sinon celui de la gamme)') + '">' + vignetteEntete(t) + '<span>' + esc(ENTETES[t][0]) + '</span></button>').join('') + '</div>'
@@ -886,59 +931,14 @@
     if (portes.sansPlace) { h += '<div class="cm-msg inf" style="margin-top:12px">' + portes.sansPlace + ' produit' + (portes.sansPlace > 1 ? 's' : '') + ' choisi' + (portes.sansPlace > 1 ? 's' : '') + ' sans place dans les pages. ' + (S.nbPages < 16 ? 'Ajoutez 2 pages, choisissez' : 'Choisissez') + ' une mise en page plus dense, une page « Notre sélection », ou « Répartir automatiquement ».</div>'; }
     h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="2">‹ Gammes</button><span class="sp"></span>' + (S.modifie ? '<span class="cm-cpt">modifications non enregistrées</span>' : '')
       + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Validation ›') + '</button></div>';
-    return h + '</section>' + cote(S, resume(S)) + '</div>';
+    return h + '</section>' + cote(S, resume(S)) + '</div>' + rendreZoom(S);
   }
-  /* --- importer une photo (15/11/2026, « changer ou importer de la médiathèque une photo ou une illustration pour les
-   * bundles ou les promotions ») : le fichier, réduit dans le navigateur (2 000 px de côté au plus), part dans la
-   * médiathèque du Marketing, rangé à MA boutique (POST …/catalogues/medias), puis est choisi pour la vignette ou la page. */
-  function boutonImport(S, cible) {
-    return '<label class="cm-btn cm-import' + (S.importEnCours ? ' off' : '') + '" title="Une photo de votre ordinateur ou de votre téléphone : elle entre dans la médiathèque de votre boutique">'
-      + (S.importEnCours ? 'Import…' : 'Importer une photo') + '<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden data-cmfichier="' + esc(cible) + '"' + (S.importEnCours ? ' disabled' : '') + '></label>';
-  }
-  function etatImport(S) { return S.importErr ? '<div class="cm-msg err">' + esc(S.importErr) + '</div>' : ''; }
-  /** Une image réduite à 2 000 px de côté (JPEG, ou PNG si elle a de la transparence) : [base64, type]. */
-  function reduireImage(fichier) {
-    return new Promise((ok, ko) => {
-      const lu = new FileReader();
-      lu.onerror = () => ko(new Error('Le fichier ne se lit pas.'));
-      lu.onload = () => {
-        const img = new Image();
-        img.onerror = () => ko(new Error('Ce fichier n’est pas une image lisible (PNG, JPEG, WebP, GIF).'));
-        img.onload = () => {
-          const k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
-          if (k === 1 && fichier.size <= 2500000) { return ok([String(lu.result).split(',')[1] || '', fichier.type]); }
-          const c = document.createElement('canvas');
-          c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-          const png = fichier.type === 'image/png';
-          ok([c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.88).split(',')[1] || '', png ? 'image/png' : 'image/jpeg']);
-        };
-        img.src = String(lu.result);
-      };
-      lu.readAsDataURL(fichier);
-    });
-  }
-  function importer(S, input) {
-    const f = input.files && input.files[0], cible = String(input.dataset.cmfichier || '');
-    if (!f) { return; }
-    S.importEnCours = true; S.importErr = null; rendre(S);
-    reduireImage(f).then(([b64]) => {
-      if (b64.length > 6600000) { throw new Error('Image trop lourde, même réduite : 5 Mo au plus.'); }
-      return appel('POST', '/medias' + qs(S), { name: f.name.replace(/\.[a-z0-9]+$/i, '').slice(0, 120), contentBase64: b64 });
-    }).then(j => {
-      const m = j.data || {};
-      S.medias = [{ id: m.id, name: m.name, url: m.url, thumbnailUrl: m.thumbnailUrl }].concat((S.medias || []).filter(x => +x.id !== +m.id));
-      S.mediaUrls = S.mediaUrls || {}; S.mediaUrls[m.id] = m.thumbnailUrl || m.url;
-      const [type, cle] = cible.split(':');
-      if (type === 'offre') { S.offresImg[cle] = +m.id; S.choixOffre = null; }
-      if (type === 'page' && S.pages[+cle]) { const p = S.pages[+cle]; p.filler = 'photo'; p.fillerMediaId = +m.id; S.choixPhoto = null; S.modifie = true; }
-    }).catch(e => { S.importErr = 'La photo n’est pas importée : ' + (e && e.message ? e.message : e) + (e && e.details && e.details[0] ? ' (' + e.details[0].message + ')' : ''); })
-      .finally(() => { S.importEnCours = false; rendre(S); });
-  }
+  /* Plus d'import de photo (17/11/2026, Sam : « retirer l'importation de photos, seulement la médiathèque ») : la vignette
+   * d'une offre et la place libre d'une page se choisissent dans la médiathèque du réseau et de ma boutique, rien d'autre. */
   /** Le choix de l'image d'une vignette d'offre : les images de la médiathèque du réseau et de ma boutique. */
   function rendreMediasOffre(S, id) {
     let h = '<div class="cm-medias"><div class="cm-lig"><input type="search" class="cm-rech" data-cm="mediasQ" placeholder="Chercher une image" value="' + esc(S.mediasQ) + '">'
-      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button>' + boutonImport(S, 'offre:' + id) + '<span class="sp"></span><button class="cm-btn" data-cm="offreImg" data-v="' + esc(id) + '">Fermer</button></div>' + etatImport(S);
+      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button>' + '<span class="sp"></span><button class="cm-btn" data-cm="offreImg" data-v="' + esc(id) + '">Fermer</button></div>';
     if (S.mediasErr) { return h + bandeauErreur(S.mediasErr, 'La médiathèque n’a pas pu être lue') + '</div>'; }
     if (!S.medias) { return h + '<div class="cm-vide">Lecture de la médiathèque…</div></div>'; }
     if (!S.medias.length) { return h + '<div class="cm-vide">Aucune image dans la médiathèque du réseau ni de ma boutique.</div></div>'; }
@@ -947,7 +947,7 @@
   /** Le choix de la photo de la place libre : les images de la médiathèque du réseau et de ma boutique. */
   function rendreMedias(S, i) {
     let h = '<div class="cm-medias"><div class="cm-lig"><input type="search" class="cm-rech" data-cm="mediasQ" placeholder="Chercher une photo" value="' + esc(S.mediasQ) + '">'
-      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button>' + boutonImport(S, 'page:' + i) + '<span class="sp"></span><button class="cm-btn" data-cm="photoFermer">Fermer</button></div>' + etatImport(S);
+      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button>' + '<span class="sp"></span><button class="cm-btn" data-cm="photoFermer">Fermer</button></div>';
     if (S.mediasErr) { return h + bandeauErreur(S.mediasErr, 'La médiathèque n’a pas pu être lue') + '</div>'; }
     if (!S.medias) { return h + '<div class="cm-vide">Lecture de la médiathèque…</div></div>'; }
     if (!S.medias.length) { return h + '<div class="cm-vide">Aucune photo dans la médiathèque du réseau ni de ma boutique.</div></div>'; }
