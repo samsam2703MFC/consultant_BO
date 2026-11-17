@@ -106,7 +106,7 @@ table.ref tr { break-inside: avoid; }
     </div>
     <figure style="margin-top:9mm">
       <img src="captures/05b-apercu.jpg" alt="Une page du catalogue : Cougnou">
-      <figcaption>Une page composée à l’étape 3 : la catégorie Cougnou, mise en page « 1 vedette + 4 », bandeau illustré.</figcaption>
+      <figcaption>Une page composée à l’étape 3 : Pain Tradition, mise en page « 2 par largeur » (grille 2 × 3, six produits).</figcaption>
     </figure>
   </div>
   <div class="box">
@@ -131,7 +131,7 @@ table.ref tr { break-inside: avoid; }
   <p class="intro">Le module s’ouvre sur la liste de vos catalogues. Chaque ligne dit d’où vient le catalogue, son état, son nombre de pages et ce qu’il reste à faire.</p>
   <figure><img src="captures/01b-liste.jpg" alt="La liste de mes catalogues"><figcaption>La liste de mes catalogues et les cinq étapes de l’assistant.</figcaption></figure>
   <div class="cols" style="grid-template-columns: 44mm 1fr; gap: 7mm; align-items: start">
-    <figure style="margin:0"><img src="captures/01a-menu.jpg" alt="Le menu : Marketing, Mon catalogue"><figcaption>Le menu de gauche.</figcaption></figure>
+    <figure style="margin:0"><img src="captures/01a-menu.jpg" alt="Le menu : Marketing, Mon catalogue"><figcaption>Le menu de gauche.</figcaption></figure>
     <ol class="leg">
     <li><span class="p">1</span><div>Dans le menu de gauche, rubrique Marketing : <span class="ui">Mon catalogue</span>.</div></li>
     <li><span class="p">2</span><div><span class="ui">＋ Nouveau catalogue</span> ouvre l’assistant sur un catalogue vierge (page suivante). <span class="ui">↻ Relire</span> recharge la liste.</div></li>
@@ -142,7 +142,7 @@ table.ref tr { break-inside: avoid; }
   </div>
   <div class="sec">Les états d’un catalogue</div>
   <table class="ref">
-    <thead><tr><th style="width:36mm">État</th><th>Ce qu’il veut dire</th><th style="width:52mm">Le lien « Ensuite »</th></tr></thead>
+    <thead><tr><th style="width:36mm">État</th><th>Ce qu’il veut dire</th><th style="width:52mm">Le lien « Ensuite »</th></tr></thead>
     <tbody>
       <tr><td>Brouillon</td><td>en cours : produits et pages à régler</td><td>Continuer › (étape 2)</td></tr>
       <tr><td>PDF prêt</td><td>validé, ou un PDF a déjà été téléchargé</td><td>Vérifier et imprimer › (étape 4)</td></tr>
@@ -234,13 +234,12 @@ table.ref tr { break-inside: avoid; }
     <li><span class="p">4</span><div><span class="ui">↺ Répartir automatiquement</span> refait toute la répartition des produits sur les pages (vos réglages de pages sont remplacés).</div></li>
     <li><span class="p">5</span><div>Les pages de la marque (cadenas) : couverture, page 2, avant-dernière, dernière.</div></li>
     <li><span class="p">6</span><div>La catégorie de la page, ou « Notre sélection » (les produits qui restent), et sa gamme. Dessous : produits placés sur places disponibles.</div></li>
-    <li><span class="p">7</span><div>La mise en page : six choix (page suivante).</div></li>
-    <li><span class="p">8</span><div>L’en-tête : titre et pictogramme, bandeau illustré ou grande illustration.</div></li>
-    <li><span class="p">9</span><div>Catégorie manuscrite : son nom en lettres manuscrites, sous celui de la gamme.</div></li>
-    <li><span class="p">10</span><div>Le gabarit : A Classique, B Bandeau, C Épuré.</div></li>
-    <li><span class="p">11</span><div><span class="ui">↑</span> <span class="ui">↓</span> déplacent la page.</div></li>
-    <li><span class="p">12</span><div>Place libre, quand une rangée reste vide : rien, une photo de la médiathèque, ou l’illustration de la gamme.</div></li>
-    <li><span class="p">13</span><div>L’aperçu de la page. Un clic l’agrandit, avec les autres pages de la même catégorie.</div></li>
+    <li><span class="p">7</span><div>La mise en page, en dessins : comment les produits se présentent sur la page (page suivante).</div></li>
+    <li><span class="p">8</span><div>Catégorie manuscrite : son nom en lettres manuscrites, sous celui de la gamme.</div></li>
+    <li><span class="p">9</span><div>Le gabarit : A Classique, B Bandeau, C Épuré.</div></li>
+    <li><span class="p">10</span><div><span class="ui">↑</span> <span class="ui">↓</span> déplacent la page.</div></li>
+    <li><span class="p">11</span><div>Place libre, quand une rangée reste vide : rien, une photo de la médiathèque, ou l’illustration de la gamme. Une page pleine n’imprime rien de plus.</div></li>
+    <li><span class="p">12</span><div>L’aperçu de la page, à jour à chaque réglage. Un clic l’agrandit, avec les autres pages de la même catégorie.</div></li>
   </ol>
   <p class="m" style="margin-top:3.5mm">Les réglages s’enregistrent en passant à <span class="ui">Validation ›</span> ; d’ici là, « modifications non enregistrées » s’affiche au bas de la page.</p>
   <div class="foot"><span>L’Atelier By · Dashboard magasin › Mon catalogue · état du 17 novembre 2026</span><span class="pg"></span></div>
@@ -257,46 +256,32 @@ table.ref tr { break-inside: avoid; }
   <table class="ref">
     <thead><tr><th style="width:52mm">Mise en page</th><th>Ce que porte la page</th><th class="num" style="width:26mm">Produits</th></tr></thead>
     <tbody>
-      <tr><td>1 vedette + 4</td><td>un produit en grand, quatre plus petits</td><td class="num">5</td></tr>
-      <tr><td>Grille 2 × 3</td><td>six vignettes de même taille</td><td class="num">6</td></tr>
-      <tr><td>Liste avec prix</td><td>une liste, photo, nom et prix sur chaque ligne</td><td class="num">12</td></tr>
-      <tr><td>Grandes vignettes 2 × 2</td><td>quatre grandes vignettes</td><td class="num">4</td></tr>
-      <tr><td>Présentation seule</td><td>la gamme : son illustration, son nom et un texte (400 caractères au plus, un par langue)</td><td class="num">0</td></tr>
+      <tr><td>1 vedette + 4</td><td>la vedette en haut, en grand, puis quatre produits</td><td class="num">5</td></tr>
+      <tr><td>2 par largeur</td><td>une grille 2 × 3, six vignettes de même taille</td><td class="num">6</td></tr>
+      <tr><td>1 par largeur</td><td>une liste : photo, nom et prix sur chaque ligne</td><td class="num">12</td></tr>
+      <tr><td>2 grandes</td><td>quatre grandes vignettes, 2 × 2</td><td class="num">4</td></tr>
+      <tr><td>Présentation</td><td>la gamme seule : son illustration, son nom et un texte (400 caractères au plus, un par langue)</td><td class="num">0</td></tr>
       <tr><td>Présentation + liste</td><td>la gamme et ses premiers produits, avec leurs prix</td><td class="num">8</td></tr>
     </tbody>
   </table>
+  <p class="m" style="margin-top:1.6mm">L’en-tête d’une page (titre et pictogramme, bandeau illustré ou grande illustration) ne se choisit pas à l’étape 3 : chaque page garde le sien.</p>
 
-  <div class="cols" style="grid-template-columns: 1fr 1fr; gap: 8mm">
-    <div>
-      <div class="sec">En-têtes · pages de produits</div>
-      <table class="ref">
-        <tbody>
-          <tr><td>Titre + pictogramme</td><td>le titre et un petit pictogramme</td></tr>
-          <tr><td>Bandeau illustré</td><td>bandeau de couleur, illustration en blanc</td></tr>
-          <tr><td>Grande illustration</td><td>grande illustration en haut, puis le titre</td></tr>
-        </tbody>
-      </table>
-      <p class="m" style="margin-top:1.6mm">L’illustration est le dessin de la famille de la catégorie, sinon celui de la gamme.</p>
-    </div>
-    <div>
-      <div class="sec">Gabarits A · B · C</div>
-      <table class="ref">
-        <thead><tr><th></th><th>Pages de produits</th><th>Présentation</th></tr></thead>
-        <tbody>
-          <tr><td>A</td><td>Classique : fond papier, titre centré</td><td>Illustration : dessin au centre</td></tr>
-          <tr><td>B</td><td>Bandeau : bandeau de couleur, titre à gauche</td><td>Pleine couleur : dessin en blanc</td></tr>
-          <tr><td>C</td><td>Épuré : fond blanc, titre à gauche</td><td>Photo pleine : grande image en haut</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <div class="sec">Gabarits A · B · C</div>
+  <table class="ref">
+    <thead><tr><th style="width:12mm"></th><th>Pages de produits</th><th>Pages de présentation</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>Classique : fond papier, titre centré</td><td>Illustration : dessin au centre, fond papier</td></tr>
+      <tr><td>B</td><td>Bandeau : bandeau de couleur, titre à gauche</td><td>Pleine couleur : fond de couleur, dessin en blanc</td></tr>
+      <tr><td>C</td><td>Épuré : fond blanc, titre à gauche</td><td>Photo pleine : grande image en haut</td></tr>
+    </tbody>
+  </table>
 
   <div class="sec">Le bas de l’étape 3</div>
   <figure><img src="captures/06-mise-en-page-fin.jpg" alt="Les deux dernières pages de la marque et le bouton Validation" style="width:120mm"></figure>
   <p>Les deux dernières pages sont celles de la marque : « nos services », puis la commande en ligne, le QR du webshop, l’adresse et les horaires de la boutique. Sous les pages, deux messages peuvent apparaître :</p>
   <ul style="margin:0 0 0; padding-left:4mm">
     <li style="margin-bottom:1.2mm"><span class="ui">… n’a pas de page à elle</span> : une catégorie choisie n’a pas de page ; ses produits vont en « Notre sélection » s’il y en a une. Choisissez sa catégorie sur une page, ou ajoutez 2 pages.</li>
-    <li><span class="ui">N produits choisis sans place dans les pages</span> : ajoutez 2 pages, prenez une mise en page plus dense (Liste avec prix : 12 produits), une page « Notre sélection », ou <span class="ui">↺ Répartir automatiquement</span>.</li>
+    <li><span class="ui">N produits choisis sans place dans les pages</span> : ajoutez 2 pages, prenez une mise en page plus dense (« 1 par largeur » : 12 produits), une page « Notre sélection », ou <span class="ui">↺ Répartir automatiquement</span>.</li>
   </ul>
   <div class="foot"><span>L’Atelier By · Dashboard magasin › Mon catalogue · état du 17 novembre 2026</span><span class="pg"></span></div>
 </section>
@@ -307,14 +292,14 @@ table.ref tr { break-inside: avoid; }
   <div class="kicker">Étape 4 · Validation</div>
   <div class="titre"><span class="rond">4</span><h2>Je vérifie avant d’imprimer</h2></div>
   <p class="intro">Le catalogue est composé tel qu’il s’imprimera, et vérifié point par point. À gauche ce qu’il faut voir, à droite les pages.</p>
-  <figure><img src="captures/07-validation.jpg" alt="La validation du catalogue"></figure>
+  <figure><img src="captures/07-validation.jpg" alt="La validation du catalogue" style="width:158mm; margin:0 auto"></figure>
   <ol class="leg c2">
     <li><span class="p">1</span><div>La langue vérifiée, FR ou NL. La jauge compte les points vus.</div></li>
-    <li><span class="p">2</span><div><b>!</b> À corriger : ici une page sans produit, qui s’imprimerait vide. Le bouton ouvre la page ; corrigez-la à l’étape 3.</div></li>
-    <li><span class="p">3</span><div><b>?</b> À confirmer : une promotion imprimée avec ses dates. <span class="ui">✓ Dates vues</span> si elle sera encore valable, <span class="ui">La retirer</span> sinon.</div></li>
+    <li><span class="p">2</span><div><b>!</b> À corriger : ici une page sans produit, qui s’imprimerait vide. <span class="ui">Ouvrir la page ›</span> la montre ; <span class="ui">Passer à 8 pages</span> retire les pages en trop ; sinon, corrigez-la à l’étape 3.</div></li>
+    <li><span class="p">3</span><div><b>?</b> À confirmer : ici la disponibilité imprimée en pied de page (<span class="ui">✓ C’est juste</span>, ou <span class="ui">Modifier</span>, qui ramène à l’étape 3). Une promotion imprimée avec ses dates : <span class="ui">✓ Dates vues</span> ou <span class="ui">La retirer</span>.</div></li>
     <li><span class="p">4</span><div><b>✓</b> Vérifié : rien à faire (les prix, les pages de la marque).</div></li>
     <li><span class="p">5</span><div>La page ouverte en grand, telle qu’elle s’imprimera.</div></li>
-    <li><span class="p">6</span><div>Toutes les pages, avec leurs points (! ou ?). Un clic ouvre la page.</div></li>
+    <li><span class="p">6</span><div>Toutes les pages, avec leurs points (! ou ?). Un clic ouvre la page.</div></li>
     <li><span class="p">7</span><div><span class="ui">Valider mon catalogue ›</span> : le catalogue passe en « PDF prêt » et l’assistant ouvre l’export.</div></li>
   </ol>
   <div class="box">
@@ -322,7 +307,7 @@ table.ref tr { break-inside: avoid; }
     <ul>
       <li>Imprimer reste possible avec des points ouverts : ils sont rappelés au moment du PDF.</li>
       <li><span class="ui">Réglé par la marque</span> : rien à faire de votre côté. Par exemple le QR de la dernière page, quand l’adresse du webshop n’est pas encore réglée : la marque est prévenue ; vous imprimez sans QR, ou vous attendez.</li>
-      <li>La capture montre un brouillon : ses pages 3 à 5 n’ont pas encore de produits, d’où les trois points « ! ».</li>
+      <li>La capture montre un brouillon en cours : ses points « ! » et « ? » sont les siens.</li>
     </ul>
   </div>
   <div class="foot"><span>L’Atelier By · Dashboard magasin › Mon catalogue · état du 17 novembre 2026</span><span class="pg"></span></div>
@@ -336,13 +321,13 @@ table.ref tr { break-inside: avoid; }
   <p class="intro">Deux façons d’imprimer, un fichier à télécharger, et la quantité imprimée à noter.</p>
   <figure><img src="captures/08-imprimer.jpg" alt="L’impression du catalogue"></figure>
   <ol class="leg">
-    <li><span class="p">1</span><div>Comment je l’imprime ? <span class="ui">Chez un imprimeur</span> : PDF imprimeur, fond perdu de 3 mm et traits de coupe, à envoyer à l’imprimeur. <span class="ui">Sur mon imprimante</span> : feuilles A4 recto verso, deux pages par face, à plier au milieu en livret A5 ; pour une petite quantité (catalogue A5 seulement : en A4, le PDF garde une page par feuille).</div></li>
+    <li><span class="p">1</span><div>Comment je l’imprime ? <span class="ui">Chez un imprimeur</span> : PDF imprimeur, fond perdu de 3 mm et traits de coupe, à envoyer à l’imprimeur. <span class="ui">Sur mon imprimante</span> : feuilles A4 recto verso, deux pages par face, à plier au milieu en livret A5 ; pour une petite quantité (catalogue A5 seulement : en A4, le PDF garde une page par feuille).</div></li>
     <li><span class="p">2</span><div>Mon impression : le format (A5 ou A4), la langue (FR, NL, ou FR + NL : deux fichiers, un par langue), la quantité d’exemplaires.</div></li>
     <li><span class="p">3</span><div>Les points restés ouverts à la validation sont rappelés ici ; <span class="ui">Revenir à la validation</span> pour les régler.</div></li>
     <li><span class="p">4</span><div><span class="ui">Télécharger le PDF imprimeur</span> (ou <span class="ui">Télécharger le livret à imprimer</span>) : le PDF s’ouvre dans un nouvel onglet, aux prix du webshop lus à ce moment. Choisissez « Enregistrer au format PDF ». Le lien vaut 48 heures.</div></li>
     <li><span class="p">5</span><div>Une fois imprimé : <span class="ui">Marquer imprimé · 250 ex.</span> note la quantité sur le catalogue (« Imprimé · 250 ex. »), pour savoir combien il en reste à distribuer.</div></li>
   </ol>
-  <div class="sec">Chez un imprimeur ou sur mon imprimante ?</div>
+  <div class="sec">Chez un imprimeur ou sur mon imprimante ?</div>
   <table class="ref">
     <thead><tr><th style="width:30mm"></th><th>Chez un imprimeur</th><th>Sur mon imprimante</th></tr></thead>
     <tbody>
@@ -408,7 +393,7 @@ table.ref tr { break-inside: avoid; }
   </div>
 
   <div class="box" style="margin-top:8mm">
-    <div class="sec">Besoin d’aide ?</div>
+    <div class="sec">Besoin d’aide ?</div>
     <p style="margin:0">Une question sur votre catalogue, un produit ou un prix qui ne va pas : la vignette <span class="ui">Demande au bureau</span>, en haut du dashboard, transmet votre demande au bureau ; la réponse revient au même endroit.</p>
   </div>
   <div class="foot"><span>L’Atelier By · Dashboard magasin › Mon catalogue · état du 17 novembre 2026</span><span class="pg"></span></div>

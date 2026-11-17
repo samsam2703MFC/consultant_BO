@@ -4,7 +4,7 @@
  *   mode d'accès « ouvert ») ;
  * - toute requête vers l'API autre qu'un GET est refusée sur place : rien n'est créé, modifié ni supprimé ;
  * - le lien du catalogue en ligne, que l'étape 5 crée quand il manque, est remplacé par un lien d'exemple.
- * Les réglages faits à l'écran (titre, gamme cochée, catégories des pages, titre de l'affiche) ne sont jamais enregistrés.
+ * Les réglages faits à l'écran (titre, gamme cochée, titre de l'affiche) ne sont jamais enregistrés.
  *
  * Usage, depuis ce dossier :
  *   DASHBOARD_URL='http://…/consulant_bo/dashboard/?shop=4&vue=catalogue' node outils/capture.js captures
@@ -133,16 +133,11 @@ async function ouvrirMesBuches(page) {
   await page.click('.cm-hd [data-cm="etape"][data-v="3"]');
   await page.waitForSelector('.cm-pg select[data-cm="pcat"]', { timeout: 90000 });
   await attendre(page, 1500);
-  // Une catégorie par page (à l'écran seulement) : Cougnou, Pain Tradition, Plateau Sandwich.
-  const sels = page.locator('.cm-pg:not(.lock) select[data-cm="pcat"]');
-  const voulu = ['Cougnou', 'Pain Tradition', 'Plateau Sandwich'];
-  for (let i = 0; i < 3; i++) { await sels.nth(i).selectOption({ label: voulu[i] }); await page.waitForTimeout(300); }
-  await page.locator('.cm-pg:not(.lock)').nth(0).locator('[data-cm="layout"][data-v="vedette"]').click();
-  await page.waitForTimeout(300);
   await page.evaluate(() => window.scrollTo(0, 0));
-  await marquer(page, [['.cm-reglages .cm-nbp', 1, 'd'], ['.cm-reglages .cm-champ:nth-child(2) .cm-seg', 2, 'hd'], ['.cm-reglages .cm-cases', 3, 'd'], ['.cm-pg:not(.lock) .cm-ap', 13, 'hg'], ['[data-cm="repartir"]', 4, 'hg'],
-    ['.cm-pg.lock .cm-lock', 5, 'hg'], ['.cm-pg:not(.lock) select[data-cm="pcat"]', 6, 'hg'], ['.cm-pg:not(.lock) .cm-types', 7, 'g'], ['.cm-pg:not(.lock) .cm-ent', 8, 'g'],
-    ['.cm-pg:not(.lock) .cm-script', 9, 'g'], ['.cm-pg:not(.lock) .cm-gab:not(.cm-ent)', 10, 'g'], ['.cm-pg:not(.lock) .mv', 11, 'hg'], ['.cm-pg:not(.lock) .cm-place', 12, 'g']]);
+  // Étape 3 (17/11/2026) : une seule rangée de choix, la mise en page en dessins ; l'en-tête ne se choisit plus.
+  await marquer(page, [['.cm-reglages .cm-nbp', 1, 'd'], ['.cm-reglages .cm-champ:nth-child(2) .cm-seg', 2, 'hd'], ['.cm-reglages .cm-cases', 3, 'd'], ['[data-cm="repartir"]', 4, 'hg'],
+    ['.cm-pg.lock .cm-lock', 5, 'hg'], ['.cm-pg:not(.lock) select[data-cm="pcat"]', 6, 'hg'], ['.cm-pg:not(.lock) .cm-lay', 7, 'g'], ['.cm-pg:not(.lock) .cm-script', 8, 'g'],
+    ['.cm-pg:not(.lock) .cm-gab:not(.cm-lay)', 9, 'g'], ['.cm-pg:not(.lock) .mv', 10, 'hg'], ['.cm-pg:not(.lock) .cm-place', 11, 'g'], ['.cm-pg:not(.lock) .cm-ap', 12, 'hg']]);
   await zone(page, '05-mise-en-page', '.cm', '.cm-pg:not(.lock)');
   await page.evaluate(() => document.querySelectorAll('.mk-guide').forEach(e => e.remove()));
   // L'aperçu agrandi de la page 3 (un clic sur sa vignette).
