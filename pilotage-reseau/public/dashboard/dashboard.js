@@ -5631,7 +5631,7 @@
    * des réponses ; la liste vient de GET /assistant/magasin/questions (tons). */
   let tonGarde = '';
   try { tonGarde = localStorage.getItem('dbIaTon') || ''; } catch (e) { /* stockage refusé */ }
-  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde };
+  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde, conv: '', reg: {}, vues: {}, modMsg: {}, modeles: null };
   const iaTons = () => (IA.questions && IA.questions.tons) || [];
   const iaTonCle = () => (iaTons().some(t => t.cle === IA.ton) ? IA.ton : ((IA.questions && IA.questions.tonDefaut) || ''));
   const iaNomTon = k => { const t = iaTons().find(x => x.cle === k); return t ? t.nom : ''; };
@@ -5641,7 +5641,7 @@
   function iaChoixTon() {
     const T = iaTons();
     if (!T.length) { return ''; }
-    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, 96)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
+    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, T.length > 3 ? 64 : 96)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
   }
   const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
   /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
@@ -5656,19 +5656,25 @@
     IA.ouvert = true;
     if (mode === 'd') { IA.mode = 'd'; hdLire(false); } else if (IA.mode === 'd' && !(IA.questions && IA.questions.actif)) { IA.mode = 'd'; }
     if (!IA.questions) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; iaRendre(); }).catch(() => { IA.questions = { tuiles: [], groupes: [] }; iaRendre(); }); }
+    if (!IA.modeles) { iaModelesLire(); }
     iaRendre();
     setTimeout(() => { const i = document.querySelector('#db-ia input'); if (i) { i.focus(); } }, 30);
   }
   function iaFermer() { IA.ouvert = false; iaRendre(); }
+  /** La clé de la conversation (aia_conversation) : une par fil, tirée ici, jamais un nom. */
+  function iaConv() {
+    if (!IA.conv) { const a = new Uint8Array(16); (window.crypto || window.msCrypto).getRandomValues(a); IA.conv = Array.from(a, x => x.toString(16).padStart(2, '0')).join(''); }
+    return IA.conv;
+  }
   function iaDemander(q, mode, origine) {
     q = String(q || '').trim();
     if (!q || IA.fil.some(t => t.attente)) { return; }
     if (mode) { IA.mode = mode; }
-    const fil = IA.fil.filter(t => t.r).map(t => ({ q: t.q, r: t.r }));
+    const fil = IA.fil.filter(t => t.r && !t.modele).map(t => ({ q: t.q, r: t.r }));
     const t = { q, attente: true, ton: iaTonCle() };
     IA.fil.push(t); IA.saisie = '';
     iaRendre();
-    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton, origine: origine || 'libre' })
+    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton, origine: origine || 'libre', conversation: iaConv() })
       .then(d => { t.r = d.reponse; t.luLe = d.luLe; }).catch(e => { t.err = e.message; })
       .finally(() => { t.attente = false; iaRendre(); });
   }
@@ -5682,36 +5688,209 @@
   /** La phrase de finition (12/11/2026, Sam : « une phrase d'introduction, des puces, une phrase de finition »). */
   function iaFin(r) { return r.conclusion ? `<p class="ia-fin">${esc(r.conclusion)}</p>` : ''; }
   function iaSuites(r) { return (r.suites || []).length ? `<div class="ia-suites"><span>Creuser :</span>${r.suites.slice(0, 3).map(s => `<button data-iaq="${esc(s)}" data-iamode="a">${esc(s)}</button>`).join('')}</div>` : ''; }
+  /** Les documents du manuel que la réponse a lus (17/11/2026). */
+  function iaSources(r) {
+    const S2 = r.sources || [];
+    return S2.length ? `<p class="ia-srcs"><span>Lu dans le manuel :</span>${S2.map(s => `<b title="${esc(s.type + ' · version ' + s.version + ' · ' + s.statut)}">${s.code ? esc(s.code) + ' · ' : ''}${esc(s.titre)}${/brouillon|valider/.test(s.statut) ? ` <em>${esc(s.statut.replace(' (pas encore relu)', ''))}</em>` : ''}</b>`).join('')}</p>` : '';
+  }
+  /* --- Les tableaux et graphiques (17/11/2026, Sam : « en fonction de la question du franchisé, l'agent lui propose
+   * tableau et/ou graphique ») ---------------------------------------------------------------------------------------
+   * Le modèle décrit la demande ; le serveur relit les chiffres (src/franchise/assistant_ia.php) et rend libellés,
+   * séries et tableau. Ici on les dessine à la largeur réelle du cadre (les textes restent à 11 px), selon les règles des
+   * graphiques du cockpit : Ruby #A82E40 pour le magasin, gris pour la comparaison, colonnes de 24 px au plus arrondies en
+   * haut, lignes de 2 px, grille discrète, graduations rondes, étiquettes choisies sur un halo blanc, la valeur au survol.
+   * Chaque visuel bascule en tableau, se télécharge (CSV, image) et se garde comme modèle (aia_modele). */
+  const IA_C = { moi: '#A82E40', ref: '#8a847c', autre: '#cfc8bd', grille: '#ece6dc', axe: '#9a948b', encre: '#2b2724' };
+  function iaFmt(v, x) { return String(iaFmt0(v, x)).replace(/\u202f/g, '\u00a0'); }   // l'espace fine ne s'affiche pas dans un SVG
+  function iaFmt0(v, x) {
+    if (x == null || x === '') { return '—'; }
+    if (typeof x !== 'number') { return String(x); }
+    switch (v.mesure) {
+      case 'panier': return nf(x, 2) + ' €';
+      case 'part': return nf(x, 1) + ' %';
+      case 'tickets': return nf(x, x < 20 && x % 1 ? 1 : 0);
+      case 'quantite': return nf(x, x % 1 ? 1 : 0) + ' pcs';
+      default: return fE(x);
+    }
+  }
+  /** Des graduations rondes de 0 au maximum : 1, 2, 2,5 ou 5 × 10ⁿ, quatre ou cinq traits. */
+  function iaGrad(max) {
+    if (!(max > 0)) { return [0, 1]; }
+    const brut = max / 4, p = Math.pow(10, Math.floor(Math.log10(brut))), m = brut / p;
+    const pas = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p, T = [];
+    for (let x = 0; x <= max + pas * 0.999; x += pas) { T.push(+x.toFixed(6)); }
+    return T;
+  }
+  const iaHalo = (x, y, t, anc) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="11.5" font-weight="600" text-anchor="${anc || 'middle'}" fill="${IA_C.encre}" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`;
+  /** La légende, dans l'image (pour qu'un téléchargement la garde). */
+  function iaLegende(v, w, y) {
+    if ((v.series || []).length < 2) { return ''; }
+    let x = 0; const items = v.series.map(s => { const lg = 26 + s.nom.length * 6.3; const r = { s, x }; x += lg + 16; return r; });
+    const x0 = Math.max(4, (w - x + 16) / 2);
+    return items.map(({ s, x: dx }) => {
+      const cx = x0 + dx, sw = s.role === 'moi' && v.forme !== 'courbe' ? `<rect x="${cx}" y="${y - 9}" width="10" height="10" rx="2" fill="${IA_C.moi}"/>` : `<line x1="${cx}" x2="${cx + 16}" y1="${y - 4}" y2="${y - 4}" stroke="${s.role === 'moi' ? IA_C.moi : IA_C.ref}" stroke-width="2.5" stroke-linecap="round"/>`;
+      return sw + `<text x="${cx + (s.role === 'moi' && v.forme !== 'courbe' ? 15 : 22)}" y="${y}" font-size="11.5" fill="#5b5650">${esc(s.nom)}</text>`;
+    }).join('');
+  }
+  function iaDessin(v, w) {
+    const ff = getComputedStyle(document.body).fontFamily.replace(/"/g, "'");
+    const svg = (h, s) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;font-family:${ff}" font-family="${ff}" role="img" aria-label="${esc(v.titre)}"><rect width="${w}" height="${h}" fill="#fff"/>${s}</svg>`;
+    const L = v.libelles || [], M = (v.series || [])[0] || { valeurs: [] }, R = (v.series || [])[1] || null, n = L.length;
+    const leg = (v.series || []).length > 1;
+    if (v.forme === 'barres') {
+      const rowH = R ? 30 : 24, lab = Math.min(Math.round(w * 0.42), Math.max(...L.map(l => String(l).length)) * 6.6 + 10), val = 72;
+      const W = w - lab - val - 8, top = 6, h = top + n * rowH + (leg ? 30 : 8);
+      const mx = Math.max(...M.valeurs.concat(R ? R.valeurs : []).map(x => x || 0)) || 1;
+      let s = '';
+      L.forEach((l, i) => {
+        const y = top + i * rowH, x = M.valeurs[i] || 0, bw = Math.max(1, W * x / mx), moiLigne = v.surligne === i;
+        const coul = v.surligne != null && !moiLigne ? IA_C.autre : IA_C.moi;
+        const lib = String(l).length > lab / 6.6 ? String(l).slice(0, Math.floor(lab / 6.6) - 1) + '…' : String(l);
+        s += `<text x="${lab - 8}" y="${y + 14}" font-size="12" text-anchor="end" fill="${IA_C.encre}"${moiLigne ? ' font-weight="700"' : ''}>${esc(lib)}<title>${esc(l)}</title></text>`;
+        s += `<path d="M${lab},${y + 5}h${(bw - 4).toFixed(1)}q4,0 4,4v4q0,4 -4,4h-${(bw - 4).toFixed(1)}z" fill="${coul}"><title>${esc(l)} : ${esc(iaFmt(v, M.valeurs[i]))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}</title></path>`;
+        if (R && R.valeurs[i] != null) { s += `<rect x="${lab}" y="${y + 20}" width="${Math.max(1, W * R.valeurs[i] / mx).toFixed(1)}" height="4" rx="2" fill="${IA_C.ref}"/>`; }
+        s += `<text x="${(lab + bw + 6).toFixed(1)}" y="${y + 14}" font-size="11.5" font-weight="600" fill="${IA_C.encre}" style="font-variant-numeric:tabular-nums">${esc(iaFmt(v, M.valeurs[i]))}</text>`;
+      });
+      return svg(h, s + iaLegende(v, w, h - 8));
+    }
+    const h = 230 + (leg ? 24 : 0), pad = [24, 18, 30, 54], W = w - pad[1] - pad[3], H = 230 - pad[0] - pad[2];
+    const tous = M.valeurs.concat(R ? R.valeurs : []).filter(x => x != null);
+    const T = iaGrad(Math.max(...tous, 0) * 1.05), hi = T[T.length - 1] || 1;
+    const y = x => pad[0] + H - (x / hi) * H;
+    let s = '';
+    T.forEach(t => { s += `<line x1="${pad[3]}" x2="${w - pad[1]}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="${t === 0 ? '#d9d2c7' : IA_C.grille}"/><text x="${pad[3] - 8}" y="${(y(t) + 4).toFixed(1)}" font-size="11" text-anchor="end" fill="${IA_C.axe}" style="font-variant-numeric:tabular-nums">${esc(iaFmt(v, t).replace(' €', '').replace(' pcs', '').replace(' %', ''))}</text>`; });
+    const col = v.forme !== 'courbe', bw = W / Math.max(1, n), cx = i => col ? pad[3] + i * bw + bw / 2 : pad[3] + (n === 1 ? W / 2 : i * W / (n - 1));
+    // Un libellé sur k, pour qu'ils ne se touchent pas ; le dernier toujours.
+    const lgMax = Math.max(...L.map(l => String(l).length)) * 6.2 + 10, pasL = Math.max(1, Math.ceil(lgMax / (col ? bw : W / Math.max(1, n - 1))));
+    L.forEach((l, i) => { if (i % pasL === 0 || i === n - 1) { if (i !== n - 1 && n - 1 - i < pasL) { return; } s += `<text x="${cx(i).toFixed(1)}" y="${230 - 9}" font-size="11" text-anchor="middle" fill="${IA_C.axe}">${esc(l)}</text>`; } });
+    const vals = M.valeurs;
+    if (col) {
+      const lg = Math.min(24, Math.max(3, bw - (bw > 12 ? 6 : 2)));
+      vals.forEach((x, i) => {
+        if (x == null) { return; }
+        const yy = y(x), x0 = cx(i) - lg / 2, r = Math.min(4, lg / 2, y(0) - yy);
+        s += `<path d="M${x0.toFixed(1)},${y(0).toFixed(1)}V${(yy + r).toFixed(1)}Q${x0.toFixed(1)},${yy.toFixed(1)} ${(x0 + r).toFixed(1)},${yy.toFixed(1)}H${(x0 + lg - r).toFixed(1)}Q${(x0 + lg).toFixed(1)},${yy.toFixed(1)} ${(x0 + lg).toFixed(1)},${(yy + r).toFixed(1)}V${y(0).toFixed(1)}Z" fill="${IA_C.moi}"><title>${esc(L[i])} : ${esc(iaFmt(v, x))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}</title></path>`;
+      });
+    } else {
+      let d = '', aire = '', run = [];
+      const fermer = () => { if (run.length > 1) { aire += `M${run[0][0]},${y(0).toFixed(1)}L${run.map(p => p.join(',')).join('L')}L${run[run.length - 1][0]},${y(0).toFixed(1)}Z`; } run = []; };
+      vals.forEach((x, i) => { if (x == null) { fermer(); return; } const p = [cx(i).toFixed(1), y(x).toFixed(1)]; d += (run.length ? 'L' : 'M') + p.join(','); run.push(p); });
+      fermer();
+      s += `<path d="${aire}" fill="${IA_C.moi}" fill-opacity=".10"/><path d="${d}" fill="none" stroke="${IA_C.moi}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      vals.forEach((x, i) => { if (x != null) { s += `<circle cx="${cx(i).toFixed(1)}" cy="${y(x).toFixed(1)}" r="${n > 40 ? 6 : 4}" fill="${n > 40 ? 'transparent' : IA_C.moi}" stroke="${n > 40 ? 'none' : '#fff'}" stroke-width="2"><title>${esc(L[i])} : ${esc(iaFmt(v, x))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}</title></circle>`; } });
+    }
+    if (R) {
+      let d = '', en = false;
+      R.valeurs.forEach((x, i) => { if (x == null) { en = false; return; } d += (en ? 'L' : 'M') + cx(i).toFixed(1) + ',' + y(x).toFixed(1); en = true; });
+      s += `<path d="${d}" fill="none" stroke="${IA_C.ref}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      if (n <= 40) { R.valeurs.forEach((x, i) => { if (x != null) { s += `<circle cx="${cx(i).toFixed(1)}" cy="${y(x).toFixed(1)}" r="3.5" fill="${IA_C.ref}" stroke="#fff" stroke-width="2"><title>${esc(L[i])} · ${esc(R.nom)} : ${esc(iaFmt(v, x))}</title></circle>`; } }); }
+    }
+    // Les étiquettes choisies : le plus haut et le dernier point du magasin.
+    const idx = vals.map((x, i) => [x, i]).filter(p => p[0] != null);
+    if (idx.length) {
+      const imax = idx.reduce((a, b) => b[0] > a[0] ? b : a)[1], ider = idx[idx.length - 1][1];
+      [...new Set([imax, ider])].forEach(i => { s += iaHalo(cx(i), y(vals[i]) - 9, iaFmt(v, vals[i]), i === ider && !col ? 'end' : 'middle'); });
+    }
+    return svg(h, s + iaLegende(v, w, h - 6));
+  }
+  function iaTableau(v) {
+    const T = v.tableau || { entetes: [], lignes: [] };
+    const num = T.entetes.map((e, i) => i > 0 && T.lignes.some(l => typeof l[i] === 'number'));
+    return `<div class="ia-tab"><table><thead><tr>${T.entetes.map((e, i) => `<th${num[i] ? ' class="n"' : ''}>${esc(e)}</th>`).join('')}</tr></thead>
+      <tbody>${T.lignes.map(l => `<tr>${l.map((c, i) => `<td${i && typeof c === 'number' ? ' class="n"' : ''}>${esc(i ? iaFmt(v, c) : c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  /** Les visuels d'une réponse ; `cle` : le rang de la réponse dans le fil (la vue choisie et les messages s'y rangent). */
+  function iaVisuels(r, cle) {
+    return (r.visuels || []).map((v, i) => {
+      const k = cle + ':' + i; IA.reg[k] = v;
+      const graphe = v.forme !== 'tableau' && (v.series || []).length > 0, vue = graphe && IA.vues[k] !== 'tableau' ? 'graphe' : 'tableau', msg = IA.modMsg[k];
+      return `<figure class="ia-vis">
+        <div class="ia-vis-h"><div><b>${esc(v.titre)}</b>${v.periode ? `<span>${esc(v.periode)}${v.mesureNom && v.donnees !== 'manuel' ? ' · ' + esc(v.mesureNom) : ''}</span>` : ''}</div>
+          ${graphe ? `<span class="ia-vis-bas"><button class="${vue === 'graphe' ? 'on' : ''}" data-iavue="${k}" data-v="graphe">Graphique</button><button class="${vue === 'tableau' ? 'on' : ''}" data-iavue="${k}" data-v="tableau">Tableau</button></span>` : ''}</div>
+        ${vue === 'graphe' ? `<div class="ia-graphe" data-iagraphe="${k}"></div>` : iaTableau(v)}
+        <figcaption>Source : ${esc(v.source || '')}${v.note ? ' · ' + esc(v.note) : ''}</figcaption>
+        <div class="ia-vis-act"><button class="db-btn" data-iacsv="${k}">⤓ Tableau (CSV)</button>${vue === 'graphe' ? `<button class="db-btn" data-iapng="${k}">⤓ Image</button>` : ''}${v.id && v.donnees !== 'manuel' ? `<button class="db-btn" data-iamod="${k}"${msg && msg.ok ? ' disabled' : ''}>★ Garder comme modèle</button>` : ''}${msg ? `<span class="${msg.ok ? 'ok' : 'ko'}">${esc(msg.t)}</span>` : ''}</div>
+      </figure>`;
+    }).join('');
+  }
+  const iaFichier = v => (String(v.titre || 'graphique').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'graphique');
+  function iaTelecharger(nom, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+  function iaCsv(v) {
+    const T = v.tableau || { entetes: [], lignes: [] };
+    const cel = c => { const s = typeof c === 'number' ? String(c).replace('.', ',') : String(c == null ? '' : c); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    iaTelecharger(iaFichier(v) + '.csv', new Blob(['﻿' + [T.entetes].concat(T.lignes).map(l => l.map(cel).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  }
+  function iaPng(v, el) {
+    const s = el && el.querySelector('svg');
+    if (!s) { return; }
+    const w = +s.getAttribute('width'), h = +s.getAttribute('height'), img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); c.toBlob(b => { if (b) { iaTelecharger(iaFichier(v) + '.png', b); } }, 'image/png'); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(s));
+  }
+  /* Mes modèles (aia_modele) : la demande d'un visuel gardée ; l'ouvrir la refait avec les chiffres du jour. */
+  function iaModelesLire() {
+    lire('/assistant/magasin/modeles?shop=' + encodeURIComponent(S.shop)).then(d => { IA.modeles = (d && d.modeles) || []; if (IA.ouvert) { iaRendre(); } }).catch(() => { IA.modeles = []; });
+  }
+  function iaModeleGarder(k) {
+    const v = IA.reg[k];
+    if (!v || !v.id) { return; }
+    ecrire('/assistant/magasin/modeles', { shop: S.shop, visuel: v.id, nom: v.titre })
+      .then(d => { IA.modMsg[k] = { ok: true, t: d && d.deja ? 'déjà dans Mes modèles' : '✓ gardé dans Mes modèles' }; iaModelesLire(); })
+      .catch(e => { IA.modMsg[k] = { ok: false, t: e.message }; }).finally(() => iaRendre());
+  }
+  function iaModeleOuvrir(id) {
+    const m = (IA.modeles || []).find(x => String(x.id) === String(id));
+    if (!m || IA.fil.some(t => t.attente)) { return; }
+    const t = { q: '★ ' + m.nom, attente: true, ton: iaTonCle(), modele: true };
+    IA.fil.push(t); iaRendre();
+    lire('/assistant/magasin/modeles/' + encodeURIComponent(id) + '?shop=' + encodeURIComponent(S.shop))
+      .then(d => { t.r = { titre: m.nom, resume: 'Votre modèle, refait avec les chiffres du jour.', chiffres: [], points: [], priorites: [], suites: [], sources: [], visuels: [d.visuel] }; })
+      .catch(e => { t.err = e.message; }).finally(() => { t.attente = false; iaRendre(); });
+  }
+  function iaModeleRetirer(id) {
+    ecrire('/assistant/magasin/modeles/' + encodeURIComponent(id) + '/supprimer', { shop: S.shop }).then(iaModelesLire).catch(() => {});
+  }
+  function iaMesModeles() {
+    const L = IA.modeles || [];
+    return L.length ? `<div class="ia-mods"><span>Mes modèles</span>${L.map(m => `<span class="ia-mod"><button data-iamodo="${esc(m.id)}" title="Refaire avec les chiffres du jour">★ ${esc(m.nom)}</button><button class="x" data-iamodx="${esc(m.id)}" aria-label="Retirer ${esc(m.nom)}">×</button></span>`).join('')}</div>` : '';
+  }
+  /** Les questions toutes prêtes de l'assistant choisi : celles du Professeur viennent du manuel. */
+  const iaProf = () => iaTonCle() === 'professeur';
+  const iaQ = () => { const Q = IA.questions || {}; return iaProf() && Q.professeur ? Q.professeur : Q; };
+  const iaLit = k => (k === 'professeur' ? 'ouvre le manuel opératoire…' : 'lit les chiffres du magasin…');
   function iaSaisie(haut) {
-    const occupe = IA.fil.some(t => t.attente);
-    return `<form class="ia-saisie${haut ? ' haut' : ''}" data-iaform="1"><input type="text" maxlength="500" placeholder="${haut ? 'Posez votre question : « quel est mon jour le plus faible ? », « que mettre en avant samedi ? »…' : 'Posez votre question sur votre magasin…'}" value="${esc(IA.saisie)}"${occupe ? ' disabled' : ''}>
+    const occupe = IA.fil.some(t => t.attente), p = iaProf();
+    const ph = p ? (haut ? 'Posez votre question sur le manuel : « comment fermer la caisse ? », « à quelle température cuire les croissants ? »…' : 'Posez votre question sur le manuel…')
+      : (haut ? 'Posez votre question : « quel est mon jour le plus faible ? », « que mettre en avant samedi ? »…' : 'Posez votre question sur votre magasin…');
+    return `<form class="ia-saisie${haut ? ' haut' : ''}" data-iaform="1"><input type="text" maxlength="500" placeholder="${ph}" value="${esc(IA.saisie)}"${occupe ? ' disabled' : ''}>
       <button class="db-btn ia-envoi" type="submit"${occupe ? ' disabled' : ''}>${haut ? 'Demander' : '→'}</button></form>`;
   }
   function iaBilan() {
-    const Q = IA.questions || {}, dern = IA.fil[IA.fil.length - 1];
+    const Q = iaQ(), dern = IA.fil[IA.fil.length - 1], k = IA.fil.length - 1;
     let h = iaSaisie(true);
     h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
-    if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 64, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    h += iaMesModeles();
+    if (!dern) { return h + `<p class="ia-vide">Choisissez une question, ou posez la vôtre. ${iaProf() ? 'Le Professeur lit le manuel opératoire du réseau, document par document.' : 'L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question, et le manuel opératoire.'} Il propose un tableau ou un graphique quand il aide.</p>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 64, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} ${iaLit(dern.ton)} « ${esc(dern.q)} »</p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
-    h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
-      <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, false)}${iaFin(r)}
+    h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[dern.modele ? 'Mes modèles' : iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
+      <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + k)}${iaPrios(r, false)}${iaSources(r)}${iaFin(r)}
       ${iaSuites(r)}
-      <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</span><button class="db-btn" data-iamode="a">Continuer en conversation ›</button></div></section>`;
+      <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin et du manuel. Vérifiez avant d’agir.</span><button class="db-btn" data-iamode="a">Continuer en conversation ›</button></div></section>`;
     return h;
   }
   function iaConversation() {
-    const Q = IA.questions || {};
-    const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
+    const Q = iaQ();
+    const gauche = `<aside class="ia-q"><p class="ia-q-t">${iaProf() ? 'Le manuel, famille par famille' : 'Questions toutes prêtes'}</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}${(IA.modeles || []).length ? `<p class="ia-q-g">Mes modèles</p>${IA.modeles.map(m => `<button class="ia-qb" data-iamodo="${esc(m.id)}">★ ${esc(m.nom)}</button>`).join('')}` : ''}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 64, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
+      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 64, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} ${iaLit(t.ton)}</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 72)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
-    }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
-    return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 72)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) && !t.modele ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + i)}${iaPrios(r, true)}${iaSources(r)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+    }).join('') || `<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>`;
+    return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin et du manuel opératoire. Vérifiez avant d’agir.</p></section></div>`;
   }
   /* --- Le helpdesk (15/11/2026, maquette C de docs/maquettes/helpdesk-franchises, « intégrer dans un avatar ») ---------
    * La demande au bureau vit dans la fenêtre de l'assistant, troisième mode : l'avatar choisi (Pierre ou le Coach) la
@@ -5809,11 +5988,13 @@
     document.body.classList.add('ia-ouvert');
     const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
     b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
-      <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
+      <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · ${iaProf() && IA.mode !== 'd' ? 'le Professeur lit le manuel opératoire du réseau' : 'il lit les chiffres de votre magasin et le manuel opératoire'}</span></div>
         <span class="ia-modes">${(IA.questions && IA.questions.actif ? [['b', 'Bilan'], ['a', 'Conversation'], ['d', 'Demande au bureau']] : [['d', 'Demande au bureau']]).map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
       ${IA.mode === 'd' ? '' : iaChoixTon()}
       ${IA.mode === 'd' ? `<div class="ia-b">${hdVue()}</div>` : (IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`)}</div>`;
+    // Les graphiques se dessinent à la largeur réelle de leur cadre : les textes gardent leur taille (17/11/2026).
+    b.querySelectorAll('[data-iagraphe]').forEach(el => { const v = IA.reg[el.dataset.iagraphe]; if (v) { el.innerHTML = iaDessin(v, Math.max(260, Math.floor(el.clientWidth))); } });
     const f = b.querySelector('.ia-fil');
     if (f && basAvant) { f.scrollTop = f.scrollHeight; }
     b.querySelectorAll('[data-iafermer]').forEach(e => e.addEventListener('click', iaFermer));
@@ -5830,6 +6011,12 @@
       iaRendre();
     }));
     b.querySelectorAll('[data-iaaller]').forEach(e => e.addEventListener('click', () => iaAller(e.dataset.iaaller)));
+    b.querySelectorAll('[data-iavue]').forEach(e => e.addEventListener('click', () => { IA.vues[e.dataset.iavue] = e.dataset.v; iaRendre(); }));
+    b.querySelectorAll('[data-iacsv]').forEach(e => e.addEventListener('click', () => { const v = IA.reg[e.dataset.iacsv]; if (v) { iaCsv(v); } }));
+    b.querySelectorAll('[data-iapng]').forEach(e => e.addEventListener('click', () => { const v = IA.reg[e.dataset.iapng]; if (v) { iaPng(v, e.closest('.ia-vis').querySelector('.ia-graphe')); } }));
+    b.querySelectorAll('[data-iamod]').forEach(e => e.addEventListener('click', () => iaModeleGarder(e.dataset.iamod)));
+    b.querySelectorAll('[data-iamodo]').forEach(e => e.addEventListener('click', () => iaModeleOuvrir(e.dataset.iamodo)));
+    b.querySelectorAll('[data-iamodx]').forEach(e => e.addEventListener('click', () => iaModeleRetirer(e.dataset.iamodx)));
     hdLier(b);
     b.querySelectorAll('[data-iaform]').forEach(fm => {
       const i = fm.querySelector('input');

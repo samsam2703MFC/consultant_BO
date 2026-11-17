@@ -3399,3 +3399,33 @@ body.db-vue-social{overflow:hidden}
 .qb-sec{margin-top:8px}
 @media (max-width:1150px){.qb-heros,.qb-g2{grid-template-columns:1fr}.qb-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .qb-douze{margin-top:12px}
+
+/* L'assistant IA (17/11/2026) : les tableaux et graphiques qu'il propose, les documents du manuel lus, Mes modèles.
+   Les graphiques sont dessinés à la largeur réelle du cadre par dashboard.js (iaDessin) : rien n'est étiré ici. */
+.ia-vis{margin:12px 0 4px;padding:12px 14px 10px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:#fff}
+.ia-vis-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ia-vis-h b{display:block;font-weight:400;font-size:13.5px;color:var(--color-text)}
+.ia-vis-h span{display:block;font-size:11.5px;color:var(--color-text-muted)}
+.ia-vis-bas{display:inline-flex!important;border:1px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;flex:none}
+.ia-vis-bas button{border:0;background:none;padding:4px 11px;font:400 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.ia-vis-bas button.on{background:rgba(141,29,44,.08);color:var(--color-primary)}
+.ia-graphe{width:100%;min-height:40px}
+.ia-graphe svg{max-width:100%}
+.ia-tab{max-height:320px;overflow:auto;border:1px solid var(--color-border-tertiary);border-radius:8px}
+.ia-tab table{width:100%;border-collapse:collapse;font-size:12.5px}
+.ia-tab th{position:sticky;top:0;background:var(--color-background-secondary);font-weight:400;color:var(--color-text-muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--color-border-tertiary)}
+.ia-tab td{padding:5px 10px;border-top:1px solid #f1ece4;color:var(--color-text)}
+.ia-tab .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ia-vis figcaption{margin-top:6px;font-size:11px;color:var(--color-text-muted)}
+.ia-vis-act{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.ia-vis-act .db-btn{font-size:11.5px;padding:4px 10px}
+.ia-vis-act .ok{font-size:11.5px;color:#2e7d32}.ia-vis-act .ko{font-size:11.5px;color:#c62828}
+.ia-srcs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0;font-size:11.5px;color:var(--color-text-muted)}
+.ia-srcs b{font-weight:400;color:var(--color-text);background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:999px;padding:2px 9px}
+.ia-srcs em{font-style:normal;color:#b26a00}
+.ia-mods{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0;font-size:11px;color:var(--color-text-muted)}
+.ia-mods>span:first-child{letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
+.ia-mod{display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;background:var(--color-surface)}
+.ia-mod button{border:0;background:none;padding:4px 10px;font:400 12px var(--font-ui);color:var(--color-text);cursor:pointer}
+.ia-mod button:hover{color:var(--color-primary)}
+.ia-mod .x{padding:4px 8px;color:var(--color-text-muted);border-left:1px solid var(--color-border-tertiary)}
