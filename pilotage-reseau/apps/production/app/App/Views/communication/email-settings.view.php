@@ -1,25 +1,54 @@
 <?php $this->view('page_components/header'); ?>
-<div class="page-heading"><h3>Konfiguracja poczty e-mail</h3><p class="text-subtitle text-muted">Konto Gmail pilotażowe: użyj hasła aplikacji, nie hasła głównego konta.</p></div>
+<?php /* [341] Un compte d'envoi par usage : factures → accounting@, logistique → logistyka@, production → produkcja@.
+        Réponses reçues sur chaque adresse (IMAP). Nouveau compte : serveurs OVH MX Plan proposés. */
+$e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); ?>
+<div class="page-heading"><h3>Konfiguracja poczty e-mail</h3>
+    <p class="text-subtitle text-muted">Jeden adres na przeznaczenie : wiadomość wychodzi z adresu swojego przeznaczenia, a gdy go brak — z adresu faktur. Login = pełny adres e-mail.</p></div>
 <section class="section">
 <?php if (($_GET['saved'] ?? '') === '1'): ?><div class="alert alert-success">Konfiguracja została zapisana. Hasła nie są ponownie wyświetlane.</div><?php endif; ?>
-<?php if (!empty($errors)): ?><div class="alert alert-danger"><?= implode('<br>', array_map(fn($e) => htmlspecialchars($e, ENT_QUOTES, 'UTF-8'), $errors)) ?></div><?php endif; ?>
-<div class="card"><div class="card-body"><form method="post" action="<?= ROOT ?>/communication/email-settings" class="row g-3">
-<div class="col-md-4"><label class="form-label">Nazwa konfiguracji</label><input class="form-control" name="name" required value="<?= htmlspecialchars($account['name'] ?? 'Gmail pilot', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-md-4"><label class="form-label">Nazwa nadawcy</label><input class="form-control" name="from_name" required value="<?= htmlspecialchars($account['from_name'] ?? 'SL Food', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-md-4"><label class="form-label">Adres From</label><input class="form-control" type="email" name="from_email" required value="<?= htmlspecialchars($account['from_email'] ?? '', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-12"><label class="form-label">Reply-To</label><input class="form-control" type="email" name="reply_to_email" required value="<?= htmlspecialchars($account['reply_to_email'] ?? '', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-12"><h5 class="mt-2">SMTP</h5></div>
-<div class="col-md-4"><label class="form-label">Host</label><input class="form-control" name="smtp_host" required value="<?= htmlspecialchars($account['smtp_host'] ?? 'smtp.gmail.com', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-md-2"><label class="form-label">Port</label><input class="form-control" name="smtp_port" type="number" value="<?= (int)($account['smtp_port'] ?? 587) ?>"></div>
-<div class="col-md-2"><label class="form-label">Szyfrowanie</label><select class="form-select" name="smtp_encryption"><option value="tls" <?= ($account['smtp_encryption'] ?? 'tls') === 'tls' ? 'selected' : '' ?>>STARTTLS</option><option value="ssl" <?= ($account['smtp_encryption'] ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option></select></div>
-<div class="col-md-4"><label class="form-label">Login</label><input class="form-control" type="email" name="smtp_username" required value="<?= htmlspecialchars($account['smtp_username'] ?? '', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-12"><label class="form-label">Hasło aplikacji SMTP</label><input class="form-control" type="password" name="smtp_secret" placeholder="<?= empty($account) ? 'Wymagane' : 'Pozostaw puste, aby nie zmieniać' ?>"></div>
-<div class="col-12"><h5 class="mt-2">IMAP — odbiór odpowiedzi</h5></div>
-<div class="col-md-4"><label class="form-label">Host</label><input class="form-control" name="imap_host" required value="<?= htmlspecialchars($account['imap_host'] ?? 'imap.gmail.com', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-md-2"><label class="form-label">Port</label><input class="form-control" name="imap_port" type="number" value="<?= (int)($account['imap_port'] ?? 993) ?>"></div>
-<div class="col-md-6"><label class="form-label">Login</label><input class="form-control" type="email" name="imap_username" required value="<?= htmlspecialchars($account['imap_username'] ?? '', ENT_QUOTES, 'UTF-8') ?>"></div>
-<div class="col-12"><label class="form-label">Hasło aplikacji IMAP</label><input class="form-control" type="password" name="imap_secret" placeholder="<?= empty($account) ? 'Wymagane' : 'Pozostaw puste, aby nie zmieniać' ?>"></div>
-<div class="col-12"><button class="btn btn-primary">Zapisz konfigurację</button><div class="form-text text-warning">Hasła SMTP i IMAP są zapisywane w bazie bez szyfrowania. Dostęp do bazy należy ograniczyć.</div></div></form></div></div>
-<div class="card mt-4"><div class="card-body"><h5>Test wysyłki</h5><div class="input-group"><input id="test-recipient" type="email" class="form-control" placeholder="adres@testowy.pl"><button id="test-email" class="btn btn-outline-primary" type="button">Wyślij test</button></div><div id="test-feedback" class="form-text"></div></div></div>
+<?php if (!empty($errors)): ?><div class="alert alert-danger"><?= implode('<br>', array_map($e, $errors)) ?></div><?php endif; ?>
+<?php foreach ($purposes as $purpose => $meta): $a = $accounts[$purpose] ?? []; $new = empty($a); ?>
+<div class="card mb-4" id="konto-<?= $e($purpose) ?>">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h4 class="card-title mb-0"><?= $e($meta['label']) ?></h4>
+        <span class="badge <?= $new ? 'bg-secondary' : 'bg-success' ?>"><?= $new ? 'Nie skonfigurowano (' . $e($meta['hint']) . ')' : $e($a['from_email']) ?></span>
+    </div>
+    <div class="card-body">
+    <form method="post" action="<?= ROOT ?>/communication/email-settings" class="row g-3">
+        <input type="hidden" name="purpose" value="<?= $e($purpose) ?>">
+        <div class="col-md-4"><label class="form-label">Nazwa konfiguracji</label><input class="form-control" name="name" required value="<?= $e($a['name'] ?? ('OVH ' . $meta['hint'])) ?>"></div>
+        <div class="col-md-4"><label class="form-label">Nazwa nadawcy</label><input class="form-control" name="from_name" required value="<?= $e($a['from_name'] ?? 'SL Food') ?>"></div>
+        <div class="col-md-4"><label class="form-label">Adres nadawcy (From)</label><input class="form-control" type="email" name="from_email" required value="<?= $e($a['from_email'] ?? '') ?>" placeholder="<?= $e($meta['hint']) ?>…"></div>
+        <div class="col-md-4"><label class="form-label">Odpowiedzi na adres (Reply-To)</label><input class="form-control" type="email" name="reply_to_email" required value="<?= $e($a['reply_to_email'] ?? '') ?>"></div>
+        <div class="col-12"><h5 class="mt-2 mb-0">Wysyłka (SMTP)</h5></div>
+        <div class="col-md-4"><label class="form-label">Serwer</label><input class="form-control" name="smtp_host" required value="<?= $e($a['smtp_host'] ?? 'ssl0.ovh.net') ?>"></div>
+        <div class="col-md-2"><label class="form-label">Port</label><input class="form-control" name="smtp_port" type="number" value="<?= (int) ($a['smtp_port'] ?? 465) ?>"></div>
+        <div class="col-md-2"><label class="form-label">Szyfrowanie</label><select class="form-select" name="smtp_encryption">
+            <?php $enc = $a['smtp_encryption'] ?? 'ssl'; ?>
+            <option value="ssl" <?= $enc === 'ssl' ? 'selected' : '' ?>>SSL</option><option value="tls" <?= $enc === 'tls' ? 'selected' : '' ?>>STARTTLS</option></select></div>
+        <div class="col-md-4"><label class="form-label">Login</label><input class="form-control" type="email" name="smtp_username" required value="<?= $e($a['smtp_username'] ?? '') ?>"></div>
+        <div class="col-12"><label class="form-label">Hasło SMTP</label><input class="form-control" type="password" name="smtp_secret" autocomplete="new-password" placeholder="<?= $new ? 'Wymagane' : 'Pozostaw puste, aby nie zmieniać' ?>"></div>
+        <div class="col-12"><h5 class="mt-2 mb-0">Odbiór odpowiedzi (IMAP)</h5></div>
+        <div class="col-md-4"><label class="form-label">Serwer</label><input class="form-control" name="imap_host" required value="<?= $e($a['imap_host'] ?? 'ssl0.ovh.net') ?>"></div>
+        <div class="col-md-2"><label class="form-label">Port</label><input class="form-control" name="imap_port" type="number" value="<?= (int) ($a['imap_port'] ?? 993) ?>"></div>
+        <div class="col-md-6"><label class="form-label">Login</label><input class="form-control" type="email" name="imap_username" required value="<?= $e($a['imap_username'] ?? '') ?>"></div>
+        <div class="col-12"><label class="form-label">Hasło IMAP</label><input class="form-control" type="password" name="imap_secret" autocomplete="new-password" placeholder="<?= $new ? 'Wymagane' : 'Pozostaw puste, aby nie zmieniać' ?>"></div>
+        <div class="col-12 d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary">Zapisz</button>
+            <?php if (!$new): ?><div class="input-group" style="max-width:420px"><input type="email" class="form-control" placeholder="adres testowy" data-test-recipient><button class="btn btn-outline-primary" type="button" data-test="<?= $e($purpose) ?>">Wyślij test</button></div><span class="form-text" data-test-feedback></span><?php endif; ?>
+        </div>
+    </form>
+    </div>
+</div>
+<?php endforeach; ?>
+<p class="form-text text-warning">Hasła SMTP i IMAP są zapisywane w bazie bez szyfrowania. Dostęp do bazy należy ograniczyć.</p>
 </section><?php $this->view('page_components/footer'); ?>
-<script>document.getElementById('test-email').addEventListener('click', async () => { const recipient=document.getElementById('test-recipient').value; const r=await fetch('<?= ROOT ?>/ajax/communication/email-settings/test',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({recipient})}); const d=await r.json(); document.getElementById('test-feedback').textContent=d.message || 'Błąd'; });</script>
+<script>
+document.querySelectorAll('[data-test]').forEach(b => b.addEventListener('click', async () => {
+    const card = b.closest('form'), out = card.querySelector('[data-test-feedback]');
+    out.textContent = '…';
+    const r = await fetch('<?= ROOT ?>/ajax/communication/email-settings/test', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({recipient: card.querySelector('[data-test-recipient]').value, purpose: b.dataset.test})});
+    const d = await r.json().catch(() => ({}));
+    out.textContent = d.message || 'Błąd';
+}));
+</script>

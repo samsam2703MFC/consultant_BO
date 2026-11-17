@@ -14,7 +14,8 @@ class CommunicationController extends BaseController
                                 private \App\Repositories\Client\ClientRepository $clients, private \App\Services\Communication\PaymentReminderAutoService $autoReminders) {}
     private function author(): ?string { $user = GlobalRegistry::get('user'); return $user ? $user->getDisplayName() : null; }
     public function templates() { $this->view('communication/templates', ['templates' => $this->service->templates(), 'languages' => $this->service->languages(), 'templateTypes' => $this->service->templateTypes()]); }
-    public function emailSettings() { $this->view('communication/email-settings', ['account' => $this->emailAccounts->active()]); }
+    /** [341] Un compte d'envoi par usage : finance (accounting@), logistyka@, produkcja@. */
+    public function emailSettings() { $this->view('communication/email-settings', ['accounts' => $this->emailAccounts->byPurpose(), 'purposes' => EmailAccountService::PURPOSES]); }
     public function saveEmailSettings()
     {
         try { $this->emailAccounts->save($_POST); header('Location: ' . ROOT . '/communication/email-settings?saved=1'); exit; }
@@ -23,7 +24,7 @@ class CommunicationController extends BaseController
     public function testEmailSettings()
     {
         try {
-            $providerId = $this->emailAccounts->test((string)($_POST['recipient'] ?? ''));
+            $providerId = $this->emailAccounts->test((string)($_POST['recipient'] ?? ''), (string)($_POST['purpose'] ?? 'finance'));
             $message = \App\Services\Communication\MailDeliveryPolicy::isLogOnly($providerId)
                 ? 'Tryb testowy (MAIL_DELIVERY_MODE=log_only): wiadomość nie została wysłana.'
                 : 'Wiadomość testowa została przekazana do SMTP.';

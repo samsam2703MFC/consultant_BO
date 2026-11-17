@@ -13,12 +13,30 @@ final class CommunicationImapSyncWorker
         private CommunicationIncomingMessageRepository $incoming
     ) {}
 
-    /** Imports recent IMAP messages once; duplicates are prevented by UID and UIDVALIDITY. */
+    /**
+     * [341] Imports recent IMAP messages of every active account (accounting@, logistyka@, produkcja@…);
+     * duplicates are prevented by account, UID and UIDVALIDITY. One failing mailbox does not stop the others.
+     */
     public function syncActive(int $limit = 100): array
     {
         if (!function_exists('imap_open')) throw new \RuntimeException('Rozszerzenie PHP IMAP nie jest dostępne na serwerze.');
-        $account = $this->accounts->active();
-        if ($account === []) throw new \RuntimeException('Brak aktywnego konta e-mail.');
+        $accounts = $this->accounts->allActive();
+        if ($accounts === []) throw new \RuntimeException('Brak aktywnego konta e-mail.');
+        $total = ['imported' => 0, 'scanned' => 0, 'accounts' => []];
+        foreach ($accounts as $account) {
+            try {
+                $r = $this->syncAccount($account, $limit);
+                $total['imported'] += $r['imported']; $total['scanned'] += $r['scanned'];
+                $total['accounts'][$account['from_email']] = $r;
+            } catch (\Throwable $e) {
+                $total['accounts'][$account['from_email']] = ['error' => $e->getMessage()];
+            }
+        }
+        return $total;
+    }
+
+    private function syncAccount(array $account, int $limit): array
+    {
         $mailbox = sprintf('{%s:%d/imap/ssl}INBOX', $account['imap_host'], (int)$account['imap_port']);
         $stream = @imap_open($mailbox, $account['imap_username'], $account['imap_secret'], 0, 1);
         if ($stream === false) throw new \RuntimeException('Nie można połączyć się z IMAP: ' . (imap_last_error() ?: 'nieznany błąd'));
