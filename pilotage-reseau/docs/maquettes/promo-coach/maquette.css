@@ -1,0 +1,83 @@
+/* Maquette « La promotion proposée par le Coach Vente » (17/11/2026) — classes pc-*, posées dans l'onglet Promotions. */
+.pc{padding:0;overflow:hidden}
+.pc-h{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#fbf3ee,#fff 60%)}
+.pc-av{width:76px;height:76px;border-radius:50%;object-fit:cover;background:#EAE4DC;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.pc-k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.pc-h h2{margin:3px 0 6px;font:400 21px var(--font-display);color:var(--ink)}
+.pc-h p{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted-2);max-width:760px}
+.pc-props{display:flex;flex-direction:column;gap:6px;align-self:start}
+.pc-props span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:right}
+.pc-props button{font:400 12.5px var(--font-ui);border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 13px;color:var(--muted-2);text-align:left;cursor:pointer}
+.pc-props button.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:rgba(141,29,44,.04)}
+.pc-props button small{color:var(--muted);margin-left:6px}
+.pc-corps{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:0}
+.pc-fiche{padding:16px 22px 18px;border-right:1px solid var(--line)}
+.pc-t{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.pc-t em{font-style:normal;letter-spacing:normal;text-transform:none;font-size:11px;color:var(--prize-ink);background:var(--prize-soft);border-radius:999px;padding:2px 9px}
+.pc-l{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:baseline;padding:10px 0;border-top:1px solid var(--row-line)}
+.pc-l:first-of-type{border-top:0}
+.pc-l>span{font-size:12px;color:var(--muted)}
+.pc-l b{font-weight:400;font-size:14.5px;color:var(--ink)}
+.pc-l .pc-nom{font-size:19px}
+.pc-l .s{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
+.pc-prix{font-size:22px!important;color:var(--accent)!important;font-variant-numeric:tabular-nums}
+.pc-barre{text-decoration:line-through;color:var(--muted);font-size:14px;margin-left:8px}
+.pc-gain{display:inline-block;margin-left:10px;font-size:12px;color:var(--green);background:#e8f1eb;border-radius:999px;padding:2px 9px}
+.pc-canaux{display:flex;gap:8px;flex-wrap:wrap}
+.pc-canal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12.5px;color:var(--ink)}
+.pc-canal i{width:15px;height:15px;border-radius:4px;background:var(--accent);color:#fff;font-style:normal;font-size:10px;display:inline-flex;align-items:center;justify-content:center}
+.pc-sel{display:flex;width:max-content;align-items:center;gap:6px;margin:7px 0 0;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--muted-2);background:#fff}
+.pc-cote{padding:16px 22px 18px;background:var(--table-head)}
+.pc-tuiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.pc-tuile{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pc-tuile .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.pc-tuile .v{font-size:21px;color:var(--ink);margin-top:3px;font-variant-numeric:tabular-nums}
+.pc-tuile .v.ok{color:var(--green)}
+.pc-tuile .s{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.pc-tuile.large{grid-column:1/-1}
+.pc-pq{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.pc-pq li{font-size:12.5px;line-height:1.45;color:var(--muted-2);padding-left:14px;position:relative}
+.pc-pq li::before{content:'';position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.pc-pq b{font-weight:400;color:var(--ink)}
+.pc-envoi{display:flex;gap:18px;align-items:center;padding:13px 22px;border-top:1px solid var(--line);background:#fff}
+.pc-etape{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.45;color:var(--muted-2);flex:1}
+.pc-etape b{font-weight:400;color:var(--ink)}
+.pc-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--ink);font-size:11.5px;display:inline-flex;align-items:center;justify-content:center}
+.pc-act{display:flex;gap:10px;align-items:center;padding:14px 22px;border-top:1px solid var(--line);background:var(--table-head)}
+.pc-btn{font:400 13px var(--font-ui);border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:9px 15px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.pc-btn.go{background:var(--accent);border-color:var(--accent);color:#fff;padding:10px 18px;font-size:13.5px}
+.pc-lien{font-size:12.5px;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.pc-act .esp{flex:1}
+.pc-act .mu{font-size:12px;color:var(--muted)}
+/* Validée */
+.pc-ok-h{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#eef5f0,#fff 60%)}
+.pc-coche{width:46px;height:46px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center}
+.pc-ok-h h2{margin:0 0 4px;font:400 21px var(--font-display)}
+.pc-ok-h p{margin:0;font-size:13px;color:var(--muted-2)}
+.pc-deux{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
+.pc-deux>div{padding:16px 22px 18px}
+.pc-deux>div+div{border-left:1px solid var(--line)}
+.pc-tl{list-style:none;margin:0;padding:0}
+.pc-tl li{display:grid;grid-template-columns:24px 1fr auto;gap:10px;padding:9px 0;border-top:1px solid var(--row-line);font-size:13px;color:var(--ink);align-items:center}
+.pc-tl li:first-child{border-top:0}
+.pc-tl li span{font-size:12px;color:var(--muted)}
+.pc-pt{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.pc-pt.fait{background:var(--green);color:#fff}.pc-pt.att{background:var(--chip);color:var(--muted-2)}
+.pc-dest{display:grid;grid-template-columns:auto 1fr;gap:16px}
+.pc-pdf{width:150px;height:212px;border:1px solid var(--line);border-radius:6px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.06);padding:12px 11px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.pc-pdf img{width:60px}
+.pc-pdf b{font-weight:400;font-size:13px;color:var(--ink)}
+.pc-pdf i{display:block;height:5px;border-radius:3px;background:var(--chip)}
+.pc-pdf .r{height:26px;border-radius:5px;background:#f6ecec}
+.pc-pdf small{font-size:9px;color:var(--muted)}
+.pc-gens{list-style:none;margin:0;padding:0}
+.pc-gens li{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:7px 0;border-top:1px solid var(--row-line);font-size:12.5px;color:var(--ink);align-items:center}
+.pc-gens li:first-child{border-top:0}
+.pc-gens li span{color:var(--muted);font-size:12px}
+.pc-gens li em{font-style:normal;font-size:11.5px;color:var(--green)}
+.pc-suivi{margin-top:12px}
+.pc-suivi table{width:100%;border-collapse:collapse;font-size:12.5px}
+.pc-suivi th{font-weight:400;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 14px;background:var(--table-head);border-bottom:1px solid var(--line)}
+.pc-suivi td{padding:10px 14px;border-bottom:1px solid var(--row-line)}
+.pc-st{display:inline-block;font-size:11px;border-radius:999px;padding:2px 9px;background:var(--prize-soft);color:var(--prize-ink)}
+.pc-maq{margin:10px 0 0;font-size:11px;color:var(--muted)}
