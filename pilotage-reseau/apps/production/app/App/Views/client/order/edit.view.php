@@ -97,7 +97,7 @@
                             <?php elseif (!empty($proforma_context['has_proforma'])): ?>
                                 <div class="alert alert-info" role="alert">
                                     <i class="bi bi-info-circle me-2"></i>
-                                    Zamówienie posiada nieopłaconą proformę. Po zmianie obecna proforma nie zostanie automatycznie zmodyfikowana. W przeglądzie zamówień będzie można anulować ją i wygenerować nową proformę.
+                                    Zamówienie posiada nieopłaconą proformę. Jeśli zmienisz produkty lub ilości, po zapisie obecna proforma zostanie anulowana i powstanie nowa ze wszystkimi pozycjami (trzeba ją wysłać klientowi ponownie).
                                 </div>
                             <?php endif; ?>
                             <!-- Order Header Info -->

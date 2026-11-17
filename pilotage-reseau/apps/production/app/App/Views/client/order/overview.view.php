@@ -56,6 +56,12 @@
 
                     <!-- Alerty informacyjne -->
                     <div class="mx-3">
+                        <?php if (!empty($order_notice)): ?>
+                            <div class="alert alert-info d-flex gap-2 align-items-start mb-3" role="status">
+                                <i class="bi bi-file-earmark-check flex-shrink-0 mt-1"></i>
+                                <div><?= htmlspecialchars((string) $order_notice) ?></div>
+                            </div>
+                        <?php endif; ?>
                         <?php if (!empty(array_filter($pending ?? [], fn($o) => !empty($o['is_freebie'])))): ?>
                             <div class="alert alert-warning d-flex gap-2 align-items-start mb-3" role="alert">
                                 <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0 mt-1"></i>

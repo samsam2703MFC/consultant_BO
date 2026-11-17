@@ -93,6 +93,8 @@ class OrderController extends BaseController
             'in_transit' => CustomerOrderStatus::IN_TRANSIT,
             'archived' => CustomerOrderStatus::ARCHIVED,
         ];
+        $data['order_notice'] = $_SESSION['order_notice'] ?? null;
+        unset($_SESSION['order_notice']);
         $this->view("client/order/overview", $data);
     }
 
@@ -309,6 +311,13 @@ class OrderController extends BaseController
                     }
                     if (!empty($result['supplement_id'])) {
                         $this->supplementPusherService->push((int)$result['supplement_id']);
+                    }
+                    // [340] Nieopłacona proforma ze wszystkimi pozycjami zamówienia (nowa, gdy zamówienie się zmieniło).
+                    try {
+                        $number = $this->orderService->refreshUnpaidProformaIfStale((int) $id);
+                        if ($number !== null) $_SESSION['order_notice'] = "Proforma zaktualizowana do zamówienia #" . (int) $id . " : nowa proforma {$number} (poprzednia anulowana). Wyślij ją klientowi ponownie.";
+                    } catch (\Throwable $e) {
+                        $_SESSION['order_notice'] = "Zamówienie #" . (int) $id . " zapisane, ale proformy nie udało się zaktualizować : " . $e->getMessage() . ". Użyj « Wygeneruj nową proformę » na liście zamówień.";
                     }
                     header('Location: ' . ROOT . '/client-orders');
                     exit;
