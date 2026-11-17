@@ -100,7 +100,6 @@
                                 <input type="hidden" name="order_type" value="STANDARD">
                                 <?php endif; ?>
                             </div>
-                            </div>
                         </div>
                         <div class="row mb-4">
                             <div class="col-md-8">
@@ -127,8 +126,8 @@
                         <div class="row mb-4">
                             <div class="col-12">
                                 <div class="card border">
-                                    <div class="card-header bg-success text-white">
-                                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Produkty w zamówieniu</h5>
+                                    <div class="card-header">
+                                        <h4 class="card-title mb-0"><i class="bi bi-box-seam"></i> Produkty w zamówieniu</h4>
                                     </div>
                                     <div class="card-body">
                                         <div id="clientSelectInfo" class="alert alert-info" style="display: none;">
