@@ -1,0 +1,372 @@
+{
+ "id": "art-dash-catalogue",
+ "code": "0.0.52",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Mon catalogue",
+  "nl": "Het dashboard: het tabblad Mijn catalogus"
+ },
+ "objectif": {
+  "fr": "Savoir créer le catalogue de la boutique avec l’assistant en cinq étapes : le point de départ, les produits et les promotions, la mise en page, la vérification, puis l’impression et la diffusion (QR code, PDF, affiche).",
+  "nl": "De catalogus van de winkel kunnen maken met de assistent in vijf stappen: het vertrekpunt, de producten en de promoties, de opmaak, de controle, daarna het drukken en het verspreiden (QR-code, pdf, affiche)."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire dans la formation FO-05, après l’article « Comprendre le dashboard magasin » (0.0.15) ; il sert aussi la formation FO-45 (Animation commerciale & saisons).",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen in opleiding FO-05, na het artikel « Het winkeldashboard begrijpen » (0.0.15); het dient ook opleiding FO-45 (Commerciële animatie & seizoenen)."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture",
+   "formation"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05",
+   "FO-45"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ouvrir « Mon catalogue »",
+    "nl": "« Mon catalogue » openen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La liste de mes catalogues",
+      "nl": "De lijst van mijn catalogi"
+     },
+     "texte": {
+      "fr": "Dans le rail, rubrique Marketing : « Mon catalogue ».\nUne ligne par catalogue : son titre et son point de départ (une gamme ou « Mes produits », le format, les langues), « De » (Ma boutique ou La marque), l’état et le nombre de pages.\nL’état : Brouillon (en cours), PDF prêt (validé, ou un PDF déjà téléchargé), Imprimé · N ex. (la quantité imprimée est notée).\n« Ensuite » reprend le catalogue là où il en est : « Continuer › » (étape 2), « Vérifier et imprimer › » (étape 4), « Diffuser › » (étape 5).\n« ＋ Nouveau catalogue » en crée un ; « Supprimer » le retire après confirmation : il disparaît aussi du Marketing.",
+      "nl": "In de rail, rubriek Marketing: « Mon catalogue ».\nEén regel per catalogus: de titel en het vertrekpunt (een gamma of « Mes produits », het formaat, de talen), « De » (Ma boutique of La marque), de status en het aantal pagina’s.\nDe status: Brouillon (bezig), PDF prêt (gevalideerd, of een pdf al gedownload), Imprimé · N ex. (de gedrukte oplage is genoteerd).\n« Ensuite » gaat verder waar de catalogus staat: « Continuer › » (stap 2), « Vérifier et imprimer › » (stap 4), « Diffuser › » (stap 5).\n« ＋ Nouveau catalogue » maakt er een aan; « Supprimer » verwijdert hem na bevestiging: hij verdwijnt ook uit Marketing."
+     },
+     "critique": false,
+     "photo": "cat-liste.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les cinq étapes de l’assistant",
+      "nl": "De vijf stappen van de assistent"
+     },
+     "texte": {
+      "fr": "Les cinq étapes : 1 Catalogue, 2 Gammes, 3 Présentation, 4 Validation, 5 Export PDF.\nUne étape faite porte une coche verte ; un toucher sur une étape y revient.\nLes choix d’une étape s’enregistrent en passant à la suivante (« Présentation › », « Validation › »).\nLe résumé à droite dit le nombre de pages, le format, les produits choisis et ce que porte chaque page.\nQuatre pages sont celles de la marque : la couverture, la page 2, l’avant-dernière et la dernière (commande en ligne, adresse, horaires et QR de la boutique). Elles ne se modifient pas.",
+      "nl": "De vijf stappen: 1 Catalogue, 2 Gammes, 3 Présentation, 4 Validation, 5 Export PDF.\nEen afgewerkte stap krijgt een groen vinkje; een tik op een stap brengt je ernaar terug.\nDe keuzes van een stap worden bewaard wanneer je naar de volgende gaat (« Présentation › », « Validation › »).\nDe samenvatting rechts toont het aantal pagina’s, het formaat, de gekozen producten en wat elke pagina draagt.\nVier pagina’s zijn die van het merk: de cover, pagina 2, de voorlaatste en de laatste (online bestellen, adres, openingsuren en QR van de winkel). Ze zijn niet te wijzigen."
+     },
+     "critique": false,
+     "photo": "cat-etapes.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Un catalogue préparé par la marque",
+      "nl": "Een catalogus die het merk voorbereidde"
+     },
+     "texte": {
+      "fr": "Quand la marque prépare un catalogue pour la boutique, une carte « Nouveau · de la marque » s’affiche au-dessus de la liste, avec ses premières pages.\nIl est déjà aux prix du webshop de la boutique, avec son adresse, ses horaires et son QR ; les produits que le webshop ne vend pas en sont retirés.\n« Le feuilleter » : voir toutes ses pages.\n« Le prendre tel quel › » : il devient celui de la boutique, à vérifier, imprimer et diffuser ; ses gammes et sa mise en page restent celles de la marque (étapes 2 et 3 verrouillées, cadenas).\n« L’adapter à ma boutique » : une copie à la boutique, que l’on change à volonté ; la marque ne la met plus à jour.",
+      "nl": "Wanneer het merk een catalogus voor de winkel voorbereidt, verschijnt boven de lijst een kaart « Nouveau · de la marque », met de eerste pagina’s.\nHij staat al aan de prijzen van de webshop van de winkel, met haar adres, openingsuren en QR; de producten die de webshop niet verkoopt, zijn eruit gehaald.\n« Le feuilleter »: alle pagina’s bekijken.\n« Le prendre tel quel › »: hij wordt die van de winkel, om na te kijken, te drukken en te verspreiden; de gamma’s en de opmaak blijven die van het merk (stappen 2 en 3 vergrendeld, hangslot).\n« L’adapter à ma boutique »: een kopie voor de winkel, vrij aan te passen; het merk werkt ze niet meer bij."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Étape 1 · Le point de départ",
+    "nl": "Stap 1 · Het vertrekpunt"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Le titre et le nombre de pages",
+      "nl": "De titel en het aantal pagina’s"
+     },
+     "texte": {
+      "fr": "« ＋ Nouveau catalogue » ouvre le point de départ ; l’étape 1 est faite (coche verte).\nTitre du catalogue : il se propose d’après les gammes cochées ; on peut le réécrire (sur la photo, « Noël & Nouvel An 2026 »).\nNombre de pages : « − 2 pages » · « ＋ 2 pages », de 8 à 16, toujours par 2, dont 4 de la marque. Il se change encore à l’étape 3.\nLe résumé à droite rappelle : « Il se crée à la fin de cette étape ».",
+      "nl": "« ＋ Nouveau catalogue » opent het vertrekpunt; stap 1 is gedaan (groen vinkje).\nTitel van de catalogus: hij wordt voorgesteld volgens de aangevinkte gamma’s; je kunt hem herschrijven (op de foto « Noël & Nouvel An 2026 »).\nAantal pagina’s: « − 2 pages » · « ＋ 2 pages », van 8 tot 16, altijd per 2, waarvan 4 van het merk. Het is in stap 3 nog te wijzigen.\nDe samenvatting rechts herinnert eraan: « Il se crée à la fin de cette étape »."
+     },
+     "critique": false,
+     "photo": "cat-nouveau.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Les gammes de départ",
+      "nl": "De gamma’s om van te vertrekken"
+     },
+     "texte": {
+      "fr": "Je pars d’une ou de plusieurs gammes (8 au plus) : je les coche. Chaque carte dit combien de produits de la boutique elle compte ; une gamme sans produit est grisée.\nAu-dessus : le total des produits cumulés (un produit de deux gammes compte une fois).\n… ou de « Tous mes produits » : tout le webshop, à trier à l’étape 2.\n« Créer et choisir mes produits › » crée le catalogue (état Brouillon) et ouvre l’étape 2.\nLe point de départ ne change plus une fois le catalogue créé : pour partir d’autres gammes, créer un nouveau catalogue.",
+      "nl": "Ik vertrek van een of meer gamma’s (hoogstens 8): ik vink ze aan. Elke kaart toont hoeveel producten van de winkel ze telt; een gamma zonder product is grijs.\nErboven: het totaal van de samengetelde producten (een product uit twee gamma’s telt één keer).\n… of van « Tous mes produits »: de hele webshop, te sorteren in stap 2.\n« Créer et choisir mes produits › » maakt de catalogus aan (status Brouillon) en opent stap 2.\nHet vertrekpunt verandert niet meer zodra de catalogus bestaat: om van andere gamma’s te vertrekken, maak je een nieuwe catalogus."
+     },
+     "critique": true,
+     "photo": "cat-gammes.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Étape 2 · Mes produits",
+    "nl": "Stap 2 · Mijn producten"
+   },
+   "etapes": [
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Cocher les produits, catégorie par catégorie",
+      "nl": "De producten aanvinken, categorie per categorie"
+     },
+     "texte": {
+      "fr": "Seuls les produits du webshop de la boutique sont proposés, à ses prix (« prix de mon webshop ») ; « sans prix » quand le webshop n’en a pas.\nUn toucher sur le nom d’une catégorie la déplie ou la replie ; « 5 / 5 produits » : cochés sur le total.\nL’interrupteur d’un produit, bordeaux = au catalogue ; « toute la catégorie » coche ou décoche tous ses produits d’un coup.\n« Chercher un produit » (nom français ou néerlandais) ; « Tout cocher » · « Tout décocher » agissent sur les produits affichés.\nUne catégorie ajoutée reçoit sa page (une page vide s’il y en a une, sinon 2 pages de plus, 16 au plus) ; une catégorie retirée laisse sa page vide.",
+      "nl": "Alleen de producten van de webshop van de winkel worden voorgesteld, aan haar prijzen (« prix de mon webshop »); « sans prix » als de webshop er geen heeft.\nEen tik op de naam van een categorie klapt ze open of dicht; « 5 / 5 produits »: aangevinkt op het totaal.\nDe schakelaar van een product, bordeaux = in de catalogus; « toute la catégorie » vinkt al haar producten in één keer aan of uit.\n« Chercher un produit » (Franse of Nederlandse naam); « Tout cocher » · « Tout décocher » werken op de getoonde producten.\nEen toegevoegde categorie krijgt haar pagina (een lege pagina als er een is, anders 2 pagina’s meer, hoogstens 16); een verwijderde categorie laat haar pagina leeg."
+     },
+     "critique": false,
+     "photo": "cat-produits.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Promotions et bundles, disponibilité",
+      "nl": "Promoties en bundels, beschikbaarheid"
+     },
+     "texte": {
+      "fr": "En bas de l’étape : les promotions de la boutique, lues dans TFBuddy, avec leur badge (2+1, Bundle…), leurs produits, leurs dates et leur prix.\nL’interrupteur met l’offre au catalogue ; une offre qui touche un produit coché est cochée d’office.\n« Image » : une image de la médiathèque (du réseau ou de la boutique) à la place des photos des produits dans la vignette de l’offre.\n« Afficher la disponibilité » : la période et le délai de commande, en pied de chaque page.\n« Présentation › » enregistre les produits et les promotions, et ouvre l’étape 3.",
+      "nl": "Onderaan de stap: de promoties van de winkel, gelezen in TFBuddy, met hun badge (2+1, Bundle…), hun producten, hun data en hun prijs.\nDe schakelaar zet het aanbod in de catalogus; een aanbod dat een aangevinkt product raakt, staat vanzelf aan.\n« Image »: een beeld uit de mediatheek (van het netwerk of van de winkel) in plaats van de productfoto’s in het vakje van het aanbod.\n« Afficher la disponibilité »: de periode en de besteltermijn, onderaan elke pagina.\n« Présentation › » bewaart de producten en de promoties en opent stap 3."
+     },
+     "critique": false,
+     "photo": "cat-promos.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Étape 3 · La présentation",
+    "nl": "Stap 3 · De opmaak"
+   },
+   "etapes": [
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Le nombre de pages, le format, les langues",
+      "nl": "Het aantal pagina’s, het formaat, de talen"
+     },
+     "texte": {
+      "fr": "Nombre de pages, toujours par 2 ; réduire est refusé si une page à retirer porte des produits : le dashboard propose alors de répartir sur moins de pages.\nFormat : A5 ou A4. Langues : français, néerlandais, ou les deux.\n« ↺ Répartir automatiquement » refait toute la répartition des produits sur les pages : les réglages des pages sont remplacés.\nLes pages de la marque portent un cadenas « Marque » : la couverture, la page 2, l’avant-dernière et la dernière.",
+      "nl": "Aantal pagina’s, altijd per 2; verminderen wordt geweigerd als een te schrappen pagina producten draagt: het dashboard stelt dan voor om over minder pagina’s te verdelen.\nFormaat: A5 of A4. Talen: Frans, Nederlands, of beide.\n« ↺ Répartir automatiquement » verdeelt alle producten opnieuw over de pagina’s: de instellingen van de pagina’s worden vervangen.\nDe pagina’s van het merk dragen een hangslot « Marque »: de cover, pagina 2, de voorlaatste en de laatste."
+     },
+     "critique": false,
+     "photo": "cat-reglages.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Une page : sa catégorie et sa mise en page",
+      "nl": "Een pagina: haar categorie en haar opmaak"
+     },
+     "texte": {
+      "fr": "La catégorie de la page, ou « Notre sélection » (les produits qui restent), et sa gamme ; dessous : les produits placés sur les places disponibles.\nLa mise en page, en dessin : « 1 vedette + 4 » (5 produits), « 2 par largeur » (grille 2 × 3, 6), « 1 par largeur » (liste avec prix, 12), « 2 grandes » (vignettes 2 × 2, 4), « Présentation » (la gamme seule), « Présentation + liste » (la gamme et 8 produits).\nCatégorie manuscrite (Non · Oui) : le nom de la catégorie en lettres manuscrites. Le gabarit : A Classique, B Bandeau, C Épuré.\nPlace libre, quand une rangée reste vide : rien, une photo de la médiathèque, ou l’illustration de la gamme.\n↑ ↓ déplacent la page. Les réglages s’enregistrent en passant à « Validation › » ; d’ici là, « modifications non enregistrées » s’affiche en bas.",
+      "nl": "De categorie van de pagina, of « Notre sélection » (de producten die overblijven), en haar gamma; eronder: de geplaatste producten op de beschikbare plaatsen.\nDe opmaak, als tekening: « 1 vedette + 4 » (5 producten), « 2 par largeur » (raster 2 × 3, 6), « 1 par largeur » (lijst met prijzen, 12), « 2 grandes » (tegels 2 × 2, 4), « Présentation » (enkel het gamma), « Présentation + liste » (het gamma en 8 producten).\nCatégorie manuscrite (Non · Oui): de naam van de categorie in handschrift. Het sjabloon: A Classique, B Bandeau, C Épuré.\nVrije plaats, als er een rij leeg blijft: niets, een foto uit de mediatheek, of de illustratie van het gamma.\n↑ ↓ verplaatsen de pagina. De instellingen worden bewaard wanneer je naar « Validation › » gaat; tot dan staat onderaan « modifications non enregistrées »."
+     },
+     "critique": false,
+     "photo": "cat-page.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "L’aperçu de la page",
+      "nl": "De voorvertoning van de pagina"
+     },
+     "texte": {
+      "fr": "À gauche de chaque page, son aperçu : composé avec les produits, leurs photos et leurs prix du webshop, il suit chaque réglage.\nUn toucher l’agrandit, avec les autres pages de la même catégorie ; « Fermer », ou un toucher à côté, le referme.\nSous les pages, deux messages possibles : une catégorie choisie « n’a pas de page à elle » (ses produits vont en « Notre sélection ») ; « N produits choisis sans place » : ajouter 2 pages, prendre une mise en page plus dense, une page « Notre sélection », ou répartir automatiquement.",
+      "nl": "Links van elke pagina staat haar voorvertoning: samengesteld met de producten, hun foto’s en hun webshopprijzen, volgt ze elke instelling.\nEen tik vergroot ze, samen met de andere pagina’s van dezelfde categorie; « Fermer », of een tik ernaast, sluit ze weer.\nOnder de pagina’s kunnen twee berichten staan: een gekozen categorie « n’a pas de page à elle » (haar producten gaan naar « Notre sélection »); « N produits choisis sans place »: 2 pagina’s toevoegen, een dichtere opmaak kiezen, een pagina « Notre sélection », of automatisch verdelen."
+     },
+     "critique": false,
+     "photo": "cat-apercu.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Étape 4 · La validation",
+    "nl": "Stap 4 · De validatie"
+   },
+   "etapes": [
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Les points à voir",
+      "nl": "De punten om na te kijken"
+     },
+     "texte": {
+      "fr": "Le catalogue est composé tel qu’il s’imprimera, puis vérifié point par point, en FR ou en NL ; la jauge compte les points vus.\n« ! » à corriger : par exemple une page sans produit, qui s’imprimerait vide. « Ouvrir la page › » la montre ; « Passer à 8 pages » retire les pages en trop ; sinon, la correction se fait à l’étape 3.\n« ? » à confirmer : la disponibilité imprimée en pied de page (« ✓ C’est juste », ou « Modifier », qui ramène à l’étape 3) ; une promotion imprimée avec ses dates (« ✓ Dates vues » si elle sera encore valable à la distribution, « La retirer » sinon).\n« ✓ » vérifié : rien à faire (les prix, les pages de la marque). « Réglé par la marque » : rien à faire non plus, la marque est prévenue.\nImprimer reste possible avec des points ouverts : ils sont rappelés au moment du PDF.",
+      "nl": "De catalogus wordt samengesteld zoals hij gedrukt zal worden en daarna punt per punt nagekeken, in het FR of het NL; de meter telt de bekeken punten.\n« ! » te verbeteren: bijvoorbeeld een pagina zonder product, die leeg gedrukt zou worden. « Ouvrir la page › » toont ze; « Passer à 8 pages » schrapt de overbodige pagina’s; anders gebeurt de verbetering in stap 3.\n« ? » te bevestigen: de beschikbaarheid onderaan de pagina (« ✓ C’est juste », of « Modifier », dat terugbrengt naar stap 3); een promotie die met haar data gedrukt wordt (« ✓ Dates vues » als ze bij de verspreiding nog geldt, anders « La retirer »).\n« ✓ » nagekeken: niets te doen (de prijzen, de pagina’s van het merk). « Réglé par la marque »: ook niets te doen, het merk is verwittigd.\nDrukken blijft mogelijk met open punten: ze worden bij de pdf herhaald."
+     },
+     "critique": true,
+     "photo": "cat-verifs.jpg",
+     "video": null
+    },
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Les pages, puis « Valider mon catalogue »",
+      "nl": "De pagina’s, daarna « Valider mon catalogue »"
+     },
+     "texte": {
+      "fr": "À droite : toutes les pages, avec leurs points (! ou ?). Un toucher ouvre une page en grand, telle qu’elle s’imprimera.\nLes prix sont ceux du webshop au moment de la vérification et du PDF.\n« Valider mon catalogue › » : le catalogue passe en « PDF prêt » et l’assistant ouvre l’export.\nSur les photos, le catalogue est un brouillon en cours : ses points « ! » et « ? » sont les siens.",
+      "nl": "Rechts: alle pagina’s, met hun punten (! of ?). Een tik opent een pagina in het groot, zoals ze gedrukt zal worden.\nDe prijzen zijn die van de webshop op het moment van de controle en van de pdf.\n« Valider mon catalogue › »: de catalogus gaat naar « PDF prêt » en de assistent opent de export.\nOp de foto’s is de catalogus een ontwerp in wording: de punten « ! » en « ? » zijn de zijne."
+     },
+     "critique": false,
+     "photo": "cat-pages.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Étape 5 · Imprimer et diffuser",
+    "nl": "Stap 5 · Drukken en verspreiden"
+   },
+   "etapes": [
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Imprimer",
+      "nl": "Drukken"
+     },
+     "texte": {
+      "fr": "« Chez un imprimeur » : le PDF imprimeur, fond perdu de 3 mm et traits de coupe, à envoyer à l’imprimeur.\n« Sur mon imprimante » : feuilles A4 recto verso, deux pages par face, à plier en livret A5 ; pour une petite quantité (catalogue A5 seulement).\nMon impression : le format, la langue (FR + NL = deux fichiers, un par langue), la quantité. À droite, « Mon fichier » et les points restés ouverts.\n« Télécharger le PDF imprimeur » : le PDF s’ouvre dans un nouvel onglet (autoriser les fenêtres du dashboard), aux prix du webshop lus à ce moment ; choisir « Enregistrer au format PDF ». Le lien vaut 48 heures.\nUne fois imprimé : « Marquer imprimé · N ex. » note la quantité (état « Imprimé · N ex. ») et garde les pages de la marque telles qu’imprimées.",
+      "nl": "« Chez un imprimeur »: de drukkers-pdf, 3 mm afloop en snijtekens, om naar de drukker te sturen.\n« Sur mon imprimante »: A4-vellen recto verso, twee pagina’s per zijde, te plooien tot een A5-boekje; voor een kleine oplage (alleen een A5-catalogus).\nMon impression: het formaat, de taal (FR + NL = twee bestanden, één per taal), de oplage. Rechts « Mon fichier » en de punten die open bleven.\n« Télécharger le PDF imprimeur »: de pdf opent in een nieuw tabblad (vensters van het dashboard toestaan), aan de webshopprijzen van dat moment; kies « Opslaan als pdf ». De link geldt 48 uur.\nEens gedrukt: « Marquer imprimé · N ex. » noteert de oplage (status « Imprimé · N ex. ») en houdt de pagina’s van het merk zoals ze gedrukt zijn."
+     },
+     "critique": false,
+     "photo": "cat-imprimer.jpg",
+     "video": null
+    },
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Diffuser : QR code, PDF léger, affiche",
+      "nl": "Verspreiden: QR-code, lichte pdf, affiche"
+     },
+     "texte": {
+      "fr": "QR code du catalogue : scanné, il ouvre le catalogue en ligne, toujours dans sa dernière version. « Télécharger le QR (PNG) », « Copier le lien ». Sur la photo, un lien d’exemple.\n« Nouveau lien » remplace l’ancien : les QR déjà imprimés (affiches, catalogues distribués) ne mènent plus au catalogue.\nPDF à partager : un PDF léger, sans traits de coupe, pour WhatsApp, un e-mail ou Facebook ; « Partager… ».\nAffiche en magasin, pour la vitrine ou le comptoir : A4 ou A3, un titre au choix (sur la photo « Nos bûches de Noël »), l’illustration de la couverture et le QR.\n« Reprendre mon catalogue » : revenir aux produits, à la mise en page, en commencer un nouveau, ou revérifier quand les prix ont changé.",
+      "nl": "QR-code van de catalogus: gescand opent hij de online catalogus, altijd in de laatste versie. « Télécharger le QR (PNG) », « Copier le lien ». Op de foto een voorbeeldlink.\n« Nouveau lien » vervangt de oude: de al gedrukte QR-codes (affiches, verspreide catalogi) leiden niet meer naar de catalogus.\nPDF à partager: een lichte pdf, zonder snijtekens, voor WhatsApp, een e-mail of Facebook; « Partager… ».\nAffiche in de winkel, voor de etalage of de toonbank: A4 of A3, een titel naar keuze (op de foto « Nos bûches de Noël »), de illustratie van de cover en de QR.\n« Reprendre mon catalogue »: terug naar de producten, naar de opmaak, een nieuwe beginnen, of opnieuw nakijken als de prijzen veranderd zijn."
+     },
+     "critique": true,
+     "photo": "cat-diffuser.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Quatre pages sont celles de la marque (la couverture, la page 2, l’avant-dernière et la dernière) : elles ne se modifient pas.",
+   "nl": "Vier pagina’s zijn die van het merk (de cover, pagina 2, de voorlaatste en de laatste): ze zijn niet te wijzigen."
+  },
+  {
+   "fr": "Seuls les produits du webshop de la boutique entrent au catalogue, à ses prix ; chaque PDF reprend les prix du webshop au moment où il est téléchargé.",
+   "nl": "Alleen de producten van de webshop van de winkel komen in de catalogus, aan haar prijzen; elke pdf neemt de webshopprijzen van het moment waarop hij gedownload wordt."
+  },
+  {
+   "fr": "Une page sans produit s’imprime vide : régler les « ! » de la validation avant d’imprimer.",
+   "nl": "Een pagina zonder product wordt leeg gedrukt: los de « ! » van de validatie op voor je drukt."
+  },
+  {
+   "fr": "« Nouveau lien » rend inutilisables les QR codes déjà imprimés.",
+   "nl": "« Nouveau lien » maakt de al gedrukte QR-codes onbruikbaar."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "On veut retirer deux pages, mais « − 2 pages » est refusé. Pourquoi ?",
+    "nl": "Je wilt twee pagina’s schrappen, maar « − 2 pages » wordt geweigerd. Waarom?"
+   },
+   "choix": {
+    "fr": [
+     "Les pages de la marque ne se retirent pas",
+     "Une des pages à retirer porte des produits : il faut répartir sur moins de pages",
+     "Un catalogue a toujours 16 pages"
+    ],
+    "nl": [
+     "De pagina’s van het merk zijn niet te schrappen",
+     "Een van de te schrappen pagina’s draagt producten: je moet over minder pagina’s verdelen",
+     "Een catalogus heeft altijd 16 pagina’s"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Les prix du webshop ont changé après la création du catalogue. Que faut-il faire ?",
+    "nl": "De webshopprijzen zijn veranderd na het maken van de catalogus. Wat moet je doen?"
+   },
+   "choix": {
+    "fr": [
+     "Recréer le catalogue",
+     "Rien : le prochain PDF reprend les prix du webshop, et la validation les montre",
+     "Corriger les prix à l’étape 2"
+    ],
+    "nl": [
+     "De catalogus opnieuw maken",
+     "Niets: de volgende pdf neemt de webshopprijzen, en de validatie toont ze",
+     "De prijzen in stap 2 verbeteren"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Que se passe-t-il quand on clique « Nouveau lien » à l’étape 5 ?",
+    "nl": "Wat gebeurt er als je in stap 5 op « Nouveau lien » klikt?"
+   },
+   "choix": {
+    "fr": [
+     "Les QR codes déjà imprimés ne mènent plus au catalogue",
+     "Le catalogue est supprimé",
+     "Le PDF imprimeur est envoyé à l’imprimeur"
+    ],
+    "nl": [
+     "De al gedrukte QR-codes leiden niet meer naar de catalogus",
+     "De catalogus wordt verwijderd",
+     "De drukkers-pdf wordt naar de drukker gestuurd"
+    ]
+   },
+   "bonne": 0
+  }
+ ]
+}

@@ -4,6 +4,7 @@
 |---|---|
 | `art-pil-01.json` | **ART-PIL-01**, Article du manuel « Comprendre le dashboard magasin » — FO-05, pré-ouverture (la compréhension) |
 | `sop-pil-01.json` | **SOP-PIL-01**, SOP « Analyser le dashboard magasin : la routine » — FO-05, formation continue (l'utilisation), moment Ouverture |
+| `art-dash-catalogue.json` | **0.0.52**, Article « Le dashboard : l’onglet Mon catalogue » — rubrique 05, FO-05 et FO-45 ; photos `photos/cat-*.jpg`, prises par `tools/formation/captures_catalogue.js` (lecture seule) |
 | `photos/dash-*.jpg` | les captures du dashboard, 1600 × 1200 (le cadre 4:3 de la tablette), bloc décrit entouré en bordeaux — `tools/formation/captures_dashboard.js` |
 | `photos.json` | (écrit à l'encodage) empreinte de chaque photo → son nom au serveur `u/…` : une photo inchangée n'est pas renvoyée |
 | `ETAT.json` | le dernier commit du dashboard pris en compte, la date des captures, encodé ou non |

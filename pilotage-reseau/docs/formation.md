@@ -1064,3 +1064,23 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
      l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
   5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
      `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».
+
+## Article 0.0.52 « Le dashboard : l’onglet Mon catalogue » (17/11/2026)
+
+- Client : « intègre [le livret du catalogue] dans le manuel opératoire ». Le module Mon catalogue du dashboard magasin
+  (`public/dashboard/catalogue.js`, l'assistant en cinq étapes) entre dans la rubrique **05 « Le dashboard magasin,
+  onglet par onglet »**, à la suite de 0.0.34 → 0.0.49 : sous « Franchisé » dans l'onglet Manuel de la tablette.
+- **`art-dash-catalogue`**, code **0.0.52**, Article, accès `responsable`, partie Opérationnel (déduite) ; 6 sections,
+  14 étapes (13 photos ; « Un catalogue préparé par la marque » sans photo : la boutique 4 n'en avait pas), 4 points
+  critiques, quiz de 3 questions ; FR et NL (NL à relire). Classement : D7.1, phases pré-ouverture et formation
+  continue, P4 et P7 à P12, C-PILOTAGE.Vente, **FO-05** (comme toute la rubrique 05) et **FO-45** Animation commerciale
+  & saisons (le catalogue de saison).
+- **Source** : `data/formation/dashboard/art-dash-catalogue.json` ; photos `photos/cat-*.jpg` (1600 × 1200, le bloc décrit
+  entouré en bordeaux), prises par `tools/formation/captures_catalogue.js` sur le dashboard en ligne, boutique 4,
+  **en lecture seule** (toute requête autre qu'un GET refusée sur place, lien du catalogue en ligne remplacé par un
+  lien d'exemple) ; encodées par `tools/formation/encoder_sop.py`.
+- **Journal** : 17/11/2026 — v1.0 « à valider » ; v1.1 le même jour : le catalogue « Mes Buches » de la boutique a été
+  rempli entre-temps (10 pages) et l'étape 3 a changé (la mise en page en une rangée de dessins, « 1 par largeur »,
+  « 2 par largeur »… ; plus de choix de l'en-tête) : photos refaites, la validation cite « Disponibilité en pied de
+  page » (« ✓ C’est juste » · « Modifier »).
+- Le même contenu existe en livret A4 imprimable : `docs/guides/catalogue/livret-catalogue.pdf`.

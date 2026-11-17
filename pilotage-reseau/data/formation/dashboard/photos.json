@@ -1,4 +1,56 @@
 {
+ "cat-apercu.jpg": {
+  "sha": "d1410b811d54405c6fb4ed93c1b854412ee4691224bedbda9c89c5ff12d3e1b7",
+  "u": "u/20261117-62fa6a9e9244.jpg"
+ },
+ "cat-diffuser.jpg": {
+  "sha": "f188ddd2acf085ec33bc24a9320f7226dfa5e7592231119895676e0f8b25b9a1",
+  "u": "u/20261117-84c1010bcc1b.jpg"
+ },
+ "cat-etapes.jpg": {
+  "sha": "b961c0e7f5306994d507eeff39a530019ed750c6b8a69ea4d7b6916e0b26b018",
+  "u": "u/20261117-19f8ae5a5178.jpg"
+ },
+ "cat-gammes.jpg": {
+  "sha": "ef6af3a91443a152ab254ea7948a35ca3b8aa88cdceb7783ab5b62f1713771f5",
+  "u": "u/20261117-5f41485b28dc.jpg"
+ },
+ "cat-imprimer.jpg": {
+  "sha": "757a4c6a19fbdad4018efcf928acccca12269fab626261768dde626a5ac6f5a9",
+  "u": "u/20261117-1eb51eac8aaa.jpg"
+ },
+ "cat-liste.jpg": {
+  "sha": "3bd3a3b458d3d9b0d94feeed8ba815778dc046a97102b4ddd8b80251a4cc49ec",
+  "u": "u/20261117-add2cc83d887.jpg"
+ },
+ "cat-nouveau.jpg": {
+  "sha": "e1b017ea1cd3df71126c56a1a853ca727700a7aa62d9e256ca3c88111f1f5bc6",
+  "u": "u/20261117-3a4256bee818.jpg"
+ },
+ "cat-page.jpg": {
+  "sha": "6f7d3711cf59714021b0bed46134dfe91121513be084d75a591d8323acaeaec6",
+  "u": "u/20261117-e0fa2b233c11.jpg"
+ },
+ "cat-pages.jpg": {
+  "sha": "1d4a7cd1dbee4f1fe01b2539a853e67777426739e586090a47bd583ba328bb09",
+  "u": "u/20261117-8ff41f217e5f.jpg"
+ },
+ "cat-produits.jpg": {
+  "sha": "6dc72a3234a206e986c8e80383d328b149ae6c2ccb18d003e55edab36f6d303f",
+  "u": "u/20261117-8f13a981940f.jpg"
+ },
+ "cat-promos.jpg": {
+  "sha": "d9b32af356c6d1c3599abb0d1a8a3f01d6f1e866eaf29b1dc74966c1c9d173f6",
+  "u": "u/20261117-c23153170bda.jpg"
+ },
+ "cat-reglages.jpg": {
+  "sha": "2da524964b3f8755d0523c816b91849b0a96e58ba883087cb3422ab9525d6633",
+  "u": "u/20261117-599b03aff15e.jpg"
+ },
+ "cat-verifs.jpg": {
+  "sha": "6fc11531140459f0f0cc7d370aff3be90e5f5d92fe9e5da8bc30eb300e5872a3",
+  "u": "u/20261117-8f3f1ce6664a.jpg"
+ },
  "dash-annee.jpg": {
   "sha": "472222eea850c8a1cecca3dc22df9716e59fd414250eec46a3c4899909919d5b",
   "u": "u/20261107-336efdb12ce7.jpg"

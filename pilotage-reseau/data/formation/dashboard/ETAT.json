@@ -8,7 +8,14 @@
  "encodeLe": "2026-11-07",
  "versions": {
   "art-pil-01": "1.2",
-  "sop-pil-01": "1.1"
+  "sop-pil-01": "1.1",
+  "art-dash-catalogue": "1.1"
  },
- "acces": "responsable (07/11/2026 : Manuel, cadenas or, PIN du responsable, 1111 provisoire)"
+ "acces": "responsable (07/11/2026 : Manuel, cadenas or, PIN du responsable, 1111 provisoire)",
+ "catalogue": {
+  "capturesLe": "2026-11-17",
+  "capturesMagasin": "4",
+  "encodeLe": "2026-11-17",
+  "note": "17/11/2026 : 0.0.52 « Le dashboard : l’onglet Mon catalogue », rubrique 05, réservé au responsable ; v1.1 : captures sur le catalogue rempli (10 pages), étape 3 en dessins. NL à relire."
+ }
 }
