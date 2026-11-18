@@ -1,0 +1,166 @@
+/* ==========================================================================
+   Fidelity — habillage « Claude Design » (handoff Bingo + Points, 18/11/2026)
+   Chargé APRÈS loyalty-wizard.css et loyalty-overview.css, sur les seules pages
+   body.loyalty-wizard-page et body.loyalty-overview-page.
+   Il ne change ni le balisage, ni les champs, ni les data-* : uniquement l'apparence.
+   Jetons : ceux de franchise-ui/tokens.css (--fb-primary rubis, --fb-secondary abricot,
+   --fb-bg beige, --fb-soft beige clair). Polices : FB Gotham, FB Vank, FB Playwrite.
+   ========================================================================== */
+@font-face{font-family:'FB Playwrite';src:url('../fonts/franchise-ui/PlaywriteDEVA-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+/* Sans repli (demande du 18/11/2026) : tokens.css limite FB Vank à l'ASCII (unicode-range), les accents tombaient en
+   Gotham ; Gotham_Regular_New n'a ni « € » ni « × ». Ici : Vank complet (il dessine ses accents) et Gotham_Medium
+   (accents, €, × compris) à une seule graisse, sans gras simulé. */
+@font-face{font-family:'FB Vank Plein';src:url('../fonts/franchise-ui/GC_Vank.ttf') format('truetype');font-display:swap}
+@font-face{font-family:'FB Gotham Plein';src:url('../fonts/franchise-ui/Gotham_Medium.otf') format('opentype');font-weight:100 900;font-display:swap}
+
+body.loyalty-wizard-page,body.loyalty-overview-page{
+  --fb-font:'FB Gotham Plein',Arial,sans-serif;--fb-display:'FB Vank Plein','FB Gotham Plein',Arial,sans-serif;
+  --cd-rubis:var(--fb-primary,#8d1d2c);--cd-abricot:var(--fb-secondary,#f2c9a0);--cd-beige:var(--fb-bg,#eae4dc);--cd-soft:var(--fb-soft,#f4efe8);
+  --cd-text:#222;--cd-muted:#666;--cd-line:rgba(34,34,34,.10);--cd-line2:rgba(34,34,34,.18);
+  --cd-rose:color-mix(in srgb,var(--cd-rubis) 12%,#fff);--cd-fete:color-mix(in srgb,var(--cd-abricot) 42%,#fff);
+  --cd-script:'FB Playwrite',cursive;
+  background:var(--cd-beige)!important;color:var(--cd-text)}
+
+/* ── Titres de page ─────────────────────────────────────────────────────── */
+body.loyalty-wizard-page .page-heading h3,body.loyalty-overview-page .page-heading h3{font:400 36px/1.05 var(--fb-display);color:var(--cd-rubis)}
+body.loyalty-overview-page .page-heading p{color:var(--cd-muted);font-size:13px}
+.lw-breadcrumb{color:var(--cd-muted)}.lw-breadcrumb span:last-child{color:var(--cd-rubis)}
+
+/* ── Assistant : étapes, panneaux, champs ───────────────────────────────── */
+#loyalty-wizard{--lw-burgundy:var(--cd-rubis);--lw-border:var(--cd-line2);color:var(--cd-text);font-size:12.5px}
+.lw-steps:before{background:#d6cbbd}
+.lw-steps button{color:var(--cd-muted);font:400 12px var(--fb-font)}
+.lw-step-number{background:#d6cec4;color:#fff;border:3px solid var(--cd-beige)}
+.lw-steps [aria-current=step]{color:var(--cd-rubis)}
+.lw-steps .is-complete{color:var(--cd-text)}
+.lw-steps .is-complete .lw-step-number{background:var(--cd-abricot);color:var(--cd-rubis)}
+.lw-panel{border:1px solid var(--cd-line);border-radius:12px;box-shadow:none;padding:20px 22px}
+body.loyalty-wizard-page .lw-panel h2{font:400 22px/1.15 var(--fb-display);color:var(--cd-text)}
+.lw-panel>p{color:var(--cd-muted)}
+.lw-field>label{font-weight:400}
+.lw-required{color:var(--cd-rubis)}
+#loyalty-wizard .form-control,#loyalty-wizard .form-select{border:1px solid var(--cd-line2);border-radius:6px;min-height:34px;font:400 12.5px/1.5 var(--fb-font);box-shadow:none}
+#loyalty-wizard input[type=number].form-control{background:var(--cd-soft);border-color:var(--cd-line);color:var(--cd-rubis)}
+#loyalty-wizard input[readonly],#loyalty-wizard select:disabled{background:var(--cd-soft);color:#6f665c}
+#loyalty-wizard .form-control:focus,#loyalty-wizard .form-select:focus{border-color:var(--cd-rubis);box-shadow:0 0 0 2px var(--cd-rose)}
+.lw-field small{color:var(--cd-muted)}
+.lw-chip,.lw-count{background:var(--cd-soft)}
+.lw-products th{background:var(--cd-soft);color:var(--cd-muted);font-weight:400;text-transform:uppercase;letter-spacing:.06em}
+.lw-products tr.is-selected{background:#fbf6f0}
+.lw-table-wrap,.lw-shop-menu summary,.lw-shop-menu[open]{border-color:var(--cd-line2)}
+.lw-advanced{border-top-color:var(--cd-line)}
+body.loyalty-wizard-page .lw-earning-picker{border-top-color:var(--cd-line)}
+body.loyalty-wizard-page .lw-earning-picker>label{font-weight:400}
+body.loyalty-wizard-page .lw-earning-list{border-color:var(--cd-line)}
+body.loyalty-wizard-page .lw-earning-option:has(input:checked){background:#fbf6f0}
+body.loyalty-wizard-page .lw-earning-result{background:var(--cd-soft)}
+body.loyalty-wizard-page .lw-earning-result h3{font:400 20px var(--fb-display);color:var(--cd-rubis)}
+
+/* ── Carte à points (points.twig) ───────────────────────────────────────── */
+/* « Type de carte » : les deux cases deviennent les deux moteurs du handoff. */
+#loyalty-points>.lw-grid:first-of-type{gap:14px;margin-bottom:8px}
+#loyalty-points>.lw-grid:first-of-type>label{display:flex;align-items:center;gap:10px;min-height:66px;border:1px solid var(--cd-rubis);border-radius:10px;padding:14px 18px;
+  font:400 22px/1 var(--fb-display);text-transform:uppercase;color:var(--cd-rubis);background:#fff;cursor:pointer}
+#loyalty-points>.lw-grid:first-of-type>label:has(input:checked){background:var(--cd-rubis);color:#fff}
+#loyalty-points>.lw-grid:first-of-type>label:has(input:checked) input{accent-color:#fff}
+#loyalty-points>fieldset>legend{font:400 22px/1.15 var(--fb-display);color:var(--cd-text);margin:14px 0 4px}
+.lp-row legend{font:400 10.5px/1.4 var(--fb-font);color:var(--cd-muted);margin-bottom:4px}
+#loyalty-points h3{font:400 11px/1.4 var(--fb-font)!important;letter-spacing:.12em;text-transform:uppercase;color:var(--cd-rubis);margin:20px 0 8px}
+#loyalty-points fieldset>p,#loyalty-points [data-point-simulator]>p{color:var(--cd-muted);font-size:12px}
+#loyalty-points label{font-weight:400}
+.lp-row{border:1px solid var(--cd-line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff}
+#loyalty-points .btn{border-radius:6px}
+[data-point-simulator]{background:var(--cd-soft);border-radius:10px;padding:14px 16px;margin-top:16px}
+[data-point-simulator] h3{margin-top:0!important}
+[data-sim-result]{font:400 11px ui-monospace,Menlo,monospace;color:var(--cd-rubis);margin-top:10px}
+[data-points-preview]{background:var(--cd-soft);border-radius:12px;padding:14px}
+[data-points-preview] h3{font:400 30px/1 var(--fb-display);color:var(--cd-rubis);text-transform:uppercase;margin:0 0 4px}
+.lp-board{gap:4px}
+.lp-board span{border:0;border-radius:6px;background:var(--cd-beige);color:var(--cd-muted);font-size:10px}
+.lp-board .is-earned{background:var(--cd-rose);color:var(--cd-rubis)}
+[data-preview-tabs]{display:flex;gap:2px;background:var(--cd-soft);border:1px solid var(--cd-line);border-radius:8px;padding:3px;margin-bottom:12px}
+[data-preview-tabs] .btn{flex:1;border:0;border-radius:6px;background:transparent;color:var(--cd-muted)}
+[data-preview-tabs] .btn[aria-pressed=true]{background:#fff;color:var(--cd-rubis);box-shadow:0 1px 2px rgba(34,34,34,.12)}
+
+/* Sociétés liées (points.twig, data-point-offices) */
+.lp-offices{display:flex;flex-direction:column;gap:6px}
+.lp-office{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--cd-line);border-radius:8px;padding:9px 12px;background:#fff;cursor:pointer}
+.lp-office:has(input:checked){border-color:var(--cd-rubis);background:#fbf6f0}
+.lp-office strong{display:block;font-weight:400}
+.lp-office small{display:block;color:var(--cd-muted);font-size:11px}
+.lp-office-meta{font-size:11px;color:var(--cd-muted);white-space:nowrap}
+.lp-office-send{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.lp-office-send label{display:flex;gap:8px;align-items:center;border:1px solid var(--cd-line2);border-radius:8px;padding:8px 12px;background:#fff;cursor:pointer}
+.lp-office-send label:has(input:checked){border-color:var(--cd-rubis);color:var(--cd-rubis);background:var(--cd-rose)}
+
+/* ── Aperçu de la carte : la carte imprimée du handoff ──────────────────── */
+.lw-card-preview{background-image:none!important;background-color:var(--card-tint,#f4efe8);border:1px solid var(--cd-line);border-radius:10px;box-shadow:none;text-align:left;color:var(--cd-text);padding:20px!important}
+.lw-preview-logo{width:auto!important;height:56px!important;max-width:160px;margin:0 0 8px!important;object-fit:contain;mix-blend-mode:multiply}
+body.loyalty-wizard-page .lw-card-preview h3,.ll-page .lw-card-preview h3{font:400 44px/.95 var(--fb-display)!important;color:var(--card-fill,#8d1d2c)!important;text-transform:uppercase;margin:4px 0 6px!important}
+.lw-card-tagline{font-size:9px!important;letter-spacing:.12em!important;color:var(--card-fill,#8d1d2c)!important}
+.lw-stamps{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:transparent;border:0;margin:14px 0!important}
+.lw-stamp{position:relative;aspect-ratio:auto!important;min-height:66px;border:0!important;border-radius:0!important;background:#fff center 62%/32px no-repeat;
+  display:flex!important;align-items:flex-start;justify-content:flex-start;place-items:start!important;padding:4px 6px;outline:1.2px solid var(--card-fill,#8d1d2c);outline-offset:-.6px;font:400 13px/1 var(--fb-display)!important;color:var(--card-fill,#8d1d2c)!important}
+.lw-stamp:nth-child(13n+1){background-image:url('../images/fidelity/ill/croissant.png')}
+.lw-stamp:nth-child(13n+2){background-image:url('../images/fidelity/ill/bread-1.png')}
+.lw-stamp:nth-child(13n+3){background-image:url('../images/fidelity/ill/cake-slice.png')}
+.lw-stamp:nth-child(13n+4){background-image:url('../images/fidelity/ill/chocolat.png')}
+.lw-stamp:nth-child(13n+5){background-image:url('../images/fidelity/ill/cookies.png')}
+.lw-stamp:nth-child(13n+6){background-image:url('../images/fidelity/ill/tartelette.png')}
+.lw-stamp:nth-child(13n+7){background-image:url('../images/fidelity/ill/bread-2.png')}
+.lw-stamp:nth-child(13n+8){background-image:url('../images/fidelity/ill/cupcake.png')}
+.lw-stamp:nth-child(13n+9){background-image:url('../images/fidelity/ill/crepes.png')}
+.lw-stamp:nth-child(13n+10){background-image:url('../images/fidelity/ill/tarte.png')}
+.lw-stamp:nth-child(13n+11){background-image:url('../images/fidelity/ill/galette.png')}
+.lw-stamp:nth-child(13n+12){background-image:url('../images/fidelity/ill/cake.png')}
+.lw-stamp:nth-child(13n+13){background-image:url('../images/fidelity/ill/hiver.png')}
+.lw-stamp.filled{background-color:color-mix(in srgb,var(--card-accent,#f2c9a0) 42%,#fff)!important;border:0!important}
+.lw-stamp.filled .lw-croissant{position:absolute;left:50%;top:52%;width:34px;height:34px;margin:-17px 0 0 -17px;mask:none!important;-webkit-mask:none!important;background:rgba(255,255,255,.75)!important;
+  border:1.6px solid var(--card-fill,#8d1d2c);border-radius:50%;transform:rotate(-14deg)}
+.lw-stamp.filled .lw-croissant::after{content:'✓';display:grid;place-items:center;height:100%;font:400 16px/1 var(--fb-font);color:var(--card-fill,#8d1d2c)}
+.lw-reward-band{position:relative;background:var(--card-fill,#8d1d2c)!important;color:#fff!important;border-radius:6px!important;margin:14px 0!important;padding:16px 18px!important;
+  font:400 20px/1.15 var(--fb-display)!important;text-transform:uppercase;outline:1.2px dashed var(--card-accent,#f2c9a0);outline-offset:-8px;justify-content:flex-start!important}
+.lw-reward-band::before,.lw-reward-band::after{content:'';position:absolute;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:var(--card-tint,#f4efe8)}
+.lw-reward-band::before{left:-8px}.lw-reward-band::after{right:-8px}
+.lw-reward-band .lw-croissant{color:#fff;width:40px;height:32px}
+.lw-thanks{font:400 13px/1.5 var(--cd-script)!important;color:var(--card-fill,#8d1d2c)!important;text-align:right}
+.lw-preview-caption{color:var(--cd-muted)}
+.lw-info{background:var(--cd-soft)!important;border:1px solid var(--cd-line)!important;color:#5d544b!important}
+.lw-info>span{color:var(--cd-rubis)}
+
+/* ── Barre d'actions ────────────────────────────────────────────────────── */
+.lw-actions{background:#fff;border-top:1px solid var(--cd-line);box-shadow:none}
+#loyalty-wizard .lw-actions .btn{border-radius:6px;font:400 12px var(--fb-font)}
+#loyalty-wizard .btn-primary,.lw-actions .btn-primary{background:var(--cd-rubis)!important;border-color:var(--cd-rubis)!important;border-radius:6px}
+#loyalty-wizard .btn-outline-secondary,#loyalty-wizard .btn-outline-primary{border-radius:6px;border-color:var(--cd-line2)}
+.lw-validation{color:var(--cd-rubis);background:var(--cd-rose)}
+
+/* ── Liste (overview.twig) ──────────────────────────────────────────────── */
+.ll-page{color:var(--cd-text)}
+.ll-notice{background:#fff;border:1px solid var(--cd-line);border-left:3px solid var(--cd-abricot);color:#5d544b}
+.ll-notice>.bi{color:var(--cd-rubis)}
+.ll-stats{border:1px solid var(--cd-line);border-radius:12px}
+.ll-stats>div+div{border-left-color:var(--cd-line)}
+.ll-stats>div>.bi{border-radius:10px;background:var(--cd-rose);color:var(--cd-rubis)}
+.ll-stats strong{font-weight:400}
+.ll-stats small{color:var(--cd-muted)}
+.ll-button{border-color:var(--cd-line2);border-radius:6px;font:400 12px/1.4 var(--fb-font)}
+.ll-button:hover{background:var(--cd-soft);border-color:var(--cd-rubis)}
+.ll-button.ll-primary{background:var(--cd-rubis);border-color:var(--cd-rubis)}
+.ll-button.ll-outline{border-color:var(--cd-rubis);color:var(--cd-rubis)!important}
+.ll-panel{border:1px solid var(--cd-line);border-radius:12px}
+.ll-page .ll-panel h2{font:400 24px/1.15 var(--fb-display);color:var(--cd-text)}
+.ll-panel>p{color:var(--cd-muted)}
+.ll-filters>label,.ll-table-wrap{border-color:var(--cd-line2)}
+.ll-table{color:#4b433b}
+.ll-table th{background:var(--cd-soft);color:var(--cd-muted);font-weight:400;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-bottom-color:var(--cd-line)}
+.ll-table td{border-bottom-color:var(--cd-line)}
+.ll-table td>strong{font-weight:400;color:var(--cd-text)}
+.ll-status{border-radius:6px}
+.ll-dialog{border:1px solid var(--cd-line);border-radius:14px;box-shadow:none;color:var(--cd-text)}
+.ll-page .ll-dialog h2{color:var(--cd-rubis)}
+.ll-card-details>section{border-color:var(--cd-line);border-radius:10px}
+body.loyalty-overview-page .ll-card-details h3{font:400 11px/1.4 var(--fb-font)!important;letter-spacing:.12em;text-transform:uppercase;color:var(--cd-rubis)}
+.ll-values strong{background:var(--cd-soft);border-color:transparent;font-weight:400}
+.ll-chips span{background:var(--cd-soft);border-radius:5px}
+.ll-card-grid>.lw-card-preview{justify-content:flex-start}
