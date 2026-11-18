@@ -8,7 +8,8 @@ Ce qui est codé :
 - **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas ;
 - **Opérationnel**, le 18/11/2026 : c'est l'étape 2. Voir « Opérationnel, codé » plus bas ;
 - **Exploitation et Semaine**, le 18/11/2026 : c'est l'étape 3. Voir « Exploitation et Semaine, codées » plus bas ;
-- **Contrôle, Tâches et Primes**, le 18/11/2026 : c'est l'étape 4. Voir « Contrôle, Tâches et Primes, codés » plus bas ;
+- **Contrôle, Tâches et Primes**, le 18/11/2026 : c'est l'étape 4. Voir « Contrôle, Tâches et Primes, codés » plus
+  bas. Contrôle et Tâches sont ceux des pull requests 150 et 151, fusionnées le même jour ;
 - **les feuilles**, le 18/11/2026 : c'est l'étape 5. Voir « Les feuilles, codées » plus bas.
 
 Les cinq étapes sont codées. Pas codée : la feuille « L'équipe du jour » de la maquette (`vues/equipe.png`). Elle
@@ -129,22 +130,19 @@ Le verdict d'Exploitation se calcule à part (`maVerdictDe`), avec les mêmes r�
 
 ## Contrôle, Tâches et Primes, codés (18/11/2026)
 
-Au téléphone seulement ; le bureau ne change pas, vérifié. Captures dans `code/` : `controle.png`, `taches.png`,
+Au téléphone seulement ; le bureau ne change pas. Captures dans `code/` : `controle.png`, `taches.png`,
 `primes.png`. L'API simulée ne donne pas d'images : les photos de Contrôle y sont « indisponibles ».
 
-- **Contrôle** (`cqMobCtrl`) :
-  - un héros : les photos rendues sur attendues, ce qui cloche en pastille (non-conformités, à noter, pas
-    rendues), le résumé du jour, et une barre : conformes, écarts, à noter, sans photo, pas rendues ;
-  - dessous, les photos en grille de deux, à la place de la bande qui défilait de côté. Chaque carte est la même
-    qu'avant : son cadre (obligatoire, facultative), son nom, son heure. Un appui l'ouvre en grand ;
-  - les deux boutons (réclamation, demande au bureau) ne changent pas.
-- **Tâches** (`tjHeros`, `rendTachesMag(true)`) :
-  - le titre et les quatre tuiles du haut cèdent la place à un héros : les tâches obligatoires faites sur
-    attendues, ce qui reste en pastille, les photos, la note de qualité, la barre d'avancement ;
-  - un lien vers les non-conformités des 30 jours, qui mène à la recherche, comme la tuile du bureau ;
-  - la bande de la semaine, le guide, la recherche et les checklists ne changent pas.
-- **Primes** : la ligne du haut devient un héros, celui du mois (l'acquis, « en cours » ou « mois clos ») ou celui
-  de l'année. Le reste ne change pas.
+**Contrôle et Tâches.** Une autre session les a refaits le même jour, et c'est fusionné : `samsam2703MFC/consultant_BO#150`
+(Tâches : la carte du jour ouvert) et `samsam2703MFC/consultant_BO#151` (Contrôle : la carte du jour en tête, les photos
+dessous, les deux boutons sur une ligne). Ces versions sont gardées. Les héros de Contrôle et de Tâches de cette
+refonte, qui disaient la même chose, sont retirés à la fusion. Le cadre de l'étape 1 s'y applique :
+- l'en-tête commun ;
+- la page entière qui défile ;
+- le saut vers la recherche des non-conformités, qui s'arrête sous l'en-tête.
+
+**Primes.** La ligne du haut devient un héros : celui du mois (l'acquis, « en cours » ou « mois clos ») ou celui
+de l'année. Le reste ne change pas.
 
 ## Les feuilles, codées (18/11/2026)
 
