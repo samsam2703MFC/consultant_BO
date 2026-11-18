@@ -74,16 +74,34 @@ régulière du 17/11/2026, Loic V. : **les chiffres « lus tout seuls », les ve
 
 Régénérer : `node docs/maquettes/audit-outils-gestion/generer.js`
 
-## À trancher avant le code
+## Les choix faits à la mise en ligne
 
-1. « …commandes par le … » : la demande est coupée. La maquette a pris **les commandes fournisseurs passées par le
-   panel**. Si c'était autre chose (commandes par le site, par la centrale d'achat…), la ligne change.
-2. La place : en tête de 4 · Analyse (assis, à l'ordinateur), ou un septième temps à part.
-3. Le rappel dans chaque courriel de rapport, ou seulement quand un outil n'est pas suivi.
+La demande ne tranchait pas trois points ; « Push online » (18/11/2026) a validé les choix de la maquette :
+
+1. « …commandes par le … » : **les commandes fournisseurs passées par le panel**.
+2. La place : **en tête du temps 4 · Analyse**.
+3. Le rappel : **dans chaque courriel de rapport**, même sans audit à cette visite (le tableau des outils, lui, n'y est que
+   si l'audit a été fait).
 
 ## Statut
 
-**Maquette, pas codée.** À coder ensuite : l'étape dans `visites.js` (+ `visites-nl.js`), la colonne
-`con_visite.outils` (JSON) et son contrôle côté serveur, les lectures ci-dessus, le bloc et la variable `{outils}` du
-modèle « Rapport de visite » (`src/suivi.php`, quatre langues), le rapport PDF, la carte du bureau, la page du
-franchisé, les tests dans `php bin/tests_suivi.php`.
+**Codée et mise en ligne le 18/11/2026.**
+
+- **Tablette** : l'étape `outils` dans `public/assets/js/visites.js` (`OUTILS`, `chargerOutils`, `outilsHtml`,
+  `outilsManque`, `ogVerdict`, `ogDansPlan`, `outilsCorps`, le (i) `ogPopHtml`) ; traductions dans `visites-nl.js` ; la
+  ligne « Les outils de gestion » dans Réglages › Contrôle guidé (bloquante par défaut).
+- **Serveur** (`src/visites_outils.php`) : la liste, le contrôle de ce qu'envoie la tablette (`viOutils`), le score, le
+  rappel dans les quatre langues, la lecture `GET /visites/outils/{shop}`, la colonne `con_visite.outils` (JSON, ajoutée au
+  premier appel, cachée au franchisé tant que le rapport est un brouillon).
+- **Rapport** : le bloc dans le PDF et « Voir le rapport » (`suOutilsHtml`), le courriel (`{outils_titre}`, `{outils}`,
+  `{rappel}` dans le modèle « Rapport de visite », `suModeleAvecRappel` pour un modèle déjà réécrit), la carte du bureau
+  (`suivi-tpl.js`, `suivi-vals.js`, `app.css`), la page du franchisé (`public/suivi/`).
+- **Tests** : `php bin/tests_suivi.php`, section « Les outils de gestion ».
+
+| Capture du code | Ce que c'est |
+|---|---|
+| `d-tablette-codee.png` (`-page.png` : l'étape entière) | l'étape telle qu'elle est codée, remplie |
+| `d-tablette-codee-info.png` | le (i) ouvert |
+| `e-tablette-nl.png` | la même en néerlandais (Halle) |
+
+Elles sont faites par `capturer-tablette.js` : la tablette de la branche servie en local, l'API simulée, rien d'écrit.
