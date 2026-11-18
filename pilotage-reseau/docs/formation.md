@@ -1097,3 +1097,9 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - **Journal** : 18/11/2026 — v1.0 encodée « à valider » par `encoder_sop.py` (Sam : « encode l'article FO-41 pôle
   vente ») ; relue au serveur : code 0.0.54, classement, neuf photos servies. Le même jour, **publiée** (Sam : « publie 0.0.54 » ;
   `PATCH /formation/sop/fiche/art-fo41-vente {statut: publiee}`, relu) : quiz et « vu faire » ouverts.
+- **0.0.28 « Gestion financière avancée » (`art-fo-41`), v1.3 du 18/11/2026** (Sam : « corrige le 35 % dans l'article
+  0.0.28 ») : partie « La marge brute : 65 % en moyenne », « le budget, lui, compte 35 % de food cost » → **40 %**, la
+  cible unique du réseau depuis le 18/11/2026 (`foodCostCible()`, Catalogue des KPI), en FR et en NL. Version de
+  précision (personne ne repasse « à revoir ») ; rien d'autre ne change (quiz, remarques, photos identiques à la v1.2).
+  Inchangé, à décider : la partie « Un levier pour chaque poste » cite le modèle du réseau de l'annexe H (FO-34) — food
+  cost 35 %, masse salariale 25 %, frais généraux 28,3 %, environ 11,7 % de bénéfice.
