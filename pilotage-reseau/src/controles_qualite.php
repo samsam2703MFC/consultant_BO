@@ -88,6 +88,54 @@ function cqmTache(array $t): ?array
     ];
 }
 
+/** Le barème du réseau (réglage `signalement`) : le seuil de conformité et les niveaux, du meilleur au pire. */
+function cqmBareme(): array
+{
+    $sig = setting('signalement', []);
+    $niveaux = [];
+    foreach ((is_array($sig) && is_array($sig['niveaux'] ?? null)) ? $sig['niveaux'] : [] as $nv) {
+        if (isset($nv['n'])) { $niveaux[] = ['n' => (int) $nv['n'], 'nom' => (string) ($nv['nom'] ?? ''), 'couleur' => (string) ($nv['couleur'] ?? '')]; }
+    }
+    return ['seuil' => is_array($sig) && isset($sig['seuil']) ? (int) $sig['seuil'] : 4, 'niveaux' => $niveaux];
+}
+
+/** Les contrôles photo d'une réponse du panel (`/consultant/shops/{id}/tasks?date=`), gardés pour la journée. */
+function cqmGarder(int $sid, string $date, array $rep): array
+{
+    $taches = [];
+    foreach (PanelApi::liste($rep) as $t) { if (is_array($t) && ($x = cqmTache($t)) !== null) { $taches[] = $x; } }
+    $j = json_encode(['le' => time(), 't' => $taches], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    if (is_string($j)) { try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [cqmCle($sid, $date), $j]); } catch (Throwable $e) { /* sans garde */ } }
+    return $taches;
+}
+
+/**
+ * Les journées de contrôles photo demandées, [[id, date], …] : les journées gardées d'abord, les manquantes ensuite,
+ * lues quatre de front dans le budget, les plus récentes devant (c'est là que l'œil va d'abord).
+ * → ['jours' => [id => [date => tâches]], 'manque' => journées restant à lire, 'lus' => journées lues au panel].
+ */
+function cqmJournees(array $paires, int $budget = CQM_BUDGET): array
+{
+    $auj = date('Y-m-d');
+    $out = ['jours' => [], 'manque' => 0, 'lus' => 0];
+    $aLire = [];
+    foreach ($paires as [$id, $d]) {
+        $c = setting(cqmCle((int) $id, $d), null);
+        if (is_array($c) && isset($c['le'], $c['t']) && time() - (int) $c['le'] < cqmTtl($d, $auj)) { $out['jours'][(int) $id][$d] = $c['t']; continue; }
+        $aLire[$id . '|' . $d] = '/consultant/shops/' . $id . '/tasks?date=' . urlencode($d);
+    }
+    uksort($aLire, static fn ($a, $b) => strcmp(explode('|', $b)[1], explode('|', $a)[1]) ?: strcmp($a, $b));
+    $lot = array_slice($aLire, 0, max(0, $budget), true);
+    $out['manque'] = count($aLire) - count($lot);
+    foreach ($lot ? PanelApi::getParallele($lot) : [] as $k => $rep) {
+        [$id, $d] = explode('|', (string) $k);
+        if (!is_array($rep)) { $out['manque']++; continue; }   // pas de réponse : relue au prochain appel
+        $out['jours'][(int) $id][$d] = cqmGarder((int) $id, $d, $rep);
+        $out['lus']++;
+    }
+    return $out;
+}
+
 /**
  * GET /controles/qualite?m=YYYY-MM[&shop=ID] — les contrôles photo du mois, un par ligne, et leur
  * répartition au barème. `etat` d'une ligne : la note (1 à 5), sinon `a_noter` (photo rendue, pas
@@ -100,12 +148,7 @@ function ep_controles_qualite(): array
     if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = substr($auj, 0, 7); }
     $du = $m . '-01';
     $au = min(date('Y-m-t', strtotime($du)), $auj);
-    $sig = setting('signalement', []);
-    $niveaux = [];
-    foreach ((is_array($sig) && is_array($sig['niveaux'] ?? null)) ? $sig['niveaux'] : [] as $nv) {
-        if (isset($nv['n'])) { $niveaux[] = ['n' => (int) $nv['n'], 'nom' => (string) ($nv['nom'] ?? ''), 'couleur' => (string) ($nv['couleur'] ?? '')]; }
-    }
-    $seuil = is_array($sig) && isset($sig['seuil']) ? (int) $sig['seuil'] : 4;
+    ['seuil' => $seuil, 'niveaux' => $niveaux] = cqmBareme();
     $out = ['mois' => $m, 'du' => $du, 'au' => $au, 'seuil' => $seuil, 'niveaux' => $niveaux,
         'magasins' => [], 'lignes' => [], 'manque' => 0, 'lus' => 0, 'source' => 'API du panel, une lecture par magasin et par jour',
         'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
@@ -119,30 +162,14 @@ function ep_controles_qualite(): array
     if ($mags === []) { $out['api']['erreur'] = 'magasins illisibles'; return $out; }
 
     // Les journées gardées d'abord, les manquantes ensuite, lues quatre de front dans le budget.
-    $jours = [];
-    for ($t = strtotime($du); $t <= strtotime($au); $t = strtotime('+1 day', $t)) { $jours[] = date('Y-m-d', $t); }
-    $parJour = []; $aLire = [];
-    foreach ($mags as $id => $nom) {
-        foreach ($jours as $d) {
-            $c = setting(cqmCle($id, $d), null);
-            if (is_array($c) && isset($c['le'], $c['t']) && time() - (int) $c['le'] < cqmTtl($d, $auj)) { $parJour[$id][$d] = $c['t']; continue; }
-            $aLire[$id . '|' . $d] = '/consultant/shops/' . $id . '/tasks?date=' . urlencode($d);
-        }
+    $paires = [];
+    for ($t = strtotime($du); $t <= strtotime($au); $t = strtotime('+1 day', $t)) {
+        foreach (array_keys($mags) as $id) { $paires[] = [$id, date('Y-m-d', $t)]; }
     }
-    // Les journées récentes passent devant : c'est là que l'œil va d'abord.
-    uksort($aLire, static fn ($a, $b) => strcmp(explode('|', $b)[1], explode('|', $a)[1]) ?: strcmp($a, $b));
-    $lot = array_slice($aLire, 0, CQM_BUDGET, true);
-    $out['manque'] = count($aLire) - count($lot);
-    foreach ($lot ? PanelApi::getParallele($lot) : [] as $k => $rep) {
-        [$id, $d] = explode('|', (string) $k);
-        if (!is_array($rep)) { $out['manque']++; continue; }   // pas de réponse : relue au prochain appel
-        $taches = [];
-        foreach (PanelApi::liste($rep) as $t) { if (is_array($t) && ($x = cqmTache($t)) !== null) { $taches[] = $x; } }
-        $parJour[(int) $id][$d] = $taches;
-        $out['lus']++;
-        $j = json_encode(['le' => time(), 't' => $taches], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-        if (is_string($j)) { try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [cqmCle((int) $id, $d), $j]); } catch (Throwable $e) { /* sans garde */ } }
-    }
+    $L = cqmJournees($paires);
+    $parJour = $L['jours'];
+    $out['manque'] = $L['manque'];
+    $out['lus'] = $L['lus'];
     $out['api']['erreur'] = PanelApi::$lastError ?: null;
 
     foreach ($parJour as $id => $js) {
