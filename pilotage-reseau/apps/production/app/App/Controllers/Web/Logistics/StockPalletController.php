@@ -7,13 +7,14 @@ use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use Symfony\Component\HttpFoundation\Request;
 use App\Services\Logistics\StockPalletService;
+use App\Core\Api\Workshop\WorkshopConfig;
 
 /** [296] Stany i palety (makieta 53) : magazyn → palety → wysyłka, skład palety, śledzenie partii ; usunięcie palety [333]. */
 final class StockPalletController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private StockPalletService $stock) {}
+    public function __construct(private StockPalletService $stock, private WorkshopConfig $config) {}
 
     /** GET /logistics/stock?q=&pallet=&product=&made= (partia = produkt + dzień etykiety) */
     public function index()
@@ -31,7 +32,8 @@ final class StockPalletController extends BaseController
         // [327] Wysłane w osobnej zakładce : główny widok = magazyn → w budowie → gotowe.
         $data['tab'] = in_array($_GET['tab'] ?? '', ['shipped', 'expiring', 'general'], true) ? $_GET['tab'] : 'flow';
         // [334] Stan ogólny : stan − zamówione → zostaje po wysyłce, względem stanu maks.
-        if ($data['tab'] === 'general') $data['general'] = $this->stock->generalStock();
+        // Tryb MTS / MTO i stan maks. zapisywane przez API kart produktów (te same reguły i uprawnienia co strona Produkty).
+        if ($data['tab'] === 'general') $data += ['general' => $this->stock->generalStock(), 'api_base' => $this->config->webApiBase(ROOT), 'session_user' => (int) user('id')];
         $this->view('logistics/stock_pallets', $data);
     }
 

@@ -100,26 +100,42 @@ final class StockPalletService
      * stan − zamówione ; wskaźnik : zostaje względem stanu maks. produktu (karta produktu, stany w kartonach = sztuki ÷ ppc).
      * @return array{categories: list<array>, totals: array}
      */
+    /** Okno « sprzedane » w Stanie ogólnym : 6 ostatnich tygodni kroczących (WDT, jak przeliczenie stanów na kartach). */
+    public const SOLD_WEEKS = 6;
+
+    /**
+     * [334] Stan ogólny : stan − zamówione = zostaje po wysyłce. Tryb karty : na stan (MTS) — wskaźnik względem stanu maks.
+     * (bez maks. : « ustaw maks. ») ; na zamówienie (MTO) — tylko pokrycie zamówień, bez min. / maks. Sprzedane = kartony
+     * WDT z 6 ostatnich tygodni (bez dnia dzisiejszego), średnio na tydzień w podpowiedzi. Produkty MTS bez stanu też.
+     */
     public function generalStock(): array
     {
         $cats = [];
-        $tot = ['stock' => 0, 'ordered' => 0, 'pallet' => 0, 'left' => 0];
-        foreach ($this->repo->generalStock() as $r) {
+        $tot = ['stock' => 0, 'ordered' => 0, 'pallet' => 0, 'left' => 0, 'sold' => 0, 'mts' => 0, 'mto' => 0];
+        foreach ($this->repo->generalStock(self::SOLD_WEEKS * 7) as $r) {
             $ppc = (int) $r['ppc'];
             $stock = (int) $r['free'] + (int) $r['pallet'];
             $ordered = (int) round((float) $r['ordered']);
             $left = $stock - $ordered;
-            $max = $r['stock_max'] !== null && $ppc > 0 ? (int) round((float) $r['stock_max'] / $ppc) : null;
-            $min = $r['stock_min'] !== null && $ppc > 0 ? (int) round((float) $r['stock_min'] / $ppc) : null;
-            $row = ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'stock' => $stock, 'ordered' => $ordered, 'pallet' => (int) $r['pallet'],
-                'left' => $left, 'max' => $max ?: null, 'min' => $min,
+            $mts = $r['mode'] === 'MTS';
+            $max = $mts && $r['stock_max'] !== null && $ppc > 0 ? (int) round((float) $r['stock_max'] / $ppc) : null;
+            $min = $mts && $r['stock_min'] !== null && $ppc > 0 ? (int) round((float) $r['stock_min'] / $ppc) : null;
+            $sold = (int) round((float) $r['sold']);
+            $state = $left < 0 ? 'short' : (!$mts ? 'ok' : (!$max ? 'nomax' : ($left > $max ? 'over' : ($min !== null && $left < $min ? 'low' : 'ok'))));
+            $row = ['id' => (int) $r['id'], 'item_id' => $r['item_id'] !== null ? (int) $r['item_id'] : null, 'name' => (string) $r['name'], 'ppc' => $ppc ?: null,
+                'mode' => $mts ? 'MTS' : 'MTO', 'stock' => $stock, 'ordered' => $ordered, 'pallet' => (int) $r['pallet'],
+                'left' => $left, 'max' => $max ?: null, 'min' => $min, 'period' => $mts ? $r['stock_period'] : null,
+                'sold' => $sold, 'sold_week' => round($sold / self::SOLD_WEEKS, 1),
                 'pct' => $max ? (int) round(max(0, $left) / $max * 100) : null,
-                'state' => $left < 0 ? 'short' : ($max && $left > $max ? 'over' : ($min !== null && $left < $min ? 'low' : 'ok'))];
+                // Skala wskaźnika : MTS — stan maks. (i to, co go przekracza) ; MTO — stan albo zamówione.
+                'scale' => max($stock, $ordered, $max ?: 0, 1),
+                'state' => $state];
             $cats[$r['category']] ??= ['name' => (string) $r['category'], 'rows' => []];
             $cats[$r['category']]['rows'][] = $row;
-            foreach (['stock', 'ordered', 'pallet', 'left'] as $k) $tot[$k] += $row[$k];
+            foreach (['stock', 'ordered', 'pallet', 'left', 'sold'] as $k) $tot[$k] += $row[$k];
+            $tot[$mts ? 'mts' : 'mto']++;
         }
-        return ['categories' => array_values($cats), 'totals' => $tot];
+        return ['categories' => array_values($cats), 'totals' => $tot, 'sold_weeks' => self::SOLD_WEEKS];
     }
 
     /**
