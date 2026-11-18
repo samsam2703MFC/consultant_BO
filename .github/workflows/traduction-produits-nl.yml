@@ -1,12 +1,14 @@
-name: Traduction — noms des produits de l’ERP en néerlandais (flamand de Belgique)
+name: Traduction — noms de l’ERP en néerlandais (flamand de Belgique)
 
-# Sam, 18/11/2026 : « traduire tout le matériel en néerlandais (flamand de Belgique) » par PATCH /products/{id}/aliases.
-# La table pilotage-reseau/tools/traductions/produits_nl.tsv est déposée dans /tmp du serveur et appliquée par
-# tools/traduire_produits_nl.php avec les identifiants du serveur (compte consultant, sinon compte admin ERP).
-# Un nom néerlandais déjà saisi dans l'ERP n'est jamais écrasé ; relancer n'écrit que ce qui manque.
+# Sam, 18/11/2026 : « traduire tout le matériel en néerlandais (flamand de Belgique) » par les routes
+# /{ressource}/{id}/aliases ; « ok pour écrire, fais le tout ».
+# Les tables de pilotage-reseau/tools/traductions/ (produits, catégories de produits, groupes de catégories, matières
+# premières, catégories de matières) sont déposées dans /tmp du serveur et appliquées par tools/traduire_produits_nl.php
+# avec les identifiants du serveur (compte consultant, sinon compte admin ERP). Une table vide ne fait que lister ce
+# qui reste à traduire. Un nom néerlandais déjà saisi dans l'ERP n'est jamais écrasé ; relancer n'écrit que ce qui manque.
 #
 # Déclenchement : pousser un changement de pilotage-reseau/traduction-nl.trigger dans la branche ci-dessous (comme
-# deploy.trigger) — pousser la table ou le script seuls n'écrit rien. Ne déploie rien : le déploiement reste dans deploy.yml.
+# deploy.trigger) — pousser les tables ou le script seuls n'écrit rien. Ne déploie rien : le déploiement reste dans deploy.yml.
 
 on:
   push:
@@ -34,17 +36,19 @@ defaults:
 jobs:
   traduction:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Contrôler la syntaxe du script et la table
+      - name: Contrôler la syntaxe du script et les tables
         run: |
           php -l tools/traduire_produits_nl.php
           # Chaque ligne : identifiant numérique, une tabulation, un nom non vide.
-          if grep -vnP '^\d+\t\S.*$' tools/traductions/produits_nl.tsv; then echo "lignes invalides ci-dessus"; exit 1; fi
-          echo "$(wc -l < tools/traductions/produits_nl.tsv) lignes"
+          for t in tools/traductions/*.tsv; do
+            if grep -vnP '^\d+\t\S.*$' "$t"; then echo "lignes invalides ci-dessus dans $t"; exit 1; fi
+            echo "$t : $(wc -l < "$t") lignes"
+          done
 
       - name: Installer sshpass
         timeout-minutes: 4
@@ -58,11 +62,12 @@ jobs:
           }
           sshpass -V | head -1
 
-      - name: Déposer la table dans /tmp du serveur
+      - name: Déposer les tables dans /tmp du serveur
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
-          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" tools/traductions/produits_nl.tsv "${SSH_USER}@${SSH_HOST}:/tmp/traductions_produits_nl.tsv"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -rf /tmp/traductions_nl && mkdir -p /tmp/traductions_nl"
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" tools/traductions/*.tsv "${SSH_USER}@${SSH_HOST}:/tmp/traductions_nl/"
 
       - name: Écrire les noms néerlandais dans l’ERP, puis relire
         env:
@@ -70,7 +75,7 @@ jobs:
         run: |
           set +e
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "php -- '${TARGET_DIR}' /tmp/traductions_produits_nl.tsv" < tools/traduire_produits_nl.php
+            "php -- '${TARGET_DIR}' /tmp/traductions_nl" < tools/traduire_produits_nl.php
           rc=$?
-          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -f /tmp/traductions_produits_nl.tsv"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -rf /tmp/traductions_nl"
           exit $rc
