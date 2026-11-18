@@ -39,6 +39,8 @@ const AIV_QUESTIONS = [
         ['Les prix', ['Où suis-je plus cher que mes concurrents ?', 'Quel prix adapter sur la viennoiserie ?', 'Mon croissant face aux boulangeries proches ?']],
         ['Les bundles', ['Quel bundle pour le petit-déjeuner ?', 'Quel bundle pour faire découvrir mes points faibles ?', 'Mes bundles en cours marchent-ils ?']],
         ['Les ventes', ['Qu’est-ce que je vends le plus le matin ?', 'Quels produits portent mon panier ?', 'Comment ont évolué mes samedis sur un an ?']],
+        // Les objectifs 2026 (18/11/2026, src/coach_objectifs.php) : food cost, personnel, clients scannés, menus.
+        ['Les objectifs 2026', ['Où en sont mes objectifs 2026 ?', 'Quels prix monter pour baisser mon food cost ?', 'Comment faire scanner plus de clients ?']],
     ],
 ];
 
