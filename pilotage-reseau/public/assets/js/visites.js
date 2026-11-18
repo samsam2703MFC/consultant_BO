@@ -1726,6 +1726,25 @@
       this.dire(complet ? 'Enregistré : les trois pistes sont proposées dans « Points à travailler », à mener d’ici le ' + fmtD(bc.echeance) + '.' : 'Enregistré — le formulaire reste à compléter.');
       this.rendre();
     }
+    /**
+     * Les écarts relevés pendant la visite dans les points proposés (18/11/2026) : la liste était figée à l'ouverture du
+     * contrôle (reviewInit), un écart noté ensuite n'y entrait jamais et ne partait pas au franchisé. Un écart nouveau
+     * s'ajoute (sauf si le consultant l'a retiré des points à travailler) ; un écart redevenu conforme retire le point
+     * proposé d'office tant que personne ne l'a modifié.
+     */
+    ecartsDansPlan(v) {
+      const f = this.form; if (!f.pa) { return; }
+      const E = this.ecartsDe(v); const refs = E.map(e => e.ref); const retires = f.paRetires || [];
+      for (let i = f.pa.length - 1; i >= 0; i--) { const a = f.pa[i]; if (a.ecart && !refs.includes(a.ref) && a.titre === a.ecart) { f.pa.splice(i, 1); } }
+      E.forEach(e => {
+        // Un point proposé d'office suit l'écart tant qu'il n'est pas retouché : la remarque écrite après l'écart passe dans son détail.
+        const deja = f.pa.find(a => a.ref === e.ref);
+        if (deja) { if (deja.ecart && deja.titre === deja.ecart) { deja.detail = e.detail; } return; }
+        if (retires.includes(e.ref)) { return; }
+        const prio = e.grave ? 'P0' : 'P1';
+        f.pa.push({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: prio, assigne: 'franchise', echeance: plusJours(auj(), this.delaiPoint(prio)), garde: true, ecart: e.titre });
+      });
+    }
     /** Les pistes du franchisé dans le plan d'action proposé : une action par piste, assignée au franchisé, à l'échéance choisie. */
     vbPistesDansPlan(bc) {
       const f = this.form; if (!f.pa || !bc) { return; }
@@ -2207,6 +2226,7 @@
       if (v.statut === 'terminee') { return this.v_review(); }
       const b = this.boutique(v.shop) || { court: v.shop, motifs: [] }; const f = this.form;
       this.reviewInit(v, false);
+      this.ecartsDansPlan(v);
       const pts = this.pointsDe(v.id); const photos = this.photosDe(v.id); const t = auj();
       const B = this.B[v.shop];
       const etapes = [];
@@ -2776,7 +2796,7 @@
         // Changer la priorité remet l'échéance au délai du réseau, si elle était encore celle de l'ancienne priorité (13/11/2026).
         if (parts[1] === 'priorite' && x.priorite !== parts[2] && x.echeance === plusJours(auj(), this.delaiPoint(x.priorite))) { x.echeance = plusJours(auj(), this.delaiPoint(parts[2])); }
         x[parts[1]] = parts[2]; this.rendre(); } return; }
-      if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
+      if (a === 'pa-del') { const x = this.form.pa[Number(v)]; if (x && x.ecart) { (this.form.paRetires = this.form.paRetires || []).push(x.ref); } this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), this.delaiPoint('P1')) }); this.rendre(); return; }
       if (a === 'terminer') { this.terminer(v); return; }
       if (a === 'meteo') { this.meteo(v); this.rendre(); return; }
