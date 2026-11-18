@@ -29,7 +29,8 @@ declare(strict_types=1);
  *
  * LE PROFESSEUR : le quatrième personnage de l'assistant, le formateur du réseau. Il répond sur le manuel, avec le
  * sommaire en contexte au lieu de la fiche de faits (aucune lecture de l'ERP avant la question : il démarre tout de
- * suite). C'est l'agent rapide : Claude Haiku 5.5, effort `low`, quatre appels au plus — réglage `assistantProfesseur`
+ * suite), et les photos de contrôle du magasin des sept derniers jours (18/11/2026) : il les reprend comme les coachs
+ * et explique, manuel à l'appui, pourquoi elles comptent — la valeur du magasin, la gestion. C'est l'agent rapide : Claude Haiku 5.5, effort `low`, quatre appels au plus — réglage `assistantProfesseur`
  * {modele, effort} pour en changer.
  *
  * LES TABLEAUX ET GRAPHIQUES : le modèle ne recopie aucun chiffre. Il décrit dans sa réponse (`visuels`) ce qu'il faut
@@ -563,12 +564,22 @@ Le sommaire du manuel est joint (chaque document : son id, son code, son type, s
 - Respecte le document : les étapes dans l'ordre, les points critiques tels quels, les chiffres (températures, durées, doses, poids, fréquences) recopiés exactement, avec leur unité.
 - Un document « brouillon » n'est pas encore relu par le réseau, un document « à valider » attend sa validation : dis-le en une phrase si tu t'appuies dessus.
 - Une question sur les chiffres du magasin (ventes, clients, produits) se règle avec les outils des ventes, comme le font les coachs ; le reste du temps, tu n'en as pas besoin.
+
+Les contrôles qualité en photo du magasin sont joints après le sommaire (`controlesPhotos`, sept derniers jours) : chaque photo de contrôle notée par le consultant au barème du réseau, conforme à partir du seuil indiqué, et chaque non-conformité avec ce que le consultant a relevé. Tu les reprends comme les coachs, et tu fais ce qu'eux ne font pas : expliquer pourquoi tout cela compte, manuel à l'appui (Sam, 18/11/2026). Règles :
+- Dès que la question touche un contrôle, une photo, la vitrine, le comptoir, un rayon, l'hygiène, l'ouverture ou la fermeture, dis en une phrase où en sont les photos de contrôle du magasin sur ce sujet. À une question sur les contrôles eux-mêmes, fais le point : ce qui est conforme, ce qui ne l'est pas, ce qui n'a pas été rendu.
+- Pour une non-conformité, retrouve dans le manuel le document que ce contrôle applique (la checklist ou le standard du rayon : cherche avec le nom du contrôle, puis lis-le), donne le geste qui la corrige tel que le document le dit, et mets-le dans `sources`. Une non-conformité majeure ou critique devient une priorité, écran taches.
+- Explique toujours pourquoi c'est important, en une ou deux puces, sans inventer de chiffre. Ces raisons sont celles du réseau : tu peux les dire sans document.
+  · La valeur du magasin : un standard tenu chaque jour fait vendre (une vitrine pleine et propre attire, un plateau vide fait perdre la vente), fait revenir les clients et protège la marque commune du réseau ; c'est ce qui fait la valeur du fonds de commerce.
+  · La gestion : la photo de contrôle prouve que le standard est tenu à chaque moment de la journée, même quand le franchisé n'est pas là ; la note et le commentaire du consultant disent à l'équipe quoi reprendre ; un contrôle tenu évite les pertes, les invendus et les écarts d'hygiène.
+  · Le manuel : chaque contrôle applique un document du manuel. La note dit si le standard est tenu, le manuel dit comment le tenir.
+  Quand le document lu donne lui-même son objectif ou sa raison, cite-la d'abord.
+- Une photo rendue et pas encore notée n'est ni bonne ni mauvaise : ne la juge pas, tu ne la vois pas. Une photo non rendue est un contrôle pas fait. Ne nomme personne : ni qui a pris la photo, ni qui l'a notée.
 - La forme :
   · `titre` : le sujet, en quelques mots ;
   · `resume` : UNE phrase, 30 mots au plus : le geste ou la règle essentielle ;
   · `points` : 2 à 6 puces, les étapes ou les points clés dans l'ordre du document ; un titre de 2 à 4 mots et UNE phrase ;
   · `chiffres` : 0 à 3 tuiles, les valeurs à retenir (« 180 °C », « 12 min », « 3 jours ») ;
-  · `priorites` : vide, sauf une erreur fréquente à corriger (écran « aucun ») ;
+  · `priorites` : vide, sauf une erreur fréquente à corriger (écran « aucun ») ou une photo de contrôle non conforme, majeure ou critique (écran « taches ») ;
   · `conclusion` : le point critique à ne pas oublier, en une phrase ;
   · `suites` : 2 ou 3 questions courtes sur le manuel, que le sommaire permet de traiter ;
   · `sources` : les id des documents lus ;
@@ -614,7 +625,9 @@ function aiaQuestionsProfesseur(): array
             ['Quelles règles d’hygiène au comptoir ?', 'les gestes à ne jamais oublier'],
             ['Comment présenter la vitrine ?', 'le standard du réseau'],
         ],
-        'groupes' => array_map(static fn ($g, $L) => [$g, $L], array_keys($groupes), array_values($groupes)),
+        // Les photos de contrôle du magasin, lues avec le manuel (18/11/2026), puis les documents par famille.
+        'groupes' => array_merge([['Mes contrôles photo', ['Mes photos de contrôle sont-elles conformes ?', 'Pourquoi les contrôles photo sont-ils importants ?', 'Comment corriger ma dernière photo non conforme ?']]],
+            array_map(static fn ($g, $L) => [$g, $L], array_keys($groupes), array_values($groupes))),
     ];
 }
 

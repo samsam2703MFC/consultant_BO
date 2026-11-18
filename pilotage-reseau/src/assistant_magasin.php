@@ -296,15 +296,15 @@ function amFaits(int $sid): array
  */
 const AM_CQ_BUDGET = 16;
 
-function amControlesPhotos(int $sid): array
+function amControlesPhotos(int $sid, bool $avecMois = true, int $budget = AM_CQ_BUDGET): array
 {
     if (!function_exists('cqmJournees')) { return ['etat' => 'contrôles photo non lus']; }
     $auj = date('Y-m-d');
     $d7 = date('Y-m-d', strtotime($auj . ' -6 days'));
     $mois = date('Y-m-01');
     $paires = [];
-    for ($t = strtotime(min($mois, $d7)); $t <= strtotime($auj); $t = strtotime('+1 day', $t)) { $paires[] = [$sid, date('Y-m-d', $t)]; }
-    $L = cqmJournees($paires, AM_CQ_BUDGET);
+    for ($t = strtotime($avecMois ? min($mois, $d7) : $d7); $t <= strtotime($auj); $t = strtotime('+1 day', $t)) { $paires[] = [$sid, date('Y-m-d', $t)]; }
+    $L = cqmJournees($paires, $budget);
     $J = $L['jours'][$sid] ?? [];
     ksort($J);
     ['seuil' => $seuil, 'niveaux' => $niveaux] = cqmBareme();
@@ -370,7 +370,7 @@ function amControlesPhotos(int $sid): array
         'bareme' => $bar, 'conformeAPartirDe' => $dire($seuil),
         'aujourdhui' => $aujL,
         'septDerniersJours' => $resume($d7),
-        'moisEnCours' => $resume($mois),
+        'moisEnCours' => $avecMois ? $resume($mois) : null,
         'nonConformesSeptDerniersJours' => array_map(static fn ($x) => array_diff_key($x, ['n' => 1]), array_slice($nc, 0, 10)),
         'exemplairesSeptDerniersJours' => array_map(static fn ($k, $n) => ['controle' => $k, 'fois' => $n], array_keys(array_slice($ex, 0, 5, true)), array_slice($ex, 0, 5, true)),
         'sansPhotoSeptDerniersJours' => array_map(static fn ($k, $n) => ['controle' => $k, 'fois' => $n], array_keys(array_slice($manques, 0, 5, true)), array_slice($manques, 0, 5, true)),
@@ -379,7 +379,23 @@ function amControlesPhotos(int $sid): array
         $out['couverture'] = 'contrôles photo lus sur ' . count($J) . ' jours des ' . $joursAttendus . ' de la période (les plus récents d’abord ; le reste vient aux prochaines lectures)';
     }
     if ($J === [] && $L['manque'] > 0) { $out['etat'] = 'le panel n’a pas répondu : contrôles photo non lus'; }
-    return $out;
+    return array_filter($out, static fn ($v) => $v !== null);
+}
+
+/**
+ * Les photos de contrôle pour le Professeur (18/11/2026, Sam : « le Professeur aussi doit expliquer pourquoi tout ça
+ * est important : la valeur du magasin, la gestion ; il est relié au manuel opératoire »). L'agent rapide ne lit pas
+ * l'ERP : il reprend les photos de la fiche des coachs si elle est fraîche, sinon les sept derniers jours seulement
+ * (sept journées au plus au panel, gardées par src/controles_qualite.php). Une panne ne l'empêche jamais de répondre.
+ */
+function amControlesPhotosProfesseur(int $sid): array
+{
+    $f = null;
+    try { $f = function_exists('aiaFicheLire') ? aiaFicheLire($sid) : null; } catch (Throwable $e) { /* fiche illisible : lecture directe */ }
+    if (is_array($f['controlesPhotos'] ?? null) && !isset($f['controlesPhotos']['etat'])) {
+        return array_diff_key($f['controlesPhotos'], ['moisEnCours' => 1]);
+    }
+    try { return amControlesPhotos($sid, false, 7); } catch (Throwable $e) { return ['etat' => 'illisible : ' . $e->getMessage()]; }
 }
 
 /** Le budget du magasin, lu dans le calcul du jour du cockpit (ep_exploitation_jour : ceo_shop_month_perf). */
@@ -785,7 +801,8 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
         // (Haiku n'en a pas) ; il démarre sur le sommaire du manuel, sans lire l'ERP.
         ['modele' => $modele, 'effort' => $effort] = aiaProfesseurModele();
         $tours = AIA_PROF_TOURS; $secondes = AIA_PROF_SECONDES;
-        $contexte = "Sommaire du manuel opératoire du réseau (id · code · type · titre — objectif) :\n" . ($faits['sommaire'] ?? aiaManuelSommaireTexte());
+        $contexte = "Sommaire du manuel opératoire du réseau (id · code · type · titre — objectif) :\n" . ($faits['sommaire'] ?? aiaManuelSommaireTexte())
+            . (isset($faits['controlesPhotos']) ? "\n\nLes contrôles qualité en photo du magasin, sept derniers jours (JSON, controlesPhotos) :\n" . json_encode($faits['controlesPhotos'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '');
         $systeme = [['type' => 'text', 'text' => AIA_SYSTEME_PROF], ['type' => 'text', 'text' => AIA_CONSIGNES, 'cache_control' => ['type' => 'ephemeral']]];
     } else {
         $r = aiaReglage('assistantMagasin', []);
@@ -907,8 +924,9 @@ function wr_assistant_magasin(): array
     if ($sid <= 0 || $q === '') { http_response_code(422); return ['error' => 'magasin ou question manquant']; }
     if (mb_strlen($q) > 500) { http_response_code(422); return ['error' => 'question trop longue (500 caractères au plus)']; }
     $ton = isset(AM_COACHS[$b['ton'] ?? '']) || ($b['ton'] ?? '') === 'professeur' ? (string) $b['ton'] : AM_TON_DEFAUT;
-    // Le Professeur ne lit pas l'ERP : il démarre tout de suite, sur le sommaire du manuel.
-    $faits = $ton === 'professeur' ? ['aujourdhui' => date('Y-m-d') . ' (' . amJour(date('Y-m-d')) . ')', 'luLe' => null, 'sommaire' => aiaManuelSommaireTexte()] : amFaits($sid);
+    // Le Professeur ne lit pas l'ERP : il démarre tout de suite, sur le sommaire du manuel et les photos de contrôle.
+    $faits = $ton === 'professeur' ? ['aujourdhui' => date('Y-m-d') . ' (' . amJour(date('Y-m-d')) . ')', 'luLe' => null, 'sommaire' => aiaManuelSommaireTexte(),
+        'controlesPhotos' => amControlesPhotosProfesseur($sid)] : amFaits($sid);
     $fil = is_array($b['fil'] ?? null) ? $b['fil'] : [];
     $orig = in_array($b['origine'] ?? '', AM_ORIGINES, true) ? (string) $b['origine'] : 'libre';
     $conv = aiaConversation($sid, $ton, (string) ($b['conversation'] ?? ''), $q);
