@@ -126,3 +126,4 @@
 2026-11-18T19:18:13Z assistant : tous les coachs reprennent les notes des photos de contrôle
 2026-11-18T19:22:57Z coach vente : objectifs 2026 (food cost 40 %, personnel 17 %, scannés 25 %, menus 15 %), hausses de prix avec lot
 2026-11-18T19:29:25Z seuil food cost du cockpit : 40 % (objectif 2026)
+2026-11-18T19:38:08Z dashboard franchisé, Tâches : résultats du jour dans la bande de la semaine, vue téléphone refaite
