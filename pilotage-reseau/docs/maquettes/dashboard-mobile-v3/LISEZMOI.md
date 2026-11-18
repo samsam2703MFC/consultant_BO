@@ -8,9 +8,11 @@ Ce qui est codé :
 - **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas ;
 - **Opérationnel**, le 18/11/2026 : c'est l'étape 2. Voir « Opérationnel, codé » plus bas ;
 - **Exploitation et Semaine**, le 18/11/2026 : c'est l'étape 3. Voir « Exploitation et Semaine, codées » plus bas ;
-- **Contrôle, Tâches et Primes**, le 18/11/2026 : c'est l'étape 4. Voir « Contrôle, Tâches et Primes, codés » plus bas.
+- **Contrôle, Tâches et Primes**, le 18/11/2026 : c'est l'étape 4. Voir « Contrôle, Tâches et Primes, codés » plus bas ;
+- **les feuilles**, le 18/11/2026 : c'est l'étape 5. Voir « Les feuilles, codées » plus bas.
 
-Reste à coder : les feuilles (étape 5).
+Les cinq étapes sont codées. Pas codée : la feuille « L'équipe du jour » de la maquette (`vues/equipe.png`). Elle
+n'existe qu'au bureau, et la porter au téléphone serait un ajout, pas une refonte.
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -143,6 +145,30 @@ Au téléphone seulement ; le bureau ne change pas, vérifié. Captures dans `co
   - la bande de la semaine, le guide, la recherche et les checklists ne changent pas.
 - **Primes** : la ligne du haut devient un héros, celui du mois (l'acquis, « en cours » ou « mois clos ») ou celui
   de l'année. Le reste ne change pas.
+
+## Les feuilles, codées (18/11/2026)
+
+Dans `dashboard.css`, un seul bloc à la fin.
+
+**Les fenêtres.** Au téléphone, toutes montent du bas, comme « Commandes du jour » et « Ventes B2B » le faisaient
+déjà : la fiche produit, la poubelle, le stock, la promotion et le détail d'un produit. Elles ont toutes :
+- une poignée en haut et les coins du haut arrondis ;
+- le haut posé sous la barre d'état de l'iPhone, à 40 px au moins ;
+- le bas au-dessus du trait de l'iPhone.
+
+Avant, ces fenêtres s'ouvraient soit en plein écran, soit en boîte centrée. Leur contenu ne change pas.
+
+**Les vues plein écran.** Depuis `viewport-fit=cover` (étape 1), elles passaient sous la barre d'état. Elles gardent
+leur forme et se posent maintenant dessous :
+- la revue du soir ;
+- la photo de contrôle agrandie ;
+- l'assistant (« Une demande au bureau »).
+
+Captures dans `code/` :
+- `feuille-commandes.png` : la feuille « Commandes du jour » ;
+- `feuille-coque.png` : la coque commune, essayée sur la fiche produit.
+
+Mesuré à 390 px : chaque fenêtre commence à 40 px du haut, touche le bas, prend toute la largeur, coins de 18 px.
 
 ## La grammaire, la même partout
 

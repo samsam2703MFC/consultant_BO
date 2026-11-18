@@ -3336,3 +3336,24 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-av__t .k{font-size:9.5px;line-height:1.1}.db-av__t .v{margin-top:1px;font-size:13px;line-height:1.2}
 .db-av.vif{border-color:rgba(141,29,44,.45);background:rgba(141,29,44,.04)}.db-av.vif .db-av__o{background:none;border:0}
 .db-av.hd{border-color:rgba(141,29,44,.45)}.db-av.hd .db-av__o,.db-av.hd .db-av__t .v{color:var(--accent)}
+
+/* ── Les feuilles au téléphone (18/11/2026, refonte mobile, étape 5, maquette dashboard-mobile-v3) ──────────────────
+   Toutes les fenêtres du dashboard s'ouvrent comme une feuille qui monte du bas, comme « Commandes du jour » et « Ventes
+   B2B » : la fiche produit, la poubelle, le stock, la promotion, le détail d'un produit. Une poignée en haut, les coins
+   du haut arrondis, le haut posé sous la barre d'état de l'iPhone (viewport-fit=cover depuis l'étape 1), le bas au-dessus
+   du trait. Les vues plein écran — la revue du soir, la photo agrandie, l'assistant — gardent leur forme et se posent
+   sous la barre d'état. */
+@media (max-width:760px){
+  #db-fiche .fi-modale,#db-invm .fi-modale,#db-stk .fi-modale,#db-pmc .fi-modale,#db-pmc .fi-modale.pmc-etroite,#db-pd .fi-modale,#db-b2b .fi-modale,#db-cmdm .fi-modale{
+    left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;
+    height:calc(100% - max(40px, env(safe-area-inset-top, 0px) + 12px));max-height:none;border-radius:18px 18px 0 0;
+    padding-bottom:env(safe-area-inset-bottom, 0px);overscroll-behavior:contain}
+  #db-fiche .fi-modale::before,#db-invm .fi-modale::before,#db-stk .fi-modale::before,#db-pmc .fi-modale::before,#db-pd .fi-modale::before{
+    content:'';display:block;width:40px;height:5px;border-radius:3px;background:#d8d1c7;margin:8px auto 0}
+  .ia-modale.mb,.ia-modale.ma{padding-top:env(safe-area-inset-top, 0px);padding-bottom:env(safe-area-inset-bottom, 0px)}
+}
+@media (max-width:560px){
+  .rv-hd{padding-top:max(14px, env(safe-area-inset-top, 0px))}
+  .rv-sc{padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px))}
+}
+.db-cql.mob .hd{top:calc(10px + env(safe-area-inset-top, 0px))}
