@@ -581,6 +581,47 @@
 .vi .ev-notes button.on.ko{background:var(--stop);border-color:var(--stop)}.vi .ev-notes button.on.att{background:var(--prize);border-color:var(--prize)}.vi .ev-notes button.on.ok{background:var(--green);border-color:var(--green)}
 .vi .ev-ax textarea{min-height:40px;font-size:12.5px}
 .vi.tab .ev-notes button{min-height:56px}
+/* Les outils de gestion (17/11/2026, maquette docs/maquettes/audit-outils-gestion/) : la synthèse et le rappel à gauche, les sept outils à droite. */
+.vi .og{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:12px;align-items:start}.vi .og > div:first-child{align-self:stretch}
+.vi .og-som{position:sticky;top:82px;padding:16px 18px}
+.vi .og-som .lab{font:400 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.vi .og-sc{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0 2px}.vi .og-sc b{font:400 46px/1 var(--font-display);color:var(--color-text-muted)}
+.vi .og-sc b.ok{color:var(--green)}.vi .og-sc b.att{color:#8a5200}.vi .og-sc b.ko{color:var(--stop)}.vi .og-sc span{font-size:13px;color:var(--color-text-muted)}.vi .og-sc span.up{color:var(--green)}.vi .og-sc span.dn{color:var(--stop)}
+.vi .og-seg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0 8px}.vi .og-seg i{height:10px;border-radius:3px;background:var(--color-background-secondary)}
+.vi .og-seg i.ok{background:var(--green)}.vi .og-seg i.part{background:var(--prize)}.vi .og-seg i.ko{background:var(--stop)}.vi .og-seg i.na{background:var(--color-text-muted);opacity:.45}
+.vi .og-cpt{display:flex;gap:6px;flex-wrap:wrap}.vi .og-cpt span{font:400 11.5px var(--font-ui);padding:5px 9px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .og-cpt span.ok{background:rgba(63,122,82,.12);color:var(--green)}.vi .og-cpt span.part{background:#FFF4E5;color:#8a5200}.vi .og-cpt span.ko{background:rgba(141,29,44,.08);color:var(--stop)}
+.vi .og-rap{margin-top:14px;border-radius:12px;border:1px solid rgba(141,29,44,.35);background:#FBF3F3;padding:12px 14px}
+.vi .og-rap .t{display:flex;align-items:center;gap:8px;font:400 12px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-primary)}
+.vi .og-rap p{margin:7px 0 0;font-size:13px;line-height:1.5}.vi .og-rap p b,.vi .og-pop .regle b{font-weight:700}
+.vi .og-lu{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:10px 0 0;border:none;border-top:1px dashed rgba(141,29,44,.3);background:none;font:400 12.5px var(--font-ui);color:var(--color-text);text-align:left;cursor:pointer}
+.vi .og-lu .cb{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--color-border-secondary);background:var(--color-surface);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+.vi .og-lu.on .cb{background:var(--green);border-color:var(--green)}.vi .og-lu small{display:block;font-size:11px;color:var(--color-text-muted)}.vi .og-lu.exige .cb{border-color:var(--prize-ink);background:#FFF4E5}
+.vi .og-i{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;font:700 13px/1 Georgia,'Times New Roman',serif;font-style:italic;text-transform:none;letter-spacing:0;flex:0 0 auto}
+.vi .og-ib{display:inline-flex;vertical-align:4px;margin-left:10px;width:34px;height:34px;border-radius:50%;border:none;background:var(--color-primary);color:#fff;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.vi .og-ib .og-i{border-color:#fff}
+.vi .og-it{padding:14px 16px;margin-bottom:10px}.vi .og-it.ko{background:linear-gradient(90deg,#FBF3F3,var(--color-surface) 55%)}
+.vi .og-it .h{display:flex;align-items:flex-start;gap:12px}
+.vi .og-it .ic{flex:0 0 auto;width:40px;height:40px;border-radius:11px;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center}
+.vi .og-it .ic svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.vi .og-it .tt{flex:1;min-width:0}.vi .og-it .tt b{display:block;font-size:15px;line-height:1.25}.vi .og-it .tt small{display:block;font-size:12px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
+.vi .og-lt{display:flex;align-items:center;gap:8px;margin:10px 0 0 52px;padding:7px 10px;border-radius:9px;background:var(--color-background-secondary);font-size:12.5px}
+.vi .og-lt .s{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap}.vi .og-lt.vue .s{color:var(--color-primary)}
+.vi .og-lt .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--color-text-muted)}.vi .og-lt .d.ok{background:var(--green)}.vi .og-lt .d.att{background:var(--prize)}.vi .og-lt .d.ko{background:var(--stop)}
+.vi .og-r{display:flex;align-items:center;gap:10px;margin:10px 0 0 52px;flex-wrap:wrap}
+.vi .og-r .tri button.part{background:var(--prize);color:#fff}.vi.tab .og-r .tri button{min-width:96px;height:48px;font-size:13.5px}
+.vi .og-r .chip{min-height:40px;padding:0 12px}.vi.tab .og-r .chip{min-height:48px;padding:0 14px;border-radius:12px;font-size:13px}
+.vi .og-r .ph-v{width:48px;height:48px}
+.vi .og-it textarea{display:block;width:calc(100% - 52px);margin:10px 0 0 52px;min-height:44px;font-size:13px}.vi .og-it textarea.exige{border-color:var(--prize-ink);background:#FFF4E5}
+.vi .og-pp{margin:8px 0 0 52px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)}.vi .og-pp b{color:var(--color-text);font-weight:400;white-space:nowrap}.vi .og-pp .pill{flex:0 0 auto}
+.vi .og-voile{position:fixed;inset:0;z-index:60;background:rgba(28,26,23,.38)}
+.vi .og-pop{position:fixed;z-index:61;top:50%;left:50%;transform:translate(-50%,-50%);width:min(580px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;background:var(--color-surface);border-radius:16px;border-top:5px solid var(--color-primary);box-shadow:0 18px 50px rgba(28,26,23,.28);padding:22px 24px 20px}
+.vi .og-pop h3{display:flex;align-items:center;gap:10px;margin:0 0 10px;font:400 20px var(--font-display);color:var(--color-primary)}
+.vi .og-pop p{margin:0 0 10px;font-size:14px;line-height:1.55}.vi .og-pop ul{margin:6px 0 12px;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-text-muted)}
+.vi .og-pop .regle{margin:12px 0;padding:14px 16px;border-radius:12px;background:#FBF3F3;border-left:4px solid var(--color-primary);font-size:15px;line-height:1.5}
+.vi .og-pop .og-bas{display:flex;gap:10px;align-items:center;margin-top:6px}.vi .og-pop .og-bas small{flex:1;font-size:11.5px;color:var(--color-text-muted)}
+@media (max-width:960px){.vi .og{grid-template-columns:1fr}.vi .og-som{position:static}}
+@media (max-width:700px){.vi .og-lt,.vi .og-r,.vi .og-pp{margin-left:0}.vi .og-it textarea{width:100%;margin-left:0}}
 @media (max-width:960px){.vi .ev{grid-template-columns:1fr}.vi .ev-radar{position:static}.vi .ev-radar svg{max-width:560px;margin:0 auto}}
 @media (orientation:portrait){.vi.tab .tb-shops{grid-template-columns:1fr 1fr}.vi.tab .tb-cal .j{min-height:92px}}
 @media (max-width:700px){.vi.tab .tb-shops{grid-template-columns:1fr}.vi.tab .tb-bar .lb,.vi.tab .tb-bar .es{display:none}}
@@ -706,7 +747,7 @@
   const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
   // Les étapes bloquantes livrées (26/10/2026) : ce qui se remplit sur place bloque ; ce qui dépend d'une lecture extérieure
   // (contrôles du jour de l'équipe, checklist du panel) ne bloque pas. Réglages › Contrôle guidé les change étape par étape.
-  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true, equipe: false };
+  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true, equipe: false, outils: true };
   // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
   const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
@@ -733,6 +774,7 @@
     fin: '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/>',
     equipe: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.6.2 4.6 2 5.2 5"/>',
     eval: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 7.5l4.5 3-1.5 5H9.5L7.5 10z"/>',
+    outils: '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 21h8M12 17v4"/><path d="M7 13l3-3 2 2 4-4"/>',
     // La visite en six temps (26/10/2026).
     t_ext: '<path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/>',
     t_int: '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M5 19h14"/>',
@@ -761,6 +803,28 @@
     { n: 2, nom: 'Non conforme — majeur', couleur: '#A32014' }, { n: 1, nom: 'Non conforme — critique', couleur: '#8D1D2C' }];
   const repCourt = nom => { const c = String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, ''); return c.charAt(0).toUpperCase() + c.slice(1); };
   const evalTon = n => n >= 4 ? 'ok' : n === 3 ? 'att' : n >= 1 ? 'ko' : 'mu';
+  // Les outils de gestion (17/11/2026, Sam) : sept outils, mêmes clés que viOutilsListe (src/visites_outils.php). Chacun : clé,
+  // nom, ce qu'on regarde, lu tout seul (vrai) ou vu sur place, son icône, et le point proposé quand il n'est pas suivi.
+  const OUTILS = [
+    ['tresorerie', 'Plan de trésorerie', 'Dashboard magasin › Trésorerie : tenu chaque semaine, fournisseurs et paiements saisis, solde réel du dimanche', true,
+      '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 14.5h2"/>', 'Tenir le plan de trésorerie chaque semaine, solde réel du dimanche compris'],
+    ['commandes', 'Les commandes dans l’ordinateur', 'Chaque commande client encodée au panel le jour où elle est prise ; aucun carnet, aucune feuille volante', true,
+      '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/><path d="M7 9h6M7 12h4"/>', 'Encoder toutes les commandes clients au panel, plus de carnet'],
+    ['etiq_commandes', 'Les étiquettes sur les commandes', 'Chaque commande préparée porte son étiquette : nom du client, jour et heure de retrait', false,
+      '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.5"/>', 'Étiqueter chaque commande préparée : nom du client, jour et heure de retrait'],
+    ['etiq_produits', 'Les étiquettes sur les produits', 'Date de production, DLC et allergènes, en vitrine, en stock et au congélateur', false,
+      '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M14 4h6v4h-6z"/>', 'Étiqueter chaque produit : date de production, DLC, allergènes'],
+    ['taches', 'Le suivi des tâches et des checklists', 'Tâches du jour faites et photographiées dans l’application, checklists d’ouverture et de fermeture', true,
+      '<path d="M4 6l2 2 3-3M4 12l2 2 3-3M4 18l2 2 3-3"/><path d="M12 7h8M12 13h8M12 19h8"/>', 'Faire et photographier chaque jour les tâches et les checklists dans l’application'],
+    ['soir', 'La revue du soir', 'Dashboard magasin › Revue du soir : faite et clôturée chaque soir avant la fermeture', true,
+      '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', 'Faire et clôturer la revue du soir chaque jour'],
+    ['fournisseurs', 'Les commandes fournisseurs au panel', 'Matières et emballages commandés par le panel, pas par téléphone ni par courriel', true,
+      '<path d="M2 6h11v10H2z"/><path d="M13 9h4l3 3v4h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>', 'Passer toutes les commandes fournisseurs par le panel']];
+  const OG_V = [['ok', 'Suivi', 'suivi'], ['part', 'En partie', 'en partie'], ['ko', 'Pas suivi', 'pas suivi'], ['na', 'N/A', 'sans objet']];
+  const OG_POIDS = { ok: 1, part: 0.5, ko: 0 };
+  // Le rappel au franchisé, en (i) et dans chaque courriel de rapport (viOutilsRappel, src/visites_outils.php).
+  const OG_RAPPEL = ['Les outils de gestion mis en place par la marque sont à suivre.', 'En ne les suivant pas, aucun effort ne sera fait de la part de la marque en cas de problème ou de manquement de gestion.'];
+  const ogTon = s => s == null ? '' : s >= 80 ? 'ok' : s >= 50 ? 'att' : 'ko';
   const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
@@ -798,7 +862,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.EQ = {}; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
+      this.D = null; this.EQ = {}; this.OG = {}; this.ogInfo = false; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -2068,6 +2132,10 @@
       const ev = (v.evaluation && v.evaluation.notes) || {};
       EVAL_AXES.forEach(([k]) => { f['ev_' + k] = (ev[k] && ev[k].note) || 0; f['evc_' + k] = (ev[k] && ev[k].com) || ''; });
       f.pe = {}; ((v.personnel && v.personnel.personnes) || []).forEach(p => { f.pe[p.emp > 0 ? 'e' + p.emp : 'n' + p.nom] = Object.assign({}, p); });
+      // Les outils de gestion (17/11/2026) : le verdict et la remarque de chaque outil, le rappel lu.
+      const og = (v.outils && v.outils.items) || {}; f.og = {};
+      OUTILS.forEach(([k]) => { const x = og[k] || {}; f.og[k] = { v: x.v || '', com: x.com || '' }; });
+      f.og_rappel = (v.outils && v.outils.rappelLu) || '';
     }
     /** Ce qui manque à l'étape Météo : le temps, la réponse sur les paiements, et le détail s'ils ne sont pas à temps. */
     meteoManque(f) {
@@ -2184,6 +2252,12 @@
       }
       if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ cle: 'checklist', tps: 'suivi', ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
       // 4. L'analyse, assis avec le franchisé : les chiffres, les leviers et Google, le client mystère, les tâches des mois passés.
+      // En tête, l'audit des outils de gestion (17/11/2026) : devant l'ordinateur du magasin, avant les chiffres.
+      this.chargerOutils(v.shop);
+      const ogF = f.og || {}; const ogN = OUTILS.filter(([k]) => (ogF[k] || {}).v).length; const ogS = this.ogScore(f);
+      etapes.push({ cle: 'outils', tps: 'analyse', ic: 'outils', court: 'Outils de gestion', titre: 'Les outils de gestion', info: 'og-info',
+        etat: ogN === OUTILS.length ? (ogS != null ? ogS + ' / 100 · ' : '') + ogN + ' / ' + OUTILS.length + ' vus' : ogN + ' / ' + OUTILS.length + ' vus',
+        ko: OUTILS.filter(([k]) => (ogF[k] || {}).v === 'ko').length, fait: !this.outilsManque(f), ogManque: this.outilsManque(f), html: () => this.outilsHtml(v, f) });
       const vbx = this.vbExige(v);
       etapes.push({ tps: 'analyse', ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: vbx === 'manque' ? 'CA sous le budget' : 'à lire',
         fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.budgetHtml(v) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
@@ -2233,6 +2307,7 @@
         else if (e.ic === 'meteo') { e.manque = e.mtManque || 'la météo du franchisé'; }
         else if (e.cle === 'equipe' && e.eqReste > 0) { e.manque = e.eqReste + ' personne' + (e.eqReste > 1 ? 's' : '') + ' à noter'; }
         else if (e.cle === 'evaluation') { e.manque = e.evReste + ' note' + (e.evReste > 1 ? 's' : '') + ' à donner'; }
+        else if (e.cle === 'outils') { e.manque = e.ogManque; }
         else if (e.cle === 'checklist') { e.manque = 'la checklist du consultant'; }
       });
       etapes.forEach(e => { if (e.fait) { e.auto = true; } e.bloquante = !!e.manque && this.etapeBloquante(e.cle); });
@@ -2265,6 +2340,7 @@
     }
     /** Aller à une étape du contrôle : marquer lue celle qu'on quitte, garder la review, défiler en haut. */
     allerEtape(n) {
+      this.ogInfo = false;
       // Une remarque tapée il y a moins de 0,7 s n'a pas encore redessiné l'écran : on relit l'étape avant de juger ce qui manque.
       // Elle part tout de suite, sans attendre la fin du délai de frappe.
       if (this._pt) { clearTimeout(this._pt); if (this._ptFlush) { this._ptFlush(); } this._pt = null; this.rendre(); }
@@ -2410,7 +2486,7 @@
         return (j ? `<i class="l ${etapes[ici.idx[j - 1]].fait ? 'fait' : ''}"></i>` : '') + `<button data-a="etape" data-v="${i}" class="${st}"><span class="n">${x.fait && i !== cur ? '✓' : j + 1}</span><span class="t"><b>${esc(x.court)}</b><small>${esc(x.module && /^\d+ \/ \d+$/.test(x.etat) ? x.etat + ' vus' : x.etat)}</small></span>${x.ko ? `<em>${x.ko}</em>` : ''}</button>`; }).join('')}</div>` : '';
       const pos = ici.idx.indexOf(cur) + 1;
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
-        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${ORD.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
+        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${ORD.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}${e.info ? `<button class="og-ib" data-a="${esc(e.info)}" title="Pourquoi cet audit" aria-label="Pourquoi cet audit"><span class="og-i">i</span></button>` : ''}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
         + `<div class="tb-step">${e.html()}</div>${nav}</div>` + barre;
     }
     v_historique() {
@@ -2543,7 +2619,7 @@
       const lignes = [['ext', 'photos_ext', 'L’extérieur en photo'], ...mods.filter(m => m[2] === 'ext').map(m => [m[2], m[0], m[1]]),
         ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'equipe', 'L’équipe en poste (planning du jour)'], ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
         ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
-        ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
+        ['analyse', 'outils', 'Les outils de gestion (sept verdicts, le rappel lu)'], ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
         ['fin', 'meteo', 'Météo du franchisé et ses finances'], ['fin', 'evaluation', 'Évaluation rapide (six notes)'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
       const ORD = this.tempsOrdre(this.form.seuils && this.form.seuils.ordreTemps);
@@ -2653,6 +2729,9 @@
       if (a === 'recharger') { this.recharger(); return; }
       if (a === 'synthese') { this.S = null; this.rendre(); return; }
       if (a === 'raz') { Idb.vider('cache').then(() => this.recharger()); return; }
+      if (a === 'og-v') { this.ogVerdict(parts[0], parts[1]); return; }
+      if (a === 'og-rappel') { this.form.og_rappel = this.form.og_rappel ? '' : maintenant(); this.rendre(); return; }
+      if (a === 'og-info') { this.ogInfo = !this.ogInfo; this.rendre(); return; }
       if (a === 'form') { const val = parts.length > 1 ? (isNaN(parts[1]) ? parts[1] : Number(parts[1])) : true; this.form[parts[0]] = (parts[0] === 'execution' || parts[0] === 'clients') && this.form[parts[0]] === val ? '' : val; this.rendre(); return; }
       if (a === 'planifier') { this.planifier(); return; }
       if (a === 'reprog') { const f = this.form; this.ecrire({ method: 'PUT', path: '/visites/' + encodeURIComponent(v), body: { prevu_le: f.prevu_le, debut_h: f.debut_h, qui: this.qui() }, apres: 'visite' }); const vis = this.visite(v); if (vis) { if (f.prevu_le) { vis.prevu_le = f.prevu_le; } if (f.debut_h) { vis.debut_h = f.debut_h; } } this.form = {}; this.dire('Visite reprogrammée.'); return; }
@@ -2731,6 +2810,15 @@
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
       if (parts[0] === 'ed') { const r = this.ed && this.ed.rep[Number(parts[1])]; if (r) { r.txt = el.value; } return; }
+      if (parts[0] === 'og') {
+        const og = this.form.og || (this.form.og = {}); const x = og[parts[1]] || (og[parts[1]] = { v: '', com: '' });
+        const avant = !!String(x.com || '').trim(); x.com = el.value;
+        if (avant !== !!el.value.trim() && (x.v === 'ko' || x.v === 'part')) {
+          clearTimeout(this._pt); this._ptFlush = () => { this._pt = null; this._ptFlush = null; };
+          this._pt = setTimeout(() => { if (this._ptFlush) { this._ptFlush(); } this.rendre(); }, 700);
+        }
+        return;
+      }
       if (parts[0] === 'eqc') { const P = this.form.pe || (this.form.pe = {}); const x = P[parts[1]] || (P[parts[1]] = { vu: true }); x.com = el.value; return; }
       if (parts[0] === 'vb') { const vb = this.form.vb; if (vb) { if (parts[1] === 'p') { vb.pistes[Number(parts[2])] = el.value; } else { vb[parts[1]] = el.value; } } return; }
       if (parts[0] === 'pa') { if (this.form.pa && this.form.pa[Number(parts[1])]) { this.form.pa[Number(parts[1])][parts[2]] = el.value; } return; }
@@ -2834,6 +2922,7 @@
         this.dire('Des paiements sont en retard : notez d’abord quoi et le détail, dans la météo du franchisé.');
         this.rendre(); return;
       }
+      OUTILS.forEach(([k]) => this.ogDansPlan(k, true));
       const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null, campagne_id: Number(a.campagne_id) > 0 ? Number(a.campagne_id) : null, statut: 'propose' }));
       if (plans.length) {
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
@@ -2851,7 +2940,7 @@
         this.D.photos.unshift({ client_id: cid, visite_id: v.id, shop: v.shop, genre: 'signature', data: f.sig, prise_a: maintenant(), attente: true });
         this.ecrire({ method: 'POST', path: '/visites/photos', body: { client_id: cid, shop: v.shop, visite_id: v.id, genre: 'signature', data: f.sig, prise_a: maintenant(), par: this.role }, apres: 'photo' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '', evaluation: this.evalCorps(f), personnel: this.equipeCorps(v, f) });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '', evaluation: this.evalCorps(f), personnel: this.equipeCorps(v, f), outils: this.outilsCorps(v, f) });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       v.rapportStatut = 'brouillon';
       this.form = {};
@@ -3032,6 +3121,109 @@
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
     }
     /** Le planning du jour du magasin (GET /visites/equipe/{shop}) : lu une fois par session et par jour, gardé hors ligne. */
+    /* --- Les outils de gestion (17/11/2026, maquette docs/maquettes/audit-outils-gestion/) --------------------------
+     * Sept outils, chacun avec ce que le cockpit en lit tout seul (GET /visites/outils/{shop}), le verdict du consultant,
+     * sa remarque (obligatoire pour « pas suivi » et « en partie ») et ses photos. Le rappel de la marque est lu avec le
+     * franchisé et coché. L'audit part avec « Terminer » (con_visite.outils) et dans le rapport, avec le rappel. */
+    chargerOutils(shop) {
+      const k = shop + '|' + auj(); if (!shop || this.OG[shop] && this.OG[shop].k === k) { return; }
+      this.OG[shop] = { k, chargement: true };
+      this.lire('/visites/outils/' + encodeURIComponent(shop), 'og:' + k)
+        .then(d => { this.OG[shop] = { k, d }; }, () => { this.OG[shop] = { k, erreur: true }; }).then(() => this.rendre());
+    }
+    /** Le score sur 100 : suivi 1, en partie ½, pas suivi 0, sans objet hors calcul (viOutilsScore) ; null sans verdict qui compte. */
+    ogScore(f) {
+      let t = 0, n = 0; OUTILS.forEach(([k]) => { const p = OG_POIDS[((f.og || {})[k] || {}).v]; if (p != null) { t += p; n++; } });
+      return n ? Math.round(t / n * 100) : null;
+    }
+    /** Ce qui reste à faire à l'étape : les outils à juger, les remarques à écrire, le rappel à cocher ; '' quand tout y est. */
+    outilsManque(f) {
+      const og = f.og || {}; const sans = OUTILS.filter(([k]) => !(og[k] || {}).v).length;
+      const sansCom = OUTILS.filter(([k]) => { const x = og[k] || {}; return (x.v === 'ko' || x.v === 'part') && !String(x.com || '').trim(); }).length;
+      return [sans ? sans + ' outil' + (sans > 1 ? 's' : '') + ' à juger' : '', sansCom ? sansCom + ' remarque' + (sansCom > 1 ? 's' : '') + ' à écrire' : '',
+        f.og_rappel ? '' : 'le rappel à lire avec le franchisé'].filter(Boolean).join(' · ');
+    }
+    /** Le dernier audit du magasin avant celui-ci (même magasin, toutes visites), pour l'écart du score. */
+    ogPrecedente(v) {
+      const av = (this.D.visites || []).filter(x => String(x.shop) === String(v.shop) && x.statut === 'terminee' && String(x.id) !== String(v.id) && x.prevu_le <= v.prevu_le && x.outils && x.outils.items)
+        .sort((a, b) => a.prevu_le < b.prevu_le ? 1 : (a.prevu_le > b.prevu_le ? -1 : Number(b.id) - Number(a.id)));
+      if (!av.length) { return null; }
+      const its = av[0].outils.items; let t = 0, n = 0; Object.keys(its).forEach(k => { const p = OG_POIDS[(its[k] || {}).v]; if (p != null) { t += p; n++; } });
+      return { le: av[0].prevu_le, score: n ? Math.round(t / n * 100) : null };
+    }
+    /** Un verdict : un second toucher l'efface ; « pas suivi » et « en partie » proposent leur point, les autres le retirent. */
+    ogVerdict(k, c) {
+      const og = this.form.og || (this.form.og = {}); const x = og[k] || (og[k] = { v: '', com: '' });
+      x.v = x.v === c ? '' : c;
+      this.ogDansPlan(k); this.rendre();
+    }
+    /**
+     * Le point proposé d'un outil (ref « outil:clé ») : P1 pour « pas suivi », P2 pour « en partie », à l'échéance du
+     * réseau ; retiré quand l'outil est suivi ou sans objet. `majSeule` (à « Terminer ») : la remarque passe dans le
+     * détail d'un point encore là, sans recréer celui que le consultant a retiré des points à travailler.
+     */
+    ogDansPlan(k, majSeule) {
+      const f = this.form; if (!f.pa) { return; } const o = OUTILS.find(x => x[0] === k); if (!o) { return; }
+      const x = (f.og || {})[k] || {}; const ref = 'outil:' + k; const j = f.pa.findIndex(a => a.ref === ref);
+      const pris = x.v === 'ko' || x.v === 'part';
+      if (!pris) { if (j >= 0 && !majSeule) { f.pa.splice(j, 1); } return; }
+      const prio = x.v === 'ko' ? 'P1' : 'P2';
+      const detail = 'Outils de gestion — ' + o[1] + ' : ' + (x.v === 'ko' ? 'pas suivi' : 'suivi en partie') + (String(x.com || '').trim() ? ' — ' + String(x.com).trim() : '');
+      if (j >= 0) {
+        const a = f.pa[j]; a.detail = detail;
+        if (!majSeule && a.priorite !== prio) { if (a.echeance === plusJours(auj(), this.delaiPoint(a.priorite))) { a.echeance = plusJours(auj(), this.delaiPoint(prio)); } a.priorite = prio; }
+        return;
+      }
+      if (majSeule) { return; }
+      f.pa.push({ cid: uuid(), ref, titre: o[5], detail, priorite: prio, assigne: 'franchise', echeance: plusJours(auj(), this.delaiPoint(prio)), garde: true });
+    }
+    /** L'audit tel qu'il part avec la visite (viOutils) : chaque outil, son verdict, sa remarque, ce qui a été lu ; null sans verdict. */
+    outilsCorps(v, f) {
+      const og = f.og || {}; const O = this.OG[v.shop]; const lu = (O && O.d && O.d.lu) || {}; const items = {}; let n = 0;
+      OUTILS.forEach(([k]) => { const x = og[k] || {}; if (x.v) { n++; } items[k] = { v: x.v || null, com: String(x.com || '').trim(), lu: lu[k] ? String(lu[k].texte || '') : '' }; });
+      return n ? { items, rappelLu: f.og_rappel || null } : null;
+    }
+    ogRappelHtml(f) {
+      return `<div class="og-rap"><div class="t" data-a="og-info" style="cursor:pointer"><span class="og-i">i</span>Le rappel au franchisé</div><p>${esc(OG_RAPPEL[0])} <b>${esc(OG_RAPPEL[1])}</b></p>
+        <button class="og-lu ${f.og_rappel ? 'on' : 'exige'}" data-a="og-rappel"><span class="cb">${f.og_rappel ? '✓' : ''}</span><span>Rappel lu avec le franchisé<small>${f.og_rappel ? 'coché à ' + esc(fmtH(f.og_rappel)) + ' · repris dans le courriel du rapport' : 'à cocher une fois lu ensemble'}</small></span></button></div>`;
+    }
+    ogPopHtml() {
+      return `<div class="og-voile" data-a="og-info"></div><div class="og-pop" role="dialog" aria-label="Pourquoi cet audit"><h3><span class="og-i">i</span>Pourquoi cet audit</h3>
+        <p>Les outils de gestion sont ce qui permet au magasin — et à la marque — de voir à temps qu’une chose dérape : la trésorerie, les commandes, la traçabilité, le travail de l’équipe.</p>
+        <div class="regle">${esc(OG_RAPPEL[0])} <b>${esc(OG_RAPPEL[1])}</b></div>
+        <ul><li>À lire avec le franchisé, puis cocher « Rappel lu avec le franchisé ».</li><li>Le même rappel est écrit dans chaque courriel de rapport, dans la langue du magasin.</li><li>Un outil « pas suivi » ou « en partie » devient un point proposé, à l’échéance du réseau.</li></ul>
+        <div class="og-bas"><small>Le texte du courriel se règle dans Suivi › Qui fait quoi › Les courriels.</small><button class="${this.o.tablette ? 'tb-b p' : 'btn p'}" data-a="og-info" style="flex:0 0 auto;min-width:140px">Compris</button></div></div>`;
+    }
+    outilsHtml(v, f) {
+      const og = f.og || (f.og = {}); const O = this.OG[v.shop]; const lu = (O && O.d && O.d.lu) || {};
+      const S = this.ogScore(f); const P = this.ogPrecedente(v); const photos = this.photosDe(v.id);
+      const n = { ok: 0, part: 0, ko: 0, na: 0 }; OUTILS.forEach(([k]) => { const x = (og[k] || {}).v; if (x) { n[x]++; } });
+      const reste = OUTILS.length - n.ok - n.part - n.ko - n.na;
+      const ec = S != null && P && P.score != null ? S - P.score : null;
+      const som = `<div class="card og-som"><div class="lab">Respect des outils de gestion</div>
+        <div class="og-sc"><b class="${ogTon(S)}">${S != null ? S : '—'}</b><span>/ 100</span>${P ? `<span>visite précédente (${esc(fmtD(P.le))}) : ${P.score != null ? P.score : '—'}${ec != null ? ` · <span class="${ec > 0 ? 'up' : ec < 0 ? 'dn' : ''}">${ec > 0 ? '+' : ec < 0 ? '−' : '±'}${Math.abs(ec)}</span>` : ''}</span>` : '<span>premier audit du magasin</span>'}</div>
+        <div class="og-seg">${OUTILS.map(([k]) => `<i class="${esc((og[k] || {}).v || '')}"></i>`).join('')}</div>
+        <div class="og-cpt">${n.ok ? `<span class="ok">${n.ok} suivi${n.ok > 1 ? 's' : ''}</span>` : ''}${n.part ? `<span class="part">${n.part} en partie</span>` : ''}${n.ko ? `<span class="ko">${n.ko} pas suivi${n.ko > 1 ? 's' : ''}</span>` : ''}${n.na ? `<span>${n.na} sans objet</span>` : ''}${reste ? `<span>${reste} à juger</span>` : ''}</div>
+        ${this.ogRappelHtml(f)}
+        <div class="xs mu" style="margin-top:10px;line-height:1.45">Part dans le rapport et le courriel : chaque outil, son verdict, la remarque et le rappel. Un « pas suivi » ou « en partie » devient un point proposé.</div></div>`;
+      const items = OUTILS.map(([k, nom, aide, auto, ic]) => {
+        const x = og[k] || {}; const L = lu[k];
+        const ligne = !auto ? `<div class="og-lt vue"><span class="s">Vu sur place</span><span class="d"></span>${k === 'etiq_commandes' ? 'chambre froide et comptoir des retraits' : 'vitrine, labo, stock et congélateur'}</div>`
+          : L ? `<div class="og-lt"><span class="s">Lu tout seul</span><span class="d ${esc(L.etat || '')}"></span><span>${esc(L.texte || '')}</span></div>`
+          : `<div class="og-lt"><span class="s">Lu tout seul</span><span class="d"></span><span>${O && O.chargement ? 'lecture…' : 'pas de donnée : à voir avec le franchisé'}</span></div>`;
+        const phs = photos.filter(p => p.ref === 'outil:' + k);
+        const tri = `<span class="tri">${OG_V.map(([c, l]) => `<button data-a="og-v" data-v="${k}|${c}" class="${x.v === c ? c : ''}">${esc(l)}</button>`).join('')}</span>`;
+        const ph = `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|outil:${k}">${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Preuve en photo'}</button>`
+          + phs.map(p => `<button class="ph-v" data-a="voir" data-v="${esc(p.client_id || p.id)}" style="background-image:url('${esc(this.photoSrc(p))}')">${this.repBadge(p)}</button>`).join('');
+        const exige = (x.v === 'ko' || x.v === 'part') && !String(x.com || '').trim();
+        const pa = (f.pa || []).find(a => a.ref === 'outil:' + k);
+        return `<div class="card og-it ${x.v === 'ko' ? 'ko' : ''}"><div class="h"><span class="ic"><svg viewBox="0 0 24 24">${ic}</svg></span><div class="tt"><b>${esc(nom)}</b><small>${esc(aide)}</small></div></div>
+          ${ligne}<div class="og-r">${tri}${ph}</div>
+          <textarea data-f="og|${k}" rows="1" class="${exige ? 'exige' : ''}" placeholder="${exige ? 'Ce qui ne va pas — obligatoire, part dans le rapport' : 'Remarque — part dans le rapport'}">${esc(x.com || '')}</textarea>
+          ${pa ? `<div class="og-pp"><span class="pill ${esc(pa.priorite)}">${esc(pa.priorite)}</span><b>Point proposé :</b> ${esc(pa.titre)} · échéance ${esc(fmtD(pa.echeance))}</div>` : ''}</div>`;
+      }).join('');
+      return `<div class="og"><div>${som}</div><div>${items}</div></div>` + (this.ogInfo ? this.ogPopHtml() : '');
+    }
     chargerEquipe(shop) {
       const k = shop + '|' + auj(); if (!shop || this.EQ[shop] && this.EQ[shop].k === k) { return; }
       this.EQ[shop] = { k, chargement: true };
