@@ -6643,6 +6643,9 @@
   /** Une non-conformité : notée sous le seuil (4 par défaut) ou refusée par le contrôleur, comme le lit cqEtat. */
   const tjNC = (t, seuil) => t.note != null && (t.note < seuil || t.accepte === false);
   const tjCtlAttente = t => t.statut === 'aControler' || t.statut === 'aValider';
+  /** Une tâche à photo : demandée, ou déjà rendue (une photo, une note, à contrôler) — une tâche notée peut arriver sans le
+   * drapeau (16/11/2026 : « Photos rendues 0 / 3 » avec sept photos notées). */
+  const tjAPhoto = t => !!(t.photoRequise || t.photo || t.note != null || t.statut === 'notee' || t.statut === 'aControler');
   /** La couleur d'une note moyenne : conforme dès le seuil, à surveiller un point en dessous, sinon à reprendre. */
   const tjCouleurNote = (m, seuil) => m == null ? '' : (m >= seuil ? '#2D7A3E' : (m >= seuil - 1 ? '#D97706' : '#C0182B'));
   /** Les non-conformités des 30 derniers jours, en pastille dans la ligne de la semaine (18/11/2026 : la ligne des quatre
@@ -6657,7 +6660,7 @@
   /** Les résultats d'un jour lu : tâches obligatoires faites, photos rendues, note moyenne du contrôle, non-conformités. */
   function tjRes(D) {
     const T = tachesJour(D), f = T.filter(tjFaite).length, sp = T.filter(tjSansPhoto).length;
-    const ph = T.filter(t => t.photoRequise), phR = ph.filter(tjFaite).length, seuil = +D.seuil || 4;
+    const ph = T.filter(tjAPhoto), phR = ph.filter(tjFaite).length, seuil = +D.seuil || 4;
     const N = T.filter(t => t.note != null), moy = N.length ? N.reduce((a, t) => a + t.note, 0) / N.length : null;
     return { T, f, p: tjPct(f, T.length), sp, ph: ph.length, phR, seuil, N: N.length, moy, nc: N.filter(t => tjNC(t, seuil)).length, ctl: T.filter(tjCtlAttente).length };
   }
