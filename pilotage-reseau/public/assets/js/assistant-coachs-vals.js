@@ -3,9 +3,11 @@
  * « garde toutes les demandes dans une table, pour après créer des agents spécifiques »).
  *
  * Deux onglets :
- *  - Coachs : Pierre et le Coach, deux coachs business de pointe au ton différent. Pour chacun : nom, accroche, ton, et
- *    pour le budget, le trafic et les contrôles qualité, le poids (accent fort, suivi, n'en parle pas) et ce qu'il
- *    vérifie. Un brouillon reste un brouillon jusqu'à « Publier » (POST /assistant/coachs). GET /assistant/coachs.
+ *  - Coachs : Mr. Pierre, le Coach et le Coach Vente, coachs business de pointe au ton différent. Pour chacun : nom,
+ *    accroche, ton, pour le budget, le trafic et les contrôles qualité, le poids (accent fort, suivi, n'en parle pas)
+ *    et ce qu'il vérifie, et ses objectifs 2026 (18/11/2026 : food cost, personnel, clients scannés, menus, articles
+ *    par ticket, panier ; une cible vide n'est pas suivie). Un brouillon reste un brouillon jusqu'à « Publier »
+ *    (POST /assistant/coachs). GET /assistant/coachs.
  *  - Questions posées : ce que les franchisés demandent (GET /assistant/questions-posees?jours=), pour décider plus
  *    tard des agents spécialisés.
  *
@@ -26,11 +28,12 @@ function charge(app, quoi, force){
   });
 }
 
-/** Le brouillon d'un coach : ascB[coach] = {nom, dit, ton, accents:{axe:{niveau, verifie}}} (seuls les champs touchés). */
+/** Le brouillon d'un coach : ascB[coach] = {nom, dit, ton, accents:{axe:{niveau, verifie}}, objectifs:{cle: saisie}} (seuls les champs touchés). */
 function brouillon(app, k, patch, axe){
   const B = JSON.parse(JSON.stringify(app.state.ascB || {}));
   B[k] = B[k] || {};
-  if (axe) { B[k].accents = B[k].accents || {}; B[k].accents[axe] = Object.assign({}, B[k].accents[axe] || {}, patch); }
+  if (axe === 'objectifs') { B[k].objectifs = Object.assign({}, B[k].objectifs || {}, patch); }
+  else if (axe) { B[k].accents = B[k].accents || {}; B[k].accents[axe] = Object.assign({}, B[k].accents[axe] || {}, patch); }
   else { Object.assign(B[k], patch); }
   app.setState({ ascB: B });
 }
@@ -41,7 +44,8 @@ function publier(app, d){
   const coachs = {};
   Object.keys(d.coachs).forEach(k => {
     const c = d.coachs[k], b = (S.ascB || {})[k] || {};
-    coachs[k] = { nom: b.nom != null ? b.nom : c.nom, dit: b.dit != null ? b.dit : c.dit, ton: b.ton != null ? b.ton : c.ton, accents: {} };
+    coachs[k] = { nom: b.nom != null ? b.nom : c.nom, dit: b.dit != null ? b.dit : c.dit, ton: b.ton != null ? b.ton : c.ton, accents: {},
+      objectifs: Object.assign({}, c.objectifs || {}, b.objectifs || {}) };
     Object.keys(d.axes).forEach(ax => { coachs[k].accents[ax] = Object.assign({}, c.accents[ax], (b.accents || {})[ax] || {}); });
   });
   app.setState({ ascEnvoi: true, ascMsg: null });
@@ -70,7 +74,15 @@ export function valsAssistantCoachs(app, common){
       return { cle: k, avatar: d.avatars[k], defaut: k === d.defaut,
         nom: v('nom'), dit: v('dit'), ton: v('ton'), modifie: !!B[k],
         setNom: e => brouillon(app, k, { nom: e.target.value }), setDit: e => brouillon(app, k, { dit: e.target.value }), setTon: e => brouillon(app, k, { ton: e.target.value }),
-        departs: () => brouillon(app, k, { nom: def.nom, dit: def.dit, ton: def.ton, accents: JSON.parse(JSON.stringify(def.accents)) }),
+        departs: () => brouillon(app, k, { nom: def.nom, dit: def.dit, ton: def.ton, accents: JSON.parse(JSON.stringify(def.accents)), objectifs: Object.assign({}, def.objectifs || {}) }),
+        // Les objectifs 2026 : la saisie telle quelle (« 12,5 »), sinon la valeur publiée, virgule belge.
+        objectifs: Object.keys(d.objectifs || {}).map(o => {
+          const D = d.objectifs[o], v = b.objectifs && o in b.objectifs ? b.objectifs[o] : (c.objectifs || {})[o];
+          return { cle: o, lib: D.lib, unite: D.unite, sens: D.sens, mesure: D.mesure,
+            valeur: v == null ? '' : (typeof v === 'number' ? String(v).replace('.', ',') : String(v)),
+            set: e => brouillon(app, k, { [o]: e.target.value.trim() }, 'objectifs') };
+        }),
+        levierPrix: (() => { const v = b.objectifs && 'foodCost' in b.objectifs ? b.objectifs.foodCost : (c.objectifs || {}).foodCost; return v != null && v !== ''; })(),
         axes: Object.keys(d.axes).map(ax => {
           const x = Object.assign({}, c.accents[ax], (b.accents || {})[ax] || {});
           return { cle: ax, lib: d.axes[ax], niveau: x.niveau, verifie: x.verifie,
