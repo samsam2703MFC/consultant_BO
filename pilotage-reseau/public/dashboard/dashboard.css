@@ -2595,10 +2595,6 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tj-j small{display:block;font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tj-barre{height:5px;border-radius:3px;background:var(--color-background-secondary);margin-top:7px;overflow:hidden}
 .tj-barre i{display:block;height:5px;border-radius:3px}
-.tj-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
-.tj-kpis .db-tui{min-height:112px}
-.tj-kpis .db-tui .v{font-size:27px}
-.tj-kpis [data-tjallerret]{cursor:pointer}
 /* La case d'un jour porte ses résultats (18/11/2026) : la part faite et son compte sur une ligne, puis photos, note, NC. */
 .tj-j{container-type:inline-size}
 .tj-jh{display:flex;align-items:baseline;gap:8px;min-width:0}
@@ -2678,7 +2674,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tj-rn small{display:block;font-size:10.5px;color:var(--color-text-muted)}
 /* Tablette : une colonne de tâches, le guide sur deux colonnes, la ligne de checklist sans « voir ». */
 @media (max-width:1100px){.tj-ts{grid-template-columns:minmax(0,1fr);padding-left:16px}.tj-g{grid-template-columns:1fr 1fr}.tj-h{grid-template-columns:70px minmax(0,1fr) 150px 100px}.tj-h .tj-repli{display:none}}
-@media (max-width:900px){.tj-kpis{grid-template-columns:1fr 1fr}.tj-j small{white-space:normal}.tj-r{grid-template-columns:76px minmax(0,1fr) auto}.tj-r .tj-note{grid-column:1;grid-row:2;justify-self:start}.tj-r .tj-rj{grid-row:1}.tj-r .tj-rn{grid-column:2;grid-row:1/span 2}.tj-r>.tj-st{grid-column:3;grid-row:1/span 2}}
+@media (max-width:900px){.tj-j small{white-space:normal}.tj-r{grid-template-columns:76px minmax(0,1fr) auto}.tj-r .tj-note{grid-column:1;grid-row:2;justify-self:start}.tj-r .tj-rj{grid-row:1}.tj-r .tj-rn{grid-column:2;grid-row:1/span 2}.tj-r>.tj-st{grid-column:3;grid-row:1/span 2}}
 /* Les onglets du bureau sur une tablette : ils passent à la ligne plutôt que de se serrer ou de se cacher. */
 @media (max-width:1100px){.db-nav>.db-ong:first-child{display:flex;flex-wrap:wrap;max-width:100%}.db-nav>.db-ong:first-child button{flex:0 0 auto;padding:7px 13px}}
 /* Téléphone : six onglets en bas ; la page des tâches en une colonne. */
@@ -2686,10 +2682,22 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .mb-tabs.mb-tabs6 button{font-size:9.5px}
 .tj-mob{padding:10px 10px 18px}
 .tj-mob .db-sec{font-size:15px;margin:2px 0 8px}.tj-mob .db-sec small{display:none}
-.tj-mob .tj-sem .db-mini{display:none}.tj-mob .tj-sem{margin-bottom:6px}.tj-mob .tj-fl{margin-left:0;width:100%;justify-content:space-between}.tj-mob .tj-fl .db-btn{font-size:11px;padding:5px 9px}
-.tj-mob .tj-bande{gap:4px}.tj-mob .tj-j{padding:6px 5px;border-radius:9px;text-align:center}.tj-mob .tj-j.on{padding:5px 4px}
-.tj-mob .tj-jh{justify-content:center}.tj-mob .tj-jr{display:none}.tj-mob .tj-j .l{font-size:9.5px}.tj-mob .tj-j b{font-size:14px}.tj-mob .tj-j small{display:none}.tj-mob .tj-j .db-sk{width:80%!important;margin:4px auto!important;height:14px!important}.tj-mob .tj-barre{margin-top:4px;height:4px}
-.tj-mob .tj-kpis{grid-template-columns:1fr 1fr;gap:8px}.tj-mob .tj-kpis .db-tui{min-height:0;padding:9px 11px}.tj-mob .tj-kpis .db-tui .v{font-size:21px}.tj-mob .tj-kpis .db-tui .k{white-space:normal}
+/* Au téléphone (18/11/2026) : la semaine sur une ligne entre ‹ et ›, sept cases courtes (la part faite, un point rouge
+ * s'il y a une non-conformité), puis la carte du jour ouvert. */
+.tj-mob .tj-sem{flex-wrap:nowrap;gap:8px;margin:0 0 6px}.tj-mob .tj-sem .db-lab{flex:1;text-align:center;font-size:10.5px}.tj-mob .tj-sem .fr-fl{width:36px;height:30px}
+.tj-mob .tj-bande{gap:4px;margin-bottom:0}.tj-mob .tj-j{position:relative;padding:6px 2px 7px;border-radius:9px;text-align:center}.tj-mob .tj-j.on{padding:5px 1px 6px}
+.tj-mob .tj-j .l{font-size:10px}.tj-mob .tj-j.auj .l{color:var(--color-primary)}.tj-mob .tj-j b{font-size:13px;margin-top:1px;white-space:nowrap}.tj-mob .tj-j small{display:none}.tj-mob .tj-j .db-sk{width:80%!important;margin:4px auto!important;height:14px!important}.tj-mob .tj-barre{margin:4px 4px 0;height:4px}
+.tj-mob .tj-jdot{position:absolute;top:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--color-primary);border:2px solid var(--color-bg,var(--chip))}
+.tj-jm{padding:10px 12px 0;overflow:hidden}
+.tj-jm-t{display:flex;align-items:baseline;gap:4px;font-size:12px;color:var(--color-text-muted)}.tj-jm-t b{font-weight:400;color:var(--color-text)}.tj-jm-t span{margin-left:auto;font-size:10.5px}
+.tj-jm-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:8px 0 10px}
+.tj-jm-g>div{display:flex;flex-direction:column;min-width:0;padding:0 8px;border-left:1px dashed var(--color-border-tertiary)}.tj-jm-g>div:first-child{padding-left:0;border-left:none}
+.tj-jm-g .k{font:400 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj-jm-g b{font:400 20px var(--font-display);font-variant-numeric:tabular-nums;line-height:1.15;margin:2px 0 1px;white-space:nowrap}
+.tj-jm-g small{font-size:10px;line-height:1.3;color:var(--color-text-muted)}
+.tj-jm-nc{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:baseline;gap:7px;width:calc(100% + 24px);margin:0 -12px;padding:9px 12px;border-top:1px solid var(--color-border-tertiary);background:rgba(141, 29, 44, 0.04);font-size:11px;color:var(--color-text-muted)}
+.tj-jm-nc .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--color-primary)}.tj-jm-nc b{font:400 15px var(--font-display);color:var(--color-primary)}.tj-jm-nc .v{margin-left:auto;color:var(--color-primary)}
+.tj-jm-nc.bon{background:#f0f7f2}.tj-jm-nc.bon .k,.tj-jm-nc.bon b,.tj-jm-nc.bon .v{color:var(--green)}
 .tj-mob .tj-g{grid-template-columns:1fr 1fr;gap:12px;padding:12px}.tj-mob .tj-g-code,.tj-mob .tj-g-txt{grid-column:1/-1}.tj-mob .tj-g-big{font-size:30px}
 .tj-mob .db-card>.ct{padding:10px 12px}.tj-mob .db-card>.ct .db-mini{flex-basis:100%}.tj-mob .tj-filtres{margin-left:0}.tj-mob .tj-guide .ct .db-mini{display:none}
 .tj-mob .tj-h{grid-template-columns:62px minmax(0,1fr) auto;grid-template-rows:auto auto;gap:6px 10px;padding:10px 12px}
