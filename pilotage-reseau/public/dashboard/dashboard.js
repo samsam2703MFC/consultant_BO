@@ -114,7 +114,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60, 'cqph': 300 };
+  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'm12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60, 'cqph': 300 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -228,7 +228,8 @@
     // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
     // clients pro (21/10/2026).
     // Les douze dernières semaines face au N-1 : en Semaine, et en Mois aussi (16/11/2026, Sam : « ce graphique aussi dans le mois »).
-    if (S.vue === 'semaine' || S.vue === 'mois') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
+    // En Mois, les douze derniers mois glissants au lieu des semaines (18/11/2026, Sam) : treize lus, douze clos et le mois en cours.
+    if (S.vue === 'semaine' || S.vue === 'mois') { lireAux(cleS12(), cheminS12(), force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
       if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set((S.vue === 'semaine' ? friseSemaines().flat() : friseJours()).map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
@@ -8770,7 +8771,7 @@
       ['canaux', 'Canaux, commandes et promotions', () => splitCarte(m) + offresCarte()],
       ['invendus', 'Invendus', () => invCarte(false), m.invendusPieces ? fN(m.invendusPieces) + ' pièces · ' + fE(m.invendus || 0) : ''],
       ['calendrier', sem ? 'Le calendrier de la semaine' : 'Le calendrier du mois', () => periodeCalendrier(m) + (sem ? '' : periodeProfil(m))],
-      // Les douze dernières semaines restent visibles, en Semaine et en Mois (16/11/2026, Sam) : voir qbPage.
+      // Les douze dernières semaines restent visibles en Semaine, les douze derniers mois en Mois (16 et 18/11/2026, Sam) : voir qbPage.
       sem || S.date.slice(0, 7) !== AUJ.slice(0, 7) ? null : ['tendance', 'Le résultat jour par jour', () => rendRentab()],
       ['heures', 'Le détail heure par heure', () => st ? rendHeures(st) : squelette(2)],
     ].filter(Boolean);
@@ -8874,28 +8875,44 @@
    * vendues ÷ tickets). La semaine en cours, servie un jour ou deux, reste hors de la courbe (elle la ferait plonger) :
    * sa tuile la compare au N-1 aux mêmes jours. Sans N-1 (magasin trop jeune), la courbe reste seule et le motif se lit
    * à la place de la tuile.
+   *
+   * En vue Mois, la même carte sur les douze derniers mois glissants (18/11/2026, Sam : « les 12 derniers mois glissants,
+   * et pas les semaines ») : chaque mois clos face au même mois un an plus tôt, le mois en cours dans sa tuile, face au
+   * N-1 aux mêmes jours.
    */
+  function cleS12() { return (S.vue === 'mois' ? 'm12|' : 's12|') + S.shop + '|' + bornes()[0]; }
+  function cheminS12() { return '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + (S.vue === 'mois' ? '&vue=mois' : '') + '&date=' + S.date + '&n=13&articles=1&pro=1'; }
   function rendSemaines() {
+    const pm = S.vue === 'mois';
+    // Les mots de la carte : la semaine ou le mois.
+    const PER = pm
+      ? { titre: 'Les douze derniers mois', de: ' du mois', lect: 'Lecture des douze mois…', aucune: 'Aucun mois clos lu pour ce magasin.', ces: 'ces mois',
+        n1: 'même mois en N-1 (pointillé)', cours: 'Mois en cours', douze: 'Douze mois', best: 'Meilleur mois', haut: 'Mois le plus haut' }
+      : { titre: 'Les douze dernières semaines', de: ' de la semaine', lect: 'Lecture des douze semaines…', aucune: 'Aucune semaine close lue pour ce magasin.', ces: 'ces semaines',
+        n1: 'même semaine en N-1 (pointillé)', cours: 'Semaine en cours', douze: 'Douze semaines', best: 'Meilleure semaine', haut: 'Semaine la plus haute' };
+    // Le nom d'une période : « S46 », ou « nov. 2025 » (« nov. » sur l'axe, l'année au premier point et en janvier).
+    const nom = w => pm ? w.lab + ' ' + w.du.slice(0, 4) : 'S' + w.iso;
+    const axe = (w, i) => pm ? w.lab + (i === 0 || w.iso === 1 ? ' ' + w.du.slice(2, 4) : '') : 'S' + w.iso;
     // Le panier hors clients pro (21/10/2026) : la courbe l'est quand chacune de ses semaines closes a ses tickets pro lus
     // (`caComptoir` du serveur), et le N-1 ne s'y montre alors que hors pro lui aussi — sans relevé pro un an plus tôt,
     // il se tait plutôt que de comparer un panier pro compris. Sinon toute la carte reste pro compris, et le dit.
     let pCpt = false;
     const S12_MESURES = {
-      clients: { nom: 'Clients', titre: 'clients', unite: 'clients de la semaine',
+      clients: { nom: 'Clients', titre: 'clients', unite: 'clients' + PER.de,
         v: x => x && x.tickets > 0 ? x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.tickets, 0), b: 1 }), f: v => fN(v) },
-      panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen de la semaine',
+      panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen' + PER.de,
         v: x => !x ? null : (pCpt ? (x.caComptoir != null && x.ticketsComptoir > 0 ? x.caComptoir / x.ticketsComptoir : null) : (x.tickets > 0 ? x.ca / x.tickets : null)),
         cumul: L => pCpt ? { a: L.reduce((t, x) => t + x.caComptoir, 0), b: L.reduce((t, x) => t + x.ticketsComptoir, 0) } : { a: L.reduce((t, x) => t + x.ca, 0), b: L.reduce((t, x) => t + x.tickets, 0) }, f: v => fU(v) },
-      articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client de la semaine',
+      articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client' + PER.de,
         v: x => x && x.tickets > 0 && x.articles != null ? x.articles / x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.articles, 0), b: L.reduce((t, x) => t + x.tickets, 0) }), f: v => nf(v, 2) }
     };
     if (!S12_MESURES[S.s12m]) { let m = null; try { m = localStorage.getItem('db.s12m'); } catch (e) { /* navigation privée */ } S.s12m = S12_MESURES[m] ? m : 'clients'; }
-    const cle = 's12|' + S.shop + '|' + bornes()[0];
+    const cle = cleS12();
     const D = S.aux[cle];
     const mk = S.s12m, M = S12_MESURES[mk];
     const bascule = `<span class="db-ong db-ong-p">${Object.entries(S12_MESURES).map(([k, x]) => `<button type="button" data-s12m="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
-    const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">Les douze dernières semaines — ${M.titre}, face au N-1</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
-    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des douze semaines…'}</div>`); }
+    const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">${PER.titre} — ${M.titre}, face au N-1</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
+    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : PER.lect}</div>`); }
     const pc = (a, b) => b ? 100 * a / b : 0;
     // Le signe se lit sur la valeur arrondie : −0,3 % s'écrit « 0 % », pas « −0 % ».
     const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
@@ -8905,7 +8922,7 @@
     const lues = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
     const enCours = lues.length && lues[lues.length - 1].enCours ? lues[lues.length - 1] : null;
     const W = lues.filter(w => !w.enCours).slice(-12);
-    if (!W.length) { return carte(`<div class="db-note">Aucune semaine close lue pour ce magasin.</div>`); }
+    if (!W.length) { return carte(`<div class="db-note">${PER.aucune}</div>`); }
     const pLu = mk === 'panier' && W.some(w => 'caComptoir' in w);   // une réponse d'avant le 21/10/2026 n'en dit rien
     pCpt = pLu && W.filter(w => w.source).every(w => w.caComptoir != null);
     const n1Motif = pCpt && W.some(w => w.n1 && w.n1.source) && !W.some(w => w.n1 && w.n1.caComptoir != null)
@@ -8913,7 +8930,7 @@
     const unite = M.unite + (pCpt ? ' hors clients pro' : (pLu ? ' (pro compris : tickets pro pas encore lus)' : ''));
     const v = w => w.source ? M.v(w) : null, v1 = w => w.n1 ? M.v(w.n1) : null;
     if (!W.some(w => v(w) != null)) {
-      return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ces semaines.' : 'Aucune semaine close lue pour ce magasin.'}</div>`);
+      return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ' + PER.ces + '.' : PER.aucune}</div>`);
     }
     const avecN1 = W.some(w => v1(w) != null);
     const vals = [];
@@ -8927,7 +8944,7 @@
     const ft = 'font-family:var(--font-ui)';
     let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
     [1, 2].forEach(k => { const y = Y(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
-    // La bande entre les deux courbes, semaine par semaine.
+    // La bande entre les deux courbes, période par période.
     for (let i = 0; i < W.length - 1; i++) {
       const a = v(W[i]), b = v(W[i + 1]), a1 = v1(W[i]), b1 = v1(W[i + 1]);
       if (a == null || b == null || a1 == null || b1 == null) { continue; }
@@ -8941,17 +8958,17 @@
       const n = v(w), n1 = v1(w), up = n1 == null || n == null || n >= n1;
       if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Y(n1)}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${X(i)}" y="${(+Y(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${M.f(n1)}</text>`; }
       if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`; }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1c1a17" style="${ft}">S${w.iso}</text>`;
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1c1a17" style="${ft}">${esc(axe(w, i))}</text>`;
     });
     svg += '</svg>';
     const chips = W.map(w => {
       const n = v(w), n1 = v1(w), e = n != null && n1 ? pc(n - n1, n1) : null;
-      const dates = (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
+      const dates = pm ? w.du.slice(0, 4) : (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
       const titre = (n != null ? M.f(n) + ' · ' + fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (n1 != null ? ' · N-1 : ' + M.f(n1) : ' · pas de N-1');
-      return `<div class="ch" title="${esc(titre)}"><span><b>S${w.iso}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
+      return `<div class="ch" title="${esc(titre)}"><span><b>${esc(pm ? w.lab.charAt(0).toUpperCase() + w.lab.slice(1) : 'S' + w.iso)}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
     }).join('');
-    // Les douze semaines : la mesure cumulée (clients : la somme ; panier et articles : le rapport des sommes), face au
-    // N-1 sur les seules semaines qui en ont un.
+    // Les douze périodes : la mesure cumulée (clients : la somme ; panier et articles : le rapport des sommes), face au
+    // N-1 sur les seules périodes qui en ont un.
     const comp = W.filter(w => v(w) != null && v1(w) != null);
     const cN = M.cumul(comp), c1 = M.cumul(comp.map(w => w.n1));
     const gN = cN.b ? cN.a / cN.b : null, g1 = c1.b ? c1.a / c1.b : null;
@@ -8963,25 +8980,25 @@
     if (enCours) {
       const n = v(enCours), n1 = v1(enCours), eC = n != null && n1 ? pc(n - n1, n1) : null;
       const j = enCours.joursServis || 0;
-      tCur = tuile('Semaine en cours', n != null ? M.f(n) : '—',
+      tCur = tuile(PER.cours, n != null ? M.f(n) : '—',
         (eC != null ? sg(eC) + ' % vs N-1 aux mêmes jours · ' : '') + j + ' jour' + (j > 1 ? 's' : '') + ' servi' + (j > 1 ? 's' : ''), eC == null ? '' : (eC >= 0 ? 'bon' : 'vif'));
     } else {
       const n = v(der), n1 = v1(der), eD = n != null && n1 ? pc(n - n1, n1) : null;
-      tCur = tuile('Semaine S' + der.iso, n != null ? M.f(n) : '—', eD != null ? sg(eD) + ' % vs N-1' : (prev && v(prev) && n != null ? sg(pc(n - v(prev), v(prev))) + ' % vs S' + prev.iso : ''),
+      tCur = tuile(pm ? nom(der) : 'Semaine S' + der.iso, n != null ? M.f(n) : '—', eD != null ? sg(eD) + ' % vs N-1' : (prev && v(prev) && n != null ? sg(pc(n - v(prev), v(prev))) + ' % vs ' + nom(prev) : ''),
         eD == null ? '' : (eD >= 0 ? 'bon' : 'vif'));
     }
-    const lib12 = 'Douze semaines';
+    const lib12 = PER.douze;
     const tuiles = [
       eT != null ? tuile(lib12 + ' vs N-1', sg(eT) + ' %', M.f(gN) + ' contre ' + M.f(g1), eT >= 0 ? 'bon' : 'vif')
         : tuile(lib12, gT != null ? M.f(gT) : '—', esc(n1Motif || 'pas de N-1')),
       tCur,
-      tuile(mk === 'clients' ? 'Meilleure semaine' : 'Semaine la plus haute', meilleure ? M.f(v(meilleure)) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
+      tuile(mk === 'clients' ? PER.best : PER.haut, meilleure ? M.f(v(meilleure)) : '—', meilleure ? (pm ? nom(meilleure) : 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au)) : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>même semaine en N-1 (pointillé)</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>${PER.n1}</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
-    return carte(corps, 'S' + W[0].iso + ' → S' + der.iso + ' · ' + (D.source || ''));
+    return carte(corps, nom(W[0]) + ' → ' + nom(der) + ' · ' + (D.source || ''));
   }
 
   /** L'année, mois par mois, face à l'an passé : la carte partagée avec la tablette (assets/js/cartes-magasin.js). */

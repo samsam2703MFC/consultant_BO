@@ -8,7 +8,7 @@
  *
  *   - la SEMAINE : six semaines, chacune face à la semaine décalée de 364
  *     jours pour qu'un lundi tombe sur un lundi ;
- *   - le MOIS : six mois, chacun face au même mois civil un an plus tôt ;
+ *   - le MOIS : six mois (ou `n`, treize au plus), chacun face au même mois civil un an plus tôt ;
  *   - l'ANNÉE : les douze mois de l'année, face aux mêmes mois de l'an passé.
  *
  * La période en cours ne se compare qu'aux jours qu'elle a déjà servis : la
@@ -22,7 +22,7 @@
  */
 
 /**
- * GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 (2 à 13 semaines)[&articles=1][&pro=1] — avec
+ * GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 (2 à 13 semaines ou mois)[&articles=1][&pro=1] — avec
  * `articles=1`, chaque période (et son N-1) porte aussi `articles`, les pièces vendues (dashboard magasin, articles par
  * client, 19/10/2026) ; avec `pro=1`, `caComptoir` et `ticketsComptoir` (le panier hors clients pro, 21/10/2026).
  */
@@ -437,7 +437,9 @@ function vsPeriodes(string $vue, string $date, int $n): array
     }
     $y = (int) substr($date, 0, 4); $m = (int) substr($date, 5, 2);
     $mois = [];
-    if ($vue === 'mois') { for ($i = 5; $i >= 0; $i--) { $t = mktime(12, 0, 0, $m - $i, 1, $y); $mois[] = [(int) date('Y', $t), (int) date('n', $t)]; } }
+    // Le mois : `n` mois jusqu'à celui de la date, six par défaut (le cockpit) ; treize pour le dashboard magasin (18/11/2026,
+    // Sam : les douze derniers mois glissants en vue Mois, et le mois en cours à part).
+    if ($vue === 'mois') { for ($i = $n - 1; $i >= 0; $i--) { $t = mktime(12, 0, 0, $m - $i, 1, $y); $mois[] = [(int) date('Y', $t), (int) date('n', $t)]; } }
     else { for ($k = 1; $k <= 12; $k++) { $mois[] = [$y, $k]; } }
     foreach ($mois as [$yy, $mm]) {
         $du = sprintf('%04d-%02d-01', $yy, $mm); $au = date('Y-m-t', strtotime($du));
