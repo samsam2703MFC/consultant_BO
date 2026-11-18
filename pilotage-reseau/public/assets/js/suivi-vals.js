@@ -454,6 +454,7 @@ function rapVals(app, sv, id){
     budget: budgetDe(v.budgetCa),
     score: scoreVals(d.score),
     evaluation: evalVals(d.evaluation),
+    outils: outilsVals(d.outils),
     personnel: equipeVals(v.personnel),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
@@ -492,6 +493,17 @@ function equipeVals(pe){
  * L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur (le même que dans le PDF), la moyenne
  * face à la précédente, chaque axe avec sa note, l'écart et le commentaire.
  */
+/** Les outils de gestion (17/11/2026) : le score, l'écart à l'audit précédent, chaque outil jugé, le rappel. */
+function outilsVals(o){
+  if (!o || !o.lignes) { return null; }
+  const P = o.precedent; const d = o.score != null && P && P.score != null ? o.score - P.score : null;
+  const CLS = { ok: 'ok', part: 'att', ko: 'ko', na: 'mu' };
+  return { score: o.score == null ? '—' : o.score, ton: o.score == null ? 'mu' : o.score >= 80 ? 'ok' : o.score >= 50 ? 'att' : 'ko',
+    prec: P ? 'audit du ' + fmtD(P.le) + ' : ' + (P.score == null ? '—' : P.score + ' / 100') : 'premier audit du magasin',
+    ecart: d == null ? null : { txt: (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d), cls: d > 0 ? 'ok' : d < 0 ? 'ko' : 'mu' },
+    rappelLu: o.rappelLu ? 'rappel lu avec le franchisé à ' + String(o.rappelLu).slice(11, 16) : 'rappel pas coché à la tablette',
+    rappel: o.rappel || '', lignes: o.lignes.map(l => ({ nom: l.nom, verdict: l.verdict, cls: CLS[l.v] || 'mu', com: l.com || '', lu: l.lu || '' })) };
+}
 function evalVals(ev){
   if (!ev || !ev.axes) { return null; }
   const nf = x => x == null ? '—' : Number(x).toFixed(1).replace('.', ',');
