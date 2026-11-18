@@ -1101,5 +1101,16 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   0.0.28 ») : partie « La marge brute : 65 % en moyenne », « le budget, lui, compte 35 % de food cost » → **40 %**, la
   cible unique du réseau depuis le 18/11/2026 (`foodCostCible()`, Catalogue des KPI), en FR et en NL. Version de
   précision (personne ne repasse « à revoir ») ; rien d'autre ne change (quiz, remarques, photos identiques à la v1.2).
-  Inchangé, à décider : la partie « Un levier pour chaque poste » cite le modèle du réseau de l'annexe H (FO-34) — food
-  cost 35 %, masse salariale 25 %, frais généraux 28,3 %, environ 11,7 % de bénéfice.
+- **0.0.28, v1.4 du 18/11/2026** (Sam : « l'aligner », puis « passer à 60 % » et « 28,3 % → 14,7 % ») :
+  - « Un levier pour chaque poste » : le modèle prend les cibles du réseau du cockpit — food cost 40 %, masse salariale
+    17 % (`foodCostCible()`, `personnelCible()`, `src/cibles_reseau.php`) — et garde les frais généraux de l'annexe H
+    (28,3 %, le cockpit n'a pas de cible réseau pour eux) : environ **14,7 %** de bénéfice sur 500 000 € de CA ;
+  - « La marge brute » : la cible passe à **60 %** en moyenne, le pendant des 40 % de food cost (comme le prix objectif
+    du cockpit, coût ÷ cible food cost) ; « sous 60 %, revoir » ; prix maximum de l'exemple 0,45 € ÷ 0,40 = **1,13 €**
+    (1,29 € à 65 %) ; bundles sur une base de 60 % : 5 + 1 gratuit **52 %**, 4 + 1 **50 %**, 1 + 1 **20 %** (58 ; 56,3 ;
+    30 à 65 %) ; l'alerte « sous 62 % » devient « sous la cible de 60 % ». Fourchettes par famille (annexe J) inchangées.
+  - FR et NL ; version de précision ; une remarque de reprise le note. Relue au serveur : contenu identique à l'envoi.
+  - **Disent encore les anciens chiffres** (relevé du Manuel le 18/11/2026, non modifiés) : 0.0.17 « Inventaire et gestion
+    des stocks » (food cost 35 %), 0.0.23 « Bouclage financier & business plan » (FO-34 : 35 %, 25 %, 28,3 %),
+    0.0.30 « Reporting consolidé » (marge 65 %), 0.0.43 « Le dashboard : l'onglet Produits » (objectif × 3,13 pour 32 %
+    de matière ; le prix objectif lit maintenant 40 %, soit × 2,5).
