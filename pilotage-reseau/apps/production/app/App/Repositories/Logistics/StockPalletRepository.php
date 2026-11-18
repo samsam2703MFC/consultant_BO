@@ -5,6 +5,7 @@ namespace App\Repositories\Logistics;
 
 use App\Domain\Client\Order\OpenOrders;
 use App\Domain\Stock\StockLevels;
+use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
@@ -177,10 +178,11 @@ final class StockPalletRepository extends WorkshopRepository
      * [334] Stan ogólny : par produit en stock ou commandé — cartons au magasin (1), sur palette (2), commandes ouvertes
      * (OpenOrders, comme Stan magazynu), stocks min. / max. en vigueur (pièces, StockLevels) et pièces par carton.
      */
-    public function generalStock(): array
+    public function generalStock(int $soldDays = 42): array
     {
         return $this->all("SELECT fp.id, fp.name, COALESCE(cp.name, 'Bez kategorii') AS category, fp.ppc,
                 COALESCE(cs.free, 0) AS free, COALESCE(cs.pallet, 0) AS pallet, COALESCE(oo.cartons, 0) AS ordered,
+                i.id AS item_id, COALESCE(ps.mode, 'MTO') AS mode, COALESCE(w.cartons, 0) AS sold,
                 " . StockLevels::columns('ps') . "
             FROM final_product fp
             LEFT JOIN category_product cp ON cp.id = fp.id_category
@@ -191,8 +193,10 @@ final class StockPalletRepository extends WorkshopRepository
                        WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
             LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
                        JOIN customer_order_product cop ON cop.id_order = co.id WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
-            WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL
-            ORDER BY cp.name IS NULL, cp.name, fp.name");
+            LEFT JOIN (SELECT sl.id_product, SUM(sl.cartons) AS cartons FROM (" . WdtSalesRepository::linesSql() . ") sl
+                       WHERE sl.sale_date >= CURDATE() - INTERVAL ? DAY AND sl.sale_date < CURDATE() GROUP BY sl.id_product) w ON w.id_product = fp.id
+            WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL OR (ps.mode = 'MTS' AND fp.active = 1)
+            ORDER BY cp.name IS NULL, cp.name, fp.name", [$soldDays]);
     }
 
     /** [333] Cartons dont la dernière palette est $id. @return list<int> */
