@@ -161,6 +161,19 @@ function coDifferesDuReleve(int $sid, string $date, array $cmds): array
     return array_fill_keys(array_keys(coApparierDifferes($cand, $tickets)), true);
 }
 
+/**
+ * Les clients des tickets pro d'un jour (18/11/2026) : le relevé pro gravé, filtré sur la TVA valide (vpLu), comme le
+ * CA pro du Résultat du jour. Une commande de l'un d'eux ce jour-là est du B2B : le ruban des canaux du dashboard la
+ * laisse à la jauge B2B au lieu de la compter dans les commandes ou le webshop.
+ */
+function coClientsPro(int $sid, string $date): array
+{
+    $b = function_exists('vpLu') ? vpLu($sid, $date) : null;
+    $out = [];
+    foreach ((array) ($b['t'] ?? []) as $t) { if (preg_match('/^c(\d+)$/', (string) ($t[1] ?? ''), $m)) { $out[(int) $m[1]] = true; } }
+    return $out;
+}
+
 /** La caisse d'un magasin jour par jour (CA, tickets) sur une liste de jours, depuis les heures gravées. */
 function coCaisse(int $sid, array $jours): array
 {
@@ -239,19 +252,29 @@ function ep_exploitation_canaux(): array
         $liste = []; $aPreparer = 0; $dem = ['n' => 0, 'ca' => 0.0];
         // Les commandes du jour réglées en paiement différé (09/11/2026) : retirées, pas « à vérifier ».
         $differes = coDifferesDuReleve($shop, $date, (array) $cmds);
+        // Le même jour la semaine d'avant (18/11/2026, le ruban des canaux) : ses commandes, que le dashboard coupe à
+        // l'heure de J−7 ; `pro` : la commande d'un client des tickets pro du jour, ou réglée en différé (du B2B).
+        $dJ7 = date('Y-m-d', strtotime($date . ' -7 day'));
+        $differesJ7 = coDifferesDuReleve($shop, $dJ7, (array) $cmds);
+        $pro = coClientsPro($shop, $date); $proJ7 = coClientsPro($shop, $dJ7); $listeJ7 = [];
         // La liste du jour porte TOUTES les commandes, précommandes au comptoir comprises : c'est
         // ce que le magasin doit préparer. Le split, lui, ne compte que le webshop.
         foreach ((array) $cmds as $iC => $c) {
-            $j = substr($c['quand'], 0, 10);
+            $j = substr($c['quand'], 0, 10); $cli = (int) ($c['cli'] ?? 0);
             if ($j === $date) {
                 $liste[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut'], 'encaissee' => $c['encaissee'],
-                    'differe' => isset($differes[$iC])];
+                    'differe' => isset($differes[$iC]), 'pro' => isset($differes[$iC]) || ($cli > 0 && isset($pro[$cli]))];
                 if (!isset($differes[$iC]) && in_array($c['statut'], ['à préparer', 'en préparation'], true)) { $aPreparer++; }
             } elseif ($j === $demain) { $dem['n']++; $dem['ca'] += $c['montant']; }
+            elseif ($j === $dJ7) {
+                $listeJ7[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'montant' => $c['montant'], 'statut' => $c['statut'], 'encaissee' => $c['encaissee'],
+                    'pro' => isset($differesJ7[$iC]) || ($cli > 0 && isset($proJ7[$cli]))];
+            }
         }
         $nWeb = count(array_filter($liste, static fn ($c) => $c['canal'] !== 'compt'));
         return ['shop' => (string) $shop, 'date' => $date, 'jour' => $mJ, 'serie' => $m14['serie'], 'quatorze' => ['webshop' => $m14['webshop'], 'total' => $m14['total'], 'cc' => $m14['cc'], 'liv' => $m14['liv']],
             'liste' => $liste, 'nWebshop' => $nWeb, 'aPreparer' => $aPreparer, 'demain' => ['n' => $dem['n'], 'ca' => round($dem['ca'], 2)],
+            'j7' => ['date' => $dJ7, 'liste' => $listeJ7],
             'indispo' => $cmds === null, 'source' => $cmds === null ? 'panel muet' : 'commandes du panel + tickets caisse'];
     }
     // Le réseau : chaque magasin sur la période.
