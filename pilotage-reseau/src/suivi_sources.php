@@ -35,6 +35,7 @@ const SS_ROUTES = [
     ['tablette', 'GET', '/visites/boutique/{shop}', 'ep_visites_boutique', 'Le dossier du magasin pour la visite'],
     ['tablette', 'GET', '/visites/kpi/{shop}', 'ep_visites_kpi', 'KPI et santé du magasin'],
     ['tablette', 'GET', '/visites/equipe/{shop}', 'ep_visites_equipe', 'L’équipe au planning du jour, à noter'],
+    ['tablette', 'GET', '/visites/outils/{shop}', 'ep_visites_outils', 'Les outils de gestion : ce que le cockpit en lit tout seul'],
     ['tablette', 'GET', '/visites/budget/{shop}', 'ep_visites_budget', 'Le CA face au budget, le mini P&L'],
     ['tablette', 'GET', '/visites/taches/{shop}', 'ep_visites_taches', 'Les tâches des derniers mois'],
     ['tablette', 'GET', '/visites/conformite', 'ep_visites_conformite', 'Assortiment obligatoire, planogramme'],

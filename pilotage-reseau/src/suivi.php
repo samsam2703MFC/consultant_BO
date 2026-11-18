@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 // L'évaluation rapide de fin de visite : les six axes, le contrôle de ce qu'envoie la tablette.
 require_once __DIR__ . '/visites_evaluation.php';
+require_once __DIR__ . '/visites_outils.php';
 
 /**
  * Suivi des franchisés (24/10/2026) — le circuit d'une visite, de l'ordinateur à
@@ -429,11 +430,11 @@ function suModelesDefaut(): array
             'en' => ['sujet' => 'Visit on {date} cancelled — {magasin}', 'corps' => "Hello,\n\nThe visit planned on {date} at {heure} with {consultant} is cancelled. We will suggest a new date.\n\n" . $sigEn],
             'de' => ['sujet' => 'Besuch am {date} abgesagt — {magasin}', 'corps' => "Guten Tag,\n\nder Besuch am {date} um {heure} mit {consultant} ist abgesagt. Wir schlagen Ihnen einen neuen Termin vor.\n\n" . $sigDe]]],
         'rapport' => ['nom' => 'Rapport de visite', 'quand' => 'à l’envoi du rapport, PDF joint',
-            'vars' => ['magasin', 'date', 'type', 'consultant', 'phrase', 'points', 'piece', 'lien'], 'textes' => [
-            'fr' => ['sujet' => 'Rapport de visite du {date} — {magasin}', 'corps' => "Bonjour,\n\nVoici le rapport de la visite du {date} avec {consultant} ({type}).\n\n{phrase}\n\nLes points à travailler :\n\n{points}\n\n{piece}\n\nLe rapport complet et vos points sont sur votre page, où vous pouvez envoyer la photo de chaque correction : {lien}\n\n" . $sigFr],
-            'nl' => ['sujet' => 'Bezoekverslag van {date} — {magasin}', 'corps' => "Beste,\n\nHierbij het verslag van het bezoek van {date} met {consultant} ({type}).\n\n{phrase}\n\nDe werkpunten:\n\n{points}\n\n{piece}\n\nHet volledige verslag en uw werkpunten staan op uw pagina, waar u voor elke correctie een foto kunt sturen: {lien}\n\n" . $sigNl],
-            'en' => ['sujet' => 'Visit report of {date} — {magasin}', 'corps' => "Hello,\n\nHere is the report of the visit on {date} with {consultant} ({type}).\n\n{phrase}\n\nThe points to work on:\n\n{points}\n\n{piece}\n\nThe full report and your points are on your page, where you can send a photo of each correction: {lien}\n\n" . $sigEn],
-            'de' => ['sujet' => 'Besuchsbericht vom {date} — {magasin}', 'corps' => "Guten Tag,\n\nhier ist der Bericht zum Besuch am {date} mit {consultant} ({type}).\n\n{phrase}\n\nDie Arbeitspunkte:\n\n{points}\n\n{piece}\n\nDer vollständige Bericht und Ihre Arbeitspunkte stehen auf Ihrer Seite, wo Sie für jede Korrektur ein Foto senden können: {lien}\n\n" . $sigDe]]],
+            'vars' => ['magasin', 'date', 'type', 'consultant', 'phrase', 'points', 'outils_titre', 'outils', 'rappel', 'piece', 'lien'], 'textes' => [
+            'fr' => ['sujet' => 'Rapport de visite du {date} — {magasin}', 'corps' => "Bonjour,\n\nVoici le rapport de la visite du {date} avec {consultant} ({type}).\n\n{phrase}\n\nLes points à travailler :\n\n{points}\n\n{outils_titre}\n\n{outils}\n\n{rappel}\n\n{piece}\n\nLe rapport complet et vos points sont sur votre page, où vous pouvez envoyer la photo de chaque correction : {lien}\n\n" . $sigFr],
+            'nl' => ['sujet' => 'Bezoekverslag van {date} — {magasin}', 'corps' => "Beste,\n\nHierbij het verslag van het bezoek van {date} met {consultant} ({type}).\n\n{phrase}\n\nDe werkpunten:\n\n{points}\n\n{outils_titre}\n\n{outils}\n\n{rappel}\n\n{piece}\n\nHet volledige verslag en uw werkpunten staan op uw pagina, waar u voor elke correctie een foto kunt sturen: {lien}\n\n" . $sigNl],
+            'en' => ['sujet' => 'Visit report of {date} — {magasin}', 'corps' => "Hello,\n\nHere is the report of the visit on {date} with {consultant} ({type}).\n\n{phrase}\n\nThe points to work on:\n\n{points}\n\n{outils_titre}\n\n{outils}\n\n{rappel}\n\n{piece}\n\nThe full report and your points are on your page, where you can send a photo of each correction: {lien}\n\n" . $sigEn],
+            'de' => ['sujet' => 'Besuchsbericht vom {date} — {magasin}', 'corps' => "Guten Tag,\n\nhier ist der Bericht zum Besuch am {date} mit {consultant} ({type}).\n\n{phrase}\n\nDie Arbeitspunkte:\n\n{points}\n\n{outils_titre}\n\n{outils}\n\n{rappel}\n\n{piece}\n\nDer vollständige Bericht und Ihre Arbeitspunkte stehen auf Ihrer Seite, wo Sie für jede Korrektur ein Foto senden können: {lien}\n\n" . $sigDe]]],
         'relance' => ['nom' => 'Relance : rapport pas encore lu', 'quand' => 'n jours après l’envoi, si le rapport n’a pas été ouvert',
             'vars' => ['magasin', 'date', 'type', 'lien'], 'textes' => [
             'fr' => ['sujet' => 'Votre rapport de visite du {date} vous attend — {magasin}', 'corps' => "Bonjour,\n\nLe rapport de la visite du {date} ({type}) n’a pas encore été ouvert. Il est sur votre page, avec les points à travailler : {lien}\n\n" . $sigFr],
@@ -472,7 +473,24 @@ function suModele(string $code, string $l): array
 {
     $m = suModeles()[$code] ?? null;
     if ($m === null) { return ['sujet' => '', 'corps' => '']; }
-    return $m['textes'][$l] ?? $m['textes']['fr'];
+    $t = $m['textes'][$l] ?? $m['textes']['fr'];
+    return $code === 'rapport' ? suModeleAvecRappel($t) : $t;
+}
+
+/**
+ * Le rappel des outils de gestion est dans CHAQUE courriel de rapport (17/11/2026, Sam). Un texte réécrit dans Qui
+ * fait quoi avant cette date n'a pas {rappel} : le bloc des outils et le rappel s'y ajoutent avant le dernier
+ * paragraphe (la signature). Pur : le banc le vérifie.
+ */
+function suModeleAvecRappel(array $t): array
+{
+    $corps = (string) ($t['corps'] ?? '');
+    if (str_contains($corps, '{rappel}')) { return $t; }
+    $p = preg_split('/\n\s*\n/u', trim(str_replace("\r", '', $corps))) ?: [];
+    $bloc = ['{outils_titre}', '{outils}', '{rappel}'];
+    if (count($p) > 1) { array_splice($p, count($p) - 1, 0, $bloc); } else { $p = array_merge($p, $bloc); }
+    $t['corps'] = implode("\n\n", $p);
+    return $t;
 }
 
 /**
@@ -508,11 +526,24 @@ function suRendre(array $modele, array $vars, string $l): array
             continue;
         }
         if (preg_match('/^\{([a-z_]+)\}$/', $p, $m) && array_key_exists($m[1], $scal) && trim($scal[$m[1]]) === '') { continue; }
+        if ($p === '{rappel}' && array_key_exists('rappel', $scal)) {
+            $h .= suRappelCourrielHtml($scal['rappel'], $l); $t[] = '(i) ' . $scal['rappel'];
+            continue;
+        }
         $h .= '<p style="margin:0 0 12px">' . nl2br($remplace($p, true), false) . '</p>';
         $t[] = $remplace($p, false);
     }
     $sujet = trim($remplace(str_replace(["\r", "\n"], ' ', (string) ($modele['sujet'] ?? '')), false));
     return ['sujet' => $sujet, 'html' => suCourrielHtml($h), 'texte' => implode("\n\n", $t)];
+}
+
+/** Le rappel des outils de gestion dans le courriel : encadré, le (i) en tête, le texte en gras. */
+function suRappelCourrielHtml(string $texte, string $l): string
+{
+    $t = ['fr' => 'Rappel', 'nl' => 'Herinnering', 'en' => 'Reminder', 'de' => 'Hinweis'];
+    return '<div style="margin:0 0 14px;padding:12px 14px;border-left:4px solid #8D1D2C;background:#FBF3F3;border-radius:4px">'
+        . '<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;margin:0 0 4px"><span style="text-transform:none;letter-spacing:0;font-family:Georgia,serif;font-style:italic;font-weight:700">(i)</span> '
+        . htmlspecialchars($t[$l] ?? $t['fr'], ENT_QUOTES, 'UTF-8') . '</div><b style="font-weight:700">' . htmlspecialchars($texte, ENT_QUOTES, 'UTF-8') . '</b></div>';
 }
 
 function suCourrielHtml(string $corps): string
@@ -537,7 +568,17 @@ function suVarsExemple(string $l, ?string $shop = null): array
         'en' => 'A solid quarter; bread runs out at the end of the day.', 'de' => 'Ein starkes Quartal; am Ende des Tages fehlt Brot.'];
     return ['magasin' => $shop !== '' ? suCourt($shop) : 'Halle', 'date' => suDateLongue($j, $l), 'date_avant' => suDateLongue(date('Y-m-d', strtotime('+1 day')), $l),
         'heure' => '10:00', 'duree' => '120 min', 'type' => suTypeNom('bilan', $l), 'consultant' => 'Sam V.', 'sujets' => $suj[$l] ?? $suj['fr'],
-        'phrase' => $phr[$l] ?? $phr['fr'], 'points' => $pts[$l] ?? $pts['fr'], 'piece' => suL('piece_pdf', $l), 'lien' => $shop !== '' ? suLien($shop) : rtrim(rapBaseUrl(), '/') . '/suivi/'];
+        'phrase' => $phr[$l] ?? $phr['fr'], 'points' => $pts[$l] ?? $pts['fr'], 'piece' => suL('piece_pdf', $l), 'lien' => $shop !== '' ? suLien($shop) : rtrim(rapBaseUrl(), '/') . '/suivi/']
+        + suOutilsExemple($l);
+}
+
+/** L'audit des outils de gestion d'exemple (aperçu et essai du modèle « Rapport de visite ») et le rappel. */
+function suOutilsExemple(string $l): array
+{
+    $o = ['items' => ['tresorerie' => ['v' => 'part', 'com' => ''], 'commandes' => ['v' => 'ko', 'com' => ''], 'etiq_commandes' => ['v' => 'ok', 'com' => ''],
+        'etiq_produits' => ['v' => 'ok', 'com' => ''], 'taches' => ['v' => 'ok', 'com' => ''], 'soir' => ['v' => 'part', 'com' => ''], 'fournisseurs' => ['v' => 'ok', 'com' => '']], 'precedent' => null];
+    $o['score'] = viOutilsScore($o['items']);
+    return ['outils_titre' => suOutilsTitre($o, $l) . ' :', 'outils' => suOutilsCourriel($o, $l), 'rappel' => viOutilsRappel($l)];
 }
 
 /** Un courriel au franchisé d'un magasin, dans sa langue, à son adresse, avec les copies données. */
@@ -941,6 +982,8 @@ function suRapportVue(array $v): array
         'score' => suScore($v),
         // L'évaluation rapide (05/11/2026) : dans le rapport tel quel, le radar dessiné par le serveur (le même que le PDF).
         'evaluation' => suEvalVue($v, 'fr'),
+        // L'audit des outils de gestion (17/11/2026) : dans le rapport, avec le rappel.
+        'outils' => suOutilsVue($v, 'fr'),
         'causesDiag' => viCausesDiag(), 'roles' => $roles,
         'envoi' => ['a' => $ad['email'], 'source' => $ad['source'], 'langue' => $l, 'langueNom' => SU_LANGUES[$l], 'copies' => $copies,
             'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'envoyePar' => $v['rapport_envoye_par'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null,
@@ -959,8 +1002,11 @@ function suVarsRapport(array $v, array $contenu, array $plans, string $l): array
         if (!$p['inclus']) { continue; }
         $pts[] = $p['priorite'] . ' · ' . $p['titre'] . ($p['echeance'] ? ' — ' . suL('echeance', $l) . ' ' . date('d/m', strtotime((string) $p['echeance'])) : '');
     }
+    // L'audit des outils de gestion (17/11/2026) : son titre et ses lignes s'il a été fait ; le rappel, toujours.
+    $og = function_exists('suOutils') ? suOutils($v) : null;
     return ['date' => suDateLongue((string) $v['prevu_le'], $l), 'type' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l),
-        'consultant' => (string) $v['consultant_nom'], 'phrase' => $contenu['phrase'], 'points' => $pts, 'piece' => suL('piece_pdf', $l)];
+        'consultant' => (string) $v['consultant_nom'], 'phrase' => $contenu['phrase'], 'points' => $pts, 'piece' => suL('piece_pdf', $l),
+        'outils_titre' => $og !== null ? suOutilsTitre($og, $l) . ' :' : '', 'outils' => $og !== null ? suOutilsCourriel($og, $l) : '', 'rappel' => viOutilsRappel($l)];
 }
 
 /**
@@ -1283,6 +1329,8 @@ function suRapportHtml(array $v, string $l): string
     $h .= suScoreHtml(suScore($v), $l, $e);
     // L'évaluation rapide de fin de visite (05/11/2026) : le radar des six axes, les notes et leurs commentaires.
     $h .= suEvalHtml(suEvaluation($v), $l, $e);
+    // L'audit des outils de gestion (17/11/2026) : chaque outil, son verdict, sa remarque, et le rappel encadré (seul sans audit).
+    $h .= suOutilsHtml(suOutils($v), $l, $e);
     $sec = static fn (string $t, string $corps): string => '<div style="margin:0 0 12px"><div style="font-weight:400;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 3px">' . htmlspecialchars($t, ENT_QUOTES, 'UTF-8') . '</div>' . $corps . '</div>';
     if ($c['positif'] !== '') { $h .= $sec(suL('positif', $l), '<div>' . nl2br($e($c['positif'])) . '</div>'); }
     $vu = [];
@@ -1753,7 +1801,7 @@ function ep_suivi_franchise(): array
                 'checklist' => ['ok' => $ck['ok'], 'total' => $ck['total']], 'ancien' => $ancien, 'phrase' => $ancien ? '' : ($c['phrase'] ?: suRapportVue($v)['contenu']['phrase']),
                 'positif' => $ancien ? '' : $c['positif'], 'reco' => $c['reco'], 'causes' => $ancien ? [] : array_map(static fn ($k) => suL('c_' . $k, $l), $c['causes']),
                 'diagnostic' => $ancien ? '' : $c['diagnostic'], 'points' => array_map(static fn ($p) => ['titre' => $p['titre'], 'priorite' => $p['priorite'], 'echeance' => $p['echeance']], $plans),
-                'photos' => $photos, 'evaluation' => $ancien ? null : suEvalVue($v, $l), 'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null];
+                'photos' => $photos, 'evaluation' => $ancien ? null : suEvalVue($v, $l), 'outils' => $ancien ? null : suOutilsVue($v, $l), 'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null];
         }
         $out['rapports'] = $raps;
     }
