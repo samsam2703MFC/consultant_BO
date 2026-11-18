@@ -11,7 +11,11 @@ declare(strict_types=1);
  *   2. PATCH /{ressource}/{id}/aliases {lang_code: nl, alias, alias_type: default} pour chaque élément de la table
  *      sans nom néerlandais. Un nom néerlandais déjà saisi n'est JAMAIS écrasé (sauf un bouche-trou sans lettre,
  *      « ??? ») : il est affiché à côté de la proposition ;
- *   3. relecture, puis les éléments encore sans nom néerlandais (lignes SANS, à traduire au passage suivant).
+ *   3. relecture, puis les éléments encore sans nom néerlandais (lignes SANS, à traduire au passage suivant), et
+ *      les noms néerlandais présents qui ne viennent pas de la table (lignes ACTUEL, à relire).
+ * Corrections (18/11/2026, Sam : « ok corrige les erreurs, surtout les matières premières ») : la table
+ * corrections_<table> réécrit un nom néerlandais existant reconnu faux ; elle prime sur la table et n'écrit que si le
+ * nom actuel diffère.
  * Une table vide ne fait que lister. Compte : celui du consultant (src/panel_api.php) ; s'il est refusé, le compte
  * admin ERP (src/erp_api.php). Le code de langue « nl » est celui des traductions déjà présentes dans l'ERP.
  *
@@ -44,8 +48,17 @@ $detail = static function (array $r): string {
     return 'HTTP ' . (int) ($r['code'] ?? 0) . ($d !== '' ? ' : ' . mb_substr($d, 0, 200) : '') . (($r['erreur'] ?? null) && $d === '' ? ' — ' . $r['erreur'] : '');
 };
 $refus = static fn (array $r): bool => in_array((int) ($r['code'] ?? 0), [0, 401, 403], true);
-// « ??? » et autres bouche-trous sans lettre ne comptent pas comme une traduction.
-$traduit = static fn (string $s): bool => preg_match('/\p{L}/u', $s) === 1;
+// « ??? » et autres bouche-trous ne comptent pas comme une traduction ; « 1/2 » ou « 30 », si.
+$traduit = static fn (string $s): bool => preg_match('/^[\s?.\-–_]*$/u', $s) !== 1;
+/** Une table « identifiant<TAB>nom » (vide si le fichier manque). */
+$charger = static function (string $chemin): array {
+    $t = [];
+    foreach ((array) @file($chemin, FILE_IGNORE_NEW_LINES) as $l) {
+        $c = explode("\t", (string) $l, 2);
+        if (count($c) === 2 && ctype_digit(trim($c[0])) && trim($c[1]) !== '') { $t[(int) $c[0]] = trim($c[1]); }
+    }
+    return $t;
+};
 
 /** Les noms néerlandais actuels d'une liste, par identifiant (variante « default »). */
 $lire = static function (callable $appel, string $res): array {
@@ -67,12 +80,10 @@ $adminDispo = ErpApi::disponible();
 $bilan = [];
 foreach ($listes as [$libelle, $res, $fichier]) {
     echo "\n######## ", mb_strtoupper($libelle), " ($res)\n";
-    $table = [];
-    foreach ((array) @file("$tables/$fichier", FILE_IGNORE_NEW_LINES) as $l) {
-        $c = explode("\t", (string) $l, 2);
-        if (count($c) === 2 && ctype_digit(trim($c[0])) && trim($c[1]) !== '') { $table[(int) $c[0]] = trim($c[1]); }
-    }
-    echo '=== Table : ', count($table), " noms ($fichier)\n";
+    $table = $charger("$tables/$fichier");
+    $corrections = $charger("$tables/corrections_$fichier");
+    foreach ($corrections as $id => $nl) { $table[$id] = $nl; }
+    echo '=== Table : ', count($table), " noms ($fichier) dont ", count($corrections), " corrections\n";
 
     echo "=== 1. Lecture (GET $res/aliases?lang_code=nl)\n";
     $compte = null; $erp = null;
@@ -87,6 +98,10 @@ foreach ($listes as [$libelle, $res, $fichier]) {
     $aEcrire = []; $dejaLa = []; $inconnus = [];
     foreach ($table as $id => $nl) {
         if (!isset($erp[$id])) { $inconnus[] = $id; continue; }
+        if (isset($corrections[$id]) && $erp[$id]['nl'] !== $nl) {
+            printf("    correction %-8d %s : « %s » → « %s »\n", $id, $erp[$id]['base'], $erp[$id]['nl'], $nl);
+            $aEcrire[$id] = $nl; continue;
+        }
         if ($traduit($erp[$id]['nl'])) { $dejaLa[$id] = $nl; continue; }
         $aEcrire[$id] = $nl;
     }
@@ -130,6 +145,13 @@ foreach ($listes as [$libelle, $res, $fichier]) {
         echo "  encore sans nom néerlandais (SANS<TAB>ressource<TAB>identifiant<TAB>nom) :\n";
         ksort($sans);
         foreach ($sans as $id => $p) { echo "    SANS\t$res\t$id\t", $p['base'], "\n"; }
+    }
+    // Les noms néerlandais qui ne viennent pas de la table : saisis avant, à relire.
+    $actuels = array_filter($apres, static fn (array $p, int $id): bool => $traduit($p['nl']) && ($table[$id] ?? null) !== $p['nl'], ARRAY_FILTER_USE_BOTH);
+    if ($actuels !== []) {
+        echo '  noms néerlandais hors table, à relire (ACTUEL<TAB>ressource<TAB>identifiant<TAB>nom<TAB>nl) : ', count($actuels), "\n";
+        ksort($actuels);
+        foreach ($actuels as $id => $p) { echo "    ACTUEL\t$res\t$id\t", $p['base'], "\t", $p['nl'], "\n"; }
     }
 }
 
