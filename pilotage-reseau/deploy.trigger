@@ -135,3 +135,4 @@
 2026-11-18T20:17:34Z dashboard franchisé, Contrôle au téléphone : carte du jour, photos, boutons sur une ligne ; fin de la boucle du helpdesk
 2026-11-18T20:07:23Z panier et articles par ticket : cibles du réseau, lues par le Coach Vente
 2026-11-18T20:13:54Z manuel opératoire : article des chiffres clés du réseau 2026
+2026-11-18T21:12:25Z Fidélité : la page app client en direct (public/fidelite-app, lecture seule)
