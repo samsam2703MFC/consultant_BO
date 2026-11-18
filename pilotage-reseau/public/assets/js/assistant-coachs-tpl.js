@@ -15,7 +15,7 @@ function tplCoachs(a, x){
     <div class="fi-liste ac-bloc"><h4>Le ton</h4><textarea class="ac-txt" rows="4" maxlength="1200" ${x.C(c.setTon)}>${esc(c.ton)}</textarea></div>
     ${c.axes.map(ax => `<div class="fi-liste ac-bloc ac-axe ${esc(ax.niveau)}"><div class="ac-axe-h"><h4>${esc(ax.lib)}</h4>
       <span class="ac-seg">${ax.choisir.map(n => `<button class="${n.on ? 'on' : ''}" ${x.A(n.go)}>${esc(n.lib)}</button>`).join('')}</span></div>
-      ${ax.niveau === 'non' ? '<p class="ac-non">Il n’en parle que si le franchisé le lui demande.</p>' : `<label class="ac-lab">Ce qu’il vérifie</label><textarea class="ac-txt" rows="3" maxlength="800" ${x.C(ax.setVerifie)}>${esc(ax.verifie)}</textarea>`}</div>`).join('')}
+      ${ax.niveau === 'non' ? `<p class="ac-non">Il n’en parle que si le franchisé le lui demande${ax.cle === 'controles' ? ', sauf les notes des photos de contrôle : tous les coachs les reprennent dans leur bilan' : ''}.</p>` : `<label class="ac-lab">Ce qu’il vérifie</label><textarea class="ac-txt" rows="3" maxlength="800" ${x.C(ax.setVerifie)}>${esc(ax.verifie)}</textarea>`}</div>`).join('')}
   </section>`;
   return `<p class="fi-pf-intro">Deux coachs business de pointe, au ton différent. Le franchisé choisit le sien dans son dashboard ; ici, on règle ce sur quoi chacun met l’accent et ce qu’il vérifie. Les chiffres viennent toujours de la fiche du magasin : le ton change la manière de dire, jamais les faits.</p>
     <div class="ac-grille">${a.coachs.map(carte).join('')}</div>
@@ -23,6 +23,7 @@ function tplCoachs(a, x){
       <div class="fi-pf-opt"><b>Budget</b><span>L’objectif de CA du cockpit (Budget) : le mois, le jour, la semaine jour par jour ; le CA à l’heure qu’il est, la projection de fin de journée, le reste à faire et les jours restants</span></div>
       <div class="fi-pf-opt"><b>Trafic</b><span>Les tickets et le panier : aujourd’hui, hier, la semaine, les deux semaines d’avant, le mois ; 21 jours jour par jour ; la cible de trafic ; le panier moyen du réseau et le rang d’hier</span></div>
       <div class="fi-pf-opt"><b>Contrôles qualité</b><span>Les checklists du jour, faites ou non à l’heure qu’il est, et les sept derniers jours ; les pertes de la semaine, produit par produit</span></div>
+      <div class="fi-pf-opt"><b>Photos de contrôle</b><span>Les notes du consultant au barème (Contrôles qualité) : aujourd’hui, les sept derniers jours et le mois ; chaque non-conformité de la semaine avec son commentaire, les contrôles rendus sans photo. Tous les coachs les reprennent dans leur bilan, quels que soient leurs accents</span></div>
       <div class="fi-pf-opt"><b>Toujours</b><span>Aucun chiffre inventé, aucune insulte ni humiliation, quel que soit le coach</span></div></div></section>`;
 }
 

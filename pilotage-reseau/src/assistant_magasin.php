@@ -12,8 +12,8 @@ declare(strict_types=1);
  *   GET  /assistant/coachs  ·  POST /assistant/coachs {coachs, qui}   le réglage des coachs, au cockpit
  *
  * Quatre règles :
- *  1. l'assistant lit la fiche de faits du magasin, assemblée ici par l'API du panel (ventes, P&L, contrôles, pertes,
- *     commandes, fidélité, rang dans le réseau), et trois outils en lecture seule sur l'historique des ventes
+ *  1. l'assistant lit la fiche de faits du magasin, assemblée ici par l'API du panel (ventes, P&L, contrôles et leurs
+ *     photos notées, pertes, commandes, fidélité, rang dans le réseau), et trois outils en lecture seule sur l'historique des ventes
  *     (14/11/2026, Sam : « l'agent doit avoir accès à tous les 18 mois de data » ; src/historique_ventes.php) : le
  *     classement du réseau, les ventes heure par heure, les produits vendus — 18 mois en arrière et la journée en
  *     cours. Pas d'accès libre, pas de SQL écrit par le modèle : des filtres validés ici. La fiche de la société (que
@@ -43,7 +43,7 @@ const AM_QUESTIONS = [
     'groupes' => [
         ['Ma semaine', ['Comment s’est passée ma semaine ?', 'Que puis-je améliorer ?', 'Qu’est-ce qui a le mieux marché ?']],
         ['Mes ventes', ['Quel est mon jour le plus faible, et pourquoi ?', 'Mon panier moyen est-il bon ?', 'Comment je me situe dans le réseau ?']],
-        ['Mon équipe', ['Mes salaires collent-ils à mes ventes ?', 'Où en sont mes contrôles ?']],
+        ['Mon équipe', ['Mes salaires collent-ils à mes ventes ?', 'Où en sont mes contrôles ?', 'Mes photos de contrôle sont-elles conformes ?']],
         ['Mes clients', ['Qui sont mes clients fidèles ?', 'Combien de clients sont reconnus en caisse ?']],
         ['Ma production', ['Qu’est-ce que je jette le plus ?', 'Quelles commandes clients arrivent ?']],
         ['Le réseau', ['Qui fait le meilleur panier aujourd’hui, et avec quoi ?', 'Qu’est-ce que je vends le plus le matin ?', 'Comment ont évolué mes samedis sur un an ?']],
@@ -70,7 +70,7 @@ const AM_COACHS = [
         'accents' => [
             'budget' => ['niveau' => 'suivi', 'verifie' => "Où en est le mois face au budget, et ce qu'il faut faire par jour restant pour le tenir. Souligne chaque jour où l'objectif a été atteint."],
             'trafic' => ['niveau' => 'fort', 'verifie' => "Les tickets face à la semaine dernière et à la cible de trafic ; le jour le plus faible et une idée simple pour y faire venir du monde ; le panier moyen face au réseau."],
-            'controles' => ['niveau' => 'suivi', 'verifie' => "Les contrôles faits à l'heure, en particulier le contrôle qualité pâtisserie ; la tendance des sept derniers jours. Encourage la régularité plutôt que de reprocher."],
+            'controles' => ['niveau' => 'suivi', 'verifie' => "Les contrôles faits à l'heure, en particulier le contrôle qualité pâtisserie ; les notes des photos de contrôle : ce qui est conforme ou exemplaire d'abord, puis la non-conformité à reprendre, avec ce que le consultant a relevé ; la tendance des sept derniers jours. Encourage la régularité plutôt que de reprocher."],
         ],
     ],
     'coach' => [
@@ -80,7 +80,7 @@ const AM_COACHS = [
         'accents' => [
             'budget' => ['niveau' => 'fort', 'verifie' => "Où on en est face au budget du mois, et ce qu'il faut faire par jour pour le tenir ; la journée d'aujourd'hui, en avance ou en retard. Sous 100 %, tu le dis sans détour."],
             'trafic' => ['niveau' => 'fort', 'verifie' => "Les tickets face à la semaine dernière ; le jour qui recule ; le panier sous le réseau, c'est de l'argent laissé sur le comptoir."],
-            'controles' => ['niveau' => 'fort', 'verifie' => "Les contrôles en retard à l'heure qu'il est, en gros (pas checklist par checklist) ; le contrôle qualité pâtisserie du jour fait ou pas ; zéro tolérance sur l'hygiène et la fermeture."],
+            'controles' => ['niveau' => 'fort', 'verifie' => "Les contrôles en retard à l'heure qu'il est, en gros (pas checklist par checklist) ; le contrôle qualité pâtisserie du jour fait ou pas ; chaque photo notée non conforme cette semaine, ce que le consultant a relevé et la reprise à faire aujourd'hui ; zéro tolérance sur l'hygiène et la fermeture."],
         ],
     ],
     'vente' => [
@@ -90,7 +90,7 @@ const AM_COACHS = [
         'accents' => [
             'budget' => ['niveau' => 'suivi', 'verifie' => "Le mois face au budget, traduit en clients ou en euros de panier à trouver par jour restant."],
             'trafic' => ['niveau' => 'fort', 'verifie' => "Le panier moyen face au réseau et à la même période passée ; les heures et les jours où il décroche ; les produits qui le portent et ceux qui manquent face au magasin le mieux classé ; une vente additionnelle précise à pousser."],
-            'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon."],
+            'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon ; les photos de vitrine et de comptoir notées non conformes, parce qu'une vitrine qui ne donne pas envie coûte des ventes."],
         ],
     ],
 ];
@@ -117,6 +117,7 @@ Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au mome
   Pas de paragraphe, pas d'énumération : ce qui ne tient pas là attend une question de suite.
 - Le personnage change la manière de dire, jamais les faits : mêmes chiffres, mêmes règles, quel que soit le ton. Quel que soit le personnage : aucune insulte, aucune grossièreté, aucune humiliation ; on s'en prend aux résultats, jamais à la personne.
 - La fiche porte le budget du magasin (objectif de CA du mois, du jour et de la semaine, saisi au cockpit) : l'écart au budget se calcule depuis ces valeurs ; sans budget saisi, dis-le.
+- La fiche porte aussi les résultats des contrôles qualité en photo (`controlesPhotos`) : chaque photo de contrôle notée par le consultant au barème du réseau, conforme à partir du seuil indiqué. Tous les personnages les reprennent, quels que soient leurs accents : dans un bilan (la semaine, la journée, quoi améliorer, ce qui marche), dis toujours où en sont les photos de contrôle. Une non-conformité des sept derniers jours se cite avec ce que le consultant a relevé, dit avec tes mots ; une non-conformité majeure ou critique devient une priorité, écran taches. Sans non-conformité, une phrase suffit (les photos notées sont conformes, l'exemplaire se salue). Une photo rendue et pas encore notée n'est ni bonne ni mauvaise : ne la juge pas, tu ne la vois pas. Une photo non rendue est un contrôle pas fait.
 - Quand c'est utile, propose deux priorités, trois au plus, de la plus rentable à la plus simple ; chacune : un titre d'action, un constat d'une phrase parlée avec un chiffre arrondi, le gain s'il se calcule simplement (« environ 1 000 € par semaine », sinon vide), et l'écran du dashboard où agir.
 - Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos, aucun.
 - Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche ou les outils doivent permettre d'y répondre.
@@ -215,6 +216,11 @@ function amFaits(int $sid): array
     ksort($parCl);
     $f['controles'] = ['heure' => date('H:i'), 'aujourdhui' => $T['summary'] ?? null, 'parChecklist' => $parCl,
         'septDerniersJours' => array_map(static fn ($d) => ['date' => $d['day'] ?? null, 'faites' => $d['tasks_done'] ?? null, 'total' => $d['tasks_total'] ?? null, 'taux' => $d['completion_rate'] ?? null], (array) ($T['trend'] ?? []))];
+    // Les photos de contrôle et leurs notes : la journée d'aujourd'hui vient d'être lue, elle sert telle quelle.
+    try {
+        if (function_exists('cqmGarder') && ($tk['code'] ?? 0) >= 200 && ($tk['code'] ?? 0) < 300 && is_array($tk['corps'])) { cqmGarder($sid, $auj, $tk['corps']); }
+        $f['controlesPhotos'] = amControlesPhotos($sid);
+    } catch (Throwable $e) { $f['controlesPhotos'] = ['etat' => 'illisible : ' . $e->getMessage()]; }
     // Les pertes de la semaine : le résumé et les produits qui pèsent (jamais l'enveloppe `shop`).
     $w = PanelApi::sondeGet('/shops/' . $sid . '/products/waste?' . http_build_query(['from' => $lundi, 'to' => $auj, 'date_from' => $lundi, 'date_to' => $auj]), 30);
     $W = is_array($w['corps']) ? $w['corps'] : [];
@@ -244,6 +250,103 @@ function amFaits(int $sid): array
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['le' => time(), 'v' => $f], JSON_UNESCAPED_UNICODE)]);
     return $f;
+}
+
+/**
+ * Les résultats des contrôles qualité en photo (18/11/2026, Sam : « tous les coachs IA doivent reprendre les résultats
+ * des contrôles qualité photos ») : chaque contrôle en photo des checklists, noté par le consultant au barème du
+ * réseau (cockpit › Contrôles qualité, src/controles_qualite.php, dont on reprend la lecture et la garde). Aujourd'hui
+ * contrôle par contrôle ; les sept derniers jours et le mois en totaux ; chaque non-conformité des sept derniers jours
+ * avec ce que le consultant a relevé ; les contrôles qui reviennent sans photo. Rien de nominatif : ni qui a pris la
+ * photo, ni qui l'a notée. Une lecture coûte au plus AM_CQ_BUDGET journées au panel (les plus récentes d'abord) ;
+ * le reste du mois vient au fil des lectures, et `couverture` le dit tant qu'il manque des jours.
+ */
+const AM_CQ_BUDGET = 16;
+
+function amControlesPhotos(int $sid): array
+{
+    if (!function_exists('cqmJournees')) { return ['etat' => 'contrôles photo non lus']; }
+    $auj = date('Y-m-d');
+    $d7 = date('Y-m-d', strtotime($auj . ' -6 days'));
+    $mois = date('Y-m-01');
+    $paires = [];
+    for ($t = strtotime(min($mois, $d7)); $t <= strtotime($auj); $t = strtotime('+1 day', $t)) { $paires[] = [$sid, date('Y-m-d', $t)]; }
+    $L = cqmJournees($paires, AM_CQ_BUDGET);
+    $J = $L['jours'][$sid] ?? [];
+    ksort($J);
+    ['seuil' => $seuil, 'niveaux' => $niveaux] = cqmBareme();
+    $noms = [];
+    foreach ($niveaux as $nv) { $noms[$nv['n']] = $nv['nom']; }
+    $top = $noms ? max(array_keys($noms)) : 5;
+    $dire = static fn (int $n) => $n . ' · ' . ($noms[$n] ?? 'note ' . $n);
+    $etat = static fn (array $t, string $d) => $t['note'] !== null ? 'noté ' . $dire($t['note']) . ($t['note'] >= $seuil ? ' (conforme)' : ' (non conforme)')
+        : ($t['photo'] ? 'photo rendue, pas encore notée' : ($d >= $auj ? 'pas encore rendue' : 'pas rendue (contrôle pas fait)'));
+
+    // Les totaux d'une période : du jour $de à aujourd'hui, sur les journées lues.
+    $resume = static function (string $de) use ($J, $auj, $seuil, $dire): array {
+        $r = ['joursLus' => 0, 'controles' => 0, 'photosRendues' => 0, 'notees' => 0, 'conformes' => 0, 'nonConformes' => 0,
+            'aNoter' => 0, 'pasRendues' => 0, 'enAttenteAujourdhui' => 0, 'noteMoyenne' => null, 'parNote' => []];
+        $somme = 0;
+        foreach ($J as $d => $taches) {
+            if ($d < $de) { continue; }
+            $r['joursLus']++;
+            foreach ($taches as $t) {
+                $r['controles']++;
+                if ($t['photo']) { $r['photosRendues']++; }
+                if ($t['note'] !== null) {
+                    $r['notees']++; $somme += $t['note'];
+                    $r[$t['note'] >= $seuil ? 'conformes' : 'nonConformes']++;
+                    $r['parNote'][$dire($t['note'])] = ($r['parNote'][$dire($t['note'])] ?? 0) + 1;
+                } elseif ($t['photo']) { $r['aNoter']++; }
+                elseif ($d >= $auj) { $r['enAttenteAujourdhui']++; }
+                else { $r['pasRendues']++; }
+            }
+        }
+        $r['noteMoyenne'] = $r['notees'] > 0 ? round($somme / $r['notees'], 1) : null;
+        krsort($r['parNote'], SORT_NATURAL);
+        return $r;
+    };
+
+    $nc = []; $ex = []; $manques = [];
+    foreach ($J as $d => $taches) {
+        if ($d < $d7) { continue; }
+        foreach ($taches as $t) {
+            $nomT = $t['tache'] . ($t['checklist'] !== '' ? ' (' . $t['checklist'] . ')' : '');
+            if ($t['note'] !== null && $t['note'] < $seuil) {
+                $nc[] = ['date' => $d, 'jour' => amJour($d), 'controle' => $nomT, 'note' => $dire($t['note']), 'n' => $t['note'],
+                    'releveDuConsultant' => $t['commentaire'] !== null ? mb_substr($t['commentaire'], 0, 220) : 'pas de commentaire'];
+            } elseif ($t['note'] !== null && $t['note'] >= $top) { $ex[$nomT] = ($ex[$nomT] ?? 0) + 1; }
+            elseif ($t['note'] === null && !$t['photo'] && $d < $auj) { $manques[$nomT] = ($manques[$nomT] ?? 0) + 1; }
+        }
+    }
+    // La plus récente d'abord ; le même jour, la plus grave d'abord.
+    usort($nc, static fn ($a, $b) => strcmp($b['date'], $a['date']) ?: $a['n'] <=> $b['n']);
+    arsort($ex); arsort($manques);
+
+    $aujL = [];
+    foreach ($J[$auj] ?? [] as $t) {
+        $aujL[] = ['heure' => $t['heure'], 'controle' => $t['tache'] . ($t['checklist'] !== '' ? ' (' . $t['checklist'] . ')' : ''), 'etat' => $etat($t, $auj)];
+    }
+    usort($aujL, static fn ($a, $b) => strcmp((string) ($a['heure'] ?? '99:99'), (string) ($b['heure'] ?? '99:99')));
+
+    $bar = [];
+    foreach ($niveaux as $nv) { $bar[] = $dire($nv['n']); }
+    $joursAttendus = count($paires);
+    $out = [
+        'source' => 'les contrôles en photo des checklists, notés par le consultant au barème du réseau (cockpit › Contrôles qualité)',
+        'bareme' => $bar, 'conformeAPartirDe' => $dire($seuil),
+        'aujourdhui' => $aujL,
+        'septDerniersJours' => $resume($d7),
+        'moisEnCours' => $resume($mois),
+        'nonConformesSeptDerniersJours' => array_map(static fn ($x) => array_diff_key($x, ['n' => 1]), array_slice($nc, 0, 10)),
+        'exemplairesSeptDerniersJours' => array_map(static fn ($k, $n) => ['controle' => $k, 'fois' => $n], array_keys(array_slice($ex, 0, 5, true)), array_slice($ex, 0, 5, true)),
+        'sansPhotoSeptDerniersJours' => array_map(static fn ($k, $n) => ['controle' => $k, 'fois' => $n], array_keys(array_slice($manques, 0, 5, true)), array_slice($manques, 0, 5, true)),
+    ];
+    if (count($J) < $joursAttendus) {
+        $out['couverture'] = 'contrôles photo lus sur ' . count($J) . ' jours des ' . $joursAttendus . ' de la période (les plus récents d’abord ; le reste vient aux prochaines lectures)';
+    }
+    if ($J === [] && $L['manque'] > 0) { $out['etat'] = 'le panel n’a pas répondu : contrôles photo non lus'; }
+    return $out;
 }
 
 /** Le budget du magasin, lu dans le calcul du jour du cockpit (ep_exploitation_jour : ceo_shop_month_perf). */
@@ -586,7 +689,10 @@ function amPersona(string $k): string
         foreach (AM_AXES as $ax => $lib) {
             $a = $c['accents'][$ax];
             if ($a['niveau'] !== $niv) { continue; }
-            if ($niv === 'non') { $t .= "\n- {$lib} : n'en parle que si la question le demande."; continue; }
+            if ($niv === 'non') {
+                $t .= "\n- {$lib} : n'en parle que si la question le demande" . ($ax === 'controles' ? ", sauf les résultats des contrôles en photo, que tout bilan reprend (règle commune) : {$a['verifie']}" : '.');
+                continue;
+            }
             $t .= "\n- {$lib} (" . ($niv === 'fort' ? "accent fort : tu l'abordes dans chaque bilan, avant les axes suivis" : 'suivi : tu en parles quand les chiffres le justifient') . ") : {$a['verifie']}";
         }
     }
