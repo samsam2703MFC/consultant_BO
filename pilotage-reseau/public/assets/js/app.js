@@ -10772,7 +10772,7 @@ class App {
     if (!r || common.rpErreur) { return; }
     if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
 
-    const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
+    const seuils = r.seuils || { food: 40, labour: 33, overhead: 13.5 };   // repli : la cible food cost du réseau
     const fE = n => this.fE(n);
     const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
     const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');
@@ -11029,7 +11029,7 @@ class App {
     common.rjLignes = []; common.rjDetail = null; common.rjInvite = '';
     if (!r || common.rjErreur) { return; }
 
-    const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
+    const seuils = r.seuils || { food: 40, labour: 33, overhead: 13.5 };   // repli : la cible food cost du réseau
     const fE = n => this.fE(n);
     const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
     const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');

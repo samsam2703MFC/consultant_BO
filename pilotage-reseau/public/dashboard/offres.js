@@ -51,7 +51,7 @@
     msg: null,            // {ok, texte}
     occupe: false,
     produits: null, prodErr: null, employes: null, empErr: null,
-    seuils: { ko: 1.67, att: 2.5, food: 32 },   // ceux de « Recette & marge », relus avec les produits
+    seuils: { ko: 1.67, att: 2.5, food: 40 },   // ceux de « Recette & marge », relus avec les produits
     cli: { type: 'particulier', q: '', l: null, err: null, enCours: false },
     nl: null,             // l'hôte de l'écran newsletter, gardé d'un rendu à l'autre (sa saisie ne se perd pas)
     aller: null,          // le dashboard : aller('boite', intention)

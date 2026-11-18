@@ -330,16 +330,16 @@
   const fPc = p => nf(p, Math.abs(p - Math.round(p)) < 0.05 ? 0 : 1) + ' %';
   function valoNormes() {
     const s = (S.aux.meta && S.aux.meta.seuils) || {};
-    const food = s.food != null && isFinite(+s.food) ? +s.food : 32;
+    const food = s.food != null && isFinite(+s.food) ? +s.food : 40;   // repli : la cible food cost du réseau
     // Le modèle de Budget › Paramètres : les catégories (somme de leurs postes), hors la matière.
     const M = (S.aux['valo|' + S.shop] || {}).normes;
     if (M && Array.isArray(M.lignes) && M.lignes.length) {
       const cats = [];
       M.lignes.filter(l => !l.matiere && isFinite(+l.pct)).forEach(l => { let c = cats.find(x => x.lib === l.categorie); if (!c) { c = { k: l.categorie, lib: l.categorie, pct: 0 }; cats.push(c); } c.pct += +l.pct; });
-      const mat = M.lignes.filter(l => l.matiere).reduce((t, l) => t + (+l.pct || 0), 0);
+      // La matière d'un mois sans mesure : la cible food cost du réseau, la même partout (18/11/2026), pas le budget.
       const aPersonnel = M.lignes.some(l => !l.matiere && /personnel|salaire|r[ée]mun|main.d|staff/i.test(l.categorie + ' ' + l.poste));
       if (!aPersonnel) { cats.push({ k: 'personnel', lib: 'Personnel', pct: VALO_PERSONNEL, ajoute: true }); }
-      return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food: mat || food, source: 'Budget › Paramètres', personnelAjoute: !aPersonnel, reste: 'Résultat normatif' };
+      return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food, source: 'Budget › Paramètres', personnelAjoute: !aPersonnel, reste: 'Résultat normatif' };
     }
     const L = VALO_NORMES.map(([k, lib, d]) => ({ k, lib, pct: s[k] != null && isFinite(+s[k]) ? +s[k] : d }));
     return { L, total: L.reduce((t, x) => t + x.pct, 0), food, source: 'les seuils du réseau', reste: 'Résultat normatif' };
@@ -1169,15 +1169,15 @@
   const MA = {
     ca: p => p == null ? 'n' : (p >= 100 ? 'v' : (p >= 90 ? 'o' : 'r')),             // chiffre face à l'objectif, %
     net: p => p == null ? 'n' : (p >= 15 ? 'v' : (p >= 5 ? 'o' : 'r')),               // résultat, % des ventes
-    // matière, % des ventes, face au seuil du réseau (Budget › Paramètres, rendu par l'API dans `seuils.food`) :
-    // vert jusqu'au seuil, orange jusqu'à dix points au-dessus. Sans seuil lu, l'ancien repère de 35 %.
-    mat: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 35) ? 'v' : (p <= (s != null ? s : 35) + 10 ? 'o' : 'r')),
+    // matière, % des ventes, face à la cible food cost du réseau (la même partout, rendue par l'API dans `seuils.food`) :
+    // vert jusqu'au seuil, orange jusqu'à dix points au-dessus. Sans seuil lu, la même cible, 40 %.
+    mat: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 40) ? 'v' : (p <= (s != null ? s : 40) + 10 ? 'o' : 'r')),
     mo: p => p == null ? 'n' : (p <= 20 ? 'v' : (p <= 25 ? 'o' : 'r')),               // main-d'œuvre, % des ventes
     poub: p => p == null ? 'n' : (p <= 1.5 ? 'v' : (p <= 3 ? 'o' : 'r')),             // poubelle, % du chiffre
     ctrl: (r, t) => !t ? 'n' : (r >= t ? 'v' : (r / t >= 0.8 ? 'o' : 'r')),           // contrôles rendus
     cli: (n, j7) => n == null || !j7 ? 'n' : (n >= 0.95 * j7 ? 'v' : (n >= 0.85 * j7 ? 'o' : 'r')),
   };
-  /** Le seuil matière du réseau tel que l'API le rend (Budget › Paramètres) ; null s'il n'est pas encore lu. */
+  /** La cible food cost du réseau telle que l'API la rend (la même partout) ; null si elle n'est pas encore lue. */
   const maSeuilMat = d => {
     const x = (d && d.seuils) || ((S.aux['jourM|' + S.date] || {}).seuils) || null;
     return x && x.food != null ? +x.food : null;
@@ -8186,8 +8186,8 @@
     // à défaut, celui gravé avec les tickets du jour.
     const matA = R && R.api && R.total > 0 ? R.total : null, mat = matA != null ? matA : matT;
     const mb = prix != null && mat != null ? prix - mat : null, taux = mb != null && prix > 0 ? 100 * mb / prix : null, coef = prix != null && mat > 0 ? prix / mat : null;
-    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 32, labour: 33, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
-    const obj = 100 / (se.food || 32);
+    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 40, labour: 33, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
+    const obj = 100 / (se.food || 40);
     const niv = c => c == null ? 'mu' : (c < FI_ZONES.ko ? 'ko' : (c < FI_ZONES.att ? 'att' : 'ok'));
     const NIV = { ko: 'sous le coût acceptable', att: 'à surveiller', ok: 'dans le vert', mu: 'coût matière inconnu' };
     const ST = S.st[cleSt()], cats = ST && Array.isArray(ST.categories) ? ST.categories : [];

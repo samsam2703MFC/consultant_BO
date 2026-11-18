@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../food_cost.php';   // la cible du food cost du réseau, la même partout
+
 /**
  * LE PLAN DE TRÉSORERIE D'UN MAGASIN (dashboard magasin › Trésorerie, 14/11/2026).
  *
@@ -15,7 +17,7 @@ declare(strict_types=1);
  *   - le BUDGET VALIDÉ : le CA budget de chaque mois (`ceo_shop_month_perf.revenue_budget`, à défaut le CA théorique
  *     de l'étude — la règle de /visites/budget), réparti sur ses jours au profil des mêmes jours de l'an passé (à
  *     défaut d'il y a deux ans, à défaut à parts égales) ; s'il a été validé (`ceo_shop_budget.validated_on`) ; les
- *     taux du budget (matière, personnel, frais généraux : seuilsCharges, Budget › Paramètres) et ses postes de charges
+ *     taux de référence (matière : la cible food cost du réseau ; personnel, frais généraux : seuilsCharges) et ses postes de charges
  *     (les paiements proposés d'un plan neuf) ;
  *   - CE QUI A ÉTÉ FAIT : le CA réel de chaque semaine close, qui remplace la prévision, et de chaque mois.
  * Les ventes viennent du panel (margin-heatmap, jour par jour : vsPanelJours, mois clos gravés), la copie de caisse
@@ -478,7 +480,7 @@ function ep_tresorerie_references(): array
     $annees = range($y0, (int) substr($dernier, 0, 4));
     $budgetMois = trBudgetMois($shop, $annees);
     $budgetJours = trBudgetJours($budgetMois, $jours, $auj);
-    $taux = function_exists('seuilsCharges') ? seuilsCharges() : ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    $taux = function_exists('seuilsCharges') ? seuilsCharges() : ['food' => foodCostCible(), 'labour' => 33.0, 'overhead' => 13.5];
 
     return [
         'shop' => $shop, 'aujourdhui' => $auj, 'debut' => $debut, 'fin' => $fin, 'dernierJour' => $dernier,
@@ -486,8 +488,8 @@ function ep_tresorerie_references(): array
         'mois' => trMois($y0 . '-01', $y1 . '-12', $jours, $budgetMois, $auj, $debut),
         'tendance' => trTendance($jours, $auj),
         'budgets' => trBudgetsExercices($shop, range($y0, $y1), $budgetMois),
-        'taux' => ['matiere' => (float) $taux['food'], 'personnel' => (float) $taux['labour'], 'fraisGeneraux' => (float) $taux['overhead'],
-            'matiereDuBudget' => function_exists('seuilMatiereBudget') && seuilMatiereBudget() !== null],
+        // La matière : la cible food cost du réseau (18/11/2026, la même variable partout), plus le taux du budget.
+        'taux' => ['matiere' => (float) $taux['food'], 'personnel' => (float) $taux['labour'], 'fraisGeneraux' => (float) $taux['overhead']],
         'charges' => trChargesBudget(),
         'sources' => $sources,
         'premiereVente' => $jours !== [] ? (string) array_key_first($jours) : null,

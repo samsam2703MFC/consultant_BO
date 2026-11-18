@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+
 require_once __DIR__ . '/erp_cles.php';
 
 /**
@@ -126,7 +128,7 @@ function ep_meta(): array
         'exercice'         => (int) setting('exercice', (int) date('Y')),
         'moisLabels'       => setting('moisLabels', []),
         'seuils'           => [
-            'food'        => $seuils['food'] ?? 40,   // l'objectif 2026 (KPI_FOOD_2026, src/kpis.php) en repli
+            'food'        => foodCostCible(),   // la cible du réseau, la même partout (src/food_cost.php)
             'labour'      => $seuils['labour'] ?? 33,
             'overhead'    => $seuils['overhead'] ?? 13.5,
             'royalties'   => $seuils['royalties'] ?? 3,
@@ -2039,52 +2041,22 @@ function ep_exploitation_jour(): array
  * Les seuils du P&L court, en % du chiffre d'affaires : coût matière (`food`), main-d'œuvre (`labour`), frais
  * généraux (`overhead`). Une seule définition, lue par le jour (/exploitation/jour) et par la période (resultat.php).
  *
- * Le coût matière vient de Budget › Paramètres (réglage `budgetCharges`, 07/11/2026) : le taux du réseau qu'on y
- * pose est celui que le dashboard montre, pas une seconde valeur tenue ailleurs. La catégorie lue est celle que le
- * palier de la marge brute retranche (`droite` = « cat:<nom> »), à défaut la première dont le nom commence par
- * « Matière » ; son taux = la somme des taux « budget » de ses lignes, ou de leurs taux « théoriques » tant que le
- * budget n'est pas posé (tout à 0). Main-d'œuvre et frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`),
- * comme avant. Sans réglage ni table : 40 (l'objectif 2026) / 33 / 13,5. `food` y passe aussi en dernier repli.
+ * Le coût matière : la cible food cost du réseau, la même variable partout (18/11/2026, Sam : « on garde pour le
+ * moment à 40 % (la même variable partout) » ; foodCostCible, src/food_cost.php, réglée au Catalogue des KPI). Du
+ * 07/11 au 18/11/2026, le taux matière de Budget › Paramètres (38 + 2 = 40 % au 07/11). Main-d'œuvre et frais
+ * généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`), comme avant ; sans table : 33 / 13,5.
  */
 function seuilsCharges(): array
 {
-    $seuils = ['food' => 40.0, 'labour' => 33.0, 'overhead' => 13.5];
+    $seuils = ['food' => foodCostCible(), 'labour' => 33.0, 'overhead' => 13.5];
     try {
         foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
-                            WHERE code IN ('food','labour','overhead')") as $k) {
+                            WHERE code IN ('labour','overhead')") as $k) {
             $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
                 ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
         }
     } catch (PDOException $e) { /* seuils par défaut */ }
-    $food = seuilMatiereBudget();
-    if ($food !== null) { $seuils['food'] = $food; }
     return $seuils;
-}
-
-/** Le taux matière du réseau posé dans Budget › Paramètres (voir seuilsCharges) ; null s'il n'y est pas. */
-function seuilMatiereBudget(): ?float
-{
-    try { $m = setting('budgetCharges'); } catch (Throwable $e) { return null; }
-    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return null; }
-    $nom = null;
-    foreach ((array) ($m['paliers'] ?? []) as $p) {
-        $d = is_array($p) ? (string) ($p['droite'] ?? '') : '';
-        if (str_starts_with($d, 'cat:')) { $nom = substr($d, 4); break; }
-    }
-    $cat = null;
-    foreach ($m['categories'] as $c) {
-        $n = is_array($c) ? (string) ($c['nom'] ?? '') : '';
-        if (($nom !== null && $n === $nom) || ($nom === null && preg_match('/^mati[eè]re/iu', $n) === 1)) { $cat = $c; break; }
-    }
-    if (!is_array($cat) || !is_array($cat['lignes'] ?? null) || $cat['lignes'] === []) { return null; }
-    $budget = 0.0; $theo = 0.0;
-    foreach ($cat['lignes'] as $l) {
-        if (!is_array($l)) { continue; }
-        $budget += is_numeric($l['pct'] ?? null) ? (float) $l['pct'] : 0.0;
-        $theo += is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0;
-    }
-    $t = $budget > 0 ? $budget : $theo;
-    return $t > 0 && $t < 100 ? round($t, 1) : null;
 }
 
 function exJourCalcul(): array

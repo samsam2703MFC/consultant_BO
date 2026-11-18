@@ -17,8 +17,10 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+
 const PC_ZONES = ['ko' => 100 / 60, 'att' => 2.5];
-const PC_FOOD = 32.0;
+// Le prix objectif : coût ÷ la cible food cost du réseau (foodCostCible, src/food_cost.php ; 32 % jusqu'au 18/11/2026).
 
 /** Première valeur numérique parmi des clés. */
 function pcNum(array $x, array $cles): ?float
@@ -145,7 +147,7 @@ function ep_analyse_produits_coefficients(): array
         $p['ecartCible'] = $p['coef'] !== null && $p['cible'] !== null ? round($p['coef'] - $p['cible'], 2) : null;
         // Le prix TTC de la pièce qui atteindrait la cible de sa catégorie (coefficient sur le prix HT), aux 5 centimes.
         $p['prixCible'] = $p['cout'] !== null && $p['cible'] !== null ? pcArrondi5($p['cout'] * $p['cible'] * (1 + ($p['tva'] ?? 0) / 100)) : null;
-        $p['prixObjectif'] = $p['cout'] !== null ? pcArrondi5($p['cout'] * 100 / PC_FOOD * (1 + ($p['tva'] ?? 0) / 100)) : null;
+        $p['prixObjectif'] = $p['cout'] !== null ? pcArrondi5($p['cout'] * 100 / foodCostCible() * (1 + ($p['tva'] ?? 0) / 100)) : null;
     }
     unset($p);
     usort($prods, static fn ($a, $b) => [$a['groupe'], $a['cat'], $a['nom']] <=> [$b['groupe'], $b['cat'], $b['nom']]);
@@ -176,7 +178,7 @@ function ep_analyse_produits_coefficients(): array
     foreach ($prods as $p) { $zones[$p['zone']]++; }
     return ['shop' => (string) $sid, 'magasin' => $nom, 'court' => preg_replace('/^.* - /', '', $nom), 'n' => count($prods), 'nChiffres' => count($coefs),
         'coefMedian' => pcMediane($coefs) !== null ? round(pcMediane($coefs), 2) : null, 'zones' => $zones,
-        'seuils' => ['ko' => round(PC_ZONES['ko'], 2), 'att' => PC_ZONES['att'], 'objectif' => round(100 / PC_FOOD, 2), 'food' => PC_FOOD],
+        'seuils' => ['ko' => round(PC_ZONES['ko'], 2), 'att' => PC_ZONES['att'], 'objectif' => round(100 / foodCostCible(), 2), 'food' => foodCostCible()],
         'produits' => $prods, 'categories' => $parCat, 'groupes' => $agg($prods, 'groupe'), 'lu' => date('c'),
         'source' => 'API du panel : /shops/{id}/products/available (prix pratiqué, TVA, coût de recette du jour, catégorie), /product-categories (coefficient cible), /product-category-groups ; coefficient = prix HT de la pièce ÷ coût de recette net'];
 }

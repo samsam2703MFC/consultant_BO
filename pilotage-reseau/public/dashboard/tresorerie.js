@@ -558,7 +558,7 @@
     h += `</div></div><div class="tr-pied"><button type="button" class="tr-btn" data-tra="addF"${d.fournisseurs.length >= 15 ? ' disabled' : ''}>+ Ajouter un fournisseur</button>
       <label title="Le maximum d’achats que tu t’autorises par rapport à tes ventes. Dépassé plusieurs semaines de suite : tu commandes trop ou tu jettes trop."><span>Plafond à ne pas dépasser (% des ventes)</span>${champ('plafond', d.plafond, { cls: 'tr-in-p tr-in-pct', edit: v => String(+((+v || 0) * 100).toFixed(1)).replace('.', ','), aff: v => pct(+v || 0) })}</label></div></div>`;
     const T = E.R.taux || {};
-    h += `<p class="tr-mu tr-p">Plafond et estimation proposés : le taux matière ${T.matiereDuBudget ? 'du budget (Budget › Paramètres)' : 'du réseau'}, ${String(T.matiere || 40).replace('.', ',')} % du CA. Les factures réellement payées ne sont pas encore lues : tape-les dans les cases.</p>`;
+    h += `<p class="tr-mu tr-p">Plafond et estimation proposés : la cible food cost du réseau, ${String(T.matiere || 40).replace('.', ',')} % du CA. Les factures réellement payées ne sont pas encore lues : tape-les dans les cases.</p>`;
     return h;
   }
 
@@ -665,7 +665,7 @@
     sec('Le réel du P&amp;L (panel), mois clos · face aux taux du budget');
     const pnl = (k, i) => clos(i) && reel[ymI(i)] && reel[ymI(i)][k] != null ? +reel[ymI(i)][k] : null;
     const ligneP = (lab, k, seuil, haut) => { const v = M.map((m, i) => pnl(k, i)); L(lab, v.map(x => x == null ? '–' : p1(x)), '', i => v[i] == null || seuil == null ? '' : (haut ? (v[i] > seuil + 0.05 ? 'k' : 'g') : (v[i] < seuil ? 'k' : ''))); };
-    ligneP(`Matière <small class="tr-mu">budget ${p1(T.matiere)}</small>`, 'matiere', T.matiere, true);
+    ligneP(`Matière <small class="tr-mu">cible ${p1(T.matiere)}</small>`, 'matiere', T.matiere, true);
     ligneP(`Personnel <small class="tr-mu">repère ${p1(T.personnel)}</small>`, 'personnel', T.personnel, true);
     ligneP(`Frais généraux <small class="tr-mu">repère ${p1(T.fraisGeneraux)}</small>`, 'fraisGeneraux', T.fraisGeneraux, true);
     ligneP('Marge nette', 'marge', 0, false);

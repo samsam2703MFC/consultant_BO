@@ -27,7 +27,8 @@ declare(strict_types=1);
  *
  * Quand : à la lecture de /stores/budgets si la dernière lecture a plus de BUDGET_CRM_TTL secondes, et sur
  * « ↻ Relire le CRM » (POST /budget/charges/crm). Le CRM injoignable : la dernière copie reste, l'écran le dit.
- * Le seuil coût matière du dashboard (`seuilsCharges`) suit : il lit la catégorie que l'étape « marge brute » retranche.
+ * Le seuil coût matière du dashboard (`seuilsCharges`) ne lit plus le budget depuis le 18/11/2026 : c'est la cible food
+ * cost du réseau, la même partout (foodCostCible, src/food_cost.php).
  */
 
 const BUDGET_CRM_TTL = 600;   // dix minutes entre deux lectures du CRM

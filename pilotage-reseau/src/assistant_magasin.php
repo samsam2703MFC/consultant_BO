@@ -114,6 +114,7 @@ const AM_COACHS = [
         // Les objectifs 2026 (18/11/2026, Sam : « le but est d'arriver à 40 % de food cost 2026, 17 % de frais de
         // personnel, xx % de clients scannés, xx % de ventes additionnelles ou de menu », puis « 25 % clients scannés et
         // 15 % menus ») ; articles par ticket et panier se posent au cockpit (CO_OBJECTIFS, src/coach_objectifs.php).
+        // Le food cost suit la cible du réseau, la même variable partout (coObjectifsDepart : foodCostCible, 40 %).
         'objectifs' => ['foodCost' => 40, 'personnel' => 17, 'clientsScannes' => 25, 'menus' => 15],
     ],
 ];
@@ -718,7 +719,7 @@ function amCoachs(): array
             if ($v !== '') { $c['accents'][$ax]['verifie'] = mb_substr($v, 0, 800); }
         }
         // Les objectifs : le réglage les porte tous quand il en change un (une cible vidée y vaut null).
-        $c['objectifs'] = coObjectifsNormaux(is_array($x['objectifs'] ?? null) ? $x['objectifs'] : ($d['objectifs'] ?? []));
+        $c['objectifs'] = is_array($x['objectifs'] ?? null) ? coObjectifsNormaux($x['objectifs']) : coObjectifsDepart($d['objectifs'] ?? []);
         $out[$k] = $c;
     }
     return $out;
@@ -931,7 +932,7 @@ function ep_assistant_coachs(): array
 {
     $av = [];
     foreach (array_keys(AM_COACHS) as $k) { $av[$k] = ($f = amAvatar($k)) !== null ? 'dashboard/avatars/' . $f : null; }
-    $def = array_map(static fn ($c) => ['objectifs' => coObjectifsNormaux($c['objectifs'] ?? [])] + $c, AM_COACHS);
+    $def = array_map(static fn ($c) => ['objectifs' => coObjectifsDepart($c['objectifs'] ?? [])] + $c, AM_COACHS);
     return ['coachs' => amCoachs(), 'defauts' => $def, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'objectifs' => CO_OBJECTIFS, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT];
 }
 
@@ -970,7 +971,7 @@ function wr_assistant_coachs(): array
                 if (!$vide && coCible($ob, $v) === null) { http_response_code(422); return ['error' => $d['nom'] . ' · ' . $od['lib'] . ' : un nombre entre ' . $od['min'] . ' et ' . $od['max'] . ' est attendu']; }
             }
             $obj = coObjectifsNormaux($x['objectifs']);
-            if ($obj !== coObjectifsNormaux($d['objectifs'] ?? [])) { $c['objectifs'] = $obj; }
+            if ($obj !== coObjectifsDepart($d['objectifs'] ?? [])) { $c['objectifs'] = $obj; }
         }
         if ($c) { $reg[$k] = $c; }
     }

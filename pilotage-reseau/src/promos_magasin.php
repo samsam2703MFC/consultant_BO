@@ -277,7 +277,7 @@ function ep_promos_magasin_produits(): array
     if ($l === null) { http_response_code(502); return ['error' => 'les produits du magasin ne se lisent pas au panel']; }
     $n = static fn (string $src) => count(array_filter($l, static fn ($p) => $p['source'] === $src));
     // Les seuils de « Recette & marge » (src/produits_coef.php) : la marge d'une offre se lit avec les mêmes couleurs.
-    $seuils = defined('PC_ZONES') && defined('PC_FOOD') ? ['ko' => round(PC_ZONES['ko'], 2), 'att' => PC_ZONES['att'], 'food' => PC_FOOD] : null;
+    $seuils = defined('PC_ZONES') && function_exists('foodCostCible') ? ['ko' => round(PC_ZONES['ko'], 2), 'att' => PC_ZONES['att'], 'food' => foodCostCible()] : null;
     return ['shop' => (string) $shop, 'produits' => $l, 'nMagasin' => $n('magasin'), 'nReseau' => $n('reseau'),
         'nSansCout' => count(array_filter($l, static fn ($p) => $p['cout'] === null)), 'seuils' => $seuils];
 }

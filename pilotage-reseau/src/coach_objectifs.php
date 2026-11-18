@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+
 /**
  * Les objectifs 2026 des coachs et les propositions de prix face à la concurrence (18/11/2026, Sam : « dans le coach
  * de ventes, le but est d'arriver à 40 % de food cost 2026 (établir les targets par coach), 17 % de frais de
@@ -81,6 +83,17 @@ function coObjectifsNormaux(mixed $o): array
     $out = [];
     foreach (array_keys(CO_OBJECTIFS) as $k) { $out[$k] = coCible($k, $o[$k] ?? null); }
     return $out;
+}
+
+/**
+ * Les cibles de départ d'un coach (AM_COACHS) : sa cible food cost, quand il en a une, suit la cible du réseau, la même
+ * variable partout (18/11/2026, foodCostCible, src/food_cost.php) ; les autres telles qu'écrites.
+ */
+function coObjectifsDepart(mixed $o): array
+{
+    $n = coObjectifsNormaux($o);
+    if (is_array($o) && array_key_exists('foodCost', $o) && function_exists('foodCostCible')) { $n['foodCost'] = coCible('foodCost', foodCostCible()); }
+    return $n;
 }
 
 /** Une cible dite comme à l'oral : « 40 % au plus », « 13 € au moins », « 3,5 au moins ». */

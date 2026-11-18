@@ -270,7 +270,7 @@ function exPeriodeCalcul(): array
     // future n'existe pas, une semaine passée est close.
     $jusqua = min($au, $auj);
 
-    $seuils = seuilsCharges();   // endpoints.php : le coût matière vient de Budget › Paramètres
+    $seuils = seuilsCharges();   // endpoints.php : le coût matière face à la cible du réseau (foodCostCible)
 
     $pj = pjPoids();
     $out = ['vue' => $vue, 'date' => $date, 'du' => $du, 'au' => $au, 'aujourdhui' => $auj,
