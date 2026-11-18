@@ -2689,7 +2689,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tj-mob .tj-j .l{font-size:10px}.tj-mob .tj-j.auj .l{color:var(--color-primary)}.tj-mob .tj-j b{font-size:13px;margin-top:1px;white-space:nowrap}.tj-mob .tj-j small{display:none}.tj-mob .tj-j .db-sk{width:80%!important;margin:4px auto!important;height:14px!important}.tj-mob .tj-barre{margin:4px 4px 0;height:4px}
 .tj-mob .tj-jdot{position:absolute;top:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--color-primary);border:2px solid var(--color-bg,var(--chip))}
 .tj-jm{padding:10px 12px 0;overflow:hidden}
-.tj-jm-t{display:flex;align-items:baseline;gap:4px;font-size:12px;color:var(--color-text-muted)}.tj-jm-t b{font-weight:400;color:var(--color-text)}.tj-jm-t span{margin-left:auto;font-size:10.5px}
+.tj-jm-t{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px;font-size:12px;color:var(--color-text-muted)}.tj-jm-t b{font-weight:400;color:var(--color-text)}.tj-jm-t span{margin-left:auto;font-size:10.5px}
 .tj-jm-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:8px 0 10px}
 .tj-jm-g>div{display:flex;flex-direction:column;min-width:0;padding:0 8px;border-left:1px dashed var(--color-border-tertiary)}.tj-jm-g>div:first-child{padding-left:0;border-left:none}
 .tj-jm-g .k{font:400 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2698,6 +2698,13 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tj-jm-nc{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:baseline;gap:7px;width:calc(100% + 24px);margin:0 -12px;padding:9px 12px;border-top:1px solid var(--color-border-tertiary);background:rgba(141, 29, 44, 0.04);font-size:11px;color:var(--color-text-muted)}
 .tj-jm-nc .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--color-primary)}.tj-jm-nc b{font:400 15px var(--font-display);color:var(--color-primary)}.tj-jm-nc .v{margin-left:auto;color:var(--color-primary)}
 .tj-jm-nc.bon{background:#f0f7f2}.tj-jm-nc.bon .k,.tj-jm-nc.bon b,.tj-jm-nc.bon .v{color:var(--green)}
+/* Contrôle au téléphone (18/11/2026, maquette B) : la carte du jour (celle de Tâches), « À contrôler » a plus de place ;
+ * les photos sans leur résumé ; les deux boutons sur une ligne. */
+.cq-jm .tj-jm-g{grid-template-columns:.95fr 1.3fr .85fr .9fr}
+.cq-jm-vide{padding:8px 0 10px}
+.ma-car .mb-cq{padding-top:12px}
+.ma-rc2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ma-rc2 .ma-rc{padding:10px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ma-rc2 .ma-rc+.ma-rc{margin-top:0}.ma-rc2 .hd-b{margin-left:4px}
 .tj-mob .tj-g{grid-template-columns:1fr 1fr;gap:12px;padding:12px}.tj-mob .tj-g-code,.tj-mob .tj-g-txt{grid-column:1/-1}.tj-mob .tj-g-big{font-size:30px}
 .tj-mob .db-card>.ct{padding:10px 12px}.tj-mob .db-card>.ct .db-mini{flex-basis:100%}.tj-mob .tj-filtres{margin-left:0}.tj-mob .tj-guide .ct .db-mini{display:none}
 .tj-mob .tj-h{grid-template-columns:62px minmax(0,1fr) auto;grid-template-rows:auto auto;gap:6px 10px;padding:10px 12px}
