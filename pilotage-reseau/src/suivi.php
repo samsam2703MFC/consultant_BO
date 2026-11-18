@@ -547,11 +547,13 @@ function suRappelCourrielHtml(string $texte, string $l): string
         . '<b style="font-weight:700">' . htmlspecialchars($texte, ENT_QUOTES, 'UTF-8') . '</b></div>';
 }
 
+/**
+ * Le corps d'un courriel du suivi, en fragment : Smtp::envoyer le pose dans la lettre du design system (docMail, §13.6 :
+ * logo, objet, filet Ruby, pied). Il ne porte plus son propre « L’ATELIER by » (18/11/2026) : le logo y était en double.
+ */
 function suCourrielHtml(string $corps): string
 {
-    return '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14px;color:#1c1a17;line-height:1.6;max-width:620px">'
-        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:18px;letter-spacing:.12em;color:#8D1D2C;margin:0 0 18px">L’ATELIER <span style="font-size:12px;letter-spacing:.2em;color:#7a736a">by</span></div>'
-        . $corps . '</div>';
+    return '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14px;color:#1c1a17;line-height:1.6;max-width:620px">' . $corps . '</div>';
 }
 
 /** Des valeurs d'exemple pour l'aperçu et l'essai d'un modèle. */
@@ -2086,7 +2088,12 @@ function wr_suivi_modeles_apercu(): array
     if (isset($b['sujet'])) { $m['sujet'] = (string) $b['sujet']; }
     if (isset($b['corps'])) { $m['corps'] = (string) $b['corps']; }
     $shop = isset(viMagasins()[(string) ($b['shop'] ?? '')]) ? (string) $b['shop'] : null;
-    return suRendre($m, suVarsExemple($l, $shop), $l) + ['langue' => $l];
+    // Le rapport reçoit le rappel des outils de gestion comme à l'envoi, même dans un texte en cours de réécriture.
+    if ($code === 'rapport') { $m = suModeleAvecRappel($m); }
+    $r = suRendre($m, suVarsExemple($l, $shop), $l);
+    // L'aperçu montre la lettre telle qu'elle part : Smtp::envoyer pose le corps dans le gabarit du design system.
+    if (function_exists('docMail')) { $r['html'] = docMail(['sujet' => $r['sujet'], 'corps' => $r['html'], 'pied' => docMailPied('Envoyé automatiquement par le cockpit L’Atelier By.')]); }
+    return $r + ['langue' => $l];
 }
 
 /** POST /suivi/modeles/essai — { code, langue, a } : le modèle en vigueur, avec des valeurs d'exemple, à une adresse d'essai. */
