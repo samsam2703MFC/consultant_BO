@@ -5,10 +5,10 @@ Exploitation, Contrôle, Tâches, Semaine, Primes. Les maquettes disent encore �
 
 Ce qui est codé :
 - **le ruban des canaux** (maquette C de `../comptoir-webshop/`) ;
-- **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas.
+- **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas ;
+- **Opérationnel**, le 18/11/2026 : c'est l'étape 2. Voir « Opérationnel, codé » plus bas.
 
-Les étapes suivantes ne sont pas codées : Opérationnel ; Exploitation et Semaine ; Contrôle, Tâches et Primes ;
-les feuilles.
+Les étapes suivantes ne sont pas codées : Exploitation et Semaine ; Contrôle, Tâches et Primes ; les feuilles.
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -64,6 +64,38 @@ Dans `public/dashboard`. Captures du vrai dashboard nourri d'une API simulée, d
 flottante de Safari. Deux points sont à regarder :
 - l'heure ne recouvre plus le nom du magasin ;
 - la barre de Safari se replie quand on fait défiler la page.
+
+## Opérationnel, codé (18/11/2026)
+
+**Décision de Sam, le 18/11/2026 : garder les deux jauges**, celle du comptoir et celle du B2B. Le « chiffre du jour »
+unique de la maquette (`jour.png`), avec quatre cases, n'est pas codé : il aurait défait la séparation du 23/10.
+
+Ce qui change, au téléphone seulement (`rendOpsMobile`), dans le vrai dashboard nourri d'une API simulée :
+- **les jauges resserrées** (`.op-mob .op-piste`) :
+  - le libellé de chaque piste passe à gauche de sa barre ;
+  - les barres sont plus fines ;
+  - l'axe est aligné sur le départ des barres ;
+  - « comptoir · » quitte les sous-libellés, puisque le titre de la carte le dit déjà ;
+  - le ruban des canaux reste sous la jauge du comptoir ;
+- **« Face à mercredi dernier »** (`opDuelMob`) remplace le duel chiffre par chiffre, qui prenait un écran entier.
+  Deux lignes, les clients et le panier, avec quatre colonnes :
+  - aujourd'hui ;
+  - le même jour la semaine d'avant, à la même heure ;
+  - l'écart entre les deux ;
+  - un repère : pour les clients, la moyenne des 6 derniers mêmes jours (la journée entière) ; pour le panier, le
+    réseau.
+
+  Le duel complet reste au bureau ;
+- **le stock** revient en bas de l'onglet, la même barre qu'au bureau. Il n'était plus nulle part au téléphone
+  depuis que Contrôle ne garde que les photos (20/10).
+
+Restent comme avant, déjà proches de la maquette : le cumul heure par heure, la vitrine et la journée.
+
+Captures dans `code/` :
+- `operationnel.png` : le haut de l'écran ;
+- `operationnel-defile.png` : tout l'onglet défilé ; la barre d'onglets apparaît au milieu, un effet de la capture
+  pleine page ;
+- `cadre-360px.png` : un téléphone de 360 px.
 
 ## La grammaire, la même partout
 

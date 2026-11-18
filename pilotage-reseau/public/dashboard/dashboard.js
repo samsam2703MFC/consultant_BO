@@ -2812,7 +2812,9 @@
   function opDuel(D, o) {
     const { now, fin, JD, m, ca, tk } = D;
     // o.comptoir : la jauge du comptoir seul (opDuelSplit) ; o.j7Total : J−7 sans son B2B lu, comptoir et pro ensemble.
-    const cpt = !!(o && o.comptoir), sous7 = cpt ? (o.j7Total ? 'comptoir + pro · ' : 'comptoir · ') : '';
+    // Au téléphone, « comptoir · » quitte les sous-libellés des pistes (18/11/2026) : le titre de la carte le dit déjà, et
+    // le libellé tient à gauche de sa barre. « comptoir + pro » reste : J−7 compte alors aussi ses clients pro.
+    const cpt = !!(o && o.comptoir), mob = estMobile(), sous7 = cpt ? (o.j7Total ? 'comptoir + pro · ' : (mob ? '' : 'comptoir · ')) : '';
     const estAuj = !!(JD && JD.estAujourdhui);
     if (!m) { return `<div class="op-duel"><div class="dh"><span class="lab">Objectif du jour</span><span class="dr">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div>${opSk()}</div>`; }
     const B = opDuelBase(D), j7 = B.j7, obj = B.obj;
@@ -2826,7 +2828,8 @@
     // Les étiquettes : à droite de leur ancre quand la place le permet, sinon à l'intérieur du segment (à gauche de
     // l'ancre) ; deux étiquettes qui se chevaucheraient fusionnent. Au téléphone, la seconde passe sous la barre (css).
     const tel = innerWidth <= 700 || document.documentElement.classList.contains('mob');
-    const barPx = Math.max(240, tel ? innerWidth - 60 : innerWidth - 250);
+    // Au téléphone, la barre commence après le libellé de la piste (86 px + 8, 18/11/2026) : la place des étiquettes en tient compte.
+    const barPx = Math.max(200, tel ? innerWidth - 60 - (estMobile() ? 94 : 0) : innerWidth - 250);
     const larg = t => (t.replace(/<[^>]+>/g, '').length * (tel ? 5.8 : 6.6) + 18) * 100 / barPx;
     const pill = (e, ded) => `<span class="val${e.cls ? ' ' + e.cls : ''}${ded ? ' dedans' : ''}${tel && e.cls && e.p < larg(e.txt) ? ' g' : ''}" style="left:${e.p.toFixed(1)}%"${e.titre ? ` title="${e.titre}"` : ''}>${e.txt}</span>`;
     const etiquettes = L => {
@@ -2846,7 +2849,7 @@
     const LA = [];
     if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
     if (pP != null && pP > pA) { LA.push({ p: pP, txt: 'projection ' + fE(B.proj), cls: 'proj', titre: 'au rythme de la journée, ' + fE(B.proj) + ' ce soir' }); }
-    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', (cpt ? 'comptoir · ' : '') + (fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now)),
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', (cpt && !mob ? 'comptoir · ' : '') + (fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now)),
       `<div class="seg ${atteint ? 'or' : 'fait'}" style="width:${pA.toFixed(1)}%"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%" title="projection au rythme de la journée : ${fE(B.proj)}"></div>` : ''}`, LA);
     if (j7) {
       const p7 = pct(j7.ca), p7j = j7.moment ? pct(j7.caJour) : p7;
@@ -3291,7 +3294,9 @@
     // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
     // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
     // cartes du dessous : retirées au téléphone.
-    let h = opDuelSplit(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
+    // Le duel chiffre par chiffre, une colonne par jour, prenait un écran entier : au téléphone, le tableau court
+    // « Face à mercredi dernier » (18/11/2026, refonte mobile, étape 2). Le duel complet reste au bureau.
+    let h = opDuelSplit(D) + opDuelMob(D) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
@@ -3300,9 +3305,35 @@
     // un second graphique des heures, restent au bureau.
     h += opJourneeMob(D);
     // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons). Le P&L, les
-    // ventes par catégorie, les promotions et les portions sont dans Exploitation ; les photos, les commandes, le stock et
-    // la poubelle dans Contrôle. Les onglets du bas y mènent ; plus de ligne de renvoi (11/10/2026).
+    // ventes par catégorie, les promotions et les portions sont dans Exploitation ; les photos dans Contrôle. Les onglets
+    // du bas y mènent ; plus de ligne de renvoi (11/10/2026).
+    // Le stock revient en bas d'Opérationnel (18/11/2026, refonte mobile) : Contrôle ne garde que les photos depuis le
+    // 20/10, il n'était plus nulle part au téléphone. La barre de la vue Semaine, sa liste en liste déroulante.
+    h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
     return h;
+  }
+  /**
+   * Le duel au téléphone (18/11/2026, maquette dashboard-mobile-v3, « Face aux mercredis ») : deux lignes, les clients
+   * et le panier ; aujourd'hui, le même jour la semaine d'avant à la même heure, l'écart entre les deux, et un repère —
+   * pour les clients la moyenne des 6 derniers mêmes jours (la journée entière, `refTickets`), pour le panier le réseau
+   * (panReseau). Les mêmes chiffres que le duel du bureau (opDuelBase), sans la journée entière de J−7.
+   */
+  function opDuelMob(D) {
+    const { now, fin, JD, m, tk } = D;
+    if (!m) { return ''; }
+    const B = opDuelBase(D), j7 = B.j7;
+    const jl = esc(B.jourNom.slice(0, 3)) + '.' + (j7 ? ' ' + fD(j7.date) : '');
+    const ec = d => d == null ? '<span class="eq">—</span>' : `<span class="${sensDe(d)}">${fSP(d)}</span>`;
+    const panR = JD ? panReseau(JD.reseau, B.panBase) : null;
+    const L = [['Clients', fN(tk), j7 ? fN(j7.tickets) : '—', ec(B.dTk), m.refTickets != null ? fN(m.refTickets) : '—'],
+      [B.panBase === 'comptoir' ? 'Panier comptoir' : 'Panier', B.panA != null ? fU(B.panA) : '—', B.pan7 != null ? fU(B.pan7) : '—', ec(B.dPan), panR ? fU(panR) : '—']];
+    const note = [j7 ? jl + (j7.moment ? ' à ' + esc(j7.moment) : ', la journée') : 'pas de ' + esc(B.jourNom) + ' gravé la semaine d’avant',
+      'réf. clients : ' + esc((JD && JD.reference && JD.reference.libelle) || 'la moyenne des derniers mêmes jours') + ', la journée',
+      'réf. panier : le réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')].join(' · ');
+    return `<div class="db-card op-bloc op-dm"><div class="ct"><span class="op-h2">Face à ${esc(B.jourNom)} dernier</span><span class="db-mini">clients et panier</span></div>
+      <table><thead><tr><th></th><th>${fin ? 'Jour' : 'Auj.'}</th><th>${jl}</th><th>écart</th><th>réf.</th></tr></thead>
+      <tbody>${L.map(r => `<tr><td>${r[0]}</td><td class="a">${r[1]}</td><td class="b">${r[2]}</td><td class="d">${r[3]}</td><td class="r">${r[4]}</td></tr>`).join('')}</tbody></table>
+      <div class="op-dm-n">${note}</div></div>`;
   }
   /**
    * La journée au téléphone (11/10/2026) : une frise de la journée. Une barre fine par personne au planning, le nom dedans
