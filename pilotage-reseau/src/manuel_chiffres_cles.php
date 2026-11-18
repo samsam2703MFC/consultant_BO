@@ -17,7 +17,9 @@ declare(strict_types=1);
  * Rangement : Article, famille 04 (Fiches de référence), sous-catégorie D7.1 « Pilotage de l'activité » du référentiel,
  * phases pré-ouverture et opérationnel, compétences C-PILOTAGE.KPI et C-PILOTAGE.Vente, formation FO-05, comme l'article
  * du dashboard (ART-PIL-01). Ouvert à TOUTE L'ÉQUIPE (18/11/2026, Sam : « ouvre l'article à toute l'équipe ») : accès
- * « tous », sans PIN, postes P1 à P12. Publié d'office ; le néerlandais est « à relire ».
+ * « tous », sans PIN, postes P1 à P12. Publié d'office, en français et en néerlandais RELU (18/11/2026, Sam : « ajoute
+ * aussi la traduction NL relue ») : le texte néerlandais ci-dessous est relu, il reste « relue » d'une version à l'autre
+ * (seuls les chiffres changent ; changer une phrase ici demande de la relire et d'incrémenter MC_GABARIT).
  *
  * Quand : à chaque passage d'ensureSop (l'installation au déploiement, les outils du manuel de l'assistant) et des
  * routes /formation/sop/ — une fois par requête, une lecture de ligne quand rien n'a changé.
@@ -26,7 +28,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/cibles_reseau.php';
 
 const MC_ID = 'art-cles-01';
-const MC_GABARIT = 1;          // la version du texte ci-dessous : la changer republie l'article
+const MC_GABARIT = 2;          // la version du texte ci-dessous : la changer republie l'article (2 : le NL relu)
 const MC_PAR = 'Cockpit (chiffres clés du réseau)';
 
 /** Un nombre à la belge : « 40 », « 3,6 », « 13,50 ». */
@@ -65,100 +67,100 @@ function mcContenu(array $c): array
     };
     if (isset($c['foodCost'])) {
         $v = $pct($c['foodCost']);
-        $ajoute("Food cost : $v du CA au plus", "Foodcost: hoogstens $v van de omzet",
+        $ajoute("Food cost : $v du CA au plus", "Foodcost: maximaal $v van de omzet",
             "Le coût matière — le coût de recette de tout ce qui est vendu — divisé par le chiffre d'affaires du mois.\n"
             . "Il se lit dans le dashboard (la matière, en % des ventes) et chez le Coach Vente.\n"
             . "Au-dessus de $v, le levier est le prix : les produits vendus sous la médiane des boulangeries concurrentes montent à la médiane, avec un lot qui garde le prix actuel pour qui prend plus.",
-            "De grondstofkost — de receptkost van alles wat verkocht wordt — gedeeld door de omzet van de maand.\n"
-            . "Je leest hem in het dashboard (de grondstoffen, in % van de verkoop) en bij de Verkoopcoach.\n"
-            . "Boven $v is de hefboom de prijs: producten die onder de mediaan van de concurrerende bakkerijen verkocht worden, gaan naar de mediaan, met een bundel die de huidige prijs behoudt voor wie meer neemt.", true);
+            "De grondstofkosten — de receptkosten van alles wat verkocht wordt — gedeeld door de omzet van de maand.\n"
+            . "Je leest ze af in het dashboard (de grondstoffen, in % van de verkoop) en bij de Verkoopcoach.\n"
+            . "Boven $v is de prijs de hefboom: producten die onder de mediaan van de concurrerende bakkerijen verkocht worden, gaan naar die mediaan, met een bundel die de huidige stukprijs behoudt voor wie meer koopt.", true);
     }
     if (isset($c['personnel'])) {
         $v = $pct($c['personnel']); $o = $pct($c['personnel'] + 5);
-        $ajoute("Frais de personnel : $v du CA au plus", "Personeelskosten: hoogstens $v van de omzet",
+        $ajoute("Frais de personnel : $v du CA au plus", "Personeelskosten: maximaal $v van de omzet",
             "Les salaires de l'équipe — le planning du panel — divisés par le chiffre d'affaires.\n"
             . "Dashboard, ligne Main-d'œuvre : vert jusqu'à $v, orange jusqu'à $o, rouge au-delà.\n"
             . "Le levier : un planning qui suit les heures de vente, pas l'inverse.",
-            "De lonen van het team — de planning van het panel — gedeeld door de omzet.\n"
-            . "Dashboard, lijn Arbeid: groen tot $v, oranje tot $o, rood daarboven.\n"
-            . "De hefboom: een planning die de verkoopuren volgt, niet omgekeerd.", true);
+            "De lonen van het team — volgens de planning in het panel — gedeeld door de omzet.\n"
+            . "In het dashboard: groen tot $v, oranje tot $o, rood daarboven.\n"
+            . "De hefboom: een planning die de verkoopuren volgt, en niet omgekeerd.", true);
     }
     if (isset($c['clientsScannes'])) {
         $v = $pct($c['clientsScannes']);
         $ajoute("Clients scannés : $v des tickets au moins", "Gescande klanten: minstens $v van de kassatickets",
             "La part des tickets rattachés à un client — sa carte ou son application scannée en caisse — sur les 90 derniers jours (Fidélité).\n"
             . "Le geste : demander la carte à chaque client, à chaque passage.",
-            "Het aandeel kassatickets dat aan een klant gekoppeld is — zijn kaart of app gescand aan de kassa — over de laatste 90 dagen (Klantenbinding).\n"
-            . "Het gebaar: bij elke klant, bij elk bezoek, naar de kaart vragen.");
+            "Het aandeel kassatickets dat aan een klant gekoppeld is — klantenkaart of app gescand aan de kassa — over de laatste 90 dagen (Klantenbinding).\n"
+            . "De actie: bij elke klant en bij elk bezoek naar de kaart vragen.");
     }
     if (isset($c['menus'])) {
         $v = $pct($c['menus']);
         $ajoute("Menus et formules : $v du CA au moins", "Menu's en formules: minstens $v van de omzet",
             "La part du chiffre d'affaires faite par les menus et formules : la vente additionnelle.\n"
             . "Le geste : proposer la formule à chaque client du midi, et la montrer en vitrine.",
-            "Het aandeel van de omzet dat menu's en formules opbrengen: de bijverkoop.\n"
-            . "Het gebaar: elke middagklant de formule voorstellen, en ze in de toonbank tonen.");
+            "Het aandeel van de omzet uit menu's en formules: de bijverkoop.\n"
+            . "De actie: elke middagklant de formule voorstellen en ze in de vitrine tonen.");
     }
     if (isset($c['articles'])) {
         $v = mcNombre($c['articles']);
-        $ajoute("Articles par ticket : $v au moins", "Artikelen per kassaticket: minstens $v",
+        $ajoute("Articles par ticket : $v au moins", "Artikelen per ticket: minstens $v",
             "Le nombre d'articles vendus divisé par le nombre de tickets.\n"
             . "Le geste : une proposition complémentaire à chaque client — la boisson avec la viennoiserie, le dessert avec le sandwich.",
             "Het aantal verkochte artikelen gedeeld door het aantal kassatickets.\n"
-            . "Het gebaar: bij elke klant een aanvullend voorstel — de drank bij de viennoiserie, het dessert bij het broodje.");
+            . "De actie: elke klant een aanvullend voorstel doen — een drankje bij de viennoiserie, een dessert bij het broodje.");
     }
     if (isset($c['panier'])) {
         $v = mcNombre($c['panier']) . ' €';
-        $ajoute("Panier moyen : $v au moins", "Gemiddeld kassaticket: minstens $v",
+        $ajoute("Panier moyen : $v au moins", "Gemiddeld ticketbedrag: minstens $v",
             "Le chiffre d'affaires divisé par le nombre de tickets.\n"
             . "Il monte avec les articles par ticket, les menus et les lots.",
             "De omzet gedeeld door het aantal kassatickets.\n"
-            . "Hij stijgt met de artikelen per ticket, de menu's en de bundels.");
+            . "Het stijgt met de artikelen per ticket, de menu's en de bundels.");
     }
     $regle = [
-        ['numero' => '1', 'titre' => $e('Qui les règle', 'Wie ze instelt'),
+        ['numero' => '1', 'titre' => $e('Qui les règle', 'Wie ze bepaalt'),
          'texte' => $e("Le Catalogue des KPI du cockpit (Paramètres) règle le food cost, le personnel, le panier moyen et les articles par ticket : une valeur changée là s'applique partout — rapports, dashboard, trésorerie, prix objectif des produits, Coach Vente — et cet article passe à la version suivante.\n"
                 . "Les clients scannés et les menus sont les objectifs du Coach Vente (cockpit, Assistant · coachs).",
-                "De KPI-catalogus van de cockpit (Instellingen) stelt de foodcost, het personeel, het gemiddelde kassaticket en de artikelen per ticket in: een waarde die daar verandert, geldt overal — rapporten, dashboard, thesaurie, streefprijs van de producten, Verkoopcoach — en dit artikel gaat naar de volgende versie.\n"
-                . "De gescande klanten en de menu's zijn de doelstellingen van de Verkoopcoach (cockpit, Assistent · coaches)."), 'critique' => false],
-        ['numero' => '2', 'titre' => $e('Où les suivre', 'Waar ze op te volgen'),
+                "De KPI-catalogus van de cockpit (« Paramètres ») bepaalt de foodcost, de personeelskosten, het gemiddelde ticketbedrag en de artikelen per ticket: een waarde die daar wijzigt, geldt overal — rapporten, dashboard, thesaurie, streefprijs van de producten, Verkoopcoach — en dit artikel krijgt een nieuwe versie.\n"
+                . "De gescande klanten en de menu's zijn doelstellingen van de Verkoopcoach (cockpit, « Assistant · coachs »)."), 'critique' => false],
+        ['numero' => '2', 'titre' => $e('Où les suivre', 'Waar je ze opvolgt'),
          'texte' => $e("Dans le dashboard du magasin, mois en cours et mois dernier.\n"
                 . "Chez le Coach Vente : « Où en sont mes objectifs 2026 ? » — il donne l'écart à chaque cible, ce qu'il vaut en euros, et le geste qui le rapproche.",
-                "In het winkeldashboard, lopende maand en vorige maand.\n"
-                . "Bij de Verkoopcoach: « Hoe staan mijn doelstellingen 2026 ervoor? » — hij geeft het verschil met elk doel, wat het in euro waard is, en het gebaar dat het dichterbij brengt."), 'critique' => false],
+                "In het winkeldashboard, de lopende en de vorige maand.\n"
+                . "Bij de Verkoopcoach, met de vraag « Où en sont mes objectifs 2026 ? »: hij geeft per doelstelling het verschil, wat dat in euro waard is en de actie die het dichterbij brengt."), 'critique' => false],
     ];
     $quiz = [];
     if (isset($c['foodCost'])) {
         $v = $c['foodCost'];
         $ch = [$pct(max(1, $v - 8)), $pct($v), $pct(min(99, $v + 10))];
-        $quiz[] = ['question' => $e('Quelle est la cible de food cost du réseau ?', 'Wat is het foodcostdoel van het netwerk?'),
+        $quiz[] = ['question' => $e('Quelle est la cible de food cost du réseau ?', 'Wat is de foodcostdoelstelling van het netwerk?'),
             'choix' => ['fr' => $ch, 'nl' => $ch], 'bonne' => 1];
     }
     if (isset($c['personnel'])) {
         $x = $pct($c['personnel'] + 3);
         $quiz[] = ['question' => $e("Un magasin est à $x de frais de personnel. Que montre le dashboard ?", "Een winkel zit op $x personeelskosten. Wat toont het dashboard?"),
             'choix' => ['fr' => ['Vert : sous la cible', 'Orange : au-dessus de la cible, à moins de cinq points', 'Rouge : plus de cinq points au-dessus'],
-                        'nl' => ['Groen: onder het doel', 'Oranje: boven het doel, minder dan vijf punten', 'Rood: meer dan vijf punten erboven']], 'bonne' => 1];
+                        'nl' => ['Groen: onder de doelstelling', 'Oranje: boven de doelstelling, minder dan vijf punten erboven', 'Rood: meer dan vijf punten erboven']], 'bonne' => 1];
     }
-    $quiz[] = ['question' => $e('Où change-t-on la cible de panier moyen ?', 'Waar verander je het doel voor het gemiddelde kassaticket?'),
+    $quiz[] = ['question' => $e('Où change-t-on la cible de panier moyen ?', 'Waar wijzig je de doelstelling voor het gemiddelde ticketbedrag?'),
         'choix' => ['fr' => ['Dans le Catalogue des KPI du cockpit', 'Dans la caisse', 'Dans cet article'],
                     'nl' => ['In de KPI-catalogus van de cockpit', 'In de kassa', 'In dit artikel']], 'bonne' => 0];
     return [
         'titre' => $e('Les chiffres clés du réseau 2026', 'De kerncijfers van het netwerk 2026'),
         'objectif' => $e("Connaître les chiffres clés que le réseau vise en 2026 : ce que chacun mesure, où il se lit, et quel geste le fait bouger.",
-            "De kerncijfers kennen die het netwerk in 2026 nastreeft: wat elk cijfer meet, waar je het leest, en welk gebaar het doet bewegen."),
+            "De kerncijfers kennen die het netwerk in 2026 nastreeft: wat elk cijfer meet, waar je het afleest en met welke actie je het bijstuurt."),
         'pour' => $e("Toute l'équipe du magasin, de l'opérateur au franchisé (P1 à P12) : chacun sait vers quoi le magasin tend et quel geste y mène. À relire à chaque nouvelle version.",
-            'Het hele winkelteam, van medewerker tot franchisenemer (P1 tot P12): iedereen weet waar de winkel naartoe wil en welk gebaar ertoe leidt. Opnieuw te lezen bij elke nieuwe versie.'),
+            'Het hele winkelteam, van medewerker tot franchisenemer (P1 tot P12): iedereen weet waar de winkel naartoe werkt en welke actie daartoe bijdraagt. Opnieuw lezen bij elke nieuwe versie.'),
         'duree' => '10 min de lecture',
         'sections' => [
             ['titre' => $e('Les chiffres clés', 'De kerncijfers'), 'etapes' => $etapes],
-            ['titre' => $e('Qui les règle, où les suivre', 'Wie ze instelt, waar ze op te volgen'), 'etapes' => $regle],
+            ['titre' => $e('Qui les règle, où les suivre', 'Wie ze bepaalt, waar je ze opvolgt'), 'etapes' => $regle],
         ],
         'points_critiques' => [
             $e('Un chiffre se lit sur le mois en cours ET face au mois dernier : un début de mois est encore instable.',
-               'Een cijfer lees je over de lopende maand ÉN tegenover vorige maand: een begin van de maand is nog onstabiel.'),
+               'Lees een cijfer altijd over de lopende maand én tegenover de vorige maand: in het begin van de maand schommelt het nog sterk.'),
             $e('Une hausse de prix se présente toujours avec son lot au prix actuel : le client fidèle garde son prix en prenant plus.',
-               'Een prijsverhoging stel je altijd voor met haar bundel aan de huidige prijs: de vaste klant behoudt zijn prijs door meer te nemen.'),
+               'Stel een prijsverhoging altijd voor samen met de bundel aan de huidige prijs: de vaste klant behoudt zijn prijs als hij meer koopt.'),
         ],
         'quiz' => $quiz,
     ];
@@ -204,7 +206,7 @@ function mcSynchroniser(): ?string
             Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, acces, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
                         titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par)
                       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [MC_ID, foCodeAuto('Article', null), 'Article', '04', 'vente', 'tous', 'publiee', $ver, $ver, 'FR', 'origine', 'a_relire',
+                [MC_ID, foCodeAuto('Article', null), 'Article', '04', 'vente', 'tous', 'publiee', $ver, $ver, 'FR', 'origine', 'relue',
                     $contenu['titre']['fr'], $contenu['titre']['nl'], $contenu['objectif']['fr'], $contenu['objectif']['nl'], $contenu['duree'],
                     $st['etapes'], $st['photos'], $ordre, $source, $now, MC_PAR]);
             // Le classement du Manuel du réseau (colonnes du référentiel) : comme l'article du dashboard.
@@ -220,7 +222,7 @@ function mcSynchroniser(): ?string
             Db::exec('UPDATE ceo_sop SET version = ?, titre_fr = ?, titre_nl = ?, objectif_fr = ?, objectif_nl = ?, duree = ?, nb_etapes = ?, nb_photos = ?,
                         trad_nl = ?, source = ?, maj_le = ?, maj_par = ? WHERE id = ?',
                 [$ver, $contenu['titre']['fr'], $contenu['titre']['nl'], $contenu['objectif']['fr'], $contenu['objectif']['nl'], $contenu['duree'],
-                    $st['etapes'], $st['photos'], 'a_relire', $source, $now, MC_PAR, MC_ID]);
+                    $st['etapes'], $st['photos'], 'relue', $source, $now, MC_PAR, MC_ID]);
         }
         Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
             [MC_ID, $ver, foJson($contenu), mb_substr($note, 0, 500), $now, MC_PAR]);
