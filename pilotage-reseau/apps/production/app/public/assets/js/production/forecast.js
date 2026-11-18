@@ -65,6 +65,7 @@
         }).join('');
     }
     function srcBadge(p) {
+        if (p.history) return '<span class="fc-src season" title="Brak w gamach panelu : sprzedaż tego produktu w tych samych tygodniach rok temu × trend">sezon N-1</span>';
         if (p.kind === 'season') return '<span class="fc-src season">sezon panel</span>';
         const counts = {};
         p.sources.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
@@ -78,7 +79,7 @@
         const dot = p.kind === 'season' && p.seasons.length ? `<span class="fc-dot" style="background:${S[p.seasons[0]]?.color || '#999'}"></span>` : '';
         const cc = p.cost_per_carton;
         const title = `Wydatki na karton ${num(cc.total, 2)} zł (surowce ${num(cc.raw, 2)}, płace ${num(cc.labor, 2)}, media ${num(cc.media, 2)}, wspólne działy ${num(cc.shared, 2)}) · ${D.weeks.length} tyg. : ${num(p.total * cc.total)} zł\n`
-            + p.sources.map((s, i) => `${D.weeks[i].iso_week} : ${({orders: 'zamówienia', n1: 'N-1 × trend', avg: 'średnia', season: 'gama N-1 × trend', none: '—'})[s]}`).join('\n');
+            + p.sources.map((s, i) => `${D.weeks[i].iso_week} : ${({orders: 'zamówienia', n1: 'N-1 × trend', avg: 'średnia', season: 'gama N-1 × trend', history: 'ten produkt N-1 × trend', none: '—'})[s]}`).join('\n');
         const note = p.all_year_in ? ` <span class="at-sub" title="Sprzedawany w ostatnich tygodniach poza gamą — liczony jak całoroczny">(w gamie ${esc(p.all_year_in.join(', '))}, sprzedaż cały rok)</span>` : '';
         return `<tr title="${esc(title)}"><td>${dot}<button type="button" class="fc-cl" data-fc-pclients="${p.product_id}" title="Którzy klienci biorą ten produkt — tydzień po tygodniu">${esc(p.name)}</button>${srcBadge(p)}${note}</td>
             ${p.values.map((v, i) => `<td class="${v ? '' : 'z'}${p.kind === 'season' && v ? ' s' : ''}${p.sources[i] === 'orders' && v ? ' o' : ''}">${v ? num(v) : '—'}</td>`).join('')}<td class="s">${num(p.total)}</td></tr>`;
