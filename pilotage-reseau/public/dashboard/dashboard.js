@@ -1083,6 +1083,11 @@
   const maGrille = T => `<div class="ma-g">${T.map(maTuile).join('')}</div>`;
   /** La ligne du haut : combien de tuiles ne sont pas vertes, lesquelles, et toutes les pastilles. */
   function maVerdict(T, regler) {
+    const V = maVerdictDe(T, regler);
+    return `<div class="ma-v"><span class="n ${V.cls}">${V.n || (V.rien ? '…' : '✓')}</span><span class="t">${V.titre}<em>${V.em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
+  }
+  /** Le verdict d'une page de tuiles : combien de points ne sont pas verts, lesquels (maVerdict, le héros d'Exploitation). */
+  function maVerdictDe(T, regler) {
     const pb = T.filter(t => t.pt === 'r' || t.pt === 'o'), n = pb.length;
     const vert = T.filter(t => t.pt === 'v').length, gris = T.filter(t => !t.pt || t.pt === 'n').length;
     // Rien de jugé (chiffres du jour pas encore lus, 13/11/2026) : ni ✓ ni « tout est au vert » — un responsable le
@@ -1091,7 +1096,44 @@
     const cls = pb.some(t => t.pt === 'r') ? 'ko' : (n ? 'wa' : (rien ? 'mu' : 'ok'));
     const titre = n ? maPl(n, 'point').replace(/^\d+ /, '') + (regler ? ' à régler' : ' à surveiller') : (rien ? 'pas encore jugé' : (gris ? 'rien à signaler pour l’instant' : 'tout est au vert'));
     const em = n ? pb.map(t => t.court || t.k).join(' · ') : (rien ? gris + ' point' + (gris > 1 ? 's' : '') + ' en attente des chiffres du jour' : vert + ' au vert' + (gris ? ' · ' + gris + ' pas encore jugé' + (gris > 1 ? 's' : '') : ''));
-    return `<div class="ma-v"><span class="n ${cls}">${n || (rien ? '…' : '✓')}</span><span class="t">${titre}<em>${em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
+    return { cls, n, rien, titre, titreN: (n ? n + ' ' : '') + titre, em };
+  }
+  /**
+   * Le héros d'Exploitation au téléphone (18/11/2026, refonte mobile, étape 3, maquette « Chiffres ») : le résultat du
+   * jour en grand, le verdict des tuiles en pastille et en une ligne, puis le compte en escalier (cascade). Il remplace
+   * la ligne du verdict et la carte « Le P&L court », qui disaient la même journée en deux blocs.
+   */
+  function maHerosExp(m, d, T) {
+    const V = maVerdictDe(T, false), auj = S.date === AUJ;
+    const c = m.net == null ? '' : MA.net(m.netPct);
+    return `<div class="db-card ma-hero"><div class="top"><span class="kick">Le résultat du jour</span><span class="chip ${V.cls}">${V.titreN}</span></div>
+      <div class="big"><b class="${c}">${m.net == null ? '—' : fS(m.net)}</b><span>${m.net == null ? esc(m.motifNet || 'P&L incomplet') : fP(m.netPct) + ' des ventes'}</span></div>
+      <div class="sub">${V.n ? 'à surveiller : ' : ''}${V.em}${auj ? ' · la journée continue' : ''}</div>${cascade(m, d)}</div>`;
+  }
+  /**
+   * Le héros de Semaine au téléphone (18/11/2026, maquette « Semaine ») : l'avance ou le retard sur l'objectif à ce jour,
+   * le réalisé face à l'attendu, puis sept colonnes — chaque jour face à son objectif (le trait), aujourd'hui hachuré tant
+   * qu'il est en dessous, les jours à venir en pointillé à la hauteur de leur objectif. Il remplace la ligne du haut et
+   * la tuile « Chiffre de la semaine ».
+   */
+  function maHerosSem(m, R, ca) {
+    const ecart = m.ecart, J = R.J.filter(j => !j.ferme || j.ca != null);
+    const cls = ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'));
+    const chip = ecart == null ? 'en lecture' : (ecart >= 0 ? 'en avance' : (R.att >= 90 ? 'à moins de 10 %' : 'en retard'));
+    const mx = Math.max(1, ...J.map(j => Math.max(j.ca || 0, j.objectif || 0))) * 1.06, h = v => (100 * v / mx).toFixed(1) + '%';
+    const auj = j => j.date === AUJ;
+    const cols = J.map(j => {
+      const fait = j.passe && j.ca != null, c = fait ? maJourCA(j) : 'av';
+      const p = fait && j.objectif ? `<span class="p">${nf(Math.round(100 * j.ca / j.objectif), 0)}</span>` : '';
+      const bar = fait ? `<i class="${c}${auj(j) && j.ca < (j.objectif || 0) ? ' en' : ''}" style="height:${h(j.ca)}"></i>` : (j.objectif ? `<i class="av" style="height:${h(j.objectif)}"></i>` : '');
+      return `<div>${p}${bar}${j.objectif ? `<b style="bottom:${h(j.objectif)}"></b>` : ''}</div>`;
+    }).join('');
+    const ax = J.map(j => `<span class="${auj(j) ? 'auj' : ''}">${esc((j.court || fD(j.date)).replace(/\s+\d+$/, ''))}</span>`).join('');
+    return `<div class="db-card ma-hero"><div class="top"><span class="kick">${esc(ca.k)}</span><span class="chip ${cls}">${chip}</span></div>
+      <div class="big"><b class="${cls}">${ecart == null ? '…' : fS(ecart)}</b><span>${ecart == null ? 'la semaine' : 'sur l’objectif à ce jour'}</span></div>
+      <div class="sub">${ca.v.replace(/<[^>]+>/g, '')} · ${ca.s}</div>
+      <div class="ma-wk">${cols}</div><div class="ma-wk-ax">${ax}</div>
+      <div class="ma-wk-leg"><span><i class="v"></i>objectif tenu</span><span><i class="o"></i>à moins de 10 %</span><span><i class="r"></i>en dessous</span><span><i class="t"></i>objectif du jour</span></div></div>`;
   }
 
   /** Exploitation : le jour, ce qu'il rapporte. */
@@ -1142,7 +1184,7 @@
     // main-d'œuvre et la poubelle se lisent dans le P&L court ; les clients et les heures dans Opérationnel. Restent en
     // tuiles le rang dans le réseau et les canaux, que le P&L ne dit pas.
     const PJ = jourPieces(m, d, S.st[cleSt()]);
-    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + `<div class="ma-large">${PJ.pnl}</div>` + maGrille(T.filter(t => /^(Réseau|Canaux)/.test(t.k)).map(t => Object.assign({}, t, { w: false })));
+    let h = maHerosExp(m, d, T.filter(t => t.pt !== undefined)) + maGrille(T.filter(t => /^(Réseau|Canaux)/.test(t.k)).map(t => Object.assign({}, t, { w: false })));
     // Les campagnes et les promotions du jour, quand il y en a : leurs cellules et leurs tiroirs.
     const ext = []; murObjectifs().forEach(t => ext.push(murR([t], true))); murPromos().forEach(t => ext.push(murR([t], true)));
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
@@ -1233,7 +1275,8 @@
     const cell = (c, v) => `<td class="${c}">${v}</td>`;
     const ligne = (lib, f) => `<tr><td class="l">${lib}</td>${J.map(j => (!j.passe || j.ferme) ? cell('f', j.ferme ? '×' : '·') : f(j)).join('')}</tr>`;
     const auj = j => j.date === AUJ;
-    let h = `<div class="ma-dam"><table><tr><th class="l">la semaine</th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date))}</th>`).join('')}</tr>`;
+    // L'en-tête sur deux lignes (18/11/2026) : « lun. 16 » ne tient pas dans une colonne de téléphone.
+    let h = `<div class="ma-dam"><table><tr><th class="l"></th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date)).replace(' ', '<br>')}</th>`).join('')}</tr>`;
     if (!R.sansChiffre) h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
     const jmLu = !!S.aux['jourM|' + S.date];
     h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net(x.ca ? 100 * x.net / x.ca : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
@@ -1251,11 +1294,8 @@
     const R = maTuilesSem(m, d);
     if (!R) { return `<div class="ma-v"><span class="n mu">…</span><span class="t">lecture de la semaine<em>le chiffre jour par jour, les contrôles, la poubelle</em></span></div>${squeletteMa(5)}`; }
     const [ca, ...reste] = R.T;
-    const ecart = m.ecart;
-    const em = [R.dessous.length ? 'en dessous : ' + R.dessous.join(', ') : '', R.dessus.length ? 'au-dessus : ' + R.dessus.join(', ') : ''].filter(Boolean).join(' · ') || 'la semaine commence';
-    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’objectif' : 'sur l’objectif à ce jour')}<em>${em}</em></span>`
-      + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
-    h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
+    let h = maHerosSem(m, R, ca);
+    h += maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
     h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }

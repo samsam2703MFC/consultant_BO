@@ -2076,6 +2076,37 @@ html.db-fiche-ouverte{overflow:hidden}
 /* Le téléphone (10/10/2026) : les chiffres de la journée passent dans Exploitation ; les tableaux des catégories
  * tiennent dans l'écran sans défiler de côté, les colonnes secondaires se retirent. */
 .ma-large{margin:12px 0}.ma-large>.db-card{margin:0}
+/* Le héros d'Exploitation et de Semaine au téléphone (18/11/2026, refonte mobile, étape 3) : le chiffre qui répond à
+   l'onglet en grand, une pastille de verdict, une ligne d'explication, puis le détail dans la même carte. */
+.ma-hero{padding:13px 14px 12px;margin:0}
+.ma-hero .top{display:flex;align-items:center;gap:8px}
+.ma-hero .kick{font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);min-width:0}
+.ma-hero .chip{margin-left:auto;font-size:10.5px;padding:3px 9px;border-radius:8px;white-space:nowrap;background:var(--chip);color:var(--muted-2)}
+.ma-hero .chip.ok{background:#e9f2ec;color:var(--green)}.ma-hero .chip.wa{background:var(--prize-soft);color:var(--prize-ink)}.ma-hero .chip.ko{background:var(--stop-soft);color:var(--stop)}
+.ma-hero .big{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:6px}
+.ma-hero .big b{font:400 34px/1.05 var(--font-display);font-variant-numeric:tabular-nums}
+.ma-hero .big b.v,.ma-hero .big b.ok{color:var(--green)}.ma-hero .big b.o,.ma-hero .big b.wa{color:#B0792A}.ma-hero .big b.r,.ma-hero .big b.ko{color:var(--stop)}
+.ma-hero .big span{font-size:13px;color:var(--muted-2)}
+.ma-hero .sub{font-size:11.5px;line-height:1.4;color:var(--color-text-muted);margin-top:4px}
+.ma-hero .db-cascade{margin-top:6px;padding:0}
+/* Le compte en escalier dans le héros : le libellé prend ce qui reste, la barre garde 54 px. */
+.ma-hero .db-cl{grid-template-columns:minmax(0,1fr) 54px 74px 50px;gap:8px;padding:7px 0}
+/* Les sept jours face à leur objectif : la barre du réalisé, le trait de l'objectif, le pourcentage au-dessus. */
+.ma-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:110px;margin-top:26px}
+.ma-wk>div{position:relative;height:100%;display:flex;align-items:flex-end}
+.ma-wk i{display:block;width:100%;border-radius:5px 5px 0 0;background:#d9d3c9}
+.ma-wk i.v{background:var(--green)}.ma-wk i.o{background:#D98A0B}.ma-wk i.r{background:var(--stop)}
+.ma-wk i.en{background:repeating-linear-gradient(135deg,#B03048 0 3px,#e8b9c2 3px 6px)}
+.ma-wk i.av{background:none;border:1px dashed #cfc7bb;border-bottom:none}
+.ma-wk b{position:absolute;left:-2px;right:-2px;height:0;border-top:2px solid var(--ink);opacity:.6}
+.ma-wk .p{position:absolute;left:0;right:0;top:-16px;text-align:center;font-size:10px;color:var(--muted-2)}
+.ma-wk-ax{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:4px;font-size:10px;color:var(--color-text-muted);text-align:center}
+.ma-wk-ax .auj{color:var(--color-primary)}
+.ma-wk-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:10.5px;color:var(--color-text-muted)}
+.ma-wk-leg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
+.ma-wk-leg i.v{background:var(--green)}.ma-wk-leg i.o{background:#D98A0B}.ma-wk-leg i.r{background:var(--stop)}
+.ma-wk-leg i.t{height:0;border-top:2px solid var(--ink);opacity:.6;vertical-align:3px}
+.ma-dam th{line-height:1.2}
 @media (max-width:560px){
   .mb-sc .db-acc{padding:4px 8px 8px}
   .mb-sc .db-acc:not(.pro):not(.pot) .db-ent,.mb-sc .db-acc:not(.pro):not(.pot) .db-al{grid-template-columns:20px minmax(0,1fr) 72px 48px;gap:6px}

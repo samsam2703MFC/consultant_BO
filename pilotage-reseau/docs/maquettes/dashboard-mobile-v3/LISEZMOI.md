@@ -6,9 +6,10 @@ Exploitation, Contrôle, Tâches, Semaine, Primes. Les maquettes disent encore �
 Ce qui est codé :
 - **le ruban des canaux** (maquette C de `../comptoir-webshop/`) ;
 - **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas ;
-- **Opérationnel**, le 18/11/2026 : c'est l'étape 2. Voir « Opérationnel, codé » plus bas.
+- **Opérationnel**, le 18/11/2026 : c'est l'étape 2. Voir « Opérationnel, codé » plus bas ;
+- **Exploitation et Semaine**, le 18/11/2026 : c'est l'étape 3. Voir « Exploitation et Semaine, codées » plus bas.
 
-Les étapes suivantes ne sont pas codées : Exploitation et Semaine ; Contrôle, Tâches et Primes ; les feuilles.
+Les étapes suivantes ne sont pas codées : Contrôle, Tâches et Primes ; les feuilles.
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -96,6 +97,32 @@ Captures dans `code/` :
 - `operationnel-defile.png` : tout l'onglet défilé ; la barre d'onglets apparaît au milieu, un effet de la capture
   pleine page ;
 - `cadre-360px.png` : un téléphone de 360 px.
+
+## Exploitation et Semaine, codées (18/11/2026)
+
+Au téléphone seulement ; le bureau ne change pas. Captures dans `code/`, avant et après :
+- `exploitation-avant.png` et `exploitation.png` ;
+- `semaine-avant.png` et `semaine.png`.
+
+- **Exploitation** (`maHerosExp`). Un héros remplace la ligne du verdict et la carte « Le P&L court », qui disaient
+  la même journée en deux blocs :
+  - le résultat du jour en grand, coloré selon sa part des ventes ;
+  - le verdict des tuiles en pastille, par exemple « 1 point à surveiller » ;
+  - une ligne qui dit quoi : « à surveiller : les clients · la journée continue » ;
+  - dessous, dans la même carte, le compte en escalier, avec chaque charge face à son seuil.
+
+  Les tuiles Réseau et Canaux, les campagnes, les promotions et les ventes par catégorie ne changent pas.
+- **Semaine** (`maHerosSem`). Un héros remplace la ligne du haut et la tuile « Chiffre de la semaine », qui
+  disaient la même avance deux fois :
+  - l'avance ou le retard sur l'objectif à ce jour, avec une pastille (en avance, à moins de 10 %, en retard) ;
+  - le réalisé face à l'attendu ;
+  - sept colonnes, chaque jour face au trait de son objectif, avec son pourcentage au-dessus. Aujourd'hui est
+    hachuré tant qu'il est sous l'objectif ; les jours à venir sont en pointillé, à la hauteur de leur objectif.
+
+  L'en-tête du damier passe sur deux lignes (« lun. » puis « 16 ») : « lun. 16 » débordait de sa colonne. Les
+  tuiles et la valeur ne changent pas.
+
+Le verdict d'Exploitation se calcule à part (`maVerdictDe`), avec les mêmes règles que la ligne du verdict.
 
 ## La grammaire, la même partout
 
