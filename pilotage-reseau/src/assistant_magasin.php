@@ -31,6 +31,8 @@ declare(strict_types=1);
  * le dernier, qui se fait sans outil (`tool_choice: none`) pour rendre une réponse quoi qu'il arrive.
  */
 
+require_once __DIR__ . '/coach_objectifs.php';   // Les objectifs 2026 des coachs et les prix face à la concurrence (18/11/2026)
+
 const AM_MODELE = 'claude-opus-5-5';
 const AM_ECRANS = ['produits', 'taches', 'semaine', 'mois', 'fidelite', 'ops', 'promos', 'aucun'];
 const AM_QUESTIONS = [
@@ -44,6 +46,7 @@ const AM_QUESTIONS = [
         ['Ma semaine', ['Comment s’est passée ma semaine ?', 'Que puis-je améliorer ?', 'Qu’est-ce qui a le mieux marché ?']],
         ['Mes ventes', ['Quel est mon jour le plus faible, et pourquoi ?', 'Mon panier moyen est-il bon ?', 'Comment je me situe dans le réseau ?']],
         ['Mon équipe', ['Mes salaires collent-ils à mes ventes ?', 'Où en sont mes contrôles ?']],
+        ['Mes objectifs 2026', ['Où en sont mes objectifs 2026 ?', 'Quels prix monter face à la concurrence ?']],
         ['Mes clients', ['Qui sont mes clients fidèles ?', 'Combien de clients sont reconnus en caisse ?']],
         ['Ma production', ['Qu’est-ce que je jette le plus ?', 'Quelles commandes clients arrivent ?']],
         ['Le réseau', ['Qui fait le meilleur panier aujourd’hui, et avec quoi ?', 'Qu’est-ce que je vends le plus le matin ?', 'Comment ont évolué mes samedis sur un an ?']],
@@ -59,7 +62,10 @@ const AM_QUESTIONS = [
  * porte un nom inventé (il ne parle au nom d'aucune personne réelle) et il est rude sans insulter : cette limite-là
  * n'est pas réglable, elle est écrite dans AM_SYSTEME.
  * Le Coach Vente (14/11/2026, Sam : « rajouter un coach expert en vente ») : le panier, les produits et les heures
- * fortes, appuyés sur l'historique des ventes (les outils) ; il ne parle des contrôles que si on le lui demande. */
+ * fortes, appuyés sur l'historique des ventes (les outils) ; il ne parle des contrôles que si on le lui demande.
+ * Les objectifs 2026 (18/11/2026) : chaque coach porte ses cibles (`objectifs`, clés de CO_OBJECTIFS ; absente ou
+ * vide = non suivie), réglées au cockpit comme le reste ; le Coach Vente part avec 40 % de food cost et 17 % de
+ * personnel, et son levier du food cost est le prix face à la concurrence, avec un lot au prix actuel. */
 const AM_AXES = ['budget' => 'Budget', 'trafic' => 'Trafic', 'controles' => 'Contrôles qualité'];
 const AM_NIVEAUX = ['fort' => 'Accent fort', 'suivi' => 'Suivi', 'non' => 'N’en parle pas'];
 const AM_COACHS = [
@@ -72,6 +78,7 @@ const AM_COACHS = [
             'trafic' => ['niveau' => 'fort', 'verifie' => "Les tickets face à la semaine dernière et à la cible de trafic ; le jour le plus faible et une idée simple pour y faire venir du monde ; le panier moyen face au réseau."],
             'controles' => ['niveau' => 'suivi', 'verifie' => "Les contrôles faits à l'heure, en particulier le contrôle qualité pâtisserie ; la tendance des sept derniers jours. Encourage la régularité plutôt que de reprocher."],
         ],
+        'objectifs' => [],
     ],
     'coach' => [
         'nom' => 'Le Coach',
@@ -82,6 +89,7 @@ const AM_COACHS = [
             'trafic' => ['niveau' => 'fort', 'verifie' => "Les tickets face à la semaine dernière ; le jour qui recule ; le panier sous le réseau, c'est de l'argent laissé sur le comptoir."],
             'controles' => ['niveau' => 'fort', 'verifie' => "Les contrôles en retard à l'heure qu'il est, en gros (pas checklist par checklist) ; le contrôle qualité pâtisserie du jour fait ou pas ; zéro tolérance sur l'hygiène et la fermeture."],
         ],
+        'objectifs' => [],
     ],
     'vente' => [
         'nom' => 'Coach Vente',
@@ -92,6 +100,10 @@ const AM_COACHS = [
             'trafic' => ['niveau' => 'fort', 'verifie' => "Le panier moyen face au réseau et à la même période passée ; les heures et les jours où il décroche ; les produits qui le portent et ceux qui manquent face au magasin le mieux classé ; une vente additionnelle précise à pousser."],
             'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon."],
         ],
+        // Les objectifs 2026 (18/11/2026, Sam : « le but est d'arriver à 40 % de food cost 2026, 17 % de frais de
+        // personnel, xx % de clients scannés, xx % de ventes additionnelles ou de menu ») : les deux cibles chiffrées ;
+        // les autres se posent au cockpit (CO_OBJECTIFS, src/coach_objectifs.php).
+        'objectifs' => ['foodCost' => 40, 'personnel' => 17],
     ],
 ];
 const AM_TON_DEFAUT = 'pierre';
@@ -99,7 +111,7 @@ const AM_TON_DEFAUT = 'pierre';
 const AM_SYSTEME = <<<'TXT'
 Tu es l'assistant du dashboard d'un magasin franchisé L'Atelier by (boulangerie, pâtisserie, traiteur ; Belgique). Tu réponds au franchisé, en français, sur SON magasin, avec le ton du personnage décrit à la fin de ces consignes (il décide du tutoiement ou du vouvoiement).
 
-Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au moment indiqué) et par trois outils qui lisent les ventes jusqu'à 18 mois en arrière et la journée en cours : classement_reseau, ventes_par_heure, produits_vendus. Règles :
+Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au moment indiqué), par trois outils qui lisent les ventes jusqu'à 18 mois en arrière et la journée en cours : classement_reseau, ventes_par_heure, produits_vendus, et par prix_concurrence, qui lit les prix des concurrents du magasin. Règles :
 - Chaque chiffre que tu donnes vient de la fiche ou d'un outil, tel quel ou par un calcul simple que tu peux montrer (somme, écart, pourcentage). N'invente aucun chiffre, aucun objectif, aucune cause. Si ni la fiche ni les outils ne permettent de répondre, dis-le en une phrase et indique ce qu'il faudrait lire.
 - Une question sur une heure de la journée, un produit, un jour de semaine, une période passée ou un autre magasin se règle avec les outils, pas par « la fiche ne le dit pas ». Appelle-les en parallèle quand c'est possible. Si un outil dit que l'historique n'est pas encore lu en entier (couverture), réponds avec ce qui est lu et dis-le en une phrase.
 - Les autres magasins du réseau sont anonymes. Ne les nomme jamais, ni par leur nom ni par leur ville, même si le franchisé les nomme : dis « un des magasins » ou « le magasin classé 1er au panier ce matin » (sa place dans le classement que tu cites). Les outils les désignent par une référence (ref) : elle sert à rappeler un outil, ne l'écris jamais dans la réponse.
@@ -120,7 +132,9 @@ Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au mome
 - Quand c'est utile, propose deux priorités, trois au plus, de la plus rentable à la plus simple ; chacune : un titre d'action, un constat d'une phrase parlée avec un chiffre arrondi, le gain s'il se calcule simplement (« environ 1 000 € par semaine », sinon vide), et l'écran du dashboard où agir.
 - Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos, aucun.
 - Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche ou les outils doivent permettre d'y répondre.
-- Le coût matière n'est souvent pas renseigné : sans lui, ne parle ni de marge ni de résultat.
+- Le food cost et les frais de personnel du mois sont dans la fiche (`mesures`, le mois en cours et le mois dernier, avec leur source) ; quand l'un vaut null, ne parle ni de marge ni de résultat sur ce point, et dis en une phrase ce qui manque.
+- Quand un bloc « objectifs » suit la fiche, ce sont TES objectifs 2026 pour ce magasin : la cible, la mesure, l'écart et ce qu'il vaut (`ceQueVautLEcart`). Un objectif qui n'y est pas, tu ne le suis pas. Un objectif tenu se dit en une phrase ; un objectif manqué se dit avec son écart arrondi et son levier.
+- Le levier du food cost est le prix. L'outil prix_concurrence donne nos produits vendus sous la médiane des boulangeries concurrentes du magasin : le prix proposé (la médiane, arrondie) et le lot qui garde le prix actuel à la pièce pour qui prend plus. Présente toujours la hausse ET son lot ensemble, comme on le dirait au comptoir : « le croissant passe à 1,30 €, et les 4 restent à 4,40 € » — le client fidèle garde son prix en prenant plus, le panier monte. Le gain de l'outil est une borne haute (tout le volume au nouveau prix) : dis « jusqu'à ». Le prix se change au panel (écran produits) ; le lot se pose dans Promotions (écran promos). Ne nomme aucun concurrent.
 TXT;
 
 /** Le schéma de la réponse : il sert le bilan (B) et la conversation (A). */
@@ -185,7 +199,6 @@ function amFaits(int $sid): array
             'panier' => round((float) ($d['avg_basket'] ?? 0), 2), 'salaires' => $sal[$j] ?? null];
     }
     $f['joursParJour'] = $jours;
-    $f['coutMatiere'] = 'non renseigné dans l’ERP : ni marge ni résultat calculables';
     // Les cibles du réseau (seuils t1 bon, t2 moyen, t3 bas).
     $ci = PanelApi::sondeGet('/consultant/shops/' . $sid . '/targets', 20);
     $f['cibles'] = [];
@@ -234,14 +247,19 @@ function amFaits(int $sid): array
     ksort($cmd);
     $f['commandesAVenir'] = $cmd;
     // La fidélité : les profils du magasin (sans nom de client).
+    $m2 = null;
     if (function_exists('fpMagasin')) {
         try {
             $m2 = fpMagasin($sid, true, false);
             $f['fidelite'] = ['clientsScannes' => $m2['scannes'], 'ticketsRattaches' => $m2['identifies'] . ' sur ' . $m2['tickets'] . ' (' . $m2['memoire'] . ' jours)',
                 'membresCarteActive' => 'aucun : la carte fidélité n’est activée chez aucun client',
                 'profils' => array_map(static fn ($p) => ['profil' => $p['nom'], 'condition' => $p['condition'], 'clients' => $p['clients'], 'part' => $p['part'] . ' %', 'panier' => $p['panier']], $m2['profils'])];
-        } catch (Throwable $e) { $f['fidelite'] = 'illisible : ' . $e->getMessage(); }
+        } catch (Throwable $e) { $m2 = null; $f['fidelite'] = 'illisible : ' . $e->getMessage(); }
     }
+    // Les mesures des objectifs 2026 (18/11/2026) : food cost, personnel, clients scannés, menus, articles, panier —
+    // le mois en cours et le mois dernier, avec les définitions du cockpit (coMesures, src/coach_objectifs.php).
+    try { $f['mesures'] = coMesures($sid, $f['ventes'], is_array($m2) ? $m2 : null); }
+    catch (Throwable $e) { $f['mesures'] = 'illisibles : ' . $e->getMessage(); }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['le' => time(), 'v' => $f], JSON_UNESCAPED_UNICODE)]);
     return $f;
 }
@@ -292,7 +310,11 @@ function amJour(string $d): string
 const AM_TOURS = 6;          // appels au modèle au plus pour une question (le dernier sans outil)
 const AM_SECONDES = 100;     // au-delà, le tour suivant est le dernier
 
-/** Les trois outils, tels que le modèle les voit. Ordre et texte fixes : ils font partie du préfixe mis en cache. */
+/**
+ * Les outils, tels que le modèle les voit. Ordre et texte fixes : ils font partie du préfixe mis en cache. Les trois
+ * premiers lisent l'historique des ventes (14/11/2026) ; prix_concurrence (18/11/2026) lit les relevés de prix des
+ * concurrents du magasin et propose les hausses avec leur lot (src/coach_objectifs.php).
+ */
 function amOutils(): array
 {
     $date = static fn (string $quoi) => ['type' => 'string', 'description' => $quoi . ' (AAAA-MM-JJ) : au plus 18 mois en arrière, au plus aujourd’hui.'];
@@ -328,6 +350,15 @@ function amOutils(): array
              'categorie' => ['type' => 'string', 'description' => 'Ne garder qu’une catégorie (un mot de son nom suffit : « viennoiserie », « fromage »). Absent : toutes.'],
              'limite' => ['type' => 'integer', 'description' => 'Combien de produits rendre, les plus vendus d’abord : de 1 à 40, 12 par défaut.'],
          ], 'required' => ['magasin', 'du', 'au']]],
+        ['name' => 'prix_concurrence',
+         'description' => 'Les produits du magasin du franchisé vendus plus de 5 % sous la médiane des boulangeries concurrentes autour de lui (relevés de prix du module Benchmark, hors supermarchés). '
+            . 'Pour chacun : le prix actuel, la médiane, le prix proposé (la médiane arrondie aux 5 cents), le lot qui garde le prix actuel à la pièce pour qui prend plus, '
+            . 'les ventes des 30 derniers jours, le gain au plus et le food cost du produit avant et après ; et l’effet sur le food cost du magasin. '
+            . 'À appeler pour le food cost, la marge, les prix, ou « que puis-je améliorer ? ».',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'categorie' => ['type' => 'string', 'description' => 'Ne garder qu’une catégorie ou un produit (un mot suffit : « viennoiserie », « croissant »). Absent : tous.'],
+             'limite' => ['type' => 'integer', 'description' => 'Combien de propositions rendre, la plus rentable d’abord : de 1 à 20, 8 par défaut.'],
+         ]]],
     ];
 }
 
@@ -533,14 +564,15 @@ function amOutilProduits(int $demandeur, array $in): array
     return $out;
 }
 
-/** Exécute un appel d'outil. Une erreur revient au modèle (is_error), jamais au franchisé. */
-function amOutil(string $nom, array $in, int $demandeur): array
+/** Exécute un appel d'outil. Une erreur revient au modèle (is_error), jamais au franchisé. $faits : la fiche du magasin. */
+function amOutil(string $nom, array $in, int $demandeur, array $faits = []): array
 {
     try {
         return match ($nom) {
             'classement_reseau' => amOutilClassement($demandeur, $in),
             'ventes_par_heure' => amOutilHeures($demandeur, $in),
             'produits_vendus' => amOutilProduits($demandeur, $in),
+            'prix_concurrence' => coOutilPrix($demandeur, $in, $faits),
             default => ['erreur' => 'outil inconnu : ' . $nom],
         };
     } catch (Throwable $e) {
@@ -571,6 +603,8 @@ function amCoachs(): array
             $v = trim((string) ($y['verifie'] ?? ''));
             if ($v !== '') { $c['accents'][$ax]['verifie'] = mb_substr($v, 0, 800); }
         }
+        // Les objectifs : le réglage les porte tous quand il en change un (une cible vidée y vaut null).
+        $c['objectifs'] = coObjectifsNormaux(is_array($x['objectifs'] ?? null) ? $x['objectifs'] : ($d['objectifs'] ?? []));
         $out[$k] = $c;
     }
     return $out;
@@ -590,7 +624,7 @@ function amPersona(string $k): string
             $t .= "\n- {$lib} (" . ($niv === 'fort' ? "accent fort : tu l'abordes dans chaque bilan, avant les axes suivis" : 'suivi : tu en parles quand les chiffres le justifient') . ") : {$a['verifie']}";
         }
     }
-    return $t . "\nCes accents orientent tes priorités et ton résumé ; ils ne t'autorisent aucun chiffre absent de la fiche.";
+    return $t . "\nCes accents orientent tes priorités et ton résumé ; ils ne t'autorisent aucun chiffre absent de la fiche." . coPersona($c['objectifs']);
 }
 
 /** Un appel à POST /v1/messages. [la réponse décodée en tableaux, la même en objets (pour la rejouer telle quelle), l'erreur]. */
@@ -634,6 +668,10 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
     $messages = [['role' => 'user', 'content' => [
         ['type' => 'text', 'text' => "Fiche de faits du magasin (JSON) :\n" . json_encode($faits, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'cache_control' => ['type' => 'ephemeral']],
     ]]];
+    // Les objectifs 2026 du coach choisi, face aux mesures du magasin (après la fiche : le cache la garde telle quelle).
+    $C = amCoachs();
+    $etat = coEtat(($C[$ton] ?? $C[AM_TON_DEFAUT])['objectifs'], is_array($faits['mesures'] ?? null) ? $faits['mesures'] : []);
+    if ($etat !== []) { $messages[0]['content'][] = ['type' => 'text', 'text' => "Bloc « objectifs » : tes objectifs 2026 pour ce magasin, et où il en est (JSON) :\n" . json_encode($etat, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]; }
     foreach (array_slice($fil, -6) as $t) {
         if (!is_array($t) || trim((string) ($t['q'] ?? '')) === '' || !is_array($t['r'] ?? null)) { continue; }
         $messages[count($messages) - 1]['content'][] = ['type' => 'text', 'text' => 'Question : ' . mb_substr((string) $t['q'], 0, 400)];
@@ -670,7 +708,7 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
             $resultats = [];
             foreach ((array) ($rep['content'] ?? []) as $b) {
                 if (($b['type'] ?? '') !== 'tool_use') { continue; }
-                $res = amOutil((string) ($b['name'] ?? ''), is_array($b['input'] ?? null) ? $b['input'] : [], $sid);
+                $res = amOutil((string) ($b['name'] ?? ''), is_array($b['input'] ?? null) ? $b['input'] : [], $sid, $faits);
                 $outils[] = (string) ($b['name'] ?? '?');
                 $resultats[] = ['type' => 'tool_result', 'tool_use_id' => (string) $b['id'], 'content' => json_encode($res, JSON_UNESCAPED_UNICODE)]
                     + (isset($res['erreur']) ? ['is_error' => true] : []);
@@ -729,10 +767,14 @@ function ep_assistant_coachs(): array
 {
     $av = [];
     foreach (array_keys(AM_COACHS) as $k) { $av[$k] = is_file(__DIR__ . '/../public/dashboard/avatars/' . $k . '.svg') ? 'dashboard/avatars/' . $k . '.svg' : null; }
-    return ['coachs' => amCoachs(), 'defauts' => AM_COACHS, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT];
+    $def = array_map(static fn ($c) => ['objectifs' => coObjectifsNormaux($c['objectifs'] ?? [])] + $c, AM_COACHS);
+    return ['coachs' => amCoachs(), 'defauts' => $def, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'objectifs' => CO_OBJECTIFS, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT];
 }
 
-/** POST /assistant/coachs {coachs:{pierre:{nom, dit, ton, accents:{budget:{niveau, verifie}, …}}, coach:{…}}, qui} : publie le réglage. */
+/**
+ * POST /assistant/coachs {coachs:{pierre:{nom, dit, ton, accents:{budget:{niveau, verifie}, …}, objectifs:{foodCost: 40,
+ * personnel: '', …}}, coach:{…}}, qui} : publie le réglage. Une cible vide : le coach ne suit pas cet objectif.
+ */
 function wr_assistant_coachs(): array
 {
     $b = body();
@@ -756,6 +798,15 @@ function wr_assistant_coachs(): array
             if (mb_strlen($ver) > 800) { http_response_code(422); return ['error' => $d['nom'] . ' · ' . $lib . ' : 800 caractères au plus']; }
             if ($niv !== '' && $niv !== $d['accents'][$ax]['niveau']) { $c['accents'][$ax]['niveau'] = $niv; }
             if ($ver !== '' && $ver !== $d['accents'][$ax]['verifie']) { $c['accents'][$ax]['verifie'] = $ver; }
+        }
+        if (is_array($x['objectifs'] ?? null)) {
+            foreach (CO_OBJECTIFS as $ob => $od) {
+                $v = $x['objectifs'][$ob] ?? null;
+                $vide = $v === null || (is_string($v) && trim($v) === '');
+                if (!$vide && coCible($ob, $v) === null) { http_response_code(422); return ['error' => $d['nom'] . ' · ' . $od['lib'] . ' : un nombre entre ' . $od['min'] . ' et ' . $od['max'] . ' est attendu']; }
+            }
+            $obj = coObjectifsNormaux($x['objectifs']);
+            if ($obj !== coObjectifsNormaux($d['objectifs'] ?? [])) { $c['objectifs'] = $obj; }
         }
         if ($c) { $reg[$k] = $c; }
     }

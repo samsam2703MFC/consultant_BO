@@ -176,7 +176,7 @@ $faux = static function (array $corps, array $c) use (&$appels, $hier): array {
 $faits = ['magasin' => 'magasin 4', 'luLe' => date('Y-m-d H:i'), 'aujourdhui' => date('Y-m-d') . ' (samedi)'];
 $R = amDemander($faits, 'C’est quoi qu’ils vendent bcp au matin ? J’étais 1er jusqu’à 8 h', [], 'vente', 4, $faux);
 verifie('une réponse au deuxième appel', ($R['reponse']['titre'] ?? '') === 'Le panier' && count($appels) === 2, json_encode($R));
-verifie('les trois outils déclarés', array_column($appels[0]['tools'], 'name') === ['classement_reseau', 'ventes_par_heure', 'produits_vendus']);
+verifie('les quatre outils déclarés', array_column($appels[0]['tools'], 'name') === ['classement_reseau', 'ventes_par_heure', 'produits_vendus', 'prix_concurrence']);
 $m = $appels[1]['messages'];
 $tourModele = json_encode($m[count($m) - 2]['content']);
 verifie('le tour du modèle rejoué tel quel, réflexion comprise, « {} » gardé', str_contains($tourModele, '"signature":"sig"') && str_contains($tourModele, '"input":{}'), $tourModele);
