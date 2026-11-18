@@ -1072,6 +1072,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ia/proposer') { return wr_ia_proposer(); }
     if ($method === 'POST' && $path === '/ia/lecons') { return wr_ia_lecons(); }
     if ($method === 'POST' && $path === '/ia/modeles') { return wr_ia_modeles(); }
+    if ($method === 'PUT'  && $path === '/ia/consigne-generale') { return wr_ia_consigne_generale(); }
     if ($method === 'POST' && $path === '/ia/analyser') { return wr_ia_analyser(); }
     if ($method === 'POST' && $path === '/budget/charges/crm') { return wr_budget_crm(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }

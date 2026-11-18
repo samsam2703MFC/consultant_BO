@@ -14786,6 +14786,55 @@ class App {
       }
     });
   }
+  /* --- La consigne générale des contrôles qualité (PUT /ia/consigne-generale) -------------------------
+   * Une liste de points envoyée à l'IA avec chaque photo de comptoir. Un point se modifie sur place et
+   * s'enregistre en quittant le champ ; un point ajouté reste un brouillon tant qu'il est vide. */
+  valsIaConsigneGenerale(E){
+    const S = this.state;
+    const pts = S.iaCgBrouillon || E.consigneGenerale || [];
+    const max = E.consigneGeneraleMax || 20;
+    return { busy: !!S.iaCgBusy, defaut: !!E.consigneGeneraleDefaut, max, longueur: 400,
+      points: pts.map((p, i) => ({ texte: p, set: e => this.iaCgModifier(E, i, e.target.value), retirer: () => this.iaCgRetirer(E, i) })),
+      ajouter: pts.length < max ? () => this.iaCgAjouter(E) : null,
+      retablir: E.consigneGeneraleDefaut ? null : () => this.iaCgRetablir() };
+  }
+  iaCgPoints(E){ return (this.state.iaCgBrouillon || E.consigneGenerale || []).slice(); }
+  iaCgEnregistrer(corps, message){
+    this.setState({ iaCgBusy: true });
+    return write(this.source, 'PUT', '/ia/consigne-generale', corps).then(r => {
+      if (!r || r.ok === false) { this.setState({ iaCgBusy: false }); this.notify('Consigne générale non enregistrée — ' + ((r && r.error) || 'serveur injoignable')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      this.setState({ iaCgBusy: false, iaCgBrouillon: null });
+      this.notify(message + ' — l’IA la reçoit avec chaque photo de comptoir');
+    });
+  }
+  iaCgModifier(E, i, valeur){
+    const pts = this.iaCgPoints(E);
+    const v = String(valeur || '').trim();
+    if ((pts[i] || '') === v) { return; }
+    pts[i] = v;
+    this.iaCgEnregistrer({ points: pts }, v ? 'Point ' + (i + 1) + ' enregistré' : 'Point ' + (i + 1) + ' retiré');
+  }
+  iaCgRetirer(E, i){
+    const pts = this.iaCgPoints(E);
+    const vide = !String(pts[i] || '').trim();
+    pts.splice(i, 1);
+    // Un point encore vide n'existe qu'à l'écran : le retirer n'écrit rien.
+    if (vide) { this.setState({ iaCgBrouillon: pts }); return; }
+    if (!window.confirm('Retirer ce point de la consigne générale ?')) { return; }
+    this.iaCgEnregistrer({ points: pts }, 'Point retiré');
+  }
+  iaCgAjouter(E){
+    const pts = this.iaCgPoints(E);
+    if (pts.length && !String(pts[pts.length - 1]).trim()) { this.iaCgFocus(); return; }
+    this.setState({ iaCgBrouillon: pts.concat(['']) });
+    this.iaCgFocus();
+  }
+  iaCgFocus(){ setTimeout(() => { const l = document.querySelectorAll('.ia-ent-cg .pts textarea'); if (l.length) { l[l.length - 1].focus(); } }, 60); }
+  iaCgRetablir(){
+    if (!window.confirm('Rétablir la consigne générale par défaut ? Vos points seront remplacés.')) { return; }
+    this.iaCgEnregistrer({ retablir: true }, 'Consigne par défaut rétablie');
+  }
   /** Le panneau de l'assistant d'entraînement, sur la page Entraînement de l'IA. */
   valsIaAnalyse(E){
     const S = this.state;
@@ -14885,6 +14934,7 @@ class App {
         { k: 'Planogrammes · exemples', v: nPlanos + ' / ' + (E.rayons || []).length + ' · ' + nExemples, s: 'rayons avec leur photo du planogramme · photos d’exemple (' + (E.exemplesEnvoyes || 2) + ' envoyées avec chaque photo)' },
         { k: 'Photos parfaites à trier', v: String(candidates.length), s: 'notées « ' + (E.nomNiveauModele || 'Exemplaire') + ' » ces 30 jours' }],
       communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
+      cg: this.valsIaConsigneGenerale(E),
       ana: this.valsIaAnalyse(E),
       versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
   }
