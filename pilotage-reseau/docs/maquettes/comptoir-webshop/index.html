@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquettes — comptoir et webshop dans la jauge du jour</title>
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="mq.css">
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+/* Distinguer les ventes du comptoir et celles du webshop dans la jauge du jour (18/11/2026), onglet Opérationnel au
+ * téléphone. Trois façons, posées sur l'écran de Halle du mercredi 18/11 à 17:43 (la capture de Sam) :
+ *   ?v=0  ce qui est en ligne (la capture, redessinée) ;
+ *   ?v=a  la barre en deux matières : la couleur dit le jour, la hachure dit le webshop ;
+ *   ?v=b  une jauge par canal : comptoir, webshop, B2B, chacune face à sa part de l'objectif ;
+ *   ?v=c  le ruban des canaux : la jauge ne change pas, trois colonnes dessous (comptoir, commandes, webshop) ;
+ *   ?v=planche  les quatre côte à côte.
+ * Chiffres réels : les jauges de la capture, et les commandes lues au panel (/shops/4/client-orders) le 18/11 et le 11/11.
+ * Seule l'objectif webshop (moyenne des quatre derniers mercredis) est un calcul de la maquette. */
+const LOGO = '../../../public/assets/img/logo.png';
+const nbsp = ' ';
+const fx = (v, d) => { const s = Math.abs(v).toFixed(d).split('.'); return (v < 0 ? '− ' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, nbsp) + (d ? ',' + s[1] : ''); };
+const fE = v => fx(v, 0) + nbsp + '€', fU = v => fx(v, 2) + nbsp + '€', fP0 = v => fx(v, 0) + nbsp + '%';
+const fS = v => (v >= 0 ? '+ ' : '− ') + fx(Math.abs(v), 0) + nbsp + '%';
+
+/* ---------- les données ---------- */
+// La capture : comptoir = caisse − tickets pro ; il compte déjà les commandes encaissées au magasin (comptoir et webshop).
+const J = {
+  maintenant: '17:43', objC: 1860, objB: 34, comptoir: 2124,
+  cmdC: { ca: 9.80, n: 1 },                 // une commande comptoir, retrait 08:30, encaissée
+  web: { ca: 5.80, n: 1, cc: 1, liv: 0 },   // un click & collect, retrait 13:30, encaissé en caisse
+  b2b: { ca: 116, n: 1 },
+  j7: { date: '11/11', moment: '17:42', ca: 3473, caJour: 3493, cmdC: { ca: 271.80, n: 5 }, web: { ca: 76.18, n: 2 } },
+  // Le webshop des quatre derniers mercredis (21/10, 28/10, 4/11, 11/11), lu au panel : sa moyenne fait l'objectif de B.
+  web4: [0, 57.90, 9.70, 76.18],
+};
+J.obj = J.objC + J.objB;
+J.directe = J.comptoir - J.cmdC.ca - J.web.ca;
+J.j7.directe = J.j7.ca - J.j7.cmdC.ca - J.j7.web.ca;
+J.objW = Math.round(J.web4.reduce((a, x) => a + x, 0) / J.web4.length);
+
+/* ---------- le cadre du téléphone (dashboard déployé) ---------- */
+const ICO = {
+  ops: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  exp: '<svg viewBox="0 0 24 24"><path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/></svg>',
+  ctrl: '<svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
+  tach: '<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg>',
+  sem: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  prim: '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>' };
+const REVUE = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="4" width="13" height="17" rx="2"/><path d="M9 3h5v3H9zM8 11l1.5 1.5L12 10M8 16l1.5 1.5L12 15"/></svg>';
+const entete = () => `<div class="mb-hd"><img src="${LOGO}" alt=""><div><div class="t">Atelier by - Halle</div><div class="d ma-d"><button class="ma-pas">‹</button><b>aujourd’hui · mer. 18 nov.</b><button class="ma-pas" disabled>›</button></div></div><span class="sp"></span><button class="mb-ic" style="position:relative">${REVUE}<b style="position:absolute;right:5px;bottom:6px;width:7px;height:7px;border-radius:50%;background:#b3261e"></b></button><button class="mb-ic">↻</button></div>`;
+const onglets = () => `<div class="mb-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']].map(([k, l]) => `<button class="${k === 'ops' ? 'on' : ''}">${ICO[k]}${l}</button>`).join('')}</div>`;
+
+/* ---------- les jauges ---------- */
+const val = (p, t, cls, st) => `<span class="val${cls ? ' ' + cls : ''}" style="left:${p.toFixed(1)}%${st ? ';' + st : ''}">${t}</span>`;
+const piste = (lb, sous, corps) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${corps}</div></div>`;
+const tete = (lab, montant, chip, droite) => `<div class="dh"><span class="lab">${lab}<b>${fE(montant)}</b></span>${chip ? '<span class="chip" style="background:#f7edc8;color:#7d6310">objectif atteint</span>' : ''}<span class="dr">${droite}</span></div>`;
+const echelle = (obj, ...v) => { const haut = Math.max(...v); const e = haut > obj ? haut * 1.06 : obj; return x => Math.max(0, Math.min(100, 100 * x / e)); };
+const cmdLigne = () => `<div class="op-cmdl cmd-l"><div class="t"><b>Commandes du jour</b><small>comptoir ${J.cmdC.n} · webshop ${J.web.n}</small></div><span class="v">${fU(J.cmdC.ca + J.web.ca)}</span><span class="ch">›</span></div>`;
+
+/** 0 · La jauge du comptoir en ligne : la capture du 18/11, redessinée. */
+function jaugeEnLigne(pied) {
+  const p = echelle(J.objC, J.comptoir, J.j7.ca, J.j7.caJour), pO = p(J.objC), pA = p(J.comptoir), p7 = p(J.j7.ca), p7j = p(J.j7.caJour);
+  const marques = `<i class="objm" style="left:${pO.toFixed(1)}%"></i><i class="temps" style="left:${pO.toFixed(1)}%"></i>`;
+  return `<div class="op-duel">${tete('Objectif comptoir du mercredi', J.objC, true, `${J.maintenant} · 100 % de la journée écoulée`)}
+    ${piste('Aujourd’hui', `comptoir · à ${J.maintenant}`, `<div class="seg or" style="width:${pA.toFixed(1)}%"></div>${marques}${val(pA, `${fE(J.comptoir)} · ${fP0(100 * J.comptoir / J.objC)}`)}`)}
+    ${piste('Mercredi dernier', `comptoir · ${J.j7.date}`, `<div class="seg j7" style="width:${p7.toFixed(1)}%"></div><div class="seg j7j" style="left:${p7.toFixed(1)}%;width:${(p7j - p7).toFixed(1)}%"></div>${marques}${val(p7, `${fE(J.j7.ca)} à ${J.j7.moment}`, 'dedans')}${val(p7j, `journée ${fE(J.j7.caJour)} · ${fP0(100 * J.j7.caJour / J.objC)}`, 'sous')}`)}
+    <div class="op-dax ab"><span>0 €</span><span class="o" style="left:${pO.toFixed(1)}%">objectif comptoir ${fE(J.objC)}</span></div>${pied === undefined ? cmdLigne() : pied}</div>`;
+}
+/** La jauge B2B en ligne (le haut seul : la capture s'arrête là). */
+function jaugeB2B() {
+  const e = Math.max(J.objB, J.b2b.ca) * 1.08, p = x => 100 * x / e, pO = p(J.objB), pA = p(J.b2b.ca);
+  return `<div class="op-duel b2b"><div class="dh"><span class="lab">Objectif B2B du mercredi<b>${fE(J.objB)}</b></span><span class="dr">1 ticket pro · part habituelle 2 %</span></div>
+    ${piste('Aujourd’hui', 'B2B · 1 ticket pro', `<div class="seg fait" style="width:${pA.toFixed(1)}%"></div><i class="objm" style="left:${pO.toFixed(1)}%"></i>${val(pA, `${fE(J.b2b.ca)} · ${fP0(100 * J.b2b.ca / J.objB)}`, 'dedans')}`)}
+    ${piste('Mercredi dernier', 'B2B · 11/11 · montant hors de la capture', '')}</div>`;
+}
+
+/** A · La même jauge, la barre en deux matières : plein = comptoir, hachuré = webshop, au bout de la barre. */
+function jaugeA() {
+  const p = echelle(J.objC, J.comptoir, J.j7.ca, J.j7.caJour), pO = p(J.objC);
+  const marques = `<i class="objm" style="left:${pO.toFixed(1)}%"></i><i class="temps" style="left:${pO.toFixed(1)}%"></i>`;
+  // Le webshop garde 1,4 % de large au moins (5 px) : 5,80 € sur 3 700 € ne se verrait pas. Le chiffre, lui, est exact.
+  const bout = (deb, w, coul) => { const l = p(deb), lw = Math.max(1.4, p(deb + w) - l); return { l, lw, html: `<div class="seg web${lw > p(deb + w) - l ? ' min' : ''}" style="--sw:${coul};left:${l.toFixed(2)}%;width:${lw.toFixed(2)}%"></div>` }; };
+  const cA = J.comptoir - J.web.ca, wA = bout(cA, J.web.ca, '#d9a520'), pA = wA.l + wA.lw;
+  const c7 = J.j7.ca - J.j7.web.ca, w7 = bout(c7, J.j7.web.ca, '#2F6EA5'), p7 = w7.l + w7.lw, p7j = p(J.j7.caJour);
+  const sous = (c, w) => `<span class="sp"><i class="sw plein"></i>comptoir ${fE(c)}</span> · <span class="sp"><i class="sw hach"></i>webshop ${fU(w)}</span>`;
+  return `<div class="op-duel">${tete('Objectif comptoir du mercredi', J.objC, true, `${J.maintenant} · 100 % de la journée écoulée`)}
+    ${piste('Aujourd’hui', sous(cA, J.web.ca), `<div class="seg or" style="width:${wA.l.toFixed(2)}%;border-radius:9px 0 0 9px"></div>${wA.html}${marques}${val(pA, `${fE(J.comptoir)} · ${fP0(100 * J.comptoir / J.objC)}`)}`)}
+    ${piste('Mercredi dernier · ' + J.j7.date, sous(c7, J.j7.web.ca) + ` <span class="sp">à ${J.j7.moment}</span>`, `<div class="seg j7" style="width:${w7.l.toFixed(2)}%;border-radius:9px 0 0 9px"></div>${w7.html}<div class="seg j7j" style="left:${p7.toFixed(2)}%;width:${(p7j - p7).toFixed(2)}%"></div>${marques}${val(w7.l, `${fE(J.j7.ca)} à ${J.j7.moment}`, 'dedans')}${val(p7j, `journée ${fE(J.j7.caJour)} · ${fP0(100 * J.j7.caJour / J.objC)}`, 'sous')}`)}
+    <div class="op-dax ab"><span>0 €</span><span class="o" style="left:${pO.toFixed(1)}%">objectif comptoir ${fE(J.objC)}</span></div>
+    <div class="leg"><span><i style="background:#d9a520"></i><i style="background:#2F6EA5;margin-left:-3px"></i>comptoir : caisse, commandes comprises</span><span><i class="sw hach" style="background:repeating-linear-gradient(135deg,#d9a520 0 2px,#fff 2px 4px)"></i><i style="background:repeating-linear-gradient(135deg,#2F6EA5 0 2px,#fff 2px 4px);margin-left:-3px"></i>webshop : click &amp; collect et livraison</span></div>
+    ${cmdLigne()}</div>`;
+}
+
+/** B · Une jauge par canal : l'objectif du jour se partage en comptoir, webshop et B2B selon leur part habituelle. */
+function jaugesB() {
+  const objW = J.objW, objC = J.obj - J.objB - objW;
+  const cA = J.comptoir - J.web.ca, c7 = J.j7.ca - J.j7.web.ca, c7j = J.j7.caJour - J.j7.web.ca;
+  const p = echelle(objC, cA, c7, c7j), pO = p(objC), pA = p(cA), p7 = p(c7), p7j = p(c7j);
+  const marques = `<i class="objm" style="left:${pO.toFixed(1)}%"></i><i class="temps" style="left:${pO.toFixed(1)}%"></i>`;
+  let h = `<div class="op-duel">${tete('Objectif comptoir du mercredi', objC, true, `${J.maintenant} · 100 % de la journée écoulée`)}
+    ${piste('Aujourd’hui', `comptoir · à ${J.maintenant} · sans le webshop`, `<div class="seg or" style="width:${pA.toFixed(1)}%"></div>${marques}${val(pA, `${fE(cA)} · ${fP0(100 * cA / objC)}`)}`)}
+    ${piste('Mercredi dernier', `comptoir · ${J.j7.date} · sans le webshop`, `<div class="seg j7" style="width:${p7.toFixed(1)}%"></div><div class="seg j7j" style="left:${p7.toFixed(1)}%;width:${(p7j - p7).toFixed(1)}%"></div>${marques}${val(p7, `${fE(c7)} à ${J.j7.moment}`, 'dedans')}${val(p7j, `journée ${fE(c7j)} · ${fP0(100 * c7j / objC)}`, 'sous')}`)}
+    <div class="op-dax ab"><span>0 €</span><span class="o" style="left:${pO.toFixed(1)}%">objectif comptoir ${fE(objC)}</span></div>
+    <div class="pied"><span><b>Commandes au comptoir</b> · ${J.cmdC.n} · ${fU(J.cmdC.ca)}</span><span class="ch">›</span></div></div>`;
+  // La carte du webshop : sa propre échelle, comme le B2B ; elle tombe quand le magasin n'a pas de webshop.
+  const e = Math.max(objW, J.web.ca, J.j7.web.ca) * 1.08, q = x => 100 * x / e, qO = q(objW), qA = q(J.web.ca), q7 = q(J.j7.web.ca);
+  const mW = `<i class="objm" style="left:${qO.toFixed(1)}%"></i>`;
+  h += `<div class="op-duel web"><div class="dh"><span class="lab">Objectif webshop du mercredi<b>${fE(objW)}</b></span><span class="dr">${J.web.n} commande · moyenne des 4 derniers mercredis</span></div>
+    ${piste('Aujourd’hui', `webshop · ${J.web.cc} click &amp; collect · ${J.web.liv} livraison`, `<div class="seg fait" style="width:${qA.toFixed(1)}%"></div>${mW}${val(qA, `${fU(J.web.ca)} · ${fP0(100 * J.web.ca / objW)}`)}`)}
+    ${piste('Mercredi dernier', `webshop · ${J.j7.date} · ${J.j7.web.n} click &amp; collect`, `<div class="seg j7" style="width:${q7.toFixed(1)}%"></div>${mW}${val(q7, `${fU(J.j7.web.ca)}`, 'dedans')}`)}
+    <div class="op-dax ab"><span>0 €</span><span class="o" style="left:${qO.toFixed(1)}%">webshop habituel ${fE(objW)}</span></div>
+    <div class="pied"><span><b>Commandes webshop</b> · ${J.web.n} · ${fU(J.web.ca)} · rien à préparer</span><span class="ch">›</span></div></div>`;
+  return h + jaugeB2B();
+}
+
+/** C · La jauge ne change pas ; sous elle, le ruban : la part de chaque canal, puis une colonne par canal face à J−7. */
+function jaugeC() {
+  const T = J.comptoir, mix = [[J.directe, 'var(--cn-c)'], [J.cmdC.ca, 'var(--cn-k)'], [J.web.ca, 'var(--cn-w)']];
+  const ecart = (a, b) => b ? `· <em>${fS(100 * (a - b) / b)}</em>` : '';
+  const col = (pt, k, v, s, j) => `<div><div class="k"><i class="pt ${pt}"></i>${k}</div><div class="v">${v}</div><div class="s">${s}</div><div class="j">${j}</div><span class="ch">›</span></div>`;
+  const rb = `<div class="rb"><div class="t"><span>Par canal · à ${J.maintenant}</span><span>la part de chaque canal</span></div>
+    <div class="mix">${mix.map(([v, c]) => `<i style="flex:${v.toFixed(2)} 0 0;background:${c}"></i>`).join('')}</div>
+    <div class="col">
+      ${col('c', 'Comptoir', fE(J.directe), `${fP0(100 * J.directe / T)} · vente directe`, `mer. ${J.j7.date} à ${J.j7.moment}<br>${fE(J.j7.directe)} ${ecart(J.directe, J.j7.directe)}`)}
+      ${col('k', 'Commandes', fU(J.cmdC.ca), `${J.cmdC.n} prise au comptoir`, `mer. ${J.j7.date}<br>${fU(J.j7.cmdC.ca)} · ${J.j7.cmdC.n}`)}
+      ${col('w', 'Webshop', fU(J.web.ca), `${J.web.cc} click &amp; collect`, `mer. ${J.j7.date}<br>${fU(J.j7.web.ca)} · ${J.j7.web.n}`)}
+    </div><div class="bas"><span>toucher un canal : ses commandes, ses tickets</span><em>›</em></div></div>`;
+  return jaugeEnLigne(rb);
+}
+
+/* ---------- les écrans ---------- */
+const tel = corps => `<div class="tel">${entete()}<div class="mb-sc">${corps}</div>${onglets()}</div>`;
+const E = {
+  0: () => tel(jaugeEnLigne() + jaugeB2B()),
+  a: () => tel(jaugeA() + jaugeB2B()),
+  b: () => tel(jaugesB()),
+  c: () => tel(jaugeC() + jaugeB2B()),
+};
+const v = new URLSearchParams(location.search).get('v') || '0';
+const el = document.getElementById('ecran');
+if (v === 'planche') {
+  document.body.style.background = '#ece6dd';
+  const leg = { 0: ['En ligne aujourd’hui', 'Le comptoir compte toute la caisse hors B2B : les commandes et le webshop encaissés au magasin y sont fondus. La ligne « Commandes du jour » est le seul indice.'],
+    a: ['A · La barre en deux matières', 'La même jauge. La couleur dit le jour, la hachure au bout de la barre dit le webshop ; le partage s’écrit sous chaque piste. Rien de plus à lire, mais un webshop de 6 € n’est qu’un trait.'],
+    b: ['B · Une jauge par canal', 'Le webshop a sa carte, comme le B2B, à son échelle et face à sa part habituelle. L’objectif du jour se partage en trois. Le plus lisible, le plus long à faire défiler.'],
+    c: ['C · Le ruban des canaux', 'La jauge reste celle d’aujourd’hui. Dessous, la part de chaque canal puis trois colonnes : comptoir, commandes prises au comptoir, webshop, chacune face à mercredi dernier.'] };
+  el.innerHTML = `<div class="planche-c"><div class="planche-w"><div class="tete"><h1>Distinguer le comptoir et le webshop — trois maquettes</h1><p>Atelier by - Halle · mercredi 18 novembre 2026 à 17:43 · jauges de la capture, commandes lues au panel</p></div></div>
+    <div class="planche">${['0', 'a', 'b', 'c'].map(k => `<figure><figcaption><b>${leg[k][0]}</b>${leg[k][1]}</figcaption>${E[k]()}</figure>`).join('')}</div></div>`;
+} else { el.innerHTML = E[v](); }
+</script>
+</body>
+</html>

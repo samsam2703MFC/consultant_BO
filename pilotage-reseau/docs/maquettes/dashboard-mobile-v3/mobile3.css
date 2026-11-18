@@ -1,0 +1,348 @@
+/* Le dashboard magasin au téléphone — refonte (18/11/2026).
+ * Une seule grammaire pour les six onglets : la barre d'état respectée, un en-tête court qui reste en haut, un chiffre
+ * héros par écran, des cartes blanches au filet fin (jamais de bord coloré), des pastilles d'état, la barre d'onglets
+ * collée au bas sans bande vide. Gotham seule, graisse 400, --line pour toutes les bordures (docs/DESIGN_SYSTEM.md). */
+
+html,body{margin:0;background:var(--color-bg);color:var(--ink);font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+:root{--cn-c:#B0792A;--cn-k:#8D1D2C;--cn-w:#1B6FA8;--cn-p:#3f7a52;--ok:#3f7a52;--wa:#B0792A;--ko:#b3261e;--j7:#2F6EA5;--acc-soft:#F5E3E5}
+
+/* --- le téléphone --- */
+.tel{width:390px;height:844px;position:relative;background:var(--color-bg);display:flex;flex-direction:column;overflow:hidden}
+.tel.long{height:auto}
+.tel.long .sc{overflow:visible}
+
+/* La barre d'état d'iOS, dessinée : la page commence sous elle (env(safe-area-inset-top)). */
+.ios{flex:0 0 auto;height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 36px;font:700 15.5px system-ui,-apple-system,sans-serif;color:#000;background:var(--color-bg)}
+.ios .r{display:flex;align-items:center;gap:6px;font-size:13px}
+.ios .bat{display:inline-flex;align-items:center;justify-content:center;min-width:27px;height:13px;border-radius:4px;background:#000;color:#fff;font-size:10px;padding:0 3px}
+
+/* --- l'en-tête : le magasin, puis le jour sur toute la largeur --- */
+.hd{flex:0 0 auto;background:var(--color-bg);padding:4px 14px 10px;border-bottom:1px solid transparent}
+.hd .l1{display:flex;align-items:center;gap:8px}
+.hd .mag{flex:1;min-width:0}
+.hd .mag b{display:block;font:400 19px/1.15 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd .mag small{display:block;font-size:11px;color:var(--muted);margin-top:1px}
+.hd .ic{position:relative;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;color:var(--muted-2);flex:0 0 auto}
+.hd .ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7}
+.hd .ic .bd{position:absolute;right:-1px;top:-1px;min-width:16px;height:16px;border-radius:8px;background:var(--ko);color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 0 0 2px var(--color-bg)}
+.hd .jr{display:flex;align-items:center;margin-top:9px;background:#fff;border:1px solid var(--line);border-radius:12px;height:40px}
+.hd .jr button{border:none;background:none;width:44px;height:100%;font:400 18px var(--font-ui);color:var(--muted-2)}
+.hd .jr button:disabled{opacity:.25}
+.hd .jr span{flex:1;text-align:center;font-size:13px;white-space:nowrap}
+.hd .jr span em{font-style:normal;color:var(--muted)}
+.hd .seg{display:flex;gap:4px;margin-top:9px;background:var(--chip);border-radius:11px;padding:3px}
+.hd .seg span{flex:1;text-align:center;font-size:12px;padding:7px 0;border-radius:8px;color:var(--muted-2)}
+.hd .seg span.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.sc{flex:1;min-height:0;overflow:hidden;padding:2px 12px 16px}
+
+/* --- la barre d'onglets : six mots courts, une pastille derrière l'onglet ouvert, le trait du téléphone dessous --- */
+.tabs{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,1fr);background:#fff;border-top:1px solid var(--line);padding:6px 4px 0}
+.tabs button{border:none;background:none;font:400 10.5px var(--font-ui);color:var(--muted);padding:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button i{position:relative;display:flex;align-items:center;justify-content:center;width:52px;height:30px;border-radius:15px}
+.tabs button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6}
+.tabs button.on{color:var(--color-primary)}
+.tabs button.on i{background:var(--acc-soft)}
+.tabs button .pt{position:absolute;right:11px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--ko);box-shadow:0 0 0 2px #fff}
+.tabs button .nb{position:absolute;right:5px;top:0;min-width:16px;height:16px;border-radius:8px;background:var(--wa);color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 0 0 2px #fff}
+.home{flex:0 0 auto;height:26px;background:#fff;display:flex;align-items:center;justify-content:center}
+.home:after{content:'';width:134px;height:5px;border-radius:3px;background:#1c1a17}
+
+/* --- les cartes --- */
+.cd{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+.cd .ct{display:flex;align-items:baseline;gap:8px}
+.cd .ct b{font:400 15px var(--font-display)}
+.cd .ct small{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap}
+.cd .ct .ch{color:var(--faint);font-size:16px;line-height:1}
+.kick{font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mu{color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;padding:3px 9px;border-radius:8px;white-space:nowrap;background:var(--chip);color:var(--muted-2)}
+.chip.ok{background:#e9f2ec;color:var(--ok)}.chip.wa{background:var(--prize-soft);color:var(--prize-ink)}.chip.ko{background:var(--stop-soft);color:var(--stop)}.chip.or{background:#f7edc8;color:#7d6310}
+.d8{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.d8.ok{background:var(--ok)}.d8.wa{background:var(--wa)}.d8.ko{background:var(--ko)}.d8.n{background:#d9d3c9}
+.d8.c{background:var(--cn-c)}.d8.k{background:var(--cn-k)}.d8.w{background:var(--cn-w)}.d8.p{background:var(--cn-p)}
+.num{font-variant-numeric:tabular-nums}
+.tel .num{text-align:inherit}   /* global.css aligne .num à droite : ici chaque bloc garde son alignement */
+.up{color:var(--ok)}.dn{color:var(--ko)}
+
+/* Le héros : le chiffre qui répond à la question de l'onglet. */
+.hero .top{display:flex;align-items:center;gap:8px}
+.hero .top .chip{margin-left:auto}
+.hero .big{display:flex;align-items:baseline;gap:10px;margin-top:6px}
+.hero .big b{font:400 38px/1.05 var(--font-display);letter-spacing:-.01em}
+.hero .big span{font-size:13px;color:var(--muted-2)}
+.hero .sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4}
+
+/* La jauge double et fine : aujourd'hui en couleurs de canal, J−7 dessous, l'objectif en trait. */
+.jg{margin-top:14px;display:grid;grid-template-columns:76px 1fr;row-gap:9px;align-items:center}
+.jg .lb{font-size:11px;color:var(--muted-2);line-height:1.15}
+.jg .lb small{display:block;font-size:10px;color:var(--muted)}
+.jg .tr{position:relative;height:16px;border-radius:5px;background:#efe9e0;display:flex;overflow:visible}
+.jg .tr i{display:block;height:100%;min-width:3px}
+.jg .tr i:first-child{border-radius:5px 0 0 5px}
+.jg .tr i.fin{border-radius:0 5px 5px 0}
+.jg .tr i+i{margin-left:1.5px}
+.jg .tr.j7 i{opacity:.42}
+.jg .tr .ob{position:absolute;top:-5px;bottom:-5px;width:0;border-left:2px solid var(--ink)}
+.jg .tr .v{position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink);background:rgba(255,255,255,.9);padding:1px 6px;border-radius:6px;white-space:nowrap}
+.jg .ax{grid-column:2;position:relative;height:13px;font-size:10px;color:var(--muted)}
+.jg .ax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+
+/* Le ruban des canaux : quatre cases en deux rangées, la part du jour et mercredi dernier. */
+.rb4{display:grid;grid-template-columns:1fr 1fr;margin-top:13px;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.rb4>div{padding:9px 11px 10px;position:relative}
+.rb4>div:nth-child(even){border-left:1px solid var(--line)}
+.rb4>div:nth-child(n+3){border-top:1px solid var(--line)}
+.rb4 .k{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted-2);white-space:nowrap}
+.rb4 .k em{font-style:normal;margin-left:auto;color:var(--muted);font-size:10.5px}
+.rb4 .v{font:400 18px/1.2 var(--font-display);margin-top:4px;white-space:nowrap;text-align:left}
+.rb4 .s{font-size:10.5px;color:var(--muted);margin-top:1px;white-space:nowrap}
+.rb4 .j{font-size:10.5px;color:#2F5D8A;margin-top:4px;white-space:nowrap}
+.lien{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
+.lien b{font-weight:400}
+.lien .t{flex:1;min-width:0}
+.lien .t small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.lien .mu{font-size:11px}
+.lien .ch{margin-left:auto;color:var(--faint);font-size:16px;line-height:1}
+
+/* Le duel compact : une ligne par mesure. */
+.dl{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+.dl th{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 0 6px;white-space:nowrap}
+.dl th:first-child{text-align:left}
+.dl td{padding:8px 0;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+.dl td:first-child{text-align:left;color:var(--muted-2)}
+.dl td small{display:block;font-size:10px;color:var(--muted)}
+.note{font-size:10.5px;line-height:1.45;color:var(--muted);margin-top:8px}
+.note b{font-weight:400;color:var(--ink)}
+
+/* Les heures : une barre par heure, la moyenne en trait. */
+.hh{display:flex;align-items:flex-end;gap:4px;height:92px;margin-top:12px;position:relative}
+.hh .b{flex:1;position:relative;height:100%;display:flex;align-items:flex-end}
+.hh .b i{display:block;width:100%;border-radius:3px 3px 0 0;background:var(--chart-real)}
+.hh .b i.en{background:repeating-linear-gradient(135deg,var(--chart-real) 0 3px,#e8b9c2 3px 6px)}
+.hh .b i.av{background:transparent}
+.hh .b u{position:absolute;left:-1px;right:-1px;height:0;border-top:2px solid var(--ink);opacity:.55}
+.hh-ax{display:flex;gap:4px;font-size:9.5px;color:var(--muted);margin-top:4px}
+.hh-ax span{flex:1;text-align:center}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10.5px;color:var(--muted);margin-top:8px}
+.leg i{display:inline-block;width:12px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
+
+/* La vitrine : trois cases, ce qui manque dessous. */
+.vt3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.vt3>div{border:1px solid var(--line);border-radius:10px;padding:8px 9px}
+.vt3 .k{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted-2)}
+.vt3 .k b{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:5px;color:#fff;font-size:9.5px;font-weight:400}
+.vt3 .v{font:400 20px/1.2 var(--font-display);margin-top:4px}
+.vt3 .s{font-size:10px;color:var(--muted)}
+.ls{margin-top:10px}
+.ls .r{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:12px}
+.ls .r .t{flex:1;min-width:0}
+.ls .r .t small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.ls .r .n{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ls .r .ch{color:var(--faint);font-size:15px}
+
+/* La journée : une barre par personne, les cuissons dessous, le trait de maintenant. */
+.fr{position:relative;margin-top:24px}
+.fr .ln{position:relative;height:20px;margin-bottom:4px}
+.fr .ln i{position:absolute;top:0;bottom:0;border-radius:6px;font-style:normal;font-size:10.5px;line-height:20px;padding:0 7px;white-space:nowrap;overflow:hidden}
+.fr .ln i.ici{background:#e3efe6;color:#2c5a3b}
+.fr .ln i.fini{background:#efe9e0;color:var(--muted)}
+.fr .ln i.av{background:#fff;border:1px dashed #cfc7bb;color:var(--muted-2)}
+.fr .cu{position:relative;height:24px;border-top:1px dashed var(--line);margin-top:6px}
+.fr .cu b{position:absolute;top:6px;transform:translateX(-50%);font-weight:400;font-size:9.5px;white-space:nowrap;display:flex;align-items:center;gap:3px;color:var(--muted-2)}
+.fr .now{position:absolute;top:-4px;bottom:0;border-left:2px solid var(--color-primary)}
+.fr .now:before{content:'17:43';position:absolute;top:-15px;left:-15px;background:#fff;padding:0 2px;font-size:9.5px;color:var(--color-primary)}
+.fr .ax{position:relative;height:14px;font-size:9.5px;color:var(--muted);margin-top:2px}
+.fr .ax span{position:absolute;transform:translateX(-50%)}
+
+/* Chiffres : le compte du jour en escalier, les barres des catégories. */
+.pl{margin-top:10px}
+.pl .r{display:grid;grid-template-columns:1fr 92px 70px;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}
+.pl .r .k small{display:block;font-size:10.5px;color:var(--muted)}
+.pl .r .tr{height:8px;border-radius:3px;background:#efe9e0;position:relative;overflow:hidden}
+.pl .r .tr i{position:absolute;top:0;bottom:0;border-radius:3px}
+.pl .r .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pl .r.tot{border-top:1px solid #cfc7bb;font:400 14px var(--font-display)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.g2 .cd{margin:0}
+.tu .k{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted-2)}
+.tu .v{font:400 22px/1.2 var(--font-display);margin-top:5px}
+.tu .s{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.35}
+.bars .r{display:grid;grid-template-columns:86px 1fr 58px;gap:8px;align-items:center;font-size:12px;margin:7px 0}
+.bars .r .tr{height:10px;border-radius:3px;background:#efe9e0;overflow:hidden}
+.bars .r .tr i{display:block;height:100%;background:var(--chart-real);border-radius:3px}
+.bars .r .n{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Contrôle : les photos en grille de deux. */
+.ph2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ph{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.ph .im{height:104px;position:relative}
+.ph .im svg{display:block;width:100%;height:100%}
+.ph .im .chip{position:absolute;left:7px;bottom:7px}
+.ph .im.vide{display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#f6f2ec 0 8px,#fbf9f5 8px 16px);color:var(--muted);font-size:11px}
+.ph .t{padding:7px 9px 8px;font-size:11.5px;line-height:1.3}
+.ph .t small{display:block;font-size:10px;color:var(--muted)}
+.bt{display:flex;align-items:center;gap:10px;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;font:400 13px var(--font-ui);color:var(--ink);margin-bottom:8px;text-align:left}
+.bt svg{width:18px;height:18px;fill:none;stroke:var(--color-primary);stroke-width:1.7;flex:0 0 auto}
+.bt .ch{margin-left:auto;color:var(--faint)}
+.bt .chip{margin-left:auto}
+
+/* Tâches : une carte par checklist, sa barre, ses tâches pas faites. */
+.flt{display:flex;gap:6px;margin:0 0 10px;overflow:hidden}
+.flt span{font-size:11.5px;padding:6px 11px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted-2);white-space:nowrap}
+.flt span.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.flt span small{opacity:.7;margin-left:3px}
+.cl .ct b{display:flex;align-items:center;gap:7px}
+.pg{height:6px;border-radius:3px;background:#efe9e0;margin-top:9px;overflow:hidden;display:flex}
+.pg i{display:block;height:100%}
+.tk{margin-top:8px}
+.tk .r{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line);font-size:12px}
+.tk .r .bx{width:18px;height:18px;border-radius:5px;border:1.5px solid #cfc7bb;flex:0 0 auto}
+.tk .r .bx.ko{border-color:var(--ko)}
+.tk .r .t{flex:1;min-width:0}
+.tk .r .t small{display:block;font-size:10.5px;color:var(--muted)}
+
+/* Semaine : sept colonnes face à l'objectif, le damier dessous. */
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:30px;align-items:end;height:118px}
+.wk .c{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.wk .c .bar{width:100%;position:relative;border-radius:5px 5px 0 0}
+.wk .c .bar.ok{background:var(--ok)}.wk .c .bar.wa{background:var(--wa)}.wk .c .bar.ko{background:var(--ko)}
+.wk .c .bar.en{background:repeating-linear-gradient(135deg,var(--ok) 0 3px,#bcd8c4 3px 6px)}
+.wk .c .bar.av{background:transparent;border:1px dashed #cfc7bb;border-bottom:none}
+.wk .c .ob{position:absolute;left:-2px;right:-2px;border-top:2px solid var(--ink);opacity:.6}
+.wk .c .p{position:absolute;top:-15px;left:0;right:0;text-align:center;font-size:9.5px;color:var(--muted-2)}
+.wk-ax{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:10px;color:var(--muted);text-align:center;margin-top:4px}
+.wk-ax .auj{color:var(--color-primary)}
+.dam{width:100%;border-collapse:separate;border-spacing:3px;margin-top:8px;font-size:10.5px}
+.dam th{font-weight:400;color:var(--muted);font-size:10px}
+.dam td{text-align:center;border-radius:5px;padding:5px 0;font-variant-numeric:tabular-nums}
+.dam td.l{text-align:left;color:var(--muted-2);padding-left:0;white-space:nowrap}
+.dam td.ok{background:#e3efe6;color:#2c5a3b}.dam td.wa{background:var(--prize-soft);color:var(--prize-ink)}.dam td.ko{background:var(--stop-soft);color:var(--stop)}.dam td.n{background:#f4f0ea;color:var(--faint)}
+
+/* Primes : une ligne par personne, ses mois en pastilles. */
+.pr .r{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.pr .r:first-child{border-top:none}
+.pr .av{width:34px;height:34px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted-2);flex:0 0 auto}
+.pr .t{flex:1;min-width:0;font-size:13px}
+.pr .t small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.pr .n{text-align:right;font:400 15px var(--font-display);white-space:nowrap}
+.pr .n small{display:block;font:400 10px var(--font-ui);color:var(--muted);margin-top:2px}
+.pr .dots{display:flex;gap:3px;margin-top:4px}
+.pr .dots i{width:14px;height:5px;border-radius:2px;background:#e3dcd2}
+.pr .dots i.o{background:var(--prize)}
+
+/* La planche */
+.planche-c{background:#ece6dd;width:max-content}
+.planche-w{padding:30px 40px 0}
+.planche-w h1{font:400 26px var(--font-display);margin:0 0 4px}
+.planche-w p{margin:0;font-size:13px;color:var(--muted-2)}
+.planche{display:flex;gap:34px;align-items:flex-start;padding:24px 40px 40px;width:max-content}
+.planche figure{margin:0;width:390px}
+.planche figcaption{font-size:12px;line-height:1.45;color:var(--muted-2);margin-bottom:10px;min-height:70px}
+.planche figcaption b{display:block;font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:3px}
+.planche .tel{border-radius:30px;box-shadow:0 1px 0 #d8d0c4,0 10px 30px rgba(60,40,20,.12)}
+.lien .v{font:400 15px var(--font-display);white-space:nowrap}
+
+/* ===================================================================================================
+ * Les vues qui s'ouvrent depuis les onglets : la feuille du bas (la modale du téléphone), l'écran plein
+ * (réclamation, revue du soir), la photo agrandie. Même grammaire : poignée, titre, ✕, blocs, lignes.
+ * =================================================================================================== */
+.voile{position:absolute;inset:0;background:rgba(34,30,26,.5);z-index:20}
+.fe{position:absolute;left:0;right:0;bottom:0;top:96px;z-index:21;background:#fff;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.tel.long .fe{position:relative;top:auto;margin-top:-760px}
+.fe .poi{width:40px;height:5px;border-radius:3px;background:#d8d1c7;margin:8px auto 2px;flex:0 0 auto}
+.fe .fh{display:flex;align-items:flex-start;gap:10px;padding:8px 16px 10px;flex:0 0 auto}
+.fe .fh .t{flex:1;min-width:0}
+.fe .fh h2{margin:0;font:400 22px/1.15 var(--font-display)}
+.fe .fh .s{font-size:11.5px;color:var(--muted);margin-top:4px}
+.x{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--muted-2);flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
+.fe .fc{flex:1;min-height:0;overflow:hidden;padding:0 16px 20px}
+.fe .home{position:absolute;left:0;right:0;bottom:0;background:transparent}
+.ong{display:flex;gap:6px;margin-bottom:12px}
+.ong span{font-size:12px;padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted-2);white-space:nowrap}
+.ong span.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.ong span small{opacity:.7;margin-left:4px}
+.lab{font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px;display:flex;justify-content:space-between}
+.lab span{letter-spacing:0;text-transform:none;font-size:11px}
+.k4{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.k4>div{padding:10px 12px}
+.k4>div:nth-child(even){border-left:1px solid var(--line)}
+.k4>div:nth-child(n+3){border-top:1px solid var(--line)}
+.k4 .k{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.k4 .v{font:400 20px/1.2 var(--font-display);margin-top:3px;font-variant-numeric:tabular-nums}
+.k4 .s{font-size:10.5px;color:var(--muted);margin-top:2px}
+.li{border-top:1px solid var(--line)}
+.li:last-child{border-bottom:1px solid var(--line)}
+.li .r{display:grid;grid-template-columns:42px minmax(0,1fr) auto 12px;gap:8px;align-items:center;padding:10px 0}
+.li .h{font-size:12px;color:var(--muted-2);font-variant-numeric:tabular-nums}
+.li .q b{display:block;font-weight:400;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .q small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.li .m{text-align:right;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.li .m .chip{display:block;margin-top:3px;text-align:center}
+.li .c{color:var(--faint);font-size:13px;text-align:right}
+.li.ouv{background:var(--table-head);margin:0 -16px;padding:0 16px}
+.art{padding:0 0 12px 50px}
+.art table{width:100%;border-collapse:collapse;font-size:11.5px}
+.art td{padding:4px 0;border-top:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.art tr:first-child td{border-top:none}
+.art td.n{text-align:right;white-space:nowrap;padding-left:8px}
+.art td.p{color:var(--muted)}
+.rap{border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.rap .bar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin-bottom:8px}
+.rap .bar i{display:block;height:100%}
+.rap .r{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0}
+.rap .r .t{flex:1}
+.rap .r small{display:block;font-size:10.5px;color:var(--muted)}
+.rap .r .n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.sec{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 6px}
+.sec b{font:400 15px var(--font-display)}
+.sec span{font-size:11px;color:var(--muted)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;font:400 14px var(--font-ui);color:var(--ink)}
+.btn.p{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.btn.v{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.r{background:#fff;border-color:#e3b9b5;color:var(--ko)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.champ{border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px 12px;font-size:13.5px;min-height:46px;display:flex;align-items:center;gap:8px}
+.champ small{display:block;font-size:10.5px;color:var(--muted)}
+.champ .ch{margin-left:auto;color:var(--faint)}
+.champ.ta{align-items:flex-start;min-height:84px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:12.5px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--muted-2)}
+.chips span.on{background:var(--acc-soft);border-color:#e6c2c7;color:var(--color-primary)}
+.qte{display:flex;align-items:center;border:1px solid var(--line);border-radius:12px;background:#fff;height:46px;overflow:hidden}
+.qte b{width:46px;text-align:center;font-weight:400;font-size:20px;color:var(--muted-2)}
+.qte span{flex:1;text-align:center;font:400 18px var(--font-display)}
+.vign{display:flex;gap:8px}
+.vign>div{width:74px;height:74px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.vign>div.plus{display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:11px;color:var(--muted);background:repeating-linear-gradient(135deg,#f6f2ec 0 8px,#fbf9f5 8px 16px)}
+.vign>div.plus b{font-size:22px;font-weight:400;color:var(--color-primary)}
+
+/* La photo agrandie : l'écran noir, la photo, le verdict au pouce. */
+.tel.noir{background:#141210;color:#fff}
+.tel.noir .ios{background:#141210;color:#fff}
+.tel.noir .ios .bat{background:#fff;color:#000}
+.tel.noir .ios svg{fill:#fff}
+.nr-hd{display:flex;align-items:center;gap:10px;padding:6px 14px 10px}
+.nr-hd .t{flex:1;min-width:0}
+.nr-hd .t b{display:block;font:400 17px var(--font-display)}
+.nr-hd .t small{font-size:11px;color:#b9b2a8}
+.nr-hd .x{background:transparent;border-color:#4a443e;color:#fff}
+.nr-im{flex:1;min-height:0;position:relative;margin:0 0 10px}
+.nr-im svg{display:block;width:100%;height:100%}
+.nr-im .nav{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.nr-bas{padding:0 14px 8px}
+.nr-bas .ref{display:flex;gap:8px;align-items:center;font-size:11.5px;color:#cfc8be;margin-bottom:10px}
+.nr-bas .ref i{width:46px;height:46px;border-radius:8px;overflow:hidden;flex:0 0 auto;display:block}
+.nr-bas .champ{background:#221f1c;border-color:#3a3530;color:#a39b90}
+.tel.noir .home{background:#141210}.tel.noir .home:after{background:#fff}
+
+/* La revue du soir : une question à la fois, en bulles. */
+.rv-p{height:5px;border-radius:3px;background:#efe9e0;overflow:hidden;margin:6px 0 4px}.rv-p i{display:block;height:100%;background:var(--color-primary)}
+.bul{background:#fff;border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:12px 14px;font-size:14px;line-height:1.5;margin:10px 0}
+.bul.moi{background:var(--acc-soft);border-color:#ecccd1;border-radius:16px 16px 4px 16px;margin-left:50px}
+.bul ul{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted-2)}
+.ctx{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted-2);margin-top:8px}
+
+/* Planche des vues : deux rangées de cinq. */
+.planche.wrap{flex-wrap:wrap;width:calc(5 * 390px + 4 * 34px + 80px);row-gap:40px}

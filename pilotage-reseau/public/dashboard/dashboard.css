@@ -538,21 +538,29 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
  * Le chiffre de la période en grand, ce qui bloque juste dessous, puis des
  * cartes ouvertes qu'un seul défilement parcourt. Deux vues : jour, semaine.
  * ========================================================================== */
-#dash.mob{padding:0;height:100dvh;display:flex;flex-direction:column;max-width:none}
-.mb-hd{display:flex;align-items:center;gap:9px;padding:10px 14px 8px;flex:0 0 auto}
-.mb-hd img{height:22px}
-/* Le bloc du titre doit pouvoir rétrécir, sinon un nom long pousse le
-   bouton ↻ hors de l'écran et la page défile de côté. */
-.mb-hd>div{min-width:0}
-.mb-hd .t{font-family:var(--font-display);font-size:16px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mb-hd .d{font-size:10.5px;color:var(--color-text-muted)}
-.mb-hd .sp{flex:1}
-.mb-ic{width:32px;height:32px;border-radius:50%;border:1px solid var(--color-border-secondary);background:var(--color-surface);
-  font-size:13px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
-.mb-sc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 16px;display:flex;flex-direction:column}
+/* Le cadre du téléphone (18/11/2026, maquette dashboard-mobile-v3) : la PAGE défile — plus un bloc de 100dvh qui
+   défile en dedans, qui empêchait Safari de replier sa barre du bas (la bande blanche sous les onglets). L'en-tête
+   reste en haut, posé sous la barre d'état (safe-area, viewport-fit=cover dans index.html) ; les onglets sont fixés
+   au bas de l'écran, la page leur garde la place. */
+#dash.mob{padding:0;min-height:100dvh;display:flex;flex-direction:column;max-width:none}
+.mb-hd{position:sticky;top:0;z-index:40;flex:0 0 auto;background:var(--color-bg);
+  padding:max(10px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 9px max(14px, env(safe-area-inset-left, 0px));
+  box-shadow:0 8px 10px -12px rgba(34,30,26,.35)}
+.mb-hd .l1{display:flex;align-items:center;gap:8px;min-height:38px}
+/* Le nom doit pouvoir rétrécir, sinon un nom long pousse le bouton ↻ hors de l'écran et la page défile de côté. */
+.mb-hd .l1 .t{flex:1;min-width:0;font:400 18px/1.15 var(--font-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-hd .sous{font-size:11.5px;color:var(--color-text-muted);margin-top:1px}
+/* Le pas de temps : toute la largeur, des flèches de 46 px pour le pouce. */
+.mb-hd .ma-d{display:flex;align-items:center;gap:0;margin-top:8px;height:40px;background:var(--color-surface);
+  border:1px solid var(--color-border-secondary);border-radius:12px;font-size:13px;color:var(--color-text)}
+.mb-hd .ma-d b{flex:1;min-width:0;text-align:center;font-weight:400}
+.mb-hd .ma-d .ma-pas{width:46px;height:100%;padding:0;font-size:19px;flex:0 0 auto}
+.mb-ic{width:38px;height:38px;border-radius:50%;border:1px solid var(--color-border-secondary);background:var(--color-surface);
+  font-size:14px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
+.mb-sc{flex:1 0 auto;padding:4px max(14px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));display:flex;flex-direction:column}
 
-.mb-tabs{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--color-border-tertiary);
-  background:var(--color-surface);padding:7px 0 calc(10px + env(safe-area-inset-bottom,0px))}
+.mb-tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--color-border-tertiary);
+  background:var(--color-surface);padding:6px max(4px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px))}
 .mb-tabs button{border:none;background:none;text-align:center;font:400 10.5px var(--font-ui);color:var(--color-text-muted);
   letter-spacing:.03em;cursor:pointer;padding:2px 0}
 .mb-tabs button i{display:block;font-style:normal;font-size:16px;margin-bottom:2px;opacity:.55}
@@ -1330,10 +1338,16 @@ body.pp-emb{background:var(--color-bg)}
 .ma-tabs button i{position:relative;display:inline-block}
 .ma-tabs button i svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;vertical-align:0}
 .ma-tabs button{display:flex;flex-direction:column;align-items:center}
-.ma-tabs .pt{position:absolute;top:-1px;right:-6px;width:9px;height:9px;border-radius:50%;border:2px solid var(--color-surface)}
+.ma-tabs .pt{position:absolute;top:1px;right:9px;width:9px;height:9px;border-radius:50%;border:2px solid var(--color-surface)}
 .ma-tabs button i{opacity:1}
 .ma-tabs button i svg{opacity:.55}
 .ma-tabs button.on i svg{opacity:1}
+/* 18/11/2026 : les noms restent (Sam) ; chaque onglet prend la largeur de son mot plus une part égale du reste, au lieu
+   de six colonnes égales où « Opérationnel » débordait sur « Exploitation ». L'onglet ouvert : une pastille derrière. */
+.mb-tabs.ma-tabs{display:flex;justify-content:space-between}
+.mb-tabs.ma-tabs button{flex:1 1 auto;min-width:0;font-size:10px;letter-spacing:0;white-space:nowrap;padding:0 1px}
+.ma-tabs button i{display:flex;align-items:center;justify-content:center;width:46px;height:28px;border-radius:14px;margin:0 auto 2px}
+.ma-tabs button.on i{background:#F5E3E5}
 .ma-note{font-size:10px;color:var(--color-text-muted);margin-top:4px;line-height:1.35}
 /* Les pastilles des photos restent en blanc : `.ok` / `.ko` (texte vert, rouge) les rendaient
    illisibles, vert sur vert. */
@@ -1667,6 +1681,17 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-dleg i.pmj{background:none;border-top:2px dotted var(--color-primary);height:0;opacity:.7}.op-dleg i.cl{background:#efe8dc;width:12px;height:9px;vertical-align:-1px}
 .op-dleg i.pal{width:6px;height:6px;border-radius:50%;border:2px solid var(--color-primary);background:#fff;vertical-align:0}
 .op-pk{margin-left:auto}.op-pk b{font-weight:400;color:var(--color-text)}
+/* Le duel au téléphone (18/11/2026, opDuelMob) : un tableau court, les clients et le panier face à J−7 et au repère. */
+.op-dm table{width:calc(100% - 28px);margin:2px 14px 0;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.op-dm th{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:2px 0 6px 6px;white-space:nowrap}
+.op-dm td{padding:9px 0 9px 6px;border-top:1px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;font-size:13px}
+.op-dm td:first-child,.op-dm th:first-child{text-align:left;padding-left:0;color:var(--muted-2)}
+.op-dm td:first-child{white-space:normal;font-size:12.5px}
+.op-dm td.a{color:var(--color-primary);font:400 15px var(--font-display)}
+.op-dm td.b{color:#2F6EA5}
+.op-dm td.r{color:var(--color-text-muted)}
+.op-dm td.d .ok{color:var(--green)}.op-dm td.d .ko{color:var(--stop)}.op-dm td.d .eq{color:var(--faint)}
+.op-dm-n{font-size:10.5px;line-height:1.45;color:var(--color-text-muted);padding:6px 14px 12px}
 .op-dt{padding:4px 16px 8px}
 .op-dl{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr);align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--color-border-tertiary);font-variant-numeric:tabular-nums}
 .op-dl:first-child{border-top:none}
@@ -1700,6 +1725,21 @@ html.db-fiche-ouverte{overflow:hidden}
   .op-dl .d{text-align:left}
 }
 .op-mob .op-duel{margin-bottom:10px}
+/* Les jauges resserrées au téléphone (18/11/2026, refonte mobile, étape 2 ; Sam : « garder deux jauges ») : le libellé
+   de chaque piste à gauche de sa barre, des barres plus fines, l'axe aligné sur leur départ. Rien ne change sur le fond. */
+.op-mob .op-piste{grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:center;margin-top:14px}
+.op-mob .op-piste + .op-piste{margin-top:24px}
+.op-mob .op-piste .pl b{font-size:14px;line-height:1.15}
+.op-mob .op-piste .pl small{display:block;font-size:10px;line-height:1.25;margin-top:1px}
+.op-mob .op-piste .pb{height:22px;border-radius:7px}
+.op-mob .op-piste .seg{border-radius:7px}
+.op-mob .op-piste .seg.proj,.op-mob .op-piste .seg.j7j,.op-mob .op-duel.b2b .seg.j7j{border-radius:0 7px 7px 0}
+.op-mob .op-piste .temps{top:-5px;bottom:-5px}
+.op-mob .op-piste .val{padding:1px 6px}
+.op-mob .op-dax{margin:22px 0 0 94px}
+.op-mob .op-duel .dh{row-gap:6px}
+/* L'axe du B2B : son repère tombe près du bord gauche, « 0 € » le chevaucherait. */
+.op-mob .op-duel.b2b .op-dax.ab>span:first-child{display:none}
 
 /* ── Modale produit, onglet « Recette & marge » (08/10/2026) ── */
 .fi-rchip.ko{background:#f8e0e3;border-color:#e4b2b8}.fi-rchip.ko b{color:#8c1020}
@@ -2036,6 +2076,39 @@ html.db-fiche-ouverte{overflow:hidden}
 /* Le téléphone (10/10/2026) : les chiffres de la journée passent dans Exploitation ; les tableaux des catégories
  * tiennent dans l'écran sans défiler de côté, les colonnes secondaires se retirent. */
 .ma-large{margin:12px 0}.ma-large>.db-card{margin:0}
+/* Le héros d'Exploitation et de Semaine au téléphone (18/11/2026, refonte mobile, étape 3) : le chiffre qui répond à
+   l'onglet en grand, une pastille de verdict, une ligne d'explication, puis le détail dans la même carte. */
+.ma-hero{padding:13px 14px 12px;margin:0}
+.ma-hero .top{display:flex;align-items:center;gap:8px}
+.ma-hero .kick{font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);min-width:0}
+.ma-hero .chip{margin-left:auto;font-size:10.5px;padding:3px 9px;border-radius:8px;white-space:nowrap;background:var(--chip);color:var(--muted-2)}
+.ma-hero .chip.ok{background:#e9f2ec;color:var(--green)}.ma-hero .chip.wa{background:var(--prize-soft);color:var(--prize-ink)}.ma-hero .chip.ko{background:var(--stop-soft);color:var(--stop)}
+.ma-hero .big{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:6px}
+.ma-hero .big b{font:400 34px/1.05 var(--font-display);font-variant-numeric:tabular-nums}
+.ma-hero .big b.v,.ma-hero .big b.ok{color:var(--green)}.ma-hero .big b.o,.ma-hero .big b.wa{color:#B0792A}.ma-hero .big b.r,.ma-hero .big b.ko{color:var(--stop)}
+.ma-hero .big span{font-size:13px;color:var(--muted-2)}
+.ma-hero .sub{font-size:11.5px;line-height:1.4;color:var(--color-text-muted);margin-top:4px}
+.ma-hero .db-cascade{margin-top:6px;padding:0}
+/* Le compte en escalier dans le héros : le libellé prend ce qui reste, la barre garde 54 px. */
+.ma-hero .db-cl{grid-template-columns:minmax(0,1fr) 54px 74px 50px;gap:8px;padding:7px 0}
+/* Les sept jours face à leur objectif : la barre du réalisé, le trait de l'objectif, le pourcentage au-dessus. */
+.ma-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:110px;margin-top:26px}
+.ma-wk>div{position:relative;height:100%;display:flex;align-items:flex-end}
+.ma-wk i{display:block;width:100%;border-radius:5px 5px 0 0;background:#d9d3c9}
+.ma-wk i.v{background:var(--green)}.ma-wk i.o{background:#D98A0B}.ma-wk i.r{background:var(--stop)}
+.ma-wk i.en{background:repeating-linear-gradient(135deg,#B03048 0 3px,#e8b9c2 3px 6px)}
+.ma-wk i.av{background:none;border:1px dashed #cfc7bb;border-bottom:none}
+.ma-wk b{position:absolute;left:-2px;right:-2px;height:0;border-top:2px solid var(--ink);opacity:.6}
+.ma-wk .p{position:absolute;left:0;right:0;top:-16px;text-align:center;font-size:10px;color:var(--muted-2)}
+.ma-wk-ax{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:4px;font-size:10px;color:var(--color-text-muted);text-align:center}
+.ma-wk-ax .auj{color:var(--color-primary)}
+.ma-wk-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:10.5px;color:var(--color-text-muted)}
+.ma-wk-leg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
+.ma-wk-leg i.v{background:var(--green)}.ma-wk-leg i.o{background:#D98A0B}.ma-wk-leg i.r{background:var(--stop)}
+.ma-wk-leg i.t{height:0;border-top:2px solid var(--ink);opacity:.6;vertical-align:3px}
+.ma-dam th{line-height:1.2}
+/* Un saut vers une carte (« voir › » des non-conformités) s'arrête sous l'en-tête du téléphone, qui reste en haut. */
+#dash.mob #tj-recherche{scroll-margin-top:118px}
 @media (max-width:560px){
   .mb-sc .db-acc{padding:4px 8px 8px}
   .mb-sc .db-acc:not(.pro):not(.pot) .db-ent,.mb-sc .db-acc:not(.pro):not(.pot) .db-al{grid-template-columns:20px minmax(0,1fr) 72px 48px;gap:6px}
@@ -2440,8 +2513,33 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .op-cmdl .t em{font-style:normal;color:var(--prize-ink)}
 .op-cmdl .v{font:400 16px var(--font-display);white-space:nowrap;font-variant-numeric:tabular-nums}
 .op-cmdl .ch{color:var(--faint);font-size:18px;line-height:1}
-#db-b2b .fi-voile,#db-cmdm .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
-#db-b2b .fi-modale,#db-cmdm .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:720px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:12px;font-family:var(--font-ui);color:var(--ink);-webkit-overflow-scrolling:touch}
+/* Le ruban des canaux sous la jauge du comptoir (18/11/2026, maquette C de comptoir-webshop) : la part de chaque canal,
+   puis trois colonnes — comptoir, commandes prises au comptoir, webshop — face à J−7. Couleurs de la jauge « Comment le
+   client achète » de la fiche client (FD_CANAUX) : comptoir or, commande comptoir bordeaux, webshop bleu. */
+.op-rb{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.op-rb .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;color:var(--color-text-muted)}
+.op-rb .mix{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;background:#efe9e0;margin:8px 0 10px}
+.op-rb .mix i{display:block;height:100%;min-width:3px}
+.op-rb .mix i.c,.op-rb .pt.c{background:#B0792A}.op-rb .mix i.k,.op-rb .pt.k{background:#8D1D2C}.op-rb .mix i.w,.op-rb .pt.w{background:#1B6FA8}
+.op-rb .col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.op-rb .col>div{padding:9px 10px 10px;min-width:0}
+.op-rb .col>div+div{border-left:1px solid var(--line)}
+.op-rb .col>div[data-cmdm]{cursor:pointer}
+.op-rb .col>div[data-cmdm]:hover{background:var(--color-background-secondary)}
+.op-rb .col>div[data-cmdm]:focus-visible,.op-rb .bas:focus-visible{outline:2px solid #2a78d6;outline-offset:-2px}
+.op-rb .col .k{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted-2);white-space:nowrap}
+.op-rb .col .k .ch{margin-left:auto;color:var(--faint);font-size:14px;line-height:1}
+.op-rb .pt{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.op-rb .col .v{font:400 17px/1.2 var(--font-display);margin-top:4px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.op-rb .col .s{font-size:10px;color:var(--color-text-muted);margin-top:1px;line-height:1.3}
+.op-rb .col .j{font-size:10px;color:#2F5D8A;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);line-height:1.35}
+.op-rb .col .j em{font-style:normal;white-space:nowrap}.op-rb .col .j em.ko{color:#8c1020}.op-rb .col .j em.ok{color:var(--green)}
+.op-rb .bas{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer}
+.op-rb .bas em{font-style:normal;color:var(--prize-ink)}
+.op-rb .bas .ch{color:var(--color-primary);font-size:14px;line-height:1}
+@media (min-width:701px){.op-rb .col .v{font-size:19px}.op-rb .col .s,.op-rb .col .j{font-size:11px}}
+#db-b2b .fi-voile,#db-cmdm .fi-voile,#db-eqm .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
+#db-b2b .fi-modale,#db-cmdm .fi-modale,#db-eqm .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:720px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:12px;font-family:var(--font-ui);color:var(--ink);-webkit-overflow-scrolling:touch}
 .bm-poi{display:none;width:40px;height:5px;border-radius:3px;background:#d8d1c7;margin:8px auto 0}
 .bm-ong{display:flex;gap:6px;flex-wrap:wrap;padding:0 22px 12px}
 .bm-pil{display:inline-flex;align-items:center;gap:5px;font:400 11.5px var(--font-ui);padding:6px 11px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);white-space:nowrap;cursor:pointer}
@@ -2503,7 +2601,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .bm-rap .eq b{font-weight:400;color:var(--ink)}
 /* Au téléphone : une feuille qui monte du bas, presque plein écran. */
 @media (max-width:760px){
-  #db-b2b .fi-modale,#db-cmdm .fi-modale{left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;height:calc(100% - 40px);max-height:none;border-radius:18px 18px 0 0}
+  #db-b2b .fi-modale,#db-cmdm .fi-modale,#db-eqm .fi-modale{left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;height:calc(100% - 40px);max-height:none;border-radius:18px 18px 0 0}
   .bm-poi{display:block}
   .bm-ong{padding:0 14px 12px}
   .bm-in{padding-left:14px;padding-right:14px}
@@ -3486,3 +3584,27 @@ body.db-vue-social{overflow:hidden}
 .ia-lien{border:0;background:none;padding:0 0 0 10px;font:400 11.5px var(--font-ui);color:var(--color-primary);cursor:pointer}
 .ia-lien:hover{text-decoration:underline}.ia-lien:disabled{color:var(--color-text-muted);cursor:default}
 .ia-pdf-err{font-size:11.5px;color:#c62828;margin-left:8px}
+/* ── Les feuilles au téléphone (18/11/2026, refonte mobile, étape 5, maquette dashboard-mobile-v3) ──────────────────
+   Toutes les fenêtres du dashboard s'ouvrent comme une feuille qui monte du bas, comme « Commandes du jour » et « Ventes
+   B2B » : la fiche produit, la poubelle, le stock, la promotion, le détail d'un produit. Une poignée en haut, les coins
+   du haut arrondis, le haut posé sous la barre d'état de l'iPhone (viewport-fit=cover depuis l'étape 1), le bas au-dessus
+   du trait. Les vues plein écran — la revue du soir, la photo agrandie, l'assistant — gardent leur forme et se posent
+   sous la barre d'état. */
+@media (max-width:760px){
+  #db-fiche .fi-modale,#db-invm .fi-modale,#db-stk .fi-modale,#db-pmc .fi-modale,#db-pmc .fi-modale.pmc-etroite,#db-pd .fi-modale,#db-b2b .fi-modale,#db-cmdm .fi-modale,#db-eqm .fi-modale{
+    left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;
+    height:calc(100% - max(40px, env(safe-area-inset-top, 0px) + 12px));max-height:none;border-radius:18px 18px 0 0;
+    padding-bottom:env(safe-area-inset-bottom, 0px);overscroll-behavior:contain}
+  #db-fiche .fi-modale::before,#db-invm .fi-modale::before,#db-stk .fi-modale::before,#db-pmc .fi-modale::before,#db-pd .fi-modale::before{
+    content:'';display:block;width:40px;height:5px;border-radius:3px;background:#d8d1c7;margin:8px auto 0}
+  .ia-modale.mb,.ia-modale.ma{padding-top:env(safe-area-inset-top, 0px);padding-bottom:env(safe-area-inset-bottom, 0px)}
+}
+@media (max-width:560px){
+  .rv-hd{padding-top:max(14px, env(safe-area-inset-top, 0px))}
+  .rv-sc{padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px))}
+}
+.db-cql.mob .hd{top:calc(10px + env(safe-area-inset-top, 0px))}
+/* L'équipe du jour au téléphone (18/11/2026) : l'initiale de chaque personne, le bouton de « La journée ». */
+#db-eqm .eqm-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--chip);color:var(--muted-2);font:400 12px var(--font-ui)}
+.op-mob .op-eqm{margin:4px 14px 0;padding-bottom:12px;cursor:pointer}
+.op-mob .jm-l i[data-eqm]{cursor:pointer}

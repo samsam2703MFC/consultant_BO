@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Tests de GET /exploitation/canaux-mois — sans base, sans réseau, sans token.
+ * Tests de GET /exploitation/canaux-mois, et du jour de GET /exploitation/canaux (le même jour la semaine d'avant,
+ * les commandes des clients pro) — sans base, sans réseau, sans token.
  *
  *   php bin/tests_canaux.php
  *
@@ -102,6 +103,27 @@ verifie('jour par jour : le mois d’avant entier', count($J['precedent']) === $
 $j1 = $J['courant'][0];
 verifie('le 1er : comptoir, pro et webshop du jour', abs($j1['comptoir'] - 980) < 0.01 && $j1['pro'] == 100.0 && $j1['cc'] == 50.0 && $j1['liv'] == 50.0 && $j1['ccN'] === 2, json_encode($j1));
 verifie('rien n’est relu au panel quand tout est gravé (une lecture des commandes)', PanelApi::$appels === 1, (string) PanelApi::$appels);
+
+echo "Le jour et le même jour la semaine d’avant (18/11/2026)\n";
+// Aujourd'hui : une précommande encaissée, un click & collect payé en ligne, une précommande du client des tickets pro
+// (c12, TVA valide). J−7 : un click & collect encaissé à 09:00, une précommande à 18:00.
+$j7 = date('Y-m-d', strtotime($auj . ' -7 day'));
+PanelApi::$commandes = [
+    ['pick_up_datetime' => $auj . ' 10:00:00', 'is_webshop' => 0, 'total_value' => 9.80, 'order_status' => 'picked_up', 'id_transaction' => 41, 'id_client' => 5],
+    ['pick_up_datetime' => $auj . ' 11:00:00', 'is_webshop' => 1, 'fulfilment_mode' => 'collect', 'total_value' => 5.80, 'order_status' => 'picked_up', 'id_client' => 6],
+    ['pick_up_datetime' => $auj . ' 12:00:00', 'is_webshop' => 0, 'total_value' => 60.0, 'order_status' => 'picked_up', 'id_transaction' => 42, 'id_client' => 12],
+    ['pick_up_datetime' => $j7 . ' 09:00:00', 'is_webshop' => 1, 'fulfilment_mode' => 'collect', 'total_value' => 16.50, 'order_status' => 'picked_up', 'id_transaction' => 43, 'id_client' => 7],
+    ['pick_up_datetime' => $j7 . ' 18:00:00', 'is_webshop' => 0, 'total_value' => 115.50, 'order_status' => 'picked_up', 'id_transaction' => 44, 'id_client' => 8],
+];
+$_GET = ['shop' => (string) $sid, 'date' => $auj];
+$r = ep_exploitation_canaux();
+$L = array_column($r['liste'], null, 'heure');
+verifie('la liste du jour : trois commandes', count($r['liste']) === 3, json_encode($r['liste']));
+verifie('la précommande du client des tickets pro est du B2B', $L['12:00']['pro'] === true && $L['10:00']['pro'] === false && $L['11:00']['pro'] === false, json_encode($L));
+verifie('J−7 nommé, ses commandes avec leur heure', ($r['j7']['date'] ?? '') === $j7 && array_column($r['j7']['liste'], 'heure') === ['09:00', '18:00'], json_encode($r['j7'] ?? null));
+$K = array_column($r['j7']['liste'], null, 'heure');
+verifie('J−7 : canal, montant, encaissée', $K['09:00']['canal'] === 'cc' && $K['09:00']['montant'] == 16.5 && $K['09:00']['encaissee'] === true && $K['18:00']['canal'] === 'compt', json_encode($K));
+verifie('J−7 : rien de nominatif', !array_key_exists('cli', $K['09:00']) && !array_key_exists('tx', $K['09:00']));
 
 echo "Bornes\n";
 $_GET = ['shop' => '0']; $r = @ep_exploitation_canaux_mois();   // http_response_code() sans en-têtes en ligne de commande

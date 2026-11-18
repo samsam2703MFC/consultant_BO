@@ -1218,6 +1218,11 @@
   const maGrille = T => `<div class="ma-g">${T.map(maTuile).join('')}</div>`;
   /** La ligne du haut : combien de tuiles ne sont pas vertes, lesquelles, et toutes les pastilles. */
   function maVerdict(T, regler) {
+    const V = maVerdictDe(T, regler);
+    return `<div class="ma-v"><span class="n ${V.cls}">${V.n || (V.rien ? '…' : '✓')}</span><span class="t">${V.titre}<em>${V.em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
+  }
+  /** Le verdict d'une page de tuiles : combien de points ne sont pas verts, lesquels (maVerdict, le héros d'Exploitation). */
+  function maVerdictDe(T, regler) {
     const pb = T.filter(t => t.pt === 'r' || t.pt === 'o'), n = pb.length;
     const vert = T.filter(t => t.pt === 'v').length, gris = T.filter(t => !t.pt || t.pt === 'n').length;
     // Rien de jugé (chiffres du jour pas encore lus, 13/11/2026) : ni ✓ ni « tout est au vert » — un responsable le
@@ -1226,7 +1231,44 @@
     const cls = pb.some(t => t.pt === 'r') ? 'ko' : (n ? 'wa' : (rien ? 'mu' : 'ok'));
     const titre = n ? maPl(n, 'point').replace(/^\d+ /, '') + (regler ? ' à régler' : ' à surveiller') : (rien ? 'pas encore jugé' : (gris ? 'rien à signaler pour l’instant' : 'tout est au vert'));
     const em = n ? pb.map(t => t.court || t.k).join(' · ') : (rien ? gris + ' point' + (gris > 1 ? 's' : '') + ' en attente des chiffres du jour' : vert + ' au vert' + (gris ? ' · ' + gris + ' pas encore jugé' + (gris > 1 ? 's' : '') : ''));
-    return `<div class="ma-v"><span class="n ${cls}">${n || (rien ? '…' : '✓')}</span><span class="t">${titre}<em>${em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
+    return { cls, n, rien, titre, titreN: (n ? n + ' ' : '') + titre, em };
+  }
+  /**
+   * Le héros d'Exploitation au téléphone (18/11/2026, refonte mobile, étape 3, maquette « Chiffres ») : le résultat du
+   * jour en grand, le verdict des tuiles en pastille et en une ligne, puis le compte en escalier (cascade). Il remplace
+   * la ligne du verdict et la carte « Le P&L court », qui disaient la même journée en deux blocs.
+   */
+  function maHerosExp(m, d, T) {
+    const V = maVerdictDe(T, false), auj = S.date === AUJ;
+    const c = m.net == null ? '' : MA.net(m.netPct);
+    return `<div class="db-card ma-hero"><div class="top"><span class="kick">Le résultat du jour</span><span class="chip ${V.cls}">${V.titreN}</span></div>
+      <div class="big"><b class="${c}">${m.net == null ? '—' : fS(m.net)}</b><span>${m.net == null ? esc(m.motifNet || 'P&L incomplet') : fP(m.netPct) + ' des ventes'}</span></div>
+      <div class="sub">${V.n ? 'à surveiller : ' : ''}${V.em}${auj ? ' · la journée continue' : ''}</div>${cascade(m, d)}</div>`;
+  }
+  /**
+   * Le héros de Semaine au téléphone (18/11/2026, maquette « Semaine ») : l'avance ou le retard sur l'objectif à ce jour,
+   * le réalisé face à l'attendu, puis sept colonnes — chaque jour face à son objectif (le trait), aujourd'hui hachuré tant
+   * qu'il est en dessous, les jours à venir en pointillé à la hauteur de leur objectif. Il remplace la ligne du haut et
+   * la tuile « Chiffre de la semaine ».
+   */
+  function maHerosSem(m, R, ca) {
+    const ecart = m.ecart, J = R.J.filter(j => !j.ferme || j.ca != null);
+    const cls = ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'));
+    const chip = ecart == null ? 'en lecture' : (ecart >= 0 ? 'en avance' : (R.att >= 90 ? 'à moins de 10 %' : 'en retard'));
+    const mx = Math.max(1, ...J.map(j => Math.max(j.ca || 0, j.objectif || 0))) * 1.06, h = v => (100 * v / mx).toFixed(1) + '%';
+    const auj = j => j.date === AUJ;
+    const cols = J.map(j => {
+      const fait = j.passe && j.ca != null, c = fait ? maJourCA(j) : 'av';
+      const p = fait && j.objectif ? `<span class="p">${nf(Math.round(100 * j.ca / j.objectif), 0)}</span>` : '';
+      const bar = fait ? `<i class="${c}${auj(j) && j.ca < (j.objectif || 0) ? ' en' : ''}" style="height:${h(j.ca)}"></i>` : (j.objectif ? `<i class="av" style="height:${h(j.objectif)}"></i>` : '');
+      return `<div>${p}${bar}${j.objectif ? `<b style="bottom:${h(j.objectif)}"></b>` : ''}</div>`;
+    }).join('');
+    const ax = J.map(j => `<span class="${auj(j) ? 'auj' : ''}">${esc((j.court || fD(j.date)).replace(/\s+\d+$/, ''))}</span>`).join('');
+    return `<div class="db-card ma-hero"><div class="top"><span class="kick">${esc(ca.k)}</span><span class="chip ${cls}">${chip}</span></div>
+      <div class="big"><b class="${cls}">${ecart == null ? '…' : fS(ecart)}</b><span>${ecart == null ? 'la semaine' : 'sur l’objectif à ce jour'}</span></div>
+      <div class="sub">${ca.v.replace(/<[^>]+>/g, '')} · ${ca.s}</div>
+      <div class="ma-wk">${cols}</div><div class="ma-wk-ax">${ax}</div>
+      <div class="ma-wk-leg"><span><i class="v"></i>objectif tenu</span><span><i class="o"></i>à moins de 10 %</span><span><i class="r"></i>en dessous</span><span><i class="t"></i>objectif du jour</span></div></div>`;
   }
 
   /** Exploitation : le jour, ce qu'il rapporte. */
@@ -1277,7 +1319,7 @@
     // main-d'œuvre et la poubelle se lisent dans le P&L court ; les clients et les heures dans Opérationnel. Restent en
     // tuiles le rang dans le réseau et les canaux, que le P&L ne dit pas.
     const PJ = jourPieces(m, d, S.st[cleSt()]);
-    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + `<div class="ma-large">${PJ.pnl}</div>` + maGrille(T.filter(t => /^(Réseau|Canaux)/.test(t.k)).map(t => Object.assign({}, t, { w: false })));
+    let h = maHerosExp(m, d, T.filter(t => t.pt !== undefined)) + maGrille(T.filter(t => /^(Réseau|Canaux)/.test(t.k)).map(t => Object.assign({}, t, { w: false })));
     // Les campagnes et les promotions du jour, quand il y en a : leurs cellules et leurs tiroirs.
     const ext = []; murObjectifs().forEach(t => ext.push(murR([t], true))); murPromos().forEach(t => ext.push(murR([t], true)));
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
@@ -1400,7 +1442,8 @@
     const cell = (c, v) => `<td class="${c}">${v}</td>`;
     const ligne = (lib, f) => `<tr><td class="l">${lib}</td>${J.map(j => (!j.passe || j.ferme) ? cell('f', j.ferme ? '×' : '·') : f(j)).join('')}</tr>`;
     const auj = j => j.date === AUJ;
-    let h = `<div class="ma-dam"><table><tr><th class="l">la semaine</th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date))}</th>`).join('')}</tr>`;
+    // L'en-tête sur deux lignes (18/11/2026) : « lun. 16 » ne tient pas dans une colonne de téléphone.
+    let h = `<div class="ma-dam"><table><tr><th class="l"></th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date)).replace(' ', '<br>')}</th>`).join('')}</tr>`;
     if (!R.sansChiffre) h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
     const jmLu = !!S.aux['jourM|' + S.date];
     h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net((x.caHt || x.ca) ? 100 * x.net / (x.caHt || x.ca) : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
@@ -1418,11 +1461,8 @@
     const R = maTuilesSem(m, d);
     if (!R) { return `<div class="ma-v"><span class="n mu">…</span><span class="t">lecture de la semaine<em>le chiffre jour par jour, les contrôles, la poubelle</em></span></div>${squeletteMa(5)}`; }
     const [ca, ...reste] = R.T;
-    const ecart = m.ecart;
-    const em = [R.dessous.length ? 'en dessous : ' + R.dessous.join(', ') : '', R.dessus.length ? 'au-dessus : ' + R.dessus.join(', ') : ''].filter(Boolean).join(' · ') || 'la semaine commence';
-    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’objectif' : 'sur l’objectif à ce jour')}<em>${em}</em></span>`
-      + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
-    h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
+    let h = maHerosSem(m, R, ca);
+    h += maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
     h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? 'marge brute − normes × ' + VALO_MULT_T : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
@@ -1442,23 +1482,38 @@
   function maDate() {
     if (S.vue === 'semaine') { const [du, au] = bornesSemaine(); return 'du ' + fD(du) + ' au ' + fD(au); }
     const t = new Date(S.date + 'T12:00:00');
-    // Au téléphone, la forme courte : « aujourd’hui · sam. 10 oct. » tient sur une ligne.
-    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', estMobile() ? { weekday: 'short', day: 'numeric', month: 'short' } : { weekday: 'long', day: 'numeric', month: 'long' });
+    // La forme longue, au téléphone aussi depuis que le pas de temps a toute la largeur de l'en-tête (18/11/2026).
+    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
+  /**
+   * Le cadre du téléphone (18/11/2026, maquette dashboard-mobile-v3, Sam : « commence par le cadre »).
+   * L'en-tête : le magasin et ses deux boutons sur une ligne ; dessous, sur toute la largeur, le pas de temps de l'onglet
+   * (le jour, la semaine, le mois) ou un sous-titre. Il reste en haut quand la page défile et se pose sous la barre
+   * d'état de l'iPhone (env(safe-area-inset-top), avec viewport-fit=cover). Le logo n'y est plus : il est sur l'icône.
+   * `pas` : les boutons ‹ › et le libellé ; `sous` : une ligne de texte ; `boutons` : 'tous' (revue du soir et ↻),
+   * 'relire' (↻ seul) ou 'aucun'.
+   */
+  function mbEntete(o) {
+    const b = o.boutons || 'tous';
+    return `<div class="mb-hd"><div class="l1"><div class="t">${esc(nomShop())}</div>${b === 'tous' ? rvBouton(true) : ''}${b !== 'aucun' ? '<button type="button" class="mb-ic" data-recharger="1" aria-label="relire">↻</button>' : ''}</div>`
+      + (o.sous ? `<div class="sous">${o.sous}</div>` : '') + (o.pas ? `<div class="d ma-d">${o.pas}</div>` : '') + '</div>';
+  }
+  /** Le pas d'un jour (ou d'une semaine) : ‹ le libellé ›, la flèche de droite éteinte au bout. */
+  const mbPasJour = (lib, fin) => `<button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(lib)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button>`;
+  /* Au téléphone, c'est la page entière qui défile (18/11/2026), plus un bloc intérieur haut de 100dvh : Safari peut
+   * replier sa barre du bas, la barre d'onglets reste fixée au bas de l'écran. La position se lit et se pose ici. */
+  const mbY = () => window.scrollY || document.documentElement.scrollTop || 0;
+  const mbAller = y => { try { window.scrollTo(0, y || 0); } catch (e) { /* rien */ } };
   function rendMobile(m, d) {
     if (S.vue === 'ops') {
-      return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      return `${mbEntete({ pas: mbPasJour(maDate(), S.date >= AUJ) })}
       <div class="mb-sc"><div class="ma op-mob">${rendOpsMobile()}</div></div>${mbOnglets()}`;
     }
     if (S.vue !== 'semaine' && !['exp', 'ctrl'].includes(S.mo)) { S.mo = 'exp'; }
     const on = S.vue === 'semaine' ? 'sem' : S.mo;
     const fin = S.vue === 'semaine' ? bornesSemaine()[1] >= AUJ : S.date >= AUJ;
-    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+    let h = `${mbEntete({ pas: mbPasJour(maDate(), fin) })}
       <div class="mb-sc"><div class="ma">`;
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
     h += on === 'exp' ? maPageExp(m, d) : (on === 'ctrl' ? maPageCtrl() : maPageSem(m, d));
@@ -1480,7 +1535,7 @@
     const P = maEtats();
     const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'taches' ? 'tach' : (S.vue === 'jour' ? S.mo : '')))));
     // Six onglets depuis Tâches (08/11/2026).
-    return `<div class="mb-tabs mb-tabs5 mb-tabs6 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
+    return `<div class="mb-tabs ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -2464,9 +2519,8 @@
   /* --- le plan d'action du franchisé : le module des visites, monté ici ------ */
   function rendActions(mobile) {
     let h = '';
-    // Au téléphone, le même en-tête que les autres onglets : le logo à sa
-    // taille, le nom qui se raccourcit, la date.
-    if (mobile) { h += `<div class="mb-hd"><img src="../assets/img/logo.png" alt=""><div><div class="t">${esc(nomShop())}</div><div class="d">${esc(fDL(AUJ))}</div></div><span class="sp"></span></div>`; }
+    // Au téléphone, le même en-tête que les autres onglets : le nom qui se raccourcit, la date dessous.
+    if (mobile) { h += mbEntete({ sous: esc(fDL(AUJ)), boutons: 'aucun' }); }
     // Au téléphone, le module défile sous la barre d'onglets, comme les autres vues.
     h += mobile ? '<div class="mb-sc"><div id="db-actions" style="flex:1 0 auto"></div></div>' + mbOnglets() : '<div id="db-actions" style="min-height:60vh"></div>';
     return h;
@@ -2965,7 +3019,9 @@
   function opDuel(D, o) {
     const { now, fin, JD, m, ca, tk } = D;
     // o.comptoir : la jauge du comptoir seul (opDuelSplit) ; o.j7Total : J−7 sans son B2B lu, comptoir et pro ensemble.
-    const cpt = !!(o && o.comptoir), sous7 = cpt ? (o.j7Total ? 'comptoir + pro · ' : 'comptoir · ') : '';
+    // Au téléphone, « comptoir · » quitte les sous-libellés des pistes (18/11/2026) : le titre de la carte le dit déjà, et
+    // le libellé tient à gauche de sa barre. « comptoir + pro » reste : J−7 compte alors aussi ses clients pro.
+    const cpt = !!(o && o.comptoir), mob = estMobile(), sous7 = cpt ? (o.j7Total ? 'comptoir + pro · ' : (mob ? '' : 'comptoir · ')) : '';
     const estAuj = !!(JD && JD.estAujourdhui);
     if (!m) { return `<div class="op-duel"><div class="dh"><span class="lab">Objectif du jour</span><span class="dr">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div>${opSk()}</div>`; }
     const B = opDuelBase(D), j7 = B.j7, obj = B.obj;
@@ -2979,7 +3035,8 @@
     // Les étiquettes : à droite de leur ancre quand la place le permet, sinon à l'intérieur du segment (à gauche de
     // l'ancre) ; deux étiquettes qui se chevaucheraient fusionnent. Au téléphone, la seconde passe sous la barre (css).
     const tel = innerWidth <= 700 || document.documentElement.classList.contains('mob');
-    const barPx = Math.max(240, tel ? innerWidth - 60 : innerWidth - 250);
+    // Au téléphone, la barre commence après le libellé de la piste (86 px + 8, 18/11/2026) : la place des étiquettes en tient compte.
+    const barPx = Math.max(200, tel ? innerWidth - 60 - (estMobile() ? 94 : 0) : innerWidth - 250);
     const larg = t => (t.replace(/<[^>]+>/g, '').length * (tel ? 5.8 : 6.6) + 18) * 100 / barPx;
     const pill = (e, ded) => `<span class="val${e.cls ? ' ' + e.cls : ''}${ded ? ' dedans' : ''}${tel && e.cls && e.p < larg(e.txt) ? ' g' : ''}" style="left:${e.p.toFixed(1)}%"${e.titre ? ` title="${e.titre}"` : ''}>${e.txt}</span>`;
     const etiquettes = L => {
@@ -2999,7 +3056,7 @@
     const LA = [];
     if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
     if (pP != null && pP > pA) { LA.push({ p: pP, txt: 'projection ' + fE(B.proj), cls: 'proj', titre: 'au rythme de la journée, ' + fE(B.proj) + ' ce soir' }); }
-    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', (cpt ? 'comptoir · ' : '') + (fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now)),
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', (cpt && !mob ? 'comptoir · ' : '') + (fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now)),
       `<div class="seg ${atteint ? 'or' : 'fait'}" style="width:${pA.toFixed(1)}%"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%" title="projection au rythme de la journée : ${fE(B.proj)}"></div>` : ''}`, LA);
     if (j7) {
       const p7 = pct(j7.ca), p7j = j7.moment ? pct(j7.caJour) : p7;
@@ -3013,8 +3070,9 @@
     h += depasse ? `<div class="op-dax ab"><span>0 €</span><span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">objectif ${cpt ? 'comptoir ' : ''}${fE(obj)}</span></div>`
       : `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + (cpt ? 'comptoir ' : '') + fE(obj) : fE(echelle)}</span></div>`;
     // La ligne « face à samedi dernier · clients · panier · au rythme de la journée » est retirée (10/10/2026).
-    // Les commandes du jour (06/11/2026) : une ligne qui ouvre leur feuille, comptoir et webshop.
-    return h + opCmdLigne(D) + '</div>';
+    // Les commandes du jour (06/11/2026) : une ligne qui ouvre leur feuille, comptoir et webshop ; depuis le 18/11/2026,
+    // le ruban des canaux quand les commandes du panel se lisent (opRuban), la ligne seule sinon.
+    return h + opRuban(D, ca, j7, B.jourNom, cpt) + '</div>';
   }
   /**
    * Les jauges du comptoir et du B2B (23/10/2026, Sam, maquette A) : la jauge du haut ne compte que le comptoir, face à
@@ -3078,11 +3136,50 @@
     const L = D && Array.isArray(D.listeC) ? D.listeC : [];
     if (!L.length) { return ''; }
     const C = L.filter(c => c.canal === 'compt'), W = L.length - C.length, tot = L.reduce((a, c) => a + (+c.montant || 0), 0);
+    // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée (opCmdVerif).
+    const v = opCmdVerif(D).v;
+    return `<div class="op-cmdl" data-cmdm="tous" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
+  }
+  /* ── Le ruban des canaux (18/11/2026, Sam : « différencier les ventes comptoir et les ventes webshop », maquette C de
+   * docs/maquettes/comptoir-webshop) ──────────────────────────────────────────────────────────────────────────────
+   * Sous la jauge, qui ne change pas : la part de chaque canal, puis trois colonnes — le comptoir (la vente directe :
+   * la valeur de la jauge moins les commandes encaissées en caisse), les commandes prises au comptoir, le webshop
+   * (click & collect et livraison, encaissés ou payés en ligne) —, chacune face au même jour la semaine d'avant à la
+   * même heure. Une commande compte quand elle est vendue : encaissée ou remise. Celle d'un client des tickets pro
+   * (`pro`, lu par le serveur) reste à la jauge B2B. J−7 : les commandes de /exploitation/canaux (`j7.liste`) dont le
+   * retrait tombe avant l'heure de la jauge de J−7. Un appui sur une colonne ouvre la feuille « Commandes du jour » sur
+   * son canal. Sans commande ni aujourd'hui ni à J−7, ou sans commandes lues : la ligne « Commandes du jour » seule. */
+  function opRuban(D, T, j7, jourNom, cpt) {
+    const CA = D && D.CA;
+    if (!CA || CA.error || CA.indispo || !Array.isArray(CA.liste) || T == null) { return opCmdLigne(D); }
+    const vendue = c => !c.pro && !c.differe && (c.encaissee || bmRemise(c));
+    const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0);
+    const parts = (L, total) => { const C = L.filter(c => c.canal === 'compt'), W = L.filter(c => c.canal !== 'compt');
+      return { C, W, direct: Math.max(0, total - somme(L.filter(c => c.encaissee))), cmd: somme(C), web: somme(W) }; };
+    const A = parts(CA.liste.filter(vendue), T);
+    const L7 = j7 && CA.j7 && Array.isArray(CA.j7.liste) && CA.j7.date === j7.date ? CA.j7.liste.filter(c => vendue(c) && (!j7.moment || String(c.heure || '') <= j7.moment)) : null;
+    const P = L7 && j7.ca != null ? parts(L7, j7.ca) : null;
+    if (!A.C.length && !A.W.length && !(P && (P.C.length || P.W.length))) { return opCmdLigne(D); }
+    const tot = A.direct + A.cmd + A.web, pc = v => tot > 0 ? (100 * v / tot >= 10 ? fP0(100 * v / tot) : fP(100 * v / tot)) : '—';
+    const jn = esc(String(jourNom || '').slice(0, 3)) + '. ' + (j7 ? fD(j7.date) : '');
+    const ecart = (a, b) => b > 0 ? ` · <em class="${a >= b ? 'ok' : 'ko'}">${fSP(100 * (a - b) / b)}</em>` : '';
+    const nCC = A.W.filter(c => c.canal === 'cc').length, nLiv = A.W.length - nCC;
+    const col = (f, k, nom, v, s, j) => `<div${f ? ` data-cmdm="${f}" role="button" tabindex="0"` : ''}><div class="k"><i class="pt ${k}"></i>${nom}${f ? '<span class="ch">›</span>' : ''}</div><div class="v">${v}</div><div class="s">${s}</div>${P ? `<div class="j">${j}</div>` : ''}</div>`;
+    const cols = col('', 'c', 'Comptoir', fE(A.direct), pc(A.direct) + (cpt ? ' · vente directe' : ' · pro compris'), `${jn}${j7 && j7.moment ? ' à ' + esc(j7.moment) : ''}<br>${P ? fE(P.direct) + ecart(A.direct, P.direct) : ''}`)
+      + col('compt', 'k', 'Commandes', fU(A.cmd), A.C.length ? plu(A.C.length, 'prise') + ' au comptoir' : 'aucune', `${jn}<br>${P ? fU(P.cmd) + ' · ' + P.C.length : ''}`)
+      + col('web', 'w', 'Webshop', fU(A.web), A.W.length ? [nCC ? nCC + ' click & collect' : '', nLiv ? plu(nLiv, 'livraison') : ''].filter(Boolean).join(' · ') : 'aucune commande', `${jn}<br>${P ? fU(P.web) + ' · ' + P.W.length : ''}`);
+    const mix = [[A.direct, 'c'], [A.cmd, 'k'], [A.web, 'w']].filter(x => x[0] > 0).map(([v, k]) => `<i class="${k}" style="flex:${v.toFixed(2)} 0 0"></i>`).join('');
+    const V = opCmdVerif(D), maint = D.now == null || S.date < AUJ ? null : opHM(D.now);
+    return `<div class="op-rb"><div class="t"><span>Par canal${maint ? ' · à ' + maint : ''}</span><span>la part de chaque canal</span></div>
+      <div class="mix" title="comptoir ${pc(A.direct)} · commandes ${pc(A.cmd)} · webshop ${pc(A.web)}">${mix}</div><div class="col">${cols}</div>
+      <div class="bas" data-cmdm="tous" role="button" tabindex="0"><span>toucher un canal : ses commandes${V.v ? ` · <em>${V.v} à vérifier</em>` : ''}</span><span class="ch">›</span></div></div>`;
+  }
+  /** Les commandes du jour à vérifier (la ligne « Commandes du jour » et le ruban) : une précommande remise sans ticket
+   *  caisse, ou une commande pas remise dont l'heure est passée ; une commande réglée en paiement différé est retirée. */
+  function opCmdVerif(D) {
+    const L = D && Array.isArray(D.listeC) ? D.listeC : [];
     const maint = S.date < AUJ ? '24:00' : (D.now == null ? '24:00' : opHM(D.now));
-    // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée.
-    // Une commande réglée en paiement différé (09/11/2026) est retirée : rien à vérifier.
-    const v = L.filter(c => !c.differe && (bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint)).length;
-    return `<div class="op-cmdl" data-cmdm="1" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
+    return { L, v: L.filter(c => !c.differe && (bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint)).length };
   }
   /** Garder le défilement d'une feuille quand elle se redessine (une lecture qui arrive, le relu des deux minutes). */
   function bmPeindre(box, html) {
@@ -3090,7 +3187,7 @@
     box.innerHTML = html;
     const m1 = box.querySelector('.fi-modale'); if (m1 && y) { m1.scrollTop = y; }
   }
-  function bmFermerClasse() { if (!S.fiche && !S.invModale && !S.stk && !S.b2b && !S.cmdm) { document.documentElement.classList.remove('db-fiche-ouverte'); } }
+  function bmFermerClasse() { if (!S.fiche && !S.invModale && !S.stk && !S.b2b && !S.cmdm && !S.eqm) { document.documentElement.classList.remove('db-fiche-ouverte'); } }
   const bmLignes = L => `<table class="bm-art">${L.map(l => `<tr><td>${l.q != null ? nf(l.q, l.q % 1 ? 1 : 0) + ' × ' : ''}${esc(l.nom)}</td><td class="n p">${l.pu != null ? fU(l.pu) : ''}</td><td class="n">${l.total != null ? fU(l.total) : ''}</td></tr>`).join('')}</table>`;
 
   /* — Ventes B2B — */
@@ -3141,9 +3238,56 @@
   }
 
 
+  /* — L'équipe du jour, au téléphone (18/11/2026, refonte mobile, maquette vues/equipe.png) —
+   * La feuille du bas : quatre chiffres (au planning, faites, vendu, à l'heure de vente), puis une ligne par personne,
+   * rangée par vendu à l'heure, qui se déplie (postes, tickets, panier, articles, heures de vente, cuissons). Les mêmes
+   * calculs que la carte du bureau (opEquipeLignes) ; le coût de chacun reste au bureau. Ouverte depuis « La journée » :
+   * le bouton « L'équipe › », ou la barre d'une personne, dépliée d'office. */
+  const eqmCle = n => String(n || '').trim().toLowerCase();
+  function eqmOuvrir(nom) { S.eqm = { ouv: nom ? { [eqmCle(nom)]: true } : {}, retour: document.activeElement }; eqmRendre(); }
+  function eqmFermer() { const r = S.eqm && S.eqm.retour; S.eqm = null; eqmRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
+  function eqmRendre() {
+    let box = document.getElementById('db-eqm');
+    if (!S.eqm) { if (box) { box.innerHTML = ''; } bmFermerClasse(); return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-eqm'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const D = opDonnees(), M = S.eqm;
+    let corps;
+    if (!D.m || !D.planning.length) { corps = `<div class="bm-in bm-msg">${D.m ? 'Pas de planning lu pour ce jour.' : 'lecture du Résultat du jour…'}</div>`; }
+    else {
+      const { L, horsPl, V, heureT } = opEquipeLignes(D), T = L.concat(horsPl);
+      const tCa = T.reduce((a, l) => a + (l.ca || 0), 0), tTk = T.reduce((a, l) => a + (l.tickets || 0), 0), tHV = L.reduce((a, l) => a + l.hV, 0);
+      const prevu = L.reduce((a, l) => a + l.prevu, 0), fait = L.reduce((a, l) => a + l.fait, 0);
+      const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
+      const k4 = `<div class="bm-in"><div class="bm-k4">
+        <div><div class="k">Au planning</div><div class="v">${nf(prevu, 1)} h</div><div class="s">${plu(L.length, 'personne')}</div></div>
+        <div><div class="k">Faites</div><div class="v">${nf(fait, 1)} h</div><div class="s">${D.now == null ? 'la journée' : 'à ' + esc(heureT)}</div></div>
+        <div><div class="k">Vendu</div><div class="v">${V ? fE(tCa) : '—'}</div><div class="s">${V ? plu(tTk, 'ticket') : 'ventes par vendeur pas lues'}</div></div>
+        <div><div class="k">À l’heure de vente</div><div class="v">${V && tHV ? fE(tCa / tHV) + '/h' : '—'}</div><div class="s">${V && tTk ? 'panier ' + fU(tCa / tTk) : ''}</div></div></div></div>`;
+      const ligne = l => {
+        const o = !!M.ouv[l.k];
+        const sous = l.hors ? 'a vendu sans être au planning' : [l.horaires, hh(l.fait) + ' faites', l.etat].join(' · ');
+        const R = [l.postes && l.postes.length ? ['Postes', esc(l.postes.join(', '))] : null, ['Tickets', l.tickets != null ? fN(l.tickets) : '—'],
+          ['Panier', l.tickets ? fU(l.ca / l.tickets) : '—'], ['Articles par ticket', l.articles != null ? nf(l.articles, 1) : '—'],
+          l.hors ? null : ['Heures de vente', hh(l.hV)], l.pieces ? ['Produit', fN(l.pieces) + ' p. · ' + esc(l.cuissons.join(', '))] : null].filter(Boolean);
+        return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-eqmt="${esc(l.k)}" role="button" tabindex="0" aria-expanded="${o}"><span class="h"><i class="eqm-av">${esc(String(l.nom || '?').charAt(0).toUpperCase())}</i></span>`
+          + `<span class="q"><b>${esc(l.nom)}</b><small>${esc(sous)}</small></span><span class="m">${l.ca != null ? fE(l.ca) : '—'}${l.parH != null ? `<span class="bm-tg">${fE(l.parH)}/h</span>` : ''}</span><span class="c">${o ? '▴' : '▾'}</span></div>`
+          + (o ? `<div class="art"><table class="bm-art">${R.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td></tr>`).join('')}</table></div>` : '') + '</div>';
+      };
+      corps = k4 + `<div class="bm-sec"><b>Par vendu à l’heure</b><span>toucher une personne : le détail</span></div><div class="bm-liste">${T.map(ligne).join('')}</div>`
+        + `<div class="bm-in"><div class="bm-msg">Vendu : le vendeur sur chaque ticket. À l’heure : ses ventes ÷ ses heures où le magasin a vendu. Le coût de chacun reste au bureau.</div></div>`;
+    }
+    bmPeindre(box, `<div class="fi-voile" data-eqmx="1"></div><div class="fi-modale bm-modale" role="dialog" aria-modal="true" aria-label="L’équipe du jour"><div class="bm-poi"></div>
+      <div class="fi-hd"><div class="t"><h2>L’équipe du jour</h2><div class="s">${esc(nomShop())} · ${S.date === AUJ ? 'aujourd’hui' : esc(fDL(S.date))}${D.now != null ? ' · à ' + opHM(D.now) : ''}</div></div><button type="button" class="fi-x" data-eqmx="1" aria-label="Fermer">✕</button></div>
+      <div class="bm-bd">${corps}</div></div>`);
+    box.querySelectorAll('[data-eqmx]').forEach(b => b.addEventListener('click', eqmFermer));
+    box.querySelectorAll('[data-eqmt]').forEach(b => { const f = () => { const k = b.dataset.eqmt; S.eqm.ouv[k] = !S.eqm.ouv[k]; eqmRendre(); };
+      b.addEventListener('click', f); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }); });
+  }
+
   /* — Commandes du jour — */
   const cleCmdm = () => 'cmdd|' + S.shop + '|' + S.date;
-  function cmdmOuvrir() { S.cmdm = { f: 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, false); cmdmRendre(); }
+  function cmdmOuvrir(f) { S.cmdm = { f: ['compt', 'web'].includes(f) ? f : 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, false); cmdmRendre(); }
   function cmdmFermer() { const r = S.cmdm && S.cmdm.retour; S.cmdm = null; cmdmRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
   // L'état de chaque commande face à la caisse du jour : libellé, couleur du repère, étiquette de la ligne.
   const CMD_ETAT = {
@@ -3404,7 +3548,9 @@
     // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
     // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
     // cartes du dessous : retirées au téléphone.
-    let h = opDuelSplit(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
+    // Le duel chiffre par chiffre, une colonne par jour, prenait un écran entier : au téléphone, le tableau court
+    // « Face à mercredi dernier » (18/11/2026, refonte mobile, étape 2). Le duel complet reste au bureau.
+    let h = opDuelSplit(D) + opDuelMob(D) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
@@ -3413,9 +3559,35 @@
     // un second graphique des heures, restent au bureau.
     h += opJourneeMob(D);
     // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons). Le P&L, les
-    // ventes par catégorie, les promotions et les portions sont dans Exploitation ; les photos, les commandes, le stock et
-    // la poubelle dans Contrôle. Les onglets du bas y mènent ; plus de ligne de renvoi (11/10/2026).
+    // ventes par catégorie, les promotions et les portions sont dans Exploitation ; les photos dans Contrôle. Les onglets
+    // du bas y mènent ; plus de ligne de renvoi (11/10/2026).
+    // Le stock revient en bas d'Opérationnel (18/11/2026, refonte mobile) : Contrôle ne garde que les photos depuis le
+    // 20/10, il n'était plus nulle part au téléphone. La barre de la vue Semaine, sa liste en liste déroulante.
+    h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
     return h;
+  }
+  /**
+   * Le duel au téléphone (18/11/2026, maquette dashboard-mobile-v3, « Face aux mercredis ») : deux lignes, les clients
+   * et le panier ; aujourd'hui, le même jour la semaine d'avant à la même heure, l'écart entre les deux, et un repère —
+   * pour les clients la moyenne des 6 derniers mêmes jours (la journée entière, `refTickets`), pour le panier le réseau
+   * (panReseau). Les mêmes chiffres que le duel du bureau (opDuelBase), sans la journée entière de J−7.
+   */
+  function opDuelMob(D) {
+    const { now, fin, JD, m, tk } = D;
+    if (!m) { return ''; }
+    const B = opDuelBase(D), j7 = B.j7;
+    const jl = esc(B.jourNom.slice(0, 3)) + '.' + (j7 ? ' ' + fD(j7.date) : '');
+    const ec = d => d == null ? '<span class="eq">—</span>' : `<span class="${sensDe(d)}">${fSP(d)}</span>`;
+    const panR = JD ? panReseau(JD.reseau, B.panBase) : null;
+    const L = [['Clients', fN(tk), j7 ? fN(j7.tickets) : '—', ec(B.dTk), m.refTickets != null ? fN(m.refTickets) : '—'],
+      [B.panBase === 'comptoir' ? 'Panier comptoir' : 'Panier', B.panA != null ? fU(B.panA) : '—', B.pan7 != null ? fU(B.pan7) : '—', ec(B.dPan), panR ? fU(panR) : '—']];
+    const note = [j7 ? jl + (j7.moment ? ' à ' + esc(j7.moment) : ', la journée') : 'pas de ' + esc(B.jourNom) + ' gravé la semaine d’avant',
+      'réf. clients : ' + esc((JD && JD.reference && JD.reference.libelle) || 'la moyenne des derniers mêmes jours') + ', la journée',
+      'réf. panier : le réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')].join(' · ');
+    return `<div class="db-card op-bloc op-dm"><div class="ct"><span class="op-h2">Face à ${esc(B.jourNom)} dernier</span><span class="db-mini">clients et panier</span></div>
+      <table><thead><tr><th></th><th>${fin ? 'Jour' : 'Auj.'}</th><th>${jl}</th><th>écart</th><th>réf.</th></tr></thead>
+      <tbody>${L.map(r => `<tr><td>${r[0]}</td><td class="a">${r[1]}</td><td class="b">${r[2]}</td><td class="d">${r[3]}</td><td class="r">${r[4]}</td></tr>`).join('')}</tbody></table>
+      <div class="op-dm-n">${note}</div></div>`;
   }
   /**
    * La journée au téléphone (11/10/2026) : une frise de la journée. Une barre fine par personne au planning, le nom dedans
@@ -3437,7 +3609,8 @@
       const d = opMin(p.debut), f = opMin(p.fin), nom = p.nom || (p.postes || []).join(', ');
       const cls = now == null ? 'jr' : (d <= now && now < f ? 'ici' : (f <= now ? 'fini' : 'av'));
       const etat = { ici: 'en poste', fini: 'fini', av: 'arrive à ' + p.debut, jr: 'au planning' }[cls];
-      return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}"><b>${esc(nom)}</b></i></div>`;
+      // Toucher la barre d'une personne ouvre « L'équipe du jour » sur elle (18/11/2026).
+      return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}" data-eqm="${esc(p.nom || '')}" role="button" tabindex="0"><b>${esc(nom)}</b></i></div>`;
     }).join('');
     const CS = cuissons.slice().sort((a, b) => opMin(a.four) - opMin(b.four)).map(c => {
       const t = opMin(c.four), cls = c.valide ? 'ok' : (now != null && t > now ? 'av' : 'kv');
@@ -3453,7 +3626,7 @@
       <div class="jm-ax">${axe.join('')}</div>
       <div class="jm-z">${tn}${barres || '<div class="db-mini">pas de planning lu</div>'}</div>
       ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
-      </div></div>`;
+      </div>${planning.length ? '<div class="op-tap op-eqm" data-eqm="" role="button" tabindex="0"><span>L’équipe du jour : ventes, heures, à l’heure</span><span>›</span></div>' : ''}</div>`;
   }
   /**
    * L'équipe du jour (20/10/2026, maquette D choisie par Sam) : au clic sur une barre de la frise, une ligne par personne —
@@ -3466,7 +3639,9 @@
    *    production (boulangerie, four, production, cuisine, pâtisserie, labo). Sans cela, rien n'est attribué.
    *  - Coût : son taux horaire au panel × ses heures faites ; un franchisé ne pèse pas au P&L, sa ligne le dit.
    */
-  function opEquipe(D) {
+  /** L'équipe du jour, ligne par ligne (le calcul de opEquipe, 18/11/2026 : commun à la carte du bureau et à la feuille du
+   *  téléphone, eqmRendre). Rangée par ventes à l'heure de vente, celles et ceux qui ont vendu hors planning à part. */
+  function opEquipeLignes(D) {
     const { now, m, planning, cuissons } = D;
     const fin = now == null ? 24 * 60 : now;
     const heureT = now == null ? 'la journée' : String(Math.floor(now / 60)).padStart(2, '0') + ':' + String(now % 60).padStart(2, '0');
@@ -3501,6 +3676,11 @@
     const horsPl = V ? Object.keys(venteDe).filter(k => !P[k]).map(k => ({ k, nom: venteDe[k].nom || 'Sans vendeur', hors: true, ca: venteDe[k].ca, tickets: venteDe[k].tickets,
       articles: venteDe[k].artLu && venteDe[k].tickets ? venteDe[k].articles / venteDe[k].tickets : null })) : [];
     L.sort((a, b) => (b.parH == null ? -1 : b.parH) - (a.parH == null ? -1 : a.parH) || (b.ca || 0) - (a.ca || 0));
+    return { L, horsPl, V, heureT, ov, cleNom };
+  }
+  function opEquipe(D) {
+    const { now, m, planning, cuissons } = D;
+    const { L, horsPl, V, heureT, ov, cleNom } = opEquipeLignes(D);
     const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
     const pct = (a, b) => b ? Math.round(100 * a / b) + ' %' : '—';
     const sel = S.eqSel ? cleNom(S.eqSel) : null, dep = S.eqDeplie ? cleNom(S.eqDeplie) : null;
@@ -5164,9 +5344,7 @@
     const pas = (attr, n, ok, lib) => `<button type="button" class="ma-pas" ${attr}="${n}" aria-label="${lib}"${ok ? '' : ' disabled'}>${n < 0 ? '‹' : '›'}</button>`;
     const per = an ? pas('data-pry', -1, y > PR_Y_DEBUT, 'année précédente') + `<b>${y}${y === yMax ? ' · en cours' : ''}</b>` + pas('data-pry', 1, y < yMax, 'année suivante')
       : pas('data-prm', -1, m > PR_M_DEBUT, 'mois précédent') + `<b>${esc(prLibMois(m))}${m === mMax ? ' · en cours' : ''}</b>` + pas('data-prm', 1, m < mMax, 'mois suivant');
-    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d">${per}</div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+    let h = `${mbEntete({ pas: per })}
       <div class="mb-sc"><div class="ma pr-mob">
       <div class="pr-mob-f"><div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
         <div class="db-ong db-ong-p">${[['toutes', 'Toutes'], ['magasin', 'Du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>`;
@@ -5184,7 +5362,9 @@
     if (an) {
       const V = prAnneeVue(D, garde);
       if (!V.rangs.length) { return vide('Aucune prime gagnée dans ce magasin cette année-là' + (filtre === 'magasin' ? ' parmi celles du magasin.' : '.')); }
-      h += `<div class="ma-v"><span class="n long">${esc(V.total)}</span><span class="t">gagnés en ${y}<em>${esc(V.periode)}</em></span></div>` + prEquipeAn(D, V, true);
+      // Le héros de l'année (18/11/2026, refonte mobile, étape 4) : la même carte que les autres onglets.
+      h += `<div class="db-card ma-hero"><div class="top"><span class="kick">Les primes de ${y}</span>${y === yMax ? '<span class="chip">en cours</span>' : ''}</div>
+        <div class="big"><b>${esc(V.total)}</b><span>gagnés en ${y}</span></div><div class="sub">${esc(V.periode)}</div></div>` + prEquipeAn(D, V, true);
       h += V.rangs.map(r => carte('an:' + r.id, r.nom, prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''), esc(prEur(V.totalDe(r))), '',
         () => V.cols.map(p => { const c = (r.cases || {})[p.cle]; return `<div class="pr-ml${c ? ' pr-gagne' : ''}"><span class="pr-ml-l">${esc(p.lib)}<small>${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
           <span class="pr-ml-v">${c ? `<span class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</span><span class="pr-b">${esc(prPl(c.fois, 'mois'))}</span>` : '<span class="pr-hors">·</span>'}</span></div>`; }).join(''))).join('');
@@ -5195,7 +5375,10 @@
     const V = prMoisVue(D, p => garde(p) && !prEstEquipe(p));
     const total = D.vendeuses.reduce((t, v) => t + (+v.acquis || 0), 0), nG = V.cols.reduce((t, p) => t + (+p.gagnees || 0), 0);
     const nV = V.rangs.filter(v => !v.franchise).length;
-    h += `<div class="ma-v"><span class="n long">${esc(prEur(total))}</span><span class="t">${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}<em>${prPl(nV, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</em></span></div>`;
+    // Le héros du mois (18/11/2026, refonte mobile, étape 4) : la même carte que les autres onglets.
+    h += `<div class="db-card ma-hero"><div class="top"><span class="kick">Les primes de ${esc(prLibMois(m))}</span><span class="chip${D.enCours ? '' : ' ok'}">${D.enCours ? 'en cours' : 'mois clos'}</span></div>
+      <div class="big"><b>${esc(prEur(total))}</b><span>${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}</span></div>
+      <div class="sub">${prPl(nV, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</div></div>`;
     h += prEquipe(D, garde, true);
     h += V.rangs.map(v => {
       const cs = V.cols.map(p => ({ p, k: prCase(p, (v.cases || {})[p.cle], V.clos) }));
@@ -6879,10 +7062,8 @@
   /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
   function rendTachesMobile() {
     const t = new Date(S.date + 'T12:00:00');
-    const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' });
-    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="jour précédent">‹</button><b>${esc(date)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="jour suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+    const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `${mbEntete({ pas: mbPasJour(date, S.date >= AUJ) })}
       <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag(true)}</div></div>${mbOnglets()}`;
   }
   function tjAller(d, voir) {
@@ -7370,18 +7551,18 @@
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
       if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
-      if (S.vue === 'taches') { const sc = $.querySelector('.mb-sc'), top = sc ? sc.scrollTop : 0; $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); const sc2 = $.querySelector('.mb-sc'); if (sc2 && S.tjHaut !== S.date) { S.tjHaut = S.date; sc2.scrollTop = 0; } else if (sc2) { sc2.scrollTop = top; }
+      if (S.vue === 'taches') { const top = mbY(); $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); if (S.tjHaut !== S.date) { S.tjHaut = S.date; mbAller(0); } else { mbAller(top); }
         // Venu de « voir › » dans Contrôle : la recherche, dès qu'elle est rendue.
         if (S.tjAllerRet) { const r = document.getElementById('tj-recherche'); if (r) { S.tjAllerRet = false; r.scrollIntoView({ block: 'start' }); } } return; }
       // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
-      if (S.vue === 'primes') { const a = $.querySelector('.pr-mob'), sc = a ? a.closest('.mb-sc') : null, top = sc ? sc.scrollTop : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } return; }
+      if (S.vue === 'primes') { const top = $.querySelector('.pr-mob') ? mbY() : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); mbAller(top); return; }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
         const champ = rcGarder();
         $.innerHTML = rendReclamation(); $.classList.add('mob'); brancher();
         cqRestaurer(cqPos); rcRestaurer(champ);
         // Après un envoi, on remonte : le bandeau « Envoyée » est en haut.
-        if (S.rcHaut) { S.rcHaut = false; const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } }
+        if (S.rcHaut) { S.rcHaut = false; mbAller(0); }
         return;
       }
       $.innerHTML = rendMobile(m, d) + cqLoupe(true);
@@ -9749,13 +9930,14 @@
   /** La bande garde sa position quand la page se redessine — et, au
    * téléphone, le mur aussi : ouvrir une photo ne doit pas ramener en haut. */
   function cqGarder() {
-    const p = document.getElementById('db-cqpiste'), sc = $.querySelector('.mb-sc');
-    return { x: p ? p.scrollLeft : 0, y: sc ? sc.scrollTop : 0, ou: S.vue + '|' + S.date + '|' + S.shop };
+    const p = document.getElementById('db-cqpiste'), mob = $.classList.contains('mob');
+    return { x: p ? p.scrollLeft : 0, y: mob ? mbY() : 0, mob, ou: S.vue + '|' + S.date + '|' + S.shop };
   }
   function cqRestaurer(g) {
     const meme = g && g.ou === S.vue + '|' + S.date + '|' + S.shop;
-    const p = document.getElementById('db-cqpiste'), sc = $.querySelector('.mb-sc');
-    if (sc && meme && g.y) { sc.scrollTop = g.y; }
+    const p = document.getElementById('db-cqpiste');
+    // Au téléphone, la page reprend sa place après un nouveau rendu ; un autre onglet, jour ou magasin repart du haut.
+    if ($.classList.contains('mob')) { if (meme && g.mob) { mbAller(g.y); } else { mbAller(0); } }
     if (p) { if (S.cqRaz || !meme) { S.cqRaz = false; p.scrollLeft = 0; } else { p.scrollLeft = g.x; } cqFleches(); }
     const ba = document.getElementById('db-cqba'), on = ba && ba.querySelector('.on');
     if (on) { ba.scrollLeft = on.offsetLeft - ba.clientWidth / 2 + on.clientWidth / 2; }
@@ -10002,9 +10184,7 @@
     return h + vis.map(rcCarte).join('') + '</div>';
   }
   function rendReclamation() {
-    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d">Réclamation fournisseur</div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
+    return `${mbEntete({ sous: 'Réclamation fournisseur', boutons: 'relire' })}
       <div class="mb-sc"><div class="rc-vue">${rcFormulaire()}${rcHistorique()}</div></div>${mbOnglets()}`;
   }
   /** Le champ actif garde son focus et sa sélection quand la page se redessine. */
@@ -10774,12 +10954,19 @@
       el.addEventListener('click', e => { const p = e.target.closest('[data-b2bj]'); b2bOuvrir(p ? p.dataset.b2bj : el.dataset.b2b); });
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b2bOuvrir(el.dataset.b2b); } });
     });
+    // La feuille « Commandes du jour » s'ouvre sur le canal touché (le ruban des canaux, 18/11/2026) : tous, compt, web.
     $.querySelectorAll('[data-cmdm]').forEach(el => {
-      el.addEventListener('click', cmdmOuvrir);
-      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cmdmOuvrir(); } });
+      el.addEventListener('click', e => { e.stopPropagation(); cmdmOuvrir(el.dataset.cmdm); });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); cmdmOuvrir(el.dataset.cmdm); } });
+    });
+    // L'équipe du jour au téléphone (18/11/2026) : le bouton de « La journée » ou la barre d'une personne.
+    $.querySelectorAll('[data-eqm]').forEach(el => {
+      el.addEventListener('click', e => { e.stopPropagation(); eqmOuvrir(el.dataset.eqm); });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); eqmOuvrir(el.dataset.eqm); } });
     });
     b2bRendre();
     cmdmRendre();
+    eqmRendre();
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
     // L'assistant s'ouvre en pleine page au bureau (17/11/2026) ; la fenêtre reste pour la demande au bureau et au téléphone.
     $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => { if (b.dataset.iaouvrir === 'd') { iaOuvrir('d'); } else if (estMobile()) { iaOuvrir(null); } else { iaPage(null); } }));
@@ -10887,7 +11074,7 @@
       const k = b.dataset.mo, avant = S.vue;
       if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else if (k === 'tach') { S.vue = 'taches'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
-      if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
+      if (S.vue === avant) { rendre(); mbAller(0); } else { mbAller(0); charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
     $.querySelectorAll('[data-invmodale]').forEach(b => {
       b.addEventListener('click', e => { e.stopPropagation(); invModaleOuvrir(); });

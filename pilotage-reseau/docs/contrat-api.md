@@ -3058,7 +3058,8 @@ Un magasin :
       jour:     { joursLus, caisse, tickets, comptoir, cc: {n, ca}, liv: {n, ca}, webshop, encaisse, total, part },
       serie:    [ { j, lu, caisse, tickets, comptoir, cc, liv, ccN, livN } × 14 ],
       quatorze: { webshop, total, cc: {n, ca}, liv: {n, ca} },
-      liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut, encaissee } ],   toutes les commandes du jour, précommandes au comptoir comprises
+      liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut, encaissee, differe, pro } ],   toutes les commandes du jour, précommandes au comptoir comprises
+      j7:       { date, liste: [ { heure, canal, montant, statut, encaissee, pro } ] },   le même jour la semaine d'avant (18/11/2026)
       nWebshop, aPreparer, demain: { n, ca }, indispo, source }
 
 Une période (`du`, `au`, 62 jours au plus) rend `periode` à la place de
@@ -3078,6 +3079,30 @@ et `reseau` (comptoir, cc, liv, webshop, total, part, `livrent` et `vendent`
 `encaissee` (06/11/2026) : la commande porte un ticket caisse (`id_transaction`). La ligne « Commandes du jour » de
 l'onglet Opérationnel en compte les commandes à vérifier : une précommande au comptoir remise sans ticket, une commande
 pas remise dont l'heure de retrait est passée.
+
+**Le ruban des canaux (18/11/2026, maquette C de `docs/maquettes/comptoir-webshop`).** Un magasin, la journée, rend
+deux choses de plus :
+
+    liste[]: { …, differe, pro }          pro : la commande d'un client des tickets pro du jour, ou réglée en différé
+    j7:      { date, liste: [ { heure, canal, montant, statut, encaissee, pro } ] }   le même jour la semaine d'avant
+
+`pro` se lit sans appel de plus : un client des tickets pro gravés du jour, à TVA valide (`vpLu`, comme le CA pro du
+Résultat du jour), ou une commande rapprochée d'un ticket différé (`coDifferesDuReleve`). `j7.liste` porte les
+commandes du jour J−7, déjà lues avec les 14 jours ; rien de nominatif.
+
+Le dashboard en tire, sous la jauge du comptoir (`opRuban`), trois colonnes face à J−7 à la même heure :
+- **les commandes** prises au comptoir ;
+- **le webshop** : click & collect et livraison, encaissés ou payés en ligne ;
+- **la vente directe** : la valeur de la jauge moins les commandes encaissées en caisse.
+
+Les règles du calcul :
+- une commande compte quand elle est vendue, c'est-à-dire encaissée ou remise ;
+- une commande `pro` reste à la jauge B2B ;
+- à J−7, ne comptent que les commandes dont l'heure de retrait tombe avant l'heure de la jauge de J−7 ;
+- une commande encaissée un autre jour que son retrait est retirée du comptoir du jour de son retrait, comme dans
+  `jour.comptoir`.
+
+Tests : `php bin/tests_canaux.php`.
 
 ### `GET /exploitation/commandes/detail` — la feuille « Commandes du jour » : comptoir, webshop, rapprochées de la caisse (06/11/2026)
 
