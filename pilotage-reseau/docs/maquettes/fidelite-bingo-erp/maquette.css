@@ -2,10 +2,10 @@
    Jetons : ceux du handoff « design_handoff_bingo_points » (identiques à admin/public/assets/css/franchise-ui/tokens.css).
    Polices et illustrations : celles déjà rangées dans le dépôt (public/assets/ds/fonts, public/fidelite-test/ill). */
 
-@font-face{font-family:'FB Gotham';src:url('../../../public/assets/ds/fonts/Gotham_Light.otf') format('opentype');font-weight:300}
-@font-face{font-family:'FB Gotham';src:url('../../../public/assets/ds/fonts/Gotham_Regular_New.otf') format('opentype');font-weight:400}
-@font-face{font-family:'FB Gotham';src:url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:500}
-@font-face{font-family:'FB Vank';src:url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+/* Sans repli (18/11/2026, Sam) : Vank dessine ses accents (pas d'unicode-range) ; le texte est en Gotham_Medium,
+   le seul fichier Gotham qui contient aussi € et ×, à une seule graisse (pas de gras simulé). */
+@font-face{font-family:'FB Gotham';src:url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:100 900}
+@font-face{font-family:'FB Vank';src:url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype')}
 @font-face{font-family:'Playwrite DEVA';src:url('../../../public/assets/ds/fonts/PlaywriteDEVA-Regular.ttf') format('truetype')}
 
 :root{
