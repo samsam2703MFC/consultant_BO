@@ -26,6 +26,8 @@ use App\Services\Workshop\Product\StandardTime;
  *    tydzień N-1 bez danych (mniej niż 30 % poziomu) : sama średnia ;
  *  - produkty sezonowe (gamy panelu TF Buddy, tylko nasze produkty — katalog SL Food) : kartony wysłane w tej samej gamie
  *    rok temu (tydzień gamy N-1 → ten sam tydzień gamy w tym roku) × trend sieci ; poza gamą tylko zamówienia ;
+ *  - produkty sezonowe z historii ERP (spoza gam panelu, bez sprzedaży w ostatnich tygodniach i w tych samych tygodniach rok temu,
+ *    wysłane rok temu w tygodniach okna, np. galette) : kartony N-1 tego samego tygodnia × trend sieci ;
  *  - trend sieci = kartony ostatnich tygodni ÷ te same tygodnie rok temu (tygodnie N-1 z danymi), w granicach parametrów.
  * Z kartonów : palety (kartony na paletę), godziny produkcji (partia z arkusza albo marszruta) wobec zdolności (pracownicy ×
  * etat, dni pracy bez świąt PL), pieniądze na produkcję [221] (wydatki gotówkowe : kartony × (surowce i opakowania + płace
@@ -204,8 +206,27 @@ final class ForecastService
             }
             if ($outside >= $trendWeeks / 2) { $allYear[$pid] = array_values(array_unique(array_map(fn($s) => $s['name'], $list))); unset($seasonal[$pid]); }
         }
+        // Sezon z historii ERP : produkt spoza gam panelu (albo bez połączenia), którego nie było w ostatnich tygodniach ani w tych
+        // samych tygodniach rok temu, a który rok temu wysłano w tygodniach okna (np. galette w grudniu i styczniu) — prognoza =
+        // jego kartony N-1 tego tygodnia × trend sieci. N-1 = 52 tygodnie wcześniej (ten sam dzień tygodnia, data ±1 dzień) : w roku
+        // z 53. tygodniem ten sam tydzień ISO zdublowałby tydzień świąt.
+        // Warunki : zero kartonów w ostatnich tygodniach ; rok temu w tych tygodniach (tylko tygodnie, w których sieć ma dane)
+        // mniej niż 30 % poziomu z tygodni okna ; produkt aktywny (sprawdzane niżej).
+        $history = [];
+        $n1Net = array_filter(array_map(fn($m) => $network[self::weeksBack($m)] ?? 0.0, $recent), fn($v) => $v > 0);
+        $n1Level = $n1Net ? array_sum($n1Net) / count($n1Net) : 0.0;
+        $n1Recent = array_values(array_filter($recent, fn($m) => $n1Level > 0 && ($network[self::weeksBack($m)] ?? 0.0) >= self::COVERAGE * $n1Level));
         foreach ($by as $pid => $byWeek) {
             if (isset($seasonal[$pid])) continue;
+            if (array_sum(array_map(fn($m) => $byWeek[$m] ?? 0.0, $recent)) > 0) continue;
+            $peak = array_filter(array_map(fn($w) => $byWeek[self::weeksBack($w)] ?? 0.0, $weeks), fn($v) => $v > 0);
+            if (!$peak) continue;
+            $level = array_sum($peak) / count($peak);
+            $before = $n1Recent ? array_sum(array_map(fn($m) => $byWeek[self::weeksBack($m)] ?? 0.0, $n1Recent)) / count($n1Recent) : 0.0;
+            if ($before < self::COVERAGE * $level) $history[$pid] = true;
+        }
+        foreach ($by as $pid => $byWeek) {
+            if (isset($seasonal[$pid]) || isset($history[$pid])) continue;
             foreach ($byWeek as $m => $c) $regular[$m] = ($regular[$m] ?? 0.0) + $c;
         }
 
@@ -230,7 +251,7 @@ final class ForecastService
         foreach ($by as $byWeek) $orderedThisWeek += $byWeek[$weeks[0]] ?? 0.0;
 
         // Produkty : ostatnie tygodnie, zamówienia w oknie, sezonowe.
-        $ids = array_keys($seasonal);
+        $ids = [...array_keys($seasonal), ...array_keys($history)];
         foreach ($by as $pid => $byWeek) {
             foreach ([...$recent, ...$weeks] as $m) if (($byWeek[$m] ?? 0) > 0) { $ids[] = $pid; break; }
         }
@@ -241,16 +262,19 @@ final class ForecastService
         foreach (array_unique($ids) as $pid) {
             $p = $info[$pid] ?? null;
             if ($p === null) continue;
+            if (isset($history[$pid]) && !(int) $p['active']) { unset($history[$pid]); continue; }
             $byWeek = $by[$pid] ?? [];
             $avg = array_sum(array_map(fn($m) => $byWeek[$m] ?? 0.0, $recent)) / $trendWeeks;
-            $isSeason = isset($seasonal[$pid]);
+            $isHistory = isset($history[$pid]);
+            $isSeason = isset($seasonal[$pid]) || $isHistory;
             $values = [];
             $sources = [];
-            $seasonValues = $isSeason ? $this->seasonValues($seasonal[$pid], $byWeek, $weeks, $index, $t, $this->panelCartons($sales, $pid, (int) $p['ppc'])) : null;
+            $seasonValues = $isHistory ? array_map(fn($w) => ($v = $byWeek[self::weeksBack($w)] ?? 0.0) > 0 ? $v * $t : null, $weeks)
+                : ($isSeason ? $this->seasonValues($seasonal[$pid], $byWeek, $weeks, $index, $t, $this->panelCartons($sales, $pid, (int) $p['ppc'])) : null);
             foreach ($weeks as $i => $w) {
                 $ordered = (float) ($byWeek[$w] ?? 0.0);
                 if ($i === 0 && $orderedThisWeek > 0) { $values[$i] = (int) round($ordered); $sources[$i] = 'orders'; continue; }
-                if ($isSeason) { $fc = $seasonValues[$i]; $src = $fc !== null ? 'season' : 'none'; $fc ??= 0.0; }
+                if ($isSeason) { $fc = $seasonValues[$i]; $src = $fc !== null ? ($isHistory ? 'history' : 'season') : 'none'; $fc ??= 0.0; }
                 elseif ($shape[$i] !== null) { $fc = $avg * $shape[$i]; $src = 'n1'; }
                 else { $fc = $avg; $src = 'avg'; }
                 if ($ordered > 0 && $ordered >= $fc - self::EPS) { $values[$i] = (int) round($ordered); $sources[$i] = 'orders'; }
@@ -262,7 +286,8 @@ final class ForecastService
             $rows[] = [
                 'product_id' => $pid, 'item_id' => $p['item_id'] !== null ? (int) $p['item_id'] : null, 'name' => (string) $p['name'], 'category' => $p['category'],
                 'active' => (bool) (int) $p['active'], 'mode' => $p['mode'], 'ppc' => (int) $p['ppc'] ?: null, 'cpp' => $cpp ?: null,
-                'kind' => $isSeason ? 'season' : 'regular', 'seasons' => $isSeason ? array_values(array_unique(array_map(fn($s) => $s['id'], $seasonal[$pid]))) : [],
+                'kind' => $isSeason ? 'season' : 'regular', 'history' => $isHistory,
+                'seasons' => isset($seasonal[$pid]) ? array_values(array_unique(array_map(fn($s) => $s['id'], $seasonal[$pid]))) : [],
                 'all_year_in' => $allYear[$pid] ?? null,
                 'avg' => round($avg, 1), 'values' => $values, 'sources' => $sources, 'total' => array_sum($values),
                 'hours_per_carton' => isset($hpc[$pid]) ? round($hpc[$pid], 4) : null,
@@ -272,7 +297,7 @@ final class ForecastService
         usort($rows, fn($a, $b) => [$a['kind'] === 'season' ? 1 : 0, -$a['total'], $a['name']] <=> [$b['kind'] === 'season' ? 1 : 0, -$b['total'], $b['name']]);
 
         // Kto bierze ile [225] ; klienci wyłączeni [226] : ich kartony (zamówienia i prognoza wg udziału) poza wszystkimi sumami.
-        $clients = $this->clientSplit($rows, $weeks, $recent, $seasonal, $end);
+        $clients = $this->clientSplit($rows, $weeks, $recent, $seasonal, $end, $history);
         $excluded = $this->repo->excludedClients();
         $minus = [];
         foreach ($clients as &$c) {
@@ -535,6 +560,12 @@ final class ForecastService
         return $out;
     }
 
+    /** Poniedziałek 52 tygodnie wcześniej (produkty sezonowe z historii ERP). */
+    private static function weeksBack(string $monday): string
+    {
+        return date('Y-m-d', strtotime($monday . ' -364 days'));
+    }
+
     private static function rank(string $status): int
     {
         return ['linked' => 0, 'auto' => 0, 'none' => 1, 'ignored' => 2][$status] ?? 3;
@@ -654,9 +685,11 @@ final class ForecastService
      * @return list<array{id:int, name:string, values:list<int>, ordered:list<int>, total:int,
      *   products:list<array{product_id:int, name:string, cpp:?int, values:list<int>, ordered:list<int>, total:int}>}>
      */
-    private function clientSplit(array $rows, array $weeks, array $recent, array $seasonal, string $end): array
+    private function clientSplit(array $rows, array $weeks, array $recent, array $seasonal, string $end, array $history = []): array
     {
         $from = $recent[0] ?? $weeks[0];
+        $n1Weeks = array_map(fn($w) => self::weeksBack($w), $weeks);
+        if ($history) $from = min($from, $n1Weeks[0]);
         foreach ($seasonal as $list) foreach ($list as $s) if ($s['n1_from'] !== null) $from = min($from, LogisticsPlanService::monday($s['n1_from']));
         $by = [];
         foreach ($this->repo->cartonsByClient($from, $end) as $l) {
@@ -670,6 +703,7 @@ final class ForecastService
             $hist = $by[$pid] ?? [];
             $share = [];
             $add = function (array $mondays) use ($hist, &$share) { foreach ($mondays as $m) foreach ($hist[$m] ?? [] as $c => $v) $share[$c] = ($share[$c] ?? 0.0) + $v; };
+            if (isset($history[$pid])) $add($n1Weeks);
             if ($r['kind'] === 'season') {
                 foreach ($seasonal[$pid] ?? [] as $s) {
                     if ($s['n1_from'] === null) continue;
