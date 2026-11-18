@@ -1,0 +1,76 @@
+name: Traduction — noms des produits de l’ERP en néerlandais (flamand de Belgique)
+
+# Sam, 18/11/2026 : « traduire tout le matériel en néerlandais (flamand de Belgique) » par PATCH /products/{id}/aliases.
+# La table pilotage-reseau/tools/traductions/produits_nl.tsv est déposée dans /tmp du serveur et appliquée par
+# tools/traduire_produits_nl.php avec les identifiants du serveur (compte consultant, sinon compte admin ERP).
+# Un nom néerlandais déjà saisi dans l'ERP n'est jamais écrasé ; relancer n'écrit que ce qui manque.
+#
+# Déclenchement : pousser un changement de pilotage-reseau/traduction-nl.trigger dans la branche ci-dessous (comme
+# deploy.trigger) — pousser la table ou le script seuls n'écrit rien. Ne déploie rien : le déploiement reste dans deploy.yml.
+
+on:
+  push:
+    branches: [claude/beautiful-faraday-euankl]
+    paths: ['pilotage-reseau/traduction-nl.trigger']
+  workflow_dispatch:
+
+concurrency:
+  group: traduction-produits-nl
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
+# chaque commande s'exécute depuis ce dossier.
+defaults:
+  run:
+    working-directory: pilotage-reseau
+
+jobs:
+  traduction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script et la table
+        run: |
+          php -l tools/traduire_produits_nl.php
+          # Chaque ligne : identifiant numérique, une tabulation, un nom non vide.
+          if grep -vnP '^\d+\t\S.*$' tools/traductions/produits_nl.tsv; then echo "lignes invalides ci-dessus"; exit 1; fi
+          echo "$(wc -l < tools/traductions/produits_nl.tsv) lignes"
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Déposer la table dans /tmp du serveur
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" tools/traductions/produits_nl.tsv "${SSH_USER}@${SSH_HOST}:/tmp/traductions_produits_nl.tsv"
+
+      - name: Écrire les noms néerlandais dans l’ERP, puis relire
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          set +e
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}' /tmp/traductions_produits_nl.tsv" < tools/traduire_produits_nl.php
+          rc=$?
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -f /tmp/traductions_produits_nl.tsv"
+          exit $rc
