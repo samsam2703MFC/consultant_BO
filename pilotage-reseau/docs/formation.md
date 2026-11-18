@@ -1110,7 +1110,14 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
     (1,29 € à 65 %) ; bundles sur une base de 60 % : 5 + 1 gratuit **52 %**, 4 + 1 **50 %**, 1 + 1 **20 %** (58 ; 56,3 ;
     30 à 65 %) ; l'alerte « sous 62 % » devient « sous la cible de 60 % ». Fourchettes par famille (annexe J) inchangées.
   - FR et NL ; version de précision ; une remarque de reprise le note. Relue au serveur : contenu identique à l'envoi.
-  - **Disent encore les anciens chiffres** (relevé du Manuel le 18/11/2026, non modifiés) : 0.0.17 « Inventaire et gestion
-    des stocks » (food cost 35 %), 0.0.23 « Bouclage financier & business plan » (FO-34 : 35 %, 25 %, 28,3 %),
-    0.0.30 « Reporting consolidé » (marge 65 %), 0.0.43 « Le dashboard : l'onglet Produits » (objectif × 3,13 pour 32 %
-    de matière ; le prix objectif lit maintenant 40 %, soit × 2,5).
+  - **Les quatre autres documents alignés le même jour** (Sam : « aligne les quatre » ; PUT de chaque fiche, version de
+    précision, FR et NL, relus : contenu identique à l'envoi, une remarque de reprise chacun) :
+    0.0.23 « Bouclage financier & business plan » v1.7 (FO-34 : « La cible : environ **14,7 %** de bénéfice », 73 412 € sur
+    500 000 € ; food cost 40 %, masse salariale 17 %, frais généraux 28,3 % ; 14,4 % à 400 000 €, 14,9 % à 600 000 € —
+    le modèle de l'article se retrouve exactement avec des frais généraux à 27 % du CA plus 6 588 € de forfaits fixes) ;
+    0.0.17 « Inventaire et gestion des stocks » v1.2 (food cost 40 %, marge 60 %) ; 0.0.30 « Reporting consolidé » v1.2
+    (marge 60 %, bénéfice 14,7 %) ; 0.0.43 « Le dashboard : l'onglet Produits » v1.2, « à valider » (repère « objectif »
+    × 2,5 pour 40 % de matière, comme `produits_coef.php` et la fiche du dashboard). **Reste** : la capture de 0.0.43,
+    fiche « Recette & marge », montre encore « objectif × 3,13 · matière 32 % » ; le dashboard demande maintenant une
+    session de la console franchisé (`garde.js`, 13/11/2026) : elle n'a pas pu être refaite sans identifiants. La source
+    de ces articles dans le dépôt (`claude/loving-turing-n6j40s`, `data/formation/dashboard-onglets/`) n'est pas à jour.
