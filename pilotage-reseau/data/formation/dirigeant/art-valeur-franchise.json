@@ -1,0 +1,417 @@
+{
+ "id": "art-valeur-franchise",
+ "code": "",
+ "type": "Article",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "statut": "a_valider",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "La valeur d’une franchise : ce que vaut vraiment la boutique",
+  "nl": "De waarde van een franchise: wat de winkel werkelijk waard is"
+ },
+ "objectif": {
+  "fr": "Comprendre pourquoi un système de gestion unique et des procédures identiques font la valeur d’une franchise, à la revente et avant : c’est ce que regardent un repreneur et une banque.",
+  "nl": "Begrijpen waarom één beheersysteem en identieke procedures de waarde van een franchise uitmaken, bij de verkoop en ervoor: dat is wat een overnemer en een bank bekijken."
+ },
+ "pour": {
+  "fr": "Franchisés, candidats franchisés et leurs partenaires (P7 à P12). À lire avant de s’engager, et chaque année pour répondre au test de vendabilité.",
+  "nl": "Franchisenemers, kandidaat-franchisenemers en hun partners (P7 tot P12). Lezen voordat men zich engageert, en elk jaar om de verkoopbaarheidstest te beantwoorden."
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ce qu’un repreneur achète",
+    "nl": "Wat een overnemer werkelijk koopt"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Le point de départ",
+      "nl": "Het vertrekpunt"
+     },
+     "texte": {
+      "fr": "La plupart des commerçants se posent la question de la valeur de leur affaire le jour où ils veulent la vendre. C’est trop tard : le repreneur et son banquier regardent ce qui existe, pas ce qu’on aurait pu construire.\nDans le commerce indépendant, l’affaire tourne souvent parce que son patron est là six jours sur sept, connaît les clients par leur prénom, a les recettes dans la tête, les fournisseurs dans son téléphone et les chiffres dans un classeur que lui seul sait lire.\nElle peut rapporter, mais elle se vend mal : le repreneur achète alors un emploi, avec le risque que tout ce qui faisait marcher le magasin parte avec le vendeur. Il négocie le prix en conséquence, ou il passe son chemin.\nUne franchise bien construite règle ce problème, grâce à deux choses moins visibles que le logo : un système de gestion unique pour tout le réseau, et des procédures identiques partout.",
+      "nl": "De meeste handelaars denken pas aan de waarde van hun zaak op de dag dat ze willen verkopen. Dan is het te laat: de overnemer en zijn bankier kijken naar wat er bestaat, niet naar wat men had kunnen opbouwen.\nIn de onafhankelijke handel draait de zaak vaak omdat de baas zes dagen op zeven aanwezig is, de klanten bij hun voornaam kent, de recepten in het hoofd heeft, de leveranciers in zijn telefoon en de cijfers in een klasseur die alleen hij kan lezen.\nZe kan veel opbrengen, maar ze verkoopt slecht: de overnemer koopt dan een job, met het risico dat alles wat de winkel draaiende hield met de verkoper vertrekt. Hij onderhandelt de prijs daarop af, of hij loopt weg.\nEen goed opgebouwde franchise lost dat probleem op, met twee dingen die minder zichtbaar zijn dan het logo: één beheersysteem voor het hele netwerk, en identieke procedures overal."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Trois questions de l’acheteur",
+      "nl": "Drie vragen van de koper"
+     },
+     "texte": {
+      "fr": "Quand on rachète un fonds, on ne paie pas pour le passé mais pour les bénéfices que le magasin produira demain, sans son propriétaire. L’acheteur se pose toujours trois questions :\nEst-ce prévisible ? Le chiffre d’affaires, la marge et la masse salariale : peut-on raisonnablement retrouver les mêmes niveaux l’an prochain ?\nEst-ce transférable ? Ce qui fait tourner le magasin reste-t-il quand le vendeur s’en va, ou part-il avec lui ?\nEst-ce prouvé ? Peut-on vérifier, comparer et faire confiance aux chiffres ?\nPlus la réponse est un oui franc, moins le risque perçu est grand, plus l’acheteur accepte de payer et plus la banque accepte de financer. Le système de gestion répond à la première et à la troisième question ; les procédures répondent à la deuxième.",
+      "nl": "Wie een zaak overneemt, betaalt niet voor het verleden maar voor de winst die de winkel morgen zonder zijn eigenaar zal maken. De koper stelt zich altijd drie vragen:\nIs het voorspelbaar? Omzet, marge en loonkost: kan men redelijkerwijs dezelfde niveaus volgend jaar terugvinden?\nIs het overdraagbaar? Blijft wat de winkel draaiende houdt wanneer de verkoper vertrekt, of vertrekt het met hem mee?\nIs het bewezen? Kan men de cijfers controleren, vergelijken en erop vertrouwen?\nHoe duidelijker het ja op die vragen, hoe kleiner het gepercipieerde risico, hoe meer de koper bereid is te betalen en hoe meer de bank bereid is te financieren. Het beheersysteem beantwoordt de eerste en de derde vraag; de procedures de tweede."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Un système de gestion unique",
+    "nl": "Één beheersysteem: cijfers waarop men kan vertrouwen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Des chiffres qu’on peut croire",
+      "nl": "Cijfers waarop men kan vertrouwen"
+     },
+     "texte": {
+      "fr": "Toutes les boutiques du réseau sont pilotées avec le même outil et la même méthode. Ventes, achats, production, casse, plannings, objectifs : tout est encodé au même endroit, de la même manière, avec les mêmes définitions.\nLe food cost d’une boutique se calcule comme celui d’une autre, et le panier moyen veut dire la même chose partout.\nAu quotidien, cela sert à piloter. Chaque franchisé lit son magasin à travers les mêmes leviers : le trafic, la récurrence et l’expérience client du côté des ventes ; le food cost, la masse salariale et les frais généraux du côté des coûts.",
+      "nl": "Alle winkels van het netwerk worden gestuurd met hetzelfde instrument en dezelfde methode. Verkoop, aankopen, productie, breuk, planningen, doelstellingen: alles wordt op dezelfde plaats en op dezelfde manier ingevoerd, met dezelfde definities.\nDe food cost van een winkel wordt berekend zoals die van een andere, en het gemiddelde ticket betekent overal hetzelfde.\nDagelijks dient dat om te sturen. Elke franchisenemer leest zijn winkel via dezelfde hefbomen: het verkeer, de herhaalaankopen en de klantervaring aan de verkoopkant; de food cost, de loonkost en de algemene kosten aan de kostenkant."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Une preuve le jour de la revente",
+      "nl": "Een bewijs op de dag van de verkoop"
+     },
+     "texte": {
+      "fr": "Le jour de la revente, le même système devient la preuve. Le repreneur n’a pas à croire le vendeur sur parole ni à reconstituer trois ans d’activité à partir de tickets et de factures.\nIl ouvre un historique complet, tenu au jour le jour, difficile à arranger après coup, et comparable à celui des autres boutiques du réseau. Il peut vérifier que la marge est dans la norme, que la masse salariale est tenue, et que le chiffre ne repose pas sur deux gros clients.\nUn tableau Excel que l’on est seul à comprendre n’est pas un outil de gestion : c’est une dépendance de plus. Les chiffres qu’on n’encode pas aujourd’hui sont ceux qu’on ne pourra pas montrer le jour où quelqu’un voudra payer pour.",
+      "nl": "Op de dag van de verkoop wordt hetzelfde systeem het bewijs. De overnemer hoeft de verkoper niet op zijn woord te geloven, en ook niet drie jaar activiteit te reconstrueren uit kasbonnen en facturen.\nHij opent een volledige geschiedenis, dag na dag bijgehouden, moeilijk achteraf te wijzigen, en vergelijkbaar met die van de andere winkels van het netwerk. Hij kan nagaan of de marge in de norm zit, of de loonkost onder controle is, en of de omzet niet op twee grote klanten rust.\nEen Excel-tabel die men alleen zelf begrijpt, is geen beheersinstrument maar een extra afhankelijkheid. Cijfers die men vandaag niet invoert, kan men niet tonen op de dag dat iemand ervoor wil betalen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La continuité le lendemain de la reprise",
+      "nl": "De continuïteit de dag na de overname"
+     },
+     "texte": {
+      "fr": "Comme le système est le même partout, le repreneur n’a rien à réinventer. Le lendemain de la reprise, les commandes, la production, les prix, les promotions, les étiquettes et le suivi des objectifs fonctionnent comme la veille.\nIl n’y a pas de période pendant laquelle le nouveau patron cherche comment on fait. Cette continuité a une valeur concrète : c’est du chiffre d’affaires qu’on ne perd pas pendant la transition.",
+      "nl": "Omdat het systeem overal hetzelfde is, hoeft de overnemer niets opnieuw uit te vinden. De dag na de overname werken de bestellingen, de productie, de prijzen, de promoties, de etiketten en de opvolging van de doelstellingen zoals de dag ervoor.\nEr is geen periode waarin de nieuwe baas zoekt hoe het hier gaat. Die continuïteit heeft een concrete waarde: het is omzet die men tijdens de overgang niet verliest."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Des procédures identiques",
+    "nl": "Identieke procedures"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Tout le monde peut prendre la place de tout le monde",
+      "nl": "Iedereen kan de plaats van iedereen innemen"
+     },
+     "texte": {
+      "fr": "Dans le réseau, on ouvre le magasin de la même façon partout : on cuit, on garnit la vitrine, on accueille, on encaisse, on réceptionne une livraison, on gère les invendus et on ferme selon les mêmes procédures, écrites, formées et contrôlées.\nChaque poste est décrit, chaque niveau de compétence est défini, et chaque personne sait où elle en est.\nN’importe quel intervenant formé peut remplacer n’importe quel autre : une vendeuse peut tenir le comptoir d’une autre boutique le lendemain sans qu’on lui explique où sont les choses ; un nouveau franchisé peut faire tourner un magasin existant dès la première semaine ; le franchiseur peut envoyer quelqu’un tenir une boutique en cas de coup dur.",
+      "nl": "In het netwerk opent men de winkel overal op dezelfde manier: men bakt, vult de vitrine, ontvangt klanten, rekent af, neemt een levering in ontvangst, beheert de onverkochte producten en sluit op dezelfde geschreven, opgeleide en gecontroleerde procedures.\nElke functie is beschreven, elk competentieniveau is vastgelegd, en elke persoon weet waar hij staat.\nElke opgeleide medewerker kan elke andere vervangen: een verkoopster kan de toog van een andere winkel de volgende dag overnemen zonder dat men haar uitlegt waar alles staat; een nieuwe franchisenemer kan een bestaande winkel vanaf de eerste week laten draaien; de franchisegever kan iemand sturen om een winkel bij een zware tegenslag te leiden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "L’interchangeabilité ne veut pas dire que les gens ne comptent pas",
+      "nl": "Verwisselbaarheid betekent niet dat mensen er niet toe doen"
+     },
+     "texte": {
+      "fr": "Irremplaçable veut dire invendable : tant que le magasin a besoin de son propriétaire personnellement pour fonctionner, il possède un poste de travail, pas une entreprise.\nLe savoir-faire appartient au magasin et au réseau, pas à une seule tête. Les personnes restent ce qui fait la différence dans l’accueil et dans l’envie ; mais le jour où l’une d’elles part, tombe malade ou prend des vacances, le magasin continue de servir ses clients au même niveau.",
+      "nl": "Onvervangbaar betekent onverkoopbaar: zolang de winkel de eigenaar persoonlijk nodig heeft om te draaien, bezit hij een werkplek, geen onderneming.\nDe knowhow hoort bij de winkel en het netwerk, niet bij één hoofd. De mensen blijven wat het verschil maakt in het onthaal en in de inzet; maar op de dag dat één van hen vertrekt, ziek wordt of op vakantie gaat, blijft de winkel haar klanten op hetzelfde niveau bedienen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Ce que ça change, bien avant la revente",
+    "nl": "Wat het verandert, lang vóór de verkoop"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Six situations, avec ou sans système commun",
+      "nl": "Zes situaties, met of zonder gemeenschappelijk systeem"
+     },
+     "texte": {
+      "fr": "Un employé clé s’en va. Sans système : une partie du savoir-faire part avec lui, et il faut des semaines pour retrouver le niveau. Avec le système : le poste est décrit, la formation existe, le remplaçant est vite opérationnel, et le réseau peut dépanner.\nLe dirigeant est absent trois semaines. Sans système : le magasin ralentit, les erreurs s’accumulent, on gère par téléphone. Avec le système : l’équipe applique les procédures, le dirigeant suit les chiffres à distance.\nUne demande de crédit. Sans système : le banquier doit se faire une opinion sur des chiffres qu’il ne peut pas comparer. Avec le système : des chiffres normés, un historique, et les résultats des autres boutiques comme référence.\nUn deuxième magasin. Sans système : impossible, le dirigeant est déjà indispensable dans le premier. Avec le système : le premier tourne sans lui, et l’on peut dupliquer.\nLa recherche d’un repreneur. Sans système : il faut trouver quelqu’un qui a déjà le métier, et le convaincre que ça marchera sans le vendeur. Avec le système : le réseau forme le repreneur et l’accompagne ; les candidats à la franchise sont des acheteurs potentiels.\nLa reprise. Sans système : plusieurs mois de transition, avec le vendeur à ses côtés, et un chiffre qui baisse. Avec le système : mêmes outils, mêmes gestes, même équipe formée ; la transition est courte.",
+      "nl": "Een sleutelmedewerker vertrekt. Zonder systeem: een deel van de knowhow vertrekt met hem, en het duurt weken om het niveau terug te vinden. Met het systeem van het netwerk: de functie is beschreven, de opleiding bestaat, de vervanger is snel operationeel, en het netwerk kan bijspringen.\nDe leidinggevende is drie weken afwezig. Zonder systeem: de winkel vertraagt, de fouten stapelen zich op, men beheert alles per telefoon. Met het systeem: het team past de procedures toe, de leidinggevende volgt de cijfers op afstand.\nEen kredietaanvraag. Zonder systeem: de bankier moet een oordeel vormen over cijfers die hij niet kan vergelijken. Met het systeem: genormeerde cijfers, een geschiedenis, en de resultaten van de andere winkels als referentie.\nEen tweede winkel. Zonder systeem: onmogelijk, de leidinggevende is al onmisbaar in de eerste. Met het systeem: de eerste draait zonder hem, en men kan vermenigvuldigen.\nEen overnemer zoeken. Zonder systeem: men moet iemand vinden die het vak al kent, en hem overtuigen dat het zonder de verkoper zal lukken. Met het systeem: het netwerk leidt de overnemer op en begeleidt hem; kandidaat-franchisenemers zijn potentiële kopers.\nDe overname. Zonder systeem: enkele maanden overgang, met de verkoper aan zijn zijde, en een dalende omzet. Met het systeem: dezelfde instrumenten, dezelfde handelingen, hetzelfde opgeleide team; de overgang is kort."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Un magasin transférable rapporte déjà",
+      "nl": "Een overdraagbare winkel levert nu al op"
+     },
+     "texte": {
+      "fr": "On parle de revente parce que c’est le moment où la valeur se transforme en argent. Mais un magasin transférable rapporte déjà à son propriétaire tant qu’il le garde.\nDans le commerce indépendant, les acheteurs possibles se limitent aux gens qui ont déjà le métier. Dans un réseau, le repreneur n’a pas besoin d’être boulanger : il lui faut être un bon gestionnaire et un bon manager, et le réseau lui apporte le reste. Plus il y a d’acheteurs possibles, mieux un bien se vend.",
+      "nl": "Men spreekt over verkoop omdat het het moment is waarop de waarde in geld wordt omgezet. Maar een overdraagbare winkel levert de eigenaar al op zolang hij ze houdt.\nIn de onafhankelijke handel zijn de mogelijke kopers beperkt tot wie het vak al kent. In een netwerk hoeft de overnemer geen bakker te zijn: hij moet een goede beheerder en een goede manager zijn, en het netwerk brengt de rest. Hoe meer mogelijke kopers, hoe beter een zaak verkoopt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les autres formes de valeur",
+    "nl": "De andere vormen van waarde"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Six formes de valeur, en plus du prix",
+      "nl": "Zes vormen van waarde, naast de prijs"
+     },
+     "texte": {
+      "fr": "Le prix de cession est la plus visible, mais ce n’est pas la seule valeur créée.\nLa valeur de revenu : un magasin piloté sur des indicateurs comparables progresse plus vite, parce qu’on voit tout de suite où il décroche et ce que font ceux qui réussissent mieux.\nLa valeur de financement : un dossier lisible, appuyé sur un réseau aux chiffres homogènes, se défend mieux auprès d’une banque, pour ouvrir, investir ou reprendre.\nLa valeur de temps : un magasin qui tourne sans son propriétaire lui rend sa liberté, pour ouvrir un autre point de vente ou prendre du recul.\nLa valeur de transmission : confier la boutique à un manager, la céder à un salarié qui a grandi dans le réseau ou à un proche devient possible quand le métier est écrit.\nLa valeur collective : chaque boutique bien tenue renforce la marque, et la marque renforce le prix de chaque boutique. L’inverse est vrai aussi : un magasin qui fait à sa manière abîme la valeur de tous les autres.",
+      "nl": "De verkoopprijs van de zaak is het zichtbaarst, maar het is niet de enige waarde die ontstaat.\nDe inkomstenwaarde: een winkel die op vergelijkbare indicatoren wordt gestuurd, groeit sneller, omdat men meteen ziet waar ze achterblijft en wat de beter presterende winkels doen.\nDe financieringswaarde: een leesbaar dossier, gesteund op een netwerk met homogene cijfers, verdedigt zich beter bij een bank, om te openen, te investeren of over te nemen.\nDe tijdwaarde: een winkel die draait zonder haar eigenaar geeft hem zijn vrijheid terug, om een ander verkooppunt te openen of afstand te nemen.\nDe overdrachtswaarde: de winkel toevertrouwen aan een manager, of overdragen aan een medewerker die in het netwerk is opgegroeid of aan een naaste, wordt mogelijk wanneer het vak is vastgelegd.\nDe collectieve waarde: elke goed gerunde winkel versterkt het merk, en het merk versterkt de prijs van elke winkel. Omgekeerd geldt ook: een winkel die op haar eigen manier werkt, schaadt de waarde van alle andere."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Ce que ça exige",
+    "nl": "Wat het vraagt"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Rien n’est automatique",
+      "nl": "Niets gebeurt vanzelf"
+     },
+     "texte": {
+      "fr": "Le système ne vaut que ce qu’on y met, et les procédures ne valent que si elles sont appliquées. C’est là que se fait la différence entre deux franchisés du même réseau, avec le même concept et les mêmes outils.\nCelui qui encode tout, tous les jours, construit un historique qui parle pour lui. Celui qui encode quand il a le temps a des trous dans ses chiffres, et un acheteur lit un trou comme un risque.\nCelui qui forme son équipe selon le référentiel et valide les niveaux de chacun a une équipe qu’on peut reprendre. Celui qui garde « sa » façon de faire fabrique un magasin qui ne ressemble plus aux autres, que le repreneur devra remettre à niveau à ses frais, c’est-à-dire au final aux frais du vendeur.\nChaque écart à la procédure paraît anodin sur le moment. Additionnés, ils retirent de la valeur au fonds. À l’inverse, chaque jour où le magasin a tourné dans les standards, avec des chiffres encodés, est un jour de plus dans le dossier qu’on présentera un jour.",
+      "nl": "Het systeem heeft alleen waarde als men het gebruikt, en de procedures alleen als ze worden toegepast. Daar maakt men het verschil tussen twee franchisenemers van hetzelfde netwerk, met hetzelfde concept en dezelfde instrumenten.\nWie alles invoert, elke dag, bouwt een geschiedenis op die voor hem spreekt. Wie invoert wanneer hij tijd heeft, heeft gaten in zijn cijfers, en een koper leest een gat als een risico.\nWie zijn team opleidt volgens het referentiekader en het niveau van ieder valideert, heeft een team dat men kan overnemen. Wie zijn « eigen » manier van werken behoudt, maakt een winkel die niet meer op de andere lijkt, die de overnemer op eigen kosten moet bijschaven, dus uiteindelijk op kosten van de verkoper.\nElke afwijking van de procedure lijkt op het moment onschuldig. Opgeteld halen ze waarde weg van de zaak. Elke dag waarop de winkel binnen de standaarden draaide, met ingevoerde cijfers, is daarentegen een dag meer in het dossier dat men op een dag zal voorleggen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Le test : deux semaines sans téléphone",
+      "nl": "De test: twee weken zonder telefoon"
+     },
+     "texte": {
+      "fr": "Partir deux semaines sans téléphone. Si, au retour, le magasin a tenu ses chiffres et ses standards, on possède une entreprise. Si tout le monde attendait pour décider, on possède un emploi.",
+      "nl": "Twee weken zonder telefoon vertrekken. Als de winkel bij de terugkomst haar cijfers en standaarden heeft gehaald, bezit men een onderneming. Als iedereen moest wachten om te beslissen, bezit men een job."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La boutique est-elle vendable demain ?",
+    "nl": "Is de winkel morgen verkoopbaar?"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Huit questions, une fois par an",
+      "nl": "Acht vragen, één keer per jaar"
+     },
+     "texte": {
+      "fr": "Chaque « non » est un point de valeur à aller chercher.\n1. Tous les chiffres des douze derniers mois sont dans le système, sans période manquante.\n2. Les ratios (food cost, masse salariale, frais généraux) sont dans les normes du réseau, et l’on sait expliquer les écarts.\n3. Chaque poste du magasin peut être tenu par au moins deux personnes formées.\n4. Les niveaux de compétence de l’équipe sont à jour dans le référentiel.\n5. Quelqu’un d’autre que le dirigeant peut ouvrir, fermer, commander et gérer une journée complète.\n6. Le magasin a déjà tourné au moins deux semaines sans le dirigeant, sans baisse de résultat.\n7. Le magasin applique les standards du réseau, sans version maison des procédures.\n8. Un repreneur pourrait comprendre l’activité en une heure, à partir du système seul.",
+      "nl": "Elk « nee » is een waardepunt om te verwerven.\n1. Alle cijfers van de voorbije twaalf maanden staan in het systeem, zonder ontbrekende periode.\n2. De ratio’s (food cost, loonkost, algemene kosten) zitten binnen de normen van het netwerk, en men kan de afwijkingen verklaren.\n3. Elke functie in de winkel kan door minstens twee opgeleide personen worden ingevuld.\n4. De competentieniveaus van het team zijn bijgewerkt in het referentiekader.\n5. Iemand anders dan de leidinggevende kan een volledige dag openen, sluiten, bestellen en beheren.\n6. De winkel heeft al minstens twee weken gedraaid zonder de leidinggevende, zonder daling van het resultaat.\n7. De winkel past de standaarden van het netwerk toe, zonder eigen versie van de procedures.\n8. Een overnemer zou de activiteit in één uur kunnen begrijpen, enkel op basis van het systeem."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Pour finir",
+    "nl": "Tot slot"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Le système et les procédures sont l’actif",
+      "nl": "Het systeem en de procedures zijn het actief"
+     },
+     "texte": {
+      "fr": "On entre souvent en franchise pour le concept, les produits et l’accompagnement. On en sort gagnant grâce à ce qu’on a moins regardé au départ : un magasin dont les chiffres sont fiables, dont le fonctionnement est écrit, et que quelqu’un d’autre peut reprendre sans que le client s’en aperçoive.\nLe système de gestion et les procédures ne sont pas le prix à payer pour faire partie du réseau. Ce sont eux, l’actif.",
+      "nl": "Men treedt vaak toe tot een franchise voor het concept, de producten en de begeleiding. Men verlaat ze als winnaar, dankzij wat men in het begin minder bekeek: een winkel waarvan de cijfers betrouwbaar zijn, waarvan de werking is vastgelegd, en die iemand anders kan overnemen zonder dat de klant het merkt.\nHet beheersysteem en de procedures zijn niet de prijs die men betaalt om deel uit te maken van het netwerk. Zij zijn het actief."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Une logique économique, pas un barème",
+      "nl": "Een economische logica, geen tabel"
+     },
+     "texte": {
+      "fr": "Cet article explique une logique économique. La valeur d’un fonds dépend aussi de sa rentabilité, de son emplacement, de son bail et des conditions de cession prévues au contrat de franchise.\nChaque projet de cession se prépare avec le franchiseur, un comptable et un conseil juridique. Pour le calcul de la valeur affiché par le dashboard, voir l’article 0.0.28.",
+      "nl": "Dit artikel legt een economische logica uit. De waarde van een zaak hangt ook af van haar rendabiliteit, haar ligging, haar huurcontract en de overdrachtsvoorwaarden in het franchisecontract.\nElk overnameproject wordt voorbereid met de franchisegever, een boekhouder en een juridisch adviseur. Voor de waardeberekening die het dashboard toont, zie het artikel 0.0.28."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Un trou dans les chiffres se lit comme un risque : encoder chaque jour est la condition de la valeur.",
+   "nl": "Een gat in de cijfers wordt gelezen als een risico: elke dag invoeren is de voorwaarde voor de waarde."
+  },
+  {
+   "fr": "Chaque écart à la procédure retire de la valeur au fonds, même quand il paraît anodin.",
+   "nl": "Elke afwijking van de procedure haalt waarde weg van de zaak, ook al lijkt ze onschuldig."
+  },
+  {
+   "fr": "Toute cession se prépare avec le franchiseur, un comptable et un conseil juridique.",
+   "nl": "Elke overdracht wordt voorbereid met de franchisegever, een boekhouder en een juridisch adviseur."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Qu’est-ce qu’un repreneur achète, selon l’article ?",
+    "nl": "Wat koopt een overnemer, volgens het artikel?"
+   },
+   "choix": {
+    "fr": [
+     "Les bénéfices que le magasin produira demain, sans son propriétaire",
+     "Le passé du magasin, c’est-à-dire ses chiffres d’hier",
+     "Le logo et la façade de la boutique"
+    ],
+    "nl": [
+     "De winst die de winkel morgen zonder zijn eigenaar zal maken",
+     "Het verleden van de winkel, de cijfers van gisteren",
+     "Het logo en de gevel van de winkel"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Qu’est-ce qui répond à la question « est-ce transférable ? »",
+    "nl": "Wat beantwoordt de vraag « is het overdraagbaar? »"
+   },
+   "choix": {
+    "fr": [
+     "Le système de gestion",
+     "Les procédures identiques",
+     "La façade et le logo"
+    ],
+    "nl": [
+     "Het beheersysteem",
+     "De identieke procedures",
+     "De gevel en het logo"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Un écart à la procédure paraît anodin. Que faut-il en retenir ?",
+    "nl": "Een afwijking van de procedure lijkt onschuldig. Wat moet men daaruit onthouden?"
+   },
+   "choix": {
+    "fr": [
+     "Rien : il ne compte que s’il se répète une fois par an",
+     "Il faut l’accepter si le résultat est bon",
+     "Additionnés, les écarts retirent de la valeur au fonds"
+    ],
+    "nl": [
+     "Niets: het telt alleen als het één keer per jaar gebeurt",
+     "Men moet het aanvaarden als het resultaat goed is",
+     "Opgeteld halen de afwijkingen waarde weg van de zaak"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Que révèle le test des deux semaines sans téléphone ?",
+    "nl": "Wat onthult de test van twee weken zonder telefoon?"
+   },
+   "choix": {
+    "fr": [
+     "Si l’on possède une entreprise ou un emploi",
+     "Si l’on sait bien utiliser son téléphone",
+     "Si l’équipe est assez grande"
+    ],
+    "nl": [
+     "Of men een onderneming of een job bezit",
+     "Of men zijn telefoon goed gebruikt",
+     "Of het team groot genoeg is"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "classement": {
+  "souscat": "D7.5",
+  "phases": [
+   "preouverture",
+   "formation"
+  ],
+  "postes": [
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.Franchise",
+   "C-PILOTAGE.Finance"
+  ],
+  "formations": [
+   "FO-32",
+   "FO-41"
+  ],
+  "checklists": []
+ }
+}

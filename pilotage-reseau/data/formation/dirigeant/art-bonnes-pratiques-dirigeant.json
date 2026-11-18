@@ -1,0 +1,815 @@
+{
+ "id": "art-bonnes-pratiques-dirigeant",
+ "code": "",
+ "type": "Article",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "statut": "a_valider",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": "20 min de lecture",
+ "titre": {
+  "fr": "Diriger, inspirer, embarquer : les bonnes pratiques du dirigeant",
+  "nl": "Leiden, inspireren, meenemen: de goede praktijken van de leidinggevende"
+ },
+ "objectif": {
+  "fr": "Poser une posture, un cap, une communication, une motivation et un pilotage qui tiennent : ce qu’on fait lundi matin, pour que l’équipe voie, comprenne et suive.",
+  "nl": "Een houding, een koers, een communicatie, een motivatie en een sturing die standhouden: wat men maandagochtend doet, zodat het team het ziet, begrijpt en volgt."
+ },
+ "pour": {
+  "fr": "Franchisés, managers et adjoints qui dirigent une équipe (P4, P7 à P12). À relire une fois par trimestre, et à lire avant le premier point individuel.",
+  "nl": "Franchisenemers, managers en adjunct-managers die een team leiden (P4, P7 tot P12). Eén keer per kwartaal herlezen, en lezen vóór het eerste individuele gesprek."
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "La posture",
+    "nl": "De houding"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "L’exemplarité n’est pas une option",
+      "nl": "Voorbeeldgedrag is geen keuze"
+     },
+     "texte": {
+      "fr": "Les gens regardent ce que le dirigeant fait, contrôle et laisse passer, plus que ce qu’il dit.\nExiger la rigueur sur les chiffres sans avoir lu le tableau de bord, c’est dire que les chiffres sont facultatifs.\nExiger la ponctualité et décaler ses propres points à la dernière minute, c’est installer ce comportement comme norme.\nLa culture d’une entreprise, c’est ce que son dirigeant tolère, y compris chez lui-même.",
+      "nl": "De mensen kijken naar wat de leidinggevende doet, controleert en laat passeren, meer dan naar wat hij zegt.\nStrikte cijfers eisen zonder het dashboard gelezen te hebben, zegt dat de cijfers optioneel zijn.\nStiptheid eisen en de eigen afspraken op het laatste moment verschuiven, maakt dat gedrag de norm.\nDe cultuur van een bedrijf is wat de leidinggevende duldt, ook bij zichzelf."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "La clarté avant tout",
+      "nl": "Duidelijkheid eerst"
+     },
+     "texte": {
+      "fr": "La plupart des problèmes de performance sont des problèmes de clarté déguisés.\nAvant de conclure qu’un collaborateur n’est pas bon, on vérifie qu’on pourrait écrire en trois lignes ce qu’on attend de lui, et qu’il écrirait les mêmes trois lignes.\nLa personne doit savoir ce qu’on attend d’elle, pour quand, avec quel niveau de qualité, et comment ce sera mesuré.",
+      "nl": "De meeste prestatieproblemen zijn duidelijkheidsproblemen die zich vermommen.\nVoor men besluit dat een medewerker niet goed is, controleert men of men in drie regels kan schrijven wat men van hem verwacht, en of hij dezelfde drie regels zou schrijven.\nDe persoon moet weten wat er van haar verwacht wordt, tot wanneer, met welk kwaliteitsniveau en hoe het gemeten wordt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Décider, et assumer",
+      "nl": "Beslissen en de verantwoordelijkheid nemen"
+     },
+     "texte": {
+      "fr": "Une décision correcte prise aujourd’hui vaut souvent mieux qu’une décision parfaite prise dans deux mois : l’indécision coûte cher, les équipes attendent, inventent leurs propres règles et perdent confiance.\nDeux règles aident. Distinguer les décisions réversibles (on tranche vite, on ajuste) des décisions irréversibles (on prend le temps, on consulte).\nUne fois la décision prise, on l’explique : ce qu’on a décidé, pourquoi, ce qu’on a écarté, et ce qui ferait changer d’avis.",
+      "nl": "Een redelijke beslissing die vandaag genomen wordt, is vaak beter dan een perfecte beslissing over twee maanden: besluiteloosheid kost veel, de teams wachten, verzinnen hun eigen regels en verliezen het vertrouwen.\nTwee regels helpen. Onderscheid de omkeerbare beslissingen (men beslist snel en past aan) van de onomkeerbare (men neemt de tijd en overlegt).\nEens de beslissing genomen, legt men ze uit: wat er beslist is, waarom, wat er geschrapt is en wat tot een andere keuze zou leiden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Où passe son temps",
+      "nl": "Waar de tijd naartoe gaat"
+     },
+     "texte": {
+      "fr": "L’agenda est la vraie stratégie. Si la priorité est le développement du réseau mais que 80 % de la semaine va à l’opérationnel et aux urgences, la priorité réelle est l’opérationnel.\nChaque mois, on relit la semaine passée et on classe chaque bloc : est-ce que quelqu’un d’autre aurait pu le faire ? Si oui, c’est un problème de délégation ou de compétence dans l’équipe, et dans les deux cas c’est au dirigeant de le régler.",
+      "nl": "De agenda is de echte strategie. Als de prioriteit de groei van het netwerk is, maar 80 % van de week naar de operatie en de spoed gaat, dan is de echte prioriteit de operatie.\nElke maand overloopt men de voorbije week en klasseert men elk blok: had iemand anders het kunnen doen? Zo ja, dan is het een probleem van delegatie of van competentie in het team, en in beide gevallen is het aan de leidinggevende om het op te lossen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Déléguer pour de vrai",
+      "nl": "Écht delegeren"
+     },
+     "texte": {
+      "fr": "Déléguer un résultat, pas une tâche : « la casse passe sous X % d’ici la fin du mois », et non « vérifie les invendus ».\nDonner le cadre : budget, limites, ce qui exige l’accord du dirigeant.\nFixer le point de contrôle au moment de la délégation, pas après : déléguer sans contrôler, c’est abandonner.\nAccepter que ce soit fait autrement que ce qu’on aurait fait, tant que le résultat est là.",
+      "nl": "Een resultaat delegeren, geen taak: « het breukpercentage zakt onder X % tegen het einde van de maand », en niet « controleer de onverkochte producten ».\nHet kader geven: budget, grenzen, wat de goedkeuring van de leidinggevende vraagt.\nHet controlepunt vastleggen op het moment van delegeren, niet erna: delegeren zonder controle is loslaten.\nAanvaarden dat het anders gebeurt dan men zelf zou doen, zolang het resultaat er is."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Quand tout repasse par le dirigeant",
+      "nl": "Als alles via de leidinggevende loopt"
+     },
+     "texte": {
+      "fr": "Si tout repasse par le dirigeant, ce n’est pas que l’équipe est faible : c’est que l’entreprise a été construite pour qu’il soit là pour tout.\nLe jour où l’on veut grandir, ce fonctionnement devient le plafond.",
+      "nl": "Als alles via de leidinggevende loopt, ligt dat niet aan een zwak team: het bedrijf is zo opgebouwd dat hij overal bij moet zijn.\nOp de dag dat men wil groeien, wordt die werkwijze het plafond."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Inspirer",
+    "nl": "Inspireren"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Un cap que tout le monde peut redire",
+      "nl": "Een koers die iedereen kan herhalen"
+     },
+     "texte": {
+      "fr": "Le test : demander à cinq personnes de niveaux différents dans l’entreprise où sera la boîte dans trois ans, et quelle est la priorité du trimestre. Cinq réponses différentes signalent un problème de cap.\nUn bon cap tient en une phrase, contient un chiffre et une date, et dit aussi ce qu’on ne fera pas.",
+      "nl": "De test: vraag aan vijf mensen van verschillende niveaus waar het bedrijf over drie jaar staat en wat de prioriteit van het kwartaal is. Vijf verschillende antwoorden wijzen op een koersprobleem.\nEen goede koers past in één zin, bevat een cijfer en een datum, en zegt ook wat men niet gaat doen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Donner le pourquoi",
+      "nl": "Het waarom geven"
+     },
+     "texte": {
+      "fr": "Les gens exécutent mieux ce qu’ils comprennent. « On change la procédure d’ouverture » déclenche la résistance.\n« On change la procédure d’ouverture, parce que la vitrine n’est pas pleine à l’ouverture et que l’on perd les clients du matin, les plus fidèles » déclenche l’adhésion, ou au minimum une discussion utile.\nExemple tiré du guide : à adapter aux horaires du magasin. Chaque consigne importante mérite sa phrase de pourquoi.",
+      "nl": "Mensen voeren beter uit wat ze begrijpen. « We veranderen de openingsprocedure » roept weerstand op.\n« We veranderen de openingsprocedure, omdat de vitrine bij de opening nog niet vol is en we de ochtendklanten verliezen, de trouwste » roept instemming op, of minstens een nuttig gesprek.\nVoorbeeld uit de gids: aan te passen aan de openingsuren van de winkel. Elke belangrijke instructie verdient haar waarom-zin."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Relier chaque poste au résultat",
+      "nl": "Elke functie koppelen aan het resultaat"
+     },
+     "texte": {
+      "fr": "La vendeuse, l’opérateur en production, le comptable : chacun doit savoir en quoi son travail pèse sur le résultat et sur le client.\nCe lien ne se devine pas, il se montre : un chiffre partagé, un retour client lu à voix haute, une visite de l’atelier pour ceux qui vendent, une journée en boutique pour ceux qui produisent.",
+      "nl": "De verkoopster, de productiemedewerker, de boekhouder: iedereen moet weten hoe zijn werk doorweegt op het resultaat en op de klant.\nDat verband raadt men niet, het wordt getoond: een gedeeld cijfer, een klantreactie hardop voorgelezen, een bezoek aan het atelier voor wie verkoopt, een dag in de winkel voor wie produceert."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Raconter, pas seulement afficher",
+      "nl": "Vertellen, niet alleen aanplakken"
+     },
+     "texte": {
+      "fr": "Les valeurs affichées au mur ne changent rien. Ce qui marque, ce sont les histoires : la fois où une commande ratée a été rattrapée, la fois où l’on a refusé de vendre un produit qui n’était pas au niveau.\nIl faut les collectionner et les raconter : elles disent « voilà ce qu’on est » bien mieux qu’une charte.",
+      "nl": "Waarden die aan de muur hangen, veranderen niets. Wat blijft hangen zijn de verhalen: de keer dat een mislukte bestelling alsnog goed werd afgeleverd, de keer dat men weigerde een product te verkopen dat niet op niveau was.\nVerzamel ze en vertel ze: ze zeggen « zo zijn wij » veel beter dan een handvest."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Montrer la concurrence",
+      "nl": "De concurrentie tonen"
+     },
+     "texte": {
+      "fr": "Une équipe qui ne regarde que l’intérieur se compare à elle-même et se trouve bien.\nOn parle régulièrement de ce que font les concurrents, des alternatives qu’ont les clients, de ce qui se fait de mieux ailleurs. Pas pour faire peur, mais pour fixer un niveau d’exigence qui vient du marché et non de l’humeur.",
+      "nl": "Een team dat alleen naar binnen kijkt, vergelijkt zich met zichzelf en vindt zichzelf goed.\nMen praat regelmatig over wat de concurrenten doen, welke alternatieven de klanten hebben en wat elders beter gaat. Niet om bang te maken, maar om een eisenniveau vast te leggen dat uit de markt komt en niet uit de stemming."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Tenir la ligne dans les moments durs",
+      "nl": "Koers houden in moeilijke tijden"
+     },
+     "texte": {
+      "fr": "Quand ça va mal, l’équipe décide si elle suit. Trois choses comptent : dire la situation telle qu’elle est, sans la maquiller ; dire ce qu’on va faire et ce qu’on attend de chacun ; rester visible.\nLe dirigeant qui disparaît dans son bureau quand les chiffres sont mauvais laisse la place à la rumeur.",
+      "nl": "Als het slecht gaat, beslist het team of het volgt. Drie dingen tellen: de situatie zeggen zoals ze is, zonder ze mooier voor te stellen; zeggen wat men gaat doen en wat men van ieder verwacht; zichtbaar blijven.\nDe leidinggevende die in zijn bureau verdwijnt als de cijfers slecht zijn, laat ruimte aan geruchten."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Communiquer avec son personnel",
+    "nl": "Communiceren met het personeel"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Les règles de base",
+      "nl": "De basisregels"
+     },
+     "texte": {
+      "fr": "Répéter : un message important se dit plusieurs fois, par plusieurs canaux. Quand on commence à se lasser de le répéter, une partie de l’équipe l’entend pour la première fois.\nUn message, une idée : une communication qui contient sept points n’en fait passer aucun.\nFaire reformuler : pour être sûr d’être compris, on demande ce que la personne a retenu de la décision. Cela évite la moitié des malentendus.\nAnnoncer directement ce qui concerne les gens : personne ne doit apprendre par un collègue ou par la rumeur un changement qui touche son poste.\nL’écrit pour confirmer, l’oral pour convaincre : une décision difficile ne s’annonce pas par message.",
+      "nl": "Herhalen: een belangrijke boodschap wordt meermaals gezegd, via meerdere kanalen. Wanneer men zich begint te vervelen met herhalen, hoort een deel van het team het pas voor de eerste keer.\nÉén boodschap, één idee: een communicatie met zeven punten laat geen enkel punt landen.\nLaten herformuleren: om zeker te zijn dat men begrepen werd, vraagt men wat de persoon uit de beslissing heeft onthouden. Zo voorkomt men de helft van de misverstanden.\nWat mensen aangaat, direct zeggen: niemand mag via een collega of via geruchten horen dat zijn functie verandert.\nSchriftelijk om te bevestigen, mondeling om te overtuigen: een moeilijke beslissing kondigt men niet per bericht aan."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les rituels qui structurent tout",
+      "nl": "De rituelen die alles structureren"
+     },
+     "texte": {
+      "fr": "La communication tient sur des rendez-vous fixes, pas sur la bonne volonté. Rythme de base, à adapter :\nBrief d’équipe : chaque jour, 5 à 10 minutes. Le chiffre de la veille, la priorité du jour, un point d’attention. Debout, sans débat.\nPoint individuel : toutes les 1 à 2 semaines, 30 minutes. Résultats, blocages, ce dont la personne a besoin. C’est son rendez-vous.\nRéunion de pilotage : chaque semaine, 45 à 60 minutes. Indicateurs contre objectifs, écarts, décisions. Chaque décision a un responsable et une date.\nPoint réseau ou équipe élargie : chaque mois. Résultats globaux, où en est le cap, ce qui marche chez l’un et que les autres peuvent copier.\nEntretien de fond : deux fois par an. Bilan, évolution, envies, rémunération. Rien de ce qui s’y dit ne doit être une surprise.",
+      "nl": "Communicatie hangt niet af van goede wil maar van vaste afspraken. Basisritme, aan te passen:\nTeambriefing: elke dag, 5 tot 10 minuten. Het cijfer van de vorige dag, de prioriteit van vandaag, één aandachtspunt. Staand, zonder debat.\nIndividueel gesprek: om de 1 tot 2 weken, 30 minuten. Resultaten, blokkades, wat de persoon nodig heeft. Het is de afspraak van die persoon.\nStuurvergadering: elke week, 45 tot 60 minuten. Indicatoren tegenover doelstellingen, afwijkingen, beslissingen. Elke beslissing heeft een verantwoordelijke en een datum.\nNetwerk- of uitgebreid teamoverleg: elke maand. Globale resultaten, waar de koers staat, wat bij de één werkt en de anderen kunnen overnemen.\nGrondgesprek: twee keer per jaar. Balans, evolutie, wensen, loon. Niets wat er gezegd wordt, mag een verrassing zijn."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Le feedback : précis, rapide, régulier",
+      "nl": "Feedback: precies, snel, regelmatig"
+     },
+     "texte": {
+      "fr": "Un feedback utile décrit un fait, son effet et ce qu’on attend : « Hier, à la fermeture, la vitrine n’était pas nettoyée ; le matin, l’équipe a perdu vingt minutes. Ce doit être fait avant de partir. »\nPas de jugement sur la personne : ni « c’est toujours comme ça », ni « jamais ». Il se donne dans les 24 heures, sinon il perd sa valeur.\nMême méthode pour le positif : « Bon boulot » ne dit rien. « La façon dont la cliente mécontente a été gérée samedi, avec un remplacement proposé tout de suite, c’est exactement ce qu’on attend » dit à la personne quoi refaire, et aux autres ce qui est valorisé.",
+      "nl": "Nuttige feedback beschrijft een feit, het effect en wat men verwacht: « Gisteren bij de sluiting was de vitrine niet gereinigd; de ochtendploeg heeft twintig minuten verloren. Het moet gedaan zijn voor iedereen vertrekt. »\nGeen oordeel over de persoon: geen « het is altijd zo » en geen « nooit ». Ze wordt gegeven binnen de 24 uur, anders verliest ze haar waarde.\nHetzelfde voor het positieve: « Goed gedaan » zegt niets. « Hoe de ontevreden klant zaterdag is opgevangen, met meteen een vervanging, dat is precies wat we verwachten » zegt de persoon wat ze moet blijven doen, en de anderen wat er gewaardeerd wordt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Écouter : la moitié qu’on oublie",
+      "nl": "Luisteren: de helft die we vergeten"
+     },
+     "texte": {
+      "fr": "La plupart des dirigeants parlent trop en réunion. Si l’on donne son avis en premier, on n’entend plus que des variations de son avis. Il faut poser la question, laisser parler, et parler en dernier.\nAller sur le terrain sans ordre du jour : les vrais problèmes se disent près du four ou derrière le comptoir, rarement en salle de réunion.\nQuestions utiles : « Qu’est-ce qui fait perdre du temps en ce moment ? » · « Si l’on était à sa place, que changerait-on en premier ? » · « Qu’est-ce que je devrais savoir et que personne ne me dit ? »\nAttention : demander l’avis des gens et ne rien en faire est pire que ne rien demander. Chaque remontée mérite une réponse, même si c’est « non, et voici pourquoi ».",
+      "nl": "De meeste leidinggevenden praten te veel in vergaderingen. Wie zijn mening als eerste geeft, hoort daarna alleen nog variaties op zijn eigen mening. Stel de vraag, laat praten en spreek als laatste.\nGa op het terrein zonder agenda: de echte problemen worden gezegd bij de oven of achter de toonbank, zelden in de vergaderzaal.\nNuttige vragen: « Wat doet nu het meeste tijd verliezen? » · « Wat zou men als eerste veranderen als men op zijn plaats stond? » · « Wat zou ik moeten weten dat niemand me zegt? »\nLet op: de mening van mensen vragen en er niets mee doen, is erger dan niets vragen. Elke melding verdient een antwoord, ook als het « nee, en dit is waarom » is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Annoncer une mauvaise nouvelle",
+      "nl": "Een slecht bericht aankondigen"
+     },
+     "texte": {
+      "fr": "Vite, avant que la rumeur ne le fasse à sa place. En face, par le dirigeant lui-même, sans déléguer l’annonce. Les faits d’abord, sans dix minutes d’introduction.\nCe que cela change concrètement pour chacun, et ce qui ne change pas. Ce qu’on ne sait pas encore, et quand on le saura.\nQui apprend les mauvaises nouvelles en dernier a déjà mal réagi à l’une d’elles. Les équipes ne cachent pas les problèmes aux dirigeants qui disent merci quand on leur en apporte un.",
+      "nl": "Snel, voordat het gerucht het voor hem doet. Oog in oog, door de leidinggevende zelf, zonder de aankondiging te delegeren. Eerst de feiten, zonder tien minuten inleiding.\nWat het concreet verandert voor ieder, en wat niet verandert. Wat men nog niet weet, en wanneer men het zal weten.\nWie het slechte nieuws als laatste hoort, heeft al slecht gereageerd op een vorige. Teams verbergen geen problemen voor leidinggevenden die bedanken als men er een meebrengt."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Motiver",
+    "nl": "Motiveren"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Ce qui démotive, à régler d’abord",
+      "nl": "Wat demotiveert, eerst oplossen"
+     },
+     "texte": {
+      "fr": "Avant de chercher des idées de motivation, on fait le ménage dans ce qui casse l’envie.\nL’injustice : celui qui fait le minimum est traité comme celui qui se démène. C’est le premier tueur de motivation.\nLe flou : ne pas savoir ce qu’on attend, ni si l’on fait bien.\nLes promesses non tenues : la prime annoncée puis oubliée, l’évolution évoquée puis jamais reprise.\nLe matériel qui ne marche pas, le planning donné la veille, la paie en retard ou fausse : aucun discours ne compense ça.\nLe contrôle sur tout, ou l’absence totale de regard : les deux disent « le travail ne compte pas ».",
+      "nl": "Voordat men motiverende ideeën zoekt, ruimt men op wat de zin doet verdwijnen.\nOnrechtvaardigheid: wie het minimum doet, wordt behandeld als wie zich uit de naad werkt. Dat is de eerste motivatiedoder.\nOnduidelijkheid: niet weten wat er verwacht wordt, of men het goed doet.\nNiet-nagekomen beloftes: de premie die aangekondigd en vergeten werd, de promotie die ter sprake kwam en nooit meer.\nMateriaal dat niet werkt, het planning dat de avond ervoor komt, het loon dat laat of fout is: geen enkel betoog compenseert dat.\nControle op alles, of helemaal geen aandacht: beide zeggen « het werk telt niet »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les vrais leviers",
+      "nl": "De echte hefbomen"
+     },
+     "texte": {
+      "fr": "Les travaux classiques sur la motivation convergent sur six ressorts. Le salaire et les conditions évitent l’insatisfaction mais ne créent pas l’engagement ; ce qui crée l’engagement, c’est ce qui suit.\nAutonomie : avoir la marge sur le comment. Fixer le résultat et le cadre, laisser la personne choisir sa méthode.\nProgression : sentir qu’on devient meilleur. Former, donner un défi d’un cran au-dessus, montrer le chemin vers le poste suivant.\nSens : savoir à quoi ça sert. Relier le poste au client et au résultat, partager les chiffres, les avis clients, les réussites.\nReconnaissance : être vu. Remercier précisément et vite, devant les autres, quand c’est mérité. Connaître les prénoms et les situations.\nÉquité : être traité justement. Mêmes règles pour tous, anciens et proches compris. Récompenser le résultat, traiter la sous-performance.\nAppartenance : faire partie d’une équipe qui gagne. Célébrer les victoires collectives, afficher les progrès, créer de la fierté d’enseigne.",
+      "nl": "De klassieke studies over motivatie komen uit op zes drijfveren. Loon en werkomstandigheden voorkomen ontevredenheid maar scheppen geen betrokkenheid; betrokkenheid ontstaat door wat hierna komt.\nAutonomie: de vrijheid hebben over de manier van werken. Het resultaat en het kader vastleggen, de persoon de methode laten kiezen.\nGroei: voelen dat men beter wordt. Opleiden, een uitdaging één stap hoger geven, de weg naar de volgende functie tonen.\nBetekenis: weten waarvoor het dient. De functie koppelen aan de klant en het resultaat, cijfers, klantenreacties en successen delen.\nErkenning: gezien worden. Precies en snel bedanken, voor de anderen, wanneer het verdiend is. De voornamen en de situaties kennen.\nRechtvaardigheid: rechtvaardig behandeld worden. Dezelfde regels voor iedereen, ook voor de oudgedienden en de vrienden. Het resultaat belonen, de ondermaatse prestatie aanpakken.\nBehoren: deel uitmaken van een team dat wint. Collectieve overwinningen vieren, vooruitgang tonen, trots op de zaak creëren."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Primes et challenges",
+      "nl": "Premies en uitdagingen"
+     },
+     "texte": {
+      "fr": "Un incentive fonctionne à trois conditions : la règle est simple et comprise par tous ; la personne peut influencer directement le résultat par son travail ; le paiement est rapide et sans discussion.\nUn challenge dont on apprend le résultat deux mois après, ou une prime dont le calcul est contestable, produit l’effet inverse.\nAttention à ce qu’on récompense : on obtient exactement ce qu’on récompense. Une prime au volume sans regard sur la marge ou la casse donne du volume, pas du résultat.",
+      "nl": "Een stimulans werkt onder drie voorwaarden: de regel is eenvoudig en voor iedereen duidelijk; de persoon kan het resultaat rechtstreeks beïnvloeden met haar werk; de uitbetaling is snel en zonder discussie.\nEen uitdaging waarvan men het resultaat twee maanden later hoort, of een premie waarvan de berekening betwistbaar is, werkt omgekeerd.\nLet op wat men beloont: men krijgt precies wat men beloont. Een premie op volume zonder aandacht voor de marge of de breuk levert volume op, geen resultaat."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Ses meilleurs éléments",
+      "nl": "Zijn beste mensen"
+     },
+     "texte": {
+      "fr": "On passe souvent 80 % de son temps de management sur les 20 % qui posent problème. Pendant ce temps, les bons se débrouillent seuls, puis partent sans prévenir. Il faut inverser la proportion : du temps, de l’attention, des projets et de la visibilité pour ceux qui tirent l’entreprise.\nGarder quelqu’un qui ne fait pas le travail, par confort ou par gentillesse, n’est pas de la bienveillance : c’est une sanction pour tous ceux qui compensent à sa place, et ils le savent.",
+      "nl": "Men besteedt vaak 80 % van de managementtijd aan de 20 % die problemen geven. Ondertussen redden de goeden het zelf en vertrekken ze zonder iets te zeggen. Keer de verhouding om: tijd, aandacht, projecten en zichtbaarheid voor wie de zaak draagt.\nIemand houden die het werk niet doet, uit gemakzucht of vriendelijkheid, is geen goedheid: het is een straf voor wie voor hem bijspringt, en zij weten dat."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Piloter",
+    "nl": "Sturen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Peu d’objectifs, mais tenus",
+      "nl": "Weinig doelen, maar gehaald"
+     },
+     "texte": {
+      "fr": "Trois priorités par trimestre au niveau de l’entreprise, pas dix. Chacune a un responsable unique, un chiffre cible et une date.\n« Améliorer le service » n’est pas un objectif. « Passer la note moyenne des avis de 4,2 à 4,5 d’ici le 31 mars » en est un.",
+      "nl": "Drie prioriteiten per kwartaal op het niveau van het bedrijf, niet tien. Elk heeft één verantwoordelijke, een streefcijfer en een datum.\n« De service verbeteren » is geen doel. « De gemiddelde score van de beoordelingen van 4,2 naar 4,5 brengen vóór 31 maart » wel."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Un chiffre par personne",
+      "nl": "Eén cijfer per persoon"
+     },
+     "texte": {
+      "fr": "Chacun connaît l’indicateur sur lequel il a la main, et sait chaque semaine s’il est au-dessus ou en dessous.\nPeu importe qu’il s’agisse du ticket moyen, du taux de casse, du respect du planning ou du délai de traitement : ce qui compte, c’est que la personne puisse agir dessus et le voir bouger.",
+      "nl": "Iedereen kent de indicator waarop hij vat heeft en weet elke week of hij erboven of eronder zit.\nOf het om het gemiddelde ticket, het breukpercentage, de naleving van het planning of de verwerkingstermijn gaat, maakt weinig uit: belangrijk is dat de persoon erop kan handelen en het ziet bewegen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Les indicateurs visibles",
+      "nl": "Zichtbare indicatoren"
+     },
+     "texte": {
+      "fr": "Un chiffre que personne ne voit ne change aucun comportement. On affiche les résultats là où l’équipe travaille, on les met à jour à rythme fixe, et on compare : à l’objectif, à la même période de l’an dernier, aux autres sites.\nLa comparaison entre sites est un des leviers les plus puissants d’un réseau, à condition de s’en servir pour faire circuler les bonnes pratiques, et non pour humilier.",
+      "nl": "Een cijfer dat niemand ziet, verandert geen gedrag. Men hangt de resultaten op waar het team werkt, werkt ze bij in een vast ritme en vergelijkt: met de doelstelling, met dezelfde periode vorig jaar, met de andere zaken.\nDe vergelijking tussen zaken is een van de krachtigste hefbomen van een netwerk, mits men ze gebruikt om goede praktijken te verspreiden en niet om te vernederen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "La réunion de pilotage qui sert à quelque chose",
+      "nl": "De stuurvergadering die iets oplevert"
+     },
+     "texte": {
+      "fr": "Elle commence à l’heure et par les chiffres, pas par un tour de table des humeurs.\nOn ne commente pas ce qui est à l’objectif : on passe le temps sur les écarts.\nPour chaque écart : la cause, l’action, le responsable, la date.\nElle commence par la revue des actions de la réunion précédente. C’est ce point-là qui installe la culture du résultat.",
+      "nl": "Ze begint op tijd en met de cijfers, niet met een ronde over de stemming.\nWat op doel zit, wordt niet becommentarieerd: de tijd gaat naar de afwijkingen.\nVoor elke afwijking: de oorzaak, de actie, de verantwoordelijke, de datum.\nZe begint met de opvolging van de acties van de vorige vergadering. Dat punt bouwt de resultaatcultuur op."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Contrôler sans étouffer",
+      "nl": "Controleren zonder te verstikken"
+     },
+     "texte": {
+      "fr": "Contrôler n’est pas un manque de confiance : c’est une marque d’intérêt. Ce que le dirigeant vérifie, l’équipe le considère comme important.\nLa bonne dose dépend de la personne. Quelqu’un de nouveau, ou en difficulté sur un sujet, a besoin de points rapprochés. Quelqu’un qui maîtrise a besoin d’un objectif, et qu’on le laisse tranquille. Traiter tout le monde pareil, c’est mal manager tout le monde.",
+      "nl": "Controleren is geen gebrek aan vertrouwen maar een teken van interesse: wat de leidinggevende controleert, vindt het team belangrijk.\nDe juiste dosis hangt af van de persoon. Wie nieuw is of op een onderwerp moeilijkheden heeft, heeft korte opvolging nodig. Wie het beheerst, heeft een doel nodig en moet met rust gelaten worden. Iedereen hetzelfde behandelen is iedereen slecht begeleiden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les conversations difficiles",
+    "nl": "Moeilijke gesprekken"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Recadrer",
+      "nl": "Corrigeren"
+     },
+     "texte": {
+      "fr": "Un recadrage se fait en privé, vite, et sur des faits. Pas de préambule interminable, pas de compliment placé avant pour amortir : la personne sent le coup venir et n’écoute plus.\nCinq étapes. 1. Le fait : « mardi et jeudi, l’ouverture s’est faite avec vingt minutes de retard ». 2. La conséquence : « des clients sont repartis, et l’équipe a dû rattraper toute la matinée ». 3. L’écoute : « qu’est-ce qui s’est passé ? » Et l’on écoute vraiment la réponse. 4. L’attendu : « l’ouverture, c’est 7 h 00, porte ouverte, vitrine pleine. Ce n’est pas négociable. » 5. La suite : « on refait le point vendredi prochain ». Et on le refait.\nSi le problème revient après un recadrage clair et un accompagnement réel, on n’est plus dans le malentendu : il faut prendre une décision.",
+      "nl": "Een correctie gebeurt privé, snel en op basis van feiten. Geen eindeloze inleiding en geen compliment vooraf om de klap te verzachten: de persoon voelt de klap aankomen en luistert niet meer.\nVijf stappen. 1. Het feit: « dinsdag en donderdag is de opening twintig minuten te laat begonnen ». 2. Het gevolg: « er zijn klanten weggegaan, en het team moest de hele ochtend inhalen ». 3. Luisteren: « wat is er gebeurd? » En men luistert echt naar het antwoord. 4. De verwachting: « de opening is om 7.00 uur, deur open, vitrine vol. Dat is niet onderhandelbaar. » 5. Het vervolg: « we bekijken dit volgende vrijdag opnieuw ». En men doet het ook.\nKomt het probleem terug na een duidelijke correctie en echte begeleiding, dan gaat het niet meer om een misverstand: dan moet er een beslissing genomen worden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Dire non",
+      "nl": "Nee zeggen"
+     },
+     "texte": {
+      "fr": "Un dirigeant qui dit oui à tout ne tient rien. Dire non proprement : la réponse d’abord, la raison ensuite, et si possible ce qui serait envisageable.\n« Non, pas d’augmentation maintenant. La raison, c’est que les objectifs fixés en janvier ne sont pas atteints. Voilà ce qu’il faudrait pour qu’on en reparle en juin. »",
+      "nl": "Een leidinggevende die overal ja op zegt, houdt niets. Zeg netjes nee: eerst het antwoord, dan de reden en, als het kan, wat wel mogelijk zou zijn.\n« Nee, geen loonsverhoging nu. De reden: de doelstellingen van januari zijn niet gehaald. Dit zou nodig zijn om er in juni opnieuw over te praten. »"
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Gérer un conflit dans l’équipe",
+      "nl": "Een conflict in het team beheren"
+     },
+     "texte": {
+      "fr": "Ne pas laisser pourrir en espérant que ça se règle seul : un conflit ne se règle jamais seul, il se transforme en clans.\nEntendre chacun séparément, puis réunir, ramener la discussion aux faits et au travail, et sortir avec des règles de fonctionnement précises.",
+      "nl": "Laat het niet rotten in de hoop dat het vanzelf overgaat: een conflict lost zichzelf nooit op, het verandert in kampen.\nIeder afzonderlijk horen, dan samenbrengen, het gesprek terugbrengen naar de feiten en het werk, en eruit komen met precieze werkafspraken."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Se séparer de quelqu’un",
+      "nl": "Afscheid nemen van iemand"
+     },
+     "texte": {
+      "fr": "Quand c’est nécessaire, le faire tôt, proprement, dans le respect du droit et de la personne.\nUne séparation bien menée n’est jamais une surprise pour celui qui la vit : s’il tombe des nues, c’est que les conversations précédentes n’ont pas eu lieu.",
+      "nl": "Wanneer het nodig is, doe het vroeg en correct, met respect voor het recht en voor de persoon.\nEen goed begeleid afscheid is nooit een verrassing voor wie het ondergaat: valt hij uit de lucht, dan hebben de voorgaande gesprekken niet plaatsgevonden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Reconnaître ses propres erreurs",
+      "nl": "Eigen fouten erkennen"
+     },
+     "texte": {
+      "fr": "« Je me suis trompé sur ce point, voilà ce qu’on change » n’affaiblit pas. C’est ce qui autorise les autres à remonter leurs erreurs au lieu de les enterrer. Le dirigeant qui n’a jamais tort fabrique une équipe qui ne dit plus rien.\nÉviter une conversation difficile, ce n’est pas protéger l’autre : c’est se protéger soi-même, et faire payer plus tard, et plus cher.",
+      "nl": "« Ik heb me op dit punt vergist, dit is wat we veranderen » verzwakt niet. Het laat anderen toe hun fouten te melden in plaats van ze te begraven. De leidinggevende die nooit ongelijk heeft, maakt een team dat niets meer zegt.\nEen moeilijk gesprek uit de weg gaan is niet de ander beschermen: het is zichzelf beschermen, en later, en duurder, laten betalen."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les erreurs classiques du dirigeant",
+    "nl": "De klassieke fouten van de leidinggevende"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Dix erreurs, leur effet, leur correctif",
+      "nl": "Tien fouten, hun effect, hun correctie"
+     },
+     "texte": {
+      "fr": "Tout faire soi-même : une équipe qui attend, un dirigeant qui sature. Déléguer des résultats, avec un point de contrôle fixé.\nChanger de priorité tous les mois : plus personne ne s’investit. Trois priorités par trimestre, tenues jusqu’au bout.\nVouloir être aimé : pas de recadrage, des standards qui glissent, les meilleurs s’en vont. Viser le respect : clair, juste, constant.\nManager par l’humeur : l’équipe passe son énergie à deviner comment on va aujourd’hui. Mêmes exigences les bons et les mauvais jours.\nCommuniquer une fois : « je l’ai dit en réunion », mais personne n’applique. Répéter, écrire, vérifier la compréhension.\nAnnoncer sans suivre : les nouveautés meurent en trois semaines et la parole du dirigeant se dévalue. Ne rien lancer qu’on ne soit prêt à contrôler pendant trois mois.\nFavoriser les proches ou les anciens : sentiment d’injustice, désengagement silencieux. Une seule règle, la même pour tous.\nRecruter dans l’urgence : un mauvais recrutement coûte des mois et abîme l’équipe. Mieux vaut un poste vide trois semaines qu’un poste mal rempli un an.\nNe parler que de ce qui ne va pas : l’équipe associe la présence du dirigeant à des reproches. Chercher activement ce qui est bien fait, et le dire.\nRester loin du terrain : décisions déconnectées, problèmes découverts trop tard. Du temps fixe sur le terrain, sans ordre du jour.",
+      "nl": "Alles zelf doen: een team dat wacht, een leidinggevende die verzadigd raakt. Resultaten delegeren, met een vast controlepunt.\nElke maand van prioriteit veranderen: niemand zet zich nog in. Drie prioriteiten per kwartaal, tot het einde volgehouden.\nGraag gezien willen worden: geen correctie, standaarden die wegglijden, de beste mensen vertrekken. Respect nastreven: duidelijk, rechtvaardig, consequent.\nLeiden op humeur: het team steekt zijn energie in raden hoe het vandaag gaat. Dezelfde eisen op goede en slechte dagen.\nEén keer communiceren: « ik heb het in de vergadering gezegd », maar niemand past het toe. Herhalen, schrijven, het begrip controleren.\nAankondigen zonder op te volgen: nieuwigheden sterven binnen drie weken en het woord van de leidinggevende verliest waarde. Niets lanceren wat men niet drie maanden kan controleren.\nFamilie of oudgedienden voortrekken: een gevoel van onrechtvaardigheid, stille terugtrekking. Eén regel, dezelfde voor iedereen.\nIn haast aanwerven: een slechte aanwerving kost maanden en schaadt het team. Beter een vacature van drie weken dan een slecht ingevulde post voor een jaar.\nAlleen praten over wat niet goed gaat: het team koppelt de aanwezigheid van de leidinggevende aan verwijten. Actief zoeken wat goed gaat, en het zeggen.\nVer van het terrein blijven: losgekoppelde beslissingen, problemen die te laat ontdekt worden. Vaste tijd op het terrein, zonder agenda."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le plan des 30 jours",
+    "nl": "Het plan van 30 dagen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Quatre semaines, un chantier par semaine",
+      "nl": "Vier weken, één werkpunt per week"
+     },
+     "texte": {
+      "fr": "Semaine 1, clarté : le cap en une phrase ; trois priorités du trimestre, chacune avec son responsable direct, son chiffre et sa date ; l’objectif et l’indicateur de chaque responsable écrits et validés avec lui.\nSemaine 2, rituels : brief quotidien en place sur chaque site ; réunion de pilotage à heure fixe ; points individuels calés dans l’agenda pour les trois prochains mois.\nSemaine 3, conversations : les deux ou trois conversations repoussées ont eu lieu. Chaque responsable direct a reçu un feedback précis, positif et correctif. Une demi-journée passée sur le terrain pour poser des questions.\nSemaine 4, reconnaissance et suivi : résultats du mois partagés à tous, réussites nommées avec les prénoms. Revue des actions décidées en semaines 1 à 3 : fait, pas fait, pourquoi.\nInutile de tout lancer en même temps : un chantier par semaine, et on tient.",
+      "nl": "Week 1, duidelijkheid: de koers in één zin; drie prioriteiten van het kwartaal, elk met zijn directe verantwoordelijke, cijfer en datum; het doel en de indicator van elke verantwoordelijke, schriftelijk en met hem gevalideerd.\nWeek 2, rituelen: dagelijkse briefing op elke zaak; stuurvergadering op een vast uur; individuele gesprekken ingepland voor de komende drie maanden.\nWeek 3, gesprekken: de twee of drie uitgestelde gesprekken hebben plaatsgevonden. Elke directe verantwoordelijke kreeg precieze, positieve en corrigerende feedback. Een halve dag op het terrein om vragen te stellen.\nWeek 4, erkenning en opvolging: de resultaten van de maand gedeeld met iedereen, successen genoemd met de voornamen. Overzicht van de acties van week 1 tot 3: gedaan, niet gedaan, waarom.\nNiet alles tegelijk lanceren: één werkpunt per week, en men houdt vol."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "La semaine type du dirigeant",
+      "nl": "Het weektype van de leidinggevende"
+     },
+     "texte": {
+      "fr": "Une fois les rituels installés, la semaine se structure d’elle-même. L’idée : le temps de management n’est pas bloqué d’avance et ne saute pas à la première urgence.\nLundi : lecture des chiffres de la semaine passée, réunion de pilotage, décisions.\nMardi à jeudi : points individuels, terrain, dossiers de fond.\nUn bloc protégé de deux à trois heures pour travailler sur l’entreprise et non dedans : stratégie, organisation, recrutement.\nVendredi : bilan de la semaine en quinze minutes. Qu’est-ce qui a avancé, qu’est-ce qui a été repoussé, qui faut-il remercier, qui faut-il recadrer.",
+      "nl": "Zodra de rituelen zijn ingevoerd, structureert de week zichzelf. Het idee: de managementtijd wordt niet vooraf geblokkeerd en valt niet stil bij de eerste spoed.\nMaandag: lezing van de cijfers van de vorige week, stuurvergadering, beslissingen.\nDinsdag tot donderdag: individuele gesprekken, het terrein, grondige dossiers.\nEen beschermd blok van twee tot drie uur om aan het bedrijf te werken en niet in het bedrijf: strategie, organisatie, aanwerving.\nVrijdag: weekbalans in vijftien minuten. Wat is vooruitgegaan, wat is uitgesteld, wie moet bedankt worden, wie moet gecorrigeerd worden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Le seul vrai critère",
+      "nl": "Het enige echte criterium"
+     },
+     "texte": {
+      "fr": "Dans trois mois, est-ce que ces rituels tournent encore sans qu’on ait sauté une semaine ?\nSi oui, l’équipe aura changé. Si non, elle aura appris que c’était une lubie de plus.",
+      "nl": "Draaien die rituelen over drie maanden nog steeds, zonder dat er één week is overgeslagen?\nZo ja, dan is het team veranderd. Zo niet, dan heeft het geleerd dat het één liefhebberij te veel was."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Auto-diagnostic",
+    "nl": "Zelfdiagnose"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Cap et clarté",
+      "nl": "Koers en duidelijkheid"
+     },
+     "texte": {
+      "fr": "Vingt questions : on répond oui uniquement si c’est vrai aujourd’hui, pas si c’est vrai en théorie.\n1. On peut dire son cap à trois ans en une phrase, avec un chiffre.\n2. Les responsables directs citeraient les mêmes trois priorités.\n3. Chaque personne de l’équipe connaît l’indicateur sur lequel elle est attendue.\n4. Quand on prend une décision, on explique le pourquoi.",
+      "nl": "Twintig vragen: men antwoordt enkel ja als het vandaag waar is, niet als het in theorie waar is.\n1. Men kan de koers voor drie jaar in één zin zeggen, met een cijfer.\n2. De directe verantwoordelijken zouden dezelfde drie prioriteiten noemen.\n3. Elke persoon in het team kent de indicator waarop ze beoordeeld wordt.\n4. Bij elke beslissing legt men het waarom uit."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Communication",
+      "nl": "Communicatie"
+     },
+     "texte": {
+      "fr": "5. Een dagelijkse briefing vindt plaats op elke zaak, ook als de leidinggevende er niet is.\n6. Men ziet elke directe verantwoordelijke minstens om de twee weken één op één.\n7. In vergaderingen spreekt men minder dan de helft van de tijd.\n8. Deze maand heeft men spontaan een slecht bericht gebracht.\n9. Belangrijke wijzigingen worden aangekondigd door de leidinggevende of de directe verantwoordelijke, nooit via geruchten.",
+      "nl": "5. Op elke zaak vindt er een dagelijkse briefing plaats, ook als de leidinggevende er niet is.\n6. Men ziet elke directe verantwoordelijke minstens om de twee weken één op één.\n7. In vergaderingen spreekt men minder dan de helft van de tijd.\n8. Deze maand heeft men spontaan een slecht bericht gebracht.\n9. Belangrijke wijzigingen worden aangekondigd door de leidinggevende of de directe verantwoordelijke, nooit via geruchten."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Motivation",
+      "nl": "Motivatie"
+     },
+     "texte": {
+      "fr": "10. Deze week heeft men iemand precies gefeliciteerd.\n11. De beste mensen weten dat men hen als zodanig beschouwt.\n12. Alle beloftes (premie, evolutie, materiaal) zijn gehouden of hersteld.\n13. De regels zijn voor iedereen dezelfde, ook voor de oudgedienden en de vrienden.\n14. Men houdt niemand die iedereen weet het werk niet doet.",
+      "nl": "10. Deze week heeft men iemand precies gefeliciteerd.\n11. De beste mensen weten dat men hen als zodanig beschouwt.\n12. Alle beloftes (premie, evolutie, materiaal) zijn gehouden of hersteld.\n13. De regels zijn voor iedereen dezelfde, ook voor de oudgedienden en de vrienden.\n14. Men houdt niemand die iedereen weet het werk niet doet."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Pilotage et courage",
+      "nl": "Sturen en moed"
+     },
+     "texte": {
+      "fr": "15. De cijfers zijn zichtbaar voor de teams en worden in een vast ritme bijgewerkt.\n16. Elke stuurvergadering begint met de opvolging van de acties van de vorige.\n17. Er ligt geen moeilijk gesprek langer dan een week te wachten.\n18. Deze maand heeft men tijd op het terrein doorgebracht, zonder agenda.\n19. In de laatste drie maanden heeft men een fout erkend voor het team.\n20. Elke week is er minstens twee uur beschermd om aan het bedrijf te werken.",
+      "nl": "15. De cijfers zijn zichtbaar voor de teams en worden in een vast ritme bijgewerkt.\n16. Elke stuurvergadering begint met de opvolging van de acties van de vorige.\n17. Er ligt geen moeilijk gesprek langer dan een week te wachten.\n18. Deze maand heeft men tijd op het terrein doorgebracht, zonder agenda.\n19. In de laatste drie maanden heeft men een fout erkend voor het team.\n20. Elke week is er minstens twee uur beschermd om aan het bedrijf te werken."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Lire le résultat",
+      "nl": "Het resultaat lezen"
+     },
+     "texte": {
+      "fr": "16 à 20 oui : la base est solide ; il s’agit de la faire tenir par les responsables, sans le dirigeant.\n10 à 15 oui : des rituels existent mais ne sont pas réguliers. Choisir les trois non qui coûtent le plus cher, et les traiter ce mois-ci.\nMoins de 10 oui : l’entreprise tourne sur l’énergie personnelle du dirigeant. Reprendre le plan des 30 jours dans l’ordre, sans sauter la semaine 1.",
+      "nl": "16 tot 20 ja: de basis is stevig; het gaat erom dat de verantwoordelijken het houden, zonder de leidinggevende.\n10 tot 15 ja: er zijn rituelen maar ze gebeuren niet regelmatig. Kies de drie nee-antwoorden die het duurst zijn, en werk ze deze maand af.\nMinder dan 10 ja: het bedrijf draait op de persoonlijke energie van de leidinggevende. Het plan van 30 dagen in volgorde hervatten, zonder week 1 over te slaan."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Pour finir",
+      "nl": "Tot slot"
+     },
+     "texte": {
+      "fr": "Diriger, ce n’est pas avoir les meilleures idées. C’est faire en sorte que des gens ordinaires obtiennent ensemble des résultats au-dessus de la moyenne, semaine après semaine.\nCela repose sur trois choses que personne ne peut faire à sa place : dire où l’on va, dire la vérité, tenir dans la durée.",
+      "nl": "Leiden betekent niet de beste ideeën hebben. Het betekent ervoor zorgen dat gewone mensen samen resultaten boven het gemiddelde halen, week na week.\nDat rust op drie dingen die niemand voor je kan doen: zeggen waarheen we gaan, de waarheid zeggen, en volhouden."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Éviter les conversations difficiles, c’est se protéger soi-même, et payer plus tard et plus cher.",
+   "nl": "Moeilijke gesprekken uit de weg gaan is zichzelf beschermen, en later en duurder betalen."
+  },
+  {
+   "fr": "Déléguer un résultat, pas une tâche, avec le point de contrôle fixé au moment de la délégation.",
+   "nl": "Een resultaat delegeren, geen taak, met het controlepunt vastgelegd op het moment van delegeren."
+  },
+  {
+   "fr": "Un message important ne se dit pas une seule fois : répéter, faire reformuler, confirmer par écrit.",
+   "nl": "Een belangrijke boodschap zeg je niet maar één keer: herhalen, laten herformuleren, schriftelijk bevestigen."
+  },
+  {
+   "fr": "Une mauvaise nouvelle s’annonce vite, soi-même, avec les faits d’abord.",
+   "nl": "Een slecht bericht kondig je snel aan, zelf, met eerst de feiten."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Un collaborateur n’atteint pas son objectif. Quelle est la première chose à vérifier ?",
+    "nl": "Een medewerker haalt zijn doel niet. Wat controleert men eerst?"
+   },
+   "choix": {
+    "fr": [
+     "Sa motivation personnelle",
+     "Qu’il pourrait écrire en trois lignes ce qu’on attend de lui",
+     "Son ancienneté dans l’entreprise"
+    ],
+    "nl": [
+     "Zijn persoonlijke motivatie",
+     "Of hij in drie regels kan schrijven wat er van hem verwacht wordt",
+     "Zijn anciënniteit in het bedrijf"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Une décision réversible : comment la traite-t-on ?",
+    "nl": "Een omkeerbare beslissing: hoe pakt men die aan?"
+   },
+   "choix": {
+    "fr": [
+     "On tranche vite et on ajuste ensuite",
+     "On attend d’avoir toutes les réponses",
+     "On la soumet à toute l’équipe"
+    ],
+    "nl": [
+     "Men beslist snel en past nadien aan",
+     "Men wacht tot alle antwoorden binnen zijn",
+     "Men legt ze voor aan het hele team"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Combien de temps dure le brief d’équipe quotidien ?",
+    "nl": "Hoe lang duurt de dagelijkse teambriefing?"
+   },
+   "choix": {
+    "fr": [
+     "Une heure, avec débat",
+     "Il n’en faut pas : le message part par écrit",
+     "5 à 10 minutes, debout, sans débat"
+    ],
+    "nl": [
+     "Een uur, met debat",
+     "Die is niet nodig: de boodschap gaat schriftelijk",
+     "5 tot 10 minuten, staand, zonder debat"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Un salarié apprend par la rumeur un changement qui touche son poste. Qu’est-ce qui a manqué ?",
+    "nl": "Een medewerker hoort via geruchten van een wijziging die zijn functie raakt. Wat ontbrak?"
+   },
+   "choix": {
+    "fr": [
+     "La rumeur, seule et sans gravité",
+     "L’annonce directe, faite par le dirigeant ou son responsable",
+     "Le planning de la semaine"
+    ],
+    "nl": [
+     "Het gerucht, alleen en zonder gevolgen",
+     "De directe aankondiging, door de leidinggevende of zijn verantwoordelijke",
+     "Het planning van de week"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Combien de priorités au niveau de l’entreprise par trimestre ?",
+    "nl": "Hoeveel prioriteiten op bedrijfsniveau per kwartaal?"
+   },
+   "choix": {
+    "fr": [
+     "Trois",
+     "Dix",
+     "Une seule, pour toute l’année"
+    ],
+    "nl": [
+     "Drie",
+     "Tien",
+     "Eén enkele, voor het hele jaar"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "classement": {
+  "souscat": "D6.4",
+  "phases": [
+   "operationnel",
+   "formation"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-RH.Réunion",
+   "C-RH.Évaluation",
+   "C-RH.Conflit",
+   "C-PILOTAGE.KPI"
+  ],
+  "formations": [
+   "FO-06",
+   "FO-05"
+  ],
+  "checklists": []
+ }
+}

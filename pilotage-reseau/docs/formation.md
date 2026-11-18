@@ -1121,3 +1121,15 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
     fiche « Recette & marge », montre encore « objectif × 3,13 · matière 32 % » ; le dashboard demande maintenant une
     session de la console franchisé (`garde.js`, 13/11/2026) : elle n'a pas pu être refaite sans identifiants. La source
     de ces articles dans le dépôt (`claude/loving-turing-n6j40s`, `data/formation/dashboard-onglets/`) n'est pas à jour.
+
+## Deux articles tirés de documents remis par Sam (18/11/2026)
+
+- Sam : « rajouter les bonnes pratiques dans le manuel opératoire », puis « rajouter » la valeur de la franchise.
+- **0.0.55 « Diriger, inspirer, embarquer : les bonnes pratiques du dirigeant »** : guide de travail en neuf chapitres
+  (posture, inspirer, communiquer, motiver, piloter, conversations difficiles, erreurs classiques, plan 30 jours,
+  auto-diagnostic). D6.4, phases opérationnel et formation continue, P4 et P7 à P12, FO-06 et FO-05, accès responsable.
+- **0.0.56 « La valeur d’une franchise : ce que vaut vraiment la boutique »** : article réseau sur le système de gestion
+  unique et les procédures identiques comme valeur à la revente. D7.5 Valorisation, phases préouverture et formation
+  continue, P7 à P12, FO-32 et FO-41, accès responsable.
+- Encodés en v1.0 « à valider » (`encoder_sop.py`), relus au serveur. Source et points « à confirmer » :
+  `data/formation/dirigeant/LISEZMOI.md`.
