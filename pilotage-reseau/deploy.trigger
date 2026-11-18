@@ -122,3 +122,4 @@
 2026-11-18T19:04:55Z stan ogólny : sans moyenne / tydz.
 2026-11-18T19:10:12Z consigne générale des contrôles qualité (Entraînement de l'IA)
 2026-11-18T19:12:00Z dashboard franchisé, vue Mois : trafic sur 12 mois glissants
+2026-11-18T19:22:57Z coach vente : objectifs 2026 (food cost 40 %, personnel 17 %, scannés 25 %, menus 15 %), hausses de prix avec lot
