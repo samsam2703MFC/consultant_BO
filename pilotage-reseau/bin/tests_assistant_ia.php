@@ -263,5 +263,17 @@ $pct = aivMargesPct($acc);
 verifie('la marge en %, les catégories par ventes décroissantes', $pct === ['Viennoiserie' => 70.0, 'Pâtisseries fines' => 60.0], json_encode($pct));
 verifie('les marges s’écrivent en %', aiaFmt(62.45, 'marge') === "62,5\u{00A0}%");
 
+echo "Les coachs citent le manuel (18/11/2026)\n";
+$memo = [];
+$doc = amDocumentDuControle('Fermeture du magasin (CO-02 — Fermeture)', $memo);
+verifie('une photo non conforme trouve le document que son contrôle applique', ($doc['id'] ?? '') === 'ferm' && ($doc['titre'] ?? '') === 'Fermeture du magasin' && ($doc['code'] ?? '') === 'FERM', json_encode($doc, JSON_UNESCAPED_UNICODE));
+verifie('le statut du document vient avec lui', ($doc['statut'] ?? '') === 'publié');
+verifie('une seule recherche par contrôle', array_key_exists('Fermeture du magasin (CO-02 — Fermeture)', $memo) && amDocumentDuControle('Fermeture du magasin (CO-02 — Fermeture)', $memo) === $doc);
+verifie('un contrôle que le manuel ne connaît pas : aucun document inventé', amDocumentDuControle('Zzz qwerty', $memo) === null);
+verifie('la règle des coachs : citer le manuel, le lire avant d’en tirer un geste, le mettre dans les sources',
+    str_contains(AM_SYSTEME, 'Tu cites le manuel opératoire') && str_contains(AM_SYSTEME, 'documentProbableDuManuel') && str_contains(AM_SYSTEME, 'lis-le (manuel_lire)') && str_contains(AM_SYSTEME, 'mets son id dans `sources`'));
+verifie('… sans document inventé pour un conseil que le manuel ne couvre pas', str_contains(AM_SYSTEME, 'ne lui invente pas de document'));
+verifie('le Professeur reçoit aussi le document probable', str_contains(AIA_SYSTEME_PROF, 'documentProbableDuManuel'));
+
 echo "\n" . ($ko === 0 ? "Tout est vert : $ok vérifications." : "$ko échec(s), $ok réussite(s).") . "\n";
 exit($ko === 0 ? 0 : 1);
