@@ -1,6 +1,23 @@
 # Distinguer le comptoir et le webshop dans la jauge du jour — trois maquettes
 
-**Statut : proposées le 18/11/2026, à choisir.** Rien n'est codé.
+**Statut : C retenue par Sam et codée le 18/11/2026.**
+
+- **Serveur** : `GET /exploitation/canaux` rend en plus `j7.liste` (les commandes du même jour la semaine d'avant) et
+  `pro` sur chaque commande (`src/canaux_offres.php`, `coClientsPro`). Contrat dans `docs/contrat-api.md`, tests
+  dans `php bin/tests_canaux.php`.
+- **Dashboard** : `opRuban`, sous la jauge du comptoir (`opDuel`), au téléphone comme au bureau. Les styles sont
+  `.op-rb` dans `dashboard.css`. Toucher une colonne ouvre la feuille « Commandes du jour » sur son canal
+  (`cmdmOuvrir(f)`).
+
+Captures de la version codée, avec une API simulée qui reprend les chiffres de Halle :
+- `code-telephone.png` : l'onglet Opérationnel au téléphone ;
+- `code-bureau.png` : la même carte au bureau ;
+- `code-feuille-webshop.png` : la feuille ouverte depuis la colonne Webshop.
+
+Écarts à la maquette, une fois codé :
+- l'écart à J−7 s'écrit au dixième (« − 32,5 % ») ;
+- une commande d'un client des tickets pro n'entre pas dans le ruban : elle est déjà à la jauge B2B ;
+- sans commande, ni aujourd'hui ni le même jour la semaine d'avant, la ligne « Commandes du jour » reste seule.
 
 Demande du 18/11/2026, sur la capture de Halle à 17:43 (onglet Opérationnel, au téléphone) : « rajouter une façon
 de différencier les ventes comptoir et les ventes webshop, fais 2-3 maquettes en screenshots ».
@@ -22,7 +39,7 @@ caisse, n'y entre pas du tout. À Halle, toutes les commandes webshop lues depui
 | **C** | `ecran-c.png` : **le ruban des canaux**. La jauge reste celle d'aujourd'hui. Dessous, une barre de la part de chaque canal, puis trois colonnes : comptoir (vente directe), commandes prises au comptoir, webshop, chacune face à mercredi dernier. Elle remplace la ligne « Commandes du jour » ; toucher une colonne ouvre la feuille des commandes sur ce canal. | Lisible même pour un webshop de 0,3 %. Il faut lire des chiffres, pas une forme. |
 | | `planche.jpg` : les quatre côte à côte | |
 
-**Recommandation : C.** Elle dit le partage chiffré, même quand le webshop est minuscule, et ne touche ni à la jauge
+**Retenue : C** (recommandée, puis choisie par Sam le 18/11). Elle dit le partage chiffré, même quand le webshop est minuscule, et ne touche ni à la jauge
 ni à l'objectif. C'est aussi elle que reprend la refonte du téléphone (`../dashboard-mobile-v3/`), avec une quatrième
 case pour le B2B.
 

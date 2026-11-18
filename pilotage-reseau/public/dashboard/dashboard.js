@@ -2846,8 +2846,9 @@
     h += depasse ? `<div class="op-dax ab"><span>0 €</span><span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">objectif ${cpt ? 'comptoir ' : ''}${fE(obj)}</span></div>`
       : `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + (cpt ? 'comptoir ' : '') + fE(obj) : fE(echelle)}</span></div>`;
     // La ligne « face à samedi dernier · clients · panier · au rythme de la journée » est retirée (10/10/2026).
-    // Les commandes du jour (06/11/2026) : une ligne qui ouvre leur feuille, comptoir et webshop.
-    return h + opCmdLigne(D) + '</div>';
+    // Les commandes du jour (06/11/2026) : une ligne qui ouvre leur feuille, comptoir et webshop ; depuis le 18/11/2026,
+    // le ruban des canaux quand les commandes du panel se lisent (opRuban), la ligne seule sinon.
+    return h + opRuban(D, ca, j7, B.jourNom, cpt) + '</div>';
   }
   /**
    * Les jauges du comptoir et du B2B (23/10/2026, Sam, maquette A) : la jauge du haut ne compte que le comptoir, face à
@@ -2911,11 +2912,50 @@
     const L = D && Array.isArray(D.listeC) ? D.listeC : [];
     if (!L.length) { return ''; }
     const C = L.filter(c => c.canal === 'compt'), W = L.length - C.length, tot = L.reduce((a, c) => a + (+c.montant || 0), 0);
+    // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée (opCmdVerif).
+    const v = opCmdVerif(D).v;
+    return `<div class="op-cmdl" data-cmdm="tous" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
+  }
+  /* ── Le ruban des canaux (18/11/2026, Sam : « différencier les ventes comptoir et les ventes webshop », maquette C de
+   * docs/maquettes/comptoir-webshop) ──────────────────────────────────────────────────────────────────────────────
+   * Sous la jauge, qui ne change pas : la part de chaque canal, puis trois colonnes — le comptoir (la vente directe :
+   * la valeur de la jauge moins les commandes encaissées en caisse), les commandes prises au comptoir, le webshop
+   * (click & collect et livraison, encaissés ou payés en ligne) —, chacune face au même jour la semaine d'avant à la
+   * même heure. Une commande compte quand elle est vendue : encaissée ou remise. Celle d'un client des tickets pro
+   * (`pro`, lu par le serveur) reste à la jauge B2B. J−7 : les commandes de /exploitation/canaux (`j7.liste`) dont le
+   * retrait tombe avant l'heure de la jauge de J−7. Un appui sur une colonne ouvre la feuille « Commandes du jour » sur
+   * son canal. Sans commande ni aujourd'hui ni à J−7, ou sans commandes lues : la ligne « Commandes du jour » seule. */
+  function opRuban(D, T, j7, jourNom, cpt) {
+    const CA = D && D.CA;
+    if (!CA || CA.error || CA.indispo || !Array.isArray(CA.liste) || T == null) { return opCmdLigne(D); }
+    const vendue = c => !c.pro && !c.differe && (c.encaissee || bmRemise(c));
+    const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0);
+    const parts = (L, total) => { const C = L.filter(c => c.canal === 'compt'), W = L.filter(c => c.canal !== 'compt');
+      return { C, W, direct: Math.max(0, total - somme(L.filter(c => c.encaissee))), cmd: somme(C), web: somme(W) }; };
+    const A = parts(CA.liste.filter(vendue), T);
+    const L7 = j7 && CA.j7 && Array.isArray(CA.j7.liste) && CA.j7.date === j7.date ? CA.j7.liste.filter(c => vendue(c) && (!j7.moment || String(c.heure || '') <= j7.moment)) : null;
+    const P = L7 && j7.ca != null ? parts(L7, j7.ca) : null;
+    if (!A.C.length && !A.W.length && !(P && (P.C.length || P.W.length))) { return opCmdLigne(D); }
+    const tot = A.direct + A.cmd + A.web, pc = v => tot > 0 ? (100 * v / tot >= 10 ? fP0(100 * v / tot) : fP(100 * v / tot)) : '—';
+    const jn = esc(String(jourNom || '').slice(0, 3)) + '. ' + (j7 ? fD(j7.date) : '');
+    const ecart = (a, b) => b > 0 ? ` · <em class="${a >= b ? 'ok' : 'ko'}">${fSP(100 * (a - b) / b)}</em>` : '';
+    const nCC = A.W.filter(c => c.canal === 'cc').length, nLiv = A.W.length - nCC;
+    const col = (f, k, nom, v, s, j) => `<div${f ? ` data-cmdm="${f}" role="button" tabindex="0"` : ''}><div class="k"><i class="pt ${k}"></i>${nom}${f ? '<span class="ch">›</span>' : ''}</div><div class="v">${v}</div><div class="s">${s}</div>${P ? `<div class="j">${j}</div>` : ''}</div>`;
+    const cols = col('', 'c', 'Comptoir', fE(A.direct), pc(A.direct) + (cpt ? ' · vente directe' : ' · pro compris'), `${jn}${j7 && j7.moment ? ' à ' + esc(j7.moment) : ''}<br>${P ? fE(P.direct) + ecart(A.direct, P.direct) : ''}`)
+      + col('compt', 'k', 'Commandes', fU(A.cmd), A.C.length ? plu(A.C.length, 'prise') + ' au comptoir' : 'aucune', `${jn}<br>${P ? fU(P.cmd) + ' · ' + P.C.length : ''}`)
+      + col('web', 'w', 'Webshop', fU(A.web), A.W.length ? [nCC ? nCC + ' click & collect' : '', nLiv ? plu(nLiv, 'livraison') : ''].filter(Boolean).join(' · ') : 'aucune commande', `${jn}<br>${P ? fU(P.web) + ' · ' + P.W.length : ''}`);
+    const mix = [[A.direct, 'c'], [A.cmd, 'k'], [A.web, 'w']].filter(x => x[0] > 0).map(([v, k]) => `<i class="${k}" style="flex:${v.toFixed(2)} 0 0"></i>`).join('');
+    const V = opCmdVerif(D), maint = D.now == null || S.date < AUJ ? null : opHM(D.now);
+    return `<div class="op-rb"><div class="t"><span>Par canal${maint ? ' · à ' + maint : ''}</span><span>la part de chaque canal</span></div>
+      <div class="mix" title="comptoir ${pc(A.direct)} · commandes ${pc(A.cmd)} · webshop ${pc(A.web)}">${mix}</div><div class="col">${cols}</div>
+      <div class="bas" data-cmdm="tous" role="button" tabindex="0"><span>toucher un canal : ses commandes${V.v ? ` · <em>${V.v} à vérifier</em>` : ''}</span><span class="ch">›</span></div></div>`;
+  }
+  /** Les commandes du jour à vérifier (la ligne « Commandes du jour » et le ruban) : une précommande remise sans ticket
+   *  caisse, ou une commande pas remise dont l'heure est passée ; une commande réglée en paiement différé est retirée. */
+  function opCmdVerif(D) {
+    const L = D && Array.isArray(D.listeC) ? D.listeC : [];
     const maint = S.date < AUJ ? '24:00' : (D.now == null ? '24:00' : opHM(D.now));
-    // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée.
-    // Une commande réglée en paiement différé (09/11/2026) est retirée : rien à vérifier.
-    const v = L.filter(c => !c.differe && (bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint)).length;
-    return `<div class="op-cmdl" data-cmdm="1" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
+    return { L, v: L.filter(c => !c.differe && (bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint)).length };
   }
   /** Garder le défilement d'une feuille quand elle se redessine (une lecture qui arrive, le relu des deux minutes). */
   function bmPeindre(box, html) {
@@ -2976,7 +3016,7 @@
 
   /* — Commandes du jour — */
   const cleCmdm = () => 'cmdd|' + S.shop + '|' + S.date;
-  function cmdmOuvrir() { S.cmdm = { f: 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, false); cmdmRendre(); }
+  function cmdmOuvrir(f) { S.cmdm = { f: ['compt', 'web'].includes(f) ? f : 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, false); cmdmRendre(); }
   function cmdmFermer() { const r = S.cmdm && S.cmdm.retour; S.cmdm = null; cmdmRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
   // L'état de chaque commande face à la caisse du jour : libellé, couleur du repère, étiquette de la ligne.
   const CMD_ETAT = {
@@ -9900,9 +9940,10 @@
       el.addEventListener('click', e => { const p = e.target.closest('[data-b2bj]'); b2bOuvrir(p ? p.dataset.b2bj : el.dataset.b2b); });
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b2bOuvrir(el.dataset.b2b); } });
     });
+    // La feuille « Commandes du jour » s'ouvre sur le canal touché (le ruban des canaux, 18/11/2026) : tous, compt, web.
     $.querySelectorAll('[data-cmdm]').forEach(el => {
-      el.addEventListener('click', cmdmOuvrir);
-      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cmdmOuvrir(); } });
+      el.addEventListener('click', e => { e.stopPropagation(); cmdmOuvrir(el.dataset.cmdm); });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); cmdmOuvrir(el.dataset.cmdm); } });
     });
     b2bRendre();
     cmdmRendre();

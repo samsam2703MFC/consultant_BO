@@ -1,6 +1,9 @@
 # Le dashboard magasin au téléphone — refonte de toutes les vues
 
-**Statut : proposée le 18/11/2026, à valider.** Rien n'est codé.
+**Statut : proposée le 18/11/2026.** Les noms des onglets restent ceux d'aujourd'hui (Sam, 18/11/2026) : Opérationnel,
+Exploitation, Contrôle, Tâches, Semaine, Primes. Les maquettes disent encore « Jour » et « Chiffres ».
+
+Le ruban des canaux (maquette C de `../comptoir-webshop/`) est codé. Le reste n'est pas encore codé.
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -21,9 +24,9 @@ dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43,
    la date est tronquée (« aujourd'hui · mer… »). Dans la refonte, le nom tient seul sur la première ligne. Dessous,
    le pas de temps prend toute la largeur : « ‹ Aujourd'hui · mer. 18 nov. › », ou la semaine, ou le mois pour les
    Primes. Le logo est déjà sur l'icône de l'application.
-4. **« Opérationnel » déborde de son onglet.** Six mots courts à la place : **Jour**, **Chiffres**, Contrôle, Tâches,
-   Semaine, Primes. Jour remplace Opérationnel, Chiffres remplace Exploitation : **à valider**, c'est un changement
-   de vocabulaire pour les équipes. L'onglet ouvert porte une pastille ; le point rouge et le compteur restent.
+4. **« Opérationnel » déborde de son onglet.** Les maquettes proposaient des mots courts (Jour, Chiffres). **Refusé le
+   18/11/2026 : les noms restent.** Il faudra serrer l'étiquette autrement, par la taille de la police ou la largeur
+   des onglets. L'onglet ouvert porte une pastille ; le point rouge et le compteur restent.
 5. **Deux cartes de jauge pour un chiffre.** Le comptoir et le B2B font chacun une carte haute d'un demi-écran, et le
    B2B de 34 € en prend autant que le comptoir. Dans la refonte, un seul héros : **2 240 €, 118 % de 1 894 €**. Une
    barre colorée par canal le suit, mercredi dernier dessous, puis **quatre cases** : comptoir, commandes, webshop,
@@ -101,7 +104,7 @@ stock, la poubelle. Les prénoms, la société et le fournisseur sont inventés.
   - réserver `env(safe-area-inset-top)` dans l'en-tête ;
   - mettre la barre d'onglets en `position:fixed`, avec `env(safe-area-inset-bottom)` et sans `100dvh` sur `#dash.mob` ;
   - écrire le nouvel en-tête : le nom seul sur la première ligne, le pas de temps sur toute la largeur ;
-  - renommer les onglets, si c'est validé.
+  - garder les noms des onglets (décision du 18/11/2026).
 - **Jour** (`rendOpsMobile`, `opDuelSplit`, `opDuelPro`) : le héros et ses quatre cases remplacent les deux cartes
   de jauge. Le partage des canaux **à l'heure de J−7** demande de couper les commandes à l'heure du retrait (voir
   `../comptoir-webshop/LISEZMOI.md`). La moyenne des 6 derniers mercredis existe déjà (`refTickets`, `reference`).
