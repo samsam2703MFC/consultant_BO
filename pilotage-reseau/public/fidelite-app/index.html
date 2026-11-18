@@ -9,8 +9,9 @@
      indépendante »). La vue app client du handoff Claude Design (Bingo, Points, Portefeuille), remplie EN DIRECT par
      l'API de l'ERP. LECTURE SEULE : elle appelle son API à côté d'elle (api.php), jamais celle du cockpit. -->
 <style>
-@font-face{font-family:'Gotham';src:url('../assets/ds/fonts/Gotham_Regular_New.otf') format('opentype');font-weight:400}
-@font-face{font-family:'Vank';src:url('../assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+/* Sans repli : Vank dessine ses accents, le texte est en Gotham_Medium (€ et × compris), une seule graisse. */
+@font-face{font-family:'Gotham';src:url('../assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:100 900}
+@font-face{font-family:'Vank';src:url('../assets/ds/fonts/GC_Vank.ttf') format('truetype')}
 @font-face{font-family:'Playwrite DEVA';src:url('../assets/ds/fonts/PlaywriteDEVA-Regular.ttf') format('truetype')}
 :root{--rubis:#8D1D2C;--abricot:#F2C9A0;--beige:#EAE4DC;--soft:#F4EFE8;--txt:#222;--muted:#666;--line:rgba(34,34,34,.10);--line2:rgba(34,34,34,.18);
   --rose:color-mix(in srgb,#8D1D2C 12%,#fff);--fete:color-mix(in srgb,#F2C9A0 42%,#fff);--ok:#2d7a3e}
