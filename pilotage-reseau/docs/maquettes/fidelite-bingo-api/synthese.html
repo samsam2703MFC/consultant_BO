@@ -25,7 +25,7 @@ body{padding:0;background:var(--beige)}
 <p class="lead">Le <b>bingo</b> fait revenir, les <b>points</b> font consommer. Dans l’ERP, il ne reste qu’une carte, <b>à points</b>, réglée avec les champs existants. Le bingo se calcule à côté, par l’API de l’ERP, <b>sans table</b> : la case de la semaine dès 10 € d’achats, un bon toutes les 3 cases (un code de bon au nom du client), le super bon à 13 / 13. Les saisons et leurs thèmes sont dans un fichier. Habillage : le handoff Claude Design.</p>
 <div class="ecrans">
   <div><b>1</b>ERP admin · les cartes de fidélité : la carte à points active, la carte café arrêtée</div>
-  <div><b>2</b>ERP admin · la carte à points (règle de gain, bonus, paliers, simulateur)</div>
+  <div><b>2</b>ERP admin · la carte à points (règle de gain, bonus, paliers, simulateur) et les <b style="font:inherit;color:var(--rubis)">sociétés liées</b> (liste des bureaux)</div>
   <div><b>3</b>Cockpit · Fidélité › Programme : l’état dans l’ERP, les règles, la carte de la saison</div>
   <div><b>4</b>Cockpit · Fidélité › Magasins : la case semaine par semaine, à relancer, les membres</div>
   <div><b>5</b>Cockpit · Fidélité › Un client : sa carte de bingo, ses points, ses bons</div>
@@ -41,8 +41,8 @@ body{padding:0;background:var(--beige)}
       <tr><td>App : bons du client</td><td><code>/webshop/vouchers</code></td><td>Présente</td></tr>
       <tr><td>Simulation</td><td><code>/admin/loyalty/simulate</code></td><td>22,40 € un mercredi 15:10 → 44 points</td></tr></table></section>
   <section class="panel"><h2>Ce qui reste</h2>
-    <p>À faire, sans table :</p><ul><li>Créer et activer les campagnes <b>« Bingo hiver · 2 € »</b> et <b>« · 10 € »</b> dans l’ERP.</li><li>Passer le module de sa page de test à la production : la tâche du lundi qui crée les bons.</li><li>La grille dans l’app : aucune route ne la rend ; l’app la calcule (historique du client + calendrier de saison).</li></ul>
+    <p>À faire, sans table :</p><ul><li>Créer et activer les campagnes <b>« Bingo hiver · 2 € »</b> et <b>« · 10 € »</b> dans l’ERP.</li><li>Passer le module de sa page de test à la production : la tâche du lundi qui crée les bons.</li><li>La grille dans l’app : aucune route ne la rend ; l’app la calcule (historique du client + calendrier de saison).</li><li><b>Lier la carte à points à des sociétés</b> : la liste des bureaux existe (<code>/panel/shops/{shop}/offices</code>) ; la carte n’a pas de champ pour garder le lien, il est à demander à l’ERP.</li></ul>
     <p style="margin-top:12px">Impossible sans changer l’ERP :</p><ul><li><b>×2 après la case</b>, par client, jusqu’au dimanche.</li><li><b>Produit de la semaine ×2</b>.</li><li><b>Échange automatique</b> au palier.</li><li><b>Coefficients personnels</b> (jour perso, offre perso).</li></ul></section>
 </div>
-<div class="live"><b>Test en direct.</b> Page à part, en lecture seule : <code>/consulant_bo/fidelite-app/</code> sur le serveur du cockpit. Elle cherche un client par son nom dans un magasin (Halle, « vincent » par défaut) et montre sa carte comme l’app, avec les vrais achats. L’hiver ne commence que le 23/11 : la grille est rejouée sur les 13 dernières semaines.</div>
+<div class="live"><b>Test en direct.</b> Page à part, en lecture seule : <code>http://185.180.206.46/consulant_bo/fidelite-app/</code>. Elle cherche un client par son nom dans un magasin (Halle, « vincent » par défaut) et montre sa carte comme l’app, avec les vrais achats. L’hiver ne commence que le 23/11 : la grille est rejouée sur les 13 dernières semaines. Essai du 18/11 (Halle, « vincent ») : un client trouvé, sa carte lue en 2,4 s (52 appels à l’ERP).</div>
 </div></body></html>

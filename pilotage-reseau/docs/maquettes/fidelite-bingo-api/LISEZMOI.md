@@ -78,3 +78,18 @@ node shot.js
 
 `index.html` reprend la feuille et les composants de `../fidelite-bingo-erp` (`maquette.css`, `donnees.js`), puis
 `extra.css`, `donnees.js` (règles et saison copiées du fichier de saison, clients fictifs) et `ecrans.js`.
+
+## Ajout du 18/11/2026 : lier la carte à points à une société
+
+Demande de Sam : « dans les cartes à points, je peux aussi lier à une société (liste des bureaux) ». Écran 2, panneau
+« Sociétés liées » : le choix se fait dans la liste des bureaux du magasin, qui existe dans l'ERP
+(`GET /panel/shops/{shop}/offices` : société, bureau, ville, sites, statut). **La carte de fidélité n'a pas de champ pour
+garder ce lien** (ni dans le `.rar`, ni dans la spécification de l'ERP) : c'est le seul ajout de la maquette, marqué
+« à créer dans l'ERP ». Ce que le lien déclenche (carte réservée aux salariés, commandes du bureau qui comptent, points au
+nom de la société) reste à préciser. Les sociétés de la capture sont fictives.
+
+## Test en direct
+
+`http://185.180.206.46/consulant_bo/fidelite-app/` (page à part, lecture seule ; `public/fidelite-app`,
+`src/fidelite_app.php`). Essai du 18/11/2026 : Halle, « vincent » → un membre de la carte trouvé, sa carte lue en 2,4 s
+(52 appels). Avant le 23/11, la grille de l'hiver est rejouée sur les 13 dernières semaines.
