@@ -170,7 +170,7 @@ a.sp-card:hover{border-color:var(--at-brand,#8D1D2C)}
                     <td class="n">{{ r.stock }}</td><td class="n">{{ r.ordered ?: '—' }}</td><td class="n">{{ r.pallet ?: '—' }}</td>
                     <td class="n"><b class="{{ r.state == 'short' ? 'text-danger' }}">{{ r.left }}</b></td>
                     <td class="n">{% if mts %}<input class="sp-max{{ r.state == 'nomax' ? ' is-missing' }}" type="number" min="1" step="1" inputmode="numeric" value="{{ r.max }}" placeholder="?" data-gen-max aria-label="Stan maks. (kartony) : {{ r.name }}" title="{{ r.period ? 'Okres wyjątkowy « ' ~ r.period ~ ' » — maks. okresu ; tu zmieniasz stan normalny karty' : 'Stan maks. w kartonach' }}">{% if r.period %}<small class="sp-sub d-block">{{ r.period }}</small>{% endif %}{% else %}<span class="sp-sub">—</span>{% endif %}</td>
-                    <td class="n">{{ r.sold ?: '—' }}{% if r.sold %}<small class="sp-sub d-block">{{ r.sold_week|number_format(1, ',', ' ') }} / tydz.</small>{% endif %}</td>
+                    <td class="n">{{ r.sold ?: '—' }}</td>
                     <td class="sp-ind"><span class="sp-bar2" title="zostaje {{ r.left }} · zamówione {{ r.ordered }}{{ r.min is not null ? ' · min. ' ~ r.min : '' }}{{ r.max ? ' · maks. ' ~ r.max : '' }} (kart.)">
                             <i class="k is-{{ r.state }}" style="width:{{ keep / sc * 100 }}%"></i><i class="r" style="width:{{ res / sc * 100 }}%"></i><i class="g" style="width:{{ gap / sc * 100 }}%"></i>
                             {% if r.min %}<b class="mn" style="left:{{ min(100, r.min / sc * 100) }}%"></b>{% endif %}
