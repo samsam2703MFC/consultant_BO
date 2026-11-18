@@ -132,3 +132,4 @@
 2026-11-18T19:54:03Z assistant : le Professeur reprend les photos de contrôle et explique pourquoi elles comptent
 2026-11-18T19:56:38Z personnel : une seule cible du réseau, 17 %, lue partout
 2026-11-18T20:11:13Z assistant : les coachs citent le manuel opératoire
+2026-11-18T20:17:34Z dashboard franchisé, Contrôle au téléphone : carte du jour, photos, boutons sur une ligne ; fin de la boucle du helpdesk
