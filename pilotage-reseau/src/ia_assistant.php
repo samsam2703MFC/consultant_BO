@@ -480,7 +480,7 @@ function ep_ia_entrainement(): array
     }
     return ['rayons' => $rayons, 'candidates' => array_slice($candidates, 0, 24), 'accord' => iaAccord(),
         'communs' => defined('RV_CRITERES_COMMUNS') ? RV_CRITERES_COMMUNS : '', 'leconsMax' => IA_LECONS_MAX, 'exemplesEnvoyes' => IA_EXEMPLES_ENVOYES,
-        // La consigne générale des contrôles qualité (src/rayons_photos.php) : ses points, et s'ils sont ceux par défaut.
+        // La consigne générale des contrôles qualité, pour toute photo de contrôle (src/rayons_photos.php) : ses points, et s'ils sont ceux par défaut.
         'consigneGenerale' => function_exists('cqConsigneGenerale') ? cqConsigneGenerale() : [],
         'consigneGeneraleDefaut' => !is_array(function_exists('setting') ? setting('cqConsigneGenerale', null) : null),
         'consigneGeneraleMax' => defined('CQ_POINTS_MAX') ? CQ_POINTS_MAX : 20,

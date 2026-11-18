@@ -8233,7 +8233,8 @@ function ep_ia_note(): array
         . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
         . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : '')
         . ($ponct !== null ? ', ' . $ponct['phrase'] : ''), ', ');
-    // Ce que le réseau attend du rayon (consigne du back office, sinon critères par défaut), et sa photo type
+    // La consigne générale des contrôles qualité, pour toute photo (src/rayons_photos.php) ; puis ce que le réseau
+    // attend du rayon (consigne du back office, sinon critères par défaut), et sa photo type
     // quand le produit n'a pas de fiche technique : l'IA juge par comparaison, comme le consultant.
     $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
     $regles = ['criteres' => function_exists('rvCriteresIa') ? rvCriteresIa($rv) : ''];

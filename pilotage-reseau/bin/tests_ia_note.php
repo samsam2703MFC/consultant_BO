@@ -45,7 +45,8 @@ $json = static fn (array $j): array => [200, ['stop_reason' => 'end_turn', 'cont
 
 echo "Critères des rayons\n";
 $quiches = ['cle' => 'quiches', 'nom' => 'Quiches', 'photo' => null, 'consigne' => null];
-verifie('pas de rayon : pas de critères', rvCriteresIa(null) === '');
+verifie('une autre photo de contrôle : la consigne générale, sans planogramme', str_starts_with(rvCriteresIa(null), "Consigne générale des contrôles qualité :\n- ")
+    && str_contains(rvCriteresIa(null), 'prise de face') && str_ends_with(rvCriteresIa(null), CQ_SANS_PLANOGRAMME) && !str_contains(rvCriteresIa(null), 'Rayon « '));
 verifie('quiches : vendues au quart, entamée n’est pas un écart', str_contains(rvCriteresIa($quiches), 'au quart') && str_contains(rvCriteresIa($quiches), 'pas un écart'));
 verifie('règles communes pour tout rayon', str_contains(rvCriteresIa($quiches), 'sans objet étranger'));
 $propre = rvCriteresIa(['cle' => 'quiches', 'nom' => 'Quiches', 'consigne' => 'Six quiches entières minimum.']);
@@ -61,6 +62,7 @@ verifie('la consigne générale modifiée : ses points, un point vide écarté, 
     str_contains(rvCriteresIa($quiches), "- Prix visible sur chaque produit.\n- Étiquettes allergènes en place.") && !str_contains(rvCriteresIa($quiches), 'prise de face'));
 $GLOBALS['REGLAGES']['cqConsigneGenerale'] = [];
 verifie('tous les points retirés : la consigne du rayon seule', rvCriteresIa($quiches) === 'Rayon « Quiches » : ' . RV_CRITERES_IA['quiches']);
+verifie('tous les points retirés : rien pour une autre photo de contrôle', rvCriteresIa(null) === '');
 unset($GLOBALS['REGLAGES']['cqConsigneGenerale']);
 verifie('un point saisi avec sa puce ou son numéro : nettoyé', cqPoint('• Photo  de face') === 'Photo de face' && cqPoint('2) Sens des produits') === 'Sens des produits'
     && cqPoint('- Quantité') === 'Quantité');

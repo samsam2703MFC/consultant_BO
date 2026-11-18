@@ -2481,7 +2481,7 @@ function tplIaEntrainement(e, x){
       <ol>
         <li><b>La photo du planogramme</b> : la présentation attendue du rayon, la même pour tout le réseau. L’IA la reçoit en premier avec chaque photo.</li>
         <li><b>Les photos d’exemple</b> : de vraies photos jugées parfaites, de chaque magasin. L’IA en reçoit deux après le planogramme, celles du même magasin d’abord. Prenez-les parmi les photos notées « ${esc(e.nomNiveau)} », ou depuis le volet de notation (★ Photo parfaite).</li>
-        <li><b>La consigne générale</b> (ci-dessous) vaut pour toutes les photos de comptoir ; <b>la consigne du rayon</b> dit ce qu’est un comptoir conforme et prime pour ce rayon. Vide, l’IA suit des critères par défaut.</li>
+        <li><b>La consigne générale</b> (ci-dessous) vaut pour toutes les photos de contrôle ; <b>la consigne du rayon</b> dit ce qu’est un comptoir conforme et prime pour ce rayon. Vide, l’IA suit des critères par défaut.</li>
         <li><b>Vos corrections</b> deviennent des leçons : quand vous notez autrement que l’IA, elle reçoit la correction (et votre raison) avec les photos suivantes du même rayon.</li>
       </ol>
     </div>
@@ -2531,7 +2531,8 @@ function tplIaEntrainement(e, x){
 }
 
 /* La consigne générale des contrôles qualité : une liste de points, envoyée à
-   l'IA avec chaque photo de comptoir avant la consigne du rayon. Chaque point
+   l'IA avec chaque photo de contrôle (avant la consigne du rayon pour une photo
+   de comptoir). Chaque point
    se modifie sur place (enregistré en quittant le champ), se retire (✕) ; « +
    Ajouter un point » en ouvre un nouveau. */
 function tplIaConsigneGenerale(g, x, card){
@@ -2539,12 +2540,12 @@ function tplIaConsigneGenerale(g, x, card){
   if (!g) { return ''; }
   return `
     <div style="${card}" class="ia-ent-cg">
-      <div class="h">Consigne générale des contrôles qualité <span>envoyée à l’IA avec chaque photo de comptoir, avant la consigne du rayon${g.defaut ? ' · consigne par défaut' : ''}</span></div>
+      <div class="h">Consigne générale des contrôles qualité <span>envoyée à l’IA avec chaque photo de contrôle — pour une photo de comptoir, avant la consigne du rayon${g.defaut ? ' · consigne par défaut' : ''}</span></div>
       <ul class="pts">${g.points.map((p, i) => `
         <li><span class="puce">•</span><textarea rows="${Math.max(1, Math.ceil(String(p.texte).length / 120))}" maxlength="${g.longueur}" placeholder="Un point à vérifier sur chaque photo…" aria-label="Point ${i + 1} de la consigne générale" ${x.C(p.set)} ${g.busy ? 'disabled' : ''}>${esc(p.texte)}</textarea>
           <button type="button" class="x" title="Retirer ce point" aria-label="Retirer le point ${i + 1}" ${x.A(p.retirer)} ${g.busy ? 'disabled' : ''}>✕</button></li>`).join('')}
       </ul>
-      ${!g.points.length ? '<div class="v">Aucun point : l’IA ne reçoit que la consigne de chaque rayon.</div>' : ''}
+      ${!g.points.length ? '<div class="v">Aucun point : l’IA ne reçoit que la consigne de chaque rayon, et rien de plus pour les autres photos de contrôle.</div>' : ''}
       <div class="act">
         ${g.ajouter ? `<button type="button" class="ia-sec" ${x.A(g.ajouter)} ${g.busy ? 'disabled' : ''}>+ Ajouter un point</button>` : `<span class="v">${g.max} points au plus.</span>`}
         ${g.retablir ? `<button type="button" class="ia-lien" ${x.A(g.retablir)} ${g.busy ? 'disabled' : ''}>rétablir la consigne par défaut</button>` : ''}
