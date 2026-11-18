@@ -15,9 +15,9 @@ declare(strict_types=1);
  * l'éditeur est remplacé au prochain changement de chiffre : la source, c'est ce fichier.
  *
  * Rangement : Article, famille 04 (Fiches de référence), sous-catégorie D7.1 « Pilotage de l'activité » du référentiel,
- * phases pré-ouverture et opérationnel, postes P4 et P7 à P12, compétences C-PILOTAGE.KPI et C-PILOTAGE.Vente, formation
- * FO-05 — comme l'article du dashboard (ART-PIL-01) ; accès « responsable » (cadenas du Manuel, PIN du responsable).
- * Publié d'office ; le néerlandais est « à relire ».
+ * phases pré-ouverture et opérationnel, compétences C-PILOTAGE.KPI et C-PILOTAGE.Vente, formation FO-05, comme l'article
+ * du dashboard (ART-PIL-01). Ouvert à TOUTE L'ÉQUIPE (18/11/2026, Sam : « ouvre l'article à toute l'équipe ») : accès
+ * « tous », sans PIN, postes P1 à P12. Publié d'office ; le néerlandais est « à relire ».
  *
  * Quand : à chaque passage d'ensureSop (l'installation au déploiement, les outils du manuel de l'assistant) et des
  * routes /formation/sop/ — une fois par requête, une lecture de ligne quand rien n'a changé.
@@ -147,8 +147,8 @@ function mcContenu(array $c): array
         'titre' => $e('Les chiffres clés du réseau 2026', 'De kerncijfers van het netwerk 2026'),
         'objectif' => $e("Connaître les chiffres clés que le réseau vise en 2026 : ce que chacun mesure, où il se lit, et quel geste le fait bouger.",
             "De kerncijfers kennen die het netwerk in 2026 nastreeft: wat elk cijfer meet, waar je het leest, en welk gebaar het doet bewegen."),
-        'pour' => $e('Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À relire à chaque nouvelle version.',
-            'Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Opnieuw te lezen bij elke nieuwe versie.'),
+        'pour' => $e("Toute l'équipe du magasin, de l'opérateur au franchisé (P1 à P12) : chacun sait vers quoi le magasin tend et quel geste y mène. À relire à chaque nouvelle version.",
+            'Het hele winkelteam, van medewerker tot franchisenemer (P1 tot P12): iedereen weet waar de winkel naartoe wil en welk gebaar ertoe leidt. Opnieuw te lezen bij elke nieuwe versie.'),
         'duree' => '10 min de lecture',
         'sections' => [
             ['titre' => $e('Les chiffres clés', 'De kerncijfers'), 'etapes' => $etapes],
@@ -204,13 +204,13 @@ function mcSynchroniser(): ?string
             Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, acces, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
                         titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par)
                       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [MC_ID, foCodeAuto('Article', null), 'Article', '04', 'vente', 'responsable', 'publiee', $ver, $ver, 'FR', 'origine', 'a_relire',
+                [MC_ID, foCodeAuto('Article', null), 'Article', '04', 'vente', 'tous', 'publiee', $ver, $ver, 'FR', 'origine', 'a_relire',
                     $contenu['titre']['fr'], $contenu['titre']['nl'], $contenu['objectif']['fr'], $contenu['objectif']['nl'], $contenu['duree'],
                     $st['etapes'], $st['photos'], $ordre, $source, $now, MC_PAR]);
             // Le classement du Manuel du réseau (colonnes du référentiel) : comme l'article du dashboard.
             try {
                 Db::exec('UPDATE ceo_sop SET souscat = ?, phases = ?, postes = ?, competences = ?, formations = ?, checklists = ? WHERE id = ?',
-                    ['D7.1', '["preouverture","operationnel"]', '["P4","P7","P8","P9","P10","P11","P12"]', '["C-PILOTAGE.KPI","C-PILOTAGE.Vente"]', '["FO-05"]', '[]', MC_ID]);
+                    ['D7.1', '["preouverture","operationnel"]', '["P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12"]', '["C-PILOTAGE.KPI","C-PILOTAGE.Vente"]', '["FO-05"]', '[]', MC_ID]);
             } catch (Throwable $e) { /* le référentiel n'est pas encore là : l'article reste non classé */ }
             $note = 'Création : les chiffres clés du réseau, écrits depuis les cibles du cockpit';
         } else {

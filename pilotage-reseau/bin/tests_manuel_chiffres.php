@@ -75,7 +75,7 @@ $manuel = static fn (array $R) => array_values(array_filter($R['ecrit'] ?? [], s
 echo "Première lecture du manuel après la livraison\n";
 $R = $lancer('creer');
 verifie('l’article est créé, version 1.0, une seule fois', str_starts_with((string) ($R['r1'] ?? ''), 'créé 1.0') && $nul($R, 'r2'), (string) ($R['r1'] ?? ''));
-verifie('Article, famille 04, réservé au responsable, publié, NL à relire, code 0.0.02', ($R['ligne']['type'] ?? '') === 'Article' && $R['ligne']['dossier'] === '04' && $R['ligne']['acces'] === 'responsable'
+verifie('Article, famille 04, ouvert à toute l’équipe, publié, NL à relire, code 0.0.02', ($R['ligne']['type'] ?? '') === 'Article' && $R['ligne']['dossier'] === '04' && $R['ligne']['acces'] === 'tous'
     && $R['ligne']['statut'] === 'publiee' && $R['ligne']['trad_nl'] === 'a_relire' && $R['ligne']['code'] === '0.0.02', json_encode($R['ligne'] ?? null));
 verifie('les six chiffres clés, dans l’ordre', $titres($R) === ['Food cost : 40 % du CA au plus', 'Frais de personnel : 17 % du CA au plus', 'Clients scannés : 25 % des tickets au moins',
     'Menus et formules : 15 % du CA au moins', 'Articles par ticket : 3,6 au moins', 'Panier moyen : 13 € au moins'], json_encode($titres($R), JSON_UNESCAPED_UNICODE));
