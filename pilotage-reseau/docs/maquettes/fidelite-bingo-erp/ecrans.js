@@ -120,7 +120,7 @@ function etape2() {
     <div class="rows"><div class="row" style="grid-template-columns:1fr 1fr 1fr auto">${champ('Solde de points', '', '100', '', '', false)}${champ('Montant (€)', '', '5,00', '', '', false)}<span class="rate">Retour : 5,00 %</span><span class="btn sm">Supprimer</span></div></div>
     <span class="btn sm" style="margin-top:8px">${ico('plus')} Ajouter un palier</span>
     <div class="sim"><h3 style="margin-top:0">Simulateur d’achat</h3><p class="help" style="margin-bottom:10px">La simulation ne sauvegarde ni points ni bons. Le montant est la dépense éligible après réductions.</p>
-      <div class="grid3">${champ('Montant (€)', '', '7,50', '', '', false)}${champ('Choisir les boutiques', '', 'Halle (#3)<span class="caret">⌄</span>', '', '', false)}${champ('Date et heure locale de la boutique', '', '13/01/2027 15:30', '', '', false)}</div>
+      <div class="grid3">${champ('Montant (€)', '', '7,50', '', '', false)}${champ('Choisir les boutiques', '', 'Halle (#4)<span class="caret">⌄</span>', '', '', false)}${champ('Date et heure locale de la boutique', '', '13/01/2027 15:30', '', '', false)}</div>
       <div style="display:flex;gap:8px;margin-top:12px"><span class="btn out">Ajouter l’achat</span><span class="btn">Réinitialiser</span></div>
       <div class="simres"><p><code>7 × 1 × 1 × 2 = 14</code> &nbsp;tranches × points par tranche × coefficient boutique × coefficient bonus (mercredi 15:30)</p>
         <p style="color:var(--muted)">Réponse de POST /loyalty/cards/simulate (slices, shop_coefficient, bonus_coefficient, points). Solde de la simulation : 78 points.</p></div></div>

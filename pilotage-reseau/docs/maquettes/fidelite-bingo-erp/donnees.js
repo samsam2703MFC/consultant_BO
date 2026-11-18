@@ -5,7 +5,7 @@
 
 const ILL = '../../../public/fidelite-test/ill/';
 const LOGO = '../../../public/assets/img/logo.png';
-const SHOPS = [['Gosselies', 2], ['Halle', 3], ['Sombreffe', 4], ['Corbais', 5]];
+const SHOPS = [['Corbais', 2], ['Gosselies', 3], ['Halle', 4], ['Sombreffe', 5]];
 
 // La carte de démonstration, telle que le formulaire l'enverrait (noms des champs de l'ERP).
 const CARD = {

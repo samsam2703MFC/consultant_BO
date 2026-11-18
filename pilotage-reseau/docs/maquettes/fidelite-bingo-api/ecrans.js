@@ -66,7 +66,7 @@ function erpCarte() {
       <div><div class="flabel">Jours : lundi–dimanche</div><div class="days">${[0, 1, 2, 3, 4, 5, 6].map((d) => `<span class="${b.days.includes(d) ? 'on' : ''}">${d + 1}</span>`).join('')}</div></div><span class="btn sm">Supprimer</span></div></div>
     <h3>Paliers de récompense ${v('tiers')}</h3>
     <div class="rows"><div class="row" style="grid-template-columns:1fr 1fr 1fr auto">${champ('Solde de points', '', '100', '', '', false)}${champ('Montant (€)', '', '5,00', '', '', false)}<span class="rate">Retour : 5,00 %</span><span class="btn sm">Supprimer</span></div></div>
-    <div class="sim"><h3 style="margin-top:0">Simulateur d’achat</h3><div class="grid3">${champ('Montant (€)', '', '7,50', '', '', false)}${champ('Choisir les boutiques', '', 'Halle (#3)<span class="caret">⌄</span>', '', '', false)}${champ('Date et heure locale de la boutique', '', '13/01/2027 15:30', '', '', false)}</div>
+    <div class="sim"><h3 style="margin-top:0">Simulateur d’achat</h3><div class="grid3">${champ('Montant (€)', '', '7,50', '', '', false)}${champ('Choisir les boutiques', '', 'Halle (#4)<span class="caret">⌄</span>', '', '', false)}${champ('Date et heure locale de la boutique', '', '13/01/2027 15:30', '', '', false)}</div>
       <div class="simres"><p><code>7 × 1 × 1 × 2 = 14</code> &nbsp;tranches × points par tranche × coefficient boutique × coefficient bonus</p></div></div></div>
   <div class="panel"><h2>Disponibilité du programme</h2><p>Définissez les dates et les boutiques participantes.</p>
     <div class="grid3">${champ('Date de début', v('starts_at'), '22/11/2026 23:00:00', 'Lundi 23/11 00:00, heure belge. UTC.')}${champ('Date de fin', v('ends_at'), '<span class="ph">Sans date de fin</span>', 'Carte permanente : les saisons du bingo passent, la carte reste.', '', false)}${champ('Périmètre', v('shop_selection'), 'Tous les magasins<span class="caret">⌄</span>', '')}</div></div>`;
@@ -174,7 +174,7 @@ function client() {
 ecran(1, 'ERP admin', 'Cartes de fidélité : il ne reste que la carte à points', 'GET /loyalty/cards · admin/views/loyalty/overview.twig', railErp(), erpListe());
 ecran(2, 'ERP admin', 'La carte à points, étape 2 · Règles et récompense', 'GET /loyalty/cards/{id}/edit · form.twig + points.twig (carte produit décochée)', railErp(), erpCarte());
 ecran(3, 'Cockpit', 'Fidélité › Programme : le bingo de la saison et ce qui est dans l’ERP', 'src/fidelite_bingo.php › GET /fidelite · src/data/fidelite_bingo.json', railCockpit(), programme());
-ecran(4, 'Cockpit', 'Fidélité › Magasins : la case, semaine par semaine', 'src/fidelite_bingo.php › GET /fidelite/clients?shop=3', railCockpit(), magasins());
+ecran(4, 'Cockpit', 'Fidélité › Magasins : la case, semaine par semaine', 'src/fidelite_bingo.php › GET /fidelite/clients?shop=4', railCockpit(), magasins());
 ecran(5, 'Cockpit', 'Fidélité › Un client : sa carte de bingo, ses points, ses bons', 'src/fidelite_bingo.php › GET /fidelite/client?id=…', railCockpit(), client());
 
 // ── 6 · App client (l'app de l'ERP, routes /webshop, jeton du client) ──
