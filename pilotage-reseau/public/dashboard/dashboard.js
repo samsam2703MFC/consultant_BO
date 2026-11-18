@@ -1275,23 +1275,38 @@
   function maDate() {
     if (S.vue === 'semaine') { const [du, au] = bornesSemaine(); return 'du ' + fD(du) + ' au ' + fD(au); }
     const t = new Date(S.date + 'T12:00:00');
-    // Au téléphone, la forme courte : « aujourd’hui · sam. 10 oct. » tient sur une ligne.
-    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', estMobile() ? { weekday: 'short', day: 'numeric', month: 'short' } : { weekday: 'long', day: 'numeric', month: 'long' });
+    // La forme longue, au téléphone aussi depuis que le pas de temps a toute la largeur de l'en-tête (18/11/2026).
+    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
+  /**
+   * Le cadre du téléphone (18/11/2026, maquette dashboard-mobile-v3, Sam : « commence par le cadre »).
+   * L'en-tête : le magasin et ses deux boutons sur une ligne ; dessous, sur toute la largeur, le pas de temps de l'onglet
+   * (le jour, la semaine, le mois) ou un sous-titre. Il reste en haut quand la page défile et se pose sous la barre
+   * d'état de l'iPhone (env(safe-area-inset-top), avec viewport-fit=cover). Le logo n'y est plus : il est sur l'icône.
+   * `pas` : les boutons ‹ › et le libellé ; `sous` : une ligne de texte ; `boutons` : 'tous' (revue du soir et ↻),
+   * 'relire' (↻ seul) ou 'aucun'.
+   */
+  function mbEntete(o) {
+    const b = o.boutons || 'tous';
+    return `<div class="mb-hd"><div class="l1"><div class="t">${esc(nomShop())}</div>${b === 'tous' ? rvBouton(true) : ''}${b !== 'aucun' ? '<button type="button" class="mb-ic" data-recharger="1" aria-label="relire">↻</button>' : ''}</div>`
+      + (o.sous ? `<div class="sous">${o.sous}</div>` : '') + (o.pas ? `<div class="d ma-d">${o.pas}</div>` : '') + '</div>';
+  }
+  /** Le pas d'un jour (ou d'une semaine) : ‹ le libellé ›, la flèche de droite éteinte au bout. */
+  const mbPasJour = (lib, fin) => `<button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(lib)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button>`;
+  /* Au téléphone, c'est la page entière qui défile (18/11/2026), plus un bloc intérieur haut de 100dvh : Safari peut
+   * replier sa barre du bas, la barre d'onglets reste fixée au bas de l'écran. La position se lit et se pose ici. */
+  const mbY = () => window.scrollY || document.documentElement.scrollTop || 0;
+  const mbAller = y => { try { window.scrollTo(0, y || 0); } catch (e) { /* rien */ } };
   function rendMobile(m, d) {
     if (S.vue === 'ops') {
-      return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      return `${mbEntete({ pas: mbPasJour(maDate(), S.date >= AUJ) })}
       <div class="mb-sc"><div class="ma op-mob">${rendOpsMobile()}</div></div>${mbOnglets()}`;
     }
     if (S.vue !== 'semaine' && !['exp', 'ctrl'].includes(S.mo)) { S.mo = 'exp'; }
     const on = S.vue === 'semaine' ? 'sem' : S.mo;
     const fin = S.vue === 'semaine' ? bornesSemaine()[1] >= AUJ : S.date >= AUJ;
-    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+    let h = `${mbEntete({ pas: mbPasJour(maDate(), fin) })}
       <div class="mb-sc"><div class="ma">`;
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
     h += on === 'exp' ? maPageExp(m, d) : (on === 'ctrl' ? maPageCtrl() : maPageSem(m, d));
@@ -1313,7 +1328,7 @@
     const P = maEtats();
     const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'taches' ? 'tach' : (S.vue === 'jour' ? S.mo : '')))));
     // Six onglets depuis Tâches (08/11/2026).
-    return `<div class="mb-tabs mb-tabs5 mb-tabs6 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
+    return `<div class="mb-tabs ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -2297,9 +2312,8 @@
   /* --- le plan d'action du franchisé : le module des visites, monté ici ------ */
   function rendActions(mobile) {
     let h = '';
-    // Au téléphone, le même en-tête que les autres onglets : le logo à sa
-    // taille, le nom qui se raccourcit, la date.
-    if (mobile) { h += `<div class="mb-hd"><img src="../assets/img/logo.png" alt=""><div><div class="t">${esc(nomShop())}</div><div class="d">${esc(fDL(AUJ))}</div></div><span class="sp"></span></div>`; }
+    // Au téléphone, le même en-tête que les autres onglets : le nom qui se raccourcit, la date dessous.
+    if (mobile) { h += mbEntete({ sous: esc(fDL(AUJ)), boutons: 'aucun' }); }
     // Au téléphone, le module défile sous la barre d'onglets, comme les autres vues.
     h += mobile ? '<div class="mb-sc"><div id="db-actions" style="flex:1 0 auto"></div></div>' + mbOnglets() : '<div id="db-actions" style="min-height:60vh"></div>';
     return h;
@@ -5046,9 +5060,7 @@
     const pas = (attr, n, ok, lib) => `<button type="button" class="ma-pas" ${attr}="${n}" aria-label="${lib}"${ok ? '' : ' disabled'}>${n < 0 ? '‹' : '›'}</button>`;
     const per = an ? pas('data-pry', -1, y > PR_Y_DEBUT, 'année précédente') + `<b>${y}${y === yMax ? ' · en cours' : ''}</b>` + pas('data-pry', 1, y < yMax, 'année suivante')
       : pas('data-prm', -1, m > PR_M_DEBUT, 'mois précédent') + `<b>${esc(prLibMois(m))}${m === mMax ? ' · en cours' : ''}</b>` + pas('data-prm', 1, m < mMax, 'mois suivant');
-    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d">${per}</div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+    let h = `${mbEntete({ pas: per })}
       <div class="mb-sc"><div class="ma pr-mob">
       <div class="pr-mob-f"><div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
         <div class="db-ong db-ong-p">${[['toutes', 'Toutes'], ['magasin', 'Du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>`;
@@ -6388,10 +6400,8 @@
   /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
   function rendTachesMobile() {
     const t = new Date(S.date + 'T12:00:00');
-    const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' });
-    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="jour précédent">‹</button><b>${esc(date)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="jour suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+    const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `${mbEntete({ pas: mbPasJour(date, S.date >= AUJ) })}
       <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag()}</div></div>${mbOnglets()}`;
   }
   function tjAller(d, voir) {
@@ -6738,16 +6748,16 @@
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
       if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
-      if (S.vue === 'taches') { const sc = $.querySelector('.mb-sc'), top = sc ? sc.scrollTop : 0; $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); const sc2 = $.querySelector('.mb-sc'); if (sc2 && S.tjHaut !== S.date) { S.tjHaut = S.date; sc2.scrollTop = 0; } else if (sc2) { sc2.scrollTop = top; } return; }
+      if (S.vue === 'taches') { const top = mbY(); $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); if (S.tjHaut !== S.date) { S.tjHaut = S.date; mbAller(0); } else { mbAller(top); } return; }
       // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
-      if (S.vue === 'primes') { const a = $.querySelector('.pr-mob'), sc = a ? a.closest('.mb-sc') : null, top = sc ? sc.scrollTop : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } return; }
+      if (S.vue === 'primes') { const top = $.querySelector('.pr-mob') ? mbY() : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); mbAller(top); return; }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
         const champ = rcGarder();
         $.innerHTML = rendReclamation(); $.classList.add('mob'); brancher();
         cqRestaurer(cqPos); rcRestaurer(champ);
         // Après un envoi, on remonte : le bandeau « Envoyée » est en haut.
-        if (S.rcHaut) { S.rcHaut = false; const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } }
+        if (S.rcHaut) { S.rcHaut = false; mbAller(0); }
         return;
       }
       $.innerHTML = rendMobile(m, d) + cqLoupe(true);
@@ -8915,13 +8925,14 @@
   /** La bande garde sa position quand la page se redessine — et, au
    * téléphone, le mur aussi : ouvrir une photo ne doit pas ramener en haut. */
   function cqGarder() {
-    const p = document.getElementById('db-cqpiste'), sc = $.querySelector('.mb-sc');
-    return { x: p ? p.scrollLeft : 0, y: sc ? sc.scrollTop : 0, ou: S.vue + '|' + S.date + '|' + S.shop };
+    const p = document.getElementById('db-cqpiste'), mob = $.classList.contains('mob');
+    return { x: p ? p.scrollLeft : 0, y: mob ? mbY() : 0, mob, ou: S.vue + '|' + S.date + '|' + S.shop };
   }
   function cqRestaurer(g) {
     const meme = g && g.ou === S.vue + '|' + S.date + '|' + S.shop;
-    const p = document.getElementById('db-cqpiste'), sc = $.querySelector('.mb-sc');
-    if (sc && meme && g.y) { sc.scrollTop = g.y; }
+    const p = document.getElementById('db-cqpiste');
+    // Au téléphone, la page reprend sa place après un nouveau rendu ; un autre onglet, jour ou magasin repart du haut.
+    if ($.classList.contains('mob')) { if (meme && g.mob) { mbAller(g.y); } else { mbAller(0); } }
     if (p) { if (S.cqRaz || !meme) { S.cqRaz = false; p.scrollLeft = 0; } else { p.scrollLeft = g.x; } cqFleches(); }
     const ba = document.getElementById('db-cqba'), on = ba && ba.querySelector('.on');
     if (on) { ba.scrollLeft = on.offsetLeft - ba.clientWidth / 2 + on.clientWidth / 2; }
@@ -9168,9 +9179,7 @@
     return h + vis.map(rcCarte).join('') + '</div>';
   }
   function rendReclamation() {
-    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d">Réclamation fournisseur</div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
+    return `${mbEntete({ sous: 'Réclamation fournisseur', boutons: 'relire' })}
       <div class="mb-sc"><div class="rc-vue">${rcFormulaire()}${rcHistorique()}</div></div>${mbOnglets()}`;
   }
   /** Le champ actif garde son focus et sa sélection quand la page se redessine. */
@@ -10051,7 +10060,7 @@
       const k = b.dataset.mo, avant = S.vue;
       if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else if (k === 'tach') { S.vue = 'taches'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
-      if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
+      if (S.vue === avant) { rendre(); mbAller(0); } else { mbAller(0); charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
     $.querySelectorAll('[data-invmodale]').forEach(b => {
       b.addEventListener('click', e => { e.stopPropagation(); invModaleOuvrir(); });

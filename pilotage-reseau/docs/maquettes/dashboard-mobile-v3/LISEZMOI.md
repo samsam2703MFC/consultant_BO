@@ -3,7 +3,12 @@
 **Statut : proposée le 18/11/2026.** Les noms des onglets restent ceux d'aujourd'hui (Sam, 18/11/2026) : Opérationnel,
 Exploitation, Contrôle, Tâches, Semaine, Primes. Les maquettes disent encore « Jour » et « Chiffres ».
 
-Le ruban des canaux (maquette C de `../comptoir-webshop/`) est codé. Le reste n'est pas encore codé.
+Ce qui est codé :
+- **le ruban des canaux** (maquette C de `../comptoir-webshop/`) ;
+- **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas.
+
+Les étapes suivantes ne sont pas codées : Opérationnel ; Exploitation et Semaine ; Contrôle, Tâches et Primes ;
+les feuilles.
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -31,6 +36,34 @@ dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43,
    B2B de 34 € en prend autant que le comptoir. Dans la refonte, un seul héros : **2 240 €, 118 % de 1 894 €**. Une
    barre colorée par canal le suit, mercredi dernier dessous, puis **quatre cases** : comptoir, commandes, webshop,
    B2B (la maquette C de `../comptoir-webshop/`, avec une case de plus).
+
+## Le cadre, codé (18/11/2026)
+
+Dans `public/dashboard`. Captures du vrai dashboard nourri d'une API simulée, dans `code/` :
+- `cadre-operationnel.png` : l'écran à son arrivée ;
+- `cadre-operationnel-defile.png` : le même écran, la page défilée ;
+- `cadre-360px.png` : un téléphone de 360 px ;
+- `cadre-semaine.png` : l'onglet Semaine.
+
+1. **La page entière défile.** Avant, un bloc de `100dvh` défilait en dedans (`.mb-sc`), et Safari ne pouvait pas
+   replier sa barre du bas. Le défilement se lit et se pose par `mbY()` et `mbAller()` :
+   - un nouveau rendu garde sa place ;
+   - un autre onglet, jour ou magasin repart du haut.
+2. **L'en-tête** (`mbEntete`, les six vues du téléphone) :
+   - il reste en haut quand la page défile et se pose sous la barre d'état : `env(safe-area-inset-top)`, avec
+     `viewport-fit=cover` dans `index.html` ;
+   - le nom du magasin est seul sur sa ligne, avec la revue du soir et ↻ ;
+   - dessous, le pas de temps prend toute la largeur, avec des flèches de 46 px et la date en entier
+     (« aujourd'hui · mercredi 18 novembre ») ;
+   - le logo n'y est plus.
+3. **La barre d'onglets** est fixée au bas de l'écran et respecte la zone du trait de l'iPhone. Les noms restent.
+   Chaque onglet prend la largeur de son mot : « Opérationnel » ne déborde plus, mesuré à 390, 375 et 360 px.
+   L'onglet ouvert porte une pastille.
+
+**À vérifier sur un iPhone une fois déployé.** Le navigateur de test ne simule ni la barre d'état ni la barre
+flottante de Safari. Deux points sont à regarder :
+- l'heure ne recouvre plus le nom du magasin ;
+- la barre de Safari se replie quand on fait défiler la page.
 
 ## La grammaire, la même partout
 

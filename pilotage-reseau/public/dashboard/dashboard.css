@@ -538,21 +538,29 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
  * Le chiffre de la période en grand, ce qui bloque juste dessous, puis des
  * cartes ouvertes qu'un seul défilement parcourt. Deux vues : jour, semaine.
  * ========================================================================== */
-#dash.mob{padding:0;height:100dvh;display:flex;flex-direction:column;max-width:none}
-.mb-hd{display:flex;align-items:center;gap:9px;padding:10px 14px 8px;flex:0 0 auto}
-.mb-hd img{height:22px}
-/* Le bloc du titre doit pouvoir rétrécir, sinon un nom long pousse le
-   bouton ↻ hors de l'écran et la page défile de côté. */
-.mb-hd>div{min-width:0}
-.mb-hd .t{font-family:var(--font-display);font-size:16px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mb-hd .d{font-size:10.5px;color:var(--color-text-muted)}
-.mb-hd .sp{flex:1}
-.mb-ic{width:32px;height:32px;border-radius:50%;border:1px solid var(--color-border-secondary);background:var(--color-surface);
-  font-size:13px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
-.mb-sc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 16px;display:flex;flex-direction:column}
+/* Le cadre du téléphone (18/11/2026, maquette dashboard-mobile-v3) : la PAGE défile — plus un bloc de 100dvh qui
+   défile en dedans, qui empêchait Safari de replier sa barre du bas (la bande blanche sous les onglets). L'en-tête
+   reste en haut, posé sous la barre d'état (safe-area, viewport-fit=cover dans index.html) ; les onglets sont fixés
+   au bas de l'écran, la page leur garde la place. */
+#dash.mob{padding:0;min-height:100dvh;display:flex;flex-direction:column;max-width:none}
+.mb-hd{position:sticky;top:0;z-index:40;flex:0 0 auto;background:var(--color-bg);
+  padding:max(10px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 9px max(14px, env(safe-area-inset-left, 0px));
+  box-shadow:0 8px 10px -12px rgba(34,30,26,.35)}
+.mb-hd .l1{display:flex;align-items:center;gap:8px;min-height:38px}
+/* Le nom doit pouvoir rétrécir, sinon un nom long pousse le bouton ↻ hors de l'écran et la page défile de côté. */
+.mb-hd .l1 .t{flex:1;min-width:0;font:400 18px/1.15 var(--font-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-hd .sous{font-size:11.5px;color:var(--color-text-muted);margin-top:1px}
+/* Le pas de temps : toute la largeur, des flèches de 46 px pour le pouce. */
+.mb-hd .ma-d{display:flex;align-items:center;gap:0;margin-top:8px;height:40px;background:var(--color-surface);
+  border:1px solid var(--color-border-secondary);border-radius:12px;font-size:13px;color:var(--color-text)}
+.mb-hd .ma-d b{flex:1;min-width:0;text-align:center;font-weight:400}
+.mb-hd .ma-d .ma-pas{width:46px;height:100%;padding:0;font-size:19px;flex:0 0 auto}
+.mb-ic{width:38px;height:38px;border-radius:50%;border:1px solid var(--color-border-secondary);background:var(--color-surface);
+  font-size:14px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
+.mb-sc{flex:1 0 auto;padding:4px max(14px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));display:flex;flex-direction:column}
 
-.mb-tabs{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--color-border-tertiary);
-  background:var(--color-surface);padding:7px 0 calc(10px + env(safe-area-inset-bottom,0px))}
+.mb-tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--color-border-tertiary);
+  background:var(--color-surface);padding:6px max(4px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px))}
 .mb-tabs button{border:none;background:none;text-align:center;font:400 10.5px var(--font-ui);color:var(--color-text-muted);
   letter-spacing:.03em;cursor:pointer;padding:2px 0}
 .mb-tabs button i{display:block;font-style:normal;font-size:16px;margin-bottom:2px;opacity:.55}
@@ -1330,10 +1338,16 @@ body.pp-emb{background:var(--color-bg)}
 .ma-tabs button i{position:relative;display:inline-block}
 .ma-tabs button i svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;vertical-align:0}
 .ma-tabs button{display:flex;flex-direction:column;align-items:center}
-.ma-tabs .pt{position:absolute;top:-1px;right:-6px;width:9px;height:9px;border-radius:50%;border:2px solid var(--color-surface)}
+.ma-tabs .pt{position:absolute;top:1px;right:9px;width:9px;height:9px;border-radius:50%;border:2px solid var(--color-surface)}
 .ma-tabs button i{opacity:1}
 .ma-tabs button i svg{opacity:.55}
 .ma-tabs button.on i svg{opacity:1}
+/* 18/11/2026 : les noms restent (Sam) ; chaque onglet prend la largeur de son mot plus une part égale du reste, au lieu
+   de six colonnes égales où « Opérationnel » débordait sur « Exploitation ». L'onglet ouvert : une pastille derrière. */
+.mb-tabs.ma-tabs{display:flex;justify-content:space-between}
+.mb-tabs.ma-tabs button{flex:1 1 auto;min-width:0;font-size:10px;letter-spacing:0;white-space:nowrap;padding:0 1px}
+.ma-tabs button i{display:flex;align-items:center;justify-content:center;width:46px;height:28px;border-radius:14px;margin:0 auto 2px}
+.ma-tabs button.on i{background:#F5E3E5}
 .ma-note{font-size:10px;color:var(--color-text-muted);margin-top:4px;line-height:1.35}
 /* Les pastilles des photos restent en blanc : `.ok` / `.ko` (texte vert, rouge) les rendaient
    illisibles, vert sur vert. */
