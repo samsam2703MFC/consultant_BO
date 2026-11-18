@@ -1,0 +1,128 @@
+/* Compléments de la maquette « bingo par l'API » (jetons et composants communs : ../fidelite-bingo-erp/maquette.css). */
+
+/* Rail du cockpit : sections titrées */
+.rail .sec{padding:16px 10px 4px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.rail li>a.s{font-size:12.5px;padding:6px 10px 6px 34px;color:#4b433b}
+.rail li>a.s[aria-current]{color:var(--rubis);background:rgba(141,29,44,.08)}
+.rail .badge-r{margin-left:auto;font-size:10px;background:var(--rubis);color:#fff;border-radius:5px;padding:1px 6px}
+
+/* Onglets de page */
+.tabs{display:flex;gap:2px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:3px;width:max-content;margin:16px 0 18px}
+.tabs span{padding:7px 18px;border-radius:6px;font-size:12.5px;color:var(--muted)}
+.tabs span.on{background:#fff;color:var(--rubis);box-shadow:0 1px 2px rgba(34,34,34,.12)}
+.date{display:inline-flex;gap:8px;align-items:center;font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 10px}
+
+/* Pièces de l'ERP (état lu par l'API) */
+.pieces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.piece{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.piece .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.piece strong{font-weight:400;font-size:14px}
+.piece p{font-size:11.5px;color:var(--muted);line-height:1.45}
+.piece code{font:400 10px var(--mono);color:#6b6157}
+.piece .api{margin-top:auto;padding-top:6px;border-top:1px dashed var(--line2);font:400 9.5px var(--mono);color:#8a8076}
+.etat{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;border-radius:5px;padding:2px 7px;white-space:nowrap}
+.etat.ok{background:var(--ok-bg);color:var(--ok)}
+.etat.at{background:var(--fete);color:#7a4a1f}
+.etat.no{background:var(--soft);color:#7a6b59}
+.etat i{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* Règles en valeurs (design « Réglages ») */
+.vals2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.vals2 div{background:var(--soft);border-radius:8px;padding:9px 12px}
+.vals2 span{display:block;font-size:10.5px;color:var(--muted)}
+.vals2 strong{font:400 22px/1.1 var(--display);color:var(--rubis)}
+.vals2 strong small{font:400 11px var(--font);color:var(--muted);margin-left:4px}
+.lims{border:1px solid var(--line);border-left:3px solid var(--rubis);border-radius:8px;padding:12px 14px;background:#fff}
+.lims li{font-size:11.5px;color:#4b433b;margin:4px 0 4px 16px}
+.lims li b{font-weight:400;color:var(--rubis)}
+
+/* Deux colonnes (contenu + carte) */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;align-items:start}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font:400 30px/1 var(--display);color:var(--rubis)}
+.kpi span{display:block;font-size:12px;margin-top:6px}
+.kpi em{display:block;font-style:normal;font-size:10.5px;color:var(--muted);margin-top:2px}
+
+/* Barres des 13 semaines */
+.barres{display:grid;grid-template-columns:repeat(13,1fr);gap:8px;align-items:end;height:170px;padding:10px 4px 0;border-bottom:1px solid var(--line)}
+.barres div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:10px;color:var(--muted)}
+.barres i{display:block;width:100%;border-radius:5px 5px 0 0;background:var(--rubis)}
+.barres .cours i{background:repeating-linear-gradient(-45deg,var(--rose),var(--rose) 4px,#e9c9cf 4px,#e9c9cf 8px);border:1.4px dashed var(--rubis);border-bottom:0}
+.barres .vide i{background:var(--beige)}
+.barres-l{display:grid;grid-template-columns:repeat(13,1fr);gap:8px;padding:6px 4px 0;text-align:center;font-size:10px;color:var(--muted)}
+.barres-l img{width:22px;margin:3px auto 0;opacity:.85}
+
+/* Bande des 13 cases (tableau des membres) */
+.bande{display:grid;grid-template-columns:repeat(13,14px);gap:3px}
+.bande i{width:14px;height:14px;border-radius:4px;background:var(--beige);display:block}
+.bande i.c{background:var(--rubis)}
+.bande i.m{background:repeating-linear-gradient(-45deg,#d9d2c8,#d9d2c8 2px,#f1ece5 2px,#f1ece5 4px)}
+.bande i.e{outline:1.4px dashed var(--rubis);outline-offset:-1.4px;background:#fff}
+.bande i.f{opacity:.45}
+.mini-bar{height:5px;border-radius:3px;background:var(--beige);overflow:hidden;width:90px;margin-top:4px}
+.mini-bar i{display:block;height:100%;background:var(--rubis)}
+
+/* Carte du client (design « app › Bingo », en largeur back-office) */
+.cg{display:grid;gap:8px}
+.cc{position:relative;border-radius:10px;min-height:96px;padding:7px 8px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.cc .d{align-self:flex-start;font-size:9px;color:var(--muted)}
+.cc img{width:40px;height:40px;object-fit:contain;margin:4px 0 2px}
+.cc strong{font-weight:400;font-size:10px;line-height:1.2}
+.cc.fete{background:var(--fete)}
+.cc.coche .st{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;border:1.6px solid var(--rubis);color:var(--rubis);display:grid;place-items:center;transform:rotate(-14deg);background:rgba(255,255,255,.7);font-size:12px;line-height:1}
+.cc.coche .st small{display:block;font-size:6.5px}
+.cc.cours{border:1.6px dashed var(--rubis)}
+.cc.cours .g{width:80%;height:4px;border-radius:2px;background:var(--beige);margin-top:5px;overflow:hidden}
+.cc.cours .g i{display:block;height:100%;background:var(--rubis)}
+.cc.futur{opacity:.42}
+.cc.manque img{filter:grayscale(1);opacity:.5}
+.cc.manque .mq{position:absolute;top:34px;left:50%;transform:translateX(-50%) rotate(-10deg);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6d645b;border:1.4px solid #8a8076;border-radius:4px;padding:1px 6px;background:#fff}
+.cc.bon{background:var(--rubis);color:#fff;border-color:var(--rubis)}
+.cc.bon .d{color:var(--abricot)}
+.cc.bon img{filter:brightness(0) invert(1)}
+.cc.bon b{font:400 15px/1 var(--display);margin-top:2px}
+.cc.bon small{font-size:9px;color:var(--abricot)}
+.cc.proche{background:var(--rose);border:1.6px dashed var(--rubis);color:var(--rubis)}
+.cc.proche .d{color:var(--rubis)}
+.cc.proche img{opacity:.6}
+.cc.proche b{font:400 15px/1 var(--display)}
+.cc.proche small{font-size:9px}
+.cc.lointain{background:var(--rose);color:var(--rubis)}
+.cc.lointain img{opacity:.45}
+.cc.lointain b{font:400 15px/1 var(--display)}
+.cc.lointain small{font-size:9px}
+.cc.plein{background:var(--rose);border:1.4px dashed #c99aa2;color:#9c6b73;flex-direction:row;justify-content:center;gap:16px;text-align:left}
+.cc.plein img{filter:grayscale(1);opacity:.5;width:54px;height:54px}
+.cc.plein .d{display:block;color:#9c6b73}
+.cc.plein b{display:block;font:400 22px/1.1 var(--display);margin:2px 0}
+.cc.plein small{display:block;font-size:10.5px}
+.bt{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
+.bt .t{font:400 40px/.9 var(--display);color:var(--rubis)}
+.bt .s{font:400 20px/1 var(--script);color:var(--rubis);margin-left:8px}
+.bt .r{text-align:right}
+.bt .r b{font:400 30px/1 var(--display)}
+.bt .r small{display:block;font-size:11px;color:var(--muted)}
+.wallet{display:flex;flex-direction:column;gap:8px}
+.wl{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.wl .ti2{width:44px;height:44px;border-radius:9px;background:var(--rubis);display:grid;place-items:center}
+.wl .ti2 img{width:32px;filter:brightness(0) invert(1)}
+.wl .ti2.ab{background:var(--abricot)}
+.wl .ti2.ab img{filter:none}
+.wl .ti2.gr{background:var(--beige)}
+.wl .ti2.gr img{filter:grayscale(1);opacity:.5}
+.wl small{display:block;font-size:10.5px;color:var(--muted)}
+.wl strong{font-weight:400;font-size:12.5px}
+.wl code{font:400 10.5px var(--mono);color:var(--rubis)}
+
+/* La carte de saison reprend la grille des semaines (annule les réglages de la carte à tampons) */
+.bc.a6 .w{min-height:112px;justify-content:flex-start}
+.bc.a6 .w .w-top{position:static}
+.bc.a6 .w .w-top b{font:inherit;color:var(--fill)}
+.bc.a6 .w.b .w-top b,.bc.a6 .w.b .w-top{color:#fff}
+.bc.a6 .w img{margin:auto 0 4px;width:42px;height:42px;opacity:1}
+.mot.off{border-color:var(--line2);background:var(--soft)}
+.mot.off .titre,.mot.off .sous{color:#a39a90}
+.info.nm{background:#222;border-color:#222;color:#efe8de}.info.nm svg{color:var(--abricot)}.info.nm p{color:#cfc6ba}
