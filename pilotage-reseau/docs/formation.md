@@ -1095,4 +1095,5 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - Source : `data/formation/gestion/` (voir son `LISEZMOI.md`, et ses « à confirmer ») ; schémas :
   `tools/formation/schemas_leviers.js`.
 - **Journal** : 18/11/2026 — v1.0 encodée « à valider » par `encoder_sop.py` (Sam : « encode l'article FO-41 pôle
-  vente ») ; relue au serveur : code 0.0.54, classement, neuf photos servies.
+  vente ») ; relue au serveur : code 0.0.54, classement, neuf photos servies. Le même jour, **publiée** (Sam : « publie 0.0.54 » ;
+  `PATCH /formation/sop/fiche/art-fo41-vente {statut: publiee}`, relu) : quiz et « vu faire » ouverts.

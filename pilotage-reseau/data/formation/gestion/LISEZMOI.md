@@ -20,6 +20,7 @@ le réseau ») : leur nom `u/…` vient de `data/formation/dashboard/photos.json
   fichier.
 - **Encodé le 18/11/2026** (demande de Sam : « encode l'article FO-41 pôle vente ») : v1.0 « à valider » — lisible sur
   la tablette, sans quiz ni « vu faire » ; six schémas envoyés (`photos.json`), trois captures du dashboard reprises.
+- **Publié le 18/11/2026** (Sam : « publie 0.0.54 ») : quiz et « vu faire » ouverts sur la tablette.
 
 ## L'exemple chiffré
 
