@@ -54,8 +54,9 @@ const RV_CRITERES_IA = [
  * quantité et le sens des produits sont comme dans le planogramme ; ce champ doit être éditable, avec des points
  * pour chaque nouveau point à prendre en compte »).
  *
- * Une liste de points, envoyée à l'IA avec chaque photo de comptoir, AVANT la consigne du rayon (qui prime pour ce
- * qui touche au rayon). Elle se modifie dans Suivi › Entraînement de l'IA (PUT /ia/consigne-generale) et se garde
+ * Une liste de points, envoyée à l'IA avec CHAQUE photo de contrôle (« aussi pour les autres photos de contrôle »,
+ * 18/11) : pour une photo de comptoir, AVANT la consigne du rayon (qui prime pour ce qui touche au rayon) ; pour une
+ * autre tâche, seule, avec une phrase qui dit qu'elle n'a pas de planogramme. Elle se modifie dans Suivi › Entraînement de l'IA (PUT /ia/consigne-generale) et se garde
  * dans les réglages (`cqConsigneGenerale`) ; jamais modifiée, c'est la liste par défaut ci-dessous qui vaut. La
  * règle commune d'avant (RV_CRITERES_COMMUNS) en est le premier point.
  */
@@ -83,10 +84,20 @@ function cqPoint(mixed $p): string
     return trim((string) preg_replace('/^(?:[•\-*–·]+|\d+[.)])\s*/u', '', $t));
 }
 
-/** Les critères que l'IA reçoit pour un rayon ; '' pour une tâche qui n'est pas une photo de comptoir. */
+/** Pour une tâche qui n'est pas une photo de comptoir : elle n'a pas de planogramme. */
+const CQ_SANS_PLANOGRAMME = "Cette tâche n'est pas une photo de comptoir : elle n'a pas de planogramme, les points qui s'y comparent ne"
+    . " s'appliquent pas.";
+
+/**
+ * Les critères que l'IA reçoit pour une photo de contrôle : la consigne générale, puis, pour une photo de comptoir
+ * ($rv), la consigne du rayon ; '' quand la consigne générale est vide et que la tâche n'a pas de rayon.
+ */
 function rvCriteresIa(?array $rv): string
 {
-    if ($rv === null) { return ''; }
+    if ($rv === null) {
+        $points = cqConsigneGenerale();
+        return $points !== [] ? "Consigne générale des contrôles qualité :\n- " . implode("\n- ", $points) . "\n" . CQ_SANS_PLANOGRAMME : '';
+    }
     $propre = trim((string) ($rv['consigne'] ?? ''));
     $rayon = $propre !== '' ? $propre : (RV_CRITERES_IA[(string) ($rv['cle'] ?? '')] ?? '');
     $points = cqConsigneGenerale();

@@ -122,3 +122,4 @@
 2026-11-18T19:04:55Z stan ogólny : sans moyenne / tydz.
 2026-11-18T19:10:12Z consigne générale des contrôles qualité (Entraînement de l'IA)
 2026-11-18T19:12:00Z dashboard franchisé, vue Mois : trafic sur 12 mois glissants
+2026-11-18T19:17:30Z consigne générale : toutes les photos de contrôle

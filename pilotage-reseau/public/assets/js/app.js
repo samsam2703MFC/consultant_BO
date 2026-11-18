@@ -14787,7 +14787,7 @@ class App {
     });
   }
   /* --- La consigne générale des contrôles qualité (PUT /ia/consigne-generale) -------------------------
-   * Une liste de points envoyée à l'IA avec chaque photo de comptoir. Un point se modifie sur place et
+   * Une liste de points envoyée à l'IA avec chaque photo de contrôle. Un point se modifie sur place et
    * s'enregistre en quittant le champ ; un point ajouté reste un brouillon tant qu'il est vide. */
   valsIaConsigneGenerale(E){
     const S = this.state;
@@ -14805,7 +14805,7 @@ class App {
       if (!r || r.ok === false) { this.setState({ iaCgBusy: false }); this.notify('Consigne générale non enregistrée — ' + ((r && r.error) || 'serveur injoignable')); return; }
       if (Array.isArray(r.rayons)) { this._iaEnt = r; }
       this.setState({ iaCgBusy: false, iaCgBrouillon: null });
-      this.notify(message + ' — l’IA la reçoit avec chaque photo de comptoir');
+      this.notify(message + ' — l’IA la reçoit avec chaque photo de contrôle');
     });
   }
   iaCgModifier(E, i, valeur){
