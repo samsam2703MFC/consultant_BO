@@ -249,7 +249,8 @@ function ventesAfficheDistribuer(array $rep): array
 function rapportSeuils(): array
 {
     return [
-        'food' => foodCostCible(),   // la cible du réseau (src/food_cost.php) 'labour' => kpiSeuil('labour-pct', 33.0),
+        // food : la cible du réseau, la même partout (src/food_cost.php).
+        'food' => foodCostCible(), 'labour' => kpiSeuil('labour-pct', 33.0),
         'overhead' => kpiSeuil('overhead-pct', 13.5), 'caEtp' => kpiSeuil('ca-etp', 13000.0),
         'cibleGoogle' => kpiSeuil('note-google', (float) setting('reputationCible', 4.5)),
         'tacheNote' => (int) kpiSeuil('taches', 3),
