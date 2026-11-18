@@ -142,7 +142,8 @@ Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au mome
   Pas de paragraphe, pas d'énumération : ce qui ne tient pas là attend une question de suite.
 - Le personnage change la manière de dire, jamais les faits : mêmes chiffres, mêmes règles, quel que soit le ton. Quel que soit le personnage : aucune insulte, aucune grossièreté, aucune humiliation ; on s'en prend aux résultats, jamais à la personne.
 - La fiche porte le budget du magasin (objectif de CA du mois, du jour et de la semaine, saisi au cockpit) : l'écart au budget se calcule depuis ces valeurs ; sans budget saisi, dis-le.
-- La fiche porte aussi les résultats des contrôles qualité en photo (`controlesPhotos`) : chaque photo de contrôle notée par le consultant au barème du réseau, conforme à partir du seuil indiqué. Tous les personnages les reprennent, quels que soient leurs accents : dans un bilan (la semaine, la journée, quoi améliorer, ce qui marche), dis toujours où en sont les photos de contrôle. Une non-conformité des sept derniers jours se cite avec ce que le consultant a relevé, dit avec tes mots ; une non-conformité majeure ou critique devient une priorité, écran taches. Sans non-conformité, une phrase suffit (les photos notées sont conformes, l'exemplaire se salue). Une photo rendue et pas encore notée n'est ni bonne ni mauvaise : ne la juge pas, tu ne la vois pas. Une photo non rendue est un contrôle pas fait.
+- La fiche porte aussi les résultats des contrôles qualité en photo (`controlesPhotos`) : chaque photo de contrôle notée par le consultant au barème du réseau, conforme à partir du seuil indiqué. Tous les personnages les reprennent, quels que soient leurs accents : dans un bilan (la semaine, la journée, quoi améliorer, ce qui marche), dis toujours où en sont les photos de contrôle. Une non-conformité des sept derniers jours se cite avec ce que le consultant a relevé, dit avec tes mots, et avec le document du manuel qui dit comment la corriger ; une non-conformité majeure ou critique devient une priorité, écran taches. Sans non-conformité, une phrase suffit (les photos notées sont conformes, l'exemplaire se salue). Une photo rendue et pas encore notée n'est ni bonne ni mauvaise : ne la juge pas, tu ne la vois pas. Une photo non rendue est un contrôle pas fait.
+- Tu cites le manuel opératoire, comme le Professeur (Sam, 18/11/2026 : « les coachs aussi doivent citer le manuel opératoire ») : chaque priorité ou conseil qui demande un geste à l'équipe (un contrôle ou une photo à reprendre, la vitrine, le comptoir, l'hygiène, l'ouverture, la fermeture, une recette, une pratique de vente) s'appuie sur le document du manuel qui le décrit. Pour une photo non conforme, la fiche donne le document probable du contrôle (`documentProbableDuManuel`) : lis-le (manuel_lire) avant d'en tirer le geste et, s'il ne parle pas de ce contrôle, cherche le bon (manuel_chercher) ; pour le reste, cherche-le, en parallèle des autres outils. Nomme le document dans la phrase (son titre ou son code) et mets son id dans `sources`. Un document « brouillon » ou « à valider » se signale en trois mots. Un conseil que le manuel ne couvre pas reste un conseil de coach : ne lui invente pas de document. Les chiffres du magasin ne viennent jamais du manuel.
 - Quand c'est utile, propose deux priorités, trois au plus, de la plus rentable à la plus simple ; chacune : un titre d'action, un constat d'une phrase parlée avec un chiffre arrondi, le gain s'il se calcule simplement (« environ 1 000 € par semaine », sinon vide), et l'écran du dashboard où agir.
 - Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos (promotions et bundles), concurrence (les prix relevés chez les concurrents), aucun.
 - Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche ou les outils doivent permettre d'y répondre.
@@ -353,7 +354,8 @@ function amControlesPhotos(int $sid, bool $avecMois = true, int $budget = AM_CQ_
             elseif ($t['note'] === null && !$t['photo'] && $d < $auj) { $manques[$nomT] = ($manques[$nomT] ?? 0) + 1; }
         }
     }
-    // La plus récente d'abord ; le même jour, la plus grave d'abord.
+    // La plus récente d'abord ; le même jour, la plus grave d'abord. $memo : une recherche du manuel par contrôle.
+    $memo = [];
     usort($nc, static fn ($a, $b) => strcmp($b['date'], $a['date']) ?: $a['n'] <=> $b['n']);
     arsort($ex); arsort($manques);
 
@@ -372,7 +374,10 @@ function amControlesPhotos(int $sid, bool $avecMois = true, int $budget = AM_CQ_
         'aujourdhui' => $aujL,
         'septDerniersJours' => $resume($d7),
         'moisEnCours' => $avecMois ? $resume($mois) : null,
-        'nonConformesSeptDerniersJours' => array_map(static fn ($x) => array_diff_key($x, ['n' => 1]), array_slice($nc, 0, 10)),
+        'nonConformesSeptDerniersJours' => array_map(static function ($x) use (&$memo) {
+            $doc = amDocumentDuControle($x['controle'], $memo);
+            return array_diff_key($x, ['n' => 1]) + ($doc !== null ? ['documentProbableDuManuel' => $doc] : []);
+        }, array_slice($nc, 0, 10)),
         'exemplairesSeptDerniersJours' => array_map(static fn ($k, $n) => ['controle' => $k, 'fois' => $n], array_keys(array_slice($ex, 0, 5, true)), array_slice($ex, 0, 5, true)),
         'sansPhotoSeptDerniersJours' => array_map(static fn ($k, $n) => ['controle' => $k, 'fois' => $n], array_keys(array_slice($manques, 0, 5, true)), array_slice($manques, 0, 5, true)),
     ];
@@ -381,6 +386,25 @@ function amControlesPhotos(int $sid, bool $avecMois = true, int $budget = AM_CQ_
     }
     if ($J === [] && $L['manque'] > 0) { $out['etat'] = 'le panel n’a pas répondu : contrôles photo non lus'; }
     return array_filter($out, static fn ($v) => $v !== null);
+}
+
+/**
+ * Le document du manuel qu'un contrôle photo applique, le plus probable (18/11/2026, Sam : « les coachs aussi doivent
+ * citer le manuel opératoire ») : la recherche du manuel (manuel_chercher) sur le nom du contrôle et de sa checklist,
+ * le premier document trouvé. C'est une piste : l'agent le lit avant d'en tirer un geste, et en cherche un autre s'il
+ * ne parle pas de ce contrôle. Null sans manuel lisible ; une recherche par contrôle ($memo).
+ */
+function amDocumentDuControle(string $controle, array &$memo): ?array
+{
+    if (array_key_exists($controle, $memo)) { return $memo[$controle]; }
+    $doc = null;
+    if (function_exists('aiaManuelChercher')) {
+        try {
+            $p = aiaManuelChercher($controle, 3)['passages'][0] ?? null;
+            if (is_array($p)) { $doc = ['id' => (string) $p['id'], 'code' => $p['code'], 'titre' => (string) $p['document'], 'statut' => (string) $p['statut']]; }
+        } catch (Throwable $e) { /* manuel illisible : l'agent cherchera lui-même */ }
+    }
+    return $memo[$controle] = $doc;
 }
 
 /**

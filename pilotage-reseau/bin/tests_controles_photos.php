@@ -111,6 +111,7 @@ verifie('sept jours : la répartition, de la meilleure note à la pire', array_k
 $nc = $cp['nonConformesSeptDerniersJours'] ?? [];
 verifie('les non-conformités, la plus récente d’abord', count($nc) === 2 && $nc[0]['date'] === $j(1) && $nc[1]['note'] === '1 · Non conforme — critique');
 verifie('chaque non-conformité porte ce que le consultant a relevé', ($nc[0]['releveDuConsultant'] ?? '') === 'Vitrine à moitié vide à 7 h, croissants manquants.');
+verifie('manuel illisible : les non-conformités restent, sans document inventé', count($nc) === 2 && !isset($nc[0]['documentProbableDuManuel']));
 verifie('l’exemplaire de la semaine est nommé', ($cp['exemplairesSeptDerniersJours'][0]['controle'] ?? '') === 'Comptoir des pâtisseries (CQ — Vitrines)');
 verifie('le contrôle qui revient sans photo est compté', ($cp['sansPhotoSeptDerniersJours'][0] ?? null) === ['controle' => 'Présentoir à pains (CQ — Vitrines)', 'fois' => 2]);
 $txt = json_encode($cp, JSON_UNESCAPED_UNICODE);
