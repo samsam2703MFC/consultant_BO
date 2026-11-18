@@ -30,8 +30,8 @@ foreach ($liste($r['corps']) as $f) {
     $fournisseurs[(int) ($f['id'] ?? 0)] = $nom;
     echo '  fournisseur ', $f['id'] ?? '?', ' « ', $nom, " »\n";
 }
-$cibles = array_filter($fournisseurs, static fn (string $n): bool => stripos(str_replace(' ', '', $n), 'slfood') !== false);
-if ($cibles === []) { echo "  SLFood introuvable par son nom — on parcourt tous les fournisseurs\n"; $cibles = $fournisseurs; }
+// Deuxième passage : SLFood n'a que deux recettes, aucune « cougnou » — on liste les recettes de TOUS les fournisseurs.
+$cibles = $fournisseurs;
 
 foreach ($cibles as $sid => $nom) {
     if ($sid <= 0) { continue; }
@@ -43,6 +43,7 @@ foreach ($cibles as $sid => $nom) {
     foreach ($recettes as $rc) {
         if (!is_array($rc)) { continue; }
         $rnom = (string) ($rc['name'] ?? $rc['title'] ?? '');
+        echo '    recette ', $rc['id'] ?? '?', " « $rnom »\n";
         if (stripos($rnom, 'cougnou') === false && stripos($rnom, 'couque') === false) { continue; }
         $rid = (int) ($rc['id'] ?? 0);
         echo "\n  --- recette $rid « $rnom » : ", $court(array_diff_key($rc, ['ingredients' => 1, 'steps' => 1]), 500), "\n";
