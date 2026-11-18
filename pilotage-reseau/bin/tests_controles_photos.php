@@ -11,7 +11,8 @@ declare(strict_types=1);
  * La fiche porte les notes des photos (aujourd'hui, sept jours, mois), chaque non-conformité avec le commentaire du
  * consultant, les contrôles sans photo ; rien de nominatif ; la journée lue par la fiche n'est pas relue ; une lecture
  * reste dans son budget et dit ce qui manque ; les trois coachs reçoivent la règle, « n'en parle pas » compris ; l'écran
- * Contrôles qualité du cockpit rend toujours ses lignes.
+ * Contrôles qualité du cockpit rend toujours ses lignes. Le Professeur (18/11/2026) reçoit les photos des sept derniers
+ * jours avec le sommaire du manuel, et la consigne d'expliquer pourquoi elles comptent.
  */
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -59,11 +60,18 @@ final class PanelApi
     }
 }
 
+final class Anthropic
+{
+    public static function config(): array { return ['cle' => 'cle-de-test', 'espace' => '']; }
+    public static function configured(): bool { return true; }
+}
+
 require __DIR__ . '/../src/controles_qualite.php';
 require __DIR__ . '/../src/assistant_magasin.php';
 
 Db::pdo()->exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
 Db::pdo()->exec('CREATE TABLE aia_reglage (cle TEXT PRIMARY KEY, valeur TEXT, maj_le TEXT, maj_par TEXT)');
+Db::pdo()->exec('CREATE TABLE aia_fiche (shop_id INT PRIMARY KEY, lu_le TEXT, faits TEXT)');
 Db::pdo()->exec("INSERT INTO aia_reglage VALUES ('repriseQuestions', '\"fait\"', '2026-11-17', 'test')");   // la reprise des questions d'avant : déjà faite
 Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?)', ['signalement', json_encode(['seuil' => 4, 'niveaux' => [
     ['n' => 5, 'nom' => 'Exemplaire'], ['n' => 4, 'nom' => 'Conforme'], ['n' => 3, 'nom' => 'Non conforme — mineur'],
@@ -136,6 +144,47 @@ verifie('l’exception ne touche que les contrôles', !str_contains(amPersona('v
 Db::exec('INSERT INTO aia_reglage (cle, valeur, maj_le) VALUES (?, ?, ?)', ['assistantCoachs', json_encode(['pierre' => ['accents' => ['controles' => ['niveau' => 'non', 'verifie' => 'Rien.']]]]), date('Y-m-d H:i:s')]);
 verifie('un coach réglé sur « n’en parle pas » au cockpit garde l’exception', str_contains(amPersona('pierre'), 'sauf les résultats des contrôles en photo'));
 verifie('une question toute prête porte sur les photos', in_array('Mes photos de contrôle sont-elles conformes ?', array_merge(...array_map(static fn ($g) => $g[1], AM_QUESTIONS['groupes'])), true));
+
+// --- le Professeur ----------------------------------------------------------------------------
+echo "Le Professeur\n";
+PanelApi::$taches[11] = [
+    $auj => [$t(30, 'Vitrine des pâtisseries', ['attachment_id' => 31, 'review_rating' => 5])],
+    $j(2) => [$t(31, 'Comptoir des viennoiseries', ['attachment_id' => 32, 'review_rating' => 2, 'review_comment' => 'Plateaux vides à 10 h.'])],
+    $j(10) => [$t(32, 'Comptoir des viennoiseries', ['attachment_id' => 33, 'review_rating' => 1, 'review_comment' => 'Hors période.'])],
+];
+$n = count(PanelApi::$lus);
+$p = amControlesPhotosProfesseur(11);
+$lus = array_slice(PanelApi::$lus, $n);
+verifie('sans fiche des coachs : sept journées au plus au panel', count($lus) <= 7 && $lus !== [], count($lus) . ' lues');
+verifie('rien avant les sept derniers jours', array_filter($lus, static fn ($x) => str_contains($x, $j(10))) === []);
+verifie('les sept derniers jours, sans le mois', isset($p['septDerniersJours']) && !array_key_exists('moisEnCours', $p), json_encode(array_keys($p)));
+verifie('la non-conformité et ce que le consultant a relevé', ($p['nonConformesSeptDerniersJours'][0]['releveDuConsultant'] ?? '') === 'Plateaux vides à 10 h.');
+// La fiche des coachs, fraîche : le Professeur la reprend, sans lire le panel.
+Db::exec('INSERT INTO aia_fiche VALUES (?, ?, ?)', [12, date('Y-m-d H:i:s'), json_encode(['controlesPhotos' => ['septDerniersJours' => ['controles' => 4], 'moisEnCours' => ['controles' => 30]]])]);
+$n = count(PanelApi::$lus);
+$p = amControlesPhotosProfesseur(12);
+verifie('fiche des coachs fraîche : reprise sans lecture au panel', count(PanelApi::$lus) === $n && ($p['septDerniersJours']['controles'] ?? null) === 4 && !isset($p['moisEnCours']));
+
+// Ce que le modèle reçoit : les photos jointes au sommaire, la consigne du « pourquoi ».
+$recu = null;
+$faux = static function (array $corps) use (&$recu): array {
+    $recu = $corps;
+    $r = ['titre' => 'Vos photos', 'resume' => 'r', 'chiffres' => [], 'points' => [], 'priorites' => [], 'conclusion' => 'c', 'suites' => [], 'sources' => [], 'visuels' => []];
+    return [['stop_reason' => 'end_turn', 'content' => [['type' => 'text', 'text' => json_encode($r)]], 'usage' => []], null, null];
+};
+$faits = ['aujourdhui' => $auj, 'luLe' => null, 'sommaire' => 'SOP-12 · Vitrine des viennoiseries — garnir les plateaux', 'controlesPhotos' => amControlesPhotosProfesseur(11)];
+$R = amDemander($faits, 'Pourquoi les contrôles photo sont-ils importants ?', [], 'professeur', 11, $faux);
+$ctx = (string) ($recu['messages'][0]['content'][0]['text'] ?? '');
+$sys = implode("\n", array_column($recu['system'] ?? [], 'text'));
+verifie('le Professeur répond', ($R['reponse']['titre'] ?? '') === 'Vos photos', json_encode($R, JSON_UNESCAPED_UNICODE));
+verifie('les photos de contrôle sont jointes au sommaire du manuel', str_contains($ctx, 'SOP-12') && str_contains($ctx, 'controlesPhotos') && str_contains($ctx, 'Plateaux vides à 10 h.'));
+verifie('la consigne : reprendre les photos et expliquer pourquoi elles comptent', str_contains($sys, 'expliquer pourquoi tout cela compte'));
+verifie('… la valeur du magasin, la gestion, le manuel', str_contains($sys, 'La valeur du magasin') && str_contains($sys, 'La gestion') && str_contains($sys, 'chaque contrôle applique un document du manuel'));
+verifie('… retrouver le document du contrôle et le citer', str_contains($sys, 'retrouve dans le manuel le document que ce contrôle applique'));
+verifie('… une non-conformité grave devient une priorité (écran taches)', str_contains($sys, 'écran « taches »'));
+$g = aiaQuestionsProfesseur()['groupes'][0] ?? null;
+verifie('le Professeur propose ses questions sur les photos en premier', ($g[0] ?? '') === 'Mes contrôles photo' && in_array('Pourquoi les contrôles photo sont-ils importants ?', $g[1] ?? [], true));
+verifie('les coachs gardent le mois', array_key_exists('moisEnCours', amControlesPhotos(11)));
 
 // --- l'écran Contrôles qualité du cockpit, après la mise en commun --------------------------
 echo "L'écran Contrôles qualité\n";
