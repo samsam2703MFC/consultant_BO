@@ -1,1 +1,1 @@
-2026-11-18 passage 1 : produits et catégories écrits, autres listes relevées
+2026-11-18 passage 2 : produits restants, matières premières et catégories de matières
