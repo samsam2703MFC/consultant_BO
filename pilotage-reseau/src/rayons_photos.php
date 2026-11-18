@@ -48,13 +48,51 @@ const RV_CRITERES_IA = [
     'boissons'          => 'Le rayon boissons est un frigo : étagères remplies, bouteilles et canettes alignées, vitre propre.',
 ];
 
+/**
+ * LA CONSIGNE GÉNÉRALE DES CONTRÔLES QUALITÉ (18/11/2026, demande du CEO : « un prompt général pour les contrôles
+ * qualité : toujours prendre une photo de face aux produits pour comparer avec le planogramme, vérifier si la
+ * quantité et le sens des produits sont comme dans le planogramme ; ce champ doit être éditable, avec des points
+ * pour chaque nouveau point à prendre en compte »).
+ *
+ * Une liste de points, envoyée à l'IA avec chaque photo de comptoir, AVANT la consigne du rayon (qui prime pour ce
+ * qui touche au rayon). Elle se modifie dans Suivi › Entraînement de l'IA (PUT /ia/consigne-generale) et se garde
+ * dans les réglages (`cqConsigneGenerale`) ; jamais modifiée, c'est la liste par défaut ci-dessous qui vaut. La
+ * règle commune d'avant (RV_CRITERES_COMMUNS) en est le premier point.
+ */
+const CQ_CONSIGNE_GENERALE_DEFAUT = [
+    RV_CRITERES_COMMUNS,
+    "La photo doit être prise de face, face aux produits, pour être comparée au planogramme : une photo de biais, de"
+        . " trop loin ou qui ne montre qu'une partie du comptoir ne permet pas la comparaison — le dire dans les constats.",
+    'Vérifier que la quantité de produits et leur sens (orientation, face visible) sont ceux du planogramme.',
+];
+const CQ_POINTS_MAX = 20;          // points au plus
+const CQ_POINT_LONGUEUR = 400;     // caractères au plus par point
+
+/** Les points de la consigne générale : ceux enregistrés, sinon la liste par défaut. */
+function cqConsigneGenerale(): array
+{
+    $v = function_exists('setting') ? setting('cqConsigneGenerale', null) : null;
+    if (!is_array($v)) { return CQ_CONSIGNE_GENERALE_DEFAUT; }
+    return array_values(array_filter(array_map(static fn ($p) => trim((string) $p), $v), static fn (string $p) => $p !== ''));
+}
+
+/** Un point saisi, nettoyé : sans puce ni numéro en tête, espaces resserrés. */
+function cqPoint(mixed $p): string
+{
+    $t = trim((string) preg_replace('/\s+/u', ' ', (string) $p));
+    return trim((string) preg_replace('/^(?:[•\-*–·]+|\d+[.)])\s*/u', '', $t));
+}
+
 /** Les critères que l'IA reçoit pour un rayon ; '' pour une tâche qui n'est pas une photo de comptoir. */
 function rvCriteresIa(?array $rv): string
 {
     if ($rv === null) { return ''; }
     $propre = trim((string) ($rv['consigne'] ?? ''));
     $rayon = $propre !== '' ? $propre : (RV_CRITERES_IA[(string) ($rv['cle'] ?? '')] ?? '');
-    return RV_CRITERES_COMMUNS . ($rayon !== '' ? "\nRayon « " . (string) ($rv['nom'] ?? '') . ' » : ' . $rayon : '');
+    $points = cqConsigneGenerale();
+    $general = $points !== [] ? "Consigne générale des contrôles qualité :\n- " . implode("\n- ", $points) : '';
+    $rayonTxt = $rayon !== '' ? 'Rayon « ' . (string) ($rv['nom'] ?? '') . ' » : ' . $rayon : '';
+    return implode("\n", array_filter([$general, $rayonTxt], static fn (string $t) => $t !== ''));
 }
 
 function ensureRayonsPhotos(): void

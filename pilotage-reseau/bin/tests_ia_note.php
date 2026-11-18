@@ -20,7 +20,8 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
     if ($cond) { $ok++; echo "  ok  $nom\n"; }
     else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
 }
-function setting(string $k, $d = null) { return $k === 'anthropic' ? ['cle' => 'sk-ant-essai', 'modele' => 'modele-essai'] : $d; }
+// Les réglages : la clé d'essai, et ceux qu'un test pose dans $GLOBALS['REGLAGES'] (la consigne générale).
+function setting(string $k, $d = null) { return $k === 'anthropic' ? ['cle' => 'sk-ant-essai', 'modele' => 'modele-essai'] : ($GLOBALS['REGLAGES'][$k] ?? $d); }
 
 $racine = dirname(__DIR__);
 require $racine . '/src/anthropic.php';
@@ -49,7 +50,20 @@ verifie('quiches : vendues au quart, entamée n’est pas un écart', str_contai
 verifie('règles communes pour tout rayon', str_contains(rvCriteresIa($quiches), 'sans objet étranger'));
 $propre = rvCriteresIa(['cle' => 'quiches', 'nom' => 'Quiches', 'consigne' => 'Six quiches entières minimum.']);
 verifie('la consigne du back office prime', str_contains($propre, 'Six quiches entières minimum.') && !str_contains($propre, 'au quart'));
-verifie('un rayon ajouté sans consigne : les règles communes seules', rvCriteresIa(['cle' => 'glaces', 'nom' => 'Glaces', 'consigne' => null]) === RV_CRITERES_COMMUNS);
+verifie('un rayon ajouté sans consigne : la consigne générale seule', rvCriteresIa(['cle' => 'glaces', 'nom' => 'Glaces', 'consigne' => null])
+    === "Consigne générale des contrôles qualité :\n- " . implode("\n- ", CQ_CONSIGNE_GENERALE_DEFAUT));
+verifie('consigne générale par défaut : photo de face comparée au planogramme, quantité et sens des produits',
+    str_contains(rvCriteresIa($quiches), 'prise de face') && str_contains(rvCriteresIa($quiches), 'planogramme')
+    && str_contains(rvCriteresIa($quiches), 'quantité de produits et leur sens'));
+verifie('la consigne générale passe avant celle du rayon', strpos(rvCriteresIa($quiches), 'Consigne générale') < strpos(rvCriteresIa($quiches), 'Rayon « Quiches »'));
+$GLOBALS['REGLAGES']['cqConsigneGenerale'] = ['Prix visible sur chaque produit.', '  ', 'Étiquettes allergènes en place.'];
+verifie('la consigne générale modifiée : ses points, un point vide écarté, la règle par défaut plus envoyée',
+    str_contains(rvCriteresIa($quiches), "- Prix visible sur chaque produit.\n- Étiquettes allergènes en place.") && !str_contains(rvCriteresIa($quiches), 'prise de face'));
+$GLOBALS['REGLAGES']['cqConsigneGenerale'] = [];
+verifie('tous les points retirés : la consigne du rayon seule', rvCriteresIa($quiches) === 'Rayon « Quiches » : ' . RV_CRITERES_IA['quiches']);
+unset($GLOBALS['REGLAGES']['cqConsigneGenerale']);
+verifie('un point saisi avec sa puce ou son numéro : nettoyé', cqPoint('• Photo  de face') === 'Photo de face' && cqPoint('2) Sens des produits') === 'Sens des produits'
+    && cqPoint('- Quantité') === 'Quantité');
 verifie('chaque rayon du panel a ses critères', count(array_filter(RV_DEFAUT, fn ($n) => isset(RV_CRITERES_IA[rvCle($n)]))) === count(RV_DEFAUT));
 verifie('le rayon d’une tâche « Photo du comptoir - Quiches »', (rvRayonDe('Photo du comptoir - Quiches', [$quiches])['cle'] ?? '') === 'quiches');
 verifie('« Photo du comptoir après-midi - Quiches » : le même rayon', (rvRayonDe('Photo du comptoir après-midi - Quiches', [$quiches])['cle'] ?? '') === 'quiches');

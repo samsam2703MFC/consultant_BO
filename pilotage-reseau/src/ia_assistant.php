@@ -276,7 +276,8 @@ function wr_ia_lecons(): array
  * Le consultant choisit ; l'IA ne choisit jamais ses propres exemples, elle renforcerait ses propres erreurs. Une
  * photo prise est COPIÉE sur le serveur : l'adresse signée du panel expire en 20 min.
  *
- * Routes : GET /ia/entrainement, POST /ia/modeles.
+ * Routes : GET /ia/entrainement, POST /ia/modeles, PUT /ia/consigne-generale (la consigne générale des contrôles
+ * qualité, src/rayons_photos.php).
  */
 
 const IA_EXEMPLES_ENVOYES = 2;   // photos d'exemple envoyées avec une photo à noter, en plus du planogramme
@@ -395,6 +396,43 @@ function wr_ia_modeles(): array
 }
 
 /**
+ * PUT /ia/consigne-generale — {points: ["…", "…"]} remplace les points de la consigne générale des contrôles qualité
+ * (src/rayons_photos.php) ; {retablir: true} revient à la liste par défaut. Un point vide est écarté ; trop de points
+ * ou un point trop long : 422, rien n'est écrit. Rend l'entraînement relu.
+ */
+function wr_ia_consigne_generale(): array
+{
+    $b = body();
+    $auteur = function_exists('psAuteur') ? psAuteur() : 'CEO';
+    if (!empty($b['retablir'])) {
+        Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', ['cqConsigneGenerale']);
+        if (function_exists('journalAdd')) { journalAdd('CEO', 'Assistant de notation', 'Consigne générale', 'Consigne par défaut rétablie (' . $auteur . ')'); }
+        return ep_ia_entrainement() + ['ok' => true];
+    }
+    if (!isset($b['points']) || !is_array($b['points']) || !array_is_list($b['points'])) {
+        http_response_code(422);
+        return ['error' => 'points attendus : une liste de textes'];
+    }
+    $points = array_values(array_filter(array_map('cqPoint', $b['points']), static fn (string $p) => $p !== ''));
+    if (count($points) > CQ_POINTS_MAX) {
+        http_response_code(422);
+        return ['error' => CQ_POINTS_MAX . ' points au plus'];
+    }
+    foreach ($points as $i => $p) {
+        if (mb_strlen($p) > CQ_POINT_LONGUEUR) {
+            http_response_code(422);
+            return ['error' => 'le point ' . ($i + 1) . ' dépasse ' . CQ_POINT_LONGUEUR . ' caractères'];
+        }
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['cqConsigneGenerale', json_encode($points, JSON_UNESCAPED_UNICODE)]);
+    if (function_exists('journalAdd')) {
+        journalAdd('CEO', 'Assistant de notation', 'Consigne générale', count($points) . ' point' . (count($points) > 1 ? 's' : '') . ' enregistré' . (count($points) > 1 ? 's' : '') . ' (' . $auteur . ')');
+    }
+    return ep_ia_entrainement() + ['ok' => true];
+}
+
+/**
  * GET /ia/entrainement — rayon par rayon : la photo du planogramme, les photos d'exemple, la consigne (et les critères
  * par défaut quand elle est vide), l'accord de l'IA avec le consultant, les leçons ; et les photos notées Exemplaire
  * ces 30 derniers jours, candidates à l'exemple.
@@ -442,6 +480,10 @@ function ep_ia_entrainement(): array
     }
     return ['rayons' => $rayons, 'candidates' => array_slice($candidates, 0, 24), 'accord' => iaAccord(),
         'communs' => defined('RV_CRITERES_COMMUNS') ? RV_CRITERES_COMMUNS : '', 'leconsMax' => IA_LECONS_MAX, 'exemplesEnvoyes' => IA_EXEMPLES_ENVOYES,
+        // La consigne générale des contrôles qualité (src/rayons_photos.php) : ses points, et s'ils sont ceux par défaut.
+        'consigneGenerale' => function_exists('cqConsigneGenerale') ? cqConsigneGenerale() : [],
+        'consigneGeneraleDefaut' => !is_array(function_exists('setting') ? setting('cqConsigneGenerale', null) : null),
+        'consigneGeneraleMax' => defined('CQ_POINTS_MAX') ? CQ_POINTS_MAX : 20,
         'niveauModele' => iaNiveauMax(), 'nomNiveauModele' => iaNomNiveau(iaNiveauMax())];
 }
 
