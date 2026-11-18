@@ -159,6 +159,8 @@ chiffre, une règle, un libellé ou une capture ; écrire un secret ; pousser ai
 
 - **Tâche planifiée** : « Manuel opératoire : nouveaux thèmes », lundi à vendredi 7 h 17 (Bruxelles), nouvelle
   session à chaque passage, notification sur le téléphone. L'environnement doit joindre le serveur en http.
+  Créée le 18/11/2026 (`trig_018KCDUUZmEeosGMYBu4j1q5`), première passe le jeudi 19/11/2026 à 7 h 17. Sans
+  connecteur : la routine n'en a pas besoin (git et l'API du cockpit en http).
 - **Première passe** : elle lit les mises en ligne depuis le 16/11/2026 20 h 49 (UTC) — `ETAT.json › dernierCommitLu`
   = `9a997ce2`, « Mise en ligne : [337] … ». Pour repartir d'ailleurs, changer ce commit.
 - **Arrêter** : désactiver la tâche planifiée ; rien n'est encodé entre deux passes sans réponse de Sam.
