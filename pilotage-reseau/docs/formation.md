@@ -1064,3 +1064,18 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
      l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
   5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
      `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».
+
+## Manuel opératoire : la routine des nouveaux thèmes (18/11/2026)
+
+- Sam : « créer une routine pour encoder, après validation de Sam, les nouveaux thèmes dans le Manuel opératoire » ;
+  choix : les thèmes viennent des **nouveautés mises en ligne**, Sam valide **en répondant dans la session**.
+- Tâche planifiée « Manuel opératoire : nouveaux thèmes », lundi à vendredi 7 h 17 (Bruxelles), une nouvelle session à
+  chaque passage, branche `claude/manuel-nouveautes`. Chaque passe lit les « Mise en ligne : … » de la branche en ligne
+  depuis la dernière, écarte ce qui n'est pas pour le magasin ni le consultant (siège, atelier de production,
+  changement interne), signale les documents existants touchés, et rédige un article par nouveau thème (trois au plus),
+  FR et NL de travail, classé au référentiel, avec captures de l'écran en ligne. Elle montre l'article sur la vraie
+  tablette et attend : `encoder` (v1.0 « à valider »), `publier`, `corriger n : …`, `écarter n`. Rien n'est encodé sans
+  la réponse de Sam.
+- Source, état et prompt : `data/formation/nouveautes/` (`LISEZMOI.md`, `ETAT.json`, `ROUTINE.md`). Aperçu sans
+  écriture au serveur : `tools/formation/apercu_tablette.js <module> <sortie> <fichiers.json…>` (partie 1, sommaire,
+  parties critiques, dernière partie, NL, onglet Manuel au bon bouton).
