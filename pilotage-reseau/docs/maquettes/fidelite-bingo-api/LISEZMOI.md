@@ -85,8 +85,12 @@ Demande de Sam : « dans les cartes à points, je peux aussi lier à une sociét
 « Sociétés liées » : le choix se fait dans la liste des bureaux du magasin, qui existe dans l'ERP
 (`GET /panel/shops/{shop}/offices` : société, bureau, ville, sites, statut). **La carte de fidélité n'a pas de champ pour
 garder ce lien** (ni dans le `.rar`, ni dans la spécification de l'ERP) : c'est le seul ajout de la maquette, marqué
-« à créer dans l'ERP ». Ce que le lien déclenche (carte réservée aux salariés, commandes du bureau qui comptent, points au
-nom de la société) reste à préciser. Les sociétés de la capture sont fictives.
+« à créer dans l'ERP ». Précision de Sam (18/11) : **les points des salariés vont au nom de la société.** Ce que l'ERP a déjà :
+la société est un client (`office.id_company_client`), ses salariés sont les membres du bureau
+(`office.members[].client_id`, `linked_at`), un bon peut être émis à son nom (`POST …/codes` avec `id_customer`). Ce
+qu'il n'a pas : le champ de la carte pour les sociétés liées, et le report des points — le moteur crédite le client du
+ticket, donc le salarié. À vérifier : une commande du bureau facturée à la société (`billing_mode` « company ») crédite
+peut-être déjà la société. Sociétés, salariés et soldes de la capture : fictifs.
 
 ## Test en direct
 
