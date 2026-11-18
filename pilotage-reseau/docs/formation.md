@@ -1079,3 +1079,20 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - Source, état et prompt : `data/formation/nouveautes/` (`LISEZMOI.md`, `ETAT.json`, `ROUTINE.md`). Aperçu sans
   écriture au serveur : `tools/formation/apercu_tablette.js <module> <sortie> <fichiers.json…>` (partie 1, sommaire,
   parties critiques, dernière partie, NL, onglet Manuel au bon bouton).
+
+## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026, encodé le 18/11/2026)
+
+- Client : « faire une mini formation pour expliquer les leviers de développement du chiffre d'affaires et l'intégrer
+  dans le manuel opératoire », puis « dans la formation gestion il y a le pôle achat et le pôle vente » → FO-41 Gestion
+  financière avancée, pôle vente. Rédigé sur la branche `claude/ecstatic-lamport-0365qq`.
+- **Article du manuel** `art-fo41-vente`, **0.0.54** « Pôle vente : les leviers du chiffre d'affaires » (NL « Verkoop:
+  de hefbomen van de omzet ») : CA = clients × panier, panier = articles × prix ; le trafic, le panier, le prix (gestes,
+  où les lire au dashboard, ce que chacun rapporte au résultat), les trois ensemble (sur un magasin type), la même
+  équipe qui pèse moins, un levier par semaine. 6 sections, 15 parties, 9 photos (six schémas `lev-*.jpg`, trois
+  captures du dashboard déjà au serveur), 4 points critiques, quiz de 5 questions.
+- Classement : FO-41, D7.4, Formation continue, P7 à P12, C-PILOTAGE.Finance et .Vente ; accès `tous` (bouton
+  « Manuel opératoire » de la tablette, rangé à FO-41 après l'article 0.0.28).
+- Source : `data/formation/gestion/` (voir son `LISEZMOI.md`, et ses « à confirmer ») ; schémas :
+  `tools/formation/schemas_leviers.js`.
+- **Journal** : 18/11/2026 — v1.0 encodée « à valider » par `encoder_sop.py` (Sam : « encode l'article FO-41 pôle
+  vente ») ; relue au serveur : code 0.0.54, classement, neuf photos servies.

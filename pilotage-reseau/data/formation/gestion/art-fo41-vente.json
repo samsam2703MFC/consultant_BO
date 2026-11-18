@@ -1,0 +1,422 @@
+{
+ "id": "art-fo41-vente",
+ "code": "0.0.54",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "duree": "15 min de lecture, puis 10 min sur le dashboard de son magasin",
+ "titre": {
+  "fr": "Pôle vente : les leviers du chiffre d’affaires",
+  "nl": "Verkoop: de hefbomen van de omzet"
+ },
+ "objectif": {
+  "fr": "Savoir de quoi est fait le chiffre d’affaires du magasin — des clients, un panier, un prix —, quel levier faire monter, avec quels gestes, et ce que chacun rapporte au résultat.",
+  "nl": "Weten waaruit de omzet van de winkel bestaat — klanten, een ticket, een prijs —, welke hefboom je laat stijgen, met welke handelingen, en wat elk ervan opbrengt in het resultaat."
+ },
+ "pour": {
+  "fr": "Franchisé, manager et adjoint manager (P7 à P12), dans la formation FO-41 Gestion financière avancée, pôle vente. Le trafic et le panier se jouent au comptoir : la formation se partage avec l’équipe de vente.",
+  "nl": "Franchisenemer, manager en adjunct-manager (P7 tot P12), in opleiding FO-41 Geavanceerd financieel beheer, luik verkoop. Traffic en ticket spelen zich af aan de toonbank: de opleiding wordt gedeeld met het verkoopteam."
+ },
+ "classement": {
+  "souscat": "D7.4",
+  "phases": [
+   "formation"
+  ],
+  "postes": [
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.Finance",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-41"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ce qui fait le chiffre d’affaires",
+    "nl": "Waaruit de omzet bestaat"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Trois leviers, pas un de plus",
+      "nl": "Drie hefbomen, niet één meer"
+     },
+     "texte": {
+      "fr": "Chiffre d’affaires = clients × panier moyen.\nPanier moyen = articles par client × prix moyen d’un article.\nTrois leviers, donc : le trafic (combien de clients entrent), le panier (combien chacun achète), le prix (ce que vaut chaque article).\nPour vendre plus, il n’y a pas d’autre chemin : un de ces trois chiffres doit monter.\nL’exemple de cette formation : 150 clients par jour × 12 € = 1 800 € par jour ; sur 26 jours ouverts, 46 800 € par mois.",
+      "nl": "Omzet = klanten × gemiddeld ticket.\nGemiddeld ticket = artikelen per klant × gemiddelde prijs van een artikel.\nDrie hefbomen dus: de traffic (hoeveel klanten binnenkomen), het ticket (hoeveel elke klant koopt), de prijs (wat elk artikel waard is).\nOm meer te verkopen is er geen andere weg: een van die drie cijfers moet stijgen.\nHet voorbeeld van deze opleiding: 150 klanten per dag × 12 € = 1 800 € per dag; over 26 open dagen 46 800 € per maand."
+     },
+     "critique": false,
+     "photo": "lev-formule.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Où lire les trois chiffres",
+      "nl": "Waar je de drie cijfers leest"
+     },
+     "texte": {
+      "fr": "Onglet Opérationnel, « Le duel » : chiffre d’affaires, clients et panier moyen, face à la même heure la semaine dernière ; sous le panier, les produits par client.\nOnglet Année : le trafic, le panier moyen et les articles par client, mois par mois, face à l’an dernier.\n« Ta place dans le réseau » : tes clients et ton panier face à la médiane des autres magasins.\nLe panier se lit hors clients pro : une grosse commande de société fausserait la lecture du comptoir.",
+      "nl": "Tabblad Operationeel, « Het duel »: omzet, klanten en gemiddeld ticket, tegenover hetzelfde uur vorige week; onder het ticket de producten per klant.\nTabblad Jaar: de traffic, het gemiddeld ticket en de artikelen per klant, maand per maand, tegenover vorig jaar.\n« Jouw plaats in het netwerk »: je klanten en je ticket tegenover de mediaan van de andere winkels.\nHet ticket lees je zonder zakelijke klanten: een grote bedrijfsbestelling zou de lezing van de toonbank vertekenen."
+     },
+     "critique": false,
+     "photo": "u/20261107-7f5eef2e0800.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le trafic : plus de clients",
+    "nl": "De traffic: meer klanten"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Ce qui fait entrer, et revenir",
+      "nl": "Wat klanten binnenbrengt, en doet terugkomen"
+     },
+     "texte": {
+      "fr": "Un client entre parce qu’il voit : vitrine pleine dès l’ouverture, porte et trottoir propres, l’offre du moment visible de la rue.\nIl achète parce qu’il trouve : les produits de son heure sont là, jusqu’à la fermeture. Un comptoir vide à 17 h, c’est un client qui ira ailleurs demain.\nIl revient pour l’accueil, la carte de fidélité et ce qu’il lit sur Google.\nAu dashboard, onglet Mois, « Les six leviers » : le trafic, la récurrence (les clients qui reviennent) et la note Google, face à l’an dernier et au réseau.",
+      "nl": "Een klant komt binnen omdat hij ziet: volle etalage vanaf de opening, deur en stoep proper, het aanbod van het moment zichtbaar vanaf de straat.\nHij koopt omdat hij vindt: de producten van zijn uur liggen er, tot de sluiting. Een lege toonbank om 17 u is een klant die morgen elders gaat.\nHij komt terug voor het onthaal, de klantenkaart en wat hij op Google leest.\nIn het dashboard, tabblad Maand, « De zes hefbomen »: de traffic, de terugkeer (klanten die terugkomen) en de Google-score, tegenover vorig jaar en het netwerk."
+     },
+     "critique": false,
+     "photo": "u/20261107-f399dc839c44.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Aller chercher les clients",
+      "nl": "Klanten gaan halen"
+     },
+     "texte": {
+      "fr": "Les clients pro (sociétés, écoles, événements) : une commande de bureau vaut des dizaines de tickets.\nLe click & collect et la livraison du webshop : le client qui ne passe pas devant la vitrine.\nLes saisons et les animations du calendrier (formation FO-45), la communication locale et les réseaux sociaux (FO-43).\nChaque action se juge au trafic des semaines suivantes, pas au ressenti.",
+      "nl": "De zakelijke klanten (bedrijven, scholen, evenementen): één kantoorbestelling is tientallen tickets waard.\nClick & collect en levering via de webshop: de klant die niet langs de etalage komt.\nDe seizoenen en de acties van de kalender (opleiding FO-45), de lokale communicatie en de sociale media (FO-43).\nElke actie beoordeel je aan de traffic van de weken erna, niet op gevoel."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Ce que le trafic rapporte",
+      "nl": "Wat de traffic opbrengt"
+     },
+     "texte": {
+      "fr": "+5 clients par jour, au panier d’aujourd’hui : 5 × 12 € × 26 jours = +1 560 € de chiffre d’affaires par mois.\nChaque client de plus coûte sa matière (environ 40 % de ce qu’il achète, le taux budget du réseau) : il reste +936 € par mois au résultat, +11,2 k€ par an.\nL’équipe ne change pas : 5 clients de plus par jour, c’est à peu près un toutes les deux heures.",
+      "nl": "+5 klanten per dag, aan het ticket van vandaag: 5 × 12 € × 26 dagen = +1 560 € omzet per maand.\nElke extra klant kost zijn grondstoffen (ongeveer 40 % van wat hij koopt, het budgetpercentage van het netwerk): er blijft +936 € per maand over in het resultaat, +11,2 k€ per jaar.\nHet team verandert niet: 5 klanten meer per dag is ongeveer één om de twee uur."
+     },
+     "critique": false,
+     "photo": "lev-trafic.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le panier : plus d’articles par client",
+    "nl": "Het ticket: meer artikelen per klant"
+   },
+   "etapes": [
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Proposer, à chaque client",
+      "nl": "Bij elke klant iets voorstellen"
+     },
+     "texte": {
+      "fr": "Le client vient pour un pain ; il repart avec ce qu’on lui a proposé.\nUne proposition à chaque client : la boisson avec la viennoiserie, le dessert avec le sandwich, la tarte pour le dimanche.\nLes formules et les offres liées font le panier toutes seules : elles doivent se voir en vitrine et en caisse.\nLa vente additionnelle s’apprend : formation FO-19, upselling et cross-selling.",
+      "nl": "De klant komt voor een brood; hij vertrekt met wat men hem heeft voorgesteld.\nEén voorstel bij elke klant: de drank bij de viennoiserie, het dessert bij het broodje, de taart voor zondag.\nFormules en gekoppelde aanbiedingen maken het ticket vanzelf: ze moeten zichtbaar zijn in de etalage en aan de kassa.\nBijverkoop leer je: opleiding FO-19, upselling en cross-selling."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Lire le panier avec les articles",
+      "nl": "Het ticket lezen met de artikelen"
+     },
+     "texte": {
+      "fr": "Le grand format plutôt que le petit, la tarte entière plutôt que la part, le plateau pour le bureau : le panier monte aussi par la gamme.\nLe panier se lit toujours avec les articles par client.\nPlus d’articles par client : la vente additionnelle marche.\nPanier plus haut avec moins d’articles : c’est le prix ou la gamme.\nPanier plus bas : rappeler la proposition à toute l’équipe, dès le lendemain.",
+      "nl": "Het grote formaat eerder dan het kleine, de hele taart eerder dan het stuk, de schotel voor het kantoor: het ticket stijgt ook via het assortiment.\nHet ticket lees je altijd samen met de artikelen per klant.\nMeer artikelen per klant: de bijverkoop werkt.\nHoger ticket met minder artikelen: dat is de prijs of het assortiment.\nLager ticket: het hele team vanaf de volgende dag aan het voorstel herinneren."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Ce que le panier rapporte",
+      "nl": "Wat het ticket opbrengt"
+     },
+     "texte": {
+      "fr": "+0,50 € par client, au prix d’aujourd’hui : 150 × 0,50 € × 26 jours = +1 950 € de chiffre d’affaires par mois.\nLa matière suit (40 %) : +1 170 € par mois au résultat, +14 k€ par an.\n0,50 € par client, c’est un café ou un cookie à un client sur quatre.",
+      "nl": "+0,50 € per klant, aan de prijs van vandaag: 150 × 0,50 € × 26 dagen = +1 950 € omzet per maand.\nDe grondstoffen volgen (40 %): +1 170 € per maand in het resultaat, +14 k€ per jaar.\n0,50 € per klant is een koffie of een koekje bij één klant op vier."
+     },
+     "critique": false,
+     "photo": "lev-panier.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le prix : ce que vaut chaque article",
+    "nl": "De prijs: wat elk artikel waard is"
+   },
+   "etapes": [
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Le prix encaissé",
+      "nl": "De geïnde prijs"
+     },
+     "texte": {
+      "fr": "Le prix qui compte, c’est celui encaissé : remises, gestes commerciaux et promotions compris.\nUne remise non prévue, un article oublié en caisse, une promotion qui dure trop : le prix baisse sans que l’étiquette change.\nLes promotions se jugent à ce qu’elles rapportent : onglet Promotions du dashboard.",
+      "nl": "De prijs die telt is de geïnde prijs: kortingen, commerciële gebaren en promoties inbegrepen.\nEen onvoorziene korting, een artikel vergeten aan de kassa, een promotie die te lang duurt: de prijs daalt zonder dat het etiket verandert.\nPromoties beoordeel je op wat ze opbrengen: tabblad Promoties van het dashboard."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Avant de changer un prix",
+      "nl": "Voor je een prijs verandert"
+     },
+     "texte": {
+      "fr": "Un prix se travaille produit par produit.\nLe comparer d’abord : au prix des autres magasins du réseau (fiche du produit, « Prix face au réseau ») et aux concurrents proches (onglet Concurrence).\nLe simuler : fiche du produit, « Recette & marge » ; le prix tapé recalcule la marge et le coefficient de la pièce.\nEn parler à son consultant avant de le changer en caisse.",
+      "nl": "Een prijs bekijk je product per product.\nEerst vergelijken: met de prijs van de andere winkels van het netwerk (productfiche, « Prijs tegenover het netwerk ») en met de concurrenten in de buurt (tabblad Concurrentie).\nSimuleren: productfiche, « Recept & marge »; de ingetypte prijs berekent de marge en de coëfficiënt van het stuk opnieuw.\nErover praten met je consultant voor je hem in de kassa verandert."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Ce que le prix rapporte, et ce qu’il risque",
+      "nl": "Wat de prijs opbrengt, en wat hij riskeert"
+     },
+     "texte": {
+      "fr": "+2 % de prix, à volume égal : 46 800 € × 2 % = +936 € de chiffre d’affaires par mois.\nLa matière ne bouge pas (mêmes produits, mêmes quantités) : tout va au résultat, +936 € par mois, +11,2 k€ par an.\nDans l’exemple, 2 % de prix rapportent autant que 5 clients de plus par jour.\nMais perdre 5 clients par jour efface tout le gain : c’est le levier qui se manie avec le plus de soin.",
+      "nl": "+2 % prijs, bij gelijk volume: 46 800 € × 2 % = +936 € omzet per maand.\nDe grondstoffen bewegen niet (dezelfde producten, dezelfde hoeveelheden): alles gaat naar het resultaat, +936 € per maand, +11,2 k€ per jaar.\nIn het voorbeeld brengt 2 % prijs evenveel op als 5 klanten meer per dag.\nMaar 5 klanten per dag verliezen wist de hele winst uit: het is de hefboom die je het voorzichtigst hanteert."
+     },
+     "critique": true,
+     "photo": "lev-prix.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les trois ensemble",
+    "nl": "De drie samen"
+   },
+   "etapes": [
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Les leviers se multiplient",
+      "nl": "De hefbomen vermenigvuldigen zich"
+     },
+     "texte": {
+      "fr": "Un petit pas sur les trois à la fois : +5 clients par jour, +0,50 € de panier, +2 % de prix.\nChacun seul : +936, +1 170 et +936 € par mois au résultat. Ensemble : +3 153 € par mois, un peu plus que la somme, car les trois se multiplient.\nMoyen (+10 clients, +1 €, +4 %) : +6 531 € par mois. Fort (+15 clients, +2 €, +6 %) : +11 560 € par mois, +138,7 k€ par an.\nC’est le triangle : chaque pas gagné sur un axe grandit avec les deux autres.",
+      "nl": "Een kleine stap op de drie tegelijk: +5 klanten per dag, +0,50 € ticket, +2 % prijs.\nElk apart: +936, +1 170 en +936 € per maand in het resultaat. Samen: +3 153 € per maand, iets meer dan de som, want de drie vermenigvuldigen zich.\nMiddel (+10 klanten, +1 €, +4 %): +6 531 € per maand. Groot (+15 klanten, +2 €, +6 %): +11 560 € per maand, +138,7 k€ per jaar.\nDat is de driehoek: elke stap op één as groeit mee met de twee andere."
+     },
+     "critique": false,
+     "photo": "lev-triangle.jpg",
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "La même équipe pèse moins",
+      "nl": "Hetzelfde team weegt minder"
+     },
+     "texte": {
+      "fr": "À équipe égale, le personnel coûte la même chose en euros ; il pèse moins dans un chiffre d’affaires plus grand.\nAvec 10 000 € de personnel par mois : 21,4 % du chiffre d’affaires aujourd’hui, 19,5 % au petit pas, 17,8 % au moyen, 15,7 % au fort.\nVendre plus avec la même équipe : c’est la façon la plus sûre de faire baisser la part du personnel, sans retirer une heure.",
+      "nl": "Bij een gelijk team kost het personeel evenveel in euro; het weegt minder in een grotere omzet.\nMet 10 000 € personeel per maand: 21,4 % van de omzet vandaag, 19,5 % bij de kleine stap, 17,8 % bij middel, 15,7 % bij groot.\nMeer verkopen met hetzelfde team: de zekerste manier om het aandeel van het personeel te laten dalen, zonder een uur te schrappen."
+     },
+     "critique": false,
+     "photo": "lev-equipe.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque semaine",
+    "nl": "Elke week"
+   },
+   "etapes": [
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Un levier à la fois",
+      "nl": "Eén hefboom tegelijk"
+     },
+     "texte": {
+      "fr": "Le lundi, au dashboard : clients par jour, panier moyen et articles par client, face à la semaine d’avant, à l’an dernier et à la médiane du réseau.\nChoisir le levier le plus en retard, et ne travailler que lui pendant la semaine.\nLe dire à l’équipe à la réunion du lundi (checklist 5.5.01) : un chiffre, un geste, un objectif — par exemple « +0,30 € de panier cette semaine : une proposition à chaque client ».\nLe lundi suivant, relire le chiffre : il a monté, on garde le geste ; il n’a pas bougé, on change de geste.",
+      "nl": "Op maandag, in het dashboard: klanten per dag, gemiddeld ticket en artikelen per klant, tegenover de vorige week, vorig jaar en de mediaan van het netwerk.\nDe hefboom kiezen die het meest achterloopt, en alleen daaraan werken tijdens de week.\nHet aan het team zeggen op de teamvergadering van maandag (checklist 5.5.01): één cijfer, één handeling, één doel — bijvoorbeeld « +0,30 € ticket deze week: één voorstel bij elke klant ».\nDe maandag erna het cijfer herlezen: gestegen, dan hou je de handeling; niet bewogen, dan verander je de handeling."
+     },
+     "critique": false,
+     "photo": "u/20261107-45c4804bc43d.jpg",
+     "video": null
+    },
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "Qui fait quoi",
+      "nl": "Wie doet wat"
+     },
+     "texte": {
+      "fr": "L’équipe de vente : l’accueil, la proposition à chaque client, la vitrine pleine jusqu’à la fermeture. Le trafic et le panier se jouent au comptoir.\nLe manager : le planning et la production calés sur les heures des clients, le suivi des trois chiffres chaque lundi.\nLe franchisé : les prix, les promotions, la communication locale et les clients pro, avec son consultant.",
+      "nl": "Het verkoopteam: het onthaal, het voorstel bij elke klant, de etalage vol tot de sluiting. Traffic en ticket spelen zich af aan de toonbank.\nDe manager: planning en productie afgestemd op de uren van de klanten, de opvolging van de drie cijfers elke maandag.\nDe franchisenemer: de prijzen, de promoties, de lokale communicatie en de zakelijke klanten, samen met zijn consultant."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Chiffre d’affaires = clients × panier ; panier = articles × prix. Pour vendre plus, un des trois doit monter.",
+   "nl": "Omzet = klanten × ticket; ticket = artikelen × prijs. Om meer te verkopen moet een van de drie stijgen."
+  },
+  {
+   "fr": "Le trafic et le panier coûtent leur matière ; le prix, à volume égal, va tout entier au résultat — mais un prix qui fait fuir des clients reprend tout.",
+   "nl": "Traffic en ticket kosten hun grondstoffen; de prijs gaat bij gelijk volume volledig naar het resultaat — maar een prijs die klanten wegjaagt, neemt alles terug."
+  },
+  {
+   "fr": "Le panier se lit hors clients pro, et toujours avec les articles par client.",
+   "nl": "Het ticket lees je zonder zakelijke klanten, en altijd samen met de artikelen per klant."
+  },
+  {
+   "fr": "Un levier à la fois : choisi le lundi au dashboard, dit à l’équipe, relu le lundi suivant.",
+   "nl": "Eén hefboom tegelijk: op maandag gekozen in het dashboard, aan het team gezegd, de maandag erna herlezen."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le chiffre d’affaires de la semaine baisse, avec autant de clients que la semaine d’avant. Quel levier a baissé ?",
+    "nl": "De omzet van de week daalt, met evenveel klanten als de week ervoor. Welke hefboom is gedaald?"
+   },
+   "choix": {
+    "fr": [
+     "Le trafic",
+     "Le panier : moins d’articles par client, ou un prix encaissé plus bas",
+     "Le personnel"
+    ],
+    "nl": [
+     "De traffic",
+     "Het ticket: minder artikelen per klant, of een lagere geïnde prijs",
+     "Het personeel"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Dans l’exemple, +2 % de prix rapportent au résultat autant que 5 clients de plus par jour, avec moins de chiffre d’affaires. Pourquoi ?",
+    "nl": "In het voorbeeld brengt +2 % prijs evenveel op in het resultaat als 5 klanten meer per dag, met minder omzet. Waarom?"
+   },
+   "choix": {
+    "fr": [
+     "Les clients en plus demandent plus de personnel",
+     "Ce n’est pas vrai : plus de clients rapporte toujours plus",
+     "Le prix, à volume égal, ne coûte pas de matière"
+    ],
+    "nl": [
+     "De extra klanten vragen meer personeel",
+     "Dat klopt niet: meer klanten brengt altijd meer op",
+     "De prijs kost bij gelijk volume geen grondstoffen"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Quel geste fait monter le panier ?",
+    "nl": "Welke handeling doet het ticket stijgen?"
+   },
+   "choix": {
+    "fr": [
+     "Ouvrir plus tôt le matin",
+     "Proposer la boisson avec la viennoiserie, le dessert avec le sandwich",
+     "Accorder une remise au client qui hésite"
+    ],
+    "nl": [
+     "’s Ochtends vroeger openen",
+     "De drank bij de viennoiserie voorstellen, het dessert bij het broodje",
+     "Een korting geven aan de klant die twijfelt"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Le panier monte, mais les articles par client baissent. Que s’est-il passé ?",
+    "nl": "Het ticket stijgt, maar de artikelen per klant dalen. Wat is er gebeurd?"
+   },
+   "choix": {
+    "fr": [
+     "La vente additionnelle a marché",
+     "Le trafic a monté",
+     "Les clients achètent moins d’articles, mais plus chers : c’est le prix ou la gamme"
+    ],
+    "nl": [
+     "De bijverkoop heeft gewerkt",
+     "De traffic is gestegen",
+     "De klanten kopen minder artikelen, maar duurdere: dat is de prijs of het assortiment"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Les trois leviers montent d’un petit pas ; l’équipe reste la même. Que devient la part du personnel dans le chiffre d’affaires ?",
+    "nl": "De drie hefbomen stijgen met een kleine stap; het team blijft hetzelfde. Wat gebeurt er met het aandeel van het personeel in de omzet?"
+   },
+   "choix": {
+    "fr": [
+     "Elle monte",
+     "Elle baisse : même coût, plus de chiffre d’affaires",
+     "Elle ne bouge pas"
+    ],
+    "nl": [
+     "Het stijgt",
+     "Het daalt: dezelfde kost, meer omzet",
+     "Het verandert niet"
+    ]
+   },
+   "bonne": 1
+  }
+ ]
+}
