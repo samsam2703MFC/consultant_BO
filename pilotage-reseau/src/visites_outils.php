@@ -223,7 +223,7 @@ function suOutilsTitre(array $o, string $l): string
 /** Les lignes du courriel : « Plan de trésorerie : en partie — plus tenu depuis 15 jours ». */
 function suOutilsCourriel(array $o, string $l): array
 {
-    $sym = ['ok' => '✓', 'part' => '◐', 'ko' => '✗', 'na' => '–'];
+    $sym = ['ok' => '✓', 'part' => '½', 'ko' => '✗', 'na' => '–'];
     return array_map(static fn ($x) => $sym[$x['v']] . ' ' . $x['nom'] . ' : ' . $x['verdict'] . ($x['com'] !== '' ? ' — ' . $x['com'] : ''), suOutilsLignes($o, $l));
 }
 
@@ -232,12 +232,12 @@ function suOutilsHtml(?array $o, string $l, callable $e): string
 {
     if ($o === null) { return suRappelHtml($l, $e); }
     $coul = ['ok' => '#3f7a52', 'part' => '#8a5200', 'ko' => '#A32014', 'na' => '#7a736a'];
-    $sym = ['ok' => '✓', 'part' => '◐', 'ko' => '✗', 'na' => '–'];
+    $sym = ['ok' => '✓', 'part' => '½', 'ko' => '✗', 'na' => '–'];
     $lignes = '';
     foreach (suOutilsLignes($o, $l) as $x) {
-        $lignes .= '<tr style="border-top:1px solid #EAE3DA"><td style="padding:5px 10px 5px 0;vertical-align:top">' . $e($x['nom']) . '</td>'
+        $lignes .= '<tr style="border-top:1px solid #EAE3DA"><td style="padding:5px 10px 5px 0;vertical-align:top;width:36%">' . $e($x['nom']) . '</td>'
             . '<td style="padding:5px 10px 5px 0;vertical-align:top;white-space:nowrap;color:' . $coul[$x['v']] . '">' . $sym[$x['v']] . ' ' . $e($x['verdict']) . '</td>'
-            . '<td style="padding:5px 0;vertical-align:top;color:#5c5852;width:100%">' . nl2br($e($x['com'])) . '</td></tr>';
+            . '<td style="padding:5px 0;vertical-align:top;color:#5c5852">' . nl2br($e($x['com'])) . '</td></tr>';
     }
     $s = $o['score'] ?? null;
     $cs = $s === null ? '#7a736a' : ($s >= 80 ? '#3f7a52' : ($s >= 50 ? '#8a5200' : '#A32014'));
@@ -257,7 +257,7 @@ function suRappelHtml(string $l, callable $e): string
 {
     $t = ['fr' => 'Rappel', 'nl' => 'Herinnering', 'en' => 'Reminder', 'de' => 'Hinweis'];
     return '<div style="margin:12px 0 0;padding:10px 12px;border-left:4px solid #8D1D2C;background:#FBF3F3;border-radius:4px;page-break-inside:avoid">'
-        . '<div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;margin:0 0 3px"><span style="text-transform:none;letter-spacing:0;font-family:Georgia,serif;font-style:italic;font-weight:700">(i)</span> ' . $e($t[$l] ?? $t['fr']) . '</div>'
+        . '<div style="font-size:11px;color:#8D1D2C;margin:0 0 3px"><b style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:#8D1D2C;color:#fff;text-align:center;font-size:10px;font-weight:700;margin-right:6px">i</b>' . $e($t[$l] ?? $t['fr']) . '</div>'
         . '<div style="font-weight:700">' . $e(viOutilsRappel($l)) . '</div></div>';
 }
 

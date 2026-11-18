@@ -542,7 +542,7 @@ function suRappelCourrielHtml(string $texte, string $l): string
 {
     $t = ['fr' => 'Rappel', 'nl' => 'Herinnering', 'en' => 'Reminder', 'de' => 'Hinweis'];
     return '<div style="margin:0 0 14px;padding:12px 14px;border-left:4px solid #8D1D2C;background:#FBF3F3;border-radius:4px">'
-        . '<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;margin:0 0 4px"><span style="text-transform:none;letter-spacing:0;font-family:Georgia,serif;font-style:italic;font-weight:700">(i)</span> '
+        . '<div style="font-size:12px;color:#8D1D2C;margin:0 0 4px"><b style="display:inline-block;width:16px;height:16px;line-height:16px;border-radius:50%;background:#8D1D2C;color:#fff;text-align:center;font-size:11px;font-weight:700;margin-right:6px">i</b>'
         . htmlspecialchars($t[$l] ?? $t['fr'], ENT_QUOTES, 'UTF-8') . '</div><b style="font-weight:700">' . htmlspecialchars($texte, ENT_QUOTES, 'UTF-8') . '</b></div>';
 }
 
