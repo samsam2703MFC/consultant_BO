@@ -128,3 +128,4 @@
 2026-11-18T19:29:25Z seuil food cost du cockpit : 40 % (objectif 2026)
 2026-11-18T19:38:08Z dashboard franchisé, Tâches : résultats du jour dans la bande de la semaine, vue téléphone refaite
 2026-11-18T19:44:45Z food cost : une seule cible du réseau, 40 %, lue partout
+2026-11-18T19:53:13Z correctif : seuil main-d'oeuvre des rapports
