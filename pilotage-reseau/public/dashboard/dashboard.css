@@ -2599,6 +2599,27 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tj-kpis .db-tui{min-height:112px}
 .tj-kpis .db-tui .v{font-size:27px}
 .tj-kpis [data-tjallerret]{cursor:pointer}
+/* La case d'un jour porte ses résultats (18/11/2026) : la part faite et son compte sur une ligne, puis photos, note, NC. */
+.tj-j{container-type:inline-size}
+.tj-jh{display:flex;align-items:baseline;gap:8px;min-width:0}
+.tj-jh b{flex:0 0 auto}
+.tj-jh small{min-width:0}
+.tj-jr{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px;margin-top:3px;font-size:10.5px;color:var(--color-text-muted);white-space:nowrap}
+.tj-jr span{display:inline-flex;align-items:center;gap:3px}
+.tj-jr em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--color-text)}
+.tj-jr em.ok{color:var(--green)}.tj-jr em.ko{color:var(--color-primary)}.tj-jr em.mu{color:var(--color-text-muted)}
+/* Les non-conformités des 30 jours, en pastille dans la ligne de la semaine. */
+.tj-nc{margin-left:auto;display:inline-flex;align-items:baseline;gap:7px;border:1px solid rgba(141, 29, 44, 0.35);background:rgba(141, 29, 44, 0.05);border-radius:999px;padding:4px 12px;font:400 11px var(--font-ui);color:var(--color-text-muted);cursor:pointer;white-space:nowrap}
+.tj-nc:hover{background:rgba(141, 29, 44, 0.1)}
+.tj-nc .k{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)}
+.tj-nc b{font:400 15px var(--font-display);color:var(--color-primary);font-variant-numeric:tabular-nums}
+.tj-nc.bon{border-color:rgba(63, 122, 82, 0.3);background:#f0f7f2}.tj-nc.bon .k,.tj-nc.bon b{color:var(--green)}
+.tj-nc + .tj-fl{margin-left:0}
+/* La ligne de la semaine reste une ligne : la phrase d'aide se raccourcit avant que la pastille ou les boutons passent dessous. */
+.tj-sem>.db-mini{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Une case étroite (le rail ouvert, un écran moyen) : « faites » s'efface, les résultats se serrent. */
+@container (max-width:150px){.tj-jh .tj-mot{display:none}.tj-jh{gap:6px}.tj-jr{column-gap:5px}}
+@container (max-width:125px){.tj-jh{flex-wrap:wrap;row-gap:0}}
 .tj-guide .ct{cursor:pointer}
 .tj-repli{margin-left:auto;font-size:11px;color:var(--color-text-muted);white-space:nowrap}
 .tj-g{display:grid;grid-template-columns:1.15fr 1fr 1fr 1.6fr;gap:20px;padding:14px 16px 16px}
@@ -2667,7 +2688,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tj-mob .db-sec{font-size:15px;margin:2px 0 8px}.tj-mob .db-sec small{display:none}
 .tj-mob .tj-sem .db-mini{display:none}.tj-mob .tj-sem{margin-bottom:6px}.tj-mob .tj-fl{margin-left:0;width:100%;justify-content:space-between}.tj-mob .tj-fl .db-btn{font-size:11px;padding:5px 9px}
 .tj-mob .tj-bande{gap:4px}.tj-mob .tj-j{padding:6px 5px;border-radius:9px;text-align:center}.tj-mob .tj-j.on{padding:5px 4px}
-.tj-mob .tj-j .l{font-size:9.5px}.tj-mob .tj-j b{font-size:14px}.tj-mob .tj-j small{display:none}.tj-mob .tj-j .db-sk{width:80%!important;margin:4px auto!important;height:14px!important}.tj-mob .tj-barre{margin-top:4px;height:4px}
+.tj-mob .tj-jh{justify-content:center}.tj-mob .tj-jr{display:none}.tj-mob .tj-j .l{font-size:9.5px}.tj-mob .tj-j b{font-size:14px}.tj-mob .tj-j small{display:none}.tj-mob .tj-j .db-sk{width:80%!important;margin:4px auto!important;height:14px!important}.tj-mob .tj-barre{margin-top:4px;height:4px}
 .tj-mob .tj-kpis{grid-template-columns:1fr 1fr;gap:8px}.tj-mob .tj-kpis .db-tui{min-height:0;padding:9px 11px}.tj-mob .tj-kpis .db-tui .v{font-size:21px}.tj-mob .tj-kpis .db-tui .k{white-space:normal}
 .tj-mob .tj-g{grid-template-columns:1fr 1fr;gap:12px;padding:12px}.tj-mob .tj-g-code,.tj-mob .tj-g-txt{grid-column:1/-1}.tj-mob .tj-g-big{font-size:30px}
 .tj-mob .db-card>.ct{padding:10px 12px}.tj-mob .db-card>.ct .db-mini{flex-basis:100%}.tj-mob .tj-filtres{margin-left:0}.tj-mob .tj-guide .ct .db-mini{display:none}
