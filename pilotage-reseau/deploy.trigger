@@ -120,3 +120,4 @@
 2026-11-18T08:06:05Z prévision : saisonniers historique ERP (galette)
 2026-11-18T08:36:55Z stan ogólny : MTO/MTS, maks., sprzedane 6 tyg.
 2026-11-18T19:04:55Z stan ogólny : sans moyenne / tydz.
+2026-11-18T19:10:12Z consigne générale des contrôles qualité (Entraînement de l'IA)
