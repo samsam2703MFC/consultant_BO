@@ -12,8 +12,8 @@ Ce qui est codé :
   bas. Contrôle et Tâches sont ceux des pull requests 150 et 151, fusionnées le même jour ;
 - **les feuilles**, le 18/11/2026 : c'est l'étape 5. Voir « Les feuilles, codées » plus bas.
 
-Les cinq étapes sont codées. Pas codée : la feuille « L'équipe du jour » de la maquette (`vues/equipe.png`). Elle
-n'existe qu'au bureau, et la porter au téléphone serait un ajout, pas une refonte.
+Les cinq étapes sont codées, et la feuille « L'équipe du jour » (`vues/equipe.png`) aussi, à la demande de Sam
+(18/11/2026). Voir « L'équipe du jour, codée » plus bas.
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -167,6 +167,29 @@ Captures dans `code/` :
 - `feuille-coque.png` : la coque commune, essayée sur la fiche produit.
 
 Mesuré à 390 px : chaque fenêtre commence à 40 px du haut, touche le bas, prend toute la largeur, coins de 18 px.
+
+## L'équipe du jour, codée (18/11/2026)
+
+Au bureau, « L'équipe du jour » était une carte qui s'ouvrait depuis « La journée ». Au téléphone, elle devient une
+feuille du bas (`eqmRendre`, `#db-eqm`), qui se construit comme « Commandes du jour ».
+
+**Elle s'ouvre de deux façons :**
+- par la ligne « L'équipe du jour : ventes, heures, à l'heure › » au pied de la carte « La journée » ;
+- par la barre d'une personne sur la frise : la feuille s'ouvre alors sur elle, dépliée.
+
+**Elle contient :**
+- quatre chiffres : au planning, heures faites, vendu, vendu à l'heure de vente ;
+- une ligne par personne, rangée par vendu à l'heure ;
+- dépliée, le détail de la personne : postes, tickets, panier, articles par ticket, heures de vente, cuissons.
+
+**Les calculs** sont ceux de la carte du bureau, sortis dans une fonction commune (`opEquipeLignes`). Comme le
+prévoyait la maquette, le coût de chacun reste au bureau. La carte du bureau ne change pas, vérifiée.
+
+Captures dans `code/` :
+- `journee-equipe.png` : la carte « La journée » et sa ligne d'entrée ;
+- `feuille-equipe.png` : la feuille, ouverte depuis la barre d'Inès.
+
+Planning et ventes par vendeuse simulés, prénoms inventés.
 
 ## La grammaire, la même partout
 

@@ -2538,8 +2538,8 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .op-rb .bas em{font-style:normal;color:var(--prize-ink)}
 .op-rb .bas .ch{color:var(--color-primary);font-size:14px;line-height:1}
 @media (min-width:701px){.op-rb .col .v{font-size:19px}.op-rb .col .s,.op-rb .col .j{font-size:11px}}
-#db-b2b .fi-voile,#db-cmdm .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
-#db-b2b .fi-modale,#db-cmdm .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:720px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:12px;font-family:var(--font-ui);color:var(--ink);-webkit-overflow-scrolling:touch}
+#db-b2b .fi-voile,#db-cmdm .fi-voile,#db-eqm .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
+#db-b2b .fi-modale,#db-cmdm .fi-modale,#db-eqm .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:720px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:12px;font-family:var(--font-ui);color:var(--ink);-webkit-overflow-scrolling:touch}
 .bm-poi{display:none;width:40px;height:5px;border-radius:3px;background:#d8d1c7;margin:8px auto 0}
 .bm-ong{display:flex;gap:6px;flex-wrap:wrap;padding:0 22px 12px}
 .bm-pil{display:inline-flex;align-items:center;gap:5px;font:400 11.5px var(--font-ui);padding:6px 11px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);white-space:nowrap;cursor:pointer}
@@ -2601,7 +2601,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .bm-rap .eq b{font-weight:400;color:var(--ink)}
 /* Au téléphone : une feuille qui monte du bas, presque plein écran. */
 @media (max-width:760px){
-  #db-b2b .fi-modale,#db-cmdm .fi-modale{left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;height:calc(100% - 40px);max-height:none;border-radius:18px 18px 0 0}
+  #db-b2b .fi-modale,#db-cmdm .fi-modale,#db-eqm .fi-modale{left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;height:calc(100% - 40px);max-height:none;border-radius:18px 18px 0 0}
   .bm-poi{display:block}
   .bm-ong{padding:0 14px 12px}
   .bm-in{padding-left:14px;padding-right:14px}
@@ -3376,7 +3376,7 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
    du trait. Les vues plein écran — la revue du soir, la photo agrandie, l'assistant — gardent leur forme et se posent
    sous la barre d'état. */
 @media (max-width:760px){
-  #db-fiche .fi-modale,#db-invm .fi-modale,#db-stk .fi-modale,#db-pmc .fi-modale,#db-pmc .fi-modale.pmc-etroite,#db-pd .fi-modale,#db-b2b .fi-modale,#db-cmdm .fi-modale{
+  #db-fiche .fi-modale,#db-invm .fi-modale,#db-stk .fi-modale,#db-pmc .fi-modale,#db-pmc .fi-modale.pmc-etroite,#db-pd .fi-modale,#db-b2b .fi-modale,#db-cmdm .fi-modale,#db-eqm .fi-modale{
     left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;
     height:calc(100% - max(40px, env(safe-area-inset-top, 0px) + 12px));max-height:none;border-radius:18px 18px 0 0;
     padding-bottom:env(safe-area-inset-bottom, 0px);overscroll-behavior:contain}
@@ -3389,3 +3389,7 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
   .rv-sc{padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px))}
 }
 .db-cql.mob .hd{top:calc(10px + env(safe-area-inset-top, 0px))}
+/* L'équipe du jour au téléphone (18/11/2026) : l'initiale de chaque personne, le bouton de « La journée ». */
+#db-eqm .eqm-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--chip);color:var(--muted-2);font:400 12px var(--font-ui)}
+.op-mob .op-eqm{margin:4px 14px 0;padding-bottom:12px;cursor:pointer}
+.op-mob .jm-l i[data-eqm]{cursor:pointer}

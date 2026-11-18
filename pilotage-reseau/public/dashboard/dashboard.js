@@ -3050,7 +3050,7 @@
     box.innerHTML = html;
     const m1 = box.querySelector('.fi-modale'); if (m1 && y) { m1.scrollTop = y; }
   }
-  function bmFermerClasse() { if (!S.fiche && !S.invModale && !S.stk && !S.b2b && !S.cmdm) { document.documentElement.classList.remove('db-fiche-ouverte'); } }
+  function bmFermerClasse() { if (!S.fiche && !S.invModale && !S.stk && !S.b2b && !S.cmdm && !S.eqm) { document.documentElement.classList.remove('db-fiche-ouverte'); } }
   const bmLignes = L => `<table class="bm-art">${L.map(l => `<tr><td>${l.q != null ? nf(l.q, l.q % 1 ? 1 : 0) + ' × ' : ''}${esc(l.nom)}</td><td class="n p">${l.pu != null ? fU(l.pu) : ''}</td><td class="n">${l.total != null ? fU(l.total) : ''}</td></tr>`).join('')}</table>`;
 
   /* — Ventes B2B — */
@@ -3100,6 +3100,53 @@
     return k4 + `<div class="bm-in"><div class="bm-lab">Les tickets</div></div><div class="bm-liste">${lignes}</div>` + cats + horsTva;
   }
 
+
+  /* — L'équipe du jour, au téléphone (18/11/2026, refonte mobile, maquette vues/equipe.png) —
+   * La feuille du bas : quatre chiffres (au planning, faites, vendu, à l'heure de vente), puis une ligne par personne,
+   * rangée par vendu à l'heure, qui se déplie (postes, tickets, panier, articles, heures de vente, cuissons). Les mêmes
+   * calculs que la carte du bureau (opEquipeLignes) ; le coût de chacun reste au bureau. Ouverte depuis « La journée » :
+   * le bouton « L'équipe › », ou la barre d'une personne, dépliée d'office. */
+  const eqmCle = n => String(n || '').trim().toLowerCase();
+  function eqmOuvrir(nom) { S.eqm = { ouv: nom ? { [eqmCle(nom)]: true } : {}, retour: document.activeElement }; eqmRendre(); }
+  function eqmFermer() { const r = S.eqm && S.eqm.retour; S.eqm = null; eqmRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
+  function eqmRendre() {
+    let box = document.getElementById('db-eqm');
+    if (!S.eqm) { if (box) { box.innerHTML = ''; } bmFermerClasse(); return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-eqm'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const D = opDonnees(), M = S.eqm;
+    let corps;
+    if (!D.m || !D.planning.length) { corps = `<div class="bm-in bm-msg">${D.m ? 'Pas de planning lu pour ce jour.' : 'lecture du Résultat du jour…'}</div>`; }
+    else {
+      const { L, horsPl, V, heureT } = opEquipeLignes(D), T = L.concat(horsPl);
+      const tCa = T.reduce((a, l) => a + (l.ca || 0), 0), tTk = T.reduce((a, l) => a + (l.tickets || 0), 0), tHV = L.reduce((a, l) => a + l.hV, 0);
+      const prevu = L.reduce((a, l) => a + l.prevu, 0), fait = L.reduce((a, l) => a + l.fait, 0);
+      const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
+      const k4 = `<div class="bm-in"><div class="bm-k4">
+        <div><div class="k">Au planning</div><div class="v">${nf(prevu, 1)} h</div><div class="s">${plu(L.length, 'personne')}</div></div>
+        <div><div class="k">Faites</div><div class="v">${nf(fait, 1)} h</div><div class="s">${D.now == null ? 'la journée' : 'à ' + esc(heureT)}</div></div>
+        <div><div class="k">Vendu</div><div class="v">${V ? fE(tCa) : '—'}</div><div class="s">${V ? plu(tTk, 'ticket') : 'ventes par vendeur pas lues'}</div></div>
+        <div><div class="k">À l’heure de vente</div><div class="v">${V && tHV ? fE(tCa / tHV) + '/h' : '—'}</div><div class="s">${V && tTk ? 'panier ' + fU(tCa / tTk) : ''}</div></div></div></div>`;
+      const ligne = l => {
+        const o = !!M.ouv[l.k];
+        const sous = l.hors ? 'a vendu sans être au planning' : [l.horaires, hh(l.fait) + ' faites', l.etat].join(' · ');
+        const R = [l.postes && l.postes.length ? ['Postes', esc(l.postes.join(', '))] : null, ['Tickets', l.tickets != null ? fN(l.tickets) : '—'],
+          ['Panier', l.tickets ? fU(l.ca / l.tickets) : '—'], ['Articles par ticket', l.articles != null ? nf(l.articles, 1) : '—'],
+          l.hors ? null : ['Heures de vente', hh(l.hV)], l.pieces ? ['Produit', fN(l.pieces) + ' p. · ' + esc(l.cuissons.join(', '))] : null].filter(Boolean);
+        return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-eqmt="${esc(l.k)}" role="button" tabindex="0" aria-expanded="${o}"><span class="h"><i class="eqm-av">${esc(String(l.nom || '?').charAt(0).toUpperCase())}</i></span>`
+          + `<span class="q"><b>${esc(l.nom)}</b><small>${esc(sous)}</small></span><span class="m">${l.ca != null ? fE(l.ca) : '—'}${l.parH != null ? `<span class="bm-tg">${fE(l.parH)}/h</span>` : ''}</span><span class="c">${o ? '▴' : '▾'}</span></div>`
+          + (o ? `<div class="art"><table class="bm-art">${R.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td></tr>`).join('')}</table></div>` : '') + '</div>';
+      };
+      corps = k4 + `<div class="bm-sec"><b>Par vendu à l’heure</b><span>toucher une personne : le détail</span></div><div class="bm-liste">${T.map(ligne).join('')}</div>`
+        + `<div class="bm-in"><div class="bm-msg">Vendu : le vendeur sur chaque ticket. À l’heure : ses ventes ÷ ses heures où le magasin a vendu. Le coût de chacun reste au bureau.</div></div>`;
+    }
+    bmPeindre(box, `<div class="fi-voile" data-eqmx="1"></div><div class="fi-modale bm-modale" role="dialog" aria-modal="true" aria-label="L’équipe du jour"><div class="bm-poi"></div>
+      <div class="fi-hd"><div class="t"><h2>L’équipe du jour</h2><div class="s">${esc(nomShop())} · ${S.date === AUJ ? 'aujourd’hui' : esc(fDL(S.date))}${D.now != null ? ' · à ' + opHM(D.now) : ''}</div></div><button type="button" class="fi-x" data-eqmx="1" aria-label="Fermer">✕</button></div>
+      <div class="bm-bd">${corps}</div></div>`);
+    box.querySelectorAll('[data-eqmx]').forEach(b => b.addEventListener('click', eqmFermer));
+    box.querySelectorAll('[data-eqmt]').forEach(b => { const f = () => { const k = b.dataset.eqmt; S.eqm.ouv[k] = !S.eqm.ouv[k]; eqmRendre(); };
+      b.addEventListener('click', f); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }); });
+  }
 
   /* — Commandes du jour — */
   const cleCmdm = () => 'cmdd|' + S.shop + '|' + S.date;
@@ -3425,7 +3472,8 @@
       const d = opMin(p.debut), f = opMin(p.fin), nom = p.nom || (p.postes || []).join(', ');
       const cls = now == null ? 'jr' : (d <= now && now < f ? 'ici' : (f <= now ? 'fini' : 'av'));
       const etat = { ici: 'en poste', fini: 'fini', av: 'arrive à ' + p.debut, jr: 'au planning' }[cls];
-      return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}"><b>${esc(nom)}</b></i></div>`;
+      // Toucher la barre d'une personne ouvre « L'équipe du jour » sur elle (18/11/2026).
+      return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}" data-eqm="${esc(p.nom || '')}" role="button" tabindex="0"><b>${esc(nom)}</b></i></div>`;
     }).join('');
     const CS = cuissons.slice().sort((a, b) => opMin(a.four) - opMin(b.four)).map(c => {
       const t = opMin(c.four), cls = c.valide ? 'ok' : (now != null && t > now ? 'av' : 'kv');
@@ -3441,7 +3489,7 @@
       <div class="jm-ax">${axe.join('')}</div>
       <div class="jm-z">${tn}${barres || '<div class="db-mini">pas de planning lu</div>'}</div>
       ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
-      </div></div>`;
+      </div>${planning.length ? '<div class="op-tap op-eqm" data-eqm="" role="button" tabindex="0"><span>L’équipe du jour : ventes, heures, à l’heure</span><span>›</span></div>' : ''}</div>`;
   }
   /**
    * L'équipe du jour (20/10/2026, maquette D choisie par Sam) : au clic sur une barre de la frise, une ligne par personne —
@@ -3454,7 +3502,9 @@
    *    production (boulangerie, four, production, cuisine, pâtisserie, labo). Sans cela, rien n'est attribué.
    *  - Coût : son taux horaire au panel × ses heures faites ; un franchisé ne pèse pas au P&L, sa ligne le dit.
    */
-  function opEquipe(D) {
+  /** L'équipe du jour, ligne par ligne (le calcul de opEquipe, 18/11/2026 : commun à la carte du bureau et à la feuille du
+   *  téléphone, eqmRendre). Rangée par ventes à l'heure de vente, celles et ceux qui ont vendu hors planning à part. */
+  function opEquipeLignes(D) {
     const { now, m, planning, cuissons } = D;
     const fin = now == null ? 24 * 60 : now;
     const heureT = now == null ? 'la journée' : String(Math.floor(now / 60)).padStart(2, '0') + ':' + String(now % 60).padStart(2, '0');
@@ -3489,6 +3539,11 @@
     const horsPl = V ? Object.keys(venteDe).filter(k => !P[k]).map(k => ({ k, nom: venteDe[k].nom || 'Sans vendeur', hors: true, ca: venteDe[k].ca, tickets: venteDe[k].tickets,
       articles: venteDe[k].artLu && venteDe[k].tickets ? venteDe[k].articles / venteDe[k].tickets : null })) : [];
     L.sort((a, b) => (b.parH == null ? -1 : b.parH) - (a.parH == null ? -1 : a.parH) || (b.ca || 0) - (a.ca || 0));
+    return { L, horsPl, V, heureT, ov, cleNom };
+  }
+  function opEquipe(D) {
+    const { now, m, planning, cuissons } = D;
+    const { L, horsPl, V, heureT, ov, cleNom } = opEquipeLignes(D);
     const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
     const pct = (a, b) => b ? Math.round(100 * a / b) + ' %' : '—';
     const sel = S.eqSel ? cleNom(S.eqSel) : null, dep = S.eqDeplie ? cleNom(S.eqDeplie) : null;
@@ -10116,8 +10171,14 @@
       el.addEventListener('click', e => { e.stopPropagation(); cmdmOuvrir(el.dataset.cmdm); });
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); cmdmOuvrir(el.dataset.cmdm); } });
     });
+    // L'équipe du jour au téléphone (18/11/2026) : le bouton de « La journée » ou la barre d'une personne.
+    $.querySelectorAll('[data-eqm]').forEach(el => {
+      el.addEventListener('click', e => { e.stopPropagation(); eqmOuvrir(el.dataset.eqm); });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); eqmOuvrir(el.dataset.eqm); } });
+    });
     b2bRendre();
     cmdmRendre();
+    eqmRendre();
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
     $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => iaOuvrir(b.dataset.iaouvrir === 'd' ? 'd' : null)));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
