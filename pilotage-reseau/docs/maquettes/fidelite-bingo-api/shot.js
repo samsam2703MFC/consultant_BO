@@ -11,7 +11,7 @@ const path = require('path');
   await p.goto('file://' + path.join(__dirname, 'index.html'), { waitUntil: 'load' });
   await p.evaluate(() => document.fonts.ready);
   await p.waitForTimeout(400);
-  const noms = ['1-erp-cartes', '2-erp-carte-points', '3-cockpit-programme', '4-cockpit-magasin', '5-cockpit-client'];
+  const noms = ['1-erp-cartes', '2-erp-carte-points', '3-cockpit-programme', '4-cockpit-magasin', '5-cockpit-client', '6-app-client'];
   const els = await p.$$('.ecran');
   for (let i = 0; i < els.length; i++) {
     await els[i].screenshot({ path: path.join(out, noms[i] + '.jpg'), type: 'jpeg', quality: 88 });

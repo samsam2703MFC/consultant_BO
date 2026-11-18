@@ -46,7 +46,7 @@ function erpListe() {
       ${ligne(`<span class="thumb"><img src="${ILL}chocolat.png" alt=""></span>`, 'Carte café', 'cafe-10', 'Magasins sélectionnés', '10 tampons', 'Un café offert', '30 jours', 0, 'Fin : 22/11/2026, remplacée par le bingo')}
     </tbody></table></div>
     <div class="pag">Afficher par page : <span class="inp" style="width:auto;min-height:28px;padding:3px 9px">10 ⌄</span><span>1–2 sur 2</span><span class="btn sm dis">${ico('left')}</span><span class="btn sm dis">${ico('right')}</span></div></section>
-  <div class="info nm" style="margin-top:0">${ico('info', 18)}<div>Note de maquette : le bingo n’est pas une carte de l’ERP.<p>Ses bons sont des codes des campagnes « Bingo hiver · 2 € » et « Bingo hiver · 10 € », dans Promotions › Bons d’achat. Le cockpit les crée chaque lundi au nom des clients, d’après les points gagnés dans la semaine.</p></div></div>`;
+  <div class="info nm" style="margin-top:0">${ico('info', 18)}<div>Note de maquette : le bingo n’est pas une carte de l’ERP.<p>Ses bons sont des codes des campagnes « Bingo hiver · 2 € » et « Bingo hiver · 10 € », dans Promotions › Bons d’achat. Le cockpit les crée chaque lundi au nom des clients, d’après leurs achats de la semaine lus dans l’ERP.</p></div></div>`;
 }
 
 // ── 2 · ERP › Modifier la carte à points (étape 2) ────────────────────
@@ -56,9 +56,9 @@ function erpCarte() {
   const reg = (n, u) => `<b>${n}</b><span class="u">${u}</span>`;
   const ed = `<div class="panel"><h2>Type de carte</h2><p>Une seule carte, à points. Les cartes à tampons s’arrêtent : le bingo prend leur place.</p>
     <div class="moteurs"><div class="mot off"><span class="ck"><span class="box"></span>Carte produit</span><div class="titre">TAMPONS</div><div class="sous">non utilisée</div><p>Règles du programme et produits offerts masqués.</p><div style="margin-top:9px">${v('points_config.stamps_enabled')}</div></div>
-      <div class="mot plein"><span class="ck"><span class="box on"></span>Carte à points</span><div class="titre">POINTS</div><div class="sous">Fait consommer · le panier</div><p>Chaque euro compte, sans plafond. Les points de la semaine font aussi la case du bingo.</p><div style="margin-top:9px">${v('points_config.points_enabled')}</div></div></div></div>
+      <div class="mot plein"><span class="ck"><span class="box on"></span>Carte à points</span><div class="titre">POINTS</div><div class="sous">Fait consommer · le panier</div><p>Chaque euro compte, sans plafond. La case du bingo, elle, se lit dans les achats de la semaine.</p><div style="margin-top:9px">${v('points_config.points_enabled')}</div></div></div></div>
   <div class="panel"><h2>Règle de gain</h2><p>Points sur les produits du programme après réductions et bons. Hors livraison, frais et cadeaux.</p>
-    <div class="grid4">${champ('Points par tranche', v('points_per_slice'), reg(1, 'pt'), '', 'set')}${champ('Tranche de dépenses (€)', v('slice_cents'), reg('1,00', '€'), '1 point = 1 € : le cockpit lit la dépense de la semaine dans les points.', 'set')}
+    <div class="grid4">${champ('Points par tranche', v('points_per_slice'), reg(1, 'pt'), '', 'set')}${champ('Tranche de dépenses (€)', v('slice_cents'), reg('1,00', '€'), '1 point par euro, arrondi à l’euro inférieur.', 'set')}
       ${champ('Validité du bon (jours)', v('voucher_validity_days'), reg(30, 'jours'), '', 'set')}${champ('Validité des points (jours)', v('points_validity_days'), reg(365, 'jours'), 'Les points survivent à la fin de la saison.', 'set')}</div>
     <h3>Boutiques et coefficients ${v('shop_coefficients')}</h3><div class="grid4">${SHOPS.map(([n, id]) => champ(`${n} (#${id})`, '', reg(1, 'coef.'), '', 'set', false)).join('')}</div>
     <h3>Bonus jour et heure ${v('bonuses')}</h3>
@@ -100,7 +100,7 @@ function programme() {
     <section class="panel"><h2>Les règles du bingo</h2><p>Les valeurs de départ du handoff, réglées dans le fichier de saison ${v('src/data/fidelite_bingo.json')}. À valider par la direction.</p>
       <div class="vals2"><div><span>Seuil de la semaine</span><strong>10<small>€ du lundi au dimanche</small></strong></div><div><span>Un bon toutes les</span><strong>3<small>cases cochées</small></strong></div><div><span>Valeur des bons</span><strong>2 €<small>× 4 bons</small></strong></div>
         <div><span>Super bon cadeau</span><strong>10 €<small>13 / 13 · provisoire</small></strong></div><div><span>Validité des bons</span><strong>30<small>jours</small></strong></div><div><span>Palier de points</span><strong>100<small>pts → 5 € (ERP)</small></strong></div></div>
-      <div class="regles"><div class="regle"><span class="ic">€</span><div><b>La case se coche toute seule</b><p>Le cockpit lit les points gagnés dans la semaine, tous magasins (<em>1 point = 1 €</em>). Dès <em>10</em> points, la case est cochée. Une case par semaine au plus.</p></div></div>
+      <div class="regles"><div class="regle"><span class="ic">€</span><div><b>La case se coche toute seule</b><p>Le cockpit lit les achats de la semaine du client, tous magasins (<em>gross_sales_before_corrections</em> de <em>/loyalty/customers</em>). Dès <em>10 €</em>, la case est cochée. Une case par semaine au plus.</p></div></div>
         <div class="regle"><span class="ic">x</span><div><b>Toutes les 3 cases, un bon à son nom</b><p>Chaque lundi, un code de la campagne « Bingo hiver · 2 € » est créé pour le client, valable <em>30</em> jours. Il arrive dans le portefeuille des bons de l’ERP.</p></div></div>
         <div class="regle"><span class="ic">13</span><div><b>Carte pleine</b><p>13 cases sur 13 : un code de « Bingo hiver · 10 € ». Une semaine manquée le rend impossible pour la saison.</p></div></div></div></section>
     <section class="panel"><h2>Une carte par saison</h2><p>Quatre cartes font l’année. Les campagnes de chaque saison se créent en brouillon depuis ce cockpit, puis s’activent dans l’ERP.</p>
@@ -127,7 +127,7 @@ function magasins() {
   <div class="kpis"><div class="kpi"><b>64</b><span>membres de la carte</span><em>clients reconnus avec la carte à points</em></div>
     <div class="kpi"><b>29</b><span>venus cette semaine</span><em>45 % des membres</em></div><div class="kpi"><b>18</b><span>case cochée cette semaine</span><em>28 % · la semaine court jusqu’à dimanche</em></div>
     <div class="kpi"><b>47</b><span>joueurs de la saison</span><em>73 % ont au moins une case</em></div><div class="kpi"><b>6</b><span>bons dus lundi 18/01</span><em>en simulation jusqu’au passage du lundi</em></div></div>
-  <div class="cols" style="grid-template-columns:minmax(0,1fr) 380px"><section class="panel"><h2>La case, semaine par semaine</h2><p>Part des membres qui ont atteint 10 € dans la semaine (points gagnés, lus dans l’ERP).</p>
+  <div class="cols" style="grid-template-columns:minmax(0,1fr) 380px"><section class="panel"><h2>La case, semaine par semaine</h2><p>Part des membres qui ont atteint 10 € d’achats dans la semaine (lus dans l’ERP, tous magasins).</p>
       <div class="barres">${bar}</div><div class="barres-l">${lab}</div></section>
     <section class="panel"><h2>À relancer</h2><p>Avant dimanche : la case ou un bon est à portée.</p><div class="wallet">${rel}</div></section></div>
   <section class="panel"><h2>Les membres et leur carte</h2><p>Une ligne par client : ses 13 semaines, sa dépense de la semaine, ses points et ses bons. ${v('GET /shops/{id}/loyalty/customers')}</p>
@@ -176,3 +176,71 @@ ecran(2, 'ERP admin', 'La carte à points, étape 2 · Règles et récompense', 
 ecran(3, 'Cockpit', 'Fidélité › Programme : le bingo de la saison et ce qui est dans l’ERP', 'src/fidelite_bingo.php › GET /fidelite · src/data/fidelite_bingo.json', railCockpit(), programme());
 ecran(4, 'Cockpit', 'Fidélité › Magasins : la case, semaine par semaine', 'src/fidelite_bingo.php › GET /fidelite/clients?shop=3', railCockpit(), magasins());
 ecran(5, 'Cockpit', 'Fidélité › Un client : sa carte de bingo, ses points, ses bons', 'src/fidelite_bingo.php › GET /fidelite/client?id=…', railCockpit(), client());
+
+// ── 6 · App client (l'app de l'ERP, routes /webshop, jeton du client) ──
+function grilleMini() {
+  const J = JULIE, x = CONF.tousLes, nC = Object.keys(J.coche).length;
+  let cells = '', bi = 0;
+  H27.forEach((s, idx) => {
+    const n = s.n; let cls = 'cc', inner = `<span class="d">${s.du}</span><img src="${ILL}${s.ill}.png" alt=""><strong>${s.titre}</strong>`;
+    if (J.coche[n]) { cls += ' coche' + (s.fete ? ' fete' : ''); inner += '<span class="st">✓</span>'; }
+    else if (J.manque.includes(n)) { cls += ' manque'; inner += '<span class="mq">manquée</span>'; }
+    else if (n === SEMAINE) { cls += ' cours'; inner += `<span class="g"><i style="width:${J.cours * 10}%"></i></span>`; }
+    else cls += ' futur';
+    cells += `<div class="${cls}">${inner}</div>`;
+    if ((idx + 1) % x === 0) {
+      bi++; const k = bi * x, [, ill] = BONS_H27[bi - 1], b = J.bons.find((y) => y.i === bi);
+      if (b) cells += `<div class="cc bon"><span class="d">${k}e case</span><img src="${ILL}${ill}.png" alt=""><b>2 €</b><small>${b.etat === 'utilise' ? 'utilisé' : 'jusqu’au ' + b.fin}</small></div>`;
+      else cells += `<div class="cc ${k - nC === 3 ? 'proche' : 'lointain'}"><span class="d">${k}e case</span><img src="${ILL}${ill}.png" alt=""><b>2 €</b><small>${k - nC === 3 ? 'encore 3 cases' : 'à la ' + k + 'e'}</small></div>`;
+    }
+  });
+  return `<div class="cg mini" style="grid-template-columns:repeat(4,1fr)">${cells}</div>`;
+}
+function qrCode() {
+  let s = 11, h = ''; const r = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const f = (i, j, x, y) => { const a = i - x, b = j - y; return a >= 0 && b >= 0 && a < 7 && b < 7 ? (a === 0 || b === 0 || a === 6 || b === 6 || (a > 1 && a < 5 && b > 1 && b < 5)) : null; };
+  for (let j = 0; j < 21; j++) for (let i = 0; i < 21; i++) { let on = f(i, j, 0, 0) ?? f(i, j, 14, 0) ?? f(i, j, 0, 14); if (on === null) on = (i < 8 && j < 8) || (i > 12 && j < 8) || (i < 8 && j > 12) ? false : r() > .5; h += on ? '<i></i>' : '<b></b>'; }
+  return `<div class="qr">${h}</div>`;
+}
+function telephone(onglet, corps) {
+  return `<div class="phone"><div class="scr"><div class="sb"><b style="font-weight:400">9:41</b><span>5G ▮▮▮</span></div>
+    <div class="ah"><img src="${LOGO}" alt=""><span>Bonjour Julie</span></div>
+    <div class="ptabs">${['Bingo', 'Points', 'Portefeuille'].map((t) => `<span class="${t === onglet ? 'on' : ''}">${t}</span>`).join('')}</div>
+    <div class="bd">${corps}</div>
+    <div class="nav"><span>Accueil</span><span class="on">Fidélité</span><span>Commander</span><span>Profil</span></div></div></div>`;
+}
+function appClient() {
+  const bingo = `<div class="bt" style="margin:0"><div><span class="t" style="font-size:34px">BINGO</span><span class="s" style="font-size:17px">d’hiver</span></div><div class="r"><b style="font-size:24px">6 / 13</b><small>cases · 2 bons</small></div></div>
+    <div class="pp-card" style="border:1.6px dashed var(--rubis);margin:0;display:flex;gap:10px;align-items:center"><img src="${ILL}bread-1.png" alt="" style="width:44px"><div style="flex:1"><div class="k" style="margin-bottom:1px">Cette semaine · 11/01 – 17/01</div><strong style="font-weight:400">Le bon pain</strong>
+      <div class="bar" style="margin:6px 0 4px"><i style="width:64%"></i></div><span class="hint" style="margin:0;font-size:9.5px">6,40 € sur 10 € — encore 3,60 € d’ici dimanche et la case se coche toute seule.</span></div></div>
+    <div class="pp-card" style="margin:0"><div class="k" style="margin-bottom:4px">Mes points <span>encore 22 pts pour 5 €</span></div><div style="display:flex;align-items:baseline;gap:6px"><b style="font:400 24px var(--display);color:var(--rubis)">78</b><span class="hint" style="margin:0">/ 100</span></div><div class="bar ab" style="margin-top:6px"><i style="width:78%"></i></div></div>
+    ${grilleMini()}`;
+  const jours = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((d, i) => `<div class="jour ${i < 3 ? 'passe' : ''} ${i === 3 ? 'auj' : ''} ${i === 2 ? 'c2' : ''}">${d}<br>${String(11 + i).padStart(2, '0')}/01<b><i>×</i>${i === 2 ? 2 : 1}</b></div>`).join('');
+  const points = `<div class="bt" style="margin:0"><div><span class="t" style="font-size:34px">POINTS</span><span class="s" style="font-size:17px">de Julie</span></div><div class="r"><b style="font-size:24px">78 pts</b><small>encore 22 pts pour 5 €</small></div></div>
+    <div class="bar ab"><i style="width:78%"></i></div>
+    <div class="pp-card" style="margin:0"><div class="k">Votre semaine <span>11/01 – 17/01</span></div><div class="jours">${jours}</div>
+      <div class="expl"><span class="x" style="background:var(--abricot);color:var(--rubis)">×2</span><span>Le mercredi de 14:00 à 17:00, tout compte double.</span></div></div>
+    <div class="pp-card" style="margin:0"><div class="k">Échanger mes points</div><div style="display:flex;justify-content:space-between;align-items:center"><span><b style="font:400 20px var(--display);color:var(--rubis)">100 pts</b> → un bon de 5 €</span><span class="btn sm dis">Échanger</span></div><span class="hint">Encore 22 points. Le bon arrive dans le portefeuille.</span></div>
+    <div class="k" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rubis);margin-top:2px">Derniers points</div>
+    <div class="lots"><div class="lot"><span>Jeudi 14/01<small>Halle · 4,00 €</small></span><b>+4</b></div><div class="lot"><span>Lundi 11/01<small>Halle · 2,40 €</small></span><b>+2</b></div>
+      <div class="lot"><span>Vendredi 08/01<small>Gosselies · 5,30 €</small></span><b>+5</b></div><div class="lot"><span>Mercredi 06/01<small>Halle · 7,80 € · la galette</small></span><b>+7</b></div></div>`;
+  const porte = `<div class="k" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rubis)">Mes bons</div>
+    <div class="wl" style="background:#fff;border:0"><span class="ti2"><img src="${ILL}tartelette.png" alt=""></span><div><small style="color:var(--rubis)">Bingo · 6e case</small><strong>Bon des Rois · 2 €</strong><small>code FID7K2QM9PA · jusqu’au 05/02</small></div><span class="btn sm pri">Montrer</span></div>
+    <div class="info" style="margin-top:0;background:#fff">${ico('info', 18)}<div>Le bon de 5 € arrive ici<p>quand vous échangez 100 points.</p></div></div>`;
+  const montrer = `<div class="code-g"><div class="k" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rubis)">Bingo · 6e case</div><div style="font:400 26px var(--display);color:var(--rubis);margin-top:6px">BON DES ROIS</div><div class="hint" style="margin:2px 0 0">2 € · valable jusqu’au 05/02</div>
+      ${qrCode()}<div class="c">FID7K2QM9PA</div><span class="hint">Montrez ce code à la caisse. Il ne sert qu’une fois.</span></div>`;
+  const col = (cap, tel, srcs) => `<div><div class="cap">${cap}</div>${tel}<div class="srcs">${srcs.map((x) => `<span>${x}</span>`).join('')}</div></div>`;
+  return `<div class="apps"><div class="kick">App client · <b>Fidélité</b> · jeudi 14/01/2027</div>
+    <h1 style="font:400 34px/1.05 var(--display);color:var(--rubis);margin:6px 0 4px">L’app de Julie D.</h1>
+    <p style="color:var(--muted);font-size:13px">L’app client de l’ERP, avec son jeton client : elle ne voit que les données de la cliente connectée. Sous chaque écran, la route qui le remplit.</p>
+    <div class="phones">
+      ${col('Bingo <span>· sa carte de la saison</span>', telephone('Bingo', bingo), [`Grille : ${v('GET /webshop/loyalty/history')} par semaine + calendrier de saison`, `Bons débloqués : ${v('GET /webshop/vouchers')}`, `Points : ${v('GET /webshop/loyalty/points')}`])}
+      ${col('Points <span>· solde, semaine, échange</span>', telephone('Points', points), [`Solde et derniers points : ${v('GET /webshop/loyalty/points')}`, `Bonus du mercredi, palier : ${v('GET /webshop/loyalty/program')}`, `Échange : ${v('POST /webshop/loyalty/points/redeem')}`])}
+      ${col('Portefeuille <span>· ses bons</span>', telephone('Portefeuille', porte), [`Bons à son nom : ${v('GET /webshop/vouchers')}`, `Bingo : codes créés par le cockpit avec ${v('id_customer')}`])}
+      ${col('Montrer <span>· à la caisse</span>', telephone('Portefeuille', montrer), [`Caisse : ${v('POST /vouchers/validate')} puis ${v('POST /vouchers/redeem')}`, 'Code à usage unique (usage_limit 1)'])}
+    </div>
+    <div class="manque-l"><div><h4>Ce qui existe déjà dans l’ERP</h4><ul><li>Le solde, les lots et l’échange de points (<code>/webshop/loyalty/points</code>, <code>…/redeem</code> : palier exact, bon au nom du client).</li><li>Les bons du client (<code>/webshop/vouchers</code>), dont les codes du bingo créés avec <code>id_customer</code>.</li><li>Les règles de la carte (<code>/webshop/loyalty/program</code>) et l’historique (<code>/webshop/loyalty/history</code>).</li></ul></div>
+      <div><h4>Ce qui reste à écrire, sans table</h4><ul><li>Aucune route de l’ERP ne rend la grille du bingo : l’app la calcule à partir de l’historique de la cliente et du calendrier de saison (fichier). Le détail des montants de <code>/webshop/loyalty/history</code> n’est pas décrit dans la spécification : à vérifier.</li><li>Pas de ×2 après la case ni d’offre perso : l’ERP ne les a pas, l’app ne les montre pas.</li></ul></div></div></div>`;
+}
+document.body.insertAdjacentHTML('beforeend', `<section class="ecran" id="e6"><div class="annot"><span class="n">6</span><div><div class="t"><span style="color:var(--abricot)">App client</span> · Fidélité : bingo, points, portefeuille, le bon à la caisse</div><div class="src">routes /webshop de l’ERP (jeton client) · aucune table</div></div>
+  <div class="leg">Aucune table, aucun champ ajouté · ${v('route existante')}</div></div>${appClient()}</section>`);

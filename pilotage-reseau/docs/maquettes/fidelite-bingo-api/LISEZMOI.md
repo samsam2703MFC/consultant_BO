@@ -9,7 +9,8 @@ du même jour : « n'utiliser que la structure disponible, ne pas créer de tabl
   `points_config` : 1 point par euro, paliers, bonus jour et heure, coefficients par magasin. Les cartes à
   tampons s'arrêtent ;
 - **le bingo** se calcule dans le cockpit, uniquement par l'API de l'ERP. La case de la semaine se coche dès
-  10 points gagnés dans la semaine (1 point = 1 €), lus dans `GET /shops/{id}/loyalty/customers`. Les bons sont
+  10 € d'achats dans la semaine, tous magasins (`shop_activity.gross_sales_before_corrections` de
+  `GET /shops/{id}/loyalty/customers?from=&to=&card_id=`). Les bons sont
   des codes des **campagnes de bons existantes** de l'ERP (`POST /admin/voucher-campaigns/{id}/codes`), créés
   chaque lundi au nom du client ;
 - les saisons, les thèmes des 13 semaines et les valeurs des bons sont dans le fichier
@@ -22,6 +23,30 @@ du même jour : « n'utiliser que la structure disponible, ne pas créer de tabl
 | 3 · Fidélité › Programme | Cockpit, ERP franchisé › Fidélité | L'état des pièces dans l'ERP, les règles et la carte de la saison (fichier de saison), ce que l'API ne permet pas | `captures/3-cockpit-programme.jpg` |
 | 4 · Fidélité › Magasins | Cockpit | Un magasin (Halle) : la case semaine par semaine, à relancer, les membres et leurs 13 cases | `captures/4-cockpit-magasin.jpg` |
 | 5 · Fidélité › Un client | Cockpit | La carte de bingo d'un client, ses points (ERP), ses bons (codes des campagnes) | `captures/5-cockpit-client.jpg` |
+| 6 · App client | L'app de l'ERP (routes `/webshop`, jeton du client) | Bingo, Points, Portefeuille, le bon montré à la caisse ; la route sous chaque écran | `captures/6-app-client.jpg` |
+
+## Vérifié dans l'API de l'ERP (18/11/2026)
+
+Spécification de `test.tfbuddy.com` (`/docs/openapi.json`, 1 277 routes) et réponse de la production
+`atelierby.tfbuddy.com`. Sa documentation publiée (`/api/documentation/api.php`, 933 routes) ne liste pas les routes
+de fidélité, mais elles répondent **401** (protégées) et non **404** (absentes) : elles existent.
+
+| Pièce | Route | Ce qui est confirmé |
+|---|---|---|
+| Carte à points (admin) | `/admin/loyalty/cards`, `/options`, `/preview`, `/simulate` | Les routes du `.rar` |
+| Achats de la semaine par client | `GET /shops/{id}/loyalty/customers?from=&to=&card_id=` | `items[].shop_activity.gross_sales_before_corrections`, `programs[].shop_activity.points_earned`, `global_progress.points` |
+| Bon à un client | `POST /admin/voucher-campaigns/{id}/codes` | Corps `code`, `status`, `id_customer`, `valid_from`, `valid_to`, `usage_limit` ; lecture filtrée par `id_customer` |
+| App : points | `GET /webshop/loyalty/points`, `POST …/points/redeem` | Solde, 50 derniers lots, échange au palier exact contre un bon au nom du client |
+| App : bons | `GET /webshop/vouchers` | Les bons du client (jeton client) |
+| App : règles, historique | `GET /webshop/loyalty/program`, `/history` | Routes présentes ; le détail de l'historique n'est pas décrit |
+| Caisse | `POST /vouchers/validate`, `/redeem`, `/reverse` | Présentes |
+
+**Ce qui reste à faire pour que ça tourne, sans table :**
+- le droit `LOYALTY.MANAGE` pour le compte de l'API du cockpit (403 le 13/11, `tools/sonde_cartes_fidelite.php`) ;
+- la grille du bingo dans l'app : aucune route ne la rend. L'app la calcule depuis l'historique du client et le
+  calendrier de saison, ou lit le cockpit (`/fidelite/client`, aujourd'hui réservé au siège) ;
+- passer le module de sa page de test (`public/fidelite-test`, écritures en simulation) à la production : campagnes
+  actives, tâche du lundi.
 
 Les écrans 3 à 5 sont l'habillage Claude Design des trois parties de la page de test `public/fidelite-test` :
 A · l'admin, B · le magasin, C · la carte du client. La maquette est datée du jeudi 14/01/2027, semaine 8 de
