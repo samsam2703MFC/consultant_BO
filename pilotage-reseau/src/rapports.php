@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
 
 // Gabarit commun des documents et e-mails (design system §13, version A).
 require_once __DIR__ . '/doc.php';
@@ -249,8 +249,8 @@ function ventesAfficheDistribuer(array $rep): array
 function rapportSeuils(): array
 {
     return [
-        // food : la cible du réseau, la même partout (src/food_cost.php).
-        'food' => foodCostCible(), 'labour' => kpiSeuil('labour-pct', 33.0),
+        // food et labour : les cibles du réseau, les mêmes partout (src/cibles_reseau.php).
+        'food' => foodCostCible(), 'labour' => personnelCible(),
         'overhead' => kpiSeuil('overhead-pct', 13.5), 'caEtp' => kpiSeuil('ca-etp', 13000.0),
         'cibleGoogle' => kpiSeuil('note-google', (float) setting('reputationCible', 4.5)),
         'tacheNote' => (int) kpiSeuil('taches', 3),

@@ -10719,7 +10719,7 @@ class App {
       { k: 'Projection', v: proj == null ? '—' : fK(proj), s: proj == null ? '' : 'fin de ' + per + ' au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', cls: proj == null ? '' : (proj < m.objectif ? 'bad' : 'good') },
       { k: 'Reste à faire', v: sansO ? '—' : fK(m.reste), s: sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')), cls: '' },
       { k: 'Par jour ouvert', v: fE(m.realise / nJ), s: fI(m.tickets / nJ) + ' clients · panier ' + (m.panier || 0).toFixed(2).replace('.', ',') + ' €', cls: '' },
-      { k: 'Marge brute', v: m.margeBrutePct != null ? Math.round(m.margeBrutePct) + ' %' : '—', s: fK(m.margeBrute || 0) + ' · matière ' + Math.round(m.coutMatierePct || 0) + ' % (seuil ' + Math.round((r.seuils || {}).food || 32) + ')', cls: '' },
+      { k: 'Marge brute', v: m.margeBrutePct != null ? Math.round(m.margeBrutePct) + ' %' : '—', s: fK(m.margeBrute || 0) + ' · matière ' + Math.round(m.coutMatierePct || 0) + ' % (seuil ' + Math.round((r.seuils || {}).food || 40) + ')', cls: '' },
       { k: 'Résultat net', v: m.net == null ? '—' : fK(m.net), s: m.netPct == null ? '' : m.netPct.toFixed(1).replace('.', ',') + ' % des ventes', cls: m.net == null ? '' : (m.net >= 0 ? 'good' : 'bad') },
       { k: 'Record', v: record ? fE(record.ca) : '—', s: record ? record.court + ' · ' + record.tickets + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) - 100 >= 0 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', cls: 'gold' },
     ];
@@ -10772,7 +10772,7 @@ class App {
     if (!r || common.rpErreur) { return; }
     if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
 
-    const seuils = r.seuils || { food: 40, labour: 33, overhead: 13.5 };   // repli : la cible food cost du réseau
+    const seuils = r.seuils || { food: 40, labour: 17, overhead: 13.5 };   // repli : les cibles food cost et personnel du réseau
     const fE = n => this.fE(n);
     const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
     const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');
@@ -11029,7 +11029,7 @@ class App {
     common.rjLignes = []; common.rjDetail = null; common.rjInvite = '';
     if (!r || common.rjErreur) { return; }
 
-    const seuils = r.seuils || { food: 40, labour: 33, overhead: 13.5 };   // repli : la cible food cost du réseau
+    const seuils = r.seuils || { food: 40, labour: 17, overhead: 13.5 };   // repli : les cibles food cost et personnel du réseau
     const fE = n => this.fE(n);
     const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
     const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');

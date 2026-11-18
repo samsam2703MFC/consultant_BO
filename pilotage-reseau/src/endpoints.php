@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
 
 require_once __DIR__ . '/erp_cles.php';
 
@@ -128,8 +128,9 @@ function ep_meta(): array
         'exercice'         => (int) setting('exercice', (int) date('Y')),
         'moisLabels'       => setting('moisLabels', []),
         'seuils'           => [
-            'food'        => foodCostCible(),   // la cible du réseau, la même partout (src/food_cost.php)
-            'labour'      => $seuils['labour'] ?? 33,
+            // food et labour : les cibles du réseau, les mêmes partout (src/cibles_reseau.php).
+            'food'        => foodCostCible(),
+            'labour'      => personnelCible(),
             'overhead'    => $seuils['overhead'] ?? 13.5,
             'royalties'   => $seuils['royalties'] ?? 3,
             'financieres' => $seuils['financieres'] ?? 2.2,
@@ -2041,17 +2042,18 @@ function ep_exploitation_jour(): array
  * Les seuils du P&L court, en % du chiffre d'affaires : coût matière (`food`), main-d'œuvre (`labour`), frais
  * généraux (`overhead`). Une seule définition, lue par le jour (/exploitation/jour) et par la période (resultat.php).
  *
- * Le coût matière : la cible food cost du réseau, la même variable partout (18/11/2026, Sam : « on garde pour le
- * moment à 40 % (la même variable partout) » ; foodCostCible, src/food_cost.php, réglée au Catalogue des KPI). Du
- * 07/11 au 18/11/2026, le taux matière de Budget › Paramètres (38 + 2 = 40 % au 07/11). Main-d'œuvre et frais
- * généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`), comme avant ; sans table : 33 / 13,5.
+ * Le coût matière et la main-d'œuvre : les cibles du réseau, une variable chacune, la même partout (18/11/2026, Sam :
+ * « on garde pour le moment à 40 % (la même variable partout) », « même variable pour le personnel à 17 % » ;
+ * foodCostCible et personnelCible, src/cibles_reseau.php, réglées au Catalogue des KPI). Du 07/11 au 18/11/2026, la
+ * matière était le taux de Budget › Paramètres (38 + 2 = 40 % au 07/11) et la main-d'œuvre la table `kpi` (33 %).
+ * Frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`), comme avant ; sans table : 13,5.
  */
 function seuilsCharges(): array
 {
-    $seuils = ['food' => foodCostCible(), 'labour' => 33.0, 'overhead' => 13.5];
+    $seuils = ['food' => foodCostCible(), 'labour' => personnelCible(), 'overhead' => 13.5];
     try {
         foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
-                            WHERE code IN ('labour','overhead')") as $k) {
+                            WHERE code IN ('overhead')") as $k) {
             $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
                 ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
         }

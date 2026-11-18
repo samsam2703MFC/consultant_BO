@@ -322,7 +322,7 @@ function emptyPayload(){
     utilisateur: { initiales: '', nom: '', role: '' },
     aujourdhui: null, dateLabel: '', periodeLabel: '',
     exercice: new Date().getFullYear(), moisLabels: MOIS,
-    seuils: { food: 40, labour: 33, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 },
+    seuils: { food: 40, labour: 17, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 },
     contribOuverture: 0, notes: {}, familles: [], reportTypes: []
   };
   return {

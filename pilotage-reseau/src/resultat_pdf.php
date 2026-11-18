@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
 
 require_once __DIR__ . '/doc.php';
 
@@ -78,7 +78,7 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
     $cls = static fn ($v) => $v === null ? 'mut' : ($v >= 0 ? 'ok' : 'acc');
     $feu = static fn ($v, float $s) => $v === null ? 'mut' : ($v <= $s ? 'ok' : ($v <= $s * 1.3 ? 'wa' : 'acc'));
     $feuRes = static fn ($v) => $v === null ? 'mut' : ($v >= 15 ? 'ok' : ($v >= 5 ? 'wa' : 'acc'));
-    $seuils = $p['seuils'] ?? ['food' => foodCostCible(), 'labour' => 33, 'overhead' => 13.5];
+    $seuils = $p['seuils'] ?? ['food' => foodCostCible(), 'labour' => personnelCible(), 'overhead' => 13.5];
     $logo = rapLogoDataUri();
     $moisCourant = substr($p['aujourdhui'], 0, 7) === substr($p['du'], 0, 7);
     $jours = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];

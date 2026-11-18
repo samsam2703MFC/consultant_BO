@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
 
 require_once __DIR__ . '/doc.php';
 
@@ -331,7 +331,7 @@ function ep_dossier_pdf(): array
         ['Objectif budget', $budget !== null && $budget > 0 ? round($pnl['ca'] / $budget * 100) . ' %' : '', $budget !== null ? $eur0($budget) . ' visés' : 'pas de budget posé', 'acc'],
         ['CA par ETP', $caEtpIci !== null ? $eur0($caEtpIci) : '', $etpIci !== null ? str_replace('.', ',', (string) $etpIci) . ' ETP (heures ÷ 164)' : 'planning incomplet', 'vert'],
         ['Food cost', $foodPct !== null ? $n1($foodPct) . ' %' : '', 'seuil ' . $n1(foodCostCible()) . ' %' . ($foodPct !== null && $foodPct > foodCostCible() ? ' dépassé' : ' tenu'), $foodPct !== null && $foodPct > foodCostCible() ? 'rouge' : 'vert'],
-        ['Main-d’œuvre', $moPct !== null ? $n1($moPct) . ' %' : '', 'seuil ' . $n1(kpiSeuil('labour-pct', 33.0)) . ' %' . ($moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? ' dépassé' : ' tenu'), $moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? 'rouge' : 'vert'],
+        ['Main-d’œuvre', $moPct !== null ? $n1($moPct) . ' %' : '', 'seuil ' . $n1(personnelCible()) . ' %' . ($moPct !== null && $moPct > personnelCible() ? ' dépassé' : ' tenu'), $moPct !== null && $moPct > personnelCible() ? 'rouge' : 'vert'],
         ['Meilleure vendeuse', $meilleure !== null ? $meilleure['nom'] : '', $meilleure !== null ? 'score ' . $meilleure['score'] : '', 'mut'],
         ['Résultat', $eur0($pnl['resultat']), $pnl['ca'] > 0 ? $n1($pnl['resultat'] / $pnl['ca'] * 100) . ' % du CA' : '', $pnl['resultat'] >= 0 ? 'vert' : 'rouge'],
     ];
@@ -433,7 +433,7 @@ function ep_dossier_pdf(): array
         ['Chiffre d’affaires', $pnl['ca'], 100.0, null, false],
         ['Coût matière', -$pnl['mat'], $foodPct, foodCostCible(), true],
         ['Marge brute', $pnl['ca'] - $pnl['mat'], $pnl['ca'] > 0 ? ($pnl['ca'] - $pnl['mat']) / $pnl['ca'] * 100 : null, null, false],
-        ['Main-d’œuvre', -$pnl['mo'], $moPct, kpiSeuil('labour-pct', 33.0), true],
+        ['Main-d’œuvre', -$pnl['mo'], $moPct, personnelCible(), true],
         ['Frais généraux', -$pnl['frais'], $pnl['ca'] > 0 ? $pnl['frais'] / $pnl['ca'] * 100 : null, kpiSeuil('overhead-pct', 13.5), true],
         ['Résultat', $pnl['resultat'], $pnl['ca'] > 0 ? $pnl['resultat'] / $pnl['ca'] * 100 : null, null, false],
     ];

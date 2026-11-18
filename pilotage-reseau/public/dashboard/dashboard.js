@@ -324,9 +324,10 @@
   const VALO_JOURS = 730, VALO_AN = 365, VALO_MULT = 3.5, VALO_MULT_T = '3,5';
   const VALO_REGLE = '(marge brute réelle − charges normatives du réseau) × ' + VALO_MULT_T;
   // Les charges normatives : les seuils du réseau (GET /meta → seuils), en % du CA ; par défaut, ceux du serveur.
-  const VALO_NORMES = [['labour', 'main-d’œuvre', 33], ['overhead', 'frais généraux', 13.5], ['royalties', 'redevances', 3], ['financieres', 'charges financières', 2.2]];
-  // Le personnel de la valeur quand le modèle de Budget › Paramètres n'en a pas (décision du 15/11/2026).
-  const VALO_PERSONNEL = 20;
+  const VALO_NORMES = [['labour', 'main-d’œuvre', 17], ['overhead', 'frais généraux', 13.5], ['royalties', 'redevances', 3], ['financieres', 'charges financières', 2.2]];
+  // Le personnel de la valeur quand le modèle de Budget › Paramètres n'en a pas : la cible personnel du réseau, la même
+  // partout (18/11/2026 ; 20 % du 15 au 18/11/2026), servie par /meta dans `seuils.labour`, 17 % en repli.
+  const VALO_PERSONNEL = 17;
   const fPc = p => nf(p, Math.abs(p - Math.round(p)) < 0.05 ? 0 : 1) + ' %';
   function valoNormes() {
     const s = (S.aux.meta && S.aux.meta.seuils) || {};
@@ -338,7 +339,7 @@
       M.lignes.filter(l => !l.matiere && isFinite(+l.pct)).forEach(l => { let c = cats.find(x => x.lib === l.categorie); if (!c) { c = { k: l.categorie, lib: l.categorie, pct: 0 }; cats.push(c); } c.pct += +l.pct; });
       // La matière d'un mois sans mesure : la cible food cost du réseau, la même partout (18/11/2026), pas le budget.
       const aPersonnel = M.lignes.some(l => !l.matiere && /personnel|salaire|r[ée]mun|main.d|staff/i.test(l.categorie + ' ' + l.poste));
-      if (!aPersonnel) { cats.push({ k: 'personnel', lib: 'Personnel', pct: VALO_PERSONNEL, ajoute: true }); }
+      if (!aPersonnel) { cats.push({ k: 'personnel', lib: 'Personnel', pct: s.labour != null && isFinite(+s.labour) ? +s.labour : VALO_PERSONNEL, ajoute: true }); }
       return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food, source: 'Budget › Paramètres', personnelAjoute: !aPersonnel, reste: 'Résultat normatif' };
     }
     const L = VALO_NORMES.map(([k, lib, d]) => ({ k, lib, pct: s[k] != null && isFinite(+s[k]) ? +s[k] : d }));
@@ -1172,7 +1173,9 @@
     // matière, % des ventes, face à la cible food cost du réseau (la même partout, rendue par l'API dans `seuils.food`) :
     // vert jusqu'au seuil, orange jusqu'à dix points au-dessus. Sans seuil lu, la même cible, 40 %.
     mat: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 40) ? 'v' : (p <= (s != null ? s : 40) + 10 ? 'o' : 'r')),
-    mo: p => p == null ? 'n' : (p <= 20 ? 'v' : (p <= 25 ? 'o' : 'r')),               // main-d'œuvre, % des ventes
+    // main-d'œuvre, % des ventes, face à la cible personnel du réseau (la même partout, `seuils.labour`) : vert jusqu'à
+    // la cible, orange jusqu'à cinq points au-dessus (avant le 18/11/2026 : 20 / 25 en dur). Sans cible lue, 17 %.
+    mo: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 17) ? 'v' : (p <= (s != null ? s : 17) + 5 ? 'o' : 'r')),
     poub: p => p == null ? 'n' : (p <= 1.5 ? 'v' : (p <= 3 ? 'o' : 'r')),             // poubelle, % du chiffre
     ctrl: (r, t) => !t ? 'n' : (r >= t ? 'v' : (r / t >= 0.8 ? 'o' : 'r')),           // contrôles rendus
     cli: (n, j7) => n == null || !j7 ? 'n' : (n >= 0.95 * j7 ? 'v' : (n >= 0.85 * j7 ? 'o' : 'r')),
@@ -1183,6 +1186,11 @@
     return x && x.food != null ? +x.food : null;
   };
   const maSeuilLib = d => { const v = maSeuilMat(d); return v != null ? 'seuil ' + fP(v) : 'seuil —'; };
+  /** La cible personnel du réseau telle que l'API la rend (la même partout) ; null si elle n'est pas encore lue. */
+  const maSeuilMo = d => {
+    const x = (d && d.seuils) || ((S.aux['jourM|' + S.date] || {}).seuils) || null;
+    return x && x.labour != null ? +x.labour : null;
+  };
   /** La poubelle du jour regardé, même depuis l'onglet Semaine (qui lit celle de la semaine). */
   function maInvJour() { const I = S.aux['inv|' + S.shop + '|' + S.date]; return I && !I.error ? I : null; }
   const maPire = L => L.includes('r') ? 'r' : (L.includes('o') ? 'o' : (L.includes('v') ? 'v' : 'n'));
@@ -1246,7 +1254,7 @@
       v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', panTxt(PM)].filter(Boolean).join(' · ') });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct, maSeuilMat(d)), v: fP(m.coutMatierePct),
       s: maSeuilLib(d) + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
-    T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct), v: m.labourPct != null ? fP(m.labourPct) : '—',
+    T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct, maSeuilMo(d)), v: m.labourPct != null ? fP(m.labourPct) : '—',
       s: m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : 'des ventes' });
     T.push({ k: 'Invendus', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true),
       pt: !I || !I.lu ? 'n' : (!I.declare ? (auj ? 'n' : 'o') : MA.poub(m.ca ? 100 * I.cout / m.ca : null)),
@@ -7634,7 +7642,7 @@
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
-    const seuilLab = (d.seuils && d.seuils.labour) || 33;
+    const seuilLab = (d.seuils && d.seuils.labour) || 17;   // la cible personnel du réseau
     const LH2 = st && Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0 || x.poste > 0) : [];
     const budgetJour = m.ca ? m.ca * seuilLab / 100 : null;
     const hRouges = LH2.filter(x => x.trav > x.ca * seuilLab / 100).map(x => x.h + ' h');
@@ -7895,7 +7903,7 @@
     })(), corpsHeures);
 
     ajoute('equipe', 'journee', 'Qui est en poste', resume(() => {
-      const seuil = (d.seuils && d.seuils.labour) || 33, plan = Array.isArray(m.planning) ? m.planning : [];
+      const seuil = (d.seuils && d.seuils.labour) || 17, plan = Array.isArray(m.planning) ? m.planning : [];
       if (m.labourPct == null && !plan.length) { return { v: '—', s: 'pas de planning dans le panel', vd: 'neutre', mini: '' }; }
       const rouges = LH.filter(x => x.trav > x.ca * seuil / 100).map(x => x.h + ' h');
       return { v: m.labourPct != null ? fP(m.labourPct) : '—',
@@ -8234,7 +8242,7 @@
     // à défaut, celui gravé avec les tickets du jour.
     const matA = R && R.api && R.total > 0 ? R.total : null, mat = matA != null ? matA : matT;
     const mb = prix != null && mat != null ? prix - mat : null, taux = mb != null && prix > 0 ? 100 * mb / prix : null, coef = prix != null && mat > 0 ? prix / mat : null;
-    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 40, labour: 33, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
+    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 40, labour: 17, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
     const obj = 100 / (se.food || 40);
     const niv = c => c == null ? 'mu' : (c < FI_ZONES.ko ? 'ko' : (c < FI_ZONES.att ? 'att' : 'ok'));
     const NIV = { ko: 'sous le coût acceptable', att: 'à surveiller', ok: 'dans le vert', mu: 'coût matière inconnu' };
@@ -8711,7 +8719,7 @@
       ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
       ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')))}
       ${tuile('Par jour ouvert', fE(m.realise / nJ), [fN(m.tickets / nJ) + ' clients', panTxt(panDe(m)).replace(' €', '\u00a0€')].filter(Boolean).join(' · '))}
-      ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 32) + ')')}
+      ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 40) + ')')}
       ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
       ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
     </div>`;

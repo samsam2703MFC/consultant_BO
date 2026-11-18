@@ -114,7 +114,8 @@ const AM_COACHS = [
         // Les objectifs 2026 (18/11/2026, Sam : « le but est d'arriver à 40 % de food cost 2026, 17 % de frais de
         // personnel, xx % de clients scannés, xx % de ventes additionnelles ou de menu », puis « 25 % clients scannés et
         // 15 % menus ») ; articles par ticket et panier se posent au cockpit (CO_OBJECTIFS, src/coach_objectifs.php).
-        // Le food cost suit la cible du réseau, la même variable partout (coObjectifsDepart : foodCostCible, 40 %).
+        // Food cost et personnel suivent les cibles du réseau, la même variable partout (coObjectifsDepart :
+        // foodCostCible 40 %, personnelCible 17 %).
         'objectifs' => ['foodCost' => 40, 'personnel' => 17, 'clientsScannes' => 25, 'menus' => 15],
     ],
 ];

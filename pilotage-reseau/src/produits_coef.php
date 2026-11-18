@@ -17,10 +17,10 @@
  */
 declare(strict_types=1);
 
-require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
 
 const PC_ZONES = ['ko' => 100 / 60, 'att' => 2.5];
-// Le prix objectif : coût ÷ la cible food cost du réseau (foodCostCible, src/food_cost.php ; 32 % jusqu'au 18/11/2026).
+// Le prix objectif : coût ÷ la cible food cost du réseau (foodCostCible, src/cibles_reseau.php ; 32 % jusqu'au 18/11/2026).
 
 /** Première valeur numérique parmi des clés. */
 function pcNum(array $x, array $cles): ?float

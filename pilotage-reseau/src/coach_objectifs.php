@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/food_cost.php';   // la cible du food cost du réseau, la même partout
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
 
 /**
  * Les objectifs 2026 des coachs et les propositions de prix face à la concurrence (18/11/2026, Sam : « dans le coach
@@ -86,13 +86,16 @@ function coObjectifsNormaux(mixed $o): array
 }
 
 /**
- * Les cibles de départ d'un coach (AM_COACHS) : sa cible food cost, quand il en a une, suit la cible du réseau, la même
- * variable partout (18/11/2026, foodCostCible, src/food_cost.php) ; les autres telles qu'écrites.
+ * Les cibles de départ d'un coach (AM_COACHS) : ses cibles food cost et personnel, quand il en a, suivent celles du
+ * réseau, la même variable partout (18/11/2026, foodCostCible et personnelCible, src/cibles_reseau.php) ; les autres
+ * telles qu'écrites.
  */
 function coObjectifsDepart(mixed $o): array
 {
     $n = coObjectifsNormaux($o);
-    if (is_array($o) && array_key_exists('foodCost', $o) && function_exists('foodCostCible')) { $n['foodCost'] = coCible('foodCost', foodCostCible()); }
+    if (!is_array($o)) { return $n; }
+    if (array_key_exists('foodCost', $o) && function_exists('foodCostCible')) { $n['foodCost'] = coCible('foodCost', foodCostCible()); }
+    if (array_key_exists('personnel', $o) && function_exists('personnelCible')) { $n['personnel'] = coCible('personnel', personnelCible()); }
     return $n;
 }
 
