@@ -372,7 +372,7 @@ verifie('les lignes du courriel : les outils jugés, dans l’ordre, avec leur r
     && $lc[3] === '– Le suivi des tâches et des checklists : sans objet', json_encode($lc, JSON_UNESCAPED_UNICODE));
 $h = suOutilsHtml($o, 'fr', $e);
 verifie('dans le rapport : le score, chaque outil, la remarque, le rappel encadré', str_contains($h, 'Les outils de gestion') && str_contains($h, '>50<') && str_contains($h, 'visite précédente (26/10) : 71')
-    && str_contains($h, 'plus tenu') && str_contains($h, 'aucun effort ne sera fait') && str_contains($h, '>i</b>Rappel') && str_contains($h, 'width:36%'));
+    && str_contains($h, 'plus tenu') && str_contains($h, 'aucun effort ne sera fait') && str_contains($h, 'border-left:3px solid #8D1D2C') && !str_contains($h, 'background:#FBF3F3') && str_contains($h, 'width:36%'));
 verifie('sans audit, le rapport porte quand même le rappel', str_contains(suOutilsHtml(null, 'nl', $e), 'geen enkele inspanning'));
 $m = suModele('rapport', 'fr');
 verifie('le modèle livré du rapport a le bloc des outils et le rappel, dans les quatre langues', !array_filter(array_keys(SU_LANGUES), static fn ($l) => !str_contains(suModele('rapport', $l)['corps'], "{outils_titre}\n\n{outils}\n\n{rappel}")));
@@ -380,7 +380,7 @@ $vx = ['date' => 'mardi 17 novembre 2026', 'consultant' => 'Loic V.', 'type' => 
     'outils_titre' => suOutilsTitre($o, 'fr') . ' :', 'outils' => $lc, 'rappel' => viOutilsRappel('fr'), 'magasin' => 'Halle'];
 $r = suRendre($m, $vx, 'fr');
 verifie('le courriel : le titre, les lignes en puces, le rappel encadré en gras, avant le lien', str_contains($r['html'], 'Le respect des outils de gestion : 50 / 100') && str_contains($r['html'], '<li style="margin:0 0 4px">½ Plan de trésorerie')
-    && str_contains($r['html'], 'border-left:4px solid #8D1D2C') && str_contains($r['texte'], '(i) Les outils de gestion mis en place') && strpos($r['texte'], '(i) ') < strpos($r['texte'], 'https://x.test/suivi/'));
+    && str_contains($r['html'], 'border-left:3px solid #8D1D2C') && str_contains($r['texte'], '(i) Les outils de gestion mis en place') && strpos($r['texte'], '(i) ') < strpos($r['texte'], 'https://x.test/suivi/'));
 $r = suRendre($m, ['outils_titre' => '', 'outils' => ''] + $vx, 'fr');
 verifie('sans audit à cette visite : ni titre ni lignes, le rappel reste', !str_contains($r['texte'], 'Le respect des outils') && !str_contains($r['texte'], '{outils') && str_contains($r['texte'], '(i) Les outils de gestion'));
 $t = suModeleAvecRappel(['sujet' => 's', 'corps' => "Bonjour,\n\n{points}\n\nL’équipe"]);

@@ -175,7 +175,7 @@ function tplRapport(r, x){
   const outils = Og ? carte('Les outils de gestion', 'dans le rapport et le courriel, avec le rappel · ' + esc(Og.rappelLu),
     `<div class="sv-sc"><b class="${esc(Og.ton)}">${esc(Og.score)}</b><span>/ 100</span><em>${esc(Og.prec)}</em>${Og.ecart ? `<i class="${esc(Og.ecart.cls)}">${esc(Og.ecart.txt)}</i>` : ''}</div>
     <div class="sv-og">${Og.lignes.map(l => `<span class="nom">${esc(l.nom)}</span><b class="${esc(l.cls)}">${esc(l.verdict)}</b><span class="com">${esc(l.com)}${l.lu ? `<small>lu : ${esc(l.lu)}</small>` : ''}</span>`).join('')}</div>
-    <div class="sv-og-rap"><b>(i)</b> ${esc(Og.rappel)}</div>`) : '';
+    <div class="sv-og-rap"><b>Rappel</b>${esc(Og.rappel)}</div>`) : '';
   // L'équipe en poste (05/11/2026) : notée à la tablette, interne — elle ne part pas au franchisé.
   const Pe = r.personnel;
   const personnel = Pe ? carte('L’équipe en poste', 'interne · ne part pas au franchisé',

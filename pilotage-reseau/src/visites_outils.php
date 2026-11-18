@@ -255,9 +255,11 @@ function suOutilsHtml(?array $o, string $l, callable $e): string
 /** Le rappel encadré, tel qu'il est dans le rapport et le courriel. */
 function suRappelHtml(string $l, callable $e): string
 {
+    // L'encadré du design system (§13.4, version A) : un filet Ruby de 3 px à gauche, sans fond ni pastille ; le libellé
+    // en petites capitales grises, le rappel en gras.
     $t = ['fr' => 'Rappel', 'nl' => 'Herinnering', 'en' => 'Reminder', 'de' => 'Hinweis'];
-    return '<div style="margin:12px 0 0;padding:10px 12px;border-left:4px solid #8D1D2C;background:#FBF3F3;border-radius:4px;page-break-inside:avoid">'
-        . '<div style="font-size:11px;color:#8D1D2C;margin:0 0 3px"><b style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:#8D1D2C;color:#fff;text-align:center;font-size:10px;font-weight:700;margin-right:6px">i</b>' . $e($t[$l] ?? $t['fr']) . '</div>'
+    return '<div style="margin:14px 0 0;padding:2px 0 2px 12px;border-left:3px solid #8D1D2C;page-break-inside:avoid">'
+        . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin:0 0 3px">' . $e($t[$l] ?? $t['fr']) . '</div>'
         . '<div style="font-weight:700">' . $e(viOutilsRappel($l)) . '</div></div>';
 }
 

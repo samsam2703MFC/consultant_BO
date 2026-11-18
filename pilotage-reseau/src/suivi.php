@@ -540,10 +540,11 @@ function suRendre(array $modele, array $vars, string $l): array
 /** Le rappel des outils de gestion dans le courriel : encadré, le (i) en tête, le texte en gras. */
 function suRappelCourrielHtml(string $texte, string $l): string
 {
+    // L'encadré du design system (§13.4, §13.6) : filet Ruby de 3 px à gauche, sans fond ; libellé en petites capitales grises.
     $t = ['fr' => 'Rappel', 'nl' => 'Herinnering', 'en' => 'Reminder', 'de' => 'Hinweis'];
-    return '<div style="margin:0 0 14px;padding:12px 14px;border-left:4px solid #8D1D2C;background:#FBF3F3;border-radius:4px">'
-        . '<div style="font-size:12px;color:#8D1D2C;margin:0 0 4px"><b style="display:inline-block;width:16px;height:16px;line-height:16px;border-radius:50%;background:#8D1D2C;color:#fff;text-align:center;font-size:11px;font-weight:700;margin-right:6px">i</b>'
-        . htmlspecialchars($t[$l] ?? $t['fr'], ENT_QUOTES, 'UTF-8') . '</div><b style="font-weight:700">' . htmlspecialchars($texte, ENT_QUOTES, 'UTF-8') . '</b></div>';
+    return '<div style="margin:4px 0 16px;padding:2px 0 2px 12px;border-left:3px solid #8D1D2C">'
+        . '<div style="font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin:0 0 4px">' . htmlspecialchars($t[$l] ?? $t['fr'], ENT_QUOTES, 'UTF-8') . '</div>'
+        . '<b style="font-weight:700">' . htmlspecialchars($texte, ENT_QUOTES, 'UTF-8') . '</b></div>';
 }
 
 function suCourrielHtml(string $corps): string

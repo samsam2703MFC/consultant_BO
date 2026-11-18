@@ -141,7 +141,7 @@
     const O = r.outils;
     const og = O ? `<div><h3>${esc(L.ogT)}</h3>${O.score != null ? `<p><b class="fr-evm">${esc(O.score)}</b> / 100${O.precedent && O.precedent.score != null ? `<span class="fr-mu"> · ${esc(L.ogPrec)} ${esc(fD(O.precedent.le))} : ${esc(O.precedent.score)}</span>` : ''}</p>` : ''}
       <div class="fr-ev">${O.lignes.map(x => `<b>${esc(x.nom)}</b><span class="n${x.v === 'ok' ? ' ok' : x.v === 'part' ? ' att' : x.v === 'ko' ? ' ko' : ''}">${esc(x.verdict)}</span><span class="fr-mu">${esc(x.com || '')}</span>`).join('')}</div>
-      <p class="fr-og-rap"><b>(i) ${esc(L.ogRap)}</b><br>${esc(O.rappel)}</p></div>` : '';
+      <p class="fr-og-rap"><b>${esc(L.ogRap)}</b><br>${esc(O.rappel)}</p></div>` : '';
     return `<details class="fr-rap" data-rap="${r.id}"${nouveau ? ' data-nouveau="1"' : ''}>${sum}<div class="c">${ev}${og}${bloc(L.positif, r.positif)}${bloc(L.vu, r.diagnostic)}
       ${r.causes && r.causes.length ? `<div><h3>${esc(L.causes)}</h3><p>${r.causes.map(esc).join(' · ')}</p></div>` : ''}${bloc(L.reco, r.reco)}
       ${r.points && r.points.length ? `<div><h3>${esc(L.ptsRap)}</h3><ul>${r.points.map(p => `<li><b>${esc(p.priorite)}</b> · ${esc(p.titre)}${p.echeance ? ' — ' + esc(L.pour) + ' ' + esc(fD(p.echeance)) : ''}</li>`).join('')}</ul></div>` : ''}
