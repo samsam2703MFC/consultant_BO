@@ -1,1 +1,1 @@
-2026-11-18 passage 2 : produits restants, matières premières et catégories de matières
+2026-11-18 passage 3 : corrections des noms faux, relecture des noms saisis avant
