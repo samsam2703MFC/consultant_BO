@@ -7,9 +7,10 @@ Ce qui est codé :
 - **le ruban des canaux** (maquette C de `../comptoir-webshop/`) ;
 - **le cadre**, le 18/11/2026 : c'est l'étape 1 sur 5. Voir « Le cadre, codé » plus bas ;
 - **Opérationnel**, le 18/11/2026 : c'est l'étape 2. Voir « Opérationnel, codé » plus bas ;
-- **Exploitation et Semaine**, le 18/11/2026 : c'est l'étape 3. Voir « Exploitation et Semaine, codées » plus bas.
+- **Exploitation et Semaine**, le 18/11/2026 : c'est l'étape 3. Voir « Exploitation et Semaine, codées » plus bas ;
+- **Contrôle, Tâches et Primes**, le 18/11/2026 : c'est l'étape 4. Voir « Contrôle, Tâches et Primes, codés » plus bas.
 
-Les étapes suivantes ne sont pas codées : Contrôle, Tâches et Primes ; les feuilles.
+Reste à coder : les feuilles (étape 5).
 
 Demande du 18/11/2026 : « retravailler tout le dashboard en vue mobile », puis « toutes les vues mobiles de tout le
 dashboard ». Point de départ : la capture de Halle du mercredi 18/11 à 17:43, et le comptoir à distinguer du webshop
@@ -123,6 +124,25 @@ Au téléphone seulement ; le bureau ne change pas. Captures dans `code/`, avant
   tuiles et la valeur ne changent pas.
 
 Le verdict d'Exploitation se calcule à part (`maVerdictDe`), avec les mêmes règles que la ligne du verdict.
+
+## Contrôle, Tâches et Primes, codés (18/11/2026)
+
+Au téléphone seulement ; le bureau ne change pas, vérifié. Captures dans `code/` : `controle.png`, `taches.png`,
+`primes.png`. L'API simulée ne donne pas d'images : les photos de Contrôle y sont « indisponibles ».
+
+- **Contrôle** (`cqMobCtrl`) :
+  - un héros : les photos rendues sur attendues, ce qui cloche en pastille (non-conformités, à noter, pas
+    rendues), le résumé du jour, et une barre : conformes, écarts, à noter, sans photo, pas rendues ;
+  - dessous, les photos en grille de deux, à la place de la bande qui défilait de côté. Chaque carte est la même
+    qu'avant : son cadre (obligatoire, facultative), son nom, son heure. Un appui l'ouvre en grand ;
+  - les deux boutons (réclamation, demande au bureau) ne changent pas.
+- **Tâches** (`tjHeros`, `rendTachesMag(true)`) :
+  - le titre et les quatre tuiles du haut cèdent la place à un héros : les tâches obligatoires faites sur
+    attendues, ce qui reste en pastille, les photos, la note de qualité, la barre d'avancement ;
+  - un lien vers les non-conformités des 30 jours, qui mène à la recherche, comme la tuile du bureau ;
+  - la bande de la semaine, le guide, la recherche et les checklists ne changent pas.
+- **Primes** : la ligne du haut devient un héros, celui du mois (l'acquis, « en cours » ou « mois clos ») ou celui
+  de l'année. Le reste ne change pas.
 
 ## La grammaire, la même partout
 

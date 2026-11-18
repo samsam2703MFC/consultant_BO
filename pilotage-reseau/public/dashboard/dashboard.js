@@ -1232,7 +1232,7 @@
   // Contrôle au téléphone (20/10/2026, demande de Sam) : les contrôles en photo et le bouton de réclamation, rien d'autre.
   // Le verdict, les tuiles (commandes, stock, poubelle…) et la note du jour en sortent ; la note reste dans Exploitation.
   function maPageCtrl() {
-    let h = `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
+    let h = cqMobCtrl() || `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
     h += `<button type="button" class="ma-rc" data-vue="reclamation">✎ Réclamer un produit au fournisseur</button>`;
     // Le helpdesk (15/11/2026) : une demande au bureau, dans la fenêtre de l'assistant (son avatar la transmet).
     hdLire(false);
@@ -1240,6 +1240,23 @@
     return h;
   }
 
+  /**
+   * Contrôle au téléphone (18/11/2026, refonte mobile, étape 4, maquette « Contrôle ») : un héros — les photos rendues sur
+   * attendues, ce qui cloche en pastille, la barre conformes / écarts / à noter / sans photo / pas rendues —, puis les
+   * photos en grille de deux, à la place de la bande qui défilait de côté. Rien de lu : '' (l'ancien bloc prend le relais).
+   */
+  function cqMobCtrl() {
+    const L = cqListe();
+    if (!L || !L.length) { return ''; }
+    const n = c => L.filter(x => x.e.c === c).length, tot = L.length, rendu = tot - n('ko') - n('mu');
+    const nc = n('nc'), ctl = n('ctl'), ko = n('ko'), auj = S.date === AUJ, now = opMaintenant();
+    const chip = nc ? ['ko', nc + ' non-conformité' + (nc > 1 ? 's' : '')] : (ctl ? ['wa', ctl + ' à noter'] : (ko && !auj ? ['wa', ko + ' pas rendue' + (ko > 1 ? 's' : '')] : ['ok', rendu ? 'tout est noté' : 'rien de rendu']));
+    const seg = (k, c) => n(k) ? `<i style="flex:${n(k)} 0 0;background:${c}" title="${n(k)}"></i>` : '';
+    return `<div class="db-card ma-hero"><div class="top"><span class="kick">Les contrôles en photo</span><span class="chip ${chip[0]}">${chip[1]}</span></div>
+      <div class="big"><b>${rendu} / ${tot}</b><span>rendue${rendu > 1 ? 's' : ''}${auj && now != null ? ' à ' + opHM(now) : ''}</span></div>
+      <div class="sub">${cqResume(L)}</div><div class="ma-pg">${seg('ok', 'var(--green)')}${seg('nc', 'var(--stop)')}${seg('ctl', '#D98A0B')}${seg('mu', '#cfc7bb')}${seg('ko', '#efe9e0')}</div></div>
+      <div class="db-cqpiste ma-cqg" id="db-cqpiste">${L.map(x => cqCarte(x, true)).join('')}</div>`;
+  }
   /** Semaine : la semaine en une vue — le chiffre jour par jour, et le damier jour × mesure. */
   function cleSemJ() { return 'semJ|' + S.shop + '|' + bornesSemaine()[0]; }
   function maTuilesSem(m, d) {
@@ -5149,7 +5166,9 @@
     if (an) {
       const V = prAnneeVue(D, garde);
       if (!V.rangs.length) { return vide('Aucune prime gagnée dans ce magasin cette année-là' + (filtre === 'magasin' ? ' parmi celles du magasin.' : '.')); }
-      h += `<div class="ma-v"><span class="n long">${esc(V.total)}</span><span class="t">gagnés en ${y}<em>${esc(V.periode)}</em></span></div>` + prEquipeAn(D, V, true);
+      // Le héros de l'année (18/11/2026, refonte mobile, étape 4) : la même carte que les autres onglets.
+      h += `<div class="db-card ma-hero"><div class="top"><span class="kick">Les primes de ${y}</span>${y === yMax ? '<span class="chip">en cours</span>' : ''}</div>
+        <div class="big"><b>${esc(V.total)}</b><span>gagnés en ${y}</span></div><div class="sub">${esc(V.periode)}</div></div>` + prEquipeAn(D, V, true);
       h += V.rangs.map(r => carte('an:' + r.id, r.nom, prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''), esc(prEur(V.totalDe(r))), '',
         () => V.cols.map(p => { const c = (r.cases || {})[p.cle]; return `<div class="pr-ml${c ? ' pr-gagne' : ''}"><span class="pr-ml-l">${esc(p.lib)}<small>${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
           <span class="pr-ml-v">${c ? `<span class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</span><span class="pr-b">${esc(prPl(c.fois, 'mois'))}</span>` : '<span class="pr-hors">·</span>'}</span></div>`; }).join(''))).join('');
@@ -5160,7 +5179,10 @@
     const V = prMoisVue(D, p => garde(p) && !prEstEquipe(p));
     const total = D.vendeuses.reduce((t, v) => t + (+v.acquis || 0), 0), nG = V.cols.reduce((t, p) => t + (+p.gagnees || 0), 0);
     const nV = V.rangs.filter(v => !v.franchise).length;
-    h += `<div class="ma-v"><span class="n long">${esc(prEur(total))}</span><span class="t">${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}<em>${prPl(nV, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</em></span></div>`;
+    // Le héros du mois (18/11/2026, refonte mobile, étape 4) : la même carte que les autres onglets.
+    h += `<div class="db-card ma-hero"><div class="top"><span class="kick">Les primes de ${esc(prLibMois(m))}</span><span class="chip${D.enCours ? '' : ' ok'}">${D.enCours ? 'en cours' : 'mois clos'}</span></div>
+      <div class="big"><b>${esc(prEur(total))}</b><span>${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}</span></div>
+      <div class="sub">${prPl(nV, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</div></div>`;
     h += prEquipe(D, garde, true);
     h += V.rangs.map(v => {
       const cs = V.cols.map(p => ({ p, k: prCase(p, (v.cases || {})[p.cle], V.clos) }));
@@ -6435,9 +6457,10 @@
       <div class="tj-q-b"><input class="tj-q-in" type="search" data-tjq="1" value="${esc(S.tjQ || '')}" placeholder="Une tâche, une checklist, un comptoir : « biscuiterie », « chambre froide », « 1.1.02 »…" aria-label="Chercher une tâche"></div>
       <div id="tj-q-res">${tjResultats(niveaux)}</div></div>`;
   }
-  function rendTachesMag() {
+  function rendTachesMag(mobile) {
     const k = cleTJ(S.date), D = S.aux[k], R = S.aux[cleTJR()];
-    let h = `<div class="db-sec">Tâches et checklists — ${esc(fDL(S.date))}<small>ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</small></div>`;
+    // Au téléphone (18/11/2026, refonte mobile, étape 4), le titre et les quatre tuiles cèdent la place à un héros (tjHeros).
+    let h = mobile ? '' : `<div class="db-sec">Tâches et checklists — ${esc(fDL(S.date))}<small>ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</small></div>`;
     h += tjBande();
     if (S.err[k]) { h += `<div class="db-err">Tâches : ${esc(S.err[k])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
     if (!D) { return h + (S.err[k] ? '' : squelette(6)) + tjGuide([]); }
@@ -6449,7 +6472,8 @@
     const dern = R && Array.isArray(R.retours) && R.retours.length ? R.retours[0] : null;
     const ncL = R && Array.isArray(R.nc) ? R.nc : null, ncRep = ncL ? ncL.filter(n => n.suite && n.suite.conforme).length : 0;
     const moy = notees.length ? notees.reduce((a, t) => a + t.note, 0) / notees.length : null;
-    h += `<div class="db-tuiles tj-kpis">
+    if (mobile) { h += tjHeros(T, f, p, sp, ph, phR, notees, ctl, moy, ncL, ncRep); }
+    else h += `<div class="db-tuiles tj-kpis">
       <div class="db-tui"><div class="k">Tâches obligatoires faites</div><div class="v" style="color:${tjCouleur(p)}">${p == null ? '—' : p + ' %'}</div><div class="s">${T.length ? f + ' sur ' + T.length + ' · ' + (T.length - f) + ' pas faite' + (T.length - f > 1 ? 's' : '') + (sp ? ' · ' + sp + ' cochée' + (sp > 1 ? 's' : '') + ' sans photo' : '') : 'aucune tâche obligatoire ce jour'}</div><div class="tj-barre"><i style="width:${p || 0}%;background:${tjCouleur(p)}"></i></div></div>
       <div class="db-tui"><div class="k">Photos rendues</div><div class="v">${phR} / ${ph.length}</div><div class="s">${!ph.length ? 'aucune photo demandée' : (phR === ph.length ? 'toutes les photos sont rendues' : (ph.length - phR) + ' photo' + (ph.length - phR > 1 ? 's' : '') + ' manque' + (ph.length - phR > 1 ? 'nt' : ''))}</div><div class="tj-barre"><i style="width:${tjPct(phR, ph.length) || 0}%;background:${tjCouleur(tjPct(phR, ph.length))}"></i></div></div>
       <div class="db-tui"><div class="k">Contrôle qualité du jour</div><div class="v">${moy != null ? nf(moy, 1) + ' / 5' : ctl.length + ' à contrôler'}</div><div class="s">${notees.length ? notees.length + ' photo' + (notees.length > 1 ? 's' : '') + ' notée' + (notees.length > 1 ? 's' : '') + (ctl.length ? ' · ' + ctl.length + ' à contrôler' : '') : (dern ? 'dernier passage du contrôleur : le ' + esc(fD(dern.jour)) + (dern.consultant ? ' (' + esc(dern.consultant) + ')' : '') : 'aucune photo notée ce jour')}</div></div>
@@ -6468,12 +6492,27 @@
       ${F.length ? F.map(c => tjLigne(c, X, niveaux)).join('') : '<div class="db-mini" style="padding:14px 16px">Aucune checklist dans ce filtre.</div>'}</div>`;
     return h;
   }
+  /**
+   * Le héros des Tâches au téléphone (18/11/2026, maquette « Tâches ») : les tâches obligatoires faites sur attendues, ce
+   * qui reste en pastille, une ligne pour les photos, le contrôle qualité et les non-conformités des 30 jours (un appui
+   * mène à la recherche des retours, comme la tuile du bureau), la barre de l'avancement. Les mêmes chiffres que les
+   * quatre tuiles du bureau.
+   */
+  function tjHeros(T, f, p, sp, ph, phR, notees, ctl, moy, ncL, ncRep) {
+    const reste = T.length - f, auj = S.date === AUJ, now = opMaintenant();
+    const chip = !T.length ? ['', 'aucune tâche'] : (!reste ? ['ok', 'tout est fait'] : [auj ? 'wa' : 'ko', reste + (auj ? ' à faire' : ' pas faite' + (reste > 1 ? 's' : ''))]);
+    const sous = [ph.length ? 'photos ' + phR + ' / ' + ph.length : '', moy != null ? 'qualité ' + nf(moy, 1) + ' / 5' : (ctl.length ? ctl.length + ' à contrôler' : ''), sp ? sp + ' sans photo' : ''].filter(Boolean).join(' · ');
+    const nc = !ncL ? '' : `<span class="ma-lien" data-tjallerret="1" role="button" tabindex="0">${ncL.length ? ncL.length + ' non-conformité' + (ncL.length > 1 ? 's' : '') + ' sur 30 jours' + (ncRep ? ', ' + ncRep + ' reprise' + (ncRep > 1 ? 's' : '') : '') : 'aucune non-conformité sur 30 jours'} ›</span>`;
+    return `<div class="db-card ma-hero"><div class="top"><span class="kick">Les tâches du jour</span><span class="chip ${chip[0]}">${chip[1]}</span></div>
+      <div class="big"><b style="color:${tjCouleur(p)}">${f} / ${T.length}</b><span>faites${auj && now != null ? ' à ' + opHM(now) : ''}${p != null ? ' · ' + p + ' %' : ''}</span></div>
+      ${sous ? `<div class="sub">${sous}</div>` : ''}<div class="ma-pg"><i style="flex:${f} 0 0;background:${tjCouleur(p)}"></i><i style="flex:${reste} 0 0;background:#efe9e0"></i></div>${nc}</div>`;
+  }
   /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
   function rendTachesMobile() {
     const t = new Date(S.date + 'T12:00:00');
     const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
     return `${mbEntete({ pas: mbPasJour(date, S.date >= AUJ) })}
-      <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag()}</div></div>${mbOnglets()}`;
+      <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag(true)}</div></div>${mbOnglets()}`;
   }
   function tjAller(d, voir) {
     if (!d || d > AUJ) { return; }
