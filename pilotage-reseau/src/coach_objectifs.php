@@ -14,8 +14,8 @@ require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du rése
  *
  *  1. LES OBJECTIFS (CO_OBJECTIFS). Chaque coach porte les siens (AM_COACHS[…]['objectifs']), réglés au cockpit
  *     (ERP franchisé › Assistant · coachs) ; une cible vide : le coach ne suit pas cet objectif. Valeurs de départ :
- *     le Coach Vente seul, 40 % de food cost, 17 % de frais de personnel, 25 % de clients scannés et 15 % de menus ;
- *     articles par ticket et panier restent à poser au cockpit.
+ *     le Coach Vente seul, 40 % de food cost, 17 % de frais de personnel, 25 % de clients scannés, 15 % de menus, et
+ *     les articles par ticket et le panier du Catalogue des KPI (les cibles du réseau, src/cibles_reseau.php).
  *
  *  2. LES MESURES du magasin (coMesures), dans la fiche de faits, avec les définitions du cockpit :
  *     · food cost = coût matière ÷ CA de la heatmap de marge du panel (bornes from/to, les seules honorées), comme
@@ -86,9 +86,9 @@ function coObjectifsNormaux(mixed $o): array
 }
 
 /**
- * Les cibles de départ d'un coach (AM_COACHS) : ses cibles food cost et personnel, quand il en a, suivent celles du
- * réseau, la même variable partout (18/11/2026, foodCostCible et personnelCible, src/cibles_reseau.php) ; les autres
- * telles qu'écrites.
+ * Les cibles de départ d'un coach (AM_COACHS) : ses cibles food cost, personnel, articles par ticket et panier, quand il
+ * en a, suivent celles du réseau, la même variable partout (18/11/2026 : foodCostCible, personnelCible, articlesCible,
+ * panierCible, src/cibles_reseau.php) ; clients scannés et menus telles qu'écrites.
  */
 function coObjectifsDepart(mixed $o): array
 {
@@ -96,6 +96,8 @@ function coObjectifsDepart(mixed $o): array
     if (!is_array($o)) { return $n; }
     if (array_key_exists('foodCost', $o) && function_exists('foodCostCible')) { $n['foodCost'] = coCible('foodCost', foodCostCible()); }
     if (array_key_exists('personnel', $o) && function_exists('personnelCible')) { $n['personnel'] = coCible('personnel', personnelCible()); }
+    if (array_key_exists('articles', $o) && function_exists('articlesCible')) { $n['articles'] = coCible('articles', articlesCible()); }
+    if (array_key_exists('panier', $o) && function_exists('panierCible')) { $n['panier'] = coCible('panier', panierCible()); }
     return $n;
 }
 

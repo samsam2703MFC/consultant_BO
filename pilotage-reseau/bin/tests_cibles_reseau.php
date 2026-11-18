@@ -34,12 +34,12 @@ if (($argv[1] ?? '') === 'cas') {
     }
     if ($cas !== 'sans') {
         [$fc, $pe] = array_map('floatval', explode('/', $cas));
-        $GLOBALS['K'] = ['food-cost-pct' => ['seuil_alerte' => $fc], 'labour-pct' => ['seuil_alerte' => $pe]];
+        $GLOBALS['K'] = ['food-cost-pct' => ['seuil_alerte' => $fc], 'labour-pct' => ['seuil_alerte' => $pe], 'panier-moyen' => ['seuil_alerte' => 14.5], 'articles-ticket' => ['seuil_alerte' => 3.2]];
         function kpiDefs(): array { return $GLOBALS['K']; }
     }
     require __DIR__ . '/../src/coach_objectifs.php';
-    echo json_encode(['food' => foodCostCible(), 'personnel' => personnelCible(),
-        'vente' => coObjectifsDepart(['foodCost' => 40, 'personnel' => 17, 'clientsScannes' => 25, 'menus' => 15]),
+    echo json_encode(['food' => foodCostCible(), 'personnel' => personnelCible(), 'panier' => panierCible(), 'articles' => articlesCible(),
+        'vente' => coObjectifsDepart(['foodCost' => 40, 'personnel' => 17, 'clientsScannes' => 25, 'menus' => 15, 'articles' => 3.6, 'panier' => 13]),
         'pierre' => coObjectifsDepart([])]) . "\n";
     exit(0);
 }
@@ -57,13 +57,14 @@ $lancer = static fn (string $cas): array => json_decode((string) shell_exec(esca
 
 echo "Les cibles du réseau\n";
 $R = $lancer('sans');
-verifie('sans référentiel : food cost 40 %, personnel 17 %', $n($R['food'] ?? null) === 40.0 && $n($R['personnel'] ?? null) === 17.0, json_encode($R));
+verifie('sans référentiel : food cost 40 %, personnel 17 %, panier 13 €, 3,6 articles', $n($R['food'] ?? null) === 40.0 && $n($R['personnel'] ?? null) === 17.0 && $n($R['panier'] ?? null) === 13.0 && $n($R['articles'] ?? null) === 3.6, json_encode($R));
 verifie('le Coach Vente part sur les cibles : 40 / 17 / 25 / 15', $n($R['vente']['foodCost'] ?? null) === 40.0 && $n($R['vente']['personnel'] ?? null) === 17.0
     && $n($R['vente']['clientsScannes'] ?? null) === 25.0 && $n($R['vente']['menus'] ?? null) === 15.0, json_encode($R));
 $R = $lancer('38/15');
 verifie('le Catalogue les règle : 38 % et 15 % partout', $n($R['food'] ?? null) === 38.0 && $n($R['personnel'] ?? null) === 15.0, json_encode($R));
-verifie('le Coach Vente suit : 38 / 15, le reste inchangé', $n($R['vente']['foodCost'] ?? null) === 38.0 && $n($R['vente']['personnel'] ?? null) === 15.0 && $n($R['vente']['menus'] ?? null) === 15.0, json_encode($R));
-verifie('un coach sans cible n’en reçoit pas', array_key_exists('foodCost', $R['pierre'] ?? []) && $R['pierre']['foodCost'] === null && $R['pierre']['personnel'] === null, json_encode($R));
+verifie('le Coach Vente suit : 38 % / 15 % / 14,50 € / 3,2 articles, clients scannés et menus inchangés', $n($R['vente']['foodCost'] ?? null) === 38.0 && $n($R['vente']['personnel'] ?? null) === 15.0
+    && $n($R['vente']['panier'] ?? null) === 14.5 && $n($R['vente']['articles'] ?? null) === 3.2 && $n($R['vente']['menus'] ?? null) === 15.0 && $n($R['vente']['clientsScannes'] ?? null) === 25.0, json_encode($R));
+verifie('un coach sans cible n’en reçoit pas', array_key_exists('foodCost', $R['pierre'] ?? []) && $R['pierre']['foodCost'] === null && $R['pierre']['personnel'] === null && $R['pierre']['panier'] === null && $R['pierre']['articles'] === null, json_encode($R));
 $R = $lancer('0/0');
 verifie('un seuil illisible (0) : les replis, 40 % et 17 %', $n($R['food'] ?? null) === 40.0 && $n($R['personnel'] ?? null) === 17.0, json_encode($R));
 

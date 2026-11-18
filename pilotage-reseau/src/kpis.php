@@ -109,9 +109,9 @@ function ensureKpiDefs(): void
         // — Les KPI DÉRIVÉS : créés par formule, modifiables et supprimables au
         //   formulaire. Quatre exemples qui fonctionnent dès aujourd'hui.
         ['panier-moyen', 'Ticket moyen (€)', 'CA ÷ tickets, par magasin sur le mois en cours.',
-            'recurrence', ['type' => 'derive', 'num' => 'ca', 'den' => 'tickets', 'echelle' => 'eur'], 13, 11, 'bas', 60, 'barres'],
+            'recurrence', ['type' => 'derive', 'num' => 'ca', 'den' => 'tickets', 'echelle' => 'eur'], PANIER_CIBLE, PANIER_CIBLE - 2, 'bas', 60, 'barres'],
         ['articles-ticket', 'Articles par ticket', 'Articles vendus ÷ tickets, par magasin sur le mois en cours.',
-            'recurrence', ['type' => 'derive', 'num' => 'produits', 'den' => 'tickets', 'echelle' => 'unite'], 3.6, 3.2, 'bas', 65, 'heatmap'],
+            'recurrence', ['type' => 'derive', 'num' => 'produits', 'den' => 'tickets', 'echelle' => 'unite'], ARTICLES_CIBLE, ARTICLES_CIBLE - 0.4, 'bas', 65, 'heatmap'],
         ['marge-brute-pct', 'Marge brute (%)', 'Marge brute ÷ CA × 100, par magasin sur le mois en cours.',
             'food-cost', ['type' => 'derive', 'num' => 'margeBrute', 'den' => 'ca', 'echelle' => 'pct'], 63, 60, 'bas', 70, 'heatmap'],
         ['ca-par-heure', 'CA par heure planifiée (€)', 'CA ÷ heures planifiées, par magasin sur le mois en cours.',
