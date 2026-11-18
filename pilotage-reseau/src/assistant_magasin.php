@@ -64,8 +64,9 @@ const AM_QUESTIONS = [
  * Le Coach Vente (14/11/2026, Sam : « rajouter un coach expert en vente ») : le panier, les produits et les heures
  * fortes, appuyés sur l'historique des ventes (les outils) ; il ne parle des contrôles que si on le lui demande.
  * Les objectifs 2026 (18/11/2026) : chaque coach porte ses cibles (`objectifs`, clés de CO_OBJECTIFS ; absente ou
- * vide = non suivie), réglées au cockpit comme le reste ; le Coach Vente part avec 40 % de food cost et 17 % de
- * personnel, et son levier du food cost est le prix face à la concurrence, avec un lot au prix actuel. */
+ * vide = non suivie), réglées au cockpit comme le reste ; le Coach Vente part avec 40 % de food cost, 17 % de
+ * personnel, 25 % de clients scannés et 15 % de menus, et son levier du food cost est le prix face à la concurrence,
+ * avec un lot au prix actuel. */
 const AM_AXES = ['budget' => 'Budget', 'trafic' => 'Trafic', 'controles' => 'Contrôles qualité'];
 const AM_NIVEAUX = ['fort' => 'Accent fort', 'suivi' => 'Suivi', 'non' => 'N’en parle pas'];
 const AM_COACHS = [
@@ -101,9 +102,9 @@ const AM_COACHS = [
             'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon."],
         ],
         // Les objectifs 2026 (18/11/2026, Sam : « le but est d'arriver à 40 % de food cost 2026, 17 % de frais de
-        // personnel, xx % de clients scannés, xx % de ventes additionnelles ou de menu ») : les deux cibles chiffrées ;
-        // les autres se posent au cockpit (CO_OBJECTIFS, src/coach_objectifs.php).
-        'objectifs' => ['foodCost' => 40, 'personnel' => 17],
+        // personnel, xx % de clients scannés, xx % de ventes additionnelles ou de menu », puis « 25 % clients scannés et
+        // 15 % menus ») ; articles par ticket et panier se posent au cockpit (CO_OBJECTIFS, src/coach_objectifs.php).
+        'objectifs' => ['foodCost' => 40, 'personnel' => 17, 'clientsScannes' => 25, 'menus' => 15],
     ],
 ];
 const AM_TON_DEFAUT = 'pierre';

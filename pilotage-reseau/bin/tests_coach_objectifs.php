@@ -55,10 +55,10 @@ verifie('une cible dite à l’oral', coCibleTexte('foodCost', 40.0) === '40 % a
 
 echo "Les coachs portent leurs objectifs\n";
 $C = amCoachs();
-verifie('le Coach Vente part avec 40 % de food cost et 17 % de personnel', $C['vente']['objectifs']['foodCost'] === 40.0 && $C['vente']['objectifs']['personnel'] === 17.0 && $C['vente']['objectifs']['clientsScannes'] === null, json_encode($C['vente']['objectifs']));
+verifie('le Coach Vente part avec 40 % de food cost, 17 % de personnel, 25 % de clients scannés et 15 % de menus', $C['vente']['objectifs']['foodCost'] === 40.0 && $C['vente']['objectifs']['personnel'] === 17.0 && $C['vente']['objectifs']['clientsScannes'] === 25.0 && $C['vente']['objectifs']['menus'] === 15.0 && $C['vente']['objectifs']['panier'] === null, json_encode($C['vente']['objectifs']));
 verifie('Mr. Pierre et le Coach n’en suivent aucun au départ', array_filter($C['pierre']['objectifs']) === [] && array_filter($C['coach']['objectifs']) === []);
 $P = amPersona('vente');
-verifie('le personnage du Coach Vente dit ses objectifs et son levier', str_contains($P, 'Food cost : 40 % au plus') && str_contains($P, 'Frais de personnel : 17 % au plus') && str_contains($P, 'prix_concurrence'), $P);
+verifie('le personnage du Coach Vente dit ses objectifs et son levier', str_contains($P, 'Food cost : 40 % au plus') && str_contains($P, 'Frais de personnel : 17 % au plus') && str_contains($P, 'Clients scannés : 25 % au moins') && str_contains($P, 'Menus et formules : 15 % au moins') && str_contains($P, 'prix_concurrence'), $P);
 verifie('celui de Mr. Pierre n’en parle pas', !str_contains(amPersona('pierre'), 'objectifs 2026'));
 
 echo "L'état des objectifs face aux mesures du magasin\n";
@@ -169,7 +169,7 @@ verifie('publié : la cible vidée vaut null, les autres sont gardées', ($r['ok
 $REGLAGES['assistantCoachs'] = $reg;
 $C = amCoachs();
 verifie('relu : 38 % de food cost, plus de cible de personnel', $C['vente']['objectifs']['foodCost'] === 38.0 && $C['vente']['objectifs']['personnel'] === null && $C['vente']['objectifs']['clientsScannes'] === 35.0, json_encode($C['vente']['objectifs']));
-$BODY = ['coachs' => ['vente' => ['objectifs' => ['foodCost' => '40', 'personnel' => '17']]]];
+$BODY = ['coachs' => ['vente' => ['objectifs' => ['foodCost' => '40', 'personnel' => '17', 'clientsScannes' => '25', 'menus' => '15']]]];
 $n = count(Db::$ecrit);
 wr_assistant_coachs();
 $reg2 = json_decode(end(Db::$ecrit)[1][1], true);

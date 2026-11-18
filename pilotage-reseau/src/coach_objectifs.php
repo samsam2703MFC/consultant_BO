@@ -12,8 +12,8 @@ declare(strict_types=1);
  *
  *  1. LES OBJECTIFS (CO_OBJECTIFS). Chaque coach porte les siens (AM_COACHS[…]['objectifs']), réglés au cockpit
  *     (ERP franchisé › Assistant · coachs) ; une cible vide : le coach ne suit pas cet objectif. Valeurs de départ :
- *     le Coach Vente seul, 40 % de food cost et 17 % de frais de personnel ; les autres cibles (clients scannés, menus,
- *     articles par ticket, panier) restent à poser au cockpit.
+ *     le Coach Vente seul, 40 % de food cost, 17 % de frais de personnel, 25 % de clients scannés et 15 % de menus ;
+ *     articles par ticket et panier restent à poser au cockpit.
  *
  *  2. LES MESURES du magasin (coMesures), dans la fiche de faits, avec les définitions du cockpit :
  *     · food cost = coût matière ÷ CA de la heatmap de marge du panel (bornes from/to, les seules honorées), comme
