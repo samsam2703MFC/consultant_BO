@@ -247,7 +247,7 @@ function ventesAfficheDistribuer(array $rep): array
 function rapportSeuils(): array
 {
     return [
-        'food' => kpiSeuil('food-cost-pct', 32.0), 'labour' => kpiSeuil('labour-pct', 33.0),
+        'food' => kpiSeuil('food-cost-pct', 40.0), 'labour' => kpiSeuil('labour-pct', 33.0),
         'overhead' => kpiSeuil('overhead-pct', 13.5), 'caEtp' => kpiSeuil('ca-etp', 13000.0),
         'cibleGoogle' => kpiSeuil('note-google', (float) setting('reputationCible', 4.5)),
         'tacheNote' => (int) kpiSeuil('taches', 3),

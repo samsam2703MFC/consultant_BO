@@ -38,6 +38,13 @@ const KPI_MESURES = [
     'pwaRevenus' => 'Clients PWA venus au moins deux jours (mois en cours)',
 ];
 
+/**
+ * Le seuil du food cost aligné sur l'objectif 2026 du réseau (18/11/2026, Sam : « aligne aussi le seuil food cost du
+ * cockpit sur 40 % » — la cible du Coach Vente, src/coach_objectifs.php). Le référentiel vit en base : l'alignement se
+ * fait UNE fois, à la première lecture qui suit la livraison (kpiFoodCost2026), puis le Catalogue des KPI commande.
+ */
+const KPI_FOOD_2026 = 40.0;
+
 const KPI_PONT_TABLE = [
     'food-cost-pct' => 'food', 'labour-pct' => 'labour',
     'overhead-pct' => 'overhead', 'ca-etp' => 'ca_etp',
@@ -64,7 +71,7 @@ function ensureKpiDefs(): void
     catch (PDOException $e) { /* déjà là */ }
 
     $n = Db::row('SELECT COUNT(*) n FROM ceo_kpi_def');
-    if ((int) ($n['n'] ?? 0) > 0) { return; }
+    if ((int) ($n['n'] ?? 0) > 0) { kpiFoodCost2026(); return; }
 
     // Les seuils historiques comme point de départ — la table `kpi` fait foi
     // au moment du semis, ensuite c'est le référentiel qui commande.
@@ -88,7 +95,7 @@ function ensureKpiDefs(): void
         ['taches', 'Note des tâches contrôlées', 'Une tâche checklist notée au-dessous passe dans le rapport, photo à l’appui.',
             'xp', ['type' => 'bloc', 'bloc' => 'xp-taches'], 3, 2, 'bas', 30],
         ['food-cost-pct', 'Food cost du mois (%)', 'Coût matière ÷ CA, par magasin, depuis la heatmap de marge.',
-            'food-cost', ['type' => 'bloc', 'bloc' => 'food-cost'], $h['food'] ?? 32, ($h['food'] ?? 32) + 4, 'haut', 35],
+            'food-cost', ['type' => 'bloc', 'bloc' => 'food-cost'], $h['food'] ?? KPI_FOOD_2026, ($h['food'] ?? KPI_FOOD_2026) + 4, 'haut', 35],
         ['labour-pct', 'Labour cost (%)', 'Seuil du ratio main-d’œuvre — écran Marge & coûts.',
             'labour-cost', ['type' => 'ecran', 'ecran' => 'Marge & coûts'], $h['labour'] ?? 33, ($h['labour'] ?? 33) + 3, 'haut', 40],
         ['ca-etp', 'CA par ETP (€)', 'CA du mois ÷ ETP planifiés (plannings réels du panel).',
@@ -113,6 +120,36 @@ function ensureKpiDefs(): void
                   VALUES (?,?,?,?,?,?,?,?,?,1,?)',
             [$s[0], $s[1], $s[2], $s[3], json_encode($s[4], JSON_UNESCAPED_UNICODE), $s[5], $s[6], $s[7], $s[9] ?? 'tableau', $s[8]]);
     }
+}
+
+/**
+ * Une fois : le seuil d'alerte du food cost (« Food cost du mois (%) ») passe à KPI_FOOD_2026, le seuil critique garde
+ * l'écart qu'il avait avec lui (4 points sans écart lisible), et la table `kpi` (food) suit par le pont, comme au
+ * Catalogue. Les valeurs d'avant restent dans le drapeau `kpiFoodCost2026` (ceo_app_setting), qui empêche de repasser :
+ * un seuil reposé ensuite au Catalogue n'est plus jamais écrasé. Sans la ligne (base neuve, semis à venir), rien ne
+ * s'écrit : la lecture suivante le fera.
+ */
+function kpiFoodCost2026(): void
+{
+    static $vu = false;
+    if ($vu) { return; }
+    $vu = true;
+    try {
+        if (setting('kpiFoodCost2026') !== null) { return; }
+        $d = Db::row("SELECT id, seuil_alerte, seuil_critique FROM ceo_kpi_def WHERE code = 'food-cost-pct'");
+        if ($d === null) { $vu = false; return; }
+        $a = $d['seuil_alerte'] !== null ? (float) $d['seuil_alerte'] : null;
+        $c = $d['seuil_critique'] !== null ? (float) $d['seuil_critique'] : null;
+        $ecart = $a !== null && $c !== null && $c > $a ? $c - $a : 4.0;
+        Db::exec('UPDATE ceo_kpi_def SET seuil_alerte = ?, seuil_critique = ? WHERE id = ?', [KPI_FOOD_2026, KPI_FOOD_2026 + $ecart, $d['id']]);
+        try { Db::exec("UPDATE kpi SET seuil_haut = ? WHERE code = 'food'", [KPI_FOOD_2026]); }
+        catch (PDOException $e) { /* table absente : rien à synchroniser */ }
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['kpiFoodCost2026', json_encode(['le' => date('Y-m-d H:i'), 'avant' => ['alerte' => $a, 'critique' => $c], 'apres' => ['alerte' => KPI_FOOD_2026, 'critique' => KPI_FOOD_2026 + $ecart]])]);
+        if (function_exists('journalAdd')) {
+            journalAdd('Cockpit', 'Paramètre', 'Food cost du mois (%)', 'Seuil aligné sur l’objectif 2026 : alerte ' . ($a ?? '—') . ' → ' . KPI_FOOD_2026 . ' %, critique ' . ($c ?? '—') . ' → ' . (KPI_FOOD_2026 + $ecart) . ' %');
+        }
+    } catch (Throwable $e) { error_log('kpiFoodCost2026 : ' . $e->getMessage()); }
 }
 
 const KPI_SORTIES = ['tableau' => 'Tableau', 'heatmap' => 'Heatmap', 'barres' => 'Barres', 'treemap' => 'Treemap'];

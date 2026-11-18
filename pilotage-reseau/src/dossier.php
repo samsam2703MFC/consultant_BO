@@ -328,7 +328,7 @@ function ep_dossier_pdf(): array
         ['Tickets', number_format($pnl['tickets'], 0, ',', ' '), 'panier ' . ($pnl['tickets'] > 0 ? number_format($pnl['ca'] / $pnl['tickets'], 2, ',', ' ') . ' €' : ''), 'mut'],
         ['Objectif budget', $budget !== null && $budget > 0 ? round($pnl['ca'] / $budget * 100) . ' %' : '', $budget !== null ? $eur0($budget) . ' visés' : 'pas de budget posé', 'acc'],
         ['CA par ETP', $caEtpIci !== null ? $eur0($caEtpIci) : '', $etpIci !== null ? str_replace('.', ',', (string) $etpIci) . ' ETP (heures ÷ 164)' : 'planning incomplet', 'vert'],
-        ['Food cost', $foodPct !== null ? $n1($foodPct) . ' %' : '', 'seuil ' . $n1(kpiSeuil('food-cost-pct', 32.0)) . ' %' . ($foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0) ? ' dépassé' : ' tenu'), $foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0) ? 'rouge' : 'vert'],
+        ['Food cost', $foodPct !== null ? $n1($foodPct) . ' %' : '', 'seuil ' . $n1(kpiSeuil('food-cost-pct', 40.0)) . ' %' . ($foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 40.0) ? ' dépassé' : ' tenu'), $foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 40.0) ? 'rouge' : 'vert'],
         ['Main-d’œuvre', $moPct !== null ? $n1($moPct) . ' %' : '', 'seuil ' . $n1(kpiSeuil('labour-pct', 33.0)) . ' %' . ($moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? ' dépassé' : ' tenu'), $moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? 'rouge' : 'vert'],
         ['Meilleure vendeuse', $meilleure !== null ? $meilleure['nom'] : '', $meilleure !== null ? 'score ' . $meilleure['score'] : '', 'mut'],
         ['Résultat', $eur0($pnl['resultat']), $pnl['ca'] > 0 ? $n1($pnl['resultat'] / $pnl['ca'] * 100) . ' % du CA' : '', $pnl['resultat'] >= 0 ? 'vert' : 'rouge'],
@@ -355,8 +355,8 @@ function ep_dossier_pdf(): array
     // à retenir
     $h .= '<div class="sec">À retenir</div><div style="font-size:9pt;line-height:1.7">';
     $points = [];
-    if ($foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0)) {
-        $points[] = ['rouge', 'Le food cost dépasse le seuil de ' . $n1($foodPct - kpiSeuil('food-cost-pct', 32.0)) . ' point(s).'];
+    if ($foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 40.0)) {
+        $points[] = ['rouge', 'Le food cost dépasse le seuil de ' . $n1($foodPct - kpiSeuil('food-cost-pct', 40.0)) . ' point(s).'];
     }
     if ($budget !== null && $budget > 0) {
         $att = $pnl['ca'] / $budget;
@@ -429,7 +429,7 @@ function ep_dossier_pdf(): array
     $h .= '<div class="sec" style="margin-top:0">Le compte de résultat de la période</div>';
     $lignesP = [
         ['Chiffre d’affaires', $pnl['ca'], 100.0, null, false],
-        ['Coût matière', -$pnl['mat'], $foodPct, kpiSeuil('food-cost-pct', 32.0), true],
+        ['Coût matière', -$pnl['mat'], $foodPct, kpiSeuil('food-cost-pct', 40.0), true],
         ['Marge brute', $pnl['ca'] - $pnl['mat'], $pnl['ca'] > 0 ? ($pnl['ca'] - $pnl['mat']) / $pnl['ca'] * 100 : null, null, false],
         ['Main-d’œuvre', -$pnl['mo'], $moPct, kpiSeuil('labour-pct', 33.0), true],
         ['Frais généraux', -$pnl['frais'], $pnl['ca'] > 0 ? $pnl['frais'] / $pnl['ca'] * 100 : null, kpiSeuil('overhead-pct', 13.5), true],

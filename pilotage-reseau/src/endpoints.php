@@ -126,7 +126,7 @@ function ep_meta(): array
         'exercice'         => (int) setting('exercice', (int) date('Y')),
         'moisLabels'       => setting('moisLabels', []),
         'seuils'           => [
-            'food'        => $seuils['food'] ?? 32,
+            'food'        => $seuils['food'] ?? 40,   // l'objectif 2026 (KPI_FOOD_2026, src/kpis.php) en repli
             'labour'      => $seuils['labour'] ?? 33,
             'overhead'    => $seuils['overhead'] ?? 13.5,
             'royalties'   => $seuils['royalties'] ?? 3,
@@ -2044,11 +2044,11 @@ function ep_exploitation_jour(): array
  * palier de la marge brute retranche (`droite` = « cat:<nom> »), à défaut la première dont le nom commence par
  * « Matière » ; son taux = la somme des taux « budget » de ses lignes, ou de leurs taux « théoriques » tant que le
  * budget n'est pas posé (tout à 0). Main-d'œuvre et frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`),
- * comme avant. Sans réglage ni table : 32 / 33 / 13,5. `food` y passe aussi en dernier repli.
+ * comme avant. Sans réglage ni table : 40 (l'objectif 2026) / 33 / 13,5. `food` y passe aussi en dernier repli.
  */
 function seuilsCharges(): array
 {
-    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    $seuils = ['food' => 40.0, 'labour' => 33.0, 'overhead' => 13.5];
     try {
         foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
                             WHERE code IN ('food','labour','overhead')") as $k) {
