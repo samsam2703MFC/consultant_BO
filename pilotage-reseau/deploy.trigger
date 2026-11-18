@@ -118,3 +118,4 @@
 2026-11-17 19:06:58 Mon catalogue : titre de couverture non coupé à l'aperçu
 2026-11-18T06:26:27Z Suivi des franchisés : l'audit des outils de gestion sur la tablette, le rappel de la marque dans le rapport et le courriel
 2026-11-18T08:06:05Z prévision : saisonniers historique ERP (galette)
+2026-11-18T08:36:55Z stan ogólny : MTO/MTS, maks., sprzedane 6 tyg.
