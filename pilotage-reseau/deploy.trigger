@@ -130,3 +130,4 @@
 2026-11-18T19:44:45Z food cost : une seule cible du réseau, 40 %, lue partout
 2026-11-18T19:53:13Z correctif : seuil main-d'oeuvre des rapports
 2026-11-18T19:54:03Z assistant : le Professeur reprend les photos de contrôle et explique pourquoi elles comptent
+2026-11-18T19:56:38Z personnel : une seule cible du réseau, 17 %, lue partout
