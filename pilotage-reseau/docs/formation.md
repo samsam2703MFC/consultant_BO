@@ -1133,3 +1133,15 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   continue, P7 à P12, FO-32 et FO-41, accès responsable.
 - Encodés en v1.0 « à valider » (`encoder_sop.py`), relus au serveur. Source et points « à confirmer » :
   `data/formation/dirigeant/LISEZMOI.md`.
+
+## Le lien Manuel ↔ checklist de gestion hebdomadaire (18/11/2026)
+
+- Sam : « relier le manuel opératoire avec la checklist de gestion hebdomadaire et les tâches qui vont avec (au niveau
+  franchisé - poste) ».
+- **Article 0.0.57** « La gestion de la semaine » (D7.1, phase opérationnel, P4 et P7 à P12, FO-06 et FO-02, accès
+  responsable) : réunion d’équipe du lundi (5.5.01), auto-audit HACCP du lundi (5.6.01), relecture de la semaine de la
+  routine du dashboard (5.2.01). v1.0 « à valider ».
+- **Liens posés** (classement, sans nouvelle version) : 0.0.16 et 0.0.55 → 5.5.01 ; 0.0.13 → 5.6.01 ; 0.0.15 → 5.2.01.
+- **Blocage** : les tâches de gestion hebdomadaire n’ont aucun niveau de poste attribué au panel (`POST /task/qui` : « qui
+  fait » vide), alors que les tâches quotidiennes du comptoir en ont. Le niveau franchisé et poste ne peut donc pas
+  s’afficher tant que les niveaux ne sont pas réglés dans le cadre des tâches. Détail : `data/formation/gestion-semaine/LISEZMOI.md`.
