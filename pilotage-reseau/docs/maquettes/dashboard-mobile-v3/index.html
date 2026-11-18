@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquettes — le dashboard magasin au téléphone, refonte</title>
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="mobile3.css">
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+/* Le dashboard magasin au téléphone, refonte (18/11/2026). Les six onglets dans une seule grammaire :
+ *   ?v=jour      Jour (ex-Opérationnel), le haut de l'écran ;   ?v=jour-long  le même, tout l'écran défilé ;
+ *   ?v=chiffres  Chiffres (ex-Exploitation) ;  ?v=controle  Contrôle ;  ?v=taches  Tâches ;
+ *   ?v=semaine   Semaine ;  ?v=primes  Primes ;  ?v=planche  les six côte à côte ; chaque onglet en « -long » : tout défilé.
+ * Les vues qui s'ouvrent depuis les onglets (feuilles, réclamation, revue du soir, photo…) : vues.js, ?v=planche-vues.
+ * Le magasin et l'instant sont ceux de la capture de Sam : Atelier by - Halle, mercredi 18/11/2026 à 17:43.
+ * Réels : les jauges de la capture (comptoir 2 124 €, B2B 116 €, objectifs 1 860 € et 34 €, mercredi 11/11 à 17:42
+ * 3 473 €, journée 3 493 €) et les commandes lues au panel (comptoir 9,80 €, webshop 5,80 € ; le 11/11 271,80 € et
+ * 76,18 €). Tout le reste est illustratif (voir LISEZMOI.md) ; les prénoms de l'équipe sont inventés. */
+const nbsp = ' ';
+const fx = (v, d) => { const s = Math.abs(v).toFixed(d).split('.'); return (v < 0 ? '− ' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, nbsp) + (d ? ',' + s[1] : ''); };
+const fE = v => fx(v, 0) + nbsp + '€', fU = v => fx(v, 2) + nbsp + '€', fP = (v, d) => fx(v, d || 0) + nbsp + '%';
+const fS = v => (v >= 0 ? '+ ' : '− ') + fx(Math.abs(v), 0) + nbsp + '%';
+const fSE = v => (v >= 0 ? '+ ' : '− ') + fx(Math.abs(v), 0) + nbsp + '€';
+
+/* ---------- le jour ---------- */
+const J = {
+  h: '17:43', objC: 1860, objB: 34,
+  c: { directe: 2124 - 9.80 - 5.80, cmd: 9.80, cmdN: 1, web: 5.80, webN: 1, pro: 116, proN: 1 },
+  j7: { date: '11/11', h: '17:42', comptoir: 3473, comptoirJour: 3493, cmd: 271.80, cmdN: 5, web: 76.18, webN: 2, pro: 58 },
+  clients: 238, clients7: 352, clientsRef: 221, panier: 8.96, panier7: 9.89, panierRef: 8.71,
+  // Les ventes au comptoir de chaque heure (aujourd'hui, la moyenne des 6 derniers mercredis), 7 h → 18 h.
+  heures: [96, 214, 241, 198, 236, 312, 228, 132, 141, 168, 158, null],
+  moy: [88, 190, 205, 186, 214, 286, 214, 128, 132, 158, 172, 104],
+};
+J.obj = J.objC + J.objB;
+J.tot = J.c.directe + J.c.cmd + J.c.web + J.c.pro;
+J.j7.directe = J.j7.comptoir - J.j7.cmd - J.j7.web;
+J.j7.tot = J.j7.comptoir + J.j7.pro;
+
+/* ---------- le cadre ---------- */
+const SVG = (d, w) => `<svg viewBox="0 0 24 24"${w ? ` width="${w}" height="${w}"` : ''}>${d}</svg>`;
+const ICO = {
+  jour: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  chif: '<path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/>',
+  ctrl: '<path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/>',
+  tach: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>',
+  sem: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  prim: '<circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/>',
+  revue: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11l1.5 1.5L13 9.5M8.5 16l1.5 1.5L13 14.5"/>',
+  relire: '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>',
+  recl: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+};
+const ONGLETS = [['jour', 'Jour'], ['chif', 'Chiffres'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']];
+const MARQUES = { ctrl: '<b class="pt"></b>', tach: '<b class="nb">4</b>' };
+const ios = () => `<div class="ios"><span>17:43</span><span class="r"><svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="6" rx="1"/><rect x="10" y="2.5" width="3" height="8.5" rx="1"/><rect x="15" y="0" width="3" height="11" rx="1" opacity=".35"/></svg>5G<span class="bat">86</span></span></div>`;
+/** L'en-tête : le magasin et deux boutons ; dessous, le pas de temps de l'onglet sur toute la largeur. */
+const entete = (sous, pas) => `<div class="hd"><div class="l1"><div class="mag"><b>Atelier by - Halle</b><small>${sous}</small></div>
+  <span class="ic">${SVG(ICO.revue)}<b class="bd">1</b></span><span class="ic">${SVG(ICO.relire)}</span></div>${pas}</div>`;
+const pasJour = () => `<div class="jr"><button>‹</button><span>Aujourd’hui <em>· mer. 18 nov.</em></span><button disabled>›</button></div>`;
+const onglets = on => `<div class="tabs">${ONGLETS.map(([k, l]) => `<button class="${k === on ? 'on' : ''}"><i>${SVG(ICO[k])}${MARQUES[k] || ''}</i>${l}</button>`).join('')}</div><div class="home"></div>`;
+const tel = (on, hd, corps, long) => `<div class="tel${long ? ' long' : ''}">${ios()}${hd}<div class="sc">${corps}</div>${onglets(on)}</div>`;
+const carte = (titre, droite, corps, ch) => `<div class="cd"><div class="ct"><b>${titre}</b><small>${droite || ''}</small>${ch ? '<span class="ch">›</span>' : ''}</div>${corps}</div>`;
+
+/* ================= Jour ================= */
+function heros() {
+  const C = J.c, T = J.tot, A = J.j7;
+  // Une échelle pour les deux pistes : la plus longue des deux journées, l'objectif en trait.
+  const e = Math.max(T, A.tot, A.comptoirJour + A.pro) * 1.04, w = v => 100 * v / e;
+  const segs = (L, j7) => L.map(([v, k], i) => `<i class="${i === L.length - 1 ? 'fin' : ''}" style="width:${w(v).toFixed(2)}%;background:var(--cn-${k})"></i>`).join('');
+  const L = [[C.directe, 'c'], [C.cmd, 'k'], [C.web, 'w'], [C.pro, 'p']], L7 = [[A.directe, 'c'], [A.cmd, 'k'], [A.web, 'w'], [A.pro, 'p']];
+  const col = (k, nom, part, v, s, j) => `<div><div class="k"><span class="d8 ${k}"></span>${nom}<em>${part}</em></div><div class="v num">${v}</div><div class="s">${s}</div><div class="j">mer. 11/11 : ${j}</div></div>`;
+  const pa = v => v / T >= .1 ? fP(100 * v / T) : fP(100 * v / T, 1);
+  return `<div class="cd hero"><div class="top"><span class="kick">Le chiffre du jour · à ${J.h}</span><span class="chip or">objectif atteint</span></div>
+    <div class="big"><b class="num">${fE(T)}</b><span>${fP(100 * T / J.obj)} de ${fE(J.obj)}</span></div>
+    <div class="sub">face à mercredi 11/11 à la même heure : <b class="dn" style="font-weight:400">${fS(100 * (T - A.tot) / A.tot)}</b> — le 11 novembre était férié</div>
+    <div class="jg"><span class="lb">Aujourd’hui<small>à ${J.h}</small></span><div class="tr">${segs(L)}<b class="ob" style="left:${w(J.obj).toFixed(1)}%"></b></div>
+      <span class="lb">Mer. 11/11<small>à ${A.h}</small></span><div class="tr j7">${segs(L7)}<b class="ob" style="left:${w(J.obj).toFixed(1)}%"></b><span class="v">${fE(A.tot)}</span></div>
+      <div class="ax"><span style="left:0;transform:none">0 €</span><span style="left:${w(J.obj).toFixed(1)}%">objectif ${fE(J.obj)}</span></div></div>
+    <div class="rb4">${col('c', 'Comptoir', pa(C.directe), fE(C.directe), 'vente directe', fE(A.directe))}${col('k', 'Commandes', pa(C.cmd), fU(C.cmd), C.cmdN + ' prise au comptoir', fU(A.cmd) + ' · ' + A.cmdN)}${col('w', 'Webshop', pa(C.web), fU(C.web), C.webN + ' click &amp; collect', fU(A.web) + ' · ' + A.webN)}${col('p', 'B2B', pa(C.pro), fE(C.pro), C.proN + ' ticket pro', fE(A.pro))}</div>
+    <div class="lien"><span class="t"><b>Commandes du jour</b><small>comptoir ${C.cmdN} · webshop ${C.webN} · rien à préparer</small></span><span class="v num">${fU(C.cmd + C.web)}</span><span class="ch">›</span></div></div>`;
+}
+function duel() {
+  const L = [['Clients', fx(J.clients, 0), fx(J.clients7, 0), fx(J.clientsRef, 0), (J.clients - J.clientsRef) / J.clientsRef],
+    ['Panier comptoir', fU(J.panier), fU(J.panier7), fU(J.panierRef), (J.panier - J.panierRef) / J.panierRef]];
+  return carte('Face aux mercredis', 'clients et panier', `<table class="dl"><tr><th></th><th>Auj.</th><th>11/11</th><th>6 merc.</th><th>écart</th></tr>
+    ${L.map(r => `<tr><td>${r[0]}</td><td class="num">${r[1]}</td><td class="num mu">${r[2]}</td><td class="num mu">${r[3]}</td><td class="num ${r[4] >= 0 ? 'up' : 'dn'}">${fS(100 * r[4])}</td></tr>`).join('')}</table>
+    <div class="note">L’écart se lit face à la <b>moyenne des 6 derniers mercredis</b> : un jour férié comme le 11/11 ne fausse plus la comparaison.</div>`);
+}
+function heures() {
+  const mx = Math.max(...J.moy, ...J.heures.filter(x => x != null)) * 1.08;
+  const b = J.heures.map((v, i) => `<div class="b">${v == null ? '<i class="av" style="height:0"></i>' : `<i class="${i === 10 ? 'en' : ''}" style="height:${(100 * v / mx).toFixed(1)}%"></i>`}<u style="bottom:${(100 * J.moy[i] / mx).toFixed(1)}%"></u></div>`).join('');
+  return carte('Heure par heure', 'comptoir', `<div class="hh">${b}</div><div class="hh-ax">${J.moy.map((_, i) => `<span>${7 + i}</span>`).join('')}</div>
+    <div class="leg"><span><i style="background:var(--chart-real)"></i>aujourd’hui</span><span><i style="background:repeating-linear-gradient(135deg,var(--chart-real) 0 2px,#e8b9c2 2px 4px)"></i>heure en cours</span><span><i style="height:2px;background:var(--ink);opacity:.55;vertical-align:3px"></i>moyenne des 6 derniers mercredis</span></div>`);
+}
+function vitrine() {
+  const C = [['S', 'Short life', '#8D1D2C', 46, 'en vitrine'], ['M', 'Medium', '#B0792A', 31, 'en vitrine'], ['L', 'Long life', '#2F6EA5', 128, 'en stock']];
+  return carte('La vitrine', '2 à recuire', `<div class="vt3">${C.map(c => `<div><div class="k"><b style="background:${c[2]}">${c[0]}</b>${c[1]}</div><div class="v num">${c[3]}</div><div class="s">${c[4]}</div></div>`).join('')}</div>
+    <div class="ls"><div class="r"><span class="d8 ko"></span><span class="t">Croissant<small>vide depuis 17:10 · 14 vendus après 17 h d’habitude</small></span><span class="n">recuire 12</span><span class="ch">›</span></div>
+    <div class="r"><span class="d8 wa"></span><span class="t">Pain au chocolat<small>3 en vitrine · la cuisson de 17:30 n’est pas validée</small></span><span class="n">recuire 8</span><span class="ch">›</span></div></div>`);
+}
+function journee() {
+  const h0 = 6, h1 = 20, x = (h, m) => (100 * (h + (m || 0) / 60 - h0) / (h1 - h0)).toFixed(2) + '%', w = (a, b) => (100 * (b - a) / (h1 - h0)).toFixed(2) + '%';
+  const P = [['Léa', 6.5, 14, 'fini'], ['Inès', 7, 15.5, 'fini'], ['Tom', 11, 19, 'ici'], ['Sarah', 14, 19.5, 'ici']];
+  const cu = [['06:15', 6.25, 'ok'], ['10:30', 10.5, 'ok'], ['14:45', 14.75, 'ok'], ['17:30', 17.5, 'wa']];
+  return carte('La journée', '2 en poste · 30,5 h au planning', `<div class="fr">${P.map(p => `<div class="ln"><i class="${p[3]}" style="left:${x(p[1])};width:${w(p[1], p[2])}">${p[0]} · ${String(Math.floor(p[1])).padStart(2, '0')}:${p[1] % 1 ? '30' : '00'}–${String(Math.floor(p[2])).padStart(2, '0')}:${p[2] % 1 ? '30' : '00'}</i></div>`).join('')}
+    <div class="cu">${cu.map(c => `<b style="left:${x(c[1])}"><span class="d8 ${c[2]}"></span>${c[0]}</b>`).join('')}</div><span class="now" style="left:${x(17, 43)}"></span>
+    <div class="ax">${[6, 9, 12, 15, 18].map(h => `<span style="left:${x(h)}">${h} h</span>`).join('')}</div></div>
+    <div class="note"><span class="d8 ok"></span> cuisson validée · <span class="d8 wa"></span> à valider — <b>la cuisson de 17:30 attend sa validation</b></div>`);
+}
+const jour = long => tel('jour', entete('relu à 17:43', pasJour()), heros() + duel() + heures() + vitrine() + journee() + (long ? stockCarte() : ''), long);
+
+/* ================= Chiffres ================= */
+function chiffres(long) {
+  const caHT = 2113, L = [['Matière', 677, 32.0, 'wa', 'seuil 32 %'], ['Main-d’œuvre', 642, 30.4, 'ok', '30,5 h · seuil 33 %'], ['Frais fixes', 285, 13.5, 'ok', 'la part du jour'], ['Poubelle', 46, 2.2, 'ok', '18 pièces déclarées hier']];
+  const res = caHT - L.reduce((a, l) => a + l[1], 0);
+  const hero = `<div class="cd hero"><div class="top"><span class="kick">Le résultat du jour · provisoire</span><span class="chip ok">dans le vert</span></div>
+    <div class="big"><b class="num up" style="color:var(--ok)">${fSE(res)}</b><span>${fP(100 * res / caHT, 1)} des ventes</span></div>
+    <div class="sub">ventes ${fE(caHT)} HT · la matière est à sa limite, le reste sous les seuils</div>
+    <div class="pl"><div class="r"><span class="k">Ventes HT<small>${fE(J.tot)} TTC</small></span><span></span><span class="n">${fE(caHT)}</span></div>
+    ${L.map(l => `<div class="r"><span class="k"><span class="d8 ${l[3]}" style="margin-right:6px"></span>${l[0]}<small>${fP(l[2], 1)} · ${l[4]}</small></span><span class="tr"><i style="left:0;width:${(l[2] / 40 * 100).toFixed(1)}%;background:${l[3] === 'wa' ? 'var(--wa)' : '#cfc7bb'}"></i></span><span class="n">${fSE(-l[1])}</span></div>`).join('')}
+    <div class="r tot"><span class="k">Résultat</span><span></span><span class="n up">${fSE(res)}</span></div></div></div>`;
+  const tuiles = `<div class="g2"><div class="cd tu"><div class="k"><span class="d8 ok"></span>Réseau</div><div class="v">2<sup style="font-size:12px">e</sup> / 4</div><div class="s">au chiffre du jour · panier 3<sup>e</sup></div></div>
+    <div class="cd tu"><div class="k"><span class="d8 n"></span>Canaux</div><div class="v">95 %</div><div class="s">au comptoir · webshop 0,3 % · B2B 5 %</div></div></div>`;
+  const cats = [['Viennoiserie', 612], ['Boulangerie', 498], ['Traiteur', 421], ['Pâtisserie', 356], ['Boissons', 214], ['Autres', 139]], mx = 612;
+  const ventes = carte('Ventes par catégorie', 'le jour, TTC', `<div class="bars">${cats.map(c => `<div class="r"><span>${c[0]}</span><span class="tr"><i style="width:${(100 * c[1] / mx).toFixed(1)}%"></i></span><span class="n">${fE(c[1])}</span></div>`).join('')}</div>`, true);
+  const promos = carte('Promotions du jour', '2 actives', `<div class="ls"><div class="r"><span class="t">3 croissants + 1 offert<small>comptoir et webshop · 14 utilisations</small></span><span class="n">− 19,60 €</span><span class="ch">›</span></div>
+    <div class="r"><span class="t">Formule midi<small>comptoir · 22 utilisations</small></span><span class="n">− 33,00 €</span><span class="ch">›</span></div></div>`);
+  return tel('chif', entete('les chiffres de la journée', pasJour()), hero + tuiles + ventes + promos + (long ? poubelleCarte() + noteCarte() : ''), long);
+}
+
+/* ================= Contrôle ================= */
+function photo(fond, forme) { return `<svg viewBox="0 0 180 104" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g${fond.replace('#', '')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${fond}"/><stop offset="1" stop-color="#3b2a20"/></linearGradient></defs><rect width="180" height="104" fill="url(#g${fond.replace('#', '')})"/>${forme}</svg>`; }
+function controle(long) {
+  const vitrine = '<rect x="10" y="58" width="160" height="6" fill="#e9dcc8" opacity=".7"/>' + [20, 48, 76, 104, 132].map((x, i) => `<ellipse cx="${x + 12}" cy="52" rx="12" ry="7" fill="${['#d9a560', '#c98b45', '#e6c08a', '#b9763a', '#d9a560'][i]}"/>`).join('');
+  const plan = '<rect x="18" y="20" width="144" height="64" rx="4" fill="#d6d2cb" opacity=".85"/><rect x="30" y="30" width="50" height="34" rx="3" fill="#f1efe9"/>';
+  const frigo = '<rect x="40" y="12" width="100" height="84" rx="5" fill="#cfd8dc" opacity=".85"/><rect x="50" y="24" width="80" height="4" fill="#9aa7ad"/><rect x="50" y="48" width="80" height="4" fill="#9aa7ad"/><text x="90" y="80" text-anchor="middle" font-size="14" fill="#38474e" font-family="system-ui">3,1 °C</text>';
+  const wc = '<rect x="60" y="20" width="60" height="70" rx="8" fill="#e8e6e1" opacity=".9"/><circle cx="90" cy="70" r="14" fill="#c7c2b8"/>';
+  const P = [['Vitrine ouverture', '06:42 · Léa', photo('#a8794f', vitrine), 'ok', 'conforme'], ['Plan de travail', '07:05 · Inès', photo('#7c7a75', plan), 'ok', 'conforme'],
+    ['Frigo · température', '10:12 · Inès', photo('#5f7178', frigo), 'ok', 'conforme'], ['Toilettes', '12:30 · Tom', photo('#8e8a83', wc), 'ko', 'non conforme'],
+    ['Vitrine midi', '12:51 · Tom', photo('#9a6b45', vitrine), 'wa', 'à noter'], ['Vitrine 17 h', 'attendue à 17:00', '', '', 'pas encore']];
+  const ph = P.map(p => `<div class="ph"><div class="im${p[2] ? '' : ' vide'}">${p[2] || 'pas encore rendue'}${p[3] ? `<span class="chip ${p[3]}">${p[4]}</span>` : ''}</div><div class="t">${p[0]}<small>${p[1]}</small></div></div>`).join('');
+  const hero = `<div class="cd hero"><div class="top"><span class="kick">Les contrôles en photo</span><span class="chip ko">1 non conforme</span></div>
+    <div class="big"><b class="num">5 / 8</b><span>rendus à 17:43</span></div><div class="sub">1 à noter · 2 à venir (vitrine 17 h, fermeture 19:00)</div>
+    <div class="pg" style="height:7px"><i style="width:${(100 * 4 / 8)}%;background:var(--ok)"></i><i style="width:12.5%;background:var(--ko)"></i><i style="width:12.5%;background:var(--wa)"></i></div></div>`;
+  const boutons = `<button class="bt">${SVG(ICO.recl)}Réclamer un produit au fournisseur<span class="ch">›</span></button><button class="bt">${SVG(ICO.mail)}Une demande au bureau<span class="chip wa">1 ouverte</span></button>`;
+  return tel('ctrl', entete('contrôles du jour', pasJour()), hero + `<div class="ph2" style="margin:0 0 10px">${ph}</div>` + boutons, long);
+}
+
+/* ================= Tâches ================= */
+function taches(long) {
+  const CL = [['Ouverture', '06:00–07:00', 12, 12, 0, []], ['Mi-journée', '11:00–14:00', 7, 8, 1, [['Réassort des boissons', 'en retard depuis 13:00 · Tom', 'ko']]],
+    ['Après-midi', '14:00–18:00', 3, 6, 0, [['Nettoyer la trancheuse', 'avant 18:00', ''], ['Préparer la commande de jeudi', 'avant 18:00', ''], ['Vitrine 17 h en photo', 'avant 17:30', 'ko']]],
+    ['Hebdomadaire', 'cette semaine', 2, 4, 1, [['Détartrer le four', 'bloquante · prévue lundi', 'ko']]]];
+  const hero = `<div class="cd hero"><div class="top"><span class="kick">Les tâches du jour</span><span class="chip ko">1 bloquante</span></div>
+    <div class="big"><b class="num">24 / 30</b><span>faites à 17:43</span></div><div class="sub">2 en retard · la fermeture (9 tâches) s’ouvre à 18:30</div></div>`;
+  const flt = `<div class="flt"><span class="on">À faire <small>6</small></span><span>En retard <small>2</small></span><span>Faites <small>24</small></span><span>Toutes</span></div>`;
+  const cartes = CL.map(c => { const pct = 100 * c[2] / c[3], fini = c[2] === c[3];
+    return `<div class="cd cl"><div class="ct"><b><span class="d8 ${fini ? 'ok' : (c[4] ? 'ko' : 'wa')}"></span>${c[0]}</b><small>${c[2]} / ${c[3]} · ${c[1]}</small></div>
+      <div class="pg"><i style="width:${pct}%;background:${fini ? 'var(--ok)' : (c[4] ? 'var(--ko)' : 'var(--wa)')}"></i></div>
+      ${c[5].length ? `<div class="tk">${c[5].map(t => `<div class="r"><span class="bx ${t[2]}"></span><span class="t">${t[0]}<small>${t[1]}</small></span></div>`).join('')}</div>` : '<div class="note" style="margin-top:7px">tout est fait · 06:58</div>'}</div>`; }).join('');
+  return tel('tach', entete('checklists du magasin', pasJour()), hero + flt + cartes + (long ? fermetureCarte() + chercheCarte() : ''), long);
+}
+
+/* ================= Semaine ================= */
+function semaine(long) {
+  const D = [['lun.', 1742, 1810], ['mar.', 1655, 1790], ['mer.', J.tot, J.obj, 'en'], ['jeu.', null, 1820], ['ven.', null, 2150], ['sam.', null, 2640], ['dim.', null, 1980]];
+  const mx = 2640 * 1.08, fait = D.filter(d => d[1] != null), real = fait.reduce((a, d) => a + d[1], 0), att = fait.reduce((a, d) => a + d[2], 0);
+  const cl = (v, o) => v / o >= 1 ? 'ok' : (v / o >= .9 ? 'wa' : 'ko');
+  const cols = D.map(d => `<div class="c">${d[1] != null ? `<span class="p">${fx(100 * d[1] / d[2], 0)}</span>` : ''}<div class="bar ${d[1] == null ? 'av' : (d[3] ? 'en' : cl(d[1], d[2]))}" style="height:${(100 * (d[1] != null ? d[1] : d[2]) / mx).toFixed(1)}%"></div><b class="ob" style="bottom:${(100 * d[2] / mx).toFixed(1)}%"></b></div>`).join('');
+  const hero = `<div class="cd hero"><div class="top"><span class="kick">La semaine au mercredi</span><span class="chip ok">en avance</span></div>
+    <div class="big"><b class="num" style="color:var(--ok)">${fSE(real - att)}</b><span>sur l’objectif à ce jour</span></div>
+    <div class="sub">${fE(real)} pour ${fE(att)} attendus · 3 jours sur 7 · objectif de la semaine ${fE(D.reduce((a, d) => a + d[2], 0))}</div>
+    <div class="wk">${cols}</div><div class="wk-ax">${D.map(d => `<span class="${d[3] ? 'auj' : ''}">${d[0]}</span>`).join('')}</div>
+    <div class="leg"><span><i style="background:var(--ok)"></i>objectif tenu</span><span><i style="background:var(--wa)"></i>à moins de 10 %</span><span><i style="height:2px;background:var(--ink);opacity:.6;vertical-align:3px"></i>objectif du jour</span></div></div>`;
+  const R = [['Chiffre / obj.', [['96', 'wa'], ['92', 'wa'], ['118', 'n']]], ['Résultat', [['+ 214', 'ok'], ['+ 136', 'ok'], ['…', 'n']]], ['Contrôles', [['8/8', 'ok'], ['7/8', 'wa'], ['5/8', 'n']]], ['Poubelle', [['41 €', 'ok'], ['52 €', 'wa'], ['—', 'n']]]];
+  const dam = carte('Jour par jour', 'vert bon · or à surveiller', `<table class="dam"><tr><th></th>${['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'].map(j => `<th>${j}</th>`).join('')}</tr>
+    ${R.map(r => `<tr><td class="l">${r[0]}</td>${r[1].map(c => `<td class="${c[1]}">${c[0]}</td>`).join('')}${'<td class="n">·</td>'.repeat(4)}</tr>`).join('')}</table>`);
+  const tuiles = `<div class="g2"><div class="cd tu"><div class="k"><span class="d8 ok"></span>Résultat</div><div class="v">+ 350 €</div><div class="s">lun. et mar. · 10,3 % des ventes</div></div>
+    <div class="cd tu"><div class="k"><span class="d8 wa"></span>Matière</div><div class="v">31,8 %</div><div class="s">seuil 32 % · la semaine</div></div>
+    <div class="cd tu"><div class="k"><span class="d8 ok"></span>Poubelle</div><div class="v">93 €</div><div class="s">2,7 % du chiffre · 41 pièces</div></div>
+    <div class="cd tu"><div class="k"><span class="d8 ok"></span>Réseau</div><div class="v">2<sup style="font-size:12px">e</sup> / 4</div><div class="s">au chiffre de la semaine</div></div></div>`;
+  const hd = entete('la semaine du 16 au 22 nov.', `<div class="jr"><button>‹</button><span>Cette semaine <em>· 16 – 22 nov.</em></span><button disabled>›</button></div>`);
+  return tel('sem', hd, hero + dam + tuiles + (long ? valeurCarte() : ''), long);
+}
+
+/* ================= Primes ================= */
+function primes(long) {
+  const P = [['Léa', 'Vendeuse', 96, 'panier · contrôles · vente additionnelle', 3], ['Inès', 'Vendeuse', 84, 'panier · contrôles', 3], ['Sarah', 'Vendeuse', 62, 'contrôles · ponctualité', 2], ['Tom', 'Vendeur', 48, 'vente additionnelle', 2], ['Nora', 'Étudiante', 22, 'contrôles', 1]];
+  const tot = P.reduce((a, p) => a + p[2], 0);
+  const hero = `<div class="cd hero"><div class="top"><span class="kick">Les primes de novembre</span><span class="chip">en cours</span></div>
+    <div class="big"><b class="num">${fE(tot)}</b><span>acquis au 18</span></div><div class="sub">5 personnes · 11 primes gagnées sur 15 possibles · se fige le 30</div></div>`;
+  const seg = `<div class="hd" style="padding:0;margin:-2px 0 10px"><div class="seg" style="margin:0"><span class="on">Toutes</span><span>Du magasin</span></div></div>`;
+  const L = `<div class="cd pr">${P.map(p => `<div class="r"><span class="av">${p[0][0]}</span><span class="t">${p[0]}<small>${p[3]}</small><span class="dots">${[0, 1, 2].map(i => `<i class="${i < p[4] ? 'o' : ''}"></i>`).join('')}</span></span><span class="n">${fE(p[2])}<small>${p[4]} / 3 primes</small></span></div>`).join('')}</div>`;
+  const regle = carte('Les primes du mois', '3 en jeu', `<div class="ls"><div class="r"><span class="t">Panier moyen au-dessus de 9 €<small>la marque · 40 € · 2 sur 5 l’ont</small></span><span class="ch">›</span></div>
+    <div class="r"><span class="t">Contrôles photo rendus à l’heure<small>la marque · 30 € · 4 sur 5</small></span><span class="ch">›</span></div>
+    <div class="r"><span class="t">Vente additionnelle<small>le magasin · 26 € · 2 sur 5</small></span><span class="ch">›</span></div></div>`);
+  const hd = entete('primes de l’équipe', `<div class="jr"><button>‹</button><span>Novembre 2026 <em>· en cours</em></span><button disabled>›</button></div><div class="seg"><span class="on">Mois</span><span>Année</span></div>`);
+  return tel('prim', hd, hero + seg + L + regle, long);
+}
+
+</script>
+<script src="vues.js"></script>
+</body>
+</html>
