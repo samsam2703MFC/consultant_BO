@@ -137,3 +137,4 @@
 2026-11-18T20:13:54Z manuel opératoire : article des chiffres clés du réseau 2026
 2026-11-18T21:12:25Z Fidélité : la page app client en direct (public/fidelite-app, lecture seule)
 2026-11-18T21:28:15Z Fidélité, page app client en direct : typo sans repli (Vank complet, Gotham_Medium)
+2026-11-18T21:31:42Z Dashboard magasin : ruban comptoir / commandes / webshop, refonte du téléphone, feuille L'équipe du jour (#152)
