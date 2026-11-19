@@ -33,7 +33,10 @@ function setting(string $key, mixed $default = null): mixed
     // Une clé du module Motivation (les primes) vit dans ses tables mot_ (src/motivation.php, 23/10/2026).
     if (function_exists('motCle') && ($t = motCle($key)) !== null) { return $t === 'cache' ? motCache($key, $default) : motReglage($key, $default); }
     $r = Db::row('SELECT value FROM ceo_app_setting WHERE `key` = ?', [$key]);
-    return $r === null ? $default : json_decode($r['value'], true);
+    $v = $r === null ? null : json_decode($r['value'], true);
+    // Les champs-clés de certains réglages vivent dans erp_cles (src/erp_cles.php, ERP_CLES_REGLAGES).
+    if (function_exists('erpClesReglage')) { $v = erpClesReglage($key, $v); }
+    return $v ?? $default;
 }
 
 /**

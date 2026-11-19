@@ -51,6 +51,24 @@ function ensureInstalled(): void
         }
     }
 
+    // Réorganisation, étape 1 (19/11/2026) : les champs-clés des réglages (Assistance IA, Google, comptes TF Buddy et
+    // ERP, SMTP, Web Push, MétaDonnée) passent dans erp_cles, le seul accès aux clés (src/erp_cles.php). Rejouable ;
+    // une clé déjà présente avec une autre valeur n'est jamais écrasée : le champ reste dans le réglage, priorité gardée.
+    if (function_exists('erpClesReprise')) {
+        try {
+            $b = erpClesReprise();
+            if ($b['rangees'] || $b['conflits']) {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    ['erpClesReprise', json_encode(['le' => date('Y-m-d H:i:s')] + $b, JSON_UNESCAPED_UNICODE)]);
+                try { journalAdd('Installation', 'Info', 'Paramètres', 'Clés rangées dans erp_cles : ' . count($b['rangees'])
+                    . ($b['conflits'] ? ' ; laissées dans les réglages (valeur différente déjà en place) : ' . implode(', ', $b['conflits']) : '')); } catch (Throwable $x) { /* journal absent */ }
+            }
+        } catch (Throwable $e) {
+            $marOk = false;   // l'empreinte ne sera pas posée : l'appel suivant réessaie
+            try { journalAdd('Installation', 'Erreur', 'Paramètres', 'Reprise des clés vers erp_cles impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ }
+        }
+    }
+
     // Jeu de démonstration : chargé UNIQUEMENT s'il est explicitement activé
     // (config 'seed' = true, ou variable d'env COCKPIT_SEED=1). Désactivé par
     // défaut → une base neuve reste vide, prête pour les vraies données.

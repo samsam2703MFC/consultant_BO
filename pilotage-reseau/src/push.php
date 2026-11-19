@@ -67,8 +67,7 @@ function pushVapid(): ?array
     if (!isset($d['ec']['x'], $d['ec']['y'])) { return null; }
     $pub = "\x04" . str_pad($d['ec']['x'], 32, "\x00", STR_PAD_LEFT) . str_pad($d['ec']['y'], 32, "\x00", STR_PAD_LEFT);
     $v = ['pem' => $pem, 'publique' => pushB64($pub)];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['pushVapid', json_encode($v, JSON_UNESCAPED_UNICODE)]);
+    settingEcrire('pushVapid', $v);   // le couple VAPID dans erp_cles (pil_push_vapid_*)
     return $v;
 }
 

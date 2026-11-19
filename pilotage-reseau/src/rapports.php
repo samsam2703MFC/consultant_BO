@@ -2911,8 +2911,7 @@ function wr_smtp(): array
     // l'ancien (l'écran ne le relit jamais, il ne peut pas le renvoyer).
     if (isset($b['motDePasse']) && (string) $b['motDePasse'] !== '') { $cur['motDePasse'] = (string) $b['motDePasse']; }
     if (!empty($b['effacerMotDePasse'])) { unset($cur['motDePasse']); }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['smtp', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    settingEcrire('smtp', $cur);   // la machine d'envoi du cockpit dans erp_cles (pil_smtp_*)
     journalAdd('CEO', 'Paramètre', '—', 'Machine d’envoi SMTP mise à jour (' . ($cur['hote'] ?? '—') . ')');
     return ['ok' => true] + Smtp::statut();
 }

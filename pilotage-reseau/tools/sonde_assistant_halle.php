@@ -34,10 +34,13 @@ foreach ($mm[1] as $fic) {
 }
 
 echo "=== 0. La clé Claude dans erp_cles (les noms, jamais les valeurs)\n";
-$cands = Db::rows("SELECT cle, portail, integration, secret, indice, CHAR_LENGTH(valeur) n, maj_le FROM erp_cles
-    WHERE LOWER(cle) REGEXP 'anthropic|claude|sk-ant|ia_|_ia|llm' OR LOWER(COALESCE(integration,'')) REGEXP 'anthropic|claude|ia|llm' ORDER BY cle");
+// Par le seul accès aux clés (src/erp_cles.php) : l'inventaire, sans les valeurs.
+$inventaire = erpClesInventaire();
+$cands = array_values(array_filter($inventaire, static fn ($r) => preg_match('/anthropic|claude|sk-ant|ia_|_ia|llm/', strtolower((string) $r['cle']))
+    || preg_match('/anthropic|claude|ia|llm/', strtolower((string) ($r['integration'] ?? '')))));
+foreach ($cands as &$r) { $r['n'] = $r['longueur']; } unset($r);
 foreach ($cands as $r) { printf("  %-32s portail %-8s intégration %-20s secret %d · %d caractères · indice %s · %s\n", $r['cle'], $r['portail'], (string) $r['integration'], $r['secret'], $r['n'], (string) $r['indice'], $r['maj_le']); }
-if (!$cands) { echo "  aucune clé IA dans erp_cles ; toutes les clés :\n"; foreach (Db::rows('SELECT cle, portail, integration FROM erp_cles ORDER BY portail, cle') as $r) { echo '    ', $r['portail'], ' · ', $r['cle'], ' · ', (string) $r['integration'], "\n"; } }
+if (!$cands) { echo "  aucune clé IA dans erp_cles ; toutes les clés :\n"; foreach ($inventaire as $r) { echo '    ', $r['portail'], ' · ', $r['cle'], ' · ', (string) $r['integration'], "\n"; } }
 // La première clé qui ressemble à une clé Anthropic sert à l'essai, dans ce processus seulement (jamais affichée).
 foreach ($cands as $r) {
     $v = trim(erpCle((string) $r['cle']));
@@ -56,12 +59,15 @@ if ($espaceDonne !== '') {
         echo "  enregistré dans erp_cles : anthropic_workspace_id (portail commun)\n";
     } else { echo "  identifiant refusé : format wrkspc_ attendu\n"; }
 }
-foreach (Db::rows("SELECT cle, portail, integration, maj_le FROM erp_cles WHERE maj_le >= CURDATE() - INTERVAL 1 DAY OR LOWER(cle) REGEXP 'work|wrk|espace|space|orga' ORDER BY maj_le DESC") as $r) {
+$inventaire = erpClesInventaire();
+usort($inventaire, static fn ($a, $b) => strcmp((string) $b['maj_le'], (string) $a['maj_le']));
+foreach (array_filter($inventaire, static fn ($r) => (string) $r['maj_le'] >= date('Y-m-d', strtotime('-1 day'))
+    || preg_match('/work|wrk|espace|space|orga/', strtolower((string) $r['cle']))) as $r) {
     printf("  récente ou nommée comme un espace : %-34s portail %-8s %-22s %s\n", $r['cle'], $r['portail'], (string) $r['integration'], $r['maj_le']);
 }
 $esp = '';
-foreach (Db::rows('SELECT cle, portail, valeur FROM erp_cles ORDER BY maj_le DESC') as $r) {
-    $v = trim((string) $r['valeur']);
+foreach ($inventaire as $r) {
+    $v = erpCle((string) $r['cle']);
     if (preg_match('/^wrkspc_[A-Za-z0-9]+$/', $v)) { echo "  valeur au format wrkspc_ : « {$r['cle']} » (portail {$r['portail']})\n"; if ($esp === '') { $esp = $v; } }
     elseif (str_contains($v, 'wrkspc_')) { echo "  « {$r['cle']} » (portail {$r['portail']}) contient wrkspc_ au milieu d'autre chose (espaces, guillemets ?)\n"; }
 }

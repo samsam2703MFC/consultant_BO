@@ -49,6 +49,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/crm/meta_graph.php';
+require_once __DIR__ . '/erp_cles.php';   // le seul accès aux clés (erpClesLire, settingEcrire)
 
 /** Les champs de l'ERP qu'une question peut remplir : clé → [libellé, règle]. */
 const MD_CHAMPS = [
@@ -177,6 +178,8 @@ function mdTables(): void
 
 function mdSettingSet(string $cle, mixed $valeur): void
 {
+    // Les secrets Meta et SMS (mdMetaSecret, mdMetaJeton, mdSmsJeton…) vont dans erp_cles : src/erp_cles.php.
+    if (function_exists('settingEcrire')) { settingEcrire($cle, $valeur); return; }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         [$cle, json_encode($valeur, JSON_UNESCAPED_UNICODE)]);
 }
@@ -1001,12 +1004,9 @@ function mdMetaCrm(): ?array
 {
     $v = [];
     $le = '';
-    try {
-        foreach (Db::rows("SELECT cle, valeur, maj_le FROM erp_cles WHERE portail = 'commun' AND cle IN ('meta_app_id', 'meta_app_secret', 'meta_page_id', 'meta_page_token', 'meta_system_token')") as $r) {
-            $v[(string) $r['cle']] = trim((string) $r['valeur']);
-            $le = max($le, (string) $r['maj_le']);
-        }
-    } catch (Throwable $e) { return null; }
+    $lignes = erpClesLire(['meta_app_id', 'meta_app_secret', 'meta_page_id', 'meta_page_token', 'meta_system_token'], 'commun');
+    if ($lignes === null) { return null; }
+    foreach ($lignes as $cle => $l) { $v[$cle] = $l['valeur']; $le = max($le, $l['maj_le']); }
     $premier = static fn (string ...$x): string => (string) current(array_filter($x, static fn ($y) => $y !== '') ?: ['']);
     return [
         'appId' => (string) preg_replace('/\D/', '', $v['meta_app_id'] ?? ''),
@@ -2151,8 +2151,7 @@ function wr_md_reglages_put(): array
     mdSettingSet('mdReglages', $cur);
     if (array_key_exists('smsJeton', $b) && is_string($b['smsJeton'])) {
         $j = trim($b['smsJeton']);
-        if ($j === '') { Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', ['mdSmsJeton']); }
-        else { mdSettingSet('mdSmsJeton', $j); }
+        mdSettingSet('mdSmsJeton', $j);   // vide = retiré (erp_cles, src/erp_cles.php)
     }
     mdJournal('reglage', 'Réglages MétaDonnée enregistrés (' . implode(', ', array_keys(array_intersect_key($b, ['erp' => 1, 'sms' => 1, 'meta' => 1, 'cp' => 1, 'smsJeton' => 1]))) . ')');
     $r = array_key_exists('cp', $b) ? mdReevaluer() : ['changes' => 0];

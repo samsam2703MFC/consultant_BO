@@ -347,9 +347,9 @@ function wr_pwa_compte(): array
     // Recrutement et les autres portails s'y connectent sans lire nos réglages. Le mot de passe n'est gardé
     // QUE là (plus dans ceo_app_setting) ; écriture impossible : il reste ici, comme avant.
     erpPublierTfbuddy($conf);
-    if (($conf['password'] ?? '') !== '' && erpCle('tfbuddy_password') === $conf['password']) { unset($conf['password']); }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['panelApi', json_encode($conf, JSON_UNESCAPED_UNICODE)]);
+    // Adresse et téléphone dans erp_cles (pil_tfbuddy_*), le mot de passe dans la clé commune tfbuddy_password ;
+    // si erp_cles refuse l'écriture, ils restent dans le réglage, comme avant (src/erp_cles.php, settingEcrire).
+    settingEcrire('panelApi', $conf);
     PanelApi::oublierJeton();
     journalAdd('CEO', 'Paramètre', null, 'Compte consultant de l’API panel mis à jour ('
         . ($conf['phone'] !== '' ? $conf['phone'] : 'téléphone vide') . ')');
@@ -382,8 +382,7 @@ function wr_erp_compte(): array
     if ($conf['password'] === '') { $conf['password'] = (string) ($cur['password'] ?? ''); }
     if ($conf['base'] === '') { unset($conf['base']); }               // → défaut du client
 
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['erpAdmin', json_encode($conf, JSON_UNESCAPED_UNICODE)]);
+    settingEcrire('erpAdmin', $conf);   // adresse, téléphone et mot de passe dans erp_cles (pil_erp_admin_*)
     ErpApi::oublierJeton();
     journalAdd('CEO', 'Paramètre', null, 'Compte admin de l’API ERP mis à jour ('
         . ($conf['phone'] !== '' ? $conf['phone'] : 'téléphone vide') . ')');
@@ -2123,8 +2122,7 @@ function wr_ia_compte(): array
     // L'espace de travail Anthropic (identifiant, pas un secret) : exigé par une clé d'organisation.
     $esp = trim((string) ($b['espace'] ?? ''));
     if ($esp !== '' && preg_match('/^[A-Za-z0-9_-]{4,80}$/', $esp)) { $cur['espace'] = $esp; }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['anthropic', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    settingEcrire('anthropic', $cur);   // la clé et l'espace dans erp_cles (src/erp_cles.php)
     journalAdd('CEO', 'Paramètre', '—', 'Assistance IA — ' . ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour'));
     return ['ok' => true] + Anthropic::statut();
 }
@@ -3172,8 +3170,7 @@ function wr_google_compte(): array
     if (!empty($b['effacer'])) { unset($cur['cle']); }
     $langue = trim((string) ($b['langue'] ?? ''));
     if ($langue !== '') { $cur['langue'] = mb_substr($langue, 0, 8); }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['google', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    settingEcrire('google', $cur);   // la clé dans erp_cles (src/erp_cles.php)
     journalAdd('CEO', 'Paramètre', '—', 'Connecteur Google — '
         . (!empty($b['effacer']) ? 'clé effacée' : ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour')));
     return ['ok' => true] + GoogleApi::statut();
