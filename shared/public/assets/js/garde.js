@@ -9,6 +9,9 @@
  * - une page du siège (data-siege="1" : le cockpit, les visites, le marketing…) renvoie un franchisé à son dashboard ;
  * - window.ACCES dit qui est connecté (role « siege » ou « franchise », nom, magasins).
  * La page reste cachée le temps de la vérification. Sans réseau, elle s'affiche (ses lectures échoueront seules).
+ * La page de connexion et le dashboard sont ceux du cockpit : à l'adresse que rend /acces/moi (`cockpit`, config.php
+ * `cockpitUrl`), sinon à côté du script (../../). Un portail servi ailleurs (/commercial/, qui charge ce script par
+ * /commercial/assets/, 19/11/2026) renvoie ainsi à la connexion du cockpit, qui le rouvre ensuite (?retour=).
  */
 (function () {
   var moi = document.currentScript;
@@ -18,7 +21,9 @@
     return;
   }
   var api = new URL((moi && moi.getAttribute('data-api')) || 'api/cockpit', location.href).href.replace(/\/$/, '');
-  var connexion = new URL('../../connexion/', moi ? moi.src : location.href).href;
+  var aCote = new URL('../../', moi ? moi.src : location.href).href;
+  // Le cockpit : son adresse rendue par l'API, sinon à côté du script.
+  function cockpit(j, chemin) { var c = aCote; try { if (j && j.cockpit) { c = new URL(j.cockpit, location.href).href; } } catch (e) { /* adresse illisible : à côté */ } return new URL(chemin, c).href; }
   var racine = document.documentElement;
   racine.style.visibility = 'hidden';
   function montrer() { racine.style.visibility = ''; }
@@ -36,13 +41,13 @@
     .then(function (x) {
       var j = x.j || {};
       if (x.code === 503) { message(j.message || 'Le serveur ne répond pas. Réessayez dans un instant.'); return; }
-      if (!j.connecte) { location.replace(connexion + '?retour=' + encodeURIComponent(location.href)); return; }
+      if (!j.connecte) { location.replace(cockpit(j, 'connexion/') + '?retour=' + encodeURIComponent(location.href)); return; }
       window.ACCES = j;
       if (j.role === 'franchise') {
         var shops = (j.shops || []).map(String);
         if (!shops.length) { message('Votre session n’a aucun magasin. Demandez un code au siège.'); return; }
         if (moi && moi.getAttribute('data-siege') === '1') {
-          location.replace(new URL('../../dashboard/?shop=' + encodeURIComponent(shops[0]), moi.src).href);
+          location.replace(cockpit(j, 'dashboard/?shop=' + encodeURIComponent(shops[0])));
           return;
         }
         var q = new URLSearchParams(location.search);
