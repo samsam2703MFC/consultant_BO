@@ -94,15 +94,28 @@ class ComplaintRepository extends BaseRepository
     }
 
     /**
+     * [362] Prix d'une pièce réclamée (SQL) : la quantité réclamée est en pièces (szt.), single_purchase_price est le prix
+     * du CARTON de la ligne WDT → prix du carton ÷ pièces par carton (de cette ligne de facture, sinon de la fiche produit).
+     * Wartość = pièces × ce prix = cartons × prix du carton. $a : alias (ou nom) de la table complaint dans la requête.
+     */
+    public static function piecePriceSql(string $a): string
+    {
+        return "COALESCE({$a}.single_purchase_price, 0) / COALESCE(
+                    NULLIF((SELECT dwp.ppc FROM document_wdt_product dwp JOIN document_wdt dw ON dw.id = dwp.id_document_wdt
+                             WHERE dw.doc_num = {$a}.invoice_num AND dwp.id_product = {$a}.id_product ORDER BY dwp.id LIMIT 1), 0),
+                    NULLIF((SELECT fpp.ppc FROM final_product fpp WHERE fpp.id = {$a}.id_product), 0), 1)";
+    }
+
+    /**
      * [243] Wykres « Oś czasu » : każda reklamacja z dniem zgłoszenia, decyzją, grupą produkcji produktu (karta produktu,
-     * grupa główna), ilością, ilością przyjętą i ceną kartonu z WDT.
+     * grupa główna), ilością (szt.), ilością przyjętą i ceną sztuki (cena kartonu z WDT ÷ szt./kart.).
      */
     public function chartRows(): array
     {
         return $this->query(
             "SELECT c.id, DATE(COALESCE(c.reported_at, c.acceptance_timestamp)) AS day, COALESCE(c.acceptance_status, 'NEW') AS status,
                     c.complaint_type, c.complaint_reason, c.id_customer, cust.company AS customer, p.name AS product,
-                    c.product_quantity, c.accepted_quantity, c.single_purchase_price,
+                    c.product_quantity, c.accepted_quantity, c.single_purchase_price, " . self::piecePriceSql('c') . " AS piece_price,
                     CASE WHEN c.acceptance_status IN ('ACCEPTED', 'REJECTED') AND c.reported_at IS NOT NULL AND c.acceptance_timestamp IS NOT NULL
                          THEN TIMESTAMPDIFF(HOUR, c.reported_at, c.acceptance_timestamp) / 24 END AS decision_days,
                     (SELECT g.id FROM n_prod_item i
