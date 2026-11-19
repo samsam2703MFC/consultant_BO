@@ -258,7 +258,8 @@ function ep_sm_semaine(): array
     $ech = [];
     $ids = array_values(array_filter(array_column($rdv, 'echantillonId')));
     if ($ids) {
-        foreach (Db::rows('SELECT * FROM sm_echantillon WHERE id IN (' . implode(',', array_map('intval', $ids)) . ')') as $e) { $ech[(int) $e['id']] = smEchVue($e, $mags); }
+        $ph = smPhotosDe($ids);
+        foreach (Db::rows('SELECT * FROM sm_echantillon WHERE id IN (' . implode(',', array_map('intval', $ids)) . ')') as $e) { $ech[(int) $e['id']] = smEchVue($e, $mags, $ph); }
     }
     return ['du' => $du, 'au' => $au, 'rdv' => $rdv, 'enRetard' => $retard, 'candidats' => $cand, 'magasins' => $magasins, 'echantillons' => (object) $ech,
         'types' => SM_RDV_TYPES];
@@ -290,8 +291,21 @@ function ep_sm_mobile(): array
         'aujourdhui' => array_map($v, Db::rows('SELECT * FROM sm_rdv WHERE le >= ? AND le < ? AND statut <> "annule" ORDER BY le', [$jour . ' 00:00:00', date('Y-m-d', (int) strtotime($jour . ' +1 day')) . ' 00:00:00'])),
         'enRetard' => array_map($v, Db::rows('SELECT * FROM sm_rdv WHERE statut = "a_faire" AND le < ? ORDER BY le LIMIT 30', [$jour . ' 00:00:00'])),
         'aVenir' => array_map($v, Db::rows('SELECT * FROM sm_rdv WHERE statut = "a_faire" AND le >= ? AND le < ? ORDER BY le LIMIT 40', [date('Y-m-d', (int) strtotime($jour . ' +1 day')) . ' 00:00:00', $fin . ' 00:00:00'])),
+        // Les échantillons à recevoir (ou reçus) autour du jour : le commercial les photographie à la réception.
+        'echantillons' => smEchantillonsDuJour($jour, $mags),
         'listes' => ['issues' => SM_ISSUES, 'faits' => SM_FAITS, 'offres' => SM_OFFRE_STATUTS, 'motifs' => SM_MOTIFS,
             'suites' => array_map(static fn ($s) => ['type' => $s[0], 'jours' => $s[1]], SM_SUITES), 'types' => SM_RDV_TYPES]];
+}
+
+/** Les échantillons commandés pour la semaine du jour (sept jours avant, sept après) : à recevoir, ou reçus ce jour-là. */
+function smEchantillonsDuJour(string $jour, array $mags): array
+{
+    smTables();
+    $du = date('Y-m-d', (int) strtotime($jour . ' -7 days')) . ' 00:00:00';
+    $au = date('Y-m-d', (int) strtotime($jour . ' +8 days')) . ' 00:00:00';
+    $rows = Db::rows('SELECT * FROM sm_echantillon WHERE statut IN ("a_envoyer", "commande", "recu") AND COALESCE(le, cree_le) >= ? AND COALESCE(le, cree_le) < ? ORDER BY COALESCE(le, cree_le) LIMIT 30', [$du, $au]);
+    $ph = smPhotosDe(array_column($rows, 'id'));
+    return array_map(static fn ($r) => smEchVue($r, $mags, $ph), $rows);
 }
 
 /** GET /commercial/cr?client=&rdv= — les comptes rendus d'un client (ou d'un rendez-vous), du plus récent au plus ancien. */

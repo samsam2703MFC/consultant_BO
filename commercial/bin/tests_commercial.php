@@ -19,6 +19,8 @@ require __DIR__ . '/../src/commercial.php';
 require __DIR__ . '/../src/commercial_gains.php';
 require __DIR__ . '/../src/commercial_semaine.php';
 require __DIR__ . '/../src/commercial_meta.php';
+require __DIR__ . '/../src/commercial_photos.php';
+require __DIR__ . '/../src/commercial_commande.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -185,6 +187,37 @@ verifie('un formulaire de franchise est reconnu', smFormulaireRecrutement(['nom'
 verifie('un formulaire « Lunch au bureau » est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'Lunch au bureau — Gosselies', 'questions' => [['label' => 'Nom de l’entreprise'], ['label' => 'Nombre de personnes']]]));
 verifie('le formulaire créé sur la Page (fonction « Job title ») est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'LUNCH AU BUREAU - FR', 'questions' => array_map(static fn ($l) => ['label' => $l], ['Company name', 'Combien de personnes dans votre équipe ?', 'Quel est votre besoin ?', 'Full name', 'Job title', 'Email', 'Phone number', 'Post code'])]));
 verifie('« un job étudiant » reste du recrutement', smFormulaireRecrutement(['nom' => 'Un job chez nous', 'questions' => []]));
+// La commande d'échantillon dans le système de commande du magasin (commercial_commande.php).
+$brut = [
+    ['id' => 11, 'name' => 'Croissant', 'category_name' => 'Viennoiserie Ind.', 'id_category' => 7, 'portion_price_gross' => '1.30', 'recipe_cost_net' => '0.31', 'is_active' => 1, 'office_delivery' => 1],
+    ['id' => 12, 'name' => 'Pain au chocolat', 'category_name' => 'Viennoiserie Ind.', 'id_category' => 7, 'portion_price_gross' => '1.50', 'recipe_cost_net' => null, 'is_active' => 1, 'office_delivery' => 1],
+    ['id' => 21, 'name' => 'Plateau 12 sandwiches', 'category_name' => 'Plateau Sandwich', 'id_category' => 9, 'portion_price_gross' => '42.00', 'recipe_cost_net' => '13.5', 'is_active' => 1, 'office_delivery' => 1],
+    ['id' => 99, 'name' => 'Ancien produit', 'category_name' => 'Plateau Sandwich', 'is_active' => 0],
+];
+$cat = smCatalogueDe($brut);
+verifie('le catalogue du magasin est rangé par catégorie, les produits inactifs écartés', array_column($cat, 'nom') === ['Plateau Sandwich', 'Viennoiserie Ind.'] && count($cat[0]['produits']) === 1 && $cat[1]['produits'][0]['prix'] === 1.3);
+$idx = smCatalogueIndex($cat);
+[$lg, $err] = smLignesCatalogue([['id' => 11, 'q' => 6], ['id' => 21, 'q' => 1], ['id' => 12, 'q' => 0]], $idx);
+verifie('les lignes reprennent le nom, la catégorie et le prix du catalogue ; une quantité nulle est écartée', $err === null && count($lg) === 2 && $lg[0]['produit'] === 'Croissant' && $lg[1]['cat'] === 'Plateau Sandwich' && $lg[0]['q'] === '6');
+verifie('un produit hors du catalogue du magasin est refusé', smLignesCatalogue([['id' => 99, 'q' => 1]], $idx)[1] !== null);
+verifie('rien de choisi : refusé', smLignesCatalogue([], $idx)[1] === 'choisissez au moins un produit');
+verifie('le coût matière : coût de la recette × quantité', smCoutLignes($lg) === round(6 * 0.31 + 13.5, 2));
+$ech = ['id' => 7, 'shopId' => '2', 'prospect' => 'Bureau Test', 'contact' => 'Anne', 'le' => '2026-11-24 10:30:00', 'mode' => 'livraison', 'adresse' => 'Rue Haute 1, 1435', 'note' => '', 'contenu' => $lg];
+$corps = smCommandeCorps($ech, '2026-11-19 20:00:00');
+verifie('la commande TF Buddy : magasin, date de retrait, statut « nouvelle »', $corps['id_shop'] === 2 && $corps['pick_up_datetime'] === '2026-11-24 10:30:00' && $corps['id_order_status'] === 1);
+verifie('la commande est marquée « ÉCHANTILLON COMMERCIAL » et nomme le prospect', str_starts_with($corps['comment'], 'ÉCHANTILLON COMMERCIAL — Bureau Test (Anne)'));
+verifie('chaque ligne est offerte : remise égale à sa valeur, total 0', $corps['products'][0]['item_discount_value'] === 7.8 && $corps['products'][0]['total_gross_value_after_discount'] === 0 && $corps['products'][1]['id_product'] === 21);
+verifie('sans date, la commande est pour le lendemain 10 h', smCommandeCorps(['le' => null] + $ech, '2026-11-19 20:00:00')['pick_up_datetime'] === '2026-11-20 10:00:00');
+verifie('des lignes notées à la main ne partent pas dans TF Buddy', smCommandeCorps(['contenu' => [['produit' => 'Croissant', 'q' => '6']]] + $ech, '2026-11-19 20:00:00')['products'] === []);
+
+// La photo des échantillons reçus (commercial_photos.php) : ce qui passe et ce qui est refusé.
+$png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+[$ph, $err] = smPhotosLues([['data' => $png]]);
+verifie('une photo PNG est lue (format, taille)', $err === null && count($ph) === 1 && $ph[0]['ext'] === 'png' && $ph[0]['largeur'] === 1);
+verifie('aucune photo : refusé', smPhotosLues([])[1] === 'aucune photo reçue');
+verifie('un texte déguisé en image est refusé', smPhotosLues([['data' => 'data:image/jpeg;base64,' . base64_encode(str_repeat('<?php echo 1; ?>', 10))]])[1] !== null);
+verifie('sept photos d’un coup : refusé', smPhotosLues(array_fill(0, 7, ['data' => $png]))[1] !== null);
+verifie('« reçu » est un statut d’échantillon, entre commandé et livré', array_slice(SM_ECH_STATUTS, 1, 3) === ['commande', 'recu', 'livre']);
 verifie('les formulaires que le portail peut mettre en inactif : « Lunch au bureau » FR et NL, rien d’autre', smFormulairesLunchNoms() === ['LUNCH AU BUREAU - FR', 'LUNCH OP KANTOOR - NL']);
 $fl = smFormulaireLunch('fr', 'https://atelierby.be/');
 verifie('le formulaire « Lunch au bureau » demande le code postal (le magasin) et l’entreprise', in_array('POST_CODE', array_column($fl['questions'], 'type'), true) && in_array('COMPANY_NAME', array_column($fl['questions'], 'type'), true));

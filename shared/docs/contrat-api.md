@@ -5954,7 +5954,9 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `GET /commercial/catalogues?shop=`, `POST /commercial/catalogues/lien` | les catalogues du magasin (relais du Marketing) ; le lien public d'un catalogue pour l'e-mail |
 | `GET /commercial/modeles`, `PUT /commercial/modeles/{id}/{fr\|nl}` | les modèles d'e-mail (`bienvenue`, `offre`, `catalogue`, `echantillon`, `relance`) ; corps vide : modèle d'origine |
 | `POST /commercial/apercu`, `POST /commercial/envoyer`, `GET /commercial/envois` | l'e-mail rendu (§13.6) ; l'envoi depuis l'expéditeur réglé (hello@atelierby.be), noté dans `sm_envoi` |
-| `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons ; `envoyer` : la demande part au magasin par e-mail (adresse de sa fiche au panel) |
+| `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons (`contenu` : `[{id, q}]` du catalogue du magasin, ou `[{produit, q}]` à la main) ; `commander` : la commande dans le système du magasin (TF Buddy `POST /client-orders`, « ÉCHANTILLON COMMERCIAL », offerte, `commande` = son numéro) ; `envoyer` : l'e-mail au magasin (adresse de sa fiche au panel) |
+| `GET /commercial/catalogue-magasin?shop=` | les catégories et les produits du magasin (TF Buddy `GET /shops/{id}/products/available`) : nom, prix, coût de la recette, livrable au bureau |
+| `POST /commercial/echantillons/{id}/photos`, `GET\|DELETE /commercial/echantillons/photos/{id}` | la photo de l'échantillon reçu (`photos: [{data}]`, data-URL JPEG, PNG ou WebP, 6 Mo) ; l'échantillon passe à « reçu » ; le fichier sort tel quel (dossier privé) |
 | `GET /commercial/suivi?du=` | par secteur et par magasin : offres et catalogues envoyés, échantillons, convertis, clients ; listes de démarchage de Prospection |
 | `GET /commercial/gains?mois=AAAA-MM` | les gains : par client (1re commande, règle, commandes, HT, gain), par secteur, plancher et complément, historique de 6 mois |
 | `GET /commercial/semaine?du=` | la semaine du lundi au samedi : `rdv[]`, `enRetard[]`, `candidats[]` (leads à traiter, bureaux et clients, lieux de Prospection à rappeler), `magasins[]` (rendez-vous, dégustations, téléphone, appel au franchisé), `echantillons{}` |
@@ -5968,6 +5970,7 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `GET /commercial/commissions?mois=` | la commission commerciale à prélever à chaque franchisé avec ses royalties du mois (taux de départ, HT) : magasin, montant, détail par client |
 | `GET /commercial/simulation?secteur=&personnes=&depense=&commandes=&ht=` | ce que rapporte un client sur un an à la règle de son secteur : CA HT par mois (estimé comme Prospection, ou donné), gains mois par mois, part du franchisé et de la marque |
 | `GET /commercial/formulaires/modele?langue=`, `POST /commercial/formulaires/creer` | le formulaire Meta « Lunch au bureau » (FR) ou « Lunch op kantoor » (NL) : l'aperçu, puis la création sur la Page (`POST /{page}/leadgen_forms`, jeton de MétaDonnée), relu par MétaDonnée |
+| `POST /commercial/formulaires/{id}/actif` | `{ actif }` : un formulaire « Lunch au bureau » archivé chez Meta (inactif) ou réactivé ; les autres formulaires : 403 |
 | `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
 
 **Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée

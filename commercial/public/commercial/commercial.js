@@ -67,9 +67,8 @@
   let compteLeads = null, compteBureaux = null;
   const alertes = () => api('GET', '/alertes').then(a => { compteLeads = a.leads; compteBureaux = a.bureaux; const v = (location.hash.slice(1) || 'semaine').split('?')[0]; rail(VUES[v] ? v : 'semaine'); }).catch(() => {});
   function rail(vue) {
-    // La Prospection est une page du portail depuis le 19/11/2026 (prospection/, à côté) : elle s'ouvre ici, sans nouvel onglet.
-    const it = ([k, i, l]) => k === 'prospection' ? `<a class="sidebar__item" href="prospection/">${ico(i)}<span>${l}</span></a>`
-      : k === 'mobile'
+    // La Prospection (prospection/, page du portail depuis le 19/11/2026) s'affiche à côté du rail, dans la vue #prospection.
+    const it = ([k, i, l]) => k === 'mobile'
       ? `<a class="sidebar__item" href="mobile/" target="_blank" rel="noopener">${ico(i)}<span>${l}</span></a>`
       : `<a class="sidebar__item ${vue === k ? 'is-active' : ''}" href="#${k}">${ico(i)}<span>${l}</span>${k === 'leads' && compteLeads ? `<span class="count" title="leads Meta à traiter" style="background:var(--accent);color:#fff">${compteLeads}</span>` : ''}${k === 'bureaux' && compteBureaux ? `<span class="count" title="bureaux à valider (compte webshop pas encore connecté)">${compteBureaux}</span>` : ''}</a>`;
     document.getElementById('rail').innerHTML = `
@@ -221,14 +220,19 @@
         const aDeguster = visites.filter(r => r.degustation || r.echantillonId);
         corps = `<div class="info">${esc(CFG.aBrancher.echantillon)}</div><div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Quand</th><th>Société</th><th>Magasin</th><th>Échantillon</th><th></th></tr></thead><tbody>${aDeguster.length ? aDeguster.map(r => { const e = d.echantillons[r.echantillonId];
           return ligneRdv(r, `<td>${e ? `<span class="${ECH[e.statut][1]}">${ECH[e.statut][0]}</span><span class="sub">${esc(e.contenu.map(x => x.q + ' × ' + x.produit).join(', '))}</span>` : '<span class="tag-warn">à commander</span>'}</td>
-            <td class="num">${e ? '' : `<input data-k="ech${r.id}" value="6 Croissant, 6 Pain au chocolat, 1 Tarte du jour (8 parts)" style="width:300px;padding:5px 8px;font-size:12px"> ${btn('Commander au magasin', 'commander', 'btn--sm btn--primary', r.id)}`}</td>`); }).join('')
+            <td class="num">${e ? (e.commande ? `<span class="small muted">TF Buddy n° ${e.commande}</span>` : '') : btn('Choisir les produits et commander', 'commander', 'btn--sm btn--primary', r.id)}</td>`); }).join('')
           : '<tr><td class="vide" colspan="5">Aucune visite avec dégustation : cochez « dég. » au planning, ou ajoutez-en une.</td></tr>'}</tbody></table></div>`;
-        ACT.commander = el => { const r = rdv.find(x => x.id === Number(el.dataset.v)); const txt = page.querySelector(`[data-k="ech${r.id}"]`).value;
-          const contenu = txt.split(',').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(\d+)\s*(?:×|x)?\s*(.+)$/); return m ? { q: m[1], produit: m[2] } : { q: '1', produit: s }; });
-          el.disabled = true;
-          api('POST', '/echantillons', { prospect: r.prospect, contact: r.contact, clientId: r.clientId, secteur: r.secteur, shopId: r.shopId, contenu, le: r.le.slice(0, 16), mode: 'livraison', adresse: r.adresse, envoyer: true, note: 'Pour la dégustation du ' + fDc(r.le) + ' à ' + hm(r.le) })
-            .then(x => api('PUT', '/rdv/' + r.id, { echantillonId: x.echantillon.id }).then(() => { toast(x.envoi && x.envoi.ok ? 'Demande envoyée au magasin' : 'Échantillon noté, pas envoyé : ' + (x.envoi ? x.envoi.erreur : ''), x.envoi && !x.envoi.ok); vueSemaine(q); }))
-            .catch(e => { toast(e.message, true); el.disabled = false; }); };
+        ACT.commander = el => { const r = rdv.find(x => x.id === Number(el.dataset.v));
+          choisirProduits(r.shopId, []).then(v => {
+            if (!v || !v.lignes.length) return;
+            el.disabled = true;
+            api('POST', '/echantillons', { prospect: r.prospect, contact: r.contact, clientId: r.clientId, secteur: r.secteur, shopId: r.shopId, contenu: v.manuel ? v.lignes : v.lignes.map(l => ({ id: l.id, q: l.q })),
+              le: r.le.slice(0, 16), mode: 'livraison', adresse: r.adresse, commander: !v.manuel, envoyer: !!v.manuel, note: 'Pour la dégustation du ' + fDc(r.le) + ' à ' + hm(r.le) })
+              .then(x => api('PUT', '/rdv/' + r.id, { echantillonId: x.echantillon.id }).then(() => {
+                const ko = (x.commande && !x.commande.ok) || (x.envoi && !x.envoi.ok);
+                toast(x.commande ? (x.commande.ok ? 'Commande TF Buddy n° ' + x.commande.commande + ' passée au magasin' : 'Échantillon noté, commande pas passée : ' + x.commande.erreur) : x.envoi && x.envoi.ok ? 'Demande envoyée au magasin par e-mail' : 'Échantillon noté, pas envoyé : ' + (x.envoi ? x.envoi.erreur : ''), ko); vueSemaine(q); }))
+              .catch(e => { toast(e.message, true); el.disabled = false; });
+          }); };
       }
       if (etape === 5) {
         corps = `<div class="grid" style="grid-template-columns:repeat(2,1fr)">${d.magasins.filter(m => mags.includes(String(m.id))).map(m => { const duMag = rdv.filter(r => String(r.shopId) === String(m.id));
@@ -566,15 +570,77 @@
   }
 
   /* --- 6. échantillons ------------------------------------------------------------------------------------------- */
-  const ECH = { a_envoyer: ['à envoyer', 'tag-warn'], commande: ['commandé', 'chip'], livre: ['livré', 'chip'], converti: ['converti', 'badge badge--ok'], sans_suite: ['sans suite', 'badge badge--n'] };
+  const ECH = { a_envoyer: ['à envoyer', 'tag-warn'], commande: ['commandé', 'chip'], recu: ['reçu', 'chip'], livre: ['livré', 'chip'], converti: ['converti', 'badge badge--ok'], sans_suite: ['sans suite', 'badge badge--n'] };
+  /* Le choix des produits du magasin, comme une commande du magasin (commercial_commande.php) : les catégories et les
+   * produits de TF Buddy, la recherche, les quantités. Rend { lignes: [{id, q, nom, prix, cout}] } ou, quand le catalogue
+   * ne se lit pas, { manuel: true, lignes: [{produit, q}] } ; null si on annule. */
+  const CATALOGUES = {};
+  const catalogueMag = shopId => CATALOGUES[shopId] || (CATALOGUES[shopId] = api('GET', '/catalogue-magasin?shop=' + encodeURIComponent(shopId)).catch(e => { delete CATALOGUES[shopId]; throw e; }));
+  function choisirProduits(shopId, depart) {
+    return new Promise(fin => {
+      const md = document.createElement('div'); md.className = 'modal';
+      md.innerHTML = `<div class="modal__box cmd-box"><h3>Commander un échantillon · ${esc(nomMag(shopId))}</h3><div class="vide">Lecture du catalogue du magasin…</div></div>`;
+      document.body.appendChild(md);
+      const sel = new Map((depart || []).filter(l => l.id).map(l => [l.id, Number(l.q) || 1]));
+      let cat = '', cherche = '', bureau = true, C = null, IDX = {};
+      const fermer = v => { md.remove(); fin(v); };
+      const lignes = () => [...sel.entries()].filter(([, q]) => q > 0).map(([id, q]) => ({ id, q, nom: IDX[id].nom, prix: IDX[id].prix, cout: IDX[id].cout, cat: IDX[id].cat }));
+      function rendre() {
+        const vis = p => (!bureau || p.bureau) && (!cherche || p.nom.toLowerCase().includes(cherche));
+        const cats = C.categories.map(c => ({ ...c, vis: c.produits.filter(vis) })).filter(c => c.vis.length);
+        if (!cherche && cat && !cats.find(c => c.nom === cat)) cat = '';
+        if (!cherche && !cat && cats.length) cat = cats[0].nom;
+        const prods = cherche ? cats.flatMap(c => c.vis) : ((cats.find(c => c.nom === cat) || {}).vis || []);
+        const L = lignes(); const valeur = L.reduce((s, l) => s + (l.prix || 0) * l.q, 0); const cout = L.reduce((s, l) => s + (l.cout || 0) * l.q, 0);
+        md.querySelector('.modal__box').innerHTML = `<h3>Commander un échantillon · ${esc(nomMag(shopId))} <span class="aside" style="float:none;margin-left:8px">les produits du magasin, comme une commande · offert</span></h3>
+          <div class="toolbar"><input class="search" data-k="cherche" placeholder="Chercher un produit du magasin" value="${esc(cherche)}"><label class="small muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-k="bureau" ${bureau ? 'checked' : ''} style="width:auto"> livrables au bureau</label></div>
+          <div class="cmd">
+            <div class="cmd__cats">${cats.map(c => `<button type="button" class="cmd__cat ${!cherche && c.nom === cat ? 'is-on' : ''}" data-cat="${esc(c.nom)}">${esc(c.nom)}<em>${c.vis.length}</em></button>`).join('') || '<div class="small muted" style="padding:10px">Aucune catégorie.</div>'}</div>
+            <div class="cmd__prods">${prods.map(p => { const q = sel.get(p.id) || 0; return `<div class="cmd__prod ${q ? 'is-on' : ''}"><div>${esc(p.nom)}<span class="sub">${p.prix != null ? fE2(p.prix) : 'prix non renseigné'}${cherche ? ' · ' + esc(IDX[p.id].cat) : ''}</span></div>
+              <div class="cmd__q"><button type="button" data-q="${p.id}|-1" ${q ? '' : 'disabled'}>−</button><span>${q || ''}</span><button type="button" data-q="${p.id}|1">+</button></div></div>`; }).join('') || '<div class="vide">Aucun produit.</div>'}</div>
+            <div class="cmd__panier"><div class="field-label">L’échantillon</div>${L.length ? `<table class="mini"><tbody>${L.map(l => `<tr><td>${l.q} ×</td><td>${esc(l.nom)}</td></tr>`).join('')}</tbody></table>
+              <div class="small" style="margin-top:10px">Valeur de vente ${fE2(valeur)} · offert<br><span class="muted">Coût matière ${cout ? fE2(cout) : '—'}</span></div>` : '<div class="small muted">Choisissez les produits avec +.</div>'}</div>
+          </div>
+          <div class="modal__actions"><button class="btn btn--ghost" data-m="0">Annuler</button><button class="btn btn--primary" data-m="1" ${L.length ? '' : 'disabled'}>Valider ${L.length ? L.length + ' produit' + (L.length > 1 ? 's' : '') : ''}</button></div>`;
+        const s = md.querySelector('[data-k=cherche]'); if (cherche) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+      }
+      md.addEventListener('click', ev => {
+        const b = ev.target.closest('[data-m],[data-cat],[data-q]'); if (!b) { if (ev.target === md) fermer(null); return; }
+        if (b.dataset.m === '0') return fermer(null);
+        if (b.dataset.m === '1') return fermer(C ? { lignes: lignes() } : { manuel: true, lignes: md.querySelector('textarea').value.split(/[,\n]/).map(x => x.trim()).filter(Boolean).map(x => { const m = x.match(/^(\d+)\s*(?:×|x)?\s*(.+)$/); return m ? { q: m[1], produit: m[2] } : { q: '1', produit: x }; }) });
+        if (b.dataset.cat != null) { cat = b.dataset.cat; cherche = ''; rendre(); return; }
+        if (b.dataset.q) { const [id, d] = b.dataset.q.split('|').map(Number); sel.set(id, Math.max(0, (sel.get(id) || 0) + d)); rendre(); }
+      });
+      md.addEventListener('input', ev => { if (ev.target.dataset.k === 'cherche') { cherche = ev.target.value.trim().toLowerCase(); rendre(); } });
+      md.addEventListener('change', ev => { if (ev.target.dataset.k === 'bureau') { bureau = ev.target.checked; rendre(); } });
+      catalogueMag(shopId).then(c => { C = c; c.categories.forEach(x => x.produits.forEach(p => { IDX[p.id] = { ...p, cat: x.nom }; })); rendre(); })
+        .catch(e => { md.querySelector('.modal__box').innerHTML = `<h3>Commander un échantillon · ${esc(nomMag(shopId))}</h3><p class="erreur">${esc(e.message)}</p>
+          <label><span class="field-label">Noter les produits à la main (la demande part alors par e-mail au magasin)</span><textarea rows="3" placeholder="6 Croissant, 6 Pain au chocolat, 1 Tarte du jour"></textarea></label>
+          <div class="modal__actions"><button class="btn btn--ghost" data-m="0">Annuler</button><button class="btn btn--primary" data-m="1">Valider</button></div>`; });
+    });
+  }
+
+  // La photo de l'échantillon reçu (commercial_photos.php) : réduite à 1600 px en JPEG par le navigateur avant l'envoi.
+  function reduirePhoto(file) {
+    return new Promise((ok, ko) => {
+      const img = new Image(); const u = URL.createObjectURL(file);
+      img.onload = () => { const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)); const c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.82)); };
+      img.onerror = () => { URL.revokeObjectURL(u); ko(new Error('photo illisible : ' + file.name)); };
+      img.src = u;
+    });
+  }
+  const photosEch = e => `<div class="ech-photos">${(e.photos || []).map(p => `<a href="${API}/echantillons/photos/${p.id}" target="_blank" rel="noopener" title="Reçu le ${esc(fDc((p.le || '').slice(0, 10)))} à ${esc((p.le || '').slice(11, 16))}"><img src="${API}/echantillons/photos/${p.id}" alt="Photo de l’échantillon reçu" loading="lazy"></a>`).join('')}
+    <label class="btn btn--sm ${(e.photos || []).length ? 'btn--ghost' : ''}" title="Photographier l’échantillon reçu">${(e.photos || []).length ? '+ Photo' : 'Photo à la réception'}<input type="file" accept="image/*" capture="environment" multiple hidden data-c="photoEch" data-v="${e.id}"></label></div>`;
   function vueEchantillons(q) {
     entete('Bureaux · webshop', 'Échantillons', '');
     Promise.all([api('GET', '/echantillons'), charger()]).then(([d]) => {
       const cli = q.get('client') ? CLIENTS.find(c => c.id === Number(q.get('client'))) : null;
       const liste = d.echantillons.length ? d.echantillons.map(e => `<tr><td class="ink2">${fDc((e.creeLe || '').slice(0, 10))}</td><td>${esc(e.prospect)}<span class="sub">${esc(e.contenu.map(x => x.q + ' × ' + x.produit).join(', '))}</span></td><td>${esc(e.magasin)}<span class="sub">${e.le ? esc(fDc(e.le.slice(0, 10)) + ' ' + e.le.slice(11, 16)) + ' · ' + esc(e.mode) : ''}</span></td>
-        <td><select class="select-native" data-c="statutEch" data-v="${e.id}" style="height:30px;font-size:12px">${Object.entries(ECH).map(([k, [l]]) => `<option value="${k}" ${e.statut === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${e.envoyeLe ? `<span class="sub">envoyé au magasin ${fDc(e.envoyeLe.slice(0, 10))}</span>` : ''}</td>
-        <td class="num">${btn(e.envoyeLe ? 'Renvoyer' : 'Envoyer au magasin', 'envoyerEch', 'btn--sm', e.id)}</td></tr>`).join('')
-        : '<tr><td class="vide" colspan="5">Aucun échantillon sur 60 jours.</td></tr>';
+        <td><select class="select-native" data-c="statutEch" data-v="${e.id}" style="height:30px;font-size:12px">${Object.entries(ECH).map(([k, [l]]) => `<option value="${k}" ${e.statut === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${e.commande ? `<span class="sub">commande TF Buddy n° ${e.commande}</span>` : e.commandeErreur ? `<span class="sub erreur">${esc(e.commandeErreur)}</span>` : e.envoyeLe ? `<span class="sub">e-mail au magasin ${fDc(e.envoyeLe.slice(0, 10))}</span>` : ''}</td>
+        <td>${photosEch(e)}</td>
+        <td class="num" style="white-space:nowrap">${!e.commande && e.contenu.some(x => x.id) ? btn('Commander dans TF Buddy', 'commanderEch', 'btn--sm btn--primary', e.id) : ''}${btn(e.envoyeLe && !e.commande ? 'Renvoyer l’e-mail' : 'E-mail au magasin', 'envoyerEch', 'btn--sm btn--ghost', e.id)}</td></tr>`).join('')
+        : '<tr><td class="vide" colspan="6">Aucun échantillon sur 60 jours.</td></tr>';
       page.innerHTML = `
         <div class="kpi-row"><div class="kpi"><div class="kpi__value">${d.mois.n}</div><div class="kpi__label">Échantillons ce mois</div></div>
           <div class="kpi"><div class="kpi__value">${fE2(d.mois.cout)}</div><div class="kpi__label">Coût matière</div><div class="kpi__note">saisi à la commande</div></div>
@@ -588,31 +654,47 @@
             <label><span class="field-label">Contact</span><input name="contact" value="${esc(cli ? cli.contact : '')}"></label>
             <label><span class="field-label">Magasin</span>${selMagasins(cli ? cli.shopId : '', null, 'shopId')}</label>
             <label><span class="field-label">Secteur</span>${selSecteurs(cli ? cli.secteur : '')}</label>
-            <div class="plein"><span class="field-label">Contenu</span><table class="lignes-ech"><tbody id="lignes">${[1, 2, 3].map(() => '<tr><td><input data-l="produit" placeholder="Croissant"></td><td style="width:90px"><input data-l="q" placeholder="6"></td></tr>').join('')}</tbody></table>${btn('+ une ligne', 'ligne', 'btn--sm btn--ghost')}</div>
+            <div class="plein"><span class="field-label">Les produits du magasin</span><div id="panier" class="small muted" style="margin:4px 0 8px">Aucun produit choisi.</div>${btn('Choisir les produits du magasin', 'produits', 'btn--sm')}</div>
             <label><span class="field-label">Le</span><input name="le" type="datetime-local"></label>
             <label><span class="field-label">Mode</span><select name="mode"><option value="livraison">Livraison</option><option value="retrait">Retrait au magasin</option></select></label>
             <label class="plein"><span class="field-label">Adresse de livraison</span><input name="adresse" value="${esc(cli ? [cli.adresse, cli.cp].filter(Boolean).join(', ') : '')}"></label>
-            <label><span class="field-label">Coût matière (€)</span><input name="cout" type="number" step="0.01" min="0"></label>
+            <label><span class="field-label">Coût matière (€)</span><input name="cout" type="number" step="0.01" min="0" placeholder="auto (recettes)"></label>
             <label><span class="field-label">Note pour le magasin</span><input name="note"></label>
-            <label class="plein"><span class="field-label"><input type="checkbox" name="envoyer" checked style="width:auto"> Envoyer la demande au magasin par e-mail</span></label>
+            <label class="plein"><span class="field-label"><input type="checkbox" name="commander" checked style="width:auto"> Passer la commande dans le système du magasin (TF Buddy, « ÉCHANTILLON COMMERCIAL », offerte)</span></label>
+            <label class="plein"><span class="field-label"><input type="checkbox" name="envoyer" style="width:auto"> Prévenir aussi le magasin par e-mail</span></label>
             <div class="plein" style="display:flex;justify-content:flex-end">${btn('Commander au magasin', 'creerEch', 'btn--primary')}</div></form>
           <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>Les échantillons <span class="aside">60 derniers jours</span></h2></div>
-            <table><thead><tr><th>Le</th><th>Prospect</th><th>Magasin</th><th>Statut</th><th></th></tr></thead><tbody>${liste}</tbody></table></div></div>`;
+            <table><thead><tr><th>Le</th><th>Prospect</th><th>Magasin</th><th>Statut</th><th>Reçu</th><th></th></tr></thead><tbody>${liste}</tbody></table></div></div>`;
       const f = document.getElementById('fe');
-      f.clientId.addEventListener('change', () => { const c = CLIENTS.find(x => x.id === Number(f.clientId.value)); if (c) { f.prospect.value = c.entreprise; f.contact.value = c.contact; f.shopId.value = c.shopId; f.secteur.value = c.secteur; f.adresse.value = [c.adresse, c.cp].filter(Boolean).join(', '); } });
+      f.clientId.addEventListener('change', () => { const c = CLIENTS.find(x => x.id === Number(f.clientId.value)); if (c) { f.prospect.value = c.entreprise; f.contact.value = c.contact; if (String(f.shopId.value) !== String(c.shopId)) { f.shopId.value = c.shopId; PANIER = null; panier(); } f.secteur.value = c.secteur; f.adresse.value = [c.adresse, c.cp].filter(Boolean).join(', '); } });
+      f.shopId.addEventListener('change', () => { PANIER = null; panier(); });
     }).catch(erreur);
+    let PANIER = null;   // { lignes, manuel } : ce que « Choisir les produits du magasin » a rendu
+    const panier = () => { const el = document.getElementById('panier'); if (!el) return;
+      el.innerHTML = PANIER && PANIER.lignes.length ? PANIER.lignes.map(l => esc(l.q + ' × ' + (l.nom || l.produit))).join(' · ') + (PANIER.manuel ? ' <span class="tag-warn">à la main : par e-mail seulement</span>' : '') : 'Aucun produit choisi.'; };
+    const resultat = r => [r.commande ? (r.commande.ok ? 'Commande TF Buddy n° ' + r.commande.commande + ' passée au magasin' : 'Commande pas passée : ' + r.commande.erreur) : '',
+      r.envoi ? (r.envoi.ok ? 'e-mail envoyé (' + r.envoi.a + ')' : 'e-mail pas envoyé : ' + r.envoi.erreur) : ''].filter(Boolean).join(' · ') || 'Échantillon noté';
+    const rate = r => (r.commande && !r.commande.ok) || (r.envoi && !r.envoi.ok);
     ACT = {
-      ligne: () => { document.getElementById('lignes').insertAdjacentHTML('beforeend', '<tr><td><input data-l="produit"></td><td style="width:90px"><input data-l="q"></td></tr>'); },
+      produits: () => { const f = document.getElementById('fe'); choisirProduits(f.shopId.value, PANIER && !PANIER.manuel ? PANIER.lignes : []).then(v => { if (v) { PANIER = v; panier(); } }); },
       creerEch: el => {
         const f = document.getElementById('fe'); const x = lireForm(f);
-        const contenu = [...document.querySelectorAll('#lignes tr')].map(tr => ({ produit: tr.querySelector('[data-l=produit]').value, q: tr.querySelector('[data-l=q]').value || '1' })).filter(l => l.produit.trim());
+        if (!PANIER || !PANIER.lignes.length) { toast('Choisissez les produits du magasin', true); return; }
+        const contenu = PANIER.manuel ? PANIER.lignes : PANIER.lignes.map(l => ({ id: l.id, q: l.q }));
         el.disabled = true;
-        api('POST', '/echantillons', { ...x, clientId: x.clientId ? Number(x.clientId) : null, contenu }).then(r => {
-          toast(r.envoi ? (r.envoi.ok ? 'Demande envoyée au magasin (' + r.envoi.a + ')' : 'Échantillon noté, pas envoyé : ' + r.envoi.erreur) : 'Échantillon noté', r.envoi && !r.envoi.ok); vueEchantillons(new URLSearchParams());
+        api('POST', '/echantillons', { ...x, clientId: x.clientId ? Number(x.clientId) : null, contenu, commander: !PANIER.manuel && f.commander.checked, envoyer: f.envoyer.checked || !!PANIER.manuel }).then(r => {
+          toast(resultat(r), rate(r)); vueEchantillons(new URLSearchParams());
         }).catch(e => { toast(e.message, true); el.disabled = false; });
       },
+      commanderEch: el => { el.disabled = true; api('PUT', '/echantillons/' + el.dataset.v, { commander: true }).then(r => { toast(resultat(r), rate(r)); vueEchantillons(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); },
       envoyerEch: el => api('PUT', '/echantillons/' + el.dataset.v, { envoyer: true }).then(r => { toast(r.envoi.ok ? 'Envoyé au magasin (' + r.envoi.a + ')' : 'Pas envoyé : ' + r.envoi.erreur, !r.envoi.ok); vueEchantillons(q); }).catch(e => toast(e.message, true)),
       statutEch: el => api('PUT', '/echantillons/' + el.dataset.v, { statut: el.value }).then(() => toast('Enregistré')).catch(e => toast(e.message, true)),
+      photoEch: el => {
+        if (!el.files.length) return;
+        const lab = el.closest('label'); if (lab) lab.firstChild.textContent = 'Envoi…';
+        Promise.all([...el.files].slice(0, 6).map(reduirePhoto)).then(l => api('POST', '/echantillons/' + el.dataset.v + '/photos', { photos: l.map(data => ({ data })) }))
+          .then(() => { toast('Photo enregistrée : échantillon reçu'); vueEchantillons(q); }).catch(e => { toast(e.message, true); vueEchantillons(q); });
+      },
     };
   }
 
@@ -767,13 +849,22 @@
     };
   }
 
+  /* --- la Prospection, à côté du rail (19/11/2026 : « mettre la prospection à côté du rail, ne pas ouvrir de nouvelle
+   * feuille ») : la page prospection/ dans un cadre, sans son propre retour au portail (?embed=1). ------------------ */
+  function vueProspection(q) {
+    entete('B2B', 'Prospection', '');
+    const shop = q.get('shop') || '';
+    page.innerHTML = `<iframe class="cadre-prospection" src="prospection/?embed=1${shop ? '&shop=' + encodeURIComponent(shop) : ''}" title="Prospection : la liste de démarchage du magasin"></iframe>`;
+  }
+
   /* --- le routeur ------------------------------------------------------------------------------------------------ */
-  const VUES = { semaine: vueSemaine, tableau: vueTableau, leads: vueLeads, nouveau: vueNouveau, bureaux: vueBureaux, offres: vueOffres, echantillons: vueEchantillons, suivi: vueSuivi, gains: vueGains, modeles: vueModeles, reglages: vueReglages };
+  const VUES = { prospection: vueProspection, semaine: vueSemaine, tableau: vueTableau, leads: vueLeads, nouveau: vueNouveau, bureaux: vueBureaux, offres: vueOffres, echantillons: vueEchantillons, suivi: vueSuivi, gains: vueGains, modeles: vueModeles, reglages: vueReglages };
   function aller() {
     const [v, qs] = (location.hash.slice(1) || 'semaine').split('?');
     const vue = VUES[v] ? v : 'semaine';
     rail(vue);
     ACT = {};
+    page.style.maxWidth = vue === 'prospection' ? 'none' : '1180px';
     window.scrollTo(0, 0);
     VUES[vue](new URLSearchParams(qs || ''));
   }

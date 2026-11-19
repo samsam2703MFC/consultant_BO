@@ -162,6 +162,8 @@ require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portai
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
 require __DIR__ . '/../../../commercial/src/commercial_meta.php';    // … et le formulaire Meta « Lunch au bureau » (création sur la Page)
+require __DIR__ . '/../../../commercial/src/commercial_photos.php';  // … et la photo des échantillons reçus par le commercial
+require __DIR__ . '/../../../commercial/src/commercial_commande.php'; // … et la commande d'échantillon dans le système de commande du magasin
 // La Prospection (liste de démarchage, types d'offre) et son relevé OpenStreetMap : dans le portail Commercial depuis le
 // 19/11/2026, page /commercial/prospection/ ; les routes /prospection/… et /scouting/demarchage ne changent pas.
 require __DIR__ . '/../../../commercial/src/scouting_osm.php';

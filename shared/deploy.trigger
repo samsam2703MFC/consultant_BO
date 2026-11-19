@@ -200,3 +200,4 @@
 2026-11-19T20:46:25Z Commercial : le formulaire « Lunch au bureau » (question « Job title ») n'est plus pris pour un formulaire de recrutement
 2026-11-19T20:49:14Z Commercial : un formulaire « Lunch au bureau » se met en inactif (archivé chez Meta) et se réactive depuis le portail
 2026-11-19T19:36:21Z Assistant · coachs, onglet KPI : chaque outil à la demande ou forcé par le coach (plus de « Coupé »)
+2026-11-19T21:01:42Z Commercial : l'échantillon se commande comme une commande du magasin (produits et catégories de TF Buddy, commande « ÉCHANTILLON COMMERCIAL ») et se photographie à la réception ; la Prospection s'affiche à côté du rail

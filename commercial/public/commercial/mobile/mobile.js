@@ -46,6 +46,32 @@
       ${r.note ? `<div class="small" style="margin-top:6px;color:var(--muted-2)">${esc(r.note)}</div>` : ''}
       ${fait ? `<div class="small" style="margin-top:8px">${esc((L.issues[r.issue] || r.statut))}</div>` : `<div class="m-actions">${tel}${nav}<button class="btn btn--primary" data-a="cr" data-v="${r.id}">Compte rendu</button></div>`}</div>`;
   }
+  /* --- la photo des échantillons reçus (commercial_photos.php) ------------------------------------------------------ */
+  // Une photo de téléphone (3 à 10 Mo) réduite à 1600 px en JPEG avant l'envoi.
+  function reduire(file) {
+    return new Promise((ok, ko) => {
+      const img = new Image(); const u = URL.createObjectURL(file);
+      img.onload = () => { const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)); const c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.82)); };
+      img.onerror = () => { URL.revokeObjectURL(u); ko(new Error('photo illisible : ' + file.name)); };
+      img.src = u;
+    });
+  }
+  function carteEch(e) {
+    const recu = e.statut === 'recu' || e.photos.length > 0;
+    const quand = e.le ? (e.le.slice(0, 10) === jour ? hm(e.le) : jourNom(e.le.slice(0, 10)) + ' ' + hm(e.le)) : 'à convenir';
+    return `<div class="m-carte ${recu ? 'recu' : ''}"><div class="m-ligne"><span class="m-heure">${esc(quand)}</span><span class="small muted">Échantillon · ${e.mode === 'retrait' ? 'retrait au magasin' : 'livraison'}${recu ? ' · <span style="color:var(--green)">reçu</span>' : ''}</span></div>
+      <div class="m-nom">${esc(e.prospect)}</div><div class="small muted">${esc([e.magasin, e.contenu.map(x => x.q + ' × ' + x.produit).join(', ')].filter(Boolean).join(' · '))}</div>
+      ${e.photos.length ? `<div class="m-photos">${e.photos.map(p => `<a href="${API}/echantillons/photos/${p.id}" target="_blank" rel="noopener"><img src="${API}/echantillons/photos/${p.id}" alt="Photo de l’échantillon reçu" loading="lazy"></a>`).join('')}</div>` : ''}
+      <div class="m-actions"><label class="btn ${recu ? '' : 'btn--primary'}">${recu ? '+ Une photo' : 'Reçu : photographier'}<input type="file" accept="image/*" capture="environment" multiple hidden data-photo="${e.id}"></label></div></div>`;
+  }
+  document.addEventListener('change', e => {
+    const i = e.target.closest('input[data-photo]'); if (!i || !i.files.length) return;
+    const lab = i.closest('label'); if (lab) lab.firstChild.textContent = 'Envoi de la photo…';
+    Promise.all([...i.files].slice(0, 6).map(reduire)).then(l => api('POST', '/echantillons/' + i.dataset.photo + '/photos', { photos: l.map(data => ({ data })) }))
+      .then(() => { toast('Photo enregistrée : échantillon reçu'); journee(); }).catch(err => { toast(err.message, true); journee(); });
+  });
+
   let DATA = null;
   function journee() {
     m.innerHTML = '<div class="vide">Lecture de la journée…</div>';
@@ -55,6 +81,7 @@
       m.innerHTML = `<div class="m-jour"><button class="btn btn--sm" data-a="jour" data-v="-1">◀</button><h1>${titre}</h1><button class="btn btn--sm" data-a="jour" data-v="1">▶</button></div>
         ${d.enRetard.length && jour === auj() ? `<div class="m-sec">En retard · ${d.enRetard.length}</div>${d.enRetard.map(carte).join('')}` : ''}
         <div class="m-sec">${jour === auj() ? 'La journée' : 'Ce jour-là'} · ${d.aujourdhui.length}</div>${d.aujourdhui.length ? d.aujourdhui.map(carte).join('') : '<div class="m-carte small muted">Rien de prévu. Planifiez la semaine depuis la version bureau, ou notez un contact imprévu.</div>'}
+        ${(d.echantillons || []).length ? `<div class="m-sec">Échantillons · ${d.echantillons.filter(e => e.statut !== 'recu' && !e.photos.length).length} à recevoir</div>${d.echantillons.map(carteEch).join('')}` : ''}
         ${d.aVenir.length ? `<div class="m-sec">La suite de la semaine · ${d.aVenir.length}</div>${d.aVenir.map(carte).join('')}` : ''}
         <div class="m-flottant"><button class="btn btn--primary" data-a="imprevu">+ Un contact imprévu</button></div>`;
     }).catch(e => { m.innerHTML = `<div class="m-carte erreur">${esc(e.message)}</div>`; });
