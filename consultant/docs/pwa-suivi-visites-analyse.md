@@ -1,7 +1,7 @@
 # PWA Suivi franchisé & consultation — analyse avant construction
 
 Analyse du brief « Projet PWA — Suivi Franchisé & Consultation (Tablet/Mobile) » face au cockpit
-existant, avec dix écrans maquettés dans `docs/maquettes/pwa-visites/` (un fichier `index.html`,
+existant, avec dix écrans maquettés dans `consultant/docs/maquettes/pwa-visites/` (un fichier `index.html`,
 `?ecran=…`, captures PNG à côté, régénérées par `generer.js`).
 
 Rien n'est construit : ce document et les maquettes servent à trancher avant d'écrire le code.
@@ -60,11 +60,11 @@ Vocabulaire du brief : 🟢 API = vient d'une source automatique, 🔴 local = s
 | Non-conformités, récidive, seuil de signalement | oui | `GET /pwa/tasks/nc?shop=&date=` (ou `du/au`), seuil 4 | 🟢 panel |
 | Planogramme de référence, photos produits | oui | `GET /planogramme`, `/planogramme/photos` (liens S3 signés 1 h), tables `pla_*`, `con_plano_photo` | 🟢 |
 | Photo d'une cible planogramme | oui | `POST /planogramme/photo` : data-URL, 4 Mo max, type lu dans les octets, fichier sous `public/` | 🔴 |
-| Notifications push | oui | `src/push.php` : VAPID, `POST /push/abonnements`, `pushDiffuser(shop, charge)`, service worker `dashboard/sw.js` | — |
+| Notifications push | oui | `shared/src/push.php` : VAPID, `POST /push/abonnements`, `pushDiffuser(shop, charge)`, service worker `dashboard/sw.js` | — |
 | Mail | oui | `Smtp::envoyer`, expéditeur rapport@atelierby.be, déjà utilisé par la newsletter et les rapports | — |
 | Consultants | oui | `GET /consultants` (cinq « Consultant réseau »), `con_consultant_visit` (consultant, date, magasin, sujet), `POST /consultants/note` | 🔴 |
 | Magasins | oui | `ep_stores()` : Corbais, Gosselies, Sombreffe, Halle (Gembloux fermé) | 🟢 |
-| Cron toutes les 5 min | oui | `/etc/cron.d/cockpit-rapports` écrit par `bin/deploy.sh` | — |
+| Cron toutes les 5 min | oui | `/etc/cron.d/cockpit-rapports` écrit par `shared/bin/deploy.sh` | — |
 | Page autonome mobile par magasin | oui | modèle `dashboard/?shop=`, `prospection/?shop=`, `newsletter/?shop=` | — |
 | Design system | oui | `assets/ds/global.css` (jetons, polices) | — |
 
@@ -90,7 +90,7 @@ Conclusion : les quatre KPI du TB franchisé se remplissent à trois quarts sans
 
 ## 5. Architecture recommandée
 
-**Une PWA `public/visites/` dans ce dépôt, en JavaScript sans framework, sur l'API PHP existante.**
+**Une PWA `consultant/public/visites/` dans ce dépôt, en JavaScript sans framework, sur l'API PHP existante.**
 
 Pourquoi pas la pile du brief :
 
@@ -228,7 +228,7 @@ jour, activité des consultants.
 
 | Lot | Contenu | Jours |
 |---|---|---|
-| A · Socle | `src/visites.php` (tables, agenda, portfolio, boutique, feu), page PWA, manifest, service worker, rôles par lien | 4 |
+| A · Socle | `consultant/src/visites.php` (tables, agenda, portfolio, boutique, feu), page PWA, manifest, service worker, rôles par lien | 4 |
 | B · Visite et checklist | Fiche, TB franchisé avec 4 KPI sourcés, photos du jour, checklist 5 modules (référentiel réglable), notes, photos, file hors-ligne | 6 |
 | C · Review et plan d'action | Écarts, création du plan, statuts, vue franchisé, vue admin, escalade, historique 3 mois | 5 |
 | D · MSP, équipe, notifications | Import MSP, relevé d'effectif, rappels J-1 / jour J, push + mail, cron | 3 |

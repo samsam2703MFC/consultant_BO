@@ -1,6 +1,6 @@
 # Plan : rubrique « Vérification » (stocks, ventes, recettes, chiffre d'affaires)
 
-Demandes du 31/10/2026. Maquette : [`docs/maquettes/verification/`](maquettes/verification/LISEZMOI.md)
+Demandes du 31/10/2026. Maquette : [`consultant/docs/maquettes/verification/`](maquettes/verification/LISEZMOI.md)
 (`planche.jpg` pour tout voir d'un coup).
 
 ## 1. Le besoin
@@ -229,12 +229,12 @@ routes GET ; les routes d'écriture servent à savoir quels gestes surveiller (�
 | Rapports de ventes, factures B2B | `/shops/{id}/reports/sales/monthly`, `/reports/sales/marge`, `/shops/{id}/invoices/summary` |
 
 La sonde suit le modèle existant (`/exploitation/invendus/sonde`, `/ventes/stats/sonde`) :
-lecture seule, GET uniquement, et le contrat mesuré est noté dans `docs/contrat-api.md`.
+lecture seule, GET uniquement, et le contrat mesuré est noté dans `shared/docs/contrat-api.md`.
 
 ## 5. La base quotidienne
 
 **Livré le 31/10 (lot 3)** : la table `con_verif_jour` existe, créée par le code au premier appel
-(`src/verification_base.php`, `CREATE TABLE IF NOT EXISTS`). Une ligne par magasin et par jour, deux familles de
+(`consultant/src/verification_base.php`, `CREATE TABLE IF NOT EXISTS`). Une ligne par magasin et par jour, deux familles de
 colonnes : l'audit des flux de la journée (`dispo_eur`, `vendu_eur`, `poubelle_eur`, `invendu_eur`, `nonexpl_eur`,
 `mesure_eur`, les mêmes en pièces, `lignes`, `cuissons_validees`, `cuissons`, `cloture`, `comptes`, `flux_le`) — écrite
 dès qu'une journée est calculée et rattrapée par le cron horaire depuis les journées gravées (84 jours, pas avant le
@@ -343,14 +343,14 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 
 | Pièce | Fichier | Contenu |
 |---|---|---|
-| Calculs et lectures | `src/verification.php` (nouveau) | `vfFluxJour`, `vfFuites`, `vfMatieres`, `vfCa`, `vfRecettes`, `vfEvolution`, la sonde |
-| Calcul de nuit | `src/verification.php` + `bin/verif_jour.php` | cron, recalcul d'une plage (admin) |
-| Tables | `src/installer.php` | les quatre `CREATE TABLE` |
-| Routes | `public/api/index.php` | `GET /verification/flux?vue=jour\|semaine\|mois&date=&shop=` · `GET /verification/fuites?vue=&date=&shop=&niveau=produits\|matieres` · `GET /verification/matieres?shop=&du=&au=` · `GET /verification/ca?mois=` · `GET /verification/recettes?shop=&regle=` · `GET /verification/evolution?semaines=12&indicateur=` · `GET /verification/sonde?q=` · `GET /verification/cron?jeton=` · `POST /verification/recalculer` |
+| Calculs et lectures | `consultant/src/verification.php` (nouveau) | `vfFluxJour`, `vfFuites`, `vfMatieres`, `vfCa`, `vfRecettes`, `vfEvolution`, la sonde |
+| Calcul de nuit | `consultant/src/verification.php` + `bin/verif_jour.php` | cron, recalcul d'une plage (admin) |
+| Tables | `shared/src/installer.php` | les quatre `CREATE TABLE` |
+| Routes | `shared/public/api/index.php` | `GET /verification/flux?vue=jour\|semaine\|mois&date=&shop=` · `GET /verification/fuites?vue=&date=&shop=&niveau=produits\|matieres` · `GET /verification/matieres?shop=&du=&au=` · `GET /verification/ca?mois=` · `GET /verification/recettes?shop=&regle=` · `GET /verification/evolution?semaines=12&indicateur=` · `GET /verification/sonde?q=` · `GET /verification/cron?jeton=` · `POST /verification/recalculer` |
 | Réglages | `PUT /parametres/verifSeuils` | seuils (§ 7) |
-| Écran | `public/assets/js/app.js`, `templates.js` | section du rail, cinq onglets, bascule, tableaux, graphiques (CSS de `vf.css` repris dans `app.css`) |
-| Contrat | `docs/contrat-api.md` | une section par route, avec les mesures de la sonde |
-| Tests | `bin/tests.php` | formules (flux, delta, consommé réel), règles de recettes sur des cas connus |
+| Écran | `shared/public/assets/js/app.js`, `templates.js` | section du rail, cinq onglets, bascule, tableaux, graphiques (CSS de `vf.css` repris dans `app.css`) |
+| Contrat | `shared/docs/contrat-api.md` | une section par route, avec les mesures de la sonde |
+| Tests | `shared/bin/tests.php` | formules (flux, delta, consommé réel), règles de recettes sur des cas connus |
 
 ## 7. Seuils (Paramètres, réglables ; 3 % / 6 % confirmés le 31/10)
 
@@ -369,7 +369,7 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | Lot | Contenu | Dépend de | Taille |
 |---|---|---|---|
 | **0. Sonde** | Mesurer les routes « à sonder » (§ 4), écrire le contrat | compte panel | S |
-| **1. Recettes à corriger** — **livré le 31/10** | La liste et ses neuf règles, la couverture, le registre ; écran `#/verification/recettes`, route `GET /verification/recettes` (contrat : `docs/contrat-api.md`), lecture des recettes par le cron horaire, tests `bin/tests_verification.php` | routes déjà connues | M |
+| **1. Recettes à corriger** — **livré le 31/10** | La liste et ses neuf règles, la couverture, le registre ; écran `#/verification/recettes`, route `GET /verification/recettes` (contrat : `shared/docs/contrat-api.md`), lecture des recettes par le cron horaire, tests `consultant/bin/tests_verification.php` | routes déjà connues | M |
 | **2. Audit des flux + Fuites (produits finis)** — **livré le 31/10** | Écrans `#/verification/flux` (réseau, magasin, jour · semaine · mois) et `#/verification/fuites` (matrice + un tableau par magasin) ; journées gravées, cron horaire ; « mesuré » ou « estimé » selon les cuissons validées | données déjà lues | M |
 | **3. Base quotidienne + Évolution** — **livré le 31/10** | Table `con_verif_jour` (§ 5), remplie par le cron horaire, sept derniers jours recalculés ; écran `#/verification/evolution` : un indicateur semaine par semaine (8, 12 ou 26 semaines), un trait par magasin et le réseau, pointillé quand la semaine n'est qu'estimée ; « avant, maintenant » (les premières semaines face aux dernières : mieux, moins bien, stable) ; route `GET /verification/evolution` | lot 2 | M |
 | **4. Matières ↔ recettes** — **livré le 31/10** | Écran `#/verification/matieres` sur le moteur de l'écran Inventaires (`invEcart`) : entre deux inventaires relevés consécutifs (ou le cumul des quatre dernières semaines), consommé réel = stock début + commandes validées à la réception − stock fin, face aux ventes × recettes + poubelle déclarée ; la cause probable de chaque écart (entrées non validées, recette, poubelle non déclarée, ni vendu ni jeté, tolérance) ; tolérances réglables (`verifTolerances` : pièces 3 %, poids et volumes 8 %) ; le tableau par catégorie de matière, même structure pour chaque magasin ; le réseau et la matrice catégories × magasins ; chaque semaine gardée et écrite dans `con_verif_inventaire`, que l'Évolution lit (« matière expliquée ») ; route `GET /verification/matieres` | lots 0 et 1 | L |
@@ -383,15 +383,15 @@ rendement, fraction de portion, prix d'une matière, rattacher une recette de no
 recette »), dans le volet de la recette en mode *Corriger* (quantités, lignes retirées ou ajoutées, rendement, copie d'une
 recette proche pour une recette vide), ou au panel par un lien direct (formules). Écriture prudente, faute de contrat :
 lire l'objet, ne changer que la clé visée dans la forme lue, écrire, **relire et constater** ; un 2xx sans changement est
-« sans effet ». Registre `con_verif_correction` (l'avant, pour « Annuler »). Code : `src/verification_correction.php`,
+« sans effet ». Registre `con_verif_correction` (l'avant, pour « Annuler »). Code : `consultant/src/verification_correction.php`,
 `verification-correction-vals.js`, `verification-correction-tpl.js` ; tests : `php bin/tests_verification_correction.php` ;
-maquette et captures : `docs/maquettes/recettes-correction`. Une ligne lourde dans une sous-recette (partagée) passe par
+maquette et captures : `consultant/docs/maquettes/recettes-correction`. Une ligne lourde dans une sous-recette (partagée) passe par
 le volet, jamais par un clic. Le prix d'une matière part par une route réglable (`vrcFormatPrix`, par défaut
 `POST /materials/{mid}/manual-price {id_shop, price}`) : la première écriture dira si c'est la bonne.
 
 **Ouvrir et corriger une recette (demande du 31/10)** : un clic sur le produit ouvre sa fiche (recette, prix par magasin, signalements) et mène à sa page au panel. Les routes d'écriture existent (`PATCH /recipes/{id}`, `PATCH /subrecipes/{id}`, `POST /recipes`, `PATCH /products/{id}`, `POST /materials/{id}/manual-price`, `PATCH /product-portions/{id}`, `POST /shops/{id}/recipes/recalculate`) mais sans contrat : la correction depuis le cockpit viendra après la mesure du format (la sonde lit `/recipes/{id}`) et une première écriture validée par le CEO.
 
-**Déjà dans le cockpit pour le lot 4** (relevé du 31/10, après fusion de la version en ligne) : l'écran **Inventaires** (`src/inventaires.php`, `#/inventaires`, depuis le 12/10) calcule, entre deux inventaires, les sorties réelles du stock face aux ventes × recettes et à la poubelle (« justesse des ventes »). Il a mesuré que le stock matière du panel ne se décompte pas avec les ventes (dernier comptage + livraisons), que le panel ne rend pas ses inventaires passés, et que le cockpit relève donc le stock toutes les cinq minutes. Le lot 4 partira de là au lieu de le refaire.
+**Déjà dans le cockpit pour le lot 4** (relevé du 31/10, après fusion de la version en ligne) : l'écran **Inventaires** (`consultant/src/inventaires.php`, `#/inventaires`, depuis le 12/10) calcule, entre deux inventaires, les sorties réelles du stock face aux ventes × recettes et à la poubelle (« justesse des ventes »). Il a mesuré que le stock matière du panel ne se décompte pas avec les ventes (dernier comptage + livraisons), que le panel ne rend pas ses inventaires passés, et que le cockpit relève donc le stock toutes les cinq minutes. Le lot 4 partira de là au lieu de le refaire.
 
 **Constat du lot 4 (relevé du 31/10, semaines du 11 au 25/10)** : Halle n'a validé **aucune commande à la réception** entre ses inventaires du 18 et du 25/10 — le stock du panel n'a monté sur aucune matière, le consommé réel est faux par défaut (« Entrées non validées ») ; Corbais : 72,8 % de la matière expliquée, l'essentiel du manque en poubelle non déclarée (Corbais ne déclare aucune poubelle) ; Gosselies : 39,3 %, recettes manquantes et « ni vendu ni jeté » ; Sombreffe n'a plus d'inventaire depuis le 11/10, Gosselies depuis le 18/10. Les « matières » du réseau sont surtout des articles de la centrale (baguettes, viennoiseries, tartes) : la matière dit ici ce que deviennent les pièces reçues.
 

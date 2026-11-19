@@ -1,6 +1,6 @@
 # Banc d'essai · Fidélité › Profils clients
 
-`src/fidelite_profils.php` contre une **vraie base MariaDB locale** et un **faux panel** (`lib.php`) dont chaque
+`marketing/src/fidelite_profils.php` contre une **vraie base MariaDB locale** et un **faux panel** (`lib.php`) dont chaque
 client passe à un rythme connu (tous les 2 jours, 3,5 jours, 4 jours, 7 jours, 12 jours, 30 jours, une seule fois…).
 Aucun appel au panel réel.
 

@@ -77,11 +77,11 @@ Tablettes) — sans lui, cette gestion est **ouverte sans code** (décision du c
 
 Les variables se posent soit en environnement (vhost Apache : `SetEnv …`,
 pool PHP-FPM : `env[…]=…`), soit — plus simple, aligné sur le panel — dans
-**`config/config.php`** créé sur le serveur, hors Git (copie de
-`config/config.example.php`, `chmod 640`).
+**`shared/config/config.php`** créé sur le serveur, hors Git (copie de
+`shared/config/config.example.php`, `chmod 640`).
 
 Option durcissement (plus tard, avec un DBA) : un compte MySQL dédié à
-moindre privilège — modèle fourni dans `sql/grants.sql`, facultatif.
+moindre privilège — modèle fourni dans `shared/sql/grants.sql`, facultatif.
 
 ---
 
@@ -125,9 +125,9 @@ donc toujours atteindre les miroirs Overpass (`overpass.kumi.systems`,
 
 **Rien à exécuter à la main.** Au premier appel de l'API, l'application :
 
-1. crée ses tables si elles manquent (`sql/schema.sql`, `CREATE TABLE IF NOT
+1. crée ses tables si elles manquent (`shared/sql/schema.sql`, `CREATE TABLE IF NOT
    EXISTS` — ne touche pas aux tables existantes du panel) ;
-2. charge le jeu de démonstration (`sql/seed.sql`, réseau belge) **si la base
+2. charge le jeu de démonstration (`shared/sql/seed.sql`, réseau belge) **si la base
    est vide** — recommandé tant que les vraies données ne sont pas branchées ;
 3. génère le secret de session (`ceo_app_setting.authSecret`).
 
@@ -160,7 +160,7 @@ vi config/config.php     # host / name / user / password + pwaBase
 chmod 640 config/config.php && chown www-data:www-data config/config.php
 ```
 
-`config/config.php` n'est pas suivi par Git (`.gitignore`), comme le
+`shared/config/config.php` n'est pas suivi par Git (`.gitignore`), comme le
 `config/db.local.php` du panel.
 
 ---
@@ -177,12 +177,12 @@ première (mesuré sur les deux builds).
 
 L'installation est idempotente et non bloquante : si le téléchargement ou
 l'installation échoue, le déploiement continue et les PDF sortent sans pied de
-page. `src/rapports.php` appelle `/usr/local/bin/wkhtmltopdf` en chemin
+page. `consultant/src/rapports.php` appelle `/usr/local/bin/wkhtmltopdf` en chemin
 complet — le PATH d'Apache ne contient pas toujours `/usr/local/bin`.
 
 ### Une livraison ne coupe pas les requêtes en cours
 
-Après la copie, `bin/deploy.sh` **recharge** Apache et PHP-FPM en douceur
+Après la copie, `shared/bin/deploy.sh` **recharge** Apache et PHP-FPM en douceur
 (`systemctl reload`) : les requêtes en cours finissent sur l'ancienne
 version. Il ne les **redémarre** que s'il a dû tuer des rendus PDF suspendus
 (`wkhtmltopdf`, `xvfb-run`, `Xvfb`), qui retiendraient sinon des workers.
@@ -193,7 +193,7 @@ toutes les vingt minutes) voyait « Failed to fetch ». Côté cockpit
 refusée en 502/503/504 se rejoue une fois, deux secondes plus tard ; une
 création (POST) ne se rejoue jamais.
 
-## Horloge des rapports (posée par `bin/deploy.sh`)
+## Horloge des rapports (posée par `shared/bin/deploy.sh`)
 
 Un rapport porte sa planification en base — « tous les lundis à 10 h » est un
 réglage de l'écran Reporting. Quelqu'un doit néanmoins réveiller le cockpit :
@@ -211,7 +211,7 @@ Le jeton (`ceo_app_setting.rapportsJeton`) naît au premier chargement ; le
 script le relit sur l'API et ne l'imprime jamais dans le journal de livraison.
 
 Le même fichier cron porte l'**horloge des newsletters** : toutes les 5 minutes,
-`bin/newsletter_cron.sh` appelle `/api/cockpit/newsletter/cron?jeton=…` (jeton
+`marketing/bin/newsletter_cron.sh` appelle `/api/cockpit/newsletter/cron?jeton=…` (jeton
 `ceo_app_setting.nlJeton`, né tout seul). L'horloge fait partir les campagnes
 dues par lots de 100 par minute et évalue les automatisations une fois par jour.
 Tant que la marque n'a pas **dispatché** (Newsletter → Paramètres → Envois), elle
@@ -271,7 +271,7 @@ Puis dans le navigateur : `$BASE/` →
 
 | Symptôme | Cause probable |
 |---|---|
-| Écrans en données de démo (console : « API indisponible ») | `config/config.php` absent/faux, ou l'API renvoie 503 → tester `curl $BASE/api/cockpit/meta` |
+| Écrans en données de démo (console : « API indisponible ») | `shared/config/config.php` absent/faux, ou l'API renvoie 503 → tester `curl $BASE/api/cockpit/meta` |
 | `/api/cockpit/*` → 404 | `mod_rewrite` inactif ou `AllowOverride` ≠ `All` sur le répertoire |
 | Partages panel vides | `mac_report_share` inexistante (aucun partage encore créé côté panel) — normal, volet vide |
 | Boutique « #n » au lieu du nom dans les partages | `ceo_shop.pwa_shop_id` pas encore mappé aux vrais ids du panel |
@@ -282,7 +282,7 @@ Puis dans le navigateur : `$BASE/` →
 Le 24/10/2026, le disque de 25 Go était plein à 100 % : MySQL n'écrivait plus, l'API répondait 503
 « Too many connections » et chaque livraison restait bloquée sur `/api/cockpit/meta`. Depuis :
 
-- chaque livraison commence par `bin/menage_disque.sh` (relevé, ménage sûr dès 90 %, relance de MySQL
+- chaque livraison commence par `shared/bin/menage_disque.sh` (relevé, ménage sûr dès 90 %, relance de MySQL
   s'il refuse les connexions) et **s'arrête avant de copier** s'il reste moins de 300 Mo libres ;
 - `/etc/cron.d/cockpit-disque` relance ce ménage toutes les 6 heures dès 85 % et notifie les abonnés
   « admin » du cockpit si le disque reste à 90 % ou plus (journal : `/var/log/cockpit-disque.log`) ;
@@ -322,7 +322,7 @@ Puis relancer la livraison (GitHub › Actions › « Deploy — Cockpit CEO » 
 ## Application terrain (visites)
 
 Le même fichier cron porte l'**horloge des visites** : toutes les 5 minutes,
-`bin/visites_cron.sh` appelle `/api/cockpit/visites/cron?jeton=…` (jeton
+`consultant/bin/visites_cron.sh` appelle `/api/cockpit/visites/cron?jeton=…` (jeton
 `visitesJeton` lu en base). L'horloge escalade les P0 dont l'échéance est
 dépassée, envoie les rappels J-1 (18 h) et jour J (7 h) et la synthèse du
 matin (7 h), une fois par jour chacun. Les photos de visite vivent sous
@@ -338,8 +338,8 @@ finale comprise ; `&lang=nl`, `&prices=0`). Le dossier `tablette/` est
 l'identité de l'application installée sur les tablettes : le renommer ferait
 apparaître une seconde application sur chacune.
 
-**Ce qui est livré.** `public/tablette/` est la compilation du dépôt
-`pwa_sales_tablet`, commitée ici comme `public/assistant/` (rien n'est compilé
+**Ce qui est livré.** `panel/public/tablette/` est la compilation du dépôt
+`pwa_sales_tablet`, commitée ici comme `marketing/public/assistant/` (rien n'est compilé
 au déploiement). La mettre à jour :
 
 ```bash
@@ -349,19 +349,19 @@ rm -rf ../consultant_bo/public/tablette && cp -r dist ../consultant_bo/public/ta
 git rev-parse HEAD > ../consultant_bo/public/tablette/VERSION
 ```
 
-Ne rien poser à la main dans `public/tablette/` : la mise à jour remplace le
+Ne rien poser à la main dans `panel/public/tablette/` : la mise à jour remplace le
 dossier entier (le `rsync --delete` du déploiement retire aussi les anciens
 morceaux de script). Les règles propres à la tablette vivent donc dans
-`public/.htaccess` : un fichier absent sous `tablette/` rend **404** (jamais le
+`shared/public/.htaccess` : un fichier absent sous `tablette/` rend **404** (jamais le
 shell du cockpit en 200, qui casserait l'application et empoisonnerait son
 cache hors ligne), et `.webmanifest` est servi en `application/manifest+json`.
 
 **Données et photos.** `GET /api/cockpit/tablette/book` (gardé six heures en
 base, clé `tabletteBook:…`) et `POST /api/cockpit/tablette/photos` — voir
-`docs/contrat-api.md`. Les vignettes carrées 640 px (`<ref>-640c.jpg`) vivent sous
+`shared/docs/contrat-api.md`. Les vignettes carrées 640 px (`<ref>-640c.jpg`) vivent sous
 `public/uploads/tablette/` (et, depuis le 06/11/2026, `public/uploads/sop/` : les photos des étapes envoyées par l’assistant de
-création des SOP) : créés et donnés à www-data par `bin/deploy.sh`, hors
-git, et protégé du `rsync --delete` par l'exclusion de `public/uploads`. Les
+création des SOP) : créés et donnés à www-data par `shared/bin/deploy.sh`, hors
+git, et protégé du `rsync --delete` par l'exclusion de `shared/public/uploads`. Les
 photos d'origine restent sous `public/uploads/plano/panel/`, partagées avec le
 planogramme.
 
@@ -370,27 +370,27 @@ l'écran d'accueil n'existent que sur une page sécurisée : en http, la tablett
 s'ouvre et lit ses données, mais ne fonctionne pas sans réseau et ne
 s'installe pas. Le lien donné aux magasins est donc le lien **https**. Au
 02/10/2026, `https://185.180.206.46/` répond par une **connexion
-réinitialisée** (*connection reset*), alors que l'étape 5a de `bin/deploy.sh`
+réinitialisée** (*connection reset*), alors que l'étape 5a de `shared/bin/deploy.sh`
 suppose un https déjà servi par le certbot du serveur : à rétablir (et son
 renouvellement automatique à vérifier) avant d'équiper les tablettes.
 
 **Recette** (ajoutée à `deploy.yml`) : `tablette/` contient « Book vendeuses »,
 `tablette/sw.js` et `tablette/manifest.webmanifest` répondent 200,
 `tablette/img/__absent__.png` répond 404, `api/cockpit/tablette/book` porte
-`"products":[`. Le contrôle de syntaxe `node --check` ignore `public/tablette/`
-(bundle Vite, comme `public/assistant/`).
+`"products":[`. Le contrôle de syntaxe `node --check` ignore `panel/public/tablette/`
+(bundle Vite, comme `marketing/public/assistant/`).
 
 ## MétaDonnée — formulaires Meta et Instagram vers l'ERP du franchisé
 
 Rail → ERP franchisé → MétaDonnée (1 · Formulaires, 2 · Mapping ERP, 3 · Suivi des leads, 4 · Alertes SMS).
-Contrat : `docs/contrat-api.md`, « MétaDonnée ».
+Contrat : `shared/docs/contrat-api.md`, « MétaDonnée ».
 
 - **Meta** : rien à régler, ni chez Meta ni dans le Cockpit — ce sont les clés et l'accès du CRM
-  (atelier-espace-candidat), dont le flux est recopié ici (`src/crm/meta_graph.php` = copie identique de
+  (atelier-espace-candidat), dont le flux est recopié ici (`marketing/src/crm/meta_graph.php` = copie identique de
   `app/crm/api/lib/meta_graph.php`). Le Cockpit les LIT dans la base partagée à chaque appel (`crm_settings`,
   complété par `meta_connexion`) et n'y écrit jamais : un jeton régénéré dans le CRM (Paramètres → Intégrations →
   Formulaires Facebook / Instagram) vaut aussitôt ici. Le compte MySQL du Cockpit doit pouvoir lire ces deux tables
-  (`sql/grants.sql`). À l'étape 1, carte « Connexion Meta » (« Clés du CRM ») : « 🔌 Connecter et tester » (jeton
+  (`shared/sql/grants.sql`). À l'étape 1, carte « Connexion Meta » (« Clés du CRM ») : « 🔌 Connecter et tester » (jeton
   vérifié — celui de l'utilisateur système échangé contre celui de la Page, gardé côté Cockpit —, Page, formulaires,
   abonnement `leadgen`). L'application étant celle du CRM, son adresse de rappel reste au CRM : le Cockpit ne la
   prend jamais et relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta
@@ -401,14 +401,14 @@ Contrat : `docs/contrat-api.md`, « MétaDonnée ».
   la sonde le dit et aucun lead ne passe — par ici comme par le CRM.
 - **ERP** : le compte API du panel (Paramètres → compte consultant). Les routes `POST/GET /consultant/leads`
   sont à créer côté panel ; elles se règlent à l'étape 2. L'envoi automatique est **éteint** à l'installation.
-- **SMS** : SMSAPI, jeton OAuth avec la permission « sms » — `config/config.php` (`smsapi.token`), variable
+- **SMS** : SMSAPI, jeton OAuth avec la permission « sms » — `shared/config/config.php` (`smsapi.token`), variable
   `SMSAPI_TOKEN`, ou saisi à l'étape 4. Les SMS sont **éteints** à l'installation ; la Belgique doit être autorisée
   sur le compte SMSAPI (code 112 sinon).
-- **Horloge** : `bin/metadonnee_cron.sh`, chaque minute (un passage en cours bloque le suivant), ligne posée par `bin/deploy.sh` dans
+- **Horloge** : `marketing/bin/metadonnee_cron.sh`, chaque minute (un passage en cours bloque le suivant), ligne posée par `shared/bin/deploy.sh` dans
   `/etc/cron.d/cockpit-rapports` (jeton `mdJeton` lu en base, né à la première ouverture du module).
 - **Vérifier** : « 🔍 Tester les connexions » (lecture seule, sur chaque écran du module) et, à l'étape 2,
   « Envoyer un lead d'essai » (un lead TEST réellement envoyé puis relu : à supprimer dans l'ERP).
-  Kit d'essai hors ligne : `tools/metadonnee-essai/LISEZMOI.md`.
+  Kit d'essai hors ligne : `marketing/tools/metadonnee-essai/LISEZMOI.md`.
 
 ## Formation › Standards (SOP)
 
@@ -416,14 +416,14 @@ Une section du module Formation : **`…/consulant_bo/formation/#/sop`** (et à 
 tablette du poste **`…/formation/sop/tablette.html?shop=<id>&poste=cuisson`** (l’onglet **SOP** de l’app Cuisine y
 mène avec le magasin et la langue de l’appareil).
 
-**Rien à installer à la main.** Au premier appel de l’API, `ensureSop()` (`src/sop.php`) crée `for_sop`,
-`for_sop_version`, `for_sop_suivi`, `for_sop_personne` et range les 25 SOP de `data/formation/sops/*.json` (FR et NL).
-La reprise n’écrase jamais une SOP déjà en base. `data/formation/` et `public/formation/sop/photos/` partent avec le
+**Rien à installer à la main.** Au premier appel de l’API, `ensureSop()` (`formation/src/sop.php`) crée `for_sop`,
+`for_sop_version`, `for_sop_suivi`, `for_sop_personne` et range les 25 SOP de `formation/data/formation/sops/*.json` (FR et NL).
+La reprise n’écrase jamais une SOP déjà en base. `formation/data/formation/` et `formation/public/formation/sop/photos/` partent avec le
 reste du dépôt.
 
 **Tablettes des magasins (lot 5, 06/11/2026)** : une seule tablette par magasin, celle-ci. Au premier lancement, elle
 demande le **PIN du magasin** (6 chiffres), puis garde la session sur l’appareil. Rien à configurer : au premier appel
-de l’API, `ensureTablettes()` (`src/tablettes.php`) crée `for_tablette_magasin`, `for_tablette_acces`,
+de l’API, `ensureTablettes()` (`formation/src/tablettes.php`) crée `for_tablette_magasin`, `for_tablette_acces`,
 `for_tablette_essai` et **reprend les magasins du Manuel du CRM** (`crm_mo_magasins`, même base) avec le même PIN
 quand il est libre — le bilan (et les éventuels PIN neufs, à communiquer) s’affiche dans Formation › Manuel du réseau
 › **Tablettes**, où l’on crée, renomme, relie à une boutique, archive les tablettes et tire un nouveau PIN. L’adresse
@@ -437,7 +437,7 @@ Tablettes envoie après l’avoir demandé ; gardé dans l’onglet seulement). 
 est **ouverte, sans code** (décision du client du 06/11/2026 : « laisse la tablette ouverte sans code » ; elle était
 fermée avant) — qui connaît l’adresse lit et change alors les PIN des magasins. Les tablettes des magasins marchent dans les deux cas. Le code est une
 chaîne secrète (par exemple 20 caractères tirés au hasard), **jamais dans le dépôt ni dans un journal**. Deux façons
-de le poser, au choix — `bin/deploy.sh` l’écrit dans `config/config.php` (`tablettesCode`) à chaque livraison :
+de le poser, au choix — `shared/bin/deploy.sh` l’écrit dans `shared/config/config.php` (`tablettesCode`) à chaque livraison :
 
 1. **Secret GitHub** `TABLETTES_CODE` (Settings → Secrets and variables → Actions → New repository secret) : le
    workflow le passe au serveur par le fichier d’identifiants temporaire (`.deployenv`, effacé après la livraison).
@@ -449,7 +449,7 @@ de le poser, au choix — `bin/deploy.sh` l’écrit dans `config/config.php` (`
    sudo cat /var/lib/consulant_bo/prive/tablettes_code     # à transmettre à qui gère les tablettes
    ```
 
-Puis relancer une livraison (ou, sans livraison, ajouter `'tablettesCode' => '…'` à `config/config.php` : la
+Puis relancer une livraison (ou, sans livraison, ajouter `'tablettesCode' => '…'` à `shared/config/config.php` : la
 livraison suivante le réécrit d’après le secret ou le fichier). Le journal de livraison dit seulement « code de
 gestion posé (non affiché) » ou « aucun code de gestion — la gestion des tablettes est ouverte sans code », et la recette
 vérifie que `GET /formation/tablettes` sans code répond **403** quand un code est posé (200 sinon). Changer le code : changer le secret ou le fichier,

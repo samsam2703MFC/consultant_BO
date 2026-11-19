@@ -3,7 +3,7 @@
 > Objet : recenser **tous** les accès directs à la base faits par le Cockpit CEO,
 > isoler ceux qui portent sur des tables appartenant à **une autre application**,
 > et spécifier les API qui doivent exister pour les remplacer.
-> Périmètre audité : la totalité du dépôt (`src/`, `public/`, `sql/`, `bin/`, `config/`, `docs/`).
+> Périmètre audité : la totalité du dépôt (`src/`, `public/`, `sql/`, `bin/`, `shared/config/`, `docs/`).
 
 ---
 
@@ -40,9 +40,9 @@ Le problème est entièrement côté serveur PHP.
 
 | Couche | Accès | Verdict |
 |---|---|---|
-| `public/index.html` | aucune donnée métier | conforme |
-| `public/assets/js/api.js` | 18 `GET` + `POST/PATCH/PUT` vers `API_BASE` | conforme |
-| `public/assets/js/app.js` | consomme la forme normalisée par `api.js` | conforme |
+| `shared/public/index.html` | aucune donnée métier | conforme |
+| `shared/public/assets/js/api.js` | 18 `GET` + `POST/PATCH/PUT` vers `API_BASE` | conforme |
+| `shared/public/assets/js/app.js` | consomme la forme normalisée par `api.js` | conforme |
 | `public/assets/js/data.js` | jeu de démonstration local, repli hors ligne | voir anomalie **F6** |
 
 ### 2.2 Tables propres au cockpit (`ceo_*`) — 25 tables, aucun changement requis
@@ -57,7 +57,7 @@ Le problème est entièrement côté serveur PHP.
 
 Ces tables sont la base *propre* du cockpit : les lire en SQL est normal, c'est ce que
 fait toute application avec ses propres données. Elles sont déjà exposées par les
-19 endpoints de `public/api/index.php`. **Rien à faire ici** (sauf le lot 3, si l'on
+19 endpoints de `shared/public/api/index.php`. **Rien à faire ici** (sauf le lot 3, si l'on
 décide que certaines de ces données ne doivent plus être détenues par le cockpit).
 
 ### 2.3 Tables d'autres applications — les 6 points à supprimer
@@ -74,7 +74,7 @@ décide que certaines de ces données ne doivent plus être détenues par le coc
 Deux couplages annexes :
 
 - **C7** — `position` (Manuel Opératoire) : citée dans `sql/schema.sql:35`,
-  `sql/grants.sql:43`, `docs/contrat-api.md` §2, et référencée par
+  `sql/grants.sql:43`, `shared/docs/contrat-api.md` §2, et référencée par
   `con_consultant.position_id` / `con_shop_budget.validated_by` — **jamais requêtée**.
   Couplage déclaré, dormant.
 - **C8** — `information_schema.columns` (`src/installer.php:53`) : lecture des
@@ -209,7 +209,7 @@ GET {mo}/api/positions?appType=CONSULTANT
 
 Alternative si le rôle des consultants reste géré dans le cockpit : **supprimer** la
 colonne `con_consultant.position_id`, `con_shop_budget.validated_by`, la ligne
-`position` de `sql/schema.sql` et de `sql/grants.sql`. Un couplage documenté mais mort
+`position` de `shared/sql/schema.sql` et de `shared/sql/grants.sql`. Un couplage documenté mais mort
 finit toujours par être branché « puisqu'il est déjà là ». Trancher dans un sens ou
 dans l'autre.
 
@@ -260,9 +260,9 @@ de démonstration. C'est le trou de données le plus large du projet.
    chargement d'écran. Règle : servir le cache tant qu'il a moins de 15 min ; au-delà,
    tenter l'appel et, en cas d'échec, resservir le dernier snapshot en marquant
    `"perime": true` pour que l'écran l'affiche.
-3. **Configuration** — `config/config.example.php` : `mo.baseUrl`, `mo.token`,
+3. **Configuration** — `shared/config/config.example.php` : `mo.baseUrl`, `mo.token`,
    `panel.baseUrl`, `panel.token`. Un secret de plus à distribuer, ce que le déploiement
-   actuel revendique de ne pas avoir (`docs/DEPLOIEMENT.md` §1) : à assumer explicitement.
+   actuel revendique de ne pas avoir (`shared/docs/DEPLOIEMENT.md` §1) : à assumer explicitement.
 4. **Modifications de code** — `ep_leviers` (`endpoints.php:70`), `ep_meta`
    (`endpoints.php:33`), `ep_kpis` (`endpoints.php:80`), `ep_pwa_reports`
    (`endpoints.php:124`), `wr_param_put` (`writes.php:301`).
@@ -270,10 +270,10 @@ de démonstration. C'est le trou de données le plus large du projet.
    `con_shop_budget_line.levid` stockent des ids `of_tag`. Les convertir en slugs
    (`VARCHAR(20)`) supprime la dernière trace d'une clé étrangère d'autrui dans les
    données du cockpit. Migration idempotente à ajouter dans `ensureValidation()`.
-6. **Nettoyage de `sql/schema.sql`** — sortir les `CREATE TABLE IF NOT EXISTS of_tag`
+6. **Nettoyage de `shared/sql/schema.sql`** — sortir les `CREATE TABLE IF NOT EXISTS of_tag`
    (l.18), `kpi` (l.24), `position` (l.35) et `mac_report_share` (l.316) vers un fichier
    `sql/schema-dev.sql` chargé uniquement en développement (voir **F2**).
-7. **Nettoyage de `sql/grants.sql`** — supprimer les quatre `GRANT SELECT` sur les tables
+7. **Nettoyage de `shared/sql/grants.sql`** — supprimer les quatre `GRANT SELECT` sur les tables
    d'autrui (l.41-44) et le `GRANT UPDATE (seuil_haut)` commenté (l.48).
 
 ---
@@ -283,14 +283,14 @@ de démonstration. C'est le trou de données le plus large du projet.
 | # | Gravité | Constat |
 |---|---|---|
 | **F1** | Élevée | **Écriture dans la table d'une autre application.** `PUT /parametres/seuil-*` fait `UPDATE kpi SET seuil_haut` (`writes.php:306`). Aucun `GRANT` correspondant n'est accordé (`grants.sql:48`, commenté) : sur un compte MySQL dédié, la route échoue en 503 « base de données indisponible ». Sur le compte partagé, elle réussit — et modifie un référentiel du Manuel Opératoire sans trace de son côté. Corrigé par **API-3**. |
-| **F2** | Élevée | **L'installeur crée des tables d'autrui en production.** `ensureInstalled()` (`installer.php:19`) exécute `sql/schema.sql` sur la base partagée ; ce fichier contient `CREATE TABLE IF NOT EXISTS of_tag / kpi / position / mac_report_share`. Si l'une manque au premier appel (panel pas encore initialisé, base neuve), le cockpit crée une **souche vide avec sa propre définition de colonnes** ; l'application propriétaire trouvera ensuite une table du mauvais format que son propre `CREATE TABLE IF NOT EXISTS` ne corrigera pas. |
+| **F2** | Élevée | **L'installeur crée des tables d'autrui en production.** `ensureInstalled()` (`installer.php:19`) exécute `shared/sql/schema.sql` sur la base partagée ; ce fichier contient `CREATE TABLE IF NOT EXISTS of_tag / kpi / position / mac_report_share`. Si l'une manque au premier appel (panel pas encore initialisé, base neuve), le cockpit crée une **souche vide avec sa propre définition de colonnes** ; l'application propriétaire trouvera ensuite une table du mauvais format que son propre `CREATE TABLE IF NOT EXISTS` ne corrigera pas. |
 | **F3** | Moyenne | **Repli silencieux sur `mac_report_share`.** Le `catch (PDOException)` (`endpoints.php:137`) renvoie un volet vide, indistinguable de « aucun partage ». Table absente, droits manquants, panel sur une autre base : trois pannes qui ne se voient pas. Ajouter un champ `indisponible: true` dans la réponse. |
 | **F4** | Moyenne | **Ids `of_tag` en dur et persistés.** `LEVIER_DEFS` (`endpoints.php:11-18`) fige `tag => 2..7`, et ces entiers partent en base (`con_project_levid`, `con_shop_budget_line`). Une renumérotation ou une insertion côté Manuel Opératoire repeint silencieusement les leviers de tout le cockpit. Symptôme déjà visible : Labour Cost et Overhead Cost partagent la même couleur (README). |
 | **F5** | Moyenne | **Base et compte MySQL partagés.** `config.example.php` pointe sur `atelierby_db` avec les identifiants du panel, et `DEPLOIEMENT.md` §1 en fait la configuration recommandée ; `grants.sql` (compte à moindre privilège) est explicitement facultatif. Le cockpit peut donc lire *et écrire* toute la base du panel. Le lot 1 est le préalable à un vrai cloisonnement. |
 | **F6** | Moyenne | **Mode démo indiscernable.** Si l'API ne répond pas en 4 s, `api.js:89` charge `data.js` et se contente d'un `console.info`. Aucun bandeau à l'écran (`app.js` n'utilise `source` que pour masquer le bouton Déconnexion, l.224). Un CEO peut lire des chiffres inventés en les croyant réels. Un bandeau permanent « Données de démonstration » s'impose. |
-| **F7** | Moyenne | **Aucune identité.** `auth` est à `false` par défaut (`config.example.php`) : l'API est ouverte, la redirection depuis l'ERP n'est jamais vérifiée, et `meta.utilisateur` est une valeur statique de `ceo_app_setting`. Le mot de passe intégré (`src/auth.php`) est un palliatif mono-utilisateur : le journal attribue toutes les actions à « CEO ». `GET {erp}/api/me` (lot 3) est la vraie réponse. |
+| **F7** | Moyenne | **Aucune identité.** `auth` est à `false` par défaut (`config.example.php`) : l'API est ouverte, la redirection depuis l'ERP n'est jamais vérifiée, et `meta.utilisateur` est une valeur statique de `ceo_app_setting`. Le mot de passe intégré (`shared/src/auth.php`) est un palliatif mono-utilisateur : le journal attribue toutes les actions à « CEO ». `GET {erp}/api/me` (lot 3) est la vraie réponse. |
 | **F8** | Faible | **Couplage `position` mort.** Déclaré partout, utilisé nulle part (C7). Brancher **API-6** ou supprimer. |
-| **F9** | Faible | **`docs/contrat-api.md` désynchronisé.** Annonce « 14 endpoints » là où `api.js` en appelle 18 ; cite une table de référence `ceo_project_famille` qui n'existe pas ; documente `PUT /stores/{id}/perf/{annee}-{mois}` et `POST /stores/{id}/budget/annexe`, absents du routeur (`public/api/index.php`). |
+| **F9** | Faible | **`shared/docs/contrat-api.md` désynchronisé.** Annonce « 14 endpoints » là où `api.js` en appelle 18 ; cite une table de référence `ceo_project_famille` qui n'existe pas ; documente `PUT /stores/{id}/perf/{annee}-{mois}` et `POST /stores/{id}/budget/annexe`, absents du routeur (`shared/public/api/index.php`). |
 | **F10** | Moyenne (perf) | **N+1 massif sur `/projects`.** `ep_projects` fait 4 requêtes par projet **plus une par tâche** (`tacheSignalement`, `endpoints.php:264`) : 40 projets × 10 tâches ≈ 600 requêtes par chargement d'écran. Même schéma sur `/stores/budgets` (2 par magasin) et `/consultants` (1 par consultant). À corriger **avant** d'introduire des appels HTTP, sous peine de les mettre dans la boucle. |
 
 ---
@@ -361,7 +361,7 @@ MySQL voit encore `of_tag`, rien ne garantit que personne ne le relira.
 
 | Fichier:ligne | Effet | Verdict |
 |---|---|---|
-| `installer.php:22` | exécute `sql/schema.sql` si `ceo_app_setting` absente | crée aussi 4 tables d'autrui → **F2** |
-| `installer.php:27` | exécute `sql/seed.sql` si `ceo_shop` vide | données de démonstration en production |
+| `installer.php:22` | exécute `shared/sql/schema.sql` si `ceo_app_setting` absente | crée aussi 4 tables d'autrui → **F2** |
+| `installer.php:27` | exécute `shared/sql/seed.sql` si `ceo_shop` vide | données de démonstration en production |
 | `installer.php:58,61` | `ALTER TABLE con_project_task ADD COLUMN note / validated_by` | propre, idempotent |
 | `installer.php:64` | `CREATE TABLE IF NOT EXISTS con_task_issue` | propre, idempotent |

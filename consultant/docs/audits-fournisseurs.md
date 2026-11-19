@@ -22,9 +22,9 @@ Maquettes validées : dépôt `webshop-mrszoko-backoffice`, dossier
 
 | Quoi | Où |
 |---|---|
-| Écran du cockpit | Pilotage › **Audit fournisseurs** (`#/audits`) : la page `public/audits/` intégrée (`?embed=1`), comme le Cadre des tâches. Onglets Formulaire · Campagnes · Résultats. |
+| Écran du cockpit | Pilotage › **Audit fournisseurs** (`#/audits`) : la page `consultant/public/audits/` intégrée (`?embed=1`), comme le Cadre des tâches. Onglets Formulaire · Campagnes · Résultats. |
 | Page du franchisé | `public/audit/?d=&jeton=` — un écran par fournisseur, enregistré à chaque « Suivant », reprise possible jusqu'à la clôture. Langue du magasin (fr, nl, en, de) pour l'interface ; les questions restent dans la langue où le siège les écrit. `?apercu=1[&c=]` : la vue du bureau, rien n'est enregistré. |
-| Code serveur | `src/audits.php` (préfixe `au`). Routes du cockpit `/audits/*` (`auRoute`), routes publiques `/audits/public*` avant l'authentification (`auRoutePublique`). |
+| Code serveur | `consultant/src/audits.php` (préfixe `au`). Routes du cockpit `/audits/*` (`auRoute`), routes publiques `/audits/public*` avant l'authentification (`auRoutePublique`). |
 | Horloge | `auHorloge()`, appelée par `viHorloge()` (cron des visites, toutes les 5 min) : relances (J+5, J+10, la veille de la clôture par défaut, en journée seulement, aux magasins qui n'ont pas fini) et clôture à la date dite. |
 | Tests | `php bin/tests_audits.php` (fonctions sans base : types, points, règles, sous-questions, score, relances, jeton). |
 

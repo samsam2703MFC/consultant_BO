@@ -8,7 +8,7 @@ Relevé du 7 novembre 2026 · réseau L'Atelier By (Corbais, Gosselies, Halle, S
   Il n'existe pas encore de prix 2027 : les relevés datent de la saison de janvier 2026, sauf
   mention contraire.
 
-Données brutes : `src/data/benchmark_galette.json`. Rapport à jour :
+Données brutes : `shared/src/data/benchmark_galette.json`. Rapport à jour :
 `php bin/benchmark.php rapport galette`.
 
 **Comment on compare.** Les galettes se vendent au diamètre ou au nombre de parts. Chaque prix

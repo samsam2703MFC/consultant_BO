@@ -249,7 +249,7 @@ remplacer, avec une option à trancher :
 
 ---
 
-## 6. Suivi de `docs/spec-api-panel.md` (demandes du 17/08)
+## 6. Suivi de `shared/docs/spec-api-panel.md` (demandes du 17/08)
 
 | Demande | Dans le swagger du 09/11 ? |
 |---|---|
@@ -290,7 +290,7 @@ Le cockpit a déjà ses sondes. Elles passent par le compte consultant configur�
 - `GET /api/cockpit/exploitation/invendus/sonde?shop=4&q=/shops/4/reports/sales/daily?date=2026-11-02,…`
   : des chemins libres, limités aux produits, au stock et aux rapports.
 - `ep_pwa_probe()` (`GET /pwa/probe?paths=…`) existe dans `endpoints.php`,
-  mais **n'est pas routée** dans `public/api/index.php`. La brancher ouvrirait un
+  mais **n'est pas routée** dans `shared/public/api/index.php`. La brancher ouvrirait un
   relais vers n'importe quelle route de l'API (employés, clients compris) : à
   restreindre comme la sonde des invendus avant de l'exposer.
 

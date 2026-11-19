@@ -5,25 +5,25 @@ les grands prix de l'année. Il a trois portes :
 
 - la page admin (`#/primes`) ;
 - la page franchisé (`#/primes?shop=3`) ;
-- l'application employé (`apps/employee`).
+- l'application employé (`panel/apps/employee`).
 
 Ce que ces trois portes appellent, source par source, et ce que chaque route répond à l'instant : l'écran « API du
-module » (`#/api`, rail › Application employé › API du module ; `src/api_module.php`, `GET /ventes/primes-api`).
+module » (`#/api`, rail › Application employé › API du module ; `panel/src/api_module.php`, `GET /ventes/primes-api`).
 
 Le module doit pouvoir être remis tel quel à l'intégrateur de l'ERP. Ses données vivent donc dans ses propres
 tables, toutes sous le préfixe `mot_` (décision du 23/10/2026, Sam).
 
 ## Les tables
 
-`src/motivation.php` crée les tables à la première lecture.
+`panel/src/motivation.php` crée les tables à la première lecture.
 
 | Table | Contenu | Se vide ? |
 |---|---|---|
 | `mot_reglage` | Ce que la marque et les franchisés règlent, et ce qui est gravé : une clé, une valeur JSON. | Jamais |
 | `mot_cache` | Ce qui se recalcule (fiches du mois, moyennes, catalogue, ventes du jour relues) : une clé, une valeur JSON. | Oui, sans rien perdre |
 | `panel_mot_grand_prix` | Les grands prix de l'année, du réseau ou d'un magasin, une ligne chacun. | Jamais |
-| `panel_mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `src/profil_employe.php`. | Jamais |
-| `panel_mot_pointage` | Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `src/pointage.php`. | Jamais |
+| `panel_mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `panel/src/profil_employe.php`. | Jamais |
+| `panel_mot_pointage` | Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `panel/src/pointage.php`. | Jamais |
 | `panel_mot_borne` | Les bornes de pointage des magasins : le jeton de leur lien, haché, et la dernière fois qu'elles ont été vues. | Jamais |
 
 ### `mot_reglage`
@@ -49,7 +49,7 @@ Les clés commencent par :
 - `prMoy`, `b2bM`, `pvJ`, `vmMois` ;
 - `grandsPrix…` ;
 - `planShop:<id>` — le planning d'un magasin lu à `GET /shops/{id}/schedule` pour l'app (cinq minutes,
-  `src/planning_moi.php`).
+  `panel/src/planning_moi.php`).
 
 ### `panel_mot_grand_prix`
 
@@ -75,7 +75,7 @@ Les clés commencent par :
 | `cree`, `maj` | Dates. |
 
 La clé (`profil.key`, 0600) et les photos de la carte d'identité (`cartes/<emp>-recto.bin`, chiffrées elles aussi)
-vivent dans le dossier privé `/var/lib/consulant_bo/prive`, hors du site et hors de la livraison (`bin/deploy.sh` le
+vivent dans le dossier privé `/var/lib/consulant_bo/prive`, hors du site et hors de la livraison (`shared/bin/deploy.sh` le
 crée, `rsync --delete` ne le touche pas). **Perdre `profil.key`, c'est rendre les profils illisibles : la sauvegarder
 avec la base.** La clé des QR de pointage (`pointage.key`) vit à côté : la perdre ne fait que changer les codes des
 bornes (une nouvelle clé est tirée), rien n'est perdu.
@@ -91,7 +91,7 @@ Avant le 23/10/2026, tout vivait dans `ceo_app_setting`. À la première lecture
 `setting()` renvoie encore une clé du module vers ses tables, pour du code qui l'appellerait par habitude.
 
 Le code du module lit et écrit avec `motReglage()`, `motReglageEcrire()`, `motCache()`, `motCacheEcrire()` et
-`motCacheVider()`. `bin/tests_primes.php` échoue si un fichier écrit encore une clé du module dans
+`motCacheVider()`. `panel/bin/tests_primes.php` échoue si un fichier écrit encore une clé du module dans
 `ceo_app_setting`.
 
 Restent hors du module, et donc dans `ceo_app_setting` :
@@ -101,7 +101,7 @@ Restent hors du module, et donc dans `ceo_app_setting` :
 
 ## Les grands prix de l'année
 
-Ils sont dans `src/grands_prix.php`, à l'onglet « Grands prix de l'année » de l'écran des primes. L'écran a deux
+Ils sont dans `panel/src/grands_prix.php`, à l'onglet « Grands prix de l'année » de l'écran des primes. L'écran a deux
 parties :
 
 - la vitrine (maquette B) : une carte par grand prix, avec le lot, qui l'offre, la valeur, le défi et le top 3 ;
@@ -140,7 +140,7 @@ et ceux de son magasin). Ce sont ceux en cours, à venir, ou finis depuis moins 
 - le `top` 3 ;
 - la saison et l'`unite` de la valeur.
 
-L'app les montre dans « Mes primes », en cartes qui défilent (`apps/employee`, `primes.twig`). Le classement se garde
+L'app les montre dans « Mes primes », en cartes qui défilent (`panel/apps/employee`, `primes.twig`). Le classement se garde
 quinze minutes.
 
 Les six grands prix de la maquette retenue, pour la saison 2026, ont été posés une fois (le 23/10/2026, `gpMaquette`) :

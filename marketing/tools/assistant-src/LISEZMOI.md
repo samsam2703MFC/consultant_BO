@@ -3,7 +3,7 @@
 > **Octobre 2026 — l'assistant est regroupé dans le Marketing** (dépôt `marketing`,
 > servi à `/marketing/`). Ses apports d'ici (KPI du levier, documents joints,
 > bureaux à livrer, canaux validés, recherche produit) y ont été reportés, et
-> `public/assistant/index.html` n'est plus qu'un renvoi vers le Marketing
+> `marketing/public/assistant/index.html` n'est plus qu'un renvoi vers le Marketing
 > (`?id=19` → la campagne 19). **Ne plus recompiler ni réinstaller cette copie** :
 > elle écraserait le renvoi. Les évolutions se font dans le Marketing.
 
@@ -21,5 +21,5 @@ Recompiler et installer :
 
 L'entrée est `src/assistant-main.tsx` (montage de CampaignBuilder seul) ;
 l'API appelée est `../api/v1/marketing/…`, servie par
-`public/api/marketing/` (copie de l'API PHP du module, connectée à la base
+`marketing/public/api/marketing/` (copie de l'API PHP du module, connectée à la base
 du cockpit).

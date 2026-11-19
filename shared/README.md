@@ -7,7 +7,7 @@ encodage du budget, scoring produits, projets (kanban par famille, fiche,
 rétroplanning), tâches consultants, contrôle des posts Facebook des magasins,
 reporting automatisé, journal et paramètres ; MétaDonnée — les formulaires de prospects Facebook et
 Instagram jusqu'à l'ERP du franchisé (par la connexion Meta du CRM, dont le flux est recopié), le suivi de
-leur traitement et les SMS au gérant (`src/metadonnee.php`, `docs/DEPLOIEMENT.md`).
+leur traitement et les SMS au gérant (`marketing/src/metadonnee.php`, `shared/docs/DEPLOIEMENT.md`).
 
 Implémentation du design **Claude Design « Cockpit CEO cliquable complet »**
 (bundle de handoff) — design system **L'Atelier by** (Gotham / Vank, couleurs
@@ -16,15 +16,15 @@ Implémentation du design **Claude Design « Cockpit CEO cliquable complet »**
 ## Stack
 
 - **Frontend** : HTML/CSS/JS vanilla (ES modules, zéro dépendance, zéro build).
-  Une SPA (`public/index.html` + `public/assets/js/`) qui reproduit le
+  Une SPA (`shared/public/index.html` + `public/assets/js/`) qui reproduit le
   prototype à l'identique. Aucune donnée métier dans le HTML : tout vient de
-  l'API (contrat dans `docs/contrat-api.md`).
+  l'API (contrat dans `shared/docs/contrat-api.md`).
 - **Backend** : PHP ≥ 8.1 (PDO MySQL), API REST `/api/cockpit/*`, un endpoint
   par écran + routes d'écriture. Sans framework — un contrôleur frontal
-  (`public/api/index.php`) et deux modules (`src/endpoints.php`,
-  `src/writes.php`).
+  (`shared/public/api/index.php`) et deux modules (`shared/src/endpoints.php`,
+  `shared/src/writes.php`).
 - **Base de données** : MySQL/MariaDB. Tables préfixées `ceo_`
-  (`sql/schema.sql`). Les tables `of_tag`, `kpi`, `position` du Manuel
+  (`shared/sql/schema.sql`). Les tables `of_tag`, `kpi`, `position` du Manuel
   Opératoire (`franchise_buddy_db`) sont **réutilisées en lecture** — en
   production, pointez la connexion sur cette base.
 
@@ -57,11 +57,11 @@ indiquée en console (`[cockpit] API indisponible … jeu de démonstration char
 ## Déploiement (Apache)
 
 Guide complet — variables, secrets, DDL, droits MySQL, auth HTTP, recette :
-**`docs/DEPLOIEMENT.md`**.
+**`shared/docs/DEPLOIEMENT.md`**.
 
 En bref : servez `public/` (racine de vhost **ou sous-répertoire** — tous les
 chemins sont relatifs), le `.htaccess` route `/api/cockpit/*` vers l'API et le
-reste vers la SPA. `config/config.php` (copie de l'exemple, hors Git) porte
+reste vers la SPA. `shared/config/config.php` (copie de l'exemple, hors Git) porte
 les identifiants MySQL et la base d'URL du panel. Pour changer la base d'URL
 de l'API côté client : `window.COCKPIT_API_BASE`.
 
@@ -159,13 +159,13 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 (les anciennes adresses `/facebook/posts…` restent servies).
 
 Chaque écriture produit une ligne dans `ceo_journal_entry` (écran Journal).
-Détail complet, exemples JSON et DDL : `docs/contrat-api.md`.
+Détail complet, exemples JSON et DDL : `shared/docs/contrat-api.md`.
 
 Module Formation (lectures, et écritures relues au panel sous `/formation/niveau`,
 `/formation/competence(s)`, `/formation/employe`) : `/formation/referentiel`, `/formation/liens`,
 `/formation/competence`, `/formation/niveau`, `/formation/procedure`,
 `/formation/formation`, `/formation/ressource`, `/formation/equipe`,
-`/formation/sonde`, `/formation/pdf` — voir `docs/formation.md`.
+`/formation/sonde`, `/formation/pdf` — voir `formation/docs/formation.md`.
 
 ## Structure de gamme
 
@@ -183,8 +183,8 @@ Les quatre nombres et la base (CA ou marge) sont des **variables du réseau** (`
 clé `structureGamme`) : la ligne de règles les modifie, **Rafraîchir** relit les ventes et recalcule,
 **Enregistrer ces règles** les garde pour tous. Une décision par référence (garder en standard,
 garder hors standard) passe par-dessus la proposition. Le calcul vit dans
-`public/assets/js/structure-regles.js`, que la maquette `docs/maquettes/structure-gamme` utilise aussi ;
-`src/structure_gamme.php` assemble les données (ventes 12 mois, catalogue, coûts, changements
+`consultant/public/assets/js/structure-regles.js`, que la maquette `consultant/docs/maquettes/structure-gamme` utilise aussi ;
+`consultant/src/structure_gamme.php` assemble les données (ventes 12 mois, catalogue, coûts, changements
 d'identifiant — les tartes Ø 28 cm d'octobre 2026 — et doublons).
 
 Deux gestes, confirmés et journalisés référence par référence :
@@ -205,7 +205,7 @@ Tests : `php bin/tests.php` (section « structure de gamme »).
 
 L'écran **Contrôle posts Facebook** encadre ce que les magasins publient, avant
 publication. Un franchisé soumet un post ; l'**agent de contrôle**
-(`src/fbcontrole.php`) le relit et propose une note ; le CEO valide ou refuse.
+(`marketing/src/fbcontrole.php`) le relit et propose une note ; le CEO valide ou refuse.
 
 - **21 règles** en 5 familles — charte de marque, mentions légales, rédaction,
   visuel, diffusion — chacune avec sa gravité (mineur / majeur / critique) :
@@ -238,19 +238,19 @@ colonnes resteront les mêmes le jour où l'API Meta Graph sera branchée — ce
 demandera une app Meta, un Business Manager et des Page Access Tokens, hors
 périmètre actuel.
 
-Tables : `mar_social_post`, `mar_social_ecart` (DDL dans `sql/schema.sql`, créées
+Tables : `mar_social_post`, `mar_social_ecart` (DDL dans `shared/sql/schema.sql`, créées
 aussi au démarrage par `ensureFacebook()` pour les bases déjà en service).
 
 ## Module Marketing
 
 > **Retiré le 22/10/2026.** Il ne reste que le Marketing servi à `/marketing/` (dépôt
-> `marketing`) : `public/marketing/index.html` n'est plus qu'un renvoi vers lui ; la
+> `marketing`) : `marketing/public/marketing/index.html` n'est plus qu'un renvoi vers lui ; la
 > console (Marketing › Aujourd'hui) et le rail (Marque & marketing → « Marketing ↗ ») y
 > mènent. Les routes `/api/cockpit/marketing/…` restent
 > en service (lecture du hub par la console, Brand Guard, avis). Ce qui suit décrit
 > l'ancien portail.
 
-**`public/marketing/`** — `…/marketing/` pour la marque, `…/marketing/?shop=4` pour un
+**`marketing/public/marketing/`** — `…/marketing/` pour la marque, `…/marketing/?shop=4` pour un
 magasin. Les réseaux sociaux, l'emailing, les avis et les campagnes vivaient dans quatre
 sections du rail et ne se lisaient jamais ensemble. Le portail les réunit autour d'un
 **flux de travail** : la campagne est le pivot, chaque contenu s'y rattache, et chaque
@@ -272,28 +272,28 @@ le bouton ☰ de l'en-tête.
 | **5 · Mesurer** | un chiffre par canal, les publiés avec leurs liens, les newsletters envoyées, ce que chaque campagne a dit ; avis Google ; posts sauvages |
 | **Paramètres** | publication, API et tables, agent de contrôle, charte, pages Facebook, avis Google (la marque ; un magasin n'y voit que l'inventaire) |
 
-- **Une lecture** : `GET /marketing/hub` (`src/marketing_hub.php`) compile campagnes,
+- **Une lecture** : `GET /marketing/hub` (`marketing/src/marketing_hub.php`) compile campagnes,
   newsletters, posts (avec leurs publications), charte et avis, avec les calculs de leurs
   écrans. Un canal dont la table manque est déclaré indisponible, les autres restent lisibles.
 - **La campagne, pivot** : `mar_social_post.campagne_id` et `mar_nl_campagne.campagne_id`.
   Une campagne en cours sans aucun contenu rattaché (ni daté dans sa période, pour un
   contenu qui n'est rattaché à rien) remonte dans « À faire ».
-- **Publication Facebook, Instagram, LinkedIn** (`src/social_publication.php`,
-  `src/meta_graph.php`, `src/linkedin_api.php`) : un post choisit ses réseaux ; validé, il
+- **Publication Facebook, Instagram, LinkedIn** (`marketing/src/social_publication.php`,
+  `marketing/src/meta_graph.php`, `marketing/src/linkedin_api.php`) : un post choisit ses réseaux ; validé, il
   se programme (réglage « Programmer à la validation ») et l'horloge
-  (`bin/social_cron.sh`, toutes les 5 minutes) le publie à son heure — une ligne
+  (`marketing/bin/social_cron.sh`, toutes les 5 minutes) le publie à son heure — une ligne
   `mar_social_publication` par réseau. Contrôle préalable par réseau (Instagram exige un
   visuel téléversé, LinkedIn ne publie que les posts de la marque…) : un réseau qui ne peut
   pas suivre est annulé avec sa raison, les autres partent. **Éteinte par défaut**
   (Paramètres → Publication) ; les jetons restent sur le serveur. Mise en service :
-  [`docs/publication-reseaux.md`](docs/publication-reseaux.md).
-- **Tables sous `mar_`** (`src/marketing_tables.php`) : tout ce que le portail possède est
+  [`marketing/docs/publication-reseaux.md`](docs/publication-reseaux.md).
+- **Tables sous `mar_`** (`marketing/src/marketing_tables.php`) : tout ce que le portail possède est
   rangé par famille — `mar_social_*` (posts, écarts, publications), `mar_bg_*` (charte),
   `mar_nl_*` (emailing), `mar_avis*`, `mar_campagne_*` (mesure, objectifs, annexes). Les
   anciennes (`ceo_fb_*`, `brand_guard_*`, `ceo_nl_*`, `ceo_shop_review|reputation`,
   `ceo_campagne_*`, `ceo_mkt_*`) sont **renommées** au premier appel après déploiement, en
   une seule instruction `RENAME TABLE` (données, index et clés suivent). Retour arrière :
-  `docs/contrat-api.md`, « Tables du portail Marketing ».
+  `shared/docs/contrat-api.md`, « Tables du portail Marketing ».
 - **API sous `/api/cockpit/marketing/…`** : `/marketing/social`, `/marketing/newsletter`,
   `/marketing/avis`, `/marketing/publication`, à côté de `/marketing/brand-guard`. Les
   anciennes adresses (`/facebook/posts`, `/newsletter`, `/reputation`,
@@ -348,7 +348,7 @@ L'onglet **Diagnostic API** de l'écran Journal porte deux choses :
   interrogent vraiment — **65 la base seule**, 45 les deux, 20 une API seule,
   22 un calcul pur. Puis les plus grosses lectures qui passent par une API,
   triées par longueur : c'est là que se joue ce qu'on gagnerait à passer en
-  base. Établie par `bin/carte_sources.php`, **lue dans le code** et non dans
+  base. Établie par `shared/bin/carte_sources.php`, **lue dans le code** et non dans
   une liste tenue à la main, en cron chaque nuit à 3 h 40.
 
 Piège rencontré : la méthode ne pouvait pas s'appeler `caCharge()` — la
@@ -360,8 +360,8 @@ Centrale d'achat en a déjà une, et la **dernière** définition d'une classe
 Deux fois par an, les franchisés notent seuls, par un lien personnel reçu par e-mail et par notification push,
 chaque fournisseur et prestataire référencé (tronc commun + questions propres, types de réponse et points, règles).
 Résultats par fournisseur, actions ouvertes par les règles, copie à chaque fournisseur avec la note du franchiseur.
-Écran Pilotage › Audit fournisseurs (`public/audits/`), page du franchisé `public/audit/`, code `src/audits.php`,
-relances par l'horloge des visites. Détails : [`docs/audits-fournisseurs.md`](docs/audits-fournisseurs.md) ;
+Écran Pilotage › Audit fournisseurs (`consultant/public/audits/`), page du franchisé `consultant/public/audit/`, code `consultant/src/audits.php`,
+relances par l'horloge des visites. Détails : [`consultant/docs/audits-fournisseurs.md`](docs/audits-fournisseurs.md) ;
 tests : `php bin/tests_audits.php`.
 
 ## Module RH · Dimona (/hr)
@@ -370,15 +370,15 @@ Les franchisés déclarent les Dimona de leur personnel (entrée, sortie, modifi
 par l'API REST Dimona v2, depuis **https://185.180.206.46/hr/** : une page autonome dans le design system
 Marketing, tout en assistants (« Connexion ONSS », « Engager »), avec la trace de chaque déclaration et de
 son résultat. Identité : le compte de la console franchisé (le siège lit, ne déclare pas). Simulation seule
-tant que la production n'est pas ouverte ; un certificat par société. Code `src/hr/`, page `public/hr/`,
+tant que la production n'est pas ouverte ; un certificat par société. Code `pilotage-reseau/src/hr/`, page `pilotage-reseau/public/hr/`,
 API `/api/v1/erp/dimona/*`, tables `hr_dimona_*`, tests `php tests/hr/run.php`. Tout est dans
-**`docs/dimona.md`**.
+**`pilotage-reseau/docs/dimona.md`**.
 
 ## Paramètres du budget : Répartition des charges = le Compte de résultat réseau du CRM
 
 Décision du 07/11/2026 (« option A, % validé réseau, corrige les fautes, mets en ligne — le CRM fait foi ; dans le
-Cockpit, c'est pour voir si le franchisé est dans les clous » ; analyse : `docs/maquettes/budget-pnl-crm/`).
-`src/budget_crm.php` lit le Compte de résultat réseau du Recrutement (`impl_pnl`) par sa route d'intégration
+Cockpit, c'est pour voir si le franchisé est dans les clous » ; analyse : `consultant/docs/maquettes/budget-pnl-crm/`).
+`consultant/src/budget_crm.php` lit le Compte de résultat réseau du Recrutement (`impl_pnl`) par sa route d'intégration
 (`GET …/v1/integration/recrutement/compte-resultat`, `erpLireRecrutement`, jeton de service — jamais ses tables) et
 réécrit `budgetCharges` : rubriques, postes (clé `cle` du CRM), libellés, **% réseau** (`pctTheo`, verrouillé) et
 sous-totaux (« Marge brute », « Disponible pour rémunération » = CA − `tout`). Le Cockpit ne garde que le **% validé**
@@ -417,7 +417,7 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   commentaire du contrôleur), et les retours du contrôle qualité des trente
   derniers jours — un clic ouvre la photo annotée de ce jour-là dans le zoom
   d'Opérationnel. Aussi au téléphone, en sixième onglet du bas. Lectures :
-  voir `docs/contrat-api.md`, « l'heure prévue et les checklists du jour ».
+  voir `shared/docs/contrat-api.md`, « l'heure prévue et les checklists du jour ».
 - **Sur tablette** (561 à 1100 px), la page du bureau ; les onglets du haut
   passent à la ligne au lieu de se serrer.
 
@@ -450,9 +450,9 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   orange. Mesuré : Corbais affichait un stock parfait avec un comptage vieux de
   trois semaines.
   Un bouton **« M'avertir »** abonne l'appareil aux **notifications push** :
-  service worker (`public/dashboard/sw.js`), clés VAPID, abonnement déposé au
+  service worker (`panel/public/dashboard/sw.js`), clés VAPID, abonnement déposé au
   serveur. L'alerte part alors **même application fermée et téléphone rangé** —
-  `bin/push_stock.php` surveille le stock toutes les quinze minutes de 5 h à
+  `consultant/bin/push_stock.php` surveille le stock toutes les quinze minutes de 5 h à
   20 h et ne signale que les références qui **viennent** de passer sous leur
   minimum. Un bouton « Essai » envoie un message de vérification tout de suite.
   Le bouton dit toujours où l'on en est : indisponible sans HTTPS, refusé si la
@@ -461,10 +461,10 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   cockpit, **Budget › Paramètres** (réglage `budgetCharges`) — la catégorie que le palier de la marge brute
   retranche (« Matière première & Emballage »), somme des taux budget de ses lignes, ou des taux théoriques tant
   que le budget est à 0 (au 07/11/2026 : 38 + 2 = **40 %**). Une seule définition, `seuilsCharges()`
-  (`src/endpoints.php`), lue par le jour, la période et le téléphone (qui avait 35 % en dur). Main-d'œuvre et
+  (`shared/src/endpoints.php`), lue par le jour, la période et le téléphone (qui avait 35 % en dur). Main-d'œuvre et
   frais généraux restent ceux de la table `kpi` ; repli 32 / 33 / 13,5. Les six leviers du Mois, eux, gardent les
   seuils d'alerte de la Table KPI (`con_kpi_def`).
-- **P&L court hors TVA et onglet Frais** (16/11/2026, `src/pnl_ht.php` et `src/franchise/frais.php`, maquette `docs/maquettes/frais-tva`) : le
+- **P&L court hors TVA et onglet Frais** (16/11/2026, `shared/src/pnl_ht.php` et `panel/src/frais.php`, maquette `panel/docs/maquettes/frais-tva`) : le
   P&L du jour, de la semaine et du mois se lit hors TVA. Le CA encaissé (TTC) en tête, la TVA des tickets retirée
   (lue ticket par ticket dans la liste du jour, sinon la caisse gravée `con_verif_ca`, sinon le taux habituel du
   magasin, sinon 6 %), puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA, d'après l'onglet
@@ -494,7 +494,7 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   isolé à 45 minutes ou plus du suivant en début ou en fin de journée (un pro
   encodé à 5 h, une correction à 21 h) est écarté. Pas au téléphone. Lecture :
   `GET /exploitation/temps-morts` ; tests : `php bin/tests_temps_morts.php` ;
-  maquette et calcul réseau : `docs/maquettes/temps-morts/`.
+  maquette et calcul réseau : `panel/docs/maquettes/temps-morts/`.
 
 ## Caisse : ouvertures, fermetures et reports
 
@@ -532,9 +532,9 @@ telle quelle.
   Mesuré à Corbais en octobre : 18 des 33 ruptures sont la même — fermeture
   sans laissé déclaré, ouverture avec 12 € au fond, par les deux mêmes
   personnes.
-- **Données** : `GET /api/cockpit/caisse/semaine` (`src/caisse.php`), TFBuddy
+- **Données** : `GET /api/cockpit/caisse/semaine` (`consultant/src/caisse.php`), TFBuddy
   seul — services de caisse (`daily-shifts`) et export comptable du jour.
-  Contrat complet et règles de contrôle dans `docs/contrat-api.md`.
+  Contrat complet et règles de contrôle dans `shared/docs/contrat-api.md`.
 - **Ce que TFBuddy ne donne pas** : les retraits (ils s'enregistrent, aucune
   route ne les relit) et le comptage réel du tiroir — `final_cash` suit la
   recette (89 à 96 % mesurés), pas les espèces (7 %).
@@ -542,20 +542,20 @@ telle quelle.
 ## Tablette des vendeuses (Book vendeuses)
 
 L'application de comptoir des vendeuses — gamme, photos, prix, saisons,
-allergènes, conseils de vente — est servie par le BO depuis `public/tablette/` :
+allergènes, conseils de vente — est servie par le BO depuis `panel/public/tablette/` :
 **https://185.180.206.46/consulant_bo/tablette/?shop=4** (`&lang=nl`, `&prices=0`).
 C'est la compilation du dépôt `pwa_sales_tablet` (Vite, `base: './'`), copiée
 ici comme l'assistant de campagne : on ne la modifie pas dans ce dépôt, on la
 recompile là-bas et on recopie le dossier `dist/` (avec le sha source dans
-`public/tablette/VERSION`). Le dossier est l'identité de l'application
+`panel/public/tablette/VERSION`). Le dossier est l'identité de l'application
 installée sur les tablettes : il ne change plus de nom.
 
-- **Données** : `GET /api/cockpit/tablette/book?shop=…` (`src/tablette.php`)
+- **Données** : `GET /api/cockpit/tablette/book?shop=…` (`panel/src/tablette.php`)
   rend le catalogue du réseau dans les champs de la tablette — produits du
   comptoir (planogramme standard, gammes ouvertes ou proches, obligatoires),
   groupes, gammes saisonnières, prix réseau, top 8 des ventes du magasin sur
   28 jours, photos de recette du panel en vignettes 640 px. Calculé pour six
-  heures ; contrat complet dans `docs/contrat-api.md`. Sans réponse valable, la
+  heures ; contrat complet dans `shared/docs/contrat-api.md`. Sans réponse valable, la
   tablette garde ses données d'exemple.
 - **Photos** : `POST /api/cockpit/tablette/photos {shop}` les télécharge au
   panel, 24 par appel, et fait les vignettes sous `public/uploads/tablette/`.
@@ -569,7 +569,7 @@ installée sur les tablettes : il ne change plus de nom.
   les tablettes est donc le lien **https** — or, au 02/10/2026, le serveur
   répond à https://185.180.206.46/ par une connexion réinitialisée
   (*connection reset*) : à rétablir avant d'équiper les magasins.
-- **Serveur de dev** : `public/router.php` sert l'`index.html` d'un dossier et
+- **Serveur de dev** : `shared/public/router.php` sert l'`index.html` d'un dossier et
   rend 404 pour un fichier absent sous `tablette/` ou `uploads/`, comme le
   `.htaccess` (qui fait de même en production : sans cela le shell du cockpit
   partait en 200 à la place d'un morceau de script ou d'une image).
@@ -593,7 +593,7 @@ Restent dans le cockpit, parce que d'autres écrans en vivent :
   *Développement commercial*, *Prospection* et *Prospection mobile* ;
 - `GET /scouting/reseau` — les magasins du réseau et leur position (fiche
   Google raccordée, ou pointée sur la carte de l'Étude de faisabilité du CRM) ;
-- `src/scouting_osm.php`, réduit au relevé Overpass du démarchage ;
+- `marketing/src/scouting_osm.php`, réduit au relevé Overpass du démarchage ;
 - la création des tables `ceo_scouting_*` (`ensureScouting`, `schema.sql`) :
   la base est commune, rien n'est supprimé.
 
@@ -601,7 +601,7 @@ Partis avec l'écran dans le CRM : la relecture hebdomadaire du cache
 OpenStreetMap (`ceo_scouting_tile`) — l'ancien cron
 `/etc/cron.d/cockpit-scouting` et `bin/scouting_refresh.php`, devenus le
 workflow « Scouting — relecture OpenStreetMap » et `tools/scouting-relecture.php`
-du CRM ; `bin/deploy.sh` efface l'ancien fichier cron du serveur — et la
+du CRM ; `shared/bin/deploy.sh` efface l'ancien fichier cron du serveur — et la
 reconstruction de la grille de population du recensement
 (`bin/scouting_grille.py` → `tools/scouting-grille.py` du CRM).
 

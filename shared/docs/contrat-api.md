@@ -16,7 +16,7 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 
 **La carte** dit d'où vient ce que chaque écran affiche. Elle est lue dans le
 **code**, pas dans une liste tenue à la main — une liste à la main ment dès la
-semaine suivante. `bin/carte_sources.php` découpe chaque fonction `ep_*` et
+semaine suivante. `shared/bin/carte_sources.php` découpe chaque fonction `ep_*` et
 regarde ce qu'elle appelle (`Db::`, `PanelApi::`, `ErpApi::`, `GoogleApi::`,
 `Anthropic::`, `ScoutingOsm::`), puis écrit le résultat dans `ceo_app_setting`
 sous `carteSources`. Cron quotidien à 3 h 40, et un passage au déploiement.
@@ -40,7 +40,7 @@ s'écrit dans `ceo_connecteur` comme n'importe quel geste.
 ## Les notifications push — `GET /push/cle`, `POST /push/abonnements`, `POST /push/essai`
 
 Le Web Push sans dépendance : PHP 8 + OpenSSL. Deux normes assemblées dans
-`src/push.php` — **VAPID** (RFC 8292) pour dire qui envoie, et le **chiffrement
+`shared/src/push.php` — **VAPID** (RFC 8292) pour dire qui envoie, et le **chiffrement
 `aes128gcm`** (RFC 8291) pour que le service de push transporte sans lire.
 
 Les clés VAPID vivent dans `ceo_app_setting` sous `pushVapid`, générées à la
@@ -58,7 +58,7 @@ Table `ceo_push_abonnement` (créée à la volée) : `shop_id`, `endpoint` (uniq
 `p256dh`, `auth`, `agent`, `cree_le`, `vu_le`, `echecs`. Un envoi qui rend
 **404 ou 410** retire l'abonnement : l'appareil ne reviendra pas.
 
-L'envoi est fait par `bin/push_stock.php`, en cron toutes les quinze minutes de
+L'envoi est fait par `consultant/bin/push_stock.php`, en cron toutes les quinze minutes de
 5 h à 20 h. Il retient dans `ceo_app_setting` (`pushStock:<id>`) la liste des
 références en alerte au passage précédent et **ne notifie que les nouvelles** —
 sans cela, chaque passage rappellerait les quatre-vingt-quinze ruptures de la
@@ -95,7 +95,7 @@ sortent en tête, les plus creuses d'abord.
 ## `GET /caisse/semaine`
 
 Ouvertures, fermetures et reports de caisse d'un magasin, sur une semaine.
-Sert la page **Caisse** (`public/caisse/`, entrée de rail « Caisse ↗ »).
+Sert la page **Caisse** (`consultant/public/caisse/`, entrée de rail « Caisse ↗ »).
 
 Paramètres : `shop` (requis), `date` (n'importe quel jour ; la semaine va du
 lundi au dimanche qui le contiennent), `rafraichir=1` (relit tout).
@@ -144,7 +144,7 @@ Les caisses viennent dans l'ordre du total déclaré de la semaine (la plus
 grosse d'abord). `versements` / `depots` à `null` : rien de saisi ce jour-là.
 
 Les **règles de contrôle** se calculent dans la page (`jourCaisse()`,
-`jourMagasin()` de `public/caisse/caisse.js`), une seule définition :
+`jourMagasin()` de `consultant/public/caisse/caisse.js`), une seule définition :
 
 | Point | Règle | Gravité |
 |---|---|---|
@@ -248,9 +248,9 @@ bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même, `ca`
 `jours` compte les jours distincts où au moins un ticket a été passé : il dit
 qu'un mois à 6 507 € sur 7 jours est un mois d'ouverture et non un mois raté.
 
-## Formation · Standards (SOP) — les SOP du réseau (`src/sop.php`)
+## Formation · Standards (SOP) — les SOP du réseau (`formation/src/sop.php`)
 
-Une section du module Formation (`public/formation/`, groupe « Standards (SOP) », et chaque partie du Manuel opératoire).
+Une section du module Formation (`formation/public/formation/`, groupe « Standards (SOP) », et chaque partie du Manuel opératoire).
 Les SOP vivent dans nos tables (`for_sop`, contenu de chaque version dans `for_sop_version`) ; chaque texte est
 un objet `{fr, nl}`. `partie` : la partie du Manuel opératoire (`preouverture`, `ouverture`, `operationnel`,
 `formation`), réglée ou déduite du moment (`partieReglee`). Statut d'une personne face à une SOP : `non`, `lu`, `quiz`, `vu`, `a_revoir` (une version
@@ -273,7 +273,7 @@ publiée « à revalider » est venue après). État d'une langue : `origine`, `
 | `POST /formation/sop/fiche` | nouvelle SOP `{code, dossier, type, poste, titre {fr, nl}, objectif?, moment?, contenu?}` (v1.0, à valider). Avec `contenu` (l'assistant de création, 06/11/2026) : la SOP entière d'un seul envoi — `pour`, `duree`, `sections[{titre, etapes[{numero, titre, texte, critique, photo, video}]}]`, `points_critiques`, `quiz` ; au moins une étape avec son texte ; le NL peut manquer (« à relire ») |
 | `POST /formation/sop/photo` | une photo d'étape `{data: "data:image/jpeg\|png\|webp;base64,…"}` (8 Mo au plus, reconnue à sa signature, réduite à 1600 px en JPEG par GD) → `{photo: "u/<nom>.jpg", url}` ; gardée dans `public/uploads/sop/` |
 | `GET /formation/sop/photo/{nom}` | une photo envoyée (publique, comme celles du dépôt) |
-| `POST /formation/sop/importer` | range les SOP de `data/formation/sops/` absentes de la base (n'écrase rien) |
+| `POST /formation/sop/importer` | range les SOP de `formation/data/formation/sops/` absentes de la base (n'écrase rien) |
 
 **Tablette du poste** (ouvertes sans session du cockpit ; depuis le lot 5, chacune EXIGE la session de l'appareil —
 PIN du magasin, voir § Formation · Tablettes des magasins — sinon **401** `{error, code: "appareil", appareil: true}` ;
@@ -291,11 +291,11 @@ vérifié au panel ou un jeton signé de 4 h, valable seulement sur une tablette
 | `POST /formation/sop/tablette/vu` | `{sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
 | `PUT /formation/sop/tablette/langue` | `{jeton, langue}` |
 
-## Formation · Tablettes des magasins — une seule tablette, PIN du magasin (`src/tablettes.php`, lot 5, 06/11/2026)
+## Formation · Tablettes des magasins — une seule tablette, PIN du magasin (`formation/src/tablettes.php`, lot 5, 06/11/2026)
 
 Le PIN du MAGASIN ouvre l'appareil (session gardée : jeton envoyé en en-tête `X-Tablette`, ou cookie `ceo_tablette`
 HttpOnly, SameSite=Lax) ; le PIN de l'employé signe ensuite (routes de la tablette du poste ci-dessus). Doc :
-`docs/formation.md` § Tablettes des magasins.
+`formation/docs/formation.md` § Tablettes des magasins.
 
 **Appareil** (publiques, avant l'authentification) :
 
@@ -331,11 +331,11 @@ Ces essais sont à part de ceux du PIN du magasin : ils ne bloquent ni l'ouvertu
 | `DELETE /formation/tablettes/appareils/{id}` | cet appareil devra retaper le PIN du magasin |
 | `POST /formation/tablettes/reprise-crm` | reprend les lignes de `crm_mo_magasins` (même base) pas encore reprises (`crm_id`), même PIN quand il est lisible et libre → `+ bilan {disponible, reprises[], dejaLa}` |
 
-## Formation · Manuel du réseau — le référentiel commun (`src/referentiel.php`, 06/11/2026)
+## Formation · Manuel du réseau — le référentiel commun (`formation/src/referentiel.php`, 06/11/2026)
 
 Le référentiel v25 (8 domaines, 36 sous-catégories) est la colonne vertébrale ; chaque SOP est un **standard** rangé
 dans une sous-catégorie et étiqueté par phases et postes. Le CRM lit `GET /formation/ref` par `nl_cockpit_get` (même
-accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
+accès que `/formation/v25`). Doc : `formation/docs/formation.md` § Manuel du réseau.
 
 **`GET /formation/ref`** — le contrat de lecture :
 
@@ -391,7 +391,7 @@ accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
 
 Chaque écriture est journalisée (`ceo_journal_entry`, type « Formation »).
 
-**Les deux guides (lot 4b, `src/referentiel_guides.php`)** — le Cockpit est l'éditeur du Guide pré-ouverture et du
+**Les deux guides (lot 4b, `formation/src/referentiel_guides.php`)** — le Cockpit est l'éditeur du Guide pré-ouverture et du
 Guide des formations et compétences ; le CRM les lit dans la même réponse. `GET /formation/ref` gagne trois clés
 (rien n'est retiré du contrat ci-dessus) :
 
@@ -472,7 +472,7 @@ acquis et relié, sinon l'ancienne compétence du panel de la SOP en repli).
 | — | `GET /scouting/reseau` | Magasins du réseau (Développement commercial, Prospection) : position (fiche Google, ou pointée dans l'Étude de faisabilité du CRM) et CA réel des douze derniers mois clos ; `panier` : panier moyen TTC du réseau et par magasin (même source que l'écran Exploitation, mois en cours, gardé un jour) |
 | — | `GET /ventes/stats?shop=&vue=&date=` | Les heures de la période, le top de chaque heure, et `categories[]` : CA, coût matière, marge brute, taux, part, `groupe`, et `produits[]` de chaque catégorie (id, nom, q, v, c, m, taux, part dans la catégorie) — la liste groupe › catégorie › produit du dashboard magasin. `bundles` (10/10/2026) : les produits de la catégorie « Bundle », groupe « Bundle & Promotion », vendus sur la période. Il donne `{n, pieces, ca, taux, part, lignes[{id, nom, cat, q, v, prix, c, m, taux, heures{h: q}, premiere, derniere}]}`, trié par quantité. Le dashboard opérationnel l'affiche à côté des ventes par catégorie, sans colonne d'heures, avec la composition lue dans la recette du bundle (`/analyse/produits/recette`). `GET /exploitation/bundles/sonde` lit en lecture seule les promotions bundle et buy X get Y du panel (`/admin/promotions/...`) : au 10/10/2026, le compte API reçoit 403. |
 | — | `GET /ventes/stats/reseau?vue=jour\|semaine\|mois&date=` | Les ventes de produits de tout le réseau (04/11/2026), sous le tableau des magasins du Résultat. `produits[]` : `{id, pid, nom, cat, groupe, portion, q, v, prix, m, taux, vChiffre, vSans, nSans, part, magasins[{s, q, v, m}]}` — une portion (½, ¼) est une ligne à part (`id` = « produit:portion », `portion: true`), `m` et `taux` sur les ventes chiffrées, `nSans` = magasins où le produit est vendu sans coût. `magasins[]` : `{shop, nom, jours, joursLus, instantanes, joursManquants, ca, refs, sansCout[{id, nom, cat, q, v}], nSansCout, caSansCout}`. `totaux` : `{refs, portions, q, ca, m, taux, vChiffre, nSansCout, caSansCout}` ; `lecture` : `{complet, ticketsLus, rechiffres, secondes}`. Relevés gravés lus tels quels ; les autres jours relus dans un budget commun (1 500 tickets, 45 s), le plus récent d'abord et magasin par magasin ; un relevé périmé sert quand le budget est épuisé (`instantanes`). Ventes sans coût rechiffrées à la recette du moment (`svRechiffrer`). Les bundles restent dans leur catégorie. |
-| — | `GET /historique/ventes` | (siège seul) L'historique des ventes sur 18 mois, que lit l'assistant du dashboard (14/11/2026, `src/historique_ventes.php`) : `{depuis, jusqua, joursParMagasin, avancement (%), complet, magasins[{magasin, joursLus, depuis, jusqua, tickets, ticketsSansLignes}]}`. Tables `panel_hist_jour` (un jour-magasin lu : tickets, CA, part pro), `panel_hist_heure` (le même, heure par heure) et `panel_hist_produit` (produits vendus heure par heure : quantité, ventes TTC, part pro), remplies depuis les tickets du panel (`/shops/{id}/transactions?date=` puis `/transactions/{id}?include=products`). Moisson de nuit : `bin/historique_moisson.php` (cron `/etc/cron.d/cockpit-historique`, toutes les dix minutes de 20 h à 6 h, 4 000 appels et 8 minutes au plus par passe), d'hier vers le passé. |
+| — | `GET /historique/ventes` | (siège seul) L'historique des ventes sur 18 mois, que lit l'assistant du dashboard (14/11/2026, `panel/src/historique_ventes.php`) : `{depuis, jusqua, joursParMagasin, avancement (%), complet, magasins[{magasin, joursLus, depuis, jusqua, tickets, ticketsSansLignes}]}`. Tables `panel_hist_jour` (un jour-magasin lu : tickets, CA, part pro), `panel_hist_heure` (le même, heure par heure) et `panel_hist_produit` (produits vendus heure par heure : quantité, ventes TTC, part pro), remplies depuis les tickets du panel (`/shops/{id}/transactions?date=` puis `/transactions/{id}?include=products`). Moisson de nuit : `panel/bin/historique_moisson.php` (cron `/etc/cron.d/cockpit-historique`, toutes les dix minutes de 20 h à 6 h, 4 000 appels et 8 minutes au plus par passe), d'hier vers le passé. |
 | — | `POST /historique/ventes/moisson {budget?}` | (siège seul) Une passe forcée : 1 500 appels et 50 s au plus. Rend `{ok, joursFaits, appels, echecs, joursRestants, plusAncienLu, secondes, etat}`. |
 | — | (relevé des tickets `svP{shop}:{date}`) | Lu une fois par jour et par magasin, la journée en cours relue toutes les dix minutes. Depuis le 05/10/2026, la relecture est **incrémentale** : le relevé garde ses tickets (`ids`), la liste du jour se relit (un appel) et seuls les tickets nouveaux se lisent (un appel chacun) ; mesuré avant, 298 tickets relus à Corbais, 8 s. Un ticket déjà lu qui a disparu de la liste (annulé) fait tout relire. `produits.ticketsLus` compte les tickets lus pendant l'appel. |
 | `fbRegles` | `GET /referentiels/facebook-regles` | Contrôle posts Facebook — pack de règles |
@@ -656,7 +656,7 @@ détectés (en semaine si au moins trois jours sont sous le seuil, samedi, diman
 `seuil × moyenne`). `potentiel` = ce que rapporterait par mois le créneau remonté à 70 % de la moyenne du magasin
 (× 4,3 semaines). `reseau` : le creux principal de chaque magasin actif, sur sa propre moyenne.
 
-`GET /promo/mecaniques` — le catalogue, semé depuis `src/data/promo_mecaniques.json` (24 fiches) si la table est vide :
+`GET /promo/mecaniques` — le catalogue, semé depuis `shared/src/data/promo_mecaniques.json` (24 fiches) si la table est vide :
 `{ mecaniques: [ { id, code, levier, type, nom, regle, habitude, sections: ["apres-midi"], jours: ["lun", …],
 declencheur: ["c:Tartes"], article: ["p:1045|Pommes Crème"], offre, prix, remisePct, margeMin, mesure, canaux: [],
 caisse, note, margeGarde, actif, ordre, majLe, majPar, enCours } ], leviers, sections, jours, types, offres, canaux }`.
@@ -793,7 +793,7 @@ d'un panier `total` : deux côtés lus, hors pro ; sinon les deux pro compris.
 
     ?shop=4&date=2026-11-06
 
-Demande de Sam (06/11/2026, maquette `docs/maquettes/b2b-commandes-mobile`, écran 2) : un appui sur la jauge B2B de
+Demande de Sam (06/11/2026, maquette `panel/docs/maquettes/b2b-commandes-mobile`, écran 2) : un appui sur la jauge B2B de
 l'onglet Opérationnel ouvre le détail, **avec le nom des sociétés**. La règle du 03/10/2026 (l'heure et le montant
 seulement) est levée pour cette feuille : depuis le 11/10, un ticket n'est pro que si la fiche du client porte une TVA
 valide. Le nom se lit sur la fiche du panel (`/shops/{id}/clients/{id}` : `company_name`, sinon le nom de la personne),
@@ -829,7 +829,7 @@ vendredis » est retiré, `&vue=semaines` avec lui ; les onglets ne portent plus
 
 ### `/production/plan` — la gestion de production (module franchisé)
 
-Demande du 03/10/2026, maquettes `docs/maquettes/gestion-production`. Écran : **cockpit, rail ERP franchisé ›
+Demande du 03/10/2026, maquettes `panel/docs/maquettes/gestion-production`. Écran : **cockpit, rail ERP franchisé ›
 Gestion de production** (sous-menu : Plan du jour, Suivi et recuissons, Paramètres ; `#/production-plan`,
 `#/production-suivi`, `#/production-parametres`), un magasin et un jour choisis dans la barre (‹ › Aujourd'hui,
 Demain, jusqu'à sept jours devant). L'écran charge la page du dashboard en mode intégré
@@ -906,17 +906,17 @@ L'application mobile des employés (TFB-Employee), hébergée par le cockpit sou
 et liée depuis le rail, ERP franchisé › **App worker ↗** (demande du 06/10/2026). Elle ne parle pas
 à l'API du cockpit : elle appelle l'API du panel (`panelApi.base`) avec les identifiants de
 l'employé (`POST /employees/authenticate`, puis `/employees/{id}`, `/employees/{id}/tasks`,
-`/employees/{id}/schedule`, `/shops/{id}`). Code dans `apps/employee`, détails dans
-`apps/employee/LISEZMOI.md`. Aux couleurs et à la typo de la marque. Seule exception : l'onglet
+`/employees/{id}/schedule`, `/shops/{id}`). Code dans `panel/apps/employee`, détails dans
+`panel/apps/employee/LISEZMOI.md`. Aux couleurs et à la typo de la marque. Seule exception : l'onglet
 **Primes** lit le cockpit (`GET /ventes/moi`, ci-dessous) avec le jeton d'employé.
 
 ### Les primes dans l'app worker — `GET /ventes/moi`, `GET /ventes/primes-reglages`, `POST /ventes/primes-app`
 
-Demande du 06/10/2026, refondue le 14/10/2026 (`docs/maquettes/primes-epure/`, variante A) : dans l'onglet
+Demande du 06/10/2026, refondue le 14/10/2026 (`panel/docs/maquettes/primes-epure/`, variante A) : dans l'onglet
 **Primes** de l'app employés, **chaque carte est une prime**, un target, une catégorie de produits ou une
 promotion du panel, avec **une récompense** réglée par l'admin, 50 € par défaut. Le classement à la Strava
-est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php` (le calcul) et
-`src/primes_app.php` (la liste, les promos, les moyennes, les cartes).
+est dans un menu déroulant. Plus de texte d'explication. Code : `panel/src/primes.php` (le calcul) et
+`panel/src/primes_app.php` (la liste, les promos, les moyennes, les cartes).
 
 | Prime | Type | Mesure | Qui gagne la récompense | Réglage |
 |---|---|---|---|---|
@@ -1071,7 +1071,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
   `X-Worker-Nom` en base64, `X-Worker-Jour`, `X-Worker-Sign` = HMAC-SHA256 de `emp|nom|jour` avec
-  le secret que les deux déduisent du même `config/config.php`, le jour ou la veille), soit le
+  le secret que les deux déduisent du même `shared/config/config.php`, le jour ou la veille), soit le
   **jeton d'employé** (`Authorization: Bearer …` ou `X-Employee-Token`), dont l'identifiant (`sub`)
   est confirmé par le panel (`GET /employees/{id}` avec ce même jeton, vérifié une fois par dix
   minutes). Sans cela, 401. La personne se retrouve par son identifiant, sinon par son nom
@@ -1132,7 +1132,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   une ligne de journal. La réussite est alors acquise, pas une projection. Le numéro vient de la fiche
   (`franchisee_employee.phone`, sinon `/shops/{id}/employees` du panel, gardé à part : `pvEmployesTel`), mis au
   format +32. Le fournisseur : Twilio, réglé dans `config/config.php › sms` (`sid`, `token`, `expediteur`) ou
-  `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
+  `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`shared/src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
   le disent.
 - **Les franchisés, sans primes** (07/11/2026, Sam : « les franchisés n'ont pas le droit aux primes ; ils peuvent être
   dans les stats ») : une personne dont la fiche du panel porte `franchise_role = franchisee` (`/shops/{id}/employees`,
@@ -1167,7 +1167,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   primes du mois). Cache `primesAn{y}` : une heure (une année close : un jour), vidé avec les fiches ; `&frais=1`
   recalcule. Écrans : la page franchisé (« Où en sont tes vendeuses » › Année), l'onglet Primes du dashboard magasin (› Année) et la page admin (« L'année des
   primes », par magasin ou par vendeuse, les mois en barres).
-- `GET /ventes/primes-api[?frais=1]` (24/10/2026) : l'API du module (`src/api_module.php`, écran `#/api`, rail ›
+- `GET /ventes/primes-api[?frais=1]` (24/10/2026) : l'API du module (`panel/src/api_module.php`, écran `#/api`, rail ›
   Application employé › API du module) — l'inventaire de ce que le module des primes et l'application employé
   appellent, et l'état de chaque route à l'instant. `sources[] {cle (cockpit, panel, erp, base, sms), nom, hote, unite,
   resume, dit, n, etat (ok, lent, alerte, erreur : le pire de ses routes), compte {ok, lent, neutre, alerte, erreur,
@@ -1177,7 +1177,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   fois, 8 s chacun ; une ligne lue par table ; le compte Twilio relu (jamais de SMS) ; pour le cockpit, l'âge des
   calculs gardés (`mot_cache.maj`). Les écritures sont listées, jamais appelées. Le magasin et la personne pris pour
   exemple ne sortent pas. Cache `apiModule`, une minute ; `&frais=1` resonde. L'inventaire est vérifié par
-  `bin/tests_primes.php` : chaque route du cockpit existe au routeur, chaque appel de l'application au panel y figure.
+  `panel/bin/tests_primes.php` : chaque route du cockpit existe au routeur, chaque appel de l'application au panel y figure.
 - La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte `c` (les tickets à deux lignes ou
   plus), `cc` ces mêmes tickets par catégorie de produits qu'ils contiennent (`k` : le jour les compte), `q`
   les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de produits,
@@ -1190,7 +1190,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   `qp`, les pièces de chaque promo sur ses seules dates et ses seuls magasins. `pvE{shop}:{jour}` grave les
   ventes du jour par vendeuse ; le compteur du jour lit ses seuls tickets (`pvLJ{shop}:{emp}`, dix
   minutes) ; le CA d'un magasin jour par jour se grave (`pvJ{shop}:{jour}`).
-- L'app (`apps/employee`, route `/primes`, `PrimesService`) appelle le cockpit à
+- L'app (`panel/apps/employee`, route `/primes`, `PrimesService`) appelle le cockpit à
   `COCKPIT_API_URL` (déduit de son adresse, sinon `EMPLOYEE_COCKPIT_API`) avec le jeton de la session.
 - Tests sans base ni réseau : `php bin/tests_primes.php`.
 
@@ -1210,7 +1210,7 @@ documentés (« contracts are not inferred ») : une copie reprend les champs de
 ou vrai/faux, `04:00` ou `04:00:00`) ; une tâche nouvelle prend les types d'une tâche existante ;
 une checklist nouvelle envoie `name`, `description`, `workstation_id`, `execution_time` (et
 `is_active` si les checklists le portent), aux types d'une checklist existante ; les jours et la
-fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/task_cadre.php`.
+fréquence se choisissent parmi les valeurs que le panel emploie déjà. `consultant/src/task_cadre.php`.
 
 | Route | Rôle |
 |---|---|
@@ -1231,7 +1231,7 @@ fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/ta
 | `PATCH /task/taches` | **le même réglage sur plusieurs tâches** (vue Document, « toute la checklist ») : `{ids: [taskId] (200 au plus), champs: {jour?, heure?, frequence?, obligatoire?, photo?}}`. `/tasks` est lu une fois, puis chaque tâche part comme `PATCH /task/taches/{id}` ; on continue après un refus. Rend `ok`, `refus`, `resultats[]` {id, ok, erreur} (HTTP 502 et `error` s'il y a un refus). |
 | `POST /task/qui` | `{ids: [taskId]}` (200 au plus) : pour chaque tâche, `fait[]` {id, nom, poste, route} (les niveaux de poste qui la portent) et `controle[]` {id, type: self\|position, positionId, nom} (`GET /tasks/{id}/controllers`) ; `choix` {niveaux[] {id, nom, poste, posteId}, postes[] {id, nom, type}} (`/position-levels`, `/positions`). Lecture seule. |
 | `POST /task/qui/modifier` | une opération : `{taskId, ajouterNiveau}` → `POST /{route}/{niveau}/tasks {task_id}` (la route que le panel emploie le plus) ; `{taskId, retirerNiveau, route}` → `DELETE /{route}/{niveau}/tasks/{taskId}` ; `{taskId, ajouterControleur: {type: self\|position, positionId}}` → `POST /tasks/{id}/controllers {controller_type, position_id}` ; `{taskId, retirerControleur}` → `DELETE /tasks/{id}/controllers/{id}`. Rend la ligne `qui` relue. |
-| `GET /task/nomenclature` | **la nomenclature des checklists** (08/11/2026, `src/checklists_codes.php`) : un code « zone.moment.numéro » (1.1.01), le même au panel (« 1.1.01 · Ouverture de la boutique »), dans Formation (le code de la fiche) et dans les SOP (leur classement) ; le nom se traduit (fr, nl, en). Rend `nomenclature` {zones[], moments[], checklists[] {code, fr, nl, en, ex[], panel}}, `points[]` {ou: panel\|fiche\|lien\|souscat, code, id, quoi, etat: fait\|afaire\|bloque, pourquoi?, changements?, avant?}, `totaux`, `structure[]` (fusion, partage, suppression : à faire au panel). Lecture seule. |
+| `GET /task/nomenclature` | **la nomenclature des checklists** (08/11/2026, `shared/src/checklists_codes.php`) : un code « zone.moment.numéro » (1.1.01), le même au panel (« 1.1.01 · Ouverture de la boutique »), dans Formation (le code de la fiche) et dans les SOP (leur classement) ; le nom se traduit (fr, nl, en). Rend `nomenclature` {zones[], moments[], checklists[] {code, fr, nl, en, ex[], panel}}, `points[]` {ou: panel\|fiche\|lien\|souscat, code, id, quoi, etat: fait\|afaire\|bloque, pourquoi?, changements?, avant?}, `totaux`, `structure[]` (fusion, partage, suppression : à faire au panel). Lecture seule. |
 | `POST /task/nomenclature/appliquer` | `{apercu?}` : exécute les points « à faire » — `PATCH /task/checklists/{id}` au panel (nom, heure, zone, « (ex …) » ajouté à la description), le code et le titre des fiches de Formation (une nouvelle version « précision » quand la fiche en a une), les liens des SOP (`for_sop.checklists`) et des sous-catégories (`for_ref_souscat.checklists`). Idempotent ; un refus n'arrête pas les autres points. Formation accepte désormais les codes de la nomenclature et traduit un ancien code (AC-01 → 1.1.01). |
 | `POST /task/ranger` | **ranger une tâche dans une checklist** (vue Document, « Ranger → AC-01 ▾ » sur une tâche qui n'est dans aucune checklist) : `{taskId, checklistId, reactiver?, niveaux?: [{id, route}], controleurs?: [{type: self\|position, positionId}]}`. `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après sa dernière tâche ; 409 si elle y est déjà) ; s'il passe, `PATCH /tasks/{id}/active` si `reactiver`, puis un rattachement par niveau et un `POST /tasks/{id}/controllers` par contrôleur (ceux de la checklist que la tâche n'a pas, calculés par l'écran). Rend `ok`, `ordre`, `operations[]`, `qui` (HTTP 502 et `error` s'il y a un refus). |
 | `POST /task/qui/lot` | **plusieurs** de ces opérations d'un coup (vue Document : une liste cochée, pour une tâche ou toute sa checklist) : `{ops: [{taskId, …}]}` (400 au plus). La route des rattachements se choisit une fois, les tâches touchées sont relues une fois à la fin ; on continue après un refus. Rend `ok`, `refus`, `operations[]` (chacune avec `taskId`, `ok`, `code`, `erreur`), `qui` (HTTP 502 et `error` s'il y a un refus). |
@@ -1462,7 +1462,7 @@ restent dans l'écran Gestion de production du cockpit (`&embed=1`).
 ### `/exploitation/semaine-jours` — la semaine jour par jour (dashboard téléphone, onglet Semaine)
 
 Demande du 04/10/2026 : le dashboard magasin au téléphone passe en trois onglets, Exploitation,
-Contrôle et Semaine (maquette A « les feux », `docs/maquettes/dashboard-3-onglets/`). L'onglet
+Contrôle et Semaine (maquette A « les feux », `panel/docs/maquettes/dashboard-3-onglets/`). L'onglet
 Semaine montre un damier jour × mesure. Le chiffre, l'objectif et le résultat de chaque jour
 viennent déjà de `/exploitation/jour?date=` (`magasins[].semaine`) ; cette route ajoute ce qui ne se
 lit que jour par jour.
@@ -1570,7 +1570,7 @@ relit (`remarques[]`, `parOperateur[]`).
 
 ### `/planogramme/standard` — le comptoir standard : un seul plan, ses moments, ses rotations
 
-Un seul plan pour tous les magasins. La géométrie est fixe (`src/plano_std.php`) : 25 sections de 30 cm, sections 1–2 =
+Un seul plan pour tous les magasins. La géométrie est fixe (`consultant/src/plano_std.php`) : 25 sections de 30 cm, sections 1–2 =
 caisse ; zones `z0` sec mortex blanc (1–8), `z1` frigo (9–12), `z2` sec mortex (13–16), `z3` frigo (17–20), `z4` sec
 table bois (21–25) ; niveaux `e3` top picking, `e2`, `e1b` étage 1 arrière, `e1a` étage 1 avant (les frigos et la table
 bois n'ont que l'étage 1) — 66 emplacements. Les produits viennent du catalogue (API panel) ; un emplacement porte **un
@@ -1739,8 +1739,8 @@ liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du pan
 `GET /formation/config` (`{cockpitUrl}` : l'adresse du « Retour au cockpit » du rail, config.php, ou null). Sans
 compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code HTTP, lignes, durée
 de chaque lecture du panel). Les routes `/career-*` du panel sont déclarées en 500 dans son
-swagger : les postes passent par `/positions`. Détail, constats et sécurité : `docs/formation.md` ;
-les 237 routes : `docs/formation-routes.md`.
+swagger : les postes passent par `/positions`. Détail, constats et sécurité : `formation/docs/formation.md` ;
+les 237 routes : `formation/docs/formation-routes.md`.
 
 Écritures (toutes relues au panel, journalisées, caches corrigés) : `POST|DELETE /formation/niveau/{nid}/competences[/{cid}]`,
 `POST /formation/competence/{cid}/liens {type, id}`, `DELETE /formation/competence/{cid}/liens/{type}/{id}`,
@@ -1765,13 +1765,13 @@ qui les lisait est retiré ; ces routes restent (Référentiel › Procédures e
 maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},
 polyvalence{competences, metiers[{cle, libelle, niveau, competences, personnes}], paliers{3,2,1,0}, avecCompetences}, effectifs{actifs,
 sansPoste, places, magasins}, manques{sansFormation, sansProcedure, competences, niveauxVides[]}}` — des comptes, aucun nom de personne.
-Détail : `docs/formation.md`.
+Détail : `formation/docs/formation.md`.
 
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
 
-La tablette « Book vendeuses » (`public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,
+La tablette « Book vendeuses » (`panel/public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,
 catégories et saisons au BO ; le reste (allergènes UE, FAQ, services, réflexes de vente, statistiques) reste embarqué.
-Code : `src/tablette.php`. Le lien d'un magasin est `tablette/?shop=<id>` (+ `&lang=nl`, `&prices=0`) ; la tablette
+Code : `panel/src/tablette.php`. Le lien d'un magasin est `tablette/?shop=<id>` (+ `&lang=nl`, `&prices=0`) ; la tablette
 garde `shop` sur l'appareil.
 
 `GET /tablette/book?shop=4[&ensemble=comptoir|tout][&rafraichir=1]` (sans `shop`, ou magasin inconnu : le réseau) :
@@ -1900,7 +1900,7 @@ l'appelle jamais.
 ### `/tablette/objectifs` — les objectifs de l'accueil de la tablette
 
 `GET /tablette/objectifs?shop=4[&date=2026-10-02][&rafraichir=1]` (sans `shop`, ou magasin inconnu : le réseau,
-`shop: null` ; `date` absente, future ou illisible → aujourd'hui). Code : `src/tablette_objectifs.php`.
+`shop: null` ; `date` absente, future ou illisible → aujourd'hui). Code : `panel/src/tablette_objectifs.php`.
 
 ```json
 { "schema": 1, "genereLe": "2026-10-02T20:15:00+02:00", "date": "2026-10-02", "shop": { "id": "4", "nom": "Halle" },
@@ -1947,12 +1947,12 @@ l'appelle jamais.
 ### `/tablette/remarques` — les remarques des clients saisies sur la tablette
 
 Une vendeuse note au comptoir ce qu'un client a dit ; la tablette l'envoie, l'écran BO « Tablette vendeuses » les
-montre (carte « Remarques des clients ») avec une bascule « Traitée ». Code : `src/tablette_remarques.php` ; table
-`panel_tablette_remarque`, créée au démarrage par `installer.php` (`ensureTabletteRemarques`) et dans `sql/schema.sql`.
+montre (carte « Remarques des clients ») avec une bascule « Traitée ». Code : `panel/src/tablette_remarques.php` ; table
+`panel_tablette_remarque`, créée au démarrage par `installer.php` (`ensureTabletteRemarques`) et dans `shared/sql/schema.sql`.
 Contrat figé avec la tablette (`pwa_sales_tablet`, `src/data/remarks.ts`). **Accès** : l'API est ouverte (auth
 désactivée en production, comme tout le cockpit) et ces routes n'ajoutent aucun contrôle — le plafond par magasin et
 par jour borne ce qu'un appel abusif peut remplir. Même origine que le BO : la tablette est servie depuis
-`public/tablette/`, aucun en-tête CORS n'est posé.
+`panel/public/tablette/`, aucun en-tête CORS n'est posé.
 
 `POST /tablette/remarques` (la tablette) — `{ "id": "<uuid>", "shop": "4" | null, "type": "compliment" | "suggestion" |
 "reclamation", "texte": "…", "langue": "fr" | "nl", "saisieLe": "2026-10-02T18:40:12+02:00" }` →
@@ -2081,7 +2081,7 @@ autres magasins ont fait ces mêmes jours ; l'écart net en points retire la ten
 
     GET /analyse/developpement/magasin?shop=4
 
-Demande du 11/11/2026, maquette **I « les tuiles »** retenue (`docs/maquettes/onglet-produits-simple/`). L'onglet
+Demande du 11/11/2026, maquette **I « les tuiles »** retenue (`panel/docs/maquettes/onglet-produits-simple/`). L'onglet
 **Produits** du dashboard magasin (après Année) répond à une question : le magasin, chaque catégorie, chaque produit
 se développe-t-il ? Une seule comparaison, en chiffre d'affaires : **les 6 dernières semaines closes face aux 6
 d'avant**.
@@ -2144,7 +2144,7 @@ onglets du bureau.
 Limite connue : en S40, la caisse a renommé les tartes (« Tartes » → « Tartes – Ø 28 cm », noms néerlandais remplacés
 par des noms français). Dans la catégorie Tartes, les anciennes références paraissent donc « arrêtées » et les
 nouvelles « nouvelles ». Le total de la catégorie, lui, est juste. Pour les relier, il faudrait une table de
-correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`).
+correspondance (voir `panel/docs/maquettes/onglet-produits-developpement/LISEZMOI.md`).
 
 ### `/tresorerie/*` — l'onglet Trésorerie du dashboard magasin : le plan de trésorerie semaine par semaine (14/11/2026)
 
@@ -2155,8 +2155,8 @@ correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`)
 
 Demande du 14/11/2026 : un module **Trésorerie** dans le dashboard magasin, sur le modèle « Plan de trésorerie —
 L'Atelier By » (Sombreffe, tiré de son fichier Excel), avec la reprise des chiffres de l'année passée, du budget
-validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/franchise/tresorerie.php`,
-`public/dashboard/tresorerie.js` et `tresorerie.css`. Tests : `php bin/tests_tresorerie.php`.
+validé et de ce qui a été fait. Fiche : `panel/docs/maquettes/tresorerie/LISEZMOI.md`. Code : `panel/src/tresorerie.php`,
+`panel/public/dashboard/tresorerie.js` et `tresorerie.css`. Tests : `php bin/tests_tresorerie.php`.
 
 **Les repères** (`GET /tresorerie/references`, lourd : le dashboard le demande avec `_cache=600`, `rafraichir=1` sur
 « ↻ Relire »). `debut` est le premier lundi du plan (un autre jour est ramené à son lundi ; absent : le lundi proposé,
@@ -2409,7 +2409,7 @@ photo de l'étiquette est jointe.
 La caméra en direct (`getUserMedia`) n'est permise qu'aux pages sécurisées. Le serveur est déjà
 servi en https sur son IP — **https://185.180.206.46/consulant_bo/** — avec un certificat
 Let's Encrypt d'adresse IP que le certbot du serveur gère et renouvelle (hors de ce dépôt ;
-`bin/deploy.sh`, étape 5a, n'y touche pas et vérifie seulement que le dashboard y répond). En
+`shared/bin/deploy.sh`, étape 5a, n'y touche pas et vérifie seulement que le dashboard y répond). En
 http, l'écran garde le scan par photo et propose la même page en https.
 Dans le viseur, le flux est lu réduit (1 280 px, vite) ; au premier code lu, l'image pleine est
 relue plus fort et ses codes s'ajoutent (le long GS1-128 du lot et des dates y est attrapé).
@@ -2820,7 +2820,7 @@ revérifie tout).
 
 ### `GET /exploitation/jour` et `/exploitation/periode` — le calcul gardé (04/10/2026)
 
-**Le P&L hors TVA (16/11/2026, `src/pnl_ht.php`, maquette `docs/maquettes/frais-tva`).** Le P&L du jour, de la semaine
+**Le P&L hors TVA (16/11/2026, `shared/src/pnl_ht.php`, maquette `panel/docs/maquettes/frais-tva`).** Le P&L du jour, de la semaine
 et du mois se lit hors TVA. Le CA encaissé reste TTC (`ca`, `realise` : objectifs, panier, écarts) ; les champs du P&L
 se rapportent au CA hors TVA :
 - `caHt` (et `realiseHt` sur une étendue) = CA × (1 − TVA ÷ TTC des tickets) ; `tva`, `tvaPart` (% du TTC), `tvaSource`.
@@ -2844,7 +2844,7 @@ se rapportent au CA hors TVA :
 
 ### `GET /exploitation/frais` et `POST /exploitation/frais/tva` — l'onglet Frais (16/11/2026)
 
-Code : `src/franchise/frais.php` (les routes), `src/pnl_ht.php` (le calcul, partagé avec le siège).
+Code : `panel/src/frais.php` (les routes), `shared/src/pnl_ht.php` (le calcul, partagé avec le siège).
 `GET /exploitation/frais?shop=4[&mois=AAAA-MM][&rafraichir=1]` : les frais du mois tels que le panel les rend
 (`/shops/{id}/owner/costs?period=AAAA-MM`, gardés `phF:{shop}:{mois}` une heure, six pour un mois passé ; la forme de la
 réponse n'étant pas documentée, liste à la racine ou sous `items`, `costs`, `lines`, `data`, `rows`), face au choix de
@@ -2890,25 +2890,25 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **L'équipe du jour : les tickets à la minute (20/10/2026).** `GET /exploitation/equipe-heures` rend en plus `noms` et `tickets: [[minute du jour, rang du vendeur dans noms (-1 sans vendeur), montant, articles ou null]]` (relevé `eqH…` forme `v` 3). Le dashboard ne déplace aucun ticket : chaque vente reste au compte de qui l'a encaissée (une réattribution à la personne seule en vente a été essayée puis retirée le même jour, à la demande de Sam).
 
-**L'e-mail « pointages suspects » de fin de journée (20/10/2026, demandé par Sam).** Une vendeuse seule au comptoir qui ne s'identifie pas à la caisse encaisse au compte de la session ouverte. Le dashboard laisse chaque ticket où il est ; le soir, le magasin reçoit le constat. Un cas = au moins 3 tickets encaissés au compte de quelqu'un qui n'est pas en poste à cette minute (parti, pas encore arrivé, pas au planning comme « Caisse 2 », ou sans vendeur) pendant qu'une seule personne était en vente (poste vente, caisse ou comptoir ; tout le monde si le planning ne dit pas de poste) ; dix minutes de grâce autour d'un poste ; deux personnes en vente = pas de cas. La phrase : « X (planning 13:00–18:30) était la seule personne en vente, mais n'a pas pointé à la caisse : de 13:12 à 18:09, 34 tickets (392,10 €) ont été encaissés au compte de Y, dont le poste se terminait à 13:00 » (« n'a pas toujours pointé » si elle a quelques tickets à son nom pendant ce temps). Une ligne du reporting (code `pointages-suspects`, quotidien, 21 h, par magasin) : carnet de la ligne, sinon celui de l'affiche du mois ; les destinataires réseau de la ligne reçoivent un récapitulatif de tous les magasins concernés. Un magasin n'est servi qu'une fois par jour (`psMailEnvoyes`) ; pas de planning ou pas de tickets lus = rien. « Générer » montre le récapitulatif sans rien envoyer. Le planning vient de `/exploitation/jour` (identifiant et horaires de chacun), les tickets de `/shops/{id}/transactions?date=` (vendeur et minute). `src/pointages_mail.php`, `bin/tests_pointages.php`.
+**L'e-mail « pointages suspects » de fin de journée (20/10/2026, demandé par Sam).** Une vendeuse seule au comptoir qui ne s'identifie pas à la caisse encaisse au compte de la session ouverte. Le dashboard laisse chaque ticket où il est ; le soir, le magasin reçoit le constat. Un cas = au moins 3 tickets encaissés au compte de quelqu'un qui n'est pas en poste à cette minute (parti, pas encore arrivé, pas au planning comme « Caisse 2 », ou sans vendeur) pendant qu'une seule personne était en vente (poste vente, caisse ou comptoir ; tout le monde si le planning ne dit pas de poste) ; dix minutes de grâce autour d'un poste ; deux personnes en vente = pas de cas. La phrase : « X (planning 13:00–18:30) était la seule personne en vente, mais n'a pas pointé à la caisse : de 13:12 à 18:09, 34 tickets (392,10 €) ont été encaissés au compte de Y, dont le poste se terminait à 13:00 » (« n'a pas toujours pointé » si elle a quelques tickets à son nom pendant ce temps). Une ligne du reporting (code `pointages-suspects`, quotidien, 21 h, par magasin) : carnet de la ligne, sinon celui de l'affiche du mois ; les destinataires réseau de la ligne reçoivent un récapitulatif de tous les magasins concernés. Un magasin n'est servi qu'une fois par jour (`psMailEnvoyes`) ; pas de planning ou pas de tickets lus = rien. « Générer » montre le récapitulatif sans rien envoyer. Le planning vient de `/exploitation/jour` (identifiant et horaires de chacun), les tickets de `/shops/{id}/transactions?date=` (vendeur et minute). `panel/src/pointages_mail.php`, `panel/bin/tests_pointages.php`.
 
 **Promotions › Édition : « Tous les magasins » (30/10/2026, demande de Sam).** La liste Magasin de l'assistant propose en tête « Tous les magasins — une promotion réseau » (choix de Sam : UNE promotion au panel plutôt qu'une copie par magasin). `POST /exploitation/promos-magasin` reçoit alors `tous: true` : la « Buy X Get Y » s'écrit au panel avec `shop_scope_type: "ALL_SHOPS"` et `shop_ids: []` (le périmètre des promotions de la marque), créée inactive, relue (`shop_scope_type` relu `ALL_SHOPS`, sinon l'écart « tous les magasins » la laisse inactive), puis activée. `shop` n'est plus que le magasin dont l'assistant a lu les produits et les prix (exclusions d'office, portions) ; le coefficient du lot se vérifie dans chaque magasin ouvert (`shops.active = 1`), le plus serré gardé. Refusés (422, rien au panel) : un brouillon réseau (le cockpit ne saurait pas le reprendre : pas de « Garder en brouillon »), un bon (ses codes et ses clients sont ceux d'un magasin : « Avec un bon » grisé), une promotion déjà enregistrée (`id` : elle reste à son magasin, on la duplique). Une fois écrite, c'est une promotion « Tout le réseau » du Tableau d'analyse, avec celles de la marque (`src: "marque"`, `shops: null`) : elle se modifie au panel, ou se duplique — le cockpit ne la rouvre pas. La réponse porte `demande.tous: true`. Verrou d'envoi : `cockpit-promo-magasin-reseau`.
 
-**Le rail réorganisé : une question, une entrée (19/11/2026, demande de Sam : « beaucoup de vues se ressemblent, on fait double emploi »).** Audit complet et décisions : `docs/audit-rail.md`. Le rail passe de 63 entrées, 11 sections et 5 sous-menus à 34 entrées et 8 sections, sans sous-menu : Pilotage, Franchisés, Vérification, Produits, Marque & marketing, Outils magasin, Administration, Applications (les pages ↗). Les lectures d'une même question deviennent des onglets (`GROUPES`, `app.js`) : Tâches & contrôles (avec l'Entraînement de l'IA), Visites (avec le Fil du franchisé), Budget, Équipe & ventes, Présence Google (Avis | Visibilité), Flux & poubelle (avec Invendus), Matières & inventaires, Promotions, Primes, Paramètres, Journal & diagnostic (avec API du module primes et Sources des visites). Le client mystère ne s'encode plus que dans Visites › Client mystère (`#/parametres/mystere` et `#/client-mystere` y mènent, l'onglet de Paramètres est retiré). Aucune adresse, route ou table ne change ; le dashboard magasin n'est pas touché.
+**Le rail réorganisé : une question, une entrée (19/11/2026, demande de Sam : « beaucoup de vues se ressemblent, on fait double emploi »).** Audit complet et décisions : `shared/docs/audit-rail.md`. Le rail passe de 63 entrées, 11 sections et 5 sous-menus à 34 entrées et 8 sections, sans sous-menu : Pilotage, Franchisés, Vérification, Produits, Marque & marketing, Outils magasin, Administration, Applications (les pages ↗). Les lectures d'une même question deviennent des onglets (`GROUPES`, `app.js`) : Tâches & contrôles (avec l'Entraînement de l'IA), Visites (avec le Fil du franchisé), Budget, Équipe & ventes, Présence Google (Avis | Visibilité), Flux & poubelle (avec Invendus), Matières & inventaires, Promotions, Primes, Paramètres, Journal & diagnostic (avec API du module primes et Sources des visites). Le client mystère ne s'encode plus que dans Visites › Client mystère (`#/parametres/mystere` et `#/client-mystere` y mènent, l'onglet de Paramètres est retiré). Aucune adresse, route ou table ne change ; le dashboard magasin n'est pas touché.
 
-**Promotions : la création sort du dashboard magasin, section Promotions au rail du cockpit (26/10/2026, maquette A de `docs/maquettes/promotions-cockpit`, choisie par Sam).** Le rail a un menu **Promotions** au même niveau que Produits (entre Produits et Marque & marketing), deux entrées : **Édition** (`#/promotions/edition?shop=4`) et **Tableau d'analyse** (`#/promotions`). L'Édition charge l'assistant « X achetés + Y » du dashboard tel quel, dans un cadre (`dashboard/?embed=promos&shop=4&ouvrir=…` : `nouvelle`, `bon`, `p21` pour reprendre ou modifier, `dup:mag:p21`, `dup:panel:12`, `codes:p21`) ; le magasin s'y choisit dans l'entête (une promotion enregistrée reste à son magasin), le cadre écrit au panel par les mêmes routes (`/exploitation/promos-magasin…`) et prévient le cockpit par `postMessage` (`enregistree`, `magasin`, `tableau`, `haut`, `etat`). Le Tableau d'analyse lit `GET /promotions/reseau` (ci-dessous). Le **dashboard du magasin ne crée plus rien** : son onglet Promotions se lit — la liste, « Où les promotions sont utilisées », le coefficient, les codes d'un bon — sans « + Nouvelle promotion », « + Nouveau bon », ni Reprendre, Modifier, Dupliquer, Supprimer, ni la bascule du bon. L'onglet Promotions d'Analyse magasin (lecture seule) est retiré : `#/promotions` ouvre le Tableau d'analyse. L'API ne distingue pas qui écrit (un mot de passe commun) : la règle vit dans les écrans.
+**Promotions : la création sort du dashboard magasin, section Promotions au rail du cockpit (26/10/2026, maquette A de `marketing/docs/maquettes/promotions-cockpit`, choisie par Sam).** Le rail a un menu **Promotions** au même niveau que Produits (entre Produits et Marque & marketing), deux entrées : **Édition** (`#/promotions/edition?shop=4`) et **Tableau d'analyse** (`#/promotions`). L'Édition charge l'assistant « X achetés + Y » du dashboard tel quel, dans un cadre (`dashboard/?embed=promos&shop=4&ouvrir=…` : `nouvelle`, `bon`, `p21` pour reprendre ou modifier, `dup:mag:p21`, `dup:panel:12`, `codes:p21`) ; le magasin s'y choisit dans l'entête (une promotion enregistrée reste à son magasin), le cadre écrit au panel par les mêmes routes (`/exploitation/promos-magasin…`) et prévient le cockpit par `postMessage` (`enregistree`, `magasin`, `tableau`, `haut`, `etat`). Le Tableau d'analyse lit `GET /promotions/reseau` (ci-dessous). Le **dashboard du magasin ne crée plus rien** : son onglet Promotions se lit — la liste, « Où les promotions sont utilisées », le coefficient, les codes d'un bon — sans « + Nouvelle promotion », « + Nouveau bon », ni Reprendre, Modifier, Dupliquer, Supprimer, ni la bascule du bon. L'onglet Promotions d'Analyse magasin (lecture seule) est retiré : `#/promotions` ouvre le Tableau d'analyse. L'API ne distingue pas qui écrit (un mot de passe commun) : la règle vit dans les écrans.
 
 **Promotions du magasin : le panel relu à l'ouverture de l'onglet (21/10/2026, demandé par Sam).** Une promotion créée ou changée directement au panel ne se voyait dans l'onglet qu'après les dix minutes de la lecture gardée. À chaque ouverture de l'onglet, la liste gardée s'affiche d'abord, puis le dashboard relit le panel (`GET /exploitation/promos-magasin?shop=&frais=1`) et remplace la liste dès que la relecture arrive (jamais par une lecture plus ancienne : `luTs`). En tête : « relu au panel à HH:MM » et un bouton « ↻ relire le panel ». La réponse porte `lu` (HH:MM), `luTs`, `luJour`. Une relecture demandée se contente d'une lecture de moins de 20 secondes (`PV_RELU_RECENT`) : deux onglets ouverts ensemble ne relisent pas deux fois le panel. Les fiches que la liste du panel ne rend pas se lisent ensemble, quatre de front (`ErpApi::getParallele`, qui refait le jeton sur un 401 et ne relance que les requêtes refusées), au lieu d'une à une — mesuré sur un faux panel à 0,3 s la fiche : 12 fiches en 1,2 s au lieu de 3,6 s.
 
 **Promotions : la structure de l'API du panel (21/10/2026, demandé par Sam).** La documentation publique du panel (Swagger : `https://atelierby.tfbuddy.com/api/documentation/`, spécification `…/api/documentation/api.php`, OpenAPI 3, 933 routes) décrit les « Buy X Get Y » ainsi : `trigger` et `reward` portent `quantity`, `product_ids`, `category_ids`, `excluded_product_ids` ; une cible produit est un entier **ou `{id_product, id_product_portion}`** — la portion d'un produit se vise par son numéro ; une catégorie ne porte pas de portion ; `category_targets` / `portion_scope` n'y figurent plus. Une promotion se modifie par **`PATCH …/{id}`** (pas de PUT documenté). `status` : `DRAFT`, `ACTIVE`, `INACTIVE` (le cockpit garde `INACTIVE` pour ses brouillons) ; nouveaux : `activation_mode: VOUCHER_ONLY`, `voucher_campaign_id`. Le cockpit suit : (1) une portion visée part produit par produit, `product_ids: [{id_product, id_product_portion}]`, et une catégorie choisie avec une portion part en ses produits du magasin qui ont cette portion (hors exclusions) — `category_ids` vide ; un produit choisi sans cette portion au panel se dit (422) avant tout envoi ; (2) les portions de chaque produit se lisent à `/products/{id}/portions` (compte admin, sinon consultant ; type `ONE_QUARTER`/`ONE_HALF`, fraction 0,25/0,5 ou libellé « 1/4 »), sinon dans la table `product_portion`, et se gardent un jour (`pmPortions`) ; (3) modifier et activer : `PATCH` (corps complet), `PUT` en repli si le panel répond 404/405 ; (4) la relecture compare les produits avec leur portion (« 12:77 ») et reconnaît la portion d'une promotion relue par le numéro de ses portions (½, ¼ dans l'assistant). La sonde `GET /ventes/promos/sonde-portions?shop=4&q=tarte` lit aussi `/products/{id}/portions` et `/shops/{magasin}/products/{id}/portions/prices`, et dit ce que le cockpit en retient (`retenu`).
 
-**Fiche franchisé : l'onglet Documents (22/10/2026, demandé par Sam).** Un troisième onglet de Fiche & scoring, à côté de « Ce magasin » et « Le réseau » : les documents du magasin choisi — rapports de réunion, contrats de mise à disposition, autres pièces —, par sorte, les plus récents d'abord. On dépose un ou plusieurs fichiers (PDF, Word, Excel, PowerPoint, OpenDocument, photos, texte, e-mails ; 25 Mo au plus, ou moins si PHP le limite) avec une sorte, un titre (sinon le nom du fichier), la date du document et une note ; on ouvre (un PDF ou une image s'affiche, le reste se télécharge), on télécharge, on retire (la ligne et le fichier). Routes : `GET /franchises/documents?shop=` → `{documents: [{id, sorte, sorteLib, titre, nom, mime, octets, date, note, deposeLe}], sortes, maxOctets, extensions}` ; `POST /franchises/documents` en **multipart** (`shop, sorte, titre, date, note, fichiers[]`) → `{ajoutes, refuses: [{nom, motif}]}` ; `GET /franchises/documents/fichier?id=[&telecharger=1]` sort le fichier lui-même ; `DELETE /franchises/documents?id=`. Les fichiers vivent sous `public/uploads/documents/{magasin}/` (préservé par le déploiement) sous un nom tiré au hasard, et un `.htaccess` y refuse tout accès direct : un contrat ne se lit que par l'API. Table `con_doc`. `src/documents.php`, `bin/tests_documents.php`. **Le mail « matériel mis à disposition »** (maquette validée par Sam le 22/10/2026) vit dans cet onglet, bloc « Courriers au franchisé » : matériel mis à disposition à l'état neuf ; l'entretien (nettoyage, courant, périodique) et toutes les pièces qui cassent (remplacement, réparations) à la charge du franchisé. Avant l'envoi : la liste du matériel (facultative), le contrat joint (un document « Contrat de mise à disposition » du magasin, le plus récent par défaut, ou sans pièce jointe), le destinataire (les adresses que les carnets des rapports connaissent pour ce magasin, ou une adresse saisie), et l'aperçu du mail tel qu'il partira. Envoyé, il est rangé dans la sorte « Courrier envoyé » (en PDF quand le serveur sait en faire, sinon en HTML), avec le destinataire et la pièce jointe en note. Routes : `GET /franchises/documents/mail-materiel?shop=[&materiel=&contrat=]` → `{sujet, html, adresses, contrats, smtp}` ; `POST /franchises/documents/mail-materiel {shop, a, materiel?, contrat?}` → `{ok, a, sujet, copie}` (un contrat de plus de 10 Mo est refusé : trop lourd pour un e-mail).
+**Fiche franchisé : l'onglet Documents (22/10/2026, demandé par Sam).** Un troisième onglet de Fiche & scoring, à côté de « Ce magasin » et « Le réseau » : les documents du magasin choisi — rapports de réunion, contrats de mise à disposition, autres pièces —, par sorte, les plus récents d'abord. On dépose un ou plusieurs fichiers (PDF, Word, Excel, PowerPoint, OpenDocument, photos, texte, e-mails ; 25 Mo au plus, ou moins si PHP le limite) avec une sorte, un titre (sinon le nom du fichier), la date du document et une note ; on ouvre (un PDF ou une image s'affiche, le reste se télécharge), on télécharge, on retire (la ligne et le fichier). Routes : `GET /franchises/documents?shop=` → `{documents: [{id, sorte, sorteLib, titre, nom, mime, octets, date, note, deposeLe}], sortes, maxOctets, extensions}` ; `POST /franchises/documents` en **multipart** (`shop, sorte, titre, date, note, fichiers[]`) → `{ajoutes, refuses: [{nom, motif}]}` ; `GET /franchises/documents/fichier?id=[&telecharger=1]` sort le fichier lui-même ; `DELETE /franchises/documents?id=`. Les fichiers vivent sous `public/uploads/documents/{magasin}/` (préservé par le déploiement) sous un nom tiré au hasard, et un `.htaccess` y refuse tout accès direct : un contrat ne se lit que par l'API. Table `con_doc`. `consultant/src/documents.php`, `consultant/bin/tests_documents.php`. **Le mail « matériel mis à disposition »** (maquette validée par Sam le 22/10/2026) vit dans cet onglet, bloc « Courriers au franchisé » : matériel mis à disposition à l'état neuf ; l'entretien (nettoyage, courant, périodique) et toutes les pièces qui cassent (remplacement, réparations) à la charge du franchisé. Avant l'envoi : la liste du matériel (facultative), le contrat joint (un document « Contrat de mise à disposition » du magasin, le plus récent par défaut, ou sans pièce jointe), le destinataire (les adresses que les carnets des rapports connaissent pour ce magasin, ou une adresse saisie), et l'aperçu du mail tel qu'il partira. Envoyé, il est rangé dans la sorte « Courrier envoyé » (en PDF quand le serveur sait en faire, sinon en HTML), avec le destinataire et la pièce jointe en note. Routes : `GET /franchises/documents/mail-materiel?shop=[&materiel=&contrat=]` → `{sujet, html, adresses, contrats, smtp}` ; `POST /franchises/documents/mail-materiel {shop, a, materiel?, contrat?}` → `{ok, a, sujet, copie}` (un contrat de plus de 10 Mo est refusé : trop lourd pour un e-mail).
 
-**Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026, demandé par Sam : « net pas brut »).** En tête de Reporting automatisé, une carte d'envoi ponctuel : le mois (le mois clos par défaut, douze au choix), le CA net hors TVA de chaque magasin et du réseau, la TVA, le TTC et les tickets, un destinataire et « Envoyer par e-mail ». Net = TTC après remise − TVA, ticket par ticket (`total_gross_amount_after_discount` − `tax_amount_after_discount` des tickets du panel, `/shops/{id}/transactions?date=`), tous les tickets, clients pro compris. Une journée close se lit une fois (`caNet{magasin}:{jour}`) ; le mois se lit par lots de vingt-cinq secondes, l'écran relit tant que ça avance. L'e-mail ne part qu'un mois entièrement lu, avec la TVA de chaque ticket, et seulement à une adresse que le cockpit connaît (destinataires des rapports, compte SMTP — la règle des dossiers). Routes : `GET /rapports/ca-net?mois=AAAA-MM` → `{magasins: [{shopId, nom, brut, tva, net, tickets, jours, joursLus, sansTva}], reseau, aLire, complet, adresses, smtp, moisDispo}` ; `POST /rapports/ca-net/envoyer {mois, a}` (409 tant que le mois n'est pas lu ou qu'un ticket n'a pas de TVA, 422 pour une adresse inconnue). `src/ca_net_mois.php`, `bin/tests_ca_net.php`.
+**Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026, demandé par Sam : « net pas brut »).** En tête de Reporting automatisé, une carte d'envoi ponctuel : le mois (le mois clos par défaut, douze au choix), le CA net hors TVA de chaque magasin et du réseau, la TVA, le TTC et les tickets, un destinataire et « Envoyer par e-mail ». Net = TTC après remise − TVA, ticket par ticket (`total_gross_amount_after_discount` − `tax_amount_after_discount` des tickets du panel, `/shops/{id}/transactions?date=`), tous les tickets, clients pro compris. Une journée close se lit une fois (`caNet{magasin}:{jour}`) ; le mois se lit par lots de vingt-cinq secondes, l'écran relit tant que ça avance. L'e-mail ne part qu'un mois entièrement lu, avec la TVA de chaque ticket, et seulement à une adresse que le cockpit connaît (destinataires des rapports, compte SMTP — la règle des dossiers). Routes : `GET /rapports/ca-net?mois=AAAA-MM` → `{magasins: [{shopId, nom, brut, tva, net, tickets, jours, joursLus, sansTva}], reseau, aLire, complet, adresses, smtp, moisDispo}` ; `POST /rapports/ca-net/envoyer {mois, a}` (409 tant que le mois n'est pas lu ou qu'un ticket n'a pas de TVA, 422 pour une adresse inconnue). `consultant/src/ca_net_mois.php`, `consultant/bin/tests_ca_net.php`.
 
-**Résultat › Évolution magasin : ventes Tout | Comptoir | B2B (13/11/2026, demande de Sam).** L'onglet gagne la bascule « ventes : Tout | Comptoir | B2B » d'Analyse réseau, combinée à Trafic clients / Chiffre d'affaires et Par jour ouvert / Total (`evCanal`). B2B = les tickets des clients pro à TVA valide (`vpTvaValides`) ; comptoir = le total moins le B2B. En B2B, la courbe passe en bleu, le trafic devient les commandes pro, la 3e tuile la part du CA face au plafond de 40 % ; en Tout, « dont B2B » et une colonne Part B2B. `GET /ventes/evolution` pose sur chaque mois et sur son `n1` **`pro`** `{clients, ca, joursLus}` : le pro de ses jours vendus, lu au relevé des tickets du panel (`svP{shop}:{jour}`, `vpLu`) depuis `SV_DEBUT`, à la copie de caisse avant (`transaction` ⨝ `client.is_b2b`, un mois clos que la copie couvre gravé brut sous `vsPro{shop}:{AAAA-MM}`, le filtre TVA réappliqué à chaque lecture) ; un jour du mois en cours sans relevé se lit (8 listes au plus par magasin). La réponse gagne `sourcePro`. Un mois dont `joursLus` ne couvre pas `jours` sort des courbes Comptoir et B2B, la légende le dit. Code : `vsProJours`, `vsProSomme`, `vsProCopie` (`src/ventes_semaines.php`), `evVals` / `evGraphe` (`app.js`), `tplResultatEvolution` ; tests `php bin/tests_evolution_pro.php` ; maquette et captures : `docs/maquettes/evolution-canaux/`.
+**Résultat › Évolution magasin : ventes Tout | Comptoir | B2B (13/11/2026, demande de Sam).** L'onglet gagne la bascule « ventes : Tout | Comptoir | B2B » d'Analyse réseau, combinée à Trafic clients / Chiffre d'affaires et Par jour ouvert / Total (`evCanal`). B2B = les tickets des clients pro à TVA valide (`vpTvaValides`) ; comptoir = le total moins le B2B. En B2B, la courbe passe en bleu, le trafic devient les commandes pro, la 3e tuile la part du CA face au plafond de 40 % ; en Tout, « dont B2B » et une colonne Part B2B. `GET /ventes/evolution` pose sur chaque mois et sur son `n1` **`pro`** `{clients, ca, joursLus}` : le pro de ses jours vendus, lu au relevé des tickets du panel (`svP{shop}:{jour}`, `vpLu`) depuis `SV_DEBUT`, à la copie de caisse avant (`transaction` ⨝ `client.is_b2b`, un mois clos que la copie couvre gravé brut sous `vsPro{shop}:{AAAA-MM}`, le filtre TVA réappliqué à chaque lecture) ; un jour du mois en cours sans relevé se lit (8 listes au plus par magasin). La réponse gagne `sourcePro`. Un mois dont `joursLus` ne couvre pas `jours` sort des courbes Comptoir et B2B, la légende le dit. Code : `vsProJours`, `vsProSomme`, `vsProCopie` (`shared/src/ventes_semaines.php`), `evVals` / `evGraphe` (`app.js`), `tplResultatEvolution` ; tests `php bin/tests_evolution_pro.php` ; maquette et captures : `marketing/docs/maquettes/evolution-canaux/`.
 
-**Résultat › Année : les clients mois par mois face à l'an passé (24/10/2026, maquette A choisie par Sam).** Entre la trajectoire cumulée et le tableau des magasins, une carte **Clients par mois — 2026 face à 2025** : un graphique ligne sur les douze mois (l'exercice en trait plein bordeaux, l'an passé en pointillé gris, la bande entre les deux bleue devant, orange derrière), l'écart de chaque mois en pastille (vert dès +3 %, rouge dès −3 %), trois chiffres (clients de l'année à date, l'an passé sur la même période, l'écart) et la bulle de chaque mois au survol (clients, jours ouverts, clients par jour, écart). Des puces choisissent le réseau ou un magasin ; un clic sur une ligne du tableau aussi (un second revient au réseau), et le tableau gagne une colonne **Clients vs 2025**. Le réseau compte tous les magasins ou, bouton « constant », ceux qui ont un N-1 (l'écart à périmètre constant s'affiche aussi à côté de l'écart total). Le mois en cours est prolongé au rythme de ses jours lus (pointillé, point creux) ; son écart reste à date. Un mois d'ouverture n'est pas relié (Halle, février 2026 ; Sombreffe, avril 2025) ; une fermeture se signale sous la pastille (« 2025 : 7 j fermés »). Lecture : `GET /ventes/reseau?vue=annee&date=AAAA-12-31&_cache=600`. Pour la courbe de l'an passé sur l'année complète, `/ventes/semaines` et `/ventes/reseau` (vues `mois` et `annee`) donnent à chaque période **`n1Mois`** (`tickets`, `jours`, `ca`, `source`, ou `null`) : le mois civil N-1 entier, y compris pour le mois en cours et les mois à venir, hors des totaux ; `n1` reste arrêté au même jour servi. Code : `clients-annee-vals.js`, `clients-annee-tpl.js` ; maquettes : `docs/maquettes/clients-annee-n1/`.
+**Résultat › Année : les clients mois par mois face à l'an passé (24/10/2026, maquette A choisie par Sam).** Entre la trajectoire cumulée et le tableau des magasins, une carte **Clients par mois — 2026 face à 2025** : un graphique ligne sur les douze mois (l'exercice en trait plein bordeaux, l'an passé en pointillé gris, la bande entre les deux bleue devant, orange derrière), l'écart de chaque mois en pastille (vert dès +3 %, rouge dès −3 %), trois chiffres (clients de l'année à date, l'an passé sur la même période, l'écart) et la bulle de chaque mois au survol (clients, jours ouverts, clients par jour, écart). Des puces choisissent le réseau ou un magasin ; un clic sur une ligne du tableau aussi (un second revient au réseau), et le tableau gagne une colonne **Clients vs 2025**. Le réseau compte tous les magasins ou, bouton « constant », ceux qui ont un N-1 (l'écart à périmètre constant s'affiche aussi à côté de l'écart total). Le mois en cours est prolongé au rythme de ses jours lus (pointillé, point creux) ; son écart reste à date. Un mois d'ouverture n'est pas relié (Halle, février 2026 ; Sombreffe, avril 2025) ; une fermeture se signale sous la pastille (« 2025 : 7 j fermés »). Lecture : `GET /ventes/reseau?vue=annee&date=AAAA-12-31&_cache=600`. Pour la courbe de l'an passé sur l'année complète, `/ventes/semaines` et `/ventes/reseau` (vues `mois` et `annee`) donnent à chaque période **`n1Mois`** (`tickets`, `jours`, `ca`, `source`, ou `null`) : le mois civil N-1 entier, y compris pour le mois en cours et les mois à venir, hors des totaux ; `n1` reste arrêté au même jour servi. Code : `clients-annee-vals.js`, `clients-annee-tpl.js` ; maquettes : `marketing/docs/maquettes/clients-annee-n1/`.
 
 **Résultat › Année : le panier moyen face à l'an passé (24/10/2026, demande de Sam).** La carte des clients prend un bouton **Clients | Panier moyen**. En panier, le même graphique ligne trace le panier du mois (CA ÷ clients) de l'exercice face au même mois de l'an passé, l'écart de chaque mois en pastille, et trois chiffres : panier de l'année à date, celui de l'an passé sur la même période, l'écart en euros et en % (avec, pour le réseau, l'écart à périmètre constant). Le panier du réseau est le CA total ÷ les clients totaux (chaque magasin pesé par ses clients) ; le mois en cours se lit à date (point creux, sans prolongement), face aux mêmes jours de l'an passé ; l'an passé se trace sur douze mois (`n1Mois.ca` ÷ `n1Mois.tickets`). Les puces, la colonne du tableau (**Panier vs 2025**) et la bulle suivent la mesure choisie. Aucune lecture de plus : `ca` et `tickets` de `/ventes/reseau?vue=annee` suffisent.
 
@@ -2964,7 +2964,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Jours creux retiré de la console (16/10/2026).** L'écran (carte jour × heure, assistant de promotion, promotions adoptées, catalogue des mécaniques) quitte la console ; `#/jours-creux` mène à Résultat. Les routes `/creux` et `/promo/*` et les tables `mar_promo`, `mar_promo_mecanique` restent : l'analyse produits marque toujours les promotions sur ses courbes. Les promotions ne partaient pas en caisse : rien ne change en magasin.
 
-**Console : production, prospection, centrale d'achat, offres et canaux sortis (16/10/2026).** Gestion de production quitte la console : l'application `production/` ouverte seule montre ses cinq pages en onglets (`?page=params|plan|suivi|cloture|fours`, Suivi par défaut) — elle ne montrait que le Suivi depuis le 06/10. Prospection quitte la console : `prospection/` prend la mise en page bureau au-delà de 900 px (carte, calcul, export CSV), la mise en page téléphone en dessous. Posts Facebook, Newsletter et Newsletter magasin quittent la console : le portail `marketing/` les tient (même module newsletter.js, mêmes routes). Calendrier et Campagnes restent : le portail ne supprime pas une campagne et n'envoie pas la note aux franchisés. La centrale d'achat (Commandes, Demande de prix, Campagnes commerciales, Facturation magasins, Paramètres › Centrale d'achat, et ses cartes de Paramètres › Général : rappel fournisseur, relance « commande à valider », journal des envois) et Offres et canaux sont retirés. Les routes `/centrale/*` restent au serveur ; `bin/rapports_cron.sh` n'appelle plus `/centrale/commandes/mail/cron`. La commission de marque (`caParams().commissionMarquePct`) garde sa valeur et sert toujours la marge nette du catalogue, mais ne se règle plus depuis la console. Les anciennes adresses ouvrent l'application qui a repris l'écran (`App.ADRESSES_SORTIES`) ; celles de la centrale et d'Offres et canaux mènent à Résultat. La console ne charge plus au démarrage `/exploitation`, `/marketing/social/regles`, `/marketing/social/posts`, `/marketing/brand-guard/stats` ni `/marketing/brand-guard/pages`.
+**Console : production, prospection, centrale d'achat, offres et canaux sortis (16/10/2026).** Gestion de production quitte la console : l'application `production/` ouverte seule montre ses cinq pages en onglets (`?page=params|plan|suivi|cloture|fours`, Suivi par défaut) — elle ne montrait que le Suivi depuis le 06/10. Prospection quitte la console : `prospection/` prend la mise en page bureau au-delà de 900 px (carte, calcul, export CSV), la mise en page téléphone en dessous. Posts Facebook, Newsletter et Newsletter magasin quittent la console : le portail `marketing/` les tient (même module newsletter.js, mêmes routes). Calendrier et Campagnes restent : le portail ne supprime pas une campagne et n'envoie pas la note aux franchisés. La centrale d'achat (Commandes, Demande de prix, Campagnes commerciales, Facturation magasins, Paramètres › Centrale d'achat, et ses cartes de Paramètres › Général : rappel fournisseur, relance « commande à valider », journal des envois) et Offres et canaux sont retirés. Les routes `/centrale/*` restent au serveur ; `consultant/bin/rapports_cron.sh` n'appelle plus `/centrale/commandes/mail/cron`. La commission de marque (`caParams().commissionMarquePct`) garde sa valeur et sert toujours la marge nette du catalogue, mais ne se règle plus depuis la console. Les anciennes adresses ouvrent l'application qui a repris l'écran (`App.ADRESSES_SORTIES`) ; celles de la centrale et d'Offres et canaux mènent à Résultat. La console ne charge plus au démarrage `/exploitation`, `/marketing/social/regles`, `/marketing/social/posts`, `/marketing/brand-guard/stats` ni `/marketing/brand-guard/pages`.
 
 **Prospection : export CSV (16/10/2026).** L'écran Prospection (bureau) exporte ma liste en CSV (« ⤓ Exporter (CSV) », point-virgule, BOM pour Excel) : lieu, type, genre, offre, adresse, téléphone, site, distance, taille, zoning, statut, visite, action à suivre et sa date, note. Il remplace l'export de Développement commercial.
 
@@ -3082,7 +3082,7 @@ et `reseau` (comptoir, cc, liv, webshop, total, part, `livrent` et `vendent`
 l'onglet Opérationnel en compte les commandes à vérifier : une précommande au comptoir remise sans ticket, une commande
 pas remise dont l'heure de retrait est passée.
 
-**Le ruban des canaux (18/11/2026, maquette C de `docs/maquettes/comptoir-webshop`).** Un magasin, la journée, rend
+**Le ruban des canaux (18/11/2026, maquette C de `panel/docs/maquettes/comptoir-webshop`).** Un magasin, la journée, rend
 deux choses de plus :
 
     liste[]: { …, differe, pro }          pro : la commande d'un client des tickets pro du jour, ou réglée en différé
@@ -3110,7 +3110,7 @@ Tests : `php bin/tests_canaux.php`.
 
     ?shop=4&date=2026-11-06
 
-Demande de Sam (06/11/2026, maquette `docs/maquettes/b2b-commandes-mobile`, écran 3) : vérifier le CA en commandes, le
+Demande de Sam (06/11/2026, maquette `panel/docs/maquettes/b2b-commandes-mobile`, écran 3) : vérifier le CA en commandes, le
 détail en modale, comptoir et webshop. Les commandes dont le retrait (ou la livraison) tombe ce jour-là
 (`coCommandes`, la lecture gardée dix minutes), chacune rangée par ce qu'elle apporte au CA du jour :
 
@@ -3259,11 +3259,11 @@ d'abord, avec `coef` : le coefficient du lot aux prix et coûts d'aujourd'hui), 
 période, le coefficient et son cas le plus serré, et ouvre le dashboard de chaque magasin sur son onglet Promotions.
 
 `GET /promotions/reseau?jours=30` (7 | 30, `&frais=1` : les règles du panel relues) — le **Tableau d'analyse** du cockpit
-(26/10/2026, `src/promos_reseau.php`) : toutes les promotions du panel, celles de la marque et celles réservées à un magasin,
+(26/10/2026, `marketing/src/promos_reseau.php`) : toutes les promotions du panel, celles de la marque et celles réservées à un magasin,
 et ce qu'elles ont fait dans les tickets déjà lus de chaque magasin ouvert (`svP…` : les tickets à remise, reconnus par
 `pvTicket`, comme l'onglet Promotions des ventes). Lecture seule ; le cockpit la demande avec `_cache=300`.
 
-Le Tableau d'analyse a deux vues (26/10/2026, maquette A avec le détail de C de `docs/maquettes/promotions-utilisation`,
+Le Tableau d'analyse a deux vues (26/10/2026, maquette A avec le détail de C de `marketing/docs/maquettes/promotions-utilisation`,
 choisie par Sam) : **Qui utilise quoi**, par défaut — une ligne par promotion utilisée sur la période ou en caisse, une
 colonne par magasin ; la case dit ce que la promotion pèse dans le CA du magasin (`v` du magasin ÷ son `ca` ; ou dans le
 CA général, `÷ total.ca`, en €, en fois), « 0 » en caisse sans vente, « · » pas dans ce magasin ; à droite son % du CA
@@ -3338,7 +3338,7 @@ dashboard en même temps) de créer deux promotions au panel ; le second relit l
 Tests : `php bin/tests_promos.php` (un panel en doublure : création, relecture, activation, refus, créneaux non repris,
 reprise par PUT, activation par PATCH, portions).
 
-**Le bon de réduction (24/10/2026, `src/promos_bons.php`).** Une promotion du magasin peut ne s'appliquer en caisse
+**Le bon de réduction (24/10/2026, `marketing/src/promos_bons.php`).** Une promotion du magasin peut ne s'appliquer en caisse
 qu'avec un code : l'étape 5 de l'assistant, « Bon de réduction » (Nom → X → Y → Conditions → **Bon** → Période →
 Vérifier), et le bouton « + Nouveau bon » de l'onglet, qui ouvre l'assistant sur cette étape puis enchaîne sur la
 promotion liée. Au panel, un bon = une campagne (`/admin/voucher-campaigns`) rattachée à la promotion, passée en
@@ -3383,7 +3383,7 @@ pour choisir ceux du bon (29/10/2026 : « un client B2B ou un client normal, rat
   numéro (« BE 0123.456 », « 0470 12 34 ») se compare en chiffres seuls, et sans son zéro de tête (le panel garde les
   téléphones au format international). Un client fusionné (`merged_into_id`), bloqué ou inactif n'est pas proposé.
 - `contact` est un e-mail ou un téléphone montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes.
-- La lecture au panel, mesurée par la sonde du 29/10/2026 (`tools/sonde_clients_bon.php`) : `limit` n'est tenu
+- La lecture au panel, mesurée par la sonde du 29/10/2026 (`marketing/tools/sonde_clients_bon.php`) : `limit` n'est tenu
   qu'avec `offset` (sans lui, tout vient d'un coup — 8 641 clients et 10 Mo au magasin 2) et les B2B viennent devant ;
   avant le 29/10, le bon s'arrêtait à 2 000 lignes (au magasin 2, 1 294 des 7 935 particuliers se trouvaient).
 - Le cockpit lit chaque type d'un seul tenant (`?type=b2c` : 7 935 particuliers en 2,2 s, +53 Mo au plus haut — la
@@ -3474,7 +3474,7 @@ lecteurs) :
   `/consultant/shops/{id}/checklists?date=` que l'écran appelait déjà. Une tâche se range sous
   chaque checklist dont le nom figure dans son champ `checklist` (une tâche citée par deux
   checklists compte dans les deux) ; le code `1.1.01` du nom donne le qui et le quand
-  (`src/checklists_codes.php`).
+  (`shared/src/checklists_codes.php`).
 
 L'onglet lit `/pwa/tasks?shop=&date=` pour chaque jour de la semaine regardée (la bande du haut),
 `/pwa/tasks/photos` pour le jour regardé (vignettes et zoom, repères du contrôleur compris) et
@@ -3547,7 +3547,7 @@ Un rayon est le nom que le panel écrit après « Photo du comptoir - »
 (Viennoiseries, Traiteur, Épicerie…) ; sa clé est ce nom réduit (minuscules,
 sans accent, tirets) : « Pains & Boulangerie » → `pains-boulangerie`. Les neuf
 rayons du panel sont toujours listés, dans l'ordre du comptoir ; les rayons
-ajoutés suivent par ordre alphabétique (`src/rayons_photos.php`).
+ajoutés suivent par ordre alphabétique (`consultant/src/rayons_photos.php`).
 
 `GET /rayons/photos` :
 
@@ -3636,7 +3636,7 @@ d'installation autonome**, vide sur une base réelle.
 | Projets, jalons, coûts | `con_project*` | — (données propres au cockpit) |
 | Fournisseurs | `con_supplier` | — (aucune table partagée équivalente) |
 
-**Le jeu de démonstration ne se charge jamais tout seul.** `sql/seed.sql` est
+**Le jeu de démonstration ne se charge jamais tout seul.** `shared/sql/seed.sql` est
 gardé derrière `seed: true` (config) ou `COCKPIT_SEED=1` ; par défaut une base
 neuve reste vide, prête pour les vraies données.
 
@@ -3710,7 +3710,7 @@ Un statut hors de ces trois valeurs est refusé en `422`. Chaque transition
 ALTER TABLE con_project_task ADD COLUMN validated_at DATETIME NULL;
 ```
 
-**Aucune migration à lancer à la main.** `ensureValidation()` (`src/installer.php`) pose les deux
+**Aucune migration à lancer à la main.** `ensureValidation()` (`shared/src/installer.php`) pose les deux
 colonnes, la table `con_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
 comme sur une base déjà en service — `schema.sql` et `seed.sql`, eux, ne repassent jamais sur une
 installation existante. Pour information, l'équivalent manuel :
@@ -3919,7 +3919,7 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - Tables : `mar_nl_magasin`, `mar_nl_source`, `mar_nl_segment`, `mar_nl_campagne` (créées et semées par `ensureNewsletter()` ; les magasins
   suivent `ep_stores()` à chaque démarrage). Les modèles (copy FR/NL/EN, SMS) vivent dans le module front `assets/js/newsletter.js`.
 
-**Le moteur** (`src/newsletter_envoi.php`) — contacts, envoi, suivi, horloge :
+**Le moteur** (`marketing/src/newsletter_envoi.php`) — contacts, envoi, suivi, horloge :
 
 - `POST /newsletter/contacts/import` (marque) `{ source, shop?, lot?, csv }` : CSV avec en-tête (`email` requis ; `prenom`, `nom`, `langue`,
   `magasin`, `telephone`, `optin`, `optin_sms`, `dernier_achat`, `panier`, `produits`, `anniversaire`, `cree_le`) → `{ nouveaux, misAJour, ignores, lot, contacts }`.
@@ -3930,7 +3930,7 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - `POST /newsletter/test` `{ subject, body, headline, cta, templateId, lang, sender, voucher, lien? }` : le mail rendu part aux adresses de test
   (`nlTestAdresses`, sinon l'expéditeur SMTP), même en mode test → `{ ok, simule, adresses, erreur }`.
 - `POST /newsletter/campagnes/{id}/envoyer` : la date passe à maintenant et l'horloge passe ; `POST /newsletter/tick` (marque) : l'horloge à la demande.
-- `GET /newsletter/cron?jeton=…` (`nlJeton`, cron toutes les 5 minutes par `bin/newsletter_cron.sh`) : campagnes dues par lots de 100 par minute
+- `GET /newsletter/cron?jeton=…` (`nlJeton`, cron toutes les 5 minutes par `marketing/bin/newsletter_cron.sh`) : campagnes dues par lots de 100 par minute
   (500 par passage), statut `sched → live → sent` ; automatisations évaluées une fois par jour (`dormant45` : dernier achat il y a 45 jours
   exactement ; `birthday` : J-3 ; `firstOffice` : compte office créé il y a 2 jours ; `third` : deux mails déjà reçus ; `season` : J-7 avant la
   date de la campagne). Jamais deux mails au même contact le même jour, jamais deux fois la même campagne.
@@ -3960,10 +3960,10 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/reglages` | admin | checklist, seuils, fréquences, état de l'horloge, adresse du cron. |
 | `GET /visites/conformite?shop=` | tous | ce que le cockpit sait du comptoir sans rien ressaisir : `planogramme` (emplacements dessinés et tenus, %, comptoirs photographiés montés aujourd'hui, obligatoires sans place) et `assortiment` (références obligatoires vues en caisse sur la fenêtre calée sur la dernière vente, manquantes nommées). Une source absente rend son `motif`, pas un chiffre. |
 | `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » de `mar_campaign.objective_coef_pct`), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`mar_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
-| `GET /visites/kpi/{shop}[?rafraichir=1]` | tous | **KPI et santé du magasin** (tablette du consultant, 26/10/2026) : `caEtp` (les trois derniers mois clos : `mois[]` `{mois, lab, ca, etp, caEtp, reseau, rang, sur}`, `seuil` de la Table KPI `ca-etp`, `heuresEtp`) — CA du mois (pvKpisMois) ÷ ETP planifiés (ep_stores_etp), le réseau = CA total ÷ ETP totaux des magasins qui ont les deux, un mois sans planning sans ETP deviné ; `structure` (les trois derniers mois clos : `categories[]` `{categorie, ca, part, partReste, ecart}` en % et en points, `ca`, `caReste`, `autres`, `moisLus` / `moisDemandes`) — `/consultant/shops/category-sales` un appel par mois pour tout le réseau, gravé (`vkCat:{AAAA-MM}`), le reste du réseau sans les entrées techniques. `canaux` (26/10/2026, les mêmes trois mois clos : `magasin` et `reste` `{ca{comptoir, b2b, cc, liv}, total, parts{…} en %, proSansTva, b2bAvecSansTva}` — les tickets des clients marqués pro sans TVA valide restent au comptoir, chiffrés à part avec la part B2B qu'ils donneraient, `reste.magasins`, `jours` / `joursLus`, `webshop`, `b2bMax` — le réglage `b2bMax` des visites, 40 —, `b2bStatut` ok, proche (à moins de 5 points), au-dessus, `motif`) — les jours dont la caisse est gravée (`svP{shop}:{jour}` : CA de tous les tickets, tickets des clients pro à TVA valide = B2B), le webshop (`coCommandes` : retrait = click & collect, livraison = livraison bureau), comptoir = caisse − B2B − commandes du webshop encaissées en caisse ; le reste du réseau sans les magasins au webshop muet. `manques[]` nomme un bloc incomplet (relu dans 5 min ; `canaux` quand le webshop du magasin n'a pas répondu). Gardé une heure (`vkKpi2:{shop}`), servi périmé six heures pendant le recalcul. L'année face à l'an passé et les six leviers, la tablette les lit aux routes du dashboard magasin (`/ventes/semaines?shop=&vue=annee&articles=1&_cache=900`, `/leviers/magasins?annee=&mois=&_cache=900`) et les dessine avec les cartes du dashboard, partagées dans `assets/js/cartes-magasin.js` (style tablette : `assets/css/cartes-magasin.css`). Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
+| `GET /visites/kpi/{shop}[?rafraichir=1]` | tous | **KPI et santé du magasin** (tablette du consultant, 26/10/2026) : `caEtp` (les trois derniers mois clos : `mois[]` `{mois, lab, ca, etp, caEtp, reseau, rang, sur}`, `seuil` de la Table KPI `ca-etp`, `heuresEtp`) — CA du mois (pvKpisMois) ÷ ETP planifiés (ep_stores_etp), le réseau = CA total ÷ ETP totaux des magasins qui ont les deux, un mois sans planning sans ETP deviné ; `structure` (les trois derniers mois clos : `categories[]` `{categorie, ca, part, partReste, ecart}` en % et en points, `ca`, `caReste`, `autres`, `moisLus` / `moisDemandes`) — `/consultant/shops/category-sales` un appel par mois pour tout le réseau, gravé (`vkCat:{AAAA-MM}`), le reste du réseau sans les entrées techniques. `canaux` (26/10/2026, les mêmes trois mois clos : `magasin` et `reste` `{ca{comptoir, b2b, cc, liv}, total, parts{…} en %, proSansTva, b2bAvecSansTva}` — les tickets des clients marqués pro sans TVA valide restent au comptoir, chiffrés à part avec la part B2B qu'ils donneraient, `reste.magasins`, `jours` / `joursLus`, `webshop`, `b2bMax` — le réglage `b2bMax` des visites, 40 —, `b2bStatut` ok, proche (à moins de 5 points), au-dessus, `motif`) — les jours dont la caisse est gravée (`svP{shop}:{jour}` : CA de tous les tickets, tickets des clients pro à TVA valide = B2B), le webshop (`coCommandes` : retrait = click & collect, livraison = livraison bureau), comptoir = caisse − B2B − commandes du webshop encaissées en caisse ; le reste du réseau sans les magasins au webshop muet. `manques[]` nomme un bloc incomplet (relu dans 5 min ; `canaux` quand le webshop du magasin n'a pas répondu). Gardé une heure (`vkKpi2:{shop}`), servi périmé six heures pendant le recalcul. L'année face à l'an passé et les six leviers, la tablette les lit aux routes du dashboard magasin (`/ventes/semaines?shop=&vue=annee&articles=1&_cache=900`, `/leviers/magasins?annee=&mois=&_cache=900`) et les dessine avec les cartes du dashboard, partagées dans `assets/js/cartes-magasin.js` (style tablette : `assets/css/cartes-magasin.css`). Code : `consultant/src/visites_kpi.php`, tests `consultant/bin/tests_visites_kpi.php`. |
 | `GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12]` | tous | **Les tâches du magasin mois par mois** (tablette, étape « Contrôles photo », 26/10/2026) : `mois[]` les n derniers mois (3 à 12, le plus récent d'abord) `{mois, lab, enCours, demandees, faites, jours, pct, notees, sous, moyenne}` — demandées et faites du relevé quotidien du panel (`con_tache_jour`, journées révolues : le mois en cours jusqu'à hier), notes du contrôle qualité (`mac_task_review` : notées, sous le seuil `signalement.seuil`, moyenne) ; `choisi` (d'office le mois en cours, ou le précédent s'il n'a encore rien) et `taches[]` ses tâches notées sous le seuil ou refusées `{jour, tache, note, commentaire, controleur, releveeLe, recidive, suite}` (ep_pwa_tasks_nc). Lu dans la base du cockpit seulement. |
-| `GET /visites/outils/{shop}` | tous | **Les outils de gestion** (tablette, en tête du temps « Analyse », 17/11/2026, `src/visites_outils.php`) : `lu{}` ce que le cockpit lit tout seul, par outil — `tresorerie` (`panel_tresorerie_plan` : dernière mise à jour, soldes réels des quatre derniers dimanches), `commandes` (la lecture du panel gardée par Commandes et ventes, `cmdApi:{shop}`, sinon `client_order` : commandes sur 30 jours, passées encore ouvertes), `taches` (`con_tache_jour` sur 30 jours, notes de `mac_task_review`), `soir` (`panel_revue_soir` : soirs clôturés sur 30), `fournisseurs` (`material_order` : commandes sur 30 jours — le panel n'a pas de route) — chacun `{etat: ok\|att\|ko\|null, texte}`, absent si rien n'est lisible ; `rappel` (le texte de la marque). Le verdict part avec la visite : `PUT /visites/{id}` `{ outils: { items: { outil: { v: ok\|part\|ko\|na, com, lu } }, rappelLu } }` → `con_visite.outils` (JSON, `viOutils` : score sur 100, suivi 1, en partie ½, pas suivi 0, sans objet hors calcul) ; le rapport (`suOutilsHtml`), le courriel (`{outils_titre}`, `{outils}`, `{rappel}`), l'écran du bureau et la page du franchisé (`outils`) le reprennent |
-| `GET /visites/budget/{shop}[?rafraichir=1]` | tous | **Le CA face au budget** (tablette, étape « KPI et santé du magasin », 26/10/2026) : `periodes{semaine, mois, trimestre, annee}` arrêtées à la VEILLE (`arrete`, le dernier jour clos), chacune `{lab, du, au, realise, attendu, objectif, ecartPct, manque, atteintePct, source, sansBudget[], incomplet, statut, reseau, rang, sur, motif?}`. Semaine et mois : les chiffres de Résultat (`ep_exploitation_periode`, la lecture du jour coupée à la veille ; un lundi la semaine passée, un 1er le mois passé) — réalisé = CA TTC encaissé, attendu = la part du budget des jours écoulés (pondération réseau des jours d'ouverture). Trimestre et année : les mois clos (CA `pvKpisMois` face au budget entier) plus le mois de la veille (Résultat) ; un mois clos sans budget ou sans vente sort des deux côtés (`sansBudget`, ses numéros), un mois clos non lu laisse l'étendue sans chiffre (`incomplet`, relu dans 5 min). Budget = `con_shop_month_perf.revenue_budget`, à défaut `ca_theorique` (`source` budget, theorique ou mixte). `ecartPct` = réalisé ÷ attendu − 1 ; `statut` ok (≥ 0), proche, sous (plus de `seuil` % sous l'attendu — le réglage `caOrange` des visites, 10 par défaut), sans (pas d'attendu) ; `rang` / `sur` parmi les magasins qui ont un écart sur la même étendue, `reseau` = Σ réalisés ÷ Σ attendus − 1. `sous[]` liste les étendues à justifier (le jour n'y entre jamais). Depuis le 26/10/2026 : l'étendue `jour` (la veille, Résultat du jour : CA face à l'objectif du jour) et, sur chaque étendue, le **mini P&L** `pnl` `{du, au, ca, coutMatiere(Pct), margeBrute(Pct), invendus(Pct), labour(Pct), overhead(Pct), net(Pct), avecInvendus, mois?, motif}` — jour, semaine et mois tels que Résultat (net = marge brute − invendus − personnel − frais généraux, à date) ; trimestre et année = les mois clos du P&L mensuel (`ep_perf`, sans les invendus) et le mois en cours de Résultat, un poste inconnu un mois restant inconnu ; `seuilsPnl` (food, labour, overhead de la Table KPI). Gardé 30 min (`vkBud:{shop}`), servi périmé 6 h. Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
+| `GET /visites/outils/{shop}` | tous | **Les outils de gestion** (tablette, en tête du temps « Analyse », 17/11/2026, `consultant/src/visites_outils.php`) : `lu{}` ce que le cockpit lit tout seul, par outil — `tresorerie` (`panel_tresorerie_plan` : dernière mise à jour, soldes réels des quatre derniers dimanches), `commandes` (la lecture du panel gardée par Commandes et ventes, `cmdApi:{shop}`, sinon `client_order` : commandes sur 30 jours, passées encore ouvertes), `taches` (`con_tache_jour` sur 30 jours, notes de `mac_task_review`), `soir` (`panel_revue_soir` : soirs clôturés sur 30), `fournisseurs` (`material_order` : commandes sur 30 jours — le panel n'a pas de route) — chacun `{etat: ok\|att\|ko\|null, texte}`, absent si rien n'est lisible ; `rappel` (le texte de la marque). Le verdict part avec la visite : `PUT /visites/{id}` `{ outils: { items: { outil: { v: ok\|part\|ko\|na, com, lu } }, rappelLu } }` → `con_visite.outils` (JSON, `viOutils` : score sur 100, suivi 1, en partie ½, pas suivi 0, sans objet hors calcul) ; le rapport (`suOutilsHtml`), le courriel (`{outils_titre}`, `{outils}`, `{rappel}`), l'écran du bureau et la page du franchisé (`outils`) le reprennent |
+| `GET /visites/budget/{shop}[?rafraichir=1]` | tous | **Le CA face au budget** (tablette, étape « KPI et santé du magasin », 26/10/2026) : `periodes{semaine, mois, trimestre, annee}` arrêtées à la VEILLE (`arrete`, le dernier jour clos), chacune `{lab, du, au, realise, attendu, objectif, ecartPct, manque, atteintePct, source, sansBudget[], incomplet, statut, reseau, rang, sur, motif?}`. Semaine et mois : les chiffres de Résultat (`ep_exploitation_periode`, la lecture du jour coupée à la veille ; un lundi la semaine passée, un 1er le mois passé) — réalisé = CA TTC encaissé, attendu = la part du budget des jours écoulés (pondération réseau des jours d'ouverture). Trimestre et année : les mois clos (CA `pvKpisMois` face au budget entier) plus le mois de la veille (Résultat) ; un mois clos sans budget ou sans vente sort des deux côtés (`sansBudget`, ses numéros), un mois clos non lu laisse l'étendue sans chiffre (`incomplet`, relu dans 5 min). Budget = `con_shop_month_perf.revenue_budget`, à défaut `ca_theorique` (`source` budget, theorique ou mixte). `ecartPct` = réalisé ÷ attendu − 1 ; `statut` ok (≥ 0), proche, sous (plus de `seuil` % sous l'attendu — le réglage `caOrange` des visites, 10 par défaut), sans (pas d'attendu) ; `rang` / `sur` parmi les magasins qui ont un écart sur la même étendue, `reseau` = Σ réalisés ÷ Σ attendus − 1. `sous[]` liste les étendues à justifier (le jour n'y entre jamais). Depuis le 26/10/2026 : l'étendue `jour` (la veille, Résultat du jour : CA face à l'objectif du jour) et, sur chaque étendue, le **mini P&L** `pnl` `{du, au, ca, coutMatiere(Pct), margeBrute(Pct), invendus(Pct), labour(Pct), overhead(Pct), net(Pct), avecInvendus, mois?, motif}` — jour, semaine et mois tels que Résultat (net = marge brute − invendus − personnel − frais généraux, à date) ; trimestre et année = les mois clos du P&L mensuel (`ep_perf`, sans les invendus) et le mois en cours de Résultat, un poste inconnu un mois restant inconnu ; `seuilsPnl` (food, labour, overhead de la Table KPI). Gardé 30 min (`vkBud:{shop}`), servi périmé 6 h. Code : `consultant/src/visites_kpi.php`, tests `consultant/bin/tests_visites_kpi.php`. |
 | `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`, `budgetCa` (26/10/2026 : le CA sous le budget, noté avec le franchisé — `{pourquoi, pistes[3], horizon: mois|trimestre, echeance, ecarts{étendue: %}, arrete}` ; le serveur ajoute `qui`, `le`, `complet` ; null efface ; colonne `con_visite.budget_ca`, relu dans la visite et dans le rapport, section « Le chiffre face au budget »). `{id}` est l'identifiant ou le `client_id`. |
@@ -3975,7 +3975,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `PUT /plans/{id}` | tous | `statut` + `role` : transitions permises par rôle (franchisé : ouvert/reprendre → attente ; admin et consultant : attente → valide ou reprendre, valide → ferme, ouvert → escalade, …), `retour` (à reprendre), `escalade_motif`, `photo_client_id`, et le contenu (`campagne_id` compris) pour consultant et admin. 409 si le passage est refusé. Push à qui de droit. |
 | `POST /msp` | consultant, admin | `shop`, `mois` AAAA-MM, `rubriques{}` (/20), `total`, `commentaires`, `fichier` (data-URL PDF ≤ 8 Mo). Un rapport par boutique et par mois. |
 | `PUT /equipe/{shop}` | consultant, franchisé | `effectif`, `prevu`, `departs`, `releve_le`. |
-| `PUT /visites/reglages` | admin | `checklist[]` (modules produit, hygiene, visuel, planogramme, assortiment, msp, avec `nom_nl` ; questions `ref`, `libelle`, `libelle_nl`, `aide`, `aide_nl`, `photo`, `type` — etat (OK / Écart / N/A), ouinon, note, pct, nombre (`min`, `max`, `unite`), choix et multi (`choix[]` {code, fr, nl, ko}), texte ; sans type, `pct` vaut pourcentage — ; `score` (compte dans le score, vrai par défaut, jamais pour le texte) et `poids` 1 à 3 — normalisées par `src/visites_questions.php`), `seuils{}`, `frequence{shop: jours}`, `photos{}` (27/10/2026 : les questions des photos du jour, module fixe `photos` — `jour_facade`, `jour_arriere`, `jour_interieur`, ni ajoutées ni retirées ; même forme de question, photo toujours attendue ; réglage `visitesPhotos`, commun à tous les types de visite). La réponse à une photo s'écrit comme un point (`PUT /visites/{id}/points`, `module: photos`, `ref` = le genre) ; elle compte dans le score (en tête) et ses écarts vont au rapport comme ceux de la checklist. `GET /visites/app` rend `photosQuestions{}`, `GET /visites/reglages` `photos{}`. `GET /visites/app` rend la checklist typée, complétée du néerlandais livré là où le français est d'origine, `typesReponse` et `langues{shop: fr\|nl\|en\|de}` (la langue du magasin, Qui fait quoi sinon sa région) : la tablette ouvre la checklist dans cette langue, FR \| NL en tête de l'étape. Le cadre de visite (`PUT /visites/cadre`, types) prend les mêmes questions. |
+| `PUT /visites/reglages` | admin | `checklist[]` (modules produit, hygiene, visuel, planogramme, assortiment, msp, avec `nom_nl` ; questions `ref`, `libelle`, `libelle_nl`, `aide`, `aide_nl`, `photo`, `type` — etat (OK / Écart / N/A), ouinon, note, pct, nombre (`min`, `max`, `unite`), choix et multi (`choix[]` {code, fr, nl, ko}), texte ; sans type, `pct` vaut pourcentage — ; `score` (compte dans le score, vrai par défaut, jamais pour le texte) et `poids` 1 à 3 — normalisées par `consultant/src/visites_questions.php`), `seuils{}`, `frequence{shop: jours}`, `photos{}` (27/10/2026 : les questions des photos du jour, module fixe `photos` — `jour_facade`, `jour_arriere`, `jour_interieur`, ni ajoutées ni retirées ; même forme de question, photo toujours attendue ; réglage `visitesPhotos`, commun à tous les types de visite). La réponse à une photo s'écrit comme un point (`PUT /visites/{id}/points`, `module: photos`, `ref` = le genre) ; elle compte dans le score (en tête) et ses écarts vont au rapport comme ceux de la checklist. `GET /visites/app` rend `photosQuestions{}`, `GET /visites/reglages` `photos{}`. `GET /visites/app` rend la checklist typée, complétée du néerlandais livré là où le français est d'origine, `typesReponse` et `langues{shop: fr\|nl\|en\|de}` (la langue du magasin, Qui fait quoi sinon sa région) : la tablette ouvre la checklist dans cette langue, FR \| NL en tête de l'étape. Le cadre de visite (`PUT /visites/cadre`, types) prend les mêmes questions. |
 | `PUT /visites/reglages` · `charte{}` | admin | (31/10/2026) la **charte de communication** : module fixe `charte` (`nom`, `nom_nl`, `points[]`), un support de communication par question — affiches, leaflets, bâches, billboard, vitrophanie, chevalet, PLV, menu board, emballages, tenues, supports hors charte. Les supports s'ajoutent, se retirent et se renomment (`ref`, `libelle`, `libelle_nl`, `aide`, `aide_nl`, `score`, `poids`, `lieu` : `ext` au tour de l'extérieur, `int` à l'intérieur) ; le type est toujours `ouinon` et la photo toujours exigée (`photoExigee`) ; `pasIci` (vrai par défaut, faux pour « Aucun support hors charte ») propose la troisième réponse « Pas ce support ici », écrite `etat` na : sans photo, hors score, ni écart ni point proposé ; `commentaireNon` (toujours vrai) : un Non sans commentaire laisse le support à remplir à la tablette — le commentaire part avec l'écart dans le rapport et le point proposé — `viCharteNormalise`, réglage `visitesCharte`, les supports livrés tant qu'il n'existe pas ; vide, le module sort des visites. Rendu par `GET /visites/app` (`charte`) et `GET`/`PUT /visites/reglages`. Ajouté à toute visite qui n'est ni un suivi ni une revisite ; à la tablette, deux étapes (dehors, dedans) qui ne se remplissent qu'avec, pour chaque support, la photo ET Oui / Non. Les réponses s'écrivent comme des points (`PUT /visites/{id}/points`, module `charte`) : elles comptent dans le score, un Non part dans le rapport et dans les points proposés. |
 | `POST /visites/tick` | admin | l'horloge tout de suite (`force` : sans attendre l'heure). |
 
@@ -3995,7 +3995,7 @@ réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
 Écrans du consultant : la fiche de visite ouvre le **contrôle guidé**
 (`#controle/{id}`), un seul écran vertical, étape après étape, rangées en six
 temps depuis le 26/10/2026 — extérieur, intérieur, suivi de projet, analyse,
-développement, météo et fin (détail : `docs/suivi-franchises.md`) ; chaque étape
+développement, météo et fin (détail : `consultant/docs/suivi-franchises.md`) ; chaque étape
 se replie une fois faite. Le franchisé n'a pas de page à part : deux onglets de son dashboard magasin
 montent le module, en **consultation**. « Campagne » (`?vue=campagne`, écran
 `v_campagne`) : la carte « Objectif de campagne » (clients, N-1, objectif, la
@@ -4015,8 +4015,8 @@ d'entrer dans la file.
 
 ### `/verification/recettes` — les recettes douteuses ou manquantes (Vérification, lot 1, 31/10/2026)
 
-Plan : `docs/plan-verification.md` § 3.5 ; maquette : `docs/maquettes/verification/e.png` ; code :
-`src/verification.php`, écran `#/verification/recettes` (`verification-vals.js`, `verification-tpl.js`,
+Plan : `consultant/docs/plan-verification.md` § 3.5 ; maquette : `consultant/docs/maquettes/verification/e.png` ; code :
+`consultant/src/verification.php`, écran `#/verification/recettes` (`verification-vals.js`, `verification-tpl.js`,
 `verification.css`) ; tests : `php bin/tests_verification.php`.
 
 `GET /verification/recettes[?rafraichir=1]` applique dix règles, magasin par magasin, aux produits vendus des
@@ -4104,7 +4104,7 @@ de `PATCH /recipes/{id}` : la sonde rend désormais `recetteBrute` (`/recipes/{i
 
 ### `/verification/recettes/*` — corriger d'ici (Recettes à corriger, 13/11/2026)
 
-Code : `src/verification_correction.php` (préfixe `vrc`) ; écran : `verification-correction-vals.js`,
+Code : `consultant/src/verification_correction.php` (préfixe `vrc`) ; écran : `verification-correction-vals.js`,
 `verification-correction-tpl.js` ; tests : `php bin/tests_verification_correction.php` (faux panel). Session du cockpit
 seulement (CEO).
 
@@ -4149,8 +4149,8 @@ recette ou d'une matière ne se devinent pas (le panel rend 200 pour toute adres
 
 ### `GET /verification/recettes/matieres` — les matières des recettes et leur prix de référence (14/11/2026)
 
-Code : `src/verification_matieres_prix.php` (préfixe `vmp`) ; écran : la bascule « Matières premières » de Recettes à
-corriger (`verification-prix-vals.js`, `verification-prix-tpl.js`, style `vm-`) ; maquette `docs/maquettes/matieres-reference`.
+Code : `consultant/src/verification_matieres_prix.php` (préfixe `vmp`) ; écran : la bascule « Matières premières » de Recettes à
+corriger (`verification-prix-vals.js`, `verification-prix-tpl.js`, style `vm-`) ; maquette `consultant/docs/maquettes/matieres-reference`.
 Lecture seule, gardée dix minutes (`vmpTable`, oubliée à chaque prix écrit) ; `?rafraichir=1` relit.
 
 Rend `lignes[]` : `{mid, nom, cat, source (CENTRAL|OPEN…), uniteBase, par (kg|l|pce), facteur, nRecettes, ca,
@@ -4168,9 +4168,9 @@ magasin, relue ; un prix qui en remplace un autre s'annule (l'ancien repart), un
 
 ### `/verification/recettes/matiere` — la fiche d'une matière, modifiable (14/11/2026)
 
-Code : `src/verification_matiere_edition.php` (préfixe `vmx`) ; écran : `verification-fichemat-vals.js`,
+Code : `consultant/src/verification_matiere_edition.php` (préfixe `vmx`) ; écran : `verification-fichemat-vals.js`,
 `verification-fichemat-tpl.js` (style `vx-`), ouvert au clic sur une matière de la bascule « Matières premières » ;
-maquette `docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout modifiable, pour tout le réseau**.
+maquette `consultant/docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout modifiable, pour tout le réseau**.
 
 - `GET ?mid=` : `{ok, mid, nom, champs[{cle, lib, type (texte|categorie|unite|valeurs|nombre|tva|oui|allergenes|prix),
   valeur, modifiable, valeurs}], cles, unite, par, facteur, refs {categories, unites, allergenes, tva}, ligne (la ligne de
@@ -4189,7 +4189,7 @@ maquette `docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout modifiable,
 
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 
-Code : `src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
+Code : `consultant/src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
 (`verification-flux-vals.js`, `verification-flux-tpl.js`) ; tests : `php bin/tests_verification.php`.
 
 Une journée d'un magasin, produit par produit, est celle de la **clôture de la Production** : `ep_production_flux_cloture`
@@ -4228,8 +4228,8 @@ magasins (et réseau).
 
 ### `/verification/evolution` — la base quotidienne, semaine par semaine (Vérification, lot 3, 31/10/2026)
 
-Code : `src/verification_base.php` ; écran `#/verification/evolution` (`verification-evol-vals.js`, `-tpl.js`) ;
-maquette `docs/maquettes/verification/f.png` ; tests `bin/tests_verification.php` (section lot 3). Lecture seule.
+Code : `consultant/src/verification_base.php` ; écran `#/verification/evolution` (`verification-evol-vals.js`, `-tpl.js`) ;
+maquette `consultant/docs/maquettes/verification/f.png` ; tests `consultant/bin/tests_verification.php` (section lot 3). Lecture seule.
 
 **La table `con_verif_jour`** (clé `shop_id`, `jour`) — des agrégats calculés par le cockpit, jamais une copie des
 sources :
@@ -4255,8 +4255,8 @@ sources :
 
 ### `/verification/matieres` — matières ↔ recettes (Vérification, lot 4, 31/10/2026)
 
-Code : `src/verification_matieres.php` (moteur : `invEcart` de `src/inventaires.php`) ; écran `#/verification/matieres`
-(`verification-matieres-vals.js`, `-tpl.js`) ; maquettes `c.png` et `g-matieres.png` ; tests `bin/tests_verification.php`
+Code : `consultant/src/verification_matieres.php` (moteur : `invEcart` de `consultant/src/inventaires.php`) ; écran `#/verification/matieres`
+(`verification-matieres-vals.js`, `-tpl.js`) ; maquettes `c.png` et `g-matieres.png` ; tests `consultant/bin/tests_verification.php`
 (section lot 4). Lecture seule.
 
 Une **semaine** est une paire d'inventaires **consécutifs relevés en direct** (`r…` : le cockpit relève le stock du panel
@@ -4290,8 +4290,8 @@ L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couv
 
 ### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
 
-Code : `src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
-tests `bin/tests_verification.php` (section lot 5). Lecture seule.
+Code : `consultant/src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
+tests `consultant/bin/tests_verification.php` (section lot 5). Lecture seule.
 
 **La caisse fait référence** : les tickets du panel, jour par jour (`caNet{magasin}:{jour}` : `b` TTC après remise, `t`
 TVA, `n` tickets — le relevé du CA net, `cnMois`, lu dans 20 s à la demande, chaque heure par le cron). Se lisent en
@@ -4327,8 +4327,8 @@ clos du mois en cours (et du précédent les cinq premiers jours).
 ### `/verification/mouvements` — les mouvements d'un produit ou d'une matière sur une période (31/10/2026)
 
 Demande du 31/10 : « pouvoir prendre un produit et avoir tous les mouvements pendant une période ». Code :
-`src/verification_mouvements.php` ; écran `#/verification/mouvements` (`verification-mouvements-vals.js`, `-tpl.js`) ;
-tests `bin/tests_verification.php`. Lecture seule. Un clic sur une matière de « Matières ↔ recettes » l'ouvre ici, sur
+`consultant/src/verification_mouvements.php` ; écran `#/verification/mouvements` (`verification-mouvements-vals.js`, `-tpl.js`) ;
+tests `consultant/bin/tests_verification.php`. Lecture seule. Un clic sur une matière de « Matières ↔ recettes » l'ouvre ici, sur
 la même semaine d'inventaire.
 
 `GET /verification/mouvements/liste?shop=` : `magasins[]`, `produits[]` {`id`, `nom`, `cat`, `q` (vendus en 30 jours)}
@@ -4645,7 +4645,7 @@ Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Jour
 
 ### Le cadre de visite, la gestion des consultants, l'agenda Google (09/10/2026)
 
-Module `src/visites_cadre.php`. Chaque visite a un **type** (la liste déroulante du planning) : sa durée, le
+Module `consultant/src/visites_cadre.php`. Chaque visite a un **type** (la liste déroulante du planning) : sa durée, le
 profil de consultant qu'il demande, sa checklist (modules et points, même forme que la liste standard) et ses
 tâches à faire avant, pendant et après. Le **cadre** dit, par magasin, combien de visites de chaque type par mois
 ou par trimestre, par quel profil, par quel consultant. Les **tâches du consultant** vivent dans
@@ -4677,7 +4677,7 @@ déposée dans le panel, type « Visite » de `notePanelDeposer`). `viFrequence`
 
 ### Les franchisés — évaluation et suivi (09/10/2026)
 
-Module `src/franchises.php`. Rien n'est ressaisi : tout est lu là où il vit, une source qui ne répond pas rend
+Module `consultant/src/franchises.php`. Rien n'est ressaisi : tout est lu là où il vit, une source qui ne répond pas rend
 son `motif`.
 
 | Route | Ce qu'elle rend |
@@ -4713,9 +4713,9 @@ Mesuré le 09/10/2026 : `material` et `result` sont à zéro sur presque tous le
 matière, cf. ticket T5a) ; `labour` et `overhead` sont ce que le franchisé encode. Les mois clos se gardent 24 h
 (`pnlMois:<shop>:<mois>`), `jours=1` joint le détail par jour. Né pour le dossier investisseur de Halle.
 
-### `GET /dossiers/fichiers` et `POST /dossiers/fichiers/envoyer` — les dossiers déposés dans `docs/dossiers/` et leur envoi en pièces jointes (09/10/2026)
+### `GET /dossiers/fichiers` et `POST /dossiers/fichiers/envoyer` — les dossiers déposés dans `consultant/docs/dossiers/` et leur envoi en pièces jointes (09/10/2026)
 
-Un dossier déposé est un sous-dossier de `docs/dossiers/` du dépôt (livré sur le serveur avec le reste), nommé en
+Un dossier déposé est un sous-dossier de `consultant/docs/dossiers/` du dépôt (livré sur le serveur avec le reste), nommé en
 slug `a-z0-9-`, avec un `dossier.json` facultatif : `titre`, `objet` (sujet du courriel), `resume` (texte du
 courriel, paragraphes séparés par une ligne vide). Premiers dossiers : `halle-2026-10`, le dossier investisseur de
 Halle (PDF 14 pages A4, français puis néerlandais, + classeur Excel ; `generer.py` et `classeur.py` sont les générateurs, ils ne se joignent pas), et `halle-produits-2026-10`, la liste des produits de Halle avec leur coefficient (PDF + Excel).
@@ -4754,7 +4754,7 @@ appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. 
 ### MétaDonnée — formulaires Meta et Instagram → ERP du franchisé (28/10/2026)
 
 Sous-menu « MétaDonnée » du rail (ERP franchisé), maquette A : quatre écrans `mdFormulaires`, `mdMapping`,
-`mdLeads`, `mdSms`, un module (`public/assets/js/metadonnee.js`), un serveur (`src/metadonnee.php`). Tables
+`mdLeads`, `mdSms`, un module (`marketing/public/assets/js/metadonnee.js`), un serveur (`marketing/src/metadonnee.php`). Tables
 créées à la première utilisation : `mar_md_form` (formulaires, suivi, magasin, mapping), `mar_md_lead` (un lead
 Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `mar_md_shop` (SMS du magasin),
 `mar_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (`source` des clés, ID de
@@ -4881,7 +4881,7 @@ Les autres routes de coûts, mesurées par la sonde : `/costs` (les 9 types de f
 - `joursLus`, `joursSans` : les jours lus avant le relevé des remises sont sans promotions.
 - `erreur` : le compte admin du panel est absent ou muet.
 
-Les règles se lisent avec le compte ADMIN du panel (`ErpApi`). La source est `/admin/promotions/buy-x-get-y?limit=100`, puis le détail de chaque règle. Ce détail donne les produits et catégories qui déclenchent et qui reçoivent, plus le type et la valeur de la récompense. Pour un bundle, il donne les articles et leur prix remisé. Les règles sont gardées 10 minutes dans `pvRegles`. Le code est dans `src/promos_ventes.php`.
+Les règles se lisent avec le compte ADMIN du panel (`ErpApi`). La source est `/admin/promotions/buy-x-get-y?limit=100`, puis le détail de chaque règle. Ce détail donne les produits et catégories qui déclenchent et qui reçoivent, plus le type et la valeur de la récompense. Pour un bundle, il donne les articles et leur prix remisé. Les règles sont gardées 10 minutes dans `pvRegles`. Le code est dans `marketing/src/promos_ventes.php`.
 
 La lecture des tickets (`svP{shop}:{jour}`) garde `r`, la liste des tickets à remise de ligne, en entier : `[{t, mn, l: [[clé, pid, q, prix unitaire, remise, total]]}]`. Un relevé sans `r` se relit une fois pour aujourd'hui, ou pour un jour passé ouvert seul.
 
@@ -5025,7 +5025,7 @@ Le bureau et la tablette gardent leurs cartes.
 
 ### `GET /marketing/hub` — le module Marketing, tous les canaux en une lecture (13/10/2026)
 
-`GET /marketing/hub[?shop={id}]` (`src/marketing_hub.php`), lu par la page `marketing/`. Réseaux sociaux, emailing et
+`GET /marketing/hub[?shop={id}]` (`marketing/src/marketing_hub.php`), lu par la page `marketing/`. Réseaux sociaux, emailing et
 campagnes vivaient dans quatre sections du rail ; la lecture les pose côte à côte **sans rien recalculer à sa façon** :
 campagnes = les lignes de `GET /marketing` (`mar_campaign`), emailing = `mar_nl_campagne` avec les statistiques de
 `GET /newsletter` (`nlStatsReelles` d'abord), réseaux sociaux = `GET /facebook/posts`, charte = `bgStatsPeriode(30)` de
@@ -5095,9 +5095,9 @@ le rôle n'est pas vérifié côté serveur : la vue magasin est une vue, pas un
 
 ### `GET /marketing/sources` — les API et les tables du module Marketing (13/10/2026)
 
-`GET /marketing/sources` (`src/marketing_sources.php`), lu par l'onglet Paramètres → « API et tables » de `marketing/`.
+`GET /marketing/sources` (`marketing/src/marketing_sources.php`), lu par l'onglet Paramètres → « API et tables » de `marketing/`.
 Comme la carte des sources, **lu dans le code** : seule la liste des routes que la page appelle est déclarée
-(`MS_ROUTES` — 34 routes au 13/10/2026, la page et le module newsletter qu'elle monte ; `bin/tests.php` vérifie que chaque fonction
+(`MS_ROUTES` — 34 routes au 13/10/2026, la page et le module newsletter qu'elle monte ; `shared/bin/tests.php` vérifie que chaque fonction
 existe et que le routeur l'appelle). Chaque route est suivie de fonction en fonction (6 niveaux au plus, sans
 l'installateur), et l'on relève les tables nommées dans le SQL (`FROM`, `JOIN` ⇒ lue ; `INSERT`, `UPDATE`, `DELETE`
 ⇒ écrite ; `CREATE`, `ALTER` ⇒ créée ; `ON DUPLICATE KEY UPDATE col` n'est pas une table) et les API **réellement
@@ -5112,7 +5112,7 @@ Réponse : `{genere, base, baseLue, apis, routes, tables, liees, limites}`.
   mode: lecture|ecriture|creation}]}]`. `tfbuddy` : la route appelle le panel ou l'ERP ; `locale` : rien ne sort du
   serveur (base et calcul).
 - `tables` : `[{nom, origine: portail|tfbuddy|module|cockpit, origineNom, ecrite, routes, existe, lignes}]`. Origine :
-  une table du registre `MAR_TABLES` = portail ; un autre `mar_*` = module marketing autonome (base partagée) ; une table créée par `src/` ou `sql/schema.sql` = cockpit ; le reste =
+  une table du registre `MAR_TABLES` = portail ; un autre `mar_*` = module marketing autonome (base partagée) ; une table créée par `src/` ou `shared/sql/schema.sql` = cockpit ; le reste =
   base partagée TFBuddy (`shops`…). `existe` et `lignes` (estimées par InnoDB) viennent d'`information_schema`,
   `null` si la base ne répond pas.
 - `registre` : `[{nom, famille, quoi, ancien}]` — les tables du portail et leur nom d'avant le 13/10/2026.
@@ -5132,7 +5132,7 @@ Un réglage déjà abîmé est réparé à la lecture.
 
 ### Tables des consultants et des visites : un seul préfixe, `con_` (26/10/2026)
 
-Tout ce que le suivi des franchisés possède passe sous `con_` (`src/con_tables.php`, `CON_TABLES`) ; seul le préfixe
+Tout ce que le suivi des franchisés possède passe sous `con_` (`consultant/src/con_tables.php`, `CON_TABLES`) ; seul le préfixe
 change, le reste du nom reste : `ceo_visite_point` → `con_visite_point`.
 
 | Famille | Tables (`con_…`, ancien nom `ceo_…`) |
@@ -5146,7 +5146,7 @@ change, le reste du nom reste : `ceo_visite_point` → `con_visite_point`.
 table ; mêmes règles que `mar_` (ci-dessous) : une seule instruction `RENAME TABLE`, une nouvelle table vide recréée trop
 tôt cède la place à l'ancienne pleine, deux tables pleines ne bougent pas et le journal le dit. Ce qui a été fait est
 gardé dans `ceo_app_setting` (`conMigration` : date, tables renommées, effacées, conflits) et se lit dans l'écran
-« Sources et API ». `bin/deploy.sh` (COCKPIT_WIPE / COCKPIT_RESET) efface aussi ces seize tables, nommées une à une.
+« Sources et API ». `shared/bin/deploy.sh` (COCKPIT_WIPE / COCKPIT_RESET) efface aussi ces seize tables, nommées une à une.
 
 **Retour arrière** — avant de redéployer l'ancienne version, dans la base (retirer de la liste une table absente :
 `RENAME TABLE` échoue en entier sinon ; `con_consultant_checklist` n'existe que si la checklist du cadre a servi) :
@@ -5163,7 +5163,7 @@ RENAME TABLE
 
 ### Tables du portail Marketing : un seul préfixe, `mar_` (13/10/2026)
 
-Tout ce que le portail possède passe sous `mar_`, rangé par famille (`src/marketing_tables.php`, `MAR_TABLES`). Les
+Tout ce que le portail possède passe sous `mar_`, rangé par famille (`marketing/src/marketing_tables.php`, `MAR_TABLES`). Les
 tables du module marketing autonome (`mar_campaign`, `mar_campaign_type`… en anglais) ne changent pas.
 
 | Nouveau nom | Ancien nom |
@@ -5215,8 +5215,8 @@ et les colonnes `reseaux` / `campagne_id` peuvent rester : l'ancienne version le
 
 ### Publication Facebook, Instagram, LinkedIn (13/10/2026)
 
-`src/social_publication.php`, avec `MetaGraph::publierPage|publierInstagram|instagramDePage` et `LinkedInApi`. Mise en
-service, droits et jetons : `docs/publication-reseaux.md`.
+`marketing/src/social_publication.php`, avec `MetaGraph::publierPage|publierInstagram|instagramDePage` et `LinkedInApi`. Mise en
+service, droits et jetons : `marketing/docs/publication-reseaux.md`.
 
 - `POST /marketing/social/posts/{id}/publier` `{quand: maintenant|programme, reseaux?}` → `{ok, publications}`.
   409 si la publication réelle est éteinte ou si le post n'est pas validé. Contrôle préalable par réseau
@@ -5224,7 +5224,7 @@ service, droits et jetons : `docs/publication-reseaux.md`.
   passe, ou si un réseau demandé nommément (`reseaux`) ne passe pas — rien n'est parti.
 - `DELETE /marketing/social/posts/{id}/publier` : annule ce qui est programmé ou en échec.
 - `GET /marketing/publication/cron?jeton=` (`socialJeton`) : publie ce qui est dû, retente une erreur après 15 minutes
-  (3 essais), 20 par passage. Ne fait rien si la publication réelle est éteinte. Appelé par `bin/social_cron.sh`.
+  (3 essais), 20 par passage. Ne fait rien si la publication réelle est éteinte. Appelé par `marketing/bin/social_cron.sh`.
 - `GET /marketing/publication/etat` : `{reglages: {reelle, auto, pageMarque, linkedinOrganisation, linkedinVersion},
   meta, linkedin, pages, reseaux, compteurs, cronDernier, base}` — l'existence des jetons, jamais leur valeur.
 - `PUT /marketing/publication/reglages` : 422 si `reelle` sans aucun accès configuré.
@@ -5324,7 +5324,7 @@ réseau. Les pastilles : vert sous l'alerte, orange entre alerte et critique, ro
 
 #### Récurrence — le taux de retour des clients PWA (23/10/2026, demande de Sam)
 
-`/leviers/magasins` porte désormais la Récurrence (`src/recurrence_pwa.php`) : parmi les clients de l'app identifiés à
+`/leviers/magasins` porte désormais la Récurrence (`consultant/src/recurrence_pwa.php`) : parmi les clients de l'app identifiés à
 la caisse d'un magasin sur la période (fiche client du panel : `pwa_user`), la part venus au moins deux jours
 différents — la définition « taux de fidélisation » du panel consultant, restreinte aux clients PWA. Tickets pro exclus.
 
@@ -5357,9 +5357,9 @@ différents — la définition « taux de fidélisation » du panel consultant, 
 
 **23/10/2026 — Promotions : la « destination » (SHOP, WEBSHOP, BOTH) et le seuil de déclenchement.** Demande de Sam : vérifier si l'API des promotions reçoit la destination et le seuil. La documentation publique (`api.php`, relue le 23/10/2026 à 16:46) est identique à celle du matin (même empreinte `5b57f425…`) : aucun champ de seuil ni de canal sur les promotions ; le seul « minimum_order_value » est l'exemple d'un paramètre global (`/admin/global-params/{key}`, le minimum de commande du webshop), pas une condition de promotion. `pvConditions` reconnaît désormais aussi un canal en **une seule valeur** sous `destination`, `destinations`, `sale(s)_destination`, `order_destination` (« SHOP » = comptoir, « WEBSHOP » = webshop, « BOTH »/« ALL » = les deux — qui apprend le nom du champ et son jeton sans rien restreindre), et le seuil sous `trigger_amount`, `min_trigger_amount`, `trigger_threshold`… ; `pmConditionsCorps` écrit alors une valeur (`destination: "WEBSHOP"`) et non une liste. La sonde `GET /ventes/promos/sonde-champs` range aussi `destination`, `declench…` et `trigger_…` parmi les conditions. Rien ne s'écrit tant qu'aucune promotion du panel ne porte ces champs (pas de nom deviné) ; la relecture vérifie toujours ce que le panel a gardé.
 
-**23/10/2026 — Promotions : la sonde complète et la documentation du cockpit.** Demande de Sam (« fais une sonde et crée ta documentation »). `GET /ventes/promos/documentation?shop=4` (`src/promos_doc.php`) rend une page : pour chaque sorte (buy-x-get-y, bundles, quantity, scheduled-product-discount, voucher-campaigns), chaque champ relu sur les fiches du panel — type, fréquence, exemple, documenté ou non (`PD_DOCUMENTES`, tiré de la spécification publique), s'il ressemble à un seuil ou un canal — et ce que le cockpit y comprend (`pvConditions`, `pmChampsAppris`) ; `&format=json` en JSON. `&essai=1` ajoute l'essai d'écriture : une promotion « X + Y » de test (DRAFT, VOUCHER_ONLY, datée du 01/01/2020, « SONDE COCKPIT — à supprimer », le magasin seul) est créée avec les noms de seuil (`PD_ESSAI_SEUIL`, une valeur par nom) et de destination (`PD_ESSAI_CANAL`) plausibles, relue, puis supprimée ; refusée, elle est retentée avec le seuil seul, le canal seul, puis sans rien (témoin) — quatre créations au plus ; une promotion de test qui n'a pas pu être supprimée est nommée. Rien de nominatif (`pmSondePropre`). La documentation écrite est `docs/api-promotions.md` : ce que dit la spécification publique, sorte par sorte (routes, champs, types, valeurs permises), ce qu'elle ne dit pas (seuil, destination), le Swagger officiel en erreur (il charge `atelier.tfbuddy.com/documentation/api.php`), la sonde et la façon dont le cockpit lit, écrit et relit les conditions.
+**23/10/2026 — Promotions : la sonde complète et la documentation du cockpit.** Demande de Sam (« fais une sonde et crée ta documentation »). `GET /ventes/promos/documentation?shop=4` (`marketing/src/promos_doc.php`) rend une page : pour chaque sorte (buy-x-get-y, bundles, quantity, scheduled-product-discount, voucher-campaigns), chaque champ relu sur les fiches du panel — type, fréquence, exemple, documenté ou non (`PD_DOCUMENTES`, tiré de la spécification publique), s'il ressemble à un seuil ou un canal — et ce que le cockpit y comprend (`pvConditions`, `pmChampsAppris`) ; `&format=json` en JSON. `&essai=1` ajoute l'essai d'écriture : une promotion « X + Y » de test (DRAFT, VOUCHER_ONLY, datée du 01/01/2020, « SONDE COCKPIT — à supprimer », le magasin seul) est créée avec les noms de seuil (`PD_ESSAI_SEUIL`, une valeur par nom) et de destination (`PD_ESSAI_CANAL`) plausibles, relue, puis supprimée ; refusée, elle est retentée avec le seuil seul, le canal seul, puis sans rien (témoin) — quatre créations au plus ; une promotion de test qui n'a pas pu être supprimée est nommée. Rien de nominatif (`pmSondePropre`). La documentation écrite est `marketing/docs/api-promotions.md` : ce que dit la spécification publique, sorte par sorte (routes, champs, types, valeurs permises), ce qu'elle ne dit pas (seuil, destination), le Swagger officiel en erreur (il charge `atelier.tfbuddy.com/documentation/api.php`), la sonde et la façon dont le cockpit lit, écrit et relit les conditions.
 
-**23/10/2026 — Promotions : le seuil et la destination trouvés au panel (`minimum_receipt_gross`, `sales_channel_scope`).** La sonde du soir (19:18, magasin 4) a relu deux champs absents de la documentation : `minimum_receipt_gross` (sur toutes les fiches « X + Y » et le bundle, vide partout — le minimum du ticket TTC) et `sales_channel_scope` (« BOTH » ou vide). `pvConditions` les reconnaît : un champ de seuil vide donne quand même son nom ; `sales_channel_scope` est un canal à une seule valeur. **Le seuil s'écrit** désormais (« À partir d'un montant » actif, envoyé sous `minimum_receipt_gross`, relu). **Le canal** ne s'écrit que du côté dont la valeur exacte a été relue sur une promotion du panel (`pmCanalEcrivable` : nom connu, et pour un champ à une valeur, le jeton de ce côté) — « BOTH » seule est connue : « Comptoir seulement » et « Webshop seulement » restent grisés, le serveur refuse (422) en nommant le champ. `regles.conditions` rend `seuil`, `canal`, `comptoir`, `webshop` et `noms {seuil, canal}` ; l'avertissement de l'étape 4 dit ce qui manque et comment le débloquer (une promotion du panel « comptoir seulement » ou « webshop seulement »). « Avant remise » disparaît des textes du seuil (rien ne le confirme pour `minimum_receipt_gross`). L'essai d'écriture de `GET /ventes/promos/documentation` : le produit se cherche dans `product_ids`, `product_targets` ou `products[]` de douze fiches ; une valeur n'est gardée que si elle revient identique (colonne « Revenu autrement ») ; il essaie `minimum_receipt_gross` et `sales_channel_scope`, puis les valeurs du canal (WEBSHOP, ONLINE, WEB ; POS, SHOP, STORE, IN_STORE). `docs/api-promotions.md` tient ce qui a été relu.
+**23/10/2026 — Promotions : le seuil et la destination trouvés au panel (`minimum_receipt_gross`, `sales_channel_scope`).** La sonde du soir (19:18, magasin 4) a relu deux champs absents de la documentation : `minimum_receipt_gross` (sur toutes les fiches « X + Y » et le bundle, vide partout — le minimum du ticket TTC) et `sales_channel_scope` (« BOTH » ou vide). `pvConditions` les reconnaît : un champ de seuil vide donne quand même son nom ; `sales_channel_scope` est un canal à une seule valeur. **Le seuil s'écrit** désormais (« À partir d'un montant » actif, envoyé sous `minimum_receipt_gross`, relu). **Le canal** ne s'écrit que du côté dont la valeur exacte a été relue sur une promotion du panel (`pmCanalEcrivable` : nom connu, et pour un champ à une valeur, le jeton de ce côté) — « BOTH » seule est connue : « Comptoir seulement » et « Webshop seulement » restent grisés, le serveur refuse (422) en nommant le champ. `regles.conditions` rend `seuil`, `canal`, `comptoir`, `webshop` et `noms {seuil, canal}` ; l'avertissement de l'étape 4 dit ce qui manque et comment le débloquer (une promotion du panel « comptoir seulement » ou « webshop seulement »). « Avant remise » disparaît des textes du seuil (rien ne le confirme pour `minimum_receipt_gross`). L'essai d'écriture de `GET /ventes/promos/documentation` : le produit se cherche dans `product_ids`, `product_targets` ou `products[]` de douze fiches ; une valeur n'est gardée que si elle revient identique (colonne « Revenu autrement ») ; il essaie `minimum_receipt_gross` et `sales_channel_scope`, puis les valeurs du canal (WEBSHOP, ONLINE, WEB ; POS, SHOP, STORE, IN_STORE). `marketing/docs/api-promotions.md` tient ce qui a été relu.
 
 **24/10/2026 — Les adresses de la console sans tiret.** Demande de Sam (« réorganiser le nav bar pour ne pas avoir de - dans les liens »). Chaque écran a une adresse d'un mot, ou la page puis sa sous-page : `#/primes` (page admin) et `#/primes?shop=4` (page franchisé), `#/fiche`, `#/fiche/scoring`, `#/equipe` (Analyse magasin), `#/budget/encodage`, `#/budget/parametres`, `#/catalogue/analyse`, `#/catalogue/prix`, `#/catalogue/manque`, `#/objectifs/produits`, `#/suivi/taches`, `#/suivi/controles`, `#/suivi/mois`, `#/qualite`, `#/invendus`, `#/tablette`, `#/brandguard`, `#/parametres/scoring`, `#/parametres/campagnes`, `#/parametres/mystere`, `#/parametres/kpi`, `#/journal/usage` (`App.ADRESSES`). Les anciennes adresses à tiret (`App.ADRESSES_ANCIENNES` : `#/primes-app-worker?shop=4`, `#/fiche-franchise`, `#/budget-encodage`…) ouvrent toujours le bon écran — le magasin compris — et la barre se remet aussitôt sur la nouvelle. Les routes de l'API (`/analyse/prix-volume`…) ne changent pas.
 
@@ -5404,7 +5404,7 @@ prime d'équipe, les mois où le magasin y est arrivé, et ce qui a été versé
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
 
 **Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,
-avec envoi par mail à l'équipe » ; `src/primes_fiches.php`, voir `docs/primes/LISEZMOI.md`). Un volet de la page d'un
+avec envoi par mail à l'équipe » ; `panel/src/primes_fiches.php`, voir `panel/docs/primes/LISEZMOI.md`). Un volet de la page d'un
 magasin : le mode d'emploi du franchisé et l'affiche de l'équipe (FR, NL), trois PDF servis par le cockpit
 (`assets/primes/`), ouverts dans un onglet pour l'impression ; puis l'envoi de l'affiche.
 
@@ -5446,7 +5446,7 @@ dans « Mes primes » (cartes `type: target`, `base`, `duMagasin: true`), le moi
 - `panel_mot_grand_prix` reçoit les grands prix.
 
 La reprise se fait une fois, à la première lecture. Aucune route ne change. Le détail est dans
-`docs/module-motivation.md`.
+`panel/docs/module-motivation.md`.
 
 **`GET /ventes/grands-prix[?shop=3]`** rend :
 
@@ -5482,7 +5482,7 @@ enCourse, top: [{rang, nom, lieu, valeur, moi}], magasin}`.
 - Le classement se garde quinze minutes (`grandsPrixCl…` dans `mot_cache`).
 ### Le suivi des franchisés (24/10/2026)
 
-Module `src/suivi.php` : le circuit d'une visite, de l'ordinateur à la tablette et retour, et ce que le franchisé en
+Module `consultant/src/suivi.php` : le circuit d'une visite, de l'ordinateur à la tablette et retour, et ce que le franchisé en
 reçoit. Réglages `suiviRegles` (qui fait quoi, droits, délais, ce que voit le franchisé) et `suiviModeles` (les
 courriels, par code et par langue fr, nl, en, de). Les types de visite (`visitesTypes`) portent `annoncee`.
 
@@ -5503,7 +5503,7 @@ courriels, par code et par langue fr, nl, en, de). Les types de visite (`visites
 | `POST /suivi/modeles/essai` | `{ code, langue, a }` : le modèle enregistré part à l'adresse d'essai. |
 | `GET /suivi/lien?shop=` | le lien de la page du franchisé (`url`, `chemin`), son adresse, sa langue, le courriel qui l'envoie, ce qu'il voit. |
 | `POST /suivi/lien/envoyer` | `{ shop }` : le lien part au franchisé, dans sa langue. |
-| `GET /suivi/sources` | (26/10/2026) le rapport « Sources et API », lu dans le code (`SS_ROUTES` : les 60 routes du module, suivies de fonction en fonction, `SS_PROFONDEUR` niveaux, les fonctions passées par leur nom comprises) et dans la base, rien n'est gardé : `routes[]` {ecran, methode, chemin, fonction, quoi, panel[] {m, chemin}, erp[], con[] / tfbuddy[] / cockpit[] {nom, mode lecture\|ecriture}, installe[] (créées au besoin), externes[]}, `chemins[]` (les chemins du panel et de l'ERP, paramètres nommés `{shop}`, `{date}`, `{query}`, et les routes qui les emploient), `registre[]` (les tables `con_` : lignes exactes, ancien nom, `champs[]`, `ddl`), `directes[]` (les tables TFBuddy lues sans API : la route existante `existe`, celle à ouvrir `propose`, colonnes), `autres[]`, `manquantes[]` (par table `con_` : `ressource`, `cle`, `endpoints[]` {m, chemin, dit, corps} — lister, lire, créer, modifier, supprimer, ou lister / écrire / retirer pour une clé composée, dépôt multipart et lien signé pour les photos), `migration` (le réglage `conMigration`), `limites`. Tests : `bin/tests_suivi.php`. |
+| `GET /suivi/sources` | (26/10/2026) le rapport « Sources et API », lu dans le code (`SS_ROUTES` : les 60 routes du module, suivies de fonction en fonction, `SS_PROFONDEUR` niveaux, les fonctions passées par leur nom comprises) et dans la base, rien n'est gardé : `routes[]` {ecran, methode, chemin, fonction, quoi, panel[] {m, chemin}, erp[], con[] / tfbuddy[] / cockpit[] {nom, mode lecture\|ecriture}, installe[] (créées au besoin), externes[]}, `chemins[]` (les chemins du panel et de l'ERP, paramètres nommés `{shop}`, `{date}`, `{query}`, et les routes qui les emploient), `registre[]` (les tables `con_` : lignes exactes, ancien nom, `champs[]`, `ddl`), `directes[]` (les tables TFBuddy lues sans API : la route existante `existe`, celle à ouvrir `propose`, colonnes), `autres[]`, `manquantes[]` (par table `con_` : `ressource`, `cle`, `endpoints[]` {m, chemin, dit, corps} — lister, lire, créer, modifier, supprimer, ou lister / écrire / retirer pour une clé composée, dépôt multipart et lien signé pour les photos), `migration` (le réglage `conMigration`), `limites`. Tests : `consultant/bin/tests_suivi.php`. |
 
 **Routes publiques** (sans session du cockpit ; la clé est le jeton du magasin, `HMAC('suivi:'+shop, visitesJeton)` sur
 24 caractères — changer `visitesJeton` invalide tous les liens) :
@@ -5516,7 +5516,7 @@ courriels, par code et par langue fr, nl, en, de). Les types de visite (`visites
 
 **Courriels** : `annonce` (à J−n, `delais.odjJours`, visites annoncées), `deplacee` et `annulee` (si l'ordre du jour
 était parti), `rapport` (à l'envoi), `relance` (rapport pas lu après `delais.relanceLuJours`), `lien`. L'horloge des
-visites (`viHorloge`, `bin/visites_cron.sh`) envoie les ordres du jour, rappelle ou envoie tel quel les rapports en
+visites (`viHorloge`, `consultant/bin/visites_cron.sh`) envoie les ordres du jour, rappelle ou envoie tel quel les rapports en
 retard (`delais.rapportTard`) et relance les rapports pas lus.
 
 `voit` : rapports, points, prochaine, msp, scoring, journalier, journal — tout est vrai par défaut. `dashboard/suivi.html?shop=`
@@ -5534,12 +5534,12 @@ gardé sur `con_visite.meteo`, puis le détail facultatif `POST /franchises/mete
 
 ### Le fil du franchisé (19/11/2026)
 
-Module `src/fil_franchise.php`, écran Franchisés › Suivi des franchisés › Fil du franchisé (`#/franchises/fil?shop=`).
+Module `consultant/src/fil_franchise.php`, écran Franchisés › Suivi des franchisés › Fil du franchisé (`#/franchises/fil?shop=`).
 Tables du portail : `con_fil_entree` (une note, une photo, une capture, un appel : magasin, date, texte, étiquettes,
 fil, épinglée, auteur), `con_fil_piece` (ses images, dans le dossier privé sous un nom tiré au hasard),
 `con_fil` (un problème de gestion et sa suite : ouvert le, résolu le, par quelle entrée). **Au cockpit seulement**
 (19/11/2026, Sam : « le franchisé ne doit rien voir », « seulement via le cockpit ») : session du siège, aucune route
-ouverte au franchisé (`src/acces.php`), rien vers sa page, ses courriels, son rapport ni la tablette de visite.
+ouverte au franchisé (`shared/src/acces.php`), rien vers sa page, ses courriels, son rapport ni la tablette de visite.
 
 | Route | Ce qu'elle rend ou fait |
 |---|---|
@@ -5558,7 +5558,7 @@ la dernière visite faite, en rappel au bureau ; il n'est jamais figé dans le d
 ### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
 
 Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
-`docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `src/fidelite.php`.
+`marketing/docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `marketing/src/fidelite.php`.
 
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -5586,7 +5586,7 @@ Le budget repose sur trois hypothèses dites à l'écran (bons utilisés à 65 %
 ### Le profil de l'employé — « Mon profil » de l'app (30/10/2026, demande de Sam)
 
 L'employé encode lui-même, dans l'app (`/me`), six fiches et la photo de sa carte d'identité (maquette validée :
-`docs/maquettes/profil-employe`). Le cockpit les garde chiffrées dans `panel_mot_profil` (`src/profil_employe.php`) ; le
+`panel/docs/maquettes/profil-employe`). Le cockpit les garde chiffrées dans `panel_mot_profil` (`panel/src/profil_employe.php`) ; le
 franchisé les lit sur la page franchisé des primes (« Les fiches de l'équipe »). Le panel n'est jamais écrit : un
 prénom, un nom, un téléphone ou un e-mail changé dans l'app est gardé ici et signalé « à reporter ».
 
@@ -5607,8 +5607,8 @@ prénom, le nom, le téléphone et l'e-mail du panel comptent comme remplis. Tes
 
 « /employee/schedule est faux, il ne relaie pas via les API planning. » L'app lisait `GET /employees/{id}/schedule`
 du panel avec le jeton de la personne ; le cockpit lit le planning par `GET /shops/{id}/schedule`, la route du
-planning que le panel sert en production (`src/planning_sync.php`). L'app demande maintenant ses services au cockpit
-(`src/planning_moi.php`), même voie que « Mes primes » (identité signée par l'app, avant la session).
+planning que le panel sert en production (`panel/src/planning_sync.php`). L'app demande maintenant ses services au cockpit
+(`panel/src/planning_moi.php`), même voie que « Mes primes » (identité signée par l'app, avant la session).
 
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -5626,9 +5626,9 @@ Tests : `php bin/tests_planning_moi.php`.
 
 « Dans leur application, un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ;
 avec le listing des pointages dans le profil, in / out en fonction de leur shift. » Maquette validée :
-`docs/maquettes/pointage-app`. Serveur : `src/pointage.php` ; tables `panel_mot_pointage`, `panel_mot_borne`.
+`panel/docs/maquettes/pointage-app`. Serveur : `panel/src/pointage.php` ; tables `panel_mot_pointage`, `panel_mot_borne`.
 
-**Le QR code** est affiché par une **borne** : `borne/?b=<jeton>` (page statique `public/borne/`), ouverte sur la
+**Le QR code** est affiché par une **borne** : `borne/?b=<jeton>` (page statique `panel/public/borne/`), ouverte sur la
 tablette du magasin avec le lien que le cockpit donne (page Pointages). Il porte un lien vers l'app,
 `employee/pointage?c=ATP1:<magasin>:<tranche>:<signature>` — l'appareil photo du téléphone ouvre donc aussi l'app —,
 change toutes les 30 secondes, vaut 90 secondes et ne sert que pour son magasin (HMAC, clé `pointage.key` dans le
@@ -5650,7 +5650,7 @@ dossier privé). Sous le QR, un code à six chiffres pour une caméra qui ne mar
 lien de la page, visible sur la tablette : QR seulement) ou `caisse` (une clé gardée dans la configuration de la
 caisse : QR, et pointage au PIN). La page Pointages crée l'une ou l'autre. `GET /pointage/borne` et
 `POST /pointage/borne/pointer` répondent aux autres adresses (CORS `*`, `OPTIONS` → 204) : la clé voyage dans la
-requête, jamais dans un cookie. La consigne pour la caisse : `docs/consignes/caisse-pointage-szymon.md` (en anglais).
+requête, jamais dans un cookie. La consigne pour la caisse : `panel/docs/consignes/caisse-pointage-szymon.md` (en anglais).
 
 Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.0 servi par l'app), `GET /me/pointages`
 (la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page
@@ -5665,7 +5665,7 @@ routes de la tablette (identifier, lu, vu, langue) gardent la session de l'appar
 
 ## Benchmark concurrents (src/benchmark.php)
 
-Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18 opérations, jeton consultant du panel). Deux familles saisonnières, un référentiel chacune (`src/data/benchmark_<famille>.json`) : `cougnou` (comparé au kilo) et `galette` (prix ramené à notre Ø 24 cm, à surface égale). Rapports de référence : `docs/benchmarks/cougnou-2026-11.md`, `docs/benchmarks/galette-2026-11.md`.
+Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18 opérations, jeton consultant du panel). Deux familles saisonnières, un référentiel chacune (`src/data/benchmark_<famille>.json`) : `cougnou` (comparé au kilo) et `galette` (prix ramené à notre Ø 24 cm, à surface égale). Rapports de référence : `consultant/docs/benchmarks/cougnou-2026-11.md`, `consultant/docs/benchmarks/galette-2026-11.md`.
 
 | Besoin | Route |
 |---|---|
@@ -5673,7 +5673,7 @@ Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18
 | … avec un cycle d'écriture sur un concurrent témoin, supprimé ensuite | `POST /benchmarks/verification` `{ shop?, ecrire: true }` |
 | Poser un relevé dans TFBuddy (idempotent, étiquette `[cockpit:<famille>:<date>]`) | `POST /benchmarks/{cougnou\|galette\|tout}/semer` `{ simuler?: true par défaut, magasins?: [2,3,4,5] }` |
 | Rapport d'une famille (prix comparable, position, contrôles web, rang Google si clé) | `GET /benchmarks/{cougnou\|galette}/rapport` (`web=0` sans les contrôles web) ; en HTML : `GET /benchmarks/{cougnou\|galette}/rapport.html` |
-| Routine (lundi 7 h, toutes les familles ; jeudi 7 h, celles en saison : cougnou 1/11–6/1, galette 1/12–20/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `bin/rapports_cron.sh` |
+| Routine (lundi 7 h, toutes les familles ; jeudi 7 h, celles en saison : cougnou 1/11–6/1, galette 1/12–20/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `consultant/bin/rapports_cron.sh` |
 | Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], taille?: { cougnou: g, galette: cm }, magasins?: { id: nom } }` → réglage `benchmark` |
 
 Table : `con_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.
@@ -5682,7 +5682,7 @@ Table : `con_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|gal
 
 L'assistant de gestion du soir du dashboard magasin (pas une checklist du panel : l'équipe ne le voit pas). Son
 réglage s'édite au cockpit, **Checklists › Revue du soir** (`public/task/?vue=soir`), et vit dans
-`ceo_app_setting` sous `revueSoir`. Code : `src/revue_soir.php`.
+`ceo_app_setting` sous `revueSoir`. Code : `panel/src/revue_soir.php`.
 
     GET  /soir/config                 { config, defaut, sondes[] }
     PUT  /soir/config                 enregistre { heure, checklists, raisons[], points[] } — journal « Revue du soir »
@@ -5743,11 +5743,11 @@ cockpit (`version` 2). Tests : `php bin/tests_revue_soir.php`.
 
 ### Dashboard › Mon catalogue — relayé au portail Marketing (14/11/2026)
 
-Onglet « Mon catalogue » du dashboard magasin (`public/dashboard/catalogue.js`, `catalogue.css`) : le franchisé crée
+Onglet « Mon catalogue » du dashboard magasin (`panel/public/dashboard/catalogue.js`, `catalogue.css`) : le franchisé crée
 ses catalogues imprimés (assistant en cinq étapes depuis le 15/11/2026 : catalogue, gammes, présentation, validation, export PDF — voir plus bas). Les
 catalogues vivent dans le **Marketing** ; le cockpit n'en garde rien et ne lit aucune table `mar_` : il relaie à
 l'API d'intégration du Marketing (`src/catalogues_magasin.php`), en ajoutant le jeton de service, que le navigateur
-ne voit jamais. La boutique est celle de la session (`src/acces.php`) : un magasin ou un franchisé n'a que les
+ne voit jamais. La boutique est celle de la session (`shared/src/acces.php`) : un magasin ou un franchisé n'a que les
 siens (`?shop=` choisit parmi eux, sinon 403) ; le siège désigne le magasin regardé par `?shop=`. Le corps ne porte
 jamais de boutique (champs filtrés).
 
@@ -5866,7 +5866,7 @@ pointer vers 127.0.0.1.
 
 **L'assistant de mise en page** (17/11/2026, Sam : « la mise en page sous forme d'assistant, catégorie par catégorie
 sélectionnée ; la dernière page est la mise en page finale, où l'on déplace une catégorie en drag and drop » ; « code
-comme les maquettes », `docs/maquettes/assistant-mise-en-page`). L'étape 3 a des sous-étapes : une par catégorie choisie
+comme les maquettes », `panel/docs/maquettes/assistant-mise-en-page`). L'étape 3 a des sous-étapes : une par catégorie choisie
 à l'étape 2 (dans son ordre), puis « Mise en page finale ». Une catégorie : 4 mises en page (1 vedette + 4 · 2 par
 largeur · 1 par largeur · 2 grandes) avec le nombre de pages que chacune donne (rouge au-delà de 2), les aperçus de ses
 pages côte à côte, « un produit seul sur une page, avec sa promotion » (une pleine page avant les autres, son produit),
@@ -5910,4 +5910,4 @@ par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design sys
 `CmScript` dans `catalogue.css`.
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
-`…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).
+`…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).

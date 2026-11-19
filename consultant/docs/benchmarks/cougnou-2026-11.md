@@ -3,7 +3,7 @@
 Relevé du 7 novembre 2026 · réseau L'Atelier By (Corbais, Gosselies, Halle, Sombreffe).
 Sources : catalogue du panel (Halle, 9/10/2026), atelierby.be, 29 prix publics relevés sur
 18 concurrents (supermarchés, chaînes, artisans à moins de 25 km de nos boutiques).
-Données brutes : `src/data/benchmark_cougnou.json` ; rapport à jour : `php bin/benchmark.php rapport cougnou`.
+Données brutes : `shared/src/data/benchmark_cougnou.json` ; rapport à jour : `php bin/benchmark.php rapport cougnou`.
 
 ## En bref
 
@@ -148,12 +148,12 @@ routine relève alors notre rang sur « cougnou <ville> », « boulangerie <vill
     (`my_product_id`).
   - Rejouable sans doublon.
 - **Routine :**
-  - `bin/rapports_cron.sh` (déjà appelé chaque heure) passe le lundi à 7 h, et aussi le jeudi
+  - `consultant/bin/rapports_cron.sh` (déjà appelé chaque heure) passe le lundi à 7 h, et aussi le jeudi
     à 7 h du 1er novembre au 6 janvier.
   - À chaque passage : vérification de l'API, photo des analyses de chaque magasin
     (`con_benchmark_snapshot`), rapport cougnou (prix au kilo + contrôles web + rang Google si
     la clé est posée), envoi par e-mail.
-  - Destinataires : `PUT /api/cockpit/benchmarks/reglages {"destinataires": [...]}`. La galette des rois suit le même circuit : `docs/benchmarks/galette-2026-11.md`.
+  - Destinataires : `PUT /api/cockpit/benchmarks/reglages {"destinataires": [...]}`. La galette des rois suit le même circuit : `consultant/docs/benchmarks/galette-2026-11.md`.
 - **Remarques sur l'API TFBuddy** (tirées de sa spec OpenAPI, à remonter au prestataire) :
   - `date_from` et `date_to` sont « passés sans validation au SQL » : **risque d'injection SQL**
     (le cockpit n'envoie que des dates validées) ;

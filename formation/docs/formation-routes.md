@@ -1,8 +1,8 @@
 # Routes API du référentiel formation (panel TFBuddy)
 
-> Fichier GÉNÉRÉ par `tools/formation/catalogue.py` — ne pas éditer à la main.
+> Fichier GÉNÉRÉ par `formation/tools/formation/catalogue.py` — ne pas éditer à la main.
 > Swagger du panel TFBuddy (/api/swagger/openapi.json), 933 chemins · généré le 2026-10-31. Le module /formation lit les routes marquées « lue ».
-> Contexte, modèle de données et constats : `docs/formation.md`.
+> Contexte, modèle de données et constats : `formation/docs/formation.md`.
 
 **237 routes** — 13 contrat documenté, 42 décrite, sans schéma, 159 sans contrat, 23 cassée (500).
 

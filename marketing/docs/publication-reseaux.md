@@ -16,7 +16,7 @@ tests simulent Meta et LinkedIn (voir « Ce qui est vérifié »).
 2. Validé par la marque, il se **programme** tout seul à son heure si « Programmer à la
    validation » est coché ; sinon « Programmer » ou « Publier maintenant » sur sa carte.
    Une ligne `mar_social_publication` par réseau.
-3. **L'horloge** (`bin/social_cron.sh`, toutes les 5 minutes, posée par `bin/deploy.sh`
+3. **L'horloge** (`marketing/bin/social_cron.sh`, toutes les 5 minutes, posée par `shared/bin/deploy.sh`
    dans `/etc/cron.d/cockpit-rapports`) appelle `GET /marketing/publication/cron?jeton=…`
    et publie ce qui est dû. Une erreur est retentée 15 minutes plus tard, 3 fois au plus.
 4. Quand tous ses réseaux (hors annulés) sont publiés, le post passe « publié » avec l'id
@@ -62,7 +62,7 @@ Où le mettre — **jamais en base, jamais dans le navigateur** :
 META_SYSTEM_TOKEN=EAAG…
 ```
 
-ou, dans `config/config.php` (hors Git, conservé par le déploiement) :
+ou, dans `shared/config/config.php` (hors Git, conservé par le déploiement) :
 
 ```php
 'meta' => ['systemToken' => 'EAAG…', 'graphVersion' => 'v21.0'],
@@ -90,7 +90,7 @@ l'adresse de la page de chaque magasin, puis « Résoudre ».
 LINKEDIN_ACCESS_TOKEN=AQX…
 ```
 
-ou `config/config.php` :
+ou `shared/config/config.php` :
 
 ```php
 'linkedin' => ['accessToken' => 'AQX…', 'expireLe' => '2026-12-12', 'organisation' => '12345678'],
@@ -120,7 +120,7 @@ format sort de ce qu'Instagram accepte (4:5 à 1,91:1) ou si l'image fait moins 
 3. Cocher **Publication réelle** (refusé tant qu'aucun accès n'est configuré), et
    **Programmer à la validation** si l'on veut que la validation suffise.
 4. Vérifier l'horloge : « horloge passée le … » en tête des réglages. Sinon, contrôler
-   `/etc/cron.d/cockpit-rapports` et lancer `bin/social_cron.sh` à la main.
+   `/etc/cron.d/cockpit-rapports` et lancer `marketing/bin/social_cron.sh` à la main.
 
 Pour tout arrêter : décocher « Publication réelle ». L'horloge ne fait plus rien ; ce qui
 était programmé attend, ou s'annule depuis la carte du post.

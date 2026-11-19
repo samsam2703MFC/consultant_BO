@@ -5,10 +5,10 @@ Le référentiel RH du panel TFBuddy, rangé pour être lu : **postes et sous-po
 **compétences produit** ; et le **Manuel du réseau**
 (standards, classeur, phases, postes, guides, tablettes). L'ancien « Manuel en ligne » a été retiré au lot 6
 (voir § Lot 6). Toutes les routes API qui portent ces données sont
-documentées dans le module (écran *Routes API*) et dans `docs/formation-routes.md`.
+documentées dans le module (écran *Routes API*) et dans `formation/docs/formation-routes.md`.
 
 - Adresse : `https://185.180.206.46/formation/` (à la racine, comme `/marketing/` — alias Apache posé par
-  `bin/deploy.sh`), et `…/consulant_bo/formation/` — rail du cockpit › **Formation** › *Module Formation ↗*.
+  `shared/bin/deploy.sh`), et `…/consulant_bo/formation/` — rail du cockpit › **Formation** › *Module Formation ↗*.
 - Manuel du réseau : `…/consulant_bo/formation/#/rfclasseur` — rail › *Manuel du réseau ↗* (il s'appelait *Manuel
   opératoire ↗* et ouvrait `?tablette=1#/manuel` jusqu'au lot 6). La page s'ajoute à l'écran d'accueil (manifeste
   `formation/manifest.webmanifest`, « Manuel du réseau ») et s'ouvre alors sur le Classeur en mode tablette, sans barre
@@ -20,7 +20,7 @@ documentées dans le module (écran *Routes API*) et dans `docs/formation-routes
 ## Design
 
 Le design system « L'Atelier By » du module Marketing (référence commune du 06/11/2026), dans une
-feuille unique : `public/formation/ds.css`, chargée en premier par `index.html` et `sop/tablette.html`.
+feuille unique : `formation/public/formation/ds.css`, chargée en premier par `index.html` et `sop/tablette.html`.
 Elle porte les deux `@font-face` (400 = `fonts/Gotham_Medium.otf`, le trait du
 texte ; 700 = `fonts/Gotham_Regular.otf`, réservé aux accents : l'entrée active du rail, la valeur d'un
 chiffre clé), les jetons de couleur, les composants (boutons `.btn`, champs, filtres, sélecteur segmenté
@@ -36,12 +36,12 @@ chaîne `?embed=1` reste donc dans l'adresse, et les liens vers une autre page d
 (`garderEmbed`).
 
 **Rail ouvert seul** : « Retour au cockpit » mène à l'adresse de la configuration — clé `cockpitUrl` de
-`config/config.php` (écrite par `bin/deploy.sh` d'après `ALIAS_PATH`, soit `/consulant_bo/` ; `COCKPIT_URL` pour
+`shared/config/config.php` (écrite par `shared/bin/deploy.sh` d'après `ALIAS_PATH`, soit `/consulant_bo/` ; `COCKPIT_URL` pour
 une autre), rendue par `GET /formation/config` et lue au démarrage (pas en mode incorporé). Clé vide : le repli
 d'avant (le dossier parent sous le cockpit, `/consulant_bo/` depuis `/formation/`). Pas de « Retour à l'ERP » :
 la configuration n'a pas d'adresse de l'ERP (seulement la base de son API, `erpAdmin.base`, qui n'est pas une page).
 
-**PDF du serveur** (fiche d'une SOP, Manuel opératoire — `foPdfHtml` dans `src/sop.php`, rendus par
+**PDF du serveur** (fiche d'une SOP, Manuel opératoire — `foPdfHtml` dans `formation/src/sop.php`, rendus par
 `rapPdfRendu`) : §13 du design system, gabarit des documents de gestion (version A). Gotham intégrée (400 =
 `fonts/Gotham_Medium.otf`, 700 = `fonts/Gotham_Regular.otf` pour le type de pièce, les titres d'étape et les
 valeurs des références), palette du back-office, Ruby au filet d'en-tête et à l'encadré des points critiques,
@@ -81,7 +81,7 @@ document. Ce qui suit (critères d'admission, création d'un poste) reste : ce s
 
 Ce qu'il faut pour être **nommé** au poste visé (et pas seulement formé). Les exigences du niveau dans le
 panel (`/position-levels/{id}/requirements`, lignes sans nom écartées) passent en premier ; le cockpit
-complète avec `src/data/admission.json`, sans doublon (une formation déjà exigée par le panel n'est pas
+complète avec `shared/src/data/admission.json`, sans doublon (une formation déjà exigée par le panel n'est pas
 répétée). Trois sortes :
 
 | Sorte | Vérifié par | Exemple |
@@ -108,7 +108,7 @@ name, level_order: 1}`), chaque pas relu ; un second appel reprend où le premie
 
 ### Carte des métiers et écrans refaits (31/10/2026)
 
-Maquettes validées : `docs/maquettes/formation-donnees/` (01a, 01c, 02 à 05). Deux constats sur le panel :
+Maquettes validées : `formation/docs/maquettes/formation-donnees/` (01a, 01c, 02 à 05). Deux constats sur le panel :
 **les niveaux ne sont pas cumulatifs** (chaque niveau ne liste que ses nouvelles compétences : partout, ce
 qu'il faut maîtriser à un niveau = le cumul des niveaux du poste jusqu'à lui) ; **aucune compétence n'a de
 procédure ni de ressource** reliée.
@@ -326,7 +326,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   formations dans ces 4 sections ») : chaque partie liste ses formations (carte : code, nom, fréquence,
   évaluations, qui forme) après ses procédures ; la fiche d'une formation se lit dans le manuel
   (`#/manuel/formation/FO-xx`, liens vers les compétences du manuel, sans retour au référentiel).
-  Répartition **par défaut**, versionnée dans `src/data/manuel_formations.json` (avec la règle de chaque
+  Répartition **par défaut**, versionnée dans `shared/src/data/manuel_formations.json` (avec la règle de chaque
   partie) : Pré-ouverture 9 (FO-29 recrutement, FO-30 intégration, FO-31 à FO-37 le parcours du
   candidat franchisé) · Ouverture 4 (FO-38 stratégie d'ouverture, et ce que tient le garant :
   FO-20 vitrine, FO-24 planning et effectif, FO-27 casse et invendus) · Opérationnel 30 (le métier au
@@ -338,7 +338,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   manuel ». Une formation du panel sans code FO se lit dans Formation continue (« Autres formations du
   panel »).
 - **La fiche d'une formation dans le manuel = « une fiche à lire »** (proposition A des maquettes
-  `docs/maquettes/manuel-formation/`, choisie le 1er nov. 2026, « avec au clic une fenêtre avec les
+  `formation/docs/maquettes/manuel-formation/`, choisie le 1er nov. 2026, « avec au clic une fenêtre avec les
   détails, vidéo, matériel didactique, PDF intégré ») : `#/manuel/formation/FO-xx` — code et rubrique
   du manuel (`S.v25.manuel`, envoyé par `/formation/v25`), titre, la phrase de la rubrique, quatre
   repères (fréquence, nombre d'étapes, qui la suit, qui la valide — le rôle, sans le nom), « Ouvrir la
@@ -383,11 +383,11 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
 ## Standards (SOP) — les SOP du réseau en FR et en NL (06/11/2026)
 
 Les 25 SOP du Drive « L’Atelier Halle — SOP — dernières versions retrouvées » sont reprises **en entier** et rangées
-dans **nos tables** (`src/sop.php` : `for_sop`, `for_sop_version`, `for_sop_suivi`, `for_sop_personne`, créées et
-remplies au premier appel depuis `data/formation/sops/*.json`). Nos bases sont la source, le Drive l’archive.
+dans **nos tables** (`formation/src/sop.php` : `for_sop`, `for_sop_version`, `for_sop_suivi`, `for_sop_personne`, créées et
+remplies au premier appel depuis `formation/data/formation/sops/*.json`). Nos bases sont la source, le Drive l’archive.
 Chaque SOP existe en français et en néerlandais (la langue d’origine fait foi, l’autre est traduite à la reprise,
-« à relire » jusqu’à relecture). Maquettes validées : `docs/maquettes/formation/` ; relevé de la reprise (corrections,
-points à confirmer) : `data/formation/REPRISE.md`.
+« à relire » jusqu’à relecture). Maquettes validées : `formation/docs/maquettes/formation/` ; relevé de la reprise (corrections,
+points à confirmer) : `formation/data/formation/REPRISE.md`.
 
 | Où | Ce qu’on y trouve |
 |---|---|
@@ -403,16 +403,16 @@ faire à la version en vigueur ; elle est alors **cochée au panel** pour la per
 le même appel que « valider la compétence » de l’écran Équipes, relu puis journalisé). Un refus du panel est dit sur la
 tablette ; la validation « vu faire » reste enregistrée.
 
-Les écrans SOP vivent dans `public/formation/formation-sop.js` (chargé avant `formation.js`, qui l’appelle par ses
+Les écrans SOP vivent dans `formation/public/formation/formation-sop.js` (chargé avant `formation.js`, qui l’appelle par ses
 accroches : `NAV`, `ICONES`, `ECRANS`, `apres()`, l’accueil et chaque partie du manuel) et `sop/sop.css` ; ils
-s’affichent même quand le référentiel du panel est illisible. Routes : `docs/contrat-api.md` § Formation · Standards (SOP).
+s’affichent même quand le référentiel du panel est illisible. Routes : `shared/docs/contrat-api.md` § Formation · Standards (SOP).
 
 ## Manuel du réseau — fusion du 06/11/2026
 
 Le Manuel opératoire, les SOP et les guides parlaient du même métier dans trois classements. Décisions du client
-(`docs/maquettes/fusion-manuel/PLAN.md`, validées le 06/11/2026) :
+(`formation/docs/maquettes/fusion-manuel/PLAN.md`, validées le 06/11/2026) :
 
-1. **Colonne vertébrale** : les 8 domaines D1–D8 du référentiel v25 (`src/data/referentiel_v25.json`, clé `manuel`)
+1. **Colonne vertébrale** : les 8 domaines D1–D8 du référentiel v25 (`shared/src/data/referentiel_v25.json`, clé `manuel`)
    et leurs 36 sous-catégories. La **phase** (les quatre parties du Manuel opératoire : pré-ouverture, ouverture,
    opérationnel, formation continue) et le **poste** (P1–P12 du v25) sont des étiquettes : les vues « par phase » et
    « par poste » se calculent, rien n'y est saisi.
@@ -421,9 +421,9 @@ Le Manuel opératoire, les SOP et les guides parlaient du même métier dans tro
 3. **Clé des compétences** : le code `C-…` du v25 (56 codes). Le panel TF Buddy garde l'état par employé ; chaque
    code est relié à UNE compétence du panel, et le « vu faire » coche celle-là.
 
-**Code** : `src/referentiel.php` (fonctions `rf*`, chargé après `src/sop.php`, `ensureReferentiel()` appelé par
-l'installeur après `ensureSop()`). Écrans : `public/formation/formation-sop.js` (bloc « Manuel du réseau ») et
-`public/formation/sop/ref.css`. Tablette : `public/formation/sop/tablette.js` (« Ma journée »).
+**Code** : `formation/src/referentiel.php` (fonctions `rf*`, chargé après `formation/src/sop.php`, `ensureReferentiel()` appelé par
+l'installeur après `ensureSop()`). Écrans : `formation/public/formation/formation-sop.js` (bloc « Manuel du réseau ») et
+`formation/public/formation/sop/ref.css`. Tablette : `formation/public/formation/sop/tablette.js` (« Ma journée »).
 
 **Tables** (créées au premier appel, `CREATE TABLE IF NOT EXISTS`) :
 
@@ -482,8 +482,8 @@ service et rush → journée, fermeture → fermeture ; étapes → une section 
 formations des étapes et de la procédure → formations ; compétence `C-…` reconnue → compétences. Les photos restent
 dans le CRM (comptées dans le bilan, notées sur la SOP) ; les vidéos sont notées dans le relevé.
 
-**Essais locaux** : `tests/formation/faux_panel.php` imite les routes du panel que le module appelle (107
-compétences et trois personnes FICTIVES, `tests/formation/fixtures/faux_panel.json`) :
+**Essais locaux** : `formation/tests/formation/faux_panel.php` imite les routes du panel que le module appelle (107
+compétences et trois personnes FICTIVES, `formation/tests/formation/fixtures/faux_panel.json`) :
 `php -S 127.0.0.1:8191 tests/formation/faux_panel.php`, puis le cockpit avec `PANEL_API_BASE=http://127.0.0.1:8191
 PANEL_API_PHONE=essai PANEL_API_PASSWORD=essai` (sans réglage `panelApi` en base, qui primerait).
 
@@ -492,11 +492,11 @@ compétences (`C-ID.ADN`, `C-ID.FB`, `C-ID.MO`, `C-MKT.Digital`, `C-MKT.Local`, 
 pointillés dans le Classeur, refusés sur un standard tant qu'ils ne sont pas décrits. L'onglet « Acquisition en
 magasin » compte encore par l'ancienne compétence du panel de chaque SOP.
 
-Routes : `docs/contrat-api.md` § Formation · Manuel du réseau.
+Routes : `shared/docs/contrat-api.md` § Formation · Manuel du réseau.
 
 ## Tablettes des magasins — une seule tablette par magasin (lot 5 de la fusion, 06/11/2026)
 
-Décision du client : la tablette du **Cockpit** (`public/formation/sop/tablette.html`) devient la seule. L’ancienne
+Décision du client : la tablette du **Cockpit** (`formation/public/formation/sop/tablette.html`) devient la seule. L’ancienne
 tablette du CRM (`/crm/manuel/`, PIN du magasin, plan de la journée) renvoie ici (CRM : page « La tablette du magasin
 a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
 
@@ -520,13 +520,13 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
   gestes du jour sur la tablette, « Archiver » (appareils déconnectés, le PIN n’ouvre plus rien ; « ↺ Réactiver »
   garde le même PIN). Signalés : « Sans boutique » (la tablette s’ouvre mais ne montre rien), « Même boutique qu’une
   autre tablette ». Pas de gestion en mode tablette.
-- **Code de gestion (lot 6, décision du client)** : en production l’API n’exige pas de connexion (`bin/deploy.sh`
+- **Code de gestion (lot 6, décision du client)** : en production l’API n’exige pas de connexion (`shared/bin/deploy.sh`
   écrit `auth => false`) et la liste porte les PIN ; les routes de gestion (`/formation/tablettes*` : liste, créer,
   renommer, nouveau PIN, déconnecter, archiver, reprise du CRM) exigent donc le **code de gestion**, envoyé dans
   l’en-tête `X-Code-Gestion` et comparé à temps constant (deux HMAC de même longueur) à la clé de configuration —
-  variable d’environnement `TABLETTES_CODE`, puis `config/config.php › tablettesCode` (écrite par `bin/deploy.sh`
+  variable d’environnement `TABLETTES_CODE`, puis `config/config.php › tablettesCode` (écrite par `shared/bin/deploy.sh`
   d’après le secret GitHub `TABLETTES_CODE` ou le fichier privé `/var/lib/consulant_bo/prive/tablettes_code` ; voir
-  `docs/DEPLOIEMENT.md`). Code non configuré : **gestion ouverte, sans code** (décision du client du 06/11/2026 :
+  `shared/docs/DEPLOIEMENT.md`). Code non configuré : **gestion ouverte, sans code** (décision du client du 06/11/2026 :
   « laisse la tablette ouverte sans code » ; elle était fermée avant). Un code posé plus tard la referme derrière lui. Essais limités comme le PIN du magasin, dans une table à part (`for_tablette_gestion_essai`, adresse
   IP hachée) : 5 codes faux par adresse en 15 minutes, puis 10 en tout par heure ou 50 par jour suspendent la gestion
   (429, même avec le bon code) ; un refus attend 0,4 s ; jamais de code dans le journal. L’écran Tablettes demande le
@@ -540,9 +540,9 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
   Manuel du CRM » de l’écran, journal sans PIN). Lancée par l’installeur (`ensureTablettes`), à chaque lecture de
   l’écran et par « Reprendre les magasins du CRM ». Les appareils ouverts au CRM ne sont pas repris (autre adresse) :
   la tablette retape le PIN du magasin une fois.
-- **Code** : `src/tablettes.php` (fonctions `tab*`, chargé après `src/referentiel.php`) ; la garde des routes de la
+- **Code** : `formation/src/tablettes.php` (fonctions `tab*`, chargé après `formation/src/referentiel.php`) ; la garde des routes de la
   tablette est dans `sopRoute` (`tabGarde`), le magasin dans `foShopTablette`, le jeton dans `foJetonTablette`
-  (`src/sop.php`). Écran du PIN : `tablette.js` (`vuePinMagasin`, FR | NL, pavé et clavier), styles
+  (`formation/src/sop.php`). Écran du PIN : `tablette.js` (`vuePinMagasin`, FR | NL, pavé et clavier), styles
   `sop/tablette-magasin.css`.
 
 | Table | Contenu |
@@ -552,7 +552,7 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
 | `for_tablette_essai` | un essai de PIN du magasin : `ip_hash`, `ok`, `cree_le` (purgé après 7 jours) |
 | `for_tablette_gestion_essai` | un code de gestion faux (lot 6) : `ip_hash`, `cree_le` (purgé après 7 jours) |
 
-Routes : `docs/contrat-api.md` § Formation · Tablettes des magasins.
+Routes : `shared/docs/contrat-api.md` § Formation · Tablettes des magasins.
 
 
 ### Les deux guides édités dans le Cockpit (lot 4b, 06/11/2026)
@@ -564,8 +564,8 @@ documents qu'il génère (Guide pré-ouverture : `data-guide` ; Guide des format
 propre à un dossier candidat reste au CRM : dates du countdown, formateurs désignés, validations et signatures,
 attestation, pack de signature, renouvellements faits.
 
-**Code** : `src/referentiel_guides.php` (fonctions `rg*`, `ensureRefGuides()` appelée par `ensureReferentiel()`).
-Écrans : `public/formation/formation-sop.js` (bloc « les deux guides ») et `public/formation/sop/ref.css` (`rf-g*`).
+**Code** : `formation/src/referentiel_guides.php` (fonctions `rg*`, `ensureRefGuides()` appelée par `ensureReferentiel()`).
+Écrans : `formation/public/formation/formation-sop.js` (bloc « les deux guides ») et `formation/public/formation/sop/ref.css` (`rf-g*`).
 
 | Table / réglage | Contenu |
 |---|---|
@@ -576,7 +576,7 @@ attestation, pack de signature, renouvellements faits.
 | `ceo_app_setting` › `rfPoles` | noms des 5 pôles FR/NL et repère du réseau (`{fr, nl, repere, le, par}`) |
 | `ceo_app_setting` › `rfGuidesReprise_2026_11` | bilan de la reprise des réglages du CRM (fait une fois) |
 
-**Semis** : `data/formation/guides/preouverture.json` et `formations.json`, recopiés du CRM par
+**Semis** : `formation/data/formation/guides/preouverture.json` et `formations.json`, recopiés du CRM par
 `php tools/formation/guides_depuis_crm.php <atelier-espace-candidat>/app/crm/api/lib` (les fichiers du CRM ne sont pas
 lisibles d'ici en production) : `GD_SECTIONS_DEFAUT`, `formation_blocs.php`, les critères proposés de
 `formation_criteres.php`, `FMT_HEURES_DEFAUT`, `FMT_POLES_DEFAUT`. Posés quand les tables sont vides (une écriture
@@ -599,15 +599,15 @@ grille ; sous 1100 px tout s'empile.
 
 ## Lot 6 — retrait des doublons (06/11/2026)
 
-Dernière passe de la fusion (`docs/maquettes/fusion-manuel/PLAN.md`, lot 6) : rien n'est retiré sans remplaçant.
+Dernière passe de la fusion (`formation/docs/maquettes/fusion-manuel/PLAN.md`, lot 6) : rien n'est retiré sans remplaçant.
 
 **Le « Manuel en ligne » (`#/manuel`) quitte le module.** Il relisait les procédures du panel TF Buddy en quatre parties,
 ce que le Manuel du réseau fait désormais sur nos propres standards. Avant de le retirer :
 
 - **Reprise des procédures du panel** dans le référentiel : `POST /formation/ref/importer-panel` (`wr_rf_importer_panel`,
-  `src/referentiel.php`), bouton « Reprendre les procédures du panel » du Classeur, à côté de « Reprendre le Manuel du
+  `formation/src/referentiel.php`), bouton « Reprendre les procédures du panel » du Classeur, à côté de « Reprendre le Manuel du
   CRM ». Chaque procédure (`GET /operational-procedures`, puis lue comme la page du manuel : `fmProcedureLue`,
-  `src/formation.php`, la lecture de `GET /formation/procedure`) devient une SOP **brouillon** : id `panel-<id>`, source
+  `formation/src/formation.php`, la lecture de `GET /formation/procedure`) devient une SOP **brouillon** : id `panel-<id>`, source
   `panel:<id>`, code `TFB-<id>` (le code que le CRM lui donnait). Pas reprise quand elle est déjà un standard : déjà
   reprise, reprise par le Manuel du CRM (code `TFB-<id>`), ou une SOP de même titre (mêmes mots : « Ouverture du magasin
   et des comptoirs » ne double pas SOP-WKL-001). Une étape par section du panel qui a un contenu (le HTML de l'éditeur du
@@ -616,7 +616,7 @@ ce que le Manuel du réseau fait désormais sur nos propres standards. Avant de 
   puis de la catégorie du panel (`rfSouscatParNom`), sinon vide et **signalée** (« à classer depuis leur fiche ») ;
   famille et poste de tablette déduits de la catégorie (nettoyage / hygiène → 03, cuisson / production → 02, sinon 01) ;
   pièces jointes du panel et vidéos réglées notées dans les remarques. Bilan à l'écran (reprises, déjà là, illisibles,
-  à classer) et au journal. Idempotent. Essai : faux panel (`tests/formation/faux_panel.php`, cinq procédures FICTIVES).
+  à classer) et au journal. Idempotent. Essai : faux panel (`formation/tests/formation/faux_panel.php`, cinq procédures FICTIVES).
 - Puis l'entrée de menu « Manuel opératoire › Manuel en ligne » disparaît, et les anciennes adresses mènent ailleurs
   (`ancienManuel`, `formation.js` ; l'adresse est remplacée, `?tablette=1` et `?embed=1` restent).
 
@@ -650,7 +650,7 @@ Manuel opératoire, réglages de la pré-ouverture et des compétences) réponde
 
 Client : « le portail est très compliqué à comprendre ; le restructurer : 1. les formations (pré-ouverture, ouverture,
 continue) ; les métiers sont des postes ; les compétences sont liées aux formations ; les SOP sont pour le manuel
-opérationnel ». Maquette validée (`docs/maquettes/portail-formation/`), puis : les 21 formations sans phase rangées
+opérationnel ». Maquette validée (`formation/docs/maquettes/portail-formation/`), puis : les 21 formations sans phase rangées
 dans les phases nécessaires ; l'Ouverture = la période de lancement (six semaines avec le garant d'ouverture,
 contrat article 4.5) avec le suivi des KPI et le développement commercial ; le Guide pré-ouverture en bloc « Démarches ».
 
@@ -692,10 +692,10 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
   `#/rfform/<n>/<code>`), formation, pour qui, SOP, compétence du panel (réglée dans la fiche, voir « Correspondance dans la fiche »).
   Onglet « Compétences produit » = celles du panel.
 - **API** : `GET /formation/ref` rend en plus, sur chaque formation, `phases`, `postes` (O / R), `famille`,
-  `competences`, et `phasesFormation`, `famillesFormation` (contrat : `docs/contrat-api.md`). Rien n'est retiré : le CRM
+  `competences`, et `phasesFormation`, `famillesFormation` (contrat : `shared/docs/contrat-api.md`). Rien n'est retiré : le CRM
   lit comme avant.
-- Fichiers : `public/formation/portail.js` (chargé entre `formation-sop.js` et `formation.js`, il étend
-  `window.FormationSop` comme les tablettes), `public/formation/portail.css`.
+- Fichiers : `formation/public/formation/portail.js` (chargé entre `formation-sop.js` et `formation.js`, il étend
+  `window.FormationSop` comme les tablettes), `formation/public/formation/portail.css`.
 
 ## Parcours retiré (06/11/2026)
 
@@ -715,10 +715,10 @@ effacer ». Retiré :
 - **API** : `GET /parcours/destinations`, `GET /parcours/candidats` (la lecture du CRM candidat), `GET /parcours`,
   `GET /parcours/liste`, `POST /parcours`, `PATCH /parcours/{id}[/etape/{FO}|/admission/{cle}]`,
   `POST /parcours/{id}/acquis/{cid}` → 404 « route inconnue ».
-- **Code serveur** : `src/parcours.php` supprimé. Ce que d'autres écrans lisent passe dans **`src/formation_postes.php`**
+- **Code serveur** : `src/parcours.php` supprimé. Ce que d'autres écrans lisent passe dans **`formation/src/formation_postes.php`**
   (noms de fonctions inchangés, préfixe `pc`) : `GET /formation/carte` (carte des métiers, `pcCarte`, `pcMaitrises`),
   `GET /formation/v25` (référentiel v25, critères d'admission), `POST /formation/postes` (créer un poste du référentiel
-  dans le panel). Tests : les vérifications du parcours retirées de `bin/tests_formation.php` (102 ok).
+  dans le panel). Tests : les vérifications du parcours retirées de `formation/bin/tests_formation.php` (102 ok).
 - **Tables** : `ceo_parcours` et `ceo_parcours_etape` effacées UNE fois par l'installation qui suit la mise en ligne
   (`formationParcoursEffacer`, appelée par `ensureInstalled`) ; une table qui avait encore des lignes est d'abord gardée en
   JSON dans le réglage `parcours_sauvegarde_2026_11` (en production, le 06/11/2026 : un seul parcours, arrêté — il y sera gardé) ; bilan dans
@@ -740,7 +740,7 @@ Client : « Correspondance panel, Tablettes : est-ce nécessaire ? » puis « ok
   correspondance (le réseau × compétence, qui a quoi par magasin, à voir faire, l'équipe, le fil). L'onglet de `#/sopcomp`
   y mène ; le chiffre « vues faire · réseau » des Standards aussi.
 - **Tablettes** : la gestion est ouverte sans code tant qu'aucun code n'est configuré (voir § Tablettes). La liste rend
-  `codeExige` ; sans code exigé, l'écran ne propose pas « Fermer la gestion ». `bin/deploy.sh` : sans code, il note
+  `codeExige` ; sans code exigé, l'écran ne propose pas « Fermer la gestion ». `shared/bin/deploy.sh` : sans code, il note
   « gestion ouverte sans code » et attend 200 ; avec un code, 403 comme avant. ATTENTION : l'API du cockpit n'exige pas de
   connexion en production — sans code, qui connaît l'adresse lit et change les PIN des magasins.
 
@@ -834,7 +834,7 @@ tous les magasins la même chose ».
 
 - Client (capture de la tablette en portrait) : « l'UX ne va vraiment pas — refais 3-4 maquettes », « ça doit être
   utilisable », « prends exemple sur les meilleures SOP disponibles sur internet ». Quatre maquettes
-  (`docs/maquettes/tablette-sop/` : A une étape = une carte, d'après SwipeGuide ; B guide illustré, d'après Dozuki et
+  (`formation/docs/maquettes/tablette-sop/` : A une étape = une carte, d'après SwipeGuide ; B guide illustré, d'après Dozuki et
   iFixit ; C checklist par section ; D mode poste), **A retenue**. Elle REMPLACE la frise verticale du 06/11/2026.
 - `sop/tablette.js` (`vueLecture`, `sommaire`, `panneauAide`, `pas`, `allerA`) et `sop/tablette.css` :
   · **En-tête d'une SOP** sur UNE ligne : retour, titre (coupé s'il est long, plus jamais sur trois lignes ; sans le
@@ -859,7 +859,7 @@ tous les magasins la même chose ».
 - Client (capture de la fiche FO-31, « Aucune SOP ne s'y rattache encore ») : « je dois pouvoir éditer et créer, avec un
   assistant, les différentes SOP et articles du manuel opératoire ; tout doit être présenté comme les SOP, en vue
   tablette ».
-- **Type « Article »** (« Article du manuel ») à côté de SOP, Checklist, Mémo, Fiche (`foType`, `src/sop.php` ; libellés
+- **Type « Article »** (« Article du manuel ») à côté de SOP, Checklist, Mémo, Fiche (`foType`, `formation/src/sop.php` ; libellés
   du PDF FR / NL ; « Création rapide »). Un article = le même modèle qu'une SOP (sections → parties, photo, vidéo,
   point critique, quiz facultatif), sans moment.
 - **Fiche d'une formation** (`portail.js`, `ficheFormation`, `ligneManuel`) — « Dans le manuel » : les SOP et articles
@@ -905,11 +905,11 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   **SOP-PIL-01** « Analyser le dashboard magasin : la routine » (28 étapes : matin, journée, soir, lundi, début de mois,
   trimestre, « Qui prévenir » ; quiz de 4 questions ; moment Ouverture), rattachés à **FO-05** Pilotage Commercial et à
   **D7.1** Pilotage de l'activité (compétences C-PILOTAGE.KPI, .Vente, .Franchise). Maquette validée :
-  `docs/maquettes/sop-dashboard/` (proposition, écrans, prompt de la routine `ROUTINE.md`).
-- **Source** : `data/formation/dashboard/` (les deux JSON FR et NL, `photos/dash-*.jpg` 1600 × 1200, `photos.json`,
+  `formation/docs/maquettes/sop-dashboard/` (proposition, écrans, prompt de la routine `ROUTINE.md`).
+- **Source** : `formation/data/formation/dashboard/` (les deux JSON FR et NL, `photos/dash-*.jpg` 1600 × 1200, `photos.json`,
   `ETAT.json` = le dernier commit du dashboard pris en compte). Ils n'entrent pas par `foImporter()` : par l'API, avec
-  `tools/formation/encoder_sop.py` (photos envoyées une fois, création ou nouvelle version, classement ; simulation par
-  défaut). Captures : `tools/formation/captures_dashboard.js`. NL de travail : `tools/formation/nl_dashboard.py`.
+  `formation/tools/formation/encoder_sop.py` (photos envoyées une fois, création ou nouvelle version, classement ; simulation par
+  défaut). Captures : `formation/tools/formation/captures_dashboard.js`. NL de travail : `formation/tools/formation/nl_dashboard.py`.
 - **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire » ; réservés au responsable ;
   v1.1 (précision) : captures du P&L, du résultat et du téléphone refaites avec le seuil matière de Budget › Paramètres.
   Article v1.2 : partie 27 (Primes), le franchisé reste dans le tableau, en gris, hors primes ; capture `dash-primes` recadrée
@@ -928,8 +928,8 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
 
-`src/data/referentiel_v25.json` reste tel que `tools/formation/referentiel_excel.py` l'a généré. Une formation que le
-réseau ajoute vit dans `src/data/formations_reseau.json` (même forme : code, nom, fréquence, contrôleur, postes
+`shared/src/data/referentiel_v25.json` reste tel que `formation/tools/formation/referentiel_excel.py` l'a généré. Une formation que le
+réseau ajoute vit dans `shared/src/data/formations_reseau.json` (même forme : code, nom, fréquence, contrôleur, postes
 `attendu`…) ; `pcV25()` l'ajoute à la suite des 53 (un code déjà dans le v25 est ignoré), donc le portail, les
 classements (`rfValides`), les postes et les plans la voient comme les autres. Ses phases et sa famille de lecture se
 posent dans `RF_FORMATIONS_PHASES_2026_11` et `RF_FAMILLES_FORMATION`, sa partie par défaut dans
@@ -947,8 +947,8 @@ Dans un même moment, les SOP d'abord, rangées par leur zone de métier (Vente,
 Gestion), puis le mémo, la fiche et les articles. Les fiches de type Checklist gardent le code de leur checklist (1.1.01).
 Seul le champ `code` change (`PATCH /formation/sop/fiche/{id} {code}`, journalisé) : identifiants, adresses, versions et
 validations restent. Les légendes du Cadre des tâches et du dashboard magasin (« Comment c'est organisé ») disent « 0 :
-SOP et manuel » ; les articles 0.0.14 et 0.0.15 aussi (v1.1 et v1.4). Sources : `data/formation/sops/*.json`,
-`data/formation/dashboard/`, `data/formation/checklists/` ; maquettes et `REPRISE.md` gardent les anciens codes.
+SOP et manuel » ; les articles 0.0.14 et 0.0.15 aussi (v1.1 et v1.4). Sources : `formation/data/formation/sops/*.json`,
+`formation/data/formation/dashboard/`, `formation/data/formation/checklists/` ; maquettes et `REPRISE.md` gardent les anciens codes.
 
 **Code donné à la création** (10/11/2026, client : « la création le donne seule ») : `POST /formation/sop/fiche` sans code, ou
 avec un code hors format, reçoit `foCodeAuto()` — 0 · le moment · le premier numéro libre de ce moment ; une fiche de
@@ -1027,7 +1027,7 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 
 - Client : « rajouter dans le manuel opératoire une section pour les consultants » ; choix : un 3e groupe dans l'onglet
   Manuel de la tablette, ouvert à tous (pas de PIN), avec la visite et les contrôles.
-- Troisième valeur d'accès **`consultant`** (`FO_ACCES`, `foAcces`, `src/sop.php`) : ouverte comme « tous », posée par
+- Troisième valeur d'accès **`consultant`** (`FO_ACCES`, `foAcces`, `formation/src/sop.php`) : ouverte comme « tous », posée par
   `PATCH /formation/sop/fiche/{id}` {acces} (ou le champ `acces` du fichier source de l'encodeur). Sur la tablette
   (`sop/tablette.js`) un document « consultant » se range dans l'onglet Manuel, groupe **« Pour les consultants »** (NL
   « Voor de consultants »), entre « Réservé au franchisé et au responsable » et « Articles du manuel opératoire ».
@@ -1072,7 +1072,7 @@ des différents manuels comme un catalogue ; un micro-catalogue ou leaflet qui e
 chaque fois un QR code qui ramène vers le manuel en question », puis « code it all and push online ». Maquettes :
 `docs/maquettes/catalogue-manuels/` (sur `claude/lucid-pascal-3ps6at`).
 
-- **Page** : `public/formation/catalogue/` (`index.html`, `catalogue.js`, `catalogue.css`), servie sous le module
+- **Page** : `formation/public/formation/catalogue/` (`index.html`, `catalogue.js`, `catalogue.css`), servie sous le module
   (`…/formation/catalogue/`). Garde d'accès comme le cockpit (`assets/js/garde.js`), **sans** `data-siege` : le siège et un
   franchisé peuvent l'ouvrir. Lecture seule, par l'API du module : `/formation/sop/liste`, `/formation/sop/fiche/{id}`,
   `/formation/ref`.

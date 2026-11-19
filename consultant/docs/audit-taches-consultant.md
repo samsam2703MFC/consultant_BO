@@ -3,7 +3,7 @@
 Demande : une gestion des tâches et des visites des consultants dans tous les magasins — par consultant, sa liste de
 tâches (liste de contrôle), le suivi, et l'agenda Google — avec une entrée « Gestion consultant » dans le rail du
 cockpit. Cet audit dit ce qui existe déjà (cockpit, panel), ce qui manque, et ce que les trois maquettes de
-`docs/maquettes/gestion-consultant/` proposent.
+`consultant/docs/maquettes/gestion-consultant/` proposent.
 
 ## 1. Verdict en six lignes
 
@@ -42,7 +42,7 @@ cockpit. Cet audit dit ce qui existe déjà (cockpit, panel), ce qui manque, et 
 
 ## 2. Ce que le cockpit a déjà
 
-### 2.1 Le module Visites (`src/visites.php`, `src/visites_conformite.php`, PWA `public/visites/`)
+### 2.1 Le module Visites (`consultant/src/visites.php`, `consultant/src/visites_conformite.php`, PWA `consultant/public/visites/`)
 
 | Objet | Table | Ce qu'il porte |
 |---|---|---|
@@ -158,7 +158,7 @@ Migration : la checklist actuelle devient celle du type « Régulière » ; la f
 `viFrequence` lisent le cadre, avec l'ancien réglage en repli. L'application Visites (PWA) reçoit le type dans
 `GET /visites/app` et la checklist du type à la place de la liste unique.
 
-## 6. Ce que les maquettes proposent (`docs/maquettes/gestion-consultant/`)
+## 6. Ce que les maquettes proposent (`consultant/docs/maquettes/gestion-consultant/`)
 
 Entrée « Gestion consultant » dans le rail, sous « Suivi de terrain » de la section « Franchisés · évaluation et
 suivi » (§7), quatre onglets : Mon planning, Tâches et contrôles,
@@ -222,10 +222,10 @@ journalier (Note Google, Tâches), un du terrain (Client mystère), un du pilota
 
 ## 8. Ce qui a été construit (09/10/2026) et ce qui reste
 
-Réalisé le jour même : les lots 1 à 5 et 8 à 10 ci-dessous — `src/visites_cadre.php`, `src/franchises.php`, l'écran
+Réalisé le jour même : les lots 1 à 5 et 8 à 10 ci-dessous — `consultant/src/visites_cadre.php`, `consultant/src/franchises.php`, l'écran
 « Gestion consultant » à quatre onglets, la section du rail en deux volets, la fiche franchisé et l'écran des remarques,
 la page du franchisé `dashboard/suivi.html?shop=`, l'application Visites qui lit le type (liste déroulante, checklist
-du type, tâches sur la fiche, lien Google Agenda). Le détail des routes est dans `docs/contrat-api.md`. Reste le
+du type, tâches sur la fiche, lien Google Agenda). Le détail des routes est dans `shared/docs/contrat-api.md`. Reste le
 lot 7 (OAuth Google, bidirectionnel) et, côté panel, la lecture des cas du helpdesk qui dépend de la forme de sa
 réponse (lue en meilleur effort).
 

@@ -2,8 +2,8 @@
 
 Contrôle de marque des posts Facebook du réseau : avant publication (la
 demande du franchisé), après publication (les pages), détection des posts
-sauvages. Code : `src/brand_guard.php` (métier), `src/meta_graph.php`
-(Meta), `Anthropic::verdict()` (`src/anthropic.php`). Lecture seule côté
+sauvages. Code : `marketing/src/brand_guard.php` (métier), `marketing/src/meta_graph.php`
+(Meta), `Anthropic::verdict()` (`shared/src/anthropic.php`). Lecture seule côté
 Meta : le module ne publie ni ne supprime jamais rien.
 
 ## Routes
@@ -23,8 +23,8 @@ et `POST /facebook/posts/{id}/controle` (le module de demandes existant).
 
 ## Secrets — config.php ou variables d'environnement, jamais la base
 
-Le plus simple sur le serveur : le bloc `meta` de `config/config.php` (hors
-Git, jamais écrasé par `bin/deploy.sh`) :
+Le plus simple sur le serveur : le bloc `meta` de `shared/config/config.php` (hors
+Git, jamais écrasé par `shared/bin/deploy.sh`) :
 
 ```php
 'meta' => [
@@ -79,7 +79,7 @@ Sans webhook, rien n'est perdu : le cron du lundi relit sept jours.
 
 ## Cron — chaque jour à 7 h
 
-`bin/rapports_cron.sh` (déjà appelé chaque heure) appelle
+`consultant/bin/rapports_cron.sh` (déjà appelé chaque heure) appelle
 `/marketing/brand-guard/cron`. L'endpoint agit **tous les jours à 7 h**
 (heure de Bruxelles) :
 

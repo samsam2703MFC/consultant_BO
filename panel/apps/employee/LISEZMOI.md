@@ -6,18 +6,18 @@ employé** (avec la page admin et la page franchisé des primes) › **Applicati
 photo) s'ouvrent depuis l'Accueil.
 
 Le module des primes (cockpit, page admin, page franchisé et cette app) range ses données dans ses propres tables,
-préfixe `mot_` : voir `docs/module-motivation.md`. Les grands prix de l'année s'y trouvent aussi (onglet « Grands prix
+préfixe `mot_` : voir `panel/docs/module-motivation.md`. Les grands prix de l'année s'y trouvent aussi (onglet « Grands prix
 de l'année » de l'écran des primes).
 
 ## Où vit quoi
 
 | Dossier | Contenu |
 |---|---|
-| `apps/employee/src` | le code PHP de l'app (contrôleurs, services, dépôts, vues Twig, traductions fr/en/nl/it/pl) |
-| `apps/employee/config/app.php` | les réglages, réécrits pour cet hébergement (voir plus bas) |
-| `apps/employee/vendor` | ses dépendances Composer, allégées et **commises** (le déploiement ne lance pas Composer) |
-| `apps/employee/marque/teinter.py` | teint le thème Mazer aux couleurs de la marque |
-| `public/employee` | ce que le serveur sert : `index.php`, `.htaccess`, `sw.js`, `manifest.webmanifest`, `assets/` |
+| `panel/apps/employee/src` | le code PHP de l'app (contrôleurs, services, dépôts, vues Twig, traductions fr/en/nl/it/pl) |
+| `panel/apps/employee/config/app.php` | les réglages, réécrits pour cet hébergement (voir plus bas) |
+| `panel/apps/employee/vendor` | ses dépendances Composer, allégées et **commises** (le déploiement ne lance pas Composer) |
+| `panel/apps/employee/marque/teinter.py` | teint le thème Mazer aux couleurs de la marque |
+| `panel/public/employee` | ce que le serveur sert : `index.php`, `.htaccess`, `sw.js`, `manifest.webmanifest`, `assets/` |
 
 Rien de l'app n'est exécutable depuis `assets/` ; les gabarits Twig restent hors du dossier public.
 
@@ -26,12 +26,12 @@ Rien de l'app n'est exécutable depuis `assets/` ; les gabarits Twig restent hor
 - **L'adresse** : l'app supposait vivre à `/employee` à la racine d'un domaine ; `ROOT` se déduit
   maintenant de l'adresse appelée (`EMPLOYEE_BASE_PATH`), le manifeste et le service worker sont
   relatifs à elle.
-- **L'API** : celle du panel, la même que le cockpit (`config/config.php` › `panelApi.base`,
+- **L'API** : celle du panel, la même que le cockpit (`shared/config/config.php` › `panelApi.base`,
   sinon `EMPLOYEE_API_BASE`, sinon `https://atelierby.tfbuddy.com/api/v1`). Les employés se
   connectent avec leurs identifiants du panel (`POST /employees/authenticate`) ; le cockpit ne
   garde aucun mot de passe.
 - **Les cookies** de session suivent le schéma (`secure` seulement en https) et le chemin de l'app.
-- **Pas de `.env` obligatoire** : chaque réglage a sa valeur par défaut ; un `apps/employee/.env`
+- **Pas de `.env` obligatoire** : chaque réglage a sa valeur par défaut ; un `panel/apps/employee/.env`
   (hors dépôt) ou des variables d'environnement les surchargent (`EMPLOYEE_API_BASE`,
   `EMPLOYEE_DEBUG=1` pour voir les erreurs, `DEFAULT_LANGUAGE`…).
 - **La marque** : plus de Nunito ni de bleu Mazer. `assets/atelier/app.css` est le thème Mazer teint
@@ -73,7 +73,7 @@ la ligne depuis les montants.
 
 Demande : « dans le système franchisé ou marque, la possibilité de créer une prime pour le B2B, pour donner envie
 d'aller chercher les écoles… ; la rémunération en % de la commande, une fois ou chaque mois pendant 1 mois, un
-trimestre, un an ». Sept maquettes (`docs/maquettes/primes-b2b/`), l'option D retenue : une phrase. Règles décidées :
+trimestre, un an ». Sept maquettes (`panel/docs/maquettes/primes-b2b/`), l'option D retenue : une phrase. Règles décidées :
 le % sur le **HT**, un nouveau client = **aucune commande pro depuis 12 mois**, la prime va à **la vendeuse de la 1re
 commande**.
 
@@ -82,7 +82,7 @@ commande**.
   (le % ou un montant fixe, la 1re commande, 1, 3, 12 mois ou sans limite), un exemple chiffré dessous ; plafond par
   client, commande minimum, nom et dates dans « plus de réglages ». Une prime de franchisé est pour un magasin, payée
   par lui ; une de la marque, pour tous, payée par la marque ou un sponsor. Trois au plus de chaque côté.
-- **Le calcul** (`src/primes_b2b.php`, `b2bCalcul` sans base, testé) : les tickets pro de la base partagée
+- **Le calcul** (`panel/src/primes_b2b.php`, `b2bCalcul` sans base, testé) : les tickets pro de la base partagée
   (`transaction` ⨝ `client.is_b2b`), le client avec une TVA valide (la règle des clients pro du cockpit), le HT =
   TTC − TVA du ticket. Un client compte dès sa 1re commande dans la période de la prime (dès sa création par défaut) ;
   sa fenêtre court la durée choisie ; le plafond vaut pour toute la durée. Gardé quinze minutes (un jour, un mois
@@ -136,9 +136,9 @@ tickets du mois jusqu'au repère « ton record » (« Étape 1/3 · encore 12 ti
 mois deviendra ton record, à battre dès novembre » (`PrimesPlan` : `pose`, hors de portée ce mois-ci). Le détail
 montre les trois étapes en une rangée (où elle en est, une valeur sous chacune) et une phrase : les seuils de
 chaque dixième, ou ce qu'il manque pour le suivant. Le cockpit donne ses tickets du mois dans la brique du record
-(`tickets`, `src/primes.php`). Le haut du détail d'une ligne tient en une carte : « à gagner » et « offerte par ».
+(`tickets`, `panel/src/primes.php`). Le haut du détail d'une ligne tient en une carte : « à gagner » et « offerte par ».
 
-La forme (`public/employee/assets/atelier/primes.css`, la dernière couche) : la police du système (SF sur
+La forme (`panel/public/employee/assets/atelier/primes.css`, la dernière couche) : la police du système (SF sur
 iPhone) à la place de Gotham et Vank sur ces écrans, un fond clair, des listes groupées blanches sans bordure ni
 ombre, le rubis seul en accent et le vert pour ce qui est gagné, des icônes au trait (Bootstrap Icons) à la place
 des émojis — une icône déposée par l'admin reste. L'Accueil reprend le même « encore en jeu » et les trois
@@ -203,7 +203,7 @@ Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 
 ## L'onglet Primes (14/10/2026) : une carte par prime, le classement dans un menu déroulant
 
-`/primes` (variante A de `docs/maquettes/primes-epure/`) : rien que des primes, sans texte d'explication.
+`/primes` (variante A de `panel/docs/maquettes/primes-epure/`) : rien que des primes, sans texte d'explication.
 En haut, **acquis** et **en jeu**. Puis une carte par prime, dans l'ordre du réglage du cockpit : l'icône
 déposée par l'admin dans le cockpit (sinon l'emoji), le nom, le type (**Target**, **Catégorie**, **Promo** ;
 Classement pour la meilleure vendeuse), la
@@ -220,13 +220,13 @@ ouvre le sien. Le compteur du jour, la collection, les semaines et les mois quit
 garde ce qui lui sert).
 
 La page ne calcule rien : `PrimesService` appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec
-le jeton de la session ; la fiche porte `cartes` et `classements` (voir `docs/contrat-api.md`, « Les primes
+le jeton de la session ; la fiche porte `cartes` et `classements` (voir `shared/docs/contrat-api.md`, « Les primes
 dans l'app worker »). Les noms des primes fixes (ventes croisées, record, objectif magasin, meilleure
 vendeuse, note Google) sont traduits par l'app ; les catégories et les promos gardent le nom que l'admin
 leur donne. Les icônes sont servies par le cockpit (`public/uploads/primes`) : `PrimesService` ajoute à la
 fiche l'adresse du cockpit (`iconesBase`, `COCKPIT_API_URL` sans « /api/… »). Styles :
-`public/employee/assets/atelier/primes.css` (fin du fichier), sans aucune couleur en dur : toutes sont des
-variables de `marque.css`, aux valeurs du design system (`public/assets/ds/global.css`) ; textes :
+`panel/public/employee/assets/atelier/primes.css` (fin du fichier), sans aucune couleur en dur : toutes sont des
+variables de `marque.css`, aux valeurs du design system (`shared/public/assets/ds/global.css`) ; textes :
 `translations/page/{fr,en,it,nl,pl}/primes.json`. Un rendu sur un jeu d'essai, calculé par le moteur du
 cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|en|…]`.
 
@@ -266,7 +266,7 @@ ce magasin (« à Corbais », clé `shift_at_shop`), donné par le cockpit ; le 
 
 ## Mon profil (30/10/2026) : la personne encode elle-même ses données
 
-Demande de Sam (« que l'employé puisse encoder toutes ses données » ; maquette `docs/maquettes/profil-employe`).
+Demande de Sam (« que l'employé puisse encoder toutes ses données » ; maquette `panel/docs/maquettes/profil-employe`).
 `/me` (`Me/ProfileController`, `Views/me/profile.twig`, textes `pf_*` de `translations/page/{fr,en,it,nl,pl}/me.json`)
 montre en tête ce qui est rempli (une barre, ce qui manque en puces qui ouvrent la bonne fiche), puis six fiches qui
 s'ouvrent du bas : **identité**, **coordonnées**, **en cas d'urgence**, **paie** (statut, numéro national, IBAN,
@@ -292,7 +292,7 @@ personne elle-même.
 ## Pointer (01/11/2026) : l'arrivée et le départ, avec le QR code de la borne
 
 Demande de Sam (« un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ; le listing
-des pointages dans le profil, in / out en fonction de leur shift » ; maquette `docs/maquettes/pointage-app`).
+des pointages dans le profil, in / out en fonction de leur shift » ; maquette `panel/docs/maquettes/pointage-app`).
 
 - **L'Accueil** : en tête, le service du jour et « Pointer l'arrivée » ; en service, la barre du service, l'heure
   d'arrivée et « Pointer le départ » ; la journée pointée en une ligne ; sans service, « Pointer quand même »
@@ -305,7 +305,7 @@ des pointages dans le profil, in / out en fonction de leur shift » ; maquette `
   planning — l'arrivée, le départ, la barre du prévu et celle du pointé, ce qui est à vérifier ; un départ oublié se
   dit ici et le magasin le valide.
 
-Rien n'est gardé dans l'app : le cockpit décide (`src/pointage.php`, `POST /ventes/moi/pointage`). Textes
+Rien n'est gardé dans l'app : le cockpit décide (`panel/src/pointage.php`, `POST /ventes/moi/pointage`). Textes
 `translations/page/{fr,en,it,nl,pl}/pointage.json` (et `dashboard.json`, `me.json`).
 
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes

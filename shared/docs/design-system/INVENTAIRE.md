@@ -1,13 +1,13 @@
 # BO consultant — mise au design system « L'Atelier By »
 
 Compte rendu de l'adaptation des écrans du BO consultant (cockpit) au design
-system commun, `docs/design-system/DESIGN_SYSTEM.md` (référence relevée dans le
+system commun, `shared/docs/design-system/DESIGN_SYSTEM.md` (référence relevée dans le
 module Marketing, état du 06/11/2026). Périmètre : **les écrans** (§0–§12) et
 **les documents** — PDF composés par le serveur et e-mails (§13, version A),
 voir le § 7.
 
 Captures avant / après (1440 × 1000, jeu de démonstration) :
-`docs/design-system/captures/`.
+`shared/docs/design-system/captures/`.
 
 ---
 
@@ -97,13 +97,13 @@ théorique (`--pkg-abricot`), marqueurs de la carte du scouting.
 | filet 0,5 px | 1 px |
 | `box-shadow` portée | retirée (les `inset` qui dessinent un liseré restent) |
 
-Le script qui applique ces règles est versionné : `tools/design-system/normalise.js`
+Le script qui applique ces règles est versionné : `shared/tools/design-system/normalise.js`
 (`node tools/design-system/normalise.js fichier…`). Il est idempotent : on peut le
 repasser sur un fichier après une modification.
 
 ## 3. Ce qui a été fait
 
-**Fondations** — `public/assets/ds/global.css` réécrite : les deux `@font-face`
+**Fondations** — `shared/public/assets/ds/global.css` réécrite : les deux `@font-face`
 du §4.1 (400 = `Gotham_Medium.otf`, 700 = `Gotham_Regular.otf`), les jetons du
 §3 copiés tels quels, les alias du tableau 2.1, la base (papier, 13 px, focus
 bordeaux 2 px partout, `b` / `strong` / `th` / titres en trait normal), tous les
@@ -163,20 +163,20 @@ Visites. Les glyphes typographiques (✓ ✕ ★ ▾) restent.
 « App worker ↗ » → « App employés ↗ ».
 
 **Configuration** : « Retour à l’ERP » n'avait pas d'adresse. Nouvelle clé
-`erpUrl` (`config/config.php`, ou `COCKPIT_ERP_URL`, ou le réglage `erpUrl`),
+`erpUrl` (`shared/config/config.php`, ou `COCKPIT_ERP_URL`, ou le réglage `erpUrl`),
 exposée par `GET /meta`. **Sans valeur, le lien n'est pas affiché** — rien n'est
 écrit en dur.
 
 ### Fichiers touchés
 
-`public/assets/ds/global.css`, `public/assets/css/app.css`,
-`public/assets/css/controles-photo.css`, `public/index.html`,
+`shared/public/assets/ds/global.css`, `shared/public/assets/css/app.css`,
+`shared/public/assets/css/controles-photo.css`, `shared/public/index.html`,
 `public/assets/js/{templates,app,scouting-tpl,scouting,franchises-tpl,franchises-vals,visites,newsletter,prospection}.js`,
 `public/dashboard/{dashboard.css,dashboard.js,suivi.html,suivi.js,mq_reseau.html}`,
 `public/production/{production.css,production.js}`,
 `public/planogramme/{plano.css,plano.js}`, `public/{visites,prospection,newsletter}/index.html`,
-`src/endpoints.php`, `config/config.example.php` ; ajoutés :
-`docs/design-system/`, `tools/design-system/normalise.js`.
+`shared/src/endpoints.php`, `shared/config/config.example.php` ; ajoutés :
+`shared/docs/design-system/`, `shared/tools/design-system/normalise.js`.
 
 Aucune route, aucun appel d'API, aucune donnée ni aucun texte métier n'a changé,
 hors les libellés listés ci-dessus.
@@ -218,9 +218,9 @@ hors les libellés listés ci-dessus.
   (`.seg`, « Mois clos / Année / Marge »).
 - **Italique** : aucun fichier Gotham italique n'est déclaré (§4.1) ; les
   rares italiques sont synthétisés par le navigateur.
-- **Hors périmètre** : `public/tablette/` (compilation du dépôt
-  `pwa_sales_tablet`), `public/assistant/` (compilation de
-  `tools/assistant-src`, copie ancienne du Marketing), `public/employee/` (app
+- **Hors périmètre** : `panel/public/tablette/` (compilation du dépôt
+  `pwa_sales_tablet`), `marketing/public/assistant/` (compilation de
+  `marketing/tools/assistant-src`, copie ancienne du Marketing), `panel/public/employee/` (app
   des employés, Bootstrap / Mazer) — à aligner dans leurs sources.
 
 ## 5. Checklist d'acceptation (§12)
@@ -237,7 +237,7 @@ hors les libellés listés ci-dessus.
 - [x] Page seule : rail du §8 (246 px, entrées 400 / active 700, une seule active) et barre supérieure.
 - [x] Page incorporée : pas de rail, barre supérieure propre, liens qui gardent `embed=1`, aucun défilement horizontal à 1 194 px (mesuré sur 19 écrans).
 - [x] Aucune route cassée, aucun comportement changé, aucune donnée inventée ; libellé anglais corrigé.
-- [x] Captures avant / après : `docs/design-system/captures/`.
+- [x] Captures avant / après : `shared/docs/design-system/captures/`.
 - [x] Compte rendu : ce fichier.
 
 ## 6. Vérifier en local
@@ -256,18 +256,18 @@ Page seule : `http://localhost:8080/#/performance`. Page incorporée : ouvrir
 
 | Pièce | Fichier | Avant |
 |---|---|---|
-| Rapports (e-mail et PDF) | `src/rapports.php` › `rapportHtml`, `rapPdfHtml`, `rapPdfPiedHtml` | Segoe UI ; carte de 680 px aux coins de 14 px sur fond beige ; filet Ruby 3 px ; leviers en pastilles pleines ; résumé en pastille rose ; bouton en pilule |
+| Rapports (e-mail et PDF) | `consultant/src/rapports.php` › `rapportHtml`, `rapPdfHtml`, `rapPdfPiedHtml` | Segoe UI ; carte de 680 px aux coins de 14 px sur fond beige ; filet Ruby 3 px ; leviers en pastilles pleines ; résumé en pastille rose ; bouton en pilule |
 | Garde e-mail des rapports | `rapMailGarde` | même carte beige, résumé en pastille, bloc « PDF » bordeaux |
-| Courriers de la centrale d'achat | `src/ca_mail.php` › `caMailSquelette`, `caMailHtml` | fond beige, cartes de commande sur beige, nombre de commandes en pastille, retard en bordeaux |
-| Note de campagne (PDF, e-mail) | `src/mkt_brief.php` | Helvetica ; type de pièce en petit gris ; kicker en Ruby ; objectif dans un bloc beige |
+| Courriers de la centrale d'achat | `consultant/src/ca_mail.php` › `caMailSquelette`, `caMailHtml` | fond beige, cartes de commande sur beige, nombre de commandes en pastille, retard en bordeaux |
+| Note de campagne (PDF, e-mail) | `marketing/src/mkt_brief.php` | Helvetica ; type de pièce en petit gris ; kicker en Ruby ; objectif dans un bloc beige |
 | Plan de développement, résultat du mois, analyse magasin, arbitrage de gamme, fiche de catégorie, croisements, dossier d'analyse, étude d'implantation, plan d'expansion, target de vente, primes, affiche des primes, références jamais vendues | `plan_pdf`, `resultat_pdf`, `analyse_magasin`, `analyse_produits`, `croisements`, `dossier`, `scouting_dossier`, `ventes`, `prod_utilisation` | titres en **Georgia**, corps `sans-serif` système ou Helvetica ; pied en Helvetica avec logo ; ≈ 1 000 teintes en dur ; l'explication des primes sortait avec des accents cassés (pas de `charset`) |
-| Scoring du trimestre | `src/scoring.php` | filet noir, logo 36 px, 🏆 |
+| Scoring du trimestre | `consultant/src/scoring.php` | filet noir, logo 36 px, 🏆 |
 | Courriers courts (visites, brand guard, dossiers, scoring, primes) | divers | fragments HTML envoyés sans gabarit |
-| Tous les e-mails | `src/smtp.php` | HTML seul, aucune version texte |
+| Tous les e-mails | `shared/src/smtp.php` | HTML seul, aucune version texte |
 
 ### 7.2 Ce qui a été fait
 
-- **Gabarit commun `src/doc.php`** : jetons papier (encre, gris, filet, Ruby…),
+- **Gabarit commun `shared/src/doc.php`** : jetons papier (encre, gris, filet, Ruby…),
   `@font-face` du §13.2 (300 Light, 400 = `Gotham_Medium`, 700 = `Gotham_Regular`)
   embarqués en data-URI (le moteur PDF tourne sans réseau), `docEntete()` (logo
   34 px, type de pièce en capitales 15 px 700, références 10 px, filet Ruby 2 px),
@@ -299,11 +299,11 @@ Page seule : `http://localhost:8080/#/performance`. Page incorporée : ouvrir
   encadré à filet gauche Ruby ; erreurs en `--danger` ; emoji retirés (🏆 🥇 🟢…,
   le feu des visites devient un point de couleur et un mot).
 - **Mentions légales** : nouvelle clé `emetteur` (raison sociale, adresse,
-  n° d'entreprise, TVA, RPM, IBAN, BIC) dans `config/config.php` ou le réglage
+  n° d'entreprise, TVA, RPM, IBAN, BIC) dans `shared/config/config.php` ou le réglage
   `emetteur`. **Aucune n'est renseignée aujourd'hui** : le pied ne les écrit donc
   pas, rien n'est inventé. Source de chaque mention : ce réglage, et lui seul.
 
-Captures avant / après : `docs/design-system/captures/documents/`.
+Captures avant / après : `shared/docs/design-system/captures/documents/`.
 
 ### 7.3 Écarts restants
 
@@ -326,7 +326,7 @@ Captures avant / après : `docs/design-system/captures/documents/`.
   mais son gabarit reste celui de la campagne ; le lien de désinscription est
   présent.
 - **wkhtmltopdf des dépôts** (sans Qt corrigé) n'imprime pas le pied de page ;
-  le serveur de production installe la version corrigée (`bin/deploy.sh`).
+  le serveur de production installe la version corrigée (`shared/bin/deploy.sh`).
 
 ### 7.4 Checklist des documents (§13.7)
 

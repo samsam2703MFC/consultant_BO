@@ -1,7 +1,7 @@
 # Reprise des SOP du Drive — 05/11/2026
 
 Les 25 SOP du dossier Drive « L’Atelier Halle — SOP — dernières versions retrouvées » ont été relues en entier et
-reprises dans `data/formation/sops/<id>.json` : le texte d’origine, tel quel (fautes de frappe évidentes corrigées), et sa
+reprises dans `formation/data/formation/sops/<id>.json` : le texte d’origine, tel quel (fautes de frappe évidentes corrigées), et sa
 traduction dans l’autre langue. Au premier appel de l’API, le cockpit les range dans ses tables (`for_sop`, `for_sop_version`) :
 **nos bases deviennent la source**, le Drive l’archive. Les traductions sont marquées « à relire » jusqu’à ce que Sam les relise
 (Formation › Rédaction et versions).

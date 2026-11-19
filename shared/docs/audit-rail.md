@@ -8,7 +8,7 @@ fonction `vals…` de l'écran, son gabarit, les routes qu'il appelle et ce qu'e
 retenu que si le code le montre (même route, même calcul, même table, même formulaire). Les chiffres d'usage réels
 (Journal & diagnostic › Usage de la console) n'ont pas pu être lus : ils sont derrière la connexion du siège.
 
-Capture avant / après : `docs/design-system/captures/rail-avant-apres-2026-11-19.png`.
+Capture avant / après : `shared/docs/design-system/captures/rail-avant-apres-2026-11-19.png`.
 
 ## 1. Le constat
 
@@ -76,10 +76,10 @@ et les fils ouverts), et chaque onglet garde le sien. Dashboard magasin ↗ rest
 demande de Sam) : Résultat l'ouvre magasin par magasin.
 
 **Ce qui ne change pas** : aucune adresse (`#/…`) ne change, aucune route ni table du serveur, aucun fichier du
-dashboard magasin (`public/dashboard/`), aucune page autonome. La recherche du rail trouve toujours chaque écran,
+dashboard magasin (`panel/public/dashboard/`), aucune page autonome. La recherche du rail trouve toujours chaque écran,
 onglets compris. La mesure d'usage range chaque onglet dans la famille de son entrée.
 
-Code : `navDef` et `GROUPES` (`public/assets/js/app.js`), icônes `ICO_ECRAN` (`public/assets/js/templates.js`).
+Code : `navDef` et `GROUPES` (`shared/public/assets/js/app.js`), icônes `ICO_ECRAN` (`shared/public/assets/js/templates.js`).
 
 ## 4. Ce qui reste à décider (non fait : touche aux données ou au métier)
 
@@ -105,11 +105,11 @@ Par ordre de valeur :
    la heatmap), et les tâches des consultants deux stocks (`con_project_task`, `con_consultant_tache`).
 7. **La validation des corrections existe deux fois** : Visites (`PUT /plans`) et `visites/?role=admin`.
 8. **Les promotions du panel sont lues deux fois** (`pvRegles` et `primesPromosPanel`, deux caches).
-9. **Deux programmes de fidélité** : l'écran Fidélité (`src/fidelite.php`) et `public/fidelite-test/`
-   (`src/fidelite_bingo.php`), qui définissent tous deux `ep_fidelite`. À trancher.
+9. **Deux programmes de fidélité** : l'écran Fidélité (`marketing/src/fidelite.php`) et `marketing/public/fidelite-test/`
+   (`marketing/src/fidelite_bingo.php`), qui définissent tous deux `ep_fidelite`. À trancher.
 10. **Les portails** (`docs/PORTAILS.md`) : Fonds, Types de campagne, Brand Guard, MétaDonnée, Fidélité et
     Objectifs produits relèvent du Marketing ; Tablette vendeuses et Formation des Formations. Le cockpit écrit
-    encore des tables `mar_` (`src/objectifs_produits.php`, synchro de la réputation dans `src/writes.php:3281`,
+    encore des tables `mar_` (`marketing/src/objectifs_produits.php`, synchro de la réputation dans `src/writes.php:3281`,
     bouton de nettoyage du Diagnostic) : la règle du dépôt l'interdit.
 11. **Mesure à vide** : Flux, Fuites et Évolution donnent un écart au plan, pas une mesure, tant qu'aucun magasin
     ne valide ses cuissons ni n'enregistre sa clôture (`src/verification_flux.php:16`) — et la Production est hors
@@ -121,13 +121,13 @@ Par ordre de valeur :
   `seuil`, `usage` (redirigés vers le Catalogue) ; routes `/produits/utilisation*` sans appelant.
 - `tplScoringTri` (l'écran est réécrit en Fiche & scoring avant le rendu) ; la vue « Client mystère » de
   `valsScoring` et l'écran `clientMystere` (désormais réécrit en Visites › Client mystère).
-- `public/dashboard/mq_reseau.html` (maquette aux chiffres en dur, liée de nulle part) ; le lien
+- `panel/public/dashboard/mq_reseau.html` (maquette aux chiffres en dur, liée de nulle part) ; le lien
   `dashboard/suivi.html` de la fiche (une simple redirection).
 - `?app=consultant` (fiche en plein écran, manifeste sur une ancienne adresse) ; le rôle franchisé de
   `visites/?shop=` (inaccessible : la garde renvoie le franchisé à son dashboard).
 - La recherche du rail lit l'ancienne table de démonstration `con_report_schedule` ; le sous-titre de Reporting
   parle encore d'« alertes push ».
-- Pages orphelines : `public/newsletter/`, `public/fidelite-test/` ; le dossier `public/assistant/assets/` n'est
+- Pages orphelines : `marketing/public/newsletter/`, `marketing/public/fidelite-test/` ; le dossier `marketing/public/assistant/assets/` n'est
   chargé par rien ; l'édition « emplacement » de la fiche produit appelle `PUT /production/planogramme/`, qui
   n'existe pas (rien ne l'ouvre).
 - Noms trompeurs : « cross » (Bats ton record, lignes par ticket) et « croisements » (achats associés).

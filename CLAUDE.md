@@ -1,15 +1,32 @@
-# Dépôt des quatre portails — L'Atelier By
+# Dépôt des quatre domaines — L'Atelier By
 
-Quatre portails, un dossier chacun : `recrutement-developpement/` (`rec_`), `marketing/` (`mar_`),
-`pilotage-reseau/` (`pil_`), `formations/` (`frm_`). Chaque dossier a son propre `CLAUDE.md` : lis celui du
-dossier où tu travailles, il fait foi pour son code.
+Décision du 19/11/2026 (elle remplace celle du 06/11 : `rec_` / `mar_` / `pil_` / `frm_`) : quatre domaines, un dossier
+et un préfixe de tables chacun. Chaque dossier a son `CLAUDE.md` : lis celui du dossier où tu travailles.
 
-- Un portail ne crée, ne modifie et ne supprime **que** ses tables (son préfixe). Il lit l'ERP par son API
-  (`atelierby.tfbuddy.com/api/v1`) et **jamais** les tables d'un autre portail : il passe par son API.
-- Réglages : `préfixe_variable` du portail. **Toutes les clés dans `erp_cles`**, la table des clés commune
-  à l'ERP (décision du 7 nov. 2026, remplace `préfixe_keys` et le projet `master_variable_keys`) : portail
-  `commun` (Meta, e-mail, SMS, IA, Google, TF Buddy, jeton de service `erp_jeton_service`, adresses
-  `rec_api_url` / `pil_api_url`) ou `rec` / `mar` / `pil` / `frm`. Entre portails : leur API, en-tête
-  `X-Service-Token`.
-- Chaque dossier se déploie seul (`.github/workflows/`, déclenché par son seul dossier) et s'exporte seul
-  vers l'ERP. Registre et règles : `docs/PORTAILS.md`. Design system commun : `docs/DESIGN_SYSTEM.md`.
+| Domaine | Dossier | Tables |
+|---|---|---|
+| Marketing | `marketing/` | `mar_` |
+| Formation | `formation/` | `for_` |
+| Pilotage (consultant) | `consultant/` | `con_` |
+| Dashboard / day panel franchisé | `panel/` | `panel_` |
+| Partagé | `shared/` | noms conservés (`ceo_shop`, `ceo_app_setting`, `ceo_journal_entry`, `erp_cles`…) |
+| Hors périmètre | `pilotage-reseau/` | copie de l'ERP (`apps/production`, base `erp`), module RH (`hr_dimona_*`) |
+
+- **Tables** : une table, un domaine, `{préfixe}_{entité}` en snake_case. Ce qui sert à plusieurs domaines va dans
+  `shared/` (code) et garde son nom (tables). Renommer une table : une migration `shared/db/migrations/NNN_*.php`
+  (`up` / `down`, un `RENAME TABLE`, jamais de `DROP`), le registre `shared/src/reorg_tables.php`, et
+  `php shared/bin/migrer.php statut | up | down <nom>`.
+- **Clés** : toutes dans `erp_cles` (la table des clés commune, la « erp_keys » de la réorganisation), lues et écrites
+  par `shared/src/erp_cles.php` et par lui seul — aucune requête SQL directe sur `erp_cles`. Les valeurs y sont en
+  clair. Dans l'environnement : l'accès à la base, rien d'autre de nouveau.
+- **Code** : un module serveur dans `<domaine>/src/`, ses pages dans `<domaine>/public/`. Le site servi est assemblé
+  (`shared/bin/assembler_public.php`) : les adresses publiques ne dépendent pas du dossier ; `public/uploads/` (fichiers
+  déposés) ne bouge jamais. `shared/src/depot.php` dit où est la racine et où est le code.
+- **Déploiement** : un seul, `.github/workflows/deploy.yml` + `shared/bin/deploy.sh`, déclenché par
+  `shared/deploy.trigger` sur la branche de déploiement.
+- **Tests** : `php shared/bin/tests_noms_globaux.php` et `php shared/bin/test_chargement.php` (bloquants en CI), puis
+  `*/bin/tests_*.php` et `php pilotage-reseau/tests/hr/run.php`.
+- **Écarts connus, non corrigés** (REORG_PLAN.md §8) : lectures SQL directes des tables de l'ERP et d'autres
+  applications, URL écrites en dur, routes hors format `/api/v1/{app}/{domaine}/{ressource}`.
+- Registre et règles des portails : `docs/PORTAILS.md`. Design system : `docs/DESIGN_SYSTEM.md`. Standard d'API :
+  `docs/API_STANDARD.md`. La réorganisation : `REORG_PLAN.md`, `REORG_REPORT.md`.

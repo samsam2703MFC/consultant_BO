@@ -49,7 +49,7 @@ curl -X POST http://127.0.0.1:8090/api/cockpit/metadonnee/meta/leads -H "X-Hub-S
 Avec les VRAIS services, Meta fournit un outil qui crée un lead de test sur un formulaire :
 developers.facebook.com/tools/lead-ads-testing (le formulaire suivi ; en mode relève, il arrive au Cockpit dans les 2 minutes).
 
-À savoir : une base NEUVE ne s'installe pas d'un bloc — `sql/schema.sql` laisse la table
+À savoir : une base NEUVE ne s'installe pas d'un bloc — `shared/sql/schema.sql` laisse la table
 `ceo_scouting_population` sans parenthèse fermante. Pour un essai local, fermer cette table dans une copie du fichier
 et la charger (`mysql … < schema-local.sql`) ; une base en service n'est pas concernée.
 

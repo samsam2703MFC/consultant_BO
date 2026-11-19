@@ -1,9 +1,9 @@
 # Tablette des vendeuses (Book vendeuses)
 
-`public/tablette/` est la version compilée de l'application tablette, dont les
+`panel/public/tablette/` est la version compilée de l'application tablette, dont les
 sources vivent dans leur propre dépôt :
 https://github.com/samsam2703MFC/pwa_sales_tablet (React + Vite, PWA).
-Le commit compilé est noté dans `public/tablette/VERSION`.
+Le commit compilé est noté dans `panel/public/tablette/VERSION`.
 
 Adresse : `…/consulant_bo/tablette/?shop=<id du magasin>` (lien par magasin
 dans l'écran « Tablette vendeuses » du cockpit). Ce dossier est l'identité de
@@ -24,5 +24,5 @@ côté de celle-ci) :
     git rev-parse HEAD > ../consultant_bo/public/tablette/VERSION
 
 Puis committer ici (`Tablette vendeuses : build <sha>`) et déployer comme
-d'habitude. Ne pas mettre de `.htaccess` dans `public/tablette/` : la règle
-404 des fichiers absents est dans `public/.htaccess`.
+d'habitude. Ne pas mettre de `.htaccess` dans `panel/public/tablette/` : la règle
+404 des fichiers absents est dans `shared/public/.htaccess`.

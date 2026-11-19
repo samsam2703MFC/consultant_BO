@@ -3,10 +3,10 @@
 Les franchisés déclarent les Dimona de leur personnel (IN, OUT, UPDATE, CANCEL) à l’ONSS, par l’API REST
 Dimona v2, sans passer par le portail. Chaque déclaration et son résultat restent tracés.
 
-- **Page** : `https://185.180.206.46/hr/`. C’est une page autonome (`public/hr/`) dans le design system du
+- **Page** : `https://185.180.206.46/hr/`. C’est une page autonome (`pilotage-reseau/public/hr/`) dans le design system du
   module Marketing.
 - **API** : `/hr/api/v1/erp/dimona/*`, qui répond aussi sous le cockpit à `/consulant_bo/api/v1/erp/dimona/*`.
-- **Code** : `src/hr/` (namespace `Hr\`). Les tables sont en `hr_dimona_*` (`sql/hr_dimona.sql`).
+- **Code** : `pilotage-reseau/src/hr/` (namespace `Hr\`). Les tables sont en `hr_dimona_*` (`pilotage-reseau/sql/hr_dimona.sql`).
 - **Environnement** : simulation seule au départ. La production est fermée tant que
   `HR_DIMONA_PROD_ENABLED` ne vaut pas `1`.
 - **Certificats** : un certificat par société franchisée (un compte REST Chaman par employeur ONSS).
@@ -15,7 +15,7 @@ Dimona v2, sans passer par le portail. Chaque déclaration et son résultat rest
 
 | Source | Ce qu’on en tire |
 |---|---|
-| `docs/dimona/openapi_dimona_v2.yaml` (zip OpenAPI v2, version 2.0.0) | Les types générés (`src/hr/Dimona/Dto`), les URL SIM et PROD (bloc `servers`), l’URL du jeton (`securitySchemes`) et les chemins (`operationId`). |
+| `pilotage-reseau/docs/dimona/openapi_dimona_v2.yaml` (zip OpenAPI v2, version 2.0.0) | Les types générés (`pilotage-reseau/src/hr/Dimona/Dto`), les URL SIM et PROD (bloc `servers`), l’URL du jeton (`securitySchemes`) et les chemins (`operationId`). |
 | Developer guide REST, « Obtaining an access token… » | Le flux du jeton : assertion JWT, claims, `scope` omis, validité de 10 minutes, renouvellement sous la minute restante. |
 | Documentation fonctionnelle v2 (PDF) | 201 et `Location` (p. 20) ; 404 tant que la déclaration n’est pas traitée (p. 5 et 24) ; exemples A, W, B et S (p. 22-24) ; blocs obligatoires (p. 10-11) ; heures planifiées d’un étudiant (p. 19). |
 | Instructions ONSS « Dimona : données principales » (lien du YAML) | Les codes de type de travailleur ; la commission paritaire déclarée sous `XXX`, sauf 124, 140, 144, 145, 149, 302, 320 et 322. |
@@ -71,7 +71,7 @@ boutiques lui appartiennent.
 Le **jeton admin réseau** de la console (`X-Admin-Token`) n’est **pas** accepté. Il est le même pour tout le
 réseau et ne dit pas qui est connecté : une Dimona et un NISS ne peuvent pas reposer dessus.
 
-**Activation en production** (01/11/2026) : `bin/console_bo.php`, lancé par chaque livraison du cockpit (root
+**Activation en production** (01/11/2026) : `shared/bin/console_bo.php`, lancé par chaque livraison du cockpit (root
 sur le serveur), s’en charge et ne refait rien quand c’est fait :
 - il ajoute la section `bo` au `config.php` de l’API de la console **si elle manque**. Les deux secrets HMAC
   sont tirés sur le serveur et jamais affichés. Le fichier est sauvegardé (`config.php.avant-bo-…`), contrôlé
@@ -92,7 +92,7 @@ sur le serveur), s’en charge et ne refait rien quand c’est fait :
   lui reprend. `"reset_password": "<identifiant>"` le repose **une seule fois** : le serveur note l’identifiant
   appliqué et ne le rejoue jamais. Un compte existant se repasse sans mot de passe pour
   changer son nom, son rôle ou ses boutiques ;
-- la même liste peut aussi être commise **scellée**, dans `config/console_bo_accounts.sealed`. Le serveur tire
+- la même liste peut aussi être commise **scellée**, dans `shared/config/console_bo_accounts.sealed`. Le serveur tire
   une paire RSA une fois et garde la clé privée dans son dossier privé ; chaque livraison écrit la clé
   **publique** dans son journal. On chiffre la liste avec cette clé publique, sur son poste :
   ```bash
@@ -139,7 +139,7 @@ statut, et le NISS, que l’API ne renvoie jamais au navigateur.
 2. Relecture `GET /declarations/{id}`. Un 404 veut dire que la déclaration n’est pas encore traitée.
    - **Rythme** : après 5 s, 15 s, 30 s, 1 min, 5 min, puis toutes les 15 minutes, pendant 24 h. Au-delà :
      `ERROR`.
-   - **Qui relit** : le cron `bin/hr_dimona_cron.sh`, chaque minute, sous www-data. Il tourne 55 s pour
+   - **Qui relit** : le cron `pilotage-reseau/bin/hr_dimona_cron.sh`, chaque minute, sous www-data. Il tourne 55 s pour
      tenir les premières échéances, qui tombent sous la minute. La page relit aussi tant qu’elle est
      ouverte, et le bouton « Actualiser » force la relecture.
 3. Le résultat suit `A` → ACCEPTED, `W` → WARNING, `B` → REFUSED, `S` → WAITING_SIGEDIS (encore relue).
@@ -166,8 +166,8 @@ statut, et le NISS, que l’API ne renvoie jamais au navigateur.
 
 ## Configuration
 
-Chaque valeur se lit dans cet ordre : variable d’environnement, puis bloc `hr` de `config/config.php`. Ce
-bloc est écrit par `bin/deploy.sh` à partir des variables du workflow (`vars.*`, `secrets.*`). Pour les
+Chaque valeur se lit dans cet ordre : variable d’environnement, puis bloc `hr` de `shared/config/config.php`. Ce
+bloc est écrit par `shared/bin/deploy.sh` à partir des variables du workflow (`vars.*`, `secrets.*`). Pour les
 adresses ONSS seulement, le YAML sert de dernière source.
 
 | Variable | Rôle | Défaut |
@@ -175,7 +175,7 @@ adresses ONSS seulement, le YAML sert de dernière source.
 | `HR_DIMONA_PROD_ENABLED` | `1` ouvre la production | fermée |
 | `HR_DIMONA_BASE_URL_SIM` / `_PROD` | URL de l’API Dimona | `servers` du YAML |
 | `HR_DIMONA_TOKEN_URL_SIM` / `_PROD` | serveur de jetons (aussi l’`aud` du JWT) | `tokenUrl` du YAML |
-| `HR_DIMONA_MASTER_KEY` | clé maître, 32 octets en base64 | `hr_dimona.key`, tirée une fois par `bin/deploy.sh` dans le dossier privé (`/var/lib/consulant_bo/prive`, 0600) et recopiée à chaque livraison dans `config.php` (bloc `hr`, `masterKey`). Sous Apache, PHP n’atteint pas le dossier privé (mesuré le 01/11/2026), mais il lit `config.php`. |
+| `HR_DIMONA_MASTER_KEY` | clé maître, 32 octets en base64 | `hr_dimona.key`, tirée une fois par `shared/bin/deploy.sh` dans le dossier privé (`/var/lib/consulant_bo/prive`, 0600) et recopiée à chaque livraison dans `config.php` (bloc `hr`, `masterKey`). Sous Apache, PHP n’atteint pas le dossier privé (mesuré le 01/11/2026), mais il lit `config.php`. |
 | `HR_CONSOLE_API_BASE` | API de la console vue du navigateur | `/webshop/api` (deploy) |
 | `HR_CONSOLE_API_INTERNAL` | API de la console vue du serveur | `http://127.0.0.1/webshop/api` (deploy) |
 | `HR_DIMONA_CERT_ALERT_DAYS` | seuil de l’alerte certificat | 60 |
@@ -193,7 +193,7 @@ php tests/hr/run.php --unit          # ce que le workflow de déploiement lance
 
 Aucun test n’appelle l’ONSS réel.
 
-Le module en local, sur une seule origine et sans réseau : voir l’en-tête de `tests/hr/dev-router.php`
+Le module en local, sur une seule origine et sans réseau : voir l’en-tête de `pilotage-reseau/tests/hr/dev-router.php`
 (comptes `franchise@test.be` / `siege@test.be`, mot de passe `test1234`).
 
 Vérification d’un vrai compte SIM, qui obtient un jeton puis fait une recherche en lecture seule, sans

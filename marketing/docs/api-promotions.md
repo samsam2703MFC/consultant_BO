@@ -56,10 +56,10 @@ produit de l'essai est pris dans `product_ids`, `product_targets` ou `products[]
 
 ## Comment le cockpit s'en sert
 
-- **Lecture** (`pvConditions`, `src/promos_ventes.php`) : un seuil sous un nom plausible ; un canal en liste
+- **Lecture** (`pvConditions`, `marketing/src/promos_ventes.php`) : un seuil sous un nom plausible ; un canal en liste
   (`sales_channels: ["POS"]`), en booléens (`is_pos`, `webshop_only`…) ou en une valeur — la *destination* (`SHOP` =
   comptoir, `WEBSHOP` = webshop, `BOTH` = les deux).
-- **Écriture** (`pmConditionsCorps`, `src/promos_magasin.php`) : seulement sous les noms **relus sur une promotion du
+- **Écriture** (`pmConditionsCorps`, `marketing/src/promos_magasin.php`) : seulement sous les noms **relus sur une promotion du
   panel** qui en porte (`pmChampsAppris`), avec ses jetons et sa forme (une valeur ou une liste). Aucun nom deviné : tant
   qu'aucune promotion du panel n'en porte, l'assistant grise « Comptoir seulement », « Webshop seulement » et « À partir
   d'un montant », et le serveur refuse une demande qui en porte (422) avant toute écriture.
@@ -203,5 +203,5 @@ Routes : `GET /admin/voucher-campaigns` · `POST /admin/voucher-campaigns` · `G
 
 ## L'historique
 
-Les entrées datées de `docs/contrat-api.md` (« Promotions : … ») racontent chaque changement : portions et `PATCH`
+Les entrées datées de `shared/docs/contrat-api.md` (« Promotions : … ») racontent chaque changement : portions et `PATCH`
 (20–21/10/2026), canal et seuil (23/10/2026), plus de noms devinés, la destination, cette documentation.

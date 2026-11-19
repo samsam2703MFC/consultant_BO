@@ -2,6 +2,9 @@
 
 **Phase 2 : plan. Rien n'a été exécuté.** J'attends « GO » avant toute modification de code ou de base.
 
+> **Statut (19/11/2026, soir)** : « GO » reçu (A1 : oui ; A3 : purge limitée à nos tables). Phases 1 à 3 faites sur la
+> branche `reorg/structure-domaines`, rien livré sur le serveur, rien supprimé : voir `REORG_REPORT.md`.
+
 | Domaine | Dossier | Préfixe des tables |
 |---|---|---|
 | Marketing | `marketing/` | `mar_` |
