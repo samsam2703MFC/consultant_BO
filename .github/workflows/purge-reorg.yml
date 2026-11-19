@@ -1,0 +1,68 @@
+name: Purge de la réorganisation (phase 4)
+
+# Phase 4 de REORG_PLAN.md, après « PURGE » écrit par Sam le 19/11/2026. Supprime une seule table,
+# ceo_assistant_question (liste définitive de REORG_REPORT.md §6), par reorg/purger.php : contrôles bloquants, sauvegarde
+# dans le dossier privé du serveur (/var/lib/consulant_bo/prive/reorg/), sauvegarde vérifiée par restauration dans une
+# table temporaire, puis seulement DROP TABLE. Le mode est lu dans reorg/purge.mode : « controle » (rien n'est supprimé)
+# ou « purger ». Au premier contrôle qui échoue, le script s'arrête et le job est rouge.
+#
+# Déclenchement : pousser un changement de reorg/purge.mode, du script ou de ce fichier sur la branche ci-dessous.
+
+on:
+  push:
+    branches: [reorg/structure-domaines]
+    paths: ['reorg/purge.mode', 'reorg/purger.php', '.github/workflows/purge-reorg.yml']
+
+concurrency:
+  group: purge-reorg
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+  PRIVE: "/var/lib/consulant_bo/prive/reorg"
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lire le mode
+        id: mode
+        run: |
+          php -l reorg/purger.php
+          mode="$(tr -d '[:space:]' < reorg/purge.mode)"
+          case "$mode" in
+            controle) echo "drapeau=" >> "$GITHUB_OUTPUT" ;;
+            purger)   echo "drapeau=--purger" >> "$GITHUB_OUTPUT" ;;
+            *) echo "mode inconnu : $mode"; exit 2 ;;
+          esac
+          echo "Mode : $mode"
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+
+      - name: Lancer reorg/purger.php sur le serveur
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "mkdir -p /tmp/reorg_purge"
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" reorg/purger.php "${SSH_USER}@${SSH_HOST}:/tmp/reorg_purge/"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "mkdir -p '${PRIVE}' && chmod 700 '${PRIVE}' && \
+             timeout 1500 php /tmp/reorg_purge/purger.php --code '${TARGET_DIR}' --dump-dir '${PRIVE}' ${{ steps.mode.outputs.drapeau }}; \
+             rc=\$?; rm -rf /tmp/reorg_purge; ls -la '${PRIVE}' | grep purge_ || true; exit \$rc"
