@@ -69,4 +69,20 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/forecast/panel-refresh', ['controller' => $fc, 'method' => 'refresh']);
     $r->addRoute('POST', '/ajax/forecast/panel-links/{id:\d+}', ['controller' => $fc, 'method' => 'link']);
     $r->addRoute('POST', '/ajax/forecast/clients/{id:\d+}', ['controller' => $fc, 'method' => 'client']);
+
+    // [352] Partie i identyfikowalność : Partie surowców (KSeF + przyjęcia), Kontrola wejść produkcji, Próbki (QR, zadanie dnia).
+    $lc = App\Controllers\Web\Production\LotControlController::class;
+    $r->addRoute('GET', '/workshop/traceability/lots', ['controller' => $lc, 'method' => 'materialLots']);
+    $r->addRoute('GET', '/workshop/traceability/check', ['controller' => $lc, 'method' => 'inputCheck']);
+    $r->addRoute('GET', '/workshop/traceability/samples', ['controller' => $lc, 'method' => 'samples']);
+    $r->addRoute('GET', '/workshop/traceability/samples/pdf', ['controller' => $lc, 'method' => 'samplesPdf']);
+    $r->addRoute('GET', '/workshop/traceability/samples/s/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleScan']);
+    $r->addRoute('PUT', '/ajax/production/material-lots/{id:\d+}', ['controller' => $lc, 'method' => 'updateLot']);
+    $r->addRoute('PUT', '/ajax/production/material-lots/material/{id:\d+}', ['controller' => $lc, 'method' => 'trackMaterial']);
+    $r->addRoute('GET', '/ajax/production/input-check/{id:\d+}', ['controller' => $lc, 'method' => 'batch']);
+    $r->addRoute('POST', '/ajax/production/samples', ['controller' => $lc, 'method' => 'createSamples']);
+    $r->addRoute('DELETE', '/ajax/production/samples/{id:\d+}', ['controller' => $lc, 'method' => 'removeSample']);
+    $r->addRoute('POST', '/ajax/production/samples/store', ['controller' => $lc, 'method' => 'storeSample']);
+    $r->addRoute('POST', '/ajax/production/samples/done', ['controller' => $lc, 'method' => 'finishSamples']);
+    $r->addRoute('PUT', '/ajax/production/sample-rules/{category:\d+}', ['controller' => $lc, 'method' => 'sampleRule']);
 };
