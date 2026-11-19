@@ -101,8 +101,8 @@
       "nl": "De waarde van de winkel"
      },
      "texte": {
-      "fr": "En haut à droite, en doré : ce que vaut le fonds de commerce au rythme actuel.\nLe calcul : le chiffre d’affaires des deux dernières années (730 jours, ou les jours vécus si le magasin est plus jeune), ramené à un an, divisé par 6 — deux mois de chiffre d’affaires.\nLe mois en cours est écarté : incomplet, il tirerait la valeur vers le bas.\nUn toucher sur « Valeur ▾ » ouvre le détail : la formule en toutes lettres et la valeur année par année.",
-      "nl": "Rechtsboven, in goud: wat de handelszaak waard is aan het huidige ritme.\nDe berekening: de omzet van de laatste twee jaar (730 dagen, of de geleefde dagen als de winkel jonger is), herleid tot één jaar, gedeeld door 6 — twee maanden omzet.\nDe lopende maand telt niet mee: onvolledig zou ze de waarde naar beneden trekken.\nEen tik op « Waarde ▾ » opent het detail: de formule voluit en de waarde jaar per jaar."
+      "fr": "En haut à droite, en doré : ce que vaut le fonds de commerce au rythme actuel.\nLe calcul : (marge brute réelle − charges normatives du réseau) × 3,5, sur le chiffre d’affaires des deux dernières années (730 jours, ou les jours vécus si le magasin est plus jeune), ramené à un an. Le détail est dans l’article 0.0.56.\nLe mois en cours est écarté : incomplet, il tirerait la valeur vers le bas.\nUn toucher sur « Valeur ▾ » ouvre le détail : la formule en toutes lettres et la valeur année par année.",
+      "nl": "Rechtsboven, in goud: wat de handelszaak waard is aan het huidige ritme.\nDe berekening: (werkelijke brutomarge − normatieve kosten van het netwerk) × 3,5, op de omzet van de laatste twee jaar (730 dagen, of de geleefde dagen als de winkel jonger is), herleid tot één jaar. Details in artikel 0.0.56.\nDe lopende maand telt niet mee: onvolledig zou ze de waarde naar beneden trekken.\nEen tik op « Waarde ▾ » opent het detail: de formule voluit en de waarde jaar per jaar."
      },
      "critique": false,
      "photo": "dash-valeur.jpg",
@@ -652,12 +652,12 @@
    },
    "choix": {
     "fr": [
-     "Le CA des deux dernières années ramené à un an, divisé par 6 (deux mois de chiffre d’affaires)",
+     "(marge brute réelle − charges normatives du réseau) × 3,5",
      "Le CA du mois en cours × 12",
      "Le résultat net de l’année × 3"
     ],
     "nl": [
-     "De omzet van de laatste twee jaar herleid tot één jaar, gedeeld door 6 (twee maanden omzet)",
+     "(werkelijke brutomarge − normatieve kosten van het netwerk) × 3,5",
      "De omzet van de lopende maand × 12",
      "Het nettoresultaat van het jaar × 3"
     ]
