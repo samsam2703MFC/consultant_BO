@@ -38,7 +38,20 @@
   ];
   var CONCURRENCE = 6;     // fiches lues en même temps
   var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null,
-    parCode: {}, parId: {}, debuts: {}, langPages: null };
+    parCode: {}, parId: {}, debuts: {}, langPages: null, somIdx: 1,
+    v25: null, panel: null, compSop: null, postesLus: false };
+  /*
+   * Les couleurs des codes de checklist : celles du cockpit (dashboard/dashboard.js TJ_ZONES, task/task.js CK_ZONES), pour
+   * qu'un code se lise pareil partout. 1er chiffre : qui ; 2e : quand ; puis le numéro (src/checklists_codes.php). Le 0
+   * est celui des SOP et des articles. Le « quand » reste gris : le bleu est déjà celui du nettoyage.
+   */
+  var ZONES = {
+    1: [{ fr: 'Vente', nl: 'Verkoop' }, '#8D1D2C'], 2: [{ fr: 'Boulangerie', nl: 'Bakkerij' }, '#B0792A'],
+    3: [{ fr: 'Traiteur', nl: 'Traiteur' }, '#3f7a52'], 4: [{ fr: 'Nettoyage', nl: 'Schoonmaak' }, '#1f5f8b'],
+    5: [{ fr: 'Gestion', nl: 'Beheer' }, '#6B4FBB'] };
+  var MOMENTS = { 1: { fr: 'Ouverture', nl: 'Opening' }, 2: { fr: 'Journée', nl: 'Dag' }, 3: { fr: 'Après-midi', nl: 'Namiddag' },
+    4: { fr: 'Fermeture', nl: 'Sluiting' }, 5: { fr: 'Chaque semaine', nl: 'Elke week' }, 6: { fr: 'Chaque mois', nl: 'Elke maand' } };
+  var GRIS = '#5c5852';
   try { if (localStorage.getItem('ctLangue') === 'nl') S.langue = 'nl'; } catch (e) { /* */ }
   var root = document.getElementById('ct');
   var mesure = null;
@@ -74,6 +87,12 @@
       return d ? '<a class="lien-doc" href="' + esc(lienDoc(d)) + '">' + code + '</a>' : m0;
     });
   }
+  /** Un code de checklist (z.m.nn) en pastille à la couleur de sa zone ; tout autre code, tel quel. */
+  function codeCk(code) {
+    var m = /^([1-5])\.([1-6])\.(\d{2})$/.exec(String(code || ''));
+    return m ? '<span class="ck-c" style="background:' + ZONES[m[1]][1] + '">' + esc(code) + '</span>' : esc(code);
+  }
+  function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); }
   function indexer() {
     S.parCode = {}; S.parId = {};
     ((S.liste && S.liste.sops) || []).forEach(function (d) { if (d.code) S.parCode[d.code] = d; S.parId[d.id] = d; });
@@ -153,8 +172,22 @@
     var e = document.getElementById('ct-charge');
     if (e) e.textContent = T('Lecture du manuel : ', 'Het handboek wordt gelezen: ') + fait + ' / ' + total;
   }
+  /**
+   * Les postes du manuel du réseau (19/11/2026, Sam : « dans le manuel du réseau, rajouter les postes, les formations et les
+   * compétences par poste ») : le référentiel v25 (/formation/v25 : postes P1–P12, formations et ce qu'elles attendent de
+   * chaque poste, compétences clés), les niveaux et compétences de Franchise Buddy (/formation/referentiel) et les SOP de
+   * chaque compétence (/formation/sop/competences). Une lecture qui échoue laisse la partie dire « illisible ».
+   */
+  function chargerPostes() {
+    if (S.postesLus) return Promise.resolve();
+    return Promise.all([
+      api('/formation/v25').then(function (j) { S.v25 = j; }, function () { S.v25 = null; }),
+      api('/formation/referentiel').then(function (j) { S.panel = j; }, function () { S.panel = null; }),
+      api('/formation/sop/competences').then(function (j) { S.compSop = j; }, function () { S.compSop = null; }),
+    ]).then(function () { S.postesLus = !!S.v25; });
+  }
   function charger(m) {
-    if (m.ref) return Promise.resolve();
+    if (m.ref) return chargerPostes();
     var docs = docsDe(m);
     var manquants = docs.filter(function (d) { return !S.fiches[d.id]; });
     var total = docs.length, fait = total - manquants.length, k = 0, actifs = 0;
@@ -193,7 +226,7 @@
     var p = document.createElement('section');
     p.className = 'pg couv';
     var n = nbDe(m);
-    var detail = m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') : T('Édition du ', 'Uitgave van ') + aujourdhui();
+    var detail = m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') + (postesV25().length ? ' · ' + postesV25().length + ' ' + T('postes', 'functies') : '') : T('Édition du ', 'Uitgave van ') + aujourdhui();
     p.innerHTML = '<div class="logo"><img src="../img/logo.png" alt="L’Atelier By"></div>' +
       '<div class="haut"><div class="gros">' + n + '</div><p>' + esc(L(m.unite)) + ' · ' + esc(detail) + '</p></div>' +
       '<div class="bande" style="background:' + m.couleur + '"><div class="k">' + T('Manuel du réseau L’Atelier By', 'Netwerkhandboek L’Atelier By') + '</div>' +
@@ -207,7 +240,7 @@
     var c = (f && f.contenu) || {};
     var B = [];
     var av = d.statut === 'a_valider' ? '<span class="chip-av">' + T('à valider', 'te valideren') + '</span>' : '';
-    B.push({ neuve: true, html: '<div class="doc-code">' + esc(d.code) + ' · ' + esc(d.type) + av + '</div><h2>' + esc(L(c.titre) || L(d.titre)) + '</h2>' +
+    B.push({ neuve: true, html: '<div class="doc-code">' + (d.type === 'Checklist' ? codeCk(d.code) : esc(d.code)) + ' · ' + esc(d.type) + av + '</div><h2>' + esc(L(c.titre) || L(d.titre)) + '</h2>' +
       (L(c.objectif) ? '<div class="doc-obj">' + lier(L(c.objectif)) + '</div>' : '') +
       (L(c.pour) ? '<div class="doc-pour">' + lier(L(c.pour)) + '</div>' : '') });
     if (!f || f.erreur) { B.push({ html: '<p>' + T('Fiche illisible pour l’instant.', 'Fiche nu niet leesbaar.') + '</p>' }); return B; }
@@ -245,6 +278,135 @@
     });
     return B;
   }
+  /**
+   * Le mode d'emploi du code des checklists (19/11/2026, Sam : « mettre l'explication, avec les couleurs, de comment est
+   * structurée la numérotation des checklists ») : la page qui suit la couverture du manuel des checklists. Même lecture que
+   * « Comment c'est organisé » du dashboard (onglet Tâches), mêmes couleurs.
+   */
+  function blocsCodeChecklist(m) {
+    var docs = docsDe(m);
+    var ex = docs[0] || { code: '1.1.01', titre: { fr: 'Ouverture de la boutique', nl: 'Opening van de winkel' } };
+    var p = String(ex.code).split('.'), z = ZONES[p[0]] || [{ fr: '', nl: '' }, GRIS];
+    function lecture(code) {
+      var q = String(code).split('.'), zz = ZONES[q[0]];
+      return (zz ? L(zz[0]) + ' (' + q[0] + ')' : '') + ' · ' + L(MOMENTS[q[1]] || '') + ' (' + q[1] + ') · ' + T('n° ', 'nr. ') + q[2];
+    }
+    var B = [];
+    B.push({ neuve: true, html: '<div class="doc-code">' + T('Mode d’emploi', 'Handleiding') + '</div><h2>' + T('Lire le code d’une checklist', 'De code van een checklist lezen') + '</h2>' +
+      '<div class="doc-obj">' + T('Une checklist est une liste de tâches à faire à un moment de la journée. Chaque checklist a un code en trois parties : qui la fait, quand, et son numéro.',
+        'Een checklist is een lijst taken op een moment van de dag. Elke checklist heeft een code in drie delen: wie, wanneer, en het nummer.') + '</div>' });
+    B.push({ html: '<div class="ck-ex"><div class="ck-gros"><i style="background:' + z[1] + '1f;color:' + z[1] + '">' + esc(p[0]) + '</i>.<i class="mo">' + esc(p[1]) + '</i>.<i class="nu">' + esc(p[2]) + '</i></div>' +
+      '<div class="ck-ex-t"><b>' + esc(ex.code) + ' · ' + esc(L(ex.titre)) + '</b><small>' + esc(lecture(ex.code)) + '</small></div></div>' });
+    var qui = Object.keys(ZONES).map(function (k) { return '<div><span class="ck-c" style="background:' + ZONES[k][1] + '">' + k + '</span> ' + esc(L(ZONES[k][0])) + '</div>'; }).join('') +
+      '<div><span class="ck-c" style="background:' + GRIS + '">0</span> ' + T('SOP et articles', 'SOP en artikels') + '</div>';
+    var quand = Object.keys(MOMENTS).map(function (k) { return '<div><span class="ck-c mo">.' + k + '</span> ' + esc(L(MOMENTS[k])) + '</div>'; }).join('');
+    var num = '<div><span class="ck-c nu">.01</span> ' + T('la première', 'de eerste') + '</div><div><span class="ck-c nu">.02</span> ' + T('la deuxième…', 'de tweede…') + '</div>' +
+      '<p>' + T('L’ordre des checklists d’une même zone, au même moment. Les mêmes codes dans tout le réseau : chaque magasin fait les mêmes checklists, aux mêmes heures.',
+        'De volgorde van de checklists van eenzelfde zone, op hetzelfde moment. Dezelfde codes in het hele netwerk: elke winkel doet dezelfde checklists, op dezelfde uren.') + '</p>';
+    B.push({ html: '<div class="ck-leg"><div><h4>' + T('1er chiffre · qui', '1e cijfer · wie') + '</h4>' + qui + '</div>' +
+      '<div><h4>' + T('2e chiffre · quand', '2e cijfer · wanneer') + '</h4>' + quand + '</div>' +
+      '<div><h4>' + T('Le numéro', 'Het nummer') + '</h4>' + num + '</div></div>' });
+    // D'autres exemples : une checklist par zone présente dans le manuel.
+    var vus = {}, autres = docs.filter(function (d) { var k = String(d.code).charAt(0); if (vus[k] || d === ex) return false; vus[k] = 1; return k !== p[0]; }).slice(0, 4);
+    if (autres.length) {
+      B.push({ html: '<h3>' + T('D’autres exemples', 'Andere voorbeelden') + '</h3>' });
+      autres.forEach(function (d) { B.push({ html: '<div class="som"><span class="c">' + codeCk(d.code) + '</span><span class="t"><a class="lien-som" href="' + esc(lienDoc(d)) + '">' + esc(L(d.titre)) + '</a> <small class="ck-lu">· ' + esc(lecture(d.code)) + '</small></span></div>' }); });
+    }
+    B.push({ html: '<h3>' + T('Quand une tâche compte-t-elle comme faite ?', 'Wanneer telt een taak als gedaan?') + '</h3><p class="ligne ck-regle"><b>' + T('Obligatoire', 'Verplicht') + '</b> · ' +
+      T('elle doit être faite chaque jour où elle revient ; les pourcentages du dashboard ne comptent qu’elles.', 'ze moet elke dag gedaan worden waarop ze terugkomt; de percentages van het dashboard tellen enkel deze.') + '</p>' });
+    B.push({ html: '<p class="ligne ck-regle"><b>' + T('Photo', 'Foto') + '</b> · ' + T('une tâche qui demande une photo n’est faite que si la photo est rendue : cochée sans photo, elle ne compte pas.', 'een taak met foto is pas gedaan als de foto er is: aangevinkt zonder foto telt ze niet.') + '</p>' });
+    B.push({ html: '<p class="ligne ck-regle"><b>' + T('Contrôle qualité', 'Kwaliteitscontrole') + '</b> · ' + T('chaque photo rendue est notée de 1 à 5 par le contrôleur ; sous 4, c’est une non-conformité, à corriger.', 'elke foto krijgt van de controleur een score van 1 tot 5; onder 4 is het een non-conformiteit, te corrigeren.') + '</p>' });
+    return B;
+  }
+
+  /* ── les postes du manuel du réseau ── */
+  function postesV25() { return (S.v25 && S.v25.postes) || []; }
+  /** Les postes d'une compétence du référentiel : « P3 Vente », « P4-P5 », « P3 niv3 / P4-P5 », « Toutes »… */
+  function codesPostes(t) {
+    t = String(t || ''); var tous = postesV25().map(function (p) { return p.code; });
+    if (/toutes|tous/i.test(t)) return tous;
+    var out = [];
+    t.replace(/P(\d+)\s*[-–]\s*P(\d+)/g, function (m0, a, b) { for (var i = +a; i <= +b; i++) out.push('P' + i); return m0; });
+    t.replace(/P(\d+)/g, function (m0, a) { out.push('P' + a); return m0; });
+    return out.filter(function (c, i) { return out.indexOf(c) === i && tous.indexOf(c) >= 0; });
+  }
+  /** L'article du manuel opératoire d'une formation : art-fo-NN, sinon le même titre (FO-31 → 0.0.20). */
+  function articleDeFo(fo) {
+    var d = S.parId['art-fo-' + String(fo.code || '').slice(3)];
+    if (d) return d;
+    var n = norm(fo.nom);
+    return ((S.liste && S.liste.sops) || []).filter(function (x) { return x.type === 'Article' && norm(x.titre && x.titre.fr || x.titre) === n; })[0] || null;
+  }
+  /** Les niveaux Franchise Buddy rattachés à un poste du référentiel (niveauxV25 : niveau du panel → P1…P12). */
+  function niveauxPanel(code) {
+    var nv = (S.v25 && S.v25.niveauxV25) || {}, out = [];
+    ((S.panel && S.panel.postes) || []).forEach(function (p) { (p.niveaux || []).forEach(function (n) { if (nv[String(n.id)] === code) out.push({ poste: p, niveau: n }); }); });
+    return out.sort(function (a, b) { return (a.poste.id - b.poste.id) || ((a.niveau.ordre || 0) - (b.niveau.ordre || 0)); });
+  }
+  function blocsPostesIntro() {
+    var n = postesV25().length;
+    return [{ neuve: true, html: '<div class="doc-code">' + T('Les postes', 'De functies') + '</div><h2>' + T('Les postes : formations et compétences', 'De functies: opleidingen en competenties') + '</h2>' +
+      '<div class="doc-obj">' + T(n + ' postes, de l’opérateur au franchisé multi-boutique. Pour chacun : ce qu’il fait, comment y accéder, les formations qu’il suit et les compétences qu’il doit tenir.',
+        n + ' functies, van operator tot multi-winkel franchisenemer. Voor elk: wat hij doet, hoe je er komt, de opleidingen en de competenties.') + '</div>' },
+      { html: '<p class="ligne"><b>' + T('Formations', 'Opleidingen') + '</b> · ' + T('celles du référentiel du réseau (FO-01 à FO-' + (((S.v25 && S.v25.formations) || []).length) + ') : obligatoires ou recommandées pour le poste. Quand un article du manuel opératoire la porte, son code renvoie à l’article.',
+        'die van het netwerkreferentieel: verplicht of aanbevolen voor de functie. Als een artikel van het operationeel handboek ze draagt, verwijst de code naar het artikel.') + '</p>' },
+      { html: '<p class="ligne"><b>' + T('Compétences clés', 'Kerncompetenties') + '</b> · ' + T('les compétences du référentiel qui visent ce poste, avec leur formation.', 'de competenties van het referentieel voor deze functie, met hun opleiding.') + '</p>' },
+      { html: '<p class="ligne"><b>' + T('Niveau par niveau', 'Niveau per niveau') + '</b> · ' + T('les niveaux du poste dans Franchise Buddy et les compétences à valider à chacun ; une compétence soulignée a sa SOP (le lien l’ouvre), « formateur » se valide par le formateur.',
+        'de niveaus van de functie in Franchise Buddy en de te valideren competenties; een onderstreepte competentie heeft haar SOP, « opleider » wordt door de opleider gevalideerd.') + '</p>' },
+      { html: '<div class="pc">' + T('Source : le référentiel v25 du réseau et Franchise Buddy, lus au moment où le manuel s’ouvre.', 'Bron: het referentieel v25 van het netwerk en Franchise Buddy, gelezen bij het openen.') + '</div>' }];
+  }
+  function blocsPoste(p) {
+    var V = S.v25 || {}, B = [];
+    var nivs = niveauxPanel(p.code), pp = nivs.length ? nivs[0].poste : null;
+    var nomPanel = (V.nomsPanel || {})[p.code];
+    B.push({ neuve: true, html: '<div class="doc-code">' + esc(p.code) + ' · ' + T('Poste', 'Functie') + '</div><h2>' + esc(p.nom) + '</h2>' +
+      (pp && pp.description ? '<div class="doc-obj">' + lier(String(pp.description).trim()) + '</div>' : '') +
+      (nomPanel && norm(nomPanel) !== norm(p.nom) ? '<div class="doc-pour">' + T('Dans Franchise Buddy : ', 'In Franchise Buddy: ') + esc(nomPanel) + '</div>' : '') });
+    // Pour y accéder (les critères d'admission du cockpit)
+    var adm = ((V.admission || {})[p.code] || {}).criteres || [];
+    adm.forEach(function (c, i) { B.push({ html: (i ? '' : '<h3>' + T('Pour y accéder', 'Toegang') + '</h3>') + '<p class="ligne">' + esc(c.libelle) + '</p>' }); });
+    // Les formations attendues
+    function ligneFo(f) {
+      var a = articleDeFo(f);
+      return '<div class="fo"><span class="fo-c">' + esc(f.code) + '</span><span class="fo-t">' + esc(f.nom) + (f.frequence ? ' <small>· ' + esc(f.frequence) + '</small>' : '') + '</span>' +
+        (a ? '<a class="lien-doc fo-a" href="' + esc(lienDoc(a)) + '">' + esc(a.code) + '</a>' : '') + '</div>';
+    }
+    var fos = (V.formations || []).filter(function (f) { return f.attendu && f.attendu[p.code]; });
+    var titreFo = '<h3>' + T('Formations', 'Opleidingen') + '</h3>';
+    [['O', T('Obligatoires', 'Verplicht')], ['R', T('Recommandées', 'Aanbevolen')]].forEach(function (g) {
+      var l = fos.filter(function (f) { return f.attendu[p.code] === g[0]; });
+      l.forEach(function (f, i) { B.push({ html: (i ? '' : titreFo + '<h4>' + g[1] + ' · ' + l.length + '</h4>') + ligneFo(f) }); if (!i) titreFo = ''; });
+    });
+    if (!fos.length) B.push({ html: titreFo + '<p class="vide">' + T('Aucune formation attendue dans le référentiel.', 'Geen opleiding verwacht in het referentieel.') + '</p>' });
+    // Les compétences clés du référentiel
+    var cles = (V.competences || []).filter(function (c) { return codesPostes(c.postes).indexOf(p.code) >= 0; });
+    cles.forEach(function (c, i) {
+      B.push({ html: (i ? '' : '<h3>' + T('Compétences clés', 'Kerncompetenties') + ' · ' + cles.length + '</h3>') + '<div class="cp"><b>' + esc(c.nom) + '</b>' +
+        (c.formation ? ' <small>· ' + esc(c.formation) + '</small>' : '') + (c.niveau ? ' <small>· ' + esc(c.niveau) + '</small>' : '') +
+        (c.description ? '<small class="d">' + esc(c.description) + '</small>' : '') + '</div>' });
+    });
+    // Niveau par niveau (Franchise Buddy)
+    var parId = {}; ((S.panel && S.panel.competences) || []).forEach(function (c) { parId[c.id] = c; });
+    var sops = {}; ((S.compSop && S.compSop.competences) || []).forEach(function (c) { sops[String(c.id)] = c.sops || []; });
+    var titreNiv = '<h3>' + T('Niveau par niveau', 'Niveau per niveau') + ' <small>· Franchise Buddy</small></h3>';
+    var avecComp = nivs.filter(function (x) { return (x.niveau.competences || []).length; });
+    avecComp.forEach(function (x) {
+      var ids = x.niveau.competences || [];
+      var desc = String(x.niveau.description || '').trim();
+      B.push({ html: titreNiv + '<h4>' + esc(x.niveau.nom) + ' <small>· ' + ids.length + ' ' + T('compétences', 'competenties') + '</small></h4>' + (desc ? '<p class="niv-d">' + esc(desc) + '</p>' : '') });
+      titreNiv = '';
+      var puces = ids.map(function (id) {
+        var c = parId[id]; if (!c) return '';
+        var s0 = (sops[String(id)] || []).map(function (sid) { return S.parId[sid]; }).filter(Boolean)[0];
+        var nom = s0 ? '<a class="lien-doc" href="' + esc(lienDoc(s0)) + '">' + esc(c.nom) + '</a>' : esc(c.nom);
+        return '<span class="cpb">' + nom + (c.verification === 'instructor' ? ' <small>· ' + T('formateur', 'opleider') + '</small>' : '') + '</span>';
+      }).filter(Boolean);
+      for (var i = 0; i < puces.length; i += 9) B.push({ html: '<div class="cps">' + puces.slice(i, i + 9).join('') + '</div>' });
+    });
+    if (!avecComp.length) B.push({ html: titreNiv + '<p class="vide">' + T('Aucune compétence encore rattachée à ce poste dans Franchise Buddy.', 'Nog geen competentie gekoppeld aan deze functie in Franchise Buddy.') + '</p>' });
+    return B;
+  }
+
   /** Range des blocs dans des pages ; rend {pages, debuts} (debuts[k] : l'indice de page où commence l'entrée k). */
   function ranger(m, entrees) {
     var pages = [], debuts = [], cur = null;
@@ -266,33 +428,50 @@
   function paginer(m) {
     if (!mesure) mesure = creerMesure();
     mesure.innerHTML = '';
-    var titres, entrees;
+    // titres : le sommaire ({sec} : un intertitre ; sinon une entrée k) ; ids[k] : l'identifiant de l'entrée k (aller à…).
+    var titres = [], entrees = [], ids = [];
+    function ajouter(id, c, t, blocs) {
+      titres.push({ c: c, t: t, href: base() + '#/m/' + m.cle + '/d/' + encodeURIComponent(id), k: entrees.length });
+      ids.push(id); entrees.push(blocs);
+    }
     if (m.ref) {
       var doms = (S.ref && S.ref.domaines) || [];
-      titres = doms.map(function (d) { return { c: d.code, t: L(d) }; });
-      entrees = doms.map(blocsDomaine);
+      titres.push({ sec: T('Les domaines', 'De domeinen') });
+      doms.forEach(function (d) { ajouter(d.code, d.code, L(d), blocsDomaine(d)); });
+      titres.push({ sec: T('Les postes : formations et compétences', 'De functies: opleidingen en competenties') });
+      if (postesV25().length) {
+        ajouter('postes', '', T('Lire cette partie', 'Dit deel lezen'), blocsPostesIntro());
+        postesV25().forEach(function (p) { ajouter(p.code, p.code, p.nom, blocsPoste(p)); });
+      } else {
+        ajouter('postes', '', T('Les postes (illisibles pour l’instant)', 'De functies (nu niet leesbaar)'),
+          [{ neuve: true, html: '<h2>' + T('Les postes', 'De functies') + '</h2><p>' + T('Le référentiel des postes est illisible pour l’instant : rouvrez le manuel plus tard.', 'Het referentieel van de functies is nu niet leesbaar: open het handboek later opnieuw.') + '</p>' }]);
+      }
     } else {
-      var docs = docsDe(m);
-      titres = docs.map(function (d) { return { c: d.code, t: L(d.titre), href: lienDoc(d) }; });
-      entrees = docs.map(function (d) { return blocsDocument(d, S.fiches[d.id]); });
+      docsDe(m).forEach(function (d) {
+        ajouter(d.id, d.code, L(d.titre), blocsDocument(d, S.fiches[d.id]));
+        titres[titres.length - 1].href = lienDoc(d);
+      });
     }
     var contenu = ranger(m, entrees);
+    // Le mode d'emploi du code, entre la couverture et le sommaire (manuel des checklists).
+    var intro = m.cle === 'checklists' ? ranger(m, [blocsCodeChecklist(m)]) : { pages: [] };
     // Le sommaire : ses pages d'abord (numéros posés ensuite, quand on sait combien il en prend).
-    var som = ranger(m, [[{ neuve: true, html: '<h2>' + T('Sommaire', 'Inhoud') + '</h2>' }]].concat(titres.map(function (x, k) {
+    var som = ranger(m, [[{ neuve: true, html: '<h2>' + T('Sommaire', 'Inhoud') + '</h2>' }]].concat(titres.map(function (x) {
+      if (x.sec) return [{ html: '<div class="som-sec">' + esc(x.sec) + '</div>' }];
       var t = x.href ? '<a class="lien-som" href="' + esc(x.href) + '">' + esc(x.t) + '</a>' : esc(x.t);
-      return [{ html: '<div class="som"><span class="c">' + esc(x.c) + '</span><span class="t">' + t + '</span><span class="n" data-k="' + k + '"></span></div>' }];
+      return [{ html: '<div class="som"><span class="c">' + codeCk(x.c) + '</span><span class="t">' + t + '</span><span class="n" data-k="' + x.k + '"></span></div>' }];
     })));
     var cv = couverture(m);
     mesure.appendChild(cv);
-    var toutes = [cv].concat(som.pages, contenu.pages);
-    var decal = 1 + som.pages.length;
+    var toutes = [cv].concat(intro.pages, som.pages, contenu.pages);
+    var decal = 1 + intro.pages.length + som.pages.length;
+    S.somIdx = 1 + intro.pages.length;
     som.pages.forEach(function (p) {
       p.querySelectorAll('.som .n').forEach(function (n) { n.textContent = String(decal + contenu.debuts[+n.getAttribute('data-k')] + 1); });
     });
     toutes.forEach(function (p, j) { var n = p.querySelector('.pg-n'); if (n) n.textContent = T('Page ', 'Pagina ') + (j + 1) + ' / ' + toutes.length; });
     S.debuts = {};
-    (m.ref ? ((S.ref && S.ref.domaines) || []).map(function (d) { return d.code; }) : docsDe(m).map(function (d) { return d.id; }))
-      .forEach(function (id, k) { S.debuts[id] = decal + contenu.debuts[k]; });
+    ids.forEach(function (id, k) { S.debuts[id] = decal + contenu.debuts[k]; });
     S.langPages = S.langue;
     return toutes;
   }
@@ -440,7 +619,7 @@
       return;
     }
     var p = e.target.closest('[data-pas]'); if (p) { pas(+p.getAttribute('data-pas')); return; }
-    if (e.target.closest('[data-aller]')) { allerA(1); return; }
+    if (e.target.closest('[data-aller]')) { allerA(S.somIdx || 1); return; }
     if (e.target.closest('[data-imprimer]') && S.pages) { imprimerManuel(); return; }
   });
   document.addEventListener('input', function (e) { if (e.target.id === 'ct-curseur' && S.pages) allerA(+e.target.value - 1); });
