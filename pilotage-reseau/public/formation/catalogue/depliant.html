@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<!-- L’accès : une session (siège ou console franchisé), comme le catalogue. -->
+<script src="../../assets/js/garde.js" data-api="../api/cockpit"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Dépliant — Comment lire les manuels — L’Atelier by</title>
+<style>
+  @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Regular.otf'); font-weight: 400; }
+  @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Medium.otf'); font-weight: 500; }
+  @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Light.otf'); font-weight: 300; }
+  :root { --ink:#1c1a17; --muted:#7a736a; --faint:#B8B2A8; --paper:#faf7f2; --line:#e6e0d8; --chip:#EDE7DE; --accent:#8D1D2C; --accent-soft:#F6EEEF; --prize-soft:#F6E7CE; --prize-ink:#7A5207; }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #d9d3c9; font-family: 'Gotham', Helvetica, Arial, sans-serif; color: var(--ink); }
+  .page { width: 210mm; height: 297mm; position: relative; overflow: hidden; background: var(--paper); padding: 16mm 16mm 22mm; margin: 0 auto 8mm; }
+  @media print { html, body { background: none; } .page { margin: 0; page-break-after: always; } }
+
+  .entete { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--accent); padding-bottom: 5mm; }
+  .entete img { height: 10mm; }
+  .entete .doc { font-size: 8pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .pied { position: absolute; left: 16mm; right: 16mm; bottom: 9mm; font-size: 7.5pt; color: var(--muted); display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 3mm; }
+
+  .kicker { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 500; margin-top: 9mm; }
+  h1 { font-size: 30pt; font-weight: 500; line-height: 1.1; margin: 3mm 0 4mm; letter-spacing: -.01em; }
+  h2 { font-size: 22pt; font-weight: 500; line-height: 1.15; margin: 3mm 0 4mm; }
+  p { font-size: 10pt; line-height: 1.55; margin: 0 0 3mm; }
+  .lead { font-size: 12pt; line-height: 1.45; color: var(--ink); margin: 0 0 6mm; }
+  ul { margin: 0; padding-left: 4.5mm; font-size: 10pt; line-height: 1.5; }
+  ul li { margin-bottom: 1.6mm; }
+
+  .colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin-top: 5mm; }
+  .carte { background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 4.5mm 5mm; }
+  .carte h3 { font-size: 10.5pt; font-weight: 500; color: var(--accent); margin: 0 0 2.5mm; }
+  .carte ul { font-size: 9.5pt; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; margin: 6mm 0 2mm; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 4mm; }
+  .stat b { display: block; font-size: 20pt; font-weight: 500; color: var(--accent); line-height: 1.1; }
+  .stat small { font-size: 8.5pt; color: var(--muted); line-height: 1.4; display: block; margin-top: 1.5mm; }
+
+  .encadre { border-left: 2.5px solid var(--accent); background: var(--accent-soft); padding: 4mm 5mm; border-radius: 0 3mm 3mm 0; margin-top: 5mm; font-size: 9.5pt; line-height: 1.5; }
+  .encadre b { font-weight: 500; }
+
+  .qrbloc { position: absolute; left: 16mm; right: 16mm; bottom: 26mm; background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 5mm; display: grid; grid-template-columns: 34mm 1fr; gap: 6mm; align-items: center; }
+  .qrbloc .img svg { width: 34mm; height: 34mm; display: block; }
+  .qrbloc h3 { font-size: 11pt; font-weight: 500; margin: 0 0 2mm; color: var(--accent); }
+  .qrbloc p { font-size: 9pt; color: var(--muted); margin: 0 0 2mm; }
+  .qrbloc .url { font-size: 7.5pt; color: var(--ink); background: var(--paper); padding: 2mm 3mm; border-radius: 2mm; word-break: break-all; }
+
+  table.tab { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 3mm; background: #fff; }
+  table.tab td, table.tab th { border-bottom: 1px solid var(--line); padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
+  table.tab th { font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  table.tab td:first-child { font-weight: 500; color: var(--accent); white-space: nowrap; }
+  .exemple { font-size: 22pt; font-weight: 500; letter-spacing: .02em; margin: 4mm 0 1mm; }
+  .legende { font-size: 8.5pt; color: var(--muted); margin-bottom: 3mm; }
+
+  /* Couverture */
+  .couv .haut { display: flex; justify-content: space-between; align-items: flex-start; }
+  .couv .haut img { height: 13mm; }
+  .couv .bloc { position: absolute; left: 0; right: 0; bottom: 0; height: 138mm; background: var(--accent); color: #fff; padding: 14mm 16mm; }
+  .couv .bloc .kicker { color: #fff; opacity: .85; margin-top: 0; }
+  .couv .bloc h1 { color: #fff; font-size: 34pt; margin-top: 4mm; }
+  .couv .bloc .lead { color: #fff; opacity: .92; font-size: 11.5pt; margin: 0; }
+  .couv .liste { position: absolute; left: 16mm; right: 16mm; top: 56mm; }
+  .couv .liste .ligne { display: grid; grid-template-columns: 14mm 1fr; gap: 3mm; padding: 4mm 0; border-bottom: 1px solid var(--line); }
+  .couv .liste .ligne b { font-size: 16pt; font-weight: 500; color: var(--accent); }
+  .couv .liste .ligne span { font-size: 10pt; line-height: 1.45; }
+  .couv .liste .ligne span strong { font-weight: 500; display: block; font-size: 11pt; }
+  .couv .petit { position: absolute; left: 16mm; bottom: 9mm; font-size: 7.5pt; letter-spacing: .1em; text-transform: uppercase; color: #fff; opacity: .85; }
+
+  .outils { position: sticky; top: 0; z-index: 3; display: flex; gap: 10px; align-items: center; justify-content: center; padding: 10px; background: #fff; border-bottom: 1px solid var(--line); font-size: 13px; margin-bottom: 8mm; }
+  .outils a, .outils button { font: inherit; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 8px 14px; text-decoration: none; cursor: pointer; }
+  .outils .p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media print { .outils { display: none !important; } }
+</style>
+<script src="../../assets/vendor/qrcode/qrcode.js"></script>
+</head>
+<body>
+<div class="outils"><a href="./">← Catalogue des manuels</a><button type="button" class="p" id="imprimer">Imprimer · enregistrer en PDF</button><span style="color:var(--muted)">A4 · 6 pages</span></div>
+
+<!-- 1 · Titre -->
+<section class="page couv" id="p1">
+  <div class="haut"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc" style="font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Manuel du réseau · 2026</div></div>
+  <div class="liste">
+    <div class="ligne"><b>1</b><span><strong>Le manuel opératoire</strong>Pourquoi on fait les choses, par thème.</span></div>
+    <div class="ligne"><b>2</b><span><strong>Les standards (SOP)</strong>Comment on les fait, pas à pas.</span></div>
+    <div class="ligne"><b>3</b><span><strong>Les checklists</strong>Ce qu’il faut contrôler, et à quel moment.</span></div>
+    <div class="ligne"><b>4</b><span><strong>Le manuel du réseau</strong>Le classeur qui range tout par domaine.</span></div>
+  </div>
+  <div class="bloc">
+    <div class="kicker">Comment lire les manuels</div>
+    <h1>Le métier, écrit pour être fait</h1>
+    <p class="lead">Ce qu’on fait, quand on le fait, et comment on le prouve. Chaque manuel s’ouvre par son QR code : scannez-le, et vous arrivez à la bonne page.</p>
+  </div>
+  <div class="petit">L’Atelier By · Sucré · Salé · À emporter</div>
+</section>
+
+<!-- 2 · La franchise -->
+<section class="page" id="p2">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">La franchise</div></div>
+  <div class="kicker">Comprendre la franchise</div>
+  <h2>Ce qu’est une franchise L’Atelier By</h2>
+  <p class="lead">Un point de vente indépendant, exploité sous l’enseigne et avec le savoir-faire du réseau. Le franchisé investit, embauche et fixe ses prix, dans le respect des prix maximums conseillés.</p>
+
+  <div class="colonnes">
+    <div class="carte">
+      <h3>Le franchiseur apporte</h3>
+      <ul>
+        <li>la licence de la marque et de l’enseigne ;</li>
+        <li>le manuel opératoire et les standards ;</li>
+        <li>la formation initiale et continue ;</li>
+        <li>l’aide pour le local et l’aménagement ;</li>
+        <li>les logiciels du réseau et son animation.</li>
+      </ul>
+    </div>
+    <div class="carte">
+      <h3>Le franchisé s’engage à</h3>
+      <ul>
+        <li>exploiter le seul point de vente désigné au contrat ;</li>
+        <li>appliquer le savoir-faire et le manuel ;</li>
+        <li>payer les redevances chaque mois ;</li>
+        <li>suivre et reporter ses chiffres au franchiseur.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>9 ans</b><small>durée du contrat, à partir de la date d’effet</small></div>
+    <div class="stat"><b>31 jours</b><small>de réflexion minimum après la remise du DIP, avant signature</small></div>
+    <div class="stat"><b>2 · 2 · 2,5 %</b><small>redevances mensuelles sur le chiffre d’affaires : marque, assistance, marketing</small></div>
+  </div>
+
+  <div class="encadre">
+    <b>Le droit d’entrée</b> se paie en deux temps : un acompte de 50 % à la signature du contrat, le solde à sa prise d’effet. Il reste acquis au franchiseur.<br>
+    <b>Le DIP</b> (document d’information précontractuelle) présente la marque, le réseau et le projet. Il faut le lire avant de signer, seul ou avec ses conseils.
+  </div>
+
+  <div class="encadre" style="margin-top:3mm;background:var(--paper);border-left-color:var(--muted)">
+    La valeur d’une franchise tient à ses process écrits et délégables : un magasin qui tourne sans son propriétaire et dont les chiffres sont fiables. Voir les articles 0.0.21 et 0.0.56.
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 2 / 6</span></div>
+</section>
+
+<!-- 3 · Manuel opératoire -->
+<section class="page" id="p3">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 1 sur 4</div></div>
+  <div class="kicker">Le pourquoi</div>
+  <h2>Le manuel opératoire</h2>
+  <p class="lead">Le métier expliqué, partie par partie : des articles avec des photos, un quiz, et la validation « vu faire » du responsable.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="n-art">56</b><small>articles, classés par formation et par poste</small></div>
+    <div class="stat"><b>2</b><small>familles : fiches de référence (04) et dashboard magasin (05)</small></div>
+    <div class="stat"><b>1 article</b><small>à lire, puis son quiz : on avance partie par partie</small></div>
+  </div>
+
+  <div class="colonnes">
+    <div class="carte">
+      <h3>Comment le lire</h3>
+      <ul>
+        <li>on ouvre l’article et on lit ses parties dans l’ordre ;</li>
+        <li>chaque partie se lit d’un geste, à la tablette ou sur ordinateur ;</li>
+        <li>la fiche indique la formation et les postes concernés.</li>
+      </ul>
+    </div>
+    <div class="carte">
+      <h3>Pour qui</h3>
+      <ul>
+        <li>toute l’équipe, pour les articles « tous » ;</li>
+        <li>le responsable et le franchisé, pour les documents qui les concernent ;</li>
+        <li>le consultant, pour les visites et les contrôles.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="qrbloc">
+    <div class="img" id="q-manuel"></div>
+    <div>
+      <h3>Ouvrir le manuel opératoire</h3>
+      <p>Scannez le code avec un téléphone : le manuel s’ouvre à la même page.</p>
+      <div class="url" id="u-manuel"></div>
+    </div>
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 3 / 6</span></div>
+</section>
+
+<!-- 4 · Standards (SOP) -->
+<section class="page" id="p4">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 2 sur 4</div></div>
+  <div class="kicker">Le comment</div>
+  <h2>Les standards (SOP)</h2>
+  <p class="lead">Les gestes de chaque poste, pas à pas : une étape, une photo, des points critiques, puis un quiz.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="n-std">24</b><small id="n-std-d">standards : 22 SOP et 2 mémos ou fiches</small></div>
+    <div class="stat"><b>FR · NL</b><small>chaque étape existe dans les deux langues</small></div>
+    <div class="stat"><b>vu faire</b><small>validé par le responsable, en magasin</small></div>
+  </div>
+
+  <div class="colonnes">
+    <div class="carte">
+      <h3>Une étape</h3>
+      <ul>
+        <li>ce qu’on fait, et pourquoi c’est important ;</li>
+        <li>la photo de la bonne façon de faire ;</li>
+        <li>le point critique, en encadré.</li>
+      </ul>
+    </div>
+    <div class="carte">
+      <h3>À la tablette du magasin</h3>
+      <ul>
+        <li>le PIN du magasin ouvre l’appareil, une fois ;</li>
+        <li>le PIN de l’employé ouvre la fiche et signe « lu » ;</li>
+        <li>le quiz, puis « vu faire » validé par la responsable.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="encadre">Une version nouvelle ne fait repasser « à revoir » que les personnes validées, si le geste change. Une simple précision ne change rien pour l’équipe.</div>
+
+  <div class="qrbloc">
+    <div class="img" id="q-sop"></div>
+    <div>
+      <h3>Ouvrir les standards</h3>
+      <p>Scannez le code : vous feuilletez les standards, par code.</p>
+      <div class="url" id="u-sop"></div>
+    </div>
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 4 / 6</span></div>
+</section>
+
+<!-- 5 · Checklists -->
+<section class="page" id="p5">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 3 sur 4</div></div>
+  <div class="kicker">Le quand</div>
+  <h2>Les checklists</h2>
+  <p class="lead">Ce qu’il faut contrôler, et à quel moment. Chaque tâche a son contrôle, et chaque checklist a un code qui se lit.</p>
+
+  <div class="exemple">1.1.01</div>
+  <div class="legende">zone 1 (vente) · moment 1 (ouverture) · numéro 01 : « Ouverture de la boutique »</div>
+
+  <table class="tab">
+    <tr><th>Zone</th><th>Moment</th></tr>
+    <tr><td>1 · Vente</td><td>1 · Ouverture</td></tr>
+    <tr><td>2 · Boulangerie</td><td>2 · Journée</td></tr>
+    <tr><td>3 · Traiteur</td><td>3 · Après-midi</td></tr>
+    <tr><td>4 · Nettoyage</td><td>4 · Fermeture</td></tr>
+    <tr><td>5 · Gestion</td><td>5 · Chaque semaine</td></tr>
+    <tr><td></td><td>6 · Chaque mois</td></tr>
+  </table>
+
+  <div class="encadre" style="margin-top:6mm">
+    <b>Exemple</b> : 5.5.01 est la réunion d’équipe du lundi. La zone est la gestion (5), le moment est « chaque semaine » (5).
+  </div>
+
+  <div class="qrbloc">
+    <div class="img" id="q-check"></div>
+    <div>
+      <h3>Ouvrir les checklists</h3>
+      <p>Scannez le code : vous feuilletez les fiches de checklist, par code.</p>
+      <div class="url" id="u-check"></div>
+    </div>
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 5 / 6</span></div>
+</section>
+
+<!-- 6 · Manuel du réseau -->
+<section class="page" id="p6">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 4 sur 4</div></div>
+  <div class="kicker">Le classeur</div>
+  <h2>Le manuel du réseau</h2>
+  <p class="lead">Le classeur qui range les standards, les formations et les compétences par domaine. Chaque domaine se découpe en sous-catégories.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="n-dom">8</b><small>domaines, de D1 à D8</small></div>
+    <div class="stat"><b id="n-sc">36</b><small>sous-catégories, où se range chaque document</small></div>
+    <div class="stat"><b>4</b><small>vues : classeur, par phase, par poste, standards</small></div>
+  </div>
+
+  <table class="tab">
+    <tr><th>Domaine</th><th>Contenu</th></tr>
+    <tr><td>D1</td><td>Identité & culture</td></tr>
+    <tr><td>D2</td><td>Image & design</td></tr>
+    <tr><td>D3</td><td>Communication</td></tr>
+    <tr><td>D4</td><td>Expérience client</td></tr>
+    <tr><td>D5</td><td>Opérations & production</td></tr>
+    <tr><td>D6</td><td>Ressources humaines</td></tr>
+    <tr><td>D7</td><td>Gestion & finance</td></tr>
+    <tr><td>D8</td><td>Conformité & qualité</td></tr>
+  </table>
+
+  <div class="qrbloc">
+    <div class="img" id="q-reseau"></div>
+    <div>
+      <h3>Ouvrir le manuel du réseau</h3>
+      <p>Scannez le code : vous feuilletez le classeur, domaine par domaine.</p>
+      <div class="url" id="u-reseau"></div>
+    </div>
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 6 / 6</span></div>
+</section>
+
+<script>
+  // Les QR codes mènent au feuilletage de chaque manuel, sur l’adresse où le dépliant est ouvert (catalogue/#/m/<manuel>).
+  var BASE = new URL('./', location.href).href;
+  function qr(id, url, taille) {
+    var q = qrcode(0, 'M'); q.addData(url); q.make();
+    document.getElementById(id).innerHTML = q.createSvgTag({ cellSize: taille, margin: 0, scalable: true, alt: 'QR code : ' + url });
+  }
+  [['q-manuel', 'u-manuel', 'operatoire'], ['q-sop', 'u-sop', 'standards'], ['q-check', 'u-check', 'checklists'], ['q-reseau', 'u-reseau', 'reseau']]
+    .forEach(function (x) { var url = BASE + '#/m/' + x[2]; qr(x[0], url, 4); document.getElementById(x[1]).textContent = url; });
+  // Les nombres, lus dans le module (les valeurs écrites restent si la lecture échoue).
+  var API = '../api/cockpit';
+  function lire(c) { return fetch(API + c, { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }); }
+  var pret = Promise.all([
+    lire('/formation/sop/liste').then(function (j) {
+      var s = j.sops || [], n = function (f) { return s.filter(f).length; };
+      var sop = n(function (x) { return x.type === 'SOP'; }), autres = n(function (x) { return x.type === 'Mémo' || x.type === 'Fiche'; });
+      document.getElementById('n-art').textContent = n(function (x) { return x.type === 'Article'; });
+      document.getElementById('n-std').textContent = sop + autres;
+      document.getElementById('n-std-d').textContent = 'standards : ' + sop + ' SOP et ' + autres + ' mémos ou fiches';
+    }),
+    lire('/formation/ref').then(function (j) {
+      var d = j.domaines || [];
+      document.getElementById('n-dom').textContent = d.length;
+      document.getElementById('n-sc').textContent = d.reduce(function (t, x) { return t + (x.souscats || []).length; }, 0);
+    }),
+  ]).catch(function () { /* les valeurs écrites restent */ });
+  document.getElementById('imprimer').addEventListener('click', function () { window.print(); });
+  if (location.hash === '#imprimer') {
+    Promise.all([pret, document.fonts ? document.fonts.ready : null]).then(function () {
+      history.replaceState(null, '', location.pathname + location.search);
+      setTimeout(function () { window.print(); }, 300);
+    });
+  }
+</script>
+</body></html>

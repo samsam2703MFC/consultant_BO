@@ -1,0 +1,412 @@
+/*
+ * Le catalogue des manuels (19/11/2026, Sam : « je dois pouvoir feuilleter en PDF les différents manuels ; créer dans le
+ * rail la possibilité de feuilleter les pages des différents manuels comme un catalogue », puis « code it all »).
+ *
+ *   #/                 la grille : quatre manuels, chacun avec Feuilleter, PDF et son QR code ; le dépliant 4 manuels
+ *   #/m/<cle>          le feuilletage d'un manuel : couverture, sommaire, puis chaque document, en pages A5
+ *   #/m/<cle>/imprimer le même, puis la fenêtre d'impression (« Enregistrer en PDF ») : une page A5 par feuille
+ *
+ * Les quatre manuels : le manuel opératoire (les articles), les standards (SOP, mémos, fiches), les checklists (les
+ * fiches de checklist) et le manuel du réseau (les domaines D1–D8 et leurs sous-catégories, avec les standards rangés
+ * dans chacune). Le QR code d'un manuel mène à son feuilletage (#/m/<cle>), sur l'adresse où la page est ouverte.
+ *
+ * Données : l'API du module, à côté (../api/cockpit) — /formation/sop/liste, /formation/sop/fiche/{id}, /formation/ref.
+ * Lecture seule : rien n'est écrit. Les brouillons n'y figurent pas (la liste ne les rend pas) ; un document
+ * « à valider » porte une pastille.
+ */
+(function () {
+  'use strict';
+
+  var API = '../api/cockpit';
+  var MANUELS = [
+    { cle: 'operatoire', couleur: '#8D1D2C', types: ['Article'],
+      titre: { fr: 'Manuel opératoire', nl: 'Operationeel handboek' },
+      sous: { fr: 'Le pourquoi : les articles, partie par partie', nl: 'Het waarom: de artikels, deel per deel' },
+      unite: { fr: 'articles', nl: 'artikels' } },
+    { cle: 'standards', couleur: '#1c1a17', types: ['SOP', 'Mémo', 'Fiche'],
+      titre: { fr: 'Standards (SOP)', nl: 'Standaarden (SOP)' },
+      sous: { fr: 'Le comment : les gestes, étape par étape', nl: 'Het hoe: de handelingen, stap per stap' },
+      unite: { fr: 'standards', nl: 'standaarden' } },
+    { cle: 'checklists', couleur: '#3f7a52', types: ['Checklist'],
+      titre: { fr: 'Checklists', nl: 'Checklists' },
+      sous: { fr: 'Le quand : ce qu’on contrôle, et à quel moment', nl: 'Het wanneer: wat men controleert, en wanneer' },
+      unite: { fr: 'checklists', nl: 'checklists' } },
+    { cle: 'reseau', couleur: '#1B6FA8', ref: true,
+      titre: { fr: 'Manuel du réseau', nl: 'Netwerkhandboek' },
+      sous: { fr: 'Le classeur : huit domaines, du standard au contrôle', nl: 'De klasseur: acht domeinen, van standaard tot controle' },
+      unite: { fr: 'domaines', nl: 'domeinen' } },
+  ];
+  var CONCURRENCE = 6;     // fiches lues en même temps
+  var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null };
+  try { if (localStorage.getItem('ctLangue') === 'nl') S.langue = 'nl'; } catch (e) { /* */ }
+  var root = document.getElementById('ct');
+  var mesure = null;
+
+  /* ── petits outils ── */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function L(x) { if (x == null) return ''; if (typeof x === 'string') return x; return x[S.langue] || x.fr || x.nl || ''; }
+  function T(fr, nl) { return S.langue === 'nl' ? nl : fr; }
+  function api(chemin) {
+    return fetch(API + chemin, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function base() { return location.href.split('#')[0]; }
+  function lienManuel(cle) { return base() + '#/m/' + cle; }
+  function qrSvg(url, cellule) {
+    if (typeof window.qrcode !== 'function') return '';
+    var q = window.qrcode(0, 'M'); q.addData(url); q.make();
+    return q.createSvgTag({ cellSize: cellule || 4, margin: 0, scalable: true, alt: 'QR code : ' + url });
+  }
+  function photoUrl(p) { p = String(p); return p.indexOf('u/') === 0 ? API + '/formation/sop/photo/' + encodeURIComponent(p.slice(2)) : '../sop/photos/' + encodeURIComponent(p); }
+  function manuelDe(cle) { return MANUELS.filter(function (m) { return m.cle === cle; })[0] || null; }
+  function docsDe(m) {
+    if (!S.liste || !m.types) return [];
+    return (S.liste.sops || []).filter(function (s) { return m.types.indexOf(s.type) >= 0; })
+      .sort(function (a, b) { return String(a.code).localeCompare(String(b.code), 'fr', { numeric: true }); });
+  }
+  function nbDe(m) {
+    if (m.ref) return ((S.ref && S.ref.domaines) || []).length;
+    return docsDe(m).length;
+  }
+  function nbSousCats() { return ((S.ref && S.ref.domaines) || []).reduce(function (n, d) { return n + (d.souscats || []).length; }, 0); }
+  function aujourdhui() { return new Date().toLocaleDateString(S.langue === 'nl' ? 'nl-BE' : 'fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function segLangue() {
+    return '<div class="seg" role="group" aria-label="Langue">' + ['fr', 'nl'].map(function (l) {
+      return '<button type="button" class="' + (S.langue === l ? 'is-active' : '') + '" data-langue="' + l + '" aria-pressed="' + (S.langue === l) + '">' + l.toUpperCase() + '</button>';
+    }).join('') + '</div>';
+  }
+
+  /* ── la grille ── */
+  function rendreGrille() {
+    var cartes = MANUELS.map(function (m) {
+      var n = nbDe(m);
+      var compte = m.ref ? n + ' ' + L(m.unite) + ' · ' + nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') : n + ' ' + L(m.unite);
+      return '<div class="ct-carte">' +
+        '<a class="ct-couv" href="#/m/' + m.cle + '" style="background:' + m.couleur + ';color:#fff;text-decoration:none">' +
+          '<div class="n">' + T('Manuel', 'Handboek') + '</div><div class="t">' + esc(L(m.titre)) + '</div><div class="s">' + esc(L(m.sous)) + '</div></a>' +
+        '<h3>' + esc(L(m.titre)) + '</h3>' +
+        '<p><span class="ct-chip">' + esc(compte) + '</span></p>' +
+        '<div class="ct-actions">' +
+          '<a class="btn btn--primary" href="#/m/' + m.cle + '">' + T('Feuilleter', 'Bladeren') + '</a>' +
+          '<a class="btn" href="#/m/' + m.cle + '/imprimer" title="' + esc(T('Imprimer ou enregistrer en PDF', 'Afdrukken of opslaan als pdf')) + '">PDF</a>' +
+          '<button type="button" class="btn" data-qr="' + m.cle + '">QR</button>' +
+        '</div></div>';
+    }).join('');
+    var depliant = '<div class="ct-carte" style="background:var(--accent-soft, #F6EEEF);border-color:transparent">' +
+      '<h3>' + T('Dépliant : comment lire les manuels', 'Folder: hoe de handboeken lezen') + '</h3>' +
+      '<p>' + T('Six pages : la franchise, puis une page par manuel avec son QR code. À imprimer et à remettre à l’équipe.', 'Zes pagina’s: de franchise, dan één pagina per handboek met zijn QR-code. Om af te drukken en aan het team te geven.') + '</p>' +
+      '<div class="ct-actions"><a class="btn" href="depliant.html">' + T('Ouvrir', 'Openen') + '</a><a class="btn btn--primary" href="depliant.html#imprimer">PDF</a></div></div>';
+    root.innerHTML = '<header class="ct-barre"><img src="../img/logo.png" alt="L’Atelier By"><div><div class="ct-titre">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</div>' +
+      '<div class="ct-sous">' + T('Formation · Documents', 'Opleiding · Documenten') + '</div></div><span class="ct-esp"></span>' + segLangue() +
+      '<a class="btn" href="../">' + T('Module Formation', 'Opleidingsmodule') + '</a></header>' +
+      '<div class="ct-corps"><div class="ct-kicker">' + T('Formation · Documents', 'Opleiding · Documenten') + '</div>' +
+      '<h1 class="ct-h1">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</h1>' +
+      '<p class="ct-lead">' + T('Feuilletez chaque manuel comme un catalogue, ou enregistrez-le en PDF pour l’imprimer. Chaque manuel a son QR code : le scanner ouvre ce manuel, à la même page.', 'Blader door elk handboek als door een catalogus, of sla het op als pdf om af te drukken. Elk handboek heeft zijn QR-code: wie hem scant, opent dat handboek.') + '</p>' +
+      (S.erreur ? '<p class="ct-msg">' + esc(T('Lecture impossible : ', 'Lezen onmogelijk: ') + S.erreur) + '</p>' : '') +
+      '<div class="ct-grille">' + cartes + depliant + '</div></div>';
+  }
+
+  /* ── la fenêtre du QR code ── */
+  function fenetreQr(cle) {
+    var m = manuelDe(cle); if (!m) return;
+    var url = lienManuel(cle);
+    var v = document.createElement('div');
+    v.className = 'ct-voile';
+    v.innerHTML = '<div class="ct-fenetre" role="dialog" aria-label="QR code"><h3 style="margin:0 0 10px">' + esc(L(m.titre)) + '</h3>' +
+      '<div class="qr">' + qrSvg(url, 6) + '</div><div class="url">' + esc(url) + '</div>' +
+      '<div class="ct-actions"><button type="button" class="btn" data-copier="' + esc(url) + '">' + T('Copier le lien', 'Link kopiëren') + '</button>' +
+      '<button type="button" class="btn btn--primary" data-fermer="1">' + T('Fermer', 'Sluiten') + '</button></div></div>';
+    v.addEventListener('click', function (e) {
+      if (e.target === v || e.target.closest('[data-fermer]')) { v.remove(); return; }
+      var c = e.target.closest('[data-copier]');
+      if (c && navigator.clipboard) { navigator.clipboard.writeText(c.getAttribute('data-copier')).then(function () { c.textContent = T('Lien copié', 'Link gekopieerd'); }); }
+    });
+    document.body.appendChild(v);
+  }
+
+  /* ── le chargement d'un manuel ── */
+  function rendreChargement(m, fait, total) {
+    root.innerHTML = '<header class="ct-barre"><a class="ct-retour" href="#/">← ' + T('Catalogue', 'Catalogus') + '</a><span class="ct-titre">' + esc(L(m.titre)) + '</span></header>' +
+      '<div class="ct-corps"><p class="ct-msg" id="ct-charge">' + T('Lecture du manuel', 'Het handboek wordt gelezen') + (total ? ' : ' + fait + ' / ' + total : '…') + '</p></div>';
+  }
+  function majChargement(m, fait, total) {
+    var e = document.getElementById('ct-charge');
+    if (e) e.textContent = T('Lecture du manuel : ', 'Het handboek wordt gelezen: ') + fait + ' / ' + total;
+  }
+  function charger(m) {
+    if (m.ref) return Promise.resolve();
+    var docs = docsDe(m);
+    var manquants = docs.filter(function (d) { return !S.fiches[d.id]; });
+    var total = docs.length, fait = total - manquants.length, k = 0, actifs = 0;
+    return new Promise(function (ok) {
+      function suivant() {
+        if (k >= manquants.length && actifs === 0) { ok(); return; }
+        while (actifs < CONCURRENCE && k < manquants.length) {
+          (function (d) {
+            actifs++;
+            api('/formation/sop/fiche/' + encodeURIComponent(d.id))
+              .then(function (f) { S.fiches[d.id] = f; }, function () { S.fiches[d.id] = { erreur: true }; })
+              .then(function () { actifs--; fait++; majChargement(m, fait, total); suivant(); });
+          })(manquants[k++]);
+        }
+      }
+      suivant();
+    });
+  }
+
+  /* ── la mise en pages (A5) ── */
+  function creerMesure() {
+    var d = document.createElement('div');
+    d.setAttribute('aria-hidden', 'true');
+    d.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;';
+    document.body.appendChild(d);
+    return d;
+  }
+  function pageVide(m) {
+    var p = document.createElement('section');
+    p.className = 'pg';
+    p.innerHTML = '<div class="pg-tete"><img src="../img/logo.png" alt=""><span>' + esc(L(m.titre)) + '</span></div>' +
+      '<div class="pg-corps"></div><div class="pg-pied"><span>L’Atelier By · ' + esc(L(m.titre)) + '</span><span class="pg-n"></span></div>';
+    return p;
+  }
+  function couverture(m) {
+    var p = document.createElement('section');
+    p.className = 'pg couv';
+    var n = nbDe(m);
+    var detail = m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') : T('Édition du ', 'Uitgave van ') + aujourdhui();
+    p.innerHTML = '<div class="logo"><img src="../img/logo.png" alt="L’Atelier By"></div>' +
+      '<div class="haut"><div class="gros">' + n + '</div><p>' + esc(L(m.unite)) + ' · ' + esc(detail) + '</p></div>' +
+      '<div class="bande" style="background:' + m.couleur + '"><div class="k">' + T('Manuel du réseau L’Atelier By', 'Netwerkhandboek L’Atelier By') + '</div>' +
+      '<div class="t">' + esc(L(m.titre)) + '</div><div class="s">' + esc(L(m.sous)) + '</div>' +
+      '<div class="ed">' + T('Édition du ', 'Uitgave van ') + esc(aujourdhui()) + '</div>' +
+      '<div class="qr">' + qrSvg(lienManuel(m.cle), 4) + '</div></div>';
+    return p;
+  }
+  /** Les blocs d'un document : [{html, neuve}] ; un titre part avec sa première ligne. */
+  function blocsDocument(d, f) {
+    var c = (f && f.contenu) || {};
+    var B = [];
+    var av = d.statut === 'a_valider' ? '<span class="chip-av">' + T('à valider', 'te valideren') + '</span>' : '';
+    B.push({ neuve: true, html: '<div class="doc-code">' + esc(d.code) + ' · ' + esc(d.type) + av + '</div><h2>' + esc(L(c.titre) || L(d.titre)) + '</h2>' +
+      (L(c.objectif) ? '<div class="doc-obj">' + esc(L(c.objectif)) + '</div>' : '') +
+      (L(c.pour) ? '<div class="doc-pour">' + esc(L(c.pour)) + '</div>' : '') });
+    if (!f || f.erreur) { B.push({ html: '<p>' + T('Fiche illisible pour l’instant.', 'Fiche nu niet leesbaar.') + '</p>' }); return B; }
+    (c.sections || []).forEach(function (s) {
+      var tete = L(s.titre) ? '<h3>' + esc(L(s.titre)) + '</h3>' : '';
+      (s.etapes || []).forEach(function (e) {
+        var lignes = String(L(e.texte) || '').split('\n').filter(function (x) { return x.trim() !== ''; });
+        var cls = 'ligne' + (e.critique ? ' crit' : '');
+        var titre = (L(e.titre) ? '<h4>' + esc(L(e.titre)) + '</h4>' : '') + (e.critique ? '<div class="crit-et">' + T('Point critique', 'Kritiek punt') + '</div>' : '');
+        var premiere = lignes.length ? '<p class="' + cls + '">' + esc(lignes[0]) + '</p>' : '';
+        B.push({ html: tete + titre + premiere });
+        tete = '';
+        lignes.slice(1).forEach(function (x) { B.push({ html: '<p class="' + cls + '">' + esc(x) + '</p>' }); });
+        if (e.photo) B.push({ html: '<div class="photo"><img src="' + esc(photoUrl(e.photo)) + '" alt="" loading="eager"></div>' });
+      });
+    });
+    var pcs = (c.points_critiques || []).map(L).filter(Boolean);
+    if (pcs.length) {
+      B.push({ html: '<h3>' + T('Points critiques', 'Kritieke punten') + '</h3><div class="pc">' + esc(pcs[0]) + '</div>' });
+      pcs.slice(1).forEach(function (x) { B.push({ html: '<div class="pc">' + esc(x) + '</div>' }); });
+    }
+    var nq = (c.quiz || []).length;
+    if (nq) B.push({ html: '<p style="color:var(--muted,#7a736a);font-size:8pt;margin-top:2mm">' + T('Quiz : ', 'Quiz: ') + nq + ' ' + T('questions, sur la tablette du magasin.', 'vragen, op de tablet van de winkel.') + '</p>' });
+    return B;
+  }
+  function blocsDomaine(dom) {
+    var B = [{ neuve: true, html: '<div class="doc-code">' + esc(dom.code) + '</div><h2>' + esc(L(dom)) + '</h2>' }];
+    var st = (S.ref && S.ref.standards) || [];
+    (dom.souscats || []).forEach(function (sc) {
+      var liste = st.filter(function (x) { return x.souscat === sc.cle; });
+      B.push({ html: '<div class="sc"><b>' + esc(sc.cle) + '</b> · ' + esc(L(sc)) +
+        (sc.description ? '<small>' + esc(sc.description) + '</small>' : '') +
+        (liste.length ? '<ul>' + liste.map(function (x) { return '<li>' + esc(x.code) + ' · ' + esc(L(x)) + '</li>'; }).join('') + '</ul>'
+          : '<small>' + T('Aucun standard rangé ici pour l’instant.', 'Hier is nog geen standaard ingedeeld.') + '</small>') + '</div>' });
+    });
+    return B;
+  }
+  /** Range des blocs dans des pages ; rend {pages, debuts} (debuts[k] : l'indice de page où commence l'entrée k). */
+  function ranger(m, entrees) {
+    var pages = [], debuts = [], cur = null;
+    function nouvelle() { cur = pageVide(m); mesure.appendChild(cur); pages.push(cur); }
+    function corps() { return cur.querySelector('.pg-corps'); }
+    function deborde() { var c = corps(); return c.scrollHeight > c.clientHeight + 1; }
+    entrees.forEach(function (blocs) {
+      blocs.forEach(function (b, i) {
+        if (!cur || b.neuve) nouvelle();
+        var el = document.createElement('div');
+        el.innerHTML = b.html;
+        corps().appendChild(el);
+        if (deborde() && corps().children.length > 1) { corps().removeChild(el); nouvelle(); corps().appendChild(el); }
+        if (i === 0) debuts.push(pages.indexOf(cur));
+      });
+    });
+    return { pages: pages, debuts: debuts };
+  }
+  function paginer(m) {
+    if (!mesure) mesure = creerMesure();
+    mesure.innerHTML = '';
+    var titres, entrees;
+    if (m.ref) {
+      var doms = (S.ref && S.ref.domaines) || [];
+      titres = doms.map(function (d) { return { c: d.code, t: L(d) }; });
+      entrees = doms.map(blocsDomaine);
+    } else {
+      var docs = docsDe(m);
+      titres = docs.map(function (d) { return { c: d.code, t: L(d.titre) }; });
+      entrees = docs.map(function (d) { return blocsDocument(d, S.fiches[d.id]); });
+    }
+    var contenu = ranger(m, entrees);
+    // Le sommaire : ses pages d'abord (numéros posés ensuite, quand on sait combien il en prend).
+    var som = ranger(m, [[{ neuve: true, html: '<h2>' + T('Sommaire', 'Inhoud') + '</h2>' }]].concat(titres.map(function (x, k) {
+      return [{ html: '<div class="som"><span class="c">' + esc(x.c) + '</span><span class="t">' + esc(x.t) + '</span><span class="n" data-k="' + k + '"></span></div>' }];
+    })));
+    var cv = couverture(m);
+    mesure.appendChild(cv);
+    var toutes = [cv].concat(som.pages, contenu.pages);
+    var decal = 1 + som.pages.length;
+    som.pages.forEach(function (p) {
+      p.querySelectorAll('.som .n').forEach(function (n) { n.textContent = String(decal + contenu.debuts[+n.getAttribute('data-k')] + 1); });
+    });
+    toutes.forEach(function (p, j) { var n = p.querySelector('.pg-n'); if (n) n.textContent = T('Page ', 'Pagina ') + (j + 1) + ' / ' + toutes.length; });
+    return toutes;
+  }
+
+  /* ── le feuilletage ── */
+  function double() { return window.innerWidth >= 1100; }
+  function vues() {
+    // En double page : la couverture seule, puis les pages par deux (1-2, 3-4…) ; sinon une page à la fois.
+    var N = S.pages.length, v = [];
+    if (!double()) { for (var i = 0; i < N; i++) v.push([i]); return v; }
+    v.push([0]);
+    for (var j = 1; j < N; j += 2) v.push(j + 1 < N ? [j, j + 1] : [j]);
+    return v;
+  }
+  function vueDe(i) { var V = vues(); for (var k = 0; k < V.length; k++) if (V[k].indexOf(i) >= 0) return k; return 0; }
+  function rendreFeuilletage() {
+    var m = S.manuel;
+    root.innerHTML = '<header class="ct-barre"><a class="ct-retour" href="#/">← ' + T('Catalogue', 'Catalogus') + '</a>' +
+      '<span class="ct-titre">' + esc(L(m.titre)) + '</span><span class="ct-esp"></span>' +
+      '<span class="ct-pages" id="ct-pages"></span>' +
+      '<button type="button" class="btn" data-aller="1">' + T('Sommaire', 'Inhoud') + '</button>' +
+      '<button type="button" class="btn" data-qr="' + m.cle + '">QR</button>' + segLangue() +
+      '<button type="button" class="btn btn--primary" data-imprimer="1">' + T('Imprimer · PDF', 'Afdrukken · pdf') + '</button></header>' +
+      '<div class="ct-corps"><div class="ct-scene" id="ct-scene"><div class="ct-livre" id="ct-livre"></div></div>' +
+      '<div class="ct-nav"><button type="button" class="btn" data-pas="-1" aria-label="' + T('Page précédente', 'Vorige pagina') + '">‹</button>' +
+      '<input type="range" id="ct-curseur" min="1" max="' + S.pages.length + '" value="1" aria-label="Page">' +
+      '<button type="button" class="btn" data-pas="1" aria-label="' + T('Page suivante', 'Volgende pagina') + '">›</button></div>' +
+      '<div class="ct-aide">' + T('Tourner : les flèches, le clavier ou un glissement · Échap pour revenir au catalogue', 'Bladeren: de pijlen, het toetsenbord of vegen · Esc om terug te keren') + '</div></div>';
+    afficher(0);
+  }
+  function afficher(sens) {
+    var livre = document.getElementById('ct-livre'); if (!livre) return;
+    var V = vues(), k = vueDe(S.i), idx = V[k];
+    livre.innerHTML = '';
+    idx.forEach(function (i) { livre.appendChild(S.pages[i].cloneNode(true)); });
+    livre.classList.toggle('un', idx.length === 1);
+    // À l'échelle de la fenêtre.
+    var scene = document.getElementById('ct-scene');
+    var pw = S.pages[0].offsetWidth || 559, ph = S.pages[0].offsetHeight || 794;
+    var largeur = pw * idx.length;
+    var dispoL = Math.max(280, scene.clientWidth - 24), dispoH = Math.max(320, window.innerHeight - 190);
+    var z = Math.min(dispoL / largeur, dispoH / ph, 1.6);
+    livre.style.transform = 'scale(' + z + ')';
+    livre.style.setProperty('--ct-z', 'scale(' + z + ')');
+    scene.style.height = Math.ceil(ph * z + 8) + 'px';
+    livre.classList.remove('tourne-d', 'tourne-g');
+    if (sens) { void livre.offsetWidth; livre.classList.add(sens > 0 ? 'tourne-d' : 'tourne-g'); }
+    var N = S.pages.length;
+    var lab = document.getElementById('ct-pages');
+    if (lab) lab.textContent = T('Page ', 'Pagina ') + (idx.length > 1 ? (idx[0] + 1) + '–' + (idx[1] + 1) : (idx[0] + 1)) + ' / ' + N;
+    var cur = document.getElementById('ct-curseur'); if (cur) cur.value = idx[0] + 1;
+  }
+  function pas(d) {
+    var V = vues(), k = vueDe(S.i) + d;
+    if (k < 0 || k >= V.length) return;
+    S.i = V[k][0]; afficher(d);
+  }
+  function allerA(i) { S.i = Math.max(0, Math.min(S.pages.length - 1, i)); afficher(0); }
+
+  /* ── l'impression (PDF) ── */
+  function imprimerManuel() {
+    var zone = document.getElementById('ct-imprime');
+    zone.innerHTML = '';
+    S.pages.forEach(function (p) { zone.appendChild(p.cloneNode(true)); });
+    var imgs = Array.prototype.slice.call(zone.querySelectorAll('img'));
+    Promise.race([
+      Promise.all(imgs.map(function (im) { return im.complete ? Promise.resolve() : new Promise(function (ok) { im.onload = im.onerror = ok; }); })),
+      new Promise(function (ok) { setTimeout(ok, 4000); }),
+    ]).then(function () {
+      if (/\/imprimer$/.test(location.hash) && S.manuel) history.replaceState(null, '', '#/m/' + S.manuel.cle);
+      window.print();
+    });
+  }
+
+  /* ── l'ouverture d'un manuel ── */
+  function ouvrirManuel(m, imprimer) {
+    S.manuel = m; S.i = 0; S.pages = null;
+    rendreChargement(m, 0, docsDe(m).length);
+    // La police AVANT la mesure : Gotham (400 le texte, 700 les accents) ne se charge qu'à son premier emploi ; mesurer avec la
+    // police de secours, plus étroite, laisserait déborder les pages une fois Gotham arrivée.
+    charger(m).then(function () {
+      if (!document.fonts || !document.fonts.load) return null;
+      return Promise.all([document.fonts.load('400 12px Gotham'), document.fonts.load('700 12px Gotham')]).then(function () { return document.fonts.ready; });
+    }).then(function () {
+      if (S.manuel !== m) return;
+      S.pages = paginer(m);
+      rendreFeuilletage();
+      if (imprimer) imprimerManuel();
+    }).catch(function (e) {
+      root.innerHTML = '<div class="ct-corps"><p class="ct-msg">' + esc(T('Lecture impossible : ', 'Lezen onmogelijk: ') + e.message) + '</p><p><a href="#/">← ' + T('Catalogue', 'Catalogus') + '</a></p></div>';
+    });
+  }
+
+  /* ── l'adresse ── */
+  function route() { var h = location.hash.replace(/^#\/?/, '').split('/'); return { ecran: h[0] || '', cle: h[1] || '', action: h[2] || '' }; }
+  function aller() {
+    var r = route();
+    if (r.ecran === 'm' && manuelDe(r.cle)) { ouvrirManuel(manuelDe(r.cle), r.action === 'imprimer'); return; }
+    S.manuel = null; S.pages = null;
+    rendreGrille();
+  }
+
+  /* ── les gestes ── */
+  document.addEventListener('click', function (e) {
+    var q = e.target.closest('[data-qr]'); if (q) { fenetreQr(q.getAttribute('data-qr')); return; }
+    var l = e.target.closest('[data-langue]');
+    if (l) {
+      S.langue = l.getAttribute('data-langue');
+      try { localStorage.setItem('ctLangue', S.langue); } catch (x) { /* */ }
+      if (S.manuel && S.pages) { var i = S.i; S.pages = paginer(S.manuel); rendreFeuilletage(); allerA(i); } else { rendreGrille(); }
+      return;
+    }
+    var p = e.target.closest('[data-pas]'); if (p) { pas(+p.getAttribute('data-pas')); return; }
+    if (e.target.closest('[data-aller]')) { allerA(1); return; }
+    if (e.target.closest('[data-imprimer]') && S.pages) { imprimerManuel(); return; }
+  });
+  document.addEventListener('input', function (e) { if (e.target.id === 'ct-curseur' && S.pages) allerA(+e.target.value - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (!S.pages || document.querySelector('.ct-voile')) { if (e.key === 'Escape') { var v = document.querySelector('.ct-voile'); if (v) v.remove(); } return; }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); pas(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); pas(-1); }
+    else if (e.key === 'Home') allerA(0);
+    else if (e.key === 'End') allerA(S.pages.length - 1);
+    else if (e.key === 'Escape') location.hash = '#/';
+  });
+  var depart = null;
+  document.addEventListener('pointerdown', function (e) { if (S.pages && e.target.closest('#ct-scene')) depart = e.clientX; });
+  document.addEventListener('pointerup', function (e) {
+    if (depart == null) return;
+    var dx = e.clientX - depart; depart = null;
+    if (Math.abs(dx) > 50) pas(dx < 0 ? 1 : -1);
+  });
+  var minuterie = null;
+  window.addEventListener('resize', function () { clearTimeout(minuterie); minuterie = setTimeout(function () { if (S.pages) afficher(0); }, 150); });
+  window.addEventListener('hashchange', aller);
+
+  /* ── au départ ── */
+  Promise.all([
+    api('/formation/sop/liste').then(function (j) { S.liste = j; }),
+    api('/formation/ref').then(function (j) { S.ref = j; }),
+  ]).catch(function (e) { S.erreur = e.message; }).then(aller);
+})();
