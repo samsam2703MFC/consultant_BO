@@ -38,6 +38,14 @@
       titre: { fr: 'Manuel du réseau', nl: 'Netwerkhandboek' },
       sous: { fr: 'Le classeur : les domaines et les postes', nl: 'De klasseur: de domeinen en de functies' },
       unite: { fr: 'domaines', nl: 'domeinen' } },
+    // Le manuel de pré-ouverture (19/11/2026, Sam : « rajouter un manuel de pré-ouverture dans le catalogue des manuels ») :
+    // le Guide pré-ouverture du Manuel du réseau (GET /formation/ref › preouverture, édité dans le module, lu par le CRM),
+    // mis en pages : le compte à rebours, chaque section avec ses étapes (échéance, responsable, preuve à garder), les
+    // contacts, puis les articles à lire avant l'ouverture. Le Beige de la marque, texte Noir.
+    { cle: 'preouverture', couleur: '#EAE4DC', encre: '#222222', guide: true,
+      titre: { fr: 'Pré-ouverture', nl: 'Vóór de opening' },
+      sous: { fr: 'Le compte à rebours : de J-90 à l’ouverture', nl: 'De aftelling: van D-90 tot de opening' },
+      unite: { fr: 'étapes', nl: 'stappen' } },
   ];
   /*
    * Les illustrations des couvertures (19/11/2026, Sam : « illustrations du design system ») : celles de la marque, au trait
@@ -50,6 +58,7 @@
     standards: '../../tablette/img/p/bread-1.png',
     checklists: '../../tablette/img/p/sweet-tart-small.png',
     reseau: '../../assets/img/newsletter/cake.png',
+    preouverture: '../../tablette/img/p/rolls.png',
     depliant: '../../tablette/img/p/cookies.png',
   };
   function illustration(cle, classe) {
@@ -125,6 +134,7 @@
   }
   function nbDe(m) {
     if (m.ref) return ((S.ref && S.ref.domaines) || []).length;
+    if (m.guide) return guideEtapes().length;
     return docsDe(m).length;
   }
   function nbSousCats() { return ((S.ref && S.ref.domaines) || []).reduce(function (n, d) { return n + (d.souscats || []).length; }, 0); }
@@ -139,7 +149,8 @@
   function rendreGrille() {
     var cartes = MANUELS.map(function (m) {
       var n = nbDe(m);
-      var compte = m.ref ? n + ' ' + L(m.unite) + ' · ' + nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') : n + ' ' + L(m.unite);
+      var compte = m.ref ? n + ' ' + L(m.unite) + ' · ' + nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën')
+        : m.guide ? n + ' ' + L(m.unite) + ' · ' + guideSections().length + ' ' + T('sections', 'delen') : n + ' ' + L(m.unite);
       return '<div class="ct-carte">' +
         '<a class="ct-couv" href="#/m/' + m.cle + '" style="background:' + m.couleur + ';color:' + m.encre + ';text-decoration:none">' +
           '<div class="n">' + T('Manuel', 'Handboek') + '</div>' + illustration(m.cle) +
@@ -209,6 +220,7 @@
   }
   function charger(m) {
     if (m.ref) return chargerPostes();
+    if (m.guide) return Promise.resolve();   // le guide arrive avec /formation/ref, lu au départ
     var docs = docsDe(m);
     var manquants = docs.filter(function (d) { return !S.fiches[d.id]; });
     var total = docs.length, fait = total - manquants.length, k = 0, actifs = 0;
@@ -247,7 +259,8 @@
     var p = document.createElement('section');
     p.className = 'pg couv';
     var n = nbDe(m);
-    var detail = m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') + (postesV25().length ? ' · ' + postesV25().length + ' ' + T('postes', 'functies') : '') : T('Édition du ', 'Uitgave van ') + aujourdhui();
+    var detail = m.guide ? guideSections().length + ' ' + T('sections', 'delen')
+      : m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') + (postesV25().length ? ' · ' + postesV25().length + ' ' + T('postes', 'functies') : '') : T('Édition du ', 'Uitgave van ') + aujourdhui();
     p.innerHTML = '<div class="logo"><img src="../img/logo.png" alt="L’Atelier By"></div>' +
       '<div class="haut"><div class="gros">' + n + '</div><p>' + esc(L(m.unite)) + ' · ' + esc(detail) + '</p></div>' +
       '<div class="bande" style="background:' + m.couleur + ';color:' + m.encre + '">' + illustration(m.cle, 'ill-couv') + '<div class="k">' + T('Manuel du réseau L’Atelier By', 'Netwerkhandboek L’Atelier By') + '</div>' +
@@ -428,6 +441,57 @@
     return B;
   }
 
+  /* ── le manuel de pré-ouverture : le Guide pré-ouverture (sections, étapes, contacts) ── */
+  var QUI = { franchise: { fr: 'Franchisé', nl: 'Franchisenemer' }, atelier: { fr: 'L’Atelier By', nl: 'L’Atelier By' },
+    ensemble: { fr: 'Ensemble', nl: 'Samen' }, formateurs: { fr: 'Formateurs', nl: 'Opleiders' } };
+  function guideSections() { return (S.ref && S.ref.preouverture && S.ref.preouverture.sections) || []; }
+  function guideEtapes() {
+    var out = [];
+    guideSections().forEach(function (s) { if (s.type !== 'contacts') (s.points || []).forEach(function (p) { out.push({ s: s, p: p }); }); });
+    return out;
+  }
+  function libelle(o) { return S.langue === 'nl' && o.nl ? o.nl : (o.fr || ''); }
+  function champLangue(o, k) { return S.langue === 'nl' && o[k + '_nl'] ? o[k + '_nl'] : (o[k + '_fr'] || ''); }
+  function echeance(j) { return j === null || j === undefined || j === '' ? '' : (+j === 0 ? T('Jour J', 'Dag D') : T('J-', 'D-') + (+j)); }
+  function qui(p) { return '<span class="po-qui po-' + esc(p.qui || '') + '">' + esc(QUI[p.qui] ? L(QUI[p.qui]) : (p.qui || '')) + '</span>'; }
+  function ligneEtape(p, avecPreuve) {
+    var preuve = avecPreuve ? champLangue(p, 'preuve') : '';
+    return '<div class="po"><span class="po-j">' + esc(echeance(p.j)) + '</span><span class="po-t">' + lier(libelle(p)) +
+      (preuve ? '<small>' + T('Preuve à garder : ', 'Bewijs om te bewaren: ') + esc(preuve) + '</small>' : '') + '</span>' + qui(p) + '</div>';
+  }
+  function blocsRebours() {
+    var e = guideEtapes().filter(function (x) { return x.p.j !== null && x.p.j !== undefined && x.p.j !== ''; })
+      .sort(function (a, b) { return (+b.p.j) - (+a.p.j); });
+    var B = [{ neuve: true, html: '<div class="doc-code">' + T('Le compte à rebours', 'De aftelling') + '</div><h2>' + T('De J-90 à l’ouverture', 'Van D-90 tot de opening') + '</h2>' +
+      '<div class="doc-obj">' + T('Toutes les étapes de la pré-ouverture, de la plus lointaine au jour J. Chacune a son responsable ; les preuves à garder sont dans les sections qui suivent, et votre consultant les vérifie à la journée test.',
+        'Alle stappen vóór de opening, van de verste tot dag D. Elke stap heeft een verantwoordelijke; de bewijzen om te bewaren staan in de volgende delen, en uw consulent controleert ze op de testdag.') + '</div>' +
+      '<div class="po-leg">' + Object.keys(QUI).map(function (k) { return qui({ qui: k }); }).join(' ') + '</div>' }];
+    [[9999, 61, T('Plus de deux mois avant', 'Meer dan twee maanden vooraf')], [60, 31, T('Le deuxième mois avant', 'De tweede maand vooraf')],
+     [30, 11, T('Le dernier mois', 'De laatste maand')], [10, 0, T('Les dix derniers jours', 'De laatste tien dagen')]].forEach(function (t) {
+      var l = e.filter(function (x) { return +x.p.j <= t[0] && +x.p.j >= t[1]; });
+      l.forEach(function (x, i) { B.push({ html: (i ? '' : '<h3>' + esc(t[2]) + ' <small>· ' + l.length + '</small></h3>') + ligneEtape(x.p, false) }); });
+    });
+    return B;
+  }
+  function blocsSectionGuide(s, n) {
+    var intro = champLangue(s, 'intro');
+    var B = [{ neuve: true, html: '<div class="doc-code">' + T('Section ', 'Deel ') + n + '</div><h2>' + esc(libelle(s)) + '</h2>' + (intro ? '<div class="doc-obj">' + lier(intro) + '</div>' : '') }];
+    (s.points || []).forEach(function (p) {
+      B.push({ html: s.type === 'contacts' ? '<div class="po"><span class="po-t">' + esc(libelle(p)) + '</span>' + qui(p) + '</div>' : ligneEtape(p, true) });
+    });
+    return B;
+  }
+  function blocsLectures() {
+    var docs = ((S.liste && S.liste.sops) || []).filter(function (d) {
+      return d.type === 'Article' && d.statut !== 'brouillon' && ((d.classement && d.classement.phases) || []).indexOf('preouverture') >= 0;
+    }).sort(function (a, b) { return String(a.code).localeCompare(String(b.code), 'fr', { numeric: true }); });
+    var B = [{ neuve: true, html: '<div class="doc-code">' + T('À lire', 'Te lezen') + '</div><h2>' + T('Les articles à lire avant l’ouverture', 'De artikels om te lezen vóór de opening') + '</h2>' +
+      '<div class="doc-obj">' + T('Les articles du manuel opératoire rangés dans la phase de pré-ouverture (' + docs.length + '). Le code ouvre l’article. Les SOP et les checklists s’apprennent pendant la formation.',
+        'De artikels van het operationeel handboek in de fase vóór de opening (' + docs.length + '). De code opent het artikel. De SOP en de checklists leert men tijdens de opleiding.') + '</div>' }];
+    docs.forEach(function (d) { B.push({ html: '<div class="fo"><span class="fo-c"><a class="lien-doc" href="' + esc(lienDoc(d)) + '">' + esc(d.code) + '</a></span><span class="fo-t">' + esc(L(d.titre)) + '</span></div>' }); });
+    return B;
+  }
+
   /** Range des blocs dans des pages ; rend {pages, debuts} (debuts[k] : l'indice de page où commence l'entrée k). */
   function ranger(m, entrees) {
     var pages = [], debuts = [], cur = null;
@@ -466,6 +530,17 @@
       } else {
         ajouter('postes', '', T('Les postes (illisibles pour l’instant)', 'De functies (nu niet leesbaar)'),
           [{ neuve: true, html: '<h2>' + T('Les postes', 'De functies') + '</h2><p>' + T('Le référentiel des postes est illisible pour l’instant : rouvrez le manuel plus tard.', 'Het referentieel van de functies is nu niet leesbaar: open het handboek later opnieuw.') + '</p>' }]);
+      }
+    } else if (m.guide) {
+      if (guideSections().length) {
+        ajouter('rebours', T('J-', 'D-'), T('Le compte à rebours, de J-90 à l’ouverture', 'De aftelling, van D-90 tot de opening'), blocsRebours());
+        titres.push({ sec: T('Les étapes, section par section', 'De stappen, deel per deel') });
+        guideSections().forEach(function (sc, k) { ajouter(sc.cle, String(k + 1), libelle(sc), blocsSectionGuide(sc, k + 1)); });
+        titres.push({ sec: T('À lire', 'Te lezen') });
+        ajouter('lectures', '', T('Les articles à lire avant l’ouverture', 'De artikels om te lezen vóór de opening'), blocsLectures());
+      } else {
+        ajouter('rebours', '', T('Le guide (illisible pour l’instant)', 'De gids (nu niet leesbaar)'),
+          [{ neuve: true, html: '<h2>' + T('Pré-ouverture', 'Vóór de opening') + '</h2><p>' + T('Le Guide pré-ouverture est illisible pour l’instant : rouvrez le manuel plus tard.', 'De gids vóór de opening is nu niet leesbaar: open het handboek later opnieuw.') + '</p>' }]);
       }
     } else {
       docsDe(m).forEach(function (d) {

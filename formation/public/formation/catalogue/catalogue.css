@@ -168,5 +168,17 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .vide { font-size: 8pt; color: var(--muted, #7a736a); }
 
 /* La carte du dépliant : le Beige de la marque (§13.3), son illustration en Noir. */
-.ct-carte-dep { background: #EAE4DC; border-color: transparent; }
+.ct-carte-dep { border-style: dashed; }   /* le Beige est désormais la couverture du manuel de pré-ouverture */
 .ct-carte-dep .ill-dep { width: 96px; height: 80px; color: var(--accent, #8D1D2C); }
+
+/* Le manuel de pré-ouverture (19/11/2026) : une étape par ligne (échéance, libellé et preuve à garder, responsable) ; le
+ * responsable en pastille aux couleurs de la marque : franchisé neutre, L'Atelier By Ruby, ensemble Abricot, formateurs Pop-Up. */
+.pg .po { display: flex; gap: 2.5mm; align-items: baseline; padding: .9mm 0; border-bottom: 1px dotted var(--line, #e6e0d8); font-size: 8.5pt; }
+.pg .po-j { width: 10mm; flex: none; color: var(--accent, #8D1D2C); font-variant-numeric: tabular-nums; font-size: 8pt; }
+.pg .po-t { flex: 1; }
+.pg .po-t small { display: block; color: var(--muted, #7a736a); font-size: 7.5pt; margin-top: .3mm; }
+.pg .po-qui { flex: none; font-size: 7pt; line-height: 1.5; border-radius: 1.2mm; padding: 0 1.6mm; background: var(--chip, #EDE7DE); color: #222222; white-space: nowrap; }
+.pg .po-atelier { background: #8D1D2C; color: #F5EFE4; }
+.pg .po-ensemble { background: #F2C9A0; color: #222222; }
+.pg .po-formateurs { background: #78554B; color: #F5EFE4; }
+.pg .po-leg { margin: 1mm 0 2mm; display: flex; gap: 1.5mm; flex-wrap: wrap; }
