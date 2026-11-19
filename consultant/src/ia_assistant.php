@@ -276,7 +276,7 @@ function wr_ia_lecons(): array
  * Le consultant choisit ; l'IA ne choisit jamais ses propres exemples, elle renforcerait ses propres erreurs. Une
  * photo prise est COPIÉE sur le serveur : l'adresse signée du panel expire en 20 min.
  *
- * Routes : GET /ia/entrainement, POST /ia/modeles, PUT /ia/consigne-generale (la consigne générale des contrôles
+ * Routes : GET /ia/entrainement, GET /ia/parfaites, POST /ia/modeles, PUT /ia/consigne-generale (la consigne générale des contrôles
  * qualité, src/rayons_photos.php).
  */
 
@@ -485,6 +485,99 @@ function ep_ia_entrainement(): array
         'consigneGeneraleDefaut' => !is_array(function_exists('setting') ? setting('cqConsigneGenerale', null) : null),
         'consigneGeneraleMax' => defined('CQ_POINTS_MAX') ? CQ_POINTS_MAX : 20,
         'niveauModele' => iaNiveauMax(), 'nomNiveauModele' => iaNomNiveau(iaNiveauMax())];
+}
+
+/* --- Les photos 5/5 d'un type de tâche, toutes périodes (19/11/2026) ----------------------------------------------
+ *
+ * Sam : « dans le suivi des tâches, dans l'entraînement de l'IA, je dois pouvoir récupérer dans les anciennes photos
+ * tous les 5/5 par type de tâche demandé ». Les candidates d'ep_ia_entrainement ne voient que 30 jours et les photos
+ * passées par le mode assisté (con_cq_ia) ; ici, toutes les notes au niveau modèle de mac_task_review (le journal de
+ * chaque note posée du cockpit ou de l'app des visites), depuis le début. Un type : un rayon (« Photo du comptoir -
+ * … », rvRayonDeTache), sinon la tâche elle-même (« tache:<nom> », comme les sujets d'ep_ia_analyses). Le nom de
+ * chaque tâche vient du panel (/tasks), gardé une heure ; une tâche sans photo n'a rien à montrer et ne compte pas.
+ *
+ * Route : GET /ia/parfaites[?sujet=&de=].
+ */
+const IA_PARFAITES_PAGE = 24;
+
+/** Les tâches du panel par id : [nom, photo] — la liste /tasks (plusieurs pages), gardée une heure ; complétée par les
+ *  noms que con_cq_ia a gardés (une tâche retirée du panel garde ainsi le sien). */
+function iaTachesConnues(): array
+{
+    $m = function_exists('setting') ? setting('iaTachesConnues', null) : null;
+    if (is_array($m) && isset($m['le'], $m['v']) && time() - (int) $m['le'] < 3600) { return (array) $m['v']; }
+    $v = []; $lu = false;
+    if (function_exists('tkLireListe') && function_exists('tkNormTache')) {
+        [$brutes] = tkLireListe('/tasks');
+        if (is_array($brutes)) {
+            $lu = true;
+            foreach ($brutes as $t) { if (!is_array($t)) { continue; } $n = tkNormTache($t); if ($n['id'] > 0) { $v[$n['id']] = ['nom' => $n['nom'], 'photo' => $n['photo']]; } }
+        }
+    }
+    try {
+        foreach (Db::rows('SELECT DISTINCT task_id, tache FROM con_cq_ia WHERE tache IS NOT NULL') as $r) {
+            $id = (int) $r['task_id'];
+            if ($id > 0 && !isset($v[$id])) { $v[$id] = ['nom' => (string) $r['tache'], 'photo' => true]; }
+        }
+    } catch (Throwable $e) { /* sans la table : les noms du panel */ }
+    if ($lu) {
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['iaTachesConnues', json_encode(['le' => time(), 'v' => $v], JSON_UNESCAPED_UNICODE)]); }
+        catch (Throwable $e) { /* relu la prochaine fois */ }
+    }
+    return $v;
+}
+
+/** Le type d'une tâche : son rayon pour une photo du comptoir, sinon elle-même. */
+function iaTypeTache(string $nom): array
+{
+    $rv = $nom !== '' && function_exists('rvRayonDeTache') ? rvRayonDeTache($nom) : null;
+    return $rv !== null ? ['cle' => (string) $rv['cle'], 'nom' => (string) $rv['nom'], 'type' => 'rayon']
+        : ['cle' => 'tache:' . $nom, 'nom' => $nom, 'type' => 'tache'];
+}
+
+/**
+ * GET /ia/parfaites — les types de tâche, chacun avec son nombre de photos notées au niveau modèle (5/5), toutes
+ * périodes : les rayons dans l'ordre du comptoir, puis les autres tâches. ?sujet=<type>&de=<rang> — ses photos, les
+ * plus récentes d'abord, IA_PARFAITES_PAGE par page : magasin, tâche, jour, qui l'a notée et son commentaire.
+ */
+function ep_ia_parfaites(): array
+{
+    ensureIaAssistant();
+    $max = iaNiveauMax();
+    $taches = iaTachesConnues();
+    $types = []; $idsDe = [];
+    foreach (Db::rows('SELECT id_task, COUNT(*) AS n FROM mac_task_review WHERE rating = ? GROUP BY id_task', [$max]) as $r) {
+        $id = (int) $r['id_task'];
+        $t = $taches[$id] ?? null;
+        if ($t !== null && empty($t['photo'])) { continue; }   // une tâche sans photo : rien à montrer
+        $ty = iaTypeTache($t !== null ? (string) $t['nom'] : 'Tâche #' . $id);
+        $types[$ty['cle']] ??= $ty + ['n' => 0];
+        $types[$ty['cle']]['n'] += (int) $r['n'];
+        $idsDe[$ty['cle']][] = $id;
+    }
+    // Les rayons dans l'ordre du comptoir (rvListe), puis les autres tâches par nom.
+    $rang = [];
+    foreach ((function_exists('rvListe') ? rvListe() : []) as $i => $rv) { $rang[(string) $rv['cle']] = $i; }
+    uasort($types, static fn ($a, $b) => [$a['type'] === 'rayon' ? 0 : 1, $rang[$a['cle']] ?? 999, $a['nom']] <=> [$b['type'] === 'rayon' ? 0 : 1, $rang[$b['cle']] ?? 999, $b['nom']]);
+    $out = ['niveau' => $max, 'nomNiveau' => iaNomNiveau($max), 'types' => array_values($types), 'nomsLus' => $taches !== [], 'page' => IA_PARFAITES_PAGE];
+    $sujet = (string) ($_GET['sujet'] ?? '');
+    if ($sujet === '') { return $out; }
+    if (!isset($idsDe[$sujet])) { return $out + ['sujet' => $sujet, 'total' => 0, 'photos' => [], 'suite' => null]; }
+    $de = max(0, (int) ($_GET['de'] ?? 0));
+    $ids = $idsDe[$sujet];
+    $in = implode(',', array_fill(0, count($ids), '?'));
+    $rows = Db::rows("SELECT * FROM mac_task_review WHERE rating = ? AND id_task IN ($in) ORDER BY review_date DESC, id DESC LIMIT "
+        . (IA_PARFAITES_PAGE + 1) . ' OFFSET ' . $de, array_merge([$max], $ids));
+    $photos = [];
+    foreach (array_slice($rows, 0, IA_PARFAITES_PAGE) as $r) {
+        $id = (int) $r['id_task'];
+        $par = trim((string) ($r['consultant_name'] ?? '')) ?: trim((string) ($r['owner_name'] ?? ''));
+        $photos[] = ['shopId' => (string) $r['id_shop'], 'taskId' => (string) $id, 'date' => substr((string) $r['review_date'], 0, 10),
+            'tache' => isset($taches[$id]) ? (string) $taches[$id]['nom'] : 'Tâche #' . $id, 'par' => $par,
+            'commentaire' => $r['comment'] !== null && trim((string) $r['comment']) !== '' ? mb_substr((string) $r['comment'], 0, 300) : null];
+    }
+    return $out + ['sujet' => $sujet, 'type' => $types[$sujet]['type'], 'nom' => $types[$sujet]['nom'], 'total' => $types[$sujet]['n'],
+        'photos' => $photos, 'suite' => count($rows) > IA_PARFAITES_PAGE ? $de + IA_PARFAITES_PAGE : null];
 }
 
 /* --- L'ASSISTANT D'ENTRAÎNEMENT (15/11/2026) -------------------------------------------------------------------------

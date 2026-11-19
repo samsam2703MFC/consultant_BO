@@ -724,6 +724,7 @@ function route(string $method, string $path): mixed
             $path === '/ia/propositions'               => ep_ia_propositions(),
             $path === '/ia/lecons'                     => ep_ia_lecons(),
             $path === '/ia/entrainement'               => ep_ia_entrainement(),
+            $path === '/ia/parfaites'                  => ep_ia_parfaites(),
             $path === '/ia/analyses'                   => ep_ia_analyses(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),

@@ -731,6 +731,9 @@ svg.pxv-nuage .lab .mu{font-weight:400;fill:var(--color-text-muted)}
 .ia-ent .ph.vide{background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);border:1px dashed var(--faint);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--color-text-muted);text-align:center;padding:6px}
 .ia-ent-cand .n{font-size:12.5px;margin-top:4px}
 .ia-ent-cand .m{font-size:11px;color:var(--color-text-muted)}
+/* Toutes les photos 5/5 d'un type de tâche (19/11/2026) : le choix du type, « Plus anciennes ». */
+.ia-par-ch{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:8px 0 2px;font-size:12px;color:var(--color-text-muted)}.ia-par-ch select{font-size:13px;padding:5px 9px;border-radius:8px}
+.ia-par-plus{margin-top:12px;text-align:center}
 .ia-ent-cand .b{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
 .ia-valider-mod{border:none;border-radius:8px;padding:5px 10px;background:var(--prize);color:#fff;font:500 11.5px var(--font-ui);cursor:pointer}
 .ia-ent-rayon .hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
