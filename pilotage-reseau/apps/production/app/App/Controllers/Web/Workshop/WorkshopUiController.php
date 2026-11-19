@@ -169,7 +169,13 @@ class WorkshopUiController extends BaseController
     /** Telefon : wejście / wyjście po zeskanowaniu kodu QR z tabletu (strona publiczna, dane przez API). */
     public function kioskScan()
     {
-        $this->view('workshop/kiosk_scan', ['api_base' => $this->apiBase()]);
+        // [355] Le téléphone ouvre la page par l'hôte du QR (celui de la tablette, joignable sur le Wi-Fi) : fichiers et API
+        // en chemins depuis CET hôte, jamais par l'hôte d'APP_URL, que le téléphone peut ne pas joindre (nom de machine,
+        // adresse publique). Une API sur un autre hôte (API_BASE_URL) reste à son adresse.
+        $path = rtrim((string) parse_url(ROOT, PHP_URL_PATH), '/');
+        $api = $this->apiBase();
+        if (str_starts_with($api, rtrim(ROOT, '/') . '/')) $api = $path . substr($api, strlen(rtrim(ROOT, '/')));
+        $this->view('workshop/kiosk_scan', ['api_base' => $api, 'page_root' => $path]);
     }
 
     /** Karta czasu pracy do druku, z podpisami z tabletu. */

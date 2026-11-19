@@ -10,7 +10,7 @@
     const pw = document.getElementById('loginPassword');
     if (!box || !pw) return;
     const root = (box.dataset.root || '').replace(/\/$/, '');
-    const base = new URL(root + '/', window.location.href).href.replace(/\/$/, '');
+    const base = (window.location.origin + new URL(root + '/', window.location.href).pathname).replace(/\/$/, '');
     const canvas = box.querySelector('[data-lq-qr]');
     const meta = box.querySelector('[data-lq-meta]');
     const pad = (n) => String(n).padStart(2, '0');
