@@ -286,6 +286,12 @@ final class ExecutionRepository extends WorkshopRepository
         $this->db->prepare('UPDATE n_prod_clock SET clock_out = ?, out_client_uuid = ? WHERE id = ? AND clock_out IS NULL')->execute([$at, $uuid, $id]);
     }
 
+    /** [365] Remarque du jour écrite par la personne au pointage (sortie), reprise sur la feuille de temps du mois. */
+    public function setClockDayNote(int $id, string $note): void
+    {
+        $this->db->prepare('UPDATE n_prod_clock SET day_note = ? WHERE id = ?')->execute([$note, $id]);
+    }
+
     public function correctClock(int $id, string $in, ?string $out, string $note, ?int $userId): void
     {
         $this->db->prepare('UPDATE n_prod_clock SET clock_in = ?, clock_out = ?, note = ?, corrected_by = ?, corrected_at = NOW() WHERE id = ?')
