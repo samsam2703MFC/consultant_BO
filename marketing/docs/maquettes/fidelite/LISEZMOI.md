@@ -6,6 +6,9 @@
 > `assets/css/fidelite.css`, rail **ERP franchisé › Fidélité** (`#/fidelity`). Les règles s'enregistrent
 > pour de vrai ; l'analyse des clients tourne sur un jeu d'essai tant que `ceo_fid_visite` est vide.
 >
+> **Retiré du cockpit** (19/11/2026, demande de Sam) : l'écran (`fidelite-vals.js`, `fidelite-tpl.js`) et son entrée
+> du rail ; `#/fidelity` mène à l'accueil. Le serveur et `fidelite.css` restent.
+>
 > **Écriture épurée, à la manière d'Apple** (24/10/2026, demande de Sam) : des listes groupées comme les
 > Réglages (une ligne par règle : titre court, résumé en clair, interrupteur ; un clic l'ouvre pour la
 > modifier), un contrôle segmenté Programme / Clients, une barre flottante pour publier, des chiffres grands et

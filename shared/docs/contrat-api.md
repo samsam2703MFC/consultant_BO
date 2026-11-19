@@ -5562,7 +5562,8 @@ la dernière visite faite, en rappel au bureau ; il n'est jamais figé dans le d
 
 ### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
 
-Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
+Écran **ERP franchisé › Fidélité** (`#/fidelity`) — **retiré du cockpit le 19/11/2026** (l'adresse mène à l'accueil ; les
+routes ci-dessous restent, le dashboard du magasin lit les profils publiés). Il avait deux onglets : le **Programme** (maquette C de
 `marketing/docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `marketing/src/fidelite.php`.
 
 | Méthode | Route | Rôle |

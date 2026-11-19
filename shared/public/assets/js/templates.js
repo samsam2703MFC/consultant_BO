@@ -7,7 +7,6 @@
 import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplSvSources } from './suivi-tpl.js';
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
-import { tplFidelite } from './fidelite-tpl.js';
 import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
@@ -67,7 +66,7 @@ const ICO_ECRAN = {
   // Produits
   catalogue: 'bundles', planogramme: 'ecran', paramProduits: 'reglages', benchmark: 'recherche', promoTableau: 'offres',
   // Marque & marketing
-  fonds: 'fonds', reputation: 'avis', mktObjectifs: 'perf', mdFormulaires: 'liens', fidelite: 'crm',
+  fonds: 'fonds', reputation: 'avis', mktObjectifs: 'perf', mdFormulaires: 'liens',
   // Outils magasin
   tablette: 'ecran', assistantCoachs: 'messages', primesApp: 'droits', pointages: 'journal',
   // Administration
@@ -211,7 +210,6 @@ export function render(c, x){
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isCadreT ? tplCadreTaches(c, x) : ''}
       ${c.isAudits ? tplAudits(c, x) : ''}
-      ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isAsc ? tplAssistantCoachs(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
