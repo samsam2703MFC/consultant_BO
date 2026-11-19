@@ -2568,7 +2568,6 @@
     try { return opMin(new Date().toLocaleTimeString('fr-BE', { timeZone: 'Europe/Brussels', hour: '2-digit', minute: '2-digit', hour12: false })); }
     catch (e) { const t = new Date(); return t.getHours() * 60 + t.getMinutes(); }
   }
-  const opDans = (m, now) => { const d = m - now; return d < 60 ? 'dans ' + d + ' min' : 'dans ' + Math.floor(d / 60) + ' h ' + String(d % 60).padStart(2, '0'); };
   /** Vide quand : la première heure où la vitrine passe à zéro ou dessous, et l'heure où une cuisson la remplit. */
   function opVide(p) {
     const c = Array.isArray(p.cases) ? p.cases : [];
@@ -3591,16 +3590,16 @@
   }
   /**
    * La journée au téléphone (11/10/2026) : une frise de la journée. Une barre fine par personne au planning, le nom dedans
-   * (vert en poste, gris fini, cadre à venir), le trait de maintenant, et les cuissons en repères dessous, à l'heure du four
-   * (vert validée, orange à valider, cadre à venir). Le détail de chaque barre ou repère dans son infobulle.
+   * (vert en poste, gris fini, cadre à venir), et le trait de maintenant. Le détail de chaque barre dans son infobulle.
+   * Les cuissons (repères à l'heure du four et leurs libellés) sont retirées le 19/11/2026, comme au bureau (Sam : « pour
+   * le moment elles ne servent à rien ») ; leur code est dans l'historique (git log -S "jm-cl").
    */
   function opJourneeMob(D) {
-    const { now, m, planning, cuissons } = D;
+    const { now, m, planning } = D;
     const tete = `<div class="ct"><span class="op-h2">La journée</span><span class="db-mini" style="margin-left:auto">${m && m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : ''}${now != null && planning.length ? ' · ' + fN(planning.filter(p => opMin(p.debut) <= now && now < opMin(p.fin)).length) + ' en poste' : ''}</span></div>`;
     const pts = [];
     planning.forEach(p => { pts.push(opMin(p.debut), opMin(p.fin)); });
-    cuissons.forEach(c => { pts.push(opMin(c.four)); });
-    if (!pts.length) { return `<div class="db-card op-bloc">${tete}<div class="db-mini" style="padding:10px 14px">${m ? 'pas de planning ni de cuisson lus' : 'lecture…'}</div></div>`; }
+    if (!pts.length) { return `<div class="db-card op-bloc">${tete}<div class="db-mini" style="padding:10px 14px">${m ? 'pas de planning lu' : 'lecture…'}</div></div>`; }
     const h0 = Math.floor(Math.min(...pts) / 60), h1 = Math.max(h0 + 1, Math.ceil(Math.max(...pts) / 60));
     const x = mn => Math.max(0, Math.min(100, 100 * (mn / 60 - h0) / (h1 - h0)));
     const pas = h1 - h0 > 12 ? 3 : 2, axe = [];
@@ -3612,20 +3611,10 @@
       // Toucher la barre d'une personne ouvre « L'équipe du jour » sur elle (18/11/2026).
       return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}" data-eqm="${esc(p.nom || '')}" role="button" tabindex="0"><b>${esc(nom)}</b></i></div>`;
     }).join('');
-    const CS = cuissons.slice().sort((a, b) => opMin(a.four) - opMin(b.four)).map(c => {
-      const t = opMin(c.four), cls = c.valide ? 'ok' : (now != null && t > now ? 'av' : 'kv');
-      return { c, t, cls, etat: c.valide ? 'validée' : (now != null && t > now ? opDans(t, now) : 'à valider') };
-    });
-    // Les cuissons : un repère à l'heure du four sur la frise, et leurs libellés en une ligne dessous (sans chevauchement).
-    const reperes = CS.map(k => `<span class="${k.cls}" style="left:${x(k.t).toFixed(2)}%" title="four ${esc(k.c.four)} · ${esc(k.c.nom)}"></span>`).join('');
-    // Court : l'heure, la cuisson, les pièces ; la couleur dit l'état, et la prochaine cuisson dit dans combien de temps.
-    const prochaine = CS.find(k => k.cls === 'av');
-    const fours = CS.map(k => `<span class="${k.cls}" title="${esc(k.c.nom)} · ${fN(k.c.pieces)} pièces, ${esc(k.c.de)} à ${esc(k.c.a)} · four ${esc(k.c.four)} · ${esc(k.etat)}"><i></i><b>${esc(k.c.four)}</b> ${esc(k.c.nom)} ${fN(k.c.pieces)}${k === prochaine ? ' · <em>' + esc(k.etat) + '</em>' : ''}</span>`).join('');
     const tn = now != null && now >= h0 * 60 && now <= h1 * 60 ? `<span class="jm-now" style="left:${x(now).toFixed(2)}%"></span>` : '';
     return `<div class="db-card op-bloc">${tete}<div class="jm">
       <div class="jm-ax">${axe.join('')}</div>
       <div class="jm-z">${tn}${barres || '<div class="db-mini">pas de planning lu</div>'}</div>
-      ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
       </div>${planning.length ? '<div class="op-tap op-eqm" data-eqm="" role="button" tabindex="0"><span>L’équipe du jour : ventes, heures, à l’heure</span><span>›</span></div>' : ''}</div>`;
   }
   /**
