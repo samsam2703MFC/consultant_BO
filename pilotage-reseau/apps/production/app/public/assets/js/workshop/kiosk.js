@@ -510,8 +510,9 @@
         const canvas = el.querySelector('[data-qr]');
         if (!canvas) { window.clearInterval(qrTimer); qrTimer = null; return; }
         try {
-            // root : adresse absolue ou chemin de l'application → adresse absolue de la page du téléphone.
-            const q = await api('GET', '/kiosk/qr?base=' + encodeURIComponent(new URL(root + '/', window.location.href).href.replace(/\/$/, '')));
+            // [355] Adresse de la page du téléphone : hôte de CETTE tablette (celui qui répond sur le réseau de l'atelier)
+            // + chemin de l'application — jamais l'hôte d'APP_URL, que le téléphone peut ne pas joindre.
+            const q = await api('GET', '/kiosk/qr?base=' + encodeURIComponent((window.location.origin + new URL(root + '/', window.location.href).pathname).replace(/\/$/, '')));
             const quiet = 4;
             const total = q.size + 2 * quiet;
             const scale = Math.max(2, Math.floor(440 / total));

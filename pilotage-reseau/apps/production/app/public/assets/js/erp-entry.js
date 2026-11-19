@@ -29,7 +29,7 @@
         const canvas = scope.querySelector('[data-ee-qr]');
         const wait = scope.querySelector('[data-ee-wait]');
         const meta = scope.querySelector('[data-ee-meta]');
-        const base = new URL(root + '/', window.location.href).href.replace(/\/$/, '');
+        const base = (window.location.origin + new URL(root + '/', window.location.href).pathname).replace(/\/$/, '');
         let since = null, expires = 0, stop = false, timer = null, poll = null;
         async function refresh() {
             try {

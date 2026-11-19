@@ -44,6 +44,7 @@
 .office-action.is-out { background: var(--k-danger-50); color: var(--k-danger); }
 .office-qr-code { grid-area: code; padding: 14px; border-radius: 24px; background: #fff; border: 1px solid var(--k-line); }
 .office-qr-code canvas { display: block; width: min(380px, 42vw); height: min(380px, 42vw); image-rendering: pixelated; }
+.office-qr-url { margin: 6px 0 0; font-size: 12px; color: var(--k-muted, #6b6b6b); text-align: center; word-break: break-all; }
 .office-qr-text { grid-area: text; display: flex; flex-direction: column; gap: 10px; }
 .office-qr-help { margin: 0; font-size: 21px; line-height: 1.35; }
 .office-waiting { margin: 6px 0 0; display: flex; gap: 10px; align-items: center; font-size: 17px; font-weight: 500; color: var(--k-primary); }

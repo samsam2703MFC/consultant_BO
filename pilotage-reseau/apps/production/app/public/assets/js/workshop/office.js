@@ -212,7 +212,8 @@
     // --- Osobisty kod QR (osoba + dzień) ---------------------------------------------------------------
     async function openPerson(personId) {
         clearTimers();
-        const qrBase = new URL(root + '/', window.location.href).href.replace(/\/$/, '');
+        // [355] Hôte de cette tablette (joignable sur le Wi-Fi de l'atelier), pas celui d'APP_URL.
+        const qrBase = (window.location.origin + new URL(root + '/', window.location.href).pathname).replace(/\/$/, '');
         let q;
         try {
             q = await api('POST', '/kiosk/office/qr', {person_id: personId, base: qrBase});
@@ -231,7 +232,7 @@
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card office-qr">
                 <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2><p class="office-qr-day">${esc(longDate(day))}</p>
                     <span class="office-action is-${action}">${esc(t(action === 'in' ? 'action_in' : 'action_out'))}${p.clocked_in && p.since ? ` · ${esc(t('state_in', {time: p.since}))}` : ''}</span></div></div>
-                <div class="office-qr-code"><canvas data-qr width="360" height="360" role="img" aria-label="QR ${esc(p.name)}"></canvas></div>
+                <div class="office-qr-code"><canvas data-qr width="360" height="360" role="img" aria-label="QR ${esc(p.name)}"></canvas><p class="office-qr-url" data-qr-url></p></div>
                 <div class="office-qr-text"><p class="office-qr-help ${!p.has_pin && !p.phones ? 'kiosk-error' : ''}">${esc(help)}</p>
                     <p class="kiosk-muted">${esc(t('qr_only_you'))}</p>
                     <p class="office-waiting"><span class="office-dot" aria-hidden="true"></span>${esc(t('waiting'))}</p>
@@ -412,6 +413,9 @@
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#000';
         q.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] === '1') ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale); });
+        // [355] Adresse ouverte par le QR (sans le code) : à comparer avec celle qui s'ouvre sur le téléphone.
+        const url = el.querySelector('[data-qr-url]');
+        if (url) url.textContent = String(q.url || '').split('#')[0].replace(/^https?:\/\//, '');
     }
 
     function renderDone(p, s) {
