@@ -5,6 +5,8 @@
  * (osoba + dzień). Osoba skanuje go swoim telefonem i zatwierdza wejście albo wyjście na telefonie (pytania, podpis) ;
  * telefon innej osoby jest odrzucany. Tablet sprawdza co 2 s, czy pointowanie jest zapisane, i wraca do działów.
  * Bez telefonu : PIN, potem pytania i podpis palcem na tablecie (pin_allowed ; kiosk.office_pin_all — wszyscy).
+ * [356] Osoba z PIN-em (pin_allowed) : dotknięcie nazwiska → od razu PIN (4 cyfry), duży przycisk WEJŚCIE / WYJŚCIE,
+ *       pytania (Tak / Nie, punkty) i podpis ; kod QR telefonem — przycisk na ekranie PIN-u.
  */
 (function () {
     'use strict';
@@ -188,8 +190,12 @@
         };
         draw();
         body.addEventListener('click', (e) => {
-            const p = e.target.closest('[data-person]');
-            if (p) openPerson(Number(p.dataset.person));
+            const b = e.target.closest('[data-person]');
+            if (!b) return;
+            // [356] PIN d'abord (4 chiffres), comme le parcours du téléphone mais sans QR ; QR : bouton sur l'écran du PIN.
+            const person = people.find(x => x.id === Number(b.dataset.person));
+            if (person && person.pin_allowed && person.employee_id) renderPin(person);
+            else openPerson(Number(b.dataset.person));
         });
         el.querySelector('.office-groupbar').addEventListener('click', (e) => {
             const c = e.target.closest('[data-filter]');
@@ -271,7 +277,9 @@
                 <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
                     <button type="button" class="kiosk-btn" data-erase aria-label="${esc(t('erase'))}">⌫</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
                     <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div>
-                <button type="button" class="kiosk-btn is-small" data-home>${esc(t('cancel'))}</button></section>`;
+                <div class="kiosk-row">${p.phones ? `<button type="button" class="kiosk-btn is-small" data-qr-go><i class="bi bi-qr-code"></i> ${esc(t('qr_instead'))}</button>` : ''}
+                    <button type="button" class="kiosk-btn is-small" data-home>${esc(t('cancel'))}</button></div></section>`;
+        el.querySelector('[data-qr-go]')?.addEventListener('click', () => openPerson(p.id));
         const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
         dots();
         const submit = async () => {
@@ -281,7 +289,7 @@
             try {
                 const r = await api('POST', '/kiosk/identify', {employee_id: p.employee_id, pin});
                 const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
-                renderConfirm(p, r.employee_token, me, me.clocked_in ? 'out' : 'in');
+                renderClock(p, r.employee_token, me);
             } catch (err) {
                 if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
                 pin = ''; dots(); ok.disabled = false;
@@ -296,6 +304,21 @@
             dots();
             if (b.hasAttribute('data-ok')) submit();
         });
+        idle(IDLE_MS);
+    }
+
+    // [356] Po PIN-ie jak na telefonie : powitanie, stan dnia i jeden duży przycisk WEJŚCIE / WYJŚCIE → pytania + podpis.
+    function renderClock(p, token, me) {
+        clearTimers();
+        const inside = !!me.clocked_in;
+        const since = inside && me.clock && me.clock.clock_in ? String(me.clock.clock_in).slice(11, 16) : null;
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card office-clock">
+                <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(t('hello', {name: p.name}))}</h2>
+                    <p class="kiosk-status">${esc(inside ? t('state_in', {time: since || p.since || ''}) : (p.left_at ? t('state_left', {time: p.left_at}) : t('state_out')))}</p></div></div>
+                <button type="button" class="kiosk-btn kiosk-big ${inside ? 'is-danger' : 'is-ok'}" data-clock-tap="${inside ? 'out' : 'in'}">${esc(t(inside ? 'action_out' : 'action_in'))}</button>
+                <button type="button" class="kiosk-btn is-small" data-home>${esc(t('not_me'))}</button>
+            </section>`;
+        el.querySelector('[data-clock-tap]').addEventListener('click', (e) => renderConfirm(p, token, me, e.currentTarget.dataset.clockTap));
         idle(IDLE_MS);
     }
 

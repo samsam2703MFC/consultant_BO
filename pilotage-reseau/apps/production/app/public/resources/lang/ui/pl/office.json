@@ -74,5 +74,6 @@
   "gp_waste_tag": "braki",
   "gp_add": "Dodaj",
   "gp_cancel": "Anuluj",
-  "gp_remove": "Usuń"
+  "gp_remove": "Usuń",
+  "qr_instead": "Kod QR telefonem"
 }
