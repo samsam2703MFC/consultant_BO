@@ -6,7 +6,7 @@ niveau franchisé et poste.
 ## Ce qui est fait
 
 - **Article 0.0.57** « La gestion de la semaine : la réunion du lundi et ses contrôles » (`art-gestion-semaine.json`),
-  encodé en v1.0 « à valider », accès responsable. Il décrit la réunion d’équipe du lundi (5.5.01), l’auto-audit HACCP
+  encodé en v1.0, accès responsable, **publié le 19/11/2026** (Sam : « publie 0.0.57 ») : quiz et « vu faire » ouverts. Il décrit la réunion d’équipe du lundi (5.5.01), l’auto-audit HACCP
   du lundi (5.6.01) et la relecture de la semaine de la routine du dashboard (5.2.01). Publication : « publie 0.0.57 ».
 - **Liens posés sur les documents existants** (champ « checklists » du classement, sans nouvelle version) :
 

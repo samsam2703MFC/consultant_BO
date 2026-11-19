@@ -1146,6 +1146,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   responsable) : réunion d’équipe du lundi (5.5.01), auto-audit HACCP du lundi (5.6.01), relecture de la semaine de la
   routine du dashboard (5.2.01). v1.0 « à valider ».
 - **Liens posés** (classement, sans nouvelle version) : 0.0.16 et 0.0.55 → 5.5.01 ; 0.0.13 → 5.6.01 ; 0.0.15 → 5.2.01.
+- **0.0.57 publié le 19/11/2026** (Sam : « publie 0.0.57 ») : `PATCH /formation/sop/fiche/art-gestion-semaine {statut: publiee}`,
+  relu au serveur et sur la tablette. La partie « Qui fait chaque tâche » reste provisoire.
 - **Blocage** : les tâches de gestion hebdomadaire n’ont aucun niveau de poste attribué au panel (`POST /task/qui` : « qui
   fait » vide), alors que les tâches quotidiennes du comptoir en ont. Le niveau franchisé et poste ne peut donc pas
   s’afficher tant que les niveaux ne sont pas réglés dans le cadre des tâches. Détail : `data/formation/gestion-semaine/LISEZMOI.md`.
