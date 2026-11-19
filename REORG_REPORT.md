@@ -1,7 +1,7 @@
 # REORG_REPORT — Réorganisation du bac à sable en quatre domaines
 
-**État au 19/11/2026 : phases 1 à 3 faites sur la branche `reorg/structure-domaines`, rien n'est livré sur le serveur
-de test, rien n'est supprimé.** La phase 4 (purge) attend « PURGE » ; ce rapport sera complété à ce moment-là (tables
+**État au 19/11/2026 : phases 1 à 3 faites sur la branche `reorg/structure-domaines` ; sur le serveur de test, seule
+la ligne de base (lecture seule) a été mesurée : rien n'y est livré, rien n'est supprimé.** La phase 4 (purge) attend « PURGE » ; ce rapport sera complété à ce moment-là (tables
 supprimées et leurs lignes, dump, tests finaux).
 
 Décisions appliquées : A1 (la mission remplace le registre du 06/11, le Recrutement n'est plus un des quatre domaines),
@@ -96,18 +96,40 @@ les secrets du déploiement (`DEPLOY_SSH_PASSWORD`…), les secrets de `config.p
 `MAR_ERP_API_*`), les secrets internes (signatures de session et de liens, mot de passe haché, codes d'accès, sel,
 code des tablettes) et le module RH.
 
+## 5 bis. Ligne de base du serveur de test (mesurée le 19/11/2026 à 17:30, lecture seule)
+
+Sonde `.github/workflows/sonde-reorg.yml` (runs 1 et 2, succès), `reorg/ligne_de_base.php` contre le code déployé.
+Détail par table : `reorg/ligne_de_base_serveur.tsv` ; JSON complet dans le dossier privé du serveur
+(`/var/lib/consulant_bo/prive/reorg/`).
+
+- Base `atelierby_db`, hôte 127.0.0.1:3306, MySQL 8.0 : **919 tables**, 8 vues, 279 clés étrangères, 1 déclencheur,
+  aucune routine ni événement. Le compte a les droits d'un `RENAME TABLE` (ALTER, DROP, CREATE, INSERT).
+- **Les 144 tables à renommer sont toutes présentes, aucune collision** (aucun nouveau nom déjà pris), aucune table
+  `panel_*` ou `for_*` existante. Lignes concernées : Formation 19 tables / 542 lignes, Marketing 12 / 2 292,
+  Dashboard franchisé 29 / 497 843, Pilotage consultant 84 / 19 374.
+- **Vues** : aucune ne lit une table à renommer (`mar_v_*` lisent des tables `mar_` inchangées ; `max_inv` et
+  `planogram_berdiff` lisent des tables de l'ERP). **Déclencheur** : un seul, sur `client` (ERP). **Clés étrangères**
+  touchant nos tables : `ceo_product_month_sales` → `ceo_product`, et `ceo_project_task`, `ceo_shop_budget`,
+  `ceo_shop_month_perf` → `ceo_shop` (suivies par le renommage) ; aucune table d'une autre application ne pointe vers
+  une table à renommer. Les FK de `mar_avis`, `mar_avis_fiche`, `mar_social_post` vers `ceo_shop` et de
+  `ceo_task_issue` vers `ceo_project_task`, déclarées dans `schema.sql`, n'existent pas en base.
+- Les cinq `ceo_verif_commande / geste / matiere / produit / stock_jour` n'existent pas (documentation seulement).
+  Les anciens noms des registres (`ceo_fb_post`, `ceo_visite`…) n'existent plus : aucun doublon.
+- 588 tables de la base n'appartiennent pas à l'inventaire de ce dépôt (panel TF Buddy, CRM `crm_*`, landing `lp_*`,
+  PWA `pwa_*`, signage `sig_*`, Social `mar_sa_*`…) : jamais touchées.
+
 ## 6. Liste définitive « à supprimer » (phase 4, après « PURGE »)
 
-Uniquement des tables créées par ce dépôt (décision A3). Les nombres de lignes viennent de la ligne de base sur le
-serveur (`php reorg/ligne_de_base.php`), **pas encore mesurée** : aucune exécution sur le serveur sans votre accord.
+Uniquement des tables créées par ce dépôt (décision A3). Nombres de lignes : ligne de base du serveur (§5 bis) ; ils
+seront relus au moment de la purge.
 
 | Table | Lignes | FK venant d'une table conservée | Code qui la cite encore (à retirer avant le contrôle bloquant) | Statut |
 |---|---|---|---|---|
-| `ceo_assistant_question` | à mesurer (absente ?) | aucune | `panel/src/assistant_ia.php` (reprise une fois), `panel/src/assistant_magasin.php` (commentaire) | à supprimer après contrôle que `panel_aia_question` a toutes ses lignes |
-| `ceo_parcours`, `ceo_parcours_etape` | à mesurer (déjà effacées ?) | aucune | `formation/src/formation_postes.php` (leur effacement) | à supprimer si encore présentes |
-| `ceo_prod_planogram` | à mesurer (absente ?) | aucune | `shared/src/installer.php` (`planoMigrer`) | à supprimer si encore présente |
-| `ceo_x` | à mesurer (absente ?) | aucune | `shared/bin/tests.php` (test) | à supprimer si présente |
-| anciens noms des registres (`ceo_fb_post`, `ceo_nl_*`, `ceo_visite*`…) | à mesurer | — | registres `marketing_tables.php`, `con_tables.php` | seulement s'ils existent en double : cas par cas, avec vous |
+| `ceo_assistant_question` | **15** (mesuré) | aucune | `panel/src/assistant_ia.php` (reprise une fois), `panel/src/assistant_magasin.php` (commentaire) | **à supprimer** : ses 15 lignes ont toutes leur copie dans `aia_question` (vérifié ligne à ligne, 0 manquante) |
+| `ceo_parcours`, `ceo_parcours_etape`, `ceo_prod_planogram`, `ceo_x` | absentes | — | — | rien à faire : déjà effacées par le code ou jamais créées en base |
+| anciens noms des registres | absents | — | — | rien à faire : aucun doublon |
+
+**La purge se réduit donc à une table, `ceo_assistant_question` (15 lignes).**
 
 **Gardées (décisions du 19/11/2026)** : le scouting (`ceo_scouting_*`, A4) et le module RH (`hr_dimona_*`, A5) restent
 en place, hors périmètre, dans `pilotage-reseau/` pour le code ; leurs tables ne font plus partie de la purge.
@@ -126,7 +148,8 @@ Social, landing), la base `erp` de la copie de l'ERP, `erp_cles`, les tables par
   vérifications ; installation neuve : 203 tables créées directement sous les nouveaux noms ; balayage des 507 routes
   GET de l'API sur la base renommée : aucune table des quatre domaines introuvable.
 - Répétition locale du site : site assemblé + API sur le banc, pages et API aux mêmes adresses.
-- **Pas fait** : la vérification des nombres de lignes sur la vraie base du serveur de test (rien n'y a été lancé).
+- Ligne de base du serveur mesurée (§5 bis). **Pas fait** : la migration elle-même sur le serveur (elle attend la
+  fusion dans la branche de déploiement), donc la comparaison des lignes avant / après sur la vraie base.
 
 ## 8. Points à trancher avant le codage final
 
