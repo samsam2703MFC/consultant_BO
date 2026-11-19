@@ -23,7 +23,7 @@ const SM_TYPES = ['bureau', 'b2b'];
 const SM_STATUTS = ['prospect', 'bureau_cree', 'client', 'perdu'];
 const SM_WEBSHOP = ['a_creer', 'demande', 'cree', 'connecte'];
 const SM_ECH_STATUTS = ['a_envoyer', 'commande', 'livre', 'converti', 'sans_suite'];
-const SM_MODELES = ['bienvenue' => 'Bienvenue bureau', 'offre' => 'Offre', 'catalogue' => 'Catalogue', 'echantillon' => 'Échantillon', 'relance' => 'Relance'];
+const SM_MODELES = ['bienvenue' => 'Bienvenue bureau', 'rdv' => 'Confirmation de rendez-vous', 'offre' => 'Offre', 'catalogue' => 'Catalogue', 'echantillon' => 'Échantillon', 'relance' => 'Relance'];
 const SM_LANGUES = ['fr', 'nl'];
 const SM_EXPEDITEUR = 'L’Atelier By — Ventes aux professionnels <hello@atelierby.be>';
 const SM_TVA = 6.0;            // le HT des tickets se déduit au taux alimentaire (la TVA d'un ticket n'est pas gardée seule)
@@ -101,6 +101,7 @@ function smReglages(): array
             'telephone' => (string) ($s['signature']['telephone'] ?? ''), 'site' => (string) ($s['signature']['site'] ?? '')],
         'webshop' => (string) ($s['webshop'] ?? ''),
         'zones' => array_filter((array) ($s['zones'] ?? []), 'is_array'),
+        'cps' => array_filter((array) ($s['cps'] ?? []), 'is_array'),
     ];
 }
 
@@ -127,6 +128,69 @@ function smZonesDefaut(): array
     ];
 }
 
+/**
+ * Les codes postaux de chaque zone (la même proposition, 19/11/2026) : un code partagé entre deux zones suit sa commune
+ * (1450 Chastre → Corbais, 5030 Gembloux et 6220 Fleurus → Sombreffe, 6250 Aiseau-Presles → Gosselies).
+ */
+function smCpDefaut(): array
+{
+    return [
+        'halle' => '1180 1190 1410 1420 1421 1430 1440 1460 1461 1480 1500 1501 1502 1540 1600 1601 1602 1620 1630 1640 1650 1651 1652 1653 1654 1670 1671 1673 1674 1701 1703 1750 1755 7090 7850',
+        'corbais' => '1300 1301 1315 1325 1330 1331 1340 1341 1342 1348 1360 1380 1390 1435 1450 1457 1470 1490 3040 5031',
+        'sombreffe' => '1495 5020 5030 5032 5060 5140 5190 6220 6221 6222 6223 6224',
+        'gosselies' => '6000 6001 6010 6020 6030 6031 6032 6040 6041 6042 6043 6044 6060 6061 6110 6111 6140 6141 6142 6180 6181 6182 6183 6200 6210 6211 6230 6238 6240 6250 6280 7160',
+    ];
+}
+
+/** Les codes postaux d'un magasin : ceux réglés par la marque, sinon la proposition rangée sous son nom. */
+function smCpsDe(string $shopId, string $nom, array $reglees): array
+{
+    if (isset($reglees[$shopId]) && is_array($reglees[$shopId])) { return array_values(array_filter(array_map(static fn ($c) => preg_replace('/\D/', '', (string) $c), $reglees[$shopId]), static fn ($c) => strlen($c) === 4)); }
+    $n = mb_strtolower($nom);
+    foreach (smCpDefaut() as $cle => $l) { if (str_contains($n, $cle)) { return explode(' ', $l); } }
+    return [];
+}
+
+/** Le magasin d'un code postal : son id, ou null hors des zones. */
+function smMagasinPourCp(string $cp, array $mags): ?string
+{
+    $cp = (string) preg_replace('/\D/', '', $cp);
+    if (strlen($cp) !== 4) { return null; }
+    foreach ($mags as $id => $m) { if (in_array($cp, $m['cps'] ?? [], true)) { return (string) $id; } }
+    return null;
+}
+
+/** Le code postal belge d'une adresse (« Rue X 4, 1360 Orbais, Belgique ») ; '' sans code. */
+function smCpAdresse(string $adresse): string
+{
+    return preg_match('/\b([1-9]\d{3})\b(?=\s+\p{L})/u', $adresse, $m) ? $m[1] : '';
+}
+
+/**
+ * GET /commercial/trouver?q=nom&cp= — le magasin d'un bureau : par son code postal ; par son nom, cherché dans Google
+ * Places (adresse, code postal) quand la clé Google est réglée. Rend le magasin et, pour un nom, les lieux trouvés.
+ */
+function ep_sm_trouver(): array
+{
+    $mags = smMagasins();
+    $vue = static function (string $cp) use ($mags): array {
+        $sid = smMagasinPourCp($cp, $mags);
+        return ['cp' => $cp, 'shopId' => $sid, 'magasin' => $sid !== null ? $mags[$sid]['nom'] : null, 'horsZone' => $cp !== '' && $sid === null];
+    };
+    $cp = (string) preg_replace('/\D/', '', (string) ($_GET['cp'] ?? ''));
+    $q = smTexte($_GET['q'] ?? '', 120);
+    $out = $vue($cp) + ['lieux' => [], 'google' => class_exists('GoogleApi') && GoogleApi::configured()];
+    if ($q !== '' && $out['google']) {
+        $r = GoogleApi::chercher($q . ($cp !== '' ? ' ' . $cp : '') . ' Belgique');
+        foreach (array_slice((array) $r, 0, 5) as $l) {
+            if (!is_array($l)) { continue; }
+            $adr = (string) ($l['adresse'] ?? $l['formattedAddress'] ?? '');
+            $out['lieux'][] = ['nom' => (string) ($l['nom'] ?? ($l['displayName']['text'] ?? $l['displayName'] ?? '')), 'adresse' => $adr] + $vue(smCpAdresse($adr));
+        }
+    }
+    return $out;
+}
+
 /** La zone d'un magasin : celle réglée par la marque, sinon la proposition rangée sous son nom. */
 function smZoneDe(string $shopId, string $nom, array $reglees): array
 {
@@ -147,7 +211,8 @@ function smMagasins(): array
         $id = (string) ($s['id'] ?? '');
         if ($id === '' || (isset($s['status']) && stripos((string) $s['status'], 'ferm') !== false)) { continue; }
         $nom = trim((string) preg_replace('/^.*?\s[-—–]\s/u', '', (string) ($s['nom'] ?? $id)));
-        $cache[$id] = ['id' => $id, 'nom' => $nom !== '' ? $nom : $id, 'zone' => smZoneDe($id, (string) ($s['nom'] ?? ''), $reg['zones'])];
+        $cache[$id] = ['id' => $id, 'nom' => $nom !== '' ? $nom : $id, 'zone' => smZoneDe($id, (string) ($s['nom'] ?? ''), $reg['zones']),
+            'cps' => smCpsDe($id, (string) ($s['nom'] ?? ''), $reg['cps'])];
     }
     return $cache;
 }
@@ -245,13 +310,15 @@ function ep_sm_leads(): array
     foreach ($leads as $l) {
         $f = smFamilleLead($l);
         $sid = (string) ($l['shopId'] ?? '');
+        $parZone = false;
+        if ($sid === '' && ($z = smMagasinPourCp((string) ($l['cp'] ?? ''), $mags)) !== null) { $sid = $z; $parZone = true; }
         if (isset($par[$sid])) { $par[$sid]['leads']++; $par[$sid][$f]++; }
         if ($shop !== '' && $sid !== $shop) { continue; }
         $comptes['tous']++; $comptes[$f]++;
         if ($fam !== '' && $fam !== $f) { continue; }
         $liste[] = ['id' => (int) $l['id'], 'recu' => $l['recu'] ?? null, 'plateforme' => $l['plateforme'] ?? '', 'form' => $l['form'] ?? '',
             'entreprise' => $l['entreprise'] ?? '', 'contact' => $l['contact'] ?? '', 'telephone' => $l['telephone'] ?? '', 'email' => $l['email'] ?? '',
-            'cp' => $l['cp'] ?? '', 'shopId' => $sid, 'magasin' => $l['magasin'] ?? '', 'shopPar' => $l['shopPar'] ?? '', 'etat' => $l['etat'] ?? '',
+            'cp' => $l['cp'] ?? '', 'shopId' => $sid, 'magasin' => $parZone ? $mags[$sid]['nom'] : ($l['magasin'] ?? ''), 'shopPar' => $parZone ? 'zone' : ($l['shopPar'] ?? ''), 'etat' => $l['etat'] ?? '',
             'statut' => $l['statut'] ?? '', 'famille' => $f, 'retard' => $l['retard'] ?? null, 'erpId' => $l['erpId'] ?? null, 'lien' => $l['lien'] ?? null,
             'clientId' => $portail[(int) $l['id']] ?? null];
     }
@@ -531,6 +598,11 @@ function smModelesDefaut(): array
                 "Bonjour {{prenom}},\n\nLe bureau de **{{entreprise}}** est ouvert sur notre webshop. Le magasin de {{magasin}} vous livre : {{tournee}}. Commandez jusqu’à la veille 16 h.\n\n{{bon_phrase}}\n\nÀ très vite,", 'Commander pour le bureau'],
             'nl' => ['Uw kantoor is klaar: L’Atelier By {{magasin}} levert bij u',
                 "Beste {{prenom}},\n\nHet kantoor van **{{entreprise}}** staat open in onze webshop. De winkel van {{magasin}} levert: {{tournee}}. Bestel tot 16 u de dag voordien.\n\n{{bon_phrase}}\n\nTot binnenkort,", 'Bestellen voor het kantoor']],
+        'rdv' => [
+            'fr' => ['Notre rendez-vous : {{date_rdv}}',
+                "Bonjour {{prenom}},\n\nJe vous confirme notre rendez-vous du **{{date_rdv}}** pour {{entreprise}}, avec L’Atelier By {{magasin}}.\n\nPouvez-vous me confirmer d’un mot en réponse à ce message ? Si le moment ne vous convient plus, proposez-moi un autre créneau.\n\nÀ très vite,", ''],
+            'nl' => ['Onze afspraak: {{date_rdv}}',
+                "Beste {{prenom}},\n\nHierbij bevestig ik onze afspraak van **{{date_rdv}}** voor {{entreprise}}, met L’Atelier By {{magasin}}.\n\nKunt u dit kort bevestigen door op dit bericht te antwoorden? Past het moment niet meer, stel dan gerust een ander voor.\n\nTot binnenkort,", '']],
         'offre' => [
             'fr' => ['{{offre}} : notre proposition pour {{entreprise}}',
                 "Bonjour {{prenom}},\n\n{{pitch}}\n\nNotre proposition, préparée par le magasin de {{magasin}} : **{{prix}}**. {{conditions}}\n\n{{bon_phrase}}\n\nBien à vous,", 'Voir la proposition'],
@@ -571,7 +643,7 @@ function ep_sm_modeles(): array
     foreach (SM_MODELES as $id => $nom) {
         foreach (SM_LANGUES as $l) { $out[] = ['id' => $id, 'nom' => $nom, 'langue' => $l] + smModele($id, $l); }
     }
-    return ['modeles' => $out, 'variables' => ['prenom', 'contact', 'entreprise', 'magasin', 'tournee', 'bon', 'bon_phrase', 'offre', 'pitch', 'prix', 'conditions', 'catalogue', 'date_echantillon']];
+    return ['modeles' => $out, 'variables' => ['prenom', 'contact', 'entreprise', 'magasin', 'tournee', 'bon', 'bon_phrase', 'offre', 'pitch', 'prix', 'conditions', 'catalogue', 'date_echantillon', 'date_rdv']];
 }
 
 /** PUT /commercial/modeles/{id}/{langue} — { sujet, corps, bouton } ; corps vide = retour au modèle par défaut. */
@@ -641,7 +713,8 @@ function smVariables(array $o): array
     }
     if (is_array($o['catalogue'] ?? null)) { $v['catalogue'] = smTexte($o['catalogue']['nom'] ?? '', 160); }
     if (!empty($o['dateEchantillon'])) { $v['date_echantillon'] = (string) $o['dateEchantillon']; }
-    $v += ['bon' => '', 'bon_phrase' => '', 'offre' => '', 'pitch' => '', 'prix' => '', 'conditions' => '', 'catalogue' => '', 'date_echantillon' => ''];
+    if (!empty($o['dateRdv'])) { $v['date_rdv'] = (string) $o['dateRdv']; }
+    $v += ['bon' => '', 'bon_phrase' => '', 'offre' => '', 'pitch' => '', 'prix' => '', 'conditions' => '', 'catalogue' => '', 'date_echantillon' => '', 'date_rdv' => ''];
     return ['v' => $v, 'client' => $c, 'shop' => $shop, 'langue' => $langue];
 }
 
@@ -835,7 +908,7 @@ function ep_sm_tableau(): array
     $clients = Db::rows('SELECT * FROM sm_client');
     $parCle = [];
     foreach ($clients as $c) { if ($c['cle_panel'] !== '') { $parCle[$c['shop_id'] . '|' . $c['cle_panel']] = $c; } }
-    $lignes = []; $semaines = []; $derniere = []; $manquants = 0; $appels = 0;
+    $lignes = []; $semaines = []; $derniere = []; $manquants = 0; $histoManquants = 0; $appels = 0;
     for ($w = 7; $w >= 0; $w--) { $semaines[date('o-\SW', strtotime('-' . ($w * 7) . ' days'))] = ['semaine' => date('\SW', strtotime('-' . ($w * 7) . ' days')), 'portail' => 0, 'autres' => 0]; }
     foreach ($mags as $sid => $m) {
         $premier = []; $vu = []; $cmd = 0; $ca = 0.0;
@@ -843,7 +916,7 @@ function ep_sm_tableau(): array
             $j = date('Y-m-d', strtotime($auj . ' -' . $i . ' days'));
             $dansFenetre = $i < $jours;
             $t = smTicketsJour((int) $sid, $j, $dansFenetre, $appels, $dansFenetre ? 6 * count($mags) : 0);
-            if ($t === null) { if ($dansFenetre) { $manquants++; } continue; }
+            if ($t === null) { if ($dansFenetre) { $manquants++; } else { $histoManquants++; } continue; }
             foreach ($t as [$h, $cle, $mt]) {
                 if ($cle !== '' && !isset($premier[$cle])) { $premier[$cle] = $j; }
                 if ($cle !== '') { $derniere[$sid . '|' . $cle] = $j; }
@@ -881,7 +954,7 @@ function ep_sm_tableau(): array
     }
     usort($suivre, static fn ($a, $b) => $a['rang'] <=> $b['rang']);
     return ['jours' => $jours, 'parMagasin' => $lignes, 'total' => $tot, 'semaines' => array_values($semaines), 'aSuivre' => array_slice($suivre, 0, 12),
-        'manquants' => $manquants, 'cartesOffice' => null, 'tva' => $tva,
+        'manquants' => $manquants, 'histoManquants' => $histoManquants, 'histoJours' => (SM_JOURS_HISTO - $jours) * count($mags), 'cartesOffice' => null, 'tva' => $tva,
         'source' => 'tickets pro du panel (TVA valide) ; HT estimé au taux de ' . str_replace('.', ',', (string) $tva) . ' % ; cartes office : à brancher'];
 }
 
@@ -963,9 +1036,65 @@ function wr_sm_reglages_put(): array
         }
         $s['zones'] = $z;
     }
+    if (is_array($b['cps'] ?? null)) {
+        $z = [];
+        foreach ($b['cps'] as $sid => $cps) {
+            if (isset(smMagasins()[(string) $sid]) && is_array($cps)) { $z[(string) $sid] = array_values(array_filter(array_map(static fn ($c) => (string) preg_replace('/\D/', '', (string) $c), $cps), static fn ($c) => strlen($c) === 4)); }
+        }
+        $s['cps'] = $z;
+    }
     settingEcrire('smReglages', $s);
     journalAdd('Commercial', 'Commercial', null, 'Paramètres du portail Commercial enregistrés');
     return ['ok' => true, 'reglages' => smReglages()];
+}
+
+/* --- les alertes du rail et les formulaires Meta ---------------------------------------------------------------- */
+
+/** GET /commercial/alertes — les pastilles du rail : leads Meta à traiter, bureaux à valider (compte webshop pas connecté). */
+function ep_sm_alertes(): array
+{
+    smTables();
+    $leads = 0;
+    try {
+        $garde = $_GET; $_GET = ['jours' => '30'];
+        try { $l = ep_sm_leads(); } finally { $_GET = $garde; }
+        $leads = (int) ($l['comptes']['a_traiter'] ?? 0);
+    } catch (Throwable $e) { /* MétaDonnée indisponible */ }
+    $bureaux = (int) (Db::row('SELECT COUNT(*) AS n FROM sm_client WHERE statut <> "perdu" AND webshop <> "connecte"')['n'] ?? 0);
+    return ['leads' => $leads, 'bureaux' => $bureaux];
+}
+
+/** Un formulaire de recrutement (candidats, franchisés) n'apporte pas de bureau : on le dit. */
+function smFormulaireRecrutement(array $f): bool
+{
+    $txt = mb_strtolower((string) ($f['nom'] ?? '') . ' ' . implode(' ', array_map(static fn ($q) => (string) ($q['label'] ?? ''), (array) ($f['questions'] ?? []))));
+    return (bool) preg_match('/franchis|recrut|flexi|candidat|emploi|job|cv\b|vacature|sollicit/u', $txt);
+}
+
+/** GET /commercial/formulaires — les formulaires Meta de MétaDonnée (Marketing) : suivis ou non, et ce qu'ils apportent. */
+function ep_sm_formulaires(): array
+{
+    $d = ep_md();
+    $out = [];
+    foreach ((array) ($d['formulaires'] ?? []) as $f) {
+        $out[] = ['id' => (string) ($f['id'] ?? ''), 'nom' => (string) ($f['nom'] ?? ''), 'page' => (string) ($f['page'] ?? ''), 'suivi' => !empty($f['suivi']),
+            'affectation' => (string) ($f['affectation'] ?? ''), 'shopId' => $f['shopId'] ?? null, 'leads30' => $f['leads30'] ?? null, 'dernierLead' => $f['dernierLead'] ?? null,
+            'recrutement' => smFormulaireRecrutement($f), 'questions' => array_values(array_map(static fn ($q) => (string) ($q['label'] ?? ''), (array) ($f['questions'] ?? [])))];
+    }
+    usort($out, static fn ($a, $b) => [$a['recrutement'], !$a['suivi'], $a['nom']] <=> [$b['recrutement'], !$b['suivi'], $b['nom']]);
+    return ['formulaires' => $out, 'source' => 'MétaDonnée (Marketing) : formulaires de la Page Meta'];
+}
+
+/** PUT /commercial/formulaires/{id} — { suivi, affectation: magasin|cp, shopId? } : suivre un formulaire de bureaux (par MétaDonnée). */
+function wr_sm_formulaire_put(string $id): array
+{
+    return wr_md_formulaire_put($id);
+}
+
+/** POST /commercial/formulaires/{id}/historique — { jours } : récupérer les leads passés du formulaire (90 jours au plus chez Meta). */
+function wr_sm_formulaire_historique(string $id): array
+{
+    return wr_md_formulaire_rattrapage($id);
 }
 
 /* --- le routeur -------------------------------------------------------------------------------------------------- */
@@ -975,6 +1104,8 @@ function smRoute(string $method, string $path): mixed
 {
     if ($path !== '/commercial' && !str_starts_with($path, '/commercial/')) { return null; }
     $p = substr($path, strlen('/commercial')) ?: '/';
+    // la semaine du commercial et le suivi de terrain (src/commercial_semaine.php)
+    if (($s = smRouteSemaine($method, $p)) !== null) { return $s; }
     if ($method === 'GET') {
         return match (true) {
             $p === '/config' => ep_sm_config(),
@@ -990,6 +1121,9 @@ function smRoute(string $method, string $path): mixed
             $p === '/echantillons' => ep_sm_echantillons(),
             $p === '/suivi' => ep_sm_suivi(),
             $p === '/gains' => ep_sm_gains(),
+            $p === '/trouver' => ep_sm_trouver(),
+            $p === '/alertes' => ep_sm_alertes(),
+            $p === '/formulaires' => ep_sm_formulaires(),
             default => smInconnue(),
         };
     }
@@ -1001,6 +1135,7 @@ function smRoute(string $method, string $path): mixed
             $p === '/envoyer' => wr_sm_envoyer(),
             $p === '/echantillons' => wr_sm_echantillon_creer(),
             $p === '/catalogues/lien' => wr_sm_catalogue_lien(),
+            (bool) preg_match('#^/formulaires/(\d{5,20})/historique$#', $p, $mf) => wr_sm_formulaire_historique($mf[1]),
             default => smInconnue(),
         };
     }
@@ -1011,6 +1146,7 @@ function smRoute(string $method, string $path): mixed
         if (preg_match('#^/modeles/([a-z]+)/(fr|nl)$#', $p, $m)) { return wr_sm_modele_put($m[1], $m[2]); }
         if ($p === '/offres') { return wr_sm_offre_put(); }
         if ($p === '/reglages') { return wr_sm_reglages_put(); }
+        if (preg_match('#^/formulaires/(\d{5,20})$#', $p, $m)) { return wr_sm_formulaire_put($m[1]); }
     }
     return smInconnue();
 }

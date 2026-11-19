@@ -17,6 +17,7 @@ function journalAdd(...$a): void {}
 final class Db { public static function rows(string $s, array $a = []): array { return []; } public static function row(string $s, array $a = []): ?array { return null; } public static function exec(string $s, array $a = []): int { return 0; } public static function config(): array { return []; } }
 require __DIR__ . '/../src/commercial.php';
 require __DIR__ . '/../src/commercial_gains.php';
+require __DIR__ . '/../src/commercial_semaine.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -105,6 +106,48 @@ verifie('le HT d’un montant TTC', smHt(106.0, 6.0) === 100.0);
 verifie('lead « bureau_connecte » : connecté', smFamilleLead(['statut' => 'bureau_connecte']) === 'connecte');
 verifie('lead sans statut : à traiter', smFamilleLead(['statut' => '']) === 'a_traiter');
 verifie('lead « vu » : à traiter', smFamilleLead(['statut' => 'vu']) === 'a_traiter');
+
+echo "La semaine et le suivi de terrain\n";
+verifie('le lundi d’un mercredi', smLundi('2026-11-19') === '2026-11-16');
+verifie('le lundi d’un dimanche : celui d’avant', smLundi('2026-11-22') === '2026-11-16');
+verifie('client absent : rappeler', smSuiteProposee('absent', '', [], false) === 'appeler');
+verifie('no show : rappeler', smSuiteProposee('no_show', '', [], false) === 'appeler');
+verifie('pas le temps : rappeler', smSuiteProposee('pas_le_temps', '', [], true) === 'appeler');
+verifie('mauvais contact : écrire', smSuiteProposee('mauvais_contact', '', [], false) === 'ecrire');
+verifie('refus de recevoir : plus rien', smSuiteProposee('refus', '', [], false) === 'rien');
+verifie('offre validée par un prospect : créer le bureau', smSuiteProposee('vu', 'validee', ['presentation'], false) === 'bureau');
+verifie('offre validée par un client : rappeler après la 1re commande', smSuiteProposee('vu', 'validee', [], true) === 'rappel_commande');
+verifie('à réfléchir sans dégustation : envoyer un échantillon', smSuiteProposee('vu', 'reflechir', ['presentation'], false) === 'echantillon');
+verifie('à réfléchir après dégustation : rappeler', smSuiteProposee('vu', 'reflechir', ['degustation'], false) === 'appeler');
+verifie('offre refusée : plus rien', smSuiteProposee('vu', 'refusee', [], false) === 'rien');
+verifie('présentation sans réponse : envoyer un devis', smSuiteProposee('vu', '', ['presentation'], false) === 'devis');
+verifie('joint au téléphone sans présentation : rappeler', smSuiteProposee('joint', '', [], false) === 'appeler');
+verifie('appeler : dans 2 jours', smSuiteDate('appeler', '2026-11-19', null) === '2026-11-21');
+verifie('une suite qui tombe un dimanche passe au lundi', smSuiteDate('appeler', '2026-11-20', null) === '2026-11-23');
+verifie('rappeler après la 1re commande : dans 7 jours', smSuiteDate('rappel_commande', '2026-11-19', null) === '2026-11-26');
+verifie('la date choisie l’emporte', smSuiteDate('appeler', '2026-11-19', '2026-12-01') === '2026-12-01');
+verifie('plus rien : pas de date', smSuiteDate('rien', '2026-11-19', '2026-12-01') === null);
+verifie('chaque suite crée un type de rendez-vous connu', array_filter(SM_SUITES, static fn ($s) => $s[0] !== null && !isset(SM_RDV_TYPES[$s[0]])) === []);
+verifie('le modèle de confirmation de rendez-vous existe en FR et NL', isset(smModelesDefaut()['rdv']['fr'], smModelesDefaut()['rdv']['nl']) && isset(SM_MODELES['rdv']));
+
+echo "Le magasin d'un bureau\n";
+$mags = [];
+foreach (['4' => 'Atelier by - Halle', '2' => 'Atelier by Berlo - Corbais', '5' => 'Atelier by Harmonie - Sombreffe', '3' => 'Atelier by Max & Sandra - Gosselies'] as $id => $n) { $mags[$id] = ['nom' => $n, 'cps' => smCpsDe((string) $id, $n, [])]; }
+verifie('1360 Orbais : Corbais', smMagasinPourCp('1360', $mags) === '2');
+verifie('6041 Gosselies : Gosselies', smMagasinPourCp('6041', $mags) === '3');
+verifie('1500 Halle : Halle', smMagasinPourCp('B-1500', $mags) === '4');
+verifie('5030 Gembloux (partagé) : Sombreffe, comme la commune', smMagasinPourCp('5030', $mags) === '5');
+verifie('1450 Chastre (partagé) : Corbais, comme la commune', smMagasinPourCp('1450', $mags) === '2');
+verifie('6250 (partagé) : Gosselies, comme Aiseau-Presles', smMagasinPourCp('6250', $mags) === '3');
+verifie('1000 Bruxelles : hors des zones', smMagasinPourCp('1000', $mags) === null);
+verifie('un code incomplet : rien', smMagasinPourCp('136', $mags) === null);
+verifie('aucun code postal dans deux zones', count(array_merge(...array_values(array_map(static fn ($m) => $m['cps'], $mags)))) === count(array_unique(array_merge(...array_values(array_map(static fn ($m) => $m['cps'], $mags))))));
+verifie('des codes réglés l’emportent', smCpsDe('2', 'Corbais', ['2' => ['1300', 'x', '13']]) === ['1300']);
+verifie('le code postal d’une adresse Google', smCpAdresse('Rue de la Station 4, 1360 Perwez, Belgique') === '1360');
+verifie('un numéro de rue n’est pas un code postal', smCpAdresse('Chaussée de Nivelles 1360, Belgique') === '');
+verifie('un formulaire de recrutement flexi-job est reconnu', smFormulaireRecrutement(['nom' => 'RECRUTEMENT B2B HALLE - FR', 'questions' => [['label' => 'Es-tu éligible au statut flexi-job ?']]]));
+verifie('un formulaire de franchise est reconnu', smFormulaireRecrutement(['nom' => 'FRANCHISE DOUR', 'questions' => []]));
+verifie('un formulaire « Lunch au bureau » est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'Lunch au bureau — Gosselies', 'questions' => [['label' => 'Nom de l’entreprise'], ['label' => 'Nombre de personnes']]]));
 
 echo "\n$ok ok, $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

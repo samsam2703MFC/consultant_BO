@@ -29,9 +29,10 @@
     setTimeout(() => d.remove(), ko ? 7000 : 3500);
   }
   function erreur(e) { page.innerHTML = `<div class="card"><p class="erreur">${esc(e.message || e)}</p></div>`; }
-  const btn = (txt, a, cls, data) => `<button class="btn ${cls || ''}" data-a="${a}"${data ? ` data-v="${esc(data)}"` : ''}>${txt}</button>`;
+  const btn = (txt, a, cls, data) => `<button class="btn ${cls || ''}" data-a="${a}"${data != null && data !== '' ? ` data-v="${esc(data)}"` : ''}>${txt}</button>`;
   const selMagasins = (val, tous, nom) => `<select class="select-native" ${nom ? `name="${nom}"` : 'data-c="shop"'}>${tous ? `<option value="">${esc(tous)}</option>` : ''}${CFG.magasins.map(m => `<option value="${esc(m.id)}" ${String(val) === String(m.id) ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`;
   const selSecteurs = (val, nom) => `<select class="select-native" name="${nom || 'secteur'}"><option value="">—</option>${CFG.secteurs.map(s => `<option value="${esc(s.id)}" ${val === s.id ? 'selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>`;
+  const magPourCp = cp => { const c = String(cp || '').replace(/\D/g, ''); return c.length === 4 ? (CFG.magasins.find(m => (m.cps || []).includes(c)) || null) : null; };
   const nomMag = id => (CFG.magasins.find(m => String(m.id) === String(id)) || {}).nom || id || '—';
   const nomSec = id => (CFG.secteurs.find(s => s.id === id) || {}).nom || '';
   function lireForm(f) {
@@ -58,15 +59,17 @@
   };
   const ico = n => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${ICO[n]}</svg>`;
   const RAIL = [
+    ['Ma semaine', [['semaine', 'carte', 'Ma semaine'], ['mobile', 'leads', 'Suivi mobile ↗']]],
     ['Bureaux · webshop', [['tableau', 'grille', 'Tableau de bord'], ['leads', 'leads', 'Leads Meta'], ['bureaux', 'bureau', 'Bureaux et clients'], ['offres', 'offre', 'Offres, bons et catalogues'], ['echantillons', 'boite', 'Échantillons']]],
     ['B2B', [['suivi', 'courbe', 'Suivi des offres'], ['gains', 'euro', 'Mes gains'], ['prospection', 'carte', 'Prospection ↗']]],
     ['Réglages', [['modeles', 'mail', 'Modèles d’e-mail'], ['reglages', 'cle', 'Paramètres']]],
   ];
-  let compteLeads = null;
+  let compteLeads = null, compteBureaux = null;
+  const alertes = () => api('GET', '/alertes').then(a => { compteLeads = a.leads; compteBureaux = a.bureaux; const v = (location.hash.slice(1) || 'semaine').split('?')[0]; rail(VUES[v] ? v : 'semaine'); }).catch(() => {});
   function rail(vue) {
-    const it = ([k, i, l]) => k === 'prospection'
-      ? `<a class="sidebar__item" href="${esc(CFG.cockpit)}prospection/" target="_blank" rel="noopener">${ico(i)}<span>${l}</span></a>`
-      : `<a class="sidebar__item ${vue === k ? 'is-active' : ''}" href="#${k}">${ico(i)}<span>${l}</span>${k === 'leads' && compteLeads ? `<span class="count">${compteLeads}</span>` : ''}</a>`;
+    const it = ([k, i, l]) => k === 'prospection' || k === 'mobile'
+      ? `<a class="sidebar__item" href="${k === 'mobile' ? 'mobile/' : esc(CFG.cockpit) + 'prospection/'}" target="_blank" rel="noopener">${ico(i)}<span>${l}</span></a>`
+      : `<a class="sidebar__item ${vue === k ? 'is-active' : ''}" href="#${k}">${ico(i)}<span>${l}</span>${k === 'leads' && compteLeads ? `<span class="count" title="leads Meta à traiter" style="background:var(--accent);color:#fff">${compteLeads}</span>` : ''}${k === 'bureaux' && compteBureaux ? `<span class="count" title="bureaux à valider (compte webshop pas encore connecté)">${compteBureaux}</span>` : ''}</a>`;
     document.getElementById('rail').innerHTML = `
       <div class="sidebar__head"><img class="sidebar__logo" src="img/logo.png" alt="L’Atelier"><div class="sidebar__kicker">Module commercial</div></div>
       <div class="sidebar__back"><a href="${esc(CFG.cockpit)}" style="text-decoration:none"><span>${ico('retour')}Retour au cockpit</span></a></div>
@@ -130,6 +133,108 @@
     }).catch(e => toast(e.message, true));
   }
 
+
+  /* --- 0. ma semaine : l'assistant horizontal ---------------------------------------------------------------------- */
+  const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const CONF = { '': ['à confirmer', 'tag-warn'], envoyee: ['e-mail envoyé', 'chip'], confirme: ['confirmé', 'badge badge--ok'], sans_reponse: ['pas de réponse', 'tag-warn'], refuse: ['refusé', 'badge badge--n'] };
+  const ETAPES = ['Magasins', 'Sociétés et créneaux', 'Confirmations', 'Échantillons', 'Appel aux franchisés', 'La semaine'];
+  const lundi = d => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); };
+  const plusJ = (d, n) => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  const hm = s => (s || '').slice(11, 16);
+  function vueSemaine(q) {
+    const du = lundi(q.get('du') || new Date().toISOString().slice(0, 10));
+    const etape = Math.min(6, Math.max(1, Number(q.get('etape') || 1)));
+    const lien = (o) => '#semaine?' + new URLSearchParams({ du, etape, ...o });
+    entete('Ma semaine', 'Semaine du ' + fD(du), `<a class="btn" href="${lien({ du: plusJ(du, -7) })}">← Semaine précédente</a><a class="btn" href="${lien({ du: plusJ(du, 7) })}">Semaine suivante →</a><a class="btn" href="mobile/" target="_blank" rel="noopener">Suivi mobile ↗</a>`);
+    page.innerHTML = '<div class="vide">Lecture de la semaine…</div>';
+    const cleMags = 'smSemaineMags:' + du;
+    api('GET', '/semaine?du=' + du).then(d => {
+      let mags = JSON.parse(sessionStorage.getItem(cleMags) || 'null');
+      if (!mags) mags = d.magasins.filter(m => m.rdv || m.candidats).map(m => String(m.id));
+      if (!mags.length) mags = d.magasins.map(m => String(m.id));
+      const dansMags = x => mags.includes(String(x.shopId));
+      const rdv = d.rdv.filter(r => r.statut !== 'annule');
+      const visites = rdv.filter(r => r.type === 'visite');
+      const stepper = `<div class="stepper">${ETAPES.map((e, i) => `<a href="${lien({ etape: i + 1 })}" style="text-decoration:none" class="${i + 1 === etape ? 'is-on' : i + 1 < etape ? 'is-fait' : ''}"><span class="small">${i + 1 < etape ? '✓ ' : ''}Étape ${i + 1}</span><div>${e}</div></a>`).join('')}</div>`;
+      const nav = `<div style="display:flex;justify-content:space-between;margin-top:16px">${etape > 1 ? `<a class="btn btn--ghost" href="${lien({ etape: etape - 1 })}">← ${ETAPES[etape - 2]}</a>` : '<span></span>'}${etape < 6 ? `<a class="btn btn--primary" href="${lien({ etape: etape + 1 })}">${ETAPES[etape]} →</a>` : ''}</div>`;
+      const ligneRdv = (r, actions) => `<tr><td class="ink2" style="white-space:nowrap">${JOURS[(new Date(r.le.slice(0, 10) + 'T12:00:00').getDay() + 6) % 7] || ''} ${fDc(r.le)}<span class="sub">${hm(r.le)}</span></td><td>${esc(r.prospect)}<span class="sub">${esc([r.contact, r.telephone, r.email].filter(Boolean).join(' · '))}</span></td><td>${esc(r.magasin)}<span class="sub">${esc(r.typeNom)}${r.degustation ? ' · dégustation' : ''}</span></td>${actions}</tr>`;
+      let corps = '';
+      if (etape === 1) {
+        corps = `<div class="grid" style="grid-template-columns:repeat(${Math.max(1, d.magasins.length)},1fr)">${d.magasins.map(m => { const on = mags.includes(String(m.id));
+          return `<label class="card" style="cursor:pointer;${on ? 'border:2px solid var(--accent);background:rgba(141,29,44,.03)' : ''}"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px">${esc(m.nom)}</span><input type="checkbox" data-c="mag" data-v="${esc(m.id)}" ${on ? 'checked' : ''}></div>
+            <div class="small muted" style="margin-top:10px;line-height:1.8">${m.rdv} rendez-vous cette semaine<br>${m.candidats} sociétés à contacter<br>${m.degustations} dégustations<br>appel au franchisé : ${m.appel.ok ? '<span style="color:var(--green)">validé</span>' : 'à faire'}</div>
+            <div class="small muted" style="margin-top:8px">${esc(m.zone.slice(0, 6).join(', '))}${m.zone.length > 6 ? '…' : ''}</div></label>`; }).join('')}</div>
+          ${d.enRetard.length ? `<div class="card" style="margin-top:16px;padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>En retard <span class="aside">prévus avant cette semaine, pas encore faits</span></h2></div><table><tbody>${d.enRetard.map(r => ligneRdv(r, `<td class="num">${btn('Cette semaine', 'deplacer', 'btn--sm', r.id)}${btn('Annuler', 'annuler', 'btn--sm btn--ghost', r.id)}</td>`)).join('')}</tbody></table></div>` : ''}`;
+      }
+      if (etape === 2) {
+        const cands = d.candidats.filter(dansMags);
+        const optJours = JOURS.map((j, i) => `<option value="${plusJ(du, i)}">${j} ${fDc(plusJ(du, i))}</option>`).join('');
+        corps = `<div class="grid" style="grid-template-columns:1.1fr 1fr">
+          <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>À contacter <span class="aside">${cands.length} dans les magasins choisis</span></h2></div>
+            <table><tbody>${cands.length ? cands.map((c, i) => `<tr><td>${esc(c.prospect)}<span class="sub">${esc(c.pourquoi)} · ${esc(c.magasin)}</span></td><td class="num" style="white-space:nowrap"><select class="select-native" data-k="j${i}" style="height:30px;font-size:12px">${optJours}</select> <input type="time" value="10:00" data-k="h${i}" style="padding:4px 6px;font-size:12px"> <select class="select-native" data-k="t${i}" style="height:30px;font-size:12px"><option value="visite">Visite</option><option value="appel">Appel</option></select> <label class="small"><input type="checkbox" data-k="g${i}"> dég.</label> ${btn('Planifier', 'planifier', 'btn--sm btn--primary', i)}</td></tr>`).join('') : '<tr><td class="vide">Rien à contacter dans ces magasins.</td></tr>'}</tbody></table>
+            <form class="form" id="fs" onsubmit="return false" style="padding:14px 18px;border-top:1px solid var(--line)"><h2 class="plein">Ajouter une société</h2>
+              <label><span class="field-label">Société</span><input name="prospect"></label><label><span class="field-label">Code postal (le magasin s’en déduit)</span><input name="cp" inputmode="numeric" maxlength="4" data-c="cpSemaine"></label>
+              <label><span class="field-label">Contact</span><input name="contact"></label>
+              <label><span class="field-label">E-mail</span><input name="email" type="email"></label><label><span class="field-label">Téléphone</span><input name="telephone"></label>
+              <label><span class="field-label">Magasin</span>${selMagasins(mags[0] || '', null, 'shopId')}</label><label><span class="field-label">Secteur</span>${selSecteurs('')}</label>
+              <label><span class="field-label">Jour</span><select name="jour">${optJours}</select></label><label><span class="field-label">Heure</span><input name="heure" type="time" value="10:00"></label>
+              <label><span class="field-label">Type</span><select name="type"><option value="visite">Visite</option><option value="appel">Appel</option></select></label><label><span class="field-label"><input type="checkbox" name="degustation" style="width:auto"> Avec dégustation</span></label>
+              <div class="plein" style="display:flex;justify-content:flex-end">${btn('Ajouter au planning', 'ajouter', 'btn--primary')}</div></form></div>
+          <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>Le planning <span class="aside">${rdv.length} rendez-vous</span></h2></div>
+            <table><tbody>${rdv.length ? rdv.map(r => ligneRdv(r, `<td class="num">${btn('Retirer', 'annuler', 'btn--sm btn--ghost', r.id)}</td>`)).join('') : '<tr><td class="vide">Rien de planifié.</td></tr>'}</tbody></table></div></div>`;
+        ACT.planifier = el => { const i = el.dataset.v, c = cands[i]; const v = k => page.querySelector(`[data-k="${k}${i}"]`);
+          api('POST', '/rdv', { clientId: c.clientId, leadId: c.leadId, prospect: c.prospect, contact: c.contact, email: c.email, telephone: c.telephone, shopId: c.shopId, secteur: c.secteur,
+            type: v('t').value, le: v('j').value + ' ' + v('h').value, degustation: v('g').checked }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)); };
+        ACT.cpSemaine = el => { const m = magPourCp(el.value); if (m) document.getElementById('fs').shopId.value = m.id; };
+        ACT.ajouter = () => { const x = lireForm(document.getElementById('fs')); if (!x.prospect.trim()) { toast('La société manque', true); return; }
+          api('POST', '/rdv', { ...x, le: x.jour + ' ' + x.heure }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)); };
+      }
+      if (etape === 3) {
+        const conf = visites.filter(r => r.confirmation === 'confirme').length;
+        corps = `<div class="kpi-row"><div class="kpi"><div class="kpi__value">${visites.length}</div><div class="kpi__label">Visites</div></div><div class="kpi"><div class="kpi__value" style="color:var(--green)">${conf}</div><div class="kpi__label">Confirmées</div></div><div class="kpi"><div class="kpi__value">${visites.length - conf}</div><div class="kpi__label">Pas encore confirmées</div></div></div>
+          <div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Quand</th><th>Société</th><th>Magasin</th><th>Confirmation</th><th></th></tr></thead><tbody>${visites.length ? visites.map(r => ligneRdv(r,
+            `<td><span class="${CONF[r.confirmation][1]}">${CONF[r.confirmation][0]}</span></td><td class="num" style="white-space:nowrap">${r.email ? btn(r.confirmation ? 'Renvoyer l’e-mail' : 'Envoyer l’e-mail', 'confirmer', 'btn--sm', r.id) : '<span class="small muted">pas d’e-mail</span>'}
+            <select class="select-native" data-c="conf" data-v="${r.id}" style="height:30px;font-size:12px"><option value="">— la réponse —</option><option value="confirme" ${r.confirmation === 'confirme' ? 'selected' : ''}>Confirmé</option><option value="sans_reponse" ${r.confirmation === 'sans_reponse' ? 'selected' : ''}>Pas de réponse</option><option value="refuse" ${r.confirmation === 'refuse' ? 'selected' : ''}>Refusé</option></select></td>`)).join('') : '<tr><td class="vide" colspan="5">Aucune visite planifiée.</td></tr>'}</tbody></table></div>`;
+      }
+      if (etape === 4) {
+        const aDeguster = visites.filter(r => r.degustation || r.echantillonId);
+        corps = `<div class="info">${esc(CFG.aBrancher.echantillon)}</div><div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Quand</th><th>Société</th><th>Magasin</th><th>Échantillon</th><th></th></tr></thead><tbody>${aDeguster.length ? aDeguster.map(r => { const e = d.echantillons[r.echantillonId];
+          return ligneRdv(r, `<td>${e ? `<span class="${ECH[e.statut][1]}">${ECH[e.statut][0]}</span><span class="sub">${esc(e.contenu.map(x => x.q + ' × ' + x.produit).join(', '))}</span>` : '<span class="tag-warn">à commander</span>'}</td>
+            <td class="num">${e ? '' : `<input data-k="ech${r.id}" value="6 Croissant, 6 Pain au chocolat, 1 Tarte du jour (8 parts)" style="width:300px;padding:5px 8px;font-size:12px"> ${btn('Commander au magasin', 'commander', 'btn--sm btn--primary', r.id)}`}</td>`); }).join('')
+          : '<tr><td class="vide" colspan="5">Aucune visite avec dégustation : cochez « dég. » au planning, ou ajoutez-en une.</td></tr>'}</tbody></table></div>`;
+        ACT.commander = el => { const r = rdv.find(x => x.id === Number(el.dataset.v)); const txt = page.querySelector(`[data-k="ech${r.id}"]`).value;
+          const contenu = txt.split(',').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(\d+)\s*(?:×|x)?\s*(.+)$/); return m ? { q: m[1], produit: m[2] } : { q: '1', produit: s }; });
+          el.disabled = true;
+          api('POST', '/echantillons', { prospect: r.prospect, contact: r.contact, clientId: r.clientId, secteur: r.secteur, shopId: r.shopId, contenu, le: r.le.slice(0, 16), mode: 'livraison', adresse: r.adresse, envoyer: true, note: 'Pour la dégustation du ' + fDc(r.le) + ' à ' + hm(r.le) })
+            .then(x => api('PUT', '/rdv/' + r.id, { echantillonId: x.echantillon.id }).then(() => { toast(x.envoi && x.envoi.ok ? 'Demande envoyée au magasin' : 'Échantillon noté, pas envoyé : ' + (x.envoi ? x.envoi.erreur : ''), x.envoi && !x.envoi.ok); vueSemaine(q); }))
+            .catch(e => { toast(e.message, true); el.disabled = false; }); };
+      }
+      if (etape === 5) {
+        corps = `<div class="grid" style="grid-template-columns:repeat(2,1fr)">${d.magasins.filter(m => mags.includes(String(m.id))).map(m => { const duMag = rdv.filter(r => String(r.shopId) === String(m.id));
+          return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px">${esc(m.nom)}</span>${m.tel ? `<a class="btn btn--sm" href="tel:${esc(m.tel.replace(/[^\d+]/g, ''))}">Appeler ${esc(m.tel)}</a>` : '<span class="small muted">téléphone inconnu</span>'}</div>
+            <p class="small muted" style="margin:10px 0 6px">À valider avec le franchisé : les rendez-vous, les dégustations et les échantillons, les bureaux sur ses tournées.</p>
+            <table class="mini"><tbody>${duMag.length ? duMag.map(r => `<tr><td>${fDc(r.le)} ${hm(r.le)}</td><td>${esc(r.prospect)}</td><td>${esc(r.typeNom)}${r.degustation ? ' · dégustation' : ''}</td><td>${r.echantillonId ? 'échantillon commandé' : ''}</td></tr>`).join('') : '<tr><td class="muted">Rien cette semaine.</td></tr>'}</tbody></table>
+            <label class="small" style="display:block;margin-top:12px"><input type="checkbox" data-c="appel" data-v="${esc(m.id)}" ${m.appel.ok ? 'checked' : ''}> Appel fait, semaine validée avec le franchisé${m.appel.le ? ' (' + fD(m.appel.le.slice(0, 10)) + ')' : ''}</label>
+            <input data-k="note${esc(m.id)}" value="${esc(m.appel.note)}" placeholder="Ce qui a été dit, ce qui change" style="width:100%;margin-top:8px;padding:7px 9px;font-size:12.5px"></div>`; }).join('')}</div>`;
+      }
+      if (etape === 6) {
+        const parJour = JOURS.map((j, i) => [j, plusJ(du, i), rdv.filter(r => r.le.slice(0, 10) === plusJ(du, i))]);
+        corps = `<div class="kpi-row"><div class="kpi"><div class="kpi__value">${rdv.length}</div><div class="kpi__label">Rendez-vous</div></div><div class="kpi"><div class="kpi__value">${visites.filter(r => r.confirmation === 'confirme').length} / ${visites.length}</div><div class="kpi__label">Visites confirmées</div></div>
+          <div class="kpi"><div class="kpi__value">${rdv.filter(r => r.echantillonId).length}</div><div class="kpi__label">Échantillons commandés</div></div><div class="kpi"><div class="kpi__value">${d.magasins.filter(m => mags.includes(String(m.id)) && m.appel.ok).length} / ${mags.length}</div><div class="kpi__label">Franchisés appelés</div></div></div>
+          <div class="grid" style="grid-template-columns:repeat(3,1fr)">${parJour.map(([j, date, l]) => `<div class="card" style="padding:14px 16px"><h2>${j} ${fDc(date)}</h2>${l.length ? l.map(r => `<div style="padding:7px 0;border-top:1px solid var(--row-line)"><span class="ink2">${hm(r.le)}</span> ${esc(r.prospect)}<span class="sub">${esc(r.magasin)} · ${esc(r.typeNom)}${r.degustation ? ' · dégustation' : ''} · ${CONF[r.confirmation][0]}</span></div>`).join('') : '<p class="small muted">Rien de prévu.</p>'}</div>`).join('')}</div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><a class="btn" href="mobile/" target="_blank" rel="noopener">Ouvrir le suivi mobile ↗</a><button class="btn" onclick="window.print()">Imprimer</button></div>`;
+      }
+      page.innerHTML = stepper + corps + nav;
+    }).catch(erreur);
+    ACT = {
+      mag: el => { const s = new Set(JSON.parse(sessionStorage.getItem(cleMags) || '[]')); page.querySelectorAll('[data-c=mag]').forEach(c => { if (c.checked) s.add(c.dataset.v); else s.delete(c.dataset.v); }); sessionStorage.setItem(cleMags, JSON.stringify([...s])); vueSemaine(q); },
+      deplacer: el => api('PUT', '/rdv/' + el.dataset.v, { le: du + ' 09:00' }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)),
+      annuler: el => api('PUT', '/rdv/' + el.dataset.v, { statut: 'annule' }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)),
+      confirmer: el => { el.disabled = true; api('POST', '/rdv/' + el.dataset.v + '/confirmer', {}).then(r => { toast('E-mail envoyé à ' + r.a); vueSemaine(q); }).catch(e => { toast('Non envoyé : ' + e.message, true); el.disabled = false; }); },
+      conf: el => api('PUT', '/rdv/' + el.dataset.v, { confirmation: el.value }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)),
+      appel: el => api('PUT', '/semaine/franchise', { shopId: el.dataset.v, du, ok: el.checked, note: (page.querySelector(`[data-k="note${el.dataset.v}"]`) || {}).value || '' }).then(() => toast(el.checked ? 'Semaine validée avec le franchisé' : 'Appel remis à faire')).catch(e => toast(e.message, true)),
+    };
+  }
   /* --- 1. tableau de bord ---------------------------------------------------------------------------------------- */
   function vueTableau(q) {
     const jours = Number(q.get('jours') || 30);
@@ -156,7 +261,7 @@
           <div class="kpi"><div class="kpi__value">${fE(t.caHt)}</div><div class="kpi__label">CA pro HT</div><div class="kpi__note">estimé, TVA ${fP(d.tva)}</div></div>
           <div class="kpi"><div class="kpi__value">${t.portail}</div><div class="kpi__label">Bureaux du portail</div><div class="kpi__note">${t.portailActifs} ont commandé · cartes office : à brancher</div></div>
         </div>
-        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px"><div style="padding:16px 18px 6px"><h2>Par magasin <span class="aside">nouveau client : 1re commande dans la période${d.manquants ? ' · ' + d.manquants + ' jours pas encore lus au panel' : ''}</span></h2></div>
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px"><div style="padding:16px 18px 6px"><h2>Par magasin <span class="aside">nouveau client : 1re commande dans la période${d.manquants ? ' · ' + d.manquants + ' jours pas encore lus au panel' : ''}${d.histoManquants ? ' · ' + d.histoManquants + ' jours d’historique non lus : les nouveaux peuvent être surestimés' : ''}</span></h2></div>
           <table><thead><tr><th>Magasin</th><th class="num">Nouveaux clients</th><th class="num">Anciens clients</th><th class="num">Commandes</th><th class="num">CA HT</th><th class="num">Panier HT</th><th class="num">Bureaux du portail</th></tr></thead>
           <tbody>${lignes}<tr class="total"><td>Réseau</td><td class="num">${t.nouveaux}</td><td class="num">${t.anciens}</td><td class="num">${t.commandes}</td><td class="num">${fE(t.caHt)}</td><td class="num">${fE2(t.panierHt)}</td><td class="num">${t.portail}</td></tr></tbody></table></div>
         <div class="grid" style="grid-template-columns: 1fr 1.25fr">
@@ -203,7 +308,17 @@
       page.innerHTML = `<div class="grid" style="grid-template-columns:repeat(${Math.max(1, d.parMagasin.length)},1fr);margin-bottom:16px">${cartes}</div>
         <div class="toolbar">${filtres}</div>
         <div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Reçu</th><th></th><th>Lead</th><th>Magasin</th><th>Statut dans l’ERP</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
-        <p class="pied">${esc(d.source)}.</p>`;
+        <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px"><h2>Formulaires Meta <span class="aside">un lead n’arrive que d’un formulaire suivi</span></h2></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
+        <p class="pied">${esc(d.source)}. Un lead sans magasin prend celui de son code postal.</p>`;
+      api('GET', '/formulaires').then(fo => {
+        const el = document.getElementById('formulaires'); if (!el) return;
+        el.outerHTML = fo.formulaires.length ? `<table><tbody>${fo.formulaires.map(x => `<tr><td>${esc(x.nom)}<span class="sub">${esc(x.page)}${x.dernierLead ? ' · dernier lead ' + esc(String(x.dernierLead).slice(0, 10)) : ''}</span></td>
+          <td>${x.recrutement ? '<span class="badge badge--n">recrutement, pas un bureau</span>' : x.suivi ? '<span class="badge badge--ok">suivi</span>' : '<span class="tag-warn">pas suivi</span>'}</td>
+          <td class="num" style="white-space:nowrap">${x.recrutement ? '' : x.suivi ? btn('Récupérer 90 jours', 'histo', 'btn--sm', x.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm btn--primary', x.id + '|1')}</td></tr>`).join('')}</tbody></table>`
+          : '<div class="vide">Aucun formulaire lu sur la Page Meta.</div>';
+      }).catch(e => { const el = document.getElementById('formulaires'); if (el) el.textContent = e.message; });
+      ACT.suivre = el => { const [id, on] = el.dataset.v.split('|'); el.disabled = true; api('PUT', '/formulaires/' + id, { suivi: on === '1', affectation: 'cp' }).then(() => { toast(on === '1' ? 'Formulaire suivi : ses leads arrivent' : 'Formulaire plus suivi'); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
+      ACT.histo = el => { el.disabled = true; api('POST', '/formulaires/' + el.dataset.v + '/historique', { jours: 90 }).then(r => { toast('Historique relu' + (r && r.nouveaux != null ? ' : ' + r.nouveaux + ' lead(s)' : '')); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
       ACT.creer = el => { const l = d.leads.find(x => x.id === Number(el.dataset.v)); sessionStorage.setItem('smLead', JSON.stringify(l)); location.hash = 'nouveau?lead=' + l.id; };
     }).catch(erreur);
     ACT = { creer: () => {} };
@@ -219,14 +334,17 @@
       <div class="stepper"><div class="is-on"><span class="small">Étape 1</span><div>Le bureau</div></div><div><span class="small">Étape 2</span><div>E-mail de bienvenue</div></div></div>
       <div class="info">${esc(CFG.aBrancher.webshop)} Le bureau est créé ici, son compte webshop reste « à créer ».</div>
       <form class="card form" id="fb" onsubmit="return false">
-        <h2 class="plein">Entreprise ${lead ? `<span class="aside">depuis le lead Meta${lead.erpId ? ' ' + esc(lead.erpId) : ''}</span>` : ''}</h2>
-        <label><span class="field-label">Entreprise</span><input name="entreprise" required value="${esc(v.entreprise || '')}"></label>
+        <h2 class="plein">Le bureau et son magasin ${lead ? `<span class="aside">depuis le lead Meta${lead.erpId ? ' ' + esc(lead.erpId) : ''}</span>` : ''}</h2>
+        <label><span class="field-label">Nom du bureau</span><input name="entreprise" required value="${esc(v.entreprise || '')}"></label>
+        <label><span class="field-label">Code postal</span><input name="cp" inputmode="numeric" maxlength="4" value="${esc(v.cp || '')}"></label>
+        <div class="plein" style="display:flex;gap:10px;align-items:center">${btn('Chercher son adresse', 'chercherNom', '')}<span class="small muted" data-mag></span></div>
+        <div class="plein" data-lieux></div>
+        <label><span class="field-label">Magasin (déduit du code postal)</span>${selMagasins(v.shopId || '', null, 'shopId')}</label>
+        <label><span class="field-label">Adresse</span><input name="adresse"></label>
         <label><span class="field-label">Numéro de TVA</span><input name="tva" placeholder="BE 0…"></label>
         <label><span class="field-label">Type</span><select name="type"><option value="bureau">Bureau (livraison au bureau)</option><option value="b2b">Client B2B</option></select></label>
         <label><span class="field-label">Secteur</span>${selSecteurs('bureau')}</label>
         <label><span class="field-label">Personnes</span><input name="personnes" type="number" min="1"></label>
-        <label><span class="field-label">Adresse</span><input name="adresse"></label>
-        <label><span class="field-label">Code postal</span><input name="cp" value="${esc(v.cp || '')}"></label>
         <h2 class="plein" style="margin-top:8px">Contact</h2>
         <label><span class="field-label">Nom</span><input name="contact" value="${esc(v.contact || '')}"></label>
         <label><span class="field-label">Fonction</span><input name="fonction"></label>
@@ -234,7 +352,6 @@
         <label><span class="field-label">Téléphone</span><input name="telephone" value="${esc(v.telephone || '')}"></label>
         <label><span class="field-label">Langue des e-mails</span><select name="langue"><option value="fr">Français</option><option value="nl">Nederlands</option></select></label>
         <h2 class="plein" style="margin-top:8px">Magasin et tournée</h2>
-        <label><span class="field-label">Magasin (sa zone)</span>${selMagasins(v.shopId || '', null, 'shopId')}</label>
         <label><span class="field-label">Tournée</span><input name="tournee" placeholder="mardi et jeudi, avant 11:30 — fixée à la réunion du mois"></label>
         <div class="plein small muted" data-zone></div>
         <h2 class="plein" style="margin-top:8px">Bon et carte office</h2>
@@ -247,8 +364,19 @@
       </form>`;
     const f = document.getElementById('fb');
     const zone = () => { const m = CFG.magasins.find(x => String(x.id) === f.shopId.value); page.querySelector('[data-zone]').textContent = m && m.zone.length ? 'Zone du magasin : ' + m.zone.join(', ') + '.' : ''; };
-    f.shopId.addEventListener('change', zone); zone();
+    const parCp = () => { const m = magPourCp(f.cp.value), o = page.querySelector('[data-mag]');
+      if (m) { f.shopId.value = m.id; o.innerHTML = 'Magasin : <b style="font-weight:700">' + esc(m.nom) + '</b> (code postal ' + esc(f.cp.value) + ')'; zone(); }
+      else o.textContent = f.cp.value.replace(/\D/g, '').length === 4 ? 'Code postal hors des zones : choisissez le magasin.' : ''; };
+    f.shopId.addEventListener('change', zone); f.cp.addEventListener('input', parCp); zone(); if (!v.shopId) parCp();
     ACT = {
+      chercherNom: () => {
+        const box = page.querySelector('[data-lieux]'); box.innerHTML = '<span class="small muted">Recherche…</span>';
+        api('GET', '/trouver?q=' + encodeURIComponent(f.entreprise.value) + '&cp=' + encodeURIComponent(f.cp.value)).then(r => {
+          if (!r.google) { box.innerHTML = '<span class="small muted">La recherche par le nom demande la clé Google (Paramètres du cockpit) : tapez le code postal.</span>'; return; }
+          box.innerHTML = r.lieux.length ? `<table class="mini"><tbody>${r.lieux.map((l, i) => `<tr><td>${esc(l.nom)}<span class="sub">${esc(l.adresse)}</span></td><td>${l.magasin ? esc(l.magasin) : '<span class="tag-warn">hors zone</span>'}</td><td class="num">${btn('Choisir', 'prendreLieu', 'btn--sm', i)}</td></tr>`).join('')}</tbody></table>` : '<span class="small muted">Rien trouvé : tapez le code postal.</span>';
+          ACT.prendreLieu = el => { const l = r.lieux[Number(el.dataset.v)]; f.entreprise.value = l.nom; f.adresse.value = l.adresse; if (l.cp) { f.cp.value = l.cp; parCp(); } box.innerHTML = ''; };
+        }).catch(e => { box.innerHTML = `<span class="erreur">${esc(e.message)}</span>`; });
+      },
       creerBureau: el => {
         const x = lireForm(f); const err = f.querySelector('[data-err]'); err.textContent = '';
         if (!x.entreprise.trim()) { err.textContent = 'Le nom de l’entreprise manque.'; return; }
@@ -543,6 +671,8 @@
         <label><span class="field-label">Signature · site</span><input name="sig_site" value="${esc(r.signature.site)}"></label>
         <label class="plein"><span class="field-label">Adresse du webshop (bouton des e-mails)</span><input name="webshop" value="${esc(r.webshop)}" placeholder="https://…"></label>
         <p class="plein small ${CFG.smtp.configure ? 'muted' : 'erreur'}">${CFG.smtp.configure ? 'Le serveur d’envoi du cockpit est réglé ; les e-mails partent avec l’expéditeur ci-dessus.' : 'Le serveur d’envoi n’est pas réglé (Paramètres du cockpit, ou clés smtp_* d’erp_cles) : aucun e-mail ne part.'}</p></div>
+      <div class="card" style="margin-bottom:16px"><h2>Codes postaux des magasins <span class="aside">ils déterminent le magasin d’un bureau et d’un lead</span></h2>
+        <div class="grid" style="grid-template-columns:repeat(${Math.max(1, CFG.magasins.length)},1fr)">${CFG.magasins.map(m => `<label><span class="field-label">${esc(m.nom)}</span><textarea name="cp_${esc(m.id)}" style="width:100%;min-height:120px;font:12.5px 'Gotham',sans-serif">${esc((m.cps || []).join(' '))}</textarea></label>`).join('')}</div></div>
       <div class="card" style="margin-bottom:16px"><h2>Zones des magasins <span class="aside">une commune par ligne</span></h2>
         <div class="grid" style="grid-template-columns:repeat(${Math.max(1, CFG.magasins.length)},1fr)">${CFG.magasins.map(m => `<label><span class="field-label">${esc(m.nom)}</span><textarea name="z_${esc(m.id)}" style="width:100%;min-height:200px;font:12.5px 'Gotham',sans-serif">${esc(m.zone.join('\n'))}</textarea></label>`).join('')}</div></div>
       <div style="display:flex;justify-content:flex-end">${btn('Enregistrer les paramètres', 'sauver', 'btn--primary')}</div></form>`;
@@ -552,18 +682,19 @@
         const regle = pre => { const o = {}; ['taux1', 'mois1', 'taux2', 'duree', 'min'].forEach(k => { if (x[pre + k] !== '') o[k] = Number(x[pre + k]); }); return o; };
         const secteurs = {}; CFG.secteurs.forEach(s => { const o = regle('s_' + s.id + '_'); if (Object.keys(o).length) secteurs[s.id] = o; });
         const zones = {}; CFG.magasins.forEach(m => { zones[m.id] = (x['z_' + m.id] || '').split('\n').map(s => s.trim()).filter(Boolean); });
+        const cps = {}; CFG.magasins.forEach(m => { cps[m.id] = (x['cp_' + m.id] || '').split(/[^\d]+/).filter(c => c.length === 4); });
         api('PUT', '/reglages', { gains: { defaut: regle('d_'), secteurs, plancher: Number(x.plancher || 0), tva: Number(x.tva || 6) }, expediteur: x.expediteur,
-          signature: { nom: x.sig_nom, fonction: x.sig_fonction, telephone: x.sig_telephone, site: x.sig_site }, webshop: x.webshop, zones })
+          signature: { nom: x.sig_nom, fonction: x.sig_fonction, telephone: x.sig_telephone, site: x.sig_site }, webshop: x.webshop, zones, cps })
           .then(() => api('GET', '/config')).then(c => { CFG = c; toast('Paramètres enregistrés'); rail('reglages'); vueReglages(); }).catch(e => toast(e.message, true));
       },
     };
   }
 
   /* --- le routeur ------------------------------------------------------------------------------------------------ */
-  const VUES = { tableau: vueTableau, leads: vueLeads, nouveau: vueNouveau, bureaux: vueBureaux, offres: vueOffres, echantillons: vueEchantillons, suivi: vueSuivi, gains: vueGains, modeles: vueModeles, reglages: vueReglages };
+  const VUES = { semaine: vueSemaine, tableau: vueTableau, leads: vueLeads, nouveau: vueNouveau, bureaux: vueBureaux, offres: vueOffres, echantillons: vueEchantillons, suivi: vueSuivi, gains: vueGains, modeles: vueModeles, reglages: vueReglages };
   function aller() {
-    const [v, qs] = (location.hash.slice(1) || 'tableau').split('?');
-    const vue = VUES[v] ? v : 'tableau';
+    const [v, qs] = (location.hash.slice(1) || 'semaine').split('?');
+    const vue = VUES[v] ? v : 'semaine';
     rail(vue);
     ACT = {};
     window.scrollTo(0, 0);
@@ -576,5 +707,5 @@
   });
   document.addEventListener('change', e => { const el = e.target.closest('[data-c]'); if (el && !el.closest('.modal') && ACT[el.dataset.c]) ACT[el.dataset.c](el); });
   window.addEventListener('hashchange', aller);
-  api('GET', '/config').then(c => { CFG = c; aller(); }).catch(e => { document.getElementById('rail').innerHTML = ''; erreur(e); });
+  api('GET', '/config').then(c => { CFG = c; aller(); alertes(); }).catch(e => { document.getElementById('rail').innerHTML = ''; erreur(e); });
 })();
