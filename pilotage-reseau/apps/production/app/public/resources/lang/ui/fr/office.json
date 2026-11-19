@@ -19,7 +19,7 @@
   "state_in": "Présent depuis {time}",
   "state_left": "Sortie {time}",
   "state_out": "Absent",
-  "state_no_pin": "Pas de PIN",
+  "state_no_pin": "Première fois : créer son PIN",
   "action_in": "Entrée",
   "action_out": "Sortie",
   "qr_help": "Scannez le code avec l’appareil photo de votre téléphone et validez sur le téléphone.",
@@ -75,5 +75,12 @@
   "gp_add": "Ajouter",
   "gp_cancel": "Annuler",
   "gp_remove": "Retirer",
-  "qr_instead": "Code QR avec le téléphone"
+  "qr_instead": "Code QR avec le téléphone",
+  "new_pin_title": "Première connexion : créez votre PIN",
+  "new_pin_help": "Choisissez 4 chiffres et retenez-les — ils serviront à chaque entrée et sortie.",
+  "new_pin_repeat": "Retapez le même PIN",
+  "pin_mismatch": "Les deux PIN sont différents — retapez le nouveau PIN.",
+  "pin_created": "PIN enregistré. Tapez-le désormais à l’entrée et à la sortie.",
+  "change_pin": "Changer mon PIN",
+  "pin_changed": "PIN changé."
 }

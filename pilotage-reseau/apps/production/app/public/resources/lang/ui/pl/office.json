@@ -19,7 +19,7 @@
   "state_in": "Obecny od {time}",
   "state_left": "Wyjście {time}",
   "state_out": "Nieobecny",
-  "state_no_pin": "Brak PIN-u",
+  "state_no_pin": "Pierwszy raz : utwórz PIN",
   "action_in": "Wejście",
   "action_out": "Wyjście",
   "qr_help": "Zeskanuj kod aparatem swojego telefonu i zatwierdź na telefonie.",
@@ -75,5 +75,12 @@
   "gp_add": "Dodaj",
   "gp_cancel": "Anuluj",
   "gp_remove": "Usuń",
-  "qr_instead": "Kod QR telefonem"
+  "qr_instead": "Kod QR telefonem",
+  "new_pin_title": "Pierwsze logowanie : utwórz swój PIN",
+  "new_pin_help": "Wybierz 4 cyfry i zapamiętaj je — będą potrzebne przy każdym wejściu i wyjściu.",
+  "new_pin_repeat": "Powtórz ten sam PIN",
+  "pin_mismatch": "PIN-y są różne — wpisz nowy PIN jeszcze raz.",
+  "pin_created": "PIN zapisany. Od teraz wpisuj go przy wejściu i wyjściu.",
+  "change_pin": "Zmień PIN",
+  "pin_changed": "PIN zmieniony."
 }

@@ -126,3 +126,11 @@
 
 /* [359] Bonjour + bouton entrée / sortie : avatar à gauche du nom aussi en portrait. */
 .office-clock .office-qr-who { flex-direction: row; text-align: left; }
+
+/* [360] Premier PIN / changement de PIN : titre de l'étape ; message après création ou changement ; boutons du bas centrés. */
+.office-pin-title { margin: 0; font-size: 19px; font-weight: 650; color: var(--k-primary, #8D1D2C); }
+.office-clock-info { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--k-ok-50, #e8f3ec); color: var(--k-ok, #2e7d4f); font-weight: 600; text-align: center; }
+.office-clock-more { justify-content: center; }
+/* [360] Sans PIN : plus grisé — toucher son nom ouvre la création du PIN ; libellé en couleur de la marque. */
+.office .kiosk-app-person.is-nopin { opacity: 1; }
+.office .kiosk-app-person.is-nopin small { color: var(--k-primary, #8D1D2C); font-weight: 600; }
