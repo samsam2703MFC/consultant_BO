@@ -74,28 +74,32 @@ $parNom = array_column($PC, null, 'cat');
 verifie('le 20/80 d’une catégorie : jusqu’à 80 % de SON chiffre, la plus grosse d’abord', array_column($parNom['Viennoiseries']['top'], 'nom') === ['Croissant', 'Pain au chocolat'] && $parNom['Viennoiseries']['vendues'] === 5 && $parNom['Viennoiseries']['refs'] === 11, json_encode(array_column($parNom['Viennoiseries']['top'], 'nom')));
 verifie('une saisonnière vendue sur la période peut être du 20/80 ; la catégorie au plus gros chiffre en tête ; sans catégorie rangée à part', array_column($parNom['Cookies']['top'], 'nom') === ['Cookie', 'Cookie Halloween']
     && $PC[0]['cat'] === 'Viennoiseries' && isset($parNom['Sans catégorie']) && $parNom['Sans catégorie']['top'] === []);
-$saisons = [['id' => '8', 'nom' => '🎄 Noël', 'du' => '2026-12-01', 'au' => '2026-12-31'], ['id' => '7', 'nom' => '👑 Épiphanie', 'du' => '2027-01-02', 'au' => '2027-01-20'], ['id' => '9', 'nom' => '🎃 Halloween', 'du' => '2026-10-20', 'au' => '2026-10-31']];
-$PR = array_column(ppPropositions($gamme, $saisons, $PC, 2, 2), null, 'cat');
-$V = $PR['Viennoiseries'];
-verifie('les classiques : au meilleur score, hors 20/80 et hors saisonnières, vendues sur la période', array_column($V['classiques'], 'nom') === ['Brioche', 'Pain aux raisins'] && $V['manque'] === 0, json_encode(array_column($V['classiques'], 'nom')));
-verifie('les saisonnières : les 2 au meilleur score sur 12 mois, le reste compté', array_column($V['saisons']['8']['retenues'], 'nom') === ['Bûche', 'Bûche chocolat'] && $V['saisons']['8']['autres'] === 2, json_encode($V['saisons']['8']));
-verifie('une saisonnière de deux gammes sert les deux saisons', array_column($V['saisons']['7']['retenues'], 'nom') === ['Galette', 'Bûche chocolat'] && !isset($V['saisons']['9']));
-verifie('ce qui sort : la classique de trop (même obligatoire), la jamais vendue, les saisonnières non retenues', array_column($V['sortent'], 'nom') === ['Chausson', 'Bûche mini', 'Bûche nouvelle', 'Kouign'], json_encode(array_column($V['sortent'], 'nom'), JSON_UNESCAPED_UNICODE));
-verifie('la saisonnière déjà du 20/80 n’est pas reproposée pour sa saison', !isset($PR['Cookies']['saisons']['9']) && $PR['Cookies']['sortent'] === [] && $PR['Cookies']['classiques'] === []);
-$P6 = array_column(ppPropositions($gamme, $saisons, $PC), null, 'cat');
-verifie('6 classiques par défaut : les places sans classique vendue restent libres', count($P6['Viennoiseries']['classiques']) === 3 && $P6['Viennoiseries']['manque'] === 3);
-$doc3 = ppDoc(['periode' => 'septembre 2026', 'caTotal' => 11200, 'totalRefs' => 6, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'saisons' => $saisons, 'saisonsLues' => true]);
+// L'assortiment proposé : celui de la Structure de gamme, envoyé par l'écran (19/11/2026, docs/audit-rail.md § 4.2).
+$N = static fn (string $id, string $nom, bool $oblig = false) => ['id' => $id, 'nom' => $nom, 'oblig' => $oblig];
+$structure = ['regles' => ['base' => 'ca', 'std' => 80, 'max' => 6, 'sai' => 4, 'seuil' => 3],
+    'saisons' => [['id' => 'hiver', 'nom' => 'Hiver', 'lib' => 'déc. – févr.']], 'periodes' => [['id' => 'noel', 'nom' => 'Noël', 'lib' => '15 nov. – 26 déc.']],
+    'cats' => [['cat' => 'Viennoiseries', 'grp' => 'Sucré', 'refs' => 11,
+        'standard' => [$N('1', 'Croissant'), $N('2', 'Pain au chocolat'), $N('3', 'Brioche')], 'garder' => [$N('5', 'Pain aux raisins')],
+        'saisons' => ['hiver' => [$N('7', 'Galette')]], 'periodes' => ['noel' => [$N('8', 'Bûche'), $N('10', 'Bûche chocolat')]],
+        'arbitrer' => [$N('9', 'Bûche mini')], 'observation' => [$N('11', 'Bûche nouvelle')], 'desactiver' => [$N('4', 'Chausson', true), $N('6', 'Kouign')]]]];
+$doc3 = ppDoc(['periode' => 'septembre 2026', 'caTotal' => 11200, 'totalRefs' => 6, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'structure' => $structure]);
 verifie('le document : le 20/80 par catégorie, puis l’assortiment proposé', str_contains($doc3, 'Le 20/80, catégorie par catégorie') && str_contains($doc3, 'L’assortiment proposé, catégorie par catégorie')
     && strpos($doc3, 'Le 20/80, catégorie par catégorie') < strpos($doc3, 'L’assortiment proposé') && str_contains($doc3, 'Sans vente sur la période : Sans catégorie'));
-verifie('le total en clair : 14 aujourd’hui, 7 toute l’année (4 à garder + 3 classiques), 3 de saison, 4 à retirer',
-    str_contains($doc3, '<b>14 produits</b> aujourd’hui') && str_contains($doc3, '<b>7 toute l’année</b> (4 à garder + 3 classiques)') && str_contains($doc3, '<b>3 de saison</b>') && str_contains($doc3, '<b>4 à retirer</b>'), '');
-verifie('une fiche par catégorie, en quatre colonnes : à garder, classiques, saison, à retirer', str_contains($doc3, '1</span><b>À garder') && str_contains($doc3, '2</span><b>Les 6 classiques') && str_contains($doc3, '3</span><b>2 produits par saison') && str_contains($doc3, '4</span><b>À retirer')
-    && str_contains($doc3, '— aujourd’hui 11 produits → 5 toute l’année + 2 par saison, 3 à retirer'));
-verifie('le classique au score faible à remplacer ; les classiques qui manquent dits ; les saisons datées, sans emoji',
-    str_contains($doc3, 'Chausson<div style="font-size:8.8pt;margin-top:0.2mm"><span class="ko">⚠ score faible') && str_contains($doc3, 'Il manque 3 classiques') && str_contains($doc3, '<b>Noël</b> <span class="mu">du 01/12 au 31/12</span>') && !str_contains($doc3, '🎄'));
-verifie('à retirer : jamais vendu, de saison pas dans les 2 meilleurs', str_contains($doc3, 'Bûche nouvelle<div style="font-size:8.8pt;margin-top:0.2mm"><span class="mu">jamais vendu') && str_contains($doc3, 'Bûche mini<div style="font-size:8.8pt;margin-top:0.2mm"><span class="mu">de saison, pas dans les 2 meilleurs'));
-$doc4 = ppDoc(['periode' => 'x', 'caTotal' => 100, 'totalRefs' => 1, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'saisons' => []]);
-verifie('sans les saisons du panel : dit, pas de produit de saison', str_contains($doc4, 'Les saisons du panel n’ont pas pu être lues') && str_contains($doc4, 'Pas de produit de saison dans cette catégorie.'));
+verifie('l’assortiment proposé est celui de la Structure de gamme, ses règles dites', str_contains($doc3, 'Comptoir › Structure de gamme')
+    && str_contains($doc3, 'font 80 % du chiffre de la catégorie, 6 au plus') && str_contains($doc3, '4 au plus') && str_contains($doc3, 'Moins de 3 % du chiffre'));
+verifie('le total en clair : 4 toute l’année, 3 de saison, 2 à arbitrer, 2 à retirer dont 1 obligatoire',
+    str_contains($doc3, '<b>11 produits</b> aujourd’hui') && str_contains($doc3, '<b>4 toute l’année</b>') && str_contains($doc3, '<b>3 de saison</b>')
+    && str_contains($doc3, '<b>2 à arbitrer</b>') && str_contains($doc3, '<b>2 à retirer</b>') && str_contains($doc3, '1 obligatoire aujourd’hui'));
+verifie('une fiche par catégorie, en quatre colonnes : toute l’année, saisons et périodes, à arbitrer, à retirer',
+    str_contains($doc3, '1</span><b>Toute l’année') && str_contains($doc3, '2</span><b>Saisons et périodes') && str_contains($doc3, '3</span><b>À arbitrer') && str_contains($doc3, '4</span><b>À retirer')
+    && str_contains($doc3, '— aujourd’hui 11 produits → 4 toute l’année + 3 de saison, 2 à arbitrer, 2 à retirer'));
+verifie('la gardée à la main, la nouveauté, l’obligatoire à retirer et les périodes dites, sans emoji',
+    str_contains($doc3, 'Pain aux raisins<div style="font-size:8.8pt;margin-top:0.2mm"><span class="mu">gardée à la main')
+    && str_contains($doc3, 'Bûche nouvelle<div style="font-size:8.8pt;margin-top:0.2mm"><span class="mu">nouveauté')
+    && str_contains($doc3, 'Chausson<div style="font-size:8.8pt;margin-top:0.2mm"><b class="ko">obligatoire aujourd’hui')
+    && str_contains($doc3, '<b>Noël</b> <span class="mu">15 nov. – 26 déc.</span>') && !str_contains($doc3, '🎄'));
+$doc4 = ppDoc(['periode' => 'x', 'caTotal' => 100, 'totalRefs' => 1, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme]);
+verifie('sans la structure de gamme : dit, rien d’inventé', str_contains($doc4, 'La structure de gamme n’a pas pu être lue') && !str_contains($doc4, 'Toute l’année'));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

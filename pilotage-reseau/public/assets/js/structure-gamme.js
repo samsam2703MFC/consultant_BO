@@ -71,6 +71,34 @@ function calcul(app){
   return app._sgMemo;
 }
 
+/**
+ * L'assortiment proposé, pour le 20/80 à imprimer du Catalogue (19/11/2026, docs/audit-rail.md § 4.2) : le PDF avait
+ * son propre calcul (6 classiques + 2 par saison du panel) ; il lit désormais celui-ci, avec les règles et les décisions
+ * enregistrées pour le réseau — jamais les règles qu'on essaie à l'écran. Un seul calcul de l'assortiment.
+ *
+ * @param {object} d        la réponse de GET /produits/structure
+ * @param {Function} oblig  id du panel → obligatoire aujourd'hui (pour signaler une référence à retirer qui l'est)
+ * @return {object|null}    null si la structure n'a pas pu être lue
+ */
+export function sgProposition(d, oblig){
+  if (!d || d.indispo || !Array.isArray(d.produits)) { return null; }
+  const r = Object.assign({}, DEFAUT, (d.reglage || {}).regles);
+  const R = structurer(d, opts(r, r.base, (d.reglage || {}).decisions || {}));
+  const est = typeof oblig === 'function' ? oblig : () => false;
+  const noms = l => (l || []).map(p => ({ id: String(p.id), nom: p.nom, oblig: !!est(String(p.id)) }));
+  return {
+    regles: { base: r.base, std: r.std, max: r.max, sai: r.sai, seuil: r.seuil },
+    saisons: SAISONS.map(s => ({ id: s.id, nom: s.nom, lib: s.lib })),
+    periodes: PERIODES.map(e => ({ id: e.id, nom: e.nom, lib: e.lib })),
+    cats: R.cats.filter(C => C.refs.length).sort((a, b) => (b.ca || 0) - (a.ca || 0)).map(C => ({
+      cat: C.cat, grp: C.grp, refs: C.refs.length,
+      standard: noms(C.std), garder: noms(C.garder),
+      saisons: Object.fromEntries(SAISONS.map(s => [s.id, noms(C.saisons[s.id])])),
+      periodes: Object.fromEntries(PERIODES.map(e => [e.id, noms(C.periodes[e.id])])),
+      arbitrer: noms(C.arbitrer), observation: noms(C.observation), desactiver: noms(C.desactiver) })),
+  };
+}
+
 /* --- Gestes -------------------------------------------------------------------------- */
 function message(app, txt, ko){
   app.setState({ sgMsg: { txt, ko: !!ko } });

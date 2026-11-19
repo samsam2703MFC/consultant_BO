@@ -1114,3 +1114,38 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
 - **Essai** : manuel opératoire, 98 liens dans le texte et le sommaire (87 internes, 11 vers les standards et les checklists),
   standards 24, checklists 10 (sommaires), manuel du réseau 88 (tous vers les autres manuels), dépliant 3 ; liens internes
   vérifiés (sommaire → bonne page du PDF) ; aucune erreur.
+
+### Le code des checklists en couleurs ; les postes dans le manuel du réseau (19/11/2026)
+
+- **Checklists** (Sam : « mettre l'explication, avec les couleurs, de comment est structurée la numérotation des
+  checklists ») : une page « Lire le code d'une checklist » entre la couverture et le sommaire du manuel des checklists.
+  Elle montre le grand code d'exemple (1.1.01), puis trois colonnes : 1er chiffre · qui (zones), 2e chiffre · quand
+  (moments), le numéro. Ensuite viennent un exemple par autre zone et les règles « faite » (obligatoire, photo, contrôle
+  qualité). Ce sont les couleurs et la lecture du dashboard, onglet Tâches, « Comment c'est organisé » :
+  1 Vente `#8D1D2C`, 2 Boulangerie `#B0792A`, 3 Traiteur `#3f7a52`, 4 Nettoyage `#1f5f8b`, 5 Gestion `#6B4FBB`, 0 SOP et
+  articles `#5c5852`. Le moment reste gris, car le bleu est celui du nettoyage. Le code d'une checklist est en pastille de
+  sa zone au sommaire et en tête de fiche. Le bouton « Sommaire » va au sommaire, après cette page. Le dépliant (page 5)
+  prend les mêmes couleurs.
+- **Manuel du réseau** (Sam : « rajouter les postes, les formations et les compétences par poste ») : après les domaines,
+  une partie « Les postes : formations et compétences ». Elle ouvre sur une page qui explique comment la lire, puis donne
+  une entrée par poste du référentiel v25 (P1 à P12). Chaque entrée comporte :
+  - la mission (description du poste dans Franchise Buddy) et son nom dans Franchise Buddy quand il diffère ;
+  - « Pour y accéder » : les critères d'admission du cockpit (P7, P8, P12) ;
+  - les formations attendues, obligatoires puis recommandées (`attendu` O / R du v25), avec leur fréquence. Quand un
+    article du manuel opératoire porte la formation (`art-fo-NN`, sinon le même titre), son code renvoie à l'article :
+    27 formations sur 54 ;
+  - les compétences clés du référentiel (champ `postes` lu en codes : « P4-P5 », « Toutes »…) ;
+  - « Niveau par niveau · Franchise Buddy » : les niveaux rattachés au poste (`niveauxV25`), leur description et leurs
+    compétences. Une compétence qui a sa SOP (`/formation/sop/competences`) renvoie à la SOP ; « formateur » marque
+    celles que valide le formateur.
+
+  Les données sont lues à l'ouverture (`/formation/v25`, `/formation/referentiel`, `/formation/sop/competences`). Si la
+  lecture échoue, la partie dit « illisible ». Le sommaire a deux intertitres (domaines, postes) et la couverture compte
+  les postes. Le dépliant (page 6) annonce les postes, compte lu dans le module.
+- **Essai** : manuel des checklists, 24 pages (la page du code tient sur une page). Manuel du réseau, 52 pages au lieu de
+  13 : 12 postes, 380 lignes de formation dont 173 avec lien vers l'article, 121 compétences clés, 134 compétences par
+  niveau dont 19 avec lien vers leur SOP. Aucune page qui déborde, aucune erreur.
+- **Dépliant, page 2 « La franchise »** (19/11/2026, Sam) : les chiffres du contrat (9 ans, 31 jours, redevances
+  2 · 2 · 2,5 %) et les deux paragraphes droit d'entrée / DIP sont retirés. À leur place, un très court résumé des deux
+  articles, liens gardés : « Le cadre · 0.0.21 » (le DIP, puis le contrat et les engagements) et « La valeur · 0.0.56 »
+  (process écrits et délégables, chiffres fiables). Les chiffres restent dans l'article 0.0.21.
