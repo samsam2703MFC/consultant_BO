@@ -1182,6 +1182,13 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   (`do-produits-recette.jpg`) et l'ancien repère × 3,13 · 32 %. Ne pas ré-encoder 0.0.43 à partir d'elle.
 - **0.0.43 publié le 19/11/2026** (Sam : « publie 0.0.43 ») : `PATCH /formation/sop/fiche/art-dash-produits {statut: publiee}`,
   v1.3 (sans la photo de l'étape 8) ; relu au serveur : « publiee ».
+- **0.0.21 « Modèle de franchise & cadre contractuel » en v1.4, le 19/11/2026** (Sam : « rajouter aussi ces 8 questions
+  dans l'article 0.0.21 ») : nouvelle partie 4 « Une franchise bien tenue » avec une étape 11, « Huit questions, une fois
+  par an » (FR et NL). Ce sont les huit questions du test de vendabilité de 0.0.56, posées comme sur le dépliant (les deux
+  semaines sans vous en premier), avec un renvoi à 0.0.56. L'objectif de l'article l'annonce. Enregistré par
+  `PUT /formation/sop/fiche/art-fo-32` (`revalider: false`) : l'article reste « publiee », quiz et remarques inchangés.
+  Dans le catalogue, cette partie tombe page 120 du manuel opératoire, et 0.0.56 y est un lien direct. Aucune source de
+  l'article n'est dans le dépôt : la version du serveur fait foi.
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
