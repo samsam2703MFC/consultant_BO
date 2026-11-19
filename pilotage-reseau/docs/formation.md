@@ -1164,9 +1164,9 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - **Corrigés le 19/11/2026, sur demande de Sam** : 0.0.15 « Comprendre le dashboard magasin » en v1.7 (partie « La valeur
   du magasin » et question 1 du quiz) et 0.0.34 « Le dashboard : le haut de l’écran » en v1.1 (« La pastille Valeur »),
   à la règle en vigueur depuis le 15/11/2026.
-- **À faire, hors de cette branche** : le source de 0.0.34 (`dashboard-onglets/art-dash-haut.json`) et celui de 0.0.15
-  (`dashboard/art-pil-01.json`) sur `claude/loving-turing-n6j40s` gardent l’ancienne règle. La routine du lundi encode
-  depuis cette branche : sans cette mise à jour, elle pourrait republier l’ancienne formule. Le source de 0.0.15 est
+- **Sources de la routine mis à jour** (`claude/loving-turing-n6j40s`, commit `cea65105`, sur demande de Sam « garder les
+  nouvelles ») : `dashboard/art-pil-01.json` (0.0.15) et `dashboard-onglets/art-dash-haut.json` (0.0.34) donnent la règle en
+  vigueur. La routine du lundi n’encodera plus l’ancienne formule. Le source de 0.0.15 est
   ici (`claude/lucid-pascal-3ps6at`) n’est qu’une copie ancienne : elle diffère de la version publiée sur 228 points (durée,
   quiz 5 et 6…). **Ne pas encoder à partir de cette copie** : elle republierait un texte plus ancien. Le source à jour est sur
   `claude/loving-turing-n6j40s`, qui garde l’ancienne règle.
