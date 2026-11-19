@@ -27,7 +27,8 @@ const SM_ECH_STATUTS = ['a_envoyer', 'commande', 'livre', 'converti', 'sans_suit
 const SM_MODELES = ['bienvenue' => 'Bienvenue bureau', 'rdv' => 'Confirmation de rendez-vous', 'offre' => 'Offre', 'catalogue' => 'Catalogue', 'echantillon' => 'Échantillon', 'relance' => 'Relance'];
 const SM_LANGUES = ['fr', 'nl'];
 const SM_EXPEDITEUR = 'L’Atelier By — Ventes aux professionnels <hello@atelierby.be>';
-const SM_TVA = 6.0;            // le HT des tickets se déduit au taux alimentaire (la TVA d'un ticket n'est pas gardée seule)
+const SM_TVA = 6.0;
+const SM_OBJECTIF = 5000.0;     // le CA HT mensuel que le commercial doit apporter par ses nouveaux clients (réglable)            // le HT des tickets se déduit au taux alimentaire (la TVA d'un ticket n'est pas gardée seule)
 const SM_JOURS_HISTO = 120;    // nouveau client : 1re commande dans la fenêtre, aucune dans les jours d'avant
 
 /* --- tables ----------------------------------------------------------------------------------------------------- */
@@ -68,18 +69,26 @@ function smTables(): void
 
 /* --- réglages : commissions, expéditeur, zones ------------------------------------------------------------------- */
 
-/** Les gains par défaut (demande du 19/11/2026) : 20 % des commandes le premier mois, ensuite 5 %, sans fin. */
+/**
+ * Les gains par défaut (19/11/2026) : 20 % des commandes le premier mois, 10 % les mois 2 et 3, puis 5 % jusqu'à la fin
+ * de la première année (12 mois depuis la 1re commande).
+ */
 function smGainsDefaut(): array
 {
-    return ['taux1' => 20.0, 'mois1' => 1, 'taux2' => 5.0, 'duree' => 0, 'min' => 0.0];
+    return ['taux1' => 20.0, 'mois1' => 1, 'taux2' => 10.0, 'mois2' => 3, 'taux3' => 5.0, 'duree' => 12, 'min' => 0.0];
 }
 
-/** Une règle de gains nettoyée : taux en %, durées en mois (duree 0 = sans fin), commande minimum en € HT. */
+/**
+ * Une règle de gains nettoyée : trois paliers — `taux1` % jusqu'au mois `mois1`, `taux2` % jusqu'au mois `mois2`,
+ * `taux3` % jusqu'au mois `duree` (0 = sans fin), comptés depuis la 1re commande — et la commande minimum en € HT.
+ */
 function smRegleGains(array $x, array $base): array
 {
     $n = static fn ($v, float $lo, float $hi, float $d) => is_numeric($v) ? max($lo, min($hi, round((float) $v, 2))) : $d;
-    return ['taux1' => $n($x['taux1'] ?? null, 0, 100, (float) $base['taux1']), 'mois1' => (int) $n($x['mois1'] ?? null, 0, 36, (float) $base['mois1']),
-        'taux2' => $n($x['taux2'] ?? null, 0, 100, (float) $base['taux2']), 'duree' => (int) $n($x['duree'] ?? null, 0, 120, (float) $base['duree']),
+    $mois1 = (int) $n($x['mois1'] ?? null, 0, 36, (float) $base['mois1']);
+    return ['taux1' => $n($x['taux1'] ?? null, 0, 100, (float) $base['taux1']), 'mois1' => $mois1,
+        'taux2' => $n($x['taux2'] ?? null, 0, 100, (float) $base['taux2']), 'mois2' => max($mois1, (int) $n($x['mois2'] ?? null, 0, 60, (float) ($base['mois2'] ?? $mois1))),
+        'taux3' => $n($x['taux3'] ?? null, 0, 100, (float) ($base['taux3'] ?? $base['taux2'])), 'duree' => (int) $n($x['duree'] ?? null, 0, 120, (float) $base['duree']),
         'min' => $n($x['min'] ?? null, 0, 100000, (float) $base['min'])];
 }
 
@@ -96,7 +105,14 @@ function smReglages(): array
     return [
         'gains' => ['defaut' => $defaut, 'secteurs' => $secteurs,
             'plancher' => is_numeric($s['gains']['plancher'] ?? null) ? max(0.0, (float) $s['gains']['plancher']) : 0.0,
-            'tva' => is_numeric($s['gains']['tva'] ?? null) ? max(0.0, min(25.0, (float) $s['gains']['tva'])) : SM_TVA],
+            'tva' => is_numeric($s['gains']['tva'] ?? null) ? max(0.0, min(25.0, (float) $s['gains']['tva'])) : SM_TVA,
+            // l'objectif (19/11/2026) : ramener au moins 5 000 € HT par mois de nouveaux clients ; son coût mensuel et la
+            // marge prise pour son ROI (0 : le ROI se lit sur le CA HT)
+            'objectif' => is_numeric($s['gains']['objectif'] ?? null) ? max(0.0, (float) $s['gains']['objectif']) : SM_OBJECTIF,
+            'cout' => is_numeric($s['gains']['cout'] ?? null) ? max(0.0, (float) $s['gains']['cout']) : 0.0,
+            'marge' => is_numeric($s['gains']['marge'] ?? null) ? max(0.0, min(100.0, (float) $s['gains']['marge'])) : 0.0,
+            // les commissions du taux de départ (20 % le premier mois) sont à la charge du franchisé du magasin
+            'departFranchise' => array_key_exists('departFranchise', (array) ($s['gains'] ?? [])) ? (bool) $s['gains']['departFranchise'] : true],
         'expediteur' => $exp !== '' ? $exp : SM_EXPEDITEUR,
         'signature' => ['nom' => (string) ($s['signature']['nom'] ?? ''), 'fonction' => (string) ($s['signature']['fonction'] ?? 'Ventes aux professionnels'),
             'telephone' => (string) ($s['signature']['telephone'] ?? ''), 'site' => (string) ($s['signature']['site'] ?? '')],
@@ -1023,7 +1039,11 @@ function wr_sm_reglages_put(): array
         foreach ((array) ($g['secteurs'] ?? []) as $k => $r) { if (is_array($r) && isset(smSecteurs()[(string) $k])) { $secteurs[(string) $k] = smRegleGains($r, $defaut); } }
         $s['gains'] = ['defaut' => $defaut, 'secteurs' => $secteurs,
             'plancher' => is_numeric($g['plancher'] ?? null) ? max(0.0, round((float) $g['plancher'], 2)) : 0.0,
-            'tva' => is_numeric($g['tva'] ?? null) ? max(0.0, min(25.0, (float) $g['tva'])) : SM_TVA];
+            'tva' => is_numeric($g['tva'] ?? null) ? max(0.0, min(25.0, (float) $g['tva'])) : SM_TVA,
+            'objectif' => is_numeric($g['objectif'] ?? null) ? max(0.0, round((float) $g['objectif'], 2)) : SM_OBJECTIF,
+            'cout' => is_numeric($g['cout'] ?? null) ? max(0.0, round((float) $g['cout'], 2)) : 0.0,
+            'marge' => is_numeric($g['marge'] ?? null) ? max(0.0, min(100.0, (float) $g['marge'])) : 0.0,
+            'departFranchise' => array_key_exists('departFranchise', $g) ? !empty($g['departFranchise']) : true];
     }
     if (array_key_exists('expediteur', $b)) { $s['expediteur'] = smTexte($b['expediteur'], 190); }
     if (is_array($b['signature'] ?? null)) {
@@ -1107,6 +1127,8 @@ function smRoute(string $method, string $path): mixed
     $p = substr($path, strlen('/commercial')) ?: '/';
     // la semaine du commercial et le suivi de terrain (src/commercial_semaine.php)
     if (($s = smRouteSemaine($method, $p)) !== null) { return $s; }
+    // le formulaire Meta des bureaux (src/commercial_meta.php)
+    if (($s = smRouteMeta($method, $p)) !== null) { return $s; }
     if ($method === 'GET') {
         return match (true) {
             $p === '/config' => ep_sm_config(),
@@ -1123,6 +1145,8 @@ function smRoute(string $method, string $path): mixed
             $p === '/suivi' => ep_sm_suivi(),
             $p === '/gains' => ep_sm_gains(),
             $p === '/trouver' => ep_sm_trouver(),
+            $p === '/commissions' => ep_sm_commissions(),
+            $p === '/simulation' => ep_sm_simulation(),
             $p === '/alertes' => ep_sm_alertes(),
             $p === '/formulaires' => ep_sm_formulaires(),
             default => smInconnue(),
