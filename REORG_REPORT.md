@@ -1,7 +1,7 @@
 # REORG_REPORT — Réorganisation du bac à sable en quatre domaines
 
-**État au 19/11/2026, 18:00 : phases 1 à 3 faites et livrées sur le serveur de test (§5 ter) ; rien n'est supprimé.** La phase 4 (purge) attend « PURGE » ; ce rapport sera complété à ce moment-là (tables
-supprimées et leurs lignes, dump, tests finaux).
+**État au 19/11/2026, 18:15 : les quatre phases sont faites sur le serveur de test.** Phases 1 à 3 livrées (§5 ter) ;
+phase 4 (après « PURGE ») : une table supprimée, `ceo_assistant_question`, avec sa sauvegarde vérifiée (§6 bis).
 
 Décisions appliquées : A1 (la mission remplace le registre du 06/11, le Recrutement n'est plus un des quatre domaines),
 A3 (la purge ne touche que des tables créées par ce dépôt), A4 et A5 (le scouting et le module RH sont gardés). Les autres questions du plan (§6) ont suivi ma
@@ -142,7 +142,7 @@ seront relus au moment de la purge.
 
 | Table | Lignes | FK venant d'une table conservée | Code qui la cite encore (à retirer avant le contrôle bloquant) | Statut |
 |---|---|---|---|---|
-| `ceo_assistant_question` | **15** (mesuré) | aucune | `panel/src/assistant_ia.php` (reprise une fois), `panel/src/assistant_magasin.php` (commentaire) | **à supprimer** : ses 15 lignes ont toutes leur copie dans `aia_question` (vérifié ligne à ligne, 0 manquante) |
+| `ceo_assistant_question` | **15** (mesuré) | aucune | `panel/src/assistant_ia.php` (reprise une fois), `panel/src/assistant_magasin.php` (commentaire) | **supprimée le 19/11/2026** (§6 bis) : ses 15 lignes avaient toutes leur copie dans `panel_aia_question` ; sauvegarde vérifiée |
 | `ceo_parcours`, `ceo_parcours_etape`, `ceo_prod_planogram`, `ceo_x` | absentes | — | — | rien à faire : déjà effacées par le code ou jamais créées en base |
 | anciens noms des registres | absents | — | — | rien à faire : aucun doublon |
 
@@ -153,6 +153,29 @@ en place, hors périmètre, dans `pilotage-reseau/` pour le code ; leurs tables 
 
 Jamais supprimées : les tables des autres applications de la base (panel TF Buddy, PWA consultant, CRM, signage,
 Social, landing), la base `erp` de la copie de l'ERP, `erp_cles`, les tables partagées.
+
+## 6 bis. La purge (phase 4, 19/11/2026, 18:09–18:11)
+
+Par `reorg/purger.php`, lancé sur le serveur par `.github/workflows/purge-reorg.yml` ; d'abord en mode contrôle
+(run 44573943477, rien supprimé), puis en mode « purger » (run 44574150973). Essayé avant sur le banc local : quatre
+cas d'arrêt (vue qui la lit, ligne sans copie, une ligne de plus, mauvaise base), purge, restauration du fichier.
+
+Contrôles bloquants, tous passés sur le serveur (127.0.0.1:3306, base `atelierby_db`, MySQL 8.0) :
+- la table est là, est une table, a **15 lignes** comme validé ;
+- les 15 ont leur copie dans `panel_aia_question` (date, magasin, question, réponse) ; la reprise est marquée faite ;
+- aucune vue, clé étrangère, déclencheur, routine ni événement ne la touche ;
+- le code déployé ne la nomme que dans la reprise déjà faite et des commentaires ;
+- **sauvegarde** dans le dossier privé, lisible par root seul :
+  `/var/lib/consulant_bo/prive/reorg/purge_20261119_171024_ceo_assistant_question.sql` (36 188 octets, sha256
+  `f9ad2260…49d98`), **vérifiée** en la restaurant dans une table temporaire : 15 lignes identiques colonne par colonne.
+  Restaurer : `mysql atelierby_db < ce_fichier`. (Une première sauvegarde, du run de contrôle, est à côté.)
+
+Résultat : `DROP TABLE ceo_assistant_question` ; **919 tables avant, 918 après** ; seule disparue :
+`ceo_assistant_question` ; aucune apparue ; aucune ligne changée dans les 918 autres pendant la purge. Aucune vue,
+aucun déclencheur ni aucune fonction à supprimer avec elle (aucun ne la touchait).
+
+Code mort, dans un commit à part : la reprise unique (`aiaReprendreQuestions`) retirée de `panel/src/assistant_ia.php`,
+commentaires mis à jour.
 
 ## 7. Résultats des tests
 
@@ -165,8 +188,9 @@ Social, landing), la base `erp` de la copie de l'ERP, `erp_cles`, les tables par
   vérifications ; installation neuve : 203 tables créées directement sous les nouveaux noms ; balayage des 507 routes
   GET de l'API sur la base renommée : aucune table des quatre domaines introuvable.
 - Répétition locale du site : site assemblé + API sur le banc, pages et API aux mêmes adresses.
-- Ligne de base du serveur mesurée (§5 bis). **Pas fait** : la migration elle-même sur le serveur (elle attend la
-  fusion dans la branche de déploiement), donc la comparaison des lignes avant / après sur la vraie base.
+- Ligne de base du serveur mesurée (§5 bis), migrations livrées et lignes comparées après (§5 ter), purge (§6 bis).
+- Après la livraison et le retrait du code mort : **49 fichiers verts, 3 rouges déjà connus** (`tests_ca_net`,
+  `tests_cq_mail`, `tests_documents` ; `tests_catalogue` est repassé au vert entre-temps), RH `--unit` vert.
 
 ## 8. Points à trancher avant le codage final
 
