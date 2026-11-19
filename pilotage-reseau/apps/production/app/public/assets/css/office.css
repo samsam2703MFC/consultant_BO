@@ -115,3 +115,11 @@
   .office .kiosk-pin .kiosk-pad .kiosk-btn { width: 84px; min-height: 84px; }
   .office-clock { margin-top: 70px; }
 }
+
+/* [357] Tablette tenue en portrait (Samsung 11 pouces, 800 px de large) : trop de services pour une ligne → deux rangées
+   (ou plus) au lieu d'une barre qui défile de côté ; chaque bouton garde sa taille. */
+@media (orientation: portrait) {
+  .office-groupbar { flex-wrap: wrap; overflow-x: visible; gap: 8px; }
+  .office-group-chip { min-width: 0; flex: 1 1 140px; max-width: 220px; }
+  .office .kiosk-row { flex-wrap: wrap; }
+}
