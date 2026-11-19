@@ -1364,3 +1364,35 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   certaines largeurs. Les trois boutons ont désormais une base et une largeur minimale nulles et des marges intérieures
   de 8 px ; « Feuilleter » prend plus de place. Vérifié à 390, 768, 937, 1100, 1280, 1440 et 1920 px : aucun bouton ne
   déborde ni n'est coupé.
+
+## Le règlement de travail dans le Guide pré-ouverture ; le manuel de pré-ouverture dans le catalogue (19/11/2026)
+
+- **Guide pré-ouverture** (Sam : « rajouter [le règlement de travail] dans le guide de pré-ouverture »). Le point
+  `reglement` de la section « Démarches administratives et légales » (J-20, « Règlement de travail ») devient trois
+  étapes, FR et NL, toutes « franchisé », calées sur les contrats (J-30), la Dimona et la formation (J-10) :
+  - `reglement`, J-40 : compléter le modèle du réseau et l'afficher 15 jours avec le registre des observations ;
+    preuve : modèle complété, dates d'affichage notées ;
+  - `reglement_depot`, J-17 : règlement signé et enregistré au Contrôle des lois sociales dans les 8 jours de son entrée
+    en vigueur ; preuve : règlement signé, accusé d'enregistrement ;
+  - `reglement_remise`, J-10 : un exemplaire à chaque collaborateur, contre accusé de réception ; preuve : accusés
+    signés.
+
+  Le guide est enregistré entier (`PUT /formation/ref/preouverture`). Il a été comparé avant et après : seuls ces trois
+  points ont changé. Le CRM les lit tout de suite (clé `reglement` gardée, deux clés nouvelles). Le modèle de règlement
+  est dans `pilotage-reseau/docs/rh/reglement-de-travail/`.
+- **Manuel de pré-ouverture** (Sam : « rajouter un manuel de pré-ouverture dans le catalogue des manuels ») : un
+  cinquième manuel, `#/m/preouverture`, tiré du Guide pré-ouverture (`GET /formation/ref`, lu au départ) :
+  - la couverture, Beige de la marque avec l'illustration des roulés ;
+  - le compte à rebours : toutes les étapes de J-90 au jour J, par période (plus de deux mois, le deuxième mois, le
+    dernier mois, les dix derniers jours), avec leur responsable en pastille (franchisé neutre, L'Atelier By Ruby,
+    ensemble Abricot, formateurs Pop-Up) ;
+  - une page par section du guide : introduction, puis chaque étape avec son échéance, son responsable et la preuve à
+    garder ; la section des contacts ;
+  - les articles à lire avant l'ouverture : les articles du manuel opératoire rangés dans la phase de pré-ouverture,
+    chacun en lien direct.
+
+  Les liens sont gardés dans le PDF. La carte du dépliant passe en bordure pointillée, le Beige étant désormais pris
+  par la couverture de ce manuel. Le dépliant lui-même présente toujours quatre manuels.
+- **Essai** : grille de 6 cartes (« 40 étapes · 5 sections ») ; manuel de 13 pages, sans page qui déborde ; 43 liens
+  vers les articles ; le manuel du réseau reste à 52 pages ; aucune erreur.
+
