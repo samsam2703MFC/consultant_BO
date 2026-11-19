@@ -698,7 +698,7 @@ le créneau depuis `du` à cette référence ; `verdict` ∈ `tot` (moins de 5 j
 `POST /promo` — adopter : `{ shop, mecaniqueId, nom, levier, type, regle, jours: [2, 3, 4, 5], heureDe: 14, heureA: 17,
 du, au, declencheur: [], article: [], offre, prix, remisePct, canaux: [], note, cible, statut }` → `{ ok, promo }` (avec sa
 référence calculée). `PUT /promo/{id}` change `statut`, `note`, `cible`, `canaux`, `nom`, `regle`, `au` ;
-`DELETE /promo/{id}` n'efface qu'un brouillon. Tables `ceo_promo_mecanique` et `ceo_promo`, créées au premier appel.
+`DELETE /promo/{id}` n'efface qu'un brouillon. Tables `mar_promo_mecanique` et `mar_promo`, créées au premier appel.
 
 `GET /exploitation/promos?shop=5&date=2026-09-29` — la carte du dashboard magasin : `{ shop, date, promos: [ { …,
 ceJour, effet, creneau } ] }`, les promotions en cours dont la période couvre la date ; `ceJour` dit si ce jour de
@@ -2067,7 +2067,7 @@ reseau: [moyenne des magasins lus ce jour-là], promos: [{id, shop, nom, du, au,
 jours: [index dans dates], surProduit}], muets }`. Mêmes lectures que la grille
 (product-category-groups), une par magasin et par jour, gravées une fois le jour clos ; `null` =
 le panel n'a pas répondu pour ce magasin ce jour-là. Les promotions sont celles des jours creux
-(`ceo_promo`, hors brouillons) actives ce jour-là, dans leurs jours de la semaine ;
+(`mar_promo`, hors brouillons) actives ce jour-là, dans leurs jours de la semaine ;
 `surProduit` quand un de leurs articles nomme la référence.
 
 Dans la fiche, « Semaines | Jours » : en Jours, « Tous les jours » ou un jour de la semaine, et
@@ -2962,7 +2962,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Marketing : une entrée, deux portes (16/10/2026).** Le rail « Marque & marketing » n'a plus qu'une entrée Marketing (`#/marketing`), à la place de « Module Marketing ↗ » et « Campagnes ». Onglet Aujourd'hui : l'espace marque (portail `marketing/`, + Campagne → `assistant/`, + Post et + Newsletter → `marketing/?onglet=creer`), la vue franchisé (`marketing/?shop={id}`, lien à copier), les chiffres par canal et la liste « à faire » de `GET /marketing/hub` (la même lecture que le tableau de bord du portail ; publication réelle éteinte et newsletter en mode test signalées). Les onglets Campagnes, Calendrier, Budget × Campagnes, Objectifs produits et Mesure restent ceux de la console. Le badge du rail compte les posts à traiter.
 
-**Jours creux retiré de la console (16/10/2026).** L'écran (carte jour × heure, assistant de promotion, promotions adoptées, catalogue des mécaniques) quitte la console ; `#/jours-creux` mène à Résultat. Les routes `/creux` et `/promo/*` et les tables `ceo_promo`, `ceo_promo_mecanique` restent : l'analyse produits marque toujours les promotions sur ses courbes. Les promotions ne partaient pas en caisse : rien ne change en magasin.
+**Jours creux retiré de la console (16/10/2026).** L'écran (carte jour × heure, assistant de promotion, promotions adoptées, catalogue des mécaniques) quitte la console ; `#/jours-creux` mène à Résultat. Les routes `/creux` et `/promo/*` et les tables `mar_promo`, `mar_promo_mecanique` restent : l'analyse produits marque toujours les promotions sur ses courbes. Les promotions ne partaient pas en caisse : rien ne change en magasin.
 
 **Console : production, prospection, centrale d'achat, offres et canaux sortis (16/10/2026).** Gestion de production quitte la console : l'application `production/` ouverte seule montre ses cinq pages en onglets (`?page=params|plan|suivi|cloture|fours`, Suivi par défaut) — elle ne montrait que le Suivi depuis le 06/10. Prospection quitte la console : `prospection/` prend la mise en page bureau au-delà de 900 px (carte, calcul, export CSV), la mise en page téléphone en dessous. Posts Facebook, Newsletter et Newsletter magasin quittent la console : le portail `marketing/` les tient (même module newsletter.js, mêmes routes). Calendrier et Campagnes restent : le portail ne supprime pas une campagne et n'envoie pas la note aux franchisés. La centrale d'achat (Commandes, Demande de prix, Campagnes commerciales, Facturation magasins, Paramètres › Centrale d'achat, et ses cartes de Paramètres › Général : rappel fournisseur, relance « commande à valider », journal des envois) et Offres et canaux sont retirés. Les routes `/centrale/*` restent au serveur ; `bin/rapports_cron.sh` n'appelle plus `/centrale/commandes/mail/cron`. La commission de marque (`caParams().commissionMarquePct`) garde sa valeur et sert toujours la marge nette du catalogue, mais ne se règle plus depuis la console. Les anciennes adresses ouvrent l'application qui a repris l'écran (`App.ADRESSES_SORTIES`) ; celles de la centrale et d'Offres et canaux mènent à Résultat. La console ne charge plus au démarrage `/exploitation`, `/marketing/social/regles`, `/marketing/social/posts`, `/marketing/brand-guard/stats` ni `/marketing/brand-guard/pages`.
 
@@ -3432,7 +3432,7 @@ Deux familles d'offres, une ligne chacune :
   `marge` et `coef` (CA ÷ coût matière) sur 7 jours. Le temps de lecture est
   borné (35 s pour un magasin, partagé entre les magasins en vue réseau) : un
   jour non lu l'est à la lecture suivante, `kpi.joursLus` le dit.
-- **promo** : une promotion des jours creux (`ceo_promo`, en cours ou finie
+- **promo** : une promotion des jours creux (`mar_promo`, en cours ou finie
   depuis moins de 30 jours), avec l'effet de `jcEffet` : `delta` = CA/h du
   créneau face à la référence gelée au lancement, `deltaTk` pour les clients.
   Le CA de la ligne est celui du créneau sur la période.
@@ -3859,7 +3859,7 @@ et `GET /scouting/demarchage`, lus par Développement commercial et Prospection.
 Ce que le franchisé fait de chaque lieu relevé par `/scouting/demarchage` : dans ma liste, visite datée,
 retour, note (part au CRM marketing), et l'**action à suivre** décidée sur place avec sa date. Une seule
 réserve pour le cockpit (écrans Prospection et Développement commercial) et la page mobile
-`prospection/?shop={id}` (`ceo_prospect`, clé magasin + id OSM).
+`prospection/?shop={id}` (`mar_prospect`, clé magasin + id OSM).
 
 ```json
 { "shop": "2", "n": 3, "lieux": { "n123456": { "coche": true, "visite": "2026-09-19", "retour": "rdv", "note": "Devis 40 pers.",
@@ -4755,9 +4755,9 @@ appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. 
 
 Sous-menu « MétaDonnée » du rail (ERP franchisé), maquette A : quatre écrans `mdFormulaires`, `mdMapping`,
 `mdLeads`, `mdSms`, un module (`public/assets/js/metadonnee.js`), un serveur (`src/metadonnee.php`). Tables
-créées à la première utilisation : `ceo_md_form` (formulaires, suivi, magasin, mapping), `ceo_md_lead` (un lead
-Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `ceo_md_shop` (SMS du magasin),
-`ceo_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (`source` des clés, ID de
+créées à la première utilisation : `mar_md_form` (formulaires, suivi, magasin, mapping), `mar_md_lead` (un lead
+Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `mar_md_shop` (SMS du magasin),
+`mar_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (`source` des clés, ID de
 l'application et de la Page, adresse de rappel, jeton de vérification, bilan de la dernière connexion), `mdMetaSecret`,
 `mdMetaJeton`, `mdMetaJetonCrm`, `mdSmsJeton` (jamais renvoyés), `mdCycle`, `mdJeton` (horloge).
 
@@ -5566,20 +5566,20 @@ la dernière visite faite, en rappel au bureau ; il n'est jamais figé dans le d
 | GET | `/fidelite/clients?shop=&mois=` | `{test, source, ref, magasins[], missions[], kpis:{actifs, actifsPrec, retour30, nouveauxPrec, montes, descendus, ca30, tickets30, panier}, rf:{lignes, colonnes, cases[5][5], segments[5][5]}, segments[], mixMoyen[6], transitions:{ordre, noms, m[5][5]}, retourSpontane:{7,14,21,30,45,60}}`. |
 | POST | `/fidelite/regles` | `{regles:[{id?, type, params, shop, actif, supprimer?}], qui}` — publie en une transaction ; une règle invalide refuse tout l'envoi (422 type inconnu, règle unique retirée ou doublée, magasin inconnu ; 404 règle introuvable). Journalisé (`Fidélité`). |
 
-**Règles** (`ceo_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
+**Règles** (`mar_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
 `gain` — `base` {euros, points} (unique, toujours active), `panier` {min, points} ; `multi` — `creneau` {mult, jours[0=lundi…6], de, a, famille, pourquoi},
 `gamme` {mult, gamme, du, au}, `anniversaire` {mult, jours} ; `recoit` — `jauge` {points, valeur, validite} (unique), `tampons` {nom, unite, n, recompense, couleur},
 `declencheur` {evenement: inscription | visite2 | anniversaire | visiteN | panier | parrainage | absence, n, recompense:{type: bon | points | produit, valeur, libelle}, validite} ;
 `garde` (uniques) — `plafond` {points}, `cumul`, `unbon`, `expiration` {mois, preavis}, `exclus` {dates}, `budget` {pct du CA des clients carte}.
 `shop` = "" pour tout le réseau. Le serveur ramène chaque valeur dans ses bornes (`fidNormalise`).
 
-**Visites** (`ceo_fid_visite` : `client_ref`, `shop_id`, `visited_at`, `montant`, `mission` pain | petitdej | lunch | gouter | occasion | bureau, ou NULL → déduite du
+**Visites** (`mar_fid_visite` : `client_ref`, `shop_id`, `visited_at`, `montant`, `mission` pain | petitdej | lunch | gouter | occasion | bureau, ou NULL → déduite du
 montant et de l'heure). Vide, les deux lectures calculent sur un **jeu d'essai** généré (7 700 clients, 150 jours, tirage fixe) et le disent (`test: true`) ; dès
 qu'une visite y est déposée, tout se calcule sur les vraies. Segments à la date de lecture : nouveau (1re visite < 30 j), puis la grille — visites par mois
 (moyenne 90 j) × jours depuis la dernière visite : habitué (8+, < 7 j), à risque (2+ par mois, 21–45 j), régulier (2+ par mois, < 21 j), occasionnel (moins de 2),
 endormi (> 45 j). « D'un mois à l'autre » compare l'état à J−30.
 
-**À brancher** : le flux des visites carte (PWA ou panel) vers `ceo_fid_visite` ; la PWA qui lit ces règles (ses cartes et sa jauge vivent dans
+**À brancher** : le flux des visites carte (PWA ou panel) vers `mar_fid_visite` ; la PWA qui lit ces règles (ses cartes et sa jauge vivent dans
 `pwa_loyalty_card` / `pwa_loyalty_config`, réglées aujourd'hui par `/franchisor/loyalty-*` du webshop) ; les ventes par gamme ; le suivi des parrainages.
 Le budget repose sur trois hypothèses dites à l'écran (bons utilisés à 65 %, produits pris à 85 %, 2,50 € le produit offert).
 

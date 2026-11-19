@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
-foreach (['ceo_fid_profil', 'ceo_fid_jour', 'ceo_fid_ticket'] as $t) { Db::exec("DROP TABLE IF EXISTS $t"); }
+foreach (['mar_fid_profil', 'mar_fid_jour', 'mar_fid_ticket'] as $t) { Db::exec("DROP TABLE IF EXISTS $t"); }
 Db::exec('DELETE FROM ceo_app_setting');
 
 $ok = 0; $ko = 0;

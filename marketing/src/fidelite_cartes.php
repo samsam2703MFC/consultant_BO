@@ -140,7 +140,7 @@ function ep_fidelite_cartes(): array
     usort($clients, static fn ($a, $b) => [$b['pretes'], $b['achats']] <=> [$a['pretes'], $a['achats']]);
     // Le haut de l'entonnoir : les clients reconnus en caisse sur 90 jours (cache des tickets de la fidélité).
     $reconnus = null;
-    try { $reconnus = (int) (Db::row('SELECT COUNT(DISTINCT client_id) n FROM ceo_fid_ticket WHERE shop_id = ? AND jour >= ?', [$sid, date('Y-m-d', strtotime('-89 days'))])['n'] ?? 0); }
+    try { $reconnus = (int) (Db::row('SELECT COUNT(DISTINCT client_id) n FROM mar_fid_ticket WHERE shop_id = ? AND jour >= ?', [$sid, date('Y-m-d', strtotime('-89 days'))])['n'] ?? 0); }
     catch (Throwable $e) { /* sans cache : l'entonnoir commence aux inscrits */ }
     // Le réseau : les mêmes statistiques pour chaque magasin.
     $reseau = [];

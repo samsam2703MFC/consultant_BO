@@ -330,7 +330,7 @@ verifie('aucun point, un point : la phrase suit', str_contains(suSmsTexte(['shop
 verifie('un numéro belge tapé à la main se lit, un texte non', smsNorme('0476 12 34 56') === '+32476123456' && smsNorme('+32 476/12.34.56') === '+32476123456' && smsNorme('pas de numéro') === null && smsNorme('') === null);
 verifie('le fournisseur des alertes de leads sert d’abord', smsFournisseur() === 'smsapi');
 
-$GLOBALS['DB_ROW'] = static fn (string $sql, array $a): ?array => str_contains($sql, 'ceo_md_shop') && $a === ['2'] ? ['sms_tel' => '0470 11 22 33'] : null;
+$GLOBALS['DB_ROW'] = static fn (string $sql, array $a): ?array => str_contains($sql, 'mar_md_shop') && $a === ['2'] ? ['sms_tel' => '0470 11 22 33'] : null;
 $REGLAGES['suiviRegles'] = ['magasins' => ['4' => ['tel' => '0476 12 34 56']], 'sms' => ['actif' => true, 'copie' => [['nom' => 'Sam', 'tel' => '0470 00 00 01'], ['nom' => 'sans numéro', 'tel' => ' ']]]];
 verifie('le GSM de Qui fait quoi d’abord, puis celui des alertes de leads, sinon aucun', suTel('4') === ['tel' => '+32476123456', 'source' => 'Qui fait quoi'] && suTel('2') === ['tel' => '+32470112233', 'source' => 'alertes SMS des leads'] && suTel('9')['tel'] === null);
 verifie('une copie sans numéro tombe', suRegles()['sms']['copie'] === [['nom' => 'Sam', 'tel' => '0470 00 00 01']]);

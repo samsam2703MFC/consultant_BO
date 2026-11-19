@@ -22,7 +22,7 @@ declare(strict_types=1);
  *
  * Les données viennent de l'API du panel, jamais de la copie locale de sa base : les listes de tickets du jour
  * (`/shops/{id}/transactions?date=`) et les lignes d'un ticket (`/transactions/{id}?include=products`). Une journée
- * close ne change plus : ses tickets identifiés se gardent dans ceo_fid_ticket (identifiants, montant, familles —
+ * close ne change plus : ses tickets identifiés se gardent dans mar_fid_ticket (identifiants, montant, familles —
  * aucun nom) pour ne pas relire 90 listes à chaque ouverture. Le jour en cours et la veille se relisent toujours.
  * Les noms des clients se lisent à la volée sur leur fiche (`/shops/{id}/clients/{id}`) et ne sont pas gardés.
  */
@@ -44,7 +44,7 @@ function fpSchema(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_profil ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_fid_profil ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(40) NOT NULL,'
         . 'n TINYINT UNSIGNED NOT NULL DEFAULT 0,'          // passages par unité
@@ -54,10 +54,10 @@ function fpSchema(): void
         . 'updated_at DATETIME NULL, updated_by VARCHAR(60) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Le cache des journées closes : les tickets particuliers identifiés, sans nom.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_jour ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_fid_jour ('
         . 'shop_id INT NOT NULL, jour DATE NOT NULL, tickets INT NOT NULL DEFAULT 0, identifies INT NOT NULL DEFAULT 0,'
         . 'lu_le DATETIME NOT NULL, PRIMARY KEY (shop_id, jour)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_ticket ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_fid_ticket ('
         . 'id BIGINT NOT NULL PRIMARY KEY,'                  // l'identifiant du ticket au panel
         . 'shop_id INT NOT NULL, jour DATE NOT NULL, client_id BIGINT NOT NULL,'
         . 'quand DATETIME NOT NULL, montant DECIMAL(10,2) NOT NULL DEFAULT 0, commande TINYINT NOT NULL DEFAULT 0,'
@@ -66,20 +66,20 @@ function fpSchema(): void
     // Le canal de chaque ticket (12/11/2026, Sam : « s'il commande au comptoir ou plutôt sur le webshop ») : comptoir (vente
     // directe), commande (prise au comptoir) ou webshop. Les anciens tickets sans commande sont des ventes directes ; les
     // anciennes commandes restent sans canal jusqu'à la relecture de leur journée (fpLireJours).
-    $col = Db::row("SELECT COUNT(*) n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ceo_fid_ticket' AND COLUMN_NAME = 'canal'");
+    $col = Db::row("SELECT COUNT(*) n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mar_fid_ticket' AND COLUMN_NAME = 'canal'");
     if ((int) ($col['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_fid_ticket ADD COLUMN canal VARCHAR(10) NULL AFTER commande');
-        Db::exec("UPDATE ceo_fid_ticket SET canal = 'comptoir' WHERE commande = 0");
+        Db::exec('ALTER TABLE mar_fid_ticket ADD COLUMN canal VARCHAR(10) NULL AFTER commande');
+        Db::exec("UPDATE mar_fid_ticket SET canal = 'comptoir' WHERE commande = 0");
     }
     // Familles, deuxième règle (12/11/2026) : le catalogue gardé et les familles déjà lues se refont une fois.
     if ((int) setting('fidFamillesRegle', 1) < 2) {
         Db::exec("DELETE FROM ceo_app_setting WHERE `key` = 'fidProfilsCatalogue'");
-        Db::exec('UPDATE ceo_fid_ticket SET familles = NULL WHERE familles IS NOT NULL');
+        Db::exec('UPDATE mar_fid_ticket SET familles = NULL WHERE familles IS NOT NULL');
         Db::exec("INSERT INTO ceo_app_setting VALUES ('fidFamillesRegle', '2') ON DUPLICATE KEY UPDATE value = VALUES(value)");
     }
-    if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_profil')['n'] ?? 0) === 0) {
+    if ((int) (Db::row('SELECT COUNT(*) n FROM mar_fid_profil')['n'] ?? 0) === 0) {
         foreach (FP_DEFAUTS as [$nom, $n, $u, $c]) {
-            Db::exec('INSERT INTO ceo_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,1,NOW(),?)', [$nom, $n, $u, $c, 'profils de départ']);
+            Db::exec('INSERT INTO mar_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,1,NOW(),?)', [$nom, $n, $u, $c, 'profils de départ']);
         }
     }
     $fait = true;
@@ -104,7 +104,7 @@ function fpProfils(bool $actifsSeuls = false): array
 {
     fpSchema();
     $L = [];
-    foreach (Db::rows('SELECT * FROM ceo_fid_profil') as $r) {
+    foreach (Db::rows('SELECT * FROM mar_fid_profil') as $r) {
         $p = ['id' => (int) $r['id'], 'nom' => (string) $r['nom'], 'n' => (int) $r['n'], 'unite' => (string) $r['unite'], 'couleur' => (string) $r['couleur'],
             'actif' => (int) $r['actif'] === 1 || $r['unite'] === 'base', 'majLe' => $r['updated_at'], 'majPar' => $r['updated_by']];
         $p['seuil'] = fpSeuil($p);
@@ -193,7 +193,7 @@ function fpLignes(mixed $corps): array
 
 /**
  * Relit les journées manquantes de [$du, $au] pour un magasin : les tickets particuliers identifiés vont dans
- * ceo_fid_ticket. Une journée lue après sa fin est close et ne se relit plus ; le jour en cours et la veille, oui.
+ * mar_fid_ticket. Une journée lue après sa fin est close et ne se relit plus ; le jour en cours et la veille, oui.
  * Rend [journées lues, journées encore à lire].
  */
 function fpLireJours(int $sid, string $du, string $au): array
@@ -202,11 +202,11 @@ function fpLireJours(int $sid, string $du, string $au): array
     $auj = date('Y-m-d');
     if ($au > $auj) { $au = $auj; }
     $lus = [];
-    foreach (Db::rows('SELECT jour, lu_le FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $r) {
+    foreach (Db::rows('SELECT jour, lu_le FROM mar_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $r) {
         $lus[$r['jour']] = substr((string) $r['lu_le'], 0, 10) > $r['jour'];
     }
     // Une journée dont une commande n'a pas encore de canal se relit une fois.
-    foreach (Db::rows('SELECT DISTINCT jour FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND canal IS NULL', [$sid, $du, $au]) as $r) { $lus[$r['jour']] = false; }
+    foreach (Db::rows('SELECT DISTINCT jour FROM mar_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND canal IS NULL', [$sid, $du, $au]) as $r) { $lus[$r['jour']] = false; }
     $chemins = [];
     for ($j = $au; $j >= $du; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
         if (!empty($lus[$j])) { continue; }
@@ -231,19 +231,19 @@ function fpLireJours(int $sid, string $du, string $au): array
             $garder[(int) $t['id']] = $t;
         }
         // Les tickets déjà gardés gardent leurs familles ; les nouveaux s'ajoutent.
-        $deja = array_column(Db::rows('SELECT id FROM ceo_fid_ticket WHERE shop_id = ? AND jour = ?', [$sid, $j]), 'id', 'id');
+        $deja = array_column(Db::rows('SELECT id FROM mar_fid_ticket WHERE shop_id = ? AND jour = ?', [$sid, $j]), 'id', 'id');
         foreach ($garder as $tid => $t) {
             $web = strtolower((string) ($t['source'] ?? '')) === 'webshop';
             $cmd = $web || (int) ($t['order_ref'] ?? 0) > 0 || trim((string) ($t['po_hash'] ?? '')) !== '';
             $canal = $web ? 'webshop' : ($cmd ? 'commande' : 'comptoir');
-            if (isset($deja[$tid])) { Db::exec('UPDATE ceo_fid_ticket SET canal = ? WHERE id = ? AND canal IS NULL', [$canal, $tid]); continue; }
-            Db::exec('INSERT IGNORE INTO ceo_fid_ticket (id, shop_id, jour, client_id, quand, montant, commande, canal) VALUES (?,?,?,?,?,?,?,?)',
+            if (isset($deja[$tid])) { Db::exec('UPDATE mar_fid_ticket SET canal = ? WHERE id = ? AND canal IS NULL', [$canal, $tid]); continue; }
+            Db::exec('INSERT IGNORE INTO mar_fid_ticket (id, shop_id, jour, client_id, quand, montant, commande, canal) VALUES (?,?,?,?,?,?,?,?)',
                 [$tid, $sid, $j, (int) $t['id_client'], substr((string) ($t['insert_timestamp'] ?? $j . ' 12:00:00'), 0, 19),
                     round((float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0), 2), $cmd ? 1 : 0, $canal]);
         }
         // Un ticket annulé ou corrigé disparaît de la liste : il disparaît aussi d'ici.
-        foreach ($deja as $tid) { if (!isset($garder[(int) $tid])) { Db::exec('DELETE FROM ceo_fid_ticket WHERE id = ?', [(int) $tid]); } }
-        Db::exec('INSERT INTO ceo_fid_jour (shop_id, jour, tickets, identifies, lu_le) VALUES (?,?,?,?,NOW())
+        foreach ($deja as $tid) { if (!isset($garder[(int) $tid])) { Db::exec('DELETE FROM mar_fid_ticket WHERE id = ?', [(int) $tid]); } }
+        Db::exec('INSERT INTO mar_fid_jour (shop_id, jour, tickets, identifies, lu_le) VALUES (?,?,?,?,NOW())
                   ON DUPLICATE KEY UPDATE tickets = VALUES(tickets), identifies = VALUES(identifies), lu_le = VALUES(lu_le)', [$sid, $j, $tk, $id]);
         $n++;
     }
@@ -253,7 +253,7 @@ function fpLireJours(int $sid, string $du, string $au): array
 /** Lit les lignes des tickets sans familles (au plus FP_DETAILS_MAX) ; rend le nombre restant. */
 function fpLireFamilles(int $sid, string $du, string $au): int
 {
-    $L = Db::rows('SELECT id FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND familles IS NULL ORDER BY jour DESC LIMIT ' . (FP_DETAILS_MAX + 1), [$sid, $du, $au]);
+    $L = Db::rows('SELECT id FROM mar_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND familles IS NULL ORDER BY jour DESC LIMIT ' . (FP_DETAILS_MAX + 1), [$sid, $du, $au]);
     $L = array_slice($L, 0, FP_DETAILS_MAX);
     if ($L === [] || !PanelApi::configured()) { return 0; }
     $ch = [];
@@ -263,9 +263,9 @@ function fpLireFamilles(int $sid, string $du, string $au): int
         $r = $res[$tid] ?? null;
         if (!is_array($r) || (int) ($r['code'] ?? 0) !== 200) { continue; }
         [$f] = fpLignes($r['data'] ?? null);
-        Db::exec('UPDATE ceo_fid_ticket SET familles = ? WHERE id = ?', [json_encode(array_map(static fn ($q) => round($q, 1), $f)), $tid]);
+        Db::exec('UPDATE mar_fid_ticket SET familles = ? WHERE id = ?', [json_encode(array_map(static fn ($q) => round($q, 1), $f)), $tid]);
     }
-    return (int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND familles IS NULL', [$sid, $du, $au])['n'] ?? 0);
+    return (int) (Db::row('SELECT COUNT(*) n FROM mar_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND familles IS NULL', [$sid, $du, $au])['n'] ?? 0);
 }
 
 /* ---------------------------------------------------------------------------
@@ -275,7 +275,7 @@ function fpLireFamilles(int $sid, string $du, string $au): int
 function fpClients(int $sid, string $du, string $au): array
 {
     $C = [];
-    foreach (Db::rows('SELECT client_id, jour, quand, montant, commande, familles FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $du, $au]) as $t) {
+    foreach (Db::rows('SELECT client_id, jour, quand, montant, commande, familles FROM mar_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $du, $au]) as $t) {
         $c = &$C[(int) $t['client_id']];
         $c ??= ['jours' => [], 'tk' => 0, 'eur' => 0.0, 'cmd' => 0, 'fam' => [], 'famLu' => 0];
         $c['jours'][(string) $t['jour']] = true;
@@ -364,7 +364,7 @@ function fpMagasin(int $sid, bool $lire = true, bool $detail = true): array
     $noms = $detail ? fpNoms($sid, array_column($rev, 'client')) : [];
     foreach ($rev as &$x) { $x['nom'] = $noms[$x['client']] ?? ('Client ' . $x['client']); }
     unset($x);
-    $jours = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
+    $jours = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM mar_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
     return ['shop' => (string) $sid, 'du' => $du, 'au' => $au, 'fenetre' => $R['fenetre'], 'memoire' => $R['memoire'], 'axes' => FP_AXES, 'familles' => FP_FAMILLES,
         'scannes' => $N, 'tickets' => (int) $jours['t'], 'identifies' => (int) $jours['i'], 'joursLus' => (int) $jours['j'], 'aLire' => $reste, 'sansFamilles' => $sansFam,
         'profils' => $sortie, 'moyenne' => $N ? ['radar' => array_map(static fn ($v) => (int) round($v / $N), $moy['radar']),
@@ -429,7 +429,7 @@ function ep_fidelite_profils_magasin(): array
  * type de récurrence ; un toggle 30 – 90 – 180 jours »). À des dates régulières de la période (chaque jour sur 30 jours,
  * tous les 3 jours sur 90, chaque semaine sur 180), le profil de chaque client est recalculé tel qu'il était ce jour-là :
  * clients scannés sur la mémoire avant cette date, rythme sur la fenêtre avant cette date. Les tickets viennent du même
- * cache (ceo_fid_ticket) ; les journées manquantes se lisent à l'API, les plus récentes d'abord.
+ * cache (mar_fid_ticket) ; les journées manquantes se lisent à l'API, les plus récentes d'abord.
  */
 function fpTendance(int $sid, int $jours): array
 {
@@ -439,7 +439,7 @@ function fpTendance(int $sid, int $jours): array
     $du = date('Y-m-d', strtotime($au . ' -' . ($jours + $R['memoire'] - 1) . ' days'));
     [, $reste] = fpLireJours($sid, $du, $au);
     $J = [];
-    foreach (Db::rows('SELECT DISTINCT client_id, jour FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $t) {
+    foreach (Db::rows('SELECT DISTINCT client_id, jour FROM mar_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $t) {
         $J[(int) $t['client_id']][] = (string) $t['jour'];
     }
     $pas = $jours <= 30 ? 1 : ($jours <= 90 ? 3 : 7);
@@ -484,7 +484,7 @@ function ep_fidelite_profils_tendance(): array
 /**
  * La part des tickets scannés (12/11/2026, Sam : « par défaut c'est aujourd'hui ; en dessous le mois et l'année en
  * moyenne »). Aujourd'hui, depuis le 1er du mois, depuis le 1er janvier : tickets identifiés sur tickets, lus dans le
- * même cache (ceo_fid_jour). Les journées manquantes de l'année se lisent à l'API, les plus récentes d'abord.
+ * même cache (mar_fid_jour). Les journées manquantes de l'année se lisent à l'API, les plus récentes d'abord.
  */
 function ep_fidelite_scan(): array
 {
@@ -493,7 +493,7 @@ function ep_fidelite_scan(): array
     $au = date('Y-m-d');
     [, $reste] = fpLireJours($sid, date('Y-01-01'), $au);
     $part = static function (string $du) use ($sid, $au): array {
-        $r = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
+        $r = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM mar_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
         $t = (int) $r['t']; $i = (int) $r['i'];
         return ['du' => $du, 'tickets' => $t, 'identifies' => $i, 'jours' => (int) $r['j'], 'part' => $t > 0 ? round(100 * $i / $t, 1) : null];
     };
@@ -511,7 +511,7 @@ function ep_fidelite_client(): array
     $au = date('Y-m-d');
     $du = date('Y-m-d', strtotime($au . ' -179 days'));
     [, $reste] = fpLireJours($sid, $du, $au);
-    $T = Db::rows('SELECT id, jour, quand, montant, commande, canal FROM ceo_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $cid, $du, $au]);
+    $T = Db::rows('SELECT id, jour, quand, montant, commande, canal FROM mar_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $cid, $du, $au]);
     // Comment il achète : vente au comptoir, commande prise au comptoir, webshop (et, le temps de la relecture, commande sans canal).
     $canaux = ['comptoir' => 0, 'commande' => 0, 'webshop' => 0, 'inconnu' => 0];
     foreach ($T as $t) { $canaux[isset($canaux[$t['canal'] ?? '']) ? $t['canal'] : 'inconnu']++; }
@@ -536,7 +536,7 @@ function ep_fidelite_client(): array
     foreach ($T as $t) {
         $tid = (int) $t['id'];
         [$f, $a] = isset($res[$tid]) && (int) ($res[$tid]['code'] ?? 0) === 200 ? fpLignes($res[$tid]['data'] ?? null) : [[], []];
-        if ($f !== []) { Db::exec('UPDATE ceo_fid_ticket SET familles = ? WHERE id = ?', [json_encode(array_map(static fn ($q) => round($q, 1), $f)), $tid]); }
+        if ($f !== []) { Db::exec('UPDATE mar_fid_ticket SET familles = ? WHERE id = ?', [json_encode(array_map(static fn ($q) => round($q, 1), $f)), $tid]); }
         foreach ($a as $x) { $art[$x['nom']] = ($art[$x['nom']] ?? 0) + $x['q']; }
         foreach ($f as $k => $q) { $fam[$k] = ($fam[$k] ?? 0) + $q; $C['fam'][$k] = ($C['fam'][$k] ?? 0) + $q; }
         $j = (string) $t['jour'];
@@ -583,7 +583,7 @@ function wr_fidelite_profils_post(): array
     foreach ($L as $x) {
         if (!is_array($x)) { continue; }
         $id = (int) ($x['id'] ?? 0);
-        $cur = $id ? Db::row('SELECT * FROM ceo_fid_profil WHERE id = ?', [$id]) : null;
+        $cur = $id ? Db::row('SELECT * FROM mar_fid_profil WHERE id = ?', [$id]) : null;
         if ($id && $cur === null) { http_response_code(404); return ['error' => 'profil ' . $id . ' introuvable']; }
         $base = $cur && $cur['unite'] === 'base';
         if (!empty($x['supprimer'])) {
@@ -601,7 +601,7 @@ function wr_fidelite_profils_post(): array
     }
     // Deux profils actifs ne partagent pas un seuil : le rangement serait ambigu.
     $etat = [];
-    foreach (Db::rows('SELECT * FROM ceo_fid_profil') as $r) { $etat[(int) $r['id']] = $r; }
+    foreach (Db::rows('SELECT * FROM mar_fid_profil') as $r) { $etat[(int) $r['id']] = $r; }
     $k = 0;
     foreach ($ops as $o) {
         if ($o[0] === 'del') { unset($etat[$o[1]]); continue; }
@@ -622,9 +622,9 @@ function wr_fidelite_profils_post(): array
     $pdo->beginTransaction();
     try {
         foreach ($ops as $o) {
-            if ($o[0] === 'del') { Db::exec('DELETE FROM ceo_fid_profil WHERE id = ?', [$o[1]]); continue; }
-            if ($o[0] === 'upd') { Db::exec('UPDATE ceo_fid_profil SET nom = ?, n = ?, unite = ?, couleur = ?, actif = ?, updated_at = NOW(), updated_by = ? WHERE id = ?', [$o[2], $o[3], $o[4], $o[5], $o[6], $qui, $o[1]]); }
-            else { Db::exec('INSERT INTO ceo_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,?,NOW(),?)', [$o[2], $o[3], $o[4], $o[5], $o[6], $qui]); }
+            if ($o[0] === 'del') { Db::exec('DELETE FROM mar_fid_profil WHERE id = ?', [$o[1]]); continue; }
+            if ($o[0] === 'upd') { Db::exec('UPDATE mar_fid_profil SET nom = ?, n = ?, unite = ?, couleur = ?, actif = ?, updated_at = NOW(), updated_by = ? WHERE id = ?', [$o[2], $o[3], $o[4], $o[5], $o[6], $qui, $o[1]]); }
+            else { Db::exec('INSERT INTO mar_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,?,NOW(),?)', [$o[2], $o[3], $o[4], $o[5], $o[6], $qui]); }
         }
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['fidProfilsReglages', json_encode(['fenetre' => $fen, 'memoire' => $mem])]);
         $pdo->commit();

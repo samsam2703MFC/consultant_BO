@@ -93,7 +93,7 @@ function mdTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_md_form ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_md_form ('
         . 'form_id VARCHAR(40) PRIMARY KEY,'
         . "page_id VARCHAR(40) NOT NULL DEFAULT '',"
         . "page_nom VARCHAR(160) NOT NULL DEFAULT '',"
@@ -115,7 +115,7 @@ function mdTables(): void
         . 'relu_le DATETIME NULL,'
         . 'KEY idx_page (page_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_md_lead ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_md_lead ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'meta_lead_id VARCHAR(40) NOT NULL,'
         . 'form_id VARCHAR(40) NOT NULL,'
@@ -155,7 +155,7 @@ function mdTables(): void
         . 'escalade_le DATETIME NULL,'
         . 'UNIQUE KEY uq_meta (meta_lead_id), KEY idx_form (form_id), KEY idx_etat (etat, recu_le), KEY idx_shop (shop_id, recu_le)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_md_shop ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_md_shop ('
         . 'shop_id VARCHAR(16) PRIMARY KEY,'
         . 'sms_on TINYINT(1) NOT NULL DEFAULT 0,'
         . "sms_tel VARCHAR(32) NOT NULL DEFAULT '',"
@@ -163,7 +163,7 @@ function mdTables(): void
         . "escalade_email VARCHAR(190) NOT NULL DEFAULT '',"
         . 'maj_le DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_md_journal ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_md_journal ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'at DATETIME NOT NULL,'
         . 'type VARCHAR(16) NOT NULL,'
@@ -188,7 +188,7 @@ function mdSettingSet(string $cle, mixed $valeur): void
 function mdJournal(string $type, string $message, ?int $leadId = null): void
 {
     try {
-        Db::exec('INSERT INTO ceo_md_journal (at, type, message, lead_id) VALUES (?,?,?,?)',
+        Db::exec('INSERT INTO mar_md_journal (at, type, message, lead_id) VALUES (?,?,?,?)',
             [date('Y-m-d H:i:s'), $type, mb_substr($message, 0, 400), $leadId]);
     } catch (Throwable $e) { /* le journal ne casse jamais le traitement */ }
 }
@@ -840,17 +840,17 @@ function mdSuggererMagasin(string $texte, array $magasins): ?string
     return $trouve;
 }
 
-/** Les réglages SMS des magasins : shop_id → ligne de ceo_md_shop. */
+/** Les réglages SMS des magasins : shop_id → ligne de mar_md_shop. */
 function mdShops(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_md_shop') as $r) { $out[(string) $r['shop_id']] = $r; }
+    foreach (Db::rows('SELECT * FROM mar_md_shop') as $r) { $out[(string) $r['shop_id']] = $r; }
     return $out;
 }
 
 function mdForm(string $formId): ?array
 {
-    return Db::row('SELECT * FROM ceo_md_form WHERE form_id = ?', [$formId]);
+    return Db::row('SELECT * FROM mar_md_form WHERE form_id = ?', [$formId]);
 }
 
 function mdJson(mixed $v, array $defaut = []): array
@@ -1281,11 +1281,11 @@ function mdRelireFormulaires(): array
             $qs = mdQuestions((array) ($fm['questions'] ?? []));
             if (mdForm($fid) === null) {
                 $neufs++;
-                Db::exec('INSERT INTO ceo_md_form (form_id, page_id, page_nom, nom, statut_meta, locale, questions_json, leads_meta, shop_id, relu_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                Db::exec('INSERT INTO mar_md_form (form_id, page_id, page_nom, nom, statut_meta, locale, questions_json, leads_meta, shop_id, relu_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
                     [$fid, $page, $pageNom, (string) ($fm['name'] ?? ''), (string) ($fm['status'] ?? ''), (string) ($fm['locale'] ?? ''),
                         json_encode($qs, JSON_UNESCAPED_UNICODE), isset($fm['leads_count']) ? (int) $fm['leads_count'] : null, mdSuggererMagasin((string) ($fm['name'] ?? ''), mdMagasins()), $maintenant]);
             } else {
-                Db::exec('UPDATE ceo_md_form SET page_id = ?, page_nom = ?, nom = ?, statut_meta = ?, locale = ?, questions_json = ?, leads_meta = ?, relu_le = ? WHERE form_id = ?',
+                Db::exec('UPDATE mar_md_form SET page_id = ?, page_nom = ?, nom = ?, statut_meta = ?, locale = ?, questions_json = ?, leads_meta = ?, relu_le = ? WHERE form_id = ?',
                     [$page, $pageNom, (string) ($fm['name'] ?? ''), (string) ($fm['status'] ?? ''), (string) ($fm['locale'] ?? ''),
                         json_encode($qs, JSON_UNESCAPED_UNICODE), isset($fm['leads_count']) ? (int) $fm['leads_count'] : null, $maintenant, $fid]);
             }
@@ -1347,7 +1347,7 @@ function mdEnregistrerLead(array $raw, array $f, string $via): array
 {
     $mid = (string) ($raw['id'] ?? '');
     if ($mid === '') { return ['error' => 'lead sans identifiant']; }
-    $deja = Db::row('SELECT id FROM ceo_md_lead WHERE meta_lead_id = ?', [$mid]);
+    $deja = Db::row('SELECT id FROM mar_md_lead WHERE meta_lead_id = ?', [$mid]);
     if ($deja !== null) { return ['id' => (int) $deja['id'], 'deja' => true]; }
     $reps = mdReponses($raw, mdQuestionsDe($f));
     $vite = mdChampsRapides($reps, $f);
@@ -1357,15 +1357,15 @@ function mdEnregistrerLead(array $raw, array $f, string $via): array
     $pf = in_array($pf, ['fb', 'ig'], true) ? $pf : (str_starts_with($pf, 'insta') ? 'ig' : (str_starts_with($pf, 'face') ? 'fb' : ''));
     $ligne = ['cp' => $vite['cp'], 'shop_par' => null, 'shop_id' => null];
     [$etat, $motif, $shop, $par] = mdEvaluer($ligne, $f, mdReglages());
-    $neuf = Db::exec('INSERT IGNORE INTO ceo_md_lead (meta_lead_id, form_id, page_id, plateforme, campagne, annonce, recu_le, lu_le, via, reponses_json,'
+    $neuf = Db::exec('INSERT IGNORE INTO mar_md_lead (meta_lead_id, form_id, page_id, plateforme, campagne, annonce, recu_le, lu_le, via, reponses_json,'
         . ' entreprise, contact, telephone, email, cp, shop_id, shop_par, etat, motif) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$mid, (string) $f['form_id'], (string) ($f['page_id'] ?? ''), $pf, isset($raw['campaign_name']) ? mb_substr((string) $raw['campaign_name'], 0, 200) : null,
             isset($raw['ad_name']) ? mb_substr((string) $raw['ad_name'], 0, 200) : null, $recu, date('Y-m-d H:i:s'), $via,
             json_encode($reps, JSON_UNESCAPED_UNICODE), $vite['entreprise'], $vite['contact'], $vite['telephone'], $vite['email'], $vite['cp'],
             $shop, $par, $etat, $motif !== '' ? $motif : null]) > 0;
-    $id = (int) (Db::row('SELECT id FROM ceo_md_lead WHERE meta_lead_id = ?', [$mid])['id'] ?? 0);
+    $id = (int) (Db::row('SELECT id FROM mar_md_lead WHERE meta_lead_id = ?', [$mid])['id'] ?? 0);
     if (!$neuf) { return ['id' => $id, 'deja' => true]; }
-    Db::exec('UPDATE ceo_md_form SET dernier_lead = GREATEST(COALESCE(dernier_lead, ?), ?) WHERE form_id = ?', [$recu, $recu, (string) $f['form_id']]);
+    Db::exec('UPDATE mar_md_form SET dernier_lead = GREATEST(COALESCE(dernier_lead, ?), ?) WHERE form_id = ?', [$recu, $recu, (string) $f['form_id']]);
     mdJournal('lead', 'Lead reçu — ' . ($vite['entreprise'] ?: ($vite['contact'] ?: 'sans nom')) . ' (' . ($pf === 'ig' ? 'Instagram' : ($pf === 'fb' ? 'Facebook' : 'Meta'))
         . ', « ' . $f['nom'] . ' », ' . $via . ')' . ($etat === 'attente' || $etat === 'a_attribuer' ? ' · ' . $motif : ''), $id);
     return ['id' => $id, 'etat' => $etat];
@@ -1383,7 +1383,7 @@ function mdRattrapage(int $jours, ?string $formId = null, string $via = 'rattrap
     $c = mdMetaCfg();
     if (!mdMetaConfigure($c)) { return ['error' => 'connexion Meta à régler (étape 1)']; }
     $jours = max(1, min(90, $jours));
-    $forms = $formId !== null ? array_filter([mdForm($formId)]) : Db::rows('SELECT * FROM ceo_md_form WHERE suivi = 1');
+    $forms = $formId !== null ? array_filter([mdForm($formId)]) : Db::rows('SELECT * FROM mar_md_form WHERE suivi = 1');
     if (!$forms) { return ['ok' => true, 'formulaires' => 0, 'nouveaux' => 0]; }
     $neufs = 0; $vus = 0; $lus = 0; $ids = [];
     foreach ($forms as $f) {
@@ -1465,11 +1465,11 @@ function mdWebhookTraiter(array $evs): array
     foreach ($evs as $ev) {
         $f = $ev['form'] !== '' ? mdForm($ev['form']) : null;
         if ($f === null && $ev['form'] !== '') {
-            Db::exec('INSERT IGNORE INTO ceo_md_form (form_id, page_id) VALUES (?, ?)', [$ev['form'], $ev['page']]);
+            Db::exec('INSERT IGNORE INTO mar_md_form (form_id, page_id) VALUES (?, ?)', [$ev['form'], $ev['page']]);
             $f = mdForm($ev['form']);
         }
         if ($f === null || !(int) $f['suivi']) {
-            if ($f !== null) { Db::exec('UPDATE ceo_md_form SET ignores = ignores + 1, dernier_lead = ? WHERE form_id = ?', [date('Y-m-d H:i:s'), $ev['form']]); }
+            if ($f !== null) { Db::exec('UPDATE mar_md_form SET ignores = ignores + 1, dernier_lead = ? WHERE form_id = ?', [date('Y-m-d H:i:s'), $ev['form']]); }
             mdJournal('webhook', 'Lead non repris : formulaire ' . ($f !== null && $f['nom'] !== '' ? '« ' . $f['nom'] . ' »' : $ev['form']) . ' non suivi');
             $faits[] = ['lead' => $ev['lead'], 'ignore' => 'formulaire non suivi'];
             continue;
@@ -1494,7 +1494,7 @@ function mdWebhookTraiter(array $evs): array
  */
 function mdEnvoyer(int $id, bool $main = false): array
 {
-    $l = Db::row('SELECT * FROM ceo_md_lead WHERE id = ?', [$id]);
+    $l = Db::row('SELECT * FROM mar_md_lead WHERE id = ?', [$id]);
     if ($l === null) { return ['error' => 'lead introuvable']; }
     $f = mdForm((string) $l['form_id']);
     if ($f === null) { return ['error' => 'formulaire introuvable']; }
@@ -1503,7 +1503,7 @@ function mdEnvoyer(int $id, bool $main = false): array
     $maintenant = date('Y-m-d H:i:s');
     [$etat, $motif, $shop, $par] = mdEvaluer($l, $f, $reg);
     if ($etat !== 'a_envoyer') {
-        Db::exec('UPDATE ceo_md_lead SET etat = ?, motif = ? WHERE id = ?', [$etat, $motif, $id]);
+        Db::exec('UPDATE mar_md_lead SET etat = ?, motif = ? WHERE id = ?', [$etat, $motif, $id]);
         return ['ok' => false, 'etat' => $etat, 'motif' => $motif];
     }
     $mags = mdMagasins();
@@ -1514,7 +1514,7 @@ function mdEnvoyer(int $id, bool $main = false): array
     elseif ($t['manques']) { $rejet = 'champ requis manquant : ' . implode(', ', array_map(static fn ($c) => MD_CHAMPS[$c][0] ?? $c, $t['manques'])); }
     $payload = mdPayload($l, $f, $t['payload'], $mag);
     if ($rejet !== null) {
-        Db::exec('UPDATE ceo_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, payload_json = ? WHERE id = ?',
+        Db::exec('UPDATE mar_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, payload_json = ? WHERE id = ?',
             ['rejete', $rejet, $shop, $par, json_encode($payload, JSON_UNESCAPED_UNICODE), $id]);
         mdJournal('envoi', 'Lead ' . ($l['entreprise'] ?: '#' . $id) . ' non envoyé — ' . $rejet, $id);
         return ['ok' => false, 'etat' => 'rejete', 'motif' => $rejet];
@@ -1524,7 +1524,7 @@ function mdEnvoyer(int $id, bool $main = false): array
     if (($code >= 200 && $code < 300) || $code === 409) {
         [$erpId, $statut] = mdErpReponse($res);
         $s = $statut !== null ? (mdStatutErp($statut) ?? 'nouveau') : 'nouveau';
-        Db::exec('UPDATE ceo_md_lead SET etat = ?, motif = NULL, shop_id = ?, shop_par = ?, erp_id = COALESCE(?, erp_id), envoye_le = COALESCE(envoye_le, ?),'
+        Db::exec('UPDATE mar_md_lead SET etat = ?, motif = NULL, shop_id = ?, shop_par = ?, erp_id = COALESCE(?, erp_id), envoye_le = COALESCE(envoye_le, ?),'
             . ' payload_json = ?, statut_erp = COALESCE(statut_erp, ?), statut_brut = COALESCE(statut_brut, ?), statut_le = COALESCE(statut_le, ?), essais = ?, essai_le = ? WHERE id = ?',
             ['envoye', $shop, $par, $erpId, $maintenant, json_encode($payload, JSON_UNESCAPED_UNICODE), $s, $statut, $maintenant, $essais, $maintenant, $id]);
         mdJournal('envoi', 'Dans l’ERP de ' . $mag['nom'] . ' — ' . ($l['entreprise'] ?: '#' . $id) . ($erpId ? ' · ' . $erpId : '') . ($code === 409 ? ' (déjà présent)' : ''), $id);
@@ -1535,7 +1535,7 @@ function mdEnvoyer(int $id, bool $main = false): array
     $definitif = in_array($code, [400, 422], true);
     $etatErr = $definitif ? 'rejete' : 'erreur';
     $motifErr = ($definitif ? 'refusé par l’ERP' : 'ERP') . ' (' . ($code ?: '—') . ') : ' . $msg . (in_array($code, [404, 405], true) ? ' — route ' . $reg['erp']['routeEnvoi'] . ' à créer côté panel ?' : '');
-    Db::exec('UPDATE ceo_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, payload_json = ?, essais = ?, essai_le = ? WHERE id = ?',
+    Db::exec('UPDATE mar_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, payload_json = ?, essais = ?, essai_le = ? WHERE id = ?',
         [$etatErr, mb_substr($motifErr, 0, 300), $shop, $par, json_encode($payload, JSON_UNESCAPED_UNICODE), min(255, $essais), $maintenant, $id]);
     mdJournal('erreur', 'Lead ' . ($l['entreprise'] ?: '#' . $id) . ' : ' . $motifErr, $id);
     return ['ok' => false, 'etat' => $etatErr, 'motif' => $motifErr];
@@ -1547,7 +1547,7 @@ function mdTraiterNouveau(int $id): array
     $out = [];
     $reg = mdReglages();
     if (!empty($reg['erp']['envoiActif'])) { $out['envoi'] = mdEnvoyer($id); }
-    $l = Db::row('SELECT * FROM ceo_md_lead WHERE id = ?', [$id]);
+    $l = Db::row('SELECT * FROM mar_md_lead WHERE id = ?', [$id]);
     if ($l !== null && $l['etat'] === 'envoye') { $out['sms'] = mdSmsLead($l, $reg); }
     return $out;
 }
@@ -1556,7 +1556,7 @@ function mdTraiterNouveau(int $id): array
 function mdReevaluer(?string $formId = null): array
 {
     $reg = mdReglages();
-    $sql = "SELECT * FROM ceo_md_lead WHERE etat IN ('attente','a_attribuer')" . ($formId !== null ? ' AND form_id = ?' : '') . ' ORDER BY recu_le LIMIT 500';
+    $sql = "SELECT * FROM mar_md_lead WHERE etat IN ('attente','a_attribuer')" . ($formId !== null ? ' AND form_id = ?' : '') . ' ORDER BY recu_le LIMIT 500';
     $n = 0;
     $forms = [];
     foreach (Db::rows($sql, $formId !== null ? [$formId] : []) as $l) {
@@ -1567,7 +1567,7 @@ function mdReevaluer(?string $formId = null): array
         $l['cp'] = $vite['cp'] ?? $l['cp'];
         [$etat, $motif, $shop, $par] = mdEvaluer($l, $f, $reg);
         if ($etat !== $l['etat'] || $motif !== (string) $l['motif'] || $shop !== $l['shop_id']) {
-            Db::exec('UPDATE ceo_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, entreprise = ?, contact = ?, telephone = ?, email = ?, cp = ? WHERE id = ?',
+            Db::exec('UPDATE mar_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, entreprise = ?, contact = ?, telephone = ?, email = ?, cp = ? WHERE id = ?',
                 [$etat, $motif !== '' ? $motif : null, $shop, $par, $vite['entreprise'], $vite['contact'], $vite['telephone'], $vite['email'], $vite['cp'], (int) $l['id']]);
             $n++;
         }
@@ -1580,7 +1580,7 @@ function mdEnvoyerEnAttente(int $max = 40): array
 {
     $t = time();
     $ok = 0; $ko = 0;
-    $rows = Db::rows("SELECT id, etat, essais, essai_le FROM ceo_md_lead WHERE etat IN ('a_envoyer','erreur') ORDER BY recu_le LIMIT " . (int) ($max * 3));
+    $rows = Db::rows("SELECT id, etat, essais, essai_le FROM mar_md_lead WHERE etat IN ('a_envoyer','erreur') ORDER BY recu_le LIMIT " . (int) ($max * 3));
     foreach ($rows as $r) {
         if ($ok + $ko >= $max) { break; }
         if ($r['etat'] === 'erreur') {
@@ -1614,7 +1614,7 @@ function mdAppliquerStatut(array $l, array $x, string $maintenant): ?string
         : ($rang >= 2 ? ($date($x, ['contacted_at', 'called_at']) ?? $maintenant) : null));
     $connecte = $l['connecte_le'] ?: ($s === 'bureau_connecte' ? ($date($x, ['connected_at', 'office_connected_at', 'won_at']) ?? $maintenant) : null);
     $change = $s !== (string) $l['statut_erp'];
-    Db::exec('UPDATE ceo_md_lead SET statut_erp = ?, statut_brut = ?, statut_le = ?, vu_le = ?, contacte_le = ?, connecte_le = ?, relu_le = ? WHERE id = ?',
+    Db::exec('UPDATE mar_md_lead SET statut_erp = ?, statut_brut = ?, statut_le = ?, vu_le = ?, contacte_le = ?, connecte_le = ?, relu_le = ? WHERE id = ?',
         [$s, $brut !== '' ? mb_substr($brut, 0, 60) : $l['statut_brut'], $change ? $maintenant : $l['statut_le'], $vu, $contact, $connecte, $maintenant, (int) $l['id']]);
     return $change ? $s : null;
 }
@@ -1623,7 +1623,7 @@ function mdAppliquerStatut(array $l, array $x, string $maintenant): ?string
 function mdRelire(array $reg, int $max = 400): array
 {
     $depuis = date('Y-m-d H:i:s', time() - (int) $reg['erp']['relectureJours'] * 86400);
-    $rows = Db::rows("SELECT * FROM ceo_md_lead WHERE etat = 'envoye' AND erp_id IS NOT NULL AND envoye_le >= ?"
+    $rows = Db::rows("SELECT * FROM mar_md_lead WHERE etat = 'envoye' AND erp_id IS NOT NULL AND envoye_le >= ?"
         . " AND (statut_erp IS NULL OR statut_erp NOT IN ('bureau_connecte','perdu')) ORDER BY envoye_le DESC LIMIT " . (int) $max, [$depuis]);
     if (!$rows) { return ['relus' => 0, 'changes' => 0]; }
     $route = (string) $reg['erp']['routeStatuts'];
@@ -1657,7 +1657,7 @@ function mdRelire(array $reg, int $max = 400): array
 /** Le SMS dû pour un lead, s'il y en a un — premier ou relance. */
 function mdSmsLead(array $l, array $reg, bool $main = false): array
 {
-    $mag = Db::row('SELECT * FROM ceo_md_shop WHERE shop_id = ?', [(string) $l['shop_id']]) ?? [];
+    $mag = Db::row('SELECT * FROM mar_md_shop WHERE shop_id = ?', [(string) $l['shop_id']]) ?? [];
     $t = time();
     $heure = (int) (new DateTime('now', new DateTimeZone('Europe/Brussels')))->format('G');
     $plan = $main ? (empty($l['sms_le']) ? 'premier' : 'relance') : mdSmsPlan($l, $mag, $reg, $t, $heure);
@@ -1669,15 +1669,15 @@ function mdSmsLead(array $l, array $reg, bool $main = false): array
     [$ok, $info] = MdSms::envoyer((string) $mag['sms_tel'], $texte, (string) $reg['sms']['from']);
     $maintenant = date('Y-m-d H:i:s', $t);
     if ($ok) {
-        if ($plan === 'premier') { Db::exec('UPDATE ceo_md_lead SET sms_le = ?, sms_derniere = ?, sms_erreur = NULL WHERE id = ?', [$maintenant, $maintenant, (int) $l['id']]); }
-        else { Db::exec('UPDATE ceo_md_lead SET sms_derniere = ?, sms_relances = sms_relances + 1, sms_erreur = NULL WHERE id = ?', [$maintenant, (int) $l['id']]); }
+        if ($plan === 'premier') { Db::exec('UPDATE mar_md_lead SET sms_le = ?, sms_derniere = ?, sms_erreur = NULL WHERE id = ?', [$maintenant, $maintenant, (int) $l['id']]); }
+        else { Db::exec('UPDATE mar_md_lead SET sms_derniere = ?, sms_relances = sms_relances + 1, sms_erreur = NULL WHERE id = ?', [$maintenant, (int) $l['id']]); }
         mdJournal($plan === 'premier' ? 'sms' : 'relance', 'SMS ' . ($plan === 'premier' ? '' : '(relance) ') . '→ ' . ($l['magasin'] ?: 'magasin') . ' ('
             . ($mag['sms_nom'] ?: mdTelLisible(mdTelE164((string) $mag['sms_tel']))) . ') · ' . ($l['entreprise'] ?: '#' . $l['id']), (int) $l['id']);
         return ['envoye' => true, 'plan' => $plan];
     }
     // Un échec n'est pas rejoué en boucle : la date est posée, l'erreur dite, le geste « Relancer » reste.
-    if ($plan === 'premier') { Db::exec('UPDATE ceo_md_lead SET sms_le = ?, sms_derniere = ?, sms_erreur = ? WHERE id = ?', [$maintenant, $maintenant, mb_substr((string) $info, 0, 200), (int) $l['id']]); }
-    else { Db::exec('UPDATE ceo_md_lead SET sms_derniere = ?, sms_relances = sms_relances + 1, sms_erreur = ? WHERE id = ?', [$maintenant, mb_substr((string) $info, 0, 200), (int) $l['id']]); }
+    if ($plan === 'premier') { Db::exec('UPDATE mar_md_lead SET sms_le = ?, sms_derniere = ?, sms_erreur = ? WHERE id = ?', [$maintenant, $maintenant, mb_substr((string) $info, 0, 200), (int) $l['id']]); }
+    else { Db::exec('UPDATE mar_md_lead SET sms_derniere = ?, sms_relances = sms_relances + 1, sms_erreur = ? WHERE id = ?', [$maintenant, mb_substr((string) $info, 0, 200), (int) $l['id']]); }
     mdJournal('erreur', 'SMS non parti (' . ($l['entreprise'] ?: '#' . $l['id']) . ') : ' . $info, (int) $l['id']);
     return ['envoye' => false, 'motif' => $info];
 }
@@ -1687,7 +1687,7 @@ function mdSmsPasser(array $reg): array
 {
     $t = time();
     $depuis = date('Y-m-d H:i:s', $t - 7 * 86400);
-    $rows = Db::rows("SELECT * FROM ceo_md_lead WHERE etat = 'envoye' AND envoye_le >= ? AND (statut_erp IS NULL OR statut_erp IN ('nouveau','vu')) ORDER BY envoye_le LIMIT 200", [$depuis]);
+    $rows = Db::rows("SELECT * FROM mar_md_lead WHERE etat = 'envoye' AND envoye_le >= ? AND (statut_erp IS NULL OR statut_erp IN ('nouveau','vu')) ORDER BY envoye_le LIMIT 200", [$depuis]);
     $shops = mdShops();
     $sms = 0; $esc = 0;
     foreach ($rows as $l) {
@@ -1713,7 +1713,7 @@ function mdEscalader(array $l, array $mag, array $reg): void
         . ' attend depuis <b>' . $e($att) . '</b> dans l’ERP de ' . $e($nomMag) . ' : ' . $e(MD_STATUTS[$l['statut_erp'] ?: 'nouveau'] ?? $l['statut_erp']) . '.</p>'
         . '<p>Lien ERP : ' . $e(str_replace('{erp_id}', (string) $l['erp_id'], (string) $reg['erp']['lienLead'])) . '</p>';
     $ok = class_exists('Smtp') && Smtp::configured() && Smtp::envoyer((string) $mag['escalade_email'], $sujet, $html);
-    Db::exec('UPDATE ceo_md_lead SET escalade_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $l['id']]);
+    Db::exec('UPDATE mar_md_lead SET escalade_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $l['id']]);
     mdJournal('escalade', ($ok ? 'E-mail à ' : '⚠ E-mail NON parti (' . (class_exists('Smtp') && Smtp::configured() ? (Smtp::$lastError ?? 'échec') : 'SMTP non configuré') . ') pour ')
         . $mag['escalade_email'] . ' — ' . ($l['entreprise'] ?: '#' . $l['id']) . ' pas rappelé depuis ' . $att, (int) $l['id']);
 }
@@ -1757,7 +1757,7 @@ function mdCycle(bool $force = false): array
     $etat['dernier'] = $t;
     $etat['bilan'] = $bilan;
     mdSettingSet('mdCycle', $etat);
-    if (random_int(1, 50) === 1) { Db::exec('DELETE FROM ceo_md_journal WHERE at < ?', [date('Y-m-d H:i:s', $t - 90 * 86400)]); }
+    if (random_int(1, 50) === 1) { Db::exec('DELETE FROM mar_md_journal WHERE at < ?', [date('Y-m-d H:i:s', $t - 90 * 86400)]); }
     return ['ok' => true, 'dernier' => date('Y-m-d H:i:s', $t), 'bilan' => $bilan];
 }
 
@@ -1817,19 +1817,19 @@ function ep_md(): array
     $t = time();
     $mags = mdMagasins();
     $shops = mdShops();
-    $rows = Db::rows('SELECT * FROM ceo_md_lead WHERE recu_le >= ?', [date('Y-m-d H:i:s', $t - 30 * 86400)]);
+    $rows = Db::rows('SELECT * FROM mar_md_lead WHERE recu_le >= ?', [date('Y-m-d H:i:s', $t - 30 * 86400)]);
     $parForm = []; $parShop = [];
     foreach ($rows as $l) { $parForm[$l['form_id']][] = $l; if ($l['shop_id'] !== null) { $parShop[(string) $l['shop_id']][] = $l; } }
 
     $formulaires = [];
-    foreach (Db::rows('SELECT * FROM ceo_md_form ORDER BY suivi DESC, page_nom, nom') as $f) {
+    foreach (Db::rows('SELECT * FROM mar_md_form ORDER BY suivi DESC, page_nom, nom') as $f) {
         $qs = mdQuestionsDe($f);
-        $dernier = Db::row('SELECT reponses_json FROM ceo_md_lead WHERE form_id = ? ORDER BY recu_le DESC LIMIT 1', [$f['form_id']]);
+        $dernier = Db::row('SELECT reponses_json FROM mar_md_lead WHERE form_id = ? ORDER BY recu_le DESC LIMIT 1', [$f['form_id']]);
         $exemple = [];
         foreach (mdJson($dernier['reponses_json'] ?? null) as $r) { $exemple[(string) $r['key']] = (string) $r['valeur']; }
         // Les réponses vues à une question à choix : ses options chez Meta, puis ce que les leads ont répondu.
         $vues = [];
-        foreach (array_slice(Db::rows('SELECT reponses_json FROM ceo_md_lead WHERE form_id = ? ORDER BY recu_le DESC LIMIT 300', [$f['form_id']]), 0, 300) as $r) {
+        foreach (array_slice(Db::rows('SELECT reponses_json FROM mar_md_lead WHERE form_id = ? ORDER BY recu_le DESC LIMIT 300', [$f['form_id']]), 0, 300) as $r) {
             foreach (mdJson($r['reponses_json']) as $rep) { $vues[(string) $rep['key']][(string) $rep['valeur']] = ($vues[(string) $rep['key']][(string) $rep['valeur']] ?? 0) + 1; }
         }
         $mapping = !empty($f['mapping_le']) ? mdJson($f['mapping_json']) : null;
@@ -1875,7 +1875,7 @@ function ep_md(): array
         'formulaires' => $formulaires,
         'magasins' => $magasins,
         'resume' => mdStats($rows, $reg, $t),
-        'journal' => Db::rows('SELECT id, at, type, message, lead_id AS leadId FROM ceo_md_journal ORDER BY id DESC LIMIT 40'),
+        'journal' => Db::rows('SELECT id, at, type, message, lead_id AS leadId FROM mar_md_journal ORDER BY id DESC LIMIT 40'),
         'maintenant' => date('Y-m-d H:i:s', $t),
     ];
 }
@@ -1887,7 +1887,7 @@ function ep_md_leads(): array
     $reg = mdReglages();
     $t = time();
     $jours = max(1, min(365, (int) ($_GET['jours'] ?? 30)));
-    $rows = Db::rows('SELECT * FROM ceo_md_lead WHERE recu_le >= ? ORDER BY recu_le DESC LIMIT 2000', [date('Y-m-d H:i:s', $t - $jours * 86400)]);
+    $rows = Db::rows('SELECT * FROM mar_md_lead WHERE recu_le >= ? ORDER BY recu_le DESC LIMIT 2000', [date('Y-m-d H:i:s', $t - $jours * 86400)]);
     $shop = (string) ($_GET['shop'] ?? '');
     $form = (string) ($_GET['form'] ?? '');
     $q = mdPlat(trim((string) ($_GET['q'] ?? '')));
@@ -1912,7 +1912,7 @@ function ep_md_leads(): array
     $limite = max(10, min(500, (int) ($_GET['limite'] ?? 150)));
     $mags = mdMagasins();
     $forms = [];
-    foreach (Db::rows('SELECT form_id, nom, mapping_json, mapping_le FROM ceo_md_form') as $f) { $forms[$f['form_id']] = $f; }
+    foreach (Db::rows('SELECT form_id, nom, mapping_json, mapping_le FROM mar_md_form') as $f) { $forms[$f['form_id']] = $f; }
     return ['filtre' => $choisi, 'comptes' => $comptes, 'total' => count($sel),
         'leads' => array_map(static fn ($l) => mdLeadVue($l, $reg, $t, $mags, $forms), array_slice($sel, 0, $limite))];
 }
@@ -1921,7 +1921,7 @@ function ep_md_leads(): array
 function ep_md_lead(int $id): array
 {
     mdTables();
-    $l = Db::row('SELECT * FROM ceo_md_lead WHERE id = ?', [$id]);
+    $l = Db::row('SELECT * FROM mar_md_lead WHERE id = ?', [$id]);
     if ($l === null) { http_response_code(404); return ['error' => 'lead introuvable']; }
     $reg = mdReglages();
     $f = mdForm((string) $l['form_id']) ?? ['nom' => '', 'mapping_json' => null, 'valeurs_json' => null];
@@ -1930,7 +1930,7 @@ function ep_md_lead(int $id): array
     $forms = [(string) $l['form_id'] => $f];
     return ['lead' => mdLeadVue($l, $reg, time(), mdMagasins(), $forms), 'reponses' => $reps,
         'payload' => mdJson($l['payload_json']) ?: null,
-        'journal' => Db::rows('SELECT at, type, message FROM ceo_md_journal WHERE lead_id = ? ORDER BY id', [$id])];
+        'journal' => Db::rows('SELECT at, type, message FROM mar_md_journal WHERE lead_id = ? ORDER BY id', [$id])];
 }
 
 /* --- écritures ------------------------------------------------------------------------------ */
@@ -1991,7 +1991,7 @@ function wr_md_formulaire_put(string $formId): array
     }
     if (!$set) { return ['ok' => true]; }
     $vals[] = $formId;
-    Db::exec('UPDATE ceo_md_form SET ' . implode(', ', $set) . ' WHERE form_id = ?', $vals);
+    Db::exec('UPDATE mar_md_form SET ' . implode(', ', $set) . ' WHERE form_id = ?', $vals);
     $nom = $f['nom'] !== '' ? $f['nom'] : $formId;
     if (array_key_exists('suivi', $b)) { mdJournal('reglage', 'Formulaire « ' . $nom . ' » ' . (!empty($b['suivi']) ? 'suivi' : 'plus suivi')); }
     if (array_key_exists('mapping', $b)) { mdJournal('reglage', 'Mapping de « ' . $nom . ' » enregistré'); }
@@ -2014,8 +2014,8 @@ function wr_md_apercu(): array
     $f = mdForm((string) ($b['formId'] ?? ''));
     if ($f === null) { http_response_code(404); return ['error' => 'formulaire inconnu']; }
     $l = !empty($b['leadId'])
-        ? Db::row('SELECT * FROM ceo_md_lead WHERE id = ? AND form_id = ?', [(int) $b['leadId'], $f['form_id']])
-        : Db::row('SELECT * FROM ceo_md_lead WHERE form_id = ? ORDER BY recu_le DESC LIMIT 1', [$f['form_id']]);
+        ? Db::row('SELECT * FROM mar_md_lead WHERE id = ? AND form_id = ?', [(int) $b['leadId'], $f['form_id']])
+        : Db::row('SELECT * FROM mar_md_lead WHERE form_id = ? ORDER BY recu_le DESC LIMIT 1', [$f['form_id']]);
     if ($l === null) { return ['vide' => true]; }
     $mapping = is_array($b['mapping'] ?? null) ? $b['mapping'] : mdMappingEffectif($f);
     $valeurs = is_array($b['valeurs'] ?? null) ? $b['valeurs'] : mdJson($f['valeurs_json']);
@@ -2035,14 +2035,14 @@ function wr_md_apercu(): array
 function wr_md_lead_put(int $id): array
 {
     mdTables();
-    $l = Db::row('SELECT * FROM ceo_md_lead WHERE id = ?', [$id]);
+    $l = Db::row('SELECT * FROM mar_md_lead WHERE id = ?', [$id]);
     if ($l === null) { http_response_code(404); return ['error' => 'lead introuvable']; }
     $b = body();
     if (array_key_exists('shopId', $b)) {
         $s = trim((string) $b['shopId']);
         if ($s === '' || !isset(mdMagasins()[$s])) { http_response_code(422); return ['error' => 'magasin inconnu']; }
         if ($l['etat'] === 'envoye' && (string) $l['shop_id'] !== $s) { http_response_code(409); return ['error' => 'déjà dans l’ERP d’un autre magasin']; }
-        Db::exec("UPDATE ceo_md_lead SET shop_id = ?, shop_par = 'main', etat = IF(etat = 'envoye', etat, 'a_envoyer'), motif = NULL WHERE id = ?", [$s, $id]);
+        Db::exec("UPDATE mar_md_lead SET shop_id = ?, shop_par = 'main', etat = IF(etat = 'envoye', etat, 'a_envoyer'), motif = NULL WHERE id = ?", [$s, $id]);
         mdJournal('reglage', 'Lead ' . ($l['entreprise'] ?: '#' . $id) . ' attribué à ' . (mdMagasins()[$s]['nom'] ?? $s), $id);
     }
     $out = ['ok' => true];
@@ -2056,7 +2056,7 @@ function wr_md_lead_envoyer(int $id): array
     mdTables();
     $r = mdEnvoyer($id, true);
     if (($r['etat'] ?? '') === 'envoye') {
-        $l = Db::row('SELECT * FROM ceo_md_lead WHERE id = ?', [$id]);
+        $l = Db::row('SELECT * FROM mar_md_lead WHERE id = ?', [$id]);
         if ($l !== null && empty($l['sms_le'])) { $r['sms'] = mdSmsLead($l, mdReglages()); }
     }
     return $r;
@@ -2066,7 +2066,7 @@ function wr_md_lead_envoyer(int $id): array
 function wr_md_lead_sms(int $id): array
 {
     mdTables();
-    $l = Db::row('SELECT * FROM ceo_md_lead WHERE id = ?', [$id]);
+    $l = Db::row('SELECT * FROM mar_md_lead WHERE id = ?', [$id]);
     if ($l === null) { http_response_code(404); return ['error' => 'lead introuvable']; }
     if ($l['etat'] !== 'envoye') { http_response_code(409); return ['error' => 'le lead n’est pas encore dans l’ERP']; }
     if (!MdSms::configured()) { http_response_code(409); return ['error' => 'SMSAPI non configuré (étape 4)']; }
@@ -2164,7 +2164,7 @@ function wr_md_magasin_put(string $shopId): array
     mdTables();
     if (!isset(mdMagasins()[$shopId])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     $b = body();
-    $cur = Db::row('SELECT * FROM ceo_md_shop WHERE shop_id = ?', [$shopId]) ?? ['sms_on' => 0, 'sms_tel' => '', 'sms_nom' => '', 'escalade_email' => ''];
+    $cur = Db::row('SELECT * FROM mar_md_shop WHERE shop_id = ?', [$shopId]) ?? ['sms_on' => 0, 'sms_tel' => '', 'sms_nom' => '', 'escalade_email' => ''];
     $tel = array_key_exists('smsTel', $b) ? trim((string) $b['smsTel']) : (string) $cur['sms_tel'];
     if ($tel !== '') {
         $e = mdTelE164($tel);
@@ -2176,7 +2176,7 @@ function wr_md_magasin_put(string $shopId): array
     $on = array_key_exists('smsOn', $b) ? (!empty($b['smsOn']) ? 1 : 0) : (int) $cur['sms_on'];
     if ($on && $tel === '') { http_response_code(422); return ['error' => 'un numéro est nécessaire pour allumer les SMS de ce magasin']; }
     $nom = array_key_exists('smsNom', $b) ? mb_substr(trim((string) $b['smsNom']), 0, 80) : (string) $cur['sms_nom'];
-    Db::exec('INSERT INTO ceo_md_shop (shop_id, sms_on, sms_tel, sms_nom, escalade_email, maj_le) VALUES (?,?,?,?,?,?)'
+    Db::exec('INSERT INTO mar_md_shop (shop_id, sms_on, sms_tel, sms_nom, escalade_email, maj_le) VALUES (?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE sms_on = VALUES(sms_on), sms_tel = VALUES(sms_tel), sms_nom = VALUES(sms_nom), escalade_email = VALUES(escalade_email), maj_le = VALUES(maj_le)',
         [$shopId, $on, $tel, $nom, $mail, date('Y-m-d H:i:s')]);
     mdJournal('reglage', 'SMS de ' . mdMagasins()[$shopId]['nom'] . ' : ' . ($on ? 'allumés vers ' . mdTelLisible($tel) : 'coupés'));
@@ -2338,7 +2338,7 @@ function mdSonde(): array
     $sm = [];
     [$okS, $info] = MdSms::profil();
     $sm[] = [$okS ? 'ok' : 'ko', 'Jeton SMSAPI · ' . MdSms::config()['base'], $info];
-    $nMag = (int) (Db::row("SELECT COUNT(*) AS n FROM ceo_md_shop WHERE sms_on = 1 AND sms_tel <> ''")['n'] ?? 0);
+    $nMag = (int) (Db::row("SELECT COUNT(*) AS n FROM mar_md_shop WHERE sms_on = 1 AND sms_tel <> ''")['n'] ?? 0);
     $sm[] = [$nMag ? 'ok' : 'att', 'Magasins avec un numéro', $nMag . ' magasin(s)'];
     $sm[] = [!empty($reg['sms']['actif']) ? 'ok' : 'att', 'SMS automatiques', !empty($reg['sms']['actif']) ? 'allumés' : 'éteints'];
     $smtp = class_exists('Smtp') && Smtp::configured();

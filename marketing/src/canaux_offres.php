@@ -535,7 +535,7 @@ function coOffresMagasin(int $sid, string $date, string $periode, int &$cout, fl
         ensureJoursCreux();
         $limite = date('Y-m-d', strtotime($date . ' -30 day'));
         try {
-            foreach (Db::rows("SELECT * FROM ceo_promo WHERE shop_id = ? AND statut IN ('en_cours','terminee','arretee') AND au >= ? AND du <= ? ORDER BY du DESC, id DESC", [(string) $sid, $limite, $date]) as $r) {
+            foreach (Db::rows("SELECT * FROM mar_promo WHERE shop_id = ? AND statut IN ('en_cours','terminee','arretee') AND au >= ? AND du <= ? ORDER BY du DESC, id DESC", [(string) $sid, $limite, $date]) as $r) {
                 $p = jcPromoLigne($r); $e = jcEffet($p, $date);
                 $nh = max(1, $p['heureA'] - $p['heureDe'] + 1);
                 $caDe = static function (array $js) use ($e, $nh): float { $s = 0.0; foreach ($js as $j) { $s += (float) (($e['parJour'][$j]['caH'] ?? 0) * $nh); } return $s; };

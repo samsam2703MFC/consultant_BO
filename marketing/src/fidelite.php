@@ -13,11 +13,11 @@ declare(strict_types=1);
  *                            ce qu'achète chaque segment (six types d'achat) ;
  *  - POST /fidelite/regles   publie les règles modifiées, ajoutées ou retirées, en un envoi.
  *
- * Les règles vivent ici (ceo_fid_regle) : c'est le paramétrage de la marque. La PWA du client
+ * Les règles vivent ici (mar_fid_regle) : c'est le paramétrage de la marque. La PWA du client
  * doit les lire pour les appliquer (cartes à tampons et jauge : pwa_loyalty_card / _config) —
  * ce raccord reste à faire, l'écran ne prétend pas le contraire.
  *
- * Les visites carte arrivent dans ceo_fid_visite (client, magasin, date-heure, montant, type
+ * Les visites carte arrivent dans mar_fid_visite (client, magasin, date-heure, montant, type
  * d'achat). Une base qui a des visites compte pour de vrai ; sans visite, l'analyse tourne sur
  * un JEU D'ESSAI généré (mêmes calculs) et la réponse le dit (`test`), comme la newsletter.
  */
@@ -54,7 +54,7 @@ const FID_PRIX_PRODUIT = 2.5;     // hypothèse : prix de vente moyen d'un produ
  * ------------------------------------------------------------------------- */
 function ensureFidelite(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_regle ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_fid_regle ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'bloc VARCHAR(8) NOT NULL,'                    // gain | multi | recoit | garde
         . 'type VARCHAR(16) NOT NULL,'
@@ -66,7 +66,7 @@ function ensureFidelite(): void
         . 'updated_by VARCHAR(60) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Les visites carte : le flux de la PWA (ou du panel) s'y dépose. Vide → jeu d'essai.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_visite ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_fid_visite ('
         . 'id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'client_ref VARCHAR(40) NOT NULL,'
         . 'shop_id VARCHAR(16) NOT NULL,'
@@ -75,7 +75,7 @@ function ensureFidelite(): void
         . 'mission VARCHAR(12) NULL,'                    // pain | petitdej | lunch | gouter | occasion | bureau
         . 'KEY idx_quand (visited_at), KEY idx_client (client_ref, visited_at)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_regle')['n'] ?? 0) === 0) { fidSemer(); }
+    if ((int) (Db::row('SELECT COUNT(*) n FROM mar_fid_regle')['n'] ?? 0) === 0) { fidSemer(); }
 }
 
 /** Le programme de départ : celui de la maquette C. Posé une fois, sur une table vide. */
@@ -112,7 +112,7 @@ function fidSemer(): void
         ['budget', ['pct' => 5], '', 1],
     ];
     foreach ($R as $i => [$type, $p, $shop, $actif]) {
-        Db::exec('INSERT INTO ceo_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
+        Db::exec('INSERT INTO mar_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
             [FID_TYPES[$type], $type, json_encode(fidNormalise($type, $p), JSON_UNESCAPED_UNICODE), $shop, $actif, ($i + 1) * 10, 'programme de départ']);
     }
 }
@@ -204,11 +204,11 @@ function fidRegles(): array
 {
     return array_map(static fn ($r) => ['id' => (int) $r['id'], 'bloc' => $r['bloc'], 'type' => $r['type'], 'params' => json_decode((string) $r['params_json'], true) ?: [],
         'shop' => (string) $r['shop_id'], 'actif' => (int) $r['actif'] === 1, 'ordre' => (int) $r['sort_order'], 'majLe' => $r['updated_at'], 'majPar' => $r['updated_by']],
-        Db::rows('SELECT * FROM ceo_fid_regle ORDER BY sort_order, id'));
+        Db::rows('SELECT * FROM mar_fid_regle ORDER BY sort_order, id'));
 }
 
 /* ---------------------------------------------------------------------------
- * Les visites : réelles (ceo_fid_visite) ou jeu d'essai
+ * Les visites : réelles (mar_fid_visite) ou jeu d'essai
  * ------------------------------------------------------------------------- */
 /** Jour (entier) d'une date Y-m-d. */
 function fidJour(string $d): int { return intdiv((int) strtotime($d . ' 12:00:00 UTC'), 86400); }
@@ -231,14 +231,14 @@ function fidMission(int $minute, float $montant): int
  */
 function fidVisites(int $R): array
 {
-    $n = (int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_visite')['n'] ?? 0);
+    $n = (int) (Db::row('SELECT COUNT(*) n FROM mar_fid_visite')['n'] ?? 0);
     if ($n === 0) { return ['test' => true, 'clients' => fidEssai($R)]; }
     $du = gmdate('Y-m-d', ($R - 150) * 86400);
     $prem = [];
-    foreach (Db::rows('SELECT client_ref, MIN(visited_at) p FROM ceo_fid_visite GROUP BY client_ref') as $r) { $prem[$r['client_ref']] = fidJour(substr((string) $r['p'], 0, 10)); }
+    foreach (Db::rows('SELECT client_ref, MIN(visited_at) p FROM mar_fid_visite GROUP BY client_ref') as $r) { $prem[$r['client_ref']] = fidJour(substr((string) $r['p'], 0, 10)); }
     $C = []; $shops = [];
     $K = array_flip(array_column(FID_MISSIONS, 'k'));
-    foreach (Db::rows('SELECT client_ref, shop_id, visited_at, montant, mission FROM ceo_fid_visite WHERE visited_at >= ? ORDER BY visited_at', [$du]) as $r) {
+    foreach (Db::rows('SELECT client_ref, shop_id, visited_at, montant, mission FROM mar_fid_visite WHERE visited_at >= ? ORDER BY visited_at', [$du]) as $r) {
         $c = (string) $r['client_ref'];
         $j = fidJour(substr((string) $r['visited_at'], 0, 10));
         if ($j > $R) { continue; }
@@ -431,7 +431,7 @@ function ep_fidelite_clients(): array
             'topShop' => $top !== '' ? ['id' => $top, 'n' => $S['shops'][$top]] : null];
     }
     return [
-        'test' => $V['test'], 'source' => $V['test'] ? 'jeu d’essai' : 'ceo_fid_visite', 'ref' => $refIso, 'shop' => $shop,
+        'test' => $V['test'], 'source' => $V['test'] ? 'jeu d’essai' : 'mar_fid_visite', 'ref' => $refIso, 'shop' => $shop,
         'magasins' => fidMagasins(), 'missions' => FID_MISSIONS,
         'kpis' => ['actifs' => $actifs, 'actifsPrec' => $actifsP, 'retour30' => $nouvP ? (int) round(100 * $nouvPRev / $nouvP) : null, 'nouveauxPrec' => $nouvP,
             'montes' => $montes, 'descendus' => $desc, 'ca30' => round($ca30), 'tickets30' => $tk30, 'panier' => $tk30 ? round($ca30 / $tk30, 2) : null],
@@ -601,7 +601,7 @@ function ep_fidelite(): array
     $V = fidVisites($R);
     $vis = $shop === '' ? $regles : array_values(array_filter($regles, static fn ($r) => $r['shop'] === '' || $r['shop'] === $shop));
     $C = $shop === '' ? $V['clients'] : array_values(array_filter($V['clients'], static fn ($c) => $c['shop'] === $shop));
-    return ['test' => $V['test'], 'source' => $V['test'] ? 'jeu d’essai' : 'ceo_fid_visite', 'ref' => $refIso, 'shop' => $shop,
+    return ['test' => $V['test'], 'source' => $V['test'] ? 'jeu d’essai' : 'mar_fid_visite', 'ref' => $refIso, 'shop' => $shop,
         'magasins' => fidMagasins(), 'missions' => FID_MISSIONS, 'regles' => $regles,
         'stats' => fidStats($vis, $V, $R, $shop), 'profils' => fidProfils($C, $R, $vis),
         'maintenant' => ['jour' => (int) date('N') - 1, 'heure' => date('H:i')]];
@@ -626,7 +626,7 @@ function wr_fidelite_regles_post(): array
     foreach ($L as $x) {
         if (!is_array($x)) { continue; }
         $id = (int) ($x['id'] ?? 0);
-        $cur = $id ? Db::row('SELECT * FROM ceo_fid_regle WHERE id = ?', [$id]) : null;
+        $cur = $id ? Db::row('SELECT * FROM mar_fid_regle WHERE id = ?', [$id]) : null;
         if ($id && $cur === null) { http_response_code(404); return ['error' => 'règle ' . $id . ' introuvable']; }
         $type = $cur ? (string) $cur['type'] : (string) ($x['type'] ?? '');
         if (!isset(FID_TYPES[$type])) { http_response_code(422); return ['error' => 'type de règle inconnu : ' . $type]; }
@@ -647,15 +647,15 @@ function wr_fidelite_regles_post(): array
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        $ordre = (int) (Db::row('SELECT COALESCE(MAX(sort_order), 0) m FROM ceo_fid_regle')['m'] ?? 0);
+        $ordre = (int) (Db::row('SELECT COALESCE(MAX(sort_order), 0) m FROM mar_fid_regle')['m'] ?? 0);
         foreach ($ops as $o) {
-            if ($o[0] === 'del') { Db::exec('DELETE FROM ceo_fid_regle WHERE id = ?', [$o[1]]); continue; }
+            if ($o[0] === 'del') { Db::exec('DELETE FROM mar_fid_regle WHERE id = ?', [$o[1]]); continue; }
             $json = json_encode($o[3], JSON_UNESCAPED_UNICODE);
             if ($o[0] === 'upd') {
-                Db::exec('UPDATE ceo_fid_regle SET params_json = ?, shop_id = ?, actif = ?, updated_at = NOW(), updated_by = ? WHERE id = ?', [$json, $o[4], $o[5], $qui, $o[1]]);
+                Db::exec('UPDATE mar_fid_regle SET params_json = ?, shop_id = ?, actif = ?, updated_at = NOW(), updated_by = ? WHERE id = ?', [$json, $o[4], $o[5], $qui, $o[1]]);
             } else {
                 $ordre += 10;
-                Db::exec('INSERT INTO ceo_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
+                Db::exec('INSERT INTO mar_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
                     [FID_TYPES[$o[2]], $o[2], $json, $o[4], $o[5], $ordre, $qui]);
             }
         }

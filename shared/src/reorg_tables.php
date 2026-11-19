@@ -29,6 +29,20 @@ const REORG_TABLES = [
         'ceo_tablette_gestion_essai' => 'for_tablette_gestion_essai',
         'ceo_tablette_magasin' => 'for_tablette_magasin',
     ],
+    'MAR' => [   // Marketing
+        'ceo_fid_jour' => 'mar_fid_jour',
+        'ceo_fid_profil' => 'mar_fid_profil',
+        'ceo_fid_regle' => 'mar_fid_regle',
+        'ceo_fid_ticket' => 'mar_fid_ticket',
+        'ceo_fid_visite' => 'mar_fid_visite',
+        'ceo_md_form' => 'mar_md_form',
+        'ceo_md_journal' => 'mar_md_journal',
+        'ceo_md_lead' => 'mar_md_lead',
+        'ceo_md_shop' => 'mar_md_shop',
+        'ceo_promo' => 'mar_promo',
+        'ceo_promo_mecanique' => 'mar_promo_mecanique',
+        'ceo_prospect' => 'mar_prospect',
+    ],
 ];
 
 /** Tous les renommages, tous domaines : [ancien => nouveau]. */

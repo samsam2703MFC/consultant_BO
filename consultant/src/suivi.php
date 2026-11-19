@@ -277,7 +277,7 @@ function suTel(string $shop, ?array $regle = null): array
     $norme = static fn (string $t): ?string => function_exists('smsNorme') ? smsNorme($t) : null;
     if (($t = $norme($regle['tel'])) !== null) { return ['tel' => $t, 'source' => 'Qui fait quoi']; }
     try {
-        $r = Db::row('SELECT sms_tel FROM ceo_md_shop WHERE shop_id = ?', [$shop]);
+        $r = Db::row('SELECT sms_tel FROM mar_md_shop WHERE shop_id = ?', [$shop]);
         if ($r !== null && ($t = $norme((string) $r['sms_tel'])) !== null) { return ['tel' => $t, 'source' => 'alertes SMS des leads']; }
     } catch (Throwable $e) { /* pas de réglage des leads ici */ }
     return ['tel' => null, 'source' => null];

@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS mar_campagne_objectif_produit (
 
 -- Jours creux : le catalogue des mécaniques de promotion (semé depuis src/data/promo_mecaniques.json
 -- au premier appel, puis éditable), et les promotions adoptées magasin par magasin sur un créneau.
-CREATE TABLE IF NOT EXISTS ceo_promo_mecanique (
+CREATE TABLE IF NOT EXISTS mar_promo_mecanique (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   code        VARCHAR(8)   NULL,             -- T1…, P1…, E1…, X1… (libre)
   levier      VARCHAR(12)  NOT NULL,         -- trafic | panier | experience | ecouler
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS ceo_promo_mecanique (
   maj_par     VARCHAR(120) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_promo (
+CREATE TABLE IF NOT EXISTS mar_promo (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   shop_id      VARCHAR(32)  NOT NULL,
   mecanique_id INT          NULL,

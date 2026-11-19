@@ -34,9 +34,9 @@ echo '  produits par famille : ', json_encode($parFam, JSON_UNESCAPED_UNICODE), 
 echo '  catégories : ', json_encode(array_values(array_unique(array_filter($nomCat))), JSON_UNESCAPED_UNICODE), "\n";
 
 echo "\n=== 2. Les tickets gardés avec de l'anti-gaspi (12 au plus, les plus récents)\n";
-$T = Db::rows("SELECT id, jour, familles FROM ceo_fid_ticket WHERE shop_id = ? AND familles LIKE '%antigaspi%' ORDER BY jour DESC LIMIT 12", [SA_SHOP]);
-echo '  tickets concernés en tout : ', (int) (Db::row("SELECT COUNT(*) n FROM ceo_fid_ticket WHERE shop_id = ? AND familles LIKE '%antigaspi%'", [SA_SHOP])['n'] ?? 0),
-    ' sur ', (int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_ticket WHERE shop_id = ? AND familles IS NOT NULL', [SA_SHOP])['n'] ?? 0), " tickets aux familles lues\n";
+$T = Db::rows("SELECT id, jour, familles FROM mar_fid_ticket WHERE shop_id = ? AND familles LIKE '%antigaspi%' ORDER BY jour DESC LIMIT 12", [SA_SHOP]);
+echo '  tickets concernés en tout : ', (int) (Db::row("SELECT COUNT(*) n FROM mar_fid_ticket WHERE shop_id = ? AND familles LIKE '%antigaspi%'", [SA_SHOP])['n'] ?? 0),
+    ' sur ', (int) (Db::row('SELECT COUNT(*) n FROM mar_fid_ticket WHERE shop_id = ? AND familles IS NOT NULL', [SA_SHOP])['n'] ?? 0), " tickets aux familles lues\n";
 $cles = false;
 foreach ($T as $t) {
     $r = PanelApi::sondeGet('/transactions/' . (int) $t['id'] . '?include=products', 30);

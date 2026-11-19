@@ -34,7 +34,7 @@ const JC_SEMAINES_MOIS = 4.3;
 
 function ensureJoursCreux(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_promo_mecanique ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_promo_mecanique ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'code VARCHAR(8) NULL,'
         . 'levier VARCHAR(12) NOT NULL,'
@@ -61,7 +61,7 @@ function ensureJoursCreux(): void
         . 'maj_le DATETIME NULL,'
         . 'maj_par VARCHAR(120) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_promo ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_promo ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'mecanique_id INT NULL,'
@@ -301,7 +301,7 @@ function jcMecaniqueLigne(array $r): array
 /** Les 24 fiches livrées, posées une fois si la table est vide. */
 function jcSemer(): void
 {
-    $n = Db::row('SELECT COUNT(*) n FROM ceo_promo_mecanique');
+    $n = Db::row('SELECT COUNT(*) n FROM mar_promo_mecanique');
     if ($n !== null && (int) $n['n'] > 0) { return; }
     $f = __DIR__ . '/../../shared/src/data/promo_mecaniques.json';
     if (!is_file($f)) { return; }
@@ -310,7 +310,7 @@ function jcSemer(): void
     $ordre = 0;
     foreach ($M['mecaniques'] as $m) {
         $ordre += 10;
-        Db::exec('INSERT INTO ceo_promo_mecanique (code, levier, type, nom, regle, habitude, sections, jours, declencheur, article, offre, prix, remise_pct, marge_min, mesure, canaux, caisse, note, marge_garde, actif, ordre, cree_le, maj_le, maj_par)
+        Db::exec('INSERT INTO mar_promo_mecanique (code, levier, type, nom, regle, habitude, sections, jours, declencheur, article, offre, prix, remise_pct, marge_min, mesure, canaux, caisse, note, marge_garde, actif, ordre, cree_le, maj_le, maj_par)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
             (string) ($m['id'] ?? ''), (string) $m['levier'], (string) ($m['type'] ?? ''), (string) $m['nom'], (string) ($m['regle'] ?? ''), (string) ($m['habitude'] ?? ''),
             implode(',', $m['sections'] ?? ['apres-midi']), implode(',', $m['joursParDefaut'] ?? []),
@@ -326,11 +326,11 @@ function ep_promo_mecaniques(): array
 {
     ensureJoursCreux();
     jcSemer();
-    $rows = Db::rows('SELECT * FROM ceo_promo_mecanique ORDER BY ordre, id');
+    $rows = Db::rows('SELECT * FROM mar_promo_mecanique ORDER BY ordre, id');
     // Les fiches utilisées par une promotion en cours : on les désactive, on ne les supprime pas.
     $usage = [];
     try {
-        foreach (Db::rows("SELECT mecanique_id, COUNT(*) n FROM ceo_promo WHERE statut = 'en_cours' AND mecanique_id IS NOT NULL GROUP BY mecanique_id") as $r) { $usage[(int) $r['mecanique_id']] = (int) $r['n']; }
+        foreach (Db::rows("SELECT mecanique_id, COUNT(*) n FROM mar_promo WHERE statut = 'en_cours' AND mecanique_id IS NOT NULL GROUP BY mecanique_id") as $r) { $usage[(int) $r['mecanique_id']] = (int) $r['n']; }
     } catch (PDOException $e) { /* pas encore de promo */ }
     $out = [];
     foreach ($rows as $r) { $l = jcMecaniqueLigne($r); $l['enCours'] = $usage[$l['id']] ?? 0; $out[] = $l; }
@@ -350,7 +350,7 @@ function wr_promo_mecanique(?int $id): array
     $levier = (string) ($b['levier'] ?? '');
     if ($id === null && ($nom === '' || !isset(JC_LEVIERS[$levier]))) { http_response_code(422); return ['error' => 'nom et levier sont requis']; }
     if ($id !== null) {
-        $cur = Db::row('SELECT * FROM ceo_promo_mecanique WHERE id = ?', [$id]);
+        $cur = Db::row('SELECT * FROM mar_promo_mecanique WHERE id = ?', [$id]);
         if ($cur === null) { http_response_code(404); return ['error' => 'mécanique inconnue']; }
     }
     $champs = [];
@@ -376,16 +376,16 @@ function wr_promo_mecanique(?int $id): array
         $champs['cree_le'] = $champs['maj_le'];
         $champs['sections'] ??= 'apres-midi';
         $champs['marge_garde'] ??= 1; $champs['actif'] ??= 1;
-        if (!isset($champs['ordre'])) { $m = Db::row('SELECT MAX(ordre) m FROM ceo_promo_mecanique'); $champs['ordre'] = (int) ($m['m'] ?? 0) + 10; }
-        Db::exec('INSERT INTO ceo_promo_mecanique (' . implode(',', array_keys($champs)) . ') VALUES (' . implode(',', array_fill(0, count($champs), '?')) . ')', array_values($champs));
+        if (!isset($champs['ordre'])) { $m = Db::row('SELECT MAX(ordre) m FROM mar_promo_mecanique'); $champs['ordre'] = (int) ($m['m'] ?? 0) + 10; }
+        Db::exec('INSERT INTO mar_promo_mecanique (' . implode(',', array_keys($champs)) . ') VALUES (' . implode(',', array_fill(0, count($champs), '?')) . ')', array_values($champs));
         $id = (int) Db::pdo()->lastInsertId();
         journalAdd('CEO', 'Jours creux', $nom, 'Mécanique créée : ' . $nom);
     } else {
         $set = implode(', ', array_map(static fn ($k) => $k . ' = ?', array_keys($champs)));
-        Db::exec('UPDATE ceo_promo_mecanique SET ' . $set . ' WHERE id = ?', array_merge(array_values($champs), [$id]));
+        Db::exec('UPDATE mar_promo_mecanique SET ' . $set . ' WHERE id = ?', array_merge(array_values($champs), [$id]));
         if (($_GET['journal'] ?? '') !== '0') { journalAdd('CEO', 'Jours creux', (string) ($nom ?: $cur['nom']), 'Mécanique modifiée'); }
     }
-    $r = Db::row('SELECT * FROM ceo_promo_mecanique WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_promo_mecanique WHERE id = ?', [$id]);
     return ['ok' => true, 'mecanique' => $r !== null ? jcMecaniqueLigne($r) : null];
 }
 
@@ -393,15 +393,15 @@ function wr_promo_mecanique(?int $id): array
 function wr_promo_mecanique_dupliquer(int $id): array
 {
     ensureJoursCreux();
-    $cur = Db::row('SELECT * FROM ceo_promo_mecanique WHERE id = ?', [$id]);
+    $cur = Db::row('SELECT * FROM mar_promo_mecanique WHERE id = ?', [$id]);
     if ($cur === null) { http_response_code(404); return ['error' => 'mécanique inconnue']; }
     unset($cur['id']);
     $cur['nom'] = mb_substr((string) $cur['nom'] . ' — variante', 0, 160);
     $cur['code'] = null; $cur['actif'] = 1; $cur['ordre'] = (int) $cur['ordre'] + 1;
     $cur['cree_le'] = $cur['maj_le'] = date('Y-m-d H:i:s'); $cur['maj_par'] = 'CEO';
-    Db::exec('INSERT INTO ceo_promo_mecanique (' . implode(',', array_keys($cur)) . ') VALUES (' . implode(',', array_fill(0, count($cur), '?')) . ')', array_values($cur));
+    Db::exec('INSERT INTO mar_promo_mecanique (' . implode(',', array_keys($cur)) . ') VALUES (' . implode(',', array_fill(0, count($cur), '?')) . ')', array_values($cur));
     $nid = (int) Db::pdo()->lastInsertId();
-    $r = Db::row('SELECT * FROM ceo_promo_mecanique WHERE id = ?', [$nid]);
+    $r = Db::row('SELECT * FROM mar_promo_mecanique WHERE id = ?', [$nid]);
     return ['ok' => true, 'mecanique' => $r !== null ? jcMecaniqueLigne($r) : null];
 }
 
@@ -409,11 +409,11 @@ function wr_promo_mecanique_dupliquer(int $id): array
 function wr_promo_mecanique_suppr(int $id): array
 {
     ensureJoursCreux();
-    $cur = Db::row('SELECT nom FROM ceo_promo_mecanique WHERE id = ?', [$id]);
+    $cur = Db::row('SELECT nom FROM mar_promo_mecanique WHERE id = ?', [$id]);
     if ($cur === null) { http_response_code(404); return ['error' => 'mécanique inconnue']; }
-    $n = Db::row("SELECT COUNT(*) n FROM ceo_promo WHERE mecanique_id = ? AND statut = 'en_cours'", [$id]);
+    $n = Db::row("SELECT COUNT(*) n FROM mar_promo WHERE mecanique_id = ? AND statut = 'en_cours'", [$id]);
     if ($n !== null && (int) $n['n'] > 0) { http_response_code(409); return ['error' => 'utilisée par ' . $n['n'] . ' promotion(s) en cours — désactivez-la plutôt']; }
-    Db::exec('DELETE FROM ceo_promo_mecanique WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM mar_promo_mecanique WHERE id = ?', [$id]);
     journalAdd('CEO', 'Jours creux', (string) $cur['nom'], 'Mécanique supprimée');
     return ['ok' => true];
 }
@@ -424,7 +424,7 @@ function wr_promo_mecaniques_ordre(): array
     ensureJoursCreux();
     $ids = array_values(array_filter(array_map('intval', (array) (body()['ids'] ?? [])), static fn ($x) => $x > 0));
     $o = 0;
-    foreach ($ids as $id) { $o += 10; Db::exec('UPDATE ceo_promo_mecanique SET ordre = ? WHERE id = ?', [$o, $id]); }
+    foreach ($ids as $id) { $o += 10; Db::exec('UPDATE mar_promo_mecanique SET ordre = ? WHERE id = ?', [$o, $id]); }
     return ['ok' => true, 'n' => count($ids)];
 }
 
@@ -582,7 +582,7 @@ function ep_promo_propositions(): array
     $prod = $ventes['produits']; $nJ = max(1, $ventes['joursLus']);
     $noms = []; foreach ($prod as $pid => $x) { $noms[$pid] = $x['nom']; }
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_promo_mecanique WHERE actif = 1 AND levier = ? ORDER BY ordre, id', [$levier]) as $r) {
+    foreach (Db::rows('SELECT * FROM mar_promo_mecanique WHERE actif = 1 AND levier = ? ORDER BY ordre, id', [$levier]) as $r) {
         $m = jcMecaniqueLigne($r);
         if (array_intersect($m['sections'], $sections) === []) { continue; }
         $idsA = jcIdsDe($m['article'], $noms); $idsD = jcIdsDe($m['declencheur'], $noms);
@@ -688,7 +688,7 @@ function ep_promos(): array
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     if (!jcDateValide($date)) { $date = date('Y-m-d'); }
     $nomDe = jcMagasins();
-    $rows = $shop !== '' ? Db::rows('SELECT * FROM ceo_promo WHERE shop_id = ? ORDER BY du DESC, id DESC', [$shop]) : Db::rows('SELECT * FROM ceo_promo ORDER BY du DESC, id DESC');
+    $rows = $shop !== '' ? Db::rows('SELECT * FROM mar_promo WHERE shop_id = ? ORDER BY du DESC, id DESC', [$shop]) : Db::rows('SELECT * FROM mar_promo ORDER BY du DESC, id DESC');
     @set_time_limit(120);
     $out = [];
     foreach ($rows as $r) {
@@ -719,7 +719,7 @@ function wr_promo_post(): array
     $ref = jcReference((int) $shop, $wds, $hde, $ha, $du);
     $statut = ($b['statut'] ?? '') === 'brouillon' ? 'brouillon' : 'en_cours';
     $mid = isset($b['mecaniqueId']) && (int) $b['mecaniqueId'] > 0 ? (int) $b['mecaniqueId'] : null;
-    Db::exec('INSERT INTO ceo_promo (shop_id, mecanique_id, levier, type, nom, regle, jours, heure_de, heure_a, du, au, declencheur, article, offre, prix, remise_pct, canaux, note, cible, ref_ca_h, ref_tk_h, ref_jours, statut, cree_le, maj_le)
+    Db::exec('INSERT INTO mar_promo (shop_id, mecanique_id, levier, type, nom, regle, jours, heure_de, heure_a, du, au, declencheur, article, offre, prix, remise_pct, canaux, note, cible, ref_ca_h, ref_tk_h, ref_jours, statut, cree_le, maj_le)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
         $shop, $mid, $levier, mb_substr(trim((string) ($b['type'] ?? '')), 0, 24), $nom, trim((string) ($b['regle'] ?? '')),
         implode(',', $wds), $hde, $ha, $du, $au,
@@ -731,7 +731,7 @@ function wr_promo_post(): array
         $ref['caH'], $ref['tkH'], $ref['jours'], $statut, date('Y-m-d H:i:s'), date('Y-m-d H:i:s')]);
     $id = (int) Db::pdo()->lastInsertId();
     journalAdd('CEO', 'Jours creux', $nomDe[$shop], 'Promotion adoptée : ' . $nom . ' · ' . jcNomBloc($wds, range($hde, $ha)) . ' · du ' . $du . ' au ' . $au);
-    $r = Db::row('SELECT * FROM ceo_promo WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_promo WHERE id = ?', [$id]);
     $p = jcPromoLigne($r); $p['reference'] = $ref;
     return ['ok' => true, 'promo' => $p];
 }
@@ -740,7 +740,7 @@ function wr_promo_post(): array
 function wr_promo_put(int $id): array
 {
     ensureJoursCreux();
-    $cur = Db::row('SELECT * FROM ceo_promo WHERE id = ?', [$id]);
+    $cur = Db::row('SELECT * FROM mar_promo WHERE id = ?', [$id]);
     if ($cur === null) { http_response_code(404); return ['error' => 'promotion inconnue']; }
     $b = body(); $champs = [];
     if (isset($b['statut']) && in_array($b['statut'], ['brouillon', 'en_cours', 'terminee', 'arretee'], true)) { $champs['statut'] = $b['statut']; }
@@ -752,9 +752,9 @@ function wr_promo_put(int $id): array
     if (isset($b['au']) && jcDateValide((string) $b['au']) && $b['au'] >= substr((string) $cur['du'], 0, 10)) { $champs['au'] = (string) $b['au']; }
     if ($champs === []) { return ['ok' => true, 'promo' => jcPromoLigne($cur)]; }
     $champs['maj_le'] = date('Y-m-d H:i:s');
-    Db::exec('UPDATE ceo_promo SET ' . implode(', ', array_map(static fn ($k) => $k . ' = ?', array_keys($champs))) . ' WHERE id = ?', array_merge(array_values($champs), [$id]));
+    Db::exec('UPDATE mar_promo SET ' . implode(', ', array_map(static fn ($k) => $k . ' = ?', array_keys($champs))) . ' WHERE id = ?', array_merge(array_values($champs), [$id]));
     if (isset($champs['statut'])) { journalAdd('CEO', 'Jours creux', (string) $cur['nom'], 'Promotion ' . $champs['statut']); }
-    $r = Db::row('SELECT * FROM ceo_promo WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_promo WHERE id = ?', [$id]);
     return ['ok' => true, 'promo' => jcPromoLigne($r)];
 }
 
@@ -762,10 +762,10 @@ function wr_promo_put(int $id): array
 function wr_promo_suppr(int $id): array
 {
     ensureJoursCreux();
-    $cur = Db::row('SELECT statut, nom FROM ceo_promo WHERE id = ?', [$id]);
+    $cur = Db::row('SELECT statut, nom FROM mar_promo WHERE id = ?', [$id]);
     if ($cur === null) { http_response_code(404); return ['error' => 'promotion inconnue']; }
     if ((string) $cur['statut'] !== 'brouillon') { http_response_code(409); return ['error' => 'une promotion lancée ne s’efface pas : terminez-la ou arrêtez-la']; }
-    Db::exec('DELETE FROM ceo_promo WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM mar_promo WHERE id = ?', [$id]);
     return ['ok' => true];
 }
 
@@ -778,7 +778,7 @@ function ep_promos_magasin(): array
     if ($shop === '' || !jcDateValide($date)) { http_response_code(400); return ['error' => 'magasin ou date manquant']; }
     $out = ['shop' => $shop, 'date' => $date, 'promos' => []];
     $wd = (int) date('N', strtotime($date));
-    foreach (Db::rows("SELECT * FROM ceo_promo WHERE shop_id = ? AND statut = 'en_cours' AND du <= ? AND au >= ? ORDER BY heure_de, id", [$shop, $date, $date]) as $r) {
+    foreach (Db::rows("SELECT * FROM mar_promo WHERE shop_id = ? AND statut = 'en_cours' AND du <= ? AND au >= ? ORDER BY heure_de, id", [$shop, $date, $date]) as $r) {
         $p = jcPromoLigne($r);
         $p['ceJour'] = in_array($wd, $p['jours'], true);
         $p['effet'] = jcEffet($p, $date);

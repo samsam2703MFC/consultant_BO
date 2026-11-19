@@ -159,7 +159,7 @@ function apDatesJours(int $jour, int $n, string $auj): array
  * `jour` : les `n` derniers jours (14 par défaut, 7 à 28) ; avec : les `n` derniers de ce jour de
  * la semaine (6 par défaut, 2 à 12). Mêmes lectures que la grille (product-category-groups),
  * une par magasin et par jour, gravées une fois le jour clos. Les promotions des jours creux
- * (ceo_promo, hors brouillons) actives ces jours-là sont jointes, magasin par magasin.
+ * (mar_promo, hors brouillons) actives ces jours-là sont jointes, magasin par magasin.
  */
 function ep_analyse_produits_jours(): array
 {
@@ -199,7 +199,7 @@ function ep_analyse_produits_jours(): array
         try {
             ensureJoursCreux();
             $nomBas = mb_strtolower((string) $nom);
-            foreach (Db::rows("SELECT * FROM ceo_promo WHERE statut <> 'brouillon' AND du <= ? AND au >= ? ORDER BY du, id", [end($dates), $dates[0]]) as $r) {
+            foreach (Db::rows("SELECT * FROM mar_promo WHERE statut <> 'brouillon' AND du <= ? AND au >= ? ORDER BY du, id", [end($dates), $dates[0]]) as $r) {
                 $x = jcPromoLigne($r);
                 $sur = [];
                 foreach ($dates as $i => $d) { if ($x['du'] <= $d && $x['au'] >= $d && ($x['jours'] === [] || in_array((int) date('N', strtotime($d . ' 12:00:00')), $x['jours'], true))) { $sur[] = $i; } }
