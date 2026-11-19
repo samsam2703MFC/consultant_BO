@@ -1161,6 +1161,10 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   (main-d'œuvre 17 %, frais généraux 13,5 %, redevances 3 %, charges financières 2,2 %).
 - **Corrigé le 19/11/2026** : 0.0.28 en v1.5 (précision) : la partie « La valeur du fonds de commerce » et la question 5 du
   quiz donnent la règle en vigueur, (marge brute réelle − charges normatives) × 3,5 ; l'exemple passe de 83 333 € à 425 250 €.
-- **Encore à corriger, même ancienne règle (à demander)** : 0.0.15 « Comprendre le dashboard magasin » (partie de la valeur et
-  question 1 du quiz, « CA ÷ 6 ») et 0.0.34 « Le dashboard : le haut de l’écran » (« CA des 730 derniers jours ÷ les jours
-  d’activité × 365 ÷ 6 »). 0.0.15 est tenu par la routine du dashboard : à modifier avec elle, ou par une demande de Sam.
+- **Corrigés le 19/11/2026, sur demande de Sam** : 0.0.15 « Comprendre le dashboard magasin » en v1.7 (partie « La valeur
+  du magasin » et question 1 du quiz) et 0.0.34 « Le dashboard : le haut de l’écran » en v1.1 (« La pastille Valeur »),
+  à la règle en vigueur depuis le 15/11/2026.
+- **À faire, hors de cette branche** : le source de 0.0.34 (`dashboard-onglets/art-dash-haut.json`) et celui de 0.0.15
+  (`dashboard/art-pil-01.json`) sur `claude/loving-turing-n6j40s` gardent l’ancienne règle. La routine du lundi encode
+  depuis cette branche : sans cette mise à jour, elle pourrait republier l’ancienne formule. Le source de 0.0.15 est
+  corrigé sur `claude/lucid-pascal-3ps6at`.
