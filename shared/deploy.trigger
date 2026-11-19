@@ -181,3 +181,6 @@
 2026-11-19T18:30:58Z Dépliant des manuels : la page 7, la pré-ouverture (7 pages, 5 manuels)
 2026-11-19T18:35:37Z Dashboard au téléphone, La journée : les cuissons retirées de la frise (il reste le planning)
 2026-11-19T18:38:24Z Pré-ouverture : les compétences à acquérir par profil, QR code vers le CRM (crmUrl) ; dépliant, page 3 en chiffres lus
+2026-11-19T19:16:18Z Assistant · coachs, onglet KPI : les outils à la demande en interrupteurs, assistant par assistant (le Professeur garde le manuel)
+2026-11-19T19:18:38Z Cockpit : Pointages retirés (#/pointages mène à l'accueil ; l'app employé et la borne pointent toujours)
+2026-11-19T19:24:18Z Pointage retiré partout : l'app employé (Accueil, /pointage, Mes pointages), la borne, la caisse et leurs routes ; les tables restent

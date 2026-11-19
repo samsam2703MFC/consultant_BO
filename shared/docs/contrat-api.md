@@ -5631,7 +5631,12 @@ fenêtre vient aussi de la table. Dans la fenêtre, la route fait foi : un servi
 table. Sans réponse du cockpit, la page Planning de l'app le dit au lieu d'afficher une semaine vide.
 Tests : `php bin/tests_planning_moi.php`.
 
-### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam)
+### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam) — retiré le 19/11/2026
+
+**Retiré le 19/11/2026 (demande de Sam).** L'app employé (l'Accueil, `/pointage`, Profil › Mes pointages), la borne
+(`/borne`), la caisse et la page Pointages du cockpit ne pointent plus : `panel/src/pointage.php` est supprimé et les
+routes ci-dessous répondent 404. Les tables `panel_mot_pointage` et `panel_mot_borne` restent, avec leurs lignes (jamais
+de `DROP`). Ce qui suit décrit ce qui existait.
 
 « Dans leur application, un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ;
 avec le listing des pointages dans le profil, in / out en fonction de leur shift. » Maquette validée :
@@ -5649,8 +5654,8 @@ dossier privé). Sous le QR, un code à six chiffres pour une caméra qui ne mar
 | GET | `/ventes/moi/pointages?du=&au=` | l'app | `{jours:[{date, prevus:[{debut, fin, shop, shop_name}], pointages:[…]}], totaux:{pointe_min, prevu_min, a_verifier}, ouvert}` (deux mois au plus). Un pointage : `{id, jour, shop, shop_name, entree, sortie, sortie_par, prevu, arrivee: a_l_heure \| retard \| hors_planning, retard_min, duree_min, etat: en_service \| fait \| non_pointe \| a_valider}`. |
 | POST | `/ventes/moi/pointage/depart` | l'app | `{id, heure}` — un départ oublié : après l'arrivée, dans les 16 h, pas dans le futur ; il attend la validation (`a_valider`). 422 sinon. |
 | GET | `/pointage/borne?b=` | la borne (son jeton), avant la session | `{shop, magasin, nom, qr, code, reste, periode, heure}` ; 404 pour un jeton inconnu ou retiré. |
-| GET | `/ventes/equipe/pointages?shop=&du=&au=` | le cockpit (session) | Les pointages d'un magasin (le premier sans `shop`), avec le nom de chacun et `valide_par` ; `magasins`, `bornes`. |
-| POST | `/ventes/equipe/pointages/valider` | le cockpit | `{id, refuser?}` — valide un départ déclaré (ou le refuse : il redevient « non pointé »). Au journal. |
+| GET | `/ventes/equipe/pointages?shop=&du=&au=` | le cockpit (session ; sans écran depuis le 19/11/2026) | Les pointages d'un magasin (le premier sans `shop`), avec le nom de chacun et `valide_par` ; `magasins`, `bornes`. |
+| POST | `/ventes/equipe/pointages/valider` | le cockpit (sans écran depuis le 19/11/2026) | `{id, refuser?}` — valide un départ déclaré (ou le refuse : il redevient « non pointé »). Au journal. |
 | GET / POST | `/pointage/bornes?shop=` / `/pointage/bornes` | le cockpit | La liste des bornes (sans jeton) ; `{shop, nom}` crée une borne et rend son `jeton` une seule fois (gardé haché). Au journal. |
 | POST | `/pointage/bornes/retirer` | le cockpit | `{id}` — le lien ne marche plus. Au journal. |
 | POST | `/pointage/borne/pointer` | la caisse (sa clé), avant la session | `{b, emp}` — la caisse pointe une personne dont ELLE a vérifié le PIN (le PIN ne quitte pas la caisse) : l'arrivée ou le départ au magasin de la clé, mêmes règles que l'app, `par = pin`. Rend `{sens, pointage, nom}` ; 422 `{motif: trop_tot, a_partir_de}` ; 403 pour le lien d'un écran ; 404 clé inconnue ou retirée ; 400 sans `emp`. |
@@ -5663,8 +5668,8 @@ requête, jamais dans un cookie. La consigne pour la caisse : `panel/docs/consig
 
 Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.0 servi par l'app), `GET /me/pointages`
 (la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page
-**Pointages** (`#/pointages`, rail « Application employé », badge : les départs à valider). Tests :
-`php bin/tests_pointage_app.php`.
+**Pointages** (`#/pointages`) est retirée le 19/11/2026 avec tout le pointage ; l'adresse mène à l'accueil. Tests :
+`php bin/tests_pointage_app.php` (supprimé avec le pointage).
 
 **Tablette ouverte (06/11/2026).** `GET /formation/sop/tablette/init`, `GET /formation/sop/tablette/sop/{id}` et
 `POST /formation/sop/tablette/quiz` ne demandent plus la session de l'appareil : la tablette est ouverte et la même pour

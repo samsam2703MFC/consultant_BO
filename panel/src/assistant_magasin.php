@@ -818,9 +818,50 @@ function amCoachs(): array
         }
         // Les objectifs : le réglage les porte tous quand il en change un (une cible vidée y vaut null).
         $c['objectifs'] = is_array($x['objectifs'] ?? null) ? coObjectifsNormaux($x['objectifs']) : coObjectifsDepart($d['objectifs'] ?? []);
+        $c['outilsCoupes'] = amOutilsNormaux($k, $x['outilsCoupes'] ?? null);
         $out[$k] = $c;
     }
     return $out;
+}
+
+/* Les outils coupés (19/11/2026, Sam : « mettre en toggle » les outils à la demande de l'onglet KPI) : pour chaque
+ * assistant, les outils que le cockpit lui retire, dans le réglage `assistantCoachs` (clé du coach, ou « professeur »),
+ * champ `outilsCoupes`. Un outil coupé n'est pas déclaré au modèle et la consigne le lui dit (amDemander). Le Professeur
+ * garde ce qu'il reçoit d'office (`prof` dans AM_KPIS : le manuel) : c'est son métier. */
+
+/** Les outils qu'un assistant peut se voir couper : ceux du catalogue AM_KPIS, dans son ordre. */
+function amOutilsCoupables(string $ton): array
+{
+    $o = [];
+    foreach (AM_KPIS as $g) {
+        foreach ($g['lignes'] as $l) {
+            if ($ton === 'professeur' && isset($l['prof'])) { continue; }
+            foreach ($l['outil'] ?? [] as $n) { $o[] = $n; }
+        }
+    }
+    return array_values(array_unique($o));
+}
+
+/** Une liste d'outils coupés lue ou reçue : les noms coupables seulement, dans l'ordre du catalogue. */
+function amOutilsNormaux(string $ton, mixed $x): array
+{
+    $x = is_array($x) ? array_filter($x, 'is_string') : [];
+    return array_values(array_intersect(amOutilsCoupables($ton), $x));
+}
+
+/** Les outils coupés d'un assistant (un coach ou « professeur »), tels que publiés. */
+function amOutilsCoupes(string $ton): array
+{
+    $r = aiaReglage('assistantCoachs', []);
+    return amOutilsNormaux($ton, is_array($r) ? ($r[$ton]['outilsCoupes'] ?? null) : null);
+}
+
+/** Ce que la consigne dit des outils coupés : rien quand il n'y en a pas. */
+function amOutilsCoupesTexte(array $coupes): string
+{
+    if ($coupes === []) { return ''; }
+    return 'Outils coupés pour toi au cockpit : ' . implode(', ', $coupes) . '. Ils ne sont pas dans ta liste : ne les appelle pas, ne les cite pas, '
+        . 'ne propose pas de les lire. Si une question en a besoin, dis en une phrase que cette lecture n’est pas ouverte pour toi, et réponds avec ce que tu as.';
 }
 
 /** Le modèle et l'effort des coachs : le réglage `assistantMagasin`, sinon AM_MODELE et « medium ». */
@@ -887,6 +928,10 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
     $c = Anthropic::config();
     if ($c['cle'] === '') { return ['erreur' => 'L’assistant n’est pas branché : aucune clé Anthropic dans les Paramètres du cockpit.']; }
     $prof = $ton === 'professeur';
+    // Les outils coupés au cockpit (19/11/2026) : pas déclarés au modèle. Un assistant aux outils coupés a son propre
+    // préfixe en cache (les outils ouvrent le préfixe) ; l'ordre et le texte des autres ne changent pas.
+    $coupes = amOutilsCoupes($prof ? 'professeur' : (isset(AM_COACHS[$ton]) ? $ton : AM_TON_DEFAUT));
+    $declares = array_values(array_filter(amOutils(), static fn ($o) => !in_array($o['name'], $coupes, true)));
     if ($prof) {
         // Le Professeur, l'agent rapide (17/11/2026) : Claude Haiku 5.5 par défaut, effort bas, sans repli côté serveur
         // (Haiku n'en a pas) ; il démarre sur le sommaire du manuel, sans lire l'ERP.
@@ -895,13 +940,14 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
         $contexte = "Sommaire du manuel opératoire du réseau (id · code · type · titre — objectif) :\n" . ($faits['sommaire'] ?? aiaManuelSommaireTexte())
             . (isset($faits['controlesPhotos']) ? "\n\nLes contrôles qualité en photo du magasin, sept derniers jours (JSON, controlesPhotos) :\n" . json_encode($faits['controlesPhotos'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '');
         $systeme = [['type' => 'text', 'text' => AIA_SYSTEME_PROF], ['type' => 'text', 'text' => AIA_CONSIGNES, 'cache_control' => ['type' => 'ephemeral']]];
+        if ($coupes !== []) { $systeme[] = ['type' => 'text', 'text' => amOutilsCoupesTexte($coupes)]; }
     } else {
         ['modele' => $modele, 'effort' => $effort] = amModele();
         $tours = AM_TOURS; $secondes = AM_SECONDES;
         $contexte = "Fiche de faits du magasin (JSON) :\n" . json_encode($faits, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         // Les outils et le bloc commun viennent avant le personnage : changer d'assistant ne repaie que lui.
         $systeme = [['type' => 'text', 'text' => AM_SYSTEME], ['type' => 'text', 'text' => AIA_CONSIGNES, 'cache_control' => ['type' => 'ephemeral']],
-            ['type' => 'text', 'text' => "Ton personnage :\n" . amPersona($ton)]];
+            ['type' => 'text', 'text' => "Ton personnage :\n" . amPersona($ton) . ($coupes !== [] ? "\n\n" . amOutilsCoupesTexte($coupes) : '')]];
     }
     // La fiche (ou le sommaire) ouvre la conversation, marquée pour le cache : les questions de suite la relisent sans la repayer.
     $messages = [['role' => 'user', 'content' => [
@@ -928,10 +974,11 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
     $corps = [
         'model' => $modele,
         'max_tokens' => 16000,
-        'tools' => amOutils(),
         'system' => $systeme,
         'output_config' => ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => amSchema()]],
     ];
+    // Tous les outils coupés : l'assistant répond avec la fiche (ou le sommaire), sans déclaration d'outil.
+    if ($declares !== []) { $corps['tools'] = $declares; }
     // Le repli côté serveur sur un refus de sécurité : les modèles qui l'acceptent (pas Haiku).
     if (!str_starts_with($modele, 'claude-haiku')) { $corps['fallbacks'] = 'default'; }
     $t0 = microtime(true);
@@ -939,7 +986,7 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
     $outils = [];
     for ($tour = 1; ; $tour++) {
         $fin = $tour >= $tours || microtime(true) - $t0 > $secondes;
-        if ($fin) { $corps['tool_choice'] = ['type' => 'none']; }   // le dernier tour répond avec ce qu'il a
+        if ($fin && $declares !== []) { $corps['tool_choice'] = ['type' => 'none']; }   // le dernier tour répond avec ce qu'il a
         $corps['messages'] = $messages;
         [$rep, $obj, $err] = $appel($corps, $c);
         if ($err !== null) { return ['erreur' => $err]; }
@@ -952,7 +999,8 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
             $resultats = [];
             foreach ((array) ($rep['content'] ?? []) as $b) {
                 if (($b['type'] ?? '') !== 'tool_use') { continue; }
-                $res = amOutil((string) ($b['name'] ?? ''), is_array($b['input'] ?? null) ? $b['input'] : [], $sid, $faits);
+                $res = in_array((string) ($b['name'] ?? ''), $coupes, true) ? ['erreur' => 'outil coupé au cockpit pour cet assistant']
+                    : amOutil((string) ($b['name'] ?? ''), is_array($b['input'] ?? null) ? $b['input'] : [], $sid, $faits);
                 $outils[] = (string) ($b['name'] ?? '?');
                 $resultats[] = ['type' => 'tool_result', 'tool_use_id' => (string) $b['id'], 'content' => json_encode($res, JSON_UNESCAPED_UNICODE)]
                     + (isset($res['erreur']) ? ['is_error' => true] : []);
@@ -1044,12 +1092,13 @@ function ep_assistant_coachs(): array
     $modeles = ['coachs' => amModele(), 'professeur' => aiaProfesseurModele()];
     return ['coachs' => amCoachs(), 'defauts' => $def, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'objectifs' => CO_OBJECTIFS, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT,
         'kpis' => AM_KPIS, 'modeles' => $modeles,
-        'professeur' => AIA_PROF + ['avatar' => ($f = amAvatar('professeur')) !== null ? 'dashboard/avatars/' . $f : null]];
+        'professeur' => AIA_PROF + ['avatar' => ($f = amAvatar('professeur')) !== null ? 'dashboard/avatars/' . $f : null, 'outilsCoupes' => amOutilsCoupes('professeur')]];
 }
 
 /**
  * POST /assistant/coachs {coachs:{pierre:{nom, dit, ton, accents:{budget:{niveau, verifie}, …}, objectifs:{foodCost: 40,
- * personnel: '', …}}, coach:{…}}, qui} : publie le réglage. Une cible vide : le coach ne suit pas cet objectif.
+ * personnel: '', …}, outilsCoupes:['produits_vendus', …]}, coach:{…}}, professeur:{outilsCoupes:[…]}, qui} : publie le
+ * réglage. Une cible vide : le coach ne suit pas cet objectif. Un outil coupé : l'assistant ne l'a plus (amOutilsCoupes).
  */
 function wr_assistant_coachs(): array
 {
@@ -1084,11 +1133,26 @@ function wr_assistant_coachs(): array
             $obj = coObjectifsNormaux($x['objectifs']);
             if ($obj !== coObjectifsDepart($d['objectifs'] ?? [])) { $c['objectifs'] = $obj; }
         }
+        if (($e = amOutilsRecus($k, $x['outilsCoupes'] ?? [], $d['nom'])) !== null) { http_response_code(422); return ['error' => $e]; }
+        if (($oc = amOutilsNormaux($k, $x['outilsCoupes'] ?? [])) !== []) { $c['outilsCoupes'] = $oc; }
         if ($c) { $reg[$k] = $c; }
     }
+    // Le Professeur (19/11/2026) : seulement ses outils coupés ; son nom et son ton ne se règlent pas ici.
+    $xp = is_array($b['professeur'] ?? null) ? $b['professeur'] : [];
+    if (($e = amOutilsRecus('professeur', $xp['outilsCoupes'] ?? [], AIA_PROF['nom'])) !== null) { http_response_code(422); return ['error' => $e]; }
+    if (($oc = amOutilsNormaux('professeur', $xp['outilsCoupes'] ?? [])) !== []) { $reg['professeur'] = ['outilsCoupes' => $oc]; }
     aiaReglageEcrire('assistantCoachs', $reg, $qui);
-    if (function_exists('journalAdd')) { journalAdd($qui, 'Assistant', null, 'Coachs de l’assistant publiés' . ($reg ? ' (' . implode(', ', array_map(static fn ($k) => AM_COACHS[$k]['nom'], array_keys($reg))) . ' réglés)' : ' (valeurs de départ)')); }
+    if (function_exists('journalAdd')) { journalAdd($qui, 'Assistant', null, 'Coachs de l’assistant publiés' . ($reg ? ' (' . implode(', ', array_map(static fn ($k) => AM_COACHS[$k]['nom'] ?? AIA_PROF['nom'], array_keys($reg))) . ' réglés)' : ' (valeurs de départ)')); }
     return ['ok' => true] + ep_assistant_coachs();
+}
+
+/** Une liste d'outils coupés reçue du cockpit : null si elle se lit, sinon le message d'erreur (un outil inconnu, ou que
+ *  cet assistant ne peut pas perdre). */
+function amOutilsRecus(string $ton, mixed $x, string $nom): ?string
+{
+    if (!is_array($x)) { return $nom . ' : la liste des outils coupés est attendue'; }
+    $hors = array_values(array_diff(array_map(static fn ($v) => is_string($v) ? $v : '?', $x), amOutilsCoupables($ton)));
+    return $hors === [] ? null : $nom . ' : outil inconnu ou qui ne se coupe pas (« ' . implode(', ', $hors) . ' »)';
 }
 
 /* --- Les questions posées (12/11/2026, Sam : « garde toutes les demandes dans une table, pour après créer des agents

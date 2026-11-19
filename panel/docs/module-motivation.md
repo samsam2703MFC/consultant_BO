@@ -23,8 +23,8 @@ tables, toutes sous le préfixe `mot_` (décision du 23/10/2026, Sam).
 | `mot_cache` | Ce qui se recalcule (fiches du mois, moyennes, catalogue, ventes du jour relues) : une clé, une valeur JSON. | Oui, sans rien perdre |
 | `panel_mot_grand_prix` | Les grands prix de l'année, du réseau ou d'un magasin, une ligne chacun. | Jamais |
 | `panel_mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `panel/src/profil_employe.php`. | Jamais |
-| `panel_mot_pointage` | Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `panel/src/pointage.php`. | Jamais |
-| `panel_mot_borne` | Les bornes de pointage des magasins : le jeton de leur lien, haché, et la dernière fois qu'elles ont été vues. | Jamais |
+| `panel_mot_pointage` | (Pointage retiré le 19/11/2026 : la table reste, plus rien n'y écrit.) Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `panel/src/pointage.php`. | Jamais |
+| `panel_mot_borne` | (Retirée avec le pointage le 19/11/2026 ; la table reste.) Les bornes de pointage des magasins : le jeton de leur lien, haché, et la dernière fois qu'elles ont été vues. | Jamais |
 
 ### `mot_reglage`
 
@@ -77,7 +77,7 @@ Les clés commencent par :
 La clé (`profil.key`, 0600) et les photos de la carte d'identité (`cartes/<emp>-recto.bin`, chiffrées elles aussi)
 vivent dans le dossier privé `/var/lib/consulant_bo/prive`, hors du site et hors de la livraison (`shared/bin/deploy.sh` le
 crée, `rsync --delete` ne le touche pas). **Perdre `profil.key`, c'est rendre les profils illisibles : la sauvegarder
-avec la base.** La clé des QR de pointage (`pointage.key`) vit à côté : la perdre ne fait que changer les codes des
+avec la base.** La clé des QR de pointage (`pointage.key`, sans usage depuis le retrait du pointage le 19/11/2026) vit à côté : la perdre ne fait que changer les codes des
 bornes (une nouvelle clé est tirée), rien n'est perdu.
 
 ## Reprise depuis `ceo_app_setting`
