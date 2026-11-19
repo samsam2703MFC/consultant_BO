@@ -110,6 +110,50 @@ function wr_sm_formulaire_creer(): array
     return ['ok' => true, 'id' => $id, 'nom' => $f['name']];
 }
 
+/**
+ * La publicité qui va avec le formulaire (19/11/2026, demande : « code aussi la vidéo à mettre et le post qui va avec ») :
+ * le texte du post (texte principal, titre, description, bouton) et les vidéos rendues par
+ * commercial/tools/video-lunch/rendre.cjs, servies à /commercial/meta/. Fonction pure, sauf la lecture des fichiers.
+ */
+function smPubLunch(string $langue): array
+{
+    $nl = $langue === 'nl';
+    $dossier = __DIR__ . '/../public/commercial/meta';
+    $videos = [];
+    foreach (['9x16' => $nl ? 'Stories en Reels (9:16)' : 'Stories et Reels (9:16)', '4x5' => $nl ? 'Feed (4:5)' : 'Fil d’actualité (4:5)'] as $f => $place) {
+        $nom = 'lunch-au-bureau-' . ($nl ? 'nl' : 'fr') . '-' . $f;
+        if (is_file($dossier . '/' . $nom . '.mp4')) {
+            $videos[] = ['format' => $f, 'placement' => $place, 'mp4' => 'meta/' . $nom . '.mp4', 'affiche' => 'meta/' . $nom . '.jpg',
+                'octets' => (int) filesize($dossier . '/' . $nom . '.mp4'), 'duree' => 15];
+        }
+    }
+    return $nl ? [
+        'langue' => 'nl', 'formulaire' => 'LUNCH OP KANTOOR - NL',
+        'texte' => "De lunch van jullie team, geleverd op kantoor.
+
+Broodjesschotels, salades, quiches, koffiekoeken en dagschotels, ’s ochtends bereid door de L’Atelier By-winkel van jullie regio. Voor een vergadering, de dagelijkse lunch of een teamontbijt, van 5 tot 50 personen.
+
+Bestellen tot 16 u de dag voordien. Laat jullie gegevens achter: de winkel belt jullie binnen 24 uur terug om een gratis proeverij te regelen.",
+        'titre' => 'Lunch geleverd op kantoor', 'description' => 'Gratis proeverij · teruggebeld binnen 24 u', 'bouton' => 'Inschrijven',
+        'videos' => $videos, 'aRendre' => $videos === [] ? 'node commercial/tools/video-lunch/rendre.cjs --langue nl' : null,
+    ] : [
+        'langue' => 'fr', 'formulaire' => 'LUNCH AU BUREAU - FR',
+        'texte' => "Le lunch de votre équipe, livré au bureau.
+
+Plateaux sandwiches, salades, quiches, viennoiseries et plats du jour, préparés le matin par le magasin L’Atelier By de votre zone. Pour une réunion, le lunch de tous les jours ou un petit-déjeuner d’équipe, de 5 à 50 personnes.
+
+Commande jusqu’à la veille 16 h. Laissez vos coordonnées : le magasin vous rappelle sous 24 h pour organiser une dégustation offerte.",
+        'titre' => 'Le lunch livré au bureau', 'description' => 'Dégustation offerte · rappel sous 24 h', 'bouton' => 'S’inscrire',
+        'videos' => $videos, 'aRendre' => $videos === [] ? 'node commercial/tools/video-lunch/rendre.cjs --langue fr' : null,
+    ];
+}
+
+/** GET /commercial/formulaires/pub?langue=fr — la vidéo et le post de la publicité « Lunch au bureau ». */
+function ep_sm_formulaire_pub(): array
+{
+    return smPubLunch(($_GET['langue'] ?? '') === 'nl' ? 'nl' : 'fr');
+}
+
 /** Les noms des formulaires que ce module crée : les seuls que le portail met en inactif ou réactive. */
 function smFormulairesLunchNoms(): array
 {
@@ -144,6 +188,7 @@ function wr_sm_formulaire_actif(string $id): array
 function smRouteMeta(string $method, string $p): mixed
 {
     if ($method === 'GET' && $p === '/formulaires/modele') { return ep_sm_formulaire_modele(); }
+    if ($method === 'GET' && $p === '/formulaires/pub') { return ep_sm_formulaire_pub(); }
     if ($method === 'POST' && $p === '/formulaires/creer') { return wr_sm_formulaire_creer(); }
     if ($method === 'POST' && preg_match('#^/formulaires/(\d+)/actif$#', $p, $m)) { return wr_sm_formulaire_actif($m[1]); }
     return null;

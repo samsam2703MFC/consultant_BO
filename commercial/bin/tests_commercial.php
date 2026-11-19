@@ -218,6 +218,10 @@ verifie('aucune photo : refusé', smPhotosLues([])[1] === 'aucune photo reçue')
 verifie('un texte déguisé en image est refusé', smPhotosLues([['data' => 'data:image/jpeg;base64,' . base64_encode(str_repeat('<?php echo 1; ?>', 10))]])[1] !== null);
 verifie('sept photos d’un coup : refusé', smPhotosLues(array_fill(0, 7, ['data' => $png]))[1] !== null);
 verifie('« reçu » est un statut d’échantillon, entre commandé et livré', array_slice(SM_ECH_STATUTS, 1, 3) === ['commande', 'recu', 'livre']);
+$pub = smPubLunch('fr');
+verifie('la publicité « Lunch au bureau » : texte, titre, bouton, pour le formulaire FR', $pub['formulaire'] === 'LUNCH AU BUREAU - FR' && str_contains($pub['texte'], 'dégustation offerte') && mb_strlen($pub['titre']) <= 40 && $pub['bouton'] !== '');
+verifie('les deux vidéos rendues (9:16 et 4:5) sont servies avec leur affiche', array_column($pub['videos'], 'format') === ['9x16', '4x5'] && str_ends_with($pub['videos'][0]['affiche'], '.jpg'));
+verifie('la publicité en néerlandais a son texte (la vidéo se rend à part)', str_contains(smPubLunch('nl')['texte'], 'proeverij'));
 verifie('les formulaires que le portail peut mettre en inactif : « Lunch au bureau » FR et NL, rien d’autre', smFormulairesLunchNoms() === ['LUNCH AU BUREAU - FR', 'LUNCH OP KANTOOR - NL']);
 $fl = smFormulaireLunch('fr', 'https://atelierby.be/');
 verifie('le formulaire « Lunch au bureau » demande le code postal (le magasin) et l’entreprise', in_array('POST_CODE', array_column($fl['questions'], 'type'), true) && in_array('COMPANY_NAME', array_column($fl['questions'], 'type'), true));

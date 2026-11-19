@@ -334,7 +334,26 @@
         <div class="toolbar">${filtres}</div>
         <div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Reçu</th><th></th><th>Lead</th><th>Magasin</th><th>Statut dans l’ERP</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
         <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">Formulaires Meta <span class="aside" style="float:none;margin-left:8px">un lead n’arrive que d’un formulaire suivi</span></h2><span style="display:flex;gap:8px">${btn('Créer « Lunch au bureau » (FR)', 'creerForm', 'btn--sm btn--primary', 'fr')}${btn('(NL)', 'creerForm', 'btn--sm', 'nl')}</span></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
+        <div class="card" style="margin-top:16px" id="pub"><div class="vide">Lecture de la publicité…</div></div>
         <p class="pied">${esc(d.source)}. Un lead sans magasin prend celui de son code postal.</p>`;
+      // La publicité « Lunch au bureau » : la vidéo et le post qui va avec (commercial_meta.php, smPubLunch).
+      const pub = langue => api('GET', '/formulaires/pub?langue=' + langue).then(x => {
+        const el = document.getElementById('pub'); if (!el) return;
+        const champ = (k, l, v) => `<div style="margin-top:12px"><div class="field-label" style="display:flex;justify-content:space-between;align-items:center">${l}${btn('Copier', 'copier', 'btn--sm btn--ghost', k)}</div><div class="pub-texte" data-pub="${k}">${esc(v)}</div></div>`;
+        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">La publicité « Lunch au bureau » <span class="aside" style="float:none;margin-left:8px">la vidéo et le post, pour le formulaire ${esc(x.formulaire)}</span></h2>
+            <span style="display:flex;gap:6px">${btn('FR', 'pubLangue', 'btn--sm ' + (langue === 'fr' ? 'btn--primary' : ''), 'fr')}${btn('NL', 'pubLangue', 'btn--sm ' + (langue === 'nl' ? 'btn--primary' : ''), 'nl')}</span></div>
+          <div class="pub">
+            <div class="pub-videos">${x.videos.length ? x.videos.map(v => `<figure><video src="${esc(v.mp4)}" poster="${esc(v.affiche)}" controls muted playsinline preload="none"></video>
+              <figcaption>${esc(v.placement)} · ${v.duree} s · ${Math.round(v.octets / 1048576 * 10) / 10} Mo <a href="${esc(v.mp4)}" download>Télécharger</a></figcaption></figure>`).join('')
+              : `<div class="info">Vidéo pas encore rendue dans cette langue : <code>${esc(x.aRendre || '')}</code></div>`}</div>
+            <div class="pub-post">${champ('texte', 'Texte principal', x.texte)}${champ('titre', 'Titre', x.titre)}${champ('description', 'Description', x.description)}
+              <div style="margin-top:12px"><div class="field-label">Bouton</div><div class="pub-texte">${esc(x.bouton)}</div></div>
+              <p class="small muted" style="margin-top:14px">Dans le Gestionnaire de publicités : objectif Prospects, formulaire instantané « ${esc(x.formulaire)} » (le réactiver d’abord ci-dessus s’il est inactif), la vidéo 9:16 pour les Stories et Reels, la 4:5 pour le fil. Sans son : une musique s’ajoute chez Meta.</p></div>
+          </div>`;
+        ACT.copier = b => { const t = el.querySelector(`[data-pub="${b.dataset.v}"]`).textContent; navigator.clipboard.writeText(t).then(() => toast('Copié')).catch(() => toast('Copie impossible : sélectionnez le texte', true)); };
+        ACT.pubLangue = b => pub(b.dataset.v);
+      }).catch(e => { const el = document.getElementById('pub'); if (el) el.innerHTML = `<div class="erreur">${esc(e.message)}</div>`; });
+      pub('fr');
       api('GET', '/formulaires').then(fo => {
         const el = document.getElementById('formulaires'); if (!el) return;
         el.outerHTML = fo.formulaires.length ? `<table><tbody>${fo.formulaires.map(x => `<tr><td>${esc(x.nom)}<span class="sub">${esc(x.page)}${x.dernierLead ? ' · dernier lead ' + esc(String(x.dernierLead).slice(0, 10)) : ''}</span></td>
