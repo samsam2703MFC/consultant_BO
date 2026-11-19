@@ -17,24 +17,24 @@ final class Db
     public static array $reglages = [];
     public static array $registre = [];
     public static array $shops = [];
-    public static array $verif = [];       // ceo_verif_jour : 'sid:jour' => colonnes
-    public static array $inv = [];         // ceo_verif_inventaire : 'sid:de:a' => colonnes
+    public static array $verif = [];       // con_verif_jour : 'sid:jour' => colonnes
+    public static array $inv = [];         // con_verif_inventaire : 'sid:de:a' => colonnes
     public static function rows(string $sql, array $p = []): array
     {
         if (str_contains($sql, 'FROM shops')) { return self::$shops; }
-        if (str_contains($sql, 'FROM ceo_verif_jour')) { $r = array_values(array_filter(self::$verif, static fn ($x) => $x['jour'] >= ($p[0] ?? ''))); usort($r, static fn ($a, $b) => $a['jour'] <=> $b['jour']); return $r; }
-        if (str_contains($sql, 'FROM ceo_verif_recette')) { return array_values(self::$registre); }
-        if (str_contains($sql, 'FROM ceo_verif_inventaire')) { return array_values(array_filter(self::$inv, static fn ($x) => $x['a_at'] >= ($p[0] ?? ''))); }
+        if (str_contains($sql, 'FROM con_verif_jour')) { $r = array_values(array_filter(self::$verif, static fn ($x) => $x['jour'] >= ($p[0] ?? ''))); usort($r, static fn ($a, $b) => $a['jour'] <=> $b['jour']); return $r; }
+        if (str_contains($sql, 'FROM con_verif_recette')) { return array_values(self::$registre); }
+        if (str_contains($sql, 'FROM con_verif_inventaire')) { return array_values(array_filter(self::$inv, static fn ($x) => $x['a_at'] >= ($p[0] ?? ''))); }
         return [];
     }
     public static function row(string $sql, array $p = []): ?array
     {
-        if (str_contains($sql, 'FROM ceo_verif_inventaire')) { return isset(self::$inv[$p[0] . ':' . $p[1] . ':' . $p[2]]) ? ['x' => 1] : null; }
-        if (str_contains($sql, 'FROM ceo_verif_jour') && str_contains($sql, 'COUNT(*)')) {
+        if (str_contains($sql, 'FROM con_verif_inventaire')) { return isset(self::$inv[$p[0] . ':' . $p[1] . ':' . $p[2]]) ? ['x' => 1] : null; }
+        if (str_contains($sql, 'FROM con_verif_jour') && str_contains($sql, 'COUNT(*)')) {
             $j = array_column(self::$verif, 'jour');
             return ['n' => count(self::$verif), 'premier' => $j ? min($j) : null, 'dernier' => $j ? max($j) : null, 'flux' => null, 'rec' => null, 'mags' => count(array_unique(array_column(self::$verif, 'shop_id')))];
         }
-        if (str_contains($sql, 'FROM ceo_verif_recette') && str_contains($sql, 'COUNT(*)')) {
+        if (str_contains($sql, 'FROM con_verif_recette') && str_contains($sql, 'COUNT(*)')) {
             $r = array_filter(self::$registre, static fn ($x) => $x['resolu_le'] !== null && $x['resolu_le'] >= $p[0]);
             return ['n' => count($r), 'd' => $r === [] ? null : min(array_column($r, 'resolu_le'))];
         }
@@ -43,18 +43,18 @@ final class Db
     public static function exec(string $sql, array $p = []): int
     {
         if (str_starts_with($sql, 'INSERT INTO ceo_app_setting')) { self::$reglages[$p[0]] = $p[1]; return 1; }
-        if (str_starts_with($sql, 'INSERT INTO ceo_verif_recette')) {
+        if (str_starts_with($sql, 'INSERT INTO con_verif_recette')) {
             self::$registre[$p[0]] = ['cle' => $p[0], 'regle' => $p[1], 'premier_vu' => $p[8], 'dernier_vu' => $p[9], 'resolu_le' => null];
             return 1;
         }
-        if (str_starts_with($sql, 'UPDATE ceo_verif_recette SET resolu_le')) { self::$registre[$p[1]]['resolu_le'] = $p[0]; return 1; }
-        if (str_starts_with($sql, 'INSERT INTO ceo_verif_inventaire')) {
+        if (str_starts_with($sql, 'UPDATE con_verif_recette SET resolu_le')) { self::$registre[$p[1]]['resolu_le'] = $p[0]; return 1; }
+        if (str_starts_with($sql, 'INSERT INTO con_verif_inventaire')) {
             preg_match('/\(([^)]*)\) VALUES/', $sql, $m);
             $row = array_combine(array_map('trim', explode(',', $m[1])), $p);
             self::$inv[$row['shop_id'] . ':' . $row['de'] . ':' . $row['a']] = $row;
             return 1;
         }
-        if (str_starts_with($sql, 'INSERT INTO ceo_verif_jour')) {
+        if (str_starts_with($sql, 'INSERT INTO con_verif_jour')) {
             preg_match('/\(([^)]*)\) VALUES/', $sql, $m);
             $cols = array_map('trim', explode(',', $m[1]));
             $row = array_combine($cols, $p);
@@ -447,7 +447,7 @@ $S4m = vmSemaines(4);
 verifie('les semaines : inventaires consécutifs relevés, le partiel et la copie écartés', count($S4m['semaines']) === 2 && $S4m['semaines'][0]['de'] === 'r2' && $S4m['semaines'][0]['a'] === 'r3' && $S4m['semaines'][1]['de'] === 'r1', json_encode($S4m['semaines']));
 $w1 = vmSemaine(4, 'r1', 'r2', true);
 verifie('une semaine se calcule une fois, puis se lit gardée', $w1 !== null && $APPELS_ECART === 1 && vmSemaine(4, 'r1', 'r2', true) !== null && $APPELS_ECART === 1);
-verifie('une semaine calculée entre dans l’historique ceo_verif_inventaire', isset(Db::$inv['4:r1:r2']) && (float) Db::$inv['4:r1:r2']['entrees_eur'] === 450.0);
+verifie('une semaine calculée entre dans l’historique con_verif_inventaire', isset(Db::$inv['4:r1:r2']) && (float) Db::$inv['4:r1:r2']['entrees_eur'] === 450.0);
 $lec = vmLecture($w1, vmTolerances(), []);
 $parNom = []; foreach ($lec['matieres'] as $m) { $parNom[$m['nom']] = $m; }
 verifie('Baguette : 40 manquantes, rien de jeté déclaré → poubelle', $parNom['Baguette']['cause'] === 'poubelle' && $parNom['Baguette']['ecartEur'] === 60.0);

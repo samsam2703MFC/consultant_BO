@@ -14,7 +14,7 @@ declare(strict_types=1);
  *   2. ne changer QUE la clé visée (la liste `materials` avec une quantité changée, `yield_quantity`, `id_recipe`…),
  *      dans la forme lue, et n'envoyer que les clés changées ;
  *   3. relire l'objet et CONSTATER que le changement y est. Un 2xx sans changement visible est « sans effet » ;
- *   4. tout noter au registre `ceo_verif_correction` : l'avant (le corps inverse, pour « Annuler »), l'après, la route,
+ *   4. tout noter au registre `con_verif_correction` : l'avant (le corps inverse, pour « Annuler »), l'après, la route,
  *      le code HTTP, le résultat.
  *
  * Rien ne part sans un geste du CEO : chaque correction se montre d'abord (`apercu`), puis s'applique. Le registre
@@ -307,7 +307,7 @@ function vrcTable(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_verif_correction ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_verif_correction ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'fait_le DATETIME NOT NULL,'
         . 'geste VARCHAR(20) NOT NULL,'
@@ -333,12 +333,12 @@ function vrcNoter(array $r): int
     try {
         vrcTable();
         $j = static fn ($v) => $v === null ? null : json_encode($v, JSON_UNESCAPED_UNICODE);
-        Db::exec('INSERT INTO ceo_verif_correction (fait_le, geste, cle, product_id, nom, objet, objet_id, shop_id, methode, route, resume, corps, inverse, http, resultat, message, cout_avant, cout_apres, annule_de)'
+        Db::exec('INSERT INTO con_verif_correction (fait_le, geste, cle, product_id, nom, objet, objet_id, shop_id, methode, route, resume, corps, inverse, http, resultat, message, cout_avant, cout_apres, annule_de)'
             . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [date('Y-m-d H:i:s'), $r['geste'], $r['cle'] ?? null, $r['pid'] ?? null, mb_substr((string) ($r['nom'] ?? ''), 0, 200), $r['objet'] ?? null, $r['objetId'] ?? null,
                 $r['shop'] ?? null, $r['methode'] ?? null, $r['route'] ?? null, mb_substr((string) ($r['resume'] ?? ''), 0, 600), $j($r['corps'] ?? null), $j($r['inverse'] ?? null),
                 $r['http'] ?? null, $r['resultat'], mb_substr((string) ($r['message'] ?? ''), 0, 600), $r['coutAvant'] ?? null, $r['coutApres'] ?? null, $r['annuleDe'] ?? null]);
-        $id = (int) (Db::row('SELECT MAX(id) id FROM ceo_verif_correction')['id'] ?? 0);
+        $id = (int) (Db::row('SELECT MAX(id) id FROM con_verif_correction')['id'] ?? 0);
         if (function_exists('journalAdd')) {
             journalAdd('CEO', 'Recette', (string) ($r['nom'] ?? ''), 'Correction au panel (' . $r['geste'] . ') : ' . ($r['resume'] ?? '') . ' — ' . vrcResultatNom((string) $r['resultat']));
         }
@@ -820,7 +820,7 @@ function wr_verification_corriger(): array
 function wr_verification_annuler(): array
 {
     $id = (int) (body()['id'] ?? 0);
-    try { vrcTable(); $r = Db::row('SELECT * FROM ceo_verif_correction WHERE id = ?', [$id]); } catch (Throwable $e) { $r = null; }
+    try { vrcTable(); $r = Db::row('SELECT * FROM con_verif_correction WHERE id = ?', [$id]); } catch (Throwable $e) { $r = null; }
     if ($r === null) { http_response_code(404); return ['ok' => false, 'error' => 'correction inconnue']; }
     $l = vrcLigneRegistre($r);
     if (!$l['annulable']) { return ['ok' => false, 'error' => 'Cette correction ne s’annule pas (déjà annulée, refusée, ou sans retour possible).']; }
@@ -852,7 +852,7 @@ function wr_verification_annuler(): array
             'resume' => 'Annulation de la correction n° ' . $id . ' : ' . $r['resume']]);
         if ($n['resultat'] !== 'ok') { return ['ok' => false, 'ecritures' => [vrcLigneRegistre($n)], 'error' => 'L’annulation n’a pas pris : ' . ($n['message'] ?? '')]; }
     }
-    try { Db::exec('UPDATE ceo_verif_correction SET annule_par = ? WHERE id = ?', [$n['id'], $id]); } catch (Throwable $e) { /* le registre garde les deux lignes */ }
+    try { Db::exec('UPDATE con_verif_correction SET annule_par = ? WHERE id = ?', [$n['id'], $id]); } catch (Throwable $e) { /* le registre garde les deux lignes */ }
     $rid = (string) $r['objet'] === 'recette' ? (int) $r['objet_id'] : 0;
     return ['ok' => true, 'ecritures' => [vrcLigneRegistre($n)], 'liste' => vrcApres($rid > 0 ? [$rid] : [], (int) ($r['shop_id'] ?? 0))];
 }
@@ -864,8 +864,8 @@ function ep_verification_registre(): array
     try {
         vrcTable();
         $rows = $pid > 0
-            ? Db::rows('SELECT * FROM ceo_verif_correction WHERE product_id = ? ORDER BY id DESC LIMIT 50', [$pid])
-            : Db::rows('SELECT * FROM ceo_verif_correction ORDER BY id DESC LIMIT 150');
+            ? Db::rows('SELECT * FROM con_verif_correction WHERE product_id = ? ORDER BY id DESC LIMIT 50', [$pid])
+            : Db::rows('SELECT * FROM con_verif_correction ORDER BY id DESC LIMIT 150');
     } catch (Throwable $e) { $rows = []; }
     return ['lignes' => array_map('vrcLigneRegistre', $rows), 'liens' => vrcLiens(), 'formatPrix' => vrcFormatPrix()];
 }

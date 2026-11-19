@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Vérification — lot 3 : la base quotidienne et l'évolution (demandes du 31/10/2026 : « uploader tous les jours dans
  * une db, pour voir les améliorations de gestion »). Plan : docs/plan-verification.md § 5 ; maquette : f.png.
  *
- * La table `ceo_verif_jour` garde, pour chaque magasin et chaque jour :
+ * La table `con_verif_jour` garde, pour chaque magasin et chaque jour :
  *  · l'audit des flux de la journée (lot 2), au prix de vente et en pièces : disponible, vendu, poubelle déclarée,
  *    invendu gardé, non expliqué ; la part mesurée (cuissons validées), les cuissons, la clôture, les comptages —
  *    écrit dès qu'une journée est calculée (vxJour), et rattrapé par le cron depuis les journées gravées ;
@@ -28,14 +28,14 @@ const VJ_INDICATEURS = [
     'invendu'  => ['Invendu gardé', false],
     'mesure'   => ['Journées mesurées', true],
     'recettes' => ['Recettes fiables', true],
-    'matiere'  => ['Matière expliquée', true],   // lot 4 : ceo_verif_inventaire, semaine de l'inventaire de fin
+    'matiere'  => ['Matière expliquée', true],   // lot 4 : con_verif_inventaire, semaine de l'inventaire de fin
 ];
 
 function vjTable(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_verif_jour ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_verif_jour ('
         . 'shop_id INT NOT NULL, jour DATE NOT NULL,'
         . 'dispo_eur DECIMAL(12,2) NULL, vendu_eur DECIMAL(12,2) NULL, poubelle_eur DECIMAL(12,2) NULL, invendu_eur DECIMAL(12,2) NULL,'
         . 'nonexpl_eur DECIMAL(12,2) NULL, mesure_eur DECIMAL(12,2) NULL,'
@@ -54,7 +54,7 @@ function vjEnregistre(int $sid, string $date, array $j, ?int $quand = null): boo
     try {
         vjTable();
         $a = vxAgregeJour($j); $e = $a['eur']; $p = $a['pcs'];
-        Db::exec('INSERT INTO ceo_verif_jour (shop_id, jour, dispo_eur, vendu_eur, poubelle_eur, invendu_eur, nonexpl_eur, mesure_eur,'
+        Db::exec('INSERT INTO con_verif_jour (shop_id, jour, dispo_eur, vendu_eur, poubelle_eur, invendu_eur, nonexpl_eur, mesure_eur,'
             . ' dispo_pcs, vendu_pcs, poubelle_pcs, invendu_pcs, nonexpl_pcs, lignes, cuissons_validees, cuissons, cloture, comptes, flux_le)'
             . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE dispo_eur = VALUES(dispo_eur), vendu_eur = VALUES(vendu_eur), poubelle_eur = VALUES(poubelle_eur),'
@@ -77,7 +77,7 @@ function vjPhotoRecettes(array $parShop): int
         vjTable();
         foreach ($parShop as $sid => $x) {
             if ((int) $sid <= 0 || !is_array($x)) { continue; }
-            Db::exec('INSERT INTO ceo_verif_jour (shop_id, jour, recettes_ca_total, recettes_ca_fiable, recettes_signalees, recettes_le) VALUES (?,?,?,?,?,?)'
+            Db::exec('INSERT INTO con_verif_jour (shop_id, jour, recettes_ca_total, recettes_ca_fiable, recettes_signalees, recettes_le) VALUES (?,?,?,?,?,?)'
                 . ' ON DUPLICATE KEY UPDATE recettes_ca_total = VALUES(recettes_ca_total), recettes_ca_fiable = VALUES(recettes_ca_fiable),'
                 . ' recettes_signalees = VALUES(recettes_signalees), recettes_le = VALUES(recettes_le)',
                 [(int) $sid, date('Y-m-d'), (float) ($x['caTotal'] ?? 0), (float) ($x['caFiable'] ?? 0), (int) ($x['signalements'] ?? 0), date('Y-m-d H:i:s')]);
@@ -96,7 +96,7 @@ function vjRattrape(array $C): int
     $deja = [];
     try {
         vjTable();
-        foreach (Db::rows('SELECT shop_id, jour, flux_le FROM ceo_verif_jour WHERE jour >= ?', [min(array_keys($jours))]) as $r) {
+        foreach (Db::rows('SELECT shop_id, jour, flux_le FROM con_verif_jour WHERE jour >= ?', [min(array_keys($jours))]) as $r) {
             $deja[(int) $r['shop_id'] . ':' . substr((string) $r['jour'], 0, 10)] = $r['flux_le'] === null ? 0 : (int) strtotime((string) $r['flux_le']);
         }
     } catch (Throwable $e) { return 0; }
@@ -128,7 +128,7 @@ function vjSemaines(int $n, ?string $ref = null): array
 }
 
 /**
- * Les séries semaine par semaine — fonction pure (bin/tests_verification.php). $rows : les lignes de ceo_verif_jour ;
+ * Les séries semaine par semaine — fonction pure (bin/tests_verification.php). $rows : les lignes de con_verif_jour ;
  * rend [sid|'reseau' => [indicateur => [valeur|null par semaine]]], et l'état « estimé » de chaque semaine.
  */
 function vjSeries(array $rows, array $semaines, array $sids): array
@@ -216,14 +216,14 @@ function ep_verification_evolution(): array
     $rows = []; $base = ['lignes' => 0, 'premier' => null, 'dernier' => null, 'fluxLe' => null, 'recettesLe' => null, 'magasins' => 0];
     try {
         vjTable();
-        $rows = Db::rows('SELECT * FROM ceo_verif_jour WHERE jour >= ? ORDER BY jour', [$sem[0]['du']]);
-        $b = Db::row('SELECT COUNT(*) n, MIN(jour) premier, MAX(jour) dernier, MAX(flux_le) flux, MAX(recettes_le) rec, COUNT(DISTINCT shop_id) mags FROM ceo_verif_jour');
+        $rows = Db::rows('SELECT * FROM con_verif_jour WHERE jour >= ? ORDER BY jour', [$sem[0]['du']]);
+        $b = Db::row('SELECT COUNT(*) n, MIN(jour) premier, MAX(jour) dernier, MAX(flux_le) flux, MAX(recettes_le) rec, COUNT(DISTINCT shop_id) mags FROM con_verif_jour');
         if ($b !== null) { $base = ['lignes' => (int) $b['n'], 'premier' => $b['premier'], 'dernier' => $b['dernier'], 'fluxLe' => $b['flux'], 'recettesLe' => $b['rec'], 'magasins' => (int) $b['mags']]; }
     } catch (Throwable $e) { $base['erreur'] = 'la base quotidienne n’a pas pu être lue'; }
     $S = vjSeries($rows, $sem, array_keys($mags));
     // Lot 4 : la matière expliquée, semaine par semaine (la semaine de l'inventaire qui clôt chaque paire).
     $inv = [];
-    try { if (function_exists('vmTable')) { vmTable(); $inv = Db::rows('SELECT shop_id, a_at, sorti_pos_eur, couvert_eur FROM ceo_verif_inventaire WHERE a_at >= ?', [$sem[0]['du']]); } }
+    try { if (function_exists('vmTable')) { vmTable(); $inv = Db::rows('SELECT shop_id, a_at, sorti_pos_eur, couvert_eur FROM con_verif_inventaire WHERE a_at >= ?', [$sem[0]['du']]); } }
     catch (Throwable $e) { $inv = []; }
     foreach (vjSeriesMatiere($inv, $sem, array_keys($mags)) as $k => $v) { $S[$k]['matiere'] = $v; }
     $lecture = static function (array $s): array {
@@ -242,5 +242,5 @@ function ep_verification_evolution(): array
         'indicateurs' => array_map(static fn ($c, $x) => ['code' => $c, 'nom' => $x[0], 'hautMieux' => $x[1]], array_keys(VJ_INDICATEURS), array_values(VJ_INDICATEURS)),
         'base' => $base, 'seuils' => ['nonExpl' => [3, 6], 'poubelle' => [6, 9], 'mesureMin' => defined('VX_MESURE_MIN') ? VX_MESURE_MIN : 50.0],
         'lu' => date('c'),
-        'source' => 'la base quotidienne ceo_verif_jour : l’audit des flux de chaque journée (lot 2) et la photo du jour de la couverture des recettes (lot 1), sommés par semaine · lecture seule'];
+        'source' => 'la base quotidienne con_verif_jour : l’audit des flux de chaque journée (lot 2) et la photo du jour de la couverture des recettes (lot 1), sommés par semaine · lecture seule'];
 }

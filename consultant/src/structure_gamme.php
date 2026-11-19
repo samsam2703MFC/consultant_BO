@@ -442,7 +442,7 @@ function wr_produits_structure_appliquer(): array
     $erreurs = [];
     foreach ($lignes as $ref => [$must, $saison]) {
         $av = null;
-        try { $av = Db::row('SELECT must, saison_id FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
+        try { $av = Db::row('SELECT must, saison_id FROM con_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
         $avSaison = $av !== null && $av['saison_id'] !== null ? (int) $av['saison_id'] : null;
         if (($av === null && !$must) || ($av !== null && (bool) $av['must'] === $must && (!$must || $avSaison === $saison))) { $n['inchangees']++; continue; }
         $r = aoEcrireObligatoire((string) $ref, $must, $saison, null, '', ' — structure de gamme');

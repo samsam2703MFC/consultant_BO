@@ -16,10 +16,10 @@ declare(strict_types=1);
  * - Les RÉSULTATS se lisent par fournisseur. Chaque fournisseur reçoit une COPIE de ses résultats avec la note du
  *   franchiseur, relue et envoyée à la main ; le nom des boutiques y est masqué par défaut.
  *
- * Les fournisseurs : le référentiel du cockpit, ceo_supplier (on ne crée pas de seconde table de fournisseurs,
+ * Les fournisseurs : le référentiel du cockpit, con_supplier (on ne crée pas de seconde table de fournisseurs,
  * cf. fournisseurAssure) — trois colonnes y sont ajoutées : audit_ref (référencé pour l'audit), audit_cat, audit_genre.
- * Tables : ceo_audit_question, ceo_audit_campagne, ceo_audit_destinataire, ceo_audit_reponse, ceo_audit_alerte,
- * ceo_audit_copie. Les fonctions sans base (auQuestionNormalise, auPoints, auScore…) : bin/tests_audits.php.
+ * Tables : con_audit_question, con_audit_campagne, con_audit_destinataire, con_audit_reponse, con_audit_alerte,
+ * con_audit_copie. Les fonctions sans base (auQuestionNormalise, auPoints, auScore…) : bin/tests_audits.php.
  */
 
 const AU_SCHEMA = 1;
@@ -385,39 +385,39 @@ function ensureAudits(): void
     if ($fait) { return; }
     $fait = true;
     if ((int) setting('auditsSchema', 0) >= AU_SCHEMA) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_audit_question (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_audit_question (
         id INT AUTO_INCREMENT PRIMARY KEY, fournisseur_id VARCHAR(10) NULL, parent_id INT NULL, ordre INT NOT NULL DEFAULT 0,
         libelle VARCHAR(300) NOT NULL, aide VARCHAR(300) NULL, type VARCHAR(12) NOT NULL, reglage TEXT NULL,
         obligatoire TINYINT NOT NULL DEFAULT 1, actif TINYINT NOT NULL DEFAULT 1, maj_le DATETIME NOT NULL,
         KEY (fournisseur_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_audit_campagne (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_audit_campagne (
         id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(120) NOT NULL, statut VARCHAR(12) NOT NULL DEFAULT \'brouillon\',
         cloture_le DATE NULL, relances VARCHAR(60) NULL, push TINYINT NOT NULL DEFAULT 1, message TEXT NULL,
         formulaire MEDIUMTEXT NULL, base VARCHAR(255) NULL, cree_le DATETIME NOT NULL, envoye_le DATETIME NULL,
         cloturee_le DATETIME NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_audit_destinataire (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_audit_destinataire (
         id INT AUTO_INCREMENT PRIMARY KEY, campagne_id INT NOT NULL, shop_id VARCHAR(20) NOT NULL, email VARCHAR(160) NULL,
         envoye_le DATETIME NULL, envoi_motif VARCHAR(255) NULL, push TINYINT NOT NULL DEFAULT 0, ouvert_le DATETIME NULL,
         termine_le DATETIME NULL, relances INT NOT NULL DEFAULT 0, relance_le DATETIME NULL,
         UNIQUE KEY campagne_shop (campagne_id, shop_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_audit_reponse (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_audit_reponse (
         id INT AUTO_INCREMENT PRIMARY KEY, destinataire_id INT NOT NULL, fournisseur_id VARCHAR(10) NOT NULL, question_id INT NOT NULL,
         valeur TEXT NULL, points DECIMAL(8,2) NULL, commentaire TEXT NULL, maj_le DATETIME NOT NULL,
         UNIQUE KEY dest_four_q (destinataire_id, fournisseur_id, question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_audit_alerte (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_audit_alerte (
         id INT AUTO_INCREMENT PRIMARY KEY, campagne_id INT NOT NULL, destinataire_id INT NOT NULL, shop_id VARCHAR(20) NOT NULL,
         fournisseur_id VARCHAR(10) NOT NULL, question_id INT NOT NULL, titre VARCHAR(200) NOT NULL, alerte TINYINT NOT NULL DEFAULT 0,
         statut VARCHAR(12) NOT NULL DEFAULT \'ouvert\', cree_le DATETIME NOT NULL, maj_le DATETIME NULL,
         UNIQUE KEY dest_four_q (destinataire_id, fournisseur_id, question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_audit_copie (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_audit_copie (
         id INT AUTO_INCREMENT PRIMARY KEY, campagne_id INT NOT NULL, fournisseur_id VARCHAR(10) NOT NULL, note TEXT NULL,
         reglage TEXT NULL, email VARCHAR(160) NULL, statut VARCHAR(12) NOT NULL DEFAULT \'a_ecrire\', envoye_le DATETIME NULL,
         envoi_motif VARCHAR(255) NULL, maj_le DATETIME NOT NULL,
         UNIQUE KEY campagne_four (campagne_id, fournisseur_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    foreach (['audit_ref TINYINT NOT NULL DEFAULT 0', 'audit_cat VARCHAR(80) NULL', 'audit_genre VARCHAR(12) NULL'] as $c) { auColonne('ceo_supplier', $c); }
+    foreach (['audit_ref TINYINT NOT NULL DEFAULT 0', 'audit_cat VARCHAR(80) NULL', 'audit_genre VARCHAR(12) NULL'] as $c) { auColonne('con_supplier', $c); }
     // Le secret des liens du franchisé : un par installation, jamais montré.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value', ['auditsJeton', json_encode(bin2hex(random_bytes(24)))]);
-    if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_audit_question')['n'] ?? 0) === 0) {
+    if ((int) (Db::row('SELECT COUNT(*) AS n FROM con_audit_question')['n'] ?? 0) === 0) {
         foreach (auTroncDefaut() as $i => $d) {
             $mere = auQuestionInserer($d + ['ordre' => ($i + 1) * 10]);
             if (isset($d['sous'])) { auQuestionInserer($d['sous'] + ['parent' => $mere, 'ordre' => 10]); }
@@ -429,7 +429,7 @@ function ensureAudits(): void
 function auQuestionInserer(array $brut): int
 {
     $q = auQuestionNormalise($brut);
-    Db::exec('INSERT INTO ceo_audit_question (fournisseur_id, parent_id, ordre, libelle, aide, type, reglage, obligatoire, actif, maj_le) VALUES (?,?,?,?,?,?,?,?,1,?)',
+    Db::exec('INSERT INTO con_audit_question (fournisseur_id, parent_id, ordre, libelle, aide, type, reglage, obligatoire, actif, maj_le) VALUES (?,?,?,?,?,?,?,?,1,?)',
         [$q['fournisseur'], $q['parent'], $q['ordre'], $q['libelle'], $q['aide'] !== '' ? $q['aide'] : null, $q['type'],
          json_encode(auReglage($q), JSON_UNESCAPED_UNICODE), $q['obligatoire'] ? 1 : 0, date('Y-m-d H:i:s')]);
     return (int) Db::pdo()->lastInsertId();
@@ -450,7 +450,7 @@ function auFournisseurs(bool $seulsReferences = false): array
     $carnet = [];
     try { if (function_exists('caMailCarnet')) { $carnet = caMailCarnet(); } } catch (Throwable $e) { $carnet = []; }
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_supplier' . ($seulsReferences ? ' WHERE audit_ref = 1' : '') . ' ORDER BY name') as $s) {
+    foreach (Db::rows('SELECT * FROM con_supplier' . ($seulsReferences ? ' WHERE audit_ref = 1' : '') . ' ORDER BY name') as $s) {
         $mail = trim((string) $s['email']); $source = $mail !== '' ? 'fiche' : null;
         if ($mail === '' && function_exists('caMailAdresse')) {
             try { $mail = caMailAdresse((string) $s['name'], $carnet); $source = $mail !== '' ? 'carnet' : null; } catch (Throwable $e) { $mail = ''; }
@@ -464,12 +464,12 @@ function auFournisseurs(bool $seulsReferences = false): array
 
 function auQuestions(): array
 {
-    return array_map('auQuestionNormalise', Db::rows('SELECT * FROM ceo_audit_question WHERE actif = 1 ORDER BY ordre, id'));
+    return array_map('auQuestionNormalise', Db::rows('SELECT * FROM con_audit_question WHERE actif = 1 ORDER BY ordre, id'));
 }
 
 function auCampagne(int $id): ?array
 {
-    $c = Db::row('SELECT * FROM ceo_audit_campagne WHERE id = ?', [$id]);
+    $c = Db::row('SELECT * FROM con_audit_campagne WHERE id = ?', [$id]);
     if ($c === null) { return null; }
     $c['formulaire'] = suJsonAu($c['formulaire']);
     $r = suJsonAu($c['relances']);
@@ -497,7 +497,7 @@ function auFormulaireCourant(): array
 function auReponses(int $destId): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_audit_reponse WHERE destinataire_id = ?', [$destId]) as $r) {
+    foreach (Db::rows('SELECT * FROM con_audit_reponse WHERE destinataire_id = ?', [$destId]) as $r) {
         $out[(string) $r['fournisseur_id']][(int) $r['question_id']] = ['id' => (int) $r['id'], 'valeur' => json_decode((string) $r['valeur'], true),
             'commentaire' => (string) ($r['commentaire'] ?? ''), 'points' => $r['points'] !== null ? (float) $r['points'] : null];
     }
@@ -533,7 +533,7 @@ function auParLien(array $src): ?array
 {
     $id = (int) ($src['d'] ?? 0); $jeton = (string) ($src['jeton'] ?? '');
     if ($id <= 0 || $jeton === '' || (string) setting('auditsJeton', '') === '' || !hash_equals(auJeton($id), $jeton)) { return null; }
-    $d = Db::row('SELECT * FROM ceo_audit_destinataire WHERE id = ?', [$id]);
+    $d = Db::row('SELECT * FROM con_audit_destinataire WHERE id = ?', [$id]);
     if ($d === null) { return null; }
     $c = auCampagne((int) $d['campagne_id']);
     return $c === null || $c['statut'] === 'brouillon' ? null : ['dest' => $d, 'camp' => $c];
@@ -591,7 +591,7 @@ function ep_audit_public(): array
     $x = auParLien($_GET);
     if ($x === null) { return auLienRefuse(); }
     ['dest' => $d, 'camp' => $c] = $x;
-    if ($d['ouvert_le'] === null) { Db::exec('UPDATE ceo_audit_destinataire SET ouvert_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $d['id']]); }
+    if ($d['ouvert_le'] === null) { Db::exec('UPDATE con_audit_destinataire SET ouvert_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $d['id']]); }
     $shop = (string) $d['shop_id'];
     return ['campagne' => ['nom' => $c['nom'], 'cloture' => $c['cloture_le'], 'ouverte' => auOuverte($c)],
         'magasin' => ['id' => $shop, 'court' => auMagasinCourt($shop)], 'langue' => auLangue($shop),
@@ -618,7 +618,7 @@ function wr_audit_public_section(): array
         $q = $parId[(int) $r['question']];
         $v = auValeur($q, $r['valeur'] ?? null);
         $com = mb_substr(trim((string) ($r['commentaire'] ?? '')), 0, 2000);
-        Db::exec('INSERT INTO ceo_audit_reponse (destinataire_id, fournisseur_id, question_id, valeur, points, commentaire, maj_le) VALUES (?,?,?,?,?,?,?)
+        Db::exec('INSERT INTO con_audit_reponse (destinataire_id, fournisseur_id, question_id, valeur, points, commentaire, maj_le) VALUES (?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), points = VALUES(points), commentaire = VALUES(commentaire), maj_le = VALUES(maj_le)',
             [(int) $d['id'], $fid, (int) $q['id'], json_encode($v, JSON_UNESCAPED_UNICODE), auPoints($q, $v), $com !== '' ? $com : null, $now]);
         $n++;
@@ -645,7 +645,7 @@ function wr_audit_public_terminer(): array
     }
     if ($manques) { http_response_code(422); return ['error' => 'incomplet', 'manques' => $manques]; }
     $premier = $d['termine_le'] === null;
-    Db::exec('UPDATE ceo_audit_destinataire SET termine_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $d['id']]);
+    Db::exec('UPDATE con_audit_destinataire SET termine_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $d['id']]);
     foreach ($c['formulaire']['fournisseurs'] ?? [] as $f) { auAlertesEvaluer($c, $d, $f['id']); }
     if ($premier) {
         $court = auMagasinCourt((string) $d['shop_id']);
@@ -693,7 +693,7 @@ function auAlertesEvaluer(array $c, array $d, string $fid): void
         $oui = auVisible($q, $valeurs) && auCondition($q['regle'], $valeurs[$q['id']] ?? null);
         if ($oui) {
             $titre = auLibelle($q['regle']['action'] !== '' ? $q['regle']['action'] : 'Alerte : ' . $q['libelle'], $f['nom']);
-            Db::exec('INSERT INTO ceo_audit_alerte (campagne_id, destinataire_id, shop_id, fournisseur_id, question_id, titre, alerte, statut, cree_le) VALUES (?,?,?,?,?,?,?,\'ouvert\',?)
+            Db::exec('INSERT INTO con_audit_alerte (campagne_id, destinataire_id, shop_id, fournisseur_id, question_id, titre, alerte, statut, cree_le) VALUES (?,?,?,?,?,?,?,\'ouvert\',?)
                 ON DUPLICATE KEY UPDATE titre = VALUES(titre), alerte = VALUES(alerte)',
                 [(int) $c['id'], (int) $d['id'], (string) $d['shop_id'], $fid, (int) $q['id'], mb_substr($titre, 0, 200), $q['regle']['alerte'] ? 1 : 0, $now]);
             if ($q['regle']['alerte'] && function_exists('viNotifier')) {
@@ -701,7 +701,7 @@ function auAlertesEvaluer(array $c, array $d, string $fid): void
             }
         } else {
             // La réponse a changé : l'alerte encore ouverte n'a plus lieu d'être.
-            Db::exec('DELETE FROM ceo_audit_alerte WHERE destinataire_id = ? AND fournisseur_id = ? AND question_id = ? AND statut = \'ouvert\'', [(int) $d['id'], $fid, (int) $q['id']]);
+            Db::exec('DELETE FROM con_audit_alerte WHERE destinataire_id = ? AND fournisseur_id = ? AND question_id = ? AND statut = \'ouvert\'', [(int) $d['id'], $fid, (int) $q['id']]);
         }
     }
 }
@@ -743,7 +743,7 @@ function auRoute(string $method, string $path): mixed
 function auCampagneLigne(array $c): array
 {
     $n = Db::row('SELECT COUNT(*) AS n, SUM(termine_le IS NOT NULL) AS fini, SUM(ouvert_le IS NOT NULL AND termine_le IS NULL) AS encours,
-        SUM(ouvert_le IS NULL) AS jamais, SUM(envoye_le IS NULL) AS nonenv FROM ceo_audit_destinataire WHERE campagne_id = ?', [(int) $c['id']]) ?? [];
+        SUM(ouvert_le IS NULL) AS jamais, SUM(envoye_le IS NULL) AS nonenv FROM con_audit_destinataire WHERE campagne_id = ?', [(int) $c['id']]) ?? [];
     return ['id' => (int) $c['id'], 'nom' => $c['nom'], 'statut' => $c['statut'], 'cloture' => $c['cloture_le'], 'relances' => $c['relances'],
         'push' => (int) $c['push'] === 1, 'message' => (string) ($c['message'] ?? ''), 'creeLe' => $c['cree_le'], 'envoyeLe' => $c['envoye_le'], 'clotureeLe' => $c['cloturee_le'],
         'fournisseurs' => count($c['formulaire']['fournisseurs'] ?? []),
@@ -753,7 +753,7 @@ function auCampagneLigne(array $c): array
 /** GET /audits/etat — le référentiel, le formulaire, les campagnes. */
 function ep_audits_etat(): array
 {
-    $camps = array_map(static fn ($c) => auCampagneLigne(auCampagne((int) $c['id'])), Db::rows('SELECT id FROM ceo_audit_campagne ORDER BY id DESC'));
+    $camps = array_map(static fn ($c) => auCampagneLigne(auCampagne((int) $c['id'])), Db::rows('SELECT id FROM con_audit_campagne ORDER BY id DESC'));
     return ['fournisseurs' => auFournisseurs(), 'questions' => auQuestions(), 'types' => AU_TYPES, 'genres' => AU_GENRES, 'seuils' => auSeuils(),
         'statuts' => AU_STATUTS, 'relancesDefaut' => AU_RELANCES, 'campagnes' => $camps,
         'smtp' => class_exists('Smtp') && Smtp::configured(), 'magasins' => count(viMagasins())];
@@ -836,20 +836,20 @@ function wr_audits_fournisseur(?string $id): array
     if ($id === null) {
         $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 120);
         if ($nom === '') { http_response_code(422); return ['error' => 'nom du fournisseur manquant']; }
-        $dej = Db::row('SELECT id FROM ceo_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
+        $dej = Db::row('SELECT id FROM con_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
         $id = $dej['id'] ?? ('f' . bin2hex(random_bytes(4)));
         if ($dej === null) {
-            Db::exec('INSERT INTO ceo_supplier (id, name, perimeter, email) VALUES (?,?,?,?)', [$id, $nom, $cat !== '' ? $cat : null, $mail]);
+            Db::exec('INSERT INTO con_supplier (id, name, perimeter, email) VALUES (?,?,?,?)', [$id, $nom, $cat !== '' ? $cat : null, $mail]);
         }
-        Db::exec('UPDATE ceo_supplier SET audit_ref = 1, audit_cat = ?, audit_genre = ?' . ($mail !== '' ? ', email = ?' : '') . ' WHERE id = ?',
+        Db::exec('UPDATE con_supplier SET audit_ref = 1, audit_cat = ?, audit_genre = ?' . ($mail !== '' ? ', email = ?' : '') . ' WHERE id = ?',
             array_merge([$cat !== '' ? $cat : null, $genre], $mail !== '' ? [$mail] : [], [$id]));
         journalAdd('CEO', 'Audit fournisseurs', $nom, 'Fournisseur référencé pour l’audit');
         return ['ok' => true, 'id' => $id];
     }
-    $s = Db::row('SELECT * FROM ceo_supplier WHERE id = ?', [$id]);
+    $s = Db::row('SELECT * FROM con_supplier WHERE id = ?', [$id]);
     if ($s === null) { http_response_code(404); return ['error' => 'fournisseur inconnu']; }
     $ref = array_key_exists('ref', $b) ? ((bool) $b['ref'] ? 1 : 0) : (int) ($s['audit_ref'] ?? 0);
-    Db::exec('UPDATE ceo_supplier SET audit_ref = ?, audit_cat = ?, audit_genre = ?, email = ? WHERE id = ?',
+    Db::exec('UPDATE con_supplier SET audit_ref = ?, audit_cat = ?, audit_genre = ?, email = ? WHERE id = ?',
         [$ref, array_key_exists('cat', $b) ? ($cat !== '' ? $cat : null) : $s['audit_cat'], array_key_exists('genre', $b) ? $genre : ($s['audit_genre'] ?? null),
          array_key_exists('email', $b) ? $mail : (string) $s['email'], $id]);
     journalAdd('CEO', 'Audit fournisseurs', (string) $s['name'], $ref ? 'Fournisseur référencé pour l’audit (fiche mise à jour)' : 'Fournisseur retiré de l’audit');
@@ -863,15 +863,15 @@ function wr_audits_question(?int $id): array
     $q = auQuestionNormalise($b);
     if ($q['libelle'] === '') { http_response_code(422); return ['error' => 'libellé manquant']; }
     if (in_array($q['type'], ['choix', 'multi'], true) && count($q['choix']) < 2) { http_response_code(422); return ['error' => 'au moins deux choix'] ; }
-    if ($q['fournisseur'] !== null && Db::row('SELECT id FROM ceo_supplier WHERE id = ?', [$q['fournisseur']]) === null) { http_response_code(422); return ['error' => 'fournisseur inconnu']; }
+    if ($q['fournisseur'] !== null && Db::row('SELECT id FROM con_supplier WHERE id = ?', [$q['fournisseur']]) === null) { http_response_code(422); return ['error' => 'fournisseur inconnu']; }
     if ($q['parent'] !== null) {
-        $p = Db::row('SELECT * FROM ceo_audit_question WHERE id = ? AND actif = 1', [$q['parent']]);
+        $p = Db::row('SELECT * FROM con_audit_question WHERE id = ? AND actif = 1', [$q['parent']]);
         if ($p === null || $p['parent_id'] !== null) { http_response_code(422); return ['error' => 'question mère inconnue (un seul niveau de sous-question)']; }
         $q['fournisseur'] = $p['fournisseur_id'];
     }
     if ($id === null) {
         if ($q['ordre'] === 0) {
-            $max = Db::row('SELECT MAX(ordre) AS m FROM ceo_audit_question WHERE actif = 1 AND ' . ($q['parent'] !== null ? 'parent_id = ?' : ($q['fournisseur'] === null ? 'fournisseur_id IS NULL AND parent_id IS NULL' : 'fournisseur_id = ? AND parent_id IS NULL')),
+            $max = Db::row('SELECT MAX(ordre) AS m FROM con_audit_question WHERE actif = 1 AND ' . ($q['parent'] !== null ? 'parent_id = ?' : ($q['fournisseur'] === null ? 'fournisseur_id IS NULL AND parent_id IS NULL' : 'fournisseur_id = ? AND parent_id IS NULL')),
                 $q['parent'] !== null ? [$q['parent']] : ($q['fournisseur'] === null ? [] : [$q['fournisseur']]));
             $q['ordre'] = (int) ($max['m'] ?? 0) + 10;
         }
@@ -879,10 +879,10 @@ function wr_audits_question(?int $id): array
         journalAdd('CEO', 'Audit fournisseurs', 'Formulaire', 'Question ajoutée : ' . $q['libelle']);
         return ['ok' => true, 'id' => $id];
     }
-    $avant = Db::row('SELECT * FROM ceo_audit_question WHERE id = ? AND actif = 1', [$id]);
+    $avant = Db::row('SELECT * FROM con_audit_question WHERE id = ? AND actif = 1', [$id]);
     if ($avant === null) { http_response_code(404); return ['error' => 'question inconnue']; }
     if (!array_key_exists('ordre', $b)) { $q['ordre'] = (int) $avant['ordre']; }
-    Db::exec('UPDATE ceo_audit_question SET libelle = ?, aide = ?, type = ?, reglage = ?, obligatoire = ?, ordre = ?, maj_le = ? WHERE id = ?',
+    Db::exec('UPDATE con_audit_question SET libelle = ?, aide = ?, type = ?, reglage = ?, obligatoire = ?, ordre = ?, maj_le = ? WHERE id = ?',
         [$q['libelle'], $q['aide'] !== '' ? $q['aide'] : null, $q['type'], json_encode(auReglage($q), JSON_UNESCAPED_UNICODE), $q['obligatoire'] ? 1 : 0, $q['ordre'], date('Y-m-d H:i:s'), $id]);
     journalAdd('CEO', 'Audit fournisseurs', 'Formulaire', 'Question modifiée : ' . $q['libelle']);
     return ['ok' => true, 'id' => $id];
@@ -891,9 +891,9 @@ function wr_audits_question(?int $id): array
 /** DELETE /audits/questions/{id} — retirée du formulaire (les campagnes envoyées gardent la leur, figée). */
 function wr_audits_question_suppr(int $id): array
 {
-    $q = Db::row('SELECT * FROM ceo_audit_question WHERE id = ? AND actif = 1', [$id]);
+    $q = Db::row('SELECT * FROM con_audit_question WHERE id = ? AND actif = 1', [$id]);
     if ($q === null) { http_response_code(404); return ['error' => 'question inconnue']; }
-    Db::exec('UPDATE ceo_audit_question SET actif = 0, maj_le = ? WHERE id = ? OR parent_id = ?', [date('Y-m-d H:i:s'), $id, $id]);
+    Db::exec('UPDATE con_audit_question SET actif = 0, maj_le = ? WHERE id = ? OR parent_id = ?', [date('Y-m-d H:i:s'), $id, $id]);
     journalAdd('CEO', 'Audit fournisseurs', 'Formulaire', 'Question retirée : ' . $q['libelle']);
     return ['ok' => true];
 }
@@ -902,7 +902,7 @@ function wr_audits_question_suppr(int $id): array
 function wr_audits_questions_ordre(): array
 {
     $ids = array_values(array_filter(array_map('intval', (array) (body()['ids'] ?? [])), static fn ($i) => $i > 0));
-    foreach ($ids as $i => $id) { Db::exec('UPDATE ceo_audit_question SET ordre = ? WHERE id = ?', [($i + 1) * 10, $id]); }
+    foreach ($ids as $i => $id) { Db::exec('UPDATE con_audit_question SET ordre = ? WHERE id = ?', [($i + 1) * 10, $id]); }
     return ['ok' => true];
 }
 
@@ -935,7 +935,7 @@ function wr_audits_campagne(?int $id): array
     $push = !array_key_exists('push', $b) || (bool) $b['push'] ? 1 : 0;
     $msg = mb_substr(trim((string) ($b['message'] ?? '')), 0, 2000);
     if ($id === null) {
-        Db::exec('INSERT INTO ceo_audit_campagne (nom, statut, cloture_le, relances, push, message, cree_le) VALUES (?,\'brouillon\',?,?,?,?,?)',
+        Db::exec('INSERT INTO con_audit_campagne (nom, statut, cloture_le, relances, push, message, cree_le) VALUES (?,\'brouillon\',?,?,?,?,?)',
             [$nom, $clo, $rel, $push, $msg !== '' ? $msg : null, date('Y-m-d H:i:s')]);
         $id = (int) Db::pdo()->lastInsertId();
         journalAdd('CEO', 'Audit fournisseurs', $nom, 'Campagne créée');
@@ -946,9 +946,9 @@ function wr_audits_campagne(?int $id): array
     if ($c['statut'] === 'cloturee') { http_response_code(409); return ['error' => 'campagne close']; }
     // Envoyée : seules la clôture et les relances bougent encore.
     if ($c['statut'] === 'envoyee') {
-        Db::exec('UPDATE ceo_audit_campagne SET cloture_le = ?, relances = ? WHERE id = ?', [$clo, $rel, $id]);
+        Db::exec('UPDATE con_audit_campagne SET cloture_le = ?, relances = ? WHERE id = ?', [$clo, $rel, $id]);
     } else {
-        Db::exec('UPDATE ceo_audit_campagne SET nom = ?, cloture_le = ?, relances = ?, push = ?, message = ? WHERE id = ?', [$nom, $clo, $rel, $push, $msg !== '' ? $msg : null, $id]);
+        Db::exec('UPDATE con_audit_campagne SET nom = ?, cloture_le = ?, relances = ?, push = ?, message = ? WHERE id = ?', [$nom, $clo, $rel, $push, $msg !== '' ? $msg : null, $id]);
     }
     journalAdd('CEO', 'Audit fournisseurs', $c['nom'], 'Campagne modifiée');
     return ['ok' => true, 'id' => $id];
@@ -959,7 +959,7 @@ function wr_audits_campagne_suppr(int $id): array
     $c = auCampagne($id);
     if ($c === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     if ($c['statut'] !== 'brouillon') { http_response_code(409); return ['error' => 'seul un brouillon se supprime']; }
-    Db::exec('DELETE FROM ceo_audit_campagne WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_audit_campagne WHERE id = ?', [$id]);
     journalAdd('CEO', 'Audit fournisseurs', $c['nom'], 'Brouillon supprimé');
     return ['ok' => true];
 }
@@ -971,7 +971,7 @@ function ep_audits_campagne(int $id): array
     if ($c === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     $mags = viMagasins(); $nbF = max(1, count($c['formulaire']['fournisseurs'] ?? []));
     $faits = [];
-    foreach (Db::rows('SELECT r.destinataire_id AS d, COUNT(DISTINCT r.fournisseur_id) AS n FROM ceo_audit_reponse r JOIN ceo_audit_destinataire x ON x.id = r.destinataire_id WHERE x.campagne_id = ? GROUP BY r.destinataire_id', [$id]) as $r) {
+    foreach (Db::rows('SELECT r.destinataire_id AS d, COUNT(DISTINCT r.fournisseur_id) AS n FROM con_audit_reponse r JOIN con_audit_destinataire x ON x.id = r.destinataire_id WHERE x.campagne_id = ? GROUP BY r.destinataire_id', [$id]) as $r) {
         $faits[(int) $r['d']] = (int) $r['n'];
     }
     $dest = array_map(static fn ($d) => ['id' => (int) $d['id'], 'shop' => (string) $d['shop_id'], 'court' => $mags[$d['shop_id']]['court'] ?? auMagasinCourt((string) $d['shop_id']),
@@ -979,7 +979,7 @@ function ep_audits_campagne(int $id): array
         'termineLe' => $d['termine_le'], 'relances' => (int) $d['relances'], 'relanceLe' => $d['relance_le'],
         'avancement' => $d['termine_le'] !== null ? $nbF : min($nbF, $faits[(int) $d['id']] ?? 0),
         'statut' => $d['termine_le'] !== null ? 'fini' : ($d['ouvert_le'] !== null ? 'encours' : ($d['envoye_le'] !== null ? 'jamais' : 'nonenvoye'))],
-        Db::rows('SELECT * FROM ceo_audit_destinataire WHERE campagne_id = ? ORDER BY termine_le IS NOT NULL, ouvert_le IS NOT NULL, shop_id', [$id]));
+        Db::rows('SELECT * FROM con_audit_destinataire WHERE campagne_id = ? ORDER BY termine_le IS NOT NULL, ouvert_le IS NOT NULL, shop_id', [$id]));
     return ['campagne' => auCampagneLigne($c) + ['fournisseursListe' => $c['formulaire']['fournisseurs'] ?? []], 'destinataires' => $dest, 'nbFournisseurs' => $nbF];
 }
 
@@ -1034,16 +1034,16 @@ function wr_audits_envoyer(int $id): array
     $mags = viMagasins();
     if (!$mags) { http_response_code(422); return ['error' => 'aucun magasin ouvert'] ; }
     $now = date('Y-m-d H:i:s');
-    Db::exec('UPDATE ceo_audit_campagne SET statut = \'envoyee\', formulaire = ?, base = ?, envoye_le = ? WHERE id = ? AND statut = \'brouillon\'',
+    Db::exec('UPDATE con_audit_campagne SET statut = \'envoyee\', formulaire = ?, base = ?, envoye_le = ? WHERE id = ? AND statut = \'brouillon\'',
         [json_encode($form, JSON_UNESCAPED_UNICODE), rapBaseUrl(), $now, $id]);
     $c = auCampagne($id);
     $bilan = ['envoyes' => 0, 'sansEnvoi' => 0, 'motifs' => []];
     foreach ($mags as $shop => $mag) {
         $mail = function_exists('suAdresse') ? suAdresse((string) $shop)['email'] : null;
-        Db::exec('INSERT INTO ceo_audit_destinataire (campagne_id, shop_id, email) VALUES (?,?,?) ON DUPLICATE KEY UPDATE email = VALUES(email)', [$id, (string) $shop, $mail]);
-        $d = Db::row('SELECT * FROM ceo_audit_destinataire WHERE campagne_id = ? AND shop_id = ?', [$id, (string) $shop]);
+        Db::exec('INSERT INTO con_audit_destinataire (campagne_id, shop_id, email) VALUES (?,?,?) ON DUPLICATE KEY UPDATE email = VALUES(email)', [$id, (string) $shop, $mail]);
+        $d = Db::row('SELECT * FROM con_audit_destinataire WHERE campagne_id = ? AND shop_id = ?', [$id, (string) $shop]);
         $r = auEnvoyer($c, $d, false);
-        Db::exec('UPDATE ceo_audit_destinataire SET envoye_le = ?, envoi_motif = ?, push = ? WHERE id = ?', [$r['ok'] || $r['push'] ? $now : null, $r['motif'], $r['push'] ? 1 : 0, (int) $d['id']]);
+        Db::exec('UPDATE con_audit_destinataire SET envoye_le = ?, envoi_motif = ?, push = ? WHERE id = ?', [$r['ok'] || $r['push'] ? $now : null, $r['motif'], $r['push'] ? 1 : 0, (int) $d['id']]);
         if ($r['ok']) { $bilan['envoyes']++; } else { $bilan['sansEnvoi']++; $bilan['motifs'][] = $mag['court'] . ' : ' . $r['motif']; }
     }
     journalAdd('CEO', 'Audit fournisseurs', $c['nom'], 'Campagne envoyée : ' . $bilan['envoyes'] . ' e-mail(s), ' . $bilan['sansEnvoi'] . ' sans e-mail');
@@ -1057,11 +1057,11 @@ function wr_audits_relancer(int $id): array
     if ($c === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     if (!auOuverte($c)) { http_response_code(409); return ['error' => 'campagne non ouverte'] ; }
     $un = (int) (body()['destinataire'] ?? 0);
-    $ls = Db::rows('SELECT * FROM ceo_audit_destinataire WHERE campagne_id = ? AND termine_le IS NULL' . ($un > 0 ? ' AND id = ?' : ''), $un > 0 ? [$id, $un] : [$id]);
+    $ls = Db::rows('SELECT * FROM con_audit_destinataire WHERE campagne_id = ? AND termine_le IS NULL' . ($un > 0 ? ' AND id = ?' : ''), $un > 0 ? [$id, $un] : [$id]);
     $n = 0; $motifs = [];
     foreach ($ls as $d) {
         $r = auEnvoyer($c, $d, true);
-        Db::exec('UPDATE ceo_audit_destinataire SET relances = relances + 1, relance_le = ?, envoye_le = COALESCE(envoye_le, ?) WHERE id = ?', [date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), (int) $d['id']]);
+        Db::exec('UPDATE con_audit_destinataire SET relances = relances + 1, relance_le = ?, envoye_le = COALESCE(envoye_le, ?) WHERE id = ?', [date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), (int) $d['id']]);
         if ($r['ok'] || $r['push']) { $n++; } else { $motifs[] = auMagasinCourt((string) $d['shop_id']) . ' : ' . $r['motif']; }
     }
     journalAdd('CEO', 'Audit fournisseurs', $c['nom'], 'Relance à la main : ' . $n . ' magasin(s)');
@@ -1071,9 +1071,9 @@ function wr_audits_relancer(int $id): array
 /** Clôt une campagne : plus de réponses ; une copie à écrire par fournisseur. */
 function auCloturer(array $c): void
 {
-    Db::exec('UPDATE ceo_audit_campagne SET statut = \'cloturee\', cloturee_le = ? WHERE id = ? AND statut = \'envoyee\'', [date('Y-m-d H:i:s'), (int) $c['id']]);
+    Db::exec('UPDATE con_audit_campagne SET statut = \'cloturee\', cloturee_le = ? WHERE id = ? AND statut = \'envoyee\'', [date('Y-m-d H:i:s'), (int) $c['id']]);
     foreach ($c['formulaire']['fournisseurs'] ?? [] as $f) {
-        Db::exec('INSERT INTO ceo_audit_copie (campagne_id, fournisseur_id, statut, maj_le) VALUES (?,?,\'a_ecrire\',?) ON DUPLICATE KEY UPDATE campagne_id = campagne_id',
+        Db::exec('INSERT INTO con_audit_copie (campagne_id, fournisseur_id, statut, maj_le) VALUES (?,?,\'a_ecrire\',?) ON DUPLICATE KEY UPDATE campagne_id = campagne_id',
             [(int) $c['id'], $f['id'], date('Y-m-d H:i:s')]);
     }
 }
@@ -1096,11 +1096,11 @@ function auResultats(array $c, bool $detail = true): array
 {
     $form = $c['formulaire']; $seuils = $form['seuils'] ?? auSeuils();
     $mags = viMagasins();
-    $dests = Db::rows('SELECT * FROM ceo_audit_destinataire WHERE campagne_id = ? AND termine_le IS NOT NULL ORDER BY shop_id', [(int) $c['id']]);
+    $dests = Db::rows('SELECT * FROM con_audit_destinataire WHERE campagne_id = ? AND termine_le IS NOT NULL ORDER BY shop_id', [(int) $c['id']]);
     $rep = [];
     foreach ($dests as $d) { $rep[(int) $d['id']] = auReponses((int) $d['id']); }
     $alertes = [];
-    foreach (Db::rows('SELECT * FROM ceo_audit_alerte WHERE campagne_id = ? ORDER BY id', [(int) $c['id']]) as $a) { $alertes[(string) $a['fournisseur_id']][] = $a; }
+    foreach (Db::rows('SELECT * FROM con_audit_alerte WHERE campagne_id = ? ORDER BY id', [(int) $c['id']]) as $a) { $alertes[(string) $a['fournisseur_id']][] = $a; }
     $out = [];
     foreach ($form['fournisseurs'] ?? [] as $f) {
         $qs = auQuestionsPour($form['questions'] ?? [], $f['id']);
@@ -1163,13 +1163,13 @@ function ep_audits_resultats(int $id): array
     if ($c === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     if ($c['statut'] === 'brouillon') { http_response_code(409); return ['error' => 'campagne pas encore envoyée'] ; }
     $res = auResultats($c);
-    $prec = Db::row('SELECT id FROM ceo_audit_campagne WHERE id < ? AND statut <> \'brouillon\' ORDER BY id DESC LIMIT 1', [$id]);
+    $prec = Db::row('SELECT id FROM con_audit_campagne WHERE id < ? AND statut <> \'brouillon\' ORDER BY id DESC LIMIT 1', [$id]);
     $avant = [];
     if ($prec !== null && ($pc = auCampagne((int) $prec['id'])) !== null) {
         foreach (auResultats($pc, false) as $r) { $avant[$r['id']] = $r['pct']; }
     }
     $copies = [];
-    foreach (Db::rows('SELECT * FROM ceo_audit_copie WHERE campagne_id = ?', [$id]) as $k) { $copies[(string) $k['fournisseur_id']] = $k; }
+    foreach (Db::rows('SELECT * FROM con_audit_copie WHERE campagne_id = ?', [$id]) as $k) { $copies[(string) $k['fournisseur_id']] = $k; }
     $four = [];
     foreach (auFournisseurs() as $f) { $four[$f['id']] = $f; }
     foreach ($res as &$r) {
@@ -1183,7 +1183,7 @@ function ep_audits_resultats(int $id): array
             'envoyeLe' => $k['envoye_le'] ?? null, 'motif' => $k['envoi_motif'] ?? null];
     }
     unset($r);
-    $n = Db::row('SELECT COUNT(*) AS n, SUM(termine_le IS NOT NULL) AS fini FROM ceo_audit_destinataire WHERE campagne_id = ?', [$id]) ?? [];
+    $n = Db::row('SELECT COUNT(*) AS n, SUM(termine_le IS NOT NULL) AS fini FROM con_audit_destinataire WHERE campagne_id = ?', [$id]) ?? [];
     return ['campagne' => auCampagneLigne($c), 'precedente' => $prec !== null ? (int) $prec['id'] : null, 'seuils' => $c['formulaire']['seuils'] ?? auSeuils(),
         'reponses' => ['fini' => (int) ($n['fini'] ?? 0), 'total' => (int) ($n['n'] ?? 0)], 'fournisseurs' => $res];
 }
@@ -1193,9 +1193,9 @@ function wr_audits_alerte(int $id): array
 {
     $st = (string) (body()['statut'] ?? '');
     if (!in_array($st, ['ouvert', 'traite'], true)) { http_response_code(422); return ['error' => 'statut invalide'] ; }
-    $a = Db::row('SELECT * FROM ceo_audit_alerte WHERE id = ?', [$id]);
+    $a = Db::row('SELECT * FROM con_audit_alerte WHERE id = ?', [$id]);
     if ($a === null) { http_response_code(404); return ['error' => 'alerte inconnue']; }
-    Db::exec('UPDATE ceo_audit_alerte SET statut = ?, maj_le = ? WHERE id = ?', [$st, date('Y-m-d H:i:s'), $id]);
+    Db::exec('UPDATE con_audit_alerte SET statut = ?, maj_le = ? WHERE id = ?', [$st, date('Y-m-d H:i:s'), $id]);
     journalAdd('CEO', 'Audit fournisseurs', $a['titre'], $st === 'traite' ? 'Action traitée' : 'Action rouverte');
     return ['ok' => true];
 }
@@ -1213,9 +1213,9 @@ function wr_audits_copie(int $cid, string $fid): array
     if ($mail !== '' && !filter_var($mail, FILTER_VALIDATE_EMAIL)) { http_response_code(422); return ['error' => 'adresse e-mail invalide']; }
     $note = mb_substr(trim((string) ($b['note'] ?? '')), 0, 4000);
     $reg = ['commentaires' => array_values(array_filter(array_map('intval', (array) ($b['commentaires'] ?? [])))), 'masquer' => !array_key_exists('masquer', $b) || (bool) $b['masquer'], 'pdf' => !empty($b['pdf'])];
-    $k = Db::row('SELECT * FROM ceo_audit_copie WHERE campagne_id = ? AND fournisseur_id = ?', [$cid, $fid]);
+    $k = Db::row('SELECT * FROM con_audit_copie WHERE campagne_id = ? AND fournisseur_id = ?', [$cid, $fid]);
     $statut = ($k['statut'] ?? '') === 'envoyee' ? 'envoyee' : ($note !== '' ? 'brouillon' : 'a_ecrire');
-    Db::exec('INSERT INTO ceo_audit_copie (campagne_id, fournisseur_id, note, reglage, email, statut, maj_le) VALUES (?,?,?,?,?,?,?)
+    Db::exec('INSERT INTO con_audit_copie (campagne_id, fournisseur_id, note, reglage, email, statut, maj_le) VALUES (?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE note = VALUES(note), reglage = VALUES(reglage), email = VALUES(email), statut = VALUES(statut), maj_le = VALUES(maj_le)',
         [$cid, $fid, $note !== '' ? $note : null, json_encode($reg), $mail !== '' ? $mail : null, $statut, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'statut' => $statut];
@@ -1227,13 +1227,13 @@ function auCopieHtml(array $c, string $fid): array
     $res = null;
     foreach (auResultats($c) as $r) { if ($r['id'] === $fid) { $res = $r; } }
     if ($res === null) { return ['error' => 'fournisseur hors campagne']; }
-    $k = Db::row('SELECT * FROM ceo_audit_copie WHERE campagne_id = ? AND fournisseur_id = ?', [(int) $c['id'], $fid]) ?? [];
+    $k = Db::row('SELECT * FROM con_audit_copie WHERE campagne_id = ? AND fournisseur_id = ?', [(int) $c['id'], $fid]) ?? [];
     $reg = suJsonAu($k['reglage'] ?? null);
     $masquer = !array_key_exists('masquer', $reg) || (bool) $reg['masquer'];
     $retenus = array_flip(array_map('intval', (array) ($reg['commentaires'] ?? [])));
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $nf = static fn ($v, int $d = 1) => number_format((float) $v, $d, ',', ' ');
-    $total = (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_audit_destinataire WHERE campagne_id = ?', [(int) $c['id']])['n'] ?? 0);
+    $total = (int) (Db::row('SELECT COUNT(*) AS n FROM con_audit_destinataire WHERE campagne_id = ?', [(int) $c['id']])['n'] ?? 0);
     $corps = docMailP($e($res['nom'] . ' · ' . $res['reponses'] . ' boutique(s) sur ' . $total . ' ont répondu.'));
     $note = trim((string) ($k['note'] ?? ''));
     if ($note !== '') {
@@ -1298,7 +1298,7 @@ function wr_audits_copie_envoyer(int $cid, string $fid): array
     try { $ok = Smtp::envoyer($mail, $x['sujet'], $x['html'], $pieces); }
     catch (Throwable $e) { $ok = false; Smtp::$lastError = $e->getMessage(); }
     $motif = $ok ? null : mb_substr((string) (Smtp::$lastError ?? 'envoi refusé'), 0, 250);
-    Db::exec('UPDATE ceo_audit_copie SET statut = ?, envoye_le = ?, envoi_motif = ?, email = COALESCE(email, ?), maj_le = ? WHERE campagne_id = ? AND fournisseur_id = ?',
+    Db::exec('UPDATE con_audit_copie SET statut = ?, envoye_le = ?, envoi_motif = ?, email = COALESCE(email, ?), maj_le = ? WHERE campagne_id = ? AND fournisseur_id = ?',
         [$ok ? 'envoyee' : 'brouillon', $ok ? date('Y-m-d H:i:s') : null, $motif, $mail, date('Y-m-d H:i:s'), $cid, $fid]);
     journalAdd('CEO', 'Audit fournisseurs', $x['nom'], $ok ? 'Copie des résultats envoyée à ' . $mail : 'Copie non envoyée : ' . $motif);
     if (!$ok) { http_response_code(502); return ['error' => 'envoi refusé : ' . $motif]; }
@@ -1312,7 +1312,7 @@ function auHorloge(array &$fait): void
     ensureAudits();
     $fait['auditsRelances'] = 0; $fait['auditsClos'] = 0;
     $now = date('Y-m-d H:i:s'); $h = (int) date('G');
-    foreach (Db::rows('SELECT id FROM ceo_audit_campagne WHERE statut = \'envoyee\'') as $x) {
+    foreach (Db::rows('SELECT id FROM con_audit_campagne WHERE statut = \'envoyee\'') as $x) {
         $c = auCampagne((int) $x['id']);
         if ($c === null) { continue; }
         if ($c['cloture_le'] !== null && date('Y-m-d') > (string) $c['cloture_le']) {
@@ -1324,10 +1324,10 @@ function auHorloge(array &$fait): void
         }
         // Les relances partent en journée, jamais la nuit.
         if ($h < 9 || $h >= 19) { continue; }
-        foreach (Db::rows('SELECT * FROM ceo_audit_destinataire WHERE campagne_id = ? AND termine_le IS NULL AND envoye_le IS NOT NULL', [(int) $c['id']]) as $d) {
+        foreach (Db::rows('SELECT * FROM con_audit_destinataire WHERE campagne_id = ? AND termine_le IS NULL AND envoye_le IS NOT NULL', [(int) $c['id']]) as $d) {
             if (!auRelanceDue($c['relances'], (string) $d['envoye_le'], $c['cloture_le'], (int) $d['relances'], $now)) { continue; }
             auEnvoyer($c, $d, true);
-            Db::exec('UPDATE ceo_audit_destinataire SET relances = relances + 1, relance_le = ? WHERE id = ?', [$now, (int) $d['id']]);
+            Db::exec('UPDATE con_audit_destinataire SET relances = relances + 1, relance_le = ? WHERE id = ?', [$now, (int) $d['id']]);
             $fait['auditsRelances']++;
         }
     }

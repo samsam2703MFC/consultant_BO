@@ -482,7 +482,7 @@ function buildStatements(): array
         $coef = 0.92 + (($seed % 21) / 100);
         $theoAn = round($budAn * $coef / 1000) * 1000;
         $menages = 4200 + ($seed % 17) * 130;
-        $sql[] = 'INSERT INTO ceo_shop_budget (shop_id, fiscal_year, validated_on, basket_target, months_total, ca_theorique_an, etude_date, etude_source, etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite) VALUES (' .
+        $sql[] = 'INSERT INTO con_shop_budget (shop_id, fiscal_year, validated_on, basket_target, months_total, ca_theorique_an, etude_date, etude_source, etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite) VALUES (' .
             q($s['id']) . ", 2026, '2026-01-10', " . n(round($s['panier'] * 1.08, 2)) . ', 12, ' . n($theoAn) . ", '2025-09-15', " .
             q('Étude de marché — zone de chalandise 10 min') . ', ' . n($menages) . ', ' . n(round($theoAn / 0.7 / 1000) * 1000) . ', 1, ' .
             j(['a1' => 70, 'a2' => 80, 'a3' => 90]) . ', ' . j(array_map(fn ($r) => round(100 * ($r['caT'] ?? 0) / max(1, $budAn), 1), $s['perf'][2026])) . ');';
@@ -490,17 +490,17 @@ function buildStatements(): array
         $lines = [['Matières premières', 5, $seuils['food'], 'food'], ['Rémunérations & charges sociales', 6, $seuils['labour'], 'labour'],
             ['Services & biens divers', 7, $seuils['overhead'], 'overhead'], ['Royalties', null, $seuils['royalties'], null], ['Charges financières', null, $seuils['financieres'], null]];
         foreach ($lines as $i => [$label, $lev, $pct, $field]) {
-            $sql[] = 'INSERT INTO ceo_shop_budget_line (shop_id, fiscal_year, label, levid, pct_budget, pct_theorique, real_field, sort_order) VALUES (' .
+            $sql[] = 'INSERT INTO con_shop_budget_line (shop_id, fiscal_year, label, levid, pct_budget, pct_theorique, real_field, sort_order) VALUES (' .
                 q($s['id']) . ', 2026, ' . q($label) . ', ' . n($lev) . ', ' . n($pct) . ', ' . n($pct) . ', ' . q($field) . ", $i);";
         }
         foreach ([2025, 2026] as $y) {
             foreach ($s['perf'][$y] as $mi => $r) {
                 $m = $mi + 1;
                 if ($y === 2026 && $r['caT'] !== null) {
-                    $sql[] = "INSERT INTO ceo_shop_budget_month (shop_id, fiscal_year, month, revenue_budget) VALUES (" . q($s['id']) . ", $y, $m, {$r['caT']});";
+                    $sql[] = "INSERT INTO con_shop_budget_month (shop_id, fiscal_year, month, revenue_budget) VALUES (" . q($s['id']) . ", $y, $m, {$r['caT']});";
                 }
                 $theoM = ($y === 2026 && $budAn > 0 && $r['caT'] !== null) ? round($theoAn * $r['caT'] / $budAn) : null;
-                $sql[] = 'INSERT INTO ceo_shop_month_perf (shop_id, year, month, revenue, revenue_budget, ca_theorique, net_margin, tickets, basket_avg, food_pct, labour_pct, overhead_pct, valuation, encoded_at) VALUES (' .
+                $sql[] = 'INSERT INTO con_shop_month_perf (shop_id, year, month, revenue, revenue_budget, ca_theorique, net_margin, tickets, basket_avg, food_pct, labour_pct, overhead_pct, valuation, encoded_at) VALUES (' .
                     q($s['id']) . ", $y, $m, " . n($r['ca']) . ', ' . n($r['caT']) . ', ' . n($theoM) . ', ' . n($r['marge']) . ', ' . n($r['tickets']) . ', ' .
                     n($r['panier']) . ', ' . n($r['food']) . ', ' . n($r['labour']) . ', ' . n($r['overhead']) . ', ' . n($r['val']) . ', ' .
                     ($r['ca'] !== null ? q(sprintf('%d-%02d-04 09:00:00', $y, min(12, $m + 1))) : 'NULL') . ');';
@@ -509,9 +509,9 @@ function buildStatements(): array
     }
 
     // --- objectifs réseau
-    $sql[] = "INSERT INTO ceo_network_target VALUES ('h1', 2026, 7400000, 2, 1, NULL);";
-    $sql[] = "INSERT INTO ceo_network_target VALUES ('h3', 2028, 11500000, 6, 1, " . q('Hypothèse : {ouvertures} ouvertures d\'ici 2028 (Knokke, Tournai, puis 3 zones à sécuriser), CA moyen de {caMoyen} par nouveau point de vente en année pleine.') . ');';
-    $sql[] = "INSERT INTO ceo_network_target VALUES ('h5', 2030, 18000000, 12, 1, " . q('Hypothèse : {ouvertures} ouvertures d\'ici 2030. La cible exige d\'ouvrir en moyenne 2 à 3 points de vente par an — le pipeline candidats doit rester ≥ 8 dossiers actifs.') . ');';
+    $sql[] = "INSERT INTO con_network_target VALUES ('h1', 2026, 7400000, 2, 1, NULL);";
+    $sql[] = "INSERT INTO con_network_target VALUES ('h3', 2028, 11500000, 6, 1, " . q('Hypothèse : {ouvertures} ouvertures d\'ici 2028 (Knokke, Tournai, puis 3 zones à sécuriser), CA moyen de {caMoyen} par nouveau point de vente en année pleine.') . ');';
+    $sql[] = "INSERT INTO con_network_target VALUES ('h5', 2030, 18000000, 12, 1, " . q('Hypothèse : {ouvertures} ouvertures d\'ici 2030. La cible exige d\'ouvrir en moyenne 2 à 3 points de vente par an — le pipeline candidats doit rester ≥ 8 dossiers actifs.') . ');';
 
     // --- intervenants
     foreach (consultants() as $i => $c) {
@@ -522,51 +522,51 @@ function buildStatements(): array
         }
     }
     foreach (suppliers() as $s) {
-        $sql[] = 'INSERT INTO ceo_supplier (id, name, perimeter, email) VALUES (' . q($s['id']) . ', ' . q($s['nom']) . ', ' . q($s['perim']) . ', ' . q($s['email']) . ');';
+        $sql[] = 'INSERT INTO con_supplier (id, name, perimeter, email) VALUES (' . q($s['id']) . ', ' . q($s['nom']) . ', ' . q($s['perim']) . ', ' . q($s['email']) . ');';
     }
 
     // --- projets
     $levBySlug = [];
     foreach (LEVIERS as $l) { $levBySlug[$l['slug']] = $l['tag']; }
     foreach (projects() as $p) {
-        $sql[] = 'INSERT INTO ceo_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real) VALUES (' .
+        $sql[] = 'INSERT INTO con_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real) VALUES (' .
             q($p['id']) . ', ' . q($p['nom']) . ', ' . q($p['famille']) . ', ' . q($p['statut']) . ', ' . q($p['prio']) . ', ' . q($p['axes'][0]) . ', ' .
             j($p['axes']) . ', ' . j($p['kpis']) . ', ' . q($p['valeurTxt']) . ', ' . q($p['debut']) . ', ' . q($p['fin']) . ', ' .
             n($p['budget']) . ', ' . n($p['valeurEst']) . ', ' . n($p['valeurReal']) . ');';
         foreach ($p['leviers'] as $slug) {
-            $sql[] = 'INSERT INTO ceo_project_levid VALUES (' . q($p['id']) . ', ' . $levBySlug[$slug] . ');';
+            $sql[] = 'INSERT INTO con_project_levid VALUES (' . q($p['id']) . ', ' . $levBySlug[$slug] . ');';
         }
         foreach ($p['jalons'] as $i => [$nom, $cible, $reel]) {
-            $sql[] = 'INSERT INTO ceo_project_milestone (project_id, name, target_on, done_on, sort_order) VALUES (' . q($p['id']) . ', ' . q($nom) . ', ' . q($cible) . ', ' . q($reel) . ", $i);";
+            $sql[] = 'INSERT INTO con_project_milestone (project_id, name, target_on, done_on, sort_order) VALUES (' . q($p['id']) . ', ' . q($nom) . ', ' . q($cible) . ', ' . q($reel) . ", $i);";
         }
         foreach ($p['couts'] as [$label, $prevu, $reel]) {
-            $sql[] = 'INSERT INTO ceo_project_cost (project_id, label, planned, actual) VALUES (' . q($p['id']) . ', ' . q($label) . ", $prevu, $reel);";
+            $sql[] = 'INSERT INTO con_project_cost (project_id, label, planned, actual) VALUES (' . q($p['id']) . ', ' . q($label) . ", $prevu, $reel);";
         }
         foreach ($p['taches'] as $t) {
-            $sql[] = 'INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on) VALUES (' .
+            $sql[] = 'INSERT INTO con_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on) VALUES (' .
                 q($t['id']) . ', ' . q($p['id']) . ', ' . q($t['nom']) . ', ' . q($t['ot']) . ', ' . q($t['oid']) . ', ' . q($t['mag']) . ', ' . q($t['due']) . ', ' . q($t['done']) . ');';
         }
         $c = $p['crm'];
-        $sql[] = 'INSERT INTO ceo_project_crm VALUES (' . q($p['id']) . ', ' . q($c['gain']) . ', ' . q($c['apport']) . ', ' . q($c['objectif']) . ', ' . n($c['attendu']) . ', ' . n($c['realise']) . ');';
+        $sql[] = 'INSERT INTO con_project_crm VALUES (' . q($p['id']) . ', ' . q($c['gain']) . ', ' . q($c['apport']) . ', ' . q($c['objectif']) . ', ' . n($c['attendu']) . ', ' . n($c['realise']) . ');';
     }
 
     // --- personnel, reporting, alertes, templates, journal
     foreach (people() as $p) {
-        $sql[] = 'INSERT INTO ceo_person VALUES (' . q($p['id']) . ', ' . q($p['nom']) . ', ' . q($p['role']) . ', ' . q($p['email']) . ');';
+        $sql[] = 'INSERT INTO con_person VALUES (' . q($p['id']) . ', ' . q($p['nom']) . ', ' . q($p['role']) . ', ' . q($p['email']) . ');';
     }
     foreach (reports() as $r) {
-        $sql[] = 'INSERT INTO ceo_report_schedule (id, name, type, description, frequency, postes_json, dest_id, cc_id, last_run, active) VALUES (' .
+        $sql[] = 'INSERT INTO con_report_schedule (id, name, type, description, frequency, postes_json, dest_id, cc_id, last_run, active) VALUES (' .
             q($r['id']) . ', ' . q($r['nom']) . ', ' . q($r['type']) . ', ' . q($r['desc']) . ', ' . q($r['freq']) . ', ' . j($r['postes']) . ', ' .
             q($r['dest']) . ', ' . ($r['cc'] === '' ? 'NULL' : q($r['cc'])) . ', ' . q($r['dernier']) . ', ' . $r['actif'] . ');';
     }
     foreach (alertRules() as [$id, $nom, $canal, $actif]) {
-        $sql[] = 'INSERT INTO ceo_alert_rule VALUES (' . q($id) . ', ' . q($nom) . ', ' . q($canal) . ", $actif);";
+        $sql[] = 'INSERT INTO con_alert_rule VALUES (' . q($id) . ', ' . q($nom) . ', ' . q($canal) . ", $actif);";
     }
     foreach (emailTemplates() as [$id, $nom, $sujet, $corps]) {
-        $sql[] = 'INSERT INTO ceo_email_template VALUES (' . q($id) . ', ' . q($nom) . ', ' . q($sujet) . ', ' . q($corps) . ');';
+        $sql[] = 'INSERT INTO con_email_template VALUES (' . q($id) . ', ' . q($nom) . ', ' . q($sujet) . ', ' . q($corps) . ');';
     }
     foreach (projTemplates() as $axe => $tpl) {
-        $sql[] = 'INSERT INTO ceo_project_template VALUES (' . q($axe) . ', ' .
+        $sql[] = 'INSERT INTO con_project_template VALUES (' . q($axe) . ', ' .
             j(array_map(fn ($x) => ['nom' => $x[0], 'j' => $x[1]], $tpl['jalons'])) . ', ' .
             j(array_map(fn ($x) => ['poste' => $x[0], 'prevu' => $x[1]], $tpl['couts'])) . ');';
     }
@@ -576,10 +576,10 @@ function buildStatements(): array
 
     // --- produits (période juillet 2026 + N-1 dérivé de la tendance)
     foreach (products() as [$id, $nom, $cat, $vol, $prix, $cout, $tend, $mags]) {
-        $sql[] = 'INSERT INTO ceo_product VALUES (' . q($id) . ', ' . q($nom) . ', ' . q($cat) . ', 1);';
-        $sql[] = "INSERT INTO ceo_product_month_sales VALUES (" . q($id) . ", 2026, 7, $vol, $mags, $prix, $cout);";
+        $sql[] = 'INSERT INTO con_product VALUES (' . q($id) . ', ' . q($nom) . ', ' . q($cat) . ', 1);';
+        $sql[] = "INSERT INTO con_product_month_sales VALUES (" . q($id) . ", 2026, 7, $vol, $mags, $prix, $cout);";
         $volN1 = (int) round($vol / $tend);
-        $sql[] = "INSERT INTO ceo_product_month_sales VALUES (" . q($id) . ", 2025, 7, $volN1, $mags, $prix, $cout);";
+        $sql[] = "INSERT INTO con_product_month_sales VALUES (" . q($id) . ", 2025, 7, $volN1, $mags, $prix, $cout);";
     }
 
     // --- posts Facebook soumis au contrôle + écarts relevés par l'agent

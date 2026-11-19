@@ -3830,7 +3830,7 @@ class App {
       this.setState({});
     });
   }
-  /** Rapports réels (table ceo_rapport) : définitions + dernières générations. */
+  /** Rapports réels (table con_rapport) : définitions + dernières générations. */
   /** Budget × Campagnes : lu à l'ouverture de l'écran, et à chaque changement
    *  de campagne ou d'exercice — le réalisé vient du panel, il ne se devine pas. */
   /* --- mesure d'impact d'une campagne -----------------------------------------
@@ -15199,7 +15199,7 @@ class App {
 
   valsReporting(common, navDef, titles){
     const S = this.state, D = this.D, M = this.M;
-    // --- générateur de rapports RÉEL (table ceo_rapport, HTML par levier).
+    // --- générateur de rapports RÉEL (table con_rapport, HTML par levier).
     // L'ancienne liste de démonstration a cédé la place : ces rapports-ci se
     // génèrent, se relisent (HTML du run) et s'envoient vraiment.
     const rz = S.rapGen;
@@ -16264,7 +16264,7 @@ class App {
       },
     };
 
-    // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les
+    // --- catalogue des KPI : le référentiel (con_kpi_def) qui pilote les
     // seuils des écrans et des rapports, et où se créent les KPI dérivés.
     if (!this._kpisLus) { this._kpisLus = true; readOne('/kpi-defs').then(d2 => { this.D.kpiDefs = d2 || null; this.setState({}); }); }
     const kd = this.D.kpiDefs;

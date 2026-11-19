@@ -34,7 +34,7 @@ final class Db {
   static function rows(string $q, array $a = []): array
   {
       $GLOBALS['SQL'][] = $q;
-      if (str_contains($q, 'FROM ceo_rapport WHERE actif = 1')) {
+      if (str_contains($q, 'FROM con_rapport WHERE actif = 1')) {
           return [['id' => 1, 'code' => 'essai', 'nom' => 'Essai', 'frequence' => 'quotidien', 'heure' => ((int) date('G') + 1) % 24, 'jour' => 1, 'jours' => null]];
       }
       return [];
@@ -47,7 +47,7 @@ function body(): array { return $GLOBALS['CORPS'] ?? []; }
 function journalAdd(string $actor, string $kind, ?string $project, string $message, ?string $ts = null): void { $GLOBALS['JOURNAL'][] = $message; }
 require __DIR__ . '/../src/rapports.php';
 
-$luParHorloge = static fn (): bool => array_filter($GLOBALS['SQL'], fn ($q) => str_contains($q, 'FROM ceo_rapport WHERE actif = 1')) !== [];
+$luParHorloge = static fn (): bool => array_filter($GLOBALS['SQL'], fn ($q) => str_contains($q, 'FROM con_rapport WHERE actif = 1')) !== [];
 $cron = static function () { $_GET['jeton'] = 'jeton'; $GLOBALS['SQL'] = []; return ep_rapports_cron(); };
 
 // --- Livré suspendu.

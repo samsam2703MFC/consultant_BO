@@ -11,7 +11,7 @@ declare(strict_types=1);
  *  · réalisé : le CA TTC encaissé (ventes caisse après remise — `ca` du
  *    margin-heatmap du panel, = `income` du daily-summary, taxe comprise),
  *    du lundi ou du 1er jusqu'à `date` incluse ;
- *  · objectif : le budget validé du mois (ceo_shop_month_perf.revenue_budget),
+ *  · objectif : le budget validé du mois (con_shop_month_perf.revenue_budget),
  *    à défaut le CA théorique de l'étude, réparti jour par jour par la
  *    pondération réseau sur les jours où le magasin ouvre — une semaine à
  *    cheval sur deux mois prend chaque jour dans le budget de son mois ;

@@ -44,8 +44,8 @@ function cqMailBase(): string
 function cqMailSemer(): void
 {
     try { cqMailBase(); } catch (Throwable $e) { /* le bouton attendra */ }
-    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', [CQM_CODE]) !== null) { return; }
-    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+    if (Db::row('SELECT id FROM con_rapport WHERE code = ?', [CQM_CODE]) !== null) { return; }
+    Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
               VALUES (?,?,?,?,?,?,?,?,?,?,?)',
         [CQM_CODE, 'Contrôle qualité non réalisé (aucune photo à 19:00)', 'Magasins', 'quotidien', 19, 1,
          json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
@@ -60,7 +60,7 @@ function cqMailAdresses(array $rep, string $nom): array
     $a = $ok($carnet[$nom] ?? []);
     if ($a !== []) { return $a; }
     if ($affiche === null) {
-        $r = Db::row('SELECT dest_par_magasin FROM ceo_rapport WHERE code = ?', ['affiche-vente-mois']);
+        $r = Db::row('SELECT dest_par_magasin FROM con_rapport WHERE code = ?', ['affiche-vente-mois']);
         $affiche = json_decode((string) ($r['dest_par_magasin'] ?? ''), true) ?: [];
     }
     return $ok($affiche[$nom] ?? []);
@@ -302,7 +302,7 @@ function cqMailDistribuer(array $rep, bool $apercu = false): array
         . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
             . (!empty($m2['envoyes']) ? ' (' . implode(', ', $m2['envoyes']) . ')' : '') . (!empty($m2['note']) ? ' · ' . $m2['note'] : '')) . '</li>', $bilan['magasins']))
         . '</ul></div>';
-    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+    Db::exec('INSERT INTO con_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
               VALUES (?,?,?,?,?,?,?,?)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), $date, $date,
          $apercu ? 'genere' : ($cpt('envoye') > 0 ? 'envoye' : 'vide'), $resume, $exemple ? $exemple['html'] : $lst,

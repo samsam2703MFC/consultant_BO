@@ -55,12 +55,12 @@ CREATE TABLE IF NOT EXISTS ceo_shop (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Réel mensuel encodé par le franchisé (une ligne par magasin et par mois)
-CREATE TABLE IF NOT EXISTS ceo_shop_month_perf (
+CREATE TABLE IF NOT EXISTS con_shop_month_perf (
   shop_id        VARCHAR(8) NOT NULL,
   year           SMALLINT NOT NULL,
   month          TINYINT NOT NULL,
   revenue        DECIMAL(12,2) NULL,    -- ca
-  revenue_budget DECIMAL(12,2) NULL,    -- caBudget (issu de ceo_shop_budget_month)
+  revenue_budget DECIMAL(12,2) NULL,    -- caBudget (issu de con_shop_budget_month)
   ca_theorique   DECIMAL(12,2) NULL,    -- CA théorique du mois (étude de marché)
   net_margin     DECIMAL(12,2) NULL,
   tickets        INT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_month_perf (
 --
 -- Une note vide n'est pas une ligne : le mois où personne n'a rien écrit
 -- reste vide à l'impression, et ce vide se voit — c'est une information.
-CREATE TABLE IF NOT EXISTS ceo_shop_month_note (
+CREATE TABLE IF NOT EXISTS con_shop_month_note (
   shop_id   VARCHAR(8)  NOT NULL,
   year      SMALLINT    NOT NULL,
   month     TINYINT     NOT NULL,
@@ -209,14 +209,14 @@ CREATE TABLE IF NOT EXISTS con_scoring_google (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Budget validé une fois par exercice avec le consultant
-CREATE TABLE IF NOT EXISTS ceo_shop_budget (
+CREATE TABLE IF NOT EXISTS con_shop_budget (
   shop_id                  VARCHAR(8) NOT NULL,
   fiscal_year              SMALLINT NOT NULL,
   validated_on             DATE NULL,
   validated_by             INT NULL,              -- position.id du consultant
   basket_target            DECIMAL(6,2) NULL,
   months_total             TINYINT NOT NULL DEFAULT 12,
-  ca_theorique_an          DECIMAL(12,2) NULL,    -- somme de ceo_shop_month_perf.ca_theorique
+  ca_theorique_an          DECIMAL(12,2) NULL,    -- somme de con_shop_month_perf.ca_theorique
   etude_date               DATE NULL,
   etude_source             VARCHAR(160) NULL,
   etude_potentiel_menages  INT NULL,
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_budget (
   FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_shop_budget_month (
+CREATE TABLE IF NOT EXISTS con_shop_budget_month (
   shop_id        VARCHAR(8) NOT NULL,
   fiscal_year    SMALLINT NOT NULL,
   month          TINYINT NOT NULL,
@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_budget_month (
   PRIMARY KEY (shop_id, fiscal_year, month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_shop_budget_line (
+CREATE TABLE IF NOT EXISTS con_shop_budget_line (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   shop_id       VARCHAR(8) NOT NULL,
   fiscal_year   SMALLINT NOT NULL,
@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_budget_line (
 -- ----------------------------------------------------------------------------
 -- Objectifs réseau 1/3/5 ans
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_network_target (
+CREATE TABLE IF NOT EXISTS con_network_target (
   horizon         ENUM('h1','h3','h5') PRIMARY KEY,
   target_year     SMALLINT NOT NULL,
   revenue_target  DECIMAL(14,2) NOT NULL,
@@ -264,7 +264,7 @@ CREATE TABLE IF NOT EXISTS ceo_network_target (
 -- ----------------------------------------------------------------------------
 -- Projets, jalons, coûts, tâches
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_project (
+CREATE TABLE IF NOT EXISTS con_project (
   id          VARCHAR(16) PRIMARY KEY,
   name        VARCHAR(200) NOT NULL,
   famille     VARCHAR(40) NOT NULL,     -- Produits | Services | Organisation & coûts | Développement réseau
@@ -281,13 +281,13 @@ CREATE TABLE IF NOT EXISTS ceo_project (
   value_real  DECIMAL(12,2)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_project_levid (
+CREATE TABLE IF NOT EXISTS con_project_levid (
   project_id VARCHAR(16),
   levid      INT UNSIGNED,
   PRIMARY KEY (project_id, levid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_project_milestone (
+CREATE TABLE IF NOT EXISTS con_project_milestone (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   project_id VARCHAR(16),
   name       VARCHAR(200),
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS ceo_project_milestone (
   sort_order SMALLINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_project_cost (
+CREATE TABLE IF NOT EXISTS con_project_cost (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   project_id VARCHAR(16),
   label      VARCHAR(120),
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS ceo_project_cost (
   actual     DECIMAL(12,2)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_project_task (
+CREATE TABLE IF NOT EXISTS con_project_task (
   id          VARCHAR(16) PRIMARY KEY,
   project_id  VARCHAR(16) NOT NULL,
   name        VARCHAR(200) NOT NULL,
@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS con_consultant (
   workload    TINYINT NULL              -- % de charge trimestre
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_supplier (
+CREATE TABLE IF NOT EXISTS con_supplier (
   id        VARCHAR(10) PRIMARY KEY,
   name      VARCHAR(120) NOT NULL,
   perimeter VARCHAR(160) NULL,
@@ -361,7 +361,7 @@ CREATE TABLE IF NOT EXISTS con_consultant_visit (
 -- ----------------------------------------------------------------------------
 -- Personnel interne (destinataires des rapports)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_person (
+CREATE TABLE IF NOT EXISTS con_person (
   id    VARCHAR(10) PRIMARY KEY,
   name  VARCHAR(120) NOT NULL,
   role  VARCHAR(120) NOT NULL,
@@ -371,14 +371,14 @@ CREATE TABLE IF NOT EXISTS ceo_person (
 -- ----------------------------------------------------------------------------
 -- Reporting automatisé + alertes
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_report_schedule (
+CREATE TABLE IF NOT EXISTS con_report_schedule (
   id          VARCHAR(10) PRIMARY KEY,
   name        VARCHAR(160) NOT NULL,
   type        VARCHAR(40) NOT NULL,     -- Financier | Commercial | Contrôle qualité | …
   description VARCHAR(255) NULL,
   frequency   VARCHAR(30) NOT NULL,     -- Hebdomadaire | Mensuel | Trimestriel | Annuel
   postes_json JSON NOT NULL,            -- ["p1","p3"] écrans sources P1–P12
-  dest_id     VARCHAR(10) NULL,         -- ceo_person.id
+  dest_id     VARCHAR(10) NULL,         -- con_person.id
   cc_id       VARCHAR(10) NULL,
   last_run    DATE NULL,
   next_run    DATE NULL,
@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS ceo_report_schedule (
   active      TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_alert_rule (
+CREATE TABLE IF NOT EXISTS con_alert_rule (
   id      VARCHAR(10) PRIMARY KEY,
   name    VARCHAR(160) NOT NULL,
   channel VARCHAR(40) NOT NULL,         -- Push + email | Email | Push
@@ -396,14 +396,14 @@ CREATE TABLE IF NOT EXISTS ceo_alert_rule (
 -- ----------------------------------------------------------------------------
 -- Modèles d'email et templates de projet par axe
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_email_template (
+CREATE TABLE IF NOT EXISTS con_email_template (
   id      VARCHAR(10) PRIMARY KEY,
   name    VARCHAR(120) NOT NULL,
   subject VARCHAR(200) NOT NULL,
   body    TEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_project_template (
+CREATE TABLE IF NOT EXISTS con_project_template (
   axe         VARCHAR(60) PRIMARY KEY,  -- Ventes | Marge nette franchisé | Développement réseau | Produit — Interne… | Produit — Externe…
   jalons_json JSON NOT NULL,            -- [{"nom","j"}] j = jours avant échéance (≤ 0)
   couts_json  JSON NOT NULL             -- [{"poste","prevu"}]
@@ -412,7 +412,7 @@ CREATE TABLE IF NOT EXISTS ceo_project_template (
 -- ----------------------------------------------------------------------------
 -- CRM projet (gain marque / apport / objectif / attendu vs réalisé)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_project_crm (
+CREATE TABLE IF NOT EXISTS con_project_crm (
   project_id VARCHAR(16) PRIMARY KEY,
   gain       TEXT NULL,
   apport     TEXT NULL,
@@ -444,7 +444,7 @@ CREATE TABLE IF NOT EXISTS ceo_app_setting (
 -- ----------------------------------------------------------------------------
 -- Catalogue et ventes mensuelles par référence (alimente /products/scoring)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_product (
+CREATE TABLE IF NOT EXISTS con_product (
   id        VARCHAR(24) PRIMARY KEY,
   nom       VARCHAR(120) NOT NULL,
   categorie VARCHAR(60)  NOT NULL,
@@ -477,7 +477,7 @@ CREATE TABLE IF NOT EXISTS mac_report_share (
   KEY idx_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS ceo_product_month_sales (
+CREATE TABLE IF NOT EXISTS con_product_month_sales (
   product_id    VARCHAR(24) NOT NULL,
   annee         SMALLINT    NOT NULL,
   mois          TINYINT     NOT NULL,
@@ -486,7 +486,7 @@ CREATE TABLE IF NOT EXISTS ceo_product_month_sales (
   prix_moyen    DECIMAL(8,2) NOT NULL,        -- prix de vente TTC moyen
   cout_unitaire DECIMAL(8,2) NOT NULL,        -- matière + emballage
   PRIMARY KEY (product_id, annee, mois),
-  FOREIGN KEY (product_id) REFERENCES ceo_product(id)
+  FOREIGN KEY (product_id) REFERENCES con_product(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------
@@ -501,14 +501,14 @@ CREATE TABLE IF NOT EXISTS ceo_product_month_sales (
 -- encore validée, ce qui alimente le groupe « À valider » de l'écran.
 --
 -- Sur une base créée par une version antérieure :
---   ALTER TABLE ceo_project_task ADD COLUMN note TINYINT NULL;
---   ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
+--   ALTER TABLE con_project_task ADD COLUMN note TINYINT NULL;
+--   ALTER TABLE con_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
 -- ----------------------------------------------------------------------------
 -- Le signalement ouvert par une validation sous le seuil.
 --
 -- Pas de colonne `gravite` : elle serait la copie de `note`, et deux sources
 -- pour un même fait finissent par diverger.
-CREATE TABLE IF NOT EXISTS ceo_task_issue (
+CREATE TABLE IF NOT EXISTS con_task_issue (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   task_id     VARCHAR(16)  NOT NULL,
   note        TINYINT      NOT NULL,          -- 1..3, recopiée pour l'historique
@@ -524,7 +524,7 @@ CREATE TABLE IF NOT EXISTS ceo_task_issue (
   closed_by   VARCHAR(80)  NULL,
   KEY idx_task (task_id),
   KEY idx_status (status, created_at),
-  CONSTRAINT fk_issue_task FOREIGN KEY (task_id) REFERENCES ceo_project_task(id)
+  CONSTRAINT fk_issue_task FOREIGN KEY (task_id) REFERENCES con_project_task(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------
@@ -535,7 +535,7 @@ CREATE TABLE IF NOT EXISTS ceo_task_issue (
 -- Le coût matière (`mat`) vit ici aussi — c'est la seule source dont dispose
 -- le réseau, et il alimente le critère « marge nette » du scoring produit.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_prod_product (
+CREATE TABLE IF NOT EXISTS con_prod_product (
   ref        VARCHAR(24) PRIMARY KEY,
   nom        VARCHAR(160) NOT NULL,
   categorie  VARCHAR(60)  NOT NULL DEFAULT '',
@@ -563,13 +563,13 @@ CREATE TABLE IF NOT EXISTS ceo_prod_product (
 -- Quatre niveaux avec identité propre — renommer « Vitrine 1 » ne doit pas
 -- déplacer ce qu'elle porte, ce qu'un rattachement par libellé aurait fait.
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS pla_zone (
+CREATE TABLE IF NOT EXISTS con_pla_zone (
   id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nom  VARCHAR(80) NOT NULL,
   rang SMALLINT UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS pla_meuble (
+CREATE TABLE IF NOT EXISTS con_pla_meuble (
   id      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   zone_id INT UNSIGNED NOT NULL,
   nom     VARCHAR(80) NOT NULL,
@@ -577,7 +577,7 @@ CREATE TABLE IF NOT EXISTS pla_meuble (
   KEY idx_zone (zone_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS pla_niveau (
+CREATE TABLE IF NOT EXISTS con_pla_niveau (
   id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   meuble_id INT UNSIGNED NOT NULL,
   nom       VARCHAR(80) NOT NULL,
@@ -585,7 +585,7 @@ CREATE TABLE IF NOT EXISTS pla_niveau (
   KEY idx_meuble (meuble_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS pla_slot (
+CREATE TABLE IF NOT EXISTS con_pla_slot (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   niveau_id  INT UNSIGNED NOT NULL,
   position   SMALLINT UNSIGNED NOT NULL,
@@ -597,7 +597,7 @@ CREATE TABLE IF NOT EXISTS pla_slot (
 -- Placement : slot_id est la vérité ; zone / meuble / niveau / slot sont
 -- recopiés en clair pour que le référentiel produit les lise sans recharger
 -- tout l'arbre.
-CREATE TABLE IF NOT EXISTS pla_placement (
+CREATE TABLE IF NOT EXISTS con_pla_placement (
   ref     VARCHAR(24) PRIMARY KEY,
   slot_id INT UNSIGNED NULL,
   zone    VARCHAR(160) NOT NULL DEFAULT '',
@@ -610,7 +610,7 @@ CREATE TABLE IF NOT EXISTS pla_placement (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Consigne de présentation, sur une référence, une zone ou un meuble.
-CREATE TABLE IF NOT EXISTS pla_note (
+CREATE TABLE IF NOT EXISTS con_pla_note (
   cible    VARCHAR(12) NOT NULL,
   cible_id VARCHAR(24) NOT NULL,
   texte    TEXT NULL,
@@ -634,7 +634,7 @@ CREATE TABLE IF NOT EXISTS pla_note (
 -- plusieurs moments de la journée, versionnée : du / au (au NULL = en vigueur).
 -- periodes : NULL = toute la journée, sinon « matin,midi », « aprem »…
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_plano_std_emplacement (
+CREATE TABLE IF NOT EXISTS con_plano_std_emplacement (
   id       INT AUTO_INCREMENT PRIMARY KEY,
   section  TINYINT NOT NULL,
   niveau   VARCHAR(4) NOT NULL,
@@ -654,7 +654,7 @@ CREATE TABLE IF NOT EXISTS ceo_plano_std_emplacement (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Le nom donné à une zone (z0…z4) ; sans ligne, le nom par défaut.
-CREATE TABLE IF NOT EXISTS ceo_plano_std_zone (
+CREATE TABLE IF NOT EXISTS con_plano_std_zone (
   id  VARCHAR(4) NOT NULL PRIMARY KEY,
   nom VARCHAR(80) NULL,
   par VARCHAR(120) NULL,
@@ -662,7 +662,7 @@ CREATE TABLE IF NOT EXISTS ceo_plano_std_zone (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- La photo de recette du panel, téléchargée une fois sous uploads/plano/panel.
-CREATE TABLE IF NOT EXISTS ceo_plano_std_photo (
+CREATE TABLE IF NOT EXISTS con_plano_std_photo (
   ref     VARCHAR(40) NOT NULL PRIMARY KEY,
   nom     VARCHAR(200) NULL,
   fichier VARCHAR(255) NULL,
@@ -670,7 +670,7 @@ CREATE TABLE IF NOT EXISTS ceo_plano_std_photo (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Le montage en magasin : une photo par magasin, zone et jour (tablette).
-CREATE TABLE IF NOT EXISTS ceo_plano_std_montage (
+CREATE TABLE IF NOT EXISTS con_plano_std_montage (
   shop_id VARCHAR(32) NOT NULL,
   zone    VARCHAR(4) NOT NULL,
   jour    DATE NOT NULL,

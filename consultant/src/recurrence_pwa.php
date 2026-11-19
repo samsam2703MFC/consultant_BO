@@ -18,7 +18,7 @@ declare(strict_types=1);
  * La copie de la base du panel s'arrête au 14/07/2026 (/audit/fraicheur) : rien n'est lu dans `transaction` ni `client`.
  *
  * Ce qui est gardé : l'identifiant du client, jamais son nom — les jours où il est passé dans un magasin
- * (`ceo_pwa_visite`), les jours relevés (`ceo_pwa_jour`), et son statut dans l'app (`ceo_pwa_client`). Rien ne sort
+ * (`con_pwa_visite`), les jours relevés (`con_pwa_jour`), et son statut dans l'app (`con_pwa_client`). Rien ne sort
  * que des comptes.
  *
  * Le relevé avance au cron, du plus récent au plus ancien jusqu'au 1er janvier, un lot par battement ; une liste lue
@@ -42,26 +42,26 @@ function rpSchema(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_pwa_jour ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pwa_jour ('
         . 'shop_id INT NOT NULL, jour DATE NOT NULL,'
         . 'tickets INT NOT NULL DEFAULT 0,'           // tickets du jour
         . 'identifies INT NOT NULL DEFAULT 0,'        // tickets non pro rattachés à un client
         . 'lu_le DATETIME NULL, essais TINYINT NOT NULL DEFAULT 0,'
         . 'PRIMARY KEY (shop_id, jour)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_pwa_visite ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pwa_visite ('
         . 'shop_id INT NOT NULL, jour DATE NOT NULL, client_id BIGINT NOT NULL,'
         . 'tickets SMALLINT NOT NULL DEFAULT 1,'
         . 'PRIMARY KEY (shop_id, jour, client_id), KEY k_client (client_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_pwa_client ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pwa_client ('
         . 'client_id BIGINT NOT NULL PRIMARY KEY,'
         . 'pwa TINYINT NULL,'                         // pwa_user de la fiche ; NULL : fiche lue sans le champ
         . 'fidelite TINYINT NULL, membre_depuis DATE NULL,'
         . 'lu_le DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // La répartition des clients identifiés (23/10/2026) : canal d'origine de la fiche, compte en ligne déjà utilisé,
     // client du webshop. Les fiches lues avant ces colonnes se relisent toutes.
-    if (Db::rows("SHOW COLUMNS FROM ceo_pwa_client LIKE 'canal'") === []) {
-        Db::exec('ALTER TABLE ceo_pwa_client ADD COLUMN canal VARCHAR(40) NULL, ADD COLUMN connecte TINYINT NULL, ADD COLUMN webshop TINYINT NULL');
-        Db::exec("UPDATE ceo_pwa_client SET lu_le = '2000-01-01'");
+    if (Db::rows("SHOW COLUMNS FROM con_pwa_client LIKE 'canal'") === []) {
+        Db::exec('ALTER TABLE con_pwa_client ADD COLUMN canal VARCHAR(40) NULL, ADD COLUMN connecte TINYINT NULL, ADD COLUMN webshop TINYINT NULL');
+        Db::exec("UPDATE con_pwa_client SET lu_le = '2000-01-01'");
     }
     $fait = true;
 }
@@ -87,13 +87,13 @@ function rpGraveListe(int $sid, string $j, array $liste): void
 {
     rpSchema();
     $r = rpDuListe($liste);
-    Db::exec('DELETE FROM ceo_pwa_visite WHERE shop_id = ? AND jour = ?', [$sid, $j]);
+    Db::exec('DELETE FROM con_pwa_visite WHERE shop_id = ? AND jour = ?', [$sid, $j]);
     foreach (array_chunk($r['clients'], 200, true) as $lot) {
         $v = []; $p = [];
         foreach ($lot as $cid => $tk) { $v[] = '(?,?,?,?)'; array_push($p, $sid, $j, $cid, min(32000, $tk)); }
-        Db::exec('INSERT INTO ceo_pwa_visite (shop_id, jour, client_id, tickets) VALUES ' . implode(',', $v), $p);
+        Db::exec('INSERT INTO con_pwa_visite (shop_id, jour, client_id, tickets) VALUES ' . implode(',', $v), $p);
     }
-    Db::exec('INSERT INTO ceo_pwa_jour (shop_id, jour, tickets, identifies, lu_le, essais) VALUES (?,?,?,?,NOW(),0)
+    Db::exec('INSERT INTO con_pwa_jour (shop_id, jour, tickets, identifies, lu_le, essais) VALUES (?,?,?,?,NOW(),0)
               ON DUPLICATE KEY UPDATE tickets = VALUES(tickets), identifies = VALUES(identifies), lu_le = VALUES(lu_le), essais = 0',
         [$sid, $j, $r['tickets'], $r['identifies']]);
 }
@@ -121,7 +121,7 @@ function rpLireJours(array $paires): int
     foreach ($paires as $i => [$sid, $j]) {
         $l = $res[$i] ?? null;
         if (is_array($l)) { rpGraveListe((int) $sid, $j, $l); $ok++; continue; }
-        Db::exec('INSERT INTO ceo_pwa_jour (shop_id, jour, essais) VALUES (?,?,1) ON DUPLICATE KEY UPDATE essais = essais + 1', [(int) $sid, $j]);
+        Db::exec('INSERT INTO con_pwa_jour (shop_id, jour, essais) VALUES (?,?,1) ON DUPLICATE KEY UPDATE essais = essais + 1', [(int) $sid, $j]);
     }
     return $ok;
 }
@@ -135,7 +135,7 @@ function rpAManquer(array $sids, string $du, string $au, int $n): array
     if ($du < RP_DEBUT) { $du = RP_DEBUT; }
     if ($du > $au || $n <= 0) { return []; }
     $lus = [];
-    foreach (Db::rows('SELECT shop_id, jour, lu_le, essais FROM ceo_pwa_jour WHERE jour BETWEEN ? AND ?', [$du, $au]) as $r) {
+    foreach (Db::rows('SELECT shop_id, jour, lu_le, essais FROM con_pwa_jour WHERE jour BETWEEN ? AND ?', [$du, $au]) as $r) {
         $lus[(int) $r['shop_id'] . '|' . $r['jour']] = $r;
     }
     $out = [];
@@ -185,7 +185,7 @@ function rpLireFiches(array $clients): int
     foreach ($clients as $cid => $sid) {
         $f = rpLitFiche($res[$cid] ?? null);
         if ($f === null) { continue; }
-        Db::exec('INSERT INTO ceo_pwa_client (client_id, pwa, fidelite, membre_depuis, canal, connecte, webshop, lu_le) VALUES (?,?,?,?,?,?,?,NOW())
+        Db::exec('INSERT INTO con_pwa_client (client_id, pwa, fidelite, membre_depuis, canal, connecte, webshop, lu_le) VALUES (?,?,?,?,?,?,?,NOW())
                   ON DUPLICATE KEY UPDATE pwa = VALUES(pwa), fidelite = VALUES(fidelite), membre_depuis = VALUES(membre_depuis),
                       canal = VALUES(canal), connecte = VALUES(connecte), webshop = VALUES(webshop), lu_le = VALUES(lu_le)',
             [(int) $cid, $f['pwa'], $f['fidelite'], $f['membre'], $f['canal'], $f['connecte'], $f['webshop']]);
@@ -201,7 +201,7 @@ function rpFichesAManquer(string $du, string $au, int $n): array
     if ($n <= 0) { return []; }
     $out = [];
     foreach (Db::rows('SELECT v.client_id, MAX(v.shop_id) shop, MAX(v.jour) dernier
-                         FROM ceo_pwa_visite v LEFT JOIN ceo_pwa_client c ON c.client_id = v.client_id
+                         FROM con_pwa_visite v LEFT JOIN con_pwa_client c ON c.client_id = v.client_id
                         WHERE v.jour BETWEEN ? AND ?
                           AND (c.client_id IS NULL
                                OR (c.pwa = 1 AND c.lu_le < NOW() - INTERVAL ' . RP_TTL_PWA . ' DAY)
@@ -303,7 +303,7 @@ function rpTaux(array $sids, string $du, string $au): array
     $dDu = max($du, RP_DEBUT); $dAu = min($au, date('Y-m-d', strtotime($auj . ' -1 day')));
     $clos = $dDu <= $dAu ? (int) round((strtotime($dAu . ' 12:00') - strtotime($dDu . ' 12:00')) / 86400) + 1 : 0;
     $avantDebut = $du < RP_DEBUT;
-    foreach (Db::rows('SELECT shop_id, COUNT(*) n, SUM(jour = ?) auj, SUM(tickets) tk FROM ceo_pwa_jour
+    foreach (Db::rows('SELECT shop_id, COUNT(*) n, SUM(jour = ?) auj, SUM(tickets) tk FROM con_pwa_jour
                         WHERE jour BETWEEN ? AND ? AND lu_le IS NOT NULL GROUP BY shop_id', [$auj, $du, $au]) as $r) {
         $sid = (int) $r['shop_id'];
         if (!isset($out['magasins'][$sid])) { continue; }
@@ -316,7 +316,7 @@ function rpTaux(array $sids, string $du, string $au): array
     // les passages : un jour avec au moins un ticket, par client et par magasin
     $tous = [];
     foreach (Db::rows('SELECT v.shop_id, v.client_id, COUNT(*) passages, SUM(v.tickets) tk, c.pwa, c.client_id lu, c.fidelite, c.canal, c.connecte, c.webshop
-                         FROM ceo_pwa_visite v LEFT JOIN ceo_pwa_client c ON c.client_id = v.client_id
+                         FROM con_pwa_visite v LEFT JOIN con_pwa_client c ON c.client_id = v.client_id
                         WHERE v.jour BETWEEN ? AND ? GROUP BY v.shop_id, v.client_id', [$du, $au]) as $r) {
         $sid = (int) $r['shop_id'];
         if (!isset($out['magasins'][$sid])) { continue; }
@@ -337,7 +337,7 @@ function rpTaux(array $sids, string $du, string $au): array
     if ($tous !== []) {
         $jours = []; $estPwa = [];
         $in = implode(',', array_map('intval', array_keys($out['magasins'])));
-        foreach (Db::rows('SELECT DISTINCT v.client_id, v.jour, c.pwa FROM ceo_pwa_visite v LEFT JOIN ceo_pwa_client c ON c.client_id = v.client_id
+        foreach (Db::rows('SELECT DISTINCT v.client_id, v.jour, c.pwa FROM con_pwa_visite v LEFT JOIN con_pwa_client c ON c.client_id = v.client_id
                             WHERE v.jour BETWEEN ? AND ? AND v.shop_id IN (' . $in . ')', [$du, $au]) as $r) {
             $jours[(int) $r['client_id']] = ($jours[(int) $r['client_id']] ?? 0) + 1;
             if ($r['pwa'] !== null && (int) $r['pwa'] === 1) { $estPwa[(int) $r['client_id']] = true; }
@@ -386,7 +386,7 @@ function rpSerie(array $sids, array $mois, string $cle = 'vIdent'): array
 function rpSeuilKpi(string $num = 'clientsRevenus', string $den = 'clientsIdentifies'): ?array
 {
     try {
-        foreach (Db::rows('SELECT code, calcul, seuil_alerte, seuil_critique, sens FROM ceo_kpi_def WHERE actif = 1 ORDER BY ordre, id') as $r) {
+        foreach (Db::rows('SELECT code, calcul, seuil_alerte, seuil_critique, sens FROM con_kpi_def WHERE actif = 1 ORDER BY ordre, id') as $r) {
             $c = json_decode((string) $r['calcul'], true);
             if (!is_array($c) || ($c['num'] ?? '') !== $num || ($c['den'] ?? '') !== $den) { continue; }
             $pct = ($c['echelle'] ?? '') === 'pct';

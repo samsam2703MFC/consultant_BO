@@ -42,7 +42,7 @@ function pfObligReseau(string $date): array
     $out = [];
     try {
         $q = [];
-        foreach (Db::rows('SELECT ref, qmin FROM ceo_prod_product WHERE must = 1 AND actif = 1') as $r) { $q[(string) $r['ref']] = (int) $r['qmin']; }
+        foreach (Db::rows('SELECT ref, qmin FROM con_prod_product WHERE must = 1 AND actif = 1') as $r) { $q[(string) $r['ref']] = (int) $r['qmin']; }
         foreach (aoObligatoires($date)['exigibles'] as $x) {
             if (!preg_match('/^\d{1,9}$/', (string) $x['ref'])) { continue; }
             $q0 = (int) ($q[(string) $x['ref']] ?? 0);

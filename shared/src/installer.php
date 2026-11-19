@@ -236,7 +236,7 @@ function ensureScouting(): void
  */
 function ensureRevue(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_revue ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_prod_revue ('
         . 'id_produit VARCHAR(24) PRIMARY KEY,'
         . 'note TINYINT NULL,'                      // 1..5, NULL = pas de revue
         . 'necessaire TINYINT NOT NULL DEFAULT 0,'  // à garder quoi qu'en dise le score
@@ -247,9 +247,9 @@ function ensureRevue(): void
     // sans la colonne la reçoit ici, et la note devient facultative — une
     // référence peut être nécessaire sans avoir été notée.
     $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
-        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_prod_revue' AND column_name = 'necessaire'");
+        . " WHERE table_schema = DATABASE() AND table_name = 'con_prod_revue' AND column_name = 'necessaire'");
     if ((int) ($r['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_prod_revue MODIFY COLUMN note TINYINT NULL, ADD COLUMN necessaire TINYINT NOT NULL DEFAULT 0');
+        Db::exec('ALTER TABLE con_prod_revue MODIFY COLUMN note TINYINT NULL, ADD COLUMN necessaire TINYINT NOT NULL DEFAULT 0');
     }
 }
 
@@ -286,26 +286,26 @@ function ensureReglageLarge(): void
  */
 function ensurePlanogramme(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_zone ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_zone ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(80) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_meuble ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_meuble ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'zone_id INT UNSIGNED NOT NULL,'
         . 'nom VARCHAR(80) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
         . 'KEY idx_zone (zone_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_niveau ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_niveau ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'meuble_id INT UNSIGNED NOT NULL,'
         . 'nom VARCHAR(80) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
         . 'KEY idx_meuble (meuble_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_slot ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_slot ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'niveau_id INT UNSIGNED NOT NULL,'
         . 'position SMALLINT UNSIGNED NOT NULL,'
@@ -318,7 +318,7 @@ function ensurePlanogramme(): void
     // `slot_id` est la vérité ; zone / meuble / niveau / position sont recopiés
     // en clair parce que le référentiel produit les lit sous cette forme et n'a
     // pas à recharger tout l'arbre pour afficher « Vitrine 1 · haut · 4 ».
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_placement ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_placement ('
         . 'ref VARCHAR(24) PRIMARY KEY,'
         . 'slot_id INT UNSIGNED NULL,'
         . 'zone VARCHAR(160) NOT NULL DEFAULT \'\','
@@ -336,9 +336,9 @@ function ensurePlanogramme(): void
     // la liste ne DÉFAIT rien : les emplacements gardent la valeur qu'ils
     // portent, c'est la proposition qui disparaît.
     $neufFormats = false;
-    try { Db::row('SELECT 1 FROM pla_format LIMIT 1'); }
+    try { Db::row('SELECT 1 FROM con_pla_format LIMIT 1'); }
     catch (PDOException $e) { $neufFormats = true; }
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_format ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_format ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(60) NOT NULL,'
         . 'largeur_mm SMALLINT UNSIGNED NULL,'
@@ -350,14 +350,14 @@ function ensurePlanogramme(): void
         // Les trois formats du comptoir tels qu'ils ont été relevés. Ce sont
         // des propositions de départ : la croix les retire, la saisie en ajoute.
         foreach ([['30 × 30 cm', 300, 300], ['60 × 40 cm', 600, 400], ['60 × 15 cm', 600, 150]] as $i => $f) {
-            Db::exec('INSERT INTO pla_format (nom, largeur_mm, hauteur_mm, rang) VALUES (?,?,?,?)'
+            Db::exec('INSERT INTO con_pla_format (nom, largeur_mm, hauteur_mm, rang) VALUES (?,?,?,?)'
                 . ' ON DUPLICATE KEY UPDATE nom = nom', [$f[0], $f[1], $f[2], $i + 1]);
         }
     }
     $neufCont = false;
-    try { Db::row('SELECT 1 FROM pla_contenant LIMIT 1'); }
+    try { Db::row('SELECT 1 FROM con_pla_contenant LIMIT 1'); }
     catch (PDOException $e) { $neufCont = true; }
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_contenant ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_contenant ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(60) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
@@ -366,7 +366,7 @@ function ensurePlanogramme(): void
     if ($neufCont) {
         foreach (['Plateau bois 1/1', 'Corbeille osier', 'Panier grillagé', 'Présentoir gradin',
                   'Bac inox GN 1/2', 'À même la tablette'] as $i => $n) {
-            Db::exec('INSERT INTO pla_contenant (nom, rang) VALUES (?,?)'
+            Db::exec('INSERT INTO con_pla_contenant (nom, rang) VALUES (?,?)'
                 . ' ON DUPLICATE KEY UPDATE nom = nom', [$n, $i + 1]);
         }
     }
@@ -375,7 +375,7 @@ function ensurePlanogramme(): void
     // produits/available → id_recipe → /recipes/{id} coûte deux appels par
     // référence, et le planogramme en affiche des dizaines. L'absence est
     // mémorisée aussi (url NULL) — c'est une réponse, pas un raté.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_photo ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plano_photo ('
         . 'ref VARCHAR(24) PRIMARY KEY,'
         . 'nom VARCHAR(190) NOT NULL DEFAULT \'\','
         . 'url VARCHAR(500) NULL,'
@@ -386,7 +386,7 @@ function ensurePlanogramme(): void
     // une consigne de meuble vaut pour tout ce qu'il contient, une consigne de
     // référence ne vaut que pour elle. Deux tables auraient dupliqué la même
     // forme et le même écran.
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_note ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_note ('
         . 'cible VARCHAR(12) NOT NULL,'          // ref | zone | meuble
         . 'cible_id VARCHAR(24) NOT NULL,'
         . 'texte TEXT NULL,'
@@ -409,14 +409,14 @@ function ensurePlanogramme(): void
         'gestion'     => "VARCHAR(120) NOT NULL DEFAULT ''",
         'pcmn'        => "VARCHAR(20) NOT NULL DEFAULT ''",
     ] as $col => $type) {
-        try { Db::exec('ALTER TABLE ceo_shop_budget_line ADD COLUMN ' . $col . ' ' . $type); }
+        try { Db::exec('ALTER TABLE con_shop_budget_line ADD COLUMN ' . $col . ' ' . $type); }
         catch (PDOException $e) { /* colonne déjà présente */ }
     }
 
     // Les fins de gamme annoncées : une référence qu'on arrête porte sa date et
     // sa note au réseau. Table dédiée — une colonne dans le produit du panel
     // n'est pas à nous, et un réglage JSON ne se joint pas au catalogue.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_fin ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_prod_fin ('
         . 'ref VARCHAR(40) NOT NULL,'
         . 'end_on DATE NOT NULL,'
         . "note VARCHAR(300) NOT NULL DEFAULT '',"
@@ -427,14 +427,14 @@ function ensurePlanogramme(): void
     // L'économie d'un projet : marge visée, prix, volumes, retour en royalties.
     // Un JSON, parce que ce sont des hypothèses qui se lisent ensemble et qui
     // évolueront — pas dix colonnes qu'il faudrait migrer à chaque ajout.
-    try { Db::exec("ALTER TABLE ceo_project ADD COLUMN economie_json TEXT NULL"); }
+    try { Db::exec("ALTER TABLE con_project ADD COLUMN economie_json TEXT NULL"); }
     catch (PDOException $e) { /* colonne déjà présente */ }
 
     // Les charges s'encodent CHAQUE MOIS, magasin par magasin : le modèle donne
     // le taux attendu, cette table garde ce qui a réellement été dépensé. Sans
     // elle, l'écran de suivi ne pouvait que recalculer un pourcentage — il
     // affichait « frais encodés » ce qui n'était qu'une projection.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_charge_month ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_shop_charge_month ('
         . 'shop_id VARCHAR(40) NOT NULL,'
         . 'fiscal_year SMALLINT UNSIGNED NOT NULL,'
         . 'month TINYINT UNSIGNED NOT NULL,'
@@ -501,7 +501,7 @@ function ensurePlanogramme(): void
     // poser, son mode de présentation et les dimensions d'un emplacement
     // décident de ce qui y tient. Ajoutés après coup, d'où l'ALTER.
     foreach ([
-        'pla_meuble' => [
+        'con_pla_meuble' => [
             'type'         => "VARCHAR(40) NOT NULL DEFAULT ''",
             'temperature'  => "VARCHAR(40) NOT NULL DEFAULT ''",
             'presentation' => "VARCHAR(40) NOT NULL DEFAULT ''",
@@ -511,7 +511,7 @@ function ensurePlanogramme(): void
             // journée, ce qui garde le comportement des meubles déjà saisis.
             'periodes'     => "VARCHAR(60) NOT NULL DEFAULT ''",
         ],
-        'pla_slot' => [
+        'con_pla_slot' => [
             'longueur_mm' => 'SMALLINT UNSIGNED NULL',
             'hauteur_mm'  => 'SMALLINT UNSIGNED NULL',
             // Le format et le contenant sont retenus par leur NOM, pas par une
@@ -523,7 +523,7 @@ function ensurePlanogramme(): void
         // La grille d'un produit dans son emplacement : combien on en met, sur
         // combien de colonnes, donc sur combien de rangées. `fronts` reste ce
         // qu'il était — le nombre vu de face, c'est-à-dire les colonnes.
-        'pla_placement' => [
+        'con_pla_placement' => [
             'par_slot'     => 'SMALLINT UNSIGNED NULL',
             'grille_cols'  => 'TINYINT UNSIGNED NULL',
             'grille_rangs' => 'SMALLINT UNSIGNED NULL',
@@ -534,7 +534,7 @@ function ensurePlanogramme(): void
         ],
         // La photo est rangée sur le disque et sa SEULE référence vit ici : un
         // fichier de 2 Mo en base serait relu à chaque lecture du planogramme.
-        'pla_note' => ['photo' => 'VARCHAR(255) NULL'],
+        'con_pla_note' => ['photo' => 'VARCHAR(255) NULL'],
         // Une dépense du fonds peut être un INVESTISSEMENT — un four, une
         // enseigne — et non un frais courant : le grand livre les distingue
         // et les sous-totalise. La table vient du module marketing disparu,
@@ -600,12 +600,12 @@ function ensurePlanogramme(): void
 function planoMigrer(): void
 {
     $repris = [
-        'ceo_plano_zone'   => ['pla_zone', 'id, nom, rang'],
-        'ceo_plano_meuble' => ['pla_meuble', 'id, zone_id, nom, rang'],
-        'ceo_plano_niveau' => ['pla_niveau', 'id, meuble_id, nom, rang'],
-        'ceo_plano_slot'   => ['pla_slot', 'id, niveau_id, position, largeur_mm, capacite'],
-        'ceo_plano_note'   => ['pla_note', 'cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le'],
-        'ceo_prod_planogram' => ['pla_placement', 'ref, slot_id, zone, meuble, niveau, slot, fronts, ordre'],
+        'ceo_plano_zone'   => ['con_pla_zone', 'id, nom, rang'],
+        'ceo_plano_meuble' => ['con_pla_meuble', 'id, zone_id, nom, rang'],
+        'ceo_plano_niveau' => ['con_pla_niveau', 'id, meuble_id, nom, rang'],
+        'ceo_plano_slot'   => ['con_pla_slot', 'id, niveau_id, position, largeur_mm, capacite'],
+        'ceo_plano_note'   => ['con_pla_note', 'cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le'],
+        'ceo_prod_planogram' => ['con_pla_placement', 'ref, slot_id, zone, meuble, niveau, slot, fronts, ordre'],
     ];
     foreach ($repris as $ancienne => [$nouvelle, $colonnes]) {
         try {
@@ -640,7 +640,7 @@ function planoMigrer(): void
  */
 function ensureAnnotation(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_annotation ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_task_annotation ('
         . 'id_shop INT UNSIGNED NOT NULL,'
         . 'id_task INT UNSIGNED NOT NULL,'
         . 'annot_date DATE NOT NULL,'
@@ -691,14 +691,14 @@ function ensureReference(): void
     $poserSetting('familles', ['Produits', 'Services', 'Organisation & coûts', 'Développement réseau']);
     $poserSetting('reportTypes', ['Financier', 'Commercial', 'Contrôle qualité', 'Pilotage projets', 'Développement réseau']);
 
-    if ((int) Db::row('SELECT COUNT(*) AS n FROM ceo_email_template')['n'] === 0) {
+    if ((int) Db::row('SELECT COUNT(*) AS n FROM con_email_template')['n'] === 0) {
         foreach (emailTemplatesDefaut() as $t) {
-            Db::exec('INSERT INTO ceo_email_template (id, name, subject, body) VALUES (?,?,?,?)', $t);
+            Db::exec('INSERT INTO con_email_template (id, name, subject, body) VALUES (?,?,?,?)', $t);
         }
     }
-    if ((int) Db::row('SELECT COUNT(*) AS n FROM ceo_project_template')['n'] === 0) {
+    if ((int) Db::row('SELECT COUNT(*) AS n FROM con_project_template')['n'] === 0) {
         foreach (projectTemplatesDefaut() as $t) {
-            Db::exec('INSERT INTO ceo_project_template (axe, jalons_json, couts_json) VALUES (?,?,?)', $t);
+            Db::exec('INSERT INTO con_project_template (axe, jalons_json, couts_json) VALUES (?,?,?)', $t);
         }
     }
 }
@@ -713,7 +713,7 @@ function ensureReference(): void
  */
 function ensureProduction(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_product ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_prod_product ('
         . 'ref VARCHAR(24) PRIMARY KEY, nom VARCHAR(160) NOT NULL,'
         . 'categorie VARCHAR(60) NOT NULL DEFAULT \'\', prep INT UNSIGNED NOT NULL DEFAULT 0,'
         . 'cuisson INT UNSIGNED NOT NULL DEFAULT 0, fin INT UNSIGNED NOT NULL DEFAULT 0,'
@@ -724,7 +724,7 @@ function ensureProduction(): void
         . 'profil VARCHAR(120) NOT NULL DEFAULT \'\', pwa_id BIGINT UNSIGNED NULL,'
         . 'actif TINYINT(1) NOT NULL DEFAULT 1, KEY idx_pwa (pwa_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    // Le placement au comptoir a rejoint `pla_placement` (voir
+    // Le placement au comptoir a rejoint `con_pla_placement` (voir
     // ensurePlanogramme). Le recréer ici le ferait naître à chaque appel pour
     // être aussitôt repris et supprimé par la migration.
 
@@ -788,7 +788,7 @@ function projectTemplatesDefaut(): array
  * `ensureInstalled()` ne rejoue `schema.sql` que si `ceo_app_setting` est
  * absente, et `seed.sql` que si la base est vide : sur une installation DÉJÀ
  * en service, aucun des deux ne repasse. Sans ce bloc, la mise à jour laissait
- * une base sans colonne `note`, sans `ceo_task_issue` et sans réglage — donc
+ * une base sans colonne `note`, sans `con_task_issue` et sans réglage — donc
  * un écran de validation aux niveaux vides, où l'on ne peut plus rien
  * signaler. La panne était silencieuse : ni erreur, ni trace.
  *
@@ -802,24 +802,24 @@ function ensureValidation(): void
             [$table, $colonne]);
         return (int) $r['n'] === 0;
     };
-    if ($manque('ceo_project_task', 'note')) {
-        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN note TINYINT NULL');
+    if ($manque('con_project_task', 'note')) {
+        Db::exec('ALTER TABLE con_project_task ADD COLUMN note TINYINT NULL');
     }
-    if ($manque('ceo_project_task', 'validated_by')) {
-        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL');
+    if ($manque('con_project_task', 'validated_by')) {
+        Db::exec('ALTER TABLE con_project_task ADD COLUMN validated_by VARCHAR(80) NULL');
     }
     // La date de validation, distincte de la livraison : sans elle, le suivi
     // situerait une validation d'aujourd'hui au mois où la tâche a été rendue.
-    if ($manque('ceo_project_task', 'validated_at')) {
-        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN validated_at DATETIME NULL');
+    if ($manque('con_project_task', 'validated_at')) {
+        Db::exec('ALTER TABLE con_project_task ADD COLUMN validated_at DATETIME NULL');
     }
     // La remise déclarée par le consultant depuis le panel : sans ces colonnes,
     // « rendue » ne dit pas QUI l'a dit, et c'était toujours la direction.
-    if ($manque('ceo_project_task', 'delivered_by')) {
-        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN delivered_by VARCHAR(80) NULL');
+    if ($manque('con_project_task', 'delivered_by')) {
+        Db::exec('ALTER TABLE con_project_task ADD COLUMN delivered_by VARCHAR(80) NULL');
     }
-    if ($manque('ceo_project_task', 'delivery_note')) {
-        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN delivery_note TEXT NULL');
+    if ($manque('con_project_task', 'delivery_note')) {
+        Db::exec('ALTER TABLE con_project_task ADD COLUMN delivery_note TEXT NULL');
     }
     // D'OÙ VIENT la tâche : la tâche de contrôle sur laquelle la note a été
     // écrite. Sans ces trois colonnes, la photo annotée qui a motivé la
@@ -830,12 +830,12 @@ function ensureValidation(): void
     // est partie. Sans lui, impossible de dire si le consultant l'a reçue.
     foreach (['src_shop' => 'VARCHAR(8) NULL', 'src_task' => 'VARCHAR(16) NULL',
               'src_date' => 'DATE NULL', 'panel_note' => 'INT NULL'] as $col => $type) {
-        if ($manque('ceo_project_task', $col)) {
-            Db::exec('ALTER TABLE ceo_project_task ADD COLUMN ' . $col . ' ' . $type);
+        if ($manque('con_project_task', $col)) {
+            Db::exec('ALTER TABLE con_project_task ADD COLUMN ' . $col . ' ' . $type);
         }
     }
 
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_issue ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_task_issue ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'task_id VARCHAR(16) NOT NULL,'
         . 'note TINYINT NOT NULL,'
@@ -1062,7 +1062,7 @@ function runSqlFile(string $path): void
  */
 function ensureCentrale(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ca_demande ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_ca_demande ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'fournisseur VARCHAR(120) NOT NULL DEFAULT \'\','
         . 'base VARCHAR(16) NOT NULL DEFAULT \'periode\','

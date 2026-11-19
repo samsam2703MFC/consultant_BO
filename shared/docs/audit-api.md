@@ -47,13 +47,13 @@ Le problème est entièrement côté serveur PHP.
 
 ### 2.2 Tables propres au cockpit (`ceo_*`) — 25 tables, aucun changement requis
 
-`ceo_shop`, `ceo_shop_month_perf`, `ceo_shop_budget`, `ceo_shop_budget_month`,
-`ceo_shop_budget_line`, `ceo_network_target`, `ceo_project`, `ceo_project_levid`,
-`ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_task_issue`,
-`ceo_project_crm`, `ceo_project_template`, `con_consultant`, `con_consultant_visit`,
-`ceo_supplier`, `ceo_person`, `ceo_report_schedule`, `ceo_alert_rule`,
-`ceo_email_template`, `ceo_journal_entry`, `ceo_app_setting`, `ceo_product`,
-`ceo_product_month_sales`.
+`ceo_shop`, `con_shop_month_perf`, `con_shop_budget`, `con_shop_budget_month`,
+`con_shop_budget_line`, `con_network_target`, `con_project`, `con_project_levid`,
+`con_project_milestone`, `con_project_cost`, `con_project_task`, `con_task_issue`,
+`con_project_crm`, `con_project_template`, `con_consultant`, `con_consultant_visit`,
+`con_supplier`, `con_person`, `con_report_schedule`, `con_alert_rule`,
+`con_email_template`, `ceo_journal_entry`, `ceo_app_setting`, `con_product`,
+`con_product_month_sales`.
 
 Ces tables sont la base *propre* du cockpit : les lire en SQL est normal, c'est ce que
 fait toute application avec ses propres données. Elles sont déjà exposées par les
@@ -68,14 +68,14 @@ décide que certaines de ces données ne doivent plus être détenues par le coc
 | **C2** | `kpi` | `src/endpoints.php:82` | `GET /referentiels/kpis` | `name` où `code IS NULL` → liste des KPI des assistants |
 | **C3** | `kpi` | `src/writes.php:306` | `PUT /parametres/seuil-{code}` | **`UPDATE kpi SET seuil_haut`** — écriture dans la table d'une autre application |
 | **C4** | `of_tag` | `src/endpoints.php:73` | `GET /referentiels/leviers` | `id`, `color` → couleur des 6 leviers de gestion |
-| **C5** | `of_tag` (par valeur) | `src/endpoints.php:11-18`, `src/writes.php:44-46`, `src/writes.php:247-252` | toutes | ids `2..7` **codés en dur** et **stockés** dans `ceo_project_levid.levid` et `ceo_shop_budget_line.levid` |
+| **C5** | `of_tag` (par valeur) | `src/endpoints.php:11-18`, `src/writes.php:44-46`, `src/writes.php:247-252` | toutes | ids `2..7` **codés en dur** et **stockés** dans `con_project_levid.levid` et `con_shop_budget_line.levid` |
 | **C6** | `mac_report_share` | `src/endpoints.php:135` | `GET /pwa/reports` | `token, id_shop, ym, label, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at` |
 
 Deux couplages annexes :
 
 - **C7** — `position` (Manuel Opératoire) : citée dans `sql/schema.sql:35`,
   `sql/grants.sql:43`, `docs/contrat-api.md` §2, et référencée par
-  `con_consultant.position_id` / `ceo_shop_budget.validated_by` — **jamais requêtée**.
+  `con_consultant.position_id` / `con_shop_budget.validated_by` — **jamais requêtée**.
   Couplage déclaré, dormant.
 - **C8** — `information_schema.columns` (`src/installer.php:53`) : lecture des
   métadonnées MySQL pour les migrations idempotentes. Interne à la base du cockpit,
@@ -208,7 +208,7 @@ GET {mo}/api/positions?appType=CONSULTANT
 ```
 
 Alternative si le rôle des consultants reste géré dans le cockpit : **supprimer** la
-colonne `con_consultant.position_id`, `ceo_shop_budget.validated_by`, la ligne
+colonne `con_consultant.position_id`, `con_shop_budget.validated_by`, la ligne
 `position` de `sql/schema.sql` et de `sql/grants.sql`. Un couplage documenté mais mort
 finit toujours par être branché « puisqu'il est déjà là ». Trancher dans un sens ou
 dans l'autre.
@@ -238,14 +238,14 @@ faut alimenter. Sans ces API, les données sont saisies à la main ou issues du 
 | Donnée | Table actuelle | Source réelle | API à demander |
 |---|---|---|---|
 | Référentiel magasins | `ceo_shop` | ERP / panel | `GET {erp}/api/shops` → code, nom, franchisé, zone, statut, ouverture |
-| Réel mensuel (CA, tickets, marge, food/labour/overhead) | `ceo_shop_month_perf` | ERP / caisse | `GET {erp}/api/shops/{id}/perf?annees=2025,2026` |
-| Ventes par référence | `ceo_product`, `ceo_product_month_sales` | ERP / caisse | `GET {erp}/api/products/sales?periode=2026-07` |
-| Consultants, fournisseurs, personnes | `con_consultant`, `ceo_supplier`, `ceo_person` | ERP / RH | `GET {erp}/api/people?type=consultant\|fournisseur\|interne` |
+| Réel mensuel (CA, tickets, marge, food/labour/overhead) | `con_shop_month_perf` | ERP / caisse | `GET {erp}/api/shops/{id}/perf?annees=2025,2026` |
+| Ventes par référence | `con_product`, `con_product_month_sales` | ERP / caisse | `GET {erp}/api/products/sales?periode=2026-07` |
+| Consultants, fournisseurs, personnes | `con_consultant`, `con_supplier`, `con_person` | ERP / RH | `GET {erp}/api/people?type=consultant\|fournisseur\|interne` |
 | Identité de l'utilisateur connecté | `ceo_app_setting.utilisateur` (valeur statique) | ERP (qui porte l'auth) | `GET {erp}/api/me` — voir **F7** |
 | Envoi réel des rapports | simulé (`writes.php:283`) | SMTP / Resend | à brancher |
 
 Note : l'écran « Encodage franchisé » n'est pas implémenté (README) ; tant que l'API de
-perf n'existe pas, `ceo_shop_month_perf` n'a **aucune source** en production hors le seed
+perf n'existe pas, `con_shop_month_perf` n'a **aucune source** en production hors le seed
 de démonstration. C'est le trou de données le plus large du projet.
 
 ---
@@ -266,8 +266,8 @@ de démonstration. C'est le trou de données le plus large du projet.
 4. **Modifications de code** — `ep_leviers` (`endpoints.php:70`), `ep_meta`
    (`endpoints.php:33`), `ep_kpis` (`endpoints.php:80`), `ep_pwa_reports`
    (`endpoints.php:124`), `wr_param_put` (`writes.php:301`).
-5. **Migration `levid` → `slug`** — `ceo_project_levid.levid` et
-   `ceo_shop_budget_line.levid` stockent des ids `of_tag`. Les convertir en slugs
+5. **Migration `levid` → `slug`** — `con_project_levid.levid` et
+   `con_shop_budget_line.levid` stockent des ids `of_tag`. Les convertir en slugs
    (`VARCHAR(20)`) supprime la dernière trace d'une clé étrangère d'autrui dans les
    données du cockpit. Migration idempotente à ajouter dans `ensureValidation()`.
 6. **Nettoyage de `sql/schema.sql`** — sortir les `CREATE TABLE IF NOT EXISTS of_tag`
@@ -285,7 +285,7 @@ de démonstration. C'est le trou de données le plus large du projet.
 | **F1** | Élevée | **Écriture dans la table d'une autre application.** `PUT /parametres/seuil-*` fait `UPDATE kpi SET seuil_haut` (`writes.php:306`). Aucun `GRANT` correspondant n'est accordé (`grants.sql:48`, commenté) : sur un compte MySQL dédié, la route échoue en 503 « base de données indisponible ». Sur le compte partagé, elle réussit — et modifie un référentiel du Manuel Opératoire sans trace de son côté. Corrigé par **API-3**. |
 | **F2** | Élevée | **L'installeur crée des tables d'autrui en production.** `ensureInstalled()` (`installer.php:19`) exécute `sql/schema.sql` sur la base partagée ; ce fichier contient `CREATE TABLE IF NOT EXISTS of_tag / kpi / position / mac_report_share`. Si l'une manque au premier appel (panel pas encore initialisé, base neuve), le cockpit crée une **souche vide avec sa propre définition de colonnes** ; l'application propriétaire trouvera ensuite une table du mauvais format que son propre `CREATE TABLE IF NOT EXISTS` ne corrigera pas. |
 | **F3** | Moyenne | **Repli silencieux sur `mac_report_share`.** Le `catch (PDOException)` (`endpoints.php:137`) renvoie un volet vide, indistinguable de « aucun partage ». Table absente, droits manquants, panel sur une autre base : trois pannes qui ne se voient pas. Ajouter un champ `indisponible: true` dans la réponse. |
-| **F4** | Moyenne | **Ids `of_tag` en dur et persistés.** `LEVIER_DEFS` (`endpoints.php:11-18`) fige `tag => 2..7`, et ces entiers partent en base (`ceo_project_levid`, `ceo_shop_budget_line`). Une renumérotation ou une insertion côté Manuel Opératoire repeint silencieusement les leviers de tout le cockpit. Symptôme déjà visible : Labour Cost et Overhead Cost partagent la même couleur (README). |
+| **F4** | Moyenne | **Ids `of_tag` en dur et persistés.** `LEVIER_DEFS` (`endpoints.php:11-18`) fige `tag => 2..7`, et ces entiers partent en base (`con_project_levid`, `con_shop_budget_line`). Une renumérotation ou une insertion côté Manuel Opératoire repeint silencieusement les leviers de tout le cockpit. Symptôme déjà visible : Labour Cost et Overhead Cost partagent la même couleur (README). |
 | **F5** | Moyenne | **Base et compte MySQL partagés.** `config.example.php` pointe sur `atelierby_db` avec les identifiants du panel, et `DEPLOIEMENT.md` §1 en fait la configuration recommandée ; `grants.sql` (compte à moindre privilège) est explicitement facultatif. Le cockpit peut donc lire *et écrire* toute la base du panel. Le lot 1 est le préalable à un vrai cloisonnement. |
 | **F6** | Moyenne | **Mode démo indiscernable.** Si l'API ne répond pas en 4 s, `api.js:89` charge `data.js` et se contente d'un `console.info`. Aucun bandeau à l'écran (`app.js` n'utilise `source` que pour masquer le bouton Déconnexion, l.224). Un CEO peut lire des chiffres inventés en les croyant réels. Un bandeau permanent « Données de démonstration » s'impose. |
 | **F7** | Moyenne | **Aucune identité.** `auth` est à `false` par défaut (`config.example.php`) : l'API est ouverte, la redirection depuis l'ERP n'est jamais vérifiée, et `meta.utilisateur` est une valeur statique de `ceo_app_setting`. Le mot de passe intégré (`src/auth.php`) est un palliatif mono-utilisateur : le journal attribue toutes les actions à « CEO ». `GET {erp}/api/me` (lot 3) est la vraie réponse. |
@@ -333,29 +333,29 @@ MySQL voit encore `of_tag`, rien ne garantit que personne ne le relira.
 | Endpoint | Tables lues |
 |---|---|
 | `GET /meta` | `ceo_app_setting` |
-| `GET /referentiels/email-templates` | `ceo_email_template` |
-| `GET /referentiels/project-templates` | `ceo_project_template` |
+| `GET /referentiels/email-templates` | `con_email_template` |
+| `GET /referentiels/project-templates` | `con_project_template` |
 | `GET /stores` | `ceo_shop` |
-| `GET /stores/perf` | `ceo_shop_month_perf` |
-| `GET /stores/budgets` | `ceo_shop_budget`, `ceo_shop_budget_line`, `ceo_shop_month_perf` |
-| `GET /targets` | `ceo_network_target`, `ceo_app_setting` |
+| `GET /stores/perf` | `con_shop_month_perf` |
+| `GET /stores/budgets` | `con_shop_budget`, `con_shop_budget_line`, `con_shop_month_perf` |
+| `GET /targets` | `con_network_target`, `ceo_app_setting` |
 | `GET /consultants` | `con_consultant`, `con_consultant_visit` |
-| `GET /fournisseurs` | `ceo_supplier` |
-| `GET /projects` | `ceo_project`, `ceo_project_levid`, `ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_task_issue` |
-| `GET /projects/crm` | `ceo_project_crm` |
-| `GET /people` | `ceo_person` |
-| `GET /reporting` | `ceo_report_schedule`, `ceo_alert_rule` |
+| `GET /fournisseurs` | `con_supplier` |
+| `GET /projects` | `con_project`, `con_project_levid`, `con_project_milestone`, `con_project_cost`, `con_project_task`, `con_task_issue` |
+| `GET /projects/crm` | `con_project_crm` |
+| `GET /people` | `con_person` |
+| `GET /reporting` | `con_report_schedule`, `con_alert_rule` |
 | `GET /journal` | `ceo_journal_entry` |
-| `GET /products/scoring` | `ceo_product`, `ceo_product_month_sales` |
+| `GET /products/scoring` | `con_product`, `con_product_month_sales` |
 | `GET /pwa/reports` | `ceo_shop`, `ceo_app_setting` (+ `mac_report_share`, cf. 8.1) |
 | `GET /auth/status` | `ceo_app_setting` |
 
 ### 8.4 Écritures sur tables propres (légitimes, conservées)
 
-`ceo_project`, `ceo_project_levid`, `ceo_project_milestone`, `ceo_project_cost`,
-`ceo_project_task`, `ceo_task_issue`, `ceo_shop_budget`, `ceo_shop_budget_month`,
-`ceo_shop_budget_line`, `ceo_shop_month_perf`, `ceo_report_schedule`, `ceo_alert_rule`,
-`ceo_email_template`, `ceo_project_template`, `ceo_app_setting`, `ceo_journal_entry`.
+`con_project`, `con_project_levid`, `con_project_milestone`, `con_project_cost`,
+`con_project_task`, `con_task_issue`, `con_shop_budget`, `con_shop_budget_month`,
+`con_shop_budget_line`, `con_shop_month_perf`, `con_report_schedule`, `con_alert_rule`,
+`con_email_template`, `con_project_template`, `ceo_app_setting`, `ceo_journal_entry`.
 
 ### 8.5 DDL exécuté au démarrage
 
@@ -363,5 +363,5 @@ MySQL voit encore `of_tag`, rien ne garantit que personne ne le relira.
 |---|---|---|
 | `installer.php:22` | exécute `sql/schema.sql` si `ceo_app_setting` absente | crée aussi 4 tables d'autrui → **F2** |
 | `installer.php:27` | exécute `sql/seed.sql` si `ceo_shop` vide | données de démonstration en production |
-| `installer.php:58,61` | `ALTER TABLE ceo_project_task ADD COLUMN note / validated_by` | propre, idempotent |
-| `installer.php:64` | `CREATE TABLE IF NOT EXISTS ceo_task_issue` | propre, idempotent |
+| `installer.php:58,61` | `ALTER TABLE con_project_task ADD COLUMN note / validated_by` | propre, idempotent |
+| `installer.php:64` | `CREATE TABLE IF NOT EXISTS con_task_issue` | propre, idempotent |

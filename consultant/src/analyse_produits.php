@@ -899,7 +899,7 @@ function revuesProduits(): array
 {
     $out = [];
     try {
-        foreach (Db::rows('SELECT id_produit, note, necessaire, auteur, maj FROM ceo_prod_revue') as $r) {
+        foreach (Db::rows('SELECT id_produit, note, necessaire, auteur, maj FROM con_prod_revue') as $r) {
             $out[(string) $r['id_produit']] = ['note' => $r['note'] !== null ? (int) $r['note'] : null,
                 'necessaire' => (int) ($r['necessaire'] ?? 0) === 1, 'auteur' => $r['auteur'], 'maj' => $r['maj']];
         }
@@ -935,14 +935,14 @@ function wr_prod_revue(string $id): array
     if ($note === null || $note === '' || (int) $note === 0) {
         // Retirer la revue sans toucher au drapeau « nécessaire » : la ligne
         // ne disparaît que si plus rien ne la justifie.
-        Db::exec('UPDATE ceo_prod_revue SET note = NULL, maj = ? WHERE id_produit = ?', [date('Y-m-d H:i:s'), $id]);
-        Db::exec('DELETE FROM ceo_prod_revue WHERE id_produit = ? AND note IS NULL AND necessaire = 0', [$id]);
+        Db::exec('UPDATE con_prod_revue SET note = NULL, maj = ? WHERE id_produit = ?', [date('Y-m-d H:i:s'), $id]);
+        Db::exec('DELETE FROM con_prod_revue WHERE id_produit = ? AND note IS NULL AND necessaire = 0', [$id]);
         return ['ok' => true, 'id' => $id, 'note' => null];
     }
     $note = (int) $note;
     if ($note < 1 || $note > 5) { http_response_code(422); return ['error' => 'la revue va de 1 à 5']; }
     $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 80) ?: null;
-    Db::exec('INSERT INTO ceo_prod_revue (id_produit, note, auteur, maj) VALUES (?,?,?,?)
+    Db::exec('INSERT INTO con_prod_revue (id_produit, note, auteur, maj) VALUES (?,?,?,?)
               ON DUPLICATE KEY UPDATE note = VALUES(note), auteur = VALUES(auteur), maj = VALUES(maj)',
         [$id, $note, $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'id' => $id, 'note' => $note];

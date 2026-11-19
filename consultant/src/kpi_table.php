@@ -9,7 +9,7 @@ declare(strict_types=1);
  *    sous-catégorie, avec sa SOURCE — l'endpoint de l'application qui le
  *    fournit, la liste et le champ à lire, la maille (jour ou mois) ;
  *  - le COLLECTEUR : au battement du cron horaire, chaque KPI « endpoint »
- *    est lu UNE fois et ses valeurs rangées dans `ceo_kpi_valeur`
+ *    est lu UNE fois et ses valeurs rangées dans `con_kpi_valeur`
  *    (kpi × magasin × période, plus la ligne réseau `*`). L'historique
  *    s'accumule tout seul — les rapports et les écrans lisent la table,
  *    plus personne ne recalcule dans son coin ;
@@ -17,7 +17,7 @@ declare(strict_types=1);
  *    la réponse inspectée — les champs numériques par magasin se proposent
  *    dans une liste, on ne tape pas un chemin à l'aveugle.
  *
- * Le référentiel reste `ceo_kpi_def` (seuils, sens, actif) : on lui ajoute
+ * Le référentiel reste `con_kpi_def` (seuils, sens, actif) : on lui ajoute
  * la catégorie, la sous-catégorie et la source. Les KPI historiques
  * (type bloc / derive) continuent leur vie sans y toucher.
  */
@@ -54,19 +54,19 @@ function kpiTableTables(): void
               'ADD COLUMN source TEXT NULL', "ADD COLUMN agregat VARCHAR(10) NOT NULL DEFAULT 'somme'",
               'ADD COLUMN unite VARCHAR(20) NULL', 'ADD COLUMN au_rapport TINYINT NOT NULL DEFAULT 1',
               'ADD COLUMN echelle TEXT NULL'] as $a) {
-        try { Db::exec('ALTER TABLE ceo_kpi_def ' . $a); } catch (PDOException $e) { /* déjà là */ }
+        try { Db::exec('ALTER TABLE con_kpi_def ' . $a); } catch (PDOException $e) { /* déjà là */ }
     }
     // La FICHE MAGASIN : les données statiques d'un magasin (m², places
     // assises…), saisies une fois, utilisables comme opérandes des KPI
     // composés. Une ligne par magasin × attribut.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_magasin_fiche ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_magasin_fiche ('
         . 'id_shop INT NOT NULL,'
         . 'cle VARCHAR(40) NOT NULL,'
         . 'libelle VARCHAR(80) NOT NULL,'
         . 'valeur DECIMAL(14,4) NULL,'
         . 'PRIMARY KEY (id_shop, cle)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_kpi_valeur ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_kpi_valeur ('
         . 'code VARCHAR(40) NOT NULL,'
         . "shop VARCHAR(20) NOT NULL,"          // id magasin, ou * pour le réseau
         . 'jour DATE NOT NULL,'                 // la clé de période (1er du mois en maille mensuelle)
@@ -103,8 +103,8 @@ function kpiTableSemer(): void
             ['type' => 'compose', 'a' => 'tk-ca-jour', 'op1' => '/', 'b' => 'tk-tickets-jour', 'op2' => '', 'c' => '', 'grain' => 'jour']],
     ];
     foreach ($seed as [$code, $nom, $cat, $sscat, $unite, $agg, $src]) {
-        if (Db::row('SELECT id FROM ceo_kpi_def WHERE code = ?', [$code]) !== null) { continue; }
-        Db::exec('INSERT INTO ceo_kpi_def (code, nom, levier, calcul, sens, sortie, actif, ordre, categorie, sous_categorie, source, agregat, unite, au_rapport)
+        if (Db::row('SELECT id FROM con_kpi_def WHERE code = ?', [$code]) !== null) { continue; }
+        Db::exec('INSERT INTO con_kpi_def (code, nom, levier, calcul, sens, sortie, actif, ordre, categorie, sous_categorie, source, agregat, unite, au_rapport)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)',
             [$code, $nom, 'transverse', json_encode(['type' => 'table']), 'bas', 'tableau', 1, 50,
              $cat, $sscat, json_encode($src, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $agg, $unite]);
@@ -209,7 +209,7 @@ function kpiCollecte(): array
         foreach (Db::rows('SELECT id FROM shops WHERE active = 1') as $s) { $actifs[(string) $s['id']] = true; }
     } catch (PDOException $e) { /* pas de filtre */ }
     $faits = 0; $rates = [];
-    foreach (Db::rows('SELECT * FROM ceo_kpi_def WHERE actif = 1 AND source IS NOT NULL') as $def) {
+    foreach (Db::rows('SELECT * FROM con_kpi_def WHERE actif = 1 AND source IS NOT NULL') as $def) {
         $src = json_decode((string) $def['source'], true);
         if (!is_array($src) || ($src['type'] ?? '') !== 'endpoint') { continue; }
         $vals = kpiSourceLit($src);
@@ -218,13 +218,13 @@ function kpiCollecte(): array
         if ($vals === []) { $rates[] = (string) $def['code']; continue; }
         $cle = kpiClePeriode((string) ($src['grain'] ?? 'jour'));
         foreach ($vals as $sid => $v) {
-            Db::exec('INSERT INTO ceo_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
+            Db::exec('INSERT INTO con_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj = VALUES(maj)',
                 [(string) $def['code'], (string) $sid, $cle, $v, date('Y-m-d H:i:s')]);
         }
         $reseau = ((string) $def['agregat']) === 'moyenne'
             ? array_sum($vals) / max(1, count($vals)) : array_sum($vals);
-        Db::exec('INSERT INTO ceo_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
+        Db::exec('INSERT INTO con_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj = VALUES(maj)',
             [(string) $def['code'], '*', $cle, round($reseau, 4), date('Y-m-d H:i:s')]);
         $faits++;
@@ -239,13 +239,13 @@ function kpiOperande(string $ref, string $shop): ?float
 {
     if (str_starts_with($ref, 'fiche:')) {
         if ($shop === '*') {
-            $r = Db::row('SELECT SUM(valeur) v FROM ceo_magasin_fiche WHERE cle = ?', [substr($ref, 6)]);
+            $r = Db::row('SELECT SUM(valeur) v FROM con_magasin_fiche WHERE cle = ?', [substr($ref, 6)]);
         } else {
-            $r = Db::row('SELECT valeur v FROM ceo_magasin_fiche WHERE cle = ? AND id_shop = ?', [substr($ref, 6), (int) $shop]);
+            $r = Db::row('SELECT valeur v FROM con_magasin_fiche WHERE cle = ? AND id_shop = ?', [substr($ref, 6), (int) $shop]);
         }
         return isset($r['v']) && $r['v'] !== null ? (float) $r['v'] : null;
     }
-    $r = Db::row('SELECT valeur v FROM ceo_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 1', [$ref, $shop]);
+    $r = Db::row('SELECT valeur v FROM con_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 1', [$ref, $shop]);
     return isset($r['v']) && $r['v'] !== null ? (float) $r['v'] : null;
 }
 
@@ -271,7 +271,7 @@ function kpiOpere(?float $a, string $op, ?float $b): ?float
 function kpiCollecteComposes(array $actifs): array
 {
     $faits = 0; $rates = [];
-    foreach (Db::rows('SELECT * FROM ceo_kpi_def WHERE actif = 1 AND source IS NOT NULL') as $def) {
+    foreach (Db::rows('SELECT * FROM con_kpi_def WHERE actif = 1 AND source IS NOT NULL') as $def) {
         $src = json_decode((string) $def['source'], true);
         if (!is_array($src) || ($src['type'] ?? '') !== 'compose') { continue; }
         $cle = kpiClePeriode((string) ($src['grain'] ?? 'jour'));
@@ -284,7 +284,7 @@ function kpiCollecteComposes(array $actifs): array
                 $v = kpiOpere($v, (string) ($src['op2'] ?? '/'), kpiOperande((string) $src['c'], (string) $sid));
             }
             if ($v === null) { continue; }
-            Db::exec('INSERT INTO ceo_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
+            Db::exec('INSERT INTO con_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj = VALUES(maj)',
                 [(string) $def['code'], (string) $sid, $cle, round($v, 4), date('Y-m-d H:i:s')]);
             $ecrits++;
@@ -340,19 +340,19 @@ function ep_kpi_table(): array
     } catch (PDOException $e) { /* vide */ }
 
     $kpis = [];
-    foreach (Db::rows('SELECT * FROM ceo_kpi_def WHERE actif = 1 AND source IS NOT NULL ORDER BY categorie, sous_categorie, ordre, id') as $def) {
+    foreach (Db::rows('SELECT * FROM con_kpi_def WHERE actif = 1 AND source IS NOT NULL ORDER BY categorie, sous_categorie, ordre, id') as $def) {
         $src = json_decode((string) $def['source'], true) ?: [];
         if (!in_array($src['type'] ?? '', ['endpoint', 'compose'], true)) { continue; }
         $bornes = json_decode((string) ($def['echelle'] ?? ''), true);
         $bornes = is_array($bornes) && count($bornes) === 4 ? array_map('floatval', $bornes) : null;
         $code = (string) $def['code'];
-        $der = Db::row('SELECT jour, valeur, maj FROM ceo_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 1', [$code, '*']);
+        $der = Db::row('SELECT jour, valeur, maj FROM con_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 1', [$code, '*']);
         $serie = array_reverse(array_map(
             fn ($r2) => ['jour' => (string) $r2['jour'], 'valeur' => $r2['valeur'] !== null ? (float) $r2['valeur'] : null],
-            Db::rows('SELECT jour, valeur FROM ceo_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 12', [$code, '*'])));
+            Db::rows('SELECT jour, valeur FROM con_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 12', [$code, '*'])));
         $parMag = [];
         if ($der !== null) {
-            foreach (Db::rows('SELECT shop, valeur FROM ceo_kpi_valeur WHERE code = ? AND jour = ? AND shop <> ?', [$code, (string) $der['jour'], '*']) as $r2) {
+            foreach (Db::rows('SELECT shop, valeur FROM con_kpi_valeur WHERE code = ? AND jour = ? AND shop <> ?', [$code, (string) $der['jour'], '*']) as $r2) {
                 // Seuls les magasins ACTIFS s'affichent — une boutique fantôme
                 // d'une source (fermée, technique) ne parle à personne.
                 if (!isset($nomDe[(string) $r2['shop']])) { continue; }
@@ -387,7 +387,7 @@ function ep_kpi_table(): array
     // La fiche magasin : les attributs et leurs valeurs, pour l'écran et
     // comme opérandes des composés (`fiche:<cle>`).
     $attrs = []; $valeursF = [];
-    foreach (Db::rows('SELECT * FROM ceo_magasin_fiche ORDER BY cle') as $r2) {
+    foreach (Db::rows('SELECT * FROM con_magasin_fiche ORDER BY cle') as $r2) {
         $attrs[(string) $r2['cle']] = (string) $r2['libelle'];
         $valeursF[(string) $r2['id_shop']][(string) $r2['cle']] = $r2['valeur'] !== null ? (float) $r2['valeur'] : null;
     }
@@ -407,7 +407,7 @@ function wr_kpi_fiche(): array
     $b = body();
     $attrs = is_array($b['attributs'] ?? null) ? $b['attributs'] : [];
     $vals = is_array($b['valeurs'] ?? null) ? $b['valeurs'] : [];
-    Db::exec('DELETE FROM ceo_magasin_fiche');
+    Db::exec('DELETE FROM con_magasin_fiche');
     $n = 0;
     foreach ($attrs as $a2) {
         $cle = mktSlug(trim((string) ($a2['cle'] ?? $a2['libelle'] ?? '')));
@@ -415,7 +415,7 @@ function wr_kpi_fiche(): array
         if ($cle === '' || $lib === '') { continue; }
         foreach ($vals as $sid => $deCle) {
             $v = $deCle[$cle] ?? ($deCle[(string) ($a2['cle'] ?? '')] ?? null);
-            Db::exec('INSERT INTO ceo_magasin_fiche (id_shop, cle, libelle, valeur) VALUES (?,?,?,?)
+            Db::exec('INSERT INTO con_magasin_fiche (id_shop, cle, libelle, valeur) VALUES (?,?,?,?)
                       ON DUPLICATE KEY UPDATE libelle = VALUES(libelle), valeur = VALUES(valeur)',
                 [(int) $sid, $cle, $lib, is_numeric($v) ? (float) $v : null]);
             $n++;
@@ -471,7 +471,7 @@ function wr_kpi_table(): array
     $b = body();
     $id = (int) ($b['id'] ?? 0);
     if (!empty($b['supprimer']) && $id > 0) {
-        Db::exec('UPDATE ceo_kpi_def SET actif = 0 WHERE id = ?', [$id]);
+        Db::exec('UPDATE con_kpi_def SET actif = 0 WHERE id = ?', [$id]);
         journalAdd('CEO', 'Paramètre', 'Table KPI', 'KPI désactivé (#' . $id . ')');
         return ['ok' => true];
     }
@@ -515,14 +515,14 @@ function wr_kpi_table(): array
     $seuil = is_numeric($b['seuilAlerte'] ?? null) ? (float) $b['seuilAlerte'] : null;
     $sens = ($b['sens'] ?? '') === 'haut' ? 'haut' : 'bas';
     if ($id > 0) {
-        Db::exec('UPDATE ceo_kpi_def SET nom = ?, categorie = ?, sous_categorie = ?, unite = ?, agregat = ?, source = ?, seuil_alerte = ?, sens = ?, au_rapport = ?, echelle = ? WHERE id = ?',
+        Db::exec('UPDATE con_kpi_def SET nom = ?, categorie = ?, sous_categorie = ?, unite = ?, agregat = ?, source = ?, seuil_alerte = ?, sens = ?, au_rapport = ?, echelle = ? WHERE id = ?',
             [$nom, $cat, $sscat, $unite, $agg, $source, $seuil, $sens, !empty($b['auRapport']) ? 1 : 0, $echelle, $id]);
         journalAdd('CEO', 'Paramètre', 'Table KPI', 'KPI modifié — ' . $nom);
         return ['ok' => true, 'id' => $id];
     }
     $code = 'tk-' . mktSlug(mb_substr($nom, 0, 30));
-    if (Db::row('SELECT id FROM ceo_kpi_def WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
-    Db::exec('INSERT INTO ceo_kpi_def (code, nom, levier, calcul, sens, sortie, actif, ordre, categorie, sous_categorie, source, agregat, unite, seuil_alerte, au_rapport, echelle)
+    if (Db::row('SELECT id FROM con_kpi_def WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
+    Db::exec('INSERT INTO con_kpi_def (code, nom, levier, calcul, sens, sortie, actif, ordre, categorie, sous_categorie, source, agregat, unite, seuil_alerte, au_rapport, echelle)
               VALUES (?,?,?,?,?,?,1,50,?,?,?,?,?,?,1,?)',
         [$code, $nom, 'transverse', json_encode(['type' => 'table']), $sens, 'tableau',
          $cat, $sscat, $source, $agg, $unite, $seuil, $echelle]);

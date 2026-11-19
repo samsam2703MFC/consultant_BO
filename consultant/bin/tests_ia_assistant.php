@@ -84,27 +84,27 @@ verifie('un échec se retente au prochain appel', $r['proposition']['etat'] === 
 
 $GLOBALS['IA'] = ['etat' => 'attente', 'niveau' => null, 'motif' => 'manque API — aucune clé Anthropic enregistrée'];
 $r = $proposer(['shopId' => 4, 'taskId' => 1212, 'date' => $J]);
-verifie('sans clé : 503, rien d’enregistré', http_response_code() === 503 && Db::row('SELECT 1 AS x FROM pil_cq_ia WHERE task_id = 1212') === null);
+verifie('sans clé : 503, rien d’enregistré', http_response_code() === 503 && Db::row('SELECT 1 AS x FROM con_cq_ia WHERE task_id = 1212') === null);
 $r = $proposer(['shopId' => 4, 'taskId' => 0, 'date' => $J]);
 verifie('requête incomplète : 400', http_response_code() === 400 && isset($r['error']));
 
 echo "La note du consultant\n";
 iaNoteHumaine(4, 1211, $J, 4, '', null, 'Sam');
-$l = iaPropositionLigne(Db::row('SELECT * FROM pil_cq_ia WHERE task_id = 1211'));
+$l = iaPropositionLigne(Db::row('SELECT * FROM con_cq_ia WHERE task_id = 1211'));
 verifie('notée au niveau proposé : validée', $l['etat'] === 'valide' && $l['noteFinale'] === 4 && $l['validePar'] === 'Sam');
 iaNoteHumaine(4, 1209, $J, 3, 'Ventilateur à retirer', 'Un objet étranger seul reste mineur', 'Sam');
-$l = iaPropositionLigne(Db::row('SELECT * FROM pil_cq_ia WHERE task_id = 1209'));
+$l = iaPropositionLigne(Db::row('SELECT * FROM con_cq_ia WHERE task_id = 1209'));
 verifie('notée autrement : corrigée, raison et commentaire gardés', $l['etat'] === 'corrige' && $l['nomFinal'] === 'Non conforme — mineur' && $l['raison'] === 'Un objet étranger seul reste mineur' && $l['commentaireFinal'] === 'Ventilateur à retirer');
 $GLOBALS['APPELS'] = [];
 $r = $proposer(['shopId' => 4, 'taskId' => 1209, 'date' => $J, 'refaire' => true]);
 verifie('déjà notée : jamais reproposée, même « refaire »', $GLOBALS['APPELS'] === [] && $r['proposition']['etat'] === 'corrige');
 iaNoteHumaine(9, 9999, $J, 4, '', null, 'Sam');
-verifie('une note sans proposition ne crée rien', Db::row('SELECT 1 AS x FROM pil_cq_ia WHERE task_id = 9999') === null);
+verifie('une note sans proposition ne crée rien', Db::row('SELECT 1 AS x FROM con_cq_ia WHERE task_id = 9999') === null);
 
 echo "Les leçons\n";
 // Des corrections plus anciennes sur les tartes, et une sur un autre rayon.
 $ins = static function (int $task, string $jour, int $niveau, int $finale, ?string $raison, string $rayon = 'tartes', string $tache = 'Photo du comptoir - Tartes', string $le = '') {
-    Db::exec('INSERT INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, raison, valide_par, valide_le, lecon)'
+    Db::exec('INSERT INTO con_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, raison, valide_par, valide_le, lecon)'
         . ' VALUES (3, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)', [$task, $jour, $tache, $rayon, $niveau, 'moyenne', json_encode(['Tarte entamée au premier plan']),
         $jour . ' 06:00:00', $finale, $raison, 'Sam', $le ?: $jour . ' 09:00:00']);
 };
@@ -168,13 +168,13 @@ $GLOBALS['IA_TELECHARGER'] = static function (string $url) use ($JPEG) { $GLOBAL
 $DET = static fn (array $plus = []) => array_merge(['photo' => 'https://r2.exemple/signee.jpg?X-Amz-Expires=1200', 'tache' => 'Photo du comptoir - Tartes',
     'rayon' => ['cle' => 'tartes', 'nom' => 'Tartes', 'photo' => null, 'consigne' => null]], $plus);
 $modeles = static function (array $b) { $GLOBALS['BODY'] = $b; http_response_code(200); return wr_ia_modeles(); };
-$nEx = static fn (string $rayon) => (int) Db::row('SELECT COUNT(*) AS n FROM pil_cq_exemple WHERE rayon = ?', [$rayon])['n'];
+$nEx = static fn (string $rayon) => (int) Db::row('SELECT COUNT(*) AS n FROM con_cq_exemple WHERE rayon = ?', [$rayon])['n'];
 // Une consigne déjà posée sur les tartes : poser la photo du planogramme ne doit pas l'effacer.
 ensureRayonsPhotos();
 Db::exec('INSERT INTO con_rayon_photo (cle, nom, photo, consigne, par, le) VALUES (?,?,?,?,?,?)', ['tartes', 'Tartes', null, 'Huit tartes minimum', 'Sam', '2026-11-01 08:00:00']);
 $GLOBALS['DETAIL'] = $DET(); $GLOBALS['IMAGES'] = []; $GLOBALS['TELECHARGES'] = [];
 $r = $modeles(['shopId' => 4, 'taskId' => 1209, 'date' => '2026-11-14', 'portee' => 'exemple']);
-$ex = Db::row('SELECT * FROM pil_cq_exemple WHERE rayon = ?', ['tartes']);
+$ex = Db::row('SELECT * FROM con_cq_exemple WHERE rayon = ?', ['tartes']);
 verifie('la photo devient une photo d’exemple du rayon', ($r['ok'] ?? false) && $ex !== null && (int) $ex['shop_id'] === 4 && (int) $ex['source_task'] === 1209 && $ex['source_jour'] === '2026-11-14' && $ex['par'] === 'Sam', json_encode($r['error'] ?? null));
 verifie('copiée sur le serveur, pas l’adresse signée', str_starts_with((string) $ex['photo'], 'uploads/rayons/exemples/tartes-4-1209-20261114-') && $GLOBALS['TELECHARGES'] === ['https://r2.exemple/signee.jpg?X-Amz-Expires=1200'] && $GLOBALS['IMAGES'][0][1] === 'data:image/jpeg;base64,');
 $tartes = array_values(array_filter($r['rayons'], fn ($x) => $x['cle'] === 'tartes'))[0] ?? [];
@@ -213,7 +213,7 @@ verifie('retirer un exemple absent : 404', http_response_code() === 404);
 
 echo "La page d'entraînement\n";
 // Une photo notée Exemplaire par le consultant : candidate à l'exemple.
-Db::exec('INSERT INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, valide_par, valide_le, lecon)'
+Db::exec('INSERT INTO con_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, valide_par, valide_le, lecon)'
     . ' VALUES (4, 1207, ?, ?, ?, 4, ?, ?, ?, 5, ?, ?, 1)', [$J, 'Photo du comptoir - Viennoiseries', 'viennoiseries', 'haute', '[]', $J . ' 07:00:00', 'Sam', $J . ' 09:00:00']);
 $e = ep_ia_entrainement();
 $cles = array_column($e['rayons'], 'cle');
@@ -253,7 +253,7 @@ $sTartes = array_values(array_filter($liste['sujets'], fn ($s) => $s['cle'] === 
 verifie('la liste des sujets et la dernière analyse', ($sTartes['n'] ?? 0) >= IA_ANALYSE_MIN_PHOTOS && isset(((array) $liste['analyses'])['tartes']));
 // Une tâche qui n'est pas une photo de comptoir.
 foreach (['2026-11-12', '2026-11-13', '2026-11-14'] as $i => $jj) {
-    Db::exec('INSERT INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, valide_le, lecon) VALUES (4, 1216, ?, ?, NULL, 4, ?, ?, ?, ?, ?, 1)',
+    Db::exec('INSERT INTO con_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, valide_le, lecon) VALUES (4, 1216, ?, ?, NULL, 4, ?, ?, ?, ?, ?, 1)',
         [$jj, 'Vérifier si le magasin est propre.', 'haute', '["Sol propre"]', $jj . ' 07:00:00', $i === 2 ? 3 : 4, $jj . ' 09:00:00']);
 }
 $sujets = array_column(ep_ia_analyses()['sujets'], 'cle');

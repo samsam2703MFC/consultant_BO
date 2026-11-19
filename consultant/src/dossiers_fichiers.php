@@ -69,7 +69,7 @@ function dsrAdressesConnues(): array
 {
     $a = [];
     try {
-        foreach (Db::rows('SELECT destinataires FROM ceo_rapport') as $r) {
+        foreach (Db::rows('SELECT destinataires FROM con_rapport') as $r) {
             foreach (json_decode((string) ($r['destinataires'] ?? '[]'), true) ?: [] as $d) { if (is_string($d)) { $a[] = $d; } }
         }
     } catch (Throwable $e) { /* sans table : seules les adresses SMTP */ }

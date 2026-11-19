@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * Les fichiers vivent sous `public/uploads/documents/{magasin}/` (le dossier que le déploiement préserve), sous un nom
  * tiré au hasard ; un `.htaccess` y refuse tout accès direct : un contrat ne se lit que par l'API
- * (GET /franchises/documents/fichier), jamais par une adresse devinée. La table `ceo_doc` garde le titre, la sorte,
+ * (GET /franchises/documents/fichier), jamais par une adresse devinée. La table `con_doc` garde le titre, la sorte,
  * la date du document, le nom d'origine et la taille.
  */
 
@@ -28,7 +28,7 @@ function docTable(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_doc ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_doc ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'shop INT NOT NULL,'
         . 'sorte VARCHAR(20) NOT NULL,'
@@ -82,7 +82,7 @@ function ep_franchises_documents(): array
     $shop = (int) ($_GET['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
     docTable();
-    $l = array_map('docLigne', Db::rows('SELECT * FROM ceo_doc WHERE shop = ? ORDER BY COALESCE(date_doc, DATE(depose_le)) DESC, id DESC', [$shop]));
+    $l = array_map('docLigne', Db::rows('SELECT * FROM con_doc WHERE shop = ? ORDER BY COALESCE(date_doc, DATE(depose_le)) DESC, id DESC', [$shop]));
     return ['shop' => (string) $shop, 'documents' => $l, 'sortes' => array_map(static fn ($k, $v) => ['v' => $k, 'nom' => $v], array_keys(DOC_SORTES), DOC_SORTES),
         'maxOctets' => docMaxOctets(), 'extensions' => array_keys(DOC_EXT)];
 }
@@ -112,10 +112,10 @@ function docGarder(int $shop, string $sorte, string $titre, ?string $date, ?stri
     $ok = $deplacer ? @move_uploaded_file($chemin, $cible) : @copy($chemin, $cible);
     if (!$ok) { return null; }
     @chmod($cible, 0640);
-    Db::exec('INSERT INTO ceo_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, note, depose_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, note, depose_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
         [$shop, $sorte, mb_substr($titre, 0, 190), $disque, mb_substr($nom, 0, 190), DOC_EXT[$ext] ?? DOC_EXT_INTERNE[$ext] ?? 'application/octet-stream', $octets, $date, $note, date('Y-m-d H:i:s')]);
     $id = (int) Db::pdo()->lastInsertId();
-    $r = Db::row('SELECT * FROM ceo_doc WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [$id]);
     return $r !== null ? docLigne($r) : null;
 }
 
@@ -166,7 +166,7 @@ function wr_franchises_documents(): array
 function ep_franchises_document_fichier(): void
 {
     docTable();
-    $r = Db::row('SELECT * FROM ceo_doc WHERE id = ?', [(int) ($_GET['id'] ?? 0)]);
+    $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [(int) ($_GET['id'] ?? 0)]);
     $chemin = $r !== null ? docDossier((int) $r['shop']) . '/' . basename((string) $r['fichier']) : '';
     if ($r === null || !is_file($chemin)) { http_response_code(404); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['error' => 'document introuvable']); exit; }
     $mime = (string) $r['mime'];
@@ -187,10 +187,10 @@ function wr_franchises_document_suppr(): array
 {
     docTable();
     $id = (int) ($_GET['id'] ?? 0);
-    $r = Db::row('SELECT * FROM ceo_doc WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'document introuvable']; }
     @unlink(docDossier((int) $r['shop']) . '/' . basename((string) $r['fichier']));
-    Db::exec('DELETE FROM ceo_doc WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_doc WHERE id = ?', [$id]);
     if (function_exists('journalAdd')) { journalAdd('CEO', 'Franchisé', 'Documents', 'Document retiré du magasin ' . $r['shop'] . ' : ' . $r['titre']); }
     return ['ok' => true];
 }
@@ -209,7 +209,7 @@ function docAdressesMagasin(string $nom): array
 {
     $a = [];
     try {
-        foreach (Db::rows('SELECT dest_par_magasin FROM ceo_rapport') as $r) {
+        foreach (Db::rows('SELECT dest_par_magasin FROM con_rapport') as $r) {
             foreach ((array) ((json_decode((string) ($r['dest_par_magasin'] ?? ''), true) ?: [])[$nom] ?? []) as $d) { if (is_string($d)) { $a[] = strtolower(trim($d)); } }
         }
     } catch (Throwable $e) { /* sans carnets */ }
@@ -274,7 +274,7 @@ function docContrat(int $shop, int $id): ?array
 {
     if ($id <= 0) { return null; }
     docTable();
-    $r = Db::row('SELECT * FROM ceo_doc WHERE id = ? AND shop = ?', [$id, $shop]);
+    $r = Db::row('SELECT * FROM con_doc WHERE id = ? AND shop = ?', [$id, $shop]);
     return $r !== null ? docLigne($r) + ['fichier' => (string) $r['fichier']] : null;
 }
 
@@ -285,7 +285,7 @@ function ep_franchises_mail_materiel(): array
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
     docTable();
     $nom = docMagasinNom($shop);
-    $contrats = array_map('docLigne', Db::rows("SELECT * FROM ceo_doc WHERE shop = ? AND sorte = 'contrat' ORDER BY COALESCE(date_doc, DATE(depose_le)) DESC, id DESC", [$shop]));
+    $contrats = array_map('docLigne', Db::rows("SELECT * FROM con_doc WHERE shop = ? AND sorte = 'contrat' ORDER BY COALESCE(date_doc, DATE(depose_le)) DESC, id DESC", [$shop]));
     $contrat = docContrat($shop, (int) ($_GET['contrat'] ?? 0));
     [$sujet, $html] = docMailMateriel($nom, mb_substr((string) ($_GET['materiel'] ?? ''), 0, 2000), $contrat);
     return ['shop' => (string) $shop, 'magasin' => $nom, 'sujet' => $sujet, 'html' => $html, 'adresses' => docAdressesMagasin($nom),

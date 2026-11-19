@@ -9,7 +9,7 @@ declare(strict_types=1);
  * heure, tickets du panel), poubelle déclarée, gardé pour demain, compté, non expliqué — les journées gravées de
  * l'audit des flux (lot 2, `vxJ:`) et le relevé des tickets (`svP`). Avec les matières de sa recette et leurs
  * mouvements de stock.
- * Une MATIÈRE (stock du panel) : chaque mouvement relevé en direct (`ceo_stock_releve`, toutes les cinq minutes) —
+ * Une MATIÈRE (stock du panel) : chaque mouvement relevé en direct (`con_stock_releve`, toutes les cinq minutes) —
  * livraison validée, inventaire, correction à la main, remise à zéro — avec le stock avant et après ; et ce que les
  * ventes et la poubelle des produits qui l'emploient en consomment, jour par jour (recettes aplaties).
  *
@@ -66,7 +66,7 @@ function vmoMouvementsMatiere(int $sid, int $mid, string $du, string $au): array
 {
     try {
         if (function_exists('invReleveTables')) { invReleveTables(); }
-        $rows = Db::rows("SELECT r.avant, r.qty, r.modif, r.vu, e.type, e.at FROM ceo_stock_releve r LEFT JOIN ceo_stock_evenement e ON e.id = r.evenement_id
+        $rows = Db::rows("SELECT r.avant, r.qty, r.modif, r.vu, e.type, e.at FROM con_stock_releve r LEFT JOIN con_stock_evenement e ON e.id = r.evenement_id
             WHERE r.shop_id = ? AND r.material_id = ? AND COALESCE(e.at, r.modif, r.vu) >= ? AND COALESCE(e.at, r.modif, r.vu) < ? ORDER BY COALESCE(e.at, r.modif, r.vu), r.id",
             [$sid, $mid, $du . ' 00:00:00', date('Y-m-d', strtotime($au . ' +1 day')) . ' 00:00:00']);
     } catch (Throwable $e) { return []; }
@@ -261,7 +261,7 @@ function ep_verification_mouvements_liste(): array
     $mids = [];
     try {
         if (function_exists('invReleveTables')) { invReleveTables(); }
-        foreach (Db::rows('SELECT material_id mid, COUNT(*) n FROM ceo_stock_releve WHERE shop_id = ? GROUP BY material_id', [$sid]) as $r) { $mids[(int) $r['mid']] = (int) $r['n']; }
+        foreach (Db::rows('SELECT material_id mid, COUNT(*) n FROM con_stock_releve WHERE shop_id = ? GROUP BY material_id', [$sid]) as $r) { $mids[(int) $r['mid']] = (int) $r['n']; }
     } catch (Throwable $e) { /* sans relevé */ }
     $infos = function_exists('invMatieres') ? invMatieres(array_keys($mids)) : [];
     $out = ['shop' => (string) $sid, 'magasins' => array_map(static fn ($id, $nom) => ['id' => (string) $id, 'nom' => $nom], array_keys(vfMagasins()), array_values(vfMagasins())), 'produits' => [], 'matieres' => []];

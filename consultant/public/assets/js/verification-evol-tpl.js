@@ -39,7 +39,7 @@ export function tplVerifEvol(c, x){
   const etat = B.erreur ? `<span class="ve-pt ko"></span><b>La base quotidienne n’a pas pu être lue</b>`
     : (B.vide ? `<span class="ve-pt att"></span><b>La base quotidienne est vide pour l’instant</b> — le cron y enregistre chaque heure les journées calculées`
       : `<span class="ve-pt ok"></span><b>Base à jour — dernier enregistrement le ${esc(B.fluxLe)}</b>`);
-  const table = B.vide || B.erreur ? '' : `<span>Table <code>ceo_verif_jour</code> : <b>${nf0(B.lignes)} ligne${B.lignes > 1 ? 's' : ''}</b> (${B.magasins} magasin${B.magasins > 1 ? 's' : ''}, du ${esc(B.premier)} au ${esc(B.dernier)})</span>`;
+  const table = B.vide || B.erreur ? '' : `<span>Table <code>con_verif_jour</code> : <b>${nf0(B.lignes)} ligne${B.lignes > 1 ? 's' : ''}</b> (${B.magasins} magasin${B.magasins > 1 ? 's' : ''}, du ${esc(B.premier)} au ${esc(B.dernier)})</span>`;
   const peu = v.semRenseignees < 2 ? `La base a ${v.semRenseignees} semaine renseignée sur la période : courbes et comparaisons se lisent à partir de deux semaines, et deviennent solides vers huit.`
     : (v.semRenseignees < 8 ? `${v.semRenseignees} semaines renseignées : la comparaison oppose ${v.compareN > 1 ? `les ${v.compareN} premières aux ${v.compareN} dernières` : 'la première à la dernière'} ; elle devient solide vers huit semaines.` : '');
   const statut = `<div class="vr-card ve-base">

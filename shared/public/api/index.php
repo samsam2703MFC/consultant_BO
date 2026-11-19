@@ -438,7 +438,7 @@ function route(string $method, string $path): mixed
             $path === '/referentiels/kpis'             => ep_kpis(),
             $path === '/referentiels/roles'            => ep_roles(),
             $path === '/referentiels/email-templates'  => ep_email_templates(),
-            $path === '/referentiels/ceo_project-templates',
+            $path === '/referentiels/con_project-templates',
             $path === '/referentiels/project-templates' => ep_project_templates(),
             $path === '/stores'                        => ep_stores(),
             $path === '/stores/perf'                   => ep_perf(),

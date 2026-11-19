@@ -286,7 +286,7 @@ verifie('les libellés', vbLab('trimestre', '2026-10-25', 10) === '4e trimestre 
 
 // Le calcul complet, arrêté à la veille : Résultat pour la semaine et le mois, les mois clos au relevé des ventes.
 $hier = date('Y-m-d', strtotime('-1 day')); $mRef = (int) substr($hier, 5, 2); $jRef = (int) substr($hier, 8, 2);
-$LIGNES = ['FROM ceo_shop_month_perf' => array_merge(...array_map(static fn (string $s) => array_map(static fn (int $m) => ['shop_id' => $s, 'month' => $m, 'revenue_budget' => 100000, 'ca_theorique' => null], range(1, 12)), ['2', '3', '4']))];
+$LIGNES = ['FROM con_shop_month_perf' => array_merge(...array_map(static fn (string $s) => array_map(static fn (int $m) => ['shop_id' => $s, 'month' => $m, 'revenue_budget' => 100000, 'ca_theorique' => null], range(1, 12)), ['2', '3', '4']))];
 $GET_RES = []; $TTL = null;
 $B = ep_visites_budget('2');
 verifie('cinq étendues, arrêtées à la veille', array_keys($B['periodes']) === ['jour', 'semaine', 'mois', 'trimestre', 'annee'] && $B['arrete'] === $hier);

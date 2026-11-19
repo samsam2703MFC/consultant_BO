@@ -19,7 +19,7 @@
  * rend son motif, pas un zéro qui passerait pour un constat.
  *
  * Deux identifiants cohabitent et ne se confondent pas : le planogramme place
- * des `ceo_prod_product.ref`, la caisse vend des `pwa_id`. Chaque obligatoire
+ * des `con_prod_product.ref`, la caisse vend des `pwa_id`. Chaque obligatoire
  * porte les deux, et chaque jointure se fait avec le bon.
  */
 
@@ -32,7 +32,7 @@ function vcObligatoires(): array
 {
     $out = [];
     try {
-        foreach (Db::rows('SELECT ref, nom, pwa_id FROM ceo_prod_product WHERE must = 1 AND actif = 1 ORDER BY nom') as $r) {
+        foreach (Db::rows('SELECT ref, nom, pwa_id FROM con_prod_product WHERE must = 1 AND actif = 1 ORDER BY nom') as $r) {
             $pwa = $r['pwa_id'] === null || (string) $r['pwa_id'] === '' ? null : (string) $r['pwa_id'];
             $out[] = ['ref' => (string) $r['ref'], 'nom' => (string) $r['nom'], 'pwa' => $pwa];
         }
@@ -130,7 +130,7 @@ function vcMontage(int $shop, string $jour): array
         ensurePlanoStd();
         $noms = psNomsZones();
         $out = [];
-        foreach (Db::rows('SELECT zone, auteur, quand FROM ceo_plano_std_montage WHERE shop_id = ? AND jour = ?', [(string) $shop, $jour]) as $r) {
+        foreach (Db::rows('SELECT zone, auteur, quand FROM con_plano_std_montage WHERE shop_id = ? AND jour = ?', [(string) $shop, $jour]) as $r) {
             $z = (string) $r['zone'];
             $out[] = ['zone' => $z, 'nom' => $noms[$z] ?? $z, 'auteur' => (string) ($r['auteur'] ?? ''), 'quand' => (string) ($r['quand'] ?? '')];
         }

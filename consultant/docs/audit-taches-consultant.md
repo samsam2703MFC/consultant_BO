@@ -38,7 +38,7 @@ cockpit. Cet audit dit ce qui existe déjà (cockpit, panel), ce qui manque, et 
   Google par ICS + invitations dès le premier lot, l'OAuth en second lot si le bidirectionnel s'impose.
 - Le panel porte aussi des **évaluations d'employés** (`/employees/{id}/evaluations`, `/schedule/{id}/evaluation`,
   `/shops/{id}/employees/evaluation-summary`) : les remarques aux opérateurs faites depuis la modale des invendus
-  pourraient y être poussées un jour, au lieu de rester dans `ceo_operateur_remarque` seulement.
+  pourraient y être poussées un jour, au lieu de rester dans `con_operateur_remarque` seulement.
 
 ## 2. Ce que le cockpit a déjà
 

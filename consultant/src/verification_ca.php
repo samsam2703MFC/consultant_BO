@@ -17,7 +17,7 @@ declare(strict_types=1);
  *    ventes après encaissement et les anomalies relevées par le panel (routes mesurées par la sonde, lues si elles
  *    répondent), et les « jours à regarder ».
  *
- * Chaque jour clos entre dans `ceo_verif_ca` (caisse, P&L, sans produit, remises) : la base quotidienne du CA.
+ * Chaque jour clos entre dans `con_verif_ca` (caisse, P&L, sans produit, remises) : la base quotidienne du CA.
  *
  * GET /verification/ca[?mois=AAAA-MM][&shop=] — le mois (celui d'hier par défaut), le réseau, chaque magasin, les jours
  * à regarder d'un magasin (le premier à regarder par défaut) et le réseau mois par mois.
@@ -126,7 +126,7 @@ function vcSansProduit(int $sid, array $jours): array
 
 /**
  * Le CA attendu par la matière (lot 4) : sur les semaines d'inventaire closes dans le mois, entrées validées,
- * R = (consommé − poubelle déclarée) ÷ ventes, au coût. Fonction pure sur les lignes de ceo_verif_inventaire.
+ * R = (consommé − poubelle déclarée) ÷ ventes, au coût. Fonction pure sur les lignes de con_verif_inventaire.
  */
 function vcRapportMatiere(array $rows): ?array
 {
@@ -146,7 +146,7 @@ function vcAttenduMois(int $sid, string $ym): ?array
 {
     try {
         if (function_exists('vmTable')) { vmTable(); }
-        $rows = Db::rows('SELECT jours, entrees_eur, sorties_eur, poubelle_eur, ventes_eur, excedent_eur FROM ceo_verif_inventaire WHERE shop_id = ? AND a_at >= ? AND a_at < ?',
+        $rows = Db::rows('SELECT jours, entrees_eur, sorties_eur, poubelle_eur, ventes_eur, excedent_eur FROM con_verif_inventaire WHERE shop_id = ? AND a_at >= ? AND a_at < ?',
             [$sid, $ym . '-01', date('Y-m-d', strtotime($ym . '-01 +1 month'))]);
     } catch (Throwable $e) { return null; }
     return vcRapportMatiere($rows);
@@ -156,7 +156,7 @@ function vcAttenduMois(int $sid, string $ym): ?array
 function vcRecettesFiables(int $sid, string $ym): ?float
 {
     try {
-        $r = Db::row('SELECT SUM(recettes_ca_fiable) f, SUM(recettes_ca_total) t FROM ceo_verif_jour WHERE shop_id = ? AND jour >= ? AND jour < ? AND recettes_ca_total > 0',
+        $r = Db::row('SELECT SUM(recettes_ca_fiable) f, SUM(recettes_ca_total) t FROM con_verif_jour WHERE shop_id = ? AND jour >= ? AND jour < ? AND recettes_ca_total > 0',
             [$sid, $ym . '-01', date('Y-m-d', strtotime($ym . '-01 +1 month'))]);
     } catch (Throwable $e) { return null; }
     return $r !== null && (float) ($r['t'] ?? 0) > 0 ? round(100 * (float) $r['f'] / (float) $r['t'], 1) : null;
@@ -306,7 +306,7 @@ function vcTable(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_verif_ca ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_verif_ca ('
         . 'shop_id INT NOT NULL, jour DATE NOT NULL, caisse_ttc DECIMAL(12,2) NULL, caisse_tva DECIMAL(12,2) NULL, tickets INT NULL,'
         . 'pnl DECIMAL(12,2) NULL, sans_produit_eur DECIMAL(12,2) NULL, sans_produit_n SMALLINT NULL, remises_ticket_eur DECIMAL(12,2) NULL,'
         . 'calcule_le DATETIME NULL, PRIMARY KEY (shop_id, jour), KEY (jour)'
@@ -321,7 +321,7 @@ function vcEnregistre(int $sid, array $caisse, array $pnl, array $sp): int
         vcTable();
         foreach ($caisse as $j => [$b, $t, $k]) {
             $x = $sp[$j] ?? null;
-            Db::exec('INSERT INTO ceo_verif_ca (shop_id, jour, caisse_ttc, caisse_tva, tickets, pnl, sans_produit_eur, sans_produit_n, remises_ticket_eur, calcule_le)'
+            Db::exec('INSERT INTO con_verif_ca (shop_id, jour, caisse_ttc, caisse_tva, tickets, pnl, sans_produit_eur, sans_produit_n, remises_ticket_eur, calcule_le)'
                 . ' VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE caisse_ttc = VALUES(caisse_ttc), caisse_tva = VALUES(caisse_tva), tickets = VALUES(tickets),'
                 . ' pnl = VALUES(pnl), sans_produit_eur = VALUES(sans_produit_eur), sans_produit_n = VALUES(sans_produit_n), remises_ticket_eur = VALUES(remises_ticket_eur), calcule_le = VALUES(calcule_le)',
                 [$sid, $j, round($b, 2), round($t, 2), $k, isset($pnl[$j]) ? round((float) $pnl[$j], 2) : null,
@@ -461,7 +461,7 @@ function vcCron(): string
             $ca = array_filter(vcCaisse($sid, $jours), static fn ($j) => $j < date('Y-m-d'), ARRAY_FILTER_USE_KEY);
             $n += vcEnregistre($sid, $ca, (array) ($pnl[$sid] ?? []), vcSansProduit($sid, $jours));
         }
-        $msg[] = $ym . ' : ' . (int) ($cn['aLire'] ?? 0) . ' journée(s) de tickets à lire, ' . $n . ' ligne(s) dans ceo_verif_ca';
+        $msg[] = $ym . ' : ' . (int) ($cn['aLire'] ?? 0) . ' journée(s) de tickets à lire, ' . $n . ' ligne(s) dans con_verif_ca';
     }
     return implode(' ; ', $msg);
 }

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Référentiel des KPI — la table `ceo_kpi_def`, éditable à l'écran (Paramètres)
+ * Référentiel des KPI — la table `con_kpi_def`, éditable à l'écran (Paramètres)
  * et par API. C'est elle qui alimente le catalogue du compositeur de rapports
  * et TOUS les seuils du générateur : un seuil changé ici s'applique partout.
  *
@@ -54,7 +54,7 @@ const KPI_PONT_TABLE = [
 
 function ensureKpiDefs(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_kpi_def ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_kpi_def ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'code VARCHAR(40) NOT NULL UNIQUE,'
         . 'nom VARCHAR(120) NOT NULL,'
@@ -69,10 +69,10 @@ function ensureKpiDefs(): void
         . 'ordre SMALLINT NOT NULL DEFAULT 100'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Base déjà en service : la colonne `sortie` est arrivée après la table.
-    try { Db::exec("ALTER TABLE ceo_kpi_def ADD COLUMN sortie VARCHAR(12) NOT NULL DEFAULT 'tableau' AFTER sens"); }
+    try { Db::exec("ALTER TABLE con_kpi_def ADD COLUMN sortie VARCHAR(12) NOT NULL DEFAULT 'tableau' AFTER sens"); }
     catch (PDOException $e) { /* déjà là */ }
 
-    $n = Db::row('SELECT COUNT(*) n FROM ceo_kpi_def');
+    $n = Db::row('SELECT COUNT(*) n FROM con_kpi_def');
     if ((int) ($n['n'] ?? 0) > 0) { kpiCibles2026(); return; }
 
     // Les seuils historiques comme point de départ — la table `kpi` fait foi
@@ -118,7 +118,7 @@ function ensureKpiDefs(): void
             'labour-cost', ['type' => 'derive', 'num' => 'ca', 'den' => 'heures', 'echelle' => 'eur'], 95, 80, 'bas', 75, 'treemap'],
     ];
     foreach ($seed as $s) {
-        Db::exec('INSERT INTO ceo_kpi_def (code, nom, description, levier, calcul, seuil_alerte, seuil_critique, sens, sortie, actif, ordre)
+        Db::exec('INSERT INTO con_kpi_def (code, nom, description, levier, calcul, seuil_alerte, seuil_critique, sens, sortie, actif, ordre)
                   VALUES (?,?,?,?,?,?,?,?,?,1,?)',
             [$s[0], $s[1], $s[2], $s[3], json_encode($s[4], JSON_UNESCAPED_UNICODE), $s[5], $s[6], $s[7], $s[9] ?? 'tableau', $s[8]]);
     }
@@ -147,12 +147,12 @@ function kpiCibles2026(): void
         $faits[$code] = true;
         try {
             if (setting($drapeau) !== null) { continue; }
-            $d = Db::row('SELECT id, seuil_alerte, seuil_critique FROM ceo_kpi_def WHERE code = ?', [$code]);
+            $d = Db::row('SELECT id, seuil_alerte, seuil_critique FROM con_kpi_def WHERE code = ?', [$code]);
             if ($d === null) { unset($faits[$code]); continue; }
             $a = $d['seuil_alerte'] !== null ? (float) $d['seuil_alerte'] : null;
             $c = $d['seuil_critique'] !== null ? (float) $d['seuil_critique'] : null;
             $ecart = $a !== null && $c !== null && $c > $a ? $c - $a : $ecartDefaut;
-            Db::exec('UPDATE ceo_kpi_def SET seuil_alerte = ?, seuil_critique = ? WHERE id = ?', [$cible, $cible + $ecart, $d['id']]);
+            Db::exec('UPDATE con_kpi_def SET seuil_alerte = ?, seuil_critique = ? WHERE id = ?', [$cible, $cible + $ecart, $d['id']]);
             try { Db::exec('UPDATE kpi SET seuil_haut = ? WHERE code = ?', [$cible, $pont]); }
             catch (PDOException $e) { /* table absente : rien à synchroniser */ }
             Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
@@ -222,7 +222,7 @@ function kpiDefs(): array
     if ($defs !== null) { return $defs; }
     ensureKpiDefs();
     $defs = [];
-    foreach (Db::rows('SELECT * FROM ceo_kpi_def ORDER BY ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM con_kpi_def ORDER BY ordre, id') as $r) {
         $r['calcul'] = json_decode((string) $r['calcul'], true) ?: [];
         $r['seuil_alerte'] = $r['seuil_alerte'] !== null ? (float) $r['seuil_alerte'] : null;
         $r['seuil_critique'] = $r['seuil_critique'] !== null ? (float) $r['seuil_critique'] : null;
@@ -362,10 +362,10 @@ function wr_kpi(): array
     if (!isset(RAP_LEVIERS[$levier])) { $levier = 'transverse'; }
     $code = 'kpi-' . preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($nom));
     $code = trim(mb_substr($code, 0, 38), '-');
-    if (Db::row('SELECT id FROM ceo_kpi_def WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
+    if (Db::row('SELECT id FROM con_kpi_def WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
     $calcul = ['type' => 'derive', 'num' => $num, 'den' => $den,
         'echelle' => in_array($b['echelle'] ?? '', ['pct', 'eur', 'unite'], true) ? $b['echelle'] : 'unite'];
-    Db::exec('INSERT INTO ceo_kpi_def (code, nom, description, levier, calcul, seuil_alerte, seuil_critique, sens, sortie, actif, ordre)
+    Db::exec('INSERT INTO con_kpi_def (code, nom, description, levier, calcul, seuil_alerte, seuil_critique, sens, sortie, actif, ordre)
               VALUES (?,?,?,?,?,?,?,?,?,1,200)',
         [$code, $nom, trim((string) ($b['description'] ?? '')) ?: (KPI_MESURES[$num] . ' ÷ ' . KPI_MESURES[$den]),
          $levier, json_encode($calcul, JSON_UNESCAPED_UNICODE),
@@ -381,7 +381,7 @@ function wr_kpi(): array
 function wr_kpi_patch(int $id): array
 {
     ensureKpiDefs();
-    $d = Db::row('SELECT * FROM ceo_kpi_def WHERE id = ?', [$id]);
+    $d = Db::row('SELECT * FROM con_kpi_def WHERE id = ?', [$id]);
     if ($d === null) { http_response_code(404); return ['error' => 'KPI inconnu']; }
     $b = body();
     $set = []; $args = [];
@@ -409,7 +409,7 @@ function wr_kpi_patch(int $id): array
     }
     if ($set === []) { return ['ok' => true, 'rien' => true]; }
     $args[] = $id;
-    Db::exec('UPDATE ceo_kpi_def SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    Db::exec('UPDATE con_kpi_def SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
 
     // Pont : les seuils historiques que les écrans lisent encore suivent.
     $pont = KPI_PONT_TABLE[(string) $d['code']] ?? null;
@@ -429,14 +429,14 @@ function wr_kpi_patch(int $id): array
 function wr_kpi_suppr(int $id): array
 {
     ensureKpiDefs();
-    $d = Db::row('SELECT * FROM ceo_kpi_def WHERE id = ?', [$id]);
+    $d = Db::row('SELECT * FROM con_kpi_def WHERE id = ?', [$id]);
     if ($d === null) { http_response_code(404); return ['error' => 'KPI inconnu']; }
     $calcul = json_decode((string) $d['calcul'], true) ?: [];
     if (($calcul['type'] ?? '') !== 'derive') {
         http_response_code(422);
         return ['error' => 'un KPI câblé ne se supprime pas — désactivez-le'];
     }
-    Db::exec('DELETE FROM ceo_kpi_def WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_kpi_def WHERE id = ?', [$id]);
     journalAdd('CEO', 'Paramètre', (string) $d['nom'], 'KPI dérivé supprimé');
     return ['ok' => true];
 }

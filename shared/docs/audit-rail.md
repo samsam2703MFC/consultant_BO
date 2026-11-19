@@ -30,7 +30,7 @@ onglet d'Analyse magasin), et des écrans qui calculent la même chose vivaient 
 
 | # | Écrans | Ce qui est identique (preuve) | Fait le 19/11 |
 |---|---|---|---|
-| 1 | Audit des flux, Fuites par magasin, Évolution | Même collecte et même lecture : `vxCollecte`, `vxAgregeJour`, `vxLecture` (`src/verification_flux.php:109-319`) ; Évolution relit ce calcul enregistré chaque jour (`ceo_verif_jour`) | Une entrée **Flux & poubelle**, trois onglets |
+| 1 | Audit des flux, Fuites par magasin, Évolution | Même collecte et même lecture : `vxCollecte`, `vxAgregeJour`, `vxLecture` (`src/verification_flux.php:109-319`) ; Évolution relit ce calcul enregistré chaque jour (`con_verif_jour`) | Une entrée **Flux & poubelle**, trois onglets |
 | 2 | Invendus et poubelle, poubelle des flux | Même source : `invLignes` → `/products/waste` (`src/production_flux.php:973`) ; Invendus valorise au coût de recette, les flux au prix de vente | Invendus devient le 4e onglet de **Flux & poubelle** |
 | 3 | Entre deux inventaires, Matières ↔ recettes | Même moteur `invEcart` / `invListe` (`src/verification_matieres.php:6, 74, 111`) | Une entrée **Matières & inventaires** (avec Mouvements d'un produit, qui en est le détail) |
 | 4 | Client mystère (Paramètres) et Client mystère (Suivi des franchisés) | Même table `con_scoring_msp` ; le formulaire de Paramètres a d'autres rubriques et n'écrit ni la date du passage ni les suites (`app.js` `sqMsp…`, `src/suivi.php:1655`) | Un seul formulaire : **Visites › Client mystère**. `#/parametres/mystere` et `#/client-mystere` y mènent ; le bouton « encoder » de la fiche aussi, le magasin choisi |
@@ -47,7 +47,7 @@ onglet d'Analyse magasin), et des écrans qui calculent la même chose vivaient 
 Corrections au passage :
 
 - Le groupe « Tâches » disait « la même checklist à trois moments » : faux, l'onglet Suivi lit les notes et
-  signalements des consultants (`ceo_project_task`, `ceo_task_issue`), pas les checklists du panel. Il s'appelle
+  signalements des consultants (`con_project_task`, `con_task_issue`), pas les checklists du panel. Il s'appelle
   désormais **Notes & signalements**.
 - Les tuiles de la fiche franchisé « Contrôle des tâches » menaient à cet onglet Suivi : elles mènent au contrôle du
   jour ; « Tâches faites · 30 j » mène à **Faites / pas faites**.
@@ -87,7 +87,7 @@ Par ordre de valeur :
 
 1. **Le produit a deux sources de vérité.** Paramétrage produits écrit au panel l'obligatoire, le prix et la
    durée de vie ; la fiche de production du Catalogue écrit obligatoire, minimum, prix, coût matière et DLV dans
-   `ceo_prod_product` (`src/writes.php:1336`), jamais renvoyés au panel. L'obligatoire s'écrit par quatre gestes
+   `con_prod_product` (`src/writes.php:1336`), jamais renvoyés au panel. L'obligatoire s'écrit par quatre gestes
    (Catalogue, Assortiment, Structure `/appliquer`, Paramétrage). Proposition : un seul endroit, le panel ;
    l'obligatoire seulement dans Assortiment.
 2. **Deux calculs de l'assortiment proposé** : le PDF 20/80 du Catalogue (6 classiques + 2 par saison,
@@ -102,7 +102,7 @@ Par ordre de valeur :
    (`src/ventes_semaines.php:195`), Marge & coûts reprend les ratios du Mois. Proposition : fusionner Trafic
    clients et Évolution magasin.
 6. **Le % de tâches faites a trois formules** sur `con_tache_jour` (`src/scoring.php:223`, `src/franchises.php:33`,
-   la heatmap), et les tâches des consultants deux stocks (`ceo_project_task`, `con_consultant_tache`).
+   la heatmap), et les tâches des consultants deux stocks (`con_project_task`, `con_consultant_tache`).
 7. **La validation des corrections existe deux fois** : Visites (`PUT /plans`) et `visites/?role=admin`.
 8. **Les promotions du panel sont lues deux fois** (`pvRegles` et `primesPromosPanel`, deux caches).
 9. **Deux programmes de fidélité** : l'écran Fidélité (`src/fidelite.php`) et `public/fidelite-test/`
@@ -125,7 +125,7 @@ Par ordre de valeur :
   `dashboard/suivi.html` de la fiche (une simple redirection).
 - `?app=consultant` (fiche en plein écran, manifeste sur une ancienne adresse) ; le rôle franchisé de
   `visites/?shop=` (inaccessible : la garde renvoie le franchisé à son dashboard).
-- La recherche du rail lit l'ancienne table de démonstration `ceo_report_schedule` ; le sous-titre de Reporting
+- La recherche du rail lit l'ancienne table de démonstration `con_report_schedule` ; le sous-titre de Reporting
   parle encore d'« alertes push ».
 - Pages orphelines : `public/newsletter/`, `public/fidelite-test/` ; le dossier `public/assistant/assets/` n'est
   chargé par rien ; l'édition « emplacement » de la fiche produit appelle `PUT /production/planogramme/`, qui

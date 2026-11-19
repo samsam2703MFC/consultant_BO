@@ -233,7 +233,7 @@ lecture seule, GET uniquement, et le contrat mesuré est noté dans `docs/contra
 
 ## 5. La base quotidienne
 
-**Livré le 31/10 (lot 3)** : la table `ceo_verif_jour` existe, créée par le code au premier appel
+**Livré le 31/10 (lot 3)** : la table `con_verif_jour` existe, créée par le code au premier appel
 (`src/verification_base.php`, `CREATE TABLE IF NOT EXISTS`). Une ligne par magasin et par jour, deux familles de
 colonnes : l'audit des flux de la journée (`dispo_eur`, `vendu_eur`, `poubelle_eur`, `invendu_eur`, `nonexpl_eur`,
 `mesure_eur`, les mêmes en pièces, `lignes`, `cuissons_validees`, `cuissons`, `cloture`, `comptes`, `flux_le`) — écrite
@@ -251,7 +251,7 @@ sources, comme le font déjà `pvMois` et `svP`. Tables créées par `installer.
 
 ```sql
 -- Un magasin, un jour : l'audit des flux et les indicateurs du jour.
-CREATE TABLE IF NOT EXISTS ceo_verif_jour (
+CREATE TABLE IF NOT EXISTS con_verif_jour (
   shop_id INT NOT NULL, jour DATE NOT NULL,
   garde_eur DECIMAL(10,2), entre_eur DECIMAL(10,2), entre_cout DECIMAL(10,2),
   produit_eur DECIMAL(10,2), produit_cout DECIMAL(10,2), produit_estime TINYINT(1) DEFAULT 0,
@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS ceo_verif_stock_jour (
   PRIMARY KEY (shop_id, jour, material_id)
 );
 -- Le registre des inventaires lus : un inventaire qui disparaît (annulé) ou change (modifié) se voit.
-CREATE TABLE IF NOT EXISTS ceo_verif_inventaire (
+CREATE TABLE IF NOT EXISTS con_verif_inventaire (
   stocktaking_id INT NOT NULL PRIMARY KEY, shop_id INT NOT NULL, fait_le DATETIME,
   lignes INT, valeur DECIMAL(10,2), empreinte CHAR(40),
   premier_vu DATETIME NOT NULL, modifie_le DATETIME NULL, disparu_le DATETIME NULL,
@@ -307,7 +307,7 @@ CREATE TABLE IF NOT EXISTS ceo_verif_geste (
   KEY (shop_id, jour)
 );
 -- Le registre des recettes douteuses : quand repérée, quand résolue.
-CREATE TABLE IF NOT EXISTS ceo_verif_recette (
+CREATE TABLE IF NOT EXISTS con_verif_recette (
   cle VARCHAR(80) NOT NULL,                   -- règle:produit (ou règle:matière)
   regle VARCHAR(24) NOT NULL, product_id INT NULL, material_id INT NULL,
   detail VARCHAR(400), ca_30j DECIMAL(10,2), magasins VARCHAR(120),
@@ -329,9 +329,9 @@ Volume : environ 70 produits × 4 magasins × 365 jours, soit 100 000 lignes par
 3. il **recalcule les sept jours d'avant**, pour absorber les corrections tardives, les
    cuissons validées après coup et les commandes validées en retard ;
 4. il prend la photo du soir de `/material-inventory` et des prix de `/shops/{id}/materials`
-   (`ceo_verif_stock_jour`), relit la liste des inventaires (`ceo_verif_inventaire`), et
+   (`ceo_verif_stock_jour`), relit la liste des inventaires (`con_verif_inventaire`), et
    compare avec la veille pour repérer les gestes à surveiller (`ceo_verif_geste`, § 3.6) ;
-5. il passe les règles de recettes et met à jour `ceo_verif_recette` (premier vu,
+5. il passe les règles de recettes et met à jour `con_verif_recette` (premier vu,
    dernier vu, résolu) ;
 6. il écrit une ligne au journal (`journalAdd`).
 
@@ -371,9 +371,9 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | **0. Sonde** | Mesurer les routes « à sonder » (§ 4), écrire le contrat | compte panel | S |
 | **1. Recettes à corriger** — **livré le 31/10** | La liste et ses neuf règles, la couverture, le registre ; écran `#/verification/recettes`, route `GET /verification/recettes` (contrat : `docs/contrat-api.md`), lecture des recettes par le cron horaire, tests `bin/tests_verification.php` | routes déjà connues | M |
 | **2. Audit des flux + Fuites (produits finis)** — **livré le 31/10** | Écrans `#/verification/flux` (réseau, magasin, jour · semaine · mois) et `#/verification/fuites` (matrice + un tableau par magasin) ; journées gravées, cron horaire ; « mesuré » ou « estimé » selon les cuissons validées | données déjà lues | M |
-| **3. Base quotidienne + Évolution** — **livré le 31/10** | Table `ceo_verif_jour` (§ 5), remplie par le cron horaire, sept derniers jours recalculés ; écran `#/verification/evolution` : un indicateur semaine par semaine (8, 12 ou 26 semaines), un trait par magasin et le réseau, pointillé quand la semaine n'est qu'estimée ; « avant, maintenant » (les premières semaines face aux dernières : mieux, moins bien, stable) ; route `GET /verification/evolution` | lot 2 | M |
-| **4. Matières ↔ recettes** — **livré le 31/10** | Écran `#/verification/matieres` sur le moteur de l'écran Inventaires (`invEcart`) : entre deux inventaires relevés consécutifs (ou le cumul des quatre dernières semaines), consommé réel = stock début + commandes validées à la réception − stock fin, face aux ventes × recettes + poubelle déclarée ; la cause probable de chaque écart (entrées non validées, recette, poubelle non déclarée, ni vendu ni jeté, tolérance) ; tolérances réglables (`verifTolerances` : pièces 3 %, poids et volumes 8 %) ; le tableau par catégorie de matière, même structure pour chaque magasin ; le réseau et la matrice catégories × magasins ; chaque semaine gardée et écrite dans `ceo_verif_inventaire`, que l'Évolution lit (« matière expliquée ») ; route `GET /verification/matieres` | lots 0 et 1 | L |
-| **5. Chiffre d'affaires** — **livré le 31/10** | Écran `#/verification/ca`, au mois (‹ ›) : la caisse (tickets du panel, TTC) fait référence ; le P&L du panel, la base des redevances (calcul du Fonds) et le CA attendu par la matière (lot 4) se lisent en écart, seuils 1 % / 4 % ; lignes sans produit, remises sur le ticket entier ; corrections et anomalies du panel montrées dès que leurs routes répondent (sonde `/verification/ca/sonde`) ; les jours à regarder d'un magasin ; le réseau mois par mois ; la base quotidienne `ceo_verif_ca` remplie par le cron ; route `GET /verification/ca` | lots 0 et 4 | M |
+| **3. Base quotidienne + Évolution** — **livré le 31/10** | Table `con_verif_jour` (§ 5), remplie par le cron horaire, sept derniers jours recalculés ; écran `#/verification/evolution` : un indicateur semaine par semaine (8, 12 ou 26 semaines), un trait par magasin et le réseau, pointillé quand la semaine n'est qu'estimée ; « avant, maintenant » (les premières semaines face aux dernières : mieux, moins bien, stable) ; route `GET /verification/evolution` | lot 2 | M |
+| **4. Matières ↔ recettes** — **livré le 31/10** | Écran `#/verification/matieres` sur le moteur de l'écran Inventaires (`invEcart`) : entre deux inventaires relevés consécutifs (ou le cumul des quatre dernières semaines), consommé réel = stock début + commandes validées à la réception − stock fin, face aux ventes × recettes + poubelle déclarée ; la cause probable de chaque écart (entrées non validées, recette, poubelle non déclarée, ni vendu ni jeté, tolérance) ; tolérances réglables (`verifTolerances` : pièces 3 %, poids et volumes 8 %) ; le tableau par catégorie de matière, même structure pour chaque magasin ; le réseau et la matrice catégories × magasins ; chaque semaine gardée et écrite dans `con_verif_inventaire`, que l'Évolution lit (« matière expliquée ») ; route `GET /verification/matieres` | lots 0 et 1 | L |
+| **5. Chiffre d'affaires** — **livré le 31/10** | Écran `#/verification/ca`, au mois (‹ ›) : la caisse (tickets du panel, TTC) fait référence ; le P&L du panel, la base des redevances (calcul du Fonds) et le CA attendu par la matière (lot 4) se lisent en écart, seuils 1 % / 4 % ; lignes sans produit, remises sur le ticket entier ; corrections et anomalies du panel montrées dès que leurs routes répondent (sonde `/verification/ca/sonde`) ; les jours à regarder d'un magasin ; le réseau mois par mois ; la base quotidienne `con_verif_ca` remplie par le cron ; route `GET /verification/ca` | lots 0 et 4 | M |
 | ~~6. Alertes~~ | **Pas pour l'instant (31/10).** Plus tard : un magasin rouge deux jours de suite, une commande livrée non validée depuis 24 h | lot 3 | S |
 
 **Constat du lot 2 (relevé du 31/10)** : aucun des quatre magasins ne valide ses cuissons, n'enregistre sa clôture ni ne compte sa vitrine. Le « produit » d'une journée n'est donc que le plan ; l'audit le dit (« Non mesuré », écart au plan en gris) et ne qualifie une fuite que sur des journées mesurées. Les ventes et la poubelle déclarée sont réelles — Corbais, par exemple, ne déclare aucune poubelle. **Pour que l'audit devienne une mesure, les magasins doivent valider leurs cuissons et leur clôture** ; en attendant, la mesure réelle des fuites passe par la matière (inventaires hebdomadaires, lot 4).
@@ -383,7 +383,7 @@ rendement, fraction de portion, prix d'une matière, rattacher une recette de no
 recette »), dans le volet de la recette en mode *Corriger* (quantités, lignes retirées ou ajoutées, rendement, copie d'une
 recette proche pour une recette vide), ou au panel par un lien direct (formules). Écriture prudente, faute de contrat :
 lire l'objet, ne changer que la clé visée dans la forme lue, écrire, **relire et constater** ; un 2xx sans changement est
-« sans effet ». Registre `ceo_verif_correction` (l'avant, pour « Annuler »). Code : `src/verification_correction.php`,
+« sans effet ». Registre `con_verif_correction` (l'avant, pour « Annuler »). Code : `src/verification_correction.php`,
 `verification-correction-vals.js`, `verification-correction-tpl.js` ; tests : `php bin/tests_verification_correction.php` ;
 maquette et captures : `docs/maquettes/recettes-correction`. Une ligne lourde dans une sous-recette (partagée) passe par
 le volet, jamais par un clic. Le prix d'une matière part par une route réglable (`vrcFormatPrix`, par défaut

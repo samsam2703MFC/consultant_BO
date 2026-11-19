@@ -18,7 +18,7 @@ declare(strict_types=1);
  *  4. Encoder, au clic seulement : concurrent, observation datée, items rattachés à nos produits, dans le module
  *     Benchmark de TFBuddy (src/benchmark.php, BenchmarkApi), pour chaque magasin retenu ; chaque écriture relue.
  *
- * Tables : ceo_bench_import (un relevé lu, ses lignes et les choix), ceo_bench_correspondance (la mémoire
+ * Tables : con_bench_import (un relevé lu, ses lignes et les choix), con_bench_correspondance (la mémoire
  * libellé du concurrent → notre produit). Le PDF reste dans le dossier privé du serveur, jamais servi sur le web.
  */
 
@@ -65,7 +65,7 @@ function biTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_bench_import ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_bench_import ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'cree_le DATETIME NOT NULL,'
         . 'maj_le DATETIME NOT NULL,'
@@ -89,7 +89,7 @@ function biTables(): void
         . 'encodage MEDIUMTEXT NULL,'
         . 'KEY idx_bi_cree (cree_le), KEY idx_bi_empreinte (empreinte)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_bench_correspondance ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_bench_correspondance ('
         . 'concurrent VARCHAR(120) NOT NULL,'            // nom normalisé du concurrent, « * » pour tout le réseau
         . 'libelle VARCHAR(190) NOT NULL,'               // libellé normalisé de la ligne
         . 'product_id INT NOT NULL,'
@@ -405,7 +405,7 @@ function biMemoire(string $concurrent): array
     $cle = benchmarkNomCle($concurrent);
     $out = [];
     try {
-        foreach (Db::rows('SELECT concurrent, libelle, product_id FROM ceo_bench_correspondance WHERE concurrent IN (?, ?)', [$cle, '*']) as $r) {
+        foreach (Db::rows('SELECT concurrent, libelle, product_id FROM con_bench_correspondance WHERE concurrent IN (?, ?)', [$cle, '*']) as $r) {
             $k = (string) $r['libelle'];
             if ((string) $r['concurrent'] !== '*' || !isset($out[$k])) { $out[$k] = (int) $r['product_id']; }
         }
@@ -525,7 +525,7 @@ function biMediane(array $v): ?float
 function biLire(int $id): ?array
 {
     biTables();
-    $r = Db::row('SELECT * FROM ceo_bench_import WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_bench_import WHERE id = ?', [$id]);
     if (!$r) { return null; }
     foreach (['concurrent', 'magasins', 'lignes', 'choix', 'sources', 'encodage'] as $k) { $r[$k] = json_decode((string) ($r[$k] ?? ''), true) ?: []; }
     return $r;
@@ -536,7 +536,7 @@ function biCreer(array $champs): int
 {
     biTables();
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_bench_import (cree_le, maj_le, source, statut, titre, fichier, nom_origine, octets, empreinte, demande, concurrent, magasins, date_releve, lignes, choix, sources, remarques, modele, jetons)'
+    Db::exec('INSERT INTO con_bench_import (cree_le, maj_le, source, statut, titre, fichier, nom_origine, octets, empreinte, demande, concurrent, magasins, date_releve, lignes, choix, sources, remarques, modele, jetons)'
         . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
         $now, $now, $champs['source'], 'lu', mb_substr((string) $champs['titre'], 0, 190), $champs['fichier'] ?? null, $champs['nom_origine'] ?? null,
         (int) ($champs['octets'] ?? 0), $champs['empreinte'] ?? null, $champs['demande'] ?? null,
@@ -545,7 +545,7 @@ function biCreer(array $champs): int
         mb_substr((string) ($champs['remarques'] ?? ''), 0, 2000), $champs['modele'] ?? null, (int) ($champs['jetons'] ?? 0)]);
     $id = method_exists('Db', 'pdo') ? (int) Db::pdo()->lastInsertId() : 0;
     if ($id > 0) { return $id; }
-    $r = Db::row('SELECT id FROM ceo_bench_import WHERE cree_le = ? AND titre = ? ORDER BY id DESC LIMIT 1', [$now, mb_substr((string) $champs['titre'], 0, 190)]);
+    $r = Db::row('SELECT id FROM con_bench_import WHERE cree_le = ? AND titre = ? ORDER BY id DESC LIMIT 1', [$now, mb_substr((string) $champs['titre'], 0, 190)]);
     return (int) ($r['id'] ?? 0);
 }
 
@@ -701,7 +701,7 @@ function biEncoder(array $imp, bool $apercu): array
     if ($apercu) { return ['ok' => true, 'apercu' => true, 'magasins' => $res, 'items' => count($items), 'fiche' => $fiche, 'observation' => ['observed_at' => $date, 'notes' => $libObs]]; }
     // La mémoire : chaque ligne rattachée est une correspondance confirmée, pour ce concurrent et pour le réseau.
     biRetenir((string) $c['nom'], array_values(array_filter(array_map(fn ($l) => $l['decision']['etat'] === 'produit' && $l['decision']['pid'] ? [$l['libelle'], (int) $l['decision']['pid']] : null, $vue['lignes']))));
-    Db::exec('UPDATE ceo_bench_import SET statut = ?, encodage = ?, maj_le = ? WHERE id = ?',
+    Db::exec('UPDATE con_bench_import SET statut = ?, encodage = ?, maj_le = ? WHERE id = ?',
         [$toutBon ? 'encode' : 'lu', json_encode(['le' => date('Y-m-d H:i'), 'magasins' => $res], JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), (int) $imp['id']]);
     if (function_exists('journalAdd')) {
         journalAdd('Cockpit', 'benchmark', 'Benchmark › Import', 'Relevé « ' . $c['nom'] . ' » (' . ($imp['source'] === 'pdf' ? 'PDF' : 'internet') . ') encodé dans ' . count($res) . ' magasin(s) : '
@@ -721,7 +721,7 @@ function biRetenir(string $concurrent, array $paires): void
         $k = biCleLibelle((string) $lib);
         if ($k === '' || $pid <= 0) { continue; }
         foreach ([$cle, '*'] as $qui) {
-            Db::exec('INSERT INTO ceo_bench_correspondance (concurrent, libelle, product_id, n, maj_le) VALUES (?,?,?,1,?) ON DUPLICATE KEY UPDATE n = IF(product_id = VALUES(product_id), n + 1, 1), product_id = VALUES(product_id), maj_le = VALUES(maj_le)',
+            Db::exec('INSERT INTO con_bench_correspondance (concurrent, libelle, product_id, n, maj_le) VALUES (?,?,?,1,?) ON DUPLICATE KEY UPDATE n = IF(product_id = VALUES(product_id), n + 1, 1), product_id = VALUES(product_id), maj_le = VALUES(maj_le)',
                 [$qui, $k, (int) $pid, $now]);
         }
     }
@@ -768,7 +768,7 @@ function biClassement(?int $seul = null): array
     $attente = [];
     try {
         biTables();
-        foreach (Db::rows("SELECT id, concurrent, magasins, cree_le FROM ceo_bench_import WHERE statut = 'lu' ORDER BY id DESC LIMIT 60") as $r) {
+        foreach (Db::rows("SELECT id, concurrent, magasins, cree_le FROM con_bench_import WHERE statut = 'lu' ORDER BY id DESC LIMIT 60") as $r) {
             $c = json_decode((string) $r['concurrent'], true) ?: [];
             $m = json_decode((string) $r['magasins'], true) ?: [];
             $ligne = ['nom' => (string) ($c['nom'] ?? ''), 'type' => BI_TYPES[$c['type'] ?? ''] ?? '', 'ville' => (string) ($c['ville'] ?? ''), 'cp' => ($c['cp'] ?? '') ?: null,
@@ -808,7 +808,7 @@ function ep_bench_import(): array
     $mags = biMagasins();
     $plages = biZones($mags);
     $liste = [];
-    foreach (Db::rows('SELECT id, cree_le, source, statut, titre, concurrent, magasins, lignes FROM ceo_bench_import ORDER BY id DESC LIMIT 80') as $r) {
+    foreach (Db::rows('SELECT id, cree_le, source, statut, titre, concurrent, magasins, lignes FROM con_bench_import ORDER BY id DESC LIMIT 80') as $r) {
         $c = json_decode((string) $r['concurrent'], true) ?: [];
         $liste[] = ['id' => (int) $r['id'], 'creeLe' => substr((string) $r['cree_le'], 0, 16), 'source' => (string) $r['source'], 'statut' => (string) $r['statut'],
             'titre' => (string) $r['titre'], 'concurrent' => (string) ($c['nom'] ?? ''), 'cp' => (string) ($c['cp'] ?? ''),
@@ -850,7 +850,7 @@ function wr_bench_import_pdf(): array
     if (!Anthropic::configured()) { http_response_code(503); return ['ok' => false, 'error' => 'clé Anthropic absente : Paramètres › IA']; }
     biTables();
     $emp = hash('sha256', $oct);
-    $deja = Db::row("SELECT id FROM ceo_bench_import WHERE empreinte = ? AND source = 'pdf' ORDER BY id DESC LIMIT 1", [$emp]);
+    $deja = Db::row("SELECT id FROM con_bench_import WHERE empreinte = ? AND source = 'pdf' ORDER BY id DESC LIMIT 1", [$emp]);
     if ($deja) { return ['ok' => true, 'id' => (int) $deja['id'], 'deja' => true]; }
     $nom = mb_substr(basename(str_replace('\\', '/', (string) ($b['nom'] ?? 'document.pdf'))), 0, 190);
     $saisi = is_array($b['concurrent'] ?? null) ? $b['concurrent'] : [];
@@ -931,7 +931,7 @@ function wr_bench_import_maj(): array
     }
     if ($set) {
         $set[] = 'maj_le = ?'; $val[] = date('Y-m-d H:i:s'); $val[] = (int) $imp['id'];
-        Db::exec('UPDATE ceo_bench_import SET ' . implode(', ', $set) . ' WHERE id = ?', $val);
+        Db::exec('UPDATE con_bench_import SET ' . implode(', ', $set) . ' WHERE id = ?', $val);
     }
     return ['ok' => true] + biVue(biLire((int) $imp['id']));
 }
@@ -954,7 +954,7 @@ function wr_bench_import_suppr(int $id): array
     $imp = biLire($id);
     if (!$imp) { http_response_code(404); return ['ok' => false, 'error' => 'relevé introuvable']; }
     if (!empty($imp['fichier']) && preg_match('/^[a-f0-9]{24}\.pdf$/', (string) $imp['fichier'])) { try { @unlink(biDossier() . '/' . $imp['fichier']); } catch (Throwable $e) { /* dossier absent */ } }
-    Db::exec('DELETE FROM ceo_bench_import WHERE id = ?', [(int) $imp['id']]);
+    Db::exec('DELETE FROM con_bench_import WHERE id = ?', [(int) $imp['id']]);
     return ['ok' => true];
 }
 

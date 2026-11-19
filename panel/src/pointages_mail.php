@@ -26,8 +26,8 @@ const PS_GRACE_MIN = 10;
 
 function psSemer(): void
 {
-    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', [PS_CODE]) !== null) { return; }
-    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+    if (Db::row('SELECT id FROM con_rapport WHERE code = ?', [PS_CODE]) !== null) { return; }
+    Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
               VALUES (?,?,?,?,?,?,?,?,?,?,?)',
         [PS_CODE, 'Pointages suspects (fin de journée)', 'Magasins', 'quotidien', 21, 1,
          json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
@@ -258,7 +258,7 @@ function psDistribuer(array $rep, bool $apercu = false): array
         . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
             . (!empty($m2['envoyes']) ? ' (' . implode(', ', $m2['envoyes']) . ')' : '') . (!empty($m2['note']) ? ' · ' . $m2['note'] : '')) . '</li>', $bilan['magasins']))
         . '</ul></div>';
-    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+    Db::exec('INSERT INTO con_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
               VALUES (?,?,?,?,?,?,?,?)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), $date, $date,
          $apercu ? 'genere' : ($cpt('envoye') > 0 || $reseauEnv !== [] ? 'envoye' : 'vide'), $resume,

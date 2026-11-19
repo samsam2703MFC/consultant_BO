@@ -119,7 +119,7 @@ franchisé, ceux de la marque se lisent, avec la mieux classée du magasin, et l
 | Reine des ventes croisées | La part des tickets à deux articles ou plus, un minimum de tickets | La moisson des tickets (`pvCroiseesMois`) |
 | Plus gros apport B2B | Le CA HT de ses tickets pro | La base partagée, comme la prime B2B (`b2bTickets`) |
 | Plus gros ticket | Son plus gros ticket, hors clients pro | La base partagée (`transaction`) |
-| Magasin de l'année (réseau seulement) | Le CA du magasin face à son objectif | `ceo_shop_month_perf` et le CA jour par jour |
+| Magasin de l'année (réseau seulement) | Le CA du magasin face à son objectif | `con_shop_month_perf` et le CA jour par jour |
 
 Le minimum monte avec la saison. À mi-saison, la moitié des heures suffit pour être classée.
 

@@ -13,7 +13,7 @@ declare(strict_types=1);
  *
  * Ce que ce lot ajoute : la CAUSE probable de chaque écart (règles du cockpit, à confirmer en visite), les
  * tolérances réglables, le tableau par catégorie de matière (même structure pour chaque magasin), le cumul de
- * plusieurs semaines, la vue réseau, et l'historique : chaque semaine calculée entre dans `ceo_verif_inventaire`, que
+ * plusieurs semaines, la vue réseau, et l'historique : chaque semaine calculée entre dans `con_verif_inventaire`, que
  * l'écran Évolution lit (« matière expliquée »).
  *
  * Les causes, dans l'ordre :
@@ -279,14 +279,14 @@ function vmSignales(): array
 }
 
 /* ---------------------------------------------------------------------------------------------
- * L'historique : chaque semaine calculée entre dans ceo_verif_inventaire (l'écran Évolution la lit)
+ * L'historique : chaque semaine calculée entre dans con_verif_inventaire (l'écran Évolution la lit)
  * ------------------------------------------------------------------------------------------- */
 
 function vmTable(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_verif_inventaire ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_verif_inventaire ('
         . 'shop_id INT NOT NULL, de VARCHAR(16) NOT NULL, a VARCHAR(16) NOT NULL, de_at DATETIME NULL, a_at DATETIME NULL, jours DECIMAL(5,1) NULL,'
         . 'debut_eur DECIMAL(12,2) NULL, entrees_eur DECIMAL(12,2) NULL, fin_eur DECIMAL(12,2) NULL, sorties_eur DECIMAL(12,2) NULL,'
         . 'ventes_eur DECIMAL(12,2) NULL, poubelle_eur DECIMAL(12,2) NULL, sorti_pos_eur DECIMAL(12,2) NULL, couvert_eur DECIMAL(12,2) NULL,'
@@ -303,7 +303,7 @@ function vmEnregistre(int $sid, array $w): bool
         vmTable();
         $t = vmZero();
         foreach ($w['m'] as $l) { vmAjoute($t, $l); }
-        Db::exec('INSERT INTO ceo_verif_inventaire (shop_id, de, a, de_at, a_at, jours, debut_eur, entrees_eur, fin_eur, sorties_eur, ventes_eur, poubelle_eur,'
+        Db::exec('INSERT INTO con_verif_inventaire (shop_id, de, a, de_at, a_at, jours, debut_eur, entrees_eur, fin_eur, sorties_eur, ventes_eur, poubelle_eur,'
             . ' sorti_pos_eur, couvert_eur, manquant_eur, excedent_eur, matieres, calcule_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE de_at = VALUES(de_at), a_at = VALUES(a_at), jours = VALUES(jours), debut_eur = VALUES(debut_eur), entrees_eur = VALUES(entrees_eur),'
             . ' fin_eur = VALUES(fin_eur), sorties_eur = VALUES(sorties_eur), ventes_eur = VALUES(ventes_eur), poubelle_eur = VALUES(poubelle_eur),'
@@ -415,7 +415,7 @@ function vmCron(): string
             $w = vmSemaine((int) $sid, $s['de'], $s['a'], false);
             if ($w !== null) {
                 // Ce qui a été gardé avant la table y entre.
-                try { vmTable(); $deja = Db::row('SELECT 1 x FROM ceo_verif_inventaire WHERE shop_id = ? AND de = ? AND a = ?', [(int) $sid, $s['de'], $s['a']]); } catch (Throwable $e) { $deja = ['x' => 1]; }
+                try { vmTable(); $deja = Db::row('SELECT 1 x FROM con_verif_inventaire WHERE shop_id = ? AND de = ? AND a = ?', [(int) $sid, $s['de'], $s['a']]); } catch (Throwable $e) { $deja = ['x' => 1]; }
                 if ($deja === null && vmEnregistre((int) $sid, $w)) { $ret++; }
                 continue;
             }

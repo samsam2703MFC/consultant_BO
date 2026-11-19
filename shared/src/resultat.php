@@ -295,7 +295,7 @@ function exPeriodeCalcul(): array
     $budgets = [];
     foreach (array_keys($moisTouches) as $ym) {
         try {
-            foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf
+            foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM con_shop_month_perf
                                 WHERE year = ? AND month = ?', [(int) substr($ym, 0, 4), (int) substr($ym, 5, 2)]) as $b) {
                 $v = null; $src = null;
                 if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) { $v = (float) $b['revenue_budget']; $src = 'budget'; }

@@ -58,7 +58,7 @@ Vocabulaire du brief : 🟢 API = vient d'une source automatique, 🔴 local = s
 | Note et avis Google, derniers avis | oui | `GET /reputation`, `POST /reputation/sync`, tables `mar_avis_fiche`, `mar_avis` | 🟢 Google Places |
 | Tâches consultant, notes 1..5, validation | oui | `GET /pwa/tasks`, `POST /pwa/tasks/review`, `POST /pwa/tasks/validate`, `PUT /pwa/tasks/annotation`, journal `mac_task_review` | 🟢 panel |
 | Non-conformités, récidive, seuil de signalement | oui | `GET /pwa/tasks/nc?shop=&date=` (ou `du/au`), seuil 4 | 🟢 panel |
-| Planogramme de référence, photos produits | oui | `GET /planogramme`, `/planogramme/photos` (liens S3 signés 1 h), tables `pla_*`, `ceo_plano_photo` | 🟢 |
+| Planogramme de référence, photos produits | oui | `GET /planogramme`, `/planogramme/photos` (liens S3 signés 1 h), tables `pla_*`, `con_plano_photo` | 🟢 |
 | Photo d'une cible planogramme | oui | `POST /planogramme/photo` : data-URL, 4 Mo max, type lu dans les octets, fichier sous `public/` | 🔴 |
 | Notifications push | oui | `src/push.php` : VAPID, `POST /push/abonnements`, `pushDiffuser(shop, charge)`, service worker `dashboard/sw.js` | — |
 | Mail | oui | `Smtp::envoyer`, expéditeur rapport@atelierby.be, déjà utilisé par la newsletter et les rapports | — |
@@ -126,7 +126,7 @@ con_visite_point      id, visite_id, module (produit|hygiene|visuel|planogramme|
                       etat (ok|ko|na), note 1..5, commentaire, cause (chips, JSON)
 con_visite_photo      id, visite_id, point_id NULL, genre (jour_facade|jour_interieur|jour_arriere|
                       point|avant|apres|correction), chemin, prise_a, lat, lng, largeur, hauteur, octets
-ceo_plan_action       id, shop_id, visite_id NULL, point_id NULL, titre, detail, priorite (P0|P1|P2),
+con_plan_action       id, shop_id, visite_id NULL, point_id NULL, titre, detail, priorite (P0|P1|P2),
                       assigne (franchise|equipe|consultant|admin), echeance, statut (ouvert|attente|
                       valide|reprendre|ferme|escalade), cree_par, cree_le, valide_par, valide_le,
                       ferme_par, ferme_le, retour_admin, escalade_motif
@@ -182,7 +182,7 @@ signal dans la carte, pas comme déclencheur seul du rouge. Seuils dans `visites
 
 **Planogramme** (brief) : 🔴 déviation > 25 % ou rupture 3 jours et plus ; 🟡 10–25 % ; 🟢 < 10 %.
 Sans mesure automatique, la déviation = emplacements non conformes / emplacements du meuble,
-comptés par le consultant sur la grille du planogramme de référence (`pla_slot`) ; les ruptures
+comptés par le consultant sur la grille du planogramme de référence (`con_pla_slot`) ; les ruptures
 viennent des tâches du panel quand elles y sont, sinon de la checklist.
 
 **Plan d'action, machine à états :**

@@ -21,7 +21,7 @@ declare(strict_types=1);
  *                     son relevé mensuel (mac_google_rating_snapshot, tenu par le panel
  *                     consultant depuis octobre 2026) pour un mois passé et le N-1 ;
  *   Food / Labour / Overhead cost  les ratios du P&L mensuel (ep_perf).
- * Les pastilles suivent les seuils de la Table KPI (ceo_kpi_def) : rien n'est fixé ici.
+ * Les pastilles suivent les seuils de la Table KPI (con_kpi_def) : rien n'est fixé ici.
  *
  * Comparer à mois égaux, toujours. Le mois d'ouverture d'un magasin est partiel
  * (l'ouverture saisie dans l'Étude de faisabilité du CRM › Magasins du réseau, sinon l'année du
@@ -294,7 +294,7 @@ function ep_leviers_magasins(): array
         $codes = array_values(LEV_KPI);
         $in = implode(',', array_fill(0, count($codes), '?'));
         $parCode = [];
-        foreach (Db::rows("SELECT code, seuil_alerte, seuil_critique, sens, actif FROM ceo_kpi_def WHERE code IN ($in)", $codes) as $r) { $parCode[$r['code']] = $r; }
+        foreach (Db::rows("SELECT code, seuil_alerte, seuil_critique, sens, actif FROM con_kpi_def WHERE code IN ($in)", $codes) as $r) { $parCode[$r['code']] = $r; }
         foreach (LEV_KPI as $k => $code) {
             $r = $parCode[$code] ?? null;
             if ($r === null || (int) $r['actif'] !== 1) { continue; }

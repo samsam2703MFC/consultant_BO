@@ -13,7 +13,7 @@ Maquettes validées : dépôt `webshop-mrszoko-backoffice`, dossier
 | Sujet | Décision |
 |---|---|
 | Forme | **Un seul audit** pour tous les fournisseurs : un **tronc commun** posé à chacun (comparable entre eux) + les **questions propres** à chaque fournisseur. |
-| Fournisseurs | **Tous les fournisseurs référencés** : le référentiel `ceo_supplier`, colonne `audit_ref`. Un fournisseur référencé reçoit le tronc commun sans autre action. On le **choisit dans une liste déroulante** (13/11/2026) : les fournisseurs de l'ERP (`/material-suppliers`, gardés une heure dans `auditsErpFournisseurs`, e-mail pré-rempli), puis ceux du cockpit, ou « Autre » pour saisir un nom (agence, collectif). `GET /audits/catalogue[?frais=1]`. |
+| Fournisseurs | **Tous les fournisseurs référencés** : le référentiel `con_supplier`, colonne `audit_ref`. Un fournisseur référencé reçoit le tronc commun sans autre action. On le **choisit dans une liste déroulante** (13/11/2026) : les fournisseurs de l'ERP (`/material-suppliers`, gardés une heure dans `auditsErpFournisseurs`, e-mail pré-rempli), puis ceux du cockpit, ou « Autre » pour saisir un nom (agence, collectif). `GET /audits/catalogue[?frais=1]`. |
 | Qui répond | **Le franchisé seul**, par un **lien personnel** (sans compte) reçu par **e-mail** et par **notification push** (appareils du magasin abonnés depuis le dashboard ou l'app visites). |
 | Copie | **Chaque fournisseur reçoit une copie** de ses résultats avec la **note du franchiseur**, relue et envoyée à la main. Nom des boutiques masqué par défaut. |
 | Points | Non montrés au franchisé. Score d'un fournisseur = points obtenus / maximum, en %. Seuils réglables : Bon ≥ 80 %, À surveiller ≥ 60 %, sinon « Revoir le contrat ». |
@@ -45,15 +45,15 @@ nom) et/ou envoie une alerte push au siège. Les actions sont listées par fourn
 
 ## Données
 
-- `ceo_supplier` : + `audit_ref`, `audit_cat`, `audit_genre` (pas de seconde table de fournisseurs). L'adresse de
+- `con_supplier` : + `audit_ref`, `audit_cat`, `audit_genre` (pas de seconde table de fournisseurs). L'adresse de
   la copie : la fiche, sinon le carnet de la centrale d'achat (`caMailAdresse`).
-- `ceo_audit_question` : le formulaire courant (`fournisseur_id` NULL = tronc commun, `parent_id` = sous-question,
+- `con_audit_question` : le formulaire courant (`fournisseur_id` NULL = tronc commun, `parent_id` = sous-question,
   `reglage` JSON : choix, coef, paliers, condition, règle). Une question retirée devient inactive.
-- `ceo_audit_campagne` : nom, statut (brouillon → envoyee → cloturee), clôture, relances, push, message,
+- `con_audit_campagne` : nom, statut (brouillon → envoyee → cloturee), clôture, relances, push, message,
   **formulaire figé à l'envoi** (fournisseurs + questions + seuils), adresse publique pour les liens du cron.
-- `ceo_audit_destinataire` : un par magasin ouvert ; e-mail (Qui fait quoi, sinon carnet du reporting), envoi,
+- `con_audit_destinataire` : un par magasin ouvert ; e-mail (Qui fait quoi, sinon carnet du reporting), envoi,
   ouverture, fin, relances. Le jeton du lien : HMAC du destinataire avec le secret `auditsJeton`.
-- `ceo_audit_reponse`, `ceo_audit_alerte`, `ceo_audit_copie`.
+- `con_audit_reponse`, `con_audit_alerte`, `con_audit_copie`.
 
 ## Points d'attention
 

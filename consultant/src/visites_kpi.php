@@ -327,7 +327,7 @@ function ep_visites_taches(string $shop): array
  *  - le TRIMESTRE et l'ANNÉE ajoutent au mois en cours les mois clos de l'étendue : leur CA (relevé des ventes du
  *    panel, pvKpisMois) face à leur budget entier. Un mois clos sans budget, ou sans aucune vente (pas encore ouvert),
  *    sort des deux côtés de la comparaison (`sansBudget`, ses numéros de mois) : il ne gonfle ni le réalisé ni l'attendu ;
- *  - le budget d'un mois est le budget validé (ceo_shop_month_perf.revenue_budget), à défaut le CA théorique de
+ *  - le budget d'un mois est le budget validé (con_shop_month_perf.revenue_budget), à défaut le CA théorique de
  *    l'étude — `source` dit lequel (budget, theorique, mixte).
  *
  * L'écart = réalisé ÷ attendu − 1. Sous le seuil (le réglage `caOrange` des visites, 10 % par défaut), le
@@ -528,7 +528,7 @@ function vbBudgets(int $annee): array
 {
     $out = [];
     try {
-        foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ?', [$annee]) as $b) {
+        foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE year = ?', [$annee]) as $b) {
             if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) { $out[(string) $b['shop_id']][(int) $b['month']] = ['v' => (float) $b['revenue_budget'], 'src' => 'budget']; }
             elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) { $out[(string) $b['shop_id']][(int) $b['month']] = ['v' => (float) $b['ca_theorique'], 'src' => 'theorique']; }
         }

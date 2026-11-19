@@ -1032,9 +1032,9 @@ if [[ -n "$WIRE_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; t
         SELECT 'position',              'partagée' UNION ALL
         SELECT 'mac_report_share',      'partagée' UNION ALL
         SELECT 'ceo_shop',              'cockpit'  UNION ALL
-        SELECT 'ceo_shop_month_perf',   'cockpit'  UNION ALL
-        SELECT 'ceo_project_task',      'cockpit'  UNION ALL
-        SELECT 'ceo_task_issue',        'cockpit'  UNION ALL
+        SELECT 'con_shop_month_perf',   'cockpit'  UNION ALL
+        SELECT 'con_project_task',      'cockpit'  UNION ALL
+        SELECT 'con_task_issue',        'cockpit'  UNION ALL
         SELECT 'ceo_app_setting',       'cockpit'
       ) t
       LEFT JOIN information_schema.TABLES i
@@ -1047,10 +1047,10 @@ if [[ -n "$WIRE_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; t
   MYSQL_PWD="$COCKPIT_DB_PASSWORD" "$WIRE_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" \
     -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" -N -B -e "
     SELECT CONCAT('magasins            : ', COUNT(*)) FROM ceo_shop UNION ALL
-    SELECT CONCAT('tâches              : ', COUNT(*)) FROM ceo_project_task UNION ALL
-    SELECT CONCAT('  dont validées     : ', COUNT(*)) FROM ceo_project_task WHERE note IS NOT NULL UNION ALL
-    SELECT CONCAT('signalements ouverts: ', COUNT(*)) FROM ceo_task_issue WHERE closed_at IS NULL UNION ALL
-    SELECT CONCAT('mois budgétés       : ', COUNT(*)) FROM ceo_shop_month_perf WHERE revenue_budget IS NOT NULL;" 2>&1 \
+    SELECT CONCAT('tâches              : ', COUNT(*)) FROM con_project_task UNION ALL
+    SELECT CONCAT('  dont validées     : ', COUNT(*)) FROM con_project_task WHERE note IS NOT NULL UNION ALL
+    SELECT CONCAT('signalements ouverts: ', COUNT(*)) FROM con_task_issue WHERE closed_at IS NULL UNION ALL
+    SELECT CONCAT('mois budgétés       : ', COUNT(*)) FROM con_shop_month_perf WHERE revenue_budget IS NOT NULL;" 2>&1 \
     | sed 's/^/    /' || warn "volumes : lecture impossible"
 fi
 
@@ -1092,10 +1092,10 @@ else
   # --- Diagnostic DB (lecture seule) sur échec ---------------------------
   DIAG_BIN="$(command -v mysql || command -v mariadb || true)"
   if [[ -n "$DIAG_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
-    log "Diagnostic MySQL (version / sql_mode / SHOW CREATE ceo_project_task)…"
+    log "Diagnostic MySQL (version / sql_mode / SHOW CREATE con_project_task)…"
     MYSQL_PWD="$COCKPIT_DB_PASSWORD" "$DIAG_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" \
       -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" \
-      -e "SELECT VERSION() AS version\G SELECT @@sql_mode AS sql_mode\G SHOW CREATE TABLE ceo_project_task\G" 2>&1 \
+      -e "SELECT VERSION() AS version\G SELECT @@sql_mode AS sql_mode\G SHOW CREATE TABLE con_project_task\G" 2>&1 \
       | sed -n '1,60p' || warn "diag SQL indisponible"
   fi
 fi

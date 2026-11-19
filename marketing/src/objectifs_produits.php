@@ -107,13 +107,13 @@ function opObjectifs(int $cid): array
 /**
  * Les clients d'un mois pour un magasin — l'ordre de grandeur qu'on a en tête
  * quand on pose un objectif en pièces : « 500 tartes pour 4 300 clients ».
- * Le dernier mois clos encodé (ceo_shop_month_perf), sinon les trente derniers
+ * Le dernier mois clos encodé (con_shop_month_perf), sinon les trente derniers
  * jours des heures gravées — sans appel au panel, on ne lit que la base.
  */
 function opClientsMois(int $sid): ?array
 {
     try {
-        $r = Db::row('SELECT year, month, tickets FROM ceo_shop_month_perf
+        $r = Db::row('SELECT year, month, tickets FROM con_shop_month_perf
                        WHERE shop_id = ? AND tickets IS NOT NULL AND tickets > 0 AND (year < ? OR (year = ? AND month < ?))
                        ORDER BY year DESC, month DESC LIMIT 1', [(string) $sid, (int) date('Y'), (int) date('Y'), (int) date('n')]);
         if ($r !== null) {

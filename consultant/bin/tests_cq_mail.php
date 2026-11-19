@@ -45,8 +45,8 @@ require __DIR__ . '/../src/cq_mail.php';
 $P = Db::pdo();
 $P->exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
 $P->exec('CREATE TABLE shops (id INT, name TEXT, active INT)');
-$P->exec('CREATE TABLE ceo_rapport (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, nom TEXT, poste TEXT, frequence TEXT, heure INT, jour INT, blocs TEXT, destinataires TEXT, par_magasin INT, actif INT, envoi_mode TEXT, dest_par_magasin TEXT, jours TEXT)');
-$P->exec('CREATE TABLE ceo_rapport_run (id INTEGER PRIMARY KEY AUTOINCREMENT, rapport_id INT, genere_le TEXT, periode_du TEXT, periode_au TEXT, statut TEXT, resume TEXT, html TEXT, contexte TEXT)');
+$P->exec('CREATE TABLE con_rapport (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, nom TEXT, poste TEXT, frequence TEXT, heure INT, jour INT, blocs TEXT, destinataires TEXT, par_magasin INT, actif INT, envoi_mode TEXT, dest_par_magasin TEXT, jours TEXT)');
+$P->exec('CREATE TABLE con_rapport_run (id INTEGER PRIMARY KEY AUTOINCREMENT, rapport_id INT, genere_le TEXT, periode_du TEXT, periode_au TEXT, statut TEXT, resume TEXT, html TEXT, contexte TEXT)');
 $P->exec('CREATE TABLE con_tache_jour (jour TEXT, id_shop INT, id_task INT, nom TEXT, fait INT, statut TEXT, note INT, obligatoire INT)');
 $P->exec('CREATE TABLE con_tache_jour_etat (jour TEXT PRIMARY KEY)');
 foreach ([[1, 'Atelier by - Florival'], [2, 'Atelier by - Bierges'], [3, 'Atelier by - Rixensart'], [4, 'Atelier by - Ottignies'], [5, 'Atelier by - Limal']] as $s) { Db::exec('INSERT INTO shops VALUES (?,?,1)', $s); }
@@ -78,19 +78,19 @@ function ep_pwa_tasks(): array {
   ]];
 }
 cqMailSemer();
-$rep = Db::row('SELECT * FROM ceo_rapport WHERE code = ?', ['cq-non-realise']);
+$rep = Db::row('SELECT * FROM con_rapport WHERE code = ?', ['cq-non-realise']);
 verifie('la ligne du reporting est semée (quotidien, 19 h, par magasin)', $rep !== null && $rep['frequence'] === 'quotidien' && (int) $rep['heure'] === 19 && $rep['envoi_mode'] === 'par-magasin');
 verifie('l’adresse publique vue par un navigateur est retenue', setting('cqMailBase') === 'https://185.180.206.46/consulant_bo');
-Db::exec('UPDATE ceo_rapport SET dest_par_magasin = ? WHERE id = ?', [json_encode(['Atelier by - Florival' => ['florival@x.be', 'pas-une-adresse'], 'Atelier by - Limal' => ['ko@x.be']]), $rep['id']]);
-Db::exec('INSERT INTO ceo_rapport (code, nom, dest_par_magasin) VALUES (?,?,?)', ['affiche-vente-mois', 'Affiche', json_encode(['Atelier by - Ottignies' => ['ottignies@x.be']])]);
-$rep = Db::row('SELECT * FROM ceo_rapport WHERE code = ?', ['cq-non-realise']);
+Db::exec('UPDATE con_rapport SET dest_par_magasin = ? WHERE id = ?', [json_encode(['Atelier by - Florival' => ['florival@x.be', 'pas-une-adresse'], 'Atelier by - Limal' => ['ko@x.be']]), $rep['id']]);
+Db::exec('INSERT INTO con_rapport (code, nom, dest_par_magasin) VALUES (?,?,?)', ['affiche-vente-mois', 'Affiche', json_encode(['Atelier by - Ottignies' => ['ottignies@x.be']])]);
+$rep = Db::row('SELECT * FROM con_rapport WHERE code = ?', ['cq-non-realise']);
 $GLOBALS['BASE'] = 'http://127.0.0.1/consulant_bo';
 
 $GLOBALS['MUET'] = true; $b = cqMailDistribuer($rep); $GLOBALS['MUET'] = false;
 verifie('panel muet : aucun envoi', Smtp::$env === [] && str_contains($b['resume'], 'aucun envoi'));
 $b = cqMailDistribuer($rep, true);
 verifie('aperçu : rien ne part, le run garde l’e-mail', Smtp::$env === [] && $b['statut'] === 'genere'
-    && str_contains((string) Db::row('SELECT html FROM ceo_rapport_run WHERE id = ?', [$b['runId']])['html'], 'Contrôle qualité non réalisé'));
+    && str_contains((string) Db::row('SELECT html FROM con_rapport_run WHERE id = ?', [$b['runId']])['html'], 'Contrôle qualité non réalisé'));
 $b = cqMailDistribuer($rep);
 $st = []; foreach ($b['magasins'] as $m) { $st[$m['magasin']] = $m['statut']; }
 verifie('un magasin avec une photo ne reçoit rien', ($st['Atelier by - Bierges'] ?? '') === 'fait');

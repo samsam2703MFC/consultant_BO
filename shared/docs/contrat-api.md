@@ -458,7 +458,7 @@ acquis et relié, sinon l'ancienne compétence du panel de la SOP en repli).
 | `leviers` | `GET /referentiels/leviers` | pastilles levier, Paramètres |
 | `kpis` | `GET /referentiels/kpis` | listes KPI des assistants |
 | `emailTemplates` | `GET /referentiels/email-templates` | relances, Paramètres |
-| `projTemplates` | `GET /referentiels/ceo_project-templates` | assistant Nouveau projet |
+| `projTemplates` | `GET /referentiels/con_project-templates` | assistant Nouveau projet |
 | `stores` | `GET /stores?statut=tous` | tous les écrans magasins |
 | `perf` | `GET /stores/perf?granularite=mois&annees=2025,2026` | Tableau, Heatmap, Objectifs, Suivi budget, Marge |
 | `budgets` | `GET /stores/budgets?exercice=2026` | Suivi budget magasin, cumul réseau |
@@ -565,7 +565,7 @@ l'auteur ne soit connu.
 Écriture : `POST /stores/budget-note` avec `{ shop, exercice, mois, auteur, texte, par }`.
 `auteur` ∈ `franchise | consultant | marque`, `mois` ∈ 1–12, `texte` plafonné à 2 000 caractères ;
 **un texte vide SUPPRIME la ligne**. Rend `{ ok: true, texte, par, le }`. Le serveur écrit
-`ceo_shop_month_note` (clé `shop_id, year, month, auteur`) et crée la table au premier appel si
+`con_shop_month_note` (clé `shop_id, year, month, auteur`) et crée la table au premier appel si
 elle manque — une installation qui n'a pas repassé `schema.sql` répond donc normalement.
 
 ### `/exploitation/notes` — la note du jour d'un magasin
@@ -921,7 +921,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 | Prime | Type | Mesure | Qui gagne la récompense | Réglage |
 |---|---|---|---|---|
 | Ventes croisées | target | ses tickets à **2 lignes ou plus** (deux produits différents ; trois croissants font une ligne) **dont une au moins de la catégorie choisie** (`categorie`, un menu déroulant des catégories du catalogue ; vide : toutes), en % de ses tickets, sur les jours moissonnés | chaque vendeuse dont le taux du mois atteint la **cible du magasin** (sinon celle du réseau), 30 tickets au moins | la récompense et la catégorie dans la liste ; `POST /ventes/croisees {cibleDefaut, cibles: {shop: pct ou ""}, minTickets}` |
-| Objectif magasin | target | l'atteinte de l'**objectif du mois** (le budget, `ceo_shop_month_perf`, sinon le CA théorique), en projection pour le mois en cours | chaque personne du magasin au planning, au-dessus de `heuresMin`, si l'atteinte dépasse `pct` (100 % par défaut) | dans la liste : `pct`, `heuresMin` |
+| Objectif magasin | target | l'atteinte de l'**objectif du mois** (le budget, `con_shop_month_perf`, sinon le CA théorique), en projection pour le mois en cours | chaque personne du magasin au planning, au-dessus de `heuresMin`, si l'atteinte dépasse `pct` (100 % par défaut) | dans la liste : `pct`, `heuresMin` |
 | Catégories : **Queen of Tartes**, **Queen of Quiches**… | categorie | le nombre de **pièces** d'une famille (un motif sur la catégorie ou le nom : `tarte`, `quiche`) vendues dans le mois à son nom (`q[cle]` de la moisson) | la **1re du magasin**, `minPieces` au moins ; à égalité, moins de tickets gagne. Plus de couronne du réseau payée | dans la liste : `lib`, `motif`, `minPieces` (six au plus ; la clé vient du libellé et ne change plus) |
 | Promos du panel | promo | les **bundles vendus** (le produit du bundle, une ligne du ticket) ou les pièces des produits d'une offre « X achetés + Y offerts », sur les **seules dates** et dans les **seuls magasins** de la promotion (`qp[cle]`) | la **1re du magasin** de la promo, `minPieces` au moins | une promo se crée depuis la liste des promotions du panel (`GET /ventes/primes-promos`) ; six au plus |
 | Bats ton record (inchangé) | target | lignes par ticket face à son record 12 mois | 100 € par dixième dès le 2e, 3 au plus | `POST /ventes/record` (onglet Targets & primes) |
@@ -1217,7 +1217,7 @@ fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/ta
 | `GET /task/cadre` | `sopLiens` {taskId: [{sopId, code, titre, etape}]} (les tâches reliées à une étape de standard) ; `checklists[]` {id, nom, description, poste, heure, taches[] {taskId, ordre, note}, brut} (les tâches EN PAUSE comprises : `GET /operational-framework/checklists?include=tasks`, car `…/{id}/tasks` ne rend que les actives ; une checklist n'a pas d'état actif au panel, l'écran la dit « en pause » quand toutes ses tâches le sont) ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
 | `GET /task/taches/{id}` | la tâche brute, ses contrôleurs (`/tasks/{id}/controllers`) et les niveaux de poste qui la portent (`/levels/{id}/tasks`, `/position-levels/{id}/tasks`). |
 | `POST /task/apercu` | rien n'est envoyé : la liste des copies et, pour chacune, les appels exacts au panel. Corps : `{modeles: [taskId], checklistId, nom: {remplacer, par, ajouter}, jours: [valeur], unParJour, heure: "HH:MM", frequence, obligatoire, photo, niveaux, controleurs, extra: {}}` — un champ `null` ou absent garde la valeur du modèle. Rend `items[]` {modeleId, nom, jour, heure, existe (id d'une tâche identique : même nom, jour, heure), operations[] {quoi, methode, chemin, corps}}, `aCreer`, `avertissements[]` (modèle quotidien auquel on impose un jour sans changer la fréquence, modèle sans niveau de poste). |
-| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_cadre_cree` et au journal. |
+| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `con_cadre_cree` et au journal. |
 | `GET /task/structure` | pour l'assistant : `sousCategories[]` {id, nom, categorie, section, nb} (la structure du cadre — `/operational-framework/structure/sections`, `…/categories`, `…/categories/{id}/subcategories` — complétée par celles que portent les tâches) et `postes[]` {id, nom} (`/operational-framework/workstations`). |
 | `POST /task/assistant/apercu` | rien n'est envoyé. Corps : `{checklist: {mode: "nouvelle", nom, description, posteId, heure, modeleId, extra} \| {mode: "existante", id} \| {mode: "aucune"}, lignes: [{modeleId?, nom, description?, sousCategorieId?, jours[], unParJour, heure, frequence, obligatoire, photo, priorite, garderNiveaux, garderControleurs}], niveaux: [id], routeNiveaux?, controleursDe?, extra: {}}`. Une ligne sans `modeleId` exige `sousCategorieId`. Rend `checklist` {mode, id, nom, operation (la création, si nouvelle)}, `routeNiveaux` (la route de rattachement que le panel emploie le plus), `items[]` {mode: `creer` \| `ajouter` (tâche identique existante, ajoutée à la checklist) \| `rien` \| `doublon`, nom, jour, heure, modeleId, modeleNom, existe, operations[]}, `aCreer`, `aAjouter`, `avertissements[]`. Une checklist nouvelle dont le nom existe déjà est reprise, pas recréée. |
 | `POST /task/assistant/creer` | même corps (+ `seulementPremiere` : la checklist et la première tâche) : la checklist d'abord, puis chaque tâche (création, checklist, niveaux, contrôleurs) ; arrêt au premier refus. Rend aussi `creees`, `ajoutees`, `arret`. |
@@ -1227,7 +1227,7 @@ fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/ta
 | `PATCH /task/checklists/{id}/actif` | `{actif}` : **mettre en pause ou réactiver toutes les tâches d'une checklist** (vue Document, l'interrupteur du titre). Une checklist du panel n'a pas d'état actif : ni champ, ni route ; `PATCH …/checklists/{id}` ignore `is_active`. Ses tâches : `GET /operational-framework/checklists/{id}?include=tasks` (en pause comprises). `PATCH /tasks/{id}/active` **inverse** l'état et répond 500 même quand il l'a changé : il n'est appelé qu'une fois, pour les seules tâches dans l'autre état, puis `GET /tasks` est relu. Rend `taches[]` {id, avant, bascule, code, actif (relu), ok, erreur?}, `refus` (HTTP 502 et `error` si une tâche n'a pas l'état voulu). Une tâche aussi rangée dans une autre checklist y change aussi. |
 | `DELETE /task/checklists/{id}` | `DELETE /operational-framework/checklists/{id}` ; ses tâches restent. Une checklist créée depuis cet écran part telle quelle ; une autre seulement avec `?confirmer=` = son nom exact au panel. |
 | `PATCH /task/taches/{id}` | `{nom?, description?, jour?, heure?, frequence?, obligatoire?, photo?, priorite?, actif?, apercu?}` → `PATCH /tasks/{id}` avec les seuls champs changés, `actif` : `PATCH /tasks/{id}/active` sans corps, et seulement si la tâche est dans l'autre état — la route **inverse** l'état et répond 500 même quand elle l'a changé (openapi du panel) ; `GET /tasks` est relu et la réponse porte `actif`, l'état relu (`ok` faux s'il n'est pas celui voulu). `apercu: true` rend les appels sans les envoyer. |
-| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}` (vue Document : « Modifier la tâche » › « Supprimer la tâche… », 13/11/2026). Une tâche créée depuis cet écran (`ceo_cadre_cree`) part telle quelle ; une autre seulement avec `?confirmer=` = son nom exact au panel (409 s'il diffère, 404 si elle est introuvable, 403 sans `confirmer`). `?checklists=43,12` (10 au plus) : les checklists où l'écran la voit — son nom s'y lit quand `GET /tasks` (toutes pages) ne la rend pas, une tâche en pause. L'écran relit le cadre ensuite et dit si le panel la montre encore dans une checklist. |
+| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}` (vue Document : « Modifier la tâche » › « Supprimer la tâche… », 13/11/2026). Une tâche créée depuis cet écran (`con_cadre_cree`) part telle quelle ; une autre seulement avec `?confirmer=` = son nom exact au panel (409 s'il diffère, 404 si elle est introuvable, 403 sans `confirmer`). `?checklists=43,12` (10 au plus) : les checklists où l'écran la voit — son nom s'y lit quand `GET /tasks` (toutes pages) ne la rend pas, une tâche en pause. L'écran relit le cadre ensuite et dit si le panel la montre encore dans une checklist. |
 | `PATCH /task/taches` | **le même réglage sur plusieurs tâches** (vue Document, « toute la checklist ») : `{ids: [taskId] (200 au plus), champs: {jour?, heure?, frequence?, obligatoire?, photo?}}`. `/tasks` est lu une fois, puis chaque tâche part comme `PATCH /task/taches/{id}` ; on continue après un refus. Rend `ok`, `refus`, `resultats[]` {id, ok, erreur} (HTTP 502 et `error` s'il y a un refus). |
 | `POST /task/qui` | `{ids: [taskId]}` (200 au plus) : pour chaque tâche, `fait[]` {id, nom, poste, route} (les niveaux de poste qui la portent) et `controle[]` {id, type: self\|position, positionId, nom} (`GET /tasks/{id}/controllers`) ; `choix` {niveaux[] {id, nom, poste, posteId}, postes[] {id, nom, type}} (`/position-levels`, `/positions`). Lecture seule. |
 | `POST /task/qui/modifier` | une opération : `{taskId, ajouterNiveau}` → `POST /{route}/{niveau}/tasks {task_id}` (la route que le panel emploie le plus) ; `{taskId, retirerNiveau, route}` → `DELETE /{route}/{niveau}/tasks/{taskId}` ; `{taskId, ajouterControleur: {type: self\|position, positionId}}` → `POST /tasks/{id}/controllers {controller_type, position_id}` ; `{taskId, retirerControleur}` → `DELETE /tasks/{id}/controllers/{id}`. Rend la ligne `qui` relue. |
@@ -1297,7 +1297,7 @@ restent dans l'écran Gestion de production du cockpit (`&embed=1`).
   Une catégorie qui ne cuisait qu'à une cuisson absente ce jour-là passe à la dernière du jour.
 - **Obligatoires** (`flux.obligatoires[pid] = {jours, min}`) : planifiés les jours cochés, au moins
   `min` pièces en 1re cuisson, même sans vente dans la base. Par défaut : l'assortiment obligatoire
-  du cockpit (`ceo_prod_product.must`), tous les jours, son minimum (`qmin`, sinon 2).
+  du cockpit (`con_prod_product.must`), tous les jours, son minimum (`qmin`, sinon 2).
 - **Préparées la veille** (`flux.veille`, catégories ; la viennoiserie par défaut) : le plan d'un jour
   porte la colonne « à préparer pour demain matin » = la 1re cuisson du lendemain (base des mêmes
   jours que le lendemain). **Se garde** (`flux.garde` ; biscuits, cakes, épicerie, boissons par
@@ -1558,7 +1558,7 @@ la production de la référence ce jour-là dans le journal, `null` sinon), `ope
 `remarques[]` déjà faites sur ce produit ce jour. La réclamation part par `POST /fournisseurs/reclamation`, la même
 route que le téléphone (sans photo ; au téléphone, un lien ouvre le formulaire complet déjà rempli). La remarque va à
 `POST /equipe/remarques` `{shop, employeId | employeNom, texte, le, heure, pid, produit, pieces, motif, saisieId,
-auteur}` → `{ok, id, remarque}` (422 sans texte ou sans personne), gardée dans `ceo_operateur_remarque` — les
+auteur}` → `{ok, id, remarque}` (422 sans texte ou sans personne), gardée dans `con_operateur_remarque` — les
 évaluations des opérateurs — et journalisée (« Équipe »). `GET /equipe/remarques?shop=4[&employe=][&du=&au=]` les
 relit (`remarques[]`, `parOperateur[]`).
 
@@ -1798,7 +1798,7 @@ garde `shop` sur l'appareil.
 - **Textes** : paires `[FR, NL]`, `""` quand le néerlandais n'existe pas (la tablette affiche alors le français). Seuls
   les noms de groupes ont un néerlandais (brouillon `TB_GROUPES_NL`, à faire valider) et les saisons dont le panel porte
   un alias `nl`. `pitch`, `ingr`, `tip`, `crossLine` sont vides : aucune source n'existe.
-- **Vente additionnelle** (`combos`, `cross`) : les combos du réseau (écran Croisements, table `ceo_combo`) dont le
+- **Vente additionnelle** (`combos`, `cross`) : les combos du réseau (écran Croisements, table `con_combo`) dont le
   produit fait partie de A — même règle que l'écran : groupe, catégorie ou produit exacts. Pour chacun : `avec` = B en
   toutes lettres (« (groupe) » retiré), `quand` = le moment (`matin`, `midi`, `apresmidi` ; vide = toute la journée),
   `nom` = le surnom du combo (vide quand ce n'est que « A × B »), `cible` = la target d'attache en % (ou `null`), `ids`
@@ -1889,7 +1889,7 @@ garde `shop` sur l'appareil.
 
 `POST /tablette/photos` — `{ "shop": "4" | null, "ensemble"?: "comptoir" | "tout" }` → `{ "faites": 40, "restants": 69,
 "manquantes": 78 }`. Pour les produits du book de ce magasin : au plus 24 photos de recette lues au panel (même chaîne
-et même table `ceo_plano_std_photo` que le planogramme, mais la recette est lue par l'`id_recipe` du catalogue,
+et même table `con_plano_std_photo` que le planogramme, mais la recette est lue par l'`id_recipe` du catalogue,
 `PanelApi::recipePhotos`, sans passer par l'assortiment d'un magasin), téléchargées sous `uploads/plano/panel/`, puis
 leurs vignettes (80 au plus, 25 s au plus). `faites` = références traitées par l'appel (photo lue, absence notée pour
 sept jours, ou vignette faite) ; `restants` = ce qu'un appel suivant ferait encore ; `manquantes` = produits toujours
@@ -1916,7 +1916,7 @@ l'appelle jamais.
   recalculés. Semaine = lundi → dimanche qui contient `date` ; mois = son mois calendaire. `realise` = CA **TTC**
   encaissé (ventes caisse après remise : `ca` du margin-heatmap du panel, = `income` du daily-summary, taxe comprise) du
   début de l'étendue jusqu'à `date` incluse. `objectif` = celui de l'étendue entière : le budget validé du mois
-  (`ceo_shop_month_perf.revenue_budget`), à défaut le CA théorique de l'étude (`ca_theorique`), réparti jour par jour par
+  (`con_shop_month_perf.revenue_budget`), à défaut le CA théorique de l'étude (`ca_theorique`), réparti jour par jour par
   la pondération réseau sur les jours où le magasin ouvre — une semaine à cheval sur deux mois prend chaque jour dans le
   budget de son mois. `attendu` = la part de cet objectif des jours jusqu'à `date` comprise. Pour une `date` passée,
   réalisé et attendu se relisent dans les `jours` de Résultat (quelques centimes d'arrondi). Réseau : la ligne `reseau`
@@ -2184,7 +2184,7 @@ jusqu'au 27/12/2027, dimanche 02/01/2028, 59 semaines comme le modèle).
   = la semaine est close : l'écran prend alors le réalisé à la place de la prévision. `budget` = la somme des budgets
   de ses jours (voir ci-dessous), extrapolée à sept jours quand quatre au moins sont budgétés (`budgetJours`), null
   sinon ; `budgetProfil` = `n1`, `n2` ou `egal`.
-- **Budget d'un jour** : le budget du mois (`ceo_shop_month_perf.revenue_budget`, à défaut `ca_theorique`, comme
+- **Budget d'un jour** : le budget du mois (`con_shop_month_perf.revenue_budget`, à défaut `ca_theorique`, comme
   `/visites/budget`) réparti au profil des mêmes jours 364 jours plus tôt, à défaut 728, à défaut à parts égales. Un
   profil ne sert que s'il est entièrement passé et qu'au moins dix de ses jours ont vendu ; un jour fermé l'an passé
   reçoit zéro.
@@ -2193,7 +2193,7 @@ jusqu'au 27/12/2027, dimanche 02/01/2028, 59 semaines comme le modèle).
   ajoute les ventes du plan : l'atterrissage du mois).
 - **`tendance`** : les 13 dernières semaines closes face à leur N-1 (celles qui ont les deux, 4 au moins), le repère de
   la croissance à appliquer à l'année passée.
-- **`budgets`** : chaque exercice du plan, sa fiche (`ceo_shop_budget`), sa date de validation, ses mois budgétés ou au
+- **`budgets`** : chaque exercice du plan, sa fiche (`con_shop_budget`), sa date de validation, ses mois budgétés ou au
   CA théorique. **`taux`** : `seuilsCharges()` (matière de Budget › Paramètres, personnel et frais généraux de la table
   KPI). **`charges`** : les postes de `budgetCharges` à taux non nul (le % validé, à défaut le % réseau ; `matiere` =
   la catégorie que la marge brute retranche).
@@ -2249,7 +2249,7 @@ retenue) : pour les exercices du plan, ce que le cockpit tient sur CE magasin se
   "taux": { "food": 40, "labour": 33, "overhead": 13.5 }, "liens": { "crm": "https://…" } }
 ```
 
-- **`exercices`** : `ceo_shop_budget` (fiche, `validated_on`, étude de marché) et `ceo_shop_month_perf` (chaque mois
+- **`exercices`** : `con_shop_budget` (fiche, `validated_on`, étude de marché) et `con_shop_month_perf` (chaque mois
   `revenue_budget` et `ca_theorique`, un zéro n'étant pas un budget). Sans saisonnalité d'étude, la courbe du réseau
   (`saisonnaliteReseau`, `saisonnaliteSource: "reseau"`).
 - **`charges`** et **`paliers`** : `budgetCharges` (Budget › Paramètres, aligné sur le Compte de résultat du CRM), le
@@ -2460,7 +2460,7 @@ charges: [{poste, levier, pctBudget, pctTheorique}] }`
 `potentielMaturite × monteeEnRegime[annéeExploitation]`, réparti par `saisonnalite`)
 (`caTheoriqueAn` = somme de `caTheoriqueMensuel`, calculée côté serveur). Le fichier d'annexe passe par `POST /stores/{id}/budget/annexe` (multipart) qui renvoie
 `{nom, url, taille, date}` à replacer dans `etudeMarche.annexe`.
-Le serveur écrit `ceo_shop_budget` + `ceo_shop_month_perf.ca_budget`
+Le serveur écrit `con_shop_budget` + `con_shop_month_perf.ca_budget`
 et journalise l'opération (`ceo_journal_entry`, type `Budget`).
 
 Chaque tâche accepte aussi `magasinId` (optionnel, `null` = tâche réseau) : une tâche est rattachée
@@ -2826,7 +2826,7 @@ se rapportent au CA hors TVA :
 - `caHt` (et `realiseHt` sur une étendue) = CA × (1 − TVA ÷ TTC des tickets) ; `tva`, `tvaPart` (% du TTC), `tvaSource`.
   La TVA vient des tickets du jour (`tax_amount_after_discount` de `/shops/{id}/transactions?date=`, la liste déjà lue
   pour le split pro : le relevé `svP{shop}:{jour}` porte désormais `b.tva` et `b.caT`, le TTC des tickets dont la TVA
-  est lue), sinon de la caisse gravée (`ceo_verif_ca` : `caisse_tva` ÷ `caisse_ttc`), sinon du taux habituel du magasin
+  est lue), sinon de la caisse gravée (`con_verif_ca` : `caisse_tva` ÷ `caisse_ttc`), sinon du taux habituel du magasin
   sur huit semaines, sinon de 6 % (vente à emporter alimentaire) ;
 - `coutMatiere` (inchangé : coût de recette, ou CA − `margin_value` du panel), `margeBrute` = `caHt` − `coutMatiere` ;
 - `overhead` = frais du jour × (hors TVA ÷ saisi) des frais du mois (onglet Frais) ; `overheadSaisi`, `overheadTva`,
@@ -2902,7 +2902,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Promotions : la structure de l'API du panel (21/10/2026, demandé par Sam).** La documentation publique du panel (Swagger : `https://atelierby.tfbuddy.com/api/documentation/`, spécification `…/api/documentation/api.php`, OpenAPI 3, 933 routes) décrit les « Buy X Get Y » ainsi : `trigger` et `reward` portent `quantity`, `product_ids`, `category_ids`, `excluded_product_ids` ; une cible produit est un entier **ou `{id_product, id_product_portion}`** — la portion d'un produit se vise par son numéro ; une catégorie ne porte pas de portion ; `category_targets` / `portion_scope` n'y figurent plus. Une promotion se modifie par **`PATCH …/{id}`** (pas de PUT documenté). `status` : `DRAFT`, `ACTIVE`, `INACTIVE` (le cockpit garde `INACTIVE` pour ses brouillons) ; nouveaux : `activation_mode: VOUCHER_ONLY`, `voucher_campaign_id`. Le cockpit suit : (1) une portion visée part produit par produit, `product_ids: [{id_product, id_product_portion}]`, et une catégorie choisie avec une portion part en ses produits du magasin qui ont cette portion (hors exclusions) — `category_ids` vide ; un produit choisi sans cette portion au panel se dit (422) avant tout envoi ; (2) les portions de chaque produit se lisent à `/products/{id}/portions` (compte admin, sinon consultant ; type `ONE_QUARTER`/`ONE_HALF`, fraction 0,25/0,5 ou libellé « 1/4 »), sinon dans la table `product_portion`, et se gardent un jour (`pmPortions`) ; (3) modifier et activer : `PATCH` (corps complet), `PUT` en repli si le panel répond 404/405 ; (4) la relecture compare les produits avec leur portion (« 12:77 ») et reconnaît la portion d'une promotion relue par le numéro de ses portions (½, ¼ dans l'assistant). La sonde `GET /ventes/promos/sonde-portions?shop=4&q=tarte` lit aussi `/products/{id}/portions` et `/shops/{magasin}/products/{id}/portions/prices`, et dit ce que le cockpit en retient (`retenu`).
 
-**Fiche franchisé : l'onglet Documents (22/10/2026, demandé par Sam).** Un troisième onglet de Fiche & scoring, à côté de « Ce magasin » et « Le réseau » : les documents du magasin choisi — rapports de réunion, contrats de mise à disposition, autres pièces —, par sorte, les plus récents d'abord. On dépose un ou plusieurs fichiers (PDF, Word, Excel, PowerPoint, OpenDocument, photos, texte, e-mails ; 25 Mo au plus, ou moins si PHP le limite) avec une sorte, un titre (sinon le nom du fichier), la date du document et une note ; on ouvre (un PDF ou une image s'affiche, le reste se télécharge), on télécharge, on retire (la ligne et le fichier). Routes : `GET /franchises/documents?shop=` → `{documents: [{id, sorte, sorteLib, titre, nom, mime, octets, date, note, deposeLe}], sortes, maxOctets, extensions}` ; `POST /franchises/documents` en **multipart** (`shop, sorte, titre, date, note, fichiers[]`) → `{ajoutes, refuses: [{nom, motif}]}` ; `GET /franchises/documents/fichier?id=[&telecharger=1]` sort le fichier lui-même ; `DELETE /franchises/documents?id=`. Les fichiers vivent sous `public/uploads/documents/{magasin}/` (préservé par le déploiement) sous un nom tiré au hasard, et un `.htaccess` y refuse tout accès direct : un contrat ne se lit que par l'API. Table `ceo_doc`. `src/documents.php`, `bin/tests_documents.php`. **Le mail « matériel mis à disposition »** (maquette validée par Sam le 22/10/2026) vit dans cet onglet, bloc « Courriers au franchisé » : matériel mis à disposition à l'état neuf ; l'entretien (nettoyage, courant, périodique) et toutes les pièces qui cassent (remplacement, réparations) à la charge du franchisé. Avant l'envoi : la liste du matériel (facultative), le contrat joint (un document « Contrat de mise à disposition » du magasin, le plus récent par défaut, ou sans pièce jointe), le destinataire (les adresses que les carnets des rapports connaissent pour ce magasin, ou une adresse saisie), et l'aperçu du mail tel qu'il partira. Envoyé, il est rangé dans la sorte « Courrier envoyé » (en PDF quand le serveur sait en faire, sinon en HTML), avec le destinataire et la pièce jointe en note. Routes : `GET /franchises/documents/mail-materiel?shop=[&materiel=&contrat=]` → `{sujet, html, adresses, contrats, smtp}` ; `POST /franchises/documents/mail-materiel {shop, a, materiel?, contrat?}` → `{ok, a, sujet, copie}` (un contrat de plus de 10 Mo est refusé : trop lourd pour un e-mail).
+**Fiche franchisé : l'onglet Documents (22/10/2026, demandé par Sam).** Un troisième onglet de Fiche & scoring, à côté de « Ce magasin » et « Le réseau » : les documents du magasin choisi — rapports de réunion, contrats de mise à disposition, autres pièces —, par sorte, les plus récents d'abord. On dépose un ou plusieurs fichiers (PDF, Word, Excel, PowerPoint, OpenDocument, photos, texte, e-mails ; 25 Mo au plus, ou moins si PHP le limite) avec une sorte, un titre (sinon le nom du fichier), la date du document et une note ; on ouvre (un PDF ou une image s'affiche, le reste se télécharge), on télécharge, on retire (la ligne et le fichier). Routes : `GET /franchises/documents?shop=` → `{documents: [{id, sorte, sorteLib, titre, nom, mime, octets, date, note, deposeLe}], sortes, maxOctets, extensions}` ; `POST /franchises/documents` en **multipart** (`shop, sorte, titre, date, note, fichiers[]`) → `{ajoutes, refuses: [{nom, motif}]}` ; `GET /franchises/documents/fichier?id=[&telecharger=1]` sort le fichier lui-même ; `DELETE /franchises/documents?id=`. Les fichiers vivent sous `public/uploads/documents/{magasin}/` (préservé par le déploiement) sous un nom tiré au hasard, et un `.htaccess` y refuse tout accès direct : un contrat ne se lit que par l'API. Table `con_doc`. `src/documents.php`, `bin/tests_documents.php`. **Le mail « matériel mis à disposition »** (maquette validée par Sam le 22/10/2026) vit dans cet onglet, bloc « Courriers au franchisé » : matériel mis à disposition à l'état neuf ; l'entretien (nettoyage, courant, périodique) et toutes les pièces qui cassent (remplacement, réparations) à la charge du franchisé. Avant l'envoi : la liste du matériel (facultative), le contrat joint (un document « Contrat de mise à disposition » du magasin, le plus récent par défaut, ou sans pièce jointe), le destinataire (les adresses que les carnets des rapports connaissent pour ce magasin, ou une adresse saisie), et l'aperçu du mail tel qu'il partira. Envoyé, il est rangé dans la sorte « Courrier envoyé » (en PDF quand le serveur sait en faire, sinon en HTML), avec le destinataire et la pièce jointe en note. Routes : `GET /franchises/documents/mail-materiel?shop=[&materiel=&contrat=]` → `{sujet, html, adresses, contrats, smtp}` ; `POST /franchises/documents/mail-materiel {shop, a, materiel?, contrat?}` → `{ok, a, sujet, copie}` (un contrat de plus de 10 Mo est refusé : trop lourd pour un e-mail).
 
 **Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026, demandé par Sam : « net pas brut »).** En tête de Reporting automatisé, une carte d'envoi ponctuel : le mois (le mois clos par défaut, douze au choix), le CA net hors TVA de chaque magasin et du réseau, la TVA, le TTC et les tickets, un destinataire et « Envoyer par e-mail ». Net = TTC après remise − TVA, ticket par ticket (`total_gross_amount_after_discount` − `tax_amount_after_discount` des tickets du panel, `/shops/{id}/transactions?date=`), tous les tickets, clients pro compris. Une journée close se lit une fois (`caNet{magasin}:{jour}`) ; le mois se lit par lots de vingt-cinq secondes, l'écran relit tant que ça avance. L'e-mail ne part qu'un mois entièrement lu, avec la TVA de chaque ticket, et seulement à une adresse que le cockpit connaît (destinataires des rapports, compte SMTP — la règle des dossiers). Routes : `GET /rapports/ca-net?mois=AAAA-MM` → `{magasins: [{shopId, nom, brut, tva, net, tickets, jours, joursLus, sansTva}], reseau, aLire, complet, adresses, smtp, moisDispo}` ; `POST /rapports/ca-net/envoyer {mois, a}` (409 tant que le mois n'est pas lu ou qu'un ticket n'a pas de TVA, 422 pour une adresse inconnue). `src/ca_net_mois.php`, `bin/tests_ca_net.php`.
 
@@ -2936,7 +2936,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Catalogue : rang, saison, tri par colonne (18/10/2026, demande de Sam).** La liste gagne trois colonnes : **Rang** — le rang au chiffre d'affaires sur toute la gamme (« 4 / 230 ») —, **Rang catégorie** — le rang dans sa catégorie (« 1 / 18 »), une colonne à part qui se trie aussi —, ceux du score (`pdCalcule` : `rangGlobal`, `rang`) — et **Saison** — les gammes saisonnières du panel où la référence est vendue (`saisons` du catalogue, noms et emoji de `/production/saisons`), « seulement en saison » quand elle n'est dans aucune gamme permanente. Un filtre « Toutes les saisons / Hors saison / une saison » rejoint la barre d'outils. Chaque en-tête porte une flèche : un clic trie la colonne, un second inverse, les cases vides restent en bas ; une question remet son ordre. L'export CSV porte la saison et les deux rangs. « ↺ Réinitialiser » (visible dès qu'un filtre est posé) remet la recherche, la catégorie, la saison, la question et le tri.
 
-**« Nécessaire » fondu dans « Obligatoire », la marge nette, la part des ventes (18/10/2026, demandes de Sam).** Il ne reste qu'une case, **Obligatoire** : imposée en boutique (l'assortiment obligatoire, son minimum, le plan de production) et toujours gardée au score (décision « Garder », `pdCalcule` lit `must` au catalogue). À la première requête qui suit la mise en ligne, `aoFusionNecessaire()` (appelée par `ensureInstalled`) rend obligatoire toute l'année, sans minimum, chaque référence cochée « nécessaire » (une obligatoire de saison reste ce qu'elle est), note chaque passage au journal (« Assortiment obligatoire ») et remet `ceo_prod_revue.necessaire` à zéro — une fois pour toutes (`php bin/tests_assortiment.php`). La route `PUT /products/{id}/necessaire` est retirée ; les PDF d'arbitrage et de catégorie disent « obligatoire ». Dans le Catalogue, un interrupteur **Obligatoire** sur chaque ligne (un clic, sans ouvrir la fiche ; retirer se confirme) et la case de la fiche écrivent `PUT /production/obligatoire/{ref}`. La **marge nette** est (prix de vente moyen − coût matière première) ÷ prix de vente moyen, en % — celle du score — dans la liste, la fiche et l'export. La colonne **Part des ventes** : le chiffre de la référence ÷ celui de toutes les références du réseau, sur la période du score.
+**« Nécessaire » fondu dans « Obligatoire », la marge nette, la part des ventes (18/10/2026, demandes de Sam).** Il ne reste qu'une case, **Obligatoire** : imposée en boutique (l'assortiment obligatoire, son minimum, le plan de production) et toujours gardée au score (décision « Garder », `pdCalcule` lit `must` au catalogue). À la première requête qui suit la mise en ligne, `aoFusionNecessaire()` (appelée par `ensureInstalled`) rend obligatoire toute l'année, sans minimum, chaque référence cochée « nécessaire » (une obligatoire de saison reste ce qu'elle est), note chaque passage au journal (« Assortiment obligatoire ») et remet `con_prod_revue.necessaire` à zéro — une fois pour toutes (`php bin/tests_assortiment.php`). La route `PUT /products/{id}/necessaire` est retirée ; les PDF d'arbitrage et de catégorie disent « obligatoire ». Dans le Catalogue, un interrupteur **Obligatoire** sur chaque ligne (un clic, sans ouvrir la fiche ; retirer se confirme) et la case de la fiche écrivent `PUT /production/obligatoire/{ref}`. La **marge nette** est (prix de vente moyen − coût matière première) ÷ prix de vente moyen, en % — celle du score — dans la liste, la fiche et l'export. La colonne **Part des ventes** : le chiffre de la référence ÷ celui de toutes les références du réseau, sur la période du score.
 
 **Le Catalogue refondu : quatre questions, une liste, une fiche (18/10/2026, maquette « A + D » choisie par Sam).** `#/catalogue` n'a plus d'onglets. En tête, quatre questions, chacune avec son chiffre, qui filtrent la liste (un second clic retire le filtre) : **Que retirer de la gamme ?** (les références à la décision « Effacer » du score), **Où vend-on moins que le réseau ?** (le manque à gagner réseau par mois, `/produits/manque`), **Les prix sont-ils tenus ?** (les références dont le prix encaissé varie de 10 % ou plus entre magasins, `/analyse/prix-volume`), **Qu'est-ce qui décroche ?** (−15 % ou pire : la 2e moitié des derniers mois face à la 1re, réseau entier, `/analyse/produits`). Puis une seule liste : Référence, Prix, Marge nette (prix de vente moyen − matière première, en %), Volume, Part des ventes, Score, Magasins, Tendance, Décision, Obligatoire — plus le manque par mois ou l'écart de prix quand la question le demande. Un clic ouvre la fiche à droite : **Magasins** (pièces face à la moyenne, prix encaissé face au prix réseau, manque à gagner là où elle manque), **Marges** (prix catalogue et encaissé, coût matière, marges brute et nette, commission, ce qui fait le score), **Dans le temps** (la courbe réseau, la tendance), **Fiche** (la fiche de production en lecture). Les gestes d'avant y restent : revue ★, Obligatoire, « Score en détail · projets · arrêt » (la fenêtre du scoring : envoyer aux projets, arrêter le produit), « Fiche de production » (la fenêtre d'édition), la perte par magasin ; la barre d'outils garde la période du score, les seuils Garder / Modifier (enregistrés pour le réseau), le PDF d'arbitrage, le PDF de la catégorie et un export CSV. Les lectures détaillées s'ouvrent de la fiche ou de la question, sans onglet, avec un retour « ‹ Catalogue » : une référence magasin par magasin (`#/analyse-produits`, la courbe jour par jour et l'effet des promotions), Prix × volume, Dans le temps, Manque à gagner. Retirés : les écrans Scoring, Sous seuil et Par magasin (`#/scoring`, `#/sous-seuil`, `#/usage-catalogue` mènent au Catalogue) et l'ancienne liste des fiches. **Assortiment obligatoire** devient un onglet de **Comptoir · planogramme** (onglets Comptoir, Assortiment obligatoire). Rien ne change au serveur.
 
@@ -3509,7 +3509,7 @@ puis les URL signées.
   lit déjà — la page croise les deux par `taskId`.
 - **`validite`** : les URL signées expirent (secondes). La page relit la route au-delà de
   quinze minutes, et dès qu'une image refuse de se charger.
-- **`avis`** et **`reperes`** sont locaux (`mac_task_review`, `ceo_task_annotation`) : ils ne
+- **`avis`** et **`reperes`** sont locaux (`mac_task_review`, `con_task_annotation`) : ils ne
   dépendent pas du panel.
 - **`checklists`** : le nom de la checklist de chaque tâche du jour, photo ou non — `/pwa/tasks`
   ne le porte pas pour une tâche déjà notée.
@@ -3626,15 +3626,15 @@ d'installation autonome**, vide sur une base réelle.
 |---|---|---|
 | Magasins | `shops` | `ceo_shop` (miroir, rempli à la volée pour les clés étrangères) |
 | Consultants | `user_membership` ⨝ `user_profile` (`app = 'CONSULTANT'`, actifs) | `con_consultant` |
-| Destinataires des rapports | `user_membership` ⨝ `user_profile` (actifs, avec e-mail) | `ceo_person` |
-| CA / marge mensuels | `mac_shop_monthly_pnl` | `ceo_shop_month_perf` |
+| Destinataires des rapports | `user_membership` ⨝ `user_profile` (actifs, avec e-mail) | `con_person` |
+| CA / marge mensuels | `mac_shop_monthly_pnl` | `con_shop_month_perf` |
 | Tickets, panier moyen | `transaction` | — |
-| Catalogue produits | `sig_products`, `transaction_product` | `ceo_product` |
+| Catalogue produits | `sig_products`, `transaction_product` | `con_product` |
 | Leviers, KPI, positions | `of_tag`, `kpi`, `position` | créées si absentes |
-| **Budget encodé** | **`ceo_shop_month_perf`** | — (donnée propre au cockpit) |
-| **Validation des tâches** | **`ceo_project_task`, `ceo_task_issue`** | — (donnée propre au cockpit) |
-| Projets, jalons, coûts | `ceo_project*` | — (données propres au cockpit) |
-| Fournisseurs | `ceo_supplier` | — (aucune table partagée équivalente) |
+| **Budget encodé** | **`con_shop_month_perf`** | — (donnée propre au cockpit) |
+| **Validation des tâches** | **`con_project_task`, `con_task_issue`** | — (donnée propre au cockpit) |
+| Projets, jalons, coûts | `con_project*` | — (données propres au cockpit) |
+| Fournisseurs | `con_supplier` | — (aucune table partagée équivalente) |
 
 **Le jeu de démonstration ne se charge jamais tout seul.** `sql/seed.sql` est
 gardé derrière `seed: true` (config) ou `COCKPIT_SEED=1` ; par défaut une base
@@ -3653,7 +3653,7 @@ Trois sources, fusionnées par (magasin, année, mois) :
 |---|---|---|
 | `ca`, `margeNette`, `margePct`, `labourCostPct`, `overheadPct` | `mac_shop_monthly_pnl` | table partagée avec le panel |
 | `tickets`, `panierMoyen`, et `ca` de repli | `transaction` | ventes caisse de l'exercice courant |
-| **`caBudget`, `caTheorique`** | **`ceo_shop_month_perf`** | **le budget encodé — aucune autre table ne le porte** |
+| **`caBudget`, `caTheorique`** | **`con_shop_month_perf`** | **le budget encodé — aucune autre table ne le porte** |
 
 La troisième passe n'est pas facultative : ni `mac_shop_monthly_pnl` ni
 `transaction` ne connaissent le budget. Sans elle, l'encodage était écrit en
@@ -3685,7 +3685,7 @@ encaissé » est une information, pas une ligne à masquer.
 
 Deux règles de lecture qui ne se devinent pas :
 
-1. **La période porte sur la date de VALIDATION** (`ceo_project_task.validated_at`),
+1. **La période porte sur la date de VALIDATION** (`con_project_task.validated_at`),
    pas sur `done_on` qui est la livraison. Une tâche rendue en mars et jugée en
    août appartient au suivi d'août — la borner sur la livraison la ferait
    disparaître de tout suivi utile.
@@ -3707,46 +3707,46 @@ Un statut hors de ces trois valeurs est refusé en `422`. Chaque transition
 écrit une ligne dans `ceo_journal_entry`.
 
 ```sql
-ALTER TABLE ceo_project_task ADD COLUMN validated_at DATETIME NULL;
+ALTER TABLE con_project_task ADD COLUMN validated_at DATETIME NULL;
 ```
 
 **Aucune migration à lancer à la main.** `ensureValidation()` (`src/installer.php`) pose les deux
-colonnes, la table `ceo_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
+colonnes, la table `con_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
 comme sur une base déjà en service — `schema.sql` et `seed.sql`, eux, ne repassent jamais sur une
 installation existante. Pour information, l'équivalent manuel :
 
 ```sql
-ALTER TABLE ceo_project_task ADD COLUMN note TINYINT NULL;
-ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
--- + la table ceo_task_issue (voir sql/schema.sql)
+ALTER TABLE con_project_task ADD COLUMN note TINYINT NULL;
+ALTER TABLE con_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
+-- + la table con_task_issue (voir sql/schema.sql)
 ```
 
 ```sql
-ALTER TABLE ceo_shop_budget ADD COLUMN ca_theorique_an DECIMAL(12,2) NULL;
-ALTER TABLE ceo_shop_month_perf ADD COLUMN ca_theorique DECIMAL(12,2) NULL;
+ALTER TABLE con_shop_budget ADD COLUMN ca_theorique_an DECIMAL(12,2) NULL;
+ALTER TABLE con_shop_month_perf ADD COLUMN ca_theorique DECIMAL(12,2) NULL;
 ALTER TABLE ceo_shop_budget_charge ADD COLUMN pct_theorique DECIMAL(5,2) NULL;
-ALTER TABLE ceo_shop_budget ADD COLUMN etude_date DATE NULL;
-ALTER TABLE ceo_shop_budget ADD COLUMN etude_source VARCHAR(160) NULL;
-ALTER TABLE ceo_shop_budget ADD COLUMN etude_potentiel_menages INT NULL;
-ALTER TABLE ceo_shop_budget ADD COLUMN etude_potentiel_maturite DECIMAL(12,2) NULL;
-ALTER TABLE ceo_shop_budget ADD COLUMN annee_exploitation TINYINT NULL;
-ALTER TABLE ceo_shop_budget ADD COLUMN montee_regime JSON NULL;   -- {"a1":70,"a2":80,"a3":90}
-ALTER TABLE ceo_shop_budget ADD COLUMN saisonnalite JSON NULL;     -- 12 pourcentages
-ALTER TABLE ceo_shop_budget ADD COLUMN etude_annexe JSON NULL;     -- {"nom","url","taille","date"}
+ALTER TABLE con_shop_budget ADD COLUMN etude_date DATE NULL;
+ALTER TABLE con_shop_budget ADD COLUMN etude_source VARCHAR(160) NULL;
+ALTER TABLE con_shop_budget ADD COLUMN etude_potentiel_menages INT NULL;
+ALTER TABLE con_shop_budget ADD COLUMN etude_potentiel_maturite DECIMAL(12,2) NULL;
+ALTER TABLE con_shop_budget ADD COLUMN annee_exploitation TINYINT NULL;
+ALTER TABLE con_shop_budget ADD COLUMN montee_regime JSON NULL;   -- {"a1":70,"a2":80,"a3":90}
+ALTER TABLE con_shop_budget ADD COLUMN saisonnalite JSON NULL;     -- 12 pourcentages
+ALTER TABLE con_shop_budget ADD COLUMN etude_annexe JSON NULL;     -- {"nom","url","taille","date"}
 
 -- Annotations mensuelles du suivi budget (créée aussi au vol par ensureBudgetNotes()) :
-CREATE TABLE IF NOT EXISTS ceo_shop_month_note (
+CREATE TABLE IF NOT EXISTS con_shop_month_note (
   shop_id VARCHAR(8) NOT NULL, year SMALLINT NOT NULL, month TINYINT NOT NULL,
   auteur VARCHAR(12) NOT NULL,          -- franchise | consultant | marque
   texte TEXT NULL, maj_par VARCHAR(120) NULL, maj_le DATETIME NULL,
   PRIMARY KEY (shop_id, year, month, auteur)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-ALTER TABLE ceo_project ADD COLUMN famille VARCHAR(40) NOT NULL;
-ALTER TABLE ceo_project_task ADD COLUMN description TEXT NULL;
-ALTER TABLE ceo_project_task ADD COLUMN budget DECIMAL(10,2) NULL;
-ALTER TABLE ceo_project_task ADD COLUMN shop_id VARCHAR(8) NULL;   -- magasin de rattachement (NULL = réseau)
-ALTER TABLE ceo_project_task ADD CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id);
+ALTER TABLE con_project ADD COLUMN famille VARCHAR(40) NOT NULL;
+ALTER TABLE con_project_task ADD COLUMN description TEXT NULL;
+ALTER TABLE con_project_task ADD COLUMN budget DECIMAL(10,2) NULL;
+ALTER TABLE con_project_task ADD COLUMN shop_id VARCHAR(8) NULL;   -- magasin de rattachement (NULL = réseau)
+ALTER TABLE con_project_task ADD CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id);
 ```
 
 ### `/targets`
@@ -3963,7 +3963,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/kpi/{shop}[?rafraichir=1]` | tous | **KPI et santé du magasin** (tablette du consultant, 26/10/2026) : `caEtp` (les trois derniers mois clos : `mois[]` `{mois, lab, ca, etp, caEtp, reseau, rang, sur}`, `seuil` de la Table KPI `ca-etp`, `heuresEtp`) — CA du mois (pvKpisMois) ÷ ETP planifiés (ep_stores_etp), le réseau = CA total ÷ ETP totaux des magasins qui ont les deux, un mois sans planning sans ETP deviné ; `structure` (les trois derniers mois clos : `categories[]` `{categorie, ca, part, partReste, ecart}` en % et en points, `ca`, `caReste`, `autres`, `moisLus` / `moisDemandes`) — `/consultant/shops/category-sales` un appel par mois pour tout le réseau, gravé (`vkCat:{AAAA-MM}`), le reste du réseau sans les entrées techniques. `canaux` (26/10/2026, les mêmes trois mois clos : `magasin` et `reste` `{ca{comptoir, b2b, cc, liv}, total, parts{…} en %, proSansTva, b2bAvecSansTva}` — les tickets des clients marqués pro sans TVA valide restent au comptoir, chiffrés à part avec la part B2B qu'ils donneraient, `reste.magasins`, `jours` / `joursLus`, `webshop`, `b2bMax` — le réglage `b2bMax` des visites, 40 —, `b2bStatut` ok, proche (à moins de 5 points), au-dessus, `motif`) — les jours dont la caisse est gravée (`svP{shop}:{jour}` : CA de tous les tickets, tickets des clients pro à TVA valide = B2B), le webshop (`coCommandes` : retrait = click & collect, livraison = livraison bureau), comptoir = caisse − B2B − commandes du webshop encaissées en caisse ; le reste du réseau sans les magasins au webshop muet. `manques[]` nomme un bloc incomplet (relu dans 5 min ; `canaux` quand le webshop du magasin n'a pas répondu). Gardé une heure (`vkKpi2:{shop}`), servi périmé six heures pendant le recalcul. L'année face à l'an passé et les six leviers, la tablette les lit aux routes du dashboard magasin (`/ventes/semaines?shop=&vue=annee&articles=1&_cache=900`, `/leviers/magasins?annee=&mois=&_cache=900`) et les dessine avec les cartes du dashboard, partagées dans `assets/js/cartes-magasin.js` (style tablette : `assets/css/cartes-magasin.css`). Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
 | `GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12]` | tous | **Les tâches du magasin mois par mois** (tablette, étape « Contrôles photo », 26/10/2026) : `mois[]` les n derniers mois (3 à 12, le plus récent d'abord) `{mois, lab, enCours, demandees, faites, jours, pct, notees, sous, moyenne}` — demandées et faites du relevé quotidien du panel (`con_tache_jour`, journées révolues : le mois en cours jusqu'à hier), notes du contrôle qualité (`mac_task_review` : notées, sous le seuil `signalement.seuil`, moyenne) ; `choisi` (d'office le mois en cours, ou le précédent s'il n'a encore rien) et `taches[]` ses tâches notées sous le seuil ou refusées `{jour, tache, note, commentaire, controleur, releveeLe, recidive, suite}` (ep_pwa_tasks_nc). Lu dans la base du cockpit seulement. |
 | `GET /visites/outils/{shop}` | tous | **Les outils de gestion** (tablette, en tête du temps « Analyse », 17/11/2026, `src/visites_outils.php`) : `lu{}` ce que le cockpit lit tout seul, par outil — `tresorerie` (`panel_tresorerie_plan` : dernière mise à jour, soldes réels des quatre derniers dimanches), `commandes` (la lecture du panel gardée par Commandes et ventes, `cmdApi:{shop}`, sinon `client_order` : commandes sur 30 jours, passées encore ouvertes), `taches` (`con_tache_jour` sur 30 jours, notes de `mac_task_review`), `soir` (`panel_revue_soir` : soirs clôturés sur 30), `fournisseurs` (`material_order` : commandes sur 30 jours — le panel n'a pas de route) — chacun `{etat: ok\|att\|ko\|null, texte}`, absent si rien n'est lisible ; `rappel` (le texte de la marque). Le verdict part avec la visite : `PUT /visites/{id}` `{ outils: { items: { outil: { v: ok\|part\|ko\|na, com, lu } }, rappelLu } }` → `con_visite.outils` (JSON, `viOutils` : score sur 100, suivi 1, en partie ½, pas suivi 0, sans objet hors calcul) ; le rapport (`suOutilsHtml`), le courriel (`{outils_titre}`, `{outils}`, `{rappel}`), l'écran du bureau et la page du franchisé (`outils`) le reprennent |
-| `GET /visites/budget/{shop}[?rafraichir=1]` | tous | **Le CA face au budget** (tablette, étape « KPI et santé du magasin », 26/10/2026) : `periodes{semaine, mois, trimestre, annee}` arrêtées à la VEILLE (`arrete`, le dernier jour clos), chacune `{lab, du, au, realise, attendu, objectif, ecartPct, manque, atteintePct, source, sansBudget[], incomplet, statut, reseau, rang, sur, motif?}`. Semaine et mois : les chiffres de Résultat (`ep_exploitation_periode`, la lecture du jour coupée à la veille ; un lundi la semaine passée, un 1er le mois passé) — réalisé = CA TTC encaissé, attendu = la part du budget des jours écoulés (pondération réseau des jours d'ouverture). Trimestre et année : les mois clos (CA `pvKpisMois` face au budget entier) plus le mois de la veille (Résultat) ; un mois clos sans budget ou sans vente sort des deux côtés (`sansBudget`, ses numéros), un mois clos non lu laisse l'étendue sans chiffre (`incomplet`, relu dans 5 min). Budget = `ceo_shop_month_perf.revenue_budget`, à défaut `ca_theorique` (`source` budget, theorique ou mixte). `ecartPct` = réalisé ÷ attendu − 1 ; `statut` ok (≥ 0), proche, sous (plus de `seuil` % sous l'attendu — le réglage `caOrange` des visites, 10 par défaut), sans (pas d'attendu) ; `rang` / `sur` parmi les magasins qui ont un écart sur la même étendue, `reseau` = Σ réalisés ÷ Σ attendus − 1. `sous[]` liste les étendues à justifier (le jour n'y entre jamais). Depuis le 26/10/2026 : l'étendue `jour` (la veille, Résultat du jour : CA face à l'objectif du jour) et, sur chaque étendue, le **mini P&L** `pnl` `{du, au, ca, coutMatiere(Pct), margeBrute(Pct), invendus(Pct), labour(Pct), overhead(Pct), net(Pct), avecInvendus, mois?, motif}` — jour, semaine et mois tels que Résultat (net = marge brute − invendus − personnel − frais généraux, à date) ; trimestre et année = les mois clos du P&L mensuel (`ep_perf`, sans les invendus) et le mois en cours de Résultat, un poste inconnu un mois restant inconnu ; `seuilsPnl` (food, labour, overhead de la Table KPI). Gardé 30 min (`vkBud:{shop}`), servi périmé 6 h. Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
+| `GET /visites/budget/{shop}[?rafraichir=1]` | tous | **Le CA face au budget** (tablette, étape « KPI et santé du magasin », 26/10/2026) : `periodes{semaine, mois, trimestre, annee}` arrêtées à la VEILLE (`arrete`, le dernier jour clos), chacune `{lab, du, au, realise, attendu, objectif, ecartPct, manque, atteintePct, source, sansBudget[], incomplet, statut, reseau, rang, sur, motif?}`. Semaine et mois : les chiffres de Résultat (`ep_exploitation_periode`, la lecture du jour coupée à la veille ; un lundi la semaine passée, un 1er le mois passé) — réalisé = CA TTC encaissé, attendu = la part du budget des jours écoulés (pondération réseau des jours d'ouverture). Trimestre et année : les mois clos (CA `pvKpisMois` face au budget entier) plus le mois de la veille (Résultat) ; un mois clos sans budget ou sans vente sort des deux côtés (`sansBudget`, ses numéros), un mois clos non lu laisse l'étendue sans chiffre (`incomplet`, relu dans 5 min). Budget = `con_shop_month_perf.revenue_budget`, à défaut `ca_theorique` (`source` budget, theorique ou mixte). `ecartPct` = réalisé ÷ attendu − 1 ; `statut` ok (≥ 0), proche, sous (plus de `seuil` % sous l'attendu — le réglage `caOrange` des visites, 10 par défaut), sans (pas d'attendu) ; `rang` / `sur` parmi les magasins qui ont un écart sur la même étendue, `reseau` = Σ réalisés ÷ Σ attendus − 1. `sous[]` liste les étendues à justifier (le jour n'y entre jamais). Depuis le 26/10/2026 : l'étendue `jour` (la veille, Résultat du jour : CA face à l'objectif du jour) et, sur chaque étendue, le **mini P&L** `pnl` `{du, au, ca, coutMatiere(Pct), margeBrute(Pct), invendus(Pct), labour(Pct), overhead(Pct), net(Pct), avecInvendus, mois?, motif}` — jour, semaine et mois tels que Résultat (net = marge brute − invendus − personnel − frais généraux, à date) ; trimestre et année = les mois clos du P&L mensuel (`ep_perf`, sans les invendus) et le mois en cours de Résultat, un poste inconnu un mois restant inconnu ; `seuilsPnl` (food, labour, overhead de la Table KPI). Gardé 30 min (`vkBud:{shop}`), servi périmé 6 h. Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
 | `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`, `budgetCa` (26/10/2026 : le CA sous le budget, noté avec le franchisé — `{pourquoi, pistes[3], horizon: mois|trimestre, echeance, ecarts{étendue: %}, arrete}` ; le serveur ajoute `qui`, `le`, `complet` ; null efface ; colonne `con_visite.budget_ca`, relu dans la visite et dans le rapport, section « Le chiffre face au budget »). `{id}` est l'identifiant ou le `client_id`. |
@@ -4084,7 +4084,7 @@ Une même pièce ne porte que l'explication la plus précise : `vide`, `unite` o
 - Sans compte panel : `{ "indispo": true, "motif": "…", "lignes": [], "total": 0 }`.
 - `lienRecette` : le réglage `verifLienRecette` (`ceo_app_setting`), une adresse du panel avec `{rid}` — vide par
   défaut, l'écran montre alors « recette 580 » ; posé, il devient « Ouvrir au panel ↗ ».
-- Le registre `ceo_verif_recette` (créé au premier appel) : `cle`, `regle`, `product_id`, `material_id`, `nom`,
+- Le registre `con_verif_recette` (créé au premier appel) : `cle`, `regle`, `product_id`, `material_id`, `nom`,
   `detail`, `ca_30j`, `magasins`, `premier_vu`, `dernier_vu`, `resolu_le`. Un signalement qui disparaît d'une analyse
   COMPLÈTE (toutes les recettes lues) est noté résolu ce jour-là ; `corrigees` compte ceux des trente derniers jours.
 - La liste est pour le CEO seul (décision du 31/10/2026) : l'écran l'exporte en CSV, il ne l'envoie pas.
@@ -4231,7 +4231,7 @@ magasins (et réseau).
 Code : `src/verification_base.php` ; écran `#/verification/evolution` (`verification-evol-vals.js`, `-tpl.js`) ;
 maquette `docs/maquettes/verification/f.png` ; tests `bin/tests_verification.php` (section lot 3). Lecture seule.
 
-**La table `ceo_verif_jour`** (clé `shop_id`, `jour`) — des agrégats calculés par le cockpit, jamais une copie des
+**La table `con_verif_jour`** (clé `shop_id`, `jour`) — des agrégats calculés par le cockpit, jamais une copie des
 sources :
 - l'audit des flux de la journée (lot 2) : `dispo_eur`, `vendu_eur`, `poubelle_eur`, `invendu_eur`, `nonexpl_eur`,
   `mesure_eur` (la part du disponible venue de cuissons validées), au prix de vente ; `dispo_pcs` … `nonexpl_pcs` ;
@@ -4262,7 +4262,7 @@ Code : `src/verification_matieres.php` (moteur : `invEcart` de `src/inventaires.
 Une **semaine** est une paire d'inventaires **consécutifs relevés en direct** (`r…` : le cockpit relève le stock du panel
 toutes les cinq minutes ; la copie locale s'arrête à la mi-juillet) ; un inventaire partiel (moins de la moitié des
 matières d'un comptage habituel) ne borne pas de semaine. Calculée une fois (≈ 5 s, `invEcart`), gardée sous
-`vmP:{shop}:{de}:{a}` quand ses tickets sont complets, et écrite dans **`ceo_verif_inventaire`** (clé `shop_id`, `de`, `a` ;
+`vmP:{shop}:{de}:{a}` quand ses tickets sont complets, et écrite dans **`con_verif_inventaire`** (clé `shop_id`, `de`, `a` ;
 `de_at`, `a_at`, `jours`, `debut_eur`, `entrees_eur`, `fin_eur`, `sorties_eur`, `ventes_eur`, `poubelle_eur`,
 `sorti_pos_eur`, `couvert_eur`, `manquant_eur`, `excedent_eur`, `matieres`, `calcule_le`). Le cron horaire (`vmCron`)
 calcule les semaines manquantes (45 s au plus) ; la route calcule à la demande dans 25 s.
@@ -4286,7 +4286,7 @@ magasins, même ordre), `tolerances`, `seuils`, `causes`.
 `pourquoi`, `produits`}), `sansEntree`, `nEntreeManquante`}, `sansRecette[]`, `caSansRecette`, `horsInventaire`, `notes`.
 
 L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couvert_eur` ÷ Σ `sorti_pos_eur` de
-`ceo_verif_inventaire`, rangé à la semaine de l'inventaire de fin.
+`con_verif_inventaire`, rangé à la semaine de l'inventaire de fin.
 
 ### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
 
@@ -4300,7 +4300,7 @@ TVA, `n` tickets — le relevé du CA net, `cnMois`, lu dans 20 s à la demande,
   `vcPnl:{shop}:{mois}`, 24 h pour un mois clos, 1 h sinon) ;
 - **redevances** : la base de calcul du Fonds (`fondsRoyaltiesCalcul` : `sales-kpis` × taux de la fiche), une fois le mois
   lu en entier, avec le dû (`vcRed:{mois}`, 1 h) ;
-- **attendu par la matière** : sur les semaines de `ceo_verif_inventaire` closes dans le mois, à entrées validées et
+- **attendu par la matière** : sur les semaines de `con_verif_inventaire` closes dans le mois, à entrées validées et
   complètes (excédent « vendu sans être sorti » sous le quart des ventes),
   R = (consommé − poubelle) ÷ ventes, au coût ; attendu = caisse × R ; écart = caisse ÷ attendu − 1.
 
@@ -4320,7 +4320,7 @@ lignes sans produit ≥ 30 € (ou trois lignes), remises sur le ticket entier �
 `historique[]` (le réseau mois par mois depuis août : `caisse`, `pnl`, `attendu`, `recettes`, `complet`), `seuils`.
 `GET /verification/ca/sonde?shop=&mois=` : la forme brute des routes de corrections, d'anomalies et de rapports.
 
-**La base quotidienne du CA** : `ceo_verif_ca` (clé `shop_id`, `jour` ; `caisse_ttc`, `caisse_tva`, `tickets`, `pnl`,
+**La base quotidienne du CA** : `con_verif_ca` (clé `shop_id`, `jour` ; `caisse_ttc`, `caisse_tva`, `tickets`, `pnl`,
 `sans_produit_eur`, `sans_produit_n`, `remises_ticket_eur`, `calcule_le`), écrite par le cron (`vcCron`) pour chaque jour
 clos du mois en cours (et du précédent les cinq premiers jours).
 
@@ -4333,7 +4333,7 @@ la même semaine d'inventaire.
 
 `GET /verification/mouvements/liste?shop=` : `magasins[]`, `produits[]` {`id`, `nom`, `cat`, `q` (vendus en 30 jours)}
 — ceux du relevé des tickets et des journées de l'audit des flux —, `matieres[]` {`id`, `nom`, `cat`, `unite`, `n`} —
-celles du relevé du stock (`ceo_stock_releve`) ; gardé une heure (`vmoListe:{shop}`).
+celles du relevé du stock (`con_stock_releve`) ; gardé une heure (`vmoListe:{shop}`).
 
 `GET /verification/mouvements?shop=&p=ID&du=&au=` (un **produit**, neuf semaines au plus ; par défaut la semaine d'hier et la précédente, du lundi) : `jours[]`
 {`date`, `calcule`, `auPlan`, `garde0`, `prod`, `mesure` (cuissons validées), `dispo`, `vendu`, `ca`, `poubelle`, `garde`,
@@ -4388,12 +4388,12 @@ CREATE TABLE ceo_shop (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Réel mensuel encodé par le franchisé (une ligne par magasin et par mois)
-CREATE TABLE ceo_shop_month_perf (
+CREATE TABLE con_shop_month_perf (
   shop_id       VARCHAR(8) NOT NULL,
   year          SMALLINT NOT NULL,
   month         TINYINT NOT NULL,
   revenue       DECIMAL(12,2) NULL,   -- ca
-  revenue_budget DECIMAL(12,2) NULL,  -- caBudget (issu de ceo_shop_budget_month)
+  revenue_budget DECIMAL(12,2) NULL,  -- caBudget (issu de con_shop_budget_month)
   net_margin    DECIMAL(12,2) NULL,
   tickets       INT NULL,
   basket_avg    DECIMAL(6,2) NULL,
@@ -4407,7 +4407,7 @@ CREATE TABLE ceo_shop_month_perf (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Budget validé une fois par exercice avec le consultant
-CREATE TABLE ceo_shop_budget (
+CREATE TABLE con_shop_budget (
   shop_id       VARCHAR(8) NOT NULL,
   fiscal_year   SMALLINT NOT NULL,
   validated_on  DATE NULL,
@@ -4418,7 +4418,7 @@ CREATE TABLE ceo_shop_budget (
   FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE ceo_shop_budget_month (
+CREATE TABLE con_shop_budget_month (
   shop_id       VARCHAR(8) NOT NULL,
   fiscal_year   SMALLINT NOT NULL,
   month         TINYINT NOT NULL,
@@ -4426,7 +4426,7 @@ CREATE TABLE ceo_shop_budget_month (
   PRIMARY KEY (shop_id, fiscal_year, month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE ceo_shop_budget_line (
+CREATE TABLE con_shop_budget_line (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   shop_id       VARCHAR(8) NOT NULL,
   fiscal_year   SMALLINT NOT NULL,
@@ -4438,7 +4438,7 @@ CREATE TABLE ceo_shop_budget_line (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Objectifs réseau 1/3/5 ans
-CREATE TABLE ceo_network_target (
+CREATE TABLE con_network_target (
   horizon       ENUM('h1','h3','h5') PRIMARY KEY,
   target_year   SMALLINT NOT NULL,
   revenue_target DECIMAL(14,2) NOT NULL,
@@ -4448,16 +4448,16 @@ CREATE TABLE ceo_network_target (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Projets, jalons, coûts, tâches
-CREATE TABLE ceo_project (
+CREATE TABLE con_project (
   id VARCHAR(8) PRIMARY KEY, name VARCHAR(200) NOT NULL,
   status ENUM('À lancer','En cours','En retard','En pause','Terminé','Abandonné') NOT NULL,
   priority ENUM('Basse','Moyenne','Haute') NOT NULL DEFAULT 'Moyenne',
   starts_on DATE, ends_on DATE, budget DECIMAL(12,2), value_est DECIMAL(12,2), value_real DECIMAL(12,2)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE ceo_project_levid  (project_id VARCHAR(8), levid INT UNSIGNED, PRIMARY KEY (project_id, levid));
-CREATE TABLE ceo_project_milestone (id INT AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(8), name VARCHAR(200), target_on DATE, done_on DATE NULL);
-CREATE TABLE ceo_project_cost   (id INT AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(8), label VARCHAR(120), planned DECIMAL(12,2), actual DECIMAL(12,2));
-CREATE TABLE ceo_project_task (
+CREATE TABLE con_project_levid  (project_id VARCHAR(8), levid INT UNSIGNED, PRIMARY KEY (project_id, levid));
+CREATE TABLE con_project_milestone (id INT AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(8), name VARCHAR(200), target_on DATE, done_on DATE NULL);
+CREATE TABLE con_project_cost   (id INT AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(8), label VARCHAR(120), planned DECIMAL(12,2), actual DECIMAL(12,2));
+CREATE TABLE con_project_task (
   id VARCHAR(10) PRIMARY KEY, project_id VARCHAR(8) NOT NULL, name VARCHAR(200) NOT NULL,
   owner_kind ENUM('c','s') NOT NULL, owner_id VARCHAR(10) NOT NULL,
   shop_id VARCHAR(8) NULL,
@@ -4469,7 +4469,7 @@ CREATE TABLE ceo_journal_entry (
   id BIGINT AUTO_INCREMENT PRIMARY KEY, happened_at DATETIME NOT NULL,
   actor VARCHAR(80) NOT NULL, kind VARCHAR(40) NOT NULL, project VARCHAR(200) NULL, message TEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE ceo_report_schedule (
+CREATE TABLE con_report_schedule (
   id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(160) NOT NULL, frequency VARCHAR(30) NOT NULL,
   recipients TEXT NOT NULL, next_run DATE NULL, format VARCHAR(10) NOT NULL DEFAULT 'PDF', active TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -4481,14 +4481,14 @@ courant, contribution attendue des ouvertures, notes).
 
 ```sql
 -- Catalogue et ventes mensuelles par référence (alimente /products/scoring)
-CREATE TABLE ceo_product (
+CREATE TABLE con_product (
   id            VARCHAR(24) PRIMARY KEY,
   nom           VARCHAR(120) NOT NULL,
   categorie     VARCHAR(60)  NOT NULL,
   actif         TINYINT(1)   NOT NULL DEFAULT 1
 );
 
-CREATE TABLE ceo_product_month_sales (
+CREATE TABLE con_product_month_sales (
   product_id    VARCHAR(24) NOT NULL,
   annee         SMALLINT    NOT NULL,
   mois          TINYINT     NOT NULL,
@@ -4497,7 +4497,7 @@ CREATE TABLE ceo_product_month_sales (
   prix_moyen    DECIMAL(8,2) NOT NULL,         -- prix de vente TTC moyen
   cout_unitaire DECIMAL(8,2) NOT NULL,         -- matière + emballage
   PRIMARY KEY (product_id, annee, mois),
-  FOREIGN KEY (product_id) REFERENCES ceo_product(id)
+  FOREIGN KEY (product_id) REFERENCES con_product(id)
 );
 ```
 
@@ -4609,15 +4609,15 @@ quand le CRM n'a pas sa propre clé ; elle n'est jamais renvoyée à l'écran.
 
 | Écran | Tables |
 |---|---|
-| Tâches consultants | `ceo_project_task`, `ceo_project`, `ceo_shop`, `position`, `of_tag` |
-| Tableau des magasins | `ceo_shop`, `ceo_shop_month_perf` |
-| Heatmap mensuelle | `ceo_shop`, `ceo_shop_month_perf`, `ceo_shop_budget_month` |
-| Objectifs de CA | `ceo_network_target`, `ceo_shop_budget_month`, `ceo_shop_month_perf`, `ceo_app_setting` |
-| Suivi budget magasin | `ceo_shop_budget`, `ceo_shop_budget_month`, `ceo_shop_budget_line`, `ceo_shop_month_perf` |
-| Marge & coûts | `ceo_shop_month_perf`, `kpi` (seuils) |
-| Projets | `ceo_project`, `ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_project_levid` |
-| Reporting | `ceo_report_schedule`, `ceo_shop`, `position` |
-| Scoring produits | `ceo_product`, `ceo_product_month_sales` |
+| Tâches consultants | `con_project_task`, `con_project`, `ceo_shop`, `position`, `of_tag` |
+| Tableau des magasins | `ceo_shop`, `con_shop_month_perf` |
+| Heatmap mensuelle | `ceo_shop`, `con_shop_month_perf`, `con_shop_budget_month` |
+| Objectifs de CA | `con_network_target`, `con_shop_budget_month`, `con_shop_month_perf`, `ceo_app_setting` |
+| Suivi budget magasin | `con_shop_budget`, `con_shop_budget_month`, `con_shop_budget_line`, `con_shop_month_perf` |
+| Marge & coûts | `con_shop_month_perf`, `kpi` (seuils) |
+| Projets | `con_project`, `con_project_milestone`, `con_project_cost`, `con_project_task`, `con_project_levid` |
+| Reporting | `con_report_schedule`, `ceo_shop`, `position` |
+| Scoring produits | `con_product`, `con_product_month_sales` |
 | Contrôle posts Facebook | `mar_social_post`, `mar_social_ecart`, `ceo_shop`, `ceo_app_setting` (clé `fbControle`) |
 | Journal | `ceo_journal_entry` |
 | Paramètres | `of_tag`, `kpi`, `ceo_app_setting`, `ceo_shop` |
@@ -4727,7 +4727,7 @@ octets, modifie}], octets}], adressesConnues: [...], smtp: bool, source}`. Seuls
 `POST /dossiers/fichiers/envoyer` `{dossier, a[, copies: [...], fichiers: [noms], objet, message]}` envoie les
 fichiers du dossier (tous, ou ceux de `fichiers`) en pièces jointes par la machine SMTP du cockpit (`Smtp::envoyer`),
 avec une page de garde HTML (titre, message, liste des pièces). Le destinataire `a` et les `copies` doivent être
-des adresses que le cockpit connaît déjà (`adressesConnues` : destinataires des rapports de `ceo_rapport`, compte
+des adresses que le cockpit connaît déjà (`adressesConnues` : destinataires des rapports de `con_rapport`, compte
 et expéditeur SMTP) — pas de relais ouvert. Réponse `{ok: true, dossier, titre, a, copies, objet, pieces: [{nom,
 octets}], octets, via: 'smtp', envoye}`. Refus : 404 dossier inconnu ou aucun fichier joignable, 400 adresse
 invalide, 403 adresse inconnue du cockpit, 413 pièces cumulées au-delà de 20 Mo, 503 SMTP non configuré, 502 le
@@ -4860,7 +4860,7 @@ sont lus aussi. « Bureau connecté » = le bureau a son compte au webshop (offi
 - Le cron (`svCron` → `resCoutsMoisson`, 400 lectures par battement) remplit l'année d'avance.
 - `/exploitation/periode` lit aussi les jours des mois passés : le P&L d'un mois passé a son résultat net.
 - Le sous-titre « marge, labour et overhead connus depuis juillet 2026, food cost depuis janvier » est retiré.
-- **API seule** (même jour, demande de Sam : « pas de table locale, API only ») : `/stores/perf` ne lit plus aucune copie locale du panel. Magasins : `/consultant/shops`. CA, tickets, panier : `/shops/{id}/statistics/sales/kpis` du mois (`pvKpisMois`, lus en parallèle par `pvKpisMoisLot`, gardés une fois le mois clos). Food cost : la heatmap de marge. Main-d'œuvre et frais généraux : le résumé quotidien, les deux années demandées (la plus récente d'abord), une somme gardée par mois clos et complet (`dsM:{shop}:{AAAA-MM}`). Seul le budget vient encore d'une table, celle du cockpit (`ceo_shop_month_perf`, saisi dans le cockpit). Sans réponse du panel : `[]`, plus de repli local. Le cron remplit l'année en cours et la précédente. Un jour clos se grave dès que le panel répond, même sans planning : sans vente ni planning (fermé, avant l'ouverture) il compte 0 € ; vendu sans planning, il rend la main-d'œuvre du mois inconnue (`sansPlanning`, le tableau affiche « — » avec le nombre de jours en bulle, les frais généraux restent). Un mois encore en lecture affiche « … ».
+- **API seule** (même jour, demande de Sam : « pas de table locale, API only ») : `/stores/perf` ne lit plus aucune copie locale du panel. Magasins : `/consultant/shops`. CA, tickets, panier : `/shops/{id}/statistics/sales/kpis` du mois (`pvKpisMois`, lus en parallèle par `pvKpisMoisLot`, gardés une fois le mois clos). Food cost : la heatmap de marge. Main-d'œuvre et frais généraux : le résumé quotidien, les deux années demandées (la plus récente d'abord), une somme gardée par mois clos et complet (`dsM:{shop}:{AAAA-MM}`). Seul le budget vient encore d'une table, celle du cockpit (`con_shop_month_perf`, saisi dans le cockpit). Sans réponse du panel : `[]`, plus de repli local. Le cron remplit l'année en cours et la précédente. Un jour clos se grave dès que le panel répond, même sans planning : sans vente ni planning (fermé, avant l'ouverture) il compte 0 € ; vendu sans planning, il rend la main-d'œuvre du mois inconnue (`sansPlanning`, le tableau affiche « — » avec le nombre de jours en bulle, les frais généraux restent). Un mois encore en lecture affiche « … ».
 
 **Le P&L mensuel du panel (11/10/2026).** `/stores/perf` lit la main-d'œuvre et les frais généraux de chaque mois dans `/consultant/shops/{id}/pnl/monthly?from=AAAA-MM&to=AAAA-MM` (24 mois au plus ; sans `from`/`to` la route répond 422) : un appel par magasin (`resPnlMensuel`, une année par appel — mesuré : 22 mois d'un coup ne répondent pas pour trois magasins sur quatre —, gardé dans `pnlM:{shop}`, le mois en cours relu passée l'heure). Le mois en cours prend le cumul jour par jour à date (resCoutsPeriode) : le P&L mensuel y compte les frais du mois entier face au CA à date (Halle, 11/10 : 68,9 %). Le poste `material` y vaut 0 : le food cost vient de la heatmap. Recoupé à Halle avec le résumé quotidien additionné : septembre 9 477,50 € contre 9 458 € de personnel, 13 042,65 € de frais des deux côtés. Les jours vendus sans planning (relevé jour par jour gravé par le cron, lu sans appel) posent `sansPlanning` : le tableau affiche la main-d'œuvre du panel suivie d'un « ! » rouge, la bulle dit combien de jours manquent.
 
@@ -5333,8 +5333,8 @@ différents — la définition « taux de fidélisation » du panel consultant, 
   tickets faits par les clients PWA), joursLus, jours, complet}` ; `serie.recurrence[12]` ; `recurrence {debut, kpi}`.
 - `v` reste `null` tant que la période n'est pas entièrement relevée (`complet: false`) : jamais un taux sur une partie
   des jours. Le réseau compte un client une fois, ses jours de passage dans tous les magasins.
-- Relevé : `ceo_pwa_jour` (jours-magasins lus), `ceo_pwa_visite` (client × jour × magasin, l'identifiant seul, jamais
-  le nom), `ceo_pwa_client` (statut de la fiche, relu tous les 30 jours pour un client PWA, 7 sinon). Les listes de
+- Relevé : `con_pwa_jour` (jours-magasins lus), `con_pwa_visite` (client × jour × magasin, l'identifiant seul, jamais
+  le nom), `con_pwa_client` (statut de la fiche, relu tous les 30 jours pour un client PWA, 7 sinon). Les listes de
   tickets (`/shops/{id}/transactions?date=`) se relisent au cron horaire (`rpCron`, 80 listes et 120 fiches au plus
   par battement, du plus récent au 1er janvier) ; une liste lue pour le pro du dashboard (`vpGraveListe`) se relève au
   passage ; la requête relit le jour en cours et quelques jours manquants. La copie de la base du panel (arrêtée au
@@ -5535,9 +5535,9 @@ gardé sur `con_visite.meteo`, puis le détail facultatif `POST /franchises/mete
 ### Le fil du franchisé (19/11/2026)
 
 Module `src/fil_franchise.php`, écran Franchisés › Suivi des franchisés › Fil du franchisé (`#/franchises/fil?shop=`).
-Tables du portail : `pil_fil_entree` (une note, une photo, une capture, un appel : magasin, date, texte, étiquettes,
-fil, épinglée, auteur), `pil_fil_piece` (ses images, dans le dossier privé sous un nom tiré au hasard),
-`pil_fil` (un problème de gestion et sa suite : ouvert le, résolu le, par quelle entrée). **Au cockpit seulement**
+Tables du portail : `con_fil_entree` (une note, une photo, une capture, un appel : magasin, date, texte, étiquettes,
+fil, épinglée, auteur), `con_fil_piece` (ses images, dans le dossier privé sous un nom tiré au hasard),
+`con_fil` (un problème de gestion et sa suite : ouvert le, résolu le, par quelle entrée). **Au cockpit seulement**
 (19/11/2026, Sam : « le franchisé ne doit rien voir », « seulement via le cockpit ») : session du siège, aucune route
 ouverte au franchisé (`src/acces.php`), rien vers sa page, ses courriels, son rapport ni la tablette de visite.
 
@@ -5676,7 +5676,7 @@ Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18
 | Routine (lundi 7 h, toutes les familles ; jeudi 7 h, celles en saison : cougnou 1/11–6/1, galette 1/12–20/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `bin/rapports_cron.sh` |
 | Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], taille?: { cougnou: g, galette: cm }, magasins?: { id: nom } }` → réglage `benchmark` |
 
-Table : `ceo_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.
+Table : `con_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.
 
 ### La revue du soir — réglage et sondes (08/11/2026)
 

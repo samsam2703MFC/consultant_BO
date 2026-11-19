@@ -23,13 +23,13 @@ if (($argv[1] ?? '') === 'cas') {
         public static function row(string $sql, array $a = []): ?array
         {
             if (str_contains($sql, 'COUNT(*)')) { return ['n' => 14]; }
-            if (str_contains($sql, 'FROM ceo_kpi_def WHERE code = ?')) { self::$lectures++; return self::$lignes[$a[0]] ?? null; }
+            if (str_contains($sql, 'FROM con_kpi_def WHERE code = ?')) { self::$lectures++; return self::$lignes[$a[0]] ?? null; }
             return null;
         }
         public static function rows(string $sql, array $a = []): array { return []; }
         public static function exec(string $sql, array $a = []): int
         {
-            if (str_starts_with($sql, 'UPDATE ceo_kpi_def')) {
+            if (str_starts_with($sql, 'UPDATE con_kpi_def')) {
                 foreach (self::$lignes as $k => $l) { if ($l['id'] === $a[2]) { self::$lignes[$k]['seuil_alerte'] = $a[0]; self::$lignes[$k]['seuil_critique'] = $a[1]; } }
             }
             if (str_starts_with($sql, 'INSERT INTO ceo_app_setting')) { self::$reglages[$a[0]] = json_decode($a[1], true); }

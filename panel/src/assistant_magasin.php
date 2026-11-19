@@ -423,7 +423,7 @@ function amControlesPhotosProfesseur(int $sid): array
     try { return amControlesPhotos($sid, false, 7); } catch (Throwable $e) { return ['etat' => 'illisible : ' . $e->getMessage()]; }
 }
 
-/** Le budget du magasin, lu dans le calcul du jour du cockpit (ep_exploitation_jour : ceo_shop_month_perf). */
+/** Le budget du magasin, lu dans le calcul du jour du cockpit (ep_exploitation_jour : con_shop_month_perf). */
 function amBudget(int $sid, mixed $caMois): array
 {
     if (!function_exists('ep_exploitation_jour')) { return ['etat' => 'budget non lu']; }

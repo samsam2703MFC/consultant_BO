@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../shared/src/reorg_tables.php';   // reorgExCeo()
+
 /**
  * Entre deux inventaires — l'écart de stock d'un magasin et la justesse de ses ventes
  * (demande du 12/10/2026).
@@ -42,7 +44,8 @@ function invTablesSonde(array $motifs): array
     } catch (Throwable $e) { return ['erreur' => 'information_schema indisponible']; }
     foreach ($ts as $t) {
         $n = (string) $t['n'];
-        if (str_starts_with($n, 'ceo_')) { continue; }
+        // Les tables du cockpit, y compris celles qui s'appelaient ceo_* avant la réorganisation en domaines.
+        if (str_starts_with($n, 'ceo_') || (function_exists('reorgExCeo') && in_array($n, reorgExCeo(), true))) { continue; }
         $e = ['table' => $n, 'lignes' => $t['lignes'] === null ? null : (int) $t['lignes'], 'colonnes' => [], 'derniere' => null];
         try {
             $cols = array_map(static fn ($c) => (string) $c['COLUMN_NAME'],
@@ -701,14 +704,14 @@ function invReleveTables(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_stock_releve (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_stock_releve (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         shop_id INT NOT NULL, material_id INT NOT NULL,
         avant DECIMAL(14,3) NULL, qty DECIMAL(14,3) NOT NULL,
         modif DATETIME NULL, vu DATETIME NOT NULL, evenement_id BIGINT NULL,
         KEY k_shop_mat (shop_id, material_id, vu), KEY k_shop_vu (shop_id, vu), KEY k_ev (evenement_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_stock_evenement (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_stock_evenement (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         shop_id INT NOT NULL, type VARCHAR(16) NOT NULL, at DATETIME NOT NULL,
         n INT NOT NULL DEFAULT 0, hausses INT NOT NULL DEFAULT 0, baisses INT NOT NULL DEFAULT 0, zeros INT NOT NULL DEFAULT 0,
@@ -729,10 +732,10 @@ function invLigneStock(array $m): ?array
 /** Enregistre un événement (une rafale ou un mouvement isolé) et rend son id. */
 function invEvenement(int $sid, string $type, string $at, int $n, int $h, int $b, int $z, string $vu): int
 {
-    Db::exec('INSERT INTO ceo_stock_evenement (shop_id, type, at, n, hausses, baisses, zeros, vu) VALUES (?,?,?,?,?,?,?,?)
+    Db::exec('INSERT INTO con_stock_evenement (shop_id, type, at, n, hausses, baisses, zeros, vu) VALUES (?,?,?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE n = n + VALUES(n), hausses = hausses + VALUES(hausses), baisses = baisses + VALUES(baisses), zeros = zeros + VALUES(zeros)',
         [$sid, $type, $at, $n, $h, $b, $z, $vu]);
-    $r = Db::row('SELECT id FROM ceo_stock_evenement WHERE shop_id = ? AND at = ? AND type = ?', [$sid, $at, $type]);
+    $r = Db::row('SELECT id FROM con_stock_evenement WHERE shop_id = ? AND at = ? AND type = ?', [$sid, $at, $type]);
     return (int) ($r['id'] ?? 0);
 }
 
@@ -760,7 +763,7 @@ function invReleverMagasin(int $sid, array $stock, string $vu): array
         }
         $ev = $base !== null ? invEvenement($sid, 'inventaire', $base, count($parModif[$base]), 0, 0, 0, $vu) : 0;
         foreach ($cur as $mid => [$q, $mod]) {
-            Db::exec('INSERT INTO ceo_stock_releve (shop_id, material_id, avant, qty, modif, vu, evenement_id) VALUES (?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO con_stock_releve (shop_id, material_id, avant, qty, modif, vu, evenement_id) VALUES (?,?,?,?,?,?,?)',
                 [$sid, $mid, null, $q, $mod, $vu, ($base !== null && $mod === $base) ? $ev : null]);
         }
         svGrave('stockEtat:' . $sid, ['quand' => time(), 'depuis' => $vu, 'm' => $cur]);
@@ -785,14 +788,14 @@ function invReleverMagasin(int $sid, array $stock, string $vu): array
             if ($z >= 0.8 * $n) { $type = 'effacement'; }
             elseif ($b === 0 && $z === 0) {
                 // que des hausses : une livraison — sauf si l'inventaire vient d'être ouvert par un effacement
-                $eff = Db::row("SELECT id FROM ceo_stock_evenement WHERE shop_id = ? AND type = 'effacement' AND at >= ? AND at <= ? ORDER BY at DESC LIMIT 1",
+                $eff = Db::row("SELECT id FROM con_stock_evenement WHERE shop_id = ? AND type = 'effacement' AND at >= ? AND at <= ? ORDER BY at DESC LIMIT 1",
                     [$sid, date('Y-m-d H:i:s', strtotime($mod) - 6 * 3600), $mod]);
                 $type = $eff !== null ? 'inventaire' : 'livraison';
             } else { $type = 'inventaire'; }
         } else { $type = 'mouvement'; }
         $ev = invEvenement($sid, $type, $mod, $n, $h, $b, $z, $vu);
         foreach ($lst as $mid => [$av, $q, $md]) {
-            Db::exec('INSERT INTO ceo_stock_releve (shop_id, material_id, avant, qty, modif, vu, evenement_id) VALUES (?,?,?,?,?,?,?)', [$sid, $mid, $av, $q, $md, $vu, $ev]);
+            Db::exec('INSERT INTO con_stock_releve (shop_id, material_id, avant, qty, modif, vu, evenement_id) VALUES (?,?,?,?,?,?,?)', [$sid, $mid, $av, $q, $md, $vu, $ev]);
         }
         $out['changes'] += $n;
         $out['evenements'][] = ['type' => $type, 'at' => $mod, 'n' => $n];
@@ -831,7 +834,7 @@ function invReleveListe(int $sid): array
 {
     try {
         invReleveTables();
-        $rows = Db::rows("SELECT id, at, n FROM ceo_stock_evenement WHERE shop_id = ? AND type = 'inventaire' ORDER BY at DESC", [$sid]);
+        $rows = Db::rows("SELECT id, at, n FROM con_stock_evenement WHERE shop_id = ? AND type = 'inventaire' ORDER BY at DESC", [$sid]);
     } catch (Throwable $e) { return []; }
     return array_map(static fn ($r) => ['id' => 'r' . (int) $r['id'], 'at' => (string) $r['at'], 'n' => (int) $r['n'], 'source' => 'releve', 'type' => 'relevé'], $rows);
 }
@@ -843,7 +846,7 @@ function invReleveEtat(int $sid): array
     $evs = [];
     try {
         invReleveTables();
-        foreach (Db::rows('SELECT type, at, n FROM ceo_stock_evenement WHERE shop_id = ? AND type <> ? ORDER BY at DESC LIMIT 8', [$sid, 'mouvement']) as $r) {
+        foreach (Db::rows('SELECT type, at, n FROM con_stock_evenement WHERE shop_id = ? AND type <> ? ORDER BY at DESC LIMIT 8', [$sid, 'mouvement']) as $r) {
             $evs[] = ['type' => (string) $r['type'], 'at' => (string) $r['at'], 'n' => (int) $r['n']];
         }
     } catch (Throwable $e2) { /* pas encore de relevé */ }
@@ -862,8 +865,8 @@ function invBaseReleve(int $sid, string $de, string $a): ?array
     if (!preg_match('/^r(\d+)$/', $de, $mA) || !preg_match('/^r(\d+)$/', $a, $mB)) { return null; }
     try {
         invReleveTables();
-        $eA = Db::row("SELECT id, at FROM ceo_stock_evenement WHERE id = ? AND shop_id = ? AND type = 'inventaire'", [(int) $mA[1], $sid]);
-        $eB = Db::row("SELECT id, at FROM ceo_stock_evenement WHERE id = ? AND shop_id = ? AND type = 'inventaire'", [(int) $mB[1], $sid]);
+        $eA = Db::row("SELECT id, at FROM con_stock_evenement WHERE id = ? AND shop_id = ? AND type = 'inventaire'", [(int) $mA[1], $sid]);
+        $eB = Db::row("SELECT id, at FROM con_stock_evenement WHERE id = ? AND shop_id = ? AND type = 'inventaire'", [(int) $mB[1], $sid]);
     } catch (Throwable $e) { return null; }
     if ($eA === null || $eB === null) { return null; }
     if ((string) $eA['at'] > (string) $eB['at']) { [$eA, $eB] = [$eB, $eA]; }
@@ -873,11 +876,11 @@ function invBaseReleve(int $sid, string $de, string $a): ?array
         if (!isset($m[$mid])) { $m[$mid] = ['cA' => null, 'cB' => null, 'entrees' => 0.0, 'sortiesDecl' => 0.0, 'corrections' => 0.0, 'efface' => null, 'apres' => 0.0, 'mouv' => [], 'avantB' => null]; }
     };
     // le compté en A
-    foreach (Db::rows('SELECT material_id mid, qty FROM ceo_stock_releve WHERE shop_id = ? AND evenement_id = ?', [$sid, (int) $eA['id']]) as $r) {
+    foreach (Db::rows('SELECT material_id mid, qty FROM con_stock_releve WHERE shop_id = ? AND evenement_id = ?', [$sid, (int) $eA['id']]) as $r) {
         $mat((int) $r['mid']); $m[(int) $r['mid']]['cA'] = (float) $r['qty'];
     }
     // entre A et B : livraisons (hausses), effacements, mouvements isolés ; puis le comptage de B
-    foreach (Db::rows("SELECT r.material_id mid, r.avant, r.qty, r.modif, r.vu, e.type, e.id ev FROM ceo_stock_releve r JOIN ceo_stock_evenement e ON e.id = r.evenement_id
+    foreach (Db::rows("SELECT r.material_id mid, r.avant, r.qty, r.modif, r.vu, e.type, e.id ev FROM con_stock_releve r JOIN con_stock_evenement e ON e.id = r.evenement_id
           WHERE r.shop_id = ? AND e.at > ? AND e.at <= ? ORDER BY e.at, r.id", [$sid, $tA, $tB]) as $r) {
         $mid = (int) $r['mid']; $mat($mid);
         $av = $r['avant'] !== null ? (float) $r['avant'] : null; $q = (float) $r['qty'];

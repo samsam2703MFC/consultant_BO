@@ -9,7 +9,7 @@ declare(strict_types=1);
  *
  *  1. l'IA PROPOSE, elle ne note pas. Rien ne part au panel sans le geste du consultant : la note passe toujours
  *     par POST /pwa/tasks/review, comme en mode manuel ;
- *  2. une proposition est GARDÉE (table pil_cq_ia) : elle se paie une fois, elle se retrouve au rechargement, et
+ *  2. une proposition est GARDÉE (table con_cq_ia) : elle se paie une fois, elle se retrouve au rechargement, et
  *     elle reste en face de la note que le consultant a posée ;
  *  3. le modèle ÉVOLUE par les corrections : quand le consultant note autrement que l'IA (ou dit pourquoi), la
  *     correction devient une leçon, envoyée en exemple avec les photos suivantes du même rayon. Une leçon se
@@ -28,7 +28,7 @@ function ensureIaAssistant(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_cq_ia ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_cq_ia ('
         . 'shop_id INT NOT NULL,'
         . 'task_id INT NOT NULL,'
         . 'jour DATE NOT NULL,'
@@ -94,7 +94,7 @@ function iaPonctualite(?string $prevue, ?string $prise): ?array
         'phrase' => 'photo prise à ' . $f . ', heure standard de la checklist ' . $p . ' : ' . $verdict];
 }
 
-/** Une ligne de pil_cq_ia telle que l'écran la lit. */
+/** Une ligne de con_cq_ia telle que l'écran la lit. */
 function iaPropositionLigne(array $r): array
 {
     $niveau = $r['niveau'] !== null ? (int) $r['niveau'] : null;
@@ -123,7 +123,7 @@ function iaPropositionLigne(array $r): array
 function iaAccord(): array
 {
     $depuis = date('Y-m-d', strtotime('-' . IA_ACCORD_JOURS . ' days'));
-    $rows = Db::rows('SELECT niveau, note_finale FROM pil_cq_ia WHERE niveau IS NOT NULL AND note_finale IS NOT NULL AND jour >= ?', [$depuis]);
+    $rows = Db::rows('SELECT niveau, note_finale FROM con_cq_ia WHERE niveau IS NOT NULL AND note_finale IS NOT NULL AND jour >= ?', [$depuis]);
     $n = count($rows);
     $pareil = 0; $severe = 0; $indulgente = 0;
     foreach ($rows as $r) {
@@ -140,9 +140,9 @@ function ep_ia_propositions(): array
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'date (YYYY-MM-DD) requise']; }
     ensureIaAssistant();
-    $props = array_map('iaPropositionLigne', Db::rows('SELECT * FROM pil_cq_ia WHERE jour = ? ORDER BY shop_id, task_id', [$date]));
+    $props = array_map('iaPropositionLigne', Db::rows('SELECT * FROM con_cq_ia WHERE jour = ? ORDER BY shop_id, task_id', [$date]));
     return ['date' => $date, 'propositions' => $props, 'accord' => iaAccord(),
-        'lecons' => (int) ((Db::row('SELECT COUNT(*) AS n FROM pil_cq_ia WHERE ' . iaSqlLecon()) ?? [])['n'] ?? 0),
+        'lecons' => (int) ((Db::row('SELECT COUNT(*) AS n FROM con_cq_ia WHERE ' . iaSqlLecon()) ?? [])['n'] ?? 0),
         'configure' => class_exists('Anthropic') && Anthropic::configured()];
 }
 
@@ -163,8 +163,8 @@ function iaLeconsPour(?string $rayon, string $tache, int $max = IA_LECONS_MAX): 
     try {
         ensureIaAssistant();
         $rows = $rayon !== null && $rayon !== ''
-            ? Db::rows('SELECT * FROM pil_cq_ia WHERE ' . iaSqlLecon() . ' AND rayon = ? ORDER BY valide_le DESC LIMIT ' . (int) $max, [$rayon])
-            : Db::rows('SELECT * FROM pil_cq_ia WHERE ' . iaSqlLecon() . ' AND tache = ? ORDER BY valide_le DESC LIMIT ' . (int) $max, [$tache]);
+            ? Db::rows('SELECT * FROM con_cq_ia WHERE ' . iaSqlLecon() . ' AND rayon = ? ORDER BY valide_le DESC LIMIT ' . (int) $max, [$rayon])
+            : Db::rows('SELECT * FROM con_cq_ia WHERE ' . iaSqlLecon() . ' AND tache = ? ORDER BY valide_le DESC LIMIT ' . (int) $max, [$tache]);
     } catch (PDOException $e) { return []; }
     $out = [];
     foreach ($rows as $r) {
@@ -192,7 +192,7 @@ function wr_ia_proposer(): array
         return ['error' => 'shopId, taskId et date (YYYY-MM-DD) sont requis'];
     }
     ensureIaAssistant();
-    $avant = Db::row('SELECT * FROM pil_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]);
+    $avant = Db::row('SELECT * FROM con_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]);
     // Déjà proposée : on ne repaie pas. Déjà notée par le consultant : on ne repropose pas par-dessus sa note.
     if ($avant !== null && ($avant['note_finale'] !== null || (empty($b['refaire']) && $avant['niveau'] !== null))) {
         return ['ok' => true, 'proposition' => iaPropositionLigne($avant), 'cache' => true];
@@ -204,14 +204,14 @@ function wr_ia_proposer(): array
         return ['error' => (string) $r['motif']];
     }
     $ponct = is_array($r['ponctualite'] ?? null) ? $r['ponctualite'] : null;
-    Db::exec('REPLACE INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, commentaire, motif,'
+    Db::exec('REPLACE INTO con_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, commentaire, motif,'
         . ' modele, lecons_vues, propose_le, heure_prevue, heure_prise, lecon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)',
         [$shopId, $taskId, $date, $r['tache'] ?? null, $r['rayon'] ?? null,
          ($r['etat'] ?? '') === 'ok' ? $r['niveau'] : null, $r['confiance'] ?? null,
          json_encode(array_values((array) ($r['constats'] ?? [])), JSON_UNESCAPED_UNICODE),
          $r['commentaire'] ?? null, ($r['etat'] ?? '') === 'ok' ? null : mb_substr((string) ($r['motif'] ?? 'pas de proposition'), 0, 300),
          $r['modele'] ?? null, (int) ($r['leconsVues'] ?? 0), date('Y-m-d H:i:s'), $ponct['prevue'] ?? null, $ponct['prise'] ?? null]);
-    $ligne = Db::row('SELECT * FROM pil_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]);
+    $ligne = Db::row('SELECT * FROM con_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]);
     return ['ok' => true, 'proposition' => iaPropositionLigne($ligne ?? []), 'cache' => false]
         + (!empty($r['avertissement']) ? ['avertissement' => $r['avertissement']] : []);
 }
@@ -226,7 +226,7 @@ function iaNoteHumaine(int $shopId, int $taskId, string $date, int $note, string
     try {
         ensureIaAssistant();
         $raison = $raison !== null ? mb_substr(trim($raison), 0, 400) : '';
-        Db::exec('UPDATE pil_cq_ia SET note_finale = ?, commentaire_final = ?, raison = ?, valide_par = ?, valide_le = ?'
+        Db::exec('UPDATE con_cq_ia SET note_finale = ?, commentaire_final = ?, raison = ?, valide_par = ?, valide_le = ?'
             . ' WHERE shop_id = ? AND task_id = ? AND jour = ?',
             [$note, $comment !== '' ? $comment : null, $raison !== '' ? $raison : null, mb_substr($auteur, 0, 190),
              date('Y-m-d H:i:s'), $shopId, $taskId, $date]);
@@ -237,7 +237,7 @@ function iaNoteHumaine(int $shopId, int $taskId, string $date, int $note, string
 function ep_ia_lecons(): array
 {
     ensureIaAssistant();
-    $rows = Db::rows("SELECT * FROM pil_cq_ia WHERE niveau IS NOT NULL AND note_finale IS NOT NULL"
+    $rows = Db::rows("SELECT * FROM con_cq_ia WHERE niveau IS NOT NULL AND note_finale IS NOT NULL"
         . " AND (note_finale <> niveau OR (raison IS NOT NULL AND raison <> '')) ORDER BY valide_le DESC LIMIT 200");
     $lecons = array_map('iaPropositionLigne', $rows);
     return ['lecons' => $lecons, 'retenues' => count(array_filter($lecons, fn ($l) => $l['lecon'])), 'max' => IA_LECONS_MAX];
@@ -254,11 +254,11 @@ function wr_ia_lecons(): array
     }
     ensureIaAssistant();
     // Existence d'abord : MySQL compte 0 ligne touchée quand la valeur ne change pas.
-    if (Db::row('SELECT shop_id FROM pil_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]) === null) {
+    if (Db::row('SELECT shop_id FROM con_cq_ia WHERE shop_id = ? AND task_id = ? AND jour = ?', [$shopId, $taskId, $date]) === null) {
         http_response_code(404);
         return ['error' => 'correction introuvable'];
     }
-    Db::exec('UPDATE pil_cq_ia SET lecon = ? WHERE shop_id = ? AND task_id = ? AND jour = ?', [!empty($b['retenir']) ? 1 : 0, $shopId, $taskId, $date]);
+    Db::exec('UPDATE con_cq_ia SET lecon = ? WHERE shop_id = ? AND task_id = ? AND jour = ?', [!empty($b['retenir']) ? 1 : 0, $shopId, $taskId, $date]);
     if (function_exists('journalAdd')) {
         journalAdd('CEO', 'Assistant de notation', null, (!empty($b['retenir']) ? 'Leçon reprise' : 'Leçon écartée') . ' — tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ')');
     }
@@ -270,7 +270,7 @@ function wr_ia_lecons(): array
  * Pour chaque rayon, l'IA juge une photo contre :
  *  1. la PHOTO DU PLANOGRAMME — la présentation attendue par le réseau, une par rayon (con_rayon_photo.photo, la
  *     « photo type » d'avant) : déposée comme fichier, ou prise parmi les vraies photos ;
- *  2. des PHOTOS D'EXEMPLE — de vraies photos que le consultant a jugées parfaites (pil_cq_exemple, plusieurs par
+ *  2. des PHOTOS D'EXEMPLE — de vraies photos que le consultant a jugées parfaites (con_cq_exemple, plusieurs par
  *     rayon, chacune de son magasin). Avec chaque photo à noter partent les deux plus récentes, celles du même magasin
  *     d'abord : les comptoirs ne se ressemblent pas d'un magasin à l'autre.
  * Le consultant choisit ; l'IA ne choisit jamais ses propres exemples, elle renforcerait ses propres erreurs. Une
@@ -287,7 +287,7 @@ function ensureIaModeles(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_cq_exemple ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_cq_exemple ('
         . 'rayon VARCHAR(80) NOT NULL,'             // clé du rayon (src/rayons_photos.php)
         . 'shop_id INT NOT NULL,'                   // le magasin de la photo
         . 'source_task INT NOT NULL,'               // la tâche et le jour d'où vient la photo
@@ -306,7 +306,7 @@ function iaExemplesPour(?string $rayon, int $shopId, int $max = IA_EXEMPLES_ENVO
     if ($rayon === null || $rayon === '') { return []; }
     try {
         ensureIaModeles();
-        return Db::rows('SELECT * FROM pil_cq_exemple WHERE rayon = ? ORDER BY CASE WHEN shop_id = ? THEN 0 ELSE 1 END, le DESC LIMIT ' . max(1, $max), [$rayon, $shopId]);
+        return Db::rows('SELECT * FROM con_cq_exemple WHERE rayon = ? ORDER BY CASE WHEN shop_id = ? THEN 0 ELSE 1 END, le DESC LIMIT ' . max(1, $max), [$rayon, $shopId]);
     } catch (PDOException $e) { return []; }
 }
 
@@ -344,11 +344,11 @@ function wr_ia_modeles(): array
     $shopId = (int) ($b['shopId'] ?? 0); $taskId = (int) ($b['taskId'] ?? 0); $date = (string) ($b['date'] ?? '');
     if (!empty($b['retirer'])) {
         $rayon = (string) ($b['rayon'] ?? '');
-        $e = Db::row('SELECT * FROM pil_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$rayon, $shopId, $taskId, $date]);
+        $e = Db::row('SELECT * FROM con_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$rayon, $shopId, $taskId, $date]);
         if ($e === null) { http_response_code(404); return ['error' => 'photo d’exemple introuvable']; }
         $f = __DIR__ . '/../../public/' . $e['photo'];
         if (is_file($f)) { @unlink($f); }
-        Db::exec('DELETE FROM pil_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$rayon, $shopId, $taskId, $date]);
+        Db::exec('DELETE FROM con_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$rayon, $shopId, $taskId, $date]);
         if (function_exists('journalAdd')) { journalAdd('CEO', 'Assistant de notation', 'Rayon ' . $rayon, 'Photo d’exemple retirée — boutique #' . $shopId . ', ' . $date); }
         return ep_ia_entrainement() + ['ok' => true];
     }
@@ -371,9 +371,9 @@ function wr_ia_modeles(): array
     if ($portee === 'exemple') {
         $f = psImage($data, 'uploads/rayons/exemples/' . $cle . '-' . $shopId . '-' . $taskId . '-' . str_replace('-', '', $date) . '-' . date('His'));
         if (isset($f['error'])) { http_response_code((int) $f['code']); return ['error' => $f['error']]; }
-        $avant = Db::row('SELECT photo FROM pil_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$cle, $shopId, $taskId, $date]);
+        $avant = Db::row('SELECT photo FROM con_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$cle, $shopId, $taskId, $date]);
         if ($avant !== null && is_file(__DIR__ . '/../../public/' . $avant['photo'])) { @unlink(__DIR__ . '/../../public/' . $avant['photo']); }
-        Db::exec('REPLACE INTO pil_cq_exemple (rayon, shop_id, source_task, source_jour, photo, tache, par, le) VALUES (?,?,?,?,?,?,?,?)',
+        Db::exec('REPLACE INTO con_cq_exemple (rayon, shop_id, source_task, source_jour, photo, tache, par, le) VALUES (?,?,?,?,?,?,?,?)',
             [$cle, $shopId, $taskId, $date, $f['chemin'], $d['tache'] ?? null, $auteur, date('Y-m-d H:i:s')]);
     } else {
         // Le planogramme du rayon : la photo de référence du réseau (con_rayon_photo.photo ; la consigne reste).
@@ -442,12 +442,12 @@ function ep_ia_entrainement(): array
     ensureIaAssistant(); ensureIaModeles();
     $depuis = date('Y-m-d', strtotime('-' . IA_ACCORD_JOURS . ' days'));
     $exemples = [];
-    foreach (Db::rows('SELECT * FROM pil_cq_exemple ORDER BY le DESC') as $m) {
+    foreach (Db::rows('SELECT * FROM con_cq_exemple ORDER BY le DESC') as $m) {
         $exemples[(string) $m['rayon']][] = ['shopId' => (string) $m['shop_id'], 'photo' => $m['photo'], 'taskId' => (string) $m['source_task'],
             'date' => $m['source_jour'], 'par' => $m['par'], 'le' => $m['le']];
     }
     $accord = [];
-    foreach (Db::rows('SELECT rayon, niveau, note_finale FROM pil_cq_ia WHERE rayon IS NOT NULL AND niveau IS NOT NULL AND note_finale IS NOT NULL AND jour >= ?', [$depuis]) as $r) {
+    foreach (Db::rows('SELECT rayon, niveau, note_finale FROM con_cq_ia WHERE rayon IS NOT NULL AND niveau IS NOT NULL AND note_finale IS NOT NULL AND jour >= ?', [$depuis]) as $r) {
         $a = &$accord[(string) $r['rayon']];
         $a = $a ?? ['notees' => 0, 'pareil' => 0, 'tropSevere' => 0, 'tropIndulgente' => 0];
         $d = (int) $r['niveau'] - (int) $r['note_finale'];
@@ -456,7 +456,7 @@ function ep_ia_entrainement(): array
         unset($a);
     }
     $lecons = [];
-    foreach (Db::rows("SELECT * FROM pil_cq_ia WHERE rayon IS NOT NULL AND niveau IS NOT NULL AND note_finale IS NOT NULL"
+    foreach (Db::rows("SELECT * FROM con_cq_ia WHERE rayon IS NOT NULL AND niveau IS NOT NULL AND note_finale IS NOT NULL"
         . " AND (note_finale <> niveau OR (raison IS NOT NULL AND raison <> '')) ORDER BY valide_le DESC LIMIT 300") as $r) {
         $lecons[(string) $r['rayon']][] = iaPropositionLigne($r);
     }
@@ -464,7 +464,7 @@ function ep_ia_entrainement(): array
     $pris = [];
     foreach ($exemples as $l) { foreach ($l as $m) { $pris[$m['shopId'] . '|' . $m['taskId'] . '|' . $m['date']] = true; } }
     $candidates = [];
-    foreach (Db::rows('SELECT * FROM pil_cq_ia WHERE rayon IS NOT NULL AND note_finale = ? AND jour >= ? ORDER BY jour DESC, valide_le DESC LIMIT 60', [iaNiveauMax(), $depuis]) as $r) {
+    foreach (Db::rows('SELECT * FROM con_cq_ia WHERE rayon IS NOT NULL AND note_finale = ? AND jour >= ? ORDER BY jour DESC, valide_le DESC LIMIT 60', [iaNiveauMax(), $depuis]) as $r) {
         $l = iaPropositionLigne($r);
         if (empty($pris[$l['shopId'] . '|' . $l['taskId'] . '|' . $l['date']])) { $candidates[] = $l; }
     }
@@ -490,10 +490,10 @@ function ep_ia_entrainement(): array
 /* --- L'ASSISTANT D'ENTRAÎNEMENT (15/11/2026) -------------------------------------------------------------------------
  *
  * Pour un rayon (ou une tâche qui n'est pas une photo de comptoir) et une période, il relit les évaluations gardées
- * (pil_cq_ia) : ce que l'IA a vu et proposé sur chaque photo, la note que le consultant a posée et pourquoi. Un seul
+ * (con_cq_ia) : ce que l'IA a vu et proposé sur chaque photo, la note que le consultant a posée et pourquoi. Un seul
  * appel au modèle, en TEXTE (Anthropic::analyserSujet), rend ce qui va, ce qui ne va pas (fréquence, magasins), les
  * désaccords à enseigner, une consigne proposée, des conseils aux magasins et les photos à prendre en exemple. La
- * dernière analyse de chaque sujet est gardée (pil_cq_analyse) : on la relit sans repayer.
+ * dernière analyse de chaque sujet est gardée (con_cq_analyse) : on la relit sans repayer.
  *
  * Routes : GET /ia/analyses, POST /ia/analyser.
  */
@@ -506,7 +506,7 @@ function ensureIaAnalyses(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_cq_analyse ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_cq_analyse ('
         . 'sujet VARCHAR(200) NOT NULL PRIMARY KEY,'   // clé du rayon, ou « tache:<nom> »
         . 'jours INT NOT NULL,'
         . 'nb INT NOT NULL,'                          // photos relues
@@ -557,8 +557,8 @@ function iaEvaluations(array $s, int $jours): array
     ensureIaAssistant();
     $depuis = date('Y-m-d', strtotime('-' . max(1, $jours) . ' days'));
     return $s['type'] === 'rayon'
-        ? Db::rows('SELECT * FROM pil_cq_ia WHERE rayon = ? AND niveau IS NOT NULL AND jour >= ? ORDER BY jour DESC, shop_id LIMIT ' . IA_ANALYSE_MAX_PHOTOS, [$s['cle'], $depuis])
-        : Db::rows('SELECT * FROM pil_cq_ia WHERE rayon IS NULL AND tache = ? AND niveau IS NOT NULL AND jour >= ? ORDER BY jour DESC, shop_id LIMIT ' . IA_ANALYSE_MAX_PHOTOS, [$s['nom'], $depuis]);
+        ? Db::rows('SELECT * FROM con_cq_ia WHERE rayon = ? AND niveau IS NOT NULL AND jour >= ? ORDER BY jour DESC, shop_id LIMIT ' . IA_ANALYSE_MAX_PHOTOS, [$s['cle'], $depuis])
+        : Db::rows('SELECT * FROM con_cq_ia WHERE rayon IS NULL AND tache = ? AND niveau IS NOT NULL AND jour >= ? ORDER BY jour DESC, shop_id LIMIT ' . IA_ANALYSE_MAX_PHOTOS, [$s['nom'], $depuis]);
 }
 
 /**
@@ -613,12 +613,12 @@ function ep_ia_analyses(): array
     ensureIaAssistant(); ensureIaAnalyses();
     $depuis = date('Y-m-d', strtotime('-90 days'));
     $parRayon = []; $parTache = [];
-    foreach (Db::rows('SELECT rayon, tache, COUNT(*) AS n FROM pil_cq_ia WHERE niveau IS NOT NULL AND jour >= ? GROUP BY rayon, tache', [$depuis]) as $r) {
+    foreach (Db::rows('SELECT rayon, tache, COUNT(*) AS n FROM con_cq_ia WHERE niveau IS NOT NULL AND jour >= ? GROUP BY rayon, tache', [$depuis]) as $r) {
         if ($r['rayon'] !== null) { $parRayon[(string) $r['rayon']] = ($parRayon[(string) $r['rayon']] ?? 0) + (int) $r['n']; }
         elseif ($r['tache'] !== null) { $parTache[(string) $r['tache']] = (int) $r['n']; }
     }
     $analyses = [];
-    foreach (Db::rows('SELECT * FROM pil_cq_analyse ORDER BY le DESC') as $r) { $analyses[(string) $r['sujet']] = iaAnalyseLigne($r); }
+    foreach (Db::rows('SELECT * FROM con_cq_analyse ORDER BY le DESC') as $r) { $analyses[(string) $r['sujet']] = iaAnalyseLigne($r); }
     $sujets = [];
     foreach ((function_exists('rvListe') ? rvListe() : []) as $rv) {
         $sujets[] = ['cle' => (string) $rv['cle'], 'nom' => (string) $rv['nom'], 'type' => 'rayon', 'n' => $parRayon[(string) $rv['cle']] ?? 0];
@@ -655,8 +655,8 @@ function wr_ia_analyser(): array
     ensureIaAnalyses();
     $notees = count(array_filter($rows, fn ($x) => $x['note_finale'] !== null));
     $auteur = function_exists('psAuteur') ? psAuteur() : 'CEO';
-    Db::exec('REPLACE INTO pil_cq_analyse (sujet, jours, nb, notees, resultat, modele, par, le) VALUES (?,?,?,?,?,?,?,?)',
+    Db::exec('REPLACE INTO con_cq_analyse (sujet, jours, nb, notees, resultat, modele, par, le) VALUES (?,?,?,?,?,?,?,?)',
         [$s['cle'], $jours, count($rows), $notees, json_encode($a, JSON_UNESCAPED_UNICODE), $r['modele'], $auteur, date('Y-m-d H:i:s')]);
     if (function_exists('journalAdd')) { journalAdd('CEO', 'Assistant de notation', null, 'Analyse « ' . $s['nom'] . ' » : ' . count($rows) . ' photos sur ' . $jours . ' jours'); }
-    return ['ok' => true, 'analyse' => iaAnalyseLigne(Db::row('SELECT * FROM pil_cq_analyse WHERE sujet = ?', [$s['cle']]) ?? [])];
+    return ['ok' => true, 'analyse' => iaAnalyseLigne(Db::row('SELECT * FROM con_cq_analyse WHERE sujet = ?', [$s['cle']]) ?? [])];
 }

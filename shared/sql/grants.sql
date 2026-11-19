@@ -13,29 +13,29 @@ CREATE USER IF NOT EXISTS 'cockpit_app'@'localhost' IDENTIFIED BY 'CHANGEZ_MOI';
 
 -- Tables propres au cockpit : lecture/écriture.
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_shop               TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_shop_month_perf    TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_shop_budget        TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_shop_budget_month  TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_shop_budget_line   TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_network_target     TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project            TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_levid      TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_milestone  TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_cost       TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_task       TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_crm        TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_shop_month_perf    TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_shop_budget        TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_shop_budget_month  TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_shop_budget_line   TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_network_target     TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project            TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project_levid      TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project_milestone  TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project_cost       TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project_task       TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project_crm        TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_consultant         TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_consultant_visit   TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_supplier           TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_person             TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_report_schedule    TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_alert_rule         TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_email_template     TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_template   TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_supplier           TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_person             TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_report_schedule    TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_alert_rule         TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_email_template     TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_project_template   TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_journal_entry      TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_app_setting        TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_product            TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_product_month_sales TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_product            TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_product_month_sales TO 'cockpit_app'@'localhost';
 
 -- Tables du Manuel Opératoire / panel consultant : LECTURE SEULE.
 GRANT SELECT ON atelierby_db.of_tag           TO 'cockpit_app'@'localhost';

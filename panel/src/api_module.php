@@ -125,7 +125,7 @@ function apiModInventaire(): array
                     ['m' => 'LIT', 'r' => 'franchisee_employee', 'dit' => 'Les personnes, leur téléphone', 'pages' => $AF, 'garde' => '', 'sonde' => ['table' => ['franchisee_employee']]],
                     ['m' => 'LIT', 'r' => 'transaction ⨝ client', 'dit' => 'Les commandes pro (prime B2B), le plus gros ticket (grands prix)', 'pages' => $AFE, 'garde' => '15 min · 1 j', 'sonde' => ['table' => ['transaction', 'client']]],
                     ['m' => 'LIT', 'r' => 'mar_avis_fiche', 'dit' => 'La note Google du magasin (tenue par Réputation)', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['mar_avis_fiche']]],
-                    ['m' => 'LIT', 'r' => 'ceo_shop_month_perf', 'dit' => 'L’objectif de CA du mois', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['ceo_shop_month_perf']]],
+                    ['m' => 'LIT', 'r' => 'con_shop_month_perf', 'dit' => 'L’objectif de CA du mois', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['con_shop_month_perf']]],
                     ['m' => 'LIT', 'r' => 'shops', 'dit' => 'Les magasins actifs', 'pages' => $AF, 'garde' => '', 'sonde' => ['table' => ['shops']]],
                 ]],
                 ['nom' => 'Tenues par le module', 'routes' => [

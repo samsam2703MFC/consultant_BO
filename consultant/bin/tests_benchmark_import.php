@@ -224,7 +224,7 @@ $promo = array_values(array_filter($it, fn ($i) => !empty($i['is_promo'])))[0] ?
 verifie('la promotion : prix normal et prix promo', (float) ($promo['price'] ?? 0) === 1.4 && (float) ($promo['promo_price'] ?? 0) === 1.12);
 $mie = array_values(array_filter($it, fn ($i) => str_starts_with($i['name_raw'], 'Pain de mie')))[0] ?? [];
 verifie('sans équivalent : entre sans my_product_id', $mie !== [] && !isset($mie['my_product_id']));
-verifie('la mémoire retient les lignes rattachées (concurrent et réseau)', count(array_filter(Db::$exec, fn ($x) => str_contains($x[0], 'ceo_bench_correspondance') && str_contains($x[0], 'INSERT'))) >= 8);
+verifie('la mémoire retient les lignes rattachées (concurrent et réseau)', count(array_filter(Db::$exec, fn ($x) => str_contains($x[0], 'con_bench_correspondance') && str_contains($x[0], 'INSERT'))) >= 8);
 $n = count(PanelApi::$items);
 $e2 = biEncoder($imp, false);
 verifie('rejouer ne crée aucun doublon', $e2['magasins'][0]['etat'] === 'deja' && count(PanelApi::$items) === $n && count(PanelApi::$comp) === 1);

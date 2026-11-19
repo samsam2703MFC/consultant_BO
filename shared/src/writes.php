@@ -64,7 +64,7 @@ function wr_budget_note(): array
     }
 
     if ($texte === '') {
-        Db::exec('DELETE FROM ceo_shop_month_note WHERE shop_id = ? AND year = ? AND month = ? AND auteur = ?',
+        Db::exec('DELETE FROM con_shop_month_note WHERE shop_id = ? AND year = ? AND month = ? AND auteur = ?',
             [$shop, $annee, $mois, $qui]);
         return ['ok' => true, 'vide' => true];
     }
@@ -78,12 +78,12 @@ function wr_budget_note(): array
     }
 
     $par = trim((string) ($b['par'] ?? '')) ?: null;
-    Db::exec('INSERT INTO ceo_shop_month_note (shop_id, year, month, auteur, texte, maj_par, maj_le)
+    Db::exec('INSERT INTO con_shop_month_note (shop_id, year, month, auteur, texte, maj_par, maj_le)
               VALUES (?,?,?,?,?,?,NOW())
               ON DUPLICATE KEY UPDATE texte = VALUES(texte), maj_par = VALUES(maj_par), maj_le = NOW()',
         [$shop, $annee, $mois, $qui, $texte, $par]);
 
-    $r = Db::row('SELECT maj_par, maj_le FROM ceo_shop_month_note
+    $r = Db::row('SELECT maj_par, maj_le FROM con_shop_month_note
                    WHERE shop_id = ? AND year = ? AND month = ? AND auteur = ?', [$shop, $annee, $mois, $qui]);
 
     return ['ok' => true, 'texte' => $texte,
@@ -95,7 +95,7 @@ function wr_project_create(): array
 {
     $b = body();
     $id = $b['id'] ?? ('px' . substr((string) round(microtime(true) * 1000), -8));
-    Db::exec('INSERT INTO ceo_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real, economie_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?)', [
+    Db::exec('INSERT INTO con_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real, economie_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?)', [
         $id, (string) $b['nom'], (string) ($b['famille'] ?? 'Organisation & coûts'), (string) ($b['statut'] ?? 'À lancer'),
         (string) ($b['prio'] ?? 'Moyenne'), (string) ($b['axes'][0] ?? ''), json_encode($b['axes'] ?? [], JSON_UNESCAPED_UNICODE),
         json_encode($b['kpis'] ?? [], JSON_UNESCAPED_UNICODE), (string) ($b['valeurTxt'] ?? ''),
@@ -110,19 +110,19 @@ function wr_project_create(): array
     foreach (LEVIER_DEFS as $l) { $slugToTag[$l['slug']] = $l['tag']; }
     foreach ($b['leviers'] ?? [] as $slug) {
         if (isset($slugToTag[$slug])) {
-            Db::exec('INSERT IGNORE INTO ceo_project_levid VALUES (?,?)', [$id, $slugToTag[$slug]]);
+            Db::exec('INSERT IGNORE INTO con_project_levid VALUES (?,?)', [$id, $slugToTag[$slug]]);
         }
     }
     foreach (array_values($b['jalons'] ?? []) as $i => $j) {
-        Db::exec('INSERT INTO ceo_project_milestone (project_id, name, target_on, done_on, sort_order) VALUES (?,?,?,?,?)',
+        Db::exec('INSERT INTO con_project_milestone (project_id, name, target_on, done_on, sort_order) VALUES (?,?,?,?,?)',
             [$id, (string) $j['nom'], $j['cible'] ?? null, $j['reel'] ?? null, $i]);
     }
     foreach ($b['couts'] ?? [] as $c) {
-        Db::exec('INSERT INTO ceo_project_cost (project_id, label, planned, actual) VALUES (?,?,?,?)',
+        Db::exec('INSERT INTO con_project_cost (project_id, label, planned, actual) VALUES (?,?,?,?)',
             [$id, (string) $c['poste'], (float) ($c['prevu'] ?? 0), (float) ($c['reel'] ?? 0)]);
     }
     foreach ($b['taches'] ?? [] as $i => $t) {
-        Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on) VALUES (?,?,?,?,?,?,?,NULL)',
+        Db::exec('INSERT INTO con_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on) VALUES (?,?,?,?,?,?,?,NULL)',
             [$t['id'] ?? ('t' . $id . $i), $id, (string) $t['nom'], (string) $t['owner']['t'], (string) $t['owner']['id'], $t['magasinId'] ?? null, $t['due'] ?? null]);
     }
     journalAdd('CEO', 'Création', (string) $b['nom'], $b['journal'] ?? ('Projet créé — statut « À lancer »'));
@@ -139,19 +139,19 @@ function wr_project_create(): array
  */
 function wr_project_delete(string $id): array
 {
-    $p = Db::row('SELECT name FROM ceo_project WHERE id = ?', [$id]);
+    $p = Db::row('SELECT name FROM con_project WHERE id = ?', [$id]);
     if ($p === null) { http_response_code(404); return ['error' => 'projet inconnu']; }
 
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        Db::exec('DELETE FROM ceo_task_issue WHERE task_id IN (SELECT id FROM ceo_project_task WHERE project_id = ?)', [$id]);
-        Db::exec('DELETE FROM ceo_project_task WHERE project_id = ?', [$id]);
-        Db::exec('DELETE FROM ceo_project_milestone WHERE project_id = ?', [$id]);
-        Db::exec('DELETE FROM ceo_project_cost WHERE project_id = ?', [$id]);
-        Db::exec('DELETE FROM ceo_project_levid WHERE project_id = ?', [$id]);
-        Db::exec('DELETE FROM ceo_project_crm WHERE project_id = ?', [$id]);
-        Db::exec('DELETE FROM ceo_project WHERE id = ?', [$id]);
+        Db::exec('DELETE FROM con_task_issue WHERE task_id IN (SELECT id FROM con_project_task WHERE project_id = ?)', [$id]);
+        Db::exec('DELETE FROM con_project_task WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM con_project_milestone WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM con_project_cost WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM con_project_levid WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM con_project_crm WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM con_project WHERE id = ?', [$id]);
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
@@ -583,11 +583,11 @@ function wr_pwa_annotation(): array
     $now = date('Y-m-d H:i:s');
 
     if (!$liste) {
-        Db::exec('DELETE FROM ceo_task_annotation WHERE id_shop = ? AND id_task = ? AND annot_date = ?',
+        Db::exec('DELETE FROM con_task_annotation WHERE id_shop = ? AND id_task = ? AND annot_date = ?',
             [$shopId, $taskId, $date]);
         return ['ok' => true, 'n' => 0];
     }
-    Db::exec('INSERT INTO ceo_task_annotation (id_shop, id_task, annot_date, reperes, auteur, maj_le)'
+    Db::exec('INSERT INTO con_task_annotation (id_shop, id_task, annot_date, reperes, auteur, maj_le)'
         . ' VALUES (?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE reperes = VALUES(reperes), auteur = VALUES(auteur), maj_le = VALUES(maj_le)',
         [$shopId, $taskId, $date, json_encode($liste, JSON_UNESCAPED_UNICODE), $auteur, $now]);
@@ -598,14 +598,14 @@ function wr_pwa_annotation(): array
 function wr_project_patch(string $id): array
 {
     $b = body();
-    $p = Db::row('SELECT name, status, famille FROM ceo_project WHERE id = ?', [$id]);
+    $p = Db::row('SELECT name, status, famille FROM con_project WHERE id = ?', [$id]);
     if ($p === null) { http_response_code(404); return ['error' => 'projet inconnu']; }
     if (isset($b['statut'])) {
-        Db::exec('UPDATE ceo_project SET status = ? WHERE id = ?', [(string) $b['statut'], $id]);
+        Db::exec('UPDATE con_project SET status = ? WHERE id = ?', [(string) $b['statut'], $id]);
         journalAdd('CEO', 'Statut', $p['name'], 'Statut passé de « ' . $p['status'] . ' » à « ' . $b['statut'] . ' » (fiche projet)');
     }
     if (isset($b['famille'])) {
-        Db::exec('UPDATE ceo_project SET famille = ? WHERE id = ?', [(string) $b['famille'], $id]);
+        Db::exec('UPDATE con_project SET famille = ? WHERE id = ?', [(string) $b['famille'], $id]);
         journalAdd('CEO', 'Famille', $p['name'], 'Famille passée de « ' . $p['famille'] . ' » à « ' . $b['famille'] . ' » (kanban)');
     }
     return ['ok' => true];
@@ -615,10 +615,10 @@ function wr_project_patch(string $id): array
 function wr_task_create(string $projectId): array
 {
     $b = body();
-    $p = Db::row('SELECT name FROM ceo_project WHERE id = ?', [$projectId]);
+    $p = Db::row('SELECT name FROM con_project WHERE id = ?', [$projectId]);
     if ($p === null) { http_response_code(404); return ['error' => 'projet inconnu']; }
     $id = $b['id'] ?? ('nt' . substr((string) round(microtime(true) * 1000), -8));
-    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on) VALUES (?,?,?,?,?,?,?,NULL)',
+    Db::exec('INSERT INTO con_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on) VALUES (?,?,?,?,?,?,?,NULL)',
         [$id, $projectId, (string) $b['nom'], (string) $b['owner']['t'], (string) $b['owner']['id'], $b['magasinId'] ?? null, $b['due'] ?? null]);
     journalAdd('CEO', 'Tâche', $p['name'], $b['journal'] ?? ('Tâche « ' . $b['nom'] . ' » créée'));
     return ['ok' => true, 'id' => $id];
@@ -657,7 +657,7 @@ function libelleNiveau(int $n): string
 function wr_task_patch(string $projectId, string $taskId): array
 {
     $b = body();
-    $t = Db::row('SELECT t.name, t.done_on, p.name AS pname FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
+    $t = Db::row('SELECT t.name, t.done_on, p.name AS pname FROM con_project_task t JOIN con_project p ON p.id = t.project_id WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
     if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
 
     // Une note hors 1..5 n'est pas une note : mieux vaut la refuser que
@@ -683,28 +683,28 @@ function wr_task_patch(string $projectId, string $taskId): array
     $pdo->beginTransaction();
     try {
         if (array_key_exists('done', $b)) {
-            Db::exec('UPDATE ceo_project_task SET done_on = ? WHERE id = ?', [$b['done'], $taskId]);
+            Db::exec('UPDATE con_project_task SET done_on = ? WHERE id = ?', [$b['done'], $taskId]);
             journalAdd('CEO', 'Tâche', $t['pname'], 'Tâche « ' . $t['name'] . ' » ' . ($b['done'] ? 'marquée faite le ' . $b['done'] : 'rouverte'));
         }
         if (array_key_exists('magasinId', $b)) {
-            Db::exec('UPDATE ceo_project_task SET shop_id = ? WHERE id = ?', [$b['magasinId'], $taskId]);
+            Db::exec('UPDATE con_project_task SET shop_id = ? WHERE id = ?', [$b['magasinId'], $taskId]);
         }
         if (array_key_exists('note', $b)) {
             $par = (string) ($b['par'] ?? 'CEO');
-            Db::exec('UPDATE ceo_project_task SET note = ?, validated_by = ?, validated_at = ? WHERE id = ?',
+            Db::exec('UPDATE con_project_task SET note = ?, validated_by = ?, validated_at = ? WHERE id = ?',
                 [$note, $note === null ? null : $par, $note === null ? null : date('Y-m-d H:i:s'), $taskId]);
             if ($note !== null) {
                 // La note vaut clôture : valider sans cocher laisserait la tâche
                 // dans « À valider » alors qu'elle vient d'être jugée.
                 if (!array_key_exists('done', $b) && $t['done_on'] === null) {
-                    Db::exec('UPDATE ceo_project_task SET done_on = ? WHERE id = ?', [date('Y-m-d'), $taskId]);
+                    Db::exec('UPDATE con_project_task SET done_on = ? WHERE id = ?', [date('Y-m-d'), $taskId]);
                 }
                 journalAdd('CEO', 'Validation', $t['pname'],
                     'Tâche « ' . $t['name'] . ' » validée ' . $note . '/5 — ' . libelleNiveau($note) . ' (' . $par . ')');
             }
             if ($note !== null && $note < $seuil) {
                 $copie = $b['copie'] ?? [];
-                Db::exec('INSERT INTO ceo_task_issue (task_id, note, famille, type, comment, recipients, status, created_at, created_by) VALUES (?,?,?,?,?,?,?,?,?)', [
+                Db::exec('INSERT INTO con_task_issue (task_id, note, famille, type, comment, recipients, status, created_at, created_by) VALUES (?,?,?,?,?,?,?,?,?)', [
                     $taskId, $note, (string) $b['famille'], (string) $b['type'],
                     $b['commentaire'] ?? null,
                     is_array($copie) ? implode(',', $copie) : (string) $copie,
@@ -735,9 +735,9 @@ function wr_task_patch(string $projectId, string $taskId): array
 function wr_task_issue_patch(string $issueId): array
 {
     $b = body();
-    $i = Db::row('SELECT i.*, t.name AS tache, p.name AS projet FROM ceo_task_issue i'
-        . ' JOIN ceo_project_task t ON t.id = i.task_id'
-        . ' JOIN ceo_project p ON p.id = t.project_id WHERE i.id = ?', [$issueId]);
+    $i = Db::row('SELECT i.*, t.name AS tache, p.name AS projet FROM con_task_issue i'
+        . ' JOIN con_project_task t ON t.id = i.task_id'
+        . ' JOIN con_project p ON p.id = t.project_id WHERE i.id = ?', [$issueId]);
     if ($i === null) { http_response_code(404); return ['error' => 'signalement inconnu']; }
 
     $statut = (string) ($b['statut'] ?? '');
@@ -760,14 +760,14 @@ function wr_task_issue_patch(string $issueId): array
     try {
         $maintenant = date('Y-m-d H:i:s');
         if ($statut === 'vu') {
-            Db::exec('UPDATE ceo_task_issue SET status = ?, seen_at = COALESCE(seen_at, ?),'
+            Db::exec('UPDATE con_task_issue SET status = ?, seen_at = COALESCE(seen_at, ?),'
                 . ' closed_at = NULL, closed_by = NULL WHERE id = ?', ['vu', $maintenant, $issueId]);
         } elseif ($statut === 'traite') {
-            Db::exec('UPDATE ceo_task_issue SET status = ?, seen_at = COALESCE(seen_at, ?),'
+            Db::exec('UPDATE con_task_issue SET status = ?, seen_at = COALESCE(seen_at, ?),'
                 . ' closed_at = ?, closed_by = ?, comment = CONCAT(COALESCE(comment, \'\'), ?) WHERE id = ?',
                 ['traite', $maintenant, $maintenant, $par, "\n— traité : " . $note, $issueId]);
         } else {
-            Db::exec('UPDATE ceo_task_issue SET status = ?, closed_at = NULL, closed_by = NULL WHERE id = ?',
+            Db::exec('UPDATE con_task_issue SET status = ?, closed_at = NULL, closed_by = NULL WHERE id = ?',
                 ['nouveau', $issueId]);
         }
         $verbe = ['nouveau' => 'rouvert', 'vu' => 'marqué vu', 'traite' => 'traité'][$statut];
@@ -786,9 +786,9 @@ function wr_task_issue_patch(string $issueId): array
 function wr_milestone_patch(string $projectId, int $index): array
 {
     $b = body();
-    $rows = Db::rows('SELECT m.id, m.name, p.name AS pname FROM ceo_project_milestone m JOIN ceo_project p ON p.id = m.project_id WHERE m.project_id = ? ORDER BY m.sort_order, m.id', [$projectId]);
+    $rows = Db::rows('SELECT m.id, m.name, p.name AS pname FROM con_project_milestone m JOIN con_project p ON p.id = m.project_id WHERE m.project_id = ? ORDER BY m.sort_order, m.id', [$projectId]);
     if (!isset($rows[$index])) { http_response_code(404); return ['error' => 'jalon inconnu']; }
-    Db::exec('UPDATE ceo_project_milestone SET done_on = ? WHERE id = ?', [$b['reel'], $rows[$index]['id']]);
+    Db::exec('UPDATE con_project_milestone SET done_on = ? WHERE id = ?', [$b['reel'], $rows[$index]['id']]);
     journalAdd('CEO', 'Jalon', $rows[$index]['pname'], 'Jalon « ' . $rows[$index]['name'] . ' » ' . ($b['reel'] ? 'atteint le ' . $b['reel'] : 'rouvert'));
     return ['ok' => true];
 }
@@ -797,9 +797,9 @@ function wr_milestone_patch(string $projectId, int $index): array
 function wr_task_reminder(string $taskId): array
 {
     $b = body();
-    $t = Db::row('SELECT t.name, p.name AS pname FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id WHERE t.id = ?', [$taskId]);
+    $t = Db::row('SELECT t.name, p.name AS pname FROM con_project_task t JOIN con_project p ON p.id = t.project_id WHERE t.id = ?', [$taskId]);
     if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
-    Db::exec('UPDATE ceo_project_task SET reminded_on = ? WHERE id = ?', [$b['date'] ?? date('Y-m-d'), $taskId]);
+    Db::exec('UPDATE con_project_task SET reminded_on = ? WHERE id = ?', [$b['date'] ?? date('Y-m-d'), $taskId]);
     journalAdd('CEO', 'Relance', $t['pname'], $b['journal'] ?? ('Relance manuelle — tâche « ' . $t['name'] . ' »'));
     return ['ok' => true];
 }
@@ -808,8 +808,8 @@ function wr_task_reminder(string $taskId): array
  * Le magasin existe-t-il, et son miroir local est-il prêt à recevoir ?
  *
  * L'autorité sur les magasins est la table PARTAGÉE `shops` du panel — c'est
- * elle que `ep_stores()` sert à l'écran. Mais `ceo_shop_budget` et
- * `ceo_shop_month_perf` portent une clé étrangère vers `ceo_shop`, qui n'est
+ * elle que `ep_stores()` sert à l'écran. Mais `con_shop_budget` et
+ * `con_shop_month_perf` portent une clé étrangère vers `ceo_shop`, qui n'est
  * qu'un miroir local et reste vide sur une installation branchée sur la vraie
  * base.
  *
@@ -863,7 +863,7 @@ function wr_budget_put(string $shopId): array
     $em = $b['etudeMarche'] ?? [];
     $caTheo = $b['caTheoriqueMensuel'] ?? [];
     $caTheoAn = array_sum(array_map('floatval', $caTheo));
-    Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, validated_on, basket_target, ca_theorique_an, etude_date, etude_source, etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite, etude_annexe)
+    Db::exec('INSERT INTO con_shop_budget (shop_id, fiscal_year, validated_on, basket_target, ca_theorique_an, etude_date, etude_source, etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite, etude_annexe)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE validated_on = VALUES(validated_on), basket_target = VALUES(basket_target),
                 ca_theorique_an = VALUES(ca_theorique_an), etude_date = VALUES(etude_date), etude_source = VALUES(etude_source),
@@ -885,16 +885,16 @@ function wr_budget_put(string $shopId): array
         // avait été fixé à rien.
         $montant = ($ca === '' || $ca === null || (float) $ca == 0.0) ? null : (float) $ca;
         $theoM = isset($caTheo[$i]) && (float) $caTheo[$i] != 0.0 ? (float) $caTheo[$i] : null;
-        // `ceo_shop_budget_month.revenue_budget` n'accepte pas NULL : un mois
+        // `con_shop_budget_month.revenue_budget` n'accepte pas NULL : un mois
         // vide s'y EFFACE au lieu de s'y écrire. (Mesuré en ligne : écrire
         // NULL renvoyait une erreur d'intégrité et l'enregistrement échouait.)
         if ($montant === null) {
-            Db::exec('DELETE FROM ceo_shop_budget_month WHERE shop_id = ? AND fiscal_year = ? AND month = ?',
+            Db::exec('DELETE FROM con_shop_budget_month WHERE shop_id = ? AND fiscal_year = ? AND month = ?',
                 [$shopId, $exercice, $m]);
         } else {
-            Db::exec('INSERT INTO ceo_shop_budget_month VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget)', [$shopId, $exercice, $m, $montant]);
+            Db::exec('INSERT INTO con_shop_budget_month VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget)', [$shopId, $exercice, $m, $montant]);
         }
-        Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, revenue_budget, ca_theorique) VALUES (?,?,?,?,?)
+        Db::exec('INSERT INTO con_shop_month_perf (shop_id, year, month, revenue_budget, ca_theorique) VALUES (?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget), ca_theorique = VALUES(ca_theorique)',
             [$shopId, $exercice, $m, $montant, $theoM]);
     }
@@ -923,19 +923,19 @@ function wr_budget_put(string $shopId): array
 function wr_report_patch(string $id): array
 {
     $b = body();
-    $r = Db::row('SELECT name FROM ceo_report_schedule WHERE id = ?', [$id]);
+    $r = Db::row('SELECT name FROM con_report_schedule WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     $map = ['freq' => 'frequency', 'destId' => 'dest_id', 'ccId' => 'cc_id'];
     foreach ($map as $key => $col) {
         if (array_key_exists($key, $b)) {
-            Db::exec("UPDATE ceo_report_schedule SET $col = ? WHERE id = ?", [$b[$key] === '' ? null : $b[$key], $id]);
+            Db::exec("UPDATE con_report_schedule SET $col = ? WHERE id = ?", [$b[$key] === '' ? null : $b[$key], $id]);
         }
     }
     if (array_key_exists('postes', $b)) {
-        Db::exec('UPDATE ceo_report_schedule SET postes_json = ? WHERE id = ?', [json_encode($b['postes']), $id]);
+        Db::exec('UPDATE con_report_schedule SET postes_json = ? WHERE id = ?', [json_encode($b['postes']), $id]);
     }
     if (array_key_exists('actif', $b)) {
-        Db::exec('UPDATE ceo_report_schedule SET active = ? WHERE id = ?', [$b['actif'] ? 1 : 0, $id]);
+        Db::exec('UPDATE con_report_schedule SET active = ? WHERE id = ?', [$b['actif'] ? 1 : 0, $id]);
     }
     return ['ok' => true];
 }
@@ -944,9 +944,9 @@ function wr_report_patch(string $id): array
 function wr_report_send(string $id): array
 {
     $b = body();
-    $r = Db::row('SELECT name FROM ceo_report_schedule WHERE id = ?', [$id]);
+    $r = Db::row('SELECT name FROM con_report_schedule WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
-    Db::exec('UPDATE ceo_report_schedule SET last_run = ? WHERE id = ?', [date('Y-m-d'), $id]);
+    Db::exec('UPDATE con_report_schedule SET last_run = ? WHERE id = ?', [date('Y-m-d'), $id]);
     journalAdd('CEO', 'Rapport', null, $b['journal'] ?? ('Rapport « ' . $r['name'] . ' » envoyé'));
     return ['ok' => true];
 }
@@ -955,7 +955,7 @@ function wr_report_send(string $id): array
 function wr_alert_patch(string $id): array
 {
     $b = body();
-    Db::exec('UPDATE ceo_alert_rule SET active = ? WHERE id = ?', [!empty($b['actif']) ? 1 : 0, $id]);
+    Db::exec('UPDATE con_alert_rule SET active = ? WHERE id = ?', [!empty($b['actif']) ? 1 : 0, $id]);
     return ['ok' => true];
 }
 
@@ -1284,11 +1284,11 @@ function wr_param_put(string $key): array
         return ['ok' => true];
     }
     if (str_starts_with($key, 'email-')) {                       // email-e1 → corps du modèle
-        Db::exec('UPDATE ceo_email_template SET body = ? WHERE id = ?', [(string) $b['corps'], substr($key, 6)]);
+        Db::exec('UPDATE con_email_template SET body = ? WHERE id = ?', [(string) $b['corps'], substr($key, 6)]);
         return ['ok' => true];
     }
     if (str_starts_with($key, 'template-')) {                    // template-<axe> → jalons + coûts
-        Db::exec('INSERT INTO ceo_project_template VALUES (?,?,?) ON DUPLICATE KEY UPDATE jalons_json = VALUES(jalons_json), couts_json = VALUES(couts_json)', [
+        Db::exec('INSERT INTO con_project_template VALUES (?,?,?) ON DUPLICATE KEY UPDATE jalons_json = VALUES(jalons_json), couts_json = VALUES(couts_json)', [
             substr($key, 9),
             json_encode($b['jalons'] ?? [], JSON_UNESCAPED_UNICODE),
             json_encode($b['couts'] ?? [], JSON_UNESCAPED_UNICODE),
@@ -1337,7 +1337,7 @@ function wr_prod_produit(string $ref): array
 
     $num = static fn ($v, $def = 0) => is_numeric($v) ? (float) $v : $def;
     Db::exec(
-        'INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, mat, prix,
+        'INSERT INTO con_prod_product (ref, nom, categorie, pwa_id, must, qmin, mat, prix,
              prep, cuisson, fin, bmin, bmult, four, dlv, profil, actif)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
          ON DUPLICATE KEY UPDATE
@@ -1356,7 +1356,7 @@ function wr_prod_produit(string $ref): array
     // Décochée, une obligatoire perd aussi sa saison : recochée plus tard, elle
     // repartirait sinon sur une saison que personne n'a choisie.
     if (empty($b['must'])) {
-        try { Db::exec('UPDATE ceo_prod_product SET saison_id = NULL WHERE ref = ?', [$ref]); } catch (PDOException $e) { /* colonne absente */ }
+        try { Db::exec('UPDATE con_prod_product SET saison_id = NULL WHERE ref = ?', [$ref]); } catch (PDOException $e) { /* colonne absente */ }
     }
     journalAdd('CEO', 'Référentiel produit', $nom,
         (string) ($b['journal'] ?? 'Fiche de production mise à jour'));
@@ -1376,7 +1376,7 @@ function wr_prod_planogramme(string $ref): array
     if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
     $zone = trim((string) ($b['zone'] ?? ''));
     if ($zone === '') {
-        Db::exec('DELETE FROM pla_placement WHERE ref = ?', [$ref]);
+        Db::exec('DELETE FROM con_pla_placement WHERE ref = ?', [$ref]);
         return ['ok' => true, 'ref' => $ref, 'retire' => true];
     }
     // Cette route désigne l'emplacement par ses NOMS. Depuis que le comptoir a
@@ -1384,10 +1384,10 @@ function wr_prod_planogramme(string $ref): array
     // compté comme placé dans le catalogue tout en restant invisible sur le
     // plan. On résout donc les noms, et on refuse plutôt que d'écrire un
     // placement qui ne désigne rien.
-    $s = Db::row('SELECT s.id FROM pla_slot s
-                    JOIN pla_niveau n ON n.id = s.niveau_id
-                    JOIN pla_meuble m ON m.id = n.meuble_id
-                    JOIN pla_zone   z ON z.id = m.zone_id
+    $s = Db::row('SELECT s.id FROM con_pla_slot s
+                    JOIN con_pla_niveau n ON n.id = s.niveau_id
+                    JOIN con_pla_meuble m ON m.id = n.meuble_id
+                    JOIN con_pla_zone   z ON z.id = m.zone_id
                    WHERE z.nom = ? AND m.nom = ? AND n.nom = ? AND s.position = ?',
         [$zone, trim((string) ($b['meuble'] ?? '')), trim((string) ($b['niveau'] ?? '')),
          isset($b['slot']) && is_numeric($b['slot']) ? (int) $b['slot'] : 0]);
@@ -1403,9 +1403,9 @@ function wr_prod_planogramme(string $ref): array
 
 /** Les trois niveaux de structure partagent leur forme : un nom, un rang, un parent. */
 const PLANO_NIVEAUX = [
-    'zone'   => ['table' => 'pla_zone',   'parent' => null,        'enfant' => 'pla_meuble', 'fkEnfant' => 'zone_id'],
-    'meuble' => ['table' => 'pla_meuble', 'parent' => 'zone_id',   'enfant' => 'pla_niveau', 'fkEnfant' => 'meuble_id'],
-    'niveau' => ['table' => 'pla_niveau', 'parent' => 'meuble_id', 'enfant' => 'pla_slot',   'fkEnfant' => 'niveau_id'],
+    'zone'   => ['table' => 'con_pla_zone',   'parent' => null,        'enfant' => 'con_pla_meuble', 'fkEnfant' => 'zone_id'],
+    'meuble' => ['table' => 'con_pla_meuble', 'parent' => 'zone_id',   'enfant' => 'con_pla_niveau', 'fkEnfant' => 'meuble_id'],
+    'niveau' => ['table' => 'con_pla_niveau', 'parent' => 'meuble_id', 'enfant' => 'con_pla_slot',   'fkEnfant' => 'niveau_id'],
 ];
 
 /**
@@ -1452,7 +1452,7 @@ function wr_plano_creer(string $type): array
     // que l'insertion reste commune aux trois niveaux de structure.
     if ($type === 'meuble') {
         $court = static fn ($v) => mb_substr(trim((string) $v), 0, 40);
-        Db::exec('UPDATE pla_meuble SET type = ?, temperature = ?, presentation = ?, periodes = ? WHERE id = ?',
+        Db::exec('UPDATE con_pla_meuble SET type = ?, temperature = ?, presentation = ?, periodes = ? WHERE id = ?',
             [$court($b['type'] ?? ''), $court($b['temperature'] ?? ''), $court($b['presentation'] ?? ''),
                 planoPeriodes($b['periodes'] ?? null), $id]);
 
@@ -1465,7 +1465,7 @@ function wr_plano_creer(string $type): array
             if (!is_array($n)) { continue; }
             $nn = mb_substr(trim((string) ($n['nom'] ?? '')), 0, 80);
             if ($nn === '') { $nn = 'Niveau ' . ($i + 1); }
-            Db::exec('INSERT INTO pla_niveau (meuble_id, nom, rang) VALUES (?,?,?)', [$id, $nn, $i + 1]);
+            Db::exec('INSERT INTO con_pla_niveau (meuble_id, nom, rang) VALUES (?,?,?)', [$id, $nn, $i + 1]);
             $nid = (int) Db::pdo()->lastInsertId();
             // Les identifiants créés sont RENDUS : sans eux, l'assistant ne peut
             // pas rattacher la photo qu'il vient de collecter pour ce niveau —
@@ -1474,7 +1474,7 @@ function wr_plano_creer(string $type): array
             $crees[] = ['id' => $nid, 'nom' => $nn, 'rang' => $i + 1];
             $ns = max(0, min(40, (int) ($n['slots'] ?? 0)));
             for ($k = 1; $k <= $ns; $k++) {
-                Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
+                Db::exec('INSERT INTO con_pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
                     . ' VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE position = position',
                     [$nid, $k,
                      planoDim($b['largeurMm'] ?? null), planoDim($b['longueurMm'] ?? null),
@@ -1492,7 +1492,7 @@ function wr_plano_creer(string $type): array
     if ($type === 'niveau' && isset($b['slots'])) {
         $n = max(0, min(40, (int) $b['slots']));
         for ($i = 1; $i <= $n; $i++) {
-            Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
+            Db::exec('INSERT INTO con_pla_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
                 . ' ON DUPLICATE KEY UPDATE position = position',
                 [$id, $i, isset($b['largeurMm']) ? (int) $b['largeurMm'] : null,
                  isset($b['capacite']) ? (int) $b['capacite'] : null]);
@@ -1520,7 +1520,7 @@ function wr_plano_patch(string $type, int $id): array
     // comptoir chaud qu'on décide finalement de monter aussi le matin ne doit
     // pas obliger à resaisir ses niveaux et ses emplacements.
     if ($type === 'meuble' && array_key_exists('periodes', $b)) {
-        Db::exec('UPDATE pla_meuble SET periodes = ? WHERE id = ?', [planoPeriodes($b['periodes']), $id]);
+        Db::exec('UPDATE con_pla_meuble SET periodes = ? WHERE id = ?', [planoPeriodes($b['periodes']), $id]);
     }
     // Le type, la température et la présentation se corrigent aussi après
     // coup : l'assistant rouvre un meuble existant, il ne doit pas obliger à
@@ -1529,7 +1529,7 @@ function wr_plano_patch(string $type, int $id): array
         $court = static fn ($v) => mb_substr(trim((string) $v), 0, 40);
         foreach (['type', 'temperature', 'presentation'] as $ch) {
             if (array_key_exists($ch, $b)) {
-                Db::exec('UPDATE pla_meuble SET ' . $ch . ' = ? WHERE id = ?', [$court($b[$ch]), $id]);
+                Db::exec('UPDATE con_pla_meuble SET ' . $ch . ' = ? WHERE id = ?', [$court($b[$ch]), $id]);
             }
         }
     }
@@ -1587,10 +1587,10 @@ function wr_plano_supprimer(string $type, int $id): array
     if (!$force) {
         $porte = [];
         if ($type === 'zone') {
-            $m = Db::row('SELECT COUNT(*) AS n FROM pla_meuble WHERE zone_id = ?', [$id]);
+            $m = Db::row('SELECT COUNT(*) AS n FROM con_pla_meuble WHERE zone_id = ?', [$id]);
             if ((int) ($m['n'] ?? 0) > 0) { $porte[] = (int) $m['n'] . ' meuble(s)'; }
         } elseif ($type === 'meuble') {
-            $n2 = Db::row('SELECT COUNT(*) AS n FROM pla_niveau WHERE meuble_id = ?', [$id]);
+            $n2 = Db::row('SELECT COUNT(*) AS n FROM con_pla_niveau WHERE meuble_id = ?', [$id]);
             if ((int) ($n2['n'] ?? 0) > 0) { $porte[] = (int) $n2['n'] . ' niveau(x)'; }
         }
         if ($slots) { $porte[] = count($slots) . ' emplacement(s)'; }
@@ -1602,25 +1602,25 @@ function wr_plano_supprimer(string $type, int $id): array
     }
     if ($slots) {
         $in = implode(',', array_fill(0, count($slots), '?'));
-        $r = Db::row('SELECT COUNT(*) AS n FROM pla_placement WHERE slot_id IN (' . $in . ')', $slots);
+        $r = Db::row('SELECT COUNT(*) AS n FROM con_pla_placement WHERE slot_id IN (' . $in . ')', $slots);
         $n = (int) ($r['n'] ?? 0);
         if ($n > 0 && !$force) {
             http_response_code(409);
             return ['error' => $n . ' référence(s) y sont placées — la suppression les retirerait du comptoir',
                 'placees' => $n];
         }
-        Db::exec('DELETE FROM pla_placement WHERE slot_id IN (' . $in . ')', $slots);
-        Db::exec('DELETE FROM pla_slot WHERE id IN (' . $in . ')', $slots);
+        Db::exec('DELETE FROM con_pla_placement WHERE slot_id IN (' . $in . ')', $slots);
+        Db::exec('DELETE FROM con_pla_slot WHERE id IN (' . $in . ')', $slots);
     }
     // Puis la descendance de structure, du bas vers le haut.
     if ($type === 'zone') {
-        $ms = array_map(fn ($x) => (int) $x['id'], Db::rows('SELECT id FROM pla_meuble WHERE zone_id = ?', [$id]));
+        $ms = array_map(fn ($x) => (int) $x['id'], Db::rows('SELECT id FROM con_pla_meuble WHERE zone_id = ?', [$id]));
         foreach ($ms as $m) {
-            Db::exec('DELETE FROM pla_niveau WHERE meuble_id = ?', [$m]);
+            Db::exec('DELETE FROM con_pla_niveau WHERE meuble_id = ?', [$m]);
         }
-        Db::exec('DELETE FROM pla_meuble WHERE zone_id = ?', [$id]);
+        Db::exec('DELETE FROM con_pla_meuble WHERE zone_id = ?', [$id]);
     } elseif ($type === 'meuble') {
-        Db::exec('DELETE FROM pla_niveau WHERE meuble_id = ?', [$id]);
+        Db::exec('DELETE FROM con_pla_niveau WHERE meuble_id = ?', [$id]);
     }
     Db::exec('DELETE FROM ' . $def['table'] . ' WHERE id = ?', [$id]);
     return ['ok' => true, 'id' => $id];
@@ -1643,12 +1643,12 @@ function planoDim($v): ?int
 function planoSlotsSous(string $type, int $id): array
 {
     if ($type === 'niveau') {
-        $q = 'SELECT id FROM pla_slot WHERE niveau_id = ?';
+        $q = 'SELECT id FROM con_pla_slot WHERE niveau_id = ?';
     } elseif ($type === 'meuble') {
-        $q = 'SELECT s.id FROM pla_slot s JOIN pla_niveau n ON n.id = s.niveau_id WHERE n.meuble_id = ?';
+        $q = 'SELECT s.id FROM con_pla_slot s JOIN con_pla_niveau n ON n.id = s.niveau_id WHERE n.meuble_id = ?';
     } else {
-        $q = 'SELECT s.id FROM pla_slot s JOIN pla_niveau n ON n.id = s.niveau_id'
-           . ' JOIN pla_meuble m ON m.id = n.meuble_id WHERE m.zone_id = ?';
+        $q = 'SELECT s.id FROM con_pla_slot s JOIN con_pla_niveau n ON n.id = s.niveau_id'
+           . ' JOIN con_pla_meuble m ON m.id = n.meuble_id WHERE m.zone_id = ?';
     }
     return array_map(fn ($x) => (int) $x['id'], Db::rows($q, [$id]));
 }
@@ -1660,10 +1660,10 @@ function wr_plano_slots(): array
     $nid = (int) ($b['niveauId'] ?? 0);
     if ($nid <= 0) { http_response_code(422); return ['error' => 'le niveau est requis']; }
     $n = max(1, min(40, (int) ($b['nombre'] ?? 1)));
-    $r = Db::row('SELECT COALESCE(MAX(position), 0) AS p FROM pla_slot WHERE niveau_id = ?', [$nid]);
+    $r = Db::row('SELECT COALESCE(MAX(position), 0) AS p FROM con_pla_slot WHERE niveau_id = ?', [$nid]);
     $depart = (int) ($r['p'] ?? 0);
     for ($i = 1; $i <= $n; $i++) {
-        Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
+        Db::exec('INSERT INTO con_pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
             . ' VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE position = position',
             [$nid, $depart + $i, planoDim($b['largeurMm'] ?? null), planoDim($b['longueurMm'] ?? null),
              planoDim($b['hauteurMm'] ?? null),
@@ -1675,13 +1675,13 @@ function wr_plano_slots(): array
 /** DELETE /planogramme/emplacement/{id} — retirer un emplacement. */
 function wr_plano_slot_supprimer(int $id): array
 {
-    $r = Db::row('SELECT COUNT(*) AS n FROM pla_placement WHERE slot_id = ?', [$id]);
+    $r = Db::row('SELECT COUNT(*) AS n FROM con_pla_placement WHERE slot_id = ?', [$id]);
     if ((int) ($r['n'] ?? 0) > 0 && empty(body()['force'])) {
         http_response_code(409);
         return ['error' => 'une référence y est placée — elle serait retirée du comptoir'];
     }
-    Db::exec('DELETE FROM pla_placement WHERE slot_id = ?', [$id]);
-    Db::exec('DELETE FROM pla_slot WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_pla_placement WHERE slot_id = ?', [$id]);
+    Db::exec('DELETE FROM con_pla_slot WHERE id = ?', [$id]);
     return ['ok' => true, 'id' => $id];
 }
 
@@ -1715,10 +1715,10 @@ function wr_plano_referentiel_creer(string $type): array
     $nom = mb_substr($nom, 0, 60);
 
     if ($type === 'contenants') {
-        $ex = Db::row('SELECT id FROM pla_contenant WHERE nom = ?', [$nom]);
+        $ex = Db::row('SELECT id FROM con_pla_contenant WHERE nom = ?', [$nom]);
         if ($ex !== null) { return ['ok' => true, 'id' => (int) $ex['id'], 'nom' => $nom, 'existait' => true]; }
-        $r = Db::row('SELECT COALESCE(MAX(rang), 0) AS n FROM pla_contenant');
-        Db::exec('INSERT INTO pla_contenant (nom, rang) VALUES (?,?)', [$nom, (int) $r['n'] + 1]);
+        $r = Db::row('SELECT COALESCE(MAX(rang), 0) AS n FROM con_pla_contenant');
+        Db::exec('INSERT INTO con_pla_contenant (nom, rang) VALUES (?,?)', [$nom, (int) $r['n'] + 1]);
         journalAdd('CEO', 'Planogramme', $nom, 'Contenant ajouté à la liste');
         return ['ok' => true, 'nom' => $nom];
     }
@@ -1740,10 +1740,10 @@ function wr_plano_referentiel_creer(string $type): array
     $lar = $lar !== null ? max(0, min(5000, $lar)) : null;
     $hau = $hau !== null ? max(0, min(5000, $hau)) : null;
 
-    $ex = Db::row('SELECT id FROM pla_format WHERE nom = ?', [$nom]);
+    $ex = Db::row('SELECT id FROM con_pla_format WHERE nom = ?', [$nom]);
     if ($ex !== null) { return ['ok' => true, 'id' => (int) $ex['id'], 'nom' => $nom, 'existait' => true]; }
-    $r = Db::row('SELECT COALESCE(MAX(rang), 0) AS n FROM pla_format');
-    Db::exec('INSERT INTO pla_format (nom, largeur_mm, hauteur_mm, rang) VALUES (?,?,?,?)',
+    $r = Db::row('SELECT COALESCE(MAX(rang), 0) AS n FROM con_pla_format');
+    Db::exec('INSERT INTO con_pla_format (nom, largeur_mm, hauteur_mm, rang) VALUES (?,?,?,?)',
         [$nom, $lar, $hau, (int) $r['n'] + 1]);
     journalAdd('CEO', 'Planogramme', $nom, 'Format d’emplacement ajouté à la liste');
     return ['ok' => true, 'nom' => $nom, 'largeurMm' => $lar, 'hauteurMm' => $hau];
@@ -1758,12 +1758,12 @@ function wr_plano_referentiel_creer(string $type): array
  */
 function wr_plano_referentiel_supprimer(string $type, int $id): array
 {
-    $table = $type === 'contenants' ? 'pla_contenant' : 'pla_format';
+    $table = $type === 'contenants' ? 'con_pla_contenant' : 'con_pla_format';
     $col = $type === 'contenants' ? 'contenant' : 'format';
     $r = Db::row('SELECT * FROM ' . $table . ' WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'position inconnue']; }
     $nom = (string) $r['nom'];
-    $u = Db::row('SELECT COUNT(*) AS n FROM pla_slot WHERE ' . $col . ' = ?', [$nom]);
+    $u = Db::row('SELECT COUNT(*) AS n FROM con_pla_slot WHERE ' . $col . ' = ?', [$nom]);
     Db::exec('DELETE FROM ' . $table . ' WHERE id = ?', [$id]);
     journalAdd('CEO', 'Planogramme', $nom, 'Position retirée de la liste');
     return ['ok' => true, 'id' => $id, 'nom' => $nom, 'utilise' => (int) ($u['n'] ?? 0)];
@@ -1779,14 +1779,14 @@ function wr_plano_referentiel_supprimer(string $type, int $id): array
 function wr_plano_slot_maj(int $id): array
 {
     $b = body();
-    $s = Db::row('SELECT * FROM pla_slot WHERE id = ?', [$id]);
+    $s = Db::row('SELECT * FROM con_pla_slot WHERE id = ?', [$id]);
     if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
 
     $sets = []; $args = []; $dit = [];
     if (array_key_exists('format', $b)) {
         $nom = mb_substr(trim((string) $b['format']), 0, 60);
         $sets[] = 'format = ?'; $args[] = $nom; $dit[] = 'format « ' . ($nom !== '' ? $nom : '—') . ' »';
-        $f = $nom !== '' ? Db::row('SELECT * FROM pla_format WHERE nom = ?', [$nom]) : null;
+        $f = $nom !== '' ? Db::row('SELECT * FROM con_pla_format WHERE nom = ?', [$nom]) : null;
         if ($f !== null && $f['largeur_mm'] !== null) { $sets[] = 'largeur_mm = ?'; $args[] = (int) $f['largeur_mm']; }
         if ($f !== null && $f['hauteur_mm'] !== null) { $sets[] = 'hauteur_mm = ?'; $args[] = (int) $f['hauteur_mm']; }
     }
@@ -1796,7 +1796,7 @@ function wr_plano_slot_maj(int $id): array
     }
     if (!$sets) { http_response_code(400); return ['error' => 'rien à modifier']; }
     $args[] = $id;
-    Db::exec('UPDATE pla_slot SET ' . implode(', ', $sets) . ' WHERE id = ?', $args);
+    Db::exec('UPDATE con_pla_slot SET ' . implode(', ', $sets) . ' WHERE id = ?', $args);
     journalAdd('CEO', 'Planogramme', 'emplacement ' . $id, implode(', ', $dit));
     return ['ok' => true, 'id' => $id];
 }
@@ -1810,23 +1810,23 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
     $b = $payload ?? body();
 
     if (empty($b['slotId'])) {
-        Db::exec('DELETE FROM pla_placement WHERE ref = ?', [$ref]);
+        Db::exec('DELETE FROM con_pla_placement WHERE ref = ?', [$ref]);
         journalAdd('CEO', 'Planogramme', $ref, 'Référence retirée du comptoir');
         return ['ok' => true, 'ref' => $ref, 'retire' => true];
     }
     $sid = (int) $b['slotId'];
     $s = Db::row('SELECT s.id, s.position, s.capacite, s.largeur_mm, s.hauteur_mm,
                          n.nom AS niveau, m.nom AS meuble, z.nom AS zone
-                    FROM pla_slot s
-                    JOIN pla_niveau n ON n.id = s.niveau_id
-                    JOIN pla_meuble m ON m.id = n.meuble_id
-                    JOIN pla_zone   z ON z.id = m.zone_id
+                    FROM con_pla_slot s
+                    JOIN con_pla_niveau n ON n.id = s.niveau_id
+                    JOIN con_pla_meuble m ON m.id = n.meuble_id
+                    JOIN con_pla_zone   z ON z.id = m.zone_id
                    WHERE s.id = ?', [$sid]);
     if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
 
     // L'état d'avant : d'où la référence vient, et ce qu'elle portait. Il est
     // lu ICI parce que l'échange en a besoin avant de toucher à quoi que ce soit.
-    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs, periodes FROM pla_placement WHERE ref = ?', [$ref]);
+    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs, periodes FROM con_pla_placement WHERE ref = ?', [$ref]);
     $venaitDe = ($ancien['slot_id'] ?? null) !== null ? (int) $ancien['slot_id'] : null;
 
     // Les moments demandés pour CE placement — transmis, sinon ceux déjà
@@ -1842,7 +1842,7 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
         if ($a === '' || $c === '') { return true; }
         return (bool) array_intersect(explode(',', $a), explode(',', $c));
     };
-    $tous = Db::rows('SELECT ref, periodes FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    $tous = Db::rows('SELECT ref, periodes FROM con_pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
     $occ = array_values(array_filter($tous,
         fn ($o) => $chevauche($perDemande, (string) ($o['periodes'] ?? ''))));
     // L'ÉCHANGE : glisser une référence sur un emplacement occupé, quand elle
@@ -1905,7 +1905,7 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
     // qu'on a décidé et ne bouge pas.
     $regrille = null;
     if ($grille === null && $gParSlot !== null && $venaitDe !== null && $venaitDe !== $sid) {
-        $av = Db::row('SELECT largeur_mm, hauteur_mm FROM pla_slot WHERE id = ?', [$venaitDe]);
+        $av = Db::row('SELECT largeur_mm, hauteur_mm FROM con_pla_slot WHERE id = ?', [$venaitDe]);
         $memeForme = $av !== null
             && (int) ($av['largeur_mm'] ?? 0) === (int) ($s['largeur_mm'] ?? 0)
             && (int) ($av['hauteur_mm'] ?? 0) === (int) ($s['hauteur_mm'] ?? 0);
@@ -1918,7 +1918,7 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
         }
     }
 
-    Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre,'
+    Db::exec('INSERT INTO con_pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre,'
         . ' par_slot, grille_cols, grille_rangs, periodes)'
         . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble), niveau = VALUES(niveau),'
@@ -1939,12 +1939,12 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
         $q = max(0, min(9999, (int) $b['qmin']));
         try {
             if ($q > 0) {
-                Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, qmin, must) VALUES (?,?,?,?,1)'
+                Db::exec('INSERT INTO con_prod_product (ref, nom, categorie, qmin, must) VALUES (?,?,?,?,1)'
                     . ' ON DUPLICATE KEY UPDATE qmin = VALUES(qmin), must = 1',
                     [$ref, mb_substr(trim((string) ($b['nom'] ?? $ref)), 0, 190), '', $q]);
             } else {
                 // Zéro : on ne touche NI au drapeau, ni à une fiche inexistante.
-                Db::exec('UPDATE ceo_prod_product SET qmin = 0 WHERE ref = ?', [$ref]);
+                Db::exec('UPDATE con_prod_product SET qmin = 0 WHERE ref = ?', [$ref]);
             }
         } catch (PDOException $e) { /* fiche produit indisponible : le placement tient quand même */ }
     }
@@ -1990,7 +1990,7 @@ function wr_plano_note(): array
     $texte = trim((string) ($b['texte'] ?? ''));
 
     if ($texte === '') {
-        Db::exec('DELETE FROM pla_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        Db::exec('DELETE FROM con_pla_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
         return ['ok' => true, 'efface' => true];
     }
     $texte = mb_substr($texte, 0, 2000);
@@ -2009,7 +2009,7 @@ function wr_plano_note(): array
     $u = setting('utilisateur', []);
     $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
 
-    Db::exec('INSERT INTO pla_note (cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le)'
+    Db::exec('INSERT INTO con_pla_note (cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le)'
         . ' VALUES (?,?,?,?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE texte = VALUES(texte), epinglee = VALUES(epinglee),'
         . ' gravite = VALUES(gravite), du = VALUES(du), au = VALUES(au),'
@@ -2048,15 +2048,15 @@ function wr_plano_photo(): array
     // Corps vide = on retire la photo.
     $data = (string) ($b['data'] ?? '');
     if (trim($data) === '') {
-        $ancien = Db::row('SELECT photo FROM pla_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        $ancien = Db::row('SELECT photo FROM con_pla_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
         if ($ancien !== null && !empty($ancien['photo'])) {
             $f = __DIR__ . '/../../public/' . $ancien['photo'];
             if (is_file($f)) { @unlink($f); }
         }
-        Db::exec('UPDATE pla_note SET photo = NULL WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        Db::exec('UPDATE con_pla_note SET photo = NULL WHERE cible = ? AND cible_id = ?', [$cible, $id]);
         // Une note qui ne porte plus ni texte ni photo n'a plus lieu d'être :
         // la garder laisserait un « consigne présente » trompeur à l'écran.
-        Db::exec('DELETE FROM pla_note WHERE cible = ? AND cible_id = ?'
+        Db::exec('DELETE FROM con_pla_note WHERE cible = ? AND cible_id = ?'
             . ' AND (texte IS NULL OR texte = \'\') AND photo IS NULL', [$cible, $id]);
         return ['ok' => true, 'photo' => null, 'retiree' => true];
     }
@@ -2094,7 +2094,7 @@ function wr_plano_photo(): array
 
     $u = setting('utilisateur', []);
     $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
-    Db::exec('INSERT INTO pla_note (cible, cible_id, photo, auteur, maj_le) VALUES (?,?,?,?,?)'
+    Db::exec('INSERT INTO con_pla_note (cible, cible_id, photo, auteur, maj_le) VALUES (?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE photo = VALUES(photo), auteur = VALUES(auteur), maj_le = VALUES(maj_le)',
         [$cible, $id, $chemin, $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'photo' => $chemin, 'octets' => strlen($bin),
@@ -2399,7 +2399,7 @@ function fondsRoyaltiesEcrire(string $mois, bool $apercu, ?int $seulShop = null)
 /**
  * Le fournisseur nommé dans une écriture rejoint le référentiel.
  *
- * On ne crée PAS une seconde table de fournisseurs : c'est `ceo_supplier`, celle
+ * On ne crée PAS une seconde table de fournisseurs : c'est `con_supplier`, celle
  * de la centrale d'achat, qui s'enrichit. Taper un nom dans le grand livre le
  * rend disponible partout ensuite — et évite les dix orthographes du même
  * fournisseur qu'une saisie libre finit toujours par produire.
@@ -2411,16 +2411,16 @@ function fournisseurAssure(?string $nom): void
 {
     $nom = trim((string) $nom);
     if ($nom === '') { return; }
-    // 120 : la borne de ceo_supplier.name — au-delà, l'insert claque en mode
+    // 120 : la borne de con_supplier.name — au-delà, l'insert claque en mode
     // strict et emporte l'écriture comptable avec lui.
     $nom = mb_substr($nom, 0, 120);
     try {
-        $dej = Db::row('SELECT id FROM ceo_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
+        $dej = Db::row('SELECT id FROM con_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
         if ($dej !== null) { return; }
         // email '' et non null : la colonne est NOT NULL (centrale d'achat).
         // Avec null, TOUTE écriture portant un fournisseur nouveau mourait ici
         // en « base de données indisponible » — avant même le mouvement.
-        Db::exec('INSERT INTO ceo_supplier (id, name, perimeter, email) VALUES (?,?,?,?)',
+        Db::exec('INSERT INTO con_supplier (id, name, perimeter, email) VALUES (?,?,?,?)',
             ['f' . bin2hex(random_bytes(4)), $nom, 'Fonds marketing', '']);
         journalAdd('CEO', 'Fournisseur', $nom, 'Fournisseur ajouté depuis le grand livre du fonds');
     } catch (Throwable $e) {
@@ -2452,12 +2452,12 @@ function wr_shop_charges(string $shopId): array
         $id = preg_replace('/[^a-z0-9]+/', '', strtolower((string) $id));
         if ($id === '') { continue; }
         if ($montant === null || $montant === '') {
-            Db::exec('DELETE FROM ceo_shop_charge_month WHERE shop_id = ? AND fiscal_year = ? AND month = ? AND poste_id = ?',
+            Db::exec('DELETE FROM con_shop_charge_month WHERE shop_id = ? AND fiscal_year = ? AND month = ? AND poste_id = ?',
                 [$shopId, $exercice, $mois, $id]);
             $effaces++;
             continue;
         }
-        Db::exec('INSERT INTO ceo_shop_charge_month (shop_id, fiscal_year, month, poste_id, amount)
+        Db::exec('INSERT INTO con_shop_charge_month (shop_id, fiscal_year, month, poste_id, amount)
                   VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE amount = VALUES(amount)',
             [$shopId, $exercice, $mois, $id, (float) $montant]);
         $ecrits++;
@@ -2484,7 +2484,7 @@ function wr_prod_fin(string $ref): array
     $b = body();
     $date = trim((string) ($b['date'] ?? ''));
     if ($date === '') {
-        Db::exec('DELETE FROM ceo_prod_fin WHERE ref = ?', [$ref]);
+        Db::exec('DELETE FROM con_prod_fin WHERE ref = ?', [$ref]);
         journalAdd('CEO', 'Produit', $ref, 'Arrêt de la référence annulé');
         return ['ok' => true, 'annule' => true];
     }
@@ -2493,7 +2493,7 @@ function wr_prod_fin(string $ref): array
         return ['error' => 'date attendue au format AAAA-MM-JJ'];
     }
     $note = mb_substr(trim((string) ($b['note'] ?? '')), 0, 300);
-    Db::exec('INSERT INTO ceo_prod_fin (ref, end_on, note) VALUES (?,?,?)
+    Db::exec('INSERT INTO con_prod_fin (ref, end_on, note) VALUES (?,?,?)
               ON DUPLICATE KEY UPDATE end_on = VALUES(end_on), note = VALUES(note)', [$ref, $date, $note]);
     journalAdd('CEO', 'Produit', $ref, 'Arrêt programmé au ' . $date . ($note !== '' ? ' — ' . $note : ''));
     return ['ok' => true, 'date' => $date];
@@ -2619,10 +2619,10 @@ function wr_consultant_note(): array
         return ['ok' => true, 'comme' => 'note', 'panel' => $panel];
     }
 
-    // VARCHAR(16) sur ceo_project.id : l'identifiant reste court.
+    // VARCHAR(16) sur con_project.id : l'identifiant reste court.
     $pid = 'px-suivi-cons';
-    if (Db::row('SELECT id FROM ceo_project WHERE id = ?', [$pid]) === null) {
-        Db::exec('INSERT INTO ceo_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL)', [
+    if (Db::row('SELECT id FROM con_project WHERE id = ?', [$pid]) === null) {
+        Db::exec('INSERT INTO con_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL)', [
             $pid, 'Suivi consultants', 'Organisation & coûts', 'En cours', 'Moyenne', '',
             json_encode([]), json_encode([]),
             'Les notes posées depuis le contrôle des tâches : chaque note envoyée comme tâche vit ici.',
@@ -2640,7 +2640,7 @@ function wr_consultant_note(): array
     $srcTask = trim((string) ($b['srcTaskId'] ?? ''));
     $srcDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['srcDate'] ?? '')) ? (string) $b['srcDate'] : null;
     $shopId = ($b['shopId'] ?? null) ?: null;
-    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description, src_shop, src_task, src_date, panel_note) VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?,?)', [
+    Db::exec('INSERT INTO con_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description, src_shop, src_task, src_date, panel_note) VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?,?)', [
         // owner_kind est un ENUM('c','s') : « c » = consultant.
         $tid, $pid, '[' . $type . '] ' . mb_substr($texte, 0, 160), 'c', $qui,
         $shopId, $due,
@@ -3342,10 +3342,10 @@ function budgetProjeter(string $shopId, int $exercice, array $em, bool $inclureC
         // théorique, pour ne pas effacer la date de validation ni l'engagement
         // panier.
         if ($k === 0) {
-            Db::exec('UPDATE ceo_shop_budget SET ca_theorique_an = ? WHERE shop_id = ? AND fiscal_year = ?',
+            Db::exec('UPDATE con_shop_budget SET ca_theorique_an = ? WHERE shop_id = ? AND fiscal_year = ?',
                 [$caAn, $shopId, $exo]);
         } else {
-            Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, ca_theorique_an, etude_date, etude_source,
+            Db::exec('INSERT INTO con_shop_budget (shop_id, fiscal_year, ca_theorique_an, etude_date, etude_source,
                         etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite)
                       VALUES (?,?,?,?,?,?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE ca_theorique_an = VALUES(ca_theorique_an),
@@ -3361,7 +3361,7 @@ function budgetProjeter(string $shopId, int $exercice, array $em, bool $inclureC
             ]);
         }
         for ($m = 1; $m <= 12; $m++) {
-            Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, ca_theorique) VALUES (?,?,?,?)
+            Db::exec('INSERT INTO con_shop_month_perf (shop_id, year, month, ca_theorique) VALUES (?,?,?,?)
                       ON DUPLICATE KEY UPDATE ca_theorique = VALUES(ca_theorique)',
                 [$shopId, $exo, $m, round($caAn * $sais[$m - 1] / $sommeSais, 2)]);
         }
@@ -3393,8 +3393,8 @@ function wr_shop_saisonnalite(string $shopId): array
     // le reste (potentiel, montée en régime, année) reste le sien.
     $r = Db::row('SELECT etude_potentiel_maturite p, annee_exploitation a, montee_regime m, etude_date d, etude_source s,
                          etude_potentiel_menages me
-                  FROM ceo_shop_budget WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]);
-    Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, saisonnalite) VALUES (?,?,?)
+                  FROM con_shop_budget WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]);
+    Db::exec('INSERT INTO con_shop_budget (shop_id, fiscal_year, saisonnalite) VALUES (?,?,?)
               ON DUPLICATE KEY UPDATE saisonnalite = VALUES(saisonnalite)',
         [$shopId, $exercice, json_encode($sais)]);
     $em = [
@@ -3404,7 +3404,7 @@ function wr_shop_saisonnalite(string $shopId): array
         'saisonnalite' => $sais,
         'date' => $r['d'] ?? null, 'source' => $r['s'] ?? null, 'potentielMenages' => $r['me'] ?? null,
     ];
-    $theoDejaSaisi = (int) (Db::row('SELECT COUNT(*) n FROM ceo_shop_month_perf
+    $theoDejaSaisi = (int) (Db::row('SELECT COUNT(*) n FROM con_shop_month_perf
                                      WHERE shop_id = ? AND year = ? AND ca_theorique IS NOT NULL AND ca_theorique > 0',
         [$shopId, $exercice])['n'] ?? 0) > 0;
     $projection = budgetProjeter($shopId, $exercice, $em, true);
@@ -3519,7 +3519,7 @@ function wr_action_usage(): array
 function wr_task_delete(string $projectId, string $taskId): array
 {
     $t = Db::row('SELECT t.name, t.done_on, t.note, t.panel_note, p.name AS pname
-                    FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id
+                    FROM con_project_task t JOIN con_project p ON p.id = t.project_id
                    WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
     if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
 
@@ -3538,10 +3538,10 @@ function wr_task_delete(string $projectId, string $taskId): array
     try {
         $sig = 0;
         try {
-            $sig = count(Db::rows('SELECT id FROM ceo_task_issue WHERE task_id = ?', [$taskId]));
-            Db::exec('DELETE FROM ceo_task_issue WHERE task_id = ?', [$taskId]);
+            $sig = count(Db::rows('SELECT id FROM con_task_issue WHERE task_id = ?', [$taskId]));
+            Db::exec('DELETE FROM con_task_issue WHERE task_id = ?', [$taskId]);
         } catch (PDOException $e) { /* table absente : rien à détacher */ }
-        Db::exec('DELETE FROM ceo_project_task WHERE id = ? AND project_id = ?', [$taskId, $projectId]);
+        Db::exec('DELETE FROM con_project_task WHERE id = ? AND project_id = ?', [$taskId, $projectId]);
         $pdo->commit();
         journalAdd('CEO', 'Tâche', (string) $t['pname'], 'Tâche « ' . $t['name'] . ' » supprimée'
             . ($t['note'] !== null ? ' (elle était validée ' . (int) $t['note'] . '/5)' : '')
@@ -3564,7 +3564,7 @@ function plaMontageTable(): void
 {
     static $ok = false;
     if ($ok) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS pla_montage ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_pla_montage ('
         . 'shop_id INT NOT NULL, zone_id INT NOT NULL, jour DATE NOT NULL,'
         . 'photo VARCHAR(255) NOT NULL, auteur VARCHAR(190) NOT NULL DEFAULT \'\','
         . 'quand DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
@@ -3580,7 +3580,7 @@ function ep_plano_montage(): array
     if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) { http_response_code(400); return ['error' => 'shop ou date manquant']; }
     plaMontageTable();
     $out = [];
-    foreach (Db::rows('SELECT zone_id, photo, auteur, quand FROM pla_montage WHERE shop_id = ? AND jour = ?', [$sid, $jour]) as $r) {
+    foreach (Db::rows('SELECT zone_id, photo, auteur, quand FROM con_pla_montage WHERE shop_id = ? AND jour = ?', [$sid, $jour]) as $r) {
         $out[(string) (int) $r['zone_id']] = ['photo' => (string) $r['photo'], 'auteur' => (string) $r['auteur'], 'quand' => (string) $r['quand']];
     }
     return ['shop' => $sid, 'date' => $jour, 'zones' => $out];
@@ -3598,9 +3598,9 @@ function wr_plano_montage(): array
     $rel = 'uploads/plano/montage-' . $sid . '-' . $zid . '-' . $jour;
     $data = (string) ($b['data'] ?? '');
     if (trim($data) === '') {
-        $anc = Db::row('SELECT photo FROM pla_montage WHERE shop_id = ? AND zone_id = ? AND jour = ?', [$sid, $zid, $jour]);
+        $anc = Db::row('SELECT photo FROM con_pla_montage WHERE shop_id = ? AND zone_id = ? AND jour = ?', [$sid, $zid, $jour]);
         if ($anc !== null && !empty($anc['photo'])) { $f = __DIR__ . '/../../public/' . $anc['photo']; if (is_file($f)) { @unlink($f); } }
-        Db::exec('DELETE FROM pla_montage WHERE shop_id = ? AND zone_id = ? AND jour = ?', [$sid, $zid, $jour]);
+        Db::exec('DELETE FROM con_pla_montage WHERE shop_id = ? AND zone_id = ? AND jour = ?', [$sid, $zid, $jour]);
         return ['ok' => true, 'retiree' => true];
     }
     if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $data, $m)) { http_response_code(422); return ['error' => 'image illisible (data-URL attendue)']; }
@@ -3616,7 +3616,7 @@ function wr_plano_montage(): array
     if (@file_put_contents(__DIR__ . '/../../public/' . $chemin, $bin) === false) { http_response_code(500); return ['error' => 'écriture de la photo impossible']; }
     $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 190);
     if ($auteur === '') { $u = setting('utilisateur', []); $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'Tablette'; }
-    Db::exec('INSERT INTO pla_montage (shop_id, zone_id, jour, photo, auteur, quand) VALUES (?,?,?,?,?,?)'
+    Db::exec('INSERT INTO con_pla_montage (shop_id, zone_id, jour, photo, auteur, quand) VALUES (?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE photo = VALUES(photo), auteur = VALUES(auteur), quand = VALUES(quand)',
         [$sid, $zid, $jour, $chemin, $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'photo' => $chemin, 'auteur' => $auteur, 'quand' => date('Y-m-d H:i:s')];

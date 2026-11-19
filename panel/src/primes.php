@@ -432,7 +432,7 @@ function primesBudgets(string $m): array
 {
     $out = [];
     try {
-        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE year = ? AND month = ?',
             [(int) substr($m, 0, 4), (int) substr($m, 5, 2)]) as $b) {
             if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) { $out[(string) $b['shop_id']] = ['montant' => (float) $b['revenue_budget'], 'source' => 'budget']; }
             elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) { $out[(string) $b['shop_id']] = ['montant' => (float) $b['ca_theorique'], 'source' => 'theorique']; }

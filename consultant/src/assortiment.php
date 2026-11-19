@@ -29,9 +29,9 @@ function aoEnsure(): void
     if ($fait) { return; }
     $fait = true;
     // Lecture vide d'abord : l'ALTER ne part que sur une table d'avant.
-    try { Db::rows('SELECT saison_id FROM ceo_prod_product LIMIT 0'); }
+    try { Db::rows('SELECT saison_id FROM con_prod_product LIMIT 0'); }
     catch (Throwable $e) {
-        try { Db::exec('ALTER TABLE ceo_prod_product ADD COLUMN saison_id INT NULL'); } catch (Throwable $e2) { /* déjà là, ou table absente */ }
+        try { Db::exec('ALTER TABLE con_prod_product ADD COLUMN saison_id INT NULL'); } catch (Throwable $e2) { /* déjà là, ou table absente */ }
     }
 }
 
@@ -250,7 +250,7 @@ function aoSaisonsFiches(): array
     aoEnsure();
     $out = [];
     try {
-        foreach (Db::rows('SELECT ref, saison_id FROM ceo_prod_product WHERE saison_id IS NOT NULL') as $r) {
+        foreach (Db::rows('SELECT ref, saison_id FROM con_prod_product WHERE saison_id IS NOT NULL') as $r) {
             $out[(string) $r['ref']] = (int) $r['saison_id'];
         }
     } catch (Throwable $e) { /* colonne absente : tout est « toute l'année » */ }
@@ -314,7 +314,7 @@ function aoObligatoires(string $jour): array
     $gammes = aoGammesBrutes();
     $out = ['exigibles' => [], 'horsSaison' => []];
     try {
-        foreach (Db::rows('SELECT ref, nom, pwa_id, saison_id FROM ceo_prod_product WHERE must = 1 AND actif = 1 ORDER BY nom') as $r) {
+        foreach (Db::rows('SELECT ref, nom, pwa_id, saison_id FROM con_prod_product WHERE must = 1 AND actif = 1 ORDER BY nom') as $r) {
             $s = $r['saison_id'] !== null ? (int) $r['saison_id'] : null;
             $pwa = $r['pwa_id'] === null || (string) $r['pwa_id'] === '' ? null : (string) $r['pwa_id'];
             if (aoExigible(true, $s, $jour, $gammes)) {
@@ -344,12 +344,12 @@ function ep_prod_saisons(): array
 
     // Identifiant du panel → référence du catalogue (la fiche cockpit peut porter une autre référence).
     $refDe = [];
-    try { foreach (Db::rows('SELECT ref, pwa_id FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) { $refDe[(int) $r['pwa_id']] = (string) $r['ref']; } }
+    try { foreach (Db::rows('SELECT ref, pwa_id FROM con_prod_product WHERE pwa_id IS NOT NULL') as $r) { $refDe[(int) $r['pwa_id']] = (string) $r['ref']; } }
     catch (Throwable $e) { /* références = identifiants du panel */ }
 
     $oblig = []; $annee = 0; $exig = 0; $inconnue = 0;
     try {
-        foreach (Db::rows('SELECT ref, saison_id FROM ceo_prod_product WHERE must = 1 AND actif = 1') as $r) {
+        foreach (Db::rows('SELECT ref, saison_id FROM con_prod_product WHERE must = 1 AND actif = 1') as $r) {
             $s = $r['saison_id'] !== null ? (int) $r['saison_id'] : null;
             if ($s === null || (isset($gammes[$s]) && $gammes[$s]['permanente'])) { $annee++; }
             else { $oblig[$s] = ($oblig[$s] ?? 0) + 1; if (!isset($gammes[$s]) || !$gammes[$s]['active']) { $inconnue++; } }
@@ -396,7 +396,7 @@ function ep_prod_saisons(): array
  */
 function aoFusionNecessaire(): int
 {
-    try { $refs = array_map(static fn ($r) => (string) $r['id_produit'], Db::rows('SELECT id_produit FROM ceo_prod_revue WHERE necessaire = 1')); }
+    try { $refs = array_map(static fn ($r) => (string) $r['id_produit'], Db::rows('SELECT id_produit FROM con_prod_revue WHERE necessaire = 1')); }
     catch (Throwable $e) { return 0; }
     if ($refs === []) { return 0; }
     aoEnsure();
@@ -404,7 +404,7 @@ function aoFusionNecessaire(): int
     foreach ($refs as $ref) {
         if (!preg_match('/^[\w-]{1,24}$/', $ref)) { continue; }
         $deja = null;
-        try { $deja = Db::row('SELECT must FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
+        try { $deja = Db::row('SELECT must FROM con_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
         if ($deja === null || (int) $deja['must'] !== 1) {
             $nom = ''; $cat = '';
             try {
@@ -412,15 +412,15 @@ function aoFusionNecessaire(): int
                 if ($p) { $nom = trim((string) $p[0]['name']); $cat = (string) ($p[0]['cat'] ?? ''); }
             } catch (Throwable $e) { /* catalogue indisponible */ }
             if ($nom === '') { $nom = $ref; }
-            Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, saison_id, actif) VALUES (?,?,?,?,1,0,NULL,1)
+            Db::exec('INSERT INTO con_prod_product (ref, nom, categorie, pwa_id, must, qmin, saison_id, actif) VALUES (?,?,?,?,1,0,NULL,1)
                       ON DUPLICATE KEY UPDATE saison_id = NULL, must = 1',
                 [$ref, mb_substr($nom, 0, 160), mb_substr($cat, 0, 60), ctype_digit($ref) ? (int) $ref : null]);
             journalAdd('CEO', 'Assortiment obligatoire', $nom, 'obligatoire toute l’année — « nécessaire » fondu dans « obligatoire »');
             $n++;
         }
-        Db::exec('UPDATE ceo_prod_revue SET necessaire = 0 WHERE id_produit = ?', [$ref]);
+        Db::exec('UPDATE con_prod_revue SET necessaire = 0 WHERE id_produit = ?', [$ref]);
     }
-    Db::exec('DELETE FROM ceo_prod_revue WHERE note IS NULL AND necessaire = 0');
+    Db::exec('DELETE FROM con_prod_revue WHERE note IS NULL AND necessaire = 0');
     return $n;
 }
 
@@ -452,7 +452,7 @@ function aoEcrireObligatoire(string $ref, bool $must, mixed $saison, mixed $qmin
     $ref = trim($ref);
     if ($ref === '' || !preg_match('/^[\w-]{1,24}$/', $ref)) { return ['error' => 'référence requise', 'code' => 400]; }
     $ancien = null;
-    try { $ancien = Db::row('SELECT qmin, saison_id FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
+    try { $ancien = Db::row('SELECT qmin, saison_id FROM con_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
     $sid = null;
     if ($must && $saison === 'garder') {
         // Sans clé « saison » (une quantité seule), la saison en place est gardée.
@@ -481,7 +481,7 @@ function aoEcrireObligatoire(string $ref, bool $must, mixed $saison, mixed $qmin
     } catch (Throwable $e) { /* catalogue indisponible */ }
     if ($nom === '') { $nom = trim($nomRepli !== '' ? $nomRepli : $ref); }
 
-    Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, saison_id, actif) VALUES (?,?,?,?,?,?,?,1)
+    Db::exec('INSERT INTO con_prod_product (ref, nom, categorie, pwa_id, must, qmin, saison_id, actif) VALUES (?,?,?,?,?,?,?,1)
               ON DUPLICATE KEY UPDATE must = VALUES(must), qmin = VALUES(qmin), saison_id = VALUES(saison_id)',
         [$ref, mb_substr($nom, 0, 160), mb_substr($cat, 0, 60), ctype_digit($ref) ? (int) $ref : null, $must ? 1 : 0, $q, $sid]);
 

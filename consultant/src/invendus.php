@@ -561,7 +561,7 @@ function ensureOperateurRemarques(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_operateur_remarque (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_operateur_remarque (
         id INT AUTO_INCREMENT PRIMARY KEY,
         shop_id INT NOT NULL,
         employe_id INT NULL,
@@ -601,7 +601,7 @@ function invRemarques(int $sid, ?string $du = null, ?string $au = null, ?int $em
         if ($du !== null) { $w[] = 'le >= ?'; $p[] = $du; }
         if ($au !== null) { $w[] = 'le <= ?'; $p[] = $au; }
         if ($employe !== null) { $w[] = 'employe_id = ?'; $p[] = $employe; }
-        $rows = Db::rows('SELECT * FROM ceo_operateur_remarque WHERE ' . implode(' AND ', $w) . ' ORDER BY le DESC, id DESC LIMIT ' . max(1, min(2000, $max)), $p);
+        $rows = Db::rows('SELECT * FROM con_operateur_remarque WHERE ' . implode(' AND ', $w) . ' ORDER BY le DESC, id DESC LIMIT ' . max(1, min(2000, $max)), $p);
     } catch (Throwable $e) { return []; }
     return array_map('invRemarqueDe', $rows);
 }
@@ -696,7 +696,7 @@ function wr_equipe_remarque_creer(): array
     $texte = mb_substr($texte, 0, 1000);
     try {
         ensureOperateurRemarques();
-        Db::exec('INSERT INTO ceo_operateur_remarque (shop_id, employe_id, employe_nom, le, heure, produit_id, produit_nom, pieces, motif, texte, source, saisie_id, auteur, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        Db::exec('INSERT INTO con_operateur_remarque (shop_id, employe_id, employe_nom, le, heure, produit_id, produit_nom, pieces, motif, texte, source, saisie_id, auteur, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [$sid, $ide, $nomE, $le, $heure, $pid, $prod, $pieces, $motif, $texte, 'invendus', $saisie, $auteur, date('Y-m-d H:i:s')]);
         $id = (int) Db::pdo()->lastInsertId();
     } catch (Throwable $e) { http_response_code(503); return ['error' => 'la remarque n’a pas pu être gardée : base indisponible']; }
@@ -723,5 +723,5 @@ function ep_equipe_remarques(): array
         $par[$k]['n']++;
     }
     return ['shop' => $sid, 'du' => $du, 'au' => $au, 'employe' => $emp, 'remarques' => $r, 'parOperateur' => array_values($par),
-        'source' => 'ceo_operateur_remarque : les remarques faites depuis la modale des invendus du dashboard magasin'];
+        'source' => 'con_operateur_remarque : les remarques faites depuis la modale des invendus du dashboard magasin'];
 }

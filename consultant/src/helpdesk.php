@@ -36,7 +36,7 @@ function hdkTable(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS hdk_mission (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_hdk_mission (
         id INT AUTO_INCREMENT PRIMARY KEY,
         case_id INT NOT NULL,
         case_ref VARCHAR(40) NOT NULL DEFAULT \'\',
@@ -51,7 +51,7 @@ function hdkTable(): void
         cloture_le DATETIME NULL,
         reponse TEXT NULL,
         KEY k_case (case_id), KEY k_visite (visite_id))');
-    Db::exec('CREATE TABLE IF NOT EXISTS hdk_demande (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_hdk_demande (
         case_id INT PRIMARY KEY,
         shop_id VARCHAR(32) NOT NULL DEFAULT \'\',
         passage TINYINT NOT NULL DEFAULT 0,
@@ -89,7 +89,7 @@ function hdkDemande(array $c): array
 function hdkMissions(?array $caseIds = null): array
 {
     hdkTable();
-    $rows = $caseIds === null ? Db::rows('SELECT * FROM hdk_mission ORDER BY id DESC') : ($caseIds === [] ? [] : Db::rows('SELECT * FROM hdk_mission WHERE case_id IN (' . implode(',', array_map('intval', $caseIds)) . ') ORDER BY id DESC'));
+    $rows = $caseIds === null ? Db::rows('SELECT * FROM con_hdk_mission ORDER BY id DESC') : ($caseIds === [] ? [] : Db::rows('SELECT * FROM con_hdk_mission WHERE case_id IN (' . implode(',', array_map('intval', $caseIds)) . ') ORDER BY id DESC'));
     $vis = [];
     $ids = array_values(array_unique(array_map(static fn ($r) => (int) $r['visite_id'], $rows)));
     if ($ids !== []) { foreach (Db::rows('SELECT id, shop_id, prevu_le, statut, consultant_nom, motif FROM con_visite WHERE id IN (' . implode(',', $ids) . ')') as $v) { $vis[(int) $v['id']] = $v; } }
@@ -210,7 +210,7 @@ function wr_helpdesk_visite(int $id): array
     if ($points === []) { http_response_code(422); return ['ok' => false, 'error' => 'Dites ce qu’il faut vérifier sur place (un point par ligne).']; }
     $ref = mb_substr(trim((string) ($b['ref'] ?? ('demande ' . $id))), 0, 40);
     $titre = mb_substr(trim((string) ($b['titre'] ?? '')), 0, 160);
-    if (Db::row('SELECT id FROM hdk_mission WHERE case_id = ? AND visite_id = ? AND cloture_le IS NULL', [$id, $vid]) !== null) { return ['ok' => false, 'error' => 'Cette demande est déjà une mission de cette visite.']; }
+    if (Db::row('SELECT id FROM con_hdk_mission WHERE case_id = ? AND visite_id = ? AND cloture_le IS NULL', [$id, $vid]) !== null) { return ['ok' => false, 'error' => 'Cette demande est déjà une mission de cette visite.']; }
     $now = date('Y-m-d H:i:s');
     $ech = static fn (string $q) => function_exists('vcEcheance') ? vcEcheance((string) $v['prevu_le'], $q, $q === 'pendant' ? 0 : 1) : (string) $v['prevu_le'];
     $taches = [];
@@ -222,7 +222,7 @@ function wr_helpdesk_visite(int $id): array
         $taches[] = (int) Db::pdo()->lastInsertId();
     }
     $pts = array_map(static fn ($p) => ['nom' => $p, 'etat' => null, 'constat' => ''], $points);
-    Db::exec('INSERT INTO hdk_mission (case_id, case_ref, titre, shop_id, visite_id, quand, points, tache_ids, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_hdk_mission (case_id, case_ref, titre, shop_id, visite_id, quand, points, tache_ids, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
         [$id, $ref, $titre, (string) $v['shop_id'], $vid, $quand, json_encode($pts, JSON_UNESCAPED_UNICODE), implode(',', $taches), $now, $now]);
     $avert = null;
     if (hdkAdmin()) { $s = hdkEnvoi('PATCH', '/cases/' . $id . '/status', ['status' => 'IN_PROGRESS']); if (!$s['ok']) { $avert = 'Mission créée ; le statut n’a pas pu passer « En cours » : ' . $s['error']; } }
@@ -243,7 +243,7 @@ function hdkConstat(array $points, string $date, string $consultant): string
 function wr_helpdesk_mission(int $mid): array
 {
     hdkTable();
-    $m = Db::row('SELECT * FROM hdk_mission WHERE id = ?', [$mid]);
+    $m = Db::row('SELECT * FROM con_hdk_mission WHERE id = ?', [$mid]);
     if ($m === null) { http_response_code(404); return ['ok' => false, 'error' => 'Mission inconnue.']; }
     if ($m['cloture_le'] !== null) { return ['ok' => false, 'error' => 'Cette mission est déjà clôturée.']; }
     $b = body();
@@ -254,7 +254,7 @@ function wr_helpdesk_mission(int $mid): array
         if (array_key_exists('constat', $p)) { $pts[$i]['constat'] = mb_substr(trim((string) $p['constat']), 0, 1000); }
     }
     $now = date('Y-m-d H:i:s');
-    Db::exec('UPDATE hdk_mission SET points = ?, maj_le = ? WHERE id = ?', [json_encode($pts, JSON_UNESCAPED_UNICODE), $now, $mid]);
+    Db::exec('UPDATE con_hdk_mission SET points = ?, maj_le = ? WHERE id = ?', [json_encode($pts, JSON_UNESCAPED_UNICODE), $now, $mid]);
     if (empty($b['cloturer'])) { return ['ok' => true, 'missions' => hdkMissions([(int) $m['case_id']])[(int) $m['case_id']] ?? []]; }
     if (array_filter($pts, static fn ($p) => ($p['etat'] ?? null) === null) !== []) { return ['ok' => false, 'error' => 'Chaque point doit être vu (conforme, à suivre ou non conforme) avant de clôturer.']; }
     $v = Db::row('SELECT prevu_le, consultant_nom FROM con_visite WHERE id = ?', [(int) $m['visite_id']]) ?? [];
@@ -269,7 +269,7 @@ function wr_helpdesk_mission(int $mid): array
         $s = hdkEnvoi('PATCH', '/cases/' . (int) $m['case_id'] . '/status', ['status' => $statut]);
         if (!$s['ok']) { $err = 'Réponse envoyée, mais le statut n’a pas suivi : ' . $s['error']; }
     }
-    Db::exec('UPDATE hdk_mission SET cloture_le = ?, reponse = ?, maj_le = ? WHERE id = ?', [$now, $texte, $now, $mid]);
+    Db::exec('UPDATE con_hdk_mission SET cloture_le = ?, reponse = ?, maj_le = ? WHERE id = ?', [$now, $texte, $now, $mid]);
     foreach (array_filter(array_map('intval', explode(',', (string) $m['tache_ids']))) as $t) { Db::exec('UPDATE con_consultant_tache SET statut = \'fait\', fait_le = ?, maj_le = ? WHERE id = ?', [$now, $now, $t]); }
     hdkJournal('Mission ' . $m['case_ref'] . ' clôturée : ' . ($tout ? 'résolue' : 'à suivre') . (!empty($b['repondre']) ? ', constat envoyé au franchisé' : ''));
     return ['ok' => true, 'statut' => $statut, 'reponse' => $texte, 'avertissement' => $err, 'missions' => hdkMissions([(int) $m['case_id']])[(int) $m['case_id']] ?? []];
@@ -343,7 +343,7 @@ function wr_helpdesk_magasin(): array
     if (!$r['ok']) { return $r; }
     $c = is_array($r['res']) ? (vrcDeballer($r['res'], ['data', 'case']) ?? $r['res']) : [];
     $id = (int) ($c['id'] ?? 0);
-    if ($id > 0) { Db::exec('INSERT INTO hdk_demande (case_id, shop_id, passage, photos, cree_le) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE passage = VALUES(passage)', [$id, (string) $shop, !empty($b['passage']) ? 1 : 0, json_encode($liens), date('Y-m-d H:i:s')]); }
+    if ($id > 0) { Db::exec('INSERT INTO con_hdk_demande (case_id, shop_id, passage, photos, cree_le) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE passage = VALUES(passage)', [$id, (string) $shop, !empty($b['passage']) ? 1 : 0, json_encode($liens), date('Y-m-d H:i:s')]); }
     if (function_exists('journalAdd')) { journalAdd('Magasin ' . $shop, 'Helpdesk', null, 'Nouvelle demande au bureau : ' . $titre); }
     return ['ok' => true, 'id' => $id, 'ref' => (string) ($c['ref'] ?? '')];
 }

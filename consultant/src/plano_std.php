@@ -112,7 +112,7 @@ function ensurePlanoStd(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_std_emplacement ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plano_std_emplacement ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'section TINYINT NOT NULL,'
         . 'niveau VARCHAR(4) NOT NULL,'
@@ -132,23 +132,23 @@ function ensurePlanoStd(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Les moments de la journée, ajoutés après la première version de la table.
     // On regarde d'abord (lecture vide, sans coût) : l'ALTER ne part que sur une table d'avant.
-    try { Db::rows('SELECT periodes FROM ceo_plano_std_emplacement LIMIT 0'); }
+    try { Db::rows('SELECT periodes FROM con_plano_std_emplacement LIMIT 0'); }
     catch (Throwable $e) {
-        try { Db::exec('ALTER TABLE ceo_plano_std_emplacement ADD COLUMN periodes VARCHAR(24) NULL'); } catch (Throwable $e2) { /* déjà là */ }
+        try { Db::exec('ALTER TABLE con_plano_std_emplacement ADD COLUMN periodes VARCHAR(24) NULL'); } catch (Throwable $e2) { /* déjà là */ }
     }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_std_zone ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plano_std_zone ('
         . 'id VARCHAR(4) NOT NULL PRIMARY KEY,'
         . 'nom VARCHAR(80) NULL,'
         . 'par VARCHAR(120) NULL,'
         . 'le DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_std_photo ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plano_std_photo ('
         . 'ref VARCHAR(40) NOT NULL PRIMARY KEY,'
         . 'nom VARCHAR(200) NULL,'
         . 'fichier VARCHAR(255) NULL,'
         . 'maj DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_std_montage ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plano_std_montage ('
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'zone VARCHAR(4) NOT NULL,'
         . 'jour DATE NOT NULL,'
@@ -172,7 +172,7 @@ function psNomsZones(): array
     $noms = [];
     foreach (PS_ZONES as $z) { $noms[$z['id']] = $z['nom']; }
     try {
-        foreach (Db::rows('SELECT id, nom FROM ceo_plano_std_zone') as $r) {
+        foreach (Db::rows('SELECT id, nom FROM con_plano_std_zone') as $r) {
             $n = trim((string) ($r['nom'] ?? ''));
             if ($n !== '' && isset($noms[(string) $r['id']])) { $noms[(string) $r['id']] = $n; }
         }
@@ -185,7 +185,7 @@ function psLignes(string $jour): array
 {
     ensurePlanoStd();
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_plano_std_emplacement WHERE du <= ? AND (au IS NULL OR au >= ?) ORDER BY du, id', [$jour, $jour]) as $r) {
+    foreach (Db::rows('SELECT * FROM con_plano_std_emplacement WHERE du <= ? AND (au IS NULL OR au >= ?) ORDER BY du, id', [$jour, $jour]) as $r) {
         $out[(int) $r['section'] . '|' . (string) $r['niveau']][] = $r;
     }
     return $out;
@@ -195,7 +195,7 @@ function psLignes(string $jour): array
 function psLignesEtendue(string $du, string $au): array
 {
     ensurePlanoStd();
-    return Db::rows('SELECT * FROM ceo_plano_std_emplacement WHERE du <= ? AND (au IS NULL OR au >= ?) ORDER BY du, id', [$au, $du]);
+    return Db::rows('SELECT * FROM con_plano_std_emplacement WHERE du <= ? AND (au IS NULL OR au >= ?) ORDER BY du, id', [$au, $du]);
 }
 
 function psCrop(?string $json): ?array
@@ -250,9 +250,9 @@ function psEtat(?string $jour = null): array
     }
     $modif = null;
     try {
-        $m = Db::row('SELECT le, par FROM ceo_plano_std_emplacement WHERE le IS NOT NULL ORDER BY le DESC LIMIT 1');
+        $m = Db::row('SELECT le, par FROM con_plano_std_emplacement WHERE le IS NOT NULL ORDER BY le DESC LIMIT 1');
         if ($m !== null) { $modif = ['le' => (string) $m['le'], 'par' => (string) ($m['par'] ?? '')]; }
-        $mz = Db::row('SELECT le, par FROM ceo_plano_std_zone WHERE le IS NOT NULL ORDER BY le DESC LIMIT 1');
+        $mz = Db::row('SELECT le, par FROM con_plano_std_zone WHERE le IS NOT NULL ORDER BY le DESC LIMIT 1');
         if ($mz !== null && ($modif === null || (string) $mz['le'] > $modif['le'])) { $modif = ['le' => (string) $mz['le'], 'par' => (string) ($mz['par'] ?? '')]; }
     } catch (PDOException $e) { /* pas d'historique */ }
     return [
@@ -302,10 +302,10 @@ function psPoser(int $s, string $n, array $P, array $chg): bool
     ensurePlanoStd();
     $auj = date('Y-m-d'); $hier = date('Y-m-d', strtotime('-1 day'));
     $par = psAuteur(); $le = date('Y-m-d H:i:s');
-    $rows = Db::rows('SELECT * FROM ceo_plano_std_emplacement WHERE section = ? AND niveau = ? AND au IS NULL ORDER BY du, id', [$s, $n]);
+    $rows = Db::rows('SELECT * FROM con_plano_std_emplacement WHERE section = ? AND niveau = ? AND au IS NULL ORDER BY du, id', [$s, $n]);
     $cols = 'section, niveau, ref, nom, groupe, qte, photo, crop, periodes, du, au, par, le';
     $inserer = static function (array $r, array $per) use ($s, $n, $auj, $par, $le, $cols): void {
-        Db::exec('INSERT INTO ceo_plano_std_emplacement (' . $cols . ') VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?)',
+        Db::exec('INSERT INTO con_plano_std_emplacement (' . $cols . ') VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?)',
             [$s, $n, (string) $r['ref'], $r['nom'], $r['groupe'], $r['qte'], $r['photo'], $r['crop'], psPeriodesTxt($per), $auj, $par, $le]);
     };
 
@@ -322,9 +322,9 @@ function psPoser(int $s, string $n, array $P, array $chg): bool
         $photo = array_key_exists('photo', $chg) ? $chg['photo'] : $cible['photo'];
         $crop = array_key_exists('crop', $chg) ? $chg['crop'] : $cible['crop'];
         if ($qte === $qAv || (string) $cible['du'] >= $auj) {
-            Db::exec('UPDATE ceo_plano_std_emplacement SET qte = ?, photo = ?, crop = ?, par = ?, le = ? WHERE id = ?', [$qte, $photo, $crop, $par, $le, (int) $cible['id']]);
+            Db::exec('UPDATE con_plano_std_emplacement SET qte = ?, photo = ?, crop = ?, par = ?, le = ? WHERE id = ?', [$qte, $photo, $crop, $par, $le, (int) $cible['id']]);
         } else {
-            Db::exec('UPDATE ceo_plano_std_emplacement SET au = ? WHERE id = ?', [$hier, (int) $cible['id']]);
+            Db::exec('UPDATE con_plano_std_emplacement SET au = ? WHERE id = ?', [$hier, (int) $cible['id']]);
             $inserer(array_merge($cible, ['qte' => $qte, 'photo' => $photo, 'crop' => $crop]), psPeriodesDe($cible['periodes']));
         }
         return true;
@@ -347,10 +347,10 @@ function psPoser(int $s, string $n, array $P, array $chg): bool
         if (array_intersect($rp, $P) === []) { continue; }
         $reste = array_values(array_diff($rp, $P));
         if ((string) $r['du'] >= $auj) {
-            if ($reste) { Db::exec('UPDATE ceo_plano_std_emplacement SET periodes = ?, par = ?, le = ? WHERE id = ?', [psPeriodesTxt($reste), $par, $le, (int) $r['id']]); }
-            else { Db::exec('DELETE FROM ceo_plano_std_emplacement WHERE id = ?', [(int) $r['id']]); }
+            if ($reste) { Db::exec('UPDATE con_plano_std_emplacement SET periodes = ?, par = ?, le = ? WHERE id = ?', [psPeriodesTxt($reste), $par, $le, (int) $r['id']]); }
+            else { Db::exec('DELETE FROM con_plano_std_emplacement WHERE id = ?', [(int) $r['id']]); }
         } else {
-            Db::exec('UPDATE ceo_plano_std_emplacement SET au = ? WHERE id = ?', [$hier, (int) $r['id']]);
+            Db::exec('UPDATE con_plano_std_emplacement SET au = ? WHERE id = ?', [$hier, (int) $r['id']]);
             if ($reste) { $inserer($r, $reste); }
         }
     }
@@ -374,15 +374,15 @@ function psPoser(int $s, string $n, array $P, array $chg): bool
 function psFusionner(int $s, string $n): void
 {
     $auj = date('Y-m-d');
-    $rows = Db::rows('SELECT * FROM ceo_plano_std_emplacement WHERE section = ? AND niveau = ? AND au IS NULL AND du >= ? ORDER BY id', [$s, $n, $auj]);
+    $rows = Db::rows('SELECT * FROM con_plano_std_emplacement WHERE section = ? AND niveau = ? AND au IS NULL AND du >= ? ORDER BY id', [$s, $n, $auj]);
     $vus = [];
     foreach ($rows as $r) {
         $k = $r['ref'] . '|' . ($r['qte'] ?? '') . '|' . ($r['photo'] ?? '') . '|' . ($r['crop'] ?? '');
         if (!isset($vus[$k])) { $vus[$k] = $r; continue; }
         $a = $vus[$k];
         $union = psPeriodesDe(array_merge(psPeriodesDe($a['periodes']), psPeriodesDe($r['periodes'])));
-        Db::exec('UPDATE ceo_plano_std_emplacement SET periodes = ? WHERE id = ?', [psPeriodesTxt($union), (int) $a['id']]);
-        Db::exec('DELETE FROM ceo_plano_std_emplacement WHERE id = ?', [(int) $r['id']]);
+        Db::exec('UPDATE con_plano_std_emplacement SET periodes = ? WHERE id = ?', [psPeriodesTxt($union), (int) $a['id']]);
+        Db::exec('DELETE FROM con_plano_std_emplacement WHERE id = ?', [(int) $r['id']]);
         $vus[$k]['periodes'] = psPeriodesTxt($union);
     }
 }
@@ -500,8 +500,8 @@ function wr_plano_std_zone(): array
     foreach (PS_ZONES as $z) { if ($z['id'] === $id) { $def = $z; } }
     if ($def === null) { http_response_code(400); return ['error' => 'zone inconnue']; }
     $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 80);
-    Db::exec('DELETE FROM ceo_plano_std_zone WHERE id = ?', [$id]);
-    Db::exec('INSERT INTO ceo_plano_std_zone (id, nom, par, le) VALUES (?,?,?,?)', [$id, $nom !== '' ? $nom : null, psAuteur(), date('Y-m-d H:i:s')]);
+    Db::exec('DELETE FROM con_plano_std_zone WHERE id = ?', [$id]);
+    Db::exec('INSERT INTO con_plano_std_zone (id, nom, par, le) VALUES (?,?,?,?)', [$id, $nom !== '' ? $nom : null, psAuteur(), date('Y-m-d H:i:s')]);
     journalAdd('CEO', 'Planogramme', 'Zone ' . $def['nom'], $nom !== '' ? 'Renommée « ' . $nom . ' »' : 'Nom par défaut rétabli');
     return psEtat();
 }
@@ -512,8 +512,8 @@ function wr_plano_std_vider(): array
     ensurePlanoStd();
     if (empty(body()['confirmer'])) { http_response_code(400); return ['error' => 'confirmation attendue']; }
     $auj = date('Y-m-d');
-    Db::exec('DELETE FROM ceo_plano_std_emplacement WHERE au IS NULL AND du >= ?', [$auj]);
-    Db::exec('UPDATE ceo_plano_std_emplacement SET au = ? WHERE au IS NULL', [date('Y-m-d', strtotime('-1 day'))]);
+    Db::exec('DELETE FROM con_plano_std_emplacement WHERE au IS NULL AND du >= ?', [$auj]);
+    Db::exec('UPDATE con_plano_std_emplacement SET au = ? WHERE au IS NULL', [date('Y-m-d', strtotime('-1 day'))]);
     journalAdd('CEO', 'Planogramme', 'Comptoir standard', 'Plan vidé');
     return psEtat();
 }
@@ -548,7 +548,7 @@ function ep_plano_std_photos(): array
  * Le cœur de la lecture des photos, partagé par le planogramme et la tablette
  * des vendeuses : chaque référence fraîche est rendue telle quelle, les autres
  * sont relues au panel (au plus PS_PHOTOS_PAR_APPEL), téléchargées sous
- * uploads/plano/panel/ et notées dans ceo_plano_std_photo — une absence aussi,
+ * uploads/plano/panel/ et notées dans con_plano_std_photo — une absence aussi,
  * pour sept jours.
  *
  * La recette se trouve de deux façons. Quand l'appelant connaît l'id_recipe du
@@ -567,7 +567,7 @@ function psPhotosResoudre(array $refs, int $shop = 0, array $recettes = []): arr
     $connu = [];
     if ($refs) {
         $in = implode(',', array_fill(0, count($refs), '?'));
-        foreach (Db::rows('SELECT * FROM ceo_plano_std_photo WHERE ref IN (' . $in . ')', $refs) as $r) { $connu[(string) $r['ref']] = $r; }
+        foreach (Db::rows('SELECT * FROM con_plano_std_photo WHERE ref IN (' . $in . ')', $refs) as $r) { $connu[(string) $r['ref']] = $r; }
     }
     $photos = []; $aLire = [];
     foreach ($refs as $r) {
@@ -599,8 +599,8 @@ function psPhotosResoudre(array $refs, int $shop = 0, array $recettes = []): arr
             $fichier = null;
             if ($t !== null && !empty($t['url'])) { $fichier = psTelecharger((string) $t['url'], 'uploads/plano/panel/' . preg_replace('/[^\w.-]/', '_', $r)); }
             $photos[$r] = ['url' => $fichier, 'nom' => (string) ($t['nom'] ?? '')];
-            Db::exec('DELETE FROM ceo_plano_std_photo WHERE ref = ?', [$r]);
-            Db::exec('INSERT INTO ceo_plano_std_photo (ref, nom, fichier, maj) VALUES (?,?,?,?)', [$r, mb_substr((string) ($t['nom'] ?? ''), 0, 190), $fichier, date('Y-m-d H:i:s')]);
+            Db::exec('DELETE FROM con_plano_std_photo WHERE ref = ?', [$r]);
+            Db::exec('INSERT INTO con_plano_std_photo (ref, nom, fichier, maj) VALUES (?,?,?,?)', [$r, mb_substr((string) ($t['nom'] ?? ''), 0, 190), $fichier, date('Y-m-d H:i:s')]);
             $lus++;
         }
     }
@@ -895,7 +895,7 @@ function ep_plano_std_montage(): array
     $jour = (string) ($_GET['date'] ?? date('Y-m-d'));
     if ($sid === '0' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) { http_response_code(400); return ['error' => 'shop ou date manquant']; }
     $out = [];
-    foreach (Db::rows('SELECT zone, photo, auteur, quand FROM ceo_plano_std_montage WHERE shop_id = ? AND jour = ?', [$sid, $jour]) as $r) {
+    foreach (Db::rows('SELECT zone, photo, auteur, quand FROM con_plano_std_montage WHERE shop_id = ? AND jour = ?', [$sid, $jour]) as $r) {
         $out[(string) $r['zone']] = ['photo' => (string) $r['photo'], 'auteur' => (string) ($r['auteur'] ?? ''), 'quand' => (string) ($r['quand'] ?? '')];
     }
     return ['shop' => $sid, 'date' => $jour, 'zones' => (object) $out];
@@ -912,11 +912,11 @@ function wr_plano_std_montage(): array
     if ($sid === '0' || !in_array($zone, array_column(PS_ZONES, 'id'), true) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) {
         http_response_code(422); return ['error' => 'magasin, zone et date sont requis'];
     }
-    $anc = Db::row('SELECT photo FROM ceo_plano_std_montage WHERE shop_id = ? AND zone = ? AND jour = ?', [$sid, $zone, $jour]);
+    $anc = Db::row('SELECT photo FROM con_plano_std_montage WHERE shop_id = ? AND zone = ? AND jour = ?', [$sid, $zone, $jour]);
     $data = (string) ($b['data'] ?? '');
     if (trim($data) === '') {
         if ($anc !== null && !empty($anc['photo'])) { $f = __DIR__ . '/../../public/' . $anc['photo']; if (is_file($f)) { @unlink($f); } }
-        Db::exec('DELETE FROM ceo_plano_std_montage WHERE shop_id = ? AND zone = ? AND jour = ?', [$sid, $zone, $jour]);
+        Db::exec('DELETE FROM con_plano_std_montage WHERE shop_id = ? AND zone = ? AND jour = ?', [$sid, $zone, $jour]);
         return ['ok' => true, 'retiree' => true];
     }
     $f = psImage($data, 'uploads/plano/montage/' . $sid . '-' . $zone . '-' . $jour . '-' . date('His'));
@@ -924,8 +924,8 @@ function wr_plano_std_montage(): array
     if ($anc !== null && !empty($anc['photo'])) { $fa = __DIR__ . '/../../public/' . $anc['photo']; if (is_file($fa)) { @unlink($fa); } }
     $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 190);
     if ($auteur === '') { $auteur = 'Tablette'; }
-    Db::exec('DELETE FROM ceo_plano_std_montage WHERE shop_id = ? AND zone = ? AND jour = ?', [$sid, $zone, $jour]);
-    Db::exec('INSERT INTO ceo_plano_std_montage (shop_id, zone, jour, photo, auteur, quand) VALUES (?,?,?,?,?,?)',
+    Db::exec('DELETE FROM con_plano_std_montage WHERE shop_id = ? AND zone = ? AND jour = ?', [$sid, $zone, $jour]);
+    Db::exec('INSERT INTO con_plano_std_montage (shop_id, zone, jour, photo, auteur, quand) VALUES (?,?,?,?,?,?)',
         [$sid, $zone, $jour, $f['chemin'], $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'photo' => $f['chemin'], 'auteur' => $auteur, 'quand' => date('Y-m-d H:i:s')];
 }

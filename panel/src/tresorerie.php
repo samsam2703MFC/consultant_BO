@@ -14,9 +14,9 @@ require_once __DIR__ . '/../../shared/src/cibles_reseau.php';   // la cible du f
  * Ce que le module reprend tout seul, au lieu de le faire retaper (demande du 14/11/2026) :
  *   - l'ANNÉE PASSÉE : le CA de la même semaine un an plus tôt, décalée de 364 jours pour qu'un lundi tombe sur un
  *     lundi (comme partout dans le cockpit), et le CA de chaque mois civil N-1 ;
- *   - le BUDGET VALIDÉ : le CA budget de chaque mois (`ceo_shop_month_perf.revenue_budget`, à défaut le CA théorique
+ *   - le BUDGET VALIDÉ : le CA budget de chaque mois (`con_shop_month_perf.revenue_budget`, à défaut le CA théorique
  *     de l'étude — la règle de /visites/budget), réparti sur ses jours au profil des mêmes jours de l'an passé (à
- *     défaut d'il y a deux ans, à défaut à parts égales) ; s'il a été validé (`ceo_shop_budget.validated_on`) ; les
+ *     défaut d'il y a deux ans, à défaut à parts égales) ; s'il a été validé (`con_shop_budget.validated_on`) ; les
  *     taux de référence (matière et personnel : les cibles du réseau ; frais généraux : seuilsCharges) et ses postes de charges
  *     (les paiements proposés d'un plan neuf) ;
  *   - CE QUI A ÉTÉ FAIT : le CA réel de chaque semaine close, qui remplace la prévision, et de chaque mois.
@@ -269,7 +269,7 @@ function trBudgetMois(string $shop, array $annees): array
     if ($annees === []) { return $out; }
     $in = implode(',', array_fill(0, count($annees), '?'));
     try {
-        foreach (Db::rows("SELECT year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf
+        foreach (Db::rows("SELECT year, month, revenue_budget, ca_theorique FROM con_shop_month_perf
                             WHERE shop_id = ? AND year IN ($in)", array_merge([$shop], $annees)) as $r) {
             $ym = sprintf('%04d-%02d', (int) $r['year'], (int) $r['month']);
             $bud = $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : 0.0;
@@ -289,7 +289,7 @@ function trBudgetsExercices(string $shop, array $annees, array $budgetMois): arr
     if ($annees !== []) {
         $in = implode(',', array_fill(0, count($annees), '?'));
         try {
-            foreach (Db::rows("SELECT fiscal_year, validated_on FROM ceo_shop_budget WHERE shop_id = ? AND fiscal_year IN ($in)",
+            foreach (Db::rows("SELECT fiscal_year, validated_on FROM con_shop_budget WHERE shop_id = ? AND fiscal_year IN ($in)",
                 array_merge([$shop], $annees)) as $r) {
                 $val[(int) $r['fiscal_year']] = $r['validated_on'] !== null ? substr((string) $r['validated_on'], 0, 10) : null;
             }
@@ -359,7 +359,7 @@ function trChargesDetail(): array
 /**
  * Les exercices du plan, tels que le cockpit les tient (lecture seule) : la fiche du budget (validée ou non, quand),
  * l'étude de marché (date, source, potentiel, année d'exploitation, montée en régime, saisonnalité, annexe), et chaque
- * mois son CA au budget et son CA théorique. Pur : les lignes de `ceo_shop_budget` et de `ceo_shop_month_perf` en entrée.
+ * mois son CA au budget et son CA théorique. Pur : les lignes de `con_shop_budget` et de `con_shop_month_perf` en entrée.
  */
 function trExercices(array $annees, array $fiches, array $mois, array $saisReseau = []): array
 {
@@ -437,8 +437,8 @@ function ep_tresorerie_budget(): array
     $annees = range((int) substr($debut, 0, 4), (int) substr(trFin($debut), 0, 4));
     $in = implode(',', array_fill(0, count($annees), '?'));
     $fiches = []; $mois = [];
-    try { $fiches = Db::rows("SELECT * FROM ceo_shop_budget WHERE shop_id = ? AND fiscal_year IN ($in)", array_merge([$shop], $annees)); } catch (PDOException $e) { /* pas de fiche */ }
-    try { $mois = Db::rows("SELECT year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ? AND year IN ($in)", array_merge([$shop], $annees)); } catch (PDOException $e) { /* pas de mois */ }
+    try { $fiches = Db::rows("SELECT * FROM con_shop_budget WHERE shop_id = ? AND fiscal_year IN ($in)", array_merge([$shop], $annees)); } catch (PDOException $e) { /* pas de fiche */ }
+    try { $mois = Db::rows("SELECT year, month, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE shop_id = ? AND year IN ($in)", array_merge([$shop], $annees)); } catch (PDOException $e) { /* pas de mois */ }
     $sr = function_exists('setting') ? setting('saisonnaliteReseau', []) : [];
     $sr = is_array($sr) && count($sr) === 12 ? array_map('floatval', array_values($sr)) : [];
     $ch = trChargesDetail();

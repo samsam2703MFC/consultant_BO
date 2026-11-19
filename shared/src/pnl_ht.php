@@ -11,7 +11,7 @@ declare(strict_types=1);
  *  - CA hors TVA = CA encaissé × (1 − TVA ÷ TTC des tickets du jour). La TVA vient de la caisse, ticket par ticket
  *    (`tax_amount_after_discount` de /shops/{id}/transactions?date=, la liste que le dashboard lit déjà toutes les dix
  *    minutes pour le split pro, gravée sous `b` dans le relevé du jour : vpDuListe) ; à défaut la base quotidienne du CA
- *    (ceo_verif_ca, écrite chaque heure par le cron de la Vérification) ; à défaut le taux habituel du magasin sur huit
+ *    (con_verif_ca, écrite chaque heure par le cron de la Vérification) ; à défaut le taux habituel du magasin sur huit
  *    semaines ; à défaut 6 %, le taux de la vente à emporter alimentaire. La source est toujours dite (`tvaSource`) ;
  *  - frais généraux hors TVA = frais du jour × (hors TVA ÷ saisi) des frais du mois, d'après l'onglet Frais du
  *    dashboard : pour chaque poste, « TVA comprise ? » (oui, non, à indiquer) et le taux. Un poste à indiquer compte tel
@@ -63,7 +63,7 @@ function phTvaHabituelle(int $sid, string $jusqua): ?float
     if (array_key_exists($k, $memo)) { return $memo[$k]; }
     $p = null;
     try {
-        $r = Db::row('SELECT SUM(caisse_ttc) AS ttc, SUM(caisse_tva) AS tva FROM ceo_verif_ca'
+        $r = Db::row('SELECT SUM(caisse_ttc) AS ttc, SUM(caisse_tva) AS tva FROM con_verif_ca'
             . ' WHERE shop_id = ? AND jour > ? AND jour <= ? AND caisse_ttc > 0 AND caisse_tva IS NOT NULL',
             [$sid, date('Y-m-d', strtotime($jusqua . ' -' . PH_HABITUEL_JOURS . ' days')), $jusqua]);
         if ($r !== null && (float) ($r['ttc'] ?? 0) > 0) { $p = phPartValide((float) $r['tva'] / (float) $r['ttc']); }
@@ -74,7 +74,7 @@ function phTvaHabituelle(int $sid, string $jusqua): ?float
 /**
  * La part de TVA du CA de chaque jour d'un magasin : [jour => ['part' => 0…0,25, 'src' => tickets|caisse|habituel|defaut]].
  * $releves : [jour => b], les relevés de tickets déjà en main (le pro du jour : vpLu, vpJoursLus) ; les autres jours se
- * lisent dans ceo_verif_ca en une requête.
+ * lisent dans con_verif_ca en une requête.
  */
 function phTvaJours(int $sid, array $jours, array $releves = []): array
 {
@@ -87,7 +87,7 @@ function phTvaJours(int $sid, array $jours, array $releves = []): array
     if ($manque !== []) {
         try {
             $ph = implode(',', array_fill(0, count($manque), '?'));
-            foreach (Db::rows('SELECT jour, caisse_ttc, caisse_tva FROM ceo_verif_ca WHERE shop_id = ? AND jour IN (' . $ph . ')', array_merge([$sid], $manque)) as $r) {
+            foreach (Db::rows('SELECT jour, caisse_ttc, caisse_tva FROM con_verif_ca WHERE shop_id = ? AND jour IN (' . $ph . ')', array_merge([$sid], $manque)) as $r) {
                 $ttc = (float) ($r['caisse_ttc'] ?? 0);
                 $p = ($ttc > 0 && is_numeric($r['caisse_tva'] ?? null)) ? phPartValide((float) $r['caisse_tva'] / $ttc) : null;
                 if ($p !== null) { $out[substr((string) $r['jour'], 0, 10)] = ['part' => $p, 'src' => 'caisse']; }

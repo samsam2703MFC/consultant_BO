@@ -1797,7 +1797,7 @@ function ep_profil_jour(): array
     } catch (PDOException $e) { /* noms indisponibles */ }
     $JOURS = [1 => 'lundi', 2 => 'mardi', 3 => 'mercredi', 4 => 'jeudi', 5 => 'vendredi', 6 => 'samedi', 7 => 'dimanche'];
     $par = [];
-    foreach (Db::rows('SELECT * FROM ceo_shop_profil_jour ORDER BY shop_id, jour') as $r) {
+    foreach (Db::rows('SELECT * FROM con_shop_profil_jour ORDER BY shop_id, jour') as $r) {
         $sid = (string) $r['shop_id'];
         if (!isset($par[$sid])) { $par[$sid] = ['shopId' => $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
             'jours' => [], 'total' => 0.0, 'maj' => null, 'du' => null, 'au' => null]; }

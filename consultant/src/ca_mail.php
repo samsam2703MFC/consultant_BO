@@ -132,7 +132,7 @@ function caMailSquelette(string $service = 'Centrale d’achat',
  *
  * MESURÉ : le panel rend bien /material-suppliers, mais son champ `email` est
  * VIDE pour les quatre fournisseurs qui reçoivent des commandes, et
- * `ceo_supplier` n'en connaît qu'un, sans adresse. Sans carnet tenu ici, il
+ * `con_supplier` n'en connaît qu'un, sans adresse. Sans carnet tenu ici, il
  * n'y a donc personne à qui écrire. Il vit dans `ceo_app_setting`, saisi
  * depuis l'écran, et le panel garde la priorité le jour où il portera l'adresse.
  */
@@ -691,7 +691,7 @@ function ep_ca_mail_courriers(): array
 /**
  * PUT /centrale/fournisseurs/mail — l'adresse d'un fournisseur.
  *
- * Le carnet est tenu ICI parce que ni le panel ni `ceo_supplier` ne portent
+ * Le carnet est tenu ICI parce que ni le panel ni `con_supplier` ne portent
  * l'adresse des fournisseurs qui reçoivent des commandes (mesuré). Une adresse
  * vide EFFACE l'entrée : « pas d'adresse » doit rester dicible.
  */

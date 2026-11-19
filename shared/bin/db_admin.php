@@ -26,7 +26,7 @@ $rows = Db::rows(
 );
 // Les tables ceo_*, et celles qui s'appelaient ceo_* avant la réorganisation en domaines (shared/src/reorg_tables.php).
 require_once __DIR__ . '/../src/reorg_tables.php';
-$exCeo = array_values(array_filter(reorgTables(), static fn ($n, $a) => str_starts_with($a, 'ceo_'), ARRAY_FILTER_USE_BOTH));
+$exCeo = reorgExCeo();
 $tables = array_values(array_filter(
     array_map(static fn ($r) => (string) $r['t'], $rows),
     static fn ($n) => str_starts_with($n, 'ceo_') || in_array($n, $exCeo, true)
@@ -40,7 +40,7 @@ fwrite(STDERR, sprintf(
 
 switch ($action) {
     case 'diag':
-        foreach (['ceo_project_task', 'ceo_report_schedule'] as $t) {
+        foreach (['con_project_task', 'con_report_schedule'] as $t) {
             if (in_array($t, $tables, true)) {
                 $c = Db::row("SHOW CREATE TABLE `$t`");
                 $ddl = $c['Create Table'] ?? ($c ? (string) reset($c) : '');

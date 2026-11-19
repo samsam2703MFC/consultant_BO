@@ -24,8 +24,8 @@ final class Db
     public static function rows(string $sql, array $p = []): array
     {
         if (str_contains($sql, 'FROM shops')) { return self::$shops; }
-        if (str_contains($sql, 'FROM ceo_verif_recette')) { return array_values(self::$registre); }
-        if (str_contains($sql, 'FROM ceo_verif_correction')) {
+        if (str_contains($sql, 'FROM con_verif_recette')) { return array_values(self::$registre); }
+        if (str_contains($sql, 'FROM con_verif_correction')) {
             $r = array_reverse(array_values(self::$corr));
             if (str_contains($sql, 'product_id = ?')) { $r = array_values(array_filter($r, static fn ($x) => (int) $x['product_id'] === (int) $p[0])); }
             return $r;
@@ -39,24 +39,24 @@ final class Db
     }
     public static function row(string $sql, array $p = []): ?array
     {
-        if (str_contains($sql, 'MAX(id) id FROM ceo_verif_correction')) { return ['id' => self::$corr === [] ? 0 : max(array_keys(self::$corr))]; }
-        if (str_contains($sql, 'FROM ceo_verif_correction WHERE id = ?')) { return self::$corr[(int) $p[0]] ?? null; }
-        if (str_contains($sql, 'FROM ceo_verif_recette') && str_contains($sql, 'COUNT(*)')) { return ['n' => 0, 'd' => null]; }
+        if (str_contains($sql, 'MAX(id) id FROM con_verif_correction')) { return ['id' => self::$corr === [] ? 0 : max(array_keys(self::$corr))]; }
+        if (str_contains($sql, 'FROM con_verif_correction WHERE id = ?')) { return self::$corr[(int) $p[0]] ?? null; }
+        if (str_contains($sql, 'FROM con_verif_recette') && str_contains($sql, 'COUNT(*)')) { return ['n' => 0, 'd' => null]; }
         return null;
     }
     public static function exec(string $sql, array $p = []): int
     {
         if (str_starts_with($sql, 'INSERT INTO ceo_app_setting')) { self::$reglages[$p[0]] = $p[1]; return 1; }
         if (str_starts_with($sql, 'DELETE FROM ceo_app_setting')) { unset(self::$reglages[$p[0]]); return 1; }
-        if (str_starts_with($sql, 'INSERT INTO ceo_verif_recette')) { self::$registre[$p[0]] = ['cle' => $p[0], 'premier_vu' => $p[8], 'resolu_le' => null]; return 1; }
-        if (str_starts_with($sql, 'INSERT INTO ceo_verif_correction')) {
+        if (str_starts_with($sql, 'INSERT INTO con_verif_recette')) { self::$registre[$p[0]] = ['cle' => $p[0], 'premier_vu' => $p[8], 'resolu_le' => null]; return 1; }
+        if (str_starts_with($sql, 'INSERT INTO con_verif_correction')) {
             preg_match('/\(([^)]*)\)\s*VALUES/', $sql, $m);
             $row = array_combine(array_map('trim', explode(',', $m[1])), $p);
             $id = (self::$corr === [] ? 0 : max(array_keys(self::$corr))) + 1;
             self::$corr[$id] = $row + ['id' => $id, 'annule_par' => null];
             return 1;
         }
-        if (str_starts_with($sql, 'UPDATE ceo_verif_correction SET annule_par')) { self::$corr[(int) $p[1]]['annule_par'] = $p[0]; return 1; }
+        if (str_starts_with($sql, 'UPDATE con_verif_correction SET annule_par')) { self::$corr[(int) $p[1]]['annule_par'] = $p[0]; return 1; }
         return 0;
     }
 }

@@ -67,38 +67,38 @@ $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Fond de caisse encodé à 0 € 
 $a = wr_fil_entree_creer();
 verifie('une note « Problème de gestion » est enregistrée', ($a['ok'] ?? false) && $a['entree']['tags'] === ['gestion', 'finances'] && $a['entree']['epingle'] === true && $a['entree']['auteur'] === 'Loic V.', json_encode($a));
 $fil = (int) ($a['filOuvert'] ?? 0);
-$f = Db::row('SELECT * FROM pil_fil WHERE id = ?', [$fil]);
+$f = Db::row('SELECT * FROM con_fil WHERE id = ?', [$fil]);
 verifie('… et ouvre un fil, titré par sa première phrase', $f !== null && $f['titre'] === 'Fond de caisse encodé à 0 € à l’ouverture' && $f['resolu_le'] === null);
 
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Encore à 0 €.', 'tags' => ['gestion'], 'fil' => $fil, 'le' => '2026-11-17 07:12', 'pieces' => [['genre' => 'photo', 'data' => $png]]];
 $b = wr_fil_entree_creer();
-verifie('une suite du fil n’en ouvre pas un autre', ($b['ok'] ?? false) && $b['filOuvert'] === null && $b['entree']['fil'] === $fil && (int) Db::row('SELECT COUNT(*) n FROM pil_fil')['n'] === 1);
+verifie('une suite du fil n’en ouvre pas un autre', ($b['ok'] ?? false) && $b['filOuvert'] === null && $b['entree']['fil'] === $fil && (int) Db::row('SELECT COUNT(*) n FROM con_fil')['n'] === 1);
 verifie('une photo fait une entrée « photo »', $b['entree']['type'] === 'photo' && count($b['entree']['pieces']) === 1 && $b['entree']['pieces'][0]['url'] === '/fil/pieces/' . $b['entree']['pieces'][0]['id']);
-$p = Db::row('SELECT * FROM pil_fil_piece WHERE entree_id = ?', [$b['entree']['num']]);
+$p = Db::row('SELECT * FROM con_fil_piece WHERE entree_id = ?', [$b['entree']['num']]);
 verifie('la pièce est rangée dans le dossier privé, sous un nom tiré au hasard', $p !== null && preg_match('/^[0-9a-f]{24}\.png$/', (string) $p['fichier']) === 1 && is_file($prive . '/fil/' . $p['fichier']) && (int) $p['largeur'] === 2);
 
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Fond de caisse juste trois jours de suite.', 'tags' => ['bonne'], 'fil' => $fil, 'ferme' => true, 'le' => '2026-11-20 07:00'];
 $c = wr_fil_entree_creer();
-$f = Db::row('SELECT * FROM pil_fil WHERE id = ?', [$fil]);
+$f = Db::row('SELECT * FROM con_fil WHERE id = ?', [$fil]);
 verifie('une bonne action « ferme » le fil, à sa date', ($c['ok'] ?? false) && $f['resolu_le'] === '2026-11-20 07:00:00' && (int) $f['resolu_par'] === $c['entree']['num']);
 $GLOBALS['corps'] = ['fil' => null];
 wr_fil_entree_maj($c['entree']['num']);
-verifie('la bonne action quitte le fil : il se rouvre', Db::row('SELECT resolu_le FROM pil_fil WHERE id = ?', [$fil])['resolu_le'] === null);
+verifie('la bonne action quitte le fil : il se rouvre', Db::row('SELECT resolu_le FROM con_fil WHERE id = ?', [$fil])['resolu_le'] === null);
 $GLOBALS['corps'] = ['fil' => $fil, 'ferme' => true];
 wr_fil_entree_maj($c['entree']['num']);
-verifie('… et se referme quand elle y revient avec « ferme »', Db::row('SELECT resolu_le FROM pil_fil WHERE id = ?', [$fil])['resolu_le'] === '2026-11-20 07:00:00');
+verifie('… et se referme quand elle y revient avec « ferme »', Db::row('SELECT resolu_le FROM con_fil WHERE id = ?', [$fil])['resolu_le'] === '2026-11-20 07:00:00');
 wr_fil_entree_suppr($c['entree']['num']);
-verifie('effacer l’entrée qui fermait le fil le rouvre', Db::row('SELECT resolu_le FROM pil_fil WHERE id = ?', [$fil])['resolu_le'] === null);
+verifie('effacer l’entrée qui fermait le fil le rouvre', Db::row('SELECT resolu_le FROM con_fil WHERE id = ?', [$fil])['resolu_le'] === null);
 
 $GLOBALS['corps'] = ['texte' => 'Encore à 0 € (vu au rapport).', 'tags' => ['gestion', 'produit', 'inconnue'], 'retirer' => [(int) $p['id']], 'le' => '2026-11-17T07:30'];
 $m = wr_fil_entree_maj($b['entree']['num']);
 verifie('modifier : texte, étiquettes connues, date', ($m['ok'] ?? false) && $m['entree']['texte'] === 'Encore à 0 € (vu au rapport).' && $m['entree']['tags'] === ['gestion', 'produit'] && $m['entree']['le'] === '2026-11-17 07:30');
 verifie('… et retirer une pièce efface aussi son fichier', $m['entree']['pieces'] === [] && !is_file($prive . '/fil/' . $p['fichier']));
 
-$avant = (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'];
+$avant = (int) Db::row('SELECT COUNT(*) n FROM con_fil_entree')['n'];
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'x', 'pieces' => [['genre' => 'photo', 'data' => $png], ['genre' => 'capture', 'data' => 'data:image/png;base64,QUJD']]];
 $r = wr_fil_entree_creer();
-verifie('une pièce illisible : refus, rien n’est écrit', isset($r['error']) && str_contains($r['error'], 'pièce 2') && (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'] === $avant && count(glob($prive . '/fil/*') ?: []) === 0);
+verifie('une pièce illisible : refus, rien n’est écrit', isset($r['error']) && str_contains($r['error'], 'pièce 2') && (int) Db::row('SELECT COUNT(*) n FROM con_fil_entree')['n'] === $avant && count(glob($prive . '/fil/*') ?: []) === 0);
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'x', 'pieces' => array_fill(0, 9, ['genre' => 'photo', 'data' => $png])];
 verifie('neuf pièces : refus', str_contains((string) (wr_fil_entree_creer()['error'] ?? ''), '8 pièces'));
 $GLOBALS['corps'] = ['shop' => '99', 'texte' => 'x'];
@@ -119,7 +119,7 @@ verifie('… et se rouvre', wr_fil_fil($fil)['fil']['ouvert'] === true);
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Prix à la main en vitrine.', 'tags' => ['gestion'], 'le' => '2026-10-26 10:45'];
 $seul = wr_fil_entree_creer();
 wr_fil_entree_suppr($seul['entree']['num']);
-verifie('un fil dont on efface la seule entrée disparaît', Db::row('SELECT id FROM pil_fil WHERE id = ?', [(int) $seul['filOuvert']]) === null);
+verifie('un fil dont on efface la seule entrée disparaît', Db::row('SELECT id FROM con_fil WHERE id = ?', [(int) $seul['filOuvert']]) === null);
 
 echo "Lecture d'un magasin\n";
 Db::exec('CREATE TABLE con_visite (id INTEGER PRIMARY KEY, shop_id TEXT, consultant_nom TEXT, prevu_le TEXT, debut_h TEXT, duree_min INT, statut TEXT, type_code TEXT, annoncee INT, score TEXT, rapport_envoye_le TEXT, rapport_envoye_par TEXT, rapport_lu_le TEXT)');
@@ -170,7 +170,7 @@ verifie('les épinglées du magasin, entre deux dates', count($ep) === 1 && str_
 echo "Au cockpit seulement\n";
 require __DIR__ . '/../../shared/src/acces.php';
 verifie('aucune route du fil n’est ouverte au franchisé', !array_filter(['/fil', '/fil/magasins', '/fil/entrees', '/fil/entrees/3', '/fil/fils/2', '/fil/pieces/3'], 'accesRouteFranchise'));
-verifie('la table ne garde aucun drapeau « visible »', !in_array('visible', array_column(Db::rows('PRAGMA table_info(pil_fil_entree)'), 'name'), true));
+verifie('la table ne garde aucun drapeau « visible »', !in_array('visible', array_column(Db::rows('PRAGMA table_info(con_fil_entree)'), 'name'), true));
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Note interne.', 'visible' => true];
 verifie('« visible » envoyé quand même : ignoré, l’entrée reste interne', !array_key_exists('visible', wr_fil_entree_creer()['entree'] ?? ['visible' => 1]));
 

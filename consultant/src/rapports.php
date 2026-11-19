@@ -23,8 +23,8 @@ require_once __DIR__ . '/../../shared/src/doc.php';
  *  - tout le contenu vient des lectures existantes du cockpit : ce fichier
  *    ASSEMBLE, il ne recalcule rien de neuf.
  *
- * Les définitions vivent dans `ceo_rapport` (poste, fréquence, blocs,
- * destinataires) et chaque génération laisse une trace dans `ceo_rapport_run`
+ * Les définitions vivent dans `con_rapport` (poste, fréquence, blocs,
+ * destinataires) et chaque génération laisse une trace dans `con_rapport_run`
  * (résumé + HTML complet, relisible depuis l'écran Reporting).
  */
 
@@ -46,7 +46,7 @@ const RAP_LEVIERS = [
 
 function ensureRapports(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_rapport ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_rapport ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'code VARCHAR(40) NOT NULL UNIQUE,'
         . 'nom VARCHAR(120) NOT NULL,'
@@ -59,7 +59,7 @@ function ensureRapports(): void
         . 'par_magasin TINYINT NOT NULL DEFAULT 0,'
         . 'actif TINYINT NOT NULL DEFAULT 1'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_rapport_run ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_rapport_run ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'rapport_id INT NOT NULL,'
         . 'genere_le DATETIME NOT NULL,'
@@ -82,13 +82,13 @@ function ensureRapports(): void
               // L'ordre des blocs et les sauts de page voulus : {ordre:[slug],
               // sauts:[slug]}. Vide = l'ordre par levier, celui d'avant.
               'ADD COLUMN mise_en_page TEXT NULL'] as $alter) {
-        try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
+        try { Db::exec('ALTER TABLE con_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
     }
     // Le contexte d'un run : magasin et nom du rapport, pour le pied de page
     // du PDF. Il vit sur le RUN parce qu'un aperçu (composition non
-    // enregistrée) n'a pas de ligne dans ceo_rapport à relire, et parce que
+    // enregistrée) n'a pas de ligne dans con_rapport à relire, et parce que
     // le périmètre d'un envoi par magasin n'est pas celui de la définition.
-    try { Db::exec('ALTER TABLE ceo_rapport_run ADD COLUMN contexte TEXT NULL'); }
+    try { Db::exec('ALTER TABLE con_rapport_run ADD COLUMN contexte TEXT NULL'); }
     catch (PDOException $e) { /* déjà là */ }
 
     // Le jeton du cron naît tout seul : personne ne doit inventer un secret à
@@ -98,7 +98,7 @@ function ensureRapports(): void
             ['rapportsJeton', json_encode(bin2hex(random_bytes(24)))]);
     }
 
-    $n = Db::row('SELECT COUNT(*) n FROM ceo_rapport');
+    $n = Db::row('SELECT COUNT(*) n FROM con_rapport');
     if ((int) ($n['n'] ?? 0) > 0) {
         // Évolution des semis : les blocs nés après le premier semis rejoignent
         // les rapports déjà en base — une fois, sans toucher au reste.
@@ -107,7 +107,7 @@ function ensureRapports(): void
             'franchise-hebdo' => ['rentab-heatmap'],
         ];
         foreach ($evolutions as $code => $nouveaux) {
-            $r = Db::row('SELECT id, blocs FROM ceo_rapport WHERE code = ?', [$code]);
+            $r = Db::row('SELECT id, blocs FROM con_rapport WHERE code = ?', [$code]);
             if ($r === null) { continue; }
             $blocs = json_decode((string) $r['blocs'], true) ?: [];
             $avant = count($blocs);
@@ -115,7 +115,7 @@ function ensureRapports(): void
                 if (!in_array($nb, $blocs, true)) { $blocs[] = $nb; }
             }
             if (count($blocs) > $avant) {
-                Db::exec('UPDATE ceo_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), (int) $r['id']]);
+                Db::exec('UPDATE con_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), (int) $r['id']]);
             }
         }
         rapVentesSemer();
@@ -139,7 +139,7 @@ function ensureRapports(): void
             ['centrale-commandes', 'food-stock', 'royalties-retard'], 0],
     ];
     foreach ($seed as $s) {
-        Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif)
+        Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif)
                   VALUES (?,?,?,?,?,?,?,?,?,1)',
             [$s[0], $s[1], $s[2], $s[3], $s[4], $s[5], json_encode($s[6]), json_encode([]), $s[7]]);
     }
@@ -159,8 +159,8 @@ function ensureRapports(): void
  */
 function rapVentesSemer(): void
 {
-    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', ['target-vente-cloture']) !== null) { return; }
-    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+    if (Db::row('SELECT id FROM con_rapport WHERE code = ?', ['target-vente-cloture']) !== null) { return; }
+    Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
               VALUES (?,?,?,?,?,?,?,?,?,?,?)',
         ['target-vente-cloture', 'Clôture Target de vente', 'Franchisé & direction', 'mensuel', 8, 3,
          json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
@@ -175,8 +175,8 @@ function rapVentesSemer(): void
  */
 function rapAfficheSemer(): void
 {
-    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', ['affiche-vente-mois']) !== null) { return; }
-    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+    if (Db::row('SELECT id FROM con_rapport WHERE code = ?', ['affiche-vente-mois']) !== null) { return; }
+    Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
               VALUES (?,?,?,?,?,?,?,?,?,?,?)',
         ['affiche-vente-mois', 'Affiche du mois — Ce qu\'il y a à gagner', 'Magasins', 'mensuel', 8, 1,
          json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
@@ -231,7 +231,7 @@ function ventesAfficheDistribuer(array $rep): array
         . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
             . (isset($m2['envoyes']) && $m2['envoyes'] !== [] ? ' (' . implode(', ', $m2['envoyes']) . ')' : '')) . '</li>', $bilan['magasins']))
         . '</ul></div>';
-    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+    Db::exec('INSERT INTO con_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
               VALUES (?,?,?,?,?,?,?,?)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), date('Y-m-01'), date('Y-m-t'),
          $servis > 0 ? 'envoye' : 'vide', $resume, $html, json_encode([], JSON_UNESCAPED_UNICODE)]);
@@ -242,7 +242,7 @@ function ventesAfficheDistribuer(array $rep): array
 }
 
 /**
- * Les seuils — lus dans le RÉFÉRENTIEL des KPI (ceo_kpi_def, éditable dans
+ * Les seuils — lus dans le RÉFÉRENTIEL des KPI (con_kpi_def, éditable dans
  * Paramètres). Plus rien en dur : changer un seuil à l'écran change les
  * rapports au prochain run. Les défauts ne servent que si une ligne manque.
  */
@@ -857,7 +857,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
         case 'kpi-table': {
             // La Table KPI dans le rapport : les indicateurs ENCODÉS (écran
             // Table KPI), dernière valeur collectée par magasin + réseau,
-            // groupés par catégorie. Aucun recalcul : on lit ceo_kpi_valeur.
+            // groupés par catégorie. Aucun recalcul : on lit con_kpi_valeur.
             $b['action'] = 'Les KPI s’encodent (source, seuils, catégorie) dans l’écran Table KPI.';
             if (!function_exists('ep_kpi_table')) { $b['motif'] = 'module absent'; break; }
             $t2 = ep_kpi_table();
@@ -949,7 +949,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             if (!function_exists('croisMoisServi')) { $b['motif'] = 'module absent'; break; }
             croisTables();
             $combos = [];
-            try { $combos = Db::rows('SELECT * FROM ceo_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $eC) { $combos = []; }
+            try { $combos = Db::rows('SELECT * FROM con_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $eC) { $combos = []; }
             if ($combos === []) { $b['motif'] = 'aucun combo enregistré — créez-en dans Croisements'; break; }
             $nomDeC = [];
             try {
@@ -1113,10 +1113,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             } catch (Throwable $eT2) { /* relevé absent : les KPI quotidiens suivent */ }
             foreach ($quotidiens as $k2) {
                 $jours = array_reverse(array_map(fn ($r2) => (string) $r2['jour'],
-                    Db::rows('SELECT DISTINCT jour FROM ceo_kpi_valeur WHERE code = ? ORDER BY jour DESC LIMIT 7', [$k2['code']])));
+                    Db::rows('SELECT DISTINCT jour FROM con_kpi_valeur WHERE code = ? ORDER BY jour DESC LIMIT 7', [$k2['code']])));
                 if ($jours === []) { continue; }
                 $grille = [];
-                foreach (Db::rows('SELECT shop, jour, valeur FROM ceo_kpi_valeur WHERE code = ? AND jour >= ?',
+                foreach (Db::rows('SELECT shop, jour, valeur FROM con_kpi_valeur WHERE code = ? AND jour >= ?',
                     [$k2['code'], $jours[0]]) as $r2) {
                     $grille[(string) $r2['shop']][(string) $r2['jour']] = $r2['valeur'] !== null ? (float) $r2['valeur'] : null;
                 }
@@ -1331,7 +1331,7 @@ function rapVentesFenetre(string $du, string $au): array
 /**
  * L'objectif de CA du mois, par NOM de magasin.
  *
- * Il vit dans ceo_shop_month_perf (encodage du budget) et se lit par
+ * Il vit dans con_shop_month_perf (encodage du budget) et se lit par
  * identifiant : on le rapproche des noms, seule clé que les blocs manipulent.
  * Un magasin sans budget encodé n'a pas d'objectif — pas d'objectif inventé.
  */
@@ -1350,7 +1350,7 @@ function rapObjectifsMois(string $date): array
             // « objectif non encodé » alors que l'étude, elle, dit un chiffre.
             // La provenance voyage avec la valeur — le rapport doit pouvoir la
             // nommer, on ne prend pas l'une pour l'autre.
-            foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+            foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE year = ? AND month = ?',
                 [(int) substr($date, 0, 4), (int) substr($date, 5, 2)]) as $b) {
                 $nom = $noms[(int) $b['shop_id']] ?? null;
                 if ($nom === null) { continue; }
@@ -1556,7 +1556,7 @@ function rapportGenerer(array $rep): array
 
     // Le run d'abord, le HTML ensuite : le pied du rapport porte un lien
     // absolu vers sa propre page, qui exige l'identifiant.
-    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+    Db::exec('INSERT INTO con_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
               VALUES (?,?,?,?,?,?,NULL,?)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), $periode['du'], $periode['au'],
          $vide ? 'vide' : 'genere', $resume,
@@ -1564,7 +1564,7 @@ function rapportGenerer(array $rep): array
              JSON_UNESCAPED_UNICODE)]);
     $runId = (int) Db::pdo()->lastInsertId();
     $html = rapportHtml($rep, $sections, $periode, $seuils, $resume, $runId);
-    Db::exec('UPDATE ceo_rapport_run SET html = ? WHERE id = ?', [$html, $runId]);
+    Db::exec('UPDATE con_rapport_run SET html = ? WHERE id = ?', [$html, $runId]);
     journalAdd('CEO', 'Rapport', $rep['nom'], 'Généré — ' . $resume);
     return ['runId' => $runId, 'statut' => $vide ? 'vide' : 'genere', 'resume' => $resume];
 }
@@ -1819,7 +1819,7 @@ function rapMailGarde(array $rep, array $run, string $labelPeriode, string $nomP
 
 function rapportEnvoyer(array $rep, int $runId, array $piecesExtra = []): array
 {
-    $run = Db::row('SELECT * FROM ceo_rapport_run WHERE id = ? AND rapport_id = ?', [$runId, (int) $rep['id']]);
+    $run = Db::row('SELECT * FROM con_rapport_run WHERE id = ? AND rapport_id = ?', [$runId, (int) $rep['id']]);
     if ($run === null) { return ['ok' => false, 'error' => 'run inconnu']; }
     $dests = json_decode((string) ($rep['destinataires'] ?? '[]'), true) ?: [];
     $dests = array_values(array_filter($dests, fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
@@ -1870,7 +1870,7 @@ function rapportEnvoyer(array $rep, int $runId, array $piecesExtra = []): array
         }
     }
     $tous = !in_array(false, $ok, true);
-    Db::exec('UPDATE ceo_rapport_run SET statut = ?, envoye_a = ? WHERE id = ?',
+    Db::exec('UPDATE con_rapport_run SET statut = ?, envoye_a = ? WHERE id = ?',
         [$tous ? 'envoye' : $run['statut'], json_encode(array_keys(array_filter($ok))), $runId]);
     journalAdd('CEO', 'Rapport', $rep['nom'], $tous
         ? 'Envoyé (' . ($viaSmtp ? 'SMTP' : 'mail()') . ', ' . ($pieces !== [] ? 'PDF joint' : 'sans PDF') . ') à ' . implode(', ', $dests)
@@ -1948,7 +1948,7 @@ function rapportDistribuer(array $rep): array
 
 /**
  * Un run pour la clôture Target de vente : le document de ventes.php entre
- * dans ceo_rapport_run comme n'importe quel rapport — l'historique, la
+ * dans con_rapport_run comme n'importe quel rapport — l'historique, la
  * relecture à l'écran et rapportEnvoyer (rendu PDF + pièce jointe) marchent
  * sans rien leur apprendre. `$shop` vide = la version réseau.
  */
@@ -1957,7 +1957,7 @@ function venteClotureRun(array $rep, string $shop = ''): array
     $r = venteClotureDoc('', $shop);
     if (isset($r['error'])) { return ['statut' => 'erreur', 'error' => $r['error']]; }
     $resume = 'Clôture ' . $r['libMois'] . ' — ' . $r['magasin'];
-    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+    Db::exec('INSERT INTO con_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
               VALUES (?,?,?,?,?,?,?,?)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), $r['m'] . '-01', date('Y-m-t', strtotime($r['m'] . '-01')),
          'genere', $resume, $r['doc'],
@@ -2026,13 +2026,13 @@ function ventesClotureDistribuer(array $rep): array
 function ep_rapports(): array
 {
     ensureRapports();
-    $reps = Db::rows('SELECT * FROM ceo_rapport ORDER BY id');
+    $reps = Db::rows('SELECT * FROM con_rapport ORDER BY id');
     $runs = Db::rows("SELECT r.id, r.rapport_id, r.genere_le, r.statut, r.resume,
                              COALESCE(p.nom, 'Aperçu à la demande') nom
-                        FROM ceo_rapport_run r LEFT JOIN ceo_rapport p ON p.id = r.rapport_id
+                        FROM con_rapport_run r LEFT JOIN con_rapport p ON p.id = r.rapport_id
                        ORDER BY r.id DESC LIMIT 12");
     $dernier = [];
-    foreach (Db::rows('SELECT rapport_id, MAX(id) mid FROM ceo_rapport_run GROUP BY rapport_id') as $x) {
+    foreach (Db::rows('SELECT rapport_id, MAX(id) mid FROM con_rapport_run GROUP BY rapport_id') as $x) {
         $dernier[(int) $x['rapport_id']] = (int) $x['mid'];
     }
     $parRun = [];
@@ -2042,7 +2042,7 @@ function ep_rapports(): array
         'suspension' => rapSuspension(),
         'rapports' => array_map(function ($r) use ($dernier, $parRun) {
             $mid = $dernier[(int) $r['id']] ?? null;
-            $d = $mid !== null ? ($parRun[$mid] ?? Db::row('SELECT id, genere_le, statut, resume FROM ceo_rapport_run WHERE id = ?', [$mid])) : null;
+            $d = $mid !== null ? ($parRun[$mid] ?? Db::row('SELECT id, genere_le, statut, resume FROM con_rapport_run WHERE id = ?', [$mid])) : null;
             $mep = rapMiseEnPageDe($r['mise_en_page'] ?? '');
             return ['id' => (int) $r['id'], 'code' => $r['code'], 'nom' => $r['nom'], 'poste' => $r['poste'],
                 'ordre' => $mep['ordre'], 'sauts' => $mep['sauts'],
@@ -2108,34 +2108,34 @@ function ep_rapports(): array
 function wr_rapport_patch(int $id): array
 {
     ensureRapports();
-    $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
+    $rep = Db::row('SELECT * FROM con_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     $b = body();
     if (array_key_exists('actif', $b)) {
-        Db::exec('UPDATE ceo_rapport SET actif = ? WHERE id = ?', [!empty($b['actif']) ? 1 : 0, $id]);
+        Db::exec('UPDATE con_rapport SET actif = ? WHERE id = ?', [!empty($b['actif']) ? 1 : 0, $id]);
     }
     if (array_key_exists('destinataires', $b) && is_array($b['destinataires'])) {
         $d = array_values(array_filter(array_map('trim', $b['destinataires']), fn ($x) => $x !== ''));
-        Db::exec('UPDATE ceo_rapport SET destinataires = ? WHERE id = ?', [json_encode($d), $id]);
+        Db::exec('UPDATE con_rapport SET destinataires = ? WHERE id = ?', [json_encode($d), $id]);
     }
     if (isset($b['heure']) && is_numeric($b['heure'])) {
-        Db::exec('UPDATE ceo_rapport SET heure = ? WHERE id = ?', [max(0, min(23, (int) $b['heure'])), $id]);
+        Db::exec('UPDATE con_rapport SET heure = ? WHERE id = ?', [max(0, min(23, (int) $b['heure'])), $id]);
     }
     if (isset($b['poste']) && trim((string) $b['poste']) !== '') {
-        Db::exec('UPDATE ceo_rapport SET poste = ? WHERE id = ?', [trim((string) $b['poste']), $id]);
+        Db::exec('UPDATE con_rapport SET poste = ? WHERE id = ?', [trim((string) $b['poste']), $id]);
     }
     if (isset($b['nom']) && trim((string) $b['nom']) !== '') {
-        Db::exec('UPDATE ceo_rapport SET nom = ? WHERE id = ?', [trim((string) $b['nom']), $id]);
+        Db::exec('UPDATE con_rapport SET nom = ? WHERE id = ?', [trim((string) $b['nom']), $id]);
     }
     if (isset($b['blocs']) && is_array($b['blocs'])) {
         $blocs = array_values(array_filter($b['blocs'], fn ($s2) => isset(rapBlocDefs()[$s2])));
-        if ($blocs !== []) { Db::exec('UPDATE ceo_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), $id]); }
+        if ($blocs !== []) { Db::exec('UPDATE con_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), $id]); }
     }
     if (isset($b['modes']) && is_array($b['modes'])) {
-        Db::exec('UPDATE ceo_rapport SET modes = ? WHERE id = ?', [json_encode($b['modes']), $id]);
+        Db::exec('UPDATE con_rapport SET modes = ? WHERE id = ?', [json_encode($b['modes']), $id]);
     }
     if (isset($b['comparaison']) && isset(RAP_COMPARAISONS[(string) $b['comparaison']])) {
-        Db::exec('UPDATE ceo_rapport SET comparaison = ? WHERE id = ?', [(string) $b['comparaison'], $id]);
+        Db::exec('UPDATE con_rapport SET comparaison = ? WHERE id = ?', [(string) $b['comparaison'], $id]);
     }
     // La fenêtre OBSERVÉE. Chaîne vide = « selon la cadence » : on écrit NULL,
     // qui est exactement ce que rapPeriode() attend pour retomber sur la
@@ -2145,21 +2145,21 @@ function wr_rapport_patch(int $id): array
         $pe = in_array($pe, ['hier', 'semaine-passee', 'mois-en-cours', 'mois-passe', 'libre'], true) ? $pe : null;
         $dd = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['du'] ?? '')) ? (string) $b['du'] : null;
         $aa = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['au'] ?? '')) ? (string) $b['au'] : null;
-        Db::exec('UPDATE ceo_rapport SET periode = ?, periode_du = ?, periode_au = ? WHERE id = ?',
+        Db::exec('UPDATE con_rapport SET periode = ?, periode_du = ?, periode_au = ? WHERE id = ?',
             [$pe, $dd, $aa, $id]);
     }
     // L'ordre des blocs et les sauts de page : envoyés ensemble, enregistrés
     // ensemble — un ordre sans ses sauts décalerait les pages.
     if (isset($b['ordre']) || isset($b['sauts'])) {
-        Db::exec('UPDATE ceo_rapport SET mise_en_page = ? WHERE id = ?',
+        Db::exec('UPDATE con_rapport SET mise_en_page = ? WHERE id = ?',
             [json_encode(rapMiseEnPageDe(['ordre' => $b['ordre'] ?? [], 'sauts' => $b['sauts'] ?? []])), $id]);
     }
     if (isset($b['magasins']) && is_array($b['magasins'])) {
-        Db::exec('UPDATE ceo_rapport SET magasins = ? WHERE id = ?',
+        Db::exec('UPDATE con_rapport SET magasins = ? WHERE id = ?',
             [json_encode(array_values(array_filter($b['magasins'], 'is_string'))), $id]);
     }
     if (isset($b['envoiMode']) && in_array($b['envoiMode'], ['groupe', 'par-magasin'], true)) {
-        Db::exec('UPDATE ceo_rapport SET envoi_mode = ? WHERE id = ?', [$b['envoiMode'], $id]);
+        Db::exec('UPDATE con_rapport SET envoi_mode = ? WHERE id = ?', [$b['envoiMode'], $id]);
     }
     if (isset($b['destParMagasin']) && is_array($b['destParMagasin'])) {
         $carnet = [];
@@ -2167,13 +2167,13 @@ function wr_rapport_patch(int $id): array
             $ok2 = array_values(array_filter((array) $emails, fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
             if (is_string($mag) && $ok2 !== []) { $carnet[$mag] = $ok2; }
         }
-        Db::exec('UPDATE ceo_rapport SET dest_par_magasin = ? WHERE id = ?', [json_encode($carnet, JSON_UNESCAPED_UNICODE), $id]);
+        Db::exec('UPDATE con_rapport SET dest_par_magasin = ? WHERE id = ?', [json_encode($carnet, JSON_UNESCAPED_UNICODE), $id]);
     }
     if (isset($b['jours']) && is_array($b['jours'])) {
         $jrs = ['dows' => [], 'doms' => []];
         foreach ((array) ($b['jours']['dows'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 7) { $jrs['dows'][] = (int) $d2; } }
         foreach ((array) ($b['jours']['doms'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 31) { $jrs['doms'][] = (int) $d2; } }
-        Db::exec('UPDATE ceo_rapport SET jours = ? WHERE id = ?', [json_encode($jrs), $id]);
+        Db::exec('UPDATE con_rapport SET jours = ? WHERE id = ?', [json_encode($jrs), $id]);
     }
     journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Réglages mis à jour');
     return ['ok' => true];
@@ -2182,7 +2182,7 @@ function wr_rapport_patch(int $id): array
 function wr_rapport_generer(int $id): array
 {
     ensureRapports();
-    $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
+    $rep = Db::row('SELECT * FROM con_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ((string) $rep['code'] === 'target-vente-cloture') { return ['ok' => true] + venteClotureRun($rep, ''); }
     // Le contrôle qualité : l'aperçu de l'e-mail d'un magasin sans photo à cette heure, rien ne part.
@@ -2199,7 +2199,7 @@ function wr_rapport_generer(int $id): array
 function wr_rapport_envoyer(int $id): array
 {
     ensureRapports();
-    $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
+    $rep = Db::row('SELECT * FROM con_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ((string) $rep['code'] === 'target-vente-cloture') {
         return ['ok' => true, 'mode' => 'par-magasin'] + ventesClotureDistribuer($rep);
@@ -2225,9 +2225,9 @@ function wr_rapport_envoyer(int $id): array
 function wr_rapport_suppr(int $id): array
 {
     ensureRapports();
-    $rep = Db::row('SELECT nom FROM ceo_rapport WHERE id = ?', [$id]);
+    $rep = Db::row('SELECT nom FROM con_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
-    Db::exec('DELETE FROM ceo_rapport WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_rapport WHERE id = ?', [$id]);
     journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Rapport supprimé — ses générations passées restent lisibles');
     return ['ok' => true];
 }
@@ -2236,7 +2236,7 @@ function wr_rapport_suppr(int $id): array
 function ep_rapport_run(int $id): array
 {
     ensureRapports();
-    $run = Db::row('SELECT html FROM ceo_rapport_run WHERE id = ?', [$id]);
+    $run = Db::row('SELECT html FROM con_rapport_run WHERE id = ?', [$id]);
     if ($run === null || $run['html'] === null) { http_response_code(404); return ['error' => 'run inconnu']; }
     header('Content-Type: text/html; charset=UTF-8');
     echo (string) $run['html'];
@@ -2297,7 +2297,7 @@ function ep_rapports_cron(): array
     $faits = [];
     // L'interrupteur général (rapSuspension) : suspendus, aucun rapport n'est dû ; le reste du battement continue.
     $suspension = rapSuspension();
-    foreach ($suspension['suspendu'] ? [] : Db::rows('SELECT * FROM ceo_rapport WHERE actif = 1') as $rep) {
+    foreach ($suspension['suspendu'] ? [] : Db::rows('SELECT * FROM con_rapport WHERE actif = 1') as $rep) {
         $jrs = json_decode((string) ($rep['jours'] ?? ''), true);
         if (is_array($jrs)) {
             // Planification par jours cochés (compositeur) : jours de semaine
@@ -2324,7 +2324,7 @@ function ep_rapports_cron(): array
             $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue', 'envoi' => $bilan['resume'] ?? ''];
             continue;
         }
-        $deja = Db::row('SELECT id FROM ceo_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
+        $deja = Db::row('SELECT id FROM con_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
             [(int) $rep['id'], date('Y-m-d 00:00:00'), 'erreur']);
         if ($deja !== null) { continue; }
         if ((string) $rep['code'] === 'target-vente-cloture') {
@@ -2421,7 +2421,7 @@ function ep_rapports_cron(): array
 function ep_rapport_run_pdf(int $id): array
 {
     ensureRapports();
-    $run = Db::row('SELECT * FROM ceo_rapport_run WHERE id = ?', [$id]);
+    $run = Db::row('SELECT * FROM con_rapport_run WHERE id = ?', [$id]);
     if ($run === null || $run['html'] === null) { http_response_code(404); return ['error' => 'run inconnu']; }
     if (!function_exists('shell_exec')) {
         http_response_code(501);
@@ -2433,7 +2433,7 @@ function ep_rapport_run_pdf(int $id): array
     // définition en base, et un envoi par magasin porte un périmètre plus
     // étroit que celui du rapport.
     $ctx = json_decode((string) ($run['contexte'] ?? ''), true) ?: [];
-    $rep = Db::row('SELECT nom, magasins FROM ceo_rapport WHERE id = ?', [(int) ($run['rapport_id'] ?? 0)]) ?? [];
+    $rep = Db::row('SELECT nom, magasins FROM con_rapport WHERE id = ?', [(int) ($run['rapport_id'] ?? 0)]) ?? [];
     $pdf = rapPdfRendu((string) $run['html'], [
         'magasin' => (string) ($ctx['magasin'] ?? '') !== '' ? (string) $ctx['magasin'] : rapMagasinLabel($rep),
         'rapport' => (string) ($ctx['rapport'] ?? '') !== '' ? (string) $ctx['rapport'] : (string) ($rep['nom'] ?? ''),
@@ -3527,7 +3527,7 @@ function rapCompositionRep(array $b): array
     // dans l'historique, au lieu d'aller grossir « Aperçu à la demande ».
     // C'est le seul moyen de retrouver ce qui a été essayé sur un rapport.
     $lie = (int) ($b['rapportId'] ?? 0);
-    $ref = $lie > 0 ? Db::row('SELECT id, nom, poste FROM ceo_rapport WHERE id = ?', [$lie]) : null;
+    $ref = $lie > 0 ? Db::row('SELECT id, nom, poste FROM con_rapport WHERE id = ?', [$lie]) : null;
     return [
         'id' => $ref !== null ? (int) $ref['id'] : 0,
         'code' => $ref !== null ? 'apercu-' . (int) $ref['id'] : 'apercu',
@@ -3586,14 +3586,14 @@ function wr_rapport_creer(): array
     $freq = $jours['doms'] !== [] && $jours['dows'] === [] ? 'mensuel'
         : (count($jours['dows']) >= 7 ? 'quotidien' : 'hebdo');
     $code = 'perso-' . trim(mb_substr(preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($rep['nom'])), 0, 30), '-');
-    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
+    if (Db::row('SELECT id FROM con_rapport WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
     $envoiMode = ($b['envoiMode'] ?? '') === 'par-magasin' ? 'par-magasin' : 'groupe';
     $carnet = [];
     foreach ((array) ($b['destParMagasin'] ?? []) as $mag => $emails) {
         $ok2 = array_values(array_filter((array) $emails, fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
         if (is_string($mag) && $ok2 !== []) { $carnet[$mag] = $ok2; }
     }
-    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif,
+    Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif,
                                        jours, magasins, periode, periode_du, periode_au, modes, envoi_mode, dest_par_magasin, comparaison,
                                        mise_en_page)
               VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?,?,?,?,?)',

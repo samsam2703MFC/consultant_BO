@@ -259,7 +259,7 @@ function suAdresse(string $shop, ?array $regle = null): array
     $nom = viMagasins()[$shop]['nom'] ?? null;
     if ($nom !== null) {
         try {
-            foreach (Db::rows('SELECT nom, dest_par_magasin FROM ceo_rapport WHERE dest_par_magasin IS NOT NULL AND dest_par_magasin <> \'\' ORDER BY id') as $r) {
+            foreach (Db::rows('SELECT nom, dest_par_magasin FROM con_rapport WHERE dest_par_magasin IS NOT NULL AND dest_par_magasin <> \'\' ORDER BY id') as $r) {
                 $carnet = suJson($r['dest_par_magasin']);
                 foreach ((array) ($carnet[$nom] ?? []) as $d) {
                     if (filter_var($d, FILTER_VALIDATE_EMAIL)) { return ['email' => (string) $d, 'source' => 'carnet du reporting (' . $r['nom'] . ')']; }

@@ -877,7 +877,7 @@ function benchmarkTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_benchmark_snapshot ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_benchmark_snapshot ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'pris_le DATETIME NOT NULL,'
         . 'shop_id INT NOT NULL DEFAULT 0,'
@@ -907,14 +907,14 @@ function benchmarkRoutine(bool $forcer = false, bool $envoyer = true): array
     foreach (BenchmarkApi::magasins() as $shop => $ville) {
         $a = BenchmarkApi::analyse($shop, date('Y-m-d', strtotime('-30 days')), date('Y-m-d'));
         if ($a === null) { continue; }
-        Db::exec('INSERT INTO ceo_benchmark_snapshot (pris_le, shop_id, sujet, contenu) VALUES (?,?,?,?)',
+        Db::exec('INSERT INTO con_benchmark_snapshot (pris_le, shop_id, sujet, contenu) VALUES (?,?,?,?)',
             [$now->format('Y-m-d H:i:s'), $shop, 'analyse', json_encode($a, JSON_UNESCAPED_UNICODE)]);
         $snap[$shop] = $a['kpi'] ?? null;
     }
     $rapports = [];
     foreach ($familles as $f) {
         $rapports[$f] = benchmarkRapport($f, true);
-        Db::exec('INSERT INTO ceo_benchmark_snapshot (pris_le, shop_id, sujet, contenu) VALUES (?,?,?,?)',
+        Db::exec('INSERT INTO con_benchmark_snapshot (pris_le, shop_id, sujet, contenu) VALUES (?,?,?,?)',
             [$now->format('Y-m-d H:i:s'), 0, $f, json_encode($rapports[$f], JSON_UNESCAPED_UNICODE)]);
     }
 

@@ -48,7 +48,7 @@ final class PanelApi {
 }
 
 Db::exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
-Db::exec('CREATE TABLE ceo_verif_ca (shop_id INT, jour TEXT, caisse_ttc REAL, caisse_tva REAL, PRIMARY KEY (shop_id, jour))');
+Db::exec('CREATE TABLE con_verif_ca (shop_id INT, jour TEXT, caisse_ttc REAL, caisse_tva REAL, PRIMARY KEY (shop_id, jour))');
 require __DIR__ . '/../../shared/src/pnl_ht.php';
 require __DIR__ . '/../src/frais.php';
 require __DIR__ . '/../../consultant/src/ventes_pro.php';
@@ -67,8 +67,8 @@ verifie('un relevé d’avant (sans TVA) ne donne rien', phPartReleve(['ca' => 1
 verifie('une part au-delà de 25 % est rejetée', phPartReleve(['tva' => 40.0, 'caT' => 100.0]) === null);
 
 echo "La TVA de chaque jour : tickets, caisse, taux habituel, défaut\n";
-Db::exec('INSERT INTO ceo_verif_ca VALUES (4, ?, ?, ?)', ['2026-11-14', 1000.0, 60.0]);
-Db::exec('INSERT INTO ceo_verif_ca VALUES (4, ?, ?, ?)', ['2026-11-15', 2000.0, 100.0]);
+Db::exec('INSERT INTO con_verif_ca VALUES (4, ?, ?, ?)', ['2026-11-14', 1000.0, 60.0]);
+Db::exec('INSERT INTO con_verif_ca VALUES (4, ?, ?, ?)', ['2026-11-15', 2000.0, 100.0]);
 $T = phTvaJours(4, ['2026-11-14', '2026-11-15', '2026-11-16'], ['2026-11-16' => ['tva' => 150.0, 'caT' => 2650.0]]);
 verifie('le jour regardé : ses tickets', $T['2026-11-16']['src'] === 'tickets' && proche($T['2026-11-16']['part'], 150 / 2650, 0.0001));
 verifie('un jour clos : la caisse gravée', $T['2026-11-14']['src'] === 'caisse' && proche($T['2026-11-14']['part'], 0.06, 0.0001));

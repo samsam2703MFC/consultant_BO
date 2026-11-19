@@ -159,7 +159,7 @@ function dossierProduits(int $sid, string $du, string $au): array
  * Les tâches boutique NOTÉES pour CE magasin sur la fenêtre — la même source
  * que le Contrôle des tâches et le rapport hebdomadaire : `con_tache_jour`,
  * la relève quotidienne du panel (ep_pwa_tasks), pas les tâches de projet
- * consultant (`ceo_project_task`), qui sont une tout autre affaire.
+ * consultant (`con_project_task`), qui sont une tout autre affaire.
  *
  * Le compte des 5/5 (exemplaires) d'abord, puis le détail des non-conformes
  * (note 3, 2 ou 1) — les 4/5 (conformes, le travail attendu) ne se listent
@@ -262,7 +262,7 @@ function ep_dossier_pdf(): array
     }
     $budget = null;
     try {
-        $b2 = Db::row('SELECT revenue_budget, ca_theorique FROM ceo_shop_month_perf
+        $b2 = Db::row('SELECT revenue_budget, ca_theorique FROM con_shop_month_perf
                         WHERE shop_id = ? AND year = ? AND month = ?',
             [(string) $sid, (int) substr($m, 0, 4), (int) substr($m, 5, 2)]);
         if ($b2 !== null) {
@@ -458,7 +458,7 @@ function ep_dossier_pdf(): array
         $real = $kB !== null ? $kB['ca'] : null;
         $bB = null;
         try {
-            $r2 = Db::row('SELECT revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ? AND year = ? AND month = ?',
+            $r2 = Db::row('SELECT revenue_budget, ca_theorique FROM con_shop_month_perf WHERE shop_id = ? AND year = ? AND month = ?',
                 [(string) $sid, (int) substr($mB, 0, 4), (int) substr($mB, 5, 2)]);
             if ($r2 !== null) {
                 $bB = (float) ($r2['revenue_budget'] ?? 0) > 0 ? (float) $r2['revenue_budget']
@@ -592,7 +592,7 @@ function ep_dossier_pdf(): array
     // arrêté.
     $budDetailDe = function (int $s3, int $mo) use ($annee): array {
         try {
-            $r3 = Db::row('SELECT revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ? AND year = ? AND month = ?',
+            $r3 = Db::row('SELECT revenue_budget, ca_theorique FROM con_shop_month_perf WHERE shop_id = ? AND year = ? AND month = ?',
                 [(string) $s3, $annee, $mo]);
         } catch (PDOException $e3) { return ['v' => null, 'valide' => false]; }
         if ($r3 === null) { return ['v' => null, 'valide' => false]; }

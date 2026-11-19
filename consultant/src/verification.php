@@ -36,7 +36,7 @@ declare(strict_types=1);
  *  · /shops/{id}/materials : le prix de chaque matière dans chaque magasin (mfMatieresApi) ;
  *  · /shops/{id}/material-inventory : le stock, pour les matières jamais en recette.
  *
- * L'analyse est gardée une heure (`vfAnalyse`). Le registre `ceo_verif_recette` dit depuis quand
+ * L'analyse est gardée une heure (`vfAnalyse`). Le registre `con_verif_recette` dit depuis quand
  * chaque recette est signalée, et quand elle a cessé de l'être (corrigée au panel).
  *
  * GET /verification/recettes[?rafraichir=1]  — la liste, la couverture, les règles ;
@@ -800,7 +800,7 @@ function vfRegistreTable(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_verif_recette ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_verif_recette ('
         . 'cle VARCHAR(120) NOT NULL PRIMARY KEY,'
         . 'regle VARCHAR(12) NOT NULL,'
         . 'product_id INT NULL, material_id INT NULL,'
@@ -823,11 +823,11 @@ function vfRegistre(array $lignes, bool $complet): array
     try {
         vfRegistreTable();
         $actifs = [];
-        foreach (Db::rows('SELECT cle, premier_vu, resolu_le FROM ceo_verif_recette') as $r) { $actifs[(string) $r['cle']] = $r; }
+        foreach (Db::rows('SELECT cle, premier_vu, resolu_le FROM con_verif_recette') as $r) { $actifs[(string) $r['cle']] = $r; }
         foreach ($lignes as $l) {
             $prev = $actifs[$l['cle']] ?? null;
             $premier = ($prev !== null && $prev['resolu_le'] === null) ? (string) $prev['premier_vu'] : $auj;
-            Db::exec('INSERT INTO ceo_verif_recette (cle, regle, product_id, material_id, nom, detail, ca_30j, magasins, premier_vu, dernier_vu, resolu_le) VALUES (?,?,?,?,?,?,?,?,?,?,NULL)'
+            Db::exec('INSERT INTO con_verif_recette (cle, regle, product_id, material_id, nom, detail, ca_30j, magasins, premier_vu, dernier_vu, resolu_le) VALUES (?,?,?,?,?,?,?,?,?,?,NULL)'
                 . ' ON DUPLICATE KEY UPDATE regle = VALUES(regle), product_id = VALUES(product_id), material_id = VALUES(material_id), nom = VALUES(nom), detail = VALUES(detail),'
                 . ' ca_30j = VALUES(ca_30j), magasins = VALUES(magasins), premier_vu = VALUES(premier_vu), dernier_vu = VALUES(dernier_vu), resolu_le = NULL',
                 [$l['cle'], $l['regle'], $l['pid'] ?? null, $l['mid'] ?? null, mb_substr((string) $l['nom'], 0, 200), mb_substr((string) $l['detail'], 0, 600),
@@ -837,10 +837,10 @@ function vfRegistre(array $lignes, bool $complet): array
         if ($complet) {
             $vus = array_flip(array_column($lignes, 'cle'));
             foreach ($actifs as $cle => $r) {
-                if ($r['resolu_le'] === null && !isset($vus[$cle])) { Db::exec('UPDATE ceo_verif_recette SET resolu_le = ? WHERE cle = ?', [$auj, $cle]); }
+                if ($r['resolu_le'] === null && !isset($vus[$cle])) { Db::exec('UPDATE con_verif_recette SET resolu_le = ? WHERE cle = ?', [$auj, $cle]); }
             }
         }
-        $c = Db::row('SELECT COUNT(*) n, MIN(resolu_le) d FROM ceo_verif_recette WHERE resolu_le >= ?', [date('Y-m-d', strtotime('-30 day'))]);
+        $c = Db::row('SELECT COUNT(*) n, MIN(resolu_le) d FROM con_verif_recette WHERE resolu_le >= ?', [date('Y-m-d', strtotime('-30 day'))]);
         $out['corrigees'] = ['n' => (int) ($c['n'] ?? 0), 'depuis' => $c['d'] ?? null];
     } catch (Throwable $e) { /* sans registre : la liste reste juste, « repérée depuis » vaut aujourd'hui */ }
     return $out;

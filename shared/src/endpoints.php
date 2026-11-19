@@ -183,13 +183,13 @@ function ep_kpis(): array
 function ep_email_templates(): array
 {
     return array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'sujet' => $r['subject'], 'corps' => $r['body']],
-        Db::rows('SELECT * FROM ceo_email_template ORDER BY id'));
+        Db::rows('SELECT * FROM con_email_template ORDER BY id'));
 }
 
 function ep_project_templates(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_project_template') as $r) {
+    foreach (Db::rows('SELECT * FROM con_project_template') as $r) {
         $out[$r['axe']] = ['jalons' => json_decode($r['jalons_json'], true), 'couts' => json_decode($r['couts_json'], true)];
     }
     return $out;
@@ -710,7 +710,7 @@ function ep_product_periodes(): array
     // recettes (et panel, via catalogueCouts), puis la saisie du cockpit.
     $cout = catalogueCouts()[$pid]['mat'] ?? null;
     try {
-        $ov = Db::row('SELECT mat FROM ceo_prod_product WHERE pwa_id = ? AND mat IS NOT NULL AND actif = 1', [$pid]);
+        $ov = Db::row('SELECT mat FROM con_prod_product WHERE pwa_id = ? AND mat IS NOT NULL AND actif = 1', [$pid]);
         if ($ov !== null) { $cout = (float) $ov['mat']; }
     } catch (PDOException $e) { /* référentiel absent : recettes seules */ }
 
@@ -908,7 +908,7 @@ function ep_prod_catalogue(): array
     if (function_exists('aoEnsure')) { aoEnsure(); }
     $enrich = [];   // id_product du panel → ligne cockpit
     $parRef = [];
-    foreach (Db::rows('SELECT * FROM ceo_prod_product') as $r) {
+    foreach (Db::rows('SELECT * FROM con_prod_product') as $r) {
         $parRef[(string) $r['ref']] = $r;
         if ($r['pwa_id'] !== null) { $enrich[(int) $r['pwa_id']] = $r; }
     }
@@ -921,7 +921,7 @@ function ep_prod_catalogue(): array
     if ($reel !== null) { return function_exists('aoEnrichir') ? aoEnrichir($reel) : $reel; }
 
     // Repli : installation autonome, sans la base de caisse.
-    $rows = Db::rows('SELECT * FROM ceo_prod_product WHERE actif = 1 ORDER BY categorie, nom');
+    $rows = Db::rows('SELECT * FROM con_prod_product WHERE actif = 1 ORDER BY categorie, nom');
     $repli = array_map(function ($r) use ($plano) {
         $pl = $plano[$r['ref']] ?? null;
         $mat = $r['mat'] !== null ? (float) $r['mat'] : null;
@@ -1021,7 +1021,7 @@ function ep_exploitation(): array
     // une carte qui, ailleurs dans le cockpit, sait très bien ce qu'elle vise.
     $budget = []; $budgetSrc = [];
     try {
-        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE year = ? AND month = ?',
             [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
             $sid = (string) $b['shop_id'];
             if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
@@ -1132,7 +1132,7 @@ function ep_exploitation_api(array $out): ?array
     // une carte qui, ailleurs dans le cockpit, sait très bien ce qu'elle vise.
     $budget = []; $budgetSrc = [];
     try {
-        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE year = ? AND month = ?',
             [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
             $sid = (string) $b['shop_id'];
             if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
@@ -1540,7 +1540,7 @@ function jourNomSemaine(string $date, bool $pluriel = false): string
  */
 function ensureProfilJour(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_profil_jour ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_shop_profil_jour ('
         . 'shop_id VARCHAR(8) NOT NULL,'
         . 'jour TINYINT NOT NULL,'            // 1 = lundi … 7 = dimanche
         . 'ca_moyen DECIMAL(12,2) NULL,'
@@ -1558,7 +1558,7 @@ function profilJourEcrire(string $shopId, array $parWd, ?string $du, ?string $au
     $now = date('Y-m-d H:i:s');
     foreach ($parWd as $wd => $v) {
         if ((int) ($v['n'] ?? 0) < 1) { continue; }
-        Db::exec('INSERT INTO ceo_shop_profil_jour (shop_id, jour, ca_moyen, jours, du, au, maj)
+        Db::exec('INSERT INTO con_shop_profil_jour (shop_id, jour, ca_moyen, jours, du, au, maj)
                   VALUES (?,?,?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE ca_moyen = VALUES(ca_moyen), jours = VALUES(jours),
                     du = VALUES(du), au = VALUES(au), maj = VALUES(maj)',
@@ -1572,7 +1572,7 @@ function profilJourLire(string $shopId): array
     ensureProfilJour();
     $out = [];
     try {
-        foreach (Db::rows('SELECT jour, ca_moyen, jours, maj FROM ceo_shop_profil_jour WHERE shop_id = ?', [$shopId]) as $r) {
+        foreach (Db::rows('SELECT jour, ca_moyen, jours, maj FROM con_shop_profil_jour WHERE shop_id = ?', [$shopId]) as $r) {
             $out[(int) $r['jour']] = ['moyenne' => $r['ca_moyen'] !== null ? (float) $r['ca_moyen'] : null,
                 'jours' => (int) $r['jours'], 'maj' => $r['maj']];
         }
@@ -1590,7 +1590,7 @@ function profilJourLire(string $shopId): array
  */
 function ensureProfilHeure(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_profil_heure ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_shop_profil_heure ('
         . 'shop_id VARCHAR(8) NOT NULL,'
         . 'jour TINYINT NOT NULL,'           // 1 = lundi … 7 = dimanche
         . 'heure TINYINT NOT NULL,'          // 0 … 23
@@ -1606,7 +1606,7 @@ function ensureProfilHeure(): void
     if (!$vu) {
         $vu = true;
         if (setting('profilHeureV') !== 2) {
-            Db::exec('DELETE FROM ceo_shop_profil_heure');
+            Db::exec('DELETE FROM con_shop_profil_heure');
             Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['profilHeureV', json_encode(2)]);
         }
     }
@@ -1640,7 +1640,7 @@ function profilHeureLire(string $shopId, int $jour): array
     ensureProfilHeure();
     $parts = []; $montants = []; $n = 0; $maj = null;
     try {
-        foreach (Db::rows('SELECT heure, part, ca_moyen, jours, maj FROM ceo_shop_profil_heure
+        foreach (Db::rows('SELECT heure, part, ca_moyen, jours, maj FROM con_shop_profil_heure
                             WHERE shop_id = ? AND jour = ? ORDER BY heure', [$shopId, $jour]) as $r) {
             $h = (int) $r['heure'];
             if ($r['part'] !== null) { $parts[$h] = (float) $r['part']; }
@@ -1682,10 +1682,10 @@ function profilHeureBatir(int $shopId, string $date): int
     if ($total <= 0) { return 0; }
     $jour = (int) date('N', strtotime($date));
     $now = date('Y-m-d H:i:s');
-    Db::exec('DELETE FROM ceo_shop_profil_heure WHERE shop_id = ? AND jour = ?', [(string) $shopId, $jour]);
+    Db::exec('DELETE FROM con_shop_profil_heure WHERE shop_id = ? AND jour = ?', [(string) $shopId, $jour]);
     foreach ($somme as $hh => $v) {
         if ($v <= 0) { continue; }
-        Db::exec('INSERT INTO ceo_shop_profil_heure (shop_id, jour, heure, ca_moyen, part, jours, maj)
+        Db::exec('INSERT INTO con_shop_profil_heure (shop_id, jour, heure, ca_moyen, part, jours, maj)
                   VALUES (?,?,?,?,?,?,?)',
             [(string) $shopId, $jour, (int) $hh, round($v / $retenus, 2), round(100 * $v / $total, 3), $retenus, $now]);
     }
@@ -2112,7 +2112,7 @@ function exJourCalcul(): array
         $condB = implode(' OR ', array_fill(0, count($moisBud), '(year = ? AND month = ?)'));
         $argsB = [];
         foreach ($moisBud as $ym) { $argsB[] = (int) substr($ym, 0, 4); $argsB[] = (int) substr($ym, 5, 2); }
-        foreach (Db::rows('SELECT shop_id, year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE ' . $condB, $argsB) as $b2) {
+        foreach (Db::rows('SELECT shop_id, year, month, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE ' . $condB, $argsB) as $b2) {
             $v = null; $src = null;
             if ($b2['revenue_budget'] !== null && (float) $b2['revenue_budget'] > 0) {
                 $v = (float) $b2['revenue_budget']; $src = 'budget';
@@ -3863,7 +3863,7 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
     } catch (PDOException $e) { return null; }
     if (!$prods) { return null; }
     $fins = [];
-    foreach (Db::rows('SELECT ref, end_on, note FROM ceo_prod_fin') as $fx) {
+    foreach (Db::rows('SELECT ref, end_on, note FROM con_prod_fin') as $fx) {
         $fins[(string) $fx['ref']] = ['end_on' => $fx['end_on'], 'note' => $fx['note']];
     }
 
@@ -4189,7 +4189,7 @@ function produitLigne(): callable
     $prixR = cataloguePrix();
     $enrich = [];
     try {
-        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
+        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM con_prod_product WHERE pwa_id IS NOT NULL') as $r) {
             $enrich[(int) $r['pwa_id']] = $r;
         }
     } catch (PDOException $e) { /* référentiel de production absent */ }
@@ -4600,7 +4600,7 @@ function ep_pwa_tasks_photos(): array
     } catch (PDOException $e) { /* table absente : pas d'avis */ }
     $reperes = [];
     try {
-        foreach (Db::rows('SELECT id_task, reperes FROM ceo_task_annotation WHERE id_shop = ? AND annot_date = ?',
+        foreach (Db::rows('SELECT id_task, reperes FROM con_task_annotation WHERE id_shop = ? AND annot_date = ?',
             [$shopId, $date]) as $r) {
             $j = json_decode((string) $r['reperes'], true);
             $reperes[(int) $r['id_task']] = annotationNormalise(is_array($j) ? $j : []);
@@ -4956,7 +4956,7 @@ function ep_fonds(): array
     }
 
     $out['fournisseurs'] = array_map(fn ($f) => ['id' => (string) $f['id'], 'nom' => (string) $f['name']],
-        Db::rows('SELECT id, name FROM ceo_supplier ORDER BY name'));
+        Db::rows('SELECT id, name FROM con_supplier ORDER BY name'));
 
     // Le grand livre, période par période (mois civils), avec les soldes.
     $periodes = [];
@@ -5155,12 +5155,12 @@ function planoReferentielsTables(): array
     if ($cache !== null) { return $cache; }
     $formats = []; $contenants = [];
     try {
-        foreach (Db::rows('SELECT * FROM pla_format ORDER BY rang, id') as $f) {
+        foreach (Db::rows('SELECT * FROM con_pla_format ORDER BY rang, id') as $f) {
             $formats[] = ['id' => (int) $f['id'], 'nom' => (string) $f['nom'],
                 'largeurMm' => $f['largeur_mm'] !== null ? (int) $f['largeur_mm'] : null,
                 'hauteurMm' => $f['hauteur_mm'] !== null ? (int) $f['hauteur_mm'] : null];
         }
-        foreach (Db::rows('SELECT * FROM pla_contenant ORDER BY rang, id') as $c) {
+        foreach (Db::rows('SELECT * FROM con_pla_contenant ORDER BY rang, id') as $c) {
             $contenants[] = ['id' => (int) $c['id'], 'nom' => (string) $c['nom']];
         }
     } catch (PDOException $e) { /* tables absentes : listes vides, jamais inventées */ }
@@ -5207,7 +5207,7 @@ function ep_planogramme(): array
 
     // Placements, indexés par emplacement — et par référence pour l'écran.
     $parSlot = []; $placements = [];
-    foreach (Db::rows('SELECT * FROM pla_placement') as $p) {
+    foreach (Db::rows('SELECT * FROM con_pla_placement') as $p) {
         $sid = $p['slot_id'] !== null ? (int) $p['slot_id'] : null;
         $l = ['ref' => (string) $p['ref'], 'slotId' => $sid,
             'fronts' => (int) ($p['fronts'] ?? 1), 'ordre' => (int) ($p['ordre'] ?? 1),
@@ -5228,7 +5228,7 @@ function ep_planogramme(): array
     // Noms des références, pour afficher l'occupant sans second appel.
     $noms = [];
     try {
-        foreach (Db::rows('SELECT ref, nom FROM ceo_prod_product') as $r) {
+        foreach (Db::rows('SELECT ref, nom FROM con_prod_product') as $r) {
             $noms[(string) $r['ref']] = (string) $r['nom'];
         }
     } catch (PDOException $e) { /* sans nom : la référence seule */ }
@@ -5237,10 +5237,10 @@ function ep_planogramme(): array
         foreach (ep_prod_catalogue() as $c) { $noms[(string) $c['ref']] = (string) $c['nom']; }
     }
 
-    $zones = Db::rows('SELECT * FROM pla_zone ORDER BY rang, id');
-    $meubles = Db::rows('SELECT * FROM pla_meuble ORDER BY rang, id');
-    $niveaux = Db::rows('SELECT * FROM pla_niveau ORDER BY rang, id');
-    $slots = Db::rows('SELECT * FROM pla_slot ORDER BY niveau_id, position');
+    $zones = Db::rows('SELECT * FROM con_pla_zone ORDER BY rang, id');
+    $meubles = Db::rows('SELECT * FROM con_pla_meuble ORDER BY rang, id');
+    $niveaux = Db::rows('SELECT * FROM con_pla_niveau ORDER BY rang, id');
+    $slots = Db::rows('SELECT * FROM con_pla_slot ORDER BY niveau_id, position');
 
     $parNiveau = [];
     foreach ($slots as $s) { $parNiveau[(int) $s['niveau_id']][] = $s; }
@@ -5304,7 +5304,7 @@ function ep_planogramme(): array
     $out['totaux']['places'] = count(array_filter($placements, fn ($p) => $p['slotId'] !== null));
     $out['totaux']['refs'] = count($placements);
 
-    foreach (Db::rows('SELECT * FROM pla_note') as $n) {
+    foreach (Db::rows('SELECT * FROM con_pla_note') as $n) {
         $out['notes'][(string) $n['cible'] . ':' . (string) $n['cible_id']] = [
             'cible' => $n['cible'], 'cibleId' => (string) $n['cible_id'],
             'texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
@@ -5321,7 +5321,7 @@ function ep_planogramme(): array
  * d'une boutique → id_recipe → /recipes/{id} → shop_photo_path (sinon
  * main_photo_path, sinon photo_1..3), résolu contre photoBase.
  *
- * Le résultat est MÉMORISÉ sept jours (table ceo_plano_photo), absence
+ * Le résultat est MÉMORISÉ sept jours (table con_plano_photo), absence
  * comprise : deux appels panel par référence, à chaque ouverture d'écran,
  * feraient payer le comptoir entier pour rien. `?rafraichir=1` force la
  * relecture quand une photo vient d'être posée côté panel.
@@ -5350,7 +5350,7 @@ function ep_plano_photos(): array
     $rafraichir = !empty($_GET['rafraichir']);
     $refs = [];
     try {
-        foreach (Db::rows('SELECT ref FROM pla_placement WHERE slot_id IS NOT NULL') as $r) {
+        foreach (Db::rows('SELECT ref FROM con_pla_placement WHERE slot_id IS NOT NULL') as $r) {
             $refs[] = (string) $r['ref'];
         }
     } catch (PDOException $e) { return ['photos' => [], 'source' => 'aucun placement']; }
@@ -5361,7 +5361,7 @@ function ep_plano_photos(): array
     $enMemoire = [];
     try {
         $in = implode(',', array_fill(0, count($refs), '?'));
-        foreach (Db::rows('SELECT * FROM ceo_plano_photo WHERE ref IN (' . $in . ')', $refs) as $c) {
+        foreach (Db::rows('SELECT * FROM con_plano_photo WHERE ref IN (' . $in . ')', $refs) as $c) {
             $age = time() - (strtotime((string) $c['maj_le']) ?: 0);
             if (!$rafraichir && $age < 7 * 86400 && !planoPhotoPerimee($c['url'] ?? null)) {
                 $enMemoire[(string) $c['ref']] = $c;
@@ -5398,7 +5398,7 @@ function ep_plano_photos(): array
         }
         $photos[$ref] = ['nom' => (string) ($trouve['nom'] ?? ''), 'url' => $trouve['url'] ?? null];
         try {
-            Db::exec('INSERT INTO ceo_plano_photo (ref, nom, url, maj_le) VALUES (?,?,?,?)'
+            Db::exec('INSERT INTO con_plano_photo (ref, nom, url, maj_le) VALUES (?,?,?,?)'
                 . ' ON DUPLICATE KEY UPDATE nom = VALUES(nom), url = VALUES(url), maj_le = VALUES(maj_le)',
                 [$ref, mb_substr((string) ($trouve['nom'] ?? ''), 0, 190), $trouve['url'] ?? null,
                  date('Y-m-d H:i:s')]);
@@ -5518,7 +5518,7 @@ function ep_prod_produit_fiche(): array
     }
 
     // La consigne de présentation de l'ancien planogramme, si elle existe encore.
-    try { $n = Db::row('SELECT * FROM pla_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]); }
+    try { $n = Db::row('SELECT * FROM con_pla_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]); }
     catch (PDOException $e) { $n = null; }
     if ($n !== null) {
         $out['note'] = ['texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
@@ -5540,7 +5540,7 @@ function annotationLire(int $shopId, int $taskId, string $date): array
 {
     $out = ['liste' => [], 'maj' => null, 'auteur' => null];
     try {
-        $r = Db::row('SELECT reperes, auteur, maj_le FROM ceo_task_annotation'
+        $r = Db::row('SELECT reperes, auteur, maj_le FROM con_task_annotation'
             . ' WHERE id_shop = ? AND id_task = ? AND annot_date = ?', [$shopId, $taskId, $date]);
     } catch (PDOException $e) { return $out; }
     if ($r === null) { return $out; }
@@ -5619,7 +5619,7 @@ function ep_perf(): array
     $annees = array_values(array_unique(array_filter(array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026')))));
     // L'API du panel seule (11/10/2026, demande de Sam : « pas de table locale, API only »). Plus de copie
     // locale du panel : ni `mac_shop_monthly_pnl` (le P&L mensuel figé à juillet-août), ni `transaction`
-    // (la caisse copiée, arrêtée au 14/07). Le budget reste celui du cockpit (`ceo_shop_month_perf`, saisi
+    // (la caisse copiée, arrêtée au 14/07). Le budget reste celui du cockpit (`con_shop_month_perf`, saisi
     // dans le cockpit, que le panel ne porte pas).
     if (!PanelApi::configured() || $annees === []) { return []; }
     $in = implode(',', array_fill(0, count($annees), '?'));   // la requête du budget du cockpit
@@ -5806,7 +5806,7 @@ function ep_perf(): array
             }
         }
 
-        // 3) Le BUDGET encodé (`ceo_shop_month_perf`) — table du cockpit, la
+        // 3) Le BUDGET encodé (`con_shop_month_perf`) — table du cockpit, la
         //    seule qui le porte. Ni `mac_shop_monthly_pnl` ni `transaction` ne
         //    connaissent le budget : sans cette passe, l'encodage était écrit
         //    en base et jamais relu, et tous les écrans qui comparent au
@@ -5817,7 +5817,7 @@ function ep_perf(): array
         //    rien encaissé » est une information, pas une ligne à masquer.
         try {
             foreach (Db::rows("SELECT shop_id, year, month, revenue_budget, ca_theorique
-                               FROM ceo_shop_month_perf
+                               FROM con_shop_month_perf
                                WHERE year IN ($in) AND (revenue_budget IS NOT NULL OR ca_theorique IS NOT NULL)", $annees) as $r) {
                 $k = $key($r['shop_id'], $r['year'], $r['month']);
                 $bud = $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null;
@@ -5902,14 +5902,14 @@ function ep_budgets(): array
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
     $slugByTag = levierSlugByTag();
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_shop_budget WHERE fiscal_year = ?', [$exercice]) as $b) {
+    foreach (Db::rows('SELECT * FROM con_shop_budget WHERE fiscal_year = ?', [$exercice]) as $b) {
         $sid = $b['shop_id'];
         // Mois encodés = mois dont le BUDGET est saisi. On comptait les mois
-        // ayant un `revenue` dans ceo_shop_month_perf — or le réel vient
+        // ayant un `revenue` dans con_shop_month_perf — or le réel vient
         // désormais du panel (mac_shop_monthly_pnl / transaction) et cette
         // colonne reste vide : le compteur affichait « 0 / 12 » même après une
         // saisie complète, laissant croire que l'encodage n'avait rien gardé.
-        $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM ceo_shop_month_perf
+        $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM con_shop_month_perf
                         WHERE shop_id = ? AND year = ? AND revenue_budget IS NOT NULL AND revenue_budget > 0',
             [$sid, $exercice]);
         // Les charges viennent du modèle RÉSEAU : les taux sont communs à tous
@@ -5950,7 +5950,7 @@ function ep_budgets(): array
             'pctBudget' => (float) $l['pct_budget'],
             'pctTheorique' => $l['pct_theorique'] !== null ? (float) $l['pct_theorique'] : null,
             'champReel' => $l['real_field'],
-        ], Db::rows('SELECT * FROM ceo_shop_budget_line WHERE shop_id = ? AND fiscal_year = ? ORDER BY sort_order', [$sid, $exercice]));
+        ], Db::rows('SELECT * FROM con_shop_budget_line WHERE shop_id = ? AND fiscal_year = ? ORDER BY sort_order', [$sid, $exercice]));
         // Repli : tant que le modèle réseau est vide, ce qu'un magasin avait
         // encodé reste lisible plutôt que de disparaître de l'écran.
         if ($charges === []) { $charges = $ancien; }
@@ -6005,7 +6005,7 @@ function ep_budgets(): array
 function chargesEncodees(string $shopId, int $exercice): array
 {
     $out = [];
-    foreach (Db::rows('SELECT month, poste_id, amount FROM ceo_shop_charge_month
+    foreach (Db::rows('SELECT month, poste_id, amount FROM con_shop_charge_month
                        WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]) as $r) {
         $m = (string) (int) $r['month'];
         if (!isset($out[$m])) { $out[$m] = []; }
@@ -6017,7 +6017,7 @@ function chargesEncodees(string $shopId, int $exercice): array
 function ep_targets(): array
 {
     $ca = []; $expansion = [];
-    foreach (Db::rows('SELECT * FROM ceo_network_target') as $t) {
+    foreach (Db::rows('SELECT * FROM con_network_target') as $t) {
         $h = $t['horizon'];
         $ca[$h] = ['an' => (int) $t['target_year'], 'cible' => (float) $t['revenue_target']];
         if ($t['note'] !== null) { $ca[$h]['note'] = $t['note']; }
@@ -6128,20 +6128,20 @@ function ep_consultants(): array
 function ep_suppliers(): array
 {
     return array_map(fn ($s) => ['id' => $s['id'], 'nom' => $s['name'], 'perim' => $s['perimeter'], 'email' => $s['email']],
-        Db::rows('SELECT * FROM ceo_supplier ORDER BY id'));
+        Db::rows('SELECT * FROM con_supplier ORDER BY id'));
 }
 
 function ep_projects(): array
 {
     $slugByTag = levierSlugByTag();
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_project ORDER BY id') as $p) {
+    foreach (Db::rows('SELECT * FROM con_project ORDER BY id') as $p) {
         $id = $p['id'];
-        $leviers = array_map(fn ($r) => $slugByTag[(int) $r['levid']] ?? '', Db::rows('SELECT levid FROM ceo_project_levid WHERE project_id = ?', [$id]));
+        $leviers = array_map(fn ($r) => $slugByTag[(int) $r['levid']] ?? '', Db::rows('SELECT levid FROM con_project_levid WHERE project_id = ?', [$id]));
         $jalons = array_map(fn ($j) => ['nom' => $j['name'], 'cible' => $j['target_on'], 'reel' => $j['done_on']],
-            Db::rows('SELECT * FROM ceo_project_milestone WHERE project_id = ? ORDER BY sort_order, id', [$id]));
+            Db::rows('SELECT * FROM con_project_milestone WHERE project_id = ? ORDER BY sort_order, id', [$id]));
         $couts = array_map(fn ($c) => ['poste' => $c['label'], 'prevu' => (float) $c['planned'], 'reel' => (float) $c['actual']],
-            Db::rows('SELECT * FROM ceo_project_cost WHERE project_id = ? ORDER BY id', [$id]));
+            Db::rows('SELECT * FROM con_project_cost WHERE project_id = ? ORDER BY id', [$id]));
         $taches = array_map(fn ($t) => [
             'id' => $t['id'], 'nom' => $t['name'],
             'owner' => ['t' => $t['owner_kind'], 'id' => $t['owner_id']],
@@ -6163,7 +6163,7 @@ function ep_projects(): array
                 ? ['shopId' => (string) ($t['src_shop'] ?? ''), 'taskId' => (string) $t['src_task'],
                    'date' => (string) $t['src_date']]
                 : null,
-        ], Db::rows('SELECT * FROM ceo_project_task WHERE project_id = ? ORDER BY id', [$id]));
+        ], Db::rows('SELECT * FROM con_project_task WHERE project_id = ? ORDER BY id', [$id]));
         $out[] = [
             'id' => $id, 'nom' => $p['name'], 'famille' => $p['famille'], 'statut' => $p['status'], 'prio' => $p['priority'],
             'debut' => $p['starts_on'], 'fin' => $p['ends_on'],
@@ -6192,7 +6192,7 @@ function ep_projects(): array
  */
 function tacheSignalement(string $taskId): ?array
 {
-    $r = Db::row('SELECT * FROM ceo_task_issue WHERE task_id = ? ORDER BY id DESC LIMIT 1', [$taskId]);
+    $r = Db::row('SELECT * FROM con_task_issue WHERE task_id = ? ORDER BY id DESC LIMIT 1', [$taskId]);
     if ($r === null) {
         return null;
     }
@@ -6232,8 +6232,8 @@ function ep_taches_suivi(string $periode = 'mois'): array
     // COALESCE pour les validations d'avant l'existence de la colonne.
     $val = Db::rows(
         'SELECT t.id, t.name, t.note, t.done_on, t.validated_at, t.owner_kind, t.owner_id, t.shop_id,'
-        . ' p.name AS projet FROM ceo_project_task t'
-        . ' JOIN ceo_project p ON p.id = t.project_id'
+        . ' p.name AS projet FROM con_project_task t'
+        . ' JOIN con_project p ON p.id = t.project_id'
         . ' WHERE t.note IS NOT NULL AND COALESCE(t.validated_at, t.done_on) >= ?'
         . ' ORDER BY COALESCE(t.validated_at, t.done_on) DESC', [$depuis]);
 
@@ -6247,9 +6247,9 @@ function ep_taches_suivi(string $periode = 'mois'): array
     // yeux, alors qu'une borne de date l'aurait masqué.
     $sig = Db::rows(
         'SELECT i.*, t.name AS tache, t.owner_kind, t.owner_id, p.name AS projet'
-        . ' FROM ceo_task_issue i'
-        . ' JOIN ceo_project_task t ON t.id = i.task_id'
-        . ' JOIN ceo_project p ON p.id = t.project_id'
+        . ' FROM con_task_issue i'
+        . ' JOIN con_project_task t ON t.id = i.task_id'
+        . ' JOIN con_project p ON p.id = t.project_id'
         . ' WHERE i.closed_at IS NULL OR i.created_at >= ?'
         . ' ORDER BY (i.closed_at IS NULL) DESC, i.note ASC, i.created_at ASC', [$depuis]);
 
@@ -6390,7 +6390,7 @@ function fbEcartsDuPost(string $postId): array
 function ep_crm(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_project_crm') as $r) {
+    foreach (Db::rows('SELECT * FROM con_project_crm') as $r) {
         $out[$r['project_id']] = ['gain' => $r['gain'], 'apport' => $r['apport'], 'objectif' => $r['objectif'],
             'attendu' => $r['attendu'] !== null ? (float) $r['attendu'] : null,
             'realise' => $r['realise'] !== null ? (float) $r['realise'] : null];
@@ -6402,7 +6402,7 @@ function ep_crm(): array
  * Les personnes destinataires des rapports.
  *
  * Source de vérité : les comptes du panel (`user_membership` ⨝ `user_profile`),
- * comme pour les consultants. `ceo_person` n'est qu'un repli d'installation
+ * comme pour les consultants. `con_person` n'est qu'un repli d'installation
  * autonome — sur une base réelle il est vide, et l'écran Reporting n'offrait
  * alors AUCUN destinataire sélectionnable, sans le moindre message.
  *
@@ -6442,7 +6442,7 @@ function ep_people(): array
     } catch (PDOException $e) { /* tables du panel absentes : repli local */ }
 
     return array_map(fn ($p) => ['id' => $p['id'], 'nom' => $p['name'], 'role' => $p['role'], 'email' => $p['email']],
-        Db::rows('SELECT * FROM ceo_person ORDER BY id'));
+        Db::rows('SELECT * FROM con_person ORDER BY id'));
 }
 
 function ep_reporting(): array
@@ -6452,9 +6452,9 @@ function ep_reporting(): array
         'freq' => $r['frequency'], 'postes' => json_decode($r['postes_json'], true),
         'destId' => $r['dest_id'], 'ccId' => $r['cc_id'] ?? '',
         'dernier' => $r['last_run'], 'actif' => (bool) $r['active'],
-    ], Db::rows('SELECT * FROM ceo_report_schedule ORDER BY id'));
+    ], Db::rows('SELECT * FROM con_report_schedule ORDER BY id'));
     $alertRules = array_map(fn ($a) => ['id' => $a['id'], 'nom' => $a['name'], 'canal' => $a['channel'], 'actif' => (bool) $a['active']],
-        Db::rows('SELECT * FROM ceo_alert_rule ORDER BY id'));
+        Db::rows('SELECT * FROM con_alert_rule ORDER BY id'));
     return ['reports' => $reports, 'alertRules' => $alertRules];
 }
 
@@ -6469,7 +6469,7 @@ function ep_journal(): array
 /**
  * GET /journal/mails — les e-mails partis du cockpit, les deux sources réunies.
  *
- * Deux machines envoient : les RAPPORTS (ceo_rapport_run, statut « envoye » ou
+ * Deux machines envoient : les RAPPORTS (con_rapport_run, statut « envoye » ou
  * « erreur », avec la liste des destinataires) et les commandes de la CENTRALE
  * D'ACHAT (ceo_app_setting.caMailJournal, tenu par caMailJournal()). Les lire
  * séparément obligeait à ouvrir deux écrans pour répondre à « ce mail est-il
@@ -6484,8 +6484,8 @@ function ep_journal_mails(): array
 
     try {
         foreach (Db::rows("SELECT r.genere_le, r.statut, r.envoye_a, r.resume, p.nom
-                             FROM ceo_rapport_run r
-                             LEFT JOIN ceo_rapport p ON p.id = r.rapport_id
+                             FROM con_rapport_run r
+                             LEFT JOIN con_rapport p ON p.id = r.rapport_id
                             WHERE r.statut IN ('envoye', 'erreur')
                          ORDER BY r.genere_le DESC, r.id DESC LIMIT 120") as $r) {
             $dests = json_decode((string) ($r['envoye_a'] ?? '[]'), true);
@@ -6664,7 +6664,7 @@ function ep_products(): array
         $cout = [];
         foreach (catalogueCouts() as $pid => $c) { $cout[$pid] = $c['mat']; }
         try {
-            foreach (Db::rows('SELECT pwa_id, mat FROM ceo_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
+            foreach (Db::rows('SELECT pwa_id, mat FROM con_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
                 $cout[(int) $c['pwa_id']] = (float) $c['mat'];
             }
         } catch (PDOException $eC) { /* référentiel absent : recettes seules */ }
@@ -6767,9 +6767,9 @@ function ep_products(): array
         $rows = Db::rows(
             'SELECT p.id, p.nom, p.categorie, s.volume, s.nb_magasins, s.prix_moyen, s.cout_unitaire,
                     n1.volume AS volume_n1
-               FROM ceo_product p
-               JOIN ceo_product_month_sales s  ON s.product_id = p.id AND s.annee = ? AND s.mois = ?
-          LEFT JOIN ceo_product_month_sales n1 ON n1.product_id = p.id AND n1.annee = ? AND n1.mois = ?
+               FROM con_product p
+               JOIN con_product_month_sales s  ON s.product_id = p.id AND s.annee = ? AND s.mois = ?
+          LEFT JOIN con_product_month_sales n1 ON n1.product_id = p.id AND n1.annee = ? AND n1.mois = ?
               WHERE p.actif = 1 ORDER BY p.id', [$annee, $mois, $annee - 1, $mois]);
         return array_map(fn ($r) => [
             'id' => $r['id'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
@@ -6964,7 +6964,7 @@ function ep_ca_catalogue(): array
     $comm = (float) ($p['commissionMarquePct'] ?? 4.0);
     $fourn = [];
     try {
-        foreach (Db::rows('SELECT id, name FROM ceo_supplier ORDER BY id') as $f) { $fourn[] = $f['name']; }
+        foreach (Db::rows('SELECT id, name FROM con_supplier ORDER BY id') as $f) { $fourn[] = $f['name']; }
     } catch (PDOException $e) { /* référentiel fournisseurs absent */ }
 
     foreach (ep_prod_catalogue() as $l) {
@@ -7169,7 +7169,7 @@ function ep_ca_reglages(): array
 {
     $out = ['params' => caParams(), 'fournisseurs' => [], 'etat' => 'ok'];
     try {
-        foreach (Db::rows('SELECT id, name, perimeter, email FROM ceo_supplier ORDER BY id') as $f) {
+        foreach (Db::rows('SELECT id, name, perimeter, email FROM con_supplier ORDER BY id') as $f) {
             $out['fournisseurs'][] = ['id' => (string) $f['id'], 'nom' => $f['name'],
                 'perimetre' => $f['perimeter'], 'email' => $f['email'],
                 // Le taux de RFA n'est porté par aucune source : la colonne
@@ -7188,7 +7188,7 @@ function ep_ca_demandes(): array
 {
     try {
         $r = Db::rows('SELECT id, fournisseur, base, du, au, campagne, total_qte, total_cible, statut, cree_le
-                       FROM ceo_ca_demande ORDER BY id DESC LIMIT 200');
+                       FROM con_ca_demande ORDER BY id DESC LIMIT 200');
     } catch (PDOException $e) { return ['etat' => 'attente', 'lignes' => [], 'motif' => 'table indisponible']; }
     return ['etat' => 'ok', 'lignes' => array_map(fn ($d) => [
         'id' => (string) $d['id'], 'fournisseur' => $d['fournisseur'], 'base' => $d['base'],
@@ -7915,7 +7915,7 @@ function ep_lacunes(): array
 
     // --- exploitation : objectifs absents parce que le budget n'est pas saisi
     try {
-        $b = Db::row('SELECT COUNT(*) AS n FROM ceo_shop_budget');
+        $b = Db::row('SELECT COUNT(*) AS n FROM con_shop_budget');
         $s = Db::row('SELECT COUNT(*) AS n FROM shops WHERE active = 1');
         $nb = (int) ($b['n'] ?? 0); $ns = (int) ($s['n'] ?? 0);
         if ($ns > 0 && $nb < $ns) {
@@ -7967,7 +7967,7 @@ function ep_lacunes(): array
             if ($sansBatch === $n) {
                 $out['assortiment'][] = lacune('Batch (fournée minimale)',
                     'aucune des ' . $n . ' références ne porte de batch',
-                    'Fiche de production — le champ existe (ceo_prod_product.bmin), il attend la saisie. '
+                    'Fiche de production — le champ existe (con_prod_product.bmin), il attend la saisie. '
                     . 'Sans lui, le minimum d\'assortiment ne peut pas être calé sur une fournée', 'saisie');
                 $out['catalogue'][] = end($out['assortiment']);
             }
@@ -7992,7 +7992,7 @@ function ep_lacunes(): array
 
     // --- assortiment : rien n'est déclaré obligatoire
     try {
-        $c2 = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_product WHERE must = 1');
+        $c2 = Db::row('SELECT COUNT(*) AS n FROM con_prod_product WHERE must = 1');
         if ((int) ($c2['n'] ?? 0) === 0) {
             $out['assortiment'][] = lacune('Références obligatoires',
                 'aucune référence déclarée obligatoire pour le réseau',
@@ -8579,13 +8579,13 @@ const BUDGET_NOTE_AUTEURS = ['franchise', 'consultant', 'marque'];
 /**
  * Table des annotations, posée à la première lecture.
  *
- * Elle vit à côté de `ceo_shop_month_perf` et suit sa clé : magasin, année,
+ * Elle vit à côté de `con_shop_month_perf` et suit sa clé : magasin, année,
  * mois. Rien n'y est écrit tant que personne n'a rédigé — un mois sans note
  * n'a pas de ligne, et c'est ce qui rend le vide lisible à l'impression.
  */
 function ensureBudgetNotes(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_month_note ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_shop_month_note ('
         . 'shop_id VARCHAR(8) NOT NULL,'
         . 'year SMALLINT NOT NULL,'
         . 'month TINYINT NOT NULL,'
@@ -8615,7 +8615,7 @@ function ep_budget_notes(): array
     }
 
     $mois = [];
-    foreach (Db::rows('SELECT month, auteur, texte, maj_par, maj_le FROM ceo_shop_month_note
+    foreach (Db::rows('SELECT month, auteur, texte, maj_par, maj_le FROM con_shop_month_note
                         WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
         $texte = trim((string) ($r['texte'] ?? ''));
         if ($texte === '') { continue; }
@@ -8693,7 +8693,7 @@ function ep_budget_campagnes(): array
     // Les douze mois, magasin par magasin : budget validé et théorique.
     $parMag = [];
     foreach ($shops as $sh) { $parMag[(string) $sh['id']] = array_fill(0, 12, ['budget' => null, 'theorique' => null]); }
-    foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ?', [$exercice]) as $r) {
+    foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE year = ?', [$exercice]) as $r) {
         $sid = (string) $r['shop_id']; $m = (int) $r['month'];
         if (!isset($parMag[$sid]) || $m < 1 || $m > 12) { continue; }
         $parMag[$sid][$m - 1] = [

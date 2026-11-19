@@ -111,7 +111,7 @@ if ($m['ca'] <= 0) {
 }
 
 // La fenêtre réellement servie, telle que ep_products vient de la graver. Son
-// dernier repli — ceo_product_month_sales — ne la grave PAS : le réglage
+// dernier repli — con_product_month_sales — ne la grave PAS : le réglage
 // porterait alors la fenêtre d'un appel précédent. On ne s'en sert donc que
 // s'il parle bien de la fenêtre demandée, sinon on dit qu'on ne sait pas
 // plutôt que d'étiqueter la base d'une source qui n'est pas la sienne.

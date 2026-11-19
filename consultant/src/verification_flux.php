@@ -97,7 +97,7 @@ function vxJour(int $sid, string $date, bool $calculer): ?array
         $v = json_encode(['quand' => time(), 'sig' => $sig, 'j' => $j], JSON_UNESCAPED_UNICODE);
         if ($v !== false) { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, $v]); }
     } catch (Throwable $e) { /* sans gravure : recalculée la prochaine fois */ }
-    // Lot 3 : la journée entre aussi dans la base quotidienne (ceo_verif_jour).
+    // Lot 3 : la journée entre aussi dans la base quotidienne (con_verif_jour).
     if (function_exists('vjEnregistre')) { vjEnregistre($sid, $date, $j); }
     return $j + ['_q' => time()];
 }

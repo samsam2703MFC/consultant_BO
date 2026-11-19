@@ -463,10 +463,10 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   que le budget est à 0 (au 07/11/2026 : 38 + 2 = **40 %**). Une seule définition, `seuilsCharges()`
   (`src/endpoints.php`), lue par le jour, la période et le téléphone (qui avait 35 % en dur). Main-d'œuvre et
   frais généraux restent ceux de la table `kpi` ; repli 32 / 33 / 13,5. Les six leviers du Mois, eux, gardent les
-  seuils d'alerte de la Table KPI (`ceo_kpi_def`).
+  seuils d'alerte de la Table KPI (`con_kpi_def`).
 - **P&L court hors TVA et onglet Frais** (16/11/2026, `src/pnl_ht.php` et `src/franchise/frais.php`, maquette `docs/maquettes/frais-tva`) : le
   P&L du jour, de la semaine et du mois se lit hors TVA. Le CA encaissé (TTC) en tête, la TVA des tickets retirée
-  (lue ticket par ticket dans la liste du jour, sinon la caisse gravée `ceo_verif_ca`, sinon le taux habituel du
+  (lue ticket par ticket dans la liste du jour, sinon la caisse gravée `con_verif_ca`, sinon le taux habituel du
   magasin, sinon 6 %), puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA, d'après l'onglet
   **Frais** du rail (groupe « Les chiffres ») : les frais du mois au panel, et pour chaque poste « TVA comprise ? » et
   le taux (table `panel_frais_tva`). Restent TTC : le CA des tuiles, l'objectif, le panier, la valeur du magasin.
@@ -632,7 +632,7 @@ d'une ouverture revient à le multiplier par le CA visé ÷ 1 000 — c'est ce q
 fait `--ca`.
 
 Le chiffre vient de `ep_products()`, la source de l'écran **Scoring des
-références** : le panel d'abord, la caisse locale en repli, `ceo_product_month_sales`
+références** : le panel d'abord, la caisse locale en repli, `con_product_month_sales`
 en dernier. Le CA d'une référence est `volume × prix moyen`, comme le fait
 l'écran — deux écrans ne calculent pas la même chose de deux façons.
 

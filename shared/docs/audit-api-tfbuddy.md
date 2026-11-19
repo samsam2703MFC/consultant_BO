@@ -234,7 +234,7 @@ donnée.
 `brand_guard_*` sont **la source**, et non une copie de TFBuddy. Il n'y a rien à
 remplacer, avec une option à trancher :
 
-- **Budget de CA** (`ceo_shop_budget`, `ceo_shop_month_perf`) ↔
+- **Budget de CA** (`con_shop_budget`, `con_shop_month_perf`) ↔
   `GET/PUT /consultant/shops/{id}/targets` : des cibles mensuelles par métrique,
   avec trois seuils. S'y ajoutent `/admin/metric-definitions` et
   `/panel/shops/{id}/targets/evaluation`. S'il existe une métrique de CA, le

@@ -76,8 +76,8 @@ function ensureScoring(): void
 function sqRapportSemer(): void
 {
     try {
-        if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', [SQ_RAPPORT_CODE]) !== null) { return; }
-        Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+        if (Db::row('SELECT id FROM con_rapport WHERE code = ?', [SQ_RAPPORT_CODE]) !== null) { return; }
+        Db::exec('INSERT INTO con_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?)',
             [SQ_RAPPORT_CODE, 'Scoring du trimestre — classement et fiche magasin', 'Magasins', 'mensuel', 8, 1,
              json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
@@ -395,7 +395,7 @@ function sqCalcul(array $tri): array
     $etoiles = array_map(fn ($l) => $l['etoiles'], $lignes);
     $oblig = sqObligatoires();
     $rep = null;
-    try { $rep = Db::row('SELECT id, destinataires, dest_par_magasin, actif FROM ceo_rapport WHERE code = ?', [SQ_RAPPORT_CODE]); } catch (PDOException $e) { /* pas de reporting */ }
+    try { $rep = Db::row('SELECT id, destinataires, dest_par_magasin, actif FROM con_rapport WHERE code = ?', [SQ_RAPPORT_CODE]); } catch (PDOException $e) { /* pas de reporting */ }
     $carnet = $rep ? (json_decode((string) ($rep['dest_par_magasin'] ?? ''), true) ?: []) : [];
     return ['trimestre' => $tri, 'trimestres' => sqTrimestres(), 'postes' => SQ_POSTES, 'magasins' => $lignes,
         'reseau' => ['sur20' => $lignes ? round(array_sum(array_map(fn ($l) => $l['total'], $lignes)) / count($lignes), 1) : null, 'magasins' => count($lignes), 'complets' => count($complets),
@@ -716,7 +716,7 @@ function sqDistribuer(array $tri, ?array $rep, ?string $essai = null): array
         try {
             $html = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px">' . sqH($bilan['resume']) . '<ul>'
                 . implode('', array_map(fn ($m) => '<li>' . sqH($m['magasin'] . ' — ' . $m['statut'] . (!empty($m['envoyes']) ? ' (' . implode(', ', $m['envoyes']) . ')' : '')) . '</li>', $bilan['magasins'])) . '</ul></div>';
-            Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte) VALUES (?,?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO con_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte) VALUES (?,?,?,?,?,?,?,?)',
                 [(int) $rep['id'], date('Y-m-d H:i:s'), $tri['du'], $tri['au'], $servis > 0 ? 'envoye' : 'vide', $bilan['resume'], $html, json_encode(['rapport' => 'Scoring du trimestre ' . $tri['court']], JSON_UNESCAPED_UNICODE)]);
             $bilan['runId'] = (int) Db::pdo()->lastInsertId();
         } catch (PDOException $e) { /* pas de journal de runs ici */ }
@@ -733,7 +733,7 @@ function wr_scoring_envoyer(): array
     $tri = sqTrimestre(is_string($b['trimestre'] ?? null) ? $b['trimestre'] : null);
     $essai = isset($b['essai']) && filter_var((string) $b['essai'], FILTER_VALIDATE_EMAIL) ? (string) $b['essai'] : null;
     $rep = null;
-    try { $rep = Db::row('SELECT * FROM ceo_rapport WHERE code = ?', [SQ_RAPPORT_CODE]); } catch (PDOException $e) { /* pas de reporting */ }
+    try { $rep = Db::row('SELECT * FROM con_rapport WHERE code = ?', [SQ_RAPPORT_CODE]); } catch (PDOException $e) { /* pas de reporting */ }
     $bilan = sqDistribuer($tri, $rep, $essai);
     if (isset($bilan['error'])) { http_response_code(409); return $bilan; }
     return ['ok' => true] + $bilan;

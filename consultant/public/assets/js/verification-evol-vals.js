@@ -1,7 +1,7 @@
 /* Cockpit CEO — Vérification › Évolution (#/verification/evolution), lot 3 (31/10/2026).
  * Plan : docs/plan-verification.md § 5 et lot 3 ; maquette docs/maquettes/verification/f.png.
  *
- * GET /verification/evolution?semaines= : la base quotidienne ceo_verif_jour, sommée semaine par semaine — magasin par
+ * GET /verification/evolution?semaines= : la base quotidienne con_verif_jour, sommée semaine par semaine — magasin par
  * magasin et pour le réseau — et « avant / maintenant » (les premières semaines face aux dernières). Pour voir si la
  * gestion s'améliore : moins de poubelle, moins de non expliqué, plus de journées mesurées, plus de recettes fiables.
  *

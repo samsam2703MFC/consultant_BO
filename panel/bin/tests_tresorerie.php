@@ -19,7 +19,7 @@ final class Db
     public static array $perf = [];
     public static function rows(string $sql, array $a = []): array
     {
-        if (str_contains($sql, 'ceo_shop_month_perf')) { return array_values(array_filter(self::$perf, static fn ($r) => (string) $r['shop_id'] === (string) $a[0])); }
+        if (str_contains($sql, 'con_shop_month_perf')) { return array_values(array_filter(self::$perf, static fn ($r) => (string) $r['shop_id'] === (string) $a[0])); }
         return [];
     }
     public static function row(string $sql, array $a = []): ?array

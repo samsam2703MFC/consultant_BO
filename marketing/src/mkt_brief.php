@@ -160,7 +160,7 @@ function mktBriefDonnees(int $id): ?array
         $an = (int) substr($du, 0, 4);
         $mois = [];
         foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique
-                             FROM ceo_shop_month_perf WHERE year = ?', [$an]) as $r) {
+                             FROM con_shop_month_perf WHERE year = ?', [$an]) as $r) {
             $sid = (string) $r['shop_id']; $m = (int) $r['month'];
             if ($m < 1 || $m > 12) { continue; }
             if (!isset($mois[$sid])) { $mois[$sid] = array_fill(0, 12, ['budget' => null, 'theorique' => null]); }

@@ -15,11 +15,11 @@ declare(strict_types=1);
  * s'imprime.
  *
  * Quatre tables, créées au premier appel comme les annotations mensuelles :
- *  · ceo_plan_engagement  — l'objectif de l'année, ses raisons, ses signatures
- *  · ceo_plan_action      — une ligne par action, avec son statut
- *  · ceo_plan_trimestre   — une ligne par (trimestre, voix) : les annotations,
+ *  · con_plan_engagement  — l'objectif de l'année, ses raisons, ses signatures
+ *  · con_plan_action      — une ligne par action, avec son statut
+ *  · con_plan_trimestre   — une ligne par (trimestre, voix) : les annotations,
  *                           et la voix « suite » = ce qui est mis en route
- *  · ceo_plan_revue       — l'état du rituel : l'étape atteinte, la validation
+ *  · con_plan_revue       — l'état du rituel : l'étape atteinte, la validation
  */
 
 const PLAN_VOIX = ['franchise', 'consultant', 'marque', 'suite'];
@@ -28,7 +28,7 @@ const PLAN_STATUTS_ENG = ['brouillon', 'engage', 'valide'];
 
 function ensurePlan(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plan_engagement ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plan_engagement ('
         . 'shop_id VARCHAR(8) NOT NULL, year SMALLINT NOT NULL,'
         . 'objectif DECIMAL(14,2) NULL, rampe DECIMAL(14,2) NULL, motif TEXT NULL,'
         . 'statut VARCHAR(12) NOT NULL DEFAULT \'brouillon\','
@@ -36,19 +36,19 @@ function ensurePlan(): void
         . 'valide_par VARCHAR(120) NULL, valide_le DATETIME NULL,'
         . 'maj_le DATETIME NULL, PRIMARY KEY (shop_id, year)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plan_action ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plan_action ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(8) NOT NULL, year SMALLINT NOT NULL,'
         . 'libelle VARCHAR(200) NOT NULL, effet_an DECIMAL(12,2) NULL, trimestre TINYINT NULL,'
         . 'statut VARCHAR(12) NOT NULL DEFAULT \'alancer\', responsable VARCHAR(120) NULL,'
         . 'date_lancement DATE NULL, mesure VARCHAR(200) NULL, effet_constate VARCHAR(200) NULL,'
         . 'ordre INT NOT NULL DEFAULT 0, maj_le DATETIME NULL, KEY k_plan (shop_id, year)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plan_trimestre ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plan_trimestre ('
         . 'shop_id VARCHAR(8) NOT NULL, year SMALLINT NOT NULL, trimestre TINYINT NOT NULL,'
         . 'auteur VARCHAR(12) NOT NULL, texte TEXT NULL, maj_par VARCHAR(120) NULL, maj_le DATETIME NULL,'
         . 'PRIMARY KEY (shop_id, year, trimestre, auteur)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plan_revue ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_plan_revue ('
         . 'shop_id VARCHAR(8) NOT NULL, year SMALLINT NOT NULL, trimestre TINYINT NOT NULL,'
         . 'etape TINYINT NOT NULL DEFAULT 1, valide_par VARCHAR(120) NULL, valide_le DATETIME NULL,'
         . 'PRIMARY KEY (shop_id, year, trimestre)'
@@ -60,12 +60,12 @@ function planRampe(string $shop, int $exercice): array
 {
     $b = null;
     try {
-        $b = Db::row('SELECT etude_potentiel_maturite, annee_exploitation, montee_regime FROM ceo_shop_budget
+        $b = Db::row('SELECT etude_potentiel_maturite, annee_exploitation, montee_regime FROM con_shop_budget
                        WHERE shop_id = ? AND fiscal_year = ?', [$shop, $exercice]);
         // À défaut d'étude sur l'exercice, la plus récente : la rampe ne change
         // pas d'une année à l'autre, seule l'année d'exploitation avance.
         if (!$b || !$b['etude_potentiel_maturite']) {
-            $b2 = Db::row('SELECT fiscal_year, etude_potentiel_maturite, annee_exploitation, montee_regime FROM ceo_shop_budget
+            $b2 = Db::row('SELECT fiscal_year, etude_potentiel_maturite, annee_exploitation, montee_regime FROM con_shop_budget
                             WHERE shop_id = ? AND etude_potentiel_maturite > 0 ORDER BY fiscal_year DESC LIMIT 1', [$shop]);
             if ($b2) { $b = $b2; $b['annee_exploitation'] = (int) $b2['annee_exploitation'] + ($exercice - (int) $b2['fiscal_year']); }
         }
@@ -100,7 +100,7 @@ function ep_plan(): array
 
     // Les engagements, toutes années (la rampe en montre cinq).
     $engagements = [];
-    foreach (Db::rows('SELECT * FROM ceo_plan_engagement WHERE shop_id = ?', [$shop]) as $r) {
+    foreach (Db::rows('SELECT * FROM con_plan_engagement WHERE shop_id = ?', [$shop]) as $r) {
         $engagements[(string) $r['year']] = [
             'objectif' => $r['objectif'] !== null ? (float) $r['objectif'] : null,
             'rampe' => $r['rampe'] !== null ? (float) $r['rampe'] : null,
@@ -115,13 +115,13 @@ function ep_plan(): array
         'statut' => (string) $a['statut'], 'responsable' => (string) ($a['responsable'] ?? ''),
         'dateLancement' => $a['date_lancement'], 'mesure' => (string) ($a['mesure'] ?? ''),
         'effetConstate' => (string) ($a['effet_constate'] ?? ''), 'ordre' => (int) $a['ordre']],
-        Db::rows('SELECT * FROM ceo_plan_action WHERE shop_id = ? AND year = ? ORDER BY ordre, id', [$shop, $exercice]));
+        Db::rows('SELECT * FROM con_plan_action WHERE shop_id = ? AND year = ? ORDER BY ordre, id', [$shop, $exercice]));
     $notes = [];
-    foreach (Db::rows('SELECT trimestre, auteur, texte, maj_par, maj_le FROM ceo_plan_trimestre WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
+    foreach (Db::rows('SELECT trimestre, auteur, texte, maj_par, maj_le FROM con_plan_trimestre WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
         $notes[(int) $r['trimestre']][(string) $r['auteur']] = ['texte' => (string) $r['texte'], 'par' => $r['maj_par'], 'le' => $r['maj_le']];
     }
     $revues = [];
-    foreach (Db::rows('SELECT trimestre, etape, valide_par, valide_le FROM ceo_plan_revue WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
+    foreach (Db::rows('SELECT trimestre, etape, valide_par, valide_le FROM con_plan_revue WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
         $revues[(int) $r['trimestre']] = ['etape' => (int) $r['etape'], 'validePar' => $r['valide_par'], 'valideLe' => $r['valide_le']];
     }
 
@@ -269,13 +269,13 @@ function wr_plan_engagement(): array
     $motif = trim((string) ($b['motif'] ?? ''));
     $par = trim((string) ($b['par'] ?? '')) ?: null;
     if ($statut !== 'brouillon' && ($obj === null || $obj <= 0)) { http_response_code(422); return ['error' => 'un engagement sans objectif ne se dépose pas']; }
-    $prev = Db::row('SELECT * FROM ceo_plan_engagement WHERE shop_id = ? AND year = ?', [$shop, $an]);
+    $prev = Db::row('SELECT * FROM con_plan_engagement WHERE shop_id = ? AND year = ?', [$shop, $an]);
     $engagePar = $prev['engage_par'] ?? null; $engageLe = $prev['engage_le'] ?? null;
     $validePar = $prev['valide_par'] ?? null; $valideLe = $prev['valide_le'] ?? null;
     if ($statut === 'engage' && ($prev === null || $prev['statut'] === 'brouillon')) { $engagePar = $par; $engageLe = date('Y-m-d H:i:s'); }
     if ($statut === 'valide') { if ($engageLe === null) { $engagePar = $par; $engageLe = date('Y-m-d H:i:s'); } $validePar = $par; $valideLe = date('Y-m-d H:i:s'); }
     if ($statut === 'brouillon') { $engagePar = null; $engageLe = null; $validePar = null; $valideLe = null; }
-    Db::exec('INSERT INTO ceo_plan_engagement (shop_id, year, objectif, rampe, motif, statut, engage_par, engage_le, valide_par, valide_le, maj_le)
+    Db::exec('INSERT INTO con_plan_engagement (shop_id, year, objectif, rampe, motif, statut, engage_par, engage_le, valide_par, valide_le, maj_le)
               VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
               ON DUPLICATE KEY UPDATE objectif = VALUES(objectif), rampe = VALUES(rampe), motif = VALUES(motif), statut = VALUES(statut),
                 engage_par = VALUES(engage_par), engage_le = VALUES(engage_le), valide_par = VALUES(valide_par), valide_le = VALUES(valide_le), maj_le = NOW()',
@@ -295,7 +295,7 @@ function wr_plan_action(): array
     if ($shop === '' || $an < 2000) { http_response_code(400); return ['error' => 'magasin ou exercice manquant']; }
     $id = (int) ($b['id'] ?? 0);
     if (!empty($b['supprimer'])) {
-        if ($id > 0) { Db::exec('DELETE FROM ceo_plan_action WHERE id = ? AND shop_id = ? AND year = ?', [$id, $shop, $an]); }
+        if ($id > 0) { Db::exec('DELETE FROM con_plan_action WHERE id = ? AND shop_id = ? AND year = ?', [$id, $shop, $an]); }
         return ['ok' => true, 'supprime' => $id];
     }
     $lib = trim((string) ($b['libelle'] ?? ''));
@@ -308,11 +308,11 @@ function wr_plan_action(): array
     $vals = [mb_substr($lib, 0, 200), $effet, $trim, $statut, mb_substr(trim((string) ($b['responsable'] ?? '')), 0, 120),
         $date, mb_substr(trim((string) ($b['mesure'] ?? '')), 0, 200), mb_substr(trim((string) ($b['effetConstate'] ?? '')), 0, 200)];
     if ($id > 0) {
-        Db::exec('UPDATE ceo_plan_action SET libelle = ?, effet_an = ?, trimestre = ?, statut = ?, responsable = ?, date_lancement = ?, mesure = ?, effet_constate = ?, maj_le = NOW()
+        Db::exec('UPDATE con_plan_action SET libelle = ?, effet_an = ?, trimestre = ?, statut = ?, responsable = ?, date_lancement = ?, mesure = ?, effet_constate = ?, maj_le = NOW()
                   WHERE id = ? AND shop_id = ? AND year = ?', array_merge($vals, [$id, $shop, $an]));
     } else {
-        $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 n FROM ceo_plan_action WHERE shop_id = ? AND year = ?', [$shop, $an])['n'] ?? 1);
-        Db::exec('INSERT INTO ceo_plan_action (shop_id, year, libelle, effet_an, trimestre, statut, responsable, date_lancement, mesure, effet_constate, ordre, maj_le)
+        $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 n FROM con_plan_action WHERE shop_id = ? AND year = ?', [$shop, $an])['n'] ?? 1);
+        Db::exec('INSERT INTO con_plan_action (shop_id, year, libelle, effet_an, trimestre, statut, responsable, date_lancement, mesure, effet_constate, ordre, maj_le)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())', array_merge([$shop, $an], $vals, [$ordre]));
         $id = (int) Db::pdo()->lastInsertId();
     }
@@ -331,10 +331,10 @@ function wr_plan_trimestre(): array
     if (mb_strlen($texte) > 4000) { http_response_code(422); return ['error' => 'texte trop long (maximum 4 000 caractères)']; }
     $par = trim((string) ($b['par'] ?? '')) ?: null;
     if ($texte === '') {
-        Db::exec('DELETE FROM ceo_plan_trimestre WHERE shop_id = ? AND year = ? AND trimestre = ? AND auteur = ?', [$shop, $an, $q, $qui]);
+        Db::exec('DELETE FROM con_plan_trimestre WHERE shop_id = ? AND year = ? AND trimestre = ? AND auteur = ?', [$shop, $an, $q, $qui]);
         return ['ok' => true, 'vide' => true];
     }
-    Db::exec('INSERT INTO ceo_plan_trimestre (shop_id, year, trimestre, auteur, texte, maj_par, maj_le) VALUES (?,?,?,?,?,?,NOW())
+    Db::exec('INSERT INTO con_plan_trimestre (shop_id, year, trimestre, auteur, texte, maj_par, maj_le) VALUES (?,?,?,?,?,?,NOW())
               ON DUPLICATE KEY UPDATE texte = VALUES(texte), maj_par = VALUES(maj_par), maj_le = NOW()', [$shop, $an, $q, $qui, $texte, $par]);
     return ['ok' => true, 'par' => $par, 'le' => date('Y-m-d H:i:s')];
 }
@@ -352,7 +352,7 @@ function wr_plan_revue(): array
     if ($valider) {
         // Une revue ne se valide pas avec une voix muette : c'est le sens du rituel.
         $voix = [];
-        foreach (Db::rows('SELECT auteur, texte FROM ceo_plan_trimestre WHERE shop_id = ? AND year = ? AND trimestre = ?', [$shop, $an, $q]) as $r) {
+        foreach (Db::rows('SELECT auteur, texte FROM con_plan_trimestre WHERE shop_id = ? AND year = ? AND trimestre = ?', [$shop, $an, $q]) as $r) {
             if (trim((string) $r['texte']) !== '') { $voix[(string) $r['auteur']] = true; }
         }
         $manque = array_values(array_filter(['franchise', 'consultant', 'marque', 'suite'], static fn ($v) => !isset($voix[$v])));
@@ -361,12 +361,12 @@ function wr_plan_revue(): array
             $noms = ['franchise' => 'la voix du franchisé', 'consultant' => 'la voix du consultant', 'marque' => 'la voix de la marque', 'suite' => 'ce qui est mis en route au prochain trimestre'];
             return ['error' => 'La revue ne se valide pas : il manque ' . implode(', ', array_map(static fn ($v) => $noms[$v], $manque)) . '.'];
         }
-        Db::exec('INSERT INTO ceo_plan_revue (shop_id, year, trimestre, etape, valide_par, valide_le) VALUES (?,?,?,5,?,NOW())
+        Db::exec('INSERT INTO con_plan_revue (shop_id, year, trimestre, etape, valide_par, valide_le) VALUES (?,?,?,5,?,NOW())
                   ON DUPLICATE KEY UPDATE etape = 5, valide_par = VALUES(valide_par), valide_le = NOW()', [$shop, $an, $q, $par]);
         journalAdd($par ?? 'CEO', 'Plan', magasinConnu($shop), 'Revue T' . $q . ' ' . $an . ' validée');
         return ['ok' => true, 'valideLe' => date('Y-m-d H:i:s'), 'validePar' => $par];
     }
-    Db::exec('INSERT INTO ceo_plan_revue (shop_id, year, trimestre, etape) VALUES (?,?,?,?)
+    Db::exec('INSERT INTO con_plan_revue (shop_id, year, trimestre, etape) VALUES (?,?,?,?)
               ON DUPLICATE KEY UPDATE etape = GREATEST(etape, VALUES(etape))', [$shop, $an, $q, $etape]);
     return ['ok' => true, 'etape' => $etape];
 }

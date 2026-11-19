@@ -26,7 +26,7 @@ declare(strict_types=1);
  *   1. l'aperçu montre chaque appel et son corps exact, sans rien envoyer ;
  *   2. la création s'arrête au premier refus du panel ; une tâche identique (même nom, même
  *      jour, même heure) n'est jamais recréée — elle est seulement ajoutée à la checklist ;
- *   3. seul ce qui a été créé depuis cet écran (table ceo_cadre_cree) s'y supprime d'un clic ; une tâche ou une
+ *   3. seul ce qui a été créé depuis cet écran (table con_cadre_cree) s'y supprime d'un clic ; une tâche ou une
  *      checklist créée dans le panel, seulement avec son nom exact (?confirmer=).
  *
  * Compte : celui du cockpit (compte consultant, PanelApi) ; ou, si le panel le refuse sur ces
@@ -203,7 +203,7 @@ function ensureCadreCree(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_cadre_cree (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_cadre_cree (
         genre VARCHAR(10) NOT NULL,
         panel_id INT NOT NULL,
         nom VARCHAR(190) NOT NULL,
@@ -222,7 +222,7 @@ function tkTracer(string $genre, int $id, string $nom, string $jour, string $heu
 {
     try {
         ensureCadreCree();
-        Db::exec('INSERT INTO ceo_cadre_cree (genre, panel_id, nom, jour, heure, checklist_id, modele_id, compte, cree_le)
+        Db::exec('INSERT INTO con_cadre_cree (genre, panel_id, nom, jour, heure, checklist_id, modele_id, compte, cree_le)
                   VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE nom = VALUES(nom), supprime_le = NULL',
             [$genre, $id, mb_substr($nom, 0, 190), mb_substr($jour, 0, 60), substr($heure, 0, 8), $cid, $modele,
              PanelApi::$jetonImpose !== null ? 'admin' : 'cockpit', date('Y-m-d H:i:s')]);
@@ -302,7 +302,7 @@ function tkCadre(): array
     $creees = []; $clCreees = [];
     try {
         ensureCadreCree();
-        foreach (Db::rows('SELECT * FROM ceo_cadre_cree WHERE supprime_le IS NULL ORDER BY cree_le DESC, panel_id DESC LIMIT 300') as $r) {
+        foreach (Db::rows('SELECT * FROM con_cadre_cree WHERE supprime_le IS NULL ORDER BY cree_le DESC, panel_id DESC LIMIT 300') as $r) {
             $x = ['id' => (int) $r['panel_id'], 'nom' => (string) $r['nom'], 'jour' => (string) ($r['jour'] ?? ''),
                 'heure' => (string) ($r['heure'] ?? ''), 'checklistId' => (int) ($r['checklist_id'] ?? 0),
                 'modeleId' => (int) ($r['modele_id'] ?? 0), 'compte' => (string) $r['compte'], 'le' => substr((string) $r['cree_le'], 0, 16)];
@@ -1718,7 +1718,7 @@ function tkModifierLot(array $b): array
 }
 
 /**
- * DELETE /task/taches/{id} et DELETE /task/checklists/{id} — ce qui a été créé depuis cet écran (ceo_cadre_cree), ou ce
+ * DELETE /task/taches/{id} et DELETE /task/checklists/{id} — ce qui a été créé depuis cet écran (con_cadre_cree), ou ce
  * dont ?confirmer= porte le nom exact au panel. Supprimer une checklist laisse ses tâches dans le panel.
  * Pour une tâche, ?checklists=43,12 (les checklists où l'écran la voit) : son nom s'y lit quand GET /tasks ne la rend
  * pas (une tâche en pause, que l'écran lit par sa ligne de checklist).
@@ -1726,7 +1726,7 @@ function tkModifierLot(array $b): array
 function tkSupprimer(string $genre, int $id): array
 {
     ensureCadreCree();
-    $r = Db::row('SELECT * FROM ceo_cadre_cree WHERE genre = ? AND panel_id = ? AND supprime_le IS NULL', [$genre, $id]);
+    $r = Db::row('SELECT * FROM con_cadre_cree WHERE genre = ? AND panel_id = ? AND supprime_le IS NULL', [$genre, $id]);
     $quoi = $genre === 'checklist' ? 'checklist' : 'tâche';
     // Une checklist ou une tâche créée dans le panel (08/11/2026, « Checklist Test Consultant » ; 13/11/2026, « je dois
     // pouvoir effacer une tâche ») : supprimée seulement si ?confirmer= porte son NOM EXACT tel que le panel le donne — la
@@ -1765,7 +1765,7 @@ function tkSupprimer(string $genre, int $id): array
         http_response_code(502);
         return ['error' => $rep['erreur'], 'reponse' => $rep['corps']];
     }
-    Db::exec('UPDATE ceo_cadre_cree SET supprime_le = ? WHERE genre = ? AND panel_id = ?', [date('Y-m-d H:i:s'), $genre, $id]);
+    Db::exec('UPDATE con_cadre_cree SET supprime_le = ? WHERE genre = ? AND panel_id = ?', [date('Y-m-d H:i:s'), $genre, $id]);
     journalAdd('CEO', 'Cadre des tâches', null, ucfirst($quoi) . ' « ' . $r['nom'] . ' » (#' . $id . ') supprimée du panel' . (!empty($r['horsCockpit']) ? ' (créée dans le panel, suppression confirmée par son nom)' : ''));
     return ['ok' => true, 'id' => $id, 'reponse' => $rep['corps']];
 }

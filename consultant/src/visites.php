@@ -716,7 +716,7 @@ function viCampagnesDe(string $shop, string $auj): array
     // Le budget du magasin, pour dire « objectif à fixer » avec un chiffre.
     $budgets = [];
     try {
-        foreach (Db::rows('SELECT year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ?', [$shop]) as $r) {
+        foreach (Db::rows('SELECT year, month, revenue_budget, ca_theorique FROM con_shop_month_perf WHERE shop_id = ?', [$shop]) as $r) {
             $budgets[(int) $r['year']][(int) $r['month'] - 1] = ['budget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
                 'theorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null];
         }

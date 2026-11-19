@@ -1305,7 +1305,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     // --- Page 2 : les COMBOS du mois — les taux et les écarts, sans un euro :
     // cette page-là parle du geste, pas de l'argent.
     $combosRows = [];
-    try { $combosRows = Db::rows('SELECT * FROM ceo_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $eC) {}
+    try { $combosRows = Db::rows('SELECT * FROM con_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $eC) {}
     if ($combosRows !== []) {
         $nomDeC = [];
         foreach ($d['magasins'] as $magC) { $nomDeC[(string) $magC['id']] = $magC['nom']; }

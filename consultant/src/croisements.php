@@ -16,9 +16,9 @@ require_once __DIR__ . '/../../shared/src/doc.php';
  * dessert » n'est pas « tickets dessert avec sandwich ». L'écran écrit l'ordre
  * en toutes lettres plutôt que de le laisser deviner.
  *
- * Les combos qui servent s'ENREGISTRENT (table `ceo_combo`) : ils reviennent
+ * Les combos qui servent s'ENREGISTRENT (table `con_combo`) : ils reviennent
  * chaque mois sans être reconstruits. Les mois révolus se mettent en CACHE
- * (`ceo_crois_cache`) : douze mois × cinq périmètres ne relisent pas douze
+ * (`con_crois_cache`) : douze mois × cinq périmètres ne relisent pas douze
  * fois la caisse — seul le mois en cours se recalcule à chaque lecture,
  * parce que lui seul change encore.
  */
@@ -50,26 +50,26 @@ function croisTables(): void
     if ($fait) { return; }
     $fait = true;
     try {
-        Db::exec('CREATE TABLE IF NOT EXISTS ceo_combo (
+        Db::exec('CREATE TABLE IF NOT EXISTS con_combo (
             id INT AUTO_INCREMENT PRIMARY KEY,
             a_sel VARCHAR(140) NOT NULL, a_lib VARCHAR(160) NOT NULL,
             b_sel VARCHAR(140) NOT NULL, b_lib VARCHAR(160) NOT NULL,
             surnom VARCHAR(120) NULL,
             cree_le DATE NOT NULL
         ) DEFAULT CHARSET=utf8mb4');
-        Db::exec('CREATE TABLE IF NOT EXISTS ceo_crois_cache (
+        Db::exec('CREATE TABLE IF NOT EXISTS con_crois_cache (
             a_sel VARCHAR(120) NOT NULL, b_sel VARCHAR(120) NOT NULL,
             mois CHAR(7) NOT NULL, shop VARCHAR(24) NOT NULL,
             ff INT NOT NULL, avec INT NOT NULL,
             ca_b DOUBLE NOT NULL DEFAULT 0, q_b DOUBLE NOT NULL DEFAULT 0,
             PRIMARY KEY (a_sel, b_sel, mois, shop)
         ) DEFAULT CHARSET=utf8mb4');
-        try { Db::exec('ALTER TABLE ceo_combo ADD COLUMN target DOUBLE NULL'); }
+        try { Db::exec('ALTER TABLE con_combo ADD COLUMN target DOUBLE NULL'); }
         catch (Throwable $e) { /* déjà ajoutée */ }
         // Le daypart fait PARTIE du combo : « Flip & Flap × Boissons le midi »
         // et « …toute la journée » sont deux engagements différents, avec
         // chacun sa target et son historique.
-        try { Db::exec("ALTER TABLE ceo_combo ADD COLUMN dp VARCHAR(12) NOT NULL DEFAULT ''"); }
+        try { Db::exec("ALTER TABLE con_combo ADD COLUMN dp VARCHAR(12) NOT NULL DEFAULT ''"); }
         catch (Throwable $e) { /* déjà ajoutée */ }
     } catch (Throwable $e) { /* l'écran dira ce qui manque */ }
 }
@@ -155,7 +155,7 @@ function croisMoisServi(string $aSel, string $bSel, ?array $idsA, array $idsB, s
     $encours = $mois >= date('Y-m');
     if (!$encours) {
         try {
-            $rows = Db::rows('SELECT shop, ff, avec, ca_b, q_b FROM ceo_crois_cache
+            $rows = Db::rows('SELECT shop, ff, avec, ca_b, q_b FROM con_crois_cache
                                WHERE a_sel = ? AND b_sel = ? AND mois = ?', [$aSel, $bSel, $mois]);
             if ($rows !== []) {
                 $out = ['shops' => [], 'caB' => 0.0, 'qB' => 0.0];
@@ -171,11 +171,11 @@ function croisMoisServi(string $aSel, string $bSel, ?array $idsA, array $idsB, s
     if ($c === null) { return null; }
     if (!$encours) {
         try {
-            Db::exec('INSERT INTO ceo_crois_cache (a_sel,b_sel,mois,shop,ff,avec,ca_b,q_b) VALUES (?,?,?,?,?,?,?,?)
+            Db::exec('INSERT INTO con_crois_cache (a_sel,b_sel,mois,shop,ff,avec,ca_b,q_b) VALUES (?,?,?,?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE ff = VALUES(ff)', [$aSel, $bSel, $mois, '*', 0, 0, $c['caB'], $c['qB']]);
             foreach ($nomDe as $sid => $n) {
                 $x = $c['shops'][$sid] ?? $c['shops'][(string) $sid] ?? ['ff' => 0, 'avec' => 0];
-                Db::exec('INSERT INTO ceo_crois_cache (a_sel,b_sel,mois,shop,ff,avec) VALUES (?,?,?,?,?,?)
+                Db::exec('INSERT INTO con_crois_cache (a_sel,b_sel,mois,shop,ff,avec) VALUES (?,?,?,?,?,?)
                           ON DUPLICATE KEY UPDATE ff = VALUES(ff), avec = VALUES(avec)',
                     [$aSel, $bSel, $mois, (string) $sid, $x['ff'], $x['avec']]);
             }
@@ -200,7 +200,7 @@ function ep_croisements_options(): array
     usort($produits, static fn ($a, $b) => strcmp($a['nom'], $b['nom']));
     $combos = [];
     try {
-        foreach (Db::rows('SELECT * FROM ceo_combo ORDER BY id') as $r) {
+        foreach (Db::rows('SELECT * FROM con_combo ORDER BY id') as $r) {
             $combos[] = ['id' => (int) $r['id'], 'aSel' => (string) $r['a_sel'], 'aLib' => (string) $r['a_lib'],
                 'bSel' => (string) $r['b_sel'], 'bLib' => (string) $r['b_lib'],
                 'surnom' => (string) ($r['surnom'] ?? ''),
@@ -275,7 +275,7 @@ function ep_croisements(): array
             'eurDernier' => (int) round(($ffDer - $avecDer) * $prixB)];
     };
     try {
-        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
+        $cb = Db::row('SELECT target FROM con_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
         $out['target'] = $cb !== null && $cb['target'] !== null ? (float) $cb['target'] : null;
     } catch (Throwable $e) { $out['target'] = null; }
     $out['reseau'] = $ligne(null);
@@ -348,7 +348,7 @@ function wr_croisement_combo(): array
         http_response_code(422); return ['error' => 'le combo ne correspond à rien au catalogue'];
     }
     $dp = croisDaypart(trim((string) ($b['dp'] ?? '')));
-    $dej = Db::row('SELECT id FROM ceo_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
+    $dej = Db::row('SELECT id FROM con_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
     if ($dej !== null) { http_response_code(409); return ['error' => 'ce combo est déjà enregistré sur ce daypart']; }
     // La target : un taux d'attache visé, en pour cent. Bornée à [1, 100] —
     // une target à 0 ne demande rien, au-delà de 100 ne veut rien dire.
@@ -356,7 +356,7 @@ function wr_croisement_combo(): array
     if (isset($b['target']) && $b['target'] !== '' && is_numeric($b['target'])) {
         $target = max(1.0, min(100.0, (float) $b['target']));
     }
-    Db::exec('INSERT INTO ceo_combo (a_sel, a_lib, b_sel, b_lib, surnom, target, dp, cree_le) VALUES (?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_combo (a_sel, a_lib, b_sel, b_lib, surnom, target, dp, cree_le) VALUES (?,?,?,?,?,?,?,?)',
         [$aSel, mb_substr(trim((string) ($b['aLib'] ?? $aSel)), 0, 160),
          $bSel, mb_substr(trim((string) ($b['bLib'] ?? $bSel)), 0, 160),
          mb_substr(trim((string) ($b['surnom'] ?? '')), 0, 120) ?: null, $target, $dp['cle'], date('Y-m-d')]);
@@ -368,7 +368,7 @@ function wr_croisement_combo(): array
 function wr_croisement_combo_patch(int $id): array
 {
     croisTables();
-    $dej = Db::row('SELECT * FROM ceo_combo WHERE id = ?', [$id]);
+    $dej = Db::row('SELECT * FROM con_combo WHERE id = ?', [$id]);
     if ($dej === null) { http_response_code(404); return ['error' => 'combo inconnu']; }
     $b = body();
     $target = $dej['target'] ?? null;
@@ -378,7 +378,7 @@ function wr_croisement_combo_patch(int $id): array
     }
     $surnom = array_key_exists('surnom', $b)
         ? (mb_substr(trim((string) $b['surnom']), 0, 120) ?: null) : ($dej['surnom'] ?? null);
-    Db::exec('UPDATE ceo_combo SET target = ?, surnom = ? WHERE id = ?', [$target, $surnom, $id]);
+    Db::exec('UPDATE con_combo SET target = ?, surnom = ? WHERE id = ?', [$target, $surnom, $id]);
     journalAdd('CEO', 'Croisement', $dej['a_lib'] . ' × ' . $dej['b_lib'],
         $target !== null ? 'Target posée à ' . $target . ' %' : 'Target retirée');
     return ['ok' => true] + ep_croisements_options();
@@ -387,11 +387,11 @@ function wr_croisement_combo_patch(int $id): array
 function wr_croisement_combo_suppr(int $id): array
 {
     croisTables();
-    $dej = Db::row('SELECT * FROM ceo_combo WHERE id = ?', [$id]);
+    $dej = Db::row('SELECT * FROM con_combo WHERE id = ?', [$id]);
     if ($dej === null) { http_response_code(404); return ['error' => 'combo inconnu']; }
     // Le cache reste : un combo retiré puis recréé retrouve son historique
     // sans relire douze mois de caisse.
-    Db::exec('DELETE FROM ceo_combo WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_combo WHERE id = ?', [$id]);
     journalAdd('CEO', 'Croisement', $dej['a_lib'] . ' × ' . $dej['b_lib'], 'Combo retiré');
     return ['ok' => true] + ep_croisements_options();
 }
@@ -421,7 +421,7 @@ function ep_croisements_feuille(): array
     $prixB = $c['qB'] > 0 ? $c['caB'] / $c['qB'] : 0.0;
     $target = null;
     try {
-        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
+        $cb = Db::row('SELECT target FROM con_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
         $target = $cb !== null && $cb['target'] !== null ? (float) $cb['target'] : null;
     } catch (Throwable $e) { /* sans target */ }
     $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
@@ -535,7 +535,7 @@ function ep_croisements_rapport(): array
     $m = trim((string) ($_GET['m'] ?? ''));
     if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m', strtotime('first day of last month')); }
     $combos = [];
-    try { $combos = Db::rows('SELECT * FROM ceo_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $e) {}
+    try { $combos = Db::rows('SELECT * FROM con_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $e) {}
     if ($combos === []) { http_response_code(422); return ['error' => 'aucun combo enregistré — enregistrez-en depuis l’écran Croisements']; }
 
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

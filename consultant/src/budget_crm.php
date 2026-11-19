@@ -17,7 +17,7 @@ declare(strict_types=1);
  *   - `pct` (« % validé », un taux RÉSEAU) = celui du Cockpit, gardé : la ligne du Cockpit qui portait déjà la clé,
  *     sinon reconnue à son libellé (même libellé, même premier mot, ou un mot distinctif — « assistance » rejoint
  *     « Royalties franchise & assistance ») ; deux lignes du Cockpit pour un poste du CRM = leurs % validés additionnés ;
- *   - l'IDENTIFIANT d'une ligne est gardé (les charges encodées mois par mois, `ceo_shop_charge_month`, s'y
+ *   - l'IDENTIFIANT d'une ligne est gardé (les charges encodées mois par mois, `con_shop_charge_month`, s'y
  *     rattachent) ; celles d'une ligne fondue dans une autre y sont reportées ;
  *   - étapes = sous-totaux du CRM (« Marge brute = CA − Matière… », « Disponible pour rémunération = CA − toutes les
  *     rubriques » → opérande `tout`).
@@ -171,7 +171,7 @@ function bcSync(bool $journal): array
     foreach ($anciennes as $i => $l) {
         if ($prise[$i] !== null) { continue; }
         $id = (string) ($l['id'] ?? '');
-        $n = $id !== '' ? (int) (Db::row('SELECT COUNT(*) n FROM ceo_shop_charge_month WHERE poste_id = ?', [$id])['n'] ?? 0) : 0;
+        $n = $id !== '' ? (int) (Db::row('SELECT COUNT(*) n FROM con_shop_charge_month WHERE poste_id = ?', [$id])['n'] ?? 0) : 0;
         if ($n > 0) {
             $hors[] = ['id' => $id, 'poste' => (string) $l['poste'], 'description' => (string) ($l['description'] ?? ''),
                 'gestion' => (string) ($l['gestion'] ?? ''), 'pcmn' => (string) ($l['pcmn'] ?? ''),
@@ -182,11 +182,11 @@ function bcSync(bool $journal): array
 
     // Les charges encodées d'une ligne fondue rejoignent celle qui reste.
     foreach ($fondues as $de => $vers) {
-        foreach (Db::rows('SELECT shop_id, fiscal_year, month, amount FROM ceo_shop_charge_month WHERE poste_id = ?', [$de]) as $r) {
-            Db::exec('INSERT INTO ceo_shop_charge_month (shop_id, fiscal_year, month, poste_id, amount) VALUES (?, ?, ?, ?, ?)
+        foreach (Db::rows('SELECT shop_id, fiscal_year, month, amount FROM con_shop_charge_month WHERE poste_id = ?', [$de]) as $r) {
+            Db::exec('INSERT INTO con_shop_charge_month (shop_id, fiscal_year, month, poste_id, amount) VALUES (?, ?, ?, ?, ?)
                       ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount)', [$r['shop_id'], $r['fiscal_year'], $r['month'], $vers, $r['amount']]);
         }
-        Db::exec('DELETE FROM ceo_shop_charge_month WHERE poste_id = ?', [$de]);
+        Db::exec('DELETE FROM con_shop_charge_month WHERE poste_id = ?', [$de]);
     }
 
     $nouveau = ['categories' => $cats, 'paliers' => $paliers, 'source' => 'crm'];

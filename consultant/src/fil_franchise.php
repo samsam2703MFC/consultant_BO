@@ -17,7 +17,7 @@ declare(strict_types=1);
  * via le cockpit ») : routes de la session du siège (src/acces.php ne les ouvre pas au franchisé), rien vers sa page,
  * ses courriels, son rapport ou la tablette de visite.
  *
- * Tables du portail (préfixe pil_, docs/PORTAILS.md) : pil_fil_entree, pil_fil_piece, pil_fil. Les pièces (photos,
+ * Tables du portail (préfixe pil_, docs/PORTAILS.md) : con_fil_entree, con_fil_piece, con_fil. Les pièces (photos,
  * captures) vont dans le dossier PRIVÉ, hors du site, sous un nom tiré au hasard, et ne sortent que par
  * GET /fil/pieces/{id}, derrière la session du siège.
  *
@@ -59,7 +59,7 @@ function filTables(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_fil (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_fil (
         id INT AUTO_INCREMENT PRIMARY KEY,
         shop_id VARCHAR(32) NOT NULL,
         titre VARCHAR(190) NOT NULL,
@@ -69,7 +69,7 @@ function filTables(): void
         cree_le DATETIME NOT NULL,
         KEY k_shop (shop_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_fil_entree (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_fil_entree (
         id INT AUTO_INCREMENT PRIMARY KEY,
         shop_id VARCHAR(32) NOT NULL,
         le DATETIME NOT NULL,
@@ -84,7 +84,7 @@ function filTables(): void
         KEY k_shop (shop_id, le),
         KEY k_fil (fil_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_fil_piece (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_fil_piece (
         id INT AUTO_INCREMENT PRIMARY KEY,
         entree_id INT NOT NULL,
         genre VARCHAR(10) NOT NULL DEFAULT \'photo\',
@@ -195,11 +195,11 @@ function filFils(string $shop): array
 {
     filTables();
     $n = [];
-    foreach (Db::rows('SELECT fil_id, COUNT(*) n, MIN(le) de, MAX(le) a FROM pil_fil_entree WHERE shop_id = ? AND fil_id IS NOT NULL GROUP BY fil_id', [$shop]) as $x) {
+    foreach (Db::rows('SELECT fil_id, COUNT(*) n, MIN(le) de, MAX(le) a FROM con_fil_entree WHERE shop_id = ? AND fil_id IS NOT NULL GROUP BY fil_id', [$shop]) as $x) {
         $n[(int) $x['fil_id']] = $x;
     }
     $out = [];
-    foreach (Db::rows('SELECT * FROM pil_fil WHERE shop_id = ? ORDER BY (resolu_le IS NULL) DESC, ouvert_le DESC, id DESC', [$shop]) as $f) {
+    foreach (Db::rows('SELECT * FROM con_fil WHERE shop_id = ? ORDER BY (resolu_le IS NULL) DESC, ouvert_le DESC, id DESC', [$shop]) as $f) {
         $id = (int) $f['id']; $x = $n[$id] ?? null;
         $fin = $f['resolu_le'] !== null ? (string) $f['resolu_le'] : null;
         $de = substr((string) $f['ouvert_le'], 0, 10);
@@ -303,16 +303,16 @@ function ep_fil(): array
     $annee = (int) ($_GET['annee'] ?? date('Y'));
     if ($annee < 2020 || $annee > 2100) { $annee = (int) date('Y'); }
     $de = $annee . '-01-01'; $a = $annee . '-12-31';
-    $rows = Db::rows('SELECT * FROM pil_fil_entree WHERE shop_id = ? AND le BETWEEN ? AND ? ORDER BY le DESC, id DESC', [$shop, $de . ' 00:00:00', $a . ' 23:59:59']);
+    $rows = Db::rows('SELECT * FROM con_fil_entree WHERE shop_id = ? AND le BETWEEN ? AND ? ORDER BY le DESC, id DESC', [$shop, $de . ' 00:00:00', $a . ' 23:59:59']);
     $pieces = [];
     if ($rows !== []) {
-        foreach (Db::rows('SELECT * FROM pil_fil_piece WHERE entree_id IN (' . implode(',', array_map(static fn ($r) => (int) $r['id'], $rows)) . ') ORDER BY id') as $p) { $pieces[(int) $p['entree_id']][] = $p; }
+        foreach (Db::rows('SELECT * FROM con_fil_piece WHERE entree_id IN (' . implode(',', array_map(static fn ($r) => (int) $r['id'], $rows)) . ') ORDER BY id') as $p) { $pieces[(int) $p['entree_id']][] = $p; }
     }
     $E = array_map(static fn ($r) => filEntreeLigne($r, $pieces[(int) $r['id']] ?? []), $rows);
     $E = array_merge($E, filSysteme($shop, $de, $a));
     usort($E, static fn ($x, $y) => strcmp($y['le'], $x['le']) ?: strcmp((string) $y['id'], (string) $x['id']));
     $m = filMagasins()[$shop] ?? null;
-    $annees = array_map('intval', array_column(Db::rows('SELECT DISTINCT SUBSTR(le, 1, 4) a FROM pil_fil_entree WHERE shop_id = ?', [$shop]), 'a'));
+    $annees = array_map('intval', array_column(Db::rows('SELECT DISTINCT SUBSTR(le, 1, 4) a FROM con_fil_entree WHERE shop_id = ?', [$shop]), 'a'));
     $annees = array_values(array_unique(array_merge($annees, [(int) date('Y'), $annee])));
     rsort($annees);
     return ['shop' => $shop, 'magasin' => $m ? ['id' => $shop, 'nom' => $m['nom'], 'court' => $m['court']] : ['id' => $shop, 'nom' => $shop, 'court' => $shop],
@@ -330,9 +330,9 @@ function ep_fil_magasins(): array
     $debut12 = date('Y-m-d', strtotime($lundi . ' -11 weeks'));
     $mois = substr($auj, 0, 7) . '-01';
     $E = []; $V = []; $ouverts = []; $dernier = []; $prochaine = []; $consultant = [];
-    foreach (Db::rows('SELECT shop_id, le, tags FROM pil_fil_entree WHERE le >= ? ORDER BY le', [min($debut12, $mois) . ' 00:00:00']) as $r) { $E[(string) $r['shop_id']][] = $r; }
-    foreach (Db::rows('SELECT shop_id, MAX(le) d FROM pil_fil_entree GROUP BY shop_id') as $r) { $dernier[(string) $r['shop_id']] = substr((string) $r['d'], 0, 16); }
-    foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM pil_fil WHERE resolu_le IS NULL GROUP BY shop_id') as $r) { $ouverts[(string) $r['shop_id']] = (int) $r['n']; }
+    foreach (Db::rows('SELECT shop_id, le, tags FROM con_fil_entree WHERE le >= ? ORDER BY le', [min($debut12, $mois) . ' 00:00:00']) as $r) { $E[(string) $r['shop_id']][] = $r; }
+    foreach (Db::rows('SELECT shop_id, MAX(le) d FROM con_fil_entree GROUP BY shop_id') as $r) { $dernier[(string) $r['shop_id']] = substr((string) $r['d'], 0, 16); }
+    foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM con_fil WHERE resolu_le IS NULL GROUP BY shop_id') as $r) { $ouverts[(string) $r['shop_id']] = (int) $r['n']; }
     try {
         foreach (Db::rows('SELECT shop_id, prevu_le, statut, consultant_nom FROM con_visite WHERE prevu_le >= ? ORDER BY prevu_le, id', [$debut12]) as $r) {
             $s = (string) $r['shop_id'];
@@ -373,7 +373,7 @@ function filEpinglees(string $shop, string $de, string $a): array
 {
     try {
         filTables();
-        return Db::rows('SELECT id, le, type, texte, tags FROM pil_fil_entree WHERE shop_id = ? AND epingle = 1 AND le BETWEEN ? AND ? ORDER BY le, id', [$shop, $de . ' 00:00:00', $a . ' 23:59:59']);
+        return Db::rows('SELECT id, le, type, texte, tags FROM con_fil_entree WHERE shop_id = ? AND epingle = 1 AND le BETWEEN ? AND ? ORDER BY le, id', [$shop, $de . ' 00:00:00', $a . ' 23:59:59']);
     } catch (Throwable $e) { return []; }
 }
 
@@ -433,7 +433,7 @@ function filPiecesRanger(int $entree, array $pieces): void
         $nom = bin2hex(random_bytes(12)) . '.' . $p['ext'];
         if (@file_put_contents($dos . '/' . $nom, $p['bin']) === false) { throw new RuntimeException('écriture de la pièce impossible'); }
         @chmod($dos . '/' . $nom, 0600);
-        Db::exec('INSERT INTO pil_fil_piece (entree_id, genre, fichier, mime, largeur, hauteur, octets) VALUES (?,?,?,?,?,?,?)',
+        Db::exec('INSERT INTO con_fil_piece (entree_id, genre, fichier, mime, largeur, hauteur, octets) VALUES (?,?,?,?,?,?,?)',
             [$entree, $p['genre'], $nom, $p['mime'], $p['largeur'], $p['hauteur'], strlen($p['bin'])]);
     }
 }
@@ -444,7 +444,7 @@ function filPiecesRetirer(array $rows): void
     foreach ($rows as $p) {
         $f = basename((string) $p['fichier']);
         try { if ($f !== '' && is_file(filDossier() . '/' . $f)) { @unlink(filDossier() . '/' . $f); } } catch (Throwable $e) { /* fichier déjà parti */ }
-        Db::exec('DELETE FROM pil_fil_piece WHERE id = ?', [(int) $p['id']]);
+        Db::exec('DELETE FROM con_fil_piece WHERE id = ?', [(int) $p['id']]);
     }
 }
 
@@ -452,20 +452,20 @@ function filPiecesRetirer(array $rows): void
 function filDuMagasin(mixed $fil, string $shop): ?array
 {
     if ($fil === null || $fil === '' || $fil === false || (int) $fil <= 0) { return null; }
-    return Db::row('SELECT * FROM pil_fil WHERE id = ? AND shop_id = ?', [(int) $fil, $shop]);
+    return Db::row('SELECT * FROM con_fil WHERE id = ? AND shop_id = ?', [(int) $fil, $shop]);
 }
 
 /** Ouvre un fil (un problème de gestion qui n'en suit pas un autre). */
 function filOuvrir(string $shop, string $titre, string $le): int
 {
-    Db::exec('INSERT INTO pil_fil (shop_id, titre, ouvert_le, cree_le) VALUES (?,?,?,?)', [$shop, mb_substr($titre, 0, 190), $le, date('Y-m-d H:i:s')]);
+    Db::exec('INSERT INTO con_fil (shop_id, titre, ouvert_le, cree_le) VALUES (?,?,?,?)', [$shop, mb_substr($titre, 0, 190), $le, date('Y-m-d H:i:s')]);
     return (int) Db::pdo()->lastInsertId();
 }
 
 /** Ferme un fil par une entrée (sa date), ou le rouvre (null). */
 function filFermer(int $fil, ?int $entree, ?string $le): void
 {
-    Db::exec('UPDATE pil_fil SET resolu_le = ?, resolu_par = ? WHERE id = ?', [$entree !== null ? $le : null, $entree, $fil]);
+    Db::exec('UPDATE con_fil SET resolu_le = ?, resolu_par = ? WHERE id = ?', [$entree !== null ? $le : null, $entree, $fil]);
 }
 
 /** POST /fil/entrees — une entrée au fil d'un magasin. */
@@ -493,7 +493,7 @@ function wr_fil_entree_creer(): array
         $filId = $fil !== null ? (int) $fil['id'] : null;
         $ouvert = false;
         if ($filId === null && in_array('gestion', $tags, true)) { $filId = filOuvrir($shop, filTitreDe((string) ($b['titreFil'] ?? '') ?: $texte), $le); $ouvert = true; }
-        Db::exec('INSERT INTO pil_fil_entree (shop_id, le, type, texte, tags, fil_id, epingle, auteur, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        Db::exec('INSERT INTO con_fil_entree (shop_id, le, type, texte, tags, fil_id, epingle, auteur, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
             [$shop, $le, $type, $texte, implode(',', $tags), $filId, !empty($b['epingle']) ? 1 : 0, filAuteur($b['auteur'] ?? null), $maintenant, $maintenant]);
         $id = (int) $pdo->lastInsertId();
         filPiecesRanger($id, $pieces);
@@ -504,15 +504,15 @@ function wr_fil_entree_creer(): array
         http_response_code(500);
         return ['error' => 'entrée non enregistrée : ' . $e->getMessage()];
     }
-    $r = Db::row('SELECT * FROM pil_fil_entree WHERE id = ?', [$id]);
-    return ['ok' => true, 'entree' => filEntreeLigne($r, Db::rows('SELECT * FROM pil_fil_piece WHERE entree_id = ? ORDER BY id', [$id])), 'filOuvert' => $ouvert ? $filId : null];
+    $r = Db::row('SELECT * FROM con_fil_entree WHERE id = ?', [$id]);
+    return ['ok' => true, 'entree' => filEntreeLigne($r, Db::rows('SELECT * FROM con_fil_piece WHERE entree_id = ? ORDER BY id', [$id])), 'filOuvert' => $ouvert ? $filId : null];
 }
 
 /** PUT /fil/entrees/{id} — modifier une entrée (texte, étiquettes, date, fil, épingle, visibilité, pièces). */
 function wr_fil_entree_maj(int $id): array
 {
     filTables();
-    $r = Db::row('SELECT * FROM pil_fil_entree WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_fil_entree WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'entrée inconnue']; }
     $b = body();
     $shop = (string) $r['shop_id'];
@@ -539,41 +539,41 @@ function wr_fil_entree_maj(int $id): array
     [$pieces, $err] = filPiecesLues($b['pieces'] ?? null);
     if ($err !== null) { http_response_code(422); return ['error' => $err]; }
     $retirer = array_map('intval', is_array($b['retirer'] ?? null) ? $b['retirer'] : []);
-    $deja = Db::rows('SELECT * FROM pil_fil_piece WHERE entree_id = ?', [$id]);
+    $deja = Db::rows('SELECT * FROM con_fil_piece WHERE entree_id = ?', [$id]);
     if (count($deja) - count(array_intersect(array_column($deja, 'id'), $retirer)) + count($pieces) > FIL_PIECES_MAX) { http_response_code(422); return ['error' => FIL_PIECES_MAX . ' pièces au plus par entrée']; }
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        if ($set !== []) { Db::exec('UPDATE pil_fil_entree SET ' . implode(', ', $set) . ', maj_le = ? WHERE id = ?', array_merge($args, [date('Y-m-d H:i:s'), $id])); }
+        if ($set !== []) { Db::exec('UPDATE con_fil_entree SET ' . implode(', ', $set) . ', maj_le = ? WHERE id = ?', array_merge($args, [date('Y-m-d H:i:s'), $id])); }
         filPiecesRanger($id, $pieces);
         filPiecesRetirer(array_values(array_filter($deja, static fn ($p) => in_array((int) $p['id'], $retirer, true))));
         // Le fil fermé par cette entrée : « ferme » le garde fermé (à sa date), sinon il se rouvre si elle le quitte.
-        $apres = Db::row('SELECT * FROM pil_fil_entree WHERE id = ?', [$id]);
+        $apres = Db::row('SELECT * FROM con_fil_entree WHERE id = ?', [$id]);
         $filId = $apres['fil_id'] !== null ? (int) $apres['fil_id'] : null;
         if (array_key_exists('ferme', $b) && $filId !== null) { filFermer($filId, !empty($b['ferme']) ? $id : null, (string) $apres['le']); }
-        foreach (Db::rows('SELECT id FROM pil_fil WHERE resolu_par = ? AND (? IS NULL OR id <> ?)', [$id, $filId, $filId]) as $f) { filFermer((int) $f['id'], null, null); }
+        foreach (Db::rows('SELECT id FROM con_fil WHERE resolu_par = ? AND (? IS NULL OR id <> ?)', [$id, $filId, $filId]) as $f) { filFermer((int) $f['id'], null, null); }
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
         http_response_code(500);
         return ['error' => 'entrée non modifiée : ' . $e->getMessage()];
     }
-    $r = Db::row('SELECT * FROM pil_fil_entree WHERE id = ?', [$id]);
-    return ['ok' => true, 'entree' => filEntreeLigne($r, Db::rows('SELECT * FROM pil_fil_piece WHERE entree_id = ? ORDER BY id', [$id]))];
+    $r = Db::row('SELECT * FROM con_fil_entree WHERE id = ?', [$id]);
+    return ['ok' => true, 'entree' => filEntreeLigne($r, Db::rows('SELECT * FROM con_fil_piece WHERE entree_id = ? ORDER BY id', [$id]))];
 }
 
 /** DELETE /fil/entrees/{id} — l'entrée, ses pièces ; le fil qu'elle fermait se rouvre, un fil vide disparaît. */
 function wr_fil_entree_suppr(int $id): array
 {
     filTables();
-    $r = Db::row('SELECT * FROM pil_fil_entree WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_fil_entree WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'entrée inconnue']; }
-    filPiecesRetirer(Db::rows('SELECT * FROM pil_fil_piece WHERE entree_id = ?', [$id]));
-    Db::exec('DELETE FROM pil_fil_entree WHERE id = ?', [$id]);
-    foreach (Db::rows('SELECT id FROM pil_fil WHERE resolu_par = ?', [$id]) as $f) { filFermer((int) $f['id'], null, null); }
+    filPiecesRetirer(Db::rows('SELECT * FROM con_fil_piece WHERE entree_id = ?', [$id]));
+    Db::exec('DELETE FROM con_fil_entree WHERE id = ?', [$id]);
+    foreach (Db::rows('SELECT id FROM con_fil WHERE resolu_par = ?', [$id]) as $f) { filFermer((int) $f['id'], null, null); }
     $vide = null;
-    if ($r['fil_id'] !== null && (int) (Db::row('SELECT COUNT(*) n FROM pil_fil_entree WHERE fil_id = ?', [(int) $r['fil_id']])['n'] ?? 0) === 0) {
-        Db::exec('DELETE FROM pil_fil WHERE id = ?', [(int) $r['fil_id']]);
+    if ($r['fil_id'] !== null && (int) (Db::row('SELECT COUNT(*) n FROM con_fil_entree WHERE fil_id = ?', [(int) $r['fil_id']])['n'] ?? 0) === 0) {
+        Db::exec('DELETE FROM con_fil WHERE id = ?', [(int) $r['fil_id']]);
         $vide = (int) $r['fil_id'];
     }
     return ['ok' => true, 'filRetire' => $vide];
@@ -583,15 +583,15 @@ function wr_fil_entree_suppr(int $id): array
 function wr_fil_fil(int $id): array
 {
     filTables();
-    $f = Db::row('SELECT * FROM pil_fil WHERE id = ?', [$id]);
+    $f = Db::row('SELECT * FROM con_fil WHERE id = ?', [$id]);
     if ($f === null) { http_response_code(404); return ['error' => 'fil inconnu']; }
     $b = body();
     if (array_key_exists('titre', $b)) {
         $t = trim((string) $b['titre']);
         if ($t === '') { http_response_code(422); return ['error' => 'titre vide']; }
-        Db::exec('UPDATE pil_fil SET titre = ? WHERE id = ?', [mb_substr($t, 0, 190), $id]);
+        Db::exec('UPDATE con_fil SET titre = ? WHERE id = ?', [mb_substr($t, 0, 190), $id]);
     }
-    if (array_key_exists('resolu', $b)) { Db::exec('UPDATE pil_fil SET resolu_le = ?, resolu_par = NULL WHERE id = ?', [!empty($b['resolu']) ? date('Y-m-d H:i:00') : null, $id]); }
+    if (array_key_exists('resolu', $b)) { Db::exec('UPDATE con_fil SET resolu_le = ?, resolu_par = NULL WHERE id = ?', [!empty($b['resolu']) ? date('Y-m-d H:i:00') : null, $id]); }
     $fils = array_values(array_filter(filFils((string) $f['shop_id']), static fn ($x) => $x['id'] === $id));
     return ['ok' => true, 'fil' => $fils[0] ?? null];
 }
@@ -600,7 +600,7 @@ function wr_fil_fil(int $id): array
 function filPieceSortie(int $id): void
 {
     filTables();
-    $p = Db::row('SELECT * FROM pil_fil_piece WHERE id = ?', [$id]);
+    $p = Db::row('SELECT * FROM con_fil_piece WHERE id = ?', [$id]);
     $f = $p !== null ? filDossier() . '/' . basename((string) $p['fichier']) : '';
     if ($p === null || !is_file($f)) { http_response_code(404); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['error' => 'pièce introuvable']); exit; }
     header('Content-Type: ' . (in_array($p['mime'], ['image/jpeg', 'image/png', 'image/webp'], true) ? $p['mime'] : 'application/octet-stream'));

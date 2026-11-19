@@ -14,7 +14,7 @@ declare(strict_types=1);
  * Tout vient de ce que le BO lit déjà : le catalogue (ep_prod_catalogue, gammes
  * comprises), la fiche produit de la base partagée (UNE lecture groupée de
  * `product`), les gammes saisonnières (ep_prod_saisons), les relevés de ventes
- * (psVentesJour) et les photos du planogramme (ceo_plano_std_photo). Chaque
+ * (psVentesJour) et les photos du planogramme (con_plano_std_photo). Chaque
  * source est lue à part : une source muette laisse ses champs vides et le dit
  * dans `sources`, le book part quand même — seul un catalogue illisible rend
  * une erreur (la tablette garde alors ses données d'exemple).
@@ -797,7 +797,7 @@ function tbPhotosEtat(array $refs, int $max, float $secondes): array
     $lignes = [];
     if ($refs) {
         $in = implode(',', array_fill(0, count($refs), '?'));
-        foreach (Db::rows('SELECT ref, fichier, maj FROM ceo_plano_std_photo WHERE ref IN (' . $in . ')', $refs) as $r) { $lignes[(string) $r['ref']] = $r; }
+        foreach (Db::rows('SELECT ref, fichier, maj FROM con_plano_std_photo WHERE ref IN (' . $in . ')', $refs) as $r) { $lignes[(string) $r['ref']] = $r; }
     }
     $pub = __DIR__ . '/../../public/';
     $t0 = microtime(true);
@@ -955,7 +955,7 @@ function tbFichierRef(string $ref): string
 }
 
 /** L'identifiant tablette d'un produit : l'id du panel (`pwaId`), sinon la référence. */
-/** Le moment d'un combo (`ceo_combo.dp`, voir CROIS_DAYPARTS) en [FR, NL] ; vide : toute la journée. */
+/** Le moment d'un combo (`con_combo.dp`, voir CROIS_DAYPARTS) en [FR, NL] ; vide : toute la journée. */
 const TB_COMBO_MOMENTS = [
     'matin' => ['Matin (avant 11 h)', 'Ochtend (voor 11 u)'],
     'midi' => ['Midi (11 – 14 h)', 'Middag (11 – 14 u)'],
@@ -966,7 +966,7 @@ const TB_COMBO_MOMENTS = [
 const TB_COMBO_PRODUITS = 4;
 
 /**
- * La vente additionnelle de chaque produit : les combos du réseau (`ceo_combo`,
+ * La vente additionnelle de chaque produit : les combos du réseau (`con_combo`,
  * écran Croisements — « sur les tickets qui contiennent A, la part qui contient
  * aussi B ») dont le produit fait partie de A. Pour chacun : ce qu'il faut
  * proposer (B, en toutes lettres), le moment, le surnom quand le réseau en a
@@ -982,7 +982,7 @@ const TB_COMBO_PRODUITS = 4;
 function tbCombos(array $retenus, array $best): array
 {
     try {
-        $rows = Db::rows('SELECT * FROM ceo_combo ORDER BY id');
+        $rows = Db::rows('SELECT * FROM con_combo ORDER BY id');
     } catch (Throwable $e) {
         return ['parProduit' => [], 'cross' => [], 'note' => 'combos illisibles (' . $e->getMessage() . ') : aucune vente additionnelle'];
     }
@@ -1023,7 +1023,7 @@ function tbCombos(array $retenus, array $best): array
         $servis += (int) $touche;
     }
     return ['parProduit' => $parProduit, 'cross' => $cross,
-        'note' => 'combos du réseau (écran Croisements, table ceo_combo) : ' . count($rows) . ' combo(s), ' . $servis
+        'note' => 'combos du réseau (écran Croisements, table con_combo) : ' . count($rows) . ' combo(s), ' . $servis
             . ' concernant des produits du book ; ' . count($parProduit) . ' produit(s) avec une vente additionnelle'];
 }
 

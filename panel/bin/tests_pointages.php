@@ -77,14 +77,14 @@ verifie('reconnue par son nom, sans poste au planning : sans vendeur', count($C4
 // --- L'envoi.
 $P = Db::pdo();
 $P->exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
-$P->exec('CREATE TABLE ceo_rapport (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, nom TEXT, poste TEXT, frequence TEXT, heure INT, jour INT, blocs TEXT, destinataires TEXT, par_magasin INT, actif INT, envoi_mode TEXT, dest_par_magasin TEXT, jours TEXT)');
-$P->exec('CREATE TABLE ceo_rapport_run (id INTEGER PRIMARY KEY AUTOINCREMENT, rapport_id INT, genere_le TEXT, periode_du TEXT, periode_au TEXT, statut TEXT, resume TEXT, html TEXT, contexte TEXT)');
+$P->exec('CREATE TABLE con_rapport (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, nom TEXT, poste TEXT, frequence TEXT, heure INT, jour INT, blocs TEXT, destinataires TEXT, par_magasin INT, actif INT, envoi_mode TEXT, dest_par_magasin TEXT, jours TEXT)');
+$P->exec('CREATE TABLE con_rapport_run (id INTEGER PRIMARY KEY AUTOINCREMENT, rapport_id INT, genere_le TEXT, periode_du TEXT, periode_au TEXT, statut TEXT, resume TEXT, html TEXT, contexte TEXT)');
 psSemer();
-$rep = Db::row('SELECT * FROM ceo_rapport WHERE code = ?', ['pointages-suspects']);
+$rep = Db::row('SELECT * FROM con_rapport WHERE code = ?', ['pointages-suspects']);
 verifie('la ligne du reporting est semée (quotidien, 21 h, par magasin)', $rep !== null && (int) $rep['heure'] === 21 && $rep['envoi_mode'] === 'par-magasin');
-Db::exec('UPDATE ceo_rapport SET dest_par_magasin = ?, destinataires = ? WHERE id = ?', [json_encode(['Atelier by - Corbais' => ['corbais@x.be']]), json_encode(['sam@x.be']), $rep['id']]);
-Db::exec('INSERT INTO ceo_rapport (code, nom, dest_par_magasin) VALUES (?,?,?)', ['affiche-vente-mois', 'Affiche', json_encode(['Atelier by - Halle' => ['halle@x.be']])]);
-$rep = Db::row('SELECT * FROM ceo_rapport WHERE code = ?', ['pointages-suspects']);
+Db::exec('UPDATE con_rapport SET dest_par_magasin = ?, destinataires = ? WHERE id = ?', [json_encode(['Atelier by - Corbais' => ['corbais@x.be']]), json_encode(['sam@x.be']), $rep['id']]);
+Db::exec('INSERT INTO con_rapport (code, nom, dest_par_magasin) VALUES (?,?,?)', ['affiche-vente-mois', 'Affiche', json_encode(['Atelier by - Halle' => ['halle@x.be']])]);
+$rep = Db::row('SELECT * FROM con_rapport WHERE code = ?', ['pointages-suspects']);
 $GLOBALS['JOUR'] = null;
 function ep_exploitation_jour(): array { return $GLOBALS['JOUR'] ?? ['magasins' => []]; }
 $b = psDistribuer($rep);
@@ -99,7 +99,7 @@ $liste = fn (array $T) => array_map(fn ($t) => ['id' => 1, 'id_employee' => $t[1
 PanelApi::$listes = ['1' => $liste($T1), '2' => $liste([$tk('09:00', 21, 5), $tk('10:00', 22, 6)]), '3' => $liste([[psMin('14:00'), 0, '', 5.0], [psMin('14:30'), 0, '', 6.0], [psMin('15:00'), 0, '', 7.0]]),
     '4' => $liste([$tk('06:05', 22, 5), $tk('06:20', 22, 6), $tk('06:40', 22, 7)])];   // Wavre (5) : tickets muets
 $b = psDistribuer($rep, true);
-verifie('aperçu : rien ne part, le run garde le récapitulatif', Smtp::$env === [] && str_contains((string) Db::row('SELECT html FROM ceo_rapport_run WHERE id = ?', [$b['runId']])['html'], 'Pointages suspects'));
+verifie('aperçu : rien ne part, le run garde le récapitulatif', Smtp::$env === [] && str_contains((string) Db::row('SELECT html FROM con_rapport_run WHERE id = ?', [$b['runId']])['html'], 'Pointages suspects'));
 $b = psDistribuer($rep);
 $st = []; foreach ($b['magasins'] as $m) { $st[$m['magasin']] = $m['statut']; }
 verifie('Corbais prévenu à son adresse', ($st['Atelier by - Corbais'] ?? '') === 'envoye');
