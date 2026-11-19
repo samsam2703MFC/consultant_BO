@@ -134,3 +134,16 @@
 /* [360] Sans PIN : plus grisé — toucher son nom ouvre la création du PIN ; libellé en couleur de la marque. */
 .office .kiosk-app-person.is-nopin { opacity: 1; }
 .office .kiosk-app-person.is-nopin small { color: var(--k-primary, #8D1D2C); font-weight: 600; }
+
+/* [361] Accueil = clavier PIN : heure et date en haut, le clavier au centre de l'écran, grandes touches ; en dessous,
+   « Wybierz nazwisko » et « Pierwszy raz ? Utwórz PIN » (liste des noms). */
+.office-pinhome { margin-top: auto; margin-bottom: auto; max-width: 520px; padding: 28px 24px 22px; }
+.office-pinhome h2 { font-size: 28px; }
+.office-pinhome .kiosk-pad { max-width: 400px; gap: 16px; }
+.office-pinhome .kiosk-pad .kiosk-btn { width: 96px; min-height: 96px; font-size: 36px; }
+.office-pinhome .kiosk-pad .kiosk-btn.is-primary { font-size: 26px; }
+.office-pinhome .kiosk-dots span { width: 18px; height: 18px; }
+.office-pinhome .kiosk-row { justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+.office-pinhome .kiosk-row .kiosk-btn { min-height: 52px; font-size: 17px; }
+.office-pinhome-bar { padding-top: 12px; }
+.office-first-help { margin: 8px 0 0; font-size: 18px; font-weight: 600; color: var(--k-primary, #8D1D2C); }

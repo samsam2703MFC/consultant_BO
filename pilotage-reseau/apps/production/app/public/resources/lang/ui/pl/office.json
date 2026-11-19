@@ -12,7 +12,7 @@
   "paired": "Tablet sparowany : {name}.",
   "hero": "Wybierz swój dział, potem swoje nazwisko",
   "section_people": "{n} os. · obecni {present}",
-  "back": "Działy",
+  "back": "Start",
   "who": "Kim jesteś?",
   "nobody": "Brak osób w tym dziale.",
   "no_people": "Brak osób do wyświetlenia — dodaj pracowników w ERP.",
@@ -82,5 +82,13 @@
   "pin_mismatch": "PIN-y są różne — wpisz nowy PIN jeszcze raz.",
   "pin_created": "PIN zapisany. Od teraz wpisuj go przy wejściu i wyjściu.",
   "change_pin": "Zmień PIN",
-  "pin_changed": "PIN zmieniony."
+  "pin_changed": "PIN zmieniony.",
+  "pin_home_title": "Wpisz swój PIN",
+  "pick_name": "Wybierz nazwisko",
+  "first_time": "Pierwszy raz ? Utwórz PIN",
+  "pick_name_help": "Dotknij swojego nazwiska i wpisz PIN.",
+  "first_time_help": "Pierwszy raz : dotknij swojego nazwiska, żeby utworzyć PIN.",
+  "back_pin": "PIN",
+  "pin_change_required": "Twój PIN trzeba zmienić : wybierz nowy (każdy PIN musi być inny).",
+  "pin_home_help": "Twój PIN otwiera Twój profil : wejście, wyjście i podpis."
 }
