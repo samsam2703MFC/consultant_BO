@@ -144,3 +144,4 @@
 2026-11-19T08:13:09Z [354] QR échantillons /q/KOD, retour après connexion
 2026-11-19T08:20:34Z [355] QR de pointage court
 2026-11-19T08:45:23Z [355] QR pointage : adresse de la tablette
+2026-11-19T09:09:37Z [356] Tablette de bureau : PIN d'abord
