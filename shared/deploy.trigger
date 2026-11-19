@@ -188,3 +188,4 @@
 2026-11-19T19:36:43Z Catalogue des manuels : le manuel « Fiches techniques » (fiches TF Buddy, une par produit)
 2026-11-19T19:44:28Z Manuels : typographie légère (Gotham Light ; Medium pour les badges) dans le catalogue, le dépliant et les PDF des SOP
 2026-11-19T19:46:03Z Visites (#/franchises) : l'assistant en barre horizontale ; onglet « Non signées » pour ouvrir ou effacer une visite pas encore signée
+2026-11-19T19:54:38Z Dépliant des manuels : la page 8, les fiches techniques (8 pages, 6 manuels)

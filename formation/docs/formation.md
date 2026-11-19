@@ -1478,4 +1478,9 @@ typographie dans tous les manuels ».
 - **Le dépliant.** Le poids 400 prend Gotham Light, et les titres passent de 500 à 400.
 - **Les PDF des SOP et du manuel** (`foPdfPolices`, `src/sop.php`). Le texte est en Gotham Light, les accents en Gotham
   Medium (au lieu de Black).
+- **Le dépliant, page 8 « Les fiches techniques »** (Sam : « oui »).
+  - Le dépliant passe à 8 pages et 6 manuels : couverture resserrée, pages « n / 8 », « Manuel n sur 6 ».
+  - Les chiffres de la page sont lus dans `/formation/ref/fiches` : produits, catégories, saison et standard, fiches avec
+    une recette, des étapes, une photo, des allergènes.
+  - Un QR code ouvre le manuel.
 
