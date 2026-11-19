@@ -7,7 +7,7 @@
  "moment": null,
  "acces": "responsable",
  "statut": "publiee",
- "version": "1.0",
+ "version": "1.1",
  "langue_origine": "FR",
  "duree": "20 min de lecture",
  "titre": {
@@ -655,6 +655,20 @@
     },
     {
      "numero": "6",
+     "titre": {
+      "fr": "Huit questions sur le magasin",
+      "nl": "Acht vragen over de winkel"
+     },
+     "texte": {
+      "fr": "Les vingt questions parlent du dirigeant ; ces huit parlent du magasin. Un dirigeant qui fait bien son travail construit un magasin qui tourne sans lui. À se poser une fois par an : chaque « non » est un point de valeur à aller chercher.\n1. Le magasin peut-il tourner deux semaines sans vous, sans baisse de résultat ?\n2. Quelqu’un d’autre que vous sait-il ouvrir, fermer, commander et gérer une journée complète ?\n3. Chaque poste peut-il être tenu par au moins deux personnes formées ?\n4. Les niveaux de compétence de l’équipe sont-ils à jour dans le référentiel ?\n5. Les douze derniers mois de chiffres sont-ils tous dans le système, sans trou ?\n6. Food cost, masse salariale, frais généraux : êtes-vous dans les normes du réseau, et savez-vous expliquer les écarts ?\n7. Appliquez-vous les standards du réseau, sans version maison des procédures ?\n8. Un repreneur comprendrait-il l’activité en une heure, avec le système seul ?\nLe pourquoi de chaque question, et ce que vaut la boutique : article 0.0.56.",
+      "nl": "De twintig vragen gaan over de leidinggevende; deze acht gaan over de winkel. Een leidinggevende die zijn werk goed doet, bouwt een winkel die zonder hem draait. Eén keer per jaar te stellen: elk « nee » is een waardepunt om te verwerven.\n1. Kan de winkel twee weken zonder u draaien, zonder daling van het resultaat?\n2. Kan iemand anders dan u een volledige dag openen, sluiten, bestellen en beheren?\n3. Kan elke functie in de winkel door minstens twee opgeleide personen worden ingevuld?\n4. Zijn de competentieniveaus van het team bijgewerkt in het referentiekader?\n5. Staan alle cijfers van de voorbije twaalf maanden in het systeem, zonder ontbrekende periode?\n6. Food cost, loonkost, algemene kosten: zit u binnen de normen van het netwerk, en kunt u de afwijkingen verklaren?\n7. Past u de standaarden van het netwerk toe, zonder eigen versie van de procedures?\n8. Zou een overnemer de activiteit in één uur kunnen begrijpen, enkel op basis van het systeem?\nHet waarom van elke vraag, en wat de winkel waard is: artikel 0.0.56."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7",
      "titre": {
       "fr": "Pour finir",
       "nl": "Tot slot"

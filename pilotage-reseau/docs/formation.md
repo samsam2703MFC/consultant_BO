@@ -1189,6 +1189,12 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   `PUT /formation/sop/fiche/art-fo-32` (`revalider: false`) : l'article reste « publiee », quiz et remarques inchangés.
   Dans le catalogue, cette partie tombe page 120 du manuel opératoire, et 0.0.56 y est un lien direct. Aucune source de
   l'article n'est dans le dépôt : la version du serveur fait foi.
+- **0.0.55 « Bonnes pratiques du dirigeant » en v1.1, le 19/11/2026** (Sam : « rajouter aussi ces 8 questions dans
+  l'article 0.0.55 ») : dans la partie « Auto-diagnostic », une étape 6, « Huit questions sur le magasin » (FR et NL),
+  entre « Lire le résultat » et « Pour finir » (devenu étape 7). Elle s'ouvre sur « Les vingt questions parlent du
+  dirigeant ; ces huit parlent du magasin », puis donne les huit questions de 0.0.56 et un renvoi à 0.0.56. Enregistré
+  par `PUT …/fiche/art-bonnes-pratiques-dirigeant` (`revalider: false`), l'article reste « publiee ». La source
+  `dirigeant/art-bonnes-pratiques-dirigeant.json` suit (v1.1).
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
