@@ -1124,7 +1124,7 @@ function fmPatchEmploye(?int $shop, array $fiche): void
  * Opérationnel · Formation continue », « sur certaines procédures, des vidéos
  * intégrées », « le tout sur tablette ». Le panel ne connaît pas ces parties (ses
  * procédures sont rangées par thème : section › catégorie) : la partie de chaque
- * procédure et ses vidéos ajoutées vivent ICI, dans `ceo_manuel_procedure`. Sans
+ * procédure et ses vidéos ajoutées vivent ICI, dans `for_manuel_procedure`. Sans
  * ligne, la partie se déduit à l'écran de la section du panel (« Formations &
  * Contrôle Continu » → Formation continue, le reste → Opérationnel). Le contenu
  * de la procédure reste celui du panel : rien n'y est écrit.
@@ -1138,7 +1138,7 @@ function ensureManuel(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_procedure ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_manuel_procedure ('
         . 'procedure_id INT NOT NULL PRIMARY KEY,'   // l'identifiant de la procédure dans le panel
         . 'partie VARCHAR(16) NULL,'                 // preouverture | ouverture | operationnel | formation ; null = déduite
         . 'videos TEXT NULL,'                        // JSON [{url, titre}] : vidéos ajoutées dans le cockpit
@@ -1180,7 +1180,7 @@ function mnClassement(): array
 {
     ensureManuel();
     $out = [];
-    foreach (Db::rows('SELECT procedure_id, partie, videos, maj_le FROM ceo_manuel_procedure') as $r) {
+    foreach (Db::rows('SELECT procedure_id, partie, videos, maj_le FROM for_manuel_procedure') as $r) {
         $out[(string) (int) $r['procedure_id']] = ['partie' => mnPartie($r['partie']), 'videos' => mnVideos(json_decode((string) $r['videos'], true)), 'majLe' => $r['maj_le']];
     }
     return $out;
@@ -1191,7 +1191,7 @@ function ep_formation_manuel(): array
 {
     ensureManuelFormations();
     $reglees = []; $supports = [];
-    foreach (Db::rows('SELECT code, partie, supports FROM ceo_manuel_formation') as $r) {
+    foreach (Db::rows('SELECT code, partie, supports FROM for_manuel_formation') as $r) {
         if (($q = mnPartie($r['partie'])) !== null) { $reglees[(string) $r['code']] = $q; }
         if (($sp = mnSupports(json_decode((string) $r['supports'], true))) !== []) { $supports[(string) $r['code']] = $sp; }
     }
@@ -1213,14 +1213,14 @@ function wr_formation_manuel_procedure(int $pid): array
         return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
     }
     ensureManuel();
-    $avant = Db::row('SELECT partie, videos FROM ceo_manuel_procedure WHERE procedure_id = ?', [$pid]);
+    $avant = Db::row('SELECT partie, videos FROM for_manuel_procedure WHERE procedure_id = ?', [$pid]);
     $partie = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
     $videos = array_key_exists('videos', $b) ? mnVideos($b['videos']) : mnVideos(json_decode((string) ($avant['videos'] ?? ''), true));
     if (array_key_exists('videos', $b) && is_array($b['videos']) && count($videos) < count(array_filter($b['videos']))) {
         return fmRefus(422, 'une adresse de vidéo n’est pas valable (https://…, dix vidéos au plus, sans doublon)');
     }
     $par = function_exists('authUser') ? (string) (authUser()['nom'] ?? '') : '';
-    Db::exec('INSERT INTO ceo_manuel_procedure (procedure_id, partie, videos, maj_le, par) VALUES (?, ?, ?, NOW(), ?)'
+    Db::exec('INSERT INTO for_manuel_procedure (procedure_id, partie, videos, maj_le, par) VALUES (?, ?, ?, NOW(), ?)'
         . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), videos = VALUES(videos), maj_le = NOW(), par = VALUES(par)',
         [$pid, $partie, $videos ? json_encode($videos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null, $par !== '' ? mb_substr($par, 0, 120) : null]);
     $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
@@ -1233,14 +1233,14 @@ function wr_formation_manuel_procedure(int $pid): array
 
 /* Les formations du référentiel (FO-xx) dans les quatre parties : une répartition par défaut,
  * versionnée (src/data/manuel_formations.json), et le réglage du cockpit qui l'emporte
- * (`ceo_manuel_formation`). */
+ * (`for_manuel_formation`). */
 
 function ensureManuelFormations(): void
 {
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_formation ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_manuel_formation ('
         . 'code VARCHAR(8) NOT NULL PRIMARY KEY,'    // FO-01…
         . 'partie VARCHAR(16) NULL,'                 // null = répartition par défaut
         . 'supports TEXT NULL,'                      // JSON [{url, titre, etape}] : vidéos, PDF, documents
@@ -1248,8 +1248,8 @@ function ensureManuelFormations(): void
         . 'par VARCHAR(120) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Table créée le 1er nov. 2026 sans supports, la partie obligatoire.
-    try { Db::exec('ALTER TABLE ceo_manuel_formation ADD COLUMN supports TEXT NULL AFTER partie'); } catch (Throwable $e) { /* déjà là */ }
-    try { Db::exec('ALTER TABLE ceo_manuel_formation MODIFY partie VARCHAR(16) NULL'); } catch (Throwable $e) { /* déjà ainsi */ }
+    try { Db::exec('ALTER TABLE for_manuel_formation ADD COLUMN supports TEXT NULL AFTER partie'); } catch (Throwable $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE for_manuel_formation MODIFY partie VARCHAR(16) NULL'); } catch (Throwable $e) { /* déjà ainsi */ }
 }
 
 /**
@@ -1303,15 +1303,15 @@ function wr_formation_manuel_formation(string $code): array
         return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
     }
     ensureManuelFormations();
-    $avant = Db::row('SELECT partie, supports FROM ceo_manuel_formation WHERE code = ?', [$code]);
+    $avant = Db::row('SELECT partie, supports FROM for_manuel_formation WHERE code = ?', [$code]);
     $p = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
     $sp = array_key_exists('supports', $b) ? mnSupports($b['supports']) : mnSupports(json_decode((string) ($avant['supports'] ?? ''), true));
     if (array_key_exists('supports', $b) && is_array($b['supports']) && count($sp) < count(array_filter($b['supports']))) {
         return fmRefus(422, 'un support n’est pas valable (adresse https://…, vingt au plus, sans doublon)');
     }
-    if ($p === null && $sp === []) { Db::exec('DELETE FROM ceo_manuel_formation WHERE code = ?', [$code]); }
+    if ($p === null && $sp === []) { Db::exec('DELETE FROM for_manuel_formation WHERE code = ?', [$code]); }
     else {
-        Db::exec('INSERT INTO ceo_manuel_formation (code, partie, supports, maj_le) VALUES (?, ?, ?, NOW())'
+        Db::exec('INSERT INTO for_manuel_formation (code, partie, supports, maj_le) VALUES (?, ?, ?, NOW())'
             . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), supports = VALUES(supports), maj_le = NOW()',
             [$code, $p, $sp ? json_encode($sp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null]);
     }

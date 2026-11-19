@@ -9,10 +9,10 @@ declare(strict_types=1);
  * signe, comme avant (src/sop.php : vérifié au panel, jeton de 4 h). L'ancienne tablette du CRM
  * (app/crm/web/manuel/, tables crm_mo_magasins / crm_mo_acces) renvoie ici.
  *
- *  ceo_tablette_magasin  une tablette de magasin : nom, boutique du panel (shop_id), PIN à 6 chiffres UNIQUE (ni
+ *  for_tablette_magasin  une tablette de magasin : nom, boutique du panel (shop_id), PIN à 6 chiffres UNIQUE (ni
  *                        000000 ni suite), archivée ou non ; crm_id = le magasin du CRM d'où elle a été reprise
- *  ceo_tablette_acces    un appareil ouvert par le PIN du magasin : jeton HACHÉ (sha256), créé le, vu le, révoqué
- *  ceo_tablette_essai    les essais de PIN du magasin (adresse IP hachée avec le secret du cockpit) : 5 erreurs
+ *  for_tablette_acces    un appareil ouvert par le PIN du magasin : jeton HACHÉ (sha256), créé le, vu le, révoqué
+ *  for_tablette_essai    les essais de PIN du magasin (adresse IP hachée avec le secret du cockpit) : 5 erreurs
  *                        par adresse en 15 minutes, 10 erreurs en tout par heure, 50 par jour — la même rigueur
  *                        que la tablette du CRM
  *
@@ -42,7 +42,7 @@ declare(strict_types=1);
  * jamais dans le dépôt). Code non configuré = gestion OUVERTE, sans code (décision du client du 06/11/2026 : « laisse la
  * tablette ouverte sans code ») ; un code posé plus tard la referme derrière lui. Les essais faux sont limités
  * comme le PIN du magasin (5 par adresse en 15 minutes, 10 par heure et 50 par jour en tout ; table
- * ceo_tablette_gestion_essai) ; ils ne touchent ni au PIN du magasin ni aux tablettes déjà ouvertes. Les routes de la
+ * for_tablette_gestion_essai) ; ils ne touchent ni au PIN du magasin ni aux tablettes déjà ouvertes. Les routes de la
  * tablette elle-même (appareil, puis /formation/sop/tablette/*) ne demandent pas ce code.
  */
 
@@ -59,7 +59,7 @@ const TAB_GESTION_CLE = 'tablettesCode';   // la clé de config/config.php ; var
 /** Les tables des tablettes ; la reprise des magasins du CRM s'ils sont dans la base. Idempotent. */
 function ensureTablettes(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_magasin ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_tablette_magasin ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(120) NOT NULL,'
         . 'shop_id VARCHAR(32) NULL,'
@@ -74,7 +74,7 @@ function ensureTablettes(): void
         . 'UNIQUE KEY u_crm (crm_id),'
         . 'KEY k_shop (shop_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_acces ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_tablette_acces ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'magasin_id INT UNSIGNED NOT NULL,'
         . "appareil VARCHAR(40) NOT NULL DEFAULT '',"
@@ -85,7 +85,7 @@ function ensureTablettes(): void
         . 'UNIQUE KEY u_jeton (jeton_hash),'
         . 'KEY k_mag (magasin_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_essai ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_tablette_essai ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'ip_hash CHAR(64) NOT NULL,'
         . 'ok TINYINT(1) NOT NULL DEFAULT 0,'
@@ -94,7 +94,7 @@ function ensureTablettes(): void
         . 'KEY k_le (cree_le)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Les essais faux du code de gestion (lot 6) : à part de ceux du PIN du magasin, qu'ils ne doivent pas bloquer.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_gestion_essai ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_tablette_gestion_essai ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'ip_hash CHAR(64) NOT NULL,'
         . 'cree_le DATETIME NOT NULL,'
@@ -125,27 +125,27 @@ function tabRepriseCrm(): array
     $dejaLa = 0;
     foreach (Db::rows('SELECT id, nom, store_id, pin, archive, cree_le FROM crm_mo_magasins ORDER BY id') as $m) {
         $cid = (int) $m['id'];
-        if (Db::row('SELECT id FROM ceo_tablette_magasin WHERE crm_id = ?', [$cid]) !== null) { $dejaLa++; continue; }
+        if (Db::row('SELECT id FROM for_tablette_magasin WHERE crm_id = ?', [$cid]) !== null) { $dejaLa++; continue; }
         $pin = preg_replace('/\D/', '', (string) ($m['pin'] ?? ''));
         $raison = null;
         if (!tabPinPermis($pin)) { $raison = $pin === '' ? 'aucun PIN au CRM' : 'PIN du CRM illisible'; $pin = null; }
-        elseif (Db::row('SELECT id FROM ceo_tablette_magasin WHERE pin = ?', [$pin]) !== null) { $raison = 'PIN du CRM déjà pris par une autre tablette'; $pin = null; }
+        elseif (Db::row('SELECT id FROM for_tablette_magasin WHERE pin = ?', [$pin]) !== null) { $raison = 'PIN du CRM déjà pris par une autre tablette'; $pin = null; }
         $nom = tabCourt($m['nom'] ?? '', 120) ?? ('Magasin ' . $cid);
         $shop = $m['store_id'] !== null ? foShopVal((string) $m['store_id']) : null;
         $cree = is_string($m['cree_le'] ?? null) && $m['cree_le'] !== '' ? (string) $m['cree_le'] : date('Y-m-d H:i:s');
         try {
-            Db::exec('INSERT INTO ceo_tablette_magasin (nom, shop_id, pin, pin_le, archive, crm_id, cree_le, cree_par, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            Db::exec('INSERT INTO for_tablette_magasin (nom, shop_id, pin, pin_le, archive, crm_id, cree_le, cree_par, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [$nom, $shop, $pin, $pin !== null ? date('Y-m-d H:i:s') : null, (int) $m['archive'] === 1 ? 1 : 0, $cid, $cree, 'Reprise du CRM', date('Y-m-d H:i:s')]);
         } catch (PDOException $e) {
             if ((string) $e->getCode() !== '23000') { throw $e; }
             // Un autre passage l'a reprise entre-temps (crm_id), ou le PIN vient d'être pris : on recommence sans PIN.
-            if (Db::row('SELECT id FROM ceo_tablette_magasin WHERE crm_id = ?', [$cid]) !== null) { $dejaLa++; continue; }
-            Db::exec('INSERT INTO ceo_tablette_magasin (nom, shop_id, pin, pin_le, archive, crm_id, cree_le, cree_par, maj_le) VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?)',
+            if (Db::row('SELECT id FROM for_tablette_magasin WHERE crm_id = ?', [$cid]) !== null) { $dejaLa++; continue; }
+            Db::exec('INSERT INTO for_tablette_magasin (nom, shop_id, pin, pin_le, archive, crm_id, cree_le, cree_par, maj_le) VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?)',
                 [$nom, $shop, (int) $m['archive'] === 1 ? 1 : 0, $cid, $cree, 'Reprise du CRM', date('Y-m-d H:i:s')]);
             $pin = null;
             $raison = 'PIN du CRM déjà pris par une autre tablette';
         }
-        $id = (int) (Db::row('SELECT id FROM ceo_tablette_magasin WHERE crm_id = ?', [$cid])['id'] ?? 0);
+        $id = (int) (Db::row('SELECT id FROM for_tablette_magasin WHERE crm_id = ?', [$cid])['id'] ?? 0);
         if ($pin === null && $id > 0) { tabPinNeuf($id); }
         $reprises[] = ['id' => $id, 'nom' => $nom, 'pinGarde' => $pin !== null, 'raison' => $raison, 'sansBoutique' => $shop === null, 'archive' => (int) $m['archive'] === 1];
     }
@@ -179,8 +179,8 @@ function tabPinNeuf(int $id): string
         $pin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         if (!tabPinPermis($pin)) { continue; }
         try {
-            Db::exec('UPDATE ceo_tablette_magasin SET pin = ?, pin_le = ?, maj_le = ? WHERE id = ?', [$pin, date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), $id]);
-            Db::exec('UPDATE ceo_tablette_acces SET revoque = 1 WHERE magasin_id = ? AND revoque = 0', [$id]);
+            Db::exec('UPDATE for_tablette_magasin SET pin = ?, pin_le = ?, maj_le = ? WHERE id = ?', [$pin, date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), $id]);
+            Db::exec('UPDATE for_tablette_acces SET revoque = 1 WHERE magasin_id = ? AND revoque = 0', [$id]);
             return $pin;
         } catch (PDOException $e) {
             if ((string) $e->getCode() !== '23000') { throw $e; }   // déjà pris : on en tire un autre
@@ -217,11 +217,11 @@ function tabAppareil(): ?array
     $memo = null;
     $j = tabJetonRecu();
     if ($j === '') { return null; }
-    $a = Db::row('SELECT a.id, a.magasin_id, a.vu_le, a.revoque, m.nom, m.shop_id, m.archive FROM ceo_tablette_acces a
-                  JOIN ceo_tablette_magasin m ON m.id = a.magasin_id WHERE a.jeton_hash = ?', [tabHash($j)]);
+    $a = Db::row('SELECT a.id, a.magasin_id, a.vu_le, a.revoque, m.nom, m.shop_id, m.archive FROM for_tablette_acces a
+                  JOIN for_tablette_magasin m ON m.id = a.magasin_id WHERE a.jeton_hash = ?', [tabHash($j)]);
     if ($a === null || (int) $a['revoque'] === 1 || (int) $a['archive'] === 1) { return null; }
     if ($a['vu_le'] === null || strtotime((string) $a['vu_le']) < time() - TAB_VU_S) {
-        Db::exec('UPDATE ceo_tablette_acces SET vu_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $a['id']]);
+        Db::exec('UPDATE for_tablette_acces SET vu_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $a['id']]);
     }
     $memo = ['acces' => (int) $a['id'], 'magasin' => (int) $a['magasin_id'], 'nom' => (string) $a['nom'],
         'shop' => $a['shop_id'] !== null && $a['shop_id'] !== '' ? (string) $a['shop_id'] : null];
@@ -278,8 +278,8 @@ function tabOuvrir(array $b): array
 {
     $ip = tabIpHash();
     $now = date('Y-m-d H:i:s');
-    Db::exec('DELETE FROM ceo_tablette_essai WHERE cree_le < ?', [date('Y-m-d H:i:s', time() - 7 * 86400)]);
-    $n = static function (string $where, array $v): int { return (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_tablette_essai WHERE ok = 0 AND ' . $where, $v)['n'] ?? 0); };
+    Db::exec('DELETE FROM for_tablette_essai WHERE cree_le < ?', [date('Y-m-d H:i:s', time() - 7 * 86400)]);
+    $n = static function (string $where, array $v): int { return (int) (Db::row('SELECT COUNT(*) AS n FROM for_tablette_essai WHERE ok = 0 AND ' . $where, $v)['n'] ?? 0); };
     if ($n('ip_hash = ? AND cree_le > ?', [$ip, date('Y-m-d H:i:s', time() - 900)]) >= TAB_ESSAIS_IP) {
         return tabRefus(429, 'essais', 'Trop d’essais depuis cet appareil : réessayer dans 15 minutes.');
     }
@@ -288,15 +288,15 @@ function tabOuvrir(array $b): array
         return tabRefus(429, 'suspendu', 'Ouverture des tablettes momentanément suspendue (trop d’essais) : réessayer dans une heure.');
     }
     $pin = preg_replace('/\D/', '', is_scalar($b['pin'] ?? null) ? (string) $b['pin'] : '');
-    $m = strlen($pin) === 6 ? Db::row('SELECT id, nom, shop_id, archive FROM ceo_tablette_magasin WHERE pin = ?', [$pin]) : null;
+    $m = strlen($pin) === 6 ? Db::row('SELECT id, nom, shop_id, archive FROM for_tablette_magasin WHERE pin = ?', [$pin]) : null;
     $ok = $m !== null && (int) $m['archive'] === 0;
-    Db::exec('INSERT INTO ceo_tablette_essai (ip_hash, ok, cree_le) VALUES (?, ?, ?)', [$ip, $ok ? 1 : 0, $now]);
+    Db::exec('INSERT INTO for_tablette_essai (ip_hash, ok, cree_le) VALUES (?, ?, ?)', [$ip, $ok ? 1 : 0, $now]);
     if (!$ok) {
         usleep(400000);
         return $m === null ? tabRefus(401, 'pin', 'PIN du magasin inconnu.') : tabRefus(401, 'archive', 'Cette tablette n’est plus active.');
     }
     $jeton = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-    Db::exec('INSERT INTO ceo_tablette_acces (magasin_id, appareil, jeton_hash, cree_le, vu_le) VALUES (?, ?, ?, ?, ?)',
+    Db::exec('INSERT INTO for_tablette_acces (magasin_id, appareil, jeton_hash, cree_le, vu_le) VALUES (?, ?, ?, ?, ?)',
         [(int) $m['id'], tabAppareilNom(), tabHash($jeton), $now, $now]);
     if (!headers_sent()) {
         setcookie(TAB_COOKIE, $jeton, ['expires' => time() + TAB_SESSION_S, 'path' => tabCookieChemin(), 'secure' => tabHttps(), 'httponly' => true, 'samesite' => 'Lax']);
@@ -338,7 +338,7 @@ function tabEtat(): array
     }
     $pre = null;
     if ($q !== null) {
-        $m = Db::row('SELECT nom FROM ceo_tablette_magasin WHERE shop_id = ? AND archive = 0 ORDER BY id LIMIT 1', [$q]);
+        $m = Db::row('SELECT nom FROM for_tablette_magasin WHERE shop_id = ? AND archive = 0 ORDER BY id LIMIT 1', [$q]);
         if ($m !== null) { $pre = ['shop' => $q, 'nom' => (string) $m['nom']]; }
     }
     return ['ouvert' => false, 'prechoix' => $pre];
@@ -348,7 +348,7 @@ function tabEtat(): array
 function tabFermer(): array
 {
     $j = tabJetonRecu();
-    if ($j !== '') { Db::exec('UPDATE ceo_tablette_acces SET revoque = 1 WHERE jeton_hash = ?', [tabHash($j)]); }
+    if ($j !== '') { Db::exec('UPDATE for_tablette_acces SET revoque = 1 WHERE jeton_hash = ?', [tabHash($j)]); }
     if (!headers_sent()) { setcookie(TAB_COOKIE, '', ['expires' => time() - 3600, 'path' => tabCookieChemin(), 'secure' => tabHttps(), 'httponly' => true, 'samesite' => 'Lax']); }
     return ['ok' => true];
 }
@@ -399,8 +399,8 @@ function tabGardeGestion(): ?array
     $recu = trim((string) ($_SERVER['HTTP_X_CODE_GESTION'] ?? ''));
     if ($recu === '') { return tabRefus(403, 'code_attendu', 'Code de gestion attendu pour gérer les tablettes.'); }
     $ip = tabIpHash();
-    Db::exec('DELETE FROM ceo_tablette_gestion_essai WHERE cree_le < ?', [date('Y-m-d H:i:s', time() - 7 * 86400)]);
-    $n = static function (string $where, array $v): int { return (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_tablette_gestion_essai WHERE ' . $where, $v)['n'] ?? 0); };
+    Db::exec('DELETE FROM for_tablette_gestion_essai WHERE cree_le < ?', [date('Y-m-d H:i:s', time() - 7 * 86400)]);
+    $n = static function (string $where, array $v): int { return (int) (Db::row('SELECT COUNT(*) AS n FROM for_tablette_gestion_essai WHERE ' . $where, $v)['n'] ?? 0); };
     if ($n('ip_hash = ? AND cree_le > ?', [$ip, date('Y-m-d H:i:s', time() - 900)]) >= TAB_ESSAIS_IP) {
         return tabRefus(429, 'essais', 'Trop de codes de gestion faux depuis cet appareil : réessayer dans 15 minutes.');
     }
@@ -410,7 +410,7 @@ function tabGardeGestion(): ?array
     }
     $sel = function_exists('foSecret') ? foSecret() : 'tablettes';
     if (hash_equals(hash_hmac('sha256', $code, $sel), hash_hmac('sha256', $recu, $sel))) { return null; }
-    Db::exec('INSERT INTO ceo_tablette_gestion_essai (ip_hash, cree_le) VALUES (?, ?)', [$ip, date('Y-m-d H:i:s')]);
+    Db::exec('INSERT INTO for_tablette_gestion_essai (ip_hash, cree_le) VALUES (?, ?)', [$ip, date('Y-m-d H:i:s')]);
     usleep(400000);
     return tabRefus(403, 'code_gestion', 'Code de gestion refusé.');
 }
@@ -435,14 +435,14 @@ function tabListe(): array
     $noms = [];
     foreach ($boutiques as $b) { $noms[$b['id']] = $b['nom']; }
     $acc = [];
-    foreach (Db::rows('SELECT id, magasin_id, appareil, cree_le, vu_le FROM ceo_tablette_acces WHERE revoque = 0 ORDER BY id DESC') as $a) {
+    foreach (Db::rows('SELECT id, magasin_id, appareil, cree_le, vu_le FROM for_tablette_acces WHERE revoque = 0 ORDER BY id DESC') as $a) {
         $acc[(int) $a['magasin_id']][] = ['id' => (int) $a['id'], 'appareil' => (string) $a['appareil'], 'creeLe' => foIso($a['cree_le']), 'vuLe' => foIso($a['vu_le'])];
     }
     $auj = [];
     try {
-        foreach (Db::rows('SELECT shop_id, COUNT(*) AS n FROM ceo_sop_suivi WHERE maj_le >= ? GROUP BY shop_id', [date('Y-m-d 00:00:00')]) as $r) { $auj[(string) $r['shop_id']] = (int) $r['n']; }
+        foreach (Db::rows('SELECT shop_id, COUNT(*) AS n FROM for_sop_suivi WHERE maj_le >= ? GROUP BY shop_id', [date('Y-m-d 00:00:00')]) as $r) { $auj[(string) $r['shop_id']] = (int) $r['n']; }
     } catch (PDOException $e) { /* suivi absent : rien à compter */ }
-    $rows = Db::rows('SELECT * FROM ceo_tablette_magasin ORDER BY archive, nom, id');
+    $rows = Db::rows('SELECT * FROM for_tablette_magasin ORDER BY archive, nom, id');
     $parShop = [];
     foreach ($rows as $m) { if ((int) $m['archive'] === 0 && $m['shop_id'] !== null) { $parShop[(string) $m['shop_id']] = ($parShop[(string) $m['shop_id']] ?? 0) + 1; } }
     $mags = array_map(static function (array $m) use ($acc, $auj, $noms, $parShop): array {
@@ -462,7 +462,7 @@ function tabListe(): array
 
 function tabLigne(int $id): ?array
 {
-    return Db::row('SELECT * FROM ceo_tablette_magasin WHERE id = ?', [$id]);
+    return Db::row('SELECT * FROM for_tablette_magasin WHERE id = ?', [$id]);
 }
 
 /** Une boutique choisie : son identifiant, contrôlé ; '' ou null = aucune. */
@@ -483,7 +483,7 @@ function tabCreer(array $b): array
     $shop = tabShopChoisi($b['shopId'] ?? null, $err);
     if ($err !== null) { return foRefus(422, $err); }
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_tablette_magasin (nom, shop_id, cree_le, cree_par, maj_le) VALUES (?, ?, ?, ?, ?)', [$nom, $shop, $now, foPar($b), $now]);
+    Db::exec('INSERT INTO for_tablette_magasin (nom, shop_id, cree_le, cree_par, maj_le) VALUES (?, ?, ?, ?, ?)', [$nom, $shop, $now, foPar($b), $now]);
     $id = (int) Db::pdo()->lastInsertId();
     tabPinNeuf($id);
     try { journalAdd(foPar($b), 'Formation', 'Tablettes', '« ' . $nom . ' » : tablette créée'); } catch (Throwable $e) { /* journal absent */ }
@@ -516,9 +516,9 @@ function tabModifier(int $id, array $b): array
     if ($set === []) { return ['ok' => true] + tabListe(); }
     $set[] = 'maj_le = ?'; $v[] = date('Y-m-d H:i:s');
     $v[] = $id;
-    Db::exec('UPDATE ceo_tablette_magasin SET ' . implode(', ', $set) . ' WHERE id = ?', $v);
+    Db::exec('UPDATE for_tablette_magasin SET ' . implode(', ', $set) . ' WHERE id = ?', $v);
     $n = 0;
-    if ($archiver === true) { $n = Db::exec('UPDATE ceo_tablette_acces SET revoque = 1 WHERE magasin_id = ? AND revoque = 0', [$id]); }
+    if ($archiver === true) { $n = Db::exec('UPDATE for_tablette_acces SET revoque = 1 WHERE magasin_id = ? AND revoque = 0', [$id]); }
     try { journalAdd(foPar($b), 'Formation', 'Tablettes', '« ' . (string) $m['nom'] . ' » : ' . implode(', ', $quoi) . ($n ? ' (' . $n . ' appareil(s) déconnecté(s))' : '')); } catch (Throwable $e) { /* journal absent */ }
     return ['ok' => true] + tabListe();
 }
@@ -528,7 +528,7 @@ function tabNouveauPin(int $id, array $b): array
 {
     $m = tabLigne($id);
     if ($m === null) { return foRefus(404, 'tablette inconnue'); }
-    $n = (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_tablette_acces WHERE magasin_id = ? AND revoque = 0', [$id])['n'] ?? 0);
+    $n = (int) (Db::row('SELECT COUNT(*) AS n FROM for_tablette_acces WHERE magasin_id = ? AND revoque = 0', [$id])['n'] ?? 0);
     tabPinNeuf($id);
     try { journalAdd(foPar($b), 'Formation', 'Tablettes', '« ' . (string) $m['nom'] . ' » : nouveau PIN (' . $n . ' appareil(s) déconnecté(s))'); } catch (Throwable $e) { /* journal absent */ }
     return ['ok' => true, 'deconnectes' => $n] + tabListe();
@@ -537,9 +537,9 @@ function tabNouveauPin(int $id, array $b): array
 /** DELETE /formation/tablettes/appareils/{id} — cet appareil devra retaper le PIN du magasin. */
 function tabDeconnecter(int $id): array
 {
-    $a = Db::row('SELECT a.id, a.appareil, m.nom FROM ceo_tablette_acces a JOIN ceo_tablette_magasin m ON m.id = a.magasin_id WHERE a.id = ?', [$id]);
+    $a = Db::row('SELECT a.id, a.appareil, m.nom FROM for_tablette_acces a JOIN for_tablette_magasin m ON m.id = a.magasin_id WHERE a.id = ?', [$id]);
     if ($a === null) { return foRefus(404, 'appareil inconnu'); }
-    Db::exec('UPDATE ceo_tablette_acces SET revoque = 1 WHERE id = ?', [$id]);
+    Db::exec('UPDATE for_tablette_acces SET revoque = 1 WHERE id = ?', [$id]);
     try { journalAdd(foPar([]), 'Formation', 'Tablettes', '« ' . (string) $a['nom'] . ' » : appareil déconnecté (' . (string) $a['appareil'] . ')'); } catch (Throwable $e) { /* journal absent */ }
     return ['ok' => true] + tabListe();
 }

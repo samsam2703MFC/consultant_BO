@@ -154,7 +154,7 @@ function ckcPlan(): array
     // 3. Formation : les liens des SOP (et des fiches) vers leurs checklists
     $fiches = [];
     foreach (CKC_LISTE as $x) { if ($x['fiche'] !== null) { $fiches[$x['fiche']] = [$x['code']]; } }
-    foreach (Db::rows('SELECT id, code, titre_fr, checklists FROM ceo_sop ORDER BY id') as $r) {
+    foreach (Db::rows('SELECT id, code, titre_fr, checklists FROM for_sop ORDER BY id') as $r) {
         $actuel = rfJsonListe($r['checklists']);
         $voulu = CKC_LIENS[$r['id']] ?? $fiches[$r['id']] ?? null;
         if ($voulu === null) {
@@ -166,7 +166,7 @@ function ckcPlan(): array
             'etat' => 'afaire', 'changements' => ['checklists' => $voulu], 'avant' => ['checklists' => $actuel]];
     }
     // 4. Le référentiel : les checklists de chaque sous-catégorie
-    foreach (Db::rows('SELECT cle, fr, checklists FROM ceo_ref_souscat ORDER BY cle') as $s) {
+    foreach (Db::rows('SELECT cle, fr, checklists FROM for_ref_souscat ORDER BY cle') as $s) {
         $actuel = rfJsonListe($s['checklists']);
         $voulu = [];
         foreach ($actuel as $k) { $n = ckcTraduire($k); if (!in_array($n, $voulu, true)) { $voulu[] = $n; } }
@@ -210,29 +210,29 @@ function ckcAppliquer(array $b): array
                 $r = foSopRow((string) $p['id']);
                 $fr = $ch['titre_fr'] ?? (string) $r['titre_fr'];
                 $nl = $ch['titre_nl'] ?? (string) $r['titre_nl'];
-                $v = Db::row('SELECT version, contenu FROM ceo_sop_version WHERE sop_id = ? ORDER BY publie_le DESC, version DESC LIMIT 1', [$r['id']]);
+                $v = Db::row('SELECT version, contenu FROM for_sop_version WHERE sop_id = ? ORDER BY publie_le DESC, version DESC LIMIT 1', [$r['id']]);
                 $c = $v ? json_decode((string) $v['contenu'], true) : null;
                 $now = date('Y-m-d H:i:s');
                 if (is_array($c) && (isset($ch['titre_fr']) || isset($ch['titre_nl']))) {
                     $c['titre'] = ['fr' => $fr, 'nl' => $nl];
                     $ver = foVersionSuivante((string) $r['version']);
-                    Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
+                    Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
                         [$r['id'], $ver, foJson($c), 'Nouvelle nomenclature des checklists : code ' . ($ch['code'] ?? $r['code']) . ', titre « ' . $fr . ' »', $now, $par]);
-                    Db::exec('UPDATE ceo_sop SET version = ? WHERE id = ?', [$ver, $r['id']]);
+                    Db::exec('UPDATE for_sop SET version = ? WHERE id = ?', [$ver, $r['id']]);
                 }
-                Db::exec('UPDATE ceo_sop SET code = ?, titre_fr = ?, titre_nl = ?, maj_le = ?, maj_par = ? WHERE id = ?',
+                Db::exec('UPDATE for_sop SET code = ?, titre_fr = ?, titre_nl = ?, maj_le = ?, maj_par = ? WHERE id = ?',
                     [$ch['code'] ?? $r['code'], mb_substr($fr, 0, 190), mb_substr($nl, 0, 190), $now, $par, $r['id']]);
                 journalAdd($par, 'Formation', $fr, 'Nouvelle nomenclature : la fiche « ' . $p['avant']['code'] . ' » devient ' . ($ch['code'] ?? $r['code']));
                 $res[] = $p + ['ok' => true];
                 continue;
             }
             if ($p['ou'] === 'lien') {
-                Db::exec('UPDATE ceo_sop SET checklists = ?, maj_le = ?, maj_par = ? WHERE id = ?', [rfJsonEcrire($ch['checklists']), date('Y-m-d H:i:s'), $par, $p['id']]);
+                Db::exec('UPDATE for_sop SET checklists = ?, maj_le = ?, maj_par = ? WHERE id = ?', [rfJsonEcrire($ch['checklists']), date('Y-m-d H:i:s'), $par, $p['id']]);
                 $res[] = $p + ['ok' => true];
                 continue;
             }
             if ($p['ou'] === 'souscat') {
-                Db::exec('UPDATE ceo_ref_souscat SET checklists = ?, maj_le = ?, maj_par = ? WHERE cle = ?', [rfJsonEcrire($ch['checklists']), date('Y-m-d H:i:s'), $par, $p['id']]);
+                Db::exec('UPDATE for_ref_souscat SET checklists = ?, maj_le = ?, maj_par = ? WHERE cle = ?', [rfJsonEcrire($ch['checklists']), date('Y-m-d H:i:s'), $par, $p['id']]);
                 $res[] = $p + ['ok' => true];
                 continue;
             }

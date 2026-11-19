@@ -26,7 +26,7 @@ final class Db
 
     public static function rows(string $sql, array $a = []): array
     {
-        if (str_contains($sql, 'FROM ceo_sop')) { return array_values(self::$sops); }
+        if (str_contains($sql, 'FROM for_sop')) { return array_values(self::$sops); }
         if (str_contains($sql, 'FROM aia_manuel_passage')) { return self::$passages; }
         if (str_contains($sql, 'FROM ceo_hist_jour') && str_contains($sql, 'GROUP BY jour')) {
             $n = count($a);
@@ -44,9 +44,9 @@ final class Db
 
     public static function row(string $sql, array $a = []): ?array
     {
-        if (str_contains($sql, 'COUNT(*) AS n FROM ceo_sop')) { return ['n' => count(self::$sops)]; }
-        if (str_contains($sql, 'FROM ceo_sop WHERE id = ?')) { return self::$sops[$a[0]] ?? null; }
-        if (str_contains($sql, 'FROM ceo_sop_version')) { $c = self::$versions[$a[0] . '|' . $a[1]] ?? null; return $c === null ? null : ['contenu' => $c]; }
+        if (str_contains($sql, 'COUNT(*) AS n FROM for_sop')) { return ['n' => count(self::$sops)]; }
+        if (str_contains($sql, 'FROM for_sop WHERE id = ?')) { return self::$sops[$a[0]] ?? null; }
+        if (str_contains($sql, 'FROM for_sop_version')) { $c = self::$versions[$a[0] . '|' . $a[1]] ?? null; return $c === null ? null : ['contenu' => $c]; }
         if (str_contains($sql, 'FROM aia_reglage')) { return isset(self::$reglages[$a[0]]) ? ['valeur' => self::$reglages[$a[0]]] : null; }
         return null;
     }

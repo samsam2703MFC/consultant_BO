@@ -416,15 +416,15 @@ Une section du module Formation : **`…/consulant_bo/formation/#/sop`** (et à 
 tablette du poste **`…/formation/sop/tablette.html?shop=<id>&poste=cuisson`** (l’onglet **SOP** de l’app Cuisine y
 mène avec le magasin et la langue de l’appareil).
 
-**Rien à installer à la main.** Au premier appel de l’API, `ensureSop()` (`src/sop.php`) crée `ceo_sop`,
-`ceo_sop_version`, `ceo_sop_suivi`, `ceo_sop_personne` et range les 25 SOP de `data/formation/sops/*.json` (FR et NL).
+**Rien à installer à la main.** Au premier appel de l’API, `ensureSop()` (`src/sop.php`) crée `for_sop`,
+`for_sop_version`, `for_sop_suivi`, `for_sop_personne` et range les 25 SOP de `data/formation/sops/*.json` (FR et NL).
 La reprise n’écrase jamais une SOP déjà en base. `data/formation/` et `public/formation/sop/photos/` partent avec le
 reste du dépôt.
 
 **Tablettes des magasins (lot 5, 06/11/2026)** : une seule tablette par magasin, celle-ci. Au premier lancement, elle
 demande le **PIN du magasin** (6 chiffres), puis garde la session sur l’appareil. Rien à configurer : au premier appel
-de l’API, `ensureTablettes()` (`src/tablettes.php`) crée `ceo_tablette_magasin`, `ceo_tablette_acces`,
-`ceo_tablette_essai` et **reprend les magasins du Manuel du CRM** (`crm_mo_magasins`, même base) avec le même PIN
+de l’API, `ensureTablettes()` (`src/tablettes.php`) crée `for_tablette_magasin`, `for_tablette_acces`,
+`for_tablette_essai` et **reprend les magasins du Manuel du CRM** (`crm_mo_magasins`, même base) avec le même PIN
 quand il est libre — le bilan (et les éventuels PIN neufs, à communiquer) s’affiche dans Formation › Manuel du réseau
 › **Tablettes**, où l’on crée, renomme, relie à une boutique, archive les tablettes et tire un nouveau PIN. L’adresse
 de la tablette ne change pas. Ordre de mise en ligne : le Cockpit **avant** le CRM (la page `/crm/manuel/` du CRM

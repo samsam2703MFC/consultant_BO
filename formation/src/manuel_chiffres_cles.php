@@ -192,7 +192,7 @@ function mcSynchroniser(): ?string
         $c = mcChiffres();
         if ($c === null || !function_exists('foContenu')) { return null; }
         $empreinte = ['gabarit' => MC_GABARIT, 'chiffres' => array_map(static fn ($v) => round((float) $v, 2), $c)];
-        $r = Db::row('SELECT id, version, source FROM ceo_sop WHERE id = ?', [MC_ID]);
+        $r = Db::row('SELECT id, version, source FROM for_sop WHERE id = ?', [MC_ID]);
         $avant = $r !== null ? json_decode((string) ($r['source'] ?? ''), true) : null;
         if ($r !== null && is_array($avant) && ($avant['empreinte'] ?? null) == $empreinte) { return null; }
         $contenu = foContenu(mcContenu($c));
@@ -202,8 +202,8 @@ function mcSynchroniser(): ?string
         $source = json_encode(['genere' => 'src/manuel_chiffres_cles.php', 'empreinte' => $empreinte], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($r === null) {
             $ver = '1.0';
-            $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 AS o FROM ceo_sop')['o'] ?? 1);
-            Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, acces, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
+            $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 AS o FROM for_sop')['o'] ?? 1);
+            Db::exec('INSERT INTO for_sop (id, code, type, dossier, poste, moment, acces, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
                         titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par)
                       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [MC_ID, foCodeAuto('Article', null), 'Article', '04', 'vente', 'tous', 'publiee', $ver, $ver, 'FR', 'origine', 'relue',
@@ -211,7 +211,7 @@ function mcSynchroniser(): ?string
                     $st['etapes'], $st['photos'], $ordre, $source, $now, MC_PAR]);
             // Le classement du Manuel du réseau (colonnes du référentiel) : comme l'article du dashboard.
             try {
-                Db::exec('UPDATE ceo_sop SET souscat = ?, phases = ?, postes = ?, competences = ?, formations = ?, checklists = ? WHERE id = ?',
+                Db::exec('UPDATE for_sop SET souscat = ?, phases = ?, postes = ?, competences = ?, formations = ?, checklists = ? WHERE id = ?',
                     ['D7.1', '["preouverture","operationnel"]', '["P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12"]', '["C-PILOTAGE.KPI","C-PILOTAGE.Vente"]', '["FO-05"]', '[]', MC_ID]);
             } catch (Throwable $e) { /* le référentiel n'est pas encore là : l'article reste non classé */ }
             $note = 'Création : les chiffres clés du réseau, écrits depuis les cibles du cockpit';
@@ -219,12 +219,12 @@ function mcSynchroniser(): ?string
             $ver = foVersionSuivante((string) $r['version']);
             $ecarts = mcEcarts(is_array($avant) ? (array) ($avant['empreinte']['chiffres'] ?? []) : [], $empreinte['chiffres']);
             $note = $ecarts !== '' ? 'Chiffres clés mis à jour : ' . $ecarts : 'Texte des chiffres clés revu';
-            Db::exec('UPDATE ceo_sop SET version = ?, titre_fr = ?, titre_nl = ?, objectif_fr = ?, objectif_nl = ?, duree = ?, nb_etapes = ?, nb_photos = ?,
+            Db::exec('UPDATE for_sop SET version = ?, titre_fr = ?, titre_nl = ?, objectif_fr = ?, objectif_nl = ?, duree = ?, nb_etapes = ?, nb_photos = ?,
                         trad_nl = ?, source = ?, maj_le = ?, maj_par = ? WHERE id = ?',
                 [$ver, $contenu['titre']['fr'], $contenu['titre']['nl'], $contenu['objectif']['fr'], $contenu['objectif']['nl'], $contenu['duree'],
                     $st['etapes'], $st['photos'], 'relue', $source, $now, MC_PAR, MC_ID]);
         }
-        Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
+        Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
             [MC_ID, $ver, foJson($contenu), mb_substr($note, 0, 500), $now, MC_PAR]);
         if (function_exists('journalAdd')) { try { journalAdd(MC_PAR, 'Formation', 'Les chiffres clés du réseau 2026', 'Version ' . $ver . ' publiée — ' . $note); } catch (Throwable $e) { /* */ } }
         return ($r === null ? 'créé ' : 'version ') . $ver . ' : ' . $note;

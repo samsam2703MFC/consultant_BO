@@ -11,12 +11,12 @@ declare(strict_types=1);
  * et rangées au premier appel. Nos bases deviennent la source ; le Drive devient l'archive (décisions du
  * 05/11/2026, docs/maquettes/formation/LISEZMOI.md).
  *
- *  ceo_sop           une ligne par SOP : code, famille (01 à 04), poste, partie du Manuel opératoire, version en
+ *  for_sop           une ligne par SOP : code, famille (01 à 04), poste, partie du Manuel opératoire, version en
  *                    vigueur, état des deux langues (origine / relue / à relire), compétence du panel, titres
- *  ceo_sop_version   le contenu de chaque version publiée — JSON FR + NL : sections, étapes, points
+ *  for_sop_version   le contenu de chaque version publiée — JSON FR + NL : sections, étapes, points
  *                    critiques, quiz. Les versions précédentes restent lisibles.
- *  ceo_sop_suivi     une personne × une SOP : lue, quiz réussi, « vu faire » par la responsable du magasin
- *  ceo_sop_personne  une personne d'un magasin : ses postes, sa langue, si elle valide « vu faire »
+ *  for_sop_suivi     une personne × une SOP : lue, quiz réussi, « vu faire » par la responsable du magasin
+ *  for_sop_personne  une personne d'un magasin : ses postes, sa langue, si elle valide « vu faire »
  *
  * DANS LE MODULE : le groupe « Standards (SOP) » (liste, fiche FR | NL, compétences, rédaction) et les quatre
  * parties du Manuel opératoire, où chaque SOP se range à côté des procédures et des formations FO (partie
@@ -63,7 +63,7 @@ const FO_PIN_ESSAIS = 5;                // essais de PIN manqués avant blocage�
 const FO_PIN_BLOCAGE_S = 600;           // … de 10 minutes, pour cette personne de ce magasin
 // Les documents RÉSERVÉS (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste (mot de passe) : celui
 // du franchisé ou du responsable magasin ; pour le moment 1111, on changera en fin de développement ») : colonne `acces`
-// de ceo_sop. Sur la tablette, un document réservé se range dans l'onglet Manuel, cadenas doré, et ne s'ouvre qu'avec le
+// de for_sop. Sur la tablette, un document réservé se range dans l'onglet Manuel, cadenas doré, et ne s'ouvre qu'avec le
 // PIN du responsable. Ce PIN est le réglage `foPinResponsable` (ceo_app_setting) ; tant qu'il n'est pas posé, le PIN
 // PROVISOIRE ci-dessous — à remplacer en fin de développement (le réglage, ou le PIN de la personne au panel).
 // « consultant » (12/11/2026, client : « une section pour les consultants ») : ouvert à tous, sans PIN ; la tablette le
@@ -78,10 +78,10 @@ function foDataDir(): string { return __DIR__ . '/../data/formation'; }
 
 /* ═══ Schéma et reprise ═══════════════════════════════════════════════════════════════════════════ */
 
-/** Les tables de la formation ; la reprise du Drive au premier passage (ceo_sop vide). Idempotent. */
+/** Les tables de la formation ; la reprise du Drive au premier passage (for_sop vide). Idempotent. */
 function ensureSop(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_sop ('
         . 'id VARCHAR(32) NOT NULL PRIMARY KEY,'
         . 'code VARCHAR(40) NULL,'
         . "type VARCHAR(20) NOT NULL DEFAULT 'SOP',"
@@ -110,7 +110,7 @@ function ensureSop(): void
         . 'maj_par VARCHAR(120) NULL,'
         . 'KEY idx_dossier (dossier, ordre)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_version ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_sop_version ('
         . 'sop_id VARCHAR(32) NOT NULL,'
         . 'version VARCHAR(12) NOT NULL,'
         . 'contenu MEDIUMTEXT NOT NULL,'
@@ -120,7 +120,7 @@ function ensureSop(): void
         . 'publie_par VARCHAR(120) NULL,'
         . 'PRIMARY KEY (sop_id, version)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_suivi ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_sop_suivi ('
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'employee_id INT NOT NULL,'
         . 'sop_id VARCHAR(32) NOT NULL,'
@@ -140,7 +140,7 @@ function ensureSop(): void
         . 'KEY idx_sop (sop_id),'
         . 'KEY idx_maj (shop_id, maj_le)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_personne ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_sop_personne ('
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'employee_id INT NOT NULL,'
         . "nom VARCHAR(120) NOT NULL DEFAULT '',"
@@ -150,15 +150,15 @@ function ensureSop(): void
         . 'maj_le DATETIME NOT NULL,'
         . 'PRIMARY KEY (shop_id, employee_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN partie VARCHAR(16) NULL AFTER poste'); } catch (PDOException $e) { /* déjà là */ }
-    try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN acces VARCHAR(16) NULL AFTER moment'); } catch (PDOException $e) { /* déjà là */ }
-    if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_sop')['n'] ?? 0) === 0) { foImporter(); }
+    try { Db::exec('ALTER TABLE for_sop ADD COLUMN partie VARCHAR(16) NULL AFTER poste'); } catch (PDOException $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE for_sop ADD COLUMN acces VARCHAR(16) NULL AFTER moment'); } catch (PDOException $e) { /* déjà là */ }
+    if ((int) (Db::row('SELECT COUNT(*) AS n FROM for_sop')['n'] ?? 0) === 0) { foImporter(); }
     // L'article « Les chiffres clés du réseau 2026 », écrit depuis les cibles du cockpit (18/11/2026).
     if (function_exists('mcSynchroniser')) { mcSynchroniser(); }
 }
 
 /**
- * La reprise : chaque data/formation/sops/<id>.json absent de ceo_sop y entre, version d'origine comprise.
+ * La reprise : chaque data/formation/sops/<id>.json absent de for_sop y entre, version d'origine comprise.
  * Ne réécrit jamais une SOP déjà en base (nos bases sont la source). Rend le nombre de SOP ajoutées.
  */
 function foImporter(): int
@@ -171,7 +171,7 @@ function foImporter(): int
         $j = json_decode((string) file_get_contents($f), true);
         if (!is_array($j) || !is_string($j['id'] ?? null)) { continue; }
         $id = foId($j['id']);
-        if ($id === null || Db::row('SELECT id FROM ceo_sop WHERE id = ?', [$id]) !== null) { continue; }
+        if ($id === null || Db::row('SELECT id FROM for_sop WHERE id = ?', [$id]) !== null) { continue; }
         $c = foContenu($j);
         if ($c['titre']['fr'] === '' && $c['titre']['nl'] === '') { continue; }
         $lo = strtoupper((string) ($j['langue_origine'] ?? 'FR'));
@@ -179,7 +179,7 @@ function foImporter(): int
         $ver = foVersion((string) ($j['version'] ?? '1.0'));
         $now = date('Y-m-d H:i:s');
         $st = foStats($c);
-        Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
+        Db::exec('INSERT INTO for_sop (id, code, type, dossier, poste, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
                     titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
             $id, foCourt($j['code'] ?? null, 40), foType($j['type'] ?? 'SOP'), foDossier($j['dossier'] ?? '01'), foPoste($j['poste'] ?? 'vente'),
@@ -188,7 +188,7 @@ function foImporter(): int
             mb_substr($c['titre']['fr'] ?: $c['titre']['nl'], 0, 190), mb_substr($c['titre']['nl'], 0, 190), $c['objectif']['fr'], $c['objectif']['nl'],
             foCourt($c['duree'], 190), $st['etapes'], $st['photos'], (int) ($ordre[$id] ?? 900 + $n),
             isset($j['source']) ? json_encode($j['source'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null, $now, 'Reprise du Drive']);
-        Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
+        Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
             [$id, $ver, foJson($c), 'Reprise du Drive' . ($reprise !== '' ? ' (' . $reprise . ')' : ''), $now, 'Reprise du Drive']);
         $n++;
     }
@@ -203,7 +203,7 @@ function foImporter(): int
 /** GET /formation/sops — les standards, rangés par famille, avec leur progression dans le réseau. */
 function ep_sop_sops(): array
 {
-    $rows = Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id');
+    $rows = Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id');
     $prog = foProgressionReseau();
     $out = [];
     foreach ($rows as $r) { $out[] = foSopLigne($r) + ['progression' => $prog[(string) $r['id']] ?? ['vu' => 0, 'quiz' => 0, 'lu' => 0, 'aRevoir' => 0]]; }
@@ -228,7 +228,7 @@ function ep_sop_sop(string $id): array
     $r = foSopRow($id);
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
     $c = foContenuVersion((string) $r['id'], (string) $r['version']);
-    $vers = Db::rows('SELECT version, note, revalider, publie_le, publie_par FROM ceo_sop_version WHERE sop_id = ? ORDER BY publie_le DESC, version DESC', [$r['id']]);
+    $vers = Db::rows('SELECT version, note, revalider, publie_le, publie_par FROM for_sop_version WHERE sop_id = ? ORDER BY publie_le DESC, version DESC', [$r['id']]);
     $out = foSopLigne($r) + [
         'contenu' => $c,
         'versions' => array_map(static fn ($v) => ['version' => (string) $v['version'], 'note' => $v['note'], 'revalider' => (int) $v['revalider'] === 1,
@@ -256,7 +256,7 @@ function ep_sop_sop_version(string $id, string $v): array
 {
     $r = foSopRow($id);
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $row = Db::row('SELECT version, contenu, note, revalider, publie_le, publie_par FROM ceo_sop_version WHERE sop_id = ? AND version = ?', [$r['id'], $v]);
+    $row = Db::row('SELECT version, contenu, note, revalider, publie_le, publie_par FROM for_sop_version WHERE sop_id = ? AND version = ?', [$r['id'], $v]);
     if ($row === null) { return foRefus(404, 'version inconnue'); }
     return ['id' => (string) $r['id'], 'version' => (string) $row['version'], 'enVigueur' => (string) $row['version'] === (string) $r['version'],
         'contenu' => json_decode((string) $row['contenu'], true), 'note' => $row['note'], 'publieLe' => foIso($row['publie_le']), 'publiePar' => $row['publie_par']];
@@ -269,7 +269,7 @@ function ep_sop_sop_version(string $id, string $v): array
 function ep_sop_competences(): array
 {
     $panel = foCompetencesPanel(!empty($_GET['rafraichir']));
-    $sops = Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id');
+    $sops = Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id');
     $comps = foCompetencesUtilisees($sops);
     $magasins = [];
     foreach (foMagasins() as $m) {
@@ -312,7 +312,7 @@ function ep_sop_manuel(): array
 {
     $l = foLangueParam();
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\' ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' ORDER BY dossier, ordre, id') as $r) {
         $c = foContenuVersion((string) $r['id'], (string) $r['version']);
         $out[] = foSopLigne($r) + ['contenu' => foContenuLangue($c, $l, true)];
     }
@@ -324,7 +324,7 @@ function ep_sop_manuel_pdf(): array
 {
     $l = foLangueParam();
     $d = isset($_GET['dossier']) && isset(FO_DOSSIERS[(string) $_GET['dossier']]) ? (string) $_GET['dossier'] : null;
-    $rows = Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\'' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
+    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\'' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
     $titre = ($l === 'nl' ? 'Operationeel handboek' : 'Manuel opératoire') . ($d !== null ? ' — ' . FO_DOSSIERS[$d][$l] : '');
     foPdfSortie($rows, $l, true, $titre, 'manuel-' . $l . ($d !== null ? '-' . $d : ''));
     return [];
@@ -363,13 +363,13 @@ function wr_sop_publier(string $id): array
     $tnl = in_array($trad['nl'] ?? null, FO_TRAD, true) ? (string) $trad['nl'] : (string) $r['trad_nl'];
     $st = foStats($c);
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [$r['id'], $ver, foJson($c), foCourt($b['note'] ?? null, 500), $reval ? 1 : 0, $now, $par]);
-    Db::exec('UPDATE ceo_sop SET version = ?, version_revalider = ?, titre_fr = ?, titre_nl = ?, objectif_fr = ?, objectif_nl = ?, duree = ?,
+    Db::exec('UPDATE for_sop SET version = ?, version_revalider = ?, titre_fr = ?, titre_nl = ?, objectif_fr = ?, objectif_nl = ?, duree = ?,
                 nb_etapes = ?, nb_photos = ?, trad_fr = ?, trad_nl = ?, maj_le = ?, maj_par = ? WHERE id = ?',
         [$ver, $reval ? $ver : (string) $r['version_revalider'], mb_substr($c['titre']['fr'] ?: $c['titre']['nl'], 0, 190), mb_substr($c['titre']['nl'], 0, 190),
             $c['objectif']['fr'], $c['objectif']['nl'], foCourt($c['duree'], 190), $st['etapes'], $st['photos'], $tfr, $tnl, $now, $par, $r['id']]);
-    $n = $reval ? (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_sop_suivi WHERE sop_id = ? AND vu_le IS NOT NULL', [$r['id']])['n'] ?? 0) : 0;
+    $n = $reval ? (int) (Db::row('SELECT COUNT(*) AS n FROM for_sop_suivi WHERE sop_id = ? AND vu_le IS NOT NULL', [$r['id']])['n'] ?? 0) : 0;
     try { journalAdd($par, 'Formation', (string) $r['titre_fr'], 'Version ' . $ver . ' publiée' . ($reval ? ' — ' . $n . ' personne(s) à revoir' : ' (précision)')); } catch (Throwable $e) { /* */ }
     return ['ok' => true, 'version' => $ver, 'aRevoir' => $n, 'sop' => foSopLigne(foSopRow($id) ?? $r)];
 }
@@ -424,7 +424,7 @@ function wr_sop_reglage(string $id): array
     $par = foPar($b);
     $set[] = 'maj_le = ?, maj_par = ?';
     array_push($p, date('Y-m-d H:i:s'), $par, $r['id']);
-    Db::exec('UPDATE ceo_sop SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
+    Db::exec('UPDATE for_sop SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
     if ($quoi) { try { journalAdd($par, 'Formation', (string) $r['titre_fr'], implode(' · ', $quoi)); } catch (Throwable $e) { /* */ } }
     return ['ok' => true, 'sop' => foSopLigne(foSopRow($id) ?? $r)];
 }
@@ -438,7 +438,7 @@ function foCodeAuto(string $type, ?string $moment): string
 {
     $m = in_array($type, ['Article', 'Mémo', 'Fiche'], true) ? 0 : (['ouverture' => 1, 'journee' => 2, 'apres-midi' => 3, 'fermeture' => 4][$moment ?? ''] ?? 2);
     $pris = [];
-    foreach (Db::rows('SELECT code FROM ceo_sop WHERE code LIKE ?', ['0.' . $m . '.%']) as $r) {
+    foreach (Db::rows('SELECT code FROM for_sop WHERE code LIKE ?', ['0.' . $m . '.%']) as $r) {
         if (preg_match('/^0\.' . $m . '\.(\d{2})$/', (string) $r['code'], $x) === 1) { $pris[(int) $x[1]] = true; }
     }
     for ($n = 1; isset($pris[$n]); $n++) { }
@@ -480,15 +480,15 @@ function wr_sop_creer(): array
     $st = foStats($c);
     $now = date('Y-m-d H:i:s');
     $par = foPar($b);
-    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 AS o FROM ceo_sop')['o'] ?? 1);
-    Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl, titre_fr, titre_nl,
+    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 AS o FROM for_sop')['o'] ?? 1);
+    Db::exec('INSERT INTO for_sop (id, code, type, dossier, poste, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl, titre_fr, titre_nl,
                 objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, maj_le, maj_par)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [$id, foCourt($b['code'] ?? null, 40), foType($b['type'] ?? 'SOP'), foDossier($b['dossier'] ?? '01'), foPoste($b['poste'] ?? 'vente'), $moment, 'a_valider', '1.0', '1.0',
             $titre['fr'] !== '' ? 'FR' : 'NL', $titre['fr'] !== '' ? 'origine' : 'a_relire', $titre['nl'] !== '' ? 'origine' : 'a_relire',
             mb_substr($titre['fr'] ?: $titre['nl'], 0, 190), mb_substr($titre['nl'], 0, 190), $c['objectif']['fr'], $c['objectif']['nl'], foCourt($c['duree'], 190),
             $st['etapes'], $st['photos'], $ordre, $now, $par]);
-    Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
+    Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
         [$id, '1.0', foJson($c), $avec ? 'Création (assistant)' : 'Création', $now, $par]);
     try { journalAdd($par, 'Formation', $titre['fr'] ?: $titre['nl'], ($avec ? 'Nouvelle SOP créée avec l’assistant, ' . $st['etapes'] . ' étape(s)' : 'Nouvelle SOP créée') . ' (à valider)'); } catch (Throwable $e) { /* */ }
     http_response_code(201);
@@ -528,7 +528,7 @@ function ep_sop_tablette_init(): array
     $shop = function_exists('tabAppareil') && tabAppareil() !== null ? foShopTablette() : null;
     $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
     // Un brouillon (repris du CRM, pas encore relu) ne va pas sur la tablette du magasin.
-    $rows = Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
+    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
     $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes'],
         'postesV25' => $p['postesV25'] ?? []], $shop !== null ? foEquipe($shop) : []);
     $app = function_exists('tabAppareil') ? tabAppareil() : null;
@@ -579,7 +579,7 @@ function wr_sop_tablette_lu(): array
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null || $r['statut'] === 'brouillon') { return foRefus(404, 'SOP inconnue'); }
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
+    Db::exec('INSERT INTO for_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
               ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), lu_le = VALUES(lu_le), maj_le = VALUES(maj_le),
                 version = IF(vu_le IS NULL, VALUES(version), version)',
         [$j['s'], (int) $j['e'], $r['id'], (string) $j['n'], (string) $r['version'], $now, $now]);
@@ -613,7 +613,7 @@ function wr_sop_tablette_quiz(): array
     $score = $total - count($faux);
     $reussi = $total > 0 && $faux === [];
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, quiz_le, quiz_score, quiz_essais, maj_le)
+    Db::exec('INSERT INTO for_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, quiz_le, quiz_score, quiz_essais, maj_le)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
               ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), quiz_essais = quiz_essais + 1, maj_le = VALUES(maj_le),
                 lu_le = COALESCE(lu_le, VALUES(lu_le)),
@@ -655,14 +655,14 @@ function wr_sop_tablette_vu(): array
     $now = date('Y-m-d H:i:s');
     $note = foCourt($b['note'] ?? null, 500);
     if ($decision === 'vu') {
-        Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, vu_le, vu_version, vu_par_id, vu_par_nom, note, maj_le)
+        Db::exec('INSERT INTO for_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, vu_le, vu_version, vu_par_id, vu_par_nom, note, maj_le)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                   ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), version = VALUES(version), lu_le = COALESCE(lu_le, VALUES(lu_le)),
                     vu_le = VALUES(vu_le), vu_version = VALUES(vu_version), vu_par_id = VALUES(vu_par_id), vu_par_nom = VALUES(vu_par_nom),
                     note = VALUES(note), maj_le = VALUES(maj_le)',
             [$shop, $emp, $r['id'], $p['nom'], (string) $r['version'], $now, $now, (string) $r['version'], $val, $vp['nom'], $note, $now]);
     } else {
-        Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, note, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
+        Db::exec('INSERT INTO for_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, note, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON DUPLICATE KEY UPDATE note = VALUES(note), maj_le = VALUES(maj_le)',
             [$shop, $emp, $r['id'], $p['nom'], (string) $r['version'], $note ?? 'pas encore', $now]);
     }
@@ -678,7 +678,7 @@ function wr_sop_tablette_vu(): array
     }
     // Repli : la SOP n'a aucun code C-… relié au panel — l'ancienne compétence du panel rattachée dans Rédaction.
     elseif ($decision === 'vu' && ($r['competence_nom'] ?? null) !== null) {
-        $sops = Db::rows('SELECT * FROM ceo_sop');
+        $sops = Db::rows('SELECT * FROM for_sop');
         $comps = foCompetencesUtilisees($sops);
         $mat = foMatrice($shop, [$p], $sops, $comps);
         $cle = foCompCle($r);
@@ -771,14 +771,14 @@ function foStatut(?array $s, array $sop): string
 
 function foSuiviLigne(string $shop, int $emp, string $sop): ?array
 {
-    return Db::row('SELECT * FROM ceo_sop_suivi WHERE shop_id = ? AND employee_id = ? AND sop_id = ?', [$shop, $emp, $sop]);
+    return Db::row('SELECT * FROM for_sop_suivi WHERE shop_id = ? AND employee_id = ? AND sop_id = ?', [$shop, $emp, $sop]);
 }
 
 /** [employee_id => [sop_id => ligne]] pour un magasin. */
 function foSuiviMagasin(string $shop): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop_suivi WHERE shop_id = ?', [$shop]) as $s) { $out[(int) $s['employee_id']][(string) $s['sop_id']] = $s; }
+    foreach (Db::rows('SELECT * FROM for_sop_suivi WHERE shop_id = ?', [$shop]) as $s) { $out[(int) $s['employee_id']][(string) $s['sop_id']] = $s; }
     return $out;
 }
 
@@ -786,9 +786,9 @@ function foSuiviMagasin(string $shop): array
 function foSuiviPersonne(string $shop, int $emp): array
 {
     $sops = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop') as $r) { $sops[(string) $r['id']] = $r; }
+    foreach (Db::rows('SELECT * FROM for_sop') as $r) { $sops[(string) $r['id']] = $r; }
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop_suivi WHERE shop_id = ? AND employee_id = ?', [$shop, $emp]) as $s) {
+    foreach (Db::rows('SELECT * FROM for_sop_suivi WHERE shop_id = ? AND employee_id = ?', [$shop, $emp]) as $s) {
         $r = $sops[(string) $s['sop_id']] ?? null;
         if ($r === null) { continue; }
         $out[(string) $s['sop_id']] = ['statut' => foStatut($s, $r), 'luLe' => foIso($s['lu_le']), 'quizLe' => foIso($s['quiz_le']),
@@ -801,9 +801,9 @@ function foSuiviPersonne(string $shop, int $emp): array
 function foProgressionReseau(): array
 {
     $sops = [];
-    foreach (Db::rows('SELECT id, version_revalider FROM ceo_sop') as $r) { $sops[(string) $r['id']] = $r; }
+    foreach (Db::rows('SELECT id, version_revalider FROM for_sop') as $r) { $sops[(string) $r['id']] = $r; }
     $out = [];
-    foreach (Db::rows('SELECT sop_id, version, lu_le, quiz_le, vu_le, vu_version FROM ceo_sop_suivi') as $s) {
+    foreach (Db::rows('SELECT sop_id, version, lu_le, quiz_le, vu_le, vu_version FROM for_sop_suivi') as $s) {
         $r = $sops[(string) $s['sop_id']] ?? null;
         if ($r === null) { continue; }
         $st = foStatut($s, $r);
@@ -984,7 +984,7 @@ function foEquipe(string $shop, bool $lire = true): array
 {
     $base = foEquipePanel($shop, $lire);
     $reg = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop_personne WHERE shop_id = ?', [$shop]) as $r) { $reg[(int) $r['employee_id']] = $r; }
+    foreach (Db::rows('SELECT * FROM for_sop_personne WHERE shop_id = ?', [$shop]) as $r) { $reg[(int) $r['employee_id']] = $r; }
     $out = [];
     foreach ($base as $id => $e) {
         $r = $reg[$id] ?? null;
@@ -1014,7 +1014,7 @@ function foPersonneForme(int $id, string $nom, string $role, ?array $r): array
 
 function foPersonneEcrire(string $shop, int $emp, string $nom, ?string $postes, ?int $valideur, ?string $langue): void
 {
-    Db::exec('INSERT INTO ceo_sop_personne (shop_id, employee_id, nom, postes, valideur, langue, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
+    Db::exec('INSERT INTO for_sop_personne (shop_id, employee_id, nom, postes, valideur, langue, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
               ON DUPLICATE KEY UPDATE nom = IF(VALUES(nom) = \'\', nom, VALUES(nom)), postes = COALESCE(VALUES(postes), postes),
                 valideur = COALESCE(VALUES(valideur), valideur), langue = COALESCE(VALUES(langue), langue), maj_le = VALUES(maj_le)',
         [$shop, $emp, $nom, $postes, $valideur, $langue, date('Y-m-d H:i:s')]);
@@ -1156,7 +1156,7 @@ function foSecret(): string
 function foFil(string $shop, int $max): array
 {
     $depuis = date('Y-m-d H:i:s', time() - FO_FIL_JOURS * 86400);
-    $rows = Db::rows('SELECT s.*, p.titre_fr FROM ceo_sop_suivi s JOIN ceo_sop p ON p.id = s.sop_id WHERE s.shop_id = ? AND s.maj_le >= ? ORDER BY s.maj_le DESC LIMIT 200', [$shop, $depuis]);
+    $rows = Db::rows('SELECT s.*, p.titre_fr FROM for_sop_suivi s JOIN for_sop p ON p.id = s.sop_id WHERE s.shop_id = ? AND s.maj_le >= ? ORDER BY s.maj_le DESC LIMIT 200', [$shop, $depuis]);
     $ev = [];
     foreach ($rows as $r) {
         foreach ([['vu_le', 'vu'], ['quiz_le', 'quiz'], ['lu_le', 'lu']] as [$k, $t]) {
@@ -1514,7 +1514,7 @@ function foContenuErreur(array $c): ?string
 /** Le contenu d'une version (normalisé) ; un contenu vide si la version manque. */
 function foContenuVersion(string $id, string $v): array
 {
-    $r = Db::row('SELECT contenu FROM ceo_sop_version WHERE sop_id = ? AND version = ?', [$id, $v]);
+    $r = Db::row('SELECT contenu FROM for_sop_version WHERE sop_id = ? AND version = ?', [$id, $v]);
     $j = $r !== null ? json_decode((string) $r['contenu'], true) : null;
     return foContenu(is_array($j) ? $j : []);
 }
@@ -1697,7 +1697,7 @@ function foPartie(array $r): string
 function foSopRow(string $id): ?array
 {
     $id = foId($id);
-    return $id === null ? null : Db::row('SELECT * FROM ceo_sop WHERE id = ?', [$id]);
+    return $id === null ? null : Db::row('SELECT * FROM for_sop WHERE id = ?', [$id]);
 }
 
 function foTitreL(array $r, string $l): string

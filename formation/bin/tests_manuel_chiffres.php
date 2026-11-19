@@ -21,18 +21,18 @@ if (($argv[1] ?? '') === 'cas') {
         public static array $ecrit = [];
         public static function row(string $q, array $a = []): ?array
         {
-            if (str_contains($q, 'FROM ceo_sop WHERE id = ?')) { return self::$ligne; }
+            if (str_contains($q, 'FROM for_sop WHERE id = ?')) { return self::$ligne; }
             if (str_contains($q, 'MAX(ordre)')) { return ['o' => 42]; }
             return null;
         }
-        public static function rows(string $q, array $a = []): array { return str_contains($q, 'SELECT code FROM ceo_sop') ? [['code' => '0.0.15'], ['code' => '0.0.01']] : []; }
+        public static function rows(string $q, array $a = []): array { return str_contains($q, 'SELECT code FROM for_sop') ? [['code' => '0.0.15'], ['code' => '0.0.01']] : []; }
         public static function exec(string $q, array $a = []): int
         {
             if (str_starts_with(trim($q), 'CREATE') || str_starts_with(trim($q), 'ALTER')) { return 0; }
             self::$ecrit[] = trim(substr(trim($q), 0, 40));
-            if (str_starts_with(trim($q), 'INSERT INTO ceo_sop (')) { self::$ligne = ['id' => $a[0], 'code' => $a[1], 'type' => $a[2], 'dossier' => $a[3], 'acces' => $a[5], 'statut' => $a[6], 'version' => $a[7], 'trad_nl' => $a[11], 'source' => $a[20]]; }
-            if (str_starts_with(trim($q), 'UPDATE ceo_sop SET version')) { self::$ligne['version'] = $a[0]; self::$ligne['source'] = $a[9]; }
-            if (str_starts_with(trim($q), 'INSERT INTO ceo_sop_version')) { self::$versions[] = ['version' => $a[1], 'contenu' => json_decode($a[2], true), 'note' => $a[3]]; }
+            if (str_starts_with(trim($q), 'INSERT INTO for_sop (')) { self::$ligne = ['id' => $a[0], 'code' => $a[1], 'type' => $a[2], 'dossier' => $a[3], 'acces' => $a[5], 'statut' => $a[6], 'version' => $a[7], 'trad_nl' => $a[11], 'source' => $a[20]]; }
+            if (str_starts_with(trim($q), 'UPDATE for_sop SET version')) { self::$ligne['version'] = $a[0]; self::$ligne['source'] = $a[9]; }
+            if (str_starts_with(trim($q), 'INSERT INTO for_sop_version')) { self::$versions[] = ['version' => $a[1], 'contenu' => json_decode($a[2], true), 'note' => $a[3]]; }
             return 1;
         }
     }
@@ -70,7 +70,7 @@ $lancer = static fn (string $cas): array => json_decode((string) shell_exec(esca
 $titres = static fn (array $R) => array_map(static fn ($e) => $e['titre']['fr'] ?? '', $R['version']['contenu']['sections'][0]['etapes'] ?? []);
 // « vaut null » sans le piège de ?? (qui remplace aussi un null) ; les écritures du manuel seules (pas celles de l'assistant).
 $nul = static fn (array $R, string $k) => array_key_exists($k, $R) && $R[$k] === null;
-$manuel = static fn (array $R) => array_values(array_filter($R['ecrit'] ?? [], static fn ($q) => str_contains($q, 'ceo_sop')));
+$manuel = static fn (array $R) => array_values(array_filter($R['ecrit'] ?? [], static fn ($q) => str_contains($q, 'for_sop')));
 
 echo "Première lecture du manuel après la livraison\n";
 $R = $lancer('creer');
@@ -80,7 +80,7 @@ verifie('Article, famille 04, ouvert à toute l’équipe, publié, NL relue, co
 verifie('les six chiffres clés, dans l’ordre', $titres($R) === ['Food cost : 40 % du CA au plus', 'Frais de personnel : 17 % du CA au plus', 'Clients scannés : 25 % des tickets au moins',
     'Menus et formules : 15 % du CA au moins', 'Articles par ticket : 3,6 au moins', 'Panier moyen : 13 € au moins'], json_encode($titres($R), JSON_UNESCAPED_UNICODE));
 verifie('FR et NL complets (le contrôle de l’éditeur passe)', $nul($R, 'erreur'), (string) ($R['erreur'] ?? 'absent'));
-verifie('classé en D7.1 « Pilotage de l’activité », trois écritures du manuel', count(array_filter($manuel($R), static fn ($q) => str_starts_with($q, 'UPDATE ceo_sop SET souscat'))) === 1 && count($manuel($R)) === 3, json_encode($manuel($R)));
+verifie('classé en D7.1 « Pilotage de l’activité », trois écritures du manuel', count(array_filter($manuel($R), static fn ($q) => str_starts_with($q, 'UPDATE for_sop SET souscat'))) === 1 && count($manuel($R)) === 3, json_encode($manuel($R)));
 verifie('le quiz porte la cible de food cost (40 %) en bonne réponse', ($R['version']['contenu']['quiz'][0]['choix']['fr'][1] ?? '') === '40 %' && ($R['version']['contenu']['quiz'][0]['bonne'] ?? -1) === 1, json_encode($R['version']['contenu']['quiz'][0] ?? null, JSON_UNESCAPED_UNICODE));
 
 echo "Rien n'a changé\n";

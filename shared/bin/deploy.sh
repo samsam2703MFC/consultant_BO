@@ -460,8 +460,11 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
     # a) DROP des tables ceo_* existantes (schéma potentiellement obsolète), et des tables
     #    con_* des consultants et des visites (src/con_tables.php), nommées une à une :
     #    aucun motif ne peut viser une table du panel.
+    # Les tables qui s'appelaient ceo_* avant la réorganisation en domaines (shared/src/reorg_tables.php) : la remise à
+    # zéro les vise toujours, ni plus ni moins qu'avant.
+    ex_ceo="$(php -r '$t = require_once $argv[1]; $l = []; foreach (reorgTables() as $a => $n) { if (str_starts_with($a, "ceo_")) { $l[] = "\x27$n\x27"; } } echo implode(",", $l);' "$TARGET_DIR/shared/src/reorg_tables.php" 2>/dev/null || true)"
     ceo_tables="$(mycli -N -B "$COCKPIT_DB_NAME" \
-      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND (table_name LIKE 'ceo\\_%' OR table_name IN ('con_visite','con_visite_point','con_visite_photo','con_visite_action','con_visite_action_evt','con_equipe_releve','con_consultant_tache','con_consultant_checklist','con_franchise_meteo','con_consultant','con_consultant_visit','con_msp','con_scoring_msp','con_scoring_google','con_tache_jour','con_tache_jour_etat'));" 2>/dev/null || true)"
+      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND (table_name LIKE 'ceo\\_%' OR table_name IN (${ex_ceo:-''}) OR table_name IN ('con_visite','con_visite_point','con_visite_photo','con_visite_action','con_visite_action_evt','con_equipe_releve','con_consultant_tache','con_consultant_checklist','con_franchise_meteo','con_consultant','con_consultant_visit','con_msp','con_scoring_msp','con_scoring_google','con_tache_jour','con_tache_jour_etat'));" 2>/dev/null || true)"
     ceo_n="$(printf '%s\n' "$ceo_tables" | grep -c . || true)"
     if [[ -n "$ceo_tables" ]]; then
       log "Suppression de $ceo_n table(s) ceo_* / con_* : $(printf '%s ' $ceo_tables)"

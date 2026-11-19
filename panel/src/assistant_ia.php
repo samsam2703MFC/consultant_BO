@@ -23,7 +23,7 @@ declare(strict_types=1);
  *   aia_manuel_passage  le manuel opératoire découpé en passages (en-tête, étapes, points critiques, quiz) pour la
  *                       recherche ; refait quand le manuel change (signature des versions)
  *
- * LE MANUEL OPÉRATOIRE : tous les documents de ceo_sop (SOP, checklists, mémos, fiches, articles — publiés, à valider et
+ * LE MANUEL OPÉRATOIRE : tous les documents de for_sop (SOP, checklists, mémos, fiches, articles — publiés, à valider et
  * brouillons, signalés), à leur version en vigueur, en français (repli sur le néerlandais). Trois outils, pour tous les
  * agents : manuel_sommaire, manuel_chercher, manuel_lire (par pages de 12 000 caractères : rien n'est coupé en silence).
  *
@@ -345,7 +345,7 @@ function aiaMots(string $s): array
 /** La signature du manuel : chaque document, sa version, son statut, sa dernière modification. */
 function aiaManuelSignature(): string
 {
-    $L = Db::rows('SELECT id, version, statut, maj_le FROM ceo_sop ORDER BY id');
+    $L = Db::rows('SELECT id, version, statut, maj_le FROM for_sop ORDER BY id');
     return md5(json_encode($L));
 }
 
@@ -364,7 +364,7 @@ function aiaManuelIndexer(bool $forcer = false): int
     $sig = aiaManuelSignature();
     if (!$forcer && aiaReglageBrut('manuelSignature') === $sig) { return -1; }
     $lignes = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id') as $r) {
         $c = aiaManuelContenu($r);
         $id = (string) $r['id']; $v = (string) $r['version']; $o = 0;
         $tete = trim(implode(' — ', array_filter([(string) $c['titre'], (string) $c['objectif'], (string) $c['pour'], (string) $c['duree']])));
@@ -406,7 +406,7 @@ function aiaManuelDocuments(): array
 {
     if (function_exists('ensureSop')) { ensureSop(); }
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id') as $r) {
         $out[] = ['id' => (string) $r['id'], 'code' => $r['code'] !== null ? (string) $r['code'] : null, 'type' => (string) $r['type'],
             'famille' => (string) (FO_DOSSIERS[(string) $r['dossier']]['fr'] ?? $r['dossier']), 'dossier' => (string) $r['dossier'],
             'partie' => function_exists('foPartie') ? foPartie($r) : null, 'poste' => (string) $r['poste'], 'moment' => $r['moment'],

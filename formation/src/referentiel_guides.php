@@ -18,10 +18,10 @@ declare(strict_types=1);
  *     réécrit —, renouvellement en mois, heures, fiche technique, vidéo, profils) ; les noms des 5 pôles FR/NL et le
  *     repère du réseau tracé sur les graphiques.
  *
- *  ceo_ref_po_section   sections du Guide pré-ouverture (cle, rang, type, fr, nl, intro_fr, intro_nl)
- *  ceo_ref_po_point     leurs points (section, cle, rang, fr, nl, qui, j, preuve_fr, preuve_nl)
- *  ceo_ref_bloc         les 11 blocs (n, fr, nl, role, role_nl, fo, heures ; heures_semis = celles du départ)
- *  ceo_ref_item         leurs points (id, bloc, rang, libellés, phase, bloq, poles, critère accepté / proposé,
+ *  for_ref_po_section   sections du Guide pré-ouverture (cle, rang, type, fr, nl, intro_fr, intro_nl)
+ *  for_ref_po_point     leurs points (section, cle, rang, fr, nl, qui, j, preuve_fr, preuve_nl)
+ *  for_ref_bloc         les 11 blocs (n, fr, nl, role, role_nl, fo, heures ; heures_semis = celles du départ)
+ *  for_ref_item         leurs points (id, bloc, rang, libellés, phase, bloq, poles, critère accepté / proposé,
  *                       renouvellement, heures, fiche, vidéo, profils ; semis = les valeurs du départ, JSON)
  *  ceo_app_setting      rfPoles {fr: [5], nl: [5], repere, le, par} ; rfGuidesReprise_2026_11 (bilan de la reprise)
  *
@@ -50,7 +50,7 @@ const RG_POLES_ANCIENS = ['Autonomie', 'Zelfstandigheid'];
 /** Les tables des deux guides, leur semis et la reprise des réglages du CRM (appelé par ensureReferentiel). */
 function ensureRefGuides(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_po_section ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_po_section ('
         . 'cle VARCHAR(40) NOT NULL PRIMARY KEY,'
         . 'rang INT NOT NULL DEFAULT 0,'
         . "type VARCHAR(10) NOT NULL DEFAULT 'points',"
@@ -61,7 +61,7 @@ function ensureRefGuides(): void
         . 'maj_le DATETIME NOT NULL,'
         . 'maj_par VARCHAR(120) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_po_point ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_po_point ('
         . 'section VARCHAR(40) NOT NULL,'
         . 'cle VARCHAR(40) NOT NULL,'
         . 'rang INT NOT NULL DEFAULT 0,'
@@ -76,7 +76,7 @@ function ensureRefGuides(): void
         . 'PRIMARY KEY (section, cle),'
         . 'KEY idx_rang (section, rang)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_bloc ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_bloc ('
         . 'n TINYINT NOT NULL PRIMARY KEY,'
         . 'fr VARCHAR(160) NOT NULL,'
         . "nl VARCHAR(160) NOT NULL DEFAULT '',"
@@ -88,8 +88,8 @@ function ensureRefGuides(): void
         . 'maj_le DATETIME NOT NULL,'
         . 'maj_par VARCHAR(120) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    // Les codes C-… portent des accents (C-PROD.Pâtisserie) : comparés à l'octet près, comme ceo_ref_corresp.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_item ('
+    // Les codes C-… portent des accents (C-PROD.Pâtisserie) : comparés à l'octet près, comme for_ref_corresp.
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_item ('
         . 'id VARCHAR(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,'
         . 'bloc TINYINT NOT NULL,'
         . 'rang INT NOT NULL DEFAULT 0,'
@@ -136,19 +136,19 @@ function rgDepart(string $nom): array
 function rgSemer(): void
 {
     $now = date('Y-m-d H:i:s');
-    if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_ref_po_section')['n'] ?? 0) === 0) {
+    if ((int) (Db::row('SELECT COUNT(*) AS n FROM for_ref_po_section')['n'] ?? 0) === 0) {
         $s = rgDepart('preouverture')['sections'] ?? [];
         if ($s !== []) { rgSectionsEcrire($s, 'Guide de départ (CRM)', $now); }
     }
-    if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_ref_bloc')['n'] ?? 0) === 0) {
+    if ((int) (Db::row('SELECT COUNT(*) AS n FROM for_ref_bloc')['n'] ?? 0) === 0) {
         foreach (rgDepart('formations')['blocs'] ?? [] as $b) {
-            Db::exec('INSERT IGNORE INTO ceo_ref_bloc (n, fr, nl, role, role_nl, fo, heures, heures_semis, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            Db::exec('INSERT IGNORE INTO for_ref_bloc (n, fr, nl, role, role_nl, fo, heures, heures_semis, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [(int) $b['n'], (string) $b['fr'], (string) $b['nl'], (string) $b['role'], (string) $b['role_nl'], (string) $b['fo'],
                     (float) $b['heures'], (float) $b['heures'], $now, 'Guide de départ (CRM)']);
             foreach ($b['items'] ?? [] as $i => $it) {
                 $semis = ['phase' => (string) $it['phase'], 'bloq' => (bool) $it['bloq'], 'poles' => (bool) $it['poles'],
                     'renouvellement' => (int) $it['renouvellement'], 'profils' => array_values((array) $it['profils'])];
-                Db::exec('INSERT IGNORE INTO ceo_ref_item (id, bloc, rang, fr, nl, dfr, dnl, fo, phase, bloq, poles, critere_accepte, critere_prop_fr, critere_prop_nl,
+                Db::exec('INSERT IGNORE INTO for_ref_item (id, bloc, rang, fr, nl, dfr, dnl, fo, phase, bloq, poles, critere_accepte, critere_prop_fr, critere_prop_nl,
                             renouvellement, profils, semis, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)',
                     [(string) $it['id'], (int) $b['n'], $i + 1, (string) $it['fr'], (string) $it['nl'], (string) $it['dfr'] ?: null, (string) $it['dnl'] ?: null,
                         (string) $it['fo'], $semis['phase'], $semis['bloq'] ? 1 : 0, $semis['poles'] ? 1 : 0,
@@ -211,7 +211,7 @@ function rgReprendreCrm(): array
     foreach (is_array($reg) ? $reg : [] as $id => $r) {
         $id = (string) $id;
         if (!is_array($r)) { continue; }
-        if (Db::row('SELECT id FROM ceo_ref_item WHERE id = ?', [$id]) === null) { $b['inconnues'][] = mb_substr($id, 0, 40); continue; }
+        if (Db::row('SELECT id FROM for_ref_item WHERE id = ?', [$id]) === null) { $b['inconnues'][] = mb_substr($id, 0, 40); continue; }
         $set = []; $p = [];
         if (in_array($r['phase'] ?? null, RG_PHASES, true)) { $set[] = 'phase = ?'; $p[] = $r['phase']; }
         if (array_key_exists('bloq', $r)) { $set[] = 'bloq = ?'; $p[] = $r['bloq'] ? 1 : 0; }
@@ -226,14 +226,14 @@ function rgReprendreCrm(): array
         if ($set === []) { continue; }
         $set[] = 'maj_le = ?, maj_par = ?';
         array_push($p, $now, $par, $id);
-        Db::exec('UPDATE ceo_ref_item SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
+        Db::exec('UPDATE for_ref_item SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
         $b['competences']++;
     }
     // 3. Les heures des blocs : {n: heures}.
     $h = json_decode((string) $lire('formation_blocs_heures'), true);
     foreach (is_array($h) ? $h : [] as $n => $v) {
         if (!is_numeric($v)) { continue; }
-        $b['heures'] += Db::exec('UPDATE ceo_ref_bloc SET heures = ?, maj_le = ?, maj_par = ? WHERE n = ?', [max(0, min(999, (float) $v)), $now, $par, (int) $n]) > 0 ? 1 : 0;
+        $b['heures'] += Db::exec('UPDATE for_ref_bloc SET heures = ?, maj_le = ?, maj_par = ? WHERE n = ?', [max(0, min(999, (float) $v)), $now, $par, (int) $n]) > 0 ? 1 : 0;
     }
     // 4. Les noms des pôles [{fr, nl} × 5] et 5. le repère.
     $np = json_decode((string) $lire('formation_poles'), true);
@@ -291,13 +291,13 @@ function rgRef(bool $detail): array
 function rgSections(bool $detail = false): array
 {
     $pts = [];
-    foreach (Db::rows('SELECT * FROM ceo_ref_po_point ORDER BY section, rang, cle') as $p) {
+    foreach (Db::rows('SELECT * FROM for_ref_po_point ORDER BY section, rang, cle') as $p) {
         $o = ['cle' => (string) $p['cle'], 'fr' => (string) $p['fr'], 'nl' => (string) $p['nl'], 'qui' => (string) $p['qui'],
             'j' => $p['j'] === null ? null : (int) $p['j'], 'preuve_fr' => (string) $p['preuve_fr'], 'preuve_nl' => (string) $p['preuve_nl']];
         $pts[(string) $p['section']][] = $o;
     }
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_ref_po_section ORDER BY rang, cle') as $s) {
+    foreach (Db::rows('SELECT * FROM for_ref_po_section ORDER BY rang, cle') as $s) {
         $o = ['cle' => (string) $s['cle'], 'type' => (string) $s['type'], 'fr' => (string) $s['fr'], 'nl' => (string) $s['nl'],
             'intro_fr' => (string) ($s['intro_fr'] ?? ''), 'intro_nl' => (string) ($s['intro_nl'] ?? ''), 'points' => $pts[(string) $s['cle']] ?? []];
         if ($detail) { $o += ['majLe' => function_exists('foIso') ? foIso($s['maj_le']) : (string) $s['maj_le'], 'majPar' => $s['maj_par']]; }
@@ -310,9 +310,9 @@ function rgSections(bool $detail = false): array
 function rgBlocs(bool $detail = false): array
 {
     $items = [];
-    foreach (Db::rows('SELECT * FROM ceo_ref_item ORDER BY bloc, rang, id') as $r) { $items[(int) $r['bloc']][] = rgItemSortie($r, $detail); }
+    foreach (Db::rows('SELECT * FROM for_ref_item ORDER BY bloc, rang, id') as $r) { $items[(int) $r['bloc']][] = rgItemSortie($r, $detail); }
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_ref_bloc ORDER BY n') as $b) {
+    foreach (Db::rows('SELECT * FROM for_ref_bloc ORDER BY n') as $b) {
         $o = ['n' => (int) $b['n'], 'fr' => (string) $b['fr'], 'nl' => (string) $b['nl'], 'role' => (string) $b['role'], 'role_nl' => (string) $b['role_nl'],
             'fo' => (string) $b['fo'], 'heures' => (float) $b['heures'], 'items' => $items[(int) $b['n']] ?? []];
         if ($detail) { $o += ['heures_semis' => (float) $b['heures_semis'], 'majLe' => function_exists('foIso') ? foIso($b['maj_le']) : (string) $b['maj_le'], 'majPar' => $b['maj_par']]; }
@@ -372,7 +372,7 @@ function rgPolesEcrire(array $p, string $par): void
 function rgVersion(): ?string
 {
     $max = null;
-    foreach (['ceo_ref_po_section', 'ceo_ref_po_point', 'ceo_ref_bloc', 'ceo_ref_item'] as $t) {
+    foreach (['for_ref_po_section', 'for_ref_po_point', 'for_ref_bloc', 'for_ref_item'] as $t) {
         try { $m = Db::row('SELECT MAX(maj_le) AS m FROM ' . $t)['m'] ?? null; } catch (Throwable $e) { $m = null; }
         if ($m !== null && ($max === null || $m > $max)) { $max = (string) $m; }
     }
@@ -448,13 +448,13 @@ function rgSectionsEcrire(array $sections, string $par, string $now): void
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        Db::exec('DELETE FROM ceo_ref_po_point');
-        Db::exec('DELETE FROM ceo_ref_po_section');
+        Db::exec('DELETE FROM for_ref_po_point');
+        Db::exec('DELETE FROM for_ref_po_section');
         foreach ($s as $i => $x) {
-            Db::exec('INSERT INTO ceo_ref_po_section (cle, rang, type, fr, nl, intro_fr, intro_nl, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            Db::exec('INSERT INTO for_ref_po_section (cle, rang, type, fr, nl, intro_fr, intro_nl, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [$x['cle'], $i + 1, $x['type'], $x['fr'], $x['nl'], $x['intro_fr'] ?: null, $x['intro_nl'] ?: null, $now, $par]);
             foreach ($x['points'] as $k => $p) {
-                Db::exec('INSERT INTO ceo_ref_po_point (section, cle, rang, fr, nl, qui, j, preuve_fr, preuve_nl, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                Db::exec('INSERT INTO for_ref_po_point (section, cle, rang, fr, nl, qui, j, preuve_fr, preuve_nl, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     [$x['cle'], $p['cle'], $k + 1, $p['fr'], $p['nl'], $p['qui'], $p['j'], $p['preuve_fr'], $p['preuve_nl'], $now, $par]);
             }
         }
@@ -471,7 +471,7 @@ function rgSectionsEcrire(array $sections, string $par, string $now): void
  */
 function wr_rg_bloc(int $n): array
 {
-    $bl = Db::row('SELECT * FROM ceo_ref_bloc WHERE n = ?', [$n]);
+    $bl = Db::row('SELECT * FROM for_ref_bloc WHERE n = ?', [$n]);
     if ($bl === null) { return rfRefus(404, 'bloc inconnu'); }
     $b = body();
     $set = []; $p = []; $quoi = []; $ko = [];
@@ -488,7 +488,7 @@ function wr_rg_bloc(int $n): array
     }
     $ordre = null;
     if (array_key_exists('ordre', $b)) {
-        $ids = array_map(static fn ($r) => (string) $r['id'], Db::rows('SELECT id FROM ceo_ref_item WHERE bloc = ? ORDER BY rang, id', [$n]));
+        $ids = array_map(static fn ($r) => (string) $r['id'], Db::rows('SELECT id FROM for_ref_item WHERE bloc = ? ORDER BY rang, id', [$n]));
         $o = is_array($b['ordre']) ? array_values(array_map('strval', array_filter($b['ordre'], 'is_scalar'))) : null;
         $a = $o; if ($a !== null) { sort($a); } $c = $ids; sort($c);
         if ($o === null || $a !== $c || count(array_unique($o)) !== count($o)) { $ko['ordre'] = ['les points du bloc, chacun une fois']; } else { $ordre = $o; $quoi[] = 'ordre des points'; }
@@ -500,10 +500,10 @@ function wr_rg_bloc(int $n): array
     if ($set !== []) {
         $set[] = 'maj_le = ?, maj_par = ?';
         array_push($p, $now, $par, $n);
-        Db::exec('UPDATE ceo_ref_bloc SET ' . implode(', ', $set) . ' WHERE n = ?', $p);
+        Db::exec('UPDATE for_ref_bloc SET ' . implode(', ', $set) . ' WHERE n = ?', $p);
     }
     if ($ordre !== null) {
-        foreach ($ordre as $i => $id) { Db::exec('UPDATE ceo_ref_item SET rang = ?, maj_le = ?, maj_par = ? WHERE id = ? AND bloc = ?', [$i + 1, $now, $par, $id, $n]); }
+        foreach ($ordre as $i => $id) { Db::exec('UPDATE for_ref_item SET rang = ?, maj_le = ?, maj_par = ? WHERE id = ? AND bloc = ?', [$i + 1, $now, $par, $id, $n]); }
     }
     try { journalAdd($par, 'Formation', 'Guide des formations · bloc ' . $n, implode(' · ', $quoi)); } catch (Throwable $e) { /* */ }
     $bloc = null;
@@ -519,7 +519,7 @@ function wr_rg_bloc(int $n): array
  */
 function wr_rg_item(string $id): array
 {
-    $r = Db::row('SELECT * FROM ceo_ref_item WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM for_ref_item WHERE id = ?', [$id]);
     if ($r === null) { return rfRefus(404, 'point de formation inconnu'); }
     $b = body();
     [$set, $p, $quoi, $ko] = rgItemChamps($b, $r);
@@ -528,9 +528,9 @@ function wr_rg_item(string $id): array
     $par = foPar($b);
     $set[] = 'maj_le = ?, maj_par = ?';
     array_push($p, date('Y-m-d H:i:s'), $par, $id);
-    Db::exec('UPDATE ceo_ref_item SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
+    Db::exec('UPDATE for_ref_item SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
     try { journalAdd($par, 'Formation', 'Guide des formations · ' . $id . ' · ' . $r['fr'], implode(' · ', $quoi)); } catch (Throwable $e) { /* */ }
-    return ['ok' => true, 'item' => rgItemSortie(Db::row('SELECT * FROM ceo_ref_item WHERE id = ?', [$id]) ?? $r, true)];
+    return ['ok' => true, 'item' => rgItemSortie(Db::row('SELECT * FROM for_ref_item WHERE id = ?', [$id]) ?? $r, true)];
 }
 
 /** [colonnes, valeurs, ce qui change (journal), refus] d'une écriture sur un point ; $r = la ligne actuelle (ou null : création). */
@@ -589,9 +589,9 @@ function rgItemChamps(array $b, ?array $r): array
     }
     if (array_key_exists('bloc', $b) && $r !== null && (int) $b['bloc'] !== (int) $r['bloc']) {
         $n = (int) $b['bloc'];
-        if (Db::row('SELECT n FROM ceo_ref_bloc WHERE n = ?', [$n]) === null) { $ko['bloc'] = ['bloc inconnu']; }
+        if (Db::row('SELECT n FROM for_ref_bloc WHERE n = ?', [$n]) === null) { $ko['bloc'] = ['bloc inconnu']; }
         else {
-            $rang = (int) (Db::row('SELECT COALESCE(MAX(rang), 0) AS m FROM ceo_ref_item WHERE bloc = ?', [$n])['m'] ?? 0) + 1;
+            $rang = (int) (Db::row('SELECT COALESCE(MAX(rang), 0) AS m FROM for_ref_item WHERE bloc = ?', [$n])['m'] ?? 0) + 1;
             $set[] = 'bloc = ?, rang = ?'; array_push($p, $n, $rang); $quoi[] = 'déplacé au bloc ' . $n;
         }
     }
@@ -601,34 +601,34 @@ function rgItemChamps(array $b, ?array $r): array
 /** POST /formation/ref/blocs/{n}/items — {id, fr, nl?, …} : un point de plus, à la fin du bloc. 409 si l'id existe. */
 function wr_rg_item_ajout(int $n): array
 {
-    if (Db::row('SELECT n FROM ceo_ref_bloc WHERE n = ?', [$n]) === null) { return rfRefus(404, 'bloc inconnu'); }
+    if (Db::row('SELECT n FROM for_ref_bloc WHERE n = ?', [$n]) === null) { return rfRefus(404, 'bloc inconnu'); }
     $b = body();
     $id = rgTexte($b['id'] ?? '', 60);
     if (!rgIdValide($id)) { return rfRefus(422, 'identifiant attendu : un code C-… ou FO-… (lettres, chiffres, point, tiret ; 60 caractères au plus)'); }
-    if (Db::row('SELECT id, bloc FROM ceo_ref_item WHERE id = ?', [$id]) !== null) { return rfRefus(409, 'ce point existe déjà'); }
+    if (Db::row('SELECT id, bloc FROM for_ref_item WHERE id = ?', [$id]) !== null) { return rfRefus(409, 'ce point existe déjà'); }
     if (rgTexte($b['fr'] ?? '', 200) === '') { return rfRefus(422, 'libellé français manquant'); }
     unset($b['bloc'], $b['accepter']);
     [$set, $p, , $ko] = rgItemChamps($b, null);
     if ($ko !== []) { return rfRefus(422, 'point refusé', ['invalides' => $ko]); }
     $par = foPar($b);
     $now = date('Y-m-d H:i:s');
-    $rang = (int) (Db::row('SELECT COALESCE(MAX(rang), 0) AS m FROM ceo_ref_item WHERE bloc = ?', [$n])['m'] ?? 0) + 1;
+    $rang = (int) (Db::row('SELECT COALESCE(MAX(rang), 0) AS m FROM for_ref_item WHERE bloc = ?', [$n])['m'] ?? 0) + 1;
     $fo = preg_match('/^FO-\d{1,3}$/', strtoupper($id)) ? strtoupper($id) : '';
-    Db::exec('INSERT INTO ceo_ref_item (id, bloc, rang, fr, fo, phase, bloq, poles, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, \'pre\', 1, 0, ?, ?)', [$id, $n, $rang, rgTexte($b['fr'], 200), $fo, $now, $par]);
-    if ($set !== []) { array_push($p, $id); Db::exec('UPDATE ceo_ref_item SET ' . implode(', ', $set) . ' WHERE id = ?', $p); }
+    Db::exec('INSERT INTO for_ref_item (id, bloc, rang, fr, fo, phase, bloq, poles, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, \'pre\', 1, 0, ?, ?)', [$id, $n, $rang, rgTexte($b['fr'], 200), $fo, $now, $par]);
+    if ($set !== []) { array_push($p, $id); Db::exec('UPDATE for_ref_item SET ' . implode(', ', $set) . ' WHERE id = ?', $p); }
     try { journalAdd($par, 'Formation', 'Guide des formations · bloc ' . $n, 'Point ajouté : ' . $id . ' · ' . rgTexte($b['fr'], 200)); } catch (Throwable $e) { /* */ }
-    return ['ok' => true, 'item' => rgItemSortie(Db::row('SELECT * FROM ceo_ref_item WHERE id = ?', [$id]), true)];
+    return ['ok' => true, 'item' => rgItemSortie(Db::row('SELECT * FROM for_ref_item WHERE id = ?', [$id]), true)];
 }
 
 /** DELETE /formation/ref/items/{id} — retire un point (les validations déjà faites dans le CRM le gardent). */
 function wr_rg_item_suppr(string $id): array
 {
-    $r = Db::row('SELECT * FROM ceo_ref_item WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM for_ref_item WHERE id = ?', [$id]);
     if ($r === null) { return rfRefus(404, 'point de formation inconnu'); }
-    Db::exec('DELETE FROM ceo_ref_item WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM for_ref_item WHERE id = ?', [$id]);
     // Le bloc garde une trace de l'écriture (la version du référentiel avance, le CRM relit).
     $par = foPar(body());
-    Db::exec('UPDATE ceo_ref_bloc SET maj_le = ?, maj_par = ? WHERE n = ?', [date('Y-m-d H:i:s'), $par, (int) $r['bloc']]);
+    Db::exec('UPDATE for_ref_bloc SET maj_le = ?, maj_par = ? WHERE n = ?', [date('Y-m-d H:i:s'), $par, (int) $r['bloc']]);
     try { journalAdd($par, 'Formation', 'Guide des formations · bloc ' . (int) $r['bloc'], 'Point retiré : ' . $id . ' · ' . $r['fr']); } catch (Throwable $e) { /* */ }
     return ['ok' => true, 'id' => $id];
 }
@@ -636,9 +636,9 @@ function wr_rg_item_suppr(string $id): array
 /** POST /formation/ref/blocs/{n}/accepter — accepte d'un coup les critères encore proposés du bloc. */
 function wr_rg_accepter(int $n): array
 {
-    if (Db::row('SELECT n FROM ceo_ref_bloc WHERE n = ?', [$n]) === null) { return rfRefus(404, 'bloc inconnu'); }
+    if (Db::row('SELECT n FROM for_ref_bloc WHERE n = ?', [$n]) === null) { return rfRefus(404, 'bloc inconnu'); }
     $par = foPar(body());
-    $k = Db::exec("UPDATE ceo_ref_item SET critere_fr = critere_prop_fr, critere_nl = critere_prop_nl, critere_accepte = 1, maj_le = ?, maj_par = ?
+    $k = Db::exec("UPDATE for_ref_item SET critere_fr = critere_prop_fr, critere_nl = critere_prop_nl, critere_accepte = 1, maj_le = ?, maj_par = ?
                    WHERE bloc = ? AND critere_accepte = 0 AND critere_prop_fr IS NOT NULL AND critere_prop_fr <> ''", [date('Y-m-d H:i:s'), $par, $n]);
     try { journalAdd($par, 'Formation', 'Guide des formations · bloc ' . $n, $k . ' critère(s) proposé(s) accepté(s)'); } catch (Throwable $e) { /* */ }
     return ['ok' => true, 'acceptes' => $k];

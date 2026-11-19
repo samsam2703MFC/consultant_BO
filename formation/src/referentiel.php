@@ -13,12 +13,12 @@ declare(strict_types=1);
  *  3. La clé d'une compétence est son code C-… du v25 (56 codes). Le panel TF Buddy garde l'état par employé :
  *     chaque code est relié à UNE compétence du panel (table de correspondance) ; « vu faire » coche celle-là.
  *
- *  ceo_ref_domaine   les 8 domaines (code D1…D8, rang, libellés FR et NL)
- *  ceo_ref_souscat   les 36 sous-catégories (clé « D5.3 » = rang dans l'ordre du v25), description, compétences,
+ *  for_ref_domaine   les 8 domaines (code D1…D8, rang, libellés FR et NL)
+ *  for_ref_souscat   les 36 sous-catégories (clé « D5.3 » = rang dans l'ordre du v25), description, compétences,
  *                    formations et checklists du v25 — semées au premier appel, jamais réécrites ensuite
- *  ceo_ref_corresp   code C-… → compétence du panel : valide (choisie par une personne), certain (proposée sans
+ *  for_ref_corresp   code C-… → compétence du panel : valide (choisie par une personne), certain (proposée sans
  *                    ambiguïté), propose (à trancher, jamais utilisée pour cocher), aucun
- *  ceo_sop           + souscat, phases, postes, competences, formations, checklists (listes JSON)
+ *  for_sop           + souscat, phases, postes, competences, formations, checklists (listes JSON)
  *
  * Les libellés NL des domaines, sous-catégories, postes et phases sont fournis ici et SONT À RELIRE (traduction de
  * travail, 06/11/2026) ; une sous-catégorie relue dans le Classeur passe « relue » (nl_relu).
@@ -170,7 +170,7 @@ const RF_MOTS_VIDES = ['de', 'du', 'des', 'la', 'le', 'les', 'et', 'en', 'au', '
 /** Les tables du référentiel, les colonnes de classement des SOP, le semis du v25 et le classement initial. */
 function ensureReferentiel(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_domaine ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_domaine ('
         . 'code VARCHAR(4) NOT NULL PRIMARY KEY,'
         . 'rang INT NOT NULL DEFAULT 0,'
         . 'fr VARCHAR(120) NOT NULL,'
@@ -178,7 +178,7 @@ function ensureReferentiel(): void
         . 'nl_relu TINYINT(1) NOT NULL DEFAULT 0,'
         . 'maj_le DATETIME NOT NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_souscat ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_souscat ('
         . 'cle VARCHAR(8) NOT NULL PRIMARY KEY,'
         . 'domaine VARCHAR(4) NOT NULL,'
         . 'rang INT NOT NULL DEFAULT 0,'
@@ -194,7 +194,7 @@ function ensureReferentiel(): void
         . 'KEY idx_domaine (domaine, rang)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Les codes C-… portent des accents (C-PROD.Pâtisserie) : comparés à l'octet près, jamais confondus.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_corresp ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_corresp ('
         . 'code VARCHAR(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,'
         . 'panel_id INT NULL,'
         . 'panel_nom VARCHAR(190) NULL,'
@@ -206,10 +206,10 @@ function ensureReferentiel(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     foreach (['souscat VARCHAR(8) NULL', 'phases VARCHAR(160) NULL', 'postes VARCHAR(160) NULL', 'competences TEXT NULL',
         'formations TEXT NULL', 'checklists TEXT NULL'] as $col) {
-        try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN ' . $col); } catch (PDOException $e) { /* déjà là */ }
+        try { Db::exec('ALTER TABLE for_sop ADD COLUMN ' . $col); } catch (PDOException $e) { /* déjà là */ }
     }
     // Les phases de chaque formation (portail de formation, 06/11/2026) : posées une fois, jamais réécrites ensuite.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_formation ('
+    Db::exec('CREATE TABLE IF NOT EXISTS for_ref_formation ('
         . 'code VARCHAR(12) NOT NULL PRIMARY KEY,'
         . 'phases VARCHAR(40) NOT NULL,'
         . 'maj_le DATETIME NOT NULL,'
@@ -217,7 +217,7 @@ function ensureReferentiel(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     $now = date('Y-m-d H:i:s');
     foreach (RF_FORMATIONS_PHASES_2026_11 as $code => $ph) {
-        Db::exec('INSERT IGNORE INTO ceo_ref_formation (code, phases, maj_le, maj_par) VALUES (?, ?, ?, ?)', [$code, rfJsonEcrire($ph), $now, 'Classement initial']);
+        Db::exec('INSERT IGNORE INTO for_ref_formation (code, phases, maj_le, maj_par) VALUES (?, ?, ?, ?)', [$code, rfJsonEcrire($ph), $now, 'Classement initial']);
     }
     rfSemer();
     rfClasserUneFois();
@@ -232,11 +232,11 @@ function rfSemer(): void
     foreach (rfV25()['manuel'] ?? [] as $i => $d) {
         $code = (string) ($d['code'] ?? '');
         if (!preg_match('/^D\d$/', $code)) { continue; }
-        Db::exec('INSERT IGNORE INTO ceo_ref_domaine (code, rang, fr, nl, nl_relu, maj_le) VALUES (?, ?, ?, ?, 0, ?)',
+        Db::exec('INSERT IGNORE INTO for_ref_domaine (code, rang, fr, nl, nl_relu, maj_le) VALUES (?, ?, ?, ?, 0, ?)',
             [$code, $i + 1, (string) $d['nom'], RF_DOMAINES_NL[$code] ?? '', $now]);
         foreach ($d['sousCategories'] ?? [] as $k => $s) {
             $cle = $code . '.' . ($k + 1);
-            Db::exec('INSERT IGNORE INTO ceo_ref_souscat (cle, domaine, rang, fr, nl, nl_relu, description, competences, formations, checklists, maj_le, maj_par)
+            Db::exec('INSERT IGNORE INTO for_ref_souscat (cle, domaine, rang, fr, nl, nl_relu, description, competences, formations, checklists, maj_le, maj_par)
                       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)',
                 [$cle, $code, $k + 1, (string) $s['nom'], RF_SOUSCATS_NL[$cle] ?? '', (string) ($s['description'] ?? '') ?: null,
                     rfJsonEcrire($s['competences'] ?? []), rfJsonEcrire($s['formations'] ?? []), rfJsonEcrire(function_exists('ckcTraduire') ? array_values(array_unique(array_map('ckcTraduire', $s['checklists'] ?? []))) : ($s['checklists'] ?? [])), $now, 'Référentiel v25']);
@@ -251,7 +251,7 @@ function rfClasserUneFois(): void
     $n = 0;
     $now = date('Y-m-d H:i:s');
     foreach (RF_CLASSEMENT_2026_11 as $id => [$sc, $ph, $po, $co, $fo, $ch]) {
-        $n += Db::exec('UPDATE ceo_sop SET souscat = ?, phases = ?, postes = ?, competences = ?, formations = ?, checklists = ?, maj_le = ?, maj_par = ?
+        $n += Db::exec('UPDATE for_sop SET souscat = ?, phases = ?, postes = ?, competences = ?, formations = ?, checklists = ?, maj_le = ?, maj_par = ?
                         WHERE id = ? AND (souscat IS NULL OR souscat = \'\')',
             [$sc, rfJsonEcrire($ph), rfJsonEcrire($po), rfJsonEcrire($co), rfJsonEcrire($fo), rfJsonEcrire($ch), $now, 'Classement initial', $id]);
     }
@@ -395,7 +395,7 @@ function ep_rf_ref(): array
 {
     $detail = !empty($_GET['detail']);
     $v = rfV25();
-    $sops = Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id');
+    $sops = Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id');
     $corr = rfCorrespLignes();
     $standards = [];
     $parComp = [];
@@ -406,8 +406,8 @@ function ep_rf_ref(): array
     }
     $domaines = [];
     $scs = [];
-    foreach (Db::rows('SELECT * FROM ceo_ref_souscat ORDER BY domaine, rang, cle') as $s) { $scs[(string) $s['domaine']][] = $s; }
-    foreach (Db::rows('SELECT * FROM ceo_ref_domaine ORDER BY rang, code') as $d) {
+    foreach (Db::rows('SELECT * FROM for_ref_souscat ORDER BY domaine, rang, cle') as $s) { $scs[(string) $s['domaine']][] = $s; }
+    foreach (Db::rows('SELECT * FROM for_ref_domaine ORDER BY rang, code') as $d) {
         $out = ['code' => (string) $d['code'], 'fr' => (string) $d['fr'], 'nl' => rfNl($d['nl']), 'souscats' => []];
         if ($detail) { $out['nlRelu'] = (int) $d['nl_relu'] === 1; }
         foreach ($scs[(string) $d['code']] ?? [] as $s) { $out['souscats'][] = rfSouscatLigne($s, $detail); }
@@ -512,7 +512,7 @@ function rfPartiesFormations(): array
     if (function_exists('ensureManuelFormations')) {
         try {
             ensureManuelFormations();
-            foreach (Db::rows('SELECT code, partie FROM ceo_manuel_formation WHERE partie IS NOT NULL') as $r) {
+            foreach (Db::rows('SELECT code, partie FROM for_manuel_formation WHERE partie IS NOT NULL') as $r) {
                 if (isset(RF_PHASES[(string) $r['partie']])) { $out[(string) $r['code']] = (string) $r['partie']; }
             }
         } catch (Throwable $e) { /* la répartition par défaut suffit */ }
@@ -525,7 +525,7 @@ function rfFormationsPhases(): array
 {
     $out = RF_FORMATIONS_PHASES_2026_11;
     try {
-        foreach (Db::rows('SELECT code, phases FROM ceo_ref_formation') as $r) {
+        foreach (Db::rows('SELECT code, phases FROM for_ref_formation') as $r) {
             $out[(string) $r['code']] = array_values(array_intersect(array_keys(RF_PHASES_FORMATION), rfJsonListe($r['phases'])));
         }
     } catch (Throwable $e) { /* le classement initial suffit */ }
@@ -550,7 +550,7 @@ function wr_rf_formation(string $code): array
     $ph = array_values(array_intersect(array_keys(RF_PHASES_FORMATION), array_map('strval', $b['phases'])));   // ordre pre, ouv, con
     $par = foPar($b);
     $avant = rfFormationsPhases()[$code] ?? [];
-    Db::exec('INSERT INTO ceo_ref_formation (code, phases, maj_le, maj_par) VALUES (?, ?, ?, ?)
+    Db::exec('INSERT INTO for_ref_formation (code, phases, maj_le, maj_par) VALUES (?, ?, ?, ?)
               ON DUPLICATE KEY UPDATE phases = VALUES(phases), maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
         [$code, rfJsonEcrire($ph), date('Y-m-d H:i:s'), $par]);
     $nom = static fn (array $l) => $l === [] ? 'aucune' : implode(', ', array_map(static fn ($k) => RF_PHASES_FORMATION[$k]['fr'], $l));
@@ -562,7 +562,7 @@ function wr_rf_formation(string $code): array
 function rfVersion(): ?string
 {
     $max = null;
-    foreach (['ceo_sop', 'ceo_ref_souscat', 'ceo_ref_domaine', 'ceo_ref_corresp', 'ceo_ref_formation'] as $t) {
+    foreach (['for_sop', 'for_ref_souscat', 'for_ref_domaine', 'for_ref_corresp', 'for_ref_formation'] as $t) {
         $m = Db::row('SELECT MAX(maj_le) AS m FROM ' . $t)['m'] ?? null;
         if ($m !== null && ($max === null || $m > $max)) { $max = $m; }
     }
@@ -596,7 +596,7 @@ function wr_rf_standard(string $id): array
     if (array_key_exists('souscat', $b)) {
         $sc = is_scalar($b['souscat']) ? trim((string) $b['souscat']) : '';
         if ($sc === '') { $set[] = 'souscat = NULL'; $quoi[] = 'sous-catégorie retirée'; }
-        elseif (Db::row('SELECT cle FROM ceo_ref_souscat WHERE cle = ?', [$sc]) === null) { $ko['souscat'] = [mb_substr($sc, 0, 20)]; }
+        elseif (Db::row('SELECT cle FROM for_ref_souscat WHERE cle = ?', [$sc]) === null) { $ko['souscat'] = [mb_substr($sc, 0, 20)]; }
         else { $set[] = 'souscat = ?'; $p[] = $sc; $quoi[] = 'sous-catégorie ' . $sc; }
     }
     // Un ancien code de checklist (AC-01) devient celui de la nomenclature (1.1.01).
@@ -615,7 +615,7 @@ function wr_rf_standard(string $id): array
     $par = foPar($b);
     $set[] = 'maj_le = ?, maj_par = ?';
     array_push($p, date('Y-m-d H:i:s'), $par, $r['id']);
-    Db::exec('UPDATE ceo_sop SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
+    Db::exec('UPDATE for_sop SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
     try { journalAdd($par, 'Formation', (string) $r['titre_fr'], 'Classement : ' . implode(' · ', $quoi)); } catch (Throwable $e) { /* */ }
     return ['ok' => true, 'standard' => rfStandard(foSopRow($id) ?? $r)];
 }
@@ -623,7 +623,7 @@ function wr_rf_standard(string $id): array
 /** PUT /formation/ref/souscats/{cle} — {nl?, description?}. Un libellé NL enregistré ici est « relu ». */
 function wr_rf_souscat(string $cle): array
 {
-    $s = Db::row('SELECT * FROM ceo_ref_souscat WHERE cle = ?', [$cle]);
+    $s = Db::row('SELECT * FROM for_ref_souscat WHERE cle = ?', [$cle]);
     if ($s === null) { return rfRefus(404, 'sous-catégorie inconnue'); }
     $b = body();
     $set = []; $p = []; $quoi = [];
@@ -641,18 +641,18 @@ function wr_rf_souscat(string $cle): array
     $par = foPar($b);
     $set[] = 'maj_le = ?, maj_par = ?';
     array_push($p, date('Y-m-d H:i:s'), $par, $cle);
-    Db::exec('UPDATE ceo_ref_souscat SET ' . implode(', ', $set) . ' WHERE cle = ?', $p);
+    Db::exec('UPDATE for_ref_souscat SET ' . implode(', ', $set) . ' WHERE cle = ?', $p);
     try { journalAdd($par, 'Formation', 'Sous-catégorie ' . $cle . ' · ' . $s['fr'], implode(' · ', $quoi)); } catch (Throwable $e) { /* */ }
-    return ['ok' => true, 'souscat' => rfSouscatLigne(Db::row('SELECT * FROM ceo_ref_souscat WHERE cle = ?', [$cle]) ?? $s, true)];
+    return ['ok' => true, 'souscat' => rfSouscatLigne(Db::row('SELECT * FROM for_ref_souscat WHERE cle = ?', [$cle]) ?? $s, true)];
 }
 
 /* ═══ La correspondance des compétences C-… ↔ panel ═══════════════════════════════════════════════ */
 
-/** [code => ligne] de ceo_ref_corresp. */
+/** [code => ligne] de for_ref_corresp. */
 function rfCorrespLignes(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_ref_corresp') as $r) { $out[(string) $r['code']] = $r; }
+    foreach (Db::rows('SELECT * FROM for_ref_corresp') as $r) { $out[(string) $r['code']] = $r; }
     return $out;
 }
 
@@ -665,12 +665,12 @@ function ep_rf_corresp(): array
 {
     $panel = function_exists('foCompetencesPanel') ? foCompetencesPanel(!empty($_GET['rafraichir'])) : ['liste' => [], 'indispo' => true, 'motif' => 'module SOP absent'];
     $auto = null;
-    if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_ref_corresp')['n'] ?? 0) === 0 && $panel['liste'] !== []) {
+    if ((int) (Db::row('SELECT COUNT(*) AS n FROM for_ref_corresp')['n'] ?? 0) === 0 && $panel['liste'] !== []) {
         $auto = rfProposer($panel['liste'], RF_AUTO);
     }
     $corr = rfCorrespLignes();
     $stdParComp = [];
-    foreach (Db::rows('SELECT id, titre_fr, competences FROM ceo_sop') as $r) {
+    foreach (Db::rows('SELECT id, titre_fr, competences FROM for_sop') as $r) {
         foreach (rfJsonListe($r['competences']) as $c) { $stdParComp[$c][] = ['id' => (string) $r['id'], 'titre' => (string) $r['titre_fr']]; }
     }
     $lignes = [];
@@ -714,7 +714,7 @@ function wr_rf_corresp(string $code): array
     $avant = rfCorrespLignes()[$code] ?? null;
     $now = date('Y-m-d H:i:s');
     if ($b['panelId'] === null || $b['panelId'] === '') {
-        Db::exec('INSERT INTO ceo_ref_corresp (code, panel_id, panel_nom, etat, score, propositions, maj_le, maj_par) VALUES (?, NULL, NULL, \'aucun\', NULL, ?, ?, ?)
+        Db::exec('INSERT INTO for_ref_corresp (code, panel_id, panel_nom, etat, score, propositions, maj_le, maj_par) VALUES (?, NULL, NULL, \'aucun\', NULL, ?, ?, ?)
                   ON DUPLICATE KEY UPDATE panel_id = NULL, panel_nom = NULL, etat = \'aucun\', maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
             [$code, $avant['propositions'] ?? null, $now, $par]);
         try { journalAdd($par, 'Formation', 'Compétence ' . $code, 'Aucune compétence du panel ne correspond (tranché)'); } catch (Throwable $e) { /* */ }
@@ -723,7 +723,7 @@ function wr_rf_corresp(string $code): array
         $nom = null;
         foreach ((function_exists('foCompetencesPanel') ? foCompetencesPanel()['liste'] : []) as $x) { if ((int) ($x['id'] ?? 0) === $pid && $pid > 0) { $nom = (string) $x['nom']; break; } }
         if ($nom === null) { return rfRefus(422, 'compétence du panel inconnue (relire la liste du panel)'); }
-        Db::exec('INSERT INTO ceo_ref_corresp (code, panel_id, panel_nom, etat, score, propositions, maj_le, maj_par) VALUES (?, ?, ?, \'valide\', NULL, ?, ?, ?)
+        Db::exec('INSERT INTO for_ref_corresp (code, panel_id, panel_nom, etat, score, propositions, maj_le, maj_par) VALUES (?, ?, ?, \'valide\', NULL, ?, ?, ?)
                   ON DUPLICATE KEY UPDATE panel_id = VALUES(panel_id), panel_nom = VALUES(panel_nom), etat = \'valide\', maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
             [$code, $pid, mb_substr($nom, 0, 190), $avant['propositions'] ?? null, $now, $par]);
         try { journalAdd($par, 'Formation', 'Compétence ' . $code, 'Reliée à la compétence du panel « ' . $nom . ' » (#' . $pid . ')'); } catch (Throwable $e) { /* */ }
@@ -784,7 +784,7 @@ function rfProposer(array $panel, string $par): array
         }
         $etat = $certain ? 'certain' : ($props !== [] ? 'propose' : 'aucun');
         $bilan[$etat]++;
-        Db::exec('INSERT INTO ceo_ref_corresp (code, panel_id, panel_nom, etat, score, propositions, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        Db::exec('INSERT INTO for_ref_corresp (code, panel_id, panel_nom, etat, score, propositions, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                   ON DUPLICATE KEY UPDATE panel_id = VALUES(panel_id), panel_nom = VALUES(panel_nom), etat = VALUES(etat), score = VALUES(score),
                     propositions = VALUES(propositions), maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
             [$code, $certain ? $cands[$i1]['id'] : null, $certain ? mb_substr($cands[$i1]['nom'], 0, 190) : null, $etat,
@@ -846,7 +846,7 @@ function rfVuFaire(string $shop, array $p, array $r): array
     if ($codes === []) { return []; }
     $corr = rfCorrespLignes();
     $v25 = rfParCode('competences');
-    $sops = Db::rows('SELECT * FROM ceo_sop');
+    $sops = Db::rows('SELECT * FROM for_sop');
     $suivi = function_exists('foSuiviMagasin') ? (foSuiviMagasin($shop)[$p['id']] ?? []) : [];
     $out = [];
     foreach ($codes as $code) {
@@ -887,17 +887,17 @@ function wr_rf_importer_crm(): array
     $chap = [];
     $tc = Db::row('SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?', ['crm_mo_chapitres']);
     if ((int) ($tc['n'] ?? 0) > 0) { foreach (Db::rows('SELECT id, nom FROM crm_mo_chapitres') as $c) { $chap[(int) $c['id']] = (string) $c['nom']; } }
-    $souscats = Db::rows('SELECT cle, fr FROM ceo_ref_souscat ORDER BY domaine, rang');
+    $souscats = Db::rows('SELECT cle, fr FROM for_ref_souscat ORDER BY domaine, rang');
     $par = foPar(body());
     $bilan = ['ok' => true, 'disponible' => true, 'reprises' => [], 'dejaLa' => [], 'ignorees' => [], 'photosNonReprises' => 0];
-    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) AS o FROM ceo_sop')['o'] ?? 0);
+    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) AS o FROM for_sop')['o'] ?? 0);
     foreach (Db::rows('SELECT * FROM crm_mo_procedures ORDER BY position, code, id') as $m) {
         $code = strtoupper(trim((string) $m['code']));
         $titre = trim((string) $m['titre']);
         $ligne = ['id' => 'crm-' . (int) $m['id'], 'code' => $code, 'titre' => $titre];
         if (in_array($code, RF_CRM_EXCLUS, true)) { $bilan['ignorees'][] = $ligne + ['raison' => 'checklist des SOP d’ouverture et de fermeture (déjà dans le référentiel)']; continue; }
         if ($titre === '') { $bilan['ignorees'][] = $ligne + ['raison' => 'sans titre']; continue; }
-        if (Db::row('SELECT id FROM ceo_sop WHERE id = ? OR source = ?', [$ligne['id'], 'crm:' . (int) $m['id']]) !== null) { $bilan['dejaLa'][] = $ligne; continue; }
+        if (Db::row('SELECT id FROM for_sop WHERE id = ? OR source = ?', [$ligne['id'], 'crm:' . (int) $m['id']]) !== null) { $bilan['dejaLa'][] = $ligne; continue; }
         [$contenu, $fo, $photos] = rfContenuCrm($m);
         $bilan['photosNonReprises'] += $photos;
         $postesCrm = array_values(array_filter(array_map('trim', explode(',', (string) $m['postes']))));
@@ -914,14 +914,14 @@ function wr_rf_importer_crm(): array
         $st = foStats($contenu);
         $now = date('Y-m-d H:i:s');
         $ordre++;
-        Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, partie, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
+        Db::exec('INSERT INTO for_sop (id, code, type, dossier, poste, partie, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
                     titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par,
                     souscat, phases, postes, competences, formations, checklists)
                   VALUES (?, ?, \'SOP\', ?, ?, ?, ?, \'brouillon\', \'1.0\', \'1.0\', \'FR\', \'origine\', \'a_relire\', ?, \'\', ?, NULL, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
             $ligne['id'], mb_substr($code, 0, 40), $dossier, $poste, $partie, $moment, mb_substr($titre, 0, 190), $contenu['objectif']['fr'] ?: null,
             foCourt($contenu['duree'], 190), $st['etapes'], $ordre, 'crm:' . (int) $m['id'], $now, $par,
             $sc, rfJsonEcrire($partie !== null ? [$partie] : []), rfJsonEcrire($postes), rfJsonEcrire($co), rfJsonEcrire($fo), '[]']);
-        Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, \'1.0\', ?, ?, 0, ?, ?)',
+        Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, \'1.0\', ?, ?, 0, ?, ?)',
             [$ligne['id'], foJson($contenu), 'Reprise du Manuel opératoire du CRM (' . $code . ', brouillon)', $now, $par]);
         $bilan['reprises'][] = $ligne + ['souscat' => $sc];
     }
@@ -986,7 +986,7 @@ function rfSouscatParNom(string $nom, array $souscats): ?string
  * même titre (mêmes mots). Lecture de chaque procédure = celle de la page du manuel (fmProcedureLue : sections dans
  * leur ordre, pièces jointes) ; une section restée vide ou à « 1 » dans le panel est sautée. Sous-catégorie déduite
  * par le nom de la sous-catégorie, puis de la catégorie du panel (rfSouscatParNom) ; sinon vide, signalée dans le
- * bilan (`aClasser`). Phase = la partie du manuel réglée dans le cockpit (ceo_manuel_procedure), sinon déduite comme
+ * bilan (`aClasser`). Phase = la partie du manuel réglée dans le cockpit (for_manuel_procedure), sinon déduite comme
  * le faisait l'écran (section ou catégorie « Formation… » ou « Contrôle continu » → formation continue, le reste →
  * opérationnel). Les vidéos réglées dans le cockpit et les pièces jointes du panel sont notées dans les remarques
  * (non reprises). Rien n'est écrit au panel.
@@ -1009,15 +1009,15 @@ function wr_rf_importer_panel(): array
     $catSec = [];
     foreach (fmListe($v['categories']['data']) as $r) { if (($i = fmInt($r, ['id'])) !== null) { $catSec[$i] = fmInt($r, ['section_id', 'id_section']); } }
     $reglees = function_exists('mnClassement') ? mnClassement() : [];
-    $souscats = Db::rows('SELECT cle, fr FROM ceo_ref_souscat ORDER BY domaine, rang');
+    $souscats = Db::rows('SELECT cle, fr FROM for_ref_souscat ORDER BY domaine, rang');
     $titres = [];
-    foreach (Db::rows('SELECT id, code, titre_fr FROM ceo_sop') as $r) {
+    foreach (Db::rows('SELECT id, code, titre_fr FROM for_sop') as $r) {
         $n = rfNorm((string) $r['titre_fr']);
         if ($n !== '' && !isset($titres[$n])) { $titres[$n] = (string) ($r['code'] ?: $r['id']); }
     }
     $par = foPar(body());
     $bilan = ['ok' => true, 'disponible' => true] + $vide;
-    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) AS o FROM ceo_sop')['o'] ?? 0);
+    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) AS o FROM for_sop')['o'] ?? 0);
     foreach (fmListe($v['procedures']['data']) as $brut) {
         $p = fmProcedure($brut);
         $pid = (int) ($p['id'] ?? 0);
@@ -1025,7 +1025,7 @@ function wr_rf_importer_panel(): array
         $ligne = ['id' => 'panel-' . $pid, 'code' => 'TFB-' . $pid, 'titre' => $titre];
         if ($pid <= 0) { $bilan['ignorees'][] = $ligne + ['raison' => 'sans identifiant']; continue; }
         if ($titre === '' || $titre === 'Procédure') { $bilan['ignorees'][] = $ligne + ['raison' => 'sans titre']; continue; }
-        $deja = Db::row('SELECT id, code, source FROM ceo_sop WHERE id = ? OR source = ? OR code = ? LIMIT 1', [$ligne['id'], 'panel:' . $pid, $ligne['code']]);
+        $deja = Db::row('SELECT id, code, source FROM for_sop WHERE id = ? OR source = ? OR code = ? LIMIT 1', [$ligne['id'], 'panel:' . $pid, $ligne['code']]);
         if ($deja !== null) {
             $bilan['dejaLa'][] = $ligne + ['raison' => str_starts_with((string) $deja['source'], 'crm:') ? 'reprise par le Manuel du CRM (' . $deja['id'] . ')' : 'déjà reprise'];
             continue;
@@ -1049,13 +1049,13 @@ function wr_rf_importer_panel(): array
         $st = foStats($contenu);
         $now = date('Y-m-d H:i:s');
         $ordre++;
-        Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, partie, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
+        Db::exec('INSERT INTO for_sop (id, code, type, dossier, poste, partie, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
                     titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par,
                     souscat, phases, postes, competences, formations, checklists)
                   VALUES (?, ?, \'SOP\', ?, ?, ?, NULL, \'brouillon\', \'1.0\', \'1.0\', \'FR\', \'origine\', \'a_relire\', ?, \'\', ?, NULL, NULL, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
             $ligne['id'], $ligne['code'], $dossier, $poste, $partie, mb_substr($titre, 0, 190), $contenu['objectif']['fr'] ?: null,
             $st['etapes'], $ordre, 'panel:' . $pid, $now, $par, $sc, rfJsonEcrire([$partie]), '[]', '[]', '[]', '[]']);
-        Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, \'1.0\', ?, ?, 0, ?, ?)',
+        Db::exec('INSERT INTO for_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, \'1.0\', ?, ?, 0, ?, ?)',
             [$ligne['id'], foJson($contenu), 'Reprise des procédures du panel (TFB-' . $pid . ', brouillon)', $now, $par]);
         $titres[rfNorm($titre)] = $ligne['code'];
         $bilan['reprises'][] = $ligne + ['souscat' => $sc, 'phase' => $partie, 'etapes' => $st['etapes']];

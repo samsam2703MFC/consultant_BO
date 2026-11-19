@@ -24,9 +24,12 @@ $rows = Db::rows(
     'SELECT table_name AS t FROM information_schema.tables WHERE table_schema = ?',
     [$dbName]
 );
+// Les tables ceo_*, et celles qui s'appelaient ceo_* avant la réorganisation en domaines (shared/src/reorg_tables.php).
+require_once __DIR__ . '/../src/reorg_tables.php';
+$exCeo = array_values(array_filter(reorgTables(), static fn ($n, $a) => str_starts_with($a, 'ceo_'), ARRAY_FILTER_USE_BOTH));
 $tables = array_values(array_filter(
     array_map(static fn ($r) => (string) $r['t'], $rows),
-    static fn ($n) => str_starts_with($n, 'ceo_')
+    static fn ($n) => str_starts_with($n, 'ceo_') || in_array($n, $exCeo, true)
 ));
 sort($tables);
 

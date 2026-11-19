@@ -315,7 +315,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   quatre parties collée en haut, ses procédures rangées par thème (catégorie du panel) ; Opérationnel
   commence par « Par poste » (l'ancien manuel) ; Formation continue finit par les formations du réseau.
 - **La partie d'une procédure** : le panel ne la connaît pas (ses procédures sont rangées par thème) ;
-  elle vit dans le cockpit, table `ceo_manuel_procedure` (`procedure_id`, `partie`, `videos` JSON,
+  elle vit dans le cockpit, table `for_manuel_procedure` (`procedure_id`, `partie`, `videos` JSON,
   `maj_le`). Sans réglage, elle se **déduit** de la section du panel : « Formations & Contrôle
   Continu » (ou une catégorie « Formation… ») → Formation continue, le reste → Opérationnel.
   Pré-ouverture et Ouverture ne se remplissent qu'à la main. Réglage : page de la procédure (manuel ou
@@ -334,7 +334,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   Formation continue 10 (FO-39 à FO-45, FO-48 à FO-50 : master class, veille, finance avancée,
   multi-boutique, communication locale, réglementation avancée, animation commerciale, e-commerce).
   Un consultant la change formation par formation (fiche de la formation, « Partie du manuel » ;
-  « ↺ Par défaut »), table `ceo_manuel_formation` ; la liste des formations a une colonne « Partie du
+  « ↺ Par défaut »), table `for_manuel_formation` ; la liste des formations a une colonne « Partie du
   manuel ». Une formation du panel sans code FO se lit dans Formation continue (« Autres formations du
   panel »).
 - **La fiche d'une formation dans le manuel = « une fiche à lire »** (proposition A des maquettes
@@ -350,7 +350,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   (description, vérification, procédures, supports), le programme (contenu, indicateurs, formations
   du même bloc), un support (son lecteur), une étape (sa description du panel, « Validée par » sur
   l'étape de validation, ses supports). Grande fenêtre (980 px), plein écran sous 760 px, ✕ et Échap.
-  **Supports** : rangés dans le cockpit (`ceo_manuel_formation.supports`, JSON `[{url, titre, etape}]`,
+  **Supports** : rangés dans le cockpit (`for_manuel_formation.supports`, JSON `[{url, titre, etape}]`,
   https, vingt au plus, `etape` = index de l'étape ou null pour la formation entière), plus les
   ressources du panel rattachées à ses compétences et leur lien de support. Lecteurs : vidéos (comme les
   procédures), PDF (cadre + « Ouvrir en plein écran », l'iPad n'affiche qu'une page dans un cadre),
@@ -383,7 +383,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
 ## Standards (SOP) — les SOP du réseau en FR et en NL (06/11/2026)
 
 Les 25 SOP du Drive « L’Atelier Halle — SOP — dernières versions retrouvées » sont reprises **en entier** et rangées
-dans **nos tables** (`src/sop.php` : `ceo_sop`, `ceo_sop_version`, `ceo_sop_suivi`, `ceo_sop_personne`, créées et
+dans **nos tables** (`src/sop.php` : `for_sop`, `for_sop_version`, `for_sop_suivi`, `for_sop_personne`, créées et
 remplies au premier appel depuis `data/formation/sops/*.json`). Nos bases sont la source, le Drive l’archive.
 Chaque SOP existe en français et en néerlandais (la langue d’origine fait foi, l’autre est traduite à la reprise,
 « à relire » jusqu’à relecture). Maquettes validées : `docs/maquettes/formation/` ; relevé de la reprise (corrections,
@@ -429,10 +429,10 @@ l'installeur après `ensureSop()`). Écrans : `public/formation/formation-sop.js
 
 | Table | Contenu |
 |---|---|
-| `ceo_ref_domaine` | les 8 domaines : code, rang, libellés FR et NL, `nl_relu` |
-| `ceo_ref_souscat` | les 36 sous-catégories (`cle` = « D5.3 », rang dans l'ordre du v25), description, compétences, formations et checklists du v25 (JSON) ; semées une fois (`INSERT IGNORE`), jamais réécrites par le semis |
-| `ceo_ref_corresp` | code `C-…` → compétence du panel : `etat` `valide` (choisie par une personne), `certain` (proposée sans ambiguïté), `propose` (à trancher, jamais utilisée pour cocher), `aucun` ; score, trois meilleures propositions |
-| `ceo_sop` (+ colonnes) | `souscat`, `phases`, `postes`, `competences`, `formations`, `checklists` (listes JSON) |
+| `for_ref_domaine` | les 8 domaines : code, rang, libellés FR et NL, `nl_relu` |
+| `for_ref_souscat` | les 36 sous-catégories (`cle` = « D5.3 », rang dans l'ordre du v25), description, compétences, formations et checklists du v25 (JSON) ; semées une fois (`INSERT IGNORE`), jamais réécrites par le semis |
+| `for_ref_corresp` | code `C-…` → compétence du panel : `etat` `valide` (choisie par une personne), `certain` (proposée sans ambiguïté), `propose` (à trancher, jamais utilisée pour cocher), `aucun` ; score, trois meilleures propositions |
+| `for_sop` (+ colonnes) | `souscat`, `phases`, `postes`, `competences`, `formations`, `checklists` (listes JSON) |
 
 **Libellés NL** des domaines, sous-catégories, postes et phases : fournis le 06/11/2026, **à relire** (traduction de
 travail). Une sous-catégorie dont le NL est enregistré dans le Classeur passe « relue ».
@@ -509,7 +509,7 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
   PIN (son nom s’affiche s’il a une tablette active). Le lien de l’app Cuisine (`?shop=…&poste=…&langue=…`) marche
   toujours : `poste` et `langue` gardent leur rôle ; si l’appareil est déjà ouvert pour un autre magasin, la tablette
   le dit (bandeau) et reste sur le sien. Un jeton d’employé ne vaut que sur une tablette de son magasin.
-- **Essais du PIN du magasin limités** (table `ceo_tablette_essai`, adresse IP hachée avec le secret du cockpit) :
+- **Essais du PIN du magasin limités** (table `for_tablette_essai`, adresse IP hachée avec le secret du cockpit) :
   5 erreurs par adresse en 15 minutes, puis 10 erreurs en tout par heure ou 50 par jour suspendent les essais
   (429 ; noté une fois par heure au journal) ; un refus attend 0,4 s. Une session déjà ouverte n’est pas touchée.
   Jamais de PIN ni de jeton dans le journal ; le jeton n’est gardé qu’haché (sha256).
@@ -527,7 +527,7 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
   variable d’environnement `TABLETTES_CODE`, puis `config/config.php › tablettesCode` (écrite par `bin/deploy.sh`
   d’après le secret GitHub `TABLETTES_CODE` ou le fichier privé `/var/lib/consulant_bo/prive/tablettes_code` ; voir
   `docs/DEPLOIEMENT.md`). Code non configuré : **gestion ouverte, sans code** (décision du client du 06/11/2026 :
-  « laisse la tablette ouverte sans code » ; elle était fermée avant). Un code posé plus tard la referme derrière lui. Essais limités comme le PIN du magasin, dans une table à part (`ceo_tablette_gestion_essai`, adresse
+  « laisse la tablette ouverte sans code » ; elle était fermée avant). Un code posé plus tard la referme derrière lui. Essais limités comme le PIN du magasin, dans une table à part (`for_tablette_gestion_essai`, adresse
   IP hachée) : 5 codes faux par adresse en 15 minutes, puis 10 en tout par heure ou 50 par jour suspendent la gestion
   (429, même avec le bon code) ; un refus attend 0,4 s ; jamais de code dans le journal. L’écran Tablettes demande le
   code (champ masqué, « Ouvrir la gestion »), le garde dans l’onglet seulement (`sessionStorage` `fm.tablettes.code`,
@@ -547,10 +547,10 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
 
 | Table | Contenu |
 |---|---|
-| `ceo_tablette_magasin` | une tablette : `nom`, `shop_id` (boutique du panel), `pin` (6 chiffres, unique), `pin_le`, `archive`, `crm_id` (magasin du CRM repris), `cree_le`, `cree_par`, `maj_le` |
-| `ceo_tablette_acces` | un appareil ouvert : `magasin_id`, `appareil` (d’après le navigateur), `jeton_hash` (sha256), `cree_le`, `vu_le`, `revoque` |
-| `ceo_tablette_essai` | un essai de PIN du magasin : `ip_hash`, `ok`, `cree_le` (purgé après 7 jours) |
-| `ceo_tablette_gestion_essai` | un code de gestion faux (lot 6) : `ip_hash`, `cree_le` (purgé après 7 jours) |
+| `for_tablette_magasin` | une tablette : `nom`, `shop_id` (boutique du panel), `pin` (6 chiffres, unique), `pin_le`, `archive`, `crm_id` (magasin du CRM repris), `cree_le`, `cree_par`, `maj_le` |
+| `for_tablette_acces` | un appareil ouvert : `magasin_id`, `appareil` (d’après le navigateur), `jeton_hash` (sha256), `cree_le`, `vu_le`, `revoque` |
+| `for_tablette_essai` | un essai de PIN du magasin : `ip_hash`, `ok`, `cree_le` (purgé après 7 jours) |
+| `for_tablette_gestion_essai` | un code de gestion faux (lot 6) : `ip_hash`, `cree_le` (purgé après 7 jours) |
 
 Routes : `docs/contrat-api.md` § Formation · Tablettes des magasins.
 
@@ -569,10 +569,10 @@ attestation, pack de signature, renouvellements faits.
 
 | Table / réglage | Contenu |
 |---|---|
-| `ceo_ref_po_section` | sections du Guide pré-ouverture : `cle`, `rang`, `type` (`points` / `contacts`), titre `fr` / `nl`, `intro_fr` / `intro_nl` |
-| `ceo_ref_po_point` | leurs points (clé `section` + `cle`) : `rang`, libellé `fr` / `nl`, `qui`, `j` (jours avant l'ouverture, NULL = sans date), `preuve_fr` / `preuve_nl` |
-| `ceo_ref_bloc` | les 11 blocs : `n`, titre, `role` / `role_nl`, `fo`, `heures` (et `heures_semis`, celles du départ) |
-| `ceo_ref_item` | leurs points : `id` (code `C-…` ou `FO-…`, comparé à l'octet près), `bloc`, `rang`, libellés et descriptions FR/NL, `fo`, `phase` (`pre`/`ouv`/`con`), `bloq`, `poles`, critère accepté (`critere_fr`/`_nl`, `critere_accepte`) et proposé (`critere_prop_fr`/`_nl`), `renouvellement`, `heures`, `fiche`, `fiche_nom`, `video`, `profils` (JSON), `semis` (valeurs du départ, JSON) |
+| `for_ref_po_section` | sections du Guide pré-ouverture : `cle`, `rang`, `type` (`points` / `contacts`), titre `fr` / `nl`, `intro_fr` / `intro_nl` |
+| `for_ref_po_point` | leurs points (clé `section` + `cle`) : `rang`, libellé `fr` / `nl`, `qui`, `j` (jours avant l'ouverture, NULL = sans date), `preuve_fr` / `preuve_nl` |
+| `for_ref_bloc` | les 11 blocs : `n`, titre, `role` / `role_nl`, `fo`, `heures` (et `heures_semis`, celles du départ) |
+| `for_ref_item` | leurs points : `id` (code `C-…` ou `FO-…`, comparé à l'octet près), `bloc`, `rang`, libellés et descriptions FR/NL, `fo`, `phase` (`pre`/`ouv`/`con`), `bloq`, `poles`, critère accepté (`critere_fr`/`_nl`, `critere_accepte`) et proposé (`critere_prop_fr`/`_nl`), `renouvellement`, `heures`, `fiche`, `fiche_nom`, `video`, `profils` (JSON), `semis` (valeurs du départ, JSON) |
 | `ceo_app_setting` › `rfPoles` | noms des 5 pôles FR/NL et repère du réseau (`{fr, nl, repere, le, par}`) |
 | `ceo_app_setting` › `rfGuidesReprise_2026_11` | bilan de la reprise des réglages du CRM (fait une fois) |
 
@@ -665,7 +665,7 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
   marchent toutes ; une entrée reste allumée sur ses écrans voisins (Formations sur `#/rfpre`, Compétences sur `#/rfform`,
   Manuel sur `#/sop` et `#/rfphase`…).
 - **La phase n'appartient qu'aux formations** : Pré-ouverture (`pre`) · Ouverture (`ouv`) · Formation continue (`con`) ;
-  une formation peut être dans plusieurs phases (apprise avant, recyclée ensuite). Table `ceo_ref_formation` (code,
+  une formation peut être dans plusieurs phases (apprise avant, recyclée ensuite). Table `for_ref_formation` (code,
   `phases` JSON, `maj_le`, `maj_par`), posée une fois par `RF_FORMATIONS_PHASES_2026_11` (INSERT IGNORE : jamais
   réécrite) : 32 phases viennent des blocs du Guide des formations, 21 formations hors blocs rangées le 06/11/2026
   (pré-ouverture : FO-03, 04, 14, 17, 26, 34, 46, 47, 53 ; continue : FO-03, 15, 17, 21, 22, 23, 28, 39, 40, 42, 44, 48,
@@ -793,7 +793,7 @@ tous les magasins la même chose ».
   portail dit la même chose. Les routes de gestion des tablettes et de l'ancienne identification restent sur le serveur.
 - **Suivi retiré du portail** : « Suivi en magasin » (`#/suivi`), l'onglet « Acquisition en magasin » de la
   correspondance, le chiffre « vues faire » des Standards, la carte « l'équipe face à cette SOP » de la fiche et le choix
-  du magasin du portail. Les tables de suivi (`ceo_sop_suivi`…) restent en base.
+  du magasin du portail. Les tables de suivi (`for_sop_suivi`…) restent en base.
 
 ## Lire une SOP sur la tablette : un assistant de tablette, frise verticale (06/11/2026)
 
@@ -916,7 +916,7 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   sur sa ligne.
 - **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
   (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
-  colonne `ceo_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
+  colonne `for_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
   {acces}`). Sur la tablette, un document réservé se range dans l'onglet **Manuel**, en tête, sous « Réservé au
   franchisé et au responsable » (cadenas et liseré or, `--prize`), quel que soit son moment ; l'ouvrir demande le **PIN
   du responsable** : `POST /formation/sop/tablette/acces {pin}` rend un jeton signé de 4 h (gardé dans l'onglet), que

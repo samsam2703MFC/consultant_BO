@@ -310,11 +310,11 @@ function tkCadre(): array
         }
     } catch (PDOException $e) { /* table impossible : les listes restent vides */ }
 
-    // Les tâches reliées à une étape de standard (ceo_sop_tache) : l'écran les étiquette « SOP-… · étape … ».
+    // Les tâches reliées à une étape de standard (for_sop_tache) : l'écran les étiquette « SOP-… · étape … ».
     $sopLiens = [];
     try {
         ensureSopTache();
-        foreach (Db::rows('SELECT l.task_id, l.sop_id, l.etape, s.code, s.titre_fr FROM ceo_sop_tache l LEFT JOIN ceo_sop s ON s.id = l.sop_id') as $l) {
+        foreach (Db::rows('SELECT l.task_id, l.sop_id, l.etape, s.code, s.titre_fr FROM for_sop_tache l LEFT JOIN for_sop s ON s.id = l.sop_id') as $l) {
             $sopLiens[(string) $l['task_id']][] = ['sopId' => (string) $l['sop_id'], 'code' => (string) ($l['code'] ?? ''), 'titre' => (string) ($l['titre_fr'] ?? ''), 'etape' => $l['etape']];
         }
     } catch (PDOException $e) { /* sans le module Formation : pas d'étiquette */ }
@@ -792,7 +792,7 @@ function tkLigne(array $l, int $n): array
         'priorite' => isset($l['priorite']) && is_numeric($l['priorite']) ? (int) $l['priorite'] : null,
         'garderNiveaux' => !array_key_exists('garderNiveaux', $l) || !empty($l['garderNiveaux']),
         'garderControleurs' => !array_key_exists('garderControleurs', $l) || !empty($l['garderControleurs']),
-        // L'étape de SOP que la tâche contrôle (assistant « depuis un standard ») : gardée dans ceo_sop_tache.
+        // L'étape de SOP que la tâche contrôle (assistant « depuis un standard ») : gardée dans for_sop_tache.
         'sop' => is_array($l['sop'] ?? null) && preg_match('/^[\w-]{1,32}$/', (string) ($l['sop']['id'] ?? '')) === 1
             ? ['id' => (string) $l['sop']['id'], 'etape' => mb_substr(trim((string) ($l['sop']['etape'] ?? '')), 0, 20) ?: null] : null,
     ], null];
@@ -1159,7 +1159,7 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
 
 /*
  * Le lien entre une tâche du panel et l'étape de SOP qu'elle contrôle (07/11/2026, propositions A et D).
- * Le panel n'a aucun champ pour le porter : il vit ici, dans ceo_sop_tache. Une checklist se relie à un
+ * Le panel n'a aucun champ pour le porter : il vit ici, dans for_sop_tache. Une checklist se relie à un
  * standard par son CODE en tête de nom (« CP-07 — Audit visuel intérieur ») : les codes du classement de
  * la SOP (Manuel du réseau, référentiel v25) et le code de la SOP elle-même.
  */
@@ -1168,7 +1168,7 @@ function ensureSopTache(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_tache (
+    Db::exec('CREATE TABLE IF NOT EXISTS for_sop_tache (
         task_id INT NOT NULL,
         sop_id VARCHAR(32) NOT NULL,
         etape VARCHAR(20) NULL,
@@ -1183,7 +1183,7 @@ function tkLierSop(int $taskId, string $sopId, ?string $etape): void
     if ($taskId <= 0) { return; }
     try {
         ensureSopTache();
-        Db::exec('INSERT INTO ceo_sop_tache (task_id, sop_id, etape, cree_le) VALUES (?,?,?,?)
+        Db::exec('INSERT INTO for_sop_tache (task_id, sop_id, etape, cree_le) VALUES (?,?,?,?)
                   ON DUPLICATE KEY UPDATE etape = COALESCE(VALUES(etape), etape)', [$taskId, $sopId, $etape, date('Y-m-d H:i:s')]);
     } catch (PDOException $e) { /* le panel a la tâche : le lien n'est qu'un confort */ }
 }
@@ -1252,12 +1252,12 @@ function tkSopAjouterCode(string $sopId, ?string $code): void
 {
     if ($code === null) { return; }
     try {
-        $r = Db::row('SELECT checklists, code FROM ceo_sop WHERE id = ?', [$sopId]);
+        $r = Db::row('SELECT checklists, code FROM for_sop WHERE id = ?', [$sopId]);
         if ($r === null || (string) ($r['code'] ?? '') === $code) { return; }
         $l = function_exists('rfJsonListe') ? rfJsonListe($r['checklists'] ?? null) : [];
         if (in_array($code, $l, true)) { return; }
         $l[] = $code;
-        Db::exec('UPDATE ceo_sop SET checklists = ?, maj_le = ?, maj_par = ? WHERE id = ?',
+        Db::exec('UPDATE for_sop SET checklists = ?, maj_le = ?, maj_par = ? WHERE id = ?',
             [json_encode($l, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), 'Cadre des tâches', $sopId]);
     } catch (PDOException $e) { /* colonne absente : le classement reste celui d'avant */ }
 }
@@ -1388,7 +1388,7 @@ function tkSopProposition(string $id): array
  * GET /task/sop/{id}/controles — proposition D : ce qui contrôle un standard, et ce que les contrôles disent.
  *
  * Les checklists du panel dont le code est au classement de la SOP, leurs tâches, les tâches reliées à une
- * étape (ceo_sop_tache), et pour chacune les avis des 30 derniers jours (mac_task_review, la table partagée
+ * étape (for_sop_tache), et pour chacune les avis des 30 derniers jours (mac_task_review, la table partagée
  * avec le panel) : nombre de notes, moyenne, non-conformités sous le seuil du barème, la dernière avec son
  * magasin et son commentaire. Les codes du classement sans checklist au panel sont rendus à part : ils sont
  * « à créer ».
@@ -1418,7 +1418,7 @@ function tkSopControles(string $id): array
     }
     try {
         ensureSopTache();
-        foreach (Db::rows('SELECT task_id, etape FROM ceo_sop_tache WHERE sop_id = ?', [(string) $S['row']['id']]) as $l) {
+        foreach (Db::rows('SELECT task_id, etape FROM for_sop_tache WHERE sop_id = ?', [(string) $S['row']['id']]) as $l) {
             $tid = (int) $l['task_id'];
             $taches[$tid] = ['checklist' => $taches[$tid]['checklist'] ?? null, 'checklistId' => $taches[$tid]['checklistId'] ?? null, 'etape' => $l['etape']];
         }
