@@ -18,6 +18,7 @@ final class Db { public static function rows(string $s, array $a = []): array { 
 require __DIR__ . '/../src/commercial.php';
 require __DIR__ . '/../src/commercial_gains.php';
 require __DIR__ . '/../src/commercial_semaine.php';
+require __DIR__ . '/../src/commercial_meta.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -182,6 +183,11 @@ verifie('un numéro de rue n’est pas un code postal', smCpAdresse('Chaussée d
 verifie('un formulaire de recrutement flexi-job est reconnu', smFormulaireRecrutement(['nom' => 'RECRUTEMENT B2B HALLE - FR', 'questions' => [['label' => 'Es-tu éligible au statut flexi-job ?']]]));
 verifie('un formulaire de franchise est reconnu', smFormulaireRecrutement(['nom' => 'FRANCHISE DOUR', 'questions' => []]));
 verifie('un formulaire « Lunch au bureau » est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'Lunch au bureau — Gosselies', 'questions' => [['label' => 'Nom de l’entreprise'], ['label' => 'Nombre de personnes']]]));
+verifie('le formulaire créé sur la Page (fonction « Job title ») est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'LUNCH AU BUREAU - FR', 'questions' => array_map(static fn ($l) => ['label' => $l], ['Company name', 'Combien de personnes dans votre équipe ?', 'Quel est votre besoin ?', 'Full name', 'Job title', 'Email', 'Phone number', 'Post code'])]));
+verifie('« un job étudiant » reste du recrutement', smFormulaireRecrutement(['nom' => 'Un job chez nous', 'questions' => []]));
+verifie('les formulaires que le portail peut mettre en inactif : « Lunch au bureau » FR et NL, rien d’autre', smFormulairesLunchNoms() === ['LUNCH AU BUREAU - FR', 'LUNCH OP KANTOOR - NL']);
+$fl = smFormulaireLunch('fr', 'https://atelierby.be/');
+verifie('le formulaire « Lunch au bureau » demande le code postal (le magasin) et l’entreprise', in_array('POST_CODE', array_column($fl['questions'], 'type'), true) && in_array('COMPANY_NAME', array_column($fl['questions'], 'type'), true));
 
 echo "\n$ok ok, $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

@@ -110,10 +110,41 @@ function wr_sm_formulaire_creer(): array
     return ['ok' => true, 'id' => $id, 'nom' => $f['name']];
 }
 
+/** Les noms des formulaires que ce module crée : les seuls que le portail met en inactif ou réactive. */
+function smFormulairesLunchNoms(): array
+{
+    return [smFormulaireLunch('fr', '')['name'], smFormulaireLunch('nl', '')['name']];
+}
+
+/**
+ * POST /commercial/formulaires/{id}/actif — { actif: bool } : un formulaire « Lunch au bureau » archivé chez Meta
+ * (inactif : plus aucune publicité ne peut s'en servir) ou réactivé. Les formulaires de recrutement et les autres ne se
+ * touchent pas d'ici. Le suivi (MétaDonnée) se coupe à part, par PUT /commercial/formulaires/{id}.
+ */
+function wr_sm_formulaire_actif(string $id): array
+{
+    $c = mdMetaCfg();
+    if (!mdMetaConfigure($c)) { http_response_code(503); return ['error' => 'connexion Meta à régler dans MétaDonnée']; }
+    $f = null;
+    foreach ((array) (ep_md()['formulaires'] ?? []) as $x) { if ((string) ($x['id'] ?? '') === $id) { $f = $x; } }
+    if ($f === null) { http_response_code(404); return ['error' => 'formulaire inconnu']; }
+    if (!in_array((string) ($f['nom'] ?? ''), smFormulairesLunchNoms(), true)) {
+        http_response_code(403); return ['error' => 'seuls les formulaires « Lunch au bureau » se mettent en inactif depuis le portail Commercial'];
+    }
+    $actif = !empty(body()['actif']);
+    $r = MdMeta::graph('POST', $id, ['status' => $actif ? 'ACTIVE' : 'ARCHIVED'], $c['jeton']);
+    if (!$r['ok']) { http_response_code(502); return ['error' => 'Meta refuse le changement : ' . (string) $r['error']]; }
+    try { wr_md_formulaires_relire(); } catch (Throwable $e) { /* relu au prochain cycle */ }
+    http_response_code(200);
+    journalAdd('Commercial', 'Commercial', null, 'Formulaire Meta ' . ($actif ? 'réactivé' : 'mis en inactif (archivé chez Meta)') . ' : ' . (string) $f['nom']);
+    return ['ok' => true, 'id' => $id, 'nom' => (string) $f['nom'], 'statut' => $actif ? 'ACTIVE' : 'ARCHIVED'];
+}
+
 /** Les routes du formulaire Meta ; null pour une autre adresse. */
 function smRouteMeta(string $method, string $p): mixed
 {
     if ($method === 'GET' && $p === '/formulaires/modele') { return ep_sm_formulaire_modele(); }
     if ($method === 'POST' && $p === '/formulaires/creer') { return wr_sm_formulaire_creer(); }
+    if ($method === 'POST' && preg_match('#^/formulaires/(\d+)/actif$#', $p, $m)) { return wr_sm_formulaire_actif($m[1]); }
     return null;
 }

@@ -197,3 +197,5 @@
 2026-11-19T20:34:09Z Prospection : transvasée dans le portail Commercial (/commercial/prospection/, table sm_prospect par la migration 006 ; l'ancienne adresse y renvoie)
 2026-11-19T20:38:10Z Commercial : gains en trois paliers (20/10/5 %), objectif 5 000 €, coût et ROI, commission des franchisés avec les royalties, simulation d'un client, création du formulaire Meta « Lunch au bureau »
 2026-11-19T20:41:24Z Portail Commercial : la garde chargée par /commercial/assets/ ; sans session, elle renvoie à la connexion du cockpit (/acces/moi rend son adresse)
+2026-11-19T20:46:25Z Commercial : le formulaire « Lunch au bureau » (question « Job title ») n'est plus pris pour un formulaire de recrutement
+2026-11-19T20:49:14Z Commercial : un formulaire « Lunch au bureau » se met en inactif (archivé chez Meta) et se réactive depuis le portail

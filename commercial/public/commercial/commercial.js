@@ -334,8 +334,10 @@
       api('GET', '/formulaires').then(fo => {
         const el = document.getElementById('formulaires'); if (!el) return;
         el.outerHTML = fo.formulaires.length ? `<table><tbody>${fo.formulaires.map(x => `<tr><td>${esc(x.nom)}<span class="sub">${esc(x.page)}${x.dernierLead ? ' · dernier lead ' + esc(String(x.dernierLead).slice(0, 10)) : ''}</span></td>
-          <td>${x.recrutement ? '<span class="badge badge--n">recrutement, pas un bureau</span>' : x.suivi ? '<span class="badge badge--ok">suivi</span>' : '<span class="tag-warn">pas suivi</span>'}</td>
-          <td class="num" style="white-space:nowrap">${x.recrutement ? '' : x.suivi ? btn('Récupérer 90 jours', 'histo', 'btn--sm', x.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm btn--primary', x.id + '|1')}</td></tr>`).join('')}</tbody></table>`
+          <td>${x.statutMeta === 'ARCHIVED' ? '<span class="badge badge--n">inactif (archivé chez Meta)</span>' : x.recrutement ? '<span class="badge badge--n">recrutement, pas un bureau</span>' : x.suivi ? '<span class="badge badge--ok">suivi</span>' : '<span class="tag-warn">pas suivi</span>'}</td>
+          <td class="num" style="white-space:nowrap">${x.statutMeta === 'ARCHIVED' ? (x.lunch ? btn('Réactiver', 'actif', 'btn--sm', x.id + '|1') : '')
+            : (x.recrutement ? '' : x.suivi ? btn('Récupérer 90 jours', 'histo', 'btn--sm', x.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm btn--primary', x.id + '|1'))
+              + (x.lunch ? btn('Mettre en inactif', 'actif', 'btn--sm btn--ghost', x.id + '|0') : '')}</td></tr>`).join('')}</tbody></table>`
           : '<div class="vide">Aucun formulaire lu sur la Page Meta.</div>';
       }).catch(e => { const el = document.getElementById('formulaires'); if (el) el.textContent = e.message; });
       ACT.creerForm = el => {
@@ -359,6 +361,15 @@
         }).catch(e => toast(e.message, true));
       };
       ACT.suivre = el => { const [id, on] = el.dataset.v.split('|'); el.disabled = true; api('PUT', '/formulaires/' + id, { suivi: on === '1', affectation: 'cp' }).then(() => { toast(on === '1' ? 'Formulaire suivi : ses leads arrivent' : 'Formulaire plus suivi'); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
+      ACT.actif = el => {
+        const [id, on] = el.dataset.v.split('|');
+        if (on !== '1' && !confirm('Mettre ce formulaire en inactif ? Il est archivé chez Meta : aucune publicité ne peut plus s’en servir, et il n’est plus suivi. Il se réactive d’ici.')) return;
+        el.disabled = true;
+        api('POST', '/formulaires/' + id + '/actif', { actif: on === '1' })
+          .then(() => on === '1' ? null : api('PUT', '/formulaires/' + id, { suivi: false }))
+          .then(() => { toast(on === '1' ? 'Formulaire réactivé chez Meta : suivez-le pour recevoir ses leads' : 'Formulaire inactif'); vueLeads(q); })
+          .catch(e => { toast(e.message, true); el.disabled = false; });
+      };
       ACT.histo = el => { el.disabled = true; api('POST', '/formulaires/' + el.dataset.v + '/historique', { jours: 90 }).then(r => { toast('Historique relu' + (r && r.nouveaux != null ? ' : ' + r.nouveaux + ' lead(s)' : '')); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
       ACT.creer = el => { const l = d.leads.find(x => x.id === Number(el.dataset.v)); sessionStorage.setItem('smLead', JSON.stringify(l)); location.hash = 'nouveau?lead=' + l.id; };
     }).catch(erreur);
