@@ -14,7 +14,7 @@ const DROITS = { preparer: 'Préparer', visiter: 'Visiter', adapter: 'Adapter', 
 // Ce que voit le franchisé sur sa page (réglage `voit`) ; « chaque jour » et le journal viennent de l'ancienne page « Mon suivi ».
 const VOIT = [['points', 'ses points à travailler et leurs photos'], ['journalier', 'ses chiffres de chaque jour : tâches, notes, infractions, invendus, réclamations, objectifs, avis, comptoir'],
   ['rapports', 'ses rapports de visite'], ['prochaine', 'sa prochaine visite annoncée'], ['msp', 'ses rapports client mystère'], ['scoring', 'son scoring du trimestre'], ['journal', 'le journal des 60 jours']];
-const BLOCS_LIB = { sante: 'Fiche franchisé · santé', points: 'Plans d’action', taches: 'Tâches et contrôles photo', scoring: 'Scoring du trimestre', msp: 'Client mystère · comptoir', meteo: 'Fin de visite · météo' };
+const BLOCS_LIB = { sante: 'Fiche franchisé · santé', points: 'Plans d’action', taches: 'Tâches et contrôles photo', scoring: 'Scoring du trimestre', msp: 'Client mystère · comptoir', meteo: 'Fin de visite · météo', fil: 'Fil du franchisé · épinglé' };
 const auj = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const fmtD = d => d ? String(d).slice(8, 10) + '/' + String(d).slice(5, 7) : '';
 const fmtDJ = d => { if (!d) { return ''; } const t = new Date(String(d).slice(0, 10) + 'T12:00:00'); return JC[t.getDay()] + ' ' + fmtD(d); };

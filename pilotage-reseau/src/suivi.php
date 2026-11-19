@@ -43,7 +43,9 @@ require_once __DIR__ . '/visites_evaluation.php';
 const SU_SCHEMA = 2;
 const SU_LANGUES = ['fr' => 'Français', 'nl' => 'Nederlands', 'en' => 'English', 'de' => 'Deutsch'];
 const SU_BLOCS = ['sante' => 'Santé du magasin', 'points' => 'Points ouverts', 'taches' => 'Tâches et contrôles photo',
-    'scoring' => 'Scoring du trimestre', 'msp' => 'Client mystère et comptoir', 'meteo' => 'Dernière météo du franchisé'];
+    'scoring' => 'Scoring du trimestre', 'msp' => 'Client mystère et comptoir', 'meteo' => 'Dernière météo du franchisé',
+    // Le fil du franchisé (19/11/2026, src/fil_franchise.php) : ce que le bureau y a épinglé pour la prochaine visite.
+    'fil' => 'Épinglé dans le fil du franchisé'];
 const SU_DROITS = ['preparer', 'visiter', 'adapter', 'envoyer', 'valider', 'regler'];
 const SU_MODELES = ['annonce', 'deplacee', 'annulee', 'rapport', 'relance', 'lien'];
 const SU_RUBRIQUES_MSP = ['Accueil', 'Produits', 'Hygiène', 'Ambiance'];
@@ -714,6 +716,13 @@ function suDossier(string $shop): array
         }
     } catch (Throwable $e) { /* météo muette */ }
     $bloc('meteo', $l, false, $l === [] ? 'pas encore relevée' : null, true);
+    // 7. Le fil du franchisé (19/11/2026) — interne : les entrées épinglées depuis la dernière visite faite.
+    if (function_exists('filEpinglees')) {
+        $der = null;
+        try { $der = Db::row('SELECT MAX(prevu_le) d FROM con_visite WHERE shop_id = ? AND statut = \'terminee\'', [$shop])['d'] ?? null; } catch (Throwable $e) { /* sans visite faite */ }
+        $l = filLignesDossier(filEpinglees($shop, $der ? (string) $der : date('Y-m-d', strtotime('-90 days')), date('Y-m-d', strtotime('+90 days'))));
+        $bloc('fil', $l, false, $l === [] ? 'rien d’épinglé depuis la dernière visite' : null, true);
+    }
     return $blocs;
 }
 
@@ -731,7 +740,7 @@ function suPreparationVue(array $v): array
 {
     $shop = (string) $v['shop_id']; $regles = suRegles(); $prep = suPrep($v);
     $dossier = suDossier($shop);
-    foreach ($dossier as &$b) { $b['inclus'] = $prep['blocs'][$b['cle']] ?? ($b['cle'] !== 'msp' || $b['lignes'] !== []); }
+    foreach ($dossier as &$b) { $b['inclus'] = $prep['blocs'][$b['cle']] ?? (!in_array($b['cle'], ['msp', 'fil'], true) || $b['lignes'] !== []); }
     unset($b);
     $annoncee = suAnnoncee($v); $l = suLangue($shop); $ad = suAdresse($shop);
     $odjLe = date('Y-m-d', strtotime((string) $v['prevu_le'] . ' -' . (int) $regles['delais']['odjJours'] . ' days'));
@@ -794,7 +803,7 @@ function wr_suivi_preparation(string $id): array
     }
     $envoyer = !empty($b['envoyer']);
     if ($envoyer) {
-        $dossier = array_values(array_filter(suDossier((string) $v['shop_id']), static fn ($x) => $prep['blocs'][$x['cle']] ?? ($x['cle'] !== 'msp' || $x['lignes'] !== [])));
+        $dossier = array_values(array_filter(suDossier((string) $v['shop_id']), static fn ($x) => $prep['blocs'][$x['cle']] ?? (!in_array($x['cle'], ['msp', 'fil'], true) || $x['lignes'] !== [])));
         $prep['dossier'] = array_map(static fn ($x) => ['cle' => $x['cle'], 'titre' => $x['titre'], 'lignes' => $x['lignes'], 'alerte' => $x['alerte'], 'interne' => $x['interne']], $dossier);
         $prep['figeLe'] = $now;
         $set[] = 'prep_envoyee_le = ?'; $args[] = $now;

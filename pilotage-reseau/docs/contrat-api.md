@@ -5491,6 +5491,26 @@ rend aussi `types` (les types de visite, avec `annoncee`), pour le formulaire de
 contrôle gagne le dossier du bureau, la checklist du consultant, les points proposés, la météo (le temps d'un toucher
 gardé sur `con_visite.meteo`, puis le détail facultatif `POST /franchises/meteo`) et la fin de visite signée.
 
+### Le fil du franchisé (19/11/2026)
+
+Module `src/fil_franchise.php`, écran Franchisés › Suivi des franchisés › Fil du franchisé (`#/franchises/fil?shop=`).
+Tables du portail : `pil_fil_entree` (une note, une photo, une capture, un appel : magasin, date, texte, étiquettes,
+fil, épinglée, visible, auteur), `pil_fil_piece` (ses images, dans le dossier privé sous un nom tiré au hasard),
+`pil_fil` (un problème de gestion et sa suite : ouvert le, résolu le, par quelle entrée). Session du siège seulement.
+
+| Route | Ce qu'elle rend ou fait |
+|---|---|
+| `GET /fil/magasins` | `magasins[]` {id, nom, court, consultant, mois {gestion, surveiller, bonne}, semaines[12] (`g`, `s`, `b`, `n` ou vide, `+v` une visite), premiereSemaine, derniereSemaine, filsOuverts, dernier, prochaine {le, consultant}}, `tags`. |
+| `GET /fil?shop=&annee=` | `entrees[]` du plus récent au plus ancien : les siennes {id `n…`, type note·photo·capture·appel, le, texte, tags[], fil, epingle, visible, auteur, pieces[{id, genre, url}]}, les visites {id `v…`, titre, statut, consultant, score figé, delta, photos, points[{titre, priorite, statut, echeance}]}, les rapports envoyés {id `r…`, lu}, le client mystère {id `m…`, score sur 100} ; `fils[]` {id, titre, ouvert, de, resolu, resoluPar, jours, entrees}, `prochaine`, `annees`, `tags`. Les demandes du helpdesk se lisent à part : `GET /helpdesk/magasin?shop=`. |
+| `POST /fil/entrees` | `{ shop, texte, tags[], le?, type? (appel), fil?, ferme?, titreFil?, epingle?, visible?, auteur?, pieces: [{genre: photo·capture, data: data-URL}] }` — 8 pièces de 6 Mo au plus, JPEG, PNG ou WebP ; rien n'est écrit si une pièce est refusée. Un « Problème de gestion » sans fil en ouvre un (`filOuvert`) ; `ferme` sur un fil le résout à la date de l'entrée. |
+| `PUT /fil/entrees/{id}` | `{ texte?, tags?, le?, type?, fil?, ferme?, epingle?, visible?, pieces?, retirer: [id] }`. Une entrée qui quitte le fil qu'elle fermait le rouvre. |
+| `DELETE /fil/entrees/{id}` | l'entrée, ses pièces et leurs fichiers ; le fil qu'elle fermait se rouvre ; un fil sans entrée disparaît. |
+| `POST /fil/fils/{id}` | `{ titre?, resolu? }` : renommer, résoudre (aujourd'hui) ou rouvrir un fil. |
+| `GET /fil/pieces/{id}` | le fichier de la pièce, tel quel (pas en JSON). |
+
+Le dossier de la visite (`GET /suivi/preparation`) porte un bloc `fil`, interne : les entrées épinglées depuis la
+dernière visite faite.
+
 ### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
 
 Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
