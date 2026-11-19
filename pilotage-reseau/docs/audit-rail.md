@@ -115,22 +115,38 @@ Par ordre de valeur :
     ne valide ses cuissons ni n'enregistre sa clôture (`src/verification_flux.php:16`) — et la Production est hors
     du rail.
 
-## 5. Code mort repéré (à retirer dans un second temps)
+## 5. Code mort — retiré le 19/11/2026 (troisième passe)
 
-- Gabarits et titres de `magasins`, `objectifs`, `marge` (redirigés vers les onglets de Résultat), de `produits`,
-  `seuil`, `usage` (redirigés vers le Catalogue) ; routes `/produits/utilisation*` sans appelant.
-- `tplScoringTri` (l'écran est réécrit en Fiche & scoring avant le rendu) ; la vue « Client mystère » de
-  `valsScoring` et l'écran `clientMystere` (désormais réécrit en Visites › Client mystère).
-- `public/dashboard/mq_reseau.html` (maquette aux chiffres en dur, liée de nulle part) ; le lien
-  `dashboard/suivi.html` de la fiche (une simple redirection).
-- `?app=consultant` (fiche en plein écran, manifeste sur une ancienne adresse) ; le rôle franchisé de
-  `visites/?shop=` (inaccessible : la garde renvoie le franchisé à son dashboard).
-- La recherche du rail lit l'ancienne table de démonstration `ceo_report_schedule` ; le sous-titre de Reporting
-  parle encore d'« alertes push ».
-- Pages orphelines : `public/newsletter/`, `public/fidelite-test/` ; le dossier `public/assistant/assets/` n'est
-  chargé par rien ; l'édition « emplacement » de la fiche produit appelle `PUT /production/planogramme/`, qui
-  n'existe pas (rien ne l'ouvre).
-- Noms trompeurs : « cross » (Bats ton record, lignes par ticket) et « croisements » (achats associés).
+Chaque élément a été vérifié avant d'être retiré : aucune route, aucun écran, aucun lien n'y menait plus. Les adresses
+gardent leur redirection ; aucune table n'est supprimée.
+
+| Retiré | Ce qui le prouvait mort |
+|---|---|
+| Rendu autonome de Tableau des magasins, Objectifs de CA, Marge & coûts | Leur adresse ouvre l'onglet de Résultat (`PERF_ONGLETS`) ; leurs gabarits restent, Résultat les affiche |
+| Titres et drapeaux de Scoring produits, Sous seuil, Usage du catalogue | Adresses redirigées vers le Catalogue ; aucun gabarit |
+| Routes `/produits/utilisation`, `/magasin`, `/jamais`, `/jamais.pdf` et leurs fonctions | Aucun appelant, dans aucun portail |
+| Écrans Scoring du trimestre et Client mystère de Paramètres : gabarits, vue « client mystère » de `valsScoring`, `sqMsp*` | Le scoring s'affiche dans la fiche (« Le réseau »), le client mystère s'encode dans Visites |
+| Routes `/scoring/msp` (GET, POST, DELETE) et leurs fonctions | Seul l'ancien formulaire les appelait |
+| Ancienne écriture dans `con_msp` (`wr_msp_post`) | Jamais atteinte : `suMspEnregistrer` est toujours chargé ; `con_msp` reste lue pour l'historique |
+| Lien `visites/?shop=` de la fiche (`terrain.app`) | Aucun écran ne le lisait ; le rôle franchisé de `visites/` est inaccessible (garde du siège) |
+| Lignes du référentiel (`refLignes` : 400 lignes calculées à chaque rendu du Catalogue et de l'Assortiment), ses filtres, `refMustPut`, `refQminPut` | Aucun gabarit ne les affichait |
+| Formulaire « emplacement » de la fiche produit, `wr_prod_planogramme`, `wr_plano_placer` | Rien ne l'ouvrait ; la route `PUT /production/planogramme/{ref}` n'existait pas |
+| `/reporting` chargé au démarrage, `PATCH`/`POST /reporting/…`, le groupe « Rapports » de la recherche | La recherche lisait `D.reporting`, que le chargeur ne remplit pas ; `D.reports` et `D.alertRules` n'étaient lus par rien |
+| Mode `?app=consultant` et `consultant.webmanifest` | Le manifeste annonçait l'agenda, la checklist et la météo, retirés de la fiche le 16/10 ; rien ne génère ce lien. Une tablette qui l'aurait installé ouvre la fiche normale |
+| `public/assistant/assets/` (le paquet compilé, 376 Ko) | La page n'est plus qu'un renvoi vers le Marketing |
+
+Corrigé au passage : chercher une référence dans le rail ouvrait le Catalogue sans filtre (`refQ`, que le Catalogue ne
+lit plus) ; elle l'ouvre filtré sur son nom (`catQ`).
+
+Gardé, à décider :
+
+- `public/newsletter/` (la lettre d'un magasin) et `public/fidelite-test/` : des pages qui fonctionnent, orphelines du
+  cockpit et du ressort du Marketing ; la fidélité attend le choix entre ses deux programmes (§ 4, point 9).
+- `POST /produits/actif` (« Remettre au catalogue ») n'a pas de bouton, mais c'est le seul moyen de défaire un retrait
+  du catalogue fait depuis la Structure de gamme.
+- `public/dashboard/mq_reseau.html` et `dashboard/suivi.html` : dans le dossier du dashboard magasin, qu'on ne touche pas
+  (le second sert encore de renvoi vers la page du franchisé).
+- Noms trompeurs « cross » / « croisements » : un renommage, pas du code mort.
 
 ## 6. Fait le 19/11/2026, seconde passe (points 1, 2 et 4 du § 4)
 

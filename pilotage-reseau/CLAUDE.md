@@ -10,8 +10,8 @@ lit par son API : `src/panel_api.php` et `src/erp_api.php`, avec des identifiant
 ## Stack
 - **Backend** : PHP ≥ 8.1, sans framework et sans Composer à la racine. PDO MySQL via `src/Db.php`.
   Extensions utilisées : openssl, curl, sodium.
-- **Frontend** : HTML, CSS et JavaScript vanilla, sans compilation (sauf `public/assistant` et
-  `public/tablette`, compilés ailleurs).
+- **Frontend** : HTML, CSS et JavaScript vanilla, sans compilation (sauf `public/tablette`, compilé ailleurs ;
+  `public/assistant` n'est plus qu'un renvoi vers le Marketing).
 - **Base** : celle du panel (`atelierby_db`). Les tables du cockpit sont en `ceo_*` et `mot_*`, celles du
   module RH en `hr_dimona_*`. Pas d'outil de migration : `CREATE TABLE IF NOT EXISTS` au premier appel.
 - **Secrets** : variable d'environnement, puis `config/config.php` (hors Git, réécrit par `bin/deploy.sh`),
@@ -26,6 +26,18 @@ lit par son API : `src/panel_api.php` et `src/erp_api.php`, avec des identifiant
 - Ne jamais journaliser une clé privée, un jeton, une assertion JWT ou un NISS en clair.
 - On écrit en français : code commenté, messages de commit, interface. Les commits sont atomiques.
 - Une page autonome appelle son API à côté d'elle, en chemin relatif, et l'alias Apache la sert à la racine.
+
+## Mise en ligne : toujours depuis la branche par défaut (19/11/2026)
+La branche par défaut (`claude/new-session-deedox`) fait référence ; la branche de déploiement
+(`claude/deploiement-application-serveur-lmz1bm`) la suit et pointe sur le même commit. Pour mettre en ligne :
+1. le travail, avec sa ligne ajoutée à `deploy.trigger`, entre dans la branche par défaut par une PR fusionnée ;
+2. la branche de déploiement avance en avance rapide jusqu'au commit de fusion :
+   `git push origin <sha>:refs/heads/claude/deploiement-application-serveur-lmz1bm`. Le changement de
+   `deploy.trigger` lance la livraison ; un saut qui ne touche pas `deploy.trigger` ne livre rien.
+
+Jamais de commit, de fusion, de cherry-pick ni de push forcé directement sur la branche de déploiement. Si elle a des
+commits absents de la branche par défaut (l'avance rapide est refusée), les ramener d'abord dans la branche par
+défaut par une PR, puis avancer.
 
 ## Le cockpit franchisé (`/dashboard`)
 Le dashboard magasin : l'écran dans `public/dashboard/`, les modules serveur qui ne servent qu'à lui dans `src/franchise/`

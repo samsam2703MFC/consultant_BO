@@ -53,24 +53,12 @@
 })();
 </script>
 <script>
-// L'application tablette du consultant (10/10/2026) : ?app=consultant ouvre la fiche franchisé en plein écran,
-// installable sur l'écran d'accueil (manifeste dédié). Le cockpit reste le même ailleurs.
-(function () {
-  try {
-    if (new URLSearchParams(location.search).get('app') !== 'consultant') { return; }
-    document.documentElement.setAttribute('data-app', 'consultant');
-    var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'consultant.webmanifest'; document.head.appendChild(l);
-    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche'; }
-  } catch (e) { /* sans app : le cockpit */ }
-})();
-</script>
-<script>
 // Au téléphone (07/11/2026) : l'écran Résultat s'ouvre dans sa vue téléphone (resultat-mobile/), une colonne,
 // Jour / Semaine / Mois. « Version complète » (?bureau=1) garde le cockpit de bureau pour la session.
 (function () {
   try {
     var q = new URLSearchParams(location.search);
-    if (q.get('embed') === '1' || q.get('app')) { return; }
+    if (q.get('embed') === '1') { return; }
     if (q.get('bureau') === '1') { sessionStorage.setItem('cockpit.bureau', '1'); return; }
     if (sessionStorage.getItem('cockpit.bureau') === '1') { return; }
     var etroit = function () { return window.matchMedia && matchMedia('(max-width: 760px)').matches; };
