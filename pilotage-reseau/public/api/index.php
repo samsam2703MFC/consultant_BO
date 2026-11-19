@@ -64,6 +64,7 @@ require __DIR__ . '/../../src/verification_matieres_prix.php';   // Recettes à 
 require __DIR__ . '/../../src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
 require __DIR__ . '/../../src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
 require __DIR__ . '/../../src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
+require __DIR__ . '/../../src/fil_franchise.php';             // Le fil du franchisé : notes, photos, captures, étiquettes, fils (19/11/2026)
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
@@ -189,6 +190,11 @@ try {
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
+    // Une pièce du fil du franchisé (19/11/2026) : la photo ou la capture, rangée dans le dossier privé, sort telle quelle.
+    if ($method === 'GET' && preg_match('#^/fil/pieces/(\d+)$#', $path, $m)) {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
+        filPieceSortie((int) $m[1]);   // sort le fichier, puis exit
+    }
     // Un document d'un franchisé (22/10/2026) sort tel quel (PDF, image, Word…), pas en JSON.
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
@@ -404,6 +410,8 @@ function route(string $method, string $path): mixed
     if (str_starts_with($path, '/soir/')) { return rsRoute($method, $path); }
     // Pilotage › Audit fournisseurs : le formulaire, les campagnes, les résultats, les copies (src/audits.php).
     if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
+    // Franchisés › Suivi des franchisés › Fil du franchisé (19/11/2026, src/fil_franchise.php).
+    if ($path === '/fil' || str_starts_with($path, '/fil/')) { return filRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
