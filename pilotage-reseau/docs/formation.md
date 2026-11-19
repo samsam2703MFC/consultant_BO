@@ -1159,5 +1159,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   jours (ou des jours d'activité si le magasin est plus jeune) ; la marge brute réelle prend le food cost mesuré, à défaut
   sa moyenne ou 40 % ; les charges normatives sont celles du modèle de Budget › Paramètres, ou les seuils du réseau
   (main-d'œuvre 17 %, frais généraux 13,5 %, redevances 3 %, charges financières 2,2 %).
-- **À corriger** : 0.0.28, partie « La valeur du fonds de commerce », décrit encore l'ancienne règle (CA ÷ 6). Non modifié
-  à ce stade.
+- **Corrigé le 19/11/2026** : 0.0.28 en v1.5 (précision) : la partie « La valeur du fonds de commerce » et la question 5 du
+  quiz donnent la règle en vigueur, (marge brute réelle − charges normatives) × 3,5 ; l'exemple passe de 83 333 € à 425 250 €.
+- **Encore à corriger, même ancienne règle (à demander)** : 0.0.15 « Comprendre le dashboard magasin » (partie de la valeur et
+  question 1 du quiz, « CA ÷ 6 ») et 0.0.34 « Le dashboard : le haut de l’écran » (« CA des 730 derniers jours ÷ les jours
+  d’activité × 365 ÷ 6 »). 0.0.15 est tenu par la routine du dashboard : à modifier avec elle, ou par une demande de Sam.

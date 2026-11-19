@@ -24,7 +24,7 @@ demande (« publie 0.0.55 », « publie 0.0.56 »).
   règle en vigueur depuis le 15/11/2026, `(marge brute réelle − charges normatives) × 3,5` (code : `dashboard.js`,
   `valoDe`, `VALO_MULT`), avec l’exemple des seuils du réseau. L’ancienne règle (CA ÷ 6) y est dite dépassée.
 - **0.0.28, partie « La valeur du fonds de commerce » (v1.2 à 1.4) : elle décrit encore l’ancienne règle** (CA des 730
-  jours × 365 ÷ 6, soit 83 333 € pour 500 000 € de CA). À corriger : une version de précision, à demander.
+  jours × 365 ÷ 6, soit 83 333 € pour 500 000 € de CA). **Corrigé le 19/11/2026** : version 1.5 de précision.
 - **Rythme des rituels** (brief quotidien, point individuel, réunion hebdomadaire, point mensuel, entretien
   semestriel) : proposition du guide, pas une règle du réseau.
 - **Exemples** : « 7 h 00 » et « 7 h 30 » dans les deux articles sont des exemples du guide, à adapter aux horaires du
