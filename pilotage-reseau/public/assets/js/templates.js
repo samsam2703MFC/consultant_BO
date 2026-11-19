@@ -4659,12 +4659,12 @@ function tplInventaires(c, x){
   }
   function histo(){
     if (!o.histo.length) { return ''; }
-    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
+    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La matière expliquée sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
       <div class="in-histo">${o.histo.map(h => `<button ${x.A(h.choisir)} class="in-hb ${h.cls}${h.on ? ' on' : ''}" title="${esc(h.titre)}"><span class="v">${esc(h.val)}</span><i style="height:${h.h}%"></i><span class="d">${esc(h.lib)}</span></button>`).join('')}<div class="in-cent"></div></div></div>`;
   }
   const J = o.justesse;
   const tete = `<div class="in-tete">
-    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Justesse des ventes</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
+    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Matière expliquée</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
     <div class="in-kpis">${o.kpi.map(k => `<div style="${card};padding:14px 16px"><div class="k">${esc(k[0])}</div><div class="v ${k[2]}">${esc(k[1])}</div><div class="s">${esc(k[3])}</div></div>`).join('')}</div></div>
     <div class="in-bilan" style="${card}">${o.bilan.map((b, i) => `<div class="${i === 3 ? 'eq' : ''}"><span>${esc(b[0])}</span><b>${esc(b[1])}</b></div>`).join('')}</div>`;
   const S = o.suite;

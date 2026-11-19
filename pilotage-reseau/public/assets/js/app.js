@@ -2689,10 +2689,13 @@ class App {
       if (nReleve < 2) { inv.alertes.push(['info', 'Les inventaires d’octobre se calculent dès le prochain : le panel ne rend pas ses inventaires passés, le cockpit relève le stock toutes les cinq minutes depuis le ' + jf(R.depuis || '') + '. La copie du panel s’arrête au ' + inv.finCopie + ' : ce sont ces semaines-là qu’on lit pour l’instant.']); }
       // l'historique : une barre par semaine
       const H = (L.paires || []).slice().reverse();
+      // La matière expliquée (19/11/2026) : le même indicateur et les mêmes seuils que Matières ↔ recettes — le ton vient
+      // du serveur (invTauxTon), l'écran ne fait que le peindre.
+      const TON = { ok: 'ok', att: 'moy', ko: 'ko' };
       inv.histo = H.map(p => { const r = p.resume; const sansL = !!(r && r.nQualite > 0 && r.livraisons === 0); const j = r && !sansL ? r.justesse : null;
-        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
+        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · matière expliquée ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
           h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j)) * 0.8, val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
-          cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
+          cls: j == null ? 'na' : (TON[r.justesseTon] || 'na'), on: p.de === de && p.a === a,
           choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
     }
     // l'écart de la paire choisie
@@ -2708,9 +2711,9 @@ class App {
         const Q0 = E.qualite || [];
         const sansLivr0 = E.source === 'copie' && Q0.length > 0 && Q0.every(q => !q.livraisons);
         const j = sansLivr0 ? null : T.justesse;
-        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : (TON[T.justesseTon] || 'na'),
           sous: sansLivr0 ? 'aucune livraison enregistrée dans le panel sur la période : le stock n’a pas d’entrées, ses sorties ne se mesurent pas'
-            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, dont ' + fE(T.fiableCouvert) + ' expliqués par la caisse et la poubelle et ' + fE(T.manquant) + ' sans explication' };
+            : j == null ? 'rien n’est sorti du stock sur la période' : 'sur toutes les matières chiffrées : ' + fE(T.sortiPos) + ' sortis du stock, dont ' + fE(T.couvert) + ' expliqués par la caisse et la poubelle — le même chiffre que Matières ↔ recettes' };
         inv.kpi = [
           ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
           ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],
