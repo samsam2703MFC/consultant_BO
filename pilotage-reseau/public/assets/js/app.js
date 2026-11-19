@@ -919,6 +919,17 @@ class App {
     this.root.addEventListener('dragleave', e => { if (e.target === survol) { eteint(); } });
     this.root.addEventListener('dragend', eteint);
     this.root.addEventListener('drop', e => { eteint(); run('data-dp', e); });
+    // Un fichier lâché hors d'une zone de dépôt ne doit pas faire quitter le cockpit : le navigateur l'ouvrirait à la
+    // place de la page (19/11/2026, le fil du franchisé). Hors zone, le curseur dit « interdit » et rien ne se passe ;
+    // un champ fichier garde son dépôt natif.
+    const porteFichiers = e => !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files'));
+    const champFichier = e => !!(e.target && e.target.closest && e.target.closest('input[type="file"]'));
+    document.addEventListener('dragover', e => {
+      if (!porteFichiers(e) || champFichier(e)) { return; }
+      e.preventDefault();
+      if (!(e.target.closest && e.target.closest('[data-dp]'))) { e.dataTransfer.dropEffect = 'none'; }
+    });
+    document.addEventListener('drop', e => { if (porteFichiers(e) && !champFichier(e)) { e.preventDefault(); } });
     // Échap ferme la recherche du rail. Le panneau de résultats recouvre le
     // rail : sans sortie au clavier, il fallait viser la croix pour retrouver
     // la navigation.
