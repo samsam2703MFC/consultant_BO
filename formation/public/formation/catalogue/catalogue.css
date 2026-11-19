@@ -192,3 +192,32 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .po-n { flex: none; font-size: 8pt; color: var(--muted, #7a736a); }
 .pg .po-bloq { font-size: 6.5pt; background: #8D1D2C; color: #F5EFE4; border-radius: 1.2mm; padding: 0 1.4mm; }
 .pg .po-ouv { font-size: 6.5pt; background: #F2C9A0; color: #222222; border-radius: 1.2mm; padding: 0 1.4mm; }
+
+/* Le manuel des fiches techniques (19/11/2026) : une fiche par produit, la photo du panel, les repères, la recette. */
+.pg .ft-chips { display: flex; gap: 1.5mm; flex-wrap: wrap; margin: 0 0 2.5mm; }
+.pg .ft-g, .pg .ft-s { font-size: 7pt; line-height: 1.6; border-radius: 1.2mm; padding: 0 1.6mm; background: var(--chip, #EDE7DE); color: #222222; }
+.pg .ft-g-standard { background: #222222; color: #F5EFE4; }
+.pg .ft-g-saison { background: #F2C9A0; color: #222222; }
+.pg .ft-g-aucune { background: #EAE4DC; color: #5c5852; }
+.pg .ft-photo { height: 48mm; margin: 0 0 3mm; border-radius: 2mm; overflow: hidden; background: #EAE4DC; }
+.pg .ft-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pg .ft-photo.vide { display: none; }
+.pg .ft-faits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5mm; margin: 0 0 2.5mm; }
+.pg .ft-faits div { border: 1px solid var(--line, #e6e0d8); border-radius: 1.5mm; padding: 1.2mm 2mm; }
+.pg .ft-faits small { display: block; font-size: 6.5pt; color: var(--muted, #7a736a); text-transform: uppercase; letter-spacing: .04em; }
+.pg .ft-faits b { font-weight: 400; font-size: 9pt; }
+.pg .ft-al { font-size: 8.5pt; margin: 0 0 1mm; }
+.pg .ft-al b, .pg .ft-comp b { font-weight: 400; color: var(--accent, #8D1D2C); }
+.pg .ft-i { display: flex; justify-content: space-between; gap: 3mm; padding: .7mm 0; border-bottom: 1px dotted var(--line, #e6e0d8); font-size: 8.5pt; }
+.pg .ft-i b { font-weight: 400; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pg .ft-i small { color: var(--muted, #7a736a); font-size: 7pt; }
+.pg .ft-e { display: flex; gap: 2.5mm; align-items: baseline; margin: 0 0 1.2mm; font-size: 8.5pt; }
+.pg .ft-e p { margin: 0; }
+.pg .ft-n { flex: none; width: 5mm; height: 5mm; border-radius: 50%; background: #8D1D2C; color: #F5EFE4; font-size: 7pt; display: inline-flex; align-items: center; justify-content: center; }
+.pg .ft-vide { color: var(--prize-ink, #7A5207); font-style: italic; }
+.pg .ft-manque { margin-top: 3mm; font-size: 7.5pt; color: var(--prize-ink, #7A5207); background: var(--prize-soft, #F6E7CE); border-radius: 1.5mm; padding: 1.5mm 2mm; }
+.pg .ft-comp { font-size: 8pt; }
+.pg .ft-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; margin: 2mm 0 3mm; }
+.pg .ft-stats div { border: 1px solid var(--line, #e6e0d8); border-radius: 2mm; padding: 2mm; }
+.pg .ft-stats b { display: block; font-weight: 400; font-size: 16pt; color: var(--accent, #8D1D2C); }
+.pg .ft-stats small { font-size: 7.5pt; color: var(--muted, #7a736a); }
