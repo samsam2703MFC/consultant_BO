@@ -202,3 +202,4 @@
 2026-11-19T19:36:21Z Assistant · coachs, onglet KPI : chaque outil à la demande ou forcé par le coach (plus de « Coupé »)
 2026-11-19T21:01:42Z Commercial : l'échantillon se commande comme une commande du magasin (produits et catégories de TF Buddy, commande « ÉCHANTILLON COMMERCIAL ») et se photographie à la réception ; la Prospection s'affiche à côté du rail
 2026-11-19T21:04:32Z Commercial : une seule vue Prospection (titre et magasin dans la barre du portail, plus d'en-tête en double ; l'entrée « Prospection ↗ » du cockpit retirée, ses anciens liens ouvrent le portail)
+2026-11-19T21:10:36Z Commercial : la publicité « Lunch au bureau » — la vidéo (15 s, 9:16 et 4:5) et le texte du post, dans Leads Meta
