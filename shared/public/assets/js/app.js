@@ -488,8 +488,9 @@ class App {
   static get ADRESSES_SORTIES(){
     return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=plan',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
-      // La Prospection est dans le portail Commercial (19/11/2026).
-      prospection: '../commercial/prospection/', 'prospection-mobile': '../commercial/prospection/', 'developpement-commercial': '../commercial/prospection/',
+      // La Prospection est dans le portail Commercial (19/11/2026), à côté de son rail (#prospection) ; sur le téléphone,
+      // la page seule, en tournée.
+      prospection: '../commercial/?bureau=1#prospection', 'prospection-mobile': '../commercial/prospection/', 'developpement-commercial': '../commercial/?bureau=1#prospection',
       // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
       'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
   }
@@ -1475,7 +1476,7 @@ class App {
       // (dashboard/), et Résultat l'ouvre magasin par magasin.
       ['Applications', [
         ['ext:caisse/', 'Caisse ↗', 0],
-        ['ext:../commercial/prospection/', 'Prospection ↗', 0],
+        // La Prospection n'a plus d'entrée à part (19/11/2026, « éviter les doubles vues ») : elle est dans Commercial ↗.
         // Le portail Commercial (19/11/2026) : servi à la racine, /commercial/ ; sur un téléphone, il s'ouvre sur le suivi de terrain.
         ['ext:/commercial/', 'Commercial ↗', 0],
         ['ext:employee/auth', 'Application employé ↗', 0],

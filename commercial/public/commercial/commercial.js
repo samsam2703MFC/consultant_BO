@@ -850,11 +850,13 @@
   }
 
   /* --- la Prospection, à côté du rail (19/11/2026 : « mettre la prospection à côté du rail, ne pas ouvrir de nouvelle
-   * feuille ») : la page prospection/ dans un cadre, sans son propre retour au portail (?embed=1). ------------------ */
+   * feuille ») : la page prospection/ dans un cadre, sans son propre en-tête (?embed=1) — un seul titre « Prospection »,
+   * celui du portail, et le magasin choisi dans sa barre. ------------------------------------------------------------ */
   function vueProspection(q) {
-    entete('B2B', 'Prospection', '');
-    const shop = q.get('shop') || '';
+    const shop = q.get('shop') || String((CFG.magasins[0] || {}).id || '');
+    entete('B2B', 'Prospection', `<select class="select-native" data-c="prosShop" title="Magasin">${CFG.magasins.map(m => `<option value="${esc(m.id)}" ${String(m.id) === shop ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`);
     page.innerHTML = `<iframe class="cadre-prospection" src="prospection/?embed=1${shop ? '&shop=' + encodeURIComponent(shop) : ''}" title="Prospection : la liste de démarchage du magasin"></iframe>`;
+    ACT.prosShop = el => { location.hash = 'prospection?shop=' + encodeURIComponent(el.value); };
   }
 
   /* --- le routeur ------------------------------------------------------------------------------------------------ */
