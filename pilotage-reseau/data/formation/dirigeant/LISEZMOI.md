@@ -16,6 +16,14 @@ demande (« publie 0.0.55 », « publie 0.0.56 »).
 
 **0.0.56 publié le 19/11/2026** (Sam : « publie 0.0.56 ») : quiz et « vu faire » ouverts sur la tablette.
 
+## La fiche de checklist 5.6.02 (19/11/2026)
+
+`chk-bien-tenue.json` : la fiche Formation de la checklist **5.6.02 « Une franchise bien tenue »** (panel #64, tâches
+#1382 à #1389). Elle compte une partie « Les tâches » : les huit tâches du panel, avec pour chacune la question et son
+« Pourquoi » tiré de 0.0.56. S'y ajoutent deux points critiques repris de 0.0.56 et un quiz de deux questions. Accès
+`responsable`, poste P11, classement D7.5 comme 0.0.56. Encodée en v1.0 « à valider » (Sam : « oui, crée la fiche
+5.6.02 ») ; publication sur demande. NL : traduction de travail, **à relire**.
+
 ## À confirmer
 
 - **Recoupement avec 0.0.16 « Animation d’équipe et RH » (FO-06)** : briefing, réunion d’équipe, entretien, conflit. Les
