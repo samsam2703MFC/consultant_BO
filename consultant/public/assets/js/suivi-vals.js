@@ -166,6 +166,48 @@ function pointsDecidesVals(app, sv, d, ouvrirVisite){
   };
 }
 
+/* La remise à zéro des visites (19/11/2026, Sam : « mettre à zéro, effacer toutes les visites, c'étaient des tests »), dans
+ * Qui fait quoi : compter (GET /visites/remise-a-zero), taper EFFACER, effacer (POST, avec le nombre compté). Toutes les
+ * visites partent, avec ce qu'elles ont produit ; personne n'est prévenu. */
+function remiseVals(app){
+  const R = app.state.svRemise || {};
+  const maj = patch => app.setState({ svRemise: Object.assign({}, app.state.svRemise || {}, patch) });
+  const c = R.compte || null;
+  const statuts = { planifiee: ['planifiée', 'planifiées'], confirmee: ['confirmée', 'confirmées'], en_cours: ['en cours', 'en cours'], terminee: ['terminée', 'terminées'], annulee: ['annulée', 'annulées'] };
+  return {
+    chargement: !!R.chargement, busy: !!R.busy, saisie: R.saisie || '', fait: R.fait || null,
+    compte: c ? {
+      visites: c.visites,
+      titre: pl(c.visites, 'visite') + (c.visites ? ' de ' + pl(c.magasins, 'magasin') + (c.du ? ', du ' + fmtD(c.du) + ' au ' + fmtD(c.au) : '') : ''),
+      statuts: Object.keys(c.parStatut || {}).map(k => nf(c.parStatut[k]) + ' ' + (statuts[k] ? statuts[k][c.parStatut[k] > 1 ? 1 : 0] : k)).join(' · '),
+      avec: [pl(c.reponses, 'réponse'), pl(c.photos, 'photo'), pl(c.points, 'point') + ' de plan d’action', pl(c.taches, 'tâche') + ' du consultant', pl(c.missions, 'mission') + ' du helpdesk'].join(' · '),
+      rapports: c.rapports ? pl(c.rapports, 'rapport') + ' déjà envoyé' + (c.rapports > 1 ? 's' : '') + ' : ' + (c.rapports > 1 ? 'ils disparaissent' : 'il disparaît') + ' de la page du franchisé' : ''
+    } : null,
+    setSaisie: e => maj({ saisie: e.target.value }),
+    compter: () => {
+      maj({ chargement: true, fait: null });
+      readOne('/visites/remise-a-zero').then(r => maj(r && r.compte ? { chargement: false, compte: r.compte, saisie: '' } : { chargement: false }))
+        .then(() => { if (!(app.state.svRemise || {}).compte) { message(app, 'Le compte des visites ne se lit pas.', true); } });
+    },
+    effacer: () => {
+      if (!c || R.busy || (R.saisie || '').trim() !== 'EFFACER') { return; }
+      if (typeof window === 'undefined' || !window.confirm('Effacer les ' + pl(c.visites, 'visite') + ' et tout ce qu’elles ont produit ?\n\nPersonne n’est prévenu. Impossible de revenir en arrière.')) { return; }
+      maj({ busy: true });
+      app.api('POST', '/visites/remise-a-zero', { confirmer: 'EFFACER', attendu: c.visites, qui: 'Cockpit' }).then(r => {
+        if (!r || r.ok === false || !r.efface) {
+          maj({ busy: false, compte: r && r.compte ? r.compte : c, saisie: '' });
+          message(app, 'Rien n’a été effacé : ' + ((r && r.error) || 'sans réponse'), true); return;
+        }
+        const e = r.efface;
+        const txt = pl(e.visites, 'visite') + ' effacée' + (e.visites > 1 ? 's' : '') + ' · ' + [pl(e.reponses, 'réponse'), pl(e.photos, 'photo'), pl(e.points, 'point'), pl(e.taches, 'tâche'), pl(e.missions, 'mission')].join(', ') + ' · personne n’a été prévenu.';
+        app.setState({ svRemise: { fait: txt, compte: r.reste || null }, svSel: { kind: 'nouvelle' }, svNouv: null, svPas: null, svPrep: null, svRap: null, svPrepF: null, svRapF: null, svVisF: null });
+        message(app, 'Remise à zéro faite : ' + txt);
+        relireTableau(app);
+      });
+    }
+  };
+}
+
 /* Effacer une visite (11/11/2026 ; 19/11/2026 : aussi depuis la liste des non signées) : DELETE /visites/{id}, après
  * confirmation. `w` dit ce que la question doit rappeler ; `apres`, l'écran où revenir. */
 function effacerVisite(app, w){
@@ -834,6 +876,7 @@ export function valsSvAdmin(app, common){
     enregistrer: () => modeleSauver(app, code, lg, { sujet: MF.sujet, corps: MF.corps }),
     remettre: M.modifie[lg] ? () => modeleSauver(app, code, lg, { reset: true }) : null,
     essai: () => { if (!S.svEssaiA) { message(app, 'Donnez l’adresse d’essai.', true); return; } app.api('POST', '/suivi/modeles/essai', { code, langue: lg, a: S.svEssaiA }).then(r => message(app, r && r.ok && r.a && !r.motif ? 'Essai envoyé à ' + r.a + ' (le texte enregistré, avec des valeurs d’exemple).' : 'Essai non envoyé : ' + ((r && (r.motif || r.error)) || '—') + '.', !(r && r.ok && !r.motif))); } };
+  sv.remise = remiseVals(app);
   common.sv = sv;
 }
 function reglesSauver(app, F){

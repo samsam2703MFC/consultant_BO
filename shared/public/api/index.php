@@ -763,6 +763,7 @@ function route(string $method, string $path): mixed
             $path === '/visites/conformite'            => ep_visites_conformite(),
             $path === '/visites/campagnes'             => ep_visites_campagnes(),
             $path === '/visites/cadre'                 => ep_visites_cadre(),
+            $path === '/visites/remise-a-zero'         => ep_visites_remise(),
             $path === '/consultants/gestion'           => ep_consultants_gestion(),
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
@@ -1080,6 +1081,8 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/consultants/taches/([\w-]+)$#', $path, $m)) { return wr_consultants_tache_put($m[1]); }
     if ($method === 'PUT' && $path === '/visites/reglages') { return wr_visites_reglages_put(); }
     if ($method === 'POST' && $path === '/visites/tick') { return wr_visites_tick(); }
+    // La remise à zéro des visites (19/11/2026) : toutes, sans prévenir personne ; GET compte, POST efface.
+    if ($method === 'POST' && $path === '/visites/remise-a-zero') { return wr_visites_remise(); }
     if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }
     if ($method === 'PUT' && preg_match('#^/visites/photos/([\w-]{1,40})/reperes$#', $path, $m)) { return wr_visites_photo_reperes($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }

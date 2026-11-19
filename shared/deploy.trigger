@@ -192,3 +192,4 @@
 2026-11-19T20:00:38Z Fiches techniques : photos en carré (1:1)
 2026-11-19T18:00:52Z Prospection : l'offre « Fêtes et locations de salle » (salles des fêtes), au lieu du petit-déjeuner d'hôtel
 2026-11-19T19:57:38Z Portail Commercial (tables sm_) à /commercial/ : bureaux, leads Meta, offres, bons, catalogues, échantillons, suivi B2B, gains du commercial
+2026-11-19T20:18:01Z Qui fait quoi : « Remettre les visites à zéro » (toutes les visites, sans prévenir personne ; compter, taper EFFACER, effacer)
