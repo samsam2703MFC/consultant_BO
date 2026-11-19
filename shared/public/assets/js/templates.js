@@ -17,7 +17,6 @@ import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
 import { tplVerifMatieres } from './verification-matieres-tpl.js';
-import { tplVerifCa } from './verification-ca-tpl.js';
 import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
 import { tplVisibilite } from './visibilite-tpl.js';
@@ -64,7 +63,7 @@ const ICO_ECRAN = {
   // Franchisés
   ficheFranchise: 'crm', suiviTableau: 'adresse', budget: 'fonds', ventes: 'analyse', audits: 'form',
   // Vérification
-  verifFlux: 'liens', verifMatieres: 'modeles', verifRecettes: 'creer', verifCa: 'balance',
+  verifFlux: 'liens', verifMatieres: 'modeles', verifRecettes: 'creer',
   // Produits
   catalogue: 'bundles', planogramme: 'ecran', paramProduits: 'reglages', benchmark: 'recherche', promoTableau: 'offres',
   // Marque & marketing
@@ -229,7 +228,7 @@ export function render(c, x){
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
       ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isFil ? tplFil(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
-      ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
+      ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}

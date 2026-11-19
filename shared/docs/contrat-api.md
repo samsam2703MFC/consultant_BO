@@ -4294,7 +4294,8 @@ L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couv
 
 ### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
 
-Code : `consultant/src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
+Code : `consultant/src/verification_ca.php` ; l'écran `#/verification/ca` est retiré du cockpit le 19/11/2026 (l'adresse
+mène à l'accueil) ; la route et le cron restent : `con_verif_ca` sert le P&L HT (`shared/src/pnl_ht.php`) ; maquette `d.png` ;
 tests `consultant/bin/tests_verification.php` (section lot 5). Lecture seule.
 
 **La caisse fait référence** : les tickets du panel, jour par jour (`caNet{magasin}:{jour}` : `b` TTC après remise, `t`
