@@ -206,57 +206,41 @@ verifie('chaque objectif 2026 a sa ligne de mesure dans le catalogue', array_dif
 verifie('le cockpit reçoit le catalogue et le modèle de chaque assistant',
     count($G['kpis']) === count(AM_KPIS) && $G['modeles']['coachs']['modele'] !== '' && $G['modeles']['professeur']['modele'] !== '' && $G['professeur']['nom'] !== '', json_encode($G['modeles']));
 
-echo "Les outils coupés au cockpit (les interrupteurs de l’onglet KPI)\n";
+echo "Les outils forcés par le coach (les interrupteurs de l’onglet KPI : à la demande ou forcé)\n";
 $tous = array_column(amOutils(), 'name');
-$coupablesP = amOutilsCoupables('professeur');
-verifie('un coach peut perdre chaque outil ; le Professeur garde le manuel', count(amOutilsCoupables('pierre')) === count($tous)
-    && !array_filter($coupablesP, static fn ($n) => str_starts_with($n, 'manuel_')) && in_array('classement_reseau', $coupablesP, true), json_encode($coupablesP));
-$BODY = ['coachs' => ['pierre' => ['outilsCoupes' => ['produits_vendus', 'inconnu']]]];
+$forcablesP = amOutilsForcables('professeur');
+verifie('un coach peut se voir forcer chaque outil ; le manuel du Professeur ne se force pas (il le reçoit d’office)', count(amOutilsForcables('pierre')) === count($tous)
+    && !array_filter($forcablesP, static fn ($n) => str_starts_with($n, 'manuel_')) && in_array('classement_reseau', $forcablesP, true), json_encode($forcablesP));
+$BODY = ['coachs' => ['pierre' => ['outilsForces' => ['produits_vendus', 'inconnu']]]];
 $r = @wr_assistant_coachs();
 verifie('un outil inconnu est refusé', isset($r['error']) && str_contains($r['error'], 'inconnu'), json_encode($r));
-$BODY = ['coachs' => [], 'professeur' => ['outilsCoupes' => ['manuel_lire']]];
+$BODY = ['coachs' => [], 'professeur' => ['outilsForces' => ['manuel_lire']]];
 $r = @wr_assistant_coachs();
-verifie('le manuel du Professeur ne se coupe pas', isset($r['error']) && str_contains($r['error'], 'manuel_lire'), json_encode($r));
-$BODY = ['coachs' => ['pierre' => ['outilsCoupes' => ['produits_vendus', 'ventes_par_heure']]], 'professeur' => ['outilsCoupes' => ['classement_reseau']], 'qui' => 'Test'];
+verifie('le manuel du Professeur ne se force pas', isset($r['error']) && str_contains($r['error'], 'manuel_lire'), json_encode($r));
+$BODY = ['coachs' => ['pierre' => ['outilsForces' => ['produits_vendus', 'ventes_par_heure']]], 'professeur' => ['outilsForces' => ['classement_reseau']], 'qui' => 'Test'];
 $r = wr_assistant_coachs();
 $P3 = $publies(); $reg3 = json_decode(end($P3)[1][1], true);
-verifie('publié : les outils coupés de Mr. Pierre (ordre du catalogue) et du Professeur', ($r['ok'] ?? false) === true
-    && $reg3['pierre']['outilsCoupes'] === ['ventes_par_heure', 'produits_vendus'] && $reg3['professeur'] === ['outilsCoupes' => ['classement_reseau']] && !isset($reg3['coach']), json_encode($reg3));
+verifie('publié : les outils forcés de Mr. Pierre (ordre du catalogue) et du Professeur', ($r['ok'] ?? false) === true
+    && $reg3['pierre']['outilsForces'] === ['ventes_par_heure', 'produits_vendus'] && $reg3['professeur'] === ['outilsForces' => ['classement_reseau']] && !isset($reg3['coach']), json_encode($reg3));
 $REGLAGES['assistantCoachs'] = $reg3;
 $G = ep_assistant_coachs();
-verifie('relu : le cockpit reçoit les outils coupés de chacun', $G['coachs']['pierre']['outilsCoupes'] === ['ventes_par_heure', 'produits_vendus'] && $G['coachs']['coach']['outilsCoupes'] === []
-    && $G['professeur']['outilsCoupes'] === ['classement_reseau'], json_encode([$G['coachs']['pierre']['outilsCoupes'], $G['professeur']['outilsCoupes']]));
+verifie('relu : le cockpit reçoit les outils forcés de chacun', $G['coachs']['pierre']['outilsForces'] === ['ventes_par_heure', 'produits_vendus'] && $G['coachs']['coach']['outilsForces'] === []
+    && $G['professeur']['outilsForces'] === ['classement_reseau'], json_encode([$G['coachs']['pierre']['outilsForces'], $G['professeur']['outilsForces']]));
 $appels = [];
-amDemander($faits, 'Mes ventes de 7 h à 9 h ?', [], 'pierre', 4, $faux);
-$noms = array_column($appels[0]['tools'] ?? [], 'name');
-verifie('Mr. Pierre : les outils coupés ne sont pas déclarés, les autres gardent leur ordre', !in_array('produits_vendus', $noms, true) && !in_array('ventes_par_heure', $noms, true)
-    && $noms === array_values(array_diff($tous, ['produits_vendus', 'ventes_par_heure'])), json_encode($noms));
+amDemander($faits, 'Ma journée ?', [], 'pierre', 4, $faux);
+verifie('Mr. Pierre : tous les outils restent déclarés, dans leur ordre', array_column($appels[0]['tools'], 'name') === $tous, json_encode(array_column($appels[0]['tools'], 'name')));
 $perso = end($appels[0]['system'])['text'];
-verifie('sa consigne les nomme, après le personnage', str_contains($perso, 'Outils coupés pour toi au cockpit : ventes_par_heure, produits_vendus') && str_starts_with($perso, 'Ton personnage'), $perso);
+verifie('sa consigne nomme les forcés, à appeler à chaque question, après le personnage', str_contains($perso, 'Outils forcés par le cockpit : ventes_par_heure, produits_vendus') && str_contains($perso, 'à chaque question')
+    && str_starts_with($perso, 'Ton personnage'), $perso);
 $appels = [];
 amDemander($faits, 'Ma journée ?', [], 'coach', 4, $faux);
-verifie('le Coach garde tous ses outils, sans consigne', array_column($appels[0]['tools'], 'name') === $tous && !str_contains(json_encode($appels[0]['system'], JSON_UNESCAPED_UNICODE), 'Outils coupés'));
+verifie('le Coach, sans outil forcé : pas de consigne', array_column($appels[0]['tools'], 'name') === $tous && !str_contains(json_encode($appels[0]['system'], JSON_UNESCAPED_UNICODE), 'Outils forcés'));
 $appels = [];
 amDemander(['aujourdhui' => date('Y-m-d') . ' (mercredi)', 'sommaire' => '1 · SOP-01 · Ouverture'], 'Comment ouvrir ?', [], 'professeur', 4, $faux);
-$nomsP = array_column($appels[0]['tools'] ?? [], 'name');
-verifie('le Professeur : classement_reseau coupé, le manuel gardé, la consigne en dernier', !in_array('classement_reseau', $nomsP, true) && in_array('manuel_lire', $nomsP, true)
-    && str_contains(end($appels[0]['system'])['text'], 'classement_reseau'), json_encode($nomsP));
-// Un appel à un outil coupé (le modèle ne le voit pas, mais s'il le nommait) : une erreur, pas une lecture.
-$appels = [];
-$fauxOutil = static function (array $corps, array $c) use (&$appels): array {
-    $appels[] = $corps;
-    $raw = count($appels) === 1
-        ? json_encode(['stop_reason' => 'tool_use', 'content' => [['type' => 'tool_use', 'id' => 't1', 'name' => 'produits_vendus', 'input' => ['du' => '2026-11-01', 'au' => '2026-11-18']]], 'usage' => []])
-        : json_encode(['stop_reason' => 'end_turn', 'content' => [['type' => 'text', 'text' => '{"titre":"Ventes"}']], 'usage' => []]);
-    return [json_decode($raw, true), json_decode($raw), null];
-};
-amDemander($faits, 'Mes produits ?', [], 'pierre', 4, $fauxOutil);
-$res = end($appels[1]['messages'])['content'][0] ?? [];
-verifie('un outil coupé appelé quand même rend une erreur', ($res['is_error'] ?? false) === true && str_contains((string) ($res['content'] ?? ''), 'coupé'), json_encode($res));
-$REGLAGES['assistantCoachs'] = ['vente' => ['outilsCoupes' => amOutilsCoupables('vente')]];
-$appels = [];
-amDemander($faits, 'Ma journée ?', [], 'vente', 4, $faux);
-verifie('tous les outils coupés : aucune déclaration d’outil', !array_key_exists('tools', $appels[0]) && !array_key_exists('tool_choice', $appels[0]), json_encode(array_keys($appels[0])));
+verifie('le Professeur : classement_reseau forcé, la consigne en dernier, le manuel toujours déclaré', in_array('manuel_lire', array_column($appels[0]['tools'], 'name'), true)
+    && str_contains(end($appels[0]['system'])['text'], 'Outils forcés par le cockpit : classement_reseau'), json_encode(end($appels[0]['system'])));
+$REGLAGES['assistantCoachs'] = ['vente' => ['outilsCoupes' => ['produits_vendus']]];
+verifie('un ancien réglage « outils coupés » ne coupe plus rien', amOutilsForces('vente') === [] && amCoachs()['vente']['outilsForces'] === []);
 
 echo "\n" . ($ko === 0 ? "Tout est vert : $ok vérifications." : "$ko échec(s), $ok réussite(s).") . "\n";
 exit($ko === 0 ? 0 : 1);

@@ -11,9 +11,10 @@
  *  - KPI (19/11/2026, Sam : « un tableau avec tous les KPI sondés, paramètres et autres, regroupés, pour voir quel modèle
  *    d'assistant fait quoi ») : chaque KPI que lisent les assistants (le catalogue AM_KPIS du serveur), groupé, d'où il
  *    vient, et pour chaque assistant ce qu'il en fait — l'accent de son axe, sa cible 2026, « lu » — avec le modèle de
- *    chacun en tête de colonne. Les brouillons de l'onglet Coachs s'y voient avant publication. Les outils à la demande
- *    s'y coupent (19/11/2026, Sam : « mettre en toggle ») : un interrupteur par assistant, en brouillon jusqu'à
- *    « Publier » ; le Professeur garde le manuel, qu'il reçoit d'office.
+ *    chacun en tête de colonne. Les brouillons de l'onglet Coachs s'y voient avant publication. Chaque outil a son
+ *    interrupteur par assistant (19/11/2026, Sam : « mettre en toggle », puis « à la demande ou forcé par le coach ») :
+ *    à la demande, l'assistant l'appelle s'il en a besoin ; forcé, à chaque question. En brouillon jusqu'à « Publier » ;
+ *    le manuel du Professeur ne se force pas, il le reçoit d'office.
  *  - Questions posées : ce que les franchisés demandent (GET /assistant/questions-posees?jours=), pour décider plus
  *    tard des agents spécialisés.
  *
@@ -42,21 +43,23 @@ function caseCoach(l, c){
 }
 
 const memes = (a, b) => JSON.stringify((a || []).slice().sort()) === JSON.stringify((b || []).slice().sort());
-/** L'interrupteur d'une ligne d'outils pour un assistant (`k` : un coach ou « professeur ») : la ligne coupée si l'un de
- *  ses outils est ouvert, rouverte sinon. Revenu à l'état publié, un brouillon qui ne portait que ses outils s'efface. */
-function basculer(app, k, outils, coupes, publies){
-  const tout = outils.every(o => coupes.includes(o));
-  const liste = tout ? coupes.filter(o => !outils.includes(o)) : coupes.concat(outils.filter(o => !coupes.includes(o)));
+/** L'interrupteur d'une ligne d'outils pour un assistant (`k` : un coach ou « professeur ») : la ligne forcée si l'un de
+ *  ses outils ne l'est pas, rendue « à la demande » sinon. Revenu à l'état publié, un brouillon qui ne portait que ses
+ *  outils s'efface. */
+function basculer(app, k, outils, forces, publies){
+  const tout = outils.every(o => forces.includes(o));
+  const liste = tout ? forces.filter(o => !outils.includes(o)) : forces.concat(outils.filter(o => !forces.includes(o)));
   const B = JSON.parse(JSON.stringify(app.state.ascB || {}));
-  B[k] = Object.assign({}, B[k] || {}, { outilsCoupes: liste });
-  if (memes(liste, publies)) { delete B[k].outilsCoupes; if (!Object.keys(B[k]).length) { delete B[k]; } }
+  B[k] = Object.assign({}, B[k] || {}, { outilsForces: liste });
+  if (memes(liste, publies)) { delete B[k].outilsForces; if (!Object.keys(B[k]).length) { delete B[k]; } }
   app.setState({ ascB: B });
 }
-/** La case d'une ligne d'outils : l'interrupteur, son mot (le levier et sa cible quand l'outil sert un objectif). */
-function caseOutil(app, l, k, nom, coupes, publies, base){
-  const on = !l.outil.some(o => coupes.includes(o));
-  return { txt: on ? base.txt : 'Coupé', ton: base.ton,
-    tog: { on, lib: l.kpi + ' pour ' + nom, modifie: on !== !l.outil.some(o => publies.includes(o)), go: () => basculer(app, k, l.outil, coupes, publies) } };
+/** La case d'une ligne d'outils : l'interrupteur allumé = forcé par le coach ; éteint, « À la demande » (ou le levier
+ *  et sa cible quand l'outil sert un objectif). */
+function caseOutil(app, l, k, nom, forces, publies, base){
+  const on = l.outil.every(o => forces.includes(o));
+  return { txt: on ? 'Forcé par le coach' : base.txt, ton: base.ton,
+    tog: { on, lib: l.kpi + ' forcé pour ' + nom, modifie: on !== l.outil.every(o => publies.includes(o)), go: () => basculer(app, k, l.outil, forces, publies) } };
 }
 
 function charge(app, quoi, force){
@@ -92,10 +95,10 @@ function publier(app, d){
     Object.keys(d.axes).forEach(ax => { coachs[k].accents[ax] = Object.assign({}, c.accents[ax], (b.accents || {})[ax] || {}); });
   });
   app.setState({ ascEnvoi: true, ascMsg: null });
-  // Les outils coupés de chaque assistant (19/11/2026) : la liste entière, le serveur garde ce qui diffère du départ.
-  Object.keys(d.coachs).forEach(k => { const b = (S.ascB || {})[k] || {}; coachs[k].outilsCoupes = b.outilsCoupes != null ? b.outilsCoupes : (d.coachs[k].outilsCoupes || []); });
+  // Les outils forcés de chaque assistant (19/11/2026) : la liste entière, le serveur garde ce qui diffère du départ.
+  Object.keys(d.coachs).forEach(k => { const b = (S.ascB || {})[k] || {}; coachs[k].outilsForces = b.outilsForces != null ? b.outilsForces : (d.coachs[k].outilsForces || []); });
   const bp = (S.ascB || {}).professeur || {};
-  const professeur = { outilsCoupes: bp.outilsCoupes != null ? bp.outilsCoupes : ((d.professeur || {}).outilsCoupes || []) };
+  const professeur = { outilsForces: bp.outilsForces != null ? bp.outilsForces : ((d.professeur || {}).outilsForces || []) };
   app.api('POST', '/assistant/coachs', { coachs, professeur, qui: 'Cockpit' }).then(r => {
     const ok = r && r.ok !== false && !r.error;
     app.setState({ ascEnvoi: false, ascMsg: ok ? { txt: 'Coachs publiés : le dashboard des magasins les utilise dès la prochaine question.', ko: false } : { txt: 'Publication refusée : ' + ((r && r.error) || 'sans réponse'), ko: true } });
@@ -121,8 +124,8 @@ export function valsAssistantCoachs(app, common){
       return { cle: k, avatar: d.avatars[k], defaut: k === d.defaut,
         nom: v('nom'), dit: v('dit'), ton: v('ton'), modifie: !!B[k],
         setNom: e => brouillon(app, k, { nom: e.target.value }), setDit: e => brouillon(app, k, { dit: e.target.value }), setTon: e => brouillon(app, k, { ton: e.target.value }),
-        departs: () => brouillon(app, k, { nom: def.nom, dit: def.dit, ton: def.ton, accents: JSON.parse(JSON.stringify(def.accents)), objectifs: Object.assign({}, def.objectifs || {}), outilsCoupes: [] }),
-        outilsCoupes: b.outilsCoupes != null ? b.outilsCoupes : (c.outilsCoupes || []), outilsPublies: c.outilsCoupes || [],
+        departs: () => brouillon(app, k, { nom: def.nom, dit: def.dit, ton: def.ton, accents: JSON.parse(JSON.stringify(def.accents)), objectifs: Object.assign({}, def.objectifs || {}), outilsForces: [] }),
+        outilsForces: b.outilsForces != null ? b.outilsForces : (c.outilsForces || []), outilsPublies: c.outilsForces || [],
         // Les objectifs 2026 : la saisie telle quelle (« 12,5 »), sinon la valeur publiée, virgule belge.
         objectifs: Object.keys(d.objectifs || {}).map(o => {
           const D = d.objectifs[o], v = b.objectifs && o in b.objectifs ? b.objectifs[o] : (c.objectifs || {})[o];
@@ -141,14 +144,14 @@ export function valsAssistantCoachs(app, common){
     // L'onglet KPI : le catalogue du serveur, une colonne par assistant (les coachs avec leurs brouillons, puis le Professeur).
     const M = d.modeles || {}, mod = x => x ? nomModele(x.modele) + ' · ' + (EFFORT[x.effort] || x.effort) : '—';
     const prof = d.professeur || { nom: 'Le Professeur' };
-    const profPublies = prof.outilsCoupes || [], profCoupes = B.professeur && B.professeur.outilsCoupes != null ? B.professeur.outilsCoupes : profPublies;
-    // Une ligne d'outils : un interrupteur par assistant ; le Professeur garde ce qu'il reçoit d'office (le manuel).
+    const profPublies = prof.outilsForces || [], profForces = B.professeur && B.professeur.outilsForces != null ? B.professeur.outilsForces : profPublies;
+    // Une ligne d'outils : un interrupteur par assistant (à la demande ou forcé) ; le Professeur reçoit le manuel d'office.
     const outils = l => l.outil && l.outil.length;
     a.kpi = {
       assistants: a.coachs.map(c => ({ nom: c.nom, avatar: c.avatar, modele: mod(M.coachs) })).concat([{ nom: prof.nom, avatar: prof.avatar || null, modele: mod(M.professeur) }]),
       groupes: (d.kpis || []).map(g => ({ groupe: g.groupe, lignes: g.lignes.map(l => ({ kpi: l.kpi, detail: l.detail || '', source: l.source || '', outil: (l.outil || []).join(', '),
-        cases: a.coachs.map(c => outils(l) ? caseOutil(app, l, c.cle, c.nom, c.outilsCoupes, c.outilsPublies, caseCoach(l, c)) : caseCoach(l, c))
-          .concat([l.prof ? { txt: 'D’office : ' + l.prof, ton: 'suivi' } : (outils(l) ? caseOutil(app, l, 'professeur', prof.nom, profCoupes, profPublies, { txt: 'À la demande', ton: 'dispo' }) : { txt: 'Pas lu', ton: 'non' })]) })) })),
+        cases: a.coachs.map(c => outils(l) ? caseOutil(app, l, c.cle, c.nom, c.outilsForces, c.outilsPublies, caseCoach(l, c)) : caseCoach(l, c))
+          .concat([l.prof ? { txt: 'D’office : ' + l.prof, ton: 'suivi' } : (outils(l) ? caseOutil(app, l, 'professeur', prof.nom, profForces, profPublies, { txt: 'À la demande', ton: 'dispo' }) : { txt: 'Pas lu', ton: 'non' })]) })) })),
     };
     a.nbModifs = Object.keys(B).length;
     a.publier = () => publier(app, d);
