@@ -1167,4 +1167,6 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - **À faire, hors de cette branche** : le source de 0.0.34 (`dashboard-onglets/art-dash-haut.json`) et celui de 0.0.15
   (`dashboard/art-pil-01.json`) sur `claude/loving-turing-n6j40s` gardent l’ancienne règle. La routine du lundi encode
   depuis cette branche : sans cette mise à jour, elle pourrait republier l’ancienne formule. Le source de 0.0.15 est
-  corrigé sur `claude/lucid-pascal-3ps6at`.
+  ici (`claude/lucid-pascal-3ps6at`) n’est qu’une copie ancienne : elle diffère de la version publiée sur 228 points (durée,
+  quiz 5 et 6…). **Ne pas encoder à partir de cette copie** : elle republierait un texte plus ancien. Le source à jour est sur
+  `claude/loving-turing-n6j40s`, qui garde l’ancienne règle.
