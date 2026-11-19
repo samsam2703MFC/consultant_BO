@@ -1331,3 +1331,7 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   À l'impression, les couleurs restent (`print-color-adjust: exact`, §13.1). Le sous-titre du manuel du réseau annonce
   les postes (« Le classeur : les domaines et les postes »). Mise en ligne par la branche par défaut (PR), selon la règle
   du 19/11/2026 (CLAUDE.md du dossier).
+- **Boutons des cartes** (19/11/2026, Sam : « attention au clipping (bouton QR) ») : le bouton QR sortait de la carte sur
+  certaines largeurs. Les trois boutons ont désormais une base et une largeur minimale nulles et des marges intérieures
+  de 8 px ; « Feuilleter » prend plus de place. Vérifié à 390, 768, 937, 1100, 1280, 1440 et 1920 px : aucun bouton ne
+  déborde ni n'est coupé.
