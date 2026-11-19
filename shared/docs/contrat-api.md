@@ -368,6 +368,9 @@ accès que `/formation/v25`). Doc : `formation/docs/formation.md` § Manuel du r
 - `nl` vaut `null` quand il n'y a pas de texte néerlandais. Les libellés NL des phases, postes, domaines et
   sous-catégories sont à relire.
 - `statut` d'un standard : `publiee`, `a_valider` ou `brouillon` (repris du CRM, pas encore relu — le CRM peut le masquer).
+- `crmUrl` (19/11/2026) : l'adresse du CRM pour le QR code « suivre sa formation » du manuel de pré-ouverture : le
+  réglage `crmFormationUrl` (l'adresse exacte de l'application) s'il est posé, sinon l'origine de `rec_api_url`
+  (erp_cles), sinon vide.
 - `lien` : relatif au module Formation (`<base du module>/` + `lien` ouvre la fiche). `formationUrl` : le chemin du
   module (réglage `formationUrl`, sinon `config.php › formationUrl`, sinon `FORMATION_URL`), vide s'il n'est pas réglé.
 - `panel.etat` : `valide` (choisie par une personne), `certain` (proposée automatiquement, sans ambiguïté), `propose`

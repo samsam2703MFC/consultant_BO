@@ -455,6 +455,7 @@ function ep_rf_ref(): array
             'standardsSansSouscat' => array_values(array_map(static fn ($s) => $s['id'], array_filter($standards, static fn ($s) => $s['souscat'] === null))),
         ],
         'formationUrl' => rfFormationUrl(),
+        'crmUrl' => rfCrmUrl(),
     ];
     if ($detail) {
         $out['checklistsConnues'] = rfChecklistsV25();
@@ -579,6 +580,24 @@ function rfFormationUrl(): string
     $c = Db::config()['formationUrl'] ?? null;
     if (is_string($c) && trim($c) !== '') { return trim($c); }
     return trim((string) (getenv('FORMATION_URL') ?: ''));
+}
+
+/**
+ * L'adresse du CRM, pour le QR code « suivre sa formation » du manuel de pré-ouverture (19/11/2026, Sam : « avec le lien
+ * QR code vers son application qui est dans le CRM ») : le réglage crmFormationUrl s'il est posé (l'adresse exacte de
+ * l'application, https), sinon l'origine de l'API du Recrutement (erp_cles › rec_api_url : schéma, hôte, port), sinon vide.
+ * Rien n'est écrit en dur : l'adresse vient du réglage ou de la table des clés commune.
+ */
+function rfCrmUrl(): string
+{
+    $s = setting('crmFormationUrl');
+    if (is_string($s) && preg_match('#^https?://\S+$#', trim($s)) === 1) { return trim($s); }
+    $api = function_exists('erpCle') ? trim(erpCle('rec_api_url')) : '';
+    $p = $api !== '' ? parse_url($api) : false;
+    if (is_array($p) && in_array($p['scheme'] ?? '', ['http', 'https'], true) && !empty($p['host'])) {
+        return $p['scheme'] . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : '') . '/';
+    }
+    return '';
 }
 
 /* ═══ Écritures : le classement d'un standard, une sous-catégorie ═════════════════════════════════ */

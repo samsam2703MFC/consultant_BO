@@ -182,3 +182,13 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .po-ensemble { background: #F2C9A0; color: #222222; }
 .pg .po-formateurs { background: #78554B; color: #F5EFE4; }
 .pg .po-leg { margin: 1mm 0 2mm; display: flex; gap: 1.5mm; flex-wrap: wrap; }
+
+/* Les compétences par profil du manuel de pré-ouverture (19/11/2026) : le QR code du CRM, les mentions bloquante et mise en route. */
+.pg .po-qr { display: flex; gap: 4mm; align-items: center; margin: 2mm 0 3mm; padding: 3mm; border: 1px solid var(--line, #e6e0d8); border-radius: 2mm; }
+.pg .po-qr-img svg { width: 26mm; height: 26mm; display: block; }
+.pg .po-qr b { font-weight: 400; font-size: 10pt; color: var(--accent, #8D1D2C); }
+.pg .po-qr p { margin: 1mm 0; font-size: 8.5pt; }
+.pg .po-qr small { font-size: 7pt; color: var(--muted, #7a736a); word-break: break-all; }
+.pg .po-n { flex: none; font-size: 8pt; color: var(--muted, #7a736a); }
+.pg .po-bloq { font-size: 6.5pt; background: #8D1D2C; color: #F5EFE4; border-radius: 1.2mm; padding: 0 1.4mm; }
+.pg .po-ouv { font-size: 6.5pt; background: #F2C9A0; color: #222222; border-radius: 1.2mm; padding: 0 1.4mm; }
