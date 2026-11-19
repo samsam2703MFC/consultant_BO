@@ -1099,8 +1099,8 @@ function ep_sm_formulaires(): array
     $d = ep_md();
     $out = [];
     foreach ((array) ($d['formulaires'] ?? []) as $f) {
-        $out[] = ['id' => (string) ($f['id'] ?? ''), 'nom' => (string) ($f['nom'] ?? ''), 'page' => (string) ($f['page'] ?? ''), 'suivi' => !empty($f['suivi']),
-            'affectation' => (string) ($f['affectation'] ?? ''), 'shopId' => $f['shopId'] ?? null, 'leads30' => $f['leads30'] ?? null, 'dernierLead' => $f['dernierLead'] ?? null,
+        $out[] = ['id' => (string) ($f['id'] ?? ''), 'nom' => (string) ($f['nom'] ?? ''), 'page' => (string) ($f['page'] ?? ''), 'suivi' => !empty($f['suivi']), 'statutMeta' => (string) ($f['statutMeta'] ?? ''),
+            'lunch' => in_array((string) ($f['nom'] ?? ''), smFormulairesLunchNoms(), true), 'affectation' => (string) ($f['affectation'] ?? ''), 'shopId' => $f['shopId'] ?? null, 'leads30' => $f['leads30'] ?? null, 'dernierLead' => $f['dernierLead'] ?? null,
             'recrutement' => smFormulaireRecrutement($f), 'questions' => array_values(array_map(static fn ($q) => (string) ($q['label'] ?? ''), (array) ($f['questions'] ?? [])))];
     }
     usort($out, static fn ($a, $b) => [$a['recrutement'], !$a['suivi'], $a['nom']] <=> [$b['recrutement'], !$b['suivi'], $b['nom']]);
