@@ -101,6 +101,8 @@ final class ExecutionController
     // Tablette de bureau : section → nom → QR personnel (personne + jour), confirmé quand le téléphone a pointé
     public function officeSections(ApiRequest $request): ApiResult { return ApiResult::list($this->office->sections($request->context)); }
     public function officeQr(ApiRequest $request): ApiResult { return new ApiResult($this->office->qr($request->body(), $request->context)); }
+    public function officeFirstPin(ApiRequest $request): ApiResult { return new ApiResult($this->office->firstPin($request->body(), $request->context), 201); }
+    public function changePin(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->changePin($request->body(), $request->context)); }
 
     public function officeStatus(ApiRequest $request): ApiResult
     {

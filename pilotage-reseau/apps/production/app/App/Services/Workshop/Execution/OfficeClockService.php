@@ -51,6 +51,18 @@ final class OfficeClockService
             + $this->kiosk->personalQr($context, $employeeId, (string) $c['base']);
     }
 
+    /** [360] Premier PIN de la personne (person_id = production_employee.id) ; son profil de production est créé au besoin. */
+    public function firstPin(array $body, ApiContext $context): array
+    {
+        $this->officeDevice($context);
+        $v = (new Validator($body))->only(['person_id', 'pin'])->integer('person_id', true, 1)->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
+        $v->throwIfInvalid();
+        $c = $v->clean();
+        $row = $this->row((int) $c['person_id']) ?? throw ApiException::notFound('person', (int) $c['person_id']);
+        $employeeId = $row['employee_id'] !== null ? (int) $row['employee_id'] : $this->employees->ensureProfile((int) $c['person_id']);
+        return $this->kiosk->firstPin($employeeId, (string) $c['pin'], $context);
+    }
+
     /** Pointage enregistré depuis l'affichage du QR (la tablette confirme et revient à l'accueil). */
     public function status(int $employeeId, string $since, ApiContext $context): array
     {
