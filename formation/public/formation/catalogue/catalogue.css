@@ -199,7 +199,8 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .ft-g-standard { background: #222222; color: #F5EFE4; }
 .pg .ft-g-saison { background: #F2C9A0; color: #222222; }
 .pg .ft-g-aucune { background: #EAE4DC; color: #5c5852; }
-.pg .ft-photo { height: 48mm; margin: 0 0 3mm; border-radius: 2mm; overflow: hidden; background: #EAE4DC; }
+/* La photo en carré (19/11/2026, Sam : « mettre les photos en ratio 1:1 »), centrée, recadrée sans déformation. */
+.pg .ft-photo { width: 80mm; height: 80mm; aspect-ratio: 1 / 1; margin: 0 auto 3mm; border-radius: 2mm; overflow: hidden; background: #EAE4DC; }
 .pg .ft-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pg .ft-photo.vide { display: none; }
 .pg .ft-faits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5mm; margin: 0 0 2.5mm; }
