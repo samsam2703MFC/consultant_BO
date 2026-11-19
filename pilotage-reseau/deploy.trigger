@@ -153,3 +153,4 @@
 2026-11-19T11:19:55Z [360] Tablette de bureau : créer / changer son PIN
 2026-11-19T11:33:52Z [361] Tablette de bureau : accueil PIN, PIN uniques
 2026-11-19T11:35:21Z [362] Réclamations : valeur au carton
+2026-11-19T11:41:58Z [363] Réclamations : carton entamé, détail
