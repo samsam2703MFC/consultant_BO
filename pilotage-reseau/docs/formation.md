@@ -1200,6 +1200,24 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   une fois par an ») et 0.0.55 en v1.2 (« Huit questions sur le magasin »). Les deux restent « publiee » ; la source de
   0.0.55 suit. 0.0.56 passe aussi en v1.2 avec ce titre (Sam : « oui, change aussi dans 0.0.56 »), et sa source
   `dirigeant/art-valeur-franchise.json` suit. Le texte des étapes, « à se poser une fois par an », ne change pas.
+- **La checklist « 5.6.02 · Une franchise bien tenue »** (19/11/2026, Sam : « rajouter chaque mois à la checklist,
+  pour le franchisé (poste), les 8 questions pour une franchise bien tenue »). Elle est créée dans le panel par
+  l'assistant de l'écran /task, avec un aperçu relu avant la création.
+  - Checklist #64 : zone Gestion, poste de travail « Administartif » (comme 5.6.01), 9:00. Sa description renvoie à
+    0.0.56.
+  - Huit tâches, #1382 à #1389, une par question. Le nom est court (« Deux semaines sans le dirigeant »…) ; la
+    description donne la question et son « Pourquoi », tiré de 0.0.56.
+  - Choix de Sam :
+    - **En pause, comme 5.6.01** : le panel ne connaît que DAILY et WEEKLY. Les tâches sont donc le lundi 9:00,
+      WEEKLY, `is_active: 0`, à activer quand on veut, ou quand le panel saura faire « chaque mois ».
+    - **Niveau « Franchise » seul** (#21, poste Franchisé).
+    - **Non obligatoires** : elles ne pèsent pas sur le pourcentage du dashboard.
+  - Sous-catégorie « Checklist mensuelle / management » (#139), priorité 4, sans photo, sans contrôleur : les tâches
+    sont copiées de la tâche #1320 de 5.6.01, sans ses niveaux ni ses contrôleurs.
+  - Le panel a confirmé chaque création et chaque rattachement (`POST /levels/21/tasks` → « success »). La relecture
+    des niveaux (`/task/qui`) ne montre pas les tâches en pause, comme pour 5.6.01 et 5.5.01. Le rattachement se
+    vérifiera à l'activation.
+  - Le code est inscrit dans `src/checklists_codes.php` (panel 64, pas encore de fiche Formation).
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
