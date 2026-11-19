@@ -12,7 +12,7 @@
   "paired": "Tablette appairée : {name}.",
   "hero": "Choisissez votre service, puis votre nom",
   "section_people": "{n} pers. · présents {present}",
-  "back": "Services",
+  "back": "Accueil",
   "who": "Qui êtes-vous ?",
   "nobody": "Personne dans ce service.",
   "no_people": "Personne à afficher — ajoutez les salariés dans l’ERP.",
@@ -82,5 +82,13 @@
   "pin_mismatch": "Les deux PIN sont différents — retapez le nouveau PIN.",
   "pin_created": "PIN enregistré. Tapez-le désormais à l’entrée et à la sortie.",
   "change_pin": "Changer mon PIN",
-  "pin_changed": "PIN changé."
+  "pin_changed": "PIN changé.",
+  "pin_home_title": "Tapez votre PIN",
+  "pick_name": "Choisir mon nom",
+  "first_time": "Première fois ? Créer mon PIN",
+  "pick_name_help": "Touchez votre nom et tapez votre PIN.",
+  "first_time_help": "Première fois : touchez votre nom pour créer votre PIN.",
+  "back_pin": "PIN",
+  "pin_change_required": "Votre PIN doit être changé : choisissez-en un nouveau (chaque PIN doit être différent).",
+  "pin_home_help": "Votre PIN ouvre votre profil : entrée, sortie et signature."
 }
