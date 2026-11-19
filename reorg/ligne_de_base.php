@@ -90,4 +90,19 @@ echo 'Tables panel_/for_ hors plan : ' . (implode(', ', $out['prefixes_reserves'
 echo 'Tables en base absentes de l’inventaire : ' . count($out['hors_inventaire']) . "\n";
 foreach ($out['tables'] as $t => $n) { printf("  %-48s %10d\n", $t, $n); }
 foreach ($out['vues'] as $v => $d) { echo "  vue $v → " . implode(', ', (array) ($d['tables'] ?? [])) . "\n"; }
+// Détail utile au plan : les clés étrangères qui touchent une table de l'inventaire (des deux côtés), les déclencheurs,
+// et la reprise des anciennes questions de l'assistant (ceo_assistant_question → aia_question), vérifiée ligne à ligne.
+$nos = array_flip(array_keys(array_filter($plan, static fn ($c) => ($c['domaine'] ?? '') !== 'EXT')));
+echo "Clés étrangères touchant une table de l'inventaire :\n";
+foreach ($out['fk'] as $k) {
+    if (isset($nos[$k['de']]) || isset($nos[$k['vers']])) {
+        echo "  fk {$k['de']}.{$k['colonne']} → {$k['vers']}.{$k['colonne_vers']}" . (isset($nos[$k['de']]) ? '' : '   (table d\'une autre application)') . "\n";
+    }
+}
+foreach ($out['declencheurs'] as $d) { echo '  déclencheur ' . ($d['nom'] ?? '?') . ' sur ' . ($d['sur'] ?? '?') . ' (' . ($d['quand'] ?? '') . ' ' . ($d['quoi'] ?? '') . ")\n"; }
+if (isset($out['tables']['ceo_assistant_question'], $out['tables']['aia_question'])) {
+    $r = Db::row('SELECT COUNT(*) n FROM ceo_assistant_question a WHERE NOT EXISTS (SELECT 1 FROM aia_question q
+        WHERE q.cree_le <=> a.cree_le AND q.shop_id <=> a.shop_id AND q.question <=> a.question)');
+    echo '  ceo_assistant_question : ' . $out['tables']['ceo_assistant_question'] . ' ligne(s), dont ' . (int) $r['n'] . " sans copie dans aia_question\n";
+}
 if ($json) { file_put_contents($json, json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)); echo "JSON : $json\n"; }
