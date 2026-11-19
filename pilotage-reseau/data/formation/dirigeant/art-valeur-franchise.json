@@ -263,6 +263,98 @@
   },
   {
    "titre": {
+    "fr": "Comment le dashboard calcule la valeur",
+    "nl": "Hoe het dashboard de waarde berekent"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La règle du réseau",
+      "nl": "De netwerkregel"
+     },
+     "texte": {
+      "fr": "Le dashboard magasin affiche la valeur du magasin, selon la règle du réseau en vigueur depuis le 15/11/2026 :\nValeur = (marge brute réelle − charges normatives du réseau) × 3,5\nAncienne règle : le chiffre d’affaires annuel divisé par 6, soit deux mois de chiffre d’affaires. Elle n’est plus utilisée : un ancien document qui la cite est dépassé.\nLe résultat est une indication suivie dans le temps : il se lit à côté des chiffres du magasin.",
+      "nl": "Het dashboard van de winkel toont de waarde van de winkel, volgens de netwerkregel die sinds 15/11/2026 geldt:\nWaarde = (werkelijke brutomarge − normatieve kosten van het netwerk) × 3,5\nOude regel: de jaaromzet gedeeld door 6, dus twee maanden omzet. Die wordt niet meer gebruikt: een oud document dat ze vermeldt, is achterhaald.\nHet resultaat is een indicatie die in de tijd wordt gevolgd: men leest het naast de cijfers van de winkel."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Le chiffre d’affaires annuel",
+      "nl": "De jaaromzet"
+     },
+     "texte": {
+      "fr": "Le chiffre d’affaires des 730 derniers jours (deux ans) est ramené au jour, puis multiplié par 365 pour donner une année.\nUn magasin ouvert depuis moins de deux ans est ramené au jour sur ses jours d’activité, et non sur 730 jours : il n’est pas pénalisé pour sa seule jeunesse.\nLa période s’arrête au dernier mois qui a des ventes : le mois en cours n’est pas compté.",
+      "nl": "De omzet van de laatste 730 dagen (twee jaar) wordt herleid tot één dag en daarna vermenigvuldigd met 365 om één jaar te krijgen.\nEen winkel die minder dan twee jaar open is, wordt herleid tot één dag op basis van haar openingsdagen, niet op 730 dagen: ze wordt niet benadeeld louter omdat ze jong is.\nDe periode stopt bij de laatste maand met verkoop: de lopende maand telt niet mee."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La marge brute réelle",
+      "nl": "De werkelijke brutomarge"
+     },
+     "texte": {
+      "fr": "C’est le chiffre d’affaires moins le coût de la matière, mois par mois, au food cost mesuré par le cockpit.\nUn mois sans mesure prend la moyenne mesurée du magasin ; à défaut, la cible food cost du réseau, soit 40 %.",
+      "nl": "Dat is de omzet min de kost van de grondstoffen, maand per maand, tegen de food cost die het cockpit meet.\nEen maand zonder meting neemt het gemiddelde van de gemeten maanden van de winkel; zonder dat, de food cost-doelstelling van het netwerk, 40 %."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les charges normatives",
+      "nl": "De normatieve kosten"
+     },
+     "texte": {
+      "fr": "Ce sont les charges du modèle de Budget › Paramètres, en % du chiffre d’affaires, sauf la matière (déjà comprise dans la marge réelle).\nLe modèle n’a pas de ligne de personnel : le personnel compte alors 17 %, la cible du réseau.\nSans modèle, ce sont les seuils du réseau : main-d’œuvre 17 %, frais généraux 13,5 %, redevances 3 %, charges financières 2,2 %, soit 35,7 % du chiffre d’affaires.",
+      "nl": "Dat zijn de kosten van het model van Budget › Parameters, in % van de omzet, behalve de grondstoffen (die zitten al in de werkelijke marge).\nHet model heeft geen personeelslijn: het personeel telt dan voor 17 %, de doelstelling van het netwerk.\nZonder model zijn het de drempels van het netwerk: arbeid 17 %, algemene kosten 13,5 %, royalty’s 3 %, financiële kosten 2,2 %, samen 35,7 % van de omzet."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Un exemple",
+      "nl": "Een voorbeeld"
+     },
+     "texte": {
+      "fr": "Un magasin qui réalise 500 000 € de chiffre d’affaires par an, avec un food cost mesuré de 40 % et les seuils du réseau :\nMarge brute réelle : 60 % de 500 000 €, soit 300 000 €.\nCharges normatives : 35,7 % de 500 000 €, soit 178 500 €.\nRésultat normatif : 300 000 € − 178 500 € = 121 500 €.\nValeur affichée : 121 500 € × 3,5 = 425 250 €.",
+      "nl": "Een winkel met 500.000 € omzet per jaar, met een gemeten food cost van 40 % en de drempels van het netwerk:\nWerkelijke brutomarge: 60 % van 500.000 €, dus 300.000 €.\nNormatieve kosten: 35,7 % van 500.000 €, dus 178.500 €.\nNormatief resultaat: 300.000 € − 178.500 € = 121.500 €.\nGetoonde waarde: 121.500 € × 3,5 = 425.250 €."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Une indication, pas un prix de cession",
+      "nl": "Een indicatie, geen verkoopprijs"
+     },
+     "texte": {
+      "fr": "Ce chiffre n’est pas un prix de cession. La valeur d’un fonds dépend aussi de sa rentabilité réelle, de son emplacement, de son bail et des conditions du contrat de franchise.\nToute cession se prépare avec le franchiseur, un comptable et un conseil juridique.",
+      "nl": "Dit cijfer is geen overnameprijs. De waarde van een zaak hangt ook af van haar werkelijke rendabiliteit, haar ligging, haar huurcontract en de voorwaarden van het franchisecontract.\nElke overdracht wordt voorbereid met de franchisegever, een boekhouder en een juridisch adviseur."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
     "fr": "Pour finir",
     "nl": "Tot slot"
    },

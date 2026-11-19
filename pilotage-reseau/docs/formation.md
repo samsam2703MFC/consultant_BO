@@ -1149,3 +1149,15 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - **Blocage** : les tâches de gestion hebdomadaire n’ont aucun niveau de poste attribué au panel (`POST /task/qui` : « qui
   fait » vide), alors que les tâches quotidiennes du comptoir en ont. Le niveau franchisé et poste ne peut donc pas
   s’afficher tant que les niveaux ne sont pas réglés dans le cadre des tâches. Détail : `data/formation/gestion-semaine/LISEZMOI.md`.
+
+## 0.0.56 : la méthode de calcul de la valeur (19/11/2026)
+
+- Sam : « 0.0.56 + rajouter la méthode de calcul ». Nouvelle section « Comment le dashboard calcule la valeur », version
+  1.1 de précision (`PUT /formation/sop/fiche/art-valeur-franchise`), relue au serveur et identique à la source.
+- La règle décrite est celle du code en ligne (`public/dashboard/dashboard.js`, depuis le 15/11/2026) :
+  `valeur = (marge brute réelle − charges normatives du réseau) × 3,5`. Le chiffre d'affaires annuel vient des 730 derniers
+  jours (ou des jours d'activité si le magasin est plus jeune) ; la marge brute réelle prend le food cost mesuré, à défaut
+  sa moyenne ou 40 % ; les charges normatives sont celles du modèle de Budget › Paramètres, ou les seuils du réseau
+  (main-d'œuvre 17 %, frais généraux 13,5 %, redevances 3 %, charges financières 2,2 %).
+- **À corriger** : 0.0.28, partie « La valeur du fonds de commerce », décrit encore l'ancienne règle (CA ÷ 6). Non modifié
+  à ce stade.
