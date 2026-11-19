@@ -121,6 +121,63 @@ const AM_COACHS = [
 ];
 const AM_TON_DEFAUT = 'pierre';
 
+/* Ce que les assistants lisent, KPI par KPI (19/11/2026, Sam : « faire un tableau avec tous les KPI sondés,
+ * paramètres et autres, pour que ce soit regroupé, et voir quel modèle d'assistant fait quoi »). Le cockpit en fait
+ * l'onglet « KPI » d'Assistant · coachs : une ligne par KPI, et pour chaque assistant ce qu'il en fait — le poids de
+ * l'axe (`axe`, AM_AXES), sa cible 2026 (`objectif`, CO_OBJECTIFS), sinon « lu ». `fiche` : la clé de la fiche de
+ * faits (amFaits) qui le porte ; `outil` : l'outil qui le rend, à la demande (amOutils) ; `toujours` : tous les coachs le
+ * reprennent, même sur un axe « n'en parle pas » ; `prof` : ce que le Professeur en reçoit d'office (il ne lit pas
+ * la fiche). À tenir à jour avec amFaits et amOutils : bin/tests_coach_objectifs.php vérifie les outils et les clés. */
+const AM_KPIS = [
+    ['groupe' => 'Ventes', 'lignes' => [
+        ['kpi' => 'Chiffre d’affaires', 'detail' => 'aujourd’hui à l’heure qu’il est, hier, cette semaine, les deux semaines d’avant, le mois en cours',
+         'source' => 'panel · /shops/{id}/statistics/sales/kpis', 'fiche' => 'ventes', 'axe' => 'budget'],
+        ['kpi' => 'Tickets (clients)', 'detail' => 'les mêmes six périodes', 'source' => 'panel · /shops/{id}/statistics/sales/kpis', 'fiche' => 'ventes', 'axe' => 'trafic'],
+        ['kpi' => 'Panier moyen', 'detail' => 'les mêmes six périodes', 'source' => 'panel · /shops/{id}/statistics/sales/kpis', 'fiche' => 'ventes', 'axe' => 'trafic', 'objectif' => 'panier'],
+        ['kpi' => 'Articles par ticket', 'detail' => 'les mêmes six périodes', 'source' => 'panel · /shops/{id}/statistics/sales/kpis', 'fiche' => 'ventes', 'axe' => 'trafic', 'objectif' => 'articles'],
+        ['kpi' => 'CA, tickets et panier jour par jour', 'detail' => 'les 21 derniers jours', 'source' => 'panel · /consultant/shops/{id}/margin-heatmap', 'fiche' => 'joursParJour', 'axe' => 'trafic'],
+    ]],
+    ['groupe' => 'Budget', 'lignes' => [
+        ['kpi' => 'Le mois face au budget', 'detail' => 'objectif de CA, CA du mois jusqu’ici, % d’atteinte, reste à faire, jours restants',
+         'source' => 'cockpit · Budget (tableau du jour)', 'fiche' => 'budget', 'axe' => 'budget'],
+        ['kpi' => 'La journée face au budget', 'detail' => 'objectif du jour, CA à l’heure qu’il est, projection de fin de journée', 'source' => 'cockpit · Budget (tableau du jour)', 'fiche' => 'budget', 'axe' => 'budget'],
+        ['kpi' => 'La semaine face au budget', 'detail' => 'jour par jour, et l’écart des jours passés', 'source' => 'cockpit · Budget (tableau du jour)', 'fiche' => 'budget', 'axe' => 'budget'],
+    ]],
+    ['groupe' => 'Réseau', 'lignes' => [
+        ['kpi' => 'Rang d’hier dans le réseau', 'detail' => 'rang au CA sur le nombre de magasins ; les autres restent anonymes', 'source' => 'panel · /consultant/shops/sales-kpis', 'fiche' => 'reseauHier', 'axe' => 'trafic'],
+        ['kpi' => 'Panier moyen du réseau', 'detail' => 'hier', 'source' => 'panel · /consultant/shops/sales-kpis', 'fiche' => 'reseauHier', 'axe' => 'trafic'],
+        ['kpi' => 'Cibles du réseau', 'detail' => 'les seuils bon, moyen et bas de chaque KPI', 'source' => 'panel · /consultant/shops/{id}/targets', 'fiche' => 'cibles'],
+    ]],
+    ['groupe' => 'Contrôles qualité', 'lignes' => [
+        ['kpi' => 'Checklists du jour', 'detail' => 'faites ou non à l’heure qu’il est, checklist par checklist', 'source' => 'panel · /consultant/shops/{id}/tasks', 'fiche' => 'controles', 'axe' => 'controles'],
+        ['kpi' => 'Checklists des sept derniers jours', 'detail' => 'faites, total, taux', 'source' => 'panel · /consultant/shops/{id}/tasks', 'fiche' => 'controles', 'axe' => 'controles'],
+        ['kpi' => 'Photos de contrôle notées', 'detail' => 'aujourd’hui, sept jours et le mois ; chaque non-conformité avec le relevé du consultant ; les contrôles rendus sans photo',
+         'source' => 'cockpit · Contrôles qualité', 'fiche' => 'controlesPhotos', 'axe' => 'controles', 'toujours' => true, 'prof' => 'sept derniers jours'],
+    ]],
+    ['groupe' => 'Production', 'lignes' => [
+        ['kpi' => 'Pertes de la semaine', 'detail' => 'pièces jetées, ventes perdues, les huit produits qui pèsent le plus (jeté, vendu, motif)', 'source' => 'panel · /shops/{id}/products/waste', 'fiche' => 'pertesCetteSemaine', 'axe' => 'controles'],
+        ['kpi' => 'Commandes clients à venir', 'detail' => 'par jour : comptoir ou webshop, encaissée ou non, nombre et montant, sans nom', 'source' => 'panel · /shops/{id}/client-orders', 'fiche' => 'commandesAVenir'],
+    ]],
+    ['groupe' => 'Clients', 'lignes' => [
+        ['kpi' => 'Clients scannés et profils', 'detail' => 'tickets rattachés à un client sur 90 jours, les profils de fréquence (part, panier)', 'source' => 'cockpit · Fidélité › Profils', 'fiche' => 'fidelite', 'objectif' => 'clientsScannes'],
+    ]],
+    ['groupe' => 'Objectifs 2026', 'lignes' => [
+        ['kpi' => 'Food cost', 'detail' => 'coût matière ÷ CA, mois en cours et mois dernier', 'source' => 'panel · heatmap de marge', 'fiche' => 'mesures', 'objectif' => 'foodCost'],
+        ['kpi' => 'Frais de personnel', 'detail' => 'main-d’œuvre ÷ CA, mois en cours et mois dernier ; les salaires jour par jour sur 21 jours', 'source' => 'panel · /consultant/shops/{id}/pnl/daily', 'fiche' => 'mesures', 'objectif' => 'personnel'],
+        ['kpi' => 'Menus et formules', 'detail' => 'part du CA, mois en cours jusqu’à hier et mois dernier', 'source' => 'historique des ventes', 'fiche' => 'mesures', 'objectif' => 'menus'],
+    ]],
+    ['groupe' => 'Outils, à la demande', 'lignes' => [
+        ['kpi' => 'Classement du réseau', 'detail' => 'CA, tickets ou panier sur une période, cumulé heure par heure si demandé', 'source' => 'historique des ventes, 18 mois', 'outil' => ['classement_reseau']],
+        ['kpi' => 'Ventes heure par heure', 'detail' => 'tickets, CA et panier par heure, d’un magasin ou du réseau', 'source' => 'historique des ventes, 18 mois', 'outil' => ['ventes_par_heure']],
+        ['kpi' => 'Produits vendus', 'detail' => 'quantités, ventes, part du CA et catégories, filtrables par heures et jours', 'source' => 'historique des ventes, 18 mois', 'outil' => ['produits_vendus']],
+        ['kpi' => 'Prix face à la concurrence', 'detail' => 'les relevés des concurrents, produit par produit, face au prix, au coût de recette et à la marge', 'source' => 'cockpit · Benchmark', 'outil' => ['prix_concurrence']],
+        ['kpi' => 'Points forts et faibles', 'detail' => 'catégories et produits au-dessus ou en dessous de la part du réseau, huit semaines', 'source' => 'historique des ventes', 'outil' => ['forces_faiblesses']],
+        ['kpi' => 'Promotions en cours', 'detail' => 'promotions et bundles du panel, en cours ou à venir', 'source' => 'panel · promotions', 'outil' => ['promotions_en_cours']],
+        ['kpi' => 'Prix à monter, avec leur lot', 'detail' => 'le levier du food cost : les produits sous la médiane des boulangeries proches', 'source' => 'cockpit · Benchmark', 'outil' => ['prix_a_monter'], 'objectif' => 'foodCost'],
+        ['kpi' => 'Manuel opératoire', 'detail' => 'le sommaire, la recherche, la lecture d’un document', 'source' => 'Formation · manuel', 'outil' => ['manuel_sommaire', 'manuel_chercher', 'manuel_lire'], 'prof' => 'le sommaire'],
+    ]],
+];
+
 const AM_SYSTEME = <<<'TXT'
 Tu es l'assistant du dashboard d'un magasin franchisé L'Atelier by (boulangerie, pâtisserie, traiteur ; Belgique). Tu réponds au franchisé, en français, sur SON magasin, avec le ton du personnage décrit à la fin de ces consignes (il décide du tutoiement ou du vouvoiement).
 
@@ -766,6 +823,15 @@ function amCoachs(): array
     return $out;
 }
 
+/** Le modèle et l'effort des coachs : le réglage `assistantMagasin`, sinon AM_MODELE et « medium ». */
+function amModele(): array
+{
+    $r = aiaReglage('assistantMagasin', []);
+    $r = is_array($r) ? $r : [];
+    return ['modele' => trim((string) ($r['modele'] ?? '')) ?: AM_MODELE,
+        'effort' => in_array($r['effort'] ?? '', ['low', 'medium', 'high'], true) ? (string) $r['effort'] : 'medium'];
+}
+
 /** Le bloc « personnage » du message système : le ton, puis les axes, l'accent fort d'abord. */
 function amPersona(string $k): string
 {
@@ -830,10 +896,7 @@ function amDemander(array $faits, string $question, array $fil, string $ton, int
             . (isset($faits['controlesPhotos']) ? "\n\nLes contrôles qualité en photo du magasin, sept derniers jours (JSON, controlesPhotos) :\n" . json_encode($faits['controlesPhotos'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '');
         $systeme = [['type' => 'text', 'text' => AIA_SYSTEME_PROF], ['type' => 'text', 'text' => AIA_CONSIGNES, 'cache_control' => ['type' => 'ephemeral']]];
     } else {
-        $r = aiaReglage('assistantMagasin', []);
-        $r = is_array($r) ? $r : [];
-        $modele = trim((string) ($r['modele'] ?? '')) ?: AM_MODELE;
-        $effort = in_array($r['effort'] ?? '', ['low', 'medium', 'high'], true) ? $r['effort'] : 'medium';
+        ['modele' => $modele, 'effort' => $effort] = amModele();
         $tours = AM_TOURS; $secondes = AM_SECONDES;
         $contexte = "Fiche de faits du magasin (JSON) :\n" . json_encode($faits, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         // Les outils et le bloc commun viennent avant le personnage : changer d'assistant ne repaie que lui.
@@ -970,13 +1033,18 @@ function wr_assistant_magasin(): array
     return ['reponse' => $reponse, 'question' => $qid, 'luLe' => $faits['luLe'] ?? null, 'modele' => $r['modele'], 'ton' => $ton];
 }
 
-/** GET /assistant/coachs → les coachs réglés, leurs valeurs de départ, les axes et les niveaux (cockpit). */
+/** GET /assistant/coachs → les coachs réglés, leurs valeurs de départ, les axes et les niveaux ; le catalogue des KPI lus
+ *  (AM_KPIS) et le modèle de chaque assistant (cockpit). */
 function ep_assistant_coachs(): array
 {
     $av = [];
     foreach (array_keys(AM_COACHS) as $k) { $av[$k] = ($f = amAvatar($k)) !== null ? 'dashboard/avatars/' . $f : null; }
     $def = array_map(static fn ($c) => ['objectifs' => coObjectifsDepart($c['objectifs'] ?? [])] + $c, AM_COACHS);
-    return ['coachs' => amCoachs(), 'defauts' => $def, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'objectifs' => CO_OBJECTIFS, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT];
+    // Le modèle de chaque assistant (19/11/2026) : les coachs partagent `assistantMagasin`, le Professeur a le sien.
+    $modeles = ['coachs' => amModele(), 'professeur' => aiaProfesseurModele()];
+    return ['coachs' => amCoachs(), 'defauts' => $def, 'axes' => AM_AXES, 'niveaux' => AM_NIVEAUX, 'objectifs' => CO_OBJECTIFS, 'avatars' => $av, 'defaut' => AM_TON_DEFAUT,
+        'kpis' => AM_KPIS, 'modeles' => $modeles,
+        'professeur' => AIA_PROF + ['avatar' => ($f = amAvatar('professeur')) !== null ? 'dashboard/avatars/' . $f : null]];
 }
 
 /**

@@ -48,3 +48,26 @@
 .ac-obj-v .fi-in{width:52px;text-align:right}
 .ac-obj-v b{font-weight:400;font-size:12px;color:var(--fi-3);min-width:12px}
 @media (max-width:900px){.ac-grille{grid-template-columns:1fr}.ac-trois,.ac-kpis{grid-template-columns:1fr 1fr}.ac-obj-g{grid-template-columns:1fr}.ac-obj-l:nth-child(2){border-top:1px solid var(--fi-fill)}}
+/* L'onglet KPI (19/11/2026) : le tableau des KPI lus, une colonne par assistant. */
+.ac-kt-wrap{overflow-x:auto}
+.ac-kt{width:100%;border-collapse:collapse;font-size:12.5px}
+.ac-kt th{font-weight:400;text-align:left;vertical-align:bottom;padding:10px 12px;border-bottom:1px solid var(--fi-fill);font-size:11px;color:var(--fi-3);white-space:nowrap}
+.ac-kt th small{display:block;font-size:11px;color:var(--fi-3);margin-top:2px}
+.ac-kt-qui{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--fi-txt)}
+.ac-kt-qui img{border-radius:6px}
+.ac-kt td{padding:8px 12px;border-top:1px solid var(--fi-fill);vertical-align:top}
+.ac-kt td:first-child{min-width:220px}
+.ac-kt td b{font-weight:400;color:var(--fi-txt)}
+.ac-kt td small{display:block;font-size:11px;color:var(--fi-3);margin-top:2px;line-height:1.4}
+.ac-kt-src{font-size:11.5px;color:var(--fi-2);min-width:160px}
+.ac-kt-src code{display:block;margin-top:3px;font:400 10.5px ui-monospace,Menlo,monospace;color:var(--fi-3)}
+.ac-kt-g td{background:var(--fi-fill2);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--fi-2);padding:6px 12px}
+.ac-k{display:inline-block;border-radius:6px;padding:3px 7px;font-size:11.5px;line-height:1.35;background:var(--fi-fill2);color:var(--fi-2)}
+.ac-k.fort{background:var(--color-primary);color:#fff}
+.ac-k.suivi{background:#FFF4E0;color:#9A5B00}
+.ac-k.non{background:transparent;color:var(--fi-3);padding-left:0;padding-right:0}
+.ac-k.lu{background:var(--fi-fill2);color:var(--fi-2)}
+.ac-k.dispo{background:#EEF3FA;color:#2E5E8C}
+.ac-kt-leg{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:11.5px;color:var(--fi-3)}
+.ac-kt-leg .ac-k{margin-left:6px}
+.ac-kt-leg .ac-k:first-child{margin-left:0}

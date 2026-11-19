@@ -190,18 +190,11 @@
 .vm-ko td{background:#fdf6f6}
 @media (max-width:1200px){.vm-deux{grid-template-columns:1fr}}
 
-/* --- Lot 5 : le chiffre d'affaires (préfixe vca-), maquette d -------------------------------------------------------- */
+/* --- Deux cartes côte à côte (préfixe vca-, né avec l'écran du chiffre d'affaires, retiré le 19/11/2026 ; Mouvements s'en sert) */
 .vca-deux{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin-top:12px;align-items:start}
 .vca-deux>.vr-card{margin-top:0!important}
-.vca-on td{background:#fbf3f4}
-.vca-jours{padding:4px 0}
-.vca-j{display:grid;grid-template-columns:92px 18px 1fr;gap:6px;align-items:baseline;padding:9px 18px;border-bottom:1px solid var(--vr-trait);font-size:12.5px;line-height:1.45}
-.vca-j .d{font-weight:400;white-space:nowrap}
-.vca-j .t{color:var(--color-text)}
 .vr-pied code{font:400 10.5px ui-monospace,Menlo,monospace;background:var(--paper);border-radius:4px;padding:0 4px}
 @media (max-width:1200px){.vca-deux{grid-template-columns:1fr}}
-.vca-t td small{white-space:normal;max-width:180px;margin-left:auto}
-.vca-t td.g small{margin-left:0}
 
 /* --- Mouvements d'un produit ou d'une matière (préfixe vmo-) -------------------------------------------------------- */
 .vmo-q{min-width:260px}
