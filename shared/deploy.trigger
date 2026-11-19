@@ -185,3 +185,4 @@
 2026-11-19T19:18:38Z Cockpit : Pointages retirés (#/pointages mène à l'accueil ; l'app employé et la borne pointent toujours)
 2026-11-19T19:24:18Z Pointage retiré partout : l'app employé (Accueil, /pointage, Mes pointages), la borne, la caisse et leurs routes ; les tables restent
 2026-11-19T19:30:50Z Entraînement de l'IA : toutes les photos 5/5 d'un type de tâche, toutes périodes (GET /ia/parfaites)
+2026-11-19T19:43:37Z Visites (#/franchises) : l'assistant en barre horizontale ; onglet « Non signées » pour ouvrir ou effacer une visite pas encore signée
