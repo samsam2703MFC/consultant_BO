@@ -23,7 +23,7 @@ declare(strict_types=1);
 const SM_TYPES = ['bureau', 'b2b'];
 const SM_STATUTS = ['prospect', 'bureau_cree', 'client', 'perdu'];
 const SM_WEBSHOP = ['a_creer', 'demande', 'cree', 'connecte'];
-const SM_ECH_STATUTS = ['a_envoyer', 'commande', 'livre', 'converti', 'sans_suite'];
+const SM_ECH_STATUTS = ['a_envoyer', 'commande', 'recu', 'livre', 'converti', 'sans_suite'];   // recu : le commercial l'a reçu (et photographié)
 const SM_MODELES = ['bienvenue' => 'Bienvenue bureau', 'rdv' => 'Confirmation de rendez-vous', 'offre' => 'Offre', 'catalogue' => 'Catalogue', 'echantillon' => 'Échantillon', 'relance' => 'Relance'];
 const SM_LANGUES = ['fr', 'nl'];
 const SM_EXPEDITEUR = 'L’Atelier By — Ventes aux professionnels <hello@atelierby.be>';
@@ -57,7 +57,11 @@ function smTables(): void
         . 'id INT AUTO_INCREMENT PRIMARY KEY, client_id INT NULL, prospect VARCHAR(200) NOT NULL, contact VARCHAR(160) NOT NULL DEFAULT "",'
         . 'secteur VARCHAR(16) NOT NULL DEFAULT "", shop_id VARCHAR(16) NOT NULL, contenu TEXT NOT NULL, le DATETIME NULL, mode VARCHAR(10) NOT NULL DEFAULT "livraison",'
         . 'adresse VARCHAR(255) NOT NULL DEFAULT "", cout DECIMAL(8,2) NULL, statut VARCHAR(12) NOT NULL DEFAULT "a_envoyer", envoye_le DATETIME NULL,'
-        . 'note VARCHAR(255) NOT NULL DEFAULT "", cree_le DATETIME NOT NULL, KEY (shop_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        . 'note VARCHAR(255) NOT NULL DEFAULT "", cree_le DATETIME NOT NULL, commande_id INT NULL, commande_erreur VARCHAR(255) NOT NULL DEFAULT "",'
+        . 'KEY (shop_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // La commande passée dans le système de commande du magasin (TF Buddy, src/commercial_commande.php) : son numéro.
+    try { $sansCmd = Db::row("SHOW COLUMNS FROM sm_echantillon LIKE 'commande_id'") === null; } catch (Throwable $e) { $sansCmd = false; }
+    if ($sansCmd) { Db::exec('ALTER TABLE sm_echantillon ADD commande_id INT NULL, ADD commande_erreur VARCHAR(255) NOT NULL DEFAULT ""'); }
     Db::exec('CREATE TABLE IF NOT EXISTS sm_envoi ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY, modele VARCHAR(16) NOT NULL, langue CHAR(2) NOT NULL DEFAULT "fr", client_id INT NULL, shop_id VARCHAR(16) NOT NULL DEFAULT "",'
         . 'secteur VARCHAR(16) NOT NULL DEFAULT "", offre_id VARCHAR(16) NOT NULL DEFAULT "", bon_code VARCHAR(40) NOT NULL DEFAULT "", destinataire VARCHAR(190) NOT NULL,'
@@ -289,7 +293,7 @@ function ep_sm_config(): array
         'reglages' => $reg, 'smtp' => ['configure' => $smtp, 'expediteur' => $reg['expediteur']],
         'cockpit' => $cockpit !== '' ? $cockpit : '/consulant_bo/',
         'aBrancher' => ['webshop' => 'Le compte du bureau au webshop et sa tournée : API de TF Buddy à définir avec Szymon.',
-            'echantillon' => 'La commande d’échantillon dans le système de commande : en attendant, elle part au magasin par e-mail.',
+            'echantillon' => 'La commande d’échantillon part dans le système de commande du magasin (TF Buddy) : une commande « ÉCHANTILLON COMMERCIAL », offerte, avec les produits du magasin. L’e-mail au magasin reste possible en plus.',
             'cartes' => 'Les cartes de fidélité office : à brancher sur le programme de fidélité.',
             'bons' => 'Les bons en caisse se créent dans Promotions du magasin ; ici, on les range et on les envoie.']];
 }
@@ -814,12 +818,15 @@ function smEmailsMagasins(): array
     return $v;
 }
 
-function smEchVue(array $r, array $mags): array
+/** La vue d'un échantillon ; `$photos` : celles de la liste, lues d'un coup (smPhotosDe), sinon lues pour lui seul. */
+function smEchVue(array $r, array $mags, ?array $photos = null): array
 {
     return ['id' => (int) $r['id'], 'clientId' => $r['client_id'] !== null ? (int) $r['client_id'] : null, 'prospect' => $r['prospect'], 'contact' => $r['contact'],
         'secteur' => $r['secteur'], 'shopId' => $r['shop_id'], 'magasin' => $mags[$r['shop_id']]['nom'] ?? $r['shop_id'], 'contenu' => json_decode((string) $r['contenu'], true) ?: [],
         'le' => $r['le'], 'mode' => $r['mode'], 'adresse' => $r['adresse'], 'cout' => $r['cout'] !== null ? (float) $r['cout'] : null, 'statut' => $r['statut'],
-        'envoyeLe' => $r['envoye_le'], 'note' => $r['note'], 'creeLe' => $r['cree_le']];
+        'envoyeLe' => $r['envoye_le'], 'note' => $r['note'], 'creeLe' => $r['cree_le'],
+        'commande' => isset($r['commande_id']) ? (int) $r['commande_id'] : null, 'commandeErreur' => (string) ($r['commande_erreur'] ?? ''),
+        'photos' => $photos !== null ? ($photos[(int) $r['id']] ?? []) : (smPhotosDe([(int) $r['id']])[(int) $r['id']] ?? [])];
 }
 
 /** GET /commercial/echantillons?jours=60 */
@@ -829,7 +836,8 @@ function ep_sm_echantillons(): array
     $j = max(1, min(365, (int) ($_GET['jours'] ?? 60)));
     $rows = Db::rows('SELECT * FROM sm_echantillon WHERE cree_le >= ? ORDER BY cree_le DESC', [date('Y-m-d H:i:s', time() - $j * 86400)]);
     $mags = smMagasins();
-    $l = array_map(static fn ($r) => smEchVue($r, $mags), $rows);
+    $ph = smPhotosDe(array_column($rows, 'id'));
+    $l = array_map(static fn ($r) => smEchVue($r, $mags, $ph), $rows);
     $mois = date('Y-m');
     $duMois = array_filter($l, static fn ($e) => substr((string) $e['creeLe'], 0, 7) === $mois);
     return ['echantillons' => $l, 'mois' => ['n' => count($duMois), 'cout' => round(array_sum(array_map(static fn ($e) => (float) ($e['cout'] ?? 0), $duMois)), 2),
@@ -870,7 +878,11 @@ function smEchEnvoyerMagasin(int $id): array
     return ['ok' => $ok, 'erreur' => $ok ? null : (string) (Smtp::$lastError ?? 'envoi impossible'), 'a' => $a];
 }
 
-/** POST /commercial/echantillons — { prospect, contact?, clientId?, secteur?, shopId, contenu: [{produit, q}], le?, mode, adresse?, cout?, note?, envoyer? } */
+/**
+ * POST /commercial/echantillons — { prospect, contact?, clientId?, secteur?, shopId, contenu: [{id, q}] (produits du
+ * catalogue du magasin) ou [{produit, q}] (à la main, quand le catalogue ne se lit pas), le?, mode, adresse?, cout?,
+ * note?, commander? (la commande dans TF Buddy), envoyer? (l'e-mail au magasin) }
+ */
 function wr_sm_echantillon_creer(): array
 {
     smTables();
@@ -879,22 +891,33 @@ function wr_sm_echantillon_creer(): array
     if (!isset(smMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin inconnu']; }
     $prospect = smTexte($b['prospect'] ?? '', 200);
     $contenu = [];
-    foreach ((array) ($b['contenu'] ?? []) as $x) {
-        $p = smTexte(is_array($x) ? ($x['produit'] ?? '') : '', 120);
-        if ($p !== '') { $contenu[] = ['produit' => $p, 'q' => smTexte($x['q'] ?? '1', 20)]; }
+    $duCatalogue = array_filter((array) ($b['contenu'] ?? []), static fn ($x) => is_array($x) && (int) ($x['id'] ?? 0) > 0);
+    if ($duCatalogue !== []) {
+        // Les produits du magasin (src/commercial_commande.php) : nom, catégorie, prix et coût repris du catalogue.
+        $cat = smCatalogueMagasin($shop);
+        if ($cat === null) { http_response_code(502); return ['error' => 'le catalogue du magasin ne se lit pas chez TF Buddy : réessayez']; }
+        [$contenu, $err] = smLignesCatalogue(array_values($duCatalogue), smCatalogueIndex($cat));
+        if ($err !== null) { http_response_code(422); return ['error' => $err]; }
+    } else {
+        foreach ((array) ($b['contenu'] ?? []) as $x) {
+            $p = smTexte(is_array($x) ? ($x['produit'] ?? '') : '', 120);
+            if ($p !== '') { $contenu[] = ['produit' => $p, 'q' => smTexte($x['q'] ?? '1', 20)]; }
+        }
     }
     if ($prospect === '' || $contenu === []) { http_response_code(422); return ['error' => 'le prospect et le contenu sont attendus']; }
+    $cout = is_numeric($b['cout'] ?? null) ? round((float) $b['cout'], 2) : smCoutLignes($contenu);
     $le = preg_match('/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2})?$/', (string) ($b['le'] ?? '')) ? str_replace('T', ' ', (string) $b['le']) : null;
     Db::exec('INSERT INTO sm_echantillon (client_id, prospect, contact, secteur, shop_id, contenu, le, mode, adresse, cout, note, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())',
         [is_numeric($b['clientId'] ?? null) ? (int) $b['clientId'] : null, $prospect, smTexte($b['contact'] ?? '', 160), isset(smSecteurs()[(string) ($b['secteur'] ?? '')]) ? (string) $b['secteur'] : '',
             $shop, json_encode($contenu, JSON_UNESCAPED_UNICODE), $le, ($b['mode'] ?? '') === 'retrait' ? 'retrait' : 'livraison', smTexte($b['adresse'] ?? '', 255),
-            is_numeric($b['cout'] ?? null) ? round((float) $b['cout'], 2) : null, smTexte($b['note'] ?? '', 255)]);
+            $cout, smTexte($b['note'] ?? '', 255)]);
     $id = (int) Db::pdo()->lastInsertId();
+    $commande = !empty($b['commander']) ? smEchCommander($id) : null;
     $envoi = !empty($b['envoyer']) ? smEchEnvoyerMagasin($id) : null;
-    return ['ok' => true, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins()), 'envoi' => $envoi];
+    return ['ok' => true, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins()), 'commande' => $commande, 'envoi' => $envoi];
 }
 
-/** PUT /commercial/echantillons/{id} — { statut?, note?, envoyer? } */
+/** PUT /commercial/echantillons/{id} — { statut?, note?, commander? (la commande dans TF Buddy), envoyer? } */
 function wr_sm_echantillon_put(int $id): array
 {
     smTables();
@@ -902,8 +925,9 @@ function wr_sm_echantillon_put(int $id): array
     $b = body();
     if (isset($b['statut']) && in_array($b['statut'], SM_ECH_STATUTS, true)) { Db::exec('UPDATE sm_echantillon SET statut = ? WHERE id = ?', [$b['statut'], $id]); }
     if (array_key_exists('note', $b)) { Db::exec('UPDATE sm_echantillon SET note = ? WHERE id = ?', [smTexte($b['note'], 255), $id]); }
+    $commande = !empty($b['commander']) ? smEchCommander($id) : null;
     $envoi = !empty($b['envoyer']) ? smEchEnvoyerMagasin($id) : null;
-    return ['ok' => true, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins()), 'envoi' => $envoi];
+    return ['ok' => true, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins()), 'commande' => $commande, 'envoi' => $envoi];
 }
 
 /* --- tableau de bord --------------------------------------------------------------------------------------------- */
@@ -1130,6 +1154,10 @@ function smRoute(string $method, string $path): mixed
     if (($s = smRouteSemaine($method, $p)) !== null) { return $s; }
     // le formulaire Meta des bureaux (src/commercial_meta.php)
     if (($s = smRouteMeta($method, $p)) !== null) { return $s; }
+    // la photo des échantillons reçus (src/commercial_photos.php)
+    if (($s = smRoutePhotos($method, $p)) !== null) { return $s; }
+    // le catalogue du magasin, pour commander un échantillon (src/commercial_commande.php)
+    if (($s = smRouteCommande($method, $p)) !== null) { return $s; }
     if ($method === 'GET') {
         return match (true) {
             $p === '/config' => ep_sm_config(),

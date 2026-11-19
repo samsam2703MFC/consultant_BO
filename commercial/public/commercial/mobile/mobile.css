@@ -44,3 +44,8 @@ body { padding-bottom: env(safe-area-inset-bottom); }
 .w-corps textarea { min-height: 120px; }
 .w-recap td { padding: 8px 0; border-top: 1px solid var(--row-line); vertical-align: top; }
 .w-recap td:first-child { color: var(--muted); width: 38%; padding-right: 10px; }
+
+/* La photo des échantillons reçus (19/11/2026) */
+.m-photos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.m-photos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+.m-carte.recu { border-color: var(--line); }

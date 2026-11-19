@@ -119,3 +119,28 @@ td.cell-edit:hover { background: var(--table-head); }
 .histo div { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
 .histo i { display: block; margin: 0 auto 4px; width: 70%; background: #B03048; border-radius: 4px 4px 0 0; }
 .histo i.plancher { background: #EBD3D8; }
+
+/* La photo des échantillons reçus (19/11/2026) */
+.ech-photos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ech-photos img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); display: block; }
+
+/* Commander un échantillon : les produits du magasin, comme une commande (19/11/2026) */
+.cmd-box { width: min(1080px, 100%); }
+.cmd { display: grid; grid-template-columns: 210px 1fr 250px; gap: 12px; height: min(460px, 62vh); }
+.cmd > div { border: 1px solid var(--line); border-radius: 10px; overflow-y: auto; background: #fff; }
+.cmd__cats { padding: 6px; }
+.cmd__cat { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 7px 9px; border: 0; border-radius: 7px; background: none; font: inherit; font-size: 12.5px; color: var(--muted-2); cursor: pointer; }
+.cmd__cat em { font-style: normal; color: var(--faint); }
+.cmd__cat:hover { background: var(--paper, #faf7f2); }
+.cmd__cat.is-on { background: var(--accent-tint, #f6ecee); color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.cmd__prod { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.cmd__prod.is-on { background: var(--accent-tint, #f6ecee); }
+.cmd__q { display: flex; align-items: center; gap: 6px; }
+.cmd__q button { width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font: inherit; font-size: 15px; cursor: pointer; color: var(--ink, #2a2224); }
+.cmd__q button:disabled { opacity: .35; cursor: default; }
+.cmd__q span { min-width: 22px; text-align: center; }
+.cmd__panier { padding: 12px; }
+@media (max-width: 860px) { .cmd { grid-template-columns: 1fr; height: auto; } .cmd > div { max-height: 300px; } }
+
+/* La Prospection à côté du rail (vue #prospection, 19/11/2026) */
+.cadre-prospection { display: block; width: 100%; height: calc(100vh - 150px); min-height: 520px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
