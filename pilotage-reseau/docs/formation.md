@@ -1198,7 +1198,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - **Titre de l'étape « Huit questions à se poser »** (19/11/2026, Sam : « huit questions à se poser, au lieu de une fois
   par an »), FR et NL (« Acht vragen om uzelf te stellen ») : 0.0.21 passe en v1.5 (l'étape s'appelait « Huit questions,
   une fois par an ») et 0.0.55 en v1.2 (« Huit questions sur le magasin »). Les deux restent « publiee » ; la source de
-  0.0.55 suit. 0.0.56 garde son titre d'origine « Huit questions, une fois par an ».
+  0.0.55 suit. 0.0.56 passe aussi en v1.2 avec ce titre (Sam : « oui, change aussi dans 0.0.56 »), et sa source
+  `dirigeant/art-valeur-franchise.json` suit. Le texte des étapes, « à se poser une fois par an », ne change pas.
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
@@ -1330,3 +1331,7 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   À l'impression, les couleurs restent (`print-color-adjust: exact`, §13.1). Le sous-titre du manuel du réseau annonce
   les postes (« Le classeur : les domaines et les postes »). Mise en ligne par la branche par défaut (PR), selon la règle
   du 19/11/2026 (CLAUDE.md du dossier).
+- **Boutons des cartes** (19/11/2026, Sam : « attention au clipping (bouton QR) ») : le bouton QR sortait de la carte sur
+  certaines largeurs. Les trois boutons ont désormais une base et une largeur minimale nulles et des marges intérieures
+  de 8 px ; « Feuilleter » prend plus de place. Vérifié à 390, 768, 937, 1100, 1280, 1440 et 1920 px : aucun bouton ne
+  déborde ni n'est coupé.

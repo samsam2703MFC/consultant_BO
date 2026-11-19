@@ -31,7 +31,10 @@ html, body { background: var(--paper, #faf7f2); }
 .ct-carte h3 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; }
 .ct-carte p { margin: 0; font-size: 12.5px; color: var(--muted, #7a736a); line-height: 1.45; }
 .ct-carte .ct-actions { display: flex; gap: 6px; margin-top: auto; }
-.ct-carte .ct-actions .btn { flex: 1; justify-content: center; }
+/* Les boutons se partagent la largeur de la carte sans en sortir (19/11/2026 : le bouton QR débordait) : base nulle,
+ * largeur minimale nulle, marges intérieures réduites ; « Feuilleter » prend un peu plus. */
+.ct-carte .ct-actions .btn { flex: 1 1 0; min-width: 0; padding-left: 8px; padding-right: 8px; justify-content: center; }
+.ct-carte .ct-actions .btn--primary { flex-grow: 1.7; }
 .ct-chip { display: inline-block; font-size: 11px; background: var(--chip, #EDE7DE); border-radius: 4px; padding: 2px 6px; color: var(--ink, #1c1a17); }
 
 /* la scène du feuilletage */

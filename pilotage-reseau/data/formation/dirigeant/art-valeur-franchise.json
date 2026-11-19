@@ -7,7 +7,7 @@
  "moment": null,
  "acces": "responsable",
  "statut": "publiee",
- "version": "1.0",
+ "version": "1.2",
  "langue_origine": "FR",
  "duree": "15 min de lecture",
  "titre": {
@@ -248,8 +248,8 @@
     {
      "numero": "1",
      "titre": {
-      "fr": "Huit questions, une fois par an",
-      "nl": "Acht vragen, één keer per jaar"
+      "fr": "Huit questions à se poser",
+      "nl": "Acht vragen om uzelf te stellen"
      },
      "texte": {
       "fr": "Chaque « non » est un point de valeur à aller chercher.\n1. Tous les chiffres des douze derniers mois sont dans le système, sans période manquante.\n2. Les ratios (food cost, masse salariale, frais généraux) sont dans les normes du réseau, et l’on sait expliquer les écarts.\n3. Chaque poste du magasin peut être tenu par au moins deux personnes formées.\n4. Les niveaux de compétence de l’équipe sont à jour dans le référentiel.\n5. Quelqu’un d’autre que le dirigeant peut ouvrir, fermer, commander et gérer une journée complète.\n6. Le magasin a déjà tourné au moins deux semaines sans le dirigeant, sans baisse de résultat.\n7. Le magasin applique les standards du réseau, sans version maison des procédures.\n8. Un repreneur pourrait comprendre l’activité en une heure, à partir du système seul.",
