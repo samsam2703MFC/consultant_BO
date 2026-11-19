@@ -2,12 +2,16 @@
  * coachs : sur quoi il met l'accent, ce qu'il vérifie — par rapport au budget, au trafic, aux tâches réalisées » ;
  * « garde toutes les demandes dans une table, pour après créer des agents spécifiques »).
  *
- * Deux onglets :
+ * Trois onglets :
  *  - Coachs : Mr. Pierre, le Coach et le Coach Vente, coachs business de pointe au ton différent. Pour chacun : nom,
  *    accroche, ton, pour le budget, le trafic et les contrôles qualité, le poids (accent fort, suivi, n'en parle pas)
  *    et ce qu'il vérifie, et ses objectifs 2026 (18/11/2026 : food cost, personnel, clients scannés, menus, articles
  *    par ticket, panier ; une cible vide n'est pas suivie). Un brouillon reste un brouillon jusqu'à « Publier »
  *    (POST /assistant/coachs). GET /assistant/coachs.
+ *  - KPI (19/11/2026, Sam : « un tableau avec tous les KPI sondés, paramètres et autres, regroupés, pour voir quel modèle
+ *    d'assistant fait quoi ») : chaque KPI que lisent les assistants (le catalogue AM_KPIS du serveur), groupé, d'où il
+ *    vient, et pour chaque assistant ce qu'il en fait — l'accent de son axe, sa cible 2026, « lu » — avec le modèle de
+ *    chacun en tête de colonne. Les brouillons de l'onglet Coachs s'y voient avant publication.
  *  - Questions posées : ce que les franchisés demandent (GET /assistant/questions-posees?jours=), pour décider plus
  *    tard des agents spécialisés.
  *
@@ -15,6 +19,25 @@
 import { readOne } from './api.js';
 
 const nf = n => n == null ? '—' : Number(n).toLocaleString('fr-BE').replace(/ /g, ' ');
+/** « claude-opus-5-5 » → « Opus 5.5 » ; un identifiant d'une autre forme reste tel quel. */
+const nomModele = id => { const m = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(String(id || '')); return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) + ' ' + m[2] + '.' + m[3] : String(id || '—'); };
+const EFFORT = { low: 'effort bas', medium: 'effort moyen', high: 'effort élevé' };
+
+/** Ce qu'un coach fait d'une ligne du catalogue : l'accent de son axe, sa cible 2026, sinon « lu ». */
+function caseCoach(l, c){
+  const ax = l.axe ? c.axes.find(a => a.cle === l.axe) : null;
+  const ob = l.objectif ? c.objectifs.find(o => o.cle === l.objectif) : null;
+  const cible = ob && ob.valeur !== '' ? 'cible ' + (ob.sens === 'max' ? '≤ ' : '≥ ') + ob.valeur + (ob.unite ? ' ' + ob.unite : '') : '';
+  if (l.outil && l.outil.length) { return cible ? { txt: 'Levier · ' + cible, ton: 'fort' } : { txt: 'À la demande', ton: 'dispo' }; }
+  if (ax) {
+    const n = ax.niveau === 'non' && l.toujours ? 'toujours' : ax.niveau;
+    const txt = { fort: 'Accent fort', suivi: 'Suivi', non: 'Si on le demande', toujours: 'Toujours (règle commune)' }[n] || n;
+    return { txt: cible ? txt + ' · ' + cible : txt, ton: n === 'toujours' ? 'suivi' : (cible && n === 'non' ? 'suivi' : n) };
+  }
+  // Une cible 2026 se vérifie dans chaque bilan (coPersona) ; sans cible, la mesure est dans la fiche, sans plus.
+  if (ob) { return cible ? { txt: 'Chaque bilan · ' + cible, ton: 'fort' } : { txt: 'Lu, sans cible', ton: 'lu' }; }
+  return { txt: 'Lu', ton: 'lu' };
+}
 
 function charge(app, quoi, force){
   const S = app.state, cle = quoi === 'q' ? 'q|' + (S.ascJours || 30) : 'c', b = S['asc' + quoi];
@@ -62,7 +85,7 @@ export function valsAssistantCoachs(app, common){
   if (onglet === 'q') { charge(app, 'q', false); }
   const bc = S.ascc || {}, d = bc.d && !bc.d.error ? bc.d : null;
   const a = { onglet, msg: S.ascMsg || null, fermerMsg: () => app.setState({ ascMsg: null }), envoi: !!S.ascEnvoi,
-    ongletC: () => app.setState({ ascOnglet: 'c' }), ongletQ: () => app.setState({ ascOnglet: 'q' }),
+    ongletC: () => app.setState({ ascOnglet: 'c' }), ongletK: () => app.setState({ ascOnglet: 'k' }), ongletQ: () => app.setState({ ascOnglet: 'q' }),
     chargement: !!bc.chargement && !d, indispo: !bc.chargement && bc.d && !d ? 'Lecture impossible — ' + (bc.d.error || 'API injoignable') + ' (GET /assistant/coachs).' : '' };
   common.asc = a;
   if (d) {
@@ -90,6 +113,14 @@ export function valsAssistantCoachs(app, common){
             setVerifie: e => brouillon(app, k, { verifie: e.target.value }, ax) };
         }) };
     });
+    // L'onglet KPI : le catalogue du serveur, une colonne par assistant (les coachs avec leurs brouillons, puis le Professeur).
+    const M = d.modeles || {}, mod = x => x ? nomModele(x.modele) + ' · ' + (EFFORT[x.effort] || x.effort) : '—';
+    const prof = d.professeur || { nom: 'Le Professeur' };
+    a.kpi = {
+      assistants: a.coachs.map(c => ({ nom: c.nom, avatar: c.avatar, modele: mod(M.coachs) })).concat([{ nom: prof.nom, avatar: prof.avatar || null, modele: mod(M.professeur) }]),
+      groupes: (d.kpis || []).map(g => ({ groupe: g.groupe, lignes: g.lignes.map(l => ({ kpi: l.kpi, detail: l.detail || '', source: l.source || '', outil: (l.outil || []).join(', '),
+        cases: a.coachs.map(c => caseCoach(l, c)).concat([l.prof ? { txt: 'D’office : ' + l.prof, ton: 'suivi' } : (l.outil && l.outil.length ? { txt: 'À la demande', ton: 'dispo' } : { txt: 'Pas lu', ton: 'non' })]) })) })),
+    };
     a.nbModifs = Object.keys(B).length;
     a.publier = () => publier(app, d);
     a.annuler = () => app.setState({ ascB: {}, ascMsg: null });
