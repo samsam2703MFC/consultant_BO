@@ -85,17 +85,17 @@ function bmTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_boite_modele (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_boite_modele (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . ' nom VARCHAR(120) NOT NULL, objet VARCHAR(200) NOT NULL DEFAULT \'\', corps TEXT NOT NULL, cree_le DATETIME NOT NULL, maj_le DATETIME NOT NULL,'
         . ' KEY k_shop (shop_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_boite_auto (shop_id VARCHAR(16) NOT NULL, regle VARCHAR(20) NOT NULL, actif TINYINT(1) NOT NULL DEFAULT 0,'
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_boite_auto (shop_id VARCHAR(16) NOT NULL, regle VARCHAR(20) NOT NULL, actif TINYINT(1) NOT NULL DEFAULT 0,'
         . ' objet VARCHAR(200) NOT NULL, corps TEXT NOT NULL, jours INT NOT NULL DEFAULT 3, maj_le DATETIME NOT NULL, PRIMARY KEY (shop_id, regle))'
         . ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_boite_journal (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_boite_journal (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . ' regle VARCHAR(20) NOT NULL, cle VARCHAR(190) NOT NULL, destinataire VARCHAR(190) NOT NULL, objet VARCHAR(255) NOT NULL,'
         . ' envoye_le DATETIME NOT NULL, erreur VARCHAR(255) NULL, UNIQUE KEY u_cle (shop_id, cle), KEY k_shop (shop_id, envoye_le))'
         . ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_boite_etat (shop_id VARCHAR(16) NOT NULL PRIMARY KEY, uidvalidity BIGINT UNSIGNED NOT NULL,'
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_boite_etat (shop_id VARCHAR(16) NOT NULL PRIMARY KEY, uidvalidity BIGINT UNSIGNED NOT NULL,'
         . ' dernier_uid BIGINT UNSIGNED NOT NULL, maj_le DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
@@ -275,7 +275,7 @@ function bmDelier(string $shop): array
 {
     $p = 'pil_boite_' . $shop . '_';
     foreach (['adresse', 'mot_de_passe', 'utilisateur'] as $k) { erpCleEcrire($p . $k, '', false, 'Boîte mail du magasin', 'pil'); }
-    Db::exec('UPDATE pil_boite_auto SET actif = 0, maj_le = NOW() WHERE shop_id = ?', [$shop]);
+    Db::exec('UPDATE panel_boite_auto SET actif = 0, maj_le = NOW() WHERE shop_id = ?', [$shop]);
     bmPoserSession($shop, null);
     journalAdd('Magasin ' . $shop, 'Boîte mail', null, 'Boîte déliée (accès retirés, messages automatiques éteints)');
     return ['ok' => true];
@@ -520,7 +520,7 @@ function bmEnvoyerRoute(string $shop, array $c, array $b): array
 function bmModeles(string $shop): array
 {
     $l = array_map(static fn ($r) => ['id' => (int) $r['id'], 'nom' => $r['nom'], 'objet' => $r['objet'], 'corps' => $r['corps'], 'maj' => $r['maj_le']],
-        Db::rows('SELECT * FROM pil_boite_modele WHERE shop_id = ? ORDER BY nom', [$shop]));
+        Db::rows('SELECT * FROM panel_boite_modele WHERE shop_id = ? ORDER BY nom', [$shop]));
     return ['reseau' => BM_MODELES_BASE, 'magasin' => $l,
         'variables' => ['{prenom}' => 'le prénom du client', '{nom}' => 'son nom', '{objet}' => 'l’objet de son e-mail', '{magasin}' => 'le nom du magasin',
             '{offre}' => 'le n° de l’offre', '{total}' => 'son total TTC', '{jour}' => 'le jour de l’événement']];
@@ -530,13 +530,13 @@ function bmModelesEcrire(string $shop, array $b): array
 {
     $a = (string) ($b['action'] ?? '');
     $id = (int) ($b['id'] ?? 0);
-    if ($a === 'supprimer') { Db::exec('DELETE FROM pil_boite_modele WHERE id = ? AND shop_id = ?', [$id, $shop]); return ['ok' => true] + bmModeles($shop); }
+    if ($a === 'supprimer') { Db::exec('DELETE FROM panel_boite_modele WHERE id = ? AND shop_id = ?', [$id, $shop]); return ['ok' => true] + bmModeles($shop); }
     $nom = trim(mb_substr((string) ($b['nom'] ?? ''), 0, 120));
     $objet = trim(mb_substr((string) ($b['objet'] ?? ''), 0, 200));
     $corps = rtrim(mb_substr((string) ($b['corps'] ?? ''), 0, 20000));
     if ($nom === '' || $corps === '') { return bmErreur(422, 'Un nom et un texte, au moins.'); }
-    if ($a === 'creer') { Db::exec('INSERT INTO pil_boite_modele (shop_id, nom, objet, corps, cree_le, maj_le) VALUES (?, ?, ?, ?, NOW(), NOW())', [$shop, $nom, $objet, $corps]); }
-    elseif ($a === 'modifier') { Db::exec('UPDATE pil_boite_modele SET nom = ?, objet = ?, corps = ?, maj_le = NOW() WHERE id = ? AND shop_id = ?', [$nom, $objet, $corps, $id, $shop]); }
+    if ($a === 'creer') { Db::exec('INSERT INTO panel_boite_modele (shop_id, nom, objet, corps, cree_le, maj_le) VALUES (?, ?, ?, ?, NOW(), NOW())', [$shop, $nom, $objet, $corps]); }
+    elseif ($a === 'modifier') { Db::exec('UPDATE panel_boite_modele SET nom = ?, objet = ?, corps = ?, maj_le = NOW() WHERE id = ? AND shop_id = ?', [$nom, $objet, $corps, $id, $shop]); }
     else { return bmErreur(422, 'action inconnue'); }
     return ['ok' => true] + bmModeles($shop);
 }
@@ -568,7 +568,7 @@ function bmModeleBase(string $id): array
 function bmRegles(string $shop): array
 {
     $l = [];
-    foreach (Db::rows('SELECT * FROM pil_boite_auto WHERE shop_id = ?', [$shop]) as $r) { $l[$r['regle']] = $r; }
+    foreach (Db::rows('SELECT * FROM panel_boite_auto WHERE shop_id = ?', [$shop]) as $r) { $l[$r['regle']] = $r; }
     $out = [];
     foreach (BM_REGLES as $k => $d) {
         $r = $l[$k] ?? null; $m = bmModeleBase($d['modele']);
@@ -582,7 +582,7 @@ function bmAuto(string $shop): array
 {
     $j = array_map(static fn ($r) => ['regle' => $r['regle'], 'nom' => BM_REGLES[$r['regle']]['nom'] ?? (AM_AUTOS[$r['regle']]['nom'] ?? $r['regle']), 'destinataire' => $r['destinataire'],
         'objet' => $r['objet'], 'le' => $r['envoye_le'], 'erreur' => $r['erreur']],
-        Db::rows('SELECT * FROM pil_boite_journal WHERE shop_id = ? ORDER BY envoye_le DESC, id DESC LIMIT 40', [$shop]));
+        Db::rows('SELECT * FROM panel_boite_journal WHERE shop_id = ? ORDER BY envoye_le DESC, id DESC LIMIT 40', [$shop]));
     $h = setting('boiteHorloge', []);
     return ['regles' => bmRegles($shop), 'journal' => $j, 'horloge' => is_array($h) ? ($h['le'] ?? null) : null];
 }
@@ -598,13 +598,13 @@ function bmAutoEcrire(string $shop, array $b): array
     $jours = max(1, min(30, (int) ($b['jours'] ?? $actuel['jours'])));
     $actif = array_key_exists('actif', $b) ? (bool) $b['actif'] : $actuel['actif'];
     if ($corps === '') { return bmErreur(422, 'Le texte du message est vide.'); }
-    Db::exec('INSERT INTO pil_boite_auto (shop_id, regle, actif, objet, corps, jours, maj_le) VALUES (?, ?, ?, ?, ?, ?, NOW())
+    Db::exec('INSERT INTO panel_boite_auto (shop_id, regle, actif, objet, corps, jours, maj_le) VALUES (?, ?, ?, ?, ?, ?, NOW())
               ON DUPLICATE KEY UPDATE actif = VALUES(actif), objet = VALUES(objet), corps = VALUES(corps), jours = VALUES(jours), maj_le = NOW()',
         [$shop, $k, $actif ? 1 : 0, $objet, $corps, $jours]);
     bmJeton();   // l'horloge a besoin de son jeton dès la première règle allumée
     if ($k === 'accuse' && $actif && !$actuel['actif']) {
         // On part de maintenant : les e-mails déjà là ne reçoivent pas d'accusé.
-        Db::exec('DELETE FROM pil_boite_etat WHERE shop_id = ?', [$shop]);
+        Db::exec('DELETE FROM panel_boite_etat WHERE shop_id = ?', [$shop]);
     }
     journalAdd('Magasin ' . $shop, 'Boîte mail', null, 'Message automatique « ' . BM_REGLES[$k]['nom'] . ' » ' . ($actif ? 'allumé' : 'éteint'));
     return ['ok' => true] + bmAuto($shop);
@@ -628,7 +628,7 @@ function bmCron(): array
     @set_time_limit(280);
     bmTables();
     $rapport = [];
-    foreach (Db::rows('SELECT DISTINCT shop_id FROM pil_boite_auto WHERE actif = 1') as $r) {
+    foreach (Db::rows('SELECT DISTINCT shop_id FROM panel_boite_auto WHERE actif = 1') as $r) {
         $shop = (string) $r['shop_id'];
         $c = bmCompte($shop);
         if ($c === null) { $rapport[$shop] = 'boîte non reliée'; continue; }
@@ -644,15 +644,15 @@ function bmCron(): array
 /** Envoie un message automatique une seule fois (la clé du journal est unique), et le note. */
 function bmAutoEnvoyer(string $shop, array $c, string $regle, string $cle, array $a, string $objet, string $texte, ?array $reponse = null): string
 {
-    $deja = Db::row('SELECT id FROM pil_boite_journal WHERE shop_id = ? AND cle = ?', [$shop, $cle]);
+    $deja = Db::row('SELECT id FROM panel_boite_journal WHERE shop_id = ? AND cle = ?', [$shop, $cle]);
     if ($deja !== null) { return 'déjà'; }
-    Db::exec('INSERT INTO pil_boite_journal (shop_id, regle, cle, destinataire, objet, envoye_le) VALUES (?, ?, ?, ?, ?, NOW())', [$shop, $regle, $cle, $a['adresse'], mb_substr($objet, 0, 255)]);
+    Db::exec('INSERT INTO panel_boite_journal (shop_id, regle, cle, destinataire, objet, envoye_le) VALUES (?, ?, ?, ?, ?, NOW())', [$shop, $regle, $cle, $a['adresse'], mb_substr($objet, 0, 255)]);
     try {
         // Un accusé automatique répond (In-Reply-To) sans marquer l'e-mail « répondu » : il reste à traiter.
         bmEnvoyer($shop, $c, [$a], [], $objet, $texte, $reponse ? ['reponse' => $reponse, 'sansDrapeau' => true] : []);
         return 'envoyé';
     } catch (Throwable $e) {
-        Db::exec('UPDATE pil_boite_journal SET erreur = ? WHERE shop_id = ? AND cle = ?', [mb_substr($e->getMessage(), 0, 255), $shop, $cle]);
+        Db::exec('UPDATE panel_boite_journal SET erreur = ? WHERE shop_id = ? AND cle = ?', [mb_substr($e->getMessage(), 0, 255), $shop, $cle]);
         return 'erreur';
     }
 }
@@ -715,11 +715,11 @@ function bmTournerAccuse(string $shop, array $c, array $regle, array $vars): arr
     $s = bmImap($c);
     $s->ouvrirDossier('INBOX');
     $val = (int) ($s->infos['uidvalidity'] ?? 0); $suivant = (int) ($s->infos['uidnext'] ?? 0);
-    $etat = Db::row('SELECT * FROM pil_boite_etat WHERE shop_id = ?', [$shop]);
+    $etat = Db::row('SELECT * FROM panel_boite_etat WHERE shop_id = ?', [$shop]);
     if ($etat === null || (int) $etat['uidvalidity'] !== $val || $suivant === 0) {
         $dernier = max(0, $suivant - 1);
         if ($suivant === 0) { $t = $s->chercher(['ALL']); $dernier = $t ? max($t) : 0; }
-        Db::exec('INSERT INTO pil_boite_etat (shop_id, uidvalidity, dernier_uid, maj_le) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE uidvalidity = VALUES(uidvalidity), dernier_uid = VALUES(dernier_uid), maj_le = NOW()',
+        Db::exec('INSERT INTO panel_boite_etat (shop_id, uidvalidity, dernier_uid, maj_le) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE uidvalidity = VALUES(uidvalidity), dernier_uid = VALUES(dernier_uid), maj_le = NOW()',
             [$shop, $val, $dernier]);
         return ['départ' => $dernier];
     }
@@ -737,7 +737,7 @@ function bmTournerAccuse(string $shop, array $c, array $regle, array $vars): arr
                 || preg_match('/bulk|list|junk/i', $e['precedence'] ?? '') || isset($e['list-id']) || isset($e['list-unsubscribe'])
                 || isset($e['x-auto-response-suppress']) || trim($e['return-path'] ?? 'x') === '<>' || isset($e['x-loop']);
             if (!$robot) {
-                $recent = Db::row('SELECT id FROM pil_boite_journal WHERE shop_id = ? AND regle = ? AND destinataire = ? AND envoye_le > ? AND erreur IS NULL',
+                $recent = Db::row('SELECT id FROM panel_boite_journal WHERE shop_id = ? AND regle = ? AND destinataire = ? AND envoye_le > ? AND erreur IS NULL',
                     [$shop, 'accuse', $de['adresse'], date('Y-m-d H:i:s', strtotime('-' . $regle['jours'] . ' days'))]);
                 if ($recent === null) {
                     $objet = bmEntete($e['subject'] ?? '');
@@ -746,7 +746,7 @@ function bmTournerAccuse(string $shop, array $c, array $regle, array $vars): arr
                     $s->ouvrirDossier('INBOX');
                 }
             }
-            Db::exec('UPDATE pil_boite_etat SET dernier_uid = ?, maj_le = NOW() WHERE shop_id = ?', [$uid, $shop]);
+            Db::exec('UPDATE panel_boite_etat SET dernier_uid = ?, maj_le = NOW() WHERE shop_id = ?', [$uid, $shop]);
         }
     }
     return $out;

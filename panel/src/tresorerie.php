@@ -32,7 +32,7 @@ require_once __DIR__ . '/../../shared/src/cibles_reseau.php';   // la cible du f
  *   GET  /tresorerie/budget?shop=4&debut=2026-11-16       l'onglet « Budget & étude » : budget, étude, charges, P&L réel
  *   POST /tresorerie/plan {shop, version, donnees}        l'enregistrer ; `donnees: null` l'efface
  *
- * Table : `pil_tresorerie_plan`, au préfixe du portail Pilotage (docs/PORTAILS.md) — une table neuve n'a pas à
+ * Table : `panel_tresorerie_plan`, au préfixe du portail Pilotage (docs/PORTAILS.md) — une table neuve n'a pas à
  * passer par `ceo_` pour être renommée ensuite.
  */
 
@@ -40,7 +40,7 @@ const TR_TAILLE_MAX = 600000;   // octets de JSON : 15 fournisseurs × 80 semain
 
 function ensureTresorerie(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_tresorerie_plan ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_tresorerie_plan ('
         . 'shop_id VARCHAR(16) NOT NULL PRIMARY KEY,'
         . 'donnees MEDIUMTEXT NOT NULL,'          // le plan, en JSON (format v2, voir tresorerie.js)
         . 'version INT UNSIGNED NOT NULL DEFAULT 1,'
@@ -499,7 +499,7 @@ function ep_tresorerie_references(): array
 /** Le plan enregistré d'un magasin, ou null. */
 function trPlanLu(string $shop): ?array
 {
-    $r = Db::row('SELECT donnees, version, maj_le FROM pil_tresorerie_plan WHERE shop_id = ?', [$shop]);
+    $r = Db::row('SELECT donnees, version, maj_le FROM panel_tresorerie_plan WHERE shop_id = ?', [$shop]);
     if ($r === null) { return null; }
     $d = json_decode((string) $r['donnees'], true);
     return ['plan' => is_array($d) ? $d : null, 'version' => (int) $r['version'], 'majLe' => (string) $r['maj_le']];
@@ -573,7 +573,7 @@ function wr_tresorerie_plan(): array
     };
 
     if ($d === null) {
-        $n = Db::exec('DELETE FROM pil_tresorerie_plan WHERE shop_id = ? AND version = ?', [$shop, $version]);
+        $n = Db::exec('DELETE FROM panel_tresorerie_plan WHERE shop_id = ? AND version = ?', [$shop, $version]);
         if ($n === 0 && trPlanLu($shop) !== null) { return $conflit(); }
         return ['ok' => true, 'version' => 0, 'majLe' => null];
     }
@@ -584,14 +584,14 @@ function wr_tresorerie_plan(): array
 
     if ($version === 0) {
         try {
-            Db::exec('INSERT INTO pil_tresorerie_plan (shop_id, donnees, version, maj_le) VALUES (?, ?, 1, NOW())', [$shop, $json]);
+            Db::exec('INSERT INTO panel_tresorerie_plan (shop_id, donnees, version, maj_le) VALUES (?, ?, 1, NOW())', [$shop, $json]);
         } catch (PDOException $e) {
             if ((string) $e->getCode() === '23000') { return $conflit(); }   // créé entre-temps sur un autre écran
             throw $e;
         }
         $v = 1;
     } else {
-        $n = Db::exec('UPDATE pil_tresorerie_plan SET donnees = ?, version = version + 1, maj_le = NOW()
+        $n = Db::exec('UPDATE panel_tresorerie_plan SET donnees = ?, version = version + 1, maj_le = NOW()
                         WHERE shop_id = ? AND version = ?', [$json, $shop, $version]);
         if ($n === 0) { return $conflit(); }
         $v = $version + 1;

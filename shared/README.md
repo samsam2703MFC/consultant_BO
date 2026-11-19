@@ -469,7 +469,7 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   (lue ticket par ticket dans la liste du jour, sinon la caisse gravée `ceo_verif_ca`, sinon le taux habituel du
   magasin, sinon 6 %), puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA, d'après l'onglet
   **Frais** du rail (groupe « Les chiffres ») : les frais du mois au panel, et pour chaque poste « TVA comprise ? » et
-  le taux (table `pil_frais_tva`). Restent TTC : le CA des tuiles, l'objectif, le panier, la valeur du magasin.
+  le taux (table `panel_frais_tva`). Restent TTC : le CA des tuiles, l'objectif, le panier, la valeur du magasin.
   « Ventes par catégorie » (Liste, Treemap) aussi : CA, marge, taux et coefficient hors TVA, au taux de TVA de chaque
   produit du catalogue.
   Tests : `php bin/tests_pnl_ht.php`.

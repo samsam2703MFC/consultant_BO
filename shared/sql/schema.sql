@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_month_note (
 
 -- La note du jour d'un magasin (dashboard journalier) : ce qui explique la
 -- journée, relu la même semaine un an plus tard. Une ligne par jour noté.
-CREATE TABLE IF NOT EXISTS ceo_shop_day_note (
+CREATE TABLE IF NOT EXISTS panel_shop_day_note (
   shop_id   VARCHAR(8)   NOT NULL,
   jour      DATE         NOT NULL,
   texte     TEXT         NULL,
@@ -986,7 +986,7 @@ CREATE TABLE IF NOT EXISTS mar_bg_controle (
 -- `recu_le` l'heure de réception au serveur (le plafond par jour la compte).
 -- Créée aussi au démarrage par installer.php (ensureTabletteRemarques).
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_tablette_remarque (
+CREATE TABLE IF NOT EXISTS panel_tablette_remarque (
   id          CHAR(36)    NOT NULL PRIMARY KEY,   -- uuid tiré par la tablette
   shop_id     VARCHAR(32) NULL,                   -- shops.id, NULL = sans magasin ou magasin inconnu
   shop_brut   VARCHAR(32) NULL,                   -- le magasin envoyé quand il n'est pas connu (gardé tel quel)

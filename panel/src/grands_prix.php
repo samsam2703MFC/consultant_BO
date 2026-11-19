@@ -18,7 +18,7 @@ declare(strict_types=1);
  *   ticket       son plus gros ticket hors clients pro (la base partagée)
  *   magasin      le CA du magasin face à son objectif (réseau seulement : un magasin gagne, son équipe fête)
  *
- * Rangé dans mot_grand_prix (src/motivation.php) ; le classement d'une saison finie s'y grave (« resultat »).
+ * Rangé dans panel_mot_grand_prix (src/motivation.php) ; le classement d'une saison finie s'y grave (« resultat »).
  */
 
 const GP_DEFIS = [
@@ -33,7 +33,7 @@ const GP_MAX = 12;                 // douze grands prix au plus par étage (la m
 const GP_CACHE_COURS = 3600;       // le classement d'une saison en cours : une heure
 const GP_TOP = 10;                 // les dix premiers rendus
 
-/** Une ligne de mot_grand_prix, lue pour l'écran. */
+/** Une ligne de panel_mot_grand_prix, lue pour l'écran. */
 function gpLigne(array $r): array
 {
     $d = GP_DEFIS[$r['defi']] ?? GP_DEFIS['vendeuse'];
@@ -52,8 +52,8 @@ function gpListe(?string $shop = null): array
     motTables();
     gpMaquette();
     $rows = $shop === null
-        ? Db::rows('SELECT * FROM mot_grand_prix ORDER BY portee DESC, shop, du DESC, valeur DESC, id')
-        : Db::rows("SELECT * FROM mot_grand_prix WHERE portee = 'reseau' OR (portee = 'magasin' AND shop = ?) ORDER BY portee DESC, du DESC, valeur DESC, id", [$shop]);
+        ? Db::rows('SELECT * FROM panel_mot_grand_prix ORDER BY portee DESC, shop, du DESC, valeur DESC, id')
+        : Db::rows("SELECT * FROM panel_mot_grand_prix WHERE portee = 'reseau' OR (portee = 'magasin' AND shop = ?) ORDER BY portee DESC, du DESC, valeur DESC, id", [$shop]);
     return array_map('gpLigne', $rows);
 }
 
@@ -80,11 +80,11 @@ function gpMaquette(): void
     $fait = true;
     try {
         if (Db::row('SELECT valeur FROM mot_reglage WHERE cle = ?', [GP_MAQUETTE_MARQUE]) !== null) { return; }
-        $deja = array_map(static fn ($r) => (string) $r['titre'], Db::rows("SELECT titre FROM mot_grand_prix WHERE portee = 'reseau'"));
+        $deja = array_map(static fn ($r) => (string) $r['titre'], Db::rows("SELECT titre FROM panel_mot_grand_prix WHERE portee = 'reseau'"));
         $n = 0;
         foreach (GP_MAQUETTE as [$defi, $titre, $valeur, $payeur, $sponsor, $seuil]) {
             if (in_array($titre, $deja, true)) { continue; }
-            Db::exec('INSERT INTO mot_grand_prix (portee, shop, defi, titre, valeur, payeur, sponsor, seuil, du, au, actif, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?, NOW())',
+            Db::exec('INSERT INTO panel_mot_grand_prix (portee, shop, defi, titre, valeur, payeur, sponsor, seuil, du, au, actif, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?, NOW())',
                 ['reseau', null, $defi, $titre, $valeur, $payeur, $sponsor, $seuil, '2026-01-01', '2026-12-31', 0]);
             $n++;
         }
@@ -319,7 +319,7 @@ function gpResultat(array $gp, ?string $auj = null): array
     if ($gp['id'] > 0 && $auj === null && $c['motif'] === null) { motCacheEcrire($cle, $c + ['quand' => time()]); }
     if ($gp['id'] > 0 && $c['saison']['etat'] === 'finie' && $c['motif'] === null && date('Y-m-d') > date('Y-m-d', strtotime($gp['au'] . ' +3 days'))) {
         $g = $c; $g['liste'] = array_slice($c['liste'], 0, GP_TOP); $g['grave_le'] = date('c');
-        try { Db::exec('UPDATE mot_grand_prix SET resultat = ? WHERE id = ? AND resultat IS NULL', [json_encode($g, JSON_UNESCAPED_UNICODE), $gp['id']]); } catch (Throwable $e) { /* regravé à la prochaine lecture */ }
+        try { Db::exec('UPDATE panel_mot_grand_prix SET resultat = ? WHERE id = ? AND resultat IS NULL', [json_encode($g, JSON_UNESCAPED_UNICODE), $gp['id']]); } catch (Throwable $e) { /* regravé à la prochaine lecture */ }
     }
     return $c;
 }
@@ -396,30 +396,30 @@ function wr_grands_prix(): array
     motTables();
     $b = body();
     $id = (int) ($b['id'] ?? 0);
-    $cur = $id > 0 ? Db::row('SELECT * FROM mot_grand_prix WHERE id = ?', [$id]) : null;
+    $cur = $id > 0 ? Db::row('SELECT * FROM panel_mot_grand_prix WHERE id = ?', [$id]) : null;
     if ($id > 0 && $cur === null) { http_response_code(404); return ['error' => 'grand prix introuvable']; }
     // Seul l'interrupteur : le reste ne bouge pas.
     if ($cur !== null && count($b) === 2 && array_key_exists('actif', $b)) {
-        Db::exec('UPDATE mot_grand_prix SET actif = ? WHERE id = ?', [$b['actif'] ? 1 : 0, $id]);
+        Db::exec('UPDATE panel_mot_grand_prix SET actif = ? WHERE id = ?', [$b['actif'] ? 1 : 0, $id]);
         journalAdd('CEO', 'Paramètre', 'Grands prix', '« ' . $cur['titre'] . ' » ' . ($b['actif'] ? 'activé' : 'éteint'));
         return ['ok' => true, 'id' => $id];
     }
     $p = gpPropre($b, primesMagasins());
     if (isset($p['error'])) { http_response_code(422); return $p; }
     if ($cur === null) {
-        $n = (int) (Db::row('SELECT COUNT(*) n FROM mot_grand_prix WHERE portee = ? AND ' . ($p['shop'] === null ? 'shop IS NULL' : 'shop = ?') . ' AND au >= ?',
+        $n = (int) (Db::row('SELECT COUNT(*) n FROM panel_mot_grand_prix WHERE portee = ? AND ' . ($p['shop'] === null ? 'shop IS NULL' : 'shop = ?') . ' AND au >= ?',
             array_values(array_filter([$p['portee'], $p['shop'], date('Y-m-d')], static fn ($v) => $v !== null)))['n'] ?? 0);
         if ($n >= GP_MAX) { http_response_code(422); return ['error' => GP_MAX . ' grands prix en cours au plus']; }
     }
     $champs = ['portee', 'shop', 'defi', 'titre', 'lot', 'valeur', 'payeur', 'sponsor', 'sponsor_site', 'photo', 'seuil', 'du', 'au', 'actif'];
     $vals = array_map(static fn ($k) => is_bool($p[$k]) ? (int) $p[$k] : $p[$k], $champs);
     if ($cur === null) {
-        Db::exec('INSERT INTO mot_grand_prix (' . implode(', ', $champs) . ', cree_le) VALUES (' . implode(',', array_fill(0, count($champs), '?')) . ', NOW())', $vals);
+        Db::exec('INSERT INTO panel_mot_grand_prix (' . implode(', ', $champs) . ', cree_le) VALUES (' . implode(',', array_fill(0, count($champs), '?')) . ', NOW())', $vals);
         $id = (int) (Db::row('SELECT LAST_INSERT_ID() id')['id'] ?? 0);
     } else {
         // Changer le défi ou la saison efface le classement gravé : il se recalcule.
         $efface = $cur['defi'] !== $p['defi'] || substr((string) $cur['du'], 0, 10) !== $p['du'] || substr((string) $cur['au'], 0, 10) !== $p['au'] || (int) ($cur['seuil'] ?? -1) !== (int) ($p['seuil'] ?? -1);
-        Db::exec('UPDATE mot_grand_prix SET ' . implode(', ', array_map(static fn ($k) => $k . ' = ?', $champs)) . ($efface ? ', resultat = NULL' : '') . ' WHERE id = ?', array_merge($vals, [$id]));
+        Db::exec('UPDATE panel_mot_grand_prix SET ' . implode(', ', array_map(static fn ($k) => $k . ' = ?', $champs)) . ($efface ? ', resultat = NULL' : '') . ' WHERE id = ?', array_merge($vals, [$id]));
     }
     journalAdd('CEO', 'Paramètre', 'Grands prix', ($cur === null ? 'Nouveau grand prix' : 'Grand prix modifié') . ' : « ' . $p['titre'] . ' » (' . GP_DEFIS[$p['defi']]['lib'] . ', '
         . number_format($p['valeur'], 0, ',', ' ') . ' €, ' . ($p['portee'] === 'magasin' ? 'magasin ' . $p['shop'] : 'réseau') . ')');
@@ -431,9 +431,9 @@ function wr_grands_prix_retirer(): array
 {
     motTables();
     $id = (int) (body()['id'] ?? 0);
-    $cur = $id > 0 ? Db::row('SELECT titre FROM mot_grand_prix WHERE id = ?', [$id]) : null;
+    $cur = $id > 0 ? Db::row('SELECT titre FROM panel_mot_grand_prix WHERE id = ?', [$id]) : null;
     if ($cur === null) { http_response_code(404); return ['error' => 'grand prix introuvable']; }
-    Db::exec('DELETE FROM mot_grand_prix WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM panel_mot_grand_prix WHERE id = ?', [$id]);
     journalAdd('CEO', 'Paramètre', 'Grands prix', 'Grand prix retiré : « ' . $cur['titre'] . ' »');
     return ['ok' => true];
 }

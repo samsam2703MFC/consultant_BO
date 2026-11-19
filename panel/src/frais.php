@@ -9,7 +9,7 @@ declare(strict_types=1);
  *   GET  /exploitation/frais?shop=4[&mois=2026-11]         l'onglet Frais : les frais du mois au panel, le choix de chaque poste
  *   POST /exploitation/frais/tva {shop, poste, tva, taux}   le choix d'un poste ; `tva` : true, false, ou null (à indiquer)
  *
- * Table : `pil_frais_tva` (ensureFraisTva, src/pnl_ht.php). Le panel n'est pas modifié.
+ * Table : `panel_frais_tva` (ensureFraisTva, src/pnl_ht.php). Le panel n'est pas modifié.
  */
 
 /* --- les routes ------------------------------------------------------------------------------------------------------- */
@@ -57,8 +57,8 @@ function wr_exploitation_frais_tva(): array
     $cle = phCle($lib);
     $qui = function_exists('accesIdentite') ? accesIdentite() : null;
     ensureFraisTva();
-    Db::exec('DELETE FROM pil_frais_tva WHERE shop_id = ? AND poste = ?', [(string) $shop, $cle]);
-    Db::exec('INSERT INTO pil_frais_tva (shop_id, poste, libelle, tva_comprise, taux, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    Db::exec('DELETE FROM panel_frais_tva WHERE shop_id = ? AND poste = ?', [(string) $shop, $cle]);
+    Db::exec('INSERT INTO panel_frais_tva (shop_id, poste, libelle, tva_comprise, taux, maj_le, maj_par) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [(string) $shop, $cle, mb_substr($lib, 0, 190), $tva === null ? null : ($tva ? 1 : 0), $taux, date('Y-m-d H:i:s'),
             is_array($qui) && isset($qui['nom']) ? mb_substr((string) $qui['nom'], 0, 120) : null]);
     phPerimerResultat();

@@ -37,7 +37,7 @@ require_once __DIR__ . '/../../shared/src/cibles_reseau.php';   // la cible du f
  *     quand la pièce passe de 1,10 € à 1,30 €). Le client fidèle garde son prix en prenant plus, le client de
  *     passage paie le prix du marché : le food cost baisse et le panier monte. Deux relevés au moins par produit.
  *     Les relevés : la lecture du Coach Vente (aivBenchmark, celle de l'onglet Concurrence), sinon le module Benchmark ;
- *     le calcul est gardé six heures dans aia_cache.
+ *     le calcul est gardé six heures dans panel_aia_cache.
  *
  * Le coach ne change rien : il propose. Le prix se change au panel ; le lot se pose dans Promotions.
  */

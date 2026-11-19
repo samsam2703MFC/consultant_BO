@@ -26,10 +26,10 @@ declare(strict_types=1);
  *
  * AU PANEL : une « Buy X Get Y » du magasin (pmEnregistrer, src/promos_magasin.php, envoyée : active), X et Y une pièce
  * chacun, Y à prix fixe (prix du bundle − prix de X), répétable, du lundi qui suit la validation (00:00) à la fin de la
- * durée choisie (1 mois par défaut, la veille du même quantième, 23:59). Elle se garde dans aia_bundle.
+ * durée choisie (1 mois par défaut, la veille du même quantième, 23:59). Elle se garde dans panel_aia_bundle.
  * LA FICHE de l'équipe (A4) : le bundle, les dates, la caisse, les phrases pour le proposer, la mise en place — ni marge
  * ni coefficient. Elle part depuis la boîte mail du magasin (bmEnvoyer) aux adresses de l'équipe (Paramètres › Mails et
- * automatisations : pil_equipe_mail, amEquipe) ; une boîte non reliée ou une équipe vide : la promotion est créée, la
+ * automatisations : panel_equipe_mail, amEquipe) ; une boîte non reliée ou une équipe vide : la promotion est créée, la
  * fiche se télécharge.
  */
 
@@ -51,7 +51,7 @@ function bndSchema(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_bundle (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_bundle (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         shop_id INT NOT NULL,
         cree_le DATETIME NOT NULL,
@@ -403,7 +403,7 @@ function ep_bnd(): array
     unset($c);
     $prods = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'cat' => $p['cat'], 'q' => $p['q'], 'ttc' => $p['ttc'], 'ht' => round($p['ht'], 4),
         'cout' => round($p['cout'], 4), 'm' => $p['m'], 'me' => $p['me']], array_values($P));
-    $lances = array_map('bndLigne', Db::rows('SELECT * FROM aia_bundle WHERE shop_id = ? ORDER BY cree_le DESC LIMIT 20', [$sid]));
+    $lances = array_map('bndLigne', Db::rows('SELECT * FROM panel_aia_bundle WHERE shop_id = ? ORDER BY cree_le DESC LIMIT 20', [$sid]));
     [$du, $au] = bndDates('1m');
     $boite = function_exists('bmCompte') ? bmCompte((string) $sid) !== null : false;
     return ['shop' => $sid, 'magasin' => bndNomMagasin($sid), 'periode' => ['du' => $L['du'], 'au' => $L['au'], 'jours' => BND_JOURS], 'base' => $B,
@@ -450,16 +450,16 @@ function wr_bnd_lancer(): array
         return ['error' => $r['error'] ?? 'le panel refuse la promotion', 'erreurs' => $r['erreurs'] ?? null];
     }
     $panelId = (int) ($r['demande']['panelId'] ?? 0) ?: null;
-    Db::exec('INSERT INTO aia_bundle (shop_id, cree_le, nom, produit_x, produit_y, prix, du, au, canal, panel_id, fiche) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    Db::exec('INSERT INTO panel_aia_bundle (shop_id, cree_le, nom, produit_x, produit_y, prix, du, au, canal, panel_id, fiche) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [$sid, $f['nom'], $f['x'], $f['y'], $f['prix'], $f['du'], $f['au'], $f['canal'], $panelId, json_encode($f, JSON_UNESCAPED_UNICODE)]);
     $id = (int) Db::pdo()->lastInsertId();
     journalAdd('Magasin ' . $sid, 'Promotions', null, 'Bundle « ' . $f['nom'] . ' » lancé avec le Coach Vente : ' . number_format($f['prix'], 2, ',', ' ') . ' €, du ' . date('d/m', strtotime($f['du'])) . ' au ' . date('d/m', strtotime($f['au'])));
     $envoi = null;
     if (!empty($b['envoyer'])) {
         $envoi = bndEnvoyer($sid, $f);
-        Db::exec('UPDATE aia_bundle SET envoi = ? WHERE id = ?', [json_encode($envoi, JSON_UNESCAPED_UNICODE), $id]);
+        Db::exec('UPDATE panel_aia_bundle SET envoi = ? WHERE id = ?', [json_encode($envoi, JSON_UNESCAPED_UNICODE), $id]);
     }
-    $row = Db::row('SELECT * FROM aia_bundle WHERE id = ?', [$id]);
+    $row = Db::row('SELECT * FROM panel_aia_bundle WHERE id = ?', [$id]);
     return ['ok' => true, 'bundle' => $row !== null ? bndLigne($row) : null, 'panelErreur' => $r['panelErreur'] ?? null, 'exclusAuto' => $r['exclusAuto'] ?? []];
 }
 
@@ -469,7 +469,7 @@ function ep_bnd_fiche(): array
     $sid = aiaShop();
     $id = (int) ($_GET['id'] ?? 0);
     bndSchema();
-    $r = Db::row('SELECT fiche FROM aia_bundle WHERE id = ? AND shop_id = ?', [$id, $sid]);
+    $r = Db::row('SELECT fiche FROM panel_aia_bundle WHERE id = ? AND shop_id = ?', [$id, $sid]);
     $f = $r !== null ? json_decode((string) $r['fiche'], true) : null;
     if (!is_array($f)) { http_response_code(404); return ['error' => 'bundle inconnu pour ce magasin']; }
     return bndPdfSortir($f);
@@ -481,12 +481,12 @@ function wr_bnd_renvoyer(): array
     $b = body();
     $sid = aiaShop();
     bndSchema();
-    $r = Db::row('SELECT * FROM aia_bundle WHERE id = ? AND shop_id = ?', [(int) ($b['id'] ?? 0), $sid]);
+    $r = Db::row('SELECT * FROM panel_aia_bundle WHERE id = ? AND shop_id = ?', [(int) ($b['id'] ?? 0), $sid]);
     $f = $r !== null ? json_decode((string) $r['fiche'], true) : null;
     if (!is_array($f)) { http_response_code(404); return ['error' => 'bundle inconnu pour ce magasin']; }
     $envoi = bndEnvoyer($sid, $f);
-    Db::exec('UPDATE aia_bundle SET envoi = ? WHERE id = ?', [json_encode($envoi, JSON_UNESCAPED_UNICODE), (int) $r['id']]);
-    return ['ok' => $envoi['erreur'] === null, 'bundle' => bndLigne(Db::row('SELECT * FROM aia_bundle WHERE id = ?', [(int) $r['id']]))];
+    Db::exec('UPDATE panel_aia_bundle SET envoi = ? WHERE id = ?', [json_encode($envoi, JSON_UNESCAPED_UNICODE), (int) $r['id']]);
+    return ['ok' => $envoi['erreur'] === null, 'bundle' => bndLigne(Db::row('SELECT * FROM panel_aia_bundle WHERE id = ?', [(int) $r['id']]))];
 }
 
 function bndRoute(string $method, string $path): ?array

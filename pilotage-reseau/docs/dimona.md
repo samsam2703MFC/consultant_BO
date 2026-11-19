@@ -130,7 +130,7 @@ au journal `hr_dimona_audit` (qui, quand, quoi), sans donnée sensible.
 
 Les champs d’un IN qui manquaient aux employés (NISS, naissance, type, CP, heures planifiées) vivent dans
 `hr_dimona_workers`, car la table employés de l’ERP n’est pas à nous. À l’embauche, l’assistant reprend ce
-que l’employé a encodé dans son profil de l’app employés (`mot_profil`, chiffré à part) : nom, naissance,
+que l’employé a encodé dans son profil de l’app employés (`panel_mot_profil`, chiffré à part) : nom, naissance,
 statut, et le NISS, que l’API ne renvoie jamais au navigateur.
 
 ## Suivi d’une déclaration

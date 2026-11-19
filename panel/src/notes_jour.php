@@ -17,7 +17,7 @@ declare(strict_types=1);
 
 function ensureNotesJour(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_day_note ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_shop_day_note ('
         . 'shop_id VARCHAR(8) NOT NULL,'
         . 'jour DATE NOT NULL,'
         . 'texte TEXT NULL,'
@@ -46,7 +46,7 @@ function njSemaine(string $date): array
 function njLignes(string $shop, string $du, string $au): array
 {
     $out = [];
-    foreach (Db::rows('SELECT jour, texte, par, maj_le FROM ceo_shop_day_note
+    foreach (Db::rows('SELECT jour, texte, par, maj_le FROM panel_shop_day_note
                         WHERE shop_id = ? AND jour BETWEEN ? AND ? ORDER BY jour', [$shop, $du, $au]) as $r) {
         $texte = trim((string) ($r['texte'] ?? ''));
         if ($texte === '') { continue; }
@@ -111,7 +111,7 @@ function wr_note_jour(): array
         return ['error' => 'magasin ou jour manquant'];
     }
     if ($texte === '') {
-        Db::exec('DELETE FROM ceo_shop_day_note WHERE shop_id = ? AND jour = ?', [$shop, $jour]);
+        Db::exec('DELETE FROM panel_shop_day_note WHERE shop_id = ? AND jour = ?', [$shop, $jour]);
         return ['ok' => true, 'vide' => true];
     }
     // 2 000 caractères : de quoi raconter une journée, pas d'y coller un rapport.
@@ -122,7 +122,7 @@ function wr_note_jour(): array
         return ['error' => 'note trop longue (' . mb_strlen($texte) . ' caractères, maximum 2 000)'];
     }
     $par = $par !== '' ? mb_substr($par, 0, 120) : null;
-    Db::exec('INSERT INTO ceo_shop_day_note (shop_id, jour, texte, par, maj_le)
+    Db::exec('INSERT INTO panel_shop_day_note (shop_id, jour, texte, par, maj_le)
               VALUES (?,?,?,?,NOW())
               ON DUPLICATE KEY UPDATE texte = VALUES(texte), par = VALUES(par), maj_le = NOW()',
         [$shop, $jour, $texte, $par]);

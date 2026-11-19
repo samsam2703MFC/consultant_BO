@@ -24,24 +24,24 @@ final class Db
     }
     public static function row(string $sql, array $a = []): ?array
     {
-        if (str_contains($sql, 'FROM pil_tresorerie_plan')) { return self::$plans[$a[0]] ?? null; }
+        if (str_contains($sql, 'FROM panel_tresorerie_plan')) { return self::$plans[$a[0]] ?? null; }
         return null;
     }
     public static function exec(string $sql, array $a = []): int
     {
         if (str_starts_with($sql, 'CREATE TABLE')) { return 0; }
-        if (str_starts_with($sql, 'INSERT INTO pil_tresorerie_plan')) {
+        if (str_starts_with($sql, 'INSERT INTO panel_tresorerie_plan')) {
             if (isset(self::$plans[$a[0]])) { throw new PDOException('doublon', 23000); }
             self::$plans[$a[0]] = ['donnees' => $a[1], 'version' => 1, 'maj_le' => '2026-11-14 18:00:00'];
             return 1;
         }
-        if (str_starts_with($sql, 'UPDATE pil_tresorerie_plan')) {
+        if (str_starts_with($sql, 'UPDATE panel_tresorerie_plan')) {
             [$json, $shop, $v] = $a;
             if (!isset(self::$plans[$shop]) || self::$plans[$shop]['version'] !== $v) { return 0; }
             self::$plans[$shop] = ['donnees' => $json, 'version' => $v + 1, 'maj_le' => '2026-11-14 18:05:00'];
             return 1;
         }
-        if (str_starts_with($sql, 'DELETE FROM pil_tresorerie_plan')) {
+        if (str_starts_with($sql, 'DELETE FROM panel_tresorerie_plan')) {
             [$shop, $v] = $a;
             if (!isset(self::$plans[$shop]) || self::$plans[$shop]['version'] !== $v) { return 0; }
             unset(self::$plans[$shop]);

@@ -50,7 +50,7 @@ function primesFichesEquipe(string $shop): array
 {
     profilTable();
     $range = [];
-    foreach (Db::rows('SELECT id_employee FROM mot_profil WHERE shop = ?', [$shop]) as $r) { $range[(int) $r['id_employee']] = true; }
+    foreach (Db::rows('SELECT id_employee FROM panel_mot_profil WHERE shop = ?', [$shop]) as $r) { $range[(int) $r['id_employee']] = true; }
     $out = [];
     foreach (venteEmployes() as $id => $e) {
         if ((string) $e['shop'] !== $shop && !isset($range[$id])) { continue; }

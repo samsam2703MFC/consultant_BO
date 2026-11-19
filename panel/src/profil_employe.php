@@ -9,7 +9,7 @@ declare(strict_types=1);
  * et la photo de sa carte d'identité, recto et verso.
  *
  * Qui voit quoi (validé) : l'employé, son franchisé (page franchisé du cockpit, « Les fiches de l'équipe ») et la
- * marque. Tout le profil est gardé chiffré (AES-256-GCM) dans mot_profil ; la clé vit hors du site web
+ * marque. Tout le profil est gardé chiffré (AES-256-GCM) dans panel_mot_profil ; la clé vit hors du site web
  * (profilDossier()/profil.key, 0600) et les photos de la carte, chiffrées elles aussi, à côté. Le numéro national et
  * l'IBAN s'affichent masqués côté cockpit ; les montrer en clair, ou ouvrir une photo de la carte, s'écrit au journal.
  *
@@ -40,7 +40,7 @@ function profilTable(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS mot_profil ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_mot_profil ('
         . 'id_employee INT NOT NULL PRIMARY KEY,'
         . 'shop VARCHAR(20) NULL,'
         . 'donnees MEDIUMTEXT NOT NULL,'              // le profil, chiffré (profilChiffrer)
@@ -91,7 +91,7 @@ function profilChiffrer(string $clair): string
 {
     $iv = random_bytes(12);
     $tag = '';
-    $c = openssl_encrypt($clair, 'aes-256-gcm', profilCle(), OPENSSL_RAW_DATA, $iv, $tag, 'mot_profil', 16);
+    $c = openssl_encrypt($clair, 'aes-256-gcm', profilCle(), OPENSSL_RAW_DATA, $iv, $tag, 'panel_mot_profil', 16);
     if ($c === false) { throw new RuntimeException('chiffrement impossible'); }
     return 'v1:' . base64_encode($iv . $tag . $c);
 }
@@ -102,7 +102,7 @@ function profilDechiffrer(string $chiffre): ?string
     if (!str_starts_with($chiffre, 'v1:')) { return null; }
     $b = base64_decode(substr($chiffre, 3), true);
     if ($b === false || strlen($b) < 29) { return null; }
-    $c = openssl_decrypt(substr($b, 28), 'aes-256-gcm', profilCle(), OPENSSL_RAW_DATA, substr($b, 0, 12), substr($b, 12, 16), 'mot_profil');
+    $c = openssl_decrypt(substr($b, 28), 'aes-256-gcm', profilCle(), OPENSSL_RAW_DATA, substr($b, 0, 12), substr($b, 12, 16), 'panel_mot_profil');
     return $c === false ? null : $c;
 }
 
@@ -314,7 +314,7 @@ function profilCorrections(array $p): array
 function profilLire(int $emp): array
 {
     profilTable();
-    $r = Db::row('SELECT donnees FROM mot_profil WHERE id_employee = ?', [$emp]);
+    $r = Db::row('SELECT donnees FROM panel_mot_profil WHERE id_employee = ?', [$emp]);
     if ($r === null) { return []; }
     $c = profilDechiffrer((string) $r['donnees']);
     $p = $c !== null ? json_decode($c, true) : null;
@@ -328,7 +328,7 @@ function profilEcrire(int $emp, ?string $shop, array $p): void
     $donnees = profilChiffrer((string) json_encode($p, JSON_UNESCAPED_UNICODE));
     $manque = implode(',', array_keys(profilManque($p)));
     $corr = implode(',', array_keys(profilCorrections($p)));
-    Db::exec('INSERT INTO mot_profil (id_employee, shop, donnees, complet, manque, corrections) VALUES (?,?,?,?,?,?)
+    Db::exec('INSERT INTO panel_mot_profil (id_employee, shop, donnees, complet, manque, corrections) VALUES (?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE shop = VALUES(shop), donnees = VALUES(donnees), complet = VALUES(complet), manque = VALUES(manque), corrections = VALUES(corrections)',
         [$emp, $shop, $donnees, profilComplet($p), $manque, $corr]);
 }
@@ -476,7 +476,7 @@ function ep_profils_equipe(): array
     if ($shop === '') { http_response_code(400); return ['error' => 'magasin attendu']; }
     profilTable();
     $lignes = [];
-    foreach (Db::rows('SELECT id_employee, complet, manque, corrections, maj FROM mot_profil WHERE shop = ?', [$shop]) as $r) { $lignes[(int) $r['id_employee']] = $r; }
+    foreach (Db::rows('SELECT id_employee, complet, manque, corrections, maj FROM panel_mot_profil WHERE shop = ?', [$shop]) as $r) { $lignes[(int) $r['id_employee']] = $r; }
     $libManque = profilManque([]);
     $libCorr = ['identite.prenom' => 'Prénom', 'identite.nom' => 'Nom', 'coordonnees.telephone' => 'Téléphone', 'coordonnees.email' => 'E-mail'];
     $out = [];

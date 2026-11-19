@@ -24,25 +24,25 @@ $prive = sys_get_temp_dir() . '/tests_profil_' . bin2hex(random_bytes(4));
 mkdir($prive, 0700, true);
 putenv('COCKPIT_PRIVE=' . $prive);
 
-/** mot_profil en mémoire : id_employee → ligne. */
+/** panel_mot_profil en mémoire : id_employee → ligne. */
 $GLOBALS['PROFILS'] = [];
 final class Db
 {
     public static function rows(string $sql, array $a = []): array
     {
-        if (str_contains($sql, 'FROM mot_profil WHERE shop = ?')) {
+        if (str_contains($sql, 'FROM panel_mot_profil WHERE shop = ?')) {
             return array_values(array_filter($GLOBALS['PROFILS'], static fn ($r) => $r['shop'] === $a[0]));
         }
         return [];
     }
     public static function row(string $sql, array $a = []): ?array
     {
-        if (str_contains($sql, 'FROM mot_profil WHERE id_employee = ?')) { return $GLOBALS['PROFILS'][(int) $a[0]] ?? null; }
+        if (str_contains($sql, 'FROM panel_mot_profil WHERE id_employee = ?')) { return $GLOBALS['PROFILS'][(int) $a[0]] ?? null; }
         return null;
     }
     public static function exec(string $sql, array $a = []): int
     {
-        if (str_starts_with($sql, 'INSERT INTO mot_profil')) {
+        if (str_starts_with($sql, 'INSERT INTO panel_mot_profil')) {
             [$emp, $shop, $donnees, $complet, $manque, $corr] = $a;
             $GLOBALS['PROFILS'][(int) $emp] = ['id_employee' => $emp, 'shop' => $shop, 'donnees' => $donnees, 'complet' => $complet,
                 'manque' => $manque, 'corrections' => $corr, 'maj' => '2026-10-30 10:00:00'];

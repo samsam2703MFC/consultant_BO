@@ -1099,7 +1099,7 @@ function ensureCentrale(): void
  */
 function ensureTabletteRemarques(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_remarque ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_tablette_remarque ('
         . 'id CHAR(36) NOT NULL PRIMARY KEY,'
         . 'shop_id VARCHAR(32) NULL,'
         . 'shop_brut VARCHAR(32) NULL,'
@@ -1118,8 +1118,8 @@ function ensureTabletteRemarques(): void
     // Le magasin envoyé par la tablette quand il n'est pas connu (la remarque est
     // gardée sans magasin) : arrivé après la table, ajouté aux bases qui l'ont déjà.
     $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
-        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tablette_remarque' AND column_name = 'shop_brut'");
+        . " WHERE table_schema = DATABASE() AND table_name = 'panel_tablette_remarque' AND column_name = 'shop_brut'");
     if ((int) ($r['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_tablette_remarque ADD COLUMN shop_brut VARCHAR(32) NULL AFTER shop_id');
+        Db::exec('ALTER TABLE panel_tablette_remarque ADD COLUMN shop_brut VARCHAR(32) NULL AFTER shop_id');
     }
 }

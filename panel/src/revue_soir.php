@@ -365,10 +365,10 @@ function rsTester(array $b): array
  *                                   (les sondes déjà évaluées), les réponses déjà données (on reprend où on en était)
  *   PUT /soir/revue                 { shop, date, par, reponses: {point: {r, c}}, checklists: {nom: {r, c}}, demain,
  *                                     cloturer } — enregistrée à chaque réponse ; « cloturer » fige la journée
- * Les réponses vivent dans ceo_revue_soir (une ligne par magasin et par jour). */
+ * Les réponses vivent dans panel_revue_soir (une ligne par magasin et par jour). */
 function rsTable(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_revue_soir ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_revue_soir ('
         . ' id_shop INT NOT NULL, jour DATE NOT NULL, par VARCHAR(120) NULL, reponses MEDIUMTEXT NULL,'
         . ' statut VARCHAR(12) NOT NULL DEFAULT \'encours\', resume MEDIUMTEXT NULL, maj_le DATETIME NULL, cloture_le DATETIME NULL,'
         . ' PRIMARY KEY (id_shop, jour)) DEFAULT CHARSET=utf8mb4');
@@ -424,7 +424,7 @@ function rsChecklistsDuJour(int $shop, string $date): array
 
 function rsRevueLire(int $shop, string $date): ?array
 {
-    try { rsTable(); $r = Db::row('SELECT * FROM ceo_revue_soir WHERE id_shop = ? AND jour = ?', [$shop, $date]); }
+    try { rsTable(); $r = Db::row('SELECT * FROM panel_revue_soir WHERE id_shop = ? AND jour = ?', [$shop, $date]); }
     catch (PDOException $e) { return null; }
     if (!$r) { return null; }
     return ['par' => $r['par'], 'statut' => $r['statut'], 'reponses' => json_decode((string) $r['reponses'], true) ?: [],
@@ -465,7 +465,7 @@ function rsRevueEcrire(array $b): array
     if ($avant && $avant['statut'] === 'cloturee' && empty($b['rouvrir'])) { http_response_code(409); return ['error' => 'la revue de ce soir est déjà clôturée', 'revue' => $avant]; }
     $clo = !empty($b['cloturer']);
     rsTable();
-    Db::exec('INSERT INTO ceo_revue_soir (id_shop, jour, par, reponses, statut, maj_le, cloture_le) VALUES (?,?,?,?,?,NOW(),?)'
+    Db::exec('INSERT INTO panel_revue_soir (id_shop, jour, par, reponses, statut, maj_le, cloture_le) VALUES (?,?,?,?,?,NOW(),?)'
         . ' ON DUPLICATE KEY UPDATE par = VALUES(par), reponses = VALUES(reponses), statut = VALUES(statut), maj_le = NOW(), cloture_le = VALUES(cloture_le)',
         [$shop, $date, $par ?: null, json_encode($rep, JSON_UNESCAPED_UNICODE), $clo ? 'cloturee' : 'encours', $clo ? date('Y-m-d H:i:s') : null]);
     if ($clo && function_exists('journalAdd')) {

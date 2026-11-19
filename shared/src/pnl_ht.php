@@ -22,7 +22,7 @@ declare(strict_types=1);
  * Les routes de l'onglet Frais (GET /exploitation/frais, POST /exploitation/frais/tva) vivent dans src/franchise/frais.php,
  * avec le dashboard ; ce fichier-ci est partagé avec le cockpit du siège (Résultat, dossier PDF, tablette).
  *
- * Table : `pil_frais_tva` (préfixe du portail Pilotage, docs/PORTAILS.md) : un choix par magasin et par poste (le libellé
+ * Table : `panel_frais_tva` (préfixe du portail Pilotage, docs/PORTAILS.md) : un choix par magasin et par poste (le libellé
  * du frais au panel), gardé d'un mois à l'autre. Le panel n'est pas modifié.
  */
 
@@ -172,7 +172,7 @@ function ensureFraisTva(): void
 {
     static $fait = false;
     if ($fait) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_frais_tva ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_frais_tva ('
         . 'shop_id VARCHAR(16) NOT NULL,'
         . 'poste VARCHAR(190) NOT NULL,'          // la clé : le libellé du frais au panel, en minuscules
         . 'libelle VARCHAR(190) NOT NULL,'        // le libellé tel que le panel l'écrit
@@ -283,7 +283,7 @@ function phChoix(array $sids): array
     try {
         ensureFraisTva();
         $ph = implode(',', array_fill(0, count($sids), '?'));
-        foreach (Db::rows('SELECT shop_id, poste, tva_comprise, taux, maj_le, maj_par FROM pil_frais_tva WHERE shop_id IN (' . $ph . ')', array_map('strval', $sids)) as $r) {
+        foreach (Db::rows('SELECT shop_id, poste, tva_comprise, taux, maj_le, maj_par FROM panel_frais_tva WHERE shop_id IN (' . $ph . ')', array_map('strval', $sids)) as $r) {
             $out[(int) $r['shop_id']][(string) $r['poste']] = [
                 'tva' => $r['tva_comprise'] === null ? null : ((int) $r['tva_comprise'] === 1),
                 'taux' => $r['taux'] === null ? null : (float) $r['taux'],

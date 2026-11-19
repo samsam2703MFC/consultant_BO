@@ -70,9 +70,9 @@ require __DIR__ . '/../src/controles_qualite.php';
 require __DIR__ . '/../../panel/src/assistant_magasin.php';
 
 Db::pdo()->exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
-Db::pdo()->exec('CREATE TABLE aia_reglage (cle TEXT PRIMARY KEY, valeur TEXT, maj_le TEXT, maj_par TEXT)');
-Db::pdo()->exec('CREATE TABLE aia_fiche (shop_id INT PRIMARY KEY, lu_le TEXT, faits TEXT)');
-Db::pdo()->exec("INSERT INTO aia_reglage VALUES ('repriseQuestions', '\"fait\"', '2026-11-17', 'test')");   // la reprise des questions d'avant : déjà faite
+Db::pdo()->exec('CREATE TABLE panel_aia_reglage (cle TEXT PRIMARY KEY, valeur TEXT, maj_le TEXT, maj_par TEXT)');
+Db::pdo()->exec('CREATE TABLE panel_aia_fiche (shop_id INT PRIMARY KEY, lu_le TEXT, faits TEXT)');
+Db::pdo()->exec("INSERT INTO panel_aia_reglage VALUES ('repriseQuestions', '\"fait\"', '2026-11-17', 'test')");   // la reprise des questions d'avant : déjà faite
 Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?)', ['signalement', json_encode(['seuil' => 4, 'niveaux' => [
     ['n' => 5, 'nom' => 'Exemplaire'], ['n' => 4, 'nom' => 'Conforme'], ['n' => 3, 'nom' => 'Non conforme — mineur'],
     ['n' => 2, 'nom' => 'Non conforme — majeur'], ['n' => 1, 'nom' => 'Non conforme — critique']]])]);
@@ -142,7 +142,7 @@ foreach (array_keys(AM_COACHS) as $k) {
 }
 verifie('« n’en parle pas » garde l’exception des photos (Coach Vente)', str_contains(amPersona('vente'), "sauf les résultats des contrôles en photo"));
 verifie('l’exception ne touche que les contrôles', !str_contains(amPersona('vente'), "Budget : n'en parle"), amPersona('vente'));
-Db::exec('INSERT INTO aia_reglage (cle, valeur, maj_le) VALUES (?, ?, ?)', ['assistantCoachs', json_encode(['pierre' => ['accents' => ['controles' => ['niveau' => 'non', 'verifie' => 'Rien.']]]]), date('Y-m-d H:i:s')]);
+Db::exec('INSERT INTO panel_aia_reglage (cle, valeur, maj_le) VALUES (?, ?, ?)', ['assistantCoachs', json_encode(['pierre' => ['accents' => ['controles' => ['niveau' => 'non', 'verifie' => 'Rien.']]]]), date('Y-m-d H:i:s')]);
 verifie('un coach réglé sur « n’en parle pas » au cockpit garde l’exception', str_contains(amPersona('pierre'), 'sauf les résultats des contrôles en photo'));
 verifie('une question toute prête porte sur les photos', in_array('Mes photos de contrôle sont-elles conformes ?', array_merge(...array_map(static fn ($g) => $g[1], AM_QUESTIONS['groupes'])), true));
 
@@ -161,7 +161,7 @@ verifie('rien avant les sept derniers jours', array_filter($lus, static fn ($x) 
 verifie('les sept derniers jours, sans le mois', isset($p['septDerniersJours']) && !array_key_exists('moisEnCours', $p), json_encode(array_keys($p)));
 verifie('la non-conformité et ce que le consultant a relevé', ($p['nonConformesSeptDerniersJours'][0]['releveDuConsultant'] ?? '') === 'Plateaux vides à 10 h.');
 // La fiche des coachs, fraîche : le Professeur la reprend, sans lire le panel.
-Db::exec('INSERT INTO aia_fiche VALUES (?, ?, ?)', [12, date('Y-m-d H:i:s'), json_encode(['controlesPhotos' => ['septDerniersJours' => ['controles' => 4], 'moisEnCours' => ['controles' => 30]]])]);
+Db::exec('INSERT INTO panel_aia_fiche VALUES (?, ?, ?)', [12, date('Y-m-d H:i:s'), json_encode(['controlesPhotos' => ['septDerniersJours' => ['controles' => 4], 'moisEnCours' => ['controles' => 30]]])]);
 $n = count(PanelApi::$lus);
 $p = amControlesPhotosProfesseur(12);
 verifie('fiche des coachs fraîche : reprise sans lecture au panel', count(PanelApi::$lus) === $n && ($p['septDerniersJours']['controles'] ?? null) === 4 && !isset($p['moisEnCours']));

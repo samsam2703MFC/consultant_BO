@@ -27,8 +27,8 @@ final class Db
     public static function rows(string $sql, array $a = []): array
     {
         if (str_contains($sql, 'FROM for_sop')) { return array_values(self::$sops); }
-        if (str_contains($sql, 'FROM aia_manuel_passage')) { return self::$passages; }
-        if (str_contains($sql, 'FROM ceo_hist_jour') && str_contains($sql, 'GROUP BY jour')) {
+        if (str_contains($sql, 'FROM panel_aia_manuel_passage')) { return self::$passages; }
+        if (str_contains($sql, 'FROM panel_hist_jour') && str_contains($sql, 'GROUP BY jour')) {
             $n = count($a);
             [$du, $au] = [$a[$n - 2], $a[$n - 1]];
             $out = [];
@@ -47,20 +47,20 @@ final class Db
         if (str_contains($sql, 'COUNT(*) AS n FROM for_sop')) { return ['n' => count(self::$sops)]; }
         if (str_contains($sql, 'FROM for_sop WHERE id = ?')) { return self::$sops[$a[0]] ?? null; }
         if (str_contains($sql, 'FROM for_sop_version')) { $c = self::$versions[$a[0] . '|' . $a[1]] ?? null; return $c === null ? null : ['contenu' => $c]; }
-        if (str_contains($sql, 'FROM aia_reglage')) { return isset(self::$reglages[$a[0]]) ? ['valeur' => self::$reglages[$a[0]]] : null; }
+        if (str_contains($sql, 'FROM panel_aia_reglage')) { return isset(self::$reglages[$a[0]]) ? ['valeur' => self::$reglages[$a[0]]] : null; }
         return null;
     }
 
     public static function exec(string $sql, array $a = []): int
     {
-        if (str_starts_with($sql, 'DELETE FROM aia_manuel_passage')) { self::$passages = []; return 1; }
-        if (str_starts_with($sql, 'INSERT INTO aia_manuel_passage')) {
+        if (str_starts_with($sql, 'DELETE FROM panel_aia_manuel_passage')) { self::$passages = []; return 1; }
+        if (str_starts_with($sql, 'INSERT INTO panel_aia_manuel_passage')) {
             foreach (array_chunk($a, 7) as [$id, $v, $o, $sec, $num, $t, $cle]) {
                 self::$passages[] = ['sop_id' => $id, 'version' => $v, 'ordre' => $o, 'section' => $sec, 'numero' => $num, 'texte' => $t, 'cle' => $cle];
             }
             return 1;
         }
-        if (str_contains($sql, 'INTO aia_reglage')) { self::$reglages[$a[0]] = $a[1]; return 1; }
+        if (str_contains($sql, 'INTO panel_aia_reglage')) { self::$reglages[$a[0]] = $a[1]; return 1; }
         return 0;
     }
 }

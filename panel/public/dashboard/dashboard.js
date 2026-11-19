@@ -5876,7 +5876,7 @@
     setTimeout(() => { const i = document.querySelector('#db-ia input'); if (i) { i.focus(); } }, 30);
   }
   function iaFermer() { IA.ouvert = false; iaRendre(); }
-  /** La clé de la conversation (aia_conversation) : une par fil, tirée ici, jamais un nom. */
+  /** La clé de la conversation (panel_aia_conversation) : une par fil, tirée ici, jamais un nom. */
   function iaConv() {
     if (!IA.conv) { const a = new Uint8Array(16); (window.crypto || window.msCrypto).getRandomValues(a); IA.conv = Array.from(a, x => x.toString(16).padStart(2, '0')).join(''); }
     return IA.conv;
@@ -5944,7 +5944,7 @@
    * séries et tableau. Ici on les dessine à la largeur réelle du cadre (les textes restent à 11 px), selon les règles des
    * graphiques du cockpit : Ruby #A82E40 pour le magasin, gris pour la comparaison, colonnes de 24 px au plus arrondies en
    * haut, lignes de 2 px, grille discrète, graduations rondes, étiquettes choisies sur un halo blanc, la valeur au survol.
-   * Chaque visuel bascule en tableau, se télécharge (CSV, image) et se garde comme modèle (aia_modele). */
+   * Chaque visuel bascule en tableau, se télécharge (CSV, image) et se garde comme modèle (panel_aia_modele). */
   const IA_C = { moi: '#A82E40', ref: '#8a847c', autre: '#cfc8bd', grille: '#ece6dc', axe: '#9a948b', encre: '#2b2724' };
   function iaFmt(v, x) { return String(iaFmt0(v, x)).replace(/\u202f/g, '\u00a0'); }   // l'espace fine ne s'affiche pas dans un SVG
   function iaFmt0(v, x) {
@@ -6113,7 +6113,7 @@
     img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); c.toBlob(b => { if (b) { iaTelecharger(iaFichier(v) + '.png', b); } }, 'image/png'); };
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(s));
   }
-  /* Mes modèles (aia_modele) : la demande d'un visuel gardée ; l'ouvrir la refait avec les chiffres du jour. */
+  /* Mes modèles (panel_aia_modele) : la demande d'un visuel gardée ; l'ouvrir la refait avec les chiffres du jour. */
   function iaModelesLire() {
     lire('/assistant/magasin/modeles?shop=' + encodeURIComponent(S.shop)).then(d => { IA.modeles = (d && d.modeles) || []; if (IA.ouvert || iaSurPage()) { iaRendre(); } }).catch(() => { IA.modeles = []; });
   }

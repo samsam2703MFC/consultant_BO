@@ -9,18 +9,18 @@ declare(strict_types=1);
  * outils de l'historique des ventes, la boucle d'appels — reste dans src/assistant_magasin.php, qui charge ce fichier.
  *
  * LES TABLES (aia_, créées au premier appel) :
- *   aia_reglage         les réglages de l'assistant (coachs, modèle, effort, Professeur, sel des références anonymes) ;
+ *   panel_aia_reglage         les réglages de l'assistant (coachs, modèle, effort, Professeur, sel des références anonymes) ;
  *                       repris de ceo_app_setting clé par clé, la première fois qu'on les lit
- *   aia_fiche           la fiche de faits d'un magasin, gardée dix minutes (avant : ceo_app_setting « assistantFaits|… »)
- *   aia_conversation    une conversation : le magasin, l'agent, la première question, le nombre de questions
- *   aia_question        chaque question et sa réponse, ses jetons, sa durée, ses outils (avant : ceo_assistant_question,
+ *   panel_aia_fiche           la fiche de faits d'un magasin, gardée dix minutes (avant : ceo_app_setting « assistantFaits|… »)
+ *   panel_aia_conversation    une conversation : le magasin, l'agent, la première question, le nombre de questions
+ *   panel_aia_question        chaque question et sa réponse, ses jetons, sa durée, ses outils (avant : ceo_assistant_question,
  *                       reprise une fois)
- *   aia_visuel          chaque graphique ou tableau proposé : la demande du modèle et les chiffres relus
- *   aia_modele          les graphiques qu'un magasin garde comme modèles : la demande seulement, rejouée à l'ouverture
+ *   panel_aia_visuel          chaque graphique ou tableau proposé : la demande du modèle et les chiffres relus
+ *   panel_aia_modele          les graphiques qu'un magasin garde comme modèles : la demande seulement, rejouée à l'ouverture
  *                       sur une période qui glisse avec le temps
- *   aia_cache           les lectures lentes des outils, gardées un temps (prix et coûts des produits, relevés de la
+ *   panel_aia_cache           les lectures lentes des outils, gardées un temps (prix et coûts des produits, relevés de la
  *                       concurrence)
- *   aia_manuel_passage  le manuel opératoire découpé en passages (en-tête, étapes, points critiques, quiz) pour la
+ *   panel_aia_manuel_passage  le manuel opératoire découpé en passages (en-tête, étapes, points critiques, quiz) pour la
  *                       recherche ; refait quand le manuel change (signature des versions)
  *
  * LE MANUEL OPÉRATOIRE : tous les documents de for_sop (SOP, checklists, mémos, fiches, articles — publiés, à valider et
@@ -37,7 +37,7 @@ declare(strict_types=1);
  * montrer — les données (ventes par heure, par jour, par semaine, par mois, produits, catégories, classement du réseau),
  * la mesure, la période, la comparaison (l'an passé, le réseau) et la forme (colonnes, courbe, barres, tableau) — et le
  * serveur relit les chiffres dans l'historique des ventes (src/historique_ventes.php). Seule exception : un tableau tiré
- * du manuel (`donnees = manuel`), recopié d'un document lu. Chaque visuel est gardé (aia_visuel), téléchargeable (CSV,
+ * du manuel (`donnees = manuel`), recopié d'un document lu. Chaque visuel est gardé (panel_aia_visuel), téléchargeable (CSV,
  * PNG) et peut devenir un modèle.
  *
  * Routes (préfixe /assistant/magasin : ouvert à la session d'un magasin, le `shop` vérifié par src/acces.php) :
@@ -95,18 +95,18 @@ function aiaSchema(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_reglage (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_reglage (
         cle VARCHAR(64) NOT NULL PRIMARY KEY,
         valeur MEDIUMTEXT NOT NULL,
         maj_le DATETIME NOT NULL,
         maj_par VARCHAR(120) NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_fiche (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_fiche (
         shop_id INT NOT NULL PRIMARY KEY,
         lu_le DATETIME NOT NULL,
         faits MEDIUMTEXT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_conversation (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_conversation (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         cle CHAR(32) NOT NULL,
         shop_id INT NOT NULL,
@@ -117,7 +117,7 @@ function aiaSchema(): void
         premiere VARCHAR(500) NOT NULL,
         UNIQUE KEY u_cle (cle, shop_id), KEY k_shop (shop_id, derniere_le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_question (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_question (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         conversation_id BIGINT UNSIGNED NULL,
         cree_le DATETIME NOT NULL,
@@ -138,7 +138,7 @@ function aiaSchema(): void
         theme VARCHAR(40) NULL,
         KEY k_date (cree_le), KEY k_shop (shop_id, cree_le), KEY k_conv (conversation_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_visuel (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_visuel (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         question_id BIGINT UNSIGNED NULL,
         shop_id INT NOT NULL,
@@ -151,7 +151,7 @@ function aiaSchema(): void
         erreur VARCHAR(300) NULL,
         KEY k_question (question_id), KEY k_shop (shop_id, cree_le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_modele (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_modele (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         shop_id INT NOT NULL,
         cree_le DATETIME NOT NULL,
@@ -164,12 +164,12 @@ function aiaSchema(): void
         ouvertures INT NOT NULL DEFAULT 0,
         KEY k_shop (shop_id, cree_le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_cache (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_cache (
         cle VARCHAR(80) NOT NULL PRIMARY KEY,
         lu_le DATETIME NOT NULL,
         valeur MEDIUMTEXT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS aia_manuel_passage (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_aia_manuel_passage (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         sop_id VARCHAR(32) NOT NULL,
         version VARCHAR(12) NOT NULL,
@@ -183,12 +183,12 @@ function aiaSchema(): void
     aiaReprendreQuestions();
 }
 
-/** Les questions déjà posées (ceo_assistant_question, 12/11/2026) passent une fois dans aia_question. */
+/** Les questions déjà posées (ceo_assistant_question, 12/11/2026) passent une fois dans panel_aia_question. */
 function aiaReprendreQuestions(): void
 {
     if (aiaReglageBrut('repriseQuestions') !== null) { return; }
     try {
-        Db::exec('INSERT INTO aia_question (cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_sortie, duree_ms, erreur, theme)
+        Db::exec('INSERT INTO panel_aia_question (cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_sortie, duree_ms, erreur, theme)
                   SELECT cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_sortie, duree_ms, erreur, theme
                   FROM ceo_assistant_question ORDER BY id');
     } catch (Throwable $e) { /* pas de table d'avant : rien à reprendre */ }
@@ -198,10 +198,10 @@ function aiaReprendreQuestions(): void
 /* ---------------------------------------------------------------------------
  * Les réglages
  * ------------------------------------------------------------------------- */
-/** La valeur brute (JSON décodé) d'un réglage d'aia_reglage ; null s'il n'y est pas. */
+/** La valeur brute (JSON décodé) d'un réglage d'panel_aia_reglage ; null s'il n'y est pas. */
 function aiaReglageBrut(string $cle): mixed
 {
-    $r = Db::row('SELECT valeur FROM aia_reglage WHERE cle = ?', [$cle]);
+    $r = Db::row('SELECT valeur FROM panel_aia_reglage WHERE cle = ?', [$cle]);
     return $r === null ? null : json_decode((string) $r['valeur'], true);
 }
 
@@ -214,7 +214,7 @@ function aiaReglage(string $cle, mixed $defaut = null): mixed
     if (in_array($cle, AIA_REGLAGES, true) && function_exists('setting')) {
         $ancien = setting($cle, null);
         if ($ancien !== null) {
-            try { Db::exec('INSERT IGNORE INTO aia_reglage (cle, valeur, maj_le, maj_par) VALUES (?, ?, NOW(), ?)', [$cle, json_encode($ancien, JSON_UNESCAPED_UNICODE), 'Reprise']); }
+            try { Db::exec('INSERT IGNORE INTO panel_aia_reglage (cle, valeur, maj_le, maj_par) VALUES (?, ?, NOW(), ?)', [$cle, json_encode($ancien, JSON_UNESCAPED_UNICODE), 'Reprise']); }
             catch (Throwable $e) { /* relu la prochaine fois */ }
             return $ancien;
         }
@@ -225,7 +225,7 @@ function aiaReglage(string $cle, mixed $defaut = null): mixed
 function aiaReglageEcrire(string $cle, mixed $valeur, string $par = ''): void
 {
     aiaSchema();
-    Db::exec('INSERT INTO aia_reglage (cle, valeur, maj_le, maj_par) VALUES (?, ?, NOW(), ?) ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj_le = NOW(), maj_par = VALUES(maj_par)',
+    Db::exec('INSERT INTO panel_aia_reglage (cle, valeur, maj_le, maj_par) VALUES (?, ?, NOW(), ?) ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj_le = NOW(), maj_par = VALUES(maj_par)',
         [$cle, json_encode($valeur, JSON_UNESCAPED_UNICODE), $par !== '' ? mb_substr($par, 0, 120) : null]);
 }
 
@@ -239,16 +239,16 @@ function aiaProfesseurModele(): array
     return ['modele' => $m, 'effort' => $e];
 }
 
-/** Une lecture lente gardée $ttl secondes (aia_cache) ; si elle échoue, la dernière gardée ressert. Null si rien. */
+/** Une lecture lente gardée $ttl secondes (panel_aia_cache) ; si elle échoue, la dernière gardée ressert. Null si rien. */
 function aiaCache(string $cle, int $ttl, callable $calc): mixed
 {
-    try { aiaSchema(); $r = Db::row('SELECT valeur, lu_le FROM aia_cache WHERE cle = ?', [$cle]); }
+    try { aiaSchema(); $r = Db::row('SELECT valeur, lu_le FROM panel_aia_cache WHERE cle = ?', [$cle]); }
     catch (Throwable $e) { $r = null; }
     $v = $r !== null ? json_decode((string) $r['valeur'], true) : null;
     if ($v !== null && strtotime((string) $r['lu_le']) > time() - $ttl) { return $v; }
     $n = $calc();
     if ($n === null) { return $v; }
-    try { Db::exec('INSERT INTO aia_cache (cle, lu_le, valeur) VALUES (?, NOW(), ?) ON DUPLICATE KEY UPDATE lu_le = NOW(), valeur = VALUES(valeur)', [$cle, json_encode($n, JSON_UNESCAPED_UNICODE)]); }
+    try { Db::exec('INSERT INTO panel_aia_cache (cle, lu_le, valeur) VALUES (?, NOW(), ?) ON DUPLICATE KEY UPDATE lu_le = NOW(), valeur = VALUES(valeur)', [$cle, json_encode($n, JSON_UNESCAPED_UNICODE)]); }
     catch (Throwable $e) { /* sans mémoire : on relira */ }
     return $n;
 }
@@ -259,7 +259,7 @@ function aiaCache(string $cle, int $ttl, callable $calc): mixed
 function aiaFicheLire(int $sid, int $ttl = 600): ?array
 {
     aiaSchema();
-    $r = Db::row('SELECT faits FROM aia_fiche WHERE shop_id = ? AND lu_le > ?', [$sid, date('Y-m-d H:i:s', time() - $ttl)]);
+    $r = Db::row('SELECT faits FROM panel_aia_fiche WHERE shop_id = ? AND lu_le > ?', [$sid, date('Y-m-d H:i:s', time() - $ttl)]);
     $f = $r !== null ? json_decode((string) $r['faits'], true) : null;
     return is_array($f) ? $f : null;
 }
@@ -268,9 +268,9 @@ function aiaFicheEcrire(int $sid, array $f): void
 {
     try {
         aiaSchema();
-        Db::exec('INSERT INTO aia_fiche (shop_id, lu_le, faits) VALUES (?, NOW(), ?) ON DUPLICATE KEY UPDATE lu_le = NOW(), faits = VALUES(faits)',
+        Db::exec('INSERT INTO panel_aia_fiche (shop_id, lu_le, faits) VALUES (?, NOW(), ?) ON DUPLICATE KEY UPDATE lu_le = NOW(), faits = VALUES(faits)',
             [$sid, json_encode($f, JSON_UNESCAPED_UNICODE)]);
-    } catch (Throwable $e) { error_log('aia_fiche : ' . $e->getMessage()); }
+    } catch (Throwable $e) { error_log('panel_aia_fiche : ' . $e->getMessage()); }
 }
 
 /* ---------------------------------------------------------------------------
@@ -282,11 +282,11 @@ function aiaConversation(int $sid, string $agent, string $cle, string $q): ?int
     if (!preg_match('/^[a-f0-9]{16,32}$/', $cle)) { return null; }
     try {
         aiaSchema();
-        Db::exec('INSERT INTO aia_conversation (cle, shop_id, agent, ouverte_le, derniere_le, questions, premiere) VALUES (?, ?, ?, NOW(), NOW(), 1, ?)
+        Db::exec('INSERT INTO panel_aia_conversation (cle, shop_id, agent, ouverte_le, derniere_le, questions, premiere) VALUES (?, ?, ?, NOW(), NOW(), 1, ?)
                   ON DUPLICATE KEY UPDATE derniere_le = NOW(), questions = questions + 1, agent = VALUES(agent)', [$cle, $sid, $agent, mb_substr($q, 0, 500)]);
-        $r = Db::row('SELECT id FROM aia_conversation WHERE cle = ? AND shop_id = ?', [$cle, $sid]);
+        $r = Db::row('SELECT id FROM panel_aia_conversation WHERE cle = ? AND shop_id = ?', [$cle, $sid]);
         return $r !== null ? (int) $r['id'] : null;
-    } catch (Throwable $e) { error_log('aia_conversation : ' . $e->getMessage()); return null; }
+    } catch (Throwable $e) { error_log('panel_aia_conversation : ' . $e->getMessage()); return null; }
 }
 
 /** Garde une question et ce qu'elle a donné ; rend son id. Une panne d'écriture ne coûte jamais la réponse. */
@@ -297,24 +297,24 @@ function aiaGarderQuestion(?int $conv, int $sid, string $coach, string $orig, st
         $u = is_array($r['usage'] ?? null) ? $r['usage'] : [];
         $entree = isset($u['input_tokens']) ? (int) $u['input_tokens'] + (int) ($u['cache_creation_input_tokens'] ?? 0) + (int) ($u['cache_read_input_tokens'] ?? 0) : null;
         $outils = !empty($r['outils']) ? mb_substr(implode(',', array_unique(array_map('strval', $r['outils']))), 0, 500) : null;
-        Db::exec('INSERT INTO aia_question (conversation_id, cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_cache_lus, jetons_sortie, duree_ms, outils, visuels, erreur)
+        Db::exec('INSERT INTO panel_aia_question (conversation_id, cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_cache_lus, jetons_sortie, duree_ms, outils, visuels, erreur)
                   VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [$conv, $sid, $coach, $orig, $rang, $q, isset($r['reponse']) ? json_encode($r['reponse'], JSON_UNESCAPED_UNICODE) : null, $r['modele'] ?? null,
              $entree, isset($u['cache_read_input_tokens']) ? (int) $u['cache_read_input_tokens'] : null, isset($u['output_tokens']) ? (int) $u['output_tokens'] : null,
              $ms, $outils, $visuels, isset($r['erreur']) ? mb_substr((string) $r['erreur'], 0, 300) : null]);
         return (int) Db::pdo()->lastInsertId() ?: null;
-    } catch (Throwable $e) { error_log('aia_question : ' . $e->getMessage()); return null; }
+    } catch (Throwable $e) { error_log('panel_aia_question : ' . $e->getMessage()); return null; }
 }
 
 function aiaGarderVisuel(?int $qid, int $sid, array $demande, array|string $res): ?int
 {
     try {
         aiaSchema();
-        Db::exec('INSERT INTO aia_visuel (question_id, shop_id, cree_le, forme, donnees, titre, demande, resultat, erreur) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?)',
+        Db::exec('INSERT INTO panel_aia_visuel (question_id, shop_id, cree_le, forme, donnees, titre, demande, resultat, erreur) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?)',
             [$qid, $sid, (string) ($demande['forme'] ?? ''), (string) ($demande['donnees'] ?? ''), mb_substr((string) ($demande['titre'] ?? ''), 0, 190),
              json_encode($demande, JSON_UNESCAPED_UNICODE), is_array($res) ? json_encode($res, JSON_UNESCAPED_UNICODE) : null, is_string($res) ? mb_substr($res, 0, 300) : null]);
         return (int) Db::pdo()->lastInsertId() ?: null;
-    } catch (Throwable $e) { error_log('aia_visuel : ' . $e->getMessage()); return null; }
+    } catch (Throwable $e) { error_log('panel_aia_visuel : ' . $e->getMessage()); return null; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -356,7 +356,7 @@ function aiaManuelContenu(array $r): array
     return foContenuLangue($c, 'fr', true);
 }
 
-/** Refait aia_manuel_passage quand le manuel a changé. Rend le nombre de passages (ou -1 : rien à refaire). */
+/** Refait panel_aia_manuel_passage quand le manuel a changé. Rend le nombre de passages (ou -1 : rien à refaire). */
 function aiaManuelIndexer(bool $forcer = false): int
 {
     aiaSchema();
@@ -382,14 +382,14 @@ function aiaManuelIndexer(bool $forcer = false): int
             if ($q['question'] !== '') { $lignes[] = [$id, $v, $o++, 'Quiz', null, $q['question'] . ' Réponse : ' . $bonne]; }
         }
     }
-    Db::exec('DELETE FROM aia_manuel_passage');
+    Db::exec('DELETE FROM panel_aia_manuel_passage');
     foreach (array_chunk($lignes, 100) as $lot) {
         $vals = []; $a = [];
         foreach ($lot as [$id, $v, $o, $sec, $num, $t]) {
             $vals[] = '(?, ?, ?, ?, ?, ?, ?)';
             array_push($a, $id, $v, $o, $sec, $num, $t, aiaNorm(($sec ?? '') . ' ' . $t));
         }
-        Db::exec('INSERT INTO aia_manuel_passage (sop_id, version, ordre, section, numero, texte, cle) VALUES ' . implode(',', $vals), $a);
+        Db::exec('INSERT INTO panel_aia_manuel_passage (sop_id, version, ordre, section, numero, texte, cle) VALUES ' . implode(',', $vals), $a);
     }
     aiaReglageEcrire('manuelSignature', $sig, 'Manuel');
     return count($lignes);
@@ -435,7 +435,7 @@ function aiaManuelChercher(string $q, int $n = 8): array
     aiaManuelIndexer();
     $mots = aiaMots($q);
     if ($mots === []) { return ['erreur' => 'question vide : donnez des mots-clés (« fermeture », « pâte à choux »)']; }
-    $P = Db::rows('SELECT sop_id, ordre, section, numero, texte, cle FROM aia_manuel_passage');
+    $P = Db::rows('SELECT sop_id, ordre, section, numero, texte, cle FROM panel_aia_manuel_passage');
     if ($P === []) { return ['passages' => [], 'note' => 'le manuel est vide']; }
     $docs = []; $titres = [];
     foreach (aiaManuelDocuments() as $d) { $docs[$d['id']] = $d; $titres[$d['id']] = aiaNorm($d['titre']); }
@@ -715,7 +715,7 @@ function aiaJours(array $shops, string $du, string $au, array $jours): array
     $hier = date('Y-m-d', strtotime('-1 day'));
     if (min($au, $hier) >= $du) {
         [$w, $a] = hvFiltre($shops, $du, min($au, $hier), $jours);
-        foreach (Db::rows('SELECT jour, SUM(tickets) t, SUM(ca) ca, SUM(tickets_pro) tp, SUM(ca_pro) cp, SUM(tickets > 0) o FROM ceo_hist_jour WHERE ' . $w . ' GROUP BY jour ORDER BY jour', $a) as $r) {
+        foreach (Db::rows('SELECT jour, SUM(tickets) t, SUM(ca) ca, SUM(tickets_pro) tp, SUM(ca_pro) cp, SUM(tickets > 0) o FROM panel_hist_jour WHERE ' . $w . ' GROUP BY jour ORDER BY jour', $a) as $r) {
             $out[(string) $r['jour']] = [(int) $r['t'], (float) $r['ca'], (int) $r['tp'], (float) $r['cp'], (int) $r['o']];
         }
     }
@@ -911,7 +911,7 @@ function aiaRadarOuBarres(array|string $v): array|string
     return $v;
 }
 
-/** Les visuels d'une réponse : chacun construit, gardé (aia_visuel) ; ceux qui ne se lisent pas sont écartés. */
+/** Les visuels d'une réponse : chacun construit, gardé (panel_aia_visuel) ; ceux qui ne se lisent pas sont écartés. */
 function aiaVisuels(mixed $demandes, int $sid, ?int $qid): array
 {
     $out = [];
@@ -974,7 +974,7 @@ function ep_aia_modeles(): array
     $sid = aiaShop();
     if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant']; }
     aiaSchema();
-    $L = Db::rows('SELECT id, cree_le, nom, forme, donnees, ouvertures, ouvert_le FROM aia_modele WHERE shop_id = ? ORDER BY cree_le DESC LIMIT ' . AIA_MODELES_MAX, [$sid]);
+    $L = Db::rows('SELECT id, cree_le, nom, forme, donnees, ouvertures, ouvert_le FROM panel_aia_modele WHERE shop_id = ? ORDER BY cree_le DESC LIMIT ' . AIA_MODELES_MAX, [$sid]);
     return ['modeles' => array_map(static fn ($r) => ['id' => (int) $r['id'], 'nom' => $r['nom'], 'forme' => $r['forme'], 'donnees' => $r['donnees'],
         'creeLe' => substr((string) $r['cree_le'], 0, 10), 'ouvertures' => (int) $r['ouvertures']], $L)];
 }
@@ -987,16 +987,16 @@ function wr_aia_modele_enregistrer(): array
     $vid = ctype_digit((string) ($b['visuel'] ?? '')) ? (int) $b['visuel'] : 0;
     if ($sid <= 0 || $vid <= 0) { http_response_code(422); return ['error' => 'magasin ou visuel manquant']; }
     aiaSchema();
-    $v = Db::row('SELECT id, forme, donnees, titre, demande, cree_le FROM aia_visuel WHERE id = ? AND shop_id = ?', [$vid, $sid]);
+    $v = Db::row('SELECT id, forme, donnees, titre, demande, cree_le FROM panel_aia_visuel WHERE id = ? AND shop_id = ?', [$vid, $sid]);
     if ($v === null) { http_response_code(404); return ['error' => 'visuel inconnu pour ce magasin']; }
-    $n = (int) (Db::row('SELECT COUNT(*) n FROM aia_modele WHERE shop_id = ?', [$sid])['n'] ?? 0);
+    $n = (int) (Db::row('SELECT COUNT(*) n FROM panel_aia_modele WHERE shop_id = ?', [$sid])['n'] ?? 0);
     if ($n >= AIA_MODELES_MAX) { http_response_code(409); return ['error' => AIA_MODELES_MAX . ' modèles au plus : retirez-en un d’abord']; }
-    $deja = Db::row('SELECT id FROM aia_modele WHERE shop_id = ? AND visuel_id = ?', [$sid, $vid]);
+    $deja = Db::row('SELECT id FROM panel_aia_modele WHERE shop_id = ? AND visuel_id = ?', [$sid, $vid]);
     if ($deja !== null) { return ['ok' => true, 'id' => (int) $deja['id'], 'deja' => true]; }
     $nom = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($b['nom'] ?? ''))) ?: (string) $v['titre'], 0, 120);
     // La demande garde sa date d'enregistrement : c'est d'elle que la période glissera.
     $D = json_decode((string) $v['demande'], true);
-    Db::exec('INSERT INTO aia_modele (shop_id, cree_le, nom, forme, donnees, demande, visuel_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)',
+    Db::exec('INSERT INTO panel_aia_modele (shop_id, cree_le, nom, forme, donnees, demande, visuel_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)',
         [$sid, $nom, (string) $v['forme'], (string) $v['donnees'], json_encode(['demande' => $D, 'le' => substr((string) $v['cree_le'], 0, 10)], JSON_UNESCAPED_UNICODE), $vid]);
     $id = (int) Db::pdo()->lastInsertId();
     if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' : modèle « ' . $nom . ' » enregistré'); }
@@ -1008,14 +1008,14 @@ function ep_aia_modele_ouvrir(int $id): array
 {
     $sid = aiaShop();
     aiaSchema();
-    $m = $sid > 0 ? Db::row('SELECT id, nom, demande FROM aia_modele WHERE id = ? AND shop_id = ?', [$id, $sid]) : null;
+    $m = $sid > 0 ? Db::row('SELECT id, nom, demande FROM panel_aia_modele WHERE id = ? AND shop_id = ?', [$id, $sid]) : null;
     if ($m === null) { http_response_code(404); return ['error' => 'modèle inconnu pour ce magasin']; }
     $j = json_decode((string) $m['demande'], true);
     $D = is_array($j['demande'] ?? null) ? aiaDemande($j['demande']) : null;
     if ($D === null) { http_response_code(422); return ['error' => 'modèle illisible']; }
     $D = aiaGlisser($D, (string) ($j['le'] ?? date('Y-m-d')));
     try { $res = aiaVisuel($D, $sid); } catch (Throwable $e) { $res = 'lecture impossible pour le moment'; }
-    Db::exec('UPDATE aia_modele SET ouvertures = ouvertures + 1, ouvert_le = NOW() WHERE id = ?', [$id]);
+    Db::exec('UPDATE panel_aia_modele SET ouvertures = ouvertures + 1, ouvert_le = NOW() WHERE id = ?', [$id]);
     if (is_string($res)) { http_response_code(409); return ['error' => $res]; }
     $vid = aiaGarderVisuel(null, $sid, $D, $res);
     return ['modele' => ['id' => (int) $m['id'], 'nom' => (string) $m['nom']], 'visuel' => ['id' => $vid] + $res];
@@ -1027,7 +1027,7 @@ function wr_aia_modele_supprimer(int $id): array
     $b = body();
     $sid = ctype_digit((string) ($b['shop'] ?? '')) ? (int) $b['shop'] : 0;
     aiaSchema();
-    $n = $sid > 0 ? Db::exec('DELETE FROM aia_modele WHERE id = ? AND shop_id = ?', [$id, $sid]) : 0;
+    $n = $sid > 0 ? Db::exec('DELETE FROM panel_aia_modele WHERE id = ? AND shop_id = ?', [$id, $sid]) : 0;
     if ($n === 0) { http_response_code(404); return ['error' => 'modèle inconnu pour ce magasin']; }
     return ['ok' => true];
 }
@@ -1126,7 +1126,7 @@ function aiaPdfHtml(array $r, array $vis, array $sources, array $images, array $
 
 /**
  * POST /assistant/magasin/pdf {shop, question?, visuels?: [id], images?: {id: data-URI PNG}} → le PDF A4.
- * `question` : une réponse gardée (aia_question) et ses visuels ; `visuels` : un ou des visuels seuls (un modèle ouvert).
+ * `question` : une réponse gardée (panel_aia_question) et ses visuels ; `visuels` : un ou des visuels seuls (un modèle ouvert).
  * Les images sont les graphiques dessinés par l'écran ; sans elles, le PDF garde les tableaux.
  */
 function wr_aia_pdf(): array
@@ -1138,16 +1138,16 @@ function wr_aia_pdf(): array
     $qid = ctype_digit((string) ($b['question'] ?? '')) ? (int) $b['question'] : 0;
     $agents = (function_exists('amCoachs') ? amCoachs() : []) + ['professeur' => AIA_PROF];
     if ($qid > 0) {
-        $q = Db::row('SELECT id, cree_le, coach, question, reponse FROM aia_question WHERE id = ? AND shop_id = ?', [$qid, $sid]);
+        $q = Db::row('SELECT id, cree_le, coach, question, reponse FROM panel_aia_question WHERE id = ? AND shop_id = ?', [$qid, $sid]);
         $r = $q !== null ? json_decode((string) $q['reponse'], true) : null;
         if (!is_array($r)) { http_response_code(404); return ['error' => 'réponse inconnue pour ce magasin']; }
-        $V = Db::rows('SELECT id, resultat FROM aia_visuel WHERE question_id = ? AND shop_id = ? AND resultat IS NOT NULL ORDER BY id', [$qid, $sid]);
+        $V = Db::rows('SELECT id, resultat FROM panel_aia_visuel WHERE question_id = ? AND shop_id = ? AND resultat IS NOT NULL ORDER BY id', [$qid, $sid]);
         $meta = ['question' => (string) $q['question'], 'agent' => (string) ($agents[$q['coach']]['nom'] ?? $q['coach']), 'le' => date('d/m/Y à H:i', strtotime((string) $q['cree_le']))];
         $sources = aiaSources($r['sources'] ?? []);
     } else {
         $ids = array_values(array_filter(array_map('intval', is_array($b['visuels'] ?? null) ? array_slice($b['visuels'], 0, 4) : []), static fn ($x) => $x > 0));
         if ($ids === []) { http_response_code(422); return ['error' => 'réponse ou visuel manquant']; }
-        $V = Db::rows('SELECT id, resultat FROM aia_visuel WHERE shop_id = ? AND resultat IS NOT NULL AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY id', array_merge([$sid], $ids));
+        $V = Db::rows('SELECT id, resultat FROM panel_aia_visuel WHERE shop_id = ? AND resultat IS NOT NULL AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY id', array_merge([$sid], $ids));
         if ($V === []) { http_response_code(404); return ['error' => 'visuel inconnu pour ce magasin']; }
         $r = ['titre' => mb_substr(trim((string) ($b['titre'] ?? '')), 0, 120) ?: 'Mes modèles', 'resume' => 'Le modèle, refait avec les chiffres du jour.'];
         $meta = ['question' => 'Mes modèles', 'agent' => 'Mes modèles', 'le' => date('d/m/Y à H:i')];

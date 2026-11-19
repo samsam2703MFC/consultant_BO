@@ -21,10 +21,10 @@ tables, toutes sous le préfixe `mot_` (décision du 23/10/2026, Sam).
 |---|---|---|
 | `mot_reglage` | Ce que la marque et les franchisés règlent, et ce qui est gravé : une clé, une valeur JSON. | Jamais |
 | `mot_cache` | Ce qui se recalcule (fiches du mois, moyennes, catalogue, ventes du jour relues) : une clé, une valeur JSON. | Oui, sans rien perdre |
-| `mot_grand_prix` | Les grands prix de l'année, du réseau ou d'un magasin, une ligne chacun. | Jamais |
-| `mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `src/profil_employe.php`. | Jamais |
-| `mot_pointage` | Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `src/pointage.php`. | Jamais |
-| `mot_borne` | Les bornes de pointage des magasins : le jeton de leur lien, haché, et la dernière fois qu'elles ont été vues. | Jamais |
+| `panel_mot_grand_prix` | Les grands prix de l'année, du réseau ou d'un magasin, une ligne chacun. | Jamais |
+| `panel_mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `src/profil_employe.php`. | Jamais |
+| `panel_mot_pointage` | Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `src/pointage.php`. | Jamais |
+| `panel_mot_borne` | Les bornes de pointage des magasins : le jeton de leur lien, haché, et la dernière fois qu'elles ont été vues. | Jamais |
 
 ### `mot_reglage`
 
@@ -51,7 +51,7 @@ Les clés commencent par :
 - `planShop:<id>` — le planning d'un magasin lu à `GET /shops/{id}/schedule` pour l'app (cinq minutes,
   `src/planning_moi.php`).
 
-### `mot_grand_prix`
+### `panel_mot_grand_prix`
 
 | Colonne | Contenu |
 |---|---|
@@ -64,7 +64,7 @@ Les clés commencent par :
 | `actif` | Allumé ou éteint. |
 | `resultat` | Le classement gravé, trois jours après la fin de la saison. |
 
-### `mot_profil` (30/10/2026)
+### `panel_mot_profil` (30/10/2026)
 
 | Colonne | Contenu |
 |---|---|

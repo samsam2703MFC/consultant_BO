@@ -10,7 +10,7 @@ declare(strict_types=1);
  *                   envoyés) : une clé, une valeur JSON. Ne se vide jamais.
  *   mot_cache       ce qui se recalcule (fiches du mois, moyennes, catalogue, ventes du jour relues) : une clé, une
  *                   valeur JSON. Se vide sans rien perdre.
- *   mot_grand_prix  les grands prix de l'année, du réseau (la marque) ou d'un magasin (src/grands_prix.php).
+ *   panel_mot_grand_prix  les grands prix de l'année, du réseau (la marque) ou d'un magasin (src/grands_prix.php).
  *
  * Avant, tout vivait dans ceo_app_setting : la première lecture y reprend les clés du module puis les y efface
  * (motReprendre). setting() renvoie encore ici une clé du module, pour du code qui l'appellerait par habitude.
@@ -51,7 +51,7 @@ function motTables(): void
     }
     // Les grands prix de l'année (src/grands_prix.php) : une ligne par grand prix ; « resultat », le classement gravé
     // une fois la saison finie.
-    Db::exec('CREATE TABLE IF NOT EXISTS mot_grand_prix ('
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_mot_grand_prix ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'portee VARCHAR(10) NOT NULL,'              // reseau (la marque) ou magasin (un franchisé)
         . 'shop VARCHAR(20) NULL,'

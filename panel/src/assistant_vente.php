@@ -44,7 +44,7 @@ const AIV_QUESTIONS = [
     ],
 ];
 
-/** Les produits du magasin : prix, coût de recette, marge — gardés une heure (aia_cache). [id => fiche]. */
+/** Les produits du magasin : prix, coût de recette, marge — gardés une heure (panel_aia_cache). [id => fiche]. */
 function aivProduits(int $sid): array
 {
     $L = aiaCache('produits:' . $sid, 3600, static function () use ($sid) { return function_exists('pmProduits') ? pmProduits($sid) : null; });
@@ -258,7 +258,7 @@ function aivMargesPct(array $acc): array
 
 /**
  * Les marges par catégorie du magasin et du reste du réseau (les autres magasins actifs, chacun avec ses prix et ses
- * coûts), sur une période ; gardées une heure (aia_cache). ['moi' => acc, 'reseau' => acc, 'magasins' => n comptés].
+ * coûts), sur une période ; gardées une heure (panel_aia_cache). ['moi' => acc, 'reseau' => acc, 'magasins' => n comptés].
  */
 function aivMarges(int $sid, string $du, string $au, array $jours = [], ?int $hd = null, ?int $hf = null): array
 {

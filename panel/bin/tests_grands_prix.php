@@ -20,12 +20,12 @@ $GLOBALS['SQL'] = [];
 final class Db
 {
     public static array $tickets = [];
-    /** Les lignes de mot_grand_prix. */
+    /** Les lignes de panel_mot_grand_prix. */
     public static array $gps = [];
     public static function rows(string $sql, array $a = []): array
     {
         $GLOBALS['SQL'][] = $sql;
-        if (str_contains($sql, 'FROM mot_grand_prix')) {
+        if (str_contains($sql, 'FROM panel_mot_grand_prix')) {
             return array_values(array_filter(self::$gps, static fn ($r) => $a === [] || $r['portee'] === 'reseau' || $r['shop'] === $a[0]));
         }
         if (str_contains($sql, 'MAX(t.total_gross_amount_after_discount)')) { return self::$tickets; }

@@ -15,9 +15,9 @@ declare(strict_types=1);
  * remonte qu'au 01/08/2026 et serait trop lourd sur 18 mois dans ceo_app_setting : l'historique a ses tables,
  * compactes, interrogeables en SQL.
  *
- *   ceo_hist_jour     un jour-magasin lu : tickets, CA, la part des clients pro ; sa présence veut dire « jour lu »
- *   ceo_hist_heure    le même jour, heure par heure
- *   ceo_hist_produit  les produits vendus, heure par heure : quantité, ventes TTC, et la part des clients pro
+ *   panel_hist_jour     un jour-magasin lu : tickets, CA, la part des clients pro ; sa présence veut dire « jour lu »
+ *   panel_hist_heure    le même jour, heure par heure
+ *   panel_hist_produit  les produits vendus, heure par heure : quantité, ventes TTC, et la part des clients pro
  *
  * La moisson va d'hier vers le passé, tous les magasins actifs, par passes bornées (un budget de tickets et de
  * temps) : la nuit par bin/historique_moisson.php (cron posé par bin/deploy.sh, toutes les dix minutes de 20 h à
@@ -47,7 +47,7 @@ function hvSchema(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_hist_jour (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_hist_jour (
         shop_id INT NOT NULL,
         jour DATE NOT NULL,
         tickets INT NOT NULL,
@@ -58,7 +58,7 @@ function hvSchema(): void
         lu_le DATETIME NOT NULL,
         PRIMARY KEY (shop_id, jour), KEY k_jour (jour)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_hist_heure (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_hist_heure (
         shop_id INT NOT NULL,
         jour DATE NOT NULL,
         heure TINYINT NOT NULL,
@@ -68,7 +68,7 @@ function hvSchema(): void
         ca_pro DECIMAL(12,2) NOT NULL,
         PRIMARY KEY (shop_id, jour, heure)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_hist_produit (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_hist_produit (
         shop_id INT NOT NULL,
         jour DATE NOT NULL,
         heure TINYINT NOT NULL,
@@ -247,11 +247,11 @@ function hvEcrire(int $sid, string $j, array $tickets, array $produits, int $san
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        Db::exec('DELETE FROM ceo_hist_heure WHERE shop_id = ? AND jour = ?', [$sid, $j]);
-        Db::exec('DELETE FROM ceo_hist_produit WHERE shop_id = ? AND jour = ?', [$sid, $j]);
-        hvInserer('ceo_hist_heure', ['shop_id', 'jour', 'heure', 'tickets', 'ca', 'tickets_pro', 'ca_pro'], $lh);
-        hvInserer('ceo_hist_produit', ['shop_id', 'jour', 'heure', 'produit_id', 'portion_id', 'nom', 'quantite', 'ventes', 'quantite_pro', 'ventes_pro'], $lp);
-        Db::exec('INSERT INTO ceo_hist_jour (shop_id, jour, tickets, ca, tickets_pro, ca_pro, sans_lignes, lu_le) VALUES (?,?,?,?,?,?,?,NOW())
+        Db::exec('DELETE FROM panel_hist_heure WHERE shop_id = ? AND jour = ?', [$sid, $j]);
+        Db::exec('DELETE FROM panel_hist_produit WHERE shop_id = ? AND jour = ?', [$sid, $j]);
+        hvInserer('panel_hist_heure', ['shop_id', 'jour', 'heure', 'tickets', 'ca', 'tickets_pro', 'ca_pro'], $lh);
+        hvInserer('panel_hist_produit', ['shop_id', 'jour', 'heure', 'produit_id', 'portion_id', 'nom', 'quantite', 'ventes', 'quantite_pro', 'ventes_pro'], $lp);
+        Db::exec('INSERT INTO panel_hist_jour (shop_id, jour, tickets, ca, tickets_pro, ca_pro, sans_lignes, lu_le) VALUES (?,?,?,?,?,?,?,NOW())
                   ON DUPLICATE KEY UPDATE tickets = VALUES(tickets), ca = VALUES(ca), tickets_pro = VALUES(tickets_pro),
                   ca_pro = VALUES(ca_pro), sans_lignes = VALUES(sans_lignes), lu_le = VALUES(lu_le)',
             [$sid, $j, $tot[0], $tot[1], $tot[2], $tot[3], $sansLignes]);
@@ -275,7 +275,7 @@ function hvMoisson(int $budget = HV_BUDGET_NUIT, int $secondes = HV_MINUTES_NUIT
     $debut = hvDebut();
     $hier = date('Y-m-d', strtotime('-1 day'));
     $lus = [];
-    foreach (Db::rows('SELECT shop_id, jour FROM ceo_hist_jour WHERE jour >= ?', [$debut]) as $r) { $lus[(int) $r['shop_id'] . '|' . $r['jour']] = true; }
+    foreach (Db::rows('SELECT shop_id, jour FROM panel_hist_jour WHERE jour >= ?', [$debut]) as $r) { $lus[(int) $r['shop_id'] . '|' . $r['jour']] = true; }
     $t0 = microtime(true);
     $cout = 0; $faits = 0; $echecs = 0; $restants = 0; $arret = false; $plusAncien = null; $suite = 0;
     // Du plus récent au plus ancien : on interroge d'abord les derniers mois.
@@ -310,7 +310,7 @@ function ep_historique_etat(): array
         $mags[(int) $s['id']] = ['magasin' => (string) $s['name'], 'joursLus' => 0, 'depuis' => null, 'jusqua' => null, 'tickets' => 0, 'ticketsSansLignes' => 0];
     }
     foreach (Db::rows('SELECT shop_id, COUNT(*) n, MIN(jour) du, MAX(jour) au, SUM(tickets) t, SUM(sans_lignes) s
-                       FROM ceo_hist_jour WHERE jour >= ? GROUP BY shop_id', [$debut]) as $r) {
+                       FROM panel_hist_jour WHERE jour >= ? GROUP BY shop_id', [$debut]) as $r) {
         $sid = (int) $r['shop_id'];
         if (!isset($mags[$sid])) { continue; }
         $mags[$sid] = array_merge($mags[$sid], ['joursLus' => (int) $r['n'], 'depuis' => $r['du'], 'jusqua' => $r['au'],
@@ -382,7 +382,7 @@ function hvCouverture(array $shops, string $du, string $au, array $jours): array
     $fin = min($au, $hier);
     if ($fin < $du) { return ['lus' => 0, 'ouverts' => 0, 'attendus' => 0]; }
     [$w, $a] = hvFiltre($shops, $du, $fin, $jours);
-    $r = Db::row('SELECT COUNT(*) n, COALESCE(SUM(tickets > 0), 0) o FROM ceo_hist_jour WHERE ' . $w, $a) ?? ['n' => 0, 'o' => 0];
+    $r = Db::row('SELECT COUNT(*) n, COALESCE(SUM(tickets > 0), 0) o FROM panel_hist_jour WHERE ' . $w, $a) ?? ['n' => 0, 'o' => 0];
     return ['lus' => (int) $r['n'], 'ouverts' => (int) $r['o'], 'attendus' => hvJoursAttendus($du, $fin, $jours) * count($shops)];
 }
 
@@ -402,7 +402,7 @@ function hvHeures(array $shops, string $du, string $au, array $jours = [], ?int 
         [$w, $a] = hvFiltre($shops, $du, min($au, $hier), $jours);
         if ($hDebut !== null) { $w .= ' AND heure >= ?'; $a[] = $hDebut; }
         if ($hFin !== null) { $w .= ' AND heure < ?'; $a[] = $hFin; }
-        foreach (Db::rows('SELECT heure, SUM(tickets) t, SUM(ca) ca, SUM(tickets_pro) tp, SUM(ca_pro) cp FROM ceo_hist_heure WHERE ' . $w . ' GROUP BY heure', $a) as $r) {
+        foreach (Db::rows('SELECT heure, SUM(tickets) t, SUM(ca) ca, SUM(tickets_pro) tp, SUM(ca_pro) cp FROM panel_hist_heure WHERE ' . $w . ' GROUP BY heure', $a) as $r) {
             $h[(int) $r['heure']] = [(int) $r['t'], (float) $r['ca'], (int) $r['tp'], (float) $r['cp']];
         }
     }
@@ -441,7 +441,7 @@ function hvProduits(array $shops, string $du, string $au, array $jours = [], ?in
         if ($hDebut !== null) { $w .= ' AND heure >= ?'; $a[] = $hDebut; }
         if ($hFin !== null) { $w .= ' AND heure < ?'; $a[] = $hFin; }
         foreach (Db::rows('SELECT produit_id, portion_id, MAX(nom) nom, SUM(quantite) q, SUM(ventes) v, SUM(quantite_pro) qp, SUM(ventes_pro) vp
-                           FROM ceo_hist_produit WHERE ' . $w . ' GROUP BY produit_id, portion_id', $a) as $r) {
+                           FROM panel_hist_produit WHERE ' . $w . ' GROUP BY produit_id, portion_id', $a) as $r) {
             $p[(int) $r['produit_id'] . ':' . (int) $r['portion_id']] = [(int) $r['produit_id'], (int) $r['portion_id'], (string) $r['nom'],
                 (float) $r['q'], (float) $r['v'], (float) $r['qp'], (float) $r['vp']];
         }

@@ -27,7 +27,7 @@ declare(strict_types=1);
  * L'horloge : bmCron (bin/boite_cron.sh, toutes les 10 minutes) appelle amCron().
  *
  * L'ÉQUIPE (17/11/2026, les bundles du Coach Vente : « les adresses de l'équipe, une liste dans les Paramètres ») : les
- * personnes du magasin qui reçoivent la fiche d'une promotion lancée (src/franchise/bundles.php). Table pil_equipe_mail,
+ * personnes du magasin qui reçoivent la fiche d'une promotion lancée (src/franchise/bundles.php). Table panel_equipe_mail,
  * réglée boîte ouverte comme le reste (ce sont des adresses personnelles) :
  *   POST /dashboard/boite/equipe {shop, action: ajouter|retirer, nom, adresse, id}
  */
@@ -57,25 +57,25 @@ const AM_SMS_MAX = 306;        // deux SMS au plus (153 signes chacun en GSM)
 const AM_JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const AM_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
-/* --- le réglage (pil_auto_reglage) ------------------------------------------------------------------------------ */
+/* --- le réglage (panel_auto_reglage) ------------------------------------------------------------------------------ */
 
 function amTables(): void
 {
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_auto_reglage (shop_id VARCHAR(16) NOT NULL, auto VARCHAR(30) NOT NULL, actif TINYINT(1) NOT NULL DEFAULT 0,'
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_auto_reglage (shop_id VARCHAR(16) NOT NULL, auto VARCHAR(30) NOT NULL, actif TINYINT(1) NOT NULL DEFAULT 0,'
         . ' reglage TEXT NOT NULL, maj_le DATETIME NOT NULL, PRIMARY KEY (shop_id, auto), KEY k_actif (actif)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_equipe_mail (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_equipe_mail (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . ' nom VARCHAR(80) NOT NULL, adresse VARCHAR(190) NOT NULL, cree_le DATETIME NOT NULL, UNIQUE KEY u_adresse (shop_id, adresse)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
-/* --- l'équipe (pil_equipe_mail) ---------------------------------------------------------------------------------- */
+/* --- l'équipe (panel_equipe_mail) ---------------------------------------------------------------------------------- */
 
 /** L'équipe du magasin : [{id, nom, adresse}], par nom. */
 function amEquipe(string $shop): array
 {
-    try { amTables(); $L = Db::rows('SELECT id, nom, adresse FROM pil_equipe_mail WHERE shop_id = ? ORDER BY nom, id', [$shop]); }
+    try { amTables(); $L = Db::rows('SELECT id, nom, adresse FROM panel_equipe_mail WHERE shop_id = ? ORDER BY nom, id', [$shop]); }
     catch (Throwable $e) { return []; }
     return array_map(static fn ($r) => ['id' => (int) $r['id'], 'nom' => (string) $r['nom'], 'adresse' => (string) $r['adresse']], $L);
 }
@@ -96,12 +96,12 @@ function amEquipeEcrire(string $shop, array $c, array $b): array
     amTables();
     $action = (string) ($b['action'] ?? '');
     if ($action === 'retirer') {
-        Db::exec('DELETE FROM pil_equipe_mail WHERE shop_id = ? AND id = ?', [$shop, (int) ($b['id'] ?? 0)]);
+        Db::exec('DELETE FROM panel_equipe_mail WHERE shop_id = ? AND id = ?', [$shop, (int) ($b['id'] ?? 0)]);
     } elseif ($action === 'ajouter') {
         if (count(amEquipe($shop)) >= 40) { return bmErreur(422, 'Quarante personnes au plus.'); }
         [$nom, $a, $err] = amEquipeValider($b);
         if ($err !== null) { return bmErreur(422, $err); }
-        Db::exec('INSERT INTO pil_equipe_mail (shop_id, nom, adresse, cree_le) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE nom = VALUES(nom)', [$shop, $nom, $a]);
+        Db::exec('INSERT INTO panel_equipe_mail (shop_id, nom, adresse, cree_le) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE nom = VALUES(nom)', [$shop, $nom, $a]);
     } else {
         return bmErreur(422, 'action inconnue');
     }
@@ -111,7 +111,7 @@ function amEquipeEcrire(string $shop, array $c, array $b): array
 /** Le réglage d'une automatisation du magasin, le réglage de départ complété. */
 function amReglage(string $shop, string $auto): array
 {
-    $r = Db::row('SELECT actif, reglage FROM pil_auto_reglage WHERE shop_id = ? AND auto = ?', [$shop, $auto]);
+    $r = Db::row('SELECT actif, reglage FROM panel_auto_reglage WHERE shop_id = ? AND auto = ?', [$shop, $auto]);
     $g = $r !== null ? json_decode((string) $r['reglage'], true) : null;
     $out = array_merge(AM_RAPPEL, is_array($g) ? array_intersect_key($g, AM_RAPPEL) : []);
     $out['actif'] = $r !== null && (int) $r['actif'] === 1;
@@ -155,14 +155,14 @@ function amEcrire(string $shop, array $c, array $b): array
     if ($err !== null) { return bmErreur(422, $err); }
     $actif = (bool) $g['actif'];
     unset($g['actif']);
-    Db::exec('INSERT INTO pil_auto_reglage (shop_id, auto, actif, reglage, maj_le) VALUES (?, ?, ?, ?, NOW())
+    Db::exec('INSERT INTO panel_auto_reglage (shop_id, auto, actif, reglage, maj_le) VALUES (?, ?, ?, ?, NOW())
               ON DUPLICATE KEY UPDATE actif = VALUES(actif), reglage = VALUES(reglage), maj_le = NOW()',
         [$shop, $auto, $actif ? 1 : 0, json_encode($g, JSON_UNESCAPED_UNICODE)]);
     bmJeton();   // l'horloge (bin/boite_cron.sh) a besoin de son jeton
     $note = null;
     if ($auto === 'rappel_retrait' && $actif && !$actuel['actif']) {
         // Le rappel des offres converties (Boîte mail › Messages automatiques) ferait un second rappel : il s'éteint.
-        $n = Db::exec('UPDATE pil_boite_auto SET actif = 0, maj_le = NOW() WHERE shop_id = ? AND regle = ? AND actif = 1', [$shop, 'rappel']);
+        $n = Db::exec('UPDATE panel_boite_auto SET actif = 0, maj_le = NOW() WHERE shop_id = ? AND regle = ? AND actif = 1', [$shop, 'rappel']);
         if ($n) { $note = 'Le « Rappel la veille de la commande » des offres (Boîte mail › Messages automatiques) est éteint : celui-ci couvre toutes les commandes.'; }
     }
     if ($actif !== $actuel['actif']) { journalAdd('Magasin ' . $shop, 'Automatisations', null, '« ' . AM_AUTOS[$auto]['nom'] . ' » ' . ($actif ? 'allumé' : 'éteint')); }
@@ -255,7 +255,7 @@ function amTropRecente(array $o): bool
 function amJournalCommande(string $shop, string $cleBase): array
 {
     $out = [];
-    foreach (Db::rows('SELECT cle, envoye_le, erreur FROM pil_boite_journal WHERE shop_id = ? AND cle LIKE ?', [$shop, $cleBase . ':%']) as $r) {
+    foreach (Db::rows('SELECT cle, envoye_le, erreur FROM panel_boite_journal WHERE shop_id = ? AND cle LIKE ?', [$shop, $cleBase . ':%']) as $r) {
         $out[substr((string) $r['cle'], strlen($cleBase) + 1)] = ['le' => $r['envoye_le'], 'erreur' => $r['erreur']];
     }
     return $out;
@@ -272,9 +272,9 @@ function amEnvoyerRappel(string $shop, array $c, array $o, array $g): array
     foreach (['email' => $mail, 'sms' => $tel] as $canal => $a) {
         if (!$k[$canal]) { continue; }
         $cle = $base . ':' . $canal;
-        if (Db::row('SELECT id FROM pil_boite_journal WHERE shop_id = ? AND cle = ?', [$shop, $cle]) !== null) { $out[$canal] = 'déjà'; continue; }
+        if (Db::row('SELECT id FROM panel_boite_journal WHERE shop_id = ? AND cle = ?', [$shop, $cle]) !== null) { $out[$canal] = 'déjà'; continue; }
         $objet = $canal === 'email' ? amRemplir($g['objet'], $v) : 'SMS';
-        Db::exec('INSERT INTO pil_boite_journal (shop_id, regle, cle, destinataire, objet, envoye_le) VALUES (?, ?, ?, ?, ?, NOW())',
+        Db::exec('INSERT INTO panel_boite_journal (shop_id, regle, cle, destinataire, objet, envoye_le) VALUES (?, ?, ?, ?, ?, NOW())',
             [$shop, 'rappel_retrait', $cle, (string) $a, mb_substr($objet, 0, 255)]);
         $err = null;
         try {
@@ -285,7 +285,7 @@ function amEnvoyerRappel(string $shop, array $c, array $o, array $g): array
                 if (!$r['ok']) { $err = (string) $r['erreur']; }
             }
         } catch (Throwable $e) { $err = $e->getMessage(); }
-        if ($err !== null) { Db::exec('UPDATE pil_boite_journal SET erreur = ? WHERE shop_id = ? AND cle = ?', [mb_substr($err, 0, 255), $shop, $cle]); }
+        if ($err !== null) { Db::exec('UPDATE panel_boite_journal SET erreur = ? WHERE shop_id = ? AND cle = ?', [mb_substr($err, 0, 255), $shop, $cle]); }
         $out[$canal] = $err === null ? 'envoyé' : 'erreur';
     }
     return $out;
@@ -313,7 +313,7 @@ function amCron(): array
 {
     amTables();
     $rapport = [];
-    foreach (Db::rows('SELECT shop_id, auto FROM pil_auto_reglage WHERE actif = 1') as $r) {
+    foreach (Db::rows('SELECT shop_id, auto FROM panel_auto_reglage WHERE actif = 1') as $r) {
         $shop = (string) $r['shop_id'];
         $c = bmCompte($shop);
         if ($c === null) { $rapport[$shop][$r['auto']] = 'boîte non reliée'; continue; }
@@ -349,9 +349,9 @@ function amLire(string $shop, array $c): array
     }
     $journal = array_map(static fn ($r) => ['le' => $r['envoye_le'], 'canal' => str_ends_with((string) $r['cle'], ':sms') ? 'sms' : 'email',
         'commande' => (int) (explode(':', (string) $r['cle'])[1] ?? 0), 'objet' => $r['objet'], 'erreur' => $r['erreur']],
-        Db::rows('SELECT cle, objet, envoye_le, erreur FROM pil_boite_journal WHERE shop_id = ? AND regle = ? ORDER BY envoye_le DESC, id DESC LIMIT 30', [$shop, 'rappel_retrait']));
+        Db::rows('SELECT cle, objet, envoye_le, erreur FROM panel_boite_journal WHERE shop_id = ? AND regle = ? ORDER BY envoye_le DESC, id DESC LIMIT 30', [$shop, 'rappel_retrait']));
     $h = setting('boiteHorloge', []);
-    $offres = Db::row('SELECT actif FROM pil_boite_auto WHERE shop_id = ? AND regle = ?', [$shop, 'rappel']);
+    $offres = Db::row('SELECT actif FROM panel_boite_auto WHERE shop_id = ? AND regle = ?', [$shop, 'rappel']);
     return [
         'shop' => $shop, 'boite' => $c['adresse'], 'magasin' => $c['nom'], 'horloge' => is_array($h) ? ($h['le'] ?? null) : null,
         'equipe' => amEquipe($shop),

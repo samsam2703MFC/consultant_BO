@@ -123,7 +123,7 @@ function viOutilLire(string $k, int $sid, string $shop, string $auj, callable $d
         case 'tresorerie':
             // Le plan du dashboard magasin (src/franchise/tresorerie.php) : sa dernière mise à jour, et les quatre derniers
             // dimanches passés — le solde réel de chaque semaine est rangé sous son lundi (`reel`).
-            $r = Db::row('SELECT donnees, maj_le FROM pil_tresorerie_plan WHERE shop_id = ?', [$shop]);
+            $r = Db::row('SELECT donnees, maj_le FROM panel_tresorerie_plan WHERE shop_id = ?', [$shop]);
             if ($r === null) { return ['etat' => 'ko', 'texte' => 'aucun plan de trésorerie ouvert']; }
             $d = json_decode((string) $r['donnees'], true); $reel = is_array($d['reel'] ?? null) ? $d['reel'] : [];
             $lundi = date('Y-m-d', strtotime($auj . ' -' . ((int) date('N', strtotime($auj)) - 1) . ' days'));
@@ -164,7 +164,7 @@ function viOutilLire(string $k, int $sid, string $shop, string $auj, callable $d
                     . ($q && (int) $q['n'] > 0 ? ' · contrôle qualité ' . str_replace('.', ',', (string) round((float) $q['m'], 1)) . ' / 5' : '')];
         case 'soir':
             // La revue du soir du dashboard magasin (src/revue_soir.php) : les soirs clôturés sur les 30 derniers.
-            $t = Db::row("SELECT SUM(statut = 'cloturee') n, MAX(CASE WHEN statut = 'cloturee' THEN jour END) derniere FROM ceo_revue_soir WHERE id_shop = ? AND jour >= ?", [$sid, $il30]);
+            $t = Db::row("SELECT SUM(statut = 'cloturee') n, MAX(CASE WHEN statut = 'cloturee' THEN jour END) derniere FROM panel_revue_soir WHERE id_shop = ? AND jour >= ?", [$sid, $il30]);
             $n = (int) ($t['n'] ?? 0);
             return ['etat' => $n >= 22 ? 'ok' : ($n >= 8 ? 'att' : 'ko'),
                 'texte' => 'clôturée ' . $n . ' soir' . ($n > 1 ? 's' : '') . ' sur 30' . (!empty($t['derniere']) ? ' · la dernière le ' . $dm((string) $t['derniere']) : '')];

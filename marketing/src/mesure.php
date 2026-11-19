@@ -1598,7 +1598,7 @@ function ensureMatiereCode(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_matiere_code (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_matiere_code (
         code VARCHAR(64) NOT NULL PRIMARY KEY,
         matiere_id INT NOT NULL,
         sku VARCHAR(64) NULL,
@@ -1616,7 +1616,7 @@ function rcCodes(): array
     $out = [];
     try {
         ensureMatiereCode();
-        foreach (Db::rows('SELECT code, matiere_id FROM ceo_matiere_code') as $r) { $out[(string) $r['code']] = (string) $r['matiere_id']; }
+        foreach (Db::rows('SELECT code, matiere_id FROM panel_matiere_code') as $r) { $out[(string) $r['code']] = (string) $r['matiere_id']; }
     } catch (PDOException $e) { /* table absente : rien d'appris */ }
     return $out;
 }
@@ -1636,7 +1636,7 @@ function wr_matiere_code(): array
     if ($mid <= 0) { http_response_code(422); return ['error' => 'il manque la matière']; }
     $maintenant = date('Y-m-d H:i:s');
     ensureMatiereCode();
-    Db::exec('INSERT INTO ceo_matiere_code (code, matiere_id, sku, nom, shop_id, cree_le, maj_le) VALUES (?,?,?,?,?,?,?)
+    Db::exec('INSERT INTO panel_matiere_code (code, matiere_id, sku, nom, shop_id, cree_le, maj_le) VALUES (?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE matiere_id = VALUES(matiere_id), sku = VALUES(sku), nom = VALUES(nom), shop_id = VALUES(shop_id), maj_le = VALUES(maj_le)',
         [$code, $mid, mb_substr((string) ($b['sku'] ?? ''), 0, 64) ?: null, mb_substr((string) ($b['nom'] ?? ''), 0, 255) ?: null,
          (int) ($b['shopId'] ?? 0) ?: null, $maintenant, $maintenant]);
@@ -1649,7 +1649,7 @@ function ensureReclamationPhotos(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_reclamation_photo (
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_reclamation_photo (
         id INT AUTO_INCREMENT PRIMARY KEY,
         reclamation_id INT NOT NULL,
         shop_id INT NOT NULL,
@@ -1665,7 +1665,7 @@ function rcPhotosDe(int $shop): array
     $out = [];
     try {
         ensureReclamationPhotos();
-        foreach (Db::rows('SELECT reclamation_id, chemin FROM ceo_reclamation_photo WHERE shop_id = ? ORDER BY id', [$shop]) as $r) {
+        foreach (Db::rows('SELECT reclamation_id, chemin FROM panel_reclamation_photo WHERE shop_id = ? ORDER BY id', [$shop]) as $r) {
             $out[(int) $r['reclamation_id']][] = (string) $r['chemin'];
         }
     } catch (PDOException $e) { /* table absente : pas de photo locale */ }
@@ -1764,7 +1764,7 @@ function wr_reclamation_creer(): array
         try {
             ensureReclamationPhotos();
             foreach ($poses as $c) {
-                Db::exec('INSERT INTO ceo_reclamation_photo (reclamation_id, shop_id, chemin, cree_le) VALUES (?,?,?,?)',
+                Db::exec('INSERT INTO panel_reclamation_photo (reclamation_id, shop_id, chemin, cree_le) VALUES (?,?,?,?)',
                     [(int) ($id ?? 0), $shopId, $c, date('Y-m-d H:i:s')]);
             }
         } catch (PDOException $e) { /* les liens sont déjà dans la description */ }

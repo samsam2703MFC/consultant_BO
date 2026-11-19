@@ -30,11 +30,11 @@ final class Db
         if (self::$p === null) {
             self::$p = new PDO('sqlite::memory:');
             self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            self::$p->exec('CREATE TABLE mot_pointage (id INTEGER PRIMARY KEY AUTOINCREMENT, emp INT, shop INT, jour TEXT, entree TEXT, sortie TEXT NULL,
+            self::$p->exec('CREATE TABLE panel_mot_pointage (id INTEGER PRIMARY KEY AUTOINCREMENT, emp INT, shop INT, jour TEXT, entree TEXT, sortie TEXT NULL,
                 entree_par TEXT, sortie_par TEXT NULL, sortie_validee_par TEXT NULL, sortie_validee_le TEXT NULL, prevu_debut TEXT NULL, prevu_fin TEXT NULL,
                 hors_planning INT DEFAULT 0, cree TEXT DEFAULT CURRENT_TIMESTAMP, maj TEXT DEFAULT CURRENT_TIMESTAMP)');
             // La table d'avant la clé de caisse : sans « sorte », que ptgTables() ajoute.
-            self::$p->exec('CREATE TABLE mot_borne (id INTEGER PRIMARY KEY AUTOINCREMENT, shop INT, nom TEXT, jeton_hash TEXT UNIQUE, actif INT DEFAULT 1,
+            self::$p->exec('CREATE TABLE panel_mot_borne (id INTEGER PRIMARY KEY AUTOINCREMENT, shop INT, nom TEXT, jeton_hash TEXT UNIQUE, actif INT DEFAULT 1,
                 cree TEXT DEFAULT CURRENT_TIMESTAMP, vue_le TEXT NULL)');
             self::$p->exec('CREATE TABLE shops (id INT, active INT)');
             self::$p->exec('INSERT INTO shops VALUES (2,1),(4,1),(5,1),(9,0)');
@@ -45,7 +45,7 @@ final class Db
     public static function row(string $sql, array $a = []): ?array { return self::rows($sql, $a)[0] ?? null; }
     public static function exec(string $sql, array $a = []): int
     {
-        if (str_starts_with($sql, 'CREATE TABLE IF NOT EXISTS mot_')) { return 0; }
+        if (str_starts_with($sql, 'CREATE TABLE IF NOT EXISTS panel_mot_')) { return 0; }
         $sql = str_replace("ADD COLUMN sorte VARCHAR(10) NOT NULL DEFAULT 'ecran'", "ADD COLUMN sorte TEXT NOT NULL DEFAULT 'ecran'", $sql);
         $s = self::pdo()->prepare($sql); $s->execute($a); return $s->rowCount();
     }
@@ -115,28 +115,28 @@ verifie('journée coupée : 12:00 trop tôt pour le service de 15 h', ptgService
 echo "\nArrivée, départ\n";
 $GLOBALS['PLAN'] = [12 => ['2026-10-30' => [['07:00', '15:00', 4]], '2026-10-31' => [['08:00', '16:00', 4]]], 11 => []];
 $r = ptgPointer(12, 4, 'qr', $t('2026-10-31 07:10'));
-verifie('07:10 : trop tôt, rien d’enregistré', $r === ['motif' => 'trop_tot', 'a_partir_de' => '07:30'] && Db::row('SELECT COUNT(*) n FROM mot_pointage')['n'] == 0);
+verifie('07:10 : trop tôt, rien d’enregistré', $r === ['motif' => 'trop_tot', 'a_partir_de' => '07:30'] && Db::row('SELECT COUNT(*) n FROM panel_mot_pointage')['n'] == 0);
 $r = ptgPointer(12, 4, 'qr', $T0);
 verifie('07:58 : l’arrivée, à l’heure, le service figé', $r['sens'] === 'arrivee' && $r['pointage']['entree'] === '07:58' && $r['pointage']['arrivee'] === 'a_l_heure'
     && $r['pointage']['prevu'] === ['debut' => '08:00', 'fin' => '16:00'] && $r['pointage']['shop_name'] === 'Halle' && $r['pointage']['etat'] === 'en_service', json_encode($r));
 $r = ptgPointer(12, 4, 'qr', $T0 + 50);
-verifie('un second scan dans les deux minutes : « déjà »', $r['sens'] === 'deja' && Db::row('SELECT COUNT(*) n FROM mot_pointage')['n'] == 1);
+verifie('un second scan dans les deux minutes : « déjà »', $r['sens'] === 'deja' && Db::row('SELECT COUNT(*) n FROM panel_mot_pointage')['n'] == 1);
 $r = ptgPointer(12, 4, 'qr', $t('2026-10-31 16:04'));
 verifie('16:04 : le départ, 8 h 06', $r['sens'] === 'depart' && $r['pointage']['sortie'] === '16:04' && $r['pointage']['duree_min'] === 486 && $r['pointage']['etat'] === 'fait');
 $r = ptgPointer(12, 4, 'qr', $t('2026-10-31 16:05'));
-verifie('le départ scanné deux fois : « déjà », pas de nouvelle journée', $r['sens'] === 'deja' && Db::row('SELECT COUNT(*) n FROM mot_pointage')['n'] == 1);
+verifie('le départ scanné deux fois : « déjà », pas de nouvelle journée', $r['sens'] === 'deja' && Db::row('SELECT COUNT(*) n FROM panel_mot_pointage')['n'] == 1);
 $GLOBALS['PLAN'][11] = ['2026-10-31' => [['08:00', '16:00', 4]]];
 verifie('08:04 : encore à l’heure (5 min de grâce)', ptgPointer(11, 4, 'qr', $t('2026-10-31 08:04'))['pointage']['arrivee'] === 'a_l_heure');
-Db::exec('DELETE FROM mot_pointage WHERE emp = 11');
+Db::exec('DELETE FROM panel_mot_pointage WHERE emp = 11');
 $r = ptgPointer(11, 4, 'code', $t('2026-10-31 08:12'));
 verifie('08:12 : 12 min de retard, par le code', $r['pointage']['arrivee'] === 'retard' && $r['pointage']['retard_min'] === 12
-    && Db::row('SELECT entree_par FROM mot_pointage WHERE emp = 11')['entree_par'] === 'code');
+    && Db::row('SELECT entree_par FROM panel_mot_pointage WHERE emp = 11')['entree_par'] === 'code');
 $r = ptgPointer(11, 5, 'qr', $t('2026-11-01 10:00'));      // dimanche, rien au planning ; la veille reste ouverte depuis plus de 16 h
 verifie('sans service : hors planning ; la veille ouverte reste « départ non pointé »', $r['sens'] === 'arrivee' && $r['pointage']['arrivee'] === 'hors_planning'
-    && Db::row('SELECT COUNT(*) n FROM mot_pointage WHERE emp = 11 AND sortie IS NULL')['n'] == 2);
+    && Db::row('SELECT COUNT(*) n FROM panel_mot_pointage WHERE emp = 11 AND sortie IS NULL')['n'] == 2);
 
 echo "\nUn départ oublié\n";
-Db::exec("INSERT INTO mot_pointage (emp, shop, jour, entree, entree_par, prevu_debut, prevu_fin) VALUES (12, 4, '2026-10-30', '2026-10-30 06:57:00', 'qr', '07:00', '15:00')");
+Db::exec("INSERT INTO panel_mot_pointage (emp, shop, jour, entree, entree_par, prevu_debut, prevu_fin) VALUES (12, 4, '2026-10-30', '2026-10-30 06:57:00', 'qr', '07:00', '15:00')");
 $id = (int) Db::pdo()->lastInsertId();
 $GLOBALS['IDENT'] = ['emp' => 12, 'nom' => 'Bram Claes'];
 $GLOBALS['CORPS'] = ['id' => $id, 'heure' => '06:00'];
@@ -175,32 +175,32 @@ $_GET = ['du' => '2026-10-26', 'au' => '2026-11-01'];
 verifie('sans magasin : le premier', ep_pointages_equipe($t('2026-10-31 18:00'))['shop'] === 2);
 $GLOBALS['CORPS'] = ['id' => $id];
 wr_pointages_valider();
-$v = Db::row('SELECT * FROM mot_pointage WHERE id = ?', [$id]);
+$v = Db::row('SELECT * FROM panel_mot_pointage WHERE id = ?', [$id]);
 verifie('validé : au journal, plus « à valider »', !empty($v['sortie_validee_le']) && ptgVueLigne($v, [], $t('2026-10-31 18:00'))['etat'] === 'fait' && count($GLOBALS['JOURNAL']) === 1);
 wr_pointages_valider();
 verifie('valider deux fois : 404', http_response_code() === 404);
 http_response_code(200);
-Db::exec("UPDATE mot_pointage SET sortie = '2026-10-30 14:00:00', sortie_par = 'declare', sortie_validee_le = NULL WHERE id = ?", [$id]);
+Db::exec("UPDATE panel_mot_pointage SET sortie = '2026-10-30 14:00:00', sortie_par = 'declare', sortie_validee_le = NULL WHERE id = ?", [$id]);
 $GLOBALS['CORPS'] = ['id' => $id, 'refuser' => true];
 wr_pointages_valider();
-verifie('refusé : redevient « départ non pointé »', Db::row('SELECT sortie FROM mot_pointage WHERE id = ?', [$id])['sortie'] === null);
+verifie('refusé : redevient « départ non pointé »', Db::row('SELECT sortie FROM panel_mot_pointage WHERE id = ?', [$id])['sortie'] === null);
 
 echo "\nLes bornes\n";
 $GLOBALS['CORPS'] = ['shop' => 4, 'nom' => 'Tablette du comptoir'];
 $b = wr_pointage_borne_creer();
-verifie('créée : un jeton, jamais gardé en clair', strlen($b['jeton']) >= 30 && Db::row('SELECT jeton_hash FROM mot_borne')['jeton_hash'] === hash('sha256', $b['jeton'])
-    && Db::row('SELECT COUNT(*) n FROM mot_borne WHERE jeton_hash = ?', [$b['jeton']])['n'] == 0);
+verifie('créée : un jeton, jamais gardé en clair', strlen($b['jeton']) >= 30 && Db::row('SELECT jeton_hash FROM panel_mot_borne')['jeton_hash'] === hash('sha256', $b['jeton'])
+    && Db::row('SELECT COUNT(*) n FROM panel_mot_borne WHERE jeton_hash = ?', [$b['jeton']])['n'] == 0);
 $_GET = ['b' => $b['jeton']];
 $B = ep_pointage_borne($T0);
 verifie('la page de la borne : le QR et le code du moment, le magasin', $B['qr'] === ptgQr(4, $tr) && $B['code'] === ptgCode(4, $tr) && $B['magasin'] === 'Halle'
-    && $B['reste'] >= 1 && $B['reste'] <= 30 && Db::row('SELECT vue_le FROM mot_borne')['vue_le'] !== null);
+    && $B['reste'] >= 1 && $B['reste'] <= 30 && Db::row('SELECT vue_le FROM panel_mot_borne')['vue_le'] !== null);
 $_GET = ['b' => 'pas-un-jeton-valable-du-tout-123'];
 ep_pointage_borne($T0);
 verifie('un autre jeton : 404', http_response_code() === 404);
 http_response_code(200);
 $_GET = ['shop' => '4'];
 verifie('la liste des bornes, sans jeton', ep_pointage_bornes()['bornes'][0]['nom'] === 'Tablette du comptoir' && !isset(ep_pointage_bornes()['bornes'][0]['jeton']));
-$GLOBALS['CORPS'] = ['id' => (int) Db::row('SELECT id FROM mot_borne')['id']];
+$GLOBALS['CORPS'] = ['id' => (int) Db::row('SELECT id FROM panel_mot_borne')['id']];
 wr_pointage_borne_retirer();
 $_GET = ['b' => $b['jeton']];
 ep_pointage_borne($T0);
@@ -208,19 +208,19 @@ verifie('retirée : son lien ne marche plus', http_response_code() === 404);
 http_response_code(200);
 
 echo "\nLa caisse : sa clé, le pointage au PIN\n";
-verifie('la colonne « sorte » ajoutée à la table d’avant', array_key_exists('sorte', (array) Db::row("SELECT * FROM mot_borne WHERE nom = 'Tablette du comptoir'")));
+verifie('la colonne « sorte » ajoutée à la table d’avant', array_key_exists('sorte', (array) Db::row("SELECT * FROM panel_mot_borne WHERE nom = 'Tablette du comptoir'")));
 $GLOBALS['CORPS'] = ['shop' => 4, 'sorte' => 'caisse'];
 $k = wr_pointage_borne_creer();
 verifie('une clé de caisse : sa sorte, son nom par défaut', $k['sorte'] === 'caisse' && $k['nom'] === 'Caisse' && strlen($k['jeton']) >= 30);
 $_GET = ['b' => $k['jeton']];
 verifie('la caisse lit le QR à montrer avec sa clé', ep_pointage_borne($T0)['qr'] === ptgQr(4, $tr));
-Db::exec('DELETE FROM mot_pointage');
+Db::exec('DELETE FROM panel_mot_pointage');
 $GLOBALS['CORPS'] = ['b' => $k['jeton'], 'emp' => 12];
 $r = wr_pointage_caisse($T0);
 verifie('PIN vérifié par la caisse : l’arrivée, au magasin de la clé, « par pin », avec le nom', http_response_code() === 200 && $r['sens'] === 'arrivee'
-    && $r['pointage']['shop'] === 4 && $r['nom'] === 'Bram Claes' && Db::row('SELECT entree_par FROM mot_pointage')['entree_par'] === 'pin', json_encode($r));
+    && $r['pointage']['shop'] === 4 && $r['nom'] === 'Bram Claes' && Db::row('SELECT entree_par FROM panel_mot_pointage')['entree_par'] === 'pin', json_encode($r));
 $r = wr_pointage_caisse($t('2026-10-31 16:02'));
-verifie('puis le départ', $r['sens'] === 'depart' && Db::row('SELECT sortie_par FROM mot_pointage')['sortie_par'] === 'pin');
+verifie('puis le départ', $r['sens'] === 'depart' && Db::row('SELECT sortie_par FROM panel_mot_pointage')['sortie_par'] === 'pin');
 $GLOBALS['CORPS'] = ['b' => $k['jeton'], 'emp' => 11];
 $r = wr_pointage_caisse($t('2026-10-31 07:10'));
 verifie('trop tôt : 422, à partir de 07:30', http_response_code() === 422 && $r['motif'] === 'trop_tot' && $r['a_partir_de'] === '07:30');
@@ -246,7 +246,7 @@ verifie('route de la caisse avant la session, CORS sur les deux routes de la bor
     && str_contains($index, "Access-Control-Allow-Origin: *") && str_contains($index, "if (\$method === 'OPTIONS') { http_response_code(204); exit; }"));
 
 echo "\nLa route de l'app\n";
-Db::exec('DELETE FROM mot_pointage');
+Db::exec('DELETE FROM panel_mot_pointage');
 $GLOBALS['IDENT'] = null;
 $GLOBALS['CORPS'] = ['lu' => $qr];
 wr_pointage_moi($T0);
@@ -260,7 +260,7 @@ http_response_code(200);
 $GLOBALS['CORPS'] = ['lu' => ptgQr(9, $tr)];
 $r = wr_pointage_moi($T0);
 verifie('le QR d’un magasin fermé : accepté pour son magasin (la signature fait foi)', http_response_code() === 200 && $r['pointage']['shop'] === 9);
-Db::exec('DELETE FROM mot_pointage');
+Db::exec('DELETE FROM panel_mot_pointage');
 $GLOBALS['CORPS'] = ['lu' => $qr];
 $r = wr_pointage_moi($T0);
 verifie('le QR de Halle : arrivée', http_response_code() === 200 && $r['sens'] === 'arrivee' && $r['pointage']['shop'] === 4);

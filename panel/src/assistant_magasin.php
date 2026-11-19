@@ -65,7 +65,7 @@ const AM_QUESTIONS = [
  * pointe, le ton est différent ; dans le cockpit : sur quoi il met l'accent, ce qu'il vérifie — par rapport au budget,
  * au trafic, aux tâches réalisées »). Le franchisé choisit le sien dans la modale ; le CEO règle chacun dans le cockpit
  * (ERP franchisé › Assistant coachs) : son ton, et pour chaque axe le poids (accent fort, suivi, n'en parle pas) et ce
- * qu'il vérifie. Le réglage `assistantCoachs` (aia_reglage, 17/11/2026 ; avant ceo_app_setting) recouvre les valeurs ci-dessous, champ par champ.
+ * qu'il vérifie. Le réglage `assistantCoachs` (panel_aia_reglage, 17/11/2026 ; avant ceo_app_setting) recouvre les valeurs ci-dessous, champ par champ.
  * Le personnage ne change que la manière de dire : les chiffres, les règles et le schéma restent les mêmes. Le Coach
  * porte un nom inventé (il ne parle au nom d'aucune personne réelle) et il est rude sans insulter : cette limite-là
  * n'est pas réglable, elle est écrite dans AM_SYSTEME.
@@ -938,7 +938,7 @@ function ep_assistant_questions(): array
  * POST /assistant/magasin {shop, question, ton, fil:[{q, r}], origine, conversation}
  *   → {reponse:{titre, resume, chiffres, points, priorites, conclusion, suites, visuels, sources}, question, luLe, modele, ton}.
  * `ton` : un coach ou « professeur » (le manuel, l'agent rapide). `conversation` : la clé du fil, tirée par le navigateur
- * (aia_conversation). Les visuels reviennent construits (chiffres relus, gardés dans aia_visuel), les sources avec le titre
+ * (panel_aia_conversation). Les visuels reviennent construits (chiffres relus, gardés dans panel_aia_visuel), les sources avec le titre
  * de chaque document.
  */
 function wr_assistant_magasin(): array
@@ -1025,7 +1025,7 @@ function wr_assistant_coachs(): array
 
 /* --- Les questions posées (12/11/2026, Sam : « garde toutes les demandes dans une table, pour après créer des agents
  * spécifiques ») ---------------------------------------------------------------------------------------------------
- * Chaque question part dans aia_question (17/11/2026 ; avant : ceo_assistant_question, reprise une fois) : le magasin,
+ * Chaque question part dans panel_aia_question (17/11/2026 ; avant : ceo_assistant_question, reprise une fois) : le magasin,
  * l'agent, d'où elle vient (tuile du bilan, liste toute prête, question de suite, question libre), son rang et sa
  * conversation, la réponse (JSON), le modèle, les jetons, la durée, les outils, les visuels — l'échec aussi, avec son
  * message. `theme` reste vide : il se remplira quand on rangera les questions pour décider des agents spécialisés. Les
@@ -1041,10 +1041,10 @@ function ep_assistant_questions_posees(): array
     $noms = [];
     foreach (fidMagasins() as $m) { $noms[(int) $m['id']] = (string) $m['nom']; }
     $C = amCoachs() + ['professeur' => AIA_PROF];
-    $tot = Db::row('SELECT COUNT(*) n, COUNT(DISTINCT shop_id) mags, SUM(erreur IS NOT NULL) ko, ROUND(AVG(duree_ms)) ms, SUM(jetons_sortie) sortie FROM aia_question WHERE cree_le >= ?', [$du]) ?: [];
-    $par = static fn (string $col) => Db::rows("SELECT $col k, COUNT(*) n FROM aia_question WHERE cree_le >= ? GROUP BY $col ORDER BY n DESC", [$du]);
-    $top = Db::rows('SELECT LOWER(question) q, MIN(question) libelle, COUNT(*) n, COUNT(DISTINCT shop_id) mags, MAX(cree_le) dernier FROM aia_question WHERE cree_le >= ? GROUP BY LOWER(question) ORDER BY n DESC, dernier DESC LIMIT 15', [$du]);
-    $der = Db::rows('SELECT id, cree_le, shop_id, coach, origine, rang, question, erreur, duree_ms FROM aia_question WHERE cree_le >= ? ORDER BY id DESC LIMIT 60', [$du]);
+    $tot = Db::row('SELECT COUNT(*) n, COUNT(DISTINCT shop_id) mags, SUM(erreur IS NOT NULL) ko, ROUND(AVG(duree_ms)) ms, SUM(jetons_sortie) sortie FROM panel_aia_question WHERE cree_le >= ?', [$du]) ?: [];
+    $par = static fn (string $col) => Db::rows("SELECT $col k, COUNT(*) n FROM panel_aia_question WHERE cree_le >= ? GROUP BY $col ORDER BY n DESC", [$du]);
+    $top = Db::rows('SELECT LOWER(question) q, MIN(question) libelle, COUNT(*) n, COUNT(DISTINCT shop_id) mags, MAX(cree_le) dernier FROM panel_aia_question WHERE cree_le >= ? GROUP BY LOWER(question) ORDER BY n DESC, dernier DESC LIMIT 15', [$du]);
+    $der = Db::rows('SELECT id, cree_le, shop_id, coach, origine, rang, question, erreur, duree_ms FROM panel_aia_question WHERE cree_le >= ? ORDER BY id DESC LIMIT 60', [$du]);
     return [
         'jours' => $j,
         'total' => (int) ($tot['n'] ?? 0), 'magasins' => (int) ($tot['mags'] ?? 0), 'echecs' => (int) ($tot['ko'] ?? 0),

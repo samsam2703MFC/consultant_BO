@@ -23,7 +23,7 @@ final class Db
     public static function rows(string $sql, array $a = []): array
     {
         if (str_contains($sql, 'FROM shops')) { return array_map(static fn ($i) => ['id' => $i, 'name' => 'magasin ' . $i], self::$shops); }
-        if (str_contains($sql, 'FROM ceo_hist_heure')) {
+        if (str_contains($sql, 'FROM panel_hist_heure')) {
             [$shops, $hd, $hf] = self::filtres($sql, $a);
             $out = [];
             foreach ($shops as $sid) {
@@ -40,7 +40,7 @@ final class Db
 
     public static function row(string $sql, array $a = []): ?array
     {
-        if (str_contains($sql, 'FROM ceo_hist_jour')) {
+        if (str_contains($sql, 'FROM panel_hist_jour')) {
             [$shops] = self::filtres($sql, $a);
             $o = count(array_filter($shops, static fn ($s) => (self::$heures[$s] ?? []) !== []));
             return ['n' => count($shops), 'o' => $o];

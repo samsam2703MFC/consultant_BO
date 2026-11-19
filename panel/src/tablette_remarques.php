@@ -21,7 +21,7 @@ declare(strict_types=1);
  *
  * L'API est ouverte (auth désactivée en production, comme tout le cockpit) : le
  * plafond de 200 remarques par magasin et par jour borne ce qu'un appel abusif
- * pourrait remplir. Table : ceo_tablette_remarque (installer.php,
+ * pourrait remplir. Table : panel_tablette_remarque (installer.php,
  * ensureTabletteRemarques).
  */
 
@@ -46,7 +46,7 @@ function wr_tablette_remarque_creer(): array
 
     // Déjà reçue : la tablette renvoie ce qu'elle n'a pas vu acquitté. Vérifié
     // avant le plafond — une remarque gardée ne doit pas se faire refuser.
-    if (Db::row('SELECT id FROM ceo_tablette_remarque WHERE id = ?', [$id]) !== null) {
+    if (Db::row('SELECT id FROM panel_tablette_remarque WHERE id = ?', [$id]) !== null) {
         return ['ok' => true, 'id' => $id, 'doublon' => true];
     }
 
@@ -82,7 +82,7 @@ function wr_tablette_remarque_creer(): array
     $recu = new DateTimeImmutable('now');
     $saisie = trmSaisie($b['saisieLe'] ?? null, $recu);
 
-    $deja = (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_tablette_remarque WHERE shop_id <=> ? AND recu_le >= ?',
+    $deja = (int) (Db::row('SELECT COUNT(*) AS n FROM panel_tablette_remarque WHERE shop_id <=> ? AND recu_le >= ?',
         [$shop, $recu->format('Y-m-d 00:00:00')])['n'] ?? 0);
     if ($deja >= TRM_PAR_JOUR) {
         return trmRefus(429, 'trop de remarques pour ce magasin aujourd’hui (' . TRM_PAR_JOUR . ' au plus par jour)');
@@ -90,7 +90,7 @@ function wr_tablette_remarque_creer(): array
 
     $ip = substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64);
     try {
-        Db::exec('INSERT INTO ceo_tablette_remarque (id, shop_id, shop_brut, type, texte, langue, saisie_le, recu_le, traitee, traitee_le, ip)
+        Db::exec('INSERT INTO panel_tablette_remarque (id, shop_id, shop_brut, type, texte, langue, saisie_le, recu_le, traitee, traitee_le, ip)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)',
             [$id, $shop, $brut, $type, $texte, $langue, $saisie->format('Y-m-d H:i:s'), $recu->format('Y-m-d H:i:s'), $ip !== '' ? $ip : null]);
     } catch (PDOException $e) {
@@ -122,9 +122,9 @@ function ep_tablette_remarques(): array
 
     $where = 'saisie_le >= ?' . ($s !== '' ? ' AND shop_id = ?' : '');
     $p = $s !== '' ? [$depuis, $s] : [$depuis];
-    $c = Db::row('SELECT COUNT(*) AS n, COALESCE(SUM(traitee = 0), 0) AS nt FROM ceo_tablette_remarque WHERE ' . $where, $p);
+    $c = Db::row('SELECT COUNT(*) AS n, COALESCE(SUM(traitee = 0), 0) AS nt FROM panel_tablette_remarque WHERE ' . $where, $p);
     $rows = Db::rows('SELECT id, shop_id, shop_brut, type, texte, langue, saisie_le, recu_le, traitee, traitee_le
-                      FROM ceo_tablette_remarque WHERE ' . $where . '
+                      FROM panel_tablette_remarque WHERE ' . $where . '
                       ORDER BY saisie_le DESC, recu_le DESC LIMIT ' . TRM_LISTE_MAX, $p);
 
     $noms = trmMagasins(array_filter(array_column($rows, 'shop_id'), static fn ($v) => $v !== null));
@@ -157,10 +157,10 @@ function wr_tablette_remarque_traiter(string $id): array
     $t = $b['traitee'] ?? null;
     if (!in_array($t, [true, false, 0, 1], true)) { return trmRefus(400, 'traitee attendu : true ou false'); }
     $t = (bool) $t;
-    $r = Db::row('SELECT shop_id, shop_brut, type, traitee FROM ceo_tablette_remarque WHERE id = ?', [$id]);
+    $r = Db::row('SELECT shop_id, shop_brut, type, traitee FROM panel_tablette_remarque WHERE id = ?', [$id]);
     if ($r === null) { return trmRefus(404, 'remarque inconnue'); }
     if (((int) $r['traitee'] === 1) !== $t) {
-        Db::exec('UPDATE ceo_tablette_remarque SET traitee = ?, traitee_le = ? WHERE id = ?',
+        Db::exec('UPDATE panel_tablette_remarque SET traitee = ?, traitee_le = ? WHERE id = ?',
             [$t ? 1 : 0, $t ? date('Y-m-d H:i:s') : null, $id]);
         $sid = $r['shop_id'] === null ? null : (string) $r['shop_id'];
         $nom = $sid !== null ? (trmMagasins([$sid])[$sid] ?? $sid)
