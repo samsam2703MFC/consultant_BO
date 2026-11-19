@@ -1198,7 +1198,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - **Titre de l'étape « Huit questions à se poser »** (19/11/2026, Sam : « huit questions à se poser, au lieu de une fois
   par an »), FR et NL (« Acht vragen om uzelf te stellen ») : 0.0.21 passe en v1.5 (l'étape s'appelait « Huit questions,
   une fois par an ») et 0.0.55 en v1.2 (« Huit questions sur le magasin »). Les deux restent « publiee » ; la source de
-  0.0.55 suit. 0.0.56 garde son titre d'origine « Huit questions, une fois par an ».
+  0.0.55 suit. 0.0.56 passe aussi en v1.2 avec ce titre (Sam : « oui, change aussi dans 0.0.56 »), et sa source
+  `dirigeant/art-valeur-franchise.json` suit. Le texte des étapes, « à se poser une fois par an », ne change pas.
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
