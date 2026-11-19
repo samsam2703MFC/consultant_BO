@@ -380,8 +380,9 @@ function prepVals(app, sv, id){
     titre: d.magasin.court + ' · ' + (t ? t.nom : '') + ' · ' + fmtDJ(v.prevu_le) + ' · ' + v.debut_h + '–' + finH(v.debut_h, v.duree_min) + ' · ' + (v.consultantNom || 'consultant à choisir'),
     roles: 'Prépare : ' + (d.roles.prepareNom || '—') + ' · dossier attendu le ' + fmtDJ(d.prepDu) + ' · adapte le rapport : ' + (d.roles.adapteNom || '—'),
     envoyee: d.tablette.envoyeeLe ? 'Envoyé sur la tablette le ' + fmtDH(d.tablette.envoyeeLe) + '. Un nouvel envoi remplace le dossier.' : null,
-    dossier: d.dossier.map(b => ({ titre: b.titre, source: BLOCS_LIB[b.cle] || '', lignes: b.lignes, motif: b.motif, alerte: b.alerte, interne: b.interne, inclus: !!F.blocs[b.cle],
-      basculer: () => maj({ blocs: Object.assign({}, F.blocs, { [b.cle]: !F.blocs[b.cle] }) }) })),
+    // Le bloc du fil du franchisé (b.cockpit) reste au cockpit : pas de case, il ne part jamais sur la tablette.
+    dossier: d.dossier.map(b => ({ titre: b.titre, source: BLOCS_LIB[b.cle] || '', lignes: b.lignes, motif: b.motif, alerte: b.alerte, interne: b.interne, cockpit: !!b.cockpit, inclus: !b.cockpit && !!F.blocs[b.cle],
+      basculer: b.cockpit ? null : () => maj({ blocs: Object.assign({}, F.blocs, { [b.cle]: !F.blocs[b.cle] }) }) })),
     types: d.types.filter(x => x.actif !== false).map(x => ({ v: x.code, nom: x.nom + (x.annoncee ? '' : ' · inopiné'), on: x.code === F.type })),
     setType: e => { const x = d.types.find(y => y.code === e.target.value); maj({ type: e.target.value, annoncee: x ? x.annoncee : F.annoncee }); },
     typeSous: t ? t.duree + ' min · ' + (t.dynamique === 'plans' ? 'checklist : les plans ouverts' : t.dynamique === 'ko' ? 'checklist : les non-conformes de la dernière visite' : pl(t.points, 'point')) : '',

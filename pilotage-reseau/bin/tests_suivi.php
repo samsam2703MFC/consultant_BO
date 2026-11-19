@@ -388,5 +388,12 @@ verifie('un modèle réécrit avant le 17/11 reçoit le bloc et le rappel avant 
 verifie('un modèle qui a déjà {rappel} reste tel quel', suModeleAvecRappel(['corps' => "A\n\n{rappel}\n\nB"])['corps'] === "A\n\n{rappel}\n\nB");
 verifie('l’aperçu du modèle montre un audit d’exemple et le rappel', str_contains(suRendre(suModele('rapport', 'de'), suOutilsExemple('de') + $vx, 'de')['texte'], 'keinerlei Entgegenkommen'));
 
+echo "\nLe dossier de la tablette\n";
+$blocsT = [['cle' => 'sante', 'lignes' => ['CA du mois'], 'cockpit' => false], ['cle' => 'msp', 'lignes' => []], ['cle' => 'meteo', 'lignes' => ['moral 4 / 5']],
+    ['cle' => 'fil', 'lignes' => ['18/11 · Problème de gestion · Invendus'], 'cockpit' => true]];
+verifie('par défaut : tout part, sauf le client mystère sans relevé et le fil du franchisé', array_column(suDossierTablette($blocsT, []), 'cle') === ['sante', 'meteo']);
+verifie('le fil du franchisé ne part jamais sur la tablette, même coché', !in_array('fil', array_column(suDossierTablette($blocsT, ['fil' => true, 'msp' => true]), 'cle'), true));
+verifie('un bloc retiré par le bureau ne part pas', array_column(suDossierTablette($blocsT, ['sante' => false]), 'cle') === ['meteo']);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

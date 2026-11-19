@@ -90,9 +90,9 @@ verifie('… et se referme quand elle y revient avec « ferme »', Db::row('SELE
 wr_fil_entree_suppr($c['entree']['num']);
 verifie('effacer l’entrée qui fermait le fil le rouvre', Db::row('SELECT resolu_le FROM pil_fil WHERE id = ?', [$fil])['resolu_le'] === null);
 
-$GLOBALS['corps'] = ['texte' => 'Encore à 0 € (vu au rapport).', 'tags' => ['gestion', 'produit', 'inconnue'], 'retirer' => [(int) $p['id']], 'visible' => true, 'le' => '2026-11-17T07:30'];
+$GLOBALS['corps'] = ['texte' => 'Encore à 0 € (vu au rapport).', 'tags' => ['gestion', 'produit', 'inconnue'], 'retirer' => [(int) $p['id']], 'le' => '2026-11-17T07:30'];
 $m = wr_fil_entree_maj($b['entree']['num']);
-verifie('modifier : texte, étiquettes connues, visibilité, date', ($m['ok'] ?? false) && $m['entree']['texte'] === 'Encore à 0 € (vu au rapport).' && $m['entree']['tags'] === ['gestion', 'produit'] && $m['entree']['visible'] === true && $m['entree']['le'] === '2026-11-17 07:30');
+verifie('modifier : texte, étiquettes connues, date', ($m['ok'] ?? false) && $m['entree']['texte'] === 'Encore à 0 € (vu au rapport).' && $m['entree']['tags'] === ['gestion', 'produit'] && $m['entree']['le'] === '2026-11-17 07:30');
 verifie('… et retirer une pièce efface aussi son fichier', $m['entree']['pieces'] === [] && !is_file($prive . '/fil/' . $p['fichier']));
 
 $avant = (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'];
@@ -166,6 +166,13 @@ verifie('la prochaine visite', ($som['prochaine']['le'] ?? '') === '2099-11-26' 
 echo "Le dossier de la visite\n";
 $ep = filEpinglees('5', '2026-11-01', '2026-11-30');
 verifie('les épinglées du magasin, entre deux dates', count($ep) === 1 && str_contains(filLignesDossier($ep)[0], 'Problème de gestion'));
+
+echo "Au cockpit seulement\n";
+require __DIR__ . '/../src/acces.php';
+verifie('aucune route du fil n’est ouverte au franchisé', !array_filter(['/fil', '/fil/magasins', '/fil/entrees', '/fil/entrees/3', '/fil/fils/2', '/fil/pieces/3'], 'accesRouteFranchise'));
+verifie('la table ne garde aucun drapeau « visible »', !in_array('visible', array_column(Db::rows('PRAGMA table_info(pil_fil_entree)'), 'name'), true));
+$GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Note interne.', 'visible' => true];
+verifie('« visible » envoyé quand même : ignoré, l’entrée reste interne', !array_key_exists('visible', wr_fil_entree_creer()['entree'] ?? ['visible' => 1]));
 
 // Le banc s'efface.
 foreach (glob($prive . '/fil/*') ?: [] as $x) { @unlink($x); }

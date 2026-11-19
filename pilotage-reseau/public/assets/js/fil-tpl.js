@@ -49,7 +49,7 @@ export function tplFil(c, x){
     ? `<div class="fil-deux"><div>${compo(V.form, x, tag)}${filtre}<div class="fil-fil">${(V.sections || []).map(s => section(s, V, x, tag)).join('')}</div></div>${cote(V, x, tag)}</div>`
     : calendrier(V, x, tag, filtre);
   return `<div data-screen="fil" class="fil">${cartes}${tete}${corps}
-    <p class="fil-pied">Le fil mêle ce que le cockpit sait déjà — visites, score, points décidés, rapports, client mystère, demandes du helpdesk — et ce que le bureau y dépose : notes, photos, captures, appels. Une entrée reste interne, sauf « le franchisé le voit ». Une entrée épinglée part dans le dossier de la prochaine visite (Visites, étape 3). Les photos et captures sont gardées dans le dossier privé du serveur.${V.demandesNote ? ' <span class="fil-or">' + esc(V.demandesNote) + '</span>' : ''}</p></div>`;
+    <p class="fil-pied">Le fil mêle ce que le cockpit sait déjà — visites, score, points décidés, rapports, client mystère, demandes du helpdesk — et ce que le bureau y dépose : notes, photos, captures, appels. Le fil est interne : il ne se lit que dans le cockpit, et le franchisé n’en voit rien — ni sur sa page, ni dans ses courriels, ni dans son rapport, ni sur la tablette de visite. Une entrée épinglée se rappelle au bureau dans le dossier de la prochaine visite (Visites, étape 3), sans partir sur la tablette. Les photos et captures sont gardées dans le dossier privé du serveur.${V.demandesNote ? ' <span class="fil-or">' + esc(V.demandesNote) + '</span>' : ''}</p></div>`;
 }
 
 /* --- le formulaire -------------------------------------------------------------------- */
@@ -69,7 +69,7 @@ function compo(f, x, tag){
       ${f.ferme ? `<label class="fil-coche"><input type="checkbox"${f.ferme.on ? ' checked' : ''} ${x.C(f.ferme.basculer)}>cette bonne action ferme le fil</label>` : ''}
       <small style="margin-left:8px">Le</small><input id="${f.idLe}" class="fil-select" type="datetime-local" max="${esc(f.leMax)}" value="${esc(f.le)}" ${x.C(f.poserLe)} title="Vide : maintenant"></div>
     <div class="fil-compo__pied"><label class="fil-joindre">${ico('trombone')}Photo ou capture<input type="file" accept="image/*" multiple ${x.C(f.choisirFichiers)} style="display:none"></label><button class="fil-sw${f.epingle.on ? ' is-on' : ''}" ${x.A(f.epingle.basculer)}><i></i>${esc(f.epingle.nom)}</button>
-      <button class="fil-sw${f.visible.on ? ' is-on' : ''}" ${x.A(f.visible.basculer)}><i></i>Le franchisé le voit</button>
+      <span class="fil-interne">${ico('cadenas')}interne : au cockpit seulement</span>
       <span class="fil-compo__fin">${msg}${f.annuler ? `<button class="btn btn--ghost btn--sm" ${x.A(f.annuler)}>Annuler</button>` : ''}${f.vider ? `<button class="btn btn--ghost btn--sm" ${x.A(f.vider)}>Vider</button>` : ''}
       <button class="btn ${f.edition ? 'btn--sm' : 'btn--primary'}" ${f.envoyer ? x.A(f.envoyer) : 'disabled'}>${f.envoi && f.envoi.enCours ? 'Envoi…' : (f.edition ? 'Enregistrer' : 'Ajouter au fil')}</button></span></div>
   </div>`;
@@ -89,7 +89,7 @@ function entree(e, V, x, tag, compact){
     const pied = [];
     if (e.fil) { pied.push(`<span>${ico('fil')}<button class="linklike" ${x.A(e.fil.voir)}>${esc(e.fil.titre)}</button> · ${e.fil.n} entrée${e.fil.n > 1 ? 's' : ''} · <span class="${e.fil.ouvert ? 'fil-ko' : 'fil-ok'}">${esc(e.fil.etat)}</span>${e.fil.ferme ? ' · <span class="fil-ok">cette entrée le ferme</span>' : ''}</span>`); }
     if (e.epingle) { pied.push(`<span class="fil-or">${ico('epingle')}${esc(e.epingle)}</span>`); }
-    pied.push(`<span class="fil-droite">${e.visible ? ico('oeil') + 'le franchisé le voit' : ico('cadenas') + 'interne'}</span>`);
+    pied.push(`<span class="fil-droite">${ico('cadenas')}interne</span>`);
     pied.push(`<span class="fil-actions"><button class="linklike" ${x.A(e.modifier)}>Modifier</button><button class="linklike" ${x.A(e.effacer)}>Effacer</button></span>`);
     corps = `<div class="fil-ent__corps"><div class="fil-ent__tete"><span class="fil-ent__type">${esc(e.typeNom)}</span><span class="fil-ent__qui">${esc(e.qui || '')}</span>${tags}</div>
       ${e.texte ? `<div class="fil-ent__txt">${esc(e.texte)}</div>` : ''}${pieces}<div class="fil-ent__pied">${pied.join('')}</div></div>`;
@@ -139,7 +139,7 @@ function cote(V, x, tag){
       ${V.filsResolus.length ? `<div class="fil-sep"></div><p class="fil-aide">${V.filsResolus.length} fil${V.filsResolus.length > 1 ? 's' : ''} résolu${V.filsResolus.length > 1 ? 's' : ''}${V.moyenneResolus != null ? ', en ' + V.moyenneResolus + ' jours en moyenne' : ''} · <button class="linklike" ${x.A(V.basculerResolus)}>${V.voirResolus ? 'replier' : 'les voir'}</button></p>
         ${V.voirResolus ? V.filsResolus.map(fil).join('') : ''}` : ''}</section>
     <section class="card"><h2>Prochaine visite</h2>${V.prochaine ? `<p class="fil-cote__p">${esc(V.prochaine.quand)} · ${esc(V.prochaine.qui || 'sans consultant')}</p>
-      <p class="fil-aide">${V.prochaine.epingles ? V.prochaine.epingles + ' entrée' + (V.prochaine.epingles > 1 ? 's' : '') + ' épinglée' + (V.prochaine.epingles > 1 ? 's' : '') + ' : elles partent dans son dossier (Visites, étape 3).' : 'Rien d’épinglé pour son dossier.'} <button class="linklike" ${x.A(V.prochaine.ouvrir)}>Ouvrir la visite</button></p>`
+      <p class="fil-aide">${V.prochaine.epingles ? V.prochaine.epingles + ' entrée' + (V.prochaine.epingles > 1 ? 's' : '') + ' épinglée' + (V.prochaine.epingles > 1 ? 's' : '') + ' : rappel au bureau dans son dossier (Visites, étape 3), jamais sur la tablette.' : 'Rien d’épinglé pour son dossier.'} <button class="linklike" ${x.A(V.prochaine.ouvrir)}>Ouvrir la visite</button></p>`
       : '<p class="fil-aide">Aucune visite planifiée.</p>'}</section>
   </aside>`;
 }
