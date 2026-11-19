@@ -493,7 +493,7 @@ $nextShipping = $next_shipping ?? [];
                     <div data-rk-pane="overview"></div>
                     <div class="rk-panel" data-rk-pane="timeline" hidden>
                         <h5>Wszystkie reklamacje na osi czasu</h5>
-                        <div class="rk-sub">wiersz = grupa produkcji · położenie = dzień zgłoszenia · wielkość = wartość reklamacji (ilość × cena kartonu z WDT) · kolor = decyzja</div>
+                        <div class="rk-sub">wiersz = grupa produkcji · położenie = dzień zgłoszenia · wielkość = wartość reklamacji (sztuki ÷ szt./kart. × cena kartonu z WDT) · kolor = decyzja</div>
                         <div class="rk-legend" data-rk-legend></div>
                         <div class="rk-plot" data-rk-plot></div>
                     </div>

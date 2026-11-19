@@ -3,7 +3,7 @@
  *  - « Przegląd » (makieta 15) : kafelki, reklamacje miesięcznie wg decyzji, wartość przyjęta miesięcznie, przyczyny,
  *    grupy produkcji (klik = filtr grupy), produkty z najwięcej reklamacjami ;
  *  - « Oś czasu » (makieta 16) : wszystkie reklamacje na osi czasu.
- * Wiersz = grupa produkcji produktu, położenie = dzień zgłoszenia, wielkość = wartość (ilość × cena kartonu z WDT),
+ * Wiersz = grupa produkcji produktu, położenie = dzień zgłoszenia, wielkość = wartość (sztuki ÷ szt./kart. × cena kartonu z WDT),
  * kolor = decyzja (przyjęta / odrzucona / otwarta). Najechanie → szczegóły, kliknięcie → reklamacja na liście.
  * Filtry : okres (3 mies., 12 mies., ten rok, wszystko), klient, grupa, decyzja. Pod osią : liczba reklamacji na miesiąc.
  */
@@ -96,7 +96,7 @@
 
     // --- Zakładki : Przegląd / Oś czasu -------------------------------------------------------------------------------
     const NOTES = {
-        overview: '<i class="bi bi-info-circle"></i> Najedź na słupek → liczby miesiąca ; kliknij grupę → filtr tej grupy. Wartość przyjęta = ilość przyjęta × cena kartonu z faktury WDT (jak raport miesięczny).',
+        overview: '<i class="bi bi-info-circle"></i> Najedź na słupek → liczby miesiąca ; kliknij grupę → filtr tej grupy. Wartość przyjęta = kartony przyjęte (sztuki ÷ szt./kart.) × cena kartonu z faktury WDT (jak raport miesięczny).',
         timeline: '<i class="bi bi-info-circle"></i> Najedź na punkt → szczegóły ; kliknij → reklamacja otwiera się na liście. Kilka reklamacji tego samego dnia w grupie = punkty jeden nad drugim.',
     };
     function render() {
@@ -139,7 +139,7 @@
         const curM = mKey(monthStart(TODAY));
         const tiles = `<div class="rk-tiles">
             <div class="rk-tile"><span>Reklamacje</span><b>${n}</b><small>${cnt.open} ${plural(cnt.open, 'otwarta', 'otwarte', 'otwartych')} · ${items.filter(c => c.day.slice(0, 7) === curM).length} w tym miesiącu</small></div>
-            <div class="rk-tile"><span>Wartość przyjęta</span><b>${nf(accVal)} €</b><small>ilość przyjęta × cena kartonu (WDT)</small></div>
+            <div class="rk-tile"><span>Wartość przyjęta</span><b>${nf(accVal)} €</b><small>kartony przyjęte × cena kartonu (WDT)</small></div>
             <div class="rk-tile"><span>Przyjęte</span><b>${decided ? Math.round(cnt.acc / decided * 100) + ' %' : '—'}</b><small>${cnt.acc} ${plural(cnt.acc, 'przyjęta', 'przyjęte', 'przyjętych')} · ${cnt.rej} ${plural(cnt.rej, 'odrzucona', 'odrzucone', 'odrzuconych')}</small></div>
             <div class="rk-tile"><span>Czas decyzji</span><b>${avgDd === null ? '—' : nf(avgDd, 1) + ' ' + (Math.abs(avgDd - 1) < .05 ? 'dzień' : 'dnia')}</b><small>średnio od zgłoszenia do decyzji${dd.length ? ` · ${dd.length} ${plural(dd.length, 'reklamacja', 'reklamacje', 'reklamacji')}` : ''}</small></div></div>`;
         if (!n) {

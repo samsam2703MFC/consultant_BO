@@ -401,8 +401,8 @@ class ComplaintService
 
     /**
      * [243] Reklamacje › Wykres (makieta 16) : wszystkie reklamacje na osi czasu — wiersz = grupa produkcji, dzień
-     * zgłoszenia, wartość (ilość × cena kartonu z WDT), decyzja (przyjęta / odrzucona / otwarta). Wartość przyjęta =
-     * ilość przyjęta × cena kartonu (jak raport miesięczny).
+     * zgłoszenia, wartość (sztuki ÷ szt./kart. × cena kartonu z WDT), decyzja (przyjęta / odrzucona / otwarta). Wartość
+     * przyjęta = sztuki przyjęte ÷ szt./kart. × cena kartonu (jak raport miesięczny).
      */
     public function chart(): array
     {
@@ -410,7 +410,8 @@ class ComplaintService
         $known = array_flip(array_column($groups, 'id'));
         $out = [];
         foreach ($this->complaintRepository->chartRows() as $r) {
-            $price = (float) ($r['single_purchase_price'] ?? 0);
+            // [362] Ilość w sztukach × cena sztuki (cena kartonu ÷ szt./kart.) — wcześniej sztuki × cena KARTONU (za dużo × ppc).
+            $price = (float) ($r['piece_price'] ?? 0);
             $qty = (float) ($r['product_quantity'] ?? 0);
             $status = (string) $r['status'];
             $nonProduct = ($r['complaint_type'] ?? 'PRODUCT') === 'NON_PRODUCT';
