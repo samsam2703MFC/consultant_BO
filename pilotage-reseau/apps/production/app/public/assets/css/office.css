@@ -161,3 +161,7 @@
 .office-search-go { font-style: normal; font-size: 28px; color: var(--k-muted); }
 .office-search-note { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--k-warn-50, #fdf1dc); color: #7a4a00; font-size: 17px; }
 .office-search .kiosk-row { justify-content: center; }
+
+/* [365] Remarque du jour à la sortie (facultative), reprise sur la feuille de temps du mois. */
+.office-daynote { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; }
+.office-daynote textarea { font-size: 17px; resize: vertical; min-height: 64px; }
