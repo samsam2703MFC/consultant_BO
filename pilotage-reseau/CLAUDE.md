@@ -27,6 +27,18 @@ lit par son API : `src/panel_api.php` et `src/erp_api.php`, avec des identifiant
 - On écrit en français : code commenté, messages de commit, interface. Les commits sont atomiques.
 - Une page autonome appelle son API à côté d'elle, en chemin relatif, et l'alias Apache la sert à la racine.
 
+## Mise en ligne : toujours depuis la branche par défaut (19/11/2026)
+La branche par défaut (`claude/new-session-deedox`) fait référence ; la branche de déploiement
+(`claude/deploiement-application-serveur-lmz1bm`) la suit et pointe sur le même commit. Pour mettre en ligne :
+1. le travail, avec sa ligne ajoutée à `deploy.trigger`, entre dans la branche par défaut par une PR fusionnée ;
+2. la branche de déploiement avance en avance rapide jusqu'au commit de fusion :
+   `git push origin <sha>:refs/heads/claude/deploiement-application-serveur-lmz1bm`. Le changement de
+   `deploy.trigger` lance la livraison ; un saut qui ne touche pas `deploy.trigger` ne livre rien.
+
+Jamais de commit, de fusion, de cherry-pick ni de push forcé directement sur la branche de déploiement. Si elle a des
+commits absents de la branche par défaut (l'avance rapide est refusée), les ramener d'abord dans la branche par
+défaut par une PR, puis avancer.
+
 ## Le cockpit franchisé (`/dashboard`)
 Le dashboard magasin : l'écran dans `public/dashboard/`, les modules serveur qui ne servent qu'à lui dans `src/franchise/`
 (lire `src/franchise/LISEZMOI.md`), le reste partagé avec le siège dans `src/`. L'index de son API :
