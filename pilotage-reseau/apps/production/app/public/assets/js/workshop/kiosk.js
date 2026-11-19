@@ -720,7 +720,9 @@
         const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0))
             && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier')) && (k !== 'bonus' || (session && session.bonus))
             && (k !== 'orders' || (session && session.orders)) && (k !== 'complaints' || (session && session.complaints > 0));
-        return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(shown).map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
+        // [358] Plus de 6 onglets : deux rangées (tablette en portrait) au lieu de libellés coupés.
+        const list = TABS.filter(shown);
+        return `<nav class="kiosk-tabs ${list.length > 6 ? 'is-many' : ''}" role="tablist" aria-label="${esc(t('tabs'))}">${list.map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}</nav>`;
     }
     function openTab(k, message) {
