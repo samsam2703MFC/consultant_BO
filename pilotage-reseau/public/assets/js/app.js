@@ -27,7 +27,7 @@ import { valsVisibilite, visibiliteBadge } from './visibilite-vals.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
 // Structure de gamme (11/11/2026) : le standard, les saisons, ce qui sort — un onglet du Planogramme, à côté de l'assortiment.
-import { valsStructure } from './structure-gamme.js';
+import { valsStructure, sgProposition } from './structure-gamme.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -2689,10 +2689,13 @@ class App {
       if (nReleve < 2) { inv.alertes.push(['info', 'Les inventaires d’octobre se calculent dès le prochain : le panel ne rend pas ses inventaires passés, le cockpit relève le stock toutes les cinq minutes depuis le ' + jf(R.depuis || '') + '. La copie du panel s’arrête au ' + inv.finCopie + ' : ce sont ces semaines-là qu’on lit pour l’instant.']); }
       // l'historique : une barre par semaine
       const H = (L.paires || []).slice().reverse();
+      // La matière expliquée (19/11/2026) : le même indicateur et les mêmes seuils que Matières ↔ recettes — le ton vient
+      // du serveur (invTauxTon), l'écran ne fait que le peindre.
+      const TON = { ok: 'ok', att: 'moy', ko: 'ko' };
       inv.histo = H.map(p => { const r = p.resume; const sansL = !!(r && r.nQualite > 0 && r.livraisons === 0); const j = r && !sansL ? r.justesse : null;
-        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
+        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · matière expliquée ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
           h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j)) * 0.8, val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
-          cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
+          cls: j == null ? 'na' : (TON[r.justesseTon] || 'na'), on: p.de === de && p.a === a,
           choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
     }
     // l'écart de la paire choisie
@@ -2708,9 +2711,9 @@ class App {
         const Q0 = E.qualite || [];
         const sansLivr0 = E.source === 'copie' && Q0.length > 0 && Q0.every(q => !q.livraisons);
         const j = sansLivr0 ? null : T.justesse;
-        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : (TON[T.justesseTon] || 'na'),
           sous: sansLivr0 ? 'aucune livraison enregistrée dans le panel sur la période : le stock n’a pas d’entrées, ses sorties ne se mesurent pas'
-            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, dont ' + fE(T.fiableCouvert) + ' expliqués par la caisse et la poubelle et ' + fE(T.manquant) + ' sans explication' };
+            : j == null ? 'rien n’est sorti du stock sur la période' : 'sur toutes les matières chiffrées : ' + fE(T.sortiPos) + ' sortis du stock, dont ' + fE(T.couvert) + ' expliqués par la caisse et la poubelle — le même chiffre que Matières ↔ recettes' };
         inv.kpi = [
           ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
           ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],
@@ -3922,7 +3925,12 @@ class App {
 
     const ed = S.refEdit;
     common.refEdit = ed ? {
-      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '', saisonTxt: ed.saisonTxt || '',
+      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '',
+      obligTxt: ed.obligTxt || '', panel: ed.panel || [], ancien: ed.ancien || '',
+      // Où corriger ce que la fiche ne tient pas : le panel (prix, durée de vie), la recette, l'assortiment.
+      voirPanel: ed.pwaId ? () => this.setState({ screen: 'paramProduits', ppPid: ed.pwaId, refEdit: null, catFiche: null }) : null,
+      voirRecettes: () => this.setState({ screen: 'verifRecettes', refEdit: null, catFiche: null }),
+      voirAssortiment: ed.mode === 'asso' ? null : () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(ed.nom), aoPop: null, refEdit: null, catFiche: null }),
       champs: ed.champs,
       set: k => e => this.setState(s2 => ({ refEdit: Object.assign({}, s2.refEdit,
         { champs: Object.assign({}, s2.refEdit.champs, { [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }) }) })),
@@ -4176,18 +4184,14 @@ class App {
       .map(f => ({ nom: f[1], on: (S.pdFenetre || 'mois') === f[0], choisir: () => this.pdChoisirFenetre(f[0]) }));
     const DEC = { garder: ['Garder', 'ok'], modifier: ['Modifier', 'a'], effacer: ['Effacer', 'ko'] };
     const nbOuv = c2.nbOuv || 1;
-    // Obligatoire ou pas, d'un geste (18/10/2026) : l'interrupteur de la ligne et la case de la fiche écrivent l'assortiment
-    // (toute l'année, le minimum gardé) ; retirer une obligatoire se confirme.
-    const basculerOblig = (p, nom) => () => {
-      const on = !p.must;
-      if (!on && !window.confirm('Retirer « ' + nom + ' » de l’assortiment obligatoire ?' + (p.saison != null ? ' Elle l’est pendant une saison.' : ''))) { this.setState({}); return; }
-      this.aoPoser(String(p.ref), on ? { must: true, saison: null, qmin: p.qmin || 0 } : { must: false },
-        '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
-    };
+    // L'obligatoire se règle à un seul endroit (19/11/2026, docs/audit-rail.md § 4.1) : Comptoir › Assortiment
+    // obligatoire, avec sa saison et son minimum. Le Catalogue le montre et y mène, la référence cherchée.
+    const voirAssortiment = nom => () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(nom), aoPop: null, catFiche: null });
     // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
     // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
-    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé. Le serveur
-    // met en page (POST /products/pareto.pdf).
+    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé — celui de
+    // la Structure de gamme depuis le 19/11/2026 (sgProposition), un seul calcul. Le serveur met en page
+    // (POST /products/pareto.pdf).
     common.catPareto = () => {
       const mPx = { mois: 1, trimestre: 3, annee: 12 }[S.pdFenetre || 'mois'] || 1;
       const vendues = L.filter(l => l.s && !l.sansVente && (l.s.ca || 0) > 0).sort((a, b) => b.s.ca - a.s.ca);
@@ -4197,23 +4201,18 @@ class App {
       for (const l of vendues) { top.push(l); cum += l.s.ca; if (cum >= 0.8 * caT) { break; } }
       let c3 = 0; const cumuls = vendues.map(l => (c3 += l.s.ca) / caT * 100);
       const courbe = Array.from({ length: 101 }, (_, k) => { const i = Math.round(k / 100 * n) - 1; return i < 0 ? 0 : Math.round(cumuls[Math.min(n - 1, i)] * 10) / 10; });
-      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie et l'assortiment
-      // proposé — le 20/80 de la catégorie, 6 classiques au score de la période, 2 saisonnières par saison au score des
-      // 12 derniers mois (`an` : leur saison y est, quelle que soit la période de l'écran).
-      const gamme = an => { const de = new Map(((an && an.base) || []).map(x => [String(x.id), x]));
-        return L.map(l => { const y = de.get(l.k), vend = y && !y.sansVente && (y.ca || 0) > 0;
-          return { k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0, mn: l.mnPct == null ? null : Math.round(l.mnPct),
-            score: l.score == null ? null : Math.round(l.score * 10) / 10, decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
-            saisonnier: !!l.saisonnier, saisons: l.saisons, scoreAn: vend ? Math.round(y.score * 10) / 10 : null, caAn: vend ? Math.round(y.ca) : 0 }; }); };
-      const saisons = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim(),
-        du: g.fenetre ? g.fenetre.du : null, au: g.fenetre ? g.fenetre.au : null }));
-      const douzeMois = () => (S.pdFenetre || 'mois') === 'annee' ? Promise.resolve(c2)
-        : (this._pdAnnee && Date.now() - this._pdAnnee.le < 3600000 ? Promise.resolve(this._pdAnnee.c)
-          : readOne('/products/scoring?fenetre=annee').then(d => { if (!Array.isArray(d)) { return null; } const c = this.pdCalcule(d); this._pdAnnee = { le: Date.now(), c }; return c; }).catch(() => null));
-      const envoyer = (px, an) => {
+      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie.
+      const gamme = () => L.map(l => ({ k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0,
+        mn: l.mnPct == null ? null : Math.round(l.mnPct), score: l.score == null ? null : Math.round(l.score * 10) / 10,
+        decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must) }));
+      // L'assortiment proposé : la Structure de gamme, lue si l'écran ne l'a pas encore fait.
+      const structure = () => (D.sgData && !D.sgData.indispo ? Promise.resolve(D.sgData)
+        : readOne('/produits/structure').then(d => { if (d && !d.indispo) { D.sgData = d; } return d; }).catch(() => null));
+      const obligDe = new Set((D.prodCatalogue || []).filter(p => p.must && p.pwaId).map(p => String(p.pwaId)));
+      const envoyer = (px, sg) => {
         const refs = new Map(((px && px.refs) || []).map(r => [String(r.pid), r]));
         const corps = { periode: c2.periode || '', periodePrix: px && px.periode ? px.periode : '', seuil: 80, caTotal: caT, totalRefs: n, courbe,
-          refs: gamme(an), saisons, saisonsLues: !!an, classiques: 6, parSaison: 2,
+          refs: gamme(), structure: sgProposition(sg, id => obligDe.has(id)),
           magasins: ((px && px.magasins) || []).map(m => ({ id: String(m.id), nom: m.court || court(m.nom) })),
           lignes: top.map(l => { const r = l.pid ? refs.get(String(l.pid)) : null;
             return { nom: l.nom, cat: l.catNom, ca: Math.round(l.s.ca), vol: Math.round(l.vol), prix: l.prix, mn: l.mnPct == null ? null : Math.round(l.mnPct),
@@ -4227,8 +4226,8 @@ class App {
       const px0 = (D.pxv || {})[mPx];
       const prix = px0 ? Promise.resolve(px0.indispo ? null : px0)
         : readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } return d && !d.indispo ? d : null; }).catch(() => null);
-      if (!px0 || ((S.pdFenetre || 'mois') !== 'annee' && !this._pdAnnee)) { this.notify('Lecture des prix par magasin et des 12 derniers mois…'); }
-      Promise.all([prix, douzeMois()]).then(([px, an]) => envoyer(px, an));
+      if (!px0 || !D.sgData) { this.notify('Lecture des prix par magasin et de la structure de gamme…'); }
+      Promise.all([prix, structure()]).then(([px, sg]) => envoyer(px, sg));
     };
     common.catLignes = F.slice(0, 250).map(l => ({
       k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
@@ -4241,7 +4240,7 @@ class App {
       rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '—' : l.rangC + ' / ' + l.nbC, rangCatNom: l.rangC == null ? '' : l.catNom,
       saison: l.saisonsTxt || (l.saisons.length ? 'saison du panel' : ''), saisonSeule: l.saisonnier,
       oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
-      basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,
+      voirOblig: l.p ? voirAssortiment(l.nom) : null,
       extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
       on: S.catFiche === l.k,
       ouvrir: () => this.setState({ catFiche: S.catFiche === l.k ? null : l.k, catOnglet: S.catOnglet || 'magasins' }) }));
@@ -4277,9 +4276,9 @@ class App {
       onglet,
       // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
       revue: s ? [1, 2, 3, 4, 5].map(n2 => ({ n: n2, pleine: s.revue != null && n2 <= s.revue, poser: () => this.pdPoserRevue(s.id, s.revue === n2 ? null : n2) })) : null,
-      // Une seule case (18/10/2026) : « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score.
+      // « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score : montrée ici, réglée dans l'assortiment.
       obligatoire: p ? !!p.must : null,
-      basculerObligatoire: p ? basculerOblig(p, l.nom) : null,
+      voirObligatoire: p ? voirAssortiment(l.nom) : null,
       detailScore: s ? () => this.pdOpenDetail(s.id) : null,
       ouvrirProduction: p ? () => this.refOpen(p, 'fiche') : null,
       comptoir: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(l.nom), psLibres: false, psSel: null }),
@@ -4334,14 +4333,27 @@ class App {
     }
     common.catFiche = fiche;
   }
-  /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
+  /**
+   * Ouvre l'édition d'une référence — fiche de production ou emplacement.
+   *
+   * La fiche ne tient plus que la fabrication (19/11/2026, docs/audit-rail.md § 4.1). Le prix, le coût matière et la
+   * durée de vie se lisent au panel et s'y corrigent ; l'obligatoire se règle dans l'assortiment. La fiche les montre
+   * et y mène, avec l'ancienne saisie du cockpit s'il y en avait une (plus lue, à reporter au panel si elle est juste).
+   */
   refOpen(p, mode){
     const sa = p.must && p.saison != null ? ((this.D.prodSaisons || {}).saisons || []).find(s => s.id === p.saison) : null;
-    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '',
-      saisonTxt: p.must && p.saison != null ? 'obligatoire pendant ' + (sa ? (sa.emoji ? sa.emoji + ' ' : '') + sa.nom : 'une saison') + ' — la saison se règle dans l’assortiment' : '',
-      champs: { must: !!p.must, qmin: p.qmin || 0, prep: p.prep || 0, cuisson: p.cuisson || 0,
+    const eur = v => v == null ? '—' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const SRC_PRIX = { boutiques: 'pratiqué en boutique', fiche: 'prix conseillé du panel' };
+    const anc = p.saisieCockpit || null;
+    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '', pwaId: p.pwaId || null,
+      obligTxt: p.must ? 'oui, ' + (p.saison != null ? 'pendant ' + (sa ? (sa.emoji ? sa.emoji + ' ' : '') + sa.nom : 'une saison') : 'toute l’année') + (p.qmin ? ' · minimum ' + p.qmin : '') : 'non',
+      panel: [['Prix de vente', eur(p.prix) + (p.prixSource ? ' · ' + (SRC_PRIX[p.prixSource] || p.prixSource) : '')],
+        ['Coût matière', p.mat == null ? 'pas de recette chiffrée' : eur(p.mat) + (p.matFiable === false ? ' · invraisemblable' : '')],
+        ['Durée de vie', p.dlv ? p.dlv + ' h' : '—']],
+      ancien: anc ? [anc.prix != null ? 'prix ' + eur(anc.prix) : '', anc.mat != null ? 'coût matière ' + eur(anc.mat) : '', anc.dlv ? 'DLV ' + anc.dlv + ' h' : '']
+        .filter(Boolean).join(' · ') : '',
+      champs: { prep: p.prep || 0, cuisson: p.cuisson || 0,
         fin: p.fin || 0, bmin: p.bmin || 0, bmult: p.bmult || 1, four: p.four || 0,
-        dlv: p.dlv || 0, mat: p.mat == null ? '' : p.mat, prix: p.prix == null ? '' : p.prix,
         profil: p.profil || '',
         zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
         slot: p.slot == null ? '' : p.slot } } });
