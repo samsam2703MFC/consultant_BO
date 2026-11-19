@@ -115,6 +115,7 @@ $INVENTAIRES = []; $ECARTS = []; $APPELS_ECART = 0;
 function svGrave(string $cle, array $v): void { Db::$reglages[$cle] = json_encode($v, JSON_UNESCAPED_UNICODE); }
 function invListe(int $sid): array { global $INVENTAIRES; return $INVENTAIRES[$sid] ?? []; }
 function invEcart(int $sid, string $de, string $a): ?array { global $ECARTS, $APPELS_ECART; $APPELS_ECART++; return $ECARTS[$sid . ':' . $de . ':' . $a] ?? null; }
+require __DIR__ . '/../src/inventaires_taux.php';
 require __DIR__ . '/../src/verification_matieres.php';
 require __DIR__ . '/../src/verification_ca.php';
 require __DIR__ . '/../src/verification_mouvements.php';
@@ -543,6 +544,18 @@ $_GET = ['du' => '2026-10-01', 'au' => '2026-12-31'];
 [$duM, $auM, $jsM] = vmoPeriode();
 verifie('la période s’arrête à aujourd’hui et à neuf semaines', $auM <= date('Y-m-d') && count($jsM) <= 63);
 $_GET = [];
+
+echo "La matière expliquée — un seul indicateur (inventaires_taux.php, 19/11/2026)\n";
+// Farine : 10 kg sortis, 9 expliqués ; beurre : 2 kg sortis, rien qui le consomme (recette manquante) ; sucre : vendu au-delà
+// de son stock (3 expliqués pour 1 sorti) — il ne rachète pas le manquant des autres ; sel : rien de sorti, ne compte pas.
+$A = [];
+invTauxAjoute($A, 10.0, 9.0, 1.0); invTauxAjoute($A, 2.0, 0.0, 5.0); invTauxAjoute($A, 1.0, 3.0, 2.0); invTauxAjoute($A, 0.0, 1.0, 9.0);
+verifie('sorties et couvert : la matière sans recette compte, l’excédent ne rachète rien', abs($A['sortiPos'] - 22.0) < 1e-9 && abs($A['couvert'] - 11.0) < 1e-9, json_encode($A));
+verifie('la matière expliquée : 50 %', invTaux($A) === 50.0);
+verifie('rien de sorti : pas de mesure', invTaux([]) === null && invTauxTon(null) === 'mu');
+verifie('les seuils : vert jusqu’à 3 % d’écart, orange jusqu’à 6 %, rouge au-delà', invTauxTon(97.0) === 'ok' && invTauxTon(96.9) === 'att' && invTauxTon(94.0) === 'att' && invTauxTon(93.9) === 'ko');
+$B = vmZero(); vmAjoute($B, ['d' => 0, 'e' => 0, 'f' => 0, 's' => 10.0, 'v' => 9.0, 'w' => 0.0, 'p' => 1.0]); vmAjoute($B, ['d' => 0, 'e' => 0, 'f' => 0, 's' => 2.0, 'v' => 0.0, 'w' => 0.0, 'p' => 5.0]); vmAjoute($B, ['d' => 0, 'e' => 0, 'f' => 0, 's' => 1.0, 'v' => 3.0, 'w' => 0.0, 'p' => 2.0]);
+verifie('Matières ↔ recettes rend le même chiffre et le même ton', vmTaux($B)['explication'] === 50.0 && vmTaux($B)['ton'] === invTauxTon(50.0), json_encode(vmTaux($B)));
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);

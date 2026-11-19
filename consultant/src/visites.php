@@ -1398,35 +1398,14 @@ function wr_msp_post(): array
     $mois = (string) ($b['mois'] ?? date('Y-m'));
     if (!preg_match('/^\d{4}-\d{2}$/', $mois)) { http_response_code(422); return ['error' => 'mois attendu AAAA-MM']; }
     // Un seul encodage (24/10/2026) : le rapport entre dans la table du scoring, un passage rangé dans son trimestre.
-    if (function_exists('suMspEnregistrer')) {
-        $rub = [];
-        foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) { if (is_numeric($v)) { $rub[(string) $k] = (float) $v; } }
-        if ($rub === []) { http_response_code(422); return ['error' => 'au moins une rubrique notée sur 20']; }
-        $r = suMspEnregistrer($shop, $mois === date('Y-m') ? date('Y-m-d') : $mois . '-01', null, null, $rub, (string) ($b['commentaires'] ?? ''), $b['fichier'] ?? null, true, viQui($b));
-        return !empty($r['error']) ? $r : ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
-    }
+    // L'ancienne écriture dans con_msp, jamais atteinte, est retirée (19/11/2026) : con_msp ne se lit plus que pour
+    // l'historique d'avant.
+    if (!function_exists('suMspEnregistrer')) { http_response_code(503); return ['error' => 'le module Suivi des franchisés n’est pas chargé']; }
     $rub = [];
-    foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) {
-        $k = mb_substr(trim((string) $k), 0, 40);
-        if ($k !== '' && is_numeric($v)) { $rub[$k] = round((float) $v, 1); }
-    }
-    $total = isset($b['total']) && is_numeric($b['total']) ? round((float) $b['total'], 1) : ($rub ? round(array_sum($rub) / count($rub), 1) : null);
-    $fichier = null;
-    if (!empty($b['fichier']) && preg_match('#^data:application/pdf;base64,(.+)$#s', (string) $b['fichier'], $m)) {
-        $bin = base64_decode($m[1], true);
-        if ($bin !== false && strlen($bin) <= 8 * 1024 * 1024 && str_starts_with($bin, '%PDF')) {
-            $dossier = __DIR__ . '/../../public/uploads/visites/msp';
-            if (is_dir($dossier) || @mkdir($dossier, 0775, true)) {
-                $nom = preg_replace('/[^\w-]/', '', $shop) . '-' . $mois . '.pdf';
-                if (@file_put_contents($dossier . '/' . $nom, $bin) !== false) { $fichier = 'uploads/visites/msp/' . $nom; }
-            }
-        }
-    }
-    Db::exec('INSERT INTO con_msp (shop_id, mois, total, rubriques, commentaires, fichier, par, le) VALUES (?,?,?,?,?,?,?,?)
-              ON DUPLICATE KEY UPDATE total = VALUES(total), rubriques = VALUES(rubriques), commentaires = VALUES(commentaires),
-              fichier = COALESCE(VALUES(fichier), fichier), par = VALUES(par), le = VALUES(le)',
-        [$shop, $mois, $total, json_encode($rub, JSON_UNESCAPED_UNICODE), mb_substr((string) ($b['commentaires'] ?? ''), 0, 2000) ?: null, $fichier, viQui($b), date('Y-m-d H:i:s')]);
-    return ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
+    foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) { if (is_numeric($v)) { $rub[(string) $k] = (float) $v; } }
+    if ($rub === []) { http_response_code(422); return ['error' => 'au moins une rubrique notée sur 20']; }
+    $r = suMspEnregistrer($shop, $mois === date('Y-m') ? date('Y-m-d') : $mois . '-01', null, null, $rub, (string) ($b['commentaires'] ?? ''), $b['fichier'] ?? null, true, viQui($b));
+    return !empty($r['error']) ? $r : ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
 }
 
 /** DELETE /msp/{id} */

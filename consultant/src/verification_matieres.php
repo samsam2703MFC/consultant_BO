@@ -37,7 +37,7 @@ const VM_SEMAINES_MAX = 12;       // semaines proposées par magasin
 const VM_RAPPORT = 6.0;           // vendu et sorti à plus de six fois l'un de l'autre : unité ou recette
 const VM_TOL_DEFAUT = ['pce' => 3.0, 'g' => 8.0, 'ml' => 8.0];
 const VM_BRUIT_EUR = 5.0;        // un écart de moins de 5 € au coût, ou d'une pièce au plus : du bruit de comptage
-const VM_SEUILS = [3.0, 6.0];     // écart matière (% du consommé) : vert ≤ 3 %, orange ≤ 6 % — comme le non expliqué
+const VM_SEUILS = INV_TAUX_SEUILS;   // écart matière : les seuils de la matière expliquée (inventaires_taux.php), un seul jeu
 const VM_AGE_INVENTAIRE = 8;      // jours : au-delà, l'inventaire hebdomadaire manque
 const VM_CAUSES = [
     'entree'     => 'Entrées non validées',
@@ -193,7 +193,7 @@ function vmAjoute(array &$a, array $l): void
     $p = (float) $l['p']; $e = $l['v'] + $l['w']; $x = $l['s'] - $e;
     $a['debut'] += $l['d'] * $p; $a['entrees'] += $l['e'] * $p; $a['fin'] += $l['f'] * $p; $a['sorties'] += $l['s'] * $p;
     $a['ventes'] += $l['v'] * $p; $a['poubelle'] += $l['w'] * $p; $a['explique'] += $e * $p; $a['ecart'] += $x * $p;
-    if ($l['s'] > 0) { $a['sortiPos'] += $l['s'] * $p; $a['couvert'] += min(max($e, 0.0), $l['s']) * $p; }
+    invTauxAjoute($a, (float) $l['s'], (float) $e, $p);   // la formule commune avec Entre deux inventaires (inventaires_taux.php)
     if ($x > 0) { $a['manquant'] += $x * $p; } else { $a['excedent'] += -$x * $p; }
 }
 
@@ -202,9 +202,9 @@ function vmTaux(array $a): array
 {
     $o = [];
     foreach ($a as $k => $v) { $o[$k] = is_float($v) ? round($v, 2) : $v; }
-    $o['explication'] = $a['sortiPos'] > 0 ? round(100 * $a['couvert'] / $a['sortiPos'], 1) : null;
+    $o['explication'] = invTaux($a);
     $o['ecartPct'] = $o['explication'] === null ? null : round(100 - $o['explication'], 1);
-    $o['ton'] = $o['ecartPct'] === null ? 'mu' : ($o['ecartPct'] <= VM_SEUILS[0] ? 'ok' : ($o['ecartPct'] <= VM_SEUILS[1] ? 'att' : 'ko'));
+    $o['ton'] = invTauxTon($o['explication']);
     return $o;
 }
 

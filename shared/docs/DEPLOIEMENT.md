@@ -361,7 +361,7 @@ base, clé `tabletteBook:…`) et `POST /api/cockpit/tablette/photos` — voir
 `shared/docs/contrat-api.md`. Les vignettes carrées 640 px (`<ref>-640c.jpg`) vivent sous
 `public/uploads/tablette/` (et, depuis le 06/11/2026, `public/uploads/sop/` : les photos des étapes envoyées par l’assistant de
 création des SOP) : créés et donnés à www-data par `shared/bin/deploy.sh`, hors
-git, et protégé du `rsync --delete` par l'exclusion de `shared/public/uploads`. Les
+git, et protégé du `rsync --delete` par l'exclusion de `/public` (le site assemblé, dont `public/uploads/`). Les
 photos d'origine restent sous `public/uploads/plano/panel/`, partagées avec le
 planogramme.
 

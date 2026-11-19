@@ -170,7 +170,7 @@ export function valsFF(app, common){
   const mu = s => '<span class="mu">' + esc(s) + '</span>';
   const nZ = (n, u) => n ? n + ' ' + u + (n > 1 ? 's' : '') : '';
   // Le réseau lit le scoring (/scoring) : le classement, ses règles et l'envoi du rapport A4.
-  if (onglet === 'reseau') { if (S.sqVue === 'msp') { app.state.sqVue = 'tableau'; } app.valsScoring(common); }
+  if (onglet === 'reseau') { app.valsScoring(common); }
   if (onglet === 'reseau' && f.tableau) {
     const sqm = (((S.sq || {}).d) || {}).magasins || [], parId = {};
     sqm.forEach((l, i) => { parId[String(l.id)] = (common.sqLignes || [])[i] || null; });

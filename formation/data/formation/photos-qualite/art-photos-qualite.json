@@ -1,0 +1,330 @@
+{
+ "id": "art-photos-qualite",
+ "code": "",
+ "type": "Article",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "statut": "a_valider",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": "10 min de lecture",
+ "titre": {
+  "fr": "Les photos de contrôle : bien cadrer, montrer ce qui compte, l’expliquer à l’équipe",
+  "nl": "Controlefoto’s: goed kaderen, tonen wat telt, het aan het team uitleggen"
+ },
+ "objectif": {
+  "fr": "Savoir cadrer une photo de contrôle qui prouve la tâche, savoir ce qu’elle doit montrer, et savoir l’expliquer à l’équipe.",
+  "nl": "Weten hoe men een controlefoto kadert die de taak bewijst, weten wat ze moet tonen, en weten hoe men het aan het team uitlegt."
+ },
+ "pour": {
+  "fr": "Toute l’équipe qui prend les photos de contrôle, et le responsable qui les explique (P1 à P12). À lire avec 0.0.33 et 0.0.51.",
+  "nl": "Het hele team dat de controlefoto’s neemt, en de verantwoordelijke die ze uitlegt (P1 tot P12). Te lezen met 0.0.33 en 0.0.51."
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Pourquoi une photo compte",
+    "nl": "Waarom een foto telt"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Une photo prouve, elle ne décrit pas",
+      "nl": "Een foto bewijst, ze beschrijft niet"
+     },
+     "texte": {
+      "fr": "La photo est la preuve qu’une tâche a été faite, au bon moment et au bon endroit.\nElle est comparée au planogramme et notée de 1 à 5 par un contrôleur. Une photo qui ne permet pas la comparaison ne prouve rien : le contrôleur le signale, même si le comptoir est bien tenu.",
+      "nl": "De foto is het bewijs dat een taak gedaan is, op het juiste moment en op de juiste plaats.\nZe wordt vergeleken met het planogram en door een controleur van 1 tot 5 beoordeeld. Een foto die geen vergelijking toelaat, bewijst niets: de controleur meldt het, ook al is de toonbank goed onderhouden."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Ce qu’un comptoir conforme montre",
+      "nl": "Wat een conforme toonbank toont"
+     },
+     "texte": {
+      "fr": "Un comptoir conforme est garni (pas de plateau ni d’emplacement vide), rangé, propre, et sans objet étranger à la vente : outil, ventilateur, carton, sac, chiffon, téléphone.",
+      "nl": "Een conforme toonbank is gevuld (geen lege plateau of lege plaats), netjes, schoon en zonder voorwerp dat niet met de verkoop te maken heeft: gereedschap, ventilator, karton, zak, doek, telefoon."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Cadrer : ce qu’on doit voir",
+    "nl": "Kaderen: wat men moet zien"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "De face, face aux produits",
+      "nl": "Recht van voor, tegenover de producten"
+     },
+     "texte": {
+      "fr": "La photo se prend de face, face aux produits, pour pouvoir être comparée au planogramme.\nDe biais, de trop loin, ou sur une partie seulement du comptoir : la comparaison devient impossible.",
+      "nl": "De foto wordt recht van voor genomen, tegenover de producten, zodat ze met het planogram vergeleken kan worden.\nSchuin, van te ver, of op maar een deel van de toonbank: de vergelijking wordt onmogelijk."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Tout le comptoir, d’un bord à l’autre",
+      "nl": "De hele toonbank, van kant tot kant"
+     },
+     "texte": {
+      "fr": "Le cadre couvre le comptoir entier. Un comptoir se garnit sur toute sa longueur : une place vide doit se voir sur la photo.",
+      "nl": "Het kader omvat de hele toonbank. Een toonbank wordt over de hele lengte gevuld: een lege plaats moet op de foto te zien zijn."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Ce qu’on veut voir sur la photo",
+      "nl": "Wat men op de foto wil zien"
+     },
+     "texte": {
+      "fr": "Les produits de la tâche (pains, viennoiseries, tartes, quiches…), en nombre.\nLeur sens et leur face visible, comme au planogramme.\nAucun objet étranger à la vente dans le cadre.",
+      "nl": "De producten van de taak (broden, viennoiserie, taarten, quiches…), in aantal.\nHun richting en zichtbare voorkant, zoals op het planogram.\nGeen enkel voorwerp dat niet met de verkoop te maken heeft in het kader."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les produits entamés ne sont pas un écart",
+      "nl": "Aangesneden producten zijn geen afwijking"
+     },
+     "texte": {
+      "fr": "Une tarte ou une quiche entamée n’est pas un écart : elles se vendent aussi au quart.",
+      "nl": "Een taart of quiche die is aangesneden, is geen afwijking: ze worden ook per kwart verkocht."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Prendre la photo",
+    "nl": "De foto nemen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Conseils de prise de vue (à valider)",
+      "nl": "Tips voor het nemen van de foto (te valideren)"
+     },
+     "texte": {
+      "fr": "Éviter les reflets : pas de flash contre une vitrine, ne pas se placer face à la lumière.\nToucher l’écran sur le comptoir pour faire la mise au point : une photo nette se lit.\nReculer plutôt que zoomer : le zoom déforme et coupe le comptoir.",
+      "nl": "Vermijd reflecties: geen flits tegen een vitrine, niet staan met het licht in de ogen.\nRaak het scherm aan op de toonbank om scherp te stellen: een scherpe foto is leesbaar.\nAchteruit gaan in plaats van zoomen: zoomen vervormt en snijdt de toonbank af."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Dans l’application",
+      "nl": "In de applicatie"
+     },
+     "texte": {
+      "fr": "Sur la tablette du contrôle, la photo est réduite, horodatée, sans données EXIF (article 0.0.51).\nUne photo refusée se reprend : elle n’est pas perdue, elle attend d’être refaite.",
+      "nl": "Op de controletablet wordt de foto verkleind, van een tijdstip voorzien, zonder EXIF-gegevens (artikel 0.0.51).\nEen geweigerde foto neemt men opnieuw: ze gaat niet verloren, ze wacht tot ze opnieuw gemaakt is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "L’expliquer à son équipe",
+    "nl": "Het aan het team uitleggen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Dire pourquoi, avant de dire comment",
+      "nl": "Eerst zeggen waarom, dan hoe"
+     },
+     "texte": {
+      "fr": "Une consigne sans pourquoi déclenche la résistance.\n« La photo du comptoir se prend de face, parce que c’est ainsi qu’on la compare au planogramme et que le contrôleur voit si le comptoir est garni » déclenche l’adhésion. Voir aussi « Donner le pourquoi » dans 0.0.55.",
+      "nl": "Een instructie zonder waarom roept weerstand op.\n« De foto van de toonbank wordt recht van voor genomen, omdat ze zo met het planogram wordt vergeleken en de controleur ziet of de toonbank gevuld is » roept instemming op. Zie ook « Het waarom geven » in 0.0.55."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Une démonstration au comptoir",
+      "nl": "Een demonstratie aan de toonbank"
+     },
+     "texte": {
+      "fr": "Montrer une bonne photo et une mauvaise, sur le vrai comptoir, avec le téléphone de la personne qui la prend.\nFaire reprendre la photo devant le responsable, jusqu’à ce qu’elle soit conforme.",
+      "nl": "Een goede en een slechte foto tonen, op de echte toonbank, met de telefoon van degene die de foto neemt.\nDe foto laten overnemen voor de verantwoordelijke, tot ze conform is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Le retour, le jour même",
+      "nl": "De terugkoppeling, dezelfde dag"
+     },
+     "texte": {
+      "fr": "Un retour se donne vite et précisément : ce qui est vu, ce qui manque, ce qu’on attend.\n« La photo est de biais, le comptoir des tartes n’est pas visible en entier : à refaire de face, tout le comptoir. » Un bon retour vaut aussi pour la photo réussie : « Photo claire, tout le comptoir est visible, c’est exactement ça. »",
+      "nl": "Een terugkoppeling geeft men snel en precies: wat er gezien wordt, wat ontbreekt, wat men verwacht.\n« De foto is schuin, de taartentoonbank is niet volledig zichtbaar: opnieuw van voor, de hele toonbank. » Een goede terugkoppeling geldt ook voor de geslaagde foto: « Heldere foto, de hele toonbank is zichtbaar, precies zo. »"
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Une photo mal faite est un point de formation",
+      "nl": "Een slechte foto is een opleidingspunt"
+     },
+     "texte": {
+      "fr": "On la refait, on explique, on vérifie la photo suivante. Personne n’est sanctionné pour une photo qu’il n’a pas encore appris à faire.",
+      "nl": "Men neemt ze opnieuw, men legt uit, men controleert de volgende foto. Niemand wordt gestraft voor een foto die hij nog niet heeft leren maken."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Une photo doit permettre la comparaison au planogramme : de face, tout le comptoir visible.",
+   "nl": "Een foto moet de vergelijking met het planogram toelaten: recht van voor, hele toonbank zichtbaar."
+  },
+  {
+   "fr": "Un comptoir conforme est garni, rangé, propre, sans objet étranger à la vente.",
+   "nl": "Een conforme toonbank is gevuld, netjes, schoon en zonder voorwerp dat niet met de verkoop te maken heeft."
+  },
+  {
+   "fr": "Expliquer le pourquoi avant le comment, puis refaire la photo devant l’équipe.",
+   "nl": "Eerst het waarom uitleggen, dan het hoe, en de foto voor het team opnieuw laten maken."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Où se prend la photo d’un comptoir ?",
+    "nl": "Waar neemt men de foto van een toonbank?"
+   },
+   "choix": {
+    "fr": [
+     "De biais, pour voir la profondeur",
+     "De face, face aux produits",
+     "De loin, pour voir toute la boutique"
+    ],
+    "nl": [
+     "Schuin, om de diepte te zien",
+     "Recht van voor, tegenover de producten",
+     "Van ver, om de hele winkel te zien"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Une tarte entamée sur le comptoir est-elle un écart ?",
+    "nl": "Is een aangesneden taart op de toonbank een afwijking?"
+   },
+   "choix": {
+    "fr": [
+     "Oui, toujours",
+     "Oui, si elle est dans la vitrine",
+     "Non : les tartes se vendent aussi au quart"
+    ],
+    "nl": [
+     "Ja, altijd",
+     "Ja, als ze in de vitrine ligt",
+     "Nee: taarten worden ook per kwart verkocht"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Que faut-il faire quand une photo ne permet pas la comparaison ?",
+    "nl": "Wat moet men doen als een foto geen vergelijking toelaat?"
+   },
+   "choix": {
+    "fr": [
+     "La supprimer",
+     "La refaire, de face, et dire pourquoi",
+     "Rien, la photo est acceptée"
+    ],
+    "nl": [
+     "Ze verwijderen",
+     "Ze opnieuw maken, van voor, en zeggen waarom",
+     "Niets, de foto wordt aanvaard"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "classement": {
+  "souscat": "D8.2",
+  "phases": [
+   "operationnel"
+  ],
+  "postes": [
+   "P1",
+   "P2",
+   "P3",
+   "P4",
+   "P5",
+   "P6",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-TRANS.Merchandising"
+  ],
+  "formations": [
+   "FO-04"
+  ],
+  "checklists": [
+   "1.1.02",
+   "1.3.02"
+  ]
+ }
+}

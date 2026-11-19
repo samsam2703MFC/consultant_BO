@@ -9,14 +9,14 @@ Ce qui sert à plusieurs domaines (règle de la réorganisation du 19/11/2026) :
   migrations (`migrations.php`, registre `reorg_tables.php`), et les monolithes qui servent tous les domaines :
   `endpoints.php` (lectures), `writes.php` (écritures), `installer.php` (création des tables, migrations en tête).
 - `public/` : la SPA du cockpit (`index.html`, `assets/js/app.js`, `templates.js`), le routeur de l'API
-  (`public/api/index.php`, servi à `/consulant_bo/api/cockpit/…` et `/formation/api/cockpit/…`), le design system.
-- `sql/schema.sql`, `sql/seed.sql`, `sql/grants.sql` ; `config/` (`config.php` hors Git) ; `db/migrations/`.
+  (`shared/public/api/index.php`, servi à `/consulant_bo/api/cockpit/…` et `/formation/api/cockpit/…`), le design system.
+- `shared/sql/schema.sql`, `shared/sql/seed.sql`, `shared/sql/grants.sql` ; `shared/config/` (`config.php` hors Git) ; `db/migrations/`.
 - `bin/` : `deploy.sh`, `migrer.php`, `assembler_public.php`, les tests transverses, la console des comptes.
 
 ## Stack
 - **Backend** : PHP ≥ 8.1, sans framework et sans Composer à la racine. PDO MySQL via `shared/src/Db.php`.
-- **Frontend** : HTML, CSS et JavaScript vanilla, sans compilation (sauf `marketing/public/assistant` et
-  `panel/public/tablette`, compilés ailleurs).
+- **Frontend** : HTML, CSS et JavaScript vanilla, sans compilation (sauf `panel/public/tablette`, compilé ailleurs ;
+  `marketing/public/assistant` n'est plus qu'un renvoi vers le Marketing).
 - **Base** : celle du panel (`atelierby_db`), partagée avec d'autres applications (panel TF Buddy, PWA consultant,
   CRM) : ne jamais toucher à leurs tables. Les tables se créent au premier appel (`CREATE TABLE IF NOT EXISTS`) ; les
   renommages passent par `shared/db/migrations/`, lancées en tête de `ensureInstalled()` et par `deploy.sh`.
@@ -26,6 +26,18 @@ Ce qui sert à plusieurs domaines (règle de la réorganisation du 19/11/2026) :
 - **Déploiement** : `.github/workflows/deploy.yml`, déclenché par un push de `shared/deploy.trigger` sur la branche de
   déploiement. Il lance `shared/bin/deploy.sh` en root sur le serveur : rsync de la racine du dépôt, `config.php`,
   migrations, site assemblé (`TARGET_DIR/public`), alias Apache, crons dans `/etc/cron.d`.
+
+## Mise en ligne : toujours depuis la branche par défaut (19/11/2026)
+La branche par défaut (`claude/new-session-deedox`) fait référence ; la branche de déploiement
+(`claude/deploiement-application-serveur-lmz1bm`) la suit et pointe sur le même commit. Pour mettre en ligne :
+1. le travail, avec sa ligne ajoutée à `shared/deploy.trigger`, entre dans la branche par défaut par une PR fusionnée ;
+2. la branche de déploiement avance en avance rapide jusqu'au commit de fusion :
+   `git push origin <sha>:refs/heads/claude/deploiement-application-serveur-lmz1bm`. Le changement de
+   `shared/deploy.trigger` lance la livraison ; un saut qui ne touche pas `shared/deploy.trigger` ne livre rien.
+
+Jamais de commit, de fusion, de cherry-pick ni de push forcé directement sur la branche de déploiement. Si elle a des
+commits absents de la branche par défaut (l'avance rapide est refusée), les ramener d'abord dans la branche par
+défaut par une PR, puis avancer.
 
 ## Règles
 - Aucune URL, clé, scope ou identifiant écrit en dur dans le code : `erp_cles`, environnement ou `config.php`.

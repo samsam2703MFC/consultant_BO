@@ -1,0 +1,279 @@
+{
+ "id": "art-gestion-semaine",
+ "code": "",
+ "type": "Article",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "statut": "a_valider",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": "10 min de lecture",
+ "titre": {
+  "fr": "La gestion de la semaine : la réunion du lundi et ses contrôles",
+  "nl": "Het beheer van de week: de maandagvergadering en haar controles"
+ },
+ "objectif": {
+  "fr": "Savoir ce que la checklist de gestion hebdomadaire demande chaque lundi, et où se lit chaque point dans le Manuel.",
+  "nl": "Weten wat de wekelijkse beheerchecklist elke maandag vraagt, en waar elk punt in het Manuel te vinden is."
+ },
+ "pour": {
+  "fr": "Responsables de magasin, franchisés, managers (P4, P7 à P12). À lire avec les articles 0.0.13 et 0.0.16.",
+  "nl": "Verantwoordelijken van de winkel, franchisenemers, managers (P4, P7 tot P12). Te lezen met de artikels 0.0.13 en 0.0.16."
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "La réunion du lundi",
+    "nl": "De vergadering van maandag"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Le point hebdomadaire de l’équipe",
+      "nl": "Het wekelijkse teampunt"
+     },
+     "texte": {
+      "fr": "La checklist « Réunion d’équipe (lundi) » (code 5.5.01) se fait chaque lundi à 9 h 00.\nElle a cinq points, tous obligatoires.",
+      "nl": "De checklist « Teamvergadering (maandag) » (code 5.5.01) wordt elke maandag om 9 u gedaan.\nZe heeft vijf punten, allemaal verplicht."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les cinq points",
+      "nl": "De vijf punten"
+     },
+     "texte": {
+      "fr": "Retours clients de la semaine : compliments, plaintes, suggestions.\nProblèmes opérationnels rencontrés pendant la semaine.\nIdées d’amélioration de l’équipe.\nValidation du planning de la semaine suivante.\nInformations du franchiseur.",
+      "nl": "Klantenfeedback van de week: complimenten, klachten, suggesties.\nOperationele problemen die zich tijdens de week voordeden.\nVerbeteringsideeën van het team.\nValidatie van het planning van de volgende week.\nInformatie van de franchisegever."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Aucun point ne se saute",
+      "nl": "Geen enkel punt wordt overgeslagen"
+     },
+     "texte": {
+      "fr": "Une réunion sans le planning de la semaine suivante n’est pas une réunion de gestion complète.",
+      "nl": "Een vergadering zonder het planning van de volgende week is geen volledig beheersoverleg."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "L’auto-audit HACCP du lundi",
+    "nl": "De HACCP-zelfaudit van maandag"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Ce qu’on contrôle",
+      "nl": "Wat men controleert"
+     },
+     "texte": {
+      "fr": "La checklist « Auto-audit HACCP » (code 5.6.01) se fait chaque lundi à 9 h 00, pour anticiper l’inspection de l’AFSCA.\nSes cinq points sont obligatoires :\nFiches HACCP complètes.\nTraçabilité des matières premières.\nRespect des DLC sur les stocks.\nPropreté du laboratoire et de la production.\nPlan d’action correctif.",
+      "nl": "De checklist « HACCP-zelfaudit » (code 5.6.01) wordt elke maandag om 9 u gedaan, om de inspectie van het FAVV voor te bereiden.\nDe vijf punten zijn verplicht:\nHACCP-fiches volledig.\nTraceerbaarheid van de grondstoffen.\nNaleving van de uiterste consumptiedatum (UCD) op de voorraad.\nNetheid van het labo en de productie.\nCorrigerend actieplan."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Le plan d’action",
+      "nl": "Het actieplan"
+     },
+     "texte": {
+      "fr": "Le dernier point, le plan d’action correctif, est la preuve qu’un écart est traité : ce qui n’est pas conforme reçoit une action corrective écrite.",
+      "nl": "Het laatste punt, het corrigerend actieplan, bewijst dat een afwijking wordt aangepakt: wat niet conform is, krijgt een schriftelijke corrigerende actie."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La semaine relue",
+    "nl": "De week herlezen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Lundi à 8 h 30 : relire la semaine",
+      "nl": "Maandag om 8.30 u: de week herlezen"
+     },
+     "texte": {
+      "fr": "La routine du dashboard demande, chaque lundi à 8 h 30, la relecture de la semaine passée : une à trois actions chiffrées, écrites dans le plan d’action et annoncées.\nC’est le point qui relie la réunion du lundi aux chiffres du dashboard magasin (article 0.0.15).",
+      "nl": "De dashboardroutine vraagt elke maandag om 8.30 u de voorbije week te herlezen: één tot drie becijferde acties, schriftelijk in het actieplan en aangekondigd.\nDit is het punt dat de maandagvergadering koppelt aan de cijfers van het winkeldashboard (artikel 0.0.15)."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Ce que cet article ne couvre pas",
+      "nl": "Wat dit artikel niet behandelt"
+     },
+     "texte": {
+      "fr": "Les autres points de la routine du dashboard (7 h 30, 11 h, 18 h) sont quotidiens : ils ne sont pas traités ici.",
+      "nl": "De andere punten van de dashboardroutine (7.30 u, 11 u, 18 u) zijn dagelijks: ze worden hier niet behandeld."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Qui fait, qui contrôle",
+    "nl": "Wie doet het, wie controleert"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Le contrôle des tâches",
+      "nl": "Het controle van de taken"
+     },
+     "texte": {
+      "fr": "Les tâches de ces checklists sont contrôlées par : la personne qui les fait ; le pôle Stratégie et Développement ; le contrôleur qualité et conformité.",
+      "nl": "De taken van deze checklists worden gecontroleerd door: de persoon die ze doet; de dienst Strategie en Ontwikkeling; de kwaliteits- en conformiteitscontroleur."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Qui fait chaque tâche",
+      "nl": "Wie elke taak doet"
+     },
+     "texte": {
+      "fr": "Qui fait chacune de ces tâches n’est pas encore réglé dans le réseau : le franchisé, le manager ou le responsable d’équipe ne sont pas encore attribués.\nCette partie sera complétée quand ce sera fait.",
+      "nl": "Wie elk van deze taken doet, is in het netwerk nog niet vastgelegd: de franchisenemer, de manager of de teamverantwoordelijke zijn nog niet toegewezen.\nDit deel wordt aangevuld zodra dat gebeurd is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Les cinq points de la réunion du lundi et les cinq points de l’auto-audit HACCP sont obligatoires.",
+   "nl": "De vijf punten van de maandagvergadering en de vijf punten van de HACCP-zelfaudit zijn verplicht."
+  },
+  {
+   "fr": "Le plan d’action correctif est la preuve qu’un écart est traité.",
+   "nl": "Het corrigerend actieplan is het bewijs dat een afwijking wordt aangepakt."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "À quelle heure se fait la réunion d’équipe du lundi ?",
+    "nl": "Hoe laat is de teamvergadering op maandag?"
+   },
+   "choix": {
+    "fr": [
+     "9 h 00",
+     "8 h 30",
+     "18 h 00"
+    ],
+    "nl": [
+     "9 u",
+     "8.30 u",
+     "18 u"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Combien de points compte l’auto-audit HACCP du lundi ?",
+    "nl": "Hoeveel punten telt de HACCP-zelfaudit van maandag?"
+   },
+   "choix": {
+    "fr": [
+     "Trois",
+     "Dix",
+     "Cinq"
+    ],
+    "nl": [
+     "Drie",
+     "Tien",
+     "Vijf"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Que demande la relecture de la semaine, le lundi à 8 h 30 ?",
+    "nl": "Wat vraagt het herlezen van de week, maandag om 8.30 u?"
+   },
+   "choix": {
+    "fr": [
+     "Un nouveau planning",
+     "Une à trois actions chiffrées, écrites et annoncées",
+     "Une prime à calculer"
+    ],
+    "nl": [
+     "Een nieuw planning",
+     "Eén tot drie becijferde acties, schriftelijk en aangekondigd",
+     "Een premie berekenen"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "operationnel"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [],
+  "formations": [
+   "FO-06",
+   "FO-02"
+  ],
+  "checklists": [
+   "5.5.01",
+   "5.6.01",
+   "5.2.01"
+  ]
+ }
+}

@@ -39,6 +39,10 @@ declare(strict_types=1);
 
 const FIL_TAGS = [
     'gestion' => ['nom' => 'Problème de gestion', 'sens' => 'neg'],
+    // La communication (19/11/2026, Sam : « rajouter dans le fil : Problème de communication, Mauvaise communication ») :
+    // le sens négatif, comme le problème de gestion, mais elles n'ouvrent pas de fil (seul « gestion » en ouvre un).
+    'communication' => ['nom' => 'Problème de communication', 'sens' => 'neg'],
+    'mauvaisecom' => ['nom' => 'Mauvaise communication', 'sens' => 'neg'],
     'surveiller' => ['nom' => 'À surveiller', 'sens' => 'att'],
     'bonne' => ['nom' => 'Bonne action', 'sens' => 'pos'],
     'equipe' => ['nom' => 'Équipe', 'sens' => ''],

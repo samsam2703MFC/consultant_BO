@@ -48,6 +48,10 @@ const CKC_LISTE = [
     ['code' => '5.2.01', 'fr' => 'Routine du dashboard magasin', 'nl' => 'Dashboardroutine van de winkel', 'en' => 'Shop dashboard routine', 'ex' => ['SOP-PIL-01'], 'panel' => 62, 'avant' => 'SOP-PIL-01 · Routine du dashboard magasin', 'heure' => '07:30', 'poste' => null, 'fiche' => null],
     ['code' => '5.5.01', 'fr' => 'Réunion d’équipe (lundi)', 'nl' => 'Teamvergadering (maandag)', 'en' => 'Team meeting (Monday)', 'ex' => ['AC-13'], 'panel' => 56, 'avant' => 'AC-13 · Réunion d’équipe', 'heure' => '09:00', 'poste' => null, 'fiche' => 'chk-ac-13'],
     ['code' => '5.6.01', 'fr' => 'Auto-audit HACCP', 'nl' => 'HACCP-zelfaudit', 'en' => 'HACCP self-audit', 'ex' => ['AC-14'], 'panel' => 57, 'avant' => 'AC-14 · Auto-audit HACCP mensuel', 'heure' => '09:00', 'poste' => null, 'fiche' => 'chk-ac-14'],
+    // Créée le 19/11/2026 (Sam : « chaque mois, à la checklist du franchisé, les 8 questions d'une franchise bien tenue ») :
+    // les huit questions de l'article 0.0.56, tâches 1382 à 1389 au niveau « Franchise », en pause comme 5.6.01 ; sa fiche
+    // Formation : chk-bien-tenue (source data/formation/dirigeant/chk-bien-tenue.json).
+    ['code' => '5.6.02', 'fr' => 'Une franchise bien tenue', 'nl' => 'Een goed geleide franchise', 'en' => 'A well-run franchise', 'ex' => [], 'panel' => 64, 'avant' => null, 'heure' => '09:00', 'poste' => null, 'fiche' => 'chk-bien-tenue'],
 ];
 
 /** Les anciens codes du référentiel v25 et du panel qui ont un nouveau code (les autres codes du v25 restent). */

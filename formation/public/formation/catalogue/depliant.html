@@ -39,6 +39,14 @@
 
   .encadre { border-left: 2.5px solid var(--accent); background: var(--accent-soft); padding: 4mm 5mm; border-radius: 0 3mm 3mm 0; margin-top: 5mm; font-size: 9.5pt; line-height: 1.5; }
   .encadre b { font-weight: 500; }
+  /* Une franchise bien tenue (19/11/2026) : les huit questions du test de vendabilité de l'article 0.0.56. */
+  .bt-titre { font-size: 13pt; font-weight: 500; margin: 1.5mm 0 1mm; color: var(--ink); line-height: 1.25; }
+  .bt-lead { font-size: 9pt; color: var(--muted); margin: 0 0 3mm; }
+  ol.bt { list-style: none; counter-reset: bt; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm 4mm; }
+  ol.bt li { counter-increment: bt; background: #fff; border: 1px solid var(--line); border-radius: 2.5mm; padding: 2.6mm 3mm 2.6mm 10.5mm; position: relative; font-size: 8.8pt; line-height: 1.4; }
+  ol.bt li::before { content: counter(bt); position: absolute; left: 3mm; top: 2.6mm; width: 5mm; height: 5mm; border-radius: 50%; background: var(--accent); color: #fff; font-size: 7.5pt; text-align: center; line-height: 5mm; }
+  ol.bt li b { font-weight: 500; color: var(--accent); }
+  .bt-src { font-size: 8pt; color: var(--muted); margin: 2.5mm 0 0; }
 
   .qrbloc { position: absolute; left: 16mm; right: 16mm; bottom: 26mm; background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 5mm; display: grid; grid-template-columns: 34mm 1fr; gap: 6mm; align-items: center; }
   .qrbloc .img svg { width: 34mm; height: 34mm; display: block; }
@@ -50,7 +58,13 @@
   table.tab td, table.tab th { border-bottom: 1px solid var(--line); padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
   table.tab th { font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
   table.tab td:first-child { font-weight: 500; color: var(--accent); white-space: nowrap; }
-  .exemple { font-size: 22pt; font-weight: 500; letter-spacing: .02em; margin: 4mm 0 1mm; }
+  .exemple { font-size: 22pt; font-weight: 500; letter-spacing: .02em; margin: 4mm 0 1mm; color: var(--muted); }
+  /* Les couleurs des codes de checklist : celles du cockpit (zone en couleur, moment en gris, numéro au trait). */
+  .exemple i { font-style: normal; border-radius: 2mm; padding: 0 1.6mm; }
+  .exemple i.mo { background: rgba(92, 88, 82, .12); color: #5c5852; }
+  .exemple i.nu { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .zc { display: inline-block; min-width: 5.5mm; text-align: center; color: #fff; border-radius: 1.2mm; padding: 0 1.2mm; margin-right: 1.5mm; font-size: 8pt; }
+  table.tab td.ck { color: var(--ink) !important; font-weight: 400 !important; }
   .legende { font-size: 8.5pt; color: var(--muted); margin-bottom: 3mm; }
 
   /* Couverture */
@@ -123,20 +137,28 @@
     </div>
   </div>
 
-  <div class="stats">
-    <div class="stat"><b>9 ans</b><small>durée du contrat, à partir de la date d’effet</small></div>
-    <div class="stat"><b>31 jours</b><small>de réflexion minimum après la remise du DIP, avant signature</small></div>
-    <div class="stat"><b>2 · 2 · 2,5 %</b><small>redevances mensuelles sur le chiffre d’affaires : marque, assistance, marketing</small></div>
+  <!-- 19/11/2026 (Sam) : les chiffres du contrat retirés ; à leur place, le très court résumé des deux articles, liens gardés. -->
+  <div class="encadre lien-auto">
+    <b>Le cadre</b> · 0.0.21 : on lit le DIP, puis on signe un contrat qui fixe les engagements de chacun.<br>
+    <b>La valeur</b> · 0.0.56 : des process écrits et délégables, des chiffres fiables ; un magasin qui tourne sans son propriétaire.
   </div>
 
-  <div class="encadre">
-    <b>Le droit d’entrée</b> se paie en deux temps : un acompte de 50 % à la signature du contrat, le solde à sa prise d’effet. Il reste acquis au franchiseur.<br>
-    <b>Le DIP</b> (document d’information précontractuelle) présente la marque, le réseau et le projet. Il faut le lire avant de signer, seul ou avec ses conseils.
-  </div>
-
-  <div class="encadre lien-auto" style="margin-top:3mm;background:var(--paper);border-left-color:var(--muted)">
-    La valeur d’une franchise tient à ses process écrits et délégables : un magasin qui tourne sans son propriétaire et dont les chiffres sont fiables. Voir les articles 0.0.21 et 0.0.56.
-  </div>
+  <!-- 19/11/2026 (Sam : « rajouter les points de bonne gestion de la franchise, est-ce que quelqu'un peut tenir ton magasin
+       deux semaines… ») : les huit questions de « La boutique est-elle vendable demain ? » (article 0.0.56). -->
+  <div class="kicker" style="margin-top:7mm">Une franchise bien tenue</div>
+  <h3 class="bt-titre">Quelqu’un peut-il tenir votre magasin deux semaines sans vous ?</h3>
+  <p class="bt-lead">Huit questions à se poser une fois par an. Chaque « non » est un point de valeur à aller chercher.</p>
+  <ol class="bt">
+    <li>Le magasin peut-il tourner <b>deux semaines sans vous</b>, sans baisse de résultat ?</li>
+    <li>Quelqu’un d’autre que vous sait-il ouvrir, fermer, commander et gérer une journée complète ?</li>
+    <li>Chaque poste peut-il être tenu par au moins deux personnes formées ?</li>
+    <li>Les niveaux de compétence de l’équipe sont-ils à jour dans le référentiel ?</li>
+    <li>Les douze derniers mois de chiffres sont-ils tous dans le système, sans trou ?</li>
+    <li>Food cost, masse salariale, frais généraux : êtes-vous dans les normes du réseau, et savez-vous expliquer les écarts ?</li>
+    <li>Appliquez-vous les standards du réseau, sans version maison des procédures ?</li>
+    <li>Un repreneur comprendrait-il l’activité en une heure, avec le système seul ?</li>
+  </ol>
+  <p class="bt-src lien-auto">D’après l’article 0.0.56, « La boutique est-elle vendable demain ? ».</p>
 
   <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 2 / 6</span></div>
 </section>
@@ -238,17 +260,17 @@
   <h2>Les checklists</h2>
   <p class="lead">Ce qu’il faut contrôler, et à quel moment. Chaque tâche a son contrôle, et chaque checklist a un code qui se lit.</p>
 
-  <div class="exemple">1.1.01</div>
+  <div class="exemple"><i style="background:#8D1D2C1f;color:#8D1D2C">1</i>.<i class="mo">1</i>.<i class="nu">01</i></div>
   <div class="legende">zone 1 (vente) · moment 1 (ouverture) · numéro 01 : « Ouverture de la boutique »</div>
 
   <table class="tab">
-    <tr><th>Zone</th><th>Moment</th></tr>
-    <tr><td>1 · Vente</td><td>1 · Ouverture</td></tr>
-    <tr><td>2 · Boulangerie</td><td>2 · Journée</td></tr>
-    <tr><td>3 · Traiteur</td><td>3 · Après-midi</td></tr>
-    <tr><td>4 · Nettoyage</td><td>4 · Fermeture</td></tr>
-    <tr><td>5 · Gestion</td><td>5 · Chaque semaine</td></tr>
-    <tr><td></td><td>6 · Chaque mois</td></tr>
+    <tr><th>1er chiffre · qui</th><th>2e chiffre · quand</th></tr>
+    <tr><td class="ck"><span class="zc" style="background:#8D1D2C">1</span>Vente</td><td><span class="zc" style="background:#5c5852">.1</span>Ouverture</td></tr>
+    <tr><td class="ck"><span class="zc" style="background:#B0792A">2</span>Boulangerie</td><td><span class="zc" style="background:#5c5852">.2</span>Journée</td></tr>
+    <tr><td class="ck"><span class="zc" style="background:#3f7a52">3</span>Traiteur</td><td><span class="zc" style="background:#5c5852">.3</span>Après-midi</td></tr>
+    <tr><td class="ck"><span class="zc" style="background:#1f5f8b">4</span>Nettoyage</td><td><span class="zc" style="background:#5c5852">.4</span>Fermeture</td></tr>
+    <tr><td class="ck"><span class="zc" style="background:#6B4FBB">5</span>Gestion</td><td><span class="zc" style="background:#5c5852">.5</span>Chaque semaine</td></tr>
+    <tr><td class="ck"><span class="zc" style="background:#5c5852">0</span>SOP et articles</td><td><span class="zc" style="background:#5c5852">.6</span>Chaque mois</td></tr>
   </table>
 
   <div class="encadre" style="margin-top:6mm">
@@ -272,12 +294,12 @@
   <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 4 sur 4</div></div>
   <div class="kicker">Le classeur</div>
   <h2>Le manuel du réseau</h2>
-  <p class="lead">Le classeur qui range les standards, les formations et les compétences par domaine. Chaque domaine se découpe en sous-catégories.</p>
+  <p class="lead">Le classeur qui range les standards, les formations et les compétences par domaine, puis les postes : pour chacun, ses formations et ses compétences, niveau par niveau.</p>
 
   <div class="stats">
     <div class="stat"><b id="n-dom">8</b><small>domaines, de D1 à D8</small></div>
     <div class="stat"><b id="n-sc">36</b><small>sous-catégories, où se range chaque document</small></div>
-    <div class="stat"><b>4</b><small>vues : classeur, par phase, par poste, standards</small></div>
+    <div class="stat"><b id="n-postes">12</b><small>postes, avec leurs formations et leurs compétences</small></div>
   </div>
 
   <table class="tab">
@@ -338,6 +360,7 @@
       document.getElementById('n-dom').textContent = d.length;
       document.getElementById('n-sc').textContent = d.reduce(function (t, x) { return t + (x.souscats || []).length; }, 0);
     }),
+    lire('/formation/v25').then(function (j) { if ((j.postes || []).length) document.getElementById('n-postes').textContent = j.postes.length; }, function () { /* 12 reste */ }),
   ]).catch(function () { /* les valeurs écrites restent */ });
   document.getElementById('imprimer').addEventListener('click', function () { window.print(); });
   if (location.hash === '#imprimer') {

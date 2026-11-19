@@ -206,10 +206,7 @@ export function render(c, x){
       ${c.isReput ? tplReputation(c, x) : ''}
       ${c.isVisib ? tplVisibilite(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
-      ${c.isMagasins && !c.isRJour ? tplMagasins(c, x) : ''}
-      ${c.isObjectifs && !c.isRJour ? tplObjectifs(c, x) : ''}
       ${c.isBudget ? tplBudget(c, x) : ''}
-      ${c.isMarge && !c.isRJour ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
@@ -223,8 +220,6 @@ export function render(c, x){
       ${c.isPointages ? tplPointages(c, x) : ''}
       ${c.isPromoTab ? tplPromoTableau(c, x) : ''}${c.isPromoEd ? tplPromoEdition(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
-      ${c.isScoringTri ? tplScoringTri(c, x) : ''}
-      ${c.isCltMyst ? tplCltMyst(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
       ${c.isIaEnt ? tplIaEntrainement(c.iaEnt, x) : ''}
@@ -235,7 +230,7 @@ export function render(c, x){
       ${c.isInventaires ? tplInventaires(c, x) : ''}
       ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isFil ? tplFil(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
       ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
-      ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
+      ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
@@ -372,7 +367,7 @@ function tplCatalogue(c, x){
       <td style="${TD};${n};font-weight:400;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
       <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
       <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:400;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
-      <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.basculerOblig)} role="switch" aria-checked="${l.oblig}" aria-label="Obligatoire" title="${l.oblig ? (l.obligSaison ? 'Obligatoire pendant une saison — un clic la retire' : 'Obligatoire — un clic la retire') : 'Un clic la rend obligatoire, toute l’année'}" style="width:38px;height:22px;border-radius:6px;border:none;cursor:pointer;position:relative;vertical-align:middle;background:${l.oblig ? '#3f7a52' : 'rgba(0,0,0,.18)'}"><i style="position:absolute;top:3px;${l.oblig ? 'left:19px' : 'left:3px'};width:16px;height:16px;border-radius:50%;background:#fff;"></i></button>${l.obligSaison ? `<div style="font-size:10px;${mu}">saison</div>` : ''}`}</td></tr>`).join('')
+      <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.voirOblig)} title="L’obligatoire se règle dans Comptoir › Assortiment obligatoire : un clic y ouvre cette référence" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:${l.oblig ? '#3f7a52' : 'var(--color-text-muted)'}">${l.oblig ? (l.obligSaison ? 'saison' : 'oui') : 'non'}</button>`}</td></tr>`).join('')
       || `<tr><td colspan="${(c.catCols || []).length}" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
     ${c.catTronque ? `<div style="padding:9px 12px;font-size:11.5px;${mu}">… et ${c.catTronque} autres : affinez la recherche ou la catégorie.</div>` : ''}</div>`;
   const f = c.catFiche;
@@ -408,7 +403,7 @@ function tplCatalogue(c, x){
       <div style="font-size:12px;${mu};margin-top:2px">${esc(f.sous)}</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:9px">
         ${f.revue ? `<span title="La revue franchiseur : un clic sur l’étoile posée la retire" style="white-space:nowrap">${f.revue.map(e => `<button ${x.A(e.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;color:${e.pleine ? '#B0792A' : '#e6e0d8'}">★</button>`).join('')}</span>` : ''}
-        ${f.obligatoire != null ? `<label style="font-size:12px;display:inline-flex;gap:5px;align-items:center;cursor:pointer" title="Imposée en boutique (l’assortiment obligatoire) et gardée au score, quoi qu’en disent la marge et le score"><input type="checkbox" ${f.obligatoire ? 'checked' : ''} ${x.C(f.basculerObligatoire)}> Obligatoire</label>` : ''}
+        ${f.obligatoire != null ? `<span title="Imposée en boutique et gardée au score, quoi qu’en disent la marge et le score : se règle dans Comptoir › Assortiment obligatoire" style="font-size:12px">${f.obligatoire ? 'Obligatoire' : 'Facultative'}</span>${lien(f.voirObligatoire, 'Assortiment ›')}` : ''}
         ${lien(f.detailScore, 'Score en détail · projets · arrêt ›')}${lien(f.ouvrirProduction, 'Fiche de production ›')}${lien(f.comptoir, 'Au comptoir ›')}</div></div>
     <div style="padding:12px 16px 16px"><div style="display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">${f.onglets.map(o => `<button ${x.A(o.choisir)} style="border:none;border-radius:8px;padding:6px 10px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;white-space:nowrap;background:${o.on ? 'var(--color-primary)' : 'transparent'};color:${o.on ? '#fff' : 'var(--color-text)'}">${esc(o.nom)}</button>`).join('')}</div>
       ${corps}</div></aside>` : '';
@@ -418,9 +413,8 @@ function tplCatalogue(c, x){
 }
 
 
-/* Édition d'une référence. Deux formulaires selon l'écran d'où l'on vient :
-   poser une référence au comptoir et chiffrer sa production sont deux gestes
-   distincts, les mélanger allongerait la saisie sans servir personne. */
+/* Édition d'une référence : sa fiche de production (la fabrication ; le reste se lit au panel). L'emplacement au
+   comptoir se pose sur le plan du Comptoir, plus ici (19/11/2026 : ce formulaire-là, que rien n'ouvrait, est retiré). */
 function tplRefEdit(c, x){
   const { esc } = x;
   const e = c.refEdit;
@@ -430,35 +424,25 @@ function tplRefEdit(c, x){
     <input id="ref-ch-${k}" value="${esc(String(e.champs[k] == null ? '' : e.champs[k]))}" ${x.I(e.set(k))} placeholder="${esc(ph || '')}" style="${IN}"></div>`;
   return `
   <div style="position:fixed;inset:0;background:rgba(20,16,14,.42);display:flex;align-items:center;justify-content:center;padding:24px;z-index:60">
-    <div style="background:var(--color-surface);border-radius:12px;padding:22px;width:100%;max-width:${e.mode === 'plano' ? '460px' : '620px'};max-height:88vh;overflow-y:auto">
+    <div style="background:var(--color-surface);border-radius:12px;padding:22px;width:100%;max-width:620px;max-height:88vh;overflow-y:auto">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px">
         <div>
           <div style="font-family:var(--font-display);font-size:18px;line-height:1.2">${esc(e.nom)}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(e.ref)} · ${e.mode === 'plano' ? 'emplacement au comptoir' : 'fiche de production'}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(e.ref)} · fiche de production</div>
         </div>
         <button ${x.A(e.close)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:18px;line-height:1;padding:2px 6px">×</button>
       </div>
-      ${e.mode === 'plano' ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          ${champ('zone', 'Zone', 'Vitrine chaude')}
-          ${champ('meuble', 'Meuble', 'M1')}
-          ${champ('niveau', 'Niveau', 'Haut')}
-          ${champ('slot', 'Emplacement', '3')}
+        <!-- Ce que la fiche ne tient pas (19/11/2026) : lu au panel ou à l'assortiment, corrigé là où il vit. -->
+        <div style="padding:11px 13px;background:var(--color-background-secondary);border-radius:9px;margin-bottom:14px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span style="color:var(--color-text-muted)">Assortiment obligatoire</span><span>${esc(e.obligTxt)}${e.voirAssortiment ? ` · <button ${x.A(e.voirAssortiment)} class="linklike">régler ›</button>` : ''}</span></div>
+          ${e.panel.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span style="color:var(--color-text-muted)">${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Le panel fait foi : le prix et la durée de vie se corrigent
+            ${e.voirPanel ? `dans <button ${x.A(e.voirPanel)} class="linklike">Paramétrage produits ›</button>` : 'dans Paramétrage produits'},
+            le coût matière dans la recette (<button ${x.A(e.voirRecettes)} class="linklike">Recettes à corriger ›</button>).</div>
+          ${e.ancien ? `<div style="font-size:11px;color:var(--color-on-abricot, #8a5a14);margin-top:6px">Ancienne saisie du cockpit, plus lue : ${esc(e.ancien)} — à reporter au panel si elle est juste.</div>` : ''}
         </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Vider la zone retire la référence du planogramme.</div>
-      ` : `
-        <div style="display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--color-background-secondary);border-radius:9px;margin-bottom:14px">
-          <input type="checkbox" ${e.champs.must ? 'checked' : ''} ${x.C(e.set('must'))} style="width:16px;height:16px;accent-color:var(--color-primary)">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:400">Référence obligatoire</div>
-            <div style="font-size:11px;color:var(--color-text-muted)">${esc(e.saisonTxt || 'toute boutique doit la proposer en permanence')}</div>
-          </div>
-          <div style="width:110px">${champ('qmin', 'Quantité min.', '0')}</div>
-        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px">La fabrication, que seul le cockpit tient :</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
-          ${champ('prix', 'Prix de vente (€)', '')}
-          ${champ('mat', 'Coût matière (€)', '')}
-          ${champ('dlv', 'DLV (heures)', '')}
           ${champ('prep', 'Préparation (min)', '')}
           ${champ('cuisson', 'Cuisson (min)', '')}
           ${champ('fin', 'Finition (min)', '')}
@@ -467,7 +451,6 @@ function tplRefEdit(c, x){
           ${champ('four', 'Four', '')}
         </div>
         <div style="margin-top:12px">${champ('profil', 'Profil de vente', 'matin, week-end…')}</div>
-      `}
       ${e.err ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary);background:rgba(141, 29, 44, 0.08);border-radius:8px;padding:8px 11px">${esc(e.err)}</div>` : ''}
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
         <button ${x.A(e.close)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 16px;border-radius:9px">Annuler</button>
@@ -1752,69 +1735,6 @@ export function tplSqCartes(c, x){
           ${c.sqBilan ? `<div class="sq-bilan${c.sqBilan.ko ? ' ko' : ''}"><b>${esc(c.sqBilan.txt)}</b>${c.sqBilan.lignes && c.sqBilan.lignes.length ? '<br>' + c.sqBilan.lignes.map(esc).join('<br>') : ''}</div>` : ''}
         </div></div>
     </div>`;
-}
-
-/* Le client mystère : l’encodage d’un rapport, et les trimestres du magasin (B2 : aussi dans la fiche). */
-export function tplSqMsp(c, x){
-  const { esc } = x, st = sqSt;
-  const F = c.sqMsp;
-  return `
-    <div class="cx-deux" style="grid-template-columns:minmax(0,1fr) 420px">
-      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le rapport reçu</span><span class="mko-mini">un rapport par magasin et par trimestre · réencoder remplace</span></div>
-        <div class="mko-corps">
-          <div class="cx-ligne" style="margin-bottom:12px"><div><label class="mko-lab" style="display:block;margin-bottom:4px">Magasin</label><select class="mko-sel" ${x.C(F.setShop)}>${F.shops.map(s => `<option value="${esc(s.id)}"${s.on ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select></div><div><label class="mko-lab" style="display:block;margin-bottom:4px">Trimestre</label><select class="mko-sel" ${x.C(F.setTri)}>${F.tris.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select></div></div>
-          <label class="mko-lab" style="display:block;margin-bottom:6px">La note reçue</label>
-          <div class="sq-conv"><div><div class="mko-mu" style="font-size:11px;margin-bottom:4px">obtenu</div><input id="sq-obtenu" class="mko-inp sq-gros" value="${esc(F.obtenu)}" ${x.I(F.setObtenu)} inputmode="decimal"></div><div class="fl">/</div><div><div class="mko-mu" style="font-size:11px;margin-bottom:4px">maximum du barème</div><input id="sq-max" class="mko-inp sq-gros" value="${esc(F.maximum)}" ${x.I(F.setMaximum)} inputmode="decimal"></div>
-            <div class="res"><div class="v">${esc(F.sur5)}<small> / 5</small></div>${st(F.pct, F.sur5 === '—', 'gd')}<div class="mko-mu">${esc(F.calcul)}</div></div></div>
-          <div class="cx-deux" style="margin-top:12px;grid-template-columns:1fr 1fr">
-            <div><label class="mko-lab" style="display:block;margin-bottom:6px">Rubriques du rapport — facultatif</label><div class="sq-rub">${F.rubriques.map((r, i) => `<input id="sq-rk${i}" class="mko-inp" value="${esc(r.k)}" ${x.I(r.setK)} placeholder="rubrique"><input id="sq-rv${i}" class="mko-inp" value="${esc(r.v)}" ${x.I(r.setV)} placeholder="17 / 20">`).join('')}</div><button ${x.A(F.addRub)} class="mko-pied-btn" style="margin-top:6px">+ rubrique</button></div>
-            <div><label class="mko-lab" style="display:block;margin-bottom:6px">Le rapport en PDF</label><label class="sq-drop"><b>${F.fichierNom ? esc(F.fichierNom) : 'Choisir le PDF'}</b>${F.fichierNom ? 'prêt à joindre · 8 Mo au plus' : '8 Mo au plus · il reste joint au trimestre et part avec le rapport A4'}<input type="file" accept="application/pdf,.pdf" ${x.C(F.setFichier)} style="display:none"></label>
-              ${F.fichierActuel ? `<div class="sq-fichier"><span class="ic">PDF</span><span><b>${esc(F.fichierActuelNom)}</b><br><span class="mko-mu">déjà joint${F.le ? ' · déposé le ' + esc(F.le) : ''}</span></span><a class="sq-lien" style="margin-left:auto" href="${esc(F.fichierActuel)}" target="_blank" rel="noopener">ouvrir</a></div>` : ''}</div>
-          </div>
-          <label class="mko-lab" style="display:block;margin:12px 0 4px">Commentaire pour le franchisé</label><textarea id="sq-com" rows="2" class="cx-ta" ${x.I(F.setCommentaire)}>${esc(F.commentaire)}</textarea>
-          <div class="cx-ligne" style="margin-top:10px"><input id="sq-par" class="mko-inp" style="width:160px" placeholder="encodé par" value="${esc(F.par)}" ${x.I(F.setPar)}><button ${x.A(F.enreg)} class="cx-btn prim" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Enregistrement…' : 'Enregistrer'}</button>${F.suppr ? `<button ${x.A(F.suppr)} class="mko-pied-btn" style="color:var(--stop)">Effacer le trimestre</button>` : ''}<span class="mko-mu">${esc(F.etat)}</span></div>
-        </div></div>
-      <div class="mko-carte" style="margin:0"><div class="mko-ct"><span class="mko-lab">${esc(F.shopCourt)} — les trimestres</span></div>
-        <div class="mko-corps" style="padding-top:8px">${F.histChargement ? '<div class="mko-mu">Lecture…</div>' : (F.hist.length ? `<table class="mko-tab sq-hist"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${F.hist.map(h => `<tr><td>${esc(h.tri)}</td><td class="n">${esc(h.recu)}</td><td class="n"><b>${esc(h.sur5)}</b> ${st(h.pct, false, 'sm')}</td><td>${h.fichier ? `<a class="sq-lien" href="${esc(h.fichier)}" target="_blank" rel="noopener">ouvrir</a>` : '<span class="mko-mu">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="mko-mu">Aucun rapport encodé pour ce magasin.</div>')}
-          <div style="margin-top:14px"><span class="mko-lab">Où ça arrive ensuite</span><ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted)"><li>le classement, poste « Client mystère », dès l’enregistrement ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
-    </div>`;
-}
-
-/* Paramètres › Client mystère : l'encodage du rapport reçu (le poste Client mystère du scoring). */
-function tplCltMyst(c, x){
-  const { esc } = x;
-  const corps = c.sqIndispo ? `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`
-    : (c.sqMsp ? tplSqMsp(c, x) : '<div class="mko-mu" style="padding:20px 0">Lecture du scoring…</div>');
-  return `<div data-screen="client-mystere" class="mko">${corps}</div>`;
-}
-
-function tplScoringTri(c, x){
-  const { esc } = x;
-  const st = sqSt;
-  const entete = `
-    <div class="mko-hd">
-      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
-      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
-      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
-      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
-    </div>`;
-  let corps = '';
-  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
-  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
-  else if (c.sqVue === 'tableau') {
-    corps = `
-    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
-      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = la note sur 5</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
-        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
-          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée, compté${l.manque > 1 ? 's' : ''} 0</span>` : ''}</div></div></div></td>
-          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
-      </tbody></table></div>
-      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur ${c.sqReseau.magasins} magasins · ${esc(c.sqReseau.etoiles)} ★ · ${c.sqReseau.complets} noté${c.sqReseau.complets > 1 ? 's' : ''} sur les quatre postes` : ''} · un poste sans donnée compte 0, et le tableau nomme ce qui manque.</div></div>
-    ${tplSqCartes(c, x)}`;
-  } else {
-    corps = tplSqMsp(c, x);
-  }
-  return `<div data-screen="scoring" class="mko">${entete}${corps}</div>`;
 }
 
 /* Les objectifs produits d'une campagne : le multiselect, l'objectif en pièces
@@ -4660,12 +4580,12 @@ function tplInventaires(c, x){
   }
   function histo(){
     if (!o.histo.length) { return ''; }
-    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
+    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La matière expliquée sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
       <div class="in-histo">${o.histo.map(h => `<button ${x.A(h.choisir)} class="in-hb ${h.cls}${h.on ? ' on' : ''}" title="${esc(h.titre)}"><span class="v">${esc(h.val)}</span><i style="height:${h.h}%"></i><span class="d">${esc(h.lib)}</span></button>`).join('')}<div class="in-cent"></div></div></div>`;
   }
   const J = o.justesse;
   const tete = `<div class="in-tete">
-    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Justesse des ventes</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
+    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Matière expliquée</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
     <div class="in-kpis">${o.kpi.map(k => `<div style="${card};padding:14px 16px"><div class="k">${esc(k[0])}</div><div class="v ${k[2]}">${esc(k[1])}</div><div class="s">${esc(k[3])}</div></div>`).join('')}</div></div>
     <div class="in-bilan" style="${card}">${o.bilan.map((b, i) => `<div class="${i === 3 ? 'eq' : ''}"><span>${esc(b[0])}</span><b>${esc(b[1])}</b></div>`).join('')}</div>`;
   const S = o.suite;

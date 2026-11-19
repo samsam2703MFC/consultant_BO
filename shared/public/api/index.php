@@ -6,11 +6,11 @@ declare(strict_types=1);
  * Base d'URL attendue : /api/cockpit/… (voir contrat-api.md).
  */
 
-require __DIR__ . '/../../src/Db.php';
-require_once __DIR__ . '/../../src/erp_cles.php';
-require __DIR__ . '/../../src/endpoints.php';
+require __DIR__ . '/../../../shared/src/Db.php';
+require_once __DIR__ . '/../../../shared/src/erp_cles.php';
+require __DIR__ . '/../../../shared/src/endpoints.php';
 require __DIR__ . '/../../../consultant/src/budget_crm.php';   // Répartition des charges alignée sur le CRM (07/11/2026)
-require __DIR__ . '/../../src/writes.php';
+require __DIR__ . '/../../../shared/src/writes.php';
 require __DIR__ . '/../../../marketing/src/mkt_types.php';
 require __DIR__ . '/../../../marketing/src/fbcontrole.php';
 require __DIR__ . '/../../../marketing/src/meta_graph.php';
@@ -18,14 +18,14 @@ require __DIR__ . '/../../../marketing/src/linkedin_api.php';
 require __DIR__ . '/../../../marketing/src/social_publication.php';
 require __DIR__ . '/../../../marketing/src/brand_guard.php';
 require __DIR__ . '/../../../marketing/src/metadonnee.php';
-require __DIR__ . '/../../src/installer.php';
+require __DIR__ . '/../../../shared/src/installer.php';
 require __DIR__ . '/../../../marketing/src/marketing_tables.php';
 require __DIR__ . '/../../../consultant/src/con_tables.php';
-require __DIR__ . '/../../src/auth.php';
-require __DIR__ . '/../../src/acces.php';   // L'accès : les comptes de la console franchisé (13/11/2026)
-require __DIR__ . '/../../src/panel_api.php';
-require __DIR__ . '/../../src/erp_api.php';
-require __DIR__ . '/../../src/anthropic.php';
+require __DIR__ . '/../../../shared/src/auth.php';
+require __DIR__ . '/../../../shared/src/acces.php';   // L'accès : les comptes de la console franchisé (13/11/2026)
+require __DIR__ . '/../../../shared/src/panel_api.php';
+require __DIR__ . '/../../../shared/src/erp_api.php';
+require __DIR__ . '/../../../shared/src/anthropic.php';
 require __DIR__ . '/../../../marketing/src/google_api.php';
 require __DIR__ . '/../../../marketing/src/scouting_osm.php';
 require __DIR__ . '/../../../marketing/src/newsletter.php';
@@ -44,19 +44,20 @@ require __DIR__ . '/../../../consultant/src/franchises.php';
 require __DIR__ . '/../../../consultant/src/suivi.php';
 require __DIR__ . '/../../../consultant/src/audits.php';          // Pilotage › Audit fournisseurs (12/11/2026)
 require __DIR__ . '/../../../consultant/src/suivi_sources.php';
-require __DIR__ . '/../../src/smtp.php';
-require __DIR__ . '/../../src/ponderation.php';
-require __DIR__ . '/../../src/push.php';
-require __DIR__ . '/../../src/resultat.php';
-require __DIR__ . '/../../src/resultat_pdf.php';
+require __DIR__ . '/../../../shared/src/smtp.php';
+require __DIR__ . '/../../../shared/src/ponderation.php';
+require __DIR__ . '/../../../shared/src/push.php';
+require __DIR__ . '/../../../shared/src/resultat.php';
+require __DIR__ . '/../../../shared/src/resultat_pdf.php';
 require __DIR__ . '/../../../consultant/src/plan.php';
 require __DIR__ . '/../../../consultant/src/plan_pdf.php';
 require __DIR__ . '/../../../panel/src/stats_ventes.php';
 require __DIR__ . '/../../../panel/src/historique_ventes.php';   // L'historique des ventes, 18 mois, pour l'assistant (14/11/2026)
 require __DIR__ . '/../../../marketing/src/promos_ventes.php';
-require __DIR__ . '/../../src/ventes_semaines.php';
+require __DIR__ . '/../../../shared/src/ventes_semaines.php';
 require __DIR__ . '/../../../panel/src/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
 require __DIR__ . '/../../../panel/src/frais.php';                 // Dashboard magasin › Frais : les frais du mois, TVA comprise ou non, et le taux (16/11/2026)
+require __DIR__ . '/../../../consultant/src/inventaires_taux.php';   // la matière expliquée, un seul indicateur (19/11/2026)
 require __DIR__ . '/../../../consultant/src/inventaires.php';
 require __DIR__ . '/../../../consultant/src/verification.php';
 require __DIR__ . '/../../../consultant/src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
@@ -75,7 +76,7 @@ require __DIR__ . '/../../../marketing/src/objectifs_produits.php';
 require __DIR__ . '/../../../marketing/src/jours_creux.php';
 require __DIR__ . '/../../../consultant/src/scoring.php';
 require __DIR__ . '/../../../consultant/src/ventes_pro.php';
-require __DIR__ . '/../../src/pnl_ht.php';                // Le P&L hors TVA et l'onglet Frais du dashboard (16/11/2026)
+require __DIR__ . '/../../../shared/src/pnl_ht.php';                // Le P&L hors TVA et l'onglet Frais du dashboard (16/11/2026)
 require __DIR__ . '/../../../panel/src/temps_morts.php';
 require __DIR__ . '/../../../consultant/src/plano_std.php';
 require __DIR__ . '/../../../consultant/src/rayons_photos.php';
@@ -85,7 +86,7 @@ require __DIR__ . '/../../../consultant/src/structure_gamme.php';
 require __DIR__ . '/../../../consultant/src/plano_proposition.php';
 require __DIR__ . '/../../../consultant/src/rapports.php';
 require __DIR__ . '/../../../panel/src/planning_sync.php';
-require __DIR__ . '/../../src/panel_ventes.php';
+require __DIR__ . '/../../../shared/src/panel_ventes.php';
 require __DIR__ . '/../../../consultant/src/analyse_produits.php';
 require __DIR__ . '/../../../panel/src/recette_produit.php';
 require __DIR__ . '/../../../panel/src/matiere_fiche.php';
@@ -112,7 +113,7 @@ require __DIR__ . '/../../../panel/src/production_flux.php';
 require __DIR__ . '/../../../consultant/src/croisements.php';
 require __DIR__ . '/../../../consultant/src/kpis.php';
 require __DIR__ . '/../../../consultant/src/cadence.php';
-require __DIR__ . '/../../src/connecteurs.php';
+require __DIR__ . '/../../../shared/src/connecteurs.php';
 require __DIR__ . '/../../../marketing/src/mesure.php';
 require __DIR__ . '/../../../consultant/src/taches_suivi.php';
 require __DIR__ . '/../../../consultant/src/cq_mail.php';
@@ -138,7 +139,7 @@ require __DIR__ . '/../../../marketing/src/promos_magasin.php';
 require __DIR__ . '/../../../marketing/src/promos_bons.php';
 require __DIR__ . '/../../../marketing/src/promos_doc.php';
 require __DIR__ . '/../../../marketing/src/promos_reseau.php';
-require __DIR__ . '/../../src/sms.php';
+require __DIR__ . '/../../../shared/src/sms.php';
 require __DIR__ . '/../../../consultant/src/recurrence_pwa.php';
 require __DIR__ . '/../../../consultant/src/leviers.php';
 require __DIR__ . '/../../../formation/src/formation.php';
@@ -151,7 +152,7 @@ require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../../marketing/src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
 require __DIR__ . '/../../../consultant/src/task_cadre.php';
-require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
+require __DIR__ . '/../../../shared/src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../../panel/src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
 require __DIR__ . '/../../../panel/src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
 require __DIR__ . '/../../../panel/src/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
@@ -491,7 +492,6 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/invendus/actions' => ep_exploitation_invendus_actions(),
             $path === '/equipe/remarques'              => ep_equipe_remarques(),
             $path === '/scoring'                       => ep_scoring(),
-            $path === '/scoring/msp'                   => ep_scoring_msp(),
             $path === '/scoring/rapport'               => ep_scoring_rapport(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
@@ -578,7 +578,6 @@ function route(string $method, string $path): mixed
             $path === '/projects'                      => ep_projects(),
             $path === '/projects/crm'                  => ep_crm(),
             $path === '/people'                        => ep_people(),
-            $path === '/reporting'                     => ep_reporting(),
             $path === '/journal'                       => ep_journal(),
             $path === '/journal/mails'                 => ep_journal_mails(),
             $path === '/production/catalogue'          => ep_prod_catalogue(),
@@ -631,10 +630,6 @@ function route(string $method, string $path): mixed
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
             $path === '/produits/analyse/sonde'        => ep_produits_analyse_sonde(),
-            $path === '/produits/utilisation'          => ep_prod_utilisation(),
-            $path === '/produits/utilisation/magasin'  => ep_prod_utilisation_magasin(),
-            $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
-            $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
             $path === '/produits/structure'           => ep_produits_structure(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
@@ -909,9 +904,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/tasks/([\w-]+)/reminder$#', $path, $m)) { return wr_task_reminder($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/task-issues/(\d+)$#', $path, $m)) { return wr_task_issue_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/budget$#', $path, $m)) { return wr_budget_put($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/reporting/reports/([\w-]+)$#', $path, $m)) { return wr_report_patch($m[1]); }
-    if ($method === 'POST' && preg_match('#^/reporting/reports/([\w-]+)/send$#', $path, $m)) { return wr_report_send($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/charges$#', $path, $m)) { return wr_shop_charges($m[1]); }
     // La variation par mois seule : sert à pousser une courbe d'un magasin aux
     // autres sans toucher à leur budget ni au reste de leur étude.
@@ -920,8 +912,6 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/produits$#', $path, $m)) { return wr_objectifs_produits((int) $m[1]); }
     if ($method === 'POST' && $path === '/promo/mecaniques') { return wr_promo_mecanique(null); }
-    if ($method === 'POST' && $path === '/scoring/msp') { return wr_scoring_msp(); }
-    if ($method === 'DELETE' && preg_match('#^/scoring/msp/(\d+)$#', $path, $m) === 1) { return wr_scoring_msp_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/scoring/envoyer') { return wr_scoring_envoyer(); }
     if ($method === 'PUT' && $path === '/promo/mecaniques/ordre') { return wr_promo_mecaniques_ordre(); }
     if ($method === 'PUT' && preg_match('#^/promo/mecaniques/(\d+)$#', $path, $m)) { return wr_promo_mecanique((int) $m[1]); }

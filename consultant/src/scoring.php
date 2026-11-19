@@ -416,67 +416,6 @@ function ep_scoring(): array
     return sqCalcul(sqTrimestre($_GET['trimestre'] ?? null));
 }
 
-/** GET /scoring/msp?shop=5 — l'historique des rapports client mystère d'un magasin (tout le réseau sans shop). */
-function ep_scoring_msp(): array
-{
-    ensureScoring();
-    $shop = trim((string) ($_GET['shop'] ?? ''));
-    $rows = Db::rows('SELECT * FROM con_scoring_msp' . ($shop !== '' ? ' WHERE shop_id = ?' : '') . ' ORDER BY trimestre DESC, shop_id', $shop !== '' ? [$shop] : []);
-    return ['shop' => $shop, 'msp' => array_map('sqMspLigne', $rows)];
-}
-
-/**
- * POST /scoring/msp — le rapport client mystère d'un trimestre :
- * { shop, trimestre, obtenu, maximum, rubriques: { "Accueil": "17 / 20" }, commentaire, fichier (data:application/pdf;base64,…), par }.
- * Réencoder remplace ; le PDF est gardé s'il n'est pas renvoyé.
- */
-function wr_scoring_msp(): array
-{
-    ensureScoring();
-    $b = body();
-    $shop = trim((string) ($b['shop'] ?? ''));
-    if (!isset(sqMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin inconnu']; }
-    $tri = sqTrimestre(is_string($b['trimestre'] ?? null) ? $b['trimestre'] : null);
-    $obtenu = is_numeric($b['obtenu'] ?? null) ? round((float) $b['obtenu'], 2) : null;
-    $max = is_numeric($b['maximum'] ?? null) ? round((float) $b['maximum'], 2) : null;
-    if ($obtenu === null || $max === null || $max <= 0 || $obtenu < 0 || $obtenu > $max) { http_response_code(422); return ['error' => 'note attendue : obtenu et maximum, 0 ≤ obtenu ≤ maximum']; }
-    $rub = [];
-    foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) {
-        $k = mb_substr(trim((string) $k), 0, 60); $v = mb_substr(trim((string) $v), 0, 40);
-        if ($k !== '' && $v !== '') { $rub[$k] = $v; }
-    }
-    $fichier = null;
-    if (!empty($b['fichier']) && preg_match('#^data:application/pdf;base64,(.+)$#s', (string) $b['fichier'], $m)) {
-        $bin = base64_decode($m[1], true);
-        if ($bin === false || !str_starts_with($bin, '%PDF')) { http_response_code(422); return ['error' => 'le fichier n’est pas un PDF']; }
-        if (strlen($bin) > 8 * 1024 * 1024) { http_response_code(422); return ['error' => 'PDF de plus de 8 Mo']; }
-        $dossier = __DIR__ . '/../../public/uploads/scoring/msp';
-        if (!is_dir($dossier) && !@mkdir($dossier, 0775, true)) { http_response_code(500); return ['error' => 'dossier uploads/scoring inaccessible']; }
-        $nom = preg_replace('/[^\w-]/', '', $shop) . '-' . $tri['cle'] . '.pdf';
-        if (@file_put_contents($dossier . '/' . $nom, $bin) === false) { http_response_code(500); return ['error' => 'PDF non enregistré (droits du dossier uploads)']; }
-        $fichier = 'uploads/scoring/msp/' . $nom;
-    }
-    $par = mb_substr(trim((string) ($b['par'] ?? '')), 0, 120) ?: null;
-    Db::exec('INSERT INTO con_scoring_msp (shop_id, trimestre, obtenu, maximum, rubriques, commentaire, fichier, par, le) VALUES (?,?,?,?,?,?,?,?,?)
-              ON DUPLICATE KEY UPDATE obtenu = VALUES(obtenu), maximum = VALUES(maximum), rubriques = VALUES(rubriques), commentaire = VALUES(commentaire),
-              fichier = COALESCE(VALUES(fichier), fichier), par = VALUES(par), le = VALUES(le)',
-        [$shop, $tri['cle'], $obtenu, $max, json_encode($rub, JSON_UNESCAPED_UNICODE), mb_substr(trim((string) ($b['commentaire'] ?? '')), 0, 2000) ?: null, $fichier, $par, date('Y-m-d H:i:s')]);
-    $r = Db::row('SELECT * FROM con_scoring_msp WHERE shop_id = ? AND trimestre = ?', [$shop, $tri['cle']]);
-    if (function_exists('journalAdd')) { journalAdd($par ?: 'CEO', 'Scoring', null, 'Client mystère ' . $tri['court'] . ' — ' . (sqMagasins()[$shop]['court'] ?? $shop) . ' : ' . $obtenu . ' / ' . $max); }
-    return ['ok' => true, 'msp' => $r ? sqMspLigne($r) : null];
-}
-
-/** DELETE /scoring/msp/{id} — efface le rapport (et son PDF). */
-function wr_scoring_msp_suppr(int $id): array
-{
-    ensureScoring();
-    $r = Db::row('SELECT * FROM con_scoring_msp WHERE id = ?', [$id]);
-    if ($r === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
-    if ($r['fichier']) { @unlink(__DIR__ . '/../../public/' . $r['fichier']); }
-    Db::exec('DELETE FROM con_scoring_msp WHERE id = ?', [$id]);
-    return ['ok' => true];
-}
-
 /* --- le rapport A4 ---------------------------------------------------------------- */
 
 function sqH(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }

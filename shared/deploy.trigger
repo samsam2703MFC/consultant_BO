@@ -159,6 +159,18 @@
 2026-11-19T12:11:19Z [366] Réclamations : photos dans la fenêtre
 2026-11-19T14:33:17Z Revue du soir : les tâches pas faites montrées clairement, la caisse sans écart (monnayeur)
 2026-11-19T14:48:38Z Fil du franchisé (fil et calendrier, au cockpit seulement) ; rail : Dashboard magasin retiré
+2026-11-19T15:03:27Z Fusion de la branche par défaut (84 commits) : déjà en ligne sous d'autres commits, ajoute les captures du helpdesk
 2026-11-19T15:02:05Z Catalogue des manuels : feuilleter, PDF, QR code, dépliant ; rail du cockpit et du module Formation
 2026-11-19T15:07:02Z Rail du cockpit réorganisé : 34 entrées sans sous-menu, les vues d'une même question en onglets (docs/audit-rail.md)
 2026-11-19T15:10:18Z Catalogue des manuels : liens directs vers les SOP, articles et checklists cités (écran et PDF)
+2026-11-19T15:31:37Z Produit : le panel fait foi, l'obligatoire au seul Assortiment ; PDF 20/80 sur la Structure de gamme ; inventaire : un seul pourcentage, la matière expliquée
+2026-11-19T15:32:09Z Catalogue des manuels : code des checklists en couleurs ; postes, formations et compétences dans le manuel du réseau
+2026-11-19T15:41:01Z Dépliant des manuels : page franchise, court résumé de 0.0.21 et 0.0.56 à la place des chiffres du contrat
+2026-11-19T15:42:59Z Revue du soir : la tuile des tâches pas faites, « 8 / 11 » sur une ligne
+2026-11-19T15:50:23Z Dépliant des manuels : page franchise, les huit questions d'une franchise bien tenue
+2026-11-19T16:03:25Z Fil : glisser ou coller une photo partout, étiquettes communication ; code mort retiré (écrans, routes sans appelant, paquet de l'assistant)
+2026-11-19T16:07:02Z Catalogue des manuels : couvertures aux couleurs de la marque, avec illustration
+2026-11-19T16:14:57Z Catalogue des manuels : boutons des cartes dans leur carte (le bouton QR débordait)
+2026-11-19T16:27:00Z Checklists : 5.6.02 « Une franchise bien tenue » dans la nomenclature (checklist #64 du panel)
+2026-11-19T16:30:53Z Checklists : la fiche Formation de 5.6.02 reliée dans la nomenclature
+2026-11-19T16:43:53Z Réorganisation en quatre domaines : dossiers, clés dans erp_cles, 144 tables renommées par migrations (aucune suppression)

@@ -10,7 +10,7 @@ et un préfixe de tables chacun. Chaque dossier a son `CLAUDE.md` : lis celui du
 | Pilotage (consultant) | `consultant/` | `con_` |
 | Dashboard / day panel franchisé | `panel/` | `panel_` |
 | Partagé | `shared/` | noms conservés (`ceo_shop`, `ceo_app_setting`, `ceo_journal_entry`, `erp_cles`…) |
-| Hors périmètre | `pilotage-reseau/` | copie de l'ERP (`apps/production`, base `erp`), module RH (`hr_dimona_*`) |
+| Hors périmètre | `pilotage-reseau/` | copie de l'ERP (`pilotage-reseau/apps/production`, base `erp`), module RH (`hr_dimona_*`) |
 
 - **Tables** : une table, un domaine, `{préfixe}_{entité}` en snake_case. Ce qui sert à plusieurs domaines va dans
   `shared/` (code) et garde son nom (tables). Renommer une table : une migration `shared/db/migrations/NNN_*.php`
@@ -24,6 +24,9 @@ et un préfixe de tables chacun. Chaque dossier a son `CLAUDE.md` : lis celui du
   déposés) ne bouge jamais. `shared/src/depot.php` dit où est la racine et où est le code.
 - **Déploiement** : un seul, `.github/workflows/deploy.yml` + `shared/bin/deploy.sh`, déclenché par
   `shared/deploy.trigger` sur la branche de déploiement.
+  Mise en ligne **toujours depuis la branche par défaut** : PR fusionnée dans `claude/new-session-deedox` (avec sa
+  ligne dans `shared/deploy.trigger`), puis avance rapide de `claude/deploiement-application-serveur-lmz1bm` jusqu'à
+  ce commit ; jamais de commit ni de fusion directe sur la branche de déploiement (détail : `shared/CLAUDE.md`).
 - **Tests** : `php shared/bin/tests_noms_globaux.php` et `php shared/bin/test_chargement.php` (bloquants en CI), puis
   `*/bin/tests_*.php` et `php pilotage-reseau/tests/hr/run.php`.
 - **Écarts connus, non corrigés** (REORG_PLAN.md §8) : lectures SQL directes des tables de l'ERP et d'autres

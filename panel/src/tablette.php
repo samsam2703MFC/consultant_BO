@@ -355,8 +355,9 @@ function tbConstruire(?array $shop, string $ensemble): array
         $etats[$al['etat']]++;
         foreach ($al['vides'] as $m) { $aSaisir[$m] = ($aSaisir[$m] ?? 0) + 1; }
         $poids = (int) ($c['poids'] ?? 0) ?: (int) ($f['single_weight'] ?? 0);
-        // La durée de vie : celle du BO (catalogue, sinon fiche de la base), celle du panel seulement à défaut.
-        $minutes = (int) ($c['dlv'] ?? 0) > 0 ? (int) $c['dlv'] * 60 : (int) ($f['shelf_life_minutes'] ?? 0);
+        // La durée de vie : celle du produit (fiche de la base, sinon le panel). La saisie du cockpit n'est plus lue
+        // (19/11/2026) : le panel fait foi, la DLV se corrige dans Produits › Paramétrage.
+        $minutes = (int) ($f['shelf_life_minutes'] ?? 0);
         if ($minutes <= 0 && (int) ($fp['shelf_life_minutes'] ?? 0) > 0) { $minutes = (int) $fp['shelf_life_minutes']; $n['dlcPanel']++; }
         $n['dlc'] += (int) ($minutes > 0);
         $keep = tbConserver(tbFicheConservation($f, $fp));

@@ -27,15 +27,14 @@ import { valsVisibilite, visibiliteBadge } from './visibilite-vals.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
 // Structure de gamme (11/11/2026) : le standard, les saisons, ce qui sort — un onglet du Planogramme, à côté de l'assortiment.
-import { valsStructure } from './structure-gamme.js';
+import { valsStructure, sgProposition } from './structure-gamme.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
 function modeTablette(){
   try {
     const tactile = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
-    const app = document.documentElement.getAttribute('data-app') === 'consultant';
-    document.documentElement.toggleAttribute('data-tablette', app || (tactile && innerWidth <= 1366) || innerWidth <= 1100);
+    document.documentElement.toggleAttribute('data-tablette', (tactile && innerWidth <= 1366) || innerWidth <= 1100);
   } catch (e) { /* sans mode tablette, l'écran reste celui du bureau */ }
 }
 modeTablette();
@@ -919,6 +918,17 @@ class App {
     this.root.addEventListener('dragleave', e => { if (e.target === survol) { eteint(); } });
     this.root.addEventListener('dragend', eteint);
     this.root.addEventListener('drop', e => { eteint(); run('data-dp', e); });
+    // Un fichier lâché hors d'une zone de dépôt ne doit pas faire quitter le cockpit : le navigateur l'ouvrirait à la
+    // place de la page (19/11/2026, le fil du franchisé). Hors zone, le curseur dit « interdit » et rien ne se passe ;
+    // un champ fichier garde son dépôt natif.
+    const porteFichiers = e => !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files'));
+    const champFichier = e => !!(e.target && e.target.closest && e.target.closest('input[type="file"]'));
+    document.addEventListener('dragover', e => {
+      if (!porteFichiers(e) || champFichier(e)) { return; }
+      e.preventDefault();
+      if (!(e.target.closest && e.target.closest('[data-dp]'))) { e.dataTransfer.dropEffect = 'none'; }
+    });
+    document.addEventListener('drop', e => { if (porteFichiers(e) && !champFichier(e)) { e.preventDefault(); } });
     // Échap ferme la recherche du rail. Le panneau de résultats recouvre le
     // rail : sans sortie au clavier, il fallait viser la croix pour retrouver
     // la navigation.
@@ -1103,18 +1113,11 @@ class App {
   /* --- valeurs de rendu (port de renderVals) --------------------------------- */
   renderVals(){
     // L'ancien écran Scoring du trimestre vit dans la fiche (B2, 16/10/2026) : son classement en est
-    // « Le réseau » (l'encodage du client mystère est dans Paramètres). Un ancien lien y mène.
+    // « Le réseau » (le client mystère s'encode dans Visites › Client mystère). Un ancien lien y mène.
     if (this.state.screen === 'scoringTri') {
       this.state.screen = 'ficheFranchise';
       this.state.ffOnglet = 'reseau';
       const juste = this.adresseDe('ficheFranchise');
-      if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
-    }
-    // Le second formulaire du client mystère (Paramètres) est retiré (19/11/2026) : tout passage s'encode dans
-    // Visites › Client mystère, qui écrit les rubriques, le passage et ses suites.
-    if (this.state.screen === 'clientMystere') {
-      this.state.screen = 'suiviMsp';
-      const juste = this.adresseDe('suiviMsp');
       if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     }
     const S = this.state;
@@ -1158,8 +1161,6 @@ class App {
       anaprod: ['Produits × magasins', 'Chaque référence, où elle se vend : une jauge par magasin face à la moyenne réseau — vert au-dessus, rouge en dessous, le delta en %, les « jamais vendu » et les éteints qui sautent aux yeux. Cliquez une référence pour sa fiche de vie — courbe fine par magasin, moyenne réseau et an dernier. Lu en direct chez le panel, tranche par tranche.'],
       prixvolume: ['Prix × volume', 'Le prix encaissé par chaque magasin, face à ce qu’il vend : une ligne par référence, une colonne par magasin — le prix (bleu sous le réseau, abricot au-dessus), les pièces, et le volume à taille égale face aux autres. Cliquez une référence pour son nuage prix contre volume.'],
       manque: ['Manque à gagner', 'Ce que chaque magasin ne vend pas, en euros. Pour chaque référence qu’il n’a pas vendue alors que les autres la vendaient : leur volume médian par jour d’ouverture, ramené à sa fréquentation, au prix encaissé. Une estimation à assortiment comparable — pas une promesse de chiffre d’affaires.'],
-      usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
-      seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
@@ -1182,8 +1183,6 @@ class App {
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       visibilite: ['Visibilité Google', 'Ce que Google affiche de chaque magasin face à ce que publie le site, et la place de chaque magasin quand on cherche ses produits autour de lui : boulangerie, sandwiches, cougnous, galettes des rois.'],
-      clientMystere: ['Client mystère', 'Le rapport client mystère reçu, magasin par magasin et par trimestre : « obtenu / maximum », ramené sur 5 pour le poste Client mystère du scoring, avec son PDF.'],
-      scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
       ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
       verifFlux: ['Audit des flux', 'Ce que chaque magasin fait de ce qui est en vitrine : gardé d’hier et produit, puis vendu, jeté, gardé — et ce qui ne s’explique pas, en % du disponible, au jour, à la semaine et au mois. Une journée n’est mesurée que si ses cuissons sont validées : sinon le produit est le plan, et l’écart un écart au plan.'],
@@ -1210,7 +1209,7 @@ class App {
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], iaEntrainement: ['Entraînement de l’IA', 'Rayon par rayon : ce que l’IA doit voir (la consigne), le comptoir parfait de chaque magasin (la photo modèle), ce qu’elle a appris de vos corrections — et à quel point elle est d’accord avec vous.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], iaEntrainement: ['Entraînement de l’IA', 'Rayon par rayon : ce que l’IA doit voir (la consigne), le comptoir parfait de chaque magasin (la photo modèle), ce qu’elle a appris de vos corrections — et à quel point elle est d’accord avec vous.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
     if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
@@ -1439,7 +1438,7 @@ class App {
         entree('taches', 'Tâches & contrôles')]],
       // Chaque franchisé : sa fiche et son scoring, ses visites, son budget, son équipe ; et ce qu'il dit des fournisseurs.
       ['Franchisés', [
-        ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
+        ['ficheFranchise', 'Fiche & scoring', 0],
         entree('visites', 'Visites', ['suiviTablette']),
         entree('budget', 'Budget'),
         entree('ventes', 'Équipe & ventes'),
@@ -1525,11 +1524,11 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
-      mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', reputation: 'isReput', resultatJour: 'isRJour',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1945,10 +1944,6 @@ class App {
     if (common.isCadreT) { this.valsCadreTaches(common); } else { this._ctSrc = null; }
     if (common.isAudits) { this.valsAudits(common); }
     if (common.isMktObj) this.valsMktObj(common);
-    if (common.isScoringTri) this.valsScoring(common);
-    // L'ancien formulaire du client mystère (Paramètres) : plus atteint depuis le 19/11/2026, l'écran est réécrit en
-    // Visites › Client mystère avant le rendu (docs/audit-rail.md, code mort à retirer).
-    if (common.isCltMyst) { if (S.sqVue !== 'msp') { this.state.sqVue = 'msp'; } this.valsScoring(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
@@ -2689,10 +2684,13 @@ class App {
       if (nReleve < 2) { inv.alertes.push(['info', 'Les inventaires d’octobre se calculent dès le prochain : le panel ne rend pas ses inventaires passés, le cockpit relève le stock toutes les cinq minutes depuis le ' + jf(R.depuis || '') + '. La copie du panel s’arrête au ' + inv.finCopie + ' : ce sont ces semaines-là qu’on lit pour l’instant.']); }
       // l'historique : une barre par semaine
       const H = (L.paires || []).slice().reverse();
+      // La matière expliquée (19/11/2026) : le même indicateur et les mêmes seuils que Matières ↔ recettes — le ton vient
+      // du serveur (invTauxTon), l'écran ne fait que le peindre.
+      const TON = { ok: 'ok', att: 'moy', ko: 'ko' };
       inv.histo = H.map(p => { const r = p.resume; const sansL = !!(r && r.nQualite > 0 && r.livraisons === 0); const j = r && !sansL ? r.justesse : null;
-        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
+        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · matière expliquée ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
           h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j)) * 0.8, val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
-          cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
+          cls: j == null ? 'na' : (TON[r.justesseTon] || 'na'), on: p.de === de && p.a === a,
           choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
     }
     // l'écart de la paire choisie
@@ -2708,9 +2706,9 @@ class App {
         const Q0 = E.qualite || [];
         const sansLivr0 = E.source === 'copie' && Q0.length > 0 && Q0.every(q => !q.livraisons);
         const j = sansLivr0 ? null : T.justesse;
-        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : (TON[T.justesseTon] || 'na'),
           sous: sansLivr0 ? 'aucune livraison enregistrée dans le panel sur la période : le stock n’a pas d’entrées, ses sorties ne se mesurent pas'
-            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, dont ' + fE(T.fiableCouvert) + ' expliqués par la caisse et la poubelle et ' + fE(T.manquant) + ' sans explication' };
+            : j == null ? 'rien n’est sorti du stock sur la période' : 'sur toutes les matières chiffrées : ' + fE(T.sortiPos) + ' sortis du stock, dont ' + fE(T.couvert) + ' expliqués par la caisse et la poubelle — le même chiffre que Matières ↔ recettes' };
         inv.kpi = [
           ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
           ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],
@@ -2776,64 +2774,6 @@ class App {
       this.setState({ sq: { cle, chargement: false, d: d || null } });
     });
   }
-  sqHistCharge(shop, force){
-    const b = this.state.sqHist;
-    if (!force && b && b.cle === shop && (b.d || b.chargement)) { return; }
-    if (this._sqHistEnCours === shop && !force) { return; }
-    this._sqHistEnCours = shop;
-    this.setState({ sqHist: { cle: shop, chargement: true, d: null } });
-    readOne('/scoring/msp?shop=' + encodeURIComponent(shop)).then(d => { this._sqHistEnCours = null; this.setState({ sqHist: { cle: shop, chargement: false, d: d || null } }); });
-  }
-  sqFichierUrl(f){ return f ? API_BASE.replace(/\/api\/cockpit\/?$/, '/') + f : null; }
-  sqRubDefaut(){ return [['Accueil & conseil', ''], ['Propreté & hygiène', ''], ['Produits & vitrine', ''], ['Caisse & encaissement', '']]; }
-  /** Le formulaire du client mystère, pré-rempli avec ce qui est déjà encodé pour ce magasin et ce trimestre. */
-  sqMspForm(shop, tri){
-    const d = (this.state.sq || {}).d || {};
-    shop = String(shop);
-    const l = (d.magasins || []).find(m => String(m.id) === shop);
-    const m = l && d.trimestre && d.trimestre.cle === tri ? l.postes.msp : null;
-    const enc = m && m.v != null;
-    let par = ''; try { par = localStorage.getItem('sq.par') || ''; } catch (e) { /* navigation privée */ }
-    return { shop, trimestre: tri, obtenu: enc ? String(m.obtenu) : '', maximum: enc ? String(m.maximum) : '', par: enc && m.par ? m.par : par,
-      rubriques: enc && m.rubriques && Object.keys(m.rubriques).length ? Object.keys(m.rubriques).map(k => [k, m.rubriques[k]]) : this.sqRubDefaut(),
-      commentaire: enc ? (m.commentaire || '') : '', fichier: null, fichierNom: '', fichierActuel: enc ? m.fichier : null, le: enc ? m.le : null, id: enc ? m.id : null };
-  }
-  sqMspOuvrir(shop, tri){
-    shop = String(shop);
-    this.setState({ sqVue: 'msp', sqMspForm: this.sqMspForm(shop, tri) });
-    this.sqHistCharge(shop, true);
-  }
-  sqMspChamp(patch){ this.setState({ sqMspForm: Object.assign({}, this.state.sqMspForm, patch) }); }
-  sqMspFichier(e){
-    const f = e.target.files && e.target.files[0];
-    if (!f) { return; }
-    if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { this.notify('Le rapport doit être un PDF'); return; }
-    if (f.size > 8 * 1024 * 1024) { this.notify('PDF de plus de 8 Mo — trop lourd'); return; }
-    const r = new FileReader();
-    r.onload = () => this.sqMspChamp({ fichier: r.result, fichierNom: f.name });
-    r.readAsDataURL(f);
-  }
-  sqMspEnreg(){
-    const f = this.state.sqMspForm; if (!f) { return; }
-    const ob = parseFloat(String(f.obtenu).replace(',', '.')), mx = parseFloat(String(f.maximum).replace(',', '.'));
-    if (!(mx > 0) || !(ob >= 0) || ob > mx) { this.notify('La note : obtenu et maximum, avec 0 ≤ obtenu ≤ maximum'); return; }
-    const rub = {}; (f.rubriques || []).forEach(r => { if (String(r[0]).trim() && String(r[1]).trim()) { rub[String(r[0]).trim()] = String(r[1]).trim(); } });
-    try { localStorage.setItem('sq.par', f.par || ''); } catch (e) { /* navigation privée */ }
-    this.setState({ sqBusy: true });
-    this.api('POST', '/scoring/msp', { shop: f.shop, trimestre: f.trimestre, obtenu: ob, maximum: mx, rubriques: rub, commentaire: f.commentaire || '', par: f.par || '', fichier: f.fichier || null }).then(r => {
-      this.setState({ sqBusy: false });
-      if (r && r.ok) {
-        this.notify('Client mystère enregistré — ' + (r.msp ? (Math.round(r.msp.v * 10) / 10).toLocaleString('fr-BE') + ' / 5' : ''));
-        this.sqMspChamp({ fichier: null, fichierNom: '', fichierActuel: r.msp ? r.msp.fichier : f.fichierActuel, le: r.msp ? r.msp.le : f.le, id: r.msp ? r.msp.id : f.id });
-        this.sqCharge(true); this.sqHistCharge(f.shop, true);
-      }
-    });
-  }
-  sqMspSuppr(){
-    const f = this.state.sqMspForm; if (!f || !f.id) { return; }
-    if (!window.confirm('Effacer le rapport client mystère de ce trimestre ?')) { return; }
-    this.api('DELETE', '/scoring/msp/' + f.id, {}).then(r => { if (r && r.ok) { this.notify('Rapport effacé'); this.setState({ sqMspForm: Object.assign({}, f, { id: null, obtenu: '', maximum: '', fichierActuel: null, le: null, commentaire: '', rubriques: this.sqRubDefaut() }) }); this.sqCharge(true); this.sqHistCharge(f.shop, true); } });
-  }
   sqEnvoyer(essai){
     const d = (this.state.sq || {}).d; if (!d || !d.trimestre) { return; }
     if (!essai && !window.confirm('Envoyer le scoring ' + d.trimestre.court + ' à chaque magasin du carnet, avec copie aux adresses réseau ?')) { return; }
@@ -2852,9 +2792,6 @@ class App {
   }
   valsScoring(common){
     const S = this.state;
-    const vue = S.sqVue || 'tableau';
-    common.sqVue = vue;
-    common.sqVues = [['tableau', 'Le classement'], ['msp', 'Client mystère']].map(([v, nom]) => ({ v, nom, on: vue === v, choisir: () => { if (v === 'msp' && !S.sqMspForm) { const d = (S.sq || {}).d || {}; const l = (d.magasins || [])[0]; if (l && d.trimestre) { this.sqMspOuvrir(String(l.id), d.trimestre.cle); return; } } this.setState({ sqVue: v }); } }));
     this.sqCharge(false);
     const b = S.sq || {}, d = b.d || {};
     common.sqChargement = !!b.chargement && !b.d;
@@ -2874,8 +2811,7 @@ class App {
       rang: l.rang, top: l.rang === 1, court: l.court, nom: l.nom, fr: l.fr, total: nf(l.total), sur: l.sur, n: l.n, manque: 4 - l.n,
       pct: l.etoiles == null ? 0 : l.etoiles / 5 * 100, na: l.etoiles == null, delta: deltaTxt(l.delta), deltaCls: l.delta == null ? 'mu' : (l.delta >= 0.05 ? 'ok' : (l.delta <= -0.05 ? 'ko' : 'mu')),
       postes: Object.keys(POSTES).map(k => { const x = l.postes[k] || { v: null }; return { cle: k, nom: POSTES[k].nom, v: x.v == null ? '—' : nf(x.v), na: x.v == null, pct: x.v == null ? 0 : x.v / 5 * 100, d: this.sqDetail(k, x, nf),
-        alerte: k === 'taches' && x.joursZero ? x.joursZero + ' jour' + (x.joursZero > 1 ? 's' : '') + ' à 0 — obligatoire manquée' : '',
-        encoder: k === 'msp' ? () => this.sqMspOuvrir(String(l.id), tri.cle) : null, fichier: k === 'msp' && x.fichier ? this.sqFichierUrl(x.fichier) : null }; }) }));
+        alerte: k === 'taches' && x.joursZero ? x.joursZero + ' jour' + (x.joursZero > 1 ? 's' : '') + ' à 0 — obligatoire manquée' : '' }; }) }));
     common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', magasins: d.reseau.magasins || (d.magasins || []).length, complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles) } : null;
     const src = d.sources || {};
     common.sqSources = (src.googleSynchro ? 'Google synchronisé le ' + jf(src.googleSynchro.slice(0, 10)) : 'Google : pas de synchro') + ' · tâches relevées du ' + jf(tri.du) + ' au ' + jf(tri.arrete) + ' · ' + (src.obligatoires || 0) + ' tâche' + (src.obligatoires > 1 ? 's' : '') + ' obligatoire' + (src.obligatoires > 1 ? 's' : '') + ' (drapeau du panel' + ((src.obligatoiresChecklists || []).length ? ' + checklists ' + src.obligatoiresChecklists.join(', ') : '') + ')' + ' · CA face au budget des trois mois · client mystère encodé à la main';
@@ -2887,28 +2823,6 @@ class App {
     common.sqEnvoyerEssai = () => this.sqEnvoyer(S.sqEssai);
     common.sqBusy = !!S.sqBusy;
     common.sqBilan = S.sqBilan ? (S.sqBilan.error ? { ko: true, txt: S.sqBilan.error } : { txt: S.sqBilan.resume || 'envoyé', lignes: (S.sqBilan.magasins || []).map(m => (m.magasin || '').split(' - ').pop() + ' — ' + m.statut + (m.envoyes && m.envoyes.length ? ' (' + m.envoyes.join(', ') + ')' : '') + (m.note ? ' · ' + m.note : '')).concat((S.sqBilan.copies || []).map(c => 'copie ' + c.a + ' — ' + c.statut + (c.note ? ' · ' + c.note : ''))) }) : null;
-    if (vue === 'msp') {
-      const f = S.sqMspForm || this.sqMspForm(String(((d.magasins || [])[0] || {}).id || ''), tri.cle);
-      if (f.shop) { this.sqHistCharge(f.shop, false); }
-      const ob = parseFloat(String(f.obtenu).replace(',', '.')), mx = parseFloat(String(f.maximum).replace(',', '.'));
-      const sur5 = mx > 0 && ob >= 0 ? Math.min(5, ob / mx * 5) : null;
-      const lig = (d.magasins || []).find(m => String(m.id) === String(f.shop)) || {};
-      const hb = S.sqHist || {}, hd = String(hb.cle) === String(f.shop) ? (hb.d || {}) : {};
-      common.sqMsp = {
-        shops: (d.magasins || []).map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === String(f.shop) })), setShop: e => this.sqMspOuvrir(e.target.value, f.trimestre),
-        tris: (d.trimestres || []).map(t => ({ cle: t.cle, lib: t.lib, on: t.cle === f.trimestre })), setTri: e => { this.setState({ sqTri: e.target.value }); this.setState({ sqMspForm: null, sqVue: 'msp' }); },
-        shopCourt: lig.court || lig.nom || '', obtenu: f.obtenu, setObtenu: e => this.sqMspChamp({ obtenu: e.target.value }), maximum: f.maximum, setMaximum: e => this.sqMspChamp({ maximum: e.target.value }),
-        sur5: sur5 == null ? '—' : nf(sur5), pct: sur5 == null ? 0 : sur5 / 5 * 100,
-        calcul: sur5 == null ? 'obtenu ÷ maximum × 5 — c’est ce qui entre dans le scoring du ' + tri.court : nf(ob, 0) + ' ÷ ' + nf(mx, 0) + ' × 5 = ' + nf(ob / mx * 5, 2) + ' — c’est ce qui entre dans le scoring du ' + tri.court,
-        rubriques: (f.rubriques || []).map((r, i) => ({ k: r[0], v: r[1], setK: e => { const l2 = f.rubriques.slice(); l2[i] = [e.target.value, l2[i][1]]; this.sqMspChamp({ rubriques: l2 }); }, setV: e => { const l2 = f.rubriques.slice(); l2[i] = [l2[i][0], e.target.value]; this.sqMspChamp({ rubriques: l2 }); } })),
-        addRub: () => this.sqMspChamp({ rubriques: (f.rubriques || []).concat([['', '']]) }),
-        fichierNom: f.fichierNom || '', setFichier: e => this.sqMspFichier(e), fichierActuel: this.sqFichierUrl(f.fichierActuel), fichierActuelNom: f.fichierActuel ? f.fichierActuel.split('/').pop() : '', le: f.le ? jf((f.le || '').slice(0, 10)) : '',
-        commentaire: f.commentaire || '', setCommentaire: e => this.sqMspChamp({ commentaire: e.target.value }), par: f.par || '', setPar: e => this.sqMspChamp({ par: e.target.value }),
-        enreg: () => this.sqMspEnreg(), suppr: f.id ? () => this.sqMspSuppr() : null, busy: !!S.sqBusy,
-        etat: f.id ? 'encodé' + (f.le ? ' le ' + jf((f.le || '').slice(0, 10)) : '') + ' · réencoder remplace' : 'pas encore encodé pour ce trimestre',
-        histChargement: !!hb.chargement, hist: (hd.msp || []).map(h => ({ tri: 'T' + h.trimestre.slice(6) + ' ' + h.trimestre.slice(0, 4), recu: nf(h.obtenu, 0) + ' / ' + nf(h.maximum, 0), sur5: nf(h.v), pct: h.v == null ? 0 : h.v / 5 * 100, fichier: this.sqFichierUrl(h.fichier) })),
-      };
-    }
   }
 
   /* --- encodage du budget ----------------------------------------------------- */
@@ -3876,44 +3790,6 @@ class App {
     const cat = D.prodCatalogue || [];
     common.refVide = !cat.length;
 
-    const fG = S.refG || 'Tous les groupes';
-    const fC = S.refC || 'Toutes les catégories';
-    const fP = S.refP || 'Toutes les gammes';
-    const q = (S.refQ || '').trim().toLowerCase();
-    common.refG = fG; common.refC = fC; common.refP = fP; common.refQ = S.refQ || '';
-    common.refSetG = e => this.setState({ refG: e.target.value, refC: 'Toutes les catégories' });
-    common.refSetC = e => this.setState({ refC: e.target.value });
-    common.refSetP = e => this.setState({ refP: e.target.value });
-    common.refSetQ = e => this.setState({ refQ: e.target.value });
-
-    common.refGroupes = ['Tous les groupes'].concat(
-      [...new Set(cat.map(p => p.groupe).filter(Boolean))].sort());
-    // Les catégories proposées suivent le groupe choisi : offrir les 56 quand
-    // un groupe en contient 6 oblige à chercher ce qui ne s'appliquera pas.
-    const pourCat = fG === 'Tous les groupes' ? cat : cat.filter(p => p.groupe === fG);
-    common.refCategories = ['Toutes les catégories'].concat(
-      [...new Set(pourCat.map(p => p.categorie).filter(Boolean))].sort());
-    common.refGammes = ['Toutes les gammes'].concat(
-      [...new Set(cat.flatMap(p => p.periods || []))].sort());
-
-    let lignes = cat.filter(p =>
-      (fG === 'Tous les groupes' || p.groupe === fG) &&
-      (fC === 'Toutes les catégories' || p.categorie === fC) &&
-      (fP === 'Toutes les gammes' || (p.periods || []).indexOf(fP) >= 0) &&
-      (!q || (p.nom || '').toLowerCase().indexOf(q) >= 0 || String(p.ref).indexOf(q) >= 0));
-
-    if (common.isAsso) { lignes = lignes.filter(p => p.must || S.refToutes); }
-    common.refToutes = !!S.refToutes;
-    common.refBascule = () => this.setState({ refToutes: !S.refToutes });
-    common.refTotal = cat.length;
-    common.refFiltres = lignes.length;
-
-    // Compteurs de couverture : sur ces deux écrans, ce qui manque est
-    // l'information principale — pas ce qui est déjà renseigné.
-    common.refMust = cat.filter(p => p.must).length;
-    common.refPlaces = cat.filter(p => p.zone).length;
-    // Fins de gamme annoncées : le réseau doit les voir là où il regarde les
-    // références — au catalogue et à l'assortiment, pas dans un écran à part.
     common.refFins = cat.filter(p => p.finLe)
       .sort((a, b) => (a.finLe < b.finLe ? -1 : 1))
       .map(p => ({ ref: String(p.ref), nom: p.nom,
@@ -3922,7 +3798,12 @@ class App {
 
     const ed = S.refEdit;
     common.refEdit = ed ? {
-      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '', saisonTxt: ed.saisonTxt || '',
+      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '',
+      obligTxt: ed.obligTxt || '', panel: ed.panel || [], ancien: ed.ancien || '',
+      // Où corriger ce que la fiche ne tient pas : le panel (prix, durée de vie), la recette, l'assortiment.
+      voirPanel: ed.pwaId ? () => this.setState({ screen: 'paramProduits', ppPid: ed.pwaId, refEdit: null, catFiche: null }) : null,
+      voirRecettes: () => this.setState({ screen: 'verifRecettes', refEdit: null, catFiche: null }),
+      voirAssortiment: ed.mode === 'asso' ? null : () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(ed.nom), aoPop: null, refEdit: null, catFiche: null }),
       champs: ed.champs,
       set: k => e => this.setState(s2 => ({ refEdit: Object.assign({}, s2.refEdit,
         { champs: Object.assign({}, s2.refEdit.champs, { [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }) }) })),
@@ -3934,97 +3815,6 @@ class App {
     // l'écran de scoring — jamais d'un second, qui finirait par en diverger.
     // Le rapprochement se fait par la référence : /products/scoring rend un
     // `id` qui est la référence catalogue (mesuré : « 1610004 » des deux côtés).
-    let scores = null, nScores = 0;
-    if (common.isCat) {
-      const c2 = this.pdCalcule();
-      scores = {};
-      (c2.base || []).forEach(s => { scores[String(s.id)] = s; });
-      nScores = Object.keys(scores).length;
-      common.refVerdict = c2.verdict;
-      common.refScorePond = c2.pond;
-      common.refScorePer = c2.periode;
-    }
-    common.refScoresN = nScores;
-    // Le scoring ne couvre que les références VENDUES sur la période : le dire
-    // évite de lire un tiret comme un mauvais score.
-    common.refScoresTxt = common.isCat
-      ? nScores + ' référence(s) notée(s) sur ' + cat.length + ' — le score porte sur ce qui s’est vendu ' + (common.refScorePer || '')
-      : '';
-
-    common.refLignes = lignes.slice(0, 400).map(p => ({
-      ref: String(p.ref), nom: p.nom, categorie: p.categorie || '',
-      // Voir aussi : la même référence dans le scoring, dans « par référence », au comptoir — des onglets du Catalogue (18/10/2026).
-      voir: [
-        { nom: 'scoring', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
-        { nom: 'par référence', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
-        { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : la poser sur le comptoir standard', go: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }) }],
-      groupe: p.groupe || '',
-      gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
-      prix: this.fEd(p.prix), cout: this.fEd(p.mat),
-      // Une marge non publiée n'est pas une marge nulle : le coût est visible,
-      // la marge se tait, et la mention dit laquelle des deux on regarde.
-      marge: p.margePct == null ? (p.mat != null ? 'non fiable' : '') : this.fP(p.margePct, 0),
-      margeC: this.echelleMarge(p.margePct == null ? null : 100 * p.margePct),
-      // Marge NETTE, commission de marque déduite : c'est celle que pilote la
-      // centrale d'achat, qui n'a plus d'écran catalogue propre. Deux
-      // catalogues sur les mêmes 711 références finissaient par se contredire.
-      commission: this.fU(p.commission),
-      margeNette: p.margeNettePct == null ? '' : this.fP(p.margeNettePct, 0),
-      margeNetteEur: this.fU(p.margeNette),
-      margeNetteC: this.echelleMarge(p.margeNettePct == null ? null : 100 * p.margeNettePct),
-      // Score : la note, son verdict et sa couleur — les trois ensemble, sinon
-      // un 62 ne dit rien sans le barème qui le juge.
-      score: (() => { const s = scores && scores[String(p.ref)];
-        return s ? Math.round(s.score) : null; })(),
-      scoreTxt: (() => { const s = scores && scores[String(p.ref)];
-        return s ? String(Math.round(s.score)) : ''; })(),
-      scoreVerdict: (() => { const s = scores && scores[String(p.ref)];
-        return s && common.refVerdict ? common.refVerdict(s.score)[0] : ''; })(),
-      scoreSt: (() => { const s = scores && scores[String(p.ref)];
-        if (!s || !common.refVerdict) { return 'color:var(--color-text-muted)'; }
-        const v = common.refVerdict(s.score);
-        return 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:11.5px;font-weight:400;'
-          + 'background:' + v[2] + ';color:' + v[1];
-      })(),
-      must: !!p.must, qmin: p.qmin || 0,
-      // Assortiment : la quantité minimale se saisit EN LIGNE, et le batch de
-      // la fiche produit est proposé à côté. Un minimum qui n'est pas un
-      // multiple du batch est intenable en production : le four sort des
-      // fournées, pas des unités. Le proposer d'un clic évite de le retaper.
-      bmin: p.bmin || 0, bmult: p.bmult || 1,
-      batchTxt: p.bmin ? (p.bmin + (p.bmult > 1 ? ' × ' + p.bmult : '')) : '',
-      qminSet: e => this.refQminPut(p.ref, e.target.value),
-      // « Obligatoire » se coche dans la ligne. Un badge en lecture seule
-      // renvoyait à la fiche pour un booléen : c'est le geste même de cet
-      // écran, il devait s'y faire.
-      mustSet: () => this.refMustPut(p.ref, !p.must),
-      qminBatch: p.bmin ? () => this.refQminPut(p.ref, p.bmin) : null,
-      // Un minimum inférieur au batch ne peut pas être produit tel quel.
-      qminSousBatch: !!(p.must && p.bmin && (p.qmin || 0) > 0 && (p.qmin || 0) < p.bmin),
-      finLe: p.finLe ? this.fD(p.finLe) + '/' + String(p.finLe).slice(0, 4) : '',
-      zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
-      slot: p.slot == null ? '' : String(p.slot),
-      place: !!p.zone,
-      // Emplacement au comptoir, lisible d'un trait : une référence
-      // obligatoire sans place au comptoir est une consigne que la boutique ne
-      // peut pas tenir — c'est ce que cette colonne rend visible.
-      emplacement: p.zone
-        ? [p.zone, p.meuble, p.niveau].filter(Boolean).join(' · ')
-          + (p.slot == null ? '' : ' · emp. ' + p.slot)
-        : '',
-      // Le même geste depuis les deux écrans : la fiche de présentation porte
-      // le plan du comptoir, on y choisit l'emplacement sur le plan.
-      planoGo: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }),
-      planoBtn: p.zone ? 'Modifier' : 'Attribuer',
-      dlv: p.dlv ? p.dlv + ' h' : '',
-      parametre: !!p.parametre,
-      ouvrir: () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche'),
-      prendre: null
-    }));
-    common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
-    common.refEchelle = this.paliersMarge();
-    common.refSansMarge = cat.filter(p => p.margePct == null).length;
-    return common;
   }
   /**
    * Le Catalogue (18/10/2026, maquette « A + D » choisie par Sam : « plus concis, le moins redondant possible »). Quatre
@@ -4176,18 +3966,14 @@ class App {
       .map(f => ({ nom: f[1], on: (S.pdFenetre || 'mois') === f[0], choisir: () => this.pdChoisirFenetre(f[0]) }));
     const DEC = { garder: ['Garder', 'ok'], modifier: ['Modifier', 'a'], effacer: ['Effacer', 'ko'] };
     const nbOuv = c2.nbOuv || 1;
-    // Obligatoire ou pas, d'un geste (18/10/2026) : l'interrupteur de la ligne et la case de la fiche écrivent l'assortiment
-    // (toute l'année, le minimum gardé) ; retirer une obligatoire se confirme.
-    const basculerOblig = (p, nom) => () => {
-      const on = !p.must;
-      if (!on && !window.confirm('Retirer « ' + nom + ' » de l’assortiment obligatoire ?' + (p.saison != null ? ' Elle l’est pendant une saison.' : ''))) { this.setState({}); return; }
-      this.aoPoser(String(p.ref), on ? { must: true, saison: null, qmin: p.qmin || 0 } : { must: false },
-        '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
-    };
+    // L'obligatoire se règle à un seul endroit (19/11/2026, docs/audit-rail.md § 4.1) : Comptoir › Assortiment
+    // obligatoire, avec sa saison et son minimum. Le Catalogue le montre et y mène, la référence cherchée.
+    const voirAssortiment = nom => () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(nom), aoPop: null, catFiche: null });
     // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
     // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
-    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé. Le serveur
-    // met en page (POST /products/pareto.pdf).
+    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé — celui de
+    // la Structure de gamme depuis le 19/11/2026 (sgProposition), un seul calcul. Le serveur met en page
+    // (POST /products/pareto.pdf).
     common.catPareto = () => {
       const mPx = { mois: 1, trimestre: 3, annee: 12 }[S.pdFenetre || 'mois'] || 1;
       const vendues = L.filter(l => l.s && !l.sansVente && (l.s.ca || 0) > 0).sort((a, b) => b.s.ca - a.s.ca);
@@ -4197,23 +3983,18 @@ class App {
       for (const l of vendues) { top.push(l); cum += l.s.ca; if (cum >= 0.8 * caT) { break; } }
       let c3 = 0; const cumuls = vendues.map(l => (c3 += l.s.ca) / caT * 100);
       const courbe = Array.from({ length: 101 }, (_, k) => { const i = Math.round(k / 100 * n) - 1; return i < 0 ? 0 : Math.round(cumuls[Math.min(n - 1, i)] * 10) / 10; });
-      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie et l'assortiment
-      // proposé — le 20/80 de la catégorie, 6 classiques au score de la période, 2 saisonnières par saison au score des
-      // 12 derniers mois (`an` : leur saison y est, quelle que soit la période de l'écran).
-      const gamme = an => { const de = new Map(((an && an.base) || []).map(x => [String(x.id), x]));
-        return L.map(l => { const y = de.get(l.k), vend = y && !y.sansVente && (y.ca || 0) > 0;
-          return { k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0, mn: l.mnPct == null ? null : Math.round(l.mnPct),
-            score: l.score == null ? null : Math.round(l.score * 10) / 10, decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
-            saisonnier: !!l.saisonnier, saisons: l.saisons, scoreAn: vend ? Math.round(y.score * 10) / 10 : null, caAn: vend ? Math.round(y.ca) : 0 }; }); };
-      const saisons = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim(),
-        du: g.fenetre ? g.fenetre.du : null, au: g.fenetre ? g.fenetre.au : null }));
-      const douzeMois = () => (S.pdFenetre || 'mois') === 'annee' ? Promise.resolve(c2)
-        : (this._pdAnnee && Date.now() - this._pdAnnee.le < 3600000 ? Promise.resolve(this._pdAnnee.c)
-          : readOne('/products/scoring?fenetre=annee').then(d => { if (!Array.isArray(d)) { return null; } const c = this.pdCalcule(d); this._pdAnnee = { le: Date.now(), c }; return c; }).catch(() => null));
-      const envoyer = (px, an) => {
+      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie.
+      const gamme = () => L.map(l => ({ k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0,
+        mn: l.mnPct == null ? null : Math.round(l.mnPct), score: l.score == null ? null : Math.round(l.score * 10) / 10,
+        decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must) }));
+      // L'assortiment proposé : la Structure de gamme, lue si l'écran ne l'a pas encore fait.
+      const structure = () => (D.sgData && !D.sgData.indispo ? Promise.resolve(D.sgData)
+        : readOne('/produits/structure').then(d => { if (d && !d.indispo) { D.sgData = d; } return d; }).catch(() => null));
+      const obligDe = new Set((D.prodCatalogue || []).filter(p => p.must && p.pwaId).map(p => String(p.pwaId)));
+      const envoyer = (px, sg) => {
         const refs = new Map(((px && px.refs) || []).map(r => [String(r.pid), r]));
         const corps = { periode: c2.periode || '', periodePrix: px && px.periode ? px.periode : '', seuil: 80, caTotal: caT, totalRefs: n, courbe,
-          refs: gamme(an), saisons, saisonsLues: !!an, classiques: 6, parSaison: 2,
+          refs: gamme(), structure: sgProposition(sg, id => obligDe.has(id)),
           magasins: ((px && px.magasins) || []).map(m => ({ id: String(m.id), nom: m.court || court(m.nom) })),
           lignes: top.map(l => { const r = l.pid ? refs.get(String(l.pid)) : null;
             return { nom: l.nom, cat: l.catNom, ca: Math.round(l.s.ca), vol: Math.round(l.vol), prix: l.prix, mn: l.mnPct == null ? null : Math.round(l.mnPct),
@@ -4227,8 +4008,8 @@ class App {
       const px0 = (D.pxv || {})[mPx];
       const prix = px0 ? Promise.resolve(px0.indispo ? null : px0)
         : readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } return d && !d.indispo ? d : null; }).catch(() => null);
-      if (!px0 || ((S.pdFenetre || 'mois') !== 'annee' && !this._pdAnnee)) { this.notify('Lecture des prix par magasin et des 12 derniers mois…'); }
-      Promise.all([prix, douzeMois()]).then(([px, an]) => envoyer(px, an));
+      if (!px0 || !D.sgData) { this.notify('Lecture des prix par magasin et de la structure de gamme…'); }
+      Promise.all([prix, structure()]).then(([px, sg]) => envoyer(px, sg));
     };
     common.catLignes = F.slice(0, 250).map(l => ({
       k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
@@ -4241,7 +4022,7 @@ class App {
       rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '—' : l.rangC + ' / ' + l.nbC, rangCatNom: l.rangC == null ? '' : l.catNom,
       saison: l.saisonsTxt || (l.saisons.length ? 'saison du panel' : ''), saisonSeule: l.saisonnier,
       oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
-      basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,
+      voirOblig: l.p ? voirAssortiment(l.nom) : null,
       extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
       on: S.catFiche === l.k,
       ouvrir: () => this.setState({ catFiche: S.catFiche === l.k ? null : l.k, catOnglet: S.catOnglet || 'magasins' }) }));
@@ -4277,9 +4058,9 @@ class App {
       onglet,
       // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
       revue: s ? [1, 2, 3, 4, 5].map(n2 => ({ n: n2, pleine: s.revue != null && n2 <= s.revue, poser: () => this.pdPoserRevue(s.id, s.revue === n2 ? null : n2) })) : null,
-      // Une seule case (18/10/2026) : « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score.
+      // « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score : montrée ici, réglée dans l'assortiment.
       obligatoire: p ? !!p.must : null,
-      basculerObligatoire: p ? basculerOblig(p, l.nom) : null,
+      voirObligatoire: p ? voirAssortiment(l.nom) : null,
       detailScore: s ? () => this.pdOpenDetail(s.id) : null,
       ouvrirProduction: p ? () => this.refOpen(p, 'fiche') : null,
       comptoir: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(l.nom), psLibres: false, psSel: null }),
@@ -4334,42 +4115,30 @@ class App {
     }
     common.catFiche = fiche;
   }
-  /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
+  /**
+   * Ouvre l'édition d'une référence — fiche de production ou emplacement.
+   *
+   * La fiche ne tient plus que la fabrication (19/11/2026, docs/audit-rail.md § 4.1). Le prix, le coût matière et la
+   * durée de vie se lisent au panel et s'y corrigent ; l'obligatoire se règle dans l'assortiment. La fiche les montre
+   * et y mène, avec l'ancienne saisie du cockpit s'il y en avait une (plus lue, à reporter au panel si elle est juste).
+   */
   refOpen(p, mode){
     const sa = p.must && p.saison != null ? ((this.D.prodSaisons || {}).saisons || []).find(s => s.id === p.saison) : null;
-    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '',
-      saisonTxt: p.must && p.saison != null ? 'obligatoire pendant ' + (sa ? (sa.emoji ? sa.emoji + ' ' : '') + sa.nom : 'une saison') + ' — la saison se règle dans l’assortiment' : '',
-      champs: { must: !!p.must, qmin: p.qmin || 0, prep: p.prep || 0, cuisson: p.cuisson || 0,
+    const eur = v => v == null ? '—' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const SRC_PRIX = { boutiques: 'pratiqué en boutique', fiche: 'prix conseillé du panel' };
+    const anc = p.saisieCockpit || null;
+    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '', pwaId: p.pwaId || null,
+      obligTxt: p.must ? 'oui, ' + (p.saison != null ? 'pendant ' + (sa ? (sa.emoji ? sa.emoji + ' ' : '') + sa.nom : 'une saison') : 'toute l’année') + (p.qmin ? ' · minimum ' + p.qmin : '') : 'non',
+      panel: [['Prix de vente', eur(p.prix) + (p.prixSource ? ' · ' + (SRC_PRIX[p.prixSource] || p.prixSource) : '')],
+        ['Coût matière', p.mat == null ? 'pas de recette chiffrée' : eur(p.mat) + (p.matFiable === false ? ' · invraisemblable' : '')],
+        ['Durée de vie', p.dlv ? p.dlv + ' h' : '—']],
+      ancien: anc ? [anc.prix != null ? 'prix ' + eur(anc.prix) : '', anc.mat != null ? 'coût matière ' + eur(anc.mat) : '', anc.dlv ? 'DLV ' + anc.dlv + ' h' : '']
+        .filter(Boolean).join(' · ') : '',
+      champs: { prep: p.prep || 0, cuisson: p.cuisson || 0,
         fin: p.fin || 0, bmin: p.bmin || 0, bmult: p.bmult || 1, four: p.four || 0,
-        dlv: p.dlv || 0, mat: p.mat == null ? '' : p.mat, prix: p.prix == null ? '' : p.prix,
-        profil: p.profil || '',
-        zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
-        slot: p.slot == null ? '' : p.slot } } });
+        profil: p.profil || '' } } });
   }
   /** Enregistre la référence en cours d'édition, puis recharge le catalogue. */
-  /**
-   * Coche ou décoche « obligatoire » depuis la ligne.
-   *
-   * Décocher remet le minimum à zéro : un minimum sur une référence facultative
-   * ne veut rien dire, et le laisser en place ferait réapparaître un chiffre
-   * orphelin à la prochaine coche.
-   */
-  refMustPut(ref, val){
-    const cat = (this.D.prodCatalogue || []).find(p => p.ref === ref);
-    if (!cat) { return; }
-    // Cocher garde la saison en place (le serveur la conserve quand la clé est absente).
-    this.aoPoser(ref, val ? { must: true, qmin: cat.qmin || 0 } : { must: false });
-  }
-  /**
-   * Écrit la quantité minimale d'assortiment, sans passer par la fiche.
-   * Un minimum rend la référence obligatoire (sa saison, si elle en a une, est gardée).
-   */
-  refQminPut(ref, val){
-    const n = Math.max(0, Math.round(+val || 0));
-    const cat = (this.D.prodCatalogue || []).find(p => p.ref === ref);
-    if (!cat) { return; }
-    this.aoPoser(ref, { must: n > 0 || !!cat.must, qmin: n });
-  }
   /* --- Assortiment obligatoire : toute l'année, ou pendant une saison du panel ------------------ */
   /** Une couleur par saison, reconnue à son nom (les identifiants du panel ne disent rien). */
   aoCouleur(s){
@@ -4628,8 +4397,7 @@ class App {
   refSave(){
     const e = this.state.refEdit; if (!e || e.busy) return;
     this.setState(s => ({ refEdit: Object.assign({}, s.refEdit, { busy: true, err: '' }) }));
-    const url = e.mode === 'plano' ? '/production/planogramme/' : '/production/produit/';
-    this.api('PUT', url + encodeURIComponent(e.ref), e.champs)
+    this.api('PUT', '/production/produit/' + encodeURIComponent(e.ref), e.champs)
       .then(r => {
         // Ne PAS annoncer un enregistrement que le serveur n'a pas confirmé :
         // le budget avait ce défaut, et le message rassurait à tort.
@@ -8119,7 +7887,7 @@ class App {
       trouve(colle(p.nom, p.ref, p.categorie, p.groupe))).map(p => ({
         titre: p.nom, detail: [p.ref, p.categorie, p.groupe].filter(Boolean).join(' · '),
         marque: p.zone ? 'au comptoir' : (p.must ? 'obligatoire' : ''),
-        aller: () => this.setState({ screen: 'catalogue', refQ: String(p.ref), gq: '' }) }));
+        aller: () => this.setState({ screen: 'catalogue', catQ: String(p.nom || p.ref), catFiche: null, gq: '' }) }));
     ajoute('Références produit', coupe(refs));
 
     // 3. Emplacements du comptoir standard.
@@ -8160,12 +7928,6 @@ class App {
         aller: () => this.setState({ screen: 'parametres', gq: '' }) }); } });
     ajoute('Intervenants', coupe(gens));
 
-    // 7. Rapports du reporting.
-    const rapports = ((D.reporting || {}).reports || []).filter(r =>
-      trouve(colle(r.nom, r.type, r.frequence))).map(r => ({
-        titre: r.nom, detail: [r.type, r.frequence].filter(Boolean).join(' · '),
-        aller: () => this.setState({ screen: 'reporting', gq: '' }) }));
-    ajoute('Rapports', coupe(rapports));
 
     common.gGroupes = groupes;
     common.gTotal = total;
@@ -15647,7 +15409,8 @@ class App {
        rien : ni au retrait, ni à la fusion. Or un écran sans entrée de rail ET
        jamais ouvert est le plus fort candidat au retrait qui soit. */
     const HORS_RAIL = 'Sans entrée de rail (adresse ou recherche)';
-    Object.keys(App.ADRESSES).forEach(id => { if (noms[id]) return;
+    // Les adresses réécrites en un autre écran (Performance → Résultat, Scoring → Fiche) ne sont pas des écrans.
+    Object.keys(App.ADRESSES).forEach(id => { if (noms[id] || App.PERF_ONGLETS[id] || id === 'scoringTri') return;
       noms[id] = ((titres || {})[id] || [])[0] || id; famille[id] = HORS_RAIL; });
     const nomEcran = id => id === '_chrome' ? 'Rail & entête (hors écran)' : (noms[id] || id);
 
