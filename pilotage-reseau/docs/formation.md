@@ -1133,6 +1133,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   continue, P7 à P12, FO-32 et FO-41, accès responsable.
 - Encodés en v1.0 « à valider » (`encoder_sop.py`), relus au serveur. Source et points « à confirmer » :
   `data/formation/dirigeant/LISEZMOI.md`.
+- **0.0.55 publié le 19/11/2026** (Sam : « publie 0.0.55 ») : `PATCH /formation/sop/fiche/art-bonnes-pratiques-dirigeant`
+  {statut: publiee}, relu au serveur et sur la tablette ; quiz et « vu faire » ouverts.
 
 ## Le lien Manuel ↔ checklist de gestion hebdomadaire (18/11/2026)
 

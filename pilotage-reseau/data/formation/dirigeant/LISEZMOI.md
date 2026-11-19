@@ -12,6 +12,8 @@ du Manuel : le guide était écrit à la deuxième personne. FR : rédaction d�
 Encodés le 18/11/2026 en v1.0 « à valider », accès `responsable` (bouton Franchisé de la tablette). Publication : sur
 demande (« publie 0.0.55 », « publie 0.0.56 »).
 
+**0.0.55 publié le 19/11/2026** (Sam : « publie 0.0.55 ») : quiz et « vu faire » ouverts sur la tablette.
+
 ## À confirmer
 
 - **Recoupement avec 0.0.16 « Animation d’équipe et RH » (FO-06)** : briefing, réunion d’équipe, entretien, conflit. Les
