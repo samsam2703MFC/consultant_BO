@@ -257,6 +257,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/groups', ExecutionController::class, 'groups', 'kiosk'],
             ['POST', '/kiosk/identify', ExecutionController::class, 'identify', 'kiosk'],
             ['GET', '/kiosk/me', ExecutionController::class, 'me', 'kiosk_employee'],
+            ['PUT', '/kiosk/me/pin', ExecutionController::class, 'changePin', 'kiosk_employee'],
             ['POST', '/kiosk/refresh', ExecutionController::class, 'refresh', 'kiosk_employee'],
             ['POST', '/kiosk/clock', ExecutionController::class, 'clock', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/start', ExecutionController::class, 'start', 'kiosk_employee'],
@@ -310,6 +311,7 @@ final class WorkshopApiRoutes
             // Tablette de bureau (mode office) : section → nom → QR personnel (personne + jour) validé au téléphone.
             ['GET', '/kiosk/office/sections', ExecutionController::class, 'officeSections', 'kiosk'],
             ['POST', '/kiosk/office/qr', ExecutionController::class, 'officeQr', 'kiosk'],
+            ['POST', '/kiosk/office/pin', ExecutionController::class, 'officeFirstPin', 'kiosk'],
             ['GET', '/kiosk/office/status', ExecutionController::class, 'officeStatus', 'kiosk'],
             // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty — po wybraniu
             // kierowcy z listy i jego PIN-ie (/kiosk/people, /kiosk/identify), jak na tablecie pracowni.

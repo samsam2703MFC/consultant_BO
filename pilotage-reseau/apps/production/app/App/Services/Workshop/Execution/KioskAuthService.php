@@ -329,6 +329,49 @@ final class KioskAuthService
     }
 
     /**
+     * [360] Tablette de bureau : la personne sans PIN crée le sien au premier passage (4 à 6 chiffres, pas trop simple) ;
+     * la session s'ouvre comme après un PIN (entrée / sortie, questions, signature). PIN déjà posé : PIN_ALREADY_SET
+     * (le changer passe par PUT /kiosk/me/pin, avec l'ancien). Créations tracées (audit pin_self_created).
+     */
+    public function firstPin(int $employeeId, string $pin, ApiContext $context): array
+    {
+        $employee = $this->repo->employee($employeeId);
+        if ($employee === null || !(int) $employee['active']) throw ApiException::notFound('employee', $employeeId);
+        $cred = $this->repo->credential($employeeId);
+        if ($cred !== null && $cred['pin_hash'] !== null) throw new ApiException('PIN_ALREADY_SET', 409);
+        $this->checkPin($pin);
+        $this->repo->saveCredential($employeeId, ['pin_hash' => password_hash($pin, PASSWORD_BCRYPT), 'failed_attempts' => 0, 'locked_until' => null]);
+        $this->audit->record($context, 'pin_self_created', 'employee', $employeeId, null, ['device_id' => (int) $context->deviceId]);
+        return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId);
+    }
+
+    /** [360] La personne change son PIN sur la tablette : ancien PIN (mêmes blocages que l'identification) puis nouveau. */
+    public function changePin(array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['current_pin', 'pin'])
+            ->string('current_pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN')->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
+        $v->throwIfInvalid();
+        $c = $v->clean();
+        $employeeId = (int) $context->employeeId;
+        $this->authenticateEmployee(['employee_id' => $employeeId, 'pin' => $c['current_pin']], (int) $context->deviceId, $context);
+        if ($c['pin'] === $c['current_pin']) throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_SAME', 'params' => []]]);
+        $this->checkPin($c['pin']);
+        $this->repo->saveCredential($employeeId, ['pin_hash' => password_hash($c['pin'], PASSWORD_BCRYPT), 'failed_attempts' => 0, 'locked_until' => null]);
+        $this->audit->record($context, 'pin_self_changed', 'employee', $employeeId, null, ['device_id' => (int) $context->deviceId]);
+        return ['employee_id' => $employeeId, 'changed' => true];
+    }
+
+    /** PIN choisi par la personne : 4 à 6 chiffres, ni un seul chiffre répété (1111) ni une suite (1234, 9876). */
+    private function checkPin(string $pin): void
+    {
+        if (!preg_match('/^\d{4,6}$/', $pin)) throw ApiException::validation([['field' => 'pin', 'code' => 'INVALID_PIN', 'params' => []]]);
+        $steps = array_unique(array_map(fn($i) => (int) $pin[$i + 1] - (int) $pin[$i], range(0, strlen($pin) - 2)));
+        if (count($steps) === 1 && in_array($steps[0], [-1, 0, 1], true)) {
+            throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_TOO_SIMPLE', 'params' => []]]);
+        }
+    }
+
+    /**
      * Sprawdzenie PIN-u bez otwierania sesji [232] (« Przeczytane » komunikatu kierownika na tablecie) : te same zasady
      * co przy logowaniu (blokada po kiosk.pin_max_attempts błędach). @return array pracownik (id, …)
      */

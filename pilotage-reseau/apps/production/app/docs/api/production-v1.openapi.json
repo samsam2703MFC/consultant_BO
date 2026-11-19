@@ -15203,6 +15203,82 @@
                 ]
             }
         },
+        "/kiosk/me/pin": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zmiana własnego PIN-u / Changer son PIN",
+                "operationId": "changePin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PinChanged"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[360] La personne identifiée change son PIN : ancien PIN (mêmes blocages que l'identification, 401 PIN_INVALID / 423) puis nouveau (différent : PIN_SAME ; pas trop simple : PIN_TOO_SIMPLE). Tracé (audit pin_self_changed).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePinInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/refresh": {
             "post": {
                 "tags": [
@@ -18542,6 +18618,84 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/OfficeQrInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/office/pin": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Pierwszy PIN osoby / Premier PIN de la personne",
+                "operationId": "officeFirstPin",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/EmployeeToken"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[360] Tablette de bureau : une personne sans PIN choisit le sien (4 à 6 chiffres ; ni chiffre répété ni suite : PIN_TOO_SIMPLE). Profil de production créé au besoin. Session ouverte comme POST /kiosk/identify (X-Employee-Token). PIN déjà posé : PIN_ALREADY_SET (409). Tracé (audit pin_self_created).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OfficePinInput"
                             }
                         }
                     }
@@ -31429,6 +31583,52 @@
                         "items": {
                             "$ref": "#/components/schemas/OfficePerson"
                         }
+                    }
+                }
+            },
+            "OfficePinInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "person_id",
+                    "pin"
+                ],
+                "properties": {
+                    "person_id": {
+                        "type": "integer"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "ChangePinInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "current_pin",
+                    "pin"
+                ],
+                "properties": {
+                    "current_pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "PinChanged": {
+                "type": "object",
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "changed": {
+                        "type": "boolean"
                     }
                 }
             },
