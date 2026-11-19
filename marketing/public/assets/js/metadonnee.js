@@ -318,7 +318,7 @@
         const [cls, txt] = this.etatForm(f);
         return `<tr${f.suivi ? '' : ' style="opacity:.8"'}>
           <td style="width:46px"><button class="tog ${f.suivi ? 'on' : ''}" data-a="suivre" data-v="${esc(f.id)}" title="${f.suivi ? 'Ne plus suivre : ses nouveaux leads ne seront plus repris' : 'Suivre : ses leads iront dans l’ERP du magasin'}"></button></td>
-          <td><b>${esc(f.nom)}</b><small>${esc(f.page || 'page inconnue')}${f.locale ? ' · ' + esc(f.locale.slice(0, 2).toUpperCase()) : ''}</small></td>
+          <td style="min-width:220px"><b>${esc(f.nom)}</b><small>${esc(f.page || 'page inconnue')}${f.locale ? ' · ' + esc(f.locale.slice(0, 2).toUpperCase()) : ''}</small></td>
           <td style="width:58px"><span style="display:inline-flex;gap:3px">${f.fb ? pf('fb') : ''}${f.ig ? pf('ig') : ''}${!f.fb && !f.ig ? vide(40) : ''}</span></td>
           <td style="width:74px;text-align:right"><b style="font:400 18px var(--font-display)">${f.leads30}</b>${f.ignores && !f.suivi ? `<small title="Leads arrivés pendant que le formulaire n’était pas suivi : comptés, pas repris">${f.ignores} non repris</small>` : ''}</td>
           <td style="width:74px;text-align:right" title="Leads chez Meta (tout l’historique)">${f.leadsMeta != null ? esc(f.leadsMeta) : '—'}</td>
@@ -330,18 +330,19 @@
         </tr>`;
       }).join('');
       const suivis = d.formulaires.filter(f => f.suivi).length;
-      return `<div class="grille" style="grid-template-columns:minmax(0,1fr) 380px">
-        <div class="carte"><h3>Formulaires<small>${d.formulaires.length} chez Meta · ${suivis} suivi${suivis > 1 ? 's' : ''} · leads sur 30 jours</small>
+      // La liste prend toute la largeur (19/11/2026) : à côté d'une colonne de 380 px, ses neuf colonnes débordaient
+      // de la carte (l'état et « Mapping → » passaient sous la connexion Meta, les noms tenaient sur cinq lignes). La
+      // connexion et la note « Sans magasin » vont dessous, côte à côte ; sur un écran étroit, la liste défile.
+      return `<div class="carte"><h3>Formulaires<small>${d.formulaires.length} chez Meta · ${suivis} suivi${suivis > 1 ? 's' : ''} · leads sur 30 jours</small>
           <span class="d"><button class="btn s xs" data-a="relire" ${this.s.busy ? 'disabled' : ''}>↻ Relire chez Meta</button></span></h3>
-          ${d.formulaires.length ? `<table class="t"><thead><tr><th>Suivre</th><th>Formulaire</th><th>Où</th><th style="text-align:right">Leads</th><th style="text-align:right">Chez Meta</th><th>Dernier</th><th>Magasin</th><th>État</th><th></th></tr></thead><tbody>${lignes}</tbody></table>`
-            : `<div class="vides">Aucun formulaire lu. ${d.statut.meta.configure ? '« Relire chez Meta » lit ceux de la Page.' : 'Réglez d’abord la connexion Meta (à droite), comme dans le CRM, puis « Connecter et tester ».'}</div>`}
+          ${d.formulaires.length ? `<div style="overflow-x:auto"><table class="t"><thead><tr><th>Suivre</th><th>Formulaire</th><th>Où</th><th style="text-align:right">Leads</th><th style="text-align:right">Chez Meta</th><th>Dernier</th><th>Magasin</th><th>État</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
+            : `<div class="vides">Aucun formulaire lu. ${d.statut.meta.configure ? '« Relire chez Meta » lit ceux de la Page.' : 'Réglez d’abord la connexion Meta (ci-dessous), comme dans le CRM, puis « Connecter et tester ».'}</div>`}
         </div>
-        <div class="grille">
+        <div class="grille" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
           ${this.carteMeta()}
           <div class="carte"><h3>Sans magasin<small>formulaire « par code postal »</small></h3>
             <div class="mini">Un formulaire de la marque couvre plusieurs magasins : le code postal du bureau choisit, d’après les plages réglées à l’étape 2. Sans plage, le lead attend « à attribuer ».</div></div>
-        </div>
-      </div>`;
+        </div>`;
     }
 
     /**
