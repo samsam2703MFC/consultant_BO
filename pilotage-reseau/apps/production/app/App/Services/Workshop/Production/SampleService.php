@@ -170,7 +170,7 @@ final class SampleService
             $w = $pdf->contentWidth();
             $y = $pdf->GetY() + 4;
             $qr = 78.0;
-            $pdf->write2DBarcode(rtrim($baseUrl, '/') . '/workshop/traceability/samples/s/' . $s['code'], 'QRCODE,M', $lm, $y, $qr, $qr,
+            $pdf->write2DBarcode(rtrim($baseUrl, '/') . '/q/' . $s['code'], 'QRCODE,M', $lm, $y, $qr, $qr,
                 ['border' => false, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false], 'N');
             $x = $lm + $qr + 8;
             $tw = $w - $qr - 8;
@@ -225,6 +225,17 @@ final class SampleService
         }
         $this->repo->markPrinted(array_column($samples, 'id'));
         return ['filename' => 'probki-' . $day . '.pdf', 'file_string' => $pdf->Output('probki-' . $day . '.pdf', 'S')];
+    }
+
+    /** [354] Karta próbki z kodu QR (/q/KOD) : partia, produkt, przechowywać do, partie surowców, stan. */
+    public function card(string $codeOrUrl): ?array
+    {
+        $raw = $this->byCode($codeOrUrl);
+        if ($raw === null) return null;
+        foreach ($this->samples((string) $raw['sample_date']) as $s) {
+            if ($s['id'] === (int) $raw['id']) return $s + ['lot_rows' => $this->repo->lotsFor([$s['output_id']])[$s['output_id']] ?? []];
+        }
+        return null;
     }
 
     /** Próbka po kodzie (strona skanu : partia, produkt, stan). */

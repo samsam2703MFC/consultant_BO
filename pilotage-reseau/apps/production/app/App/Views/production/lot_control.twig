@@ -3,7 +3,7 @@
 {% block title %}Partie i identyfikowalność{% endblock %}
 
 {# [352] Partie i identyfikowalność (makiety 68 i 68 B) : App\Controllers\Web\Production\LotControlController.
-   tab : lots (rejestr partii surowców), check (kontrola wejść produkcji dnia), samples (asystent próbek), scan (próbka z QR). #}
+   tab : lots (rejestr partii surowców), check (kontrola wejść produkcji dnia), samples (asystent próbek). Próbka z QR : production/sample_qr.twig (/q/KOD). #}
 
 {% block page_heading %}
     <div class="page-heading at-profit-head">
@@ -118,20 +118,6 @@
     <div id="lcSamples"><p class="at-empty">Ładowanie…</p></div>
     <script type="application/json" id="lcBoot">{{ page|json_encode|raw }}</script>
 
-{% elseif tab == 'scan' %}
-    <div class="card lc-card"><div class="card-body">
-    {% if scan %}
-        <p class="text-muted small mb-1">Próbka archiwalna · {{ scan.code }}</p>
-        <h4 class="mb-1">{{ scan.lot_code }} · {{ scan.name }}</h4>
-        <p class="mb-2">Produkcja {{ scan.work_date|date('d.m.Y') }}{{ scan.group_name ? ' · ' ~ scan.group_name : '' }} · przechowywać do <b>{{ scan.keep_until ? scan.keep_until|date('d.m.Y') : '—' }}</b></p>
-        <p class="small text-muted">Partie surowców : {{ scan.lots ?: '—' }}</p>
-        {% if scan.status == 'stored' %}<p><span class="lc-pill lc-r">✓ odłożona {{ scan.stored_at|date('d.m.Y H:i') }}{{ scan.location ? ' · ' ~ scan.location : '' }}</span></p>
-        {% else %}<button type="button" class="btn btn-primary" data-lc-store="{{ scan.code }}"><i class="bi bi-check2-circle"></i> Próbka odłożona</button>{% endif %}
-        <a class="btn btn-link" href="{{ root }}/workshop/traceability?q={{ scan.lot_code|url_encode }}&from={{ scan.work_date }}&to={{ scan.work_date }}">Partia : składniki i klienci →</a>
-    {% else %}
-        <p class="mb-0">Nie znaleziono próbki o tym kodzie.</p>
-    {% endif %}
-    </div></div>
 {% endif %}
 </section>
 {% endblock %}

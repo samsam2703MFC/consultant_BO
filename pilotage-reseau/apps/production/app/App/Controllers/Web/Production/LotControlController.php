@@ -58,17 +58,30 @@ class LotControlController extends BaseController
             'Content-Disposition' => 'inline; filename="' . $file['filename'] . '"', 'Content-Length' => strlen($file['file_string'])]);
     }
 
-    /** GET /workshop/traceability/samples/s/{code} — skan QR próbki telefonem : próbka i jej partia (odłożenie jednym przyciskiem). */
+    /** GET /workshop/traceability/samples/s/{code} — dawne kody QR (pierwsze arkusze) : krótki adres /q/KOD. */
     public function sampleScan($code)
     {
-        $s = $this->samples->byCode((string) $code);
-        if ($s === null) {
-            $this->view('production/lot_control', ['tab' => 'scan', 'scan' => null]);
-            return;
+        header('Location: ' . ROOT . '/q/' . strtoupper((string) $code), true, 302);
+        exit;
+    }
+
+    /** [354] GET /q/{code} — karta próbki z kodu QR : bez logowania, bez menu (szybko na telefonie). */
+    public function sampleQr($code)
+    {
+        $this->view('production/sample_qr', ['card' => $this->samples->card((string) $code), 'logged' => (bool) user('id'),
+            'done' => ($_GET['ok'] ?? '') === '1']);
+    }
+
+    /** [354] POST /q/{code} — « Próbka odłożona » z telefonu (z sesją : kto ; bez : telefon). */
+    public function sampleQrStore($code)
+    {
+        try {
+            $this->samples->store((string) $code, $this->userId(), isset($_POST['location']) ? (string) $_POST['location'] : null);
+        } catch (CustomException $e) {
+            return new Response($e->getMessage(), (int) $e->getCode() ?: 400, ['Content-Type' => 'text/plain; charset=utf-8']);
         }
-        $page = $this->samples->page((string) $s['sample_date']);
-        $sample = array_values(array_filter($page['samples'], fn($x) => $x['id'] === (int) $s['id']))[0] ?? null;
-        $this->view('production/lot_control', ['tab' => 'scan', 'scan' => $sample, 'date' => $s['sample_date']]);
+        header('Location: ' . ROOT . '/q/' . strtoupper((string) $code) . '?ok=1', true, 303);
+        exit;
     }
 
     /** PUT /ajax/production/material-lots/{id} {lot_number?, best_before?, active?} */

@@ -77,6 +77,9 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/workshop/traceability/samples', ['controller' => $lc, 'method' => 'samples']);
     $r->addRoute('GET', '/workshop/traceability/samples/pdf', ['controller' => $lc, 'method' => 'samplesPdf']);
     $r->addRoute('GET', '/workshop/traceability/samples/s/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleScan']);
+    // [354] Kod QR próbki : krótki adres, strona lekka i bez logowania (telefon przy zamrażarce), « Próbka odłożona ».
+    $r->addRoute('GET', '/q/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleQr']);
+    $r->addRoute('POST', '/q/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleQrStore']);
     $r->addRoute('PUT', '/ajax/production/material-lots/{id:\d+}', ['controller' => $lc, 'method' => 'updateLot']);
     $r->addRoute('PUT', '/ajax/production/material-lots/material/{id:\d+}', ['controller' => $lc, 'method' => 'trackMaterial']);
     $r->addRoute('GET', '/ajax/production/input-check/{id:\d+}', ['controller' => $lc, 'method' => 'batch']);
