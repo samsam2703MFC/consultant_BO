@@ -178,6 +178,13 @@ class ComplaintController extends BaseController
         );
     }
 
+    /** [363] Fenêtre de détail d'une réclamation (Reklamacje › Wykres). */
+    public function ajaxDetail($id)
+    {
+        $d = $this->complaintService->detail((int) $id);
+        return $d === null ? $this->json(['message' => 'Nie znaleziono reklamacji'], 404) : $this->json($d);
+    }
+
     public function ajaxGetPresignedUrl($id)
     {
         $link = $this->complaintCollectorService->getAttachmentPresigned($id);

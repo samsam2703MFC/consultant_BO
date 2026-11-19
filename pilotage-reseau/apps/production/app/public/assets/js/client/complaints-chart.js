@@ -3,7 +3,7 @@
  *  - « Przegląd » (makieta 15) : kafelki, reklamacje miesięcznie wg decyzji, wartość przyjęta miesięcznie, przyczyny,
  *    grupy produkcji (klik = filtr grupy), produkty z najwięcej reklamacjami ;
  *  - « Oś czasu » (makieta 16) : wszystkie reklamacje na osi czasu.
- * Wiersz = grupa produkcji produktu, położenie = dzień zgłoszenia, wielkość = wartość (sztuki ÷ szt./kart. × cena kartonu z WDT),
+ * Wiersz = grupa produkcji produktu, położenie = dzień zgłoszenia, wielkość = wartość (kartony rozpoczęte = szt. ÷ szt./kart. w górę, × cena kartonu z WDT),
  * kolor = decyzja (przyjęta / odrzucona / otwarta). Najechanie → szczegóły, kliknięcie → reklamacja na liście.
  * Filtry : okres (3 mies., 12 mies., ten rok, wszystko), klient, grupa, decyzja. Pod osią : liczba reklamacji na miesiąc.
  */
@@ -96,8 +96,8 @@
 
     // --- Zakładki : Przegląd / Oś czasu -------------------------------------------------------------------------------
     const NOTES = {
-        overview: '<i class="bi bi-info-circle"></i> Najedź na słupek → liczby miesiąca ; kliknij grupę → filtr tej grupy. Wartość przyjęta = kartony przyjęte (sztuki ÷ szt./kart.) × cena kartonu z faktury WDT (jak raport miesięczny).',
-        timeline: '<i class="bi bi-info-circle"></i> Najedź na punkt → szczegóły ; kliknij → reklamacja otwiera się na liście. Kilka reklamacji tego samego dnia w grupie = punkty jeden nad drugim.',
+        overview: '<i class="bi bi-info-circle"></i> Najedź na słupek → liczby miesiąca ; kliknij grupę → filtr tej grupy. Kliknij przyczynę lub produkt → jego reklamacje ; kliknij reklamację → zgłoszenie, zdjęcia, co wysłano. Wartość = kartony rozpoczęte (szt. ÷ szt./kart., w górę) × cena kartonu z faktury WDT.',
+        timeline: '<i class="bi bi-info-circle"></i> Najedź na punkt → szczegóły ; kliknij → zgłoszenie, zdjęcia i co wysłano. Kilka reklamacji tego samego dnia w grupie = punkty jeden nad drugim.',
     };
     function render() {
         hideTip();
@@ -160,9 +160,9 @@
         const bars = (list, head, opts = {}) => {
             const mx = Math.max(1, ...list.map(e => e.n));
             return `<div class="rk-bars"><div class="rk-bar hd"><span>${head}</span><span></span><span class="n">Liczba</span><span class="v">Wartość</span></div>`
-                + list.map(e => `<${opts.click ? `button type="button" data-rk-group="${esc(e.k)}"` : 'div'} class="rk-bar${opts.click && S.group === e.k ? ' on' : ''}"${opts.click ? ` title="Filtr : ${esc(e.name)}"` : ''}>`
+                + list.map(e => `<button type="button" ${opts.click ? `data-rk-group="${esc(e.k)}"` : `data-rk-list="${opts.list}" data-rk-key="${esc(e.k)}"`} class="rk-bar${opts.click && S.group === e.k ? ' on' : ''}" title="${opts.click ? 'Filtr' : 'Reklamacje'} : ${esc(e.name)}">`
                     + `<span class="nm" title="${esc(e.name)}">${esc(e.name)}</span><span class="tr"><i style="width:${(e.n / mx * 100).toFixed(1)}%"></i></span>`
-                    + `<span class="n">${e.n}</span><span class="v">${e.v ? nf(e.v) + ' €' : '—'}</span></${opts.click ? 'button' : 'div'}>`).join('') + '</div>';
+                    + `<span class="n">${e.n}</span><span class="v">${e.v ? nf(e.v) + ' €' : '—'}</span></button>`).join('') + '</div>';
         };
         pane.innerHTML = tiles + `<div class="rk-grid">
             <div class="rk-col">
@@ -172,9 +172,9 @@
               <div class="rk-card2"><h5>Wartość przyjętych reklamacji</h5><div class="rk-sub">€ miesięcznie</div><div data-rk-values></div></div>
             </div>
             <div class="rk-col">
-              <div class="rk-card2"><h5>Przyczyny</h5><div class="rk-sub">wszystkie reklamacje okresu</div>${bars(agg(c => c.reason || '—', c => c.reason || '—'), 'Przyczyna')}</div>
+              <div class="rk-card2"><h5>Przyczyny</h5><div class="rk-sub">wszystkie reklamacje okresu · kliknij → reklamacje</div>${bars(agg(c => c.reason || '—', c => c.reason || '—'), 'Przyczyna', {list: 'reason'})}</div>
               <div class="rk-card2"><h5>Grupy produkcji</h5><div class="rk-sub">grupa, która robi produkt · kliknij → filtr grupy</div>${bars(agg(c => c.row, c => rowName[c.row] || c.row), 'Grupa', {click: true})}</div>
-              <div class="rk-card2"><h5>Produkty — najwięcej reklamacji</h5><div class="rk-sub">6 pierwszych</div>${bars(agg(c => c.product, c => c.product).slice(0, 6), 'Produkt')}</div>
+              <div class="rk-card2"><h5>Produkty — najwięcej reklamacji</h5><div class="rk-sub">6 pierwszych · kliknij → reklamacje</div>${bars(agg(c => c.product, c => c.product).slice(0, 6), 'Produkt', {list: 'product'})}</div>
             </div></div>`;
         drawMonths(pane.querySelector('[data-rk-months]'), months, per);
         drawValues(pane.querySelector('[data-rk-values]'), months, per);
@@ -392,6 +392,89 @@
         }
     }
 
+    // --- [363] Okno : reklamacje przyczyny / produktu, potem zgłoszenie z magazynu, zdjęcia i co wysłano ----------------
+    const ROOT = (root.dataset.root || '').replace(/\/$/, '');
+    const fmtQ = (v) => nf(v, Number(v) % 1 ? 2 : 0);
+    const mDay = (d) => d ? String(d).slice(0, 10).split('-').reverse().join('.') : '—';
+    let modal = null;
+    function closeModal() { if (modal) { modal.remove(); modal = null; document.removeEventListener('keydown', escClose); } }
+    function escClose(e) { if (e.key === 'Escape') closeModal(); }
+    function showModal(title, body) {
+        closeModal();
+        modal = document.createElement('div');
+        modal.className = 'rk-modal';
+        modal.innerHTML = `<div class="rk-modal-box" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="rk-modal-hd"><h5>${esc(title)}</h5>
+            <button type="button" class="rk-modal-x" data-rk-close aria-label="Zamknij">×</button></div><div class="rk-modal-bd">${body}</div></div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('[data-rk-close]')) return closeModal();
+            const o = e.target.closest('[data-rk-open]');
+            if (o) return openDetail(Number(o.dataset.rkOpen));
+            const l = e.target.closest('[data-rk-onlist]');
+            if (l) { closeModal(); return openComplaint(Number(l.dataset.rkOnlist)); }
+            const a = e.target.closest('[data-rk-att]');
+            if (a) { e.preventDefault(); return attachmentUrl(a.dataset.rkAtt).then(u => { if (u) window.open(u, '_blank', 'noopener'); }); }
+        });
+        document.addEventListener('keydown', escClose);
+        return modal.querySelector('.rk-modal-bd');
+    }
+    function openList(kind, key) {
+        const items = filtered().filter(c => (kind === 'reason' ? (c.reason || '—') : c.product) === key)
+            .sort((a, b) => b.day.localeCompare(a.day));
+        const st = (c) => `<span class="rk-st ${c.state}">${esc(c.state === 'open' ? (OPEN_LABEL[c.status] || ST.open[2]) : ST[c.state][2])}</span>`;
+        showModal(`${key} — ${items.length} ${plural(items.length, 'reklamacja', 'reklamacje', 'reklamacji')}`, items.length ? `<div class="rk-mlist">${items.map(c => `<button type="button" class="rk-mrow" data-rk-open="${c.id}">
+                <span class="d">${mDay(c.day)}</span><span class="w"><b>${esc(kind === 'reason' ? c.product : c.reason || '—')}</b><small>${esc(c.customer)}</small></span>
+                <span class="q">${fmtQ(c.qty)} szt.</span><span class="v">${c.value ? nf(c.value) + ' €' : '—'}</span>${st(c)}<i class="bi bi-chevron-right"></i></button>`).join('')}</div>`
+            : '<p class="rk-empty">Brak reklamacji.</p>');
+    }
+    async function attachmentUrl(id) {
+        try {
+            const r = await fetch(`${ROOT}/ajax/franchise-complaints/attachment/${encodeURIComponent(id)}/presigned-url`, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+            const j = await r.json().catch(() => null);
+            return r.ok && j && j.url ? j.url : null;
+        } catch (e) { return null; }
+    }
+    async function openDetail(id) {
+        const box = showModal('Reklamacja', '<p class="rk-empty"><i class="bi bi-hourglass-split"></i> Wczytywanie…</p>');
+        let d;
+        try {
+            const r = await fetch(`${ROOT}/ajax/franchise-complaints/${id}/detail`, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+            d = await r.json();
+            if (!r.ok) throw new Error(d && d.message || 'Błąd');
+        } catch (e) { box.innerHTML = `<p class="rk-empty">${esc(e.message || 'Błąd komunikacji')}</p>`; return; }
+        modal.querySelector('.rk-modal-hd h5').textContent = d.non_product ? 'Reklamacja bez produktu' : d.product;
+        const state = d.status === 'ACCEPTED' ? 'acc' : (d.status === 'REJECTED' ? 'rej' : 'open');
+        const shipped = d.shipped.length ? `<table class="rk-mtable"><thead><tr><th>Kartony</th><th>szt./kart.</th><th>Sztuki</th><th>Cena kartonu</th><th>Razem</th></tr></thead><tbody>
+                ${d.shipped.map(l => `<tr><td>${fmtQ(l.cartons)}</td><td>${l.ppc ? fmtQ(l.ppc) : '—'}</td><td>${l.pieces !== null ? fmtQ(l.pieces) : '—'}</td><td>${nf(l.price_carton, 2)} €</td><td>${nf(l.total, 2)} €</td></tr>`).join('')}</tbody></table>`
+            : `<p class="rk-muted">${d.invoice_num ? 'Brak tego produktu na fakturze ' + esc(d.invoice_num) + '.' : 'Brak faktury.'}</p>`;
+        const calc = (q, cartons, v) => `${fmtQ(q)} szt. ÷ ${fmtQ(d.ppc)} szt./kart. → <b>${cartons} ${plural(cartons, 'karton', 'kartony', 'kartonów')}</b> × ${nf(d.carton_price, 2)} € = <b>${nf(v, 2)} €</b>`;
+        box.innerHTML = `<div class="rk-mhead"><span class="rk-st ${state}">${esc(d.status_label)}</span><span>${esc(d.customer || '—')}</span>
+                <span class="rk-muted">zgłoszona ${mDay(d.reported_at)}${d.decided_at && state !== 'open' ? ' · decyzja ' + mDay(d.decided_at) : ''}</span></div>
+            <section class="rk-msec"><h6><i class="bi bi-shop"></i> Zgłoszenie z magazynu</h6>
+                <dl class="rk-mdl"><dt>Przyczyna</dt><dd>${esc(d.reason || '—')}</dd>
+                ${d.non_product ? '' : `<dt>Ilość</dt><dd><b>${fmtQ(d.quantity)} szt.</b></dd>`}
+                <dt>Żądana kompensata</dt><dd>${esc(d.requested_action || '—')}</dd></dl>
+                ${d.client_comment ? `<blockquote class="rk-quote">${esc(d.client_comment)}</blockquote>` : '<p class="rk-muted">Bez komentarza.</p>'}</section>
+            <section class="rk-msec"><h6><i class="bi bi-camera"></i> Zdjęcia i załączniki (${d.attachments.length})</h6>
+                ${d.attachments.length ? `<div class="rk-photos">${d.attachments.map(a => a.image
+                    ? `<a href="#" class="rk-photo" data-rk-att="${a.id}" data-rk-img="${a.id}" title="${esc(a.name)}"><span>Wczytywanie…</span></a>`
+                    : `<a href="#" class="rk-file" data-rk-att="${a.id}"><i class="bi bi-file-earmark"></i> ${esc(a.name || 'Załącznik')}</a>`).join('')}</div>` : '<p class="rk-muted">Brak załączników.</p>'}</section>
+            ${d.non_product ? '' : `<section class="rk-msec"><h6><i class="bi bi-truck"></i> Co wysłano — faktura ${esc(d.invoice_num || '—')}${d.invoice_date ? ' z ' + mDay(d.invoice_date) : ''}</h6>${shipped}</section>
+            <section class="rk-msec"><h6><i class="bi bi-calculator"></i> Wartość reklamacji (kartony rozpoczęte × cena kartonu)</h6>
+                <p>Zgłoszone : ${calc(d.quantity, d.cartons, d.value)}</p>
+                ${d.accepted_quantity !== null ? `<p>Przyjęte : ${calc(d.accepted_quantity, d.accepted_cartons || 0, d.accepted_value || 0)}</p>` : ''}</section>`}
+            <section class="rk-msec"><h6><i class="bi bi-send"></i> Decyzja i odpowiedź wysłana do magazynu</h6>
+                <dl class="rk-mdl"><dt>Decyzja</dt><dd>${esc(d.status_label)}${d.compensation ? ' · ' + esc(d.compensation) : ''}</dd></dl>
+                ${d.production_response ? `<blockquote class="rk-quote is-out">${esc(d.production_response)}</blockquote>` : '<p class="rk-muted">Brak odpowiedzi.</p>'}</section>
+            <div class="rk-mfoot"><button type="button" class="btn btn-sm btn-outline-secondary" data-rk-onlist="${d.id}"><i class="bi bi-list-ul"></i> Pokaż na liście</button></div>`;
+        // Zdjęcia : adres podpisany z serwera magazynu, ładowany po otwarciu okna.
+        box.querySelectorAll('[data-rk-img]').forEach(async (el) => {
+            const u = await attachmentUrl(el.dataset.rkImg);
+            if (!el.isConnected) return;
+            el.innerHTML = u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<span>Brak podglądu</span>';
+        });
+    }
+
     // --- Przełącznik Lista / Wykres ------------------------------------------------------------------------------------
     function setView(v) {
         const chart = v === 'chart';
@@ -416,8 +499,10 @@
         if (tb) { S.tab = tb.dataset.rkTab; save(); return render(); }
         const gb = e.target.closest('[data-rk-group]');
         if (gb) { S.group = S.group === gb.dataset.rkGroup ? '' : gb.dataset.rkGroup; save(); renderFilters(); return render(); }
+        const lb = e.target.closest('[data-rk-list]');
+        if (lb) return openList(lb.dataset.rkList, lb.dataset.rkKey);
         const pt = e.target.closest('.rk-pt');
-        if (pt && pts[pt.dataset.i]) openComplaint(pts[pt.dataset.i].c.id);
+        if (pt && pts[pt.dataset.i]) openDetail(pts[pt.dataset.i].c.id);
     });
     root.addEventListener('change', (e) => {
         const f = e.target.closest('[data-rk-f]');

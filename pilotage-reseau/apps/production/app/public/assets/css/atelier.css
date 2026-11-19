@@ -4230,3 +4230,37 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .at-asst-btn .ic { width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .2); display: grid; place-items: center; font-size: 13px; flex: none; }
 .at-asst-btn.is-todo { background: #b42318; } .at-asst-btn.is-done { background: #1f7a3a; }
 .at-asst-btn:hover, .at-asst-btn:focus { color: #fff; filter: brightness(1.08); }
+
+/* [363] Reklamacje › Wykres : okno — reklamacje przyczyny / produktu, potem zgłoszenie, zdjęcia, co wysłano, wartość. */
+.rk-modal { position: fixed; inset: 0; z-index: 2000; background: rgba(34, 34, 34, .45); display: grid; place-items: center; padding: 20px; }
+.rk-modal-box { background: #fff; border-radius: 16px; width: min(760px, 100%); max-height: calc(100vh - 40px); display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0, 0, 0, .25); }
+.rk-modal-hd { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--at-line); }
+.rk-modal-hd h5 { margin: 0; flex: 1; font-size: 17px; font-weight: 700; }
+.rk-modal-x { border: 0; background: #f3efea; width: 34px; height: 34px; border-radius: 50%; font-size: 20px; line-height: 1; }
+.rk-modal-bd { padding: 14px 18px 18px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.rk-mlist { display: flex; flex-direction: column; gap: 6px; }
+.rk-mrow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 74px 80px auto 14px; gap: 10px; align-items: center; text-align: left; padding: 9px 10px;
+  border: 1px solid var(--at-line); border-radius: 10px; background: #fff; font-size: 13px; }
+.rk-mrow:hover { background: #faf6f2; }
+.rk-mrow .w { min-width: 0; } .rk-mrow .w b, .rk-mrow .w small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-mrow .w small, .rk-mrow .d { color: var(--at-muted); }
+.rk-mrow .q, .rk-mrow .v { text-align: right; font-variant-numeric: tabular-nums; }
+.rk-st { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.rk-st.acc { background: #e6f2ea; color: #2e7d4f; } .rk-st.rej { background: #f9e4e4; color: #b42318; } .rk-st.open { background: #fdf1dc; color: #9a5b00; }
+.rk-mhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13.5px; }
+.rk-msec { border: 1px solid var(--at-line); border-radius: 12px; padding: 10px 12px; }
+.rk-msec h6 { margin: 0 0 8px; font-size: 13px; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.rk-msec p { margin: 4px 0 0; font-size: 13px; }
+.rk-mdl { display: grid; grid-template-columns: 150px 1fr; gap: 4px 10px; margin: 0; font-size: 13px; }
+.rk-mdl dt { color: var(--at-muted); font-weight: 500; } .rk-mdl dd { margin: 0; }
+.rk-quote { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid #d8ccbf; background: #faf8f5; border-radius: 0 8px 8px 0; font-size: 13px; white-space: pre-wrap; }
+.rk-quote.is-out { border-left-color: var(--at-brand, #8D1D2C); }
+.rk-muted { color: var(--at-muted); font-size: 12.5px; }
+.rk-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.rk-photo { width: 130px; height: 130px; border-radius: 10px; overflow: hidden; border: 1px solid var(--at-line); display: grid; place-items: center; background: #f6f3ef; color: var(--at-muted); font-size: 12px; text-decoration: none; }
+.rk-photo img { width: 100%; height: 100%; object-fit: cover; }
+.rk-file { display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; border: 1px solid var(--at-line); border-radius: 8px; font-size: 12.5px; text-decoration: none; }
+.rk-mtable { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rk-mtable th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); font-weight: 700; text-align: right; padding: 4px 6px; }
+.rk-mtable td { text-align: right; padding: 5px 6px; border-top: 1px solid var(--at-line); }
+.rk-mfoot { display: flex; justify-content: flex-end; }
