@@ -12,11 +12,15 @@ declare(strict_types=1);
  */
 
 $racine = dirname(__DIR__);
-foreach (["$racine/shared/src/Db.php", "$racine/pilotage-reseau/src/Db.php"] as $f) {
-    if (is_file($f)) { require_once $f; break; }
+$json = null; $code = null; $tsv = __DIR__ . '/tables.tsv';
+foreach ($argv as $i => $a) {
+    if ($a === '--json') { $json = $argv[$i + 1] ?? null; }
+    if ($a === '--code') { $code = rtrim((string) ($argv[$i + 1] ?? ''), '/'); }   // le code DÉPLOYÉ (sur le serveur : /var/www/consulant_bo)
+    if ($a === '--tsv') { $tsv = (string) ($argv[$i + 1] ?? $tsv); }
 }
-$json = null;
-foreach ($argv as $i => $a) { if ($a === '--json') { $json = $argv[$i + 1] ?? null; } }
+$candidats = $code !== null ? ["$code/shared/src/Db.php", "$code/src/Db.php"] : ["$racine/shared/src/Db.php", "$racine/pilotage-reseau/src/Db.php"];
+foreach ($candidats as $f) { if (is_file($f)) { require_once $f; break; } }
+if (!class_exists('Db')) { fwrite(STDERR, "Db.php introuvable (" . implode(', ', $candidats) . ")\n"); exit(2); }
 
 $cfg = Db::config()['db'];
 $base = (string) Db::row('SELECT DATABASE() b')['b'];
@@ -25,7 +29,8 @@ $out = ['hote' => $cfg['host'] . ':' . $cfg['port'], 'base' => $base, 'le' => da
 echo "Hôte : {$out['hote']} · base : {$out['base']} · MySQL {$out['version']}\n";
 
 // Les droits du compte (un RENAME demande ALTER, DROP, CREATE, INSERT)
-$out['droits'] = array_map(static fn ($r) => (string) reset($r), Db::rows('SHOW GRANTS FOR CURRENT_USER()'));
+// Sans l'empreinte du mot de passe que certaines versions ajoutent (IDENTIFIED BY PASSWORD '…').
+$out['droits'] = array_map(static fn ($r) => (string) preg_replace('/\s+IDENTIFIED BY .*$/i', '', (string) reset($r)), Db::rows('SHOW GRANTS FOR CURRENT_USER()'));
 
 // Toutes les tables et vues, avec le nombre EXACT de lignes
 $out['tables'] = [];
@@ -57,7 +62,6 @@ $out['evenements'] = $lire('SELECT event_name nom, status etat FROM information_
 
 // Confrontation avec l'inventaire du plan
 $plan = [];
-$tsv = __DIR__ . '/tables.tsv';
 if (is_file($tsv)) {
     $l = file($tsv, FILE_IGNORE_NEW_LINES);
     $tete = explode("\t", array_shift($l));
@@ -69,7 +73,8 @@ $out['renommages'] = [];
 foreach ($plan as $t => $c) {
     if (($c['nouveau'] ?? '=') === '=') { continue; }
     $out['renommages'][$t] = ['vers' => $c['nouveau'], 'lignes' => $out['tables'][$t] ?? null, 'cible_existe' => isset($out['tables'][$c['nouveau']])];
-    if (isset($out['tables'][$c['nouveau']])) { $out['collisions'][] = $c['nouveau']; }
+    // Collision : l'ancien ET le nouveau nom en base (la migration refuserait). Le nouveau seul : déjà renommée.
+    if (isset($out['tables'][$c['nouveau']]) && isset($out['tables'][$t])) { $out['collisions'][] = $c['nouveau']; }
 }
 $out['prefixes_reserves'] = array_values(array_filter($noms, static fn ($n) => preg_match('/^(panel|for)_/', $n)
     && !in_array($n, array_column($out['renommages'], 'vers'), true)));
@@ -78,7 +83,7 @@ $out['hors_inventaire'] = array_values(array_diff($noms, array_keys($plan)));
 // Résumé lisible
 printf("%d tables, %d vues, %d clés étrangères, %d déclencheurs, %d routines, %d événements\n",
     count($out['tables']), count($out['vues']), count($out['fk']), count($out['declencheurs']), count($out['routines']), count($out['evenements']));
-echo "Droits : " . implode(' | ', array_map(static fn ($g) => preg_replace("/IDENTIFIED BY .*/", '', $g), $out['droits'])) . "\n";
+echo "Droits : " . implode(' | ', $out['droits']) . "\n";
 echo 'Renommages prévus présents en base : ' . count(array_filter($out['renommages'], static fn ($r) => $r['lignes'] !== null)) . ' / ' . count($out['renommages']) . "\n";
 echo 'Collisions (nom cible déjà pris) : ' . (implode(', ', $out['collisions']) ?: 'aucune') . "\n";
 echo 'Tables panel_/for_ hors plan : ' . (implode(', ', $out['prefixes_reserves']) ?: 'aucune') . "\n";
