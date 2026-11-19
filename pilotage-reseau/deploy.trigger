@@ -150,3 +150,4 @@
 2026-11-19T10:45:03Z [358] Kiosque atelier portrait + plein écran
 2026-11-19T10:49:42Z [359] Tablettes : écrans courts centrés
 2026-11-19T10:50:46Z [359] Tablettes : centre sur la hauteur visible
+2026-11-19T11:19:55Z [360] Tablette de bureau : créer / changer son PIN
