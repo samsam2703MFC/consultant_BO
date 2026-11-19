@@ -11,7 +11,11 @@ declare(strict_types=1);
  * note, des photos, des captures d'écran, un appel —, avec des étiquettes. Trois disent le SENS : « Problème de
  * gestion », « À surveiller », « Bonne action » ; les autres le THÈME. Un problème de gestion ouvre un FIL ; les
  * entrées suivantes le prolongent (« suite de ») jusqu'à celle qui le ferme. Une entrée épinglée part dans le dossier
- * de la prochaine visite (suDossier, bloc « fil ») ; « le franchisé le voit » la marque pour sa page.
+ * de la prochaine visite : un rappel dans Visites, étape 3 (suDossier, bloc « fil »), qui ne part jamais sur la tablette.
+ *
+ * Le fil ne se lit et ne s'écrit QUE dans le cockpit (19/11/2026, Sam : « le franchisé ne doit rien voir », « seulement
+ * via le cockpit ») : routes de la session du siège (src/acces.php ne les ouvre pas au franchisé), rien vers sa page,
+ * ses courriels, son rapport ou la tablette de visite.
  *
  * Tables du portail (préfixe pil_, docs/PORTAILS.md) : pil_fil_entree, pil_fil_piece, pil_fil. Les pièces (photos,
  * captures) vont dans le dossier PRIVÉ, hors du site, sous un nom tiré au hasard, et ne sortent que par
@@ -21,10 +25,10 @@ declare(strict_types=1);
  *                                          fils ouverts, dernier ajout, prochaine visite
  *   GET    /fil?shop=&annee=             — le fil d'un magasin sur l'année : entrées, visites, rapports, client mystère,
  *                                          fils, prochaine visite
- *   POST   /fil/entrees                  {shop, type?, texte, tags[], le?, fil?, ferme?, epingle?, visible?, auteur?,
+ *   POST   /fil/entrees                  {shop, type?, texte, tags[], le?, fil?, ferme?, epingle?, auteur?,
  *                                          pieces[{genre, data}]} — une entrée ; « Problème de gestion » sans fil en
  *                                          ouvre un ; « ferme » sur un fil le résout
- *   PUT    /fil/entrees/{id}             {texte?, tags?, le?, type?, fil?, ferme?, epingle?, visible?, pieces?, retirer?}
+ *   PUT    /fil/entrees/{id}             {texte?, tags?, le?, type?, fil?, ferme?, epingle?, pieces?, retirer?}
  *   DELETE /fil/entrees/{id}             — l'entrée, ses pièces et leurs fichiers
  *   POST   /fil/fils/{id}                {titre?, resolu?} — renommer, résoudre ou rouvrir un fil
  *   GET    /fil/pieces/{id}              — le fichier d'une pièce (sorti tel quel, pas en JSON : public/api/index.php)
@@ -74,7 +78,6 @@ function filTables(): void
         tags VARCHAR(255) NOT NULL DEFAULT \'\',
         fil_id INT NULL,
         epingle TINYINT NOT NULL DEFAULT 0,
-        visible TINYINT NOT NULL DEFAULT 0,
         auteur VARCHAR(120) NOT NULL DEFAULT \'\',
         cree_le DATETIME NOT NULL,
         maj_le DATETIME NOT NULL,
@@ -183,7 +186,7 @@ function filEntreeLigne(array $r, array $pieces): array
 {
     return ['id' => 'n' . (int) $r['id'], 'num' => (int) $r['id'], 'source' => 'fil', 'type' => (string) $r['type'],
         'le' => substr((string) $r['le'], 0, 16), 'texte' => (string) ($r['texte'] ?? ''), 'tags' => filTags((string) $r['tags']),
-        'fil' => $r['fil_id'] !== null ? (int) $r['fil_id'] : null, 'epingle' => (bool) (int) $r['epingle'], 'visible' => (bool) (int) $r['visible'],
+        'fil' => $r['fil_id'] !== null ? (int) $r['fil_id'] : null, 'epingle' => (bool) (int) $r['epingle'],
         'auteur' => (string) $r['auteur'], 'pieces' => array_map('filPieceLigne', $pieces)];
 }
 
@@ -374,7 +377,7 @@ function filEpinglees(string $shop, string $de, string $a): array
     } catch (Throwable $e) { return []; }
 }
 
-/** Les lignes du bloc « fil » du dossier d'une visite : les épinglées depuis la visite terminée d'avant. Fonction pure. */
+/** Les lignes du bloc « fil » du dossier d'une visite (au cockpit seulement) : les épinglées depuis la visite faite d'avant. Fonction pure. */
 function filLignesDossier(array $rows): array
 {
     return array_map(static function (array $r): string {
@@ -490,8 +493,8 @@ function wr_fil_entree_creer(): array
         $filId = $fil !== null ? (int) $fil['id'] : null;
         $ouvert = false;
         if ($filId === null && in_array('gestion', $tags, true)) { $filId = filOuvrir($shop, filTitreDe((string) ($b['titreFil'] ?? '') ?: $texte), $le); $ouvert = true; }
-        Db::exec('INSERT INTO pil_fil_entree (shop_id, le, type, texte, tags, fil_id, epingle, visible, auteur, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-            [$shop, $le, $type, $texte, implode(',', $tags), $filId, !empty($b['epingle']) ? 1 : 0, !empty($b['visible']) ? 1 : 0, filAuteur($b['auteur'] ?? null), $maintenant, $maintenant]);
+        Db::exec('INSERT INTO pil_fil_entree (shop_id, le, type, texte, tags, fil_id, epingle, auteur, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [$shop, $le, $type, $texte, implode(',', $tags), $filId, !empty($b['epingle']) ? 1 : 0, filAuteur($b['auteur'] ?? null), $maintenant, $maintenant]);
         $id = (int) $pdo->lastInsertId();
         filPiecesRanger($id, $pieces);
         if ($fil !== null && !empty($b['ferme'])) { filFermer((int) $fil['id'], $id, $le); }
@@ -526,7 +529,7 @@ function wr_fil_entree_maj(int $id): array
         $set[] = 'le = ?'; $args[] = $le;
     }
     if (array_key_exists('type', $b) && isset(FIL_TYPES[(string) $b['type']])) { $set[] = 'type = ?'; $args[] = (string) $b['type']; }
-    foreach (['epingle', 'visible'] as $k) { if (array_key_exists($k, $b)) { $set[] = $k . ' = ?'; $args[] = !empty($b[$k]) ? 1 : 0; } }
+    if (array_key_exists('epingle', $b)) { $set[] = 'epingle = ?'; $args[] = !empty($b['epingle']) ? 1 : 0; }
     $fil = null;
     if (array_key_exists('fil', $b)) {
         $fil = filDuMagasin($b['fil'], $shop);

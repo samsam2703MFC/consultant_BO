@@ -148,7 +148,6 @@ function formVue(app, D, cle, F, pour){
     ferme: !!filChoisi && filChoisi.ouvert !== false && tags.includes('bonne') ? { on: F.ferme !== false, basculer: () => maj({ ferme: F.ferme === false }) } : null,
     le: F.le || '', poserLe: e => maj({ le: e.target.value }), leMax: maintenantLocal(),
     epingle: { on: !!F.epingle, nom: prochaine ? 'Épingler pour la visite du ' + jm(prochaine.le) : 'Épingler pour la prochaine visite', basculer: () => maj({ epingle: !F.epingle }) },
-    visible: { on: !!F.visible, basculer: () => maj({ visible: !F.visible }) },
     pieces: (F.pieces || []).map((p, i) => ({ src: p.data, genre: p.genre === 'capture' ? 'capture' : 'photo', retirer: () => maj({ pieces: (courant().pieces || []).filter((_, j) => j !== i) }) }))
       .concat((F.garder || []).map(p => ({ src: API_BASE + p.url, genre: p.genre === 'capture' ? 'capture' : 'photo', retirer: () => maj({ garder: (courant().garder || []).filter(x => x.id !== p.id), retirer: (courant().retirer || []).concat([p.id]) }) }))),
     choisirFichiers: e => { ajouterPieces(app, e.target.files || [], null); e.target.value = ''; },
@@ -156,7 +155,7 @@ function formVue(app, D, cle, F, pour){
     envoi: envoi ? { enCours: !!envoi.enCours, ok: envoi.ok, msg: envoi.msg } : null,
   };
   const corps = () => ({ texte: F.texte || '', tags, le: F.le ? F.le.replace('T', ' ') : null, fil: F.fil ? Number(F.fil) : null, ferme: v.ferme ? v.ferme.on : undefined,
-    epingle: !!F.epingle, visible: !!F.visible, type: F.type === 'appel' ? 'appel' : 'note', pieces: (F.pieces || []).map(p => ({ genre: p.genre, data: p.data })) });
+    epingle: !!F.epingle, type: F.type === 'appel' ? 'appel' : 'note', pieces: (F.pieces || []).map(p => ({ genre: p.genre, data: p.data })) });
   const pret = (String(F.texte || '').trim() || (F.pieces || []).length || (F.garder || []).length) && !(envoi && envoi.enCours);
   if (cle === 'flForm') {
     v.envoyer = pret ? () => {
@@ -200,9 +199,9 @@ function entreeVue(app, D, e, opts){
     Object.assign(v, { famille: 'note', typeNom: { note: 'Note', photo: 'Photo', capture: 'Capture', appel: 'Appel' }[e.type] || 'Note', qui: e.auteur, texte: e.texte,
       pieces: (e.pieces || []).map(p => ({ src: API_BASE + p.url, genre: p.genre })),
       fil: fil ? { titre: fil.titre, n: fil.entrees, ouvert: fil.ouvert, etat: fil.ouvert ? 'ouvert depuis ' + fil.jours + ' j' : 'résolu le ' + jm(fil.resolu) + ', en ' + fil.jours + ' j', ferme: fil.resoluPar === e.id, voir: () => app.setState({ flFil: fil.id }) } : null,
-      epingle: e.epingle ? (D.prochaine ? 'épinglé pour la visite du ' + jm(D.prochaine.le) : 'épinglé pour la prochaine visite') : '', visible: e.visible,
+      epingle: e.epingle ? (D.prochaine ? 'épinglé pour la visite du ' + jm(D.prochaine.le) : 'épinglé pour la prochaine visite') : '',
       modifier: () => app.setState({ flEdit: { num: e.num, texte: e.texte, tags: (e.tags || []).slice(), le: String(e.le).replace(' ', 'T'), fil: e.fil ? String(e.fil) : '',
-        ferme: fil ? fil.resoluPar === e.id : true, epingle: e.epingle, visible: e.visible, type: e.type === 'appel' ? 'appel' : 'note', pieces: [], garder: (e.pieces || []).slice(), retirer: [] }, flEnvoi: null }),
+        ferme: fil ? fil.resoluPar === e.id : true, epingle: e.epingle, type: e.type === 'appel' ? 'appel' : 'note', pieces: [], garder: (e.pieces || []).slice(), retirer: [] }, flEnvoi: null }),
       effacer: () => {
         if (typeof window !== 'undefined' && !window.confirm('Effacer cette entrée du fil' + ((e.pieces || []).length ? ' et ses ' + pluriel(e.pieces.length, 'pièce') : '') + ' ?')) { return; }
         write(app.source || 'api', 'DELETE', '/fil/entrees/' + e.num).then(r => { if (r && r.ok !== false) { app.notify('Entrée effacée.'); relire(app); } else { app.notify('Effacement refusé : ' + ((r && r.error) || 'pas de réponse')); } });

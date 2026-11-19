@@ -354,5 +354,12 @@ verifie('SMS coupés dans Qui fait quoi : rien ne part', !$r['envoye'] && MdSms:
 unset($REGLAGES['suiviRegles'], $GLOBALS['DB_ROW']);
 verifie('par défaut : le SMS part, sans copie tant qu’aucun numéro n’est donné', suRegles()['sms'] === ['actif' => true, 'copie' => []]);
 
+echo "\nLe dossier de la tablette\n";
+$blocsT = [['cle' => 'sante', 'lignes' => ['CA du mois'], 'cockpit' => false], ['cle' => 'msp', 'lignes' => []], ['cle' => 'meteo', 'lignes' => ['moral 4 / 5']],
+    ['cle' => 'fil', 'lignes' => ['18/11 · Problème de gestion · Invendus'], 'cockpit' => true]];
+verifie('par défaut : tout part, sauf le client mystère sans relevé et le fil du franchisé', array_column(suDossierTablette($blocsT, []), 'cle') === ['sante', 'meteo']);
+verifie('le fil du franchisé ne part jamais sur la tablette, même coché', !in_array('fil', array_column(suDossierTablette($blocsT, ['fil' => true, 'msp' => true]), 'cle'), true));
+verifie('un bloc retiré par le bureau ne part pas', array_column(suDossierTablette($blocsT, ['sante' => false]), 'cle') === ['meteo']);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

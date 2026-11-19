@@ -33,9 +33,10 @@ d'exemple de Sombreffe — : `code-fil.png` (le fil), `code-calendrier.png` (le 
   Client. La liste se règle dans Qui fait quoi.
 - **Les fils.** Une note peut être la *suite* d'un problème. Le fil reste ouvert jusqu'à ce qu'une bonne action le
   ferme. Exemple : « Prix écrits à la main en vitrine », ouvert à la visite du 26/10 et fermé le 19/11, en 24 jours.
-- **Épingler pour la prochaine visite** : l'entrée part dans le dossier de la visite (étape 3 de Visites).
-- **Interne par défaut.** Une entrée n'apparaît sur la page du franchisé que si l'option « Le franchisé le voit » est
-  cochée, par exemple pour lui montrer une bonne action.
+- **Épingler pour la prochaine visite** : un rappel au bureau dans le dossier de la visite (étape 3 de Visites), qui ne part pas sur la tablette.
+- **Au cockpit seulement** (décision du 19/11/2026 : « le franchisé ne doit rien voir », « seulement via le cockpit »).
+  L'option « Le franchisé le voit » des maquettes est abandonnée : rien du fil ne part vers la page du franchisé, ses
+  courriels, son rapport ni la tablette de visite ; une entrée épinglée reste un rappel au bureau (Visites, étape 3).
 
 ## A — Le fil vertical
 

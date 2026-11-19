@@ -5495,21 +5495,24 @@ gardé sur `con_visite.meteo`, puis le détail facultatif `POST /franchises/mete
 
 Module `src/fil_franchise.php`, écran Franchisés › Suivi des franchisés › Fil du franchisé (`#/franchises/fil?shop=`).
 Tables du portail : `pil_fil_entree` (une note, une photo, une capture, un appel : magasin, date, texte, étiquettes,
-fil, épinglée, visible, auteur), `pil_fil_piece` (ses images, dans le dossier privé sous un nom tiré au hasard),
-`pil_fil` (un problème de gestion et sa suite : ouvert le, résolu le, par quelle entrée). Session du siège seulement.
+fil, épinglée, auteur), `pil_fil_piece` (ses images, dans le dossier privé sous un nom tiré au hasard),
+`pil_fil` (un problème de gestion et sa suite : ouvert le, résolu le, par quelle entrée). **Au cockpit seulement**
+(19/11/2026, Sam : « le franchisé ne doit rien voir », « seulement via le cockpit ») : session du siège, aucune route
+ouverte au franchisé (`src/acces.php`), rien vers sa page, ses courriels, son rapport ni la tablette de visite.
 
 | Route | Ce qu'elle rend ou fait |
 |---|---|
 | `GET /fil/magasins` | `magasins[]` {id, nom, court, consultant, mois {gestion, surveiller, bonne}, semaines[12] (`g`, `s`, `b`, `n` ou vide, `+v` une visite), premiereSemaine, derniereSemaine, filsOuverts, dernier, prochaine {le, consultant}}, `tags`. |
-| `GET /fil?shop=&annee=` | `entrees[]` du plus récent au plus ancien : les siennes {id `n…`, type note·photo·capture·appel, le, texte, tags[], fil, epingle, visible, auteur, pieces[{id, genre, url}]}, les visites {id `v…`, titre, statut, consultant, score figé, delta, photos, points[{titre, priorite, statut, echeance}]}, les rapports envoyés {id `r…`, lu}, le client mystère {id `m…`, score sur 100} ; `fils[]` {id, titre, ouvert, de, resolu, resoluPar, jours, entrees}, `prochaine`, `annees`, `tags`. Les demandes du helpdesk se lisent à part : `GET /helpdesk/magasin?shop=`. |
-| `POST /fil/entrees` | `{ shop, texte, tags[], le?, type? (appel), fil?, ferme?, titreFil?, epingle?, visible?, auteur?, pieces: [{genre: photo·capture, data: data-URL}] }` — 8 pièces de 6 Mo au plus, JPEG, PNG ou WebP ; rien n'est écrit si une pièce est refusée. Un « Problème de gestion » sans fil en ouvre un (`filOuvert`) ; `ferme` sur un fil le résout à la date de l'entrée. |
-| `PUT /fil/entrees/{id}` | `{ texte?, tags?, le?, type?, fil?, ferme?, epingle?, visible?, pieces?, retirer: [id] }`. Une entrée qui quitte le fil qu'elle fermait le rouvre. |
+| `GET /fil?shop=&annee=` | `entrees[]` du plus récent au plus ancien : les siennes {id `n…`, type note·photo·capture·appel, le, texte, tags[], fil, epingle, auteur, pieces[{id, genre, url}]}, les visites {id `v…`, titre, statut, consultant, score figé, delta, photos, points[{titre, priorite, statut, echeance}]}, les rapports envoyés {id `r…`, lu}, le client mystère {id `m…`, score sur 100} ; `fils[]` {id, titre, ouvert, de, resolu, resoluPar, jours, entrees}, `prochaine`, `annees`, `tags`. Les demandes du helpdesk se lisent à part : `GET /helpdesk/magasin?shop=`. |
+| `POST /fil/entrees` | `{ shop, texte, tags[], le?, type? (appel), fil?, ferme?, titreFil?, epingle?, auteur?, pieces: [{genre: photo·capture, data: data-URL}] }` — 8 pièces de 6 Mo au plus, JPEG, PNG ou WebP ; rien n'est écrit si une pièce est refusée. Un « Problème de gestion » sans fil en ouvre un (`filOuvert`) ; `ferme` sur un fil le résout à la date de l'entrée. |
+| `PUT /fil/entrees/{id}` | `{ texte?, tags?, le?, type?, fil?, ferme?, epingle?, pieces?, retirer: [id] }`. Une entrée qui quitte le fil qu'elle fermait le rouvre. |
 | `DELETE /fil/entrees/{id}` | l'entrée, ses pièces et leurs fichiers ; le fil qu'elle fermait se rouvre ; un fil sans entrée disparaît. |
 | `POST /fil/fils/{id}` | `{ titre?, resolu? }` : renommer, résoudre (aujourd'hui) ou rouvrir un fil. |
 | `GET /fil/pieces/{id}` | le fichier de la pièce, tel quel (pas en JSON). |
 
-Le dossier de la visite (`GET /suivi/preparation`) porte un bloc `fil`, interne : les entrées épinglées depuis la
-dernière visite faite.
+Le dossier de la visite (`GET /suivi/preparation`) porte un bloc `fil` (`cockpit: true`) : les entrées épinglées depuis
+la dernière visite faite, en rappel au bureau ; il n'est jamais figé dans le dossier envoyé sur la tablette
+(`suDossierTablette`).
 
 ### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
 
