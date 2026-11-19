@@ -3922,7 +3922,12 @@ class App {
 
     const ed = S.refEdit;
     common.refEdit = ed ? {
-      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '', saisonTxt: ed.saisonTxt || '',
+      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '',
+      obligTxt: ed.obligTxt || '', panel: ed.panel || [], ancien: ed.ancien || '',
+      // Où corriger ce que la fiche ne tient pas : le panel (prix, durée de vie), la recette, l'assortiment.
+      voirPanel: ed.pwaId ? () => this.setState({ screen: 'paramProduits', ppPid: ed.pwaId, refEdit: null, catFiche: null }) : null,
+      voirRecettes: () => this.setState({ screen: 'verifRecettes', refEdit: null, catFiche: null }),
+      voirAssortiment: ed.mode === 'asso' ? null : () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(ed.nom), aoPop: null, refEdit: null, catFiche: null }),
       champs: ed.champs,
       set: k => e => this.setState(s2 => ({ refEdit: Object.assign({}, s2.refEdit,
         { champs: Object.assign({}, s2.refEdit.champs, { [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }) }) })),
@@ -4176,14 +4181,9 @@ class App {
       .map(f => ({ nom: f[1], on: (S.pdFenetre || 'mois') === f[0], choisir: () => this.pdChoisirFenetre(f[0]) }));
     const DEC = { garder: ['Garder', 'ok'], modifier: ['Modifier', 'a'], effacer: ['Effacer', 'ko'] };
     const nbOuv = c2.nbOuv || 1;
-    // Obligatoire ou pas, d'un geste (18/10/2026) : l'interrupteur de la ligne et la case de la fiche écrivent l'assortiment
-    // (toute l'année, le minimum gardé) ; retirer une obligatoire se confirme.
-    const basculerOblig = (p, nom) => () => {
-      const on = !p.must;
-      if (!on && !window.confirm('Retirer « ' + nom + ' » de l’assortiment obligatoire ?' + (p.saison != null ? ' Elle l’est pendant une saison.' : ''))) { this.setState({}); return; }
-      this.aoPoser(String(p.ref), on ? { must: true, saison: null, qmin: p.qmin || 0 } : { must: false },
-        '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
-    };
+    // L'obligatoire se règle à un seul endroit (19/11/2026, docs/audit-rail.md § 4.1) : Comptoir › Assortiment
+    // obligatoire, avec sa saison et son minimum. Le Catalogue le montre et y mène, la référence cherchée.
+    const voirAssortiment = nom => () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(nom), aoPop: null, catFiche: null });
     // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
     // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
     // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé. Le serveur
@@ -4241,7 +4241,7 @@ class App {
       rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '—' : l.rangC + ' / ' + l.nbC, rangCatNom: l.rangC == null ? '' : l.catNom,
       saison: l.saisonsTxt || (l.saisons.length ? 'saison du panel' : ''), saisonSeule: l.saisonnier,
       oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
-      basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,
+      voirOblig: l.p ? voirAssortiment(l.nom) : null,
       extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
       on: S.catFiche === l.k,
       ouvrir: () => this.setState({ catFiche: S.catFiche === l.k ? null : l.k, catOnglet: S.catOnglet || 'magasins' }) }));
@@ -4277,9 +4277,9 @@ class App {
       onglet,
       // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
       revue: s ? [1, 2, 3, 4, 5].map(n2 => ({ n: n2, pleine: s.revue != null && n2 <= s.revue, poser: () => this.pdPoserRevue(s.id, s.revue === n2 ? null : n2) })) : null,
-      // Une seule case (18/10/2026) : « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score.
+      // « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score : montrée ici, réglée dans l'assortiment.
       obligatoire: p ? !!p.must : null,
-      basculerObligatoire: p ? basculerOblig(p, l.nom) : null,
+      voirObligatoire: p ? voirAssortiment(l.nom) : null,
       detailScore: s ? () => this.pdOpenDetail(s.id) : null,
       ouvrirProduction: p ? () => this.refOpen(p, 'fiche') : null,
       comptoir: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(l.nom), psLibres: false, psSel: null }),
@@ -4334,14 +4334,27 @@ class App {
     }
     common.catFiche = fiche;
   }
-  /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
+  /**
+   * Ouvre l'édition d'une référence — fiche de production ou emplacement.
+   *
+   * La fiche ne tient plus que la fabrication (19/11/2026, docs/audit-rail.md § 4.1). Le prix, le coût matière et la
+   * durée de vie se lisent au panel et s'y corrigent ; l'obligatoire se règle dans l'assortiment. La fiche les montre
+   * et y mène, avec l'ancienne saisie du cockpit s'il y en avait une (plus lue, à reporter au panel si elle est juste).
+   */
   refOpen(p, mode){
     const sa = p.must && p.saison != null ? ((this.D.prodSaisons || {}).saisons || []).find(s => s.id === p.saison) : null;
-    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '',
-      saisonTxt: p.must && p.saison != null ? 'obligatoire pendant ' + (sa ? (sa.emoji ? sa.emoji + ' ' : '') + sa.nom : 'une saison') + ' — la saison se règle dans l’assortiment' : '',
-      champs: { must: !!p.must, qmin: p.qmin || 0, prep: p.prep || 0, cuisson: p.cuisson || 0,
+    const eur = v => v == null ? '—' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const SRC_PRIX = { boutiques: 'pratiqué en boutique', fiche: 'prix conseillé du panel' };
+    const anc = p.saisieCockpit || null;
+    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '', pwaId: p.pwaId || null,
+      obligTxt: p.must ? 'oui, ' + (p.saison != null ? 'pendant ' + (sa ? (sa.emoji ? sa.emoji + ' ' : '') + sa.nom : 'une saison') : 'toute l’année') + (p.qmin ? ' · minimum ' + p.qmin : '') : 'non',
+      panel: [['Prix de vente', eur(p.prix) + (p.prixSource ? ' · ' + (SRC_PRIX[p.prixSource] || p.prixSource) : '')],
+        ['Coût matière', p.mat == null ? 'pas de recette chiffrée' : eur(p.mat) + (p.matFiable === false ? ' · invraisemblable' : '')],
+        ['Durée de vie', p.dlv ? p.dlv + ' h' : '—']],
+      ancien: anc ? [anc.prix != null ? 'prix ' + eur(anc.prix) : '', anc.mat != null ? 'coût matière ' + eur(anc.mat) : '', anc.dlv ? 'DLV ' + anc.dlv + ' h' : '']
+        .filter(Boolean).join(' · ') : '',
+      champs: { prep: p.prep || 0, cuisson: p.cuisson || 0,
         fin: p.fin || 0, bmin: p.bmin || 0, bmult: p.bmult || 1, four: p.four || 0,
-        dlv: p.dlv || 0, mat: p.mat == null ? '' : p.mat, prix: p.prix == null ? '' : p.prix,
         profil: p.profil || '',
         zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
         slot: p.slot == null ? '' : p.slot } } });

@@ -1312,12 +1312,17 @@ function wr_param_put(string $key): array
 }
 
 /**
- * Fiche de production d'une référence — assortiment et paramètres four.
+ * Fiche de production d'une référence — les paramètres de fabrication.
  *
  * Le catalogue vient d'`atelierby_db` ; ces attributs-là n'existent nulle part
  * ailleurs et appartiennent au réseau. La ligne cockpit est donc créée à la
  * volée, la première fois qu'on touche une référence : rien n'est pré-rempli,
  * et une référence jamais éditée n'occupe aucune place.
+ *
+ * Depuis le 19/11/2026 (docs/audit-rail.md § 4.1), la fiche n'écrit QUE la fabrication (préparation, cuisson,
+ * finition, batch, four, profil). Le prix, le coût matière et la durée de vie sont au panel (Produits › Paramétrage,
+ * Vérification › Recettes à corriger) ; l'obligatoire et son minimum s'écrivent par aoEcrireObligatoire
+ * (Comptoir › Assortiment obligatoire). Les clés must, qmin, prix, mat et dlv reçues sont ignorées.
  */
 function wr_prod_produit(string $ref): array
 {
@@ -1337,28 +1342,20 @@ function wr_prod_produit(string $ref): array
     if ($nom === '') { $nom = (string) ($b['nom'] ?? $ref); }
 
     $num = static fn ($v, $def = 0) => is_numeric($v) ? (float) $v : $def;
+    // Une ligne neuve n'est pas obligatoire et n'a ni prix ni coût : ce sont les valeurs par défaut de la table.
     Db::exec(
-        'INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, mat, prix,
-             prep, cuisson, fin, bmin, bmult, four, dlv, profil, actif)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+        'INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id,
+             prep, cuisson, fin, bmin, bmult, four, profil, actif)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,1)
          ON DUPLICATE KEY UPDATE
-             must = VALUES(must), qmin = VALUES(qmin), mat = VALUES(mat), prix = VALUES(prix),
              prep = VALUES(prep), cuisson = VALUES(cuisson), fin = VALUES(fin),
              bmin = VALUES(bmin), bmult = VALUES(bmult), four = VALUES(four),
-             dlv = VALUES(dlv), profil = VALUES(profil)',
+             profil = VALUES(profil)',
         [$ref, $nom, $cat, ctype_digit($ref) ? (int) $ref : null,
-         !empty($b['must']) ? 1 : 0, (int) $num($b['qmin'] ?? 0),
-         isset($b['mat']) && $b['mat'] !== '' ? $num($b['mat']) : null,
-         isset($b['prix']) && $b['prix'] !== '' ? $num($b['prix']) : null,
          (int) $num($b['prep'] ?? 0), (int) $num($b['cuisson'] ?? 0), (int) $num($b['fin'] ?? 0),
          (int) $num($b['bmin'] ?? 0), (int) $num($b['bmult'] ?? 1), (int) $num($b['four'] ?? 0),
-         (int) $num($b['dlv'] ?? 0), (string) ($b['profil'] ?? '')]
+         (string) ($b['profil'] ?? '')]
     );
-    // Décochée, une obligatoire perd aussi sa saison : recochée plus tard, elle
-    // repartirait sinon sur une saison que personne n'a choisie.
-    if (empty($b['must'])) {
-        try { Db::exec('UPDATE ceo_prod_product SET saison_id = NULL WHERE ref = ?', [$ref]); } catch (PDOException $e) { /* colonne absente */ }
-    }
     journalAdd('CEO', 'Référentiel produit', $nom,
         (string) ($b['journal'] ?? 'Fiche de production mise à jour'));
     return ['ok' => true, 'ref' => $ref];
