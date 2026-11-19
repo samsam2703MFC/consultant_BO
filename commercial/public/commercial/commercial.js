@@ -61,14 +61,16 @@
   const RAIL = [
     ['Ma semaine', [['semaine', 'carte', 'Ma semaine'], ['mobile', 'leads', 'Suivi mobile ↗']]],
     ['Bureaux · webshop', [['tableau', 'grille', 'Tableau de bord'], ['leads', 'leads', 'Leads Meta'], ['bureaux', 'bureau', 'Bureaux et clients'], ['offres', 'offre', 'Offres, bons et catalogues'], ['echantillons', 'boite', 'Échantillons']]],
-    ['B2B', [['suivi', 'courbe', 'Suivi des offres'], ['gains', 'euro', 'Mes gains'], ['prospection', 'carte', 'Prospection ↗']]],
+    ['B2B', [['suivi', 'courbe', 'Suivi des offres'], ['gains', 'euro', 'Mes gains'], ['prospection', 'carte', 'Prospection']]],
     ['Réglages', [['modeles', 'mail', 'Modèles d’e-mail'], ['reglages', 'cle', 'Paramètres']]],
   ];
   let compteLeads = null, compteBureaux = null;
   const alertes = () => api('GET', '/alertes').then(a => { compteLeads = a.leads; compteBureaux = a.bureaux; const v = (location.hash.slice(1) || 'semaine').split('?')[0]; rail(VUES[v] ? v : 'semaine'); }).catch(() => {});
   function rail(vue) {
-    const it = ([k, i, l]) => k === 'prospection' || k === 'mobile'
-      ? `<a class="sidebar__item" href="${k === 'mobile' ? 'mobile/' : esc(CFG.cockpit) + 'prospection/'}" target="_blank" rel="noopener">${ico(i)}<span>${l}</span></a>`
+    // La Prospection est une page du portail depuis le 19/11/2026 (prospection/, à côté) : elle s'ouvre ici, sans nouvel onglet.
+    const it = ([k, i, l]) => k === 'prospection' ? `<a class="sidebar__item" href="prospection/">${ico(i)}<span>${l}</span></a>`
+      : k === 'mobile'
+      ? `<a class="sidebar__item" href="mobile/" target="_blank" rel="noopener">${ico(i)}<span>${l}</span></a>`
       : `<a class="sidebar__item ${vue === k ? 'is-active' : ''}" href="#${k}">${ico(i)}<span>${l}</span>${k === 'leads' && compteLeads ? `<span class="count" title="leads Meta à traiter" style="background:var(--accent);color:#fff">${compteLeads}</span>` : ''}${k === 'bureaux' && compteBureaux ? `<span class="count" title="bureaux à valider (compte webshop pas encore connecté)">${compteBureaux}</span>` : ''}</a>`;
     document.getElementById('rail').innerHTML = `
       <div class="sidebar__head"><img class="sidebar__logo" src="img/logo.png" alt="L’Atelier"><div class="sidebar__kicker">Module commercial</div></div>

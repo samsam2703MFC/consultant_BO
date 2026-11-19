@@ -72,7 +72,7 @@ const ICO_ECRAN = {
   // Administration
   parametres: 'cadenas', reporting: 'cal', journal: 'journal',
   // Applications
-  'ext:caisse/': 'fonds', 'ext:prospection/': 'adresse', 'ext:employee/auth': 'droits', 'ext:formation/': 'modeles', 'ext:formation/catalogue/': 'bundles'
+  'ext:caisse/': 'fonds', 'ext:../commercial/prospection/': 'adresse', 'ext:employee/auth': 'droits', 'ext:formation/': 'modeles', 'ext:formation/catalogue/': 'bundles'
 };
 function railIco(key){
   const d = ICO[ICO_ECRAN[key]];

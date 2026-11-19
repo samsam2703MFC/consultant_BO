@@ -3872,8 +3872,11 @@ et `GET /scouting/demarchage`, lus par Développement commercial et Prospection.
 
 Ce que le franchisé fait de chaque lieu relevé par `/scouting/demarchage` : dans ma liste, visite datée,
 retour, note (part au CRM marketing), et l'**action à suivre** décidée sur place avec sa date. Une seule
-réserve pour le cockpit (écrans Prospection et Développement commercial) et la page mobile
-`prospection/?shop={id}` (`mar_prospect`, clé magasin + id OSM).
+réserve, lue par la page de la Prospection, dans le portail Commercial depuis le 19/11/2026 :
+`/commercial/prospection/?shop={id}` (bureau et téléphone ; l'ancienne `/consulant_bo/prospection/` y renvoie), et par
+le portail lui-même (Ma semaine, Suivi des offres). Table `sm_prospect` (clé magasin + id OSM), code
+`commercial/src/prospection.php`. Les routes ne changent pas ; depuis le portail, elles passent par
+`/commercial/api/cockpit/prospection/…`.
 
 ```json
 { "shop": "2", "n": 3, "lieux": { "n123456": { "coche": true, "visite": "2026-09-19", "retour": "rdv", "note": "Devis 40 pers.",
