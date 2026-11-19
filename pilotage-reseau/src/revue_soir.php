@@ -374,7 +374,12 @@ function rsTable(): void
         . ' PRIMARY KEY (id_shop, jour)) DEFAULT CHARSET=utf8mb4');
 }
 
-/** Les checklists pas finies du jour, à partir des tâches obligatoires (une tâche citée par deux checklists compte dans les deux). */
+/**
+ * Les checklists pas finies du jour, à partir des tâches obligatoires (une tâche citée par deux checklists compte dans les
+ * deux). Chacune dit ses tâches pas faites (`pasFaites`, 19/11/2026) : le nom, l'heure prévue et ce qui manque — `pasFaite`
+ * (pas rendue) ou `photo` (cochée sans la photo demandée) —, rangées à l'heure. `manquent` (les seuls noms) reste pour un
+ * écran ouvert avant la mise en ligne.
+ */
 function rsChecklistsDuJour(int $shop, string $date): array
 {
     [$d, , $err] = rsLireCockpit('/pwa/tasks?shop=' . $shop . '&date=' . $date);
@@ -404,8 +409,13 @@ function rsChecklistsDuJour(int $shop, string $date): array
         $titre = $code !== '' ? trim(preg_replace('/^\s*' . preg_quote($code, '/') . '\s*[·—–:-]\s*/u', '', $n)) : $n;
         $hs = array_filter(array_map(fn ($t) => $t['heure'] ?? null, $L));
         sort($hs);
+        $pas = array_values(array_filter($L, fn ($t) => !$faite($t)));
+        usort($pas, fn ($a, $b) => [($a['heure'] ?? null) === null, (string) ($a['heure'] ?? ''), (string) $a['tache']] <=> [($b['heure'] ?? null) === null, (string) ($b['heure'] ?? ''), (string) $b['tache']]);
+        $pas = array_slice($pas, 0, 40);
         $liste[] = ['nom' => $n, 'code' => $code, 'titre' => $titre, 'heure' => $heures[$n] ?? ($hs[0] ?? null), 'faites' => $f, 'total' => count($L),
-            'manquent' => array_slice(array_values(array_map(fn ($t) => (string) $t['tache'], array_filter($L, fn ($t) => !$faite($t)))), 0, 40)];
+            'manquent' => array_map(fn ($t) => (string) $t['tache'], $pas),
+            'pasFaites' => array_map(fn ($t) => ['tache' => (string) $t['tache'], 'heure' => $t['heure'] ?? null,
+                'etat' => ($t['statut'] ?? '') === 'sansPhoto' ? 'photo' : 'pasFaite'], $pas)];
     }
     usort($liste, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);
     usort($toutes, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);
