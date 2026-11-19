@@ -1251,7 +1251,7 @@ $prevMonth = date('Y-m', strtotime('first day of last month'));
 [$s, $b] = $call('POST', '/kiosk/clocks', ['employee_id' => $jan, 'clock_in' => $prevMonth . '-10 21:00', 'clock_out' => $prevMonth . '-11 07:00', 'note' => 'zmiana nocna'], $access);
 check($s === 201, 'manual entry added');
 [$s, $ts] = $call('GET', "/kiosk/employees/{$jan}/timesheet?month={$prevMonth}", null, $access);
-check($s === 200 && $ts['data']['totals']['hours'] == 10.0 && $ts['data']['totals']['night_hours'] == 8.0 && $ts['data']['days'][0]['source'] === 'manual', 'timesheet: 10 h of which 8 h at night (22:00–06:00)');
+check($s === 200 && $ts['data']['totals']['hours'] == 10.0 && $ts['data']['totals']['night_hours'] == 8.0 && $ts['data']['days'][0]['source'] === 'manual', 'timesheet: 10 h of which 8 h at night (21:00–05:00)');
 [$s, $ts] = $call('GET', "/kiosk/employees/{$jan}/timesheet?month={$month}", null, $access);
 check($s === 200 && $ts['data']['totals']['hours'] == 2.0 && $ts['data']['totals']['signed'] === 1 && $ts['data']['days'][0]['corrected'] && $ts['data']['month_signature'] !== null
     && $ts['data']['totals']['signed_in'] === 1 && $ts['data']['days'][0]['signature_in_id'] !== null, 'timesheet of the month: corrected 2 h, day signed at entry and exit, signed month');

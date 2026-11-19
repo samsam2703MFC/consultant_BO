@@ -9,17 +9,18 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Repositories\Workshop\ClockQuestionRepository;
 use App\Repositories\Workshop\ExecutionRepository;
+use App\Repositories\Workshop\ParamRepository;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
- * Godziny pracy z tabletu : miesięczna karta pracownika (wejścia / wyjścia, godziny, godziny nocne
+ * Godziny pracy z tabletu : miesięczna karta pracownika (wejścia / wyjścia, godziny, godziny nocne [365 : 21:00–05:00, parametry]
  * 22:00–06:00, podpisy, pytania potwierdzone przy wejściu / wyjściu), zestawienie miesiąca dla wszystkich,
  * korekty kierownika (zawsze z powodem, w dzienniku). Karta drukowana jest podpisywana na tablecie (podpis miesiąca) albo na papierze.
  */
 final class TimesheetService
 {
     public function __construct(private ExecutionRepository $repo, private TransactionManager $tx, private AuditTrail $audit, private SignatureStorage $storage,
-        private ClockQuestionRepository $questions)
+        private ClockQuestionRepository $questions, private ParamRepository $params)
     {
     }
 
@@ -27,6 +28,7 @@ final class TimesheetService
     {
         $now ??= time();
         $this->checkMonth($month);
+        [$nightFrom, $nightTo] = $this->nightWindow();
         $employee = $this->repo->employee($employeeId) ?? throw ApiException::notFound('employee', $employeeId);
         $from = $month . '-01 00:00:00';
         $to = date('Y-m-01 00:00:00', strtotime($from . ' +1 month'));
@@ -47,18 +49,31 @@ final class TimesheetService
             $end = $out ?? $now;
             $days[] = [
                 'id' => (int) $k['id'], 'date' => substr($k['clock_in'], 0, 10), 'clock_in' => $k['clock_in'], 'clock_out' => $k['clock_out'],
-                'hours' => round(max(0, $end - $in) / 3600, 2), 'night_hours' => round(self::nightSeconds($in, $end) / 3600, 2),
-                'open' => $out === null, 'source' => $k['source'], 'note' => $k['note'], 'corrected' => $k['corrected_at'] !== null,
+                'hours' => round(max(0, $end - $in) / 3600, 2), 'night_hours' => round(self::nightSeconds($in, $end, $nightFrom, $nightTo) / 3600, 2),
+                'open' => $out === null, 'source' => $k['source'], 'note' => $k['note'], 'day_note' => $k['day_note'] ?? null, 'corrected' => $k['corrected_at'] !== null,
                 'signature_id' => isset($byClock[(int) $k['id']]) ? (int) $byClock[(int) $k['id']]['id'] : null,
                 'signature_in_id' => isset($inByClock[(int) $k['id']]) ? (int) $inByClock[(int) $k['id']]['id'] : null,
                 'answers' => self::answers($answers[(int) $k['id']] ?? []),
             ];
         }
         $closed = array_filter($days, fn($d) => !$d['open']);
+        // [365] Totaux par semaine (lundi → dimanche, semaine ISO) : heures et heures de nuit des pointages fermés.
+        $weeks = [];
+        foreach ($days as $i => $d) {
+            $mon = date('Y-m-d', strtotime($d['date'] . ' -' . (((int) date('N', strtotime($d['date']))) - 1) . ' days'));
+            $days[$i]['week_from'] = $mon;
+            $weeks[$mon] ??= ['week' => (int) date('W', strtotime($mon)), 'from' => $mon, 'to' => date('Y-m-d', strtotime($mon . ' +6 days')), 'hours' => 0.0, 'night_hours' => 0.0, 'days' => 0];
+            $weeks[$mon]['days']++;
+            if ($d['open']) continue;
+            $weeks[$mon]['hours'] = round($weeks[$mon]['hours'] + $d['hours'], 2);
+            $weeks[$mon]['night_hours'] = round($weeks[$mon]['night_hours'] + $d['night_hours'], 2);
+        }
         return [
             'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
             'month' => $month,
+            'night_window' => $nightFrom . '–' . $nightTo,
             'days' => $days,
+            'weeks' => array_values($weeks),
             'totals' => [
                 'hours' => round(array_sum(array_column($closed, 'hours')), 2),
                 'night_hours' => round(array_sum(array_column($closed, 'night_hours')), 2),
@@ -144,13 +159,24 @@ final class TimesheetService
         return $row ? $this->storage->load($row) : null;
     }
 
-    /** Secondes entre 22:00 et 06:00 dans [from, to]. */
-    public static function nightSeconds(int $from, int $to): int
+    /**
+     * [365] Heures de nuit : de time.night_start à time.night_end (par défaut 21:00–05:00, Ustawienia › Parametry).
+     * @return array{0: string, 1: string} HH:MM
+     */
+    public function nightWindow(): array
+    {
+        $ok = fn(string $v, string $d) => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $v) ? $v : $d;
+        return [$ok(trim($this->params->get('time.night_start', '21:00')), '21:00'), $ok(trim($this->params->get('time.night_end', '05:00')), '05:00')];
+    }
+
+    /** Secondes de nuit dans [from, to] : chaque nuit de $nightFrom (HH:MM) à $nightTo (le lendemain si plus tôt). */
+    public static function nightSeconds(int $from, int $to, string $nightFrom = '21:00', string $nightTo = '05:00'): int
     {
         $total = 0;
+        $nextDay = $nightTo <= $nightFrom;
         for ($day = strtotime(date('Y-m-d', $from) . ' -1 day'); $day <= $to; $day = strtotime('+1 day', $day)) {
-            $start = strtotime(date('Y-m-d', $day) . ' 22:00:00');
-            $end = strtotime(date('Y-m-d', $day) . ' 06:00:00 +1 day');
+            $start = strtotime(date('Y-m-d', $day) . ' ' . $nightFrom . ':00');
+            $end = strtotime(date('Y-m-d', $day) . ' ' . $nightTo . ':00' . ($nextDay ? ' +1 day' : ''));
             $total += max(0, min($to, $end) - max($from, $start));
         }
         return $total;

@@ -28003,6 +28003,12 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true,
+                        "description": "[365] remarque du jour (en général à la sortie), reprise sur la feuille de temps du mois"
+                    },
                     "direction": {
                         "type": "string",
                         "enum": [
@@ -32237,6 +32243,13 @@
                                 "night_hours": {
                                     "type": "number"
                                 },
+                                "day_note": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "week_from": {
+                                    "type": "string"
+                                },
                                 "open": {
                                     "type": "boolean"
                                 },
@@ -32277,6 +32290,36 @@
                                 }
                             }
                         }
+                    },
+                    "weeks": {
+                        "type": "array",
+                        "description": "[365] totaux par semaine (lundi–dimanche)",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "week": {
+                                    "type": "integer"
+                                },
+                                "from": {
+                                    "type": "string"
+                                },
+                                "to": {
+                                    "type": "string"
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "night_hours": {
+                                    "type": "number"
+                                },
+                                "days": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "night_window": {
+                        "type": "string"
                     },
                     "totals": {
                         "type": "object",
