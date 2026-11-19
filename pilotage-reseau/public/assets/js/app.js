@@ -1370,9 +1370,8 @@ class App {
       // Performance n'a plus d'entrée.
       ['Pilotage', [
         ['resultatJour', 'Résultat', 0],
-        // La page la plus regardée du réseau n'avait pas d'entrée : on
-        // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
-        ['ext:dashboard/', 'Dashboard magasin ↗', 0],
+        // « Dashboard magasin ↗ » a quitté le rail (19/11/2026, demande de Sam) : la page reste à son adresse
+        // (dashboard/), et Résultat l'ouvre magasin par magasin.
         // Benchmark (14/11/2026, Sam : « dans le rail Benchmark ») : importer les prix d'un concurrent (PDF ou internet
         // par l'IA), les rapprocher de nos produits, classer chaque concurrent sur son magasin et son franchisé par code postal.
         ['benchmark', 'Benchmark', 0],
@@ -11168,8 +11167,8 @@ class App {
         atteint: !!m.ouvert && m.objectifAtteinte != null && m.objectifAtteinte >= 1,
         // La ligne ouvre le DASHBOARD du magasin, vue Opérationnel, à la date
         // regardée, dans un nouvel onglet (demande du 27/10/2026, maquette A de
-        // docs/maquettes/resultat-vers-dashboard). Adresse relative, comme
-        // « Dashboard magasin ↗ » du menu : elle suit le cockpit où qu'il soit servi.
+        // docs/maquettes/resultat-vers-dashboard). Adresse relative : elle suit
+        // le cockpit où qu'il soit servi.
         ouvrir: () => window.open('dashboard/?shop=' + encodeURIComponent(m.shopId) + '&vue=ops&date=' + jour, '_blank', 'noopener'),
         dashTitre: 'Ouvrir le dashboard de ' + m.magasin + ' — opérationnel du ' + this.fD(jour) + ', nouvel onglet',
         // Le compte de résultat du magasin se déplie au ▸ devant le nom. Une
