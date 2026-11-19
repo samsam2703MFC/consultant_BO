@@ -1217,7 +1217,12 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   - Le panel a confirmé chaque création et chaque rattachement (`POST /levels/21/tasks` → « success »). La relecture
     des niveaux (`/task/qui`) ne montre pas les tâches en pause, comme pour 5.6.01 et 5.5.01. Le rattachement se
     vérifiera à l'activation.
-  - Le code est inscrit dans `src/checklists_codes.php` (panel 64, pas encore de fiche Formation).
+  - Le code est inscrit dans `src/checklists_codes.php` (panel 64, fiche `chk-bien-tenue`).
+  - **La fiche Formation 5.6.02** (Sam : « oui, crée la fiche 5.6.02 ») : `chk-bien-tenue`, type Checklist, v1.0 « à
+    valider ». Elle donne les huit tâches avec leur question et leur « Pourquoi », deux points critiques de 0.0.56 et un
+    quiz de deux questions, en FR et NL. Accès `responsable`, poste P11, classement D7.5. Source
+    `data/formation/dirigeant/chk-bien-tenue.json`, encodée par `encoder_sop.py` (simulation, puis écriture). Elle
+    entre dans le manuel des Checklists du catalogue, avec la pastille « à valider ».
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
