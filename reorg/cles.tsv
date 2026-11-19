@@ -69,7 +69,7 @@ erp_cles (erpCle)	erp_jeton_service	src/erp_cles.php src/franchise/catalogues_ma
 erp_cles (erpCle)	mar_api_url	src/franchise/catalogues_magasin.php
 erp_cles (erpCle)	pil_api_url	src/erp_cles.php
 erp_cles (erpCle)	rec_api_url	src/erp_cles.php
-erp_cles (erpCle)	tfbuddy_password	src/panel_api.php src/writes.php
+erp_cles (erpCle)	tfbuddy_password	src/panel_api.php
 variable d’environnement (getenv)	CB_JOURNAL_FILE	bin/console_bo.php
 variable d’environnement (getenv)	CB_OPCACHE_WAIT	bin/console_bo.php
 variable d’environnement (getenv)	CB_RESETS_FILE	bin/console_bo.php
