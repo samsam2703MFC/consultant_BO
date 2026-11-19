@@ -176,7 +176,7 @@
     }).join('');
     var depliant = '<div class="ct-carte ct-carte-dep">' + illustration('depliant', 'ill-dep') +
       '<h3>' + T('Dépliant : comment lire les manuels', 'Folder: hoe de handboeken lezen') + '</h3>' +
-      '<p>' + T('Sept pages : la franchise, puis une page par manuel avec son QR code. À imprimer et à remettre à l’équipe.', 'Zeven pagina’s: de franchise, dan één pagina per handboek met zijn QR-code. Om af te drukken en aan het team te geven.') + '</p>' +
+      '<p>' + T('Huit pages : la franchise, puis une page par manuel avec son QR code. À imprimer et à remettre à l’équipe.', 'Acht pagina’s: de franchise, dan één pagina per handboek met zijn QR-code. Om af te drukken en aan het team te geven.') + '</p>' +
       '<div class="ct-actions"><a class="btn" href="depliant.html">' + T('Ouvrir', 'Openen') + '</a><a class="btn btn--primary" href="depliant.html#imprimer">PDF</a></div></div>';
     root.innerHTML = '<header class="ct-barre"><img src="../img/logo.png" alt="L’Atelier By"><div><div class="ct-titre">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</div>' +
       '<div class="ct-sous">' + T('Formation · Documents', 'Opleiding · Documenten') + '</div></div><span class="ct-esp"></span>' + segLangue() +
