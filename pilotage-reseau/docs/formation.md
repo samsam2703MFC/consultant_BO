@@ -1303,3 +1303,24 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   0.0.56), posées en questions et en deux colonnes. Les deux semaines sans le dirigeant passent en premier, puis viennent
   la relève, les postes doublés, les niveaux à jour, douze mois de chiffres, les ratios, les standards et le repreneur en
   une heure. La source (0.0.56) est en lien. La page tient sur l'A4.
+- **Couvertures aux couleurs du design system, avec illustration** (19/11/2026, Sam : « utiliser les couleurs du design
+  system pour les couvertures + illustration »). La palette de la marque réservée aux couvertures (DESIGN_SYSTEM.md
+  §13.3) remplace le vert et le bleu :
+
+  | Manuel | Couleur | Texte |
+  |---|---|---|
+  | Manuel opératoire | Ruby `#8D1D2C` | crème `#F5EFE4` |
+  | Standards | Noir `#222222` | crème `#F5EFE4` |
+  | Checklists | Pop-Up `#78554B` | crème `#F5EFE4` |
+  | Manuel du réseau | Abricot `#F2C9A0` | Noir `#222222` |
+  | Carte du dépliant | Beige `#EAE4DC` | — |
+
+  Chaque couverture, en carte et en page A5, porte une illustration au trait dans l'esprit des icônes (§7.12) :
+  - le livre ouvert et l'épi (manuel opératoire) ;
+  - la toque (standards) ;
+  - la planchette cochée (checklists) ;
+  - trois magasins reliés (manuel du réseau) ;
+  - le dépliant plié (carte du dépliant).
+
+  À l'impression, les couleurs restent (`print-color-adjust: exact`, §13.1). Le sous-titre du manuel du réseau annonce
+  les postes. Mise en ligne par la branche par défaut (PR), selon la règle du 19/11/2026 (CLAUDE.md du dossier).
