@@ -86,3 +86,32 @@
 /* [262] Dzień wolny za nadgodziny : podpis przy odbiciu (PIN). */
 .office-action.is-comp { background: rgba(46, 125, 79, .12); color: #2E7D4F; }
 .office-comp-text { margin: 4px 0 0; font-size: 20px; font-weight: 600; line-height: 1.35; }
+
+/* [357] Tablette 11 pouces (≈ 1194 × 834 en paysage, 834 × 1194 en portrait) : tout sur un écran, sans défilement
+   pour signer. Confirmation : questions à gauche, signature et « OK » à droite ; signature sur toute la largeur. */
+.office-confirm-main, .office-confirm-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.office-confirm .kiosk-sign { max-width: none; }
+@media (orientation: landscape) and (min-width: 1000px) and (max-height: 900px) {
+  /* Accueil : heure et date sur une ligne, visages plus petits — plusieurs services visibles d'un coup. */
+  .office-home { gap: 6px; }
+  .office-hero { display: flex; align-items: baseline; justify-content: center; gap: 18px; padding: 0; }
+  .office-hero .kiosk-ipad-time { font-size: 44px; }
+  .office-hero .kiosk-ipad-date { margin: 0; font-size: 18px; }
+  .office-groupbar { margin: 2px 0 0; padding: 8px 2px; }
+  .office-group-chip { min-height: 56px; min-width: 124px; padding: 8px 14px; }
+  .office-group { margin-top: 10px; }
+  .office-group-title { margin-bottom: 8px; font-size: 21px; }
+  .office-people { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 14px 8px; }
+  .office-people .kiosk-avatar.is-app { width: 74px; height: 74px; font-size: 25px; }
+  .office-people .kiosk-app-name { font-size: 16px; }
+  /* Confirmation : deux colonnes, « OK, zatwierdzam » toujours visible. */
+  .office-confirm { max-width: none; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 0 28px; align-items: start; padding: 22px 24px; }
+  .office-confirm-side { position: sticky; top: 12px; }
+  .office-confirm .kiosk-confirm-sign { margin-top: 0; }
+  .office-confirm .kiosk-confirm-sign .kiosk-sign { height: 300px; }
+  .office-confirm .kiosk-big { min-height: 96px; }
+  /* PIN et bouton entrée / sortie : un peu plus grands, centrés dans la hauteur. */
+  .office .kiosk-pin .kiosk-pad { max-width: 380px; }
+  .office .kiosk-pin .kiosk-pad .kiosk-btn { width: 84px; min-height: 84px; }
+  .office-clock { margin-top: 70px; }
+}
