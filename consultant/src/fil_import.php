@@ -102,7 +102,7 @@ function filImportAppliquer(array $doc, bool $ecrire): array
     if (!filMagasinConnu($shop)) { $cr['erreur'] = 'magasin inconnu : ' . $shop; return $cr; }
     $fils = [];
     foreach ($doc['entrees'] as $e) {
-        $deja = Db::row('SELECT id, fil_id FROM pil_fil_entree WHERE shop_id = ? AND le = ? AND texte = ?', [$shop, $e['le'], $e['texte']]);
+        $deja = Db::row('SELECT id, fil_id FROM con_fil_entree WHERE shop_id = ? AND le = ? AND texte = ?', [$shop, $e['le'], $e['texte']]);
         if ($deja !== null) {
             $cr['deja']++;
             if ($e['fil'] !== null && !isset($fils[$e['fil']]) && $deja['fil_id'] !== null) { $fils[$e['fil']] = (int) $deja['fil_id']; }

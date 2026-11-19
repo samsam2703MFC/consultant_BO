@@ -11,14 +11,14 @@ declare(strict_types=1);
  * exemple /var/lib/consulant_bo/prive/fil-import/) et on les efface une fois l'import fait. Rejouer un fichier n'écrit
  * rien deux fois.
  */
-require __DIR__ . '/../src/Db.php';
-if (is_file(__DIR__ . '/../src/erp_cles.php')) { require_once __DIR__ . '/../src/erp_cles.php'; }
-require __DIR__ . '/../src/endpoints.php';
-require __DIR__ . '/../src/writes.php';
+require __DIR__ . '/../../shared/src/Db.php';
+if (is_file(__DIR__ . '/../../shared/src/erp_cles.php')) { require_once __DIR__ . '/../../shared/src/erp_cles.php'; }
+require __DIR__ . '/../../shared/src/endpoints.php';
+require __DIR__ . '/../../shared/src/writes.php';
 require __DIR__ . '/../src/fil_franchise.php';
 require __DIR__ . '/../src/fil_import.php';
 
-// Les magasins ouverts, comme l'écran du fil les connaît (viMagasins, src/visites.php) : la table des magasins du panel.
+// Les magasins ouverts, comme l'écran du fil les connaît (viMagasins, consultant/src/visites.php) : la table `shops` du panel.
 if (!function_exists('viMagasins')) {
     function viMagasins(): array
     {

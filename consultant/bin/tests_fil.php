@@ -198,13 +198,13 @@ verifie('une photo sans pièce : refus', (bool) $faux(['le' => '2026-03-01', 'ty
 verifie('une date illisible : refus', (bool) $faux(['le' => 'mars', 'texte' => 'x']));
 verifie('un fil ouvert sans « gestion » : refus', (bool) $faux(['le' => '2026-03-01', 'texte' => 'x', 'tags' => ['finances'], 'fil' => 'k']));
 verifie('« ferme » sans fil : refus', (bool) $faux(['le' => '2026-03-01', 'texte' => 'x', 'ferme' => true]));
-$avant = (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'];
+$avant = (int) Db::row('SELECT COUNT(*) n FROM con_fil_entree')['n'];
 $blanc = filImportAppliquer($lu, false);
-verifie('à blanc : rien n’est écrit', (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'] === $avant
+verifie('à blanc : rien n’est écrit', (int) Db::row('SELECT COUNT(*) n FROM con_fil_entree')['n'] === $avant
     && $blanc['nouvelles'] === 4 && $blanc['filsOuverts'] === ['loyer'] && $blanc['filsFermes'] === ['loyer']);
 $cr = filImportAppliquer($lu, true);
-$loyer = Db::row('SELECT * FROM pil_fil WHERE shop_id = ? AND titre = ?', ['4', 'Loyer du bâtiment en retard']);
-$lignes = Db::rows('SELECT * FROM pil_fil_entree WHERE shop_id = ? AND auteur = ? ORDER BY le', ['4', 'Import courrier']);
+$loyer = Db::row('SELECT * FROM con_fil WHERE shop_id = ? AND titre = ?', ['4', 'Loyer du bâtiment en retard']);
+$lignes = Db::rows('SELECT * FROM con_fil_entree WHERE shop_id = ? AND auteur = ? ORDER BY le', ['4', 'Import courrier']);
 verifie('écrit : quatre entrées, à leur date, avec leur auteur', $cr['erreur'] === null && $cr['nouvelles'] === 4 && count($lignes) === 4
     && $lignes[0]['le'] === '2026-05-07 12:16:00' && $lignes[0]['type'] === 'appel');
 verifie('le fil : ouvert par le problème, sous le titre du fichier', $loyer !== null && $loyer['ouvert_le'] === '2026-10-02 09:12:00');
@@ -212,7 +212,7 @@ verifie('les suites sont dans le fil, la dernière le ferme', count(array_filter
     && $loyer['resolu_le'] === '2026-11-03 16:00:00' && (int) $loyer['resolu_par'] === (int) $lignes[3]['id']);
 $encore = filImportAppliquer($lu, true);
 verifie('rejouer : rien n’est écrit deux fois', $encore['nouvelles'] === 0 && $encore['deja'] === 4
-    && (int) Db::row('SELECT COUNT(*) n FROM pil_fil WHERE titre = ?', ['Loyer du bâtiment en retard'])['n'] === 1);
+    && (int) Db::row('SELECT COUNT(*) n FROM con_fil WHERE titre = ?', ['Loyer du bâtiment en retard'])['n'] === 1);
 verifie('un magasin inconnu : arrêt', filImportAppliquer(['shop' => '99', 'magasin' => 'x', 'titres' => [], 'entrees' => []], true)['erreur'] !== null);
 
 // Le banc s'efface.
