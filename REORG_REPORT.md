@@ -5,7 +5,7 @@ de test, rien n'est supprimé.** La phase 4 (purge) attend « PURGE » ; ce rapp
 supprimées et leurs lignes, dump, tests finaux).
 
 Décisions appliquées : A1 (la mission remplace le registre du 06/11, le Recrutement n'est plus un des quatre domaines),
-A3 (la purge ne touche que des tables créées par ce dépôt). Les autres questions du plan (§6) ont suivi ma
+A3 (la purge ne touche que des tables créées par ce dépôt), A4 et A5 (le scouting et le module RH sont gardés). Les autres questions du plan (§6) ont suivi ma
 recommandation, sauf ce qui demande une action sur le serveur (A9) : rien n'y a été exécuté.
 
 ## 1. Les commits de la phase 3
@@ -103,13 +103,14 @@ serveur (`php reorg/ligne_de_base.php`), **pas encore mesurée** : aucune exécu
 
 | Table | Lignes | FK venant d'une table conservée | Code qui la cite encore (à retirer avant le contrôle bloquant) | Statut |
 |---|---|---|---|---|
-| `ceo_scouting_candidate`, `_competitor`, `_etude`, `_population`, `_tile` (5) | à mesurer | aucune (code et banc) | `shared/sql/schema.sql`, `shared/src/installer.php`, `shared/src/endpoints.php` (etude), `shared/bin/deploy.sh` (tile) | **à confirmer (A4)** : supprimées seulement si le Recrutement en a une copie |
-| `hr_dimona_*` (9) | à mesurer | aucune | aucun dans les quatre domaines (module RH dans `pilotage-reseau/`) | **à confirmer (A5)** : je recommande de les garder |
 | `ceo_assistant_question` | à mesurer (absente ?) | aucune | `panel/src/assistant_ia.php` (reprise une fois), `panel/src/assistant_magasin.php` (commentaire) | à supprimer après contrôle que `panel_aia_question` a toutes ses lignes |
 | `ceo_parcours`, `ceo_parcours_etape` | à mesurer (déjà effacées ?) | aucune | `formation/src/formation_postes.php` (leur effacement) | à supprimer si encore présentes |
 | `ceo_prod_planogram` | à mesurer (absente ?) | aucune | `shared/src/installer.php` (`planoMigrer`) | à supprimer si encore présente |
 | `ceo_x` | à mesurer (absente ?) | aucune | `shared/bin/tests.php` (test) | à supprimer si présente |
 | anciens noms des registres (`ceo_fb_post`, `ceo_nl_*`, `ceo_visite*`…) | à mesurer | — | registres `marketing_tables.php`, `con_tables.php` | seulement s'ils existent en double : cas par cas, avec vous |
+
+**Gardées (décisions du 19/11/2026)** : le scouting (`ceo_scouting_*`, A4) et le module RH (`hr_dimona_*`, A5) restent
+en place, hors périmètre, dans `pilotage-reseau/` pour le code ; leurs tables ne font plus partie de la purge.
 
 Jamais supprimées : les tables des autres applications de la base (panel TF Buddy, PWA consultant, CRM, signage,
 Social, landing), la base `erp` de la copie de l'ERP, `erp_cles`, les tables partagées.
@@ -134,7 +135,7 @@ Social, landing), la base `erp` de la copie de l'ERP, `erp_cles`, les tables par
    `reorg/structure-domaines` dans cette branche (et y reporter ce qui a été ajouté depuis le 19/11, la routine du
    matin le signale), puis ne plus livrer l'ancienne disposition — sinon l'ancien code recréerait des tables vides sous
    les anciens noms.
-2. A4 (scouting) et A5 (module RH) : supprimer ou garder.
+2. A4 et A5 tranchés le 19/11 : scouting et module RH gardés.
 3. Les doublons de clés (`pil_*` du cockpit / clés communes) : lesquels fusionner ; le chiffrement d'`erp_cles`.
 4. Les secrets restés dans `config.php` / l'environnement : les migrer vers `erp_cles` (il faut toucher au déploiement).
 5. Les lectures croisées entre domaines (REORG_PLAN.md §7) et les accès directs aux tables d'autres applications (§8) :
