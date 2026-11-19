@@ -1395,4 +1395,10 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   par la couverture de ce manuel. Le dépliant lui-même présente toujours quatre manuels.
 - **Essai** : grille de 6 cartes (« 40 étapes · 5 sections ») ; manuel de 13 pages, sans page qui déborde ; 43 liens
   vers les articles ; le manuel du réseau reste à 52 pages ; aucune erreur.
+- **Dépliant, page 7 « La pré-ouverture »** (Sam : « oui, ajoute une page pré-ouverture au dépliant »). Le dépliant passe
+  à 7 pages A4 : « Manuel n sur 5 », « Page n / 7 », un cinquième manuel sur la couverture, « Sept pages » sur la carte
+  du catalogue. La page donne trois chiffres, lus dans le module : les étapes, les sections, les articles à lire avant
+  l'ouverture. Suivent les étapes par période (comptes lus dans le guide, exemples écrits), « qui fait quoi » et le QR
+  code vers `#/m/preouverture`. Essai : 40 étapes, 5 sections, 43 articles, 4 / 12 / 13 / 11 par période, QR code
+  présent, PDF de 7 pages, rien ne se chevauche.
 
