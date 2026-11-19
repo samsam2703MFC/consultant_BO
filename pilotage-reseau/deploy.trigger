@@ -147,3 +147,4 @@
 2026-11-19T09:09:37Z [356] Tablette de bureau : PIN d'abord
 2026-11-19T10:27:15Z [357] Tablette de bureau 11 pouces
 2026-11-19T10:39:57Z [357] Tablette de bureau portrait
+2026-11-19T10:45:03Z [358] Kiosque atelier portrait + plein écran
