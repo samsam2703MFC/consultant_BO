@@ -186,3 +186,4 @@
 2026-11-19T19:24:18Z Pointage retiré partout : l'app employé (Accueil, /pointage, Mes pointages), la borne, la caisse et leurs routes ; les tables restent
 2026-11-19T19:30:50Z Entraînement de l'IA : toutes les photos 5/5 d'un type de tâche, toutes périodes (GET /ia/parfaites)
 2026-11-19T19:36:43Z Catalogue des manuels : le manuel « Fiches techniques » (fiches TF Buddy, une par produit)
+2026-11-19T19:44:28Z Manuels : typographie légère (Gotham Light ; Medium pour les badges) dans le catalogue, le dépliant et les PDF des SOP
