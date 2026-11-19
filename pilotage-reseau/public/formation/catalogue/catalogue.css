@@ -19,10 +19,13 @@ html, body { background: var(--paper, #faf7f2); }
 /* la grille des manuels */
 .ct-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 .ct-carte { background: #fff; border: 1px solid var(--line, #e6e0d8); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.ct-couv { height: 220px; border-radius: 6px; color: #fff; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; cursor: pointer; }
+.ct-couv { height: 250px; border-radius: 6px; color: #fff; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; cursor: pointer; }
 .ct-couv::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: rgba(0, 0, 0, .18); }
 .ct-couv .n { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
 .ct-couv .t { font-size: 20px; line-height: 1.2; }
+/* L'illustration des couvertures (19/11/2026) : au trait, couleur du texte de la couverture. */
+.ct-couv .ill { width: 92px; height: 92px; align-self: center; opacity: .92; flex: none; }
+.ct-couv .bas { display: flex; flex-direction: column; gap: 6px; }
 .ct-couv .s { font-size: 12px; opacity: .9; }
 .ct-carte h3 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; }
 .ct-carte p { margin: 0; font-size: 12.5px; color: var(--muted, #7a736a); line-height: 1.45; }
@@ -84,8 +87,9 @@ html, body { background: var(--paper, #faf7f2); }
 .pg.couv .logo { position: absolute; left: 12mm; top: 12mm; background: #fff; border-radius: 2mm; padding: 2.5mm 3.5mm; }
 .pg.couv .logo img { height: 8mm; display: block; }
 .pg.couv .k { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
-.pg.couv .t { font-size: 24pt; line-height: 1.1; margin: 3mm 0 2mm; }
-.pg.couv .s { font-size: 10pt; opacity: .92; }
+.pg.couv .t { font-size: 24pt; line-height: 1.1; margin: 3mm 0 2mm; max-width: 82mm; }
+.pg.couv .ill-couv { position: absolute; right: 12mm; top: 10mm; width: 36mm; height: 36mm; opacity: .92; }
+.pg.couv .s { font-size: 10pt; opacity: .92; max-width: 82mm; }
 .pg.couv .qr { position: absolute; right: 12mm; bottom: 12mm; background: #fff; border-radius: 2mm; padding: 2mm; }
 .pg.couv .qr svg { width: 26mm; height: 26mm; display: block; }
 .pg.couv .ed { position: absolute; left: 12mm; bottom: 12mm; font-size: 7.5pt; opacity: .85; }
@@ -108,6 +112,8 @@ html, body { background: var(--paper, #faf7f2); }
   body > *:not(#ct-imprime) { display: none !important; }
   #ct-imprime { display: block !important; }
   #ct-imprime .pg { page-break-after: always; break-after: page; border: none; }
+  /* Les couleurs imprimées telles quelles (couvertures, pastilles) : sans cela le navigateur retire les fonds (DS §13.1). */
+  #ct-imprime .pg, #ct-imprime .pg * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 @media (pointer: coarse) {
   .ct-barre .btn, .ct-nav .btn, .ct-carte .btn { min-height: 44px; }
@@ -156,3 +162,7 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .cpb { font-size: 7.5pt; background: var(--chip, #EDE7DE); border-radius: 1.2mm; padding: .3mm 1.6mm; }
 .pg .cpb small { color: var(--muted, #7a736a); font-size: 6.5pt; }
 .pg .vide { font-size: 8pt; color: var(--muted, #7a736a); }
+
+/* La carte du dépliant : le Beige de la marque (§13.3), son illustration en Noir. */
+.ct-carte-dep { background: #EAE4DC; border-color: transparent; }
+.ct-carte-dep .ill-dep { width: 64px; height: 64px; color: #222222; opacity: .85; }
