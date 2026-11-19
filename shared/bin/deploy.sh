@@ -374,8 +374,9 @@ Alias /formation/ ${TARGET_DIR}/public/formation/
 # API juste à côté d'elle, par le même contrôleur.
 RedirectMatch 301 ^/commercial\$ /commercial/
 AliasMatch ^/commercial/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
-# La Prospection du portail (/commercial/prospection/, 19/11/2026) lit les fichiers communs du cockpit (design system,
-# Leaflet, garde) à côté d'elle : /commercial/assets/ est le dossier assets/ du site. Avant « Alias /commercial/ ».
+# Les pages du portail (la garde de chacune ; la Prospection, /commercial/prospection/, 19/11/2026 : design system,
+# Leaflet) lisent les fichiers communs du cockpit à côté d'elles : /commercial/assets/ est le dossier assets/ du site.
+# Avant « Alias /commercial/ ».
 Alias /commercial/assets/ ${TARGET_DIR}/public/assets/
 Alias /commercial/ ${TARGET_DIR}/public/commercial/
 # Le module RH / Dimona à la racine du serveur, comme /formation/ (01/11/2026) : la page (public/hr) et son

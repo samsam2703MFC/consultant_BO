@@ -22,6 +22,9 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des domaines, clés, migration
 - **Tables** : `sm_*` (`sm_prospect` pour la Prospection, `sm_client`, `sm_offre`, `sm_bon`, `sm_echantillon`, `sm_envoi`, `sm_modele`, `sm_rdv`, `sm_cr`, `sm_appel_franchise`), créées au premier
   appel (`smTables`). Réglage : `smReglages` (`ceo_app_setting`, partagé) ; l'adresse e-mail des magasins lue au panel :
   `smEmailsMagasins` (un jour).
+- **La garde** (`garde.js` du cockpit) : chaque page la charge à côté d'elle, par l'alias `/commercial/assets/`
+  (`assets/js/garde.js` depuis le portail, `../assets/js/garde.js` depuis `mobile/` et `prospection/`) ; sans session,
+  elle renvoie à la connexion du cockpit (`/acces/moi` rend son adresse, `cockpitUrl`), qui rouvre la page.
 - **Code** : `src/commercial.php` (routes `/commercial/…`, `smRoute`), `src/commercial_gains.php` (le calcul des gains,
   sans base : `smGainsCalcul`). La page `public/commercial/` est servie à `/commercial/`, son API à
   `/commercial/api/cockpit/commercial/…` (alias Apache de `shared/bin/deploy.sh`, routeur `shared/public/api/index.php`).

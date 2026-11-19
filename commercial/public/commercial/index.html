@@ -2,8 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <!-- La garde des pages du cockpit (src/acces.php) : une page du siège. -->
-  <script src="../assets/js/garde.js" data-api="api/cockpit" data-siege="1"></script>
+  <!-- La garde des pages du cockpit (src/acces.php) : une page du siège. Chargée à côté de la page, par l'alias
+       /commercial/assets/ (shared/bin/deploy.sh) : ../assets/ visait la racine du serveur, où elle n'est pas (19/11/2026). -->
+  <script src="assets/js/garde.js" data-api="api/cockpit" data-siege="1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
     // Sur un téléphone, le portail s'ouvre directement sur le suivi de terrain (mobile/) ; « Version bureau » y revient
