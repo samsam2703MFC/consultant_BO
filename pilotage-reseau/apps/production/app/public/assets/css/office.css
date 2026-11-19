@@ -147,3 +147,17 @@
 .office-pinhome .kiosk-row .kiosk-btn { min-height: 52px; font-size: 17px; }
 .office-pinhome-bar { padding-top: 12px; }
 .office-first-help { margin: 8px 0 0; font-size: 18px; font-weight: 600; color: var(--k-primary, #8D1D2C); }
+
+/* [364] RODO — sans PIN : la personne tape son nom (3 lettres), le serveur renvoie les noms qui correspondent (sans service
+   ni présence) ; elle se touche puis crée son PIN. Carte au centre de l'écran, grand champ, grandes lignes. */
+.office-search { margin-top: auto; margin-bottom: auto; max-width: 620px; width: 100%; margin-left: auto; margin-right: auto; padding: 26px 24px;
+  display: flex; flex-direction: column; gap: 12px; }
+.office-search h2 { margin: 0; font-size: 26px; }
+.office-search-input { font-size: 24px; min-height: 64px; }
+.office-search-results { display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+.office-search-row { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 10px 16px; border: 1px solid var(--k-line); border-radius: 14px;
+  background: var(--k-surface); font-size: 21px; font-weight: 600; text-align: left; color: var(--k-text); }
+.office-search-row > span:not(.kiosk-avatar) { flex: 1; } .office-search-row .kiosk-avatar { width: 44px; height: 44px; font-size: 16px; } .office-search-row:active { transform: scale(.99); background: var(--k-fill); }
+.office-search-go { font-style: normal; font-size: 28px; color: var(--k-muted); }
+.office-search-note { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--k-warn-50, #fdf1dc); color: #7a4a00; font-size: 17px; }
+.office-search .kiosk-row { justify-content: center; }
