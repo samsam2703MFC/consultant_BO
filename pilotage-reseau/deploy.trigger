@@ -156,3 +156,4 @@
 2026-11-19T11:41:58Z [363] Réclamations : carton entamé, détail
 2026-11-19T11:49:01Z [364] Tablette de bureau : PIN, pointage direct, recherche RODO
 2026-11-19T11:56:31Z [365] Heures de nuit 21–05, semaines, remarque du jour
+2026-11-19T12:11:19Z [366] Réclamations : photos dans la fenêtre
