@@ -159,3 +159,4 @@
 2026-11-19T12:11:19Z [366] Réclamations : photos dans la fenêtre
 2026-11-19T14:33:17Z Revue du soir : les tâches pas faites montrées clairement, la caisse sans écart (monnayeur)
 2026-11-19T14:48:38Z Fil du franchisé (fil et calendrier, au cockpit seulement) ; rail : Dashboard magasin retiré
+2026-11-19T15:02:05Z Catalogue des manuels : feuilleter, PDF, QR code, dépliant ; rail du cockpit et du module Formation
