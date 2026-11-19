@@ -110,9 +110,9 @@ select.select-native { height: 36px; padding: 0 10px; border: 1px solid var(--li
 .detail td { background: var(--table-head); }
 .mini td { padding: 6px 10px; font-size: 12px; border-top: 1px solid var(--row-line); }
 .stepper { display: flex; gap: 6px; margin-bottom: 16px; }
-.stepper div { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
-.stepper div.is-on { border: 2px solid var(--accent); background: rgba(141,29,44,.05); color: var(--accent); }
-.stepper div.is-fait .small { color: var(--green); }
+.stepper > * { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.stepper > .is-on { border: 2px solid var(--accent); background: rgba(141,29,44,.05); color: var(--accent); }
+.stepper > .is-fait .small { color: var(--green); }
 td.cell-edit { cursor: pointer; }
 td.cell-edit:hover { background: var(--table-head); }
 .histo { display: flex; align-items: flex-end; gap: 10px; height: 120px; padding-top: 8px; }

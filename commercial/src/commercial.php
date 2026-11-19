@@ -23,7 +23,7 @@ const SM_TYPES = ['bureau', 'b2b'];
 const SM_STATUTS = ['prospect', 'bureau_cree', 'client', 'perdu'];
 const SM_WEBSHOP = ['a_creer', 'demande', 'cree', 'connecte'];
 const SM_ECH_STATUTS = ['a_envoyer', 'commande', 'livre', 'converti', 'sans_suite'];
-const SM_MODELES = ['bienvenue' => 'Bienvenue bureau', 'offre' => 'Offre', 'catalogue' => 'Catalogue', 'echantillon' => 'Échantillon', 'relance' => 'Relance'];
+const SM_MODELES = ['bienvenue' => 'Bienvenue bureau', 'rdv' => 'Confirmation de rendez-vous', 'offre' => 'Offre', 'catalogue' => 'Catalogue', 'echantillon' => 'Échantillon', 'relance' => 'Relance'];
 const SM_LANGUES = ['fr', 'nl'];
 const SM_EXPEDITEUR = 'L’Atelier By — Ventes aux professionnels <hello@atelierby.be>';
 const SM_TVA = 6.0;            // le HT des tickets se déduit au taux alimentaire (la TVA d'un ticket n'est pas gardée seule)
@@ -531,6 +531,11 @@ function smModelesDefaut(): array
                 "Bonjour {{prenom}},\n\nLe bureau de **{{entreprise}}** est ouvert sur notre webshop. Le magasin de {{magasin}} vous livre : {{tournee}}. Commandez jusqu’à la veille 16 h.\n\n{{bon_phrase}}\n\nÀ très vite,", 'Commander pour le bureau'],
             'nl' => ['Uw kantoor is klaar: L’Atelier By {{magasin}} levert bij u',
                 "Beste {{prenom}},\n\nHet kantoor van **{{entreprise}}** staat open in onze webshop. De winkel van {{magasin}} levert: {{tournee}}. Bestel tot 16 u de dag voordien.\n\n{{bon_phrase}}\n\nTot binnenkort,", 'Bestellen voor het kantoor']],
+        'rdv' => [
+            'fr' => ['Notre rendez-vous : {{date_rdv}}',
+                "Bonjour {{prenom}},\n\nJe vous confirme notre rendez-vous du **{{date_rdv}}** pour {{entreprise}}, avec L’Atelier By {{magasin}}.\n\nPouvez-vous me confirmer d’un mot en réponse à ce message ? Si le moment ne vous convient plus, proposez-moi un autre créneau.\n\nÀ très vite,", ''],
+            'nl' => ['Onze afspraak: {{date_rdv}}',
+                "Beste {{prenom}},\n\nHierbij bevestig ik onze afspraak van **{{date_rdv}}** voor {{entreprise}}, met L’Atelier By {{magasin}}.\n\nKunt u dit kort bevestigen door op dit bericht te antwoorden? Past het moment niet meer, stel dan gerust een ander voor.\n\nTot binnenkort,", '']],
         'offre' => [
             'fr' => ['{{offre}} : notre proposition pour {{entreprise}}',
                 "Bonjour {{prenom}},\n\n{{pitch}}\n\nNotre proposition, préparée par le magasin de {{magasin}} : **{{prix}}**. {{conditions}}\n\n{{bon_phrase}}\n\nBien à vous,", 'Voir la proposition'],
@@ -571,7 +576,7 @@ function ep_sm_modeles(): array
     foreach (SM_MODELES as $id => $nom) {
         foreach (SM_LANGUES as $l) { $out[] = ['id' => $id, 'nom' => $nom, 'langue' => $l] + smModele($id, $l); }
     }
-    return ['modeles' => $out, 'variables' => ['prenom', 'contact', 'entreprise', 'magasin', 'tournee', 'bon', 'bon_phrase', 'offre', 'pitch', 'prix', 'conditions', 'catalogue', 'date_echantillon']];
+    return ['modeles' => $out, 'variables' => ['prenom', 'contact', 'entreprise', 'magasin', 'tournee', 'bon', 'bon_phrase', 'offre', 'pitch', 'prix', 'conditions', 'catalogue', 'date_echantillon', 'date_rdv']];
 }
 
 /** PUT /commercial/modeles/{id}/{langue} — { sujet, corps, bouton } ; corps vide = retour au modèle par défaut. */
@@ -641,7 +646,8 @@ function smVariables(array $o): array
     }
     if (is_array($o['catalogue'] ?? null)) { $v['catalogue'] = smTexte($o['catalogue']['nom'] ?? '', 160); }
     if (!empty($o['dateEchantillon'])) { $v['date_echantillon'] = (string) $o['dateEchantillon']; }
-    $v += ['bon' => '', 'bon_phrase' => '', 'offre' => '', 'pitch' => '', 'prix' => '', 'conditions' => '', 'catalogue' => '', 'date_echantillon' => ''];
+    if (!empty($o['dateRdv'])) { $v['date_rdv'] = (string) $o['dateRdv']; }
+    $v += ['bon' => '', 'bon_phrase' => '', 'offre' => '', 'pitch' => '', 'prix' => '', 'conditions' => '', 'catalogue' => '', 'date_echantillon' => '', 'date_rdv' => ''];
     return ['v' => $v, 'client' => $c, 'shop' => $shop, 'langue' => $langue];
 }
 
@@ -835,7 +841,7 @@ function ep_sm_tableau(): array
     $clients = Db::rows('SELECT * FROM sm_client');
     $parCle = [];
     foreach ($clients as $c) { if ($c['cle_panel'] !== '') { $parCle[$c['shop_id'] . '|' . $c['cle_panel']] = $c; } }
-    $lignes = []; $semaines = []; $derniere = []; $manquants = 0; $appels = 0;
+    $lignes = []; $semaines = []; $derniere = []; $manquants = 0; $histoManquants = 0; $appels = 0;
     for ($w = 7; $w >= 0; $w--) { $semaines[date('o-\SW', strtotime('-' . ($w * 7) . ' days'))] = ['semaine' => date('\SW', strtotime('-' . ($w * 7) . ' days')), 'portail' => 0, 'autres' => 0]; }
     foreach ($mags as $sid => $m) {
         $premier = []; $vu = []; $cmd = 0; $ca = 0.0;
@@ -843,7 +849,7 @@ function ep_sm_tableau(): array
             $j = date('Y-m-d', strtotime($auj . ' -' . $i . ' days'));
             $dansFenetre = $i < $jours;
             $t = smTicketsJour((int) $sid, $j, $dansFenetre, $appels, $dansFenetre ? 6 * count($mags) : 0);
-            if ($t === null) { if ($dansFenetre) { $manquants++; } continue; }
+            if ($t === null) { if ($dansFenetre) { $manquants++; } else { $histoManquants++; } continue; }
             foreach ($t as [$h, $cle, $mt]) {
                 if ($cle !== '' && !isset($premier[$cle])) { $premier[$cle] = $j; }
                 if ($cle !== '') { $derniere[$sid . '|' . $cle] = $j; }
@@ -881,7 +887,7 @@ function ep_sm_tableau(): array
     }
     usort($suivre, static fn ($a, $b) => $a['rang'] <=> $b['rang']);
     return ['jours' => $jours, 'parMagasin' => $lignes, 'total' => $tot, 'semaines' => array_values($semaines), 'aSuivre' => array_slice($suivre, 0, 12),
-        'manquants' => $manquants, 'cartesOffice' => null, 'tva' => $tva,
+        'manquants' => $manquants, 'histoManquants' => $histoManquants, 'histoJours' => (SM_JOURS_HISTO - $jours) * count($mags), 'cartesOffice' => null, 'tva' => $tva,
         'source' => 'tickets pro du panel (TVA valide) ; HT estimé au taux de ' . str_replace('.', ',', (string) $tva) . ' % ; cartes office : à brancher'];
 }
 
@@ -975,6 +981,8 @@ function smRoute(string $method, string $path): mixed
 {
     if ($path !== '/commercial' && !str_starts_with($path, '/commercial/')) { return null; }
     $p = substr($path, strlen('/commercial')) ?: '/';
+    // la semaine du commercial et le suivi de terrain (src/commercial_semaine.php)
+    if (($s = smRouteSemaine($method, $p)) !== null) { return $s; }
     if ($method === 'GET') {
         return match (true) {
             $p === '/config' => ep_sm_config(),

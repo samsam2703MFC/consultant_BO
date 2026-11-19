@@ -5952,6 +5952,11 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons ; `envoyer` : la demande part au magasin par e-mail (adresse de sa fiche au panel) |
 | `GET /commercial/suivi?du=` | par secteur et par magasin : offres et catalogues envoyés, échantillons, convertis, clients ; listes de démarchage de Prospection |
 | `GET /commercial/gains?mois=AAAA-MM` | les gains : par client (1re commande, règle, commandes, HT, gain), par secteur, plancher et complément, historique de 6 mois |
+| `GET /commercial/semaine?du=` | la semaine du lundi au samedi : `rdv[]`, `enRetard[]`, `candidats[]` (leads à traiter, bureaux et clients, lieux de Prospection à rappeler), `magasins[]` (rendez-vous, dégustations, téléphone, appel au franchisé), `echantillons{}` |
+| `POST /commercial/rdv`, `PUT /commercial/rdv/{id}`, `POST /commercial/rdv/{id}/confirmer` | un rendez-vous (visite, appel, e-mail, bon, échantillon, devis, rappel après la 1re commande, bureau) ; la confirmation part par e-mail (modèle `rdv`) ; `confirmation` ∈ `envoyee`, `confirme`, `sans_reponse`, `refuse` |
+| `PUT /commercial/semaine/franchise` | `{shopId, du, ok, note}` : l'appel au franchisé de la semaine, validé |
+| `GET /commercial/mobile?jour=` | l'app de terrain : `aujourdhui[]`, `enRetard[]`, `aVenir[]`, `listes` (issues, faits, réponses à l'offre, motifs, suites et leurs délais) |
+| `POST /commercial/cr`, `GET /commercial/cr?client=` | le compte rendu d'un contact : `{rdvId?, clientId?, prospect, shopId, issue, faits[], offre, offreStatut, motif, suite, suiteLe, note}` ; le rendez-vous passe à « fait », la suite crée le suivant |
 | `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
 
 **Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée

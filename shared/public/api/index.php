@@ -162,6 +162,7 @@ require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail d
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
+require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');

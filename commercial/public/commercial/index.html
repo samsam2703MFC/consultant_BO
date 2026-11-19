@@ -5,6 +5,16 @@
   <!-- La garde des pages du cockpit (src/acces.php) : une page du siège. -->
   <script src="../assets/js/garde.js" data-api="api/cockpit" data-siege="1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Sur un téléphone, le portail s'ouvre directement sur le suivi de terrain (mobile/) ; « Version bureau » y revient
+    // avec ?bureau=1, retenu pour la session.
+    (function () {
+      var q = new URLSearchParams(location.search);
+      if (q.get('bureau') === '1') { try { sessionStorage.setItem('smBureau', '1'); } catch (e) {} return; }
+      var bureau = false; try { bureau = sessionStorage.getItem('smBureau') === '1'; } catch (e) {}
+      if (!bureau && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) { location.replace('mobile/' + location.search); }
+    })();
+  </script>
   <title>Commercial — L’Atelier By</title>
   <link rel="icon" href="img/logo.png">
   <link rel="stylesheet" href="commercial.css">

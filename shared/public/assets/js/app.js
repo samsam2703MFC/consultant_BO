@@ -1475,6 +1475,8 @@ class App {
       ['Applications', [
         ['ext:caisse/', 'Caisse ↗', 0],
         ['ext:prospection/', 'Prospection ↗', 0],
+        // Le portail Commercial (19/11/2026) : servi à la racine, /commercial/ ; sur un téléphone, il s'ouvre sur le suivi de terrain.
+        ['ext:/commercial/', 'Commercial ↗', 0],
         ['ext:employee/auth', 'Application employé ↗', 0],
         // Le Manuel du réseau est une page du module : une seule entrée.
         ['ext:formation/', 'Formation ↗', 0],
