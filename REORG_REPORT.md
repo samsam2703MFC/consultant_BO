@@ -206,3 +206,12 @@ commentaires mis à jour.
    domaine.
 7. Les routes hors format `/api/v1/{app}/{domaine}/{ressource}` et les URL écrites en dur (REORG_PLAN.md §3.3, §8).
 8. Un déploiement par domaine (aujourd'hui un seul) et un `bin/export.sh` par domaine pour l'export vers l'ERP.
+
+## 9. Le signage rejoint le Marketing (20/11/2026)
+
+Décision de Sam (19/11/2026) : « tout le signage doit aller dans marketing, le reste reste dans cette structure ».
+Destination choisie : le dépôt `marketing` (dossier `signage/`, historique gardé), comme Social le 06/11. Tables
+`sig_` → `mar_sig_` (37 noms ; base SQLite de la régie au démarrage, copie MariaDB pendant la livraison), livraison
+`marketing/.github/workflows/deploy-signage.yml`, adresses inchangées. Ici : le diagnostic et le câblage de
+`shared/bin/deploy.sh` lisent `mar_sig_products` / `mar_sig_product_categories`. `landing` lit `mar_sig_seasons`
+(ancien nom en repli). `landing` (`lp_`) et `atelier-espace-candidat` (`crm_`) restent tels quels.
