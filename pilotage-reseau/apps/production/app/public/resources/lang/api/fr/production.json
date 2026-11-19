@@ -221,6 +221,8 @@
     "INVALID_PHOTO": "La photo doit être une image JPEG, PNG ou WebP.",
     "PHOTO_TOO_LARGE": "La photo est trop lourde (max. {max_kb} Ko).",
     "MATERIAL_NOT_IN_RECIPE": "Cette matière n’est pas dans la recette du produit.",
+    "MATERIAL_LOT_UNAVAILABLE": "Ce lot n’est plus dans la liste (désactivé ou date dépassée).",
+    "MISSING_LOT_PHOTO_REQUIRED": "Lot absent : prenez une photo de l’étiquette ou de l’emballage.",
     "STOP_REASON_REQUIRED": "Choisissez la raison de l’arrêt.",
     "STOP_NOTE_REQUIRED": "Décrivez la raison de l’arrêt (raison « autre »).",
     "WASTE_NOTE_REQUIRED": "Décrivez la raison de la perte (raison « autre »).",

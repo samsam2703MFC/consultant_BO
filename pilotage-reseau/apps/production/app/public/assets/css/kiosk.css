@@ -1140,3 +1140,18 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kiosk-tag.is-warn { background: var(--k-warn-50); color: #8a5a12; }
 .kiosk-tag.is-ok { background: var(--k-ok-50); color: var(--k-ok); }
 .kiosk-tag.is-bad { background: var(--k-danger-50); color: var(--k-danger); }
+
+/* [352] Partie surowców : lista wyboru partii, powód braku, licznik « uzupełnione », surowiec nieśledzony. */
+.kiosk-lot-pick { display: grid; gap: 6px; margin-top: 10px; font-weight: 600; }
+.kiosk-lot-pick select { min-height: 52px; font-size: 17px; border-radius: 12px; border: 1.5px solid var(--k-line, #d9d0c6); padding: 0 12px; background: #fff; }
+.kiosk-lot-reason { margin-top: 10px; display: grid; gap: 6px; }
+.kiosk-lot-reason select { min-height: 48px; font-size: 16px; border-radius: 12px; padding: 0 12px; }
+.kiosk-lot.is-reason { border-color: #d9a05b; }
+.kiosk-lot.is-reason .kiosk-lot-state { color: #9a6b00; }
+.kiosk-lot.is-untracked { opacity: .6; }
+.kiosk-lot.is-untracked .kiosk-lot-state { color: inherit; font-weight: 500; font-size: 15px; }
+.kiosk-lot-progress { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.kiosk-lot-progress span { width: 180px; height: 10px; border-radius: 6px; background: #eee7de; overflow: hidden; }
+.kiosk-lot-progress i { display: block; height: 100%; background: #d9a05b; }
+.kiosk-lot-progress b { color: #9a6b00; }
+.kiosk-lot-progress.is-ok i { background: var(--k-ok, #2E7D4F); } .kiosk-lot-progress.is-ok b { color: var(--k-ok, #2E7D4F); }

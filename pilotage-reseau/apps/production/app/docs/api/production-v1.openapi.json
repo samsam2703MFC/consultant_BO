@@ -16315,7 +16315,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Matière de la recette du produit (sinon 422 MATERIAL_NOT_IN_RECIPE). Photo de l'étiquette en data URL JPEG / PNG / WebP (kiosk.lot_photo_max_kb), conservée en base ; ocr_text = texte lu sur la tablette.",
+                "description": "Matière de la recette du produit (sinon 422 MATERIAL_NOT_IN_RECIPE). material_lot_id : lot de la liste « Partie surowców » (actif, sinon 422 MATERIAL_LOT_UNAVAILABLE) ; numéro saisi hors liste : ajouté au registre. missing_reason : lot absent avec motif, photo obligatoire (422 MISSING_LOT_PHOTO_REQUIRED). Photo de l'étiquette en data URL JPEG / PNG / WebP (kiosk.lot_photo_max_kb), conservée en base ; ocr_text = texte lu sur la tablette.",
                 "parameters": [
                     {
                         "name": "id",
@@ -31142,6 +31142,17 @@
                         "type": "string",
                         "maxLength": 4000,
                         "nullable": true
+                    },
+                    "material_lot_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Partie surowców : lot choisi dans la liste (received)"
+                    },
+                    "missing_reason": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true,
+                        "description": "Lot absent : motif (photo obligatoire)"
                     }
                 }
             },
@@ -31203,6 +31214,17 @@
                                         },
                                         "photo": {
                                             "type": "boolean"
+                                        },
+                                        "tracked": {
+                                            "type": "boolean"
+                                        },
+                                        "material_lot_id": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "missing_reason": {
+                                            "type": "string",
+                                            "nullable": true
                                         },
                                         "last": {
                                             "type": "object",
