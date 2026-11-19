@@ -50,8 +50,13 @@ function prOffresDefaut(): array
         ['id' => 'sport', 'nom' => 'Après-match et cantine', 'pitch' => 'Pains, gaufres et snacks pour la buvette et l’après-match.',
             'contenu' => 'pains, gaufres, couques, sandwiches', 'genres' => 'sport|fitness|stade|piscine|swimming|pool|club', 'familles' => ['sport'],
             'depense' => 3, 'commandes' => 1, 'part' => 15],
+        // Les salles des fêtes (19/11/2026) : avant, une salle d'événements recevait le petit-déjeuner d'hôtel. On vend
+        // au gérant de la salle, qui recommande le magasin à ses locataires ; ils commandent sur le webshop.
+        ['id' => 'fetes', 'nom' => 'Fêtes et locations de salle', 'pitch' => 'Plateaux de sandwiches, tartes et pains pour les fêtes de vos locataires : ils commandent sur le webshop, nous livrons à la salle.',
+            'contenu' => 'plateaux sandwiches, tartes de fête, pains et pistolets, mignardises', 'genres' => 'fête|fete|événement|evenement|salle polyvalente|salle communale|banquet|feestzaal', 'familles' => [],
+            'depense' => 5, 'commandes' => 1, 'part' => 15],
         ['id' => 'hotel', 'nom' => 'Petit-déjeuner d’hôtel', 'pitch' => 'Pains et viennoiseries du matin livrés chaque jour avant 7 h.',
-            'contenu' => 'pains, viennoiseries, brioches', 'genres' => 'hôtel|hotel|auberge|gîte|salle|événement|evenement', 'familles' => ['evenements'],
+            'contenu' => 'pains, viennoiseries, brioches', 'genres' => 'hôtel|hotel|auberge|gîte', 'familles' => ['evenements'],
             'depense' => 2.5, 'commandes' => 7, 'part' => 15],
         ['id' => 'personnel', 'nom' => 'Pause du personnel', 'pitch' => 'Viennoiseries et sandwiches pour la pause de l’équipe, sur commande groupée.',
             'contenu' => 'viennoiseries, sandwiches', 'genres' => 'commerce|supermarché|bricolage|magasin|grande surface', 'familles' => ['commerces'],

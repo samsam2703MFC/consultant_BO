@@ -3883,9 +3883,9 @@ réserve pour le cockpit (écrans Prospection et Développement commercial) et l
 - `retour` ∈ `''` | `rappeler` | `rdv` | `interesse` | `refus` | `client` ; `action` ∈ `''` | `mail` | `test` | `devis` | `rappel` | `passer` | `commande` ;
   `offre` = le type d'offre choisi pour ce lieu (vide = celui de son genre).
 - `GET /prospection/offres` → `{ offres: [{ id, nom, pitch, contenu, genres (regex sur le libellé du genre), familles[], depense, commandes, part }] }` :
-  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Dix offres (plateau bureau, petit-déjeuner
-  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, petit-déjeuner
-  d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
+  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Onze offres (plateau bureau, petit-déjeuner
+  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, fêtes et
+  locations de salle, petit-déjeuner d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
   commandes?, part?, nom?, pitch?, contenu? }] }` règle le catalogue pour tout le réseau (`ceo_app_setting.prospectionOffres`).
 - `PUT /prospection/{shop}` `{ lieux: { id: { coche?, visite?, retour?, note?, action?, actionLe?, nom? } } }` : fusion champ par
   champ (400 lieux par appel au plus) ; une ligne vidée disparaît. Rend les lignes relues.
@@ -5932,3 +5932,29 @@ par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design sys
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).
+
+## Portail Commercial — `/commercial/…` (19/11/2026, commercial/src/commercial.php, tables `sm_`)
+
+La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (alias Apache vers ce routeur). Routes du siège.
+
+| Route | Rend / fait |
+|---|---|
+| `GET /commercial/config` | `{magasins[{id, nom, zone[]}], secteurs[{id, nom, pitch, contenu}], modeles, reglages, smtp{configure, expediteur}, cockpit, aBrancher}` |
+| `GET /commercial/tableau?jours=30` | par magasin : nouveaux et anciens clients pro (TVA valide), commandes, CA HT estimé, bureaux du portail ; `semaines[]` (clients du portail, autres) ; `aSuivre[]` |
+| `GET /commercial/leads?jours=&shop=&famille=` | les leads de MétaDonnée par magasin (`a_traiter`, `contacte`, `cree`, `connecte`, `perdu`) et la liste, avec `clientId` si le bureau existe |
+| `GET\|POST /commercial/clients`, `PUT /commercial/clients/{id}` | les bureaux et clients du portail ; le POST (assistant) crée au besoin le bon (`bonCreer {avantage, jours}`) et envoie la bienvenue (`envoyer`) |
+| `GET /commercial/clients-panel?shop=` | les clients pro vus au magasin sur 90 jours (clé `c{id}`, nom, dernière commande), pour rattacher un bureau |
+| `GET\|PUT /commercial/offres` | prix, conditions et état de chaque type d'offre par magasin (`{offre, shopId, prix, conditions, statut}` ; prix vide : retirée) |
+| `GET\|POST /commercial/bons`, `PUT /commercial/bons/{id}` | le registre des bons (code, magasin, avantage, validité, envoyés, utilisés, actif) |
+| `GET /commercial/catalogues?shop=`, `POST /commercial/catalogues/lien` | les catalogues du magasin (relais du Marketing) ; le lien public d'un catalogue pour l'e-mail |
+| `GET /commercial/modeles`, `PUT /commercial/modeles/{id}/{fr\|nl}` | les modèles d'e-mail (`bienvenue`, `offre`, `catalogue`, `echantillon`, `relance`) ; corps vide : modèle d'origine |
+| `POST /commercial/apercu`, `POST /commercial/envoyer`, `GET /commercial/envois` | l'e-mail rendu (§13.6) ; l'envoi depuis l'expéditeur réglé (hello@atelierby.be), noté dans `sm_envoi` |
+| `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons ; `envoyer` : la demande part au magasin par e-mail (adresse de sa fiche au panel) |
+| `GET /commercial/suivi?du=` | par secteur et par magasin : offres et catalogues envoyés, échantillons, convertis, clients ; listes de démarchage de Prospection |
+| `GET /commercial/gains?mois=AAAA-MM` | les gains : par client (1re commande, règle, commandes, HT, gain), par secteur, plancher et complément, historique de 6 mois |
+| `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
+
+**Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée
+au portail ; `taux1` % du HT pendant `mois1` mois depuis sa 1re commande (défaut 20 %, 1 mois), puis `taux2` % (défaut 5 %)
+jusqu'à `duree` mois (0 = sans fin) ; une commande sous `min` € HT ne rapporte rien ; une règle par secteur au besoin ; sous
+le `plancher` mensuel, le complément est payé. Tests : `php commercial/bin/tests_commercial.php`.

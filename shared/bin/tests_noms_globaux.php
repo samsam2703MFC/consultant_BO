@@ -23,7 +23,7 @@ const DEJA = [
 // Tous les domaines et le hors-périmètre : leur code se charge dans la même API (réorganisation du 19/11/2026).
 $racine = dirname(__DIR__, 2);
 $fichiers = [];
-foreach (glob($racine . '/{shared,marketing,formation,consultant,panel,pilotage-reseau}/{src,public/api}', GLOB_BRACE | GLOB_ONLYDIR) ?: [] as $d) {
+foreach (glob($racine . '/{shared,marketing,formation,consultant,panel,commercial,pilotage-reseau}/{src,public/api}', GLOB_BRACE | GLOB_ONLYDIR) ?: [] as $d) {
     $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($d, FilesystemIterator::SKIP_DOTS));
     foreach ($it as $f) { if ($f->isFile() && $f->getExtension() === 'php') { $fichiers[] = $f->getPathname(); } }
 }

@@ -190,3 +190,5 @@
 2026-11-19T19:46:03Z Visites (#/franchises) : l'assistant en barre horizontale ; onglet « Non signées » pour ouvrir ou effacer une visite pas encore signée
 2026-11-19T19:54:38Z Dépliant des manuels : la page 8, les fiches techniques (8 pages, 6 manuels)
 2026-11-19T20:00:38Z Fiches techniques : photos en carré (1:1)
+2026-11-19T18:00:52Z Prospection : l'offre « Fêtes et locations de salle » (salles des fêtes), au lieu du petit-déjeuner d'hôtel
+2026-11-19T19:57:38Z Portail Commercial (tables sm_) à /commercial/ : bureaux, leads Meta, offres, bons, catalogues, échantillons, suivi B2B, gains du commercial
