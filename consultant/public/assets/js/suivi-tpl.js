@@ -349,7 +349,20 @@ export function tplSvAdmin(c, x){
       <div class="sv-pied" style="justify-content:flex-start"><button ${x.A(M.voir)} class="cx-btn">Aperçu</button>${M.remettre ? `<button ${x.A(M.remettre)} class="cx-btn">Remettre le texte livré</button>` : ''}<button ${x.A(M.enregistrer)} class="cx-btn prim" ${M.change ? '' : 'disabled'}>Enregistrer le modèle</button>
         <span class="cx-ligne" style="margin-left:auto"><input class="mko-inp" type="email" placeholder="adresse d’essai" style="width:200px" value="${esc(M.essaiA)}" ${x.I(M.setEssaiA)}><button ${x.A(M.essai)} class="cx-btn" ${M.smtp ? '' : 'disabled title="SMTP non configuré"'}>Envoyer un essai</button></span></div>
       ${M.apercu ? `<div class="sv-mail"><b>${esc(M.apercu.sujet)}</b><iframe class="sv-ifr court" srcdoc="${esc(M.apercu.html)}" title="Aperçu du courriel"></iframe></div>` : ''}</div></div></div>`;
-  return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${sms}${voit}</div></div>${modeles}</div>`;
+  // La remise à zéro des visites (19/11/2026) : compter, taper EFFACER, effacer. Personne n'est prévenu.
+  const Z = s.remise;
+  const zc = Z && Z.compte;
+  const remise = Z ? `<div class="mko-carte sv-remise" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Remettre les visites à zéro</span><span class="mko-mini">toutes les visites · personne n’est prévenu · irréversible</span></div><div class="mko-corps">
+    <p class="sv-remise-t">Efface <b>toutes</b> les visites du réseau, quel que soit leur état, avec ce qu’elles ont produit : réponses, photos, points de plan d’action et leur historique, tâches du consultant, missions du helpdesk, rapports envoyés. Ni l’agenda du consultant ni le franchisé ne sont prévenus. Restent : les points nés hors visite, le client mystère, le fil du franchisé, les réglages et le journal.</p>
+    ${Z.fait ? `<div class="gc-msg">${esc(Z.fait)}</div>` : ''}
+    ${!zc ? `<button ${x.A(Z.compter)} class="cx-btn" ${Z.chargement ? 'disabled' : ''}>${Z.chargement ? 'Comptage…' : 'Compter ce qui serait effacé'}</button>`
+      : !zc.visites ? `<div class="mko-mu">Aucune visite à effacer.</div><button ${x.A(Z.compter)} class="cx-btn" style="margin-top:8px">Recompter</button>`
+      : `<div class="sv-remise-c"><b>${esc(zc.titre)}</b><small>${esc(zc.statuts)}</small><small>avec ${esc(zc.avec)}</small>${zc.rapports ? `<small class="ko">${esc(zc.rapports)}</small>` : ''}</div>
+        <div class="sv-remise-a"><label>Tapez <b>EFFACER</b> pour confirmer</label><input class="mko-inp" value="${esc(Z.saisie)}" ${x.I(Z.setSaisie)} placeholder="EFFACER" autocomplete="off" spellcheck="false">
+          <button ${x.A(Z.effacer)} class="cx-btn sv-remise-b" ${Z.busy || Z.saisie.trim() !== 'EFFACER' ? 'disabled' : ''}>${Z.busy ? 'Effacement…' : 'Effacer les ' + esc(zc.titre.split(' de ')[0])}</button>
+          <button ${x.A(Z.compter)} class="cx-btn" ${Z.busy || Z.chargement ? 'disabled' : ''}>Recompter</button></div>`}
+  </div></div>` : '';
+  return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${sms}${voit}</div></div>${modeles}${remise}</div>`;
 }
 
 /* --- 6. Sources et API ---------------------------------------------------------------------- */

@@ -1109,6 +1109,105 @@ function wr_visites_delete(string $id): array
     return ['ok' => true, 'efface' => $n + ['id' => $vid, 'shop' => (string) $v['shop_id'], 'court' => $court], 'suite' => $suite];
 }
 
+/*
+ * La remise à zéro des visites (19/11/2026, Sam : « mettre à zéro, effacer toutes les visites aux franchisés, c'étaient
+ * des tests »). GET /visites/remise-a-zero compte ce qui partirait ; POST l'efface, avec { confirmer: "EFFACER",
+ * attendu: <le nombre de visites compté> }. Tout part, comme par DELETE /visites/{id} pour chacune : les visites, leurs
+ * réponses, leurs photos (fichiers compris, et les photos de correction de leurs points), les points nés pendant elles et
+ * leur historique, leurs tâches, les missions du helpdesk qui leur étaient confiées. SANS PRÉVENIR PERSONNE (choix de
+ * Sam) : ni annulation dans l'agenda du consultant, ni courriel au franchisé. Restent : les points nés hors visite
+ * (client mystère, hors visite) — une photo effacée qui leur servait de preuve en est détachée —, le client mystère, le
+ * fil du franchisé, les réglages et le journal. Le compteur des numéros de visite n'est pas remis à 1 : une tablette qui
+ * garde une visite effacée écrirait sinon dans la nouvelle visite du même numéro.
+ */
+
+/** Ce que la remise à zéro toucherait : les visites (jusqu'à `max`), leurs points, leurs photos (id => chemin). */
+function viRemiseCible(): array
+{
+    ensureVisites();
+    if (function_exists('ensureVisitesCadre')) { ensureVisitesCadre(); }
+    if (function_exists('hdkTable')) { hdkTable(); }
+    $max = (int) (Db::row('SELECT MAX(id) m FROM con_visite')['m'] ?? 0);
+    $plans = array_map(static fn (array $r): int => (int) $r['id'], Db::rows('SELECT id FROM con_visite_action WHERE visite_id IS NOT NULL AND visite_id <= ?', [$max]));
+    $dePlan = array_flip($plans);
+    $photos = [];
+    foreach (Db::rows('SELECT id, chemin FROM con_visite_photo WHERE visite_id IS NOT NULL AND visite_id <= ?', [$max]) as $p) { $photos[(int) $p['id']] = (string) $p['chemin']; }
+    foreach (Db::rows('SELECT id, chemin, plan_id FROM con_visite_photo WHERE visite_id IS NULL AND plan_id IS NOT NULL') as $p) {
+        if (isset($dePlan[(int) $p['plan_id']])) { $photos[(int) $p['id']] = (string) $p['chemin']; }
+    }
+    return ['max' => $max, 'plans' => $plans, 'photos' => $photos];
+}
+
+/** Le compte de la remise à zéro, sans rien toucher. */
+function viRemiseCompte(?array $c = null): array
+{
+    $c ??= viRemiseCible(); $max = $c['max'];
+    $n = static function (string $sql, array $a = []): int { try { return (int) (Db::row($sql, $a)['n'] ?? 0); } catch (Throwable $e) { return 0; } };
+    $par = [];
+    foreach (Db::rows('SELECT statut, COUNT(*) n FROM con_visite WHERE id <= ? GROUP BY statut', [$max]) as $r) { $par[(string) $r['statut']] = (int) $r['n']; }
+    $bornes = Db::row('SELECT MIN(prevu_le) du, MAX(prevu_le) au, COUNT(DISTINCT shop_id) mags FROM con_visite WHERE id <= ?', [$max]) ?? [];
+    return ['visites' => array_sum($par), 'parStatut' => $par, 'magasins' => (int) ($bornes['mags'] ?? 0), 'du' => $bornes['du'] ?? null, 'au' => $bornes['au'] ?? null,
+        'rapports' => $n('SELECT COUNT(*) n FROM con_visite WHERE id <= ? AND rapport_envoye_le IS NOT NULL', [$max]),
+        'reponses' => $n('SELECT COUNT(*) n FROM con_visite_point WHERE visite_id <= ?', [$max]), 'photos' => count($c['photos']), 'points' => count($c['plans']),
+        'taches' => function_exists('ensureVisitesCadre') ? $n('SELECT COUNT(*) n FROM con_consultant_tache WHERE visite_id IS NOT NULL AND visite_id <= ?', [$max]) : 0,
+        'missions' => function_exists('hdkTable') ? $n('SELECT COUNT(*) n FROM con_hdk_mission WHERE visite_id <= ?', [$max]) : 0];
+}
+
+/** GET /visites/remise-a-zero */
+function ep_visites_remise(): array
+{
+    return ['ok' => true, 'compte' => viRemiseCompte(), 'confirmer' => 'EFFACER'];
+}
+
+/** POST /visites/remise-a-zero — { confirmer: "EFFACER", attendu: n, qui } */
+function wr_visites_remise(): array
+{
+    $b = body();
+    if (($b['confirmer'] ?? '') !== 'EFFACER') { http_response_code(400); return ['error' => 'confirmation manquante : tapez EFFACER']; }
+    $c = viRemiseCible(); $compte = viRemiseCompte($c);
+    if (!isset($b['attendu']) || (int) $b['attendu'] !== $compte['visites']) {
+        http_response_code(409);
+        return ['error' => 'le nombre de visites a changé depuis le compte (' . $compte['visites'] . ' maintenant) : recomptez', 'compte' => $compte];
+    }
+    $qui = viQui($b + ['qui' => 'Bureau']);
+    $max = $c['max'];
+    $parLots = static function (string $sql, array $ids): int {
+        $n = 0;
+        foreach (array_chunk($ids, 500) as $lot) { $n += (int) Db::exec(sprintf($sql, implode(',', array_fill(0, count($lot), '?'))), $lot); }
+        return $n;
+    };
+    $phIds = array_keys($c['photos']);
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        // Une photo effacée qui servait de preuve à un point qui reste (né hors visite) : le point reste, sans la photo.
+        $parLots('UPDATE con_visite_action SET photo_id = NULL WHERE photo_id IN (%s)', $phIds);
+        $parLots('UPDATE con_visite_action_evt SET photo_id = NULL WHERE photo_id IN (%s)', $phIds);
+        $parLots('DELETE FROM con_visite_action_evt WHERE plan_id IN (%s)', $c['plans']);
+        $parLots('DELETE FROM con_visite_action WHERE id IN (%s)', $c['plans']);
+        $parLots('DELETE FROM con_visite_photo WHERE id IN (%s)', $phIds);
+        Db::exec('DELETE FROM con_visite_point WHERE visite_id <= ?', [$max]);
+        if (function_exists('ensureVisitesCadre')) { Db::exec('DELETE FROM con_consultant_tache WHERE visite_id IS NOT NULL AND visite_id <= ?', [$max]); }
+        if (function_exists('hdkTable')) { Db::exec('DELETE FROM con_hdk_mission WHERE visite_id <= ?', [$max]); }
+        Db::exec('DELETE FROM con_visite WHERE id <= ?', [$max]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        http_response_code(500);
+        return ['error' => 'rien n’a été effacé : ' . $e->getMessage()];
+    }
+    // Les fichiers, une fois la base à jour : seulement ceux rangés sous uploads/visites/.
+    $fichiers = 0;
+    foreach ($c['photos'] as $chemin) {
+        $f = __DIR__ . '/../../public/' . $chemin;
+        if (preg_match('#^uploads/visites/[\w-]+/[\w.-]+$#', $chemin) === 1 && is_file($f) && @unlink($f)) { $fichiers++; }
+    }
+    journalAdd($qui, 'Visite', null, 'Remise à zéro des visites (sans prévenir personne) : ' . $compte['visites'] . ' visite(s) de ' . $compte['magasins'] . ' magasin(s)'
+        . ($compte['du'] ? ' du ' . $compte['du'] . ' au ' . $compte['au'] : '') . ' · ' . $compte['reponses'] . ' réponse(s), ' . $compte['photos'] . ' photo(s), '
+        . $compte['points'] . ' point(s), ' . $compte['taches'] . ' tâche(s), ' . $compte['missions'] . ' mission(s) du helpdesk, ' . $compte['rapports'] . ' rapport(s) envoyé(s)');
+    return ['ok' => true, 'efface' => $compte + ['fichiers' => $fichiers], 'reste' => viRemiseCompte()];
+}
+
 /** La checklist d'une visite : celle de son type, la standard pour la régulière (vcTypes). */
 function viChecklistVisite(array $v): array
 {
