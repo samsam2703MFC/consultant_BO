@@ -1,4 +1,29 @@
-# Les quatre portails — registre de la réorganisation
+# Les quatre domaines — registre de la réorganisation
+
+## Décision du 19/11/2026 (elle remplace celle du 06/11, gardée plus bas pour l'historique)
+
+Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `consultant_BO` :
+
+| Domaine | Dossier | Tables | Avant |
+|---|---|---|---|
+| Marketing | `marketing/` | `mar_` | `mar_`, `ceo_md_*`, `ceo_fid_*`, `ceo_promo*`, `ceo_prospect` |
+| Formation | `formation/` | `for_` | `ceo_sop*`, `ceo_ref_*`, `ceo_manuel_*`, `ceo_tablette_*` (le registre du 06/11 prévoyait `frm_`) |
+| Pilotage (consultant) | `consultant/` | `con_` | `con_`, la plupart des `ceo_*`, `pla_`, `hdk_`, `pil_cq_*`, `pil_fil*` (prévu `pil_`) |
+| Dashboard / day panel franchisé | `panel/` | `panel_` | `aia_`, `mot_`, `pil_boite_*`, `pil_tresorerie_plan`… (prévu `pil_`) |
+| Partagé | `shared/` | noms conservés | `ceo_shop`, `ceo_app_setting`, `ceo_journal_entry`, `ceo_push_abonnement`, `ceo_ecran_vue`, `ceo_action_usage`, `ceo_connecteur`, `erp_cles` |
+
+- **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
+  module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
+- **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
+  ses codes de portail (`commun`, `rec`, `mar`, `pil`, `frm`) ne changent pas, d'autres dépôts les lisent.
+- **Les renommages** : 144 tables, une migration par domaine (`shared/db/migrations/002` à `005`), registre
+  `shared/src/reorg_tables.php`. Détail, correspondances et risques : `REORG_PLAN.md`, `REORG_REPORT.md`.
+- **Un seul déploiement** pour les quatre domaines (`shared/bin/deploy.sh`) ; aucune adresse publique n'a changé.
+- **La purge** (phase 4) ne touche que des tables créées par ce dépôt, jamais celles des autres applications de la base.
+
+---
+
+# Historique — les quatre portails du 06/11/2026 (remplacés le 19/11/2026)
 
 Décision du 06/11/2026 : il ne reste que **quatre portails**, chacun avec **son préfixe de tables**, tous dans
 la base de l'ERP, chacun exportable seul vers l'ERP à la fin du bac à sable.

@@ -173,7 +173,7 @@ final class Config
             is_string($this->v['privateDir'] ?? null) ? $this->v['privateDir'] : '',
             (string) (getenv('COCKPIT_PRIVE') ?: ''),
             '/var/lib/consulant_bo/prive',
-            dirname(__DIR__, 3) . '/var/prive',
+            dirname(__DIR__, 4) . '/var/prive',   // var/ à la racine du dépôt (réorganisation du 19/11/2026)
         ]));
     }
 }
