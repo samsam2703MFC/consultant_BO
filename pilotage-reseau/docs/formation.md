@@ -1117,7 +1117,7 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
     le modèle de l'article se retrouve exactement avec des frais généraux à 27 % du CA plus 6 588 € de forfaits fixes) ;
     0.0.17 « Inventaire et gestion des stocks » v1.2 (food cost 40 %, marge 60 %) ; 0.0.30 « Reporting consolidé » v1.2
     (marge 60 %, bénéfice 14,7 %) ; 0.0.43 « Le dashboard : l'onglet Produits » v1.2, « à valider » (repère « objectif »
-    × 2,5 pour 40 % de matière, comme `produits_coef.php` et la fiche du dashboard). **Reste** : la capture de 0.0.43,
+    × 2,5 pour 40 % de matière, comme `produits_coef.php` et la fiche du dashboard). **Reste** (réglé le 19/11/2026 : photo retirée, v1.3) : la capture de 0.0.43,
     fiche « Recette & marge », montre encore « objectif × 3,13 · matière 32 % » ; le dashboard demande maintenant une
     session de la console franchisé (`garde.js`, 13/11/2026) : elle n'a pas pu être refaite sans identifiants. La source
     de ces articles dans le dépôt (`claude/loving-turing-n6j40s`, `data/formation/dashboard-onglets/`) n'est pas à jour.
@@ -1173,7 +1173,13 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   quiz 5 et 6…). **Ne pas encoder à partir de cette copie** : elle republierait un texte plus ancien. Le source à jour est sur
   `claude/loving-turing-n6j40s` (commit `cea65105`, règle × 3,5).
 - **0.0.34 publié le 19/11/2026** (Sam : « publie 0.0.34 ») : `PATCH /formation/sop/fiche/art-dash-haut {statut: publiee}`,
-  v1.1 ; relu au serveur : « publiee ». 0.0.43 reste « à valider » (sa photo montre encore « × 3,13 · matière 32 % »).
+  v1.1 ; relu au serveur : « publiee ».
+- **0.0.43 : photo de l'étape 8 retirée le 19/11/2026** (Sam : « retire la photo de 0.0.43 ») : la capture de la fiche
+  « Recette & marge » (`u/20261113-551f407947e0.jpg`) montrait l'ancien repère « objectif × 3,13 · matière 32 % ». Nouvelle
+  version 1.3 (`PUT /formation/sop/fiche/art-dash-produits`, `revalider: false`), étape 8 sans photo, remarque mise à jour ;
+  texte inchangé. Toujours « à valider ». Les sept autres captures restent. **La source du dépôt est ancienne**
+  (`claude/loving-turing-n6j40s`, `dashboard-onglets/art-dash-produits.json`) : elle garde cette capture
+  (`do-produits-recette.jpg`) et l'ancien repère × 3,13 · 32 %. Ne pas ré-encoder 0.0.43 à partir d'elle.
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
