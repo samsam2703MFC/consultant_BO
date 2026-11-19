@@ -130,5 +130,24 @@ verifie('plus rien : pas de date', smSuiteDate('rien', '2026-11-19', '2026-12-01
 verifie('chaque suite crée un type de rendez-vous connu', array_filter(SM_SUITES, static fn ($s) => $s[0] !== null && !isset(SM_RDV_TYPES[$s[0]])) === []);
 verifie('le modèle de confirmation de rendez-vous existe en FR et NL', isset(smModelesDefaut()['rdv']['fr'], smModelesDefaut()['rdv']['nl']) && isset(SM_MODELES['rdv']));
 
+echo "Le magasin d'un bureau\n";
+$mags = [];
+foreach (['4' => 'Atelier by - Halle', '2' => 'Atelier by Berlo - Corbais', '5' => 'Atelier by Harmonie - Sombreffe', '3' => 'Atelier by Max & Sandra - Gosselies'] as $id => $n) { $mags[$id] = ['nom' => $n, 'cps' => smCpsDe((string) $id, $n, [])]; }
+verifie('1360 Orbais : Corbais', smMagasinPourCp('1360', $mags) === '2');
+verifie('6041 Gosselies : Gosselies', smMagasinPourCp('6041', $mags) === '3');
+verifie('1500 Halle : Halle', smMagasinPourCp('B-1500', $mags) === '4');
+verifie('5030 Gembloux (partagé) : Sombreffe, comme la commune', smMagasinPourCp('5030', $mags) === '5');
+verifie('1450 Chastre (partagé) : Corbais, comme la commune', smMagasinPourCp('1450', $mags) === '2');
+verifie('6250 (partagé) : Gosselies, comme Aiseau-Presles', smMagasinPourCp('6250', $mags) === '3');
+verifie('1000 Bruxelles : hors des zones', smMagasinPourCp('1000', $mags) === null);
+verifie('un code incomplet : rien', smMagasinPourCp('136', $mags) === null);
+verifie('aucun code postal dans deux zones', count(array_merge(...array_values(array_map(static fn ($m) => $m['cps'], $mags)))) === count(array_unique(array_merge(...array_values(array_map(static fn ($m) => $m['cps'], $mags))))));
+verifie('des codes réglés l’emportent', smCpsDe('2', 'Corbais', ['2' => ['1300', 'x', '13']]) === ['1300']);
+verifie('le code postal d’une adresse Google', smCpAdresse('Rue de la Station 4, 1360 Perwez, Belgique') === '1360');
+verifie('un numéro de rue n’est pas un code postal', smCpAdresse('Chaussée de Nivelles 1360, Belgique') === '');
+verifie('un formulaire de recrutement flexi-job est reconnu', smFormulaireRecrutement(['nom' => 'RECRUTEMENT B2B HALLE - FR', 'questions' => [['label' => 'Es-tu éligible au statut flexi-job ?']]]));
+verifie('un formulaire de franchise est reconnu', smFormulaireRecrutement(['nom' => 'FRANCHISE DOUR', 'questions' => []]));
+verifie('un formulaire « Lunch au bureau » est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'Lunch au bureau — Gosselies', 'questions' => [['label' => 'Nom de l’entreprise'], ['label' => 'Nombre de personnes']]]));
+
 echo "\n$ok ok, $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

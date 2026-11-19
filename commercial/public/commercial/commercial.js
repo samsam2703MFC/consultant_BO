@@ -29,9 +29,10 @@
     setTimeout(() => d.remove(), ko ? 7000 : 3500);
   }
   function erreur(e) { page.innerHTML = `<div class="card"><p class="erreur">${esc(e.message || e)}</p></div>`; }
-  const btn = (txt, a, cls, data) => `<button class="btn ${cls || ''}" data-a="${a}"${data ? ` data-v="${esc(data)}"` : ''}>${txt}</button>`;
+  const btn = (txt, a, cls, data) => `<button class="btn ${cls || ''}" data-a="${a}"${data != null && data !== '' ? ` data-v="${esc(data)}"` : ''}>${txt}</button>`;
   const selMagasins = (val, tous, nom) => `<select class="select-native" ${nom ? `name="${nom}"` : 'data-c="shop"'}>${tous ? `<option value="">${esc(tous)}</option>` : ''}${CFG.magasins.map(m => `<option value="${esc(m.id)}" ${String(val) === String(m.id) ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`;
   const selSecteurs = (val, nom) => `<select class="select-native" name="${nom || 'secteur'}"><option value="">—</option>${CFG.secteurs.map(s => `<option value="${esc(s.id)}" ${val === s.id ? 'selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>`;
+  const magPourCp = cp => { const c = String(cp || '').replace(/\D/g, ''); return c.length === 4 ? (CFG.magasins.find(m => (m.cps || []).includes(c)) || null) : null; };
   const nomMag = id => (CFG.magasins.find(m => String(m.id) === String(id)) || {}).nom || id || '—';
   const nomSec = id => (CFG.secteurs.find(s => s.id === id) || {}).nom || '';
   function lireForm(f) {
@@ -63,11 +64,12 @@
     ['B2B', [['suivi', 'courbe', 'Suivi des offres'], ['gains', 'euro', 'Mes gains'], ['prospection', 'carte', 'Prospection ↗']]],
     ['Réglages', [['modeles', 'mail', 'Modèles d’e-mail'], ['reglages', 'cle', 'Paramètres']]],
   ];
-  let compteLeads = null;
+  let compteLeads = null, compteBureaux = null;
+  const alertes = () => api('GET', '/alertes').then(a => { compteLeads = a.leads; compteBureaux = a.bureaux; const v = (location.hash.slice(1) || 'semaine').split('?')[0]; rail(VUES[v] ? v : 'semaine'); }).catch(() => {});
   function rail(vue) {
     const it = ([k, i, l]) => k === 'prospection' || k === 'mobile'
       ? `<a class="sidebar__item" href="${k === 'mobile' ? 'mobile/' : esc(CFG.cockpit) + 'prospection/'}" target="_blank" rel="noopener">${ico(i)}<span>${l}</span></a>`
-      : `<a class="sidebar__item ${vue === k ? 'is-active' : ''}" href="#${k}">${ico(i)}<span>${l}</span>${k === 'leads' && compteLeads ? `<span class="count">${compteLeads}</span>` : ''}</a>`;
+      : `<a class="sidebar__item ${vue === k ? 'is-active' : ''}" href="#${k}">${ico(i)}<span>${l}</span>${k === 'leads' && compteLeads ? `<span class="count" title="leads Meta à traiter" style="background:var(--accent);color:#fff">${compteLeads}</span>` : ''}${k === 'bureaux' && compteBureaux ? `<span class="count" title="bureaux à valider (compte webshop pas encore connecté)">${compteBureaux}</span>` : ''}</a>`;
     document.getElementById('rail').innerHTML = `
       <div class="sidebar__head"><img class="sidebar__logo" src="img/logo.png" alt="L’Atelier"><div class="sidebar__kicker">Module commercial</div></div>
       <div class="sidebar__back"><a href="${esc(CFG.cockpit)}" style="text-decoration:none"><span>${ico('retour')}Retour au cockpit</span></a></div>
@@ -171,7 +173,8 @@
           <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>À contacter <span class="aside">${cands.length} dans les magasins choisis</span></h2></div>
             <table><tbody>${cands.length ? cands.map((c, i) => `<tr><td>${esc(c.prospect)}<span class="sub">${esc(c.pourquoi)} · ${esc(c.magasin)}</span></td><td class="num" style="white-space:nowrap"><select class="select-native" data-k="j${i}" style="height:30px;font-size:12px">${optJours}</select> <input type="time" value="10:00" data-k="h${i}" style="padding:4px 6px;font-size:12px"> <select class="select-native" data-k="t${i}" style="height:30px;font-size:12px"><option value="visite">Visite</option><option value="appel">Appel</option></select> <label class="small"><input type="checkbox" data-k="g${i}"> dég.</label> ${btn('Planifier', 'planifier', 'btn--sm btn--primary', i)}</td></tr>`).join('') : '<tr><td class="vide">Rien à contacter dans ces magasins.</td></tr>'}</tbody></table>
             <form class="form" id="fs" onsubmit="return false" style="padding:14px 18px;border-top:1px solid var(--line)"><h2 class="plein">Ajouter une société</h2>
-              <label><span class="field-label">Société</span><input name="prospect"></label><label><span class="field-label">Contact</span><input name="contact"></label>
+              <label><span class="field-label">Société</span><input name="prospect"></label><label><span class="field-label">Code postal (le magasin s’en déduit)</span><input name="cp" inputmode="numeric" maxlength="4" data-c="cpSemaine"></label>
+              <label><span class="field-label">Contact</span><input name="contact"></label>
               <label><span class="field-label">E-mail</span><input name="email" type="email"></label><label><span class="field-label">Téléphone</span><input name="telephone"></label>
               <label><span class="field-label">Magasin</span>${selMagasins(mags[0] || '', null, 'shopId')}</label><label><span class="field-label">Secteur</span>${selSecteurs('')}</label>
               <label><span class="field-label">Jour</span><select name="jour">${optJours}</select></label><label><span class="field-label">Heure</span><input name="heure" type="time" value="10:00"></label>
@@ -182,6 +185,7 @@
         ACT.planifier = el => { const i = el.dataset.v, c = cands[i]; const v = k => page.querySelector(`[data-k="${k}${i}"]`);
           api('POST', '/rdv', { clientId: c.clientId, leadId: c.leadId, prospect: c.prospect, contact: c.contact, email: c.email, telephone: c.telephone, shopId: c.shopId, secteur: c.secteur,
             type: v('t').value, le: v('j').value + ' ' + v('h').value, degustation: v('g').checked }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)); };
+        ACT.cpSemaine = el => { const m = magPourCp(el.value); if (m) document.getElementById('fs').shopId.value = m.id; };
         ACT.ajouter = () => { const x = lireForm(document.getElementById('fs')); if (!x.prospect.trim()) { toast('La société manque', true); return; }
           api('POST', '/rdv', { ...x, le: x.jour + ' ' + x.heure }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)); };
       }
@@ -304,7 +308,17 @@
       page.innerHTML = `<div class="grid" style="grid-template-columns:repeat(${Math.max(1, d.parMagasin.length)},1fr);margin-bottom:16px">${cartes}</div>
         <div class="toolbar">${filtres}</div>
         <div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Reçu</th><th></th><th>Lead</th><th>Magasin</th><th>Statut dans l’ERP</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
-        <p class="pied">${esc(d.source)}.</p>`;
+        <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px"><h2>Formulaires Meta <span class="aside">un lead n’arrive que d’un formulaire suivi</span></h2></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
+        <p class="pied">${esc(d.source)}. Un lead sans magasin prend celui de son code postal.</p>`;
+      api('GET', '/formulaires').then(fo => {
+        const el = document.getElementById('formulaires'); if (!el) return;
+        el.outerHTML = fo.formulaires.length ? `<table><tbody>${fo.formulaires.map(x => `<tr><td>${esc(x.nom)}<span class="sub">${esc(x.page)}${x.dernierLead ? ' · dernier lead ' + esc(String(x.dernierLead).slice(0, 10)) : ''}</span></td>
+          <td>${x.recrutement ? '<span class="badge badge--n">recrutement, pas un bureau</span>' : x.suivi ? '<span class="badge badge--ok">suivi</span>' : '<span class="tag-warn">pas suivi</span>'}</td>
+          <td class="num" style="white-space:nowrap">${x.recrutement ? '' : x.suivi ? btn('Récupérer 90 jours', 'histo', 'btn--sm', x.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm btn--primary', x.id + '|1')}</td></tr>`).join('')}</tbody></table>`
+          : '<div class="vide">Aucun formulaire lu sur la Page Meta.</div>';
+      }).catch(e => { const el = document.getElementById('formulaires'); if (el) el.textContent = e.message; });
+      ACT.suivre = el => { const [id, on] = el.dataset.v.split('|'); el.disabled = true; api('PUT', '/formulaires/' + id, { suivi: on === '1', affectation: 'cp' }).then(() => { toast(on === '1' ? 'Formulaire suivi : ses leads arrivent' : 'Formulaire plus suivi'); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
+      ACT.histo = el => { el.disabled = true; api('POST', '/formulaires/' + el.dataset.v + '/historique', { jours: 90 }).then(r => { toast('Historique relu' + (r && r.nouveaux != null ? ' : ' + r.nouveaux + ' lead(s)' : '')); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
       ACT.creer = el => { const l = d.leads.find(x => x.id === Number(el.dataset.v)); sessionStorage.setItem('smLead', JSON.stringify(l)); location.hash = 'nouveau?lead=' + l.id; };
     }).catch(erreur);
     ACT = { creer: () => {} };
@@ -320,14 +334,17 @@
       <div class="stepper"><div class="is-on"><span class="small">Étape 1</span><div>Le bureau</div></div><div><span class="small">Étape 2</span><div>E-mail de bienvenue</div></div></div>
       <div class="info">${esc(CFG.aBrancher.webshop)} Le bureau est créé ici, son compte webshop reste « à créer ».</div>
       <form class="card form" id="fb" onsubmit="return false">
-        <h2 class="plein">Entreprise ${lead ? `<span class="aside">depuis le lead Meta${lead.erpId ? ' ' + esc(lead.erpId) : ''}</span>` : ''}</h2>
-        <label><span class="field-label">Entreprise</span><input name="entreprise" required value="${esc(v.entreprise || '')}"></label>
+        <h2 class="plein">Le bureau et son magasin ${lead ? `<span class="aside">depuis le lead Meta${lead.erpId ? ' ' + esc(lead.erpId) : ''}</span>` : ''}</h2>
+        <label><span class="field-label">Nom du bureau</span><input name="entreprise" required value="${esc(v.entreprise || '')}"></label>
+        <label><span class="field-label">Code postal</span><input name="cp" inputmode="numeric" maxlength="4" value="${esc(v.cp || '')}"></label>
+        <div class="plein" style="display:flex;gap:10px;align-items:center">${btn('Chercher son adresse', 'chercherNom', '')}<span class="small muted" data-mag></span></div>
+        <div class="plein" data-lieux></div>
+        <label><span class="field-label">Magasin (déduit du code postal)</span>${selMagasins(v.shopId || '', null, 'shopId')}</label>
+        <label><span class="field-label">Adresse</span><input name="adresse"></label>
         <label><span class="field-label">Numéro de TVA</span><input name="tva" placeholder="BE 0…"></label>
         <label><span class="field-label">Type</span><select name="type"><option value="bureau">Bureau (livraison au bureau)</option><option value="b2b">Client B2B</option></select></label>
         <label><span class="field-label">Secteur</span>${selSecteurs('bureau')}</label>
         <label><span class="field-label">Personnes</span><input name="personnes" type="number" min="1"></label>
-        <label><span class="field-label">Adresse</span><input name="adresse"></label>
-        <label><span class="field-label">Code postal</span><input name="cp" value="${esc(v.cp || '')}"></label>
         <h2 class="plein" style="margin-top:8px">Contact</h2>
         <label><span class="field-label">Nom</span><input name="contact" value="${esc(v.contact || '')}"></label>
         <label><span class="field-label">Fonction</span><input name="fonction"></label>
@@ -335,7 +352,6 @@
         <label><span class="field-label">Téléphone</span><input name="telephone" value="${esc(v.telephone || '')}"></label>
         <label><span class="field-label">Langue des e-mails</span><select name="langue"><option value="fr">Français</option><option value="nl">Nederlands</option></select></label>
         <h2 class="plein" style="margin-top:8px">Magasin et tournée</h2>
-        <label><span class="field-label">Magasin (sa zone)</span>${selMagasins(v.shopId || '', null, 'shopId')}</label>
         <label><span class="field-label">Tournée</span><input name="tournee" placeholder="mardi et jeudi, avant 11:30 — fixée à la réunion du mois"></label>
         <div class="plein small muted" data-zone></div>
         <h2 class="plein" style="margin-top:8px">Bon et carte office</h2>
@@ -348,8 +364,19 @@
       </form>`;
     const f = document.getElementById('fb');
     const zone = () => { const m = CFG.magasins.find(x => String(x.id) === f.shopId.value); page.querySelector('[data-zone]').textContent = m && m.zone.length ? 'Zone du magasin : ' + m.zone.join(', ') + '.' : ''; };
-    f.shopId.addEventListener('change', zone); zone();
+    const parCp = () => { const m = magPourCp(f.cp.value), o = page.querySelector('[data-mag]');
+      if (m) { f.shopId.value = m.id; o.innerHTML = 'Magasin : <b style="font-weight:700">' + esc(m.nom) + '</b> (code postal ' + esc(f.cp.value) + ')'; zone(); }
+      else o.textContent = f.cp.value.replace(/\D/g, '').length === 4 ? 'Code postal hors des zones : choisissez le magasin.' : ''; };
+    f.shopId.addEventListener('change', zone); f.cp.addEventListener('input', parCp); zone(); if (!v.shopId) parCp();
     ACT = {
+      chercherNom: () => {
+        const box = page.querySelector('[data-lieux]'); box.innerHTML = '<span class="small muted">Recherche…</span>';
+        api('GET', '/trouver?q=' + encodeURIComponent(f.entreprise.value) + '&cp=' + encodeURIComponent(f.cp.value)).then(r => {
+          if (!r.google) { box.innerHTML = '<span class="small muted">La recherche par le nom demande la clé Google (Paramètres du cockpit) : tapez le code postal.</span>'; return; }
+          box.innerHTML = r.lieux.length ? `<table class="mini"><tbody>${r.lieux.map((l, i) => `<tr><td>${esc(l.nom)}<span class="sub">${esc(l.adresse)}</span></td><td>${l.magasin ? esc(l.magasin) : '<span class="tag-warn">hors zone</span>'}</td><td class="num">${btn('Choisir', 'prendreLieu', 'btn--sm', i)}</td></tr>`).join('')}</tbody></table>` : '<span class="small muted">Rien trouvé : tapez le code postal.</span>';
+          ACT.prendreLieu = el => { const l = r.lieux[Number(el.dataset.v)]; f.entreprise.value = l.nom; f.adresse.value = l.adresse; if (l.cp) { f.cp.value = l.cp; parCp(); } box.innerHTML = ''; };
+        }).catch(e => { box.innerHTML = `<span class="erreur">${esc(e.message)}</span>`; });
+      },
       creerBureau: el => {
         const x = lireForm(f); const err = f.querySelector('[data-err]'); err.textContent = '';
         if (!x.entreprise.trim()) { err.textContent = 'Le nom de l’entreprise manque.'; return; }
@@ -644,6 +671,8 @@
         <label><span class="field-label">Signature · site</span><input name="sig_site" value="${esc(r.signature.site)}"></label>
         <label class="plein"><span class="field-label">Adresse du webshop (bouton des e-mails)</span><input name="webshop" value="${esc(r.webshop)}" placeholder="https://…"></label>
         <p class="plein small ${CFG.smtp.configure ? 'muted' : 'erreur'}">${CFG.smtp.configure ? 'Le serveur d’envoi du cockpit est réglé ; les e-mails partent avec l’expéditeur ci-dessus.' : 'Le serveur d’envoi n’est pas réglé (Paramètres du cockpit, ou clés smtp_* d’erp_cles) : aucun e-mail ne part.'}</p></div>
+      <div class="card" style="margin-bottom:16px"><h2>Codes postaux des magasins <span class="aside">ils déterminent le magasin d’un bureau et d’un lead</span></h2>
+        <div class="grid" style="grid-template-columns:repeat(${Math.max(1, CFG.magasins.length)},1fr)">${CFG.magasins.map(m => `<label><span class="field-label">${esc(m.nom)}</span><textarea name="cp_${esc(m.id)}" style="width:100%;min-height:120px;font:12.5px 'Gotham',sans-serif">${esc((m.cps || []).join(' '))}</textarea></label>`).join('')}</div></div>
       <div class="card" style="margin-bottom:16px"><h2>Zones des magasins <span class="aside">une commune par ligne</span></h2>
         <div class="grid" style="grid-template-columns:repeat(${Math.max(1, CFG.magasins.length)},1fr)">${CFG.magasins.map(m => `<label><span class="field-label">${esc(m.nom)}</span><textarea name="z_${esc(m.id)}" style="width:100%;min-height:200px;font:12.5px 'Gotham',sans-serif">${esc(m.zone.join('\n'))}</textarea></label>`).join('')}</div></div>
       <div style="display:flex;justify-content:flex-end">${btn('Enregistrer les paramètres', 'sauver', 'btn--primary')}</div></form>`;
@@ -653,8 +682,9 @@
         const regle = pre => { const o = {}; ['taux1', 'mois1', 'taux2', 'duree', 'min'].forEach(k => { if (x[pre + k] !== '') o[k] = Number(x[pre + k]); }); return o; };
         const secteurs = {}; CFG.secteurs.forEach(s => { const o = regle('s_' + s.id + '_'); if (Object.keys(o).length) secteurs[s.id] = o; });
         const zones = {}; CFG.magasins.forEach(m => { zones[m.id] = (x['z_' + m.id] || '').split('\n').map(s => s.trim()).filter(Boolean); });
+        const cps = {}; CFG.magasins.forEach(m => { cps[m.id] = (x['cp_' + m.id] || '').split(/[^\d]+/).filter(c => c.length === 4); });
         api('PUT', '/reglages', { gains: { defaut: regle('d_'), secteurs, plancher: Number(x.plancher || 0), tva: Number(x.tva || 6) }, expediteur: x.expediteur,
-          signature: { nom: x.sig_nom, fonction: x.sig_fonction, telephone: x.sig_telephone, site: x.sig_site }, webshop: x.webshop, zones })
+          signature: { nom: x.sig_nom, fonction: x.sig_fonction, telephone: x.sig_telephone, site: x.sig_site }, webshop: x.webshop, zones, cps })
           .then(() => api('GET', '/config')).then(c => { CFG = c; toast('Paramètres enregistrés'); rail('reglages'); vueReglages(); }).catch(e => toast(e.message, true));
       },
     };
@@ -677,5 +707,5 @@
   });
   document.addEventListener('change', e => { const el = e.target.closest('[data-c]'); if (el && !el.closest('.modal') && ACT[el.dataset.c]) ACT[el.dataset.c](el); });
   window.addEventListener('hashchange', aller);
-  api('GET', '/config').then(c => { CFG = c; aller(); }).catch(e => { document.getElementById('rail').innerHTML = ''; erreur(e); });
+  api('GET', '/config').then(c => { CFG = c; aller(); alertes(); }).catch(e => { document.getElementById('rail').innerHTML = ''; erreur(e); });
 })();

@@ -5957,6 +5957,9 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `PUT /commercial/semaine/franchise` | `{shopId, du, ok, note}` : l'appel au franchisé de la semaine, validé |
 | `GET /commercial/mobile?jour=` | l'app de terrain : `aujourdhui[]`, `enRetard[]`, `aVenir[]`, `listes` (issues, faits, réponses à l'offre, motifs, suites et leurs délais) |
 | `POST /commercial/cr`, `GET /commercial/cr?client=` | le compte rendu d'un contact : `{rdvId?, clientId?, prospect, shopId, issue, faits[], offre, offreStatut, motif, suite, suiteLe, note}` ; le rendez-vous passe à « fait », la suite crée le suivant |
+| `GET /commercial/trouver?q=&cp=` | le magasin d'un bureau : par son code postal (codes des zones, `cps` des réglages) ; par son nom, cherché dans Google Places (adresse, code postal) quand la clé Google est réglée |
+| `GET /commercial/alertes` | les pastilles du rail : `leads` (leads Meta à traiter), `bureaux` (bureaux dont le compte webshop n'est pas encore connecté) |
+| `GET /commercial/formulaires`, `PUT /commercial/formulaires/{id}`, `POST /commercial/formulaires/{id}/historique` | les formulaires Meta de MétaDonnée (`recrutement` : candidats ou franchisés, pas un bureau) ; les suivre (affectation par code postal) ; relire 90 jours |
 | `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
 
 **Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée

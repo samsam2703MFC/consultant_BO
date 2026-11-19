@@ -13,6 +13,8 @@
   const jourNom = d => { const x = new Date(d + 'T12:00:00'); return JOURS[x.getDay()] + ' ' + d.slice(8, 10) + '/' + d.slice(5, 7); };
   const hm = s => (s || '').slice(11, 16);
   let CFG = null, L = null, CLIENTS = [], BONS = [], jour = auj();
+  const magPourCp = cp => { const c = String(cp || '').replace(/\D/g, ''); return c.length === 4 ? (CFG.magasins.find(m => (m.cps || []).includes(c)) || null) : null; };
+  const magTexte = cp => { const m = magPourCp(cp); return m ? 'Magasin : ' + esc(m.nom) : String(cp).replace(/\D/g, '').length === 4 ? 'hors des zones : choisissez le magasin' : ''; };
 
   function api(method, path, body) {
     return fetch(API + path, { method, credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
@@ -78,7 +80,10 @@
       let c = '';
       if (e === 'qui') {
         c = `<h2>Avec qui ?</h2><label><span class="field-label">Un client du portail</span><select data-w="clientId"><option value="">— une autre société —</option>${CLIENTS.map(x => `<option value="${x.id}" ${st.clientId === x.id ? 'selected' : ''}>${esc(x.entreprise)} · ${esc(x.magasin)}</option>`).join('')}</select></label>
-          <label><span class="field-label">Société</span><input data-w="prospect" value="${esc(st.prospect)}"></label><label><span class="field-label">Contact</span><input data-w="contact" value="${esc(st.contact)}"></label>
+          <label><span class="field-label">Nom du bureau ou de la société</span><input data-w="prospect" value="${esc(st.prospect)}"></label>
+          <label><span class="field-label">Code postal (le magasin s’en déduit)</span><input data-w="cp" inputmode="numeric" maxlength="4" value="${esc(st.cp || '')}"></label>
+          <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button class="btn btn--sm" data-w-a="chercher">Chercher son adresse</button><span class="small muted" data-mag>${st.cp ? magTexte(st.cp) : ''}</span></div><div data-lieux></div>
+          <label><span class="field-label">Contact</span><input data-w="contact" value="${esc(st.contact)}"></label>
           <label><span class="field-label">Téléphone</span><input data-w="telephone" type="tel" value="${esc(st.telephone)}"></label><label><span class="field-label">E-mail</span><input data-w="email" type="email" value="${esc(st.email)}"></label>
           <label><span class="field-label">Magasin</span><select data-w="shopId">${CFG.magasins.map(x => `<option value="${esc(x.id)}" ${String(st.shopId) === String(x.id) ? 'selected' : ''}>${esc(x.nom)}</option>`).join('')}</select></label>`;
       }
@@ -116,7 +121,8 @@
     }
     w.addEventListener('input', ev => { const k = ev.target.dataset.w; if (!k) return; st[k] = k === 'clientId' ? (ev.target.value ? Number(ev.target.value) : null) : ev.target.value;
       if (k === 'clientId' && st.clientId) { const x = CLIENTS.find(y => y.id === st.clientId); if (x) { Object.assign(st, { prospect: x.entreprise, contact: x.contact, email: x.email, telephone: x.telephone, shopId: x.shopId, offre: x.secteur }); rendre(); } }
-      if (k === 'prospect') { const b = w.querySelector('[data-w-a=suiv]'); if (b) b.disabled = !st.prospect.trim(); } });
+      if (k === 'prospect') { const b = w.querySelector('[data-w-a=suiv]'); if (b) b.disabled = !st.prospect.trim(); }
+      if (k === 'cp') { const mg = magPourCp(st.cp); if (mg) { st.shopId = mg.id; const s = w.querySelector('[data-w=shopId]'); if (s) s.value = mg.id; } const o = w.querySelector('[data-mag]'); if (o) o.textContent = magTexte(st.cp); } });
     w.addEventListener('change', ev => { const k = ev.target.dataset.w; if (k === 'offre' || k === 'shopId' || k === 'suiteLe') st[k] = ev.target.value; });
     w.addEventListener('click', ev => {
       const b = ev.target.closest('button'); if (!b) return;
@@ -126,12 +132,22 @@
       if (b.dataset.motif) { st.motif = b.dataset.motif; rendre(); return; }
       if (b.dataset.suite) { st.suite = b.dataset.suite; st.suiteLe = dateSuite(st.suite); rendre(); return; }
       const a = b.dataset.wA;
+      if (a === 'chercher') {
+        const box = w.querySelector('[data-lieux]'); box.innerHTML = '<p class="small muted">Recherche…</p>';
+        api('GET', '/trouver?q=' + encodeURIComponent(st.prospect) + '&cp=' + encodeURIComponent(st.cp || '')).then(r => {
+          if (!r.google) { box.innerHTML = '<p class="small muted">Tapez le code postal : la recherche par le nom demande la clé Google.</p>'; return; }
+          box.innerHTML = r.lieux.length ? `<div class="w-choix un" style="margin-top:10px">${r.lieux.map((l, k) => `<button data-lieu="${k}">${esc(l.nom)}<small>${esc(l.adresse)} · ${l.magasin ? esc(l.magasin) : 'hors zone'}</small></button>`).join('')}</div>` : '<p class="small muted">Rien trouvé : tapez le code postal.</p>';
+          w._lieux = r.lieux;
+        }).catch(e => { box.innerHTML = `<p class="erreur">${esc(e.message)}</p>`; });
+        return;
+      }
+      if (b.dataset.lieu !== undefined && w._lieux) { const l = w._lieux[Number(b.dataset.lieu)]; Object.assign(st, { prospect: l.nom, adresse: l.adresse, cp: l.cp || st.cp }); if (l.shopId) st.shopId = l.shopId; rendre(); return; }
       if (a === 'fermer') { if (!st.issue || confirm('Fermer sans enregistrer ?')) w.remove(); }
       if (a === 'prec') { i = Math.max(0, i - 1); rendre(); }
       if (a === 'suiv') { i++; rendre(); }
       if (a === 'enregistrer') {
         b.disabled = true;
-        api('POST', '/cr', { rdvId: rdv ? rdv.id : null, clientId: st.clientId, prospect: st.prospect, contact: st.contact, email: st.email, telephone: st.telephone, shopId: st.shopId,
+        api('POST', '/cr', { rdvId: rdv ? rdv.id : null, clientId: st.clientId, prospect: st.prospect, contact: st.contact, email: st.email, telephone: st.telephone, shopId: st.shopId, adresse: st.adresse || '',
           issue: st.issue, faits: st.faits, offre: st.offre, offreStatut: st.offreStatut, motif: st.motif, suite: st.suite, suiteLe: st.suite !== 'rien' ? st.suiteLe : null, note: st.note })
           .then(r => apres(w, st, r)).catch(e => { b.disabled = false; w.querySelector('[data-err]').textContent = e.message; });
       }
@@ -156,7 +172,7 @@
       if (g === 'echantillon') { window.open('../?bureau=1#echantillons' + (st.clientId ? '?client=' + st.clientId : ''), '_blank'); }
       if (g === 'bureau') {
         b.disabled = true;
-        api('POST', '/clients', { type: 'bureau', shopId: st.shopId, secteur: st.offre, entreprise: st.prospect, contact: st.contact, email: st.email, telephone: st.telephone, langue: 'fr', bonCreer: { avantage: '−10 % sur la 1re commande', jours: 30 } })
+        api('POST', '/clients', { type: 'bureau', shopId: st.shopId, secteur: st.offre, entreprise: st.prospect, contact: st.contact, email: st.email, telephone: st.telephone, adresse: st.adresse || '', cp: st.cp || '', langue: 'fr', bonCreer: { avantage: '−10 % sur la 1re commande', jours: 30 } })
           .then(x => { st.clientId = x.client.id; CLIENTS.push(x.client); b.textContent = 'Bureau créé : ' + x.client.entreprise; toast('Bureau créé'); })
           .catch(e => { b.disabled = false; w.querySelector('[data-err]').textContent = e.message; });
       }

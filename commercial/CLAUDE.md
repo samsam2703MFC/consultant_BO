@@ -18,6 +18,9 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des domaines, clés, migration
 - **Code** : `src/commercial.php` (routes `/commercial/…`, `smRoute`), `src/commercial_gains.php` (le calcul des gains,
   sans base : `smGainsCalcul`). La page `public/commercial/` est servie à `/commercial/`, son API à
   `/commercial/api/cockpit/commercial/…` (alias Apache de `shared/bin/deploy.sh`, routeur `shared/public/api/index.php`).
+- **Le magasin d'un bureau** : son code postal (`smCpDefaut`, réglable par magasin : `cps`) ; son nom, cherché dans Google
+  Places (`GoogleApi::chercher`). Un lead Meta sans magasin prend celui de son code postal. Les formulaires Meta de
+  recrutement (candidats, franchisés) sont signalés et ne se suivent pas d'ici.
 - **Lit ailleurs, jamais dans leurs tables** : les leads par MétaDonnée (`ep_md_leads`), la liste de démarchage par
   Prospection (`ep_prospection`), les types d'offre (`prOffres`), les catalogues par le relais du Marketing (`cmRoute`),
   les tickets pro par le relevé du panel (`vpLu` / `vpJour`), les magasins par `ep_stores`.

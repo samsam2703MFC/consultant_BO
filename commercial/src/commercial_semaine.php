@@ -343,7 +343,7 @@ function wr_sm_cr_creer(): array
         $heure = $rdv !== null && $type === 'visite' ? substr((string) $rdv['le'], 11, 5) : '09:00';
         Db::exec('INSERT INTO sm_rdv (client_id, lead_id, prospect, contact, email, telephone, adresse, shop_id, secteur, type, le, statut, origine_cr, note, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,"a_faire",?,?,?)',
             [$clientId, $rdv['lead_id'] ?? null, $prospect, smTexte($b['contact'] ?? ($rdv['contact'] ?? ($client['contact'] ?? '')), 160), smEmail($b['email'] ?? ($rdv['email'] ?? ($client['email'] ?? ''))),
-                smTexte($b['telephone'] ?? ($rdv['telephone'] ?? ($client['telephone'] ?? '')), 40), smTexte($rdv['adresse'] ?? ($client['adresse'] ?? ''), 255), $shop,
+                smTexte($b['telephone'] ?? ($rdv['telephone'] ?? ($client['telephone'] ?? '')), 40), smTexte($b['adresse'] ?? ($rdv['adresse'] ?? ($client['adresse'] ?? '')), 255), $shop,
                 $offre !== '' ? $offre : (string) ($rdv['secteur'] ?? ($client['secteur'] ?? '')), $type, $suiteLe . ' ' . $heure . ':00', $crId,
                 smTexte(SM_ISSUES[$issue] . ($offreSt !== '' ? ' · offre ' . mb_strtolower(SM_OFFRE_STATUTS[$offreSt]) : ''), 500), $now]);
         $suivant = (int) Db::pdo()->lastInsertId();
