@@ -12,7 +12,8 @@ class LogisticsController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private LogisticsService $logistics, private \App\Services\Logistics\DriverService $driver, private VehicleCreationService $vehicleCreation) {}
+    public function __construct(private LogisticsService $logistics, private \App\Services\Logistics\DriverService $driver, private VehicleCreationService $vehicleCreation,
+        private \App\Services\Logistics\DriverContractService $driverContracts) {}
 
     public function day()
     {
@@ -53,6 +54,8 @@ class LogisticsController extends BaseController
     public function vehicles()
     {
         $data = $this->logistics->vehicles() + $this->vehicleCreation->choices();
+        // [309] Kierowcy : etat / zlecenie, pojazd, trasa, umowa zlecenia na przewóz.
+        $data['driver_rows'] = $this->driverContracts->drivers();
         if (($_SESSION['vehicle_created']['id'] ?? null) === (int) ($_GET['created'] ?? 0)) {
             $data['created'] = $_SESSION['vehicle_created'];
             unset($_SESSION['vehicle_created']);
@@ -104,6 +107,18 @@ class LogisticsController extends BaseController
         try {
             $this->logistics->assign($this->getJson(Request::createFromGlobals()), $this->userId());
             return $this->json(['message' => 'Zapisano przydział.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** [331] PUT /ajax/logistics/stops {date, customers: [id…], reset?} : kolejność dostaw na ten dzień. */
+    public function reorderStops()
+    {
+        try {
+            $in = $this->getJson(Request::createFromGlobals());
+            $this->logistics->reorderStops((string) ($in['date'] ?? ''), (array) ($in['customers'] ?? []), !empty($in['reset']), $this->userId());
+            return $this->json(['message' => !empty($in['reset']) ? 'Przywrócono kolejność stałej trasy.' : 'Zapisano kolejność dostaw na ten dzień.']);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

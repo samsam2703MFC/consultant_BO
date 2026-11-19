@@ -12,6 +12,7 @@ import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
 import { tplHelpdesk } from './helpdesk-tpl.js';
+import { tplFil } from './fil-tpl.js';
 import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
@@ -73,7 +74,7 @@ const ICO_ECRAN = {
   // Administration
   parametres: 'cadenas', reporting: 'cal', journal: 'journal',
   // Applications
-  'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', 'ext:prospection/': 'adresse', 'ext:employee/auth': 'droits', 'ext:formation/': 'modeles'
+  'ext:caisse/': 'fonds', 'ext:prospection/': 'adresse', 'ext:employee/auth': 'droits', 'ext:formation/': 'modeles', 'ext:formation/catalogue/': 'bundles'
 };
 function railIco(key){
   const d = ICO[ICO_ECRAN[key]];
@@ -226,12 +227,13 @@ export function render(c, x){
       ${c.isCltMyst ? tplCltMyst(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
+      ${c.isIaEnt ? tplIaEntrainement(c.iaEnt, x) : ''}
       ${c.isKpiT ? tplKpiT(c, x) : ''}
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
+      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isFil ? tplFil(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
       ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
@@ -252,6 +254,7 @@ export function render(c, x){
   ${c.pdDet ? tplScoringDetail(c, x) : ''}
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
+  ${c.iaRecap ? tplIaRecap(c.iaRecap, x) : ''}
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
   ${c.anDetail ? tplAnalyseDetail(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
@@ -2221,7 +2224,9 @@ function tplControle(c, x){
       <select ${x.C(c.setCtrlShop)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlShopOptions, c.ctrlShop)}</select>
       <select ${x.C(c.setCtrlOnly)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlOnlyOptions, c.ctrlOnly, o => o.val, o => o.nom)}</select>
       <span class="cq-vue"><button type="button" ${x.A(c.ctrlVuePhotos)} class="${c.ctrlVue === 'photos' ? 'on' : ''}">▦ Photos</button><button type="button" ${x.A(c.ctrlVueListe)} class="${c.ctrlVue === 'liste' ? 'on' : ''}">☰ Liste</button></span>
+      ${c.ctrlVue === 'photos' ? `<span class="cq-vue cq-mode" title="Manuelle : vous notez chaque photo. Assistée : l’IA propose une note, vous validez ou corrigez."><span class="lb">Notation</span><button type="button" ${x.A(c.iaManuel)} class="${c.iaMode === 'manuel' ? 'on' : ''}">✎ Manuelle</button><button type="button" ${x.A(c.iaAssiste)} class="${c.iaMode === 'assiste' ? 'on' : ''}">✦ Assistée par l’IA</button></span>` : ''}
     </div>
+    ${c.ia ? tplIaBande(c.ia, x, card) : ''}
     ${c.rv ? tplRayonsPhotos(c.rv, x, card) : ''}
     ${c.ctrlApiOff ? `
       <div style="background:var(--prize-soft);border:1px solid rgba(193,122,42,0.35);border-radius:10px;padding:12px 16px;font-size:12.5px;line-height:1.55">
@@ -2312,7 +2317,7 @@ function tplRayonsPhotos(r, x, card){
   return `
     <div data-rv="1" style="${card};overflow:hidden">
       <button ${x.A(r.basculer)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:13px 18px;display:flex;align-items:center;gap:12px;color:var(--color-text)">
-        <span style="font-size:13px;font-weight:400">Photos types des rayons</span>
+        <span style="font-size:13px;font-weight:400">Photos du planogramme des rayons</span>
         <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(etat)} — le comptoir tel qu’il doit être, en face de chaque « Photo du comptoir »</span>
         <span style="margin-left:auto;font-size:11.5px;font-weight:400;color:var(--color-primary)">${r.ouvert ? 'Replier ▴' : 'Gérer ▾'}</span>
       </button>
@@ -2360,17 +2365,27 @@ function tplCtrlPhotos(s, c, x, card){
       if (t.attente) { return '<span class="db-cqph att"></span>'; }
       return `<span class="db-cqph vide ${t.e}"><b>${t.e === 'ko' ? '✗' : '—'}</b>${esc(t.videTxt)}</span>`;
     }
-    return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.e}">${esc(t.badge)}</em></span>`;
+    return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.ia ? esc(t.ia.cls) : t.e}">${esc(t.ia ? t.ia.badge : t.badge)}</em></span>`;
   };
   // La carte : la photo et son texte ouvrent le volet ; dessous, la note
   // rapide (4, 5 — sans commentaire) et « Noter… » pour le volet.
   const actes = t => {
     if (t.envoi) { return '<div class="cq-acts"><span class="cq-envoi">envoi de la note…</span></div>'; }
+    // Mode assisté, une note proposée : la valider telle quelle, ou corriger dans le volet.
+    if (t.ia && !t.ia.manuel) {
+      return `<div class="cq-acts">${t.ia.valider ? `<button type="button" ${x.A(t.ia.valider.pick)} class="cq-valider" style="--c:${esc(t.ia.valider.coul)}" title="${esc(t.ia.valider.titre)}">✓ ${esc(t.ia.valider.lib)}</button>` : ''}<button type="button" ${x.A(t.ia.corriger.pick)} class="cq-noter${t.ia.valider ? ' re' : ''}" title="Voir la photo, la proposition complète, et noter">${esc(t.ia.corriger.lib)}</button></div>`;
+    }
+    if (t.ia && t.ia.refaire) {
+      return `<div class="cq-acts"><button type="button" ${x.A(t.ia.refaire)} class="cq-noter re" title="Redemander une proposition à l’IA">↻ Réessayer</button><button type="button" ${x.A(t.open)} class="cq-noter">Noter…</button></div>`;
+    }
     const rapides = (t.rapides || []).map(r => `<button type="button" ${x.A(r.pick)} class="cq-rapide" style="--c:${esc(r.coul)}" title="${esc(r.nom)} — note rapide, sans commentaire">${r.n}</button>`).join('');
     if (!rapides && !t.bouton) { return ''; }
     return `<div class="cq-acts">${rapides}${t.bouton ? `<button type="button" ${x.A(t.open)} class="cq-noter${t.e === 'ctl' ? '' : ' re'}" title="Voir la photo en grand, poser des repères, commenter">${esc(t.bouton)}</button>` : ''}</div>`;
   };
-  const carte = t => `<div class="db-cqc${t.type ? ' duo' : ''}"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${t.type ? `<span class="db-cqduo">${photo(t)}${ty(t)}</span>` : photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
+  const constat = t => t.ia
+    ? `<span class="c ${esc(t.ia.constatCls)}" title="${esc(t.ia.constat)}">${esc(t.ia.constat)}</span>${t.ia.conf ? `<span class="cf">${esc(t.ia.conf)}</span>` : ''}`
+    : (t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : '');
+  const carte = t => `<div class="db-cqc${t.type ? ' duo' : ''}${t.ia ? ' ia' : ''}"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${t.type ? `<span class="db-cqduo">${photo(t)}${ty(t)}</span>` : photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.ponct ? `<span class="pt ${esc(t.ponct.etat)}" title="${esc(t.ponct.long)}">${t.ponct.etat === 'heure' ? '✓' : '⏱'} ${esc(t.ponct.txt)}</span>` : ''}${constat(t)}</button>${actes(t)}</div>`;
   return `
           <div style="${card};overflow:hidden">
             <div style="padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -2382,6 +2397,204 @@ function tplCtrlPhotos(s, c, x, card){
             : q.cartes.length ? `<div class="db-cqrail"><button type="button" class="db-cqfl g" ${x.A(q.gauche)} aria-label="précédentes">‹</button><div class="db-cqpiste">${q.cartes.map(carte).join('')}</div><button type="button" class="db-cqfl d" ${x.A(q.droite)} aria-label="suivantes">›</button></div><div class="db-cqpied">${esc(q.pied)}</div>`
             : `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.vide)}</div>`}
           </div>`;
+}
+
+/* L'assistant de notation (mode assisté) : où en est l'IA, ce qu'elle propose,
+   la validation finale, le taux d'accord et ce qu'elle a appris des
+   corrections du consultant. */
+function tplIaBande(a, x, card){
+  const { esc } = x;
+  return `
+    <div class="ia-band" style="${card}">
+      <div class="t"><span class="tag">✦ Assistant de notation</span><span class="s">${esc(a.etat)}</span>${a.accord ? `<span class="acc">${esc(a.accord)}</span>` : ''}</div>
+      ${a.attente ? `<div class="ia-prog"><i style="width:${a.pct}%"></i></div>` : ''}
+      ${a.dispo && a.items.length ? `<div class="k">
+        ${a.tuiles.map(t => `<div class="ia-k ${t.cls}"><b>${t.n}</b><span>${esc(t.lib)}</span></div>`).join('')}
+        <div class="ia-act">
+          <button type="button" ${x.A(a.peutValider ? a.valider : null)} class="ia-btn" ${a.peutValider ? '' : 'disabled'}>${esc(a.valiLib)}</button>
+          <button type="button" ${x.A(a.leconsBasculer)} class="ia-lien">Ce que l’IA a appris (${a.leconsN}) ${a.leconsOuvert ? '▴' : '▾'}</button>
+        </div>
+      </div>` : (a.dispo ? `<div class="ia-act g"><button type="button" ${x.A(a.leconsBasculer)} class="ia-lien">Ce que l’IA a appris (${a.leconsN}) ${a.leconsOuvert ? '▴' : '▾'}</button></div>` : '')}
+      <div class="note">L’IA propose, vous décidez : rien ne part au panel sans votre clic — « Valider » sur une carte, « Corriger… » pour ouvrir la photo, ou tout à la fin dans « Valider ce que l’IA a proposé ». L’heure de la photo est comparée à l’heure standard de sa checklist (15 min de tolérance).</div>
+      ${a.leconsOuvert ? `
+      <div class="ia-lecons">
+        <div class="h">Quand vous notez autrement que l’IA, la correction devient une leçon : les ${a.leconsMax} dernières de chaque rayon lui sont envoyées avec chaque nouvelle photo de ce rayon. La consigne des rayons (« Photos types des rayons ») prime toujours. Écartez une leçon qui ne doit pas servir d’exemple.</div>
+        ${a.leconsChargement ? '<div class="v">Lecture des leçons…</div>'
+          : !a.lecons.length ? '<div class="v">Pas encore de correction : l’IA apprend dès que vous notez autrement qu’elle, ou que vous dites pourquoi.</div>'
+          : `<div class="l">${a.lecons.map(l => `
+            <div class="r${l.retenue ? '' : ' off'}">
+              <span class="d">${esc(l.date)}</span>
+              <span class="q">${esc(l.shop)} · ${esc(l.tache)}</span>
+              <span class="c">IA : ${esc(l.ia)} → vous : <b>${esc(l.vous)}</b>${l.raison ? ` — « ${esc(l.raison)} »` : ''}${l.constat ? `<small>l’IA avait vu : ${esc(l.constat)}</small>` : ''}</span>
+              <button type="button" ${x.A(l.basculer)} class="ia-lien">${l.retenue ? 'écarter' : 'reprendre'}</button>
+            </div>`).join('')}</div>`}
+      </div>` : ''}
+    </div>`;
+}
+
+/* La validation finale : chaque note proposée, modifiable, cochée ou non ;
+   l'envoi part ligne par ligne au panel. */
+function tplIaRecap(r, x){
+  const { esc } = x;
+  return `
+  <div ${x.A(r.fermer)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:60;animation:fadeIn 160ms ease"></div>
+  <div class="ia-recap">
+    <div class="hd">
+      <div><div class="u">Assistant de notation</div><h2>Valider ce que l’IA a proposé</h2>
+        <div class="s">Cochez ce que vous validez ; changez la note ou le commentaire si besoin — une note changée peut dire pourquoi, l’IA en tiendra compte. Rien ne part avant « Valider et envoyer ».</div></div>
+      <button type="button" ${x.A(r.fermer)} class="x">✕</button>
+    </div>
+    <div class="sel"><button type="button" ${x.A(r.tout)} class="ia-lien">tout cocher</button><button type="button" ${x.A(r.aucun)} class="ia-lien">tout décocher</button></div>
+    <div class="rows">
+      ${r.lignes.map(l => `
+      <div class="row${l.inclus ? '' : ' off'}${l.erreur ? ' err' : ''}">
+        <label class="ck"><input type="checkbox" ${l.inclus ? 'checked' : ''} ${x.C(l.setInclus)}></label>
+        <button type="button" ${x.A(l.ouvrir)} class="ph" title="Ouvrir la photo et le volet de notation"><img src="${esc(l.photo)}" alt="" loading="lazy"></button>
+        <div class="tx">
+          <div class="n">${esc(l.shop)} · ${esc(l.nom)}</div>
+          <div class="m">${l.heure ? 'photo ' + esc(l.heure) : ''}${l.ponct ? ` · <span class="pt ${esc(l.ponct.etat)}">${esc(l.ponct.txt)}</span>` : ''} · IA : ${esc(l.propose)} · confiance ${esc(l.confiance || '?')}${l.faible ? ' — à juger vous-même' : ''}</div>
+          ${l.constats.length ? `<ul>${l.constats.map(k => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
+        </div>
+        <div class="ed">
+          <select ${x.C(l.setNote)} style="border-color:${esc(l.couleur)}">${l.niveaux.map(v => `<option value="${v.n}"${v.sel ? ' selected' : ''}>${esc(v.nom)}</option>`).join('')}</select>
+          <textarea rows="2" ${x.C(l.setComment)} placeholder="Commentaire au magasin${l.sousSeuil ? ' (obligatoire sous le seuil)' : ''}" class="${l.manqueComment ? 'manque' : ''}">${esc(l.comment)}</textarea>
+          ${l.change ? `<input value="${esc(l.raison)}" ${x.C(l.setRaison)} maxlength="400" placeholder="Pourquoi changez-vous la note ? (facultatif, l’IA en tiendra compte)">` : ''}
+          ${l.erreur ? `<div class="e">${esc(l.erreur)}</div>` : ''}
+        </div>
+      </div>`).join('')}
+    </div>
+    <div class="ft">
+      <span>${r.n} note${r.n > 1 ? 's' : ''} cochée${r.n > 1 ? 's' : ''}${r.nCorr ? ', dont ' + r.nCorr + ' corrigée' + (r.nCorr > 1 ? 's' : '') : ''}${r.nManque ? ` · <b class="e">${r.nManque} commentaire${r.nManque > 1 ? 's' : ''} manquant${r.nManque > 1 ? 's' : ''}</b>` : ''}</span>
+      <button type="button" ${x.A(r.fermer)} class="ia-sec">Fermer</button>
+      <button type="button" ${x.A(r.envoyer)} class="ia-btn" ${r.envoi || !r.n ? 'disabled' : ''}>${esc(r.envoyerLib)}</button>
+    </div>
+  </div>`;
+}
+
+/* L'entraînement de l'IA : les chiffres, les photos parfaites à prendre comme
+   modèle, puis une carte par rayon — la consigne, les modèles, les leçons. */
+function tplIaEntrainement(e, x){
+  const { esc } = x;
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  if (!e || e.chargement) { return `<div data-screen="ia-entrainement"><div style="${card};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Entraînement de l’IA — lecture…</div></div>`; }
+  const img = (src, alt) => src ? `<a href="${esc(src)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(src)}" alt="${esc(alt)}" loading="lazy"></a>` : '';
+  return `
+  <div data-screen="ia-entrainement" class="ia-ent">
+    ${!e.dispo ? `<div class="ia-ent-alerte">Aucune clé Anthropic au serveur (Paramètres › Assistance IA) : l’IA ne propose rien tant qu’elle manque. L’entraînement, lui, se prépare déjà.</div>` : ''}
+    <div class="ia-ent-kpis">${e.kpis.map(k => `<div style="${card}" class="kp"><div class="k">${esc(k.k)}</div><div class="v">${esc(k.v)}</div><div class="s">${esc(k.s)}</div></div>`).join('')}</div>
+    <div style="${card}" class="ia-ent-comment">
+      <div class="h">Comment l’IA apprend</div>
+      <ol>
+        <li><b>La photo du planogramme</b> : la présentation attendue du rayon, la même pour tout le réseau. L’IA la reçoit en premier avec chaque photo.</li>
+        <li><b>Les photos d’exemple</b> : de vraies photos jugées parfaites, de chaque magasin. L’IA en reçoit deux après le planogramme, celles du même magasin d’abord. Prenez-les parmi les photos notées « ${esc(e.nomNiveau)} », ou depuis le volet de notation (★ Photo parfaite).</li>
+        <li><b>La consigne générale</b> (ci-dessous) vaut pour toutes les photos de contrôle ; <b>la consigne du rayon</b> dit ce qu’est un comptoir conforme et prime pour ce rayon. Vide, l’IA suit des critères par défaut.</li>
+        <li><b>Vos corrections</b> deviennent des leçons : quand vous notez autrement que l’IA, elle reçoit la correction (et votre raison) avec les photos suivantes du même rayon.</li>
+      </ol>
+    </div>
+    ${tplIaConsigneGenerale(e.cg, x, card)}
+    ${tplIaAnalyse(e.ana, x, card)}
+    <div style="${card}" class="ia-ent-cand">
+      <div class="h">Photos parfaites à prendre comme exemple <span>notées « ${esc(e.nomNiveau)} » ces 30 jours</span></div>
+      ${e.candidates.length ? `<div class="g">${e.candidates.map(c => `
+        <div class="t">
+          ${c.photo ? `<span class="ph"><img src="${esc(c.photo)}" alt="" loading="lazy"></span>` : `<span class="ph vide">${c.attente ? 'lecture…' : 'photo indisponible'}</span>`}
+          <div class="n">${esc(c.shop)} · ${esc(c.rayon)}</div>
+          <div class="m">${esc(c.date)} · ${esc(c.note)}${c.par ? ' par ' + esc(c.par) : ''}</div>
+          <div class="b"><button type="button" ${x.A(c.exemple)} class="ia-valider-mod">${c.busy === 'exemple' ? 'copie…' : '★ Photo d’exemple'}</button>
+            <button type="button" ${x.A(c.planogramme)} class="ia-lien">${c.busy === 'planogramme' ? 'copie…' : 'comme planogramme'}</button></div>
+        </div>`).join('')}</div>`
+      : `<div class="v">Aucune photo notée « ${esc(e.nomNiveau)} » ces 30 jours. Notez 5/5 une photo parfaite dans <button type="button" ${x.A(e.versControle)} class="ia-lien">Contrôle</button>, ou ouvrez-la et choisissez « ★ Photo parfaite ».</div>`}
+    </div>
+    ${e.rayons.map(r => `
+    <div style="${card}" class="ia-ent-rayon">
+      <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}<button type="button" ${x.A(r.versAnalyse)} class="ia-lien ana">✦ Ce qui va, ce qui ne va pas</button></div>
+      <div class="cols">
+        <div>
+          <div class="lb">1 · La photo du planogramme</div>
+          <div class="plano">${r.planogramme ? img(r.planogramme, 'Photo du planogramme ' + r.nom)
+            : `<label class="ph vide depot">${r.planoBusy ? 'envoi…' : 'Pas encore de photo du planogramme'}<b>${r.planoBusy ? '' : 'Déposer la photo'}</b><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.planoFichier)} hidden></label>`}</div>
+          ${r.planogramme ? `<div class="act"><label class="ia-lien">${r.planoBusy ? 'envoi…' : 'remplacer'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.planoFichier)} hidden></label> · <button type="button" ${x.A(r.planoRetirer)} class="ia-lien">retirer</button></div>` : ''}
+        </div>
+        <div>
+          <div class="lb">2 · Les photos d’exemple${r.exemples.length ? ' (' + r.exemples.length + ')' : ''}</div>
+          <div class="mods">
+            ${r.exemples.map(m => `<div class="mod">${img(m.photo, 'Photo d’exemple ' + r.nom + ' ' + m.shop)}<div class="m">★ ${esc(m.shop)}${m.date ? ' · ' + esc(m.date) : ''}</div><button type="button" ${x.A(m.retirer)} class="ia-lien">retirer</button></div>`).join('')}
+          </div>
+          ${!r.exemples.length ? '<div class="df">Pas encore de photo d’exemple : prenez des photos notées parfaites, de chaque magasin.</div>' : ''}
+        </div>
+        <div>
+          <div class="lb">3 · La consigne</div>
+          <textarea rows="3" maxlength="600" ${x.C(r.setConsigne)} placeholder="Ex. : comptoir garni sur toute sa longueur, six quiches entières minimum, prix sur chaque produit">${esc(r.consigne)}</textarea>
+          ${!r.consigne && r.defaut ? `<div class="df">Vide : l’IA suit les critères par défaut — « ${esc(r.defaut)} »</div>` : ''}
+          <div class="lb" style="margin-top:12px">Ce qu’elle a appris de vous</div>
+          ${r.lecons.length ? r.lecons.map(l => `<div class="lc${l.retenue ? '' : ' off'}"><span>${esc(l.date)} · ${esc(l.shop)}</span> IA : ${esc(l.ia)} → vous : <b>${esc(l.vous)}</b>${l.raison ? ` — « ${esc(l.raison)} »` : ''} <button type="button" ${x.A(l.basculer)} class="ia-lien">${l.retenue ? 'écarter' : 'reprendre'}</button></div>`).join('')
+            + (r.leconsPlus ? `<div class="df">et ${r.leconsPlus} de plus</div>` : '')
+            : '<div class="df">Pas encore de correction sur ce rayon.</div>'}
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* La consigne générale des contrôles qualité : une liste de points, envoyée à
+   l'IA avec chaque photo de contrôle (avant la consigne du rayon pour une photo
+   de comptoir). Chaque point
+   se modifie sur place (enregistré en quittant le champ), se retire (✕) ; « +
+   Ajouter un point » en ouvre un nouveau. */
+function tplIaConsigneGenerale(g, x, card){
+  const { esc } = x;
+  if (!g) { return ''; }
+  return `
+    <div style="${card}" class="ia-ent-cg">
+      <div class="h">Consigne générale des contrôles qualité <span>envoyée à l’IA avec chaque photo de contrôle — pour une photo de comptoir, avant la consigne du rayon${g.defaut ? ' · consigne par défaut' : ''}</span></div>
+      <ul class="pts">${g.points.map((p, i) => `
+        <li><span class="puce">•</span><textarea rows="${Math.max(1, Math.ceil(String(p.texte).length / 120))}" maxlength="${g.longueur}" placeholder="Un point à vérifier sur chaque photo…" aria-label="Point ${i + 1} de la consigne générale" ${x.C(p.set)} ${g.busy ? 'disabled' : ''}>${esc(p.texte)}</textarea>
+          <button type="button" class="x" title="Retirer ce point" aria-label="Retirer le point ${i + 1}" ${x.A(p.retirer)} ${g.busy ? 'disabled' : ''}>✕</button></li>`).join('')}
+      </ul>
+      ${!g.points.length ? '<div class="v">Aucun point : l’IA ne reçoit que la consigne de chaque rayon, et rien de plus pour les autres photos de contrôle.</div>' : ''}
+      <div class="act">
+        ${g.ajouter ? `<button type="button" class="ia-sec" ${x.A(g.ajouter)} ${g.busy ? 'disabled' : ''}>+ Ajouter un point</button>` : `<span class="v">${g.max} points au plus.</span>`}
+        ${g.retablir ? `<button type="button" class="ia-lien" ${x.A(g.retablir)} ${g.busy ? 'disabled' : ''}>rétablir la consigne par défaut</button>` : ''}
+        <span class="etat">${g.busy ? 'enregistrement…' : 'chaque point s’enregistre en quittant le champ'}</span>
+      </div>
+    </div>`;
+}
+
+/* L'assistant d'entraînement : un rayon (ou une tâche), une période, et ce
+   que disent les photos reçues — ce qui va, ce qui ne va pas, les désaccords,
+   la consigne proposée, les conseils aux magasins, les exemples suggérés. */
+function tplIaAnalyse(a, x, card){
+  const { esc } = x;
+  if (!a || a.chargement) { return `<div style="${card}" class="ia-ana"><div class="h">✦ Assistant d’entraînement</div><div class="v">Lecture…</div></div>`; }
+  const an = a.an;
+  return `
+    <div style="${card}" class="ia-ana">
+      <div class="h">✦ Assistant d’entraînement <span>ce qui est bon, ce qui ne l’est pas, sur les photos reçues</span></div>
+      <div class="ctl">
+        <select ${x.C(a.setSujet)}>${a.groupes.map(g => `<optgroup label="${esc(g.lib)}">${g.opts.map(o => `<option value="${esc(o.val)}"${o.sel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</optgroup>`).join('')}</select>
+        <select ${x.C(a.setJours)}>${a.periodes.map(p => `<option value="${p.val}"${p.sel ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>
+        <button type="button" ${x.A(a.peut && !a.busy && !a.autreBusy ? a.lancer : null)} class="ia-btn" ${a.peut && !a.busy && !a.autreBusy ? '' : 'disabled'}>${a.busy ? 'Analyse en cours…' : esc(a.lib)}</button>
+        <span class="cout">un appel à l’IA, sur le texte des évaluations (sans renvoyer les photos)</span>
+      </div>
+      ${a.manque ? `<div class="v">${esc(a.manque)}</div>` : ''}
+      ${a.erreur ? `<div class="err">${esc(a.erreur)}</div>` : ''}
+      ${an ? `
+      <div class="meta">${esc(an.meta)}</div>
+      ${an.synthese ? `<p class="syn">${esc(an.synthese)}</p>` : ''}
+      <div class="g2">
+        <div class="b ok"><div class="lb">✓ Ce qui va</div>${an.va.length ? `<ul>${an.va.map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : '<div class="v">Rien de régulier à signaler.</div>'}</div>
+        <div class="b nc"><div class="lb">✗ Ce qui ne va pas</div>${an.vaPas.length ? `<ul>${an.vaPas.map(v => `<li>${esc(v.constat)} <span class="fq ${esc(v.freqCls)}">${esc(v.freq)}</span>${v.magasins ? `<small>${esc(v.magasins)}</small>` : ''}</li>`).join('')}</ul>` : '<div class="v">Aucun écart récurrent.</div>'}</div>
+      </div>
+      ${an.desaccords.length ? `<div class="b"><div class="lb">Où l’IA et vous ne notez pas pareil — à lui apprendre</div><ul>${an.desaccords.map(d => `<li><b>${esc(d.sujet)}</b> — ${esc(d.a_retenir)}</li>`).join('')}</ul></div>` : ''}
+      ${an.consigne ? `<div class="b cons"><div class="lb">Consigne proposée</div><div class="txt">${esc(an.consigne)}</div>
+        ${an.dejaReprise ? '<div class="v">C’est la consigne actuelle du rayon.</div>' : an.reprendre ? `<button type="button" ${x.A(an.reprendre)} class="ia-sec">Reprendre comme consigne du rayon</button>` : '<div class="v">Une tâche hors rayon n’a pas de consigne : à reprendre dans sa checklist.</div>'}</div>` : ''}
+      ${an.conseils.length ? `<div class="b"><div class="lb">À dire aux magasins</div><ul>${an.conseils.map(c => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
+      ${an.exemples.length ? `<div class="b"><div class="lb">Photos à prendre en exemple</div><div class="exs">${an.exemples.map(ex => `
+        <div class="ex">${ex.photo ? `<span class="ph"><img src="${esc(ex.photo)}" alt="" loading="lazy"></span>` : `<span class="ph vide">${ex.attente ? 'lecture…' : 'photo expirée'}</span>`}
+          <div class="m">${esc(ex.magasin)} · ${esc(ex.date)}</div><div class="p">${esc(ex.pourquoi)}</div>
+          ${ex.deja ? '<div class="v">★ déjà photo d’exemple</div>' : `<button type="button" ${x.A(ex.prendre)} class="ia-valider-mod">${ex.busy ? 'copie…' : '★ Photo d’exemple'}</button>`}</div>`).join('')}</div></div>` : ''}
+      ` : (!a.manque && !a.busy ? '<div class="v">Pas encore d’analyse pour ce sujet.</div>' : '')}
+    </div>`;
 }
 
 /* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le
@@ -5646,31 +5859,39 @@ function tplCtrlDetail(c, x){
         <button ${x.A(d.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:20px">
         <div>
           <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Photo en boutique</div>
           ${d.photo
             ? `<button ${x.A(d.zoomGo)} title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block">
                 <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;padding:3px 9px;border-radius:8px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
                ${d.faitMeta ? `<div style="margin-top:5px;font-size:11px;color:var(--color-text)">${esc(d.faitMeta)}</div>` : ''}
+               ${d.ponct ? `<div class="pt ${esc(d.ponct.etat)}" style="margin-top:3px;font-size:11px;white-space:normal">${d.ponct.etat === 'heure' ? '✓' : '⏱'} ${esc(d.ponct.long)}</div>` : ''}
+               ${d.estExemple ? `<div class="ia-mod-ok">★ Cette photo est une photo d’exemple du rayon</div>`
+                 : d.prendreExemple ? `<div class="ia-mod" title="Une photo parfaite devient une référence de l’IA pour ce rayon">★ Photo parfaite :
+                   <button type="button" ${x.A(d.prendreExemple)} class="ia-lien">${d.modeleBusy === 'exemple' ? 'copie…' : 'en faire une photo d’exemple'}</button> ·
+                   <button type="button" ${x.A(d.prendrePlano)} class="ia-lien">${d.modeleBusy === 'planogramme' ? 'copie…' : 'la photo du planogramme'}</button></div>` : ''}
                <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
         </div>
         <div>
-          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.rayon ? 'Photo type · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
+          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.rayon ? 'Planogramme · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
           ${d.photoRef
             ? `<a href="${d.photoRef}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photoRef}" alt="Photo de référence du produit" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>`
             : d.rayon && d.rayon.photo
-            ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo type du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
-               <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo type'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo du planogramme du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
+               <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo du planogramme'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
             : d.rayon
-            ? `<label style="background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5;cursor:pointer"><span>Pas encore de photo type pour ce rayon.</span><span style="font-weight:400;color:var(--color-primary)">${d.rayon.busy ? 'Envoi…' : 'Poser la photo type'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            ? `<label style="background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5;cursor:pointer"><span>Pas encore de photo du planogramme pour ce rayon.</span><span style="font-weight:400;color:var(--color-primary)">${d.rayon.busy ? 'Envoi…' : 'Poser la photo du planogramme'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoRefTxt)}</div>`}
+          ${d.rayon && !d.photoRef ? `<div class="ia-vex"><div class="lb">Photos d’exemple${d.nExemples ? ' (' + d.nExemples + ')' : ''}</div>
+            ${d.exemples.length ? `<div class="g">${d.exemples.map(ex => `<a href="${esc(ex.photo)}" target="_blank" rel="noopener" title="${esc(ex.shop + (ex.date ? ' · ' + ex.date : ''))}"><img src="${esc(ex.photo)}" alt="Photo d’exemple ${esc(ex.shop)}" loading="lazy"><span>${esc(ex.shop)}</span></a>`).join('')}</div>`
+              : '<div class="v">Aucune encore : une photo parfaite peut en devenir une (★ sous la photo).</div>'}</div>` : ''}
         </div>
       </div>
       ${d.rayon && d.rayon.consigne ? `<div style="font-size:12px;margin-top:8px;line-height:1.5"><span style="font-weight:400">Attendu :</span> ${esc(d.rayon.consigne)}</div>` : ''}
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">${d.rayon
-        ? 'Une photo de comptoir se juge contre la photo type de son rayon, posée dans « Photos types des rayons » en haut de l\u2019écran — la même s\u2019affiche dans le contrôle guidé des visites.'
+        ? 'Une photo de comptoir se juge contre la photo du planogramme de son rayon, puis ses photos d\u2019exemple — elles se gèrent dans « Entraînement de l\u2019IA ». La photo du planogramme s\u2019affiche aussi dans le contrôle guidé des visites.'
         : 'Un contrôle qualité se juge par comparaison : la photo produit (products/available \u2192 recipes/{id_recipe}, le même API que le webshop) s\u2019affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »'}</div>
 
       <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>
@@ -5679,17 +5900,18 @@ function tplCtrlDetail(c, x){
 
       <!-- Assistance IA : une PROPOSITION, jamais une note. Elle pré-remplit,
            le consultant valide — c'est son geste qui engage le réseau. -->
-      ${d.photo ? `<div style="margin:20px 0 0;padding:12px 14px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
+      ${d.photo || d.iaPre ? `<div style="margin:20px 0 0;padding:12px 14px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};flex:1;min-width:150px">Assistance à la notation</div>
           ${d.iaDispo
             ? `<button ${x.A(d.iaGo)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:${d.iaBusy ? 'wait' : 'pointer'};opacity:${d.iaBusy ? '0.6' : '1'};color:var(--color-text)">${d.iaBusy ? 'Analyse de la photo…' : (d.iaFait ? 'Réanalyser' : 'Proposer une évaluation')}</button>`
             : `<span style="font-size:11px;font-weight:400;padding:2px 8px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)">manque API</span>`}
         </div>
+        ${d.iaPre ? `<div style="font-size:11.5px;color:var(--color-text);margin-top:7px;line-height:1.5">✦ Note proposée par l’IA : le niveau et le commentaire ci-dessous sont pré-remplis. Validez-les en envoyant la note, ou corrigez-les.</div>` : ''}
         ${!d.iaDispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.5">Aucune clé Anthropic enregistrée. Paramètres → Assistance IA. La clé reste sur le serveur ; le navigateur ne reçoit que la proposition.</div>` : ''}
         ${d.iaMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaMotif)}</div>` : ''}
         ${d.iaNom ? `<div style="margin-top:9px">
-          <div style="font-size:12.5px"><span style="font-weight:400">Proposition : ${esc(d.iaNom)}</span>${d.iaConfiance ? `<span style="color:var(--color-text-muted)"> · confiance ${esc(d.iaConfiance)}</span>` : ''}${d.iaModele ? `<span style="color:var(--color-text-muted)"> · ${esc(d.iaModele)}</span>` : ''}</div>
+          <div style="font-size:12.5px"><span style="font-weight:400">Proposition : ${esc(d.iaNom)}</span>${d.iaConfiance ? `<span style="color:var(--color-text-muted)"> · confiance ${esc(d.iaConfiance)}</span>` : ''}${d.iaModele ? `<span style="color:var(--color-text-muted)"> · ${esc(d.iaModele)}</span>` : ''}${d.iaLecons ? `<span style="color:var(--color-text-muted)"> · ${d.iaLecons} leçon${d.iaLecons > 1 ? 's' : ''} de vos corrections</span>` : ''}</div>
           ${(d.iaConstats || []).length ? `<ul style="margin:6px 0 0;padding-left:17px;font-size:12px;color:var(--color-text-muted);line-height:1.55">${d.iaConstats.map(k => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
           ${d.iaAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaAvert)}</div>` : ''}
           <div style="display:flex;gap:9px;margin-top:10px;flex-wrap:wrap">
@@ -5714,6 +5936,10 @@ function tplCtrlDetail(c, x){
           ${lv.aide ? `<span style="font-size:11px;color:var(--color-text-muted);font-weight:400">${esc(lv.aide)}</span>` : ''}
         </button>`).join('')}
       <textarea ${x.C(d.setComment)} rows="4" placeholder="${d.commentRequis ? 'Commentaire obligatoire pour une non-conformité' : 'Commentaire (facultatif)'}" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:13px;border:1px solid ${d.commentRequis && !d.comment ? '#8D1D2C' : 'var(--color-border-secondary)'};border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
+      ${d.iaChange ? `<div style="margin-top:9px;padding:9px 12px;border-radius:9px;background:var(--prize-soft)">
+        <div style="font-size:11.5px;line-height:1.5">Vous notez autrement que l’IA (${esc(d.iaNom)}). <span style="color:var(--color-text-muted)">Pourquoi ? Facultatif : l’IA reçoit cette correction avec les prochaines photos de ce rayon.</span></div>
+        <input value="${esc(d.raisonIa)}" ${x.C(d.setRaisonIa)} maxlength="400" placeholder="Ex. : les quiches se vendent au quart, une quiche entamée n’est pas un écart" style="width:100%;box-sizing:border-box;margin-top:6px;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+      </div>` : ''}
       ${d.erreur ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px">${esc(d.erreur)}</div>` : ''}
       <!-- Note au consultant : un geste occasionnel, replié par défaut. -->
       <div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:11px">

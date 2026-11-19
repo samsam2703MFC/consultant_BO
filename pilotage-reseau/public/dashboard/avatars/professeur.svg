@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+<!-- Le Professeur (17/11/2026) : le formateur du réseau, qui répond sur le manuel opératoire. Même trait que Pierre et le
+     Coach : fond lin, veste de tweed, nœud papillon Ruby, lunettes rondes, barbe blanche, toque universitaire. -->
+<defs>
+<clipPath id="corps"><path d="M18 240 C22 204 52 188 88 180 L120 198 L152 180 C188 188 218 204 222 240 Z"></path></clipPath>
+</defs>
+<rect width="240" height="240" fill="#EAE4DC"></rect>
+<path d="M18 240 C22 204 52 188 88 180 L120 198 L152 180 C188 188 218 204 222 240 Z" fill="#7A5A43"></path>
+<g clip-path="url(#corps)" fill="none" stroke-linecap="round">
+<g stroke="#8E6B52" stroke-width="2" opacity=".75"><path d="M24 214 l8 -6 8 6 8 -6 8 6 8 -6 8 6M150 214 l8 -6 8 6 8 -6 8 6 8 -6 8 6M30 232 l8 -6 8 6 8 -6 8 6 8 -6 8 6M146 232 l8 -6 8 6 8 -6 8 6 8 -6 8 6"></path></g>
+<g stroke="#5E4332" stroke-width="2.5" opacity=".6"><path d="M70 186 L96 240M170 186 L144 240"></path></g>
+</g>
+<path d="M98 160 L98 188 Q120 206 142 188 L142 160 Z" fill="#DFA587"></path>
+<path d="M98 184 L120 214 L142 184 L142 196 L120 240 L98 196 Z" fill="#F6F2EC"></path>
+<path d="M88 180 L104 174 L120 214 L100 222 Z" fill="#5E4332"></path>
+<path d="M152 180 L136 174 L120 214 L140 222 Z" fill="#5E4332"></path>
+<path d="M120 200 L100 190 L100 212 Z M120 200 L140 190 L140 212 Z" fill="#8D1D2C"></path>
+<rect x="114" y="194" width="12" height="12" rx="3" fill="#6E1522"></rect>
+<ellipse cx="63" cy="120" rx="10" ry="15" fill="#E7B494"></ellipse>
+<ellipse cx="177" cy="120" rx="10" ry="15" fill="#E7B494"></ellipse>
+<path d="M66 104 C66 64 90 46 120 46 C150 46 174 64 174 104 L174 126 C174 160 152 180 120 180 C88 180 66 160 66 126 Z" fill="#EFC3A4" stroke="#C98D70" stroke-width="2"></path>
+<path d="M62 116 C56 98 58 82 68 72 C70 86 72 98 78 108 Z" fill="#EDEAE5" stroke="#D2CCC5" stroke-width="1.5"></path>
+<path d="M178 116 C184 98 182 82 172 72 C170 86 168 98 162 108 Z" fill="#EDEAE5" stroke="#D2CCC5" stroke-width="1.5"></path>
+<path d="M80 136 C80 168 98 190 120 194 C142 190 160 168 160 136 C152 152 140 158 120 158 C100 158 88 152 80 136 Z" fill="#EDEAE5" stroke="#D2CCC5" stroke-width="1.5"></path>
+<g fill="none" stroke="#D2CCC5" stroke-width="1.6" stroke-linecap="round" opacity=".9">
+<path d="M96 166 Q100 176 108 182"></path><path d="M144 166 Q140 176 132 182"></path><path d="M120 170 L120 186"></path>
+</g>
+<path d="M96 148 C104 138 115 140 120 145 C125 140 136 138 144 148 C136 154 127 153 120 150 C113 153 104 154 96 148 Z" fill="#F7F5F2" stroke="#D2CCC5" stroke-width="1.5"></path>
+<g fill="none" stroke="#DCD7D1" stroke-width="6.5" stroke-linecap="round">
+<path d="M82 96 Q96 88 110 94"></path><path d="M130 94 Q144 88 158 96"></path>
+</g>
+<g fill="#FFFFFF" fill-opacity=".22" stroke="#3A2E28" stroke-width="3.5">
+<circle cx="97" cy="116" r="15"></circle><circle cx="143" cy="116" r="15"></circle>
+</g>
+<g fill="none" stroke="#3A2E28" stroke-width="3.2" stroke-linecap="round">
+<path d="M112 114 Q120 109 128 114"></path><path d="M82 112 L67 107"></path><path d="M158 112 L173 107"></path>
+</g>
+<circle cx="97" cy="117" r="3.4" fill="#2A2422"></circle><circle cx="143" cy="117" r="3.4" fill="#2A2422"></circle>
+<g fill="none" stroke="#C98D70" stroke-width="2" stroke-linecap="round">
+<path d="M90 124 Q97 127 104 124"></path><path d="M136 124 Q143 127 150 124"></path>
+<path d="M120 121 Q114 134 117 139 Q121 142 125 138"></path>
+</g>
+<circle cx="86" cy="138" r="8" fill="#E79C86" opacity=".4"></circle><circle cx="154" cy="138" r="8" fill="#E79C86" opacity=".4"></circle>
+<path d="M70 80 C70 60 92 50 120 50 C148 50 170 60 170 80 L170 86 C150 76 90 76 70 86 Z" fill="#2A2422"></path>
+<path d="M44 52 L120 24 L196 52 L120 80 Z" fill="#332B27" stroke="#1E1917" stroke-width="2" stroke-linejoin="round"></path>
+<path d="M120 24 L196 52" fill="none" stroke="#4A403A" stroke-width="2.5"></path>
+<circle cx="120" cy="52" r="4.5" fill="#C9A54A"></circle>
+<path d="M120 52 C140 54 160 58 176 62 L178 92" fill="none" stroke="#C9A54A" stroke-width="3" stroke-linecap="round"></path>
+<path d="M172 90 L184 90 L182 108 L174 108 Z" fill="#C9A54A"></path>
+<g stroke="#A88732" stroke-width="1.2"><path d="M175 94 L175 107M178 94 L178 107M181 94 L181 107"></path></g>
+</svg>

@@ -1,0 +1,4 @@
+# Décision du propriétaire (17.11.2026) : sur le serveur en cohabitation (base de l'ERP d'origine, 192.168.1.150),
+# les e-mails partent réellement (MAIL_DELIVERY_MODE=live) par les comptes OVH de slfood.eu (accounting@, logistyka@,
+# produkcja@ — Konfiguracja poczty e-mail). Supprimer ce fichier rend la main à ERP_MAIL_MODE de /etc/erp-pull.conf.
+# Les envois automatiques (relances, rapports) restent commandés par Ustawienia › Parametry › system.auto_send.

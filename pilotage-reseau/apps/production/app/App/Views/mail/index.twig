@@ -76,6 +76,13 @@
 .ml-help{font-size:13px;color:#5d554f}
 .ml-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0}
 .ml-check .bi-check-circle-fill{color:#248A3D}.ml-check .bi-x-circle-fill{color:#b02a37}
+/* [347] skrzynki firmowe do wyboru */
+.ml-company{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid #ece6e0}
+.ml-company-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.ml-company-item{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid #e3ddd6;border-radius:10px;background:#fff;padding:10px 12px;font-size:13px;cursor:pointer}
+.ml-company-item > span:not(.ml-tag){display:flex;flex-direction:column;min-width:0;flex:1}.ml-company-item strong{overflow-wrap:anywhere}.ml-company-item .ml-tag{flex:none;margin:0}.ml-company-item small{color:#7a716a}
+.ml-company-item:hover:not(:disabled){border-color:#8a1c2b}.ml-company-item.is-on{border-color:#8a1c2b;background:#fbf4f5}
+.ml-company-item.is-on .bi{color:#8a1c2b}.ml-company-item:disabled{opacity:.55;cursor:not-allowed}
 @media (max-width: 1100px){.ml-shell{grid-template-columns:170px 1fr}.ml-reader{grid-column:1 / -1;border-top:1px solid var(--ml-line)}.ml-shell{height:auto}.ml-rows{max-height:50vh}.ml-settings{grid-template-columns:1fr}}
 @media (max-width: 700px){.ml-shell{grid-template-columns:1fr}.ml-folders{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid var(--ml-line)}.ml-account{display:none}}
 </style>

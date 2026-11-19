@@ -11,15 +11,25 @@
     </fieldset>
 {% endmacro %}
 
+{# [306] Kierowca zwykle na trasie : aktywni pracownicy, najpierw Kierowca-dostawca. #}
+{% macro driverSelect(drivers, current) %}
+    <select class="form-select" name="driver_id" data-nullable>
+        <option value="">— bez kierowcy —</option>
+        {% set main = drivers|filter(d => d.is_driver) %}{% set rest = drivers|filter(d => not d.is_driver) %}
+        {% if main %}<optgroup label="Kierowcy">{% for d in main %}<option value="{{ d.id }}" {{ d.id == current ? 'selected' : '' }}>{{ d.name }}</option>{% endfor %}</optgroup>{% endif %}
+        {% if rest %}<optgroup label="Inni pracownicy">{% for d in rest %}<option value="{{ d.id }}" {{ d.id == current ? 'selected' : '' }}>{{ d.name }}</option>{% endfor %}</optgroup>{% endif %}
+    </select>
+{% endmacro %}
+
 {% block page_heading %}
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Trasy</h3>
-            <p class="text-subtitle text-muted">Trasy z pojazdami i klientami: dni tygodnia, wyjazd, kolejność rozładunku</p>
+            <p class="text-subtitle text-muted">Trasa = stali klienci, ciężarówka zwykle ta sama, kierowca zwykle ten sam : dni tygodnia, wyjazd, kolejność rozładunku</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-primary" href="{{ root }}/logistics"><i class="bi bi-stack"></i> Załadunek dnia</a>
-            <a class="btn btn-outline-primary" href="{{ root }}/logistics/vehicles"><i class="bi bi-truck"></i> Pojazdy</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/transport-wizard"><i class="bi bi-magic"></i> Transport dla zamówień</a>
         </div>
     </div>
 {% endblock %}
@@ -36,12 +46,13 @@
             <form id="addTour" class="at-logi-add at-tour-form">
                 <label>Nazwa<input class="form-control" name="name" maxlength="80" required placeholder="np. Wrocław – Berlin"></label>
                 <label>Wyjazd<input class="form-control" type="time" name="departure_time" data-nullable><span class="at-sub">puste = godzina pojazdu ({{ default_departure }})</span></label>
+                <label>Kierowca{{ _self.driverSelect(drivers, null) }}</label>
                 <label>Kolor<input class="form-control form-control-color" type="color" name="color" value="#8d1d2c"></label>
                 <label>Uwagi<input class="form-control" name="notes" maxlength="255"></label>
                 <div class="at-tour-form-days">{{ _self.dayChips(weekdays, [1, 2, 3, 4, 5], 'new') }}</div>
                 <div class="at-logi-add-actions"><button class="btn btn-primary"><i class="bi bi-plus"></i> Dodaj trasę</button></div>
             </form>
-            <p class="at-profit-note">Potem dodaj do trasy pojazdy (kolejność wypełniania) i klientów (kolejność rozładunku). W dniu wysyłki klient jedzie trasą tego dnia tygodnia, a pojazd jest dobierany z pojazdów trasy.</p>
+            <p class="at-profit-note">Potem dodaj do trasy pojazd (zwykle jeden — pierwszy na liście ; kolejne, gdy się nie zmieści) i stałych klientów (kolejność rozładunku). W dniu wysyłki klient jedzie trasą tego dnia tygodnia, a pojazd jest dobierany z pojazdów trasy — klienci trasy nie blokują Logistyki w asystencie « Transport dla zamówień ».</p>
         </div>
     </div>
 
@@ -57,6 +68,8 @@
                     <div class="at-tour-title">
                         <strong>{{ t.name }}</strong>
                         <span class="at-sub">{{ t.days }} · wyjazd {{ t.departure_time ?: (t.vehicles ? 'wg pojazdu' : default_departure) }}{{ t.active ? '' : ' · nieaktywna' }}{{ t.notes ? ' · ' ~ t.notes : '' }}</span>
+                        <span class="at-tour-usual"><i class="bi bi-truck"></i> {{ t.vehicles ? t.vehicles[0].label : 'brak pojazdu' }}
+                            · <i class="bi bi-person"></i> {% if t.driver %}{{ t.driver }}{% else %}<span class="at-tour-missing">brak kierowcy</span>{% endif %}</span>
                     </div>
                     <div class="at-tour-figures">
                         <span><strong>{{ t.vehicles|length }}</strong> {{ t.vehicles|length|plural_pl('pojazd', 'pojazdy', 'pojazdów')|split(' ')|last }}</span>
@@ -71,6 +84,7 @@
                         <label>Nazwa<input class="form-control" name="name" maxlength="80" required value="{{ t.name }}"></label>
                         <label>Wyjazd<input class="form-control" type="time" name="departure_time" value="{{ t.departure_time }}" data-nullable></label>
                         <label>Kolor<input class="form-control form-control-color" type="color" name="color" value="{{ t.color ?: '#8d1d2c' }}"></label>
+                        <label>Kierowca{{ _self.driverSelect(drivers, t.driver_id) }}</label>
                         <label>Uwagi<input class="form-control" name="notes" maxlength="255" value="{{ t.notes }}" data-nullable></label>
                         <div class="at-tour-form-days">{{ _self.dayChips(weekdays, t.day_list, 't' ~ t.id) }}</div>
                         <label class="at-tour-active"><span><input type="checkbox" class="form-check-input" name="active" {{ t.active ? 'checked' : '' }}> trasa w użyciu</span></label>
@@ -82,7 +96,7 @@
                 </details>
 
                 <section class="at-tour-part">
-                    <h5>Pojazdy <span class="at-sub">kolejność wypełniania</span></h5>
+                    <h5>Pojazdy <span class="at-sub">pierwszy = zwykle ten ; kolejne, gdy się nie zmieści</span></h5>
                     {% if t.vehicles %}
                         <ol class="at-tour-list">
                             {% for v in t.vehicles %}
@@ -113,7 +127,7 @@
                 </section>
 
                 <section class="at-tour-part">
-                    <h5>Klienci <span class="at-sub">kolejność rozładunku</span></h5>
+                    <h5>Stali klienci <span class="at-sub">kolejność rozładunku</span></h5>
                     {% if t.customers %}
                         <ol class="at-tour-list">
                             {% for c in t.customers %}

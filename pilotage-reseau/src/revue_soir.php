@@ -77,7 +77,7 @@ function rsDefaut(): array
 {
     $r = fn (string $t, bool $ok) => ['t' => $t, 'ok' => $ok];
     return [
-        'version' => 1, 'heure' => '18:00', 'checklists' => true,
+        'version' => 2, 'heure' => '18:00', 'checklists' => true,
         'raisons' => ['Fait, pas coché', 'Pas eu le temps', 'Manque de personnel', 'Oublié', 'Pas concerné aujourd’hui', 'Produit / matériel manquant'],
         'points' => [
             ['id' => 'invendus', 'actif' => true, 'type' => 'auto', 'sonde' => 'invendus', 'params' => [], 'icone' => '🗑', 'titre' => 'Invendus encodés',
@@ -98,9 +98,10 @@ function rsDefaut(): array
             ['id' => 'feedback', 'actif' => true, 'type' => 'question', 'sonde' => null, 'params' => [], 'icone' => '💬', 'titre' => 'Feedback à l’équipe',
                 'question' => 'Les retours du jour (photos, vitrine, ce qui manquait) ont-ils été donnés à l’équipe ?',
                 'reponses' => [$r('Oui, au briefing', true), $r('Oui, un par un', true), $r('Pas encore', false), $r('Pas nécessaire', true)]],
-            ['id' => 'caisse', 'actif' => true, 'type' => 'question', 'sonde' => null, 'params' => [], 'icone' => '💶', 'titre' => 'Caisse comptée et clôturée',
-                'question' => 'Fond de caisse compté, écart noté, journée fermée dans la caisse ?',
-                'reponses' => [$r('Oui, sans écart', true), $r('Oui, avec écart', false), $r('Pas encore', false)]],
+            // Le monnayeur compte l'argent (19/11/2026) : ni fond de caisse à compter ni écart à noter, la journée à fermer.
+            ['id' => 'caisse', 'actif' => true, 'type' => 'question', 'sonde' => null, 'params' => [], 'icone' => '💶', 'titre' => 'Caisse clôturée',
+                'question' => 'La journée est-elle clôturée dans la caisse ?',
+                'reponses' => [$r('Oui, clôturée', true), $r('Pas encore', false)]],
             ['id' => 'fournisseurs', 'actif' => true, 'type' => 'question', 'sonde' => null, 'params' => [], 'icone' => '🚚', 'titre' => 'Commande fournisseurs de demain',
                 'question' => 'La commande fournisseurs de demain est-elle passée et confirmée ?',
                 'reponses' => [$r('Passée', true), $r('Pas nécessaire', true), $r('Pas encore', false)]],
@@ -111,10 +112,32 @@ function rsDefaut(): array
     ];
 }
 
+/**
+ * Un réglage enregistré avant le 19/11/2026 (version 1) : son point « caisse » demandait de compter le fond de caisse et
+ * de noter l'écart. Les magasins ont un monnayeur, qui compte l'argent : il n'y a plus d'écart à noter. S'il en parle
+ * encore, le point reprend la version sans écart — à la lecture, tant que le réglage n'est pas réenregistré au cockpit
+ * (il l'est alors en version 2, tel qu'on l'a voulu).
+ */
+function rsMigrer(array $c): array
+{
+    if ((int) ($c['version'] ?? 1) >= 2) { return $c; }
+    $neuf = null;
+    foreach (rsDefaut()['points'] as $d) { if ($d['id'] === 'caisse') { $neuf = $d; } }
+    foreach ($c['points'] as $i => $p) {
+        if (!is_array($p) || ($p['id'] ?? '') !== 'caisse' || ($p['type'] ?? '') === 'auto') { continue; }
+        $textes = [(string) ($p['titre'] ?? ''), (string) ($p['question'] ?? '')];
+        foreach ((array) ($p['reponses'] ?? []) as $r) { $textes[] = (string) (is_array($r) ? ($r['t'] ?? '') : $r); }
+        if (!preg_match('/[ée]cart/iu', implode(' ', $textes))) { continue; }
+        $c['points'][$i] = ['titre' => $neuf['titre'], 'question' => $neuf['question'], 'reponses' => $neuf['reponses']] + $p;
+    }
+    $c['version'] = 2;
+    return $c;
+}
+
 function rsConfig(): array
 {
     $c = setting('revueSoir', null);
-    $c = is_array($c) && !empty($c['points']) ? $c + ['majLe' => null, 'majPar' => null] : rsDefaut() + ['majLe' => null, 'majPar' => null];
+    $c = is_array($c) && !empty($c['points']) ? rsMigrer($c) + ['majLe' => null, 'majPar' => null] : rsDefaut() + ['majLe' => null, 'majPar' => null];
     $c['points'] = array_map('rsNormalise', $c['points']);
     return $c;
 }
@@ -173,7 +196,7 @@ function rsEnregistrer(array $b): array
     $raisons = array_values(array_unique(array_filter(array_map(fn ($r) => $txt($r, 40), (array) ($b['raisons'] ?? [])))));
     $heure = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) ($b['heure'] ?? '')) ? (string) $b['heure'] : '18:00';
     $qui = function_exists('currentUserName') ? (string) currentUserName() : 'cockpit';
-    $c = ['version' => 1, 'heure' => $heure, 'checklists' => !empty($b['checklists']), 'raisons' => array_slice($raisons, 0, 10),
+    $c = ['version' => 2, 'heure' => $heure, 'checklists' => !empty($b['checklists']), 'raisons' => array_slice($raisons, 0, 10),
         'points' => $points, 'majLe' => date('Y-m-d H:i'), 'majPar' => $qui];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['revueSoir', json_encode($c, JSON_UNESCAPED_UNICODE)]);
@@ -351,7 +374,12 @@ function rsTable(): void
         . ' PRIMARY KEY (id_shop, jour)) DEFAULT CHARSET=utf8mb4');
 }
 
-/** Les checklists pas finies du jour, à partir des tâches obligatoires (une tâche citée par deux checklists compte dans les deux). */
+/**
+ * Les checklists pas finies du jour, à partir des tâches obligatoires (une tâche citée par deux checklists compte dans les
+ * deux). Chacune dit ses tâches pas faites (`pasFaites`, 19/11/2026) : le nom, l'heure prévue et ce qui manque — `pasFaite`
+ * (pas rendue) ou `photo` (cochée sans la photo demandée) —, rangées à l'heure. `manquent` (les seuls noms) reste pour un
+ * écran ouvert avant la mise en ligne.
+ */
 function rsChecklistsDuJour(int $shop, string $date): array
 {
     [$d, , $err] = rsLireCockpit('/pwa/tasks?shop=' . $shop . '&date=' . $date);
@@ -381,8 +409,13 @@ function rsChecklistsDuJour(int $shop, string $date): array
         $titre = $code !== '' ? trim(preg_replace('/^\s*' . preg_quote($code, '/') . '\s*[·—–:-]\s*/u', '', $n)) : $n;
         $hs = array_filter(array_map(fn ($t) => $t['heure'] ?? null, $L));
         sort($hs);
+        $pas = array_values(array_filter($L, fn ($t) => !$faite($t)));
+        usort($pas, fn ($a, $b) => [($a['heure'] ?? null) === null, (string) ($a['heure'] ?? ''), (string) $a['tache']] <=> [($b['heure'] ?? null) === null, (string) ($b['heure'] ?? ''), (string) $b['tache']]);
+        $pas = array_slice($pas, 0, 40);
         $liste[] = ['nom' => $n, 'code' => $code, 'titre' => $titre, 'heure' => $heures[$n] ?? ($hs[0] ?? null), 'faites' => $f, 'total' => count($L),
-            'manquent' => array_slice(array_values(array_map(fn ($t) => (string) $t['tache'], array_filter($L, fn ($t) => !$faite($t)))), 0, 40)];
+            'manquent' => array_map(fn ($t) => (string) $t['tache'], $pas),
+            'pasFaites' => array_map(fn ($t) => ['tache' => (string) $t['tache'], 'heure' => $t['heure'] ?? null,
+                'etat' => ($t['statut'] ?? '') === 'sansPhoto' ? 'photo' : 'pasFaite'], $pas)];
     }
     usort($liste, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);
     usort($toutes, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);

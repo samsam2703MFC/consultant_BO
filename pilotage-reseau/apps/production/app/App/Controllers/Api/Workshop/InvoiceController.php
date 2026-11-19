@@ -14,7 +14,7 @@ use App\Services\Workshop\Supply\PriceHistoryService;
  */
 final class InvoiceController
 {
-    public function __construct(private InvoiceService $invoices, private PriceHistoryService $history)
+    public function __construct(private InvoiceService $invoices, private PriceHistoryService $history, private \App\Services\Workshop\Supply\InvoicePriceImpactService $impact)
     {
     }
 
@@ -38,6 +38,19 @@ final class InvoiceController
     public function mappings(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mappings($request->context)); }
     public function deleteMapping(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->deleteMapping($request->id(), $request->context)); }
     // Kreator [217] : wszystkie otwarte faktury w jednej tabeli, linie sprawdzane jedna po drugiej, zatwierdzenie gotowych.
+    /** [349] Efekt nowej ceny surowca (asystent « Ceny z faktur zakupu ») : ?price= (zł / jednostka bazowa), old=, invoice=, supplier=. */
+    public function priceImpact(ApiRequest $request): ApiResult
+    {
+        $num = fn(string $k) => ($v = $request->query($k)) !== null && is_numeric(str_replace(',', '.', $v)) ? (float) str_replace(',', '.', $v) : null;
+        $price = $num('price');
+        if ($price === null || $price < 0) throw \App\Core\Api\Workshop\ApiException::validation([['field' => 'price', 'code' => 'INVALID_NUMBER', 'params' => []]]);
+        $supplier = $num('supplier');
+        return new ApiResult($this->impact->impact($request->id(), $price, $num('old'), (int) ($num('invoice') ?? 0), $supplier ? (int) $supplier : null));
+    }
+
+    /** [349] Stan asystenta : czerwony (do sprawdzenia / zatwierdzenia) albo zielony. */
+    public function assistantStatus(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->assistantStatus($request->context->translator->lang())); }
+
     public function wizard(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->wizard($request->context)); }
     public function checkLine(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->checkLine($request->id(), $request->id('lineId'), $request->body(), $request->context)); }
     public function checkSafe(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->checkSafe($request->context)); }

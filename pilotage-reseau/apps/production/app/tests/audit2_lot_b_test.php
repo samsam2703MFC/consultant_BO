@@ -35,8 +35,8 @@ function expectLotB(bool $condition, string $message): void
 // --- Sans base : onglets et règle des avis de livraison
 $tab = fn(string $p) => ($g = PageTabs::forPath($p)) ? $g['key'] . ':' . (array_values(array_filter($g['tabs'], fn($t) => $t['active']))[0]['url'] ?? '') : null;
 expectLotB($tab('/logistics') === 'shipping_day:/logistics' && $tab('/logistics/week') === 'trucks:/logistics/week' && $tab('/logistics/plan') === 'trucks:/logistics/plan'
-    && $tab('/logistics/tours') === null
-    && $tab('/shipping/wizard') === 'shipping_day:/shipping/wizard' && $tab('/logistics/deliveries') === 'shipping_day:/logistics/deliveries', 'Dzień wysyłki: 5 tabs, week / tours stay apart');
+    && $tab('/logistics/tours') === 'tours:/logistics/tours' && $tab('/logistics/vehicles') === 'tours:/logistics/vehicles'
+    && $tab('/shipping/wizard') === 'shipping_day:/shipping/wizard' && $tab('/logistics/deliveries') === 'shipping_day:/logistics/deliveries', 'Dzień wysyłki: 5 tabs, week apart ; [306] Trasy + Pojazdy i kierowcy : own tabs');
 expectLotB($tab('/workshop/stock') === 'warehouse:/workshop/stock' && $tab('/workshop/stock/mts') === 'warehouse:/workshop/stock/mts'
     && $tab('/workshop/stock-movements') === 'warehouse:/workshop/stock-movements' && $tab('/workshop/products') === 'products:/workshop/products', 'Magazyn tabs');
 expectLotB($tab('/audits/product-weights') === 'packaging:/audits/product-weights' && $tab('/ppwr/reports') === 'packaging:/ppwr/reports'

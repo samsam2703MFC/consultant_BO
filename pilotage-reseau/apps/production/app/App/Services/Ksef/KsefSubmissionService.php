@@ -57,6 +57,14 @@ final class KsefSubmissionService
     public function refreshPendingStatuses(): array
     {
         $result = ['checked'=>0, 'accepted'=>0, 'rejected'=>0, 'pending'=>0, 'errors'=>0, 'updates'=>[]];
+        // [322] Wcześniej oznaczone jako odrzucone z powodu duplikatu (440) : faktura jest w KSeF — przyjęta z jej numerem.
+        foreach ($this->submissions->rejectedWithCode('440') as $row) {
+            $ksefNumber = self::duplicateKsefNumber('440', (string)$row['error_message']);
+            if ($ksefNumber === null) continue;
+            $this->submissions->setStatus((int)$row['id'], 'accepted', self::duplicateDetails($ksefNumber));
+            $result['updates'][] = ['shipmentId'=>(int)$row['id_shipment_log'], 'submission'=>['status'=>'accepted', 'ksef_number'=>$ksefNumber, 'upo_available'=>!empty($row['upo_xml'])]];
+            $result['accepted']++;
+        }
         $tokens = [];
         foreach ($this->submissions->pendingForStatusRefresh() as $row) {
             $result['checked']++;
@@ -80,6 +88,14 @@ final class KsefSubmissionService
                 } else {
                     $message = (string)($status['description'] ?? 'KSeF odrzucił fakturę.');
                     if (!empty($status['details']) && is_array($status['details'])) $message .= ' ' . implode(' ', $status['details']);
+                    // [322] 440 « Duplikat faktury » z numerem KSeF : faktura jest już w KSeF (wysłana wcześniej, np. przez stary ERP)
+                    // — to nie odrzucenie : zapisujemy numer KSeF i status « przyjęta ».
+                    if (($ksefNumber = self::duplicateKsefNumber((string)$code, $message)) !== null) {
+                        $this->submissions->setStatus((int)$row['id'], 'accepted', self::duplicateDetails($ksefNumber));
+                        $result['updates'][] = ['shipmentId'=>(int)$row['id_shipment_log'], 'submission'=>['status'=>'accepted', 'ksef_number'=>$ksefNumber, 'upo_available'=>false]];
+                        $result['accepted']++;
+                        continue;
+                    }
                     $exception = new KsefApiException($message, 200, (string)$code, '/sessions/.../invoices/...', ['status'=>$status]);
                     $this->submissions->setStatus((int)$row['id'], 'rejected', ['error_code'=>(string)$code, 'error_message'=>$message, 'resolved_at'=>date('Y-m-d H:i:s')]);
                     $this->events->error((int)$row['id'], (int)$row['id_shipment_log'], 'końcowy status KSeF', $exception);
@@ -92,5 +108,19 @@ final class KsefSubmissionService
             }
         }
         return $result;
+    }
+
+    /** [322] Numer KSeF z komunikatu « Duplikat faktury … Faktura o numerze KSeF: … została już prawidłowo przesłana » (kod 440). */
+    public static function duplicateKsefNumber(string $code, string $message): ?string
+    {
+        if ($code !== '440') return null;
+        return preg_match('/numerze KSeF:\s*([0-9]{10}-[0-9]{8}-[0-9A-F]{6,}-[0-9A-F]{2})/i', $message, $m) ? strtoupper($m[1]) : null;
+    }
+
+    /** @return array<string,mixed> */
+    private static function duplicateDetails(string $ksefNumber): array
+    {
+        return ['ksef_number'=>$ksefNumber, 'error_code'=>null, 'resolved_at'=>date('Y-m-d H:i:s'),
+            'error_message'=>'Faktura była już w KSeF (numer ' . $ksefNumber . ', wysłana wcześniej) — KSeF odpowiedział « duplikat », bez ponownej wysyłki.'];
     }
 }

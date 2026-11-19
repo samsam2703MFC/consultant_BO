@@ -180,7 +180,7 @@
             need_absence: '<span class="at-pill at-pill-danger">Powód ?</span>', ok: '<span class="at-pill at-pill-ok">OK</span>'}[p.status];
         const comp = p.comp_proposed.length ? `<span class="tm-sub"><i class="bi bi-pen"></i> dzień wolny ${dm(p.comp_proposed[0].day)} do podpisu</span>` : '';
         return `<tr class="${p.status !== 'ok' ? 'tm-need' : ''}" data-row="${p.employee_id}">
-            <td><b>${esc(p.name)}</b>${p.took ? ` ${basket(p.employee_id, D.day, p.took)}` : ''}${comp}</td>
+            <td><b>${esc(p.name)}</b>${p.clock_sms ? `<span class="tm-sms" title="SMS : brak wejścia o ${esc(p.clock_sms.at)}${p.clock_sms.status === 'logged' ? ' (zapisany, bramka nie wysyła)' : ''}" aria-label="SMS : brak wejścia o ${esc(p.clock_sms.at)}">✉ ${esc(p.clock_sms.at)}</span>` : ''}${p.took ? ` ${basket(p.employee_id, D.day, p.took)}` : ''}${comp}</td>
             <td>${p.group ? `<span class="tm-group" style="--g:${esc(p.group_color || '#B8B2A8')}">${esc(p.group)}</span>` : '—'}</td>
             <td class="text-center">${inCell}</td><td class="text-center">${outCell}</td>
             <td class="text-end tm-num">${p.open ? '—' : (p.clocks.length ? hm(p.worked) : '—')}</td>

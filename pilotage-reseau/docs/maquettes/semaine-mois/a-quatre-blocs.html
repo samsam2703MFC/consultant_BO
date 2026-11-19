@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A · Quatre blocs — Dashboard magasin › Semaine et Mois</title>
+<!-- Direction A (16/11/2026) : chaque chiffre une seule fois. Le chiffre (la jauge et quatre tuiles), les jours, le résultat, les heures ; le reste (réseau, tâches, canaux, invendus, promotions, tendance, détail des heures) replié sous la page. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="sm.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="donnees.js"></script>
+<script src="blocs.js"></script>
+</head><body><script>
+const corps = `${frise()}
+  <div class="sm-heros">${jauge()}<div>${quatre()}</div></div>
+  ${jours()}
+  <div class="sm-g2" style="margin-top:12px">${resultat()}<div class="sm-pile">${heures()}${topProduits()}</div></div>
+  ${plus(PLUS())}`;
+coque({ actif: P, titre: X.titre, kicker: 'Atelier by Harmonie - Sombreffe · ' + X.lib, corps, pied: piedSM('A · Quatre blocs') });
+</script></body></html>

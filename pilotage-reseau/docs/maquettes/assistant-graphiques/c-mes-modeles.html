@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C · Mes modèles — L'assistant fait des graphiques</title>
+<!-- Écran C (17/11/2026) : la bibliothèque des modèles — les miens et ceux du réseau ; chaque modèle se rouvre avec les chiffres du jour, se télécharge ou se programme. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const H = [6, 9, 14, 12, 26, 23, 24, 12, 9, 8, 8, 7, 2], HL = H.map((v, i) => (6 + i) + 'h');
+const PAN = [11.6, 11.2, 11.5, 11.9, 11.8, 12.1, 11.4, 12.0, 12.95, 12.95, 11.49], PANL = ['j', 'f', 'm', 'a', 'm', 'j', 'j', 'a', 's', 'o', 'n'];
+const T = (vig, t, s, tags, prog) => `<div class="gr-mt"><div class="vig">${vig}</div><div class="t">${t}</div><div class="s">${s}</div><div class="tags">${tags.map(x => `<span class="${x.startsWith('chaque') ? 'prog' : ''}">${x}</span>`).join('')}</div>
+  <div class="a"><span class="p">Ouvrir</span><span>⤓ Télécharger</span><span>${prog ? 'Programmé' : 'Programmer'}</span></div></div>`;
+const mes = [
+  T(graphe(300, 104, true), 'Mes clients par semaine face au N-1', 'les 12 dernières semaines · barres + N-1', ['chaque lundi 8:00 · PDF'], true),
+  T(graphe(300, 104, true, H, null, HL), 'Clients par heure, le samedi', 'moyenne des 4 derniers samedis', ['épinglé en Semaine']),
+  T(graphe(300, 104, true, PAN, null, PANL), 'Le panier moyen mois par mois', 'depuis janvier · hors clients pro', []),
+];
+const reseau = [
+  T(graphe(300, 104, true, [57.5, 55.7, 47.9, 45.2, 56.8, 50.1].reverse(), [54.2, 52.6, 45.5, 46.0, 53.1, 52.8].reverse(), null), 'Le CA des 6 derniers mois face au N-1', 'proposé par le réseau · votre magasin', ['du réseau']),
+  T(graphe(300, 104, true, [326, 274, 259, 230, 198, 176, 160, 150, 141, 132], null, null), 'Les 10 produits qui rapportent le plus', 'marge brute hors TVA · le mois en cours', ['du réseau']),
+  T(graphe(300, 104, true, [2.1, 1.6, 1.0, 2.2, 1.4, 1.8, 2.6], null, null), 'Les invendus jour par jour', 'pièces jetées et leur coût · la semaine', ['du réseau']),
+];
+const corps = `<div class="gr-mods"><h4>Mes modèles <small>3 · ils se refont avec les ventes du jour à chaque ouverture</small></h4><div class="gr-grille">${mes.join('')}</div>
+  <h4>Les modèles du réseau <small>proposés par le siège · à ouvrir ou à copier dans mes modèles</small></h4><div class="gr-grille">${reseau.join('')}</div></div>`;
+document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('modeles')}${corps}</div>`);
+</script></body></html>

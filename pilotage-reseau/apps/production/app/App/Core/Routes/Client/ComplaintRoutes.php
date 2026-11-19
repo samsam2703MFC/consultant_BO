@@ -74,6 +74,12 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxGetShippingDocument'
     ]);
 
+    // [363] Détail d'une réclamation (fenêtre du graphique) : réclamation d'origine, photos, ce qui a été envoyé.
+    $r->addRoute('GET', '/ajax/franchise-complaints/{id:\d+}/detail', [
+        'controller' => \App\Controllers\Web\Client\Complaint\ComplaintController::class,
+        'method'     => 'ajaxDetail'
+    ]);
+
     $r->addRoute('GET', '/ajax/franchise-complaints/attachment/{id}/presigned-url', [
         'controller' => \App\Controllers\Web\Client\Complaint\ComplaintController::class,
         'method'     => 'ajaxGetPresignedUrl'

@@ -31,7 +31,7 @@ final class TestSms implements App\Services\Logistics\Sms\SmsTransport
     public array $sent = [];
     public function name(): string { return 'test'; }
     public function delivers(): bool { return false; }
-    public function send(string $to, string $text): array { $this->sent[] = [$to, $text]; return ['status' => 'logged', 'provider_id' => null, 'error' => null]; }
+    public function send(string $to, string $text, array $context = []): array { $this->sent[] = [$to, $text]; return ['status' => 'logged', 'provider_id' => null, 'error' => null]; }
 }
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
@@ -61,7 +61,7 @@ try {
     $pdo->exec("INSERT INTO n_position (id, code, name_pl, name_fr, kind, sort_order, active) VALUES (3, 'KIEROWNIK_PRODUKCJI', 'Kierownik produkcji', 'Chef', 'erp', 1, 1),
         (5, 'ADMINISTRACJA', 'Administracja i fakturowanie', 'Admin', 'erp', 2, 1), (4, 'LOGISTYKA', 'Logistyka', 'Logistique', 'erp', 3, 1)");
     $pdo->exec("INSERT INTO n_user_position (id_user, id_position) VALUES (2, 3), (3, 5), (4, 4)");
-    foreach (['170_hr.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '172_hr_quick_note.sql', '179_hr_clothing_size.sql'] as $f) {
+    foreach (['170_hr.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '172_hr_quick_note.sql', '179_hr_clothing_size.sql', '207_hr_clock_reminder.sql'] as $f) {
         foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
     }
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();

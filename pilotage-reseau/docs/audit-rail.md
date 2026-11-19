@@ -14,10 +14,13 @@ Capture avant / après : `docs/design-system/captures/rail-avant-apres-2026-11-1
 
 | | Avant | Après |
 |---|---|---|
-| Entrées du rail | 61 | 34 |
+| Entrées du rail | 63 | 34 |
 | Sections | 11 | 8 |
 | Sous-menus | 5 (Suivi des franchisés, Budget, Suivi journalier, MétaDonnée, API du module) | 0 |
 | Écrans retirés du code | — | 0 : toutes les adresses ouvrent toujours un écran |
+
+« Avant » est le rail en ligne le 19/11/2026 à 15:02 (branche de déploiement), Fil du franchisé, Entraînement de
+l'IA et Catalogue des manuels compris, Dashboard magasin ↗ déjà retiré.
 
 Le rail avait poussé module par module. Une même question avait plusieurs entrées (Budget en trois, MétaDonnée
 en quatre, API du module en six), un même écran était à deux endroits (Réputation : entrée de Suivi journalier et
@@ -38,7 +41,7 @@ onglet d'Analyse magasin), et des écrans qui calculent la même chose vivaient 
 | 9 | API du module ×6 | Un seul appel `/ventes/primes-api` ; les sous-entrées ne posaient qu'un filtre que les tuiles de l'écran font déjà | Un onglet de **Journal & diagnostic** |
 | 10 | Diagnostic API, API du module, Sources et API | Trois écrans de santé des API (tout le cockpit, module primes, visites) dans trois sections | Réunis en onglets de **Journal & diagnostic** |
 | 11 | Primes : page admin, page franchisé | Un seul écran, deux entrées qui ne changeaient que `prSection` | Une entrée **Primes** ; la page d'un magasin s'ouvre de son onglet (elle n'affiche rien de la marque, pas même un onglet) |
-| 12 | Module Formation ↗, Manuel du réseau ↗ | Deux liens vers la même application | Une entrée **Formation ↗** |
+| 12 | Module Formation ↗, Manuel du réseau ↗ | Deux liens vers la même application | Une entrée **Formation ↗** (le Catalogue des manuels ↗, une page à part, garde la sienne) |
 | 13 | Visite sur tablette | Iframe de `controle/` ; chaque visite de l'écran Visites donne déjà son lien et son QR code | Retirée du rail, adresse gardée |
 
 Corrections au passage :
@@ -48,6 +51,8 @@ Corrections au passage :
   désormais **Notes & signalements**.
 - Les tuiles de la fiche franchisé « Contrôle des tâches » menaient à cet onglet Suivi : elles mènent au contrôle du
   jour ; « Tâches faites · 30 j » mène à **Faites / pas faites**.
+- Fil du franchisé devient un onglet de **Visites**, Entraînement de l'IA un onglet de **Tâches & contrôles** (il
+  l'était déjà du groupe Tâches).
 - Benchmark (prix des concurrents) passe de Pilotage à **Produits** ; Cadre des tâches devient l'onglet
   **Paramétrage des checklists** de Tâches & contrôles ; Reporting automatisé passe en **Administration** ;
   Objectifs produits (tables de campagne) passe en **Marque & marketing**.
@@ -57,16 +62,18 @@ Corrections au passage :
 
 | Section | Entrées (onglets) |
 |---|---|
-| Pilotage | Résultat · Demandes des franchisés · Tâches & contrôles (Le jour, Contrôles photo du mois, Faites / pas faites, Notes & signalements, Paramétrage des checklists) |
-| Franchisés | Fiche & scoring · Visites (Visites, Client mystère, Page du franchisé, Qui fait quoi) · Budget (Suivi, Encodage, Paramètres) · Équipe & ventes (Équipe & ventes, Panier · croisements) · Audit fournisseurs |
+| Pilotage | Résultat · Demandes des franchisés · Tâches & contrôles (Le jour, Contrôles photo du mois, Faites / pas faites, Notes & signalements, Entraînement de l'IA, Paramétrage des checklists) |
+| Franchisés | Fiche & scoring · Visites (Visites, Fil du franchisé, Client mystère, Page du franchisé, Qui fait quoi) · Budget (Suivi, Encodage, Paramètres) · Équipe & ventes (Équipe & ventes, Panier · croisements) · Audit fournisseurs |
 | Vérification | Flux & poubelle (Audit des flux, Fuites par magasin, Évolution, Invendus) · Matières & inventaires (Matières ↔ recettes, Entre deux inventaires, Mouvements d'un produit) · Recettes à corriger · Chiffre d'affaires |
 | Produits | Catalogue · Comptoir (Comptoir, Assortiment obligatoire, Structure de gamme) · Paramétrage produits · Benchmark · Promotions (Tableau d'analyse, Édition) |
 | Marque & marketing | Fonds & Royalties · Présence Google (Avis, Visibilité) · Objectifs produits · MétaDonnée · Fidélité |
 | Outils magasin | Tablette vendeuses · Assistant · coachs · Primes (Marque & sponsors, Page d'un magasin) · Pointages |
 | Administration | Paramètres (Général, Scoring produits, Types de campagne, Table KPI, Brand Guard) · Reporting automatisé · Journal & diagnostic (Journal, Usage de la console, Diagnostic API, API du module primes, Sources des visites) |
-| Applications | Dashboard magasin ↗ · Caisse ↗ · Prospection ↗ · Application employé ↗ · Formation ↗ |
+| Applications | Caisse ↗ · Prospection ↗ · Application employé ↗ · Formation ↗ · Catalogue des manuels ↗ |
 
-Une entrée de groupe porte la somme des compteurs de ses onglets, et chaque onglet garde le sien.
+Une entrée de groupe porte la somme des compteurs de ses onglets (Visites : les rapports à adapter, les corrections
+et les fils ouverts), et chaque onglet garde le sien. Dashboard magasin ↗ reste hors du rail (retiré le 19/11/2026,
+demande de Sam) : Résultat l'ouvre magasin par magasin.
 
 **Ce qui ne change pas** : aucune adresse (`#/…`) ne change, aucune route ni table du serveur, aucun fichier du
 dashboard magasin (`public/dashboard/`), aucune page autonome. La recherche du rail trouve toujours chaque écran,

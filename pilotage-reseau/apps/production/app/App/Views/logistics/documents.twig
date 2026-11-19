@@ -50,7 +50,11 @@
             {% set few = (total_copies % 10) in [2, 3, 4] and (total_copies % 100) not in [12, 13, 14] %}
             <span>Plik dla kierowców : <b>{{ total_copies }} {{ total_copies == 1 ? 'dokument' : (few ? 'dokumenty' : 'dokumentów') }}</b> (egzemplarze) ·
                 {{ n }} {{ n == 1 ? 'wysyłka' : ((n % 10) in [2, 3, 4] and (n % 100) not in [12, 13, 14] ? 'wysyłki' : 'wysyłek') }}</span>
-            <button type="button" class="btn btn-light btn-sm" id="dlPrintAll"><i class="bi bi-printer"></i> Drukuj wszystko dla kierowców</button>
+            <span class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-light btn-sm" href="{{ root }}/logistics/documents/pallet-labels.pdf?date={{ date }}" target="_blank" rel="noopener"
+                   title="A5, jedna paleta na stronę : QR skanowany przez tablet kierowcy przy rozładunku"><i class="bi bi-qr-code"></i> Etykiety palet (QR)</a>
+                <button type="button" class="btn btn-light btn-sm" id="dlPrintAll"><i class="bi bi-printer"></i> Drukuj wszystko dla kierowców</button>
+            </span>
         </div>
         {% for s in shipments %}
             <div class="dl-day">
@@ -72,6 +76,7 @@
                 </div>
                 <div>
                     <button type="button" class="btn btn-sm btn-outline-dark" data-print="{{ s.id }}"><i class="bi bi-printer"></i> Drukuj</button>
+                    <a class="btn btn-sm btn-link p-0 small" href="{{ root }}/logistics/documents/pallet-labels.pdf?date={{ date }}&amp;customer={{ s.customer }}" target="_blank" rel="noopener"><i class="bi bi-qr-code"></i> etykiety palet</a>
                     <button type="button" class="btn btn-sm btn-link p-0 small" data-print-all="{{ s.id }}" title="WZ ×3, CMR ×3, WDT, PPWR, różnice — jak dawniej">komplet</button>
                 </div>
             </div>

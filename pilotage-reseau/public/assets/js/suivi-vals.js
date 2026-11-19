@@ -14,7 +14,7 @@ const DROITS = { preparer: 'Préparer', visiter: 'Visiter', adapter: 'Adapter', 
 // Ce que voit le franchisé sur sa page (réglage `voit`) ; « chaque jour » et le journal viennent de l'ancienne page « Mon suivi ».
 const VOIT = [['points', 'ses points à travailler et leurs photos'], ['journalier', 'ses chiffres de chaque jour : tâches, notes, infractions, invendus, réclamations, objectifs, avis, comptoir'],
   ['rapports', 'ses rapports de visite'], ['prochaine', 'sa prochaine visite annoncée'], ['msp', 'ses rapports client mystère'], ['scoring', 'son scoring du trimestre'], ['journal', 'le journal des 60 jours']];
-const BLOCS_LIB = { sante: 'Fiche franchisé · santé', points: 'Plans d’action', taches: 'Tâches et contrôles photo', scoring: 'Scoring du trimestre', msp: 'Client mystère · comptoir', meteo: 'Fin de visite · météo' };
+const BLOCS_LIB = { sante: 'Fiche franchisé · santé', points: 'Plans d’action', taches: 'Tâches et contrôles photo', scoring: 'Scoring du trimestre', msp: 'Client mystère · comptoir', meteo: 'Fin de visite · météo', fil: 'Fil du franchisé · épinglé' };
 const auj = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const fmtD = d => d ? String(d).slice(8, 10) + '/' + String(d).slice(5, 7) : '';
 const fmtDJ = d => { if (!d) { return ''; } const t = new Date(String(d).slice(0, 10) + 'T12:00:00'); return JC[t.getDay()] + ' ' + fmtD(d); };
@@ -380,8 +380,9 @@ function prepVals(app, sv, id){
     titre: d.magasin.court + ' · ' + (t ? t.nom : '') + ' · ' + fmtDJ(v.prevu_le) + ' · ' + v.debut_h + '–' + finH(v.debut_h, v.duree_min) + ' · ' + (v.consultantNom || 'consultant à choisir'),
     roles: 'Prépare : ' + (d.roles.prepareNom || '—') + ' · dossier attendu le ' + fmtDJ(d.prepDu) + ' · adapte le rapport : ' + (d.roles.adapteNom || '—'),
     envoyee: d.tablette.envoyeeLe ? 'Envoyé sur la tablette le ' + fmtDH(d.tablette.envoyeeLe) + '. Un nouvel envoi remplace le dossier.' : null,
-    dossier: d.dossier.map(b => ({ titre: b.titre, source: BLOCS_LIB[b.cle] || '', lignes: b.lignes, motif: b.motif, alerte: b.alerte, interne: b.interne, inclus: !!F.blocs[b.cle],
-      basculer: () => maj({ blocs: Object.assign({}, F.blocs, { [b.cle]: !F.blocs[b.cle] }) }) })),
+    // Le bloc du fil du franchisé (b.cockpit) reste au cockpit : pas de case, il ne part jamais sur la tablette.
+    dossier: d.dossier.map(b => ({ titre: b.titre, source: BLOCS_LIB[b.cle] || '', lignes: b.lignes, motif: b.motif, alerte: b.alerte, interne: b.interne, cockpit: !!b.cockpit, inclus: !b.cockpit && !!F.blocs[b.cle],
+      basculer: b.cockpit ? null : () => maj({ blocs: Object.assign({}, F.blocs, { [b.cle]: !F.blocs[b.cle] }) }) })),
     types: d.types.filter(x => x.actif !== false).map(x => ({ v: x.code, nom: x.nom + (x.annoncee ? '' : ' · inopiné'), on: x.code === F.type })),
     setType: e => { const x = d.types.find(y => y.code === e.target.value); maj({ type: e.target.value, annoncee: x ? x.annoncee : F.annoncee }); },
     typeSous: t ? t.duree + ' min · ' + (t.dynamique === 'plans' ? 'checklist : les plans ouverts' : t.dynamique === 'ko' ? 'checklist : les non-conformes de la dernière visite' : pl(t.points, 'point')) : '',
@@ -454,6 +455,7 @@ function rapVals(app, sv, id){
     budget: budgetDe(v.budgetCa),
     score: scoreVals(d.score),
     evaluation: evalVals(d.evaluation),
+    outils: outilsVals(d.outils),
     personnel: equipeVals(v.personnel),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
@@ -492,6 +494,17 @@ function equipeVals(pe){
  * L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur (le même que dans le PDF), la moyenne
  * face à la précédente, chaque axe avec sa note, l'écart et le commentaire.
  */
+/** Les outils de gestion (17/11/2026) : le score, l'écart à l'audit précédent, chaque outil jugé, le rappel. */
+function outilsVals(o){
+  if (!o || !o.lignes) { return null; }
+  const P = o.precedent; const d = o.score != null && P && P.score != null ? o.score - P.score : null;
+  const CLS = { ok: 'ok', part: 'att', ko: 'ko', na: 'mu' };
+  return { score: o.score == null ? '—' : o.score, ton: o.score == null ? 'mu' : o.score >= 80 ? 'ok' : o.score >= 50 ? 'att' : 'ko',
+    prec: P ? 'audit du ' + fmtD(P.le) + ' : ' + (P.score == null ? '—' : P.score + ' / 100') : 'premier audit du magasin',
+    ecart: d == null ? null : { txt: (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d), cls: d > 0 ? 'ok' : d < 0 ? 'ko' : 'mu' },
+    rappelLu: o.rappelLu ? 'rappel lu avec le franchisé à ' + String(o.rappelLu).slice(11, 16) : 'rappel pas coché à la tablette',
+    rappel: o.rappel || '', lignes: o.lignes.map(l => ({ nom: l.nom, verdict: l.verdict, cls: CLS[l.v] || 'mu', com: l.com || '', lu: l.lu || '' })) };
+}
 function evalVals(ev){
   if (!ev || !ev.axes) { return null; }
   const nf = x => x == null ? '—' : Number(x).toFixed(1).replace('.', ',');

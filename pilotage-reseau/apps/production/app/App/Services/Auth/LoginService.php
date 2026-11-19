@@ -48,6 +48,12 @@ class LoginService
         return false;
     }
 
+    /** [300] Compte ouvert par le QR de connexion (validé sur le téléphone de la personne liée). */
+    public function loginUser(array $row): void
+    {
+        $this->userRepository->authenticate($row);
+    }
+
     public function logout()
     {
         return $this->userRepository->logout();

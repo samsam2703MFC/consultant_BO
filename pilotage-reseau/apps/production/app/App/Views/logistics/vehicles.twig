@@ -140,6 +140,45 @@
                 Tras / tydz. : standard 1 trasa na kierowcę na tydzień ; 2–4 trasy mnożą miejsca tygodnia w planie logistyki (Kalendarz tras : następna trasa po odpoczynku dobowym, jazda ≤ 56 h w tygodniu).</p>
         </div>
     </div>
+
+    {# [309] Kierowcy (makieta 57 D) : etat = umowa o pracę w karcie HR ; zlecenie = umowa zlecenia na przewóz z Logistyki. #}
+    <div class="card" id="drivers">
+        <div class="card-header d-flex justify-content-between align-items-center"><h4 class="card-title mb-0">Kierowcy</h4>
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/logistics/transport-wizard"><i class="bi bi-person-plus"></i> Dodaj kierowcę (asystent transportu)</a></div>
+        <div class="card-body pt-0">
+            {% if driver_rows %}
+            <div class="table-responsive">
+                <table class="table mb-0 at-drv-table">
+                    <thead><tr><th>Kierowca</th><th>Współpraca</th><th>Pojazd</th><th>Trasa</th><th>Wynagrodzenie za przewóz</th><th>Umowa</th></tr></thead>
+                    <tbody>
+                    {% for d in driver_rows %}
+                        <tr data-driver="{{ d.id }}">
+                            <td><strong>{{ d.name }}</strong>{% if d.licence %}<div class="at-sub">prawo jazdy {{ d.licence }}</div>{% endif %}</td>
+                            <td>{% if d.cooperation == 'zlecenie' %}<span class="at-pill at-pill-warn">Zlecenie</span>
+                                {% elseif d.cooperation == 'etat' %}<span class="at-pill at-pill-info">Etat · umowa o pracę</span>
+                                {% else %}<span class="at-pill">karta HR do uzupełnienia</span>{% endif %}
+                                {% if d.cooperation == 'zlecenie' and (d.contract_from or d.contract_to) %}<div class="at-sub">{{ d.contract_from ? d.contract_from|date('d.m.Y') : '?' }} – {{ d.contract_to ? d.contract_to|date('d.m.Y') : 'bez końca' }}</div>{% endif %}</td>
+                            <td>{{ d.vehicles ? d.vehicles|join(', ') : '—' }}</td>
+                            <td>{{ d.tours ? d.tours|join(', ') : '—' }}</td>
+                            <td>{{ d.pay ?: '—' }}</td>
+                            <td>{% if d.cooperation == 'zlecenie' %}
+                                    {% if d.contract_doc %}<div class="at-sub at-drv-ok"><i class="bi bi-check2"></i> w karcie HR ({{ d.contract_doc|date('d.m.Y') }})</div>{% endif %}
+                                    {% if d.contract_ending %}<div class="at-sub at-drv-bad"><i class="bi bi-exclamation-triangle"></i> umowa kończy się {{ d.contract_to|date('d.m.Y') }}</div>{% endif %}
+                                    <div class="d-flex gap-1 flex-wrap mt-1"><a class="btn btn-sm btn-outline-primary" href="{{ root }}/logistics/drivers/{{ d.id }}/contract-docx">DOCX</a>
+                                    <button type="button" class="btn btn-sm btn-primary" data-contract-pdf="{{ d.id }}">Umowa zlecenia (PDF do karty HR)</button></div>
+                                {% elseif d.cooperation == 'etat' %}<span class="at-sub">umowa o pracę w karcie HR</span>
+                                {% else %}<span class="at-sub">—</span>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="at-empty">Brak kierowców — dodaj kierowcę w asystencie « Transport dla zamówień ».</p>
+            {% endif %}
+            <p class="at-profit-note">Kierowca etatowy : karta HR jak każdy pracownik. Kierowca na zlecenie : tylko dane do umowy ; « Umowa zlecenia na przewóz towaru » (szablon w HR › Szablony umów) z jego danymi, pojazdem, trasą i wynagrodzeniem. Brakujące dane = komunikat, umowa nie powstaje.</p>
+        </div>
+    </div>
 </section>
 {% endblock %}
 
@@ -188,6 +227,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(res => {
             at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
             if (res.ok) window.setTimeout(() => window.location.reload(), 500);
+        });
+    }));
+    // [309] Umowa zlecenia na przewóz : PDF do karty HR kierowcy.
+    document.querySelectorAll('[data-contract-pdf]').forEach(b => b.addEventListener('click', () => {
+        b.disabled = true;
+        at.send(`/ajax/logistics/drivers/${b.dataset.contractPdf}/contract-pdf`, 'POST', {}).then(res => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            b.disabled = false;
+            if (res.ok) window.setTimeout(() => window.location.reload(), 900);
         });
     }));
 })();

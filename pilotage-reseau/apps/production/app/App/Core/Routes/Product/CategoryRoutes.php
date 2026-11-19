@@ -16,6 +16,12 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxUpdateCategory'
     ]);
 
+    // [339] Włącz / wyłącz kategorię = wszystkie jej produkty (administrator, produkcja).
+    $r->addRoute('PUT', '/ajax/product-categories/{id:\d+}/active', [
+        'controller' => App\Controllers\Web\Product\CategoryController::class,
+        'method'     => 'ajaxSetActive'
+    ]);
+
     $r->addRoute('POST', '/ajax/product-categories', [
         'controller' => App\Controllers\Web\Product\CategoryController::class,
         'method'     => 'ajaxCreateCategory'

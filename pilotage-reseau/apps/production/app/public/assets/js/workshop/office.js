@@ -5,6 +5,8 @@
  * (osoba + dzień). Osoba skanuje go swoim telefonem i zatwierdza wejście albo wyjście na telefonie (pytania, podpis) ;
  * telefon innej osoby jest odrzucany. Tablet sprawdza co 2 s, czy pointowanie jest zapisane, i wraca do działów.
  * Bez telefonu : PIN, potem pytania i podpis palcem na tablecie (pin_allowed ; kiosk.office_pin_all — wszyscy).
+ * [356] Osoba z PIN-em (pin_allowed) : dotknięcie nazwiska → od razu PIN (4 cyfry), duży przycisk WEJŚCIE / WYJŚCIE,
+ *       pytania (Tak / Nie, punkty) i podpis ; kod QR telefonem — przycisk na ekranie PIN-u.
  */
 (function () {
     'use strict';
@@ -20,7 +22,7 @@
     const LANG_KEY = 'tfb.lang';
     const POLL_MS = 2000;
     const QR_SCREEN_MS = 180000; // ekran kodu QR : powrót do działów po 3 min
-    const IDLE_MS = 60000;       // lista nazwisk : powrót po 1 min bez dotyku
+    const IDLE_MS = 60000;       // wyszukiwanie, PIN osoby : powrót do PIN-u po 1 min bez dotyku
     const DONE_MS = 6000;
     const store = {
         get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
@@ -28,12 +30,13 @@
     };
     let lang = store.get(LANG_KEY) === 'fr' ? 'fr' : 'pl';
     let labels = {};
+    // [299] Otwarty z sesji ERP : serwer sparował go od razu (nowy token tylko, gdy przeglądarka nie miała ważnego).
+    const erpDevice = el.dataset.erpDevice || '';
+    if (erpDevice) store.set(DEVICE_KEY, erpDevice);
     let device = store.get(DEVICE_KEY);
     let paired = !!device;
-    let sections = [];
     let timers = [];
     let deviceInfo = null;
-    let filter = null; // dział wybrany w pasku (null = wszyscy)
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
@@ -94,7 +97,16 @@
         const err = new Error(((json.errors || []).map(x => x.message).join(' ')) || json.message || t('error'));
         err.code = json.description;
         err.fields = (json.errors || []).map(x => x.field);
-        if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; clearTimers(); renderPairing(err.message); }
+        if (err.code === 'DEVICE_UNAUTHENTICATED') {
+            // [299] Sesja ERP : strona sama paruje się na nowo (raz na minutę najwyżej), bez ekranu z kodem.
+            let last = 0;
+            try { last = Number(window.sessionStorage.getItem('tfb.office.repair') || 0); } catch (e) { /* brak */ }
+            if (el.dataset.erpSession && Date.now() - last > 60000) {
+                try { window.sessionStorage.setItem('tfb.office.repair', String(Date.now())); } catch (e) { /* brak */ }
+                store.set(DEVICE_KEY, null);
+                location.reload();
+            } else { paired = false; clearTimers(); renderPairing(err.message); }
+        }
         // Tablet pracowni albo kierowcy : jego własna strona (/kiosk przekierowuje tablet kierowcy na /driver).
         // Tablet kierowcy : jego trasa (każdy inny tablet otwiera ekran biurowy).
         if (err.code === 'DEVICE_NOT_OFFICE') { store.set(HOME_KEY, null); location.replace(root + '/tablet/driver'); }
@@ -133,74 +145,93 @@
         el.querySelector('[name=code]').focus();
     }
 
-    // --- Wszystkie grupy i wszystkie osoby na jednym ekranie -----------------------------------------
-    const allPeople = () => sections.flatMap(s => s.people.map(p => ({...p, section: s.name, section_id: s.id})));
-
+    // [361][364] Accueil : le clavier PIN — le PIN seul ouvre le pointage de la personne (tous les PIN sont différents).
+    // RODO : plus de liste de tout le personnel ni de présences à l'écran ; sans PIN, « Nie mam PIN-u » → la personne tape
+    // son nom, se choisit et crée son PIN.
     async function renderHome() {
         if (!paired) return renderPairing();
         clearTimers();
         try {
             if (deviceInfo === null) deviceInfo = await api('GET', '/kiosk/device');
-            // Tout le personnel : les personnes sans dział forment la section 0, nommée ici (« Bez działu » / « Sans service »).
-            sections = (await api('GET', '/kiosk/office/sections')).map(x => x.name ? x : {...x, name: t('no_section')});
         } catch (err) {
             if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
-            el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-error">${esc(err.message)}</p>
-                <div class="kiosk-row"><button type="button" class="kiosk-btn is-primary" data-retry>${esc(t('retry'))}</button></div></section>`;
-            el.querySelector('[data-retry]').addEventListener('click', renderHome);
-            return;
         }
-        if (filter !== null && !sections.some(x => x.id === filter)) filter = null;
-        const people = allPeople();
-        const present = people.filter(p => p.clocked_in).length;
-        const now = new Date();
-        el.innerHTML = `<div class="kiosk-ipad office-home">
-            <div class="kiosk-ipad-bar"><span class="kiosk-logo" aria-hidden="true">LA</span><span class="kiosk-ipad-name">${esc(t('title'))}</span>
-                <button type="button" class="kiosk-chip is-glass" data-lang>${esc(t('lang_switch'))}</button></div>
-            <section class="kiosk-ipad-hero office-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
-                <div class="kiosk-ipad-date">${esc(longDate(now))}</div></section>
-            <nav class="office-groupbar" aria-label="${esc(t('groups'))}">
-                <button type="button" class="office-group-chip ${filter === null ? 'is-on' : ''}" data-filter="">${esc(t('all_groups'))}<small>${present}/${people.length}</small></button>
-                ${sections.map(x => `<button type="button" class="office-group-chip ${filter === x.id ? 'is-on' : ''}" data-filter="${x.id}">${esc(x.name)}<small>${x.people.filter(p => p.clocked_in).length}/${x.people.length}</small></button>`).join('')}</nav>
-            <div data-home-body></div></div>`;
-        const body = el.querySelector('[data-home-body]');
-        // Grupy jedna pod drugą, każda ze wszystkimi osobami (bez wyszukiwarki : dotknięcie nazwiska).
-        const draw = () => {
-            const groups = sections.filter(x => filter === null || x.id === filter)
-                .map(x => ({...x, list: x.people}))
-                .filter(x => x.list.length || filter !== null);
-            body.innerHTML = groups.length ? groups.map(x => `<section class="office-group">
-                    <h2 class="office-group-title">${esc(x.name)} <small>${esc(t('section_people', {n: x.people.length, present: x.people.filter(p => p.clocked_in).length}))}</small></h2>
-                    ${x.list.length ? `<div class="kiosk-apps office-people">${x.list.map(personTile).join('')}</div>` : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`}</section>`).join('')
-                : `<p class="kiosk-muted">${esc(t('no_people'))}</p>`;
-        };
-        draw();
-        body.addEventListener('click', (e) => {
-            const p = e.target.closest('[data-person]');
-            if (p) openPerson(Number(p.dataset.person));
+        pinPad(null, {
+            home: true,
+            help: t('pin_home_help'),
+            extra: `<button type="button" class="kiosk-btn is-small" data-first-go>${esc(t('no_pin_btn'))}</button>`,
+            onPin: async (pin) => {
+                let r;
+                try {
+                    r = await api('POST', '/kiosk/office/login', {pin});
+                } catch (err) {
+                    if (err.code === 'PIN_CHOOSE_NAME') return renderSearch('choose', err.message);
+                    throw err;
+                }
+                const person = r.person || {id: null, employee_id: r.employee.id, name: r.employee.name, has_pin: true, phones: 0};
+                const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
+                if (r.pin_change_required) return renderChangePin(person, r.employee_token, me, pin, true);
+                clockNow(person, r.employee_token, me, pin);
+            },
         });
-        el.querySelector('.office-groupbar').addEventListener('click', (e) => {
-            const c = e.target.closest('[data-filter]');
-            if (!c) return;
-            filter = c.dataset.filter === '' ? null : Number(c.dataset.filter);
-            el.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('is-on', b === c));
-            draw();
-            el.querySelector('.office-groupbar').scrollIntoView({block: 'start', behavior: 'smooth'});
-        });
-        // Stan obecności odświeżany co minutę.
-        timers.push(window.setInterval(renderHome, 60000));
+        el.querySelector('[data-first-go]').addEventListener('click', () => renderSearch('first'));
+        idleMs = 0;
+        window.clearTimeout(idleTimer);
     }
 
-    function personTile(p) {
-        const state = p.clocked_in ? t('state_in', {time: p.since}) : p.left_at ? t('state_left', {time: p.left_at}) : (!p.has_pin && !p.phones ? t('state_no_pin') : t('state_out'));
-        return `<button type="button" class="kiosk-app-person ${p.clocked_in ? 'is-in' : ''} ${!p.has_pin && !p.phones ? 'is-nopin' : ''}" data-person="${p.id}">
-            ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span><small>${esc(state)}</small></button>`;
+    /**
+     * [364] Recherche de son nom (au moins 3 lettres) : le serveur ne renvoie que les noms qui correspondent (8 au plus),
+     * sans service ni présence. mode first : créer son PIN (déjà un PIN → le responsable le remet) ; choose : deux
+     * personnes avaient le même PIN — on se choisit puis on tape son PIN (un nouveau sera demandé).
+     */
+    function renderSearch(mode, message) {
+        clearTimers();
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card office-search">
+                <h2>${esc(t(mode === 'choose' ? 'search_title_choose' : 'search_title_first'))}</h2>
+                ${message ? `<p class="kiosk-error">${esc(message)}</p>` : ''}
+                <p class="kiosk-muted">${esc(t('search_help'))}</p>
+                <input class="kiosk-search office-search-input" type="search" data-search placeholder="${esc(t('search_ph'))}" aria-label="${esc(t('search_ph'))}" autocomplete="off" autocapitalize="words" spellcheck="false">
+                <div class="office-search-results" data-results aria-live="polite"></div>
+                <div class="kiosk-row"><button type="button" class="kiosk-btn is-small" data-home>${esc(t('cancel'))}</button></div></section>`;
+        const input = el.querySelector('[data-search]');
+        const box = el.querySelector('[data-results]');
+        let timer = null, seq = 0, found = [];
+        const draw = (list, q) => {
+            found = list;
+            if (q.length < 3) { box.innerHTML = ''; return; }
+            box.innerHTML = list.length ? list.map((p, i) => `<button type="button" class="office-search-row" data-pick="${i}">${avatar(p.name)}<span>${esc(p.name)}</span><i class="office-search-go">›</i></button>`).join('')
+                : `<p class="kiosk-muted">${esc(t('search_none'))}</p>`;
+        };
+        input.addEventListener('input', () => {
+            const q = input.value.trim();
+            window.clearTimeout(timer);
+            idle(IDLE_MS);
+            if (q.length < 3) return draw([], q);
+            timer = window.setTimeout(async () => {
+                const mine = ++seq;
+                try {
+                    const list = await api('GET', '/kiosk/office/search?q=' + encodeURIComponent(q));
+                    if (mine === seq) draw(list, q);
+                } catch (err) { if (mine === seq) box.innerHTML = `<p class="kiosk-error">${esc(err.offline ? t('offline') : err.message)}</p>`; }
+            }, 250);
+        });
+        box.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-pick]');
+            const p = b && found[Number(b.dataset.pick)];
+            if (!p) return;
+            if (!p.has_pin) return renderFirstPin(p);
+            if (mode === 'choose' && p.employee_id) return renderPin(p);
+            box.innerHTML = `<p class="office-search-note">${esc(t('pin_forgot', {name: p.name}))}</p>`;
+        });
+        input.focus();
+        idle(IDLE_MS);
     }
 
     // --- Osobisty kod QR (osoba + dzień) ---------------------------------------------------------------
     async function openPerson(personId) {
         clearTimers();
-        const qrBase = new URL(root + '/', window.location.href).href.replace(/\/$/, '');
+        // [355] Hôte de cette tablette (joignable sur le Wi-Fi de l'atelier), pas celui d'APP_URL.
+        const qrBase = (window.location.origin + new URL(root + '/', window.location.href).pathname).replace(/\/$/, '');
         let q;
         try {
             q = await api('POST', '/kiosk/office/qr', {person_id: personId, base: qrBase});
@@ -219,7 +250,7 @@
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card office-qr">
                 <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2><p class="office-qr-day">${esc(longDate(day))}</p>
                     <span class="office-action is-${action}">${esc(t(action === 'in' ? 'action_in' : 'action_out'))}${p.clocked_in && p.since ? ` · ${esc(t('state_in', {time: p.since}))}` : ''}</span></div></div>
-                <div class="office-qr-code"><canvas data-qr width="360" height="360" role="img" aria-label="QR ${esc(p.name)}"></canvas></div>
+                <div class="office-qr-code"><canvas data-qr width="360" height="360" role="img" aria-label="QR ${esc(p.name)}"></canvas><p class="office-qr-url" data-qr-url></p></div>
                 <div class="office-qr-text"><p class="office-qr-help ${!p.has_pin && !p.phones ? 'kiosk-error' : ''}">${esc(help)}</p>
                     <p class="kiosk-muted">${esc(t('qr_only_you'))}</p>
                     <p class="office-waiting"><span class="office-dot" aria-hidden="true"></span>${esc(t('waiting'))}</p>
@@ -249,16 +280,25 @@
     }
 
     // --- Bez telefonu : PIN → pytania + podpis palcem → wejście / wyjście ---------------------------------
-    function renderPin(p) {
+    // Klawiatura PIN-u (logowanie, pierwszy PIN, zmiana PIN-u) : onPin(pin) — błąd = komunikat i klawiatura od nowa.
+    function pinPad(p, opts) {
         clearTimers();
         let pin = '';
-        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-pin">
-                ${avatar(p.name, 'is-lg')}<h2>${esc(p.name)}</h2><p class="kiosk-muted">${esc(t('pin_help'))}</p>
-                <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error></p>
+        const now = new Date();
+        // Accueil : heure, date et langue en haut, le clavier au centre ; sinon l'en-tête avec retour et le nom de la personne.
+        const top = opts.home ? `<div class="kiosk-ipad-bar office-pinhome-bar"><span class="kiosk-logo" aria-hidden="true">LA</span><span class="kiosk-ipad-name">${esc(t('title'))}</span>
+                <button type="button" class="kiosk-chip is-glass" data-lang>${esc(t('lang_switch'))}</button></div>
+            <section class="kiosk-ipad-hero office-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
+                <div class="kiosk-ipad-date">${esc(longDate(now))}</div></section>`
+            : header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`);
+        el.innerHTML = top + `<section class="kiosk-card kiosk-pin ${opts.home ? 'office-pinhome' : ''}">
+                ${opts.home ? `<h2>${esc(t('pin_home_title'))}</h2>` : `${avatar(p.name, 'is-lg')}<h2>${esc(p.name)}</h2>`}${opts.title ? `<p class="office-pin-title">${esc(opts.title)}</p>` : ''}<p class="kiosk-muted">${esc(opts.help)}</p>
+                <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error>${esc(opts.error || '')}</p>
                 <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
                     <button type="button" class="kiosk-btn" data-erase aria-label="${esc(t('erase'))}">⌫</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
                     <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div>
-                <button type="button" class="kiosk-btn is-small" data-home>${esc(t('cancel'))}</button></section>`;
+                <div class="kiosk-row">${opts.extra || ''}${opts.home ? '' : `<button type="button" class="kiosk-btn is-small" ${opts.onCancel ? 'data-pin-cancel' : 'data-home'}>${esc(t('cancel'))}</button>`}</div></section>`;
+        if (opts.onCancel) el.querySelector('[data-pin-cancel]').addEventListener('click', opts.onCancel);
         const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
         dots();
         const submit = async () => {
@@ -266,13 +306,12 @@
             const ok = el.querySelector('[data-ok]');
             ok.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/identify', {employee_id: p.employee_id, pin});
-                const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
-                renderConfirm(p, r.employee_token, me, me.clocked_in ? 'out' : 'in');
+                await opts.onPin(pin);
             } catch (err) {
                 if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
                 pin = ''; dots(); ok.disabled = false;
-                el.querySelector('[data-error]').textContent = err.message;
+                const box = el.querySelector('[data-error]');
+                if (box) box.textContent = err.offline ? t('offline') : err.message;
             }
         };
         el.querySelector('.kiosk-pad').addEventListener('click', (e) => {
@@ -283,26 +322,87 @@
             dots();
             if (b.hasAttribute('data-ok')) submit();
         });
-        idle(IDLE_MS);
+        if (!opts.home) idle(IDLE_MS);
+    }
+
+    function renderPin(p) {
+        pinPad(p, {
+            help: t('pin_help'),
+            extra: p.phones ? `<button type="button" class="kiosk-btn is-small" data-qr-go><i class="bi bi-qr-code"></i> ${esc(t('qr_instead'))}</button>` : '',
+            onPin: async (pin) => {
+                const r = await api('POST', '/kiosk/identify', {employee_id: p.employee_id, pin});
+                const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
+                if (r.pin_change_required) return renderChangePin(p, r.employee_token, me, pin, true);
+                clockNow(p, r.employee_token, me, pin);
+            },
+        });
+        el.querySelector('[data-qr-go]')?.addEventListener('click', () => openPerson(p.id));
+    }
+
+    // [360] Nowy PIN dwa razy (pierwsze logowanie albo zmiana) ; save(pin) zapisuje, błąd serwera → od początku z komunikatem.
+    function newPin(p, title, save, onCancel, error) {
+        pinPad(p, {title, help: t('new_pin_help'), error, onCancel, onPin: async (first) => {
+            pinPad(p, {title, help: t('new_pin_repeat'), onCancel, onPin: async (second) => {
+                if (second !== first) return newPin(p, title, save, onCancel, t('pin_mismatch'));
+                try { await save(first); } catch (err) {
+                    if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
+                    // PIN zbyt prosty, taki sam jak obecny… : od początku, z komunikatem ; zły obecny PIN (zmiana) : błąd na ekranie.
+                    if (err.code === 'VALIDATION_FAILED' || (err.fields || []).includes('pin')) return newPin(p, title, save, onCancel, err.message);
+                    throw err;
+                }
+            }});
+        }});
+    }
+
+    // [360] Pierwsze logowanie na tablecie biurowym : osoba bez PIN-u tworzy swój (4 cyfry, dwa razy), potem wejście / wyjście.
+    function renderFirstPin(p) {
+        newPin(p, t('new_pin_title'), async (pin) => {
+            const r = await api('POST', '/kiosk/office/pin', {person_id: p.id, pin});
+            const person = {...p, employee_id: r.employee ? r.employee.id : p.employee_id, has_pin: true};
+            const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
+            clockNow(person, r.employee_token, me, pin, t('pin_created'));
+        });
+    }
+
+    // [360] Zmiana PIN-u po zalogowaniu : nowy PIN dwa razy ; obecny PIN to ten, który osoba właśnie wpisała.
+    // [361] forced : ce PIN est aussi celui d'une autre personne (posé avant l'unicité) — nouveau PIN avant de continuer.
+    function renderChangePin(p, token, me, current, forced) {
+        newPin(p, t('change_pin'), async (pin) => {
+            await api('PUT', '/kiosk/me/pin', {current_pin: current, pin}, token);
+            clockNow(p, token, me, pin, t('pin_changed'));
+        }, forced ? () => renderHome() : () => clockNow(p, token, me, current), forced ? t('pin_change_required') : undefined);
+    }
+
+    // [364] Après le PIN : le pointage tout de suite (entrée si absent, sortie si présent) — questions puis signature.
+    function clockNow(p, token, me, pin, info) {
+        renderConfirm(p, token, me, me.clocked_in ? 'out' : 'in', undefined, {pin, info});
     }
 
     // Pytania (ustawiane w zarządzaniu tabletami) i podpis palcem — obowiązkowy przy pointowaniu PIN-em na tablecie biurowym.
-    function renderConfirm(p, token, me, direction, error) {
+    function renderConfirm(p, token, me, direction, error, extra) {
         clearTimers();
+        extra = extra || {};
+        const since = me.clocked_in && me.clock && me.clock.clock_in ? String(me.clock.clock_in).slice(11, 16) : null;
         const questions = (me.questions && me.questions[direction]) || [];
         // [263] Punkty do potwierdzenia i pytania Tak / Nie (np. towar przy wyjściu, (i) z zasadą firmy).
         let refresh = () => {};
         const cq = window.TfbClockQuestions(questions, {t, esc, catalog: (me.questions && me.questions.catalog) || [], onChange: () => refresh()});
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-confirm office-confirm">
-                <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
-                    <span class="office-action is-${direction}">${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</span></div></div>
-                ${cq.html}
-                <div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
+                <div class="office-confirm-main"><div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(t('hello', {name: p.name}))}</h2>
+                    <span class="office-action is-${direction}">${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}${since ? ` · ${esc(t('state_in', {time: since}))}` : ''}</span></div></div>
+                ${extra.info ? `<p class="office-clock-info">${esc(extra.info)}</p>` : ''}
+                ${cq.html}</div>
+                <div class="office-confirm-side"><div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
                     <canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas>
                     <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
+                ${direction === 'out' ? `<label class="office-daynote"><span>${esc(t('day_note'))}</span>
+                    <textarea class="kiosk-input" data-day-note rows="2" maxlength="500" placeholder="${esc(t('day_note_ph'))}"></textarea></label>` : ''}
                 <p class="kiosk-error" data-error>${esc(error || '')}</p>
                 <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
+                <div class="kiosk-row office-clock-more">${extra.pin ? `<button type="button" class="kiosk-btn is-small" data-change-pin>${esc(t('change_pin'))}</button>` : ''}
+                    <button type="button" class="kiosk-btn is-small" data-home>${esc(t('not_me'))}</button></div></div>
             </section>`;
+        el.querySelector('[data-change-pin]')?.addEventListener('click', () => renderChangePin(p, token, me, extra.pin));
         const ok = el.querySelector('[data-confirm]');
         const pad = signaturePad(el.querySelector('[data-pad]'), () => refresh());
         refresh = () => { ok.disabled = cq.blocked() || pad.empty(); };
@@ -313,7 +413,8 @@
         ok.addEventListener('click', async () => {
             ok.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: cq.answers(), signature: pad.image()}, token);
+                const note = (el.querySelector('[data-day-note]')?.value || '').trim();
+                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: cq.answers(), signature: pad.image(), ...(note ? {note} : {})}, token);
                 const at = String((direction === 'out' ? r.clock.clock_out : r.clock.clock_in) || '').slice(11, 16);
                 // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.
                 if (me.comp_days && me.comp_days.length) return renderComp(p, token, me.comp_days.slice(), {direction, at});
@@ -323,7 +424,7 @@
                 if (err.code === 'EMPLOYEE_SESSION_EXPIRED' || err.code === 'EMPLOYEE_UNAUTHENTICATED') return renderPin(p);
                 if (err.code === 'CLOCK_QUESTIONS_REQUIRED') {
                     const fresh = await api('GET', '/kiosk/me', undefined, token).catch(() => null);
-                    if (fresh) return renderConfirm(p, token, fresh, direction, err.message);
+                    if (fresh) return renderConfirm(p, token, fresh, direction, err.message, extra);
                 }
                 ok.disabled = false;
                 el.querySelector('[data-error]').textContent = err.offline ? t('offline') : err.message;
@@ -400,6 +501,9 @@
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#000';
         q.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] === '1') ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale); });
+        // [355] Adresse ouverte par le QR (sans le code) : à comparer avec celle qui s'ouvre sur le téléphone.
+        const url = el.querySelector('[data-qr-url]');
+        if (url) url.textContent = String(q.url || '').split('#')[0].replace(/^https?:\/\//, '');
     }
 
     function renderDone(p, s) {

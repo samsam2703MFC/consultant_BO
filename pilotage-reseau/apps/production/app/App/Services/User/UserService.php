@@ -102,7 +102,7 @@ class UserService
     private function hashPassword(array $data): array
     {
         if (isset($data['password']) && $data['password'] !== '' && !Passwords::isHash((string) $data['password'])) {
-            $data['password'] = Passwords::hash((string) $data['password']);
+            $data['password'] = Passwords::forStorage((string) $data['password']);
         }
         return $data;
     }

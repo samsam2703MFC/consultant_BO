@@ -1064,3 +1064,53 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
      l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
   5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
      `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».
+
+## Catalogue des manuels : feuilleter, PDF, QR code, dépliant (19/11/2026)
+
+Sam : « je dois pouvoir feuilleter en PDF les différents manuels ; créer dans le rail la possibilité de feuilleter les pages
+des différents manuels comme un catalogue ; un micro-catalogue ou leaflet qui explique le fonctionnement de tout, avec
+chaque fois un QR code qui ramène vers le manuel en question », puis « code it all and push online ». Maquettes :
+`docs/maquettes/catalogue-manuels/` (sur `claude/lucid-pascal-3ps6at`).
+
+- **Page** : `public/formation/catalogue/` (`index.html`, `catalogue.js`, `catalogue.css`), servie sous le module
+  (`…/formation/catalogue/`). Garde d'accès comme le cockpit (`assets/js/garde.js`), **sans** `data-siege` : le siège et un
+  franchisé peuvent l'ouvrir. Lecture seule, par l'API du module : `/formation/sop/liste`, `/formation/sop/fiche/{id}`,
+  `/formation/ref`.
+- **Quatre manuels** : le manuel opératoire (les articles), les standards (SOP, mémos, fiches), les checklists (les fiches de
+  checklist), le manuel du réseau (les domaines D1–D8, leurs sous-catégories et les standards rangés dans chacune). Les
+  brouillons n'y sont pas ; un document « à valider » porte une pastille.
+- **Feuilleter** (`#/m/<manuel>`) : couverture (nombre de documents, QR code), sommaire numéroté, puis chaque document sur
+  une nouvelle page ; pages A5 mises en page dans le navigateur (mesure après le chargement de Gotham), en double page sur
+  un grand écran, une page à la fois sur une tablette ; flèches, clavier, glissement, curseur ; FR | NL.
+- **PDF** (`#/m/<manuel>/imprimer`, ou « Imprimer · PDF ») : la fenêtre d'impression du navigateur, une page A5 par
+  feuille (« Enregistrer en PDF »). Pas de PDF du serveur.
+- **QR code** : le lien du feuilletage du manuel (`catalogue/#/m/<manuel>`), sur l'adresse où la page est ouverte.
+- **Dépliant** (`catalogue/depliant.html`) : six pages A4, design system (logo, filet bordeaux, pied « Page n / 6 ») : titre,
+  la franchise (d'après 0.0.21 et 0.0.23), puis une page par manuel avec son QR code ; les nombres lus dans le module ;
+  « Imprimer · enregistrer en PDF » (`depliant.html#imprimer` lance l'impression).
+- **Rail** : cockpit › Formation › « Catalogue des manuels ↗ » (`app.js`) ; module Formation › Documents › « Catalogue des
+  manuels ↗ » et « Dépliant des manuels ↗ » (`portail.js` ; `formation.js` sert une entrée `ext:…` comme un lien direct).
+- **Essai avant la mise en ligne** (navigateur sans tête, API du serveur en lecture) : manuel opératoire 396 pages, standards
+  145 (une page à la fois), checklists 23, manuel du réseau 13 ; PDF des checklists 23 pages A5 ; dépliant 6 pages A4,
+  4 QR codes ; aucune erreur.
+- **À corriger sur le fil** : l'accès des équipes sans session (la tablette du magasin n'ouvre pas le catalogue) ; la
+  longueur du manuel opératoire en PDF (un article par nouvelle page) ; les adresses des QR codes si une autre cible est voulue.
+
+### Liens directs dans les manuels et le PDF (19/11/2026)
+
+Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, mettre un lien direct dans le PDF ».
+
+- **Ce qui devient un lien** : tout code de document (`0.m.nn` : article, SOP, mémo, fiche) ou de checklist (`z.m.nn`) cité
+  dans le texte d'un document (objectif, public, lignes, points critiques) **s'il existe dans le module** ; les entrées du
+  sommaire ; dans le manuel du réseau, chaque standard rangé dans une sous-catégorie ; dans le dépliant, les codes cités
+  (0.0.21, 0.0.56, 5.5.01). Un code sans document (une checklist du panel sans fiche) reste du texte ; une tâche citée par
+  son seul libellé n'a pas de code, donc pas de lien.
+- **À l'écran** : le lien ouvre `#/m/<manuel>/d/<id>`, le manuel du document à sa première page (sans tout relire si le
+  manuel est déjà ouvert). Le manuel est déduit du type : Article → opératoire, Checklist → checklists, le reste → standards.
+- **Dans le PDF** : Chrome change un lien « même page + #… » en lien interne au PDF et l'abandonne sans ancre ; la copie
+  imprimée (`lierPourPdf`) pose donc une ancre sur la première page de chaque document. Un document du **même** manuel →
+  lien interne (le clic saute à la page du PDF) ; d'un **autre** manuel → `catalogue/?m=<manuel>#/m/<manuel>/d/<id>`, un
+  vrai lien web (il demande une session, comme le catalogue).
+- **Essai** : manuel opératoire, 98 liens dans le texte et le sommaire (87 internes, 11 vers les standards et les checklists),
+  standards 24, checklists 10 (sommaires), manuel du réseau 88 (tous vers les autres manuels), dépliant 3 ; liens internes
+  vérifiés (sommaire → bonne page du PDF) ; aucune erreur.

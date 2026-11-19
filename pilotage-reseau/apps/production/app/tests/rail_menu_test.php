@@ -20,7 +20,9 @@ function expectRail(bool $condition, string $message): void
 }
 
 // --- Bez bazy : układ ----------------------------------------------------------------------------------------------------
-expectRail(count(Rail::ITEMS) === 30 && Rail::count() === 30, 'menu wspólne : 30 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR, [277] + Lista płac, [281] + Kontrola ; [286] Dzisiaj i zadania = jedna pozycja)');
+expectRail(count(Rail::ITEMS) === 33 && Rail::count() === 33, 'menu wspólne : 33 pozycje (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR, [277] + Lista płac, [281] + Kontrola ; [286] Dzisiaj i zadania = jedna pozycja ; [296] + Stany i palety ; [306] + Trasy ; [353] + Procedury SOP)');
+expectRail(Rail::itemFor('/logistics/tours') === 'tours' && Rail::itemFor('/logistics/vehicles') === 'tours' && \App\Core\Web\PageAccess::keyFor('/logistics/tours') === 'logistics', '[306] Trasy : pozycja Logistyki (nie Ustawienia), prawo « logistics »');
+expectRail(Rail::itemFor('/logistics/stock') === 'stock_pallets' && Rail::itemFor('/logistics') === 'shipping_day' && \App\Core\Web\PageAccess::keyFor('/logistics/stock') === 'stock_pallets' && \App\Core\Web\PageAccess::keyFor('/logistics/day') === 'logistics', '[296] Stany i palety : pozycja railu (nie Dzień wysyłki) ; [335] prawo « stock_pallets » (reszta logistyki : « logistics »)');
 expectRail(Rail::itemFor('/time/month') === 'time' && Rail::itemFor('/time') === 'time' && \App\Core\Web\PageAccess::keyFor('/time/overtime') === 'time', '[262] Czas pracy : pozycja railu i prawo « time »');
 expectRail(array_keys(array_filter(array_map(fn($i) => $i[2], Rail::ITEMS), fn($s) => !in_array($s, Rail::SECTIONS, true))) === [], 'sekcje pozycji znane');
 foreach (array_keys(PageTabs::GROUPS) as $group) {
@@ -164,8 +166,8 @@ try {
     $res = $access()->saveMenuState(3, ['reset' => true], 1);
     expectRail($access()->railMenu(3) === null && $res['states']['mail'] === 'menu', 'całe menu : bez własnego menu');
     $m = $access()->menuMatrix();
-    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 30,
-        'macierz : stanowiska biurowe + bez stanowiska × 30 pozycji');
+    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 32,
+        'macierz : stanowiska biurowe + bez stanowiska × 32 pozycje');
     echo "rail_menu_test: OK\n";
 } finally {
     $_SESSION = [];

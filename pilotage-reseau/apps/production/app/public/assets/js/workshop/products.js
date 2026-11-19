@@ -14,6 +14,8 @@
     const esc = ui.esc;
     const state = {groups: [], workstations: [], erp: {categories: [], sections: [], label_types: [0, 1]}, item: null, studies: {}};
     const STEPS = 9;
+    // [339] Włącz / wyłącz produkty i kategorie w ERP : administrator i produkcja (sprawdzane też na serwerze).
+    const canToggle = el.dataset.canToggle === '1';
 
     try {
         await api.init();
@@ -111,7 +113,7 @@
                     <button type="button" role="menuitem" data-act="tech"><i class="bi bi-file-earmark-arrow-down"></i>${esc(t('row.tech_card'))}</button>`
                     : `<button type="button" role="menuitem" disabled><i class="bi bi-file-earmark-arrow-down"></i>${esc(t('row.no_recipe'))}</button>`}
                 <div class="tfb-workload" title="${esc(t('row.workload_help'))}"><span>${esc(t('row.workload'))}</span>${[1, 2, 3, 4, 5].map(v => `<button type="button" role="menuitem" data-act="workload" data-value="${v}" class="${(i.workload_points ?? 3) === v ? 'active' : ''}" aria-pressed="${(i.workload_points ?? 3) === v}">${v}</button>`).join('')}</div>
-                <button type="button" role="menuitem" data-act="active"><i class="bi ${i.erp_active ? 'bi-toggle-off' : 'bi-toggle-on'}"></i>${esc(t(i.erp_active ? 'row.deactivate' : 'row.activate'))}</button>
+                ${canToggle ? `<button type="button" role="menuitem" data-act="active"><i class="bi ${i.erp_active ? 'bi-toggle-off' : 'bi-toggle-on'}"></i>${esc(t(i.erp_active ? 'row.deactivate' : 'row.activate'))}</button>` : ''}
                 <hr>
                 <a role="menuitem" class="at-more-danger" href="${root}/products/${i.final_product_id}/delete"><i class="bi bi-trash"></i>${esc(t('row.delete'))}</a>
             </div></div>`;
@@ -302,7 +304,10 @@
                     <td class="text-center"><strong class="text-success">${c.qty_active}</strong></td>
                     <td class="text-center"><span class="${c.qty_inactive ? 'text-danger' : 'text-muted'}">${c.qty_inactive}</span></td>
                     <td><div class="input-group input-group-sm"><input class="form-control text-end" data-f="target_margin_percentage" inputmode="decimal" value="${esc(ui.fmt(c.target_margin_percentage ?? 0, 1, api.lang))}" aria-label="${esc(t('cat.col.margin'))}"><span class="input-group-text">%</span></div></td>
-                    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="#/?erp=all&category=${c.id}"><i class="bi bi-list-ul"></i> ${esc(t('cat.products'))}</a></td></tr>`).join('')
+                    <td class="text-end text-nowrap">${canToggle && (c.qty_active + c.qty_inactive) ? (c.qty_active
+                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-cat-active="0"><i class="bi bi-toggle-off"></i> ${esc(t('cat.deactivate'))}</button>`
+                        : `<button type="button" class="btn btn-sm btn-outline-success" data-cat-active="1"><i class="bi bi-toggle-on"></i> ${esc(t('cat.activate'))}</button>`) : ''}
+                        <a class="btn btn-sm btn-outline-primary" href="#/?erp=all&category=${c.id}"><i class="bi bi-list-ul"></i> ${esc(t('cat.products'))}</a></td></tr>`).join('')
                     || `<tr><td colspan="5" class="text-muted">${esc(t('cat.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
         const form = el.querySelector('[data-filters]');
         const apply = () => {
@@ -328,6 +333,15 @@
             try { await send('/ajax/product-categories', 'POST', {name, target_margin_percentage: m}); ui.notify(true, t('saved')); await renderCategories(); }
             catch (err) { ui.notify(false, err.message); }
         });
+        // [339] Kategoria : wszystkie produkty naraz (z potwierdzeniem : ile produktów się zmieni).
+        el.querySelectorAll('tr[data-cat] [data-cat-active]').forEach(b => b.addEventListener('click', async () => {
+            const c = (res.rows || []).find(x => String(x.id) === b.closest('tr').dataset.cat);
+            const on = b.dataset.catActive === '1';
+            if (!window.confirm(t(on ? 'cat.activate_confirm' : 'cat.deactivate_confirm', {name: c.name, n: on ? c.qty_inactive : c.qty_active}))) return;
+            b.disabled = true;
+            try { const r = await send(`/ajax/product-categories/${c.id}/active`, 'PUT', {active: on ? 1 : 0}); ui.notify(true, t('cat.toggled', {n: r.changed})); await renderCategories(); }
+            catch (err) { ui.notify(false, err.message); b.disabled = false; }
+        }));
         el.querySelectorAll('tr[data-cat] [data-f]').forEach(input => input.addEventListener('change', async () => {
             const id = input.closest('tr').dataset.cat;
             const before = input.defaultValue;

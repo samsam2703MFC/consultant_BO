@@ -549,6 +549,11 @@ function wr_pwa_task_review(): array
     journalAdd($consultant ? $auteur : 'CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
         . $note . '/5 — ' . ($accepte ? 'conforme' : 'non conforme') . ($comment !== '' ? ' : ' . $comment : '')
         . ($consultant ? ' (visite)' : '') . ($tfb !== null ? ' ; contreseing' . tacheTfbJournal($tfb) : ''));
+    // L'assistant de notation (src/ia_assistant.php) : la note humaine rejoint la proposition de l'IA, s'il y en a
+    // une — c'est d'elle que l'assistant apprend. `raisonIa` : pourquoi le consultant a corrigé (facultatif).
+    if (function_exists('iaNoteHumaine')) {
+        iaNoteHumaine($shopId, $taskId, $date, $note, $comment, isset($b['raisonIa']) ? (string) $b['raisonIa'] : null, $auteur);
+    }
     return ['ok' => true, 'note' => $note, 'accepte' => $accepte] + ($tfb !== null ? ['tfbuddyValidation' => $tfb] : []);
 }
 

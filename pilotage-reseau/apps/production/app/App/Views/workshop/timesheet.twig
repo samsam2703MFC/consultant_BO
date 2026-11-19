@@ -15,6 +15,8 @@
     .num { text-align: right; white-space: nowrap; }
     .sig { height: 34px; max-width: 120px; }
     .totals td { font-weight: bold; }
+    .week td { background: #f7f4ef; font-weight: 600; font-size: 11.5px; }
+    .daynote { color: var(--text); font-size: 12px; font-style: italic; }
     .note { color: var(--muted); font-size: 11px; }
     .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 28px; }
     .sign div { border-top: 1px solid var(--text); padding-top: 4px; color: var(--muted); min-height: 60px; }
@@ -26,10 +28,11 @@
 <body>
 <div class="actions"><button type="button" onclick="window.print()">Drukuj / Imprimer</button></div>
 <h1>Karta czasu pracy — {{ sheet.employee.name }}</h1>
-<div class="meta">Miesiąc {{ sheet.month }} · {{ sheet.totals.days }} dni · {{ sheet.totals.hours|number_format(2, ',', ' ') }} h, w tym w nocy (22:00–06:00) {{ sheet.totals.night_hours|number_format(2, ',', ' ') }} h</div>
+<div class="meta">Miesiąc {{ sheet.month }} · {{ sheet.totals.days }} dni · {{ sheet.totals.hours|number_format(2, ',', ' ') }} h, w tym w nocy ({{ sheet.night_window|default('21:00–05:00') }}) {{ sheet.totals.night_hours|number_format(2, ',', ' ') }} h</div>
 <table>
     <thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th><th class="num">Godziny</th><th class="num">W nocy</th><th>Uwagi</th><th>Podpis wejście</th><th>Podpis wyjście</th></tr></thead>
     <tbody>
+    {% set weeks = {} %}{% for w in sheet.weeks|default([]) %}{% set weeks = weeks|merge({(w.from): w}) %}{% endfor %}
     {% for d in sheet.days %}
         <tr>
             <td>{{ d.date|day_pl }}</td>
@@ -37,18 +40,22 @@
             <td>{{ d.clock_out ? (d.clock_out|slice(0, 10) != d.date ? d.clock_out|date('d.m H:i') : d.clock_out|slice(11, 5)) : 'brak wyjścia' }}</td>
             <td class="num">{{ d.hours|number_format(2, ',', ' ') }}</td>
             <td class="num">{{ d.night_hours > 0 ? d.night_hours|number_format(2, ',', ' ') : '' }}</td>
-            <td class="note">{{ d.source == 'manual' ? 'wpis ręczny' : '' }}{{ d.corrected ? ' korekta' : '' }}{{ d.note ? ' — ' ~ d.note : '' }}
+            <td class="note">{% if d.day_note %}<div class="daynote">{{ d.day_note }}</div>{% endif %}{{ d.source == 'manual' ? 'wpis ręczny' : '' }}{{ d.corrected ? ' korekta' : '' }}{{ d.note ? ' — ' ~ d.note : '' }}
                 {% for dir, a in d.answers %}<div>{{ dir == 'in' ? 'wejście' : 'wyjście' }} : potwierdzono {{ a.yes }}/{{ a.total }}{{ a.no ? ' — nie : ' ~ a.no|join(', ') : '' }}</div>{% endfor %}</td>
             <td>{% if d.signature_in_id and images[d.signature_in_id] is defined %}<img class="sig" src="{{ images[d.signature_in_id] }}" alt="podpis przy wejściu">{% endif %}</td>
             <td>{% if d.signature_id and images[d.signature_id] is defined %}<img class="sig" src="{{ images[d.signature_id] }}" alt="podpis przy wyjściu">{% endif %}</td>
         </tr>
+        {# [365] Suma tygodnia (pon.–niedz.) po ostatnim dniu tygodnia w tym miesiącu. #}
+        {% if d.week_from is defined and (loop.last or sheet.days[loop.index].week_from != d.week_from) and weeks[d.week_from] is defined %}{% set w = weeks[d.week_from] %}
+        <tr class="week"><td colspan="3">Tydzień {{ w.week }} ({{ w.from|date('d.m') }}–{{ w.to|date('d.m') }})</td><td class="num">{{ w.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ w.night_hours|number_format(2, ',', ' ') }}</td><td colspan="3"></td></tr>
+        {% endif %}
     {% else %}
         <tr><td colspan="8">Brak wpisów w tym miesiącu.</td></tr>
     {% endfor %}
     </tbody>
-    <tfoot><tr class="totals"><td colspan="3">Razem</td><td class="num">{{ sheet.totals.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ sheet.totals.night_hours|number_format(2, ',', ' ') }}</td><td colspan="3"></td></tr></tfoot>
+    <tfoot><tr class="totals"><td colspan="3">Razem miesiąc</td><td class="num">{{ sheet.totals.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ sheet.totals.night_hours|number_format(2, ',', ' ') }}</td><td colspan="3"></td></tr></tfoot>
 </table>
-<p class="note">Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. « Potwierdzono » : pytania przy wejściu / wyjściu (np. odzież robocza) zatwierdzone przez pracownika. Podpisy przy wejściu (lista obecności) i przy wyjściu (godziny) złożone palcem na tablecie albo telefonie mają zapisany skrót SHA-256 (integralność).</p>
+<p class="note">Godziny w nocy : {{ sheet.night_window|default('21:00–05:00') }}. Sumy tygodni (poniedziałek–niedziela) i miesiąca bez wpisów bez wyjścia. Uwagi pracownika (kursywą) wpisane przy wyjściu. Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. « Potwierdzono » : pytania przy wejściu / wyjściu (np. odzież robocza) zatwierdzone przez pracownika. Podpisy przy wejściu (lista obecności) i przy wyjściu (godziny) złożone palcem na tablecie albo telefonie mają zapisany skrót SHA-256 (integralność).</p>
 <div class="sign">
     <div>Pracownik — potwierdzam godziny pracy
         {% if sheet.month_signature and images[sheet.month_signature.id] is defined %}<img src="{{ images[sheet.month_signature.id] }}" alt="podpis pracownika"><span class="note">podpisano na tablecie {{ sheet.month_signature.signed_at|date('d.m.Y H:i') }}</span>{% endif %}

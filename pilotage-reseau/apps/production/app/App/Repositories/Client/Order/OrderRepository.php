@@ -120,7 +120,10 @@ class OrderRepository extends BaseRepository
                        FROM customer_order_product cop
                                 INNER JOIN final_product fp
                                            ON cop.id_product = fp.id
-                       WHERE cop.id_order = co.id),2) as totalSumKg
+                       WHERE cop.id_order = co.id),2) as totalSumKg,
+                -- [312] Wartość zamówienia netto (kartony × cena klienta ; gratis = 0) i waluta klienta.
+                IF(co.is_freebie = 1, 0, ROUND((SELECT SUM(cop.quantity_carton * cop.purchase_price) FROM customer_order_product cop WHERE cop.id_order = co.id), 2)) as order_value,
+                COALESCE(NULLIF(cust.default_currency, ''), 'EUR') as currency
             
             FROM customer_order co
                      INNER JOIN customer cust

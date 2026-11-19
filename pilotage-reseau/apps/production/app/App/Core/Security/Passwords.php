@@ -15,6 +15,16 @@ final class Passwords
         return password_hash($plain, PASSWORD_DEFAULT);
     }
 
+    /**
+     * [295] Mot de passe à enregistrer dans la table user. Mode cohabitation : dans le format de l'ERP d'origine, qui
+     * travaille sur la même base et compare le mot de passe tel quel — les deux ERP gardent les mêmes mots de passe.
+     * Le chiffrement (bcrypt) revient à la bascule (Bin/hash_passwords.php).
+     */
+    public static function forStorage(string $plain): string
+    {
+        return \App\Core\Cohabitation::on() ? $plain : self::hash($plain);
+    }
+
     public static function isHash(string $stored): bool
     {
         return password_get_info($stored)['algoName'] !== 'unknown';
@@ -31,6 +41,7 @@ final class Passwords
     /** En clair, ou chiffré avec d'anciens paramètres : à rechiffrer. */
     public static function needsRehash(string $stored): bool
     {
+        if (\App\Core\Cohabitation::on()) return false;   // [295] mêmes mots de passe que l'ERP d'origine
         return !self::isHash($stored) || password_needs_rehash($stored, PASSWORD_DEFAULT);
     }
 }

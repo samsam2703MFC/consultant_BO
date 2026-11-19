@@ -256,6 +256,16 @@ try {
     $pdo->exec("INSERT INTO n_pallet_entry (ship_date, id_customer, id_product, cartons, source) VALUES ('{$d}', 1, 11, 2, 'erp')");
     expectBoard($board->deletePalletEntry((int) $pdo->lastInsertId()) === null, 'wpis z ERP nie cofa się z tabletu');
 
+    // --- Kontrola z zamówieniem [305] : braki, nadmiar, produkt spoza zamówienia (zamówione 0)
+    $pdo->exec("INSERT INTO n_pallet_entry (ship_date, id_customer, id_product, cartons, source) VALUES ('{$d}', 2, 11, 5, 'erp')");
+    $b = array_values(array_filter($board->pallets($d, 1, 2)['clients'], fn($c) => $c['id'] === 2))[0];
+    $name11 = (string) $pdo->query('SELECT name FROM final_product WHERE id = 11')->fetchColumn();
+    expectBoard(count($b['extra']) === 1 && $b['extra'][0]['product_id'] === 11 && $b['extra'][0]['ordered'] === 0 && $b['extra'][0]['on_pallet'] === 5
+        && $b['extra'][0]['name'] === $name11 && $b['check']['over'] >= 1 && !$b['check']['ok'], 'B : 5 kartonów produktu niezamówionego → nadmiar, kontrola nie OK');
+    $a = $board->pallets($d, 1, 1)['clients'][0];
+    expectBoard($a['check']['missing'] === count(array_filter($a['lines'], fn($l) => $l['left'] > 0)) && $a['check']['missing'] > 0 && !$a['check']['ok'],
+        'A : braki policzone w kontroli');
+
     echo "logistics_board_test: OK\n";
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");

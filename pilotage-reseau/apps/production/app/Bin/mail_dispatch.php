@@ -27,25 +27,31 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);
 }
 
+// [295] Interrupteur des envois automatiques (Ustawienia › Parametry, system.auto_send). À 0 : seulement les tâches
+// internes (écarts d'expédition, cloche, versions de recettes) et la file des envois faits à la main ; les règles
+// d'e-mails automatiques avancent leur point de départ (à la remise en route, aucun ancien document ne part).
+$auto = App\Core\AutoSend::enabled();
+$off = ['skipped' => 'auto_send = 0'];
 try {
     // Statuts KSeF (factures envoyées en attente de réponse, UPO) : en premier : une WDT acceptée déclenche son e-mail dans le même passage.
     try {
-        $ksef = $container->get(App\Services\Ksef\KsefSubmissionService::class)->refreshPendingStatusesIfConfigured();
+        $ksef = !$auto ? $off : $container->get(App\Services\Ksef\KsefSubmissionService::class)->refreshPendingStatusesIfConfigured();
     } catch (Throwable $e) {
         fwrite(STDERR, 'mail_dispatch ksef: ' . $e->getMessage() . PHP_EOL);
         $ksef = ['error' => $e->getMessage()];
     }
-    $dispatch = $container->get(App\Services\Communication\MailAutomationService::class)->dispatch();
+    $mailAutomation = $container->get(App\Services\Communication\MailAutomationService::class);
+    $dispatch = $auto ? $mailAutomation->dispatch() : $off + ['fast_forwarded' => $mailAutomation->fastForward()];
     // Rappels de paiement des proformas, niveaux 1 à reminders.auto_levels (P5 ; 0 = désactivé) : avant la file d'envoi.
     try {
-        $reminders = $container->get(App\Services\Communication\PaymentReminderAutoService::class)->run();
+        $reminders = !$auto ? $off : $container->get(App\Services\Communication\PaymentReminderAutoService::class)->run();
     } catch (Throwable $e) {
         fwrite(STDERR, 'mail_dispatch reminders: ' . $e->getMessage() . PHP_EOL);
         $reminders = ['error' => $e->getMessage()];
     }
     // Raport miesięczny zarządu : raz w miesiącu za poprzedni miesiąc (błąd raportu nie zatrzymuje wysyłki kolejki).
     try {
-        $report = $container->get(App\Services\Analysis\MonthlyReportService::class)->autoSend();
+        $report = !$auto ? $off : $container->get(App\Services\Analysis\MonthlyReportService::class)->autoSend();
     } catch (Throwable $e) {
         fwrite(STDERR, 'mail_dispatch monthly report: ' . $e->getMessage() . PHP_EOL);
         $report = ['error' => $e->getMessage()];
@@ -73,27 +79,27 @@ try {
     }
     // Domówienia remises en file depuis Stan wysyłek : une tentative de plus (à part aussi).
     try {
-        $supplements = $container->get(App\Services\Client\Order\OrderSupplementPusherService::class)->pushRequeued();
+        $supplements = !$auto ? $off : $container->get(App\Services\Client\Order\OrderSupplementPusherService::class)->pushRequeued();
     } catch (Throwable $e) {
         fwrite(STDERR, 'mail_dispatch supplements: ' . $e->getMessage() . PHP_EOL);
         $supplements = ['error' => $e->getMessage()];
     }
     // Avis « wysłane » aux boutiques (mis en file par Wyślij dzień) : sans clé de boutique valable, rien ne part (report).
     try {
-        $shopNotices = $container->get(App\Services\Client\Order\ShipmentOutboxDispatcher::class)->dispatchDue(50);
+        $shopNotices = !$auto ? $off : $container->get(App\Services\Client\Order\ShipmentOutboxDispatcher::class)->dispatchDue(50);
     } catch (Throwable $e) {
         fwrite(STDERR, 'mail_dispatch shop notices: ' . $e->getMessage() . PHP_EOL);
         $shopNotices = ['error' => $e->getMessage()];
     }
     // Kreator cen [218] : e-maile « nowe ceny od » (X dni przed), nowe ceny w dniu zmiany, cennik na stronę franczyzy (à part aussi).
     try {
-        $prices = $container->get(App\Services\Finances\PricePublicationService::class)->run();
+        $prices = !$auto ? $off : $container->get(App\Services\Finances\PricePublicationService::class)->run();
     } catch (Throwable $e) {
         fwrite(STDERR, 'mail_dispatch price publications: ' . $e->getMessage() . PHP_EOL);
         $prices = ['error' => $e->getMessage()];
     }
     $delivery = $container->get(App\Services\Communication\CommunicationEmailDeliveryWorker::class)->processDue(50);
-    echo json_encode(['dispatch' => $dispatch, 'reminders' => $reminders, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'shop_notices' => $shopNotices, 'price_publications' => $prices, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    echo json_encode(['dispatch' => $dispatch, 'reminders' => $reminders, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'shop_notices' => $shopNotices, 'price_publications' => $prices, 'delivery' => $delivery, 'auto_send' => $auto], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, 'mail_dispatch: ' . $e->getMessage() . PHP_EOL);
     exit(1);

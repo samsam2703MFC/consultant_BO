@@ -22,6 +22,15 @@ class ProductCategoryService
         ], $this->categoryProductRepository->allWithCounts());
     }
 
+    /** [339] Kategoria włączona / wyłączona = wszystkie jej produkty w ERP aktywne / nieaktywne. */
+    public function setActive(int $id, bool $active): int
+    {
+        if (!$this->categoryProductRepository->first(['id' => $id])) {
+            throw new \App\Exceptions\CustomException('Nie znaleziono kategorii.', 'errors', 404);
+        }
+        return $this->categoryProductRepository->setProductsActive($id, $active);
+    }
+
     public function findAll()
     {
         return $this->categoryProductRepository->findAll();
