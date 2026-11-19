@@ -1193,3 +1193,5 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
    son alignement en haut (les marges automatiques valent alors zéro) et défile comme avant. */
 .kiosk:not(.kiosk-phone) > .kiosk-head + section.kiosk-card:last-of-type,
 .kiosk:not(.kiosk-phone) > .kiosk-head + .kiosk-tabs + section.kiosk-card:last-of-type { margin-top: auto; margin-bottom: auto; }
+/* [359] Centre calculé sur la hauteur réellement visible (barre d'adresse de Chrome affichée ou non) : 100dvh. */
+.kiosk { min-height: 100dvh; }
