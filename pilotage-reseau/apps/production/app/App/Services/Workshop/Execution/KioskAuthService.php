@@ -169,9 +169,9 @@ final class KioskAuthService
             $data['badge_hash'] = $hash;
         }
         if (array_key_exists('pin', $c)) {
-            $data['pin_hash'] = $c['pin'] === null ? null : password_hash($c['pin'], PASSWORD_BCRYPT);
-            $data['failed_attempts'] = 0;
-            $data['locked_until'] = null;
+            // [361] Tous les PIN différents (le PIN seul ouvre le profil sur la tablette de bureau) : PIN_TAKEN sinon.
+            $data = ($c['pin'] === null ? ['pin_hash' => null, 'pin_lookup' => null, 'pin_conflict' => 0, 'failed_attempts' => 0, 'locked_until' => null]
+                : $this->pinCredential($employeeId, $c['pin'])) + $data;
         }
         if (!empty($c['unlock'])) { $data['failed_attempts'] = 0; $data['locked_until'] = null; }
         if (array_key_exists('biometric_consent', $c)) {
@@ -322,10 +322,14 @@ final class KioskAuthService
             && $this->repo->activePhones($body['employee_id']) > 0) {
             throw new ApiException('OFFICE_USE_PHONE', 409);
         }
-        $employee = $this->presentByTap($body, $device, $context) ?? $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        $tapped = $this->presentByTap($body, $device, $context);
+        $employee = $tapped ?? $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        // [361] PIN tapé : son empreinte est posée au passage ; PIN identique à celui d'une autre personne → à changer.
+        $change = $tapped === null && isset($body['pin']) && is_string($body['pin']) && $this->settlePin((int) $employee['id'], $body['pin']);
         // Tablette générique : le groupe touché à l'accueil, à défaut le groupe principal de la personne (badge).
         return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId
-            ?? (isset($employee['id_primary_group']) && $employee['id_primary_group'] !== null ? (int) $employee['id_primary_group'] : null));
+            ?? (isset($employee['id_primary_group']) && $employee['id_primary_group'] !== null ? (int) $employee['id_primary_group'] : null))
+            + ['pin_change_required' => $change];
     }
 
     /**
@@ -339,8 +343,9 @@ final class KioskAuthService
         if ($employee === null || !(int) $employee['active']) throw ApiException::notFound('employee', $employeeId);
         $cred = $this->repo->credential($employeeId);
         if ($cred !== null && $cred['pin_hash'] !== null) throw new ApiException('PIN_ALREADY_SET', 409);
+        $this->deviceNotLocked((int) $context->deviceId);
         $this->checkPin($pin);
-        $this->repo->saveCredential($employeeId, ['pin_hash' => password_hash($pin, PASSWORD_BCRYPT), 'failed_attempts' => 0, 'locked_until' => null]);
+        $this->repo->saveCredential($employeeId, $this->pinCredential($employeeId, $pin, $context));
         $this->audit->record($context, 'pin_self_created', 'employee', $employeeId, null, ['device_id' => (int) $context->deviceId]);
         return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId);
     }
@@ -356,9 +361,109 @@ final class KioskAuthService
         $this->authenticateEmployee(['employee_id' => $employeeId, 'pin' => $c['current_pin']], (int) $context->deviceId, $context);
         if ($c['pin'] === $c['current_pin']) throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_SAME', 'params' => []]]);
         $this->checkPin($c['pin']);
-        $this->repo->saveCredential($employeeId, ['pin_hash' => password_hash($c['pin'], PASSWORD_BCRYPT), 'failed_attempts' => 0, 'locked_until' => null]);
+        $this->repo->saveCredential($employeeId, $this->pinCredential($employeeId, $c['pin'], $context));
         $this->audit->record($context, 'pin_self_changed', 'employee', $employeeId, null, ['device_id' => (int) $context->deviceId]);
         return ['employee_id' => $employeeId, 'changed' => true];
+    }
+
+    /**
+     * [361] Tablette de bureau : le PIN seul ouvre le profil. Retrouvé par son empreinte (et, le temps que chacun se
+     * reconnecte, parmi les PIN posés avant, en bcrypt). Inconnu : compté sur la tablette (kiosk.office_pin_max_attempts,
+     * puis blocage kiosk.lock_minutes — DEVICE_PIN_LOCKED). Deux personnes avec ce PIN : PIN_CHOOSE_NAME (nom puis PIN,
+     * puis nouveau PIN). Même réponse et mêmes blocages qu'une identification par nom + PIN.
+     */
+    public function loginByPin(string $pin, ApiContext $context): array
+    {
+        if (!preg_match('/^\d{4,6}$/', $pin)) throw ApiException::validation([['field' => 'pin', 'code' => 'INVALID_PIN', 'params' => []]]);
+        $deviceId = (int) $context->deviceId;
+        $this->deviceNotLocked($deviceId);
+        $owners = array_values(array_filter($this->pinOwners($pin), fn($id) => ($e = $this->repo->employee($id)) !== null && (int) $e['active']));
+        if (!$owners) $this->devicePinFailure($deviceId, $context);
+        $this->repo->update($deviceId, ['pin_failed' => 0, 'pin_locked_until' => null]);
+        $cred = count($owners) === 1 ? $this->repo->credential($owners[0]) : null;
+        if ($cred === null || (int) $cred['pin_conflict'] === 1) {
+            $this->markPinConflict($owners);
+            throw new ApiException('PIN_CHOOSE_NAME', 409);
+        }
+        if ($cred['locked_until'] !== null && $cred['locked_until'] > date('Y-m-d H:i:s')) {
+            throw new ApiException('EMPLOYEE_LOCKED', 423, [], ['until' => substr($cred['locked_until'], 11, 5)]);
+        }
+        if (!$this->officePinAll() && $this->repo->activePhones($owners[0]) > 0) throw new ApiException('OFFICE_USE_PHONE', 409);
+        if ($cred['pin_lookup'] === null) $this->repo->saveCredential($owners[0], ['pin_lookup' => $this->pinLookup($pin)]);
+        $employee = $this->repo->employee($owners[0]);
+        return $this->employeeToken($employee, $deviceId, $context->deviceGroupId) + ['pin_change_required' => false];
+    }
+
+    /** [361] Empreinte du PIN (HMAC, clé du serveur) : unique, retrouve la personne sans parcourir tous les bcrypt. */
+    public function pinLookup(string $pin): string
+    {
+        return hash_hmac('sha256', 'pin:' . $pin, $this->config->jwtSecret());
+    }
+
+    /**
+     * [361] PIN posé (tablette, back-office, création d'employé, chauffeur) : différent de tous les autres, sinon
+     * PIN_TAKEN (sur la tablette, compté comme un PIN inconnu : pas de sondage des PIN des autres). @return colonnes
+     */
+    public function pinCredential(int $employeeId, string $pin, ?ApiContext $context = null): array
+    {
+        if ($this->pinOwners($pin, $employeeId)) {
+            if ($context !== null && $context->deviceId !== null) $this->devicePinFailure((int) $context->deviceId, $context, 'PIN_TAKEN');
+            throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_TAKEN', 'params' => []]]);
+        }
+        return ['pin_hash' => password_hash($pin, PASSWORD_BCRYPT), 'pin_lookup' => $this->pinLookup($pin), 'pin_conflict' => 0,
+            'failed_attempts' => 0, 'locked_until' => null];
+    }
+
+    /** @return list<int> personnes dont le PIN est $pin : empreinte, puis PIN encore sans empreinte (bcrypt) ; sauf $except. */
+    private function pinOwners(string $pin, ?int $except = null): array
+    {
+        $ids = [];
+        $byLookup = $this->repo->credentialByPinLookup($this->pinLookup($pin));
+        if ($byLookup !== null) $ids[] = (int) $byLookup['id_employee'];
+        foreach ($this->repo->pinsWithoutLookup() as $c) {
+            if (password_verify($pin, (string) $c['pin_hash'])) $ids[] = (int) $c['id_employee'];
+        }
+        return array_values(array_filter(array_unique($ids), fn($id) => $id !== $except));
+    }
+
+    /** Identification par nom + PIN : empreinte posée si libre ; PIN partagé avec une autre personne → conflit. @return bool à changer */
+    private function settlePin(int $employeeId, string $pin): bool
+    {
+        $cred = $this->repo->credential($employeeId);
+        if ($cred === null) return false;
+        if ((int) $cred['pin_conflict'] === 1) return true;
+        if ($cred['pin_lookup'] !== null) return false;
+        $others = $this->pinOwners($pin, $employeeId);
+        if ($others) {
+            $this->markPinConflict(array_merge([$employeeId], $others));
+            return true;
+        }
+        $this->repo->saveCredential($employeeId, ['pin_lookup' => $this->pinLookup($pin)]);
+        return false;
+    }
+
+    /** Même PIN pour plusieurs personnes : plus de connexion par PIN seul pour elles, nouveau PIN à la prochaine connexion. */
+    private function markPinConflict(array $ids): void
+    {
+        foreach (array_unique($ids) as $id) $this->repo->saveCredential((int) $id, ['pin_lookup' => null, 'pin_conflict' => 1]);
+    }
+
+    private function deviceNotLocked(int $deviceId): void
+    {
+        $until = $this->repo->find($deviceId)['pin_locked_until'] ?? null;
+        if ($until !== null && $until > date('Y-m-d H:i:s')) throw new ApiException('DEVICE_PIN_LOCKED', 423, [], ['until' => substr((string) $until, 11, 5)]);
+    }
+
+    /** PIN inconnu (ou déjà pris) tapé sur la tablette : compté ; au-delà de kiosk.office_pin_max_attempts, tablette bloquée. */
+    private function devicePinFailure(int $deviceId, ApiContext $context, string $code = 'PIN_UNKNOWN'): void
+    {
+        $failed = (int) ($this->repo->find($deviceId)['pin_failed'] ?? 0) + 1;
+        $max = max(1, (int) $this->params->get('kiosk.office_pin_max_attempts', '5'));
+        $lock = $failed >= $max ? date('Y-m-d H:i:s', time() + max(1, (int) $this->params->get('kiosk.lock_minutes', '15')) * 60) : null;
+        $this->repo->update($deviceId, ['pin_failed' => $lock ? 0 : $failed, 'pin_locked_until' => $lock]);
+        $this->audit->record($context, 'pin_unknown', 'device', $deviceId, null, ['locked' => $lock !== null, 'code' => $code]);
+        if ($lock) throw new ApiException('DEVICE_PIN_LOCKED', 423, [], ['until' => substr($lock, 11, 5)]);
+        if ($code === 'PIN_UNKNOWN') throw new ApiException('PIN_UNKNOWN', 401, [], ['left' => $max - $failed]);
     }
 
     /** PIN choisi par la personne : 4 à 6 chiffres, ni un seul chiffre répété (1111) ni une suite (1234, 9876). */
