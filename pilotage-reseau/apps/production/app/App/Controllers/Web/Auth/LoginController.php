@@ -51,8 +51,9 @@ class LoginController extends BaseController
             $user = $this->qrLogin->poll($_SESSION['ERP_LOGIN_QR'] ?? null);
             if ($user === null) return $this->json(['data' => ['done' => false]]);
             unset($_SESSION['ERP_LOGIN_QR']);
+            $to = $this->afterLogin();
             $this->loginService->loginUser($user);
-            return $this->json(['data' => ['done' => true, 'redirect' => ROOT . '/home']]);
+            return $this->json(['data' => ['done' => true, 'redirect' => $to]]);
         } catch (\Throwable $e) {
             error_log('[login-qr] ' . $e->getMessage());
             return $this->json(['data' => ['done' => false]]);
@@ -74,9 +75,10 @@ class LoginController extends BaseController
     public function login()
     {
         $libre = $this->entreeLibre();
+        $to = $this->afterLogin();
         if ($libre !== '') {
             if ($this->loginService->loginWithoutPassword($libre)) {
-                header('Location: ' . ROOT . '/home');
+                header('Location: ' . $to);
                 return;
             }
             $this->errors[] = "Konto " . htmlspecialchars($libre) . " nie istnieje.";
@@ -92,8 +94,16 @@ class LoginController extends BaseController
             $qr = $this->qrEnabled();
             $this->view('auth/login', ['qrLogin' => $qr, 'qrSections' => $qr ? $this->qrSections() : [], 'showPassword' => true]);
         } else {
-            header('Location: ' . ROOT . '/home');
+            header('Location: ' . $to);
         }
+    }
+
+    /** [354] Strona, na którą wraca się po zalogowaniu (otwarta bez sesji, np. kod QR) — inaczej /home. Raz. */
+    private function afterLogin(): string
+    {
+        $to = (string) ($_SESSION['AFTER_LOGIN'] ?? '');
+        unset($_SESSION['AFTER_LOGIN']);
+        return preg_match('~^/(?!/)[A-Za-z0-9/_\-.%?=&]*$~', $to) ? ROOT . $to : ROOT . '/home';
     }
 
 }
