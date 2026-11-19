@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Maquette 3 — Dépliant 4 pages avec QR codes</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  body { background: #e9e4dc; padding: 26px 0 40px; }
+  .titre { text-align: center; margin-bottom: 18px; }
+  .titre h1 { font-size: 22px; }
+  .lab { font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; text-align: center; margin: 22px 0 8px; }
+  .feuille { width: 842px; height: 595px; margin: 0 auto; display: flex; background: #fff; box-shadow: 0 8px 26px rgba(28,26,23,.12); }
+  .pg { width: 421px; height: 595px; padding: 30px 32px; position: relative; overflow: hidden; }
+  .pg + .pg { border-left: 1px dashed #d8d1c6; }
+  .pg h2 { font-size: 19px; font-weight: 500; margin: 0 0 10px; line-height: 1.2; }
+  .pg p, .pg li { font-size: 11.5px; line-height: 1.5; color: var(--ink); margin: 0 0 6px; }
+  .pg ul { padding-left: 16px; margin: 6px 0; }
+  .pied { position: absolute; bottom: 16px; left: 32px; right: 32px; font-size: 9.5px; color: var(--muted); display: flex; justify-content: space-between; }
+  .couv { background: var(--accent); color: #fff; }
+  .couv h2 { font-size: 30px; color: #fff; margin-top: 90px; }
+  .couv .sous { font-size: 13px; opacity: .9; margin-top: 10px; margin-bottom: 40px; line-height: 1.45; }
+  .couv .petit { position: absolute; left: 32px; bottom: 22px; font-size: 11px; letter-spacing: .1em; opacity: .85; }
+  .postes { border-collapse: collapse; width: 100%; font-size: 11px; margin: 8px 0 10px; }
+  .postes td { border-bottom: 1px solid var(--line); padding: 5px 4px; vertical-align: top; }
+  .postes td:first-child { width: 42px; font-weight: 500; color: var(--accent); }
+  .codeex { font-size: 26px; font-weight: 500; letter-spacing: .02em; margin: 6px 0 2px; }
+  .legende { font-size: 10.5px; color: var(--muted); margin-bottom: 8px; }
+  .boite { background: var(--paper); border-radius: 6px; padding: 9px 11px; margin: 10px 0; }
+  .qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin-top: 10px; }
+  .qr { display: flex; gap: 9px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  .qr .img { width: 96px; height: 96px; flex: none; }
+  .qr .img svg { width: 96px; height: 96px; }
+  .qr b { font-size: 11.5px; font-weight: 500; display: block; margin-bottom: 3px; }
+  .qr small { font-size: 9px; color: var(--muted); word-break: break-all; line-height: 1.35; display: block; }
+  .encadre { border-left: 3px solid var(--prize); background: var(--prize-soft); color: var(--prize-ink); padding: 7px 10px; font-size: 10.5px; border-radius: 4px; margin-top: 10px; }
+</style>
+<script src="../../../public/assets/vendor/qrcode/qrcode.js"></script>
+</head>
+<body>
+<div class="titre"><div class="kicker">Maquette 3 · le dépliant, feuille A4 à plier en deux</div></div>
+
+<div class="lab">Recto · pages 4 (à gauche) et 1 (à droite)</div>
+<div class="feuille">
+  <section class="pg">
+    <h2>Le manuel en un coup d’œil</h2>
+    <p>Quatre manuels, un même métier. Chacun répond à une question :</p>
+    <ul>
+      <li><b>Le manuel opératoire</b> : pourquoi on fait les choses.</li>
+      <li><b>Les standards (SOP)</b> : comment on les fait, pas à pas.</li>
+      <li><b>Les checklists</b> : ce qu’il faut contrôler, et quand.</li>
+      <li><b>Le manuel du réseau</b> : où tout cela se range, par domaine.</li>
+    </ul>
+    <p>Scannez le QR code de chaque manuel (page 4) : vous arrivez directement à la bonne page.</p>
+    <div class="encadre">Cette maquette : les textes sont indicatifs, la version finale sera relue avant impression.</div>
+    <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 4 de 4</span></div>
+  </section>
+  <section class="pg couv">
+    <div class="kicker" style="color:#fff;opacity:.85">Comment lire les manuels</div>
+    <h2>Le métier, écrit pour être fait</h2>
+    <div class="sous">Les postes, les checklists, les standards : ce qu’on fait, quand on le fait, et comment on le prouve.</div>
+    <div class="petit">MANUEL DU RÉSEAU · ÉDITION 2026</div>
+  </section>
+</div>
+
+<div class="lab">Verso · pages 2 (à gauche) et 3 (à droite)</div>
+<div class="feuille">
+  <section class="pg">
+    <h2>Les postes : qui fait quoi</h2>
+    <p>Chaque personne occupe un poste. Le poste détermine les standards et les checklists qu’on lui demande.</p>
+    <table class="postes">
+      <tr><td>P1</td><td>Cuisson et production</td></tr>
+      <tr><td>P3</td><td>Vente</td></tr>
+      <tr><td>P7</td><td>Adjoint manager</td></tr>
+      <tr><td>P8</td><td>Manager</td></tr>
+      <tr><td>P12</td><td>Franchisé multi-boutique</td></tr>
+    </table>
+    <p>Les autres niveaux (P2, P4 à P6, P9 à P11) se lisent dans le manuel opératoire, par poste.</p>
+    <div class="encadre">Libellés repris du référentiel ; à relire avant impression.</div>
+    <div class="pied"><span>Lire aussi : manuel opératoire, par poste</span><span>Page 2 de 4</span></div>
+  </section>
+  <section class="pg">
+    <h2>Lire un code : checklists et standards</h2>
+    <div class="codeex">1.1.01</div>
+    <div class="legende">zone 1 (vente) · moment 1 (ouverture) · numéro 01 : « Ouverture de la boutique »</div>
+    <div class="boite">
+      <p><b>Zone</b> : 1 vente · 2 boulangerie · 3 traiteur · 4 nettoyage · 5 gestion</p>
+      <p><b>Moment</b> : 1 ouverture · 2 journée · 3 après-midi · 4 fermeture · 5 chaque semaine · 6 chaque mois</p>
+    </div>
+    <p>Exemple : <b>5.5.01</b>, réunion d’équipe du lundi, c’est la zone gestion, au moment « chaque semaine ».</p>
+    <p>Un standard (SOP) se lit par étapes : chaque étape a sa photo, ses points critiques, puis un quiz. La personne est validée « vu faire » par son responsable.</p>
+    <div class="pied"><span>Codes : nomenclature des checklists</span><span>Page 3 de 4</span></div>
+  </section>
+</div>
+
+<div class="lab">Page 4 · le dos : les quatre QR codes (adresses à confirmer avant impression)</div>
+<div class="feuille" style="width:421px;margin:0 auto">
+  <section class="pg" style="width:421px">
+    <h2>Ouvrir un manuel</h2>
+    <p style="margin-bottom:10px">Scannez avec l’appareil photo : vous arrivez sur le manuel, à la bonne page.</p>
+    <div class="qrs">
+      <div class="qr"><div class="img" id="q1"></div><div><b>Manuel opératoire</b><small>http://185.180.206.46/consulant_bo/formation/#/manuel</small></div></div>
+      <div class="qr"><div class="img" id="q2"></div><div><b>Standards (SOP)</b><small>http://185.180.206.46/consulant_bo/formation/#/sop</small></div></div>
+      <div class="qr"><div class="img" id="q3"></div><div><b>Checklists</b><small>adresse à confirmer</small></div></div>
+      <div class="qr"><div class="img" id="q4"></div><div><b>Manuel du réseau</b><small>http://185.180.206.46/consulant_bo/formation/#/rfclasseur</small></div></div>
+    </div>
+    <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 4 de 4</span></div>
+  </section>
+</div>
+<script>
+  function qr(id, url, taille) {
+    var q = qrcode(0, 'M'); q.addData(url); q.make();
+    document.getElementById(id).innerHTML = q.createSvgTag({ cellSize: taille, margin: 0, scalable: true, alt: 'QR code : ' + url });
+  }
+  qr('q1', 'http://185.180.206.46/consulant_bo/formation/#/manuel', 3);
+  qr('q2', 'http://185.180.206.46/consulant_bo/formation/#/sop', 3);
+  qr('q3', 'http://185.180.206.46/consulant_bo/formation/', 3);
+  qr('q4', 'http://185.180.206.46/consulant_bo/formation/#/rfclasseur', 3);
+</script>
+<div class="maquette-tag statique">Maquette 3 · dépliant 4 pages</div>
+</body></html>

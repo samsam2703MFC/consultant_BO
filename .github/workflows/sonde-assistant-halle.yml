@@ -9,7 +9,7 @@ name: Sonde — assistant du dashboard magasin, appel réel (Halle) (lecture seu
 on:
   push:
     branches: [claude/elegant-cray-9i8enx]
-    paths: ['pilotage-reseau/tools/sonde_assistant_halle.php', 'pilotage-reseau/src/assistant_magasin.php', 'pilotage-reseau/src/anthropic.php', '.github/workflows/sonde-assistant-halle.yml']
+    paths: ['panel/tools/sonde_assistant_halle.php', 'panel/src/assistant_magasin.php', 'shared/src/anthropic.php', '.github/workflows/sonde-assistant-halle.yml']
   # Lancement à la main : `espace` enregistre l'identifiant d'espace de travail Anthropic (wrkspc_…, pas un secret) dans
   # erp_cles (anthropic_workspace_id, portail commun) avant les questions. Rien n'est écrit dans le code.
   workflow_dispatch:
@@ -30,11 +30,10 @@ env:
   SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
   TARGET_DIR: "/var/www/consulant_bo"
 
-# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
-# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+# Réorganisation en quatre domaines (19/11/2026) : le script vit dans panel/, chaque commande part de ce dossier.
 defaults:
   run:
-    working-directory: pilotage-reseau
+    working-directory: panel
 
 jobs:
   sonde:
@@ -64,8 +63,8 @@ jobs:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/assistant_magasin.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_assistant_magasin.php"
-          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/fidelite_profils.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_fidelite_profils.php"
-          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/anthropic.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_anthropic.php"
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" ../marketing/src/fidelite_profils.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_fidelite_profils.php"
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" ../shared/src/anthropic.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_anthropic.php"
 
       - name: Poser deux questions à l’assistant pour Halle
         env:

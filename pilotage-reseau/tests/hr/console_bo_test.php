@@ -14,7 +14,7 @@ declare(strict_types=1);
  */
 
 $ROOT = dirname(__DIR__, 2);
-require $ROOT . '/bin/console_bo.php';
+require dirname($ROOT) . '/shared/bin/console_bo.php';
 
 $ok = 0;
 $ko = 0;
@@ -92,7 +92,7 @@ if ($dsn !== '') {
     $run = static function (string $accounts = '') use ($ROOT, $tmp, $base): string {
         return (string) shell_exec('CB_OPCACHE_WAIT=0 CB_RESETS_FILE=' . escapeshellarg($tmp . '/resets.json') . ' CB_JOURNAL_FILE=' . escapeshellarg($tmp . '/journal.jsonl') . ' CB_SEAL_KEY_FILE=' . escapeshellarg($tmp . '/seal.pem') . ' CB_SEALED_FILE=' . escapeshellarg($tmp . '/comptes.sealed')
             . ' WEBSHOP_API_LOCAL=' . escapeshellarg($base) . ' CONSOLE_BO_ACCOUNTS=' . escapeshellarg($accounts)
-            . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/console_bo.php') . ' --api-dir=' . escapeshellarg($tmp . '/api') . ' 2>&1');
+            . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname($ROOT) . '/shared/bin/console_bo.php') . ' --api-dir=' . escapeshellarg($tmp . '/api') . ' 2>&1');
     };
     verifie('avant : /bo/franchisee/me rend 500 (non configuré)', cbHealth($base . '/bo/franchisee/me') === 500);
     $out = $run();
@@ -148,7 +148,7 @@ if ($dsn !== '') {
     $liste = (string) json_encode([['email' => 'scelle@exemple.be', 'name' => 'Scellé', 'role' => 'franchise', 'shops' => [3], 'password' => 'mot-de-passe-scelle-123']]);
     file_put_contents($tmp . '/liste.json', $liste);
     file_put_contents($tmp . '/pub.pem', $pub);
-    $pli = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/console_bo_seal.php') . ' ' . escapeshellarg($tmp . '/pub.pem') . ' ' . escapeshellarg($tmp . '/liste.json') . ' 2>/dev/null');
+    $pli = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname($ROOT) . '/shared/bin/console_bo_seal.php') . ' ' . escapeshellarg($tmp . '/pub.pem') . ' ' . escapeshellarg($tmp . '/liste.json') . ' 2>/dev/null');
     verifie('pli scellé : ni e-mail ni mot de passe en clair', $pli !== '' && !str_contains($pli, 'scelle@') && !str_contains($pli, 'mot-de-passe-scelle'), $pli);
     file_put_contents($tmp . '/comptes.sealed', $pli);
     $out6 = $run();

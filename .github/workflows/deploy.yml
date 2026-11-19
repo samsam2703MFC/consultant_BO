@@ -14,7 +14,8 @@ name: Deploy — Cockpit CEO
 on:
   push:
     branches: [claude/deploiement-application-serveur-lmz1bm]
-    paths: ['pilotage-reseau/deploy.trigger']
+    # Réorganisation en quatre domaines (19/11/2026) : le déclencheur vit dans shared/.
+    paths: ['shared/deploy.trigger']
   workflow_dispatch:
 
 concurrency:
@@ -46,11 +47,12 @@ env:
   # Données de démonstration du module « Gestion de production atelier » (serveur de test seulement).
   ERP_TFB_DEMO: "1"
 
-# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
-# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+# Le dépôt en quatre domaines (réorganisation du 19/11/2026) : marketing/, formation/, consultant/, panel/, le
+# partagé dans shared/, le hors-périmètre dans pilotage-reseau/. Chaque commande part de la racine du dépôt, qui est
+# aussi ce qui part sur le serveur.
 defaults:
   run:
-    working-directory: pilotage-reseau
+    working-directory: .
 
 jobs:
   deploy:
@@ -66,7 +68,7 @@ jobs:
       # pour PHP 8.1 (config.platform), la version du serveur.
       - name: Préparer l'ERP (composer install)
         run: |
-          composer install --working-dir=apps/production/app/public \
+          composer install --working-dir=pilotage-reseau/apps/production/app/public \
             --no-dev --no-interaction --no-progress --optimize-autoloader
 
       # Un script de déploiement mal quoté part sur le serveur sans que rien
@@ -76,14 +78,14 @@ jobs:
       - name: Contrôler la syntaxe avant de livrer
         run: |
           fail=0
-          bash -n bin/deploy.sh || { echo "::error title=deploy.sh::syntaxe shell invalide"; fail=1; }
-          for f in $(find src public -name '*.php'); do
+          bash -n shared/bin/deploy.sh || { echo "::error title=deploy.sh::syntaxe shell invalide"; fail=1; }
+          for f in $(find */src */public -name '*.php'); do
             php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP invalide"; fail=1; }
           done
           # public/assistant et public/tablette : bundles Vite minifiés (modules
           # ES), déjà validés par leur compilation — `node --check` les lirait
           # comme des scripts CommonJS et les refuserait à tort.
-          for f in $(find public -name '*.js' -not -path 'public/assistant/*' -not -path 'public/tablette/*'); do
+          for f in $(find */public -name '*.js' -not -path 'marketing/public/assistant/*' -not -path 'panel/public/tablette/*'); do
             node --check "$f" >/dev/null 2>&1 || { echo "::error file=$f::syntaxe JS invalide"; fail=1; }
           done
           [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
@@ -97,13 +99,13 @@ jobs:
       - name: Test de fonctionnement avant de livrer
         run: |
           fail=0
-          php bin/tests_noms_globaux.php || { echo "::error title=Noms globaux::une fonction ou une constante globale est déclarée deux fois (bin/tests_noms_globaux.php)"; fail=1; }
-          php bin/test_chargement.php || { echo "::error title=Chargement de l'API::un point d'entrée de l'API ne se charge pas (bin/test_chargement.php) : en ligne, le cockpit répondrait 500 partout"; fail=1; }
+          php shared/bin/tests_noms_globaux.php || { echo "::error title=Noms globaux::une fonction ou une constante globale est déclarée deux fois (shared/bin/tests_noms_globaux.php)"; fail=1; }
+          php shared/bin/test_chargement.php || { echo "::error title=Chargement de l'API::un point d'entrée de l'API ne se charge pas (shared/bin/test_chargement.php) : en ligne, le cockpit répondrait 500 partout"; fail=1; }
           [ "$fail" = "0" ] || exit 1
           # Déjà en échec avant ce test (fichiers ou polices absents hors du serveur) : lancés, jamais signalés.
           connus=" tests_noms_globaux tests_ca_net tests_cq_mail tests_documents tests_catalogue "
           ok=0; ko=0
-          for t in bin/tests_*.php; do
+          for t in */bin/tests_*.php; do
             n=$(basename "$t" .php)
             case "$connus" in *" $n "*) continue ;; esac
             if out=$(timeout 120 php "$t" 2>&1); then ok=$((ok+1))
@@ -118,7 +120,7 @@ jobs:
       # Le module RH / Dimona : ses tests unitaires (JWT, cache du jeton, statuts, backoff, YAML, chiffrement),
       # sans réseau ni ONSS. Les tests d'intégration (faux ONSS servi par php -S) : php tests/hr/run.php.
       - name: Tests du module RH (sans réseau, sans ONSS)
-        run: php tests/hr/run.php --unit
+        run: php pilotage-reseau/tests/hr/run.php --unit
 
       - name: Installer sshpass
         timeout-minutes: 4
@@ -192,13 +194,13 @@ jobs:
           #   « wipe »  → remise à zéro (base vide, aucune démo) — prioritaire ;
           #   « reset » → réinstallation avec jeu de démonstration.
           RESET=0; WIPE=0; DBINSPECT=0; APIINSPECT=0
-          if grep -qiw 'reset'     deploy.trigger 2>/dev/null; then RESET=1; fi
-          if grep -qiw 'wipe'      deploy.trigger 2>/dev/null; then WIPE=1; RESET=0; fi
-          if grep -qiw 'dbinspect' deploy.trigger 2>/dev/null; then DBINSPECT=1; fi
-          if grep -qiw 'apiinspect' deploy.trigger 2>/dev/null; then APIINSPECT=1; fi
+          if grep -qiw 'reset'     shared/deploy.trigger 2>/dev/null; then RESET=1; fi
+          if grep -qiw 'wipe'      shared/deploy.trigger 2>/dev/null; then WIPE=1; RESET=0; fi
+          if grep -qiw 'dbinspect' shared/deploy.trigger 2>/dev/null; then DBINSPECT=1; fi
+          if grep -qiw 'apiinspect' shared/deploy.trigger 2>/dev/null; then APIINSPECT=1; fi
           echo "COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT} COCKPIT_APIINSPECT=${APIINSPECT}"
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "cd ${SRC_DIR} && chmod +x bin/deploy.sh && COCKPIT_PWA_BASE='${PWA_BASE}' COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT} COCKPIT_APIINSPECT=${APIINSPECT} bash bin/deploy.sh"
+            "cd ${SRC_DIR} && chmod +x shared/bin/deploy.sh && COCKPIT_PWA_BASE='${PWA_BASE}' COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT} COCKPIT_APIINSPECT=${APIINSPECT} bash shared/bin/deploy.sh"
 
       - name: Nettoyer le fichier d'identifiants
         if: always()
@@ -215,10 +217,10 @@ jobs:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "ERP_URL='${ERP_URL}' ERP_ENTREE_LIBRE='${ERP_ENTREE_LIBRE}' ERP_SANDBOX_OUVERT='${ERP_SANDBOX_OUVERT}' ERP_TFB_DEMO='${ERP_TFB_DEMO}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
+            "ERP_URL='${ERP_URL}' ERP_ENTREE_LIBRE='${ERP_ENTREE_LIBRE}' ERP_SANDBOX_OUVERT='${ERP_SANDBOX_OUVERT}' ERP_TFB_DEMO='${ERP_TFB_DEMO}' bash ${SRC_DIR}/pilotage-reseau/apps/production/deploy/server.sh"
           # Avec le mot de passe navigateur, l'extérieur sans identifiants doit recevoir 401.
           expected=200
-          [ -f apps/production/deploy/acces_test.htpasswd ] && expected=401
+          [ -f pilotage-reseau/apps/production/deploy/acces_test.htpasswd ] && expected=401
           code=$(curl -s -o /dev/null -w '%{http_code}' "${ERP_URL}/")
           if [ "$code" != "$expected" ]; then
             echo "::error title=ERP::${ERP_URL}/ répond HTTP ${code} depuis l'extérieur (${expected} attendu)"; exit 1

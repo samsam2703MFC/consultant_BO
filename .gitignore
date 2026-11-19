@@ -1,0 +1,21 @@
+# Dépôt en quatre domaines (réorganisation du 19/11/2026) : marketing/, formation/, consultant/, panel/, shared/,
+# et pilotage-reseau/ pour ce qui est hors périmètre.
+
+# Configuration du serveur (identifiants) : réécrite par shared/bin/deploy.sh, jamais commise.
+shared/config/config.php
+config/config.php
+
+node_modules/
+.DS_Store
+marketing/tools/assistant-src/tsconfig.tsbuildinfo
+marketing/tools/assistant-src/dist-assistant/
+
+# Le site assemblé (shared/bin/assembler_public.php : des liens vers le public/ de chaque domaine) et ses fichiers
+# déposés (uploads/, assistant/uploads/) : construits sur place, jamais commis.
+/public/
+
+# Dossier privé local du cockpit et du module RH (clés, essais) — jamais commis.
+/var/
+
+# Worktrees temporaires des agents Claude Code
+.claude/worktrees/
