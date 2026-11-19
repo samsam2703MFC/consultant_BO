@@ -395,6 +395,8 @@
                 <div class="office-confirm-side"><div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
                     <canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas>
                     <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
+                ${direction === 'out' ? `<label class="office-daynote"><span>${esc(t('day_note'))}</span>
+                    <textarea class="kiosk-input" data-day-note rows="2" maxlength="500" placeholder="${esc(t('day_note_ph'))}"></textarea></label>` : ''}
                 <p class="kiosk-error" data-error>${esc(error || '')}</p>
                 <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
                 <div class="kiosk-row office-clock-more">${extra.pin ? `<button type="button" class="kiosk-btn is-small" data-change-pin>${esc(t('change_pin'))}</button>` : ''}
@@ -411,7 +413,8 @@
         ok.addEventListener('click', async () => {
             ok.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: cq.answers(), signature: pad.image()}, token);
+                const note = (el.querySelector('[data-day-note]')?.value || '').trim();
+                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: cq.answers(), signature: pad.image(), ...(note ? {note} : {})}, token);
                 const at = String((direction === 'out' ? r.clock.clock_out : r.clock.clock_in) || '').slice(11, 16);
                 // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.
                 if (me.comp_days && me.comp_days.length) return renderComp(p, token, me.comp_days.slice(), {direction, at});

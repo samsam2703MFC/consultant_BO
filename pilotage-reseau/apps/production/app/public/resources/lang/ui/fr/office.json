@@ -97,5 +97,7 @@
   "search_help": "Tapez au moins 3 lettres du nom ou du prénom, puis touchez votre nom.",
   "search_ph": "Nom ou prénom",
   "search_none": "Personne trouvé — vérifiez l’orthographe ou demandez au responsable.",
-  "pin_forgot": "{name} a déjà un PIN. Si vous l’avez oublié, demandez-en un nouveau au responsable (Tablety › Zarządzanie)."
+  "pin_forgot": "{name} a déjà un PIN. Si vous l’avez oublié, demandez-en un nouveau au responsable (Tablety › Zarządzanie).",
+  "day_note": "Remarque pour aujourd’hui (si nécessaire)",
+  "day_note_ph": "ex. parti plus tôt — rendez-vous médical"
 }

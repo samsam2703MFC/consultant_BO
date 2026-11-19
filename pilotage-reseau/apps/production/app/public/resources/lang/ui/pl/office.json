@@ -97,5 +97,7 @@
   "search_help": "Wpisz co najmniej 3 litery nazwiska lub imienia, potem dotknij siebie.",
   "search_ph": "Nazwisko lub imię",
   "search_none": "Nikogo nie znaleziono — sprawdź pisownię albo poproś kierownika.",
-  "pin_forgot": "{name} ma już PIN. Jeśli go nie pamiętasz, poproś kierownika o nowy (Tablety › Zarządzanie)."
+  "pin_forgot": "{name} ma już PIN. Jeśli go nie pamiętasz, poproś kierownika o nowy (Tablety › Zarządzanie).",
+  "day_note": "Uwagi do dzisiejszego dnia (jeśli trzeba)",
+  "day_note_ph": "np. wyszedłem wcześniej — wizyta u lekarza"
 }
