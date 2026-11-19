@@ -195,6 +195,7 @@
             // [356] PIN d'abord (4 chiffres), comme le parcours du téléphone mais sans QR ; QR : bouton sur l'écran du PIN.
             const person = people.find(x => x.id === Number(b.dataset.person));
             if (person && person.pin_allowed && person.employee_id) renderPin(person);
+            else if (person && !person.has_pin) renderFirstPin(person); // [360] pierwsze logowanie : utworzenie PIN-u
             else openPerson(Number(b.dataset.person));
         });
         el.querySelector('.office-groupbar').addEventListener('click', (e) => {
@@ -268,18 +269,18 @@
     }
 
     // --- Bez telefonu : PIN → pytania + podpis palcem → wejście / wyjście ---------------------------------
-    function renderPin(p) {
+    // Klawiatura PIN-u (logowanie, pierwszy PIN, zmiana PIN-u) : onPin(pin) — błąd = komunikat i klawiatura od nowa.
+    function pinPad(p, opts) {
         clearTimers();
         let pin = '';
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-pin">
-                ${avatar(p.name, 'is-lg')}<h2>${esc(p.name)}</h2><p class="kiosk-muted">${esc(t('pin_help'))}</p>
-                <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error></p>
+                ${avatar(p.name, 'is-lg')}<h2>${esc(p.name)}</h2>${opts.title ? `<p class="office-pin-title">${esc(opts.title)}</p>` : ''}<p class="kiosk-muted">${esc(opts.help)}</p>
+                <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error>${esc(opts.error || '')}</p>
                 <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
                     <button type="button" class="kiosk-btn" data-erase aria-label="${esc(t('erase'))}">⌫</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
                     <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div>
-                <div class="kiosk-row">${p.phones ? `<button type="button" class="kiosk-btn is-small" data-qr-go><i class="bi bi-qr-code"></i> ${esc(t('qr_instead'))}</button>` : ''}
-                    <button type="button" class="kiosk-btn is-small" data-home>${esc(t('cancel'))}</button></div></section>`;
-        el.querySelector('[data-qr-go]')?.addEventListener('click', () => openPerson(p.id));
+                <div class="kiosk-row">${opts.extra || ''}<button type="button" class="kiosk-btn is-small" ${opts.onCancel ? 'data-pin-cancel' : 'data-home'}>${esc(t('cancel'))}</button></div></section>`;
+        if (opts.onCancel) el.querySelector('[data-pin-cancel]').addEventListener('click', opts.onCancel);
         const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
         dots();
         const submit = async () => {
@@ -287,13 +288,12 @@
             const ok = el.querySelector('[data-ok]');
             ok.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/identify', {employee_id: p.employee_id, pin});
-                const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
-                renderClock(p, r.employee_token, me);
+                await opts.onPin(pin);
             } catch (err) {
                 if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
                 pin = ''; dots(); ok.disabled = false;
-                el.querySelector('[data-error]').textContent = err.message;
+                const box = el.querySelector('[data-error]');
+                if (box) box.textContent = err.offline ? t('offline') : err.message;
             }
         };
         el.querySelector('.kiosk-pad').addEventListener('click', (e) => {
@@ -307,8 +307,54 @@
         idle(IDLE_MS);
     }
 
+    function renderPin(p) {
+        pinPad(p, {
+            help: t('pin_help'),
+            extra: p.phones ? `<button type="button" class="kiosk-btn is-small" data-qr-go><i class="bi bi-qr-code"></i> ${esc(t('qr_instead'))}</button>` : '',
+            onPin: async (pin) => {
+                const r = await api('POST', '/kiosk/identify', {employee_id: p.employee_id, pin});
+                const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
+                renderClock(p, r.employee_token, me, pin);
+            },
+        });
+        el.querySelector('[data-qr-go]')?.addEventListener('click', () => openPerson(p.id));
+    }
+
+    // [360] Nowy PIN dwa razy (pierwsze logowanie albo zmiana) ; save(pin) zapisuje, błąd serwera → od początku z komunikatem.
+    function newPin(p, title, save, onCancel, error) {
+        pinPad(p, {title, help: t('new_pin_help'), error, onCancel, onPin: async (first) => {
+            pinPad(p, {title, help: t('new_pin_repeat'), onCancel, onPin: async (second) => {
+                if (second !== first) return newPin(p, title, save, onCancel, t('pin_mismatch'));
+                try { await save(first); } catch (err) {
+                    if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
+                    // PIN zbyt prosty, taki sam jak obecny… : od początku, z komunikatem ; zły obecny PIN (zmiana) : błąd na ekranie.
+                    if (err.code === 'VALIDATION_FAILED' || (err.fields || []).includes('pin')) return newPin(p, title, save, onCancel, err.message);
+                    throw err;
+                }
+            }});
+        }});
+    }
+
+    // [360] Pierwsze logowanie na tablecie biurowym : osoba bez PIN-u tworzy swój (4 cyfry, dwa razy), potem wejście / wyjście.
+    function renderFirstPin(p) {
+        newPin(p, t('new_pin_title'), async (pin) => {
+            const r = await api('POST', '/kiosk/office/pin', {person_id: p.id, pin});
+            const person = {...p, employee_id: r.employee ? r.employee.id : p.employee_id, has_pin: true};
+            const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
+            renderClock(person, r.employee_token, me, pin, t('pin_created'));
+        });
+    }
+
+    // [360] Zmiana PIN-u po zalogowaniu : nowy PIN dwa razy ; obecny PIN to ten, który osoba właśnie wpisała.
+    function renderChangePin(p, token, me, current) {
+        newPin(p, t('change_pin'), async (pin) => {
+            await api('PUT', '/kiosk/me/pin', {current_pin: current, pin}, token);
+            renderClock(p, token, me, pin, t('pin_changed'));
+        }, () => renderClock(p, token, me, current));
+    }
+
     // [356] Po PIN-ie jak na telefonie : powitanie, stan dnia i jeden duży przycisk WEJŚCIE / WYJŚCIE → pytania + podpis.
-    function renderClock(p, token, me) {
+    function renderClock(p, token, me, pin, info) {
         clearTimers();
         const inside = !!me.clocked_in;
         const since = inside && me.clock && me.clock.clock_in ? String(me.clock.clock_in).slice(11, 16) : null;
@@ -316,9 +362,12 @@
                 <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(t('hello', {name: p.name}))}</h2>
                     <p class="kiosk-status">${esc(inside ? t('state_in', {time: since || p.since || ''}) : (p.left_at ? t('state_left', {time: p.left_at}) : t('state_out')))}</p></div></div>
                 <button type="button" class="kiosk-btn kiosk-big ${inside ? 'is-danger' : 'is-ok'}" data-clock-tap="${inside ? 'out' : 'in'}">${esc(t(inside ? 'action_out' : 'action_in'))}</button>
-                <button type="button" class="kiosk-btn is-small" data-home>${esc(t('not_me'))}</button>
+                ${info ? `<p class="office-clock-info">${esc(info)}</p>` : ''}
+                <div class="kiosk-row office-clock-more">${pin ? `<button type="button" class="kiosk-btn is-small" data-change-pin>${esc(t('change_pin'))}</button>` : ''}
+                    <button type="button" class="kiosk-btn is-small" data-home>${esc(t('not_me'))}</button></div>
             </section>`;
         el.querySelector('[data-clock-tap]').addEventListener('click', (e) => renderConfirm(p, token, me, e.currentTarget.dataset.clockTap));
+        el.querySelector('[data-change-pin]')?.addEventListener('click', () => renderChangePin(p, token, me, pin));
         idle(IDLE_MS);
     }
 
