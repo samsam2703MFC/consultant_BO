@@ -1449,6 +1449,49 @@ function suEtape(array $v): ?string
     return null;
 }
 
+/**
+ * Les visites non signées (19/11/2026, demande de Sam : « possibilité d'effacer une visite non signée »). Une visite se
+ * signe sur la tablette, en la terminant (photos de genre « signature », le franchisé, et « sig_consultant ») ; tant
+ * qu'elle ne l'est pas, le bureau peut l'effacer d'ici sans la chercher dans les onglets — une visite déjà sur la
+ * tablette et pas encore faite n'en a pas. Le groupe d'une visite : null si elle est signée, annulée, ou terminée sans
+ * brouillon en attente (rapport parti : le franchisé l'a reçu, elle s'efface encore de son en-tête, plus d'ici). Pur : le
+ * banc le vérifie.
+ */
+function suNonSigneeGroupe(array $v, bool $signee, string $auj): ?string
+{
+    if ($signee) { return null; }
+    $st = (string) ($v['statut'] ?? '');
+    if ($st === 'en_cours') { return 'cours'; }
+    if (in_array($st, ['planifiee', 'confirmee'], true)) { return (string) $v['prevu_le'] < $auj ? 'passee' : 'avenir'; }
+    // Terminée sans signature : seulement quand son brouillon attend au bureau (une visite d'avant le circuit du rapport, sans
+    // brouillon, n'est plus dans le circuit).
+    if ($st === 'terminee' && ($v['rapport_statut'] ?? null) === 'brouillon') { return 'terminee'; }
+    return null;
+}
+
+/** Les visites non signées du réseau, les plus récentes d'abord (300 au plus), avec ce qu'elles ont déjà produit. */
+function suNonSignees(string $cons = ''): array
+{
+    $sql = 'SELECT v.*, (SELECT COUNT(*) FROM con_visite_point p WHERE p.visite_id = v.id) AS n_reponses,'
+        . ' (SELECT COUNT(*) FROM con_visite_photo f WHERE f.visite_id = v.id) AS n_photos'
+        . ' FROM con_visite v WHERE v.statut IN (\'planifiee\', \'confirmee\', \'en_cours\', \'terminee\')'
+        . ' AND (v.statut <> \'terminee\' OR v.rapport_statut = \'brouillon\')'
+        . ' AND NOT EXISTS (SELECT 1 FROM con_visite_photo s WHERE s.visite_id = v.id AND s.genre IN (\'signature\', \'sig_consultant\'))'
+        . ($cons !== '' ? ' AND v.consultant_id = ?' : '') . ' ORDER BY v.prevu_le DESC, v.debut_h DESC LIMIT 300';
+    $auj = date('Y-m-d'); $out = [];
+    foreach (Db::rows($sql, $cons !== '' ? [$cons] : []) as $v) {
+        $g = suNonSigneeGroupe($v, false, $auj);
+        if ($g === null) { continue; }
+        $type = (string) (($v['type_code'] ?? '') ?: 'reguliere');
+        $out[] = ['id' => (int) $v['id'], 'shop' => (string) $v['shop_id'], 'court' => suCourt((string) $v['shop_id']), 'groupe' => $g,
+            'le' => $v['prevu_le'], 'h' => $v['debut_h'], 'type' => $type, 'typeNom' => suTypeNom($type, 'fr'), 'annoncee' => suAnnoncee($v),
+            'consultant' => (string) $v['consultant_id'], 'consultantNom' => (string) $v['consultant_nom'], 'statut' => $v['statut'],
+            'commenceLe' => $v['commence_a'] ?? null, 'termineLe' => $v['termine_a'] ?? null, 'prepEnvoyeeLe' => $v['prep_envoyee_le'] ?? null,
+            'odjEnvoyeLe' => $v['odj_envoye_le'] ?? null, 'reponses' => (int) $v['n_reponses'], 'photos' => (int) $v['n_photos']];
+    }
+    return $out;
+}
+
 /** GET /suivi/tableau?consultant=&semaine=0 — les visites dans le circuit, les franchisés, les points et les corrections. */
 /**
  * Le scoring du trimestre, gardé : son calcul relit le panel pour tous les magasins (≈ 20 s en production,
@@ -1570,7 +1613,7 @@ function ep_suivi_tableau(): array
             'envoyesMois' => count($envMois), 'lusMois' => count(array_filter($envMois, static fn ($v) => !empty($v['rapport_lu_le']))),
             'points' => count($plans), 'p0' => count(array_filter($plans, static fn ($p) => $p['priorite'] === 'P0')), 'retard' => count(array_filter($plans, static fn ($p) => $p['retard'] > 0)),
             'corrections' => count($corrections)],
-        'franchises' => $franchises, 'points' => $plans, 'corrections' => $corrections];
+        'franchises' => $franchises, 'points' => $plans, 'corrections' => $corrections, 'nonSignees' => suNonSignees($cons)];
 }
 
 /* --- le client mystère : un encodage, par passage ------------------------------- */
