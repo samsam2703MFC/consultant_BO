@@ -1,0 +1,65 @@
+name: Sonde — Contrôles, vérification IA des photos (appel réel)
+
+# La vérification IA des photos (Contrôles, mode assisté et « Proposer une évaluation ») : la route du bouton, sur la
+# dernière photo en échec, avec le code en ligne puis avec la correction de src/anthropic.php déposée dans /tmp (pas dans
+# le site). Écrit seulement la trace du connecteur « Assistance IA », comme un clic. Ne déploie rien : le déploiement
+# reste dans deploy.yml.
+
+on:
+  push:
+    branches: [claude/awesome-lovelace-c4gn8d]
+    paths: ['pilotage-reseau/tools/sonde_ia_photo.php', 'pilotage-reseau/src/anthropic.php', '.github/workflows/sonde-ia-photo.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: sonde-ia-photo
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+defaults:
+  run:
+    working-directory: pilotage-reseau
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe
+        run: php -l tools/sonde_ia_photo.php && php -l src/anthropic.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Déposer la correction dans /tmp du serveur
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/anthropic.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_ia_anthropic.php"
+
+      - name: Proposition IA avec le code en ligne, puis avec la correction
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          for passage in deploye nouveau; do
+            sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+              "php -- '${TARGET_DIR}' '${passage}'" < tools/sonde_ia_photo.php || true
+          done
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -f /tmp/sonde_ia_anthropic.php /tmp/sonde_ia_cible.json"
