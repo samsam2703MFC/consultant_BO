@@ -1278,6 +1278,7 @@ check($s === 422 && $codes($b) === ['base:INVALID_URL'], 'QR address must be htt
 $qr = substr($q['data']['url'], strpos($q['data']['url'], '#t=') + 3);
 check($s === 200 && str_starts_with($q['data']['url'], 'https://erp.example/production/kiosk/scan#t=') && $q['data']['expires_in'] === 90 && $q['data']['refresh_s'] === 20
     && $q['data']['size'] >= 21 && count($q['data']['rows']) === $q['data']['size'] && strlen($q['data']['rows'][0]) === $q['data']['size'], 'tablet shows a QR of the scan page (matrix) with a short token');
+check(strlen($qr) === 11 && $qr[0] === 'Q', 'QR address carries an 11-character code, not the signed token [355]');
 [$s, $b] = $phone('GET', '/kiosk/phone/people', null, 'nonsense');
 check($s === 401 && $b['description'] === 'QR_INVALID', 'invalid QR refused');
 $expired = (new Jwt(str_repeat('s', 48)))->encode(['aud' => KioskAuthService::QR_AUDIENCE, 'dev' => $dev['data']['id'], 'iat' => time() - 200, 'nbf' => time() - 200, 'exp' => time() - 100]);

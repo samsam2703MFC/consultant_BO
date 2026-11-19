@@ -195,6 +195,18 @@ final class ExecutionRepository extends WorkshopRepository
         return (int) $this->db->lastInsertId();
     }
 
+    /** [355] Kod krótki QR pointage : zapis jetonu (i sprzątanie kodów wygasłych ponad dzień). */
+    public function saveQrCode(string $code, string $token, int $ttl): void
+    {
+        $this->db->exec('DELETE FROM n_kiosk_qr WHERE expires_at < NOW() - INTERVAL 1 DAY');
+        $this->db->prepare('INSERT INTO n_kiosk_qr (code, token, expires_at) VALUES (?, ?, NOW() + INTERVAL ? SECOND)')->execute([$code, $token, $ttl]);
+    }
+
+    public function qrToken(string $code): ?string
+    {
+        return $this->all('SELECT token FROM n_kiosk_qr WHERE code = ?', [$code])[0]['token'] ?? null;
+    }
+
     public function phoneByHash(string $hash): ?array
     {
         return $this->all('SELECT * FROM n_prod_phone WHERE token_hash = ?', [$hash])[0] ?? null;

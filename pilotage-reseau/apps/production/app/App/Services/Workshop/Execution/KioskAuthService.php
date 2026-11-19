@@ -418,18 +418,26 @@ final class KioskAuthService
     public function loginRequestOf(string $qr): ?int
     {
         $this->deviceFromQr($qr);
-        $claims = $this->jwt()->decode($qr, self::QR_AUDIENCE);
+        $claims = $this->jwt()->decode($this->qrJwt($qr), self::QR_AUDIENCE);
         return isset($claims['lgn']) && (int) $claims['lgn'] > 0 ? (int) $claims['lgn'] : null;
     }
 
-    /** Jeton signé, adresse {base}/kiosk/scan#t=… (le fragment n'est jamais envoyé au serveur) et matrice du QR. */
+    /**
+     * Jeton signé gardé sur le serveur (n_kiosk_qr), adresse courte {base}/kiosk/scan#t=CODE (le fragment n'est jamais
+     * envoyé au serveur) et matrice du QR. [355] Le jeton complet dans l'adresse donnait un QR de 73×73 modules, lu
+     * lentement ou pas du tout sur l'écran d'une tablette ; le code (11 caractères) donne un QR d'environ 33×33.
+     * Première lettre : L connexion ERP, M connexion d'une personne choisie, P personnel, Q tablette (le téléphone choisit son écran sans lire le jeton).
+     */
     private function qrPayload(array $claims, string $base, int $ttl): array
     {
         $base = rtrim(trim($base), '/');
         if (!preg_match('#^https?://[^\s"<>]{1,200}$#', $base)) throw ApiException::validation([['field' => 'base', 'code' => 'INVALID_URL', 'params' => []]]);
         $now = time();
         $token = $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::QR_AUDIENCE] + $claims + ['iat' => $now, 'nbf' => $now - 5, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(6))]);
-        $url = $base . '/kiosk/scan#t=' . $token;
+        $code = isset($claims['lgn']) ? (isset($claims['emp']) ? 'M' : 'L') : (isset($claims['emp']) ? 'P' : 'Q');
+        for ($i = 0; $i < 10; $i++) $code .= self::CODE_ALPHABET[random_int(0, strlen(self::CODE_ALPHABET) - 1)];
+        $this->repo->saveQrCode($code, $token, $ttl);
+        $url = $base . '/kiosk/scan#t=' . $code;
         $code = new \TCPDF2DBarcode($url, 'QRCODE,M');
         $matrix = $code->getBarcodeArray();
         return [
@@ -502,6 +510,7 @@ final class KioskAuthService
     private function deviceFromQr(string $qr): array
     {
         if ($qr === '') throw new ApiException('QR_INVALID', 401);
+        $qr = $this->qrJwt($qr);
         try {
             $claims = $this->jwt()->decode($qr, self::QR_AUDIENCE);
         } catch (JwtException $e) {
@@ -513,6 +522,13 @@ final class KioskAuthService
         if (isset($claims['day']) && $claims['day'] !== date('Y-m-d')) throw new ApiException('QR_EXPIRED', 401);
         $group = isset($claims['grp']) && (int) $claims['grp'] > 0 && $this->repo->groupActive((int) $claims['grp']) ? (int) $claims['grp'] : null;
         return [$device, isset($claims['emp']) ? (int) $claims['emp'] : null, $group];
+    }
+
+    /** [355] Code court du QR → jeton signé gardé sur le serveur ; un jeton complet (QR affiché avant la mise à jour) passe tel quel. */
+    private function qrJwt(string $qr): string
+    {
+        if (!preg_match('/^[LMPQ][A-Z2-9]{10}$/', strtoupper($qr))) return $qr;
+        return $this->repo->qrToken(strtoupper($qr)) ?? throw new ApiException('QR_INVALID', 401);
     }
 
     /** Le QR personnel d'une autre personne : refus avec son nom (le téléphone n'est pas le sien). */

@@ -39,8 +39,12 @@
     const fmt = (n) => Number(n).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 2});
     // Osobisty kod QR (tablet biurowy) : jeton z osobą (emp) — tylko do wyświetlenia, serwer sprawdza sam.
     // [300] Kod QR ze strony logowania ERP (lgn) : telefon odbija wejście i otwiera sesję na komputerze.
-    const loginQr = () => { try { return !!JSON.parse(atob(qr.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).lgn; } catch (e) { return false; } };
-    const personalQr = () => { try { return !!JSON.parse(atob(qr.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).emp; } catch (e) { return false; } };
+    // [355] Kod krótki (pierwsza litera : L logowanie, M logowanie wybranej osoby, P osobisty, Q tablet) ;
+    // pełny jeton : QR wyświetlony przed aktualizacją.
+    const claims = () => { try { return JSON.parse(atob(qr.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch (e) { return {}; } };
+    const kind = () => (/^[LMPQ][A-Z2-9]{10}$/i.test(qr) ? qr[0].toUpperCase() : null);
+    const loginQr = () => (kind() ? 'LM'.includes(kind()) : !!claims().lgn);
+    const personalQr = () => (kind() ? 'MP'.includes(kind()) : !!claims().emp);
 
     async function loadLabels() {
         const res = await fetch(`${root}/resources/lang/ui/${lang}/kiosk.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
