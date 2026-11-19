@@ -415,13 +415,15 @@ preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SE
 preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/171_payroll_contracts.sql'), $m171);
 // 203 [335] : Stany i palety (osobne prawo : logistyka + finanse, kierownik produkcji, jakość).
 preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/203_stock_pallets_access.sql'), $m203);
-$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1], $m149[1], $m152[1], $m162[1], $m166[1], $m170[1], $m171[1], $m203[1])));
+// 210 [353] : Procedury SOP (kierownik produkcji, jakość, kto ma produkcję).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/210_sop.sql'), $m210);
+$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1], $m149[1], $m152[1], $m162[1], $m166[1], $m170[1], $m171[1], $m203[1], $m210[1])));
 // [256] Strony, które od tego czasu są tylko dla administratora (budżet personelu) : dawne wpisy nic nie dają (canSee je pomija).
 $seeded = array_values(array_filter($seeded, fn($k) => isset(PageAccess::PAGES[$k]) && !PageAccess::adminOnly($k)));
 sort($seeded);
 $grantable = PageAccess::grantable();
 sort($grantable);
-check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 + 149 + 152 + 162 + 166 + 170 + 171 + 203 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
+check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 + 149 + 152 + 162 + 166 + 170 + 171 + 203 + 210 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
 
 // --- Aktywność w ERP : trasa (identyfikatory → {id}), ścieżka bez zapytania, okres uporządkowany i ograniczony
 check(ActivityService::route('/products/12/edit') === '/products/{id}/edit' && ActivityService::route('/workshop/gantt') === '/workshop/gantt'
