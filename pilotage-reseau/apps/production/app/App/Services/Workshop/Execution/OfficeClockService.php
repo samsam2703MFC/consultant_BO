@@ -51,6 +51,19 @@ final class OfficeClockService
             + $this->kiosk->personalQr($context, $employeeId, (string) $c['base']);
     }
 
+    /**
+     * [364] RODO : plus de liste de tout le personnel sur la tablette de bureau. Une personne sans PIN tape son nom (au
+     * moins 3 lettres) et se choisit parmi au plus 8 résultats : nom seul, sans service ni présence.
+     */
+    public function search(string $q, ApiContext $context): array
+    {
+        $this->officeDevice($context);
+        $q = trim(preg_replace('/\s+/u', ' ', $q));
+        if (mb_strlen($q) < 3) return [];
+        return array_map(fn($p) => ['id' => (int) $p['person_id'], 'employee_id' => $p['employee_id'] !== null ? (int) $p['employee_id'] : null,
+            'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'phones' => (int) $p['phones']], $this->repo->officeSearch(mb_substr($q, 0, 60)));
+    }
+
     /** [361] Accueil de la tablette de bureau : le PIN seul ouvre le profil (session + la personne, comme dans la liste). */
     public function login(array $body, ApiContext $context): array
     {

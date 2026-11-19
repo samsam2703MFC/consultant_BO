@@ -1,6 +1,7 @@
 <?php
 /**
  * [360] Tablette de bureau : la personne crée son premier PIN puis le change (ancien PIN demandé).
+ * [364] Recherche de son nom (RODO : nom seul, sans service ni présence).
  * [361] Tous les PIN différents ; le PIN seul ouvre le profil (empreinte, PIN anciens en bcrypt, doublons, blocage tablette).
  *
  * Base : TFB_TEST_DSN (défaut mysql:unix_socket=/run/mysqld/mysqld.sock), TFB_TEST_USER (root), TFB_TEST_PASS (vide).
@@ -81,6 +82,15 @@ $pdo->exec('UPDATE n_prod_device SET pin_failed = 0, pin_locked_until = NULL');
 $c1 = $code(fn() => $svc->loginByPin('7777', $device)); $c2 = $code(fn() => $svc->loginByPin('7778', $device)); $c3 = $code(fn() => $svc->loginByPin('7779', $device));
 $check($c1 === 'PIN_UNKNOWN' && $c2 === 'PIN_UNKNOWN' && $c3 === 'DEVICE_PIN_LOCKED', 'unknown PINs counted, tablet locked after kiosk.office_pin_max_attempts');
 $check($code(fn() => $svc->loginByPin('5839', $device)) === 'DEVICE_PIN_LOCKED', 'locked tablet refuses even a right PIN');
+
+// --- [364] Recherche de son nom
+$pdo->exec('CREATE TABLE n_prod_phone (id INT AUTO_INCREMENT PRIMARY KEY, id_employee INT, revoked_at DATETIME NULL)');
+$repo = new ExecutionRepository($pdo);
+$found = $repo->officeSearch('soba b');
+$check(count($found) === 1 && $found[0]['name'] === 'Osoba B' && (int) $found[0]['has_pin'] === 1 && !array_key_exists('clocked_in_at', $found[0]) && !array_key_exists('section_name', $found[0]),
+    'name search: only matching people, name + PIN set, no presence nor section');
+$check(count($repo->officeSearch('B Osoba')) === 1 && count($repo->officeSearch('Osoba', 2)) === 2, 'surname first works, limit applied');
+$check($repo->officeSearch('50%') === [], 'LIKE wildcards are escaped');
 
 $pdo->exec('DROP DATABASE erp_self_pin_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";

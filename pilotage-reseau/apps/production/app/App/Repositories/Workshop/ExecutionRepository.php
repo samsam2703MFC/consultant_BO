@@ -146,6 +146,26 @@ final class ExecutionRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * [364] Tablette de bureau, RODO : recherche d'une personne par son nom (au moins 3 lettres), sans service ni
+     * présence — seulement le nom, le PIN posé ou non et les téléphones. Au plus $limit personnes.
+     */
+    public function officeSearch(string $q, int $limit = 8): array
+    {
+        $like = '%' . addcslashes($q, '%_\\') . '%';
+        return $this->all(
+            "SELECT pe.id AS person_id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id AS employee_id, c.pin_hash IS NOT NULL AS has_pin,
+                    (SELECT COUNT(*) FROM n_prod_phone p WHERE p.id_employee = e.id AND p.revoked_at IS NULL) AS phones
+             FROM production_employee pe
+             LEFT JOIN n_prod_employee e ON e.id_production_employee = pe.id
+             LEFT JOIN n_prod_employee_credential c ON c.id_employee = e.id
+             WHERE COALESCE(e.active, 1) = 1
+               AND (CONCAT(pe.name, ' ', pe.surname) LIKE ? OR CONCAT(pe.surname, ' ', pe.name) LIKE ?)
+             ORDER BY pe.surname, pe.name LIMIT " . max(1, min(20, $limit)),
+            [$like, $like]
+        );
+    }
+
     /** Téléphones enregistrés (non révoqués) d'une personne : la tablette de bureau propose alors le QR, pas le PIN. */
     public function activePhones(int $employeeId): int
     {
