@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Maquette 2 — Feuilleter un manuel</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .main { padding: 22px 36px 30px; }
+  .haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .fil { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .fil b { color: var(--ink); font-weight: 500; }
+  .outils { display: flex; gap: 8px; align-items: center; }
+  .scene { display: flex; justify-content: center; align-items: center; gap: 0; padding: 10px 0 0; }
+  .livre { position: relative; }
+  .dos { position: absolute; left: 50%; top: 0; bottom: 0; width: 18px; margin-left: -9px; background: linear-gradient(90deg, rgba(28,26,23,.10), rgba(28,26,23,0) 50%, rgba(28,26,23,.10)); pointer-events: none; }
+  .fleche { position: absolute; top: 50%; transform: translateY(-50%); }
+  .fleche.g { left: -62px; } .fleche.d { right: -62px; }
+  .ligne { height: 8px; background: var(--chip); border-radius: 4px; margin: 9px 0; }
+  .ligne.c { width: 70%; } .ligne.m { width: 88%; } .ligne.p { width: 45%; }
+  .formule { background: var(--accent-soft); color: var(--accent); text-align: center; border-radius: 6px; padding: 12px; font-size: 15px; font-weight: 500; margin: 14px 0; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .progres { height: 4px; background: var(--chip); border-radius: 2px; margin-top: 18px; position: relative; }
+  .progres i { position: absolute; left: 0; top: 0; bottom: 0; width: 13%; background: var(--accent); border-radius: 2px; }
+  .bas { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .sommaire { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sommaire span { font-size: 11.5px; padding: 3px 8px; border-radius: 4px; background: #fff; border: 1px solid var(--line); }
+  .sommaire span.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style></head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="marque">L’ATELIER BY · COCKPIT</div>
+    <h4>Documents</h4>
+    <a href="#"><span class="ico"></span>Catalogue des manuels <span class="new">NOUVEAU</span></a>
+    <a href="#" class="sous">Manuel opératoire</a>
+    <a href="#" class="sous">Standards (SOP)</a>
+    <a href="#" class="sous">Checklists</a>
+    <a href="#" class="sous">Manuel du réseau</a>
+  </aside>
+
+  <main class="main">
+    <div class="haut">
+      <div class="fil"><a href="#" style="color:var(--accent);text-decoration:none">← Catalogue</a> <span>/</span> <span>Manuel opératoire</span> <span>/</span> <b>0.0.54 · Pôle vente</b></div>
+      <div class="outils">
+        <button class="btn">Sommaire</button>
+        <button class="btn">QR de cet article</button>
+        <button class="btn">Imprimer</button>
+        <button class="btn p">Télécharger le PDF</button>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="livre">
+        <div class="dos"></div>
+        <div class="fleche g"><button class="btn rond" style="width:46px;height:46px;border-radius:50%;justify-content:center;font-size:18px;padding:0">‹</button></div>
+        <div class="fleche d"><button class="btn rond" style="width:46px;height:46px;border-radius:50%;justify-content:center;font-size:18px;padding:0">›</button></div>
+        <div class="livre" style="display:flex">
+          <div class="page g">
+            <div class="code">0.0.54 · FO-41 · D7.4</div>
+            <h2>Pôle vente : les leviers du chiffre d’affaires</h2>
+            <p style="margin:0 0 6px;font-size:12.5px;color:var(--muted)">Partie 1 sur 15 · Ce qui fait le chiffre d’affaires</p>
+            <div class="etape">
+              <b>Trois leviers, pas un de plus.</b>
+              <div style="margin-top:6px">Chiffre d’affaires = clients × panier moyen.</div>
+              <div>Panier moyen = articles par client × prix moyen d’un article.</div>
+            </div>
+            <div class="formule">150 clients × 12 € = 1 800 € par jour</div>
+            <div class="ligne m"></div><div class="ligne c"></div><div class="ligne m"></div>
+            <div class="note">Exemple du manuel : un magasin type, pas un magasin du réseau.</div>
+            <div class="folio">2</div>
+          </div>
+          <div class="page d">
+            <div class="code">Partie 2</div>
+            <h2>Où lire les trois chiffres</h2>
+            <div class="ligne m" style="margin-top:20px"></div><div class="ligne"></div><div class="ligne c"></div>
+            <div class="ligne m" style="margin-top:14px"></div><div class="ligne p"></div><div class="ligne m"></div><div class="ligne c"></div>
+            <div class="crit" style="background:var(--prize-soft);color:var(--prize-ink);padding:10px 12px;border-radius:6px;font-size:12.5px;margin-top:18px">Point critique : ce qui se lit au dashboard, pas dans un tableur.</div>
+            <div class="ligne m" style="margin-top:16px"></div><div class="ligne c"></div>
+            <div class="folio">3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="progres"><i></i></div>
+    <div class="bas">
+      <span>Pages 2–3 sur 31</span>
+      <span>Tourner : flèches, glisser, ou clavier · Échap pour revenir</span>
+    </div>
+    <div class="vignettes">
+      <span class="on"><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span><span><i></i><i></i><i></i></span>
+    </div>
+    <p class="note" style="margin-top:14px">Maquette : les pages de droite sont à titre indicatif ; le contenu réel vient du module à l’ouverture.</p>
+  </main>
+</div>
+<div class="maquette-tag">Maquette 2 · feuilleter un manuel</div>
+</body></html>

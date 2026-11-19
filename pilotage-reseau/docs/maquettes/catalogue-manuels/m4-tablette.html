@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Maquette 4 — Catalogue sur tablette</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  body { background: #d9d3c9; display: flex; justify-content: center; padding: 18px 0; }
+  .tab { width: 820px; height: 1180px; background: var(--paper); border-radius: 26px; overflow: hidden; position: relative; box-shadow: 0 14px 40px rgba(28,26,23,.2); border: 10px solid #1c1a17; }
+  .top { background: #fff; border-bottom: 1px solid var(--line); padding: 20px 26px; display: flex; justify-content: space-between; align-items: center; }
+  .top .marque { font-size: 14px; letter-spacing: .12em; }
+  .top .titre { font-size: 22px; font-weight: 500; }
+  .corps { padding: 22px 26px; }
+  .cat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; gap: 14px; align-items: center; margin-bottom: 12px; min-height: 96px; }
+  .cat .vig { width: 64px; height: 84px; border-radius: 6px; flex: none; position: relative; overflow: hidden; color: #fff; font-size: 8px; padding: 7px 6px; box-sizing: border-box; letter-spacing: .03em; }
+  .cat .vig::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: rgba(0,0,0,.2); }
+  .cat .txt { flex: 1; }
+  .cat .txt b { font-size: 17px; font-weight: 500; display: block; }
+  .cat .txt small { font-size: 13px; color: var(--muted); }
+  .cat .acts { display: flex; gap: 8px; }
+  .cat .acts .btn { min-height: 46px; padding: 0 16px; font-size: 15px; }
+  .cat .acts .btn.ic { width: 46px; padding: 0; justify-content: center; }
+  .feuil { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(28,26,23,.14); padding: 20px 26px 26px; }
+  .feuil .poignee { width: 56px; height: 5px; border-radius: 3px; background: var(--chip); margin: 0 auto 14px; }
+  .feuil .ligne { display: flex; gap: 22px; align-items: center; }
+  .feuil .qrbox { width: 210px; height: 210px; border: 1px solid var(--line); border-radius: 12px; padding: 8px; flex: none; display: grid; place-items: center; }
+  .feuil .qrbox svg { width: 190px; height: 190px; }
+  .feuil h3 { font-size: 20px; font-weight: 500; margin: 0 0 6px; }
+  .feuil p { font-size: 14px; color: var(--muted); margin: 0 0 12px; line-height: 1.5; }
+  .feuil .url { font-size: 12px; color: var(--ink); background: var(--paper); padding: 8px 10px; border-radius: 6px; word-break: break-all; }
+  .feuil .acts { display: flex; gap: 8px; margin-top: 14px; }
+  .feuil .acts .btn { min-height: 48px; font-size: 15px; }
+</style>
+<script src="../../../public/assets/vendor/qrcode/qrcode.js"></script>
+</head>
+<body>
+<div class="tab">
+  <div class="top">
+    <div><div class="marque">L’ATELIER BY</div><div class="titre">Catalogue des manuels</div></div>
+    <button class="btn" style="min-height:48px;font-size:15px">Fermer</button>
+  </div>
+  <div class="corps">
+    <p class="lead" style="font-size:15px;margin:0 0 16px">Touchez un manuel pour le feuilleter. Le QR code ouvre le même manuel sur un autre appareil.</p>
+
+    <div class="cat">
+      <div class="vig" style="background:#8D1D2C">MANUEL<br><b style="font-size:9px;white-space:nowrap">Opératoire</b></div>
+      <div class="txt"><b>Manuel opératoire</b><small>Articles, parties, quiz · ~58 articles</small></div>
+      <div class="acts"><button class="btn p">Feuilleter</button><button class="btn ic" id="ouvrir-qr">QR</button></div>
+    </div>
+    <div class="cat">
+      <div class="vig" style="background:#1c1a17">MANUEL<br><b style="font-size:9px;white-space:nowrap">Standards</b></div>
+      <div class="txt"><b>Standards (SOP)</b><small>Étapes, photos, « vu faire » · ~25 SOP</small></div>
+      <div class="acts"><button class="btn p">Feuilleter</button><button class="btn ic">QR</button></div>
+    </div>
+    <div class="cat">
+      <div class="vig" style="background:#3f7a52">MANUEL<br><b style="font-size:9px;white-space:nowrap">Checklists</b></div>
+      <div class="txt"><b>Checklists</b><small>Codes zone · moment · numéro · 19 checklists</small></div>
+      <div class="acts"><button class="btn p">Feuilleter</button><button class="btn ic">QR</button></div>
+    </div>
+    <div class="cat">
+      <div class="vig" style="background:#1B6FA8">MANUEL<br><b style="font-size:9px;white-space:nowrap">du réseau</b></div>
+      <div class="txt"><b>Manuel du réseau</b><small>Domaines D1 à D8 · classeur</small></div>
+      <div class="acts"><button class="btn p">Feuilleter</button><button class="btn ic">QR</button></div>
+    </div>
+    <div class="cat" style="background:var(--accent-soft);border-color:transparent">
+      <div class="txt"><b>Dépliant 4 pages</b><small>« Comment lire les manuels » · à imprimer et à plier</small></div>
+      <div class="acts"><button class="btn">PDF</button></div>
+    </div>
+  </div>
+
+  <div class="feuil">
+    <div class="poignee"></div>
+    <div class="ligne">
+      <div class="qrbox" id="qr-grand"></div>
+      <div>
+        <h3>Manuel opératoire</h3>
+        <p>Scannez ce code avec un téléphone : le manuel s’ouvre au même endroit.</p>
+        <div class="url">http://185.180.206.46/consulant_bo/formation/#/manuel</div>
+        <div class="acts"><button class="btn p">Feuilleter ce manuel</button><button class="btn">Copier le lien</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  var q4 = qrcode(0, 'M'); q4.addData('http://185.180.206.46/consulant_bo/formation/#/manuel'); q4.make();
+  document.getElementById('qr-grand').innerHTML = q4.createSvgTag({ cellSize: 6, margin: 0, scalable: true, alt: 'QR code du manuel opératoire' });
+</script>
+<div class="maquette-tag">Maquette 4 · tablette</div>
+</body></html>
