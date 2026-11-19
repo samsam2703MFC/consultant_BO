@@ -27,7 +27,7 @@ import { valsVisibilite, visibiliteBadge } from './visibilite-vals.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
 // Structure de gamme (11/11/2026) : le standard, les saisons, ce qui sort — un onglet du Planogramme, à côté de l'assortiment.
-import { valsStructure } from './structure-gamme.js';
+import { valsStructure, sgProposition } from './structure-gamme.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -4186,8 +4186,9 @@ class App {
     const voirAssortiment = nom => () => this.setState({ screen: 'assortiment', aoVue: 'liste', aoQ: String(nom), aoPop: null, catFiche: null });
     // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
     // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
-    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé. Le serveur
-    // met en page (POST /products/pareto.pdf).
+    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé — celui de
+    // la Structure de gamme depuis le 19/11/2026 (sgProposition), un seul calcul. Le serveur met en page
+    // (POST /products/pareto.pdf).
     common.catPareto = () => {
       const mPx = { mois: 1, trimestre: 3, annee: 12 }[S.pdFenetre || 'mois'] || 1;
       const vendues = L.filter(l => l.s && !l.sansVente && (l.s.ca || 0) > 0).sort((a, b) => b.s.ca - a.s.ca);
@@ -4197,23 +4198,18 @@ class App {
       for (const l of vendues) { top.push(l); cum += l.s.ca; if (cum >= 0.8 * caT) { break; } }
       let c3 = 0; const cumuls = vendues.map(l => (c3 += l.s.ca) / caT * 100);
       const courbe = Array.from({ length: 101 }, (_, k) => { const i = Math.round(k / 100 * n) - 1; return i < 0 ? 0 : Math.round(cumuls[Math.min(n - 1, i)] * 10) / 10; });
-      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie et l'assortiment
-      // proposé — le 20/80 de la catégorie, 6 classiques au score de la période, 2 saisonnières par saison au score des
-      // 12 derniers mois (`an` : leur saison y est, quelle que soit la période de l'écran).
-      const gamme = an => { const de = new Map(((an && an.base) || []).map(x => [String(x.id), x]));
-        return L.map(l => { const y = de.get(l.k), vend = y && !y.sansVente && (y.ca || 0) > 0;
-          return { k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0, mn: l.mnPct == null ? null : Math.round(l.mnPct),
-            score: l.score == null ? null : Math.round(l.score * 10) / 10, decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
-            saisonnier: !!l.saisonnier, saisons: l.saisons, scoreAn: vend ? Math.round(y.score * 10) / 10 : null, caAn: vend ? Math.round(y.ca) : 0 }; }); };
-      const saisons = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim(),
-        du: g.fenetre ? g.fenetre.du : null, au: g.fenetre ? g.fenetre.au : null }));
-      const douzeMois = () => (S.pdFenetre || 'mois') === 'annee' ? Promise.resolve(c2)
-        : (this._pdAnnee && Date.now() - this._pdAnnee.le < 3600000 ? Promise.resolve(this._pdAnnee.c)
-          : readOne('/products/scoring?fenetre=annee').then(d => { if (!Array.isArray(d)) { return null; } const c = this.pdCalcule(d); this._pdAnnee = { le: Date.now(), c }; return c; }).catch(() => null));
-      const envoyer = (px, an) => {
+      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie.
+      const gamme = () => L.map(l => ({ k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0,
+        mn: l.mnPct == null ? null : Math.round(l.mnPct), score: l.score == null ? null : Math.round(l.score * 10) / 10,
+        decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must) }));
+      // L'assortiment proposé : la Structure de gamme, lue si l'écran ne l'a pas encore fait.
+      const structure = () => (D.sgData && !D.sgData.indispo ? Promise.resolve(D.sgData)
+        : readOne('/produits/structure').then(d => { if (d && !d.indispo) { D.sgData = d; } return d; }).catch(() => null));
+      const obligDe = new Set((D.prodCatalogue || []).filter(p => p.must && p.pwaId).map(p => String(p.pwaId)));
+      const envoyer = (px, sg) => {
         const refs = new Map(((px && px.refs) || []).map(r => [String(r.pid), r]));
         const corps = { periode: c2.periode || '', periodePrix: px && px.periode ? px.periode : '', seuil: 80, caTotal: caT, totalRefs: n, courbe,
-          refs: gamme(an), saisons, saisonsLues: !!an, classiques: 6, parSaison: 2,
+          refs: gamme(), structure: sgProposition(sg, id => obligDe.has(id)),
           magasins: ((px && px.magasins) || []).map(m => ({ id: String(m.id), nom: m.court || court(m.nom) })),
           lignes: top.map(l => { const r = l.pid ? refs.get(String(l.pid)) : null;
             return { nom: l.nom, cat: l.catNom, ca: Math.round(l.s.ca), vol: Math.round(l.vol), prix: l.prix, mn: l.mnPct == null ? null : Math.round(l.mnPct),
@@ -4227,8 +4223,8 @@ class App {
       const px0 = (D.pxv || {})[mPx];
       const prix = px0 ? Promise.resolve(px0.indispo ? null : px0)
         : readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } return d && !d.indispo ? d : null; }).catch(() => null);
-      if (!px0 || ((S.pdFenetre || 'mois') !== 'annee' && !this._pdAnnee)) { this.notify('Lecture des prix par magasin et des 12 derniers mois…'); }
-      Promise.all([prix, douzeMois()]).then(([px, an]) => envoyer(px, an));
+      if (!px0 || !D.sgData) { this.notify('Lecture des prix par magasin et de la structure de gamme…'); }
+      Promise.all([prix, structure()]).then(([px, sg]) => envoyer(px, sg));
     };
     common.catLignes = F.slice(0, 250).map(l => ({
       k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
