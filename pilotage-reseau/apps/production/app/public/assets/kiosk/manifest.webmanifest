@@ -5,8 +5,9 @@
   "lang": "pl",
   "start_url": "../../tablet/production?source=pwa",
   "scope": "../../tablet/",
-  "display": "standalone",
-  "orientation": "any",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
   "background_color": "#F6F1EA",
   "theme_color": "#8D1D2C",
   "icons": [
