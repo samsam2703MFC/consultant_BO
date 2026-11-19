@@ -1,6 +1,6 @@
 # Fil du franchisé : trois maquettes (19/11/2026)
 
-**Statut : à décider.** Demande du 19/11/2026 : créer dans le rail, pour le suivi des franchisés, un endroit pour les
+**Statut : retenu le 19/11/2026 — « A on toggle B » : le fil vertical (A), avec le calendrier (B) en bascule ; codé** (écran `#/franchises/fil`, `src/fil_franchise.php`, `public/assets/js/fil-vals.js`, `fil-tpl.js`, `public/assets/css/fil.css`). Demande du 19/11/2026 : créer dans le rail, pour le suivi des franchisés, un endroit pour les
 notes, les captures d'écran et les photos, avec des étiquettes (« Problème de gestion », « Bonne action »…), pour suivre
 un fil sur la semaine ou sur l'année. Quand on ouvre la carte d'un franchisé, on voit ses visites, ses rapports et ses
 notes sur un calendrier ou sur un fil vertical.
@@ -15,6 +15,10 @@ Nouvelle entrée du rail : **Franchisés › Suivi des franchisés › Fil du fr
 
 Les trois maquettes lisent **les mêmes données** (`donnees.js`), avec Sombreffe ouvert le jeudi 19/11 : seule la
 mise en page change. Le rail est celui du cockpit, relevé le 19/11 (`rail.html`).
+
+**L'écran codé** (19/11/2026), capturé sur un banc d'essai — le module serveur réel sur SQLite, rempli avec l'année
+d'exemple de Sombreffe — : `code-fil.png` (le fil), `code-calendrier.png` (le mois et sa semaine), `code-annee.png`
+(l'année en carrés).
 
 ## Ce qui est commun aux trois
 
