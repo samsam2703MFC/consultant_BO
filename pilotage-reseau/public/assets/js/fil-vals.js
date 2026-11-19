@@ -95,33 +95,61 @@ export function nbFilsOuverts(app){
   return d.reduce((n, m) => n + (m.filsOuverts || 0), 0);
 }
 
-/* --- coller une capture ----------------------------------------------------------- */
+/* --- coller ou déposer une image ------------------------------------------------------ */
 
-/** Ctrl+V d'une image sur l'écran du fil : elle rejoint l'entrée en cours (le formulaire ouvert, sinon celui du haut). */
+/**
+ * Les images d'un presse-papiers ou d'un glisser-déposer : les fichiers image de ses éléments (une capture d'écran, une
+ * image copiée dans une page), sinon ses fichiers (des photos copiées dans l'explorateur, quand le navigateur les passe).
+ */
+function imagesDe(dt){
+  if (!dt) { return []; }
+  const parElements = Array.from(dt.items || []).filter(i => i.kind === 'file' && /^image\//.test(i.type)).map(i => i.getAsFile()).filter(Boolean);
+  return parElements.length ? parElements : Array.from(dt.files || []).filter(f => /^image\//.test(f.type || 'image/'));
+}
+/** Ctrl+V d'une image n'importe où sur l'écran du fil : elle rejoint l'entrée en cours (le formulaire ouvert, sinon celui du haut). */
 function ecouterColler(app){
   if (app._filColler || typeof document === 'undefined') { return; }
   app._filColler = true;
   document.addEventListener('paste', e => {
-    if (app.state.screen !== 'filFranchise' || !e.clipboardData) { return; }
-    const imgs = Array.from(e.clipboardData.items || []).filter(i => i.kind === 'file' && /^image\//.test(i.type)).map(i => i.getAsFile()).filter(Boolean);
+    if (app.state.screen !== 'filFranchise') { return; }
+    const imgs = imagesDe(e.clipboardData);
     if (!imgs.length) { return; }
     e.preventDefault();
-    ajouterPieces(app, imgs, 'capture');
+    ajouterPieces(app, imgs, null);
   });
 }
 function cibleForm(app){ return app.state.flEdit ? 'flEdit' : 'flForm'; }
+/**
+ * Joint des images à l'entrée en cours. Une capture d'écran collée (PNG sans nom, « image.png ») se range en capture,
+ * une photo (JPEG, ou un fichier nommé) en photo. Le geste se confirme (19/11/2026, Sam : « je dois drag and drop ou
+ * coller une photo ») : le formulaire du haut pouvait être hors de l'écran, et rien ne disait que l'image était jointe.
+ */
 function ajouterPieces(app, fichiers, genre){
   const cle = cibleForm(app);
-  Array.from(fichiers).filter(f => /^image\//.test(f.type || 'image/')).forEach(f => {
-    const g = genre || (/^image\/png$/.test(f.type) && /capture|screenshot|écran|ecran/i.test(f.name || '') ? 'capture' : 'photo');
-    reduire(f, g === 'capture' ? 2000 : 1600, g === 'capture' ? 0.9 : 0.85).then(data => {
+  const imgs = Array.from(fichiers || []).filter(f => /^image\//.test(f.type || 'image/'));
+  if (!imgs.length) { app.notify('Seules les images se joignent : JPEG, PNG ou WebP.'); return; }
+  let n = 0;
+  Promise.all(imgs.map(f => {
+    const capture = /^image\/png$/.test(f.type) && (!f.name || f.name === 'image.png' || /capture|screenshot|écran|ecran/i.test(f.name));
+    const g = genre || (capture ? 'capture' : 'photo');
+    return reduire(f, g === 'capture' ? 2000 : 1600, g === 'capture' ? 0.9 : 0.85).then(data => {
       if (data.length * 0.75 > PIECE_MAX) { app.notify('Image trop lourde, même réduite (6 Mo au plus).'); return; }
       const F0 = app.state[cle] || {};
       const F = cle === 'flForm' && F0.shop !== String(app.state.flMag || '') ? { shop: String(app.state.flMag || '') } : F0;
-      const pieces = (F.pieces || []).concat([{ genre: g, data, nom: f.name || (g === 'capture' ? 'capture collée' : 'photo') }]);
+      const pieces = (F.pieces || []).concat([{ genre: g, data, nom: f.name && f.name !== 'image.png' ? f.name : (g === 'capture' ? 'capture collée' : 'photo') }]);
       if (pieces.length + (F.garder || []).length > 8) { app.notify('8 pièces au plus par entrée.'); return; }
       app.setState({ [cle]: Object.assign({}, F, { pieces }) });
+      n++;
     }).catch(() => app.notify('Image illisible : JPEG, PNG ou WebP.'));
+  })).then(() => {
+    if (!n) { return; }
+    app.notify(pluriel(n, 'image jointe', 'images jointes') + ' à ' + (cle === 'flEdit' ? 'l’entrée en cours de modification' : 'la nouvelle entrée, en haut du fil')
+      + ' — « ' + (cle === 'flEdit' ? 'Enregistrer' : 'Ajouter au fil') + ' » l’enregistre.');
+    // Le formulaire à l'écran : on voit l'image jointe là où elle attend.
+    setTimeout(() => {
+      const z = typeof document !== 'undefined' ? document.querySelector(cle === 'flEdit' ? '.fil-compo--edit' : '.fil-compo') : null;
+      if (z && z.scrollIntoView) { z.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    }, 60);
   });
 }
 
@@ -151,7 +179,7 @@ function formVue(app, D, cle, F, pour){
     pieces: (F.pieces || []).map((p, i) => ({ src: p.data, genre: p.genre === 'capture' ? 'capture' : 'photo', retirer: () => maj({ pieces: (courant().pieces || []).filter((_, j) => j !== i) }) }))
       .concat((F.garder || []).map(p => ({ src: API_BASE + p.url, genre: p.genre === 'capture' ? 'capture' : 'photo', retirer: () => maj({ garder: (courant().garder || []).filter(x => x.id !== p.id), retirer: (courant().retirer || []).concat([p.id]) }) }))),
     choisirFichiers: e => { ajouterPieces(app, e.target.files || [], null); e.target.value = ''; },
-    deposer: e => { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files) { ajouterPieces(app, e.dataTransfer.files, null); } },
+    deposer: e => { e.preventDefault(); e.stopPropagation(); ajouterPieces(app, imagesDe(e.dataTransfer), null); },
     envoi: envoi ? { enCours: !!envoi.enCours, ok: envoi.ok, msg: envoi.msg } : null,
   };
   const corps = () => ({ texte: F.texte || '', tags, le: F.le ? F.le.replace('T', ' ') : null, fil: F.fil ? Number(F.fil) : null, ferme: v.ferme ? v.ferme.on : undefined,
@@ -282,6 +310,8 @@ export function valsFil(app, c){
   v.relecture = !!FD.chargement && !!FD.d;
   if (!FD.d || FD.d.error || FD.shop !== shop) { v.mag = (mags.find(m => m.id === shop) || {}); return; }
   const D = FD.d;
+  // Une image lâchée n'importe où sur le fil rejoint l'entrée en cours, comme celle lâchée sur le formulaire.
+  v.deposer = e => { e.preventDefault(); ajouterPieces(app, imagesDe(e.dataTransfer), null); };
   const maintenant = D.aujourdhui || (auj() + ' 23:59');
   // Les demandes du helpdesk, lues à part (le panel ne retarde pas le fil).
   const DM = S.flDem && S.flDem.shop === shop ? S.flDem : null;

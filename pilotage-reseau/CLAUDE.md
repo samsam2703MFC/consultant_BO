@@ -10,8 +10,8 @@ lit par son API : `src/panel_api.php` et `src/erp_api.php`, avec des identifiant
 ## Stack
 - **Backend** : PHP ≥ 8.1, sans framework et sans Composer à la racine. PDO MySQL via `src/Db.php`.
   Extensions utilisées : openssl, curl, sodium.
-- **Frontend** : HTML, CSS et JavaScript vanilla, sans compilation (sauf `public/assistant` et
-  `public/tablette`, compilés ailleurs).
+- **Frontend** : HTML, CSS et JavaScript vanilla, sans compilation (sauf `public/tablette`, compilé ailleurs ;
+  `public/assistant` n'est plus qu'un renvoi vers le Marketing).
 - **Base** : celle du panel (`atelierby_db`). Les tables du cockpit sont en `ceo_*` et `mot_*`, celles du
   module RH en `hr_dimona_*`. Pas d'outil de migration : `CREATE TABLE IF NOT EXISTS` au premier appel.
 - **Secrets** : variable d'environnement, puis `config/config.php` (hors Git, réécrit par `bin/deploy.sh`),

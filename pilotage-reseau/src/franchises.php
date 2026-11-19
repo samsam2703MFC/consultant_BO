@@ -361,8 +361,7 @@ function ep_franchises_fiche(): array
         'journalier' => ['mois' => frMois($shop), 'tachesJour' => frTachesJour($shop), 'taches' => frTachesJours($shop), 'invendus' => frInvendus($shop), 'revues' => frRevues($shop), 'reclamations' => frReclamations($shop), 'objectifs' => frObjectifs($shop),
             'remarques' => frRemarques($shop), 'google' => $etat['google'][$shop] ?? null, 'ca' => $etat['ca'][$shop] ?? null],
         'terrain' => ['visites' => frVisites($shop), 'plans' => $etat['plans'], 'cadre' => $cadre, 'msp' => frMsp($shop), 'mspVisites' => $etat['msp'][$shop] ?? [],
-            'conformite' => frConformite($shop), 'scoring' => frScoring($shop), 'plano' => $b['plano'] ?? null, 'equipe' => $etat['equipe'][$shop] ?? null,
-            'app' => rtrim(rapBaseUrl(), '/') . '/visites/?shop=' . rawurlencode($shop)],
+            'conformite' => frConformite($shop), 'scoring' => frScoring($shop), 'plano' => $b['plano'] ?? null, 'equipe' => $etat['equipe'][$shop] ?? null],
         'journal' => frJournal($shop)];
 }
 

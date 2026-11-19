@@ -492,7 +492,6 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/invendus/actions' => ep_exploitation_invendus_actions(),
             $path === '/equipe/remarques'              => ep_equipe_remarques(),
             $path === '/scoring'                       => ep_scoring(),
-            $path === '/scoring/msp'                   => ep_scoring_msp(),
             $path === '/scoring/rapport'               => ep_scoring_rapport(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
@@ -579,7 +578,6 @@ function route(string $method, string $path): mixed
             $path === '/projects'                      => ep_projects(),
             $path === '/projects/crm'                  => ep_crm(),
             $path === '/people'                        => ep_people(),
-            $path === '/reporting'                     => ep_reporting(),
             $path === '/journal'                       => ep_journal(),
             $path === '/journal/mails'                 => ep_journal_mails(),
             $path === '/production/catalogue'          => ep_prod_catalogue(),
@@ -632,10 +630,6 @@ function route(string $method, string $path): mixed
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
             $path === '/produits/analyse/sonde'        => ep_produits_analyse_sonde(),
-            $path === '/produits/utilisation'          => ep_prod_utilisation(),
-            $path === '/produits/utilisation/magasin'  => ep_prod_utilisation_magasin(),
-            $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
-            $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
             $path === '/produits/structure'           => ep_produits_structure(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
@@ -910,9 +904,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/tasks/([\w-]+)/reminder$#', $path, $m)) { return wr_task_reminder($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/task-issues/(\d+)$#', $path, $m)) { return wr_task_issue_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/budget$#', $path, $m)) { return wr_budget_put($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/reporting/reports/([\w-]+)$#', $path, $m)) { return wr_report_patch($m[1]); }
-    if ($method === 'POST' && preg_match('#^/reporting/reports/([\w-]+)/send$#', $path, $m)) { return wr_report_send($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/charges$#', $path, $m)) { return wr_shop_charges($m[1]); }
     // La variation par mois seule : sert à pousser une courbe d'un magasin aux
     // autres sans toucher à leur budget ni au reste de leur étude.
@@ -921,8 +912,6 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/produits$#', $path, $m)) { return wr_objectifs_produits((int) $m[1]); }
     if ($method === 'POST' && $path === '/promo/mecaniques') { return wr_promo_mecanique(null); }
-    if ($method === 'POST' && $path === '/scoring/msp') { return wr_scoring_msp(); }
-    if ($method === 'DELETE' && preg_match('#^/scoring/msp/(\d+)$#', $path, $m) === 1) { return wr_scoring_msp_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/scoring/envoyer') { return wr_scoring_envoyer(); }
     if ($method === 'PUT' && $path === '/promo/mecaniques/ordre') { return wr_promo_mecaniques_ordre(); }
     if ($method === 'PUT' && preg_match('#^/promo/mecaniques/(\d+)$#', $path, $m)) { return wr_promo_mecanique((int) $m[1]); }

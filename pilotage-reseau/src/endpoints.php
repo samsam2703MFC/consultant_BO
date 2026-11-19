@@ -6444,19 +6444,6 @@ function ep_people(): array
         Db::rows('SELECT * FROM ceo_person ORDER BY id'));
 }
 
-function ep_reporting(): array
-{
-    $reports = array_map(fn ($r) => [
-        'id' => $r['id'], 'nom' => $r['name'], 'type' => $r['type'], 'desc' => $r['description'],
-        'freq' => $r['frequency'], 'postes' => json_decode($r['postes_json'], true),
-        'destId' => $r['dest_id'], 'ccId' => $r['cc_id'] ?? '',
-        'dernier' => $r['last_run'], 'actif' => (bool) $r['active'],
-    ], Db::rows('SELECT * FROM ceo_report_schedule ORDER BY id'));
-    $alertRules = array_map(fn ($a) => ['id' => $a['id'], 'nom' => $a['name'], 'canal' => $a['channel'], 'actif' => (bool) $a['active']],
-        Db::rows('SELECT * FROM ceo_alert_rule ORDER BY id'));
-    return ['reports' => $reports, 'alertRules' => $alertRules];
-}
-
 function ep_journal(): array
 {
     return array_map(fn ($l) => [

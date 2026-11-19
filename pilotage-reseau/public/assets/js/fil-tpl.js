@@ -48,7 +48,7 @@ export function tplFil(c, x){
   const corps = V.vue === 'fil'
     ? `<div class="fil-deux"><div>${compo(V.form, x, tag)}${filtre}<div class="fil-fil">${(V.sections || []).map(s => section(s, V, x, tag)).join('')}</div></div>${cote(V, x, tag)}</div>`
     : calendrier(V, x, tag, filtre);
-  return `<div data-screen="fil" class="fil">${cartes}${tete}${corps}
+  return `<div data-screen="fil" class="fil" ${x.DP(V.deposer)}>${cartes}${tete}${corps}
     <p class="fil-pied">Le fil mêle ce que le cockpit sait déjà — visites, score, points décidés, rapports, client mystère, demandes du helpdesk — et ce que le bureau y dépose : notes, photos, captures, appels. Le fil est interne : il ne se lit que dans le cockpit, et le franchisé n’en voit rien — ni sur sa page, ni dans ses courriels, ni dans son rapport, ni sur la tablette de visite. Une entrée épinglée se rappelle au bureau dans le dossier de la prochaine visite (Visites, étape 3), sans partir sur la tablette. Les photos et captures sont gardées dans le dossier privé du serveur.${V.demandesNote ? ' <span class="fil-or">' + esc(V.demandesNote) + '</span>' : ''}</p></div>`;
 }
 
@@ -61,7 +61,7 @@ function compo(f, x, tag){
   const pieces = f.pieces.map(p => `<span class="fil-piece"><img src="${esc(p.src)}" alt=""><span>${p.genre === 'capture' ? 'capture' : 'photo'}</span><button class="fil-piece__x" title="Retirer" aria-label="Retirer" ${x.A(p.retirer)}>×</button></span>`).join('');
   const msg = f.envoi && !f.envoi.enCours && f.envoi.msg ? `<span class="error">${esc(f.envoi.msg)}</span>` : '';
   return `<div class="fil-compo${f.edition ? ' fil-compo--edit' : ''}" ${x.DP(f.deposer)}>
-    <textarea id="${f.idTexte}" rows="${f.edition ? 3 : 2}" placeholder="${f.edition ? 'Le texte de l’entrée…' : 'Une note, un constat, un appel… Ctrl+V colle une capture d’écran ; on dépose aussi des photos ici.'}" ${x.I(f.poserTexte)}>${esc(f.texte)}</textarea>
+    <textarea id="${f.idTexte}" rows="${f.edition ? 3 : 2}" placeholder="${f.edition ? 'Le texte de l’entrée…' : 'Une note, un constat, un appel… Ctrl+V colle une photo ou une capture ; on peut aussi la glisser n’importe où sur le fil.'}" ${x.I(f.poserTexte)}>${esc(f.texte)}</textarea>
     ${pieces ? `<div class="fil-compo__pieces">${pieces}</div>` : ''}
     <div class="fil-compo__ligne"><small>Étiquettes</small>${choix}</div>
     <div class="fil-compo__ligne"><span class="seg seg--sm">${f.types.map(t => `<button class="${t.on ? 'is-on' : ''}" ${x.A(t.choisir)}>${esc(t.nom)}</button>`).join('')}</span>
