@@ -123,3 +123,6 @@
   .office-group-chip { min-width: 0; flex: 1 1 140px; max-width: 220px; }
   .office .kiosk-row { flex-wrap: wrap; }
 }
+
+/* [359] Bonjour + bouton entrée / sortie : avatar à gauche du nom aussi en portrait. */
+.office-clock .office-qr-who { flex-direction: row; text-align: left; }

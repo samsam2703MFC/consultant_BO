@@ -1187,3 +1187,9 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
   .kiosk-recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kiosk-table-wrap { overflow-x: auto; }
 }
+
+/* [359] Tablettes tenues en vertical : un écran court (PIN, bouton entrée / sortie, signature, confirmation, étape) se place
+   au centre de la hauteur au lieu de rester collé en haut avec la moitié basse vide. Un écran plus long que l'écran garde
+   son alignement en haut (les marges automatiques valent alors zéro) et défile comme avant. */
+.kiosk:not(.kiosk-phone) > .kiosk-head + section.kiosk-card:last-of-type,
+.kiosk:not(.kiosk-phone) > .kiosk-head + .kiosk-tabs + section.kiosk-card:last-of-type { margin-top: auto; margin-bottom: auto; }
