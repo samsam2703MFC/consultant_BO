@@ -196,3 +196,4 @@
 2026-11-19T20:12:02Z Commercial : « Ma semaine » (assistant en 6 étapes) et l'app mobile de suivi (/commercial/mobile/), lien « Commercial ↗ » dans le cockpit ; le magasin d’un bureau par son code postal ou son nom, pastilles du rail, formulaires Meta
 2026-11-19T20:34:09Z Prospection : transvasée dans le portail Commercial (/commercial/prospection/, table sm_prospect par la migration 006 ; l'ancienne adresse y renvoie)
 2026-11-19T20:38:10Z Commercial : gains en trois paliers (20/10/5 %), objectif 5 000 €, coût et ROI, commission des franchisés avec les royalties, simulation d'un client, création du formulaire Meta « Lunch au bureau »
+2026-11-19T20:46:25Z Commercial : le formulaire « Lunch au bureau » (question « Job title ») n'est plus pris pour un formulaire de recrutement

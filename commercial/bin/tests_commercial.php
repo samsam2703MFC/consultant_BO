@@ -182,6 +182,8 @@ verifie('un numéro de rue n’est pas un code postal', smCpAdresse('Chaussée d
 verifie('un formulaire de recrutement flexi-job est reconnu', smFormulaireRecrutement(['nom' => 'RECRUTEMENT B2B HALLE - FR', 'questions' => [['label' => 'Es-tu éligible au statut flexi-job ?']]]));
 verifie('un formulaire de franchise est reconnu', smFormulaireRecrutement(['nom' => 'FRANCHISE DOUR', 'questions' => []]));
 verifie('un formulaire « Lunch au bureau » est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'Lunch au bureau — Gosselies', 'questions' => [['label' => 'Nom de l’entreprise'], ['label' => 'Nombre de personnes']]]));
+verifie('le formulaire créé sur la Page (fonction « Job title ») est un formulaire de bureaux', !smFormulaireRecrutement(['nom' => 'LUNCH AU BUREAU - FR', 'questions' => array_map(static fn ($l) => ['label' => $l], ['Company name', 'Combien de personnes dans votre équipe ?', 'Quel est votre besoin ?', 'Full name', 'Job title', 'Email', 'Phone number', 'Post code'])]));
+verifie('« un job étudiant » reste du recrutement', smFormulaireRecrutement(['nom' => 'Un job chez nous', 'questions' => []]));
 
 echo "\n$ok ok, $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

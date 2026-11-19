@@ -1089,7 +1089,8 @@ function ep_sm_alertes(): array
 function smFormulaireRecrutement(array $f): bool
 {
     $txt = mb_strtolower((string) ($f['nom'] ?? '') . ' ' . implode(' ', array_map(static fn ($q) => (string) ($q['label'] ?? ''), (array) ($f['questions'] ?? []))));
-    return (bool) preg_match('/franchis|recrut|flexi|candidat|emploi|job|cv\b|vacature|sollicit/u', $txt);
+    // « Job title » (la fonction, question standard de Meta) n'est pas une offre d'emploi.
+    return (bool) preg_match('/franchis|recrut|flexi|candidat|emploi|\bjobs?\b(?!\s*title)|\bcv\b|vacature|sollicit/u', $txt);
 }
 
 /** GET /commercial/formulaires — les formulaires Meta de MétaDonnée (Marketing) : suivis ou non, et ce qu'ils apportent. */
