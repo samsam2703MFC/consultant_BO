@@ -168,3 +168,4 @@
 2026-11-19T15:41:01Z Dépliant des manuels : page franchise, court résumé de 0.0.21 et 0.0.56 à la place des chiffres du contrat
 2026-11-19T15:42:59Z Revue du soir : la tuile des tâches pas faites, « 8 / 11 » sur une ligne
 2026-11-19T15:50:23Z Dépliant des manuels : page franchise, les huit questions d'une franchise bien tenue
+2026-11-19T16:03:25Z Fil : glisser ou coller une photo partout, étiquettes communication ; code mort retiré (écrans, routes sans appelant, paquet de l'assistant)
