@@ -178,3 +178,4 @@
 2026-11-19T18:01:52Z Cockpit : Vérification › Chiffre d'affaires et Fidélité retirés ; MétaDonnée › Formulaires, la liste sur toute la largeur ; Assistant · coachs, l'onglet KPI (ce que lit chaque assistant, et son modèle)
 2026-11-19T18:16:56Z Dashboard, La journée : les lignes Four, Vitrine et Commandes retirées de la frise (il reste l'Équipe)
 2026-11-19T18:27:33Z Catalogue des manuels : le manuel de pré-ouverture (compte à rebours, étapes, articles à lire)
+2026-11-19T18:30:58Z Dépliant des manuels : la page 7, la pré-ouverture (7 pages, 5 manuels)
