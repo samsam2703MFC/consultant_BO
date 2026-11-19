@@ -159,6 +159,7 @@
 2026-11-19T12:11:19Z [366] Réclamations : photos dans la fenêtre
 2026-11-19T14:33:17Z Revue du soir : les tâches pas faites montrées clairement, la caisse sans écart (monnayeur)
 2026-11-19T14:48:38Z Fil du franchisé (fil et calendrier, au cockpit seulement) ; rail : Dashboard magasin retiré
+2026-11-19T15:03:27Z Fusion de la branche par défaut (84 commits) : déjà en ligne sous d'autres commits, ajoute les captures du helpdesk
 2026-11-19T15:02:05Z Catalogue des manuels : feuilleter, PDF, QR code, dépliant ; rail du cockpit et du module Formation
 2026-11-19T15:07:02Z Rail du cockpit réorganisé : 34 entrées sans sous-menu, les vues d'une même question en onglets (docs/audit-rail.md)
 2026-11-19T15:10:18Z Catalogue des manuels : liens directs vers les SOP, articles et checklists cités (écran et PDF)
