@@ -19,4 +19,4 @@ l’expliquer à son équipe.
 - **« Une photo refusée se reprend »** : le comportement exact de l’application est à confirmer.
 - **Démonstration et retour** (partie « L’expliquer à son équipe ») : méthode proposée, à tester en magasin.
 - NL : traduction de travail, à relire.
-- Publication : sur demande (« publie 0.0.57 » ne concerne pas cet article ; le code sera celui donné à la création).
+- Code : **0.0.58**, donné à la création. Publication : sur demande (« publie 0.0.58 »).
