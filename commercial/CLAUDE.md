@@ -21,6 +21,11 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des domaines, clés, migration
 - **Le magasin d'un bureau** : son code postal (`smCpDefaut`, réglable par magasin : `cps`) ; son nom, cherché dans Google
   Places (`GoogleApi::chercher`). Un lead Meta sans magasin prend celui de son code postal. Les formulaires Meta de
   recrutement (candidats, franchisés) sont signalés et ne se suivent pas d'ici.
+- **Les gains** (`src/commercial_gains.php`) : trois paliers (20 % le 1er mois, 10 % jusqu'au 3e, 5 % jusqu'au 12e), une
+  règle par secteur, commande minimum, plancher, objectif mensuel, coût et ROI ; le taux de départ payé par le franchisé
+  avec ses royalties (`/commercial/commissions`) ; la simulation d'un client (`/commercial/simulation`, dans « Ma semaine »).
+- **Le formulaire Meta des bureaux** (`src/commercial_meta.php`) : « Lunch au bureau » créé sur la Page par l'API Graph, avec
+  le jeton de MétaDonnée ; ses fonctions seulement, jamais ses tables.
 - **Lit ailleurs, jamais dans leurs tables** : les leads par MétaDonnée (`ep_md_leads`), la liste de démarchage par
   Prospection (`ep_prospection`), les types d'offre (`prOffres`), les catalogues par le relais du Marketing (`cmRoute`),
   les tickets pro par le relevé du panel (`vpLu` / `vpJour`), les magasins par `ep_stores`.

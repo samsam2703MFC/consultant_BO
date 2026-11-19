@@ -181,10 +181,29 @@
               <label><span class="field-label">Type</span><select name="type"><option value="visite">Visite</option><option value="appel">Appel</option></select></label><label><span class="field-label"><input type="checkbox" name="degustation" style="width:auto"> Avec dégustation</span></label>
               <div class="plein" style="display:flex;justify-content:flex-end">${btn('Ajouter au planning', 'ajouter', 'btn--primary')}</div></form></div>
           <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>Le planning <span class="aside">${rdv.length} rendez-vous</span></h2></div>
-            <table><tbody>${rdv.length ? rdv.map(r => ligneRdv(r, `<td class="num">${btn('Retirer', 'annuler', 'btn--sm btn--ghost', r.id)}</td>`)).join('') : '<tr><td class="vide">Rien de planifié.</td></tr>'}</tbody></table></div></div>`;
+            <table><tbody>${rdv.length ? rdv.map(r => ligneRdv(r, `<td class="num">${btn('Retirer', 'annuler', 'btn--sm btn--ghost', r.id)}</td>`)).join('') : '<tr><td class="vide">Rien de planifié.</td></tr>'}</tbody></table></div></div>
+          <div class="card" style="margin-top:16px"><h2>Ce que rapporte un client <span class="aside">la simulation sur un an, à la règle de son secteur</span></h2>
+            <form class="form" id="fsim" onsubmit="return false" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;align-items:end">
+              <label><span class="field-label">Secteur</span>${selSecteurs('bureau')}</label>
+              <label><span class="field-label">Personnes</span><input name="personnes" type="number" min="1" value="20"></label>
+              <label><span class="field-label">€ par personne</span><input name="depense" type="number" step="0.5" min="0" placeholder="de l’offre"></label>
+              <label><span class="field-label">Commandes / semaine</span><input name="commandes" type="number" step="0.25" min="0" placeholder="de l’offre"></label>
+              <label><span class="field-label">ou CA HT / mois</span><input name="ht" type="number" step="50" min="0"></label>
+              <div>${btn('Simuler', 'simuler', 'btn--primary')}</div></form><div id="sim"></div></div>`;
         ACT.planifier = el => { const i = el.dataset.v, c = cands[i]; const v = k => page.querySelector(`[data-k="${k}${i}"]`);
           api('POST', '/rdv', { clientId: c.clientId, leadId: c.leadId, prospect: c.prospect, contact: c.contact, email: c.email, telephone: c.telephone, shopId: c.shopId, secteur: c.secteur,
             type: v('t').value, le: v('j').value + ' ' + v('h').value, degustation: v('g').checked }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)); };
+        ACT.simuler = () => {
+          const x = lireForm(document.getElementById('fsim')); const qs = new URLSearchParams(); Object.entries(x).forEach(([k, v]) => { if (v !== '') qs.set(k, v); });
+          api('GET', '/simulation?' + qs).then(s => {
+            const max = Math.max(1, ...s.mois.map(m => m.gain));
+            document.getElementById('sim').innerHTML = `<div class="kpi-row" style="margin-top:14px"><div class="kpi"><div class="kpi__value">${fE(s.htMois)}</div><div class="kpi__label">CA HT du client par mois</div><div class="kpi__note">${s.estime ? s.personnes + ' pers. × ' + nf(s.depense, 2) + ' € × ' + nf(s.commandes, 2) + ' cmd/sem. × 4,33' : 'saisi'}</div></div>
+              <div class="kpi"><div class="kpi__value">${fE(s.total)}</div><div class="kpi__label">Gagné sur l’année</div><div class="kpi__note">${regleTxt(s.regle)} · ${regleSub(s.regle)}</div></div>
+              <div class="kpi"><div class="kpi__value">${fE(s.franchise)}</div><div class="kpi__label">Payé par le franchisé</div><div class="kpi__note">le taux de départ, avec ses royalties</div></div>
+              <div class="kpi"><div class="kpi__value">${fE(s.marque)}</div><div class="kpi__label">Payé par la marque</div></div></div>
+              <div class="histo" style="height:110px">${s.mois.map(m => `<div><span style="color:var(--ink)">${fE(m.gain)}</span><i style="height:${Math.round(m.gain / max * 70)}px;${m.phase === 'depart' ? '' : 'background:#EBD3D8'}"></i>M${m.mois}<span class="sub">${fP(m.taux)}</span></div>`).join('')}</div>`;
+          }).catch(e => toast(e.message, true));
+        };
         ACT.cpSemaine = el => { const m = magPourCp(el.value); if (m) document.getElementById('fs').shopId.value = m.id; };
         ACT.ajouter = () => { const x = lireForm(document.getElementById('fs')); if (!x.prospect.trim()) { toast('La société manque', true); return; }
           api('POST', '/rdv', { ...x, le: x.jour + ' ' + x.heure }).then(() => vueSemaine(q)).catch(e => toast(e.message, true)); };
@@ -308,7 +327,7 @@
       page.innerHTML = `<div class="grid" style="grid-template-columns:repeat(${Math.max(1, d.parMagasin.length)},1fr);margin-bottom:16px">${cartes}</div>
         <div class="toolbar">${filtres}</div>
         <div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Reçu</th><th></th><th>Lead</th><th>Magasin</th><th>Statut dans l’ERP</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
-        <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px"><h2>Formulaires Meta <span class="aside">un lead n’arrive que d’un formulaire suivi</span></h2></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
+        <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">Formulaires Meta <span class="aside" style="float:none;margin-left:8px">un lead n’arrive que d’un formulaire suivi</span></h2><span style="display:flex;gap:8px">${btn('Créer « Lunch au bureau » (FR)', 'creerForm', 'btn--sm btn--primary', 'fr')}${btn('(NL)', 'creerForm', 'btn--sm', 'nl')}</span></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
         <p class="pied">${esc(d.source)}. Un lead sans magasin prend celui de son code postal.</p>`;
       api('GET', '/formulaires').then(fo => {
         const el = document.getElementById('formulaires'); if (!el) return;
@@ -317,6 +336,26 @@
           <td class="num" style="white-space:nowrap">${x.recrutement ? '' : x.suivi ? btn('Récupérer 90 jours', 'histo', 'btn--sm', x.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm btn--primary', x.id + '|1')}</td></tr>`).join('')}</tbody></table>`
           : '<div class="vide">Aucun formulaire lu sur la Page Meta.</div>';
       }).catch(e => { const el = document.getElementById('formulaires'); if (el) el.textContent = e.message; });
+      ACT.creerForm = el => {
+        const langue = el.dataset.v;
+        api('GET', '/formulaires/modele?langue=' + langue).then(m => {
+          const f = m.formulaire; const md = document.createElement('div'); md.className = 'modal';
+          const libQ = x => x.label || ({ COMPANY_NAME: 'Nom de l’entreprise', FULL_NAME: 'Nom complet', JOB_TITLE: 'Fonction', EMAIL: 'E-mail', PHONE: 'Téléphone', POST_CODE: 'Code postal' })[x.type] || x.type;
+          md.innerHTML = `<div class="modal__box" style="width:min(640px,100%)"><h3>Créer « ${esc(f.name)} » sur la Page Meta</h3>
+            <p class="small muted">${esc(f.context_card.title)} — ${esc(f.context_card.content[0])}</p>
+            <table class="mini"><tbody>${f.questions.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(libQ(x))}${x.options ? `<span class="sub">${esc(x.options.map(o => o.value).join(' · '))}</span>` : ''}</td></tr>`).join('')}</tbody></table>
+            <p class="small" style="margin-top:12px">Remerciement : ${esc(f.thank_you_page.title)}<br>Politique de confidentialité : ${m.politique ? `<a href="${esc(m.politique)}" target="_blank" rel="noopener">${esc(m.politique)}</a>` : '<span class="erreur">introuvable sur les formulaires existants</span>'}<br>Langue : ${esc(m.locale)} · site : ${esc(m.site)}</p>
+            <p class="small muted">Le formulaire est créé dans la bibliothèque de la Page, sans publicité : il sert quand une publicité l’utilise. Il est ensuite suivi ici, le magasin de chaque lead pris d’après son code postal.</p>
+            <p class="erreur" data-err></p>
+            <div class="modal__actions"><button class="btn btn--ghost" data-m="0">Annuler</button><button class="btn btn--primary" data-m="1" ${m.politique ? '' : 'disabled'}>Créer sur la Page</button></div></div>`;
+          document.body.appendChild(md);
+          md.addEventListener('click', ev => { const b = ev.target.closest('[data-m]'); if (!b) return; if (b.dataset.m === '0') { md.remove(); return; }
+            b.disabled = true;
+            api('POST', '/formulaires/creer', { langue }).then(r => (r.id ? api('PUT', '/formulaires/' + r.id, { suivi: true, affectation: 'cp' }).then(() => r) : r))
+              .then(r => { md.remove(); toast((r.deja ? 'Déjà sur la Page : ' : 'Créé et suivi : ') + r.nom); vueLeads(q); })
+              .catch(e => { b.disabled = false; md.querySelector('[data-err]').textContent = e.message; }); });
+        }).catch(e => toast(e.message, true));
+      };
       ACT.suivre = el => { const [id, on] = el.dataset.v.split('|'); el.disabled = true; api('PUT', '/formulaires/' + id, { suivi: on === '1', affectation: 'cp' }).then(() => { toast(on === '1' ? 'Formulaire suivi : ses leads arrivent' : 'Formulaire plus suivi'); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
       ACT.histo = el => { el.disabled = true; api('POST', '/formulaires/' + el.dataset.v + '/historique', { jours: 90 }).then(r => { toast('Historique relu' + (r && r.nouveaux != null ? ' : ' + r.nouveaux + ' lead(s)' : '')); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
       ACT.creer = el => { const l = d.leads.find(x => x.id === Number(el.dataset.v)); sessionStorage.setItem('smLead', JSON.stringify(l)); location.hash = 'nouveau?lead=' + l.id; };
@@ -587,7 +626,9 @@
   }
 
   /* --- 8. mes gains ---------------------------------------------------------------------------------------------- */
-  const PHASE = { depart: 'départ', suite: 'ensuite', termine: 'terminé', min: 'sous le minimum' };
+  const PHASE = { depart: 'départ', palier: 'palier', suite: 'ensuite', termine: 'terminé', min: 'sous le minimum' };
+  const regleTxt = r => `${fP(r.taux1)} · ${fP(r.taux2)} · ${fP(r.taux3)}`;
+  const regleSub = r => `${r.mois1} mois, puis jusqu’au ${r.mois2}e, puis jusqu’au ${r.duree ? r.duree + 'e mois' : 'bout'}${r.min ? ', min ' + fE(r.min) : ''}`;
   function vueGains(q) {
     const auj = new Date(); const moisAuj = auj.toISOString().slice(0, 7);
     const mois = q.get('mois') || moisAuj;
@@ -597,24 +638,37 @@
     api('GET', '/gains?mois=' + mois).then(d => {
       const r = d.regles.defaut;
       const maxH = Math.max(1, ...d.historique.map(h => h.du));
-      const histo = d.historique.map(h => `<div><span style="color:var(--ink)">${fE(h.du)}</span>${h.complement ? `<i class="plancher" style="height:${Math.round(h.complement / maxH * 90)}px;margin-bottom:0;border-radius:4px 4px 0 0"></i>` : ''}<i style="height:${Math.round(h.gain / maxH * 90)}px;${h.complement ? 'border-radius:0' : ''}"></i>${esc(nomMois(h.mois).replace(/ \d{4}$/, ''))}</div>`).join('');
+      const histo = d.historique.map(h => `<div><span style="color:var(--ink)">${fE(h.du)}</span>${h.complement ? `<i class="plancher" style="height:${Math.round(h.complement / maxH * 90)}px;margin-bottom:0;border-radius:4px 4px 0 0"></i>` : ''}<i style="height:${Math.round(h.gain / maxH * 90)}px;${h.complement ? 'border-radius:0' : ''}"></i>${esc(nomMois(h.mois).replace(/ \d{4}$/, ''))}<span class="sub">${h.atteinte == null ? '' : 'obj. ' + nf(h.atteinte, 0) + ' %'}${h.roi == null ? '' : ' · ROI ' + nf(h.roi, 0) + ' %'}</span></div>`).join('');
       const ouvert = Number(q.get('client') || 0);
       const lignes = d.clients.length ? d.clients.map(c => `<tr class="row-link" data-a="detail" data-v="${c.id}"><td>${esc(c.entreprise)}<span class="sub">${esc(c.secteurNom || 'sans secteur')} · ${esc(c.magasin)}</span></td>
         <td class="ink2">${c.premiere ? fD(c.premiere) : '—'}<span class="sub">${c.finDepart ? 'taux de départ jusqu’au ' + fD(c.finDepart) : 'pas encore de commande'}</span></td>
-        <td class="ink2">${fP(c.regle.taux1)} puis ${fP(c.regle.taux2)}<span class="sub">${c.regle.mois1} mois${c.regle.duree ? ', fin à ' + c.regle.duree + ' mois' : ', sans fin'}${c.regle.min ? ', min ' + fE(c.regle.min) : ''}</span></td>
+        <td class="ink2">${regleTxt(c.regle)}<span class="sub">${regleSub(c.regle)}</span></td>
         <td class="num">${c.n}</td><td class="num">${fE2(c.ht)}</td><td class="num">${fE2(c.gain)}</td></tr>`
-        + (c.id === ouvert ? `<tr class="detail"><td colspan="6"><table class="mini"><tbody>${c.commandes.length ? c.commandes.map(k => `<tr><td>${fD(k.j)} ${esc(k.h)}</td><td class="num">${fE2(k.ttc)} TTC</td><td class="num">${fE2(k.ht)} HT</td><td>${PHASE[k.phase]}</td><td class="num">${fP(k.taux)}</td><td class="num">${fE2(k.gain)}</td></tr>`).join('') : '<tr><td class="muted">Aucune commande ce mois.</td></tr>'}</tbody></table></td></tr>` : '')).join('')
+        + (c.id === ouvert ? `<tr class="detail"><td colspan="6"><table class="mini"><tbody>${c.commandes.length ? c.commandes.map(k => `<tr><td>${fD(k.j)} ${esc(k.h)}</td><td class="num">${fE2(k.ttc)} TTC</td><td class="num">${fE2(k.ht)} HT</td><td>${PHASE[k.phase]}${k.payeur ? ' · ' + (k.payeur === 'franchise' ? 'payé par le franchisé' : 'payé par la marque') : ''}</td><td class="num">${fP(k.taux)}</td><td class="num">${fE2(k.gain)}</td></tr>`).join('') : '<tr><td class="muted">Aucune commande ce mois.</td></tr>'}</tbody></table></td></tr>` : '')).join('')
         : '<tr><td class="vide" colspan="6">Aucun client rattaché à son compte du panel : ses commandes ne peuvent pas encore compter.</td></tr>';
       const parSec = d.parSecteur.map(s => `<tr><td>${esc(s.nom)}</td><td class="num">${s.clients}</td><td class="num">${fE2(s.ht)}</td><td class="num">${fE2(s.gain)}</td></tr>`).join('');
+      const roiTxt = d.roi == null ? '—' : (d.roi > 0 ? '+' : '') + nf(d.roi, 0) + ' %';
+      const barre = Math.min(100, d.atteinte || 0);
+      const fr = d.franchises || [];
       page.innerHTML = `
         <div class="kpi-row">
-          <div class="kpi"><div class="kpi__value">${fE2(d.du)}</div><div class="kpi__label">À payer · ${esc(nomMois(mois))}</div><div class="kpi__note">${d.complement ? 'dont ' + fE2(d.complement) + ' de complément au plancher' : 'commissions du mois'}</div></div>
-          <div class="kpi"><div class="kpi__value">${fE2(d.gain)}</div><div class="kpi__label">Commissions</div><div class="kpi__note">${d.commandes} commande${d.commandes > 1 ? 's' : ''} · ${fE2(d.ht)} HT</div></div>
+          <div class="kpi"><div class="kpi__value">${fE2(d.du)}</div><div class="kpi__label">À payer au commercial · ${esc(nomMois(mois))}</div><div class="kpi__note">${d.complement ? 'dont ' + fE2(d.complement) + ' de complément au plancher' : 'commissions du mois'}</div></div>
+          <div class="kpi"><div class="kpi__value">${fE2(d.aLaChargeFranchises)}</div><div class="kpi__label">Payé par les franchisés</div><div class="kpi__note">taux de départ, prélevé avec les royalties</div></div>
+          <div class="kpi"><div class="kpi__value">${fE2(d.aLaChargeMarque)}</div><div class="kpi__label">Payé par la marque</div><div class="kpi__note">taux ensuite${d.complement ? ' et complément au plancher' : ''}</div></div>
           <div class="kpi"><div class="kpi__value">${fE2(d.plancher)}</div><div class="kpi__label">Plancher mensuel</div><div class="kpi__note">${d.plancher ? (d.complement ? 'atteint grâce au complément' : 'dépassé') : 'aucun plancher réglé'}</div></div>
-          <div class="kpi"><div class="kpi__value">${fP(r.taux1)} → ${fP(r.taux2)}</div><div class="kpi__label">Règle par défaut</div><div class="kpi__note">${r.mois1} mois au départ${r.duree ? ', fin à ' + r.duree + ' mois' : ', sans fin'} · <a href="#reglages">Paramètres</a></div></div>
         </div>
+        <div class="kpi-row">
+          <div class="kpi" style="flex:1.6"><div class="kpi__value" style="color:${d.objectifAtteint ? 'var(--green)' : 'var(--ink)'}">${fE(d.ht)} <span style="font-size:13px;font-weight:400;color:var(--muted)">/ ${fE(d.objectif)}</span></div><div class="kpi__label">Objectif : CA HT apporté par ses clients</div>
+            <div style="height:6px;border-radius:3px;background:var(--chip);margin-top:8px;overflow:hidden"><i style="display:block;height:6px;width:${barre}%;background:${d.objectifAtteint ? 'var(--green)' : 'var(--prize)'}"></i></div>
+            <div class="kpi__note">${d.atteinte == null ? 'pas d’objectif réglé' : nf(d.atteinte, 0) + ' %' + (d.manque ? ' · il manque ' + fE(d.manque) : ' · atteint')} · ${d.nouveauxDuMois} nouveau${d.nouveauxDuMois > 1 ? 'x' : ''} client${d.nouveauxDuMois > 1 ? 's' : ''} ce mois (${fE(d.htNouveauxDuMois)})</div></div>
+          <div class="kpi"><div class="kpi__value">${fE(d.coutTotal)}</div><div class="kpi__label">Coût pour la marque</div><div class="kpi__note">${d.cout ? fE(d.cout) + ' de coût mensuel + ' + fE2(d.aLaChargeMarque) : 'coût mensuel à régler (Paramètres)'}</div></div>
+          <div class="kpi"><div class="kpi__value" style="color:${d.roi == null ? 'var(--ink)' : d.roi >= 0 ? 'var(--green)' : 'var(--stop)'}">${roiTxt}</div><div class="kpi__label">ROI du commercial</div><div class="kpi__note">${d.roi == null ? 'réglez son coût mensuel' : 'retour ' + fE(d.retour) + (d.marge ? ' (marge ' + nf(d.marge, 0) + ' %)' : ' (CA HT)') + ' · ×' + nf(d.multiple, 2)}</div></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px"><div style="padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">À prélever aux franchisés avec les royalties de ${esc(nomMois(mois))} <span class="aside" style="float:none;margin-left:8px">commission commerciale B2B, HT</span></h2>${fr.length ? btn('Exporter (CSV)', 'exportCommissions', 'btn--sm') : ''}</div>
+          <table><tbody>${fr.length ? fr.map(x => `<tr><td>${esc(x.magasin)}</td><td class="ink2">${esc(d.clients.filter(c => String(c.shopId) === String(x.shopId) && c.gainFranchise > 0).map(c => c.entreprise + ' (' + fE2(c.gainFranchise) + ')').join(', '))}</td><td class="num">${fE2(x.montant)}</td></tr>`).join('')
+            + `<tr class="total"><td>Total</td><td></td><td class="num">${fE2(d.aLaChargeFranchises)}</td></tr>` : '<tr><td class="vide">Rien à prélever ce mois.</td></tr>'}</tbody></table></div>
         <div class="grid" style="grid-template-columns: 1.4fr 1fr;margin-bottom:16px">
-          <div class="card"><h2>Les ${d.historique.length} derniers mois <span class="aside">commissions et complément au plancher</span></h2><div class="histo">${histo}</div></div>
+          <div class="card"><h2>Les ${d.historique.length} derniers mois <span class="aside">à payer au commercial ; l’objectif atteint et le ROI</span></h2><div class="histo">${histo}</div></div>
           <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>Par secteur</h2></div><table><thead><tr><th>Secteur</th><th class="num">Clients</th><th class="num">CA HT</th><th class="num">Gains</th></tr></thead><tbody>${parSec || '<tr><td class="vide" colspan="4">—</td></tr>'}</tbody></table></div>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div style="padding:16px 18px 6px"><h2>Le détail par client <span class="aside">un clic : ses commandes du mois</span></h2></div>
@@ -622,6 +676,12 @@
         ${d.nonRattaches.length ? `<div class="card" style="margin-top:16px"><h2>Pas encore comptés <span class="aside">rattachez leur compte client du panel</span></h2><p class="small">${d.nonRattaches.map(c => `<a href="#bureaux?id=${c.id}">${esc(c.entreprise)}</a> (${esc(c.magasin)})`).join(' · ')}</p></div>` : ''}
         <p class="pied">${esc(d.source)}${d.manquants ? ' · ' + d.manquants + ' jours du mois pas encore lus au panel' : ''}.</p>`;
       ACT.detail = el => { location.hash = 'gains?mois=' + mois + (Number(el.dataset.v) === ouvert ? '' : '&client=' + el.dataset.v); };
+      ACT.exportCommissions = () => {
+        const lignes = [['Mois', 'Magasin', 'Client', '1re commande', 'Commission HT']];
+        d.clients.filter(c => c.gainFranchise > 0).forEach(c => lignes.push([mois, c.magasin, c.entreprise, c.premiere || '', String(c.gainFranchise).replace('.', ',')]));
+        const csv = '\ufeff' + lignes.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+        const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a2.download = 'commission-commerciale-' + mois + '.csv'; a2.click();
+      };
     }).catch(erreur);
     ACT = { mois: el => { location.hash = 'gains?mois=' + el.value; }, detail: () => {} };
   }
@@ -654,14 +714,18 @@
   function vueReglages() {
     entete('Réglages', 'Paramètres', '');
     const r = CFG.reglages, g = r.gains, d = g.defaut;
-    const champsRegle = (x, pre, vide) => ['taux1', 'mois1', 'taux2', 'duree', 'min'].map(k => `<td><input type="number" step="${k.startsWith('taux') || k === 'min' ? '0.5' : '1'}" min="0" name="${pre}${k}" value="${x && x[k] != null ? x[k] : ''}" ${vide ? `placeholder="${d[k]}"` : ''} style="width:86px;padding:5px 8px"></td>`).join('');
+    const champsRegle = (x, pre, vide) => ['taux1', 'mois1', 'taux2', 'mois2', 'taux3', 'duree', 'min'].map(k => `<td><input type="number" step="${k.startsWith('taux') || k === 'min' ? '0.5' : '1'}" min="0" name="${pre}${k}" value="${x && x[k] != null ? x[k] : ''}" ${vide ? `placeholder="${d[k]}"` : ''} style="width:70px;padding:5px 8px"></td>`).join('');
     page.innerHTML = `<form id="fr" onsubmit="return false">
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px"><div style="padding:16px 18px 6px"><h2>Les gains du commercial <span class="aside">case vide : la règle par défaut</span></h2></div>
-        <table><thead><tr><th>Secteur</th><th>Taux de départ (%)</th><th>Pendant (mois)</th><th>Taux ensuite (%)</th><th>Fin après (mois, 0 = jamais)</th><th>Commande min. (€ HT)</th></tr></thead>
+        <table><thead><tr><th>Secteur</th><th>Départ (%)</th><th>Jusqu’au mois</th><th>Palier (%)</th><th>Jusqu’au mois</th><th>Ensuite (%)</th><th>Fin au mois (0 = jamais)</th><th>Commande min. (€ HT)</th></tr></thead>
         <tbody><tr class="total"><td>Par défaut</td>${champsRegle(d, 'd_', false)}</tr>${CFG.secteurs.map(s => `<tr><td>${esc(s.nom)}</td>${champsRegle(g.secteurs[s.id], 's_' + s.id + '_', true)}</tr>`).join('')}</tbody></table>
-        <div class="form" style="padding:14px 18px;border-top:1px solid var(--line);grid-template-columns:1fr 1fr 2fr">
+        <div class="form" style="padding:14px 18px;border-top:1px solid var(--line);grid-template-columns:1fr 1fr 1fr">
           <label><span class="field-label">Plancher mensuel (€)</span><input type="number" step="1" min="0" name="plancher" value="${g.plancher}"></label>
           <label><span class="field-label">TVA pour le HT (%)</span><input type="number" step="0.5" min="0" name="tva" value="${g.tva}"></label>
+          <label><span class="field-label">Objectif mensuel : CA HT apporté (€)</span><input type="number" step="100" min="0" name="objectif" value="${g.objectif}"></label>
+          <label><span class="field-label">Coût mensuel du commercial (€)</span><input type="number" step="50" min="0" name="cout" value="${g.cout}"></label>
+          <label><span class="field-label">Marge pour le ROI (%, vide : sur le CA HT)</span><input type="number" step="1" min="0" max="100" name="marge" value="${g.marge || ''}"></label>
+          <label class="plein"><span class="field-label"><input type="checkbox" name="departFranchise" ${g.departFranchise !== false ? 'checked' : ''} style="width:auto"> Le taux de départ est à la charge du franchisé (prélevé avec ses royalties)</span></label>
           <p class="small muted" style="align-self:end">Plancher : si les commissions du mois sont plus basses, le commercial touche le plancher. Une commande sous le minimum ne rapporte rien.</p></div></div>
       <div class="card form" style="margin-bottom:16px"><h2 class="plein">E-mails</h2>
         <label class="plein"><span class="field-label">Expéditeur</span><input name="expediteur" value="${esc(r.expediteur)}"></label>
@@ -679,11 +743,11 @@
     ACT = {
       sauver: () => {
         const x = lireForm(document.getElementById('fr'));
-        const regle = pre => { const o = {}; ['taux1', 'mois1', 'taux2', 'duree', 'min'].forEach(k => { if (x[pre + k] !== '') o[k] = Number(x[pre + k]); }); return o; };
+        const regle = pre => { const o = {}; ['taux1', 'mois1', 'taux2', 'mois2', 'taux3', 'duree', 'min'].forEach(k => { if (x[pre + k] !== '') o[k] = Number(x[pre + k]); }); return o; };
         const secteurs = {}; CFG.secteurs.forEach(s => { const o = regle('s_' + s.id + '_'); if (Object.keys(o).length) secteurs[s.id] = o; });
         const zones = {}; CFG.magasins.forEach(m => { zones[m.id] = (x['z_' + m.id] || '').split('\n').map(s => s.trim()).filter(Boolean); });
         const cps = {}; CFG.magasins.forEach(m => { cps[m.id] = (x['cp_' + m.id] || '').split(/[^\d]+/).filter(c => c.length === 4); });
-        api('PUT', '/reglages', { gains: { defaut: regle('d_'), secteurs, plancher: Number(x.plancher || 0), tva: Number(x.tva || 6) }, expediteur: x.expediteur,
+        api('PUT', '/reglages', { gains: { defaut: regle('d_'), secteurs, plancher: Number(x.plancher || 0), tva: Number(x.tva || 6), objectif: Number(x.objectif || 0), cout: Number(x.cout || 0), marge: Number(x.marge || 0), departFranchise: !!x.departFranchise }, expediteur: x.expediteur,
           signature: { nom: x.sig_nom, fonction: x.sig_fonction, telephone: x.sig_telephone, site: x.sig_site }, webshop: x.webshop, zones, cps })
           .then(() => api('GET', '/config')).then(c => { CFG = c; toast('Paramètres enregistrés'); rail('reglages'); vueReglages(); }).catch(e => toast(e.message, true));
       },

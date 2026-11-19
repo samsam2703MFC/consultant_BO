@@ -5962,9 +5962,15 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `GET /commercial/trouver?q=&cp=` | le magasin d'un bureau : par son code postal (codes des zones, `cps` des réglages) ; par son nom, cherché dans Google Places (adresse, code postal) quand la clé Google est réglée |
 | `GET /commercial/alertes` | les pastilles du rail : `leads` (leads Meta à traiter), `bureaux` (bureaux dont le compte webshop n'est pas encore connecté) |
 | `GET /commercial/formulaires`, `PUT /commercial/formulaires/{id}`, `POST /commercial/formulaires/{id}/historique` | les formulaires Meta de MétaDonnée (`recrutement` : candidats ou franchisés, pas un bureau) ; les suivre (affectation par code postal) ; relire 90 jours |
+| `GET /commercial/commissions?mois=` | la commission commerciale à prélever à chaque franchisé avec ses royalties du mois (taux de départ, HT) : magasin, montant, détail par client |
+| `GET /commercial/simulation?secteur=&personnes=&depense=&commandes=&ht=` | ce que rapporte un client sur un an à la règle de son secteur : CA HT par mois (estimé comme Prospection, ou donné), gains mois par mois, part du franchisé et de la marque |
+| `GET /commercial/formulaires/modele?langue=`, `POST /commercial/formulaires/creer` | le formulaire Meta « Lunch au bureau » (FR) ou « Lunch op kantoor » (NL) : l'aperçu, puis la création sur la Page (`POST /{page}/leadgen_forms`, jeton de MétaDonnée), relu par MétaDonnée |
 | `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
 
 **Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée
-au portail ; `taux1` % du HT pendant `mois1` mois depuis sa 1re commande (défaut 20 %, 1 mois), puis `taux2` % (défaut 5 %)
-jusqu'à `duree` mois (0 = sans fin) ; une commande sous `min` € HT ne rapporte rien ; une règle par secteur au besoin ; sous
-le `plancher` mensuel, le complément est payé. Tests : `php commercial/bin/tests_commercial.php`.
+au portail ; trois paliers depuis sa 1re commande — `taux1` % jusqu'au mois `mois1` (20 %, 1), `taux2` % jusqu'au mois `mois2`
+(10 %, 3), `taux3` % jusqu'au mois `duree` (5 %, 12 ; 0 = sans fin) ; une commande sous `min` € HT ne rapporte rien ; une règle par
+secteur au besoin ; sous le `plancher` mensuel, le complément est payé. Le taux de départ est à la charge du franchisé
+(`departFranchise`), prélevé avec ses royalties ; le reste, à la charge de la marque. L'objectif (`objectif`, 5 000 € HT par
+mois apportés), le coût mensuel du commercial (`cout`) et le ROI de la marque ((retour − coût) ÷ coût, le retour étant le CA HT
+ou la marge `marge` %). Tests : `php commercial/bin/tests_commercial.php`.
