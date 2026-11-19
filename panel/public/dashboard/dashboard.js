@@ -2552,8 +2552,6 @@
     lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force);
     lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force);
     lireAux(cleCanaux(), cheminCanaux(), force);
-    // La ligne « Commandes » de la frise (19/11/2026) : la lecture de la feuille « Commandes du jour », la même clé.
-    lireAux(cleCmdm(), cheminCmdm(), force);
     lireAux(cleInv(), cheminInv(), force);
     lireAux(cleNC(), urlNC(ncFenetre()), force);
     lireAux(clePromo(), cheminPromo(), force);
@@ -3289,8 +3287,7 @@
 
   /* — Commandes du jour — */
   const cleCmdm = () => 'cmdd|' + S.shop + '|' + S.date;
-  const cheminCmdm = () => '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date;
-  function cmdmOuvrir(f) { S.cmdm = { f: ['compt', 'web'].includes(f) ? f : 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), cheminCmdm(), false); cmdmRendre(); }
+  function cmdmOuvrir(f) { S.cmdm = { f: ['compt', 'web'].includes(f) ? f : 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, false); cmdmRendre(); }
   function cmdmFermer() { const r = S.cmdm && S.cmdm.retour; S.cmdm = null; cmdmRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
   // L'état de chaque commande face à la caisse du jour : libellé, couleur du repère, étiquette de la ligne.
   const CMD_ETAT = {
@@ -3303,27 +3300,6 @@
     avenir: ['À venir', '#c9c2b8', 'retrait plus tard', ['', 'à venir']],
     sans: ['Remises sans ticket', '#8c1020', 'remises au panel, aucun ticket caisse lié', ['ko', 'sans ticket']] };
   const CMD_CANAL = { compt: 'Comptoir', cc: 'Click & collect', liv: 'Livraison' };
-  /**
-   * La ligne « Commandes » de la frise de « La journée » (19/11/2026, Sam : la prendre de la feuille « Commandes du
-   * jour ») : les commandes de la feuille, un point à l'heure de retrait, de la couleur de son état face à la caisse
-   * (CMD_ETAT) ; le nombre et le montant sous le libellé, les états en deuxième ligne (sous les points, qu'ils ne
-   * cachent pas) ; un appui ouvre la feuille. Avant, /exploitation/canaux. Rend [libellé, hauteur, contenu] pour ligneF.
-   */
-  function opCmdFrise(x) {
-    const cle = cleCmdm(), D = S.aux[cle];
-    const msg = t => ['Commandes', 22, `<span class="vide">${t}</span>`];
-    if (!D) { return msg(S.err[cle] ? esc(S.err[cle]) : 'lecture…'); }
-    if (D.indispo) { return msg(esc(D.motif || 'commandes indisponibles')); }
-    const L = Array.isArray(D.commandes) ? D.commandes : [];
-    if (!L.length) { return msg('pas de commande ' + ceJour()); }
-    const n = (...k) => L.filter(c => k.includes(c.etat)).length, pl = (v, m) => v + ' ' + m + (v > 1 ? 's' : '');
-    const ret = n('caisse', 'differe', 'avant', 'ligne', 'sans'), att = n('attente'), av = n('avenir'), sans = n('sans');
-    const points = L.map(c => { const T = CMD_ETAT[c.etat] || CMD_ETAT.avenir;
-      return `<b class="cmd" style="left:${x(opMin(c.heure))};background:${T[1]}" title="${esc(c.heure)} · ${esc(CMD_CANAL[c.canal] || c.canal || '')} · ${fU(c.montant)} · ${esc(T[3][1])}"></b>`; }).join('');
-    const etats = [ret ? pl(ret, 'retirée') : '', att ? `<em class="wa">${pl(att, 'pas retirée')}</em>` : '', sans ? `<em class="ko">${sans} sans ticket</em>` : '', av ? av + ' à venir' : ''].filter(Boolean).join(' · ');
-    return [`Commandes<small>${L.length} · ${fU(L.reduce((a, c) => a + (+c.montant || 0), 0))}</small>`, 34,
-      `<span class="cmdz" data-cmdm="tous" role="button" tabindex="0" aria-label="Les commandes du jour : ouvrir la feuille">${points}<span class="etats">${etats}</span></span>`];
-  }
   function cmdmRendre() {
     let box = document.getElementById('db-cmdm');
     if (!S.cmdm) { if (box) { box.innerHTML = ''; } bmFermerClasse(); return; }
@@ -3783,7 +3759,7 @@
   }
   function rendOps() {
     const D = opDonnees();
-    const { now, fin, U, ST, JD, m, CM, SK, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
     let h = '';
 
     /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
@@ -3813,7 +3789,7 @@
     frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
     frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
     frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
-    frise += ligneF(...opCmdFrise(x));
+    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;

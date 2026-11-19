@@ -1384,9 +1384,6 @@ body.pp-emb{background:var(--color-bg)}
 .eq-four{display:block;background:#B8742A;color:#fff;border-radius:5px;padding:2px 4px;font:400 10px var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eq-prod{font:400 11px var(--font-ui);color:#B8742A}
 .op-fl .pis b.cmd{background:#2F6EA5;width:9px;height:9px;padding:0;border-radius:50%;top:6px}
-/* La ligne « Commandes » (19/11/2026) : toute la piste ouvre la feuille « Commandes du jour ». */
-.op-fl .pis .cmdz{position:absolute;inset:0;cursor:pointer;border-radius:5px}.op-fl .pis .cmdz:hover{background:rgba(0,0,0,.04)}.op-fl .pis .cmdz:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
-.op-fl .pis .cmdz .etats{position:absolute;left:8px;top:18px;font:400 10px var(--font-ui);color:var(--color-text-muted);white-space:nowrap}.op-fl .pis .cmdz .etats em{font-style:normal}
 .op-fl .pis .lbl{position:absolute;top:5px;font:400 10px var(--font-ui);color:#8a5a12;white-space:nowrap}
 .op-fl .pis .vide{position:absolute;left:8px;top:4px;font-size:10px;color:var(--color-text-muted)}
 .op-now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--stop);z-index:3}
