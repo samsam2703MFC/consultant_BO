@@ -488,7 +488,8 @@ class App {
   static get ADRESSES_SORTIES(){
     return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=plan',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
-      prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
+      // La Prospection est dans le portail Commercial (19/11/2026).
+      prospection: '../commercial/prospection/', 'prospection-mobile': '../commercial/prospection/', 'developpement-commercial': '../commercial/prospection/',
       // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
       'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
   }
@@ -1474,7 +1475,9 @@ class App {
       // (dashboard/), et Résultat l'ouvre magasin par magasin.
       ['Applications', [
         ['ext:caisse/', 'Caisse ↗', 0],
-        ['ext:prospection/', 'Prospection ↗', 0],
+        ['ext:../commercial/prospection/', 'Prospection ↗', 0],
+        // Le portail Commercial (19/11/2026) : servi à la racine, /commercial/ ; sur un téléphone, il s'ouvre sur le suivi de terrain.
+        ['ext:/commercial/', 'Commercial ↗', 0],
         ['ext:employee/auth', 'Application employé ↗', 0],
         // Le Manuel du réseau est une page du module : une seule entrée.
         ['ext:formation/', 'Formation ↗', 0],

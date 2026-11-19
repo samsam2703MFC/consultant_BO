@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <!-- La garde des pages du cockpit (src/acces.php) : une page du siège. Chargée à côté de la page, par l'alias
+       /commercial/assets/ (shared/bin/deploy.sh) : ../assets/ visait la racine du serveur, où elle n'est pas (19/11/2026). -->
+  <script src="assets/js/garde.js" data-api="api/cockpit" data-siege="1"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Sur un téléphone, le portail s'ouvre directement sur le suivi de terrain (mobile/) ; « Version bureau » y revient
+    // avec ?bureau=1, retenu pour la session.
+    (function () {
+      var q = new URLSearchParams(location.search);
+      if (q.get('bureau') === '1') { try { sessionStorage.setItem('smBureau', '1'); } catch (e) {} return; }
+      var bureau = false; try { bureau = sessionStorage.getItem('smBureau') === '1'; } catch (e) {}
+      if (!bureau && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) { location.replace('mobile/' + location.search); }
+    })();
+  </script>
+  <title>Commercial — L’Atelier By</title>
+  <link rel="icon" href="img/logo.png">
+  <link rel="stylesheet" href="commercial.css">
+</head>
+<body>
+  <div class="workspace">
+    <aside class="sidebar" id="rail"></aside>
+    <div class="workspace__main">
+      <header class="topbar"><div><p class="topbar__kicker" id="kicker"></p><h1 id="titre">Commercial</h1></div><div class="topbar__actions" id="actions"></div></header>
+      <div class="app__body"><div id="page" style="max-width:1180px"><div class="vide">Chargement…</div></div></div>
+    </div>
+  </div>
+  <script src="commercial.js"></script>
+</body>
+</html>

@@ -1173,7 +1173,7 @@ function foFil(string $shop, int $max): array
 /* ═══ Le PDF (Manuel opératoire, une SOP) ═════════════════════════════════════════════════════════ */
 //
 // Mise en page : design system « L'Atelier By », §13 (documents de gestion, version A du 06/11/2026). Papier
-// blanc, Gotham intégrée (400 = Gotham_Medium, le texte ; 700 = Gotham_Regular, les seuls accents : type de
+// blanc, Gotham intégrée (400 = Gotham_Light, le texte ; 700 = Gotham_Medium, les seuls accents : type de
 // pièce, titre d'étape, valeurs des références), palette du back-office, le Ruby à deux endroits : le filet
 // d'en-tête et le filet de l'encadré des points critiques. Ni aplat, ni fond de page, ni pilule.
 //
@@ -1238,7 +1238,7 @@ function foPdfPiedTexte(array $rows, string $l, bool $couverture, string $titre)
 }
 
 /**
- * Gotham (§4.1, §13.2) : 400 = Gotham_Medium, le texte ; 700 = Gotham_Regular, les accents. Intégrée (data:)
+ * Gotham (§4.1, §13.2) : 400 = Gotham_Light, le texte ; 700 = Gotham_Medium, les accents (19/11/2026). Intégrée (data:)
  * dans le document ; en chemin de fichier absolu pour la page de pied, que wkhtmltopdf recharge à chaque feuille
  * (--enable-local-file-access) — la décoder 80 fois rallongerait le rendu, borné à 25 s.
  */
@@ -1246,7 +1246,9 @@ function foPdfPolices(bool $avecAccents = true, bool $parFichier = false): strin
 {
     $dir = __DIR__ . '/../public/formation/fonts/';
     $css = '';
-    foreach (array_filter(['Gotham_Medium.otf' => 400, 'Gotham_Regular.otf' => $avecAccents ? 700 : null]) as $f => $poids) {
+    // 19/11/2026 (Sam : « tout est trop en gras ») : « Gotham_Regular.otf » est en réalité Gotham Black ; le texte prend
+    // Gotham Light, les accents Gotham Medium.
+    foreach (array_filter(['Gotham_Light.otf' => 400, 'Gotham_Medium.otf' => $avecAccents ? 700 : null]) as $f => $poids) {
         $chemin = realpath($dir . $f);
         if ($chemin === false) { continue; }
         $url = $parFichier ? "'file://" . str_replace(["'", '\\'], ['%27', '/'], $chemin) . "'"

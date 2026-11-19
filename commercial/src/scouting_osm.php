@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 /**
  * Les lieux à démarcher autour d'un magasin, relevés dans OpenStreetMap
- * (GET /scouting/demarchage : Développement commercial, Prospection).
+ * (GET /scouting/demarchage, appelé par shared/src/endpoints.php) : la Prospection du
+ * portail Commercial, qu'il a suivie le 19/11/2026.
  *
  * Ce fichier portait tout le cache OpenStreetMap du Scouting commercial
  * (secteurs, zoning d'activité, étude locale, relecture hebdomadaire). L'écran
@@ -150,6 +151,9 @@ final class ScoutingOsm
                 $famille = 'sante'; $grand = $am !== 'social_facility' || preg_match('/nursing|assisted|group_home|senior/', (string) ($t['social_facility'] ?? '') . ' ' . (string) ($t['social_facility:for'] ?? '')) === 1;
                 $genre = $am === 'hospital' || $hc === 'hospital' ? 'hôpital' : ($am === 'clinic' || $hc === 'clinic' ? 'clinique / polyclinique' : ($am === 'nursing_home' || $grand && $am === 'social_facility' ? 'maison de repos' : ($hc !== '' ? 'centre de soins' : 'service social')));
             } elseif ($am === 'funeral_hall' || $am === 'crematorium' || $sh === 'funeral_directors') { $famille = 'funeraire'; $genre = $am === 'crematorium' ? 'crématorium' : ($am === 'funeral_hall' ? 'funérarium' : 'pompes funèbres'); $grand = true; }
+            // une salle des fêtes est souvent cartographiée en centre communautaire : salle de village, ou « salle » dans le nom
+            elseif ($am === 'community_centre' && (in_array((string) ($t['community_centre'] ?? ''), ['village_hall', 'community_hall', 'events_venue'], true)
+                || preg_match('/\bsalle\b|zaal|feest/iu', self::ou($t, ['name:fr', 'name'])) === 1)) { $famille = 'evenements'; $genre = 'salle des fêtes'; $grand = true; }
             elseif (in_array($am, ['townhall', 'police', 'fire_station', 'courthouse', 'post_office', 'community_centre', 'library', 'prison'], true) || $of === 'government') {
                 $famille = 'administration'; $grand = $am !== 'post_office' && $am !== 'library';
                 $genre = ['townhall' => 'maison communale', 'police' => 'police', 'fire_station' => 'pompiers', 'courthouse' => 'justice', 'post_office' => 'poste', 'community_centre' => 'centre communautaire', 'library' => 'bibliothèque', 'prison' => 'prison'][$am] ?? 'administration';

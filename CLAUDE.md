@@ -2,6 +2,7 @@
 
 Décision du 19/11/2026 (elle remplace celle du 06/11 : `rec_` / `mar_` / `pil_` / `frm_`) : quatre domaines, un dossier
 et un préfixe de tables chacun. Chaque dossier a son `CLAUDE.md` : lis celui du dossier où tu travailles.
+Le portail Commercial (`commercial/`, `sm_`, servi à `/commercial/`) s'y est ajouté le même jour, sur les mêmes règles.
 
 | Domaine | Dossier | Tables |
 |---|---|---|
@@ -9,6 +10,7 @@ et un préfixe de tables chacun. Chaque dossier a son `CLAUDE.md` : lis celui du
 | Formation | `formation/` | `for_` |
 | Pilotage (consultant) | `consultant/` | `con_` |
 | Dashboard / day panel franchisé | `panel/` | `panel_` |
+| Commercial (portail du commercial B2B, ajouté le 19/11/2026) | `commercial/` | `sm_` |
 | Partagé | `shared/` | noms conservés (`ceo_shop`, `ceo_app_setting`, `ceo_journal_entry`, `erp_cles`…) |
 | Hors périmètre | `pilotage-reseau/` | copie de l'ERP (`pilotage-reseau/apps/production`, base `erp`), module RH (`hr_dimona_*`) |
 

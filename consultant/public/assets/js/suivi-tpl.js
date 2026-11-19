@@ -12,7 +12,8 @@ const duo = (x, esc, a, b) => `<span class="sv-duo"><button ${x.A(a.fn)} class="
 const carte = (titre, mini, corps, plus) => `<div class="mko-carte"${plus || ''}><div class="mko-ct"><span class="mko-lab">${titre}</span>${mini ? `<span class="mko-mini">${mini}</span>` : ''}</div><div class="mko-corps">${corps}</div></div>`;
 
 /* --- 1. Visites : l'assistant (26/10/2026, maquette C, docs/maquettes/franchises-wizard) --------------------
- * Les étapes à gauche, en accordéon ; la fiche vivante à droite ; un onglet par visite qui attend le bureau. */
+ * Les étapes en haut, sur une ligne (19/11/2026 : la barre de la maquette A) ; dessous, l'étape en cours et la fiche
+ * vivante à droite ; un onglet par visite qui attend le bureau, et un pour les visites non signées. */
 const IC = {
   tab: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M10 18h4"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
@@ -20,7 +21,24 @@ const IC = {
   plus: '<path d="M12 5v14M5 12h14"/>', ok: '<path d="M5 12l5 5 9-10"/>'
 };
 const ic = (k, cls) => `<svg viewBox="0 0 24 24" class="sva-ic ${cls || ''}">${IC[k]}</svg>`;
-const PHASES = { avant: 'Avant la visite · au bureau', pendant: 'Pendant la visite · sur la tablette', apres: 'Après la visite · au bureau' };
+const PHASES = { avant: 'Avant la visite · au bureau', pendant: 'Pendant la visite', apres: 'Après la visite · au bureau' };
+const NB_ETAPES = 6;
+
+/* La barre des étapes : les trois temps au-dessus, chaque étape en colonne — son rond (numéro, coche, tablette), son
+ * nom, ce qui a été choisi, et « Modifier » / « Ouvrir » quand elle se rouvre. */
+function stepperHtml(etapes, x){
+  const { esc } = x;
+  const phases = []; etapes.forEach(e => { const l = phases[phases.length - 1]; if (l && l.k === e.phase) { l.n++; } else { phases.push({ k: e.phase, n: 1 }); } });
+  const tete = phases.map(ph => `<span class="sva-sph${ph.k === 'pendant' ? ' tab' : ''}" style="grid-column:span ${ph.n}">${esc(PHASES[ph.k])}</span>`).join('');
+  const lis = etapes.map(e => {
+    const pn = e.etat === 'fait' ? ic('ok') : (e.n ? String(e.n) : ic('tab'));
+    const resume = e.titre && e.titre !== e.nom ? e.titre : e.sous;
+    const plein = [e.titre !== e.nom ? e.titre : '', e.sous].filter(Boolean).join(' — ');
+    return `<li class="sva-se ${e.etat}${e.n ? '' : ' tab'}${e.modifier ? ' clic' : ''}"${e.modifier ? ' ' + x.A(e.modifier) : ''}${e.etat === 'cur' ? ' aria-current="step"' : ''} title="${esc(plein)}">
+      <span class="sva-pn">${pn}</span><b>${esc(e.nom)}</b>${resume ? `<small>${esc(resume)}</small>` : ''}${e.modifier ? `<span class="sva-lien">${e.etat === 'fait' ? 'Modifier' : 'Ouvrir'}</span>` : ''}</li>`;
+  }).join('');
+  return `<nav class="sva-stepper" aria-label="Les étapes de la visite"><div class="sva-sphases">${tete}</div><ol class="sva-setapes">${lis}</ol></nav>`;
+}
 
 export function tplSvTableau(c, x){
   const { esc } = x, s = c.sv;
@@ -34,23 +52,31 @@ export function tplSvTableau(c, x){
     ${s.autres ? sel(x, esc, s.setAutre, s.autres, 'height:34px;margin-bottom:2px;max-width:220px') : ''}
     <button ${x.A(s.creer.ouvrir)} class="sva-og plus${s.creer.on ? ' on' : ''}">${ic('plus')}Créer une visite</button>
     ${s.ongletPoints ? `<button ${x.A(s.ongletPoints.ouvrir)} class="sva-og pts${s.ongletPoints.on ? ' on' : ''}">${s.ongletPoints.retard ? '<i class="sva-pt ko"></i>' : ''}Points décidés <b>${esc(s.ongletPoints.n)}</b>${s.ongletPoints.retard ? ` <em class="att">${esc(s.ongletPoints.retard)} en retard</em>` : ''}</button>` : ''}
+    ${s.ongletNonSignees ? `<button ${x.A(s.ongletNonSignees.ouvrir)} class="sva-og ns${s.ongletNonSignees.on ? ' on' : ''}" title="Les visites pas encore signées sur la tablette : les ouvrir ou les effacer">${s.ongletNonSignees.passees ? '<i class="sva-pt ko"></i>' : ''}Non signées <b>${esc(s.ongletNonSignees.n)}</b>${s.ongletNonSignees.passees ? ` <em class="att">${esc(s.ongletNonSignees.passees)} jamais faite${s.ongletNonSignees.passees > 1 ? 's' : ''}</em>` : ''}</button>` : ''}
     <span class="sva-og-aide">Chaque visite qui attend quelque chose de vous garde son onglet.</span></div>`;
   if (s.pointsDecides) { return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau sva-pts">${tplPointsDecides(s.pointsDecides, x)}</div>${apercu}</div>`; }
-  let gauche;
+  if (s.nonSignees) { return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau sva-pts">${tplNonSignees(s.nonSignees, x)}</div>${apercu}</div>`; }
+  let gauche, barre = '';
   if (s.indispo) { gauche = panne(esc, s.indispo); }
   else if (s.pasChargement) { gauche = `<div class="mko-mu" style="padding:20px">${esc(s.pasChargement)}</div>`; }
   else {
-    let phase = '';
-    gauche = s.etapes.map(e => {
-      const h = e.phase !== phase ? `<div class="sva-phase${e.phase === 'pendant' ? ' tab' : ''}">${esc(PHASES[e.phase])}</div>` : '';
-      phase = e.phase;
-      const pn = e.etat === 'fait' ? ic('ok') : (e.n ? String(e.n) : ic('tab'));
-      const corps = e.etat === 'cur' ? `<div class="sva-ouvert"><div class="sva-pl">${e.n ? e.n + ' · ' : ''}${esc(e.nom)}</div>${pasHtml(s.pas, x)}</div>`
-        : `<div class="sva-ferme"><b>${esc(e.titre)}</b>${e.sous ? `<small>${esc(e.sous)}</small>` : ''}${e.modifier ? `<button ${x.A(e.modifier)} class="sva-lien">${e.etat === 'fait' ? 'Modifier' : 'Ouvrir'}</button>` : ''}</div>`;
-      return `${h}<div class="sva-pas ${e.etat}${e.n ? '' : ' tab'}${e.der ? ' der' : ''}"><div class="sva-pn">${pn}</div><div class="sva-pc">${corps}</div></div>`;
-    }).join('');
+    const e = s.etapes.find(y => y.etat === 'cur');
+    barre = stepperHtml(s.etapes, x);
+    gauche = `<div class="sva-ouvert"><div class="sva-pl">${e.n ? 'Étape ' + e.n + ' sur ' + NB_ETAPES : 'Sur la tablette'} · ${esc(e.nom)}</div>${pasHtml(s.pas, x)}</div>`;
   }
-  return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau"><div class="sva-gauche">${gauche}</div><div class="sva-droite">${s.fiche ? ficheHtml(s.fiche, x) : ''}</div></div>${apercu}</div>`;
+  return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau sva-h">${barre}<div class="sva-gauche">${gauche}</div><div class="sva-droite">${s.fiche ? ficheHtml(s.fiche, x) : ''}</div></div>${apercu}</div>`;
+}
+
+/* L'onglet des visites non signées (19/11/2026) : par groupe, chaque visite s'ouvre dans l'assistant ou s'efface. */
+function tplNonSignees(N, x){
+  const { esc } = x;
+  const filtres = `<div class="sva-ptf">${sel(x, esc, N.setShop, N.magasins, 'height:34px;max-width:260px')}<span class="sva-aide">Une visite se signe sur la tablette, quand le consultant la termine.</span></div>`;
+  if (!N.groupes.length) { return filtres + `<div class="mko-mu" style="padding:18px 2px">${N.total ? 'Aucune visite non signée pour ce magasin.' : 'Aucune visite non signée : toutes celles qui ont eu lieu sont signées, et aucune n’est prévue.'}</div>`; }
+  return filtres + N.groupes.map(g => `<div class="sva-sect"><h3 class="${esc(g.cls)}">${esc(g.nom)}</h3><span class="sva-aide-g">${esc(g.aide)}</span><span class="mini">${g.lignes.length}</span></div>
+    <div style="overflow-x:auto"><table class="mko-tab sv-tab sva-ptab sva-nstab"><thead><tr><th>Magasin</th><th>Prévue le</th><th>Type</th><th>Consultant</th><th>Où elle en est</th><th>Déjà saisi</th><th></th></tr></thead>
+    <tbody>${g.lignes.map(l => `<tr><td><b>${esc(l.court)}</b></td><td>${esc(l.le)}${l.quand ? `<small>${esc(l.quand)}</small>` : ''}</td><td>${esc(l.type)}</td><td>${esc(l.qui)}</td>
+      <td>${esc(l.etat)}</td><td><small class="${l.saisi === 'rien de saisi' ? '' : 'att'}" style="margin:0">${esc(l.saisi)}</small></td>
+      <td class="sva-nsact"><button ${x.A(l.ouvrir)} class="mko-pied-btn">Ouvrir</button><button ${x.A(l.effacer)} class="mko-pied-btn sva-effacer" ${N.busy ? 'disabled' : ''} title="Effacer cette visite et tout ce qu’elle a produit">Effacer</button></td></tr>`).join('')}</tbody></table></div>`).join('');
 }
 
 /* L'onglet des points décidés : filtres, puis un tableau par échéance. */
@@ -323,7 +349,20 @@ export function tplSvAdmin(c, x){
       <div class="sv-pied" style="justify-content:flex-start"><button ${x.A(M.voir)} class="cx-btn">Aperçu</button>${M.remettre ? `<button ${x.A(M.remettre)} class="cx-btn">Remettre le texte livré</button>` : ''}<button ${x.A(M.enregistrer)} class="cx-btn prim" ${M.change ? '' : 'disabled'}>Enregistrer le modèle</button>
         <span class="cx-ligne" style="margin-left:auto"><input class="mko-inp" type="email" placeholder="adresse d’essai" style="width:200px" value="${esc(M.essaiA)}" ${x.I(M.setEssaiA)}><button ${x.A(M.essai)} class="cx-btn" ${M.smtp ? '' : 'disabled title="SMTP non configuré"'}>Envoyer un essai</button></span></div>
       ${M.apercu ? `<div class="sv-mail"><b>${esc(M.apercu.sujet)}</b><iframe class="sv-ifr court" srcdoc="${esc(M.apercu.html)}" title="Aperçu du courriel"></iframe></div>` : ''}</div></div></div>`;
-  return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${sms}${voit}</div></div>${modeles}</div>`;
+  // La remise à zéro des visites (19/11/2026) : compter, taper EFFACER, effacer. Personne n'est prévenu.
+  const Z = s.remise;
+  const zc = Z && Z.compte;
+  const remise = Z ? `<div class="mko-carte sv-remise" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Remettre les visites à zéro</span><span class="mko-mini">toutes les visites · personne n’est prévenu · irréversible</span></div><div class="mko-corps">
+    <p class="sv-remise-t">Efface <b>toutes</b> les visites du réseau, quel que soit leur état, avec ce qu’elles ont produit : réponses, photos, points de plan d’action et leur historique, tâches du consultant, missions du helpdesk, rapports envoyés. Ni l’agenda du consultant ni le franchisé ne sont prévenus. Restent : les points nés hors visite, le client mystère, le fil du franchisé, les réglages et le journal.</p>
+    ${Z.fait ? `<div class="gc-msg">${esc(Z.fait)}</div>` : ''}
+    ${!zc ? `<button ${x.A(Z.compter)} class="cx-btn" ${Z.chargement ? 'disabled' : ''}>${Z.chargement ? 'Comptage…' : 'Compter ce qui serait effacé'}</button>`
+      : !zc.visites ? `<div class="mko-mu">Aucune visite à effacer.</div><button ${x.A(Z.compter)} class="cx-btn" style="margin-top:8px">Recompter</button>`
+      : `<div class="sv-remise-c"><b>${esc(zc.titre)}</b><small>${esc(zc.statuts)}</small><small>avec ${esc(zc.avec)}</small>${zc.rapports ? `<small class="ko">${esc(zc.rapports)}</small>` : ''}</div>
+        <div class="sv-remise-a"><label>Tapez <b>EFFACER</b> pour confirmer</label><input class="mko-inp" value="${esc(Z.saisie)}" ${x.I(Z.setSaisie)} placeholder="EFFACER" autocomplete="off" spellcheck="false">
+          <button ${x.A(Z.effacer)} class="cx-btn sv-remise-b" ${Z.busy || Z.saisie.trim() !== 'EFFACER' ? 'disabled' : ''}>${Z.busy ? 'Effacement…' : 'Effacer les ' + esc(zc.titre.split(' de ')[0])}</button>
+          <button ${x.A(Z.compter)} class="cx-btn" ${Z.busy || Z.chargement ? 'disabled' : ''}>Recompter</button></div>`}
+  </div></div>` : '';
+  return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${sms}${voit}</div></div>${modeles}${remise}</div>`;
 }
 
 /* --- 6. Sources et API ---------------------------------------------------------------------- */

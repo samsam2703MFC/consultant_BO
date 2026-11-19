@@ -293,7 +293,7 @@ verifie('con_ : aucun ancien nom ne reste dans le code', $restes === [], implode
 // --- 11 ter. la réorganisation en quatre domaines (19/11/2026) ------------------------------
 echo "Réorganisation en domaines\n";
 require_once __DIR__ . '/../src/reorg_tables.php';
-$prefixes = ['FOR' => 'for_', 'MAR' => 'mar_', 'PANEL' => 'panel_', 'CON' => 'con_'];
+$prefixes = ['FOR' => 'for_', 'MAR' => 'mar_', 'PANEL' => 'panel_', 'CON' => 'con_', 'SM' => 'sm_'];
 verifie('réorganisation : chaque nouveau nom porte le préfixe de son domaine', !array_filter(REORG_TABLES, static fn ($p, $d) =>
     array_filter($p, static fn ($n) => !str_starts_with($n, $prefixes[$d])), ARRAY_FILTER_USE_BOTH));
 verifie('réorganisation : aucun nouveau nom n’est pris deux fois', count(array_unique(reorgTables())) === count(reorgTables()));

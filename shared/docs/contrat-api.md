@@ -371,6 +371,13 @@ accès que `/formation/v25`). Doc : `formation/docs/formation.md` § Manuel du r
 - `crmUrl` (19/11/2026) : l'adresse du CRM pour le QR code « suivre sa formation » du manuel de pré-ouverture : le
   réglage `crmFormationUrl` (l'adresse exacte de l'application) s'il est posé, sinon l'origine de `rec_api_url`
   (erp_cles), sinon vide.
+- `GET /formation/ref/fiches` (19/11/2026) : les fiches techniques des produits pour le manuel « Fiches techniques » :
+  `{produits: [{id, ref, nom, categorie, groupe, gamme: standard|saison|aucune, saisons, prix, dlvHeures, fiche}], total,
+  manquent, erreurs}`. `fiche` résume la fiche technique du panel (`/products/{id}/technical-sheet/raw`, comme
+  l'application cuisine) : ingrédients, étapes, emballage, compétences, allergènes, conservation, durée de vie, remise en
+  température ; `null` si elle n'a pas pu être lue. Lues par lots (20 s par appel) et gardées six heures dans le dossier
+  privé : tant que `manquent` > 0, rappeler. `?rafraichir=1` relit tout. `GET /formation/ref/fiches/photo/{id}` redirige
+  vers la photo signée du panel (valable une heure, redemandée à chaque fois).
 - `lien` : relatif au module Formation (`<base du module>/` + `lien` ouvre la fiche). `formationUrl` : le chemin du
   module (réglage `formationUrl`, sinon `config.php › formationUrl`, sinon `FORMATION_URL`), vide s'il n'est pas réglé.
 - `panel.etat` : `valide` (choisie par une personne), `certain` (proposée automatiquement, sans ambiguïté), `propose`
@@ -3865,8 +3872,11 @@ et `GET /scouting/demarchage`, lus par Développement commercial et Prospection.
 
 Ce que le franchisé fait de chaque lieu relevé par `/scouting/demarchage` : dans ma liste, visite datée,
 retour, note (part au CRM marketing), et l'**action à suivre** décidée sur place avec sa date. Une seule
-réserve pour le cockpit (écrans Prospection et Développement commercial) et la page mobile
-`prospection/?shop={id}` (`mar_prospect`, clé magasin + id OSM).
+réserve, lue par la page de la Prospection, dans le portail Commercial depuis le 19/11/2026 :
+`/commercial/prospection/?shop={id}` (bureau et téléphone ; l'ancienne `/consulant_bo/prospection/` y renvoie), et par
+le portail lui-même (Ma semaine, Suivi des offres). Table `sm_prospect` (clé magasin + id OSM), code
+`commercial/src/prospection.php`. Les routes ne changent pas ; depuis le portail, elles passent par
+`/commercial/api/cockpit/prospection/…`.
 
 ```json
 { "shop": "2", "n": 3, "lieux": { "n123456": { "coche": true, "visite": "2026-09-19", "retour": "rdv", "note": "Devis 40 pers.",
@@ -3876,9 +3886,9 @@ réserve pour le cockpit (écrans Prospection et Développement commercial) et l
 - `retour` ∈ `''` | `rappeler` | `rdv` | `interesse` | `refus` | `client` ; `action` ∈ `''` | `mail` | `test` | `devis` | `rappel` | `passer` | `commande` ;
   `offre` = le type d'offre choisi pour ce lieu (vide = celui de son genre).
 - `GET /prospection/offres` → `{ offres: [{ id, nom, pitch, contenu, genres (regex sur le libellé du genre), familles[], depense, commandes, part }] }` :
-  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Dix offres (plateau bureau, petit-déjeuner
-  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, petit-déjeuner
-  d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
+  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Onze offres (plateau bureau, petit-déjeuner
+  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, fêtes et
+  locations de salle, petit-déjeuner d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
   commandes?, part?, nom?, pitch?, contenu? }] }` règle le catalogue pour tout le réseau (`ceo_app_setting.prospectionOffres`).
 - `PUT /prospection/{shop}` `{ lieux: { id: { coche?, visite?, retour?, note?, action?, actionLe?, nom? } } }` : fusion champ par
   champ (400 lieux par appel au plus) ; une ligne vidée disparaît. Rend les lignes relues.
@@ -3975,6 +3985,8 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`, `budgetCa` (26/10/2026 : le CA sous le budget, noté avec le franchisé — `{pourquoi, pistes[3], horizon: mois|trimestre, echeance, ecarts{étendue: %}, arrete}` ; le serveur ajoute `qui`, `le`, `complet` ; null efface ; colonne `con_visite.budget_ca`, relu dans la visite et dans le rapport, section « Le chiffre face au budget »). `{id}` est l'identifiant ou le `client_id`. |
 | `DELETE /visites/{id}` | admin | effacer une visite (11/11/2026, demande de Sam), à n'importe quelle étape : la visite, ses réponses (`con_visite_point`), ses photos (`con_visite_photo` et leurs fichiers sous `uploads/visites/`, y compris les photos de correction des points nés pendant elle), ses points et leur historique (`con_visite_action`, `con_visite_action_evt`), les tâches de son type (`con_consultant_tache`). Une photo de cette visite qui servait de preuve à un point d'une autre visite est détachée (`photo_id` à NULL), le point reste. Une visite à venir (planifiée ou confirmée, aujourd'hui ou plus tard) est d'abord annulée comme par `PUT statut annulee` : l'agenda du consultant reçoit l'annulation, le franchisé d'une visite annoncée qui avait reçu l'ordre du jour est prévenu. → `{ ok, efface {id, shop, court, reponses, photos, points, taches}, suite }` ; 404 si inconnue. Journalisé. Sans retour possible : l'écran demande confirmation. |
+| `GET /visites/remise-a-zero` | admin | (19/11/2026, Sam : « mettre à zéro, effacer toutes les visites, c'étaient des tests ») le compte de la remise à zéro, sans rien toucher : `compte` {visites, parStatut{}, magasins, du, au, rapports (déjà envoyés), reponses, photos, points, taches, missions} et `confirmer: "EFFACER"`. Écran : Qui fait quoi, carte « Remettre les visites à zéro ». |
+| `POST /visites/remise-a-zero` | admin | `{ confirmer: "EFFACER", attendu: <compte.visites>, qui }` — efface TOUTES les visites, comme `DELETE /visites/{id}` pour chacune (réponses, photos et leurs fichiers sous `uploads/visites/`, y compris les corrections de leurs points, points et historique, tâches `con_consultant_tache`, missions du helpdesk `con_hdk_mission`), en une transaction, **sans prévenir personne** : ni annulation d'agenda, ni courriel au franchisé. Restent les points nés hors visite (détachés d'une photo effacée), le client mystère, le fil, les réglages, le journal ; le compteur des numéros de visite continue. 400 sans le mot ; 409 si le nombre a changé depuis le compte (`compte` à jour rendu). → `{ ok, efface {…compte, fichiers}, reste }`. Journalisé. Banc : `consultant/bin/tests_visites_remise.php` (SQLite). |
 | Le score de la visite (26/10/2026, maquette A) | — | `viScore` (src/visites_questions.php) et `scoreDe` (visites.js), la même règle : sur 100, Σ poids × réussite / Σ poids sur les questions qui comptent et ont une réponse (conforme 1, écart 0, une note au prorata (note − 1) / 4, un pourcentage pour sa valeur ; hors score le texte libre, « ne compte pas », N/A, sans réponse ; les obligatoires `oblig_…` comptent ensemble pour une question). Pas de score pour un suivi ou une revisite. Figé dans `con_visite.score` (JSON : score, n, modules[] {id, nom, nom_nl, score, n}, le) quand la visite se termine, et recalculé si une réponse arrive ensuite ; `viVisiteLigne` le rend. Comparé à la dernière visite terminée **du même type**. `GET /suivi/rapport` rend `score` {actuel, precedent {id, le, score}} ; le rapport au franchisé (4 langues) porte le bloc « Score de la visite » sous l'en-tête. La tablette ne le montre qu'à l'étape Fin, avant les signatures (visite précédente → cette visite, module par module, FR ou NL). |
 | `PUT /visites/{id}/points` | consultant | `points[]` : `ref`, `module`, `libelle`, `etat` (ok, ko, na), `note` 1..5, `valeur` (% planogramme), `commentaire`, `causes[]`, `reponse` (26/10/2026 : le code d'un choix unique, la liste des codes d'un choix multiple, un nombre, un texte — colonne `con_visite_point.reponse`, JSON). La tablette pose aussi `etat` d'après la réponse (un choix marqué écart, un nombre hors des bornes : ko), si bien que les points faits, les écarts, les revisites et les points à travailler se lisent comme avant. Idempotent par (visite, ref). |
 | `POST /visites/photos` | tous | `client_id`, `shop` ou `visite_id`, `ref`, `plan_id`, `genre` (jour_facade, jour_interieur, jour_arriere, point, avant, apres, correction, msp, signature — le franchisé, sig_consultant — le consultant (26/10/2026) ; les deux signatures vont côte à côte dans le rapport, jamais dans ses photos), `data` (data-URL ≤ 2 Mo, JPEG/PNG/WebP), `prise_a`, `lat`, `lng`. Fichier sous `uploads/visites/{shop}/`. |
@@ -5496,7 +5508,7 @@ courriels, par code et par langue fr, nl, en, de). Les types de visite (`visites
 
 | Route | Ce qu'elle rend ou fait |
 |---|---|
-| `GET /suivi/tableau?consultant=&semaine=` | `kpis` {visitesSemaine, aPreparer, surTablette, aAdapter, urgent, urgentTxt, envoyesMois, lusMois, points, p0, retard, corrections} ; `cartes` {preparer, tablette, adapter, envoye} — une carte par visite {id, shop, court, feu, type, typeNom, annoncee, le, h, consultant, consultantNom, statut, dossier {points, blocs}, prepDu, prepRetard, prepEnvoyeeLe, odjEnvoyeLe, nonFaite, proposes, ouverts, termineLe, delai {limite, resteH, depasse}, envoyeLe, luLe, relanceLe} ; `franchises[]` (feu, responsable, `responsableId` et `langue` / `langueNom` des courriels — proposés d'office par l'assistant Visites, derniere, rapport, points, prochaine, cadre du mois, scoring) ; `points[]` les plans ouverts ; `corrections[]` les photos à valider (avant, apres, commentaire, recuLe, attenteH, horsDelai, valide) ; `delais`, `consultants`, `semaine` {du, au, decalage}. |
+| `GET /suivi/tableau?consultant=&semaine=` | `kpis` {visitesSemaine, aPreparer, surTablette, aAdapter, urgent, urgentTxt, envoyesMois, lusMois, points, p0, retard, corrections} ; `cartes` {preparer, tablette, adapter, envoye} — une carte par visite {id, shop, court, feu, type, typeNom, annoncee, le, h, consultant, consultantNom, statut, dossier {points, blocs}, prepDu, prepRetard, prepEnvoyeeLe, odjEnvoyeLe, nonFaite, proposes, ouverts, termineLe, delai {limite, resteH, depasse}, envoyeLe, luLe, relanceLe} ; `franchises[]` (feu, responsable, `responsableId` et `langue` / `langueNom` des courriels — proposés d'office par l'assistant Visites, derniere, rapport, points, prochaine, cadre du mois, scoring) ; `points[]` les plans ouverts ; `corrections[]` les photos à valider (avant, apres, commentaire, recuLe, attenteH, horsDelai, valide) ; `delais`, `consultants`, `semaine` {du, au, decalage} ; `nonSignees[]` (19/11/2026, `suNonSignees`) les visites pas encore signées sur la tablette (aucune photo `signature` ni `sig_consultant`), 300 au plus, les plus récentes d'abord — {id, shop, court, groupe : `avenir` \| `cours` \| `passee` (date passée, jamais faite) \| `terminee` (terminée sans signature, brouillon du rapport au bureau), le, h, type, typeNom, annoncee, consultant, consultantNom, statut, commenceLe, termineLe, prepEnvoyeeLe, odjEnvoyeLe, reponses, photos} : l'onglet « Non signées » de l'assistant les ouvre ou les efface (`DELETE /visites/{id}`). |
 | `GET /suivi/preparation?visite=` | `visite`, `magasin`, `type`, `types` (avec `annoncee`), `dossier[]` {cle, titre, lignes[], motif, alerte, interne, inclus} assemblé tout seul (santé, points ouverts, tâches et contrôles photo, scoring, client mystère et comptoir, météo interne), `prep` {blocs, points[] {ref, libelle, odj, source}, note, figeLe}, `annoncee`, `roles`, `prepDu`, `tablette` {envoyeeLe}, `odj` {auto, prevuLe, envoyeLe, adresse, source, langue, langueNom, sujet, texte}. |
 | `PUT /suivi/preparation/{id}` | `{ blocs: {cle: bool}, points: [{libelle, odj}], annoncee, type, note, envoyer, odj }`. `envoyer: true` fige le dossier et le pousse sur la tablette (notification) ; `odj: true` envoie l'ordre du jour maintenant (visite annoncée seulement) → `odjEnvoi` {envoye, a, motif}. 409 si la visite est terminée ou annulée. |
 | `GET /suivi/rapport?visite=` | le brouillon de la tablette, relu au bureau : `contenu` {phrase, positif, sentiment, execution, clients, causes[], diagnostic, reco}, `checklist` {ok, total, na, ecarts[]}, `plans[]` {id, titre, detail, priorite, echeance, statut, inclus, modifiable}, `photos[]` {id, chemin, genre, inclus}, `delai`, `roles`, `envoi` {a, source, langue, copies[], envoyeLe, envoyePar, luLe, smtp, dernier, sms {actif, tel, source, copies[], fournisseur, dernier}}, `apercu` {sujet, texte}. |
@@ -5925,3 +5937,43 @@ par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design sys
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).
+
+## Portail Commercial — `/commercial/…` (19/11/2026, commercial/src/commercial.php, tables `sm_`)
+
+La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (alias Apache vers ce routeur). Routes du siège.
+
+| Route | Rend / fait |
+|---|---|
+| `GET /commercial/config` | `{magasins[{id, nom, zone[]}], secteurs[{id, nom, pitch, contenu}], modeles, reglages, smtp{configure, expediteur}, cockpit, aBrancher}` |
+| `GET /commercial/tableau?jours=30` | par magasin : nouveaux et anciens clients pro (TVA valide), commandes, CA HT estimé, bureaux du portail ; `semaines[]` (clients du portail, autres) ; `aSuivre[]` |
+| `GET /commercial/leads?jours=&shop=&famille=` | les leads de MétaDonnée par magasin (`a_traiter`, `contacte`, `cree`, `connecte`, `perdu`) et la liste, avec `clientId` si le bureau existe |
+| `GET\|POST /commercial/clients`, `PUT /commercial/clients/{id}` | les bureaux et clients du portail ; le POST (assistant) crée au besoin le bon (`bonCreer {avantage, jours}`) et envoie la bienvenue (`envoyer`) |
+| `GET /commercial/clients-panel?shop=` | les clients pro vus au magasin sur 90 jours (clé `c{id}`, nom, dernière commande), pour rattacher un bureau |
+| `GET\|PUT /commercial/offres` | prix, conditions et état de chaque type d'offre par magasin (`{offre, shopId, prix, conditions, statut}` ; prix vide : retirée) |
+| `GET\|POST /commercial/bons`, `PUT /commercial/bons/{id}` | le registre des bons (code, magasin, avantage, validité, envoyés, utilisés, actif) |
+| `GET /commercial/catalogues?shop=`, `POST /commercial/catalogues/lien` | les catalogues du magasin (relais du Marketing) ; le lien public d'un catalogue pour l'e-mail |
+| `GET /commercial/modeles`, `PUT /commercial/modeles/{id}/{fr\|nl}` | les modèles d'e-mail (`bienvenue`, `offre`, `catalogue`, `echantillon`, `relance`) ; corps vide : modèle d'origine |
+| `POST /commercial/apercu`, `POST /commercial/envoyer`, `GET /commercial/envois` | l'e-mail rendu (§13.6) ; l'envoi depuis l'expéditeur réglé (hello@atelierby.be), noté dans `sm_envoi` |
+| `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons ; `envoyer` : la demande part au magasin par e-mail (adresse de sa fiche au panel) |
+| `GET /commercial/suivi?du=` | par secteur et par magasin : offres et catalogues envoyés, échantillons, convertis, clients ; listes de démarchage de Prospection |
+| `GET /commercial/gains?mois=AAAA-MM` | les gains : par client (1re commande, règle, commandes, HT, gain), par secteur, plancher et complément, historique de 6 mois |
+| `GET /commercial/semaine?du=` | la semaine du lundi au samedi : `rdv[]`, `enRetard[]`, `candidats[]` (leads à traiter, bureaux et clients, lieux de Prospection à rappeler), `magasins[]` (rendez-vous, dégustations, téléphone, appel au franchisé), `echantillons{}` |
+| `POST /commercial/rdv`, `PUT /commercial/rdv/{id}`, `POST /commercial/rdv/{id}/confirmer` | un rendez-vous (visite, appel, e-mail, bon, échantillon, devis, rappel après la 1re commande, bureau) ; la confirmation part par e-mail (modèle `rdv`) ; `confirmation` ∈ `envoyee`, `confirme`, `sans_reponse`, `refuse` |
+| `PUT /commercial/semaine/franchise` | `{shopId, du, ok, note}` : l'appel au franchisé de la semaine, validé |
+| `GET /commercial/mobile?jour=` | l'app de terrain : `aujourdhui[]`, `enRetard[]`, `aVenir[]`, `listes` (issues, faits, réponses à l'offre, motifs, suites et leurs délais) |
+| `POST /commercial/cr`, `GET /commercial/cr?client=` | le compte rendu d'un contact : `{rdvId?, clientId?, prospect, shopId, issue, faits[], offre, offreStatut, motif, suite, suiteLe, note}` ; le rendez-vous passe à « fait », la suite crée le suivant |
+| `GET /commercial/trouver?q=&cp=` | le magasin d'un bureau : par son code postal (codes des zones, `cps` des réglages) ; par son nom, cherché dans Google Places (adresse, code postal) quand la clé Google est réglée |
+| `GET /commercial/alertes` | les pastilles du rail : `leads` (leads Meta à traiter), `bureaux` (bureaux dont le compte webshop n'est pas encore connecté) |
+| `GET /commercial/formulaires`, `PUT /commercial/formulaires/{id}`, `POST /commercial/formulaires/{id}/historique` | les formulaires Meta de MétaDonnée (`recrutement` : candidats ou franchisés, pas un bureau) ; les suivre (affectation par code postal) ; relire 90 jours |
+| `GET /commercial/commissions?mois=` | la commission commerciale à prélever à chaque franchisé avec ses royalties du mois (taux de départ, HT) : magasin, montant, détail par client |
+| `GET /commercial/simulation?secteur=&personnes=&depense=&commandes=&ht=` | ce que rapporte un client sur un an à la règle de son secteur : CA HT par mois (estimé comme Prospection, ou donné), gains mois par mois, part du franchisé et de la marque |
+| `GET /commercial/formulaires/modele?langue=`, `POST /commercial/formulaires/creer` | le formulaire Meta « Lunch au bureau » (FR) ou « Lunch op kantoor » (NL) : l'aperçu, puis la création sur la Page (`POST /{page}/leadgen_forms`, jeton de MétaDonnée), relu par MétaDonnée |
+| `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
+
+**Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée
+au portail ; trois paliers depuis sa 1re commande — `taux1` % jusqu'au mois `mois1` (20 %, 1), `taux2` % jusqu'au mois `mois2`
+(10 %, 3), `taux3` % jusqu'au mois `duree` (5 %, 12 ; 0 = sans fin) ; une commande sous `min` € HT ne rapporte rien ; une règle par
+secteur au besoin ; sous le `plancher` mensuel, le complément est payé. Le taux de départ est à la charge du franchisé
+(`departFranchise`), prélevé avec ses royalties ; le reste, à la charge de la marque. L'objectif (`objectif`, 5 000 € HT par
+mois apportés), le coût mensuel du commercial (`cout`) et le ROI de la marque ((retour − coût) ÷ coût, le retour étant le CA HT
+ou la marge `marge` %). Tests : `php commercial/bin/tests_commercial.php`.

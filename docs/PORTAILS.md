@@ -12,6 +12,12 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
 | Dashboard / day panel franchisé | `panel/` | `panel_` | `aia_`, `mot_`, `pil_boite_*`, `pil_tresorerie_plan`… (prévu `pil_`) |
 | Partagé | `shared/` | noms conservés | `ceo_shop`, `ceo_app_setting`, `ceo_journal_entry`, `ceo_push_abonnement`, `ceo_ecran_vue`, `ceo_action_usage`, `ceo_connecteur`, `erp_cles` |
 
+- **Le portail Commercial** (19/11/2026, demande de Sam) : dossier `commercial/`, tables `sm_`, page `/commercial/` et API
+  `/commercial/api/cockpit/commercial/…` (même routeur, même déploiement). Il lit les leads (MétaDonnée) et les
+  catalogues du Marketing par leurs fonctions ou leur API, jamais dans leurs tables. Maquettes :
+  `docs/maquettes/portail-commercial/`. La **Prospection** y est passée le 19/11/2026 (Sam : « transvaser tout le
+  /prospection/ dans le /commercial ») : page `/commercial/prospection/`, code `commercial/src/prospection.php` et
+  `scouting_osm.php`, table `sm_prospect` (migration 006) ; l'ancienne adresse `/consulant_bo/prospection/` y renvoie.
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;

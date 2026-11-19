@@ -1140,6 +1140,8 @@ function rfTexteDeHtml(string $h): string
 function rfRoute(string $method, string $path): ?array
 {
     if ($path !== '/formation/ref' && !str_starts_with($path, '/formation/ref/')) { return null; }
+    // Les fiches techniques des produits (src/fiches_techniques.php, 19/11/2026).
+    if (str_starts_with($path, '/formation/ref/fiches') && function_exists('ftRoute') && ($f = ftRoute($method, $path)) !== null) { return $f; }
     $seg = static fn (string $s): string => rawurldecode($s);
     return match (true) {
         $method === 'GET' && $path === '/formation/ref' => ep_rf_ref(),

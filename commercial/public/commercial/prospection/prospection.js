@@ -1,9 +1,10 @@
 /* Prospection — la liste de démarchage du magasin, un CRM minimal, la carte
  * des concentrations et le calculateur de pénétration.
  *
- * Un seul module, deux hôtes : l'écran « Prospection » du cockpit (bureau,
- * deux colonnes) et la page mobile public/prospection/ (une colonne, quatre
- * onglets — la liste et l'annotation en tournée). Les lieux viennent de
+ * Une seule page, dans le portail Commercial depuis le 19/11/2026 :
+ * /commercial/prospection/ (commercial/public/commercial/prospection/), en deux
+ * colonnes sur grand écran, et sur le téléphone en une colonne, quatre onglets
+ * (la liste et l'annotation en tournée). Les lieux viennent de
  * ../api/cockpit/scouting/demarchage (OpenStreetMap autour du magasin, gardé
  * 45 jours au serveur) ; la position du magasin de /scouting/reseau ; ce que
  * le franchisé fait de chaque lieu (ma liste, statut, visite, note) vit AU
@@ -252,7 +253,7 @@
         { n: 0, pers: 0, clients: 0, enCours: 0, possible: 0, atteignable: 0, capte: 0 });
       return { rows, T };
     }
-    coulOffre(id) { return { bureau: '#8D1D2C', equipe: '#78554B', ecole: '#B0792A', soins: '#3f7a52', commune: '#4a5a8a', formation: '#7A5207', funeraire: '#5c5852', sport: '#1baf7a', hotel: '#a34a8c', personnel: '#9a8c6a' }[id] || '#7a736a'; }
+    coulOffre(id) { return { bureau: '#8D1D2C', equipe: '#78554B', ecole: '#B0792A', soins: '#3f7a52', commune: '#4a5a8a', formation: '#7A5207', funeraire: '#5c5852', sport: '#1baf7a', fetes: '#c8553d', hotel: '#a34a8c', personnel: '#9a8c6a' }[id] || '#7a736a'; }
     htmlCalcul(tous) {
       const c = this.s.calc, s = this.s, { rows, T } = this.calcul(tous), O = offres();
       const num = (o, k, min, max, step) => `<input type="number" min="${min}" max="${max}" step="${step}" value="${o[k]}" data-f="offre-${o.id}-${k}" data-c="offreval" data-v="${o.id}|${k}" class="pr-oin">`;

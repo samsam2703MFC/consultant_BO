@@ -1424,3 +1424,63 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
 - **Essai** : manuel de 23 pages, sans page qui déborde ; page 3 du dépliant à 36 / 20 / 606 ; tests du dépôt
   (`tests_noms_globaux`, `test_chargement`, `tests_formation` : 104 ok).
 
+## Le manuel « Fiches techniques » et les nouvelles SOP « à valider » (19/11/2026)
+
+Sam a demandé un rapport : les SOP couvrent-elles les grandes catégories de produits vendus et les gestes du quotidien ?
+Puis : « traiteur froid vers les fiches techniques : créer un nouveau manuel, voir le repo kitchen pour les données à
+récupérer, une feuille par produit triée par catégorie, standard, saison », et « tout ce qui n'est pas là, sur mes à
+valider ».
+
+- **Le manuel « Fiches techniques »** (catalogue, 6e manuel). Il compte une fiche par produit actif du catalogue du
+  cockpit (502), rangées par groupe puis par catégorie, d'abord la gamme standard, puis la saison, puis les produits hors
+  gamme.
+  - **Les données** sont celles de l'application cuisine (dépôt `pwa_kitchen`, `TechnicalSheetRepository`) : la fiche
+    technique du panel TF Buddy, `/products/{id}/technical-sheet/raw`. Elles sont lues par
+    `formation/src/fiches_techniques.php` (`GET /formation/ref/fiches`, cache de six heures dans le dossier privé).
+  - **Chaque fiche** donne la photo, la conservation, la durée de vie, la remise en température, les allergènes, la
+    recette, les étapes, l'emballage et les compétences. Une case vide affiche « à compléter dans TF Buddy ».
+  - **Ce qui manque au 19/11/2026**, sur 502 produits :
+    - 107 sans recette ;
+    - 444 sans étapes ;
+    - 364 sans photo ;
+    - 279 sans allergènes ;
+    - 405 sans emballage.
+  - **Une erreur de données** : le Poké saumon pointe vers la recette d'une tarte abricot.
+- **Les 11 documents « à valider »**, en français et en néerlandais (NL à relire). Ils sont créés par l'API, classés dans
+  le référentiel et reliés aux checklists. Les points inconnus sont marqués « À compléter » et seront ajustés après les
+  essais en magasin.
+
+  | Code | Document |
+  |---|---|
+  | 0.1.08 | Flip-Flap : le concept, la mise en place et le montage à la chaîne |
+  | 0.1.09 | Entremets |
+  | 0.2.11 | Fromages, raclette et fondue |
+  | 0.2.12 | Produits de fête |
+  | 0.2.13 | Plats chauds et soupes |
+  | 0.2.14 | Réceptionner une livraison |
+  | 0.2.15 | Les emballages |
+  | 0.2.16 | Formation barista (FO-11) |
+  | 0.2.17 | Commande traiteur en caisse : 12 captures d'écran à fournir |
+  | 0.0.59 | Le plan de nettoyage, relié aux checklists |
+  | 0.0.60 | Fraîcheur et qualité, avec les renvois |
+
+## La typographie des manuels (19/11/2026)
+
+Sam : « il faut sous-peser les grosseurs de typo dans le manuel et les SOP, tout est trop en gras : titre, sous-titre et
+corps non gras ; garder les badges en rectangle aux coins arrondis », puis, après les captures d'essai : « nouvelle
+typographie dans tous les manuels ».
+
+- **La cause.** Le fichier `Gotham_Regular.otf` est en réalité Gotham Black (vérifié avec `fc-scan`). Le texte, lui,
+  était en Gotham Medium.
+- **Le catalogue (les six manuels).** Les pages prennent une famille à part, `GothamPage` (`catalogue.css`) : Gotham Light
+  pour le titre, le sous-titre et le texte, Gotham Medium pour les badges seulement. La hiérarchie vient de la taille et
+  de la couleur.
+- **Le dépliant.** Le poids 400 prend Gotham Light, et les titres passent de 500 à 400.
+- **Les PDF des SOP et du manuel** (`foPdfPolices`, `src/sop.php`). Le texte est en Gotham Light, les accents en Gotham
+  Medium (au lieu de Black).
+- **Le dépliant, page 8 « Les fiches techniques »** (Sam : « oui »).
+  - Le dépliant passe à 8 pages et 6 manuels : couverture resserrée, pages « n / 8 », « Manuel n sur 6 ».
+  - Les chiffres de la page sont lus dans `/formation/ref/fiches` : produits, catégories, saison et standard, fiches avec
+    une recette, des étapes, une photo, des allergènes.
+  - Un QR code ouvre le manuel.
+

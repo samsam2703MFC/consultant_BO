@@ -17,7 +17,7 @@ declare(strict_types=1);
  */
 
 const PROTEGES = ['uploads', 'assistant/uploads'];
-const SOURCES = ['shared', 'marketing', 'formation', 'consultant', 'panel', 'pilotage-reseau'];
+const SOURCES = ['shared', 'marketing', 'formation', 'consultant', 'panel', 'commercial', 'pilotage-reseau'];
 
 $args = array_slice($argv, 1);
 $essai = in_array('--essai', $args, true);

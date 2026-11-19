@@ -27,14 +27,12 @@ require __DIR__ . '/../../../shared/src/panel_api.php';
 require __DIR__ . '/../../../shared/src/erp_api.php';
 require __DIR__ . '/../../../shared/src/anthropic.php';
 require __DIR__ . '/../../../marketing/src/google_api.php';
-require __DIR__ . '/../../../marketing/src/scouting_osm.php';
 require __DIR__ . '/../../../marketing/src/newsletter.php';
 require __DIR__ . '/../../../marketing/src/newsletter_envoi.php';
 require __DIR__ . '/../../../marketing/src/fidelite.php';
 require __DIR__ . '/../../../marketing/src/fidelite_profils.php';   // Fidélité › Profils clients (12/11/2026)
 require __DIR__ . '/../../../panel/src/assistant_magasin.php';   // L'assistant du dashboard magasin (12/11/2026)
 require __DIR__ . '/../../../marketing/src/fidelite_cartes.php';     // Les cartes de fidélité, lues dans l'ERP (13/11/2026)
-require __DIR__ . '/../../../marketing/src/prospection.php';
 require __DIR__ . '/../../../consultant/src/visites_questions.php';
 require __DIR__ . '/../../../consultant/src/visites.php';
 require __DIR__ . '/../../../consultant/src/visites_kpi.php';
@@ -146,6 +144,7 @@ require __DIR__ . '/../../../formation/src/sop.php';
 require __DIR__ . '/../../../formation/src/referentiel.php';
 require __DIR__ . '/../../../formation/src/tablettes.php';
 require __DIR__ . '/../../../formation/src/referentiel_guides.php';
+require __DIR__ . '/../../../formation/src/fiches_techniques.php';
 require __DIR__ . '/../../../formation/src/formation_postes.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
@@ -159,6 +158,14 @@ require __DIR__ . '/../../../panel/src/dashboard_marketing.php'; // Marketing �
 require __DIR__ . '/../../../panel/src/offres_newsletter.php';  // Vendre › Offres › Newsletter : le module newsletter, au rôle du magasin (15/11/2026)
 require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
+require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
+require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
+require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
+require __DIR__ . '/../../../commercial/src/commercial_meta.php';    // … et le formulaire Meta « Lunch au bureau » (création sur la Page)
+// La Prospection (liste de démarchage, types d'offre) et son relevé OpenStreetMap : dans le portail Commercial depuis le
+// 19/11/2026, page /commercial/prospection/ ; les routes /prospection/… et /scouting/demarchage ne changent pas.
+require __DIR__ . '/../../../commercial/src/scouting_osm.php';
+require __DIR__ . '/../../../commercial/src/prospection.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -370,6 +377,8 @@ function route(string $method, string $path): mixed
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.
     if (($c = bndRoute($method, $path)) !== null) { return $c; }
+    // Le portail Commercial (19/11/2026) : /commercial/… (commercial/src/commercial.php, tables sm_).
+    if (($c = smRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
@@ -758,6 +767,7 @@ function route(string $method, string $path): mixed
             $path === '/visites/conformite'            => ep_visites_conformite(),
             $path === '/visites/campagnes'             => ep_visites_campagnes(),
             $path === '/visites/cadre'                 => ep_visites_cadre(),
+            $path === '/visites/remise-a-zero'         => ep_visites_remise(),
             $path === '/consultants/gestion'           => ep_consultants_gestion(),
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
@@ -1075,6 +1085,8 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/consultants/taches/([\w-]+)$#', $path, $m)) { return wr_consultants_tache_put($m[1]); }
     if ($method === 'PUT' && $path === '/visites/reglages') { return wr_visites_reglages_put(); }
     if ($method === 'POST' && $path === '/visites/tick') { return wr_visites_tick(); }
+    // La remise à zéro des visites (19/11/2026) : toutes, sans prévenir personne ; GET compte, POST efface.
+    if ($method === 'POST' && $path === '/visites/remise-a-zero') { return wr_visites_remise(); }
     if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }
     if ($method === 'PUT' && preg_match('#^/visites/photos/([\w-]{1,40})/reperes$#', $path, $m)) { return wr_visites_photo_reperes($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }

@@ -43,7 +43,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # consultant/, panel/, pilotage-reseau/), et TARGET_DIR/public est le site ASSEMBLÉ (shared/bin/assembler_public.php) :
 # des liens vers le public/ de chaque domaine, et les fichiers déposés (uploads/), qui ne bougent pas.
 REPO_SRC="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DOMAINES_CODE="shared marketing formation consultant panel"
+DOMAINES_CODE="shared marketing formation consultant panel commercial"
 
 log()  { printf '\033[1;34m[deploy]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[deploy]\033[0m %s\n' "$*"; }
@@ -370,6 +370,15 @@ cat > /etc/apache2/conf-available/consulant_bo.conf <<APACHE
 RedirectMatch 301 ^/formation\$ /formation/
 AliasMatch ^/formation/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
 Alias /formation/ ${TARGET_DIR}/public/formation/
+# Le portail Commercial à la racine du serveur, comme /formation/ (19/11/2026) : la page (public/commercial) et son
+# API juste à côté d'elle, par le même contrôleur.
+RedirectMatch 301 ^/commercial\$ /commercial/
+AliasMatch ^/commercial/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
+# Les pages du portail (la garde de chacune ; la Prospection, /commercial/prospection/, 19/11/2026 : design system,
+# Leaflet) lisent les fichiers communs du cockpit à côté d'elles : /commercial/assets/ est le dossier assets/ du site.
+# Avant « Alias /commercial/ ».
+Alias /commercial/assets/ ${TARGET_DIR}/public/assets/
+Alias /commercial/ ${TARGET_DIR}/public/commercial/
 # Le module RH / Dimona à la racine du serveur, comme /formation/ (01/11/2026) : la page (public/hr) et son
 # API juste à côté d'elle (public/api/hr/index.php, routes /api/v1/erp/dimona/…).
 RedirectMatch 301 ^/hr\$ /hr/
@@ -462,7 +471,7 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
     #    aucun motif ne peut viser une table du panel.
     # Les tables qui s'appelaient ceo_* avant la réorganisation en domaines (shared/src/reorg_tables.php) : la remise à
     # zéro les vise toujours, ni plus ni moins qu'avant.
-    ex_ceo="$(php -r '$t = require_once $argv[1]; $l = []; foreach (reorgTables() as $a => $n) { if (str_starts_with($a, "ceo_")) { $l[] = "\x27$n\x27"; } } echo implode(",", $l);' "$TARGET_DIR/shared/src/reorg_tables.php" 2>/dev/null || true)"
+    ex_ceo="$(php -r 'require_once $argv[1]; echo implode(",", array_map(static fn ($n) => "\x27$n\x27", reorgExCeo()));' "$TARGET_DIR/shared/src/reorg_tables.php" 2>/dev/null || true)"
     ceo_tables="$(mycli -N -B "$COCKPIT_DB_NAME" \
       -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND (table_name LIKE 'ceo\\_%' OR table_name IN (${ex_ceo:-''}) OR table_name IN ('con_visite','con_visite_point','con_visite_photo','con_visite_action','con_visite_action_evt','con_equipe_releve','con_consultant_tache','con_consultant_checklist','con_franchise_meteo','con_consultant','con_consultant_visit','con_msp','con_scoring_msp','con_scoring_google','con_tache_jour','con_tache_jour_etat'));" 2>/dev/null || true)"
     ceo_n="$(printf '%s\n' "$ceo_tables" | grep -c . || true)"
