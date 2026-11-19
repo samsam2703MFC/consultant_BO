@@ -9,7 +9,6 @@ import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsFF, valsCQM } from './franchises-vals.js';
 import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
 import { valsClientsAnnee } from './clients-annee-vals.js';
-import { valsFidelite } from './fidelite-vals.js';
 import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
@@ -19,7 +18,6 @@ import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
 import { valsVerifMatieres } from './verification-matieres-vals.js';
-import { valsVerifCa } from './verification-ca-vals.js';
 import { valsVerifMouvements } from './verification-mouvements-vals.js';
 import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './promotions-vals.js';
 // Visibilité Google (09/11/2026) : les fiches des magasins face au site, et leur rang dans les recherches locales.
@@ -397,8 +395,6 @@ class App {
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
       journal: 'journal', scoring: 'parametres/scoring',
       tablette: 'tablette',
-      // La fidélité du client (24/10/2026) : le programme et l'analyse des clients.
-      fidelite: 'fidelity',
       // Les coachs de l'assistant du dashboard magasin (12/11/2026).
       assistantCoachs: 'assistant',
       // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
@@ -414,8 +410,6 @@ class App {
       verifEvol: 'verification/evolution',
       // Lot 4 (31/10/2026) : la matière consommée entre deux inventaires, face aux ventes × recettes.
       verifMatieres: 'verification/matieres',
-      // Lot 5 (31/10/2026) : la caisse face au P&L, aux redevances et au CA que la matière laisse attendre.
-      verifCa: 'verification/ca',
       // Les mouvements d'un produit ou d'une matière sur une période (31/10/2026).
       verifMouv: 'verification/mouvements',
       // MétaDonnée (28/10/2026) : les formulaires Meta et Instagram vers l'ERP du franchisé.
@@ -478,6 +472,12 @@ class App {
       // Le client mystère s'encodait aussi dans Paramètres, dans la même table avec d'autres rubriques : un seul
       // formulaire depuis le 19/11/2026, Visites › Client mystère (docs/audit-rail.md).
       'parametres/mystere': 'suiviMsp', clientMystere: 'suiviMsp',
+      // Vérification › Chiffre d'affaires, retiré (19/11/2026, demande de Sam) : l'accueil. Le serveur garde son cron,
+      // qui remplit con_verif_ca pour le P&L HT (shared/src/pnl_ht.php).
+      'verification/ca': 'resultatJour', verifCa: 'resultatJour',
+      // Fidélité, retirée du cockpit (19/11/2026, demande de Sam) : l'accueil. Les routes /fidelite/* restent : le
+      // dashboard du magasin lit les profils clients publiés, l'Assistant · coachs garde les listes fi- de fidelite.css.
+      fidelity: 'resultatJour', fidelite: 'resultatJour',
     };
   }
   /**
@@ -1174,7 +1174,6 @@ class App {
       apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
-      fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
       assistantCoachs: ['Assistant · coachs', 'Les deux coachs de l’assistant du dashboard magasin, Pierre et le Coach : leur ton, ce sur quoi chacun met l’accent et ce qu’il vérifie — budget, trafic, contrôles qualité. Et les questions que les franchisés leur posent.'],
       // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
       cadreTaches: ['Cadre des tâches', ''],
@@ -1190,7 +1189,6 @@ class App {
       verifRecettes: ['Recettes à corriger', 'Chaque produit vendu doit avoir une recette complète, chiffrée et plausible : sinon l’écart de matière, la marge et le CA attendu sont faux. Dix règles, magasin par magasin, sur les ventes des trente derniers jours, classées par chiffre d’affaires concerné — et la part du CA déjà couverte, vers 100 %.'],
       verifEvol: ['Évolution', 'Les mêmes indicateurs semaine après semaine, lus dans la base quotidienne : poubelle, non expliqué, invendu, journées mesurées, recettes fiables — magasin par magasin et pour le réseau, et les premières semaines face aux dernières. Pour voir si la gestion s’améliore.'],
       verifMatieres: ['Matières ↔ recettes', 'D’un inventaire hebdomadaire à l’autre, la matière consommée par chaque magasin — stock du début, plus les commandes validées à la réception, moins le stock de fin — face à ce que ses ventes et sa poubelle déclarée en expliquent par les recettes. Matière par matière, la cause probable de chaque écart : entrées non validées, recette, poubelle non déclarée, ni vendu ni jeté.'],
-      verifCa: ['Chiffre d’affaires', 'La caisse fait référence : les tickets du panel, jour par jour. Le P&L du panel, la base des redevances et le chiffre d’affaires que la matière consommée laisse attendre se lisent en écart, magasin par magasin ; à part, les lignes sans produit, les remises sur le ticket entier et les corrections — et les jours à regarder.'],
       verifMouv: ['Mouvements d’un produit', 'Un produit ou une matière, un magasin, une période : tous ses mouvements, jour par jour et dans l’ordre de l’heure — gardé d’hier, production, ventes heure par heure, poubelle, gardé pour demain ; livraisons validées, inventaires et corrections de stock ; et ce qui ne s’explique pas.'],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
       suiviTableau: ['Suivi des franchisés · visites', ''],
@@ -1443,12 +1441,11 @@ class App {
         entree('budget', 'Budget'),
         entree('ventes', 'Équipe & ventes'),
         ['audits', 'Audit fournisseurs', 0]]],
-      // Ce que chaque magasin fait de ce qui entre : le flux du jour, la matière, les recettes, la caisse.
+      // Ce que chaque magasin fait de ce qui entre : le flux du jour, la matière, les recettes.
       ['Vérification', [
         entree('flux', 'Flux & poubelle'),
         entree('matieres', 'Matières & inventaires'),
-        ['verifRecettes', 'Recettes à corriger', compteur('verifRecettes')],
-        ['verifCa', 'Chiffre d’affaires', 0]]],
+        ['verifRecettes', 'Recettes à corriger', compteur('verifRecettes')]]],
       // La gamme, le comptoir, la fiche produit au panel, les prix des concurrents, les promotions.
       ['Produits', [
         ['catalogue', 'Catalogue', compteur('catalogue'), ['anaprod', 'manque', 'prixvolume', 'analyse']],
@@ -1456,14 +1453,13 @@ class App {
         ['paramProduits', 'Paramétrage produits', 0],
         ['benchmark', 'Benchmark', 0],
         entree('promotions', 'Promotions')]],
-      // Ce que la marque finance et ce qu'elle montre : fonds, Google, objectifs de campagne, leads Meta, fidélité.
+      // Ce que la marque finance et ce qu'elle montre : fonds, Google, objectifs de campagne, leads Meta.
       ['Marque & marketing', [
         ['fonds', 'Fonds & Royalties', 0],
         entree('google', 'Présence Google'),
         ['mktObjectifs', 'Objectifs produits', 0],
         // MétaDonnée : un écran à quatre étapes, que le module affiche lui-même en tête.
-        ['mdFormulaires', 'MétaDonnée', compteur('mdFormulaires'), ['mdMapping', 'mdLeads', 'mdSms']],
-        ['fidelite', 'Fidélité', 0]]],
+        ['mdFormulaires', 'MétaDonnée', compteur('mdFormulaires'), ['mdMapping', 'mdLeads', 'mdSms']]]],
       // Les outils du magasin tenus ici en attendant l'ERP : la tablette des vendeuses, l'assistant, l'app employé.
       ['Outils magasin', [
         ['tablette', 'Tablette vendeuses', 0],
@@ -1524,11 +1520,11 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1949,7 +1945,6 @@ class App {
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
     if (common.isApiModule) { this.valsApiModule(common); }
     if (common.isPointages) { this.valsPointages(common); }
-    if (common.isFid) { valsFidelite(this, common); }
     if (common.isAsc) { valsAssistantCoachs(this, common); }
     if (common.isPromoTab) { valsPromoTableau(this, common); }
     if (common.isPromoEd) { valsPromoEdition(this, common); }
@@ -1976,7 +1971,6 @@ class App {
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
     if (common.isVerifEvol) { valsVerifEvol(this, common); }
     if (common.isVerifMat) { valsVerifMatieres(this, common); }
-    if (common.isVerifCa) { valsVerifCa(this, common); }
     if (common.isVerifMouv) { valsVerifMouvements(this, common); }
     if (common.isFF) valsFF(this, common);
     if (common.isCQM) valsCQM(this, common);

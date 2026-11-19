@@ -182,5 +182,29 @@ verifie('une cible hors bornes est refusée', isset($r['error']) && str_contains
 $G = ep_assistant_coachs();
 verifie('le cockpit reçoit les objectifs et les valeurs de départ complètes', isset($G['objectifs']['foodCost']) && $G['defauts']['vente']['objectifs']['foodCost'] === 40.0 && array_key_exists('menus', $G['defauts']['pierre']['objectifs']), json_encode($G['defauts']['vente']['objectifs']));
 
+// Le catalogue des KPI lus (onglet « KPI » du cockpit, 19/11/2026) : chaque outil donné au modèle y a sa ligne, et
+// chaque ligne pointe vers un axe, un objectif, un outil et une clé de la fiche qui existent.
+$outilsModele = array_column(amOutils(), 'name');
+$outilsCatalogue = [];
+$clesFiche = ['ventes', 'joursParJour', 'budget', 'reseauHier', 'cibles', 'controles', 'controlesPhotos', 'pertesCetteSemaine', 'commandesAVenir', 'fidelite', 'mesures'];
+$lignesKo = [];
+foreach (AM_KPIS as $g) {
+    foreach ($g['lignes'] as $l) {
+        foreach ($l['outil'] ?? [] as $o) { $outilsCatalogue[] = $o; }
+        if (isset($l['axe']) && !isset(AM_AXES[$l['axe']])) { $lignesKo[] = $l['kpi'] . ' : axe ' . $l['axe']; }
+        if (isset($l['objectif']) && !isset(CO_OBJECTIFS[$l['objectif']])) { $lignesKo[] = $l['kpi'] . ' : objectif ' . $l['objectif']; }
+        if (isset($l['fiche']) && !in_array($l['fiche'], $clesFiche, true)) { $lignesKo[] = $l['kpi'] . ' : fiche ' . $l['fiche']; }
+        if (!isset($l['fiche']) && !isset($l['outil'])) { $lignesKo[] = $l['kpi'] . ' : ni fiche ni outil'; }
+    }
+}
+sort($outilsModele); sort($outilsCatalogue);
+verifie('le catalogue des KPI porte chaque outil du modèle, une fois', $outilsModele === $outilsCatalogue, json_encode([$outilsModele, $outilsCatalogue]));
+verifie('chaque ligne du catalogue pointe vers un axe, un objectif et une clé de fiche qui existent', $lignesKo === [], implode(' ; ', $lignesKo));
+$objCatalogue = [];
+foreach (AM_KPIS as $g) { foreach ($g['lignes'] as $l) { if (isset($l['objectif'], $l['fiche'])) { $objCatalogue[] = $l['objectif']; } } }
+verifie('chaque objectif 2026 a sa ligne de mesure dans le catalogue', array_diff(array_keys(CO_OBJECTIFS), $objCatalogue) === [], json_encode(array_values(array_diff(array_keys(CO_OBJECTIFS), $objCatalogue))));
+verifie('le cockpit reçoit le catalogue et le modèle de chaque assistant',
+    count($G['kpis']) === count(AM_KPIS) && $G['modeles']['coachs']['modele'] !== '' && $G['modeles']['professeur']['modele'] !== '' && $G['professeur']['nom'] !== '', json_encode($G['modeles']));
+
 echo "\n" . ($ko === 0 ? "Tout est vert : $ok vérifications." : "$ko échec(s), $ok réussite(s).") . "\n";
 exit($ko === 0 ? 0 : 1);

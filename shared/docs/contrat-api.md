@@ -4294,7 +4294,8 @@ L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couv
 
 ### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
 
-Code : `consultant/src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
+Code : `consultant/src/verification_ca.php` ; l'écran `#/verification/ca` est retiré du cockpit le 19/11/2026 (l'adresse
+mène à l'accueil) ; la route et le cron restent : `con_verif_ca` sert le P&L HT (`shared/src/pnl_ht.php`) ; maquette `d.png` ;
 tests `consultant/bin/tests_verification.php` (section lot 5). Lecture seule.
 
 **La caisse fait référence** : les tickets du panel, jour par jour (`caNet{magasin}:{jour}` : `b` TTC après remise, `t`
@@ -5561,7 +5562,8 @@ la dernière visite faite, en rappel au bureau ; il n'est jamais figé dans le d
 
 ### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
 
-Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
+Écran **ERP franchisé › Fidélité** (`#/fidelity`) — **retiré du cockpit le 19/11/2026** (l'adresse mène à l'accueil ; les
+routes ci-dessous restent, le dashboard du magasin lit les profils publiés). Il avait deux onglets : le **Programme** (maquette C de
 `marketing/docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `marketing/src/fidelite.php`.
 
 | Méthode | Route | Rôle |
