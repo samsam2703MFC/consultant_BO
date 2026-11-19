@@ -85,4 +85,19 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/production/samples/store', ['controller' => $lc, 'method' => 'storeSample']);
     $r->addRoute('POST', '/ajax/production/samples/done', ['controller' => $lc, 'method' => 'finishSamples']);
     $r->addRoute('PUT', '/ajax/production/sample-rules/{category:\d+}', ['controller' => $lc, 'method' => 'sampleRule']);
+
+    // [353] Procedury SOP : /sop (lista, asystent, zatwierdzenie — prawo « sop ») ; /procedure (procedura asystowana, każdy).
+    $sop = App\Controllers\Web\Production\SopController::class;
+    $r->addRoute('GET', '/sop', ['controller' => $sop, 'method' => 'index']);
+    $r->addRoute('GET', '/sop/new', ['controller' => $sop, 'method' => 'create']);
+    $r->addRoute('GET', '/sop/{id:\d+}/edit', ['controller' => $sop, 'method' => 'edit']);
+    $r->addRoute('POST', '/ajax/sop', ['controller' => $sop, 'method' => 'save']);
+    $r->addRoute('PUT', '/ajax/sop/{id:\d+}', ['controller' => $sop, 'method' => 'save']);
+    $r->addRoute('POST', '/ajax/sop/{id:\d+}/approve', ['controller' => $sop, 'method' => 'approve']);
+    $r->addRoute('POST', '/ajax/sop/{id:\d+}/archive', ['controller' => $sop, 'method' => 'archive']);
+    $r->addRoute('POST', '/ajax/sop/photos', ['controller' => $sop, 'method' => 'upload']);
+    $r->addRoute('GET', '/procedure/{id:\d+}', ['controller' => $sop, 'method' => 'show']);
+    $r->addRoute('GET', '/procedure/{id:\d+}/pdf', ['controller' => $sop, 'method' => 'pdf']);
+    $r->addRoute('GET', '/procedure/photo/{id:\d+}', ['controller' => $sop, 'method' => 'photo']);
+    $r->addRoute('POST', '/ajax/procedure/{id:\d+}/runs', ['controller' => $sop, 'method' => 'run']);
 };

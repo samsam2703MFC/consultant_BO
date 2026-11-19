@@ -1,0 +1,91 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Procedury (SOP){% endblock %}
+
+{# [353] Procedury SOP (makieta 69 · 1) : App\Controllers\Web\Production\SopController::index — tabela główna + zakładki + asystent. #}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Procedury (SOP)</h3>
+            <p class="text-subtitle text-muted">Standardowe procedury operacyjne : etapy ze zdjęciami i zrzutami ekranu, gdzie i kiedy się je wykonuje. Przycisk « Procedura » na stronach i asystentach, do których są przypięte.</p>
+        </div>
+        <a class="btn btn-primary" href="{{ root }}/sop/new"><i class="bi bi-magic me-1"></i> Nowa procedura (asystent)</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.sp-tabs{display:flex;gap:4px;border-bottom:1px solid var(--at-line);margin:0 0 14px;flex-wrap:wrap}
+.sp-tabs a{padding:9px 14px;font-size:13.5px;color:var(--at-muted);border-bottom:2px solid transparent;margin-bottom:-1px;text-decoration:none}
+.sp-tabs a.on{color:var(--at-brand,#8D1D2C);border-color:var(--at-brand,#8D1D2C);font-weight:700}.sp-tabs b{background:#efe9e3;border-radius:7px;padding:0 6px;font-size:11px;margin-left:5px;color:#5d554f}
+.sp-t{width:100%;border-collapse:collapse;font-size:13px}.sp-t th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 7px;text-align:left;white-space:nowrap}
+.sp-t td{border-bottom:1px solid var(--at-line);padding:8px 7px;vertical-align:middle}.sp-t .n{text-align:right;font-variant-numeric:tabular-nums}
+.sp-pill{display:inline-block;font-size:11px;border-radius:6px;padding:1px 7px;font-weight:600;white-space:nowrap;margin:1px 0}
+.sp-k{background:#eef3ff;color:#2d4a8a}.sp-r{background:#e7f4ea;color:#1f6b33}.sp-w{background:#fff3d6;color:#7a5a00}.sp-x{background:#fde8e8;color:#9b1c1c}.sp-g{background:#efe9e3;color:#5d554f}
+.sp-row{cursor:pointer}.sp-row:hover td{background:#fbf8f4}
+</style>
+<section class="section">
+    {% set nreview = review|length %}
+    <nav class="sp-tabs">
+        <a class="{{ tab == 'list' ? 'on' }}" href="{{ root }}/sop">Procedury<b>{{ list|filter(s => s.status != 'archived')|length }}</b></a>
+        <a class="{{ tab == 'review' ? 'on' }}" href="{{ root }}/sop?tab=review">Do zatwierdzenia i przeglądu<b>{{ nreview }}</b></a>
+        <a class="{{ tab == 'runs' ? 'on' }}" href="{{ root }}/sop?tab=runs">Wykonania</a>
+        <a class="{{ tab == 'missing' ? 'on' }}" href="{{ root }}/sop?tab=missing">Asystenci bez procedury<b>{{ missing|length }}</b></a>
+    </nav>
+
+    {% if tab == 'list' or tab == 'review' %}
+        {% set rows = tab == 'list' ? list : review %}
+        <div class="card"><div class="card-body p-2"><div class="table-responsive">
+        <table class="sp-t">
+            <thead><tr><th>Kod</th><th>Procedura</th><th>Obszar</th><th>Przycisk « Procedura » na</th><th class="n">Etapy</th><th class="n">Zdjęcia</th><th>Wersja</th><th>Przegląd</th><th>Stan</th><th class="n">Wykonania</th></tr></thead>
+            <tbody>
+            {% for s in rows %}
+                <tr class="sp-row" onclick="location.href='{{ root }}/sop/{{ s.id }}/edit'">
+                    <td style="white-space:nowrap"><b>{{ s.code }}</b></td><td>{{ s.title }}</td><td>{{ s.area ?: '—' }}</td>
+                    <td>{% for l in s.links %}<span class="sp-pill sp-k" title="{{ l }}">{{ page_names[l] ?? l }}</span> {% else %}<span class="text-muted">—</span>{% endfor %}</td>
+                    <td class="n">{{ s.steps }}</td><td class="n">{{ s.photos }} / {{ s.steps }}</td>
+                    <td>{{ s.version ? 'v' ~ s.version : '—' }}{% if s.changed and s.status == 'active' %} <span class="sp-pill sp-w">zmiany</span>{% endif %}</td>
+                    <td>{% if s.review_at %}{% if s.review_due %}<span class="sp-pill sp-w">{{ s.review_at|date('d.m.Y') }}</span>{% else %}{{ s.review_at|date('d.m.Y') }}{% endif %}{% else %}—{% endif %}</td>
+                    <td>{% if s.status == 'active' %}<span class="sp-pill sp-r">obowiązuje</span>{% elseif s.status == 'draft' %}<span class="sp-pill sp-g">szkic</span>{% else %}<span class="sp-pill sp-g">archiwum</span>{% endif %}</td>
+                    <td class="n">{{ s.runs ?: '—' }}</td></tr>
+            {% else %}
+                <tr><td colspan="10" class="text-muted">{{ tab == 'list' ? 'Brak procedur — « Nowa procedura (asystent) ».' : 'Nic do zatwierdzenia ani do przeglądu.' }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div></div></div>
+        <p class="text-muted small mt-2">Zadanie dnia Kierownika produkcji « SOP dnia » : popraw jedną procedurę (np. dodaj zrzuty ekranu) albo utwórz nową i zatwierdź wersję. Klik na wiersz : asystent procedury.</p>
+
+    {% elseif tab == 'runs' %}
+        <div class="card"><div class="card-body p-2"><div class="table-responsive">
+        <table class="sp-t">
+            <thead><tr><th>Kiedy</th><th>Procedura</th><th>Kto</th><th class="n">Czas</th><th>Skąd</th><th>Wynik</th></tr></thead>
+            <tbody>
+            {% for r in runs %}
+                <tr><td>{{ r.finished_at|date('d.m H:i') }}</td><td><a href="{{ root }}/procedure/{{ r.sop_id }}"><b>{{ r.code }}</b></a> {{ r.title }} <span class="text-muted">v{{ r.version }}</span></td>
+                    <td>{{ r.user ?: '—' }}</td><td class="n">{{ r.minutes is not null ? r.minutes ~ ' min' : '—' }}</td><td><span class="text-muted small">{{ r.source ?: '—' }}</span></td>
+                    <td>{% if r.result == 'ok' %}<span class="sp-pill sp-r">{{ r.ok_steps }}/{{ r.steps }} ✓</span>{% else %}<span class="sp-pill sp-x">odchylenie{{ r.nc ? ' → NC ' ~ r.nc : '' }}</span>
+                        <div class="small text-danger">{% for d in r.detail|filter(d => not (d.ok ?? true)) %}{{ d.step }}. {{ d.title }} : {{ d.value }} {{ d.unit }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}</td></tr>
+            {% else %}
+                <tr><td colspan="6" class="text-muted">Brak wykonań.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div></div></div>
+
+    {% else %}
+        <div class="card"><div class="card-body p-2"><div class="table-responsive">
+        <table class="sp-t">
+            <thead><tr><th>Asystent ERP (zadanie)</th><th>Strona</th><th></th></tr></thead>
+            <tbody>
+            {% for m in missing %}
+                <tr><td><b>{{ m.name }}</b></td><td><span class="sp-pill sp-k">{{ m.path }}</span></td>
+                    <td class="n"><a class="btn btn-sm btn-outline-primary" href="{{ root }}/sop/new?title={{ ('Procedura : ' ~ m.name)|url_encode }}&link={{ m.path|url_encode }}"><i class="bi bi-plus-lg"></i> Utwórz SOP</a></td></tr>
+            {% else %}
+                <tr><td colspan="3" class="text-muted">Każdy asystent ma procedurę.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div></div></div>
+        <p class="text-muted small mt-2">Asystenci zadań bez przypiętej procedury : jedna nowa SOP dziennie (zadanie « SOP dnia ») — zrzuty ekranu każdego kroku asystenta.</p>
+    {% endif %}
+</section>
+{% endblock %}

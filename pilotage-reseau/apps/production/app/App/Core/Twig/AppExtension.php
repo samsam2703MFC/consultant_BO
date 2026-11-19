@@ -32,6 +32,8 @@ class AppExtension extends AbstractExtension
             // Dzień wysyłki : 7 etapów dnia nad zakładkami tej grupy (Załadunek, Wyślij dzień, Dokumenty, Powiadomienia, Potwierdzenia).
             new TwigFunction('shipping_day_steps', [self::class, 'shippingDaySteps'], ['is_safe' => ['html']]),
             // Uprawnienia stanowisk : czy użytkownik widzi stronę ; prefiksy stron z widocznością dla railu i wyszukiwarki.
+            // [353] Procedury SOP przypięte do bieżącej strony (przycisk « Procedura »).
+            new TwigFunction('sop_here', [self::class, 'sopHere']),
             new TwigFunction('can_see', fn(string $path) => \App\Core\Web\PageAccess::visible($path)),
             new TwigFunction('rail_access', fn() => (object) \App\Core\Web\PageAccess::$rail),
             new TwigFunction('view_session', fn() => \App\Core\Web\ViewSession::menu()),
@@ -49,6 +51,18 @@ class AppExtension extends AbstractExtension
     }
 
     /** Pasek etapów dnia wysyłki (ShippingDayService) dla dnia strony ; pusty poza zakładkami « Dzień wysyłki » albo przy błędzie. */
+    /** @return list<array{id:int, code:string, title:string, status:string}> procedury SOP bieżącej strony (bez błędu, gdy tabel jeszcze nie ma) */
+    public static function sopHere(): array
+    {
+        $container = GlobalRegistry::get('container');
+        if ($container === null) return [];
+        try {
+            return $container->get(\App\Services\Workshop\Production\SopService::class)->forPath(\App\Core\Web\PageTabs::currentPath());
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
     public static function shippingDaySteps(mixed $pageDate = null): string
     {
         $group = \App\Core\Web\PageTabs::forPath(\App\Core\Web\PageTabs::currentPath());

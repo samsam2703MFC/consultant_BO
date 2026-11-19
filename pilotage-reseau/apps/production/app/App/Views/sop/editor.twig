@@ -1,0 +1,32 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ sop ? sop.code ~ ' · ' ~ sop.title : 'Nowa procedura' }}{% endblock %}
+
+{# [353] Asystent procedury SOP (makieta 69 · 2–3) : opis → etapy (zdjęcie, zrzut ekranu Ctrl+V, plik) → powiązanie → zatwierdź.
+   Widok : assets/js/sop/sop-editor.js, rama asystenta : assets/js/organization/task-wizard.js. #}
+
+{% block content %}
+<section class="section">
+    <div id="sopEditor"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="sopBoot">{{ {sop: sop, prefixes: prefixes, pages: pages, preset: preset}|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<style>
+.se-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}.se-grid .wide{grid-column:1/-1}
+.se-step{display:grid;grid-template-columns:34px 200px minmax(0,1fr) 250px;gap:12px;align-items:start;border:1px solid var(--at-line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fff}
+.se-step.on{border-color:var(--at-brand,#8D1D2C);box-shadow:0 0 0 2px rgba(141,29,44,.12)}
+.se-no{width:30px;height:30px;border-radius:9px;background:var(--at-brand,#8D1D2C);color:#fff;display:grid;place-items:center;font-weight:700}
+.se-ph{height:130px;border-radius:10px;background:#faf7f4;border:1.5px dashed #cdbfae;display:grid;place-items:center;text-align:center;color:#9a8b78;font-size:12px;overflow:hidden;position:relative}
+.se-ph img{width:100%;height:100%;object-fit:contain;background:#fff}.se-ph .x{position:absolute;top:4px;right:4px;border:0;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;font-size:11px;padding:1px 6px}
+.se-phb{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.se-phb label,.se-phb button{font-size:12px}
+.se-step textarea{min-height:64px}.se-side{display:grid;gap:6px;font-size:12.5px}.se-side .row2{display:grid;grid-template-columns:1fr 1fr 70px;gap:6px}
+.se-move{display:flex;flex-direction:column;gap:4px;margin-top:6px}.se-move button{border:1px solid var(--at-line);background:#fff;border-radius:7px;padding:1px 8px}
+.se-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 18px}
+.se-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}.se-sum div{background:#faf7f4;border-radius:10px;padding:10px 12px}.se-sum b{display:block;font-size:20px}
+</style>
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/sop/sop-editor.js?v={{ asset_v() }}"></script>
+{% endblock %}
