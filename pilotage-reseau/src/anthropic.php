@@ -99,7 +99,11 @@ final class Anthropic
         $c = self::config();
         if ($c['cle'] === '') { return $vide + [] ; }
 
+        // Chaque image part PRÉPARÉE (preparerImage) : type lu dans les octets, photo de téléphone redressée et
+        // réduite. Telle quelle, une photo de 4032 × 3024 (3 à 8 Mo) dépassait les 5 Mo par image que l'API
+        // accepte en base64, et la demande échouait.
         [$img, $mime] = self::telecharger($imageUrl);
+        if ($img !== null) { [$img, $mime] = self::preparerImage($img, $mime); }
         if ($img === null) {
             $vide['erreur'] = 'photo illisible : ' . (self::$lastError ?? 'téléchargement impossible');
             return $vide;
@@ -110,6 +114,7 @@ final class Anthropic
         $refs = [];
         if ($refUrl !== null && $refUrl !== '') {
             [$o, $m] = self::telecharger($refUrl);
+            if ($o !== null) { [$o, $m] = self::preparerImage($o, $m); }
             if ($o !== null) { $refs[] = [$o, $m, "Photo de RÉFÉRENCE du produit (fiche technique, l'attendu) :"]; }
         }
         $locales = (array) ($regles['refs'] ?? []);
@@ -120,9 +125,10 @@ final class Anthropic
             foreach ($locales as $l) {
                 if (count($refs) >= 3) { break; }
                 $chemin = (string) ($l['chemin'] ?? '');
-                if ($chemin === '' || !is_file($chemin) || filesize($chemin) > 5 * 1024 * 1024) { continue; }
-                $refs[] = [(string) file_get_contents($chemin), self::mimeImage((string) (function_exists('mime_content_type') ? mime_content_type($chemin) : '')),
-                    trim((string) ($l['lib'] ?? '')) ?: 'Photo de référence :'];
+                if ($chemin === '' || !is_file($chemin) || filesize($chemin) > 25 * 1024 * 1024) { continue; }
+                [$o, $m] = self::preparerImage((string) file_get_contents($chemin));
+                if ($o === null) { continue; }
+                $refs[] = [$o, $m, trim((string) ($l['lib'] ?? '')) ?: 'Photo de référence :'];
             }
         }
 
@@ -532,38 +538,110 @@ final class Anthropic
         return [$code, json_decode((string) $raw, true)];
     }
 
-    /**
-     * L'API n'accepte qu'une courte liste de types d'image : on normalise plutôt que d'envoyer un
-     * « application/octet-stream » qui serait refusé.
-     */
-    private static function mimeImage(string $ct): string
-    {
-        foreach (['image/png', 'image/webp', 'image/gif', 'image/jpeg'] as $t) {
-            if (stripos($ct, $t) !== false) { return $t; }
-        }
-        return 'image/jpeg';
-    }
+    /** Grand côté d'une image envoyée au modèle : assez pour juger un comptoir, toujours sous les limites de l'API. */
+    public const IMAGE_PX = 1568;
+    /** Ce que l'API accepte par image : 5 Mo, comptés sur le base64 (4/3 des octets). */
+    public const IMAGE_MAX_B64 = 5 * 1024 * 1024;
 
-    /** Télécharge une image et rend [octets, type MIME]. */
+    /** Les essais remplacent le téléchargement par cette fonction : fn(string $url): [octets|null, type annoncé|null]. */
+    public static ?Closure $telechargeur = null;
+
+    /** Télécharge une image et rend [octets, type annoncé par le serveur] ; preparerImage la rend présentable. */
     private static function telecharger(string $url): array
     {
+        if (self::$telechargeur !== null) { return (self::$telechargeur)($url); }
         $ch = curl_init($url);
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 30,
-            CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_FOLLOWLOCATION => true]);
+            CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3]);
         $raw = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $ct = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $err = curl_error($ch);
         curl_close($ch);
         if ($raw === false || $code < 200 || $code >= 300) {
-            self::$lastError = 'HTTP ' . $code;
+            self::$lastError = $raw === false ? ($err !== '' ? $err : 'téléchargement impossible') : 'HTTP ' . $code;
             return [null, null];
         }
-        $mime = self::mimeImage($ct);
-        // 5 Mo : au-delà l'appel échouerait côté API, autant le dire ici.
-        if (strlen((string) $raw) > 5 * 1024 * 1024) {
+        // 25 Mo : au-delà ce n'est pas une photo de comptoir, et la réduire coûterait trop de mémoire.
+        if (strlen((string) $raw) > 25 * 1024 * 1024) {
             self::$lastError = 'photo trop lourde (' . round(strlen((string) $raw) / 1048576, 1) . ' Mo)';
             return [null, null];
         }
-        return [(string) $raw, $mime];
+        return [(string) $raw, $ct];
+    }
+
+    /**
+     * Rend une image que l'API accepte : [octets, type MIME], ou [null, null] avec la raison dans $lastError.
+     *
+     * Le type se lit dans les OCTETS, pas dans l'en-tête : une URL signée répond souvent
+     * « binary/octet-stream », et un type annoncé faux fait refuser la demande. Une image trop grande
+     * (grand côté > IMAGE_PX) ou trop lourde est redressée (orientation EXIF : GD ne l'applique pas, la
+     * photo partirait couchée), réduite et réencodée en JPEG. Sans GD, elle part telle quelle si elle tient.
+     */
+    public static function preparerImage(string $octets, ?string $annonce = null): array
+    {
+        $info = @getimagesizefromstring($octets);
+        $mime = is_array($info) ? (string) ($info['mime'] ?? '') : '';
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true)) {
+            $heic = in_array(substr($octets, 4, 8), ['ftypheic', 'ftypheix', 'ftypmif1'], true);
+            self::$lastError = $heic ? 'photo au format HEIC (iPhone), que le modèle ne lit pas'
+                : 'format d’image non reconnu' . ($annonce ? ' (' . mb_substr($annonce, 0, 40) . ')' : '');
+            return [null, null];
+        }
+        $w = (int) $info[0]; $h = (int) $info[1];
+        $tient = (int) ceil(strlen($octets) / 3) * 4 <= self::IMAGE_MAX_B64;
+        if ($tient && max($w, $h) <= self::IMAGE_PX) { return [$octets, $mime]; }
+
+        $reduite = self::reduire($octets, $w, $h, (int) ($info[2] ?? 0));
+        if ($reduite !== null) { return [$reduite, 'image/jpeg']; }
+        if ($tient) { return [$octets, $mime]; }   // sans GD : l'API réduit elle-même ce qui dépasse en pixels
+        self::$lastError = 'photo trop lourde (' . round(strlen($octets) / 1048576, 1) . ' Mo) et impossible à réduire sur ce serveur';
+        return [null, null];
+    }
+
+    /** Redresse, réduit (grand côté ≤ IMAGE_PX) et réencode en JPEG ; null si GD manque ou échoue. */
+    private static function reduire(string $octets, int $w, int $h, int $type): ?string
+    {
+        if (!function_exists('imagecreatefromstring') || $w <= 0 || $h <= 0) { return null; }
+        // Décodée, l'image pèse ~5 octets par pixel : sans la place, GD tuerait la requête (erreur fatale).
+        if (!self::memoirePour($w * $h * 5 + strlen($octets) + 32 * 1024 * 1024)) { return null; }
+        $im = @imagecreatefromstring($octets);
+        if ($im === false) { return null; }
+        if ($type === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+            $f = fopen('php://memory', 'r+');
+            fwrite($f, $octets); rewind($f);
+            $exif = @exif_read_data($f);
+            fclose($f);
+            $angle = [3 => 180, 6 => -90, 8 => 90][(int) (is_array($exif) ? ($exif['Orientation'] ?? 1) : 1)] ?? 0;
+            if ($angle !== 0 && ($tourne = imagerotate($im, $angle, 0)) !== false) { imagedestroy($im); $im = $tourne; }
+        }
+        $w = imagesx($im); $h = imagesy($im);
+        $k = min(1, self::IMAGE_PX / max($w, $h));
+        $nw = max(1, (int) round($w * $k)); $nh = max(1, (int) round($h * $k));
+        $petit = imagecreatetruecolor($nw, $nh);
+        // Fond blanc : la transparence d'un PNG deviendrait noire en JPEG.
+        imagefill($petit, 0, 0, imagecolorallocate($petit, 255, 255, 255));
+        imagecopyresampled($petit, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagedestroy($im);
+        ob_start();
+        $ok = imagejpeg($petit, null, 85);
+        $jpeg = (string) ob_get_clean();
+        imagedestroy($petit);
+        return $ok && $jpeg !== '' ? $jpeg : null;
+    }
+
+    /** Assez de mémoire pour décoder l'image ? Relève la limite jusqu'à 512 Mo s'il le faut. */
+    private static function memoirePour(int $octets): bool
+    {
+        $lim = static function (): int {
+            $l = trim((string) ini_get('memory_limit'));
+            if ($l === '' || $l === '-1') { return PHP_INT_MAX; }
+            $n = (int) $l;
+            return match (strtolower(substr($l, -1))) { 'g' => $n * 1024 ** 3, 'm' => $n * 1024 ** 2, 'k' => $n * 1024, default => $n };
+        };
+        $besoin = memory_get_usage() + $octets;
+        if ($lim() >= $besoin) { return true; }
+        if ($besoin <= 512 * 1024 * 1024) { @ini_set('memory_limit', '512M'); }
+        return $lim() >= $besoin;
     }
 }
