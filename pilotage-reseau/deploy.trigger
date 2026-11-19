@@ -165,3 +165,6 @@
 2026-11-19T15:10:18Z Catalogue des manuels : liens directs vers les SOP, articles et checklists cités (écran et PDF)
 2026-11-19T15:31:37Z Produit : le panel fait foi, l'obligatoire au seul Assortiment ; PDF 20/80 sur la Structure de gamme ; inventaire : un seul pourcentage, la matière expliquée
 2026-11-19T15:32:09Z Catalogue des manuels : code des checklists en couleurs ; postes, formations et compétences dans le manuel du réseau
+2026-11-19T15:41:01Z Dépliant des manuels : page franchise, court résumé de 0.0.21 et 0.0.56 à la place des chiffres du contrat
+2026-11-19T15:42:59Z Revue du soir : la tuile des tâches pas faites, « 8 / 11 » sur une ligne
+2026-11-19T15:50:23Z Dépliant des manuels : page franchise, les huit questions d'une franchise bien tenue

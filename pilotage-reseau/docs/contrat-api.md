@@ -5739,7 +5739,7 @@ tâches obligatoires pas faites (40 au plus), rangées à l'heure prévue (sans 
 `pasFaite` (pas rendue) ou `photo` (cochée sans la photo demandée). `manquent[]` (les mêmes noms) reste pour un écran
 ouvert avant la mise en ligne. L'écran les montre partout : le nombre de tâches pas faites dans le résumé et par
 checklist, la liste d'emblée sur l'écran de chaque checklist (huit, puis « + N autres »), avant « Pourquoi ? », et à la
-fin sous chaque checklist pas finie (la première tuile dit « N pas faites sur T »). Le point **caisse** devient
+fin sous chaque checklist pas finie (la première tuile dit « N / T » pas faites, comme la tuile de la gestion). Le point **caisse** devient
 « Caisse clôturée » — « La journée est-elle clôturée dans la caisse ? » (Oui, clôturée · Pas encore) : le monnayeur
 compte l'argent, il n'y a ni fond de caisse à compter ni écart à noter. Un réglage enregistré avant (`version` 1) dont la
 caisse parlait encore d'écart est lu avec la caisse sans écart (`rsMigrer`), jusqu'à ce qu'il soit réenregistré au

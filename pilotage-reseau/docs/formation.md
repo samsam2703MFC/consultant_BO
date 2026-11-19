@@ -1145,3 +1145,13 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
 - **Essai** : manuel des checklists, 24 pages (la page du code tient sur une page). Manuel du réseau, 52 pages au lieu de
   13 : 12 postes, 380 lignes de formation dont 173 avec lien vers l'article, 121 compétences clés, 134 compétences par
   niveau dont 19 avec lien vers leur SOP. Aucune page qui déborde, aucune erreur.
+- **Dépliant, page 2 « La franchise »** (19/11/2026, Sam) : les chiffres du contrat (9 ans, 31 jours, redevances
+  2 · 2 · 2,5 %) et les deux paragraphes droit d'entrée / DIP sont retirés. À leur place, un très court résumé des deux
+  articles, liens gardés : « Le cadre · 0.0.21 » (le DIP, puis le contrat et les engagements) et « La valeur · 0.0.56 »
+  (process écrits et délégables, chiffres fiables). Les chiffres restent dans l'article 0.0.21.
+- **Dépliant, page 2 : « Une franchise bien tenue »** (19/11/2026, Sam : « rajouter les points de bonne gestion de la
+  franchise, est-ce que quelqu'un peut tenir ton magasin deux semaines… »). Le titre est « Quelqu'un peut-il tenir votre
+  magasin deux semaines sans vous ? », suivi des huit questions de « La boutique est-elle vendable demain ? » (article
+  0.0.56), posées en questions et en deux colonnes. Les deux semaines sans le dirigeant passent en premier, puis viennent
+  la relève, les postes doublés, les niveaux à jour, douze mois de chiffres, les ratios, les standards et le repreneur en
+  une heure. La source (0.0.56) est en lien. La page tient sur l'A4.
