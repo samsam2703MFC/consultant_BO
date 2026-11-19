@@ -412,8 +412,21 @@
             if (o) return openDetail(Number(o.dataset.rkOpen));
             const l = e.target.closest('[data-rk-onlist]');
             if (l) { closeModal(); return openComplaint(Number(l.dataset.rkOnlist)); }
+            const z = e.target.closest('[data-rk-zoom]');
+            if (z) { z.hidden = true; z.innerHTML = ''; return; }
             const a = e.target.closest('[data-rk-att]');
-            if (a) { e.preventDefault(); return attachmentUrl(a.dataset.rkAtt).then(u => { if (u) window.open(u, '_blank', 'noopener'); }); }
+            if (a) {
+                e.preventDefault();
+                // Zdjęcie : powiększenie w oknie (dotknij, żeby zamknąć) ; inny plik : otwarcie w nowej karcie.
+                const zoom = modal.querySelector('[data-rk-zoom]');
+                if (a.classList.contains('is-img') && zoom) {
+                    zoom.innerHTML = `<img src="${esc(a.dataset.rkUrl)}" alt=""><a href="${esc(a.dataset.rkUrl)}" target="_blank" rel="noopener" class="rk-zoom-open">Otwórz oryginał ↗</a>`;
+                    zoom.hidden = false;
+                    zoom.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+                    return;
+                }
+                return (a.dataset.rkUrl ? Promise.resolve(a.dataset.rkUrl) : attachmentUrl(a.dataset.rkAtt)).then(u => { if (u) window.open(u, '_blank', 'noopener'); });
+            }
         });
         document.addEventListener('keydown', escClose);
         return modal.querySelector('.rk-modal-bd');
@@ -456,9 +469,9 @@
                 <dt>Żądana kompensata</dt><dd>${esc(d.requested_action || '—')}</dd></dl>
                 ${d.client_comment ? `<blockquote class="rk-quote">${esc(d.client_comment)}</blockquote>` : '<p class="rk-muted">Bez komentarza.</p>'}</section>
             <section class="rk-msec"><h6><i class="bi bi-camera"></i> Zdjęcia i załączniki (${d.attachments.length})</h6>
-                ${d.attachments.length ? `<div class="rk-photos">${d.attachments.map(a => a.image
-                    ? `<a href="#" class="rk-photo" data-rk-att="${a.id}" data-rk-img="${a.id}" title="${esc(a.name)}"><span>Wczytywanie…</span></a>`
-                    : `<a href="#" class="rk-file" data-rk-att="${a.id}"><i class="bi bi-file-earmark"></i> ${esc(a.name || 'Załącznik')}</a>`).join('')}</div>` : '<p class="rk-muted">Brak załączników.</p>'}</section>
+                ${d.attachments.length ? `<div class="rk-photos">${d.attachments.map((a, i) =>
+                    `<a href="#" class="rk-photo" data-rk-att="${a.id}" data-rk-img="${a.id}" data-rk-n="${i + 1}"><span>Wczytywanie…</span></a>`).join('')}</div>
+                    <div class="rk-zoom" data-rk-zoom hidden></div>` : '<p class="rk-muted">Brak załączników.</p>'}</section>
             ${d.non_product ? '' : `<section class="rk-msec"><h6><i class="bi bi-truck"></i> Co wysłano — faktura ${esc(d.invoice_num || '—')}${d.invoice_date ? ' z ' + mDay(d.invoice_date) : ''}</h6>${shipped}</section>
             <section class="rk-msec"><h6><i class="bi bi-calculator"></i> Wartość reklamacji (kartony rozpoczęte × cena kartonu)</h6>
                 <p>Zgłoszone : ${calc(d.quantity, d.cartons, d.value)}</p>
@@ -467,11 +480,18 @@
                 <dl class="rk-mdl"><dt>Decyzja</dt><dd>${esc(d.status_label)}${d.compensation ? ' · ' + esc(d.compensation) : ''}</dd></dl>
                 ${d.production_response ? `<blockquote class="rk-quote is-out">${esc(d.production_response)}</blockquote>` : '<p class="rk-muted">Brak odpowiedzi.</p>'}</section>
             <div class="rk-mfoot"><button type="button" class="btn btn-sm btn-outline-secondary" data-rk-onlist="${d.id}"><i class="bi bi-list-ul"></i> Pokaż na liście</button></div>`;
-        // Zdjęcia : adres podpisany z serwera magazynu, ładowany po otwarciu okna.
+        // [366] Zdjęcia w oknie : adres podpisany z serwera magazynu, ładowany po otwarciu. Klucz pliku nie ma rozszerzenia
+        // (np. 46f1d5bf…), więc każdy załącznik próbujemy pokazać jako obraz ; nie-obraz (PDF…) → odnośnik « Załącznik N ».
         box.querySelectorAll('[data-rk-img]').forEach(async (el) => {
             const u = await attachmentUrl(el.dataset.rkImg);
             if (!el.isConnected) return;
-            el.innerHTML = u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<span>Brak podglądu</span>';
+            if (!u) { el.innerHTML = '<span>Brak podglądu</span>'; return; }
+            el.dataset.rkUrl = u;
+            const img = new Image();
+            img.alt = 'Zdjęcie ' + el.dataset.rkN;
+            img.onload = () => { el.innerHTML = ''; el.appendChild(img); el.classList.add('is-img'); };
+            img.onerror = () => { el.classList.add('is-file'); el.innerHTML = `<i class="bi bi-file-earmark"></i><span>Załącznik ${esc(el.dataset.rkN)}</span>`; };
+            img.src = u;
         });
     }
 
