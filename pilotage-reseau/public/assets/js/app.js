@@ -1522,7 +1522,9 @@ class App {
       ['Formation', [
         ['ext:formation/', 'Module Formation ↗', 0],
         // « Parcours compétences ↗ » (formation/parcours/) retiré le 06/11/2026 : le client n'en voit pas la nécessité.
-        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0]]],
+        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0],
+        // Le catalogue des manuels (19/11/2026, Sam) : feuilleter chaque manuel, l'imprimer en PDF, son QR code, le dépliant.
+        ['ext:formation/catalogue/', 'Catalogue des manuels ↗', 0]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];

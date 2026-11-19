@@ -1064,3 +1064,34 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
      l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
   5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
      `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».
+
+## Catalogue des manuels : feuilleter, PDF, QR code, dépliant (19/11/2026)
+
+Sam : « je dois pouvoir feuilleter en PDF les différents manuels ; créer dans le rail la possibilité de feuilleter les pages
+des différents manuels comme un catalogue ; un micro-catalogue ou leaflet qui explique le fonctionnement de tout, avec
+chaque fois un QR code qui ramène vers le manuel en question », puis « code it all and push online ». Maquettes :
+`docs/maquettes/catalogue-manuels/` (sur `claude/lucid-pascal-3ps6at`).
+
+- **Page** : `public/formation/catalogue/` (`index.html`, `catalogue.js`, `catalogue.css`), servie sous le module
+  (`…/formation/catalogue/`). Garde d'accès comme le cockpit (`assets/js/garde.js`), **sans** `data-siege` : le siège et un
+  franchisé peuvent l'ouvrir. Lecture seule, par l'API du module : `/formation/sop/liste`, `/formation/sop/fiche/{id}`,
+  `/formation/ref`.
+- **Quatre manuels** : le manuel opératoire (les articles), les standards (SOP, mémos, fiches), les checklists (les fiches de
+  checklist), le manuel du réseau (les domaines D1–D8, leurs sous-catégories et les standards rangés dans chacune). Les
+  brouillons n'y sont pas ; un document « à valider » porte une pastille.
+- **Feuilleter** (`#/m/<manuel>`) : couverture (nombre de documents, QR code), sommaire numéroté, puis chaque document sur
+  une nouvelle page ; pages A5 mises en page dans le navigateur (mesure après le chargement de Gotham), en double page sur
+  un grand écran, une page à la fois sur une tablette ; flèches, clavier, glissement, curseur ; FR | NL.
+- **PDF** (`#/m/<manuel>/imprimer`, ou « Imprimer · PDF ») : la fenêtre d'impression du navigateur, une page A5 par
+  feuille (« Enregistrer en PDF »). Pas de PDF du serveur.
+- **QR code** : le lien du feuilletage du manuel (`catalogue/#/m/<manuel>`), sur l'adresse où la page est ouverte.
+- **Dépliant** (`catalogue/depliant.html`) : six pages A4, design system (logo, filet bordeaux, pied « Page n / 6 ») : titre,
+  la franchise (d'après 0.0.21 et 0.0.23), puis une page par manuel avec son QR code ; les nombres lus dans le module ;
+  « Imprimer · enregistrer en PDF » (`depliant.html#imprimer` lance l'impression).
+- **Rail** : cockpit › Formation › « Catalogue des manuels ↗ » (`app.js`) ; module Formation › Documents › « Catalogue des
+  manuels ↗ » et « Dépliant des manuels ↗ » (`portail.js` ; `formation.js` sert une entrée `ext:…` comme un lien direct).
+- **Essai avant la mise en ligne** (navigateur sans tête, API du serveur en lecture) : manuel opératoire 396 pages, standards
+  145 (une page à la fois), checklists 23, manuel du réseau 13 ; PDF des checklists 23 pages A5 ; dépliant 6 pages A4,
+  4 QR codes ; aucune erreur.
+- **À corriger sur le fil** : l'accès des équipes sans session (la tablette du magasin n'ouvre pas le catalogue) ; la
+  longueur du manuel opératoire en PDF (un article par nouvelle page) ; les adresses des QR codes si une autre cible est voulue.
