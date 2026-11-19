@@ -239,6 +239,9 @@ try {
     expectOff($s === 200 && $b['data']['employee']['id'] === $ola, 'group QR: any registered phone (unchanged)');
 
     // --- Bez telefonu : PIN, pytania i podpis na tablecie biurowym ; z telefonem — kod QR (OFFICE_USE_PHONE)
+    // [356] Migracja 212 : PIN dla wszystkich (kiosk.office_pin_all = 1) ; tu najpierw zasada « 0 », potem « 1 ».
+    expectOff($pdo->query("SELECT value FROM n_prod_param WHERE code = 'kiosk.office_pin_all'")->fetchColumn() === '1', 'migration 212: PIN on the office tablet for everyone');
+    $call('PATCH', '/referentiels/params/kiosk.office_pin_all', ['value' => false], $manager);
     $call('DELETE', '/kiosk/employees/80/phones', null, $manager);
     [, $b] = $call('GET', '/kiosk/office/sections', null, $office);
     $jan = array_values(array_filter(array_column($b['data'], null, 'id')[1]['people'], fn($p) => $p['id'] === 20))[0];
