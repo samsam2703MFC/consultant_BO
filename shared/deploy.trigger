@@ -185,3 +185,4 @@
 2026-11-19T19:18:38Z Cockpit : Pointages retirés (#/pointages mène à l'accueil ; l'app employé et la borne pointent toujours)
 2026-11-19T19:24:18Z Pointage retiré partout : l'app employé (Accueil, /pointage, Mes pointages), la borne, la caisse et leurs routes ; les tables restent
 2026-11-19T19:30:50Z Entraînement de l'IA : toutes les photos 5/5 d'un type de tâche, toutes périodes (GET /ia/parfaites)
+2026-11-19T19:36:21Z Assistant · coachs, onglet KPI : chaque outil à la demande ou forcé par le coach (plus de « Coupé »)
