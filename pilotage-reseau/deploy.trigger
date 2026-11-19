@@ -163,3 +163,4 @@
 2026-11-19T15:02:05Z Catalogue des manuels : feuilleter, PDF, QR code, dépliant ; rail du cockpit et du module Formation
 2026-11-19T15:07:02Z Rail du cockpit réorganisé : 34 entrées sans sous-menu, les vues d'une même question en onglets (docs/audit-rail.md)
 2026-11-19T15:10:18Z Catalogue des manuels : liens directs vers les SOP, articles et checklists cités (écran et PDF)
+2026-11-19T15:32:09Z Catalogue des manuels : code des checklists en couleurs ; postes, formations et compétences dans le manuel du réseau
