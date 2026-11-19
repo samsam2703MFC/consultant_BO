@@ -7156,6 +7156,10 @@
       return `<button type="button" class="rv-chip${t === choisi ? (ok === false ? ' on wa' : ' on') : ''}" ${attr}="${esc(t)}">${esc(t)}</button>`; }).join('')}
       <button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>`;
   }
+  /** Les tâches pas faites d'une checklist (19/11/2026) : `pasFaites` du serveur, ou les seuls noms d'un serveur d'avant. */
+  const rvPasFaites = c => c.pasFaites || (c.manquent || []).map(t => ({ tache: t, heure: null, etat: 'pasFaite' }));
+  /** Une tâche pas faite par ligne : l'heure prévue, le nom, « cochée sans photo » quand seule la photo manque. */
+  const rvLignesPF = L => L.map(t => `<li><span class="h">${esc(t.heure || '—')}</span><span class="t">${esc(t.tache)}</span>${t.etat === 'photo' ? '<em>cochée sans photo</em>' : ''}</li>`).join('');
   function rvEcran() {
     const R = S.rv, D = R.D, e = R.etapes[R.i], C = D.checklists || { taches: 0, faites: 0, liste: [] };
     const nQ = R.etapes.length - 2, pos = Math.min(R.i, nQ);
@@ -7167,16 +7171,26 @@
       const n = C.liste.length, g = D.points.filter(p => !(p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok')).length;
       const qui = [...new Set([R.par, ...(C.qui || [])].filter(Boolean))];
       const deja = Object.keys(R.rep.points).length + Object.keys(R.rep.checklists).length;
-      return `<div class="rv-bul">Bonsoir${R.par ? ' ' + esc(R.par.split(' ')[0]) : ''} 👋<br>Aujourd’hui, <b>${C.faites} tâche${C.faites > 1 ? 's' : ''} obligatoire${C.faites > 1 ? 's' : ''} sur ${C.taches}</b> ${C.faites > 1 ? 'sont faites' : 'est faite'}. On passe en revue ${n ? `<b>${n} checklist${n > 1 ? 's' : ''} pas finie${n > 1 ? 's' : ''}</b> et ` : ''}<b>${g} point${g > 1 ? 's' : ''} de gestion</b>. Environ ${Math.max(1, Math.round((n + g) / 5))} minute${n + g > 7 ? 's' : ''}.</div>
-        ${n ? `<div class="rv-cards">${C.liste.slice(0, 6).map(c => `<div class="rv-mini">${rvPill(c)}<span>${esc(c.titre)}</span><b>${c.faites}/${c.total}</b></div>`).join('')}${n > 6 ? `<div class="rv-n">+ ${n - 6} autre${n - 6 > 1 ? 's' : ''}…</div>` : ''}</div>` : ''}
+      // Les tâches pas faites d'abord (19/11/2026) : leur nombre, puis par checklist.
+      const pf = Math.max(0, C.taches - C.faites);
+      const jour = C.lu === false ? 'les tâches du jour n’ont pas pu être lues'
+        : !C.taches ? 'aucune tâche obligatoire n’était prévue'
+        : pf ? `<b class="ko">${pl(pf, 'tâche obligatoire', 'tâches obligatoires')} pas faite${pf > 1 ? 's' : ''}</b> sur ${C.taches}`
+        : `<b class="ok">les ${C.taches} tâches obligatoires sont faites</b>`;
+      return `<div class="rv-bul">Bonsoir${R.par ? ' ' + esc(R.par.split(' ')[0]) : ''} 👋<br>Aujourd’hui, ${jour}. On passe en revue ${n ? `<b>${n} checklist${n > 1 ? 's' : ''} pas finie${n > 1 ? 's' : ''}</b> et ` : ''}<b>${g} point${g > 1 ? 's' : ''} de gestion</b>. Environ ${Math.max(1, Math.round((n + g) / 5))} minute${n + g > 7 ? 's' : ''}.</div>
+        ${n ? `<div class="rv-cards">${C.liste.slice(0, 6).map(c => { const m = c.total - c.faites; return `<div class="rv-mini">${rvPill(c)}<span>${esc(c.titre)}</span><b>${m} pas faite${m > 1 ? 's' : ''}</b></div>`; }).join('')}${n > 6 ? `<div class="rv-n">+ ${n - 6} autre${n - 6 > 1 ? 's' : ''}…</div>` : ''}</div>` : ''}
         <div class="rv-q">Qui fait la revue ?</div><div class="rv-rep">${qui.map(q => `<button type="button" class="rv-chip${q === R.par ? ' on' : ''}" data-rvpar="${esc(q)}">${esc(q)}</button>`).join('')}<button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>${autre}
         <div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">${deja ? 'Reprendre · ' + deja + ' réponse' + (deja > 1 ? 's' : '') + ' déjà données' : 'Commencer'}</button><button type="button" class="rv-b" data-rvfermer="1">Plus tard</button></div>`;
     }
     if (e.k === 'cl') {
-      const c = e.c, a = R.rep.checklists[c.nom] || {}, m = c.total - c.faites;
-      return `${prog}<div class="rv-ctx">${rvPill(c)} <span>${esc(c.titre)}</span><span class="rv-n">· ${c.faites} / ${c.total}${c.heure ? ' · ' + esc(c.heure) : ''}</span></div>
-        <div class="rv-bul"><b>${m} tâche${m > 1 ? 's' : ''}</b> de « ${esc(c.titre)} » ${m > 1 ? 'ne sont pas cochées' : 'n’est pas cochée'}. Pourquoi ?
-          <button type="button" class="rv-lien" data-rvvoir="1">${R.voir ? 'cacher les tâches ▴' : 'voir les tâches ▾'}</button>${R.voir ? `<ul class="rv-ul">${c.manquent.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div>
+      // Les tâches pas faites se lisent d'emblée (19/11/2026), à l'heure prévue ; au-delà de huit, « + N autres ».
+      const c = e.c, a = R.rep.checklists[c.nom] || {}, m = c.total - c.faites, P = rvPasFaites(c);
+      const nPh = P.filter(t => t.etat === 'photo').length, MAX = 8, vus = R.voir ? P : P.slice(0, MAX), reste = m - vus.length;
+      return `${prog}<div class="rv-ctx">${rvPill(c)} <span>${esc(c.titre)}</span><span class="rv-n">· ${c.faites} / ${c.total} faites${c.heure ? ' · ' + esc(c.heure) : ''}</span></div>
+        <div class="rv-bul"><b class="ko">${m} tâche${m > 1 ? 's' : ''} pas faite${m > 1 ? 's' : ''}</b> dans « ${esc(c.titre)} »${nPh ? ` <span class="rv-n0">(dont ${nPh} cochée${nPh > 1 ? 's' : ''} sans photo)</span>` : ''} :
+          ${vus.length ? `<ul class="rv-pf">${rvLignesPF(vus)}</ul>` : ''}
+          ${P.length > MAX ? `<button type="button" class="rv-lien" data-rvvoir="1">${R.voir ? 'n’en montrer que ' + MAX + ' ▴' : '+ ' + (P.length - MAX) + ' autre' + (P.length - MAX > 1 ? 's' : '') + ' ▾'}</button>` : reste > 0 ? `<span class="rv-n0">+ ${reste} autre${reste > 1 ? 's' : ''}</span>` : ''}
+          <div class="rv-pq">Pourquoi ?</div></div>
         ${a.r ? `<div class="rv-bul moi">${esc(a.r)}</div>` : ''}
         ${rvChips(D.raisons, a.r, 'data-rvcl')}${autre}${com('cl:' + c.nom, a.c)}`;
     }
@@ -7205,11 +7219,13 @@
     const V = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
     const X = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     const rond = e => `<span class="rv-rd e-${e}">${e === 'ko' ? X : V}</span>`;
+    const det = {}; (C.liste || []).forEach(c => { det[c.nom] = rvPasFaites(c); });
     const toutes = (C.toutes && C.toutes.length ? C.toutes : C.liste).map(c => {
       const r = (cl[c.nom] || {}).r || '';
       const etat = c.faites >= c.total ? 'ok' : (/fait/i.test(r) && /pas coch/i.test(r) ? 'npc' : 'ko');
-      return Object.assign({}, c, { r, etat, zone: /^\d/.test(c.code || '') ? +c.code[0] : 0 });
+      return Object.assign({}, c, { r, etat, zone: /^\d/.test(c.code || '') ? +c.code[0] : 0, pf: c.faites >= c.total ? [] : (det[c.nom] || []) });
     });
+    const pf = Math.max(0, C.taches - C.faites);
     const ZN = { 1: 'Vente', 2: 'Boulangerie', 3: 'Traiteur', 4: 'Nettoyage', 5: 'Gestion', 0: 'Autres' };
     const zc = z => (TJ_ZONES[z] || [0, '#5c5852'])[1];
     const zones = [...new Set(toutes.map(c => c.zone))].sort((a, b) => (a || 9) - (b || 9));
@@ -7221,10 +7237,10 @@
     const nOk = toutes.filter(c => c.etat !== 'ko').length, gOk = gp.filter(g => g.etat === 'ok').length;
     const sc = (v, l, cls) => `<div class="${cls || ''}"><b>${v}</b><small>${l}</small></div>`;
     return `${prog}<div class="rv-fin"><b>${rv.statut === 'cloturee' ? 'Journée clôturée' : 'Revue pas encore clôturée'}</b><span class="rv-n">${rv.clotureLe ? 'à ' + esc(rv.clotureLe.slice(11, 16)) : ''}${rv.par ? ' par ' + esc(rv.par) : ''}</span></div>
-      <div class="rv-sc4">${sc(C.faites + ' / ' + C.taches, 'tâches faites')}${sc(nOk, 'checklists ✓', 'e-ok')}${sc(toutes.length - nOk, 'checklists ✗', toutes.length - nOk ? 'e-ko' : 'e-ok')}${sc(gOk + ' / ' + gp.length, 'gestion ✓', gOk === gp.length ? 'e-ok' : 'e-wa')}</div>
+      <div class="rv-sc4">${sc(pf, (pf > 1 ? 'pas faites' : 'pas faite') + ' sur ' + C.taches, pf ? 'e-ko' : 'e-ok')}${sc(nOk, 'checklists ✓', 'e-ok')}${sc(toutes.length - nOk, 'checklists ✗', toutes.length - nOk ? 'e-ko' : 'e-ok')}${sc(gOk + ' / ' + gp.length, 'gestion ✓', gOk === gp.length ? 'e-ok' : 'e-wa')}</div>
       ${zones.map(z => { const L = toutes.filter(c => c.zone === z), ok = L.filter(c => c.etat !== 'ko').length;
         return `<div class="rv-zc"><div class="rv-zch" style="background:${zc(z)}"><b>${ZN[z] || ZN[0]}</b><span class="rv-zs">${ok} / ${L.length}</span><span class="rv-zb"><i style="width:${Math.round(100 * ok / L.length)}%"></i></span></div>
-          ${L.map(c => `<div class="rv-cl e-${c.etat}">${rond(c.etat)}<b class="rv-cd" style="color:${zc(z)}">${esc(c.code || '—')}</b><span class="rv-ct">${esc(c.titre)}<small>${c.faites} / ${c.total} · ${c.etat === 'ok' ? 'faite' : esc(c.r || 'pas de raison')}</small></span></div>`).join('')}</div>`; }).join('')}
+          ${L.map(c => `<div class="rv-cl e-${c.etat}">${rond(c.etat)}<b class="rv-cd" style="color:${zc(z)}">${esc(c.code || '—')}</b><span class="rv-ct">${esc(c.titre)}<small>${c.faites} / ${c.total} · ${c.etat === 'ok' ? 'faite' : esc(c.r || 'pas de raison')}</small></span></div>${c.pf.length ? `<ul class="rv-pf rv-clt e-${c.etat}">${rvLignesPF(c.pf)}</ul>` : ''}`).join('')}</div>`; }).join('')}
       <div class="rv-sec">Gestion</div><div class="rv-tu">${gp.map(g => `<div class="rv-t e-${g.etat}">${rond(g.etat)}<b>${esc(g.p.icone || '')}</b><span>${esc(g.p.titre)}</span><small>${esc(g.txt)}</small></div>`).join('')}</div>
       ${R.rep.demain ? `<div class="rv-dem"><span>Pour demain</span>« ${esc(R.rep.demain)} »</div>` : ''}
       <div class="rv-pied"><button type="button" class="rv-b p" data-rvfermer="1">Fermer</button>${rv.statut === 'cloturee' ? '<button type="button" class="rv-lien" data-rvrouvrir="1">Rouvrir la revue</button>' : ''}</div>`;
