@@ -33,6 +33,9 @@ declare(strict_types=1);
  *   POST   /fil/fils/{id}                {titre?, resolu?} — renommer, résoudre ou rouvrir un fil
  *   GET    /fil/pieces/{id}              — le fichier d'une pièce (sorti tel quel, pas en JSON : public/api/index.php)
  *
+ * Le passé s'importe (19/11/2026) : src/fil_import.php et bin/fil_import.php posent, par filEntreeCreer, les entrées
+ * préparées et relues hors du cockpit (courrier, Drive, agenda, WhatsApp), à leur date, sans rien écrire deux fois.
+ *
  * Les demandes du helpdesk se lisent à part, par la route existante GET /helpdesk/magasin?shop= (src/helpdesk.php) :
  * un appel au panel ne doit pas retarder le fil.
  */
@@ -475,21 +478,31 @@ function filFermer(int $fil, ?int $entree, ?string $le): void
 /** POST /fil/entrees — une entrée au fil d'un magasin. */
 function wr_fil_entree_creer(): array
 {
+    $r = filEntreeCreer(body());
+    if (isset($r['code'])) { http_response_code((int) $r['code']); unset($r['code']); }
+    return $r;
+}
+
+/**
+ * Pose une entrée au fil : le corps de POST /fil/entrees, partagé avec l'import rétroactif (bin/fil_import.php).
+ * Rend l'entrée, ou une erreur avec le code HTTP à poser (« code »).
+ */
+function filEntreeCreer(array $b): array
+{
     filTables();
-    $b = body();
     $shop = trim((string) ($b['shop'] ?? ''));
-    if (!filMagasinConnu($shop)) { http_response_code(422); return ['error' => 'magasin inconnu']; }
+    if (!filMagasinConnu($shop)) { return ['code' => 422, 'error' => 'magasin inconnu']; }
     $texte = trim((string) ($b['texte'] ?? ''));
-    if (mb_strlen($texte) > FIL_TEXTE_MAX) { http_response_code(422); return ['error' => 'texte trop long (' . FIL_TEXTE_MAX . ' caractères au plus)']; }
+    if (mb_strlen($texte) > FIL_TEXTE_MAX) { return ['code' => 422, 'error' => 'texte trop long (' . FIL_TEXTE_MAX . ' caractères au plus)']; }
     [$pieces, $err] = filPiecesLues($b['pieces'] ?? null);
-    if ($err !== null) { http_response_code(422); return ['error' => $err]; }
-    if ($texte === '' && $pieces === []) { http_response_code(422); return ['error' => 'une note, une photo ou une capture']; }
+    if ($err !== null) { return ['code' => 422, 'error' => $err]; }
+    if ($texte === '' && $pieces === []) { return ['code' => 422, 'error' => 'une note, une photo ou une capture']; }
     $le = array_key_exists('le', $b) && $b['le'] !== null && $b['le'] !== '' ? filDateHeure($b['le']) : date('Y-m-d H:i:00');
-    if ($le === null) { http_response_code(422); return ['error' => 'date illisible']; }
+    if ($le === null) { return ['code' => 422, 'error' => 'date illisible']; }
     $tags = filTags($b['tags'] ?? []);
     $type = filTypeDe($b['type'] ?? null, array_column($pieces, 'genre'));
     $fil = filDuMagasin($b['fil'] ?? null, $shop);
-    if (($b['fil'] ?? null) !== null && ($b['fil'] ?? '') !== '' && $fil === null) { http_response_code(422); return ['error' => 'fil inconnu pour ce magasin']; }
+    if (($b['fil'] ?? null) !== null && ($b['fil'] ?? '') !== '' && $fil === null) { return ['code' => 422, 'error' => 'fil inconnu pour ce magasin']; }
     $maintenant = date('Y-m-d H:i:s');
     $pdo = Db::pdo();
     $pdo->beginTransaction();
@@ -505,8 +518,7 @@ function wr_fil_entree_creer(): array
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
-        http_response_code(500);
-        return ['error' => 'entrée non enregistrée : ' . $e->getMessage()];
+        return ['code' => 500, 'error' => 'entrée non enregistrée : ' . $e->getMessage()];
     }
     $r = Db::row('SELECT * FROM pil_fil_entree WHERE id = ?', [$id]);
     return ['ok' => true, 'entree' => filEntreeLigne($r, Db::rows('SELECT * FROM pil_fil_piece WHERE entree_id = ? ORDER BY id', [$id])), 'filOuvert' => $ouvert ? $filId : null];

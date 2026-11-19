@@ -11,7 +11,7 @@ declare(strict_types=1);
  * Les règles pures (étiquettes, dates, titre d'un fil, type, code d'une semaine, lignes du dossier), l'entrée et ses
  * pièces (rangées dans le dossier privé, refusées sans rien écrire), les fils (un problème de gestion en ouvre un, une
  * suite le ferme, l'effacer le rouvre, un fil vide disparaît), la lecture d'un magasin (entrées, visites, rapports,
- * client mystère, filtre de l'année) et la carte des magasins.
+ * client mystère, filtre de l'année), la carte des magasins et l'import rétroactif (src/fil_import.php).
  */
 $ok = 0; $ko = 0;
 // En ligne de commande, le code HTTP ne se pose pas après une sortie : l'avertissement ne dit rien du code testé.
@@ -173,6 +173,47 @@ verifie('aucune route du fil n’est ouverte au franchisé', !array_filter(['/fi
 verifie('la table ne garde aucun drapeau « visible »', !in_array('visible', array_column(Db::rows('PRAGMA table_info(pil_fil_entree)'), 'name'), true));
 $GLOBALS['corps'] = ['shop' => '5', 'texte' => 'Note interne.', 'visible' => true];
 verifie('« visible » envoyé quand même : ignoré, l’entrée reste interne', !array_key_exists('visible', wr_fil_entree_creer()['entree'] ?? ['visible' => 1]));
+
+echo "L'import rétroactif\n";
+require __DIR__ . '/../src/fil_import.php';
+$doc = ['shop' => '4', 'magasin' => 'Halle', 'auteur' => 'Import courrier',
+    'fils' => ['loyer' => ['titre' => 'Loyer du bâtiment en retard']],
+    'entrees' => [
+        ['le' => '2026-10-21 10:05', 'texte' => 'Conciliation demandée à l’avocat.', 'tags' => ['finances'], 'fil' => 'loyer',
+            'source' => ['type' => 'gmail', 'titre' => 'Demande de mission de conciliation', 'url' => 'https://mail.example/x'], 'confiance' => 'haute'],
+        ['le' => '2026-10-02 09:12', 'texte' => 'Paiement du loyer en retard, relance du bailleur.', 'tags' => ['gestion', 'finances'], 'fil' => 'loyer',
+            'source' => ['type' => 'gmail', 'titre' => 'Achterstallige betaling']],
+        ['le' => '2026-11-03 16:00', 'texte' => 'Arriéré réglé.', 'tags' => ['bonne', 'finances'], 'fil' => 'loyer', 'ferme' => true],
+        ['le' => '2026-05-07 12:16', 'type' => 'appel', 'texte' => 'Trois nouveaux clients B2B.', 'tags' => ['bonne', 'client']],
+    ]];
+[$lu, $err] = filImportLire($doc);
+verifie('un fichier correct se lit', $lu !== null && $err === [], implode(' ; ', $err));
+verifie('les entrées dans l’ordre des dates', array_column($lu['entrees'], 'le') === ['2026-05-07 12:16:00', '2026-10-02 09:12:00', '2026-10-21 10:05:00', '2026-11-03 16:00:00']);
+verifie('la source termine le texte, sans son adresse', str_ends_with($lu['entrees'][1]['texte'], "\n\nSource : Gmail — « Achterstallige betaling »")
+    && !str_contains(implode(' ', array_column($lu['entrees'], 'texte')), 'mail.example'));
+$faux = static fn (array $e): array => filImportLire(['shop' => '4', 'entrees' => [$e]])[1];
+verifie('une étiquette inconnue : refus', (bool) $faux(['le' => '2026-03-01', 'texte' => 'x', 'tags' => ['gestionn']]));
+verifie('deux étiquettes de sens : refus', (bool) $faux(['le' => '2026-03-01', 'texte' => 'x', 'tags' => ['gestion', 'bonne']]));
+verifie('une photo sans pièce : refus', (bool) $faux(['le' => '2026-03-01', 'type' => 'photo', 'texte' => 'x']));
+verifie('une date illisible : refus', (bool) $faux(['le' => 'mars', 'texte' => 'x']));
+verifie('un fil ouvert sans « gestion » : refus', (bool) $faux(['le' => '2026-03-01', 'texte' => 'x', 'tags' => ['finances'], 'fil' => 'k']));
+verifie('« ferme » sans fil : refus', (bool) $faux(['le' => '2026-03-01', 'texte' => 'x', 'ferme' => true]));
+$avant = (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'];
+$blanc = filImportAppliquer($lu, false);
+verifie('à blanc : rien n’est écrit', (int) Db::row('SELECT COUNT(*) n FROM pil_fil_entree')['n'] === $avant
+    && $blanc['nouvelles'] === 4 && $blanc['filsOuverts'] === ['loyer'] && $blanc['filsFermes'] === ['loyer']);
+$cr = filImportAppliquer($lu, true);
+$loyer = Db::row('SELECT * FROM pil_fil WHERE shop_id = ? AND titre = ?', ['4', 'Loyer du bâtiment en retard']);
+$lignes = Db::rows('SELECT * FROM pil_fil_entree WHERE shop_id = ? AND auteur = ? ORDER BY le', ['4', 'Import courrier']);
+verifie('écrit : quatre entrées, à leur date, avec leur auteur', $cr['erreur'] === null && $cr['nouvelles'] === 4 && count($lignes) === 4
+    && $lignes[0]['le'] === '2026-05-07 12:16:00' && $lignes[0]['type'] === 'appel');
+verifie('le fil : ouvert par le problème, sous le titre du fichier', $loyer !== null && $loyer['ouvert_le'] === '2026-10-02 09:12:00');
+verifie('les suites sont dans le fil, la dernière le ferme', count(array_filter($lignes, static fn ($l) => (int) $l['fil_id'] === (int) $loyer['id'])) === 3
+    && $loyer['resolu_le'] === '2026-11-03 16:00:00' && (int) $loyer['resolu_par'] === (int) $lignes[3]['id']);
+$encore = filImportAppliquer($lu, true);
+verifie('rejouer : rien n’est écrit deux fois', $encore['nouvelles'] === 0 && $encore['deja'] === 4
+    && (int) Db::row('SELECT COUNT(*) n FROM pil_fil WHERE titre = ?', ['Loyer du bâtiment en retard'])['n'] === 1);
+verifie('un magasin inconnu : arrêt', filImportAppliquer(['shop' => '99', 'magasin' => 'x', 'titres' => [], 'entrees' => []], true)['erreur'] !== null);
 
 // Le banc s'efface.
 foreach (glob($prive . '/fil/*') ?: [] as $x) { @unlink($x); }
