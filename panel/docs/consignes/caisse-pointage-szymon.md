@@ -1,5 +1,8 @@
 # POS clock-in / clock-out — brief for Szymon
 
+> **Withdrawn on 19 November 2026.** Clock-in / clock-out has been removed from L'Atelier (app, kiosk, POS and cockpit).
+> `GET /pointage/borne` and `POST /pointage/borne/pointer` now answer 404: do not build or ship this button.
+
 **Task.** Add a "Clock in / out" button to the L'Atelier POS. It opens a full-screen panel with two modes:
 
 - **QR (default):** show the shop's live QR code. Staff scan it with the Atelier employee app.

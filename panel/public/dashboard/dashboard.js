@@ -2568,7 +2568,6 @@
     try { return opMin(new Date().toLocaleTimeString('fr-BE', { timeZone: 'Europe/Brussels', hour: '2-digit', minute: '2-digit', hour12: false })); }
     catch (e) { const t = new Date(); return t.getHours() * 60 + t.getMinutes(); }
   }
-  const opDans = (m, now) => { const d = m - now; return d < 60 ? 'dans ' + d + ' min' : 'dans ' + Math.floor(d / 60) + ' h ' + String(d % 60).padStart(2, '0'); };
   /** Vide quand : la première heure où la vitrine passe à zéro ou dessous, et l'heure où une cuisson la remplit. */
   function opVide(p) {
     const c = Array.isArray(p.cases) ? p.cases : [];
@@ -3591,16 +3590,16 @@
   }
   /**
    * La journée au téléphone (11/10/2026) : une frise de la journée. Une barre fine par personne au planning, le nom dedans
-   * (vert en poste, gris fini, cadre à venir), le trait de maintenant, et les cuissons en repères dessous, à l'heure du four
-   * (vert validée, orange à valider, cadre à venir). Le détail de chaque barre ou repère dans son infobulle.
+   * (vert en poste, gris fini, cadre à venir), et le trait de maintenant. Le détail de chaque barre dans son infobulle.
+   * Les cuissons (repères à l'heure du four et leurs libellés) sont retirées le 19/11/2026, comme au bureau (Sam : « pour
+   * le moment elles ne servent à rien ») ; leur code est dans l'historique (git log -S "jm-cl").
    */
   function opJourneeMob(D) {
-    const { now, m, planning, cuissons } = D;
+    const { now, m, planning } = D;
     const tete = `<div class="ct"><span class="op-h2">La journée</span><span class="db-mini" style="margin-left:auto">${m && m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : ''}${now != null && planning.length ? ' · ' + fN(planning.filter(p => opMin(p.debut) <= now && now < opMin(p.fin)).length) + ' en poste' : ''}</span></div>`;
     const pts = [];
     planning.forEach(p => { pts.push(opMin(p.debut), opMin(p.fin)); });
-    cuissons.forEach(c => { pts.push(opMin(c.four)); });
-    if (!pts.length) { return `<div class="db-card op-bloc">${tete}<div class="db-mini" style="padding:10px 14px">${m ? 'pas de planning ni de cuisson lus' : 'lecture…'}</div></div>`; }
+    if (!pts.length) { return `<div class="db-card op-bloc">${tete}<div class="db-mini" style="padding:10px 14px">${m ? 'pas de planning lu' : 'lecture…'}</div></div>`; }
     const h0 = Math.floor(Math.min(...pts) / 60), h1 = Math.max(h0 + 1, Math.ceil(Math.max(...pts) / 60));
     const x = mn => Math.max(0, Math.min(100, 100 * (mn / 60 - h0) / (h1 - h0)));
     const pas = h1 - h0 > 12 ? 3 : 2, axe = [];
@@ -3612,20 +3611,10 @@
       // Toucher la barre d'une personne ouvre « L'équipe du jour » sur elle (18/11/2026).
       return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}" data-eqm="${esc(p.nom || '')}" role="button" tabindex="0"><b>${esc(nom)}</b></i></div>`;
     }).join('');
-    const CS = cuissons.slice().sort((a, b) => opMin(a.four) - opMin(b.four)).map(c => {
-      const t = opMin(c.four), cls = c.valide ? 'ok' : (now != null && t > now ? 'av' : 'kv');
-      return { c, t, cls, etat: c.valide ? 'validée' : (now != null && t > now ? opDans(t, now) : 'à valider') };
-    });
-    // Les cuissons : un repère à l'heure du four sur la frise, et leurs libellés en une ligne dessous (sans chevauchement).
-    const reperes = CS.map(k => `<span class="${k.cls}" style="left:${x(k.t).toFixed(2)}%" title="four ${esc(k.c.four)} · ${esc(k.c.nom)}"></span>`).join('');
-    // Court : l'heure, la cuisson, les pièces ; la couleur dit l'état, et la prochaine cuisson dit dans combien de temps.
-    const prochaine = CS.find(k => k.cls === 'av');
-    const fours = CS.map(k => `<span class="${k.cls}" title="${esc(k.c.nom)} · ${fN(k.c.pieces)} pièces, ${esc(k.c.de)} à ${esc(k.c.a)} · four ${esc(k.c.four)} · ${esc(k.etat)}"><i></i><b>${esc(k.c.four)}</b> ${esc(k.c.nom)} ${fN(k.c.pieces)}${k === prochaine ? ' · <em>' + esc(k.etat) + '</em>' : ''}</span>`).join('');
     const tn = now != null && now >= h0 * 60 && now <= h1 * 60 ? `<span class="jm-now" style="left:${x(now).toFixed(2)}%"></span>` : '';
     return `<div class="db-card op-bloc">${tete}<div class="jm">
       <div class="jm-ax">${axe.join('')}</div>
       <div class="jm-z">${tn}${barres || '<div class="db-mini">pas de planning lu</div>'}</div>
-      ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
       </div>${planning.length ? '<div class="op-tap op-eqm" data-eqm="" role="button" tabindex="0"><span>L’équipe du jour : ventes, heures, à l’heure</span><span>›</span></div>' : ''}</div>`;
   }
   /**
@@ -3759,7 +3748,7 @@
   }
   function rendOps() {
     const D = opDonnees();
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, INV, NC, PR, prods, vides, manques, trop, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk } = D;
     let h = '';
 
     /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
@@ -3787,9 +3776,8 @@
     const ligneF = (lb, haut, contenu) => `<div class="op-fl" style="height:${haut + 8}px"><span class="lb">${lb}</span><div class="pis" style="height:${haut}px">${contenu}${trait}</div></div>`;
     let frise = '';
     frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
-    frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
-    frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
-    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
+    // Les lignes Four, Vitrine et Commandes sont retirées (19/11/2026, Sam : « pour le moment elles ne servent à rien ») ;
+    // leur code est dans l'historique (git log -S "ligneF('Vitrine'").
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;

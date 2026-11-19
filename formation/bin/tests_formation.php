@@ -154,5 +154,31 @@ verifie('supports : https seulement, une même adresse par étape une seule fois
     array_map(static fn ($x) => [$x['url'], $x['etape']], $sup) === [['https://www.youtube.com/watch?v=aqz-KE-bpKQ', 0], ['https://www.youtube.com/watch?v=aqz-KE-bpKQ', null], ['https://x.be/guide.pdf', 3], ['https://x.be/a.pdf', null]], json_encode($sup));
 verifie('supports : titre rogné, vingt au plus', $sup[0]['titre'] === 'Vidéo' && count(mnSupports(array_map(static fn ($i) => ['url' => 'https://x.be/' . $i . '.pdf'], range(1, 30)))) === 20);
 
+// --- les fiches techniques (src/fiches_techniques.php) : ce que le manuel garde d'une fiche du panel ---
+require_once __DIR__ . '/../src/fiches_techniques.php';
+$ftF = ftResume(['object' => ['name' => 'Plateau mini', 'category_name' => 'Plateau Sandwich', 'storage_temperature' => 4, 'shelf_life_minutes' => 1444,
+        'reheating_time_minutes' => 0, 'reheating_temperature_celsius' => 0, 'allergene' => 'Lait, Œufs', 'is_prepared_before_sales' => 1],
+    'recipe' => ['name' => 'Plateau mini', 'yield_quantity' => '1.00', 'elements' => [['name' => 'Thon mayo', 'recipe_quantity' => 240, 'unit_name' => 'g', 'type' => 'ingredient',
+        'allergens' => [['name' => 'Poisson'], 'Œufs']]]],
+    'preparation' => ['types' => [], 'steps' => [['step_number' => 1, 'step_description' => " Couper\r\nen deux "]]],
+    'package' => ['name' => 'Emballage plats', 'materials' => [['name' => 'Ravier']]], 'competences' => [['id' => 12, 'name' => 'Composition Traiteur']],
+    'photos' => ['main_photo_path' => '', 'shop_photo_path' => 'https://x/p.webp']]);
+verifie('fiches techniques : ingrédients, étapes d’une ligne, emballage, compétences, photo',
+    $ftF['ingredients'][0]['qte'] === 240.0 && $ftF['etapes'] === ['Couper en deux'] && $ftF['emballage']['materiaux'] === ['Ravier']
+    && $ftF['competences'] === ['Composition Traiteur'] && $ftF['photo'] === true && $ftF['avantVente'] === true, json_encode($ftF, JSON_UNESCAPED_UNICODE));
+verifie('fiches techniques : allergènes du produit et des ingrédients, sans doublon ; 0 °C de remise en température = aucune',
+    $ftF['allergenes'] === ['Lait', 'Œufs', 'Poisson'] && $ftF['rechauffe'] === null && $ftF['temperature'] === 4.0);
+verifie('fiches techniques : une fiche vide reste vide (rien d’inventé)', ftResume([])['ingredients'] === [] && ftResume([])['temperature'] === null && ftResume([])['photo'] === false);
+verifie('fiches techniques : la gamme — standard, saison (noms sans emoji), aucune',
+    ftGamme(['standard' => true, 'periods' => ['🥖 Standard']])['gamme'] === 'standard'
+    && ftGamme(['saisonnier' => true, 'periods' => ['🍂 Automnale', '❄️ Hivernale']])['saisons'] === ['Automnale', 'Hivernale']
+    && ftGamme(['periods' => []])['gamme'] === 'aucune');
+
+$ftL = [['groupe' => 'Épicerie', 'categorie' => 'B', 'gamme' => 'standard', 'nom' => 'x'], ['groupe' => 'Viennoiserie', 'categorie' => 'A', 'gamme' => 'standard', 'nom' => 'y'],
+    ['groupe' => 'Épicerie', 'categorie' => 'B', 'gamme' => 'saison', 'nom' => 'a'], ['groupe' => 'Épicerie', 'categorie' => 'B', 'gamme' => 'standard', 'nom' => 'b']];
+usort($ftL, static fn ($a, $b) => ftOrdre($a) <=> ftOrdre($b));
+verifie('fiches techniques : l’ordre — Épicerie avant Viennoiserie ; standard puis saison ; puis le nom',
+    array_column($ftL, 'nom') === ['b', 'x', 'a', 'y'], json_encode(array_column($ftL, 'nom')));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);

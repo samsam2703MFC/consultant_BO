@@ -395,5 +395,18 @@ verifie('par défaut : tout part, sauf le client mystère sans relevé et le fil
 verifie('le fil du franchisé ne part jamais sur la tablette, même coché', !in_array('fil', array_column(suDossierTablette($blocsT, ['fil' => true, 'msp' => true]), 'cle'), true));
 verifie('un bloc retiré par le bureau ne part pas', array_column(suDossierTablette($blocsT, ['sante' => false]), 'cle') === ['meteo']);
 
+echo "\nLes visites non signées, à effacer (19/11/2026)\n";
+$jour = '2026-11-19';
+$vNs = static fn (string $statut, string $le, ?string $rap = null): array => ['statut' => $statut, 'prevu_le' => $le, 'rapport_statut' => $rap];
+verifie('à venir, prévue aujourd’hui ou plus tard', suNonSigneeGroupe($vNs('planifiee', '2026-11-19'), false, $jour) === 'avenir' && suNonSigneeGroupe($vNs('confirmee', '2026-12-02'), false, $jour) === 'avenir');
+verifie('date passée sans avoir été faite', suNonSigneeGroupe($vNs('planifiee', '2026-11-18'), false, $jour) === 'passee');
+verifie('en cours sur la tablette', suNonSigneeGroupe($vNs('en_cours', '2026-11-19'), false, $jour) === 'cours');
+verifie('terminée sans signature, brouillon du rapport au bureau', suNonSigneeGroupe($vNs('terminee', '2026-11-17', 'brouillon'), false, $jour) === 'terminee');
+verifie('le rapport parti, ou une vieille visite sans brouillon : plus dans la liste', suNonSigneeGroupe($vNs('terminee', '2026-11-17', 'envoye'), false, $jour) === null
+    && suNonSigneeGroupe($vNs('terminee', '2026-09-17'), false, $jour) === null);
+verifie('signée ou annulée : plus dans la liste', suNonSigneeGroupe($vNs('terminee', '2026-11-17', 'brouillon'), true, $jour) === null && suNonSigneeGroupe($vNs('en_cours', '2026-11-19'), true, $jour) === null
+    && suNonSigneeGroupe($vNs('annulee', '2026-11-25'), false, $jour) === null);
+verifie('sans base : la liste est vide, pas d’erreur', suNonSignees() === [] && suNonSignees('c1') === []);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

@@ -4,7 +4,9 @@
 <script src="../../assets/js/garde.js" data-api="../api/cockpit"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Dépliant — Comment lire les manuels — L’Atelier by</title>
 <style>
-  @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Regular.otf'); font-weight: 400; }
+  /* 19/11/2026 (Sam : « tout est trop en gras ») : « Gotham_Regular.otf » est en réalité Gotham Black ; le texte, les titres
+     et les sous-titres prennent Gotham Light, Medium reste aux petits libellés et aux badges. */
+  @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Light.otf'); font-weight: 400; }
   @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Medium.otf'); font-weight: 500; }
   @font-face { font-family: 'Gotham'; src: url('../fonts/Gotham_Light.otf'); font-weight: 300; }
   :root { --ink:#1c1a17; --muted:#7a736a; --faint:#B8B2A8; --paper:#faf7f2; --line:#e6e0d8; --chip:#EDE7DE; --accent:#8D1D2C; --accent-soft:#F6EEEF; --prize-soft:#F6E7CE; --prize-ink:#7A5207; }
@@ -20,8 +22,8 @@
   .pied { position: absolute; left: 16mm; right: 16mm; bottom: 9mm; font-size: 7.5pt; color: var(--muted); display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 3mm; }
 
   .kicker { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 500; margin-top: 9mm; }
-  h1 { font-size: 30pt; font-weight: 500; line-height: 1.1; margin: 3mm 0 4mm; letter-spacing: -.01em; }
-  h2 { font-size: 22pt; font-weight: 500; line-height: 1.15; margin: 3mm 0 4mm; }
+  h1 { font-size: 30pt; font-weight: 400; line-height: 1.1; margin: 3mm 0 4mm; letter-spacing: -.01em; }
+  h2 { font-size: 22pt; font-weight: 400; line-height: 1.15; margin: 3mm 0 4mm; }
   p { font-size: 10pt; line-height: 1.55; margin: 0 0 3mm; }
   .lead { font-size: 12pt; line-height: 1.45; color: var(--ink); margin: 0 0 6mm; }
   ul { margin: 0; padding-left: 4.5mm; font-size: 10pt; line-height: 1.5; }
@@ -29,36 +31,36 @@
 
   .colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin-top: 5mm; }
   .carte { background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 4.5mm 5mm; }
-  .carte h3 { font-size: 10.5pt; font-weight: 500; color: var(--accent); margin: 0 0 2.5mm; }
+  .carte h3 { font-size: 10.5pt; font-weight: 400; color: var(--accent); margin: 0 0 2.5mm; }
   .carte ul { font-size: 9.5pt; }
 
   .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; margin: 6mm 0 2mm; }
   .stat { background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 4mm; }
-  .stat b { display: block; font-size: 20pt; font-weight: 500; color: var(--accent); line-height: 1.1; }
+  .stat b { display: block; font-size: 20pt; font-weight: 400; color: var(--accent); line-height: 1.1; }
   .stat small { font-size: 8.5pt; color: var(--muted); line-height: 1.4; display: block; margin-top: 1.5mm; }
 
   .encadre { border-left: 2.5px solid var(--accent); background: var(--accent-soft); padding: 4mm 5mm; border-radius: 0 3mm 3mm 0; margin-top: 5mm; font-size: 9.5pt; line-height: 1.5; }
-  .encadre b { font-weight: 500; }
+  .encadre b { font-weight: 400; }
   /* Une franchise bien tenue (19/11/2026) : les huit questions du test de vendabilité de l'article 0.0.56. */
-  .bt-titre { font-size: 13pt; font-weight: 500; margin: 1.5mm 0 1mm; color: var(--ink); line-height: 1.25; }
+  .bt-titre { font-size: 13pt; font-weight: 400; margin: 1.5mm 0 1mm; color: var(--ink); line-height: 1.25; }
   .bt-lead { font-size: 9pt; color: var(--muted); margin: 0 0 3mm; }
   ol.bt { list-style: none; counter-reset: bt; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm 4mm; }
   ol.bt li { counter-increment: bt; background: #fff; border: 1px solid var(--line); border-radius: 2.5mm; padding: 2.6mm 3mm 2.6mm 10.5mm; position: relative; font-size: 8.8pt; line-height: 1.4; }
   ol.bt li::before { content: counter(bt); position: absolute; left: 3mm; top: 2.6mm; width: 5mm; height: 5mm; border-radius: 50%; background: var(--accent); color: #fff; font-size: 7.5pt; text-align: center; line-height: 5mm; }
-  ol.bt li b { font-weight: 500; color: var(--accent); }
+  ol.bt li b { font-weight: 400; color: var(--accent); }
   .bt-src { font-size: 8pt; color: var(--muted); margin: 2.5mm 0 0; }
 
   .qrbloc { position: absolute; left: 16mm; right: 16mm; bottom: 26mm; background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 5mm; display: grid; grid-template-columns: 34mm 1fr; gap: 6mm; align-items: center; }
   .qrbloc .img svg { width: 34mm; height: 34mm; display: block; }
-  .qrbloc h3 { font-size: 11pt; font-weight: 500; margin: 0 0 2mm; color: var(--accent); }
+  .qrbloc h3 { font-size: 11pt; font-weight: 400; margin: 0 0 2mm; color: var(--accent); }
   .qrbloc p { font-size: 9pt; color: var(--muted); margin: 0 0 2mm; }
   .qrbloc .url { font-size: 7.5pt; color: var(--ink); background: var(--paper); padding: 2mm 3mm; border-radius: 2mm; word-break: break-all; }
 
   table.tab { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 3mm; background: #fff; }
   table.tab td, table.tab th { border-bottom: 1px solid var(--line); padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
   table.tab th { font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
-  table.tab td:first-child { font-weight: 500; color: var(--accent); white-space: nowrap; }
-  .exemple { font-size: 22pt; font-weight: 500; letter-spacing: .02em; margin: 4mm 0 1mm; color: var(--muted); }
+  table.tab td:first-child { font-weight: 400; color: var(--accent); white-space: nowrap; }
+  .exemple { font-size: 22pt; font-weight: 400; letter-spacing: .02em; margin: 4mm 0 1mm; color: var(--muted); }
   /* Les couleurs des codes de checklist : celles du cockpit (zone en couleur, moment en gris, numéro au trait). */
   .exemple i { font-style: normal; border-radius: 2mm; padding: 0 1.6mm; }
   .exemple i.mo { background: rgba(92, 88, 82, .12); color: #5c5852; }
@@ -70,15 +72,15 @@
   /* Couverture */
   .couv .haut { display: flex; justify-content: space-between; align-items: flex-start; }
   .couv .haut img { height: 13mm; }
-  .couv .bloc { position: absolute; left: 0; right: 0; bottom: 0; height: 138mm; background: var(--accent); color: #fff; padding: 14mm 16mm; }
+  .couv .bloc { position: absolute; left: 0; right: 0; bottom: 0; height: 128mm; background: var(--accent); color: #fff; padding: 14mm 16mm; }
   .couv .bloc .kicker { color: #fff; opacity: .85; margin-top: 0; }
   .couv .bloc h1 { color: #fff; font-size: 34pt; margin-top: 4mm; }
   .couv .bloc .lead { color: #fff; opacity: .92; font-size: 11.5pt; margin: 0; }
-  .couv .liste { position: absolute; left: 16mm; right: 16mm; top: 56mm; }
-  .couv .liste .ligne { display: grid; grid-template-columns: 14mm 1fr; gap: 3mm; padding: 4mm 0; border-bottom: 1px solid var(--line); }
-  .couv .liste .ligne b { font-size: 16pt; font-weight: 500; color: var(--accent); }
+  .couv .liste { position: absolute; left: 16mm; right: 16mm; top: 40mm; }
+  .couv .liste .ligne { display: grid; grid-template-columns: 14mm 1fr; gap: 3mm; padding: 2.8mm 0; border-bottom: 1px solid var(--line); }
+  .couv .liste .ligne b { font-size: 16pt; font-weight: 400; color: var(--accent); }
   .couv .liste .ligne span { font-size: 10pt; line-height: 1.45; }
-  .couv .liste .ligne span strong { font-weight: 500; display: block; font-size: 11pt; }
+  .couv .liste .ligne span strong { font-weight: 400; display: block; font-size: 11pt; }
   .couv .petit { position: absolute; left: 16mm; bottom: 9mm; font-size: 7.5pt; letter-spacing: .1em; text-transform: uppercase; color: #fff; opacity: .85; }
 
   .outils { position: sticky; top: 0; z-index: 3; display: flex; gap: 10px; align-items: center; justify-content: center; padding: 10px; background: #fff; border-bottom: 1px solid var(--line); font-size: 13px; margin-bottom: 8mm; }
@@ -89,7 +91,7 @@
 <script src="../../assets/vendor/qrcode/qrcode.js"></script>
 </head>
 <body>
-<div class="outils"><a href="./">← Catalogue des manuels</a><button type="button" class="p" id="imprimer">Imprimer · enregistrer en PDF</button><span style="color:var(--muted)">A4 · 6 pages</span></div>
+<div class="outils"><a href="./">← Catalogue des manuels</a><button type="button" class="p" id="imprimer">Imprimer · enregistrer en PDF</button><span style="color:var(--muted)">A4 · 7 pages</span></div>
 
 <!-- 1 · Titre -->
 <section class="page couv" id="p1">
@@ -99,6 +101,8 @@
     <div class="ligne"><b>2</b><span><strong>Les standards (SOP)</strong>Comment on les fait, pas à pas.</span></div>
     <div class="ligne"><b>3</b><span><strong>Les checklists</strong>Ce qu’il faut contrôler, et à quel moment.</span></div>
     <div class="ligne"><b>4</b><span><strong>Le manuel du réseau</strong>Le classeur qui range tout par domaine.</span></div>
+    <div class="ligne"><b>5</b><span><strong>La pré-ouverture</strong>Le compte à rebours, de J-90 à l’ouverture.</span></div>
+    <div class="ligne"><b>6</b><span><strong>Les fiches techniques</strong>La recette de chaque produit, une fiche par produit.</span></div>
   </div>
   <div class="bloc">
     <div class="kicker">Comment lire les manuels</div>
@@ -160,20 +164,20 @@
   </ol>
   <p class="bt-src lien-auto">D’après l’article 0.0.56, « La boutique est-elle vendable demain ? ».</p>
 
-  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 2 / 6</span></div>
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 2 / 8</span></div>
 </section>
 
 <!-- 3 · Manuel opératoire -->
 <section class="page" id="p3">
-  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 1 sur 4</div></div>
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 1 sur 6</div></div>
   <div class="kicker">Le pourquoi</div>
   <h2>Le manuel opératoire</h2>
   <p class="lead">Le métier expliqué, partie par partie : des articles avec des photos, un quiz, et la validation « vu faire » du responsable.</p>
 
   <div class="stats">
     <div class="stat"><b id="n-art">56</b><small>articles, classés par formation et par poste</small></div>
-    <div class="stat"><b>2</b><small>familles : fiches de référence (04) et dashboard magasin (05)</small></div>
-    <div class="stat"><b>1 article</b><small>à lire, puis son quiz : on avance partie par partie</small></div>
+    <div class="stat"><b id="n-art-pub">36</b><small id="n-art-pub-d">publiés ; les 20 autres, en relecture, portent la pastille « à valider »</small></div>
+    <div class="stat"><b id="n-art-parties">606</b><small>parties à lire, une à la fois ; un quiz clôt chaque article</small></div>
   </div>
 
   <div class="colonnes">
@@ -204,12 +208,12 @@
     </div>
   </div>
 
-  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 3 / 6</span></div>
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 3 / 8</span></div>
 </section>
 
 <!-- 4 · Standards (SOP) -->
 <section class="page" id="p4">
-  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 2 sur 4</div></div>
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 2 sur 6</div></div>
   <div class="kicker">Le comment</div>
   <h2>Les standards (SOP)</h2>
   <p class="lead">Les gestes de chaque poste, pas à pas : une étape, une photo, des points critiques, puis un quiz.</p>
@@ -250,12 +254,12 @@
     </div>
   </div>
 
-  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 4 / 6</span></div>
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 4 / 8</span></div>
 </section>
 
 <!-- 5 · Checklists -->
 <section class="page" id="p5">
-  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 3 sur 4</div></div>
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 3 sur 6</div></div>
   <div class="kicker">Le quand</div>
   <h2>Les checklists</h2>
   <p class="lead">Ce qu’il faut contrôler, et à quel moment. Chaque tâche a son contrôle, et chaque checklist a un code qui se lit.</p>
@@ -286,12 +290,12 @@
     </div>
   </div>
 
-  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 5 / 6</span></div>
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 5 / 8</span></div>
 </section>
 
 <!-- 6 · Manuel du réseau -->
 <section class="page" id="p6">
-  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 4 sur 4</div></div>
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 4 sur 6</div></div>
   <div class="kicker">Le classeur</div>
   <h2>Le manuel du réseau</h2>
   <p class="lead">Le classeur qui range les standards, les formations et les compétences par domaine, puis les postes : pour chacun, ses formations et ses compétences, niveau par niveau.</p>
@@ -323,7 +327,81 @@
     </div>
   </div>
 
-  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 6 / 6</span></div>
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 6 / 8</span></div>
+</section>
+
+<!-- 7 · Pré-ouverture (19/11/2026, Sam : « ajoute une page pré-ouverture au dépliant ») -->
+<section class="page" id="p7">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 5 sur 6</div></div>
+  <div class="kicker">Le compte à rebours</div>
+  <h2>La pré-ouverture</h2>
+  <p class="lead">Tout ce qu’il faut faire avant d’ouvrir, de J-90 au jour J. Chaque étape a son échéance, son responsable et, souvent, une preuve à garder.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="n-po-et">40</b><small>étapes, de J-90 au jour J</small></div>
+    <div class="stat"><b id="n-po-sec">5</b><small>sections : démarches, équipe, commandes, ouverture, contacts</small></div>
+    <div class="stat"><b id="n-po-art">43</b><small>articles du manuel opératoire à lire avant l’ouverture</small></div>
+  </div>
+
+  <table class="tab">
+    <tr><th>Période</th><th>Étapes</th><th>Par exemple</th></tr>
+    <tr><td>Plus de deux mois avant</td><td id="n-po-1">4</td><td>la BCE, le compte bancaire, la TVA</td></tr>
+    <tr><td>Le deuxième mois</td><td id="n-po-2">12</td><td>le secrétariat social, l’équipe et les offres d’emploi, le règlement de travail</td></tr>
+    <tr><td>Le dernier mois</td><td id="n-po-3">13</td><td>les assurances, les contrats de travail, la caisse</td></tr>
+    <tr><td>Les dix derniers jours</td><td id="n-po-4">11</td><td>la Dimona, la formation, la journée test, l’ouverture</td></tr>
+  </table>
+
+  <div class="encadre lien-auto" style="margin-top:4mm">
+    <b>Qui fait quoi</b> : chaque étape revient au franchisé, à L’Atelier By, aux deux ensemble ou aux formateurs. Votre consultant vérifie les preuves à la journée test.
+  </div>
+
+  <div class="qrbloc">
+    <div class="img" id="q-preouv"></div>
+    <div>
+      <h3>Ouvrir le manuel de pré-ouverture</h3>
+      <p>Scannez le code : vous feuilletez le compte à rebours, section par section.</p>
+      <div class="url" id="u-preouv"></div>
+    </div>
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 7 / 8</span></div>
+</section>
+
+<!-- 8 · Les fiches techniques (19/11/2026) -->
+<section class="page" id="p8">
+  <div class="entete"><img src="../img/logo.png" alt="L’Atelier By"><div class="doc">Manuel 6 sur 6</div></div>
+  <div class="kicker">La recette</div>
+  <h2>Les fiches techniques</h2>
+  <p class="lead">Une fiche par produit, rangée par catégorie : la gamme standard, puis la saison. Chaque fiche donne la photo, la conservation, la durée de vie, les allergènes, la recette, les étapes et l’emballage.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="n-ft">502</b><small>produits, une fiche chacun</small></div>
+    <div class="stat"><b id="n-ft-cat">49</b><small>catégories, de la boulangerie au traiteur</small></div>
+    <div class="stat"><b id="n-ft-sai">45</b><small id="n-ft-sai-d">produits de saison, à côté de la gamme standard</small></div>
+  </div>
+
+  <table class="tab">
+    <tr><th>Sur la fiche</th><th>Remplie</th><th>À quoi elle sert</th></tr>
+    <tr><td>La recette</td><td id="n-ft-rec">395</td><td>les ingrédients et leurs quantités</td></tr>
+    <tr><td>Les étapes</td><td id="n-ft-et">58</td><td>la préparation, pas à pas</td></tr>
+    <tr><td>La photo</td><td id="n-ft-ph">138</td><td>le produit tel qu’il doit sortir</td></tr>
+    <tr><td>Les allergènes</td><td id="n-ft-al">223</td><td>l’étiquette et le conseil au client</td></tr>
+  </table>
+
+  <div class="encadre" style="margin-top:4mm">
+    <b>D’où viennent les fiches</b> : du panel TF Buddy, comme l’application cuisine. Une case vide se complète dans TF Buddy, et la fiche suit d’elle-même.
+  </div>
+
+  <div class="qrbloc">
+    <div class="img" id="q-fiches"></div>
+    <div>
+      <h3>Ouvrir les fiches techniques</h3>
+      <p>Scannez le code : vous feuilletez les fiches, catégorie par catégorie.</p>
+      <div class="url" id="u-fiches"></div>
+    </div>
+  </div>
+
+  <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 8 / 8</span></div>
 </section>
 
 <script>
@@ -333,7 +411,7 @@
     var q = qrcode(0, 'M'); q.addData(url); q.make();
     document.getElementById(id).innerHTML = q.createSvgTag({ cellSize: taille, margin: 0, scalable: true, alt: 'QR code : ' + url });
   }
-  [['q-manuel', 'u-manuel', 'operatoire'], ['q-sop', 'u-sop', 'standards'], ['q-check', 'u-check', 'checklists'], ['q-reseau', 'u-reseau', 'reseau']]
+  [['q-manuel', 'u-manuel', 'operatoire'], ['q-sop', 'u-sop', 'standards'], ['q-check', 'u-check', 'checklists'], ['q-reseau', 'u-reseau', 'reseau'], ['q-preouv', 'u-preouv', 'preouverture'], ['q-fiches', 'u-fiches', 'fiches']]
     .forEach(function (x) { var url = BASE + '#/m/' + x[2]; qr(x[0], url, 4); document.getElementById(x[1]).textContent = url; });
   // Les nombres, lus dans le module (les valeurs écrites restent si la lecture échoue).
   var API = '../api/cockpit';
@@ -343,8 +421,14 @@
       var s = j.sops || [], n = function (f) { return s.filter(f).length; };
       var sop = n(function (x) { return x.type === 'SOP'; }), autres = n(function (x) { return x.type === 'Mémo' || x.type === 'Fiche'; });
       document.getElementById('n-art').textContent = n(function (x) { return x.type === 'Article'; });
+      // Page 3 (19/11/2026) : les articles publiés, et les parties à lire (chiffres lus, plus rien d'écrit en dur).
+      var arts = s.filter(function (x) { return x.type === 'Article'; }), pub = arts.filter(function (x) { return x.statut === 'publiee'; }).length;
+      document.getElementById('n-art-pub').textContent = pub;
+      document.getElementById('n-art-pub-d').textContent = 'publiés ; ' + (arts.length - pub > 0 ? 'les ' + (arts.length - pub) + ' autres, en relecture, portent la pastille « à valider »' : 'tous les articles sont publiés');
+      document.getElementById('n-art-parties').textContent = arts.reduce(function (t, x) { return t + (+x.nbEtapes || 0); }, 0);
       document.getElementById('n-std').textContent = sop + autres;
       document.getElementById('n-std-d').textContent = 'standards : ' + sop + ' SOP et ' + autres + ' mémos ou fiches';
+      document.getElementById('n-po-art').textContent = n(function (x) { return x.type === 'Article' && x.statut !== 'brouillon' && ((x.classement && x.classement.phases) || []).indexOf('preouverture') >= 0; });
       // Les codes cités (0.0.21, 5.5.01…) deviennent des liens directs vers leur page du catalogue (cliquables dans le PDF).
       var parCode = {}; s.forEach(function (x) { if (x.code) parCode[x.code] = x; });
       var man = function (t) { return t === 'Article' ? 'operatoire' : t === 'Checklist' ? 'checklists' : 'standards'; };
@@ -359,7 +443,32 @@
       var d = j.domaines || [];
       document.getElementById('n-dom').textContent = d.length;
       document.getElementById('n-sc').textContent = d.reduce(function (t, x) { return t + (x.souscats || []).length; }, 0);
+      // La pré-ouverture : les étapes du Guide pré-ouverture, par période (les mêmes que le manuel du catalogue).
+      var secs = (j.preouverture && j.preouverture.sections) || [];
+      if (secs.length) {
+        var et = [];
+        secs.forEach(function (x) { if (x.type !== 'contacts') (x.points || []).forEach(function (p) { if (p.j !== null && p.j !== undefined && p.j !== '') et.push(+p.j); }); });
+        document.getElementById('n-po-et').textContent = et.length;
+        document.getElementById('n-po-sec').textContent = secs.length;
+        [[9999, 61], [60, 31], [30, 11], [10, 0]].forEach(function (t, k) {
+          document.getElementById('n-po-' + (k + 1)).textContent = et.filter(function (v) { return v <= t[0] && v >= t[1]; }).length;
+        });
+      }
     }),
+    // Les fiches techniques (page 8) : les nombres du manuel, lus au module (gardés six heures côté serveur).
+    lire('/formation/ref/fiches').then(function (j) {
+      var p = j.produits || []; if (!p.length) return;
+      var cats = {}; p.forEach(function (x) { cats[x.groupe + '|' + x.categorie] = 1; });
+      var c = function (f) { return p.filter(function (x) { return x.fiche && f(x.fiche); }).length; };
+      document.getElementById('n-ft').textContent = p.length;
+      document.getElementById('n-ft-cat').textContent = Object.keys(cats).length;
+      document.getElementById('n-ft-sai').textContent = p.filter(function (x) { return x.gamme === 'saison'; }).length;
+      document.getElementById('n-ft-sai-d').textContent = 'produits de saison, à côté de ' + p.filter(function (x) { return x.gamme === 'standard'; }).length + ' de la gamme standard';
+      document.getElementById('n-ft-rec').textContent = c(function (f) { return (f.ingredients || []).length; });
+      document.getElementById('n-ft-et').textContent = c(function (f) { return (f.etapes || []).length; });
+      document.getElementById('n-ft-ph').textContent = c(function (f) { return f.photo; });
+      document.getElementById('n-ft-al').textContent = c(function (f) { return (f.allergenes || []).length; });
+    }, function () { /* les valeurs écrites restent */ }),
     lire('/formation/v25').then(function (j) { if ((j.postes || []).length) document.getElementById('n-postes').textContent = j.postes.length; }, function () { /* 12 reste */ }),
   ]).catch(function () { /* les valeurs écrites restent */ });
   document.getElementById('imprimer').addEventListener('click', function () { window.print(); });

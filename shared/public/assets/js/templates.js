@@ -7,7 +7,6 @@
 import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplSvSources } from './suivi-tpl.js';
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
-import { tplFidelite } from './fidelite-tpl.js';
 import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
@@ -17,7 +16,6 @@ import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
 import { tplVerifMatieres } from './verification-matieres-tpl.js';
-import { tplVerifCa } from './verification-ca-tpl.js';
 import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
 import { tplVisibilite } from './visibilite-tpl.js';
@@ -64,13 +62,13 @@ const ICO_ECRAN = {
   // Franchisés
   ficheFranchise: 'crm', suiviTableau: 'adresse', budget: 'fonds', ventes: 'analyse', audits: 'form',
   // Vérification
-  verifFlux: 'liens', verifMatieres: 'modeles', verifRecettes: 'creer', verifCa: 'balance',
+  verifFlux: 'liens', verifMatieres: 'modeles', verifRecettes: 'creer',
   // Produits
   catalogue: 'bundles', planogramme: 'ecran', paramProduits: 'reglages', benchmark: 'recherche', promoTableau: 'offres',
   // Marque & marketing
-  fonds: 'fonds', reputation: 'avis', mktObjectifs: 'perf', mdFormulaires: 'liens', fidelite: 'crm',
+  fonds: 'fonds', reputation: 'avis', mktObjectifs: 'perf', mdFormulaires: 'liens',
   // Outils magasin
-  tablette: 'ecran', assistantCoachs: 'messages', primesApp: 'droits', pointages: 'journal',
+  tablette: 'ecran', assistantCoachs: 'messages', primesApp: 'droits',
   // Administration
   parametres: 'cadenas', reporting: 'cal', journal: 'journal',
   // Applications
@@ -212,12 +210,10 @@ export function render(c, x){
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isCadreT ? tplCadreTaches(c, x) : ''}
       ${c.isAudits ? tplAudits(c, x) : ''}
-      ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isAsc ? tplAssistantCoachs(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isApiModule ? tplApiModule(c, x) : ''}
-      ${c.isPointages ? tplPointages(c, x) : ''}
       ${c.isPromoTab ? tplPromoTableau(c, x) : ''}${c.isPromoEd ? tplPromoEdition(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
@@ -229,7 +225,7 @@ export function render(c, x){
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
       ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isFil ? tplFil(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
-      ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
+      ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
@@ -2393,6 +2389,33 @@ function tplIaRecap(r, x){
 
 /* L'entraînement de l'IA : les chiffres, les photos parfaites à prendre comme
    modèle, puis une carte par rayon — la consigne, les modèles, les leçons. */
+/** Toutes les photos 5/5 d'un type de tâche, toutes périodes (19/11/2026) : le type choisi, ses photos, « Plus anciennes ». */
+function tplIaParfaites(p, x, card){
+  const { esc } = x;
+  if (!p) { return ''; }
+  const tete = `<div class="h">Toutes les photos 5/5 d’un type de tâche <span>toutes périodes · les notes posées au cockpit et dans l’app des visites</span></div>`;
+  if (p.chargement) { return `<div style="${card}" class="ia-ent-cand">${tete}<div class="v">Lecture des notes…</div></div>`; }
+  if (p.indispo) { return `<div style="${card}" class="ia-ent-cand">${tete}<div class="v">Les notes n’ont pas pu être lues (GET /ia/parfaites).</div></div>`; }
+  if (!p.groupes.length) { return `<div style="${card}" class="ia-ent-cand">${tete}<div class="v">Aucune photo notée « ${esc(p.nomNiveau)} » pour l’instant.</div></div>`; }
+  const choix = `<select ${x.C(p.setSujet)} aria-label="Type de tâche">${p.groupes.map(g => `<optgroup label="${esc(g.lib)}">${g.opts.map(o => `<option value="${esc(o.val)}"${o.sel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+  return `<div style="${card}" class="ia-ent-cand ia-ent-par">${tete}
+    <div class="ia-par-ch">${choix}<span>${esc(p.total)} photo${p.total > 1 ? 's' : ''} notée${p.total > 1 ? 's' : ''} « ${esc(p.nomNiveau)} »${p.rayon ? '' : ' · pas un rayon : elles ne servent pas d’exemple à l’IA'}</span></div>
+    ${!p.nomsLus ? '<div class="v">La liste des tâches du panel n’a pas pu être lue : les types portent le numéro de la tâche.</div>' : ''}
+    ${p.photos.length ? `<div class="g">${p.photos.map(c => `
+      <div class="t">
+        ${c.photo ? `<a class="ph" href="${esc(c.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(c.photo)}" alt="" loading="lazy"></a>` : `<span class="ph vide">${c.attente ? 'lecture…' : 'photo indisponible'}</span>`}
+        <div class="n">${esc(c.shop)}${c.tache ? ' · ' + esc(c.tache) : ''}</div>
+        <div class="m">${esc(c.date)}${c.par ? ' · notée par ' + esc(c.par) : ''}</div>
+        ${c.commentaire ? `<div class="m">« ${esc(c.commentaire)} »</div>` : ''}
+        ${c.deja ? '<div class="m">★ déjà photo d’exemple</div>' : ''}
+        ${c.exemple || c.planogramme ? `<div class="b">${c.exemple ? `<button type="button" ${x.A(c.exemple)} class="ia-valider-mod">${c.busy === 'exemple' ? 'copie…' : '★ Photo d’exemple'}</button>` : ''}
+          ${c.planogramme ? `<button type="button" ${x.A(c.planogramme)} class="ia-lien">${c.busy === 'planogramme' ? 'copie…' : 'comme planogramme'}</button>` : ''}</div>` : ''}
+      </div>`).join('')}</div>` : (p.attente ? '<div class="v">Lecture des photos…</div>' : '')}
+    ${p.attente && p.photos.length ? '<div class="v">Lecture de la page suivante…</div>' : ''}
+    ${p.plus ? `<div class="ia-par-plus"><button type="button" ${x.A(p.plus)} class="ia-lien">Plus anciennes (${esc(p.reste)} de plus)</button></div>` : ''}
+  </div>`;
+}
+
 function tplIaEntrainement(e, x){
   const { esc } = x;
   const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
@@ -2425,6 +2448,7 @@ function tplIaEntrainement(e, x){
         </div>`).join('')}</div>`
       : `<div class="v">Aucune photo notée « ${esc(e.nomNiveau)} » ces 30 jours. Notez 5/5 une photo parfaite dans <button type="button" ${x.A(e.versControle)} class="ia-lien">Contrôle</button>, ou ouvrez-la et choisissez « ★ Photo parfaite ».</div>`}
     </div>
+    ${tplIaParfaites(e.par, x, card)}
     ${e.rayons.map(r => `
     <div style="${card}" class="ia-ent-rayon">
       <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}<button type="button" ${x.A(r.versAnalyse)} class="ia-lien ana">✦ Ce qui va, ce qui ne va pas</button></div>
@@ -6900,62 +6924,6 @@ function tplPrWiz(W, x){
 /* L'API du module (24/10/2026) : les sources du module des primes et de l'application employé, qui appelle qui, puis
    chaque route — méthode, chemin, ce qu'elle fait, ses pages, ce que le cockpit en garde, ce qu'elle répond à l'instant.
    Maquette : docs/maquettes/api-module. */
-/* Les pointages (01/11/2026) : un magasin, une semaine ; les départs déclarés à valider ; les bornes. */
-function tplPointages(c, x){
-  const { esc } = x;
-  const P = c.pt;
-  if (!P) { return ''; }
-  const sf = "'Gotham',system-ui,sans-serif"; // police de l'interface (design system §4.1)
-  const muet = 'var(--color-text-muted)';
-  const filet = '1px solid var(--color-border-tertiary)';
-  const carte = 'background:var(--color-surface);border-radius:12px';
-  const btS = `border:0;border-radius:6px;padding:7px 14px;font:400 13px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer`;
-  const btP = `border:0;border-radius:6px;padding:7px 14px;font:400 13px ${sf};background:var(--color-primary);color:#fff;cursor:pointer`;
-  const pastille = (t, coul, fond) => `<span style="display:inline-block;padding:2px 8px;border-radius:7px;font:400 12.5px ${sf};font-variant-numeric:tabular-nums;color:${coul};background:${fond}">${esc(t)}</span>`;
-  const VERT = ['#3f7a52', 'rgba(63, 122, 82, .12)'], ORANGE = ['#A35F00', '#F6E7CE'], ROUGE = ['#b3261e', 'rgba(179,38,30,.09)'], GRIS = ['var(--color-text)', 'var(--color-background-secondary)'];
-  const arrivee = l => l.arrivee === 'retard' ? pastille(l.entree + ' · +' + l.retard + ' min', ...ORANGE) : l.arrivee === 'hors_planning' ? pastille(l.entree, ...GRIS) : pastille(l.entree, ...VERT);
-  const depart = l => l.etat === 'fait' ? pastille(l.sortie, ...GRIS) : l.etat === 'en_service' ? pastille('en service', ...VERT)
-    : l.etat === 'a_valider' ? pastille(l.sortie + ' · déclaré', ...ORANGE) : pastille('non pointé', ...ROUGE);
-  const barre = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
-      <div style="display:flex;gap:4px;flex-wrap:wrap">${P.magasins.map(m => `<button ${x.A(m.aller)} style="${m.on ? btP : btS}" data-pt-magasin="${esc(m.nom)}">${esc(m.nom)}</button>`).join('')}</div>
-      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-        <button ${x.A(P.prec)} style="${btS}" aria-label="Semaine précédente">‹</button>
-        <span style="font:400 14px ${sf};min-width:120px;text-align:center">${esc(P.semaine)}</span>
-        <button ${x.A(P.suiv)} style="${btS}" aria-label="Semaine suivante">›</button>
-        ${P.courante ? '' : `<button ${x.A(P.cetteSemaine)} style="${btS}">Cette semaine</button>`}
-        <button ${x.A(P.relire)} style="${btS}">Relire</button></div></div>`;
-  const msg = P.msg ? `<div style="margin-top:10px;font:400 13px ${sf};color:var(--color-primary)">${esc(P.msg)}</div>` : '';
-  if (P.chargement) { return `<section data-pt>${barre}<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Lecture des pointages…</div></section>`; }
-  if (P.motif) { return `<section data-pt>${barre}<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${esc(P.motif)} <button ${x.A(P.relire)} style="${btS}">Relire</button></div></section>`; }
-  const tuiles = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));${carte};margin-top:14px">${P.tuiles.map((t, i) => `<div style="padding:12px 16px;${i ? `border-left:${filet}` : ''}">
-      <div style="font:700 22px/1.2 ${sf};font-variant-numeric:tabular-nums">${esc(t.v)}</div><div style="font:400 12.5px ${sf};color:${muet}">${esc(t.lib)}</div></div>`).join('')}</div>`;
-  const th = t => `<th style="text-align:left;padding:9px 12px;font:400 11px ${sf};letter-spacing:.04em;text-transform:uppercase;color:${muet};white-space:nowrap">${t}</th>`;
-  const td = (h, s) => `<td style="padding:10px 12px;border-top:${filet};font:400 13px ${sf};vertical-align:middle;${s || ''}">${h}</td>`;
-  const tableau = P.lignes.length ? `<div style="${carte};margin-top:14px;overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-      <thead><tr>${th('Jour')}${th('Vendeuse')}${th('Prévu')}${th('Arrivée')}${th('Départ')}${th('Durée')}${th('')}</tr></thead>
-      <tbody>${P.lignes.map(l => `<tr data-pt-ligne="${esc(String(l.id))}" data-pt-etat="${esc(l.etat)}">${td(esc(l.jour), 'white-space:nowrap')}${td(`<b style="font-weight:400">${esc(l.nom)}</b>`)}
-        ${td(esc(l.prevu), `color:${muet};white-space:nowrap`)}${td(arrivee(l))}${td(depart(l))}${td(esc(l.duree), 'font-variant-numeric:tabular-nums;white-space:nowrap')}
-        ${td(l.valider ? `<div style="display:flex;gap:6px;justify-content:flex-end"><button ${x.A(l.valider)} style="${btP}" data-pt-valider>Valider</button><button ${x.A(l.refuser)} style="${btS}" data-pt-refuser>Refuser</button></div>` : '')}</tr>`).join('')}</tbody></table></div>`
-    : `<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Personne n’a pointé dans ce magasin cette semaine.</div>`;
-  const lien = P.lien ? `<div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--color-background-secondary)" data-pt-lien>
-      <div style="font:400 13px ${sf}">${P.lien.cle ? 'La clé de la caisse — à mettre dans la configuration de la caisse' : 'Le lien de la borne — ouvrez-le sur la tablette du magasin'}</div>
-      <div style="margin-top:6px;font:400 12.5px ui-monospace,Menlo,monospace;word-break:break-all;user-select:all">${esc(P.lien.cle || P.lien.url)}</div>
-      ${P.lien.cle ? `<div style="margin-top:6px;font:400 12px ${sf};color:${muet}">Adresse de l’API : <span style="font-family:ui-monospace,Menlo,monospace;user-select:all">${esc(P.lien.api)}</span> — routes GET /pointage/borne?b=&lt;clé&gt; et POST /pointage/borne/pointer.</div>` : ''}
-      <div style="display:flex;gap:8px;margin-top:10px"><button ${x.A(P.lien.copier)} style="${btP}">Copier</button>${P.lien.url ? `<a href="${esc(P.lien.url)}" target="_blank" rel="noopener" style="${btS};text-decoration:none">Ouvrir ↗</a>` : ''}<button ${x.A(P.lien.fermer)} style="${btS}">Fermer</button></div>
-      <div style="margin-top:8px;font:400 12px ${sf};color:${muet}">${P.lien.cle ? 'Elle ne s’affiche qu’une fois. Ne la mettez jamais dans une adresse visible : avec elle, la caisse pointe une personne au PIN.' : 'Il ne s’affiche qu’une fois : gardez-le, ou créez-en un autre et retirez celui-ci.'}</div></div>` : '';
-  const bornes = `<div style="${carte};margin-top:18px;padding:16px 18px" data-pt-bornes>
-      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px">
-        <div style="font:400 15px ${sf}">Borne de pointage</div>
-        <div style="margin-top:3px;font:400 13px/1.45 ${sf};color:${muet}">Une page qui montre le QR code du magasin ; il change toutes les 30 secondes et ne vaut que pour ce magasin. Ouvrez son lien sur la tablette du comptoir et laissez-la allumée.</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">${P.creerBorne ? `<button ${x.A(P.creerBorne)} style="${btP}" data-pt-creer>Créer un lien de borne</button>` : ''}${P.creerCaisse ? `<button ${x.A(P.creerCaisse)} style="${btS}" data-pt-caisse>Clé pour la caisse</button>` : ''}</div></div>
-      ${lien}
-      ${P.bornes.length ? `<div style="margin-top:12px">${P.bornes.map((b, i) => `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;${i ? `border-top:${filet}` : `border-top:${filet}`}">
-        <span style="font:400 14px ${sf}">${esc(b.nom)}</span><span style="font:400 12.5px ${sf};color:${muet}">${esc(b.sorte)} · créée ${esc(b.cree)} · ${esc(b.vue)}</span>
-        <button ${x.A(b.retirer)} style="${btS};margin-left:auto">Retirer</button></div>`).join('')}</div>`
-      : `<div style="margin-top:10px;font:400 13px ${sf};color:${muet}">Pas encore de borne pour ce magasin.</div>`}</div>`;
-  return `<section data-pt>${barre}${msg}${tuiles}${tableau}${bornes}</section>`;
-}
-
 function tplApiModule(c, x){
   const { esc } = x;
   const A = c.am;

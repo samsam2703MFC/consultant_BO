@@ -1364,3 +1364,123 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   certaines largeurs. Les trois boutons ont désormais une base et une largeur minimale nulles et des marges intérieures
   de 8 px ; « Feuilleter » prend plus de place. Vérifié à 390, 768, 937, 1100, 1280, 1440 et 1920 px : aucun bouton ne
   déborde ni n'est coupé.
+
+## Le règlement de travail dans le Guide pré-ouverture ; le manuel de pré-ouverture dans le catalogue (19/11/2026)
+
+- **Guide pré-ouverture** (Sam : « rajouter [le règlement de travail] dans le guide de pré-ouverture »). Le point
+  `reglement` de la section « Démarches administratives et légales » (J-20, « Règlement de travail ») devient trois
+  étapes, FR et NL, toutes « franchisé », calées sur les contrats (J-30), la Dimona et la formation (J-10) :
+  - `reglement`, J-40 : compléter le modèle du réseau et l'afficher 15 jours avec le registre des observations ;
+    preuve : modèle complété, dates d'affichage notées ;
+  - `reglement_depot`, J-17 : règlement signé et enregistré au Contrôle des lois sociales dans les 8 jours de son entrée
+    en vigueur ; preuve : règlement signé, accusé d'enregistrement ;
+  - `reglement_remise`, J-10 : un exemplaire à chaque collaborateur, contre accusé de réception ; preuve : accusés
+    signés.
+
+  Le guide est enregistré entier (`PUT /formation/ref/preouverture`). Il a été comparé avant et après : seuls ces trois
+  points ont changé. Le CRM les lit tout de suite (clé `reglement` gardée, deux clés nouvelles). Le modèle de règlement
+  est dans `pilotage-reseau/docs/rh/reglement-de-travail/`.
+- **Manuel de pré-ouverture** (Sam : « rajouter un manuel de pré-ouverture dans le catalogue des manuels ») : un
+  cinquième manuel, `#/m/preouverture`, tiré du Guide pré-ouverture (`GET /formation/ref`, lu au départ) :
+  - la couverture, Beige de la marque avec l'illustration des roulés ;
+  - le compte à rebours : toutes les étapes de J-90 au jour J, par période (plus de deux mois, le deuxième mois, le
+    dernier mois, les dix derniers jours), avec leur responsable en pastille (franchisé neutre, L'Atelier By Ruby,
+    ensemble Abricot, formateurs Pop-Up) ;
+  - une page par section du guide : introduction, puis chaque étape avec son échéance, son responsable et la preuve à
+    garder ; la section des contacts ;
+  - les articles à lire avant l'ouverture : les articles du manuel opératoire rangés dans la phase de pré-ouverture,
+    chacun en lien direct.
+
+  Les liens sont gardés dans le PDF. La carte du dépliant passe en bordure pointillée, le Beige étant désormais pris
+  par la couverture de ce manuel. Le dépliant lui-même présente toujours quatre manuels.
+- **Essai** : grille de 6 cartes (« 40 étapes · 5 sections ») ; manuel de 13 pages, sans page qui déborde ; 43 liens
+  vers les articles ; le manuel du réseau reste à 52 pages ; aucune erreur.
+- **Dépliant, page 7 « La pré-ouverture »** (Sam : « oui, ajoute une page pré-ouverture au dépliant »). Le dépliant passe
+  à 7 pages A4 : « Manuel n sur 5 », « Page n / 7 », un cinquième manuel sur la couverture, « Sept pages » sur la carte
+  du catalogue. La page donne trois chiffres, lus dans le module : les étapes, les sections, les articles à lire avant
+  l'ouverture. Suivent les étapes par période (comptes lus dans le guide, exemples écrits), « qui fait quoi » et le QR
+  code vers `#/m/preouverture`. Essai : 40 étapes, 5 sections, 43 articles, 4 / 12 / 13 / 11 par période, QR code
+  présent, PDF de 7 pages, rien ne se chevauche.
+
+## Le dépliant, page 3 ; les compétences par profil dans le manuel de pré-ouverture (19/11/2026)
+
+- **Dépliant, page 3** (Sam : « oui, corrige les chiffres de la page 3 »). Les deux chiffres écrits en dur (« 2 familles »,
+  « 1 article ») sont remplacés par des chiffres lus dans `/formation/sop/liste` :
+  - les articles publiés (36), avec le nombre en relecture (20, pastille « à valider ») ;
+  - les parties à lire (606, somme des `nbEtapes` des articles), avec un quiz à la fin de chaque article.
+- **Manuel de pré-ouverture, les compétences à acquérir** (Sam : « dans pré-ouverture, rajouter la liste des
+  compétences à acquérir par poste, avec le lien QR code vers son application qui est dans le CRM »). Une partie après
+  les sections du guide, tirée du Guide des formations et compétences (`GET /formation/ref › blocs`) :
+  - une page d'introduction : le QR code « Suivre sa formation dans le CRM » et le compte par profil ;
+  - puis une entrée par profil : gérant (35), vendeur (17), étudiant / flexi-job (11), multi-boutique (4). Ce sont les
+    profils des plans du référentiel, que le Guide des formations emploie à la place des postes P1–P12 ;
+  - les points des phases « pré-ouverture » et « mise en route », bloc par bloc (avec le rôle du formateur), avec le
+    critère « Réussi si… » et les mentions « bloquante » et « à la mise en route ».
+
+  Le manuel passe de 13 à 23 pages.
+- **L'adresse du CRM** : `GET /formation/ref` rend `crmUrl` (`rfCrmUrl`, `formation/src/referentiel.php`). C'est le
+  réglage `crmFormationUrl` s'il est posé (l'adresse exacte de l'application), sinon l'origine de `rec_api_url`
+  (erp_cles), sinon vide. Rien n'est écrit en dur. Sans adresse, la page dit que le consultant la donne.
+- **Essai** : manuel de 23 pages, sans page qui déborde ; page 3 du dépliant à 36 / 20 / 606 ; tests du dépôt
+  (`tests_noms_globaux`, `test_chargement`, `tests_formation` : 104 ok).
+
+## Le manuel « Fiches techniques » et les nouvelles SOP « à valider » (19/11/2026)
+
+Sam a demandé un rapport : les SOP couvrent-elles les grandes catégories de produits vendus et les gestes du quotidien ?
+Puis : « traiteur froid vers les fiches techniques : créer un nouveau manuel, voir le repo kitchen pour les données à
+récupérer, une feuille par produit triée par catégorie, standard, saison », et « tout ce qui n'est pas là, sur mes à
+valider ».
+
+- **Le manuel « Fiches techniques »** (catalogue, 6e manuel). Il compte une fiche par produit actif du catalogue du
+  cockpit (502), rangées par groupe puis par catégorie, d'abord la gamme standard, puis la saison, puis les produits hors
+  gamme.
+  - **Les données** sont celles de l'application cuisine (dépôt `pwa_kitchen`, `TechnicalSheetRepository`) : la fiche
+    technique du panel TF Buddy, `/products/{id}/technical-sheet/raw`. Elles sont lues par
+    `formation/src/fiches_techniques.php` (`GET /formation/ref/fiches`, cache de six heures dans le dossier privé).
+  - **Chaque fiche** donne la photo, la conservation, la durée de vie, la remise en température, les allergènes, la
+    recette, les étapes, l'emballage et les compétences. Une case vide affiche « à compléter dans TF Buddy ».
+  - **Ce qui manque au 19/11/2026**, sur 502 produits :
+    - 107 sans recette ;
+    - 444 sans étapes ;
+    - 364 sans photo ;
+    - 279 sans allergènes ;
+    - 405 sans emballage.
+  - **Une erreur de données** : le Poké saumon pointe vers la recette d'une tarte abricot.
+- **Les 11 documents « à valider »**, en français et en néerlandais (NL à relire). Ils sont créés par l'API, classés dans
+  le référentiel et reliés aux checklists. Les points inconnus sont marqués « À compléter » et seront ajustés après les
+  essais en magasin.
+
+  | Code | Document |
+  |---|---|
+  | 0.1.08 | Flip-Flap : le concept, la mise en place et le montage à la chaîne |
+  | 0.1.09 | Entremets |
+  | 0.2.11 | Fromages, raclette et fondue |
+  | 0.2.12 | Produits de fête |
+  | 0.2.13 | Plats chauds et soupes |
+  | 0.2.14 | Réceptionner une livraison |
+  | 0.2.15 | Les emballages |
+  | 0.2.16 | Formation barista (FO-11) |
+  | 0.2.17 | Commande traiteur en caisse : 12 captures d'écran à fournir |
+  | 0.0.59 | Le plan de nettoyage, relié aux checklists |
+  | 0.0.60 | Fraîcheur et qualité, avec les renvois |
+
+## La typographie des manuels (19/11/2026)
+
+Sam : « il faut sous-peser les grosseurs de typo dans le manuel et les SOP, tout est trop en gras : titre, sous-titre et
+corps non gras ; garder les badges en rectangle aux coins arrondis », puis, après les captures d'essai : « nouvelle
+typographie dans tous les manuels ».
+
+- **La cause.** Le fichier `Gotham_Regular.otf` est en réalité Gotham Black (vérifié avec `fc-scan`). Le texte, lui,
+  était en Gotham Medium.
+- **Le catalogue (les six manuels).** Les pages prennent une famille à part, `GothamPage` (`catalogue.css`) : Gotham Light
+  pour le titre, le sous-titre et le texte, Gotham Medium pour les badges seulement. La hiérarchie vient de la taille et
+  de la couleur.
+- **Le dépliant.** Le poids 400 prend Gotham Light, et les titres passent de 500 à 400.
+- **Les PDF des SOP et du manuel** (`foPdfPolices`, `src/sop.php`). Le texte est en Gotham Light, les accents en Gotham
+  Medium (au lieu de Black).
+- **Le dépliant, page 8 « Les fiches techniques »** (Sam : « oui »).
+  - Le dépliant passe à 8 pages et 6 manuels : couverture resserrée, pages « n / 8 », « Manuel n sur 6 ».
+  - Les chiffres de la page sont lus dans `/formation/ref/fiches` : produits, catégories, saison et standard, fiches avec
+    une recette, des étapes, une photo, des allergènes.
+  - Un QR code ouvre le manuel.
+

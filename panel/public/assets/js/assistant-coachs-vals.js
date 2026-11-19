@@ -2,12 +2,18 @@
  * coachs : sur quoi il met l'accent, ce qu'il vérifie — par rapport au budget, au trafic, aux tâches réalisées » ;
  * « garde toutes les demandes dans une table, pour après créer des agents spécifiques »).
  *
- * Deux onglets :
+ * Trois onglets :
  *  - Coachs : Mr. Pierre, le Coach et le Coach Vente, coachs business de pointe au ton différent. Pour chacun : nom,
  *    accroche, ton, pour le budget, le trafic et les contrôles qualité, le poids (accent fort, suivi, n'en parle pas)
  *    et ce qu'il vérifie, et ses objectifs 2026 (18/11/2026 : food cost, personnel, clients scannés, menus, articles
  *    par ticket, panier ; une cible vide n'est pas suivie). Un brouillon reste un brouillon jusqu'à « Publier »
  *    (POST /assistant/coachs). GET /assistant/coachs.
+ *  - KPI (19/11/2026, Sam : « un tableau avec tous les KPI sondés, paramètres et autres, regroupés, pour voir quel modèle
+ *    d'assistant fait quoi ») : chaque KPI que lisent les assistants (le catalogue AM_KPIS du serveur), groupé, d'où il
+ *    vient, et pour chaque assistant ce qu'il en fait — l'accent de son axe, sa cible 2026, « lu » — avec le modèle de
+ *    chacun en tête de colonne. Les brouillons de l'onglet Coachs s'y voient avant publication. Les outils à la demande
+ *    s'y coupent (19/11/2026, Sam : « mettre en toggle ») : un interrupteur par assistant, en brouillon jusqu'à
+ *    « Publier » ; le Professeur garde le manuel, qu'il reçoit d'office.
  *  - Questions posées : ce que les franchisés demandent (GET /assistant/questions-posees?jours=), pour décider plus
  *    tard des agents spécialisés.
  *
@@ -15,6 +21,43 @@
 import { readOne } from './api.js';
 
 const nf = n => n == null ? '—' : Number(n).toLocaleString('fr-BE').replace(/ /g, ' ');
+/** « claude-opus-5-5 » → « Opus 5.5 » ; un identifiant d'une autre forme reste tel quel. */
+const nomModele = id => { const m = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(String(id || '')); return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) + ' ' + m[2] + '.' + m[3] : String(id || '—'); };
+const EFFORT = { low: 'effort bas', medium: 'effort moyen', high: 'effort élevé' };
+
+/** Ce qu'un coach fait d'une ligne du catalogue : l'accent de son axe, sa cible 2026, sinon « lu ». */
+function caseCoach(l, c){
+  const ax = l.axe ? c.axes.find(a => a.cle === l.axe) : null;
+  const ob = l.objectif ? c.objectifs.find(o => o.cle === l.objectif) : null;
+  const cible = ob && ob.valeur !== '' ? 'cible ' + (ob.sens === 'max' ? '≤ ' : '≥ ') + ob.valeur + (ob.unite ? ' ' + ob.unite : '') : '';
+  if (l.outil && l.outil.length) { return cible ? { txt: 'Levier · ' + cible, ton: 'fort' } : { txt: 'À la demande', ton: 'dispo' }; }
+  if (ax) {
+    const n = ax.niveau === 'non' && l.toujours ? 'toujours' : ax.niveau;
+    const txt = { fort: 'Accent fort', suivi: 'Suivi', non: 'Si on le demande', toujours: 'Toujours (règle commune)' }[n] || n;
+    return { txt: cible ? txt + ' · ' + cible : txt, ton: n === 'toujours' ? 'suivi' : (cible && n === 'non' ? 'suivi' : n) };
+  }
+  // Une cible 2026 se vérifie dans chaque bilan (coPersona) ; sans cible, la mesure est dans la fiche, sans plus.
+  if (ob) { return cible ? { txt: 'Chaque bilan · ' + cible, ton: 'fort' } : { txt: 'Lu, sans cible', ton: 'lu' }; }
+  return { txt: 'Lu', ton: 'lu' };
+}
+
+const memes = (a, b) => JSON.stringify((a || []).slice().sort()) === JSON.stringify((b || []).slice().sort());
+/** L'interrupteur d'une ligne d'outils pour un assistant (`k` : un coach ou « professeur ») : la ligne coupée si l'un de
+ *  ses outils est ouvert, rouverte sinon. Revenu à l'état publié, un brouillon qui ne portait que ses outils s'efface. */
+function basculer(app, k, outils, coupes, publies){
+  const tout = outils.every(o => coupes.includes(o));
+  const liste = tout ? coupes.filter(o => !outils.includes(o)) : coupes.concat(outils.filter(o => !coupes.includes(o)));
+  const B = JSON.parse(JSON.stringify(app.state.ascB || {}));
+  B[k] = Object.assign({}, B[k] || {}, { outilsCoupes: liste });
+  if (memes(liste, publies)) { delete B[k].outilsCoupes; if (!Object.keys(B[k]).length) { delete B[k]; } }
+  app.setState({ ascB: B });
+}
+/** La case d'une ligne d'outils : l'interrupteur, son mot (le levier et sa cible quand l'outil sert un objectif). */
+function caseOutil(app, l, k, nom, coupes, publies, base){
+  const on = !l.outil.some(o => coupes.includes(o));
+  return { txt: on ? base.txt : 'Coupé', ton: base.ton,
+    tog: { on, lib: l.kpi + ' pour ' + nom, modifie: on !== !l.outil.some(o => publies.includes(o)), go: () => basculer(app, k, l.outil, coupes, publies) } };
+}
 
 function charge(app, quoi, force){
   const S = app.state, cle = quoi === 'q' ? 'q|' + (S.ascJours || 30) : 'c', b = S['asc' + quoi];
@@ -49,7 +92,11 @@ function publier(app, d){
     Object.keys(d.axes).forEach(ax => { coachs[k].accents[ax] = Object.assign({}, c.accents[ax], (b.accents || {})[ax] || {}); });
   });
   app.setState({ ascEnvoi: true, ascMsg: null });
-  app.api('POST', '/assistant/coachs', { coachs, qui: 'Cockpit' }).then(r => {
+  // Les outils coupés de chaque assistant (19/11/2026) : la liste entière, le serveur garde ce qui diffère du départ.
+  Object.keys(d.coachs).forEach(k => { const b = (S.ascB || {})[k] || {}; coachs[k].outilsCoupes = b.outilsCoupes != null ? b.outilsCoupes : (d.coachs[k].outilsCoupes || []); });
+  const bp = (S.ascB || {}).professeur || {};
+  const professeur = { outilsCoupes: bp.outilsCoupes != null ? bp.outilsCoupes : ((d.professeur || {}).outilsCoupes || []) };
+  app.api('POST', '/assistant/coachs', { coachs, professeur, qui: 'Cockpit' }).then(r => {
     const ok = r && r.ok !== false && !r.error;
     app.setState({ ascEnvoi: false, ascMsg: ok ? { txt: 'Coachs publiés : le dashboard des magasins les utilise dès la prochaine question.', ko: false } : { txt: 'Publication refusée : ' + ((r && r.error) || 'sans réponse'), ko: true } });
     if (ok) { app.setState({ ascB: {}, ascc: { cle: 'c', chargement: false, d: r } }); }
@@ -62,7 +109,7 @@ export function valsAssistantCoachs(app, common){
   if (onglet === 'q') { charge(app, 'q', false); }
   const bc = S.ascc || {}, d = bc.d && !bc.d.error ? bc.d : null;
   const a = { onglet, msg: S.ascMsg || null, fermerMsg: () => app.setState({ ascMsg: null }), envoi: !!S.ascEnvoi,
-    ongletC: () => app.setState({ ascOnglet: 'c' }), ongletQ: () => app.setState({ ascOnglet: 'q' }),
+    ongletC: () => app.setState({ ascOnglet: 'c' }), ongletK: () => app.setState({ ascOnglet: 'k' }), ongletQ: () => app.setState({ ascOnglet: 'q' }),
     chargement: !!bc.chargement && !d, indispo: !bc.chargement && bc.d && !d ? 'Lecture impossible — ' + (bc.d.error || 'API injoignable') + ' (GET /assistant/coachs).' : '' };
   common.asc = a;
   if (d) {
@@ -74,7 +121,8 @@ export function valsAssistantCoachs(app, common){
       return { cle: k, avatar: d.avatars[k], defaut: k === d.defaut,
         nom: v('nom'), dit: v('dit'), ton: v('ton'), modifie: !!B[k],
         setNom: e => brouillon(app, k, { nom: e.target.value }), setDit: e => brouillon(app, k, { dit: e.target.value }), setTon: e => brouillon(app, k, { ton: e.target.value }),
-        departs: () => brouillon(app, k, { nom: def.nom, dit: def.dit, ton: def.ton, accents: JSON.parse(JSON.stringify(def.accents)), objectifs: Object.assign({}, def.objectifs || {}) }),
+        departs: () => brouillon(app, k, { nom: def.nom, dit: def.dit, ton: def.ton, accents: JSON.parse(JSON.stringify(def.accents)), objectifs: Object.assign({}, def.objectifs || {}), outilsCoupes: [] }),
+        outilsCoupes: b.outilsCoupes != null ? b.outilsCoupes : (c.outilsCoupes || []), outilsPublies: c.outilsCoupes || [],
         // Les objectifs 2026 : la saisie telle quelle (« 12,5 »), sinon la valeur publiée, virgule belge.
         objectifs: Object.keys(d.objectifs || {}).map(o => {
           const D = d.objectifs[o], v = b.objectifs && o in b.objectifs ? b.objectifs[o] : (c.objectifs || {})[o];
@@ -90,6 +138,18 @@ export function valsAssistantCoachs(app, common){
             setVerifie: e => brouillon(app, k, { verifie: e.target.value }, ax) };
         }) };
     });
+    // L'onglet KPI : le catalogue du serveur, une colonne par assistant (les coachs avec leurs brouillons, puis le Professeur).
+    const M = d.modeles || {}, mod = x => x ? nomModele(x.modele) + ' · ' + (EFFORT[x.effort] || x.effort) : '—';
+    const prof = d.professeur || { nom: 'Le Professeur' };
+    const profPublies = prof.outilsCoupes || [], profCoupes = B.professeur && B.professeur.outilsCoupes != null ? B.professeur.outilsCoupes : profPublies;
+    // Une ligne d'outils : un interrupteur par assistant ; le Professeur garde ce qu'il reçoit d'office (le manuel).
+    const outils = l => l.outil && l.outil.length;
+    a.kpi = {
+      assistants: a.coachs.map(c => ({ nom: c.nom, avatar: c.avatar, modele: mod(M.coachs) })).concat([{ nom: prof.nom, avatar: prof.avatar || null, modele: mod(M.professeur) }]),
+      groupes: (d.kpis || []).map(g => ({ groupe: g.groupe, lignes: g.lignes.map(l => ({ kpi: l.kpi, detail: l.detail || '', source: l.source || '', outil: (l.outil || []).join(', '),
+        cases: a.coachs.map(c => outils(l) ? caseOutil(app, l, c.cle, c.nom, c.outilsCoupes, c.outilsPublies, caseCoach(l, c)) : caseCoach(l, c))
+          .concat([l.prof ? { txt: 'D’office : ' + l.prof, ton: 'suivi' } : (outils(l) ? caseOutil(app, l, 'professeur', prof.nom, profCoupes, profPublies, { txt: 'À la demande', ton: 'dispo' }) : { txt: 'Pas lu', ton: 'non' })]) })) })),
+    };
     a.nbModifs = Object.keys(B).length;
     a.publier = () => publier(app, d);
     a.annuler = () => app.setState({ ascB: {}, ascMsg: null });

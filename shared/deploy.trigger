@@ -175,5 +175,19 @@
 2026-11-19T16:30:53Z Checklists : la fiche Formation de 5.6.02 reliée dans la nomenclature
 2026-11-19T16:43:53Z Réorganisation en quatre domaines : dossiers, clés dans erp_cles, 144 tables renommées par migrations (aucune suppression)
 2026-11-19T17:11:41Z Réorganisation, phase 4 : ceo_assistant_question supprimée (sauvegarde vérifiée), sa reprise unique retirée du code
+2026-11-19T18:01:52Z Cockpit : Vérification › Chiffre d'affaires et Fidélité retirés ; MétaDonnée › Formulaires, la liste sur toute la largeur ; Assistant · coachs, l'onglet KPI (ce que lit chaque assistant, et son modèle)
+2026-11-19T18:16:56Z Dashboard, La journée : les lignes Four, Vitrine et Commandes retirées de la frise (il reste l'Équipe)
+2026-11-19T18:27:33Z Catalogue des manuels : le manuel de pré-ouverture (compte à rebours, étapes, articles à lire)
+2026-11-19T18:30:58Z Dépliant des manuels : la page 7, la pré-ouverture (7 pages, 5 manuels)
+2026-11-19T18:35:37Z Dashboard au téléphone, La journée : les cuissons retirées de la frise (il reste le planning)
+2026-11-19T18:38:24Z Pré-ouverture : les compétences à acquérir par profil, QR code vers le CRM (crmUrl) ; dépliant, page 3 en chiffres lus
+2026-11-19T19:16:18Z Assistant · coachs, onglet KPI : les outils à la demande en interrupteurs, assistant par assistant (le Professeur garde le manuel)
+2026-11-19T19:18:38Z Cockpit : Pointages retirés (#/pointages mène à l'accueil ; l'app employé et la borne pointent toujours)
+2026-11-19T19:24:18Z Pointage retiré partout : l'app employé (Accueil, /pointage, Mes pointages), la borne, la caisse et leurs routes ; les tables restent
+2026-11-19T19:30:50Z Entraînement de l'IA : toutes les photos 5/5 d'un type de tâche, toutes périodes (GET /ia/parfaites)
+2026-11-19T19:36:43Z Catalogue des manuels : le manuel « Fiches techniques » (fiches TF Buddy, une par produit)
+2026-11-19T19:44:28Z Manuels : typographie légère (Gotham Light ; Medium pour les badges) dans le catalogue, le dépliant et les PDF des SOP
+2026-11-19T19:46:03Z Visites (#/franchises) : l'assistant en barre horizontale ; onglet « Non signées » pour ouvrir ou effacer une visite pas encore signée
+2026-11-19T19:54:38Z Dépliant des manuels : la page 8, les fiches techniques (8 pages, 6 manuels)
 2026-11-19T18:00:52Z Prospection : l'offre « Fêtes et locations de salle » (salles des fêtes), au lieu du petit-déjeuner d'hôtel
 2026-11-19T19:57:38Z Portail Commercial (tables sm_) à /commercial/ : bureaux, leads Meta, offres, bons, catalogues, échantillons, suivi B2B, gains du commercial

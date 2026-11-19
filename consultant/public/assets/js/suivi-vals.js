@@ -60,14 +60,15 @@ function lu(app, cle, path){ const b = app.state[cle]; return b && b.path === pa
 function message(app, txt, ko){ app.setState({ svMsg: { txt, ko: !!ko } }); setTimeout(() => { if (app.state.svMsg && app.state.svMsg.txt === txt) { app.setState({ svMsg: null }); } }, 8000); }
 function relireTableau(app){ const t = app.state.svT; if (t && t.path) { charge(app, 'svT', t.path, true); } }
 
-/* --- 1. Visites : l'assistant (26/10/2026, maquette C choisie par Sam) ------------------------------
- * Une seule page, sans tableau de bord : on arrive sur « Créer une visite ». À gauche, les étapes en accordéon —
- * avant la visite (1 le magasin, 2 la visite, 3 le dossier, 4 l'envoi), pendant (la tablette), après (5 le rapport,
- * 6 les corrections) ; celles qui sont faites se replient sur une ligne, l'étape en cours s'ouvre. À droite, la fiche
- * de la visite se remplit à chaque choix : qui reçoit quoi, l'ordre du jour tel qu'il partira, la suite. Chaque visite
- * qui attend quelque chose du bureau garde son onglet (dossier à finir, sur la tablette, rapport à adapter,
- * corrections). Mêmes routes qu'avant : /suivi/tableau, POST /visites, PUT /visites/{id}, /suivi/preparation,
- * /suivi/rapport, PUT /plans/{id}. */
+/* --- 1. Visites : l'assistant (26/10/2026, maquette C choisie par Sam ; horizontal le 19/11/2026) ----------------
+ * Une seule page, sans tableau de bord : on arrive sur « Créer une visite ». En haut, les étapes sur une ligne (19/11,
+ * Sam : « le wizard en mode horizontal », la barre de la maquette A) — avant la visite (1 le magasin, 2 la visite,
+ * 3 le dossier, 4 l'envoi), pendant (la tablette), après (5 le rapport, 6 les corrections) ; sous chacune, ce qui a
+ * été choisi ; une étape faite se rouvre d'un clic. Dessous, l'étape en cours ; à droite, la fiche de la visite se
+ * remplit à chaque choix : qui reçoit quoi, l'ordre du jour tel qu'il partira, la suite. Chaque visite qui attend
+ * quelque chose du bureau garde son onglet (dossier à finir, sur la tablette, rapport à adapter, corrections) ; les
+ * visites non signées ont le leur, pour les effacer. Mêmes routes qu'avant : /suivi/tableau, POST /visites,
+ * PUT /visites/{id}, DELETE /visites/{id}, /suivi/preparation, /suivi/rapport, PUT /plans/{id}. */
 const ETAPES = [['magasin', 'Le magasin', 'avant'], ['visite', 'La visite', 'avant'], ['dossier', 'Le dossier', 'avant'], ['envoi', 'L’envoi', 'avant'],
   ['tablette', 'La visite sur place', 'pendant'], ['rapport', 'Le rapport', 'apres'], ['corrections', 'Les corrections', 'apres']];
 const NUMERO = { magasin: 1, visite: 2, dossier: 3, envoi: 4, tablette: null, rapport: 5, corrections: 6 };
@@ -94,7 +95,7 @@ export function valsSvTableau(app, common){
   d.cartes.preparer.forEach(c => attente.push({ id: c.id, court: c.court, quoi: c.prepRetard ? 'dossier en retard' : 'dossier à finir', echeance: 'visite ' + fmtDJ(c.le) + ' ' + c.h, urgent: !!c.prepRetard, pt: c.prepRetard ? 'ko' : '', pas: 'dossier' }));
   d.cartes.tablette.filter(c => c.nonFaite || c.statut === 'en_cours').forEach(c => attente.push({ id: c.id, court: c.court, quoi: c.statut === 'en_cours' ? 'en visite' : 'pas encore faite', echeance: fmtDJ(c.le), urgent: !!c.nonFaite, pt: c.nonFaite ? 'ko' : 'ok', pas: 'tablette' }));
   const vus = {}; const tabs = attente.filter(a => { const k = String(a.id); if (vus[k]) { return false; } vus[k] = true; return true; });
-  const sel = S.svSel && (S.svSel.kind === 'nouvelle' || S.svSel.kind === 'points' || tabs.some(t => String(t.id) === String(S.svSel.id)) || S.svSel.garde) ? S.svSel : { kind: 'nouvelle' };
+  const sel = S.svSel && (S.svSel.kind === 'nouvelle' || S.svSel.kind === 'points' || S.svSel.kind === 'nonSignees' || tabs.some(t => String(t.id) === String(S.svSel.id)) || S.svSel.garde) ? S.svSel : { kind: 'nouvelle' };
   const N = S.svNouv || {};
   // Une visite ouverte reste ouverte, même quand elle change d'étape et quitte la liste de ce qui attend.
   const ouvrir = (s, pas) => app.setState({ svSel: s.kind === 'visite' ? Object.assign({ garde: true }, s) : s, svPas: pas || null, svPrepF: null, svRapF: null, svVisF: null, svRep: null });
@@ -108,7 +109,8 @@ export function valsSvTableau(app, common){
     const ET = { preparer: 'dossier à finir', tablette: 'sur la tablette', adapter: 'rapport à adapter', envoye: 'rapport envoyé' };
     let c = null, et = '';
     Object.keys(d.cartes).forEach(k => { const x = d.cartes[k].find(y => String(y.id) === String(sel.id)); if (x && !c) { c = x; et = k; } });
-    sv.onglets.push({ court: c ? c.court : 'Visite', quoi: c ? ET[et] : '', on: true, pt: '', ouvrir: () => {} });
+    const ns = c ? null : (d.nonSignees || []).find(y => String(y.id) === String(sel.id));
+    sv.onglets.push({ court: c ? c.court : ns ? ns.court : 'Visite', quoi: c ? ET[et] : ns ? 'non signée · ' + fmtDJ(ns.le) : '', on: true, pt: '', ouvrir: () => {} });
   }
   tabs.slice(0, MAX).forEach(t => sv.onglets.push({ nom: '', court: t.court, quoi: t.quoi, echeance: t.echeance, urgent: t.urgent, pt: t.pt, on: sel.kind === 'visite' && String(sel.id) === String(t.id), ouvrir: () => ouvrir({ kind: 'visite', id: t.id }, t.pas) }));
   sv.autres = tabs.length > MAX ? [{ v: '', nom: '+ ' + (tabs.length - MAX) + ' autre' + (tabs.length - MAX > 1 ? 's' : ''), on: true }].concat(tabs.slice(MAX).map(t => ({ v: String(t.id), nom: t.court + ' · ' + t.quoi, on: false }))) : null;
@@ -118,9 +120,13 @@ export function valsSvTableau(app, common){
   const pts = d.points || [];
   const nRetard = pts.filter(q => q.retard > 0).length;
   sv.ongletPoints = { n: pts.length, retard: nRetard, on: sel.kind === 'points', ouvrir: () => ouvrir({ kind: 'points' }) };
+  // L'onglet des visites non signées (19/11/2026) : de quoi effacer une visite sans la chercher.
+  const ns = d.nonSignees || [];
+  sv.ongletNonSignees = { n: ns.length, passees: ns.filter(v => v.groupe === 'passee').length, on: sel.kind === 'nonSignees', ouvrir: () => ouvrir({ kind: 'nonSignees' }) };
   sv.relire = () => { charge(app, 'svT', path, true); if (S.svPrep && S.svPrep.path) { charge(app, 'svPrep', S.svPrep.path, true); } if (S.svRap && S.svRap.path) { charge(app, 'svRap', S.svRap.path, true); } };
   sv.lu = d.lu ? 'relu à ' + d.lu.slice(11, 16) : '';
   if (sel.kind === 'points') { pointsDecidesVals(app, sv, d, vid => ouvrir({ kind: 'visite', id: vid }, 'corrections')); }
+  else if (sel.kind === 'nonSignees') { nonSigneesVals(app, sv, d, vid => ouvrir({ kind: 'visite', id: vid })); }
   else if (sel.kind === 'nouvelle') { nouvelleVals(app, sv, d, { shopDe, types, consNom }); }
   else { visiteVals(app, sv, d, sel.id, { shopDe, types, consNom, corrPar }); }
 }
@@ -160,6 +166,59 @@ function pointsDecidesVals(app, sv, d, ouvrirVisite){
   };
 }
 
+/* Effacer une visite (11/11/2026 ; 19/11/2026 : aussi depuis la liste des non signées) : DELETE /visites/{id}, après
+ * confirmation. `w` dit ce que la question doit rappeler ; `apres`, l'écran où revenir. */
+function effacerVisite(app, w){
+  if (app.state.svBusy) { return; }
+  const q = ['Effacer la visite de ' + w.court + ' du ' + fmtDJ(w.le) + ' ?', '',
+    (w.nonSignee ? 'Elle n’est pas signée. ' : '') + 'Tout part avec elle : ses réponses, ses photos, les points nés pendant la visite et les tâches de ' + w.consN + '.'];
+  if (w.enCours) { q.push(w.consN + ' l’a commencée sur sa tablette : ce qu’il y saisit encore sera refusé.'); }
+  if (w.rapportEnvoye) { q.push('Le rapport est déjà parti : ses points disparaissent aussi de la page du franchisé.'); }
+  if (w.aVenir) { q.push('L’agenda de ' + w.consN + ' reçoit l’annulation' + (w.annoncee && w.odjEnvoye ? ' ; le franchisé, qui a reçu l’ordre du jour, est prévenu par courriel.' : '.')); }
+  q.push('', 'Impossible de revenir en arrière.');
+  if (typeof window === 'undefined' || !window.confirm(q.join('\n'))) { return; }
+  app.setState({ svBusy: true });
+  app.api('DELETE', '/visites/' + w.id, { qui: 'Cockpit' }).then(r => {
+    const ok = r && r.ok !== false && !r.error && r.efface;
+    app.setState({ svBusy: false });
+    if (!ok) { message(app, 'Visite non effacée : ' + ((r && r.error) || 'sans réponse'), true); return; }
+    const n = r.efface; const su = r.suite || {};
+    const prev = [su.invitation && su.invitation.envoye ? 'annulation envoyée à l’agenda de ' + w.consN : '', su.franchise && su.franchise.envoye ? 'franchisé prévenu' : ''].filter(Boolean);
+    message(app, 'Visite effacée : ' + w.court + ' du ' + fmtDJ(w.le) + ' · ' + [pl(n.reponses, 'réponse'), pl(n.photos, 'photo'), pl(n.points, 'point'), pl(n.taches, 'tâche')].join(', ') + (prev.length ? ' · ' + prev.join(', ') : '') + '.');
+    app.setState(Object.assign({ svPas: null, svPrep: null, svRap: null, svPrepF: null, svRapF: null, svVisF: null }, w.apres || { svSel: { kind: 'nouvelle' } }));
+    relireTableau(app);
+  });
+}
+
+/* Les visites non signées (19/11/2026, demande de Sam) : à venir, en cours sur la tablette, jamais faites, terminées
+ * sans signature et dont le rapport n'est pas parti (suNonSignees). Chacune s'ouvre dans l'assistant ou s'efface. */
+const NS_GROUPES = [['cours', 'En cours sur la tablette', 'att', 'le consultant est en train de la faire'], ['passee', 'Date passée, jamais faite', 'ko', 'prévues, mais personne ne les a ouvertes sur la tablette'],
+  ['avenir', 'À venir', '', 'pas encore faites : les effacer prévient l’agenda du consultant'], ['terminee', 'Terminées sans signature', '', 'fermées sur la tablette sans signer ; le rapport n’est pas parti']];
+function nonSigneesVals(app, sv, d, ouvrirVisite){
+  const S = app.state; const F = S.svNsF || { shop: '' };
+  const tous = d.nonSignees || []; const t = auj();
+  const vus = tous.filter(v => !F.shop || String(v.shop) === String(F.shop));
+  const mags = {}; tous.forEach(v => { mags[v.shop] = v.court || v.shop; });
+  const etat = v => v.groupe === 'cours' ? 'commencée ' + fmtDH(v.commenceLe)
+    : v.groupe === 'terminee' ? 'terminée ' + fmtDH(v.termineLe) + ' · rapport à adapter'
+    : v.groupe === 'passee' ? 'pas faite' + (v.prepEnvoyeeLe ? ' · dossier envoyé' : '')
+    : (v.prepEnvoyeeLe ? 'dossier sur la tablette' : 'dossier à préparer') + (v.annoncee ? (v.odjEnvoyeLe ? ' · ordre du jour envoyé' : ' · annoncée') : ' · inopinée');
+  sv.titre = 'Les visites non signées';
+  sv.chapo = 'Une visite se signe sur la tablette, quand le consultant la termine. Tant qu’elle ne l’est pas, elle s’efface d’ici : à venir, en cours, jamais faite, ou terminée sans signature et dont le rapport n’est pas parti.';
+  sv.nonSignees = {
+    total: tous.length, busy: !!S.svBusy,
+    magasins: [{ v: '', nom: 'Tous les magasins · ' + tous.length, on: !F.shop }].concat(Object.keys(mags).sort((a, b) => String(mags[a]).localeCompare(String(mags[b]))).map(k => ({ v: k, nom: mags[k] + ' · ' + tous.filter(v => String(v.shop) === String(k)).length, on: String(F.shop) === String(k) }))),
+    setShop: e => app.setState({ svNsF: Object.assign({}, F, { shop: e.target.value }) }),
+    groupes: NS_GROUPES.map(([k, nom, cls, aide]) => ({ nom, cls, aide, lignes: vus.filter(v => v.groupe === k)
+      .sort((a, b) => k === 'avenir' ? String(a.le + a.h).localeCompare(String(b.le + b.h)) : String(b.le + b.h).localeCompare(String(a.le + a.h))).map(v => ({
+        court: v.court, le: fmtDJ(v.le) + (v.h ? ' · ' + v.h : ''), quand: v.le === t ? 'aujourd’hui' : '', type: v.typeNom || v.type, qui: v.consultantNom || 'sans consultant', etat: etat(v),
+        saisi: v.reponses || v.photos ? [v.reponses ? pl(v.reponses, 'réponse') : '', v.photos ? pl(v.photos, 'photo') : ''].filter(Boolean).join(' · ') : 'rien de saisi',
+        ouvrir: () => ouvrirVisite(v.id),
+        effacer: () => effacerVisite(app, { id: v.id, court: v.court, le: v.le, consN: v.consultantNom || 'le consultant', nonSignee: true, enCours: v.groupe === 'cours',
+          aVenir: v.groupe === 'avenir', annoncee: v.annoncee, odjEnvoye: !!v.odjEnvoyeLe, apres: { svSel: { kind: 'nonSignees' } } }) })) })).filter(g => g.lignes.length)
+  };
+}
+
 /* La pile d'étapes : l'état de chacune (fait, en cours, à venir), sa ligne repliée, l'étape ouverte. */
 function etapesDe(app, faits, lignes, defaut, ouvrables){
   const S = app.state;
@@ -184,7 +243,7 @@ function nouvelleVals(app, sv, d, h){
     tablette: ['La visite sur place', 'sur la tablette du consultant : rien à faire ici'], rapport: ['Le rapport', 'à adapter et envoyer sous ' + d.delais.rapportHeures + ' h'], corrections: ['Les corrections', 'les photos du franchisé, à valider'] };
   sv.etapes = etapesDe(app, faits, lignes, f ? 'visite' : 'magasin', f ? ['magasin', 'visite'] : ['magasin']);
   sv.titre = 'Créer une visite';
-  sv.chapo = 'À gauche, une étape à la fois. À droite, la fiche de la visite se remplit au fur et à mesure : qui reçoit quoi, ce que lira le franchisé, ce qui se passe ensuite.';
+  sv.chapo = 'En haut, les étapes ; dessous, une seule à la fois. À droite, la fiche de la visite se remplit au fur et à mesure : qui reçoit quoi, ce que lira le franchisé, ce qui se passe ensuite.';
   const ouverte = sv.etapes.find(e => e.etat === 'cur').cle;
   if (ouverte === 'magasin') {
     sv.pas = { cle: 'magasin', question: 'Quel magasin allez-vous visiter ?', lead: 'Le feu, la dernière visite et les points ouverts aident à choisir. Le consultant responsable et la langue du franchisé suivent.',
@@ -272,27 +331,9 @@ function visiteVals(app, sv, d, id, h){
   sv.titre = f.court + ' · ' + (t ? t.nom : 'visite');
   sv.chapo = 'La visite du ' + fmtDJ(v.prevu_le) + ' à ' + v.debut_h + ' avec ' + fin(consN) + ' Reprenez là où elle en est ; une étape faite se rouvre d’un clic.';
   // Effacer la visite (11/11/2026, demande de Sam), à n'importe quelle étape : DELETE /visites/{id}, après confirmation.
-  const aVenir = ['planifiee', 'confirmee'].includes(v.statut) && v.prevu_le >= auj();
-  sv.effacer = () => {
-    if (app.state.svBusy) { return; }
-    const q = ['Effacer la visite de ' + f.court + ' du ' + fmtDJ(v.prevu_le) + ' ?', '',
-      'Tout part avec elle : ses réponses, ses photos, les points nés pendant la visite et les tâches de ' + consN + '.'];
-    if (rapportEnvoye) { q.push('Le rapport est déjà parti : ses points disparaissent aussi de la page du franchisé.'); }
-    if (aVenir) { q.push('L’agenda de ' + consN + ' reçoit l’annulation' + (p.annoncee && P.odj.envoyeLe ? ' ; le franchisé, qui a reçu l’ordre du jour, est prévenu par courriel.' : '.')); }
-    q.push('', 'Impossible de revenir en arrière.');
-    if (typeof window === 'undefined' || !window.confirm(q.join('\n'))) { return; }
-    app.setState({ svBusy: true });
-    app.api('DELETE', '/visites/' + id, { qui: 'Cockpit' }).then(r => {
-      const ok = r && r.ok !== false && !r.error && r.efface;
-      app.setState({ svBusy: false });
-      if (!ok) { message(app, 'Visite non effacée : ' + ((r && r.error) || 'sans réponse'), true); return; }
-      const n = r.efface; const su = r.suite || {};
-      const prev = [su.invitation && su.invitation.envoye ? 'annulation envoyée à l’agenda de ' + consN : '', su.franchise && su.franchise.envoye ? 'franchisé prévenu' : ''].filter(Boolean);
-      message(app, 'Visite effacée : ' + f.court + ' du ' + fmtDJ(v.prevu_le) + ' · ' + [pl(n.reponses, 'réponse'), pl(n.photos, 'photo'), pl(n.points, 'point'), pl(n.taches, 'tâche')].join(', ') + (prev.length ? ' · ' + prev.join(', ') : '') + '.');
-      app.setState({ svSel: { kind: 'nouvelle' }, svPas: null, svPrep: null, svRap: null, svPrepF: null, svRapF: null, svVisF: null });
-      relireTableau(app);
-    });
-  };
+  sv.effacer = () => effacerVisite(app, { id, court: f.court, le: v.prevu_le, consN, rapportEnvoye, enCours: v.statut === 'en_cours',
+    nonSignee: (d.nonSignees || []).some(x => String(x.id) === String(id)), aVenir: ['planifiee', 'confirmee'].includes(v.statut) && v.prevu_le >= auj(),
+    annoncee: p.annoncee, odjEnvoye: !!P.odj.envoyeLe });
   const ouverte = sv.etapes.find(e => e.etat === 'cur').cle;
   const enregistrerVisite = (G, puis) => {
     app.setState({ svBusy: true });

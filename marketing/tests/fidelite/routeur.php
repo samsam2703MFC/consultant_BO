@@ -1,7 +1,6 @@
 <?php
 // Banc navigateur : les fichiers de public/, et l'API des profils servie par le vrai backend (faux panel, MariaDB locale).
 $u = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-if ($u === '/__banc.html') { readfile(__DIR__ . '/banc.html'); return true; }
 if ($u === '/__banc-coachs.html') { readfile(__DIR__ . '/banc-coachs.html'); return true; }
 // Les avatars des coachs, servis comme au cockpit (dashboard/avatars/ à côté de index.html).
 if (str_starts_with($u, '/api/cockpit/')) {

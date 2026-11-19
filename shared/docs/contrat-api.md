@@ -368,6 +368,16 @@ accès que `/formation/v25`). Doc : `formation/docs/formation.md` § Manuel du r
 - `nl` vaut `null` quand il n'y a pas de texte néerlandais. Les libellés NL des phases, postes, domaines et
   sous-catégories sont à relire.
 - `statut` d'un standard : `publiee`, `a_valider` ou `brouillon` (repris du CRM, pas encore relu — le CRM peut le masquer).
+- `crmUrl` (19/11/2026) : l'adresse du CRM pour le QR code « suivre sa formation » du manuel de pré-ouverture : le
+  réglage `crmFormationUrl` (l'adresse exacte de l'application) s'il est posé, sinon l'origine de `rec_api_url`
+  (erp_cles), sinon vide.
+- `GET /formation/ref/fiches` (19/11/2026) : les fiches techniques des produits pour le manuel « Fiches techniques » :
+  `{produits: [{id, ref, nom, categorie, groupe, gamme: standard|saison|aucune, saisons, prix, dlvHeures, fiche}], total,
+  manquent, erreurs}`. `fiche` résume la fiche technique du panel (`/products/{id}/technical-sheet/raw`, comme
+  l'application cuisine) : ingrédients, étapes, emballage, compétences, allergènes, conservation, durée de vie, remise en
+  température ; `null` si elle n'a pas pu être lue. Lues par lots (20 s par appel) et gardées six heures dans le dossier
+  privé : tant que `manquent` > 0, rappeler. `?rafraichir=1` relit tout. `GET /formation/ref/fiches/photo/{id}` redirige
+  vers la photo signée du panel (valable une heure, redemandée à chaque fois).
 - `lien` : relatif au module Formation (`<base du module>/` + `lien` ouvre la fiche). `formationUrl` : le chemin du
   module (réglage `formationUrl`, sinon `config.php › formationUrl`, sinon `FORMATION_URL`), vide s'il n'est pas réglé.
 - `panel.etat` : `valide` (choisie par une personne), `certain` (proposée automatiquement, sans ambiguïté), `propose`
@@ -4294,7 +4304,8 @@ L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couv
 
 ### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
 
-Code : `consultant/src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
+Code : `consultant/src/verification_ca.php` ; l'écran `#/verification/ca` est retiré du cockpit le 19/11/2026 (l'adresse
+mène à l'accueil) ; la route et le cron restent : `con_verif_ca` sert le P&L HT (`shared/src/pnl_ht.php`) ; maquette `d.png` ;
 tests `consultant/bin/tests_verification.php` (section lot 5). Lecture seule.
 
 **La caisse fait référence** : les tickets du panel, jour par jour (`caNet{magasin}:{jour}` : `b` TTC après remise, `t`
@@ -5561,7 +5572,8 @@ la dernière visite faite, en rappel au bureau ; il n'est jamais figé dans le d
 
 ### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
 
-Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
+Écran **ERP franchisé › Fidélité** (`#/fidelity`) — **retiré du cockpit le 19/11/2026** (l'adresse mène à l'accueil ; les
+routes ci-dessous restent, le dashboard du magasin lit les profils publiés). Il avait deux onglets : le **Programme** (maquette C de
 `marketing/docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `marketing/src/fidelite.php`.
 
 | Méthode | Route | Rôle |
@@ -5626,7 +5638,12 @@ fenêtre vient aussi de la table. Dans la fenêtre, la route fait foi : un servi
 table. Sans réponse du cockpit, la page Planning de l'app le dit au lieu d'afficher une semaine vide.
 Tests : `php bin/tests_planning_moi.php`.
 
-### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam)
+### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam) — retiré le 19/11/2026
+
+**Retiré le 19/11/2026 (demande de Sam).** L'app employé (l'Accueil, `/pointage`, Profil › Mes pointages), la borne
+(`/borne`), la caisse et la page Pointages du cockpit ne pointent plus : `panel/src/pointage.php` est supprimé et les
+routes ci-dessous répondent 404. Les tables `panel_mot_pointage` et `panel_mot_borne` restent, avec leurs lignes (jamais
+de `DROP`). Ce qui suit décrit ce qui existait.
 
 « Dans leur application, un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ;
 avec le listing des pointages dans le profil, in / out en fonction de leur shift. » Maquette validée :
@@ -5644,8 +5661,8 @@ dossier privé). Sous le QR, un code à six chiffres pour une caméra qui ne mar
 | GET | `/ventes/moi/pointages?du=&au=` | l'app | `{jours:[{date, prevus:[{debut, fin, shop, shop_name}], pointages:[…]}], totaux:{pointe_min, prevu_min, a_verifier}, ouvert}` (deux mois au plus). Un pointage : `{id, jour, shop, shop_name, entree, sortie, sortie_par, prevu, arrivee: a_l_heure \| retard \| hors_planning, retard_min, duree_min, etat: en_service \| fait \| non_pointe \| a_valider}`. |
 | POST | `/ventes/moi/pointage/depart` | l'app | `{id, heure}` — un départ oublié : après l'arrivée, dans les 16 h, pas dans le futur ; il attend la validation (`a_valider`). 422 sinon. |
 | GET | `/pointage/borne?b=` | la borne (son jeton), avant la session | `{shop, magasin, nom, qr, code, reste, periode, heure}` ; 404 pour un jeton inconnu ou retiré. |
-| GET | `/ventes/equipe/pointages?shop=&du=&au=` | le cockpit (session) | Les pointages d'un magasin (le premier sans `shop`), avec le nom de chacun et `valide_par` ; `magasins`, `bornes`. |
-| POST | `/ventes/equipe/pointages/valider` | le cockpit | `{id, refuser?}` — valide un départ déclaré (ou le refuse : il redevient « non pointé »). Au journal. |
+| GET | `/ventes/equipe/pointages?shop=&du=&au=` | le cockpit (session ; sans écran depuis le 19/11/2026) | Les pointages d'un magasin (le premier sans `shop`), avec le nom de chacun et `valide_par` ; `magasins`, `bornes`. |
+| POST | `/ventes/equipe/pointages/valider` | le cockpit (sans écran depuis le 19/11/2026) | `{id, refuser?}` — valide un départ déclaré (ou le refuse : il redevient « non pointé »). Au journal. |
 | GET / POST | `/pointage/bornes?shop=` / `/pointage/bornes` | le cockpit | La liste des bornes (sans jeton) ; `{shop, nom}` crée une borne et rend son `jeton` une seule fois (gardé haché). Au journal. |
 | POST | `/pointage/bornes/retirer` | le cockpit | `{id}` — le lien ne marche plus. Au journal. |
 | POST | `/pointage/borne/pointer` | la caisse (sa clé), avant la session | `{b, emp}` — la caisse pointe une personne dont ELLE a vérifié le PIN (le PIN ne quitte pas la caisse) : l'arrivée ou le départ au magasin de la clé, mêmes règles que l'app, `par = pin`. Rend `{sens, pointage, nom}` ; 422 `{motif: trop_tot, a_partir_de}` ; 403 pour le lien d'un écran ; 404 clé inconnue ou retirée ; 400 sans `emp`. |
@@ -5658,8 +5675,8 @@ requête, jamais dans un cookie. La consigne pour la caisse : `panel/docs/consig
 
 Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.0 servi par l'app), `GET /me/pointages`
 (la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page
-**Pointages** (`#/pointages`, rail « Application employé », badge : les départs à valider). Tests :
-`php bin/tests_pointage_app.php`.
+**Pointages** (`#/pointages`) est retirée le 19/11/2026 avec tout le pointage ; l'adresse mène à l'accueil. Tests :
+`php bin/tests_pointage_app.php` (supprimé avec le pointage).
 
 **Tablette ouverte (06/11/2026).** `GET /formation/sop/tablette/init`, `GET /formation/sop/tablette/sop/{id}` et
 `POST /formation/sop/tablette/quiz` ne demandent plus la session de l'appareil : la tablette est ouverte et la même pour
