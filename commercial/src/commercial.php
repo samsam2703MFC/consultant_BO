@@ -10,9 +10,10 @@ declare(strict_types=1);
  * tableau de bord. B2B : le suivi des offres par secteur et par magasin, et les gains du commercial (commissions).
  *
  * Ce que le portail LIT ailleurs, jamais dans les tables d'un autre domaine : les leads par MétaDonnée (ep_md_leads,
- * Marketing), la liste de démarchage par Prospection (ep_prospection, Marketing), les catalogues des magasins par le
+ * Marketing), les catalogues des magasins par le
  * relais du Marketing (cmRoute), les tickets pro par le relevé du panel (vpLu / vpJour, src/ventes_pro.php), les
- * magasins par ep_stores. Ce qu'il ÉCRIT : ses tables sm_ et son réglage `smReglages`.
+ * magasins par ep_stores. Ce qu'il ÉCRIT : ses tables sm_ et son réglage `smReglages`. La Prospection (liste de
+ * démarchage, ep_prospection ; types d'offre, prOffres) est dans ce domaine depuis le 19/11/2026 : src/prospection.php.
  *
  * Pas encore d'API, dit tel quel à l'écran (« à brancher ») : le compte du bureau au webshop et sa tournée (TF Buddy,
  * à définir avec Szymon), la commande d'échantillon dans le système de commande (elle part au magasin par e-mail en

@@ -160,6 +160,11 @@ const REORG_TABLES = [
         'pla_slot' => 'con_pla_slot',
         'pla_zone' => 'con_pla_zone',
     ],
+    // Le portail Commercial (19/11/2026) : la Prospection y passe, sa table avec elle (migration 006). Un second
+    // renommage pour une table déjà renommée par 003 : reorgExCeo() suit la chaîne jusqu'au nom d'aujourd'hui.
+    'SM' => [   // Commercial
+        'mar_prospect' => 'sm_prospect',
+    ],
 ];
 
 /** Tous les renommages, tous domaines : [ancien => nouveau]. */
@@ -168,8 +173,18 @@ function reorgTables(): array
     return array_merge(...array_values(REORG_TABLES));
 }
 
-/** Les nouveaux noms des tables qui s'appelaient ceo_* : la remise à zéro et l'inventaire des stocks les traitent comme avant. */
+/**
+ * Les noms d'aujourd'hui des tables qui s'appelaient ceo_* : la remise à zéro et l'inventaire des stocks les traitent
+ * comme avant. Un nom renommé une seconde fois (ceo_prospect → mar_prospect → sm_prospect) est suivi jusqu'au bout.
+ */
 function reorgExCeo(): array
 {
-    return array_values(array_filter(reorgTables(), static fn ($n, $a) => str_starts_with($a, 'ceo_'), ARRAY_FILTER_USE_BOTH));
+    $t = reorgTables();
+    $out = [];
+    foreach ($t as $a => $n) {
+        if (!str_starts_with($a, 'ceo_')) { continue; }
+        for ($i = 0; isset($t[$n]) && $i < 10; $i++) { $n = $t[$n]; }
+        $out[] = $n;
+    }
+    return $out;
 }

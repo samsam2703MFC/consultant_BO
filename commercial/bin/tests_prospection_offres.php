@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Tests du catalogue des types d'offre de la prospection B2B (GET /prospection/offres) — sans base, sans Overpass.
  *
- *   php marketing/bin/tests_prospection_offres.php
+ *   php commercial/bin/tests_prospection_offres.php
  *
  * L'offre qu'un lieu reçoit par son genre (prOffreDe, la même règle que offreDe dans prospection.js), et le genre que
  * le démarchage OpenStreetMap donne aux salles des fêtes (19/11/2026 : elles recevaient le petit-déjeuner d'hôtel).

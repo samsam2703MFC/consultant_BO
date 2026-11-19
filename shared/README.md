@@ -593,7 +593,8 @@ Restent dans le cockpit, parce que d'autres écrans en vivent :
   *Développement commercial*, *Prospection* et *Prospection mobile* ;
 - `GET /scouting/reseau` — les magasins du réseau et leur position (fiche
   Google raccordée, ou pointée sur la carte de l'Étude de faisabilité du CRM) ;
-- `marketing/src/scouting_osm.php`, réduit au relevé Overpass du démarchage ;
+- `commercial/src/scouting_osm.php` (dans le portail Commercial, avec la Prospection, depuis le 19/11/2026),
+  réduit au relevé Overpass du démarchage ;
 - la création des tables `ceo_scouting_*` (`ensureScouting`, `schema.sql`) :
   la base est commune, rien n'est supprimé.
 
