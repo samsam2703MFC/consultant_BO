@@ -13,8 +13,8 @@ declare(strict_types=1);
  *                       repris de ceo_app_setting clé par clé, la première fois qu'on les lit
  *   panel_aia_fiche           la fiche de faits d'un magasin, gardée dix minutes (avant : ceo_app_setting « assistantFaits|… »)
  *   panel_aia_conversation    une conversation : le magasin, l'agent, la première question, le nombre de questions
- *   panel_aia_question        chaque question et sa réponse, ses jetons, sa durée, ses outils (avant : ceo_assistant_question,
- *                       reprise une fois)
+ *   panel_aia_question        chaque question et sa réponse, ses jetons, sa durée, ses outils (les 15 questions de
+ *                       ceo_assistant_question, reprises ici le 17/11/2026 ; table supprimée le 19/11/2026)
  *   panel_aia_visuel          chaque graphique ou tableau proposé : la demande du modèle et les chiffres relus
  *   panel_aia_modele          les graphiques qu'un magasin garde comme modèles : la demande seulement, rejouée à l'ouverture
  *                       sur une période qui glisse avec le temps
@@ -180,19 +180,6 @@ function aiaSchema(): void
         cle TEXT NOT NULL,
         KEY k_sop (sop_id, ordre)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    aiaReprendreQuestions();
-}
-
-/** Les questions déjà posées (ceo_assistant_question, 12/11/2026) passent une fois dans panel_aia_question. */
-function aiaReprendreQuestions(): void
-{
-    if (aiaReglageBrut('repriseQuestions') !== null) { return; }
-    try {
-        Db::exec('INSERT INTO panel_aia_question (cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_sortie, duree_ms, erreur, theme)
-                  SELECT cree_le, shop_id, coach, origine, rang, question, reponse, modele, jetons_entree, jetons_sortie, duree_ms, erreur, theme
-                  FROM ceo_assistant_question ORDER BY id');
-    } catch (Throwable $e) { /* pas de table d'avant : rien à reprendre */ }
-    aiaReglageEcrire('repriseQuestions', date('Y-m-d H:i:s'), 'Reprise');
 }
 
 /* ---------------------------------------------------------------------------

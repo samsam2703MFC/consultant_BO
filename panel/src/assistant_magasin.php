@@ -1025,7 +1025,7 @@ function wr_assistant_coachs(): array
 
 /* --- Les questions posées (12/11/2026, Sam : « garde toutes les demandes dans une table, pour après créer des agents
  * spécifiques ») ---------------------------------------------------------------------------------------------------
- * Chaque question part dans panel_aia_question (17/11/2026 ; avant : ceo_assistant_question, reprise une fois) : le magasin,
+ * Chaque question part dans panel_aia_question (17/11/2026 ; avant : ceo_assistant_question, reprise puis supprimée le 19/11/2026) : le magasin,
  * l'agent, d'où elle vient (tuile du bilan, liste toute prête, question de suite, question libre), son rang et sa
  * conversation, la réponse (JSON), le modèle, les jetons, la durée, les outils, les visuels — l'échec aussi, avec son
  * message. `theme` reste vide : il se remplira quand on rangera les questions pour décider des agents spécialisés. Les
