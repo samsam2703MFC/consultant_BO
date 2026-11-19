@@ -173,8 +173,8 @@
 
   <div class="stats">
     <div class="stat"><b id="n-art">56</b><small>articles, classés par formation et par poste</small></div>
-    <div class="stat"><b>2</b><small>familles : fiches de référence (04) et dashboard magasin (05)</small></div>
-    <div class="stat"><b>1 article</b><small>à lire, puis son quiz : on avance partie par partie</small></div>
+    <div class="stat"><b id="n-art-pub">36</b><small id="n-art-pub-d">publiés ; les 20 autres, en relecture, portent la pastille « à valider »</small></div>
+    <div class="stat"><b id="n-art-parties">606</b><small>parties à lire, une à la fois ; un quiz clôt chaque article</small></div>
   </div>
 
   <div class="colonnes">
@@ -381,6 +381,11 @@
       var s = j.sops || [], n = function (f) { return s.filter(f).length; };
       var sop = n(function (x) { return x.type === 'SOP'; }), autres = n(function (x) { return x.type === 'Mémo' || x.type === 'Fiche'; });
       document.getElementById('n-art').textContent = n(function (x) { return x.type === 'Article'; });
+      // Page 3 (19/11/2026) : les articles publiés, et les parties à lire (chiffres lus, plus rien d'écrit en dur).
+      var arts = s.filter(function (x) { return x.type === 'Article'; }), pub = arts.filter(function (x) { return x.statut === 'publiee'; }).length;
+      document.getElementById('n-art-pub').textContent = pub;
+      document.getElementById('n-art-pub-d').textContent = 'publiés ; ' + (arts.length - pub > 0 ? 'les ' + (arts.length - pub) + ' autres, en relecture, portent la pastille « à valider »' : 'tous les articles sont publiés');
+      document.getElementById('n-art-parties').textContent = arts.reduce(function (t, x) { return t + (+x.nbEtapes || 0); }, 0);
       document.getElementById('n-std').textContent = sop + autres;
       document.getElementById('n-std-d').textContent = 'standards : ' + sop + ' SOP et ' + autres + ' mémos ou fiches';
       document.getElementById('n-po-art').textContent = n(function (x) { return x.type === 'Article' && x.statut !== 'brouillon' && ((x.classement && x.classement.phases) || []).indexOf('preouverture') >= 0; });

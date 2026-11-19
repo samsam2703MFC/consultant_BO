@@ -1402,3 +1402,25 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   code vers `#/m/preouverture`. Essai : 40 étapes, 5 sections, 43 articles, 4 / 12 / 13 / 11 par période, QR code
   présent, PDF de 7 pages, rien ne se chevauche.
 
+## Le dépliant, page 3 ; les compétences par profil dans le manuel de pré-ouverture (19/11/2026)
+
+- **Dépliant, page 3** (Sam : « oui, corrige les chiffres de la page 3 »). Les deux chiffres écrits en dur (« 2 familles »,
+  « 1 article ») sont remplacés par des chiffres lus dans `/formation/sop/liste` :
+  - les articles publiés (36), avec le nombre en relecture (20, pastille « à valider ») ;
+  - les parties à lire (606, somme des `nbEtapes` des articles), avec un quiz à la fin de chaque article.
+- **Manuel de pré-ouverture, les compétences à acquérir** (Sam : « dans pré-ouverture, rajouter la liste des
+  compétences à acquérir par poste, avec le lien QR code vers son application qui est dans le CRM »). Une partie après
+  les sections du guide, tirée du Guide des formations et compétences (`GET /formation/ref › blocs`) :
+  - une page d'introduction : le QR code « Suivre sa formation dans le CRM » et le compte par profil ;
+  - puis une entrée par profil : gérant (35), vendeur (17), étudiant / flexi-job (11), multi-boutique (4). Ce sont les
+    profils des plans du référentiel, que le Guide des formations emploie à la place des postes P1–P12 ;
+  - les points des phases « pré-ouverture » et « mise en route », bloc par bloc (avec le rôle du formateur), avec le
+    critère « Réussi si… » et les mentions « bloquante » et « à la mise en route ».
+
+  Le manuel passe de 13 à 23 pages.
+- **L'adresse du CRM** : `GET /formation/ref` rend `crmUrl` (`rfCrmUrl`, `formation/src/referentiel.php`). C'est le
+  réglage `crmFormationUrl` s'il est posé (l'adresse exacte de l'application), sinon l'origine de `rec_api_url`
+  (erp_cles), sinon vide. Rien n'est écrit en dur. Sans adresse, la page dit que le consultant la donne.
+- **Essai** : manuel de 23 pages, sans page qui déborde ; page 3 du dépliant à 36 / 20 / 606 ; tests du dépôt
+  (`tests_noms_globaux`, `test_chargement`, `tests_formation` : 104 ok).
+

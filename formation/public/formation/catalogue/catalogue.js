@@ -492,6 +492,65 @@
     return B;
   }
 
+  /*
+   * Les compétences à acquérir, par profil (19/11/2026, Sam : « dans pré-ouverture, rajouter la liste des compétences à
+   * acquérir par poste, avec le lien QR code vers son application qui est dans le CRM ») : le Guide des formations et
+   * compétences (GET /formation/ref › blocs), ses points des phases « pré-ouverture » et « mise en route », profil par
+   * profil (gérant, vendeur, étudiant, multi-boutique : les plans du référentiel), bloc par bloc, avec le critère
+   * « Réussi si… » et la mention « bloquante » (nécessaire à l'attestation). Le QR code ouvre le CRM, où chacun suit son
+   * plan et ses validations (crmUrl du module : réglage, sinon l'adresse du Recrutement dans erp_cles).
+   */
+  var PROFILS = [['gerant', 'PF-GER', { fr: 'Gérant (franchisé)', nl: 'Zaakvoerder (franchisenemer)' }],
+    ['vendeur', 'PF-VEND', { fr: 'Vendeur, vendeuse', nl: 'Verkoper, verkoopster' }],
+    ['etudiant', 'PF-ETU', { fr: 'Étudiant, flexi-job', nl: 'Student, flexi-job' }],
+    ['multi', 'PF-MULTI', { fr: 'Gérant multi-boutique', nl: 'Zaakvoerder van meerdere winkels' }]];
+  function nomProfil(pr) {
+    var plan = ((S.ref && S.ref.plans) || []).filter(function (x) { return x.code === pr[1]; })[0];
+    return S.langue === 'fr' && plan && plan.fr ? plan.fr.replace(/^Plan\s+/, '') : L(pr[2]);
+  }
+  function pointsProfil(cle) {
+    var out = [];
+    ((S.ref && S.ref.blocs) || []).forEach(function (b) {
+      (b.items || []).forEach(function (it) {
+        if ((it.profils || []).indexOf(cle) >= 0 && (it.phase === 'pre' || it.phase === 'ouv')) out.push({ b: b, it: it });
+      });
+    });
+    return out;
+  }
+  function blocsCompetencesIntro() {
+    var url = (S.ref && S.ref.crmUrl) || '';
+    var B = [{ neuve: true, html: '<div class="doc-code">' + T('Les compétences', 'De competenties') + '</div><h2>' + T('Les compétences à acquérir avant l’ouverture', 'De competenties te verwerven vóór de opening') + '</h2>' +
+      '<div class="doc-obj">' + T('Pour chaque profil, les compétences et les formations du Guide des formations, bloc par bloc : celles de la pré-ouverture et de la mise en route. Chacune a son critère « Réussi si… ». Une compétence « bloquante » est nécessaire à l’attestation d’ouverture.',
+        'Voor elk profiel de competenties en opleidingen van de opleidingsgids, blok per blok: die van vóór de opening en van de opstart. Elk heeft zijn criterium « Geslaagd als… ». Een « blokkerende » competentie is nodig voor het openingsattest.') + '</div>' }];
+    B.push({ html: '<div class="po-qr">' + (url ? '<div class="po-qr-img">' + qrSvg(url, 4) + '</div>' : '') + '<div><b>' + T('Suivre sa formation dans le CRM', 'Zijn opleiding volgen in het CRM') + '</b>' +
+      '<p>' + (url ? T('Scannez le code : votre plan de formation, vos validations et votre attestation sont dans votre espace du CRM.', 'Scan de code: uw opleidingsplan, uw validaties en uw attest staan in uw ruimte in het CRM.') + '</p><small>' + esc(url) + '</small>'
+        : T('L’adresse du CRM n’est pas encore réglée : votre consultant vous la donne.', 'Het adres van het CRM is nog niet ingesteld: uw consulent geeft het u.') + '</p>') + '</div></div>' });
+    PROFILS.forEach(function (pr) {
+      var l = pointsProfil(pr[0]);
+      B.push({ html: '<div class="po"><span class="po-t">' + esc(nomProfil(pr)) + '</span><span class="po-n">' + l.length + ' ' + T('à acquérir', 'te verwerven') + ' · ' + l.filter(function (x) { return x.it.bloq; }).length + ' ' + T('bloquantes', 'blokkerend') + '</span></div>' });
+    });
+    return B;
+  }
+  function blocsCompetencesProfil(pr) {
+    var l = pointsProfil(pr[0]);
+    var B = [{ neuve: true, html: '<div class="doc-code">' + T('Compétences · profil', 'Competenties · profiel') + '</div><h2>' + esc(nomProfil(pr)) + '</h2>' +
+      '<div class="doc-obj">' + l.length + ' ' + T('compétences et formations à acquérir, dont ', 'competenties en opleidingen te verwerven, waarvan ') + l.filter(function (x) { return x.it.bloq; }).length + ' ' + T('bloquantes pour l’attestation.', 'blokkerend voor het attest.') + '</div>' }];
+    var bloc = null;
+    l.forEach(function (x) {
+      var titre = '';
+      if (bloc !== x.b) {
+        bloc = x.b;
+        titre = '<h4>' + T('Bloc ', 'Blok ') + esc(x.b.n) + ' · ' + esc(libelle(x.b)) + (x.b.role ? ' <small>· ' + esc(S.langue === 'nl' && x.b.role_nl ? x.b.role_nl : x.b.role) + '</small>' : '') + '</h4>';
+      }
+      var crit = champLangue(x.it, 'critere');
+      B.push({ html: titre + '<div class="cp"><b>' + esc(libelle(x.it)) + '</b> <small>· ' + esc(x.it.id) + '</small>' +
+        (x.it.bloq ? ' <span class="po-bloq">' + T('bloquante', 'blokkerend') + '</span>' : '') +
+        (x.it.phase === 'ouv' ? ' <span class="po-ouv">' + T('à la mise en route', 'bij de opstart') + '</span>' : '') +
+        (crit ? '<small class="d">' + T('Réussi si : ', 'Geslaagd als: ') + esc(crit) + '</small>' : '') + '</div>' });
+    });
+    return B;
+  }
+
   /** Range des blocs dans des pages ; rend {pages, debuts} (debuts[k] : l'indice de page où commence l'entrée k). */
   function ranger(m, entrees) {
     var pages = [], debuts = [], cur = null;
@@ -536,6 +595,11 @@
         ajouter('rebours', T('J-', 'D-'), T('Le compte à rebours, de J-90 à l’ouverture', 'De aftelling, van D-90 tot de opening'), blocsRebours());
         titres.push({ sec: T('Les étapes, section par section', 'De stappen, deel per deel') });
         guideSections().forEach(function (sc, k) { ajouter(sc.cle, String(k + 1), libelle(sc), blocsSectionGuide(sc, k + 1)); });
+        if (((S.ref && S.ref.blocs) || []).length) {
+          titres.push({ sec: T('Les compétences à acquérir, par profil', 'De te verwerven competenties, per profiel') });
+          ajouter('competences', '', T('Comment les lire, et les suivre dans le CRM', 'Hoe ze te lezen, en te volgen in het CRM'), blocsCompetencesIntro());
+          PROFILS.forEach(function (pr) { if (pointsProfil(pr[0]).length) ajouter('comp-' + pr[0], '', nomProfil(pr), blocsCompetencesProfil(pr)); });
+        }
         titres.push({ sec: T('À lire', 'Te lezen') });
         ajouter('lectures', '', T('Les articles à lire avant l’ouverture', 'De artikels om te lezen vóór de opening'), blocsLectures());
       } else {
