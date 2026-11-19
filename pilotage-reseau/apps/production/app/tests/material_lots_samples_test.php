@@ -201,7 +201,8 @@ try {
     expectLs($samples->create($today, [1], 1) === 0, 'partia z próbką : bez drugiej próbki');
     expectLsFail(fn() => $samples->create($today, [999], 1), 422, 'partia spoza dnia');
     $file = $samples->pdf($today, 'http://erp.test');
-    expectLs(str_starts_with($file['file_string'], '%PDF') && $file['filename'] === 'probki-' . $today . '.pdf', 'arkusz A4 PDF z kodami QR');
+    expectLs(str_starts_with($file['file_string'], '%PDF') && $file['filename'] === 'probki-' . $today . '.pdf', 'arkusz PDF z kodami QR');
+    expectLs(preg_match_all('#/Type\s*/Page[^s]#', $file['file_string']) === 3, '1 strona A4 na próbkę (3 próbki = 3 strony)');
     if (($out = getenv('LS_PDF_OUT')) !== false && $out !== '') file_put_contents($out, $file['file_string']); // podgląd arkusza
     $p = $samples->page($today);
     expectLs($p['counts']['printed'] === 3 && $p['step'] === 3, 'po wydruku : krok 3 (odłożenie)');

@@ -147,51 +147,81 @@ final class SampleService
         return $this->page($day);
     }
 
-    /** Krok 2 : arkusz A4 próbek dnia (QR = adres próbki w ERP). @return array{filename:string, file_string:string} */
+    /**
+     * Krok 2 : arkusz próbek dnia — jedna strona A4 na próbkę (styl dokumentów) : duży kod QR (adres próbki w ERP), partia,
+     * produkt, produkcja, przechowywać do, partie surowców, miejsce i podpis przy odłożeniu.
+     * @return array{filename:string, file_string:string}
+     */
     public function pdf(string $day, string $baseUrl): array
     {
         $samples = $this->samples($day);
         if (!$samples) throw new CustomException('Brak próbek w tym dniu — utwórz je w kroku 1.', 'errors', 404);
+        $lots = $this->repo->lotsFor(array_column($samples, 'output_id'));
+        $place = $this->params->get('samples.location', 'Zamrażarka próbek');
+        $dmy = fn(?string $d) => $d ? date('d.m.Y', strtotime($d)) : '—';
         $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetCreator('ERP SL Food');
         $pdf->SetTitle('Próbki produkcji ' . $day);
-        $pdf->brandPage('Próbki produkcji', ['ref' => date('d.m.Y', strtotime($day))]);
-        $pdf->brandHeader('Próbki produkcji', [['Dzień produkcji', date('d.m.Y', strtotime($day))], ['Próbek', (string) count($samples)]],
-            'Próbka archiwalna : odłożyć, zeskanować kod QR przy odłożeniu, przechowywać do daty na próbce.');
-        $lm = 12.0;
-        $w = $pdf->contentWidth();
-        $h = 40.0;
-        $qr = 32.0;
-        $y = $pdf->GetY() + 3;
         foreach ($samples as $s) {
-            if ($y + $h > $pdf->getPageHeight() - 20) { $pdf->AddPage(); $y = 26.0; }
-            $pdf->SetLineStyle(['width' => 0.2, 'dash' => '2,1.5', 'color' => [160, 150, 140]]);
-            $pdf->RoundedRect($lm, $y, $w, $h, 2, '1111', 'D');
-            $pdf->SetLineStyle(['width' => 0.2, 'dash' => 0, 'color' => [0, 0, 0]]);
-            $pdf->write2DBarcode(rtrim($baseUrl, '/') . '/workshop/traceability/samples/s/' . $s['code'], 'QRCODE,M', $lm + 3, $y + 4, $qr, $qr,
+            $pdf->brandPage('Próbka archiwalna', ['ref' => (string) $s['lot_code']]);
+            $pdf->brandHeader('Próbka archiwalna', [['Partia', (string) $s['lot_code']], ['Kod próbki', (string) $s['code']]],
+                'Odłożyć, zeskanować kod QR przy odłożeniu, przechowywać do daty poniżej.');
+            $lm = 12.0;
+            $w = $pdf->contentWidth();
+            $y = $pdf->GetY() + 4;
+            $qr = 78.0;
+            $pdf->write2DBarcode(rtrim($baseUrl, '/') . '/workshop/traceability/samples/s/' . $s['code'], 'QRCODE,M', $lm, $y, $qr, $qr,
                 ['border' => false, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false], 'N');
             $x = $lm + $qr + 8;
-            $tw = $w - $qr - 11;
-            $pdf->SetTextColorArray(TCPDFService::BRAND);
-            $pdf->SetFont('dejavusans', 'B', 8);
-            $pdf->SetXY($x, $y + 3);
-            $pdf->Cell($tw, 4, 'PRÓBKA ARCHIWALNA · ' . $s['code'], 0, 1);
+            $tw = $w - $qr - 8;
+            $pdf->SetTextColorArray(TCPDFService::MUTED);
+            $pdf->SetFont('dejavusans', '', 9);
+            $pdf->SetXY($x, $y);
+            $pdf->Cell($tw, 5, 'Partia produkcji', 0, 1);
             $pdf->SetTextColorArray(TCPDFService::INK);
-            $pdf->SetFont('dejavusansmono', 'B', 13);
+            $pdf->SetFont('dejavusansmono', 'B', 24);
             $pdf->SetX($x);
-            $pdf->Cell($tw, 6, (string) $s['lot_code'], 0, 1);
-            $pdf->SetFont('dejavusans', 'B', 9);
+            $pdf->Cell($tw, 12, (string) $s['lot_code'], 0, 1, 'L', false, '', 1);
+            $pdf->SetFont('dejavusans', 'B', 15);
             $pdf->SetX($x);
-            $pdf->Cell($tw, 5, (string) $s['name'], 0, 1);
-            $pdf->SetFont('dejavusans', '', 7.5);
-            $pdf->SetX($x);
-            $pdf->Cell($tw, 4, 'Produkcja : ' . date('d.m.Y', strtotime((string) $s['work_date'])) . ($s['group_name'] ? ' · ' . $s['group_name'] : '')
-                . ($s['employee'] ? ' · ' . $s['employee'] : '') . '   ·   Przechowywać do : ' . ($s['keep_until'] ? date('d.m.Y', strtotime((string) $s['keep_until'])) : '— (brak trwałości na karcie)'), 0, 1);
-            $pdf->SetX($x);
-            $pdf->MultiCell($tw, 3.6, 'Partie surowców : ' . ($s['lots'] ?: '—'), 0, 'L', false, 1, '', '', true, 0, false, true, 8, 'T', true);
-            $pdf->SetXY($x, $y + $h - 7);
-            $pdf->Cell($tw, 4, 'Miejsce : ' . ($s['location'] ?: $this->params->get('samples.location', 'Zamrażarka próbek')) . '      Odłożył(a) : ____________________      Podpis : ____________', 0, 1);
-            $y += $h + 3;
+            $pdf->MultiCell($tw, 7, (string) $s['name'], 0, 'L', false, 1, $x);
+            $pdf->Ln(2);
+            foreach ([['Produkcja', $dmy($s['work_date']) . ($s['group_name'] ? ' · ' . $s['group_name'] : '')], ['Operator', $s['employee'] ?: '—']] as [$k, $v]) {
+                $pdf->SetX($x);
+                $pdf->SetFont('dejavusans', '', 9);
+                $pdf->SetTextColorArray(TCPDFService::MUTED);
+                $pdf->Cell(26, 6, $k, 0, 0);
+                $pdf->SetFont('dejavusans', 'B', 10.5);
+                $pdf->SetTextColorArray(TCPDFService::INK);
+                $pdf->Cell($tw - 26, 6, (string) $v, 0, 1, 'L', false, '', 1);
+            }
+            // Przechowywać do : wyróżnione (DLC produktu z karty).
+            $by = $pdf->GetY() + 3;
+            $pdf->SetFillColorArray(TCPDFService::BRAND_SOFT);
+            $pdf->RoundedRect($x, $by, $tw, 18, 2, '1111', 'F');
+            $pdf->SetXY($x + 4, $by + 2);
+            $pdf->SetFont('dejavusans', '', 9);
+            $pdf->SetTextColorArray(TCPDFService::BRAND);
+            $pdf->Cell($tw - 8, 5, 'Przechowywać do (DLC produktu)', 0, 1);
+            $pdf->SetX($x + 4);
+            $pdf->SetFont('dejavusans', 'B', 18);
+            $pdf->Cell($tw - 8, 9, $s['keep_until'] ? $dmy($s['keep_until']) : '— brak trwałości na karcie produktu', 0, 1, 'L', false, '', 1);
+            $pdf->SetTextColorArray(TCPDFService::INK);
+            $pdf->SetY(max($y + $qr, $by + 18) + 8);
+            $pdf->brandSection('Partie surowców');
+            $rows = array_map(fn($l) => [(string) $l['name'], ($l['lot_number'] ?? '') !== '' ? (string) $l['lot_number'] : ($l['missing_reason'] ? 'brak : ' . $l['missing_reason'] : '—'),
+                $dmy($l['best_before'])], $lots[$s['output_id']] ?? []);
+            if ($rows) $pdf->brandTable([['label' => 'Surowiec', 'w' => 3], ['label' => 'Partia', 'w' => 2], ['label' => 'DLC', 'w' => 1]], $rows, ['font' => 9, 'min_h' => 6.5]);
+            else $pdf->brandText('Brak partii surowców wpisanych na tablecie.');
+            $pdf->Ln(6);
+            $pdf->brandSection('Odłożenie');
+            $pdf->SetFont('dejavusans', '', 10);
+            foreach ([['Miejsce', $s['location'] ?: $place], ['Odłożył(a)', '______________________________'], ['Data i godzina', '______________________________'], ['Podpis', '______________________________']] as [$k, $v]) {
+                $pdf->SetTextColorArray(TCPDFService::MUTED);
+                $pdf->Cell(40, 9, $k, 0, 0);
+                $pdf->SetTextColorArray(TCPDFService::INK);
+                $pdf->Cell($w - 40, 9, (string) $v, 0, 1);
+            }
         }
         $this->repo->markPrinted(array_column($samples, 'id'));
         return ['filename' => 'probki-' . $day . '.pdf', 'file_string' => $pdf->Output('probki-' . $day . '.pdf', 'S')];

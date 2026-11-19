@@ -109,8 +109,8 @@
         }
         if (step === 2) {
             const rows = D.samples.map(s => ({cells: [`<b>${esc(s.lot_code)}</b>`, esc(s.name), dmy(s.keep_until), `<code>${esc(s.code)}</code>`, tw.pill(STATUS[s.status][0], STATUS[s.status][1])]}));
-            return `<p class="tw-lead">${c.samples} ${tw.plural(c.samples, 'próbka', 'próbki', 'próbek')} : wydrukuj arkusz A4 (blok z kodem QR na próbkę — wytnij albo włóż do segregatora próbek).</p>
-                <p><a class="tw-btn" href="${pdfUrl}" target="_blank" rel="noopener" data-lc-pdf><i class="bi bi-printer"></i> Arkusz A4 z kodami QR (PDF)</a></p>
+            return `<p class="tw-lead">${c.samples} ${tw.plural(c.samples, 'próbka', 'próbki', 'próbek')} : wydrukuj arkusz : 1 strona A4 na próbkę (kod QR, partia, przechowywać do, partie surowców) — strona idzie z próbką.</p>
+                <p><a class="tw-btn" href="${pdfUrl}" target="_blank" rel="noopener" data-lc-pdf><i class="bi bi-printer"></i> Drukuj : 1 A4 na próbkę (PDF)</a></p>
                 ${tw.table([{label: 'Partia'}, {label: 'Produkt'}, {label: 'Przechowywać do'}, {label: 'Kod'}, {label: 'Stan'}], rows, 'Brak próbek — wróć do kroku 1.')}`;
         }
         const rows = D.samples.map(s => ({cells: [`<b>${esc(s.lot_code)}</b>`, esc(s.name), `<code>${esc(s.code)}</code>`,
