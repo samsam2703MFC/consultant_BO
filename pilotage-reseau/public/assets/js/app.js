@@ -14,6 +14,7 @@ import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
 import { valsHelpdesk, nbDemandesOuvertes } from './helpdesk-vals.js';
+import { valsFil, nbFilsOuverts } from './fil-vals.js';
 import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
@@ -423,6 +424,8 @@ class App {
       // Franchisés · évaluation et suivi (09/10/2026)
       ficheFranchise: 'fiche', controlesQualite: 'qualite',
       // Suivi des franchisés (24/10/2026) : le tableau de bord du bureau, la tablette, le client mystère, la page du franchisé, qui fait quoi.
+      // Le fil du franchisé (19/11/2026) : notes, photos, captures, étiquettes, et la carte de chaque magasin ; « ?shop=5 ».
+      filFranchise: 'franchises/fil',
       suiviTableau: 'franchises', suiviTablette: 'franchises/tablette', suiviMsp: 'franchises/mystere', suiviFranchise: 'franchises/page', suiviAdmin: 'franchises/quifaitquoi', suiviSources: 'franchises/sources',
     };
   }
@@ -520,6 +523,7 @@ class App {
     const base = '#/' + (App.ADRESSES[id] || id);
     if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
     if (id === 'apiModule' && this.state.apiSrc) { return base + '?source=' + encodeURIComponent(this.state.apiSrc); }
+    if (id === 'filFranchise' && this.state.flMag) { return base + '?shop=' + encodeURIComponent(this.state.flMag); }
     if (id === 'cadreTaches' && this.state.ctChecklist) { return base + '?checklist=' + encodeURIComponent(this.state.ctChecklist); }
     // L'édition des promotions porte son magasin (26/10/2026) : #/promotions/edition?shop=4.
     if (id === 'promoEdition' && this.state.peShop) { return base + '?shop=' + encodeURIComponent(this.state.peShop); }
@@ -537,6 +541,7 @@ class App {
       return Object.assign(shop ? { peShop: shop, peSrcShop: shop } : {}, o ? { peOuvrir: o } : {});
     }
     if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
+    if (id === 'filFranchise') { const shop = App.shopDeAdresse(); return shop ? { flMag: shop } : {}; }
     if (id === 'cadreTaches') {
       // « ?checklist=43 » ouvre la checklist ; « ?sop=ouv-mag » (Formation › la fiche d'une SOP) ouvre l'assistant sur ce standard.
       const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), cl = (a.get('checklist') || '').trim(), sop = (a.get('sop') || '').trim();
@@ -558,7 +563,7 @@ class App {
     // L'ancre suit l'écran — et l'historique avec elle : le bouton « retour »
     // du navigateur ramène à l'écran précédent, ce qu'on attend d'une adresse.
     // Les primes suivent aussi leur page (admin ou franchisé) et leur magasin.
-    if (this.state.screen !== avant || this.state.screen === 'primesApp' || this.state.screen === 'apiModule' || this.state.screen === 'promoEdition') {
+    if (this.state.screen !== avant || this.state.screen === 'primesApp' || this.state.screen === 'apiModule' || this.state.screen === 'promoEdition' || this.state.screen === 'filFranchise') {
       const cible = this.adresseDe(this.state.screen);
       if (avantAdr !== cible && location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
     }
@@ -1184,6 +1189,7 @@ class App {
       suiviMsp: ['Client mystère', 'Les passages du client mystère, magasin par magasin : la note, les rubriques sur 20, le passage précédent et ce qui a suivi. Un seul encodage par passage, rangé dans son trimestre : il nourrit le feu, le scoring, la visite suivante et la page du franchisé.'],
       suiviFranchise: ['Page du franchisé', 'La page que le franchisé ouvre avec son lien, sans mot de passe : ses points à travailler et l’envoi de sa photo de correction, ses chiffres de chaque jour, ses rapports de visite, sa prochaine visite annoncée, le journal. L’aperçu ne marque rien comme lu.'],
       suiviSources: ['Sources et API', 'Les consultants et les visites, source par source : ce qui vient du panel atelierby.tfbuddy.com, ce qui vit dans les tables locales con_, ce qui se lit dans la base TFBuddy sans API — et les API à ouvrir au panel pour tout passer en lecture et en écriture, avec la structure de chaque table.'],
+      filFranchise: ['Fil du franchisé', 'Tout ce qui s’est passé chez un franchisé, sur un seul fil : ses visites, leurs rapports et leurs points, le client mystère, ses demandes — et les notes, photos et captures que le bureau y dépose, avec leurs étiquettes. Un problème de gestion ouvre un fil, jusqu’à la bonne action qui le ferme. Le calendrier montre la même chose jour par jour.'],
       suiviAdmin: ['Qui fait quoi', 'Par magasin, qui prépare, qui adapte le rapport, qui l’envoie, qui valide les corrections, qui est en copie, à quelle adresse et dans quelle langue ; les personnes et leurs droits ; les délais ; les visites annoncées ou inopinées ; les courriels aux franchisés dans les quatre langues.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
       mdFormulaires: ['MétaDonnée — 1. Formulaires', 'Les formulaires de prospects Facebook et Instagram de la Page, par la connexion Meta du CRM. On choisit ceux qu\u2019on suit et leur magasin : un formulaire non suivi ne laisse rien entrer.'],
@@ -1400,6 +1406,9 @@ class App {
         // en visite (controle/), le client mystère, la page que voit le franchisé, et qui fait quoi.
         { sub: 'Suivi des franchisés', children: [
           ['suiviTableau', 'Visites', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0],
+          // Le fil du franchisé (19/11/2026, demande de Sam, maquettes docs/maquettes/fil-franchise : A, avec B en bascule).
+          // Le badge, une fois les cartes lues : les fils ouverts du réseau (des problèmes de gestion pas encore résolus).
+          ['filFranchise', 'Fil du franchisé', nbFilsOuverts(this)],
           ['suiviTablette', 'Visite sur tablette', 0],
           ['suiviMsp', 'Client mystère', 0],
           ['suiviFranchise', 'Page du franchisé', 0],
@@ -1553,8 +1562,8 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
@@ -2002,6 +2011,7 @@ class App {
     if (common.isVerifR) { valsVerification(this, common); common.large = true; }
     if (common.isParamProd) { valsParamProduits(this, common); common.large = true; }
     if (common.isHelpdesk) { valsHelpdesk(this, common); common.large = true; }
+    if (common.isFil) { valsFil(this, common); common.large = true; }
     if (common.isBench) { valsBenchmark(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
