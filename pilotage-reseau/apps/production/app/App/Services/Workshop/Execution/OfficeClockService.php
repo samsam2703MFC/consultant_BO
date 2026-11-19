@@ -51,6 +51,20 @@ final class OfficeClockService
             + $this->kiosk->personalQr($context, $employeeId, (string) $c['base']);
     }
 
+    /** [361] Accueil de la tablette de bureau : le PIN seul ouvre le profil (session + la personne, comme dans la liste). */
+    public function login(array $body, ApiContext $context): array
+    {
+        $this->officeDevice($context);
+        $v = (new Validator($body))->only(['pin'])->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
+        $v->throwIfInvalid();
+        $r = $this->kiosk->loginByPin((string) $v->clean()['pin'], $context);
+        $row = null;
+        foreach ($this->repo->officePeople(date('Y-m-d')) as $p) {
+            if ($p['employee_id'] !== null && (int) $p['employee_id'] === (int) $r['employee']['id']) { $row = $p; break; }
+        }
+        return $r + ['person' => $row !== null ? $this->person($row) : null];
+    }
+
     /** [360] Premier PIN de la personne (person_id = production_employee.id) ; son profil de production est créé au besoin. */
     public function firstPin(array $body, ApiContext $context): array
     {

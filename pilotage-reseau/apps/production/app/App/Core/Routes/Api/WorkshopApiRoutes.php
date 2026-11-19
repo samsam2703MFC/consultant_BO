@@ -312,6 +312,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/office/sections', ExecutionController::class, 'officeSections', 'kiosk'],
             ['POST', '/kiosk/office/qr', ExecutionController::class, 'officeQr', 'kiosk'],
             ['POST', '/kiosk/office/pin', ExecutionController::class, 'officeFirstPin', 'kiosk'],
+            ['POST', '/kiosk/office/login', ExecutionController::class, 'officeLogin', 'kiosk'],
             ['GET', '/kiosk/office/status', ExecutionController::class, 'officeStatus', 'kiosk'],
             // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty — po wybraniu
             // kierowcy z listy i jego PIN-ie (/kiosk/people, /kiosk/identify), jak na tablecie pracowni.

@@ -7,7 +7,7 @@ namespace App\Repositories\Workshop;
 final class ExecutionRepository extends WorkshopRepository
 {
     protected string $table = 'n_prod_device';
-    protected array $writable = ['name', 'id_group', 'mode', 'id_carrier_vehicle', 'token_hash', 'pairing_code_hash', 'pairing_expires_at', 'active', 'last_seen_at', 'created_by'];
+    protected array $writable = ['name', 'id_group', 'mode', 'id_carrier_vehicle', 'token_hash', 'pairing_code_hash', 'pairing_expires_at', 'active', 'last_seen_at', 'created_by', 'pin_failed', 'pin_locked_until'];
 
     // --- Tablettes -------------------------------------------------------------------------------
 
@@ -167,6 +167,19 @@ final class ExecutionRepository extends WorkshopRepository
         return $this->all('SELECT * FROM n_prod_employee_credential WHERE id_employee = ?', [$employeeId])[0] ?? null;
     }
 
+    /** [361] Personne dont le PIN a cette empreinte (HMAC). */
+    public function credentialByPinLookup(string $lookup): ?array
+    {
+        return $this->all('SELECT * FROM n_prod_employee_credential WHERE pin_lookup = ?', [$lookup])[0] ?? null;
+    }
+
+    /** [361] PIN encore sans empreinte (posés avant la connexion par PIN seul) des personnes actives : vérifiés en bcrypt. */
+    public function pinsWithoutLookup(): array
+    {
+        return $this->all('SELECT c.id_employee, c.pin_hash FROM n_prod_employee_credential c JOIN n_prod_employee e ON e.id = c.id_employee
+            WHERE c.pin_hash IS NOT NULL AND c.pin_lookup IS NULL AND e.active = 1');
+    }
+
     public function credentialByBadge(string $hash): ?array
     {
         return $this->all('SELECT * FROM n_prod_employee_credential WHERE badge_hash = ?', [$hash])[0] ?? null;
@@ -174,7 +187,7 @@ final class ExecutionRepository extends WorkshopRepository
 
     public function saveCredential(int $employeeId, array $data): void
     {
-        $allowed = ['badge_hash', 'pin_hash', 'failed_attempts', 'locked_until', 'biometric_consent', 'biometric_consent_at', 'biometric_consent_by', 'updated_by'];
+        $allowed = ['badge_hash', 'pin_hash', 'pin_lookup', 'pin_conflict', 'failed_attempts', 'locked_until', 'biometric_consent', 'biometric_consent_at', 'biometric_consent_by', 'updated_by'];
         $data = array_intersect_key($data, array_flip($allowed));
         if (!$data) return;
         $columns = array_keys($data);

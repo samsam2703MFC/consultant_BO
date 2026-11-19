@@ -18707,6 +18707,84 @@
                 ]
             }
         },
+        "/kiosk/office/login": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Logowanie samym PIN-em / Connexion par le PIN seul",
+                "operationId": "officeLogin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OfficeLogin"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[361] Accueil de la tablette de bureau : le PIN seul ouvre le profil (tous les PIN sont différents). Inconnu : PIN_UNKNOWN (401, left) compté sur la tablette ; après kiosk.office_pin_max_attempts, DEVICE_PIN_LOCKED (423) pendant kiosk.lock_minutes. Deux personnes avec ce PIN (posés avant l'unicité) : PIN_CHOOSE_NAME (409) — nom puis PIN, puis nouveau PIN (pin_change_required). Réponse : comme POST /kiosk/identify + la personne (OfficePerson).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OfficeLoginInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/office/status": {
             "get": {
                 "tags": [
@@ -27819,6 +27897,10 @@
                                 "type": "string"
                             }
                         }
+                    },
+                    "pin_change_required": {
+                        "type": "boolean",
+                        "description": "[361] PIN identique à celui d'une autre personne : à changer (PUT /kiosk/me/pin)"
                     }
                 }
             },
@@ -31583,6 +31665,47 @@
                         "items": {
                             "$ref": "#/components/schemas/OfficePerson"
                         }
+                    }
+                }
+            },
+            "OfficeLoginInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "pin"
+                ],
+                "properties": {
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "OfficeLogin": {
+                "type": "object",
+                "properties": {
+                    "employee_token": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "pin_change_required": {
+                        "type": "boolean"
+                    },
+                    "person": {
+                        "$ref": "#/components/schemas/OfficePerson"
                     }
                 }
             },
