@@ -221,6 +221,8 @@
     "INVALID_PHOTO": "Zdjęcie musi być obrazem JPEG, PNG lub WebP.",
     "PHOTO_TOO_LARGE": "Zdjęcie jest za duże (maks. {max_kb} KB).",
     "MATERIAL_NOT_IN_RECIPE": "Tego surowca nie ma w recepturze produktu.",
+    "MATERIAL_LOT_UNAVAILABLE": "Tej partii nie ma już na liście (wyłączona albo po dacie ważności).",
+    "MISSING_LOT_PHOTO_REQUIRED": "Brak partii : zrób zdjęcie etykiety albo opakowania.",
     "STOP_REASON_REQUIRED": "Wybierz powód postoju.",
     "STOP_NOTE_REQUIRED": "Opisz powód postoju (powód « inne »).",
     "WASTE_NOTE_REQUIRED": "Opisz powód straty (powód « inne »).",

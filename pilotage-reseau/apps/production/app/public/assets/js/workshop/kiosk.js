@@ -2748,18 +2748,33 @@
         // Jedna linia = jeden składnik : dotknięcie otwiera numer partii (ręcznie, zdjęcie worka z OCR, skan) ; otwarta jest
         // wskazana linia, inaczej pierwszy składnik bez numeru partii.
         const order = [...b.ingredients.filter(g => !g.packaging), ...b.ingredients.filter(g => g.packaging)];
-        const open = b.editable ? (focus !== undefined && focus !== null ? focus : (order.find(g => !g.lot_number) || {}).material_id ?? null) : null;
-        const row = (g) => `<article class="kiosk-card kiosk-lot ${g.lot_number ? 'is-ok' : ''} ${open === g.material_id ? 'is-open' : ''}" data-material="${g.material_id}">
+        // [352] Uzupełnione = surowiec śledzony z partią albo z powodem braku ; nieśledzony (Partie surowców) : bez partii.
+        const filled = (g) => !!g.lot_number || !!g.missing_reason;
+        const open = b.editable ? (focus !== undefined && focus !== null ? focus : (order.find(g => g.tracked !== false && !filled(g)) || {}).material_id ?? null) : null;
+        const dmy = (d) => d ? d.split('-').reverse().join('.') : '—';
+        const lotState = (g) => g.tracked === false ? esc(t('lot_untracked'))
+            : g.lot_number ? icon('circle-check', 'is-sm') + ' ' + esc(g.lot_number) + (g.photo ? ' ' + icon('camera', 'is-sm') : '')
+            : g.missing_reason ? icon('triangle-alert', 'is-sm') + ' ' + esc(t('lot_missing_reason_state', {reason: g.missing_reason})) : esc(t('lot_missing'));
+        const row = (g) => g.tracked === false ? `<article class="kiosk-card kiosk-lot is-untracked" data-material="${g.material_id}">
+            <div class="kiosk-lot-head"><div><h3>${esc(g.name)}</h3><span class="kiosk-muted">${g.quantity !== null ? esc(amount(g.quantity) + ' ' + (g.unit || '')) : esc(amount(g.per_unit) + ' ' + (g.unit || '') + ' / ' + t('prod_per_recipe'))}</span></div>
+                <span class="kiosk-lot-state kiosk-muted">${lotState(g)}</span></div></article>`
+            : `<article class="kiosk-card kiosk-lot ${filled(g) ? 'is-ok' : ''} ${g.missing_reason && !g.lot_number ? 'is-reason' : ''} ${open === g.material_id ? 'is-open' : ''}" data-material="${g.material_id}">
             <div class="kiosk-lot-head" ${b.editable ? 'data-lot-toggle role="button" tabindex="0"' : ''}><div><h3>${esc(g.name)}</h3><span class="kiosk-muted">${g.quantity !== null ? esc(amount(g.quantity) + ' ' + (g.unit || '')) : esc(amount(g.per_unit) + ' ' + (g.unit || '') + ' / ' + t('prod_per_recipe'))}</span></div>
-                <span class="kiosk-lot-state">${g.lot_number ? icon('circle-check', 'is-sm') + ' ' + esc(g.lot_number) + (g.photo ? ' ' + icon('camera', 'is-sm') : '') : esc(t('lot_missing'))}</span></div>
-            ${b.editable ? `<div class="kiosk-lot-body" ${open === g.material_id ? '' : 'hidden'}><div class="kiosk-lot-fields">
+                <span class="kiosk-lot-state">${lotState(g)}</span></div>
+            ${b.editable ? `<div class="kiosk-lot-body" ${open === g.material_id ? '' : 'hidden'}>
+                ${(g.received || []).length ? `<label class="kiosk-lot-pick">${esc(t('lot_pick'))}<select data-pick><option value="">${esc(t('lot_pick_placeholder'))}</option>
+                    ${g.received.map((r, k) => `<option value="${r.id}" ${g.material_lot_id === r.id ? 'selected' : ''}>${esc(r.lot_number)} · ${esc(t('lot_pick_bb', {date: dmy(r.best_before)}))}${r.supplier ? ' · ' + esc(r.supplier) : ''}${k === 0 && r.best_before ? ' · ' + esc(t('lot_pick_first')) : ''}</option>`).join('')}
+                    </select></label>` : `<p class="kiosk-muted">${esc(t('lot_pick_none'))}</p>`}
+                <div class="kiosk-lot-fields">
                 <label>${esc(t('lot_number'))}<input name="lot" autocomplete="off" autocapitalize="characters" maxlength="64" value="${esc(g.lot_number || '')}"></label>
                 <label>${esc(t('lot_best_before'))}<input name="bb" type="date" value="${esc(g.best_before || '')}"></label>
                 ${canScan() ? `<button type="button" class="kiosk-btn is-small is-primary" data-scan>${icon('scan-line')} ${esc(t('lot_scan'))}</button>` : ''}
                 <label class="kiosk-btn is-small kiosk-photo">${icon('camera')} ${esc(t('lot_photo'))}<input type="file" accept="image/*" capture="environment" data-photo hidden></label>
-                ${(g.received || []).filter(r => r.lot_number !== g.lot_number).map((r, k) => `<button type="button" class="kiosk-btn is-small" data-fefo="${k}">${esc(t('lot_received', {lot: r.lot_number, date: r.best_before ? r.best_before.split('-').reverse().join('.') : '—'}))}</button>`).join('')}
                 ${g.last && g.last.lot_number !== g.lot_number && !(g.received || []).some(r => r.lot_number === g.last.lot_number) ? `<button type="button" class="kiosk-btn is-small" data-same>${esc(t('lot_same', {lot: g.last.lot_number}))}</button>` : ''}
+                <button type="button" class="kiosk-btn is-small is-danger-soft" data-reason-open>${esc(t('lot_reason_open'))}</button>
                 <button type="button" class="kiosk-btn is-primary is-small" data-save-lot>${esc(t('lot_save'))}</button></div>
+                <div class="kiosk-lot-reason" data-reason-box hidden><label>${esc(t('lot_reason_label'))}<select data-reason>${['lot_reason_unreadable', 'lot_reason_no_label', 'lot_reason_no_invoice', 'lot_reason_other'].map(k => `<option>${esc(t(k))}</option>`).join('')}</select></label>
+                    <p class="kiosk-muted">${esc(t('lot_reason_help'))}</p></div>
             <div class="kiosk-ocr" data-ocr hidden></div></div>` : ''}</article>`;
         const ingredients = b.ingredients.filter(g => !g.packaging);
         const packaging = b.ingredients.filter(g => g.packaging);
@@ -2776,8 +2791,9 @@
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
             <section class="kiosk-card kiosk-batch-head ${b.cancelled ? 'is-cancelled' : ''}"><div><h2>${esc(item.name)}</h2>
                 <p class="kiosk-status">${esc(t('prod_batch_line', {lot: b.lot_code, q: qty(b.quantity, item)}))}${b.cancelled ? ' · ' + esc(t('prod_cancelled')) : ''}</p>
-                <p class="kiosk-muted">${esc(t('prod_lots', {done: b.lots_done, total: b.lots_total}))}${b.employee ? ' · ' + esc(b.employee) : ''} · ${esc(hhmm(b.created_at))}</p></div>
-                ${b.editable ? `<div class="kf-batch-actions">${b.cancelled ? '' : `<button type="button" class="kiosk-btn is-primary" data-kf-finish>${icon('check')} ${esc(t('kf_finish_short'))}</button>`}
+                <p class="kiosk-muted">${b.employee ? esc(b.employee) + ' · ' : ''}${esc(hhmm(b.created_at))}</p>
+                ${b.lots_total ? `<div class="kiosk-lot-progress ${b.lots_done >= b.lots_total ? 'is-ok' : ''}"><span><i style="width:${Math.round(b.lots_done / b.lots_total * 100)}%"></i></span><b>${esc(t('lot_progress', {done: b.lots_done, total: b.lots_total}))}</b></div>` : ''}</div>
+                ${b.editable ? `<div class="kf-batch-actions">${b.cancelled ? '' : `<button type="button" class="kiosk-btn is-primary" data-kf-finish ${b.lots_done < b.lots_total ? 'disabled' : ''}>${icon('check')} ${esc(b.lots_done < b.lots_total ? t('kf_finish_locked', {n: b.lots_total - b.lots_done}) : t('kf_finish_short'))}</button>`}
                     <button type="button" class="kiosk-btn is-small is-danger-soft" data-cancel-batch>${esc(t('prod_cancel'))}</button></div>` : ''}</section>
             ${b.ingredients.length || comps.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_no_recipe'))}</p></section>`}
             ${comps.length ? `<h2 class="kiosk-section">${esc(t('go_from_other'))}</h2>${comps.map(compCard).join('')}` : ''}
@@ -2813,12 +2829,19 @@
             const m = Number(card.dataset.material);
             const g = b.ingredients.find(x => x.material_id === m);
             card.addEventListener('input', resetIdle);
-            card.querySelectorAll('[data-fefo]').forEach(btn => btn.addEventListener('click', () => {
-                const r = (g.received || []).filter(x => x.lot_number !== g.lot_number)[Number(btn.dataset.fefo)];
+            // [352] Lista partii (Partie surowców) : wybór wypełnia numer i DLC ; zapis z identyfikatorem partii.
+            card.querySelector('[data-pick]')?.addEventListener('change', (e) => {
+                const r = (g.received || []).find(x => String(x.id) === e.target.value);
                 if (!r) return;
                 card.querySelector('[name=lot]').value = r.lot_number;
                 card.querySelector('[name=bb]').value = r.best_before || '';
-            }));
+                card.querySelector('[data-reason-box]').hidden = true;
+            });
+            card.querySelector('[data-reason-open]')?.addEventListener('click', () => {
+                const box = card.querySelector('[data-reason-box]');
+                box.hidden = !box.hidden;
+                resetIdle();
+            });
             card.querySelector('[data-same]')?.addEventListener('click', () => {
                 card.querySelector('[name=lot]').value = g.last.lot_number;
                 if (g.last.best_before) card.querySelector('[name=bb]').value = g.last.best_before;
@@ -2836,14 +2859,21 @@
                 const lot = card.querySelector('[name=lot]').value.trim();
                 const bb = card.querySelector('[name=bb]').value || null;
                 const p = pending[m] || {};
-                if (!lot && !p.photo) { toast(t('lot_required'), true); return; }
+                const reasonBox = card.querySelector('[data-reason-box]');
+                const reason = reasonBox && !reasonBox.hidden && !lot ? card.querySelector('[data-reason]').value : null;
+                const pickSel = card.querySelector('[data-pick]');
+                const picked = pickSel && pickSel.value ? (g.received || []).find(x => String(x.id) === pickSel.value) : null;
+                if (reason && !p.photo && !g.photo) { toast(t('lot_reason_photo'), true); return; }
+                if (!lot && !p.photo && !reason) { toast(t('lot_required'), true); return; }
                 e.target.disabled = true;
                 try {
-                    const r = await api('PUT', `/kiosk/production/${b.id}/lots/${m}`, {lot_number: lot || null, best_before: bb, ...(p.photo ? {photo: p.photo} : {}), ...(p.ocr ? {ocr_text: p.ocr} : {})}, true);
-                    // Następny składnik bez numeru partii otwiera się sam (po kolei : składniki, potem opakowania).
+                    const body = {lot_number: lot || null, best_before: bb, ...(p.photo ? {photo: p.photo} : {}), ...(p.ocr ? {ocr_text: p.ocr} : {}),
+                        ...(picked && picked.lot_number === lot.toUpperCase() ? {material_lot_id: picked.id} : {}), ...(reason ? {missing_reason: reason} : {})};
+                    const r = await api('PUT', `/kiosk/production/${b.id}/lots/${m}`, body, true);
+                    // Następny składnik bez partii otwiera się sam (po kolei : składniki, potem opakowania ; nieśledzone pominięte).
                     const fresh = [...r.ingredients.filter(x => !x.packaging), ...r.ingredients.filter(x => x.packaging)];
                     const at = fresh.findIndex(x => x.material_id === m);
-                    const next = [...fresh.slice(at + 1), ...fresh.slice(0, at)].find(x => !x.lot_number);
+                    const next = [...fresh.slice(at + 1), ...fresh.slice(0, at)].find(x => x.tracked !== false && !x.lot_number && !x.missing_reason);
                     await renderBatch(b.id, t('lot_saved', {name: g.name}), r, next ? next.material_id : -1);
                 } catch (err) { e.target.disabled = false; toast(err.message, true); }
             });

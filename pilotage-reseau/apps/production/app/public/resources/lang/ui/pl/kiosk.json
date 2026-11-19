@@ -870,5 +870,22 @@
   "login_in_open": "Wchodzę i otwieram ERP",
   "login_open": "Otwórz ERP",
   "login_opened": "Wejście zapisane — ERP otwarte na komputerze (sesja {session}).",
-  "login_not_you": "To nie Ty przy tym komputerze ? Nie zatwierdzaj."
+  "login_not_you": "To nie Ty przy tym komputerze ? Nie zatwierdzaj.",
+  "lot_untracked": "— bez partii (surowiec nieśledzony)",
+  "lot_missing_reason_state": "brak : {reason}",
+  "lot_pick": "Partia z listy (faktury KSeF i przyjęcia)",
+  "lot_pick_placeholder": "Wybierz partię…",
+  "lot_pick_bb": "DLC {date}",
+  "lot_pick_first": "najkrótsza DLC",
+  "lot_pick_none": "Brak partii tego surowca na liście — wpisz numer albo zrób zdjęcie etykiety.",
+  "lot_reason_open": "Brak partii — powód",
+  "lot_reason_label": "Powód braku partii",
+  "lot_reason_unreadable": "Etykieta nieczytelna",
+  "lot_reason_no_label": "Brak etykiety na opakowaniu",
+  "lot_reason_no_invoice": "Dostawa jeszcze bez faktury / przyjęcia",
+  "lot_reason_other": "Inny powód (zdjęcie)",
+  "lot_reason_help": "Zrób zdjęcie opakowania (przycisk « Zdjęcie etykiety »), potem « Zapisz ».",
+  "lot_reason_photo": "Brak partii : najpierw zrób zdjęcie opakowania.",
+  "lot_progress": "{done} / {total} uzupełnione",
+  "kf_finish_locked": "Brakuje partii ({n})"
 }
