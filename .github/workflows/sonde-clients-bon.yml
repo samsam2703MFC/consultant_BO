@@ -13,7 +13,7 @@ name: Sonde — clients du magasin pour le bon (lecture seule)
 on:
   push:
     branches: [claude/magical-meitner-lx22uk]
-    paths: ['pilotage-reseau/tools/sonde_clients_bon.php', '.github/workflows/sonde-clients-bon.yml']
+    paths: ['marketing/tools/sonde_clients_bon.php', '.github/workflows/sonde-clients-bon.yml']
   workflow_dispatch:
 
 concurrency:
@@ -27,11 +27,10 @@ env:
   SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
   TARGET_DIR: "/var/www/consulant_bo"
 
-# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
-# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+# Réorganisation en quatre domaines (19/11/2026) : le script vit dans marketing/, chaque commande part de ce dossier.
 defaults:
   run:
-    working-directory: pilotage-reseau
+    working-directory: marketing
 
 jobs:
   sonde:

@@ -1,0 +1,60 @@
+name: Sonde — ligne de base de la réorganisation (lecture seule)
+
+# Étape 0 de REORG_PLAN.md : sur le serveur de test, la base du cockpit telle qu'elle est — hôte et nom de la base,
+# chaque table avec son nombre EXACT de lignes, les clés étrangères, vues, déclencheurs, routines, événements, les droits
+# du compte (sans mot de passe), et la confrontation avec l'inventaire du plan. N'écrit rien en base, n'affiche aucune
+# valeur de ligne. Le JSON complet reste sur le serveur, dans le dossier privé (/var/lib/consulant_bo/prive/reorg/).
+#
+# Déclenchement : pousser un changement sur le script ou ce fichier dans la branche ci-dessous. Ne déploie rien.
+
+on:
+  push:
+    branches: [reorg/structure-domaines]
+    paths: ['reorg/ligne_de_base.php', '.github/workflows/sonde-reorg.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: sonde-reorg
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script
+        run: php -l reorg/ligne_de_base.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Mesurer la base du serveur (lecture seule)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "mkdir -p /tmp/reorg_mesure"
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" reorg/ligne_de_base.php reorg/tables.tsv "${SSH_USER}@${SSH_HOST}:/tmp/reorg_mesure/"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "mkdir -p /var/lib/consulant_bo/prive/reorg && chmod 700 /var/lib/consulant_bo/prive/reorg && \
+             timeout 900 php /tmp/reorg_mesure/ligne_de_base.php --code '${TARGET_DIR}' --tsv /tmp/reorg_mesure/tables.tsv \
+               --json /var/lib/consulant_bo/prive/reorg/ligne_de_base_\$(date +%Y%m%d_%H%M).json; \
+             rc=\$?; rm -rf /tmp/reorg_mesure; exit \$rc"
