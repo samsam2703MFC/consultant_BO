@@ -181,3 +181,4 @@
 2026-11-19T18:30:58Z Dépliant des manuels : la page 7, la pré-ouverture (7 pages, 5 manuels)
 2026-11-19T18:35:37Z Dashboard au téléphone, La journée : les cuissons retirées de la frise (il reste le planning)
 2026-11-19T18:38:24Z Pré-ouverture : les compétences à acquérir par profil, QR code vers le CRM (crmUrl) ; dépliant, page 3 en chiffres lus
+2026-11-19T19:36:43Z Catalogue des manuels : le manuel « Fiches techniques » (fiches TF Buddy, une par produit)
