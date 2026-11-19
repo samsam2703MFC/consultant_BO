@@ -90,5 +90,12 @@
   "first_time_help": "Première fois : touchez votre nom pour créer votre PIN.",
   "back_pin": "PIN",
   "pin_change_required": "Votre PIN doit être changé : choisissez-en un nouveau (chaque PIN doit être différent).",
-  "pin_home_help": "Votre PIN ouvre votre profil : entrée, sortie et signature."
+  "pin_home_help": "Votre PIN ouvre votre profil : entrée, sortie et signature.",
+  "no_pin_btn": "Je n’ai pas de PIN",
+  "search_title_first": "Première connexion : trouvez votre nom",
+  "search_title_choose": "Trouvez votre nom",
+  "search_help": "Tapez au moins 3 lettres du nom ou du prénom, puis touchez votre nom.",
+  "search_ph": "Nom ou prénom",
+  "search_none": "Personne trouvé — vérifiez l’orthographe ou demandez au responsable.",
+  "pin_forgot": "{name} a déjà un PIN. Si vous l’avez oublié, demandez-en un nouveau au responsable (Tablety › Zarządzanie)."
 }
