@@ -60,6 +60,11 @@
     };
     const STOP_PATH = '/driver/stops';
     const PHOTO_PATH = '/driver/photos';
+    const PALLET_PATH = '/driver/pallets';
+    const INCIDENT_PATH = '/driver/incidents';
+    // [310] Punkt otwarty po prawej (lista punktów po lewej) ; miniatury zdjęć palet zrobionych w tej sesji.
+    let selected = null;
+    const thumbs = {};
 
     async function loadLabels() {
         const res = await fetch(`${root}/resources/lang/ui/${lang}/driver.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
@@ -133,6 +138,7 @@
         const others = people.filter(p => !p.driver);
         let pin = '';
         el.innerHTML = header() + `<section class="kiosk-card kiosk-pin driver-login"><h2>${esc(t('who_title'))}</h2><p class="kiosk-muted">${esc(t('who_help'))}</p>
+            <button type="button" class="kiosk-btn is-primary driver-login-scan" data-login-scan>▣ ${esc(t('login_scan'))}</button>
             <label class="driver-field"><span>${esc(t('tour'))}</span><select class="driver-vehicle driver-person" data-tour aria-label="${esc(t('choose_tour'))}"><option value="">${esc(tours.length ? t('choose_tour') : t('no_tours'))}</option>
                 ${tours.map(x => `<option value="${x.id}" ${x.id === preset ? 'selected' : ''}>${esc(x.label)}${x.carrier && x.carrier !== x.label ? ' · ' + esc(x.carrier) : ''}${x.departure ? ' · ' + esc(String(x.departure).slice(0, 5)) : ''} — ${esc(t('vehicle_stops', {n: x.customers, pallets: fmt(x.pallets, 0)}))}</option>`).join('')}</select></label>
             <label class="driver-field"><span>${esc(t('driver'))}</span><select class="driver-vehicle driver-person" data-person aria-label="${esc(t('choose_driver'))}"><option value="">${esc(t('choose_driver'))}</option>
@@ -174,6 +180,15 @@
         });
         select.addEventListener('change', () => { error.textContent = ''; });
         tourSelect.addEventListener('change', () => { error.textContent = ''; });
+        // [310] 1. QR trasy → 2. nazwisko → 3. PIN → OK : trasa ustawiona, kierowca zaczyna.
+        const shownDate = date;
+        el.querySelector('[data-login-scan]').addEventListener('click', () => openTourScan(() => {
+            if (date !== shownDate) { renderLogin(); return; }
+            if (!tours.some(x => x.id === vehicle)) { error.textContent = t('tour_scanned_other'); return; }
+            tourSelect.value = String(vehicle);
+            error.textContent = '';
+            select.focus();
+        }));
     }
 
     // --- Parowanie -------------------------------------------------------------------------------------
@@ -235,10 +250,82 @@
         return `<span class="driver-state">${esc(t('state_todo'))}</span>`;
     }
 
+    /** Palety punktu zeskanowane : serwer + kolejka bez sieci. */
+    const scannedOf = (s) => {
+        const set = new Set((s.pallet_scans || []).map(x => Number(x.pallet_no)));
+        queue.filter(q => q.path === PALLET_PATH && q.body.customer_id === s.customer_id && q.body.date === date).forEach(q => set.add(Number(q.body.pallet_no)));
+        return set;
+    };
+    const isDone = (s) => s.status === 'delivered' || s.status === 'problem' || !!queuedFor(s.customer_id);
+    const DOC_TYPES = {CMR: 'cmr', WZ: 'wz', WDT: 'wdt'};
+    const docTag = (type) => type === 'WDT' ? 'FV' : type;
+    const docName = (type) => type === 'WDT' ? t('invoice') : type;
+    const incidentsOf = (s) => (s.incidents || []).concat(queue.filter(q => q.path === INCIDENT_PATH && q.body.customer_id === s.customer_id && q.body.date === date)
+        .map(q => ({kind: q.body.kind, label: ((data.incident_kinds || []).find(k => k.code === q.body.kind) || {}).label || q.body.kind, note: q.body.note, queued: true})));
+
+    function listItem(s) {
+        const q = queuedFor(s.customer_id);
+        const sub = q ? t('state_queued', {status: t('status_' + q.body.status)})
+            : s.status === 'delivered' ? t('state_delivered', {time: hhmm(s.recorded_at), who: s.receiver_name || t('mode_absent')})
+            : s.status === 'problem' ? t('status_problem') + ' ' + hhmm(s.recorded_at)
+            : s.status === 'arrived' ? t('state_arrived', {time: hhmm(s.arrived_at || s.recorded_at)})
+            : t('list_pallets', {n: fmt(s.pallets, 0)}) + (s.address ? ' · ' + s.address.split(',').slice(-2, -1).join('').trim() : '');
+        const mark = q ? '…' : s.status === 'delivered' ? '✓' : s.status === 'problem' ? '!' : s.n;
+        return `<button type="button" class="driver-li ${s.customer_id === selected ? 'is-sel' : ''} ${s.status ? 'is-' + s.status : ''}" data-select="${s.customer_id}">
+            <span class="driver-n">${esc(mark)}</span><span class="driver-li-main"><b>${esc(s.name)}</b><small>${esc(sub)}</small></span></button>`;
+    }
+
+    function stopDetail(s) {
+        const nums = s.pallet_numbers || [];
+        const scanned = scannedOf(s);
+        const missing = nums.filter(n => !scanned.has(Number(n)));
+        const incidents = incidentsOf(s);
+        const delivered = s.status === 'delivered';
+        const tile = (label, value, cls) => `<div class="driver-tile ${cls || ''}"><span>${esc(label)}</span><strong>${value}</strong></div>`;
+        const docs = (s.documents || []).filter(doc => DOC_TYPES[doc.type]).map(doc => `<button type="button" class="driver-docbtn" data-doc="${DOC_TYPES[doc.type]}">
+                <span class="driver-doc-tag">${esc(docTag(doc.type))}</span><span><b>${esc(docName(doc.type))}</b><small>${esc(doc.num)}</small></span>
+                ${doc.type === 'CMR' && s.has_signed_cmr ? `<em>✓ ${esc(t('signed'))}</em>` : '<i>›</i>'}</button>`).join('');
+        const step = (attr, icon, title, sub, cls) => `<button type="button" class="driver-step ${cls || ''}" ${attr}><b>${icon} ${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</button>`;
+        return `<article class="kiosk-card driver-stop ${s.status ? 'is-' + s.status : ''}" data-stop="${s.customer_id}">
+            <div class="driver-stop-head"><span class="driver-n">${s.n}</span><div class="driver-stop-title"><h3>${esc(s.name)}</h3>
+                <p class="kiosk-muted">${esc(s.address || '—')}${s.phone ? ' · ☎ ' + esc(s.phone) : ''}</p></div>${stopState(s)}</div>
+            <div class="driver-tiles">
+                ${nums.length ? tile(t('tile_unloaded'), `${scanned.size} / ${nums.length}`, missing.length ? 'is-warn' : 'is-ok')
+                    : tile(t('pallets'), (s.pallets_estimated ? '≈ ' : '') + fmt(s.pallets, 0))}
+                ${tile(t('tile_returned'), s.pallets_returned ?? '—')}
+                ${tile(t('tile_temperature'), photoCount(s, 'temperature') ? '📷 ' + photoCount(s, 'temperature') : '—')}
+                ${tile(t('tile_status'), esc(s.status === 'arrived' ? t('tile_on_site', {time: hhmm(s.arrived_at || s.recorded_at)}) : s.status === 'delivered' ? t('status_delivered') + ' ' + hhmm(s.recorded_at) : s.status === 'problem' ? t('status_problem') : t('state_todo')))}
+            </div>
+            ${instructionsBlock(s)}
+            <h4 class="driver-sub">${esc(t('stop_documents'))}</h4>
+            ${docs ? `<div class="driver-docs">${docs}</div>` : `<p class="kiosk-muted">${esc(t('no_documents'))}</p>`}
+            ${photoCount(s, 'before') || photoCount(s, 'after') ? `<p class="kiosk-muted driver-photo-summary">📷 ${esc(t('photos_before'))} : ${photoCount(s, 'before')} · ${esc(t('photos_after'))} : ${photoCount(s, 'after')}</p>` : ''}
+            ${incidents.length ? `<ul class="driver-incidents">${incidents.map(x => `<li>⚠ <b>${esc(x.label)}</b>${x.note ? ' — ' + esc(x.note) : ''}${x.queued ? ' <span class="driver-state is-queued">' + esc(t('queued_short')) + '</span>' : ''}</li>`).join('')}</ul>` : ''}
+            ${s.note && s.status === 'problem' ? `<p class="kiosk-muted">${esc(s.note)}</p>` : ''}
+            <h4 class="driver-sub">${esc(t('delivery_steps'))}</h4>
+            <div class="driver-steps">
+                ${!delivered && !photoCount(s, 'temperature') ? step('data-photo="temperature"', '🌡', t('temperature_photo'), t('temperature_help'), 'is-light') : ''}
+                ${!delivered ? step('data-photo="before"', '📷', t(photoCount(s, 'before') ? 'add_before' : 'arrive_photo'), '', 'is-light') : ''}
+                ${nums.length ? step('data-pallets', '📦', t('unload_pallets'), missing.length ? t('unload_pallets_sub', {n: scanned.size, total: nums.length, missing: missing.join(', ')}) : t('unload_pallets_done', {n: nums.length}), missing.length ? 'is-blue' : 'is-done') : ''}
+                ${step('data-photo="after"', '📷', t('after_photo'), photoCount(s, 'after') ? t('photos_n', {n: photoCount(s, 'after')}) : t('after_photo_help'), 'is-light')}
+                ${step('data-incident', '⚠', t('incident'), t('incident_help'), 'is-warn')}
+                ${step('data-deliver', '✍', delivered ? t('deliver_again') : t('receipt'), t('receipt_help'), 'is-red is-wide')}
+            </div>
+            <details class="driver-products"><summary>${esc(t('products', {n: s.products.length}))}</summary>
+                <ul>${s.products.map(p => `<li>${esc(p.name)} — ${fmt(p.cartons, 1)} ${esc(t('cartons'))}</li>`).join('')}</ul></details>
+            <div class="kiosk-row driver-actions">
+                ${s.address ? `<a class="kiosk-btn is-small" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}" target="_blank" rel="noopener">${esc(t('navigate'))}</a>` : ''}
+                ${s.phone ? `<a class="kiosk-btn is-small" href="tel:${esc(String(s.phone).replace(/[^0-9+]/g, ''))}">${esc(t('call'))}</a>` : ''}
+                ${s.status ? `<button type="button" class="kiosk-btn is-small" data-stop-pdf>${esc(t('stop_pdf'))}</button>` : ''}
+                <button type="button" class="kiosk-btn is-small is-danger-soft" data-problem>${esc(t('problem'))}</button></div>
+        </article>`;
+    }
+
     function render() {
         const d = data;
         const run = d.run || {};
         const v = d.vehicle;
+        if (!d.stops.some(s => s.customer_id === selected)) selected = ((d.stops.find(s => !isDone(s)) || d.stops[0]) || {}).customer_id || null;
         const runCard = v ? `<section class="kiosk-card driver-run">
                 <div class="driver-run-main"><div><h2>${esc(v.label)}</h2><p class="kiosk-muted">${esc(t('run_summary', {stops: d.counts.stops, pallets: fmt(v.pallets, 0), kg: fmt(v.weight_kg, 0)}))}
                     ${v.departure ? ' · ' + esc(t('departure', {time: v.departure})) : ''}</p></div>
@@ -246,38 +333,23 @@
                     ${d.counts.problem ? `<span class="driver-state is-problem">${esc(t('problems', {n: d.counts.problem}))}</span>` : ''}</div></div>
                 <div class="driver-run-actions"><span class="driver-name">${esc(t('driver_name'))}<strong>${esc(session ? session.name : (run.driver_name || ''))}</strong></span>
                     ${!run.started_at ? `<button type="button" class="kiosk-btn is-primary" data-run="start">${esc(t('start_run'))}</button>`
-                        : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span><button type="button" class="kiosk-btn" data-run="finish">${esc(t('finish_run'))}</button>`
+                        : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span>
+                            ${run.cmr_signed_at ? `<span class="driver-state is-ok" title="${esc(t('cmr_sign_help'))}">✍ ${esc(t('cmr_signed', {time: hhmm(run.cmr_signed_at)}))}</span>`
+                                : `<button type="button" class="kiosk-btn is-primary" data-run="sign">✍ ${esc(t('cmr_sign_button'))}</button>`}`
                         : `<span class="driver-state is-ok">${esc(t('finished', {from: hhmm(run.started_at), to: hhmm(run.finished_at)}))}</span>`}
                     <button type="button" class="kiosk-btn ${d.loading && d.loading.loaded < d.loading.total ? 'is-primary' : ''}" data-loading ${d.loading ? '' : 'disabled'}>⛟ ${esc(d.loading ? t('loading_plan_n', {loaded: d.loading.loaded, total: d.loading.total}) : t('loading_plan_none'))}</button>
                     <button type="button" class="kiosk-btn" data-docs>${esc(t('documents'))}</button>
-                    <button type="button" class="kiosk-btn" data-report>${esc(t('report_pdf'))}</button></div></section>` : '';
+                    <button type="button" class="kiosk-btn ${d.stops.length && d.stops.every(isDone) && !run.finished_at ? 'is-ok' : ''}" data-summary>${esc(t('summary_button'))}</button></div></section>` : '';
         const choose = `<section class="driver-choose">
                 <div class="driver-days">${d.dates.map(x => `<button type="button" class="kiosk-chip ${x === d.date ? 'is-active' : ''}" data-date="${x}">${esc(dayLabel(x))}</button>`).join('')}
                     <button type="button" class="kiosk-chip" data-scan-tour>▣ ${esc(t('scan_tour'))}</button></div>
                 ${d.vehicles.length > 1 || !v ? `<select class="driver-vehicle" data-vehicle aria-label="${esc(t('vehicle'))}"><option value="">${esc(t('choose_vehicle'))}</option>
                     ${d.vehicles.map(x => `<option value="${x.id}" ${v && x.id === v.id ? 'selected' : ''}>${esc(x.label)} · ${esc(t('vehicle_stops', {n: x.customers, pallets: fmt(x.pallets, 0)}))}</option>`).join('')}</select>` : ''}
             </section>`;
-        const stops = d.stops.map(s => `<article class="kiosk-card driver-stop ${s.status ? 'is-' + s.status : ''}" data-stop="${s.customer_id}">
-                <div class="driver-stop-head"><span class="driver-n">${s.n}</span><div class="driver-stop-title"><h3>${esc(s.name)}</h3>
-                    <p class="kiosk-muted">${esc(s.address || '—')}</p></div>${stopState(s)}</div>
-                <div class="driver-facts"><span><strong>${s.pallets_estimated ? '≈ ' : ''}${fmt(s.pallets, 0)}</strong> ${esc(t('pallets'))}${s.pallets_estimated ? ' <span class="kiosk-muted">(' + esc(t('pallets_estimated')) + ')</span>' : ''}</span>
-                    <span><strong>${fmt(s.cartons, 0)}</strong> ${esc(t('cartons'))}</span><span><strong>${fmt(s.weight_kg, 0)}</strong> kg</span>
-                    ${s.documents.map(doc => `<span class="driver-doc">${esc(doc.type)} ${esc(doc.num)}</span>`).join('')}</div>
-                ${s.pallet_numbers && s.pallet_numbers.length ? `<p class="driver-pallet-numbers">${esc(t('pallet_numbers'))} : ${s.pallet_numbers.map(n => `<span class="driver-pallet">${esc(n)}</span>`).join('')}</p>` : ''}
-                ${instructionsBlock(s)}
-                ${photoCount(s, 'before') || photoCount(s, 'after') ? `<p class="kiosk-muted driver-photo-summary">📷 ${esc(t('photos_before'))} : ${photoCount(s, 'before')} · ${esc(t('photos_after'))} : ${photoCount(s, 'after')}</p>` : ''}
-                ${s.note && s.status === 'problem' ? `<p class="kiosk-muted">${esc(s.note)}</p>` : ''}
-                <details class="driver-products"><summary>${esc(t('products', {n: s.products.length}))}</summary>
-                    <ul>${s.products.map(p => `<li>${esc(p.name)} — ${fmt(p.cartons, 1)} ${esc(t('cartons'))}</li>`).join('')}</ul></details>
-                <div class="kiosk-row driver-actions">
-                    ${s.address ? `<a class="kiosk-btn is-small" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}" target="_blank" rel="noopener">${esc(t('navigate'))}</a>` : ''}
-                    ${s.phone ? `<a class="kiosk-btn is-small" href="tel:${esc(String(s.phone).replace(/[^0-9+]/g, ''))}">${esc(t('call'))}</a>` : ''}
-                    ${s.status ? `<button type="button" class="kiosk-btn is-small" data-stop-pdf>${esc(t('stop_pdf'))}</button>` : ''}
-                    ${s.status !== 'delivered' ? `<button type="button" class="kiosk-btn is-small" data-photo="before">📷 ${esc(t(photoCount(s, 'before') ? 'add_before' : 'arrive_photo'))}</button>` : ''}
-                    <button type="button" class="kiosk-btn is-small is-danger-soft" data-problem>${esc(t('problem'))}</button>
-                    <button type="button" class="kiosk-btn is-small is-ok" data-deliver>${esc(s.status === 'delivered' ? t('deliver_again') : t('deliver'))}</button></div>
-            </article>`).join('');
-        el.innerHTML = header() + choose + runCard + (v ? (stops || `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('no_stops'))}</p></section>`)
+        const current = d.stops.find(s => s.customer_id === selected);
+        const split = d.stops.length ? `<div class="driver-split"><nav class="driver-list" aria-label="${esc(t('stops_list'))}">${d.stops.map(listItem).join('')}</nav>
+                <div class="driver-detail">${current ? stopDetail(current) : ''}</div></div>` : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('no_stops'))}</p></section>`;
+        el.innerHTML = header() + choose + runCard + (v ? split
             : `<section class="kiosk-card"><p class="kiosk-muted">${esc(d.vehicles.length ? t('choose_vehicle_help') : t('no_vehicles'))}</p></section>`);
         bind();
     }
@@ -287,32 +359,100 @@
         const vs = el.querySelector('[data-vehicle]');
         if (vs) vs.addEventListener('change', () => { vehicle = Number(vs.value) || null; store.set(VEHICLE_KEY, vehicle ? String(vehicle) : null); load(); });
         const scanTour = el.querySelector('[data-scan-tour]');
-        if (scanTour) scanTour.addEventListener('click', openTourScan);
-        el.querySelectorAll('[data-run]').forEach(b => b.addEventListener('click', async () => {
-            if (b.dataset.run === 'finish' && !window.confirm(t('finish_confirm'))) return;
-            b.disabled = true;
-            try {
-                await api('POST', '/driver/run', {date, vehicle_id: vehicle, action: b.dataset.run});
-                toast(t(b.dataset.run === 'start' ? 'run_started' : 'run_finished'));
-                load();
-            } catch (err) { b.disabled = false; toast(err.message, true); }
-        }));
+        if (scanTour) scanTour.addEventListener('click', () => openTourScan());
+        el.querySelectorAll('[data-run]').forEach(b => b.addEventListener('click', () => runAction(b, b.dataset.run)));
         const loadingBtn = el.querySelector('[data-loading]');
         if (loadingBtn) loadingBtn.addEventListener('click', openLoading);
         const docs = el.querySelector('[data-docs]');
         if (docs) docs.addEventListener('click', () => openFile('/driver/documents?date=' + encodeURIComponent(date), docs));
-        const report = el.querySelector('[data-report]');
-        if (report) report.addEventListener('click', () => openFile(`/driver/report?date=${encodeURIComponent(date)}&vehicle_id=${vehicle}`, report));
+        const summary = el.querySelector('[data-summary]');
+        if (summary) summary.addEventListener('click', openSummary);
+        el.querySelectorAll('[data-select]').forEach(b => b.addEventListener('click', () => {
+            selected = Number(b.dataset.select);
+            render();
+            const detail = el.querySelector('.driver-detail');
+            if (detail && window.matchMedia('(max-width: 899px)').matches) detail.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }));
         el.querySelectorAll('[data-stop]').forEach(card => {
             const s = data.stops.find(x => x.customer_id === Number(card.dataset.stop));
             card.querySelector('[data-deliver]').addEventListener('click', () => openDeliver(s));
             card.querySelector('[data-problem]').addEventListener('click', () => openProblem(s));
+            card.querySelector('[data-incident]').addEventListener('click', () => openIncident(s));
+            const pallets = card.querySelector('[data-pallets]');
+            if (pallets) pallets.addEventListener('click', () => openPallets(s));
+            card.querySelectorAll('[data-doc]').forEach(b => b.addEventListener('click', () =>
+                openFile(`/driver/stop-document?date=${encodeURIComponent(date)}&customer_id=${s.customer_id}&type=${b.dataset.doc}`, b)));
             const pdf = card.querySelector('[data-stop-pdf]');
             if (pdf) pdf.addEventListener('click', () => openFile(`/driver/report?date=${encodeURIComponent(date)}&vehicle_id=${vehicle}&customer_id=${s.customer_id}`, pdf));
-            const before = card.querySelector('[data-photo="before"]');
-            if (before) before.addEventListener('click', () => takePhoto(s, 'before').then(ok => { if (ok) render(); }));
+            card.querySelectorAll('[data-photo]').forEach(b => b.addEventListener('click', () => takePhoto(s, b.dataset.photo).then(ok => { if (ok) render(); })));
             bindReveal(card);
         });
+    }
+
+    async function runAction(b, action, signature) {
+        if (action === 'finish' && !window.confirm(t('finish_confirm'))) return false;
+        // [311] Start trasy : kierowca podpisuje się raz — pole 23 CMR (przewoźnik) wszystkich CMR trasy z dnia.
+        if ((action === 'start' && !(data.run || {}).cmr_signed_at || action === 'sign') && !signature) { openCarrierSign(b, action); return false; }
+        b.disabled = true;
+        try {
+            await api('POST', '/driver/run', Object.assign({date, vehicle_id: vehicle, action}, signature ? {signature} : {}));
+            toast(t(action === 'start' ? 'run_started' : action === 'sign' ? 'cmr_sign_saved' : 'run_finished'));
+            await load();
+            return true;
+        } catch (err) { b.disabled = false; toast(err.message, true); return false; }
+    }
+
+    /** [311] Podpis kierowcy (przewoźnika) : pole 23 wszystkich CMR trasy z dnia ; pole 22 = wystawca z ERP, pole 24 = odbiorca. */
+    function openCarrierSign(button, action) {
+        const box = sheet(t('cmr_sign_title'), `<form class="kiosk-form driver-form" data-form>
+            <p class="kiosk-muted">${esc(t('cmr_sign_help'))}</p>
+            <div><span class="driver-label">${esc(t('cmr_sign_label', {name: session ? session.name : ''}))}</span>
+                <canvas class="kiosk-sign driver-sign" data-pad width="900" height="300" aria-label="${esc(t('cmr_sign_label', {name: ''}))}"></canvas>
+                <button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div>
+            <p class="kiosk-error" data-error></p>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button>
+                <button class="kiosk-btn is-primary" data-confirm>${esc(t(action === 'start' ? 'cmr_sign_start' : 'cmr_sign_save'))}</button></div></form>`);
+        const pad = signaturePad(box);
+        box.querySelector('[data-form]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!pad.strokes) { box.querySelector('[data-error]').textContent = t('cmr_sign_first'); return; }
+            const confirm = box.querySelector('[data-confirm]');
+            confirm.disabled = true;
+            if (await runAction(button, action, pad.canvas.toDataURL('image/png'))) box.remove(); else confirm.disabled = false;
+        });
+    }
+
+    // --- [310] Koniec trasy : podsumowanie punktów, raport PDF, « Zakończ trasę » ----------------------------------
+    function openSummary() {
+        const d = data;
+        const run = d.run || {};
+        const rows = d.stops.map(s => {
+            const q = queuedFor(s.customer_id);
+            const status = q ? q.body.status : s.status;
+            const incidents = incidentsOf(s);
+            const icon = status === 'delivered' ? (incidents.length ? '!' : '✓') : status === 'problem' ? '!' : '○';
+            const parts = [];
+            if (status === 'delivered') parts.push(t('mode_done_' + ((q ? q.body.receipt_mode : s.receipt_mode) || 'tablet')));
+            if (status === 'problem') parts.push(t('status_problem'));
+            if (!status) parts.push(t('state_todo'));
+            if (incidents.length) parts.push(t('incident_n', {list: incidents.map(x => x.label).join(', ')}));
+            const photos = photoCount(s, 'before') + photoCount(s, 'after') + photoCount(s, 'temperature');
+            if (photos) parts.push(t('photos_n', {n: photos}));
+            if ((s.pallet_numbers || []).length) parts.push(t('pallets_scanned_n', {n: scannedOf(s).size, total: s.pallet_numbers.length}));
+            return `<li class="driver-sum ${status === 'delivered' && !incidents.length ? 'is-ok' : status ? 'is-warn' : ''}"><span class="driver-n">${icon}</span>
+                <span class="driver-li-main"><b>${esc(s.name)}</b><small>${esc(parts.join(' · '))}</small></span><span class="kiosk-muted">${esc(hhmm(q ? q.body.recorded_at : s.recorded_at))}</span></li>`;
+        }).join('');
+        const returned = d.stops.reduce((n, s) => n + (Number(s.pallets_returned) || 0), 0);
+        const box = sheet(t('summary_title', {day: dayLabel(date)}), `<p class="kiosk-muted">${esc(t('summary_sub', {done: d.stops.filter(isDone).length, n: d.stops.length, pallets: fmt(d.vehicle ? d.vehicle.pallets : 0, 0), returned}))}</p>
+            <ul class="driver-sums">${rows}</ul>
+            ${queue.length ? `<p class="driver-queue">${esc(t('queue', {n: queue.length}))} — ${esc(t('queue_help'))}</p>` : ''}
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button>
+                <button type="button" class="kiosk-btn" data-sum-report>📄 ${esc(t('report_pdf'))}</button>
+                ${run.started_at && !run.finished_at ? `<button type="button" class="kiosk-btn is-ok" data-sum-finish>✓ ${esc(t('finish_run'))}</button>` : ''}</div>`);
+        const rep = box.querySelector('[data-sum-report]');
+        rep.addEventListener('click', () => openFile(`/driver/report?date=${encodeURIComponent(date)}&vehicle_id=${vehicle}`, rep));
+        const fin = box.querySelector('[data-sum-finish]');
+        if (fin) fin.addEventListener('click', async () => { if (await runAction(fin, 'finish')) box.remove(); });
     }
 
     // --- Plan załadunku (28/10/2026) : naczepa z biura, palety na miejscach, « załadowana » dotknięciem ---------------
@@ -408,12 +548,21 @@
     async function stampPhoto(file, caption) {
         const taken = file.lastModified && Math.abs(Date.now() - file.lastModified) < 6 * 3600 * 1000 ? new Date(file.lastModified) : new Date();
         const bitmap = await createImageBitmap(file);
-        const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+        return stampImage(bitmap, bitmap.width, bitmap.height, taken, caption);
+    }
+
+    /** [310] Klatka z aparatu skanera (zdjęcie palety bez otwierania aparatu drugi raz). */
+    function stampVideo(video, caption) {
+        return stampImage(video, video.videoWidth, video.videoHeight, new Date(), caption);
+    }
+
+    function stampImage(source, width, height, taken, caption) {
+        const scale = Math.min(1, 1280 / Math.max(width, height));
         const canvas = document.createElement('canvas');
-        canvas.width = Math.round(bitmap.width * scale);
-        canvas.height = Math.round(bitmap.height * scale);
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
         const band = Math.max(26, Math.round(canvas.height * 0.06));
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.fillRect(0, canvas.height - band, canvas.width, band);
@@ -430,14 +579,14 @@
         const file = await pickPhoto();
         if (!file) return false;
         let shot;
-        try { shot = await stampPhoto(file, s.name + ' · ' + t(kind === 'before' ? 'stamp_before' : 'stamp_after')); } catch (e) { toast(t('photo_error'), true); return false; }
+        try { shot = await stampPhoto(file, s.name + ' · ' + t('stamp_' + kind)); } catch (e) { toast(t('photo_error'), true); return false; }
         const pos = await position();
         const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, kind, client_uuid: uuid()}, shot, pos || {});
         try {
             const r = await api('POST', PHOTO_PATH, body);
-            s.photos = s.photos || {before: [], after: []};
-            s.photos[kind].push({id: r.id, taken_at: r.taken_at});
-            if (kind === 'before' && !s.status) { s.status = 'arrived'; s.arrived_at = r.taken_at; }
+            s.photos = s.photos || {};
+            (s.photos[kind] = s.photos[kind] || []).push({id: r.id, taken_at: r.taken_at});
+            if (kind !== 'after' && !s.status) { s.status = 'arrived'; s.arrived_at = r.taken_at; }
             toast(t('photo_saved', {time: hhmm(r.taken_at)}));
             return true;
         } catch (err) {
@@ -498,7 +647,8 @@
         };
     }
 
-    async function openTourScan() {
+    /** Skan QR trasy ; onDone (ekran logowania) zamiast wczytania dnia. */
+    async function openTourScan(onDone) {
         const box = sheet(t('scan_tour'), `<div class="driver-scan"><video data-video autoplay playsinline muted></video></div>
             <p class="kiosk-muted" data-scan-msg>${esc(t('scan_tour_help'))}</p>
             <div class="kiosk-row"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button></div>`);
@@ -523,7 +673,7 @@
             let text = null;
             try { text = await decode(video); } catch (e) { text = null; }
             if (text) {
-                if (applyTourCode(text)) { stop(); box.remove(); toast(t('tour_opened')); load(); return; }
+                if (applyTourCode(text)) { stop(); box.remove(); toast(t('tour_opened')); if (onDone) onDone(); else load(); return; }
                 msg.textContent = t('scan_tour_wrong');
             }
             timer = window.setTimeout(tick, 350);
@@ -581,18 +731,48 @@
         return pad;
     }
 
+    /**
+     * [310] Odbiór : podpis na tablecie, podpis w polu 24 CMR z fakturowania (PDF), albo klient nieobecny (bez podpisu,
+     * zdjęcie po dostawie obowiązkowe). Niezeskanowane palety : uzasadnienie obowiązkowe.
+     */
     function openDeliver(s) {
-        const box = sheet(t('deliver_title', {name: s.name}), `<form class="kiosk-form driver-form" data-form>
-            <label>${esc(t('receiver'))}<input name="receiver_name" required maxlength="100" autocomplete="off" value="${esc(s.receiver_name || '')}"></label>
-            <div class="driver-pallets"><label>${esc(t('pallets_delivered'))}<input name="pallets_delivered" type="number" min="0" max="99" inputmode="numeric" value="${s.pallets_delivered ?? s.pallets ?? 0}"></label>
+        const cmr = (s.documents || []).find(d => d.type === 'CMR');
+        let mode = s.receipt_mode && (s.receipt_mode !== 'cmr' || cmr) ? s.receipt_mode : 'tablet';
+        const nums = s.pallet_numbers || [];
+        const scanned = scannedOf(s);
+        const missing = nums.filter(n => !scanned.has(Number(n)));
+        const box = sheet(t('deliver_title', {name: s.name}), `<div class="driver-modes" role="tablist">
+                ${['tablet', 'cmr', 'absent'].map(m => `<button type="button" role="tab" class="driver-mode" data-mode="${m}" ${m === 'cmr' && !cmr ? 'disabled title="' + esc(t('mode_cmr_none')) + '"' : ''}>${esc(t('mode_' + m))}</button>`).join('')}</div>
+            <p class="driver-mode-help" data-mode-help></p>
+            <form class="kiosk-form driver-form" data-form novalidate>
+            <div class="driver-pallets"><label data-person>${esc(t('receiver'))}<input name="receiver_name" maxlength="100" autocomplete="off" value="${esc(s.receiver_name || '')}"></label>
+                <label>${esc(t('pallets_delivered'))}<input name="pallets_delivered" type="number" min="0" max="99" inputmode="numeric" value="${s.pallets_delivered ?? (scanned.size || s.pallets || 0)}"></label>
                 <label>${esc(t('pallets_returned'))}<input name="pallets_returned" type="number" min="0" max="99" inputmode="numeric" value="${s.pallets_returned ?? 0}"></label></div>
+            ${missing.length ? `<div class="driver-missing"><p>⚠ ${esc(t('pallets_missing', {n: missing.length, list: missing.join(', ')}))}</p>
+                <label>${esc(t('pallets_note'))}<input name="pallets_note" maxlength="255" autocomplete="off" value="${esc(s.pallets_note || '')}"></label>
+                <button type="button" class="kiosk-btn is-small" data-open-pallets>📦 ${esc(t('unload_pallets'))}</button></div>` : ''}
             <div class="driver-checklist" data-checklist>${checklist(s)}</div>
-            <div><span class="driver-label">${esc(t('signature'))}</span><canvas class="kiosk-sign driver-sign" data-pad width="900" height="300" aria-label="${esc(t('signature'))}"></canvas>
+            <div data-sign><span class="driver-label" data-sign-label>${esc(t('signature'))}</span><canvas class="kiosk-sign driver-sign" data-pad width="900" height="300" aria-label="${esc(t('signature'))}"></canvas>
                 <button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div>
             <label>${esc(t('note'))}<input name="note" maxlength="500" autocomplete="off"></label>
             <p class="kiosk-error" data-error></p>
-            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button><button class="kiosk-btn is-ok">${esc(t('confirm_delivery'))}</button></div></form>`);
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button><button class="kiosk-btn is-ok" data-confirm>${esc(t('confirm_delivery'))}</button></div></form>`);
         const pad = signaturePad(box);
+        const setMode = (m) => {
+            mode = m;
+            box.querySelectorAll('[data-mode]').forEach(b => { b.classList.toggle('is-active', b.dataset.mode === m); b.setAttribute('aria-selected', b.dataset.mode === m ? 'true' : 'false'); });
+            box.querySelector('[data-mode-help]').textContent = m === 'cmr' ? t('mode_cmr_help', {num: cmr ? cmr.num : ''}) : t('mode_' + m + '_help');
+            box.querySelector('[data-sign]').hidden = m === 'absent';
+            box.querySelector('[data-person]').hidden = m === 'absent';
+            box.querySelector('[data-sign-label]').textContent = t(m === 'cmr' ? 'signature_cmr' : 'signature');
+            box.querySelector('[data-confirm]').textContent = t(m === 'cmr' ? 'confirm_cmr' : m === 'absent' ? 'confirm_absent' : 'confirm_delivery');
+            box.querySelector('[data-error]').textContent = '';
+        };
+        box.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+        box.querySelector('[data-form]').addEventListener('input', () => { box.querySelector('[data-error]').textContent = ''; });
+        setMode(mode);
+        const reopen = box.querySelector('[data-open-pallets]');
+        if (reopen) reopen.addEventListener('click', () => { box.remove(); openPallets(s); });
         const bindChecklist = () => box.querySelectorAll('[data-sheet-photo]').forEach(b => b.addEventListener('click', () => takePhoto(s, b.dataset.sheetPhoto).then(ok => {
             if (!ok) return;
             box.querySelector('[data-checklist]').innerHTML = checklist(s);
@@ -602,11 +782,19 @@
         box.querySelector('[data-form]').addEventListener('submit', async (e) => {
             e.preventDefault();
             const f = e.target;
-            if (!pad.strokes) { box.querySelector('[data-error]').textContent = t('sign_first'); return; }
-            if ((!photoCount(s, 'before') || !photoCount(s, 'after')) && !window.confirm(t('no_photos_confirm'))) return;
-            f.querySelector('.is-ok').disabled = true;
-            const body = {status: 'delivered', receiver_name: f.receiver_name.value.trim(), pallets_delivered: Number(f.pallets_delivered.value) || 0,
-                pallets_returned: Number(f.pallets_returned.value) || 0, note: f.note.value.trim() || null, signature: pad.canvas.toDataURL('image/png')};
+            const err = box.querySelector('[data-error]');
+            const note = f.pallets_note ? f.pallets_note.value.trim() : '';
+            if (missing.length && !note) { err.textContent = t('pallets_note_required'); f.pallets_note.focus(); return; }
+            if (mode === 'absent' && !photoCount(s, 'after')) { err.textContent = t('absent_photo_required'); return; }
+            if (mode !== 'absent') {
+                if (!f.receiver_name.value.trim()) { err.textContent = t('receiver_required'); f.receiver_name.focus(); return; }
+                if (!pad.strokes) { err.textContent = t('sign_first'); return; }
+                if ((!photoCount(s, 'before') || !photoCount(s, 'after')) && !window.confirm(t('no_photos_confirm'))) return;
+            }
+            f.querySelector('[data-confirm]').disabled = true;
+            const body = {status: 'delivered', receipt_mode: mode, receiver_name: mode === 'absent' ? null : f.receiver_name.value.trim(),
+                pallets_delivered: Number(f.pallets_delivered.value) || 0, pallets_returned: Number(f.pallets_returned.value) || 0,
+                pallets_note: note || null, note: f.note.value.trim() || null, signature: mode === 'absent' ? null : pad.canvas.toDataURL('image/png')};
             await submit(s, body, box);
         });
     }
@@ -636,6 +824,173 @@
         });
     }
 
+    // --- [310] Rozładunek palet : skan QR etykiety (TFBPAL:numer) + zdjęcie każdej palety -------------------------------
+    /** Numer palety z kodu QR etykiety albo z cyfr. */
+    const palletFromCode = (text) => {
+        const m = String(text || '').trim().match(/^TFBPAL:(\d{1,9})$/i) || String(text || '').trim().match(/^(\d{1,9})$/);
+        return m ? Number(m[1]) : null;
+    };
+
+    async function openPallets(s) {
+        const nums = (s.pallet_numbers || []).map(Number);
+        const box = sheet(t('pallets_title', {name: s.name}), `<p class="kiosk-muted" data-count></p>
+            <div class="driver-scan is-pallet"><video data-video autoplay playsinline muted></video><span class="driver-scan-frame" aria-hidden="true"></span></div>
+            <p class="kiosk-muted" data-scan-msg>${esc(t('pallet_scan_help'))}</p>
+            <div class="driver-pallet-alert" data-alert role="alert" hidden></div>
+            <div class="driver-pallet-found" data-found hidden></div>
+            <div class="driver-pallet-grid" data-grid></div>
+            <div class="driver-manual"><input type="number" inputmode="numeric" min="1" data-manual placeholder="${esc(t('pallet_number'))}" aria-label="${esc(t('pallet_number'))}">
+                <button type="button" class="kiosk-btn" data-manual-ok>⌨ ${esc(t('pallet_manual'))}</button></div>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-warn-soft" data-missing>${esc(t('pallet_missing_btn'))}</button>
+                <button type="button" class="kiosk-btn is-primary" data-close>${esc(t('done'))}</button></div>`);
+        const video = box.querySelector('[data-video]');
+        const msg = box.querySelector('[data-scan-msg]');
+        const alertBox = box.querySelector('[data-alert]');
+        const foundBox = box.querySelector('[data-found]');
+        let stream = null;
+        let timer = null;
+        let closed = false;
+        let pending = null;
+        let last = {text: '', at: 0};
+        const stopCam = () => { closed = true; window.clearTimeout(timer); if (stream) stream.getTracks().forEach(tr => tr.stop()); };
+        new MutationObserver((_, obs) => { if (!document.body.contains(box)) { stopCam(); obs.disconnect(); render(); } }).observe(document.body, {childList: true});
+        const scanTime = (no) => {
+            const x = (s.pallet_scans || []).find(y => Number(y.pallet_no) === no);
+            if (x) return hhmm(x.scanned_at);
+            return queue.some(q => q.path === PALLET_PATH && q.body.customer_id === s.customer_id && q.body.date === date && Number(q.body.pallet_no) === no) ? t('queued_short') : null;
+        };
+        const draw = () => {
+            const scanned = scannedOf(s);
+            box.querySelector('[data-count]').textContent = t('pallets_count', {n: scanned.size, total: nums.length});
+            box.querySelector('[data-grid]').innerHTML = nums.map(no => {
+                const time = scanTime(no);
+                const thumb = thumbs[`${date}:${s.customer_id}:${no}`];
+                return `<div class="driver-ptile ${time ? 'is-done' : ''} ${pending && pending.no === no ? 'is-pending' : ''}"><b>${no}</b>
+                    ${thumb ? `<img src="${thumb}" alt="">` : '<span class="driver-ptile-ph"></span>'}<small>${time ? '✓ ' + esc(time) : esc(t('to_scan'))}</small></div>`;
+            }).join('');
+        };
+        const showAlert = (text) => { alertBox.textContent = '✕ ' + text; alertBox.hidden = !text; };
+        const candidate = (no, method) => {
+            showAlert('');
+            if (!no) { showAlert(t('pallet_not_label')); return; }
+            if (!nums.includes(no)) {
+                const other = data.stops.find(x => (x.pallet_numbers || []).map(Number).includes(no));
+                showAlert(other ? t('pallet_other', {pallet: no, name: other.name, n: other.n}) : t('pallet_unknown', {pallet: no}));
+                return;
+            }
+            if (scannedOf(s).has(no)) { msg.textContent = t('pallet_already', {pallet: no}); return; }
+            pending = {no, method};
+            foundBox.hidden = false;
+            foundBox.innerHTML = `<span>✓ ${esc(t('pallet_ok', {pallet: no}))}</span>
+                <button type="button" class="kiosk-btn is-ok" data-shot>📷 ${esc(t('pallet_photo', {pallet: no}))}</button>
+                <button type="button" class="kiosk-btn is-small" data-shot-cancel>${esc(t('cancel'))}</button>`;
+            foundBox.querySelector('[data-shot]').addEventListener('click', (e) => shoot(e.currentTarget));
+            foundBox.querySelector('[data-shot-cancel]').addEventListener('click', () => { pending = null; foundBox.hidden = true; draw(); });
+            draw();
+        };
+        const shoot = async (btn) => {
+            if (!pending) return;
+            btn.disabled = true;
+            const {no, method} = pending;
+            const caption = `${s.name} · ${t('stamp_pallet', {pallet: no})}`;
+            let shot = null;
+            try {
+                if (stream && video.videoWidth) shot = stampVideo(video, caption);
+                else { const file = await pickPhoto(); if (file) shot = await stampPhoto(file, caption); }
+            } catch (e) { shot = null; }
+            if (!shot) { btn.disabled = false; toast(t('photo_error'), true); return; }
+            const pos = await position();
+            const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, pallet_no: no, method, client_uuid: uuid()}, shot, pos || {});
+            try {
+                const r = await api('POST', PALLET_PATH, body);
+                s.pallet_scans = r.pallet_scans;
+                if (!s.status) s.status = 'arrived';
+                toast(t('pallet_saved', {pallet: no, n: r.scanned, total: r.total}));
+            } catch (err) {
+                if (!err.offline) { btn.disabled = false; showAlert(err.message); pending = null; foundBox.hidden = true; draw(); return; }
+                queue.push({path: PALLET_PATH, body});
+                if (!saveQueue()) { queue.pop(); btn.disabled = false; toast(t('storage_full'), true); return; }
+                toast(t('photo_queued'));
+            }
+            thumbs[`${date}:${s.customer_id}:${no}`] = shot.photo;
+            pending = null;
+            foundBox.hidden = true;
+            draw();
+            if (scannedOf(s).size >= nums.length) msg.textContent = t('pallets_all');
+        };
+        box.querySelector('[data-manual-ok]').addEventListener('click', () => {
+            const input = box.querySelector('[data-manual]');
+            candidate(Number(input.value) || null, 'manual');
+            input.value = '';
+        });
+        box.querySelector('[data-missing]').addEventListener('click', () => {
+            const left = nums.filter(n => !scannedOf(s).has(n));
+            box.remove();
+            openIncident(s, 'missing_goods', left.length ? t('pallet_missing_note', {list: left.join(', ')}) : '');
+        });
+        draw();
+        if (!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { msg.textContent = t('scan_unavailable_manual'); video.parentElement.hidden = true; return; }
+        let decode;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false});
+            decode = await qrDecoder();
+        } catch (e) { if (stream) stream.getTracks().forEach(tr => tr.stop()); stream = null; msg.textContent = t('scan_unavailable_manual'); video.parentElement.hidden = true; return; }
+        if (closed) { stopCam(); return; }
+        video.srcObject = stream;
+        const tick = async () => {
+            if (closed) return;
+            if (!pending) {
+                let text = null;
+                try { text = await decode(video); } catch (e) { text = null; }
+                // Ten sam kod przed aparatem : jeden komunikat na 3 s.
+                if (text && (text !== last.text || Date.now() - last.at > 3000)) { last = {text, at: Date.now()}; candidate(palletFromCode(text), 'qr'); }
+            }
+            timer = window.setTimeout(tick, 350);
+        };
+        tick();
+    }
+
+    // --- [310] « Coś nie tak » : zdjęcie (obowiązkowe) + rodzaj + opis ; nie blokuje dostawy ------------------------------
+    function openIncident(s, kind, note) {
+        const kinds = data.incident_kinds || [];
+        const box = sheet(t('incident_title', {name: s.name}), `<form class="kiosk-form driver-form" data-form>
+            <label class="driver-photo"><span>${esc(t('incident_photo'))}</span><input type="file" accept="image/*" capture="environment" data-photo><img data-photo-preview alt="" hidden></label>
+            <span class="driver-label">${esc(t('incident_kind'))}</span>
+            <div class="driver-kinds">${kinds.map((k, i) => `<label class="driver-kind"><input type="radio" name="kind" value="${esc(k.code)}" ${(kind ? k.code === kind : i === 0) ? 'checked' : ''}> <span>${esc(k.label)}</span></label>`).join('')}</div>
+            <label>${esc(t('incident_note'))}<input name="note" maxlength="500" autocomplete="off" value="${esc(note || '')}"></label>
+            <p class="kiosk-muted">${esc(t('incident_info'))}</p>
+            <p class="kiosk-error" data-error></p>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button><button class="kiosk-btn is-warn" data-confirm>${esc(t('incident_save'))}</button></div></form>`);
+        bindPhoto(box);
+        box.querySelector('[data-form]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            const err = box.querySelector('[data-error]');
+            const file = f.querySelector('[data-photo]').files[0];
+            if (!file) { err.textContent = t('incident_photo_required'); return; }
+            const btn = f.querySelector('[data-confirm]');
+            btn.disabled = true;
+            const label = (kinds.find(k => k.code === f.kind.value) || {}).label || f.kind.value;
+            let shot;
+            try { shot = await stampPhoto(file, `${s.name} · ${label}`); } catch (x) { btn.disabled = false; err.textContent = t('photo_error'); return; }
+            const pos = await position();
+            const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, kind: f.kind.value, note: f.note.value.trim() || null, client_uuid: uuid()}, shot, pos || {});
+            try {
+                await api('POST', INCIDENT_PATH, body);
+                (s.incidents = s.incidents || []).push({kind: body.kind, label, note: body.note});
+                if (!s.status) s.status = 'arrived';
+                toast(t('incident_saved'));
+            } catch (x) {
+                if (!x.offline) { btn.disabled = false; err.textContent = x.message; return; }
+                queue.push({path: INCIDENT_PATH, body});
+                if (!saveQueue()) { queue.pop(); btn.disabled = false; toast(t('storage_full'), true); return; }
+                toast(t('photo_queued'));
+            }
+            box.remove();
+            render();
+        });
+    }
+
     /** Położenie (opcjonalne) : najwyżej 4 s, bez blokowania zapisu. */
     function position() {
         return new Promise(resolve => {
@@ -655,7 +1010,10 @@
             await api('POST', STOP_PATH, body);
             box.remove();
             toast(t(fields.status === 'delivered' ? 'saved_delivery' : 'saved_problem'));
-            load();
+            // [310] Po ostatnim punkcie : podsumowanie trasy (D) ; inaczej następny punkt do dostarczenia.
+            selected = null;
+            await load();
+            if (data && data.stops.length && data.stops.every(isDone) && !(data.run || {}).finished_at) openSummary();
         } catch (err) {
             if (err.offline) {
                 // Bez sieci : zapis w kolejce, wysyłka sama, gdy sieć wróci.
@@ -664,10 +1022,12 @@
                 if (!saveQueue()) { queue.pop(); toast(t('storage_full'), true); return; }
                 box.remove();
                 toast(t('saved_offline'));
+                selected = null;
                 render();
+                if (data.stops.every(isDone)) openSummary();
                 return;
             }
-            const btn = box.querySelector('.is-ok, .is-danger');
+            const btn = box.querySelector('[data-confirm], .is-ok, .is-danger');
             if (btn) btn.disabled = false;
             box.querySelector('[data-error]').textContent = err.message;
         }

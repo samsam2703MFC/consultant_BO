@@ -3,7 +3,8 @@ declare(strict_types=1);
 /*
  * Tablet kierowcy : tablet w trybie « driver » z pojazdem, parowanie, trasa dnia (klient, adres, telefon, palety),
  * start trasy, dostawa (podpis obowiązkowy, zdjęcie), zapis ponowiony bez duplikatu, problem → dzwonek ERP,
- * tablet pracowni odrzucony, ERP : dostawy dnia, PDF potwierdzenia z podpisem, dokumenty dnia.
+ * tablet pracowni odrzucony, ERP : dostawy dnia, PDF potwierdzenia z podpisem, dokumenty dnia ; [310] skan palet (QR + zdjęcie),
+ * tryby odbioru (tablet / CMR / nieobecny), temperatura, « Coś nie tak », dokumenty punktu, etykiety palet.
  *
  *   php tests/driver_tablet_test.php
  *
@@ -72,7 +73,7 @@ try {
     $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton) VALUES (10, 500, 50)");
     $pdo->exec("INSERT INTO n_shipping_assignment (ship_date, id_customer, id_carrier_vehicle, vehicle_set, tour_set) VALUES ('{$today}', 3, 5, 1, 0)");
     // Palety zeskanowane w magazynie dla klienta 3 (numery palet).
-    $pdo->exec("INSERT INTO palets_delivery (id_palet, client, delivery_date, status, id_customer) VALUES (4290, 'Boulangerie Test', '{$today}', 1, 3), (4288, 'Boulangerie Test', '{$today}', 1, 3)");
+    $pdo->exec("INSERT INTO palets_delivery (id_palet, client, delivery_date, status, id_customer) VALUES (4290, 'Boulangerie Test', '{$today}', 1, 3), (4288, 'Boulangerie Test', '{$today}', 1, 3), (5001, 'Bez dostawy', '{$today}', 1, 4)");
     $pdo->exec("SET SESSION sql_mode = @mode");
 
     $builder = new DI\ContainerBuilder();
@@ -253,8 +254,35 @@ try {
     expectDrv($stop['status'] === 'arrived' && $stop['arrived_at'] === $arrivedAt && count($stop['photos']['before']) === 2 && $stop['photos']['after'] === []
         && $day['data']['counts']['arrived'] === 1 && $day['data']['counts']['delivered'] === 0 && $day['data']['max_photos'] === 6, 'day shows the arrival and photos');
 
-    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Ktoś inny'], $driver);
-    expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal', 'run started, driver = person identified with the PIN (typed name ignored)');
+    // [311] Start trasy : podpis kierowcy obowiązkowy (pole 23 CMR, przewoźnik).
+    $sigPng = function (): string { $im = imagecreatetruecolor(600, 200); imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
+        imageline($im, 20, 150, 580, 40, imagecolorallocate($im, 0, 0, 0)); ob_start(); imagepng($im); return 'data:image/png;base64,' . base64_encode((string) ob_get_clean()); };
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start'], $driver);
+    expectDrv($s === 422 && $codes($b) === ['signature:REQUIRED'], 'first start of the day needs the driver signature (CMR box 23)');
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Ktoś inny', 'signature' => $sigPng()], $driver);
+    expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal' && $b['data']['cmr_signed_at'] !== null,
+        'run started with the driver signature, driver = person identified with the PIN (typed name ignored)');
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'sign'], $driver);
+    expectDrv($s === 422 && $codes($b) === ['signature:REQUIRED'], 're-sign needs a signature');
+    [$s] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start'], $driver);
+    expectDrv($s === 200, 'start again (already signed) needs no new signature');
+    // Pola 22 i 23 CMR : wystawca wysyłki z ERP (zapisany podpis) i kierowca trasy.
+    $pdo->exec("SET @mode := @@SESSION.sql_mode");
+    $pdo->exec("SET SESSION sql_mode = ''");
+    $pdo->exec("INSERT INTO document_cmr (id, id_document_wz, id_customer, id_carrier, id_carrier_vehicle) VALUES (901, 1, 3, 1, 5)");
+    $pdo->exec("SET SESSION sql_mode = @mode");
+    $pdo->exec("INSERT INTO shipment_log (id, shipment_date, id_customer, id_wz, id_cmr, id_wdt, id_diff, id_employee) VALUES (951, '{$today}', 3, 1, 901, 1, 1, 1)");
+    $sigRepo = $container->get(App\Repositories\Document\CmrSignatureRepository::class);
+    expectDrv($sigRepo->sender(901) === null, 'no issuer recorded → box 22 stays empty');
+    $sigRepo->setIssuer(951, 1);
+    expectDrv($sigRepo->sender(901) === null, 'issuer without a saved signature → box 22 stays empty');
+    $sigRepo->saveUserSignature(1, base64_decode(substr($sigPng(), 22)));
+    $sender = $sigRepo->sender(901);
+    $carrier = $sigRepo->carrier(901);
+    expectDrv($sender && $sender['name'] === 'Anna K.' && str_starts_with($sender['signature'], "\x89PNG"), 'box 22 : issuer name and saved signature');
+    expectDrv($carrier && $carrier['name'] === 'Jan Kowal' && str_starts_with($carrier['signature'], "\x89PNG"), 'box 23 : driver signature of the tour');
+    $pdo->exec('DELETE FROM shipment_log WHERE id = 951');
+    $pdo->exec('DELETE FROM document_cmr WHERE id = 901');
 
     // --- Dostawa : podpis obowiązkowy, potem zapis z podpisem i zdjęciem
     $png = function (int $w, int $h): string { $im = imagecreatetruecolor($w, $h); imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
@@ -265,6 +293,29 @@ try {
     $delivery = ['date' => $today, 'customer_id' => 3, 'vehicle_id' => 5, 'status' => 'delivered', 'receiver_name' => 'Marie Dupont', 'pallets_delivered' => 2,
         'pallets_returned' => 1, 'signature' => $png(600, 200), 'photo' => $jpeg(), 'lat' => 50.8466, 'lng' => 4.3528, 'recorded_at' => date('Y-m-d H:i:s'), 'driver_name' => 'Jan Kowal',
         'client_uuid' => 'u-1'];
+    // [310] Palety : każda zeskanowana (QR + zdjęcie) albo uzasadnienie ; paleta innego klienta / nieznana odrzucona
+    [$s, $b] = $call('POST', '/driver/stops', $delivery, $driver);
+    expectDrv($s === 422 && $codes($b) === ['pallets_note:DRIVER_PALLETS_NOT_SCANNED'] && str_contains($b['errors'][0]['message'], '4288, 4290'), 'delivery needs every pallet scanned');
+    $scan = ['date' => $today, 'customer_id' => 3, 'vehicle_id' => 5, 'pallet_no' => 4290, 'method' => 'qr', 'photo' => $jpegPhoto(), 'client_uuid' => 'pal-1', 'driver_name' => 'Jan Kowal'];
+    [$s, $b] = $call('POST', '/driver/pallets', ['photo' => null] + $scan, $driver);
+    expectDrv($s === 422 && $codes($b) === ['photo:REQUIRED'], 'pallet photo required');
+    [$s, $b] = $call('POST', '/driver/pallets', ['pallet_no' => 5001] + $scan, $driver, 'fr');
+    expectDrv($s === 422 && $codes($b) === ['pallet_no:DRIVER_PALLET_OTHER_CUSTOMER'] && str_contains($b['errors'][0]['message'], 'Bez dostawy'), 'pallet of another customer refused');
+    [$s, $b] = $call('POST', '/driver/pallets', ['pallet_no' => 9999] + $scan, $driver);
+    expectDrv($s === 422 && $codes($b) === ['pallet_no:DRIVER_PALLET_UNKNOWN'], 'unknown pallet refused');
+    [$s, $b] = $call('POST', '/driver/pallets', $scan, $driver);
+    expectDrv($s === 201 && $b['data']['scanned'] === 1 && $b['data']['total'] === 2 && $b['data']['pallet_no'] === 4290, 'pallet scanned with photo');
+    [$s, $b] = $call('POST', '/driver/pallets', $scan, $driver);
+    expectDrv($s === 201 && $b['data']['scanned'] === 1 && (int) $pdo->query("SELECT COUNT(*) FROM n_delivery_media WHERE kind = 'photo_pallet'")->fetchColumn() === 1, 'replayed scan (offline queue) not duplicated');
+    [$s, $b] = $call('POST', '/driver/stops', ['receipt_mode' => 'absent', 'signature' => null] + $delivery, $driver);
+    expectDrv($s === 422 && $codes($b) === ['pallets_note:DRIVER_PALLETS_NOT_SCANNED'] && str_contains($b['errors'][0]['message'], '4288') && !str_contains($b['errors'][0]['message'], '4290'), 'still one pallet to scan');
+    [$s, $b] = $call('POST', '/driver/pallets', ['pallet_no' => 4288, 'method' => 'manual', 'client_uuid' => 'pal-2'] + $scan, $driver);
+    expectDrv($s === 201 && $b['data']['scanned'] === 2 && $b['data']['total'] === 2, 'second pallet typed by hand');
+    // Tryby odbioru : klient nieobecny (zdjęcie po dostawie obowiązkowe), CMR (musi istnieć z fakturowania)
+    [$s, $b] = $call('POST', '/driver/stops', ['receipt_mode' => 'absent', 'signature' => null, 'receiver_name' => null] + $delivery, $driver);
+    expectDrv($s === 422 && $codes($b) === ['photo:DRIVER_ABSENT_PHOTO_REQUIRED'], 'absent customer: photo after delivery required');
+    [$s, $b] = $call('POST', '/driver/stops', ['receipt_mode' => 'cmr'] + $delivery, $driver);
+    expectDrv($s === 422 && $codes($b) === ['receipt_mode:DRIVER_CMR_MISSING'], 'CMR mode needs the CMR from invoicing');
     [$s, $b] = $call('POST', '/driver/stops', $delivery, $driver);
     expectDrv($s === 201 && $b['data']['status'] === 'delivered', 'delivery recorded');
     [$s] = $call('POST', '/driver/stops', $delivery, $driver);
@@ -321,6 +372,24 @@ try {
     expectDrv($service->statuses($today)[3]['reason_label'] === 'Uszkodzenie', 'stop now a problem');
     [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'finish'], $driver);
     expectDrv($s === 200 && $b['data']['finished_at'] !== null && $b['data']['driver_name'] === 'Jan Kowal', 'run finished, driver kept');
+    // [310] Temperatura zamrażarki (zdjęcie nieobowiązkowe), « Coś nie tak » (zdjęcie + opis, nie blokuje), dokumenty punktu
+    [$s, $b] = $call('POST', '/driver/photos', ['date' => $today, 'customer_id' => 3, 'kind' => 'temperature', 'photo' => $jpegPhoto(), 'client_uuid' => 't-1'], $driver);
+    expectDrv($s === 201 && $b['data']['kind'] === 'temperature', 'freezer temperature photo');
+    [$s, $b] = $call('POST', '/driver/incidents', ['date' => $today, 'customer_id' => 3, 'kind' => 'pallet_damaged', 'note' => 'folia rozdarta'], $driver);
+    expectDrv($s === 422 && $codes($b) === ['photo:REQUIRED'], 'incident needs a photo');
+    [$s, $b] = $call('POST', '/driver/incidents', ['date' => $today, 'customer_id' => 3, 'kind' => 'pallet_damaged', 'note' => 'folia rozdarta', 'photo' => $jpegPhoto(), 'client_uuid' => 'i-1'], $driver);
+    $inc = $pdo->query("SELECT body FROM app_notification WHERE type = 'delivery_problem' AND title = 'Zgłoszenie kierowcy'")->fetchColumn();
+    expectDrv($s === 201 && $b['data']['kind'] === 'pallet_damaged' && $inc && str_contains($inc, 'folia rozdarta'), 'incident recorded and in the ERP bell');
+    [, $day] = $call('GET', '/driver/day', null, $driver);
+    $stop = $day['data']['stops'][0];
+    expectDrv(count($stop['pallet_scans']) === 2 && count($stop['incidents']) === 1 && count($stop['photos']['temperature']) === 1 && $day['data']['incident_kinds'], 'day shows scans, incidents, temperature');
+    [$s] = $call('GET', '/driver/stop-document?date=' . $today . '&customer_id=3&type=wz', null, $driver);
+    expectDrv($s === 404, 'no WZ yet for the stop');
+    [$s, $b] = $call('GET', '/driver/stop-document?date=' . $today . '&customer_id=3&type=xx', null, $driver);
+    expectDrv($s === 422, 'unknown document type');
+    $labels = $container->get(App\Services\Logistics\PalletLabelService::class)->pdf($today, 3);
+    expectDrv(str_starts_with($labels['file_string'], '%PDF') && $labels['filename'] === 'ETYKIETY_PALET_' . $today . '_3.pdf' && substr_count($labels['file_string'], '/Type /Page') >= 2, 'pallet labels with QR (one page per pallet)');
+    if (getenv('DRIVER_LABEL_OUT')) file_put_contents((string) getenv('DRIVER_LABEL_OUT'), $labels['file_string']);
     [$s, $b] = $call('GET', '/driver/documents?date=' . $today, null, $driver);
     expectDrv($s === 200 && $b['data']['filename'] === 'DOKUMENTY_DLA_KIEROWCOW_' . $today . '.pdf' && str_starts_with(base64_decode($b['data']['content_base64']), '%PDF'), 'documents of the day for the driver');
 } finally {

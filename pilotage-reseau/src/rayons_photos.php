@@ -25,6 +25,87 @@ declare(strict_types=1);
 /** Les rayons que le panel photographie chaque jour (tâches « Photo du comptoir - … »), dans l'ordre du comptoir. */
 const RV_DEFAUT = ['Pains & Boulangerie', 'Viennoiseries', 'Pâtisseries', 'Tartes', 'Quiches', 'Traiteur', 'Biscuiterie', 'Épicerie', 'Boissons'];
 
+/**
+ * CE QU'EST UN COMPTOIR CONFORME, pour la proposition de note de l'IA (Anthropic::noterPhoto). Les règles
+ * communes valent pour tous les rayons ; pour chaque rayon, la consigne posée au back office PRIME, et ces
+ * critères par défaut ne servent que tant qu'elle est vide. Ils viennent des photos rendues (quiches et tartes
+ * vendues au quart, d'après l'affiche de Halle ; épicerie sur étagère ; boissons en frigo) : à valider par le
+ * réseau, et à remplacer par la consigne du rayon dès qu'elle est écrite.
+ */
+const RV_CRITERES_COMMUNS = "Un comptoir conforme est garni (pas de plateau ni d'emplacement vide), rangé, propre, et sans objet"
+    . " étranger à la vente (outil, ventilateur, carton, sac, chiffon, téléphone).";
+const RV_CRITERES_IA = [
+    'pains-boulangerie' => 'Pains et baguettes présentés en nombre, paniers et étagères remplis.',
+    'viennoiseries'     => 'Plaques remplies, viennoiseries entières et rangées par sorte.',
+    'patisseries'       => 'Plaques remplies, pâtisseries entières, sans produit abîmé ni affaissé.',
+    'tartes'            => "Comptoir garni de tartes sur toute sa longueur. Les tartes se vendent aussi au quart : une tarte"
+        . " entamée n'est pas un écart.",
+    'quiches'           => "Comptoir garni de quiches. Les quiches se vendent aussi au quart : une quiche entamée n'est pas un"
+        . " écart. Le papier de cuisson sous les quiches fait partie de la présentation.",
+    'traiteur'          => 'Vitrine réfrigérée remplie, bacs et barquettes alignés.',
+    'biscuiterie'       => 'Boîtes, sachets et biscuits rangés, présentoir rempli.',
+    'epicerie'          => "L'épicerie est une étagère, pas un comptoir : étagères remplies, produits alignés face visible.",
+    'boissons'          => 'Le rayon boissons est un frigo : étagères remplies, bouteilles et canettes alignées, vitre propre.',
+];
+
+/**
+ * LA CONSIGNE GÉNÉRALE DES CONTRÔLES QUALITÉ (18/11/2026, demande du CEO : « un prompt général pour les contrôles
+ * qualité : toujours prendre une photo de face aux produits pour comparer avec le planogramme, vérifier si la
+ * quantité et le sens des produits sont comme dans le planogramme ; ce champ doit être éditable, avec des points
+ * pour chaque nouveau point à prendre en compte »).
+ *
+ * Une liste de points, envoyée à l'IA avec CHAQUE photo de contrôle (« aussi pour les autres photos de contrôle »,
+ * 18/11) : pour une photo de comptoir, AVANT la consigne du rayon (qui prime pour ce qui touche au rayon) ; pour une
+ * autre tâche, seule, avec une phrase qui dit qu'elle n'a pas de planogramme. Elle se modifie dans Suivi › Entraînement de l'IA (PUT /ia/consigne-generale) et se garde
+ * dans les réglages (`cqConsigneGenerale`) ; jamais modifiée, c'est la liste par défaut ci-dessous qui vaut. La
+ * règle commune d'avant (RV_CRITERES_COMMUNS) en est le premier point.
+ */
+const CQ_CONSIGNE_GENERALE_DEFAUT = [
+    RV_CRITERES_COMMUNS,
+    "La photo doit être prise de face, face aux produits, pour être comparée au planogramme : une photo de biais, de"
+        . " trop loin ou qui ne montre qu'une partie du comptoir ne permet pas la comparaison — le dire dans les constats.",
+    'Vérifier que la quantité de produits et leur sens (orientation, face visible) sont ceux du planogramme.',
+];
+const CQ_POINTS_MAX = 20;          // points au plus
+const CQ_POINT_LONGUEUR = 400;     // caractères au plus par point
+
+/** Les points de la consigne générale : ceux enregistrés, sinon la liste par défaut. */
+function cqConsigneGenerale(): array
+{
+    $v = function_exists('setting') ? setting('cqConsigneGenerale', null) : null;
+    if (!is_array($v)) { return CQ_CONSIGNE_GENERALE_DEFAUT; }
+    return array_values(array_filter(array_map(static fn ($p) => trim((string) $p), $v), static fn (string $p) => $p !== ''));
+}
+
+/** Un point saisi, nettoyé : sans puce ni numéro en tête, espaces resserrés. */
+function cqPoint(mixed $p): string
+{
+    $t = trim((string) preg_replace('/\s+/u', ' ', (string) $p));
+    return trim((string) preg_replace('/^(?:[•\-*–·]+|\d+[.)])\s*/u', '', $t));
+}
+
+/** Pour une tâche qui n'est pas une photo de comptoir : elle n'a pas de planogramme. */
+const CQ_SANS_PLANOGRAMME = "Cette tâche n'est pas une photo de comptoir : elle n'a pas de planogramme, les points qui s'y comparent ne"
+    . " s'appliquent pas.";
+
+/**
+ * Les critères que l'IA reçoit pour une photo de contrôle : la consigne générale, puis, pour une photo de comptoir
+ * ($rv), la consigne du rayon ; '' quand la consigne générale est vide et que la tâche n'a pas de rayon.
+ */
+function rvCriteresIa(?array $rv): string
+{
+    if ($rv === null) {
+        $points = cqConsigneGenerale();
+        return $points !== [] ? "Consigne générale des contrôles qualité :\n- " . implode("\n- ", $points) . "\n" . CQ_SANS_PLANOGRAMME : '';
+    }
+    $propre = trim((string) ($rv['consigne'] ?? ''));
+    $rayon = $propre !== '' ? $propre : (RV_CRITERES_IA[(string) ($rv['cle'] ?? '')] ?? '');
+    $points = cqConsigneGenerale();
+    $general = $points !== [] ? "Consigne générale des contrôles qualité :\n- " . implode("\n- ", $points) : '';
+    $rayonTxt = $rayon !== '' ? 'Rayon « ' . (string) ($rv['nom'] ?? '') . ' » : ' . $rayon : '';
+    return implode("\n", array_filter([$general, $rayonTxt], static fn (string $t) => $t !== ''));
+}
+
 function ensureRayonsPhotos(): void
 {
     static $fait = false;
@@ -94,7 +175,8 @@ function rvListe(): array
  */
 function rvRayonDe(string $libelle, ?array $rayons = null): ?array
 {
-    $reste = (string) preg_replace('/^(photo du )?comptoirs?\s*/', '', rvNorm($libelle));
+    // « Photo du comptoir après-midi - Pâtisseries » : le moment de la journée n'est pas le rayon.
+    $reste = (string) preg_replace('/^(photo du )?comptoirs?\s*(?:(?:apres midi|matin|midi|soir)\s+)?/', '', rvNorm($libelle));
     if ($reste === '') { return null; }
     $sing = static fn (string $x): string => (string) preg_replace('/s\b/', '', $x);
     $prefixe = null; $long = 0;

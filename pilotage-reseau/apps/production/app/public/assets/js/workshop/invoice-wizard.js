@@ -6,6 +6,8 @@
  * 3. Zatwierdź faktury : ze wszystkimi pozycjami sprawdzonymi — ceny do kartoteki, przyjęcie na stan, akceptacja.
  * API : GET /supply/invoices/wizard, POST /supply/invoices/{id}/lines/{lineId}/check, POST …/wizard/check-safe, POST …/wizard/process.
  * Etykiety kw.* w supply.json.
+ * [351] Ścieżka cen : pasek 4 kroków na górze (price-path.js, krok 1 = ten asystent, stan z /supply/invoices/assistant-status),
+ * w kroku 3 « Dalej : 2. Sprawdź ceny katalogowe → » do Kreatora cen (/finances/price-wizard#step=2).
  */
 (function () {
     'use strict';
@@ -30,6 +32,7 @@
         let materials = null;      // wszystkie surowce (lista wyboru), wczytane przy pierwszej potrzebie
         let busy = false;
         const chosen = new Set();  // krok 3 : wybrane faktury (domyślnie wszystkie gotowe)
+        const PP = {inv: null, path: null}; // [351] stan ścieżki cen (krok 1 : assistant-status, kroki 2–4 : Kreator cen)
 
         const setStep = (s) => {
             step = s;
@@ -74,6 +77,23 @@
             if (materials) return;
             try { materials = (await api.get('/supply/materials')).rows; } catch (err) { materials = []; ui.notify(false, errText(err)); }
             render();
+        }
+
+        // --- [351] Pasek ścieżki cen -------------------------------------------------------------------------
+        // Krok 1 na żywo z liczb kreatora (todo, gotowe), ostatnie zatwierdzenie z assistant-status.
+        const pathBar = () => {
+            if (!window.TfbPricePath) return '';
+            const T = W && W.totals;
+            const inv = T ? {todo: T.todo, ready: T.ready, done: !T.todo && !T.ready, last_done: PP.inv ? PP.inv.last_done : null} : PP.inv;
+            return window.TfbPricePath.html({cur: 1, root: api.root, inv, path: PP.path, lang: api.lang, here: 'invoices',
+                threshold: PP.path && PP.path.threshold});
+        };
+        const paintPath = () => { const n = host.querySelector('.pp'); if (n) n.outerHTML = pathBar(); };
+        async function loadPath() {
+            if (!window.TfbPricePath) return;
+            try { PP.inv = await api.get('/supply/invoices/assistant-status'); } catch (err) { PP.inv = null; }
+            PP.path = await window.TfbPricePath.load(api.root, false);
+            paintPath();
         }
 
         // --- Wspólne ------------------------------------------------------------------------------------------
@@ -197,6 +217,7 @@
                     ${l.material ? '' : '<div data-kw-preview></div>'}
                     ${l.up && l.up.decision ? `<div class="kw-note">${esc(t('kw.up_decided.' + l.up.decision))}</div>` : ''}
                     ${odd ? `<div class="kw-note bad">${esc(t('kw.odd_price', {p: pct(c.catalog_gap_pct)}))}</div>` : ''}</div></div>
+                ${l.material && c.price_base !== null ? '<div class="kw-impact" data-kw-impact></div>' : ''}
                 ${write ? `<div class="kw-acts">${l.state === 'todo' || l.state === 'auto' ? (up
                         ? `<button type="button" class="kw-btn ${odd ? '' : 'pri'}" data-kw-check="accept" ${odd ? 'data-kw-odd' : ''}>${esc(t('kw.act.accept'))}${odd ? '' : ' <span class="kw-key">Enter</span>'}</button><button type="button" class="kw-btn" data-kw-check="keep">${esc(t('kw.act.keep'))} <span class="kw-key">K</span></button>`
                         : `<span class="kw-do" data-kw-plain><button type="button" class="kw-btn ${odd ? '' : 'pri'}" data-kw-check="" ${odd ? 'data-kw-odd' : ''}>${esc(t('kw.act.check'))}${odd ? '' : ' <span class="kw-key">Enter</span>'}</button></span>`
@@ -242,33 +263,39 @@
             const sum = sel.reduce((a, i) => a + (i.total_net || 0), 0);
             const prices = sel.reduce((a, i) => a + i.plan.prices.filter(p => !p.kept).length, 0);
             const receive = sel.filter(i => i.plan.receive).length;
+            // [349] Efekt nowych cen / miesiąc (zużycie z 3 miesięcy × zmiana), bez cen « tylko ta dostawa ».
+            const effOf = (i) => i.plan.prices.reduce((a, p) => a + (!p.kept && p.effect_month ? p.effect_month : 0), 0);
+            const effTxt = (v) => Math.abs(v) < 0.5 ? '' : `${v > 0 ? '+' : '−'}${f2(Math.abs(v))} zł / ${t('kw.imp.month')}`;
+            const effSum = sel.reduce((a, i) => a + effOf(i), 0);
             const priceTxt = (i) => i.plan.prices_done ? t('kw.prices_done') : (i.plan.prices.length
                 ? i.plan.prices.slice(0, 3).map(p => `${p.name.slice(0, 22)} ${p.kept ? t('kw.kept') : pct(p.pct)}`).join(' · ') + (i.plan.prices.length > 3 ? ` · +${i.plan.prices.length - 3}` : '') : t('kw.prices_same'));
             const recvTxt = (i) => i.plan.receive === 'order' ? t('kw.recv_order', {c: i.order.code}) : (i.plan.receive === 'invoice' ? t('kw.recv_invoice') : t('kw.recv_none'));
             const row = (i, ok) => `<tr class="${ok ? '' : 'okrow'}"><td>${ok ? `<input type="checkbox" class="form-check-input kw-box" data-kw-pick="${i.id}" ${chosen.has(i.id) ? 'checked' : ''} aria-label="${esc(i.number || '')}" ${W.can_write ? '' : 'disabled'}>` : ''}</td>
                 <td><b>${esc(i.number || t('inv.no_number'))}</b><small>${day(i.issue_date)}</small></td><td>${esc(seller(i))}</td><td class="r tfb-num">${money(i.total_net)}</td><td class="text-nowrap">${bar(i)}</td>
-                <td>${ok ? esc(priceTxt(i)) : ''}</td><td>${ok ? esc(recvTxt(i)) : ''}${ok && i.warnings.length ? `<div class="kw-do mt-1">${i.warnings.map(w => `<span class="kw-badge warn">${WARN(w)}</span>`).join('')}</div>` : ''}</td>
+                <td>${ok ? esc(priceTxt(i)) : ''}${ok && effTxt(effOf(i)) ? `<small class="${effOf(i) > 0 ? 'kw-up' : 'kw-down'}">${esc(t('kw.imp.effect_short', {v: effTxt(effOf(i))}))}</small>` : ''}</td><td>${ok ? esc(recvTxt(i)) : ''}${ok && i.warnings.length ? `<div class="kw-do mt-1">${i.warnings.map(w => `<span class="kw-badge warn">${WARN(w)}</span>`).join('')}</div>` : ''}</td>
                 <td class="r">${ok ? `<span class="kw-badge ok">${esc(t('kw.will_accept'))}</span>` : `<button type="button" class="kw-btn ghost kw-sm" data-kw-goto="${i.id}">${statusOf(i)}</button>`}</td></tr>`;
             return `<div class="kw-card"><h5>${esc(t('kw.s3.title'))} <span class="kw-badge ok">${esc(t('kw.s3.ready', {n: ready.length}))}</span>${waiting.length ? `<span class="kw-badge">${esc(t('kw.s3.waiting', {n: waiting.length}))}</span>` : ''}</h5>
                 <p class="kw-lead">${esc(t('kw.s3.lead'))}</p>
                 ${W.invoices.length ? `<div class="table-responsive"><table class="kw-t"><thead><tr><th style="width:34px"></th><th>${esc(t('inv.col.number'))}</th><th>${esc(t('col.supplier'))}</th><th class="r">${esc(t('inv.col.net'))}</th>
                     <th>${esc(t('kw.col.checked'))}</th><th>${esc(t('kw.col.prices'))}</th><th>${esc(t('kw.col.receive'))}</th><th class="r">${esc(t('kw.col.result'))}</th></tr></thead>
                     <tbody>${ready.map(i => row(i, true)).join('')}${waiting.map(i => row(i, false)).join('')}</tbody></table></div>` : `<p class="at-empty mb-0">${esc(t('kw.empty'))}</p>`}
-                ${sel.length ? `<div class="kw-note">${esc(t('kw.s3.summary', {p: prices, r: receive, n: sel.length}))}</div>` : ''}
+                ${sel.length ? `<div class="kw-note">${esc(t('kw.s3.summary', {p: prices, r: receive, n: sel.length}))}${effTxt(effSum) ? ` <b class="${effSum > 0 ? 'kw-up' : 'kw-down'}">${esc(t('kw.imp.effect_total', {v: effTxt(effSum)}))}</b>` : ''}</div>` : ''}
                 <div class="kw-foot"><button type="button" class="kw-btn" data-kw-step="2">← ${esc(t('kw.back_lines'))}</button>
-                    ${W.can_write ? `<button type="button" class="kw-btn pri" data-kw-process ${sel.length ? '' : 'disabled'}>${esc(t('kw.process', {n: sel.length, s: money(sum)}))}</button>` : ''}</div></div>`;
+                    <span class="kw-do">${W.can_write && ready.length ? `<button type="button" class="kw-btn pri" data-kw-process ${sel.length ? '' : 'disabled'}>${esc(t('kw.process', {n: sel.length, s: money(sum)}))}</button>` : ''}
+                    <a class="kw-btn ${ready.length && W.can_write ? '' : 'pri'}" href="${api.root}/finances/price-wizard#step=2" data-kw-path-next>${esc(t('kw.path.next'))} →</a></span></div></div>`;
         }
 
         function render() {
             if (!W) { host.innerHTML = `<p class="text-muted">${esc(t('loading'))}</p>`; return; }
             const y = window.scrollY;
-            host.innerHTML = `<div class="kw">${steps()}${step === 1 ? stepOne() : (step === 2 ? stepTwo() : stepThree())}</div>`;
+            host.innerHTML = `<div class="kw">${pathBar()}${steps()}${step === 1 ? stepOne() : (step === 2 ? stepTwo() : stepThree())}</div>`;
             window.scrollTo(0, y);
             if (step === 2 && cur) {
                 const x = find(cur);
                 if (x && !x.l.material && !materials) ensureMaterials();
                 const p = host.querySelector('[data-kw-panel]');
                 if (p) preview(p);
+                if (p && x) impact(p, x);
                 if (p && !isVisible(p)) p.scrollIntoView({block: 'center'});
             }
         }
@@ -334,6 +361,49 @@
             const res = await act(() => api.post(`/supply/invoices/${x.inv.id}/lines/${x.l.id}/check`, {action: 'dispute', note}), t('kw.disputed_saved'), prev);
             if (!res) { cur = prev; render(); }
         }
+        // [349] Efekt ceny z faktury (makieta 65) : cena w bazie / ostatnia faktura / ta faktura / inni dostawcy (90 dni),
+        // produkty z tym surowcem (koszt na sztukę, marża na surowcach przed → po, efekt / miesiąc) — wczytane raz na pozycję.
+        const impacts = new Map();
+        async function impact(p, x) {
+            const box = p.querySelector('[data-kw-impact]');
+            const l = x.l;
+            if (!box || !l.material || l.control.price_base === null) return;
+            const k = `${key(x.inv, l)}:${l.material.id}:${l.control.price_base}`;
+            if (!impacts.has(k)) {
+                box.innerHTML = `<p class="kw-lead m-0">${esc(t('kw.imp.loading'))}</p>`;
+                const q = new URLSearchParams({price: String(l.control.price_base), invoice: String(x.inv.id)});
+                if (l.control.catalog_price) q.set('old', String(l.control.catalog_price));
+                if (x.inv.supplier) q.set('supplier', String(x.inv.supplier.id));
+                try { impacts.set(k, await api.get(`/supply/materials/${l.material.id}/price-impact?${q}`)); }
+                catch (err) { box.innerHTML = `<div class="kw-note bad">${esc(errText(err))}</div>`; return; }
+                if (!host.contains(box)) return;
+            }
+            box.innerHTML = impactHtml(impacts.get(k), l);
+        }
+        function impactHtml(d, l) {
+            const u = displayOf(l);
+            const per = (v) => v === null || v === undefined ? '—' : `${f2(v * u.f)} <small>zł/${esc(u.unit)}</small>`;
+            const sign = (v) => `${v > 0 ? '+' : (v < 0 ? '−' : '')}${f2(Math.abs(v))} zł`;
+            const cls = (v) => v > 0.004 ? 'kw-up' : (v < -0.004 ? 'kw-down' : '');
+            const tile = (label, val, sub, c = '') => `<div class="${c}"><span>${esc(label)}</span><b>${val}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+            const tiles = tile(t('kw.imp.base'), per(d.old_price), '')
+                + tile(t('kw.imp.last'), d.last_invoice ? per(d.last_invoice.price) : '—', d.last_invoice ? [day(d.last_invoice.date), d.last_invoice.supplier].filter(Boolean).join(' · ') : t('kw.imp.none'))
+                + tile(t('kw.imp.this'), per(d.new_price), d.change_pct !== null ? pct(d.change_pct) : '', d.change_pct > 0.5 ? 'up' : (d.change_pct < -0.5 ? 'down' : ''))
+                + tile(t('kw.imp.other'), d.other_best ? per(d.other_best.price) : '—', d.other_best ? [d.other_best.supplier, day(d.other_best.date)].filter(Boolean).join(' · ') : t('kw.imp.none'),
+                    d.other_best && d.other_best.price < d.new_price ? 'down' : '');
+            const rows = d.products.map(r => `<tr><td>${esc(r.name)}<small>${esc(t('kw.imp.cartons', {n: n(r.cartons_month, 1)}))}</small></td>
+                <td class="r tfb-num">${r.cost_piece !== null ? f2(r.cost_piece) + ' zł' : '—'}</td><td class="r tfb-num ${cls(r.delta_piece)}">${Math.abs(r.delta_piece) < 0.005 ? '—' : sign(r.delta_piece)}</td>
+                <td class="r tfb-num">${r.margin_before !== null ? `${n(r.margin_before, 1)} → <b class="${r.margin_after < r.margin_before - 0.05 ? 'kw-up' : (r.margin_after > r.margin_before + 0.05 ? 'kw-down' : '')}">${n(r.margin_after, 1)} %</b>` : '—'}</td>
+                <td class="r tfb-num ${cls(r.effect_month)}">${sign(r.effect_month)}</td></tr>`).join('')
+                + (d.rest ? `<tr><td class="kw-lead">${esc(t('kw.imp.rest', {n: d.rest.count}))}</td><td></td><td></td><td></td><td class="r tfb-num ${cls(d.rest.effect_month)}">${sign(d.rest.effect_month)}</td></tr>` : '');
+            const table = d.products.length ? `<table class="kw-t kw-imp-t"><thead><tr><th>${esc(t('kw.imp.product'))}</th><th class="r">${esc(t('kw.imp.cost_piece'))}</th><th class="r">${esc(t('kw.change'))}</th>
+                    <th class="r">${esc(t('kw.imp.margin'))}</th><th class="r">${esc(t('kw.imp.effect'))}</th></tr></thead><tbody>${rows}
+                    <tr class="tot"><td><b>${esc(t('kw.imp.total', {q: n(d.use_month / u.f, u.f > 1 ? 1 : 0), u: u.unit}))}</b></td><td></td><td></td><td></td><td class="r tfb-num ${cls(d.effect_month)}"><b>${sign(d.effect_month)}</b></td></tr></tbody></table>`
+                : `<div class="kw-note">${esc(t('kw.imp.no_products'))}</div>`;
+            return `<div class="kw-imp-tiles">${tiles}</div><h6>${esc(t('kw.imp.title', {n: d.products_count}))}</h6>${table}
+                <p class="kw-lead m-0">${esc(t('kw.imp.help', {m: d.months}))}</p>`;
+        }
+
         // Linia bez surowca : podgląd ceny z wybranej podpowiedzi (cena bazowa, zmiana) jeszcze przed zatwierdzeniem —
         // zła jednostka widoczna od razu (zmiana nie do wiary : bez Enter, jak po przypisaniu).
         function preview(p) {
@@ -455,11 +525,12 @@
                 const res = await act(() => api.post('/supply/invoices/wizard/process', {ids}));
                 if (res) {
                     ui.notify(!res.errors.length, t('kw.processed', {n: res.processed.length}) + (res.errors.length ? ' ' + t('kw.process_errors', {list: res.errors.map(x => (x.number || '#' + x.id) + ' (' + x.code + ')').join(', ')}) : ''));
-                    // Nowe ceny surowców w kartotece → Kreator cen [218] : koszty i marże, nowe ceny, publikacja od daty.
+                    loadPath();
+                    // Nowe ceny surowców w kartotece → ścieżka cen [351], krok 2 : ceny katalogowe (przeliczenie receptur przy wejściu).
                     if (res.processed.length && window.Swal) {
                         const next = await Swal.fire({icon: 'success', title: t('kw.processed', {n: res.processed.length}), text: t('kw.next_prices'), showCancelButton: true,
                             confirmButtonText: t('kw.go_prices'), cancelButtonText: t('kw.stay'), confirmButtonColor: '#8e1f2f'});
-                        if (next.isConfirmed) window.location.href = api.root + '/finances/price-wizard';
+                        if (next.isConfirmed) window.location.href = api.root + '/finances/price-wizard#step=2';
                     }
                 }
             }
@@ -501,6 +572,7 @@
         document.addEventListener('keydown', onKey);
         render();
         load();
+        loadPath();
     }
 
     window.TfbInvoiceWizard = {mount};

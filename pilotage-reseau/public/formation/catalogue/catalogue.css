@@ -1,0 +1,158 @@
+/* Le catalogue des manuels (19/11/2026) : feuilleter chaque manuel page par page, l'imprimer ou l'enregistrer en PDF,
+ * et son QR code. Jetons et police : ../ds.css (le design system du module). Les pages sont au format A5 (148 × 210 mm) :
+ * la même mise en page à l'écran (mise à l'échelle) et à l'impression. */
+html, body { background: var(--paper, #faf7f2); }
+.ct { min-height: 100vh; display: flex; flex-direction: column; }
+.ct-barre { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--line, #e6e0d8); display: flex; align-items: center; gap: 12px; padding: 10px 20px; flex-wrap: wrap; }
+.ct-barre img { height: 26px; }
+.ct-barre .ct-titre { font-size: 15px; }
+.ct-barre .ct-sous { font-size: 12px; color: var(--muted, #7a736a); }
+.ct-barre .ct-esp { flex: 1; }
+.ct-barre .ct-retour { color: var(--accent, #8D1D2C); text-decoration: none; font-size: 14px; }
+.ct-barre .ct-pages { font-size: 13px; color: var(--muted, #7a736a); min-width: 120px; text-align: center; }
+.ct-corps { flex: 1; padding: 24px 28px 40px; }
+.ct-kicker { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted, #7a736a); }
+.ct-h1 { font-size: 26px; margin: 4px 0 6px; font-weight: 400; }
+.ct-lead { color: var(--muted, #7a736a); font-size: 14px; max-width: 720px; line-height: 1.5; margin: 0 0 18px; }
+.ct-msg { padding: 14px 16px; border: 1px solid var(--line, #e6e0d8); border-radius: 8px; background: #fff; color: var(--muted, #7a736a); }
+
+/* la grille des manuels */
+.ct-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+.ct-carte { background: #fff; border: 1px solid var(--line, #e6e0d8); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.ct-couv { height: 220px; border-radius: 6px; color: #fff; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; cursor: pointer; }
+.ct-couv::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: rgba(0, 0, 0, .18); }
+.ct-couv .n { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
+.ct-couv .t { font-size: 20px; line-height: 1.2; }
+.ct-couv .s { font-size: 12px; opacity: .9; }
+.ct-carte h3 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; }
+.ct-carte p { margin: 0; font-size: 12.5px; color: var(--muted, #7a736a); line-height: 1.45; }
+.ct-carte .ct-actions { display: flex; gap: 6px; margin-top: auto; }
+.ct-carte .ct-actions .btn { flex: 1; justify-content: center; }
+.ct-chip { display: inline-block; font-size: 11px; background: var(--chip, #EDE7DE); border-radius: 4px; padding: 2px 6px; color: var(--ink, #1c1a17); }
+
+/* la scène du feuilletage */
+.ct-scene { display: flex; justify-content: center; align-items: flex-start; padding-top: 6px; touch-action: pan-y; user-select: none; overflow: hidden; }
+.ct-livre { position: relative; display: flex; transform-origin: top center; border: 1px solid var(--line, #e6e0d8); background: #fff; }
+.ct-livre.un .pg + .pg { display: none; }
+.ct-livre::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 16px; margin-left: -8px; background: linear-gradient(90deg, rgba(28,26,23,.09), rgba(28,26,23,0) 50%, rgba(28,26,23,.09)); pointer-events: none; }
+.ct-livre.un::after { display: none; }
+.ct-livre.tourne-d { animation: ctTourneD .28s ease-out; }
+.ct-livre.tourne-g { animation: ctTourneG .28s ease-out; }
+@keyframes ctTourneD { from { opacity: .35; transform: var(--ct-z) perspective(1400px) rotateY(-7deg); } to { opacity: 1; } }
+@keyframes ctTourneG { from { opacity: .35; transform: var(--ct-z) perspective(1400px) rotateY(7deg); } to { opacity: 1; } }
+.ct-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; }
+.ct-nav input[type=range] { width: min(560px, 60vw); accent-color: var(--accent, #8D1D2C); }
+.ct-nav .btn { min-width: 44px; justify-content: center; }
+.ct-aide { text-align: center; font-size: 12px; color: var(--muted, #7a736a); margin-top: 8px; }
+
+/* une page A5 */
+.pg { width: 148mm; height: 210mm; background: #fff; position: relative; overflow: hidden; color: var(--ink, #1c1a17); font-size: 9.5pt; line-height: 1.5; flex: none; }
+.pg + .pg { border-left: 1px solid var(--line, #e6e0d8); }
+.pg-tete { position: absolute; left: 12mm; right: 12mm; top: 9mm; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--accent, #8D1D2C); padding-bottom: 2.5mm; font-size: 7pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #7a736a); }
+.pg-tete img { height: 6mm; }
+.pg-corps { position: absolute; left: 12mm; right: 12mm; top: 21mm; bottom: 16mm; overflow: hidden; }
+.pg-pied { position: absolute; left: 12mm; right: 12mm; bottom: 7mm; display: flex; justify-content: space-between; font-size: 7pt; color: var(--muted, #7a736a); border-top: 1px solid var(--line, #e6e0d8); padding-top: 2mm; }
+/* Titres du livre : la graisse 400 du design system, sans les capitales des h2 de ds.css. */
+.pg h2, .pg h3, .pg h4 { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.pg h2 { font-size: 15pt; line-height: 1.2; margin: 0 0 2mm; }
+.pg h3 { font-size: 11pt; margin: 4mm 0 1.5mm; color: var(--accent, #8D1D2C); }
+.pg h4 { font-size: 10pt; margin: 3.5mm 0 1mm; }
+.pg p { margin: 0 0 1.4mm; }
+.pg .doc-code { font-size: 7.5pt; letter-spacing: .06em; color: var(--muted, #7a736a); text-transform: uppercase; margin-bottom: 1.5mm; }
+.pg .doc-obj { font-size: 9pt; color: var(--ink, #1c1a17); margin-bottom: 1.5mm; }
+.pg .doc-pour { font-size: 8pt; color: var(--muted, #7a736a); margin-bottom: 2mm; }
+.pg .chip-av { font-size: 7pt; background: var(--prize-soft, #F6E7CE); color: var(--prize-ink, #7A5207); border-radius: 3px; padding: 0.5mm 1.5mm; margin-left: 2mm; text-transform: none; letter-spacing: 0; }
+.pg .ligne { padding-left: 3mm; border-left: 2px solid var(--chip, #EDE7DE); }
+.pg .crit { border-left-color: var(--accent, #8D1D2C); }
+.pg .crit-et { font-size: 7pt; color: var(--accent, #8D1D2C); text-transform: uppercase; letter-spacing: .06em; }
+.pg .photo { height: 44mm; margin: 1.5mm 0 2mm 3mm; background: var(--paper, #faf7f2); border-radius: 2mm; overflow: hidden; display: flex; justify-content: center; }
+.pg .photo img { height: 100%; width: auto; max-width: 100%; object-fit: contain; }
+.pg .pc { background: var(--prize-soft, #F6E7CE); color: var(--prize-ink, #7A5207); border-radius: 2mm; padding: 1.5mm 2.5mm; margin: 1mm 0; font-size: 8.5pt; }
+.pg .som { display: flex; gap: 2mm; align-items: baseline; padding: 1.2mm 0; border-bottom: 1px dotted var(--line, #e6e0d8); font-size: 8.5pt; }
+.pg .som .c { color: var(--muted, #7a736a); width: 13mm; flex: none; }
+.pg .som .t { flex: 1; }
+.pg .som .n { color: var(--accent, #8D1D2C); }
+.pg .som-sec { font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #7a736a); margin: 3mm 0 1mm; }
+.pg .sc { margin: 2mm 0; padding: 2mm 2.5mm; background: var(--paper, #faf7f2); border-radius: 2mm; }
+.pg .sc b { color: var(--accent, #8D1D2C); }
+.pg .sc small { display: block; color: var(--muted, #7a736a); font-size: 8pt; margin: .5mm 0 1mm; }
+.pg .sc ul { margin: 0; padding-left: 4mm; font-size: 8.5pt; }
+
+/* la couverture d'un manuel */
+.pg.couv { color: #fff; }
+.pg.couv .bande { position: absolute; left: 0; right: 0; bottom: 0; height: 120mm; padding: 12mm; }
+.pg.couv .logo { position: absolute; left: 12mm; top: 12mm; background: #fff; border-radius: 2mm; padding: 2.5mm 3.5mm; }
+.pg.couv .logo img { height: 8mm; display: block; }
+.pg.couv .k { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+.pg.couv .t { font-size: 24pt; line-height: 1.1; margin: 3mm 0 2mm; }
+.pg.couv .s { font-size: 10pt; opacity: .92; }
+.pg.couv .qr { position: absolute; right: 12mm; bottom: 12mm; background: #fff; border-radius: 2mm; padding: 2mm; }
+.pg.couv .qr svg { width: 26mm; height: 26mm; display: block; }
+.pg.couv .ed { position: absolute; left: 12mm; bottom: 12mm; font-size: 7.5pt; opacity: .85; }
+.pg.couv .haut { position: absolute; left: 12mm; right: 12mm; top: 38mm; color: var(--ink, #1c1a17); }
+.pg.couv .haut .gros { font-size: 30pt; font-weight: 700; color: var(--accent, #8D1D2C); line-height: 1; } /* l’accent : la valeur d’un chiffre clé */
+.pg.couv .haut p { color: var(--muted, #7a736a); font-size: 9pt; }
+
+/* fenêtre du QR code */
+.ct-voile { position: fixed; inset: 0; background: rgba(28, 26, 23, .45); z-index: 20; display: flex; align-items: center; justify-content: center; }
+.ct-fenetre { background: #fff; border-radius: 12px; padding: 20px 22px; width: min(460px, 92vw); text-align: center; }
+.ct-fenetre .qr svg { width: 220px; height: 220px; }
+.ct-fenetre .url { font-size: 12px; word-break: break-all; background: var(--paper, #faf7f2); padding: 8px 10px; border-radius: 6px; margin: 10px 0 14px; }
+.ct-fenetre .ct-actions { display: flex; gap: 8px; justify-content: center; }
+
+/* l'impression : seules les pages, une par feuille A5 */
+#ct-imprime { display: none; }
+@media print {
+  @page { size: A5; margin: 0; }
+  html, body { background: #fff !important; }
+  body > *:not(#ct-imprime) { display: none !important; }
+  #ct-imprime { display: block !important; }
+  #ct-imprime .pg { page-break-after: always; break-after: page; border: none; }
+}
+@media (pointer: coarse) {
+  .ct-barre .btn, .ct-nav .btn, .ct-carte .btn { min-height: 44px; }
+}
+
+/* Les liens directs (19/11/2026) : un code de document ou de checklist cité dans un texte, et les entrées du sommaire. Ils
+ * restent cliquables dans le PDF (adresse complète du feuilletage). */
+.pg a.lien-doc { color: var(--accent, #8D1D2C); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 1.5px; }
+.pg a.lien-som { color: inherit; text-decoration: none; }
+.pg a.lien-som:hover { color: var(--accent, #8D1D2C); }
+
+/* Le code des checklists (19/11/2026) : les couleurs du cockpit (dashboard, onglet Tâches ; task). Zone en couleur, moment
+ * en gris (le bleu est celui du nettoyage), numéro au trait. */
+.pg .ck-c { display: inline-block; min-width: 6mm; text-align: center; font-size: 7.5pt; line-height: 1.5; color: #fff; border-radius: 1.2mm; padding: 0 1.4mm; font-variant-numeric: tabular-nums; letter-spacing: .02em; white-space: nowrap; vertical-align: baseline; }
+.pg .ck-c.mo { background: #5c5852; }
+.pg .ck-c.nu { background: #fff; color: var(--ink, #1c1a17); border: 1px solid var(--line, #e6e0d8); }
+.pg .doc-code .ck-c { font-size: 7.5pt; letter-spacing: .04em; }
+.pg .ck-ex { display: flex; align-items: center; gap: 5mm; margin: 3mm 0 2.5mm; padding: 3mm 3.5mm; background: var(--paper, #faf7f2); border-radius: 2mm; }
+.pg .ck-gros { font-size: 26pt; line-height: 1.15; letter-spacing: .02em; white-space: nowrap; color: var(--muted, #7a736a); }
+.pg .ck-gros i { font-style: normal; border-radius: 2mm; padding: 0 1.6mm; }
+.pg .ck-gros i.mo { background: rgba(92, 88, 82, .12); color: #5c5852; }
+.pg .ck-gros i.nu { background: #fff; color: var(--ink, #1c1a17); border: 1px solid var(--line, #e6e0d8); }
+.pg .ck-ex-t b { display: block; font-weight: 400; font-size: 10pt; }
+.pg .ck-ex-t small { color: var(--muted, #7a736a); font-size: 8pt; }
+.pg .ck-leg { display: grid; grid-template-columns: 1.1fr 1.1fr 1fr; gap: 3mm; font-size: 8.5pt; margin: 1mm 0 2mm; }
+.pg .ck-leg h4 { font-size: 7pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #7a736a); margin: 0 0 1.5mm; }
+.pg .ck-leg > div > div { margin: 0 0 1.1mm; }
+.pg .ck-leg p { font-size: 7.5pt; color: var(--muted, #7a736a); margin: 1mm 0 0; line-height: 1.4; }
+.pg .som .c .ck-c { min-width: 0; }
+.pg .som .ck-lu { color: var(--muted, #7a736a); font-size: 7.5pt; }
+.pg .ck-regle { font-size: 8.5pt; line-height: 1.45; margin-bottom: 1mm; }
+
+/* Les postes du manuel du réseau (19/11/2026) : formations attendues, compétences clés, niveaux de Franchise Buddy. */
+.pg h3 small, .pg h4 small { font-size: 7.5pt; color: var(--muted, #7a736a); }
+.pg .fo { display: flex; gap: 2mm; align-items: baseline; padding: .8mm 0; border-bottom: 1px dotted var(--line, #e6e0d8); font-size: 8.5pt; }
+.pg .fo-c { color: var(--muted, #7a736a); width: 11mm; flex: none; font-size: 7.5pt; }
+.pg .fo-t { flex: 1; }
+.pg .fo-t small { color: var(--muted, #7a736a); font-size: 7.5pt; }
+.pg .fo-a { flex: none; font-size: 7.5pt; }
+.pg .cp { padding: .6mm 0 .6mm 3mm; border-left: 2px solid var(--chip, #EDE7DE); margin: .9mm 0; font-size: 8.5pt; }
+.pg .cp b { font-weight: 400; }
+.pg .cp small { color: var(--muted, #7a736a); font-size: 7.5pt; }
+.pg .cp small.d { display: block; line-height: 1.4; }
+.pg .niv-d { font-size: 7.5pt; color: var(--muted, #7a736a); line-height: 1.45; margin: 0 0 1.2mm; }
+.pg .cps { display: flex; flex-wrap: wrap; gap: 1.2mm; margin: 0 0 1.2mm; }
+.pg .cpb { font-size: 7.5pt; background: var(--chip, #EDE7DE); border-radius: 1.2mm; padding: .3mm 1.6mm; }
+.pg .cpb small { color: var(--muted, #7a736a); font-size: 6.5pt; }
+.pg .vide { font-size: 8pt; color: var(--muted, #7a736a); }

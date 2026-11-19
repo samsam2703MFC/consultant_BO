@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+{# [353] Układ bez menu (procedura asystowana w panelu bocznym strony / asystenta). #}
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Procedura{% endblock %}</title>
+    <link rel="stylesheet" href="{{ root }}/assets/css/bootstrap.css">
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/bootstrap-icons/bootstrap-icons.css?v=1.11.3">
+    <link rel="stylesheet" href="{{ root }}/assets/css/app.css">
+    <link rel="stylesheet" href="{{ root }}/assets/css/snackbarStyle.css">
+    <link rel="stylesheet" href="{{ root }}/assets/css/atelier.css?v={{ asset_v() }}">
+    <link rel="stylesheet" href="{{ root }}/assets/css/ds.css?v={{ asset_v() }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="sop-bare" style="background:#fff">
+    {% block page_heading %}{% endblock %}
+    {% block content %}{% endblock %}
+    <div id="snackbar"></div>
+    <script>
+    function showSnack(ok, error_message = 'Coś poszło nie tak', success_message = '') {
+        const x = document.getElementById('snackbar');
+        x.innerText = ok ? (success_message || 'Sukces') : error_message;
+        x.style.backgroundColor = ok ? '#4cd038' : '#ff6666';
+        x.className = 'show';
+        setTimeout(() => { x.className = x.className.replace('show', ''); }, 3000);
+    }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

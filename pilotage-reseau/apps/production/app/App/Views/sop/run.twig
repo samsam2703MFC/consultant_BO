@@ -1,0 +1,38 @@
+{% extends embed ? "layouts/bare.twig" : "layouts/base.twig" %}
+
+{% block title %}{{ sop.code }} · {{ sop.title }}{% endblock %}
+
+{# [353] Procedura asystowana (makieta 69 B) : krok po kroku — zdjęcie, polecenie, potwierdzenie (odhaczenie, wartość w zakresie,
+   zdjęcie) ; zapis wykonania. embed=1 : w panelu bocznym strony / asystenta (przycisk « Procedura »). #}
+
+{% block content %}
+<section class="section sr-wrap {{ embed ? 'is-embed' : '' }}">
+    <div id="sopRun"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="sopRunBoot">{{ {sop: sop, from: from, embed: embed, runs: runs, can_edit: can_see('/sop')}|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<style>
+.sr-wrap{max-width:1100px}.sr-wrap.is-embed{padding:14px}
+.sr-card{background:#fff;border:1px solid var(--at-line,#e7e0d8);border-radius:16px;overflow:hidden}
+.sr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--at-line,#e7e0d8);flex-wrap:wrap}
+.sr-top small{color:var(--at-muted)}.sr-pb{width:200px;height:9px;border-radius:6px;background:#eee7de;overflow:hidden}.sr-pb i{display:block;height:100%;background:var(--at-brand,#8D1D2C)}
+.sr-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:16px}.is-embed .sr-body{grid-template-columns:1fr}
+.sr-ph{border-radius:14px;background:#f3eee8;min-height:220px;display:grid;place-items:center;overflow:hidden;color:#9a8b78}.sr-ph img{width:100%;max-height:440px;object-fit:contain;background:#fff}
+.sr-no{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--at-brand,#8D1D2C);color:#fff;font-weight:700;font-size:16px;margin-right:8px}
+.sr-title{font-size:21px;font-weight:700;line-height:1.25;margin:10px 0 6px}.sr-text{font-size:14.5px;color:#4d4640;white-space:pre-line}
+.sr-tag{display:inline-block;font-size:12px;border-radius:7px;padding:2px 9px;font-weight:600;margin-right:4px}.sr-bhp{background:#fde8e8;color:#9b1c1c}.sr-haccp{background:#fff3d6;color:#7a5a00}.sr-quality{background:#eef3ff;color:#2d4a8a}.sr-min{background:#efe9e3;color:#5d554f}
+.sr-confirm{margin-top:16px}.sr-check{display:flex;gap:10px;align-items:center;font-size:16px;font-weight:600;border:2px solid var(--at-line,#e7e0d8);border-radius:12px;padding:12px 14px;cursor:pointer;user-select:none}
+.sr-check.on{border-color:#2E7D4F;background:#f1f8f3;color:#1f6b33}.sr-check i{font-size:22px}
+.sr-val{display:flex;gap:10px;align-items:center}.sr-val input{font-size:24px;font-weight:700;max-width:180px;border-radius:12px;border:2px solid var(--at-line,#e7e0d8);padding:8px 12px}
+.sr-val.ok input{border-color:#2E7D4F;background:#f1f8f3}.sr-val.bad input{border-color:#C41E3A;background:#fff5f5}.sr-val b{font-size:14px}
+.sr-shot img{max-height:120px;border-radius:10px;margin-top:8px}
+.sr-foot{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--at-line,#e7e0d8);background:#fcfbf9;gap:10px;flex-wrap:wrap}
+.sr-dots{display:flex;gap:5px;flex-wrap:wrap}.sr-dots i{width:24px;height:6px;border-radius:4px;background:#e3ddd6}.sr-dots i.d{background:#2E7D4F}.sr-dots i.c{background:var(--at-brand,#8D1D2C)}.sr-dots i.x{background:#C41E3A}
+.sr-btn{border:0;border-radius:12px;padding:12px 18px;font-weight:700;font-size:15px;background:var(--at-brand,#8D1D2C);color:#fff}.sr-btn:disabled{opacity:.5}.sr-btn.alt{background:#fff;color:#2b2522;border:1px solid var(--at-line-2,#d9d0c6)}
+.sr-sum li{padding:4px 0}.sr-intro dl{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;margin:10px 0}.sr-intro dt{color:var(--at-muted);font-weight:500}
+</style>
+<script src="{{ root }}/assets/js/sop/sop-run.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -41,7 +41,6 @@ export const ENDPOINTS = {
   projects:       '/projects',
   crm:            '/projects/crm',
   people:         '/people',
-  reporting:      '/reporting',
   journal:        '/journal',
   products:       '/products/scoring?periode=' + YM,
   pwaReports:     '/pwa/reports',
@@ -257,8 +256,6 @@ function shape(p, source){
       emailTemplates: p.emailTemplates,
       crm: p.crm,
       people: p.people,
-      reports: (p.reporting || {}).reports,
-      alertRules: (p.reporting || {}).alertRules,
       logs: p.journal,
       products: p.products,
       pwaReports: p.pwaReports,
@@ -322,14 +319,14 @@ function emptyPayload(){
     utilisateur: { initiales: '', nom: '', role: '' },
     aujourdhui: null, dateLabel: '', periodeLabel: '',
     exercice: new Date().getFullYear(), moisLabels: MOIS,
-    seuils: { food: 32, labour: 33, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 },
+    seuils: { food: 40, labour: 17, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 },
     contribOuverture: 0, notes: {}, familles: [], reportTypes: []
   };
   return {
     raw: {}, meta, leviers: [], kpis: [], familles: [], reportTypes: [],
     emailTemplates: [], projTemplates: [], stores: [], perf: null, budgets: [],
     targets: [], consultants: [], suppliers: [], projects: [], crm: [], people: [],
-    reporting: { reports: [], alertRules: [] }, journal: [], products: [], etp: [],
+    journal: [], products: [], etp: [],
     pwaReports: { base: '', magasins: [], partages: [] },
     pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
     pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false },

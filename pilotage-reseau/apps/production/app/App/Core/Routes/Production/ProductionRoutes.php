@@ -69,4 +69,38 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/forecast/panel-refresh', ['controller' => $fc, 'method' => 'refresh']);
     $r->addRoute('POST', '/ajax/forecast/panel-links/{id:\d+}', ['controller' => $fc, 'method' => 'link']);
     $r->addRoute('POST', '/ajax/forecast/clients/{id:\d+}', ['controller' => $fc, 'method' => 'client']);
+
+    // [352] Partie i identyfikowalność : Partie surowców (KSeF + przyjęcia), Kontrola wejść produkcji, Próbki (QR, zadanie dnia).
+    $lc = App\Controllers\Web\Production\LotControlController::class;
+    $r->addRoute('GET', '/workshop/traceability/lots', ['controller' => $lc, 'method' => 'materialLots']);
+    $r->addRoute('GET', '/workshop/traceability/check', ['controller' => $lc, 'method' => 'inputCheck']);
+    $r->addRoute('GET', '/workshop/traceability/samples', ['controller' => $lc, 'method' => 'samples']);
+    $r->addRoute('GET', '/workshop/traceability/samples/pdf', ['controller' => $lc, 'method' => 'samplesPdf']);
+    $r->addRoute('GET', '/workshop/traceability/samples/s/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleScan']);
+    // [354] Kod QR próbki : krótki adres, strona lekka i bez logowania (telefon przy zamrażarce), « Próbka odłożona ».
+    $r->addRoute('GET', '/q/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleQr']);
+    $r->addRoute('POST', '/q/{code:[A-Za-z0-9]{12}}', ['controller' => $lc, 'method' => 'sampleQrStore']);
+    $r->addRoute('PUT', '/ajax/production/material-lots/{id:\d+}', ['controller' => $lc, 'method' => 'updateLot']);
+    $r->addRoute('PUT', '/ajax/production/material-lots/material/{id:\d+}', ['controller' => $lc, 'method' => 'trackMaterial']);
+    $r->addRoute('GET', '/ajax/production/input-check/{id:\d+}', ['controller' => $lc, 'method' => 'batch']);
+    $r->addRoute('POST', '/ajax/production/samples', ['controller' => $lc, 'method' => 'createSamples']);
+    $r->addRoute('DELETE', '/ajax/production/samples/{id:\d+}', ['controller' => $lc, 'method' => 'removeSample']);
+    $r->addRoute('POST', '/ajax/production/samples/store', ['controller' => $lc, 'method' => 'storeSample']);
+    $r->addRoute('POST', '/ajax/production/samples/done', ['controller' => $lc, 'method' => 'finishSamples']);
+    $r->addRoute('PUT', '/ajax/production/sample-rules/{category:\d+}', ['controller' => $lc, 'method' => 'sampleRule']);
+
+    // [353] Procedury SOP : /sop (lista, asystent, zatwierdzenie — prawo « sop ») ; /procedure (procedura asystowana, każdy).
+    $sop = App\Controllers\Web\Production\SopController::class;
+    $r->addRoute('GET', '/sop', ['controller' => $sop, 'method' => 'index']);
+    $r->addRoute('GET', '/sop/new', ['controller' => $sop, 'method' => 'create']);
+    $r->addRoute('GET', '/sop/{id:\d+}/edit', ['controller' => $sop, 'method' => 'edit']);
+    $r->addRoute('POST', '/ajax/sop', ['controller' => $sop, 'method' => 'save']);
+    $r->addRoute('PUT', '/ajax/sop/{id:\d+}', ['controller' => $sop, 'method' => 'save']);
+    $r->addRoute('POST', '/ajax/sop/{id:\d+}/approve', ['controller' => $sop, 'method' => 'approve']);
+    $r->addRoute('POST', '/ajax/sop/{id:\d+}/archive', ['controller' => $sop, 'method' => 'archive']);
+    $r->addRoute('POST', '/ajax/sop/photos', ['controller' => $sop, 'method' => 'upload']);
+    $r->addRoute('GET', '/procedure/{id:\d+}', ['controller' => $sop, 'method' => 'show']);
+    $r->addRoute('GET', '/procedure/{id:\d+}/pdf', ['controller' => $sop, 'method' => 'pdf']);
+    $r->addRoute('GET', '/procedure/photo/{id:\d+}', ['controller' => $sop, 'method' => 'photo']);
+    $r->addRoute('POST', '/ajax/procedure/{id:\d+}/runs', ['controller' => $sop, 'method' => 'run']);
 };

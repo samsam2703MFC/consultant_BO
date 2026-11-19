@@ -113,7 +113,7 @@ $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_gene
 try {
     foreach (['customer', 'customer_order', 'customer_order_product', 'final_product', 'category_product', 'product_recipe', 'n_prod_item', 'n_prod_product_settings',
                  'n_prod_group', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_workstation', 'n_stock_period', 'n_stock_period_item', 'n_prod_param',
-                 'n_prod_employee', 'user', 'raw_material', 'unit', 'category_material', 'supplier', 'n_mp_supply', 'n_mp_count', 'n_po', 'n_po_line', 'n_po_receipt',
+                 'n_prod_employee', 'user', 'raw_material', 'n_raw_material_loss', 'unit', 'category_material', 'supplier', 'n_mp_supply', 'n_mp_count', 'n_po', 'n_po_line', 'n_po_receipt',
                  'carton_stock', 'flattened_recipe_ingredient', 'n_mp_offer', 'n_forecast_run', 'n_forecast_panel_read', 'n_forecast_panel_link', 'n_forecast_client_excluded',
                  'cost_month', 'cost_month_employee', 'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics',
                  'cost_month_section', 'production_sections', 'n_section_target', 'document_wdt', 'document_wdt_product', 'n_wdt_superseded', 'erp_company_other_settings'] as $table) {
@@ -132,7 +132,8 @@ try {
     // Saint-Nicolas, ale sprzedawany cały rok) ; 4 Buche praline (podpowiedź z nazwy) ; 5 Bûche chocolat 4/6 (połączenie ręczne).
     $pdo->exec("INSERT INTO final_product (id, name, id_category, ppc, cpl, lpp, cpp, active, id_recipe) VALUES
         (1, 'Bagietka', 1, 10, 5, 2, 10, 1, 100), (2, 'Cougnou sucre – 200 g (cru)', 1, 42, 5, 2, 20, 1, NULL), (3, 'Spéculoos Saint-Nicolas', 1, 24, 1, 1, 1, 1, NULL),
-        (4, 'Buche Chocolat & Praline - 16 cm', 1, 12, 5, 2, 40, 0, NULL), (5, 'Bûche cacao 4/6', 1, 6, 5, 2, 40, 1, NULL)");
+        (4, 'Buche Chocolat & Praline - 16 cm', 1, 12, 5, 2, 40, 0, NULL), (5, 'Bûche cacao 4/6', 1, 6, 5, 2, 40, 1, NULL),
+        (6, 'Galette Frangipane - 21 cm (crue)', 1, 8, 5, 2, 40, 1, NULL)");
     // Wydatki na karton [221–222] : miesiąc zamknięty — płace Piekarni 10 000 zł ÷ 1 000 kartonów = 10 zł, Pakowanie / wysyłka
     // (dział wspólny) 3 000 zł = 3 zł na karton firmy ; poza wydatkami : inwestycje [223] = amortyzacja 1 000 zł + « Kredyt -
     // Leasing » 1 500 zł, pozostałe koszty stałe 3 500 zł, Administracja 4 000 zł ; logistyka 2 000 zł = 2 zł (osobno).
@@ -178,6 +179,9 @@ try {
     // Rok temu w oknie : Bagietka 16 / tydz., w tygodniach 51 i 52 — 32 ; Cougnou wysłany w tyg. 15.12.2025 : 10 kartonów.
     for ($m = '2025-11-03'; $m <= '2026-02-02'; $m = date('Y-m-d', strtotime("{$m} +7 days"))) $add(date('Y-m-d', strtotime("{$m} +1 day")), [1 => in_array($m, ['2025-12-15', '2025-12-22'], true) ? 32 : 16]);
     $add('2025-12-16', [2 => 10]);
+    // Galette (poza gamami panelu, poza katalogiem SL Food) : tylko grudzień–styczeń rok temu — 40 kart. w tyg. 22.12.2025, 20 w tyg. 5.01.2026.
+    $add('2025-12-23', [6 => 40]);
+    $add('2026-01-06', [6 => 20]);
     // Zamówienia : tydzień bieżący (Bagietka 25), tydzień 2 (50 > prognoza), tydzień 3 (5 < prognoza).
     $add('2026-11-03', [1 => 25], 2);
     $add('2026-11-17', [1 => 50], 1);
@@ -275,6 +279,16 @@ try {
     $y = $fc->setClient(2, true, null, $today, $now);
     expectFc($y['totals']['cartons'] === $f['totals']['cartons'] && $y['clients_excluded']['count'] === 0, 'ponowne włączenie : prognoza jak przed');
     try { $fc->setClient(999, false, null, $today, $now); expectFc(false, 'nieznany klient odrzucony'); } catch (CustomException $e) { expectFc($e->getCode() === 404 || str_contains($e->getMessage(), 'klienta'), 'nieznany klient odrzucony'); }
+    // Sezon z historii ERP : Galette poza gamami panelu, bez sprzedaży w ostatnich tygodniach — N-1 (52 tyg. wcześniej) × trend 1,25.
+    $g = $rows[6] ?? null;
+    $iXmas = array_search('2026-12-21', array_column($W, 'week_start'), true);
+    $i53 = array_search('2026-12-28', array_column($W, 'week_start'), true);
+    $iJan = array_search('2027-01-04', array_column($W, 'week_start'), true);
+    expectFc($g !== null && $g['kind'] === 'season' && $g['history'] === true && $g['seasons'] === [], 'Galette : w prognozie jako sezon z historii ERP');
+    expectFc($g !== null && $g['values'][$iXmas] === 50 && $g['sources'][$iXmas] === 'history' && $g['values'][$i53] === 0 && $g['values'][$iJan] === 25
+        && $g['values'][1] === 0 && $g['total'] === 75, 'Galette : 40 × 1,25 = 50 (tydz. 52), tydz. 53 bez dublowania, 20 × 1,25 = 25 (tydz. 1) ; ' . json_encode($g['values'] ?? null));
+    expectFc($cp(1, 6)['values'][$iXmas] === 50, 'Galette : klienci wg sprzedaży rok temu');
+    expectFc($rows[1]['history'] === false && $rows[3]['history'] === false && $rows[2]['history'] === false, 'produkty całoroczne i gamy panelu : nie z historii');
     $s = $rows[3];
     expectFc($s['kind'] === 'regular' && $s['all_year_in'] === ['Saint-Nicolas'], 'Spéculoos : w gamie Saint-Nicolas, ale sprzedawany cały rok → całoroczny');
     expectFc(!isset($rows[41009]) && $rows[2]['kind'] === 'season', 'produkt gamy całorocznej nie jest sezonowy ; Cougnou sezonowy');

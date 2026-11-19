@@ -265,10 +265,12 @@
       return '<div class="sidebar__group"><div class="sidebar__group-label">' + esc(g[0]) + '</div>' +
         g[1].map(function (it, i) {
           // it[3] : une sous-adresse (#/operationnel/ouverture) ; l'entrée s'allume sur elle seule (sans sous-adresse : la journée).
-          var cible = it[0] + (it[3] ? '/' + it[3] : '');
-          var on = it[3] ? S.route.ecran === it[0] && (S.route.a[0] || 'journee') === it[3] : (S.route.ecran === it[0] || it[2].indexOf(S.route.ecran) >= 0);
+          // Une entrée « ext:… » (19/11/2026) : une page à part du module (le catalogue des manuels), lien direct, jamais allumée.
+          var ext = it[0].indexOf('ext:') === 0;
+          var cible = ext ? it[0].slice(4) : it[0] + (it[3] ? '/' + it[3] : '');
+          var on = !ext && (it[3] ? S.route.ecran === it[0] && (S.route.a[0] || 'journee') === it[3] : (S.route.ecran === it[0] || it[2].indexOf(S.route.ecran) >= 0));
           var signe = g[2] ? '<span class="sidebar__num" aria-hidden="true">' + (i + 1) + '</span>' : icone(ICONES[cible] || ICONES[it[0]] || ICONES.manuel);
-          return '<a href="#/' + cible + '" class="sidebar__item' + (g[2] ? ' sidebar__item--num' : '') + (on ? ' is-active' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' + signe + esc(it[1]) + '</a>';
+          return '<a href="' + (ext ? cible : '#/' + cible) + '" class="sidebar__item' + (g[2] ? ' sidebar__item--num' : '') + (on ? ' is-active' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' + signe + esc(it[1]) + '</a>';
         }).join('') + '</div>';
     }).join('');
   }

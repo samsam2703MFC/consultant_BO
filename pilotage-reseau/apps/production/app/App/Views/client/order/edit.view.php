@@ -97,7 +97,7 @@
                             <?php elseif (!empty($proforma_context['has_proforma'])): ?>
                                 <div class="alert alert-info" role="alert">
                                     <i class="bi bi-info-circle me-2"></i>
-                                    Zamówienie posiada nieopłaconą proformę. Po zmianie obecna proforma nie zostanie automatycznie zmodyfikowana. W przeglądzie zamówień będzie można anulować ją i wygenerować nową proformę.
+                                    Zamówienie posiada nieopłaconą proformę. Jeśli zmienisz produkty lub ilości, po zapisie obecna proforma zostanie anulowana i powstanie nowa ze wszystkimi pozycjami (trzeba ją wysłać klientowi ponownie).
                                 </div>
                             <?php endif; ?>
                             <!-- Order Header Info -->
@@ -186,8 +186,8 @@
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <div class="card border">
-                                        <div class="card-header bg-primary text-white">
-                                            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Produkty w zamówieniu</h5>
+                                        <div class="card-header">
+                                            <h4 class="card-title mb-0"><i class="bi bi-box-seam"></i> Produkty w zamówieniu</h4>
                                         </div>
                                         <div class="card-body">
                                             <div class="table-responsive">

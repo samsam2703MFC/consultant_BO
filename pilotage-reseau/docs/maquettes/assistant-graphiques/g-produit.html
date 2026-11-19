@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>G · L’évolution d’un produit — L'assistant fait des graphiques</title>
+<!-- Écran G (17/11/2026) : un produit (ou une catégorie) mois par mois sur 12 mois, en pièces ; le mois en cours en pointillé. Chiffres réels : /dashboard/analyse/mois (Baguette Tradition 500 g). -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+<script src="graphes2.js"></script>
+<script src="donnees2.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const actions = (suites) => `<div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites">${(suites || []).map(t => `<span>${t}</span>`).join('')}</span></div>`;
+const ouvrir = (fil) => document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil">${fil}</div></div></div>`);
+const B = D2.baguette, libs = B.mois.map(moisLib), P = B.pieces, clos = P.slice(0, 11), moy = Math.round(clos.reduce((a, b) => a + b, 0) / clos.length);
+const imax = clos.indexOf(Math.max(...clos)), imin = clos.indexOf(Math.min(...clos));
+const fil = `<div class="gr-moi">Comment évolue la Baguette Tradition depuis un an ?</div>
+  <div class="gr-rep"><p>La Baguette Tradition se vend à <b style="font-weight:400">${fN(moy)} pièces par mois</b> en moyenne sur les onze derniers mois clos. Elle a touché son plus bas en février (${fN(P[imin])}) et son plus haut en décembre (${fN(P[imax])}) ; octobre est dans la moyenne (${fN(P[10])}). Novembre, à mi-mois, en est à ${fN(P[11])} pièces.</p>
+    <div class="gr-types"><span class="on">⟋ Courbe</span><span>▥ Colonnes</span><span>☰ Tableau</span><span style="margin-left:auto">Produit : <b style="font-weight:400;color:var(--ink)">Baguette Tradition 500 g ▾</b> · ou une catégorie ▾ · Mesure : <b style="font-weight:400;color:var(--ink)">pièces ▾</b></span></div>
+    <div class="gr-graph">${ligne(730, 270, P, { libs, enCours: true, min0: true, etiquettes: [imin, imax, 10, 11], titre: 'Baguette Tradition, pièces par mois' })}
+      ${legende([['Pièces vendues par mois', 'trait', COUL.moi], ['Novembre, en cours (jusqu’à hier)', 'tirets', COUL.moi]])}</div>
+    <div class="gr-k"><div><b>${fN(moy)}</b><span>pièces par mois, moyenne des 11 mois clos</span></div><div><b>${fN(P[imax])}</b><span>le plus haut : décembre 2025</span></div><div><b>${fE(B.ca[10])}</b><span>de ventes en octobre (TVA comprise)</span></div></div>
+    <div class="gr-src">Source : tickets du panel, mois par mois · le mois en cours se lit jusqu’à hier · c’était « Vendre › Analyse », produit par produit</div>
+    ${actions(['Et toute la catégorie Pain ?', 'Face au réseau'])}</div>`;
+ouvrir(fil);
+</script></body></html>

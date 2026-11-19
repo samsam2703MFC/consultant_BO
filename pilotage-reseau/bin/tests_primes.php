@@ -1001,7 +1001,7 @@ verifie('la reprise depuis ceo_app_setting est passée (marque posée)', isset($
     && count(array_filter($GLOBALS['SQL'] ?? [], static fn ($q) => str_starts_with($q, 'INSERT IGNORE INTO mot_'))) === 2);
 // Le code du module ne touche plus ceo_app_setting ; aucun fichier n'y écrit une clé du module.
 $fautifs = [];
-foreach (glob(__DIR__ . '/../src/*.php') as $f) {
+foreach (array_merge(glob(__DIR__ . '/../src/*.php'), glob(__DIR__ . '/../src/franchise/*.php') ?: []) as $f) {
     $t = (string) file_get_contents($f);
     if (preg_match('/^primes/', basename($f)) && str_contains($t, 'ceo_app_setting')) { $fautifs[] = basename($f); }
     if (preg_match_all('/INSERT INTO ceo_app_setting[^;]*?\[\s*\'([A-Za-z0-9_]+)/s', $t, $mm)) {

@@ -54,7 +54,9 @@ try {
     foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/175_task_mandatory.sql')) as $sql) $pdo->exec($sql);
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();
     expectL($count("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'n_position_task' AND COLUMN_NAME IN ('mandatory', 'block_mode', 'block_time', 'block_tolerance', 'wizard_steps')") === 5
-        && $count("SELECT COUNT(*) FROM n_position_task WHERE mandatory = 1") === 0, 'migration 175 (rejouée) : colonnes, aucune tâche obligatoire au départ');
+        && $count("SELECT COUNT(*) FROM n_position_task WHERE mandatory = 1 AND COALESCE(auto_code, '') <> 'orders_transport'") === 0, 'migration 175 (rejouée) : colonnes, aucune tâche obligatoire au départ (sauf [303] transport Logistyki)');
+    // [303] Logistyka : « Transport dla zamówień » obowiązkowe od razu (migracja 191), jeśli stanowisko istnieje.
+    $pdo->exec("UPDATE n_position_task SET mandatory = 0 WHERE auto_code = 'orders_transport'");
     $pos = fn(string $code) => (int) $pdo->query("SELECT id FROM n_position WHERE code = '{$code}'")->fetchColumn();
     $adm = $pos('ADMINISTRACJA'); $kier = $pos('KIEROWNIK_PRODUKCJI');
     $pdo->exec("UPDATE n_position SET id_reports_to = {$kier} WHERE id = {$adm}");

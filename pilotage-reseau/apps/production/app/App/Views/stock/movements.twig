@@ -73,13 +73,13 @@
         <div class="card"><div class="card-body">
             <h6><i class="bi bi-calendar-x text-danger"></i> Kartony przeterminowane na magazynie</h6>
             <ul class="sl-list">
-                {% for e in expired|slice(0, 8) %}<li><a href="{{ root }}/workshop/stock-movements/{{ e.id_product }}">{{ e.name ?? ('#' ~ e.id_product) }}</a>
+                {% for e in expired|slice(0, 8) %}<li>{% if e.name %}<a href="{{ root }}/workshop/stock-movements/{{ e.id_product }}">{{ e.name }}</a>{% else %}<span title="Produkt usunięty z ERP">#{{ e.id_product }}</span>{% endif %}
                     <span><strong>{{ e.n }}</strong> <span class="sl-sub">od {{ e.oldest|date('d.m.Y') }}</span></span></li>{% endfor %}
             </ul>
             {% if expired|length > 8 %}
             <details><summary class="sl-sub">+ {{ (expired|length - 8)|plural_pl('produkt', 'produkty', 'produktów') }}</summary>
                 <ul class="sl-list">
-                    {% for e in expired|slice(8) %}<li><a href="{{ root }}/workshop/stock-movements/{{ e.id_product }}">{{ e.name ?? ('#' ~ e.id_product) }}</a>
+                    {% for e in expired|slice(8) %}<li>{% if e.name %}<a href="{{ root }}/workshop/stock-movements/{{ e.id_product }}">{{ e.name }}</a>{% else %}<span title="Produkt usunięty z ERP">#{{ e.id_product }}</span>{% endif %}
                         <span><strong>{{ e.n }}</strong> <span class="sl-sub">od {{ e.oldest|date('d.m.Y') }}</span></span></li>{% endfor %}
                 </ul>
             </details>
@@ -115,7 +115,7 @@
                 <tbody>
                 {% for r in rows %}
                     <tr>
-                        <td><a href="{{ root }}/workshop/stock-movements/{{ r.id }}?from={{ from }}&to={{ to }}">{{ r.name }}</a></td>
+                        <td>{% if r.name %}<a href="{{ root }}/workshop/stock-movements/{{ r.id }}?from={{ from }}&to={{ to }}">{{ r.name }}</a>{% else %}<span title="Produkt usunięty z ERP">#{{ r.id }}</span>{% endif %}</td>
                         <td class="sl-sub">{{ r.category ?? '—' }}</td>
                         <td class="n">{{ r.opening }}</td>
                         <td class="n sl-in">{{ r.produced ? '+' ~ r.produced : '·' }}</td>

@@ -14,7 +14,6 @@ class MaterialRepository extends BaseRepository
     protected $allowedColumns = [
         'name',
         'waste_perc',
-        'waste_review',
         'id_unit',
         'id_category',
         'id_current_supplier',
@@ -37,8 +36,6 @@ class MaterialRepository extends BaseRepository
 
     protected $fetchAllowedColumns = [
         'name',
-        'waste_perc',
-        'waste_review',
         'id_unit',
         'id_category',
         'single_weight',
@@ -56,8 +53,8 @@ class MaterialRepository extends BaseRepository
         $sql = "SELECT 
                     rm.id, 
                     rm.name,
-                    rm.waste_perc,
-                    rm.waste_review,
+                    " . \App\Services\Material\MaterialLoss::column('rm') . " AS waste_perc,
+                    " . \App\Services\Material\MaterialLoss::reviewColumn('rm') . " AS waste_review,
                     rm.id_unit,
                     rm.id_category,
                     rm.package_size_in_base_unit,
@@ -89,8 +86,8 @@ class MaterialRepository extends BaseRepository
                     rm.id,
                     rm.name,
                     rm.name_fr,
-                    rm.waste_perc,
-                    rm.waste_review,
+                    " . \App\Services\Material\MaterialLoss::column('rm') . " AS waste_perc,
+                    " . \App\Services\Material\MaterialLoss::reviewColumn('rm') . " AS waste_review,
                     rm.id_unit,
                     rm.id_category,
                     rm.id_current_supplier,
@@ -128,8 +125,8 @@ class MaterialRepository extends BaseRepository
                     rm.id,
                     rm.name,
                     rm.name_fr,
-                    rm.waste_perc,
-                    rm.waste_review,
+                    " . \App\Services\Material\MaterialLoss::column('rm') . " AS waste_perc,
+                    " . \App\Services\Material\MaterialLoss::reviewColumn('rm') . " AS waste_review,
                     rm.id_unit,
                     rm.id_category,
                     rm.id_current_supplier,
@@ -260,4 +257,10 @@ class MaterialRepository extends BaseRepository
     }
 
 
+    /** [295] Odpad tej wersji (n_raw_material_loss) : zapis karty potwierdza wartość (review = 0). */
+    public function saveLoss(int $id, float $loss): void
+    {
+        $this->db->prepare('INSERT INTO n_raw_material_loss (id_raw_material, loss_perc, review) VALUES (?, ?, 0)
+            ON DUPLICATE KEY UPDATE loss_perc = VALUES(loss_perc), review = 0')->execute([$id, max(0.0, min(99.99, $loss))]);
+    }
 }

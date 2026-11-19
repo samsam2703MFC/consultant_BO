@@ -89,9 +89,9 @@ function pasHtml(P, x){
     const p = P.prep;
     if (!p || p.chargement) { return tete + '<div class="mko-mu">Assemblage du dossier…</div>'; }
     if (p.indispo) { return tete + `<div class="ko">${esc(p.indispo)}</div>`; }
-    return tete + `<div class="sva-sect"><h3>Le dossier du magasin</h3><span class="mini">${p.dossier.filter(b => b.inclus).length} sur ${p.dossier.length} partent</span></div>
+    return tete + `<div class="sva-sect"><h3>Le dossier du magasin</h3><span class="mini">${p.dossier.filter(b => b.inclus).length} sur ${p.dossier.filter(b => !b.cockpit).length} partent</span></div>
       <div class="sva-liste">${p.dossier.map(b => `<button ${x.A(b.basculer)} class="sva-ln${b.inclus ? '' : ' off'}${b.interne ? ' int' : ''}"><span class="sva-cb${b.inclus ? ' on' : ''}"></span><span><b>${esc(b.titre)}</b>${b.interne ? ' <span class="sva-int">interne</span>' : ''}${b.alerte ? ` <span class="gc-pill ko">${esc(b.alerte)}</span>` : ''}
-        <small>${esc(b.lignes.length ? b.lignes.slice(0, 2).join(' · ') : (b.motif || 'rien à signaler'))}</small></span><span class="r">${b.inclus ? (b.interne ? 'jamais montré au franchisé' : '') : 'retiré'}</span></button>`).join('')}</div>
+        <small>${esc(b.lignes.length ? b.lignes.slice(0, 2).join(' · ') : (b.motif || 'rien à signaler'))}</small></span><span class="r">${b.cockpit ? 'reste au cockpit, ne part pas sur la tablette' : (b.inclus ? (b.interne ? 'jamais montré au franchisé' : '') : 'retiré')}</span></button>`).join('')}</div>
       <div class="sva-sect"><h3>Vos demandes à ${esc(P.consultant)}</h3><span class="mini">elles ouvrent sa checklist · le franchisé lit celles de l’ordre du jour</span></div>
       <div class="sva-liste">${p.points.map(q => `<div class="sva-dm"><input class="mko-inp" value="${esc(q.libelle)}" ${x.I(q.setLib)} placeholder="Ce que ${esc(P.consultant)} doit regarder">
           <span class="sva-seg"><button ${q.odj ? '' : x.A(q.basculerOdj)} class="${q.odj ? 'on lu' : ''}">${ic('mail')}Ordre du jour</button><button ${q.odj ? x.A(q.basculerOdj) : ''} class="${q.odj ? '' : 'on in'}">${ic('lock')}Interne</button></span>
@@ -170,6 +170,12 @@ function tplRapport(r, x){
     `<div class="sv-sc"><b>${esc(Ev.moyenne)}</b><span>/ 5 · moyenne</span><em>${esc(Ev.prec)}</em>${Ev.ecart ? `<i class="${esc(Ev.ecart.cls)}">${esc(Ev.ecart.txt)}</i>` : ''}</div>
     <div class="sv-ev-radar">${Ev.svg}</div>
     <div class="sv-ev">${Ev.axes.map(a => `<span class="nom">${esc(a.nom)}</span><b class="${esc(a.ton)}">${esc(a.note)}</b><em class="${a.ecart ? esc(a.ecart.cls) : ''}">${a.ecart ? esc(a.ecart.txt) : ''}</em><span class="com">${esc(a.com)}</span>`).join('')}</div>`) : '';
+  // Les outils de gestion (17/11/2026) : l'audit de la tablette et le rappel, dans le rapport et le courriel.
+  const Og = r.outils;
+  const outils = Og ? carte('Les outils de gestion', 'dans le rapport et le courriel, avec le rappel · ' + esc(Og.rappelLu),
+    `<div class="sv-sc"><b class="${esc(Og.ton)}">${esc(Og.score)}</b><span>/ 100</span><em>${esc(Og.prec)}</em>${Og.ecart ? `<i class="${esc(Og.ecart.cls)}">${esc(Og.ecart.txt)}</i>` : ''}</div>
+    <div class="sv-og">${Og.lignes.map(l => `<span class="nom">${esc(l.nom)}</span><b class="${esc(l.cls)}">${esc(l.verdict)}</b><span class="com">${esc(l.com)}${l.lu ? `<small>lu : ${esc(l.lu)}</small>` : ''}</span>`).join('')}</div>
+    <div class="sv-og-rap"><b>(i)</b> ${esc(Og.rappel)}</div>`) : '';
   // L'équipe en poste (05/11/2026) : notée à la tablette, interne — elle ne part pas au franchisé.
   const Pe = r.personnel;
   const personnel = Pe ? carte('L’équipe en poste', 'interne · ne part pas au franchisé',
@@ -183,7 +189,7 @@ function tplRapport(r, x){
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
     ${r.sms && r.sms.sansFournisseur ? '<div class="gc-pill att" style="margin-top:8px">Aucun fournisseur SMS réglé (MétaDonnée › Alertes SMS) : le SMS ne partira pas</div>' : ''}
     ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}${r.sms && r.sms.dernier ? `<div class="mko-mu" style="margin-top:4px">${esc(r.sms.dernier)}</div>` : ''}`);
-  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${evaluation}${budget}${photos}${ck}${personnel}</div></div>
+  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${evaluation}${outils}${budget}${photos}${ck}${personnel}</div></div>
     <div class="sva-act"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
       ${r.envoye ? `<button ${x.A(r.renvoyer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Renvoyer le courriel</button>`
         : `<button ${x.A(r.envoyer)} class="cx-btn prim sva-lg" ${r.busy ? 'disabled' : ''}>${r.busy ? 'Envoi…' : 'Envoyer au franchisé →'}</button><button ${x.A(r.enregistrer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Enregistrer</button>`}</div>`;
@@ -256,7 +262,7 @@ export function tplSvFranchise(c, x){
   if (s.indispo) { return `<div data-screen="suivi-franchise">${entete}${panne(esc, s.indispo)}</div>`; }
   if (s.chargement) { return `<div data-screen="suivi-franchise">${entete}${attente(esc, 'Lecture de la page du franchisé…')}</div>`; }
   const voit = carte('Ce qu’il voit', '<button ' + x.A(s.regler) + ' class="gc-lien">régler dans Qui fait quoi ›</button>', `<ul class="sv-voit">${s.voit.map(v => `<li class="${v.on ? 'ok' : 'off'}">${v.on ? '✓' : '—'} ${esc(v.l)}</li>`).join('')}</ul>`);
-  const pas = carte('Ce qu’il ne voit pas', '', `<ul class="sv-ul"><li>Les brouillons : un rapport n’apparaît qu’une fois envoyé par le bureau.</li><li>Les points gardés en interne et les points proposés pas encore envoyés.</li><li>Les visites inopinées, les notes du bureau, le dossier de préparation.</li><li>La météo du franchisé notée par le consultant.</li></ul>`);
+  const pas = carte('Ce qu’il ne voit pas', '', `<ul class="sv-ul"><li>Les brouillons : un rapport n’apparaît qu’une fois envoyé par le bureau.</li><li>Les points gardés en interne et les points proposés pas encore envoyés.</li><li>Les visites inopinées, les notes du bureau, le dossier de préparation.</li><li>La météo du franchisé notée par le consultant.</li><li>Le fil du franchisé : notes, photos, captures, étiquettes — il ne se lit qu’au cockpit.</li></ul>`);
   const retour = carte('Ce qui revient au bureau', '', `<ul class="sv-ul"><li>Sa photo de correction : au tableau de bord, « Points et corrections », pour validation.</li><li>Le rapport lu : la date s’affiche au tableau de bord ; sinon une relance part au bout du délai réglé.</li></ul>`);
   const lien = carte('Son lien', esc(s.langue), `<input class="mko-inp" readonly value="${esc(s.url)}" style="font-size:11px"><div class="mko-mu" style="margin-top:6px">Sans mot de passe : le lien porte une clé propre au magasin. Courriel : ${esc(s.adresse || 'aucune adresse')}${s.source ? ' (' + esc(s.source) + ')' : ''}${s.smtp ? '' : ' · SMTP non configuré'}.</div>
     <button ${x.A(s.basculer)} class="gc-lien" style="margin-top:6px">${s.ouvert ? 'Masquer le courriel' : 'Voir le courriel'}</button>${s.ouvert ? `<div class="sv-mail"><b>${esc(s.sujet)}</b><pre>${esc(s.texte)}</pre></div>` : ''}`);

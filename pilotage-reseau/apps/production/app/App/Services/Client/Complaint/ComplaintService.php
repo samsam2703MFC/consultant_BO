@@ -401,8 +401,8 @@ class ComplaintService
 
     /**
      * [243] Reklamacje › Wykres (makieta 16) : wszystkie reklamacje na osi czasu — wiersz = grupa produkcji, dzień
-     * zgłoszenia, wartość (ilość × cena kartonu z WDT), decyzja (przyjęta / odrzucona / otwarta). Wartość przyjęta =
-     * ilość przyjęta × cena kartonu (jak raport miesięczny).
+     * zgłoszenia, wartość (kartony rozpoczęte = szt. ÷ szt./kart. w górę, × cena kartonu z WDT), decyzja (przyjęta /
+     * odrzucona / otwarta). Wartość przyjęta = kartony rozpoczęte z ilości przyjętej × cena kartonu (jak raport miesięczny).
      */
     public function chart(): array
     {
@@ -410,7 +410,9 @@ class ComplaintService
         $known = array_flip(array_column($groups, 'id'));
         $out = [];
         foreach ($this->complaintRepository->chartRows() as $r) {
+            // [362] Ilość w sztukach → kartony rozpoczęte (szt. ÷ szt./kart., w górę) × cena kartonu — wcześniej sztuki × cena KARTONU.
             $price = (float) ($r['single_purchase_price'] ?? 0);
+            $ppc = (float) ($r['ppc'] ?? 1);
             $qty = (float) ($r['product_quantity'] ?? 0);
             $status = (string) $r['status'];
             $nonProduct = ($r['complaint_type'] ?? 'PRODUCT') === 'NON_PRODUCT';
@@ -425,14 +427,62 @@ class ComplaintService
                 'customer_id' => $r['id_customer'] !== null ? (int) $r['id_customer'] : null,
                 'customer' => (string) ($r['customer'] ?? '—'),
                 'qty' => round($qty, 2),
-                'value' => round($qty * $price, 2),
-                'accepted_value' => $status === 'ACCEPTED' ? round((float) ($r['accepted_quantity'] ?? 0) * $price, 2) : null,
+                'value' => ComplaintRepository::value($qty, $ppc, $price),
+                'accepted_value' => $status === 'ACCEPTED' ? ComplaintRepository::value((float) ($r['accepted_quantity'] ?? 0), $ppc, $price) : null,
                 'reason' => \App\Core\Helpers\ComplaintReasonTranslator::translate($r['complaint_reason'] ?? null),
                 // Czas decyzji (dni od zgłoszenia do decyzji, jak raport miesięczny) ; ujemny = dane niespójne → pominięty.
                 'decision_days' => $r['decision_days'] !== null && (float) $r['decision_days'] >= 0 ? round((float) $r['decision_days'], 1) : null,
             ];
         }
         return ['complaints' => $out, 'groups' => $groups, 'today' => date('Y-m-d')];
+    }
+
+    /**
+     * [363] Fenêtre de détail (Reklamacje › Wykres) : la réclamation d'origine (raison, commentaire du magasin, pièces,
+     * compensation demandée), ses photos, ce qui a été envoyé (ligne WDT : cartons, pièces par carton, prix du carton)
+     * et le calcul de la valeur (cartons entamés × prix du carton), la décision et la réponse envoyée au magasin.
+     */
+    public function detail(int $id): ?array
+    {
+        $r = $this->complaintRepository->detailRow($id);
+        if ($r === null) return null;
+        $labels = ['REFUND' => 'Zwrot pieniędzy', 'REPLACEMENT' => 'Wymiana produktu', 'CREDIT' => 'Kredyt na konto'];
+        $status = ['NEW' => 'Nowa', 'IN_REVIEW' => 'W weryfikacji', 'ACCEPTED' => 'Przyjęta', 'REJECTED' => 'Odrzucona'];
+        $ppc = max(1.0, (float) ($r['ppc'] ?? 1));
+        $price = (float) ($r['single_purchase_price'] ?? 0);
+        $qty = (float) ($r['product_quantity'] ?? 0);
+        $acc = $r['accepted_quantity'] !== null ? (float) $r['accepted_quantity'] : null;
+        $shipped = [];
+        if ($r['wdt_id'] !== null && $r['id_product'] !== null) {
+            foreach ($this->complaintRepository->shippedLines((int) $r['wdt_id'], (int) $r['id_product']) as $l) {
+                $lppc = (float) ($l['ppc'] ?? 0);
+                $shipped[] = ['cartons' => (float) $l['quantity'], 'ppc' => $lppc ?: null, 'pieces' => $lppc ? round((float) $l['quantity'] * $lppc, 2) : null,
+                    'price_carton' => (float) $l['price_carton'], 'total' => (float) $l['total_net']];
+            }
+        }
+        $attachments = array_map(fn($a) => ['id' => (int) $a['id'], 'name' => basename((string) ($a['object_key'] ?? '')),
+            'image' => (bool) preg_match('/\.(jpe?g|png|webp|gif|heic|heif)$/i', (string) ($a['object_key'] ?? ''))],
+            $this->complaintAttachmentRepository->getByComplaint($id) ?: []);
+        return [
+            'id' => (int) $r['id'],
+            'non_product' => ($r['complaint_type'] ?? 'PRODUCT') === 'NON_PRODUCT',
+            'reported_at' => $r['reported_at'], 'decided_at' => $r['acceptance_timestamp'],
+            'status' => $r['status'], 'status_label' => $status[$r['status']] ?? $r['status'],
+            'customer' => $r['customer'], 'product' => $r['product'],
+            'invoice_num' => $r['invoice_num'], 'invoice_date' => $r['invoice_date'],
+            'reason' => \App\Core\Helpers\ComplaintReasonTranslator::translate($r['complaint_reason'] ?? null),
+            'client_comment' => (string) ($r['client_comment'] ?? ''),
+            'requested_action' => $r['requested_action'] ? ($labels[$r['requested_action']] ?? $r['requested_action']) : null,
+            'compensation' => $r['compensation_method'] ? ($labels[$r['compensation_method']] ?? $r['compensation_method']) : null,
+            'production_response' => (string) ($r['production_response'] ?? ''),
+            'quantity' => $qty, 'accepted_quantity' => $acc, 'ppc' => $ppc, 'carton_price' => $price,
+            'cartons' => $qty > 0 ? (int) ceil($qty / $ppc - 0.000001) : 0,
+            'accepted_cartons' => $acc !== null && $acc > 0 ? (int) ceil($acc / $ppc - 0.000001) : null,
+            'value' => ComplaintRepository::value($qty, $ppc, $price),
+            'accepted_value' => $acc !== null ? ComplaintRepository::value($acc, $ppc, $price) : null,
+            'attachments' => $attachments,
+            'shipped' => $shipped,
+        ];
     }
 
     public function getComplaints()

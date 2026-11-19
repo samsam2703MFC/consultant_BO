@@ -484,7 +484,7 @@ $nextShipping = $next_shipping ?? [];
                 </div><!-- rk-list -->
 
                 <?php if (!empty($chart)): ?>
-                <div id="rk-chart" class="rk-chart-root" hidden>
+                <div id="rk-chart" class="rk-chart-root" data-root="<?= htmlspecialchars(ROOT) ?>" hidden>
                     <div class="rk-tabs" role="tablist" aria-label="Wykres">
                         <button type="button" role="tab" data-rk-tab="overview" class="on" aria-selected="true"><i class="bi bi-grid-1x2"></i> Przegląd</button>
                         <button type="button" role="tab" data-rk-tab="timeline" aria-selected="false"><i class="bi bi-distribute-horizontal"></i> Oś czasu</button>
@@ -493,7 +493,7 @@ $nextShipping = $next_shipping ?? [];
                     <div data-rk-pane="overview"></div>
                     <div class="rk-panel" data-rk-pane="timeline" hidden>
                         <h5>Wszystkie reklamacje na osi czasu</h5>
-                        <div class="rk-sub">wiersz = grupa produkcji · położenie = dzień zgłoszenia · wielkość = wartość reklamacji (ilość × cena kartonu z WDT) · kolor = decyzja</div>
+                        <div class="rk-sub">wiersz = grupa produkcji · położenie = dzień zgłoszenia · wielkość = wartość reklamacji (kartony rozpoczęte × cena kartonu z WDT) · kolor = decyzja</div>
                         <div class="rk-legend" data-rk-legend></div>
                         <div class="rk-plot" data-rk-plot></div>
                     </div>

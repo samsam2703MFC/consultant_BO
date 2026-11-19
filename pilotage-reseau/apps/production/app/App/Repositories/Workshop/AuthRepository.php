@@ -28,7 +28,7 @@ final class AuthRepository extends WorkshopRepository
     /** @return list<array{code:string,group_id:?int,permission:?string}> */
     public function rolePermissions(int $userId): array
     {
-        return $this->all(
+        $rows = $this->all(
             'SELECT ur.role_code AS code, ur.id_group AS group_id, rp.permission
              FROM n_prod_user_role ur
              LEFT JOIN n_prod_role_permission rp ON rp.role_code = ur.role_code
@@ -36,6 +36,19 @@ final class AuthRepository extends WorkshopRepository
              ORDER BY ur.role_code, ur.id_group',
             [$userId]
         );
+        if ($rows || !$this->isBootstrapAdmin($userId)) return $rows;
+        // Même règle que les pages de l'ERP (PageAccessService::profile) : tant que personne n'a le rôle
+        // prod_admin (installation neuve, cohabitation), le compte « admin » est administrateur du module.
+        return $this->all(
+            "SELECT 'prod_admin' AS code, NULL AS group_id, permission FROM n_prod_role_permission WHERE role_code = 'prod_admin'"
+        ) ?: [['code' => 'prod_admin', 'group_id' => null, 'permission' => null]];
+    }
+
+    /** Compte « admin » quand aucun compte n'a encore le rôle prod_admin (sans groupe). */
+    private function isBootstrapAdmin(int $userId): bool
+    {
+        if ($this->all("SELECT 1 FROM n_prod_user_role WHERE role_code = 'prod_admin' AND id_group IS NULL LIMIT 1")) return false;
+        return ($this->all('SELECT login FROM user WHERE id = ?', [$userId])[0]['login'] ?? null) === 'admin';
     }
 
     public function recentFailures(string $login, string $ip, int $windowMinutes): int

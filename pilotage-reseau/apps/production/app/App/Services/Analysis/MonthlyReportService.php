@@ -600,7 +600,7 @@ final class MonthlyReportService
         }
 
         $c = $d['complaints'];
-        $pdf->brandSection($t('Reklamacje', 'Réclamations'), $t('Wartość = przyjęta ilość × cena zakupu klienta', 'Valeur = quantité acceptée × prix d’achat du client'));
+        $pdf->brandSection($t('Reklamacje', 'Réclamations'), $t('Wartość = przyjęte kartony (sztuki ÷ szt./kart.) × cena kartonu z faktury', 'Valeur = cartons acceptés (pièces ÷ pièces par carton) × prix du carton facturé'));
         $tot = $c['totals'];
         $pdf->brandTable([['label' => '', 'w' => 2.6], ['label' => $l['cur'][$i], 'w' => 1.2, 'align' => 'R'], ['label' => $l['prev'][$i], 'sub' => 'M-1', 'w' => 1.2, 'align' => 'R'], ['label' => $l['ly'][$i], 'sub' => 'N-1', 'w' => 1.2, 'align' => 'R']], [
             [$t('Zgłoszone', 'Déclarées'), $tot['cur']['count'], $tot['prev']['count'], $tot['ly']['count']],

@@ -46,11 +46,24 @@ expectMl($svc->validate($new + ['waste_perc' => '35'], true), 'création 35 % ac
 expectMl(!$svc->validate($new + ['waste_perc' => '120'], true) && isset($svc->lastErrors['waste_perc']), 'création 120 % refusée');
 
 // Données normalisées avant enregistrement : la fiche enregistrée confirme la valeur (fin de « do sprawdzenia »)
+// [295] La perte part dans n_raw_material_loss (_loss, enregistrée confirmée) ; waste_perc reçoit la valeur au sens de la base.
+putenv('COHABITATION=0');
 $adj = $svc->adjustData(['waste_perc' => '', 'name' => 'x']);
-expectMl($adj['waste_perc'] === 0.0 && $adj['waste_review'] === 0, 'adjustData : vide → 0 et confirmé');
-expectMl($svc->adjustData(['waste_perc' => '35'])['waste_perc'] === 35.0, 'adjustData : 35');
+expectMl($adj['_loss'] === 0.0 && $adj['waste_perc'] === 0.0 && !array_key_exists('waste_review', $adj), 'adjustData : vide → 0');
+$adj = $svc->adjustData(['waste_perc' => '35']);
+expectMl($adj['_loss'] === 35.0 && $adj['waste_perc'] === 35.0, 'adjustData : 35');
 $untouched = $svc->adjustData(['name' => 'x']);
-expectMl(!array_key_exists('waste_perc', $untouched) && !array_key_exists('waste_review', $untouched), 'adjustData : champ absent laissé absent');
+expectMl(!array_key_exists('waste_perc', $untouched) && !array_key_exists('_loss', $untouched), 'adjustData : champ absent laissé absent');
+
+// [295] Cohabitation : raw_material.waste_perc garde le sens de l'ERP d'origine (« wykorzystanie », 100 = sans perte).
+putenv('COHABITATION=1');
+$adj = $svc->adjustData(['waste_perc' => '35']);
+expectMl($adj['_loss'] === 35.0 && $adj['waste_perc'] === 65.0, 'cohabitation : perte 35 → wykorzystanie 65 dans raw_material');
+expectMl(MaterialLoss::legacyValue(0.0) === 100.0, 'cohabitation : sans perte → 100');
+expectMl(str_contains(MaterialLoss::column('rm'), 'n_raw_material_loss') && str_contains(MaterialLoss::column('rm'), '100 - rm.waste_perc'), 'cohabitation : perte lue dans n_, sinon convertie depuis waste_perc');
+expectMl(MaterialLoss::reviewColumn('rm') !== '' && str_contains(MaterialLoss::reviewColumn('rm'), ', 1)'), 'cohabitation : sans ligne n_ → à vérifier');
+putenv('COHABITATION=0');
+expectMl(MaterialLoss::legacyValue(35.0) === 35.0 && str_contains(MaterialLoss::reviewColumn('rm'), ', 0)'), 'hors cohabitation : valeur telle quelle, rien à vérifier');
 
 // [251] Perte dans le coût : recettes pesées après épluchage → prix du kg utilisable = prix ÷ (1 − perte)
 expectMl(abs(MaterialLoss::factor(35) - 1 / 0.65) < 1e-9, 'facteur 35 % = 1/0,65');

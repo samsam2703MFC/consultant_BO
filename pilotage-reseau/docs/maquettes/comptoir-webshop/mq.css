@@ -1,0 +1,118 @@
+/* Maquettes « Comptoir et webshop dans la jauge » (18/11/2026).
+ * Les règles du dashboard déployé (pilotage-reseau/public/dashboard/dashboard.css) recopiées de la maquette
+ * b2b-commandes-mobile : en-tête du téléphone, jauges du duel, barre d’onglets, variante téléphone appliquée d’office.
+ * Puis ce qui est nouveau (plus bas) : les trois façons de distinguer le comptoir du webshop. */
+
+html,body{margin:0;background:var(--color-bg);color:var(--ink);font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+.tel{width:390px;height:844px;position:relative;background:var(--color-bg);display:flex;flex-direction:column;overflow:hidden}
+
+/* --- l'en-tête et les onglets du téléphone (dashboard déployé) --- */
+.mb-hd{display:flex;align-items:center;gap:9px;padding:14px 14px 10px;flex:0 0 auto}
+.mb-hd img{height:24px}
+.mb-hd>div{min-width:0}
+.mb-hd .t{font-family:var(--font-display);font-size:17px;line-height:1.1;white-space:nowrap}
+.mb-hd .d{font-size:11px;color:var(--color-text-muted)}
+.mb-hd .sp{flex:1}
+.mb-ic{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--color-text-muted);flex:0 0 auto}
+.ma-d{display:flex;align-items:center;gap:4px}
+.ma-d b{font-weight:400;color:var(--ink);white-space:nowrap}
+.ma-pas{border:none;background:none;font:400 14px var(--font-ui);color:var(--color-text-muted);padding:0 5px;line-height:1}
+.ma-pas:disabled{opacity:.25}
+.mb-sc{flex:1;min-height:0;overflow:hidden;padding:0 12px 14px}
+.mb-tabs{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--line);background:#fff;padding:8px 0 22px}
+.mb-tabs button{border:none;background:none;text-align:center;font:400 10px var(--font-ui);color:var(--color-text-muted);padding:2px 1px;white-space:nowrap}
+.mb-tabs button svg{display:block;width:22px;height:22px;margin:0 auto 3px;fill:none;stroke:currentColor;stroke-width:1.6;opacity:.6}
+.mb-tabs button.on{color:var(--color-primary)}.mb-tabs button.on svg{opacity:1}
+
+/* --- les jauges du duel (dashboard déployé, variante téléphone) --- */
+.op-duel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.op-duel .dh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.op-duel .dh .lab{font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.op-duel .dh .lab b{font:400 15px var(--font-display);letter-spacing:0;text-transform:none;color:var(--ink);margin-left:6px}
+.op-duel .dh .chip{display:inline-flex;align-items:center;font:400 10.5px var(--font-ui);padding:3px 9px;border-radius:8px;white-space:nowrap}
+.op-duel .dh .dr{margin-left:auto;font-size:11px;color:var(--color-text-muted);white-space:nowrap}
+.op-piste{display:grid;grid-template-columns:1fr;gap:4px;margin-top:14px}
+.op-piste + .op-piste{margin-top:26px}
+.op-piste .pl b{display:block;font:400 16px var(--font-display)}
+.op-piste .pl small{font-size:11px;color:var(--color-text-muted)}
+.op-piste .pb{position:relative;height:30px;border-radius:9px;background:#efe9e0}
+.op-piste .seg{position:absolute;top:0;bottom:0;border-radius:9px}
+.op-piste .seg.fait{left:0;background:var(--color-primary);z-index:2}
+.op-piste .seg.proj{background:repeating-linear-gradient(135deg,#d9a3ab 0 6px,#e9c4c9 6px 12px);z-index:1;border-radius:0 9px 9px 0}
+.op-piste .seg.j7{left:0;background:#2F6EA5;z-index:2}
+.op-piste .seg.j7j{background:repeating-linear-gradient(135deg,#9fbbd6 0 6px,#c6d8e8 6px 12px);z-index:1;border-radius:0 9px 9px 0}
+.op-piste .seg.or{left:0;background:linear-gradient(90deg,#d9a520,#f2d268 50%,#d9a520);z-index:2}
+.op-piste .temps{position:absolute;top:-6px;bottom:-6px;border-left:2px dashed var(--ink);z-index:3}
+.op-piste .objm{position:absolute;top:-5px;bottom:-5px;border-left:2px solid #1d1d1b;opacity:.45;z-index:3}
+.op-piste .val{position:absolute;top:50%;transform:translate(8px,-50%);font:400 10px var(--font-ui);color:var(--ink);background:rgba(255,255,255,.92);padding:2px 7px;border-radius:8px;white-space:nowrap;z-index:4}
+.op-piste .val.dedans{transform:translate(calc(-100% - 8px),-50%);color:#fff;background:rgba(0,0,0,.25)}
+.op-piste .val.sous{top:auto;bottom:-22px;transform:translate(-100%,0);color:#2F5D8A;background:none;padding:2px 0}
+.op-piste .val.sous.proj{color:#8c1020}
+.op-dax{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin:24px 0 0}
+.op-dax.ab{position:relative;display:block;height:14px}.op-dax.ab span{position:absolute;left:0;white-space:nowrap}
+.op-dax.ab .o{transform:translateX(-50%);color:var(--muted-2)}
+.op-duel.b2b .seg.fait{background:#7A5C2E}.op-duel.b2b .seg.j7{background:#a88d62}
+
+/* La ligne « Commandes du jour » au pied de la carte du comptoir (dashboard déployé). */
+.cmd-l{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:11px;border-top:1px solid var(--line)}
+.cmd-l .t{flex:1;min-width:0}
+.cmd-l .t b{display:block;font:400 14px var(--font-display);color:var(--ink)}
+.cmd-l .t small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
+.cmd-l .v{font:400 16px var(--font-display);white-space:nowrap}
+.cmd-l .ch{color:var(--faint);font-size:18px;line-height:1}
+
+/* La planche : les trois téléphones côte à côte */
+.planche{display:flex;gap:36px;align-items:flex-start;padding:30px 36px 36px;background:#ece6dd;width:max-content}
+.planche figure{margin:0;width:390px}
+.planche figcaption{font-size:12px;line-height:1.45;color:var(--muted-2);margin-bottom:10px;min-height:52px}
+.planche figcaption b{display:block;font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:3px}
+.planche .tel{border-radius:28px;box-shadow:0 1px 0 #d8d0c4,0 10px 30px rgba(60,40,20,.12)}
+.planche h1{font:400 24px var(--font-display);margin:0 0 4px}
+.planche .tete{width:100%;margin-bottom:6px}
+.planche .tete p{margin:0;font-size:12.5px;color:var(--muted-2)}
+.planche-c{background:#ece6dd;width:max-content}
+.planche-w{padding:30px 36px 0}
+
+/* ===================================================================================================
+ * Nouveau (18/11/2026) — les canaux. Les couleurs reprennent la jauge « Comment le client achète » de la
+ * fiche client (FD_CANAUX) : comptoir or #B0792A, commande comptoir bordeaux #8D1D2C, webshop bleu #1B6FA8.
+ * =================================================================================================== */
+:root{--cn-c:#B0792A;--cn-k:#8D1D2C;--cn-w:#1B6FA8;--cn-p:#7A5C2E}
+.pt{display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:0;margin-right:5px}
+.pt.c{background:var(--cn-c)}.pt.k{background:var(--cn-k)}.pt.w{background:var(--cn-w)}.pt.p{background:var(--cn-p)}
+
+/* A — la barre en deux matières : la couleur dit le jour, la hachure dit le webshop. */
+.op-piste .seg.web{z-index:2;border-radius:0 9px 9px 0;background:repeating-linear-gradient(135deg,var(--sw) 0 3px,#fff 3px 5px)}
+.op-piste .seg.web.min{box-shadow:0 0 0 1.5px #fff}
+.op-piste .pl small .sp{white-space:nowrap}
+.op-piste .pl small i.sw{display:inline-block;width:12px;height:8px;border-radius:2px;margin:0 4px 0 2px;vertical-align:0}
+.sw.plein{background:#8a8378}.sw.hach{background:repeating-linear-gradient(135deg,#8a8378 0 2px,#fff 2px 4px);box-shadow:inset 0 0 0 1px #8a8378}
+.leg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:10.5px;color:var(--color-text-muted);margin-top:12px}
+.leg i{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.web-fl{position:absolute;z-index:5;top:-19px;transform:translateX(-50%);font-size:9.5px;color:var(--cn-w);white-space:nowrap;background:#fff;padding:0 3px;border-radius:4px}
+.web-fl:after{content:'';position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:var(--cn-w)}
+
+/* B — une jauge par canal : la carte du webshop, sur le modèle de celle du B2B. */
+.op-duel.web .seg.fait{background:var(--cn-w)}.op-duel.web .seg.j7{background:#8fb5d6}
+.op-duel .pied{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:11.5px;color:var(--color-text-muted)}
+.op-duel .pied b{font-weight:400;color:var(--ink)}
+.op-duel .pied .ch{margin-left:auto;color:var(--faint);font-size:16px;line-height:1}
+
+/* C — le ruban des canaux sous la jauge : la part du jour, puis une colonne par canal. */
+.rb{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.rb .t{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--color-text-muted)}
+.rb .t b{font:400 14px var(--font-display);color:var(--ink)}
+.rb .mix{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#efe9e0;margin:8px 0 10px;gap:2px}
+.rb .mix i{display:block;height:100%;min-width:3px}
+.rb .col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rb .col>div{padding:9px 9px 10px;position:relative}
+.rb .col>div+div{border-left:1px solid var(--line)}
+.rb .col .k{font-size:10.5px;color:var(--muted-2);white-space:nowrap}
+.rb .col .v{font:400 17px/1.2 var(--font-display);margin-top:4px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rb .col .s{font-size:10px;color:var(--color-text-muted);margin-top:1px;line-height:1.3}
+.rb .col .j{font-size:10px;color:#2F5D8A;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);line-height:1.35}
+.rb .col .j em{font-style:normal;color:#8c1020}
+.rb .col .ch{position:absolute;right:7px;top:8px;color:var(--faint);font-size:14px;line-height:1}
+.rb .bas{display:flex;justify-content:space-between;font-size:10.5px;color:var(--color-text-muted);margin-top:8px}
+.rb .bas em{font-style:normal;color:var(--color-primary)}

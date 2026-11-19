@@ -1212,3 +1212,94 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   relu au serveur et sur la tablette.
 - Encodé en **0.0.58**, v1.0 « à valider ». Consigne générale : `rayons_photos.php` ; conseils de prise de vue et démonstration à valider
   (`data/formation/photos-qualite/LISEZMOI.md`).
+
+## Catalogue des manuels : feuilleter, PDF, QR code, dépliant (19/11/2026)
+
+Sam : « je dois pouvoir feuilleter en PDF les différents manuels ; créer dans le rail la possibilité de feuilleter les pages
+des différents manuels comme un catalogue ; un micro-catalogue ou leaflet qui explique le fonctionnement de tout, avec
+chaque fois un QR code qui ramène vers le manuel en question », puis « code it all and push online ». Maquettes :
+`docs/maquettes/catalogue-manuels/` (sur `claude/lucid-pascal-3ps6at`).
+
+- **Page** : `public/formation/catalogue/` (`index.html`, `catalogue.js`, `catalogue.css`), servie sous le module
+  (`…/formation/catalogue/`). Garde d'accès comme le cockpit (`assets/js/garde.js`), **sans** `data-siege` : le siège et un
+  franchisé peuvent l'ouvrir. Lecture seule, par l'API du module : `/formation/sop/liste`, `/formation/sop/fiche/{id}`,
+  `/formation/ref`.
+- **Quatre manuels** : le manuel opératoire (les articles), les standards (SOP, mémos, fiches), les checklists (les fiches de
+  checklist), le manuel du réseau (les domaines D1–D8, leurs sous-catégories et les standards rangés dans chacune). Les
+  brouillons n'y sont pas ; un document « à valider » porte une pastille.
+- **Feuilleter** (`#/m/<manuel>`) : couverture (nombre de documents, QR code), sommaire numéroté, puis chaque document sur
+  une nouvelle page ; pages A5 mises en page dans le navigateur (mesure après le chargement de Gotham), en double page sur
+  un grand écran, une page à la fois sur une tablette ; flèches, clavier, glissement, curseur ; FR | NL.
+- **PDF** (`#/m/<manuel>/imprimer`, ou « Imprimer · PDF ») : la fenêtre d'impression du navigateur, une page A5 par
+  feuille (« Enregistrer en PDF »). Pas de PDF du serveur.
+- **QR code** : le lien du feuilletage du manuel (`catalogue/#/m/<manuel>`), sur l'adresse où la page est ouverte.
+- **Dépliant** (`catalogue/depliant.html`) : six pages A4, design system (logo, filet bordeaux, pied « Page n / 6 ») : titre,
+  la franchise (d'après 0.0.21 et 0.0.23), puis une page par manuel avec son QR code ; les nombres lus dans le module ;
+  « Imprimer · enregistrer en PDF » (`depliant.html#imprimer` lance l'impression).
+- **Rail** : cockpit › Formation › « Catalogue des manuels ↗ » (`app.js`) ; module Formation › Documents › « Catalogue des
+  manuels ↗ » et « Dépliant des manuels ↗ » (`portail.js` ; `formation.js` sert une entrée `ext:…` comme un lien direct).
+- **Essai avant la mise en ligne** (navigateur sans tête, API du serveur en lecture) : manuel opératoire 396 pages, standards
+  145 (une page à la fois), checklists 23, manuel du réseau 13 ; PDF des checklists 23 pages A5 ; dépliant 6 pages A4,
+  4 QR codes ; aucune erreur.
+- **À corriger sur le fil** : l'accès des équipes sans session (la tablette du magasin n'ouvre pas le catalogue) ; la
+  longueur du manuel opératoire en PDF (un article par nouvelle page) ; les adresses des QR codes si une autre cible est voulue.
+
+### Liens directs dans les manuels et le PDF (19/11/2026)
+
+Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, mettre un lien direct dans le PDF ».
+
+- **Ce qui devient un lien** : tout code de document (`0.m.nn` : article, SOP, mémo, fiche) ou de checklist (`z.m.nn`) cité
+  dans le texte d'un document (objectif, public, lignes, points critiques) **s'il existe dans le module** ; les entrées du
+  sommaire ; dans le manuel du réseau, chaque standard rangé dans une sous-catégorie ; dans le dépliant, les codes cités
+  (0.0.21, 0.0.56, 5.5.01). Un code sans document (une checklist du panel sans fiche) reste du texte ; une tâche citée par
+  son seul libellé n'a pas de code, donc pas de lien.
+- **À l'écran** : le lien ouvre `#/m/<manuel>/d/<id>`, le manuel du document à sa première page (sans tout relire si le
+  manuel est déjà ouvert). Le manuel est déduit du type : Article → opératoire, Checklist → checklists, le reste → standards.
+- **Dans le PDF** : Chrome change un lien « même page + #… » en lien interne au PDF et l'abandonne sans ancre ; la copie
+  imprimée (`lierPourPdf`) pose donc une ancre sur la première page de chaque document. Un document du **même** manuel →
+  lien interne (le clic saute à la page du PDF) ; d'un **autre** manuel → `catalogue/?m=<manuel>#/m/<manuel>/d/<id>`, un
+  vrai lien web (il demande une session, comme le catalogue).
+- **Essai** : manuel opératoire, 98 liens dans le texte et le sommaire (87 internes, 11 vers les standards et les checklists),
+  standards 24, checklists 10 (sommaires), manuel du réseau 88 (tous vers les autres manuels), dépliant 3 ; liens internes
+  vérifiés (sommaire → bonne page du PDF) ; aucune erreur.
+
+### Le code des checklists en couleurs ; les postes dans le manuel du réseau (19/11/2026)
+
+- **Checklists** (Sam : « mettre l'explication, avec les couleurs, de comment est structurée la numérotation des
+  checklists ») : une page « Lire le code d'une checklist » entre la couverture et le sommaire du manuel des checklists.
+  Elle montre le grand code d'exemple (1.1.01), puis trois colonnes : 1er chiffre · qui (zones), 2e chiffre · quand
+  (moments), le numéro. Ensuite viennent un exemple par autre zone et les règles « faite » (obligatoire, photo, contrôle
+  qualité). Ce sont les couleurs et la lecture du dashboard, onglet Tâches, « Comment c'est organisé » :
+  1 Vente `#8D1D2C`, 2 Boulangerie `#B0792A`, 3 Traiteur `#3f7a52`, 4 Nettoyage `#1f5f8b`, 5 Gestion `#6B4FBB`, 0 SOP et
+  articles `#5c5852`. Le moment reste gris, car le bleu est celui du nettoyage. Le code d'une checklist est en pastille de
+  sa zone au sommaire et en tête de fiche. Le bouton « Sommaire » va au sommaire, après cette page. Le dépliant (page 5)
+  prend les mêmes couleurs.
+- **Manuel du réseau** (Sam : « rajouter les postes, les formations et les compétences par poste ») : après les domaines,
+  une partie « Les postes : formations et compétences ». Elle ouvre sur une page qui explique comment la lire, puis donne
+  une entrée par poste du référentiel v25 (P1 à P12). Chaque entrée comporte :
+  - la mission (description du poste dans Franchise Buddy) et son nom dans Franchise Buddy quand il diffère ;
+  - « Pour y accéder » : les critères d'admission du cockpit (P7, P8, P12) ;
+  - les formations attendues, obligatoires puis recommandées (`attendu` O / R du v25), avec leur fréquence. Quand un
+    article du manuel opératoire porte la formation (`art-fo-NN`, sinon le même titre), son code renvoie à l'article :
+    27 formations sur 54 ;
+  - les compétences clés du référentiel (champ `postes` lu en codes : « P4-P5 », « Toutes »…) ;
+  - « Niveau par niveau · Franchise Buddy » : les niveaux rattachés au poste (`niveauxV25`), leur description et leurs
+    compétences. Une compétence qui a sa SOP (`/formation/sop/competences`) renvoie à la SOP ; « formateur » marque
+    celles que valide le formateur.
+
+  Les données sont lues à l'ouverture (`/formation/v25`, `/formation/referentiel`, `/formation/sop/competences`). Si la
+  lecture échoue, la partie dit « illisible ». Le sommaire a deux intertitres (domaines, postes) et la couverture compte
+  les postes. Le dépliant (page 6) annonce les postes, compte lu dans le module.
+- **Essai** : manuel des checklists, 24 pages (la page du code tient sur une page). Manuel du réseau, 52 pages au lieu de
+  13 : 12 postes, 380 lignes de formation dont 173 avec lien vers l'article, 121 compétences clés, 134 compétences par
+  niveau dont 19 avec lien vers leur SOP. Aucune page qui déborde, aucune erreur.
+- **Dépliant, page 2 « La franchise »** (19/11/2026, Sam) : les chiffres du contrat (9 ans, 31 jours, redevances
+  2 · 2 · 2,5 %) et les deux paragraphes droit d'entrée / DIP sont retirés. À leur place, un très court résumé des deux
+  articles, liens gardés : « Le cadre · 0.0.21 » (le DIP, puis le contrat et les engagements) et « La valeur · 0.0.56 »
+  (process écrits et délégables, chiffres fiables). Les chiffres restent dans l'article 0.0.21.
+- **Dépliant, page 2 : « Une franchise bien tenue »** (19/11/2026, Sam : « rajouter les points de bonne gestion de la
+  franchise, est-ce que quelqu'un peut tenir ton magasin deux semaines… »). Le titre est « Quelqu'un peut-il tenir votre
+  magasin deux semaines sans vous ? », suivi des huit questions de « La boutique est-elle vendable demain ? » (article
+  0.0.56), posées en questions et en deux colonnes. Les deux semaines sans le dirigeant passent en premier, puis viennent
+  la relève, les postes doublés, les niveaux à jour, douze mois de chiffres, les ratios, les standards et le repreneur en
+  une heure. La source (0.0.56) est en lien. La page tient sur l'A4.

@@ -37,6 +37,10 @@ return function(RouteCollector $r) {
         'method'     => 'editOrder'
     ]);
 
+    // [312] Płatność proformy zamówienia (przełącznik) i ponowne przypomnienie e-mail / SMS.
+    $r->addRoute('POST', '/ajax/client-orders/{id:\d+}/paid', ['controller' => \App\Controllers\Web\Client\Order\OrderController::class, 'method' => 'ajaxSetPaid']);
+    $r->addRoute('POST', '/ajax/client-orders/{id:\d+}/remind', ['controller' => \App\Controllers\Web\Client\Order\OrderController::class, 'method' => 'ajaxRemind']);
+
     $r->addRoute('PATCH', '/ajax/client-orders/{id:\d+}', [
         'controller' => \App\Controllers\Web\Client\Order\OrderController::class,
         'method'     => 'ajaxUpdateOrder'

@@ -164,14 +164,19 @@ function vpNet(array $t): float
     return (float) ($t[5] ?? $t[2]);
 }
 
-/** Le pro d'une liste de tickets du panel : total du jour, tickets pro (heure, clé de compte, montant, facturé, différé), par heure. */
+/**
+ * Le pro d'une liste de tickets du panel : total du jour, tickets pro (heure, clé de compte, montant, facturé, différé),
+ * par heure. La même liste porte la TVA de chaque ticket (`tax_amount_after_discount`) : `tva` et `caT` (le TTC des
+ * tickets dont la TVA est lue) donnent le CA hors TVA du P&L (src/pnl_ht.php, 16/11/2026), sans appel de plus.
+ */
 function vpDuListe(array $liste): array
 {
-    $t = []; $h = []; $ca = 0.0; $n = 0;
+    $t = []; $h = []; $ca = 0.0; $n = 0; $tva = 0.0; $caT = 0.0;
     foreach (analyseListe($liste) as $x) {
         if (!is_array($x)) { continue; }
         $m = (float) ($x['total_gross_amount_after_discount'] ?? $x['total_value_after_discount'] ?? 0);
         $n++; $ca += $m;
+        if (isset($x['tax_amount_after_discount']) && is_numeric($x['tax_amount_after_discount'])) { $tva += (float) $x['tax_amount_after_discount']; $caT += $m; }
         if (empty($x['is_client_b2b'])) { continue; }
         $ts = (string) ($x['insert_timestamp'] ?? '');
         $hh = (string) (int) substr($ts, 11, 2);
@@ -181,7 +186,7 @@ function vpDuListe(array $liste): array
     }
     foreach ($h as $k => $v) { $h[$k] = [round($v[0], 2), $v[1]]; }
     usort($t, static fn ($a, $b) => strcmp($a[0], $b[0]));
-    return ['q' => time(), 'n' => $n, 'ca' => round($ca, 2), 't' => $t, 'h' => $h];
+    return ['q' => time(), 'n' => $n, 'ca' => round($ca, 2), 'tva' => round($tva, 2), 'caT' => round($caT, 2), 't' => $t, 'h' => $h];
 }
 
 /** Le pro gravé d'un jour vaut-il encore ? Clos s'il a été lu un jour plus tard ; sinon dix minutes. */

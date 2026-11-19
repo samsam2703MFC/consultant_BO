@@ -408,6 +408,44 @@ function ep_ventes_mensuel(): array
             $mois[] = ['mois' => $k, 'ca' => null, 'source' => null, 'tickets' => 0, 'jours' => 0];
         }
     }
+    // Le food cost RÉEL de chaque mois (15/11/2026, la valeur du magasin : marge brute réelle − charges normatives du
+    // réseau) : celui que /stores/perf mesure et garde (ceo_app_setting `foodCostApi`, clé « magasin-année-mois »). Une
+    // lecture, pas un calcul ; un mois jamais mesuré reste à null.
+    $fcCache = setting('foodCostApi', []);
+    foreach ($mois as &$m3) {
+        $cle = $shop . '-' . (int) substr((string) $m3['mois'], 0, 4) . '-' . (int) substr((string) $m3['mois'], 5, 2);
+        $m3['fc'] = is_array($fcCache) && isset($fcCache[$cle]) && is_numeric($fcCache[$cle]) ? (float) $fcCache[$cle] : null;
+    }
+    unset($m3);
+    // Les charges du réseau, en % du CA (15/11/2026, la valeur du magasin) : le modèle de Budget › Paramètres (réglage
+    // `budgetCharges`, recopié du compte de résultat du CRM), le « % validé », à défaut (vide ou 0) le « % réseau ». La catégorie que le palier « Marge brute » retranche
+    // (la matière) est marquée : la valeur la remplace par le coût matière réel du magasin.
+    $normes = null;
+    $modele = setting('budgetCharges');
+    if (is_array($modele) && is_array($modele['categories'] ?? null)) {
+        $catMatiere = null;
+        foreach ((array) ($modele['paliers'] ?? []) as $pa) {
+            $d = is_array($pa) ? (string) ($pa['droite'] ?? '') : '';
+            if (str_starts_with($d, 'cat:')) { $catMatiere = substr($d, 4); break; }
+        }
+        $lignes = [];
+        foreach ($modele['categories'] as $cat) {
+            $nomCat = (string) ($cat['nom'] ?? '');
+            foreach ((array) ($cat['lignes'] ?? []) as $l) {
+                // Le « % validé » s'il est posé ; à 0 ou vide, le « % réseau » du compte de résultat du CRM (une ligne neuve du
+                // CRM arrive avec un % validé à 0 : « Rémunération », 20 % réseau, le 15/11/2026).
+                $val = isset($l['pct']) && is_numeric($l['pct']) ? (float) $l['pct'] : null;
+                $res = isset($l['pctTheo']) && is_numeric($l['pctTheo']) ? (float) $l['pctTheo'] : null;
+                $pct = $val !== null && $val > 0 ? $val : ($res ?? $val);
+                if ($pct === null) { continue; }
+                $lignes[] = ['categorie' => $nomCat, 'poste' => (string) ($l['poste'] ?? ''), 'pct' => $pct, 'matiere' => $catMatiere !== null && $nomCat === $catMatiere];
+            }
+        }
+        $paliers = [];
+        foreach ((array) ($modele['paliers'] ?? []) as $pa) { if (is_array($pa)) { $paliers[] = ['nom' => (string) ($pa['nom'] ?? ''), 'droite' => (string) ($pa['droite'] ?? '')]; } }
+        if ($lignes) { $normes = ['source' => 'Budget › Paramètres', 'lignes' => $lignes, 'paliers' => $paliers]; }
+    }
+
     // Le jour où la caisse a sonné pour la première fois. Un mois d'ouverture
     // ne se répartit pas sur ses 31 jours : Corbais a ouvert le 21 juillet
     // 2024, son juillet ne vaut que onze jours. Sans cette date, l'année
@@ -447,6 +485,7 @@ function ep_ventes_mensuel(): array
         'ouverture' => $premiere === null ? null : substr((string) $premiere, 0, 10),
         'source' => 'route vivante du panel (' . $nVivant . ' mois), copie du P&L quand le panel n’a pas le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
         'mois'   => $mois,
+        'normes' => $normes,
     ];
 }
 

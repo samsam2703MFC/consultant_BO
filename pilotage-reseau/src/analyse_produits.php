@@ -539,6 +539,8 @@ function adCalculer(array $tranches, array $lu, int $sid, array $catDe, array $g
             + ['evo' => $evo, 'prix' => $c !== null && $c['ttc'] !== null ? round($c['ttc'], 2) : null,
                 // Le prix HT du catalogue (13/11/2026) : la fiche produit ouverte d'ici en tire marge, coefficient et simulateur.
                 'prixHt' => $c !== null && $c['ht'] !== null ? round($c['ht'], 2) : null,
+                // Le coût de la recette du jour (15/11/2026) : la fiche de Vendre › Analyse en tire la marge par pièce.
+                'cout' => $c !== null && $c['cout'] !== null ? round($c['cout'], 3) : null,
                 'prixEncaisse' => array_sum($x['q']) > 0 ? round(array_sum(array_slice($x['v'], AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1)) / max(0.0001, array_sum(array_slice($x['q'], AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1))), 2) : null,
                 'marge' => $marge, 'margeSemaine' => $margeSem, 'margeMotif' => $motif];
     }
@@ -1387,46 +1389,87 @@ function ppParCategorie(array $refs, int $seuil = 80): array
 }
 
 /**
- * L'assortiment proposé, catégorie par catégorie (18/10/2026, demande de Sam : « à part les produits 20/80, 6 classiques
- * + 2 de saison pour chaque catégorie »). Le 20/80 de la catégorie se garde d'office. Puis les $nC classiques — dans
- * aucune gamme saisonnière seule — au meilleur score de la période, vendues sur la période. Puis, pour chaque saison du
- * panel, les $nS saisonnières de sa gamme au meilleur score sur 12 mois (`scoreAn`, `caAn` : leur saison y est, quelle
- * que soit la période choisie), vendues sur 12 mois ; une saisonnière peut servir deux saisons. Le reste sort.
- *
- * @return list<array{cat:string,refs:int,garde:list,classiques:list,manque:int,saisons:array<string,array{retenues:list,autres:int}>,sortent:list}>
+ * L'assortiment proposé, catégorie par catégorie : depuis le 19/11/2026 (docs/audit-rail.md § 4.2), il n'est plus
+ * calculé ici (6 classiques + 2 par saison du panel). C'est celui de Comptoir › Structure de gamme, avec les règles et
+ * les décisions du réseau, que l'écran envoie (`structure`, sgProposition dans structure-gamme.js) : un seul calcul.
  */
-function ppPropositions(array $refs, array $saisons, array $parCat, int $nC = 6, int $nS = 2): array
+
+/**
+ * L'assortiment proposé, mis en page : une fiche par catégorie, en quatre colonnes qui se lisent de gauche à droite —
+ * toute l'année, saisons et périodes, à arbitrer, à retirer —, en gros caractères, sans emoji (le moteur PDF du serveur
+ * les imprime mal). Les listes viennent de la Structure de gamme (sgProposition) ; sans elle, on le dit.
+ *
+ * @param array|null $S { regles:{base,std,max,sai,seuil}, saisons:[{id,nom,lib}], periodes:[…], cats:[{cat, refs,
+ *                       standard, garder, saisons:{id:[…]}, periodes:{id:[…]}, arbitrer, observation, desactiver}] }
+ */
+function ppDocProposition(?array $S, callable $e): string
 {
-    $cle = static fn ($r) => (string) ($r['k'] ?? $r['nom'] ?? '');
-    $sIds = array_values(array_filter(array_map(static fn ($s) => is_array($s) ? (string) ($s['id'] ?? '') : '', $saisons), static fn ($v) => $v !== ''));
-    $g = [];
-    foreach ($refs as $r) { if (is_array($r)) { $g[ppCat($r)][] = $r; } }
-    $out = [];
-    foreach ($parCat as $pc) {
-        $l = $g[$pc['cat']] ?? [];
-        $pris = [];
-        foreach ($pc['top'] as $r) { $pris[$cle($r)] = true; }
-        $cand = array_values(array_filter($l, static fn ($r) => empty($r['saisonnier']) && !isset($pris[$cle($r)]) && (float) ($r['ca'] ?? 0) > 0));
-        usort($cand, ppTri('score', 'ca'));
-        $classiques = array_slice($cand, 0, $nC);
-        foreach ($classiques as $r) { $pris[$cle($r)] = true; }
-        $parS = []; $retS = [];
-        foreach ($sIds as $sid) {
-            $deS = array_values(array_filter($l, static fn ($r) => !empty($r['saisonnier']) && !isset($pris[$cle($r)])
-                && in_array($sid, array_map('strval', (array) ($r['saisons'] ?? [])), true)));
-            if ($deS === []) { continue; }
-            $vendues = array_values(array_filter($deS, static fn ($r) => (float) ($r['caAn'] ?? 0) > 0));
-            usort($vendues, ppTri('scoreAn', 'caAn'));
-            $ret = array_slice($vendues, 0, $nS);
-            foreach ($ret as $r) { $retS[$cle($r)] = true; }
-            $parS[$sid] = ['retenues' => $ret, 'autres' => count($deS) - count($ret)];
-        }
-        $sortent = array_values(array_filter($l, static fn ($r) => !isset($pris[$cle($r)]) && !isset($retS[$cle($r)])));
-        usort($sortent, ppTri('ca', 'caAn'));
-        $out[] = ['cat' => $pc['cat'], 'refs' => count($l), 'garde' => $pc['top'], 'classiques' => $classiques,
-            'manque' => max(0, $nC - count($classiques)), 'saisons' => $parS, 'sortent' => $sortent];
+    $titre = '<div class="saut"></div><h2 style="font-size:17pt">L’assortiment proposé, catégorie par catégorie</h2>';
+    if ($S === null || !is_array($S['cats'] ?? null)) {
+        return $titre . '<div class="ko" style="font-size:10pt">La structure de gamme n’a pas pu être lue : l’assortiment proposé n’est pas imprimé. '
+            . 'Il se lit dans le cockpit, Comptoir › Structure de gamme.</div>';
     }
-    return $out;
+    $R = is_array($S['regles'] ?? null) ? $S['regles'] : [];
+    $num = static fn ($v) => str_replace('.', ',', (string) (0 + (float) $v));
+    $std = $num($R['std'] ?? 80); $max = (int) ($R['max'] ?? 6); $sai = (int) ($R['sai'] ?? 4); $seuil = $num($R['seuil'] ?? 3);
+    $base = ($R['base'] ?? 'ca') === 'mg' ? 'de la marge' : 'du chiffre';
+    $liste = static fn ($l) => array_values(array_filter((array) $l, static fn ($x) => is_array($x) && trim((string) ($x['nom'] ?? '')) !== ''));
+    $noms = []; foreach (array_merge((array) ($S['saisons'] ?? []), (array) ($S['periodes'] ?? [])) as $x) {
+        if (is_array($x) && ($x['id'] ?? '') !== '') { $noms[(string) $x['id']] = '<b>' . $e($x['nom'] ?? '') . '</b>' . (($x['lib'] ?? '') !== '' ? ' <span class="mu">' . $e($x['lib']) . '</span>' : ''); }
+    }
+    $COUL = ['g' => ['#E8EFEA', '#3f7a52'], 's' => ['#F6E7CE', '#7A5207'], 'a' => ['#FBF9F5', '#5c5852'], 'r' => ['#F6ECED', '#A61E1E']];
+    $tete = static fn (string $k, string $n, string $t, string $sous) => '<td style="width:25%;vertical-align:top;background:' . $COUL[$k][0] . ';border-radius:2mm;padding:2mm 2.5mm">'
+        . '<div style="font-size:11pt;color:' . $COUL[$k][1] . '"><span style="display:inline-block;width:5.2mm;height:5.2mm;line-height:5.2mm;border-radius:50%;background:' . $COUL[$k][1]
+        . ';color:#fff;text-align:center;font-size:9pt;font-weight:400;margin-right:1.5mm">' . $n . '</span><b>' . $t . '</b></div><div style="font-size:8.6pt;color:#3d3833;margin-top:0.8mm">' . $sous . '</div></td>';
+    $li = static fn (array $r, string $note = '') => '<div style="margin:0 0 1.5mm">' . $e($r['nom']) . ($note !== '' ? '<div style="font-size:8.8pt;margin-top:0.2mm">' . $note . '</div>' : '') . '</div>';
+    $vide = static fn (string $t) => '<div class="mu" style="font-size:8.6pt">' . $t . '</div>';
+
+    $nAn = 0; $nSai = 0; $nArb = 0; $nRet = 0; $nRetO = 0; $nTot = 0; $fiches = '';
+    foreach ($S['cats'] as $C) {
+        if (!is_array($C)) { continue; }
+        $an = array_merge($liste($C['standard'] ?? []), $liste($C['garder'] ?? []));
+        $saiCat = []; $vus = [];
+        foreach (['saisons', 'periodes'] as $k) {
+            foreach ((array) ($C[$k] ?? []) as $id => $l) {
+                $l = $liste($l); if ($l === []) { continue; }
+                $saiCat[(string) $id] = $l;
+                foreach ($l as $r) { $vus[(string) ($r['id'] ?? $r['nom'])] = true; }
+            }
+        }
+        $arb = array_merge($liste($C['arbitrer'] ?? []), $liste($C['observation'] ?? []));
+        $ret = $liste($C['desactiver'] ?? []);
+        $nAn += count($an); $nSai += count($vus); $nArb += count($arb); $nRet += count($ret); $nTot += (int) ($C['refs'] ?? 0);
+        $nRetO += count(array_filter($ret, static fn ($r) => !empty($r['oblig'])));
+        $gar = array_map(static fn ($r) => (string) ($r['id'] ?? ''), $liste($C['garder'] ?? []));
+        $obs = array_map(static fn ($r) => (string) ($r['id'] ?? ''), $liste($C['observation'] ?? []));
+        $col1 = implode('', array_map(static fn ($r) => $li($r, in_array((string) ($r['id'] ?? ''), $gar, true) ? '<span class="mu">gardée à la main, hors standard</span>' : ''), $an)) ?: $vide('Aucune référence vendue toute l’année.');
+        $col2 = '';
+        foreach ($saiCat as $id => $l) {
+            $col2 .= '<div style="margin:0 0 2mm"><div style="font-size:9.6pt">' . ($noms[$id] ?? $e($id)) . '</div><div style="margin-top:0.4mm">'
+                . implode('<br>', array_map(static fn ($r) => $e($r['nom']), $l)) . '</div></div>';
+        }
+        if ($col2 === '') { $col2 = $vide('Pas de produit de saison dans cette catégorie.'); }
+        $col3 = implode('', array_map(static fn ($r) => $li($r, in_array((string) ($r['id'] ?? ''), $obs, true) ? '<span class="mu">nouveauté, jugée à 6 mois de ventes</span>' : ''), $arb)) ?: $vide('Rien à arbitrer.');
+        $col4 = implode('', array_map(static fn ($r) => $li($r, !empty($r['oblig']) ? '<b class="ko">obligatoire aujourd’hui</b>' : ''), $ret)) ?: $vide('Rien à retirer.');
+        $col = static fn (string $k, string $corps) => '<td style="width:25%;vertical-align:top;padding:2.5mm 3mm;border-top:2.5pt solid ' . $COUL[$k][1] . '">' . $corps . '</td>';
+        $fiches .= '<div style="page-break-inside:avoid;border:0.8pt solid #e6e0d8;border-radius:2.5mm;margin-bottom:4mm;font-size:11pt">'
+            . '<div style="padding:2.2mm 3mm;border-bottom:0.6pt solid #e6e0d8"><span style="font-size:14pt"><b>' . $e($C['cat'] ?? '') . '</b></span>'
+            . ' <span style="font-size:9.5pt;color:#5c5852">— aujourd’hui ' . (int) ($C['refs'] ?? 0) . ' produit' . ((int) ($C['refs'] ?? 0) > 1 ? 's' : '') . ' → ' . count($an) . ' toute l’année'
+            . ($vus !== [] ? ' + ' . count($vus) . ' de saison' : '') . ', ' . count($arb) . ' à arbitrer, ' . count($ret) . ' à retirer</span></div>'
+            . '<table width="100%" cellpadding="0" cellspacing="0"><tr>' . $col('g', $col1) . $col('s', $col2) . $col('a', $col3) . $col('r', $col4) . '</tr></table></div>';
+    }
+    return $titre
+        . '<div style="font-size:9.5pt;color:#3d3833;margin:1mm 0 3mm">Le calcul de Comptoir › Structure de gamme, sur les ventes réseau de douze mois, avec les règles et les décisions du réseau. Chaque fiche se lit de gauche à droite.</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="4" style="margin-bottom:3mm"><tr>'
+        . $tete('g', '1', 'Toute l’année', 'Les références vendues toute l’année qui font ' . $std . ' % ' . $base . ' de la catégorie, ' . $max . ' au plus ; et celles gardées à la main.')
+        . $tete('s', '2', 'Saisons et périodes', 'Pour chaque saison et chaque période (Noël, Nouvel An, Pâques) : ' . $sai . ' au plus, de la même façon.')
+        . $tete('a', '3', 'À arbitrer', 'Ni retenues ni sous le seuil : à garder hors structure ou à retirer. Les nouveautés y attendent 6 mois.')
+        . $tete('r', '4', 'À retirer', 'Moins de ' . $seuil . ' % du chiffre de leur catégorie, sur les mois où elles se vendent.')
+        . '</tr></table>'
+        . '<div style="font-size:10pt;margin-bottom:4mm;padding:2mm 3mm;border:0.8pt solid #e6e0d8;border-radius:2mm">Au total, <b>' . $nTot . ' produits</b> aujourd’hui. Proposé : <b>'
+        . $nAn . ' toute l’année</b>, <b>' . $nSai . ' de saison</b>, <b>' . $nArb . ' à arbitrer</b>, <b>' . $nRet . ' à retirer</b>'
+        . ($nRetO > 0 ? ', dont <b class="ko">' . $nRetO . ' obligatoire' . ($nRetO > 1 ? 's' : '') . ' aujourd’hui</b>' : '') . '.</div>'
+        . $fiches;
 }
 
 /** Le document HTML du 20/80 (sans le PDF) : séparé de la route pour se tester sans moteur PDF. */
@@ -1510,12 +1553,11 @@ function ppDoc(array $b): string
     }
     $h .= '</tbody></table>';
 
-    // Le 20/80 de chaque catégorie, puis l'assortiment proposé (18/10/2026) — quand l'écran envoie toute la gamme.
+    // Le 20/80 de chaque catégorie (18/10/2026), puis l'assortiment proposé de la Structure de gamme (19/11/2026) — quand
+    // l'écran envoie toute la gamme.
     $refs = array_slice(array_values(array_filter((array) ($b['refs'] ?? []), 'is_array')), 0, 3000);
     if ($refs !== []) {
         $PC = ppParCategorie($refs, $seuil);
-        $nC = max(0, min(20, (int) ($b['classiques'] ?? 6)));
-        $nS = max(0, min(10, (int) ($b['parSaison'] ?? 2)));
         $h .= '<div class="saut"></div><h2 style="font-size:17pt">Le ' . (100 - $seuil) . '/' . $seuil . ', catégorie par catégorie</h2>'
             . '<div style="font-size:9.5pt;color:#3d3833;margin:1mm 0 3mm">Dans chaque catégorie, les produits qui font ensemble ' . $seuil . ' % de son chiffre (' . $e($per) . '), du plus vendu au moins vendu. '
             . '<b>Part</b> : sa part du chiffre de la catégorie ; <b>cumul</b> : la part des produits au-dessus, lui compris.</div>';
@@ -1543,67 +1585,7 @@ function ppDoc(array $b): string
         }
         $h .= '</table>' . ($muettes !== [] ? '<div class="mu" style="font-size:9pt">Sans vente sur la période : ' . $e(implode(', ', $muettes)) . '.</div>' : '');
 
-        // L'assortiment proposé (refait le 18/10/2026 : « illisible, non compréhensible ») : une fiche par catégorie, en
-        // quatre colonnes qui se lisent de gauche à droite — à garder, les classiques, la saison, à retirer —, en gros
-        // caractères, sans score brut ni emoji (le moteur PDF du serveur les imprime mal).
-        $sais = array_values(array_filter((array) ($b['saisons'] ?? []), static fn ($x) => is_array($x) && (string) ($x['id'] ?? '') !== ''));
-        $PR = ppPropositions($refs, $sais, $PC, $nC, $nS);
-        $jm = static fn ($d) => is_string($d) && preg_match('/^\d{4}-(\d{2})-(\d{2})/', $d, $m) ? $m[2] . '/' . $m[1] : '';
-        $sansEmoji = static fn ($t) => trim((string) preg_replace('/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}\x{200D}]/u', '', (string) $t));
-        $nomS = []; foreach ($sais as $x) {
-            $f = is_array($x['fenetre'] ?? null) ? $x['fenetre'] : $x;
-            $du = $jm($f['du'] ?? null);
-            $nomS[(string) $x['id']] = '<b>' . $e($sansEmoji($x['nom'] ?? '')) . '</b>' . ($du !== '' ? ' <span class="mu">du ' . $du . ' au ' . $jm($f['au'] ?? null) . '</span>' : '');
-        }
-        $nG = 0; $nCl = 0; $nSo = 0; $nSoO = 0; $saisRet = [];
-        foreach ($PR as $p) {
-            $nG += count($p['garde']); $nCl += count($p['classiques']); $nSo += count($p['sortent']);
-            $nSoO += count(array_filter($p['sortent'], static fn ($r) => !empty($r['oblig'])));
-            foreach ($p['saisons'] as $x) { foreach ($x['retenues'] as $r) { $saisRet[(string) ($r['k'] ?? $r['nom'] ?? '')] = true; } }
-        }
-        $COUL = ['g' => ['#E8EFEA', '#3f7a52'], 'c' => ['#FBF9F5', '#5c5852'], 's' => ['#F6E7CE', '#7A5207'], 'r' => ['#F6ECED', '#A61E1E']];
-        $tete = static fn (string $k, string $num, string $titre, string $sous) => '<td style="width:25%;vertical-align:top;background:' . $COUL[$k][0] . ';border-radius:2mm;padding:2mm 2.5mm">'
-            . '<div style="font-size:11pt;color:' . $COUL[$k][1] . '"><span style="display:inline-block;width:5.2mm;height:5.2mm;line-height:5.2mm;border-radius:50%;background:' . $COUL[$k][1]
-            . ';color:#fff;text-align:center;font-size:9pt;font-weight:400;margin-right:1.5mm">' . $num . '</span><b>' . $titre . '</b></div><div style="font-size:8.6pt;color:#3d3833;margin-top:0.8mm">' . $sous . '</div></td>';
-        $h .= '<div class="saut"></div><h2 style="font-size:17pt">L’assortiment proposé, catégorie par catégorie</h2>'
-            . '<div style="font-size:9.5pt;color:#3d3833;margin:1mm 0 3mm">Pour chaque catégorie, ce que nous proposons de vendre. Chaque fiche se lit de gauche à droite.</div>'
-            . '<table width="100%" cellpadding="0" cellspacing="4" style="margin-bottom:3mm"><tr>'
-            . $tete('g', '1', 'À garder', 'Les produits qui font ' . $seuil . ' % du chiffre de la catégorie (' . $e($per) . ').')
-            . $tete('c', '2', 'Les ' . $nC . ' classiques', 'Vendus toute l’année : les ' . $nC . ' meilleurs des autres produits, selon le score.')
-            . $tete('s', '3', $nS . ' produits par saison', 'Pour chaque saison du panel : les ' . $nS . ' meilleurs produits de la saison, sur les 12 derniers mois.')
-            . $tete('r', '4', 'À retirer', 'Tout le reste de la catégorie.')
-            . '</tr></table>'
-            . '<div style="font-size:10pt;margin-bottom:4mm;padding:2mm 3mm;border:0.8pt solid #e6e0d8;border-radius:2mm">Au total, <b>' . count($refs) . ' produits</b> aujourd’hui. Proposé : <b>'
-            . ($nG + $nCl) . ' toute l’année</b> (' . $nG . ' à garder + ' . $nCl . ' classiques), <b>' . count($saisRet) . ' de saison</b>, <b>' . $nSo . ' à retirer</b>'
-            . ($nSoO > 0 ? ', dont <b class="ko">' . $nSoO . ' obligatoire' . ($nSoO > 1 ? 's' : '') . ' aujourd’hui</b>' : '') . '.'
-            . (array_key_exists('saisonsLues', $b) && !$b['saisonsLues'] ? '<br><span class="ko">Les ventes des 12 derniers mois n’ont pas pu être lues : pas de produit de saison proposé.</span>' : '')
-            . ($sais === [] ? '<br><span class="ko">Les saisons du panel n’ont pas pu être lues : pas de produit de saison proposé.</span>' : '') . '</div>';
-        $li = static fn (string $txt, string $note = '') => '<div style="margin:0 0 1.5mm">' . $txt . ($note !== '' ? '<div style="font-size:8.8pt;margin-top:0.2mm">' . $note . '</div>' : '') . '</div>';
-        $vide = static fn (string $t) => '<div class="mu" style="font-size:8.6pt">' . $t . '</div>';
-        foreach ($PR as $p) {
-            $caCat = 0.0; foreach ($PC as $c) { if ($c['cat'] === $p['cat']) { $caCat = (float) $c['ca']; } }
-            $g = implode('', array_map(static fn ($r) => $li($e($r['nom'] ?? ''), $caCat > 0 ? '<span class="mu">' . $num(100 * (float) ($r['ca'] ?? 0) / $caCat, 0) . ' % du chiffre de la catégorie</span>' : ''), $p['garde']))
-                ?: $vide('Aucune vente sur la période.');
-            $cl = implode('', array_map(static fn ($r) => $li($e($r['nom'] ?? ''), ($r['decision'] ?? '') === 'Effacer' ? '<span class="ko">score faible : à remplacer par un meilleur produit</span>' : ''), $p['classiques']))
-                . ($p['manque'] > 0 ? $vide(($p['classiques'] === [] ? 'Aucun classique' : 'Il manque ' . $p['manque'] . ' classique' . ($p['manque'] > 1 ? 's' : '')) . ' : pas d’autre produit vendu toute l’année dans cette catégorie.') : '');
-            $sa = '';
-            foreach ($p['saisons'] as $sid => $x) {
-                $sa .= '<div style="margin:0 0 2mm"><div style="font-size:9.6pt">' . ($nomS[(string) $sid] ?? $e((string) $sid)) . '</div>'
-                    . ($x['retenues'] === [] ? $vide('aucun produit de la saison vendu sur 12 mois')
-                        : '<div style="margin-top:0.4mm">' . implode('<br>', array_map(static fn ($r) => $e($r['nom'] ?? '') . (($r['decision'] ?? '') === 'Effacer' ? ' <span class="ko" style="font-size:8pt">score faible</span>' : ''), $x['retenues'])) . '</div>')
-                    . '</div>';
-            }
-            if ($sa === '') { $sa = $vide('Pas de produit de saison dans cette catégorie.'); }
-            $so = implode('', array_map(static fn ($r) => $li($e($r['nom'] ?? ''), trim((!empty($r['oblig']) ? '<b class="ko">obligatoire aujourd’hui</b> ' : '')
-                . ((float) ($r['ca'] ?? 0) <= 0 && (float) ($r['caAn'] ?? 0) <= 0 ? '<span class="mu">jamais vendu</span>' : (!empty($r['saisonnier']) ? '<span class="mu">de saison, pas dans les ' . $nS . ' meilleurs</span>' : '')))), $p['sortent']))
-                ?: $vide('Rien à retirer.');
-            $col = static fn (string $k, string $corps) => '<td style="width:25%;vertical-align:top;padding:2.5mm 3mm;border-top:2.5pt solid ' . $COUL[$k][1] . '">' . $corps . '</td>';
-            $h .= '<div style="page-break-inside:avoid;border:0.8pt solid #e6e0d8;border-radius:2.5mm;margin-bottom:4mm;font-size:11pt">'
-                . '<div style="padding:2.2mm 3mm;border-bottom:0.6pt solid #e6e0d8"><span style="font-size:14pt"><b>' . $e($p['cat']) . '</b></span>'
-                . ' <span style="font-size:9.5pt;color:#5c5852">— aujourd’hui ' . $p['refs'] . ' produit' . ($p['refs'] > 1 ? 's' : '') . ' → ' . (count($p['garde']) + count($p['classiques'])) . ' toute l’année'
-                . ($p['saisons'] !== [] ? ' + ' . $nS . ' par saison' : '') . ', ' . count($p['sortent']) . ' à retirer</span></div>'
-                . '<table width="100%" cellpadding="0" cellspacing="0"><tr>' . $col('g', $g) . $col('c', $cl) . $col('s', $sa) . $col('r', $so) . '</tr></table></div>';
-        }
+        $h .= ppDocProposition(is_array($b['structure'] ?? null) ? $b['structure'] : null, $e);
     }
 
     // Le prix et le volume par magasin.

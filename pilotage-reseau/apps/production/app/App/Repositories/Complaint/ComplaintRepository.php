@@ -93,16 +93,71 @@ class ComplaintRepository extends BaseRepository
         return array_column($rows, 'day', 'id_customer');
     }
 
+    /** [363] Une réclamation pour la fenêtre de détail : client, produit, facture WDT, pièces par carton. */
+    public function detailRow(int $id): ?array
+    {
+        return $this->query(
+            "SELECT c.id, c.complaint_type, c.complaint_reason, c.requested_action, c.compensation_method, c.invoice_num, c.id_product,
+                    c.product_quantity, c.accepted_quantity, c.client_comment, c.single_purchase_price, COALESCE(c.acceptance_status, 'NEW') AS status,
+                    c.reported_at, c.acceptance_timestamp, c.production_response, cust.company AS customer, p.name AS product,
+                    wdt.id AS wdt_id, wdt.established_date AS invoice_date, " . self::ppcSql('c') . " AS ppc
+             FROM complaint c
+             LEFT JOIN customer cust ON cust.id = c.id_customer
+             LEFT JOIN final_product p ON p.id = c.id_product
+             LEFT JOIN document_wdt wdt ON wdt.doc_num = c.invoice_num
+             WHERE c.id = :id",
+            ['id' => $id]
+        )[0] ?? null;
+    }
+
+    /** [363] Ce qui a été envoyé : lignes de ce produit sur la facture WDT de la réclamation (cartons, pièces par carton, prix). */
+    public function shippedLines(int $wdtId, int $productId): array
+    {
+        return $this->query(
+            'SELECT quantity, ppc, price_carton, total_net FROM document_wdt_product WHERE id_document_wdt = :w AND id_product = :p ORDER BY id',
+            ['w' => $wdtId, 'p' => $productId]
+        ) ?: [];
+    }
+
+    /**
+     * [362] Pièces par carton d'une réclamation (SQL) : celles de la ligne de facture WDT, sinon de la fiche produit, sinon 1.
+     * $a : alias (ou nom) de la table complaint dans la requête.
+     */
+    public static function ppcSql(string $a): string
+    {
+        return "COALESCE(
+                    NULLIF((SELECT dwp.ppc FROM document_wdt_product dwp JOIN document_wdt dw ON dw.id = dwp.id_document_wdt
+                             WHERE dw.doc_num = {$a}.invoice_num AND dwp.id_product = {$a}.id_product ORDER BY dwp.id LIMIT 1), 0),
+                    NULLIF((SELECT fpp.ppc FROM final_product fpp WHERE fpp.id = {$a}.id_product), 0), 1)";
+    }
+
+    /**
+     * [362] Valeur d'une réclamation (SQL) : la quantité est en pièces (szt.), single_purchase_price est le prix du CARTON
+     * de la ligne WDT → cartons entamés (pièces ÷ pièces par carton, arrondi au carton supérieur) × prix du carton.
+     * Ex. 7 pièces, 6 par carton, carton 12 € → 2 cartons → 24 €. $qty : colonne de quantité (product_quantity, accepted_quantity).
+     */
+    public static function valueSql(string $a, string $qty): string
+    {
+        return "CEIL(COALESCE({$a}.{$qty}, 0) / " . self::ppcSql($a) . " - 0.000001) * COALESCE({$a}.single_purchase_price, 0)";
+    }
+
+    /** [362] Même règle en PHP : cartons entamés × prix du carton. */
+    public static function value(float $pieces, float $ppc, float $cartonPrice): float
+    {
+        return $pieces <= 0 ? 0.0 : round(ceil($pieces / max(1.0, $ppc) - 0.000001) * $cartonPrice, 2);
+    }
+
+
     /**
      * [243] Wykres « Oś czasu » : każda reklamacja z dniem zgłoszenia, decyzją, grupą produkcji produktu (karta produktu,
-     * grupa główna), ilością, ilością przyjętą i ceną kartonu z WDT.
+     * grupa główna), ilością (szt.), ilością przyjętą, ceną kartonu z WDT i szt./kart. (wartość = kartony rozpoczęte × cena kartonu).
      */
     public function chartRows(): array
     {
         return $this->query(
             "SELECT c.id, DATE(COALESCE(c.reported_at, c.acceptance_timestamp)) AS day, COALESCE(c.acceptance_status, 'NEW') AS status,
                     c.complaint_type, c.complaint_reason, c.id_customer, cust.company AS customer, p.name AS product,
-                    c.product_quantity, c.accepted_quantity, c.single_purchase_price,
+                    c.product_quantity, c.accepted_quantity, c.single_purchase_price, " . self::ppcSql('c') . " AS ppc,
                     CASE WHEN c.acceptance_status IN ('ACCEPTED', 'REJECTED') AND c.reported_at IS NOT NULL AND c.acceptance_timestamp IS NOT NULL
                          THEN TIMESTAMPDIFF(HOUR, c.reported_at, c.acceptance_timestamp) / 24 END AS decision_days,
                     (SELECT g.id FROM n_prod_item i

@@ -63,6 +63,6 @@
         <header class='mb-3'>
             <?php $this->view("page_components/navbar"); ?>
         </header>
-        <div id="appNotificationBanner" class="px-3 px-md-4" aria-live="polite"></div>
+        <?php /* [337] Pilne : tylko na stronie Dzisiaj i zadania. */ ?>
         <div id="main-content">
             <?= \App\Core\Web\PageTabs::html(ROOT) ?>

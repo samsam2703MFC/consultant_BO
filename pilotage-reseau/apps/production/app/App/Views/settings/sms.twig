@@ -1,0 +1,131 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}SMS (SMSAPI){% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>SMS (SMSAPI)</h3>
+            <p class="text-subtitle text-muted">Ta sama bramka co CRM : powiadomienia o dostawie, przypomnienia o płatności, notatki HR. Każdy SMS trafia do historii wysyłek klienta.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.sm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.sm-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #F1EBE3;font-size:14px}
+.sm-row:last-child{border-bottom:0}
+.sm-row span:first-child{color:#78716C}
+.sm-row span:last-child{text-align:right;font-weight:600}
+.sm-steps{padding-left:1.1rem;margin:0 0 10px}.sm-steps li{margin-bottom:6px}
+.sm-st{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
+.sm-sent{background:#E7F3EC;color:#2E7D4F}.sm-logged{background:#F1EBE3;color:#5f5852}.sm-failed{background:#FBEEF0;color:#8D1D2C}
+</style>
+<section class="section" id="smApp" data-root="{{ root }}"><p class="text-muted">Wczytywanie…</p></section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const app = document.getElementById('smApp');
+    const root = (app.dataset.root || '').replace(/\/$/, '');
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const call = (method, path, body) => fetch(root + path, {method, credentials: 'same-origin', headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+        body: body === undefined ? undefined : JSON.stringify(body)}).then((r) => r.json().catch(() => ({})).then((j) => { if (!r.ok) throw new Error(j.message || `Błąd (${r.status})`); return j; }));
+    const SOURCES = {env: 'plik .env serwera (SMSAPI_TOKEN)', erp_cles: 'wspólna tabela kluczy ERP (erp_cles · smsapi_token)', settings: 'wpisany w Ustawieniach'};
+    const CONTEXTS = {delivery_notice: 'Informacja o dostawie', payment_reminder: 'Przypomnienie o płatności', hr_note: 'Notatka HR', test: 'SMS próbny'};
+    const STATUS = {sent: ['wysłany', 'sm-sent'], logged: ['tylko zapis', 'sm-logged'], failed: ['błąd', 'sm-failed']};
+    let s = null;
+    let msg = '';
+
+    const load = (check) => call('GET', '/ajax/settings/sms' + (check ? '?check=1' : '')).then((r) => { s = r; draw(); })
+        .catch((e) => { app.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
+
+    function keyCard() {
+        if (!s.configured) {
+            return `<p class="mb-2"><span class="badge bg-secondary">brak tokenu</span> SMS-y są tylko zapisywane w historii.</p>
+                <ol class="sm-steps"><li>Konto <strong>SMSAPI</strong> (to samo co w CRM) : <em>Ustawienia API → Tokeny API (OAuth)</em>.</li>
+                <li>Nowy token z uprawnieniem <strong>sms</strong> (i <strong>profile</strong> do sprawdzenia konta).</li>
+                <li>Wklej go poniżej — albo administrator serwera : <code>SMSAPI_TOKEN=…</code> w .env ERP, albo klucz <code>smsapi_token</code> w erp_cles.</li></ol>${keyForm()}`;
+        }
+        const p = s.profile;
+        const own = s.source === 'settings' && s.can_edit;
+        return `<div class="sm-row"><span>Token</span><span>…${esc(s.hint)} · ${esc(SOURCES[s.source] || s.source)}</span></div>
+            <div class="sm-row"><span>Konto SMSAPI</span><span>${p ? (p.ok ? esc(p.message) + (p.points != null ? ' · ' + Number(p.points).toLocaleString('pl-PL') + ' pkt' : '') : '<span class="text-danger">' + esc(p.message) + '</span>')
+                : '<button type="button" class="btn btn-link btn-sm p-0" data-check>sprawdź połączenie</button>'}</span></div>
+            ${own ? '<p class="mt-2 mb-0 small"><button type="button" class="btn btn-link btn-sm p-0" data-change>zmień token</button> · <button type="button" class="btn btn-link btn-sm p-0 text-danger" data-del>usuń</button></p><div data-keyform hidden>' + keyForm() + '</div>' : ''}`;
+    }
+
+    function keyForm() {
+        if (!s.can_edit) return '<p class="text-muted mb-0">Token wpisuje administrator.</p>';
+        return `<label class="form-label fw-semibold mb-1" for="smKey">Token SMSAPI (OAuth)</label>
+            <div class="d-flex gap-2"><input type="password" class="form-control" id="smKey" autocomplete="off" placeholder="wklej token">
+            <button type="button" class="btn btn-primary" data-savekey>Sprawdź i zapisz</button></div>
+            <p class="small text-muted mt-1 mb-0">Sprawdzany w SMSAPI przed zapisem, przechowywany zaszyfrowany ; ERP pokazuje tylko 4 ostatnie znaki.</p>`;
+    }
+
+    function draw() {
+        const live = s.delivers;
+        const dis = s.can_edit ? '' : 'disabled';
+        const recent = (s.recent || []).map((r) => `<tr><td class="text-nowrap">${esc(String(r.created_at).slice(0, 16))}</td><td>${esc(CONTEXTS[r.context] || r.context)}</td>
+            <td>${r.id_customer ? `<a href="${root}/clients/${r.id_customer}/space?tab=messages">${esc(r.company || '#' + r.id_customer)}</a>` : '<span class="text-muted">—</span>'}</td>
+            <td>${esc(r.recipient)}</td><td><span class="sm-st ${(STATUS[r.status] || ['', ''])[1]}">${esc((STATUS[r.status] || [r.status])[0])}</span>${r.error ? ' <span class="small text-danger">' + esc(r.error) + '</span>' : ''}</td></tr>`).join('');
+        app.innerHTML = `${msg ? `<div class="alert ${/nie potwierdzi|odrzuca|nie wysłany|Błąd/.test(msg) ? 'alert-warning' : 'alert-info'}">${esc(msg)}</div>` : ''}
+        <div class="card"><div class="card-body d-flex align-items-center gap-3 flex-wrap">
+            <span class="badge ${live ? 'bg-success' : 'bg-secondary'}" style="font-size:13px">${live ? 'SMS wychodzą do odbiorców' : 'SMS tylko zapisywane'}</span>
+            <span class="text-muted">${live ? 'SMSAPI · ' + esc(s.base) : esc(s.blocker || '')}</span>
+        </div></div>
+        <div class="sm-grid">
+            <div class="card mb-0"><div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-key"></i> Token SMSAPI</h4></div><div class="card-body">${keyCard()}</div></div>
+            <div class="card mb-0"><div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-sliders"></i> Wysyłka</h4></div><div class="card-body">
+                <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="smOn" ${s.enabled ? 'checked' : ''} ${dis}>
+                    <label class="form-check-label" for="smOn">Wysyłaj SMS przez SMSAPI <span class="text-muted small">(wyłączone = tylko zapis w historii)</span></label></div>
+                ${s.cohab_switch ? `<div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="smLive" ${s.live_cohab ? 'checked' : ''} ${dis}>
+                    <label class="form-check-label" for="smLive"><strong>SMS naprawdę z tego serwera</strong> <span class="text-muted small d-block">Serwer atelier działa obok starego ERP : e-maile zostają w trybie testowym (bez podwójnych wysyłek), SMS wychodzą do odbiorców.</span></label></div>` : ''}
+                <label class="form-label mb-1" for="smFrom">Nadawca</label>
+                <input class="form-control mb-1" id="smFrom" maxlength="11" value="${esc(s.from)}" placeholder="domyślny nadawca konta" ${dis}>
+                <p class="small text-muted">Nazwa zatwierdzona w SMSAPI (2–11 znaków). Puste = nadawca domyślny konta.</p>
+                <label class="form-label mb-1" for="smPrefix">Kraj numerów bez prefiksu</label>
+                <input class="form-control mb-1" id="smPrefix" maxlength="3" value="${esc(s.prefix)}" style="max-width:110px" ${dis}>
+                <p class="small text-muted">32 = Belgia, 48 = Polska. Numer « 0476 12 34 56 » → +32 476 12 34 56.</p>
+                ${s.can_edit ? '<button type="button" class="btn btn-primary" data-save>Zapisz</button>' : ''}
+                <p class="small text-muted mt-3 mb-0">Kopia testowa ERP (tryb wysyłki e-maili inny niż « live ») nigdy nie wysyła SMS — jak e-maili.</p>
+            </div></div>
+            ${s.can_edit ? `<div class="card mb-0"><div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-send"></i> SMS próbny</h4></div><div class="card-body">
+                <label class="form-label mb-1" for="smTest">Numer telefonu</label>
+                <div class="d-flex gap-2"><input class="form-control" id="smTest" inputmode="tel" placeholder="+32 4…"><button type="button" class="btn btn-outline-primary" data-test>Wyślij</button></div>
+                <p class="small text-muted mt-1 mb-0">Wychodzi naprawdę tylko, gdy status powyżej to « SMS wychodzą do odbiorców ».</p>
+            </div></div>` : ''}
+        </div>
+        <div class="card mt-3"><div class="card-header"><h4 class="card-title mb-0">Ostatnie SMS-y</h4></div><div class="card-body">
+            ${recent ? `<div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Data</th><th>Rodzaj</th><th>Klient</th><th>Numer</th><th>Status</th></tr></thead><tbody>${recent}</tbody></table></div>`
+                : '<p class="text-muted mb-0">Jeszcze żadnego SMS.</p>'}
+            <p class="small text-muted mt-2 mb-0">Pełna historia e-maili i SMS klienta : strona klienta › Wysyłki.</p>
+        </div></div>`;
+        bind();
+    }
+
+    function act(p) {
+        msg = '';
+        return p.then((r) => { if (r && r.message) msg = r.message; s = r.state || (r.configured !== undefined ? r : s); draw(); })
+            .catch((e) => { msg = e.message; draw(); });
+    }
+
+    function bind() {
+        const q = (sel) => app.querySelector(sel);
+        q('[data-check]')?.addEventListener('click', () => load(true));
+        q('[data-change]')?.addEventListener('click', () => { q('[data-keyform]').hidden = false; });
+        q('[data-del]')?.addEventListener('click', () => { if (window.confirm('Usunąć token SMSAPI ? SMS-y będą tylko zapisywane.')) act(call('PUT', '/ajax/settings/sms/key', {key: ''})); });
+        q('[data-savekey]')?.addEventListener('click', () => act(call('PUT', '/ajax/settings/sms/key', {key: q('#smKey').value})));
+        q('[data-save]')?.addEventListener('click', () => act(call('PUT', '/ajax/settings/sms', Object.assign({enabled: q('#smOn').checked, from: q('#smFrom').value, prefix: q('#smPrefix').value}, q('#smLive') ? {live_cohab: q('#smLive').checked} : {}))));
+        q('[data-test]')?.addEventListener('click', () => {
+            const phone = q('#smTest').value.trim();
+            if (phone && window.confirm('Wysłać SMS próbny na ' + phone + ' ?')) act(call('POST', '/ajax/settings/sms/test', {phone}));
+        });
+    }
+
+    load(false);
+})();
+</script>
+{% endblock %}

@@ -6,6 +6,19 @@ return function(RouteCollector $r) {
 
     $r->addRoute('GET', '/logistics', ['controller' => $c, 'method' => 'day']);
     $r->addRoute('GET', '/logistics/week', ['controller' => $c, 'method' => 'week']);
+    // [296] Stany i palety : magazyn → palety w budowie → gotowe → wysłane, skład palety, śledzenie partii.
+    $r->addRoute('GET', '/logistics/stock', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'index']);
+    $r->addRoute('DELETE', '/ajax/logistics/stock/pallets/{id:\d+}', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'deletePallet']);
+    // [303] Asystent « Transport dla zamówień » (makieta 56) : zadanie obowiązkowe Logistyki, gdy zamówienia dziś / jutro nie mają transportu.
+    $r->addRoute('GET', '/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/assign', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'assign']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/vehicle', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'addVehicle']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/driver', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'linkDriver']);
+    // [309] Umowa zlecenia na przewóz towaru (kierowca na zlecenie) : DOCX albo PDF w karcie HR.
+    $r->addRoute('GET', '/logistics/drivers/{id:\d+}/contract-docx', ['controller' => App\Controllers\Web\Logistics\DriverContractController::class, 'method' => 'docx']);
+    $r->addRoute('POST', '/ajax/logistics/drivers/{id:\d+}/contract-pdf', ['controller' => App\Controllers\Web\Logistics\DriverContractController::class, 'method' => 'pdf']);
+    $r->addRoute('POST', '/ajax/logistics/transport-wizard/new-driver', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'addDriver']);
     // Plan logistyki na 12 tygodni [200] : prognoza palet, ciężarówki (przeciągnij), święta PL / BE, urlopy kierowców.
     $pl = App\Controllers\Web\Logistics\LogisticsPlanController::class;
     $r->addRoute('GET', '/logistics/plan', ['controller' => $pl, 'method' => 'index']);
@@ -48,6 +61,7 @@ return function(RouteCollector $r) {
     $d = App\Controllers\Web\Logistics\DeliveryDocumentsController::class;
     $r->addRoute('GET', '/logistics/documents', ['controller' => $d, 'method' => 'index']);
     $r->addRoute('GET', '/ajax/logistics/documents/day.pdf', ['controller' => $d, 'method' => 'dayPdf']);
+    $r->addRoute('GET', '/logistics/documents/pallet-labels.pdf', ['controller' => $d, 'method' => 'palletLabels']);
     // Dostawy : potwierdzenia z tabletu kierowcy (odbiorca, podpis, zdjęcie, palety), PDF potwierdzenia.
     $p = App\Controllers\Web\Logistics\DeliveryProofController::class;
     $r->addRoute('GET', '/logistics/deliveries', ['controller' => $p, 'method' => 'index']);
@@ -59,6 +73,7 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/logistics/notices/preview', ['controller' => $n, 'method' => 'preview']);
     $r->addRoute('POST', '/ajax/logistics/notices/send', ['controller' => $n, 'method' => 'send']);
     $r->addRoute('PUT', '/ajax/logistics/assignments', ['controller' => $c, 'method' => 'assign']);
+    $r->addRoute('PUT', '/ajax/logistics/stops', ['controller' => $c, 'method' => 'reorderStops']);
     $r->addRoute('POST', '/ajax/logistics/vehicles', ['controller' => $c, 'method' => 'addVehicle']);
     $r->addRoute('PUT', '/ajax/logistics/vehicles/{id:\d+}', ['controller' => $c, 'method' => 'saveVehicle']);
     $r->addRoute('POST', '/ajax/logistics/tours', ['controller' => $c, 'method' => 'createTour']);

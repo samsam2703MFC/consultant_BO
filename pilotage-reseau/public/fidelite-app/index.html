@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fidélité — l’app client en direct</title>
+<!-- Page à part (18/11/2026, Sam : « faire un test en live (Halle, client Vincent) sur le serveur, une page
+     indépendante »). La vue app client du handoff Claude Design (Bingo, Points, Portefeuille), remplie EN DIRECT par
+     l'API de l'ERP. LECTURE SEULE : elle appelle son API à côté d'elle (api.php), jamais celle du cockpit. -->
+<style>
+/* Sans repli : Vank dessine ses accents, le texte est en Gotham_Medium (€ et × compris), une seule graisse. */
+@font-face{font-family:'Gotham';src:url('../assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:100 900}
+@font-face{font-family:'Vank';src:url('../assets/ds/fonts/GC_Vank.ttf') format('truetype')}
+@font-face{font-family:'Playwrite DEVA';src:url('../assets/ds/fonts/PlaywriteDEVA-Regular.ttf') format('truetype')}
+:root{--rubis:#8D1D2C;--abricot:#F2C9A0;--beige:#EAE4DC;--soft:#F4EFE8;--txt:#222;--muted:#666;--line:rgba(34,34,34,.10);--line2:rgba(34,34,34,.18);
+  --rose:color-mix(in srgb,#8D1D2C 12%,#fff);--fete:color-mix(in srgb,#F2C9A0 42%,#fff);--ok:#2d7a3e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--beige);color:var(--txt);font:400 13px/1.5 'Gotham',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+b,strong{font-weight:400}
+main{max-width:1180px;margin:0 auto;padding:26px 24px 60px}
+.kick{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.kick b{color:var(--rubis)}
+h1{font:400 36px/1.05 'Vank','Gotham',sans-serif;color:var(--rubis);margin:6px 0}
+.lead{color:var(--muted);max-width:900px}
+.barre{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:16px 0}
+.barre label{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+select,input{font:inherit;border:1px solid var(--line2);border-radius:6px;padding:7px 10px;background:#fff;min-width:160px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line2);background:#fff;border-radius:6px;padding:7px 14px}
+button.pri{background:var(--rubis);border-color:var(--rubis);color:#fff}
+.res{display:flex;gap:6px;flex-wrap:wrap}
+.res button.on{border-color:var(--rubis);color:var(--rubis);background:var(--rose)}
+.note{border-left:3px solid var(--abricot);background:#fff;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#5d544b}
+.note b{color:var(--rubis)}
+.err{border-left-color:var(--rubis);color:var(--rubis)}
+.grille{display:grid;grid-template-columns:400px minmax(0,1fr);gap:22px;align-items:start}
+/* téléphone */
+.phone{width:390px;height:820px;background:#222;border-radius:46px;padding:11px}
+.scr{background:var(--soft);border-radius:36px;height:100%;overflow:hidden;display:flex;flex-direction:column}
+.sb{display:flex;justify-content:space-between;padding:14px 28px 2px;font-size:12px}
+.ah{display:flex;justify-content:space-between;align-items:center;padding:10px 18px 8px;font-size:12px;color:#555}.ah img{height:19px}
+.tabs{display:flex;background:var(--beige);border-radius:8px;padding:3px;margin:2px 18px 12px}
+.tabs button{flex:1;border:0;background:transparent;padding:6px;font-size:12px;color:var(--muted);border-radius:6px}
+.tabs button.on{background:#fff;color:var(--rubis);box-shadow:0 1px 2px rgba(34,34,34,.12)}
+.bd{flex:1;overflow:auto;padding:0 18px 14px;display:flex;flex-direction:column;gap:10px}
+.nav{display:flex;justify-content:space-around;padding:12px 0 22px;background:#fff;border-top:1px solid var(--line);font-size:11px;color:#555}.nav .on{color:var(--rubis)}
+.bt{display:flex;justify-content:space-between;align-items:flex-end}
+.bt .t{font:400 34px/.9 'Vank',sans-serif;color:var(--rubis)}.bt .s{font:400 17px/1 'Playwrite DEVA',cursive;color:var(--rubis);margin-left:6px}
+.bt .r{text-align:right}.bt .r b{font:400 24px/1 'Vank','Gotham',sans-serif}.bt .r small{display:block;font-size:10.5px;color:var(--muted)}
+.card{background:#fff;border-radius:12px;padding:11px 12px}
+.card .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rubis);display:flex;justify-content:space-between;gap:8px;margin-bottom:5px}
+.card .k span{color:var(--muted);letter-spacing:0;text-transform:none}
+.dash{border:1.6px dashed var(--rubis)}.full{border:1.6px solid var(--rubis)}
+.bar{height:7px;border-radius:4px;background:var(--beige);overflow:hidden;margin:6px 0 4px}.bar i{display:block;height:100%;background:var(--rubis)}.bar.ab i{background:var(--abricot)}
+.hint{font-size:10.5px;color:var(--muted)}
+.cg{display:grid;gap:5px}
+.cc{position:relative;border-radius:9px;min-height:78px;padding:5px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.cc .d{align-self:flex-start;font-size:8px;color:var(--muted)}
+.cc img{width:28px;height:28px;object-fit:contain;margin:3px 0 1px}
+.cc strong{font-size:8.5px;line-height:1.15}
+.cc em{font-style:normal;font-size:8px;color:var(--muted)}
+.cc.fete{background:var(--fete)}
+.cc.coche .st{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:1.6px solid var(--rubis);color:var(--rubis);display:grid;place-items:center;transform:rotate(-14deg);background:rgba(255,255,255,.7);font-size:11px}
+.cc.cours{border:1.6px dashed var(--rubis)}.cc.cours .g{width:80%;height:4px;border-radius:2px;background:var(--beige);margin-top:4px;overflow:hidden}.cc.cours .g i{display:block;height:100%;background:var(--rubis)}
+.cc.avenir{opacity:.42}
+.cc.manque img{filter:grayscale(1);opacity:.5}.cc.manque .mq{position:absolute;top:26px;left:50%;transform:translateX(-50%) rotate(-10deg);font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:#6d645b;border:1.4px solid #8a8076;border-radius:4px;padding:0 4px;background:#fff}
+.cc.bon{background:var(--rubis);color:#fff;border-color:var(--rubis)}.cc.bon .d{color:var(--abricot)}.cc.bon img{filter:brightness(0) invert(1)}
+.cc.bon b,.cc.proche b,.cc.loin b{font:400 13px/1 'Vank','Gotham',sans-serif;margin-top:1px}.cc small{font-size:7.5px}
+.cc.bon small{color:var(--abricot)}
+.cc.proche{background:var(--rose);border:1.6px dashed var(--rubis);color:var(--rubis)}.cc.proche .d{color:var(--rubis)}.cc.proche img{opacity:.6}
+.cc.loin{background:var(--rose);color:var(--rubis)}.cc.loin img{opacity:.45}
+.cc.perdu{background:var(--beige);color:#8a8076}.cc.perdu img{filter:grayscale(1);opacity:.4}
+.cc.plein{flex-direction:row;justify-content:center;gap:12px;text-align:left;background:var(--rose);border:1.4px dashed #c99aa2;color:#9c6b73}
+.cc.plein.ok{background:var(--rubis);color:#fff;border-color:var(--rubis)}.cc.plein.ok img{filter:brightness(0) invert(1);opacity:1}
+.cc.plein img{width:44px;height:44px;filter:grayscale(1);opacity:.5}.cc.plein b{display:block;font:400 18px/1.1 'Vank',sans-serif}.cc.plein .d{display:block}
+.jours{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.jour{border-radius:7px;background:var(--beige);text-align:center;padding:5px 0 4px;font-size:8.5px;color:var(--muted);line-height:1.3}
+.jour b{display:block;font:400 17px/1 'Vank',sans-serif;color:var(--txt);margin-top:2px}.jour i{font:400 9px 'Gotham';font-style:normal}
+.jour.c2{background:var(--abricot);color:var(--rubis)}.jour.c2 b{color:var(--rubis)}.jour.c3{background:var(--rubis);color:#fff}.jour.c3 b{color:#fff}
+.jour.auj{outline:1.4px solid var(--txt);outline-offset:-1.4px}
+.ligne{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:11.5px}.ligne:last-child{border-bottom:0}.ligne small{display:block;color:var(--muted);font-size:10px}.ligne b{color:var(--rubis)}
+.wl{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;background:#fff;border-radius:12px;padding:10px}
+.wl .ti{width:40px;height:40px;border-radius:9px;background:var(--rubis);display:grid;place-items:center}.wl .ti img{width:28px;filter:brightness(0) invert(1)}
+.wl small{display:block;font-size:10px;color:var(--muted)}.wl .tg{font-size:10px;border-radius:5px;padding:2px 7px;background:var(--fete);color:#7a4a1f;white-space:nowrap}
+/* panneau */
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.panel h2{font:400 21px/1.15 'Vank','Gotham',sans-serif;margin-bottom:4px}
+.panel>p{font-size:12px;color:var(--muted);margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{text-align:left;font-weight:400;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--soft);padding:7px 8px}
+td{padding:6px 8px;border-bottom:1px solid var(--line)}
+td code,.j code{font:400 10.5px ui-monospace,Menlo,monospace;color:#6b6157}
+.ok{color:var(--ok)}.ko{color:var(--rubis)}
+.vide{color:var(--muted);padding:30px;text-align:center}
+@media (max-width:980px){.grille{grid-template-columns:1fr}.phone{margin:0 auto}}
+</style>
+</head>
+<body>
+<main>
+  <div class="kick">Fidélité · <b>test en direct</b> · page à part, lecture seule</div>
+  <h1>L’app client, en direct</h1>
+  <p class="lead">La vue app du handoff Claude Design (Bingo, Points, Portefeuille), remplie par l’API de l’ERP : la carte à points de l’ERP, les achats de la semaine de chaque magasin, les campagnes de bons. Rien n’est écrit, aucun bon n’est émis.</p>
+  <div class="barre">
+    <label for="mag">Magasin</label><select id="mag"></select>
+    <label for="q">Client</label><input id="q" value="vincent" autocomplete="off">
+    <button class="pri" id="go">Chercher</button>
+    <div class="res" id="res"></div>
+  </div>
+  <div id="msg"></div>
+  <div class="grille">
+    <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div>
+      <div class="ah"><img src="../assets/img/logo.png" alt="L’Atelier by"><span id="bonjour">Bonjour</span></div>
+      <div class="tabs" id="tabs"><button class="on" data-t="bingo">Bingo</button><button data-t="points">Points</button><button data-t="porte">Portefeuille</button></div>
+      <div class="bd" id="bd"><div class="vide">Chargement…</div></div>
+      <div class="nav"><span>Accueil</span><span class="on">Fidélité</span><span>Commander</span><span>Profil</span></div></div></div>
+    <div>
+      <section class="panel"><h2>Semaine par semaine</h2><p>Achats et points de la cliente ou du client, tous magasins, lus dans l’ERP. La case se coche dès le seuil.</p><div id="sem"></div></section>
+      <section class="panel"><h2>D’où viennent les chiffres</h2><p>Chaque appel à l’ERP, son résultat et sa durée.</p><div id="journal" class="j"></div></section>
+    </div>
+  </div>
+</main>
+<script>
+'use strict';
+const ILL = '../fidelite-test/ill/';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const eur = (n) => (Math.round(n * 100) / 100).toFixed(2).replace('.', ',') + ' €';
+const dm = (iso) => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
+const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+let ETAT = null, CARTE = null, ONGLET = 'bingo', JOURNAL = [];
+
+async function api(r, p = {}) {
+  const u = new URLSearchParams({ r, ...p });
+  const res = await fetch('api.php?' + u.toString(), { credentials: 'same-origin' });
+  let d = null; try { d = await res.json(); } catch { d = { error: 'réponse illisible (HTTP ' + res.status + ')' }; }
+  if (d && d.journal) JOURNAL = JOURNAL.concat(d.journal);
+  if (!res.ok) throw Object.assign(new Error(d.error || d.message || ('HTTP ' + res.status)), { d });
+  return d;
+}
+function message(html, err) { $('#msg').innerHTML = html ? `<div class="note ${err ? 'err' : ''}">${html}</div>` : ''; }
+function journal() {
+  $('#journal').innerHTML = JOURNAL.length ? `<table><tr><th>Appel</th><th>Résultat</th><th>ms</th></tr>${JOURNAL.map((j) => `<tr><td><code>${esc(j.route)}</code></td><td class="${j.ok ? 'ok' : 'ko'}">${j.ok ? '✓' : '✗'} ${esc(j.note)}</td><td>${j.ms}</td></tr>`).join('')}</table>` : '<div class="vide">—</div>';
+}
+
+async function demarrer() {
+  try {
+    ETAT = await api('/etat');
+    const mags = ETAT.magasins || [];
+    $('#mag').innerHTML = mags.map((m) => `<option value="${esc(m.id)}" ${m.id === '4' ? 'selected' : ''}>${esc(m.nom)} (#${esc(m.id)})</option>`).join('');
+    if (!ETAT.carte) message('Aucune carte à points active dans l’ERP : rien à montrer.', true);
+    journal();
+    await chercher();
+  } catch (e) { message('L’API ne répond pas : ' + esc(e.message), true); journal(); }
+}
+async function chercher() {
+  const shop = $('#mag').value, q = $('#q').value.trim();
+  if (!shop || !q) return;
+  $('#res').innerHTML = '<span class="hint">recherche…</span>';
+  try {
+    const d = await api('/clients', { shop, q });
+    const L = d.clients || [];
+    $('#res').innerHTML = L.length ? L.map((c, i) => `<button data-id="${c.id}" class="${i === 0 ? 'on' : ''}">${esc(c.nom)} · ${c.solde} pts</button>`).join('') : '<span class="hint">aucun membre de la carte à ce nom dans ce magasin</span>';
+    journal();
+    if (L.length) await ouvrir(L[0].id);
+    else { $('#bd').innerHTML = '<div class="vide">Aucun client trouvé.</div>'; $('#sem').innerHTML = ''; }
+  } catch (e) { $('#res').innerHTML = ''; message('Recherche impossible : ' + esc(e.message), true); journal(); }
+}
+async function ouvrir(id) {
+  document.querySelectorAll('#res button').forEach((b) => b.classList.toggle('on', Number(b.dataset.id) === id));
+  $('#bd').innerHTML = '<div class="vide">Lecture des 13 semaines dans l’ERP…</div>';
+  try {
+    CARTE = await api('/carte', { id, q: $('#q').value.trim() });
+    const S = CARTE.saison;
+    message(CARTE.rejeu
+      ? `<b>Rejeu.</b> La saison « ${esc(CARTE.vraie.nom)} » commence le ${dm(CARTE.vraie.du)} : l’ERP ne rend pas encore ses semaines. La grille de l’hiver est rejouée sur les 13 dernières semaines (du ${dm(S.du)} au ${dm(S.au)}), avec les vrais achats ; la semaine en cours est la 13e.`
+      : `Saison « ${esc(S.nom)} », semaine ${S.enCours} / 13.`);
+    $('#bonjour').textContent = 'Bonjour ' + (CARTE.client.nom || '').split(' ')[0];
+    rendre(); semaines(); journal();
+  } catch (e) { $('#bd').innerHTML = `<div class="vide">${esc(e.message)}</div>`; journal(); }
+}
+
+function rendre() {
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ONGLET));
+  if (!CARTE) return;
+  $('#bd').innerHTML = ONGLET === 'bingo' ? vueBingo() : ONGLET === 'points' ? vuePoints() : vuePorte();
+}
+function vueBingo() {
+  const C = CARTE, R = C.regles, x = R.tousLes, cl = C.client, sem = C.semaines;
+  const cours = sem.find((w) => w.etat === 'cours');
+  const prochainBon = C.bons.find((b) => !b.gagne && b.possible);
+  let cells = '', i = 0, prochainVu = false;
+  sem.forEach((w, idx) => {
+    let cls = 'cc' + (w.fete ? ' fete' : ''), extra = '';
+    if (w.coche) { cls += ' coche'; extra = '<span class="st">✓</span>'; }
+    else if (w.manquee) { cls = 'cc manque'; extra = '<span class="mq">manquée</span>'; }
+    else if (w.etat === 'cours') { cls = 'cc cours'; extra = `<span class="g"><i style="width:${Math.min(100, 100 * (w.euros || 0) / R.seuil)}%"></i></span>`; }
+    else if (w.etat === 'avenir') cls = 'cc avenir';
+    cells += `<div class="${cls}"><span class="d">${dm(w.du)}</span><img src="${ILL}${esc(w.ill)}.png" alt=""><strong>${esc(w.titre)}</strong>${w.euros !== null && w.etat !== 'avenir' ? `<em>${eur(w.euros)}</em>` : ''}${extra}</div>`;
+    if ((idx + 1) % x === 0) {
+      const b = C.bons[i++]; if (!b) return;
+      if (b.gagne) cells += `<div class="cc bon"><span class="d">${b.k}e case</span><img src="${ILL}${esc(b.motif)}.png" alt=""><b>${eur(b.valeur).replace(',00', '')}</b><small>gagné</small></div>`;
+      else if (!b.possible) cells += `<div class="cc perdu"><span class="d">${b.k}e case</span><img src="${ILL}${esc(b.motif)}.png" alt=""><b>${eur(b.valeur).replace(',00', '')}</b><small>plus possible</small></div>`;
+      else if (!prochainVu) { prochainVu = true; cells += `<div class="cc proche"><span class="d">${b.k}e case</span><img src="${ILL}${esc(b.motif)}.png" alt=""><b>${eur(b.valeur).replace(',00', '')}</b><small>encore ${b.reste} case${b.reste > 1 ? 's' : ''}</small></div>`; }
+      else cells += `<div class="cc loin"><span class="d">${b.k}e case</span><img src="${ILL}${esc(b.motif)}.png" alt=""><b>${eur(b.valeur).replace(',00', '')}</b><small>à la ${b.k}e case</small></div>`;
+    }
+  });
+  const sup = C.bons.find((b) => b.super);
+  if (sup) cells += `<div class="cc plein ${sup.gagne ? 'ok' : ''}" style="grid-column:span ${x + 1 - (sem.length % x)}"><img src="${ILL}cake.png" alt=""><div><span class="d">13 / 13 cases · ${eur(sup.valeur).replace(',00', '')}</span><b>SUPER BON CADEAU</b><small>${sup.gagne ? 'gagné' : sup.possible ? 'encore ' + sup.reste + ' cases' : cl.manquees + ' semaine(s) manquée(s) : à la saison suivante'}</small></div></div>`;
+  const pts = cl.points, prochain = (pts.paliers || []).find((p) => !p.atteint);
+  const semCard = cours ? `<div class="card ${cours.coche ? 'full' : 'dash'}" style="display:flex;gap:10px;align-items:center"><img src="${ILL}${esc(cours.ill)}.png" alt="" style="width:44px"><div style="flex:1"><div class="k">Cette semaine <span>${dm(cours.du)} – ${dm(cours.au)}</span></div><strong>${esc(cours.titre)}</strong>
+      <div class="bar"><i style="width:${Math.min(100, 100 * (cours.euros || 0) / R.seuil)}%"></i></div><span class="hint">${cours.coche ? 'Case cochée cette semaine : ' + eur(cours.euros) + '.' : eur(cours.euros || 0) + ' sur ' + eur(R.seuil) + ' — encore ' + eur(C.client.semaine ? C.client.semaine.reste : R.seuil) + ' d’ici dimanche et la case se coche toute seule.'}</span></div></div>` : '';
+  return `<div class="bt"><div><span class="t">BINGO</span><span class="s">d’hiver${C.rejeu ? ' · rejeu' : ''}</span></div><div class="r"><b>${cl.cases} / 13</b><small>cases · ${C.bons.filter((b) => b.gagne && !b.super).length} bon(s)</small></div></div>
+    ${semCard}
+    <div class="card"><div class="k">Mes points <span>${prochain ? 'encore ' + prochain.reste + ' pts pour ' + eur(prochain.valeur).replace(',00', '') : ''}</span></div><div style="display:flex;align-items:baseline;gap:6px"><b style="font:400 24px 'Vank',sans-serif;color:var(--rubis)">${pts.solde}</b>${prochain ? `<span class="hint">/ ${prochain.points}</span>` : ''}</div>${prochain ? `<div class="bar ab"><i style="width:${Math.min(100, 100 * pts.solde / prochain.points)}%"></i></div>` : ''}</div>
+    <div class="cg" style="grid-template-columns:repeat(${x + 1},1fr)">${cells}</div>`;
+}
+function vuePoints() {
+  const C = CARTE, pts = C.client.points, cfg = (C.carte && C.carte.points) || {}, prochain = (pts.paliers || []).find((p) => !p.atteint);
+  const auj = (new Date(C.aujourdhui + 'T12:00:00Z').getUTCDay() + 6) % 7;
+  const jours = JOURS.map((d, i) => { const B = (cfg.bonuses || []).filter((b) => (b.days || []).includes(i)); const k = B.length ? Math.max(...B.map((b) => Number(b.coefficient))) : 1;
+    return `<div class="jour ${k >= 3 ? 'c3' : k > 1 ? 'c2' : ''} ${i === auj ? 'auj' : ''}">${d}<b><i>×</i>${String(k).replace('.', ',')}</b></div>`; }).join('');
+  const bonus = (cfg.bonuses || []).map((b) => `<div class="hint">×${String(b.coefficient).replace('.', ',')} · ${esc(b.name)} : ${b.days.map((d) => JOURS[d]).join(', ')} de ${esc(b.from)} à ${esc(b.to)}</div>`).join('');
+  const recents = C.semaines.filter((w) => w.etat !== 'avenir' && (w.points || w.euros)).slice(-6).reverse()
+    .map((w) => `<div class="ligne"><span>S${w.n} · ${dm(w.du)} – ${dm(w.au)}<small>${eur(w.euros || 0)} · ${w.tickets || 0} ticket(s)</small></span><b>+${w.points || 0}</b></div>`).join('');
+  return `<div class="bt"><div><span class="t">POINTS</span><span class="s">de ${esc((C.client.nom || '').split(' ')[0])}</span></div><div class="r"><b>${pts.solde} pts</b><small>${prochain ? 'encore ' + prochain.reste + ' pts pour ' + eur(prochain.valeur).replace(',00', '') : 'palier atteint'}</small></div></div>
+    ${prochain ? `<div class="bar ab"><i style="width:${Math.min(100, 100 * pts.solde / prochain.points)}%"></i></div>` : ''}
+    <div class="card"><div class="k">Votre semaine <span>bonus de la carte</span></div><div class="jours">${jours}</div>${bonus || '<div class="hint">Aucun bonus jour et heure sur la carte.</div>'}</div>
+    <div class="card"><div class="k">Échanger mes points</div>${(pts.paliers || []).map((p) => `<div class="ligne"><span><b style="font:400 18px 'Vank',sans-serif">${p.points} pts</b> → ${eur(p.valeur).replace(',00', '')}</span><span class="hint">${p.atteint ? 'à échanger dans l’app' : 'encore ' + p.reste}</span></div>`).join('') || '<div class="hint">Pas de palier.</div>'}</div>
+    <div class="card"><div class="k">Derniers points <span>par semaine</span></div>${recents || '<div class="hint">Aucun point sur ces semaines.</div>'}</div>
+    <div class="hint">Gagnés depuis le début : ${pts.gagnes} · échangés : ${pts.echanges}${pts.expires ? ' · expirés : ' + pts.expires : ''}</div>`;
+}
+function vuePorte() {
+  const C = CARTE, gagnes = C.bons.filter((b) => b.gagne);
+  const codes = (C.codes || []).map((k) => `<div class="wl"><span class="ti"><img src="${ILL}tartelette.png" alt=""></span><div><small>${esc(k.campagne)}</small><strong>${esc(k.code)}</strong><small>${esc(k.statut)}${k.jusquau ? ' · jusqu’au ' + dm(k.jusquau) : ''}</small></div><span class="tg">dans l’ERP</span></div>`).join('');
+  const dus = gagnes.map((b) => `<div class="wl"><span class="ti"><img src="${ILL}${esc(b.motif)}.png" alt=""></span><div><small>Bingo · ${b.k}e case</small><strong>${esc(b.nom)} · ${eur(b.valeur).replace(',00', '')}</strong><small>valable ${C.regles.validite} jours</small></div><span class="tg">simulation</span></div>`).join('');
+  return `<div class="card"><div class="k">Mes bons</div><span class="hint">${(C.codes || []).length ? 'Les codes à son nom dans les campagnes « ' + esc(C.saison.campagne) + ' ».' : 'Aucune campagne « ' + esc(C.saison.campagne) + ' » dans l’ERP : les bons gagnés ci-dessous ne sont pas émis.'}</span></div>
+    ${codes}${dus || '<div class="vide">Pas encore de bon gagné.</div>'}
+    <div class="card"><div class="k">Points</div><span class="hint">${C.client.points.echanges ? C.client.points.echanges + ' points échangés contre des bons dans l’app.' : 'Aucun échange de points pour l’instant.'}</span></div>`;
+}
+function semaines() {
+  const C = CARTE;
+  $('#sem').innerHTML = `<table><tr><th>Sem.</th><th>Du – au</th><th>Achats</th><th>Points</th><th>Tickets</th><th>Case</th></tr>${C.semaines.map((w) => `<tr><td>S${w.n}</td><td>${dm(w.du)} – ${dm(w.au)}</td><td>${w.euros === null ? '—' : eur(w.euros)}</td><td>${w.points ?? '—'}</td><td>${w.tickets ?? '—'}</td><td class="${w.coche ? 'ok' : w.manquee ? 'ko' : ''}">${w.coche ? '✓ cochée' : w.manquee ? 'manquée' : w.etat === 'cours' ? 'en cours' : 'à venir'}</td></tr>`).join('')}</table>
+    <p class="hint" style="margin-top:8px">Carte de l’ERP : ${esc(C.carte.nom)} (${esc(C.carte.code)}, id ${C.carte.id}) · seuil ${eur(C.regles.seuil)} · un bon toutes les ${C.regles.tousLes} cases · magasins des achats : ${(C.client.magasins || []).map((s) => '#' + s).join(', ') || '—'}</p>`;
+}
+$('#tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; ONGLET = b.dataset.t; rendre(); });
+$('#go').addEventListener('click', () => { JOURNAL = []; chercher(); });
+$('#q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { JOURNAL = []; chercher(); } });
+$('#res').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) ouvrir(Number(b.dataset.id)); });
+demarrer();
+</script>
+</body>
+</html>

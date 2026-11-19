@@ -27,7 +27,7 @@ final class OutgoingMessageService
         if (!filter_var($message['recipient'], FILTER_VALIDATE_EMAIL)) {
             throw new \InvalidArgumentException('Nieprawidłowy adres odbiorcy: ' . $message['recipient']);
         }
-        $account = $this->accounts->active();
+        $account = $this->accounts->forMessageType((string) $message['message_type']); // [341] adresse de l'usage
         $domain = $account !== [] && str_contains($account['from_email'], '@') ? substr(strrchr($account['from_email'], '@'), 1) : 'localhost';
         $links = $message['links'] ?? [];
         $now = date('Y-m-d H:i:s');

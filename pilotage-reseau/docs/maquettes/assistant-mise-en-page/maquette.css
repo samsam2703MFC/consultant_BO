@@ -1,0 +1,85 @@
+/* Maquette « assistant de mise en page » (17/11/2026) : l'étape 3 de Mon catalogue, catégorie par catégorie, puis la
+ * mise en page finale en glisser-déposer. Couleurs et formes du dashboard (Rubis, Abricot, cartes à coins arrondis). */
+.am{display:grid;gap:14px}
+.am-sous{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.am-ss{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:9px 12px;min-width:0}
+.am-ss .no{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;background:#EDE7DE;color:#5c5852}
+.am-ss .l{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-ss .d{font-size:10.5px;color:var(--color-text-muted)}
+.am-ss.on{border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary)}
+.am-ss.on .no{background:var(--color-primary);color:#fff}
+.am-ss.fait .no{background:#3f7a52;color:#fff}
+.am-ss.fin{background:#FBEFE3;border-color:#F2C9A0}
+.am-ss.fin.on{background:#fff}
+.am-corps{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+.am-pan{background:#fff;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px;display:grid;gap:14px}
+.am-kick{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-muted)}
+.am-tit{display:flex;align-items:baseline;gap:12px}
+.am-tit h2{margin:0;font:500 22px var(--font-display,'Vank',serif);text-transform:uppercase;color:var(--color-primary);letter-spacing:.02em}
+.am-tit span{font-size:12.5px;color:var(--color-text-muted)}
+.am-q{font-size:13.5px;font-weight:500}
+.am-lays{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.am-lay{display:grid;grid-template-columns:34px 1fr;gap:4px 10px;align-items:center;border:1px solid var(--color-border-tertiary);border-radius:10px;padding:9px 10px;background:#fff}
+.am-lay .mini{grid-row:span 2;width:30px;height:42px;padding:3px;gap:2px}
+.am-lay b{font-size:12.5px;font-weight:500}
+.am-lay small{font-size:11px;color:var(--color-text-muted)}
+.am-lay em{grid-column:1/-1;font-style:normal;font-size:11px;border-radius:999px;padding:2px 8px;justify-self:start;background:#F4EFE8;color:#5c5852}
+.am-lay.on{border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary)}
+.am-lay.on b{color:var(--color-primary)}
+.am-lay.on em{background:var(--color-primary);color:#fff}
+.am-lay.trop em{background:#FBEAEA;color:#8D1D2C}
+.am-aps{display:flex;gap:14px;justify-content:center;background:#F4EFE8;border-radius:12px;padding:16px}
+.am-ap{display:grid;gap:6px;justify-items:center}
+.am-ap .cm-feuille{box-shadow:0 2px 10px rgba(36,28,26,.12)}
+.am-ap span{font-size:11px;color:var(--color-text-muted)}
+.am-ap span b{color:var(--color-primary);font-weight:500}
+.am-opts{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+.am-opt{border:1px solid var(--color-border-tertiary);border-radius:10px;padding:11px 12px;display:grid;gap:8px;align-content:start}
+.am-opt .t{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.am-opt .t .sp{flex:1}
+.am-opt .s{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
+.am-opt.on{border-color:#F2C9A0;background:#FFF9F3}
+.am-pt{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--color-primary);margin-right:6px;vertical-align:1px}
+.am-seg{display:inline-flex;border:1px solid var(--color-border-tertiary);border-radius:999px;padding:2px;background:#F4EFE8}
+.am-seg i{font-style:normal;font-size:12px;padding:4px 12px;border-radius:999px;color:#5c5852}
+.am-seg i.on{background:#fff;color:var(--color-text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.am-sel{border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff;display:flex;justify-content:space-between;gap:10px}
+.am-gabs{display:flex;gap:6px}
+.am-gab{flex:1;border:1px solid var(--color-border-tertiary);border-radius:8px;padding:5px;display:grid;justify-items:center;font-size:11px;color:var(--color-text-muted)}
+.am-gab.on{border-color:var(--color-primary);color:var(--color-primary)}
+.am-pied{display:flex;align-items:center;gap:10px;border-top:1px solid var(--color-border-tertiary);padding-top:12px}
+.am-pied .sp{flex:1}
+.am-pied .cm-cpt{font-size:12px;color:var(--color-text-muted)}
+.am-cote{background:#fff;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px;display:grid;gap:10px;font-size:12.5px}
+.am-cote h3{margin:0;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-muted);font-weight:500}
+.am-jauge{height:8px;border-radius:999px;background:#EDE7DE;overflow:hidden;display:flex}
+.am-jauge i{display:block;height:100%}
+.am-lg{display:grid;gap:5px}
+.am-lg div{display:flex;align-items:center;gap:8px}
+.am-lg .pt{width:9px;height:9px;border-radius:3px;flex:none}
+.am-lg .n{margin-left:auto;color:var(--color-text-muted)}
+.am-note{font-size:11.5px;color:var(--color-text-muted);line-height:1.45}
+/* Mise en page finale : les pages dans l'ordre, rangées par catégorie ; une catégorie se glisse d'un bloc. */
+.am-fin{display:flex;flex-wrap:wrap;gap:16px 12px;align-items:flex-start;background:#F4EFE8;border-radius:12px;padding:18px 16px}
+.am-bloc{display:grid;gap:7px;padding:8px 9px 9px;border-radius:12px;border:1.5px solid transparent;background:#fff;position:relative}
+.am-bloc .h{display:flex;align-items:center;gap:7px;font-size:12px}
+.am-bloc .h .pg{color:var(--color-text-muted);font-size:11px;margin-left:auto}
+.am-bloc .h .poi{color:#9a948c;font-size:14px;cursor:grab}
+.am-bloc .pp{display:flex;gap:6px}
+.am-bloc.lock{background:transparent;border-style:dashed;border-color:#D9D2C7}
+.am-bloc.lock .h{color:var(--color-text-muted)}
+.am-bloc.glisse{transform:rotate(-2deg) translateY(-6px);box-shadow:0 14px 30px rgba(36,28,26,.22);border-color:var(--color-primary)}
+.am-bloc.fantome{opacity:.35;border:1.5px dashed var(--color-primary);background:transparent}
+.am-depot{align-self:stretch;width:5px;border-radius:3px;background:var(--color-primary);box-shadow:0 0 0 4px rgba(141,29,44,.15)}
+.am-th{display:grid;gap:3px;justify-items:center}
+.am-th span{font-size:10.5px;color:var(--color-text-muted)}
+.am-vide{width:96px;height:136px;border:1.5px dashed #C9C1B5;border-radius:4px;display:grid;place-items:center;text-align:center;font-size:10.5px;color:var(--color-text-muted);padding:8px;background:#FBF8F4}
+.am-bulle{position:absolute;top:-34px;left:10px;background:var(--color-primary);color:#fff;font-size:11.5px;padding:5px 10px;border-radius:8px;white-space:nowrap}
+.am-bulle:after{content:'';position:absolute;left:18px;bottom:-5px;border:5px solid transparent;border-bottom:0;border-top-color:var(--color-primary)}
+/* Les dessins des mises en page (ceux de l'étape 3 actuelle) */
+.am .mini{display:grid;border-radius:4px;border:1px solid var(--color-border-tertiary);background:#F6F1E9}
+.am .mini i{display:block;background:#fff;border:1px solid rgba(34,34,34,.12);border-radius:2px}
+.am .mini.vedette{grid-template-columns:1fr 1fr;grid-template-rows:1.3fr 1fr 1fr}.am .mini.vedette i:first-child{grid-column:1/3}
+.am .mini.grille{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr)}
+.am .mini.liste{grid-template-columns:1fr;grid-template-rows:repeat(6,1fr)}
+.am .mini.mosaique{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}

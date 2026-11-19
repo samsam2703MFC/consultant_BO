@@ -67,9 +67,15 @@ a:hover { color: var(--at-primary-dark); }
 .text-danger { color: var(--at-danger) !important; }
 .border-primary { border-color: var(--at-primary) !important; }
 ::selection { background: var(--at-primary-soft); }
-::-webkit-scrollbar { width: 10px; height: 10px; }
+/* [304] Barre de défilement verticale : 3 px, Ruby (horizontale inchangée). Firefox : fine, Ruby. */
+::-webkit-scrollbar { width: 3px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--at-line-2); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:vertical { background: var(--at-primary); border: 0; border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
+@supports not selector(::-webkit-scrollbar) { html, body, * { scrollbar-width: thin; scrollbar-color: var(--at-primary) transparent; } }
+/* Menu latéral (Perfect Scrollbar) : le même fil ruby de 3 px que la page. */
+.ps__rail-y, .ps__rail-y:hover, .ps .ps__rail-y.ps--clicking { width: 5px; background: transparent !important; opacity: 1; }
+.ps__thumb-y, .ps__rail-y:hover > .ps__thumb-y, .ps__rail-y:focus > .ps__thumb-y, .ps__rail-y.ps--clicking .ps__thumb-y { width: 3px; right: 1px; background: var(--at-primary); border-radius: 3px; }
 
 /* --- Menu latéral -------------------------------------------------------- */
 .sidebar-wrapper {
@@ -457,6 +463,7 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-pill-warn { background: rgba(242, 201, 160, 0.45); color: var(--at-on-abricot); }
 .at-pill-danger { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
 .at-pill-muted { background: var(--at-bg-2); color: var(--at-muted); }
+.at-pill-info { background: rgba(31, 79, 122, 0.10); color: #1f4f7a; }
 .at-empty { margin: 0; padding: 14px 0; color: var(--at-muted); font-size: 13px; }
 .at-link { font-size: 12.5px; font-weight: 500; }
 
@@ -2770,6 +2777,17 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .kw-check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; } .kw-check input { width: 18px; height: 18px; }
 .kw-conv { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; } .kw-in { width: 90px; min-height: 40px; border: 1px solid var(--at-line-2); border-radius: 8px; padding: 0 8px; font-weight: 700; text-align: right; background: #fff; }
 .kw-price { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; } .kw-price b { text-align: right; font-variant-numeric: tabular-nums; }
+/* [349] Efekt ceny z faktury (makieta 65) */
+.kw-impact { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--at-line, #ece6e0); }
+.kw-impact h6 { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); margin: 12px 0 6px; }
+.kw-imp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.kw-imp-tiles > div { background: #faf7f4; border-radius: 10px; padding: 8px 10px; }
+.kw-imp-tiles span { display: block; font-size: 12px; color: var(--at-muted); }
+.kw-imp-tiles b { font-size: 17px; font-variant-numeric: tabular-nums; } .kw-imp-tiles b small { font-size: 12px; font-weight: 400; }
+.kw-imp-tiles small { display: block; font-size: 11px; color: var(--at-muted); }
+.kw-imp-tiles .up b { color: #b42318; } .kw-imp-tiles .down b { color: #1f7a3a; }
+.kw-imp-t td small { display: block; color: var(--at-muted); font-size: 11px; } .kw-imp-t tr.tot td { border-top: 1px solid var(--at-line, #ece6e0); }
+@media (max-width: 991.98px) { .kw-imp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kw-up { color: #8e1f2f; font-weight: 700; } .kw-down { color: #1f5a37; font-weight: 700; }
 .kw-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
 .kw-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 10px; font-weight: 600; border: 1px solid var(--at-line-2); background: #fff; color: var(--at-text); white-space: nowrap; }
@@ -2813,6 +2831,48 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .pw-detail { text-align: left; font-size: 13px; max-height: 60vh; overflow: auto; }
 .pw-params { display: grid; gap: 10px; text-align: left; } .pw-params label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
 @media (max-width: 1199.98px) { .pw-pub, .pw-rule3 { grid-template-columns: minmax(0, 1fr); } .pw-q { width: 100%; } }
+/* [351] Ścieżka cen (makieta 66 B) : pasek 4 kroków (asystent faktur + Kreator cen) i krok 2 « Sprawdź ceny katalogowe ». */
+.pp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--at-line); border-radius: 14px; overflow: hidden; background: #fff; }
+.pp-step { display: block; padding: 12px 16px; border: 0; border-right: 1px solid var(--at-line); background: #fff; color: var(--at-text); text-align: left; text-decoration: none; min-height: 64px; font: inherit; }
+.pp-step:last-child { border-right: 0; } a.pp-step:hover, button.pp-step:hover { background: #fbf8f5; color: var(--at-text); }
+.pp-step b { display: flex; align-items: center; gap: 8px; font-size: 14px; } .pp-step small { display: block; color: var(--at-muted); font-size: 12px; margin-top: 2px; }
+.pp-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: #efe9e3; color: var(--at-muted); }
+.pp-where { display: block; font-size: 11px; color: #9a9089; margin-bottom: 3px; }
+.kw-card h5 .pw-hbtn { font-size: 13px; font-weight: 600; }
+.pp-step.done b { color: #1f7a3a; } .pp-step.done .pp-n { background: #1f7a3a; color: #fff; }
+.pp-step.todo .pp-n { background: rgba(154,23,48,.12); color: #9a1730; }
+.pp-step.cur { background: #fbf4f5; } .pp-step.cur b { color: #8e1f2f; } .pp-step.cur .pp-n { background: #8e1f2f; color: #fff; }
+.pw-prm { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #faf7f4; border-radius: 12px; padding: 8px 14px; font-size: 13px; margin: 8px 0 0; }
+.pw-prm label { display: flex; align-items: center; gap: 6px; margin: 0; } .pw-prm .kw-in { width: 62px; min-height: 36px; font-weight: 600; }
+.pw-mut { color: var(--at-muted); font-size: 12px; }
+.pw-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.pw-tiles > div { background: #faf7f4; border-radius: 12px; padding: 12px 14px; } .pw-tiles span { display: block; font-size: 12px; color: var(--at-muted); }
+.pw-tiles b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; } .pw-tiles small { color: var(--at-muted); font-size: 12px; }
+.pw-tiles .up { background: #fdf0ef; } .pw-tiles .up b { color: #b42318; } .pw-tiles .down { background: #edf6ef; } .pw-tiles .down b { color: #1f7a3a; }
+.pw-link { border: 0; background: none; padding: 0; color: #2b5f9e; font-size: 12px; text-decoration: underline; }
+.kw-t.pt { table-layout: fixed; min-width: 1240px; }
+.pt th.c { text-align: center; border-bottom: 2px solid var(--at-line); color: #5d554f; } .pt tr.h1 th { border-bottom: 0; padding-bottom: 2px; }
+.pt th.num, .pt td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pt td.mut { color: #8a817a; } .pt td.ar { text-align: center; padding: 0; }
+.pt td:nth-child(3), .pt th:nth-child(3), .pt td:nth-child(7), .pt th:nth-child(7), .pt td:nth-child(11), .pt th:nth-child(11) { border-left: 1px solid #efe8e1; }
+.pt tr.h1 th:nth-child(3), .pt tr.h1 th:nth-child(4), .pt tr.h1 th:nth-child(5) { border-left: 1px solid #efe8e1; } .pt tr.h1 th:nth-child(6) { border-left: 0; }
+.pt tr.grp td { background: #faf7f4; font-weight: 700; font-size: 12.5px; border-left: 0 !important; } .pt tr.grp-up td { color: #b42318; } .pt tr.grp-down td { color: #1f7a3a; }
+.pt tr.grp-same .pw-tog { color: var(--at-muted); font-weight: 700; min-height: 28px; }
+.pt tr.off td { opacity: .55; } .pt tr.off td:first-child { opacity: 1; }
+.pt tbody tr:not(.grp):hover td { background: #fbf8f5; }
+.pt .pw-prod b { display: block; } .pt .pw-prod small, .pt .why small { white-space: normal; }
+.pt .kw-in.pw-price { width: 88px; min-height: 36px; }
+.pw-ar { font-size: 15px; font-weight: 700; } .pw-ar.up { color: #b42318; } .pw-ar.down { color: #1f7a3a; } .pw-ar.eq { color: #a39a92; }
+.pw-pill { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--at-bg-2); color: var(--at-muted); }
+.pw-pill.up { background: #fde8e6; color: #b42318; } .pw-pill.down { background: #e5f3e8; color: #1f7a3a; }
+.pw-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; padding: 3px 8px; font-size: 12.5px; font-weight: 600; margin: 0 4px 3px 0; }
+.pw-chip.cu { background: #fdf0ef; color: #9b1c1c; border: 1px solid #f6d3cf; } .pw-chip.cd { background: #edf6ef; color: #1f6b33; border: 1px solid #cfe7d6; }
+.pw-src { display: block; color: #8a817a; font-size: 11px; margin-top: 1px; }
+.pw-tag { display: inline-block; font-size: 11px; border-radius: 6px; padding: 1px 7px; margin: 0 4px 3px 0; background: #f1ede8; color: #5d554f; }
+.pw-tag.warn { background: #fff3d6; color: #7a5a00; } .pw-tag.new { background: #eef3ff; color: #2d4a8a; } .pw-tag.bad { background: rgba(154,23,48,.1); color: #9a1730; }
+.pw-yellow { background: #fff3d6; border-radius: 10px; padding: 9px 12px; font-size: 12.5px; color: #5c4400; margin-top: 10px; }
+.pw-sel { font-size: 12.5px; color: var(--at-muted); margin-top: 8px; }
+@media (max-width: 991.98px) { .pp, .pw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pp-step:nth-child(2) { border-right: 0; } }
 
 /* [219] Dzisiaj « Mój tydzień » : zadania stałe stanowiska dzień po dniu (kolor kategorii, minuty, link, zrobione). */
 .wk-card { margin-bottom: 14px; }
@@ -3853,6 +3913,30 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .pay-card { margin-bottom: 14px; }
 @media (max-width: 900px) { .hr-tpl, .pay-grid { grid-template-columns: 1fr; } .hr-tpl-extra { grid-template-columns: 1fr 1fr; } }
 
+/* [348] Karta pracownika › Grafik tygodnia i przypomnienie o wejściu : grille CSS (pas de tableau, tient en étroit). */
+.hr-wk { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); gap: 4px 5px; align-items: center; margin-top: 10px; }
+.hr-wk-h { font-size: 11px; font-weight: 600; color: var(--at-muted); text-align: center; letter-spacing: .04em; }
+.hr-wk-h.is-we { color: #a99f93; }
+.hr-wk-l { font-size: 11.5px; color: var(--at-muted); }
+.hr-wk .form-control { padding: 3px 1px; font-size: 12.5px; text-align: center; font-variant-numeric: tabular-nums; min-width: 0; }
+.hr-wk-n { font-size: 11.5px; text-align: center; color: var(--at-ink, #2b2b2b); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hr-wk-n.is-off { color: var(--at-muted); }
+.hr-wk-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 12.5px; margin: 8px 0 2px; }
+.hr-wk-sum .btn-link { padding: 0; font-size: 12.5px; }
+.tm-dialog-body label.hr-sms-on { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 12px 0 0; color: var(--at-ink, #2b2b2b); font-size: 12.5px; }
+.tm-dialog-body label.hr-sms-on .form-check-input { margin: 0; float: none; align-self: center; }
+.hr-sms-on .tm-sub { display: inline; }
+.hr-sms-help { display: flex; flex-wrap: wrap; gap: 2px 6px; font-size: 11.5px; color: var(--at-muted); margin-top: 3px; }
+.hr-sms-help .btn-link { padding: 0; font-size: 11.5px; }
+.hr-sms-help .is-long { color: #B54708; font-weight: 600; }
+.hr-sms-meta { font-size: 12px; color: var(--at-muted); margin-top: 10px; line-height: 1.6; }
+.hr-sms-meta b { color: var(--at-ink, #2b2b2b); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hr-sms-meta .hr-miss { font-weight: 600; }
+.hr-settings .hr-f-wide { grid-column: 1 / -1; }
+@media (max-width: 520px) { .hr-wk { grid-template-columns: 24px repeat(7, minmax(0, 1fr)); gap: 3px 2px; } .hr-wk .form-control { font-size: 11px; padding: 3px 0; } }
+/* [348] Czas pracy › Dzień : SMS « brak wejścia » envoyé ce jour. */
+.tm-sms { color: #B54708; font-size: 12px; white-space: nowrap; margin-left: 4px; }
+
 /* [279] HR › Szybka notatka (makieta 44) + follow-upy */
 .hr-qn { display: grid; grid-template-columns: 1.45fr 1fr; gap: 0; padding: 0 !important; }
 .hr-qn-l { padding: 16px 20px; }
@@ -4088,3 +4172,102 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .ul-tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--at-bg-2); color: var(--at-muted); }
 .ul-tag.is-pending { background: #f6ead6; color: #8a5a12; } .ul-tag.is-approved { background: rgba(46, 125, 79, .1); color: #2E7D4F; } .ul-tag.is-rejected { background: rgba(196, 30, 58, .09); color: #C41E3A; }
 .at-leave-banner { background: #f6ead6; border: 1px solid rgba(193, 122, 42, .4); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; color: #6b4420; }
+
+/* [301] En-tête : date et heure de la dernière mise à jour du serveur (à gauche de la cloche). */
+.at-deployed { font-size: 11.5px; color: #8a837a; white-space: nowrap; display: inline-flex; align-items: center; gap: .3rem; }
+.at-deployed i { font-size: 12px; }
+
+/* [303] Asystent « Transport dla zamówień » (makieta 56) : klienci bez transportu ↔ pojazdy floty. */
+.otw-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; margin-top: 10px; }
+@media (max-width: 900px) { .otw-cols { grid-template-columns: minmax(0, 1fr); } }
+.otw-cl { display: flex; align-items: center; gap: 10px; border: 1px solid #eadfd3; border-radius: 10px; padding: 9px 12px; margin-bottom: 7px; background: #fff; cursor: pointer; }
+.otw-cl.is-on { border-color: #8D1D2C; background: #fbf4f5; }
+.otw-cl-t { flex: 1; min-width: 0; } .otw-cl small { display: block; color: #8a837a; font-size: 12px; }
+.otw-veh { display: block; width: 100%; text-align: left; border: 2px solid #e3ddd3; border-radius: 12px; padding: 11px 13px; margin-bottom: 9px; background: #fff; cursor: pointer; }
+.otw-veh.is-on { border-color: #8D1D2C; box-shadow: 0 0 0 3px rgba(141, 29, 44, .08); }
+.otw-veh .tw-gbar, .otw-veh [class*="gbar"] { margin: 7px 0 3px; }
+.otw-act { display: flex; justify-content: flex-end; margin-top: 12px; }
+.otw-veh .tw-gbar { display: block; width: 100%; }
+/* [306] Mini-asystenci « Dodaj pojazd » / « Dodaj kierowcę » i krok « Kierowca i trasa » */
+.otw-mini { border: 1px dashed #c9b9a6; border-radius: 12px; padding: 12px 14px; background: #fffaf5; margin-bottom: 9px; }
+.otw-mini-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.otw-mini .tw-field { margin-bottom: 9px; }
+.otw-cap { margin: 2px 0 10px; font-size: 13.5px; color: #3c3833; } .otw-cap .bi { color: var(--at-primary); }
+.otw-mini-a { display: flex; justify-content: flex-end; gap: 8px; margin: 4px 0 0; }
+.otw-drv { border: 1px solid #eadfd3; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+.otw-drv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
+.otw-drv-h .tw-pill { margin-left: auto; }
+.otw-drv-f { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.otw-drv-f .tw-field { margin-bottom: 0; }
+.otw-drv-b { display: flex; gap: 8px; padding-bottom: 2px; }
+.otw-ro { display: flex; align-items: center; min-height: 44px; color: #6f6860; font-size: 13.5px; }
+.otw-drv .otw-mini { margin: 12px 0 0; }
+@media (max-width: 900px) { .otw-drv-f { grid-template-columns: minmax(0, 1fr); } }
+
+/* [306] Trasy : pojazd i kierowca zwykle ci sami (pod nazwą trasy). */
+.at-tour-usual { display: block; margin-top: 3px; font-size: 13px; color: #3c3833; }
+.at-tour-usual .bi { color: var(--at-primary); }
+.at-tour-missing { color: #b42318; font-weight: 600; }
+
+/* [309] Kierowcy : umowa zlecenia na przewóz (Pojazdy i kierowcy). */
+.at-drv-table td { vertical-align: top; }
+.at-drv-ok { color: #2E7D4F; } .at-drv-bad { color: #b42318; font-weight: 600; }
+
+/* [309] Dodaj kierowcę : etat / zlecenie (makieta 57). */
+.otw-coop { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 2px 0 10px; }
+.otw-coop-o { text-align: left; border: 2px solid #e3ddd3; border-radius: 12px; padding: 10px 12px; background: #fff; cursor: pointer; }
+.otw-coop-o b { display: block; font-size: 14px; } .otw-coop-o small { color: #8a837a; font-size: 12px; }
+.otw-coop-o.is-on { border-color: #8D1D2C; background: #fbf4f5; }
+.otw-sec { font-size: 11px; font-weight: 700; color: #8D1D2C; text-transform: uppercase; letter-spacing: .06em; margin: 10px 0 6px; }
+.otw-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.otw-ck { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 14px 8px 0; }
+.otw-cks { display: flex; flex-wrap: wrap; }
+.otw-cbtn { display: inline-flex; gap: 8px; margin-left: auto; }
+@media (max-width: 700px) { .otw-coop { grid-template-columns: 1fr; } }
+/* [349] Przycisk asystenta (czerwony = do zrobienia, zielony = zrobione) — Dzisiaj, Zaopatrzenie › Faktury */
+.at-asst-btn { display: inline-flex; align-items: center; gap: 9px; border-radius: 10px; padding: 6px 12px; font-weight: 600; font-size: 13px; line-height: 1.25; color: #fff; text-decoration: none; }
+.at-asst-btn small { display: block; font-weight: 400; font-size: 11px; opacity: .92; }
+.at-asst-btn .ic { width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .2); display: grid; place-items: center; font-size: 13px; flex: none; }
+.at-asst-btn.is-todo { background: #b42318; } .at-asst-btn.is-done { background: #1f7a3a; }
+.at-asst-btn:hover, .at-asst-btn:focus { color: #fff; filter: brightness(1.08); }
+
+/* [363] Reklamacje › Wykres : okno — reklamacje przyczyny / produktu, potem zgłoszenie, zdjęcia, co wysłano, wartość. */
+.rk-modal { position: fixed; inset: 0; z-index: 2000; background: rgba(34, 34, 34, .45); display: grid; place-items: center; padding: 20px; }
+.rk-modal-box { background: #fff; border-radius: 16px; width: min(760px, 100%); max-height: calc(100vh - 40px); display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0, 0, 0, .25); }
+.rk-modal-hd { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--at-line); }
+.rk-modal-hd h5 { margin: 0; flex: 1; font-size: 17px; font-weight: 700; }
+.rk-modal-x { border: 0; background: #f3efea; width: 34px; height: 34px; border-radius: 50%; font-size: 20px; line-height: 1; }
+.rk-modal-bd { padding: 14px 18px 18px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.rk-mlist { display: flex; flex-direction: column; gap: 6px; }
+.rk-mrow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 74px 80px auto 14px; gap: 10px; align-items: center; text-align: left; padding: 9px 10px;
+  border: 1px solid var(--at-line); border-radius: 10px; background: #fff; font-size: 13px; }
+.rk-mrow:hover { background: #faf6f2; }
+.rk-mrow .w { min-width: 0; } .rk-mrow .w b, .rk-mrow .w small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-mrow .w small, .rk-mrow .d { color: var(--at-muted); }
+.rk-mrow .q, .rk-mrow .v { text-align: right; font-variant-numeric: tabular-nums; }
+.rk-st { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.rk-st.acc { background: #e6f2ea; color: #2e7d4f; } .rk-st.rej { background: #f9e4e4; color: #b42318; } .rk-st.open { background: #fdf1dc; color: #9a5b00; }
+.rk-mhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13.5px; }
+.rk-msec { border: 1px solid var(--at-line); border-radius: 12px; padding: 10px 12px; }
+.rk-msec h6 { margin: 0 0 8px; font-size: 13px; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.rk-msec p { margin: 4px 0 0; font-size: 13px; }
+.rk-mdl { display: grid; grid-template-columns: 150px 1fr; gap: 4px 10px; margin: 0; font-size: 13px; }
+.rk-mdl dt { color: var(--at-muted); font-weight: 500; } .rk-mdl dd { margin: 0; }
+.rk-quote { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid #d8ccbf; background: #faf8f5; border-radius: 0 8px 8px 0; font-size: 13px; white-space: pre-wrap; }
+.rk-quote.is-out { border-left-color: var(--at-brand, #8D1D2C); }
+.rk-muted { color: var(--at-muted); font-size: 12.5px; }
+.rk-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.rk-photo { width: 130px; height: 130px; border-radius: 10px; overflow: hidden; border: 1px solid var(--at-line); display: grid; place-items: center; background: #f6f3ef; color: var(--at-muted); font-size: 12px; text-decoration: none; }
+.rk-photo img { width: 100%; height: 100%; object-fit: cover; }
+.rk-file { display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; border: 1px solid var(--at-line); border-radius: 8px; font-size: 12.5px; text-decoration: none; }
+.rk-mtable { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rk-mtable th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); font-weight: 700; text-align: right; padding: 4px 6px; }
+.rk-mtable td { text-align: right; padding: 5px 6px; border-top: 1px solid var(--at-line); }
+.rk-mfoot { display: flex; justify-content: flex-end; }
+/* [366] Zdjęcia reklamacji widoczne w oknie : większe miniatury, powiększenie w oknie po dotknięciu. */
+.rk-photo { width: 160px; height: 160px; cursor: zoom-in; }
+.rk-photo.is-file { cursor: pointer; flex-direction: column; gap: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--at-brand, #8D1D2C); }
+.rk-photo.is-file i { font-size: 30px; }
+.rk-zoom { margin-top: 10px; border: 1px solid var(--at-line); border-radius: 12px; background: #111; padding: 8px; text-align: center; cursor: zoom-out; }
+.rk-zoom img { max-width: 100%; max-height: 62vh; object-fit: contain; border-radius: 8px; display: block; margin: 0 auto; }
+.rk-zoom-open { display: inline-block; margin-top: 6px; color: #fff; font-size: 12.5px; text-decoration: underline; }

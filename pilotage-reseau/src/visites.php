@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/visites_evaluation.php';
 // L'équipe en poste, lue au planning et notée pendant la visite.
 require_once __DIR__ . '/visites_equipe.php';
+// L'audit des outils de gestion : la liste, le contrôle de ce qu'envoie la tablette, ce que le cockpit en lit tout seul.
+require_once __DIR__ . '/visites_outils.php';
 
 /**
  * Visites terrain — l'application du consultant (PWA `visites/`).
@@ -234,6 +236,10 @@ function ensureVisites(): void
     $sansPers = true;
     try { $sansPers = Db::row("SHOW COLUMNS FROM con_visite LIKE 'personnel'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($sansPers) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN personnel TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
+    // L'audit des outils de gestion (17/11/2026) : le verdict de chaque outil, sa remarque, le rappel lu, en JSON (viOutils).
+    $sansOutils = true;
+    try { $sansOutils = Db::row("SHOW COLUMNS FROM con_visite LIKE 'outils'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansOutils) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN outils TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -493,7 +499,9 @@ function viVisiteLigne(array $v): array
         // L'évaluation rapide de fin de visite : six notes de 1 à 5, leur commentaire (viEvaluation).
         'evaluation' => !empty($v['evaluation']) ? (json_decode((string) $v['evaluation'], true) ?: null) : null,
         // L'équipe en poste, notée pendant la visite (viPersonnel) : interne au bureau.
-        'personnel' => !empty($v['personnel']) ? (json_decode((string) $v['personnel'], true) ?: null) : null];
+        'personnel' => !empty($v['personnel']) ? (json_decode((string) $v['personnel'], true) ?: null) : null,
+        // L'audit des outils de gestion (viOutils) : il part dans le rapport, avec le rappel.
+        'outils' => !empty($v['outils']) ? (json_decode((string) $v['outils'], true) ?: null) : null];
 }
 
 /**
@@ -881,7 +889,7 @@ function viPourFranchise(array $e, array $visites, array $points, array $photos,
         if (in_array($v['statut'], ['planifiee', 'confirmee', 'en_cours'], true) && $v['prevu_le'] >= $auj && empty($v['annoncee'])) { $caches[] = $v['id']; return null; }
         $v['prep'] = null; $v['notes'] = null; $v['meteo'] = null; $v['personnel'] = null;
         if (($v['rapportStatut'] ?? null) === 'brouillon') {
-            foreach (['positif', 'diagnostic', 'reco', 'execution', 'clients', 'sentiment', 'evaluation'] as $k) { $v[$k] = null; }
+            foreach (['positif', 'diagnostic', 'reco', 'execution', 'clients', 'sentiment', 'evaluation', 'outils'] as $k) { $v[$k] = null; }
             $v['causes'] = [];
         }
         return $v;
@@ -1022,6 +1030,7 @@ function wr_visites_put(string $id): array
     if (array_key_exists('budgetCa', $b)) { $bc = viBudgetCa($b['budgetCa'], viQui($b)); $set[] = 'budget_ca = ?'; $args[] = $bc !== null ? json_encode($bc, JSON_UNESCAPED_UNICODE) : null; }
     if (array_key_exists('personnel', $b)) { $pe = viPersonnel($b['personnel'], viQui($b)); $set[] = 'personnel = ?'; $args[] = $pe !== null ? json_encode($pe, JSON_UNESCAPED_UNICODE) : null; }
     if (array_key_exists('evaluation', $b)) { $ev = viEvaluation($b['evaluation'], viQui($b)); $set[] = 'evaluation = ?'; $args[] = $ev !== null ? json_encode($ev, JSON_UNESCAPED_UNICODE) : null; }
+    if (array_key_exists('outils', $b)) { $og = viOutils($b['outils'], viQui($b)); $set[] = 'outils = ?'; $args[] = $og !== null ? json_encode($og, JSON_UNESCAPED_UNICODE) : null; }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
     Db::exec('UPDATE con_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
@@ -1389,35 +1398,14 @@ function wr_msp_post(): array
     $mois = (string) ($b['mois'] ?? date('Y-m'));
     if (!preg_match('/^\d{4}-\d{2}$/', $mois)) { http_response_code(422); return ['error' => 'mois attendu AAAA-MM']; }
     // Un seul encodage (24/10/2026) : le rapport entre dans la table du scoring, un passage rangé dans son trimestre.
-    if (function_exists('suMspEnregistrer')) {
-        $rub = [];
-        foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) { if (is_numeric($v)) { $rub[(string) $k] = (float) $v; } }
-        if ($rub === []) { http_response_code(422); return ['error' => 'au moins une rubrique notée sur 20']; }
-        $r = suMspEnregistrer($shop, $mois === date('Y-m') ? date('Y-m-d') : $mois . '-01', null, null, $rub, (string) ($b['commentaires'] ?? ''), $b['fichier'] ?? null, true, viQui($b));
-        return !empty($r['error']) ? $r : ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
-    }
+    // L'ancienne écriture dans con_msp, jamais atteinte, est retirée (19/11/2026) : con_msp ne se lit plus que pour
+    // l'historique d'avant.
+    if (!function_exists('suMspEnregistrer')) { http_response_code(503); return ['error' => 'le module Suivi des franchisés n’est pas chargé']; }
     $rub = [];
-    foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) {
-        $k = mb_substr(trim((string) $k), 0, 40);
-        if ($k !== '' && is_numeric($v)) { $rub[$k] = round((float) $v, 1); }
-    }
-    $total = isset($b['total']) && is_numeric($b['total']) ? round((float) $b['total'], 1) : ($rub ? round(array_sum($rub) / count($rub), 1) : null);
-    $fichier = null;
-    if (!empty($b['fichier']) && preg_match('#^data:application/pdf;base64,(.+)$#s', (string) $b['fichier'], $m)) {
-        $bin = base64_decode($m[1], true);
-        if ($bin !== false && strlen($bin) <= 8 * 1024 * 1024 && str_starts_with($bin, '%PDF')) {
-            $dossier = __DIR__ . '/../public/uploads/visites/msp';
-            if (is_dir($dossier) || @mkdir($dossier, 0775, true)) {
-                $nom = preg_replace('/[^\w-]/', '', $shop) . '-' . $mois . '.pdf';
-                if (@file_put_contents($dossier . '/' . $nom, $bin) !== false) { $fichier = 'uploads/visites/msp/' . $nom; }
-            }
-        }
-    }
-    Db::exec('INSERT INTO con_msp (shop_id, mois, total, rubriques, commentaires, fichier, par, le) VALUES (?,?,?,?,?,?,?,?)
-              ON DUPLICATE KEY UPDATE total = VALUES(total), rubriques = VALUES(rubriques), commentaires = VALUES(commentaires),
-              fichier = COALESCE(VALUES(fichier), fichier), par = VALUES(par), le = VALUES(le)',
-        [$shop, $mois, $total, json_encode($rub, JSON_UNESCAPED_UNICODE), mb_substr((string) ($b['commentaires'] ?? ''), 0, 2000) ?: null, $fichier, viQui($b), date('Y-m-d H:i:s')]);
-    return ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
+    foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) { if (is_numeric($v)) { $rub[(string) $k] = (float) $v; } }
+    if ($rub === []) { http_response_code(422); return ['error' => 'au moins une rubrique notée sur 20']; }
+    $r = suMspEnregistrer($shop, $mois === date('Y-m') ? date('Y-m-d') : $mois . '-01', null, null, $rub, (string) ($b['commentaires'] ?? ''), $b['fichier'] ?? null, true, viQui($b));
+    return !empty($r['error']) ? $r : ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
 }
 
 /** DELETE /msp/{id} */

@@ -642,6 +642,8 @@
       ['Opérationnel', [['operationnel', 'Ouverture', [], 'ouverture'], ['operationnel', 'Journée de travail', [], 'journee'], ['operationnel', 'Fermeture', [], 'fermeture'],
         ['operationnel', 'La tablette', [], 'tablette'],
         ['sopred', 'Rédaction des SOP', ['sop', 'sopnouvelle', 'rfclasseur', 'rfphase', 'rfposte', 'manuel']]], false],
+      // Les documents (19/11/2026, Sam) : des pages à part du module (« ext:… », formation.js les sert telles quelles).
+      ['Documents', [['ext:catalogue/', 'Catalogue des manuels ↗', []], ['ext:catalogue/depliant.html', 'Dépliant des manuels ↗', []]], false],
     ],
   };
 })(window.FormationSop);

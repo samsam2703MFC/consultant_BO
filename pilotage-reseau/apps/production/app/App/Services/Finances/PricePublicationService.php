@@ -18,6 +18,7 @@ use App\Services\Product\Price\ClientPriceListService;
  *     klient, który dostał już e-mail z tym cennikiem, nie dostaje drugiego « nowy cennik » (stan cennika zapisany) ;
  *  3. cennik na stronę franczyzy (webhook cennika, PricelistPusher) : ponowienia co przebieg, najwyżej SITE_ATTEMPTS.
  * Kopia testowa : poczta log_only, klucze franczyzy wyczyszczone → strona « no_site », nic nie wychodzi.
+ * [351] Ścieżka cen, krok 4 : « Wyślij teraz » (sendNow) kolejkuje e-maile publikacji od razu, przez notice().
  */
 final class PricePublicationService
 {
@@ -138,7 +139,10 @@ final class PricePublicationService
         return array_map(fn($p) => $p + ['notice_date' => date('Y-m-d', strtotime($p['effective_date'] . ' -' . (int) $p['notice_days'] . ' days'))], $this->repo->publications());
     }
 
-    /** Szczegóły : ceny standardowe, klienci (e-mail, strona) i liczba cen klientów. */
+    /**
+     * Szczegóły : ceny standardowe, klienci (e-mail, strona) i liczba cen klientów ; [351] krok 4 ścieżki : język
+     * i adres e-maila klienta (wysłany : adres z wysyłki, czekający : adres wg Dystrybucji dokumentów), data e-maila.
+     */
     public function detail(int $id): array
     {
         $p = $this->repo->publication($id) ?? throw new CustomException('Nie znaleziono publikacji.', 'errors', 404);
@@ -146,8 +150,45 @@ final class PricePublicationService
         $standard = array_values(array_filter($items, fn($i) => (int) $i['id_customer'] === 0));
         $perClient = [];
         foreach ($items as $i) if ((int) $i['id_customer'] > 0) $perClient[(int) $i['id_customer']] = ($perClient[(int) $i['id_customer']] ?? 0) + 1;
-        $clients = array_map(fn($c) => $c + ['prices' => $perClient[(int) $c['id_customer']] ?? 0], $this->repo->clients($id));
+        $rows = $this->repo->clients($id);
+        $customers = $this->repo->customers(array_map(fn($c) => (int) $c['id_customer'], $rows));
+        $clients = [];
+        foreach ($rows as $c) {
+            $cu = $customers[(int) $c['id_customer']] ?? [];
+            $lang = strtolower((string) ($cu['communication_lang'] ?? ''));
+            $address = '';
+            if ($c['email_status'] === 'queued') $address = (string) $c['email_note'];
+            elseif ((int) $c['email'] === 1 && $c['email_status'] === null && $cu) $address = $this->wizard->priceAddress((int) $c['id_customer'], $cu);
+            $clients[] = $c + ['prices' => $perClient[(int) $c['id_customer']] ?? 0, 'lang' => in_array($lang, ['fr', 'nl', 'pl', 'en'], true) ? $lang : 'fr', 'address' => $address];
+        }
+        $p['notice_date'] = date('Y-m-d', strtotime($p['effective_date'] . ' -' . (int) $p['notice_days'] . ' days'));
         return ['publication' => $p, 'standard' => $standard, 'clients' => $clients];
+    }
+
+    /**
+     * [351] Krok 4 « Wyślij teraz » : e-maile tej publikacji jeszcze niewysłane trafiają od razu do kolejki wysyłki
+     * (ta sama ścieżka co e-maile należne w run() — notice() ; kolejka respektuje MAIL_DELIVERY_MODE) zamiast czekać
+     * do daty « notice_days » przed zmianą. Bez kliknięcia wychodzą same jak dotąd.
+     * @return array{queued: int, skipped: int, failed: int, message: string}
+     */
+    public function sendNow(int $publicationId): array
+    {
+        $p = $this->repo->publication($publicationId) ?? throw new CustomException('Nie znaleziono publikacji.', 'errors', 404);
+        if ($p['status'] !== 'planned') throw new CustomException('Publikacja jest już zastosowana albo anulowana.', 'errors', 409);
+        if (!(int) $p['notify_email']) throw new CustomException('Publikacja bez e-maila do klientów.', 'errors', 422);
+        $pending = $this->repo->pendingNotices($publicationId);
+        if (!$pending) throw new CustomException('Wszystkie e-maile tej publikacji są już w kolejce.', 'errors', 409);
+        foreach ($pending as $n) $this->notice($publicationId, $n['id_customer'], $n['effective_date']);
+        $ids = array_flip(array_column($pending, 'id_customer'));
+        $out = ['queued' => 0, 'skipped' => 0, 'failed' => 0];
+        foreach ($this->repo->clients($publicationId) as $c) {
+            if (!isset($ids[(int) $c['id_customer']])) continue;
+            $k = $c['email_status'] === 'queued' ? 'queued' : ($c['email_status'] === 'skipped' ? 'skipped' : 'failed');
+            $out[$k]++;
+        }
+        $out['message'] = 'E-maile z cennikiem w kolejce wysyłki : ' . $out['queued'] . ($out['skipped'] ? ' · pominięte (brak adresu) : ' . $out['skipped'] : '')
+            . ($out['failed'] ? ' · błąd : ' . $out['failed'] : '') . '.';
+        return $out;
     }
 
     public function cancel(int $id, ?int $userId): string

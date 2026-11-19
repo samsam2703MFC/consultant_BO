@@ -549,6 +549,11 @@ function wr_pwa_task_review(): array
     journalAdd($consultant ? $auteur : 'CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
         . $note . '/5 — ' . ($accepte ? 'conforme' : 'non conforme') . ($comment !== '' ? ' : ' . $comment : '')
         . ($consultant ? ' (visite)' : '') . ($tfb !== null ? ' ; contreseing' . tacheTfbJournal($tfb) : ''));
+    // L'assistant de notation (src/ia_assistant.php) : la note humaine rejoint la proposition de l'IA, s'il y en a
+    // une — c'est d'elle que l'assistant apprend. `raisonIa` : pourquoi le consultant a corrigé (facultatif).
+    if (function_exists('iaNoteHumaine')) {
+        iaNoteHumaine($shopId, $taskId, $date, $note, $comment, isset($b['raisonIa']) ? (string) $b['raisonIa'] : null, $auteur);
+    }
     return ['ok' => true, 'note' => $note, 'accepte' => $accepte] + ($tfb !== null ? ['tfbuddyValidation' => $tfb] : []);
 }
 
@@ -915,46 +920,6 @@ function wr_budget_put(string $shopId): array
     return ['ok' => true, 'projection' => $projection];
 }
 
-/** PATCH /reporting/reports/{id} — fréquence, destinataires, postes, actif. */
-function wr_report_patch(string $id): array
-{
-    $b = body();
-    $r = Db::row('SELECT name FROM ceo_report_schedule WHERE id = ?', [$id]);
-    if ($r === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
-    $map = ['freq' => 'frequency', 'destId' => 'dest_id', 'ccId' => 'cc_id'];
-    foreach ($map as $key => $col) {
-        if (array_key_exists($key, $b)) {
-            Db::exec("UPDATE ceo_report_schedule SET $col = ? WHERE id = ?", [$b[$key] === '' ? null : $b[$key], $id]);
-        }
-    }
-    if (array_key_exists('postes', $b)) {
-        Db::exec('UPDATE ceo_report_schedule SET postes_json = ? WHERE id = ?', [json_encode($b['postes']), $id]);
-    }
-    if (array_key_exists('actif', $b)) {
-        Db::exec('UPDATE ceo_report_schedule SET active = ? WHERE id = ?', [$b['actif'] ? 1 : 0, $id]);
-    }
-    return ['ok' => true];
-}
-
-/** POST /reporting/reports/{id}/send — génération/envoi (simulé côté serveur : trace + last_run). */
-function wr_report_send(string $id): array
-{
-    $b = body();
-    $r = Db::row('SELECT name FROM ceo_report_schedule WHERE id = ?', [$id]);
-    if ($r === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
-    Db::exec('UPDATE ceo_report_schedule SET last_run = ? WHERE id = ?', [date('Y-m-d'), $id]);
-    journalAdd('CEO', 'Rapport', null, $b['journal'] ?? ('Rapport « ' . $r['name'] . ' » envoyé'));
-    return ['ok' => true];
-}
-
-/** PATCH /reporting/alerts/{id} — activer/désactiver une règle. */
-function wr_alert_patch(string $id): array
-{
-    $b = body();
-    Db::exec('UPDATE ceo_alert_rule SET active = ? WHERE id = ?', [!empty($b['actif']) ? 1 : 0, $id]);
-    return ['ok' => true];
-}
-
 /* --- Contrôle des posts Facebook -------------------------------------------
  *
  * Le cycle : soumission → contrôle par l'agent → décision du CEO → publication.
@@ -1307,12 +1272,17 @@ function wr_param_put(string $key): array
 }
 
 /**
- * Fiche de production d'une référence — assortiment et paramètres four.
+ * Fiche de production d'une référence — les paramètres de fabrication.
  *
  * Le catalogue vient d'`atelierby_db` ; ces attributs-là n'existent nulle part
  * ailleurs et appartiennent au réseau. La ligne cockpit est donc créée à la
  * volée, la première fois qu'on touche une référence : rien n'est pré-rempli,
  * et une référence jamais éditée n'occupe aucune place.
+ *
+ * Depuis le 19/11/2026 (docs/audit-rail.md § 4.1), la fiche n'écrit QUE la fabrication (préparation, cuisson,
+ * finition, batch, four, profil). Le prix, le coût matière et la durée de vie sont au panel (Produits › Paramétrage,
+ * Vérification › Recettes à corriger) ; l'obligatoire et son minimum s'écrivent par aoEcrireObligatoire
+ * (Comptoir › Assortiment obligatoire). Les clés must, qmin, prix, mat et dlv reçues sont ignorées.
  */
 function wr_prod_produit(string $ref): array
 {
@@ -1332,67 +1302,23 @@ function wr_prod_produit(string $ref): array
     if ($nom === '') { $nom = (string) ($b['nom'] ?? $ref); }
 
     $num = static fn ($v, $def = 0) => is_numeric($v) ? (float) $v : $def;
+    // Une ligne neuve n'est pas obligatoire et n'a ni prix ni coût : ce sont les valeurs par défaut de la table.
     Db::exec(
-        'INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, mat, prix,
-             prep, cuisson, fin, bmin, bmult, four, dlv, profil, actif)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+        'INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id,
+             prep, cuisson, fin, bmin, bmult, four, profil, actif)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,1)
          ON DUPLICATE KEY UPDATE
-             must = VALUES(must), qmin = VALUES(qmin), mat = VALUES(mat), prix = VALUES(prix),
              prep = VALUES(prep), cuisson = VALUES(cuisson), fin = VALUES(fin),
              bmin = VALUES(bmin), bmult = VALUES(bmult), four = VALUES(four),
-             dlv = VALUES(dlv), profil = VALUES(profil)',
+             profil = VALUES(profil)',
         [$ref, $nom, $cat, ctype_digit($ref) ? (int) $ref : null,
-         !empty($b['must']) ? 1 : 0, (int) $num($b['qmin'] ?? 0),
-         isset($b['mat']) && $b['mat'] !== '' ? $num($b['mat']) : null,
-         isset($b['prix']) && $b['prix'] !== '' ? $num($b['prix']) : null,
          (int) $num($b['prep'] ?? 0), (int) $num($b['cuisson'] ?? 0), (int) $num($b['fin'] ?? 0),
          (int) $num($b['bmin'] ?? 0), (int) $num($b['bmult'] ?? 1), (int) $num($b['four'] ?? 0),
-         (int) $num($b['dlv'] ?? 0), (string) ($b['profil'] ?? '')]
+         (string) ($b['profil'] ?? '')]
     );
-    // Décochée, une obligatoire perd aussi sa saison : recochée plus tard, elle
-    // repartirait sinon sur une saison que personne n'a choisie.
-    if (empty($b['must'])) {
-        try { Db::exec('UPDATE ceo_prod_product SET saison_id = NULL WHERE ref = ?', [$ref]); } catch (PDOException $e) { /* colonne absente */ }
-    }
     journalAdd('CEO', 'Référentiel produit', $nom,
         (string) ($b['journal'] ?? 'Fiche de production mise à jour'));
     return ['ok' => true, 'ref' => $ref];
-}
-
-/**
- * Emplacement d'une référence au comptoir.
- * Une zone vide efface l'emplacement plutôt que d'enregistrer un blanc : une
- * référence « posée nulle part » et une référence « jamais placée » doivent se
- * distinguer à l'écran.
- */
-function wr_prod_planogramme(string $ref): array
-{
-    $b = body();
-    $ref = trim($ref);
-    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
-    $zone = trim((string) ($b['zone'] ?? ''));
-    if ($zone === '') {
-        Db::exec('DELETE FROM pla_placement WHERE ref = ?', [$ref]);
-        return ['ok' => true, 'ref' => $ref, 'retire' => true];
-    }
-    // Cette route désigne l'emplacement par ses NOMS. Depuis que le comptoir a
-    // une structure, un placement doit s'y rattacher : sans `slot_id` il serait
-    // compté comme placé dans le catalogue tout en restant invisible sur le
-    // plan. On résout donc les noms, et on refuse plutôt que d'écrire un
-    // placement qui ne désigne rien.
-    $s = Db::row('SELECT s.id FROM pla_slot s
-                    JOIN pla_niveau n ON n.id = s.niveau_id
-                    JOIN pla_meuble m ON m.id = n.meuble_id
-                    JOIN pla_zone   z ON z.id = m.zone_id
-                   WHERE z.nom = ? AND m.nom = ? AND n.nom = ? AND s.position = ?',
-        [$zone, trim((string) ($b['meuble'] ?? '')), trim((string) ($b['niveau'] ?? '')),
-         isset($b['slot']) && is_numeric($b['slot']) ? (int) $b['slot'] : 0]);
-    if ($s === null) {
-        http_response_code(422);
-        return ['error' => 'aucun emplacement de ce nom au comptoir — déclarez-le dans le planogramme, '
-            . 'ou utilisez PUT /planogramme/placement/{ref} avec son slotId'];
-    }
-    return wr_plano_placer($ref, array_merge($b, ['slotId' => (int) $s['id']]));
 }
 
 /* --- Planogramme : structure du comptoir, placements, consignes ------------- */
@@ -1795,173 +1721,6 @@ function wr_plano_slot_maj(int $id): array
     Db::exec('UPDATE pla_slot SET ' . implode(', ', $sets) . ' WHERE id = ?', $args);
     journalAdd('CEO', 'Planogramme', 'emplacement ' . $id, implode(', ', $dit));
     return ['ok' => true, 'id' => $id];
-}
-
-function wr_plano_placer(string $ref, ?array $payload = null): array
-{
-    $ref = trim($ref);
-    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
-    // `payload` permet à la route par NOMS de déléguer ici après avoir résolu
-    // l'emplacement : une seule règle d'occupation pour les deux chemins.
-    $b = $payload ?? body();
-
-    if (empty($b['slotId'])) {
-        Db::exec('DELETE FROM pla_placement WHERE ref = ?', [$ref]);
-        journalAdd('CEO', 'Planogramme', $ref, 'Référence retirée du comptoir');
-        return ['ok' => true, 'ref' => $ref, 'retire' => true];
-    }
-    $sid = (int) $b['slotId'];
-    $s = Db::row('SELECT s.id, s.position, s.capacite, s.largeur_mm, s.hauteur_mm,
-                         n.nom AS niveau, m.nom AS meuble, z.nom AS zone
-                    FROM pla_slot s
-                    JOIN pla_niveau n ON n.id = s.niveau_id
-                    JOIN pla_meuble m ON m.id = n.meuble_id
-                    JOIN pla_zone   z ON z.id = m.zone_id
-                   WHERE s.id = ?', [$sid]);
-    if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
-
-    // L'état d'avant : d'où la référence vient, et ce qu'elle portait. Il est
-    // lu ICI parce que l'échange en a besoin avant de toucher à quoi que ce soit.
-    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs, periodes FROM pla_placement WHERE ref = ?', [$ref]);
-    $venaitDe = ($ancien['slot_id'] ?? null) !== null ? (int) $ancien['slot_id'] : null;
-
-    // Les moments demandés pour CE placement — transmis, sinon ceux déjà
-    // enregistrés : poser un ordre ne doit pas effacer un « matin seulement ».
-    $perDemande = array_key_exists('periodes', $b) ? planoPeriodes($b['periodes'])
-        : (string) ($ancien['periodes'] ?? '');
-
-    // Deux références peuvent partager un emplacement si elles n'y sont PAS au
-    // même moment : les croissants du matin et le traiteur de midi occupent la
-    // même case sans jamais s'y croiser. Le conflit se juge donc par
-    // chevauchement — une liste vide vaut « toute la journée » et croise tout.
-    $chevauche = static function (string $a, string $c): bool {
-        if ($a === '' || $c === '') { return true; }
-        return (bool) array_intersect(explode(',', $a), explode(',', $c));
-    };
-    $tous = Db::rows('SELECT ref, periodes FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
-    $occ = array_values(array_filter($tous,
-        fn ($o) => $chevauche($perDemande, (string) ($o['periodes'] ?? ''))));
-    // L'ÉCHANGE : glisser une référence sur un emplacement occupé, quand elle
-    // vient elle-même d'un emplacement, se lit comme « ces deux-là permutent ».
-    // C'est le geste qu'on fait au comptoir ; le refuser obligerait à vider un
-    // emplacement d'abord, en laissant une référence nulle part entre-temps.
-    $echange = null;
-    if ($occ && !empty($b['echange']) && $venaitDe !== null && $venaitDe !== $sid) {
-        if (count($occ) > 1) {
-            http_response_code(409);
-            return ['error' => 'emplacement partagé — l’échange ne saurait pas qui déplacer',
-                'occupants' => array_map(fn ($o) => (string) $o['ref'], $occ)];
-        }
-        $autre = (string) $occ[0]['ref'];
-        // L'autre part d'abord vers l'emplacement libéré ; `partager` lève le
-        // contrôle d'occupation le temps de la permutation, puisque la
-        // référence déplacée n'a pas encore quitté sa place.
-        $r = wr_plano_placer($autre, ['slotId' => $venaitDe, 'partager' => true]);
-        if (($r['ok'] ?? false) !== true) { return $r; }
-        $echange = $autre;
-        $occ = [];
-    }
-    if ($occ && empty($b['partager'])) {
-        http_response_code(409);
-        return ['error' => 'emplacement déjà occupé',
-            'occupants' => array_map(fn ($o) => (string) $o['ref'], $occ)];
-    }
-
-    $ordre  = max(1, min(40, (int) ($b['ordre'] ?? 1)));
-
-    // La grille. `parSlot` est ce qu'on décide ; les colonnes et les rangées
-    // s'en déduisent — la ligne juste d'office, une ligne imposée si on l'a
-    // choisie. Sans `parSlot`, rien n'est inventé : la grille reste ce qu'elle
-    // était et `fronts` garde son ancien sens.
-    $grille = null;
-    if (isset($b['parSlot']) && $b['parSlot'] !== '' && $b['parSlot'] !== null) {
-        $grille = planoGrille((int) $b['parSlot'],
-            $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
-            ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null,
-            isset($b['cols']) && (int) $b['cols'] > 0 ? (int) $b['cols'] : null);
-    }
-    // Vu de face, on voit les colonnes : c'est cela, un front.
-    $fronts = $grille !== null && $grille['cols'] > 0
-        ? max(1, min(40, $grille['cols']))
-        : max(1, min(40, (int) ($b['fronts'] ?? 1)));
-
-    // Sans nouvelle grille, celle qui était enregistrée est RELUE et remise :
-    // enregistrer un ordre ne doit pas effacer un nombre par emplacement.
-    $gParSlot = $grille !== null ? $grille['parSlot']
-        : (($ancien['par_slot'] ?? null) !== null ? (int) $ancien['par_slot'] : null);
-    $gCols = $grille !== null ? $grille['cols']
-        : (($ancien['grille_cols'] ?? null) !== null ? (int) $ancien['grille_cols'] : null);
-    $gRangs = $grille !== null ? $grille['rangs']
-        : (($ancien['grille_rangs'] ?? null) !== null ? (int) $ancien['grille_rangs'] : null);
-
-    // Un déménagement change la forme de la case : six éclairs tiennent en
-    // 6 × 2 dans un 60 × 40, pas dans un 60 × 15. Quand l'emplacement d'arrivée
-    // n'a pas les mêmes dimensions que celui de départ, la ligne juste est
-    // REFAITE pour le nouveau format — le nombre par emplacement, lui, est ce
-    // qu'on a décidé et ne bouge pas.
-    $regrille = null;
-    if ($grille === null && $gParSlot !== null && $venaitDe !== null && $venaitDe !== $sid) {
-        $av = Db::row('SELECT largeur_mm, hauteur_mm FROM pla_slot WHERE id = ?', [$venaitDe]);
-        $memeForme = $av !== null
-            && (int) ($av['largeur_mm'] ?? 0) === (int) ($s['largeur_mm'] ?? 0)
-            && (int) ($av['hauteur_mm'] ?? 0) === (int) ($s['hauteur_mm'] ?? 0);
-        if (!$memeForme) {
-            $regrille = planoGrille($gParSlot,
-                $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
-                ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null);
-            $gCols = $regrille['cols']; $gRangs = $regrille['rangs'];
-            $fronts = max(1, min(40, $regrille['cols']));
-        }
-    }
-
-    Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre,'
-        . ' par_slot, grille_cols, grille_rangs, periodes)'
-        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
-        . ' ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble), niveau = VALUES(niveau),'
-        . ' slot = VALUES(slot), slot_id = VALUES(slot_id), fronts = VALUES(fronts), ordre = VALUES(ordre),'
-        . ' par_slot = VALUES(par_slot), grille_cols = VALUES(grille_cols), grille_rangs = VALUES(grille_rangs),'
-        . ' periodes = VALUES(periodes)',
-        [$ref, (string) $s['zone'], (string) $s['meuble'], (string) $s['niveau'],
-         (int) $s['position'], $sid, $fronts, $ordre, $gParSlot, $gCols, $gRangs, $perDemande]);
-
-    // Le minimum d'assortiment est le même chiffre que celui du comptoir : le
-    // saisir ici évite d'ouvrir un second écran pour la même idée.
-    //
-    // Mais un minimum de ZÉRO ne rend rien obligatoire. La première version
-    // posait `must = 1` dès qu'un `qmin` était transmis — et l'écran en transmet
-    // toujours un : placer une référence la déclarait obligatoire au réseau sans
-    // que personne ne l'ait demandé. C'est le minimum qui engage, pas la place.
-    if (isset($b['qmin'])) {
-        $q = max(0, min(9999, (int) $b['qmin']));
-        try {
-            if ($q > 0) {
-                Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, qmin, must) VALUES (?,?,?,?,1)'
-                    . ' ON DUPLICATE KEY UPDATE qmin = VALUES(qmin), must = 1',
-                    [$ref, mb_substr(trim((string) ($b['nom'] ?? $ref)), 0, 190), '', $q]);
-            } else {
-                // Zéro : on ne touche NI au drapeau, ni à une fiche inexistante.
-                Db::exec('UPDATE ceo_prod_product SET qmin = 0 WHERE ref = ?', [$ref]);
-            }
-        } catch (PDOException $e) { /* fiche produit indisponible : le placement tient quand même */ }
-    }
-    journalAdd('CEO', 'Planogramme', $ref,
-        'Placée en « ' . $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau']
-        . ' · position ' . $s['position'] . ' » ('
-        . ($grille !== null
-            ? $grille['parSlot'] . ' par emplacement, ' . $grille['cols'] . ' × ' . $grille['rangs']
-              . ($grille['reste'] > 0 ? ', ' . $grille['reste'] . ' hors grille' : '')
-            : $fronts . ' front(s)') . ')');
-    $out = ['ok' => true, 'ref' => $ref, 'slotId' => $sid,
-        'ou' => $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau'] . ' · ' . $s['position']];
-    if ($grille !== null) { $out['grille'] = $grille; }
-    if ($echange !== null) { $out['echange'] = $echange; }
-    if ($regrille !== null) {
-        $out['regrille'] = $regrille;
-        journalAdd('CEO', 'Planogramme', $ref,
-            'Grille refaite pour le nouvel emplacement : ' . $regrille['cols'] . ' × ' . $regrille['rangs']
-            . ' (' . $regrille['parSlot'] . ' par emplacement)');
-    }
-    return $out;
 }
 
 /**

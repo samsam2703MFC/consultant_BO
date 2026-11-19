@@ -9640,6 +9640,66 @@
                 "x-permission": "prod.supply.read"
             }
         },
+        "/supply/invoices/assistant-status": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Stan asystenta « Ceny z faktur zakupu » / État de l'assistant des prix d'achat",
+                "operationId": "getInvoicePriceAssistantStatus",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceAssistantStatus"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[349] Bouton rouge / vert : lignes à vérifier (todo), factures prêtes à valider (ready, prix pas encore dans les fiches), litigieuses, plus ancienne date en attente, dernière validation (last_done). done = rien à vérifier ni à valider.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
         "/supply/invoices/wizard/check-safe": {
             "post": {
                 "tags": [
@@ -12717,6 +12777,78 @@
                 "x-permission": "prod.supply.read"
             }
         },
+        "/supply/materials/{id}/price-impact": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Efekt nowej ceny surowca / Effet d'un nouveau prix matière",
+                "operationId": "getMaterialPriceImpact",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaterialPriceImpact"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[349] Query : price (zł / unité de base, obligatoire), old (prix de base, sinon fiche), invoice (facture exclue de « dernière facture »), supplier (exclu des « autres fournisseurs »). Produits avec la matière dans la recette (coût / pièce, marge sur matières avant / après, effet / mois sur 3 mois de commandes), dernière facture, meilleur autre fournisseur 90 jours.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
         "/supply/materials/{id}/unit": {
             "patch": {
                 "tags": [
@@ -15071,6 +15203,82 @@
                 ]
             }
         },
+        "/kiosk/me/pin": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zmiana własnego PIN-u / Changer son PIN",
+                "operationId": "changePin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PinChanged"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[360] La personne identifiée change son PIN : ancien PIN (mêmes blocages que l'identification, 401 PIN_INVALID / 423) puis nouveau (différent : PIN_SAME ; pas trop simple : PIN_TOO_SIMPLE). Tracé (audit pin_self_changed).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePinInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/refresh": {
             "post": {
                 "tags": [
@@ -16183,7 +16391,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Matière de la recette du produit (sinon 422 MATERIAL_NOT_IN_RECIPE). Photo de l'étiquette en data URL JPEG / PNG / WebP (kiosk.lot_photo_max_kb), conservée en base ; ocr_text = texte lu sur la tablette.",
+                "description": "Matière de la recette du produit (sinon 422 MATERIAL_NOT_IN_RECIPE). material_lot_id : lot de la liste « Partie surowców » (actif, sinon 422 MATERIAL_LOT_UNAVAILABLE) ; numéro saisi hors liste : ajouté au registre. missing_reason : lot absent avec motif, photo obligatoire (422 MISSING_LOT_PHOTO_REQUIRED). Photo de l'étiquette en data URL JPEG / PNG / WebP (kiosk.lot_photo_max_kb), conservée en base ; ocr_text = texte lu sur la tablette.",
                 "parameters": [
                     {
                         "name": "id",
@@ -18257,7 +18465,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "QR changeant affiché par la tablette : {base}/kiosk/scan#t=<jeton> (kiosk.qr_ttl_s, renouvelé toutes les kiosk.qr_refresh_s). rows = matrice (1 = noir).",
+                "description": "QR changeant affiché par la tablette : {base}/kiosk/scan#t=<code> (code de 11 caractères, Q…, qui désigne le jeton gardé sur le serveur ; kiosk.qr_ttl_s, renouvelé toutes les kiosk.qr_refresh_s). rows = matrice (1 = noir).",
                 "parameters": [
                     {
                         "name": "base",
@@ -18398,7 +18606,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "QR de la page {base}/kiosk/scan#t=<jeton> avec la tablette, la personne (emp) et le jour (day) ; valable kiosk.office_qr_ttl_s, renouvelé (refresh_s) avant. Seul le téléphone enregistré de cette personne le valide (sinon 403 QR_OTHER_PERSON), seulement ce jour-là (QR_EXPIRED) ; au premier scan, seule cette personne est proposée (PIN). since : heure du serveur, à repasser à GET /kiosk/office/status.",
+                "description": "QR de la page {base}/kiosk/scan#t=<code> (P…, jeton gardé sur le serveur) avec la tablette, la personne (emp) et le jour (day) ; valable kiosk.office_qr_ttl_s, renouvelé (refresh_s) avant. Seul le téléphone enregistré de cette personne le valide (sinon 403 QR_OTHER_PERSON), seulement ce jour-là (QR_EXPIRED) ; au premier scan, seule cette personne est proposée (PIN). since : heure du serveur, à repasser à GET /kiosk/office/status.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -18414,6 +18622,238 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/office/pin": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Pierwszy PIN osoby / Premier PIN de la personne",
+                "operationId": "officeFirstPin",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/EmployeeToken"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[360] Tablette de bureau : une personne sans PIN choisit le sien (4 à 6 chiffres ; ni chiffre répété ni suite : PIN_TOO_SIMPLE). Profil de production créé au besoin. Session ouverte comme POST /kiosk/identify (X-Employee-Token). PIN déjà posé : PIN_ALREADY_SET (409). Tracé (audit pin_self_created).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OfficePinInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/office/login": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Logowanie samym PIN-em / Connexion par le PIN seul",
+                "operationId": "officeLogin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OfficeLogin"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[361] Accueil de la tablette de bureau : le PIN seul ouvre le profil (tous les PIN sont différents). Inconnu : PIN_UNKNOWN (401, left) compté sur la tablette ; après kiosk.office_pin_max_attempts, DEVICE_PIN_LOCKED (423) pendant kiosk.lock_minutes. Deux personnes avec ce PIN (posés avant l'unicité) : PIN_CHOOSE_NAME (409) — nom puis PIN, puis nouveau PIN (pin_change_required). Réponse : comme POST /kiosk/identify + la personne (OfficePerson).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OfficeLoginInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/office/search": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Szukaj swojego nazwiska / Chercher son nom",
+                "operationId": "officeSearch",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/OfficeSearchPerson"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[364] RODO : la tablette de bureau n'affiche plus tout le personnel. Une personne sans PIN tape son nom (au moins 3 lettres, sinon liste vide) : au plus 8 personnes, nom seul — sans service ni présence. id = production_employee.id (POST /kiosk/office/pin).",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Kowa"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
                 "security": [
                     {
                         "deviceToken": []
@@ -18694,6 +19134,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
+                "description": "start : le chauffeur signe une fois (case 23 du CMR, transporteur) — signature posée sur tous les CMR de sa tournée du jour ; sign : signature ajoutée ou refaite après le départ.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -19803,6 +20244,245 @@
                 ]
             }
         },
+        "/driver/pallets": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Skan palety (QR + zdjęcie) / Scan d'une palette (QR + photo)",
+                "operationId": "driverPalletScan",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverPalletResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "QR de l'étiquette palette (TFBPAL:numéro) ou numéro saisi ; photo obligatoire. Palette d'un autre client : DRIVER_PALLET_OTHER_CUSTOMER ; numéro inconnu ce jour-là : DRIVER_PALLET_UNKNOWN. Le même numéro rescanné remplace la photo.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverPalletInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/incidents": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Coś nie tak (zdjęcie + opis) / Quelque chose ne va pas (photo + description)",
+                "operationId": "driverIncident",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverIncidentResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Ne bloque pas la livraison. Va dans la file des écarts d'expédition et dans la cloche de l'ERP (Zgłoszenie kierowcy).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverIncidentInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/stop-document": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "CMR / WZ / faktura klienta (PDF) / CMR / WZ / facture du client (PDF)",
+                "operationId": "driverStopDocument",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DocumentFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Documents générés à la facturation (shipment_log). cmr : le CMR signé (case 24) quand il existe.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "customer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "cmr",
+                                "wz",
+                                "wdt"
+                            ]
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/driver/report": {
             "get": {
                 "tags": [
@@ -20386,6 +21066,124 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/erp-login": {
+            "get": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Logowanie do ERP kodem QR : co się otworzy / Connexion ERP par QR : ce qui s'ouvrira",
+                "operationId": "phoneErpLoginPreview",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ErpLogin"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[300] QR de la page de connexion (lgn) : compte ERP lié à la personne du téléphone, session ouverte, entrée déjà pointée ou non. 409 ERP_LOGIN_NO_ACCOUNT sans compte lié.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Logowanie do ERP kodem QR : zatwierdź / Connexion ERP par QR : valider",
+                "operationId": "phoneErpLogin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ErpLogin"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[300] L'entrée doit être pointée (409 ERP_LOGIN_CLOCK_FIRST) ; le navigateur qui affiche le QR ouvre le compte, une fois.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
                 "security": [
                     {
                         "phoneToken": [],
@@ -21001,7 +21799,7 @@
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Qr-Token",
-                "description": "Jeton du QR code affiché par la tablette (GET /kiosk/qr), valable kiosk.qr_ttl_s"
+                "description": "Code du QR affiché par la tablette (GET /kiosk/qr, 11 caractères après #t=) ou jeton complet, valable kiosk.qr_ttl_s"
             },
             "phoneToken": {
                 "type": "apiKey",
@@ -25411,13 +26209,19 @@
                         "type": "string",
                         "enum": [
                             "start",
-                            "finish"
+                            "finish",
+                            "sign"
                         ]
                     },
                     "driver_name": {
                         "type": "string",
                         "maxLength": 100,
                         "nullable": true
+                    },
+                    "signature": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "data:image/png;base64,… podpis kierowcy (pole 23 CMR) : obowiązkowy przy pierwszym starcie trasy dnia i przy sign"
                     }
                 }
             },
@@ -26224,6 +27028,52 @@
                                     "items": {
                                         "$ref": "#/components/schemas/PalletLine"
                                     }
+                                },
+                                "extra": {
+                                    "type": "array",
+                                    "description": "Na palecie, nie zamówione / Sur palette, non commandé",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "product_id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "category": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "ordered": {
+                                                "type": "integer"
+                                            },
+                                            "on_pallet": {
+                                                "type": "integer"
+                                            },
+                                            "scanned": {
+                                                "type": "integer"
+                                            },
+                                            "entered": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "check": {
+                                    "type": "object",
+                                    "description": "Kontrola z zamówieniem / Contrôle par rapport à la commande",
+                                    "properties": {
+                                        "ok": {
+                                            "type": "boolean"
+                                        },
+                                        "missing": {
+                                            "type": "integer"
+                                        },
+                                        "over": {
+                                            "type": "integer"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -26276,6 +27126,10 @@
                     "finished_at": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "cmr_signed_at": {
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -26305,6 +27159,22 @@
                             "delivered",
                             "problem"
                         ]
+                    },
+                    "receipt_mode": {
+                        "type": "string",
+                        "enum": [
+                            "tablet",
+                            "cmr",
+                            "absent"
+                        ],
+                        "nullable": true,
+                        "description": "tablet : signature sur la tablette ; cmr : signature dans la case 24 du CMR ; absent : client absent, photo après livraison obligatoire"
+                    },
+                    "pallets_note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true,
+                        "description": "obligatoire si toutes les palettes ne sont pas scannées"
                     },
                     "reason": {
                         "type": "string",
@@ -26413,7 +27283,8 @@
                         "type": "string",
                         "enum": [
                             "before",
-                            "after"
+                            "after",
+                            "temperature"
                         ]
                     },
                     "photo": {
@@ -26442,6 +27313,175 @@
                         "type": "string",
                         "maxLength": 100,
                         "nullable": true
+                    }
+                }
+            },
+            "DriverPalletInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "pallet_no",
+                    "photo"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "pallet_no": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "numéro lu dans le QR TFBPAL:numéro ou saisi"
+                    },
+                    "method": {
+                        "type": "string",
+                        "enum": [
+                            "qr",
+                            "manual"
+                        ],
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,… (driver.photo_max_kb)"
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "example": "2026-10-26 21:35:00",
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    },
+                    "lat": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "lng": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverPalletResult": {
+                "type": "object",
+                "properties": {
+                    "stop_id": {
+                        "type": "integer"
+                    },
+                    "pallet_no": {
+                        "type": "integer"
+                    },
+                    "scanned": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "pallet_scans": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "DriverIncidentInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "kind",
+                    "photo"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "pallet_damaged",
+                            "closed",
+                            "temperature",
+                            "missing_goods",
+                            "refused",
+                            "other"
+                        ]
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,… (driver.photo_max_kb)"
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "example": "2026-10-26 21:35:00",
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    },
+                    "lat": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "lng": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverIncidentResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "stop_id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "recorded_at": {
+                        "type": "string"
                     }
                 }
             },
@@ -26933,6 +27973,10 @@
                                 "type": "string"
                             }
                         }
+                    },
+                    "pin_change_required": {
+                        "type": "boolean",
+                        "description": "[361] PIN identique à celui d'une autre personne : à changer (PUT /kiosk/me/pin)"
                     }
                 }
             },
@@ -26959,6 +28003,12 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true,
+                        "description": "[365] remarque du jour (en général à la sortie), reprise sur la feuille de temps du mois"
+                    },
                     "direction": {
                         "type": "string",
                         "enum": [
@@ -30410,6 +31460,17 @@
                         "type": "string",
                         "maxLength": 4000,
                         "nullable": true
+                    },
+                    "material_lot_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Partie surowców : lot choisi dans la liste (received)"
+                    },
+                    "missing_reason": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true,
+                        "description": "Lot absent : motif (photo obligatoire)"
                     }
                 }
             },
@@ -30471,6 +31532,17 @@
                                         },
                                         "photo": {
                                             "type": "boolean"
+                                        },
+                                        "tracked": {
+                                            "type": "boolean"
+                                        },
+                                        "material_lot_id": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "missing_reason": {
+                                            "type": "string",
+                                            "nullable": true
                                         },
                                         "last": {
                                             "type": "object",
@@ -30678,6 +31750,114 @@
                     }
                 }
             },
+            "OfficeSearchPerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "phones": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "OfficeLoginInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "pin"
+                ],
+                "properties": {
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "OfficeLogin": {
+                "type": "object",
+                "properties": {
+                    "employee_token": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "pin_change_required": {
+                        "type": "boolean"
+                    },
+                    "person": {
+                        "$ref": "#/components/schemas/OfficePerson"
+                    }
+                }
+            },
+            "OfficePinInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "person_id",
+                    "pin"
+                ],
+                "properties": {
+                    "person_id": {
+                        "type": "integer"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "ChangePinInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "current_pin",
+                    "pin"
+                ],
+                "properties": {
+                    "current_pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "PinChanged": {
+                "type": "object",
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "changed": {
+                        "type": "boolean"
+                    }
+                }
+            },
             "OfficeQrInput": {
                 "type": "object",
                 "additionalProperties": false,
@@ -30815,6 +31995,26 @@
                     },
                     "questions": {
                         "$ref": "#/components/schemas/ClockQuestions"
+                    }
+                }
+            },
+            "ErpLogin": {
+                "type": "object",
+                "properties": {
+                    "account": {
+                        "type": "string"
+                    },
+                    "session": {
+                        "type": "string"
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    },
+                    "since": {
+                        "type": "string"
+                    },
+                    "browser": {
+                        "type": "string"
                     }
                 }
             },
@@ -31043,6 +32243,13 @@
                                 "night_hours": {
                                     "type": "number"
                                 },
+                                "day_note": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "week_from": {
+                                    "type": "string"
+                                },
                                 "open": {
                                     "type": "boolean"
                                 },
@@ -31083,6 +32290,36 @@
                                 }
                             }
                         }
+                    },
+                    "weeks": {
+                        "type": "array",
+                        "description": "[365] totaux par semaine (lundi–dimanche)",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "week": {
+                                    "type": "integer"
+                                },
+                                "from": {
+                                    "type": "string"
+                                },
+                                "to": {
+                                    "type": "string"
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "night_hours": {
+                                    "type": "number"
+                                },
+                                "days": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "night_window": {
+                        "type": "string"
                     },
                     "totals": {
                         "type": "object",
@@ -35216,6 +36453,65 @@
                     "force": {
                         "type": "boolean",
                         "description": "valider malgré les avertissements (facture seule)"
+                    }
+                }
+            },
+            "InvoiceAssistantStatus": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "invoices": {
+                        "type": "integer"
+                    },
+                    "todo": {
+                        "type": "integer"
+                    },
+                    "ready": {
+                        "type": "integer"
+                    },
+                    "disputed": {
+                        "type": "integer"
+                    },
+                    "oldest": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "done": {
+                        "type": "boolean"
+                    },
+                    "last_done": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "MaterialPriceImpact": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "new_price": {
+                        "type": "number"
+                    },
+                    "old_price": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "change_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "effect_month": {
+                        "type": "number"
+                    },
+                    "use_month": {
+                        "type": "number"
                     }
                 }
             },

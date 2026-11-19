@@ -44,6 +44,8 @@ declare(strict_types=1);
  * Contrat : docs/contrat-api.md § Formation · Standards (SOP) et § Formation · Manuel du réseau.
  */
 
+require_once __DIR__ . '/manuel_chiffres_cles.php';   // l'article des chiffres clés du réseau (18/11/2026)
+
 const FO_LANGUES = ['fr', 'nl'];
 const FO_POSTES = ['vente', 'cuisson', 'production', 'nettoyage'];
 const FO_DOSSIERS = [
@@ -151,6 +153,8 @@ function ensureSop(): void
     try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN partie VARCHAR(16) NULL AFTER poste'); } catch (PDOException $e) { /* déjà là */ }
     try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN acces VARCHAR(16) NULL AFTER moment'); } catch (PDOException $e) { /* déjà là */ }
     if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_sop')['n'] ?? 0) === 0) { foImporter(); }
+    // L'article « Les chiffres clés du réseau 2026 », écrit depuis les cibles du cockpit (18/11/2026).
+    if (function_exists('mcSynchroniser')) { mcSynchroniser(); }
 }
 
 /**
@@ -704,6 +708,8 @@ function wr_sop_tablette_langue(): array
 function sopRoute(string $method, string $path, bool $public = false): ?array
 {
     if (!str_starts_with($path, '/formation/sop/')) { return null; }
+    // Les chiffres clés du réseau : l'article suit les cibles du cockpit dès qu'on ouvre le manuel (une fois par requête).
+    if (function_exists('mcSynchroniser')) { mcSynchroniser(); }
     // La tablette du magasin (lot 5, src/tablettes.php) : chaque route exige la session de l'appareil, ouverte par
     // le PIN du magasin ; sans elle, 401 `appareil` et la tablette revient à l'écran du PIN.
     // La tablette OUVERTE (06/11/2026, client : « la tablette doit être ouverte, et pour tous les magasins la même chose ») :

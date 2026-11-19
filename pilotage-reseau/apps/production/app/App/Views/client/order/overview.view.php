@@ -56,6 +56,13 @@
 
                     <!-- Alerty informacyjne -->
                     <div class="mx-3">
+                        <?php if (!empty($order_notice)): ?>
+                            <div class="alert alert-info d-flex gap-2 align-items-start mb-3" role="status">
+                                <i class="bi bi-file-earmark-check flex-shrink-0 mt-1"></i>
+                                <div><?= htmlspecialchars((string) $order_notice) ?>
+                                    <?php if (!empty($order_notice_link['url'])): ?> <a class="btn btn-sm btn-primary ms-2" href="<?= ROOT . htmlspecialchars((string) $order_notice_link['url']) ?>"><i class="bi bi-envelope"></i> <?= htmlspecialchars((string) $order_notice_link['label']) ?></a><?php endif; ?></div>
+                            </div>
+                        <?php endif; ?>
                         <?php if (!empty(array_filter($pending ?? [], fn($o) => !empty($o['is_freebie'])))): ?>
                             <div class="alert alert-warning d-flex gap-2 align-items-start mb-3" role="alert">
                                 <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0 mt-1"></i>
@@ -86,33 +93,90 @@
 
                     <!-- Tabela zamówień -->
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size: .875rem;">
+                        <table class="table table-hover align-middle mb-0 at-orders" style="font-size: .875rem;">
                             <thead class="table-light">
                                 <tr>
                                     <th style="width:3%" class="ps-3">
                                         <input type="checkbox" class="form-check-input" onClick="togglePending(this)" checked>
                                     </th>
-                                    <th style="width:25%">Firma</th>
-                                    <th style="width:23%">Opis</th>
-                                    <th style="width:10%">Data zamówienia</th>
-                                    <th style="width:10%">Wysyłka</th>
-                                    <th style="width:7%" class="text-end">Waga</th>
-                                    <th style="width:10%" class="text-center">Proforma</th>
-                                    <th style="width:12%" class="text-end pe-3">Akcje</th>
+                                    <th style="width:24%">Firma</th>
+                                    <th style="width:<?= !empty($showValues) ? 22 : 31 ?>%">Opis</th>
+                                    <th style="width:9%" class="text-center">Data zamówienia</th>
+                                    <th style="width:9%" class="text-end">Waga</th>
+                                    <?php if (!empty($showValues)): ?><th style="width:9%" class="text-end">Wartość</th><?php endif; ?>
+                                    <th style="width:14%" class="text-start">Płatność</th>
+                                    <th style="width:10%" class="text-end pe-3">Akcje</th>
                                 </tr>
                             </thead>
                             <tbody>
+                            <?php
+                                // [312] Wartości (profil Finanse / CEO) : suma dnia wysyłki w nagłówku dnia.
+                                // [316] Bez kolumny « Wysyłka » : data wysyłki = nagłówek dnia (bez powtarzania w każdym wierszu).
+                                $cols = 7 + (!empty($showValues) ? 1 : 0);
+                                $dayTotals = [];
+                                // [315] Sumy na trasę w dniu wysyłki : zamówienia, kg, (Finanse / CEO) wartość według waluty.
+                                $tourTotals = [];
+                                foreach ($pending ?? [] as $o) {
+                                    $k = $o['expected_shipping_date'] . '|' . strtoupper((string) ($o['currency'] ?? 'EUR'));
+                                    $dayTotals[$k] = ($dayTotals[$k] ?? 0) + (float) ($o['order_value'] ?? 0);
+                                    $t = &$tourTotals[$o['expected_shipping_date']][$o['tour'] ?? ''];
+                                    $t ??= ['orders' => 0, 'kg' => 0.0, 'customers' => [], 'value' => []];
+                                    $t['orders']++;
+                                    $t['kg'] += (float) ($o['totalSumKg'] ?? 0);
+                                    $t['customers'][(int) ($o['id_customer'] ?? 0)] = true;
+                                    $cur = strtoupper((string) ($o['currency'] ?? 'EUR'));
+                                    $t['value'][$cur] = ($t['value'][$cur] ?? 0) + (float) ($o['order_value'] ?? 0);
+                                    unset($t);
+                                }
+                                $kgFmt = fn($v) => number_format((float) $v, 0, ',', ' ') . ' kg';
+                                $money = fn($v, $cur) => number_format((float) $v, 2, ',', ' ') . ' ' . (strtoupper((string) $cur) === 'EUR' ? '€' : strtoupper((string) $cur));
+                            ?>
                             <?php if (!empty($pending)): ?>
                                 <?php for ($i = 0; $i < count($pending); $i++): ?>
 
                                     <?php if ($pending[$i]['expected_shipping_date'] != @$pending[$i - 1]['expected_shipping_date'] || $i == 0): ?>
                                         <tr class="table-secondary">
-                                            <td colspan="8" class="ps-3 py-2">
+                                            <?php $dayKg = array_sum(array_column($tourTotals[$pending[$i]['expected_shipping_date']] ?? [], 'kg')); ?>
+                                            <td colspan="<?= !empty($showValues) ? $cols - 4 : $cols - 3 ?>" class="ps-3 py-2">
                                                 <i class="bi bi-calendar-event me-2 text-secondary"></i>
                                                 <strong class="text-secondary">
                                                     <?= day_label_pl($pending[$i]['expected_shipping_date']) ?>
                                                 </strong>
                                             </td>
+                                            <!-- Waga dnia w kolumnie « Waga » -->
+                                            <td class="text-end text-nowrap small py-2 at-num"><strong class="text-secondary"><?= $kgFmt($dayKg) ?></strong></td>
+                                            <?php if (empty($showValues)): ?><td colspan="2"></td><?php endif; ?>
+                                            <?php if (!empty($showValues)): ?>
+                                                <!-- Suma dnia w kolumnie « Wartość » -->
+                                                <td class="text-end text-nowrap py-2 at-num">
+                                                    <span class="small text-secondary d-block">Razem</span>
+                                                    <?php foreach ($dayTotals as $k => $v): [$d, $cur] = explode('|', $k); if ($d !== $pending[$i]['expected_shipping_date']) continue; ?>
+                                                        <strong class="text-secondary d-block"><?= $money($v, $cur) ?></strong>
+                                                    <?php endforeach; ?>
+                                                </td>
+                                                <td colspan="2"></td>
+                                            <?php endif; ?>
+                                        </tr>
+                                    <?php endif; ?>
+
+                                    <?php
+                                        // [316] Trasa : podtytuł nad jej zamówieniami (zamiast etykiety w każdym wierszu), sumy w kolumnach Waga / Wartość.
+                                        $dayTours = $tourTotals[$pending[$i]['expected_shipping_date']] ?? [];
+                                        $tourKey = $pending[$i]['tour'] ?? '';
+                                        $newTour = $i === 0 || $pending[$i]['expected_shipping_date'] != $pending[$i - 1]['expected_shipping_date'] || ($pending[$i - 1]['tour'] ?? '') !== $tourKey;
+                                    ?>
+                                    <?php if ($newTour && (count($dayTours) > 1 || !isset($dayTours['']))): $tt = $dayTours[$tourKey]; ?>
+                                        <tr class="at-tour-sum<?= $tourKey === '' ? ' is-none' : '' ?>">
+                                            <td></td>
+                                            <td colspan="<?= $cols - (!empty($showValues) ? 5 : 4) ?>" class="py-1">
+                                                <i class="bi bi-signpost-split me-1"></i><strong><?= htmlspecialchars($tourKey === '' ? 'Bez trasy' : $tourKey) ?></strong>
+                                                <span class="at-tour-meta"><?= $tt['orders'] ?> zam. · <?= count($tt['customers']) ?> kl.</span>
+                                            </td>
+                                            <td class="text-end text-nowrap small py-1 at-num"><?= $kgFmt($tt['kg']) ?></td>
+                                            <?php if (!empty($showValues)): ?>
+                                                <td class="text-end text-nowrap py-1 at-num at-tour-val"><?php foreach ($tt['value'] as $cur => $v): ?><span class="d-block"><?= $money($v, $cur) ?></span><?php endforeach; ?></td>
+                                            <?php endif; ?>
+                                            <td colspan="2"></td>
                                         </tr>
                                     <?php endif; ?>
 
@@ -184,16 +248,10 @@
                                             <?= $pending[$i]['create_order_time'] ?>
                                         </td>
 
-                                        <!-- Data wysyłki -->
-                                        <td class="text-nowrap small">
-                                            <i class="bi bi-truck me-1 text-primary"></i><?= $pending[$i]['expected_shipping_date'] ?>
-                                        </td>
 
                                         <!-- Waga -->
-                                        <td class="text-end text-nowrap small">
-                                            <span class="badge bg-light text-dark border">
-                                                <i class="bi bi-box me-1"></i><?= $pending[$i]['totalSumKg'] ?> kg
-                                            </span>
+                                        <td class="text-end text-nowrap small at-num">
+                                            <?= number_format((float) ($pending[$i]['totalSumKg'] ?? 0), 2, ',', ' ') ?> kg
                                         </td>
 
                                         <?php
@@ -202,16 +260,36 @@
                                             $proformaStale = !is_null($idProforma) && !$proformaPaid && !empty($pending[$i]['proforma_stale']);
                                             $isSupplement  = ($pending[$i]['order_type'] ?? 'STANDARD') === 'SUPPLEMENT';
                                         ?>
-                                        <!-- Proforma: stan; działania w menu „⋯” -->
-                                        <td class="text-center">
-                                            <?php if (is_null($idProforma)): ?>
-                                                <span class="at-pill at-pill-muted">Brak</span>
-                                            <?php elseif ($proformaPaid): ?>
-                                                <span class="at-pill at-pill-ok">Opłacona</span>
-                                            <?php elseif ($proformaStale): ?>
-                                                <span class="at-pill at-pill-danger" title="Zamówienie zostało zmienione po wystawieniu proformy">Nieaktualna</span>
+                                        <?php if (!empty($showValues)): ?>
+                                        <!-- [312] Wartość netto (profil Finanse / CEO) -->
+                                        <td class="text-end text-nowrap fw-semibold at-num">
+                                            <?= !empty($pending[$i]['is_freebie']) ? '<span class="text-muted">gratis</span>' : $money($pending[$i]['order_value'] ?? 0, $pending[$i]['currency'] ?? 'EUR') ?>
+                                        </td>
+                                        <?php endif; ?>
+                                        <!-- [312] Płatność : przełącznik opłacona / nieopłacona + ponowne przypomnienie (e-mail / SMS) -->
+                                        <td class="text-start">
+                                            <?php if (!empty($pending[$i]['is_freebie'])): ?>
+                                                <span class="at-pill at-pill-muted">Gratis</span>
+                                            <?php elseif (is_null($idProforma)): ?>
+                                                <span class="at-pill at-pill-muted" title="Najpierw wystaw proformę (menu „⋯”)">Brak proformy</span>
                                             <?php else: ?>
-                                                <span class="at-pill at-pill-warn">Nieopłacona</span>
+                                                <div class="at-pay">
+                                                    <label class="at-pay-switch" title="Opłacona / nieopłacona">
+                                                        <input type="checkbox" role="switch" data-paid-toggle="<?= (int) $pending[$i]['id'] ?>" <?= $proformaPaid ? 'checked' : '' ?>
+                                                               aria-label="Proforma opłacona">
+                                                        <span class="at-pay-track"></span>
+                                                        <span class="at-pay-text" data-paid-text><?= $proformaPaid ? 'Opłacona' : 'Nieopłacona' ?></span>
+                                                    </label>
+                                                    <button type="button" class="at-pay-remind" data-remind="<?= (int) $pending[$i]['id'] ?>" data-doc="<?= htmlspecialchars((string) ($pending[$i]['company'] ?? '')) ?>"
+                                                            title="Wyślij ponownie przypomnienie o płatności (e-mail albo SMS)" <?= $proformaPaid ? 'hidden' : '' ?>><i class="bi bi-send"></i></button>
+                                                </div>
+                                                <?php $last = $lastReminders[(int) $idProforma] ?? null; ?>
+                                                <?php if ($last && !$proformaPaid): ?>
+                                                    <div class="small text-muted" data-last-reminder>przyp. <?= date('d.m H:i', strtotime((string) $last['at'])) ?> · <?= $last['channel'] === 'sms' ? 'SMS' : 'e-mail' ?></div>
+                                                <?php endif; ?>
+                                                <?php if ($proformaStale): ?>
+                                                    <span class="at-pill at-pill-danger mt-1" title="Zamówienie zostało zmienione po wystawieniu proformy">Nieaktualna</span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
 
@@ -232,9 +310,6 @@
                                                         <?php else: ?>
                                                             <button type="button" role="menuitem" onclick="generateProforma(<?= (int) $idProforma ?>)"><i class="bi bi-file-earmark-text"></i>Pobierz proformę (PDF)</button>
                                                             <a role="menuitem" href="<?= ROOT ?>/communication/compose/proforma/<?= (int) $idProforma ?>"><i class="bi bi-envelope"></i>Przygotuj e-mail</a>
-                                                            <?php if (!$proformaPaid): ?>
-                                                                <button type="button" role="menuitem" onclick="markProformaPaid(<?= (int) $idProforma ?>)"><i class="bi bi-check-circle"></i>Oznacz jako opłaconą</button>
-                                                            <?php endif; ?>
                                                             <?php if ($proformaStale): ?>
                                                                 <button type="button" role="menuitem" onclick="regenerateProforma(<?= (int) $pending[$i]['id'] ?>)"><i class="bi bi-arrow-repeat"></i>Wygeneruj nową proformę</button>
                                                             <?php endif; ?>
@@ -268,7 +343,7 @@
 
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-5">
+                                    <td colspan="<?= $cols ?>" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
                                         Brak oczekujących zamówień
                                     </td>
@@ -419,6 +494,47 @@
     function generateProforma(idProforma){
         downloadPDF(`/ajax/proforma-documents/${idProforma}/document`);
     }
+
+    // [312] Płatność : przełącznik (bez przeładowania) i przypomnienie e-mail / SMS.
+    document.querySelectorAll('[data-paid-toggle]').forEach((box) => box.addEventListener('change', async () => {
+        const paid = box.checked;
+        box.disabled = true;
+        const r = await api(`/ajax/client-orders/${box.dataset.paidToggle}/paid`, {method: 'POST', data: {paid}});
+        box.disabled = false;
+        const cell = box.closest('td');
+        if (!r.ok) {
+            box.checked = !paid;
+            await Swal.fire('Błąd', (r.data && r.data.message) || 'Nie udało się zapisać płatności.', 'error');
+            return;
+        }
+        cell.querySelector('[data-paid-text]').textContent = paid ? 'Opłacona' : 'Nieopłacona';
+        const remind = cell.querySelector('[data-remind]');
+        if (remind) remind.hidden = paid;
+        const last = cell.querySelector('[data-last-reminder]');
+        if (last) last.hidden = paid;
+    }));
+    document.querySelectorAll('[data-remind]').forEach((btn) => btn.addEventListener('click', async () => {
+        const choice = await Swal.fire({
+            title: 'Przypomnienie o płatności',
+            html: `<p class="mb-1">${btn.dataset.doc.replace(/[&<>"']/g, '')}</p><p class="small text-muted mb-0">E-mail : kolejny poziom przypomnienia proformy (1–5) z PDF, w języku klienta. SMS : krótka wiadomość na telefon z fiche klienta.</p>`,
+            showDenyButton: true, showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-envelope"></i> E-mail', denyButtonText: '<i class="bi bi-phone"></i> SMS', cancelButtonText: 'Anuluj',
+        });
+        if (choice.isDismissed) return;
+        const channel = choice.isConfirmed ? 'email' : 'sms';
+        btn.disabled = true;
+        const r = await api(`/ajax/client-orders/${btn.dataset.remind}/remind`, {method: 'POST', data: {channel}});
+        btn.disabled = false;
+        const message = (r.data && r.data.message) || (r.ok ? 'Wysłano.' : 'Nie udało się wysłać przypomnienia.');
+        await Swal.fire(r.ok ? 'Wysłano' : 'Błąd', message, r.ok ? 'success' : 'error');
+        if (r.ok) {
+            const cell = btn.closest('td');
+            let last = cell.querySelector('[data-last-reminder]');
+            if (!last) { last = document.createElement('div'); last.className = 'small text-muted'; last.dataset.lastReminder = ''; btn.closest('.at-pay').after(last); }
+            const d = new Date();
+            last.textContent = `przyp. ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${channel === 'sms' ? 'SMS' : 'e-mail'}`;
+        }
+    }));
 
     async function markProformaPaid(idProforma) {
         const confirmation = await Swal.fire({
@@ -581,3 +697,27 @@
     }
 
 </script>
+
+<style>
+/* [312] Płatność zamówienia : przełącznik + przypomnienie. */
+.at-pay{display:inline-flex;align-items:center;gap:6px}
+.at-pay-switch{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;font-size:.8rem;white-space:nowrap}
+.at-pay-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.at-pay-track{position:relative;width:34px;height:20px;border-radius:999px;background:#d9d3cd;transition:background .15s}
+.at-pay-track::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.at-pay-switch input:checked + .at-pay-track{background:#2E7D4F}
+.at-pay-switch input:checked + .at-pay-track::after{transform:translateX(14px)}
+.at-pay-switch input:focus-visible + .at-pay-track{outline:2px solid #8D1D2C;outline-offset:2px}
+.at-pay-switch input:checked ~ .at-pay-text{color:#2E7D4F;font-weight:600}
+.at-tour-sum td{background:#FBF7F5;border-bottom:1px solid #EFE8DF;font-size:.82rem;color:#44403C}
+.at-tour-sum.is-none td{color:#78716C}
+.at-tour-sum .at-tour-meta{color:#78716C;margin-left:8px}
+.at-tour-sum .at-tour-val{font-weight:700;color:#8D1D2C}
+.at-orders td,.at-orders th{vertical-align:middle}
+.at-orders .at-num{font-variant-numeric:tabular-nums}
+.at-orders thead th{white-space:nowrap}
+.at-pay-switch input:not(:checked) ~ .at-pay-text{color:#B45309;font-weight:600}
+.at-pay-remind{border:1px solid #e3ddd8;background:#fff;border-radius:8px;width:30px;height:28px;display:inline-grid;place-items:center;color:#8D1D2C}
+.at-pay-remind:hover{background:#fbf3f3}
+.at-pay-remind[hidden]{display:none}
+</style>

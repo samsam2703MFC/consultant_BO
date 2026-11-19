@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
+
 require_once __DIR__ . '/erp_cles.php';
 
 /**
@@ -126,8 +128,9 @@ function ep_meta(): array
         'exercice'         => (int) setting('exercice', (int) date('Y')),
         'moisLabels'       => setting('moisLabels', []),
         'seuils'           => [
-            'food'        => $seuils['food'] ?? 32,
-            'labour'      => $seuils['labour'] ?? 33,
+            // food et labour : les cibles du réseau, les mêmes partout (src/cibles_reseau.php).
+            'food'        => foodCostCible(),
+            'labour'      => personnelCible(),
             'overhead'    => $seuils['overhead'] ?? 13.5,
             'royalties'   => $seuils['royalties'] ?? 3,
             'financieres' => $seuils['financieres'] ?? 2.2,
@@ -497,6 +500,10 @@ function ep_pwa_tasks(): array
                     ? substr((string) $apiTaches[$sid . '|' . $tid]['completed_at'], 0, 16) : null,
                 'faitePar'    => trim((string) ($apiTaches[$sid . '|' . $tid]['completed_by'] ?? '')) ?: null,
                 'statut'      => $valide ? 'notee' : 'aControler',
+                // Une note porte sur une photo rendue (16/11/2026) : la tâche notée garde `photo` et `photoRequise`, sinon le
+                // dashboard magasin la sortait du compte des photos (« Photos rendues 0 / 3 » avec sept photos notées).
+                'photo'       => true,
+                'photoRequise' => true,
                 // La checklist aussi pour une tâche notée : la fiche franchisé range les tâches du jour par checklist.
                 'checklist'   => trim((string) ($apiTaches[$sid . '|' . $tid]['checklist_name'] ?? '')) ?: null,
                 // Le drapeau du panel aussi (20/10/2026) : sans lui, le relevé gardait une tâche notée pour
@@ -696,13 +703,9 @@ function ep_product_periodes(): array
     $triDeb    = date('Y-m-01 00:00:00', strtotime($moisDeb . ' -2 months'));
     $anPrec    = ((int) substr($per, 0, 4)) - 1;
 
-    // Le coût matière : les mêmes sources que le score, dans le même ordre —
-    // recettes (et panel, via catalogueCouts), puis la saisie du cockpit.
+    // Le coût matière : la même source que le score — les recettes (et le panel, via catalogueCouts). La saisie du
+    // cockpit n'est plus lue (19/11/2026) : le panel fait foi.
     $cout = catalogueCouts()[$pid]['mat'] ?? null;
-    try {
-        $ov = Db::row('SELECT mat FROM ceo_prod_product WHERE pwa_id = ? AND mat IS NOT NULL AND actif = 1', [$pid]);
-        if ($ov !== null) { $cout = (float) $ov['mat']; }
-    } catch (PDOException $e) { /* référentiel absent : recettes seules */ }
 
     $fenetre = static function (string $du, string $au) use ($pid, $cout): array {
         $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(6000) */
@@ -2035,52 +2038,23 @@ function ep_exploitation_jour(): array
  * Les seuils du P&L court, en % du chiffre d'affaires : coût matière (`food`), main-d'œuvre (`labour`), frais
  * généraux (`overhead`). Une seule définition, lue par le jour (/exploitation/jour) et par la période (resultat.php).
  *
- * Le coût matière vient de Budget › Paramètres (réglage `budgetCharges`, 07/11/2026) : le taux du réseau qu'on y
- * pose est celui que le dashboard montre, pas une seconde valeur tenue ailleurs. La catégorie lue est celle que le
- * palier de la marge brute retranche (`droite` = « cat:<nom> »), à défaut la première dont le nom commence par
- * « Matière » ; son taux = la somme des taux « budget » de ses lignes, ou de leurs taux « théoriques » tant que le
- * budget n'est pas posé (tout à 0). Main-d'œuvre et frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`),
- * comme avant. Sans réglage ni table : 32 / 33 / 13,5. `food` y passe aussi en dernier repli.
+ * Le coût matière et la main-d'œuvre : les cibles du réseau, une variable chacune, la même partout (18/11/2026, Sam :
+ * « on garde pour le moment à 40 % (la même variable partout) », « même variable pour le personnel à 17 % » ;
+ * foodCostCible et personnelCible, src/cibles_reseau.php, réglées au Catalogue des KPI). Du 07/11 au 18/11/2026, la
+ * matière était le taux de Budget › Paramètres (38 + 2 = 40 % au 07/11) et la main-d'œuvre la table `kpi` (33 %).
+ * Frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`), comme avant ; sans table : 13,5.
  */
 function seuilsCharges(): array
 {
-    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    $seuils = ['food' => foodCostCible(), 'labour' => personnelCible(), 'overhead' => 13.5];
     try {
         foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
-                            WHERE code IN ('food','labour','overhead')") as $k) {
+                            WHERE code IN ('overhead')") as $k) {
             $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
                 ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
         }
     } catch (PDOException $e) { /* seuils par défaut */ }
-    $food = seuilMatiereBudget();
-    if ($food !== null) { $seuils['food'] = $food; }
     return $seuils;
-}
-
-/** Le taux matière du réseau posé dans Budget › Paramètres (voir seuilsCharges) ; null s'il n'y est pas. */
-function seuilMatiereBudget(): ?float
-{
-    try { $m = setting('budgetCharges'); } catch (Throwable $e) { return null; }
-    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return null; }
-    $nom = null;
-    foreach ((array) ($m['paliers'] ?? []) as $p) {
-        $d = is_array($p) ? (string) ($p['droite'] ?? '') : '';
-        if (str_starts_with($d, 'cat:')) { $nom = substr($d, 4); break; }
-    }
-    $cat = null;
-    foreach ($m['categories'] as $c) {
-        $n = is_array($c) ? (string) ($c['nom'] ?? '') : '';
-        if (($nom !== null && $n === $nom) || ($nom === null && preg_match('/^mati[eè]re/iu', $n) === 1)) { $cat = $c; break; }
-    }
-    if (!is_array($cat) || !is_array($cat['lignes'] ?? null) || $cat['lignes'] === []) { return null; }
-    $budget = 0.0; $theo = 0.0;
-    foreach ($cat['lignes'] as $l) {
-        if (!is_array($l)) { continue; }
-        $budget += is_numeric($l['pct'] ?? null) ? (float) $l['pct'] : 0.0;
-        $theo += is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0;
-    }
-    $t = $budget > 0 ? $budget : $theo;
-    return $t > 0 && $t < 100 ? round($t, 1) : null;
 }
 
 function exJourCalcul(): array
@@ -2222,6 +2196,11 @@ function exJourCalcul(): array
             if (!isset($proLu[$id]) && is_array($res['tkl' . $id] ?? null)) { $proLu[$id] = vpGraveListe($id, $date, $res['tkl' . $id]); }
         }
     }
+
+    // Le P&L hors TVA (16/11/2026, src/pnl_ht.php) : la part hors TVA des frais de chaque mois touché (onglet Frais),
+    // une lecture des frais du panel par magasin, gardée une heure.
+    $fraisParts = function_exists('phFraisParts')
+        ? phFraisParts(array_map(static fn ($s) => (int) $s['id'], $shops), array_unique([substr($date, 0, 7), substr($lundiSem, 0, 7)])) : [];
 
     /** La ventilation d'une réponse category-sales : [magasin => [catégorie => CA]]. */
     $lireCats = static function ($cs): array {
@@ -2392,16 +2371,28 @@ function exJourCalcul(): array
             $e = svMatiereJour($id, $j, $zeroMb, 0);
             return $e !== null ? (float) $d['ca'] - (float) $e['estime'] : null;
         };
+        // Le P&L hors TVA (16/11/2026, src/pnl_ht.php) : la part de TVA du CA de chaque jour lu (les tickets du jour
+        // regardé, sinon la caisse gravée, sinon le taux habituel) et la part hors TVA des frais de son mois.
+        $avecHt = function_exists('phTvaJours') && function_exists('phPnl');
+        $tvaJ = $avecHt ? phTvaJours($id, array_merge(array_keys($parJour), [$date]), [$date => $proLu[$id] ?? null]) : [];
+        $partTvaDe = static fn (string $j): float => (float) ($tvaJ[$j]['part'] ?? 0.0);
+        $partFraisDe = static fn (string $j): ?float => $fraisParts[$id][substr($j, 0, 7)]['part'] ?? null;
+        // Le résultat hors TVA d'un jour : marge du panel − TVA du CA − main-d'œuvre − frais hors TVA.
+        $netDe = static fn (?float $mbJ, string $j, float $caJ): ?float => $avecHt
+            ? phNetJour($mbJ, $caJ, $partTvaDe($j), $labJ, $ohJ, $partFraisDe($j))
+            : (($mbJ !== null && $labJ !== null && $ohJ !== null) ? $mbJ - $labJ - $ohJ : null);
         $serie = [];
         foreach ($parJour as $j => $d) {
             if (!str_starts_with($j, $moisAff)) { continue; }   // la série montre le MOIS
             $mbJ = $d['ouvert'] ? $mbDe($j, $d) : null;
-            $net = ($d['ouvert'] && $mbJ !== null && $labJ !== null && $ohJ !== null) ? $mbJ - $labJ - $ohJ : null;
+            $net = $d['ouvert'] ? $netDe($mbJ, $j, (float) $d['ca']) : null;
+            $caHtJ = (float) $d['ca'] * (1 - $partTvaDe($j));
             $serie[] = ['date' => $j, 'ouvert' => $d['ouvert'],
                 'ca' => $d['ouvert'] ? round($d['ca'], 2) : null,
+                'caHt' => $d['ouvert'] ? round($caHtJ, 2) : null,
                 'tickets' => $d['ouvert'] ? $d['tickets'] : null,
                 'net' => $net !== null ? round($net, 2) : null,
-                'netPct' => ($net !== null && $d['ca'] > 0) ? round($net / $d['ca'] * 100, 1) : null];
+                'netPct' => ($net !== null && $caHtJ > 0) ? round($net / $caHtJ * 100, 1) : null];
         }
 
         $jour = $parJour[$date] ?? null;
@@ -2464,6 +2455,15 @@ function exJourCalcul(): array
         $inv = $invM[$id] ?? ['cout' => null, 'pieces' => null, 'declare' => null, 'source' => 'panel muet'];
         $invCout = $inv['cout'] ?? 0.0;
         $net = ($fc !== null && $labour !== null && $oh !== null) ? $ca - $fc - $invCout - $labour - $oh : null;
+        // Hors TVA (16/11/2026) : le CA sans la TVA de ses tickets, les frais sans leur TVA ; les % sur le CA hors TVA.
+        $pnlHt = null;
+        if ($avecHt) {
+            $fpJ = $fraisParts[$id][substr($date, 0, 7)] ?? null;
+            $pnlHt = phPnl((float) $ca, $partTvaDe($date), $fc, $inv['cout'] !== null ? (float) $inv['cout'] : null, $labour, $oh, $fpJ['part'] ?? null)
+                + ['tvaSource' => phTvaSourceLib([(string) ($tvaJ[$date]['src'] ?? 'defaut')]),
+                   'fraisSource' => phFraisSourceLib($fpJ), 'fraisAIndiquer' => $fpJ['aIndiquer'] ?? null, 'pnlBase' => 'ht'];
+            $net = $pnlHt['net'];
+        }
 
         // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
         // Une catégorie absente d'un jour de référence OUVERT compte zéro : ne
@@ -2658,10 +2658,12 @@ function exJourCalcul(): array
             $d6 = $parJour[$j6] ?? null;
             $ouv6 = $d6 !== null && $d6['ouvert'];
             $mb6 = $ouv6 ? $mbDe($j6, $d6) : null;
-            $net6 = ($ouv6 && $mb6 !== null && $labJ !== null && $ohJ !== null) ? $mb6 - $labJ - $ohJ : null;
+            $net6 = $ouv6 ? $netDe($mb6, $j6, (float) $d6['ca']) : null;
             if ($j6 === $date && $net !== null) { $net6 = $net; }
             $semaine[] = ['date' => $j6, 'wd' => $wd6, 'passe' => $j6 <= $date, 'aujourdhui' => $j6 === $date,
-                'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null, 'tickets' => $ouv6 ? $d6['tickets'] : null,
+                'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null,
+                'caHt' => $ouv6 ? round((float) $d6['ca'] * (1 - $partTvaDe($j6)), 2) : null,
+                'tickets' => $ouv6 ? $d6['tickets'] : null,
                 'net' => $net6 !== null ? round($net6, 2) : null, 'objectif' => $obj6];
         }
         // Les ventes PAR HEURE du jour (déjà lues par la route des heures) et
@@ -2805,6 +2807,7 @@ function exJourCalcul(): array
             // Le split pro / comptoir : les tickets des clients pro du panel,
             // le reste du CA de la ligne au comptoir.
             + (function_exists('vpSplit') ? vpSplit($proLu[$id] ?? null, (float) $ca, (int) $tickets) : []);
+        if ($pnlHt !== null) { $lignes[count($lignes) - 1] = array_merge($lignes[count($lignes) - 1], $pnlHt); }
         // Les clients manquants du jour se comptent au comptoir (CA pro exclu).
         if (function_exists('vpClientsComptoir')) {
             $iL = count($lignes) - 1;
@@ -2820,7 +2823,7 @@ function exJourCalcul(): array
     $out['magasins'] = $lignes;
 
     // --- Réseau : la somme de ce qui est connu, jamais une extrapolation.
-    $t = ['ca' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
+    $t = ['ca' => 0.0, 'caHt' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
         'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0, 'invendus' => 0.0, 'invendusPieces' => 0.0];
     $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = []; $invLus = 0; $invDeclarent = 0;
     $pro = ['ca' => 0.0, 'tickets' => 0, 'caMag' => 0.0, 'ticketsMag' => 0, 'n' => 0];
@@ -2831,7 +2834,7 @@ function exJourCalcul(): array
             $pro['n']++; $pro['ca'] += $l['caPro']; $pro['tickets'] += (int) $l['ticketsPro'];
             $pro['caMag'] += $l['ca']; $pro['ticketsMag'] += (int) $l['tickets'];
         }
-        $t['ca'] += $l['ca']; $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
+        $t['ca'] += $l['ca']; $t['caHt'] += (float) ($l['caHt'] ?? $l['ca']); $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
         $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
         if (($l['invendus'] ?? null) !== null) { $invLus++; $t['invendus'] += (float) $l['invendus']; $t['invendusPieces'] += (float) ($l['invendusPieces'] ?? 0); if (!empty($l['invendusDeclare'])) { $invDeclarent++; } }
         if ($l['refCa'] === null) { $refComplet = false; }
@@ -2855,7 +2858,9 @@ function exJourCalcul(): array
     }
     usort($catsR, fn ($a, $b) => $b['ca'] <=> $a['ca']);
     $ca = $t['ca'];
-    $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'tickets' => $t['tickets'],
+    // Les % du P&L du réseau se rapportent au CA hors TVA (16/11/2026) ; CA, panier et écarts restent sur le TTC.
+    $caP = $t['caHt'] > 0 ? $t['caHt'] : $ca;
+    $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'caHt' => round($t['caHt'], 2), 'tva' => round($ca - $t['caHt'], 2), 'pnlBase' => 'ht', 'tickets' => $t['tickets'],
         'produits' => $t['produits'],
         'refCa' => $refComplet ? round($t['refCa'], 2) : null,
         'refJours' => $refMin,
@@ -2863,20 +2868,20 @@ function exJourCalcul(): array
         'panier' => $t['tickets'] > 0 ? round($ca / $t['tickets'], 2) : null,
         'produitsParClient' => $t['tickets'] > 0 ? round($t['produits'] / $t['tickets'], 2) : null,
         'coutMatiere' => round($t['coutMatiere'], 2),
-        'coutMatierePct' => $ca > 0 ? round($t['coutMatiere'] / $ca * 100, 1) : null,
+        'coutMatierePct' => $caP > 0 ? round($t['coutMatiere'] / $caP * 100, 1) : null,
         'margeBrute' => round($t['margeBrute'], 2),
-        'margeBrutePct' => $ca > 0 ? round($t['margeBrute'] / $ca * 100, 1) : null,
+        'margeBrutePct' => $caP > 0 ? round($t['margeBrute'] / $caP * 100, 1) : null,
         'invendus' => $invLus ? round($t['invendus'], 2) : null,
-        'invendusPct' => ($invLus && $ca > 0) ? round($t['invendus'] / $ca * 100, 1) : null,
+        'invendusPct' => ($invLus && $caP > 0) ? round($t['invendus'] / $caP * 100, 1) : null,
         'invendusPieces' => $invLus ? round($t['invendusPieces'], 1) : null,
         'invendusDeclare' => $invLus ? $invDeclarent > 0 : null,
         'invendusSource' => $invLus ? ($invDeclarent . ' magasin' . ($invDeclarent > 1 ? 's' : '') . ' sur ' . $ouverts . ' déclare' . ($invDeclarent > 1 ? 'nt' : '') . ' la poubelle') : 'panel muet',
         'labour' => $netComplet ? round($t['labour'], 2) : null,
-        'labourPct' => ($netComplet && $ca > 0) ? round($t['labour'] / $ca * 100, 1) : null,
+        'labourPct' => ($netComplet && $caP > 0) ? round($t['labour'] / $caP * 100, 1) : null,
         'overhead' => $netComplet ? round($t['overhead'], 2) : null,
-        'overheadPct' => ($netComplet && $ca > 0) ? round($t['overhead'] / $ca * 100, 1) : null,
+        'overheadPct' => ($netComplet && $caP > 0) ? round($t['overhead'] / $caP * 100, 1) : null,
         'net' => $netComplet ? round($t['net'], 2) : null,
-        'netPct' => ($netComplet && $ca > 0) ? round($t['net'] / $ca * 100, 1) : null,
+        'netPct' => ($netComplet && $caP > 0) ? round($t['net'] / $caP * 100, 1) : null,
         // Le split du réseau sur les magasins dont les tickets sont lus :
         // `proMagasins` < `magasins` dit qu'il en manque.
         'caPro' => $pro['n'] ? round($pro['ca'], 2) : null,
@@ -3804,13 +3809,13 @@ function cataloguePrixMagasin(int $sid): array
 function ficheRemplie(?array $e): bool
 {
     if ($e === null) { return false; }
-    foreach (['prep', 'cuisson', 'fin', 'bmin', 'four', 'dlv', 'qmin'] as $k) {
+    // Depuis le 19/11/2026, la fiche ne tient que la fabrication : le prix, le coût et la durée de vie sont au panel,
+    // l'obligatoire et son minimum dans l'assortiment.
+    foreach (['prep', 'cuisson', 'fin', 'bmin', 'four'] as $k) {
         if ((int) ($e[$k] ?? 0) > 0) { return true; }
     }
     if ((int) ($e['bmult'] ?? 1) > 1) { return true; }
-    if (($e['mat'] ?? null) !== null || ($e['prix'] ?? null) !== null) { return true; }
-    if ((string) ($e['profil'] ?? '') !== '') { return true; }
-    return !empty($e['must']);
+    return (string) ($e['profil'] ?? '') !== '';
 }
 
 function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?array
@@ -3871,19 +3876,19 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         $ref = $e !== null ? (string) $e['ref'] : (string) $pid;
         $pl  = $plano[$ref] ?? null;
 
-        // Prix : la saisie réseau prime, puis le prix réellement pratiqué en
-        // boutique (`shop_product`), puis seulement le prix conseillé de la
-        // fiche — qui vaut 1,00 partout, donc ne veut rien dire.
-        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : null;
-        $prixSrc = $prix !== null ? 'réseau' : null;
-        if ($prix === null && isset($prixR[$pid])) { $prix = $prixR[$pid]; $prixSrc = 'boutiques'; }
+        // Le panel fait foi (19/11/2026, docs/audit-rail.md § 4.1) : le prix, le coût matière et la durée de vie se
+        // lisent au panel et s'y corrigent (Produits › Paramétrage, Vérification › Recettes à corriger). Ce que la
+        // fiche de production du cockpit en avait saisi n'est plus lu : il est rendu à part (saisieCockpit), pour être
+        // reporté au panel s'il est juste.
+        // Prix : celui réellement pratiqué en boutique (`shop_product`), sinon le prix conseillé de la fiche.
+        $prix = null; $prixSrc = null;
+        if (isset($prixR[$pid])) { $prix = $prixR[$pid]; $prixSrc = 'boutiques'; }
         if ($prix === null && (float) $p['suggested_sale_price'] > 0) {
             $prix = (float) $p['suggested_sale_price']; $prixSrc = 'fiche';
         }
-        // Coût matière : la saisie cockpit prime, sinon la recette du réseau.
-        $mat = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : null;
-        $matSrc = $mat !== null ? 'saisi' : null;
-        if ($mat === null && isset($couts[$pid])) {
+        // Coût matière : la recette du réseau.
+        $mat = null; $matSrc = null;
+        if (isset($couts[$pid])) {
             $mat = $couts[$pid]['mat']; $matSrc = $couts[$pid]['source'];
         }
         // Vraisemblance du coût. Au-dessus du prix, la recette est mal
@@ -3894,9 +3899,13 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         // corriger à la source.
         $matFiable = coutVraisemblable($mat, $prix);
 
-        $dlv = $e !== null && (int) $e['dlv'] > 0 ? (int) $e['dlv'] : null;
-        if ($dlv === null && (int) $p['shelf_life_minutes'] > 0) {
-            $dlv = (int) round(((int) $p['shelf_life_minutes']) / 60);
+        $dlv = (int) $p['shelf_life_minutes'] > 0 ? (int) round(((int) $p['shelf_life_minutes']) / 60) : null;
+        // L'ancienne saisie du cockpit, montrée seulement : plus rien ne la lit.
+        $saisieCockpit = [];
+        if ($e !== null) {
+            if ($e['prix'] !== null) { $saisieCockpit['prix'] = (float) $e['prix']; }
+            if ($e['mat'] !== null) { $saisieCockpit['mat'] = (float) $e['mat']; }
+            if ((int) $e['dlv'] > 0) { $saisieCockpit['dlv'] = (int) $e['dlv']; }
         }
 
         $fin = $fins[$ref] ?? null;
@@ -3915,6 +3924,7 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
             'four'    => $e ? (int) $e['four'] : 0,
             'dlv' => $dlv ?? 0, 'mat' => $mat, 'prix' => $prix,
             'matSource' => $matSrc, 'prixSource' => $prixSrc, 'matFiable' => $matFiable,
+            'saisieCockpit' => $saisieCockpit ?: null,
             'marge'    => ($matFiable && $mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
             'margePct' => ($matFiable && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
             // Marge NETTE : la commission de marque retirée. Elle vient de la
@@ -4177,15 +4187,16 @@ function produitLigne(): callable
     $prixR = cataloguePrix();
     $enrich = [];
     try {
-        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
+        foreach (Db::rows('SELECT pwa_id, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
             $enrich[(int) $r['pwa_id']] = $r;
         }
     } catch (PDOException $e) { /* référentiel de production absent */ }
 
+    // Prix et coût matière : le panel fait foi (19/11/2026) ; le cockpit ne garde que l'obligatoire.
     return function (int $pid, string $nom) use ($couts, $prixR, $enrich): array {
         $e = $enrich[$pid] ?? null;
-        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : ($prixR[$pid] ?? null);
-        $mat  = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : ($couts[$pid]['mat'] ?? null);
+        $prix = $prixR[$pid] ?? null;
+        $mat  = $couts[$pid]['mat'] ?? null;
         $ok   = coutVraisemblable($mat, $prix);
         return ['id' => (string) $pid, 'nom' => $nom, 'prix' => $prix, 'mat' => $mat,
             'matFiable' => $ok,
@@ -4691,6 +4702,8 @@ function ep_pwa_task_detail(): array
         // se discute sans savoir de quel service ni de quelle personne il
         // vient — et l'heure dit souvent à elle seule ce qui s'est passé.
         'faitLe' => null, 'faitPar' => null,
+        // L'heure STANDARD de la tâche (celle de sa checklist) : la ponctualité de la photo se juge contre elle.
+        'heure' => null,
         'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
         'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
         // Référence : la photo de la fiche technique du produit contrôlé, pour
@@ -4700,6 +4713,8 @@ function ep_pwa_task_detail(): array
         // TYPE du rayon, posée dans le cockpit (src/rayons_photos.php). Chemin
         // local, à part de photoRef que le rapport PDF et l'IA téléchargent.
         'rayon' => null,
+        // Les photos d'EXEMPLE du rayon, jugées parfaites par le consultant (src/ia_assistant.php), ce magasin d'abord.
+        'exemples' => [],
         // Repères posés sur la photo. Lus AVANT l'API : ils sont locaux, ils
         // doivent revenir même si le panel ne répond pas.
         'reperes' => annotationLire($shopId, $taskId, $date),
@@ -4720,6 +4735,7 @@ function ep_pwa_task_detail(): array
             $out['statut']       = $t['status'] ?? null;
             $out['faitLe']       = ($t['completed_at'] ?? null) !== null ? substr((string) $t['completed_at'], 0, 16) : null;
             $out['faitPar']      = trim((string) ($t['completed_by'] ?? '')) ?: null;
+            $out['heure']        = preg_match('/^\d{2}:\d{2}/', (string) ($t['execution_time'] ?? '')) ? substr((string) $t['execution_time'], 0, 5) : null;
             foreach (['product_id', 'id_product', 'productId'] as $pk) {
                 if (!empty($t[$pk]) && is_numeric($t[$pk])) { $out['produitId'] = (int) $t[$pk]; break; }
             }
@@ -4759,6 +4775,12 @@ function ep_pwa_task_detail(): array
     }
     if ($out['tache'] !== null && function_exists('rvRayonDeTache') && ($rv = rvRayonDeTache($out['tache'])) !== null) {
         $out['rayon'] = ['cle' => $rv['cle'], 'nom' => $rv['nom'], 'photo' => $rv['photo'], 'consigne' => $rv['consigne']];
+        // Les photos d'exemple du rayon (src/ia_assistant.php), celles de ce magasin d'abord : le volet les montre,
+        // la proposition de l'IA les reçoit après le planogramme.
+        foreach (function_exists('iaExemplesPour') ? iaExemplesPour((string) $rv['cle'], $shopId, 6) : [] as $ex) {
+            $out['exemples'][] = ['photo' => $ex['photo'], 'date' => $ex['source_jour'], 'taskId' => (string) $ex['source_task'],
+                'shopId' => (string) $ex['shop_id'], 'memeMagasin' => (int) $ex['shop_id'] === $shopId, 'par' => $ex['par']];
+        }
     }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;
@@ -6422,19 +6444,6 @@ function ep_people(): array
         Db::rows('SELECT * FROM ceo_person ORDER BY id'));
 }
 
-function ep_reporting(): array
-{
-    $reports = array_map(fn ($r) => [
-        'id' => $r['id'], 'nom' => $r['name'], 'type' => $r['type'], 'desc' => $r['description'],
-        'freq' => $r['frequency'], 'postes' => json_decode($r['postes_json'], true),
-        'destId' => $r['dest_id'], 'ccId' => $r['cc_id'] ?? '',
-        'dernier' => $r['last_run'], 'actif' => (bool) $r['active'],
-    ], Db::rows('SELECT * FROM ceo_report_schedule ORDER BY id'));
-    $alertRules = array_map(fn ($a) => ['id' => $a['id'], 'nom' => $a['name'], 'canal' => $a['channel'], 'actif' => (bool) $a['active']],
-        Db::rows('SELECT * FROM ceo_alert_rule ORDER BY id'));
-    return ['reports' => $reports, 'alertRules' => $alertRules];
-}
-
 function ep_journal(): array
 {
     return array_map(fn ($l) => [
@@ -6634,17 +6643,12 @@ function ep_products(): array
         // (product_recipe ⨝ recipe_cost, ~422 références sur 711), le panel
         // pour les références sans recette (recipe_cost_net de
         // /shops/{id}/products/available, dans catalogueCouts), puis la
-        // saisie du cockpit qui prime — elle corrige au cas par cas.
+        // saisie du cockpit primait — elle n'est plus lue depuis le 19/11/2026 : le panel fait foi.
         // Le rapprochement se fait par identifiant de caisse UNIQUEMENT,
         // jamais par l'intitulé : deux références peuvent porter des noms
         // voisins et une marge fausse ne se voit pas.
         $cout = [];
         foreach (catalogueCouts() as $pid => $c) { $cout[$pid] = $c['mat']; }
-        try {
-            foreach (Db::rows('SELECT pwa_id, mat FROM ceo_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
-                $cout[(int) $c['pwa_id']] = (float) $c['mat'];
-            }
-        } catch (PDOException $eC) { /* référentiel absent : recettes seules */ }
 
         // Catégorie : le vrai catalogue (product ⨝ product_category), indexé
         // par identifiant de caisse. La table miroir sig_products porte des
@@ -8179,11 +8183,40 @@ function ep_ia_note(): array
     $sig = setting('signalement', []);
     $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : signalementDefaut()['niveaux'];
 
+    // L'heure de la photo contre l'heure standard de la checklist : calculée ici (src/ia_assistant.php), pas
+    // devinée par le modèle ; il la reçoit pour la dire au magasin quand la photo est en retard.
+    $ponct = function_exists('iaPonctualite') ? iaPonctualite($d['heure'] ?? null, $d['faitLe'] ?? null) : null;
+    $out['ponctualite'] = $ponct;
     $ctx = trim(($d['checklist'] ? 'checklist « ' . $d['checklist'] . ' »' : '')
         . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
-        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : ''));
+        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : '')
+        . ($ponct !== null ? ', ' . $ponct['phrase'] : ''), ', ');
+    // La consigne générale des contrôles qualité, pour toute photo (src/rayons_photos.php) ; puis ce que le réseau
+    // attend du rayon (consigne du back office, sinon critères par défaut), et sa photo type
+    // quand le produit n'a pas de fiche technique : l'IA juge par comparaison, comme le consultant.
+    $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
+    $regles = ['criteres' => function_exists('rvCriteresIa') ? rvCriteresIa($rv) : ''];
+    // Les références d'une photo de comptoir (src/ia_assistant.php) : la photo du PLANOGRAMME du rayon, puis ses
+    // photos d'EXEMPLE jugées parfaites par le consultant — celles de ce magasin d'abord.
+    $regles['refs'] = [];
+    if (empty($d['photoRef']) && $rv !== null) {
+        if (!empty($rv['photo'])) {
+            $regles['refs'][] = ['chemin' => __DIR__ . '/../public/' . $rv['photo'], 'lib' => 'Photo du PLANOGRAMME du rayon « ' . $rv['nom'] . ' » (la présentation attendue par le réseau) :'];
+        }
+        foreach ((array) ($d['exemples'] ?? []) as $i => $ex) {
+            if ($i >= (defined('IA_EXEMPLES_ENVOYES') ? IA_EXEMPLES_ENVOYES : 2)) { break; }
+            $regles['refs'][] = ['chemin' => __DIR__ . '/../public/' . $ex['photo'], 'lib' => 'Photo d’EXEMPLE jugée parfaite par le consultant ('
+                . (!empty($ex['memeMagasin']) ? 'ce magasin' : 'un autre magasin') . ', ' . ($ex['date'] ?? '?') . ') :'];
+        }
+    }
+    $out['references'] = count($regles['refs']);
+    // Les corrections du consultant sur ce rayon (src/ia_assistant.php) : l'IA s'aligne sur ses décisions.
+    $regles['exemples'] = function_exists('iaLeconsPour') ? iaLeconsPour($rv['cle'] ?? null, (string) ($d['tache'] ?? '')) : [];
+    $out['tache'] = $d['tache'] ?? null;
+    $out['rayon'] = $rv['cle'] ?? null;
+    $out['leconsVues'] = count($regles['exemples']);
     $r = Anthropic::noterPhoto((string) ($d['tache'] ?? ('Tâche #' . $taskId)),
-        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx);
+        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx, $regles);
 
     $out['modele'] = $r['modele'];
     // L'état du connecteur : une proposition rendue est un succès, un refus du

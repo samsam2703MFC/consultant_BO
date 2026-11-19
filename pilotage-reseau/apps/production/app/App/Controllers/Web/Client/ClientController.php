@@ -48,7 +48,8 @@ class ClientController extends BaseController
 
     public function overview()
     {
-        $type = $_GET['type'] ?? ''; // jeśli nie ma, to pusty string
+        // [325] Domyślnie aktywni klienci ; « Wszyscy » = type=all.
+        $type = (string) ($_GET['type'] ?? 'active');
 
         if ($type === 'inactive') {
             $data['table_title'] = "Nieaktywni klienci";
@@ -64,6 +65,7 @@ class ClientController extends BaseController
             $data['rows'] = $this->clientService->getAll();
         }
 
+        $data['type'] = in_array($type, ['active', 'inactive', 'franchisee'], true) ? $type : 'all';
         $data['space_enabled'] = array_flip($this->clientSpaceService->enabledCustomerIds());
         $this->view("client/client/overview", $data);
     }

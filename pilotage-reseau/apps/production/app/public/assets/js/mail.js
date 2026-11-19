@@ -458,7 +458,7 @@
 
     function settings(target) {
         var P = paths(target);
-        api('GET', P.state).then(function (s) {
+        return api('GET', P.state).then(function (s) {
             state = s;
             var pol = s.admin_policy || {};
             if (!target && pol.managed) {
@@ -475,7 +475,22 @@
             var pwdHint = s.mailbox ? 'zostaw puste, aby nie zmieniać' : '';
             var who = target ? '<div class="d-flex align-items-center gap-2 mb-3"><button type="button" class="btn btn-sm btn-outline-secondary" data-back><i class="bi bi-arrow-left"></i> Skrzynki użytkowników</button>'
                 + '<strong>' + esc(target.name) + '</strong>' + (pol.stopped ? '<span class="ml-tag is-fail">wstrzymana</span>' : '') + '</div>' : '';
-            app.innerHTML = who + '<div class="ml-settings"><div class="card"><div class="card-body"><form data-form autocomplete="off">'
+            // [347] Skrzynki firmowe już skonfigurowane (Konfiguracja poczty e-mail) : wybór jednym kliknięciem, bez hasła.
+            var company = !target && s.company_accounts && s.company_accounts.length ? s.company_accounts : [];
+            var linked = s.mailbox && s.mailbox.id_email_account ? s.mailbox.id_email_account : null;
+            var ownHidden = company.length && (linked || !s.mailbox);
+            var pick = company.length ? '<div class="ml-company" data-company><h6 class="mb-1">Skrzynka firmowa</h6>'
+                + '<p class="ml-help mb-2">Wybierz adres skonfigurowany w « Konfiguracja poczty e-mail » — serwer i hasło są już zapisane.</p><div class="ml-company-list">'
+                + company.map(function (a) {
+                    var on = linked === a.id;
+                    return '<button type="button" class="ml-company-item' + (on ? ' is-on' : '') + '" data-account="' + a.id + '"' + (a.ready ? '' : ' disabled') + '>'
+                        + '<i class="bi ' + (on ? 'bi-check-circle-fill' : 'bi-envelope') + '"></i><span><strong>' + esc(a.email) + '</strong>'
+                        + '<small>' + esc([a.position, a.name].filter(Boolean).join(' · ')) + (a.ready ? '' : ' · brak hasła w Konfiguracji poczty') + '</small></span>'
+                        + (on ? '<span class="ml-tag">wybrana</span>' : '') + '</button>';
+                }).join('')
+                + '<button type="button" class="ml-company-item' + (s.mailbox && !linked ? ' is-on' : '') + '" data-own-toggle><i class="bi bi-pencil"></i><span><strong>Inny adres</strong><small>własna skrzynka : dostawca, adres i hasło</small></span></button>'
+                + '</div><span class="ml-status" data-company-msg></span><div class="mt-2" data-company-checks></div></div>' : '';
+            app.innerHTML = who + '<div class="ml-settings"><div class="card"><div class="card-body">' + pick + '<form data-form autocomplete="off"' + (ownHidden ? ' hidden' : '') + '>'
                 + '<div class="row g-2"><div class="col-md-6">' + field('Dostawca poczty', '<select class="form-select" name="provider">' + Object.keys(s.providers).map(function (k) { return opt(k, b.provider, s.providers[k].label); }).join('') + '</select>', 'provider') + '</div>'
                 + '<div class="col-md-6">' + field('Adres e-mail', '<input class="form-control" type="email" name="email" value="' + esc(b.email || '') + '">', 'email') + '</div>'
                 + '<div class="col-md-6">' + field('Nazwa nadawcy', '<input class="form-control" name="display_name" maxlength="160" value="' + esc(b.display_name || '') + '" placeholder="np. Anna Kowalska — SL Food">', 'display_name') + '</div>'
@@ -517,6 +532,15 @@
             });
             if (!s.mailbox) form.provider.dispatchEvent(new Event('change'));
             form.addEventListener('submit', function (e) { e.preventDefault(); save(form, target); });
+            app.querySelectorAll('[data-account]').forEach(function (btn) {
+                btn.addEventListener('click', function () { chooseAccount(Number(btn.dataset.account)); });
+            });
+            var ownBtn = app.querySelector('[data-own-toggle]');
+            if (ownBtn) ownBtn.addEventListener('click', function () {
+                form.hidden = !form.hidden;
+                ownBtn.classList.toggle('is-on', !form.hidden);
+                if (!form.hidden) form.email.focus();
+            });
             var del = app.querySelector('[data-delete]');
             if (del) del.addEventListener('click', function () {
                 if (!window.confirm('Odłączyć skrzynkę ? Wiadomości znikną z ERP (w skrzynce zostają).')) return;
@@ -537,6 +561,23 @@
             + '<div>Folder wysłanych : ' + esc(b.sent_folder || 'nie znaleziony') + '</div>'
             + (b.last_error ? '<div class="text-danger mt-1">Ostatni błąd : ' + esc(b.last_error) + '</div>' : '')
             + (page === 'admin' ? '' : '<a class="btn btn-sm btn-outline-secondary mt-2" href="' + esc(root) + '/mail"><i class="bi bi-envelope"></i> Otwórz pocztę</a>') + mode;
+    }
+
+    // [347] Konto firmowe → skrzynka (kopiowane na serwerze), potem test odbioru i wysyłki.
+    function chooseAccount(id) {
+        var msg = app.querySelector('[data-company-msg]');
+        var checks = app.querySelector('[data-company-checks]');
+        msg.textContent = 'Podłączanie i sprawdzanie połączenia…';
+        checks.innerHTML = '';
+        api('PUT', '/ajax/mail/settings/account', { account_id: id }).then(function (r) {
+            return settings().then(function () {
+                var m = app.querySelector('[data-company-msg]'), c = app.querySelector('[data-company-checks]');
+                if (!m) return;
+                var line = function (label, x) { return '<div class="ml-check"><i class="bi ' + (x.ok ? 'bi-check-circle-fill' : 'bi-x-circle-fill') + '"></i><div><strong>' + label + '</strong> — ' + esc(x.message) + '</div></div>'; };
+                m.textContent = r.test.imap.ok && r.test.smtp.ok ? 'Gotowe : skrzynka działa.' : 'Podłączona, ale połączenie wymaga poprawki (hasło w Konfiguracji poczty e-mail).';
+                c.innerHTML = line('Odbiór (IMAP)', r.test.imap) + line('Wysyłka (SMTP)', r.test.smtp);
+            });
+        }).catch(function (e) { msg.textContent = e.message; });
     }
 
     function save(form, target) {

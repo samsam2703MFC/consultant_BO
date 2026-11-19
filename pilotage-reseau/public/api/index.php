@@ -55,7 +55,9 @@ require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/historique_ventes.php';   // L'historique des ventes, 18 mois, pour l'assistant (14/11/2026)
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
-require __DIR__ . '/../../src/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
+require __DIR__ . '/../../src/franchise/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
+require __DIR__ . '/../../src/franchise/frais.php';                 // Dashboard magasin › Frais : les frais du mois, TVA comprise ou non, et le taux (16/11/2026)
+require __DIR__ . '/../../src/inventaires_taux.php';   // la matière expliquée, un seul indicateur (19/11/2026)
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
@@ -63,6 +65,7 @@ require __DIR__ . '/../../src/verification_matieres_prix.php';   // Recettes à 
 require __DIR__ . '/../../src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
 require __DIR__ . '/../../src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
 require __DIR__ . '/../../src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
+require __DIR__ . '/../../src/fil_franchise.php';             // Le fil du franchisé : notes, photos, captures, étiquettes, fils (19/11/2026)
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
@@ -73,9 +76,11 @@ require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
-require __DIR__ . '/../../src/temps_morts.php';
+require __DIR__ . '/../../src/pnl_ht.php';                // Le P&L hors TVA et l'onglet Frais du dashboard (16/11/2026)
+require __DIR__ . '/../../src/franchise/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rayons_photos.php';
+require __DIR__ . '/../../src/ia_assistant.php';          // L'assistant de notation : propositions gardées, leçons (15/11/2026)
 require __DIR__ . '/../../src/assortiment.php';
 require __DIR__ . '/../../src/structure_gamme.php';
 require __DIR__ . '/../../src/plano_proposition.php';
@@ -102,7 +107,7 @@ require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/invendus.php';
 require __DIR__ . '/../../src/caisse.php';
-require __DIR__ . '/../../src/dashboard_semaine.php';
+require __DIR__ . '/../../src/franchise/dashboard_semaine.php';
 require __DIR__ . '/../../src/production_plan.php';
 require __DIR__ . '/../../src/production_flux.php';
 require __DIR__ . '/../../src/croisements.php';
@@ -149,7 +154,12 @@ require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : 
 require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
-require __DIR__ . '/../../src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
+require __DIR__ . '/../../src/franchise/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
+require __DIR__ . '/../../src/franchise/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
+require __DIR__ . '/../../src/franchise/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
+require __DIR__ . '/../../src/franchise/offres_newsletter.php';  // Vendre › Offres › Newsletter : le module newsletter, au rôle du magasin (15/11/2026)
+require __DIR__ . '/../../src/franchise/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
+require __DIR__ . '/../../src/franchise/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -181,10 +191,20 @@ try {
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
+    // Une pièce du fil du franchisé (19/11/2026) : la photo ou la capture, rangée dans le dossier privé, sort telle quelle.
+    if ($method === 'GET' && preg_match('#^/fil/pieces/(\d+)$#', $path, $m)) {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
+        filPieceSortie((int) $m[1]);   // sort le fichier, puis exit
+    }
     // Un document d'un franchisé (22/10/2026) sort tel quel (PDF, image, Word…), pas en JSON.
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
+    }
+    // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
+    if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); echo json_encode($r[1], JSON_UNESCAPED_UNICODE); exit; }
+        ep_offres_client_pdf();   // sort le PDF, puis exit
     }
     // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
     // ouvert au monde : c'est le client, depuis sa boîte mail, qui l'appelle.
@@ -355,7 +375,9 @@ function tempsServeur(float $tCharge, float $tInstall): void
 function routeGardee(string $method, string $path): mixed
 {
     $n = $method === 'GET' ? min(900, max(0, (int) ($_GET['_cache'] ?? 0))) : 0;
-    if ($n <= 0 || !function_exists('rcServi') || in_array($path, ['/exploitation/jour', '/exploitation/periode'], true)) { return route($method, $path); }
+    // La boîte mail ne passe JAMAIS par ce cache commun : sa réponse est celle d'une session (le mot de passe de la boîte).
+    if ($n <= 0 || !function_exists('rcServi') || in_array($path, ['/exploitation/jour', '/exploitation/periode'], true)
+        || str_starts_with($path, '/dashboard/boite')) { return route($method, $path); }
     $q = $_GET; unset($q['_cache'], $q['fond'], $q['rafraichir']); ksort($q);
     $cle = 'rcG:' . md5($path . '?' . http_build_query($q));
     rcFondDemande();
@@ -371,12 +393,26 @@ function route(string $method, string $path): mixed
 {
     // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
     if (($c = cmRoute($method, $path)) !== null) { return $c; }
+    // Dashboard › Mon marketing (15/11/2026) : le hub du marketing, pour le magasin de la requête (src/dashboard_marketing.php).
+    if (($c = dmRoute($method, $path)) !== null) { return $c; }
+    // Dashboard › Réseaux sociaux (15/11/2026) : l'espace boutique du Marketing, ouvert pour le magasin de la session.
+    if (($c = dsRoute($method, $path)) !== null) { return $c; }
+    // Dashboard › Boîte mail (15/11/2026) : la boîte du magasin, verrouillée par son propre mot de passe (src/franchise/boite_mail.php).
+    if (($c = bmRoute($method, $path)) !== null) { return $c; }
+    // Vendre › Analyse (15/11/2026) : les lectures propres aux pages Analyse (src/franchise/dashboard_analyse.php).
+    if (($c = daRoute($method, $path)) !== null) { return $c; }
+    // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
+    if (($c = aiaRoute($method, $path)) !== null) { return $c; }
+    // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.
+    if (($c = bndRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
     if (str_starts_with($path, '/soir/')) { return rsRoute($method, $path); }
     // Pilotage › Audit fournisseurs : le formulaire, les campagnes, les résultats, les copies (src/audits.php).
     if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
+    // Franchisés › Suivi des franchisés › Fil du franchisé (19/11/2026, src/fil_franchise.php).
+    if ($path === '/fil' || str_starts_with($path, '/fil/')) { return filRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
@@ -431,6 +467,9 @@ function route(string $method, string $path): mixed
             // Le Tableau d'analyse (26/10/2026) : toutes les promotions de tous les magasins, et ce qu'elles ont fait.
             $path === '/promotions/reseau'             => ep_promotions_reseau(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
+            // Vendre › Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy.
+            $path === '/exploitation/offres-client'    => ep_offres_client(),
+            $path === '/exploitation/offres-client/employes' => ep_offres_client_employes(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
             $path === '/exploitation/temps-morts'      => ep_temps_morts(),
@@ -453,7 +492,6 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/invendus/actions' => ep_exploitation_invendus_actions(),
             $path === '/equipe/remarques'              => ep_equipe_remarques(),
             $path === '/scoring'                       => ep_scoring(),
-            $path === '/scoring/msp'                   => ep_scoring_msp(),
             $path === '/scoring/rapport'               => ep_scoring_rapport(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
@@ -540,7 +578,6 @@ function route(string $method, string $path): mixed
             $path === '/projects'                      => ep_projects(),
             $path === '/projects/crm'                  => ep_crm(),
             $path === '/people'                        => ep_people(),
-            $path === '/reporting'                     => ep_reporting(),
             $path === '/journal'                       => ep_journal(),
             $path === '/journal/mails'                 => ep_journal_mails(),
             $path === '/production/catalogue'          => ep_prod_catalogue(),
@@ -593,10 +630,6 @@ function route(string $method, string $path): mixed
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
             $path === '/produits/analyse/sonde'        => ep_produits_analyse_sonde(),
-            $path === '/produits/utilisation'          => ep_prod_utilisation(),
-            $path === '/produits/utilisation/magasin'  => ep_prod_utilisation_magasin(),
-            $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
-            $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
             $path === '/produits/structure'           => ep_produits_structure(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
@@ -616,6 +649,7 @@ function route(string $method, string $path): mixed
             $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
+            $path === '/exploitation/frais'           => ep_exploitation_frais(),
             $path === '/tresorerie/references'        => ep_tresorerie_references(),
             $path === '/tresorerie/plan'              => ep_tresorerie_plan(),
             $path === '/tresorerie/budget'            => ep_tresorerie_budget(),
@@ -724,6 +758,10 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
             $path === '/ia/note'                       => ep_ia_note(),
             $path === '/ia/statut'                     => ep_ia_statut(),
+            $path === '/ia/propositions'               => ep_ia_propositions(),
+            $path === '/ia/lecons'                     => ep_ia_lecons(),
+            $path === '/ia/entrainement'               => ep_ia_entrainement(),
+            $path === '/ia/analyses'                   => ep_ia_analyses(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),
             // Le Scouting est parti dans le CRM (Étude de faisabilité) ; restent
@@ -776,6 +814,7 @@ function route(string $method, string $path): mixed
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
             preg_match('#^/visites/equipe/(\d{1,10})$#', $path, $m) === 1 => ep_visites_equipe($m[1]),
+            preg_match('#^/visites/outils/(\d{1,10})$#', $path, $m) === 1 => ep_visites_outils($m[1]),
             preg_match('#^/visites/taches/(\d{1,10})$#', $path, $m) === 1 => ep_visites_taches($m[1]),
             preg_match('#^/visites/budget/(\d{1,10})$#', $path, $m) === 1 => ep_visites_budget($m[1]),
             $path === '/marketing/social/regles'   => ep_fb_regles(),
@@ -799,6 +838,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/tva') { return wr_exploitation_frais_tva(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
@@ -812,6 +852,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin(); }
     if ($method === 'DELETE' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin_retirer(); }
     if ($method === 'POST' && $path === '/exploitation/promos-magasin/bon') { return wr_promos_magasin_bon(); }
+    if ($method === 'POST' && $path === '/exploitation/offres-client') { return wr_offres_client(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }
@@ -863,9 +904,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/tasks/([\w-]+)/reminder$#', $path, $m)) { return wr_task_reminder($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/task-issues/(\d+)$#', $path, $m)) { return wr_task_issue_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/budget$#', $path, $m)) { return wr_budget_put($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/reporting/reports/([\w-]+)$#', $path, $m)) { return wr_report_patch($m[1]); }
-    if ($method === 'POST' && preg_match('#^/reporting/reports/([\w-]+)/send$#', $path, $m)) { return wr_report_send($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/charges$#', $path, $m)) { return wr_shop_charges($m[1]); }
     // La variation par mois seule : sert à pousser une courbe d'un magasin aux
     // autres sans toucher à leur budget ni au reste de leur étude.
@@ -874,8 +912,6 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/produits$#', $path, $m)) { return wr_objectifs_produits((int) $m[1]); }
     if ($method === 'POST' && $path === '/promo/mecaniques') { return wr_promo_mecanique(null); }
-    if ($method === 'POST' && $path === '/scoring/msp') { return wr_scoring_msp(); }
-    if ($method === 'DELETE' && preg_match('#^/scoring/msp/(\d+)$#', $path, $m) === 1) { return wr_scoring_msp_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/scoring/envoyer') { return wr_scoring_envoyer(); }
     if ($method === 'PUT' && $path === '/promo/mecaniques/ordre') { return wr_promo_mecaniques_ordre(); }
     if ($method === 'PUT' && preg_match('#^/promo/mecaniques/(\d+)$#', $path, $m)) { return wr_promo_mecanique((int) $m[1]); }
@@ -1031,6 +1067,11 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/fonds/royalties') { return wr_fonds_royalties(); }
     if ($method === 'POST' && $path === '/fonds/royalties/generer') { return wr_fonds_royalties_generer(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
+    if ($method === 'POST' && $path === '/ia/proposer') { return wr_ia_proposer(); }
+    if ($method === 'POST' && $path === '/ia/lecons') { return wr_ia_lecons(); }
+    if ($method === 'POST' && $path === '/ia/modeles') { return wr_ia_modeles(); }
+    if ($method === 'PUT'  && $path === '/ia/consigne-generale') { return wr_ia_consigne_generale(); }
+    if ($method === 'POST' && $path === '/ia/analyser') { return wr_ia_analyser(); }
     if ($method === 'POST' && $path === '/budget/charges/crm') { return wr_budget_crm(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
