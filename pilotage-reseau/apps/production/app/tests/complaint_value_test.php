@@ -1,7 +1,8 @@
 <?php
 /**
  * [362] Valeur d'une réclamation : la quantité est en pièces, le prix enregistré est celui du carton (ligne WDT) →
- * valeur = pièces ÷ pièces par carton (ligne de facture, sinon fiche produit) × prix du carton.
+ * valeur = cartons entamés (pièces ÷ pièces par carton de la ligne de facture, sinon de la fiche ; arrondi au carton
+ * supérieur) × prix du carton.
  *
  * Base : TFB_TEST_DSN (défaut mysql:unix_socket=/run/mysqld/mysqld.sock), TFB_TEST_USER (root), TFB_TEST_PASS (vide).
  * Base erp_complaint_value_test recréée (tables minimales), supprimée à la fin. Aucun envoi.
@@ -26,24 +27,38 @@ $pdo->exec('CREATE TABLE n_prod_item (id INT PRIMARY KEY, id_final_product INT)'
 $pdo->exec('CREATE TABLE n_prod_product_settings (id_item INT, id_primary_group INT)');
 $pdo->exec('CREATE TABLE n_prod_group (id INT PRIMARY KEY, sort_order INT)');
 // Baguette : 30 pièces par carton sur la facture (fiche : 25), carton 30 € ; Blanc : rien sur la facture, fiche 6 / carton ; Inconnu : sans ppc.
-$pdo->exec("INSERT INTO final_product VALUES (1, 'Baguette', 25), (2, 'Blanc', 6), (3, 'Inconnu', NULL)");
+$pdo->exec("INSERT INTO final_product VALUES (1, 'Baguette', 25), (2, 'Blanc', 6), (3, 'Inconnu', NULL), (4, 'Tarte', 6)");
 $pdo->exec("INSERT INTO document_wdt VALUES (10, 'WDT/1/2026')");
 $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, ppc, price_carton) VALUES (10, 1, 30, 30)");
 $pdo->exec("INSERT INTO complaint (invoice_num, id_product, product_quantity, accepted_quantity, single_purchase_price, acceptance_status, reported_at) VALUES
     ('WDT/1/2026', 1, 120, 120, 30, 'ACCEPTED', '2026-11-10 10:00:00'),
     ('WDT/9/2026', 2, 12, 12, 14, 'ACCEPTED', '2026-11-11 10:00:00'),
-    ('WDT/9/2026', 3, 5, 5, 8, 'ACCEPTED', '2026-11-12 10:00:00')");
+    ('WDT/9/2026', 3, 5, 5, 8, 'ACCEPTED', '2026-11-12 10:00:00'),
+    ('WDT/9/2026', 4, 7, 7, 12, 'ACCEPTED', '2026-11-13 10:00:00')");
 $fail = 0;
 $check = function (bool $ok, string $label) use (&$fail) { echo ($ok ? 'ok   ' : 'FAIL ') . $label . "\n"; if (!$ok) $fail++; };
 $rows = array_column((new ComplaintRepository($pdo))->chartRows(), null, 'product');
-$val = fn(string $p) => round((float) $rows[$p]['accepted_quantity'] * (float) $rows[$p]['piece_price'], 2);
+$val = fn(string $p) => ComplaintRepository::value((float) $rows[$p]['accepted_quantity'], (float) $rows[$p]['ppc'], (float) $rows[$p]['single_purchase_price']);
 $check($val('Baguette') === 120.0, '120 baguettes, 30 / carton on the invoice, 30 € carton → 120 € (was 3 600 €)');
 $check($val('Blanc') === 28.0, '12 pieces, no invoice line → product card ppc 6 → 2 cartons × 14 € = 28 €');
 $check($val('Inconnu') === 40.0, 'no ppc anywhere → treated as 1 piece per carton');
+$check($val('Tarte') === 24.0, '7 pieces, 6 per carton → 2 started cartons × 12 € = 24 €');
 $m = new MonthlyReportRepository($pdo);
-$check(round((float) $m->complaintTotals('2026-11-01', '2026-11-30')['value'], 2) === 188.0, 'monthly report total uses the same rule (120 + 28 + 40)');
+$check(round((float) $m->complaintTotals('2026-11-01', '2026-11-30')['value'], 2) === 212.0, 'monthly report total uses the same rule (120 + 28 + 40 + 24)');
 $byProduct = array_column($m->complaintsByProduct('2026-11-01', '2026-11-30'), 'value', 'name');
 $check(round((float) ($byProduct['Baguette'] ?? 0), 2) === 120.0, 'monthly report by product uses the same rule');
+// [363] Fenêtre de détail : pièces par carton de la facture et ce qui a été envoyé.
+$pdo->exec('ALTER TABLE complaint ADD requested_action VARCHAR(16) NULL, ADD compensation_method VARCHAR(16) NULL, ADD client_comment TEXT NULL, ADD production_response TEXT NULL');
+$pdo->exec('ALTER TABLE document_wdt ADD established_date DATE NULL, ADD total_net DECIMAL(10,2) NULL');
+$pdo->exec('ALTER TABLE document_wdt_product ADD quantity DECIMAL(10,2) NULL, ADD total_net DECIMAL(10,2) NULL');
+$pdo->exec('UPDATE document_wdt_product SET quantity = 10, total_net = 300');
+$repo = new ComplaintRepository($pdo);
+$baguetteId = (int) $pdo->query("SELECT id FROM complaint WHERE id_product = 1")->fetchColumn();
+$d = $repo->detailRow($baguetteId);
+$check($d !== null && (float) $d['ppc'] === 30.0 && $d['product'] === 'Baguette' && (int) $d['wdt_id'] === 10, 'detail: invoice ppc and WDT found');
+$lines = $repo->shippedLines(10, 1);
+$check(count($lines) === 1 && (float) $lines[0]['quantity'] === 10.0 && (float) $lines[0]['price_carton'] === 30.0, 'detail: what was sent on the invoice (10 cartons × 30 €)');
+
 $pdo->exec('DROP DATABASE erp_complaint_value_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";
 exit($fail ? 1 : 0);
