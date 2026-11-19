@@ -1223,6 +1223,12 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
     quiz de deux questions, en FR et NL. Accès `responsable`, poste P11, classement D7.5. Source
     `formation/data/formation/dirigeant/chk-bien-tenue.json`, encodée par `encoder_sop.py` (simulation, puis écriture). Elle
     entre dans le manuel des Checklists du catalogue, avec la pastille « à valider ».
+  - **Publiée le 19/11/2026** (Sam : « publie 5.6.02 ») : v1.0, relue au serveur « publiee » ; la pastille disparaît du
+    catalogue.
+  - **Checklist activée le 19/11/2026** (Sam : « active la checklist 5.6.02 ») : `PATCH /task/checklists/64/actif
+    {actif: true}`. Les huit tâches ont basculé, puis ont été relues actives. Le panel ne connaissant pas « chaque mois »,
+    elles reviennent **chaque lundi à 9:00** (WEEKLY). Relecture `/task/qui` une fois actives : chacune est faite par le
+    niveau « Franchise » (#21, poste Franchisé), sans contrôleur. Le rattachement posé à la création est donc confirmé.
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 

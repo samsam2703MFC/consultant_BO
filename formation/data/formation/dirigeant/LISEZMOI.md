@@ -24,6 +24,9 @@ demande (« publie 0.0.55 », « publie 0.0.56 »).
 `responsable`, poste P11, classement D7.5 comme 0.0.56. Encodée en v1.0 « à valider » (Sam : « oui, crée la fiche
 5.6.02 ») ; publication sur demande. NL : traduction de travail, **à relire**.
 
+**5.6.02 publiée le 19/11/2026** (Sam : « publie 5.6.02 ») : `PATCH /formation/sop/fiche/chk-bien-tenue {statut: publiee}`,
+v1.0 ; relu au serveur : « publiee ».
+
 ## À confirmer
 
 - **Recoupement avec 0.0.16 « Animation d’équipe et RH » (FO-06)** : briefing, réunion d’équipe, entretien, conflit. Les

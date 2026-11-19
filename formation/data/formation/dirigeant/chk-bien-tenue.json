@@ -6,7 +6,7 @@
  "poste": "vente",
  "moment": null,
  "acces": "responsable",
- "statut": null,
+ "statut": "publiee",
  "version": "1.0",
  "langue_origine": "FR",
  "duree": null,
