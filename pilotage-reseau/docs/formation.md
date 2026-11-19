@@ -1179,5 +1179,7 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   (comparaison au planogramme, notation de 1 à 5), cadrage (de face, tout le comptoir, ce qu’on veut voir, produits entamés
   non écartés), prise de vue et application, puis comment l’expliquer à l’équipe (pourquoi d’abord, démonstration, retour du
   jour, photo mal faite = point de formation). Liée aux checklists 1.1.02 et 1.3.02.
+- **0.0.58 publié le 19/11/2026** (Sam : « publie 0.0.58 ») : `PATCH /formation/sop/fiche/art-photos-qualite {statut: publiee}`,
+  relu au serveur et sur la tablette.
 - Encodé en **0.0.58**, v1.0 « à valider ». Consigne générale : `rayons_photos.php` ; conseils de prise de vue et démonstration à valider
   (`data/formation/photos-qualite/LISEZMOI.md`).
