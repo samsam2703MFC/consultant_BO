@@ -77,6 +77,18 @@ final class SampleRepository extends WorkshopRepository
              WHERE s.sample_date = ? ORDER BY o.created_at, s.id", [$day]);
     }
 
+    /** Partie surowców partii produkcji (arkusz próbki) : surowiec, partia, DLC, powód braku. @return array<int, list<array>> */
+    public function lotsFor(array $outputIds): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $outputIds)));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all('SELECT l.id_output, rm.name, l.lot_number, l.best_before, l.missing_reason
+                             FROM n_prod_output_lot l JOIN raw_material rm ON rm.id = l.id_material
+                             WHERE l.id_output IN (' . implode(',', $ids) . ') ORDER BY rm.name') as $r) $out[(int) $r['id_output']][] = $r;
+        return $out;
+    }
+
     public function byCode(string $code): ?array
     {
         return $this->all('SELECT * FROM n_prod_sample WHERE code = ?', [$code])[0] ?? null;
