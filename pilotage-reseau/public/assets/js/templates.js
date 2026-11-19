@@ -56,19 +56,24 @@ const ICO = {
   reglages: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
   balance: 'M12 3v18M7 21h10M4 7h16M4 7l-2.5 6a2.5 2.5 0 0 0 5 0zM20 7l-2.5 6a2.5 2.5 0 0 0 5 0z'
 };
-/* Écran → notion du catalogue. */
+/* Écran → notion du catalogue (rail réorganisé le 19/11/2026 : une entrée par question, sans sous-menu). */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle', audits: 'form',
-  ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
-  ventes: 'analyse', invendus: 'form',
-  verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
-  verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
-  paramProduits: 'reglages', demandesFranchises: 'messages', benchmark: 'balance', catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
-  promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
-  'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
-  primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
-  'ext:formation/': 'modeles', 'ext:formation/#/rfclasseur': 'modeles',
-  parametres: 'cadenas', journal: 'journal'
+  // Pilotage
+  resultatJour: 'bilan', demandesFranchises: 'messages', controle: 'controle',
+  // Franchisés
+  ficheFranchise: 'crm', suiviTableau: 'adresse', budget: 'fonds', ventes: 'analyse', audits: 'form',
+  // Vérification
+  verifFlux: 'liens', verifMatieres: 'modeles', verifRecettes: 'creer', verifCa: 'balance',
+  // Produits
+  catalogue: 'bundles', planogramme: 'ecran', paramProduits: 'reglages', benchmark: 'recherche', promoTableau: 'offres',
+  // Marque & marketing
+  fonds: 'fonds', reputation: 'avis', mktObjectifs: 'perf', mdFormulaires: 'liens', fidelite: 'crm',
+  // Outils magasin
+  tablette: 'ecran', assistantCoachs: 'messages', primesApp: 'droits', pointages: 'journal',
+  // Administration
+  parametres: 'cadenas', reporting: 'cal', journal: 'journal',
+  // Applications
+  'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', 'ext:prospection/': 'adresse', 'ext:employee/auth': 'droits', 'ext:formation/': 'modeles'
 };
 function railIco(key){
   const d = ICO[ICO_ECRAN[key]];

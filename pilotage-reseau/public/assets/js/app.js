@@ -382,7 +382,7 @@ class App {
       promoTableau: 'promotions', promoEdition: 'promotions/edition',
       croisements: 'croisements',
       fonds: 'fonds',
-      mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
+      mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring',
       suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
@@ -428,7 +428,7 @@ class App {
   static get ADRESSES_ANCIENNES(){
     return { 'budget-encodage': 'encodage', 'budget-parametres': 'budgetparam', 'analyse-produits': 'anaprod', 'prix-volume': 'prixvolume',
       'manque-a-gagner': 'manque', 'target-ventes': 'ventes', 'types-campagne': 'mktTypes', 'objectifs-produits': 'mktObjectifs',
-      'scoring-trimestre': 'scoringTri', 'client-mystere': 'clientMystere', 'suivi-taches': 'suivi', 'controle-taches': 'controle',
+      'scoring-trimestre': 'scoringTri', 'client-mystere': 'suiviMsp', 'suivi-taches': 'suivi', 'controle-taches': 'controle',
       'suivi-mensuel': 'suiviMensuel', 'table-kpi': 'kpiTable', 'usage-console': 'usageConsole', 'scoring-reglages': 'scoring',
       'tablette-vendeuses': 'tablette', 'primes-app-worker': 'primesApp', 'brand-guard': 'brandGuard', 'invendus-poubelle': 'invendus',
       'fiche-franchise': 'ficheFranchise', 'controles-qualite': 'controlesQualite' };
@@ -471,6 +471,9 @@ class App {
       // Scoring, Sous seuil et Par magasin : le Catalogue les reprend (18/10/2026, une liste et sa fiche).
       scoring: 'catalogue', produits: 'catalogue', 'sous-seuil': 'catalogue', seuil: 'catalogue', 'usage-catalogue': 'catalogue', usage: 'catalogue',
       'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
+      // Le client mystère s'encodait aussi dans Paramètres, dans la même table avec d'autres rubriques : un seul
+      // formulaire depuis le 19/11/2026, Visites › Client mystère (docs/audit-rail.md).
+      'parametres/mystere': 'suiviMsp', clientMystere: 'suiviMsp',
     };
   }
   /**
@@ -1100,6 +1103,13 @@ class App {
       const juste = this.adresseDe('ficheFranchise');
       if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     }
+    // Le second formulaire du client mystère (Paramètres) est retiré (19/11/2026) : tout passage s'encode dans
+    // Visites › Client mystère, qui écrit les rubriques, le passage et ses suites.
+    if (this.state.screen === 'clientMystere') {
+      this.state.screen = 'suiviMsp';
+      const juste = this.adresseDe('suiviMsp');
+      if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
+    }
     const S = this.state;
     if (S.gate){
       const g = S.gate;
@@ -1197,33 +1207,80 @@ class App {
     // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
     if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
-    // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
+    // Les compteurs, une seule définition pour le rail et les onglets (19/11/2026) : une entrée du rail qui couvre
+    // plusieurs onglets porte la somme de leurs compteurs. Lus seulement une fois les données chargées.
+    const COMPTEURS = {
+      demandesFranchises: () => nbDemandesOuvertes(this),
+      controle: () => ((this.D.pwaTasks || {}).totals || {}).aValider || 0,
+      suivi: () => (S.suiviData ? S.suiviData.ouverts : 0),
+      suiviTableau: () => (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0,
+      reputation: () => ((this.D.reput || {}).reseau || {}).sousCible || 0,
+      visibilite: () => visibiliteBadge(this),
+      verifRecettes: () => ((S.vrData || {}).d || {}).total || 0,
+      catalogue: () => (this._pdDcs || {}).effacer || 0,
+      promoEdition: () => promosBadges(this).brouillons,
+      promoTableau: () => promosBadges(this).sousRepere,
+      mdFormulaires: () => ((S.mdBadges || {}).mapping || 0) + ((S.mdBadges || {}).retard || 0),
+      pointages: () => (this._ptL || {}).aValider || 0,
+      apiModule: () => Object.values((this._apiL || {}).erreurs || {}).reduce((a, n) => a + (n || 0), 0),
+    };
+    const compteur = id => { if (!S.ready || !COMPTEURS[id]) { return 0; } try { return COMPTEURS[id]() || 0; } catch (e) { return 0; } };
+    /* Une question, une entrée du rail ; ses lectures, des onglets (réorganisation du 19/11/2026, docs/audit-rail.md).
+     * Un onglet : [écran, nom, phrase d'introduction (absente : celle du groupe ; '' : aucune), état posé en plus]. */
+    const intro = id => (titles[id] || [])[1];
     const GROUPES = {
-      suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
-        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
-      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
-        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['clientMystere', 'Client mystère'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
-      journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
-        [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
-      // L'onglet Promotions est parti dans la section Promotions du rail (26/10/2026).
-      ventes: ['Analyse magasin', 'Un magasin, trois lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, ce que Google en dit.',
-        [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
-      // Budget : trois entrées du sous-menu Budget (24/10/2026), chacune son titre — plus d'onglets.
+      // Les checklists du panel, toutes au même endroit : le jour à noter, le mois des contrôles photo, la heatmap
+      // faites / pas faites, les notes et signalements qui en suivent, et le paramétrage des checklists (task/).
+      taches: ['Tâches & contrôles', 'Les checklists du panel, magasin par magasin : le jour à noter, les contrôles photo du mois, ce qui est fait ou pas, les notes et signalements qui en suivent, et le paramétrage des checklists.',
+        [['controle', 'Le jour', intro('controle')], ['controlesQualite', 'Contrôles photo du mois', ''], ['suiviMensuel', 'Faites / pas faites', intro('suiviMensuel')],
+          ['suivi', 'Notes & signalements', intro('suivi')], ['cadreTaches', 'Paramétrage des checklists', '']]],
+      // Le suivi des franchisés sur le terrain. « Visite sur tablette » n'a plus d'onglet : chaque visite donne
+      // déjà son lien et son QR code vers controle/ ; son adresse reste.
+      visites: ['Visites', '',
+        [['suiviTableau', 'Visites', ''], ['suiviMsp', 'Client mystère', intro('suiviMsp')], ['suiviFranchise', 'Page du franchisé', intro('suiviFranchise')],
+          ['suiviAdmin', 'Qui fait quoi', intro('suiviAdmin')]]],
+      budget: ['Budget', '', [['budget', 'Suivi', intro('budget')], ['encodage', 'Encodage', intro('encodage')], ['budgetparam', 'Paramètres', intro('budgetparam')]]],
+      ventes: ['Équipe & ventes', '', [['ventes', 'Équipe & ventes', intro('ventes')], ['croisements', 'Panier · croisements', intro('croisements')]]],
+      // La note Google (le poste du scoring) et ce que Google affiche du magasin : un seul écran, deux lectures.
+      google: ['Présence Google', '', [['reputation', 'Avis', intro('reputation')], ['visibilite', 'Visibilité', intro('visibilite')]]],
+      // Flux, Fuites et Évolution lisent le même calcul (verification_flux.php) ; les invendus, la même poubelle.
+      flux: ['Flux & poubelle', '', [['verifFlux', 'Audit des flux', intro('verifFlux')], ['verifFuites', 'Fuites par magasin', intro('verifFuites')],
+        ['verifEvol', 'Évolution', intro('verifEvol')], ['invendus', 'Invendus', intro('invendus')]]],
+      // Matières et Inventaires partagent le moteur invEcart (inventaires.php) ; les mouvements en sont le détail.
+      matieres: ['Matières & inventaires', '', [['verifMatieres', 'Matières ↔ recettes', intro('verifMatieres')], ['inventaires', 'Entre deux inventaires', intro('inventaires')],
+        ['verifMouv', 'Mouvements d’un produit', intro('verifMouv')]]],
+      promotions: ['Promotions', '', [['promoTableau', 'Tableau d’analyse', intro('promoTableau')], ['promoEdition', 'Édition', intro('promoEdition')]]],
+      // La page d'un magasin ne montre rien de la marque, pas même un onglet : les onglets ne s'affichent que sur la
+      // page de la marque (voir plus bas) ; le rail y ramène.
+      primes: ['Primes', '', [['primesApp', 'Marque & sponsors', intro('primesApp'), { prSection: 'marque', prShop: '' }],
+        ['primesApp', 'Page d’un magasin', '', { prSection: 'franchise' }]]],
+      // Le client mystère ne s'encode plus ici (19/11/2026) : un seul formulaire, Visites › Client mystère.
+      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, les types de campagne, la table des KPI et la charte Brand Guard.',
+        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
+      // Les trois écrans de santé des API réunis (19/11/2026) : tout le cockpit, le module primes, les visites.
+      journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API rendent ou non.',
+        [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API'],
+          ['apiModule', 'API du module primes', intro('apiModule'), { apiSrc: '' }], ['suiviSources', 'Sources des visites', intro('suiviSources')]]],
       // Le Catalogue n'a plus d'onglets (18/10/2026, maquette « A + D ») : une liste et sa fiche (valsCatalogue). Le
       // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
         [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]],
           // La structure de gamme (11/11/2026) : ce que l'assortiment devrait être, calculé sur les ventes de douze mois.
           ['structure', 'Structure de gamme', titles.structure[1]]]] };
-    // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
-    const ecranOnglet = S.screen;
-    const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
-    if (grp) {
-      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === ecranOnglet);
-      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
+    // L'onglet allumé : son écran, et l'état qu'il pose (la source d'API ou le magasin choisis ne comptent pas).
+    const ONGLET_LIBRES = ['prShop', 'apiSrc'];
+    const ongletOn = o => S.screen === o[0] && (!o[3] || Object.keys(o[3]).filter(k => ONGLET_LIBRES.indexOf(k) < 0)
+      .every(k => (S[k] || ({ prSection: 'marque' }[k] || '')) === o[3][k]));
+    const ongletGo = o => o[3] ? () => this.setState(Object.assign({ screen: o[0], hmHover: null, railOuvert: false }, o[3])) : goTo(o[0]);
+    const grp = Object.keys(GROUPES).find(k => (GROUPES[k][2] || []).some(o => o[0] === S.screen));
+    const sansOnglets = S.screen === 'primesApp' && S.prSection === 'franchise';
+    if (grp && !sansOnglets) {
+      const onglets = GROUPES[grp][2] || [];
+      const onglet = onglets.find(ongletOn) || onglets.find(o => o[0] === S.screen);
+      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2] !== undefined) ? onglet[2] : GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
-      const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
-      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: ecranOnglet === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0 };
+      common.ongletsEcran = onglets.map(o => ({ nom: o[1], on: o === onglet, go: ongletGo(o), badge: badges[o[0]] != null ? badges[o[0]] : (o[3] && o[0] === 'primesApp' ? 0 : compteur(o[0])) }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
     // Les lectures détaillées, ouvertes depuis la fiche d'une référence du Catalogue (18/10/2026) : un retour, pas d'onglets.
@@ -1354,175 +1411,77 @@ class App {
     const flat = this.tasksFlat();
     const lateTasks = flat.filter(x => x.st === 'En retard');
 
-    // Le rail suit les QUESTIONS du métier, pas l'historique des modules :
-    // qu'est-ce qui se passe aujourd'hui ? comment vont les magasins, et que
-    // faire pour chacun ? que valent les produits ? qu'achète-t-on ? que fait
-    // la marque ? qu'a-t-on contrôlé ? — puis l'administration. Dix sections
-    // avaient poussé l'une après l'autre ; les écrans magasin, éclatés en
-    // trois sections (performance, analyse, budget), retrouvent un seul toit.
+    // Le rail suit les QUESTIONS du métier, pas l'historique des modules. Réorganisé le 19/11/2026 (audit des
+    // doublons, docs/audit-rail.md) : 61 entrées, 11 sections et 5 sous-menus étaient devenus 34 entrées et 8 sections,
+    // sans sous-menu. Une question = une entrée ; les lectures d'une même question sont des onglets (GROUPES, plus
+    // haut) ; ce qui s'ouvre hors du cockpit (↗) est rangé à part, en bas. Aucune adresse ne change : un écran
+    // retiré du rail reste ouvert par son adresse, son onglet ou la recherche.
+    // Une entrée de groupe : son premier onglet, son nom, la somme des compteurs de ses onglets, les autres écrans
+    // qu'elle allume (et ceux, sans onglet, qu'on y ajoute).
+    const entree = (k, label, autres) => { const ids = [...new Set((GROUPES[k][2] || []).map(o => o[0]))];
+      return [ids[0], label, ids.reduce((a, id) => a + compteur(id), 0), ids.slice(1).concat(autres || [])]; };
     const navDef = [
-      // Le matin : ce qui s'est passé, ce qui presse.
-      // Un seul écran de pilotage : Résultat — jour, semaine, mois. Les
-      // tâches consultants et le P&L magasins restent accessibles par leur
-      // adresse, mais ce qu'on y lisait chaque matin vit désormais ici.
-      // Résultat répond aussi à « comment évolue-t-on ? » (16/10/2026) : le
-      // mois clos, l'année, les horizons et la marge y sont des onglets —
-      // Performance n'a plus d'entrée.
+      // Le matin : où en est-on, ce que les franchisés demandent, ce qu'il reste à contrôler.
       ['Pilotage', [
         ['resultatJour', 'Résultat', 0],
-        // La page la plus regardée du réseau n'avait pas d'entrée : on
-        // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
-        ['ext:dashboard/', 'Dashboard magasin ↗', 0],
-        // Benchmark (14/11/2026, Sam : « dans le rail Benchmark ») : importer les prix d'un concurrent (PDF ou internet
-        // par l'IA), les rapprocher de nos produits, classer chaque concurrent sur son magasin et son franchisé par code postal.
-        ['benchmark', 'Benchmark', 0],
-        // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
-        // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
-        ['cadreTaches', 'Cadre des tâches', 0],
-        // L'audit des fournisseurs et prestataires (12/11/2026, Sam : « dans le cockpit consultant, Pilotage ») :
-        // les franchisés notent chaque fournisseur référencé ; résultats et copie au fournisseur.
-        ['audits', 'Audit fournisseurs', 0],
-        // Ouvertures, fermetures et reports de caisse, par magasin et par
-        // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
-        ['ext:caisse/', 'Caisse ↗', 0]]],
-      // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
-      // en deux volets : ce que les données disent chaque jour, sans aller sur
-      // place ; ce que le consultant constate sur place. Le scoring du
-      // trimestre est la synthèse des deux : depuis le 16/10/2026 (B2), il est en tête de
-      // la fiche, et le classement du réseau en est un onglet — une seule entrée.
-      // Libellé du rail sur une ligne (design system §8.1).
+        ['demandesFranchises', 'Demandes des franchisés', compteur('demandesFranchises')],
+        entree('taches', 'Tâches & contrôles')]],
+      // Chaque franchisé : sa fiche et son scoring, ses visites, son budget, son équipe ; et ce qu'il dit des fournisseurs.
       ['Franchisés', [
-        ['demandesFranchises', 'Demandes des franchisés', nbDemandesOuvertes(this)],
         ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
-        // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
-        // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
-        // en visite (controle/), le client mystère, la page que voit le franchisé, et qui fait quoi.
-        { sub: 'Suivi des franchisés', children: [
-          ['suiviTableau', 'Visites', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0],
-          ['suiviTablette', 'Visite sur tablette', 0],
-          ['suiviMsp', 'Client mystère', 0],
-          ['suiviFranchise', 'Page du franchisé', 0],
-          ['suiviAdmin', 'Qui fait quoi', 0],
-          // Sources et API (26/10/2026) : le panel TFBuddy, les tables locales con_, et les API qui manquent pour tout passer par le panel.
-          ['suiviSources', 'Sources et API', 0]] },
-        // Le budget, sorti de Magasins (24/10/2026) : trois entrées au lieu d'un écran à trois onglets.
-        { sub: 'Budget', children: [
-          ['budget', 'Suivi budget', 0],
-          ['encodage', 'Encodage du budget', 0],
-          ['budgetparam', 'Paramètres du budget', 0]] },
-        { sub: 'Suivi journalier', children: [
-          ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
-          ['controlesQualite', 'Contrôles qualité du mois', 0],
-          ['mktObjectifs', 'Objectifs', 0],
-          ['reputation', 'Note Google et avis', 0],
-          ['reporting', 'Reporting automatisé', 0]] }]],
-      // LE cœur du métier : d'abord constater (performance), puis agir
-      // magasin par magasin (analyse & leviers), puis cadrer (budget).
-      // Trois questions : comment va ce magasin (équipe, panier, réputation),
-      // quel budget il tient, où il va sur trois ans.
-      ['Magasins', [
-        ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements']],
-        // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
-        // le détail — pièces, motifs, produits — reste ici, sous Magasins.
-        // « Scouting — où ouvrir » a quitté le rail (31/10/2026) : il vit dans
-        // le CRM, Développement → Étude de faisabilité. « Inventaires » est passé
-        // sous Vérification (Sam, 31/10/2026).
-        ['invendus', 'Invendus et poubelle', 0]]],
-      // Deux entrées (18/10/2026) : le Catalogue — quatre questions, une liste,
-      // une fiche ; ses lectures détaillées (une référence magasin par magasin,
-      // prix × volume, dans le temps, manque à gagner) s'ouvrent de la fiche — et
-      // le Comptoir, avec l'assortiment obligatoire. L'entrée qui couvre un écran
-      // s'allume pour lui.
-      // Les badges : au Catalogue, les références que le scoring propose
-      // d'effacer ; au Comptoir, les obligatoires qui n'y ont pas encore de place.
-      // Vérification (31/10/2026, plan docs/plan-verification.md, maquettes docs/maquettes/verification) : ce que chaque
-      // magasin fait de ce qui entre. Lot 1 : les recettes à corriger — le badge, une fois la liste lue, son nombre de lignes.
+        entree('visites', 'Visites', ['suiviTablette']),
+        entree('budget', 'Budget'),
+        entree('ventes', 'Équipe & ventes'),
+        ['audits', 'Audit fournisseurs', 0]]],
+      // Ce que chaque magasin fait de ce qui entre : le flux du jour, la matière, les recettes, la caisse.
       ['Vérification', [
-        ['verifFlux', 'Audit des flux', 0],
-        ['verifFuites', 'Fuites par magasin', 0],
-        // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la
-        // poubelle — venu de Magasins (Sam, 31/10/2026 : « déplace Inventaires dans Vérification »).
-        ['inventaires', 'Inventaires', 0],
-        ['verifMatieres', 'Matières ↔ recettes', 0],
-        ['verifCa', 'Chiffre d’affaires', 0],
-        ['verifMouv', 'Mouvements d’un produit', 0],
-        ['verifRecettes', 'Recettes à corriger', ((S.vrData || {}).d || {}).total || 0],
-        ['verifEvol', 'Évolution', 0]]],
+        entree('flux', 'Flux & poubelle'),
+        entree('matieres', 'Matières & inventaires'),
+        ['verifRecettes', 'Recettes à corriger', compteur('verifRecettes')],
+        ['verifCa', 'Chiffre d’affaires', 0]]],
+      // La gamme, le comptoir, la fiche produit au panel, les prix des concurrents, les promotions.
       ['Produits', [
+        ['catalogue', 'Catalogue', compteur('catalogue'), ['anaprod', 'manque', 'prixvolume', 'analyse']],
+        ['planogramme', 'Comptoir', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']],
         ['paramProduits', 'Paramétrage produits', 0],
-        ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
-          ['anaprod', 'manque', 'prixvolume', 'analyse']],
-        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']]]],
-      // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
-      // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
-      // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
-      // promotions en caisse sous le repère ×2. Un menu du rail au même niveau que Produits (Sam, 26/10/2026) : son
-      // titre de section, ses deux entrées.
-      ['Promotions', [
-        ['promoEdition', 'Édition', promosBadges(this).brouillons],
-        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]]],
-      // Marque & marketing : depuis le 05/11/2026 (Sam), la section ne garde que Fonds & Royalties. Les entrées
-      // Marketing ↗ (/marketing/), Marketing en magasin ↗ (/signage/) et Projets de développement sont retirées
-      // du cockpit ; les deux applications restent sur le serveur, les projets et leurs tâches restent en base
-      // (les tâches se suivent dans Suivi › Tâches).
+        ['benchmark', 'Benchmark', 0],
+        entree('promotions', 'Promotions')]],
+      // Ce que la marque finance et ce qu'elle montre : fonds, Google, objectifs de campagne, leads Meta, fidélité.
       ['Marque & marketing', [
         ['fonds', 'Fonds & Royalties', 0],
-        // Visibilité Google (09/11/2026, maquettes docs/maquettes/visibilite-google) : le badge, une fois lu, les écarts à corriger.
-        ['visibilite', 'Visibilité Google', visibiliteBadge(this)]]],
-      // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa tablette.
-      // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
-      ['ERP franchisé', [
-        // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
-        // mise en page bureau sur grand écran, mobile sur le téléphone.
-        ['ext:prospection/', 'Prospection ↗', 0],
-        // MétaDonnée (demande du 28/10/2026, maquette A) : les formulaires de prospects Meta et
-        // Instagram jusqu'à l'ERP du franchisé, en quatre étapes — module à part (metadonnee.js).
-        { sub: 'MétaDonnée', children: [['mdFormulaires', '1 · Formulaires', 0], ['mdMapping', '2 · Mapping ERP', (S.mdBadges || {}).mapping || 0],
-          ['mdLeads', '3 · Suivi des leads', (S.mdBadges || {}).retard || 0], ['mdSms', '4 · Alertes SMS', 0]] },
-        // Le book des vendeuses : une application à part (tablette/) — l'écran
-        // donne ses liens, un aperçu et l'état des données que le BO lui sert.
+        entree('google', 'Présence Google'),
+        ['mktObjectifs', 'Objectifs produits', 0],
+        // MétaDonnée : un écran à quatre étapes, que le module affiche lui-même en tête.
+        ['mdFormulaires', 'MétaDonnée', compteur('mdFormulaires'), ['mdMapping', 'mdLeads', 'mdSms']],
+        ['fidelite', 'Fidélité', 0]]],
+      // Les outils du magasin tenus ici en attendant l'ERP : la tablette des vendeuses, l'assistant, l'app employé.
+      ['Outils magasin', [
         ['tablette', 'Tablette vendeuses', 0],
-        // La fidélité du client (24/10/2026, maquettes docs/maquettes/fidelite : le Programme de C, les Clients de B).
-        ['fidelite', 'Fidélité', 0],
-        // L'assistant du dashboard magasin (12/11/2026) : les deux coachs (ton, accents, vérifications) et les questions posées.
-        ['assistantCoachs', 'Assistant · coachs', 0]]],
-      // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
-      // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
-      // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
-      // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
-      // et le sous-menu « Primes · module app worker » d'ERP franchisé.
-      ['Application employé', [
-        ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
-        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
-        ['ext:employee/auth', 'Application ↗', 0],
-        // Les pointages (01/11/2026) : le badge, les départs déclarés à valider du magasin ouvert.
-        ['pointages', 'Pointages', ((this._ptL || {}).aValider) || 0],
-        // Ce que le module appelle, source par source, et ce que chaque route répond à l'instant (24/10/2026, Sam).
-        // Le badge : les routes en erreur, une fois la page ouverte.
-        { sub: 'API du module', children: [['apiModule', 'Vue d’ensemble', 0, [], { apiSrc: '' }]].concat(
-          [['cockpit', 'Cockpit'], ['panel', 'Panel tfbuddy'], ['erp', 'ERP admin'], ['base', 'Base partagée'], ['sms', 'SMS · Twilio']]
-            .map(([cle, nom]) => ['apiModule', nom, ((this._apiL || {}).erreurs || {})[cle] || 0, [], { apiSrc: cle }])) }]],
-        // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
-      // Le module Formation (demande du 31/10/2026) : une application à part (formation/), au
-      // design du module marketing — le référentiel RH du panel (postes, niveaux, compétences,
-      // formations, procédures) et le Manuel du réseau (standards, classeur, phases, postes). Le
-      // « Manuel en ligne » en mode tablette a été retiré au lot 6 de la fusion (06/11/2026).
-      ['Formation', [
-        ['ext:formation/', 'Module Formation ↗', 0],
-        // « Parcours compétences ↗ » (formation/parcours/) retiré le 06/11/2026 : le client n'en voit pas la nécessité.
-        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0]]],
+        ['assistantCoachs', 'Assistant · coachs', 0],
+        // La page de la marque ; celle d'un magasin s'ouvre de son onglet.
+        ['primesApp', 'Primes', 0, [], { prSection: 'marque', prShop: '' }],
+        ['pointages', 'Pointages', compteur('pointages')]]],
       ['Administration', [
-        ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
-        ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
+        entree('parametres', 'Paramètres'),
+        ['reporting', 'Reporting automatisé', 0],
+        entree('journal', 'Journal & diagnostic')]],
+      // Les pages à part, ouvertes dans un onglet du navigateur.
+      ['Applications', [
+        ['ext:dashboard/', 'Dashboard magasin ↗', 0],
+        ['ext:caisse/', 'Caisse ↗', 0],
+        ['ext:prospection/', 'Prospection ↗', 0],
+        ['ext:employee/auth', 'Application employé ↗', 0],
+        // Le Manuel du réseau est une page du module : une seule entrée.
+        ['ext:formation/', 'Formation ↗', 0]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:400;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:400' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     // Une entrée peut mener hors du cockpit (« ext: », dans un onglet à part — la page tablette n'est pas un
     // écran de la console, elle vit à côté), couvrir des écrans alias (c[3]) ou poser un état en plus de
-    // l'écran (c[4], ex. l'onglet Client mystère, la page admin ou franchisé de l'application employé).
+    // l'écran (c[4], ex. la page de la marque des primes, quand on revient de celle d'un magasin).
     const cExt = c => c[0].indexOf('ext:') === 0;
-    // Le magasin de la page franchisé (prShop) ne compte pas : l'entrée reste allumée quel que soit le magasin.
-    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).filter(k => k !== 'prShop').every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
+    // Depuis le 19/11/2026, une entrée n'a qu'un écran par question : l'état qu'elle pose sert à y aller, pas à
+    // l'allumer — Primes reste allumée sur la page d'un magasin.
+    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0);
     const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
       if (Array.isArray(it)) {
@@ -1542,11 +1501,12 @@ class App {
     // Le rail sert aussi à NOMMER les écrans dans la heatmap du journal : sans
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
+    this._titres = titles;
     // Barre supérieure (§7.1 du design system) : le kicker dit le périmètre —
     // les outils de l'ERP du franchisé se lisent « Vue Franchisé », tout le
     // reste du cockpit « Vue Réseau ».
     const grActif = common.nav.find(g => g.items.some(n => n.on || (n.children || []).some(k => k.on)));
-    common.screenKicker = grActif && grActif.titre === 'ERP franchisé' ? 'Vue Franchisé' : 'Vue Réseau';
+    common.screenKicker = grActif && grActif.titre === 'Outils magasin' ? 'Vue Franchisé' : 'Vue Réseau';
     // Retour à l'ERP : l'adresse vient de la configuration (meta.erpUrl) ; sans elle, pas de lien.
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
@@ -1972,7 +1932,8 @@ class App {
     if (common.isAudits) { this.valsAudits(common); }
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
-    // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
+    // L'ancien formulaire du client mystère (Paramètres) : plus atteint depuis le 19/11/2026, l'écran est réécrit en
+    // Visites › Client mystère avant le rendu (docs/audit-rail.md, code mort à retirer).
     if (common.isCltMyst) { if (S.sqVue !== 'msp') { this.state.sqVue = 'msp'; } this.valsScoring(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
@@ -15045,8 +15006,11 @@ class App {
     const noms = {}, famille = {};
     (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
       if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = [g[0], it.sub].filter(Boolean).join(' › '); }); }
-      else if (it) { noms[it[0]] = it[1]; famille[it[0]] = g[0]; }
+      else if (it) { noms[it[0]] = it[1]; famille[it[0]] = (it[3] || []).length ? g[0] + ' › ' + it[1] : g[0]; }
     }));
+    // Les écrans tenus en onglets d'une entrée (c[3], 19/11/2026) sont de la même famille : celle de leur entrée.
+    (this._navDef || []).forEach(g => (g[1] || []).forEach(it => { if (!Array.isArray(it)) { return; }
+      (it[3] || []).forEach(id => { if (noms[id]) { return; } noms[id] = ((titres || {})[id] || [])[0] || id; famille[id] = g[0] + ' › ' + it[1]; }); }));
     /* Le rail n'est pas l'inventaire complet. Des écrans gardent une ADRESSE
        sans avoir d'entrée de menu — retirés du rail au fil du temps, atteints
        par un signet ou la recherche. Absents d'ici, ils n'étaient candidats à
@@ -15205,6 +15169,9 @@ class App {
       if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; }); }
       else if (it) { noms[it[0]] = it[1]; }
     }));
+    // Les écrans tenus en onglets d'une entrée : leur propre titre (19/11/2026).
+    (this._navDef || []).forEach(g => (g[1] || []).forEach(it => { if (Array.isArray(it)) { (it[3] || []).forEach(id => {
+      if (!noms[id]) { noms[id] = ((this._titres || {})[id] || [])[0] || id; } }); } }));
     common.vuesChargement = !!(S.vues || {}).chargement;
     const jours = v.joursListe || [];
     const maxN = Math.max(1, ...(v.ecrans || []).flatMap(e => e.jours || []));
