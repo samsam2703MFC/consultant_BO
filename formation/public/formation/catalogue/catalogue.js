@@ -869,7 +869,8 @@
     // police de secours, plus étroite, laisserait déborder les pages une fois Gotham arrivée.
     charger(m).then(function () {
       if (!document.fonts || !document.fonts.load) return null;
-      return Promise.all([document.fonts.load('400 12px Gotham'), document.fonts.load('700 12px Gotham')]).then(function () { return document.fonts.ready; });
+      return Promise.all([document.fonts.load('400 12px Gotham'), document.fonts.load('700 12px Gotham'),
+        document.fonts.load('300 12px GothamPage'), document.fonts.load('500 12px GothamPage')]).then(function () { return document.fonts.ready; });
     }).then(function () {
       if (S.manuel !== m) return;
       S.pages = paginer(m);

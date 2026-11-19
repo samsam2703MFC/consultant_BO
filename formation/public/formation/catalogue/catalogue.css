@@ -221,3 +221,22 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .ft-stats div { border: 1px solid var(--line, #e6e0d8); border-radius: 2mm; padding: 2mm; }
 .pg .ft-stats b { display: block; font-weight: 400; font-size: 16pt; color: var(--accent, #8D1D2C); }
 .pg .ft-stats small { font-size: 7.5pt; color: var(--muted, #7a736a); }
+
+/*
+ * La typographie des pages (19/11/2026, Sam : « tout est trop en gras : titre, sous-titre et corps non gras, garder les
+ * badges en rectangle aux coins arrondis »). Le design system donne à Gotham le poids 400 avec le fichier Medium, et le
+ * fichier nommé « Gotham_Regular.otf » est en réalité Gotham Black (vérifié avec fc-scan) : sur une page, tout paraît
+ * gras. Les pages des manuels prennent donc leur propre famille : Gotham Light pour les titres, les sous-titres et le
+ * texte ; Gotham Medium pour les badges seulement. La hiérarchie vient de la taille et de la couleur, pas de la graisse.
+ */
+@font-face { font-family: 'GothamPage'; src: url('../fonts/Gotham_Light.otf') format('opentype'); font-weight: 300; font-display: swap; }
+@font-face { font-family: 'GothamPage'; src: url('../fonts/Gotham_Medium.otf') format('opentype'); font-weight: 500; font-display: swap; }
+.pg, .pg h2, .pg h3, .pg h4, .pg b, .pg strong, .pg.couv .haut .gros { font-family: 'GothamPage', 'Gotham', Helvetica, Arial, sans-serif; font-weight: 300; }
+.pg { font-size: 9pt; line-height: 1.55; color: #1c1a17; }
+.pg h2 { font-size: 18pt; line-height: 1.15; color: #1c1a17; margin-bottom: 2.5mm; }
+.pg h3 { font-size: 12pt; color: var(--accent, #8D1D2C); }
+.pg h4 { font-size: 10pt; color: #1c1a17; }
+.pg .doc-obj { font-size: 9.5pt; color: #5c5852; }
+.pg .ck-c, .pg .chip-av, .pg .ft-g, .pg .ft-s, .pg .po-qui, .pg .po-bloq, .pg .po-ouv, .pg .ft-n {
+  font-family: 'GothamPage', 'Gotham', Helvetica, Arial, sans-serif; font-weight: 500; border-radius: 1.2mm; }
+.pg .ft-al b, .pg .ft-comp b, .pg .ft-faits b, .pg .ft-i b, .pg .ft-stats b, .pg .cp b, .pg .po-qr b, .pg .ck-ex-t b { font-weight: 300; }

@@ -1464,3 +1464,18 @@ valider ».
   | 0.0.59 | Le plan de nettoyage, relié aux checklists |
   | 0.0.60 | Fraîcheur et qualité, avec les renvois |
 
+## La typographie des manuels (19/11/2026)
+
+Sam : « il faut sous-peser les grosseurs de typo dans le manuel et les SOP, tout est trop en gras : titre, sous-titre et
+corps non gras ; garder les badges en rectangle aux coins arrondis », puis, après les captures d'essai : « nouvelle
+typographie dans tous les manuels ».
+
+- **La cause.** Le fichier `Gotham_Regular.otf` est en réalité Gotham Black (vérifié avec `fc-scan`). Le texte, lui,
+  était en Gotham Medium.
+- **Le catalogue (les six manuels).** Les pages prennent une famille à part, `GothamPage` (`catalogue.css`) : Gotham Light
+  pour le titre, le sous-titre et le texte, Gotham Medium pour les badges seulement. La hiérarchie vient de la taille et
+  de la couleur.
+- **Le dépliant.** Le poids 400 prend Gotham Light, et les titres passent de 500 à 400.
+- **Les PDF des SOP et du manuel** (`foPdfPolices`, `src/sop.php`). Le texte est en Gotham Light, les accents en Gotham
+  Medium (au lieu de Black).
+
