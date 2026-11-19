@@ -5631,7 +5631,12 @@ fenêtre vient aussi de la table. Dans la fenêtre, la route fait foi : un servi
 table. Sans réponse du cockpit, la page Planning de l'app le dit au lieu d'afficher une semaine vide.
 Tests : `php bin/tests_planning_moi.php`.
 
-### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam)
+### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam) — retiré le 19/11/2026
+
+**Retiré le 19/11/2026 (demande de Sam).** L'app employé (l'Accueil, `/pointage`, Profil › Mes pointages), la borne
+(`/borne`), la caisse et la page Pointages du cockpit ne pointent plus : `panel/src/pointage.php` est supprimé et les
+routes ci-dessous répondent 404. Les tables `panel_mot_pointage` et `panel_mot_borne` restent, avec leurs lignes (jamais
+de `DROP`). Ce qui suit décrit ce qui existait.
 
 « Dans leur application, un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ;
 avec le listing des pointages dans le profil, in / out en fonction de leur shift. » Maquette validée :
@@ -5663,9 +5668,8 @@ requête, jamais dans un cookie. La consigne pour la caisse : `panel/docs/consig
 
 Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.0 servi par l'app), `GET /me/pointages`
 (la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page
-**Pointages** (`#/pointages`) est retirée le 19/11/2026 (demande de Sam) ; l'adresse mène à l'accueil. Les routes du
-cockpit (`/ventes/equipe/pointages`, `…/valider`, `/pointage/bornes`, `…/retirer`) restent, sans écran. Tests :
-`php bin/tests_pointage_app.php`.
+**Pointages** (`#/pointages`) est retirée le 19/11/2026 avec tout le pointage ; l'adresse mène à l'accueil. Tests :
+`php bin/tests_pointage_app.php` (supprimé avec le pointage).
 
 **Tablette ouverte (06/11/2026).** `GET /formation/sop/tablette/init`, `GET /formation/sop/tablette/sop/{id}` et
 `POST /formation/sop/tablette/quiz` ne demandent plus la session de l'appareil : la tablette est ouverte et la même pour

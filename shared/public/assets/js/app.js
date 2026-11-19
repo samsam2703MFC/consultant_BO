@@ -476,8 +476,8 @@ class App {
       // Fidélité, retirée du cockpit (19/11/2026, demande de Sam) : l'accueil. Les routes /fidelite/* restent : le
       // dashboard du magasin lit les profils clients publiés, l'Assistant · coachs garde les listes fi- de fidelite.css.
       fidelity: 'resultatJour', fidelite: 'resultatJour',
-      // Pointages, retirés du cockpit (19/11/2026, demande de Sam) : l'accueil. Les routes de src/pointage.php restent :
-      // l'app employé pointe (/ventes/moi/pointage…), la borne et la caisse aussi (/pointage/borne…).
+      // Pointages, retirés (19/11/2026, demande de Sam) : l'accueil. Tout le pointage est parti avec l'écran : l'app
+      // employé, la borne, la caisse et leurs routes (src/pointage.php) ; les tables panel_mot_pointage et _borne restent.
       pointages: 'resultatJour',
     };
   }
