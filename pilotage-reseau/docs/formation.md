@@ -1195,6 +1195,10 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   dirigeant ; ces huit parlent du magasin », puis donne les huit questions de 0.0.56 et un renvoi à 0.0.56. Enregistré
   par `PUT …/fiche/art-bonnes-pratiques-dirigeant` (`revalider: false`), l'article reste « publiee ». La source
   `dirigeant/art-bonnes-pratiques-dirigeant.json` suit (v1.1).
+- **Titre de l'étape « Huit questions à se poser »** (19/11/2026, Sam : « huit questions à se poser, au lieu de une fois
+  par an »), FR et NL (« Acht vragen om uzelf te stellen ») : 0.0.21 passe en v1.5 (l'étape s'appelait « Huit questions,
+  une fois par an ») et 0.0.55 en v1.2 (« Huit questions sur le magasin »). Les deux restent « publiee » ; la source de
+  0.0.55 suit. 0.0.56 garde son titre d'origine « Huit questions, une fois par an ».
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 

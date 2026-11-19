@@ -7,7 +7,7 @@
  "moment": null,
  "acces": "responsable",
  "statut": "publiee",
- "version": "1.1",
+ "version": "1.2",
  "langue_origine": "FR",
  "duree": "20 min de lecture",
  "titre": {
@@ -656,8 +656,8 @@
     {
      "numero": "6",
      "titre": {
-      "fr": "Huit questions sur le magasin",
-      "nl": "Acht vragen over de winkel"
+      "fr": "Huit questions à se poser",
+      "nl": "Acht vragen om uzelf te stellen"
      },
      "texte": {
       "fr": "Les vingt questions parlent du dirigeant ; ces huit parlent du magasin. Un dirigeant qui fait bien son travail construit un magasin qui tourne sans lui. À se poser une fois par an : chaque « non » est un point de valeur à aller chercher.\n1. Le magasin peut-il tourner deux semaines sans vous, sans baisse de résultat ?\n2. Quelqu’un d’autre que vous sait-il ouvrir, fermer, commander et gérer une journée complète ?\n3. Chaque poste peut-il être tenu par au moins deux personnes formées ?\n4. Les niveaux de compétence de l’équipe sont-ils à jour dans le référentiel ?\n5. Les douze derniers mois de chiffres sont-ils tous dans le système, sans trou ?\n6. Food cost, masse salariale, frais généraux : êtes-vous dans les normes du réseau, et savez-vous expliquer les écarts ?\n7. Appliquez-vous les standards du réseau, sans version maison des procédures ?\n8. Un repreneur comprendrait-il l’activité en une heure, avec le système seul ?\nLe pourquoi de chaque question, et ce que vaut la boutique : article 0.0.56.",
