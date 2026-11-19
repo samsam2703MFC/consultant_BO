@@ -6,7 +6,7 @@ Demande : un nouveau portail pour le commercial B2B (tables `sm_`), au design sy
   envoyés depuis hello@atelierby.be, les échantillons commandés aux magasins, le tableau de bord des bureaux.
 - **B2B** : le suivi des offres par secteur et par magasin.
 
-À valider avant tout code.
+Validées le 19/11/2026 et codées : `commercial/` (page `/commercial/`). Un écran de plus que les maquettes : « Mes gains ».
 
 | Écran | Ce qu'il montre |
 |---|---|

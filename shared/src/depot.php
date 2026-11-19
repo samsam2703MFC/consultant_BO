@@ -14,7 +14,7 @@ declare(strict_types=1);
  */
 
 /** Les dossiers du code, dans l'ordre où l'API les charge : le partagé d'abord. */
-const DEPOT_DOMAINES = ['shared', 'marketing', 'formation', 'consultant', 'panel'];
+const DEPOT_DOMAINES = ['shared', 'marketing', 'formation', 'consultant', 'panel', 'commercial'];
 
 /** La racine du dépôt (ou du déploiement). */
 function depotRacine(): string

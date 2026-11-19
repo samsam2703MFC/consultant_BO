@@ -176,3 +176,4 @@
 2026-11-19T16:43:53Z Réorganisation en quatre domaines : dossiers, clés dans erp_cles, 144 tables renommées par migrations (aucune suppression)
 2026-11-19T17:11:41Z Réorganisation, phase 4 : ceo_assistant_question supprimée (sauvegarde vérifiée), sa reprise unique retirée du code
 2026-11-19T18:00:52Z Prospection : l'offre « Fêtes et locations de salle » (salles des fêtes), au lieu du petit-déjeuner d'hôtel
+2026-11-19T19:57:38Z Portail Commercial (tables sm_) à /commercial/ : bureaux, leads Meta, offres, bons, catalogues, échantillons, suivi B2B, gains du commercial
