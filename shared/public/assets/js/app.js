@@ -14371,6 +14371,55 @@ class App {
     readOne('/ia/entrainement').then(r => { this._iaEntLu = false; this._iaEnt = r || { indispo: true, rayons: [], candidates: [] }; this.setState({}); });
     return this._iaEnt || null;
   }
+  /**
+   * Les photos 5/5 d'un type de tâche, toutes périodes (19/11/2026, Sam : « récupérer dans les anciennes photos tous les
+   * 5/5 par type de tâche demandé » ; GET /ia/parfaites) : la liste des types sans `sujet`, puis chaque page d'un type.
+   */
+  iaParLire(sujet, de){
+    const k = (sujet || '') + '|' + (de || 0);
+    this._iaPar = this._iaPar || {};
+    if (k in this._iaPar) { return this._iaPar[k]; }
+    this._iaPar[k] = null;
+    readOne('/ia/parfaites' + (sujet ? '?sujet=' + encodeURIComponent(sujet) + '&de=' + (de || 0) : ''))
+      .then(r => { this._iaPar[k] = r || { erreur: true }; this.setState({}); });
+    return null;
+  }
+  /** La carte « Toutes les photos 5/5 » : le type choisi (par défaut celui qui en a le plus), ses pages lues, chaque photo
+   *  avec son magasin, son jour et qui l'a notée ; un rayon se prend en exemple ou en planogramme, comme les candidates. */
+  valsIaParfaites(E){
+    const S = this.state;
+    const T = this.iaParLire('', 0);
+    if (!T) { return { chargement: true }; }
+    if (T.erreur || !Array.isArray(T.types)) { return { indispo: true }; }
+    const types = T.types;
+    const parDefaut = (types.slice().sort((a, b) => b.n - a.n)[0] || {}).cle || '';
+    const sujet = S.iaParSujet && types.some(t => t.cle === S.iaParSujet) ? S.iaParSujet : parDefaut;
+    const ty = types.find(t => t.cle === sujet) || null;
+    const groupe = (t, lib) => ({ lib, opts: types.filter(x => x.type === t).map(x => ({ val: x.cle, nom: x.nom + ' — ' + x.n, sel: x.cle === sujet })) });
+    const base = { chargement: false, nomNiveau: T.nomNiveau || 'Exemplaire', groupes: [groupe('rayon', 'Rayons'), groupe('tache', 'Autres tâches')].filter(g => g.opts.length),
+      setSujet: e => this.setState({ iaParSujet: e.target.value, iaParPages: 1 }), total: ty ? ty.n : 0, rayon: !!ty && ty.type === 'rayon', nomsLus: T.nomsLus !== false };
+    if (!ty) { return Object.assign(base, { photos: [], vide: true }); }
+    // Les pages lues du type choisi, dans l'ordre : la suivante se demande avec « Plus anciennes ».
+    const pages = []; const n = S.iaParSujet === sujet ? (S.iaParPages || 1) : 1;
+    let de = 0, attente = false;
+    for (let i = 0; i < n && de !== null; i++) { const P = this.iaParLire(sujet, de); if (!P) { attente = true; break; } pages.push(P); de = P.suite; }
+    const rv = (E.rayons || []).find(r => r.cle === sujet) || null;
+    const busy = S.iaModeleBusy || {};
+    const photos = [].concat(...pages.map(P => P.photos || [])).map(c => {
+      const Ph = this.ctrlPhotosLire(c.shopId, c.date);
+      const ph = ((Ph && Ph.photos) || []).find(p => String(p.taskId) === String(c.taskId));
+      const k = c.shopId + '|' + c.taskId + '|' + c.date;
+      const deja = !!(rv && (rv.exemples || []).some(m => String(m.shopId) === String(c.shopId) && String(m.taskId) === String(c.taskId) && m.date === c.date));
+      return { photo: ph ? ph.photo : null, attente: !Ph, shop: this.iaNomMagasin(c.shopId), tache: String(c.tache || '').replace(/^Photo du comptoir\s*/i, '').replace(/^-\s*/, ''),
+        // Des photos de toutes périodes : l'année quand ce n'est pas celle-ci (« 02/12/25 »).
+        date: this.fD(c.date) + (String(c.date).slice(0, 4) !== String(new Date().getFullYear()) ? '/' + String(c.date).slice(2, 4) : ''), par: c.par || '', commentaire: c.commentaire || '', deja, busy: busy[k] || '',
+        exemple: base.rayon && !deja ? () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'exemple') : null,
+        planogramme: base.rayon ? () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'planogramme') : null };
+    });
+    const derniere = pages[pages.length - 1];
+    return Object.assign(base, { photos, attente, reste: Math.max(0, base.total - photos.length),
+      plus: !attente && derniere && derniere.suite != null ? () => this.setState({ iaParSujet: sujet, iaParPages: n + 1 }) : null });
+  }
   /** Le nom court d'un magasin (« Halle ») : la journée chargée, sinon le référentiel. */
   iaNomMagasin(id){
     const s = ((this.D.pwaTasks || {}).shops || []).find(x => String(x.shopId) === String(id));
@@ -14598,6 +14647,7 @@ class App {
       communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
       cg: this.valsIaConsigneGenerale(E),
       ana: this.valsIaAnalyse(E),
+      par: this.valsIaParfaites(E),
       versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
   }
   /**

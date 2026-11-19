@@ -2389,6 +2389,33 @@ function tplIaRecap(r, x){
 
 /* L'entraînement de l'IA : les chiffres, les photos parfaites à prendre comme
    modèle, puis une carte par rayon — la consigne, les modèles, les leçons. */
+/** Toutes les photos 5/5 d'un type de tâche, toutes périodes (19/11/2026) : le type choisi, ses photos, « Plus anciennes ». */
+function tplIaParfaites(p, x, card){
+  const { esc } = x;
+  if (!p) { return ''; }
+  const tete = `<div class="h">Toutes les photos 5/5 d’un type de tâche <span>toutes périodes · les notes posées au cockpit et dans l’app des visites</span></div>`;
+  if (p.chargement) { return `<div style="${card}" class="ia-ent-cand">${tete}<div class="v">Lecture des notes…</div></div>`; }
+  if (p.indispo) { return `<div style="${card}" class="ia-ent-cand">${tete}<div class="v">Les notes n’ont pas pu être lues (GET /ia/parfaites).</div></div>`; }
+  if (!p.groupes.length) { return `<div style="${card}" class="ia-ent-cand">${tete}<div class="v">Aucune photo notée « ${esc(p.nomNiveau)} » pour l’instant.</div></div>`; }
+  const choix = `<select ${x.C(p.setSujet)} aria-label="Type de tâche">${p.groupes.map(g => `<optgroup label="${esc(g.lib)}">${g.opts.map(o => `<option value="${esc(o.val)}"${o.sel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+  return `<div style="${card}" class="ia-ent-cand ia-ent-par">${tete}
+    <div class="ia-par-ch">${choix}<span>${esc(p.total)} photo${p.total > 1 ? 's' : ''} notée${p.total > 1 ? 's' : ''} « ${esc(p.nomNiveau)} »${p.rayon ? '' : ' · pas un rayon : elles ne servent pas d’exemple à l’IA'}</span></div>
+    ${!p.nomsLus ? '<div class="v">La liste des tâches du panel n’a pas pu être lue : les types portent le numéro de la tâche.</div>' : ''}
+    ${p.photos.length ? `<div class="g">${p.photos.map(c => `
+      <div class="t">
+        ${c.photo ? `<a class="ph" href="${esc(c.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(c.photo)}" alt="" loading="lazy"></a>` : `<span class="ph vide">${c.attente ? 'lecture…' : 'photo indisponible'}</span>`}
+        <div class="n">${esc(c.shop)}${c.tache ? ' · ' + esc(c.tache) : ''}</div>
+        <div class="m">${esc(c.date)}${c.par ? ' · notée par ' + esc(c.par) : ''}</div>
+        ${c.commentaire ? `<div class="m">« ${esc(c.commentaire)} »</div>` : ''}
+        ${c.deja ? '<div class="m">★ déjà photo d’exemple</div>' : ''}
+        ${c.exemple || c.planogramme ? `<div class="b">${c.exemple ? `<button type="button" ${x.A(c.exemple)} class="ia-valider-mod">${c.busy === 'exemple' ? 'copie…' : '★ Photo d’exemple'}</button>` : ''}
+          ${c.planogramme ? `<button type="button" ${x.A(c.planogramme)} class="ia-lien">${c.busy === 'planogramme' ? 'copie…' : 'comme planogramme'}</button>` : ''}</div>` : ''}
+      </div>`).join('')}</div>` : (p.attente ? '<div class="v">Lecture des photos…</div>' : '')}
+    ${p.attente && p.photos.length ? '<div class="v">Lecture de la page suivante…</div>' : ''}
+    ${p.plus ? `<div class="ia-par-plus"><button type="button" ${x.A(p.plus)} class="ia-lien">Plus anciennes (${esc(p.reste)} de plus)</button></div>` : ''}
+  </div>`;
+}
+
 function tplIaEntrainement(e, x){
   const { esc } = x;
   const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
@@ -2421,6 +2448,7 @@ function tplIaEntrainement(e, x){
         </div>`).join('')}</div>`
       : `<div class="v">Aucune photo notée « ${esc(e.nomNiveau)} » ces 30 jours. Notez 5/5 une photo parfaite dans <button type="button" ${x.A(e.versControle)} class="ia-lien">Contrôle</button>, ou ouvrez-la et choisissez « ★ Photo parfaite ».</div>`}
     </div>
+    ${tplIaParfaites(e.par, x, card)}
     ${e.rayons.map(r => `
     <div style="${card}" class="ia-ent-rayon">
       <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}<button type="button" ${x.A(r.versAnalyse)} class="ia-lien ana">✦ Ce qui va, ce qui ne va pas</button></div>
