@@ -18785,6 +18785,82 @@
                 ]
             }
         },
+        "/kiosk/office/search": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Szukaj swojego nazwiska / Chercher son nom",
+                "operationId": "officeSearch",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/OfficeSearchPerson"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[364] RODO : la tablette de bureau n'affiche plus tout le personnel. Une personne sans PIN tape son nom (au moins 3 lettres, sinon liste vide) : au plus 8 personnes, nom seul — sans service ni présence. id = production_employee.id (POST /kiosk/office/pin).",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Kowa"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/office/status": {
             "get": {
                 "tags": [
@@ -31665,6 +31741,27 @@
                         "items": {
                             "$ref": "#/components/schemas/OfficePerson"
                         }
+                    }
+                }
+            },
+            "OfficeSearchPerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "phones": {
+                        "type": "integer"
                     }
                 }
             },
