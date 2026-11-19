@@ -1,0 +1,76 @@
+/* Maquettes « Catalogue des manuels » — style du design system (docs/DESIGN_SYSTEM.md, public/formation/ds.css). */
+@font-face { font-family: 'Gotham'; src: url('../../../public/formation/fonts/Gotham_Regular.otf'); font-weight: 400; }
+@font-face { font-family: 'Gotham'; src: url('../../../public/formation/fonts/Gotham_Medium.otf'); font-weight: 500; }
+@font-face { font-family: 'Gotham'; src: url('../../../public/formation/fonts/Gotham_Light.otf'); font-weight: 300; }
+
+:root {
+  --ink: #1c1a17; --muted: #7a736a; --faint: #B8B2A8; --paper: #faf7f2; --line: #e6e0d8;
+  --chip: #EDE7DE; --accent: #8D1D2C; --accent-soft: #F6EEEF; --prize: #B0792A; --prize-soft: #F6E7CE; --prize-ink: #7A5207;
+  --green: #3f7a52; --blue: #1B6FA8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Gotham', Helvetica, Arial, sans-serif; color: var(--ink); background: var(--paper); font-weight: 400; }
+.maquette-tag { position: fixed; right: 12px; bottom: 10px; font-size: 11px; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; z-index: 9; }
+
+/* — le rail du cockpit — */
+.app { display: flex; min-height: 100vh; }
+.rail { width: 246px; flex: none; background: #fff; border-right: 1px solid var(--line); padding: 18px 14px; }
+.rail .marque { font-size: 13px; letter-spacing: .12em; color: var(--ink); padding: 4px 8px 16px; }
+.rail h4 { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); font-weight: 500; margin: 16px 8px 6px; }
+.rail a { text-decoration: none; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--ink); font-size: 14px; }
+.rail a .ico { width: 16px; height: 16px; border-radius: 4px; background: var(--chip); flex: none; }
+.rail a.on { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.rail a.on .ico { background: var(--accent); }
+.rail a .new { margin-left: auto; font-size: 10px; background: var(--prize-soft); color: var(--prize-ink); padding: 2px 6px; border-radius: 4px; }
+.rail a.sous { padding-left: 36px; font-size: 13px; color: var(--muted); }
+.rail a.sous.on { color: var(--accent); }
+
+.main { flex: 1; padding: 26px 36px 40px; min-width: 0; }
+.kicker { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: 26px; font-weight: 500; margin: 4px 0 4px; letter-spacing: -.01em; }
+.lead { color: var(--muted); font-size: 14px; margin: 0; max-width: 680px; line-height: 1.5; }
+.bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.btns { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 8px 14px; font: inherit; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; }
+.btn.p { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.g { border-color: transparent; background: transparent; color: var(--accent); }
+.btn .k { font-size: 10px; background: var(--chip); color: var(--ink); border-radius: 4px; padding: 1px 5px; }
+
+/* cartes des manuels */
+.grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 22px; }
+.carte { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.couv { height: 236px; border-radius: 8px; position: relative; color: #fff; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+.couv .n { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.couv .t { font-size: 20px; font-weight: 500; line-height: 1.2; }
+.couv .s { font-size: 12px; opacity: .9; }
+.couv::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: rgba(0,0,0,.18); }
+.carte h3 { font-size: 15px; font-weight: 500; margin: 0; }
+.carte p { font-size: 12.5px; color: var(--muted); margin: 0; line-height: 1.45; }
+.carte .pied { display: flex; gap: 6px; margin-top: auto; }
+.carte .pied .btn { padding: 6px 10px; font-size: 12.5px; flex: 1; justify-content: center; }
+.chip { display: inline-block; font-size: 11px; background: var(--chip); color: var(--ink); border-radius: 4px; padding: 2px 6px; }
+
+/* — le feuilletage — */
+.livre { background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(28,26,23,.08); display: flex; overflow: hidden; }
+.page { width: 470px; height: 640px; padding: 34px 38px; position: relative; font-size: 13.5px; line-height: 1.55; color: var(--ink); }
+.page.g { background: #fffdf9; border-right: 1px solid var(--line); }
+.page.d { background: #fff; }
+.page .folio { position: absolute; bottom: 16px; font-size: 11px; color: var(--muted); }
+.page.g .folio { left: 38px; } .page.d .folio { right: 38px; }
+.page h2 { font-size: 20px; font-weight: 500; margin: 0 0 6px; line-height: 1.25; }
+.page .code { font-size: 11px; color: var(--muted); letter-spacing: .05em; margin-bottom: 14px; }
+.page .etape { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; margin: 14px 0; }
+.page .etape b { font-weight: 500; }
+.page .crit { background: var(--prize-soft); color: var(--prize-ink); padding: 10px 12px; border-radius: 6px; font-size: 12.5px; margin-top: 14px; }
+.livre-bas { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+.curseur { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.curseur .rond { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; font-size: 16px; color: var(--ink); }
+.vignettes { display: flex; gap: 8px; margin-top: 16px; overflow: hidden; }
+.vignettes span { width: 58px; height: 74px; border: 1px solid var(--line); border-radius: 4px; background: #fff; flex: none; position: relative; }
+.vignettes span.on { border: 2px solid var(--accent); }
+.vignettes span i { position: absolute; left: 6px; right: 6px; top: 8px; height: 3px; background: var(--chip); }
+.vignettes span i:nth-child(2) { top: 16px; } .vignettes span i:nth-child(3) { top: 24px; right: 22px; }
+
+/* QR codes (qrcode-generator, SVG) */
+.qr .img svg, .feuil .qrbox svg, .cat svg { display: block; }
+.maquette-tag.statique { position: static; display: table; margin: 18px auto 0; }

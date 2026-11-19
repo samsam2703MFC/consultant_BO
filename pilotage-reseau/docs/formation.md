@@ -1065,6 +1065,154 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
      `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».
 
+## Manuel opératoire : la routine des nouveaux thèmes (18/11/2026)
+
+- Sam : « créer une routine pour encoder, après validation de Sam, les nouveaux thèmes dans le Manuel opératoire » ;
+  choix : les thèmes viennent des **nouveautés mises en ligne**, Sam valide **en répondant dans la session**.
+- Tâche planifiée « Manuel opératoire : nouveaux thèmes », lundi à vendredi 7 h 17 (Bruxelles), une nouvelle session à
+  chaque passage, branche `claude/manuel-nouveautes`. Chaque passe lit les « Mise en ligne : … » de la branche en ligne
+  depuis la dernière, écarte ce qui n'est pas pour le magasin ni le consultant (siège, atelier de production,
+  changement interne), signale les documents existants touchés, et rédige un article par nouveau thème (trois au plus),
+  FR et NL de travail, classé au référentiel, avec captures de l'écran en ligne. Elle montre l'article sur la vraie
+  tablette et attend : `encoder` (v1.0 « à valider »), `publier`, `corriger n : …`, `écarter n`. Rien n'est encodé sans
+  la réponse de Sam.
+- Source, état et prompt : `data/formation/nouveautes/` (`LISEZMOI.md`, `ETAT.json`, `ROUTINE.md`). Aperçu sans
+  écriture au serveur : `tools/formation/apercu_tablette.js <module> <sortie> <fichiers.json…>` (partie 1, sommaire,
+  parties critiques, dernière partie, NL, onglet Manuel au bon bouton).
+
+## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026, encodé le 18/11/2026)
+
+- Client : « faire une mini formation pour expliquer les leviers de développement du chiffre d'affaires et l'intégrer
+  dans le manuel opératoire », puis « dans la formation gestion il y a le pôle achat et le pôle vente » → FO-41 Gestion
+  financière avancée, pôle vente. Rédigé sur la branche `claude/ecstatic-lamport-0365qq`.
+- **Article du manuel** `art-fo41-vente`, **0.0.54** « Pôle vente : les leviers du chiffre d'affaires » (NL « Verkoop:
+  de hefbomen van de omzet ») : CA = clients × panier, panier = articles × prix ; le trafic, le panier, le prix (gestes,
+  où les lire au dashboard, ce que chacun rapporte au résultat), les trois ensemble (sur un magasin type), la même
+  équipe qui pèse moins, un levier par semaine. 6 sections, 15 parties, 9 photos (six schémas `lev-*.jpg`, trois
+  captures du dashboard déjà au serveur), 4 points critiques, quiz de 5 questions.
+- Classement : FO-41, D7.4, Formation continue, P7 à P12, C-PILOTAGE.Finance et .Vente ; accès `tous` (bouton
+  « Manuel opératoire » de la tablette, rangé à FO-41 après l'article 0.0.28).
+- Source : `data/formation/gestion/` (voir son `LISEZMOI.md`, et ses « à confirmer ») ; schémas :
+  `tools/formation/schemas_leviers.js`.
+- **Journal** : 18/11/2026 — v1.0 encodée « à valider » par `encoder_sop.py` (Sam : « encode l'article FO-41 pôle
+  vente ») ; relue au serveur : code 0.0.54, classement, neuf photos servies. Le même jour, **publiée** (Sam : « publie 0.0.54 » ;
+  `PATCH /formation/sop/fiche/art-fo41-vente {statut: publiee}`, relu) : quiz et « vu faire » ouverts.
+- **0.0.28 « Gestion financière avancée » (`art-fo-41`), v1.3 du 18/11/2026** (Sam : « corrige le 35 % dans l'article
+  0.0.28 ») : partie « La marge brute : 65 % en moyenne », « le budget, lui, compte 35 % de food cost » → **40 %**, la
+  cible unique du réseau depuis le 18/11/2026 (`foodCostCible()`, Catalogue des KPI), en FR et en NL. Version de
+  précision (personne ne repasse « à revoir ») ; rien d'autre ne change (quiz, remarques, photos identiques à la v1.2).
+- **0.0.28, v1.4 du 18/11/2026** (Sam : « l'aligner », puis « passer à 60 % » et « 28,3 % → 14,7 % ») :
+  - « Un levier pour chaque poste » : le modèle prend les cibles du réseau du cockpit — food cost 40 %, masse salariale
+    17 % (`foodCostCible()`, `personnelCible()`, `src/cibles_reseau.php`) — et garde les frais généraux de l'annexe H
+    (28,3 %, le cockpit n'a pas de cible réseau pour eux) : environ **14,7 %** de bénéfice sur 500 000 € de CA ;
+  - « La marge brute » : la cible passe à **60 %** en moyenne, le pendant des 40 % de food cost (comme le prix objectif
+    du cockpit, coût ÷ cible food cost) ; « sous 60 %, revoir » ; prix maximum de l'exemple 0,45 € ÷ 0,40 = **1,13 €**
+    (1,29 € à 65 %) ; bundles sur une base de 60 % : 5 + 1 gratuit **52 %**, 4 + 1 **50 %**, 1 + 1 **20 %** (58 ; 56,3 ;
+    30 à 65 %) ; l'alerte « sous 62 % » devient « sous la cible de 60 % ». Fourchettes par famille (annexe J) inchangées.
+  - FR et NL ; version de précision ; une remarque de reprise le note. Relue au serveur : contenu identique à l'envoi.
+  - **Les quatre autres documents alignés le même jour** (Sam : « aligne les quatre » ; PUT de chaque fiche, version de
+    précision, FR et NL, relus : contenu identique à l'envoi, une remarque de reprise chacun) :
+    0.0.23 « Bouclage financier & business plan » v1.7 (FO-34 : « La cible : environ **14,7 %** de bénéfice », 73 412 € sur
+    500 000 € ; food cost 40 %, masse salariale 17 %, frais généraux 28,3 % ; 14,4 % à 400 000 €, 14,9 % à 600 000 € —
+    le modèle de l'article se retrouve exactement avec des frais généraux à 27 % du CA plus 6 588 € de forfaits fixes) ;
+    0.0.17 « Inventaire et gestion des stocks » v1.2 (food cost 40 %, marge 60 %) ; 0.0.30 « Reporting consolidé » v1.2
+    (marge 60 %, bénéfice 14,7 %) ; 0.0.43 « Le dashboard : l'onglet Produits » v1.2, « à valider » (repère « objectif »
+    × 2,5 pour 40 % de matière, comme `produits_coef.php` et la fiche du dashboard). **Reste** (réglé le 19/11/2026 : photo retirée, v1.3) : la capture de 0.0.43,
+    fiche « Recette & marge », montre encore « objectif × 3,13 · matière 32 % » ; le dashboard demande maintenant une
+    session de la console franchisé (`garde.js`, 13/11/2026) : elle n'a pas pu être refaite sans identifiants. La source
+    de ces articles dans le dépôt (`claude/loving-turing-n6j40s`, `data/formation/dashboard-onglets/`) n'est pas à jour.
+
+## Deux articles tirés de documents remis par Sam (18/11/2026)
+
+- Sam : « rajouter les bonnes pratiques dans le manuel opératoire », puis « rajouter » la valeur de la franchise.
+- **0.0.55 « Diriger, inspirer, embarquer : les bonnes pratiques du dirigeant »** : guide de travail en neuf chapitres
+  (posture, inspirer, communiquer, motiver, piloter, conversations difficiles, erreurs classiques, plan 30 jours,
+  auto-diagnostic). D6.4, phases opérationnel et formation continue, P4 et P7 à P12, FO-06 et FO-05, accès responsable.
+- **0.0.56 « La valeur d’une franchise : ce que vaut vraiment la boutique »** : article réseau sur le système de gestion
+  unique et les procédures identiques comme valeur à la revente. D7.5 Valorisation, phases préouverture et formation
+  continue, P7 à P12, FO-32 et FO-41, accès responsable.
+- Encodés en v1.0 « à valider » (`encoder_sop.py`), relus au serveur. Source et points « à confirmer » :
+  `data/formation/dirigeant/LISEZMOI.md`.
+- **0.0.55 publié le 19/11/2026** (Sam : « publie 0.0.55 ») : `PATCH /formation/sop/fiche/art-bonnes-pratiques-dirigeant`
+  {statut: publiee}, relu au serveur et sur la tablette ; quiz et « vu faire » ouverts.
+- **0.0.56 publié le 19/11/2026** (Sam : « publie 0.0.56 ») : `PATCH /formation/sop/fiche/art-valeur-franchise`
+  {statut: publiee}, relu au serveur et sur la tablette ; quiz et « vu faire » ouverts.
+
+## Le lien Manuel ↔ checklist de gestion hebdomadaire (18/11/2026)
+
+- Sam : « relier le manuel opératoire avec la checklist de gestion hebdomadaire et les tâches qui vont avec (au niveau
+  franchisé - poste) ».
+- **Article 0.0.57** « La gestion de la semaine » (D7.1, phase opérationnel, P4 et P7 à P12, FO-06 et FO-02, accès
+  responsable) : réunion d’équipe du lundi (5.5.01), auto-audit HACCP du lundi (5.6.01), relecture de la semaine de la
+  routine du dashboard (5.2.01). v1.0 « à valider ».
+- **Liens posés** (classement, sans nouvelle version) : 0.0.16 et 0.0.55 → 5.5.01 ; 0.0.13 → 5.6.01 ; 0.0.15 → 5.2.01.
+- **0.0.57 publié le 19/11/2026** (Sam : « publie 0.0.57 ») : `PATCH /formation/sop/fiche/art-gestion-semaine {statut: publiee}`,
+  relu au serveur et sur la tablette. La partie « Qui fait chaque tâche » reste provisoire.
+- **Blocage** : les tâches de gestion hebdomadaire n’ont aucun niveau de poste attribué au panel (`POST /task/qui` : « qui
+  fait » vide), alors que les tâches quotidiennes du comptoir en ont. Le niveau franchisé et poste ne peut donc pas
+  s’afficher tant que les niveaux ne sont pas réglés dans le cadre des tâches. Détail : `data/formation/gestion-semaine/LISEZMOI.md`.
+
+## 0.0.56 : la méthode de calcul de la valeur (19/11/2026)
+
+- Sam : « 0.0.56 + rajouter la méthode de calcul ». Nouvelle section « Comment le dashboard calcule la valeur », version
+  1.1 de précision (`PUT /formation/sop/fiche/art-valeur-franchise`), relue au serveur et identique à la source.
+- La règle décrite est celle du code en ligne (`public/dashboard/dashboard.js`, depuis le 15/11/2026) :
+  `valeur = (marge brute réelle − charges normatives du réseau) × 3,5`. Le chiffre d'affaires annuel vient des 730 derniers
+  jours (ou des jours d'activité si le magasin est plus jeune) ; la marge brute réelle prend le food cost mesuré, à défaut
+  sa moyenne ou 40 % ; les charges normatives sont celles du modèle de Budget › Paramètres, ou les seuils du réseau
+  (main-d'œuvre 17 %, frais généraux 13,5 %, redevances 3 %, charges financières 2,2 %).
+- **Corrigé le 19/11/2026** : 0.0.28 en v1.5 (précision) : la partie « La valeur du fonds de commerce » et la question 5 du
+  quiz donnent la règle en vigueur, (marge brute réelle − charges normatives) × 3,5 ; l'exemple passe de 83 333 € à 425 250 €.
+- **Corrigés le 19/11/2026, sur demande de Sam** : 0.0.15 « Comprendre le dashboard magasin » en v1.7 (partie « La valeur
+  du magasin » et question 1 du quiz) et 0.0.34 « Le dashboard : le haut de l’écran » en v1.1 (« La pastille Valeur »),
+  à la règle en vigueur depuis le 15/11/2026.
+- **Sources de la routine mis à jour** (`claude/loving-turing-n6j40s`, commit `cea65105`, sur demande de Sam « garder les
+  nouvelles ») : `dashboard/art-pil-01.json` (0.0.15) et `dashboard-onglets/art-dash-haut.json` (0.0.34) donnent la règle en
+  vigueur. La routine du lundi n’encodera plus l’ancienne formule. Le source de 0.0.15 rangé
+  ici (`claude/lucid-pascal-3ps6at`) n’est qu’une copie ancienne : elle diffère de la version publiée sur 228 points (durée,
+  quiz 5 et 6…). **Ne pas encoder à partir de cette copie** : elle republierait un texte plus ancien. Le source à jour est sur
+  `claude/loving-turing-n6j40s` (commit `cea65105`, règle × 3,5).
+- **0.0.34 publié le 19/11/2026** (Sam : « publie 0.0.34 ») : `PATCH /formation/sop/fiche/art-dash-haut {statut: publiee}`,
+  v1.1 ; relu au serveur : « publiee ».
+- **0.0.43 : photo de l'étape 8 retirée le 19/11/2026** (Sam : « retire la photo de 0.0.43 ») : la capture de la fiche
+  « Recette & marge » (`u/20261113-551f407947e0.jpg`) montrait l'ancien repère « objectif × 3,13 · matière 32 % ». Nouvelle
+  version 1.3 (`PUT /formation/sop/fiche/art-dash-produits`, `revalider: false`), étape 8 sans photo, remarque mise à jour ;
+  texte inchangé. Toujours « à valider ». Les sept autres captures restent. **La source du dépôt est ancienne**
+  (`claude/loving-turing-n6j40s`, `dashboard-onglets/art-dash-produits.json`) : elle garde cette capture
+  (`do-produits-recette.jpg`) et l'ancien repère × 3,13 · 32 %. Ne pas ré-encoder 0.0.43 à partir d'elle.
+- **0.0.43 publié le 19/11/2026** (Sam : « publie 0.0.43 ») : `PATCH /formation/sop/fiche/art-dash-produits {statut: publiee}`,
+  v1.3 (sans la photo de l'étape 8) ; relu au serveur : « publiee ».
+- **0.0.21 « Modèle de franchise & cadre contractuel » en v1.4, le 19/11/2026** (Sam : « rajouter aussi ces 8 questions
+  dans l'article 0.0.21 ») : nouvelle partie 4 « Une franchise bien tenue » avec une étape 11, « Huit questions, une fois
+  par an » (FR et NL). Ce sont les huit questions du test de vendabilité de 0.0.56, posées comme sur le dépliant (les deux
+  semaines sans vous en premier), avec un renvoi à 0.0.56. L'objectif de l'article l'annonce. Enregistré par
+  `PUT /formation/sop/fiche/art-fo-32` (`revalider: false`) : l'article reste « publiee », quiz et remarques inchangés.
+  Dans le catalogue, cette partie tombe page 120 du manuel opératoire, et 0.0.56 y est un lien direct. Aucune source de
+  l'article n'est dans le dépôt : la version du serveur fait foi.
+- **0.0.55 « Bonnes pratiques du dirigeant » en v1.1, le 19/11/2026** (Sam : « rajouter aussi ces 8 questions dans
+  l'article 0.0.55 ») : dans la partie « Auto-diagnostic », une étape 6, « Huit questions sur le magasin » (FR et NL),
+  entre « Lire le résultat » et « Pour finir » (devenu étape 7). Elle s'ouvre sur « Les vingt questions parlent du
+  dirigeant ; ces huit parlent du magasin », puis donne les huit questions de 0.0.56 et un renvoi à 0.0.56. Enregistré
+  par `PUT …/fiche/art-bonnes-pratiques-dirigeant` (`revalider: false`), l'article reste « publiee ». La source
+  `dirigeant/art-bonnes-pratiques-dirigeant.json` suit (v1.1).
+- **Titre de l'étape « Huit questions à se poser »** (19/11/2026, Sam : « huit questions à se poser, au lieu de une fois
+  par an »), FR et NL (« Acht vragen om uzelf te stellen ») : 0.0.21 passe en v1.5 (l'étape s'appelait « Huit questions,
+  une fois par an ») et 0.0.55 en v1.2 (« Huit questions sur le magasin »). Les deux restent « publiee » ; la source de
+  0.0.55 suit. 0.0.56 garde son titre d'origine « Huit questions, une fois par an ».
+
+## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
+
+- Sam : « rajouter dans le manuel opératoire : comment faire les photos de qualité (cadrage, ce qu’on veut voir), comment
+  l’expliquer à son staff ».
+- Article `art-photos-qualite` (D8.2, phase opérationnel, tous les postes, FO-04, accès tous) : pourquoi une photo compte
+  (comparaison au planogramme, notation de 1 à 5), cadrage (de face, tout le comptoir, ce qu’on veut voir, produits entamés
+  non écartés), prise de vue et application, puis comment l’expliquer à l’équipe (pourquoi d’abord, démonstration, retour du
+  jour, photo mal faite = point de formation). Liée aux checklists 1.1.02 et 1.3.02.
+- **0.0.58 publié le 19/11/2026** (Sam : « publie 0.0.58 ») : `PATCH /formation/sop/fiche/art-photos-qualite {statut: publiee}`,
+  relu au serveur et sur la tablette.
+- Encodé en **0.0.58**, v1.0 « à valider ». Consigne générale : `rayons_photos.php` ; conseils de prise de vue et démonstration à valider
+  (`data/formation/photos-qualite/LISEZMOI.md`).
+
 ## Catalogue des manuels : feuilleter, PDF, QR code, dépliant (19/11/2026)
 
 Sam : « je dois pouvoir feuilleter en PDF les différents manuels ; créer dans le rail la possibilité de feuilleter les pages
@@ -1155,3 +1303,30 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   0.0.56), posées en questions et en deux colonnes. Les deux semaines sans le dirigeant passent en premier, puis viennent
   la relève, les postes doublés, les niveaux à jour, douze mois de chiffres, les ratios, les standards et le repreneur en
   une heure. La source (0.0.56) est en lien. La page tient sur l'A4.
+- **Couvertures aux couleurs du design system, avec illustration** (19/11/2026, Sam : « utiliser les couleurs du design
+  system pour les couvertures + illustration »). La palette de la marque réservée aux couvertures (DESIGN_SYSTEM.md
+  §13.3) remplace le vert et le bleu :
+
+  | Manuel | Couleur | Texte |
+  |---|---|---|
+  | Manuel opératoire | Ruby `#8D1D2C` | crème `#F5EFE4` |
+  | Standards | Noir `#222222` | crème `#F5EFE4` |
+  | Checklists | Pop-Up `#78554B` | crème `#F5EFE4` |
+  | Manuel du réseau | Abricot `#F2C9A0` | Noir `#222222` |
+  | Carte du dépliant | Beige `#EAE4DC` | — |
+
+  Chaque couverture, en carte et en page A5, porte une **illustration de la marque** (Sam : « illustrations du design
+  system »). Ce sont les dessins au trait continu des gammes et des familles, déjà servis par le cockpit et repris tels
+  quels :
+  - le croissant (manuel opératoire), `tablette/img/p/croissant.png` ;
+  - la baguette (standards), `tablette/img/p/bread-1.png` ;
+  - la tartelette (checklists), `tablette/img/p/sweet-tart-small.png` ;
+  - le gâteau sous cloche (manuel du réseau), `assets/img/newsletter/cake.png` ;
+  - les cookies (carte du dépliant), `tablette/img/p/cookies.png`.
+
+  L'image sert de masque CSS : le trait prend la couleur du texte de la couverture (crème, ou Noir sur l'Abricot). Sur la
+  carte Beige du dépliant, il garde son Ruby d'origine.
+
+  À l'impression, les couleurs restent (`print-color-adjust: exact`, §13.1). Le sous-titre du manuel du réseau annonce
+  les postes (« Le classeur : les domaines et les postes »). Mise en ligne par la branche par défaut (PR), selon la règle
+  du 19/11/2026 (CLAUDE.md du dossier).

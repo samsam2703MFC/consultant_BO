@@ -19,23 +19,43 @@
 
   var API = '../api/cockpit';
   var MANUELS = [
-    { cle: 'operatoire', couleur: '#8D1D2C', types: ['Article'],
+    // Les couvertures (19/11/2026, Sam : « utiliser les couleurs du design system pour les couvertures + illustration ») :
+    // la palette de la marque réservée aux couvertures (docs/DESIGN_SYSTEM.md §13.3) : Ruby, Noir, Pop-Up, Abricot ; texte
+    // crème #F5EFE4 sur les couleurs sombres, Noir sur l'Abricot.
+    { cle: 'operatoire', couleur: '#8D1D2C', encre: '#F5EFE4', types: ['Article'],
       titre: { fr: 'Manuel opératoire', nl: 'Operationeel handboek' },
       sous: { fr: 'Le pourquoi : les articles, partie par partie', nl: 'Het waarom: de artikels, deel per deel' },
       unite: { fr: 'articles', nl: 'artikels' } },
-    { cle: 'standards', couleur: '#1c1a17', types: ['SOP', 'Mémo', 'Fiche'],
+    { cle: 'standards', couleur: '#222222', encre: '#F5EFE4', types: ['SOP', 'Mémo', 'Fiche'],
       titre: { fr: 'Standards (SOP)', nl: 'Standaarden (SOP)' },
       sous: { fr: 'Le comment : les gestes, étape par étape', nl: 'Het hoe: de handelingen, stap per stap' },
       unite: { fr: 'standards', nl: 'standaarden' } },
-    { cle: 'checklists', couleur: '#3f7a52', types: ['Checklist'],
+    { cle: 'checklists', couleur: '#78554B', encre: '#F5EFE4', types: ['Checklist'],
       titre: { fr: 'Checklists', nl: 'Checklists' },
       sous: { fr: 'Le quand : ce qu’on contrôle, et à quel moment', nl: 'Het wanneer: wat men controleert, en wanneer' },
       unite: { fr: 'checklists', nl: 'checklists' } },
-    { cle: 'reseau', couleur: '#1B6FA8', ref: true,
+    { cle: 'reseau', couleur: '#F2C9A0', encre: '#222222', ref: true,
       titre: { fr: 'Manuel du réseau', nl: 'Netwerkhandboek' },
-      sous: { fr: 'Le classeur : huit domaines, du standard au contrôle', nl: 'De klasseur: acht domeinen, van standaard tot controle' },
+      sous: { fr: 'Le classeur : les domaines et les postes', nl: 'De klasseur: de domeinen en de functies' },
       unite: { fr: 'domaines', nl: 'domeinen' } },
   ];
+  /*
+   * Les illustrations des couvertures (19/11/2026, Sam : « illustrations du design system ») : celles de la marque, au trait
+   * continu, des gammes et des familles de produits, déjà servies par le cockpit (public/tablette/img/p,
+   * public/assets/img/newsletter). Posées en masque, elles prennent la couleur du texte de la couverture : crème sur le
+   * Ruby, le Noir et le Pop-Up, Noir sur l'Abricot ; Ruby, leur couleur d'origine, sur la carte Beige du dépliant.
+   */
+  var ILLUS = {
+    operatoire: '../../tablette/img/p/croissant.png',
+    standards: '../../tablette/img/p/bread-1.png',
+    checklists: '../../tablette/img/p/sweet-tart-small.png',
+    reseau: '../../assets/img/newsletter/cake.png',
+    depliant: '../../tablette/img/p/cookies.png',
+  };
+  function illustration(cle, classe) {
+    var u = ILLUS[cle];
+    return u ? '<span class="illu ' + (classe || 'ill') + '" aria-hidden="true" style="-webkit-mask-image:url(' + u + ');mask-image:url(' + u + ')"></span>' : '';
+  }
   var CONCURRENCE = 6;     // fiches lues en même temps
   var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null,
     parCode: {}, parId: {}, debuts: {}, langPages: null, somIdx: 1,
@@ -121,8 +141,9 @@
       var n = nbDe(m);
       var compte = m.ref ? n + ' ' + L(m.unite) + ' · ' + nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') : n + ' ' + L(m.unite);
       return '<div class="ct-carte">' +
-        '<a class="ct-couv" href="#/m/' + m.cle + '" style="background:' + m.couleur + ';color:#fff;text-decoration:none">' +
-          '<div class="n">' + T('Manuel', 'Handboek') + '</div><div class="t">' + esc(L(m.titre)) + '</div><div class="s">' + esc(L(m.sous)) + '</div></a>' +
+        '<a class="ct-couv" href="#/m/' + m.cle + '" style="background:' + m.couleur + ';color:' + m.encre + ';text-decoration:none">' +
+          '<div class="n">' + T('Manuel', 'Handboek') + '</div>' + illustration(m.cle) +
+          '<div class="bas"><div class="t">' + esc(L(m.titre)) + '</div><div class="s">' + esc(L(m.sous)) + '</div></div></a>' +
         '<h3>' + esc(L(m.titre)) + '</h3>' +
         '<p><span class="ct-chip">' + esc(compte) + '</span></p>' +
         '<div class="ct-actions">' +
@@ -131,7 +152,7 @@
           '<button type="button" class="btn" data-qr="' + m.cle + '">QR</button>' +
         '</div></div>';
     }).join('');
-    var depliant = '<div class="ct-carte" style="background:var(--accent-soft, #F6EEEF);border-color:transparent">' +
+    var depliant = '<div class="ct-carte ct-carte-dep">' + illustration('depliant', 'ill-dep') +
       '<h3>' + T('Dépliant : comment lire les manuels', 'Folder: hoe de handboeken lezen') + '</h3>' +
       '<p>' + T('Six pages : la franchise, puis une page par manuel avec son QR code. À imprimer et à remettre à l’équipe.', 'Zes pagina’s: de franchise, dan één pagina per handboek met zijn QR-code. Om af te drukken en aan het team te geven.') + '</p>' +
       '<div class="ct-actions"><a class="btn" href="depliant.html">' + T('Ouvrir', 'Openen') + '</a><a class="btn btn--primary" href="depliant.html#imprimer">PDF</a></div></div>';
@@ -229,7 +250,7 @@
     var detail = m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') + (postesV25().length ? ' · ' + postesV25().length + ' ' + T('postes', 'functies') : '') : T('Édition du ', 'Uitgave van ') + aujourdhui();
     p.innerHTML = '<div class="logo"><img src="../img/logo.png" alt="L’Atelier By"></div>' +
       '<div class="haut"><div class="gros">' + n + '</div><p>' + esc(L(m.unite)) + ' · ' + esc(detail) + '</p></div>' +
-      '<div class="bande" style="background:' + m.couleur + '"><div class="k">' + T('Manuel du réseau L’Atelier By', 'Netwerkhandboek L’Atelier By') + '</div>' +
+      '<div class="bande" style="background:' + m.couleur + ';color:' + m.encre + '">' + illustration(m.cle, 'ill-couv') + '<div class="k">' + T('Manuel du réseau L’Atelier By', 'Netwerkhandboek L’Atelier By') + '</div>' +
       '<div class="t">' + esc(L(m.titre)) + '</div><div class="s">' + esc(L(m.sous)) + '</div>' +
       '<div class="ed">' + T('Édition du ', 'Uitgave van ') + esc(aujourdhui()) + '</div>' +
       '<div class="qr">' + qrSvg(lienManuel(m.cle), 4) + '</div></div>';
