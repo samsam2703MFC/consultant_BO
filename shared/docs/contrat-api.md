@@ -3873,9 +3873,9 @@ réserve pour le cockpit (écrans Prospection et Développement commercial) et l
 - `retour` ∈ `''` | `rappeler` | `rdv` | `interesse` | `refus` | `client` ; `action` ∈ `''` | `mail` | `test` | `devis` | `rappel` | `passer` | `commande` ;
   `offre` = le type d'offre choisi pour ce lieu (vide = celui de son genre).
 - `GET /prospection/offres` → `{ offres: [{ id, nom, pitch, contenu, genres (regex sur le libellé du genre), familles[], depense, commandes, part }] }` :
-  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Dix offres (plateau bureau, petit-déjeuner
-  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, petit-déjeuner
-  d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
+  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Onze offres (plateau bureau, petit-déjeuner
+  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, fêtes et
+  locations de salle, petit-déjeuner d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
   commandes?, part?, nom?, pitch?, contenu? }] }` règle le catalogue pour tout le réseau (`ceo_app_setting.prospectionOffres`).
 - `PUT /prospection/{shop}` `{ lieux: { id: { coche?, visite?, retour?, note?, action?, actionLe?, nom? } } }` : fusion champ par
   champ (400 lieux par appel au plus) ; une ligne vidée disparaît. Rend les lignes relues.

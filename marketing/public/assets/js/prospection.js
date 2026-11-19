@@ -252,7 +252,7 @@
         { n: 0, pers: 0, clients: 0, enCours: 0, possible: 0, atteignable: 0, capte: 0 });
       return { rows, T };
     }
-    coulOffre(id) { return { bureau: '#8D1D2C', equipe: '#78554B', ecole: '#B0792A', soins: '#3f7a52', commune: '#4a5a8a', formation: '#7A5207', funeraire: '#5c5852', sport: '#1baf7a', hotel: '#a34a8c', personnel: '#9a8c6a' }[id] || '#7a736a'; }
+    coulOffre(id) { return { bureau: '#8D1D2C', equipe: '#78554B', ecole: '#B0792A', soins: '#3f7a52', commune: '#4a5a8a', formation: '#7A5207', funeraire: '#5c5852', sport: '#1baf7a', fetes: '#c8553d', hotel: '#a34a8c', personnel: '#9a8c6a' }[id] || '#7a736a'; }
     htmlCalcul(tous) {
       const c = this.s.calc, s = this.s, { rows, T } = this.calcul(tous), O = offres();
       const num = (o, k, min, max, step) => `<input type="number" min="${min}" max="${max}" step="${step}" value="${o[k]}" data-f="offre-${o.id}-${k}" data-c="offreval" data-v="${o.id}|${k}" class="pr-oin">`;
