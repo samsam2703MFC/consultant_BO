@@ -46,6 +46,13 @@
       titre: { fr: 'Pré-ouverture', nl: 'Vóór de opening' },
       sous: { fr: 'Le compte à rebours : de J-90 à l’ouverture', nl: 'De aftelling: van D-90 tot de opening' },
       unite: { fr: 'étapes', nl: 'stappen' } },
+    // Les fiches techniques (19/11/2026, Sam : « créer un nouveau manuel : fiches des recettes et fiches techniques, une
+    // feuille par produit, triée par catégorie, standard, saison ») : la fiche technique de chaque produit du panel TF
+    // Buddy, celle de l'application cuisine (GET /formation/ref/fiches, src/fiches_techniques.php). Crème, texte Ruby.
+    { cle: 'fiches', couleur: '#F5EFE4', encre: '#8D1D2C', fiches: true,
+      titre: { fr: 'Fiches techniques', nl: 'Technische fiches' },
+      sous: { fr: 'Les recettes : une fiche par produit', nl: 'De recepten: één fiche per product' },
+      unite: { fr: 'produits', nl: 'producten' } },
   ];
   /*
    * Les illustrations des couvertures (19/11/2026, Sam : « illustrations du design system ») : celles de la marque, au trait
@@ -59,6 +66,7 @@
     checklists: '../../tablette/img/p/sweet-tart-small.png',
     reseau: '../../assets/img/newsletter/cake.png',
     preouverture: '../../tablette/img/p/rolls.png',
+    fiches: '../../tablette/img/p/sandwiches.png',
     depliant: '../../tablette/img/p/cookies.png',
   };
   function illustration(cle, classe) {
@@ -68,7 +76,7 @@
   var CONCURRENCE = 6;     // fiches lues en même temps
   var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null,
     parCode: {}, parId: {}, debuts: {}, langPages: null, somIdx: 1,
-    v25: null, panel: null, compSop: null, postesLus: false };
+    v25: null, panel: null, compSop: null, postesLus: false, ft: null };
   /*
    * Les couleurs des codes de checklist : celles du cockpit (dashboard/dashboard.js TJ_ZONES, task/task.js CK_ZONES), pour
    * qu'un code se lise pareil partout. 1er chiffre : qui ; 2e : quand ; puis le numéro (src/checklists_codes.php). Le 0
@@ -135,6 +143,7 @@
   function nbDe(m) {
     if (m.ref) return ((S.ref && S.ref.domaines) || []).length;
     if (m.guide) return guideEtapes().length;
+    if (m.fiches) return ftProduits().length;
     return docsDe(m).length;
   }
   function nbSousCats() { return ((S.ref && S.ref.domaines) || []).reduce(function (n, d) { return n + (d.souscats || []).length; }, 0); }
@@ -150,7 +159,9 @@
     var cartes = MANUELS.map(function (m) {
       var n = nbDe(m);
       var compte = m.ref ? n + ' ' + L(m.unite) + ' · ' + nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën')
-        : m.guide ? n + ' ' + L(m.unite) + ' · ' + guideSections().length + ' ' + T('sections', 'delen') : n + ' ' + L(m.unite);
+        : m.guide ? n + ' ' + L(m.unite) + ' · ' + guideSections().length + ' ' + T('sections', 'delen')
+        : m.fiches ? (S.ft ? n + ' ' + L(m.unite) + ' · ' + ftCategories().length + ' ' + T('catégories', 'categorieën') : T('Une fiche par produit', 'Eén fiche per product'))
+        : n + ' ' + L(m.unite);
       return '<div class="ct-carte">' +
         '<a class="ct-couv" href="#/m/' + m.cle + '" style="background:' + m.couleur + ';color:' + m.encre + ';text-decoration:none">' +
           '<div class="n">' + T('Manuel', 'Handboek') + '</div>' + illustration(m.cle) +
@@ -221,6 +232,7 @@
   function charger(m) {
     if (m.ref) return chargerPostes();
     if (m.guide) return Promise.resolve();   // le guide arrive avec /formation/ref, lu au départ
+    if (m.fiches) return chargerFiches(m);
     var docs = docsDe(m);
     var manquants = docs.filter(function (d) { return !S.fiches[d.id]; });
     var total = docs.length, fait = total - manquants.length, k = 0, actifs = 0;
@@ -238,6 +250,113 @@
       }
       suivant();
     });
+  }
+
+  /* ── le manuel des fiches techniques ── */
+  /** Les fiches, lues par lots au panel (la réponse dit combien il en manque) : on rappelle jusqu'à les avoir toutes. */
+  function chargerFiches(m) {
+    if (S.ft && !S.ft.manquent) return Promise.resolve();
+    var essais = 0;
+    function lire() {
+      return api('/formation/ref/fiches').then(function (j) {
+        S.ft = j; essais++;
+        majChargement(m, (j.total || 0) - (j.manquent || 0), j.total || 0);
+        if (j.manquent > 0 && essais < 15) return lire();
+      });
+    }
+    return lire();
+  }
+  var GAMMES = { standard: { fr: 'Standard', nl: 'Standaard' }, saison: { fr: 'Saison', nl: 'Seizoen' }, aucune: { fr: 'Hors gamme', nl: 'Buiten gamma' } };
+  var MANQUES = { fiche: { fr: 'fiche', nl: 'fiche' }, recette: { fr: 'recette', nl: 'recept' }, etapes: { fr: 'étapes de préparation', nl: 'bereidingsstappen' },
+    photo: { fr: 'photo', nl: 'foto' }, allergenes: { fr: 'allergènes', nl: 'allergenen' } };
+  function ftProduits() { return (S.ft && S.ft.produits) || []; }
+  /** Les catégories, dans l'ordre du serveur (groupe, catégorie ; standard, saison, hors gamme ; nom). */
+  function ftCategories() {
+    var out = [], idx = {};
+    ftProduits().forEach(function (p) {
+      var k = p.groupe + '|' + p.categorie;
+      if (!idx[k]) { idx[k] = { groupe: p.groupe, categorie: p.categorie, produits: [] }; out.push(idx[k]); }
+      idx[k].produits.push(p);
+    });
+    return out;
+  }
+  function ftManques(p) {
+    var f = p.fiche;
+    if (!f) return ['fiche'];
+    var l = [];
+    if (!(f.ingredients || []).length) l.push('recette');
+    if (!(f.etapes || []).length) l.push('etapes');
+    if (!f.photo) l.push('photo');
+    if (!(f.allergenes || []).length) l.push('allergenes');
+    return l;
+  }
+  function nombre(x) { return x == null ? '' : String(Math.round(x * 100) / 100).replace('.', S.langue === 'nl' ? ',' : ','); }
+  function dureeVie(min) {
+    if (!min) return '';
+    var h = min / 60;
+    return h >= 48 ? Math.round(h / 24) + ' ' + T('jours', 'dagen') : Math.round(h) + ' h';
+  }
+  /** Les photos des pages ne se chargent qu'affichées ou imprimées : l'adresse du panel est redemandée à chaque fois. */
+  function photosDe(el) {
+    el.querySelectorAll('img[data-src]').forEach(function (im) {
+      im.onerror = function () { var b = im.parentNode; if (b) b.classList.add('vide'); };
+      im.src = im.getAttribute('data-src'); im.removeAttribute('data-src');
+    });
+  }
+  function blocsFichesIntro() {
+    var ps = ftProduits(), n = { standard: 0, saison: 0, aucune: 0 }, k = { fiche: 0, recette: 0, etapes: 0, photo: 0, allergenes: 0 };
+    ps.forEach(function (p) { n[p.gamme] = (n[p.gamme] || 0) + 1; ftManques(p).forEach(function (x) { k[x]++; }); });
+    var B = [{ neuve: true, html: '<h2>' + T('Lire une fiche technique', 'Een technische fiche lezen') + '</h2>' +
+      '<p>' + T('Une fiche par produit, catégorie par catégorie : d’abord la gamme standard, puis les produits de saison, puis ceux hors gamme. Chaque fiche donne la conservation, la durée de vie, les allergènes, la recette (ingrédients et quantités), les étapes de préparation, l’emballage et les compétences demandées.',
+        'Eén fiche per product, categorie per categorie: eerst het standaardgamma, dan de seizoensproducten, dan die buiten gamma. Elke fiche geeft de bewaring, de houdbaarheid, de allergenen, het recept (ingrediënten en hoeveelheden), de bereidingsstappen, de verpakking en de gevraagde competenties.') + '</p>' }];
+    B.push({ html: '<div class="ft-stats">' + ['standard', 'saison', 'aucune'].map(function (g) {
+      return '<div><b>' + (n[g] || 0) + '</b><small>' + esc(L(GAMMES[g])) + '</small></div>'; }).join('') + '</div>' });
+    B.push({ html: '<h3>' + T('Ce qu’il reste à compléter dans TF Buddy', 'Wat nog aan te vullen is in TF Buddy') + '</h3>' +
+      '<p>' + T('Les données viennent des fiches techniques du panel TF Buddy, comme dans l’application cuisine. Une case vide se complète dans TF Buddy, pas ici : la fiche suit au prochain passage.',
+        'De gegevens komen uit de technische fiches van het TF Buddy-panel, zoals in de keukenapp. Een leeg vak vult men aan in TF Buddy, niet hier: de fiche volgt bij de volgende lezing.') + '</p>' });
+    ['recette', 'etapes', 'photo', 'allergenes'].forEach(function (x) {
+      B.push({ html: '<div class="ft-i"><span>' + T('Sans ', 'Zonder ') + esc(L(MANQUES[x])) + '</span><b>' + k[x] + ' / ' + ps.length + '</b></div>' });
+    });
+    if (k.fiche) B.push({ html: '<div class="ft-i"><span>' + T('Fiche illisible au panel', 'Fiche onleesbaar in het panel') + '</span><b>' + k.fiche + '</b></div>' });
+    return B;
+  }
+  function blocsFicheProduit(p) {
+    var f = p.fiche || {}, B = [];
+    var vide = '<span class="ft-vide">' + T('à compléter dans TF Buddy', 'aan te vullen in TF Buddy') + '</span>';
+    var chips = '<span class="ft-g ft-g-' + esc(p.gamme) + '">' + esc(L(GAMMES[p.gamme] || GAMMES.aucune)) + '</span>' +
+      (p.saisons || []).map(function (s) { return '<span class="ft-s">' + esc(s) + '</span>'; }).join('') +
+      (f.vegetarien ? '<span class="ft-s">' + T('Végétarien', 'Vegetarisch') + '</span>' : '');
+    var faits = [];
+    if (f.temperature != null) faits.push([T('Conservation', 'Bewaring'), nombre(f.temperature) + ' °C']);
+    var vie = dureeVie(f.vieMinutes) || (p.dlvHeures ? p.dlvHeures + ' h' : '');
+    if (vie) faits.push([T('Durée de vie', 'Houdbaarheid'), vie]);
+    if (f.rechauffe) faits.push([T('Remise en température', 'Opwarmen'), [f.rechauffe.minutes ? nombre(f.rechauffe.minutes) + ' min' : '', f.rechauffe.degres ? nombre(f.rechauffe.degres) + ' °C' : ''].filter(Boolean).join(' · ')]);
+    if (f.delaiHeures) faits.push([T('Commander', 'Bestellen'), nombre(f.delaiHeures) + ' h ' + T('avant', 'vooraf')]);
+    if (f.avantVente) faits.push([T('Préparation', 'Bereiding'), T('avant la vente', 'vóór de verkoop')]);
+    if (p.prix) faits.push([T('Prix de vente', 'Verkoopprijs'), nombre(p.prix) + ' €']);
+    if (f.rendement && f.rendement !== 1) faits.push([T('Rendement', 'Opbrengst'), nombre(f.rendement)]);
+    B.push({ neuve: true, html: '<div class="doc-code">' + esc(p.ref || String(p.id)) + ' · ' + esc(p.categorie) + '</div><h2>' + esc(p.nom) + '</h2>' +
+      '<div class="ft-chips">' + chips + '</div>' +
+      (f.photo ? '<div class="ft-photo"><img data-src="' + esc(API + '/formation/ref/fiches/photo/' + p.id) + '" alt=""></div>' : '') +
+      (faits.length ? '<div class="ft-faits">' + faits.map(function (x) { return '<div><small>' + esc(x[0]) + '</small><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>' : '') +
+      '<div class="ft-al"><b>' + T('Allergènes', 'Allergenen') + ' :</b> ' + ((f.allergenes || []).length ? esc(f.allergenes.join(', ')) : vide) + '</div>' });
+    if (!p.fiche) { B.push({ html: '<p class="ft-vide">' + T('Fiche illisible au panel pour l’instant.', 'Fiche nu niet leesbaar in het panel.') + '</p>' }); return B; }
+    var ing = (f.ingredients || []).filter(function (i) { return !i.emballage; });
+    var ligne = function (i) { return '<div class="ft-i"><span>' + esc(i.nom) + (i.sousRecette ? ' <small>(' + T('préparation', 'bereiding') + ')</small>' : '') + '</span><b>' + (i.qte != null ? nombre(i.qte) + ' ' + esc(i.unite) : '') + '</b></div>'; };
+    var tRec = '<h3>' + T('La recette', 'Het recept') + (f.rendement ? ' <small>· ' + T('pour ', 'voor ') + nombre(f.rendement) + '</small>' : '') + '</h3>';
+    if (ing.length) { B.push({ html: tRec + ligne(ing[0]) }); ing.slice(1).forEach(function (i) { B.push({ html: ligne(i) }); }); }
+    else B.push({ html: tRec + '<p>' + vide + '</p>' });
+    var et = f.etapes || [];
+    var tEt = '<h3>' + T('La préparation', 'De bereiding') + '</h3>';
+    var etape = function (t, k) { return '<div class="ft-e"><span class="ft-n">' + (k + 1) + '</span><p>' + lier(t) + '</p></div>'; };
+    if (et.length) { B.push({ html: tEt + etape(et[0], 0) }); et.slice(1).forEach(function (t, k) { B.push({ html: etape(t, k + 1) }); }); }
+    else B.push({ html: tEt + '<p>' + vide + '</p>' });
+    var emb = (f.emballage ? [f.emballage.nom].concat(f.emballage.materiaux || []) : []).concat((f.ingredients || []).filter(function (i) { return i.emballage; }).map(function (i) { return i.nom; }));
+    B.push({ html: '<h3>' + T('L’emballage', 'De verpakking') + '</h3><p>' + (emb.length ? esc(emb.join(' · ')) : vide) + '</p>' });
+    if ((f.competences || []).length) B.push({ html: '<p class="ft-comp"><b>' + T('Compétences', 'Competenties') + ' :</b> ' + esc(f.competences.join(', ')) + '</p>' });
+    var mq = ftManques(p);
+    if (mq.length) B.push({ html: '<p class="ft-manque">' + T('À compléter dans TF Buddy : ', 'Aan te vullen in TF Buddy: ') + esc(mq.map(function (x) { return L(MANQUES[x]); }).join(', ')) + '.</p>' });
+    return B;
   }
 
   /* ── la mise en pages (A5) ── */
@@ -259,7 +378,7 @@
     var p = document.createElement('section');
     p.className = 'pg couv';
     var n = nbDe(m);
-    var detail = m.guide ? guideSections().length + ' ' + T('sections', 'delen')
+    var detail = m.fiches ? ftCategories().length + ' ' + T('catégories', 'categorieën') : m.guide ? guideSections().length + ' ' + T('sections', 'delen')
       : m.ref ? nbSousCats() + ' ' + T('sous-catégories', 'subcategorieën') + (postesV25().length ? ' · ' + postesV25().length + ' ' + T('postes', 'functies') : '') : T('Édition du ', 'Uitgave van ') + aujourdhui();
     p.innerHTML = '<div class="logo"><img src="../img/logo.png" alt="L’Atelier By"></div>' +
       '<div class="haut"><div class="gros">' + n + '</div><p>' + esc(L(m.unite)) + ' · ' + esc(detail) + '</p></div>' +
@@ -606,6 +725,20 @@
         ajouter('rebours', '', T('Le guide (illisible pour l’instant)', 'De gids (nu niet leesbaar)'),
           [{ neuve: true, html: '<h2>' + T('Pré-ouverture', 'Vóór de opening') + '</h2><p>' + T('Le Guide pré-ouverture est illisible pour l’instant : rouvrez le manuel plus tard.', 'De gids vóór de opening is nu niet leesbaar: open het handboek later opnieuw.') + '</p>' }]);
       }
+    } else if (m.fiches) {
+      if (ftProduits().length) {
+        ajouter('lire', '', T('Lire une fiche, et ce qu’il reste à compléter', 'Een fiche lezen, en wat nog aan te vullen is'), blocsFichesIntro());
+        var grp = null;
+        ftCategories().forEach(function (c) {
+          if (c.groupe !== grp) { grp = c.groupe; titres.push({ sec: grp || T('Sans groupe', 'Zonder groep') }); }
+          var B = [];
+          c.produits.forEach(function (p) { B = B.concat(blocsFicheProduit(p)); });
+          ajouter('cat-' + norm(c.categorie), String(c.produits.length), c.categorie, B);
+        });
+      } else {
+        ajouter('lire', '', T('Les fiches (illisibles pour l’instant)', 'De fiches (nu niet leesbaar)'),
+          [{ neuve: true, html: '<h2>' + T('Fiches techniques', 'Technische fiches') + '</h2><p>' + T('Les fiches techniques du panel sont illisibles pour l’instant : rouvrez le manuel plus tard.', 'De technische fiches van het panel zijn nu niet leesbaar: open het handboek later opnieuw.') + '</p>' }]);
+      }
     } else {
       docsDe(m).forEach(function (d) {
         ajouter(d.id, d.code, L(d.titre), blocsDocument(d, S.fiches[d.id]));
@@ -667,6 +800,7 @@
     var V = vues(), k = vueDe(S.i), idx = V[k];
     livre.innerHTML = '';
     idx.forEach(function (i) { livre.appendChild(S.pages[i].cloneNode(true)); });
+    photosDe(livre);
     livre.classList.toggle('un', idx.length === 1);
     // À l'échelle de la fenêtre.
     var scene = document.getElementById('ct-scene');
@@ -716,10 +850,11 @@
     zone.innerHTML = '';
     S.pages.forEach(function (p) { zone.appendChild(p.cloneNode(true)); });
     lierPourPdf(zone);
+    photosDe(zone);
     var imgs = Array.prototype.slice.call(zone.querySelectorAll('img'));
     Promise.race([
       Promise.all(imgs.map(function (im) { return im.complete ? Promise.resolve() : new Promise(function (ok) { im.onload = im.onerror = ok; }); })),
-      new Promise(function (ok) { setTimeout(ok, 4000); }),
+      new Promise(function (ok) { setTimeout(ok, S.manuel && S.manuel.fiches ? 30000 : 4000); }),
     ]).then(function () {
       if (/\/imprimer$/.test(location.hash) && S.manuel) history.replaceState(null, '', '#/m/' + S.manuel.cle);
       window.print();
@@ -734,7 +869,8 @@
     // police de secours, plus étroite, laisserait déborder les pages une fois Gotham arrivée.
     charger(m).then(function () {
       if (!document.fonts || !document.fonts.load) return null;
-      return Promise.all([document.fonts.load('400 12px Gotham'), document.fonts.load('700 12px Gotham')]).then(function () { return document.fonts.ready; });
+      return Promise.all([document.fonts.load('400 12px Gotham'), document.fonts.load('700 12px Gotham'),
+        document.fonts.load('300 12px GothamPage'), document.fonts.load('500 12px GothamPage')]).then(function () { return document.fonts.ready; });
     }).then(function () {
       if (S.manuel !== m) return;
       S.pages = paginer(m);

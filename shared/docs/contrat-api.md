@@ -371,6 +371,13 @@ accès que `/formation/v25`). Doc : `formation/docs/formation.md` § Manuel du r
 - `crmUrl` (19/11/2026) : l'adresse du CRM pour le QR code « suivre sa formation » du manuel de pré-ouverture : le
   réglage `crmFormationUrl` (l'adresse exacte de l'application) s'il est posé, sinon l'origine de `rec_api_url`
   (erp_cles), sinon vide.
+- `GET /formation/ref/fiches` (19/11/2026) : les fiches techniques des produits pour le manuel « Fiches techniques » :
+  `{produits: [{id, ref, nom, categorie, groupe, gamme: standard|saison|aucune, saisons, prix, dlvHeures, fiche}], total,
+  manquent, erreurs}`. `fiche` résume la fiche technique du panel (`/products/{id}/technical-sheet/raw`, comme
+  l'application cuisine) : ingrédients, étapes, emballage, compétences, allergènes, conservation, durée de vie, remise en
+  température ; `null` si elle n'a pas pu être lue. Lues par lots (20 s par appel) et gardées six heures dans le dossier
+  privé : tant que `manquent` > 0, rappeler. `?rafraichir=1` relit tout. `GET /formation/ref/fiches/photo/{id}` redirige
+  vers la photo signée du panel (valable une heure, redemandée à chaque fois).
 - `lien` : relatif au module Formation (`<base du module>/` + `lien` ouvre la fiche). `formationUrl` : le chemin du
   module (réglage `formationUrl`, sinon `config.php › formationUrl`, sinon `FORMATION_URL`), vide s'il n'est pas réglé.
 - `panel.etat` : `valide` (choisie par une personne), `certain` (proposée automatiquement, sans ambiguïté), `propose`

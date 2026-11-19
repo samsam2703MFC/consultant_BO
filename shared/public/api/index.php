@@ -146,6 +146,7 @@ require __DIR__ . '/../../../formation/src/sop.php';
 require __DIR__ . '/../../../formation/src/referentiel.php';
 require __DIR__ . '/../../../formation/src/tablettes.php';
 require __DIR__ . '/../../../formation/src/referentiel_guides.php';
+require __DIR__ . '/../../../formation/src/fiches_techniques.php';
 require __DIR__ . '/../../../formation/src/formation_postes.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
