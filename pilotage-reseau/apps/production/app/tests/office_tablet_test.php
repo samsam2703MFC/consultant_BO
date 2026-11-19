@@ -90,6 +90,12 @@ try {
     $manager = ['Authorization' => 'Bearer ' . $call('POST', '/auth/login', ['login' => 'manager', 'password' => 'Secret-123'])[1]['data']['access_token']];
     $codes = fn(array $b) => array_map(fn($e) => $e['field'] . ':' . $e['code'], $b['errors'] ?? []);
     $tokenOf = fn(array $q) => substr($q['url'], strpos($q['url'], '#t=') + 3);
+    // [355] L'adresse porte un code court ; le jeton signé reste sur le serveur (n_kiosk_qr).
+    $jwtOf = function (array $q) use ($pdo, $tokenOf): string {
+        $st = $pdo->prepare('SELECT token FROM n_kiosk_qr WHERE code = ?');
+        $st->execute([$tokenOf($q)]);
+        return (string) $st->fetchColumn();
+    };
     $base = 'https://erp.example/production';
 
     // --- Tablet biurowy : tryb « office », bez grupy, parowanie
@@ -138,7 +144,7 @@ try {
     expectOff(str_starts_with($q['data']['url'], $base . '/kiosk/scan#t=') && $q['data']['expires_in'] === 120 && $q['data']['refresh_s'] === 105
         && count($q['data']['rows']) === $q['data']['size'], 'personal QR matrix, valid 120 s, renewed before');
     expectOff((int) $pdo->query("SELECT id_production_employee FROM n_prod_employee WHERE id = {$ola}")->fetchColumn() === 30, 'production profile created on the first QR');
-    $claims = (new Jwt(str_repeat('s', 48)))->decode($tokenOf($q['data']), KioskAuthService::QR_AUDIENCE);
+    $claims = (new Jwt(str_repeat('s', 48)))->decode($jwtOf($q['data']), KioskAuthService::QR_AUDIENCE);
     expectOff($claims['emp'] === $ola && $claims['day'] === date('Y-m-d') && $claims['dev'] === $officeId, 'QR token carries the tablet, the person and the day');
     $olaQr = $tokenOf($q['data']);
     $since = $q['data']['since'];
@@ -226,7 +232,7 @@ try {
     // --- QR grupy tabletu pracowni : jak wcześniej (lista grupy, każdy zarejestrowany telefon)
     [, $gq] = $call('GET', '/kiosk/qr?base=' . rawurlencode($base), null, $atelier);
     $groupQr = $tokenOf($gq['data']);
-    expectOff(!isset((new Jwt(str_repeat('s', 48)))->decode($groupQr, KioskAuthService::QR_AUDIENCE)['emp']) && $gq['data']['expires_in'] === 90, 'group QR has no person');
+    expectOff(str_starts_with($groupQr, 'Q') && strlen($groupQr) === 11 && !isset((new Jwt(str_repeat('s', 48)))->decode($jwtOf($gq['data']), KioskAuthService::QR_AUDIENCE)['emp']) && $gq['data']['expires_in'] === 90, 'group QR has no person');
     [$s, $b] = $call('GET', '/kiosk/phone/people', null, ['X-Qr-Token' => $groupQr]);
     expectOff($s === 200 && array_column($b['data'], 'id') === [80], 'group QR: people of the group');
     [$s, $b] = $call('GET', '/kiosk/phone/me', null, ['X-Qr-Token' => $groupQr, 'X-Phone-Token' => $olaPhone]);
@@ -402,8 +408,8 @@ try {
     $r2 = $login->qr(null, $base, null, $ola);
     expectOff($login->qr($r2['request'], $base, null, null)['request']['id'] !== $r2['request']['id'], 'other choice → new request');
     $r2 = $login->qr(null, $base, null, $ola);
-    $claims = json_decode(base64_decode(strtr(explode('.', $tokenOf($r2['qr']))[1], '-_', '+/')), true);
-    expectOff($claims['emp'] === $ola && $claims['lgn'] === $r2['request']['id'], 'QR carries the chosen person');
+    $claims = json_decode(base64_decode(strtr(explode('.', $jwtOf($r2['qr']))[1], '-_', '+/')), true);
+    expectOff($claims['emp'] === $ola && $claims['lgn'] === $r2['request']['id'] && $tokenOf($r2['qr'])[0] === 'M', 'QR carries the chosen person');
     $ph = ['X-Qr-Token' => $tokenOf($r2['qr']), 'X-Phone-Token' => $olaPhone];
     [$s, $b] = $call('GET', '/kiosk/phone/people', null, ['X-Qr-Token' => $tokenOf($r2['qr'])]);
     expectOff($s === 200 && array_column($b['data'], 'id') === [$ola], 'first scan: only the chosen person (PIN)');

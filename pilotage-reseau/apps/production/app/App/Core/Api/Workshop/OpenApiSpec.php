@@ -194,7 +194,7 @@ final class OpenApiSpec
                 'accessTokenHeader' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Access-Token'],
                 'deviceToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Device-Token', 'description' => 'Jeton de la tablette (POST /kiosk/pair)'],
                 'employeeToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Employee-Token', 'description' => 'Jeton court de la personne identifiée (POST /kiosk/identify)'],
-                'qrToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Qr-Token', 'description' => 'Jeton du QR code affiché par la tablette (GET /kiosk/qr), valable kiosk.qr_ttl_s'],
+                'qrToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Qr-Token', 'description' => 'Code du QR affiché par la tablette (GET /kiosk/qr, 11 caractères après #t=) ou jeton complet, valable kiosk.qr_ttl_s'],
                 'phoneToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Phone-Token', 'description' => 'Jeton du téléphone enregistré (POST /kiosk/phone/enroll)'],
             ],
             'parameters' => [

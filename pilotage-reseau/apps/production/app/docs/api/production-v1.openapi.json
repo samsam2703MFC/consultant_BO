@@ -18389,7 +18389,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "QR changeant affiché par la tablette : {base}/kiosk/scan#t=<jeton> (kiosk.qr_ttl_s, renouvelé toutes les kiosk.qr_refresh_s). rows = matrice (1 = noir).",
+                "description": "QR changeant affiché par la tablette : {base}/kiosk/scan#t=<code> (code de 11 caractères, Q…, qui désigne le jeton gardé sur le serveur ; kiosk.qr_ttl_s, renouvelé toutes les kiosk.qr_refresh_s). rows = matrice (1 = noir).",
                 "parameters": [
                     {
                         "name": "base",
@@ -18530,7 +18530,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "QR de la page {base}/kiosk/scan#t=<jeton> avec la tablette, la personne (emp) et le jour (day) ; valable kiosk.office_qr_ttl_s, renouvelé (refresh_s) avant. Seul le téléphone enregistré de cette personne le valide (sinon 403 QR_OTHER_PERSON), seulement ce jour-là (QR_EXPIRED) ; au premier scan, seule cette personne est proposée (PIN). since : heure du serveur, à repasser à GET /kiosk/office/status.",
+                "description": "QR de la page {base}/kiosk/scan#t=<code> (P…, jeton gardé sur le serveur) avec la tablette, la personne (emp) et le jour (day) ; valable kiosk.office_qr_ttl_s, renouvelé (refresh_s) avant. Seul le téléphone enregistré de cette personne le valide (sinon 403 QR_OTHER_PERSON), seulement ce jour-là (QR_EXPIRED) ; au premier scan, seule cette personne est proposée (PIN). since : heure du serveur, à repasser à GET /kiosk/office/status.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -21491,7 +21491,7 @@
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Qr-Token",
-                "description": "Jeton du QR code affiché par la tablette (GET /kiosk/qr), valable kiosk.qr_ttl_s"
+                "description": "Code du QR affiché par la tablette (GET /kiosk/qr, 11 caractères après #t=) ou jeton complet, valable kiosk.qr_ttl_s"
             },
             "phoneToken": {
                 "type": "apiKey",
