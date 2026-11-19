@@ -1,0 +1,45 @@
+{# [353] Procedura asystowana : na stronie / asystencie z przypiętą procedurą SOP — przycisk « Procedura » (panel z prawej,
+   wykonanie krok po kroku w ramce /procedure/{id}?embed=1). Strony bez SOP : nic. #}
+{% set sops = sop_here() %}
+{% if sops %}
+<div class="sop-fab" id="sopFab">
+    <button type="button" class="sop-fab-btn" data-sop-toggle aria-expanded="false"><i class="bi bi-journal-check"></i> Procedura{% if sops|length > 1 %} ({{ sops|length }}){% endif %}</button>
+    <div class="sop-fab-menu" hidden>
+        {% for s in sops %}<button type="button" data-sop-open="{{ s.id }}"><b>{{ s.code }}</b> {{ s.title }}{% if s.status == 'draft' %} <span class="sop-fab-draft">szkic</span>{% endif %}</button>{% endfor %}
+    </div>
+</div>
+<aside class="sop-panel" id="sopPanel" hidden aria-label="Procedura">
+    <div class="sop-panel-head"><b data-sop-title>Procedura</b><span><a data-sop-full target="_blank" rel="noopener" title="Otwórz w nowej karcie"><i class="bi bi-box-arrow-up-right"></i></a><button type="button" data-sop-close aria-label="Zamknij"><i class="bi bi-x-lg"></i></button></span></div>
+    <iframe title="Procedura" data-sop-frame></iframe>
+</aside>
+<style>
+.sop-fab{position:fixed;right:22px;bottom:22px;z-index:1040;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.sop-fab-btn{display:inline-flex;gap:8px;align-items:center;border:0;border-radius:12px;background:var(--at-brand,#8D1D2C);color:#fff;font-weight:700;padding:11px 16px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.sop-fab-menu{background:#fff;border:1px solid var(--at-line,#e7e0d8);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);overflow:hidden;max-width:380px}
+.sop-fab-menu button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:9px 12px;font-size:13px;border-bottom:1px solid #f0ebe5}
+.sop-fab-menu button:hover{background:#fbf4f5}.sop-fab-draft{font-size:11px;background:#efe9e3;border-radius:6px;padding:0 6px;color:#5d554f}
+.sop-panel{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:#fff;z-index:1050;box-shadow:-10px 0 30px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.sop-panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--at-line,#e7e0d8)}
+.sop-panel-head span{display:flex;gap:6px;align-items:center}.sop-panel-head a,.sop-panel-head button{border:0;background:none;font-size:16px;color:#5d554f;padding:4px 6px}
+.sop-panel iframe{flex:1;border:0;width:100%}
+</style>
+<script>
+(() => {
+    const fab = document.getElementById('sopFab'), panel = document.getElementById('sopPanel');
+    if (!fab || !panel) return;
+    const root = {{ root|json_encode|raw }}, from = encodeURIComponent(location.pathname.replace(root.replace(/^https?:\/\/[^/]+/, ''), '') || '/');
+    const menu = fab.querySelector('.sop-fab-menu'), list = {{ sops|json_encode|raw }};
+    const open = (id) => {
+        const s = list.find(x => x.id === id);
+        panel.querySelector('[data-sop-title]').textContent = s ? s.code + ' · ' + s.title : 'Procedura';
+        panel.querySelector('[data-sop-frame]').src = `${root}/procedure/${id}?embed=1&from=${from}`;
+        panel.querySelector('[data-sop-full]').href = `${root}/procedure/${id}?from=${from}`;
+        panel.hidden = false; menu.hidden = true;
+    };
+    fab.querySelector('[data-sop-toggle]').addEventListener('click', () => { if (list.length === 1) open(list[0].id); else menu.hidden = !menu.hidden; });
+    fab.querySelectorAll('[data-sop-open]').forEach(b => b.addEventListener('click', () => open(Number(b.dataset.sopOpen))));
+    panel.querySelector('[data-sop-close]').addEventListener('click', () => { panel.hidden = true; panel.querySelector('[data-sop-frame]').src = 'about:blank'; });
+    window.addEventListener('message', (e) => { if (e.origin === location.origin && e.data === 'sop-done') setTimeout(() => { panel.hidden = true; }, 1600); });
+})();
+</script>
+{% endif %}

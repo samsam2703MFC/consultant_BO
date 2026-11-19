@@ -58,6 +58,8 @@ final class PageAccess
         'returns' => ['Zwroty', 'Sprzedaż', ['/client-complaints'], false],
         'communication' => ['Komunikacja (dystrybucja dokumentów i e-maile automatyczne, wzory dokumentów i e-maili, wiadomości)', 'Sprzedaż', ['/communication'], false],
         // [335] Stany i palety : osobne prawo (CEO, finanse, produkcja, jakość — bez całej logistyki) ; usunięcie palety (AJAX) pod tym samym prawem.
+        // [353] Procedury SOP : lista, asystent tworzenia, zatwierdzenie (procedura asystowana /procedure : każdy zalogowany).
+        'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
         'stock_pallets' => ['Stany i palety (magazyn, palety, wysłane, stan ogólny, krótka data ; usunięcie palety)', 'Logistyka i pakowanie', ['/logistics/stock', '/ajax/logistics/stock'], false],
         'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, plan 12 tygodni, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics'], false],
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],

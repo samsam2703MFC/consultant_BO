@@ -96,6 +96,7 @@ final class PositionTaskService
         '/purchasing/cost-review' => 'material_costs_reviewed',
         '/production/yield-review' => 'yield_reviewed',
         '/workshop/traceability/samples' => 'samples_done',
+        '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',
     ];

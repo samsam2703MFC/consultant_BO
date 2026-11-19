@@ -35,6 +35,8 @@ final class Rail
         // [262] Czas pracy (moduł Pointages) : dzień do zatwierdzenia, miesiąc, urlopy, nadgodziny ; licznik = dni do zatwierdzenia.
         'time' => ['Czas pracy', 'bi-clock-history', 'Produkcja', '/time', [], 'time'],
         'hr' => ['HR', 'bi-person-vcard', 'Produkcja', '/hr', [], null],
+        // [353] Procedury SOP : lista, asystent (etapy + zdjęcia), wykonania ; procedura asystowana pod przyciskiem na stronach.
+        'sop' => ['Procedury (SOP)', 'bi-journal-check', 'Produkcja', '/sop', ['/procedure'], null],
         'tablets' => ['Tablety', 'bi-tablet', 'Produkcja', '/workshop/execution', ['/workshop/timesheet'], null],
         'purchasing' => ['Zakupy', 'bi-cart3', 'Zakupy', '/workshop/buy', ['/settings/ksef/purchase-invoices', '/purchases'], null],
         'materials' => ['Surowce i ceny', 'bi-basket', 'Zakupy', '/purchasing', ['/material-categories', '/materials'], null],

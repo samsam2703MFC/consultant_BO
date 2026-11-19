@@ -46,6 +46,8 @@ final class TaskWizards
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
         // [352] Próbki produkcji (makieta 68 · 3) : wybór partii, arkusz A4 z QR, skan przy odłożeniu.
+        // [353] SOP dnia : procedura poprawiona albo nowa, zatwierdzona dziś.
+        'sop_daily' => ['SOP dnia', '/sop', 'wersja procedury zatwierdzona dziś (poprawiona albo nowa)', 4],
         'samples_done' => ['Próbki produkcji', '/workshop/traceability/samples', 'próbki dnia odłożone (skan QR) albo dzień bez próbek', 3],
         // [262] Czas pracy : zadanie nr 1 kierownika produkcji — odbicia dnia sprawdzone, powody wybrane, dzień zatwierdzony.
         'time_day_validated' => ['Czas pracy dnia', '/time', 'dzień zatwierdzony (odbicia, powody nadgodzin i nieobecności)', 1],
@@ -82,6 +84,7 @@ final class TaskWizards
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
+        'sop_daily' => 'gdy dziś zatwierdzono wersję procedury SOP — poprawionej albo nowej (Procedury SOP, krok « Zatwierdź »)',
         'samples_done' => 'gdy wszystkie próbki dnia są odłożone i zeskanowane albo dzień zaliczony bez próbek (asystent « Próbki produkcji »)',
         'time_day_validated' => 'gdy dzień jest zatwierdzony w Czasie pracy (odbicia, powody nadgodzin i nieobecności)',
         'time_month_closed' => 'gdy poprzedni miesiąc jest zamknięty w Czasie pracy › Miesiąc (karty czasu pracy)',
@@ -209,6 +212,10 @@ final class TaskWizards
                 break;
             case 'tomorrow_sent':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                break;
+            case 'sop_daily':
+                $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);
+                if ($d['done']) $out = ['done' => true, 'summary' => $d['summary']] + $out;
                 break;
             case 'samples_done':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
