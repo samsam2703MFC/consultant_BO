@@ -19,7 +19,7 @@ declare(strict_types=1);
  * SES magasins : tout paramètre de magasin d'une requête (shop, shopId, magasin…) doit en faire partie, sinon 403.
  *
  * Restent ouvertes sans session, comme avant, les routes qui ont leur propre clé (index.php) : suivi des newsletters,
- * flux ICS, webhooks Meta, app employé, borne et caisse de pointage, page de suivi du franchisé, tablettes SOP,
+ * flux ICS, webhooks Meta, app employé, page de suivi du franchisé, tablettes SOP,
  * routes d'intégration des autres portails (X-Service-Token) ; les horloges (…/cron?jeton=) ; la recette de chaque
  * livraison (clé X-Recette tirée par bin/deploy.sh).
  *

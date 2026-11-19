@@ -36,13 +36,15 @@ function tplKpi(a, x){
   if (!k) { return ''; }
   if (!k.groupes.length) { return '<div class="fi-vide">Le serveur ne rend pas encore le catalogue des KPI (GET /assistant/coachs, champ kpis).</div>'; }
   const n = 2 + k.assistants.length;
+  // L'interrupteur d'un outil (design system §7.11, celui de Structure de gamme) ; le point bleu : pas encore publié.
+  const tog = c => `<span class="ac-tog"><button type="button" class="sg-tog${c.tog.on ? ' is-on' : ''}" role="switch" aria-checked="${c.tog.on}" aria-label="${esc(c.tog.lib)}" ${x.A(c.tog.go)}><span class="sg-tog__piste"></span><span class="sg-tog__mot">${esc(c.txt)}</span></button>${c.tog.modifie ? '<i class="fi-pt" title="modifié, pas encore publié"></i>' : ''}</span>`;
   const tete = k.assistants.map(s => `<th><span class="ac-kt-qui">${s.avatar ? `<img src="${esc(s.avatar)}" width="22" height="22" alt="">` : ''}${esc(s.nom)}</span><small>${esc(s.modele)}</small></th>`).join('');
   const lignes = k.groupes.map(g => `<tr class="ac-kt-g"><td colspan="${n}">${esc(g.groupe)}</td></tr>` + g.lignes.map(l => `<tr>
       <td><b>${esc(l.kpi)}</b><small>${esc(l.detail)}</small></td>
       <td class="ac-kt-src">${esc(l.source)}${l.outil ? `<code>${esc(l.outil)}</code>` : ''}</td>
-      ${l.cases.map(c => `<td><span class="ac-k ${esc(c.ton)}">${esc(c.txt)}</span></td>`).join('')}</tr>`).join('')).join('');
-  return `<p class="fi-pf-intro">Tout ce que lisent les assistants, groupé : la fiche du magasin, lue d’office à chaque question (les KPI sondés au panel et au cockpit), puis les outils qu’ils appellent à la demande. Chaque case dit ce que l’assistant en fait : l’accent de son axe et sa cible 2026, réglés dans l’onglet Coachs (les brouillons s’y voient avant publication), ou « lu ». Le modèle de chaque assistant est sous son nom.</p>
-    <div class="ac-kt-leg"><span class="ac-k fort">Accent fort</span> dans chaque bilan <span class="ac-k suivi">Suivi</span> quand les chiffres le justifient <span class="ac-k non">Si on le demande</span> seulement sur question <span class="ac-k lu">Lu</span> dans la fiche, sans consigne <span class="ac-k dispo">À la demande</span> un outil qu’il appelle s’il en a besoin</div>
+      ${l.cases.map(c => `<td>${c.tog ? tog(c) : `<span class="ac-k ${esc(c.ton)}">${esc(c.txt)}</span>`}</td>`).join('')}</tr>`).join('')).join('');
+  return `<p class="fi-pf-intro">Tout ce que lisent les assistants, groupé : la fiche du magasin, lue d’office à chaque question (les KPI sondés au panel et au cockpit), puis les outils qu’ils appellent à la demande. Chaque case dit ce que l’assistant en fait : l’accent de son axe et sa cible 2026, réglés dans l’onglet Coachs (les brouillons s’y voient avant publication), ou « lu ». Le modèle de chaque assistant est sous son nom. Les outils à la demande se coupent assistant par assistant ; le Professeur garde le manuel.</p>
+    <div class="ac-kt-leg"><span class="ac-k fort">Accent fort</span> dans chaque bilan <span class="ac-k suivi">Suivi</span> quand les chiffres le justifient <span class="ac-k non">Si on le demande</span> seulement sur question <span class="ac-k lu">Lu</span> dans la fiche, sans consigne <span class="ac-k dispo">À la demande</span> un outil qu’il appelle s’il en a besoin : l’interrupteur le lui coupe, à publier</div>
     <div class="fi-liste ac-kt-wrap"><table class="ac-kt"><thead><tr><th>KPI</th><th>Lu où</th>${tete}</tr></thead><tbody>${lignes}</tbody></table></div>
     <p class="ac-non">Toujours, quel que soit l’assistant : aucun chiffre inventé, aucune insulte ni humiliation. Le Professeur ne lit pas la fiche : il part du sommaire du manuel et des photos de contrôle des sept derniers jours.</p>`;
 }
@@ -69,6 +71,6 @@ export function tplAssistantCoachs(c, x){
   if (!a) { return ''; }
   const haut = `<div class="fi-haut"><div class="fi-segc"><button ${x.A(a.ongletC)} class="${a.onglet === 'c' ? 'on' : ''}">Coachs</button><button ${x.A(a.ongletK)} class="${a.onglet === 'k' ? 'on' : ''}">KPI</button><button ${x.A(a.ongletQ)} class="${a.onglet === 'q' ? 'on' : ''}">Questions posées</button></div></div>`;
   const msg = a.msg ? `<div class="fi-toast${a.msg.ko ? ' ko' : ''}">${esc(a.msg.txt)}<button ${x.A(a.fermerMsg)} aria-label="Fermer">×</button></div>` : '';
-  const dock = a.onglet === 'c' && a.nbModifs ? `<div class="fi-dock"><span>${a.nbModifs} coach${a.nbModifs > 1 ? 's' : ''} modifié${a.nbModifs > 1 ? 's' : ''}, non publié${a.nbModifs > 1 ? 's' : ''}</span><button class="fi-lien" ${x.A(a.annuler)}>Annuler</button><button class="fi-cta" ${x.A(a.publier)}${a.envoi ? ' disabled' : ''}>${a.envoi ? 'Publication…' : 'Publier dans les magasins'}</button></div>` : '';
+  const dock = a.onglet !== 'q' && a.nbModifs ? `<div class="fi-dock"><span>${a.nbModifs} assistant${a.nbModifs > 1 ? 's' : ''} modifié${a.nbModifs > 1 ? 's' : ''}, non publié${a.nbModifs > 1 ? 's' : ''}</span><button class="fi-lien" ${x.A(a.annuler)}>Annuler</button><button class="fi-cta" ${x.A(a.publier)}${a.envoi ? ' disabled' : ''}>${a.envoi ? 'Publication…' : 'Publier dans les magasins'}</button></div>` : '';
   return `<div data-screen="assistantCoachs" class="fi ac">${haut}${msg}<div class="fi-col">${a.onglet === 'q' ? tplQuestions(a, x) : (a.onglet === 'k' ? tplKpi(a, x) : tplCoachs(a, x))}</div>${dock}</div>`;
 }

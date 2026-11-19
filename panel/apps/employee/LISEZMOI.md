@@ -289,7 +289,10 @@ gardé dans l'app ni dans le cockpit ; la feuille se vide en se fermant. À savo
 (`franchisee_employee.pin`) et `PATCH /employees/{id}` ne vérifie que la validité du jeton, pas qu'il s'agit de la
 personne elle-même.
 
-## Pointer (01/11/2026) : l'arrivée et le départ, avec le QR code de la borne
+## Pointer (01/11/2026) : l'arrivée et le départ, avec le QR code de la borne — retiré le 19/11/2026
+
+**Retiré le 19/11/2026 (demande de Sam)** : la carte de l'Accueil, `/pointage`, Profil › Mes pointages, leurs textes
+(`pointage.json`, les `pt_` de `dashboard.json`, `pf_clockings` de `me.json`) et jsQR. Ce qui suit décrit ce qui existait.
 
 Demande de Sam (« un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ; le listing
 des pointages dans le profil, in / out en fonction de leur shift » ; maquette `panel/docs/maquettes/pointage-app`).
