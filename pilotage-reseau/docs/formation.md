@@ -1135,6 +1135,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   `data/formation/dirigeant/LISEZMOI.md`.
 - **0.0.55 publié le 19/11/2026** (Sam : « publie 0.0.55 ») : `PATCH /formation/sop/fiche/art-bonnes-pratiques-dirigeant`
   {statut: publiee}, relu au serveur et sur la tablette ; quiz et « vu faire » ouverts.
+- **0.0.56 publié le 19/11/2026** (Sam : « publie 0.0.56 ») : `PATCH /formation/sop/fiche/art-valeur-franchise`
+  {statut: publiee}, relu au serveur et sur la tablette ; quiz et « vu faire » ouverts.
 
 ## Le lien Manuel ↔ checklist de gestion hebdomadaire (18/11/2026)
 

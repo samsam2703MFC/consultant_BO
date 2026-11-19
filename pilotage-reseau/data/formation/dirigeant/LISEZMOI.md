@@ -14,6 +14,8 @@ demande (« publie 0.0.55 », « publie 0.0.56 »).
 
 **0.0.55 publié le 19/11/2026** (Sam : « publie 0.0.55 ») : quiz et « vu faire » ouverts sur la tablette.
 
+**0.0.56 publié le 19/11/2026** (Sam : « publie 0.0.56 ») : quiz et « vu faire » ouverts sur la tablette.
+
 ## À confirmer
 
 - **Recoupement avec 0.0.16 « Animation d’équipe et RH » (FO-06)** : briefing, réunion d’équipe, entretien, conflit. Les
