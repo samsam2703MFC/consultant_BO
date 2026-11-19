@@ -372,7 +372,7 @@ function tplCatalogue(c, x){
       <td style="${TD};${n};font-weight:400;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
       <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
       <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:400;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
-      <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.basculerOblig)} role="switch" aria-checked="${l.oblig}" aria-label="Obligatoire" title="${l.oblig ? (l.obligSaison ? 'Obligatoire pendant une saison — un clic la retire' : 'Obligatoire — un clic la retire') : 'Un clic la rend obligatoire, toute l’année'}" style="width:38px;height:22px;border-radius:6px;border:none;cursor:pointer;position:relative;vertical-align:middle;background:${l.oblig ? '#3f7a52' : 'rgba(0,0,0,.18)'}"><i style="position:absolute;top:3px;${l.oblig ? 'left:19px' : 'left:3px'};width:16px;height:16px;border-radius:50%;background:#fff;"></i></button>${l.obligSaison ? `<div style="font-size:10px;${mu}">saison</div>` : ''}`}</td></tr>`).join('')
+      <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.voirOblig)} title="L’obligatoire se règle dans Comptoir › Assortiment obligatoire : un clic y ouvre cette référence" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:${l.oblig ? '#3f7a52' : 'var(--color-text-muted)'}">${l.oblig ? (l.obligSaison ? 'saison' : 'oui') : 'non'}</button>`}</td></tr>`).join('')
       || `<tr><td colspan="${(c.catCols || []).length}" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
     ${c.catTronque ? `<div style="padding:9px 12px;font-size:11.5px;${mu}">… et ${c.catTronque} autres : affinez la recherche ou la catégorie.</div>` : ''}</div>`;
   const f = c.catFiche;
@@ -408,7 +408,7 @@ function tplCatalogue(c, x){
       <div style="font-size:12px;${mu};margin-top:2px">${esc(f.sous)}</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:9px">
         ${f.revue ? `<span title="La revue franchiseur : un clic sur l’étoile posée la retire" style="white-space:nowrap">${f.revue.map(e => `<button ${x.A(e.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;color:${e.pleine ? '#B0792A' : '#e6e0d8'}">★</button>`).join('')}</span>` : ''}
-        ${f.obligatoire != null ? `<label style="font-size:12px;display:inline-flex;gap:5px;align-items:center;cursor:pointer" title="Imposée en boutique (l’assortiment obligatoire) et gardée au score, quoi qu’en disent la marge et le score"><input type="checkbox" ${f.obligatoire ? 'checked' : ''} ${x.C(f.basculerObligatoire)}> Obligatoire</label>` : ''}
+        ${f.obligatoire != null ? `<span title="Imposée en boutique et gardée au score, quoi qu’en disent la marge et le score : se règle dans Comptoir › Assortiment obligatoire" style="font-size:12px">${f.obligatoire ? 'Obligatoire' : 'Facultative'}</span>${lien(f.voirObligatoire, 'Assortiment ›')}` : ''}
         ${lien(f.detailScore, 'Score en détail · projets · arrêt ›')}${lien(f.ouvrirProduction, 'Fiche de production ›')}${lien(f.comptoir, 'Au comptoir ›')}</div></div>
     <div style="padding:12px 16px 16px"><div style="display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">${f.onglets.map(o => `<button ${x.A(o.choisir)} style="border:none;border-radius:8px;padding:6px 10px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;white-space:nowrap;background:${o.on ? 'var(--color-primary)' : 'transparent'};color:${o.on ? '#fff' : 'var(--color-text)'}">${esc(o.nom)}</button>`).join('')}</div>
       ${corps}</div></aside>` : '';
@@ -447,18 +447,17 @@ function tplRefEdit(c, x){
         </div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Vider la zone retire la référence du planogramme.</div>
       ` : `
-        <div style="display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--color-background-secondary);border-radius:9px;margin-bottom:14px">
-          <input type="checkbox" ${e.champs.must ? 'checked' : ''} ${x.C(e.set('must'))} style="width:16px;height:16px;accent-color:var(--color-primary)">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:400">Référence obligatoire</div>
-            <div style="font-size:11px;color:var(--color-text-muted)">${esc(e.saisonTxt || 'toute boutique doit la proposer en permanence')}</div>
-          </div>
-          <div style="width:110px">${champ('qmin', 'Quantité min.', '0')}</div>
+        <!-- Ce que la fiche ne tient pas (19/11/2026) : lu au panel ou à l'assortiment, corrigé là où il vit. -->
+        <div style="padding:11px 13px;background:var(--color-background-secondary);border-radius:9px;margin-bottom:14px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span style="color:var(--color-text-muted)">Assortiment obligatoire</span><span>${esc(e.obligTxt)}${e.voirAssortiment ? ` · <button ${x.A(e.voirAssortiment)} class="linklike">régler ›</button>` : ''}</span></div>
+          ${e.panel.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span style="color:var(--color-text-muted)">${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Le panel fait foi : le prix et la durée de vie se corrigent
+            ${e.voirPanel ? `dans <button ${x.A(e.voirPanel)} class="linklike">Paramétrage produits ›</button>` : 'dans Paramétrage produits'},
+            le coût matière dans la recette (<button ${x.A(e.voirRecettes)} class="linklike">Recettes à corriger ›</button>).</div>
+          ${e.ancien ? `<div style="font-size:11px;color:var(--color-on-abricot, #8a5a14);margin-top:6px">Ancienne saisie du cockpit, plus lue : ${esc(e.ancien)} — à reporter au panel si elle est juste.</div>` : ''}
         </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px">La fabrication, que seul le cockpit tient :</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
-          ${champ('prix', 'Prix de vente (€)', '')}
-          ${champ('mat', 'Coût matière (€)', '')}
-          ${champ('dlv', 'DLV (heures)', '')}
           ${champ('prep', 'Préparation (min)', '')}
           ${champ('cuisson', 'Cuisson (min)', '')}
           ${champ('fin', 'Finition (min)', '')}
@@ -4660,12 +4659,12 @@ function tplInventaires(c, x){
   }
   function histo(){
     if (!o.histo.length) { return ''; }
-    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
+    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La matière expliquée sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
       <div class="in-histo">${o.histo.map(h => `<button ${x.A(h.choisir)} class="in-hb ${h.cls}${h.on ? ' on' : ''}" title="${esc(h.titre)}"><span class="v">${esc(h.val)}</span><i style="height:${h.h}%"></i><span class="d">${esc(h.lib)}</span></button>`).join('')}<div class="in-cent"></div></div></div>`;
   }
   const J = o.justesse;
   const tete = `<div class="in-tete">
-    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Justesse des ventes</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
+    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Matière expliquée</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
     <div class="in-kpis">${o.kpi.map(k => `<div style="${card};padding:14px 16px"><div class="k">${esc(k[0])}</div><div class="v ${k[2]}">${esc(k[1])}</div><div class="s">${esc(k[3])}</div></div>`).join('')}</div></div>
     <div class="in-bilan" style="${card}">${o.bilan.map((b, i) => `<div class="${i === 3 ? 'eq' : ''}"><span>${esc(b[0])}</span><b>${esc(b[1])}</b></div>`).join('')}</div>`;
   const S = o.suite;

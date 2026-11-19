@@ -57,6 +57,7 @@ require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/franchise/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
 require __DIR__ . '/../../src/franchise/frais.php';                 // Dashboard magasin › Frais : les frais du mois, TVA comprise ou non, et le taux (16/11/2026)
+require __DIR__ . '/../../src/inventaires_taux.php';   // la matière expliquée, un seul indicateur (19/11/2026)
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)

@@ -703,13 +703,9 @@ function ep_product_periodes(): array
     $triDeb    = date('Y-m-01 00:00:00', strtotime($moisDeb . ' -2 months'));
     $anPrec    = ((int) substr($per, 0, 4)) - 1;
 
-    // Le coût matière : les mêmes sources que le score, dans le même ordre —
-    // recettes (et panel, via catalogueCouts), puis la saisie du cockpit.
+    // Le coût matière : la même source que le score — les recettes (et le panel, via catalogueCouts). La saisie du
+    // cockpit n'est plus lue (19/11/2026) : le panel fait foi.
     $cout = catalogueCouts()[$pid]['mat'] ?? null;
-    try {
-        $ov = Db::row('SELECT mat FROM ceo_prod_product WHERE pwa_id = ? AND mat IS NOT NULL AND actif = 1', [$pid]);
-        if ($ov !== null) { $cout = (float) $ov['mat']; }
-    } catch (PDOException $e) { /* référentiel absent : recettes seules */ }
 
     $fenetre = static function (string $du, string $au) use ($pid, $cout): array {
         $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(6000) */
@@ -3813,13 +3809,13 @@ function cataloguePrixMagasin(int $sid): array
 function ficheRemplie(?array $e): bool
 {
     if ($e === null) { return false; }
-    foreach (['prep', 'cuisson', 'fin', 'bmin', 'four', 'dlv', 'qmin'] as $k) {
+    // Depuis le 19/11/2026, la fiche ne tient que la fabrication : le prix, le coût et la durée de vie sont au panel,
+    // l'obligatoire et son minimum dans l'assortiment.
+    foreach (['prep', 'cuisson', 'fin', 'bmin', 'four'] as $k) {
         if ((int) ($e[$k] ?? 0) > 0) { return true; }
     }
     if ((int) ($e['bmult'] ?? 1) > 1) { return true; }
-    if (($e['mat'] ?? null) !== null || ($e['prix'] ?? null) !== null) { return true; }
-    if ((string) ($e['profil'] ?? '') !== '') { return true; }
-    return !empty($e['must']);
+    return (string) ($e['profil'] ?? '') !== '';
 }
 
 function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?array
@@ -3880,19 +3876,19 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         $ref = $e !== null ? (string) $e['ref'] : (string) $pid;
         $pl  = $plano[$ref] ?? null;
 
-        // Prix : la saisie réseau prime, puis le prix réellement pratiqué en
-        // boutique (`shop_product`), puis seulement le prix conseillé de la
-        // fiche — qui vaut 1,00 partout, donc ne veut rien dire.
-        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : null;
-        $prixSrc = $prix !== null ? 'réseau' : null;
-        if ($prix === null && isset($prixR[$pid])) { $prix = $prixR[$pid]; $prixSrc = 'boutiques'; }
+        // Le panel fait foi (19/11/2026, docs/audit-rail.md § 4.1) : le prix, le coût matière et la durée de vie se
+        // lisent au panel et s'y corrigent (Produits › Paramétrage, Vérification › Recettes à corriger). Ce que la
+        // fiche de production du cockpit en avait saisi n'est plus lu : il est rendu à part (saisieCockpit), pour être
+        // reporté au panel s'il est juste.
+        // Prix : celui réellement pratiqué en boutique (`shop_product`), sinon le prix conseillé de la fiche.
+        $prix = null; $prixSrc = null;
+        if (isset($prixR[$pid])) { $prix = $prixR[$pid]; $prixSrc = 'boutiques'; }
         if ($prix === null && (float) $p['suggested_sale_price'] > 0) {
             $prix = (float) $p['suggested_sale_price']; $prixSrc = 'fiche';
         }
-        // Coût matière : la saisie cockpit prime, sinon la recette du réseau.
-        $mat = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : null;
-        $matSrc = $mat !== null ? 'saisi' : null;
-        if ($mat === null && isset($couts[$pid])) {
+        // Coût matière : la recette du réseau.
+        $mat = null; $matSrc = null;
+        if (isset($couts[$pid])) {
             $mat = $couts[$pid]['mat']; $matSrc = $couts[$pid]['source'];
         }
         // Vraisemblance du coût. Au-dessus du prix, la recette est mal
@@ -3903,9 +3899,13 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         // corriger à la source.
         $matFiable = coutVraisemblable($mat, $prix);
 
-        $dlv = $e !== null && (int) $e['dlv'] > 0 ? (int) $e['dlv'] : null;
-        if ($dlv === null && (int) $p['shelf_life_minutes'] > 0) {
-            $dlv = (int) round(((int) $p['shelf_life_minutes']) / 60);
+        $dlv = (int) $p['shelf_life_minutes'] > 0 ? (int) round(((int) $p['shelf_life_minutes']) / 60) : null;
+        // L'ancienne saisie du cockpit, montrée seulement : plus rien ne la lit.
+        $saisieCockpit = [];
+        if ($e !== null) {
+            if ($e['prix'] !== null) { $saisieCockpit['prix'] = (float) $e['prix']; }
+            if ($e['mat'] !== null) { $saisieCockpit['mat'] = (float) $e['mat']; }
+            if ((int) $e['dlv'] > 0) { $saisieCockpit['dlv'] = (int) $e['dlv']; }
         }
 
         $fin = $fins[$ref] ?? null;
@@ -3924,6 +3924,7 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
             'four'    => $e ? (int) $e['four'] : 0,
             'dlv' => $dlv ?? 0, 'mat' => $mat, 'prix' => $prix,
             'matSource' => $matSrc, 'prixSource' => $prixSrc, 'matFiable' => $matFiable,
+            'saisieCockpit' => $saisieCockpit ?: null,
             'marge'    => ($matFiable && $mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
             'margePct' => ($matFiable && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
             // Marge NETTE : la commission de marque retirée. Elle vient de la
@@ -4186,15 +4187,16 @@ function produitLigne(): callable
     $prixR = cataloguePrix();
     $enrich = [];
     try {
-        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
+        foreach (Db::rows('SELECT pwa_id, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
             $enrich[(int) $r['pwa_id']] = $r;
         }
     } catch (PDOException $e) { /* référentiel de production absent */ }
 
+    // Prix et coût matière : le panel fait foi (19/11/2026) ; le cockpit ne garde que l'obligatoire.
     return function (int $pid, string $nom) use ($couts, $prixR, $enrich): array {
         $e = $enrich[$pid] ?? null;
-        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : ($prixR[$pid] ?? null);
-        $mat  = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : ($couts[$pid]['mat'] ?? null);
+        $prix = $prixR[$pid] ?? null;
+        $mat  = $couts[$pid]['mat'] ?? null;
         $ok   = coutVraisemblable($mat, $prix);
         return ['id' => (string) $pid, 'nom' => $nom, 'prix' => $prix, 'mat' => $mat,
             'matFiable' => $ok,
@@ -6654,17 +6656,12 @@ function ep_products(): array
         // (product_recipe ⨝ recipe_cost, ~422 références sur 711), le panel
         // pour les références sans recette (recipe_cost_net de
         // /shops/{id}/products/available, dans catalogueCouts), puis la
-        // saisie du cockpit qui prime — elle corrige au cas par cas.
+        // saisie du cockpit primait — elle n'est plus lue depuis le 19/11/2026 : le panel fait foi.
         // Le rapprochement se fait par identifiant de caisse UNIQUEMENT,
         // jamais par l'intitulé : deux références peuvent porter des noms
         // voisins et une marge fausse ne se voit pas.
         $cout = [];
         foreach (catalogueCouts() as $pid => $c) { $cout[$pid] = $c['mat']; }
-        try {
-            foreach (Db::rows('SELECT pwa_id, mat FROM ceo_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
-                $cout[(int) $c['pwa_id']] = (float) $c['mat'];
-            }
-        } catch (PDOException $eC) { /* référentiel absent : recettes seules */ }
 
         // Catégorie : le vrai catalogue (product ⨝ product_category), indexé
         // par identifiant de caisse. La table miroir sig_products porte des
