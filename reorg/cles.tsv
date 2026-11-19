@@ -1,0 +1,122 @@
+emplacement	nom	fichiers
+URL https en dur	http://blog-gourmand-anvers.be	bin/seed.php sql/seed.sql
+URL https en dur	https://api.anthropic.com	src/anthropic.php src/assistant_magasin.php
+URL https en dur	https://api.linkedin.com	src/linkedin_api.php
+URL https en dur	https://api.smsapi.com	config/config.example.php src/metadonnee.php
+URL https en dur	https://api.twilio.com	src/api_module.php src/sms.php
+URL https en dur	https://atelierby.be	bin/tests.php src/benchmark.php
+URL https en dur	https://atelierby.tfbuddy.com	apps/employee/config/app.php src/ca_mail.php src/erp_api.php src/metadonnee.php src/panel_api.php src/ventes.php src/verification.php tools/sonde_vouchers.php
+URL https en dur	https://calendar.google.com	public/assets/js/visites.js src/visites_cadre.php
+URL https en dur	https://docs.google.com	public/formation/formation.js
+URL https en dur	https://drive.google.com	public/formation/formation.js
+URL https en dur	https://franchise.atelierby.be	tools/metadonnee-essai/router.php
+URL https en dur	https://graph.facebook.com	src/crm/meta_graph.php src/meta_graph.php
+URL https en dur	https://overpass-api.de	src/scouting_osm.php
+URL https en dur	https://overpass.kumi.systems	src/scouting_osm.php
+URL https en dur	https://overpass.private.coffee	src/scouting_osm.php
+URL https en dur	https://panel.atelierby.be	bin/seed.php
+URL https en dur	https://places.googleapis.com	src/google_api.php
+URL https en dur	https://player.vimeo.com	public/formation/formation.js public/formation/sop/tablette.js
+URL https en dur	https://services-sim.socialsecurity.be	src/hr/Dimona/Generated/Spec.php
+URL https en dur	https://services.socialsecurity.be	src/hr/Dimona/Generated/Spec.php
+URL https en dur	https://test.tfbuddy.com	tools/assistant-src/src/lib/api/config.ts tools/assistant-src/vite.config.ts tools/sonde_vouchers.php
+URL https en dur	https://tile.openstreetmap.org	public/assets/js/prospection.js
+URL https en dur	https://up.test	bin/tests.php
+URL https en dur	https://webshop.atelierby.be	public/assets/js/newsletter.js
+URL https en dur	https://www.atelierby.be	bin/seed.php sql/seed.sql
+URL https en dur	https://www.facebook.com	bin/tests.php public/assets/js/app.js sql/seed.sql src/brand_guard.php src/meta_graph.php
+URL https en dur	https://www.google.com	public/assets/js/prospection.js
+URL https en dur	https://www.linkedin.com	src/linkedin_api.php
+URL https en dur	https://www.loom.com	public/formation/formation.js
+URL https en dur	https://www.youtube-nocookie.com	public/formation/formation.js public/formation/sop/tablette.js
+ceo_app_setting (setting)	anthropic	src/anthropic.php src/writes.php tools/sonde_assistant_halle.php
+ceo_app_setting (setting)	auditsJeton	src/audits.php
+ceo_app_setting (setting)	authPasswordHash	src/auth.php
+ceo_app_setting (setting)	authSecret	src/auth.php src/installer.php src/sop.php src/tablettes.php
+ceo_app_setting (setting)	boiteJeton	src/franchise/boite_mail.php
+ceo_app_setting (setting)	boiteSecret	src/franchise/boite_mail.php
+ceo_app_setting (setting)	brandGuard	src/brand_guard.php src/meta_graph.php
+ceo_app_setting (setting)	cockpitBase	src/rapports.php
+ceo_app_setting (setting)	cqMailBase	src/cq_mail.php
+ceo_app_setting (setting)	erpAdmin	src/erp_api.php src/writes.php
+ceo_app_setting (setting)	erpAdminToken	src/erp_api.php src/writes.php
+ceo_app_setting (setting)	erpUrl	src/endpoints.php
+ceo_app_setting (setting)	espaceBoutiqueUrl	src/endpoints.php
+ceo_app_setting (setting)	foodCostApi	src/endpoints.php src/ventes.php
+ceo_app_setting (setting)	formationUrl	src/referentiel.php
+ceo_app_setting (setting)	google	src/google_api.php src/writes.php
+ceo_app_setting (setting)	marketingApi	src/endpoints.php
+ceo_app_setting (setting)	marketingServiceTokenFile	src/endpoints.php
+ceo_app_setting (setting)	mdJeton	src/metadonnee.php
+ceo_app_setting (setting)	mdMeta	src/metadonnee.php
+ceo_app_setting (setting)	mdMetaJeton	src/metadonnee.php
+ceo_app_setting (setting)	mdMetaJetonCrm	src/metadonnee.php
+ceo_app_setting (setting)	mdMetaSecret	src/metadonnee.php
+ceo_app_setting (setting)	mdSmsJeton	src/metadonnee.php
+ceo_app_setting (setting)	nlJeton	src/newsletter_envoi.php
+ceo_app_setting (setting)	panelApi	src/panel_api.php src/writes.php
+ceo_app_setting (setting)	panelApiToken	src/panel_api.php
+ceo_app_setting (setting)	pushVapid	src/push.php
+ceo_app_setting (setting)	pwaBase	src/endpoints.php src/stats_ventes.php
+ceo_app_setting (setting)	rapportsJeton	src/benchmark.php src/brand_guard.php src/ca_mail.php src/fidelite_bingo.php src/rapports.php
+ceo_app_setting (setting)	smtp	src/rapports.php src/smtp.php
+ceo_app_setting (setting)	socialJeton	src/social_publication.php
+ceo_app_setting (setting)	socialPublication	src/linkedin_api.php src/social_publication.php
+ceo_app_setting (setting)	visitesJeton	src/suivi.php src/visites.php src/visites_cadre.php
+erp_cles (erpCle)	anthropic_api_key	src/anthropic.php
+erp_cles (erpCle)	anthropic_workspace_id	src/anthropic.php tools/sonde_assistant_halle.php
+erp_cles (erpCle)	erp_jeton_service	src/erp_cles.php src/franchise/catalogues_magasin.php src/franchise/dashboard_marketing.php
+erp_cles (erpCle)	mar_api_url	src/franchise/catalogues_magasin.php
+erp_cles (erpCle)	pil_api_url	src/erp_cles.php
+erp_cles (erpCle)	rec_api_url	src/erp_cles.php
+erp_cles (erpCle)	tfbuddy_password	src/panel_api.php src/writes.php
+variable d’environnement (getenv)	CB_JOURNAL_FILE	bin/console_bo.php
+variable d’environnement (getenv)	CB_OPCACHE_WAIT	bin/console_bo.php
+variable d’environnement (getenv)	CB_RESETS_FILE	bin/console_bo.php
+variable d’environnement (getenv)	CB_SEALED_FILE	bin/console_bo.php
+variable d’environnement (getenv)	CB_SEAL_KEY_FILE	bin/console_bo.php
+variable d’environnement (getenv)	COCKPIT_ACCES	config/config.example.php src/acces.php
+variable d’environnement (getenv)	COCKPIT_AUTH	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_DB_HOST	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_DB_NAME	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_DB_PASSWORD	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_DB_PORT	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_DB_USER	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_ERP_URL	config/config.example.php src/endpoints.php
+variable d’environnement (getenv)	COCKPIT_ESPACE_BOUTIQUE_URL	src/endpoints.php
+variable d’environnement (getenv)	COCKPIT_PRIVE	src/benchmark_import.php src/fil_franchise.php src/hr/Support/Config.php src/profil_employe.php
+variable d’environnement (getenv)	COCKPIT_PWA_BASE	config/config.example.php
+variable d’environnement (getenv)	COCKPIT_SEED	config/config.example.php src/installer.php
+variable d’environnement (getenv)	COCKPIT_URL	config/config.example.php src/formation.php
+variable d’environnement (getenv)	CONSOLE_BO_ACCOUNTS	bin/console_bo.php
+variable d’environnement (getenv)	FORMATION_URL	config/config.example.php src/referentiel.php
+variable d’environnement (getenv)	GOOGLE_API_KEY	config/config.example.php src/google_api.php
+variable d’environnement (getenv)	HR_CONSOLE_API_BASE	config/config.example.php src/acces.php
+variable d’environnement (getenv)	HR_CONSOLE_API_INTERNAL	config/config.example.php src/acces.php
+variable d’environnement (getenv)	HR_DB_DSN	src/hr/bootstrap.php
+variable d’environnement (getenv)	HR_DB_PASSWORD	src/hr/bootstrap.php
+variable d’environnement (getenv)	HR_DB_USER	src/hr/bootstrap.php
+variable d’environnement (getenv)	HR_DEV_DIRECTORY	src/hr/bootstrap.php
+variable d’environnement (getenv)	HR_DEV_IDENTITY	public/api/hr/index.php
+variable d’environnement (getenv)	HR_DIMONA_PROD_ENABLED	config/config.example.php
+variable d’environnement (getenv)	HR_SMOKE_CLIENT_ID	scripts/dimona-smoke.php
+variable d’environnement (getenv)	HR_SMOKE_ENTERPRISE_NUMBER	scripts/dimona-smoke.php
+variable d’environnement (getenv)	HR_SMOKE_ENV	scripts/dimona-smoke.php
+variable d’environnement (getenv)	HR_SMOKE_PRIVATE_KEY_FILE	scripts/dimona-smoke.php
+variable d’environnement (getenv)	LINKEDIN_ACCESS_TOKEN	src/linkedin_api.php
+variable d’environnement (getenv)	MAR_BASE_PATH	public/api/marketing/src/Support/Request.php
+variable d’environnement (getenv)	MAR_ENV_FILE	public/api/marketing/src/Support/Env.php
+variable d’environnement (getenv)	META_APP_SECRET	config/config.example.php
+variable d’environnement (getenv)	META_GRAPH_BASE	src/crm/meta_graph.php
+variable d’environnement (getenv)	META_SYSTEM_TOKEN	config/config.example.php
+variable d’environnement (getenv)	META_VERIFY_TOKEN	config/config.example.php
+variable d’environnement (getenv)	SMSAPI_BASE	config/config.example.php src/metadonnee.php
+variable d’environnement (getenv)	SMSAPI_TOKEN	config/config.example.php src/metadonnee.php
+variable d’environnement (getenv)	SMS_EXPEDITEUR	config/config.example.php src/sms.php
+variable d’environnement (getenv)	TABLETTES_CODE	config/config.example.php src/tablettes.php
+variable d’environnement (getenv)	TWILIO_SID	config/config.example.php src/sms.php
+variable d’environnement (getenv)	TWILIO_TOKEN	config/config.example.php src/sms.php
+variable d’environnement (getenv)	USER	public/api/marketing/src/Support/ImageStore.php
+variable d’environnement (getenv)	USERNAME	public/api/marketing/src/Support/ImageStore.php
+variable d’environnement (getenv)	WEBSHOP_API_DIR	bin/console_bo.php
+variable d’environnement (getenv)	WEBSHOP_API_LOCAL	bin/console_bo.php
