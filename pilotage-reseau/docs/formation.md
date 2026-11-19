@@ -1145,3 +1145,7 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
 - **Essai** : manuel des checklists, 24 pages (la page du code tient sur une page). Manuel du réseau, 52 pages au lieu de
   13 : 12 postes, 380 lignes de formation dont 173 avec lien vers l'article, 121 compétences clés, 134 compétences par
   niveau dont 19 avec lien vers leur SOP. Aucune page qui déborde, aucune erreur.
+- **Dépliant, page 2 « La franchise »** (19/11/2026, Sam) : les chiffres du contrat (9 ans, 31 jours, redevances
+  2 · 2 · 2,5 %) et les deux paragraphes droit d'entrée / DIP sont retirés. À leur place, un très court résumé des deux
+  articles, liens gardés : « Le cadre · 0.0.21 » (le DIP, puis le contrat et les engagements) et « La valeur · 0.0.56 »
+  (process écrits et délégables, chiffres fiables). Les chiffres restent dans l'article 0.0.21.
