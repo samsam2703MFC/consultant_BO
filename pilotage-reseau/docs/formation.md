@@ -1180,6 +1180,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   texte inchangé. Toujours « à valider ». Les sept autres captures restent. **La source du dépôt est ancienne**
   (`claude/loving-turing-n6j40s`, `dashboard-onglets/art-dash-produits.json`) : elle garde cette capture
   (`do-produits-recette.jpg`) et l'ancien repère × 3,13 · 32 %. Ne pas ré-encoder 0.0.43 à partir d'elle.
+- **0.0.43 publié le 19/11/2026** (Sam : « publie 0.0.43 ») : `PATCH /formation/sop/fiche/art-dash-produits {statut: publiee}`,
+  v1.3 (sans la photo de l'étape 8) ; relu au serveur : « publiee ».
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
