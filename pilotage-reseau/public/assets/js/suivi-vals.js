@@ -646,8 +646,9 @@ export function valsSvMsp(app, common){
       pdf: x && x.fichier ? racine() + x.fichier : null,
       reencoder: x ? () => app.setState({ svMspF: mspFormDe(d, m.id, x) }) : null };
   });
-  // L'encodage d'un passage, et ce qui le suit.
-  const F = S.svMspF || mspFormDe(d, (d.magasins[0] || {}).id || '', null);
+  // L'encodage d'un passage, et ce qui le suit. La fiche franchisé y mène, son magasin choisi (svMspShop, 19/11/2026).
+  const choisi = S.svMspShop != null ? d.magasins.find(m => String(m.id) === String(S.svMspShop)) : null;
+  const F = S.svMspF || mspFormDe(d, (choisi || d.magasins[0] || {}).id || '', null);
   const maj = patch => app.setState({ svMspF: Object.assign({}, F, patch) });
   const mag = d.magasins.find(m => m.id === F.shop) || {};
   const somme = rub.reduce((a, k) => a + (F.rub[k] !== '' && F.rub[k] != null ? Number(String(F.rub[k]).replace(',', '.')) || 0 : 0), 0);
