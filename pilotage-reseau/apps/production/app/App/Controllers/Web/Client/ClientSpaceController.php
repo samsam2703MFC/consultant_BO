@@ -4,17 +4,18 @@ namespace App\Controllers\Web\Client;
 use App\Core\Helpers\GlobalRegistry;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
+use App\Services\Client\ClientMessageLogService;
 use App\Services\Client\ClientSpaceService;
 use App\Services\Client\SalesGoalPdfService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Klienci › Strona klienta : dokumenty klienta i cel obrotu franczyzy (opcje w karcie klienta). */
+/** Klienci › Strona klienta : dokumenty klienta i cel obrotu franczyzy (opcje w karcie klienta), historia wysyłek e-mail i SMS [313]. */
 class ClientSpaceController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private ClientSpaceService $space, private SalesGoalPdfService $goalPdf) {}
+    public function __construct(private ClientSpaceService $space, private SalesGoalPdfService $goalPdf, private ClientMessageLogService $messages) {}
 
     public function index($id)
     {
@@ -26,8 +27,9 @@ class ClientSpaceController extends BaseController
             exit;
         }
         $settings = $this->space->settings($id);
-        $tab = in_array($_GET['tab'] ?? '', ['docs', 'goal'], true) ? $_GET['tab'] : ($settings['docs'] ? 'docs' : 'goal');
+        $tab = in_array($_GET['tab'] ?? '', ['docs', 'goal', 'messages'], true) ? $_GET['tab'] : ($settings['docs'] ? 'docs' : 'goal');
         $data = ['client' => $client, 'settings' => $settings, 'tab' => $tab];
+        if ($tab === 'messages') $data['messages'] = $this->messages->log($id, $_GET);
         if ($tab === 'docs' && $settings['docs']) $data['docs'] = $this->space->documents($id, $_GET);
         if ($tab === 'goal' && $settings['goal']) {
             $data['goal'] = $this->space->goal($id, (string) ($_GET['month'] ?? $this->space->defaultMonth()), (string) ($_GET['source'] ?? 'wdt'));

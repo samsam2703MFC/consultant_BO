@@ -32,6 +32,14 @@ class CategoryProductRepository extends BaseRepository
         return $this->query($sql) ?: [];
     }
 
+    /** [339] Wszystkie produkty kategorii aktywne / nieaktywne naraz ; zwraca liczbę zmienionych produktów. */
+    public function setProductsActive(int $categoryId, bool $active): int
+    {
+        $stmt = $this->db->prepare('UPDATE final_product SET active = ? WHERE id_category = ? AND active <> ?');
+        $stmt->execute([$active ? 1 : 0, $categoryId, $active ? 1 : 0]);
+        return $stmt->rowCount();
+    }
+
     public function updateCategory($id, array $data)
     {
         return $this->update($id, $data);

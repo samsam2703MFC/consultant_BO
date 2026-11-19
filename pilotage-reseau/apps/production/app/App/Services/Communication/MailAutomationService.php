@@ -73,6 +73,24 @@ final class MailAutomationService
         return $result;
     }
 
+    /**
+     * [295] Envois automatiques coupés (system.auto_send = 0) : chaque règle active repart d'aujourd'hui, comme à son
+     * activation — à la remise en route, les documents émis pendant la coupure ne partent pas.
+     */
+    public function fastForward(): int
+    {
+        $n = 0;
+        foreach ($this->rules->enabled() as $rule) {
+            if (in_array($rule['event'], MailEventSource::DATED, true)) continue;
+            $last = $this->events->lastRefId($rule['event']);
+            if ((string) $last !== (string) $rule['start_ref_id']) {
+                $this->rules->update((int) $rule['id'], ['start_ref_id' => $last]);
+                $n++;
+            }
+        }
+        return $n;
+    }
+
     public function updateRule(int $ruleId, array $input, ?string $author): array
     {
         $rule = $this->rules->find($ruleId) ?? throw new CustomException('Nie znaleziono reguły.', 'errors', 404);

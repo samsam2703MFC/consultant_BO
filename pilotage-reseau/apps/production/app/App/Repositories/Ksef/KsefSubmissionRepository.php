@@ -66,6 +66,13 @@ final class KsefSubmissionRepository extends BaseRepository
     }
 
     /** @return list<array<string,mixed>> */
+    /** [322] Wysyłki odrzucone z danym kodem KSeF (np. 440 : duplikat). @return list<array<string,mixed>> */
+    public function rejectedWithCode(string $code): array
+    {
+        $rows = $this->query("SELECT id, id_shipment_log, error_message, upo_xml FROM ksef_submission WHERE status = 'rejected' AND error_code = :code", ['code' => $code]);
+        return is_array($rows) ? $rows : [];
+    }
+
     public function pendingForStatusRefresh(): array
     {
         $rows = $this->query("SELECT k.*, w.consignor_nip FROM ksef_submission k INNER JOIN document_wdt w ON w.id = k.id_document_wdt WHERE (k.status IN ('submitted', 'processing') OR (k.status = 'accepted' AND k.upo_xml IS NULL)) AND k.session_reference_number IS NOT NULL AND k.invoice_reference_number IS NOT NULL");

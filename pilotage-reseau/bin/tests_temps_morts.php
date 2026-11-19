@@ -22,7 +22,7 @@ function setting(string $k, mixed $d = null): mixed { return $d; }
 function svGrave(string $k, array $v): void {}
 function analyseListe($r): array { return is_array($r) && array_is_list($r) ? $r : (is_array($r['data'] ?? null) ? $r['data'] : []); }
 
-require __DIR__ . '/../src/temps_morts.php';
+require __DIR__ . '/../src/franchise/temps_morts.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void

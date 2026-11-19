@@ -10,7 +10,7 @@ final class UserMailRepository extends WorkshopRepository
 {
     protected string $table = 'n_user_mail';
 
-    public const MAILBOX_FIELDS = ['email', 'display_name', 'provider', 'imap_host', 'imap_port', 'imap_security', 'imap_username', 'imap_secret',
+    public const MAILBOX_FIELDS = ['id_email_account', 'account_chosen', 'email', 'display_name', 'provider', 'imap_host', 'imap_port', 'imap_security', 'imap_username', 'imap_secret',
         'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username', 'smtp_secret', 'tls_verify', 'signature', 'sent_folder', 'last_sync_at', 'last_error'];
     private const MAIL_FIELDS = ['id_user', 'folder', 'uid_validity', 'uid', 'message_id', 'in_reply_to', 'from_email', 'from_name', 'to_list', 'cc_list',
         'subject', 'sent_at', 'size', 'seen', 'answered', 'flagged', 'has_attachments', 'snippet', 'body_text', 'id_customer', 'id_supplier',
@@ -37,6 +37,37 @@ final class UserMailRepository extends WorkshopRepository
         if (!$fields) return;
         $this->db->prepare('UPDATE n_user_mailbox SET ' . implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($fields))) . ' WHERE id_user = ?')
             ->execute(array_merge(array_values($fields), [$userId]));
+    }
+
+    // --- [345] skrzynka stanowiska (konto wysyłki accounting@, logistyka@, produkcja@ ↔ stanowisko) ----------------------
+
+    /** @return list<int> użytkownicy na stanowisku (kod n_position) */
+    public function usersWithPosition(string $code): array
+    {
+        return array_map('intval', array_column($this->all('SELECT up.id_user FROM n_user_position up JOIN n_position p ON p.id = up.id_position
+            WHERE p.code = ? ORDER BY up.id_user', [$code]), 'id_user'));
+    }
+
+    /** [347] Kody stanowisk osoby. @return list<string> */
+    public function userPositionCodes(int $userId): array
+    {
+        return array_column($this->all('SELECT p.code FROM n_user_position up JOIN n_position p ON p.id = up.id_position WHERE up.id_user = ?', [$userId]), 'code');
+    }
+
+    /** @return list<array{id_user:int, id_email_account:int}> skrzynki skopiowane z kont stanowisk */
+    public function positionMailboxes(): array
+    {
+        return array_map(fn($r) => ['id_user' => (int) $r['id_user'], 'id_email_account' => (int) $r['id_email_account'], 'chosen' => (bool) ($r['account_chosen'] ?? 0)],
+            $this->all('SELECT * FROM n_user_mailbox WHERE id_email_account IS NOT NULL'));
+    }
+
+    /** Sesja stanowiska administratora : pierwszy użytkownik tego stanowiska ze skrzynką (null = brak). */
+    public function mailboxOwnerForPosition(int $positionId): ?int
+    {
+        // [347] Personne du poste avec une boîte (celle d'un compte firmowe d'abord) ; sinon la première personne du poste.
+        $id = $this->all('SELECT up.id_user FROM n_user_position up LEFT JOIN n_user_mailbox b ON b.id_user = up.id_user
+            WHERE up.id_position = ? ORDER BY (b.id_user IS NULL), (b.id_email_account IS NULL), up.id_user LIMIT 1', [$positionId])[0]['id_user'] ?? null;
+        return $id === null ? null : (int) $id;
     }
 
     public function deleteMailbox(int $userId): void

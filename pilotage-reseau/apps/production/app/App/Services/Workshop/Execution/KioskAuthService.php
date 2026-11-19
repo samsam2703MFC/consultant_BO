@@ -169,9 +169,9 @@ final class KioskAuthService
             $data['badge_hash'] = $hash;
         }
         if (array_key_exists('pin', $c)) {
-            $data['pin_hash'] = $c['pin'] === null ? null : password_hash($c['pin'], PASSWORD_BCRYPT);
-            $data['failed_attempts'] = 0;
-            $data['locked_until'] = null;
+            // [361] Tous les PIN différents (le PIN seul ouvre le profil sur la tablette de bureau) : PIN_TAKEN sinon.
+            $data = ($c['pin'] === null ? ['pin_hash' => null, 'pin_lookup' => null, 'pin_conflict' => 0, 'failed_attempts' => 0, 'locked_until' => null]
+                : $this->pinCredential($employeeId, $c['pin'])) + $data;
         }
         if (!empty($c['unlock'])) { $data['failed_attempts'] = 0; $data['locked_until'] = null; }
         if (array_key_exists('biometric_consent', $c)) {
@@ -199,6 +199,40 @@ final class KioskAuthService
         $this->repo->update((int) $device['id'], ['token_hash' => hash('sha256', $token), 'pairing_code_hash' => null, 'pairing_expires_at' => null, 'last_seen_at' => date('Y-m-d H:i:s')]);
         return ['device_token' => $token, 'device' => ['id' => (int) $device['id'], 'name' => $device['name'], 'group_id' => $device['id_group'] !== null ? (int) $device['id_group'] : null,
             'mode' => $device['mode'] ?? 'atelier']];
+    }
+
+    /**
+     * [299] Tablette de bureau ouverte depuis l'ERP par un utilisateur connecté (droit Tablety ou Czas pracy) : appairée
+     * d'office, sans code, et réappairée seule si le navigateur perd son jeton. Chaque utilisateur a sa propre tablette
+     * de bureau (« Tablet biurowy · login », mode office) : la tablette fixe appairée par code n'est jamais touchée.
+     * Rien à faire si le navigateur a déjà un jeton valide ; une tablette bloquée par l'administrateur (active = 0)
+     * n'est pas réappairée (écran d'appairage habituel).
+     * @return array{device_token:string, device:array{id:int, name:string}}|null
+     */
+    public function erpOfficePairing(int $userId, string $login, string $currentToken): ?array
+    {
+        if ($userId <= 0) return null;
+        if ($currentToken !== '') {
+            $current = $this->repo->deviceByToken(hash('sha256', $currentToken));
+            if ($current !== null && (int) $current['active']) return null;
+        }
+        $name = mb_substr('Tablet biurowy · ' . ($login !== '' ? $login : '#' . $userId), 0, 100);
+        $device = $this->repo->erpOfficeDevice($userId, $name);
+        if ($device !== null && !(int) $device['active']) return null;
+        $token = bin2hex(random_bytes(32));
+        $data = ['token_hash' => hash('sha256', $token), 'pairing_code_hash' => null, 'pairing_expires_at' => null, 'last_seen_at' => date('Y-m-d H:i:s')];
+        $context = new ApiContext('erp-office-' . bin2hex(random_bytes(4)), new Translator('pl'), $userId);
+        $id = $this->tx->execute(function () use ($device, $data, $name, $userId, $context) {
+            if ($device === null) {
+                $id = $this->repo->insert($data + ['name' => $name, 'mode' => 'office', 'id_group' => null, 'created_by' => $userId, 'active' => 1]);
+                $this->audit->record($context, 'create', 'device', $id, null, ['name' => $name, 'mode' => 'office', 'erp_session' => true]);
+                return $id;
+            }
+            $this->repo->update((int) $device['id'], $data);
+            $this->audit->record($context, 'pairing', 'device', (int) $device['id'], null, ['erp_session' => true]);
+            return (int) $device['id'];
+        });
+        return ['device_token' => $token, 'device' => ['id' => (int) $id, 'name' => $name]];
     }
 
     /** Tablette appairée (jeton en en-tête ou en cookie) : nom et groupe — la tablette vérifie au démarrage qu'elle est appairée. */
@@ -288,10 +322,158 @@ final class KioskAuthService
             && $this->repo->activePhones($body['employee_id']) > 0) {
             throw new ApiException('OFFICE_USE_PHONE', 409);
         }
-        $employee = $this->presentByTap($body, $device, $context) ?? $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        $tapped = $this->presentByTap($body, $device, $context);
+        $employee = $tapped ?? $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        // [361] PIN tapé : son empreinte est posée au passage ; PIN identique à celui d'une autre personne → à changer.
+        $change = $tapped === null && isset($body['pin']) && is_string($body['pin']) && $this->settlePin((int) $employee['id'], $body['pin']);
         // Tablette générique : le groupe touché à l'accueil, à défaut le groupe principal de la personne (badge).
         return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId
-            ?? (isset($employee['id_primary_group']) && $employee['id_primary_group'] !== null ? (int) $employee['id_primary_group'] : null));
+            ?? (isset($employee['id_primary_group']) && $employee['id_primary_group'] !== null ? (int) $employee['id_primary_group'] : null))
+            + ['pin_change_required' => $change];
+    }
+
+    /**
+     * [360] Tablette de bureau : la personne sans PIN crée le sien au premier passage (4 à 6 chiffres, pas trop simple) ;
+     * la session s'ouvre comme après un PIN (entrée / sortie, questions, signature). PIN déjà posé : PIN_ALREADY_SET
+     * (le changer passe par PUT /kiosk/me/pin, avec l'ancien). Créations tracées (audit pin_self_created).
+     */
+    public function firstPin(int $employeeId, string $pin, ApiContext $context): array
+    {
+        $employee = $this->repo->employee($employeeId);
+        if ($employee === null || !(int) $employee['active']) throw ApiException::notFound('employee', $employeeId);
+        $cred = $this->repo->credential($employeeId);
+        if ($cred !== null && $cred['pin_hash'] !== null) throw new ApiException('PIN_ALREADY_SET', 409);
+        $this->deviceNotLocked((int) $context->deviceId);
+        $this->checkPin($pin);
+        $this->repo->saveCredential($employeeId, $this->pinCredential($employeeId, $pin, $context));
+        $this->audit->record($context, 'pin_self_created', 'employee', $employeeId, null, ['device_id' => (int) $context->deviceId]);
+        return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId);
+    }
+
+    /** [360] La personne change son PIN sur la tablette : ancien PIN (mêmes blocages que l'identification) puis nouveau. */
+    public function changePin(array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['current_pin', 'pin'])
+            ->string('current_pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN')->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
+        $v->throwIfInvalid();
+        $c = $v->clean();
+        $employeeId = (int) $context->employeeId;
+        $this->authenticateEmployee(['employee_id' => $employeeId, 'pin' => $c['current_pin']], (int) $context->deviceId, $context);
+        if ($c['pin'] === $c['current_pin']) throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_SAME', 'params' => []]]);
+        $this->checkPin($c['pin']);
+        $this->repo->saveCredential($employeeId, $this->pinCredential($employeeId, $c['pin'], $context));
+        $this->audit->record($context, 'pin_self_changed', 'employee', $employeeId, null, ['device_id' => (int) $context->deviceId]);
+        return ['employee_id' => $employeeId, 'changed' => true];
+    }
+
+    /**
+     * [361] Tablette de bureau : le PIN seul ouvre le profil. Retrouvé par son empreinte (et, le temps que chacun se
+     * reconnecte, parmi les PIN posés avant, en bcrypt). Inconnu : compté sur la tablette (kiosk.office_pin_max_attempts,
+     * puis blocage kiosk.lock_minutes — DEVICE_PIN_LOCKED). Deux personnes avec ce PIN : PIN_CHOOSE_NAME (nom puis PIN,
+     * puis nouveau PIN). Même réponse et mêmes blocages qu'une identification par nom + PIN.
+     */
+    public function loginByPin(string $pin, ApiContext $context): array
+    {
+        if (!preg_match('/^\d{4,6}$/', $pin)) throw ApiException::validation([['field' => 'pin', 'code' => 'INVALID_PIN', 'params' => []]]);
+        $deviceId = (int) $context->deviceId;
+        $this->deviceNotLocked($deviceId);
+        $owners = array_values(array_filter($this->pinOwners($pin), fn($id) => ($e = $this->repo->employee($id)) !== null && (int) $e['active']));
+        if (!$owners) $this->devicePinFailure($deviceId, $context);
+        $this->repo->update($deviceId, ['pin_failed' => 0, 'pin_locked_until' => null]);
+        $cred = count($owners) === 1 ? $this->repo->credential($owners[0]) : null;
+        if ($cred === null || (int) $cred['pin_conflict'] === 1) {
+            $this->markPinConflict($owners);
+            throw new ApiException('PIN_CHOOSE_NAME', 409);
+        }
+        if ($cred['locked_until'] !== null && $cred['locked_until'] > date('Y-m-d H:i:s')) {
+            throw new ApiException('EMPLOYEE_LOCKED', 423, [], ['until' => substr($cred['locked_until'], 11, 5)]);
+        }
+        if (!$this->officePinAll() && $this->repo->activePhones($owners[0]) > 0) throw new ApiException('OFFICE_USE_PHONE', 409);
+        if ($cred['pin_lookup'] === null) $this->repo->saveCredential($owners[0], ['pin_lookup' => $this->pinLookup($pin)]);
+        $employee = $this->repo->employee($owners[0]);
+        return $this->employeeToken($employee, $deviceId, $context->deviceGroupId) + ['pin_change_required' => false];
+    }
+
+    /** [361] Empreinte du PIN (HMAC, clé du serveur) : unique, retrouve la personne sans parcourir tous les bcrypt. */
+    public function pinLookup(string $pin): string
+    {
+        return hash_hmac('sha256', 'pin:' . $pin, $this->config->jwtSecret());
+    }
+
+    /**
+     * [361] PIN posé (tablette, back-office, création d'employé, chauffeur) : différent de tous les autres, sinon
+     * PIN_TAKEN (sur la tablette, compté comme un PIN inconnu : pas de sondage des PIN des autres). @return colonnes
+     */
+    public function pinCredential(int $employeeId, string $pin, ?ApiContext $context = null): array
+    {
+        if ($this->pinOwners($pin, $employeeId)) {
+            if ($context !== null && $context->deviceId !== null) $this->devicePinFailure((int) $context->deviceId, $context, 'PIN_TAKEN');
+            throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_TAKEN', 'params' => []]]);
+        }
+        return ['pin_hash' => password_hash($pin, PASSWORD_BCRYPT), 'pin_lookup' => $this->pinLookup($pin), 'pin_conflict' => 0,
+            'failed_attempts' => 0, 'locked_until' => null];
+    }
+
+    /** @return list<int> personnes dont le PIN est $pin : empreinte, puis PIN encore sans empreinte (bcrypt) ; sauf $except. */
+    private function pinOwners(string $pin, ?int $except = null): array
+    {
+        $ids = [];
+        $byLookup = $this->repo->credentialByPinLookup($this->pinLookup($pin));
+        if ($byLookup !== null) $ids[] = (int) $byLookup['id_employee'];
+        foreach ($this->repo->pinsWithoutLookup() as $c) {
+            if (password_verify($pin, (string) $c['pin_hash'])) $ids[] = (int) $c['id_employee'];
+        }
+        return array_values(array_filter(array_unique($ids), fn($id) => $id !== $except));
+    }
+
+    /** Identification par nom + PIN : empreinte posée si libre ; PIN partagé avec une autre personne → conflit. @return bool à changer */
+    private function settlePin(int $employeeId, string $pin): bool
+    {
+        $cred = $this->repo->credential($employeeId);
+        if ($cred === null) return false;
+        if ((int) $cred['pin_conflict'] === 1) return true;
+        if ($cred['pin_lookup'] !== null) return false;
+        $others = $this->pinOwners($pin, $employeeId);
+        if ($others) {
+            $this->markPinConflict(array_merge([$employeeId], $others));
+            return true;
+        }
+        $this->repo->saveCredential($employeeId, ['pin_lookup' => $this->pinLookup($pin)]);
+        return false;
+    }
+
+    /** Même PIN pour plusieurs personnes : plus de connexion par PIN seul pour elles, nouveau PIN à la prochaine connexion. */
+    private function markPinConflict(array $ids): void
+    {
+        foreach (array_unique($ids) as $id) $this->repo->saveCredential((int) $id, ['pin_lookup' => null, 'pin_conflict' => 1]);
+    }
+
+    private function deviceNotLocked(int $deviceId): void
+    {
+        $until = $this->repo->find($deviceId)['pin_locked_until'] ?? null;
+        if ($until !== null && $until > date('Y-m-d H:i:s')) throw new ApiException('DEVICE_PIN_LOCKED', 423, [], ['until' => substr((string) $until, 11, 5)]);
+    }
+
+    /** PIN inconnu (ou déjà pris) tapé sur la tablette : compté ; au-delà de kiosk.office_pin_max_attempts, tablette bloquée. */
+    private function devicePinFailure(int $deviceId, ApiContext $context, string $code = 'PIN_UNKNOWN'): void
+    {
+        $failed = (int) ($this->repo->find($deviceId)['pin_failed'] ?? 0) + 1;
+        $max = max(1, (int) $this->params->get('kiosk.office_pin_max_attempts', '5'));
+        $lock = $failed >= $max ? date('Y-m-d H:i:s', time() + max(1, (int) $this->params->get('kiosk.lock_minutes', '15')) * 60) : null;
+        $this->repo->update($deviceId, ['pin_failed' => $lock ? 0 : $failed, 'pin_locked_until' => $lock]);
+        $this->audit->record($context, 'pin_unknown', 'device', $deviceId, null, ['locked' => $lock !== null, 'code' => $code]);
+        if ($lock) throw new ApiException('DEVICE_PIN_LOCKED', 423, [], ['until' => substr($lock, 11, 5)]);
+        if ($code === 'PIN_UNKNOWN') throw new ApiException('PIN_UNKNOWN', 401, [], ['left' => $max - $failed]);
+    }
+
+    /** PIN choisi par la personne : 4 à 6 chiffres, ni un seul chiffre répété (1111) ni une suite (1234, 9876). */
+    private function checkPin(string $pin): void
+    {
+        if (!preg_match('/^\d{4,6}$/', $pin)) throw ApiException::validation([['field' => 'pin', 'code' => 'INVALID_PIN', 'params' => []]]);
+        $steps = array_unique(array_map(fn($i) => (int) $pin[$i + 1] - (int) $pin[$i], range(0, strlen($pin) - 2)));
+        if (count($steps) === 1 && in_array($steps[0], [-1, 0, 1], true)) {
+            throw ApiException::validation([['field' => 'pin', 'code' => 'PIN_TOO_SIMPLE', 'params' => []]]);
+        }
     }
 
     /**
@@ -371,14 +553,39 @@ final class KioskAuthService
         return $this->qrPayload(['dev' => $deviceId, 'emp' => $employeeId, 'day' => date('Y-m-d')], $base, $ttl) + ['refresh_s' => max(10, $ttl - 15)];
     }
 
-    /** Jeton signé, adresse {base}/kiosk/scan#t=… (le fragment n'est jamais envoyé au serveur) et matrice du QR. */
+    /** [300] QR de connexion à l'ERP : numéro de la demande (lgn) et, si choisie sur la page, la personne (emp). */
+    public function erpLoginQr(int $deviceId, int $requestId, string $base, int $ttl, ?int $employeeId = null): array
+    {
+        $ttl = max(30, min(600, $ttl));
+        // Personne choisie sur la page (emp) : seul son téléphone valide (QR_OTHER_PERSON), premier scan : son PIN seulement.
+        $claims = ['dev' => $deviceId, 'lgn' => $requestId] + ($employeeId !== null ? ['emp' => $employeeId] : []) + ['day' => date('Y-m-d')];
+        return $this->qrPayload($claims, $base, $ttl) + ['refresh_s' => max(10, $ttl - 20)];
+    }
+
+    /** [300] Demande de connexion portée par un QR valide (null : QR d'une tablette ou personnel). */
+    public function loginRequestOf(string $qr): ?int
+    {
+        $this->deviceFromQr($qr);
+        $claims = $this->jwt()->decode($this->qrJwt($qr), self::QR_AUDIENCE);
+        return isset($claims['lgn']) && (int) $claims['lgn'] > 0 ? (int) $claims['lgn'] : null;
+    }
+
+    /**
+     * Jeton signé gardé sur le serveur (n_kiosk_qr), adresse courte {base}/kiosk/scan#t=CODE (le fragment n'est jamais
+     * envoyé au serveur) et matrice du QR. [355] Le jeton complet dans l'adresse donnait un QR de 73×73 modules, lu
+     * lentement ou pas du tout sur l'écran d'une tablette ; le code (11 caractères) donne un QR d'environ 33×33.
+     * Première lettre : L connexion ERP, M connexion d'une personne choisie, P personnel, Q tablette (le téléphone choisit son écran sans lire le jeton).
+     */
     private function qrPayload(array $claims, string $base, int $ttl): array
     {
         $base = rtrim(trim($base), '/');
         if (!preg_match('#^https?://[^\s"<>]{1,200}$#', $base)) throw ApiException::validation([['field' => 'base', 'code' => 'INVALID_URL', 'params' => []]]);
         $now = time();
         $token = $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::QR_AUDIENCE] + $claims + ['iat' => $now, 'nbf' => $now - 5, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(6))]);
-        $url = $base . '/kiosk/scan#t=' . $token;
+        $code = isset($claims['lgn']) ? (isset($claims['emp']) ? 'M' : 'L') : (isset($claims['emp']) ? 'P' : 'Q');
+        for ($i = 0; $i < 10; $i++) $code .= self::CODE_ALPHABET[random_int(0, strlen(self::CODE_ALPHABET) - 1)];
+        $this->repo->saveQrCode($code, $token, $ttl);
+        $url = $base . '/kiosk/scan#t=' . $code;
         $code = new \TCPDF2DBarcode($url, 'QRCODE,M');
         $matrix = $code->getBarcodeArray();
         return [
@@ -451,6 +658,7 @@ final class KioskAuthService
     private function deviceFromQr(string $qr): array
     {
         if ($qr === '') throw new ApiException('QR_INVALID', 401);
+        $qr = $this->qrJwt($qr);
         try {
             $claims = $this->jwt()->decode($qr, self::QR_AUDIENCE);
         } catch (JwtException $e) {
@@ -462,6 +670,13 @@ final class KioskAuthService
         if (isset($claims['day']) && $claims['day'] !== date('Y-m-d')) throw new ApiException('QR_EXPIRED', 401);
         $group = isset($claims['grp']) && (int) $claims['grp'] > 0 && $this->repo->groupActive((int) $claims['grp']) ? (int) $claims['grp'] : null;
         return [$device, isset($claims['emp']) ? (int) $claims['emp'] : null, $group];
+    }
+
+    /** [355] Code court du QR → jeton signé gardé sur le serveur ; un jeton complet (QR affiché avant la mise à jour) passe tel quel. */
+    private function qrJwt(string $qr): string
+    {
+        if (!preg_match('/^[LMPQ][A-Z2-9]{10}$/', strtoupper($qr))) return $qr;
+        return $this->repo->qrToken(strtoupper($qr)) ?? throw new ApiException('QR_INVALID', 401);
     }
 
     /** Le QR personnel d'une autre personne : refus avec son nom (le téléphone n'est pas le sien). */

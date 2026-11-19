@@ -63,7 +63,9 @@ final class OutputRepository extends WorkshopRepository
     public function day(string $day, int $groupId): array
     {
         return $this->all("SELECT o.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name,
-                                  (SELECT COUNT(*) FROM n_prod_output_lot l WHERE l.id_output = o.id AND l.lot_number IS NOT NULL AND l.lot_number <> '')
+                                  (SELECT COUNT(*) FROM n_prod_output_lot l LEFT JOIN n_material_trace t ON t.id_raw_material = l.id_material
+                                    WHERE l.id_output = o.id AND COALESCE(t.tracked, 1) = 1
+                                      AND ((l.lot_number IS NOT NULL AND l.lot_number <> '') OR l.missing_reason IS NOT NULL))
                                   + (SELECT COUNT(*) FROM n_prod_output_component k WHERE k.id_output = o.id AND k.id_source_output IS NOT NULL) AS lots_done
                            FROM n_prod_output o
                            LEFT JOIN n_prod_employee e ON e.id = o.id_employee
@@ -98,11 +100,13 @@ final class OutputRepository extends WorkshopRepository
     /** Surowce i opakowania receptury : ilość na karton (produkt) albo na recepturę (półprodukt). */
     public function recipe(int $recipeId): array
     {
-        return $this->all("SELECT fri.material_id, rm.name, rm.name_fr, u.name AS unit, fri.quantity, COALESCE(c.id_group, 0) = 1 AS packaging
+        return $this->all("SELECT fri.material_id, rm.name, rm.name_fr, u.name AS unit, fri.quantity, COALESCE(c.id_group, 0) = 1 AS packaging,
+                                  COALESCE(t.tracked, 1) AS tracked
                            FROM flattened_recipe_ingredient fri
                            JOIN raw_material rm ON rm.id = fri.material_id
                            LEFT JOIN unit u ON u.id = rm.id_unit
                            LEFT JOIN category_material c ON c.id = rm.id_category
+                           LEFT JOIN n_material_trace t ON t.id_raw_material = fri.material_id
                            WHERE fri.recipe_id = ? ORDER BY packaging, fri.quantity DESC, rm.name", [$recipeId]);
     }
 
@@ -243,13 +247,15 @@ final class OutputRepository extends WorkshopRepository
         return $out;
     }
 
-    public function saveLot(int $outputId, int $materialId, ?float $quantity, ?string $lot, ?string $bestBefore, ?int $photoId, ?string $ocr, ?int $employeeId): void
+    public function saveLot(int $outputId, int $materialId, ?float $quantity, ?string $lot, ?string $bestBefore, ?int $photoId, ?string $ocr, ?int $employeeId,
+                            ?int $materialLotId = null, ?string $missingReason = null): void
     {
-        $this->db->prepare('INSERT INTO n_prod_output_lot (id_output, id_material, quantity, lot_number, best_before, id_photo, ocr_text, id_employee)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), lot_number = VALUES(lot_number), best_before = VALUES(best_before),
-                                id_photo = COALESCE(VALUES(id_photo), id_photo), ocr_text = COALESCE(VALUES(ocr_text), ocr_text), id_employee = VALUES(id_employee)')
-            ->execute([$outputId, $materialId, $quantity, $lot, $bestBefore, $photoId, $ocr, $employeeId]);
+        $this->db->prepare('INSERT INTO n_prod_output_lot (id_output, id_material, id_material_lot, quantity, lot_number, best_before, id_photo, ocr_text, missing_reason, id_employee)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE id_material_lot = VALUES(id_material_lot), quantity = VALUES(quantity), lot_number = VALUES(lot_number),
+                                best_before = VALUES(best_before), id_photo = COALESCE(VALUES(id_photo), id_photo), ocr_text = COALESCE(VALUES(ocr_text), ocr_text),
+                                missing_reason = VALUES(missing_reason), id_employee = VALUES(id_employee)')
+            ->execute([$outputId, $materialId, $materialLotId, $quantity, $lot, $bestBefore, $photoId, $ocr, $missingReason, $employeeId]);
     }
 
     public function insertPhoto(string $mime, string $bytes, ?int $deviceId, ?int $employeeId): int

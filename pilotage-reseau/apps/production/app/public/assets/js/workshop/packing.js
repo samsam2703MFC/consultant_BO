@@ -7,6 +7,7 @@
  *  - Paletyzacja : operator (osoby obecne), transport (pojazd albo wszyscy klienci dnia), klienci u góry, produkty
  *    zamówione przez klienta : zamówione / na palecie / zostało ; dotknięcie wiersza → szczegóły (skan + 1 + 2 + 32 = …),
  *    « + » → klawiatura (1, 5, 10, reszta) → kartony na paletę ; cofnięcie ostatniego wpisu ; odświeżanie co 15 s.
+ *    Kontrola z zamówieniem [305] : po ostatnim kartonie klienta (albo przycisk) — zamówione / na palecie / różnica.
  *  - Przyjęcia [230] : kontrola przyjęć dnia — dostawy z zamówień dostawców (lista z lewej), pozycja po pozycji : ilość,
  *    partia, termin, temperatura (chłodnia), OK / Niezgodność (co jest nie tak, zdjęcie z aparatu tabletu, opis, decyzja) ;
  *    zapis = przyjęcie w zamówieniu + NC ; operator jak w paletyzacji. Zadanie « Kontrola przyjęć » zalicza się samo.
@@ -277,10 +278,35 @@
                     <div class="pp-n">${fmt(l.ordered)}</div><div class="pp-n">${l.on_pallet ? fmt(l.on_pallet) : '—'}</div>
                     <div class="pp-n pp-rem ${l.left === 0 ? 'is-zero' : ''}">${l.left === 0 ? (l.over ? '+' + fmt(l.over) : '✓') : fmt(l.left)}</div>
                     <button type="button" class="pp-plus ${l.left === 0 ? 'is-ok' : ''}" data-plus="${l.product_id}" aria-label="${esc(t('add'))}">${l.left === 0 ? '✓' : '+'}</button></div>`).join('')}
-                <div class="pp-sum">${open.length ? esc(t('left_sum', {n: fmt(c.left), p: open.length})) : esc(t('all_on'))}</div>${loads(c)}</section>`;
+                <div class="pp-sum"><button type="button" class="pc-open ${c.check && !c.check.ok && !c.left ? 'is-warn' : ''}" data-check>${esc(t('check_btn'))}</button>
+                    <span>${open.length ? esc(t('left_sum', {n: fmt(c.left), p: open.length})) : esc(t('all_on'))}</span></div>${loads(c)}</section>`;
+            if (panel === 'check') list = checkCard(c);
         }
-        el.innerHTML = header() + clients + `<div class="pp-main ${panel ? 'has-side' : ''}">${list}${panel && c ? side(c) : ''}</div>` + dropdown();
+        const sideOpen = panel && panel !== 'check';
+        el.innerHTML = header() + clients + `<div class="pp-main ${sideOpen ? 'has-side' : ''}">${list}${sideOpen && c ? side(c) : ''}</div>` + dropdown();
         bindPallets();
+    }
+
+    // Kontrola palet z zamówieniem (po paletyzacji klienta) : zamówione / na palecie (skan + tablet) / różnica ;
+    // zielone OK, czerwone braki, żółte nadmiar i produkty spoza zamówienia. Dotknięcie braku → klawiatura.
+    function checkCard(c) {
+        const rows = [...c.lines, ...(c.extra || [])].map(l => ({...l, diff: l.on_pallet - l.ordered}))
+            .sort((a, b) => a.name.localeCompare(b.name, lang === 'fr' ? 'fr' : 'pl'));
+        const ok = c.check ? c.check.ok : rows.every(r => r.diff === 0);
+        const missing = rows.filter(r => r.diff < 0).length;
+        const over = rows.filter(r => r.diff > 0).length;
+        const note = ok ? `<p class="pc-note is-ok">✓ ${esc(t('check_all_ok'))}</p>`
+            : `<p class="pc-note">⚠ ${esc([missing ? t('check_missing_n', {n: missing}) : '', over ? t('check_over_n', {n: over}) : ''].filter(Boolean).join(' ; '))}. ${esc(t('check_hint'))}</p>`;
+        return `<section class="kiosk-card pc-card" aria-label="${esc(t('check_title'))}">
+            <div class="pc-top"><div><h2>${esc(t('check_title'))}</h2><p class="kiosk-muted">${esc(c.name)} · ${esc(t('check_sub', {n: rows.length}))}</p></div>
+                <span class="pc-badge ${ok ? 'is-ok' : 'is-warn'}">${esc(t(ok ? 'check_ok' : 'check_diff'))}</span></div>
+            <div class="pc-grid pc-th"><span>${esc(t('col_product'))}</span><span>${esc(t('col_ordered'))}</span><span>${esc(t('col_on'))}</span><span>${esc(t('check_col_diff'))}</span></div>
+            ${rows.map(r => `<div class="pc-grid pc-row ${r.diff === 0 ? 'is-ok' : (r.diff < 0 ? 'is-miss' : 'is-over')}" ${r.diff < 0 ? `data-fix="${r.product_id}" role="button"` : ''}>
+                <span class="pc-name">${esc(r.name)}${r.ordered === 0 ? `<small>${esc(t('check_not_ordered'))}</small>` : ''}</span>
+                <span>${fmt(r.ordered)}</span><span>${fmt(r.on_pallet)}</span>
+                <span class="pc-diff">${r.diff === 0 ? 'OK' : (r.diff > 0 ? '+' : '−') + fmt(Math.abs(r.diff))}</span></div>`).join('')}
+            ${note}
+            <div class="pc-actions"><button type="button" class="kiosk-btn" data-check-back>← ${esc(t('check_back'))}</button></div></section>`;
     }
 
     // Waga i wysokość palet klienta [213] : już na paletach (skan + tablet) i po całym zamówieniu ; czerwone ponad limit.
@@ -380,6 +406,11 @@
         el.querySelectorAll('[data-plus]').forEach(b => b.addEventListener('click', () => openPad(Number(b.dataset.plus))));
         const close = el.querySelector('[data-close]');
         if (close) close.addEventListener('click', () => { product = null; panel = null; renderPallets(); });
+        const chk = el.querySelector('[data-check]');
+        if (chk) chk.addEventListener('click', () => { product = null; panel = 'check'; renderPallets(); });
+        const back = el.querySelector('[data-check-back]');
+        if (back) back.addEventListener('click', () => { panel = null; renderPallets(); });
+        el.querySelectorAll('[data-fix]').forEach(r => r.addEventListener('click', () => openPad(Number(r.dataset.fix))));
         const padBtn = el.querySelector('[data-pad]');
         if (padBtn) padBtn.addEventListener('click', () => openPad(product));
         el.querySelectorAll('[data-key]').forEach(b => b.addEventListener('click', () => {
@@ -408,11 +439,14 @@
         const l = clientNow()?.lines.find(x => x.product_id === product);
         if (busy || !n || !l) return;
         busy = true;
+        const before = clientNow()?.left || 0;
         try {
             setPal(await api('POST', '/kiosk/pallets/entries', {date, customer_id: customer, product_id: product, cartons: n,
                 employee_id: operatorNow() ? operator : null, vehicle_id: vehicle}));
             toast(t('added', {n: fmt(n), product: l.name}));
             panel = 'detail'; pad = '';
+            // Klient skończony : kontrola z zamówieniem od razu.
+            if (before > 0 && clientNow() && clientNow().left === 0) { panel = 'check'; product = null; }
             render();
         } catch (err) {
             if (err.code !== 'DEVICE_UNAUTHENTICATED') toast(err.message, true);

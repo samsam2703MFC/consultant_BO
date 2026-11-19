@@ -1,0 +1,1641 @@
+{
+"periode": "S43 à S47 (du 19/10 au 17/11/2026)",
+"tranches": [
+"S43",
+"S44",
+"S45",
+"S46",
+"S47"
+],
+"produits": [
+{
+"pid": 1610004,
+"nom": "Pain au Chocolat",
+"cat": "Viennoiserie Ind.",
+"q": 1587,
+"ttc": 1.9,
+"ht": 1.7925,
+"cout": 0.8047
+},
+{
+"pid": 1300012,
+"nom": "Sandwich",
+"cat": "Petite Boulangerie",
+"q": 1747,
+"ttc": 0.9,
+"ht": 0.8491,
+"cout": 0.2218
+},
+{
+"pid": 1610006,
+"nom": "Croissant",
+"cat": "Viennoiserie Ind.",
+"q": 1736,
+"ttc": 1.8,
+"ht": 1.6981,
+"cout": 0.6838
+},
+{
+"pid": 1300003,
+"nom": "Baguette Tradition",
+"cat": "Petite Boulangerie",
+"q": 851,
+"ttc": 2.2,
+"ht": 2.0755,
+"cout": 1.4656
+},
+{
+"pid": 1300001,
+"nom": "Pistolet à l'Ancienne",
+"cat": "Petite Boulangerie",
+"q": 1859,
+"ttc": 0.9,
+"ht": 0.8491,
+"cout": 0.2943
+},
+{
+"pid": 1610009,
+"nom": "Pain au Chocolat Nappé",
+"cat": "Viennoiserie Ind.",
+"q": 1224,
+"ttc": 2.1,
+"ht": 1.9811,
+"cout": 0.85
+},
+{
+"pid": 1620005,
+"nom": "Mini - Croissant",
+"cat": "Viennoiserie réduction",
+"q": 172,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.4132
+},
+{
+"pid": 1200003,
+"nom": "Pain Doré",
+"cat": "Pain",
+"q": 755,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 1.2727
+},
+{
+"pid": 1620003,
+"nom": "Mini - Chocolat",
+"cat": "Viennoiserie réduction",
+"q": 180,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.5037
+},
+{
+"pid": 1200002,
+"nom": "Pain 10 Céréales",
+"cat": "Pain",
+"q": 666,
+"ttc": 3.2,
+"ht": 3.0189,
+"cout": 1.2727
+},
+{
+"pid": 1200001,
+"nom": "Pain Demi-Gris",
+"cat": "Pain",
+"q": 621,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 1.2727
+},
+{
+"pid": 4100001,
+"nom": "Cougnou - Sucre",
+"cat": "Cougnou",
+"q": 160,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 0.9831
+},
+{
+"pid": 6700170,
+"nom": "Couque au Beurre",
+"cat": "Viennoiserie Ind.",
+"q": 831,
+"ttc": 1.8,
+"ht": 1.6981,
+"cout": 0.7397
+},
+{
+"pid": 4100003,
+"nom": "Cougnou - Sucre & Chocolat",
+"cat": "Cougnou",
+"q": 94,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 1.124
+},
+{
+"pid": 1530010,
+"nom": "Choux Nappe",
+"cat": "Entremets - Individuel",
+"q": 121,
+"ttc": 1.1,
+"ht": 1.0377,
+"cout": 0.231
+},
+{
+"pid": 1610002,
+"nom": "Suisse",
+"cat": "Viennoiserie Ind.",
+"q": 774,
+"ttc": 1.9,
+"ht": 1.7925,
+"cout": 0.7883
+},
+{
+"pid": 4100002,
+"nom": "Cougnou - Sucre & Raisin",
+"cat": "Cougnou",
+"q": 84,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 0.9524
+},
+{
+"pid": 2300016,
+"nom": "Club",
+"cat": "Sandwiches garnis",
+"q": 46,
+"ttc": 5.4,
+"ht": 5.0943,
+"cout": 1.5545
+},
+{
+"pid": 1540001,
+"nom": "éclair chocolat",
+"cat": "Pâtisserie individuelle",
+"q": 287,
+"ttc": 3.0,
+"ht": 2.8302,
+"cout": 0.555
+},
+{
+"pid": 1620010,
+"nom": "Mini - Chocolat Nappé",
+"cat": "Viennoiserie réduction",
+"q": 6,
+"ttc": 1.2,
+"ht": 1.1321,
+"cout": 0.545
+},
+{
+"pid": 1610005,
+"nom": "Huit",
+"cat": "Viennoiserie Ind.",
+"q": 605,
+"ttc": 2.2,
+"ht": 2.0755,
+"cout": 0.9658
+},
+{
+"pid": 1620001,
+"nom": "Mini - Huit",
+"cat": "Viennoiserie réduction",
+"q": 174,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.4688
+},
+{
+"pid": 1620007,
+"nom": "Mini - Frangipane",
+"cat": "Viennoiserie réduction",
+"q": 74,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.6484
+},
+{
+"pid": 3210004,
+"nom": "Cookie Chocolat Lait",
+"cat": "Cookies",
+"q": 162,
+"ttc": 3.1,
+"ht": 2.9245,
+"cout": 1.4783
+},
+{
+"pid": 1610008,
+"nom": "Baulus",
+"cat": "Viennoiserie Ind.",
+"q": 436,
+"ttc": 1.8,
+"ht": 1.6981,
+"cout": 0.7609
+},
+{
+"pid": 1620006,
+"nom": "Mini - Pomme",
+"cat": "Viennoiserie réduction",
+"q": 76,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.6343
+},
+{
+"pid": 2300003,
+"nom": "Italien",
+"cat": "Sandwiches garnis",
+"q": 37,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 2.0723
+},
+{
+"pid": 1610003,
+"nom": "Tortillon",
+"cat": "Viennoiserie Ind.",
+"q": 369,
+"ttc": 1.7,
+"ht": 1.6038,
+"cout": 0.5533
+},
+{
+"pid": 1610007,
+"nom": "Gosette Pomme",
+"cat": "Viennoiserie Ind.",
+"q": 267,
+"ttc": 2.2,
+"ht": 2.0755,
+"cout": 0.97
+},
+{
+"pid": 1200006,
+"nom": "Pavé Seigle & Froment",
+"cat": "Pain",
+"q": 85,
+"ttc": 4.1,
+"ht": 3.8679,
+"cout": 1.8782
+},
+{
+"pid": 3210001,
+"nom": "Cookie Chocolat Blanc",
+"cat": "Cookies",
+"q": 113,
+"ttc": 3.1,
+"ht": 2.9245,
+"cout": 1.4276
+},
+{
+"pid": 6700264,
+"nom": "Melocake – Boîte de 6",
+"cat": "Chocolaterie",
+"q": 29,
+"ttc": 8.9,
+"ht": 8.3962,
+"cout": 3.3
+},
+{
+"pid": 2300001,
+"nom": "Poulet César",
+"cat": "Sandwiches garnis",
+"q": 68,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 1.948
+},
+{
+"pid": 3400001,
+"nom": "Coca-Cola",
+"cat": "Boissons froides",
+"q": 39,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.707
+},
+{
+"pid": 2300010,
+"nom": "Thon",
+"cat": "Sandwiches garnis",
+"q": 54,
+"ttc": 5.4,
+"ht": 5.0943,
+"cout": 2.8977
+},
+{
+"pid": 3400007,
+"nom": "Café",
+"cat": "Boissons chaudes",
+"q": 83,
+"ttc": 2.3,
+"ht": 2.1698,
+"cout": 0.147
+},
+{
+"pid": 6700230,
+"nom": "Brownies",
+"cat": "Tartes – Ø 28 cm",
+"q": 149,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 8.478
+},
+{
+"pid": 3210002,
+"nom": "Cookie Chocolat Noir",
+"cat": "Cookies",
+"q": 99,
+"ttc": 3.1,
+"ht": 2.9245,
+"cout": 1.494
+},
+{
+"pid": 1300023,
+"nom": "Baguette Poivre & Sel",
+"cat": "Petite Boulangerie",
+"q": 13,
+"ttc": 2.6,
+"ht": 2.4528,
+"cout": 1.4639
+},
+{
+"pid": 1200005,
+"nom": "Fermier Seigle & Levain",
+"cat": "Pain",
+"q": 74,
+"ttc": 4.1,
+"ht": 3.8679,
+"cout": 1.3636
+},
+{
+"pid": 1610011,
+"nom": "Crookie",
+"cat": "Viennoiserie Ind.",
+"q": 4,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.7075
+},
+{
+"pid": 1620002,
+"nom": "Mini - Baulus",
+"cat": "Viennoiserie réduction",
+"q": 64,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.4812
+},
+{
+"pid": 6700018,
+"nom": "Wrapps - Poulet & Parmesan",
+"cat": "Wrapps",
+"q": 10,
+"ttc": 6.5,
+"ht": 6.1321,
+"cout": 1.624
+},
+{
+"pid": 1210002,
+"nom": "Focaccia - Aromates",
+"cat": "Pain Tradition",
+"q": 13,
+"ttc": 4.3,
+"ht": 4.0566,
+"cout": 1.7708
+},
+{
+"pid": 6700127,
+"nom": "Cookie Noix & Caramel",
+"cat": "Cookies",
+"q": 72,
+"ttc": 3.1,
+"ht": 2.9245,
+"cout": 1.1021
+},
+{
+"pid": 6700241,
+"nom": "Frangipane & Poire",
+"cat": "Tartes – Ø 28 cm",
+"q": 34,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 9.775
+},
+{
+"pid": 1610010,
+"nom": "Couque à la Crème",
+"cat": "Viennoiserie Ind.",
+"q": 184,
+"ttc": 3.5,
+"ht": 3.3019,
+"cout": 0.6838
+},
+{
+"pid": 3210003,
+"nom": "Cookie Double Chocolat",
+"cat": "Cookies",
+"q": 99,
+"ttc": 3.1,
+"ht": 2.9245,
+"cout": 1.494
+},
+{
+"pid": 1530006,
+"nom": "Merveilleux",
+"cat": "Entremets - Individuel",
+"q": 55,
+"ttc": 4.5,
+"ht": 4.2453,
+"cout": 1.821
+},
+{
+"pid": 6700233,
+"nom": "Fromage",
+"cat": "Tartes – Ø 28 cm",
+"q": 118,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.5913
+},
+{
+"pid": 3210006,
+"nom": "Cookie Avoine Raisins et Noisette",
+"cat": "Cookies",
+"q": 92,
+"ttc": 3.1,
+"ht": 2.9245,
+"cout": 1.1538
+},
+{
+"pid": 2300002,
+"nom": "Omelette & Lardons",
+"cat": "Sandwiches garnis",
+"q": 13,
+"ttc": 5.4,
+"ht": 5.0943,
+"cout": 1.497
+},
+{
+"pid": 1410003,
+"nom": "Quiche Lorraine",
+"cat": "Quiches",
+"q": 37,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 8.8317
+},
+{
+"pid": 6700231,
+"nom": "Brookie",
+"cat": "Tartes – Ø 28 cm",
+"q": 87,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 9.941
+},
+{
+"pid": 1620004,
+"nom": "Mini - Rhubarbe",
+"cat": "Viennoiserie réduction",
+"q": 52,
+"ttc": 1.0,
+"ht": 0.9434,
+"cout": 0.692
+},
+{
+"pid": 1210005,
+"nom": "Pain Tradition - 4 Céréales",
+"cat": "Pain Tradition",
+"q": 33,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 2.184
+},
+{
+"pid": 6700246,
+"nom": "Riz",
+"cat": "Tartes – Ø 28 cm",
+"q": 100,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.1825
+},
+{
+"pid": 1210006,
+"nom": "Pain Tradition - Olives",
+"cat": "Pain Tradition",
+"q": 50,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 2.202
+},
+{
+"pid": 3400004,
+"nom": "Eau Plate",
+"cat": "Boissons froides",
+"q": 22,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.51
+},
+{
+"pid": 1110203,
+"nom": "Fromage & Spéculoos",
+"cat": "Tartissières - 19Ø",
+"q": 44,
+"ttc": 19.9,
+"ht": 18.7736,
+"cout": 9.2317
+},
+{
+"pid": 1210011,
+"nom": "Pain Tradition - Noix et Raisins",
+"cat": "Pain Tradition",
+"q": 49,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 2.401
+},
+{
+"pid": 1510003,
+"nom": "Entremet 120Ø -  Duo Framboise & Passion",
+"cat": "Entremets - 4/6 personnes",
+"q": 46,
+"ttc": 14.9,
+"ht": 14.0566,
+"cout": 5.2167
+},
+{
+"pid": 6700229,
+"nom": "Pommes Amandes",
+"cat": "Tartes – Ø 28 cm",
+"q": 49,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 8.7991
+},
+{
+"pid": 6700228,
+"nom": "Pommes Tranches",
+"cat": "Tartes – Ø 28 cm",
+"q": 62,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 7.9866
+},
+{
+"pid": 1410006,
+"nom": "Quiche saumon & épinards",
+"cat": "Quiches",
+"q": 46,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 8.865
+},
+{
+"pid": 6700243,
+"nom": "Moelleux au chocolat",
+"cat": "Tartes – Ø 28 cm",
+"q": 2,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 8.6636
+},
+{
+"pid": 2300005,
+"nom": "Poulet Curry",
+"cat": "Sandwiches garnis",
+"q": 31,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 2.487
+},
+{
+"pid": 1410005,
+"nom": "Quiche Grecque",
+"cat": "Quiches",
+"q": 50,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 8.3533
+},
+{
+"pid": 1210003,
+"nom": "Pain Tradition - Noisettes",
+"cat": "Pain Tradition",
+"q": 23,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 2.963
+},
+{
+"pid": 1110103,
+"nom": "Fromage & Spéculoos - 120⌀",
+"cat": "Tartissières - 12Ø",
+"q": 60,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 4.715
+},
+{
+"pid": 2300017,
+"nom": "Omelette & Saumons",
+"cat": "Sandwiches garnis",
+"q": 1,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 1.8843
+},
+{
+"pid": 3400002,
+"nom": "Coca-Cola Zero",
+"cat": "Boissons froides",
+"q": 30,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.707
+},
+{
+"pid": 3400026,
+"nom": "Jus de pomme",
+"cat": "Boissons froides",
+"q": 59,
+"ttc": 2.7,
+"ht": 2.5472,
+"cout": 0.652
+},
+{
+"pid": 2300013,
+"nom": "Brie, Pommes & Miel",
+"cat": "Sandwiches garnis",
+"q": 1,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 2.1046
+},
+{
+"pid": 3400028,
+"nom": "Cécémel",
+"cat": "Boissons froides",
+"q": 78,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 1.043
+},
+{
+"pid": 1510004,
+"nom": "Entremet 120Ø -  Duo Chocolat",
+"cat": "Entremets - 4/6 personnes",
+"q": 56,
+"ttc": 14.9,
+"ht": 14.0566,
+"cout": 4.9622
+},
+{
+"pid": 1530002,
+"nom": "Misérable Ind.",
+"cat": "Entremets - Individuel",
+"q": 13,
+"ttc": 4.5,
+"ht": 4.2453,
+"cout": 1.1183
+},
+{
+"pid": 1210001,
+"nom": "Pain au Noix & Sésame",
+"cat": "Pain Tradition",
+"q": 32,
+"ttc": 4.2,
+"ht": 3.9623,
+"cout": 1.6406
+},
+{
+"pid": 3220004,
+"nom": "Tendresse au Chocolat",
+"cat": "Financier",
+"q": 3,
+"ttc": 1.9,
+"ht": 1.7925,
+"cout": 1.099
+},
+{
+"pid": 1410004,
+"nom": "Quiche Jambon & Chicons",
+"cat": "Quiches",
+"q": 36,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.2833
+},
+{
+"pid": 3220002,
+"nom": "Financier au Chocolat",
+"cat": "Financier",
+"q": 5,
+"ttc": 1.9,
+"ht": 1.7925,
+"cout": 0.6478
+},
+{
+"pid": 6700244,
+"nom": "Poires & Chocolat",
+"cat": "Tartes – Ø 28 cm",
+"q": 26,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 10.3504
+},
+{
+"pid": 3400029,
+"nom": "Red Bull",
+"cat": "Boissons froides",
+"q": 56,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 1.15
+},
+{
+"pid": 1410007,
+"nom": "Quiche roquette, chèvre & miel",
+"cat": "Quiches",
+"q": 26,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.5383
+},
+{
+"pid": 2300011,
+"nom": "Tomates & Mozzarella",
+"cat": "Sandwiches garnis",
+"q": 18,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 1.9639
+},
+{
+"pid": 1530001,
+"nom": "Javanais Ind.",
+"cat": "Entremets - Individuel",
+"q": 36,
+"ttc": 4.5,
+"ht": 4.2453,
+"cout": 0.2797
+},
+{
+"pid": 1210004,
+"nom": "Pain Tradition - Oignons et Lardons",
+"cat": "Pain Tradition",
+"q": 5,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 2.334
+},
+{
+"pid": 6700234,
+"nom": "Cerise",
+"cat": "Tartes – Ø 28 cm",
+"q": 55,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.1616
+},
+{
+"pid": 6700232,
+"nom": "Pommes Parisienne",
+"cat": "Tartes – Ø 28 cm",
+"q": 49,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 10.057
+},
+{
+"pid": 1110105,
+"nom": "Citron Meringué - 120⌀",
+"cat": "Tartissières - 12Ø",
+"q": 34,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.5339
+},
+{
+"pid": 4100016,
+"nom": "Cougnou - Sucre & Canelle",
+"cat": "Cougnou",
+"q": 11,
+"ttc": 2.9,
+"ht": 2.7358,
+"cout": 0.954
+},
+{
+"pid": 3400003,
+"nom": "Eau Pétillante",
+"cat": "Boissons froides",
+"q": 11,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.51
+},
+{
+"pid": 1410015,
+"nom": "Quiche aux champignons",
+"cat": "Quiches",
+"q": 36,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 7.8333
+},
+{
+"pid": 1410013,
+"nom": "Quiche boeufs & curry de légumes",
+"cat": "Quiches",
+"q": 19,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 7.66
+},
+{
+"pid": 1300006,
+"nom": "Brioche tressée au chocolat",
+"cat": "Petite Boulangerie",
+"q": 10,
+"ttc": 5.9,
+"ht": 5.566,
+"cout": 3.0194
+},
+{
+"pid": 3400009,
+"nom": "Cappuccino (à emporter)",
+"cat": "Boissons chaudes",
+"q": 22,
+"ttc": 2.8,
+"ht": 2.6415,
+"cout": 0.091
+},
+{
+"pid": 1410012,
+"nom": "Quiche Montagnarde",
+"cat": "Quiches",
+"q": 20,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 6.5867
+},
+{
+"pid": 3220001,
+"nom": "Tendresse aux Framboises",
+"cat": "Financier",
+"q": 9,
+"ttc": 1.9,
+"ht": 1.7925,
+"cout": 1.0213
+},
+{
+"pid": 1110208,
+"nom": "Citron Meringué",
+"cat": "Tartissières - 19Ø",
+"q": 27,
+"ttc": 19.9,
+"ht": 18.7736,
+"cout": 8.9117
+},
+{
+"pid": 1520002,
+"nom": "Duo Chocolat - 180⌀",
+"cat": "Entremets - 190Ø",
+"q": 21,
+"ttc": 23.9,
+"ht": 22.5472,
+"cout": 8.0567
+},
+{
+"pid": 2300006,
+"nom": "Salade de Viande Maison",
+"cat": "Sandwiches garnis",
+"q": 28,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 2.814
+},
+{
+"pid": 1131002,
+"nom": "Tarte Cassonade",
+"cat": "Tartes au sucre",
+"q": 1,
+"ttc": 15.9,
+"ht": 15.0,
+"cout": 3.0779
+},
+{
+"pid": 1410011,
+"nom": "Quiche lardons, chèvre & tomates",
+"cat": "Quiches",
+"q": 25,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.7967
+},
+{
+"pid": 6700139,
+"nom": "Cougnou Nature - 400 g.",
+"cat": "Cougnou",
+"q": 2,
+"ttc": 5.8,
+"ht": 5.4717,
+"cout": 2.408
+},
+{
+"pid": 1561106,
+"nom": "Cake Marbré - 300 g.",
+"cat": "Cake",
+"q": 21,
+"ttc": 8.8,
+"ht": 8.3019,
+"cout": 2.9147
+},
+{
+"pid": 3400010,
+"nom": "Espresso (à emporter)",
+"cat": "Boissons chaudes",
+"q": 8,
+"ttc": 2.3,
+"ht": 2.1698,
+"cout": 0.075
+},
+{
+"pid": 1520001,
+"nom": "Duo Framboise & Passion - 180⌀",
+"cat": "Entremets - 190Ø",
+"q": 15,
+"ttc": 23.9,
+"ht": 22.5472,
+"cout": 9.0033
+},
+{
+"pid": 3400012,
+"nom": "Fanta",
+"cat": "Boissons froides",
+"q": 12,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.755
+},
+{
+"pid": 6700280,
+"nom": "Flan Breton",
+"cat": "Tartes – Ø 28 cm",
+"q": 32,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 3.4647
+},
+{
+"pid": 1410010,
+"nom": "Quiche feta, aubergines & citron",
+"cat": "Quiches",
+"q": 17,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 8.7467
+},
+{
+"pid": 1561102,
+"nom": "Cake Pomme & Pralin - 300 g.",
+"cat": "Cake",
+"q": 21,
+"ttc": 8.8,
+"ht": 8.3019,
+"cout": 3.3393
+},
+{
+"pid": 1210010,
+"nom": "Ciabatta",
+"cat": "Pain Tradition",
+"q": 6,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 1.4847
+},
+{
+"pid": 1561104,
+"nom": "Cake Nature - 300 g.",
+"cat": "Cake",
+"q": 23,
+"ttc": 8.8,
+"ht": 8.3019,
+"cout": 3.118
+},
+{
+"pid": 6700237,
+"nom": "Abricot",
+"cat": "Tartes – Ø 28 cm",
+"q": 23,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 6.7166
+},
+{
+"pid": 3220003,
+"nom": "Financier aux Amandes",
+"cat": "Financier",
+"q": 15,
+"ttc": 1.9,
+"ht": 1.7925,
+"cout": 0.5507
+},
+{
+"pid": 1561001,
+"nom": "Cake Citron - 350 g.",
+"cat": "Cake",
+"q": 18,
+"ttc": 8.8,
+"ht": 8.3019,
+"cout": 3.0827
+},
+{
+"pid": 6700172,
+"nom": "Pain au chocolat nappé & crème",
+"cat": "Viennoiserie Ind.",
+"q": 54,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 1.323
+},
+{
+"pid": 1110207,
+"nom": "Mousse chocolat & caramel beurre salé",
+"cat": "Tartissières - 19Ø",
+"q": 1,
+"ttc": 26.5,
+"ht": 25.0,
+"cout": 8.025
+},
+{
+"pid": 1410016,
+"nom": "Quiche Poulet & Gorgonzola",
+"cat": "Quiches",
+"q": 27,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 7.07
+},
+{
+"pid": 6700285,
+"nom": "Frangipane",
+"cat": "Tartes – Ø 28 cm",
+"q": 31,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 9.167
+},
+{
+"pid": 1540009,
+"nom": "Mousse au chocolat",
+"cat": "Pâtisserie individuelle",
+"q": 1,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 2.3417
+},
+{
+"pid": 3200001,
+"nom": "Damier - 100 g.",
+"cat": "Biscuiterie",
+"q": 8,
+"ttc": 4.9,
+"ht": 4.6226,
+"cout": 1.4208
+},
+{
+"pid": 6700242,
+"nom": "Groseille",
+"cat": "Tartes – Ø 28 cm",
+"q": 17,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 6.3483
+},
+{
+"pid": 6700238,
+"nom": "Abricot & Cerise",
+"cat": "Tartes – Ø 28 cm",
+"q": 15,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 9.5379
+},
+{
+"pid": 1300007,
+"nom": "Cramique",
+"cat": "Petite Boulangerie",
+"q": 9,
+"ttc": 4.9,
+"ht": 4.6226,
+"cout": 1.7528
+},
+{
+"pid": 6700163,
+"nom": "Wrapps - Hummus Falafel",
+"cat": "Wrapps",
+"q": 1,
+"ttc": 6.5,
+"ht": 6.1321,
+"cout": 0.87
+},
+{
+"pid": 6700245,
+"nom": "Rhubarbe & Fraises",
+"cat": "Tartes – Ø 28 cm",
+"q": 35,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 6.8354
+},
+{
+"pid": 1561110,
+"nom": "Cake Chocolat - 300 g.",
+"cat": "Cake",
+"q": 11,
+"ttc": 8.8,
+"ht": 8.3019,
+"cout": 3.9007
+},
+{
+"pid": 6700239,
+"nom": "Abricot & Rhubarbe",
+"cat": "Tartes – Ø 28 cm",
+"q": 10,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 7.1187
+},
+{
+"pid": 1410008,
+"nom": "Tian de Legumes",
+"cat": "Quiches",
+"q": 23,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 8.6533
+},
+{
+"pid": 6700240,
+"nom": "Frangipane & Abricots",
+"cat": "Tartes – Ø 28 cm",
+"q": 19,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 9.622
+},
+{
+"pid": 6700129,
+"nom": "Focaccia - Olives",
+"cat": "Pain Tradition",
+"q": 13,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 1.8008
+},
+{
+"pid": 1110106,
+"nom": "Passion Sauvage - 120⌀",
+"cat": "Tartissières - 12Ø",
+"q": 6,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.56
+},
+{
+"pid": 6700284,
+"nom": "Frangipane & Pommes",
+"cat": "Tartes – Ø 28 cm",
+"q": 39,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 9.916
+},
+{
+"pid": 1300005,
+"nom": "Brioche tressée au sucre perlé",
+"cat": "Petite Boulangerie",
+"q": 4,
+"ttc": 5.9,
+"ht": 5.566,
+"cout": 2.3331
+},
+{
+"pid": 6700092,
+"nom": "Bouteille Coca-Cola 50cl",
+"cat": "Boissons froides",
+"q": 1,
+"ttc": 2.8,
+"ht": 2.6415,
+"cout": 0.707
+},
+{
+"pid": 1510005,
+"nom": "Entremet 120Ø - Tiramisu",
+"cat": "Entremets - 4/6 personnes",
+"q": 18,
+"ttc": 14.9,
+"ht": 14.0566,
+"cout": 6.4244
+},
+{
+"pid": 6700235,
+"nom": "Rhubarbe",
+"cat": "Tartes – Ø 28 cm",
+"q": 13,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 7.8929
+},
+{
+"pid": 3400015,
+"nom": "IceTea Pétillant",
+"cat": "Boissons froides",
+"q": 9,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.643
+},
+{
+"pid": 3200004,
+"nom": "Leopard - 100 g.",
+"cat": "Biscuiterie",
+"q": 7,
+"ttc": 4.9,
+"ht": 4.6226,
+"cout": 1.5417
+},
+{
+"pid": 6700248,
+"nom": "Rhubarbe Parisienne",
+"cat": "Tartes – Ø 28 cm",
+"q": 6,
+"ttc": 29.9,
+"ht": 28.2075,
+"cout": 7.5625
+},
+{
+"pid": 1131004,
+"nom": "Tarte Sucre & Chocolat",
+"cat": "Tartes au sucre",
+"q": 2,
+"ttc": 18.9,
+"ht": 17.8302,
+"cout": 3.0779
+},
+{
+"pid": 2300014,
+"nom": "Fromage Gouda Jeune",
+"cat": "Sandwiches garnis",
+"q": 5,
+"ttc": 5.4,
+"ht": 5.0943,
+"cout": 2.373
+},
+{
+"pid": 1110205,
+"nom": "Fromage citronné & coulis de framboises",
+"cat": "Tartissières - 19Ø",
+"q": 3,
+"ttc": 19.9,
+"ht": 18.7736,
+"cout": 7.66
+},
+{
+"pid": 3200006,
+"nom": "Amandes & Cannelles - 100 g",
+"cat": "Biscuiterie",
+"q": 2,
+"ttc": 4.9,
+"ht": 4.6226,
+"cout": 1.7358
+},
+{
+"pid": 5200003,
+"nom": "Brownies",
+"cat": "Dessert",
+"q": 2,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 1.1021
+},
+{
+"pid": 3200002,
+"nom": "Swirl - 100g.",
+"cat": "Biscuiterie",
+"q": 4,
+"ttc": 4.9,
+"ht": 4.6226,
+"cout": 1.3988
+},
+{
+"pid": 6700137,
+"nom": "Granola - Banane & Chocolat",
+"cat": "Épicerie",
+"q": 10,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.629
+},
+{
+"pid": 4100017,
+"nom": "Saint Nicolas - Lait",
+"cat": "Noël",
+"q": 1,
+"ttc": 7.9,
+"ht": 7.4528,
+"cout": 5.72
+},
+{
+"pid": 1150023,
+"nom": "Bleuet",
+"cat": "Tartes – Ø 28 cm",
+"q": 5,
+"ttc": 19.9,
+"ht": 18.7736,
+"cout": 6.709
+},
+{
+"pid": 6700020,
+"nom": "Sandwich Garnis Individuel",
+"cat": "Sandwiches garnis",
+"q": 5,
+"ttc": 2.7,
+"ht": 2.5472,
+"cout": 0.2218
+},
+{
+"pid": 2120008,
+"nom": "Soupe Tomate & Boulettes",
+"cat": "Soupes",
+"q": 1,
+"ttc": 5.5,
+"ht": 5.1887,
+"cout": 1.9017
+},
+{
+"pid": 3400021,
+"nom": "Sprite",
+"cat": "Boissons froides",
+"q": 5,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.74
+},
+{
+"pid": 6700128,
+"nom": "Focaccia - Pesto Rosso",
+"cat": "Pain Tradition",
+"q": 2,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 1.8417
+},
+{
+"pid": 6700283,
+"nom": "Plusieurs Fruits",
+"cat": "Tartes – Ø 28 cm",
+"q": 13,
+"ttc": 21.9,
+"ht": 20.6604,
+"cout": 7.1463
+},
+{
+"pid": 6700089,
+"nom": "Macchiato",
+"cat": "Boissons chaudes",
+"q": 14,
+"ttc": 2.8,
+"ht": 2.6415,
+"cout": 0.417
+},
+{
+"pid": 1210009,
+"nom": "Blanc (Pauvre en Gluten) - 600 g.",
+"cat": "Pain Tradition",
+"q": 1,
+"ttc": 4.5,
+"ht": 4.2453,
+"cout": 2.2056
+},
+{
+"pid": 4100015,
+"nom": "Sapin de Noel en pain d'épice",
+"cat": "Noël",
+"q": 2,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.527
+},
+{
+"pid": 3400013,
+"nom": "IceTea Pêche",
+"cat": "Boissons froides",
+"q": 6,
+"ttc": 2.0,
+"ht": 1.8868,
+"cout": 0.643
+},
+{
+"pid": 6700135,
+"nom": "Granola - Noisette & Chocolat",
+"cat": "Épicerie",
+"q": 8,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 4.1795
+},
+{
+"pid": 6700124,
+"nom": "TartoCake - Cerise & Pistache",
+"cat": "Tartocake - 22Ø",
+"q": 1,
+"ttc": 20.9,
+"ht": 19.717,
+"cout": 8.6717
+},
+{
+"pid": 6700136,
+"nom": "Granola - Pommes & Canelle",
+"cat": "Épicerie",
+"q": 4,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.3705
+},
+{
+"pid": 1520005,
+"nom": "Framboise & Chocolat - 180⌀",
+"cat": "Entremets - 190Ø",
+"q": 1,
+"ttc": 19.9,
+"ht": 18.7736,
+"cout": 8.8
+},
+{
+"pid": 1110107,
+"nom": "Fromage Citron & Coulis Framboise - 120⌀",
+"cat": "Tartissières - 12Ø",
+"q": 2,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.45
+},
+{
+"pid": 1300011,
+"nom": "Briochette Sucre",
+"cat": "Petite Boulangerie",
+"q": 7,
+"ttc": 0.9,
+"ht": 0.8491,
+"cout": 0.4663
+},
+{
+"pid": 6700217,
+"nom": "Crème Glacée Spéculoos - 600 ml",
+"cat": "Glace by Rawette",
+"q": 3,
+"ttc": 11.0,
+"ht": 10.3774,
+"cout": 7.99
+},
+{
+"pid": 6700252,
+"nom": "Crème Glacée Spéculoos - 200 ml",
+"cat": "Glace by Rawette",
+"q": 1,
+"ttc": 5.5,
+"ht": 5.1887,
+"cout": 4.15
+},
+{
+"pid": 1121001,
+"nom": "Tarte Fraises",
+"cat": "Tarte Fruits Frais",
+"q": 3,
+"ttc": 29.9,
+"ht": 28.2075,
+"cout": 8.032
+},
+{
+"pid": 1121003,
+"nom": "Tarte TuttiFrutti",
+"cat": "Tarte Fruits Frais",
+"q": 4,
+"ttc": 29.9,
+"ht": 28.2075,
+"cout": 5.848
+},
+{
+"pid": 6700215,
+"nom": "Crème Glacée Vanille 600 ml",
+"cat": "Glace by Rawette",
+"q": 2,
+"ttc": 11.0,
+"ht": 10.3774,
+"cout": 7.99
+},
+{
+"pid": 1122007,
+"nom": "Croûte Framboise",
+"cat": "Croutes Fruits Frais",
+"q": 1,
+"ttc": 24.5,
+"ht": 23.1132,
+"cout": 5.5
+},
+{
+"pid": 6700279,
+"nom": "Bréslienne",
+"cat": "Tartes – Ø 28 cm",
+"q": 6,
+"ttc": 24.9,
+"ht": 23.4906,
+"cout": 6.2556
+},
+{
+"pid": 3200003,
+"nom": "Pecan - 100 g.",
+"cat": "Biscuiterie",
+"q": 3,
+"ttc": 4.9,
+"ht": 4.6226,
+"cout": 2.0592
+},
+{
+"pid": 1110202,
+"nom": "Passion Sauvage",
+"cat": "Tartissières - 19Ø",
+"q": 3,
+"ttc": 19.9,
+"ht": 18.7736,
+"cout": 8.6717
+},
+{
+"pid": 6700138,
+"nom": "Granola - Citron & Bleuet",
+"cat": "Épicerie",
+"q": 2,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 4.5485
+},
+{
+"pid": 1122002,
+"nom": "Croûte aux fraises",
+"cat": "Croutes Fruits Frais",
+"q": 3,
+"ttc": 21.5,
+"ht": 20.283,
+"cout": 6.875
+},
+{
+"pid": 6700134,
+"nom": "Granola - Noisette & Miel",
+"cat": "Épicerie",
+"q": 2,
+"ttc": 9.9,
+"ht": 9.3396,
+"cout": 3.678
+},
+{
+"pid": 1122001,
+"nom": "Croûte aux fruits",
+"cat": "Croutes Fruits Frais",
+"q": 1,
+"ttc": 21.5,
+"ht": 20.283,
+"cout": 6.002
+},
+{
+"pid": 6700255,
+"nom": "Sorbet Citron 200 ml",
+"cat": "Glace by Rawette",
+"q": 1,
+"ttc": 5.5,
+"ht": 5.1887,
+"cout": 4.15
+},
+{
+"pid": 6700219,
+"nom": "Sorbet Passion & Mangue 600 ml",
+"cat": "Glace by Rawette",
+"q": 1,
+"ttc": 11.0,
+"ht": 10.3774,
+"cout": 7.99
+},
+{
+"pid": 1300019,
+"nom": "Brioche 400g.",
+"cat": "Petite Boulangerie",
+"q": 1,
+"ttc": 3.9,
+"ht": 3.6792,
+"cout": 1.7944
+}
+]
+}

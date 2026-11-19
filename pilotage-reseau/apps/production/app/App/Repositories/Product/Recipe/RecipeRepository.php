@@ -131,7 +131,7 @@ class RecipeRepository extends BaseRepository
         if (empty($ids)) return [];
         $params = [];
         foreach (array_values($ids) as $i => $id) $params['m' . $i] = (int) $id;
-        $sql = "SELECT rm.id, rm.name, rm.price_per_unit, rm.waste_perc, unit.name AS unit_name
+        $sql = "SELECT rm.id, rm.name, rm.price_per_unit, " . \App\Services\Material\MaterialLoss::column('rm') . " AS waste_perc, unit.name AS unit_name
                 FROM raw_material rm
                 INNER JOIN unit ON rm.id_unit = unit.id
                 WHERE rm.id IN (:" . implode(', :', array_keys($params)) . ")";
@@ -424,7 +424,7 @@ class RecipeRepository extends BaseRepository
                         IF(pr.name IS NULL, prod.name, pr.name)) as ing_name,
                     " . \App\Services\Material\MaterialLoss::priceSql('mat') . " as suggested_base_unit_price,
                     mat.price_per_unit as purchase_unit_price,
-                    IFNULL(mat.waste_perc, 0) as waste_perc,
+                    " . \App\Services\Material\MaterialLoss::column('mat') . " as waste_perc,
                     IFNULL(mat.is_part_of_package, 0) as is_packaging,
                     IF(prc.child_ingredient_id IS NOT NULL, mat.id_unit, pr.id_unit) as id_unit,
                     IF(prc.child_ingredient_id IS NOT NULL, mat_unit.name, rec_unit.name) as unit_name,

@@ -14,7 +14,7 @@ final class DeliveryRepository extends WorkshopRepository
 {
     protected string $table = 'n_delivery_stop';
     protected array $writable = ['ship_date', 'id_customer', 'id_carrier_vehicle', 'status', 'reason', 'receiver_name', 'pallets_delivered', 'pallets_returned',
-        'note', 'lat', 'lng', 'recorded_at', 'arrived_at', 'driver_name', 'id_device'];
+        'note', 'lat', 'lng', 'recorded_at', 'arrived_at', 'driver_name', 'id_device', 'receipt_mode', 'pallets_note'];
 
     public function run(string $date, int $vehicleId): ?array
     {
@@ -104,15 +104,83 @@ final class DeliveryRepository extends WorkshopRepository
     }
 
     /** Zdjęcie przed / po rozładunku ; to samo client_uuid (kolejka offline wysłana drugi raz) = ten sam zapis. */
-    public function addMedia(int $stopId, string $kind, string $mime, string $content, ?string $takenAt, ?string $uuid): int
+    public function addMedia(int $stopId, string $kind, string $mime, string $content, ?string $takenAt, ?string $uuid, ?int $palletNo = null, ?int $incidentId = null): int
     {
         if ($uuid !== null) {
             $existing = $this->all('SELECT id FROM n_delivery_media WHERE id_stop = ? AND client_uuid = ?', [$stopId, $uuid])[0]['id'] ?? null;
             if ($existing !== null) return (int) $existing;
         }
-        $this->db->prepare('INSERT INTO n_delivery_media (id_stop, kind, mime, content, taken_at, client_uuid) VALUES (?, ?, ?, ?, ?, ?)')
-            ->execute([$stopId, $kind, $mime, $content, $takenAt, $uuid]);
+        $this->db->prepare('INSERT INTO n_delivery_media (id_stop, kind, pallet_no, id_incident, mime, content, taken_at, client_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$stopId, $kind, $palletNo, $incidentId, $mime, $content, $takenAt, $uuid]);
         return (int) $this->db->lastInsertId();
+    }
+
+    // --- [310] Rozładunek palet, zgłoszenia, dokumenty punktu ------------------------------------------------------
+
+    /** Skan palety (jeden na paletę i postój ; ponowny skan / ta sama kolejka = ten sam zapis). @return int id skanu */
+    public function addPalletScan(int $stopId, int $palletNo, string $method, ?int $mediaId, string $at, $lat, $lng, ?string $driver, ?string $uuid): int
+    {
+        $row = $this->all('SELECT id FROM n_delivery_pallet_scan WHERE id_stop = ? AND pallet_no = ?', [$stopId, $palletNo])[0] ?? null;
+        if ($row) return (int) $row['id'];
+        $this->db->prepare('INSERT INTO n_delivery_pallet_scan (id_stop, pallet_no, method, id_media, scanned_at, lat, lng, driver_name, client_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$stopId, $palletNo, $method, $mediaId, $at, $lat, $lng, $driver, $uuid]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    /** @return array<int, list<array{pallet_no:int, method:string, scanned_at:string, media_id:?int}>> postój → skany */
+    public function palletScans(array $stopIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $stopIds))));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all('SELECT id_stop, pallet_no, method, scanned_at, id_media FROM n_delivery_pallet_scan WHERE id_stop IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
+                             ORDER BY scanned_at, id', $ids) as $r) {
+            $out[(int) $r['id_stop']][] = ['pallet_no' => (int) $r['pallet_no'], 'method' => $r['method'], 'scanned_at' => $r['scanned_at'],
+                'media_id' => $r['id_media'] !== null ? (int) $r['id_media'] : null];
+        }
+        return $out;
+    }
+
+    public function addIncident(int $stopId, string $kind, ?string $note, string $at, ?string $driver, ?string $uuid): int
+    {
+        if ($uuid !== null) {
+            $existing = $this->all('SELECT id FROM n_delivery_incident WHERE client_uuid = ?', [$uuid])[0]['id'] ?? null;
+            if ($existing !== null) return (int) $existing;
+        }
+        $this->db->prepare('INSERT INTO n_delivery_incident (id_stop, kind, note, recorded_at, driver_name, client_uuid) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$stopId, $kind, $note, $at, $driver, $uuid]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    /** @return array<int, list<array>> postój → zgłoszenia (z identyfikatorami zdjęć) */
+    public function incidents(array $stopIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $stopIds))));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all('SELECT i.id, i.id_stop, i.kind, i.note, i.recorded_at, i.driver_name,
+                    (SELECT GROUP_CONCAT(m.id ORDER BY m.id) FROM n_delivery_media m WHERE m.id_incident = i.id) AS photo_ids
+                FROM n_delivery_incident i WHERE i.id_stop IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY i.recorded_at, i.id', $ids) as $r) {
+            $out[(int) $r['id_stop']][] = ['id' => (int) $r['id'], 'kind' => $r['kind'], 'note' => $r['note'], 'recorded_at' => $r['recorded_at'],
+                'driver_name' => $r['driver_name'], 'photo_ids' => $r['photo_ids'] ? array_map('intval', explode(',', (string) $r['photo_ids'])) : []];
+        }
+        return $out;
+    }
+
+    /** Wysyłki dnia klienta (dokumenty z fakturowania) : [id_wz, id_cmr, id_wdt, numery]. @return list<array> */
+    public function shipments(string $date, int $customerId): array
+    {
+        return $this->all(
+            "SELECT sl.id, sl.id_wz, sl.id_cmr, sl.id_wdt, wz.doc_num AS wz, cmr.doc_num AS cmr, wdt.doc_num AS wdt
+             FROM shipment_log sl LEFT JOIN document_wz wz ON wz.id = sl.id_wz LEFT JOIN document_cmr cmr ON cmr.id = sl.id_cmr LEFT JOIN document_wdt wdt ON wdt.id = sl.id_wdt
+             WHERE sl.shipment_date = ? AND sl.id_customer = ? ORDER BY sl.id", [$date, $customerId]);
+    }
+
+    /** Palety dnia innych klientów : numer → [id_customer, nazwa] (komunikat « cudza paleta »). */
+    public function palletOwner(string $date, int $palletNo): ?array
+    {
+        return $this->all("SELECT pd.id_customer, COALESCE(NULLIF(TRIM(cu.company), ''), TRIM(CONCAT(cu.name, ' ', cu.surname))) AS customer
+            FROM palets_delivery pd LEFT JOIN customer cu ON cu.id = pd.id_customer WHERE pd.delivery_date = ? AND pd.id_palet = ?", [$date, $palletNo])[0] ?? null;
     }
 
     public function countMedia(int $stopId, string $kind): int
@@ -131,6 +199,32 @@ final class DeliveryRepository extends WorkshopRepository
         $out = [];
         foreach ($this->all('SELECT id_customer, id_palet FROM palets_delivery WHERE delivery_date = ? ORDER BY id_palet', [$date]) as $r) {
             $out[(int) $r['id_customer']][] = (int) $r['id_palet'];
+        }
+        return $out;
+    }
+
+    /** [310] Palety dnia do etykiet : numer, klient (nazwa z palety, gdy brak w planie). */
+    public function labelPallets(string $date, ?int $customerId = null): array
+    {
+        $sql = 'SELECT pd.id_palet, pd.id_customer, COALESCE(c.company, pd.client) AS customer FROM palets_delivery pd
+                LEFT JOIN customer c ON c.id = pd.id_customer WHERE pd.delivery_date = ?';
+        $args = [$date];
+        if ($customerId !== null) { $sql .= ' AND pd.id_customer = ?'; $args[] = $customerId; }
+        return $this->all($sql . ' ORDER BY pd.id_customer, pd.id_palet', $args);
+    }
+
+    /** [310] Zawartość palet : numer palety => [[produkt, kartony]] (kartony połączone z paletą). */
+    public function palletContents(array $palletIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $palletIds))));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all('SELECT cpc.id_palet, COALESCE(fp.name, CONCAT(\'#\', cs.id_product)) AS product, COUNT(*) AS n
+                FROM carton_pallet_connection cpc JOIN carton_stock cs ON cs.id_carton = cpc.id_carton
+                LEFT JOIN final_product fp ON fp.id = cs.id_product
+                WHERE cpc.id_palet IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
+                GROUP BY cpc.id_palet, cs.id_product, fp.name ORDER BY cpc.id_palet, n DESC', $ids) as $r) {
+            $out[(int) $r['id_palet']][] = ['product' => (string) $r['product'], 'cartons' => (int) $r['n']];
         }
         return $out;
     }
@@ -180,14 +274,14 @@ final class DeliveryRepository extends WorkshopRepository
     {
         $out = [];
         foreach ($this->all(
-            "SELECT sl.id_customer, wz.doc_num AS wz, cmr.doc_num AS cmr, wdt.doc_num AS wdt
+            "SELECT sl.id_customer, sl.id_wz, sl.id_cmr, sl.id_wdt, wz.doc_num AS wz, cmr.doc_num AS cmr, wdt.doc_num AS wdt
              FROM shipment_log sl
              LEFT JOIN document_wz wz ON wz.id = sl.id_wz LEFT JOIN document_cmr cmr ON cmr.id = sl.id_cmr LEFT JOIN document_wdt wdt ON wdt.id = sl.id_wdt
              WHERE sl.shipment_date = ? ORDER BY sl.id",
             [$date]
         ) as $r) {
             foreach (['wz' => 'WZ', 'cmr' => 'CMR', 'wdt' => 'WDT'] as $k => $label) {
-                if ($r[$k]) $out[(int) $r['id_customer']][] = ['type' => $label, 'num' => (string) $r[$k]];
+                if ($r[$k]) $out[(int) $r['id_customer']][] = ['type' => $label, 'num' => (string) $r[$k], 'id' => (int) $r['id_' . $k]];
             }
         }
         return $out;

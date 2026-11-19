@@ -10,7 +10,7 @@ class App
 
 	/**
 	 * Licznik stron (Ustawienia › Licznik stron) : jedno wyświetlenie strony na trasę z parametrami
-	 * zastąpionymi nazwami (/products/{id}/edit), dzień i użytkownika. Błąd licznika nie zatrzymuje strony.
+	 * zastąpionymi nazwami (/products/{id}/edit), dzień, użytkownika i profil [314]. Błąd licznika nie zatrzymuje strony.
 	 */
 	private function countPageView($container, string $uri, array $vars): void
 	{
@@ -21,7 +21,9 @@ class App
 				if ($name !== false && $segment !== '') $segment = '{' . $name . '}';
 			}
 			$route = implode('/', $segments) ?: '/';
-			$container->get(\App\Repositories\Settings\PageViewRepository::class)->hit($route, $uri, (int) (user('id') ?? 0));
+			$userId = (int) (user('id') ?? 0);
+			$profile = $userId ? $container->get(\App\Services\Organization\PageAccessService::class)->trackingProfile($userId) : 'none';
+			$container->get(\App\Repositories\Settings\PageViewRepository::class)->hit($route, $uri, $userId, $profile);
 		} catch (\Throwable $e) {
 			error_log('[page-view] ' . $e->getMessage());
 		}
@@ -50,14 +52,21 @@ class App
         // produkcji (/kiosk, /kiosk/scan telefonu : sama powłoka, dane wyłącznie przez API z tokenem tabletu
         // albo kodem QR z tabletu), tablet kierowcy (/driver), tablet biurowy (/office) i tablet pakowania (/tablet/packing) :
         // dane przez API z tokenem tabletu ;
-        // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila.
-        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing'], true)
-            && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)) {
+        // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila ;
+        // [300] logowanie kodem QR (/ajax/login-qr, /ajax/login-qr/status) : kod i oczekiwanie tej przeglądarki.
+        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing', '/ajax/login-qr', '/ajax/login-qr/status'], true)
+            && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)
+            // [354] Próbka z kodu QR (telefon, często bez sesji ERP) : karta próbki i « odłożona » ; dawne adresy QR → /q/KOD.
+            && !preg_match('#^/(q|workshop/traceability/samples/s)/[A-Za-z0-9]{12}$#', $uri)) {
             if (str_starts_with($uri, '/ajax/')) {
                 http_response_code(401);
                 header('Content-Type: application/json');
                 echo json_encode(['message' => 'Unauthorized']);
                 return;
+            }
+            // [354] Strona otwierana bez sesji (np. kod QR procedury) : po zalogowaniu wraca się na nią, nie na /home.
+            if ($method === 'GET' && $uri !== '/' && !str_starts_with($uri, '/ajax/')) {
+                $_SESSION['AFTER_LOGIN'] = $uri . (($q = (string) ($_SERVER['QUERY_STRING'] ?? '')) !== '' ? '?' . preg_replace('/(^|&)url=[^&]*&?/', '$1', $q) : '');
             }
             header('Location: ' . ROOT . '/');
             return;

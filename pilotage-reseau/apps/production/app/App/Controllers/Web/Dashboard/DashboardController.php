@@ -30,6 +30,7 @@ class DashboardController extends BaseController
         private \App\Repositories\Workshop\TimeRepository $time,
         private GroupWeekProfitService $groupWeeks,
         private \App\Services\Organization\PageAccessService $access,
+        private \App\Services\Workshop\Supply\InvoiceService $invoices,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -98,8 +99,18 @@ class DashboardController extends BaseController
         // [284] Produkcja (stanowisko albo sesja kierownika produkcji) : Dzisiaj = tylko zadania (bez wskaźników, rentowności
         // grup, planu wysyłek, « Do zrobienia » i ostatnich zamówień — są w swoich modułach).
         $data['tasks_focus'] = ($week['user']['position_code'] ?? null) === 'KIEROWNIK_PRODUKCJI';
+        // [324] Administracja i fakturowanie (finanse) : bez karty « Do zrobienia » — sprawy są w Mój tydzień i w modułach.
+        $data['hide_todo'] = ($week['user']['position_code'] ?? null) === 'ADMINISTRACJA';
         // [285] Minuty zadań (przydziela administrator, makieta 39) widzi tylko administrator — pracownik widzi swoje zadania.
         // Na razie także administrator w sesji stanowiska (widok operatora) ich nie widzi.
+        // [349] Przycisk asystenta « Ceny z faktur zakupu » : czerwony (pozycje do sprawdzenia / faktury do zatwierdzenia)
+        // albo zielony — dla osób z dostępem do Zaopatrzenia.
+        $data['invoice_assistant'] = null;
+        try {
+            if ($userId && $this->access->canSee($userId, '/workshop/supply')) $data['invoice_assistant'] = $this->invoices->assistantStatus();
+        } catch (\Throwable $e) {
+            error_log('[today] invoice assistant: ' . $e->getMessage());
+        }
         $data['show_minutes'] = $this->access->showTaskMinutes($userId);
         if (!$data['show_minutes'] && is_array($data['week'])) $data['week'] = self::withoutMinutes($data['week']);
         $this->view('dashboard/dashboard', $data);
@@ -118,7 +129,7 @@ class DashboardController extends BaseController
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */
     public function ajaxCounters()
     {
-        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'queue' => $this->queueBadge(), 'profit' => $this->profitBadge(),
+        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'profit' => $this->profitBadge(),
             'time' => $this->timeBadge()]);
     }
 
@@ -176,12 +187,6 @@ class DashboardController extends BaseController
                 'ok' => $t['staff_ok'],
             ];
         });
-    }
-
-    /** [253] Licznik « Do obsłużenia » (pozycja Zamówienia i jej zakładka), najwyżej raz na 5 minut na sesję. */
-    private function queueBadge(): int
-    {
-        return (int) $this->sessionCached('tfb_queue_badge', fn() => $this->today->queueTotal());
     }
 
     /** Wynik liczony najwyżej raz na 5 minut na sesję ; błąd = null. */

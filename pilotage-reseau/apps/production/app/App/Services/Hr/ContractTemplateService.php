@@ -25,8 +25,11 @@ final class ContractTemplateService
         'data_od' => 'data od', 'data_do' => 'data do', 'data_zawarcia' => 'data zawarcia', 'miejscowosc' => 'miejscowość (Ustawienia płac)',
         'miejsce_pracy' => 'miejsce pracy (Ustawienia płac)', 'firma' => 'nazwa firmy', 'adres_firmy' => 'adres firmy', 'nip_firmy' => 'NIP firmy',
         'reprezentant' => 'reprezentant firmy (Ustawienia płac)', 'przedmiot' => 'przedmiot umowy', 'przyczyna' => 'przyczyna', 'okres_wypowiedzenia' => 'okres wypowiedzenia',
+        // [309] Umowa zlecenia na przewóz towaru (Logistyka) : dane kierowcy, pojazd i trasa.
+        'prawo_jazdy' => 'kategoria prawa jazdy (kierowca)', 'pojazd' => 'pojazd (Logistyka)', 'trasa' => 'trasa (Logistyka)',
+        'wynagrodzenie_transport' => 'wynagrodzenie za przewóz (kierowca)',
     ];
-    private const PARTIES = ['zlecenie' => ['Zleceniodawca', 'Zleceniobiorca'], 'dzielo' => ['Zamawiający', 'Wykonawca'], 'wypowiedzenie' => ['Pracodawca', 'Otrzymałem/am (data, podpis)'],
+    private const PARTIES = ['zlecenie' => ['Zleceniodawca', 'Zleceniobiorca'], 'zlecenie_transport' => ['Zleceniodawca', 'Zleceniobiorca'], 'dzielo' => ['Zamawiający', 'Wykonawca'], 'wypowiedzenie' => ['Pracodawca', 'Otrzymałem/am (data, podpis)'],
         'swiadectwo' => ['Pracodawca', 'Otrzymałem/am (data, podpis)'], 'informacja' => ['Pracodawca', 'Otrzymałem/am (data, podpis)']];
 
     public function __construct(private HrRepository $repo, private HrService $hr, private HrCipher $cipher, private ParamRepository $params)
@@ -140,6 +143,9 @@ final class ContractTemplateService
             'nip_firmy' => trim((string) ($c['nip'] ?? '')) ?: null,
             'przedmiot' => trim((string) ($x['subject'] ?? '')) ?: null, 'przyczyna' => trim((string) ($x['reason'] ?? '')) ?: null,
             'okres_wypowiedzenia' => self::notice($p['contract_type'], $p['hire_date'], $p['contract_end'], $sign),
+            // [309] Przewóz towaru : podane przez Logistykę (DriverContractService).
+            'prawo_jazdy' => trim((string) ($x['licence'] ?? '')) ?: null, 'pojazd' => trim((string) ($x['vehicle'] ?? '')) ?: null,
+            'trasa' => trim((string) ($x['route'] ?? '')) ?: null, 'wynagrodzenie_transport' => trim((string) ($x['transport_pay'] ?? '')) ?: null,
         ];
     }
 

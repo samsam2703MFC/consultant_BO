@@ -148,6 +148,13 @@ final class TaskWizardRepository extends WorkshopRepository
         return $this->all('SELECT summary, done_at FROM n_wizard_done WHERE code = ? AND day >= ? AND day < ? ORDER BY day DESC LIMIT 1', [$code, $from, $to])[0] ?? null;
     }
 
+    /** [352] Próbki dnia : utworzone i odłożone. @return array{total:int, stored:int} */
+    public function samplesDay(string $day): array
+    {
+        $r = $this->all("SELECT COUNT(*) AS total, SUM(status = 'stored') AS stored FROM n_prod_sample WHERE sample_date = ?", [$day])[0] ?? [];
+        return ['total' => (int) ($r['total'] ?? 0), 'stored' => (int) ($r['stored'] ?? 0)];
+    }
+
     /** [262] Dzień zatwierdzony w Czasie pracy. */
     public function timeDay(string $day): ?array
     {

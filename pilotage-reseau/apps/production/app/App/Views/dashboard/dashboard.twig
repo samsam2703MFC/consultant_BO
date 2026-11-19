@@ -44,6 +44,12 @@
             {% if f0.late|length %}<span class="at-count is-late">zaległe {{ f0.late|length }}</span>{% endif %}
             <span class="at-count is-done">zrobione {{ week.totals.done }}</span>
             {% endif %}
+            {% if invoice_assistant %}{% set ia = invoice_assistant %}
+            {# [349] Asystent « Ceny z faktur zakupu » (makieta 65) : czerwony = do zrobienia, zielony = zrobione #}
+            <a class="at-asst-btn {{ ia.done ? 'is-done' : 'is-todo' }}" href="{{ root }}/workshop/supply#tab=invoices&inv=wizard" data-invoice-assistant>
+                <span class="ic">{{ ia.done ? '✓' : '!' }}</span><span>{{ ia.done ? 'Ceny z faktur sprawdzone' : 'Asystent : ceny z faktur zakupu' }}
+                <small>{% if ia.done %}{{ ia.last_done ? 'ostatnio ' ~ ia.last_done|date('d.m H:i') : 'nic do sprawdzenia' }}{% else %}{{ ia.todo ? ia.todo ~ ' poz. do sprawdzenia' : '' }}{{ ia.todo and ia.ready ? ' · ' : '' }}{{ ia.ready ? ia.ready ~ ' fakt. do zatwierdzenia' : '' }}{{ ia.oldest ? ' · od ' ~ ia.oldest|date('d.m') : '' }}{% endif %}</small></span></a>
+            {% endif %}
             <a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
         </div>
     </div>
@@ -51,6 +57,8 @@
 
 {% block content %}
 <section class="section at-today">
+    {# [337] Pilne (reklamacje bez decyzji, brak kosztów miesiąca…) : tutaj, rozwinięte — już nie nad każdą stroną. #}
+    <div id="appNotificationBanner" class="mb-3" data-open="1" aria-live="polite"></div>
 
     <div class="row">
         {# --- Mój tydzień : zadania stałe stanowiska dzień po dniu (plan ustala administrator) --- #}
@@ -343,7 +351,8 @@
             </div>
         </div>
 
-        {# --- Do zrobienia ------------------------------------------------------ #}
+        {# --- Do zrobienia ([324] nie dla Administracja i fakturowanie) ---------- #}
+        {% if not hide_todo %}
         <div class="col-12">
             <div class="card">
                 <div class="card-header"><h4 class="card-title">Do zrobienia</h4></div>
@@ -370,42 +379,9 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
-    {# --- Ostatnie zamówienia --------------------------------------------------- #}
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0">Ostatnie zamówienia</h4>
-            <a class="at-link" href="{{ root }}/client-orders">Wszystkie zamówienia</a>
-        </div>
-        <div class="card-body pt-0">
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead>
-                        <tr><th>Nr</th><th>Klient</th><th>Wpłynęło</th><th>Wysyłka</th><th class="text-end">Kartony</th><th>Proforma</th></tr>
-                    </thead>
-                    <tbody>
-                    {% for o in latest %}
-                        <tr>
-                            <td><a href="{{ root }}/client-orders/{{ o.id }}/edit">#{{ o.id }}</a></td>
-                            <td>{{ o.company }}</td>
-                            <td>{{ o.create_order_date }}</td>
-                            <td>{{ o.expected_shipping_date }}</td>
-                            <td class="text-end">{{ o.cartons|number_format(0, ',', ' ') }}</td>
-                            <td>
-                                {% if o.proforma_status == 'paid' %}<span class="at-pill at-pill-ok">Opłacona</span>
-                                {% elseif o.proforma_status == 'issued' %}<span class="at-pill at-pill-warn">Nieopłacona</span>
-                                {% elseif o.proforma_status == 'cancelled' %}<span class="at-pill at-pill-muted">Anulowana</span>
-                                {% elseif o.proforma_status == 'archived' %}<span class="at-pill at-pill-muted">Zarchiwizowana</span>
-                                {% else %}<span class="at-pill at-pill-muted">Brak</span>{% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
     {% endif %}
 </section>
 {% endblock %}

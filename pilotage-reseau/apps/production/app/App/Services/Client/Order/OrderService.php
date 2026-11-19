@@ -467,6 +467,22 @@ class OrderService
         return $context;
     }
 
+    /**
+     * [340] Proforma nieopłacona idzie za zamówieniem : gdy po zapisie zamówienia jej pozycje (produkty, ilości,
+     * ceny) się różnią, stara jest anulowana i powstaje nowa ze wszystkimi pozycjami. Opłacona zostaje bez zmian
+     * (różnice rozlicza dokument różnic). Zwraca numer nowej proformy albo null, gdy nic nie trzeba było robić.
+     */
+    /** @return array{id:int, number:string}|null nowa proforma (id do wysyłki, numer) albo null */
+    public function refreshUnpaidProformaIfStale(int $idOrder): ?array
+    {
+        $order = $this->orderRepository->getById($idOrder);
+        if (!$order || empty($order['id_proforma'])) return null;
+        $context = $this->getProformaContext($order);
+        if (!$context['has_proforma'] || $context['is_paid'] || !$context['is_stale']) return null;
+        $newId = $this->regenerateUnpaidProforma($idOrder);
+        return ['id' => $newId, 'number' => (string) ($this->proformaRepository->first(['id' => $newId])['doc_num'] ?? $newId)];
+    }
+
     public function regenerateUnpaidProforma(int $idOrder): int
     {
         return $this->transactionManager->execute(function () use ($idOrder): int {

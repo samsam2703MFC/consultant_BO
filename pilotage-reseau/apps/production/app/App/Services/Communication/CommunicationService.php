@@ -205,7 +205,7 @@ class CommunicationService
         if ($subject === '' || $body === '') throw new CustomException('Temat i treść wiadomości są wymagane.', 'errors', 422);
 
         $action = ($data['action'] ?? 'queue') === 'draft' ? 'draft' : 'queue';
-        $account = $this->emailAccounts->active();
+        $account = $this->emailAccounts->forMessageType($messageType); // [341] adresse de l'usage
         if ($action === 'queue' && $account === []) throw new CustomException('Przed przekazaniem wiadomości do wysyłki skonfiguruj aktywne konto e-mail.', 'errors', 422);
 
         $domain = $account !== [] && str_contains($account['from_email'], '@') ? substr(strrchr($account['from_email'], '@'), 1) : 'localhost';

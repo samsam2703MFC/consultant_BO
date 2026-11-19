@@ -52,8 +52,12 @@ final class EmployeeCreationService
         $badge = trim((string) ($input['badge'] ?? ''));
         $credential = ['updated_by' => $userId];
         if ($pin !== '') {
-            if (preg_match('/^\d{4,6}$/', $pin)) $credential['pin_hash'] = password_hash($pin, PASSWORD_BCRYPT);
-            else $problems[] = 'PIN : 4 do 6 cyfr — nie zapisano.';
+            if (!preg_match('/^\d{4,6}$/', $pin)) $problems[] = 'PIN : 4 do 6 cyfr — nie zapisano.';
+            else {
+                // [361] Każdy PIN inny (sam PIN otwiera profil na tablecie biurowym).
+                try { $credential = $this->kiosk->pinCredential($profileId, $pin) + $credential; }
+                catch (\App\Core\Api\Workshop\ApiException $e) { $problems[] = 'PIN : ten PIN ma już inna osoba (każdy PIN musi być inny) — nie zapisano.'; }
+            }
         }
         if ($badge !== '') {
             $hash = $this->kiosk->badgeHash($badge);

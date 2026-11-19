@@ -122,8 +122,8 @@ final class ExecutionService
     public function clock(array $body, ApiContext $context, ?int $now = null): array
     {
         $now ??= time();
-        $v = (new Validator($body))->only(['direction', 'client_uuid', 'answers', 'signature'])->choice('direction', ['in', 'out'], false)
-            ->string('client_uuid', 36, false, true, '/^[0-9a-fA-F-]{36}$/', 'INVALID_UUID');
+        $v = (new Validator($body))->only(['direction', 'client_uuid', 'answers', 'signature', 'note'])->choice('direction', ['in', 'out'], false)
+            ->string('client_uuid', 36, false, true, '/^[0-9a-fA-F-]{36}$/', 'INVALID_UUID')->string('note', 500, false, true);
         $v->throwIfInvalid();
         $c = $v->clean();
         $employeeId = (int) $context->employeeId;
@@ -166,6 +166,9 @@ final class ExecutionService
                 $this->audit->record($context, 'clock_out', 'clock', $id, null, ['employee_id' => $employeeId, 'device_id' => $context->deviceId]);
             });
         }
+        // [365] Remarque du jour (facultative, en général à la sortie) : reprise sur la feuille de temps imprimée du mois.
+        $note = trim((string) ($c['note'] ?? ''));
+        if ($note !== '') $this->repo->setClockDayNote($id, mb_substr($note, 0, 500));
         $row = $this->clockRow($this->repo->clock($id), $now);
         return ['replayed' => false, 'clock' => $row, 'signed' => $signature !== null, 'signature_required' => false];
     }

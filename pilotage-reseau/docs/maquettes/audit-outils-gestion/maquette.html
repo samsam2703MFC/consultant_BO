@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette · Les outils de gestion — L'Atelier by</title>
+<!-- Maquette STATIQUE (17/11/2026) : l'étape « Les outils de gestion » de la tablette de contrôle et le bloc du courriel
+     de rapport. Aucun code fonctionnel. Le CSS de la tablette (la constante CSS de public/assets/js/visites.js) est
+     injecté par generer.js au moment de la capture ; seul le CSS propre à l'étape (préfixe og-) est écrit ici.
+     #a : l'étape remplie · #b : la même, le (i) ouvert · #c : le courriel du rapport. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<style>
+  html, body { margin: 0; background: var(--color-bg); font-family: var(--font-ui); color: var(--color-text); }
+  .vue { display: none; } body[data-vue="a"] #tab, body[data-vue="b"] #tab, body[data-vue="c"] #mail { display: block; }
+
+  /* ---- L'étape « Les outils de gestion » (préfixe og-) ---- */
+  .vi .og{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:12px;align-items:start}
+  .vi .og-som{position:sticky;top:82px;padding:16px 18px}
+  .vi .og-som .lab{font:400 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+  .vi .og-sc{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0 2px}
+  .vi .og-sc b{font:400 46px/1 var(--font-display);color:var(--stop)}
+  .vi .og-sc span{font-size:13px;color:var(--color-text-muted)}
+  .vi .og-sc .dn{color:var(--stop)}
+  .vi .og-seg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0 8px}
+  .vi .og-seg i{height:10px;border-radius:3px;background:var(--color-background-secondary)}
+  .vi .og-seg i.ok{background:var(--green)}.vi .og-seg i.att{background:var(--prize)}.vi .og-seg i.ko{background:var(--stop)}
+  .vi .og-cpt{display:flex;gap:6px;flex-wrap:wrap}
+  .vi .og-cpt span{font:400 11.5px var(--font-ui);padding:5px 9px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+  .vi .og-cpt span b{color:var(--color-text)}
+  .vi .og-cpt span.ok{background:rgba(63,122,82,.12);color:var(--green)}.vi .og-cpt span.att{background:#FFF4E5;color:#8a5200}.vi .og-cpt span.ko{background:rgba(141,29,44,.08);color:var(--stop)}
+  /* Le rappel, le (i) */
+  .vi .og-rap{margin-top:14px;border-radius:12px;border:1px solid rgba(141,29,44,.35);background:#FBF3F3;padding:12px 14px}
+  .vi .og-rap .t{display:flex;align-items:center;gap:8px;font:400 12px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-primary)}
+  .vi .og-rap p{margin:7px 0 0;font-size:13px;line-height:1.5;color:var(--color-text)}
+  .vi .og-rap p b{font-weight:700}
+  .vi .og-lu{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(141,29,44,.3);font-size:12.5px}
+  .vi .og-lu .cb{width:26px;height:26px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+  .vi .og-lu small{display:block;font-size:11px;color:var(--color-text-muted)}
+  .vi .og-i{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;font:700 13px/1 Georgia,'Times New Roman',serif;font-style:italic;text-transform:none;letter-spacing:0;flex:0 0 auto}
+  .vi .tb-h h1 .og-ib{display:inline-flex;vertical-align:6px;margin-left:10px;width:34px;height:34px;border-radius:50%;border:none;background:var(--color-primary);color:#fff;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .vi .tb-h h1 .og-ib .og-i{border-color:#fff;width:22px;height:22px}
+  /* Un outil */
+  .vi .og-it{padding:14px 16px;margin-bottom:10px}
+  .vi .og-it.ko{background:linear-gradient(90deg,#FBF3F3,var(--color-surface) 55%)}
+  .vi .og-it .h{display:flex;align-items:flex-start;gap:12px}
+  .vi .og-it .ic{flex:0 0 auto;width:40px;height:40px;border-radius:11px;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;color:var(--color-text)}
+  .vi .og-it .ic svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .vi .og-it .tt{flex:1;min-width:0}
+  .vi .og-it .tt b{display:block;font-size:15px;line-height:1.25}
+  .vi .og-it .tt small{display:block;font-size:12px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
+  .vi .og-lt{display:flex;align-items:center;gap:8px;margin:10px 0 0 52px;padding:7px 10px;border-radius:9px;background:var(--color-background-secondary);font-size:12.5px}
+  .vi .og-lt .s{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap}
+  .vi .og-lt .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .vi .og-lt .d.ok{background:var(--green)}.vi .og-lt .d.att{background:var(--prize)}.vi .og-lt .d.ko{background:var(--stop)}.vi .og-lt .d.mu{background:var(--color-text-muted)}
+  .vi .og-lt.vue .s{color:var(--color-primary)}
+  .vi .og-r{display:flex;align-items:center;gap:10px;margin:10px 0 0 52px;flex-wrap:wrap}
+  .vi.tab .og-r .tri button{min-width:96px;height:48px;font-size:13.5px}
+  .vi.tab .og-r .tri button.att{background:var(--prize);color:#fff}
+  .vi .og-ph{display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--color-border-secondary);background:var(--color-surface);font:400 13px var(--font-ui);color:var(--color-text)}
+  .vi .og-ph svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .vi .og-ph.a{border-color:var(--green);color:var(--green)}
+  .vi .og-ph .vg{width:34px;height:34px;border-radius:7px;margin-left:2px;background:linear-gradient(135deg,#c9b8a6,#8b7765)}
+  .vi .og-it textarea{display:block;width:calc(100% - 52px);margin:10px 0 0 52px;min-height:44px;font-size:13px}
+  .vi .og-pp{margin:8px 0 0 52px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)}
+  .vi .og-pp b{color:var(--color-text);font-weight:400}
+  /* Le (i) ouvert */
+  .og-voile{position:fixed;inset:0;z-index:60;background:rgba(28,26,23,.38)}
+  .vi .og-pop{position:fixed;z-index:61;top:204px;left:259px;width:580px;background:var(--color-surface);border-radius:16px;border-top:5px solid var(--color-primary);box-shadow:0 18px 50px rgba(28,26,23,.28);padding:22px 24px 20px}
+  .vi .og-pop:before{content:'';position:absolute;top:-14px;left:52px;border:9px solid transparent;border-bottom-color:var(--color-primary)}
+  .vi .og-pop h3{display:flex;align-items:center;gap:10px;margin:0 0 10px;font:400 20px var(--font-display);color:var(--color-primary)}
+  .vi .og-pop p{margin:0 0 10px;font-size:14px;line-height:1.55}
+  .vi .og-pop .regle{margin:12px 0;padding:14px 16px;border-radius:12px;background:#FBF3F3;border-left:4px solid var(--color-primary);font-size:15px;line-height:1.5}
+  .vi .og-pop .regle b{font-weight:700}
+  .vi .og-pop ul{margin:6px 0 12px;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-text-muted)}
+  .vi .og-pop .og-bas{display:flex;gap:10px;align-items:center;margin-top:6px}
+  .vi .og-pop .og-bas small{flex:1;font-size:11.5px;color:var(--color-text-muted)}
+
+  /* ---- Le courriel du rapport ---- */
+  #mail{background:#e9e4dd;padding:28px 0 36px;min-height:100vh}
+  .ml{max-width:720px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(28,26,23,.12);overflow:hidden;font-family:Gotham,Helvetica,Arial,sans-serif}
+  .ml-tete{padding:16px 26px;border-bottom:1px solid #eee6dc;font-size:13px;color:#5c554d;line-height:1.7}
+  .ml-tete b{color:#1c1a17;font-weight:400}
+  .ml-tete .obj{font-size:17px;color:#1c1a17;margin-top:4px}
+  .ml-tete .pj{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:4px 10px;border-radius:8px;background:#f4efe9;font-size:12px}
+  .ml-corps{padding:26px 26px 30px}
+  .ml-neuf{outline:2px dashed #B0792A;outline-offset:6px;border-radius:4px;position:relative}
+  .ml-neuf:after{content:'nouveau';position:absolute;top:-18px;right:-4px;font:400 10px Gotham,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;background:#B0792A;color:#fff;padding:2px 7px;border-radius:5px}
+</style>
+</head>
+<body data-vue="a">
+
+<!-- ======================= LA TABLETTE ======================= -->
+<div id="tab" class="vue"><div class="vi tab">
+  <div class="tb-top">
+    <button class="tb-ret">‹ Contrôles</button><span class="sep"></span>
+    <div style="min-width:0"><div class="t">Contrôle · Halle</div><div class="d">mar 17 nov. · commencé à 09:40 · Régulière</div></div>
+    <span style="flex:1"></span>
+    <div class="tb-pr">15 / 26 étapes<div class="bar"><i style="width:58%"></i></div></div>
+    <span class="lng"><button class="on">FR</button><button>NL</button></span>
+    <button class="tb-ch"><i></i>en ligne</button>
+    <button class="tb-av">LV</button>
+  </div>
+
+  <div class="tb-main tb-ctl">
+    <div class="tb-sous">
+      <button class="on"><span class="n">1</span><span class="t"><b>Outils de gestion</b><small>57 / 100 · 7 / 7 vus</small></span><em>2</em></button>
+      <i class="l"></i>
+      <button><span class="n">2</span><span class="t"><b>KPI</b><small>à lire</small></span></button>
+      <i class="l"></i>
+      <button><span class="n">3</span><span class="t"><b>Leviers</b><small>à lire</small></span></button>
+      <i class="l"></i>
+      <button><span class="n">4</span><span class="t"><b>Tâches</b><small>à lire</small></span></button>
+      <i class="l"></i>
+      <button><span class="n">5</span><span class="t"><b>Client mystère</b><small>à lire</small></span></button>
+    </div>
+
+    <div class="tb-h">
+      <div>
+        <div class="cap" style="margin:0">4 · Analyse · étape 1 sur 5 · avec le franchisé, devant l’ordinateur du magasin</div>
+        <h1>Les outils de gestion<button class="og-ib" title="Pourquoi cet audit"><span class="og-i">i</span></button></h1>
+      </div>
+      <span style="flex:1"></span>
+      <div class="tb-pills"><span class="ok">7 / 7 vus</span><span class="ko">2 pas suivis</span><span>2 en partie</span></div>
+    </div>
+
+    <div class="tb-step"><div class="og">
+      <!-- À gauche : la synthèse et le rappel -->
+      <div><div class="card og-som">
+        <div class="lab">Respect des outils de gestion</div>
+        <div class="og-sc"><b>57</b><span>/ 100</span><span>visite précédente (26/10) : 71 · <span class="dn">−14</span></span></div>
+        <div class="og-seg"><i class="att"></i><i class="ko"></i><i class="ko"></i><i class="ok"></i><i class="ok"></i><i class="att"></i><i class="ok"></i></div>
+        <div class="og-cpt"><span class="ok"><b style="color:inherit">3</b> suivis</span><span class="att"><b style="color:inherit">2</b> en partie</span><span class="ko"><b style="color:inherit">2</b> pas suivis</span></div>
+        <div class="og-rap">
+          <div class="t"><span class="og-i">i</span>Le rappel au franchisé</div>
+          <p>Les outils de gestion mis en place par la marque sont à suivre. <b>En ne les suivant pas, aucun effort ne sera fait de la part de la marque en cas de problème ou de manquement de gestion.</b></p>
+          <div class="og-lu"><span class="cb">✓</span><div>Rappel lu avec le franchisé<small>coché à 10:12 · repris dans le courriel du rapport</small></div></div>
+        </div>
+        <div class="xs mu" style="margin-top:10px;line-height:1.45">Part dans le rapport et le courriel : chaque outil, son verdict, la remarque, les photos choisies et le rappel. Un « pas suivi » devient un point proposé.</div>
+      </div></div>
+
+      <!-- À droite : les sept outils -->
+      <div>
+        <div class="card og-it">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 14.5h2"/></svg></span>
+            <div class="tt"><b>Plan de trésorerie</b><small>Dashboard magasin › Trésorerie : tenu chaque semaine, fournisseurs et paiements saisis, solde réel du dimanche</small></div></div>
+          <div class="og-lt"><span class="s">Lu tout seul</span><span class="d att"></span>dernière mise à jour le 02/11 · solde du dimanche saisi 1 dimanche sur 4</div>
+          <div class="og-r"><span class="tri"><button>Suivi</button><button class="att">En partie</button><button>Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Preuve</span></div>
+          <textarea rows="1">Ouvert mais plus tenu depuis 15 jours ; les fournisseurs de novembre ne sont pas saisis.</textarea>
+          <div class="og-pp"><span class="pill P2">P2</span><b>Point proposé :</b> tenir le plan chaque semaine, solde du dimanche compris · échéance 01/12</div>
+        </div>
+
+        <div class="card og-it ko">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/><path d="M7 9h6M7 12h4"/></svg></span>
+            <div class="tt"><b>Les commandes dans l’ordinateur</b><small>Chaque commande client encodée au panel le jour où elle est prise ; aucun carnet, aucune feuille volante</small></div></div>
+          <div class="og-lt"><span class="s">Lu tout seul</span><span class="d ko"></span>3 commandes encodées sur 30 jours · 2 passées encore ouvertes</div>
+          <div class="og-r"><span class="tri"><button>Suivi</button><button>En partie</button><button class="ko">Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph a"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>1 photo<span class="vg"></span></span></div>
+          <textarea rows="1">Carnet papier à côté de la caisse : 6 commandes de la semaine qui ne sont pas au panel.</textarea>
+          <div class="og-pp"><span class="pill P1">P1</span><b>Point proposé :</b> encoder toutes les commandes au panel, plus de carnet · échéance 24/11</div>
+        </div>
+
+        <div class="card og-it ko">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.5"/></svg></span>
+            <div class="tt"><b>Les étiquettes sur les commandes</b><small>Chaque commande préparée porte son étiquette : nom du client, jour et heure de retrait</small></div></div>
+          <div class="og-lt vue"><span class="s">Vu sur place</span><span class="d mu"></span>chambre froide et comptoir des retraits</div>
+          <div class="og-r"><span class="tri"><button>Suivi</button><button>En partie</button><button class="ko">Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph a"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>2 photos<span class="vg"></span></span></div>
+          <textarea rows="1">2 commandes sur 5 sans étiquette en chambre froide.</textarea>
+          <div class="og-pp"><span class="pill P1">P1</span><b>Point proposé :</b> étiqueter chaque commande préparée · échéance 24/11</div>
+        </div>
+
+        <div class="card og-it">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M14 4h6v4h-6z"/></svg></span>
+            <div class="tt"><b>Les étiquettes sur les produits</b><small>Date de production, DLC et allergènes, en vitrine, en stock et au congélateur</small></div></div>
+          <div class="og-lt vue"><span class="s">Vu sur place</span><span class="d mu"></span>vitrine, labo, congélateur</div>
+          <div class="og-r"><span class="tri"><button class="ok">Suivi</button><button>En partie</button><button>Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Preuve</span></div>
+          <textarea rows="1" placeholder="Remarque — part dans le rapport"></textarea>
+        </div>
+
+        <div class="card og-it">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 6l2 2 3-3M4 12l2 2 3-3M4 18l2 2 3-3"/><path d="M12 7h8M12 13h8M12 19h8"/></svg></span>
+            <div class="tt"><b>Le suivi des tâches et des checklists</b><small>Tâches du jour faites et photographiées dans l’application, checklists d’ouverture et de fermeture</small></div></div>
+          <div class="og-lt"><span class="s">Lu tout seul</span><span class="d ok"></span>tâches obligatoires faites 86 % sur 30 jours · checklists 27 / 30 · photos rendues 92 %</div>
+          <div class="og-r"><span class="tri"><button class="ok">Suivi</button><button>En partie</button><button>Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Preuve</span></div>
+          <textarea rows="1" placeholder="Remarque — part dans le rapport"></textarea>
+        </div>
+
+        <div class="card og-it">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span>
+            <div class="tt"><b>La revue du soir</b><small>Dashboard magasin › Revue du soir : faite et clôturée chaque soir avant la fermeture</small></div></div>
+          <div class="og-lt"><span class="s">Lu tout seul</span><span class="d att"></span>clôturée 9 soirs sur 30 · la dernière le 12/11</div>
+          <div class="og-r"><span class="tri"><button>Suivi</button><button class="att">En partie</button><button>Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Preuve</span></div>
+          <textarea rows="1">Faite seulement quand le franchisé ferme lui-même ; l’équipe du soir ne la fait pas.</textarea>
+          <div class="og-pp"><span class="pill P2">P2</span><b>Point proposé :</b> clôturer la revue du soir chaque jour · échéance 01/12</div>
+        </div>
+
+        <div class="card og-it">
+          <div class="h"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 6h11v10H2z"/><path d="M13 9h4l3 3v4h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg></span>
+            <div class="tt"><b>Les commandes fournisseurs au panel</b><small>Matières et emballages commandés par le panel, pas par téléphone ni par courriel</small></div></div>
+          <div class="og-lt"><span class="s">Lu tout seul</span><span class="d ok"></span>5 commandes au panel sur 30 jours · la dernière le 13/11</div>
+          <div class="og-r"><span class="tri"><button class="ok">Suivi</button><button>En partie</button><button>Pas suivi</button><button>N/A</button></span>
+            <span class="og-ph"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Preuve</span></div>
+          <textarea rows="1" placeholder="Remarque — part dans le rapport"></textarea>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="tb-nav"><button class="tb-b">‹ Checklist</button><span class="sp" style="flex:1"></span>
+      <div class="tb-suiv"><button class="tb-b p"><small>Suivant</small>KPI ›</button></div></div>
+  </div>
+
+  <div class="tb-bar" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+    <button class="fait"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/></svg><span class="ok">✓</span></span><span class="lb">1 · Extérieur</span><span class="es">3 / 3</span></button>
+    <button class="fait"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M5 19h14"/></svg><span class="ok">✓</span></span><span class="lb">2 · Intérieur</span><span class="es">10 / 10</span></button>
+    <button class="fait"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 6l2 2 3-3M4 12l2 2 3-3M4 18l2 2 3-3"/><path d="M12 7h8M12 13h8M12 19h8"/></svg><span class="ok">✓</span></span><span class="lb">3 · Suivi de projet</span><span class="es">2 / 2</span></button>
+    <button class="on"><span class="ic"><svg viewBox="0 0 24 24"><path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/></svg><span class="ko">2</span></span><span class="lb">4 · Analyse</span><span class="es">0 / 5</span></button>
+    <button><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span><span class="lb">5 · Développement</span><span class="es">0 / 3</span></button>
+    <button><span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/></svg></span><span class="lb">6 · Météo et fin</span><span class="es">0 / 3</span></button>
+  </div>
+
+  <!-- Le (i) ouvert (vue #b) -->
+  <div id="pop" style="display:none">
+    <div class="og-voile"></div>
+    <div class="og-pop">
+      <h3><span class="og-i">i</span>Pourquoi cet audit</h3>
+      <p>Les outils de gestion sont ce qui permet au magasin — et à la marque — de voir à temps qu’une chose dérape : la trésorerie, les commandes, la traçabilité, le travail de l’équipe.</p>
+      <div class="regle">Les outils de gestion mis en place par la marque sont à suivre. <b>En ne les suivant pas, aucun effort ne sera fait de la part de la marque en cas de problème ou de manquement de gestion.</b></div>
+      <ul>
+        <li>À lire avec le franchisé, puis cocher « Rappel lu avec le franchisé ».</li>
+        <li>Le même rappel est écrit dans le courriel du rapport, dans la langue du magasin.</li>
+        <li>Un outil « pas suivi » devient un point proposé, à l’échéance du réseau.</li>
+      </ul>
+      <div class="og-bas"><small>Le texte se règle dans Suivi › Qui fait quoi › Les courriels.</small><button class="tb-b p" style="flex:0 0 auto;min-width:140px">Compris</button></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ======================= LE COURRIEL DU RAPPORT ======================= -->
+<div id="mail" class="vue"><div class="ml">
+  <div class="ml-tete">
+    De <b>L’Atelier by</b> · à <b>le franchisé de Halle</b> · copie <b>le consultant, le bureau</b>
+    <div class="obj">Rapport de visite du mardi 17 novembre 2026 — Halle</div>
+    <span class="pj">PDF · rapport-visite-halle-2026-11-17.pdf</span>
+  </div>
+  <div class="ml-corps">
+    <div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14px;color:#1c1a17;line-height:1.6;max-width:620px">
+      <div style="font-size:18px;letter-spacing:.12em;color:#8D1D2C;margin:0 0 18px">L’ATELIER <span style="font-size:12px;letter-spacing:.2em;color:#7a736a">by</span></div>
+      <p style="margin:0 0 12px">Bonjour,</p>
+      <p style="margin:0 0 12px">Voici le rapport de la visite du mardi 17 novembre 2026 avec Loic V. (visite régulière).</p>
+      <p style="margin:0 0 12px">Une boutique propre et bien tenue ; la gestion décroche : des commandes sur papier et un plan de trésorerie à l’arrêt.</p>
+      <p style="margin:0 0 12px">Les points à travailler :</p>
+      <ul style="margin:0 0 12px;padding-left:20px">
+        <li>P1 · Encoder toutes les commandes au panel, plus de carnet — échéance 24/11</li>
+        <li>P1 · Étiqueter chaque commande préparée (nom, jour et heure de retrait) — échéance 24/11</li>
+        <li>P2 · Tenir le plan de trésorerie chaque semaine, solde du dimanche compris — échéance 01/12</li>
+        <li>P2 · Clôturer la revue du soir chaque jour — échéance 01/12</li>
+      </ul>
+
+      <div class="ml-neuf" style="margin:22px 0 18px">
+        <p style="margin:0 0 8px">Le respect des outils de gestion : <b style="color:#A32014;font-weight:700">57 / 100</b> <span style="color:#7a736a">(visite précédente : 71)</span></p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.4">
+          <tr style="border-top:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">Plan de trésorerie</td><td style="padding:6px 0;color:#8a5200;white-space:nowrap">◐ en partie</td><td style="padding:6px 0 6px 10px;color:#7a736a">plus tenu depuis 15 jours</td></tr>
+          <tr style="border-top:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">Les commandes dans l’ordinateur</td><td style="padding:6px 0;color:#A32014;white-space:nowrap">✗ pas suivi</td><td style="padding:6px 0 6px 10px;color:#7a736a">carnet papier, 6 commandes hors panel</td></tr>
+          <tr style="border-top:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">Les étiquettes sur les commandes</td><td style="padding:6px 0;color:#A32014;white-space:nowrap">✗ pas suivi</td><td style="padding:6px 0 6px 10px;color:#7a736a">2 commandes sur 5 sans étiquette</td></tr>
+          <tr style="border-top:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">Les étiquettes sur les produits</td><td style="padding:6px 0;color:#3f7a52;white-space:nowrap">✓ suivi</td><td></td></tr>
+          <tr style="border-top:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">Les tâches et les checklists</td><td style="padding:6px 0;color:#3f7a52;white-space:nowrap">✓ suivi</td><td></td></tr>
+          <tr style="border-top:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">La revue du soir</td><td style="padding:6px 0;color:#8a5200;white-space:nowrap">◐ en partie</td><td style="padding:6px 0 6px 10px;color:#7a736a">clôturée 9 soirs sur 30</td></tr>
+          <tr style="border-top:1px solid #eee6dc;border-bottom:1px solid #eee6dc"><td style="padding:6px 8px 6px 0">Les commandes fournisseurs au panel</td><td style="padding:6px 0;color:#3f7a52;white-space:nowrap">✓ suivi</td><td></td></tr>
+        </table>
+        <div style="margin:14px 0 0;padding:12px 14px;border-left:4px solid #8D1D2C;background:#FBF3F3;border-radius:4px">
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;margin-bottom:4px"><span style="text-transform:none;letter-spacing:0;font-family:Georgia,serif;font-style:italic;font-weight:700">(i)</span> Rappel</div>
+          Les outils de gestion mis en place par la marque sont à suivre. <b style="font-weight:700">En ne les suivant pas, aucun effort ne sera fait de la part de la marque en cas de problème ou de manquement de gestion.</b>
+        </div>
+      </div>
+
+      <p style="margin:0 0 12px">Le rapport est joint en PDF.</p>
+      <p style="margin:0 0 12px">Le rapport complet et vos points sont sur votre page, où vous pouvez envoyer la photo de chaque correction : <span style="color:#8D1D2C;text-decoration:underline">votre page de suivi</span></p>
+      <p style="margin:0 0 12px">L’équipe L’Atelier by</p>
+    </div>
+  </div>
+</div></div>
+
+<script>
+  (function () {
+    var v = (location.hash || '#a').slice(1); document.body.dataset.vue = v;
+    if (v === 'b') { document.getElementById('pop').style.display = 'block'; }
+  })();
+</script>
+</body>
+</html>

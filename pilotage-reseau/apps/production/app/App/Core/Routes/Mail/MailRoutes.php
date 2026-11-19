@@ -18,6 +18,7 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/mail/admin/users/{id:\d+}/settings/test', ['controller' => $c, 'method' => 'adminTest']);
     $r->addRoute('PUT', '/ajax/mail/admin/users/{id:\d+}/policy', ['controller' => $c, 'method' => 'adminPolicy']);
     $r->addRoute('PUT', '/ajax/mail/settings', ['controller' => $c, 'method' => 'saveSettings']);
+    $r->addRoute('PUT', '/ajax/mail/settings/account', ['controller' => $c, 'method' => 'chooseAccount']);
     $r->addRoute('DELETE', '/ajax/mail/settings', ['controller' => $c, 'method' => 'deleteSettings']);
     $r->addRoute('POST', '/ajax/mail/settings/test', ['controller' => $c, 'method' => 'test']);
     $r->addRoute('POST', '/ajax/mail/sync', ['controller' => $c, 'method' => 'sync']);

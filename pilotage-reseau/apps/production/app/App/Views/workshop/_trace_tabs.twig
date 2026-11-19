@@ -1,0 +1,14 @@
+{# [352] Partie i identyfikowalność : jedna pozycja menu, zakładki (makieta 68) — partia produktu, partie surowców,
+   kontrola wejść produkcji, próbki. #}
+{% set tt = trace_tab|default('product') %}
+<nav class="lc-tabs" aria-label="Partie i identyfikowalność">
+    <a class="{{ tt == 'product' ? 'on' }}" href="{{ root }}/workshop/traceability"><i class="bi bi-upc-scan"></i> Partia produktu</a>
+    <a class="{{ tt == 'lots' ? 'on' }}" href="{{ root }}/workshop/traceability/lots"><i class="bi bi-basket"></i> Partie surowców</a>
+    <a class="{{ tt == 'check' ? 'on' }}" href="{{ root }}/workshop/traceability/check"><i class="bi bi-ui-checks"></i> Kontrola wejść</a>
+    <a class="{{ tt == 'samples' ? 'on' }}" href="{{ root }}/workshop/traceability/samples"><i class="bi bi-qr-code"></i> Próbki</a>
+</nav>
+<style>
+.lc-tabs{display:flex;gap:4px;border-bottom:1px solid var(--at-line);margin:0 0 14px;flex-wrap:wrap}
+.lc-tabs a{padding:9px 14px;font-size:13.5px;color:var(--at-muted);border-bottom:2px solid transparent;margin-bottom:-1px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.lc-tabs a.on{color:var(--at-brand,#8D1D2C);border-color:var(--at-brand,#8D1D2C);font-weight:700}
+</style>

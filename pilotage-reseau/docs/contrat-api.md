@@ -2155,7 +2155,7 @@ correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`)
 
 Demande du 14/11/2026 : un module **Trésorerie** dans le dashboard magasin, sur le modèle « Plan de trésorerie —
 L'Atelier By » (Sombreffe, tiré de son fichier Excel), avec la reprise des chiffres de l'année passée, du budget
-validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/tresorerie.php`,
+validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/franchise/tresorerie.php`,
 `public/dashboard/tresorerie.js` et `tresorerie.css`. Tests : `php bin/tests_tresorerie.php`.
 
 **Les repères** (`GET /tresorerie/references`, lourd : le dashboard le demande avec `_cache=600`, `rafraichir=1` sur
@@ -2820,6 +2820,44 @@ revérifie tout).
 
 ### `GET /exploitation/jour` et `/exploitation/periode` — le calcul gardé (04/10/2026)
 
+**Le P&L hors TVA (16/11/2026, `src/pnl_ht.php`, maquette `docs/maquettes/frais-tva`).** Le P&L du jour, de la semaine
+et du mois se lit hors TVA. Le CA encaissé reste TTC (`ca`, `realise` : objectifs, panier, écarts) ; les champs du P&L
+se rapportent au CA hors TVA :
+- `caHt` (et `realiseHt` sur une étendue) = CA × (1 − TVA ÷ TTC des tickets) ; `tva`, `tvaPart` (% du TTC), `tvaSource`.
+  La TVA vient des tickets du jour (`tax_amount_after_discount` de `/shops/{id}/transactions?date=`, la liste déjà lue
+  pour le split pro : le relevé `svP{shop}:{jour}` porte désormais `b.tva` et `b.caT`, le TTC des tickets dont la TVA
+  est lue), sinon de la caisse gravée (`ceo_verif_ca` : `caisse_tva` ÷ `caisse_ttc`), sinon du taux habituel du magasin
+  sur huit semaines, sinon de 6 % (vente à emporter alimentaire) ;
+- `coutMatiere` (inchangé : coût de recette, ou CA − `margin_value` du panel), `margeBrute` = `caHt` − `coutMatiere` ;
+- `overhead` = frais du jour × (hors TVA ÷ saisi) des frais du mois (onglet Frais) ; `overheadSaisi`, `overheadTva`,
+  `fraisSource`, `fraisAIndiquer` (postes sans choix, comptés tels que saisis) ;
+- `net` = `margeBrute` − invendus − main-d'œuvre − `overhead` ; tous les `…Pct` en % de `caHt` ; `pnlBase` = `ht`.
+- La série du mois (`serie[]`) et la semaine (`semaine[]`) de `/exploitation/jour` portent `caHt`, leur `net` hors TVA
+  et `netPct` en % de `caHt`. Le réseau : `caHt`, `tva`, les `…Pct` sur la somme des `caHt`.
+- La carte « Ventes par catégorie » (16/11/2026, « le coefficient doit être calculé sur le net, pas le brut ») : la Liste et
+  le Treemap se lisent hors TVA. `GET /ventes/stats` porte, pour chaque catégorie et chaque produit, `vHt` (le CA sans la
+  TVA du produit : `tax_value_percent` du catalogue, gardé `phTvaP:{shop}` six heures ; à défaut la part habituelle du
+  magasin), `mHt` (= `vHt` − coût de recette), `tauxHt`, et pour la catégorie `vChiffreHt`, `vSansHt`. Le coefficient de la
+  carte = CA hors TVA ÷ coût, comme celui du catalogue. Le total se cale sur `caHt` et `margeBrute` du P&L. Les champs TTC
+  (`v`, `m`, `taux`) restent : les onglets Promotions et Portions et la fiche produit comparent des prix de caisse.
+- Le dossier PDF du mois et la tablette (`vbPnlLigne` : `ca` = la base des %, `caTtc`, `horsTva`) suivent.
+
+### `GET /exploitation/frais` et `POST /exploitation/frais/tva` — l'onglet Frais (16/11/2026)
+
+Code : `src/franchise/frais.php` (les routes), `src/pnl_ht.php` (le calcul, partagé avec le siège).
+`GET /exploitation/frais?shop=4[&mois=AAAA-MM][&rafraichir=1]` : les frais du mois tels que le panel les rend
+(`/shops/{id}/owner/costs?period=AAAA-MM`, gardés `phF:{shop}:{mois}` une heure, six pour un mois passé ; la forme de la
+réponse n'étant pas documentée, liste à la racine ou sous `items`, `costs`, `lines`, `data`, `rows`), face au choix de
+chaque poste : `lignes[]` {`poste`, `cle`, `type`, `montant`, `tva` (true, false, null = à indiquer), `taux`, `ht`,
+`tvaMontant`, `aIndiquer`, `majLe`, `majPar`}, `saisi`, `ht`, `tva`, `part` (hors TVA ÷ saisi), `postes`, `aIndiquer`,
+`aIndiquerEur`, `lu`, `luLe`, `jour` {`saisi`, `ht`} (les frais que le panel alloue à aujourd'hui), `taux` (0, 6, 12, 21).
+
+`POST /exploitation/frais/tva {shop, poste, tva, taux}` : le choix d'un poste, gardé d'un mois à l'autre dans
+`pil_frais_tva` (clé : magasin et libellé en minuscules ; `tva_comprise` 1, 0 ou NULL, `taux`, `maj_le`, `maj_par`).
+`tva: true` sans taux vaut 21 %, `false` sans taux 0 %, `null` remet le poste à indiquer ; taux entre 0 et 30 %. Le
+Résultat gardé d'aujourd'hui part périmé (servi, refait en arrière-plan). Le panel n'est pas modifié. Routes sous
+`/exploitation` : un franchisé n'y lit et n'y écrit que ses magasins.
+
 **Main-d'œuvre de la semaine et du mois (10/10/2026).** `/exploitation/periode` additionne le coût du personnel de chaque jour tel que le panel l'alloue (`/shops/{id}/statistics/daily-summary` : `employee_cost`, et `shop_cost` pour les frais). `/pnl?period=month` rend le personnel cumulé du 1er à aujourd'hui, pas le mois entier. Le répartir sur les 31 jours d'octobre donnait 1 257,69 € pour Halle au 10/10 au lieu d'environ 3 900 €. Ce cumul ne sert plus qu'en repli, divisé par les jours ouverts écoulés. Un jour lu deux jours plus tard est gardé (`dsJ:{magasin}:{jour}`). `labourSource` dit d'où vient le chiffre. Le tableau « Le duel, chiffre par chiffre » de l'onglet Opérationnel ne garde que CA, clients et panier.
 
 **Dashboard magasin, Semaine et Mois (10/10/2026).** Plus de barre du stock (elle reste dans Opérationnel). « Ta place dans le réseau » classe le B2B (`caPro`, la part `partPro` dessous) à la place des messages du panel, qui ne sont plus lus.
@@ -2855,6 +2893,8 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 **L'e-mail « pointages suspects » de fin de journée (20/10/2026, demandé par Sam).** Une vendeuse seule au comptoir qui ne s'identifie pas à la caisse encaisse au compte de la session ouverte. Le dashboard laisse chaque ticket où il est ; le soir, le magasin reçoit le constat. Un cas = au moins 3 tickets encaissés au compte de quelqu'un qui n'est pas en poste à cette minute (parti, pas encore arrivé, pas au planning comme « Caisse 2 », ou sans vendeur) pendant qu'une seule personne était en vente (poste vente, caisse ou comptoir ; tout le monde si le planning ne dit pas de poste) ; dix minutes de grâce autour d'un poste ; deux personnes en vente = pas de cas. La phrase : « X (planning 13:00–18:30) était la seule personne en vente, mais n'a pas pointé à la caisse : de 13:12 à 18:09, 34 tickets (392,10 €) ont été encaissés au compte de Y, dont le poste se terminait à 13:00 » (« n'a pas toujours pointé » si elle a quelques tickets à son nom pendant ce temps). Une ligne du reporting (code `pointages-suspects`, quotidien, 21 h, par magasin) : carnet de la ligne, sinon celui de l'affiche du mois ; les destinataires réseau de la ligne reçoivent un récapitulatif de tous les magasins concernés. Un magasin n'est servi qu'une fois par jour (`psMailEnvoyes`) ; pas de planning ou pas de tickets lus = rien. « Générer » montre le récapitulatif sans rien envoyer. Le planning vient de `/exploitation/jour` (identifiant et horaires de chacun), les tickets de `/shops/{id}/transactions?date=` (vendeur et minute). `src/pointages_mail.php`, `bin/tests_pointages.php`.
 
 **Promotions › Édition : « Tous les magasins » (30/10/2026, demande de Sam).** La liste Magasin de l'assistant propose en tête « Tous les magasins — une promotion réseau » (choix de Sam : UNE promotion au panel plutôt qu'une copie par magasin). `POST /exploitation/promos-magasin` reçoit alors `tous: true` : la « Buy X Get Y » s'écrit au panel avec `shop_scope_type: "ALL_SHOPS"` et `shop_ids: []` (le périmètre des promotions de la marque), créée inactive, relue (`shop_scope_type` relu `ALL_SHOPS`, sinon l'écart « tous les magasins » la laisse inactive), puis activée. `shop` n'est plus que le magasin dont l'assistant a lu les produits et les prix (exclusions d'office, portions) ; le coefficient du lot se vérifie dans chaque magasin ouvert (`shops.active = 1`), le plus serré gardé. Refusés (422, rien au panel) : un brouillon réseau (le cockpit ne saurait pas le reprendre : pas de « Garder en brouillon »), un bon (ses codes et ses clients sont ceux d'un magasin : « Avec un bon » grisé), une promotion déjà enregistrée (`id` : elle reste à son magasin, on la duplique). Une fois écrite, c'est une promotion « Tout le réseau » du Tableau d'analyse, avec celles de la marque (`src: "marque"`, `shops: null`) : elle se modifie au panel, ou se duplique — le cockpit ne la rouvre pas. La réponse porte `demande.tous: true`. Verrou d'envoi : `cockpit-promo-magasin-reseau`.
+
+**Le rail réorganisé : une question, une entrée (19/11/2026, demande de Sam : « beaucoup de vues se ressemblent, on fait double emploi »).** Audit complet et décisions : `docs/audit-rail.md`. Le rail passe de 63 entrées, 11 sections et 5 sous-menus à 34 entrées et 8 sections, sans sous-menu : Pilotage, Franchisés, Vérification, Produits, Marque & marketing, Outils magasin, Administration, Applications (les pages ↗). Les lectures d'une même question deviennent des onglets (`GROUPES`, `app.js`) : Tâches & contrôles (avec l'Entraînement de l'IA), Visites (avec le Fil du franchisé), Budget, Équipe & ventes, Présence Google (Avis | Visibilité), Flux & poubelle (avec Invendus), Matières & inventaires, Promotions, Primes, Paramètres, Journal & diagnostic (avec API du module primes et Sources des visites). Le client mystère ne s'encode plus que dans Visites › Client mystère (`#/parametres/mystere` et `#/client-mystere` y mènent, l'onglet de Paramètres est retiré). Aucune adresse, route ou table ne change ; le dashboard magasin n'est pas touché.
 
 **Promotions : la création sort du dashboard magasin, section Promotions au rail du cockpit (26/10/2026, maquette A de `docs/maquettes/promotions-cockpit`, choisie par Sam).** Le rail a un menu **Promotions** au même niveau que Produits (entre Produits et Marque & marketing), deux entrées : **Édition** (`#/promotions/edition?shop=4`) et **Tableau d'analyse** (`#/promotions`). L'Édition charge l'assistant « X achetés + Y » du dashboard tel quel, dans un cadre (`dashboard/?embed=promos&shop=4&ouvrir=…` : `nouvelle`, `bon`, `p21` pour reprendre ou modifier, `dup:mag:p21`, `dup:panel:12`, `codes:p21`) ; le magasin s'y choisit dans l'entête (une promotion enregistrée reste à son magasin), le cadre écrit au panel par les mêmes routes (`/exploitation/promos-magasin…`) et prévient le cockpit par `postMessage` (`enregistree`, `magasin`, `tableau`, `haut`, `etat`). Le Tableau d'analyse lit `GET /promotions/reseau` (ci-dessous). Le **dashboard du magasin ne crée plus rien** : son onglet Promotions se lit — la liste, « Où les promotions sont utilisées », le coefficient, les codes d'un bon — sans « + Nouvelle promotion », « + Nouveau bon », ni Reprendre, Modifier, Dupliquer, Supprimer, ni la bascule du bon. L'onglet Promotions d'Analyse magasin (lecture seule) est retiré : `#/promotions` ouvre le Tableau d'analyse. L'API ne distingue pas qui écrit (un mot de passe commun) : la règle vit dans les écrans.
 
@@ -3922,6 +3962,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » de `mar_campaign.objective_coef_pct`), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`mar_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
 | `GET /visites/kpi/{shop}[?rafraichir=1]` | tous | **KPI et santé du magasin** (tablette du consultant, 26/10/2026) : `caEtp` (les trois derniers mois clos : `mois[]` `{mois, lab, ca, etp, caEtp, reseau, rang, sur}`, `seuil` de la Table KPI `ca-etp`, `heuresEtp`) — CA du mois (pvKpisMois) ÷ ETP planifiés (ep_stores_etp), le réseau = CA total ÷ ETP totaux des magasins qui ont les deux, un mois sans planning sans ETP deviné ; `structure` (les trois derniers mois clos : `categories[]` `{categorie, ca, part, partReste, ecart}` en % et en points, `ca`, `caReste`, `autres`, `moisLus` / `moisDemandes`) — `/consultant/shops/category-sales` un appel par mois pour tout le réseau, gravé (`vkCat:{AAAA-MM}`), le reste du réseau sans les entrées techniques. `canaux` (26/10/2026, les mêmes trois mois clos : `magasin` et `reste` `{ca{comptoir, b2b, cc, liv}, total, parts{…} en %, proSansTva, b2bAvecSansTva}` — les tickets des clients marqués pro sans TVA valide restent au comptoir, chiffrés à part avec la part B2B qu'ils donneraient, `reste.magasins`, `jours` / `joursLus`, `webshop`, `b2bMax` — le réglage `b2bMax` des visites, 40 —, `b2bStatut` ok, proche (à moins de 5 points), au-dessus, `motif`) — les jours dont la caisse est gravée (`svP{shop}:{jour}` : CA de tous les tickets, tickets des clients pro à TVA valide = B2B), le webshop (`coCommandes` : retrait = click & collect, livraison = livraison bureau), comptoir = caisse − B2B − commandes du webshop encaissées en caisse ; le reste du réseau sans les magasins au webshop muet. `manques[]` nomme un bloc incomplet (relu dans 5 min ; `canaux` quand le webshop du magasin n'a pas répondu). Gardé une heure (`vkKpi2:{shop}`), servi périmé six heures pendant le recalcul. L'année face à l'an passé et les six leviers, la tablette les lit aux routes du dashboard magasin (`/ventes/semaines?shop=&vue=annee&articles=1&_cache=900`, `/leviers/magasins?annee=&mois=&_cache=900`) et les dessine avec les cartes du dashboard, partagées dans `assets/js/cartes-magasin.js` (style tablette : `assets/css/cartes-magasin.css`). Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
 | `GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12]` | tous | **Les tâches du magasin mois par mois** (tablette, étape « Contrôles photo », 26/10/2026) : `mois[]` les n derniers mois (3 à 12, le plus récent d'abord) `{mois, lab, enCours, demandees, faites, jours, pct, notees, sous, moyenne}` — demandées et faites du relevé quotidien du panel (`con_tache_jour`, journées révolues : le mois en cours jusqu'à hier), notes du contrôle qualité (`mac_task_review` : notées, sous le seuil `signalement.seuil`, moyenne) ; `choisi` (d'office le mois en cours, ou le précédent s'il n'a encore rien) et `taches[]` ses tâches notées sous le seuil ou refusées `{jour, tache, note, commentaire, controleur, releveeLe, recidive, suite}` (ep_pwa_tasks_nc). Lu dans la base du cockpit seulement. |
+| `GET /visites/outils/{shop}` | tous | **Les outils de gestion** (tablette, en tête du temps « Analyse », 17/11/2026, `src/visites_outils.php`) : `lu{}` ce que le cockpit lit tout seul, par outil — `tresorerie` (`pil_tresorerie_plan` : dernière mise à jour, soldes réels des quatre derniers dimanches), `commandes` (la lecture du panel gardée par Commandes et ventes, `cmdApi:{shop}`, sinon `client_order` : commandes sur 30 jours, passées encore ouvertes), `taches` (`con_tache_jour` sur 30 jours, notes de `mac_task_review`), `soir` (`ceo_revue_soir` : soirs clôturés sur 30), `fournisseurs` (`material_order` : commandes sur 30 jours — le panel n'a pas de route) — chacun `{etat: ok\|att\|ko\|null, texte}`, absent si rien n'est lisible ; `rappel` (le texte de la marque). Le verdict part avec la visite : `PUT /visites/{id}` `{ outils: { items: { outil: { v: ok\|part\|ko\|na, com, lu } }, rappelLu } }` → `con_visite.outils` (JSON, `viOutils` : score sur 100, suivi 1, en partie ½, pas suivi 0, sans objet hors calcul) ; le rapport (`suOutilsHtml`), le courriel (`{outils_titre}`, `{outils}`, `{rappel}`), l'écran du bureau et la page du franchisé (`outils`) le reprennent |
 | `GET /visites/budget/{shop}[?rafraichir=1]` | tous | **Le CA face au budget** (tablette, étape « KPI et santé du magasin », 26/10/2026) : `periodes{semaine, mois, trimestre, annee}` arrêtées à la VEILLE (`arrete`, le dernier jour clos), chacune `{lab, du, au, realise, attendu, objectif, ecartPct, manque, atteintePct, source, sansBudget[], incomplet, statut, reseau, rang, sur, motif?}`. Semaine et mois : les chiffres de Résultat (`ep_exploitation_periode`, la lecture du jour coupée à la veille ; un lundi la semaine passée, un 1er le mois passé) — réalisé = CA TTC encaissé, attendu = la part du budget des jours écoulés (pondération réseau des jours d'ouverture). Trimestre et année : les mois clos (CA `pvKpisMois` face au budget entier) plus le mois de la veille (Résultat) ; un mois clos sans budget ou sans vente sort des deux côtés (`sansBudget`, ses numéros), un mois clos non lu laisse l'étendue sans chiffre (`incomplet`, relu dans 5 min). Budget = `ceo_shop_month_perf.revenue_budget`, à défaut `ca_theorique` (`source` budget, theorique ou mixte). `ecartPct` = réalisé ÷ attendu − 1 ; `statut` ok (≥ 0), proche, sous (plus de `seuil` % sous l'attendu — le réglage `caOrange` des visites, 10 par défaut), sans (pas d'attendu) ; `rang` / `sur` parmi les magasins qui ont un écart sur la même étendue, `reseau` = Σ réalisés ÷ Σ attendus − 1. `sous[]` liste les étendues à justifier (le jour n'y entre jamais). Depuis le 26/10/2026 : l'étendue `jour` (la veille, Résultat du jour : CA face à l'objectif du jour) et, sur chaque étendue, le **mini P&L** `pnl` `{du, au, ca, coutMatiere(Pct), margeBrute(Pct), invendus(Pct), labour(Pct), overhead(Pct), net(Pct), avecInvendus, mois?, motif}` — jour, semaine et mois tels que Résultat (net = marge brute − invendus − personnel − frais généraux, à date) ; trimestre et année = les mois clos du P&L mensuel (`ep_perf`, sans les invendus) et le mois en cours de Résultat, un poste inconnu un mois restant inconnu ; `seuilsPnl` (food, labour, overhead de la Table KPI). Gardé 30 min (`vkBud:{shop}`), servi périmé 6 h. Code : `src/visites_kpi.php`, tests `bin/tests_visites_kpi.php`. |
 | `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
@@ -5812,6 +5853,45 @@ l'illustration de la catégorie (dessin de sa famille, sinon de la gamme, sinon 
 « Titre + pictogramme · Bandeau illustré · Grande illustration » (3 vignettes) à côté du gabarit, type parmi 6
 vignettes ; étape 4 et PDF : le rendu de `CataloguePages.tsx` (`Heading`, `cat-grid--mosaique`). Plus de défilement
 interne (liste des photos de la médiathèque) : la page entière défile.
+
+**Pleine page** (17/11/2026, client : « une possibilité de produit pleine page, 1 seul produit et sa promotion ») :
+`layout: pleine` (1 produit) et le champ de page `product`, le produit que la page montre seul (Marketing v1.8 ;
+seulement avec `pleine`, sinon 422 `pages[i].product`). Le Marketing le réserve à sa page avec sa promotion (la
+première vignette cochée qui le contient) ; sans `product`, le premier de sa catégorie ; absent de la version :
+`PAGE_PRODUCT_MISSING`. Étape 3 : 7e dessin « Pleine page · 1 produit et sa promo », puis la liste « Le premier de la
+catégorie » + les produits choisis de la catégorie, et la ligne « « X » seul sur la page · avec sa promotion « Y » ».
+Passer à une autre mise en page retire `product`. Le dashboard passe au Marketing l'hôte de sa page
+(`X-Forwarded-Host`) : les dessins du document (en-tête, repli des vignettes) s'ouvrent dans le navigateur au lieu de
+pointer vers 127.0.0.1.
+
+**L'assistant de mise en page** (17/11/2026, Sam : « la mise en page sous forme d'assistant, catégorie par catégorie
+sélectionnée ; la dernière page est la mise en page finale, où l'on déplace une catégorie en drag and drop » ; « code
+comme les maquettes », `docs/maquettes/assistant-mise-en-page`). L'étape 3 a des sous-étapes : une par catégorie choisie
+à l'étape 2 (dans son ordre), puis « Mise en page finale ». Une catégorie : 4 mises en page (1 vedette + 4 · 2 par
+largeur · 1 par largeur · 2 grandes) avec le nombre de pages que chacune donne (rouge au-delà de 2), les aperçus de ses
+pages côte à côte, « un produit seul sur une page, avec sa promotion » (une pleine page avant les autres, son produit),
+gabarit et catégorie manuscrite. Choisir refait les pages de la catégorie à la place des anciennes ; les pages libres
+(sans produit, ni présentation) font la place, sinon le catalogue prend 2 pages de plus (16 au plus, dit). La mise en
+page finale : les pages dans l'ordre en blocs (une catégorie et ses pages, présentation, Notre sélection, pages libres),
+qui se glissent par ⠿ (ou ‹ ›) ; les pages de la marque restent fixes ; nombre de pages (sans retirer une page qui
+porte des produits), format, langues ; « Réglages page par page » ouvre la liste détaillée d'avant (place libre, gamme,
+présentations, répartition automatique). Rien ne part avant « Validation » : un seul `PUT` (pages, format, langues, et
+`pageCount` s'il a changé). Le produit d'une pleine page est relu (`adopter`) et renvoyé (`pagesCorps`). À chaque
+catégorie, sous le résumé, la liste de ses produits (photo, nom, prix) avec un interrupteur montré · caché : le choix de
+l'étape 2, enregistré avec les pages (`products`) ; le dernier montré reste.
+
+**Feuilleter** (17/11/2026, Sam : « un catalogue à feuilleter en simulation dans l'export en PDF, pour être sûr que
+tout est bien à sa place »). En tête de l'étape 5, le document (`…/document`, la langue choisie) comme imprimé et plié :
+la couverture seule à droite, les doubles pages (2-3, 4-5…), la dernière seule à gauche. La page tourne autour du pli
+(3D, sans animation si le système le demande) ; ‹ ›, les flèches du clavier, un clic sur la page de gauche ou de droite,
+les pastilles des doubles pages ; « Agrandir » l'ouvre en grand (Échap ferme). Rien n'est lu en plus : le document de
+l'étape.
+
+**Couverture et dernière page** (17/11/2026, Marketing v1.9) : l'aperçu reprend la police et la couleur du titre et du
+sous-titre de la couverture (`titleFont`/`titleColor`, `subtitleFont`/`subtitleColor` : Vank · Gotham · Playwrite DEVA,
+rubis · abricot · or · crème · encre · blanc, choisis dans la charte), et à la dernière page l'e-mail de la boutique
+(ERP) et son second téléphone (`DocShop.email`, `.phone2`). Le QR mène au webshop direct de la boutique quand la charte
+le porte ; son logo remplace celui de la charte (`charter.logoUrl` du document).
 
 **Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
 disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le

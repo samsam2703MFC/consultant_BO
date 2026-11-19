@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D · La structure des ventes en radar — L'assistant fait des graphiques</title>
+<!-- Écran D (17/11/2026, Sam : « montrer la structure des ventes en spider (catégorie) par rapport au réseau ») : la part
+     de chaque famille de produits dans le CA d'octobre 2026, Sombreffe face aux trois autres magasins (moyenne, et la
+     bande du plus bas au plus haut). Chiffres réels : /ventes/stats?vue=mois&date=2026-10-31, catégories regroupées par
+     famille du catalogue, 31 jours lus sur 31 dans chaque magasin. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+</head><body><script>
+const R = {"axes": ["Boulangerie", "Viennoiserie", "Tartes", "Traiteur", "Quiches", "Pâtisserie", "Biscuiterie", "Boissons & épicerie", "Bundles & promos"], "moi": [22.0, 13.6, 11.4, 12.3, 4.7, 7.2, 3.4, 3.6, 21.6], "moy": [17.5, 20.1, 21.1, 19.7, 6.4, 6.5, 3.5, 4.4, 0.0], "min": [10.8, 14.0, 15.4, 4.2, 3.7, 6.3, 2.7, 2.0, 0.0], "max": [21.7, 31.0, 25.5, 29.6, 7.8, 7.0, 3.9, 8.4, 0.0], "caMoi": 57498, "caAutres": [158579, 61091, 58895]};
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const fP = v => v.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+const fPt = v => (v > 0 ? '+ ' : v < 0 ? '− ' : '') + Math.abs(v).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pt';
+/** Le radar (17/11/2026, soigné) : la grille en filets pleins ; la bande du réseau (du plus bas au plus haut) en aplat
+ *  léger ; la moyenne du réseau en ligne grise pleine ; le magasin en ligne de 2 px, un voile à 10 %, des points de 8 px
+ *  cerclés de blanc. Les libellés à l'encre : la famille, puis « 22,0 % · réseau 17,5 % ». */
+function radar(T) {
+  // Le rayon laisse 128 px de chaque côté : « Boissons & épicerie » à gauche et « 11,4 % · réseau 21,1 % » à droite tiennent.
+  const n = R.axes.length, cx = T / 2, Rr = T / 2 - 128, cy = Rr + 58, MX = 32, Hh = cy + Rr + 56;
+  const a = i => -Math.PI / 2 + 2 * Math.PI * i / n;
+  const p = (i, v) => [cx + Rr * Math.min(v, MX) / MX * Math.cos(a(i)), cy + Rr * Math.min(v, MX) / MX * Math.sin(a(i))];
+  const poly = V => V.map((v, i) => p(i, v).map(x => x.toFixed(1)).join(',')).join(' ');
+  const chemin = V => 'M' + V.map((v, i) => p(i, v).map(x => x.toFixed(1)).join(',')).join('L') + 'Z';
+  let s = '';
+  [8, 16, 24, 32].forEach(r => { s += `<polygon points="${poly(R.axes.map(() => r))}" fill="none" stroke="${COUL.grille}" stroke-width="1"/>`; });
+  // Les graduations sur la bissectrice de Viennoiserie et Tartes : loin de tous les libellés, détourées de blanc.
+  const ag = -Math.PI / 2 + 3 * Math.PI / n;
+  [8, 16, 24, 32].forEach(r => { s += `<text x="${(cx + Rr * r / MX * Math.cos(ag) + 3).toFixed(1)}" y="${(cy + Rr * r / MX * Math.sin(ag) - 2).toFixed(1)}" font-size="9.5" fill="#a39c92" stroke="${COUL.fond}" stroke-width="3" paint-order="stroke">${r} %</text>`; });
+  R.axes.forEach((t, i) => { const [x, y] = p(i, MX); s += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${COUL.grille}" stroke-width="1"/>`; });
+  s += `<path d="${chemin(R.max)} ${chemin(R.min)}" fill="${COUL.bande}" fill-opacity=".16" fill-rule="evenodd"><title>Le réseau, du plus bas au plus haut</title></path>`;
+  s += `<polygon points="${poly(R.moy)}" fill="none" stroke="${COUL.ref}" stroke-width="2" stroke-linejoin="round"/>`;
+  s += `<polygon points="${poly(R.moi)}" fill="${COUL.moi}" fill-opacity=".10" stroke="${COUL.moi}" stroke-width="2" stroke-linejoin="round"/>`;
+  s += R.moi.map((v, i) => { const [x, y] = p(i, v); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${COUL.moi}" stroke="${COUL.fond}" stroke-width="2"><title>${R.axes[i]} : ${fP(v)} · réseau ${fP(R.moy[i])} (de ${fP(R.min[i])} à ${fP(R.max[i])})</title></circle>`; }).join('');
+  R.axes.forEach((t, i) => {
+    const [x, y] = p(i, MX + 3.4), c = Math.cos(a(i)), sn = Math.sin(a(i));
+    const anc = Math.abs(c) < .25 ? 'middle' : (c > 0 ? 'start' : 'end'), dy = sn < -.6 ? -16 : (sn > .6 ? 8 : -4);
+    s += `<text x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" font-size="12.5" text-anchor="${anc}" fill="${COUL.encre}">${t}</text>
+      <text x="${x.toFixed(1)}" y="${(y + dy + 15).toFixed(1)}" font-size="11" text-anchor="${anc}" fill="${COUL.doux}" style="font-variant-numeric:tabular-nums"><tspan fill="${COUL.encre}" font-weight="600">${fP(R.moi[i])}</tspan> · réseau ${fP(R.moy[i])}</text>`;
+  });
+  return `<svg width="100%" viewBox="0 0 ${T} ${Hh.toFixed(0)}" style="display:block;margin:0 auto;max-width:${T}px" role="img" aria-label="Structure des ventes par famille, Sombreffe face au réseau">${s}</svg>`;
+}
+/** Les écarts au réseau, en barres divergentes : à droite le Ruby (plus que le réseau), à gauche le bleu (moins), un
+ *  écart de moins de 2 points en gris ; le zéro au milieu. Les chiffres à l'encre. */
+const ec = R.axes.map((t, i) => ({ t, moi: R.moi[i], moy: R.moy[i], e: Math.round((R.moi[i] - R.moy[i]) * 10) / 10 })).sort((a, b) => b.e - a.e);
+const liste = `<div class="gr-ecarts"><div class="gr-ecarts-t">L’écart au réseau, en points de part du CA</div>${ec.map(x => {
+  const w = Math.min(50, Math.abs(x.e) / 22 * 50), coul = Math.abs(x.e) < 2 ? '#cfc9bf' : (x.e > 0 ? COUL.moi : COUL.froid);
+  return `<div class="l" title="${x.t} : ${fP(x.moi)} chez vous, ${fP(x.moy)} au réseau"><span>${x.t}</span>
+    <span class="b"><i style="${x.e >= 0 ? 'left:50%' : 'right:50%'};width:${w.toFixed(1)}%;background:${coul};border-radius:${x.e >= 0 ? '0 4px 4px 0' : '4px 0 0 4px'}"></i><b></b></span>
+    <span class="n">${fPt(x.e)}</span></div>`; }).join('')}
+  <div class="gr-ecarts-l"><span><i style="background:${COUL.froid}"></i>moins que le réseau</span><span><i style="background:${COUL.moi}"></i>plus que le réseau</span></div></div>`;
+const reponse = `<div class="gr-moi">Montre-moi la structure de mes ventes par catégorie, face au réseau</div>
+  <div class="gr-rep"><p>En octobre, votre vente est la plus « boulangerie » du réseau (22,0 % du CA contre 17,5 % en moyenne) et la seule à passer par des <b style="font-weight:400">bundles et promotions : 21,6 %</b>. Les tartes (11,4 % contre 21,1 %), le traiteur (12,3 % contre 19,7 %) et la viennoiserie (13,6 % contre 20,1 %) pèsent moins qu’ailleurs.</p>
+    <div class="gr-types"><span class="on">◎ Radar</span><span>▥ Barres</span><span>☰ Tableau</span><span style="margin-left:auto">Mesure : <b style="font-weight:400;color:var(--ink)">part du CA ▾</b> · Période : <b style="font-weight:400;color:var(--ink)">octobre 2026 ▾</b></span></div>
+    <div class="gr-graph" style="display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:14px;align-items:center;padding:10px 16px">
+      <div>${radar(480)}${legende([['Sombreffe', 'trait', COUL.moi], ['Le réseau : moyenne des 3 autres magasins', 'trait', COUL.ref], ['Du plus bas au plus haut', 'bande', COUL.bande]])}</div>
+      ${liste}</div>
+    <div class="gr-k"><div><b>21,6 %</b><span>en bundles et promotions · réseau 0 %</span></div><div><b>− 9,7 pt</b><span>tartes : 11,4 % contre 21,1 %</span></div><div><b>− 7,4 pt</b><span>traiteur : 12,3 % contre 19,7 %</span></div></div>
+    <p style="margin:0">À savoir : une partie de vos viennoiseries et de votre boulangerie se vend dans les bundles ; leur part réelle est donc un peu plus haute que ce que montre le radar.</p>
+    <div class="gr-src">Source : les tickets du panel d’octobre 2026, 31 jours lus dans chaque magasin · catégories regroupées par famille du catalogue · les autres magasins ne sont pas nommés</div>
+    <div class="gr-act"><span class="gr-btn">⤓ Télécharger ▾</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites"><span>Et en marge brute ?</span><span>Le même sur 6 mois</span></span></div>
+  </div>`;
+const gch = gauche().replace('<span class="gr-q gr"><i>▥</i>Mes clients par semaine face à l’an passé</span>', '<span class="gr-q gr" style="border-color:var(--accent);color:var(--accent)"><i>◎</i>La structure de mes ventes face au réseau</span><span class="gr-q gr"><i>▥</i>Mes clients par semaine face à l’an passé</span>');
+document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gch}<div class="gr-fil">${reponse}</div></div></div>`);
+</script></body></html>

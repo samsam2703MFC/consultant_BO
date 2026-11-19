@@ -24,6 +24,7 @@ final class VehicleCreationService
         private EmployeeRepository $employees,
         private ExecutionRepository $execution,
         private PositionRepository $positions,
+        private KioskAuthService $kiosk,
     ) {
     }
 
@@ -70,7 +71,10 @@ final class VehicleCreationService
                 else if (!preg_match('/^\d{4,6}$/', $pin)) $problems[] = 'PIN kierowcy : 4 do 6 cyfr — nie zapisano.';
                 else {
                     try {
-                        $this->execution->saveCredential($driverId, ['pin_hash' => password_hash($pin, PASSWORD_BCRYPT), 'updated_by' => $userId]);
+                        // [361] Każdy PIN inny (sam PIN otwiera profil na tablecie biurowym).
+                        $this->execution->saveCredential($driverId, $this->kiosk->pinCredential($driverId, $pin) + ['updated_by' => $userId]);
+                    } catch (\App\Core\Api\Workshop\ApiException $e) {
+                        $problems[] = 'PIN kierowcy : ten PIN ma już inna osoba (każdy PIN musi być inny) — nie zapisano.';
                     } catch (\Throwable $e) {
                         $problems[] = 'PIN kierowcy : ' . $e->getMessage();
                     }

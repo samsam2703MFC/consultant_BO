@@ -544,5 +544,10 @@
   "pal.semi": "Un semi-fini n'a pas de palette — continuer.",
   "lv.period": "Période d'exception : {name} — niveaux d'exception jusqu'au {to}",
   "lv.period_help": "Niveau de la période « {name} » (jusqu'au {to}) ; ensuite retour au niveau normal",
-  "lv.normal": "norm. {v}"
+  "lv.normal": "norm. {v}",
+  "cat.activate": "Activer la catégorie",
+  "cat.deactivate": "Désactiver la catégorie",
+  "cat.activate_confirm": "Activer la catégorie « {name} » ? {n} produits inactifs deviendront actifs dans l'ERP.",
+  "cat.deactivate_confirm": "Désactiver la catégorie « {name} » ? {n} produits actifs deviendront inactifs dans l'ERP (ils disparaissent des commandes et des tarifs).",
+  "cat.toggled": "Produits modifiés : {n}."
 }

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — Mails et automatisations › Rappel la veille du retrait</title>
+<!-- Une automatisation vers les clients : la veille du retrait d'une commande, à 17:00, le client reçoit sa commande
+     (articles, heure, adresse, reste à payer) avec le bon de commande en PDF. Les envois de demain sont listés. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="mails.css">
+<script src="coque.js"></script>
+</head><body><script>
+const sw = (on, txt) => `<span class="px-sw${on ? ' on' : ''}"><i></i>${txt}</span>`;
+const v = t => `<span class="px-var">{{${t}}}</span>`;
+const gauche = `
+  <div class="db-card"><div class="ct"><span class="db-lab">Quand</span></div><div class="px-f">
+    <div class="row"><span class="px-in">La veille du retrait ▾</span><span class="px-in">17:00</span></div>
+    <div class="row">${sw(true, 'Seulement les commandes confirmées (pas les devis ni les annulées)')}</div>
+    <div class="row" style="margin:0">${sw(true, 'Une commande passée moins de 24 h avant le retrait : pas de rappel (la confirmation suffit)')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">À qui</span></div><div class="px-f">
+    <div class="row"><span class="px-chip">Le client de la commande <b>· l’e-mail et le téléphone de sa fiche</b></span></div>
+    <div class="row">${sw(true, 'Ni e-mail ni téléphone sur la fiche : me prévenir dans la liste des prochains envois')}</div>
+    <div class="row" style="margin:0"><span class="lab" style="margin:0 8px 0 0">Répondre à</span><span class="px-in">la boîte mail du magasin ▾</span></div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Par où</span></div><div class="px-f">
+    <div class="row"><span class="seg"><button>E-mail</button><button>SMS</button><button class="is-on">Les deux</button></span><span class="db-mini" style="margin-left:6px">un client sans e-mail reçoit le SMS seul, et l’inverse</span></div>
+    <span class="lab">Le SMS · par l’API SMS du cockpit</span>
+    <div class="row"><div class="px-ta">${v('magasin')} : votre commande vous attend demain à ${v('heure_retrait')}. Reste à payer ${v('reste_a_payer')}. Un changement ? Répondez à notre e-mail ou appelez le ${v('tel_magasin')}.</div></div>
+    <div class="row" style="margin:0"><span class="px-cpt">environ 140 caractères · 1 SMS · expéditeur « AtelierBy »</span></div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">L’e-mail</span><span class="db-mini">modèle « Rappel de commande »</span></div><div class="px-f">
+    <span class="lab">Objet</span>
+    <div class="row"><span class="px-in w">Votre commande de demain ${v('heure_retrait')} · ${v('magasin')}</span></div>
+    <span class="lab">Message</span>
+    <div class="row"><div class="px-ta">Bonjour ${v('client')},<br>votre commande vous attend demain, ${v('date_retrait')}, à partir de ${v('heure_retrait')}, au ${v('adresse_magasin')}.<br>${v('articles')}<br>Reste à payer au retrait : ${v('reste_a_payer')}. Un changement ? Répondez simplement à cet e-mail.</div></div>
+    <div class="row" style="margin:0"><span class="lab" style="margin:0 8px 0 0">Variables</span>${['client', 'date_retrait', 'heure_retrait', 'articles', 'total', 'acompte', 'reste_a_payer', 'adresse_magasin'].map(v).join(' ')}<span style="flex:1"></span><span class="seg"><button class="is-on">langue du client</button><button>FR</button><button>NL</button></span></div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Le fichier joint</span>${sw(true, 'PDF')}</div><div class="px-f">
+    <div class="row"><span class="px-in w">Commande_${v('numero')}_${v('date_retrait')}.pdf</span></div>
+    <div class="row" style="margin:0"><span class="px-chip">le bon de commande : articles, quantités, prix, acompte, reste à payer, adresse et horaires</span></div>
+  </div></div>`;
+const demain = [['Mme Lambert', '08:30', 'gâteau 12 parts, 24 mini-viennoiseries', '✓ e-mail et SMS'], ['M. Claes', '10:00', '2 tartes aux pommes Ø 28 cm', '✓ e-mail et SMS'], ['Café du Parc', '07:15', '60 croissants, 40 pains au chocolat', '✓ e-mail · client pro'], ['Mme Wouters', '11:30', 'plateau traiteur 10 personnes', '✓ SMS seul (pas d’e-mail)']];
+const droite = `
+  <div class="db-card"><div class="ct"><span class="db-lab">Aperçu</span><span class="db-mini">ce que recevra Mme Lambert aujourd’hui à 17:00</span></div>
+    <div class="px-mail">
+      <div class="tete">De <b>Atelier by Halle</b> · À <b>c.lambert@exemple.be</b><br>Objet <b>Votre commande de demain 08:30 · Atelier by Halle</b></div>
+      <div class="corps">
+        <div class="logo">L’ATELIER</div>
+        <div class="k">Votre commande · mardi 17 novembre</div>
+        <h3>Elle vous attend demain à 08:30</h3>
+        Bonjour Madame Lambert,<br>votre commande vous attend demain, mardi 17 novembre, à partir de 08:30, au magasin de Halle.
+        <table class="px-cmd"><tr><td>Gâteau d’anniversaire · 12 parts</td><td class="n">42,00 €</td></tr><tr><td>24 mini-viennoiseries</td><td class="n">26,40 €</td></tr><tr><td>Acompte versé</td><td class="n">− 20,00 €</td></tr><tr><td><b style="font-weight:400">Reste à payer au retrait</b></td><td class="n"><b style="font-weight:400">48,40 €</b></td></tr></table>
+        Un changement ? Répondez simplement à cet e-mail.
+        <div class="px-pj"><span class="px-pdf"></span><span>Commande_2041_2026-11-17.pdf<br><span style="color:var(--muted);font-size:11px">1 page · A4 · 90 Ko</span></span></div>
+      </div>
+    </div>
+    <div class="px-btns"><span class="px-btn">Envoyer un essai à moi</span><span class="px-btn p">Enregistrer</span></div>
+  </div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Le SMS</span><span class="db-mini">ce que lit Mme Lambert sur son téléphone · et le SMS « commande prête »</span></div>
+    <div class="px-sms"><div class="px-tel"><div class="h">AtelierBy · aujourd’hui 17:00</div><div class="px-bulle">Atelier by Halle : votre commande vous attend demain à 08:30. Reste à payer 48,40 €. Un changement ? Répondez à notre e-mail ou appelez le 02 000 00 00.</div>
+      <div class="px-gris"><div class="h" style="margin-top:12px">AtelierBy · demain 08:05 · à venir</div><div class="px-bulle">Atelier by Halle : votre commande est prête ! Elle vous attend au comptoir. À tout de suite.</div></div></div>
+      <div style="font-size:12px;line-height:1.5;color:var(--muted)"><b style="font-weight:400;color:var(--ink)">Commande prête</b> <span class="px-bientot">à venir</span> est une automatisation à part : le SMS partira dès que la commande est marquée prête, <b style="font-weight:400;color:var(--ink)">sur la tablette du magasin pour le moment</b>, au téléphone de la fiche du client.<br><br>Les SMS partent par l’API SMS du cockpit (déjà utilisée pour les primes des vendeuses) ; chaque envoi est noté au journal.</div></div>
+  </div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les envois d’aujourd’hui 17:00</span><span class="db-mini">les commandes à retirer demain</span></div>
+    <table class="px-t px-j"><thead><tr><th>Client</th><th>Retrait</th><th>Commande</th><th>Par où</th></tr></thead><tbody>
+      ${demain.map(([c, h, a, e]) => `<tr><td>${c}</td><td>${h}</td><td class="mu">${a}</td><td><span class="ok">${e}</span></td></tr>`).join('')}
+    </tbody></table></div>`;
+const corps = `
+  <div class="px-tabs"><button class="on">Automatisations<span class="n">8</span></button><button>Modèles d’e-mail<span class="n">8</span></button><button>Destinataires<span class="n">3</span></button><button>Journal des envois</button><button>Reçus du réseau<span class="n">7</span></button></div>
+  <p class="px-intro" style="margin-bottom:14px"><span style="color:var(--accent)">‹ Les automatisations</span> · <span class="px-qui"><i style="background:#8D1D2C"></i>Clients</span> · <b style="font-weight:400;color:var(--ink)">Rappel la veille du retrait</b> — la commande, l’heure et ce qui reste à payer, par e-mail (avec le bon de commande) et par SMS. ${sw(true, 'actif')}</p>
+  <div class="px-b"><div>${gauche}</div><div>${droite}</div></div>`;
+coque({ titre: 'Mails et automatisations', kicker: 'Atelier by - Halle · Paramètres', corps,
+  pied: 'Maquette v3 du 16/11/2026 · clients, adresses et commandes d’exemple. Les commandes, leur jour et leur heure de retrait, l’acompte et le client viennent des commandes clients du panel (Commandes) ; l’e-mail part de la boîte mail du magasin (les réponses y arrivent), le SMS par l’API SMS du cockpit (src/sms.php). Numéro du magasin d’exemple.' });
+</script></body></html>

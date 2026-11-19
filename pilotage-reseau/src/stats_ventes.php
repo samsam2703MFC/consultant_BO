@@ -1225,23 +1225,30 @@ function ep_stats_ventes(): array
                 'bundle' => ['de' => $x['cat'], 'n' => round($x['q'], 1), 'prix' => $x['q'] > 0 ? round($x['v'] / $x['q'], 2) : null, 'part' => round(100 * $sh)]];
         }
     }
+    // Hors TVA (16/11/2026, « le coefficient doit être calculé sur le net, pas le brut ») : le CA de chaque produit sans
+    // sa TVA (le taux du produit au catalogue, src/pnl_ht.php) ; la marge, le taux et le coefficient de la liste et du
+    // treemap se lisent sur lui. Le TTC reste (`v`) : promotions, portions et fiche produit comparent des prix de caisse.
+    $htDe = function_exists('phHtProduit') ? phHtProduit($sid) : static fn ($id, float $v): float => $v;
+    foreach ($ppT as $k => $x) { $ppT[$k]['vH'] = $htDe($x['id'], (float) $x['v']); }
     // Les catégories se recomptent sur les produits rangés. B (10/10/2026) : chacune garde la marge de ses produits
     // chiffrés ; les produits sans coût se comptent à part (nSans, vSans) au lieu de mettre toute la catégorie en gris.
     $ccT = [];
     foreach ($ppT as $x) {
         $cn = $x['cat'];
-        if (!isset($ccT[$cn])) { $ccT[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'nSans' => 0, 'vSans' => 0.0, 'refs' => []]; }
-        $ccT[$cn]['q'] += $x['q']; $ccT[$cn]['v'] += $x['v']; $ccT[$cn]['refs'][$x['id']] = true;
-        if (!$x['cInconnu']) { $ccT[$cn]['vC'] += $x['v']; $ccT[$cn]['cC'] += $x['c']; }
-        elseif ($x['v'] > 0) { $ccT[$cn]['nSans']++; $ccT[$cn]['vSans'] += $x['v']; }
+        if (!isset($ccT[$cn])) { $ccT[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'nSans' => 0, 'vSans' => 0.0, 'refs' => [], 'vH' => 0.0, 'vCH' => 0.0, 'vSansH' => 0.0]; }
+        $ccT[$cn]['q'] += $x['q']; $ccT[$cn]['v'] += $x['v']; $ccT[$cn]['vH'] += $x['vH']; $ccT[$cn]['refs'][$x['id']] = true;
+        if (!$x['cInconnu']) { $ccT[$cn]['vC'] += $x['v']; $ccT[$cn]['vCH'] += $x['vH']; $ccT[$cn]['cC'] += $x['c']; }
+        elseif ($x['v'] > 0) { $ccT[$cn]['nSans']++; $ccT[$cn]['vSans'] += $x['v']; $ccT[$cn]['vSansH'] += $x['vH']; }
     }
     // Les produits de chaque catégorie, du plus vendu au moins vendu, avec leur part dans la catégorie.
     $prodDe = []; $pidsPortion = [];
     foreach ($ppT as $x) {
         if ($x['v'] <= 0 && $x['q'] <= 0) { continue; }
         $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+        $mH = $x['cInconnu'] ? null : round($x['vH'] - $x['c'], 2);
         $prodDe[$x['cat']][] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
-            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : [])
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null,
+            'vHt' => round($x['vH'], 2), 'mHt' => $mH, 'tauxHt' => ($mH !== null && $x['vH'] > 0) ? round(100 * $mH / $x['vH'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : [])
             // Une portion (10/10/2026, onglet Portions) : son libellé et la fraction de la pièce entière.
             + (is_string($x['id']) && str_contains($x['id'], ':') ? ['portion' => svPortionDuNom((string) $x['nom'])] : []);
         if (is_string($x['id']) && str_contains($x['id'], ':')) { $pidsPortion[(int) explode(':', $x['id'])[0]] = true; }
@@ -1249,13 +1256,16 @@ function ep_stats_ventes(): array
     foreach ($ccT as $x) {
         $chiffre = $x['vC'] > 0 || $x['nSans'] === 0;
         $m = $chiffre ? round($x['vC'] - $x['cC'], 2) : null;
+        $mH = $chiffre ? round($x['vCH'] - $x['cC'], 2) : null;
         $prods = $prodDe[$x['nom']] ?? [];
         usort($prods, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
         foreach ($prods as &$pr) { $pr['part'] = $x['v'] > 0 ? round(100 * $pr['v'] / $x['v'], 1) : null; }
         unset($pr);
         $catsT[] = ['nom' => $x['nom'], 'groupe' => $grpDe[$x['nom']] ?? null, 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $chiffre ? round($x['cC'], 2) : null, 'm' => $m,
             'taux' => ($m !== null && $x['vC'] > 0) ? round(100 * $m / $x['vC'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs']),
-            'vChiffre' => round($x['vC'], 2), 'nSans' => $x['nSans'], 'vSans' => round($x['vSans'], 2), 'produits' => $prods];
+            'vChiffre' => round($x['vC'], 2), 'nSans' => $x['nSans'], 'vSans' => round($x['vSans'], 2),
+            'vHt' => round($x['vH'], 2), 'mHt' => $mH, 'tauxHt' => ($mH !== null && $x['vCH'] > 0) ? round(100 * $mH / $x['vCH'], 1) : null,
+            'vChiffreHt' => round($x['vCH'], 2), 'vSansHt' => round($x['vSansH'], 2), 'produits' => $prods];
     }
     usort($catsT, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
     $bundles = svBundles($prod, $catDe, $grpDe);

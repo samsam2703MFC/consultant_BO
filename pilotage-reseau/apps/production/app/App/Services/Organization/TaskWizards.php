@@ -21,10 +21,14 @@ final class TaskWizards
         'inv_checked' => ['Asystent faktur', '/workshop/supply#tab=invoices&inv=wizard', 'pozycje faktur sprawdzone', 1],
         'costs_recalc' => ['Asystent cen — koszty i marże', '/finances/price-wizard', 'koszty i marże przeliczone', 3],
         'prices_planned' => ['Asystent cen — nowe ceny', '/finances/price-wizard#step=2', 'nowe ceny zaplanowane', 3],
+        // [351] Ścieżka cen (co czwartek) : faktury KSeF → ceny katalogowe ±3 % → cennik → e-mail (makieta 66 B).
+        'price_path_done' => ['Ścieżka cen', '/finances/price-wizard#step=2', 'cennik zaplanowany albo ceny sprawdzone bez zmian w tygodniu', 4],
         'week_plan_validated' => ['Plan produkcji tygodnia', '/production/plan-wizard', 'plan tygodnia zatwierdzony', 2],
         'production_day_closed' => ['Zatwierdzenia produkcji', '/production/follow-up', 'dzień zatwierdzony na tabletach', 1],
         'day_shipped' => ['Wysyłka dnia', '/shipping/wizard', 'wszystkie palety dnia z dokumentami', 1],
         'logistics_plan_approved' => ['Plan logistyki 13 tygodni', '/logistics/plan', 'tydzień planu zatwierdzony', 1],
+        // [303] Zamówienia dziś / jutro bez transportu → asystent (makieta 56).
+        'orders_transport' => ['Transport dla zamówień', '/logistics/transport-wizard', 'każda wysyłka dziś i jutro ma transport', 3],
         'month_closed' => ['Zamknięcie miesiąca', '/month-close', 'miesiąc zamknięty (8 kroków)', 8],
         'services_closed' => ['Koszty usług miesiąca', '/finances/costs', 'miesiąc zamknięty w Finansach', 1],
         // Tablety [229] : zadanie dnia stanowiska pracowni, zaliczane przez zatwierdzenie na tablecie.
@@ -41,6 +45,10 @@ final class TaskWizards
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
+        // [352] Próbki produkcji (makieta 68 · 3) : wybór partii, arkusz A4 z QR, skan przy odłożeniu.
+        // [353] SOP dnia : procedura poprawiona albo nowa, zatwierdzona dziś.
+        'sop_daily' => ['SOP dnia', '/sop', 'wersja procedury zatwierdzona dziś (poprawiona albo nowa)', 4],
+        'samples_done' => ['Próbki produkcji', '/workshop/traceability/samples', 'próbki dnia odłożone (skan QR) albo dzień bez próbek', 3],
         // [262] Czas pracy : zadanie nr 1 kierownika produkcji — odbicia dnia sprawdzone, powody wybrane, dzień zatwierdzony.
         'time_day_validated' => ['Czas pracy dnia', '/time', 'dzień zatwierdzony (odbicia, powody nadgodzin i nieobecności)', 1],
         // [273] Czas pracy miesiąca : poprzedni miesiąc sprawdzony i zamknięty (karty czasu pracy).
@@ -55,12 +63,14 @@ final class TaskWizards
         'inv_checked' => 'gdy pozycje faktur są sprawdzone (asystent faktur)',
         'costs_recalc' => 'gdy koszty i marże są przeliczone (asystent cen, krok 1)',
         'prices_planned' => 'gdy nowe ceny są zaplanowane (asystent cen, krok 3)',
+        'price_path_done' => 'gdy w tygodniu zaplanowano zmianę cennika albo zapisano « Sprawdzone — bez zmian w tym tygodniu » (ścieżka cen, krok 2)',
         'buy_sent' => 'gdy zapytania ofertowe są wysłane (zakupy tygodnia)',
         'forecast_approved' => 'gdy prognoza 13 tygodni jest zatwierdzona (Produkcja › Prognoza)',
         'week_plan_validated' => 'gdy plan produkcji tygodnia jest zatwierdzony (asystent planu)',
         'production_day_closed' => 'gdy dzień jest zatwierdzony na tabletach (zatwierdzenia produkcji)',
         'day_shipped' => 'gdy wszystkie palety dnia mają dokumenty (wysyłka dnia)',
         'logistics_plan_approved' => 'gdy tydzień planu logistyki jest zatwierdzony',
+        'orders_transport' => 'gdy każda wysyłka dziś i jutro ma transport (asystent « Transport dla zamówień »)',
         'month_closed' => 'gdy poprzedni miesiąc jest zamknięty (zamknięcie miesiąca, 8 kroków)',
         'services_closed' => 'gdy koszty usług poprzedniego miesiąca są zamknięte (Finanse)',
         'group_day_closed' => 'gdy grupa stanowiska zatwierdzi dzień na tablecie produkcji',
@@ -74,6 +84,8 @@ final class TaskWizards
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
+        'sop_daily' => 'gdy dziś zatwierdzono wersję procedury SOP — poprawionej albo nowej (Procedury SOP, krok « Zatwierdź »)',
+        'samples_done' => 'gdy wszystkie próbki dnia są odłożone i zeskanowane albo dzień zaliczony bez próbek (asystent « Próbki produkcji »)',
         'time_day_validated' => 'gdy dzień jest zatwierdzony w Czasie pracy (odbicia, powody nadgodzin i nieobecności)',
         'time_month_closed' => 'gdy poprzedni miesiąc jest zamknięty w Czasie pracy › Miesiąc (karty czasu pracy)',
     ];
@@ -175,6 +187,11 @@ final class TaskWizards
                 elseif ($r['products'] > 0 && $r['done'] >= $r['products']) $out = ['done' => true, 'summary' => $r['products'] . ' ' . self::pl($r['products'], 'produkt', 'produkty', 'produktów') . ' · ' . self::num($r['packed']) . ' szt. spakowane'] + $out;
                 elseif ($r['packed'] > 0) $out = ['step' => 1, 'step_label' => self::num($r['packed']) . ' z ' . self::num($r['base']) . ' szt. spakowane'] + $out;
                 break;
+            case 'orders_transport':
+                $n = $this->container->get(\App\Services\Logistics\TransportWizardService::class)->uncovered();
+                if ($n === 0) $out = ['done' => true, 'summary' => 'każda wysyłka dziś i jutro ma transport'] + $out;
+                else $out['step_label'] = $n . ' ' . self::pl($n, 'klient', 'klientów', 'klientów') . ' bez transportu';
+                break;
             case 'route_done':
                 $r = $this->repo->routeDay($day);
                 if ($r['runs'] === 0 && $r['pallets'] === 0) $out = ['done' => true, 'summary' => 'brak trasy tego dnia'] + $out;
@@ -196,6 +213,14 @@ final class TaskWizards
             case 'tomorrow_sent':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 break;
+            case 'sop_daily':
+                $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);
+                if ($d['done']) $out = ['done' => true, 'summary' => $d['summary']] + $out;
+                break;
+            case 'samples_done':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->samplesDay($day)) && $n['total'] > 0) $out = ['step' => $n['stored'] > 0 ? 3 : 2, 'step_label' => $n['stored'] . ' z ' . $n['total'] . ' próbek odłożone'] + $out;
+                break;
             case 'time_day_validated':
                 if ($r = $this->repo->timeDay($day)) $out = ['done' => true, 'summary' => 'zatwierdzony ' . $hm($r['validated_at']) . ($r['summary'] ? ' · ' . $r['summary'] : '')] + $out;
                 break;
@@ -205,6 +230,7 @@ final class TaskWizards
                 break;
             case 'nc_reviewed':
             case 'material_costs_reviewed':
+            case 'price_path_done':
             case 'yield_reviewed':
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 break;

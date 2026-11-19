@@ -330,6 +330,93 @@ final class PriceWizardRepository extends WorkshopRepository
     {
         $stmt = $this->db->prepare("UPDATE n_price_publication SET status = 'cancelled', cancelled_by = ?, cancelled_at = NOW() WHERE id = ? AND status = 'planned'");
         $stmt->execute([$userId, $publicationId]);
-        return $stmt->rowCount() === 1;
+        $ok = $stmt->rowCount() === 1;
+        if ($ok) $this->restoreBaselines($publicationId);
+        return $ok;
+    }
+
+    // ── Ścieżka cen [351] : koszt surowców przy ostatnim cenniku ─────────────────────────────────────────────
+
+    /** @param list<int> $ids @return array<int, array{food: float, set_at: string, id_publication: ?int}> */
+    public function baselines(array $ids): array
+    {
+        if (!$ids) return [];
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $out = [];
+        foreach ($this->all("SELECT id_product, food_cost, set_at, id_publication FROM n_price_cost_baseline WHERE id_product IN ($in)", array_values($ids)) as $r) {
+            $out[(int) $r['id_product']] = ['food' => (float) $r['food_cost'], 'set_at' => (string) $r['set_at'],
+                'id_publication' => $r['id_publication'] !== null ? (int) $r['id_publication'] : null];
+        }
+        return $out;
+    }
+
+    /**
+     * Pierwsza baza produktów bez bazy (raz : INSERT IGNORE — istniejąca baza nie zmienia się).
+     * @param array<int, array{food: float, set_at: string}> $rows
+     */
+    public function initBaselines(array $rows): void
+    {
+        $ins = $this->db->prepare('INSERT IGNORE INTO n_price_cost_baseline (id_product, food_cost, set_at, id_publication) VALUES (?, ?, ?, NULL)');
+        foreach ($rows as $id => $r) $ins->execute([(int) $id, round($r['food'], 4), $r['set_at']]);
+    }
+
+    /**
+     * Po zaplanowaniu publikacji : baza opublikowanych produktów = koszt dziś (poprzednia zapamiętana do anulowania).
+     * @param array<int, float> $foods produkt => koszt surowców kartonu (PLN)
+     */
+    public function setBaselines(array $foods, int $publicationId, string $at): void
+    {
+        $up = $this->db->prepare('INSERT INTO n_price_cost_baseline (id_product, food_cost, set_at, id_publication) VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE prev_food_cost = food_cost, prev_set_at = set_at, prev_id_publication = id_publication,
+                food_cost = VALUES(food_cost), set_at = VALUES(set_at), id_publication = VALUES(id_publication)');
+        foreach ($foods as $id => $food) $up->execute([(int) $id, round($food, 4), $at, $publicationId]);
+    }
+
+    /** Anulowana publikacja : poprzednia baza wraca (bez poprzedniej — baza usunięta, zainicjuje się od nowa). */
+    public function restoreBaselines(int $publicationId): void
+    {
+        $this->db->prepare('UPDATE n_price_cost_baseline SET food_cost = prev_food_cost, set_at = prev_set_at, id_publication = prev_id_publication,
+            prev_food_cost = NULL, prev_set_at = NULL, prev_id_publication = NULL WHERE id_publication = ? AND prev_food_cost IS NOT NULL')->execute([$publicationId]);
+        $this->db->prepare('DELETE FROM n_price_cost_baseline WHERE id_publication = ?')->execute([$publicationId]);
+    }
+
+    /** Przeliczenie kosztów poprzedzające daną chwilę (data kosztu « przed » z n_margin_recalc). */
+    public function runBefore(string $at): ?string
+    {
+        $v = $this->all('SELECT MAX(run_at) AS at FROM n_margin_recalc_run WHERE run_at < ?', [$at])[0]['at'] ?? null;
+        return $v !== null ? (string) $v : null;
+    }
+
+    /**
+     * Ostatnia faktura z cenami zapisanymi do kartoteki po $from z pozycją surowca : surowiec => numer faktury.
+     * @param list<int> $materialIds @return array<int, string>
+     */
+    public function invoiceOfMaterials(array $materialIds, string $from): array
+    {
+        if (!$materialIds) return [];
+        $in = implode(',', array_fill(0, count($materialIds), '?'));
+        $out = [];
+        foreach ($this->all("SELECT l.id_raw_material AS id, i.number FROM n_inv i JOIN n_inv_line l ON l.id_inv = i.id
+            WHERE i.prices_imported_at IS NOT NULL AND i.prices_imported_at > ? AND l.id_raw_material IN ($in) AND i.number IS NOT NULL
+            ORDER BY i.prices_imported_at DESC, i.id DESC", array_merge([$from], array_values($materialIds))) as $r) {
+            $out[(int) $r['id']] ??= (string) $r['number'];
+        }
+        return $out;
+    }
+
+    /** Publikacje utworzone w okresie [from, to) (nie anulowane) — najnowsza najpierw. @return list<array> */
+    public function publicationsCreated(string $from, string $to): array
+    {
+        return $this->all("SELECT p.*, (SELECT COUNT(*) FROM n_price_publication_client c WHERE c.id_publication = p.id AND c.email = 1) AS emails,
+                (SELECT COUNT(*) FROM n_price_publication_client c WHERE c.id_publication = p.id AND c.email = 1 AND c.email_status IS NOT NULL) AS emails_done
+            FROM n_price_publication p WHERE p.created_at >= ? AND p.created_at < ? AND p.status <> 'cancelled' ORDER BY p.id DESC", [$from, $to]);
+    }
+
+    /** E-maile publikacji jeszcze niewysłane (przycisk « Wyślij teraz »). @return list<array{id_customer: int, effective_date: string}> */
+    public function pendingNotices(int $publicationId): array
+    {
+        return array_map(fn($r) => ['id_customer' => (int) $r['id_customer'], 'effective_date' => (string) $r['effective_date']],
+            $this->all("SELECT pc.id_customer, p.effective_date FROM n_price_publication_client pc JOIN n_price_publication p ON p.id = pc.id_publication
+                WHERE pc.id_publication = ? AND p.status = 'planned' AND p.notify_email = 1 AND pc.email = 1 AND pc.email_status IS NULL ORDER BY pc.id_customer", [$publicationId]));
     }
 }

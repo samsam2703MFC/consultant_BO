@@ -35,22 +35,28 @@ final class Rail
         // [262] Czas pracy (moduł Pointages) : dzień do zatwierdzenia, miesiąc, urlopy, nadgodziny ; licznik = dni do zatwierdzenia.
         'time' => ['Czas pracy', 'bi-clock-history', 'Produkcja', '/time', [], 'time'],
         'hr' => ['HR', 'bi-person-vcard', 'Produkcja', '/hr', [], null],
+        // [353] Procedury SOP : lista, asystent (etapy + zdjęcia), wykonania ; procedura asystowana pod przyciskiem na stronach.
+        'sop' => ['Procedury (SOP)', 'bi-journal-check', 'Produkcja', '/sop', ['/procedure'], null],
         'tablets' => ['Tablety', 'bi-tablet', 'Produkcja', '/workshop/execution', ['/workshop/timesheet'], null],
         'purchasing' => ['Zakupy', 'bi-cart3', 'Zakupy', '/workshop/buy', ['/settings/ksef/purchase-invoices', '/purchases'], null],
         'materials' => ['Surowce i ceny', 'bi-basket', 'Zakupy', '/purchasing', ['/material-categories', '/materials'], null],
         'suppliers' => ['Dostawcy', 'bi-truck-front', 'Zakupy', '/material-suppliers', [], null],
         'products' => ['Produkty', 'bi-box-seam', 'Produkt', '/workshop/products', ['/product-categories', '/products'], null],
         'packaging' => ['Opakowania', 'bi-recycle', 'Produkt', '/products/cartons', [], null],
-        'orders' => ['Zamówienia', 'bi-receipt', 'Sprzedaż', '/client-orders', [], 'queue'],
+        'orders' => ['Zamówienia', 'bi-receipt', 'Sprzedaż', '/client-orders', ['/client-orders/queue'], null],
         'clients' => ['Klienci', 'bi-shop', 'Sprzedaż', '/clients', ['/price-lists'], null],
         'complaints' => ['Reklamacje i zwroty', 'bi-arrow-counterclockwise', 'Sprzedaż', '/franchise-complaints', ['/client-complaints'], 'complaints'],
         'invoicing' => ['Faktury i płatności', 'bi-cash-stack', 'Sprzedaż', '/finances/payments-day', ['/finances/payment-proofs', '/communication/compose/reminder'], null],
+        // [296] Stany i palety (makieta 53) : droga kartonu magazyn → paleta → wysyłka, skład palety, śledzenie partii.
+        'stock_pallets' => ['Stany i palety', 'bi-boxes', 'Logistyka', '/logistics/stock', [], null],
         'shipping_day' => ['Dzień wysyłki', 'bi-calendar-check', 'Logistyka', '/logistics', [], null],
         'trucks' => ['Ciężarówki', 'bi-calendar-range', 'Logistyka', '/logistics/plan', [], null],
+        // [306] Trasy : stali klienci, ciężarówka zwykle ta sama, kierowca zwykle ten sam (z Administracji › Ustawienia).
+        'tours' => ['Trasy', 'bi-signpost-split', 'Logistyka', '/logistics/tours', ['/logistics/vehicles'], null],
         'shipments' => ['Wysyłki i dokumenty', 'bi-file-earmark-text', 'Logistyka', '/shipments', ['/shipping-transport-documents', '/shipping-documents', '/archive'], null],
         'settings' => ['Ustawienia', 'bi-gear', 'Administracja', '/settings', ['/other-settings', '/settings/languages', '/settings/ksef', '/settings/panel-api',
-            '/settings/mail-footers', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
-            '/organization/positions', '/logistics/tours', '/logistics/vehicles', '/product-carriers', '/task-forms'], null],
+            '/settings/mail-footers', '/settings/sms', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
+            '/organization/positions', '/product-carriers', '/task-forms'], null],
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
         // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.

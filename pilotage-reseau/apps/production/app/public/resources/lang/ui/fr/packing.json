@@ -164,5 +164,17 @@
   "rc_ocr_nothing": "Ni lot ni date trouvés sur la photo — saisissez-les à la main.",
   "rc_ocr_unavailable": "Lecture du texte indisponible — saisissez à la main.",
   "rc_ocr_lot": "LOT",
-  "rc_ocr_date": "Date"
+  "rc_ocr_date": "Date",
+  "check_btn": "Contrôle / commande",
+  "check_title": "Contrôle des palettes par rapport à la commande",
+  "check_sub": "{n} produits",
+  "check_ok": "Conforme",
+  "check_diff": "Écarts",
+  "check_col_diff": "Écart",
+  "check_not_ordered": "non commandé",
+  "check_missing_n": "{n} produit(s) avec trop peu de cartons",
+  "check_over_n": "{n} produit(s) avec des cartons en trop",
+  "check_hint": "Corrigez les palettes avant le départ (touchez un manque pour compléter).",
+  "check_all_ok": "Palettes conformes à la commande.",
+  "check_back": "Retour à la palettisation"
 }

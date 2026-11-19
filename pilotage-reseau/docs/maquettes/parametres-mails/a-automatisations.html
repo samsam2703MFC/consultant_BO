@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Dashboard magasin › Paramètres › Mails et automatisations</title>
+<!-- v2 du 16/11/2026 (« c'est aussi pour envoyer les rapports aux comptables en fin de mois, ou les commandes aux clients
+     le jour avant ») : les envois que le MAGASIN programme vers l'extérieur — son comptable, ses clients, ses clients
+     pro, son équipe, lui-même. Pour chacun : à qui, quand, l'e-mail et ses pièces jointes (PDF, Excel). -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="mails.css">
+<script src="coque.js"></script>
+</head><body><script>
+const sw = (on, txt) => `<span class="px-sw${on ? ' on' : ''}"><i></i>${txt || (on ? 'actif' : 'éteint')}</span>`;
+const pj = t => t.startsWith('Excel') ? `<span class="px-chip xls">${t}</span>` : (t.startsWith('PDF') ? `<span class="px-chip pdf">${t}</span>` : `<span class="px-chip mail">${t}</span>`);
+// [envoi, contenu, quand, à qui, canal (m = e-mail, s = SMS), pièces jointes, actif, dernier envoi, sélectionné, note, en gris (pas encore)]
+const G = [
+  ['Comptable', '#6B4FBB', [
+    ['Dossier comptable du mois', 'les revenus du mois (TTC, hors TVA, TVA par taux) et les factures du mois en PDF', 'dès que les factures du mois sont faites · au plus tard le 5', 'compta@fiduciaire-exemple.be', 'm', ['PDF revenus du mois', 'PDF factures du mois'], true, '02/11 07:00 · envoyé', true]]],
+  ['Clients', '#8D1D2C', [
+    ['Confirmation de commande', 'dès que la commande est enregistrée : articles, jour et heure de retrait, acompte', 'à la commande', 'le client de la commande', 'm', ['PDF bon de commande'], true, 'aujourd’hui 11:42 · 1 envoi'],
+    ['Rappel la veille du retrait', 'la commande, l’heure de retrait, l’adresse du magasin, ce qui reste à payer', 'la veille · 17:00', 'le client de la commande', 'ms', ['PDF bon de commande'], true, 'hier 17:00 · 3 e-mails, 3 SMS', false, 'demain : 4 commandes'],
+    ['Commande prête', 'un SMS court : la commande est prête, l’heure, l’adresse', 'dès que la commande est marquée prête sur la tablette', 'le client de la commande (son téléphone)', 's', [], false, 'jamais envoyé', false, '', 'via la tablette pour le moment'],
+    ['Merci et avis Google', 'le lendemain du retrait : merci, et le lien vers la fiche Google du magasin', 'le lendemain · 10:00', 'le client de la commande', 'm', [], false, 'jamais envoyé']]],
+  ['Clients pro', '#B0792A', [
+    ['Relevé mensuel des achats différés', 'chaque ticket en paiement différé du mois, remise personnelle déduite, total à payer', 'le 1er du mois · 08:00', 'chaque client pro (son e-mail au panel)', 'm', ['PDF relevé'], true, '01/11 08:00 · 5 envois']]],
+  ['Équipe', '#3f7a52', [
+    ['Planning de la semaine prochaine', 'les services de chacun, du lundi au dimanche', 'chaque vendredi · 16:00', 'chaque personne du planning', 'ms', ['PDF planning'], true, 'vendredi 13/11 16:00 · 7 envois']]],
+  ['Moi', '#1f5f8b', [
+    ['Résumé de la journée', 'CA, objectif, résultat hors TVA, poubelle, tâches et contrôles du jour', 'chaque soir · 21:00', 'franchise.halle@exemple.be', 'm', [], true, 'hier 21:00 · envoyé']]]
+];
+const canal = c => c === 'ms' ? '<span class="px-chip mail">e-mail</span><span class="px-chip sms">SMS</span>' : (c === 's' ? '<span class="px-chip sms">SMS</span>' : '<span class="px-chip mail">e-mail</span>');
+const lignes = G.map(([g, c, L]) => `<tr class="px-grp"><td colspan="7"><span class="px-qui"><i style="background:${c}"></i>${g}</span></td></tr>` + L.map(r => `<tr class="${r[8] ? 'sel' : ''}${r[10] ? ' px-gris' : ''}">
+  <td>${r[0]}<span class="sub">${r[1]}</span></td><td>${r[2]}${r[9] ? `<span class="sub" style="color:var(--accent)">${r[9]}</span>` : ''}</td><td>${r[3]}</td><td>${canal(r[4])}</td><td>${r[5].length ? r[5].map(pj).join('') : '<span class="mu">—</span>'}</td><td>${r[10] ? `<span class="px-bientot">à venir</span><span class="sub">${r[10]}</span>` : sw(r[6]) + `<span class="sub">${r[7]}</span>`}</td><td><span class="px-ouvrir">${r[10] ? 'Voir ▸' : 'Ouvrir ▸'}</span></td></tr>`).join('')).join('');
+const tl = [
+  ['aujourd’hui', '17:00', '#8D1D2C', 'Rappel la veille du retrait · e-mail et SMS', 'aux 4 clients des commandes de demain · Mme Lambert, M. Claes, Café du Parc, Mme Wouters'],
+  ['vendredi 20/11', '16:00', '#3f7a52', 'Planning de la semaine prochaine', 'aux 7 personnes du planning'],
+  ['dès les factures faites', '≤ 05/12', '#6B4FBB', 'Dossier comptable de novembre', 'au comptable · revenus du mois + factures du mois en PDF'],
+  ['mardi 01/12', '08:00', '#B0792A', 'Relevé des achats différés de novembre', 'aux 5 clients pro qui ont acheté en différé']
+].map(([j, h, c, t, s]) => `<div class="e"><span class="q">${h}<small>${j}</small></span><span class="p" style="background:${c}"></span><span class="t">${t}<small>${s}</small></span></div>`).join('');
+const corps = `
+  <div class="px-top"><p class="px-intro">Les e-mails que le magasin envoie tout seul : au comptable en fin de mois, aux clients la veille de leur commande ou quand elle est prête, aux clients pro, à l’équipe, à soi-même. Pour chacun : à qui, quand, par e-mail, par SMS ou les deux, le modèle du message et les fichiers joints.</p><span class="px-btn p">+ Nouvelle automatisation</span></div>
+  <div class="px-tabs"><button class="on">Automatisations<span class="n">8</span></button><button>Modèles d’e-mail<span class="n">8</span></button><button>Destinataires<span class="n">3</span></button><button>Journal des envois</button><button>Reçus du réseau<span class="n">7</span></button></div>
+  <div class="db-tuiles px-tuiles">
+    <div class="db-tui"><div class="k">Automatisations actives</div><div class="v">6 / 8</div><div class="s">1 éteinte · « Commande prête » à venir, via la tablette pour le moment</div></div>
+    <div class="db-tui"><div class="k">Envois ce mois-ci</div><div class="v">61 · 23 SMS</div><div class="s">58 e-mails envoyés · 2 clients sans e-mail · 1 refusé, renvoyé</div></div>
+    <div class="db-tui"><div class="k">Prochain envoi</div><div class="v">17:00</div><div class="s">rappel aux 4 clients des commandes de demain</div></div>
+    <div class="db-tui"><div class="k">Fin du mois</div><div class="v">≤ 05/12</div><div class="s">dossier comptable dès les factures faites · relevés pro le 01/12</div></div>
+  </div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les automatisations du magasin</span><span class="db-mini">rangées par destinataire · cliquer une ligne pour la régler</span></div>
+    <table class="px-t px-auto"><thead><tr><th>Envoi</th><th>Quand</th><th>À qui</th><th>Canal</th><th>Pièces jointes</th><th>État · dernier envoi</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
+  <div class="px-g2">
+    <div class="db-card"><div class="ct"><span class="db-lab">Les prochains envois</span><span class="db-mini">ce qui partira tout seul</span></div><div class="px-tl">${tl}</div></div>
+    <div class="db-card"><div class="ct"><span class="db-lab">Nouvelle automatisation</span><span class="db-mini">partir d’un modèle</span></div>
+      <div class="px-neuf">
+        <div><b>Au comptable</b><span>fin de mois, fin de trimestre : dossier, ventes, frais</span></div>
+        <div><b>Aux clients d’une commande</b><span>confirmation, rappel la veille, merci</span></div>
+        <div><b>Aux clients pro</b><span>relevé des achats différés, facture</span></div>
+        <div><b>À l’équipe</b><span>planning, primes du mois</span></div>
+        <div><b>À un fournisseur</b><span>commande, bon de réception</span></div>
+        <div><b>À moi</b><span>résumé du jour, de la semaine</span></div>
+      </div></div>
+  </div>`;
+coque({ titre: 'Mails et automatisations', corps,
+  pied: 'Maquette v3 du 16/11/2026 · noms, adresses et chiffres d’exemple. Les données existent déjà au cockpit : ventes hors TVA et TVA par taux (P&L hors TVA), frais (onglet Frais), commandes clients et retraits (Commandes), tickets pro différés et remise personnelle (B2B), planning (Opérationnel), résumé du jour (Revue du soir). Les SMS partent par l’API SMS du cockpit (src/sms.php, Twilio, déjà utilisée pour les primes). « Reçus du réseau » garde les rapports que le réseau envoie au magasin (maquette v1).' });
+</script></body></html>

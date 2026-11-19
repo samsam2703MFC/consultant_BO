@@ -43,8 +43,10 @@ class OrderTimelineService
 
         // E-mail z proformą do klienta (stan z wysyłki : is_sent_to_client).
         if (!empty($f['id_proforma']) && !in_array($f['proforma_status'], ['cancelled', 'archived'], true)) {
+            // [344] Proforma już wysłana : « Wyślij ponownie » (np. klient zgubił wiadomość).
             $stages[] = !empty($f['proforma_sent'])
-                ? $this->stage('E-mail', 'bi-envelope', 'done', 'proforma wysłana ' . $this->date($f['proforma_sent_at']))
+                ? $this->stage('E-mail', 'bi-envelope', 'done', 'proforma wysłana ' . $this->date($f['proforma_sent_at']), null,
+                    ['label' => 'Wyślij ponownie', 'url' => '/communication/compose/proforma/' . (int) $f['id_proforma'], 'always' => true])
                 : $this->stage('E-mail', 'bi-envelope', 'todo', 'proforma niewysłana', null,
                     ['label' => 'Wyślij proformę', 'url' => '/communication/compose/proforma/' . (int) $f['id_proforma']]);
         }
@@ -119,7 +121,10 @@ class OrderTimelineService
 
     private function stage(string $label, string $icon, string $state, string $meta, ?string $url = null, ?array $action = null): array
     {
-        return ['label' => $label, 'icon' => $icon, 'state' => $state, 'meta' => $meta, 'url' => $url, 'action' => $state === 'done' ? null : $action];
+        // Akcja etapu zakończonego tylko gdy wyraźnie dozwolona (always) — np. ponowna wysyłka proformy.
+        $keep = $state !== 'done' || !empty($action['always']);
+        if ($action !== null) unset($action['always']);
+        return ['label' => $label, 'icon' => $icon, 'state' => $state, 'meta' => $meta, 'url' => $url, 'action' => $keep ? $action : null];
     }
 
     private function date($value): string

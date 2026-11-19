@@ -1,0 +1,2718 @@
+{
+ "genere": "2026-11-17T13:22:22Z",
+ "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php",
+ "base": "/api/cockpit",
+ "accesMagasin": [
+  "/exploitation",
+  "/ventes",
+  "/fidelite",
+  "/analyse",
+  "/fournisseurs",
+  "/push",
+  "/production",
+  "/soir",
+  "/assistant/magasin",
+  "/stores",
+  "/benchmarks/magasin",
+  "/benchmarks/releve",
+  "/plan",
+  "/leviers",
+  "/equipe",
+  "/caisse",
+  "/planogramme",
+  "/pwa",
+  "/formation/sop/photo",
+  "/uploads",
+  "/dashboard",
+  "/tablette",
+  "/tresorerie",
+  "/helpdesk/magasin"
+ ],
+ "routes": [
+  {
+   "chemin": "/analyse/categories/journee",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:148",
+    "dashboard.js:7991"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/categories/journee",
+     "handler": "ep_analyse_categorie_journee",
+     "source": "src/analyse_produits.php:615",
+     "resume": "La journée de vente d'une catégorie ou d'un groupe (10/10/2026) : de 6 h à 18 h, heure par heure, le chiffre d'affaires et les pièces du jour face à la moyenne des 6 derniers mêmes jours (un jour sans aucune vente au magasin, fermé, ne compte pas)."
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/categories/magasin",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:7980"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/categories/magasin",
+     "handler": "ep_analyse_categorie_magasin",
+     "source": "src/analyse_produits.php:418",
+     "resume": "les ventes d'une catégorie (ou d'un groupe de catégories) pour le dashboard d'UN magasin (10/10/2026) : le chiffre d'affaires et les pièces semaine par semaine (12 semaines closes + l'en cours), face à la moyenne par magasin du réseau."
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/developpement/magasin",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:5459"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/developpement/magasin",
+     "handler": "ep_analyse_developpement_magasin",
+     "source": "src/analyse_produits.php:482",
+     "resume": "l'onglet Produits du dashboard magasin (11/11/2026, maquette I « les tuiles », docs/maquettes/onglet-produits-simple) : est-ce que le magasin, chaque catégorie, chaque produit se développe ? Une seule comparaison, en chiffre d'affaires : les 6 dernières semain"
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/matieres/fiche",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:7962"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/matieres/fiche",
+     "handler": "ep_analyse_matiere_fiche",
+     "source": "src/matiere_fiche.php:222",
+     "resume": "la fiche d'une matière pour un magasin : son prix et ceux des autres magasins (par kg quand l'unité est le gramme), ses fournisseurs avec leur liste de prix datée, le prix conseillé quand le panel le porte."
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/produits",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:180"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/produits",
+     "handler": "ep_analyse_produits",
+     "source": "src/analyse_produits.php:229",
+     "resume": "la grille entière : chaque référence, sa série par magasin et la moyenne réseau, tranche par tranche."
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/produits/magasin",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:140",
+    "dashboard.js:7959"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/produits/magasin",
+     "handler": "ep_analyse_produit_magasin",
+     "source": "src/analyse_produits.php:335",
+     "resume": "la fiche d'un produit pour le dashboard d'UN magasin (demande du 06/10/2026, maquette B, « seulement le magasin actif ») : semaines : les ventes du magasin semaine par semaine (12 semaines closes + l'en cours), et des repères réseau anonymes — la moyenne par m"
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/produits/recette",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:7968"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/analyse/produits/recette",
+     "handler": "ep_analyse_produit_recette",
+     "source": "src/recette_produit.php:259",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:5670"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/assistant/magasin",
+     "handler": "wr_assistant_magasin",
+     "source": "src/assistant_magasin.php:766",
+     "resume": "shop, question, ton, fil:[{q, r}], origine, conversation} → {reponse:{titre, resume, chiffres, points, priorites, conclusion, suites, visuels, sources}, question, luLe, modele, ton}. `ton` : un coach ou « professeur » (le manuel, l'agent rapide)."
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin/bundles",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "bundles.js:32"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/assistant/magasin/bundles…",
+     "handler": "bndRoute",
+     "source": "src/franchise/bundles.php:477",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin/bundles/apercu",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "bundles.js:313"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/assistant/magasin/bundles…",
+     "handler": "bndRoute",
+     "source": "src/franchise/bundles.php:477",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin/bundles/fiche",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "bundles.js:308"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/assistant/magasin/bundles…",
+     "handler": "bndRoute",
+     "source": "src/franchise/bundles.php:477",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin/bundles/lancer",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "bundles.js:286"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/assistant/magasin/bundles…",
+     "handler": "bndRoute",
+     "source": "src/franchise/bundles.php:477",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin/bundles/renvoyer",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "bundles.js:292"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/assistant/magasin/bundles…",
+     "handler": "bndRoute",
+     "source": "src/franchise/bundles.php:477",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/assistant/magasin/questions",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:5651",
+    "dashboard.js:6147"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/assistant/magasin/questions",
+     "handler": "ep_assistant_questions",
+     "source": "src/assistant_magasin.php:744",
+     "resume": "Les questions toutes prêtes, et si l'assistant est branché (sans clé, le dashboard ne montre pas le bouton)."
+    }
+   ]
+  },
+  {
+   "chemin": "/benchmarks/magasin",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:5180"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/benchmarks/magasin",
+     "handler": "ep_benchmark_magasin",
+     "source": "src/benchmark.php:1024",
+     "resume": "tout ce que l'onglet affiche pour un magasin : - `releves` : chaque prix concurrent relevé pour ce magasin dans TFBuddy (terrain du réseau compris), avec le concurrent, son type, sa distance, la date ; la taille portée dans le libellé (« [250 g] ») est relue ;"
+    }
+   ]
+  },
+  {
+   "chemin": "/benchmarks/releve",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:5424"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/benchmarks/releve",
+     "handler": "wr_benchmark_releve",
+     "source": "src/benchmark.php:1085",
+     "resume": "un prix vu en magasin, saisi depuis le dashboard : { shop, concurrentId? | concurrent: {nom, type?, ville?, distance?}, produitId?, nom, prix, promo?, unite?, taille?, notes? }. Le concurrent est créé s'il n'existe pas ; l'observation est celle du jour « Relev"
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/analyse/jours",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:143"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/analyse…",
+     "handler": "daRoute",
+     "source": "src/franchise/dashboard_analyse.php:412",
+     "resume": "Le routeur du module : null si la route n'est pas la sienne."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/analyse/mois",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:142",
+    "analyse.js:152"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/analyse…",
+     "handler": "daRoute",
+     "source": "src/franchise/dashboard_analyse.php:412",
+     "resume": "Le routeur du module : null si la route n'est pas la sienne."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/analyse/periode",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:133"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/analyse…",
+     "handler": "daRoute",
+     "source": "src/franchise/dashboard_analyse.php:412",
+     "resume": "Le routeur du module : null si la route n'est pas la sienne."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/analyse/reseau",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:141",
+    "analyse.js:147"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/analyse…",
+     "handler": "daRoute",
+     "source": "src/franchise/dashboard_analyse.php:412",
+     "resume": "Le routeur du module : null si la route n'est pas la sienne."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "automatisations.js:38",
+    "boite.js:481",
+    "boite.js:72"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/automatiques",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:242",
+    "boite.js:437",
+    "boite.js:439"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/automatisations",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "automatisations.js:42",
+    "automatisations.js:51"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/automatisations/essai",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "automatisations.js:61"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/envoyer",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:161"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/equipe",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "automatisations.js:70"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/fermer",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:413"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/geste",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:102"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/message",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "boite.js:175",
+    "boite.js:93"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/messages",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "boite.js:88"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/modeles",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:241",
+    "boite.js:430",
+    "boite.js:436"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/ouvrir",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:410"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/relier",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:404"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/marketing/annee",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:60"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/marketing…",
+     "handler": "dmRoute",
+     "source": "src/franchise/dashboard_marketing.php:201",
+     "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/marketing/campagnes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:49"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/marketing…",
+     "handler": "dmRoute",
+     "source": "src/franchise/dashboard_marketing.php:201",
+     "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/marketing/campagnes/annexe",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:275"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/marketing…",
+     "handler": "dmRoute",
+     "source": "src/franchise/dashboard_marketing.php:201",
+     "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/marketing/ventes-periode",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:106"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/marketing…",
+     "handler": "dmRoute",
+     "source": "src/franchise/dashboard_marketing.php:201",
+     "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/social/ouvrir",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "reseaux.js:40"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/social/ouvrir…",
+     "handler": "dsRoute",
+     "source": "src/franchise/dashboard_marketing.php:235",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/equipe/remarques",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:2190"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/equipe/remarques",
+     "handler": "ep_equipe_remarques",
+     "source": "src/invendus.php:711",
+     "resume": "les remarques faites aux opérateurs d'un magasin : leurs évaluations."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/equipe/remarques",
+     "handler": "wr_equipe_remarque_creer",
+     "source": "src/invendus.php:677",
+     "resume": "shop, employeId|employeNom, texte, le, heure, pid, produit, pieces, motif, saisieId, auteur} — une remarque à un opérateur (un problème de qualité en production), gardée dans ses évaluations."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/canaux",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1550"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/canaux",
+     "handler": "ep_exploitation_canaux",
+     "source": "src/canaux_offres.php:219",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/canaux-mois",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1632"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/canaux-mois",
+     "handler": "ep_exploitation_canaux_mois",
+     "source": "src/canaux_offres.php:349",
+     "resume": "chaque canal sur les `n` derniers mois (le mois choisi compris) et, jour par jour, le mois choisi et celui d'avant : la carte « Commandes et canaux » du mois en tire une mini-courbe par canal, l'écart au mois d'avant et, au clic, le cumul du mois face au mois "
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/commandes/detail",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:3107"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/commandes/detail",
+     "handler": "ep_exploitation_commandes_detail",
+     "source": "src/canaux_offres.php:688",
+     "resume": "les commandes du jour, comptoir et webshop, leur rapprochement avec la caisse et, pour celles qui sont encaissées, leurs articles."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/equipe-heures",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:2457",
+    "dashboard.js:3480",
+    "dashboard.js:3484"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/equipe-heures",
+     "handler": "ep_exploitation_equipe_heures",
+     "source": "src/endpoints.php:1951",
+     "resume": "les ventes de chaque personne, heure par heure (dashboard magasin, l'équipe du jour, une ligne dépliée ; 20/10/2026)."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/frais",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:7021"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/frais",
+     "handler": "ep_exploitation_frais",
+     "source": "src/franchise/frais.php:25",
+     "resume": "l'onglet Frais du dashboard."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/frais/tva",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:7086"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/frais/tva",
+     "handler": "wr_exploitation_frais_tva",
+     "source": "src/franchise/frais.php:46",
+     "resume": "shop, poste, tva: true|false|null, taux} — le choix d'un poste, gardé d'un mois à l'autre."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/invendus",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1999"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/invendus",
+     "handler": "ep_exploitation_invendus",
+     "source": "src/invendus.php:233",
+     "resume": "la carte du jour ; GET /exploitation/invendus?shop=4&du=&au= — la semaine, le mois ; sans magasin : le réseau, magasin par magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/invendus/actions",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:2130"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/invendus/actions",
+     "handler": "ep_exploitation_invendus_actions",
+     "source": "src/invendus.php:628",
+     "resume": "de quoi agir sur une pièce jetée pour un problème de qualité."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/invendus/detail",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:137",
+    "dashboard.js:2038"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/invendus/detail",
+     "handler": "ep_exploitation_invendus_detail",
+     "source": "src/invendus.php:500",
+     "resume": "ou &du=&au=) — le détail des pièces jetées d'un magasin : le total par produit du panel (comme la carte), et chaque saisie de caisse — heure, opérateur, produit, quantité, motif — quand le journal des mouvements de la base partagée couvre la fenêtre."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/jour",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:141",
+    "dashboard.js:196",
+    "dashboard.js:207",
+    "dashboard.js:2458"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/jour",
+     "handler": "ep_exploitation_jour",
+     "source": "src/endpoints.php:2027",
+     "resume": "le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/note",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:2405"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/note",
+     "handler": "wr_note_jour",
+     "source": "src/notes_jour.php:101",
+     "resume": "{ shop, jour, texte, par }. Un refus se dit par le STATUT HTTP : le dashboard lit le statut, pas le corps."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/notes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:2350"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/notes",
+     "handler": "ep_notes_jour",
+     "source": "src/notes_jour.php:72",
+     "resume": "la note du jour, celles de sa semaine, et la même semaine un an plus tôt."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/objectifs-produits",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1450",
+    "marketing.js:51"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/objectifs-produits",
+     "handler": "ep_objectifs_produits_magasin",
+     "source": "src/objectifs_produits.php:430",
+     "resume": "le dashboard du magasin : les campagnes en cours ce jour-là où le magasin a un objectif, avec sa jauge."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/offres",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1553"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/offres",
+     "handler": "ep_exploitation_offres",
+     "source": "src/canaux_offres.php:545",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/offres-client",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:108",
+    "offres.js:68",
+    "offres.js:73"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/offres-client",
+     "handler": "ep_offres_client",
+     "source": "src/franchise/offres_client.php:107",
+     "resume": "les offres du magasin, les plus récentes d'abord, et leurs comptes."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/offres-client",
+     "handler": "wr_offres_client",
+     "source": "src/franchise/offres_client.php:242",
+     "resume": "shop, action: creer | modifier | archiver | reactiver | supprimer | convertir, id?, offre?, …}"
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/offres-client/employes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "offres.js:89"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/offres-client/employes",
+     "handler": "ep_offres_client_employes",
+     "source": "src/franchise/offres_client.php:143",
+     "resume": "l'équipe du magasin (id, prénom et initiale), pour la conversion."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/offres-client/pdf",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "offres.js:227"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/offres-client/pdf",
+     "handler": "ep_offres_client_pdf",
+     "source": "src/franchise/offres_client.php:155",
+     "resume": "le PDF de TF Buddy, tel quel (sort, puis exit)."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/periode",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:196",
+    "dashboard.js:203",
+    "dashboard.js:234"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/periode",
+     "handler": "ep_exploitation_periode",
+     "source": "src/resultat.php:26",
+     "resume": "le calcul gardé (rcServi) : cinq minutes pour l'étendue en cours, une heure pour une étendue close."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/pro",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:2231"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/pro",
+     "handler": "ep_exploitation_pro",
+     "source": "src/ventes_pro.php:373",
+     "resume": "la carte « Clients pro » du dashboard : le jour (tickets pro à l'heure et au montant, à facturer), les 30 jours (part, nombre de comptes servis), la série jour par jour."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/pro/detail",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:3058"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/pro/detail",
+     "handler": "ep_exploitation_pro_detail",
+     "source": "src/ventes_pro.php:516",
+     "resume": "la feuille « Ventes B2B » : les tickets pro d'un jour, chacun avec sa société, son règlement (facturé, différé, réglé au comptoir) et ses articles ; les chiffres du jour face au comptoir ; ce que les sociétés achètent, par catégorie."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/promos",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1496"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/promos",
+     "handler": "ep_promos_magasin",
+     "source": "src/jours_creux.php:773",
+     "resume": "le dashboard du magasin : ses promotions en cours ce jour-là, avec leur effet."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/promos-magasin",
+   "methodes": [
+    "DELETE",
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:3608",
+    "dashboard.js:4655",
+    "dashboard.js:4676"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/promos-magasin",
+     "handler": "ep_promos_magasin_demandes",
+     "source": "src/promos_magasin.php:1204",
+     "resume": "les promotions du magasin (lues au panel : celles réservées à lui seul), les autres promotions du panel qui le touchent (la marque), les règles."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/promos-magasin",
+     "handler": "wr_promos_magasin",
+     "source": "src/promos_magasin.php:1251",
+     "resume": "shop, id? (« p21 » : la promotion n° 21 du panel), action: brouillon|envoyer, nom, description, x, y, du, au, creneaux, repetable, maxParTicket, bon?, tous?} — écrit au panel, et rien ailleurs (18/10/2026)."
+    },
+    {
+     "methodes": [
+      "DELETE"
+     ],
+     "chemin": "/exploitation/promos-magasin",
+     "handler": "wr_promos_magasin_retirer",
+     "source": "src/promos_magasin.php:1330",
+     "resume": "un brouillon du magasin (inactif au panel) se supprime au panel."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/promos-magasin/bon",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:4469",
+    "dashboard.js:4485",
+    "dashboard.js:4509"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/promos-magasin/bon",
+     "handler": "ep_promos_magasin_bon",
+     "source": "src/promos_bons.php:566",
+     "resume": "le bon de la promotion, relu au panel : sa distribution, ses codes (en clair : le magasin les remet à ses clients) et le nom du client de chacun."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/promos-magasin/bon",
+     "handler": "wr_promos_magasin_bon",
+     "source": "src/promos_bons.php:577",
+     "resume": "shop, id: « p21 », actif} — le bon de la promotion activé ou mis hors service."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/promos-magasin/canaux",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:3612"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/promos-magasin/canaux",
+     "handler": "ep_promos_magasin_canaux",
+     "source": "src/promos_magasin.php:294",
+     "resume": "7 | 30) — où les promotions s'appliquent : au comptoir, en click & collect, en livraison, promotion par promotion et jour par jour."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/promos-magasin/clients",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "boite.js:227",
+    "dashboard.js:4438",
+    "dashboard.js:4458",
+    "offres.js:100"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/promos-magasin/clients",
+     "handler": "ep_promos_magasin_clients",
+     "source": "src/promos_bons.php:517",
+     "resume": "les clients du magasin, lus au panel, pour le bon : les comptes B2B (société, TVA, la personne) ou les particuliers rattachés au magasin (nom, ville), un contact masqué."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/promos-magasin/produits",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "boite.js:107",
+    "dashboard.js:3610",
+    "offres.js:83"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/promos-magasin/produits",
+     "handler": "ep_promos_magasin_produits",
+     "source": "src/promos_magasin.php:272",
+     "resume": "ce que l'assistant chiffre : les produits du magasin, leur prix et leur coût de recette (du magasin, sinon du réseau)."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/rentabilite",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:226"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/rentabilite",
+     "handler": "ep_exploitation_rentabilite",
+     "source": "src/endpoints.php:1321",
+     "resume": "le résultat net par jour et par magasin, comme l'« Analyse rentabilité » de la PWA consultant."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/semaine-jours",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:208"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/semaine-jours",
+     "handler": "ep_exploitation_semaine_jours",
+     "source": "src/franchise/dashboard_semaine.php:78",
+     "resume": "la semaine (lundi → dimanche) de la date, jour par jour : contrôles obligatoires et poubelle."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/temps-morts",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:5451"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/exploitation/temps-morts",
+     "handler": "ep_temps_morts",
+     "source": "src/franchise/temps_morts.php:185",
+     "resume": "l'onglet « Temps morts » du dashboard magasin : le jour (trous un par un, heure par heure), son habitude (les 4 mêmes jours de semaine d'avant), la semaine du lundi au dimanche jour par jour, et la semaine d'avant."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/carte",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6160"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/carte",
+     "handler": "ep_fidelite_carte",
+     "source": "src/fidelite_cartes.php:186",
+     "resume": ": le détail d'une carte, tel que l'ERP la définit (/admin/loyalty/cards) — mécanique, récompense, validité, magasins, ce qui fait gagner un timbre, ce qui en est exclu, ce que la récompense donne, les points —, les identifiants de produits et de catégories tra"
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/carte-client",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6162"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/carte-client",
+     "handler": "ep_fidelite_carte_client",
+     "source": "src/fidelite_cartes.php:162",
+     "resume": ": les cartes d'un client, et son activité dans le magasin (depuis janvier)."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/cartes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6158"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/cartes",
+     "handler": "ep_fidelite_cartes",
+     "source": "src/fidelite_cartes.php:96",
+     "resume": ": la vue du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/client",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6168"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/client",
+     "handler": "ep_fidelite_client",
+     "source": "src/fidelite_profils.php:504",
+     "resume": ": l'historique d'un client sur 180 jours, ticket par ticket."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/profils/magasin",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6156"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/profils/magasin",
+     "handler": "ep_fidelite_profils_magasin",
+     "source": "src/fidelite_profils.php:420",
+     "resume": ": le dashboard du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/profils/tendance",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6166"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/profils/tendance",
+     "handler": "ep_fidelite_profils_tendance",
+     "source": "src/fidelite_profils.php:476",
+     "resume": ": le nombre de clients de chaque profil, date après date."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/scan",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6164"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/scan",
+     "handler": "ep_fidelite_scan",
+     "source": "src/fidelite_profils.php:489",
+     "resume": "La part des tickets scannés (12/11/2026, Sam : « par défaut c'est aujourd'hui ; en dessous le mois et l'année en moyenne »)."
+    }
+   ]
+  },
+  {
+   "chemin": "/fournisseurs/matiere-code",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:10238"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/fournisseurs/matiere-code",
+     "handler": "wr_matiere_code",
+     "source": "src/mesure.php:1630",
+     "resume": "retenir qu'un code-barres désigne une matière."
+    }
+   ]
+  },
+  {
+   "chemin": "/fournisseurs/reclamation",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:10268",
+    "dashboard.js:2181"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/fournisseurs/reclamation",
+     "handler": "wr_reclamation_creer",
+     "source": "src/mesure.php:1705",
+     "resume": "déposer une réclamation dans le panel."
+    }
+   ]
+  },
+  {
+   "chemin": "/fournisseurs/reclamation-refs",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:9685"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fournisseurs/reclamation-refs",
+     "handler": "ep_reclamation_refs",
+     "source": "src/mesure.php:1507",
+     "resume": "Ce qu'il faut pour ÉCRIRE une réclamation : motifs, matières du fournisseur (avec leur SKU), unités, et les livraisons du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/fournisseurs/reclamations",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:9683"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fournisseurs/reclamations",
+     "handler": "ep_fournisseurs_reclamations",
+     "source": "src/mesure.php:1331",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/helpdesk/magasin",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:5970",
+    "dashboard.js:6044"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/helpdesk/magasin",
+     "handler": "ep_helpdesk_magasin",
+     "source": "src/helpdesk.php:283",
+     "resume": "les domaines et les demandes du magasin."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/helpdesk/magasin",
+     "handler": "wr_helpdesk_magasin",
+     "source": "src/helpdesk.php:319",
+     "resume": "shop, domaine, titre, description, passage, photos[]} — la demande part au bureau."
+    }
+   ]
+  },
+  {
+   "chemin": "/leviers/magasins",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:7405"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/leviers/magasins",
+     "handler": "ep_leviers_magasins",
+     "source": "src/leviers.php:256",
+     "resume": "les lectures, puis levCalcul()."
+    }
+   ]
+  },
+  {
+   "chemin": "/marketing/avis",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:141"
+   ],
+   "magasin": false,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/marketing/avis",
+     "handler": "ep_reputation",
+     "source": "src/endpoints.php:8406",
+     "resume": "la réputation digitale du réseau, magasin par magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/meta",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:139",
+    "dashboard.js:141",
+    "dashboard.js:151"
+   ],
+   "magasin": false,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/meta",
+     "handler": "ep_meta",
+     "source": "src/endpoints.php:89",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/plan",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:186"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/plan",
+     "handler": "ep_plan",
+     "source": "src/plan.php:89",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/production/catalogue",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:55"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/production/catalogue",
+     "handler": "ep_prod_catalogue",
+     "source": "src/endpoints.php:899",
+     "resume": "Catalogue produit du réseau."
+    }
+   ]
+  },
+  {
+   "chemin": "/production/flux/suivi",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:2456"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/production/flux/suivi",
+     "handler": "ep_production_flux_suivi",
+     "source": "src/production_flux.php:774",
+     "resume": "la validation des cuissons et la surveillance heure par heure : pour chaque produit, le stock à la fin de chaque heure passée (report + sorti − vendu) et projeté pour les heures à venir (6 derniers mêmes jours), l'heure du premier manque et le conseil."
+    }
+   ]
+  },
+  {
+   "chemin": "/production/plan",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:1793"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/production/plan",
+     "handler": "ep_production_plan",
+     "source": "src/production_plan.php:809",
+     "resume": "les paramètres résolus, le plan du jour par cuisson, les commandes, et (pour aujourd'hui) le suivi avant la prochaine cuisson."
+    }
+   ]
+  },
+  {
+   "chemin": "/production/plan/fait",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:1991"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/production/plan/fait",
+     "handler": "wr_production_fait",
+     "source": "src/production_plan.php:877",
+     "resume": "{ shop, date, cuisson, lignes: { pid: pièces } } : ce qui a été réellement enfourné."
+    }
+   ]
+  },
+  {
+   "chemin": "/production/plan/params",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:1983"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/production/plan/params",
+     "handler": "wr_production_params",
+     "source": "src/production_plan.php:864",
+     "resume": "{ shop, params: { cuissons, categories, regles } }."
+    }
+   ]
+  },
+  {
+   "chemin": "/production/saisons",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:54"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/production/saisons",
+     "handler": "ep_prod_saisons",
+     "source": "src/assortiment.php:337",
+     "resume": "Les gammes saisonnières du panel, leur fenêtre autour du jour, leurs produits (références du catalogue) et les obligatoires qui s'y rattachent."
+    }
+   ]
+  },
+  {
+   "chemin": "/produits",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "catalogue.js:143"
+   ],
+   "magasin": false,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/analyse",
+     "handler": "ep_produits_analyse",
+     "source": "src/endpoints.php:3047",
+     "resume": "Analyse d'une catégorie ou d'une référence dans le temps."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/analyse/options",
+     "handler": "ep_produits_analyse_options",
+     "source": "src/endpoints.php:3389",
+     "resume": "Vocabulaire analysable — alimenté par les routes qui portent les DONNÉES. C'est le cœur du correctif : le sélecteur était rempli avec les catégories du catalogue (81), alors que les ventes sont ventilées par groupe (12)."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/analyse/sonde",
+     "handler": "ep_produits_analyse_sonde",
+     "source": "src/endpoints.php:6815",
+     "resume": "Sonde : existe-t-il une source de ventes PAR MAGASIN sous le niveau groupe ? Diagnostic en lecture seule."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/utilisation",
+     "handler": "ep_prod_utilisation",
+     "source": "src/prod_utilisation.php:199",
+     "resume": "Combien de références du catalogue chaque magasin a-t-il vendues, mois par mois ? Et lesquelles lui manquent que les autres vendent ?"
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/utilisation/magasin",
+     "handler": "ep_prod_utilisation_magasin",
+     "source": "src/prod_utilisation.php:396",
+     "resume": "Le détail d'UN magasin, sur les TROIS niveaux de l'arbre produit : le groupe, la catégorie qu'il contient, puis les références elles-mêmes."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/utilisation/jamais.pdf",
+     "handler": "ep_prod_utilisation_jamais_pdf",
+     "source": "src/prod_utilisation.php:703",
+     "resume": "Le même chiffre que la tuile « Jamais vendues », mais nommé : la liste part en réunion catalogue, pas l'écran."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/utilisation/jamais",
+     "handler": "ep_prod_utilisation_jamais",
+     "source": "src/prod_utilisation.php:994",
+     "resume": "La même liste que le PDF, en JSON. Elle sert à AGIR dessus — retirer un bloc du catalogue — sans recopier des codes à la main : une liste retapée depuis un PDF est une liste où il manque une ligne."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/manque",
+     "handler": "ep_prod_manque",
+     "source": "src/prod_manque.php:52",
+     "resume": "Le manque à gagner par magasin et par mois, le détail par référence de chaque magasin, et le classement réseau des références qui coûtent le plus."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/structure",
+     "handler": "ep_produits_structure",
+     "source": "src/structure_gamme.php:261",
+     "resume": "les données et le réglage."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/parametrage/liste",
+     "handler": "ep_produits_parametrage_liste",
+     "source": "src/produit_parametrage.php:181",
+     "resume": "Les produits du réseau : le catalogue du panel s'il se lit, sinon ceux des magasins."
+    },
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/produits/parametrage",
+     "handler": "ep_produits_parametrage",
+     "source": "src/produit_parametrage.php:256",
+     "resume": "la fiche."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/produits/actif",
+     "handler": "wr_prod_actif",
+     "source": "src/prod_utilisation.php:880",
+     "resume": "retirer (ou remettre) des références du catalogue."
+    },
+    {
+     "methodes": [
+      "PUT"
+     ],
+     "chemin": "/produits/structure",
+     "handler": "wr_produits_structure",
+     "source": "src/structure_gamme.php:271",
+     "resume": "{ regles?: {base, std, max, sai, seuil}, decisions?: {id: 'standard'|'garder'|'saison:ete'|'periode:noel'|null} } Les règles valent pour tout le réseau ; une décision, pour une référence."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/produits/structure/desactiver",
+     "handler": "wr_produits_structure_desactiver",
+     "source": "src/structure_gamme.php:345",
+     "resume": "{ ids: [pid…] (40 au plus avec un compte API), confirmer: true } Le retrait du catalogue refuse d'ordinaire toute référence vendue sur douze mois."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/produits/structure/appliquer",
+     "handler": "wr_produits_structure_appliquer",
+     "source": "src/structure_gamme.php:418",
+     "resume": "{ standard: [ref…], saisons: [{ref, saison}…], retirer: [ref…], confirmer: true } L'assortiment obligatoire suit la structure : le standard devient obligatoire toute l'année, une référence de saison ou de période l'est pendant la gamme du panel qui la porte (H"
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/produits/parametrage",
+     "handler": "wr_produits_parametrage",
+     "source": "src/produit_parametrage.php:490",
+     "resume": "les champs, puis les gammes, puis les prix des magasins."
+    }
+   ]
+  },
+  {
+   "chemin": "/push/abonnements",
+   "methodes": [
+    "DELETE",
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:683",
+    "dashboard.js:695"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/push/abonnements",
+     "handler": "wr_push_abonnement",
+     "source": "src/push.php:230",
+     "resume": "le navigateur s'inscrit."
+    },
+    {
+     "methodes": [
+      "DELETE"
+     ],
+     "chemin": "/push/abonnements",
+     "handler": "wr_push_desabonnement",
+     "source": "src/push.php:252",
+     "resume": "le navigateur se désinscrit."
+    }
+   ]
+  },
+  {
+   "chemin": "/push/cle",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:691"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/push/cle",
+     "handler": "ep_push_cle",
+     "source": "src/push.php:214",
+     "resume": "la clé publique VAPID, et ce que le serveur sait faire."
+    }
+   ]
+  },
+  {
+   "chemin": "/push/essai",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:709"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/push/essai",
+     "handler": "wr_push_essai",
+     "source": "src/push.php:263",
+     "resume": "un message de vérification, tout de suite."
+    }
+   ]
+  },
+  {
+   "chemin": "/pwa/tasks",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:241",
+    "dashboard.js:242",
+    "dashboard.js:2459",
+    "dashboard.js:6583",
+    "dashboard.js:9436"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/pwa/tasks",
+     "handler": "ep_pwa_tasks",
+     "source": "src/endpoints.php:340",
+     "resume": "contrôle des tâches consultants du panel."
+    }
+   ]
+  },
+  {
+   "chemin": "/pwa/tasks/detail",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:9227"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/pwa/tasks/detail",
+     "handler": "ep_pwa_task_detail",
+     "source": "src/endpoints.php:4696",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/pwa/tasks/heatmap/mois",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:242"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/pwa/tasks/heatmap/mois",
+     "handler": "ep_taches_heatmap_mois",
+     "source": "src/taches_suivi.php:317",
+     "resume": "la vue PAR MOIS, celle qui s'ouvre en premier : magasins × jours du mois, chaque cellule un jour (part faite, faites, pas faites)."
+    }
+   ]
+  },
+  {
+   "chemin": "/pwa/tasks/nc",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6586",
+    "dashboard.js:9144",
+    "dashboard.js:9158"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/pwa/tasks/nc",
+     "handler": "ep_pwa_tasks_nc",
+     "source": "src/endpoints.php:4416",
+     "resume": "les non-conformités d'une boutique, sur un jour ou une période."
+    }
+   ]
+  },
+  {
+   "chemin": "/pwa/tasks/photos",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:6711",
+    "dashboard.js:9437",
+    "dashboard.js:9446"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/pwa/tasks/photos",
+     "handler": "ep_pwa_tasks_photos",
+     "source": "src/endpoints.php:4600",
+     "resume": "toutes les photos rendues d'un magasin sur une journée, en UNE lecture."
+    }
+   ]
+  },
+  {
+   "chemin": "/soir/revue",
+   "methodes": [
+    "GET",
+    "PUT"
+   ],
+   "fichiers": [
+    "dashboard.js:6826",
+    "dashboard.js:6849",
+    "dashboard.js:6873"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "PUT"
+     ],
+     "chemin": "/soir/…",
+     "handler": "rsRoute",
+     "source": "src/revue_soir.php:122",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/stores",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:10852"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/stores",
+     "handler": "ep_stores",
+     "source": "src/endpoints.php:192",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/stores/perf",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:134"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/stores/perf",
+     "handler": "ep_perf",
+     "source": "src/endpoints.php:5640",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/tresorerie/budget",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "tresorerie.js:267"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/tresorerie/budget",
+     "handler": "ep_tresorerie_budget",
+     "source": "src/franchise/tresorerie.php:429",
+     "resume": "l'onglet « Budget & étude » (lecture seule) : les exercices du plan (fiche du budget, étude de marché, CA au budget et théorique de chaque mois), les postes de charges et les étapes du compte de résultat, le P&L réel du magasin, les liens pour modifier (cockpi"
+    }
+   ]
+  },
+  {
+   "chemin": "/tresorerie/plan",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "tresorerie.js:247",
+    "tresorerie.js:286",
+    "tresorerie.js:869"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/tresorerie/plan",
+     "handler": "ep_tresorerie_plan",
+     "source": "src/franchise/tresorerie.php:507",
+     "resume": "le plan tel qu'il est enregistré, sa version, et le premier lundi proposé."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/tresorerie/plan",
+     "handler": "wr_tresorerie_plan",
+     "source": "src/franchise/tresorerie.php:557",
+     "resume": "{shop, version, donnees}. La version est celle qu'on a lue : si le plan a changé depuis (un autre écran), rien n'est écrit, 409 et le plan tel qu'il est."
+    }
+   ]
+  },
+  {
+   "chemin": "/tresorerie/references",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "tresorerie.js:253"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/tresorerie/references",
+     "handler": "ep_tresorerie_references",
+     "source": "src/franchise/tresorerie.php:461",
+     "resume": "l'année passée, le budget et le réalisé, semaine par semaine sur la fenêtre du plan et mois par mois de janvier de son année à décembre de sa dernière."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/commandes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:2460",
+    "dashboard.js:248"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/commandes",
+     "handler": "ep_ventes_commandes",
+     "source": "src/commandes.php:123",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/mensuel",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:134",
+    "dashboard.js:141",
+    "dashboard.js:169",
+    "dashboard.js:171",
+    "dashboard.js:173",
+    "dashboard.js:174",
+    "dashboard.js:184",
+    "dashboard.js:225"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/mensuel",
+     "handler": "ep_ventes_mensuel",
+     "source": "src/ventes.php:328",
+     "resume": "le CA mois par mois d'un magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/primes-annee",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:4911"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/primes-annee",
+     "handler": "ep_primes_annee",
+     "source": "src/primes.php:1592",
+     "resume": "l'année des primes du réseau, ou d'un magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/primes-equipe",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:4909"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/primes-equipe",
+     "handler": "ep_primes_equipe",
+     "source": "src/primes.php:1602",
+     "resume": "l'équipe d'un magasin face à ses primes (la page franchisé du cockpit)."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/record",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:241"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/record",
+     "handler": "ep_stats_record",
+     "source": "src/stats_ventes.php:314",
+     "resume": "le record du magasin POUR CE JOUR DE SEMAINE avant la date (le meilleur dimanche à battre, le meilleur lundi…), sur trois ans au plus, relu dans le margin-heatmap du panel par fenêtres de 31 jours (six en parallèle) jusqu'à trois mois sans vente."
+    },
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/ventes/record",
+     "handler": "wr_ventes_record",
+     "source": "src/ventes.php:1663",
+     "resume": "les trois réglages du système."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/semaines",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:231",
+    "dashboard.js:8989"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/semaines",
+     "handler": "ep_ventes_semaines",
+     "source": "src/ventes_semaines.php:29",
+     "resume": "2 à 13 semaines)[&articles=1][&pro=1] — avec `articles=1`, chaque période (et son N-1) porte aussi `articles`, les pièces vendues (dashboard magasin, articles par client, 19/10/2026) ; avec `pro=1`, `caComptoir` et `ticketsComptoir` (le panier hors clients pro"
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/stats",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "analyse.js:135",
+    "dashboard.js:212"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/stats",
+     "handler": "ep_stats_ventes",
+     "source": "src/stats_ventes.php:1100",
+     "resume": "Les heures de la période (somme et moyenne par jour ouvert), la cascade de chaque heure, le top 5 des produits par marge de chaque heure, et la couverture : combien de jours portent leurs heures, combien leurs tickets."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/stock",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:239"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/stock",
+     "handler": "ep_ventes_stock",
+     "source": "src/ventes.php:504",
+     "resume": "l'inventaire matière d'UN magasin, tel qu'il est."
+    }
+   ]
+  },
+  {
+   "chemin": "/ventes/tendance",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "dashboard.js:241"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/ventes/tendance",
+     "handler": "ep_stats_tendance",
+     "source": "src/stats_ventes.php:375",
+     "resume": "les 7 derniers mêmes jours de semaine AVANT la date (CA, marge brute, clients, panier), relus dans le margin-heatmap du panel sur huit semaines."
+    }
+   ]
+  }
+ ]
+}
