@@ -39,6 +39,14 @@
 
   .encadre { border-left: 2.5px solid var(--accent); background: var(--accent-soft); padding: 4mm 5mm; border-radius: 0 3mm 3mm 0; margin-top: 5mm; font-size: 9.5pt; line-height: 1.5; }
   .encadre b { font-weight: 500; }
+  /* Une franchise bien tenue (19/11/2026) : les huit questions du test de vendabilité de l'article 0.0.56. */
+  .bt-titre { font-size: 13pt; font-weight: 500; margin: 1.5mm 0 1mm; color: var(--ink); line-height: 1.25; }
+  .bt-lead { font-size: 9pt; color: var(--muted); margin: 0 0 3mm; }
+  ol.bt { list-style: none; counter-reset: bt; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm 4mm; }
+  ol.bt li { counter-increment: bt; background: #fff; border: 1px solid var(--line); border-radius: 2.5mm; padding: 2.6mm 3mm 2.6mm 10.5mm; position: relative; font-size: 8.8pt; line-height: 1.4; }
+  ol.bt li::before { content: counter(bt); position: absolute; left: 3mm; top: 2.6mm; width: 5mm; height: 5mm; border-radius: 50%; background: var(--accent); color: #fff; font-size: 7.5pt; text-align: center; line-height: 5mm; }
+  ol.bt li b { font-weight: 500; color: var(--accent); }
+  .bt-src { font-size: 8pt; color: var(--muted); margin: 2.5mm 0 0; }
 
   .qrbloc { position: absolute; left: 16mm; right: 16mm; bottom: 26mm; background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 5mm; display: grid; grid-template-columns: 34mm 1fr; gap: 6mm; align-items: center; }
   .qrbloc .img svg { width: 34mm; height: 34mm; display: block; }
@@ -134,6 +142,23 @@
     <b>Le cadre</b> · 0.0.21 : on lit le DIP, puis on signe un contrat qui fixe les engagements de chacun.<br>
     <b>La valeur</b> · 0.0.56 : des process écrits et délégables, des chiffres fiables ; un magasin qui tourne sans son propriétaire.
   </div>
+
+  <!-- 19/11/2026 (Sam : « rajouter les points de bonne gestion de la franchise, est-ce que quelqu'un peut tenir ton magasin
+       deux semaines… ») : les huit questions de « La boutique est-elle vendable demain ? » (article 0.0.56). -->
+  <div class="kicker" style="margin-top:7mm">Une franchise bien tenue</div>
+  <h3 class="bt-titre">Quelqu’un peut-il tenir votre magasin deux semaines sans vous ?</h3>
+  <p class="bt-lead">Huit questions à se poser une fois par an. Chaque « non » est un point de valeur à aller chercher.</p>
+  <ol class="bt">
+    <li>Le magasin peut-il tourner <b>deux semaines sans vous</b>, sans baisse de résultat ?</li>
+    <li>Quelqu’un d’autre que vous sait-il ouvrir, fermer, commander et gérer une journée complète ?</li>
+    <li>Chaque poste peut-il être tenu par au moins deux personnes formées ?</li>
+    <li>Les niveaux de compétence de l’équipe sont-ils à jour dans le référentiel ?</li>
+    <li>Les douze derniers mois de chiffres sont-ils tous dans le système, sans trou ?</li>
+    <li>Food cost, masse salariale, frais généraux : êtes-vous dans les normes du réseau, et savez-vous expliquer les écarts ?</li>
+    <li>Appliquez-vous les standards du réseau, sans version maison des procédures ?</li>
+    <li>Un repreneur comprendrait-il l’activité en une heure, avec le système seul ?</li>
+  </ol>
+  <p class="bt-src lien-auto">D’après l’article 0.0.56, « La boutique est-elle vendable demain ? ».</p>
 
   <div class="pied"><span>L’Atelier By · Manuel du réseau</span><span>Page 2 / 6</span></div>
 </section>
