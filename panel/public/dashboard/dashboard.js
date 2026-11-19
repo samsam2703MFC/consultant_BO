@@ -3759,7 +3759,7 @@
   }
   function rendOps() {
     const D = opDonnees();
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, INV, NC, PR, prods, vides, manques, trop, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk } = D;
     let h = '';
 
     /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
@@ -3787,9 +3787,8 @@
     const ligneF = (lb, haut, contenu) => `<div class="op-fl" style="height:${haut + 8}px"><span class="lb">${lb}</span><div class="pis" style="height:${haut}px">${contenu}${trait}</div></div>`;
     let frise = '';
     frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
-    frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
-    frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
-    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
+    // Les lignes Four, Vitrine et Commandes sont retirées (19/11/2026, Sam : « pour le moment elles ne servent à rien ») ;
+    // leur code est dans l'historique (git log -S "ligneF('Vitrine'").
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
