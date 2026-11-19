@@ -142,3 +142,4 @@
 2026-11-19T06:33:33Z [352] échantillons : 1 A4 par échantillon
 2026-11-19T06:57:56Z [353] procédures SOP
 2026-11-19T08:13:09Z [354] QR échantillons /q/KOD, retour après connexion
+2026-11-19T08:20:34Z [355] QR de pointage court
