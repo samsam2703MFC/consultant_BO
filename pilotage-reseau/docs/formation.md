@@ -1223,6 +1223,8 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
     quiz de deux questions, en FR et NL. Accès `responsable`, poste P11, classement D7.5. Source
     `data/formation/dirigeant/chk-bien-tenue.json`, encodée par `encoder_sop.py` (simulation, puis écriture). Elle
     entre dans le manuel des Checklists du catalogue, avec la pastille « à valider ».
+  - **Publiée le 19/11/2026** (Sam : « publie 5.6.02 ») : v1.0, relue au serveur « publiee » ; la pastille disparaît du
+    catalogue.
 
 ## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
 
