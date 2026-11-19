@@ -179,4 +179,5 @@
 2026-11-19T18:16:56Z Dashboard, La journée : les lignes Four, Vitrine et Commandes retirées de la frise (il reste l'Équipe)
 2026-11-19T18:27:33Z Catalogue des manuels : le manuel de pré-ouverture (compte à rebours, étapes, articles à lire)
 2026-11-19T18:30:58Z Dépliant des manuels : la page 7, la pré-ouverture (7 pages, 5 manuels)
+2026-11-19T18:35:37Z Dashboard au téléphone, La journée : les cuissons retirées de la frise (il reste le planning)
 2026-11-19T18:38:24Z Pré-ouverture : les compétences à acquérir par profil, QR code vers le CRM (crmUrl) ; dépliant, page 3 en chiffres lus
