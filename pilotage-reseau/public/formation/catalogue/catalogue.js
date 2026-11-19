@@ -37,7 +37,8 @@
       unite: { fr: 'domaines', nl: 'domeinen' } },
   ];
   var CONCURRENCE = 6;     // fiches lues en même temps
-  var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null };
+  var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null,
+    parCode: {}, parId: {}, debuts: {}, langPages: null };
   try { if (localStorage.getItem('ctLangue') === 'nl') S.langue = 'nl'; } catch (e) { /* */ }
   var root = document.getElementById('ct');
   var mesure = null;
@@ -58,6 +59,25 @@
     return q.createSvgTag({ cellSize: cellule || 4, margin: 0, scalable: true, alt: 'QR code : ' + url });
   }
   function photoUrl(p) { p = String(p); return p.indexOf('u/') === 0 ? API + '/formation/sop/photo/' + encodeURIComponent(p.slice(2)) : '../sop/photos/' + encodeURIComponent(p); }
+  /** Le manuel où se lit un document, d'après son type. */
+  function manuelDuType(t) { return t === 'Article' ? 'operatoire' : t === 'Checklist' ? 'checklists' : 'standards'; }
+  /** Le lien direct d'un document : sa page dans le feuilletage de son manuel (adresse complète : il reste cliquable dans le PDF). */
+  function lienDoc(d) { return base() + '#/m/' + manuelDuType(d.type) + '/d/' + encodeURIComponent(d.id); }
+  /**
+   * Un texte, échappé, où chaque code de document (0.1.01, 0.0.56…) ou de checklist (1.1.01, 5.5.01…) qui existe dans le
+   * module devient un lien direct (19/11/2026, Sam : « quand on parle d'une procédure, SOP, tâche ou checklist, mettre un
+   * lien direct dans le PDF »). Un code sans document (une checklist du panel sans fiche) reste du texte.
+   */
+  function lier(texte) {
+    return esc(texte).replace(/\b([0-5]\.[0-6]\.\d{2})\b/g, function (m0, code) {
+      var d = S.parCode[code];
+      return d ? '<a class="lien-doc" href="' + esc(lienDoc(d)) + '">' + code + '</a>' : m0;
+    });
+  }
+  function indexer() {
+    S.parCode = {}; S.parId = {};
+    ((S.liste && S.liste.sops) || []).forEach(function (d) { if (d.code) S.parCode[d.code] = d; S.parId[d.id] = d; });
+  }
   function manuelDe(cle) { return MANUELS.filter(function (m) { return m.cle === cle; })[0] || null; }
   function docsDe(m) {
     if (!S.liste || !m.types) return [];
@@ -188,8 +208,8 @@
     var B = [];
     var av = d.statut === 'a_valider' ? '<span class="chip-av">' + T('à valider', 'te valideren') + '</span>' : '';
     B.push({ neuve: true, html: '<div class="doc-code">' + esc(d.code) + ' · ' + esc(d.type) + av + '</div><h2>' + esc(L(c.titre) || L(d.titre)) + '</h2>' +
-      (L(c.objectif) ? '<div class="doc-obj">' + esc(L(c.objectif)) + '</div>' : '') +
-      (L(c.pour) ? '<div class="doc-pour">' + esc(L(c.pour)) + '</div>' : '') });
+      (L(c.objectif) ? '<div class="doc-obj">' + lier(L(c.objectif)) + '</div>' : '') +
+      (L(c.pour) ? '<div class="doc-pour">' + lier(L(c.pour)) + '</div>' : '') });
     if (!f || f.erreur) { B.push({ html: '<p>' + T('Fiche illisible pour l’instant.', 'Fiche nu niet leesbaar.') + '</p>' }); return B; }
     (c.sections || []).forEach(function (s) {
       var tete = L(s.titre) ? '<h3>' + esc(L(s.titre)) + '</h3>' : '';
@@ -197,17 +217,17 @@
         var lignes = String(L(e.texte) || '').split('\n').filter(function (x) { return x.trim() !== ''; });
         var cls = 'ligne' + (e.critique ? ' crit' : '');
         var titre = (L(e.titre) ? '<h4>' + esc(L(e.titre)) + '</h4>' : '') + (e.critique ? '<div class="crit-et">' + T('Point critique', 'Kritiek punt') + '</div>' : '');
-        var premiere = lignes.length ? '<p class="' + cls + '">' + esc(lignes[0]) + '</p>' : '';
+        var premiere = lignes.length ? '<p class="' + cls + '">' + lier(lignes[0]) + '</p>' : '';
         B.push({ html: tete + titre + premiere });
         tete = '';
-        lignes.slice(1).forEach(function (x) { B.push({ html: '<p class="' + cls + '">' + esc(x) + '</p>' }); });
+        lignes.slice(1).forEach(function (x) { B.push({ html: '<p class="' + cls + '">' + lier(x) + '</p>' }); });
         if (e.photo) B.push({ html: '<div class="photo"><img src="' + esc(photoUrl(e.photo)) + '" alt="" loading="eager"></div>' });
       });
     });
     var pcs = (c.points_critiques || []).map(L).filter(Boolean);
     if (pcs.length) {
-      B.push({ html: '<h3>' + T('Points critiques', 'Kritieke punten') + '</h3><div class="pc">' + esc(pcs[0]) + '</div>' });
-      pcs.slice(1).forEach(function (x) { B.push({ html: '<div class="pc">' + esc(x) + '</div>' }); });
+      B.push({ html: '<h3>' + T('Points critiques', 'Kritieke punten') + '</h3><div class="pc">' + lier(pcs[0]) + '</div>' });
+      pcs.slice(1).forEach(function (x) { B.push({ html: '<div class="pc">' + lier(x) + '</div>' }); });
     }
     var nq = (c.quiz || []).length;
     if (nq) B.push({ html: '<p style="color:var(--muted,#7a736a);font-size:8pt;margin-top:2mm">' + T('Quiz : ', 'Quiz: ') + nq + ' ' + T('questions, sur la tablette du magasin.', 'vragen, op de tablet van de winkel.') + '</p>' });
@@ -219,8 +239,8 @@
     (dom.souscats || []).forEach(function (sc) {
       var liste = st.filter(function (x) { return x.souscat === sc.cle; });
       B.push({ html: '<div class="sc"><b>' + esc(sc.cle) + '</b> · ' + esc(L(sc)) +
-        (sc.description ? '<small>' + esc(sc.description) + '</small>' : '') +
-        (liste.length ? '<ul>' + liste.map(function (x) { return '<li>' + esc(x.code) + ' · ' + esc(L(x)) + '</li>'; }).join('') + '</ul>'
+        (sc.description ? '<small>' + lier(sc.description) + '</small>' : '') +
+        (liste.length ? '<ul>' + liste.map(function (x) { var d = S.parId[x.id]; var t = esc(x.code) + ' · ' + esc(L(x)); return '<li>' + (d ? '<a class="lien-doc" href="' + esc(lienDoc(d)) + '">' + t + '</a>' : t) + '</li>'; }).join('') + '</ul>'
           : '<small>' + T('Aucun standard rangé ici pour l’instant.', 'Hier is nog geen standaard ingedeeld.') + '</small>') + '</div>' });
     });
     return B;
@@ -253,13 +273,14 @@
       entrees = doms.map(blocsDomaine);
     } else {
       var docs = docsDe(m);
-      titres = docs.map(function (d) { return { c: d.code, t: L(d.titre) }; });
+      titres = docs.map(function (d) { return { c: d.code, t: L(d.titre), href: lienDoc(d) }; });
       entrees = docs.map(function (d) { return blocsDocument(d, S.fiches[d.id]); });
     }
     var contenu = ranger(m, entrees);
     // Le sommaire : ses pages d'abord (numéros posés ensuite, quand on sait combien il en prend).
     var som = ranger(m, [[{ neuve: true, html: '<h2>' + T('Sommaire', 'Inhoud') + '</h2>' }]].concat(titres.map(function (x, k) {
-      return [{ html: '<div class="som"><span class="c">' + esc(x.c) + '</span><span class="t">' + esc(x.t) + '</span><span class="n" data-k="' + k + '"></span></div>' }];
+      var t = x.href ? '<a class="lien-som" href="' + esc(x.href) + '">' + esc(x.t) + '</a>' : esc(x.t);
+      return [{ html: '<div class="som"><span class="c">' + esc(x.c) + '</span><span class="t">' + t + '</span><span class="n" data-k="' + k + '"></span></div>' }];
     })));
     var cv = couverture(m);
     mesure.appendChild(cv);
@@ -269,6 +290,10 @@
       p.querySelectorAll('.som .n').forEach(function (n) { n.textContent = String(decal + contenu.debuts[+n.getAttribute('data-k')] + 1); });
     });
     toutes.forEach(function (p, j) { var n = p.querySelector('.pg-n'); if (n) n.textContent = T('Page ', 'Pagina ') + (j + 1) + ' / ' + toutes.length; });
+    S.debuts = {};
+    (m.ref ? ((S.ref && S.ref.domaines) || []).map(function (d) { return d.code; }) : docsDe(m).map(function (d) { return d.id; }))
+      .forEach(function (id, k) { S.debuts[id] = decal + contenu.debuts[k]; });
+    S.langPages = S.langue;
     return toutes;
   }
 
@@ -328,10 +353,30 @@
   function allerA(i) { S.i = Math.max(0, Math.min(S.pages.length - 1, i)); afficher(0); }
 
   /* ── l'impression (PDF) ── */
+  /**
+   * Les liens directs dans le PDF. Chrome change un lien « même page + #… » en lien interne au PDF, et l'abandonne si
+   * l'ancre n'existe pas : nos liens #/m/… disparaîtraient. Donc, dans la copie imprimée seulement :
+   *  - un document du même manuel → ancre de sa première page : le clic saute à la bonne page DU PDF ;
+   *  - un document d'un autre manuel → l'adresse du catalogue avec « ?m=<manuel> » (une autre adresse aux yeux de
+   *    Chrome, donc un vrai lien web) : le clic ouvre ce manuel en ligne, à la page du document.
+   */
+  function ancre(id) { return 'doc-' + String(id).replace(/[^\w-]/g, '_'); }
+  function lierPourPdf(zone) {
+    var pgs = zone.children, racine = location.origin + location.pathname;
+    Object.keys(S.debuts).forEach(function (id) { var pg = pgs[S.debuts[id]]; if (pg && !pg.id) pg.id = ancre(id); });
+    Array.prototype.forEach.call(zone.querySelectorAll('a.lien-doc, a.lien-som'), function (a) {
+      var r = /#\/m\/([^/]+)\/d\/([^/]+)$/.exec(a.getAttribute('href') || '');
+      if (!r) return;
+      var id = decodeURIComponent(r[2]);
+      if (S.manuel && r[1] === S.manuel.cle && S.debuts[id] != null && document.getElementById(ancre(id))) a.setAttribute('href', '#' + ancre(id));
+      else a.setAttribute('href', racine + '?m=' + r[1] + '#/m/' + r[1] + '/d/' + r[2]);
+    });
+  }
   function imprimerManuel() {
     var zone = document.getElementById('ct-imprime');
     zone.innerHTML = '';
     S.pages.forEach(function (p) { zone.appendChild(p.cloneNode(true)); });
+    lierPourPdf(zone);
     var imgs = Array.prototype.slice.call(zone.querySelectorAll('img'));
     Promise.race([
       Promise.all(imgs.map(function (im) { return im.complete ? Promise.resolve() : new Promise(function (ok) { im.onload = im.onerror = ok; }); })),
@@ -343,7 +388,7 @@
   }
 
   /* ── l'ouverture d'un manuel ── */
-  function ouvrirManuel(m, imprimer) {
+  function ouvrirManuel(m, imprimer, cible) {
     S.manuel = m; S.i = 0; S.pages = null;
     rendreChargement(m, 0, docsDe(m).length);
     // La police AVANT la mesure : Gotham (400 le texte, 700 les accents) ne se charge qu'à son premier emploi ; mesurer avec la
@@ -355,6 +400,7 @@
       if (S.manuel !== m) return;
       S.pages = paginer(m);
       rendreFeuilletage();
+      if (cible && S.debuts[cible] != null) allerA(S.debuts[cible]);
       if (imprimer) imprimerManuel();
     }).catch(function (e) {
       root.innerHTML = '<div class="ct-corps"><p class="ct-msg">' + esc(T('Lecture impossible : ', 'Lezen onmogelijk: ') + e.message) + '</p><p><a href="#/">← ' + T('Catalogue', 'Catalogus') + '</a></p></div>';
@@ -362,10 +408,20 @@
   }
 
   /* ── l'adresse ── */
-  function route() { var h = location.hash.replace(/^#\/?/, '').split('/'); return { ecran: h[0] || '', cle: h[1] || '', action: h[2] || '' }; }
+  function route() { var h = location.hash.replace(/^#\/?/, '').split('/'); return { ecran: h[0] || '', cle: h[1] || '', action: h[2] || '', id: h[3] ? decodeURIComponent(h[3]) : '' }; }
   function aller() {
     var r = route();
-    if (r.ecran === 'm' && manuelDe(r.cle)) { ouvrirManuel(manuelDe(r.cle), r.action === 'imprimer'); return; }
+    if (r.ecran === 'm' && manuelDe(r.cle)) {
+      var m = manuelDe(r.cle), cible = r.action === 'd' ? r.id : '';
+      // Le manuel est déjà mis en pages (un lien vers un de ses documents) : on y va sans tout relire.
+      if (S.manuel === m && S.pages && S.langPages === S.langue && document.getElementById('ct-livre')) {
+        if (cible && S.debuts[cible] != null) allerA(S.debuts[cible]);
+        else if (r.action === 'imprimer') imprimerManuel();
+        return;
+      }
+      ouvrirManuel(m, r.action === 'imprimer', cible);
+      return;
+    }
     S.manuel = null; S.pages = null;
     rendreGrille();
   }
@@ -373,6 +429,9 @@
   /* ── les gestes ── */
   document.addEventListener('click', function (e) {
     var q = e.target.closest('[data-qr]'); if (q) { fenetreQr(q.getAttribute('data-qr')); return; }
+    // Un lien direct vers le document où l'on est déjà (même adresse) : pas de « hashchange », on y retourne quand même.
+    var ln = e.target.closest('a.lien-doc, a.lien-som');
+    if (ln && ln.href.split('#')[0] === base() && ln.hash === location.hash) { e.preventDefault(); aller(); return; }
     var l = e.target.closest('[data-langue]');
     if (l) {
       S.langue = l.getAttribute('data-langue');
@@ -406,7 +465,7 @@
 
   /* ── au départ ── */
   Promise.all([
-    api('/formation/sop/liste').then(function (j) { S.liste = j; }),
+    api('/formation/sop/liste').then(function (j) { S.liste = j; indexer(); }),
     api('/formation/ref').then(function (j) { S.ref = j; }),
   ]).catch(function (e) { S.erreur = e.message; }).then(aller);
 })();

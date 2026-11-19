@@ -1095,3 +1095,22 @@ chaque fois un QR code qui ramène vers le manuel en question », puis « code i
   4 QR codes ; aucune erreur.
 - **À corriger sur le fil** : l'accès des équipes sans session (la tablette du magasin n'ouvre pas le catalogue) ; la
   longueur du manuel opératoire en PDF (un article par nouvelle page) ; les adresses des QR codes si une autre cible est voulue.
+
+### Liens directs dans les manuels et le PDF (19/11/2026)
+
+Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, mettre un lien direct dans le PDF ».
+
+- **Ce qui devient un lien** : tout code de document (`0.m.nn` : article, SOP, mémo, fiche) ou de checklist (`z.m.nn`) cité
+  dans le texte d'un document (objectif, public, lignes, points critiques) **s'il existe dans le module** ; les entrées du
+  sommaire ; dans le manuel du réseau, chaque standard rangé dans une sous-catégorie ; dans le dépliant, les codes cités
+  (0.0.21, 0.0.56, 5.5.01). Un code sans document (une checklist du panel sans fiche) reste du texte ; une tâche citée par
+  son seul libellé n'a pas de code, donc pas de lien.
+- **À l'écran** : le lien ouvre `#/m/<manuel>/d/<id>`, le manuel du document à sa première page (sans tout relire si le
+  manuel est déjà ouvert). Le manuel est déduit du type : Article → opératoire, Checklist → checklists, le reste → standards.
+- **Dans le PDF** : Chrome change un lien « même page + #… » en lien interne au PDF et l'abandonne sans ancre ; la copie
+  imprimée (`lierPourPdf`) pose donc une ancre sur la première page de chaque document. Un document du **même** manuel →
+  lien interne (le clic saute à la page du PDF) ; d'un **autre** manuel → `catalogue/?m=<manuel>#/m/<manuel>/d/<id>`, un
+  vrai lien web (il demande une session, comme le catalogue).
+- **Essai** : manuel opératoire, 98 liens dans le texte et le sommaire (87 internes, 11 vers les standards et les checklists),
+  standards 24, checklists 10 (sommaires), manuel du réseau 88 (tous vers les autres manuels), dépliant 3 ; liens internes
+  vérifiés (sommaire → bonne page du PDF) ; aucune erreur.

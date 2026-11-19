@@ -112,3 +112,9 @@ html, body { background: var(--paper, #faf7f2); }
 @media (pointer: coarse) {
   .ct-barre .btn, .ct-nav .btn, .ct-carte .btn { min-height: 44px; }
 }
+
+/* Les liens directs (19/11/2026) : un code de document ou de checklist cité dans un texte, et les entrées du sommaire. Ils
+ * restent cliquables dans le PDF (adresse complète du feuilletage). */
+.pg a.lien-doc { color: var(--accent, #8D1D2C); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 1.5px; }
+.pg a.lien-som { color: inherit; text-decoration: none; }
+.pg a.lien-som:hover { color: var(--accent, #8D1D2C); }
