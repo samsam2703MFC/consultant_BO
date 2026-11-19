@@ -2843,6 +2843,15 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 .rv-lien{border:none;background:none;color:var(--color-primary);font:400 12.5px var(--font-ui);cursor:pointer;padding:4px 0;margin:0 18px;text-align:left}
 .rv-bul .rv-lien{margin:6px 0 0;display:block}
 .rv-ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--color-text-muted);max-height:220px;overflow-y:auto}
+/* Les tâches pas faites (19/11/2026) : une par ligne, l'heure prévue en tête ; « cochée sans photo » quand seule la photo manque. */
+.rv-bul b.ko{color:#C0182B}.rv-bul b.ok{color:#2D7A3E}.rv-n0{font-size:12px;color:var(--color-text-muted)}
+.rv-pf{list-style:none;margin:8px 0 2px;padding:0;font-size:13px;line-height:1.3}
+.rv-pf li{display:grid;grid-template-columns:42px 1fr;column-gap:8px;padding:6px 0;border-top:1px solid var(--color-border-tertiary)}
+.rv-pf .h{color:#C0182B;font-variant-numeric:tabular-nums;font-size:12px;padding-top:1px}
+.rv-pf em{grid-column:2;font-style:normal;font-size:11px;color:#B45309}
+.rv-pq{margin-top:8px;font-weight:500}
+.rv-clt{margin:0;padding:0 11px 4px 42px;font-size:11.5px;background:#fdf4f5}.rv-clt li{padding:4px 0;border-top:1px dashed rgba(192,24,43,.18)}
+.rv-clt.e-npc{background:#fff}.rv-clt.e-npc .h{color:var(--color-text-muted)}.rv-clt.e-npc li{border-top-color:var(--color-border-tertiary)}
 .rv-com{display:flex;gap:8px;padding:6px 18px}.rv-com textarea,.rv-com input{flex:1;font:400 14px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:12px;padding:9px 11px}
 .rv-ta{margin:6px 18px;font:400 14px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:12px;padding:10px 12px;resize:vertical}
 .rv-q{margin:16px 18px 2px;font-size:13px;color:var(--color-text-muted)}
