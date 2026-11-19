@@ -69,13 +69,6 @@
         if (res.ok) reload();
     }));
 
-    // --- Próbka z kodu QR (telefon) -------------------------------------------------------------------------------------
-    document.querySelectorAll('[data-lc-store]').forEach(b => b.addEventListener('click', async () => {
-        b.disabled = true;
-        const res = await send('/ajax/production/samples/store', 'POST', {code: b.dataset.lcStore});
-        if (res.ok) reload(); else b.disabled = false;
-    }));
-
     // --- Asystent « Próbki produkcji » ------------------------------------------------------------------------------------
     const app = document.getElementById('lcSamples');
     const boot = document.getElementById('lcBoot');

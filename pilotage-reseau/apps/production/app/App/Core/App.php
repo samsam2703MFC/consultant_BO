@@ -55,12 +55,18 @@ class App
         // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila ;
         // [300] logowanie kodem QR (/ajax/login-qr, /ajax/login-qr/status) : kod i oczekiwanie tej przeglądarki.
         if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing', '/ajax/login-qr', '/ajax/login-qr/status'], true)
-            && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)) {
+            && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)
+            // [354] Próbka z kodu QR (telefon, często bez sesji ERP) : karta próbki i « odłożona » ; dawne adresy QR → /q/KOD.
+            && !preg_match('#^/(q|workshop/traceability/samples/s)/[A-Za-z0-9]{12}$#', $uri)) {
             if (str_starts_with($uri, '/ajax/')) {
                 http_response_code(401);
                 header('Content-Type: application/json');
                 echo json_encode(['message' => 'Unauthorized']);
                 return;
+            }
+            // [354] Strona otwierana bez sesji (np. kod QR procedury) : po zalogowaniu wraca się na nią, nie na /home.
+            if ($method === 'GET' && $uri !== '/' && !str_starts_with($uri, '/ajax/')) {
+                $_SESSION['AFTER_LOGIN'] = $uri . (($q = (string) ($_SERVER['QUERY_STRING'] ?? '')) !== '' ? '?' . preg_replace('/(^|&)url=[^&]*&?/', '$1', $q) : '');
             }
             header('Location: ' . ROOT . '/');
             return;

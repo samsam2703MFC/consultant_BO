@@ -5,7 +5,7 @@
     <a class="{{ tt == 'product' ? 'on' }}" href="{{ root }}/workshop/traceability"><i class="bi bi-upc-scan"></i> Partia produktu</a>
     <a class="{{ tt == 'lots' ? 'on' }}" href="{{ root }}/workshop/traceability/lots"><i class="bi bi-basket"></i> Partie surowców</a>
     <a class="{{ tt == 'check' ? 'on' }}" href="{{ root }}/workshop/traceability/check"><i class="bi bi-ui-checks"></i> Kontrola wejść</a>
-    <a class="{{ tt in ['samples', 'scan'] ? 'on' }}" href="{{ root }}/workshop/traceability/samples"><i class="bi bi-qr-code"></i> Próbki</a>
+    <a class="{{ tt == 'samples' ? 'on' }}" href="{{ root }}/workshop/traceability/samples"><i class="bi bi-qr-code"></i> Próbki</a>
 </nav>
 <style>
 .lc-tabs{display:flex;gap:4px;border-bottom:1px solid var(--at-line);margin:0 0 14px;flex-wrap:wrap}

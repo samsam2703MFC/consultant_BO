@@ -43,6 +43,7 @@ function expectLsFail(callable $fn, int $code, string $message): void
 
 // Bez bazy : kod próbki z treści QR, data przechowywania.
 expectLs(SampleService::codeFrom('http://erp.test/workshop/traceability/samples/s/ABCDEFGH2345') === 'ABCDEFGH2345', 'kod z adresu QR');
+expectLs(SampleService::codeFrom('http://192.168.1.150/production/q/ABCDEFGH2345') === 'ABCDEFGH2345', 'kod z krótkiego adresu QR (/q/KOD)');
 expectLs(SampleService::codeFrom('abcdefgh2345') === 'ABCDEFGH2345' && SampleService::codeFrom('ABC-123') === null, 'kod wpisany ręcznie / nieprawidłowy');
 expectLs(SampleService::keepUntil('2026-11-18', 180) === '2027-05-17' && SampleService::keepUntil('2026-11-18', null) === null, 'przechowywać do = dzień + trwałość karty');
 expectLs(MaterialLotService::normalize('  l 2611  -0458 ') === 'L 2611 -0458' && MaterialLotService::normalize('  ') === null, 'numer partii : wielkie litery, spacje');
@@ -210,12 +211,15 @@ try {
     $st = $samples->store('http://erp.test/workshop/traceability/samples/s/' . $codes['A-01'], 1);
     expectLs($st['status'] === 'stored' && $st['location'] === 'Zamrażarka próbek' && !$st['already'], 'skan adresu QR : próbka odłożona (miejsce z parametru)');
     expectLs($samples->store($codes['A-01'], 1)['already'], 'drugi skan : już odłożona');
+    $card = $samples->card('http://erp.test/q/' . $codes['A-02']);
+    expectLs($card !== null && $card['lot_code'] === 'A-02' && $card['status'] === 'printed' && is_array($card['lot_rows']) && $samples->card('ZZZZZZZZZZZZ') === null,
+        'karta próbki z kodu QR (/q/KOD) : partia, stan, partie surowców ; nieznany kod : brak');
     expectLsFail(fn() => $samples->store('ZZZZZZZZZZZZ', 1), 404, 'nieznany kod');
     expectLsFail(fn() => $samples->finish($today, 1), 409, 'zadanie : nie wszystkie próbki odłożone');
     $removable = $p['samples'][array_search('A-03', array_column($p['samples'], 'lot_code'), true)]['id'];
     $samples->remove($removable);
     expectLsFail(fn() => $samples->remove((int) $st['id']), 409, 'próbka odłożona nie usuwa się');
-    $samples->store($codes['A-02'], 1);
+    expectLs($samples->store($codes['A-02'], null, 'półka 2')['stored_by'] === null, 'odłożona z telefonu bez logowania (bez osoby), miejsce z formularza');
     $done = $samples->finish($today, 1);
     expectLs($done['done'] !== null && $done['done']['summary'] === '2 próbki odłożone', 'wszystkie odłożone : zadanie zaliczone (n_wizard_done)');
     // Następny dzień tygodnia : Ciasta mają już próbkę w tym tygodniu ? (A-03 usunięta → nie) ; Pieczywo każda partia.
