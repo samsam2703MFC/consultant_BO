@@ -330,14 +330,14 @@
         let refresh = () => {};
         const cq = window.TfbClockQuestions(questions, {t, esc, catalog: (me.questions && me.questions.catalog) || [], onChange: () => refresh()});
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-confirm office-confirm">
-                <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
+                <div class="office-confirm-main"><div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
                     <span class="office-action is-${direction}">${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</span></div></div>
-                ${cq.html}
-                <div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
+                ${cq.html}</div>
+                <div class="office-confirm-side"><div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
                     <canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas>
                     <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
                 <p class="kiosk-error" data-error>${esc(error || '')}</p>
-                <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
+                <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button></div>
             </section>`;
         const ok = el.querySelector('[data-confirm]');
         const pad = signaturePad(el.querySelector('[data-pad]'), () => refresh());
