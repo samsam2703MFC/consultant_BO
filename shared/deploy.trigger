@@ -176,3 +176,4 @@
 2026-11-19T16:43:53Z Réorganisation en quatre domaines : dossiers, clés dans erp_cles, 144 tables renommées par migrations (aucune suppression)
 2026-11-19T17:11:41Z Réorganisation, phase 4 : ceo_assistant_question supprimée (sauvegarde vérifiée), sa reprise unique retirée du code
 2026-11-19T18:01:52Z Cockpit : Vérification › Chiffre d'affaires et Fidélité retirés ; MétaDonnée › Formulaires, la liste sur toute la largeur ; Assistant · coachs, l'onglet KPI (ce que lit chaque assistant, et son modèle)
+2026-11-19T18:16:56Z Dashboard, La journée : les lignes Four, Vitrine et Commandes retirées de la frise (il reste l'Équipe)
