@@ -23,8 +23,9 @@ html, body { background: var(--paper, #faf7f2); }
 .ct-couv::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: rgba(0, 0, 0, .18); }
 .ct-couv .n { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
 .ct-couv .t { font-size: 20px; line-height: 1.2; }
-/* L'illustration des couvertures (19/11/2026) : au trait, couleur du texte de la couverture. */
-.ct-couv .ill { width: 92px; height: 92px; align-self: center; opacity: .92; flex: none; }
+/* Les illustrations de la marque (19/11/2026) : l'image sert de masque, la couleur est celle du texte de la couverture. */
+.illu { display: block; background-color: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.ct-couv .ill { width: 128px; height: 112px; align-self: center; flex: none; }
 .ct-couv .bas { display: flex; flex-direction: column; gap: 6px; }
 .ct-couv .s { font-size: 12px; opacity: .9; }
 .ct-carte h3 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; }
@@ -88,7 +89,7 @@ html, body { background: var(--paper, #faf7f2); }
 .pg.couv .logo img { height: 8mm; display: block; }
 .pg.couv .k { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
 .pg.couv .t { font-size: 24pt; line-height: 1.1; margin: 3mm 0 2mm; max-width: 82mm; }
-.pg.couv .ill-couv { position: absolute; right: 12mm; top: 10mm; width: 36mm; height: 36mm; opacity: .92; }
+.pg.couv .ill-couv { position: absolute; right: 10mm; top: 8mm; width: 42mm; height: 42mm; }
 .pg.couv .s { font-size: 10pt; opacity: .92; max-width: 82mm; }
 .pg.couv .qr { position: absolute; right: 12mm; bottom: 12mm; background: #fff; border-radius: 2mm; padding: 2mm; }
 .pg.couv .qr svg { width: 26mm; height: 26mm; display: block; }
@@ -165,4 +166,4 @@ html, body { background: var(--paper, #faf7f2); }
 
 /* La carte du dépliant : le Beige de la marque (§13.3), son illustration en Noir. */
 .ct-carte-dep { background: #EAE4DC; border-color: transparent; }
-.ct-carte-dep .ill-dep { width: 64px; height: 64px; color: #222222; opacity: .85; }
+.ct-carte-dep .ill-dep { width: 96px; height: 80px; color: var(--accent, #8D1D2C); }

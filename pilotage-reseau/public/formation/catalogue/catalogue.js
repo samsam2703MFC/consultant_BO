@@ -36,33 +36,25 @@
       unite: { fr: 'checklists', nl: 'checklists' } },
     { cle: 'reseau', couleur: '#F2C9A0', encre: '#222222', ref: true,
       titre: { fr: 'Manuel du réseau', nl: 'Netwerkhandboek' },
-      sous: { fr: 'Le classeur : les domaines, puis les postes, leurs formations et leurs compétences', nl: 'De klasseur: de domeinen, dan de functies, hun opleidingen en competenties' },
+      sous: { fr: 'Le classeur : les domaines et les postes', nl: 'De klasseur: de domeinen en de functies' },
       unite: { fr: 'domaines', nl: 'domeinen' } },
   ];
   /*
-   * Les illustrations des couvertures : dessins au trait, dans l'esprit des icônes du design system (§7.12 : linéaires,
-   * bouts et angles arrondis, couleur du texte), à plus grande échelle. Opératoire : le livre ouvert et l'épi ;
-   * standards : la toque ; checklists : la planchette cochée ; réseau : les magasins reliés ; dépliant : le dépliant plié.
+   * Les illustrations des couvertures (19/11/2026, Sam : « illustrations du design system ») : celles de la marque, au trait
+   * continu, des gammes et des familles de produits, déjà servies par le cockpit (public/tablette/img/p,
+   * public/assets/img/newsletter). Posées en masque, elles prennent la couleur du texte de la couverture : crème sur le
+   * Ruby, le Noir et le Pop-Up, Noir sur l'Abricot ; Ruby, leur couleur d'origine, sur la carte Beige du dépliant.
    */
-  var BOUTIQUE = '<path d="M-18 12 L-14 0 H14 L18 12 Z"/><path d="M-18 12 q4.5 6 9 0 q4.5 6 9 0 q4.5 6 9 0 q4.5 6 9 0"/><path d="M-15 15 V36 H15 V15"/><path d="M-5 36 V24 H5 V36"/>';
   var ILLUS = {
-    operatoire: '<path d="M60 50 C48 42 30 40 16 42 V100 C30 98 48 100 60 108 C72 100 90 98 104 100 V42 C90 40 72 42 60 50 Z"/><path d="M60 50 V108"/>' +
-      '<path d="M26 56 C36 55 44 57 50 60 M26 68 C36 67 44 69 50 72 M26 80 C36 79 44 81 50 84 M94 56 C84 55 76 57 70 60 M94 68 C84 67 76 69 70 72 M94 80 C84 79 76 81 70 84"/>' +
-      '<path d="M60 44 V12"/><path d="M60 40 C53 38 50 33 50 27 C56 28 60 33 60 40 Z M60 40 C67 38 70 33 70 27 C64 28 60 33 60 40 Z M60 28 C54 26 52 22 52 17 C57 18 60 22 60 28 Z M60 28 C66 26 68 22 68 17 C63 18 60 22 60 28 Z"/>',
-    standards: '<path d="M36 76 C24 74 18 60 28 51 C27 37 43 30 53 37 C57 26 75 25 80 37 C92 32 104 46 95 58 C102 66 96 78 84 76"/>' +
-      '<rect x="36" y="76" width="48" height="20" rx="3"/><path d="M48 76 V96 M60 76 V96 M72 76 V96"/><path d="M53 37 C50 44 50 52 52 60 M80 37 C76 45 74 52 73 60"/>',
-    checklists: '<rect x="28" y="24" width="64" height="84" rx="6"/><rect x="46" y="16" width="28" height="14" rx="4"/>' +
-      '<rect x="38" y="42" width="12" height="12" rx="2"/><path d="M40.5 48 L43.5 51 L48.5 44.5"/><path d="M58 48 H82"/>' +
-      '<rect x="38" y="62" width="12" height="12" rx="2"/><path d="M40.5 68 L43.5 71 L48.5 64.5"/><path d="M58 68 H82"/>' +
-      '<rect x="38" y="82" width="12" height="12" rx="2"/><path d="M58 88 H76"/>',
-    reseau: '<g transform="translate(60 22)">' + BOUTIQUE + '</g><g transform="translate(26 70) scale(.75)">' + BOUTIQUE + '</g><g transform="translate(94 70) scale(.75)">' + BOUTIQUE + '</g>' +
-      '<path d="M44 62 L34 70 M76 62 L86 70 M40 98 H80" stroke-dasharray="1 7"/>',
-    depliant: '<path d="M20 34 L46 26 L74 34 L100 26 V86 L74 94 L46 86 L20 94 Z"/><path d="M46 26 V86 M74 34 V94"/>' +
-      '<rect x="80" y="46" width="13" height="13" rx="1.5"/><path d="M27 48 H40 M27 58 H40 M27 68 H36 M53 46 H67 M53 56 H67 M53 66 H62"/>',
+    operatoire: '../../tablette/img/p/croissant.png',
+    standards: '../../tablette/img/p/bread-1.png',
+    checklists: '../../tablette/img/p/sweet-tart-small.png',
+    reseau: '../../assets/img/newsletter/cake.png',
+    depliant: '../../tablette/img/p/cookies.png',
   };
   function illustration(cle, classe) {
-    return ILLUS[cle] ? '<svg class="' + (classe || 'ill') + '" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-      ILLUS[cle].replace(/<path /g, '<path vector-effect="non-scaling-stroke" ').replace(/<rect /g, '<rect vector-effect="non-scaling-stroke" ') + '</svg>' : '';
+    var u = ILLUS[cle];
+    return u ? '<span class="illu ' + (classe || 'ill') + '" aria-hidden="true" style="-webkit-mask-image:url(' + u + ');mask-image:url(' + u + ')"></span>' : '';
   }
   var CONCURRENCE = 6;     // fiches lues en même temps
   var S = { liste: null, ref: null, fiches: {}, langue: 'fr', manuel: null, pages: null, i: 0, erreur: null,

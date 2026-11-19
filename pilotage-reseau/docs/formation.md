@@ -1315,12 +1315,18 @@ Sam : « quand on parle d'une procédure, SOP ou autre, tâche ou checklist, met
   | Manuel du réseau | Abricot `#F2C9A0` | Noir `#222222` |
   | Carte du dépliant | Beige `#EAE4DC` | — |
 
-  Chaque couverture, en carte et en page A5, porte une illustration au trait dans l'esprit des icônes (§7.12) :
-  - le livre ouvert et l'épi (manuel opératoire) ;
-  - la toque (standards) ;
-  - la planchette cochée (checklists) ;
-  - trois magasins reliés (manuel du réseau) ;
-  - le dépliant plié (carte du dépliant).
+  Chaque couverture, en carte et en page A5, porte une **illustration de la marque** (Sam : « illustrations du design
+  system »). Ce sont les dessins au trait continu des gammes et des familles, déjà servis par le cockpit et repris tels
+  quels :
+  - le croissant (manuel opératoire), `tablette/img/p/croissant.png` ;
+  - la baguette (standards), `tablette/img/p/bread-1.png` ;
+  - la tartelette (checklists), `tablette/img/p/sweet-tart-small.png` ;
+  - le gâteau sous cloche (manuel du réseau), `assets/img/newsletter/cake.png` ;
+  - les cookies (carte du dépliant), `tablette/img/p/cookies.png`.
+
+  L'image sert de masque CSS : le trait prend la couleur du texte de la couverture (crème, ou Noir sur l'Abricot). Sur la
+  carte Beige du dépliant, il garde son Ruby d'origine.
 
   À l'impression, les couleurs restent (`print-color-adjust: exact`, §13.1). Le sous-titre du manuel du réseau annonce
-  les postes. Mise en ligne par la branche par défaut (PR), selon la règle du 19/11/2026 (CLAUDE.md du dossier).
+  les postes (« Le classeur : les domaines et les postes »). Mise en ligne par la branche par défaut (PR), selon la règle
+  du 19/11/2026 (CLAUDE.md du dossier).
