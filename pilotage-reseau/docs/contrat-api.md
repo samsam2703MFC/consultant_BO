@@ -5657,13 +5657,25 @@ les points vérifiés en ordre en un écran vert, un écran par point de gestion
 demain, la clôture.
 
     GET /soir/revue?shop=4&date=…            { heure, raisons, checklists: { taches, faites, liste[{ nom, code, titre,
-                                               heure, faites, total, manquent[] }], qui[] }, points[{ …, sonde }], revue }
+                                               heure, faites, total, manquent[], pasFaites[{ tache, heure,
+                                               etat: 'pasFaite'|'photo' }] }], qui[] }, points[{ …, sonde }], revue }
     GET /soir/revue?shop=4&date=…&leger=1    { heure, revue } — l'état du bouton, sans sonder
     PUT /soir/revue                          { shop, date, par, reponses: { point: { r, c } }, checklists: { nom: { r, c } },
                                                demain, cloturer, rouvrir } — enregistrée à chaque réponse ; 409 si clôturée
 
 Table `ceo_revue_soir` (id_shop, jour, par, reponses JSON, statut encours|cloturee, maj_le, cloture_le), créée à la
 première lecture. La clôture s'inscrit au journal (« Revue du soir »).
+
+**Les tâches pas faites, et la caisse sans écart (19/11/2026).** Chaque checklist pas finie porte `pasFaites[]` : ses
+tâches obligatoires pas faites (40 au plus), rangées à l'heure prévue (sans heure à la fin), avec ce qui manque —
+`pasFaite` (pas rendue) ou `photo` (cochée sans la photo demandée). `manquent[]` (les mêmes noms) reste pour un écran
+ouvert avant la mise en ligne. L'écran les montre partout : le nombre de tâches pas faites dans le résumé et par
+checklist, la liste d'emblée sur l'écran de chaque checklist (huit, puis « + N autres »), avant « Pourquoi ? », et à la
+fin sous chaque checklist pas finie (la première tuile dit « N pas faites sur T »). Le point **caisse** devient
+« Caisse clôturée » — « La journée est-elle clôturée dans la caisse ? » (Oui, clôturée · Pas encore) : le monnayeur
+compte l'argent, il n'y a ni fond de caisse à compter ni écart à noter. Un réglage enregistré avant (`version` 1) dont la
+caisse parlait encore d'écart est lu avec la caisse sans écart (`rsMigrer`), jusqu'à ce qu'il soit réenregistré au
+cockpit (`version` 2). Tests : `php bin/tests_revue_soir.php`.
 
 ### Dashboard › Mon catalogue — relayé au portail Marketing (14/11/2026)
 
