@@ -158,3 +158,4 @@
 2026-11-19T11:56:31Z [365] Heures de nuit 21–05, semaines, remarque du jour
 2026-11-19T12:11:19Z [366] Réclamations : photos dans la fenêtre
 2026-11-19T14:33:17Z Revue du soir : les tâches pas faites montrées clairement, la caisse sans écart (monnayeur)
+2026-11-19T14:48:38Z Fil du franchisé (fil et calendrier, au cockpit seulement) ; rail : Dashboard magasin retiré
