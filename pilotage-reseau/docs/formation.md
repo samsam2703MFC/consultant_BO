@@ -1170,3 +1170,14 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   ici (`claude/lucid-pascal-3ps6at`) n’est qu’une copie ancienne : elle diffère de la version publiée sur 228 points (durée,
   quiz 5 et 6…). **Ne pas encoder à partir de cette copie** : elle republierait un texte plus ancien. Le source à jour est sur
   `claude/loving-turing-n6j40s`, qui garde l’ancienne règle.
+
+## Les photos de contrôle : cadrer, montrer, expliquer (19/11/2026)
+
+- Sam : « rajouter dans le manuel opératoire : comment faire les photos de qualité (cadrage, ce qu’on veut voir), comment
+  l’expliquer à son staff ».
+- Article `art-photos-qualite` (D8.2, phase opérationnel, tous les postes, FO-04, accès tous) : pourquoi une photo compte
+  (comparaison au planogramme, notation de 1 à 5), cadrage (de face, tout le comptoir, ce qu’on veut voir, produits entamés
+  non écartés), prise de vue et application, puis comment l’expliquer à l’équipe (pourquoi d’abord, démonstration, retour du
+  jour, photo mal faite = point de formation). Liée aux checklists 1.1.02 et 1.3.02.
+- Encodé en v1.0 « à valider ». Consigne générale : `rayons_photos.php` ; conseils de prise de vue et démonstration à valider
+  (`data/formation/photos-qualite/LISEZMOI.md`).
