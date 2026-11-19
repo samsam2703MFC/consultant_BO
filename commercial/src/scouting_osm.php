@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 /**
  * Les lieux à démarcher autour d'un magasin, relevés dans OpenStreetMap
- * (GET /scouting/demarchage : Développement commercial, Prospection).
+ * (GET /scouting/demarchage, appelé par shared/src/endpoints.php) : la Prospection du
+ * portail Commercial, qu'il a suivie le 19/11/2026.
  *
  * Ce fichier portait tout le cache OpenStreetMap du Scouting commercial
  * (secteurs, zoning d'activité, étude locale, relecture hebdomadaire). L'écran

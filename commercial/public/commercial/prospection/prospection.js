@@ -1,9 +1,10 @@
 /* Prospection — la liste de démarchage du magasin, un CRM minimal, la carte
  * des concentrations et le calculateur de pénétration.
  *
- * Un seul module, deux hôtes : l'écran « Prospection » du cockpit (bureau,
- * deux colonnes) et la page mobile public/prospection/ (une colonne, quatre
- * onglets — la liste et l'annotation en tournée). Les lieux viennent de
+ * Une seule page, dans le portail Commercial depuis le 19/11/2026 :
+ * /commercial/prospection/ (commercial/public/commercial/prospection/), en deux
+ * colonnes sur grand écran, et sur le téléphone en une colonne, quatre onglets
+ * (la liste et l'annotation en tournée). Les lieux viennent de
  * ../api/cockpit/scouting/demarchage (OpenStreetMap autour du magasin, gardé
  * 45 jours au serveur) ; la position du magasin de /scouting/reseau ; ce que
  * le franchisé fait de chaque lieu (ma liste, statut, visite, note) vit AU

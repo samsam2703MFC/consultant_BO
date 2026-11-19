@@ -6,6 +6,13 @@ declare(strict_types=1);
  * démarchage : dans ma liste, date de visite, retour, note (la note part au
  * CRM marketing). Une ligne par magasin et par lieu OpenStreetMap.
  *
+ * Dans le portail Commercial depuis le 19/11/2026 (Sam : « transvaser tout le
+ * /prospection/ dans le /commercial ») : la page est servie à
+ * /commercial/prospection/, l'ancienne adresse du cockpit y renvoie, et la
+ * table du Marketing devient sm_prospect (migration 006_prospection_commercial,
+ * registre shared/src/reorg_tables.php). Les routes ne changent pas :
+ * /prospection/{shop}, /prospection/offres.
+ *
  * Gardé AU SERVEUR, pas dans le navigateur : la liste se prépare au bureau
  * dans le cockpit et se coche sur le téléphone en tournée — deux appareils,
  * une seule réserve. Les lieux eux-mêmes viennent de /scouting/demarchage.
@@ -120,7 +127,7 @@ function wr_prospection_offres_put(): array
 
 function ensureProspection(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS mar_prospect ('
+    Db::exec('CREATE TABLE IF NOT EXISTS sm_prospect ('
         . 'shop_id VARCHAR(16) NOT NULL,'
         . 'place_id VARCHAR(24) NOT NULL,'        // id OSM : n123, w123, r123
         . 'nom VARCHAR(200) NOT NULL DEFAULT "",'  // rappel, pour lire la table sans la carte
@@ -135,7 +142,7 @@ function ensureProspection(): void
         . 'updated_at DATETIME NOT NULL,'
         . 'PRIMARY KEY (shop_id, place_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    try { Db::exec('ALTER TABLE mar_prospect ADD COLUMN offre VARCHAR(16) NOT NULL DEFAULT ""'); } catch (Throwable $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE sm_prospect ADD COLUMN offre VARCHAR(16) NOT NULL DEFAULT ""'); } catch (Throwable $e) { /* déjà là */ }
 }
 
 function prShop(string $shop): string
@@ -157,7 +164,7 @@ function ep_prospection(string $shop): array
     ensureProspection();
     $shop = prShop($shop);
     $out = [];
-    foreach (Db::rows('SELECT * FROM mar_prospect WHERE shop_id = ? ORDER BY updated_at DESC', [$shop]) as $r) { $out[$r['place_id']] = prRow($r); }
+    foreach (Db::rows('SELECT * FROM sm_prospect WHERE shop_id = ? ORDER BY updated_at DESC', [$shop]) as $r) { $out[$r['place_id']] = prRow($r); }
     return ['shop' => $shop, 'lieux' => (object) $out, 'n' => count($out)];
 }
 
@@ -177,7 +184,7 @@ function wr_prospection_put(string $shop): array
     foreach (array_slice($lieux, 0, 400, true) as $id => $p) {
         $id = (string) $id;
         if (!preg_match('/^[nwr]\d{1,15}$/', $id) || !is_array($p)) { continue; }
-        $cur = Db::row('SELECT * FROM mar_prospect WHERE shop_id = ? AND place_id = ?', [$shop, $id]);
+        $cur = Db::row('SELECT * FROM sm_prospect WHERE shop_id = ? AND place_id = ?', [$shop, $id]);
         $coche = array_key_exists('coche', $p) ? (!empty($p['coche']) ? 1 : 0) : (int) ($cur['coche'] ?? 0);
         $visite = array_key_exists('visite', $p) ? (string) $p['visite'] : (string) ($cur['visite'] ?? '');
         if ($visite !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $visite)) { $visite = ''; }
@@ -194,14 +201,14 @@ function wr_prospection_put(string $shop): array
         $nom = array_key_exists('nom', $p) ? mb_substr(trim((string) $p['nom']), 0, 200) : (string) ($cur['nom'] ?? '');
         $le = (array_key_exists('note', $p) || array_key_exists('retour', $p) || array_key_exists('visite', $p) || array_key_exists('action', $p)) ? date('Y-m-d') : ($cur['le'] ?? null);
         if (!$coche && $visite === '' && $retour === '' && $note === '' && $action === '' && $offre === '') {
-            if ($cur) { Db::exec('DELETE FROM mar_prospect WHERE shop_id = ? AND place_id = ?', [$shop, $id]); $faits++; }
+            if ($cur) { Db::exec('DELETE FROM sm_prospect WHERE shop_id = ? AND place_id = ?', [$shop, $id]); $faits++; }
             continue;
         }
-        Db::exec('INSERT INTO mar_prospect (shop_id, place_id, nom, coche, visite, retour, note, action, action_le, offre, le, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())'
+        Db::exec('INSERT INTO sm_prospect (shop_id, place_id, nom, coche, visite, retour, note, action, action_le, offre, le, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())'
             . ' ON DUPLICATE KEY UPDATE nom = VALUES(nom), coche = VALUES(coche), visite = VALUES(visite), retour = VALUES(retour), note = VALUES(note), action = VALUES(action), action_le = VALUES(action_le), offre = VALUES(offre), le = VALUES(le), updated_at = NOW()',
             [$shop, $id, $nom, $coche, $visite !== '' ? $visite : null, $retour, $note !== '' ? $note : null, $action, $actionLe !== '' ? $actionLe : null, $offre, $le]);
         $faits++;
-        $r = Db::row('SELECT * FROM mar_prospect WHERE shop_id = ? AND place_id = ?', [$shop, $id]);
+        $r = Db::row('SELECT * FROM sm_prospect WHERE shop_id = ? AND place_id = ?', [$shop, $id]);
         if ($r) { $out[$id] = prRow($r); }
     }
     return ['ok' => true, 'faits' => $faits, 'lieux' => (object) $out];

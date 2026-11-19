@@ -27,14 +27,12 @@ require __DIR__ . '/../../../shared/src/panel_api.php';
 require __DIR__ . '/../../../shared/src/erp_api.php';
 require __DIR__ . '/../../../shared/src/anthropic.php';
 require __DIR__ . '/../../../marketing/src/google_api.php';
-require __DIR__ . '/../../../marketing/src/scouting_osm.php';
 require __DIR__ . '/../../../marketing/src/newsletter.php';
 require __DIR__ . '/../../../marketing/src/newsletter_envoi.php';
 require __DIR__ . '/../../../marketing/src/fidelite.php';
 require __DIR__ . '/../../../marketing/src/fidelite_profils.php';   // Fidélité › Profils clients (12/11/2026)
 require __DIR__ . '/../../../panel/src/assistant_magasin.php';   // L'assistant du dashboard magasin (12/11/2026)
 require __DIR__ . '/../../../marketing/src/fidelite_cartes.php';     // Les cartes de fidélité, lues dans l'ERP (13/11/2026)
-require __DIR__ . '/../../../marketing/src/prospection.php';
 require __DIR__ . '/../../../consultant/src/visites_questions.php';
 require __DIR__ . '/../../../consultant/src/visites.php';
 require __DIR__ . '/../../../consultant/src/visites_kpi.php';
@@ -163,6 +161,10 @@ require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › An
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
+// La Prospection (liste de démarchage, types d'offre) et son relevé OpenStreetMap : dans le portail Commercial depuis le
+// 19/11/2026, page /commercial/prospection/ ; les routes /prospection/… et /scouting/demarchage ne changent pas.
+require __DIR__ . '/../../../commercial/src/scouting_osm.php';
+require __DIR__ . '/../../../commercial/src/prospection.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
