@@ -261,7 +261,7 @@ $creees = msTablesCreees(dirname(__DIR__));
 $sansCreation = array_filter($noms, static fn ($n) => !isset($creees[$n]));
 verifie('chaque table du registre est créée par le code (CREATE TABLE)', $sansCreation === [], json_encode(array_values($sansCreation)));
 $restes = [];
-foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql']) as $f) {
+foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), glob(dirname(__DIR__) . '/src/franchise/*.php') ?: [], [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql']) as $f) {
     if (str_ends_with($f, 'marketing_tables.php')) { continue; }
     $t = (string) file_get_contents($f);
     foreach (array_filter(array_column(MAR_TABLES, 'ancien')) as $a) { if (preg_match('/\b' . $a . '\b/', $t)) { $restes[] = basename($f) . ':' . $a; } }
@@ -283,7 +283,7 @@ $sansCreation = array_filter($noms, static fn ($n) => !isset($creees[$n]));
 verifie('chaque table con_ est créée par le code (CREATE TABLE)', $sansCreation === [], json_encode(array_values($sansCreation)));
 verifie('chaque table con_ dit sa ressource d’API (chemin, clé)', !array_filter(CON_TABLES, static fn ($d) => empty($d['api']['chemin']) || empty($d['api']['cle'])));
 $restes = [];
-foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), glob(dirname(__DIR__) . '/bin/*.php'), [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql', dirname(__DIR__) . '/sql/grants.sql']) as $f) {
+foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), glob(dirname(__DIR__) . '/src/franchise/*.php') ?: [], glob(dirname(__DIR__) . '/bin/*.php'), [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql', dirname(__DIR__) . '/sql/grants.sql']) as $f) {
     if (str_ends_with($f, 'con_tables.php') || str_ends_with($f, 'tests.php')) { continue; }
     $t = (string) file_get_contents($f);
     foreach (array_column(CON_TABLES, 'ancien') as $a) { if (preg_match('/\b' . $a . '\b/', $t)) { $restes[] = basename($f) . ':' . $a; } }

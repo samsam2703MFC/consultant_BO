@@ -72,6 +72,15 @@ final class PageAccessRepository extends WorkshopRepository
     }
 
     /** Czy ktokolwiek ma rolę administratora (bez tego konto « admin » zostaje administratorem — bez blokady dostępu). */
+    /** [339] Kierownik produkcji (stanowisko) albo rola modułu prod_admin / prod_manager bez grupy. */
+    public function isProductionManager(int $userId): bool
+    {
+        return (bool) $this->all("SELECT 1 FROM n_user_position up JOIN n_position p ON p.id = up.id_position
+                                   WHERE up.id_user = ? AND p.code = 'KIEROWNIK_PRODUKCJI'
+                                  UNION SELECT 1 FROM n_prod_user_role WHERE id_user = ? AND id_group IS NULL
+                                   AND role_code IN ('prod_admin', 'prod_manager') LIMIT 1", [$userId, $userId]);
+    }
+
     public function anyProdAdmin(): bool
     {
         return (bool) $this->all("SELECT 1 FROM n_prod_user_role WHERE role_code = 'prod_admin' AND id_group IS NULL LIMIT 1");

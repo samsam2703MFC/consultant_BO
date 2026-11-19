@@ -1251,7 +1251,7 @@ $prevMonth = date('Y-m', strtotime('first day of last month'));
 [$s, $b] = $call('POST', '/kiosk/clocks', ['employee_id' => $jan, 'clock_in' => $prevMonth . '-10 21:00', 'clock_out' => $prevMonth . '-11 07:00', 'note' => 'zmiana nocna'], $access);
 check($s === 201, 'manual entry added');
 [$s, $ts] = $call('GET', "/kiosk/employees/{$jan}/timesheet?month={$prevMonth}", null, $access);
-check($s === 200 && $ts['data']['totals']['hours'] == 10.0 && $ts['data']['totals']['night_hours'] == 8.0 && $ts['data']['days'][0]['source'] === 'manual', 'timesheet: 10 h of which 8 h at night (22:00–06:00)');
+check($s === 200 && $ts['data']['totals']['hours'] == 10.0 && $ts['data']['totals']['night_hours'] == 8.0 && $ts['data']['days'][0]['source'] === 'manual', 'timesheet: 10 h of which 8 h at night (21:00–05:00)');
 [$s, $ts] = $call('GET', "/kiosk/employees/{$jan}/timesheet?month={$month}", null, $access);
 check($s === 200 && $ts['data']['totals']['hours'] == 2.0 && $ts['data']['totals']['signed'] === 1 && $ts['data']['days'][0]['corrected'] && $ts['data']['month_signature'] !== null
     && $ts['data']['totals']['signed_in'] === 1 && $ts['data']['days'][0]['signature_in_id'] !== null, 'timesheet of the month: corrected 2 h, day signed at entry and exit, signed month');
@@ -1278,6 +1278,7 @@ check($s === 422 && $codes($b) === ['base:INVALID_URL'], 'QR address must be htt
 $qr = substr($q['data']['url'], strpos($q['data']['url'], '#t=') + 3);
 check($s === 200 && str_starts_with($q['data']['url'], 'https://erp.example/production/kiosk/scan#t=') && $q['data']['expires_in'] === 90 && $q['data']['refresh_s'] === 20
     && $q['data']['size'] >= 21 && count($q['data']['rows']) === $q['data']['size'] && strlen($q['data']['rows'][0]) === $q['data']['size'], 'tablet shows a QR of the scan page (matrix) with a short token');
+check(strlen($qr) === 11 && $qr[0] === 'Q', 'QR address carries an 11-character code, not the signed token [355]');
 [$s, $b] = $phone('GET', '/kiosk/phone/people', null, 'nonsense');
 check($s === 401 && $b['description'] === 'QR_INVALID', 'invalid QR refused');
 $expired = (new Jwt(str_repeat('s', 48)))->encode(['aud' => KioskAuthService::QR_AUDIENCE, 'dev' => $dev['data']['id'], 'iat' => time() - 200, 'nbf' => time() - 200, 'exp' => time() - 100]);

@@ -383,8 +383,10 @@ class App {
       promoTableau: 'promotions', promoEdition: 'promotions/edition',
       croisements: 'croisements',
       fonds: 'fonds',
-      mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
+      mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring',
       suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
+      // L'entraînement de l'IA (15/11/2026) : rayon par rayon, consigne, photos modèles, leçons.
+      iaEntrainement: 'suivi/entrainement',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
@@ -431,7 +433,7 @@ class App {
   static get ADRESSES_ANCIENNES(){
     return { 'budget-encodage': 'encodage', 'budget-parametres': 'budgetparam', 'analyse-produits': 'anaprod', 'prix-volume': 'prixvolume',
       'manque-a-gagner': 'manque', 'target-ventes': 'ventes', 'types-campagne': 'mktTypes', 'objectifs-produits': 'mktObjectifs',
-      'scoring-trimestre': 'scoringTri', 'client-mystere': 'clientMystere', 'suivi-taches': 'suivi', 'controle-taches': 'controle',
+      'scoring-trimestre': 'scoringTri', 'client-mystere': 'suiviMsp', 'suivi-taches': 'suivi', 'controle-taches': 'controle',
       'suivi-mensuel': 'suiviMensuel', 'table-kpi': 'kpiTable', 'usage-console': 'usageConsole', 'scoring-reglages': 'scoring',
       'tablette-vendeuses': 'tablette', 'primes-app-worker': 'primesApp', 'brand-guard': 'brandGuard', 'invendus-poubelle': 'invendus',
       'fiche-franchise': 'ficheFranchise', 'controles-qualite': 'controlesQualite' };
@@ -474,6 +476,9 @@ class App {
       // Scoring, Sous seuil et Par magasin : le Catalogue les reprend (18/10/2026, une liste et sa fiche).
       scoring: 'catalogue', produits: 'catalogue', 'sous-seuil': 'catalogue', seuil: 'catalogue', 'usage-catalogue': 'catalogue', usage: 'catalogue',
       'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
+      // Le client mystère s'encodait aussi dans Paramètres, dans la même table avec d'autres rubriques : un seul
+      // formulaire depuis le 19/11/2026, Visites › Client mystère (docs/audit-rail.md).
+      'parametres/mystere': 'suiviMsp', clientMystere: 'suiviMsp',
     };
   }
   /**
@@ -1105,6 +1110,13 @@ class App {
       const juste = this.adresseDe('ficheFranchise');
       if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     }
+    // Le second formulaire du client mystère (Paramètres) est retiré (19/11/2026) : tout passage s'encode dans
+    // Visites › Client mystère, qui écrit les rubriques, le passage et ses suites.
+    if (this.state.screen === 'clientMystere') {
+      this.state.screen = 'suiviMsp';
+      const juste = this.adresseDe('suiviMsp');
+      if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
+    }
     const S = this.state;
     if (S.gate){
       const g = S.gate;
@@ -1198,38 +1210,88 @@ class App {
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], iaEntrainement: ['Entraînement de l’IA', 'Rayon par rayon : ce que l’IA doit voir (la consigne), le comptoir parfait de chaque magasin (la photo modèle), ce qu’elle a appris de vos corrections — et à quel point elle est d’accord avec vous.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
     if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
-    // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
+    // Les compteurs, une seule définition pour le rail et les onglets (19/11/2026) : une entrée du rail qui couvre
+    // plusieurs onglets porte la somme de leurs compteurs. Lus seulement une fois les données chargées.
+    const COMPTEURS = {
+      demandesFranchises: () => nbDemandesOuvertes(this),
+      filFranchise: () => nbFilsOuverts(this),
+      controle: () => ((this.D.pwaTasks || {}).totals || {}).aValider || 0,
+      suivi: () => (S.suiviData ? S.suiviData.ouverts : 0),
+      suiviTableau: () => (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0,
+      reputation: () => ((this.D.reput || {}).reseau || {}).sousCible || 0,
+      visibilite: () => visibiliteBadge(this),
+      verifRecettes: () => ((S.vrData || {}).d || {}).total || 0,
+      catalogue: () => (this._pdDcs || {}).effacer || 0,
+      promoEdition: () => promosBadges(this).brouillons,
+      promoTableau: () => promosBadges(this).sousRepere,
+      mdFormulaires: () => ((S.mdBadges || {}).mapping || 0) + ((S.mdBadges || {}).retard || 0),
+      pointages: () => (this._ptL || {}).aValider || 0,
+      apiModule: () => Object.values((this._apiL || {}).erreurs || {}).reduce((a, n) => a + (n || 0), 0),
+    };
+    const compteur = id => { if (!S.ready || !COMPTEURS[id]) { return 0; } try { return COMPTEURS[id]() || 0; } catch (e) { return 0; } };
+    /* Une question, une entrée du rail ; ses lectures, des onglets (réorganisation du 19/11/2026, docs/audit-rail.md).
+     * Un onglet : [écran, nom, phrase d'introduction (absente : celle du groupe ; '' : aucune), état posé en plus]. */
+    const intro = id => (titles[id] || [])[1];
     const GROUPES = {
-      suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
-        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
-      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
-        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['clientMystere', 'Client mystère'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
-      journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
-        [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
-      // L'onglet Promotions est parti dans la section Promotions du rail (26/10/2026).
-      ventes: ['Analyse magasin', 'Un magasin, trois lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, ce que Google en dit.',
-        [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
-      // Budget : trois entrées du sous-menu Budget (24/10/2026), chacune son titre — plus d'onglets.
+      // Les checklists du panel, toutes au même endroit : le jour à noter, le mois des contrôles photo, la heatmap
+      // faites / pas faites, les notes et signalements qui en suivent, l'IA qui note les photos et le paramétrage des
+      // checklists (task/).
+      taches: ['Tâches & contrôles', 'Les checklists du panel, magasin par magasin : le jour à noter, les contrôles photo du mois, ce qui est fait ou pas, les notes et signalements qui en suivent, l’entraînement de l’IA qui note les photos, et le paramétrage des checklists.',
+        [['controle', 'Le jour', intro('controle')], ['controlesQualite', 'Contrôles photo du mois', ''], ['suiviMensuel', 'Faites / pas faites', intro('suiviMensuel')],
+          ['suivi', 'Notes & signalements', intro('suivi')], ['iaEntrainement', 'Entraînement de l’IA', intro('iaEntrainement')],
+          ['cadreTaches', 'Paramétrage des checklists', '']]],
+      // Le suivi des franchisés sur le terrain. « Visite sur tablette » n'a plus d'onglet : chaque visite donne
+      // déjà son lien et son QR code vers controle/ ; son adresse reste.
+      visites: ['Visites', '',
+        [['suiviTableau', 'Visites', ''], ['filFranchise', 'Fil du franchisé', intro('filFranchise')], ['suiviMsp', 'Client mystère', intro('suiviMsp')], ['suiviFranchise', 'Page du franchisé', intro('suiviFranchise')],
+          ['suiviAdmin', 'Qui fait quoi', intro('suiviAdmin')]]],
+      budget: ['Budget', '', [['budget', 'Suivi', intro('budget')], ['encodage', 'Encodage', intro('encodage')], ['budgetparam', 'Paramètres', intro('budgetparam')]]],
+      ventes: ['Équipe & ventes', '', [['ventes', 'Équipe & ventes', intro('ventes')], ['croisements', 'Panier · croisements', intro('croisements')]]],
+      // La note Google (le poste du scoring) et ce que Google affiche du magasin : un seul écran, deux lectures.
+      google: ['Présence Google', '', [['reputation', 'Avis', intro('reputation')], ['visibilite', 'Visibilité', intro('visibilite')]]],
+      // Flux, Fuites et Évolution lisent le même calcul (verification_flux.php) ; les invendus, la même poubelle.
+      flux: ['Flux & poubelle', '', [['verifFlux', 'Audit des flux', intro('verifFlux')], ['verifFuites', 'Fuites par magasin', intro('verifFuites')],
+        ['verifEvol', 'Évolution', intro('verifEvol')], ['invendus', 'Invendus', intro('invendus')]]],
+      // Matières et Inventaires partagent le moteur invEcart (inventaires.php) ; les mouvements en sont le détail.
+      matieres: ['Matières & inventaires', '', [['verifMatieres', 'Matières ↔ recettes', intro('verifMatieres')], ['inventaires', 'Entre deux inventaires', intro('inventaires')],
+        ['verifMouv', 'Mouvements d’un produit', intro('verifMouv')]]],
+      promotions: ['Promotions', '', [['promoTableau', 'Tableau d’analyse', intro('promoTableau')], ['promoEdition', 'Édition', intro('promoEdition')]]],
+      // La page d'un magasin ne montre rien de la marque, pas même un onglet : les onglets ne s'affichent que sur la
+      // page de la marque (voir plus bas) ; le rail y ramène.
+      primes: ['Primes', '', [['primesApp', 'Marque & sponsors', intro('primesApp'), { prSection: 'marque', prShop: '' }],
+        ['primesApp', 'Page d’un magasin', '', { prSection: 'franchise' }]]],
+      // Le client mystère ne s'encode plus ici (19/11/2026) : un seul formulaire, Visites › Client mystère.
+      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, les types de campagne, la table des KPI et la charte Brand Guard.',
+        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
+      // Les trois écrans de santé des API réunis (19/11/2026) : tout le cockpit, le module primes, les visites.
+      journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API rendent ou non.',
+        [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API'],
+          ['apiModule', 'API du module primes', intro('apiModule'), { apiSrc: '' }], ['suiviSources', 'Sources des visites', intro('suiviSources')]]],
       // Le Catalogue n'a plus d'onglets (18/10/2026, maquette « A + D ») : une liste et sa fiche (valsCatalogue). Le
       // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
         [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]],
           // La structure de gamme (11/11/2026) : ce que l'assortiment devrait être, calculé sur les ventes de douze mois.
           ['structure', 'Structure de gamme', titles.structure[1]]]] };
-    // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
-    const ecranOnglet = S.screen;
-    const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
-    if (grp) {
-      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === ecranOnglet);
-      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
+    // L'onglet allumé : son écran, et l'état qu'il pose (la source d'API ou le magasin choisis ne comptent pas).
+    const ONGLET_LIBRES = ['prShop', 'apiSrc'];
+    const ongletOn = o => S.screen === o[0] && (!o[3] || Object.keys(o[3]).filter(k => ONGLET_LIBRES.indexOf(k) < 0)
+      .every(k => (S[k] || ({ prSection: 'marque' }[k] || '')) === o[3][k]));
+    const ongletGo = o => o[3] ? () => this.setState(Object.assign({ screen: o[0], hmHover: null, railOuvert: false }, o[3])) : goTo(o[0]);
+    const grp = Object.keys(GROUPES).find(k => (GROUPES[k][2] || []).some(o => o[0] === S.screen));
+    const sansOnglets = S.screen === 'primesApp' && S.prSection === 'franchise';
+    if (grp && !sansOnglets) {
+      const onglets = GROUPES[grp][2] || [];
+      const onglet = onglets.find(ongletOn) || onglets.find(o => o[0] === S.screen);
+      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2] !== undefined) ? onglet[2] : GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
-      const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
-      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: ecranOnglet === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0 };
+      common.ongletsEcran = onglets.map(o => ({ nom: o[1], on: o === onglet, go: ongletGo(o), badge: badges[o[0]] != null ? badges[o[0]] : (o[3] && o[0] === 'primesApp' ? 0 : compteur(o[0])) }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
     // Les lectures détaillées, ouvertes depuis la fiche d'une référence du Catalogue (18/10/2026) : un retour, pas d'onglets.
@@ -1360,177 +1422,80 @@ class App {
     const flat = this.tasksFlat();
     const lateTasks = flat.filter(x => x.st === 'En retard');
 
-    // Le rail suit les QUESTIONS du métier, pas l'historique des modules :
-    // qu'est-ce qui se passe aujourd'hui ? comment vont les magasins, et que
-    // faire pour chacun ? que valent les produits ? qu'achète-t-on ? que fait
-    // la marque ? qu'a-t-on contrôlé ? — puis l'administration. Dix sections
-    // avaient poussé l'une après l'autre ; les écrans magasin, éclatés en
-    // trois sections (performance, analyse, budget), retrouvent un seul toit.
+    // Le rail suit les QUESTIONS du métier, pas l'historique des modules. Réorganisé le 19/11/2026 (audit des
+    // doublons, docs/audit-rail.md) : 63 entrées, 11 sections et 5 sous-menus étaient devenus 34 entrées et 8 sections,
+    // sans sous-menu. Une question = une entrée ; les lectures d'une même question sont des onglets (GROUPES, plus
+    // haut) ; ce qui s'ouvre hors du cockpit (↗) est rangé à part, en bas. Aucune adresse ne change : un écran
+    // retiré du rail reste ouvert par son adresse, son onglet ou la recherche.
+    // Une entrée de groupe : son premier onglet, son nom, la somme des compteurs de ses onglets, les autres écrans
+    // qu'elle allume (et ceux, sans onglet, qu'on y ajoute).
+    const entree = (k, label, autres) => { const ids = [...new Set((GROUPES[k][2] || []).map(o => o[0]))];
+      return [ids[0], label, ids.reduce((a, id) => a + compteur(id), 0), ids.slice(1).concat(autres || [])]; };
     const navDef = [
-      // Le matin : ce qui s'est passé, ce qui presse.
-      // Un seul écran de pilotage : Résultat — jour, semaine, mois. Les
-      // tâches consultants et le P&L magasins restent accessibles par leur
-      // adresse, mais ce qu'on y lisait chaque matin vit désormais ici.
-      // Résultat répond aussi à « comment évolue-t-on ? » (16/10/2026) : le
-      // mois clos, l'année, les horizons et la marge y sont des onglets —
-      // Performance n'a plus d'entrée.
+      // Le matin : où en est-on, ce que les franchisés demandent, ce qu'il reste à contrôler.
       ['Pilotage', [
         ['resultatJour', 'Résultat', 0],
-        // « Dashboard magasin ↗ » a quitté le rail (19/11/2026, demande de Sam) : la page reste à son adresse
-        // (dashboard/), et Résultat l'ouvre magasin par magasin.
-        // Benchmark (14/11/2026, Sam : « dans le rail Benchmark ») : importer les prix d'un concurrent (PDF ou internet
-        // par l'IA), les rapprocher de nos produits, classer chaque concurrent sur son magasin et son franchisé par code postal.
-        ['benchmark', 'Benchmark', 0],
-        // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
-        // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
-        ['cadreTaches', 'Cadre des tâches', 0],
-        // L'audit des fournisseurs et prestataires (12/11/2026, Sam : « dans le cockpit consultant, Pilotage ») :
-        // les franchisés notent chaque fournisseur référencé ; résultats et copie au fournisseur.
-        ['audits', 'Audit fournisseurs', 0],
-        // Ouvertures, fermetures et reports de caisse, par magasin et par
-        // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
-        ['ext:caisse/', 'Caisse ↗', 0]]],
-      // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
-      // en deux volets : ce que les données disent chaque jour, sans aller sur
-      // place ; ce que le consultant constate sur place. Le scoring du
-      // trimestre est la synthèse des deux : depuis le 16/10/2026 (B2), il est en tête de
-      // la fiche, et le classement du réseau en est un onglet — une seule entrée.
-      // Libellé du rail sur une ligne (design system §8.1).
+        ['demandesFranchises', 'Demandes des franchisés', compteur('demandesFranchises')],
+        entree('taches', 'Tâches & contrôles')]],
+      // Chaque franchisé : sa fiche et son scoring, ses visites, son budget, son équipe ; et ce qu'il dit des fournisseurs.
       ['Franchisés', [
-        ['demandesFranchises', 'Demandes des franchisés', nbDemandesOuvertes(this)],
         ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
-        // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
-        // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
-        // en visite (controle/), le client mystère, la page que voit le franchisé, et qui fait quoi.
-        { sub: 'Suivi des franchisés', children: [
-          ['suiviTableau', 'Visites', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0],
-          // Le fil du franchisé (19/11/2026, demande de Sam, maquettes docs/maquettes/fil-franchise : A, avec B en bascule).
-          // Le badge, une fois les cartes lues : les fils ouverts du réseau (des problèmes de gestion pas encore résolus).
-          ['filFranchise', 'Fil du franchisé', nbFilsOuverts(this)],
-          ['suiviTablette', 'Visite sur tablette', 0],
-          ['suiviMsp', 'Client mystère', 0],
-          ['suiviFranchise', 'Page du franchisé', 0],
-          ['suiviAdmin', 'Qui fait quoi', 0],
-          // Sources et API (26/10/2026) : le panel TFBuddy, les tables locales con_, et les API qui manquent pour tout passer par le panel.
-          ['suiviSources', 'Sources et API', 0]] },
-        // Le budget, sorti de Magasins (24/10/2026) : trois entrées au lieu d'un écran à trois onglets.
-        { sub: 'Budget', children: [
-          ['budget', 'Suivi budget', 0],
-          ['encodage', 'Encodage du budget', 0],
-          ['budgetparam', 'Paramètres du budget', 0]] },
-        { sub: 'Suivi journalier', children: [
-          ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
-          ['controlesQualite', 'Contrôles qualité du mois', 0],
-          ['mktObjectifs', 'Objectifs', 0],
-          ['reputation', 'Note Google et avis', 0],
-          ['reporting', 'Reporting automatisé', 0]] }]],
-      // LE cœur du métier : d'abord constater (performance), puis agir
-      // magasin par magasin (analyse & leviers), puis cadrer (budget).
-      // Trois questions : comment va ce magasin (équipe, panier, réputation),
-      // quel budget il tient, où il va sur trois ans.
-      ['Magasins', [
-        ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements']],
-        // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
-        // le détail — pièces, motifs, produits — reste ici, sous Magasins.
-        // « Scouting — où ouvrir » a quitté le rail (31/10/2026) : il vit dans
-        // le CRM, Développement → Étude de faisabilité. « Inventaires » est passé
-        // sous Vérification (Sam, 31/10/2026).
-        ['invendus', 'Invendus et poubelle', 0]]],
-      // Deux entrées (18/10/2026) : le Catalogue — quatre questions, une liste,
-      // une fiche ; ses lectures détaillées (une référence magasin par magasin,
-      // prix × volume, dans le temps, manque à gagner) s'ouvrent de la fiche — et
-      // le Comptoir, avec l'assortiment obligatoire. L'entrée qui couvre un écran
-      // s'allume pour lui.
-      // Les badges : au Catalogue, les références que le scoring propose
-      // d'effacer ; au Comptoir, les obligatoires qui n'y ont pas encore de place.
-      // Vérification (31/10/2026, plan docs/plan-verification.md, maquettes docs/maquettes/verification) : ce que chaque
-      // magasin fait de ce qui entre. Lot 1 : les recettes à corriger — le badge, une fois la liste lue, son nombre de lignes.
+        entree('visites', 'Visites', ['suiviTablette']),
+        entree('budget', 'Budget'),
+        entree('ventes', 'Équipe & ventes'),
+        ['audits', 'Audit fournisseurs', 0]]],
+      // Ce que chaque magasin fait de ce qui entre : le flux du jour, la matière, les recettes, la caisse.
       ['Vérification', [
-        ['verifFlux', 'Audit des flux', 0],
-        ['verifFuites', 'Fuites par magasin', 0],
-        // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la
-        // poubelle — venu de Magasins (Sam, 31/10/2026 : « déplace Inventaires dans Vérification »).
-        ['inventaires', 'Inventaires', 0],
-        ['verifMatieres', 'Matières ↔ recettes', 0],
-        ['verifCa', 'Chiffre d’affaires', 0],
-        ['verifMouv', 'Mouvements d’un produit', 0],
-        ['verifRecettes', 'Recettes à corriger', ((S.vrData || {}).d || {}).total || 0],
-        ['verifEvol', 'Évolution', 0]]],
+        entree('flux', 'Flux & poubelle'),
+        entree('matieres', 'Matières & inventaires'),
+        ['verifRecettes', 'Recettes à corriger', compteur('verifRecettes')],
+        ['verifCa', 'Chiffre d’affaires', 0]]],
+      // La gamme, le comptoir, la fiche produit au panel, les prix des concurrents, les promotions.
       ['Produits', [
+        ['catalogue', 'Catalogue', compteur('catalogue'), ['anaprod', 'manque', 'prixvolume', 'analyse']],
+        ['planogramme', 'Comptoir', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']],
         ['paramProduits', 'Paramétrage produits', 0],
-        ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
-          ['anaprod', 'manque', 'prixvolume', 'analyse']],
-        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']]]],
-      // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
-      // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
-      // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
-      // promotions en caisse sous le repère ×2. Un menu du rail au même niveau que Produits (Sam, 26/10/2026) : son
-      // titre de section, ses deux entrées.
-      ['Promotions', [
-        ['promoEdition', 'Édition', promosBadges(this).brouillons],
-        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]]],
-      // Marque & marketing : depuis le 05/11/2026 (Sam), la section ne garde que Fonds & Royalties. Les entrées
-      // Marketing ↗ (/marketing/), Marketing en magasin ↗ (/signage/) et Projets de développement sont retirées
-      // du cockpit ; les deux applications restent sur le serveur, les projets et leurs tâches restent en base
-      // (les tâches se suivent dans Suivi › Tâches).
+        ['benchmark', 'Benchmark', 0],
+        entree('promotions', 'Promotions')]],
+      // Ce que la marque finance et ce qu'elle montre : fonds, Google, objectifs de campagne, leads Meta, fidélité.
       ['Marque & marketing', [
         ['fonds', 'Fonds & Royalties', 0],
-        // Visibilité Google (09/11/2026, maquettes docs/maquettes/visibilite-google) : le badge, une fois lu, les écarts à corriger.
-        ['visibilite', 'Visibilité Google', visibiliteBadge(this)]]],
-      // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa tablette.
-      // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
-      ['ERP franchisé', [
-        // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
-        // mise en page bureau sur grand écran, mobile sur le téléphone.
-        ['ext:prospection/', 'Prospection ↗', 0],
-        // MétaDonnée (demande du 28/10/2026, maquette A) : les formulaires de prospects Meta et
-        // Instagram jusqu'à l'ERP du franchisé, en quatre étapes — module à part (metadonnee.js).
-        { sub: 'MétaDonnée', children: [['mdFormulaires', '1 · Formulaires', 0], ['mdMapping', '2 · Mapping ERP', (S.mdBadges || {}).mapping || 0],
-          ['mdLeads', '3 · Suivi des leads', (S.mdBadges || {}).retard || 0], ['mdSms', '4 · Alertes SMS', 0]] },
-        // Le book des vendeuses : une application à part (tablette/) — l'écran
-        // donne ses liens, un aperçu et l'état des données que le BO lui sert.
+        entree('google', 'Présence Google'),
+        ['mktObjectifs', 'Objectifs produits', 0],
+        // MétaDonnée : un écran à quatre étapes, que le module affiche lui-même en tête.
+        ['mdFormulaires', 'MétaDonnée', compteur('mdFormulaires'), ['mdMapping', 'mdLeads', 'mdSms']],
+        ['fidelite', 'Fidélité', 0]]],
+      // Les outils du magasin tenus ici en attendant l'ERP : la tablette des vendeuses, l'assistant, l'app employé.
+      ['Outils magasin', [
         ['tablette', 'Tablette vendeuses', 0],
-        // La fidélité du client (24/10/2026, maquettes docs/maquettes/fidelite : le Programme de C, les Clients de B).
-        ['fidelite', 'Fidélité', 0],
-        // L'assistant du dashboard magasin (12/11/2026) : les deux coachs (ton, accents, vérifications) et les questions posées.
-        ['assistantCoachs', 'Assistant · coachs', 0]]],
-      // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
-      // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
-      // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
-      // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
-      // et le sous-menu « Primes · module app worker » d'ERP franchisé.
-      ['Application employé', [
-        ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
-        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
-        ['ext:employee/auth', 'Application ↗', 0],
-        // Les pointages (01/11/2026) : le badge, les départs déclarés à valider du magasin ouvert.
-        ['pointages', 'Pointages', ((this._ptL || {}).aValider) || 0],
-        // Ce que le module appelle, source par source, et ce que chaque route répond à l'instant (24/10/2026, Sam).
-        // Le badge : les routes en erreur, une fois la page ouverte.
-        { sub: 'API du module', children: [['apiModule', 'Vue d’ensemble', 0, [], { apiSrc: '' }]].concat(
-          [['cockpit', 'Cockpit'], ['panel', 'Panel tfbuddy'], ['erp', 'ERP admin'], ['base', 'Base partagée'], ['sms', 'SMS · Twilio']]
-            .map(([cle, nom]) => ['apiModule', nom, ((this._apiL || {}).erreurs || {})[cle] || 0, [], { apiSrc: cle }])) }]],
-        // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
-      // Le module Formation (demande du 31/10/2026) : une application à part (formation/), au
-      // design du module marketing — le référentiel RH du panel (postes, niveaux, compétences,
-      // formations, procédures) et le Manuel du réseau (standards, classeur, phases, postes). Le
-      // « Manuel en ligne » en mode tablette a été retiré au lot 6 de la fusion (06/11/2026).
-      ['Formation', [
-        ['ext:formation/', 'Module Formation ↗', 0],
-        // « Parcours compétences ↗ » (formation/parcours/) retiré le 06/11/2026 : le client n'en voit pas la nécessité.
-        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0]]],
+        ['assistantCoachs', 'Assistant · coachs', 0],
+        // La page de la marque ; celle d'un magasin s'ouvre de son onglet.
+        ['primesApp', 'Primes', 0, [], { prSection: 'marque', prShop: '' }],
+        ['pointages', 'Pointages', compteur('pointages')]]],
       ['Administration', [
-        ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
-        ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
+        entree('parametres', 'Paramètres'),
+        ['reporting', 'Reporting automatisé', 0],
+        entree('journal', 'Journal & diagnostic')]],
+      // Les pages à part, ouvertes dans un onglet du navigateur.
+      // « Dashboard magasin ↗ » a quitté le rail (19/11/2026, demande de Sam) : la page reste à son adresse
+      // (dashboard/), et Résultat l'ouvre magasin par magasin.
+      ['Applications', [
+        ['ext:caisse/', 'Caisse ↗', 0],
+        ['ext:prospection/', 'Prospection ↗', 0],
+        ['ext:employee/auth', 'Application employé ↗', 0],
+        // Le Manuel du réseau est une page du module : une seule entrée.
+        ['ext:formation/', 'Formation ↗', 0],
+        // Le catalogue des manuels (19/11/2026, Sam) : feuilleter chaque manuel, l'imprimer en PDF, son QR code, le dépliant.
+        ['ext:formation/catalogue/', 'Catalogue des manuels ↗', 0]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:400;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:400' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     // Une entrée peut mener hors du cockpit (« ext: », dans un onglet à part — la page tablette n'est pas un
     // écran de la console, elle vit à côté), couvrir des écrans alias (c[3]) ou poser un état en plus de
-    // l'écran (c[4], ex. l'onglet Client mystère, la page admin ou franchisé de l'application employé).
+    // l'écran (c[4], ex. la page de la marque des primes, quand on revient de celle d'un magasin).
     const cExt = c => c[0].indexOf('ext:') === 0;
-    // Le magasin de la page franchisé (prShop) ne compte pas : l'entrée reste allumée quel que soit le magasin.
-    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).filter(k => k !== 'prShop').every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
+    // Depuis le 19/11/2026, une entrée n'a qu'un écran par question : l'état qu'elle pose sert à y aller, pas à
+    // l'allumer — Primes reste allumée sur la page d'un magasin.
+    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0);
     const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
       if (Array.isArray(it)) {
@@ -1550,20 +1515,21 @@ class App {
     // Le rail sert aussi à NOMMER les écrans dans la heatmap du journal : sans
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
+    this._titres = titles;
     // Barre supérieure (§7.1 du design system) : le kicker dit le périmètre —
     // les outils de l'ERP du franchisé se lisent « Vue Franchisé », tout le
     // reste du cockpit « Vue Réseau ».
     const grActif = common.nav.find(g => g.items.some(n => n.on || (n.children || []).some(k => k.on)));
-    common.screenKicker = grActif && grActif.titre === 'ERP franchisé' ? 'Vue Franchisé' : 'Vue Réseau';
+    common.screenKicker = grActif && grActif.titre === 'Outils magasin' ? 'Vue Franchisé' : 'Vue Réseau';
     // Retour à l'ERP : l'adresse vient de la configuration (meta.erpUrl) ; sans elle, pas de lien.
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isFil'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1980,7 +1946,8 @@ class App {
     if (common.isAudits) { this.valsAudits(common); }
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
-    // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
+    // L'ancien formulaire du client mystère (Paramètres) : plus atteint depuis le 19/11/2026, l'écran est réécrit en
+    // Visites › Client mystère avant le rendu (docs/audit-rail.md, code mort à retirer).
     if (common.isCltMyst) { if (S.sqVue !== 'msp') { this.state.sqVue = 'msp'; } this.valsScoring(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
@@ -1998,6 +1965,7 @@ class App {
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
+    if (common.isIaEnt) { this.iaStatut(); this.valsIaEntrainement(common); }
     if (common.isKpiT) this.valsKpiT(common);
     // --- contrôle des posts Facebook
     if (common.isBrandGuard) this.valsBrandGuard(common);
@@ -10724,7 +10692,7 @@ class App {
       { k: 'Projection', v: proj == null ? '—' : fK(proj), s: proj == null ? '' : 'fin de ' + per + ' au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', cls: proj == null ? '' : (proj < m.objectif ? 'bad' : 'good') },
       { k: 'Reste à faire', v: sansO ? '—' : fK(m.reste), s: sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')), cls: '' },
       { k: 'Par jour ouvert', v: fE(m.realise / nJ), s: fI(m.tickets / nJ) + ' clients · panier ' + (m.panier || 0).toFixed(2).replace('.', ',') + ' €', cls: '' },
-      { k: 'Marge brute', v: m.margeBrutePct != null ? Math.round(m.margeBrutePct) + ' %' : '—', s: fK(m.margeBrute || 0) + ' · matière ' + Math.round(m.coutMatierePct || 0) + ' % (seuil ' + Math.round((r.seuils || {}).food || 32) + ')', cls: '' },
+      { k: 'Marge brute', v: m.margeBrutePct != null ? Math.round(m.margeBrutePct) + ' %' : '—', s: fK(m.margeBrute || 0) + ' · matière ' + Math.round(m.coutMatierePct || 0) + ' % (seuil ' + Math.round((r.seuils || {}).food || 40) + ')', cls: '' },
       { k: 'Résultat net', v: m.net == null ? '—' : fK(m.net), s: m.netPct == null ? '' : m.netPct.toFixed(1).replace('.', ',') + ' % des ventes', cls: m.net == null ? '' : (m.net >= 0 ? 'good' : 'bad') },
       { k: 'Record', v: record ? fE(record.ca) : '—', s: record ? record.court + ' · ' + record.tickets + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) - 100 >= 0 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', cls: 'gold' },
     ];
@@ -10777,7 +10745,7 @@ class App {
     if (!r || common.rpErreur) { return; }
     if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
 
-    const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
+    const seuils = r.seuils || { food: 40, labour: 17, overhead: 13.5 };   // repli : les cibles food cost et personnel du réseau
     const fE = n => this.fE(n);
     const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
     const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');
@@ -11034,7 +11002,7 @@ class App {
     common.rjLignes = []; common.rjDetail = null; common.rjInvite = '';
     if (!r || common.rjErreur) { return; }
 
-    const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
+    const seuils = r.seuils || { food: 40, labour: 17, overhead: 13.5 };   // repli : les cibles food cost et personnel du réseau
     const fE = n => this.fE(n);
     const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
     const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');
@@ -13032,11 +13000,20 @@ class App {
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
   ctrlOpenTask(shopId, taskId, date, tacheNom){
-    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
+    // En mode assisté, la proposition de l'IA est déjà là : elle s'affiche et
+    // pré-remplit le niveau et le commentaire (un avis déjà posé prime).
+    const jIa = this.iaMode() === 'assiste' && this._iaJ ? this._iaJ[date] : null;
+    const pr = jIa ? jIa.map[String(shopId) + '|' + String(taskId)] : null;
+    const pre = pr && pr.niveau != null && pr.etat === 'propose' ? pr : null;
+    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, envoi: false, rep: [],
+      note: pre ? pre.niveau : null, comment: pre ? (pre.commentaire || '') : '',
+      ia: pre ? this.iaVersVolet(pre) : null, iaPre: !!pre, raisonIa: '' } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
       .then(d => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === taskId)
         ? { ctrlDet: Object.assign({}, s.ctrlDet, { chargement: false, d: d || null,
-            note: (d && d.avis && d.avis.note) || null, comment: (d && d.avis && d.avis.comment) || '',
+            // Un avis déjà posé prime ; sinon ce qui est à l'écran (la proposition, ou ce que le consultant a déjà changé).
+            note: (d && d.avis && d.avis.note) || s.ctrlDet.note || null,
+            comment: (d && d.avis && d.avis.comment) || s.ctrlDet.comment || '',
             // Repères déjà posés : ils reviennent avec le détail, on ne les
             // relit pas dans un second appel.
             rep: ((d && d.reperes) || {}).liste || [] }) }
@@ -13280,9 +13257,12 @@ class App {
     }
     const d = dt.d || {};
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
+    // Une note qui s'écarte de la proposition de l'IA emporte la raison du consultant : c'est la leçon.
+    const raisonIa = dt.ia && dt.ia.niveau != null && note !== dt.ia.niveau ? String(dt.raisonIa || '').trim() : '';
     write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
-      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
+      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null, raisonIa })
       .then(() => {
+        this.iaApresNote(dt.shopId, dt.taskId, dt.date, note);
         // La modale RESTE ouverte : on la fermait d'office, et comme la
         // fermeture attendait le rechargement complet de la journée (4 à 5 s
         // sur /pwa/tasks), l'écran semblait se fermer tout seul, longtemps
@@ -13367,7 +13347,8 @@ class App {
   /** Le rayon d'un libellé : au pluriel près, sinon par le début du nom, à la frontière d'un mot. */
   rvDe(libelle){
     const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, ' ').trim();
-    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*/, ''); if (!reste) { return null; }
+    // « Photo du comptoir après-midi - Pâtisseries » : le moment de la journée n'est pas le rayon.
+    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*(?:(?:apres midi|matin|midi|soir)\s+)?/, ''); if (!reste) { return null; }
     const sing = x => x.replace(/s\b/g, '');
     let pre = null, long = 0;
     for (const r of this._rv || []) {
@@ -13420,19 +13401,23 @@ class App {
    * repère — au-dessus du seuil, le barème n'en exige pas. Le même chemin
    * que le volet : le détail de la tâche pour les identifiants du panel
    * (checklist, completion), puis la note ; la carte prend la note tout de
-   * suite, la journée se recharge derrière.
+   * suite, la journée se recharge derrière. En mode assisté, la même voie
+   * valide la proposition de l'IA : sa note et son commentaire (exigé sous
+   * le seuil).
    */
-  ctrlNoteRapide(shopId, taskId, date, nom, note){
+  ctrlNoteRapide(shopId, taskId, date, nom, note, comment){
     const k = shopId + '|' + taskId;
     const marque = on => this.setState(s => ({ ctrlRapide: Object.assign({}, s.ctrlRapide, { [k]: on }) }));
     if ((this.state.ctrlRapide || {})[k]) { return; }
     marque(true);
+    const texte = String(comment || '');
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
-      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: '',
+      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: texte,
         checklistId: (d && d.checklistId) || null, completionId: (d && d.completionId) || null }))
       .then(r => {
         if (r && r.error) { throw new Error(r.error); }
-        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: '' });
+        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: texte });
+        this.iaApresNote(shopId, taskId, date, note);
         marque(false);
         this.notify('Note ' + note + '/5 enregistrée — ' + nom);
         readOne('/pwa/tasks?date=' + encodeURIComponent(date))
@@ -13481,10 +13466,20 @@ class App {
     const resume = (!P ? 'lecture des photos…'
       : avec.length ? avec.length + ' photo' + (avec.length > 1 ? 's' : '') + ' rendue' + (avec.length > 1 ? 's' : '') + plage + (qui ? ' par ' + qui : '')
       : (P.erreur ? 'photos indisponibles' : 'aucune photo rendue'))
-      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '');
+      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '')
+      + (this.iaMode() === 'assiste' && this._iaJ && this._iaJ[pt.date] ? (() => {
+        const n = L.filter(t => t.e.c === 'ctl' && ((this._iaJ[pt.date].map[String(s.shopId) + '|' + String(t.taskId)] || {}).etat === 'propose')).length;
+        return n ? ' · ' + n + ' note' + (n > 1 ? 's' : '') + ' proposée' + (n > 1 ? 's' : '') + ' par l’IA' : ''; })() : '');
     // La note rapide : les niveaux au-dessus du seuil, ceux qui n'exigent ni
     // commentaire ni repère — 4 et 5 dans le barème partagé.
     const rapides = this.zNiveaux().filter(lv => lv.n >= seuil).sort((a, b) => a.n - b.n);
+    // L'assistant (mode assisté) : chaque photo à contrôler porte la note proposée par l'IA ; celles qui n'en ont
+    // pas encore partent en file. Les gestes manuels restent sur les cartes sans proposition.
+    const IA = this.iaMode() === 'assiste' ? this.iaPropsLire(pt.date) : null;
+    const prDe = t => IA ? IA.map[String(s.shopId) + '|' + String(t.taskId)] || null : null;
+    const enFile = t => { const k = pt.date + '|' + s.shopId + '|' + t.taskId;
+      return !!((this._iaEnCours || {})[k] || (this._iaFile || []).some(q => q.k === k)); };
+    if (IA) { this.iaDemander(pt.date, L.filter(t => t.e.c === 'ctl' && t.p && !prDe(t)).map(t => ({ shopId: s.shopId, taskId: t.taskId }))); }
     const cartes = F.map(t => {
       const reps = t.p && Array.isArray(t.p.reperes) ? t.p.reperes : [];
       const rp = reps.map(r => ({ st: 'left:' + (r.x * 100).toFixed(1) + '%;top:' + (r.y * 100).toFixed(1) + '%;width:' + (r.l * 100).toFixed(1) + '%;height:' + (r.h * 100).toFixed(1) + '%;border-color:' + ((this.zNiveau(r.niveau || t.note || 3) || {}).couleur || '#B0792A') }));
@@ -13498,12 +13493,14 @@ class App {
       return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe), type: ry && ry.photo ? ry.photo : null,
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
         constat, photo: t.p ? t.p.photo : null, reperes: rp,
+        ponct: t.e.c !== 'ko' && t.e.c !== 'mu' ? this.ponctualite(t.heure, t.faitLe) : null,
         attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
         videTxt: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible'),
         bouton: t.e.c === 'ctl' ? 'Noter…' : (t.note != null ? 'Renoter' : ''),
         envoi: !!((S.ctrlRapide || {})[s.shopId + '|' + t.taskId]),
         rapides: t.e.c === 'ctl' ? rapides.map(lv => ({ n: lv.n, nom: lv.nom || (lv.n + '/5'), coul: lv.couleur || '#3f7a52',
           pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, lv.n) })) : [],
+        ia: IA && t.e.c === 'ctl' && t.p ? this.iaCarte(prDe(t), s, t, seuil, enFile(t)) : null,
         open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache) };
     });
     // Les flèches font défiler le rail d'une largeur, sans rendu : le DOM reste.
@@ -13618,6 +13615,13 @@ class App {
       const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
       shops.forEach(s2 => { s2.cq = this.ctrlCartes(brut[String(s2.shopId)] || { shopId: s2.shopId, taches: [] }, pt, garde, seuilC, nomNiveau); });
     }
+    // --- L'assistant de notation : le mode (manuel / assisté), la bande, la validation finale, les leçons.
+    common.iaMode = this.iaMode();
+    common.iaManuel = () => this.iaSetMode('manuel');
+    common.iaAssiste = () => this.iaSetMode('assiste');
+    common.ia = common.ctrlVue === 'photos' && common.iaMode === 'assiste' && S.screen === 'controle' && this.source === 'api'
+      ? this.valsIaBande(pt, shops, garde, seuilC) : null;
+    common.iaRecap = common.ia && S.iaRecap ? this.valsIaRecap(common.ia, seuilC) : null;
 
     // --- Photos types des rayons : le back office du comptoir attendu. Les
     // rayons que le panel photographie aujourd'hui sans photo type connue
@@ -13697,6 +13701,17 @@ class App {
           ? ('Prise' + (d.faitLe ? ' le ' + this.fDA(String(d.faitLe).slice(0, 10)) + ' à ' + String(d.faitLe).slice(11, 16) : '')
              + (d.faitPar ? ' par ' + d.faitPar : ''))
           : '',
+        // La photo contre l'heure standard de sa checklist : l'heure fait partie du contrôle.
+        ponct: this.ponctualite(d.heure, d.faitLe),
+        // Les références d'une photo de comptoir : le planogramme du rayon, puis ses photos d'exemple (ce magasin
+        // d'abord). Une photo de comptoir peut devenir une photo d'exemple, ou la photo du planogramme.
+        exemples: (d.exemples || []).slice(0, 3).map(ex => ({ photo: ex.photo, shop: this.iaNomMagasin(ex.shopId), date: ex.date ? this.fD(ex.date) : '' })),
+        nExemples: (d.exemples || []).length,
+        estExemple: (d.exemples || []).some(ex => String(ex.taskId) === String(dt.taskId) && ex.date === dt.date && String(ex.shopId) === String(dt.shopId)),
+        shopNom: this.iaNomMagasin(dt.shopId),
+        prendreExemple: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'exemple') : null,
+        prendrePlano: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'planogramme') : null,
+        modeleBusy: (this.state.iaModeleBusy || {})[dt.shopId + '|' + dt.taskId + '|' + dt.date] || '',
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
         avisComment: a.comment || '',
@@ -13880,6 +13895,12 @@ class App {
         iaModele: (dt.ia && dt.ia.modele) || '',
         iaConstats: (dt.ia && dt.ia.constats) || [],
         iaAvert: (dt.ia && dt.ia.avertissement) || '',
+        iaPre: !!dt.iaPre,
+        iaLecons: (dt.ia && dt.ia.leconsVues) || 0,
+        // Le consultant note autrement que l'IA : il peut dire pourquoi, l'assistant en fera une leçon.
+        iaChange: !!(dt.ia && dt.ia.niveau != null && dt.note != null && dt.note !== dt.ia.niveau),
+        raisonIa: dt.raisonIa || '',
+        setRaisonIa: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { raisonIa: v }) })); },
         iaGo: () => this.ctrlIaProposer(),
         // Reprendre ne valide pas : cela remplit le formulaire, l'envoi reste
         // un geste distinct. Le commentaire proposé complète le vôtre sans
@@ -14349,16 +14370,577 @@ class App {
     readOne('/ia/statut').then(st => { this._iaStEnCours = false;
       this.D.iaStatut = st || { configure: false }; this.setState({}); });
   }
-  /** Demande une proposition d'évaluation sur la photo ouverte. */
+  /**
+   * Demande une proposition d'évaluation sur la photo ouverte. Elle passe par
+   * l'assistant (POST /ia/proposer) : gardée au serveur, elle rejoint ensuite
+   * la note posée — c'est ainsi que l'assistant apprend, même en mode manuel.
+   * « Réanalyser » la refait.
+   */
   ctrlIaProposer(){
     const dt = this.state.ctrlDet;
     if (!dt || dt.iaBusy) { return; }
+    const refaire = !!dt.ia;
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: true, ia: null }) }));
-    readOne('/ia/note?shop=' + encodeURIComponent(dt.shopId) + '&task=' + encodeURIComponent(dt.taskId)
-      + '&date=' + encodeURIComponent(dt.date))
-      .then(r => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
-        ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
-            ia: r || { motif: 'assistance injoignable' } }) } : {}));
+    write(this.source, 'POST', '/ia/proposer', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date, refaire })
+      .then(r => {
+        const pr = r && r.ok !== false && r.proposition ? r.proposition : null;
+        if (pr) { this.iaRetenir(pr); }
+        this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
+          ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
+              ia: pr ? this.iaVersVolet(pr, r.avertissement) : { motif: (r && r.error) || 'assistance injoignable' } }) } : {});
+      });
+  }
+  /* --- L'assistant de notation (src/ia_assistant.php) ------------------------
+   *
+   * Deux modes, au choix et gardés dans ce navigateur : MANUEL, la page telle
+   * qu'elle était ; ASSISTÉ, où l'IA propose une note pour chaque photo à
+   * contrôler. Le consultant valide ou corrige — sur la carte, dans le volet,
+   * ou toutes à la fin dans « Valider ce que l'IA a proposé ». Rien ne part au
+   * panel sans son geste. Les propositions sont gardées au serveur (payées une
+   * fois, relues au rechargement) ; quand le consultant note autrement, la
+   * correction devient une leçon que l'IA reçoit avec les photos suivantes du
+   * même rayon. */
+  iaMode(){
+    if (this._iaMode === undefined) {
+      let m = ''; try { m = localStorage.getItem('cockpit.ctrlMode') || ''; } catch (e) { /* navigation privée */ }
+      this._iaMode = m === 'assiste' ? 'assiste' : 'manuel';
+    }
+    return this._iaMode;
+  }
+  iaSetMode(m){
+    this._iaMode = m === 'assiste' ? 'assiste' : 'manuel';
+    try { localStorage.setItem('cockpit.ctrlMode', this._iaMode); } catch (e) { /* navigation privée */ }
+    this.setState({});
+  }
+  /** Les propositions d'une journée, lues une fois puis tenues à jour ici : { map, accord, lecons, configure }. */
+  iaPropsLire(date){
+    if (!date || this.source !== 'api') { return null; }
+    this._iaJ = this._iaJ || {}; this._iaJLu = this._iaJLu || {};
+    if (this._iaJ[date]) { return this._iaJ[date]; }
+    if (!this._iaJLu[date]) {
+      this._iaJLu[date] = true;
+      readOne('/ia/propositions?date=' + encodeURIComponent(date)).then(r => {
+        delete this._iaJLu[date];
+        const map = {}; ((r && r.propositions) || []).forEach(p => { map[p.shopId + '|' + p.taskId] = p; });
+        this._iaJ[date] = { map, accord: (r && r.accord) || null, lecons: (r && r.lecons) || 0, configure: !!(r && r.configure), indispo: !r };
+        this.setState({});
+      });
+    }
+    return null;
+  }
+  /** Une proposition reçue rejoint la journée chargée. */
+  iaRetenir(pr){
+    const j = this._iaJ && this._iaJ[pr.date];
+    if (j) { j.map[pr.shopId + '|' + pr.taskId] = pr; }
+  }
+  /** Les propositions manquantes partent en file, trois à la fois ; une photo n'est demandée qu'une fois par visite. */
+  iaDemander(date, cles){
+    const j = this._iaJ && this._iaJ[date];
+    if (!j || j.configure === false) { return; }
+    this._iaFile = this._iaFile || []; this._iaEnCours = this._iaEnCours || {}; this._iaTente = this._iaTente || {};
+    cles.forEach(c => {
+      const k = date + '|' + c.shopId + '|' + c.taskId;
+      if (j.map[c.shopId + '|' + c.taskId] || this._iaEnCours[k] || this._iaTente[k]) { return; }
+      this._iaTente[k] = true; this._iaFile.push({ date, shopId: String(c.shopId), taskId: String(c.taskId), k });
+    });
+    this.iaPomper();
+  }
+  iaPomper(){
+    this._iaFile = this._iaFile || []; this._iaEnCours = this._iaEnCours || {};
+    while (Object.keys(this._iaEnCours).length < 3 && this._iaFile.length) {
+      const q = this._iaFile.shift();
+      this._iaEnCours[q.k] = true;
+      write(this.source, 'POST', '/ia/proposer', { shopId: q.shopId, taskId: q.taskId, date: q.date }).then(r => {
+        delete this._iaEnCours[q.k];
+        const j = this._iaJ && this._iaJ[q.date];
+        if (r && r.ok !== false && r.proposition) { this.iaRetenir(r.proposition); }
+        else if (j) {
+          j.map[q.shopId + '|' + q.taskId] = { shopId: q.shopId, taskId: q.taskId, date: q.date, etat: 'echec', niveau: null,
+            motif: (r && r.error) || 'assistance injoignable' };
+          // Sans clé, inutile de vider la file photo par photo.
+          if (r && r.status === 503) { j.configure = false; this._iaFile = this._iaFile.filter(x => x.date !== q.date); }
+        }
+        this.setState({});
+        this.iaPomper();
+      });
+    }
+  }
+  /** Combien de propositions restent à venir pour une journée (file + en cours). */
+  iaAttente(date){
+    return (this._iaFile || []).filter(q => q.date === date).length
+      + Object.keys(this._iaEnCours || {}).filter(k => k.startsWith(date + '|')).length;
+  }
+  /** Redemander une proposition (échec, ou « Réanalyser » depuis la carte). */
+  iaRefaire(date, shopId, taskId){
+    const j = this._iaJ && this._iaJ[date]; const k = date + '|' + shopId + '|' + taskId;
+    if (j) { delete j.map[shopId + '|' + taskId]; j.configure = true; }
+    if (this._iaTente) { delete this._iaTente[k]; }
+    this.iaDemander(date, [{ shopId, taskId }]);
+    this.setState({});
+  }
+  /** La note du consultant posée : la proposition passe « validée » ou « corrigée », les leçons se relisent. */
+  iaApresNote(shopId, taskId, date, note){
+    const j = this._iaJ && this._iaJ[date];
+    const pr = j ? j.map[String(shopId) + '|' + String(taskId)] : null;
+    if (pr && pr.niveau != null) {
+      pr.noteFinale = note; pr.etat = note === pr.niveau ? 'valide' : 'corrige';
+      // Le taux d'accord et le compte des leçons se relisent au serveur.
+      readOne('/ia/propositions?date=' + encodeURIComponent(date)).then(r => {
+        if (!r || !this._iaJ || !this._iaJ[date]) { return; }
+        (r.propositions || []).forEach(p => { this._iaJ[date].map[p.shopId + '|' + p.taskId] = p; });
+        this._iaJ[date].accord = r.accord || this._iaJ[date].accord; this._iaJ[date].lecons = r.lecons || 0;
+        this.setState({});
+      });
+    }
+    this._iaLecons = undefined;
+  }
+  /**
+   * La ponctualité d'une photo : son heure contre l'heure STANDARD de sa
+   * checklist. Les mêmes seuils que le serveur (src/ia_assistant.php,
+   * iaPonctualite) : à l'heure jusqu'à 15 min de retard, en retard au-delà,
+   * « très en avance » plus d'une heure avant. Rend { etat, txt, long } ou null.
+   */
+  ponctualite(heure, faitLe){
+    const hm = v => { const m = /(\d{2}):(\d{2})(?::\d{2})?$/.exec(String(v || '').trim()); return m ? +m[1] * 60 + +m[2] : null; };
+    const prevue = hm(heure); const prise = hm(String(faitLe || '').length > 5 ? String(faitLe).slice(11, 16) : faitLe);
+    if (prevue == null || prise == null) { return null; }
+    const ecart = prise - prevue;
+    const duree = m => { m = Math.abs(m); return m >= 60 ? Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; };
+    const etat = ecart > 15 ? 'retard' : (ecart < -60 ? 'avance' : 'heure');
+    const std = String(heure).slice(0, 5);
+    return { etat, ecart,
+      txt: etat === 'retard' ? '+' + duree(ecart) + ' sur ' + std : (etat === 'avance' ? 'très tôt (std ' + std + ')' : 'à l’heure (std ' + std + ')'),
+      long: 'heure standard de la checklist ' + std + ' : ' + (etat === 'retard' ? 'en retard de ' + duree(ecart)
+        : etat === 'avance' ? 'très en avance (' + duree(ecart) + ' avant) — le comptoir était-il prêt ?'
+        : 'à l’heure' + (ecart < 0 ? ' (' + duree(ecart) + ' avant)' : ecart > 0 ? ' (' + duree(ecart) + ' après, toléré)' : '')) };
+  }
+  /** La forme que le volet lit (bloc « Assistance à la notation »). */
+  iaVersVolet(pr, avert){
+    return { niveau: pr.niveau, nom: pr.nom, constats: pr.constats || [], commentaire: pr.commentaire || '',
+      confiance: pr.confiance || '', modele: pr.modele || '', motif: pr.niveau == null ? (pr.motif || 'pas de proposition') : '',
+      avertissement: avert || (pr.confiance === 'faible' ? 'Confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même.' : ''),
+      leconsVues: pr.leconsVues || 0 };
+  }
+  /**
+   * Ce que la carte d'une photo à contrôler montre en mode assisté : la note
+   * proposée en clair (« IA · 4/5 Conforme »), le premier constat, la
+   * confiance, et deux gestes — valider la note proposée, ou corriger dans le
+   * volet. Confiance faible : pas de validation en un clic.
+   */
+  iaCarte(pr, s, t, seuil, attente){
+    const open = () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache);
+    if (!pr || attente) {
+      return { cls: 'iaatt', badge: 'IA · …', constat: attente ? 'note en cours de proposition…' : 'en attente de l’assistant', constatCls: 'ia rv', conf: '', manuel: true };
+    }
+    if (pr.niveau == null) {
+      return { cls: 'iarv', badge: 'IA · —', constat: 'pas de proposition — ' + (pr.motif || 'motif inconnu'), constatCls: 'ia rv', conf: '', manuel: true,
+        refaire: () => this.iaRefaire(t.date, s.shopId, t.taskId) };
+    }
+    const lv = this.zNiveaux().find(v => v.n === pr.niveau) || { nom: pr.nom || (pr.niveau + '/5'), couleur: '#7a736a' };
+    const faible = pr.confiance === 'faible';
+    const nomCourt = pr.niveau >= seuil ? String(lv.nom) : String(lv.nom).split(/[—–-]/).pop().trim();
+    const comment = String(pr.commentaire || '');
+    // Sous le seuil, une note exige un commentaire : sans commentaire proposé, on corrige dans le volet.
+    const direct = !faible && (pr.niveau >= seuil || comment.trim() !== '');
+    return { cls: faible ? 'iarv' : 'ia' + pr.niveau, badge: 'IA · ' + pr.niveau + '/5 ' + nomCourt,
+      constat: (pr.constats || [])[0] || comment || nomCourt, constatCls: 'ia ' + (faible ? 'rv' : (pr.niveau < seuil ? 'nc' : 'ok')),
+      conf: faible ? 'confiance faible — à juger vous-même' : 'confiance ' + (pr.confiance || '?') + (pr.leconsVues ? ' · ' + pr.leconsVues + ' leçon' + (pr.leconsVues > 1 ? 's' : '') : ''),
+      valider: direct ? { lib: 'Valider ' + pr.niveau + '/5', coul: lv.couleur || '#3f7a52',
+        titre: 'Valider la note proposée : ' + lv.nom + (comment ? ' — « ' + comment + ' »' : ''),
+        pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, pr.niveau, comment) } : null,
+      corriger: { lib: faible || !direct ? 'Noter…' : 'Corriger…', pick: open } };
+  }
+  /**
+   * La bande de l'assistant : où en est l'IA sur les photos à contrôler des
+   * boutiques affichées, ce qu'elle propose (écarts, à revoir, conformes), le
+   * taux d'accord avec les notes du consultant, la validation finale et les
+   * leçons.
+   */
+  valsIaBande(pt, shops, garde, seuil){
+    const S = this.state;
+    const dispo = (this.D.iaStatut || {}).configure === true;
+    const J = this.iaPropsLire(pt.date);
+    const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
+    const nomT = x => String(x || '').replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+    const items = [];
+    shops.forEach(sh => {
+      const s = brut[String(sh.shopId)]; if (!s) { return; }
+      const P = this.ctrlPhotosLire(s.shopId, pt.date);
+      const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
+      (s.taches || []).filter(garde).forEach(t => {
+        if (t.note != null || !(t.statut === 'aControler' || t.statut === 'aValider')) { return; }
+        const p = ph[String(t.taskId)]; if (!p) { return; }
+        items.push({ k: s.shopId + '|' + t.taskId, shopId: String(s.shopId), taskId: String(t.taskId), date: t.date || pt.date,
+          shop: s.shop, tache: t.tache, nom: nomT(t.tache), heure: t.faitLe ? String(t.faitLe).slice(11, 16) : '', photo: p.photo,
+          checklistId: p.checklistId || null, completionId: p.completionId || null, ponct: this.ponctualite(t.heure, t.faitLe),
+          pr: J ? J.map[String(s.shopId) + '|' + String(t.taskId)] || null : null });
+      });
+    });
+    const prets = items.filter(i => i.pr && i.pr.etat === 'propose' && i.pr.niveau != null);
+    const faible = i => i.pr.confiance === 'faible';
+    const nConf = prets.filter(i => !faible(i) && i.pr.niveau >= seuil).length;
+    const nEcart = prets.filter(i => !faible(i) && i.pr.niveau < seuil).length;
+    const nRevoir = prets.filter(faible).length;
+    const nEchec = items.filter(i => i.pr && i.pr.niveau == null).length;
+    const attente = J ? this.iaAttente(pt.date) : 0;
+    const a = J && J.accord;
+    const accord = !a ? '' : a.notees
+      ? 'Accord avec vos notes (' + a.jours + ' j) : ' + a.pct + ' % sur ' + a.notees
+        + (a.tropSevere || a.tropIndulgente ? ' · plus sévère que vous ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '')
+      : 'Accord avec vos notes : mesuré dès vos premières validations';
+    const pl = (n, s1, s2) => n + ' ' + (n > 1 ? s2 : s1);
+    const etat = !dispo ? 'Aucune clé Anthropic au serveur (Paramètres › Assistance IA) : l’IA ne peut rien proposer.'
+      : !J ? 'Lecture des propositions…'
+      : J.configure === false ? 'La clé Anthropic du serveur est refusée ou absente : l’IA ne peut rien proposer.'
+      : !items.length ? 'Aucune photo à contrôler dans cette sélection.'
+      : attente ? 'L’IA note les photos… ' + (items.length - attente) + ' / ' + items.length
+      : pl(prets.length, 'note proposée', 'notes proposées') + ' sur ' + pl(items.length, 'photo à contrôler', 'photos à contrôler') + '.';
+    const nomN = n => ((this.zNiveaux().find(v => v.n === n) || {}).nom) || (n + '/5');
+    const nomShop = id => ((pt.shops || []).find(x => String(x.shopId) === String(id)) || {}).shop || ('Boutique ' + id);
+    const Lc = S.iaLeconsOuvert ? this.iaLeconsLire() : null;
+    return { dispo: dispo && !!J && J.configure !== false, etat, attente: attente > 0,
+      pct: items.length ? Math.round(100 * (items.length - attente) / items.length) : 0, accord, items, prets,
+      tuiles: [{ cls: 'nc', n: nEcart, lib: nEcart > 1 ? 'écarts proposés' : 'écart proposé' },
+        { cls: 'rv', n: nRevoir, lib: 'à revoir · confiance faible' },
+        { cls: 'ok', n: nConf, lib: nConf > 1 ? 'conformes proposées' : 'conforme proposée' }]
+        .concat(nEchec ? [{ cls: 'rv', n: nEchec, lib: 'sans proposition' }] : [])
+        .concat((() => { const n = items.filter(i => i.ponct && i.ponct.etat === 'retard').length;
+          return n ? [{ cls: 'nc', n, lib: (n > 1 ? 'photos prises' : 'photo prise') + ' en retard sur l’heure standard' }] : []; })()),
+      peutValider: prets.length > 0,
+      valider: () => this.setState({ iaRecap: { edits: {}, envoi: false } }),
+      valiLib: 'Valider ce que l’IA a proposé (' + prets.length + ')',
+      leconsN: J ? J.lecons : 0,
+      leconsOuvert: !!S.iaLeconsOuvert,
+      leconsBasculer: () => this.setState({ iaLeconsOuvert: !S.iaLeconsOuvert }),
+      leconsChargement: !!S.iaLeconsOuvert && !Lc,
+      leconsMax: (Lc && Lc.max) || 6,
+      lecons: Lc ? (Lc.lecons || []).map(l => ({ date: this.fD(l.date), shop: nomShop(l.shopId), tache: nomT(l.tache),
+        ia: nomN(l.niveau), vous: nomN(l.noteFinale), raison: l.raison || '', constat: (l.constats || [])[0] || '',
+        retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })) : [] };
+  }
+  /** La validation finale : une ligne par note proposée, modifiable avant l'envoi. */
+  valsIaRecap(ia, seuil){
+    const R = this.state.iaRecap || {}; const E = R.edits || {};
+    const niv = this.zNiveaux().slice().sort((a, b) => b.n - a.n);
+    const maj = (k, champ) => e => {
+      const v = champ === 'inclus' ? !!e.target.checked : (champ === 'note' ? +e.target.value : String(e.target.value));
+      this.setState(s => ({ iaRecap: Object.assign({}, s.iaRecap, { edits: Object.assign({}, (s.iaRecap || {}).edits,
+        { [k]: Object.assign({}, ((s.iaRecap || {}).edits || {})[k], { [champ]: v }) }) }) }));
+    };
+    const tous = on => () => this.setState(s => { const ed = Object.assign({}, (s.iaRecap || {}).edits);
+      ia.prets.forEach(i => { ed[i.k] = Object.assign({}, ed[i.k], { inclus: on }); });
+      return { iaRecap: Object.assign({}, s.iaRecap, { edits: ed }) }; });
+    const lignes = ia.prets.map(i => {
+      const e = E[i.k] || {};
+      const note = e.note != null ? e.note : i.pr.niveau;
+      const comment = e.comment != null ? e.comment : (i.pr.commentaire || '');
+      const inclus = e.inclus != null ? e.inclus : i.pr.confiance !== 'faible';
+      const lv = niv.find(v => v.n === note) || {};
+      return { k: i.k, shopId: i.shopId, taskId: i.taskId, date: i.date, checklistId: i.checklistId, completionId: i.completionId,
+        shop: i.shop, nom: i.nom, heure: i.heure, photo: i.photo, note, comment, inclus, raison: e.raison || '', ponct: i.ponct,
+        change: note !== i.pr.niveau, propose: i.pr.niveau + '/5 · ' + (i.pr.nom || ''), confiance: i.pr.confiance || '',
+        faible: i.pr.confiance === 'faible', constats: (i.pr.constats || []).slice(0, 3), couleur: lv.couleur || '#7a736a',
+        sousSeuil: note < seuil, manqueComment: inclus && note < seuil && !String(comment).trim(), erreur: (R.erreurs || {})[i.k] || '',
+        niveaux: niv.map(v => ({ n: v.n, nom: v.n + '/5 · ' + v.nom, sel: v.n === note })),
+        setInclus: maj(i.k, 'inclus'), setNote: maj(i.k, 'note'), setComment: maj(i.k, 'comment'), setRaison: maj(i.k, 'raison'),
+        ouvrir: () => { if (!R.envoi) { this.setState({ iaRecap: null }); this.ctrlOpenTask(i.shopId, i.taskId, i.date, i.tache); } } };
+    });
+    const n = lignes.filter(l => l.inclus).length;
+    return { lignes, n, nCorr: lignes.filter(l => l.inclus && l.change).length, nManque: lignes.filter(l => l.manqueComment).length,
+      envoi: !!R.envoi, faits: R.faits || 0, total: R.total || 0,
+      tout: tous(true), aucun: tous(false),
+      fermer: () => { if (!R.envoi) { this.setState({ iaRecap: null }); } },
+      envoyer: () => this.iaRecapEnvoyer(lignes),
+      envoyerLib: R.envoi ? 'Envoi… ' + (R.faits || 0) + ' / ' + (R.total || 0) : 'Valider et envoyer (' + n + ')' };
+  }
+  /** Les leçons (GET /ia/lecons), lues à l'ouverture du panneau. */
+  iaLeconsLire(){
+    if (this._iaLecons !== undefined || this._iaLeconsLu) { return this._iaLecons || null; }
+    this._iaLeconsLu = true;
+    readOne('/ia/lecons').then(r => { this._iaLeconsLu = false; this._iaLecons = r || { lecons: [], indispo: true }; this.setState({}); });
+    return null;
+  }
+  iaLeconRetenir(l, retenir){
+    write(this.source, 'POST', '/ia/lecons', { shopId: l.shopId, taskId: l.taskId, date: l.date, retenir }).then(r => {
+      if (r && r.ok !== false && Array.isArray(r.lecons)) { this._iaLecons = r; }
+      else { this.notify('Échec — ' + ((r && r.error) || 'leçon inchangée')); }
+      const j = this._iaJ && this._iaJ[l.date]; if (j && r && r.retenues != null) { j.lecons = r.retenues; }
+      Object.keys(this._iaJ || {}).forEach(d => { if (r && r.retenues != null) { this._iaJ[d].lecons = r.retenues; } });
+      this.setState({});
+      this.notify(retenir ? 'Leçon reprise — l’IA la recevra de nouveau' : 'Leçon écartée — l’IA ne la recevra plus');
+    });
+  }
+  /* --- L'entraînement de l'IA (écran « Entraînement de l'IA », GET /ia/entrainement) -----------------
+   *
+   * Rayon par rayon : la consigne (ce que l'IA doit voir), la photo modèle de
+   * chaque magasin et la photo type du réseau, les leçons, l'accord. Une
+   * photo notée Exemplaire est candidate au modèle ; c'est le consultant qui
+   * la prend, jamais l'IA. */
+  iaEntLire(forcer){
+    if (!forcer && (this._iaEnt !== undefined || this._iaEntLu)) { return this._iaEnt || null; }
+    this._iaEntLu = true;
+    readOne('/ia/entrainement').then(r => { this._iaEntLu = false; this._iaEnt = r || { indispo: true, rayons: [], candidates: [] }; this.setState({}); });
+    return this._iaEnt || null;
+  }
+  /** Le nom court d'un magasin (« Halle ») : la journée chargée, sinon le référentiel. */
+  iaNomMagasin(id){
+    const s = ((this.D.pwaTasks || {}).shops || []).find(x => String(x.shopId) === String(id));
+    const st = (this.D.stores || []).find(x => String(x.id) === String(id));
+    const nom = (s && s.shop) || (st && st.nom) || ('Magasin ' + id);
+    return nom.indexOf(' - ') >= 0 ? nom.slice(nom.lastIndexOf(' - ') + 3).trim() : nom;
+  }
+  /**
+   * Prendre la photo d'une tâche pour son rayon : comme photo d'EXEMPLE
+   * (portée « exemple », plusieurs par rayon), ou comme photo du PLANOGRAMME
+   * (portée « planogramme », une par rayon).
+   */
+  iaPrendreModele(shopId, taskId, date, portee){
+    const k = shopId + '|' + taskId + '|' + date;
+    if ((this.state.iaModeleBusy || {})[k]) { return; }
+    this.setState(s => ({ iaModeleBusy: Object.assign({}, s.iaModeleBusy, { [k]: portee }) }));
+    write(this.source, 'POST', '/ia/modeles', { shopId, taskId, date, portee }).then(r => {
+      this.setState(s => { const b = Object.assign({}, s.iaModeleBusy); delete b[k]; return { iaModeleBusy: b }; });
+      if (!r || r.ok === false) { this.notify('Photo refusée — ' + ((r && r.error) || 'serveur injoignable')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      // La photo du planogramme a pu changer : la liste des rayons se relit.
+      if (portee === 'planogramme') { this._rv = undefined; }
+      const ry = (r.rayons || []).find(x => x.cle === r.rayon) || {};
+      this.notify((portee === 'planogramme' ? 'Photo du planogramme' : 'Photo d’exemple') + (ry.nom ? ' « ' + ry.nom + ' »' : '')
+        + (portee === 'planogramme' ? '' : ' (' + this.iaNomMagasin(shopId) + ')') + ' — l’IA la reçoit désormais avec chaque photo du rayon');
+      // Le volet ouvert sur cette tâche montre la nouvelle référence.
+      const dt = this.state.ctrlDet;
+      if (dt && String(dt.shopId) === String(shopId) && String(dt.taskId) === String(taskId) && dt.date === date) {
+        readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
+          .then(d => this.setState(s => (s.ctrlDet && String(s.ctrlDet.taskId) === String(taskId) && d ? { ctrlDet: Object.assign({}, s.ctrlDet, { d }) } : {})));
+      }
+      this.setState({});
+    });
+  }
+  iaRetirerExemple(rayon, nomRayon, ex){
+    if (!window.confirm('Retirer cette photo d’exemple « ' + nomRayon + ' » (' + this.iaNomMagasin(ex.shopId) + ', ' + this.fD(ex.date) + ') ?')) { return; }
+    write(this.source, 'POST', '/ia/modeles', { rayon, shopId: ex.shopId, taskId: ex.taskId, date: ex.date, retirer: true }).then(r => {
+      if (!r || r.ok === false) { this.notify('Échec — ' + ((r && r.error) || 'exemple inchangé')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      this.notify('Photo d’exemple retirée — ' + nomRayon + ', ' + this.iaNomMagasin(ex.shopId));
+      this.setState({});
+    });
+  }
+  /** Déposer (ou retirer) la photo du planogramme d'un rayon depuis l'entraînement : la page se relit ensuite. */
+  iaPlanoFichier(nom){
+    return e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!f) { return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { this.notify('Photo en JPEG, PNG ou WebP'); return; }
+      this.rvReduire(f).then(data => this.rvEcrire(nom, { data }, 'Photo du planogramme posée — ' + nom)).then(() => this.iaEntLire(true))
+        .catch(() => this.notify('Image illisible — essayez un autre fichier'));
+    };
+  }
+  /* --- L'assistant d'entraînement (POST /ia/analyser) ---------------------------------------------
+   * Pour un rayon (ou une tâche) et une période : ce qui va, ce qui ne va pas, les désaccords, une
+   * consigne proposée, les conseils aux magasins, les photos à prendre en exemple. La dernière
+   * analyse de chaque sujet est gardée au serveur. */
+  iaAnaLire(forcer){
+    if (!forcer && (this._iaAna !== undefined || this._iaAnaLu)) { return this._iaAna || null; }
+    this._iaAnaLu = true;
+    readOne('/ia/analyses').then(r => { this._iaAnaLu = false; this._iaAna = r || { sujets: [], analyses: {}, indispo: true }; this.setState({}); });
+    return this._iaAna || null;
+  }
+  iaAnalyser(sujet, jours){
+    if (!sujet || this.state.iaAnaBusy) { return; }
+    this.setState({ iaAnaBusy: sujet, iaAnaSujet: sujet, iaAnaErreur: '' });
+    write(this.source, 'POST', '/ia/analyser', { sujet, jours }).then(r => {
+      if (r && r.ok !== false && r.analyse) {
+        this._iaAna = this._iaAna || { sujets: [], analyses: {} };
+        this._iaAna.analyses = Object.assign({}, this._iaAna.analyses, { [sujet]: r.analyse });
+        this.setState({ iaAnaBusy: '' });
+        this.notify('Analyse prête — ' + (r.analyse.nom || sujet) + ' : ' + r.analyse.nb + ' photos relues');
+      } else {
+        this.setState({ iaAnaBusy: '', iaAnaErreur: (r && r.error) || 'analyse impossible — serveur injoignable' });
+      }
+    });
+  }
+  /* --- La consigne générale des contrôles qualité (PUT /ia/consigne-generale) -------------------------
+   * Une liste de points envoyée à l'IA avec chaque photo de contrôle. Un point se modifie sur place et
+   * s'enregistre en quittant le champ ; un point ajouté reste un brouillon tant qu'il est vide. */
+  valsIaConsigneGenerale(E){
+    const S = this.state;
+    const pts = S.iaCgBrouillon || E.consigneGenerale || [];
+    const max = E.consigneGeneraleMax || 20;
+    return { busy: !!S.iaCgBusy, defaut: !!E.consigneGeneraleDefaut, max, longueur: 400,
+      points: pts.map((p, i) => ({ texte: p, set: e => this.iaCgModifier(E, i, e.target.value), retirer: () => this.iaCgRetirer(E, i) })),
+      ajouter: pts.length < max ? () => this.iaCgAjouter(E) : null,
+      retablir: E.consigneGeneraleDefaut ? null : () => this.iaCgRetablir() };
+  }
+  iaCgPoints(E){ return (this.state.iaCgBrouillon || E.consigneGenerale || []).slice(); }
+  iaCgEnregistrer(corps, message){
+    this.setState({ iaCgBusy: true });
+    return write(this.source, 'PUT', '/ia/consigne-generale', corps).then(r => {
+      if (!r || r.ok === false) { this.setState({ iaCgBusy: false }); this.notify('Consigne générale non enregistrée — ' + ((r && r.error) || 'serveur injoignable')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      this.setState({ iaCgBusy: false, iaCgBrouillon: null });
+      this.notify(message + ' — l’IA la reçoit avec chaque photo de contrôle');
+    });
+  }
+  iaCgModifier(E, i, valeur){
+    const pts = this.iaCgPoints(E);
+    const v = String(valeur || '').trim();
+    if ((pts[i] || '') === v) { return; }
+    pts[i] = v;
+    this.iaCgEnregistrer({ points: pts }, v ? 'Point ' + (i + 1) + ' enregistré' : 'Point ' + (i + 1) + ' retiré');
+  }
+  iaCgRetirer(E, i){
+    const pts = this.iaCgPoints(E);
+    const vide = !String(pts[i] || '').trim();
+    pts.splice(i, 1);
+    // Un point encore vide n'existe qu'à l'écran : le retirer n'écrit rien.
+    if (vide) { this.setState({ iaCgBrouillon: pts }); return; }
+    if (!window.confirm('Retirer ce point de la consigne générale ?')) { return; }
+    this.iaCgEnregistrer({ points: pts }, 'Point retiré');
+  }
+  iaCgAjouter(E){
+    const pts = this.iaCgPoints(E);
+    if (pts.length && !String(pts[pts.length - 1]).trim()) { this.iaCgFocus(); return; }
+    this.setState({ iaCgBrouillon: pts.concat(['']) });
+    this.iaCgFocus();
+  }
+  iaCgFocus(){ setTimeout(() => { const l = document.querySelectorAll('.ia-ent-cg .pts textarea'); if (l.length) { l[l.length - 1].focus(); } }, 60); }
+  iaCgRetablir(){
+    if (!window.confirm('Rétablir la consigne générale par défaut ? Vos points seront remplacés.')) { return; }
+    this.iaCgEnregistrer({ retablir: true }, 'Consigne par défaut rétablie');
+  }
+  /** Le panneau de l'assistant d'entraînement, sur la page Entraînement de l'IA. */
+  valsIaAnalyse(E){
+    const S = this.state;
+    const A = this.iaAnaLire();
+    if (!A) { return { chargement: true }; }
+    const sujets = A.sujets || [];
+    const parDefaut = (sujets.slice().sort((a, b) => b.n - a.n)[0] || {}).cle || '';
+    const cle = S.iaAnaSujet || parDefaut;
+    const jours = S.iaAnaJours || 30;
+    const su = sujets.find(x => x.cle === cle) || {};
+    const an = ((A.analyses || {})[cle]) || null;
+    const rv = (E.rayons || []).find(r => r.cle === cle) || null;
+    const groupe = (t, lib) => ({ lib, opts: sujets.filter(x => x.type === t).map(x => ({ val: x.cle, nom: x.nom + ' — ' + x.n + ' photo' + (x.n > 1 ? 's' : '') + ' évaluée' + (x.n > 1 ? 's' : ''), sel: x.cle === cle })) });
+    const FREQ = { souvent: 'souvent', parfois: 'parfois', rare: 'rare' };
+    return { chargement: false,
+      groupes: [groupe('rayon', 'Rayons'), groupe('tache', 'Autres tâches')].filter(g => g.opts.length),
+      setSujet: e => this.setState({ iaAnaSujet: e.target.value, iaAnaErreur: '' }),
+      periodes: [7, 14, 30, 90].map(n => ({ val: n, nom: n + ' jours', sel: n === jours })),
+      setJours: e => this.setState({ iaAnaJours: +e.target.value }),
+      busy: S.iaAnaBusy === cle, autreBusy: !!S.iaAnaBusy && S.iaAnaBusy !== cle,
+      peut: (su.n || 0) >= (A.min || 3),
+      manque: (su.n || 0) < (A.min || 3) ? 'Il faut ' + (A.min || 3) + ' photos évaluées au moins sur ce sujet : passez des photos en mode assisté.' : '',
+      erreur: S.iaAnaErreur || '',
+      lancer: () => this.iaAnalyser(cle, jours),
+      lib: an ? 'Relancer l’analyse' : 'Analyser les photos',
+      an: !an ? null : {
+        meta: 'Analyse du ' + this.fD(String(an.le || '').slice(0, 10)) + ' ' + String(an.le || '').slice(11, 16) + ' · ' + an.nb + ' photo' + (an.nb > 1 ? 's' : '') + ' sur ' + an.jours + ' jours (' + an.notees + ' notée' + (an.notees > 1 ? 's' : '') + ' par le consultant)',
+        synthese: an.synthese || '',
+        va: an.ce_qui_va || [],
+        vaPas: (an.ce_qui_ne_va_pas || []).map(v => ({ constat: v.constat, freq: FREQ[v.frequence] || v.frequence, freqCls: v.frequence, magasins: (v.magasins || []).join(', ') })),
+        desaccords: an.desaccords || [],
+        consigne: an.consigne_proposee || '',
+        reprendre: rv && an.consigne_proposee ? () => {
+          if (rv.consigne && !window.confirm('Remplacer la consigne actuelle du rayon « ' + rv.nom + ' » par la consigne proposée ?')) { return; }
+          this.rvEcrire(rv.nom, { consigne: an.consigne_proposee }, 'Consigne reprise — ' + rv.nom).then(() => this.iaEntLire(true));
+        } : null,
+        dejaReprise: !!(rv && rv.consigne && rv.consigne.trim() === String(an.consigne_proposee || '').trim()),
+        conseils: an.conseils_magasins || [],
+        exemples: (an.exemples_suggeres || []).map(x => {
+          const P = this.ctrlPhotosLire(x.shopId, x.date);
+          const ph = ((P && P.photos) || []).find(p => String(p.taskId) === String(x.taskId));
+          const dejaEx = !!(rv && (rv.exemples || []).some(m => String(m.shopId) === String(x.shopId) && String(m.taskId) === String(x.taskId) && m.date === x.date));
+          return { photo: ph ? ph.photo : null, attente: !P, magasin: x.magasin, date: this.fD(x.date), pourquoi: x.pourquoi, deja: dejaEx,
+            busy: ((S.iaModeleBusy || {})[x.shopId + '|' + x.taskId + '|' + x.date]) || '',
+            prendre: () => this.iaPrendreModele(x.shopId, x.taskId, x.date, 'exemple') };
+        }) } };
+  }
+  valsIaEntrainement(common){
+    const S = this.state;
+    const E = this.iaEntLire();
+    this.rvLire();
+    const nomN = n => ((this.zNiveaux().find(v => v.n === n) || {}).nom) || (n + '/5');
+    const nomT = x => String(x || '').replace(/^Photo du comptoir\s*-\s*/i, '');
+    const busy = S.iaModeleBusy || {};
+    if (!E) { common.iaEnt = { chargement: true }; return; }
+    const A = E.accord || {};
+    const nPlanos = (E.rayons || []).filter(r => r.planogramme).length;
+    const nExemples = (E.rayons || []).reduce((a, r) => a + (r.exemples || []).length, 0);
+    const nLecons = (E.rayons || []).reduce((a, r) => a + (r.lecons || []).filter(l => l.lecon).length, 0);
+    const candidates = (E.candidates || []).map(c => {
+      const P = this.ctrlPhotosLire(c.shopId, c.date);
+      const ph = ((P && P.photos) || []).find(p => String(p.taskId) === String(c.taskId));
+      const k = c.shopId + '|' + c.taskId + '|' + c.date;
+      return { photo: ph ? ph.photo : null, attente: !P, shop: this.iaNomMagasin(c.shopId), rayon: nomT(c.tache), date: this.fD(c.date),
+        note: (c.nomFinal || nomN(c.noteFinale)), par: c.validePar || '', busy: busy[k] || '',
+        exemple: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'exemple'),
+        planogramme: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'planogramme') };
+    });
+    const rayons = (E.rayons || []).map(r => {
+      const a = r.accord || {};
+      const lec = (r.lecons || []);
+      return { cle: r.cle, nom: r.nom, consigne: r.consigne || '', defaut: r.criteresDefaut || '',
+        setConsigne: e => { const v = String(e.target.value).trim(); if (v !== (r.consigne || '')) {
+          this.rvEcrire(r.nom, { consigne: v }, v ? 'Consigne enregistrée — ' + r.nom : 'Consigne retirée — ' + r.nom).then(() => this.iaEntLire(true)); } },
+        accord: a.notees ? a.pct + ' % d’accord sur ' + a.notees + ' photo' + (a.notees > 1 ? 's' : '') : 'pas encore de note comparée',
+        accordCls: !a.notees ? '' : a.pct >= 80 ? 'ok' : a.pct >= 60 ? 'moy' : 'nc',
+        ecarts: a.notees && (a.tropSevere || a.tropIndulgente) ? 'IA plus sévère ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '',
+        // 1. La photo du planogramme (une par rayon), 2. les photos d'exemple (plusieurs, chacune de son magasin).
+        planogramme: r.planogramme || null,
+        planoFichier: this.iaPlanoFichier(r.nom),
+        planoBusy: !!(S.rvBusy || {})[r.nom],
+        planoRetirer: r.planogramme ? () => { if (window.confirm('Retirer la photo du planogramme « ' + r.nom + ' » ?')) {
+          this.rvEcrire(r.nom, { data: '' }, 'Photo du planogramme retirée — ' + r.nom).then(() => this.iaEntLire(true)); } } : null,
+        exemples: (r.exemples || []).map(m => ({ photo: m.photo, shop: this.iaNomMagasin(m.shopId), date: m.date ? this.fD(m.date) : '',
+          par: m.par || '', retirer: () => this.iaRetirerExemple(r.cle, r.nom, m) })),
+        lecons: lec.slice(0, 5).map(l => ({ date: this.fD(l.date), shop: this.iaNomMagasin(l.shopId), ia: nomN(l.niveau), vous: nomN(l.noteFinale),
+          raison: l.raison || '', retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })),
+        leconsPlus: Math.max(0, lec.length - 5),
+        // L'assistant d'entraînement sur ce rayon : le choisir et remonter au panneau (l'analyse se lance d'un clic, là-haut).
+        versAnalyse: () => { this.setState({ iaAnaSujet: r.cle, iaAnaErreur: '' });
+          setTimeout(() => { const el = document.querySelector('.ia-ana'); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 60); } };
+    });
+    common.iaEnt = { chargement: false, indispo: !!E.indispo, dispo: (this.D.iaStatut || {}).configure === true,
+      kpis: [
+        { k: 'Accord avec vos notes', v: A.notees ? A.pct + ' %' : '—', s: A.notees ? 'sur ' + A.notees + ' photos notées en ' + A.jours + ' jours' : 'mesuré dès vos premières notes en mode assisté' },
+        { k: 'Leçons retenues', v: String(nLecons), s: 'vos corrections, envoyées à l’IA (les ' + (E.leconsMax || 6) + ' dernières par rayon)' },
+        { k: 'Planogrammes · exemples', v: nPlanos + ' / ' + (E.rayons || []).length + ' · ' + nExemples, s: 'rayons avec leur photo du planogramme · photos d’exemple (' + (E.exemplesEnvoyes || 2) + ' envoyées avec chaque photo)' },
+        { k: 'Photos parfaites à trier', v: String(candidates.length), s: 'notées « ' + (E.nomNiveauModele || 'Exemplaire') + ' » ces 30 jours' }],
+      communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
+      cg: this.valsIaConsigneGenerale(E),
+      ana: this.valsIaAnalyse(E),
+      versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
+  }
+  /**
+   * « Valider ce que l'IA a proposé » : chaque ligne cochée part au panel,
+   * une à une, avec la note et le commentaire tels que le consultant les a
+   * laissés ; une note changée emporte sa raison (la leçon). Une ligne
+   * refusée reste affichée avec son motif, les autres partent.
+   */
+  async iaRecapEnvoyer(lignes){
+    const R = this.state.iaRecap;
+    if (!R || R.envoi) { return; }
+    const sel = lignes.filter(l => l.inclus);
+    if (!sel.length) { this.notify('Aucune ligne cochée.'); return; }
+    if (sel.some(l => l.manqueComment)) { this.notify('Commentaire obligatoire sous le seuil — complétez les lignes signalées.'); return; }
+    this.setState(s => ({ iaRecap: Object.assign({}, s.iaRecap, { envoi: true, faits: 0, total: sel.length, erreurs: {} }) }));
+    let bons = 0, corriges = 0; const erreurs = {};
+    for (const l of sel) {
+      const r = await write(this.source, 'POST', '/pwa/tasks/review', { shopId: l.shopId, taskId: l.taskId, date: l.date, note: l.note,
+        comment: l.comment, checklistId: l.checklistId || null, completionId: l.completionId || null, raisonIa: l.change ? l.raison : '' });
+      if (r && r.ok !== false) {
+        bons++; if (l.change) { corriges++; }
+        this.ctrlPatchLigne({ shopId: l.shopId, taskId: l.taskId, date: l.date, note: l.note, comment: l.comment });
+        this.iaApresNote(l.shopId, l.taskId, l.date, l.note);
+      } else { erreurs[l.k] = (r && r.error) || 'note refusée'; }
+      this.setState(s => (s.iaRecap ? { iaRecap: Object.assign({}, s.iaRecap, { faits: bons + Object.keys(erreurs).length, erreurs: Object.assign({}, erreurs) }) } : {}));
+    }
+    const nErr = Object.keys(erreurs).length;
+    this.notify(bons + ' note' + (bons > 1 ? 's' : '') + ' envoyée' + (bons > 1 ? 's' : '') + (corriges ? ', dont ' + corriges + ' corrigée' + (corriges > 1 ? 's' : '') : '')
+      + (nErr ? ' — ' + nErr + ' refusée' + (nErr > 1 ? 's' : '') : ''));
+    this.setState(s => (nErr ? { iaRecap: Object.assign({}, s.iaRecap, { envoi: false }) } : { iaRecap: null }));
+    const date = sel[0].date;
+    readOne('/pwa/tasks?date=' + encodeURIComponent(date)).then(pt => { if (pt) { this.D.pwaTasks = pt; this.setState({}); } }).catch(() => {});
   }
   /* --- suivi des tâches ------------------------------------------------------------- */
   /**
@@ -15054,8 +15636,11 @@ class App {
     const noms = {}, famille = {};
     (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
       if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = [g[0], it.sub].filter(Boolean).join(' › '); }); }
-      else if (it) { noms[it[0]] = it[1]; famille[it[0]] = g[0]; }
+      else if (it) { noms[it[0]] = it[1]; famille[it[0]] = (it[3] || []).length ? g[0] + ' › ' + it[1] : g[0]; }
     }));
+    // Les écrans tenus en onglets d'une entrée (c[3], 19/11/2026) sont de la même famille : celle de leur entrée.
+    (this._navDef || []).forEach(g => (g[1] || []).forEach(it => { if (!Array.isArray(it)) { return; }
+      (it[3] || []).forEach(id => { if (noms[id]) { return; } noms[id] = ((titres || {})[id] || [])[0] || id; famille[id] = g[0] + ' › ' + it[1]; }); }));
     /* Le rail n'est pas l'inventaire complet. Des écrans gardent une ADRESSE
        sans avoir d'entrée de menu — retirés du rail au fil du temps, atteints
        par un signet ou la recherche. Absents d'ici, ils n'étaient candidats à
@@ -15214,6 +15799,9 @@ class App {
       if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; }); }
       else if (it) { noms[it[0]] = it[1]; }
     }));
+    // Les écrans tenus en onglets d'une entrée : leur propre titre (19/11/2026).
+    (this._navDef || []).forEach(g => (g[1] || []).forEach(it => { if (Array.isArray(it)) { (it[3] || []).forEach(id => {
+      if (!noms[id]) { noms[id] = ((this._titres || {})[id] || [])[0] || id; } }); } }));
     common.vuesChargement = !!(S.vues || {}).chargement;
     const jours = v.joursListe || [];
     const maxN = Math.max(1, ...(v.ecrans || []).flatMap(e => e.jours || []));

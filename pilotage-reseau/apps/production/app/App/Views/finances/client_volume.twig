@@ -48,20 +48,7 @@
             <span class="at-tile-meta">różnice zamówienie / faktura z {{ thresholds.recent_days }} dni</span></a>
     </div>
 
-    {% if alerts %}
-    <div class="card">
-        <div class="card-header"><h4 class="card-title mb-0">Do sprawdzenia ({{ alerts|length }})</h4></div>
-        <div class="card-body pt-0">
-            <ul class="list-unstyled mb-0" id="cvAlerts">
-                {% for a in alerts %}
-                    <li class="py-1"><i class="bi {{ a.level == 'danger' ? 'bi-exclamation-octagon text-danger' : (a.level == 'warning' ? 'bi-exclamation-triangle text-warning' : 'bi-info-circle text-secondary') }}"></i>
-                        <a class="at-link" href="{{ root }}/clients/{{ a.id }}/profitability">{{ a.client }}</a> : {{ a.text }}</li>
-                {% endfor %}
-            </ul>
-            <p class="small text-muted mt-2 mb-0">Progi : spadek ≤ {{ thresholds.decline }} % r/r, marża niższa od średniej firmy o {{ thresholds.margin_gap }} pkt, proforma bez płatności &gt; {{ thresholds.unpaid_days }} dni, należności i dopłaty z ostatnich {{ thresholds.recent_days }} dni.</p>
-        </div>
-    </div>
-    {% endif %}
+    {# [326] « Do sprawdzenia » usunięte z tej strony. #}
 
     <div class="card">
         <div class="card-header"><h4 class="card-title mb-0">Firma : miesiąc po miesiącu</h4></div>

@@ -7,7 +7,7 @@ namespace App\Repositories\Workshop;
 final class ExecutionRepository extends WorkshopRepository
 {
     protected string $table = 'n_prod_device';
-    protected array $writable = ['name', 'id_group', 'mode', 'id_carrier_vehicle', 'token_hash', 'pairing_code_hash', 'pairing_expires_at', 'active', 'last_seen_at', 'created_by'];
+    protected array $writable = ['name', 'id_group', 'mode', 'id_carrier_vehicle', 'token_hash', 'pairing_code_hash', 'pairing_expires_at', 'active', 'last_seen_at', 'created_by', 'pin_failed', 'pin_locked_until'];
 
     // --- Tablettes -------------------------------------------------------------------------------
 
@@ -36,6 +36,12 @@ final class ExecutionRepository extends WorkshopRepository
     public function deviceByToken(string $hash): ?array
     {
         return $this->all('SELECT * FROM n_prod_device WHERE token_hash = ?', [$hash])[0] ?? null;
+    }
+
+    /** [299] Tablette de bureau d'un utilisateur, appairée depuis sa session ERP (nom « Tablet biurowy · login »). */
+    public function erpOfficeDevice(int $userId, string $name): ?array
+    {
+        return $this->all("SELECT * FROM n_prod_device WHERE mode = 'office' AND created_by = ? AND name = ? ORDER BY id LIMIT 1", [$userId, $name])[0] ?? null;
     }
 
     public function deviceByPairing(string $hash): ?array
@@ -140,6 +146,26 @@ final class ExecutionRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * [364] Tablette de bureau, RODO : recherche d'une personne par son nom (au moins 3 lettres), sans service ni
+     * présence — seulement le nom, le PIN posé ou non et les téléphones. Au plus $limit personnes.
+     */
+    public function officeSearch(string $q, int $limit = 8): array
+    {
+        $like = '%' . addcslashes($q, '%_\\') . '%';
+        return $this->all(
+            "SELECT pe.id AS person_id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id AS employee_id, c.pin_hash IS NOT NULL AS has_pin,
+                    (SELECT COUNT(*) FROM n_prod_phone p WHERE p.id_employee = e.id AND p.revoked_at IS NULL) AS phones
+             FROM production_employee pe
+             LEFT JOIN n_prod_employee e ON e.id_production_employee = pe.id
+             LEFT JOIN n_prod_employee_credential c ON c.id_employee = e.id
+             WHERE COALESCE(e.active, 1) = 1
+               AND (CONCAT(pe.name, ' ', pe.surname) LIKE ? OR CONCAT(pe.surname, ' ', pe.name) LIKE ?)
+             ORDER BY pe.surname, pe.name LIMIT " . max(1, min(20, $limit)),
+            [$like, $like]
+        );
+    }
+
     /** Téléphones enregistrés (non révoqués) d'une personne : la tablette de bureau propose alors le QR, pas le PIN. */
     public function activePhones(int $employeeId): int
     {
@@ -161,6 +187,19 @@ final class ExecutionRepository extends WorkshopRepository
         return $this->all('SELECT * FROM n_prod_employee_credential WHERE id_employee = ?', [$employeeId])[0] ?? null;
     }
 
+    /** [361] Personne dont le PIN a cette empreinte (HMAC). */
+    public function credentialByPinLookup(string $lookup): ?array
+    {
+        return $this->all('SELECT * FROM n_prod_employee_credential WHERE pin_lookup = ?', [$lookup])[0] ?? null;
+    }
+
+    /** [361] PIN encore sans empreinte (posés avant la connexion par PIN seul) des personnes actives : vérifiés en bcrypt. */
+    public function pinsWithoutLookup(): array
+    {
+        return $this->all('SELECT c.id_employee, c.pin_hash FROM n_prod_employee_credential c JOIN n_prod_employee e ON e.id = c.id_employee
+            WHERE c.pin_hash IS NOT NULL AND c.pin_lookup IS NULL AND e.active = 1');
+    }
+
     public function credentialByBadge(string $hash): ?array
     {
         return $this->all('SELECT * FROM n_prod_employee_credential WHERE badge_hash = ?', [$hash])[0] ?? null;
@@ -168,7 +207,7 @@ final class ExecutionRepository extends WorkshopRepository
 
     public function saveCredential(int $employeeId, array $data): void
     {
-        $allowed = ['badge_hash', 'pin_hash', 'failed_attempts', 'locked_until', 'biometric_consent', 'biometric_consent_at', 'biometric_consent_by', 'updated_by'];
+        $allowed = ['badge_hash', 'pin_hash', 'pin_lookup', 'pin_conflict', 'failed_attempts', 'locked_until', 'biometric_consent', 'biometric_consent_at', 'biometric_consent_by', 'updated_by'];
         $data = array_intersect_key($data, array_flip($allowed));
         if (!$data) return;
         $columns = array_keys($data);
@@ -187,6 +226,18 @@ final class ExecutionRepository extends WorkshopRepository
     {
         $this->db->prepare('INSERT INTO n_prod_phone (id_employee, token_hash, label, last_used_at) VALUES (?, ?, ?, NOW())')->execute([$employeeId, $hash, $label]);
         return (int) $this->db->lastInsertId();
+    }
+
+    /** [355] Kod krótki QR pointage : zapis jetonu (i sprzątanie kodów wygasłych ponad dzień). */
+    public function saveQrCode(string $code, string $token, int $ttl): void
+    {
+        $this->db->exec('DELETE FROM n_kiosk_qr WHERE expires_at < NOW() - INTERVAL 1 DAY');
+        $this->db->prepare('INSERT INTO n_kiosk_qr (code, token, expires_at) VALUES (?, ?, NOW() + INTERVAL ? SECOND)')->execute([$code, $token, $ttl]);
+    }
+
+    public function qrToken(string $code): ?string
+    {
+        return $this->all('SELECT token FROM n_kiosk_qr WHERE code = ?', [$code])[0]['token'] ?? null;
     }
 
     public function phoneByHash(string $hash): ?array
@@ -233,6 +284,12 @@ final class ExecutionRepository extends WorkshopRepository
     public function clockOut(int $id, string $at, ?string $uuid): void
     {
         $this->db->prepare('UPDATE n_prod_clock SET clock_out = ?, out_client_uuid = ? WHERE id = ? AND clock_out IS NULL')->execute([$at, $uuid, $id]);
+    }
+
+    /** [365] Remarque du jour écrite par la personne au pointage (sortie), reprise sur la feuille de temps du mois. */
+    public function setClockDayNote(int $id, string $note): void
+    {
+        $this->db->prepare('UPDATE n_prod_clock SET day_note = ? WHERE id = ?')->execute([$note, $id]);
     }
 
     public function correctClock(int $id, string $in, ?string $out, string $note, ?int $userId): void

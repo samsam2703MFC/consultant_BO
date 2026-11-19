@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <!-- L'accès : une session (siège ou console franchisé), comme les pages du cockpit (src/acces.php). Pas de data-siege :
+         un franchisé peut feuilleter les manuels de son magasin. -->
+    <script src="../../assets/js/garde.js" data-api="../api/cockpit"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#8D1D2C" />
+    <title>Catalogue des manuels — L'Atelier by</title>
+    <!-- Chemins RELATIFS : la page vit sous formation/catalogue/, l'API du module sous formation/api/cockpit. -->
+    <link rel="icon" href="../img/logo.png" />
+    <link rel="stylesheet" href="../ds.css" />
+    <link rel="stylesheet" href="catalogue.css" />
+  </head>
+  <body>
+    <div id="ct" class="ct"><div class="ct-corps"><p class="ct-msg">Ouverture du catalogue…</p></div></div>
+    <div id="ct-imprime" aria-hidden="true"></div>
+    <!-- Les QR codes : qrcode-generator (MIT), déjà servi par le cockpit (assets/vendor/qrcode). -->
+    <script src="../../assets/vendor/qrcode/qrcode.js"></script>
+    <script src="catalogue.js"></script>
+  </body>
+</html>

@@ -303,6 +303,41 @@ final class ErpApi
     }
 
     /**
+     * Un GET dont la réponse n'est pas du JSON (le PDF d'une offre client, 15/11/2026) : {code, type, corps brut, erreur}.
+     * Un 401 déclenche une reconnexion, comme get().
+     */
+    public static function brut(string $path, int $max = 15_000_000): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'type' => '', 'corps' => '', 'erreur' => self::$lastError ?? 'jeton admin indisponible']; }
+        $url = self::config()['base'] . $path;
+        $lire = static function (string $t) use ($url, $max): array {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 40, CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_HTTPHEADER => ['Accept: application/pdf, application/json', 'Authorization: Bearer ' . $t],
+                CURLOPT_MAXFILESIZE => $max]);
+            $raw = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $type = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            $err = curl_error($ch);
+            curl_close($ch);
+            return [$code, $type, $raw === false ? '' : (string) $raw, $raw === false ? 'API ERP injoignable : ' . $err : null];
+        };
+        [$code, $type, $corps, $err] = $lire($tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok !== null) { [$code, $type, $corps, $err] = $lire($tok); }
+        }
+        if ($err === null && ($code < 200 || $code >= 300)) {
+            $j = json_decode($corps, true);
+            $det = '';
+            foreach (['description', 'message', 'detail', 'error'] as $k) { if (is_array($j) && !empty($j[$k]) && is_string($j[$k])) { $det = $j[$k]; break; } }
+            $err = 'HTTP ' . $code . ($det !== '' ? ' : ' . substr($det, 0, 300) : '');
+        }
+        return ['code' => $code, 'type' => $type, 'corps' => $corps, 'erreur' => $err];
+    }
+
+    /**
      * GET pour qui veut le code autant que le corps (les promotions du panel, 16/10/2026) :
      * {code, corps, erreur} — un 403 se dit tel quel au lieu de se perdre dans un null.
      */

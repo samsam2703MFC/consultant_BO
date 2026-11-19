@@ -106,7 +106,7 @@ final class HrQuickNoteService
                 $sent['email']++;
             }
             if (in_array('sms', $channels, true) && $u['phone']) {
-                $r = $this->sms->send((string) $u['phone'], mb_substr($short, 0, 300));
+                $r = $this->sms->send((string) $u['phone'], mb_substr($short, 0, 300), ['context' => 'hr_note', 'ref' => $id, 'author' => 'hr_note:' . (int) $viewer]);
                 if (($r['status'] ?? '') !== 'failed') $sent['sms']++;
             }
         }

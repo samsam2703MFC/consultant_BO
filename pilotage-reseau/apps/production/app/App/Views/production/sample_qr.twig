@@ -1,0 +1,48 @@
+{% extends "layouts/bare.twig" %}
+
+{% block title %}{{ card ? 'Próbka ' ~ card.lot_code : 'Próbka' }}{% endblock %}
+
+{# [354] Karta próbki z kodu QR (/q/KOD) : bez logowania i bez menu — szybka na telefonie przy zamrażarce próbek.
+   « Próbka odłożona » : formularz (POST /q/KOD), bez JavaScriptu. #}
+
+{% block content %}
+<style>
+body.sop-bare{background:#f7f4f0!important}
+.qr-wrap{max-width:520px;margin:0 auto;padding:16px}
+.qr-card{background:#fff;border:1px solid #e7e0d8;border-radius:16px;padding:18px}
+.qr-k{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;font-weight:700}
+.qr-lot{font:700 30px/1.15 ui-monospace,Menlo,monospace;margin:4px 0}
+.qr-prod{font-size:19px;font-weight:700}
+.qr-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #f0ebe5;font-size:15px}.qr-row span{color:#7a716a}
+.qr-keep{background:#f8ecee;border-radius:12px;padding:12px 14px;margin:12px 0}.qr-keep span{display:block;color:#8D1D2C;font-size:13px}.qr-keep b{font-size:24px;color:#8D1D2C}
+.qr-lots{font-size:14px;margin:10px 0 0;padding-left:18px}
+.qr-btn{display:block;width:100%;border:0;border-radius:14px;background:#8D1D2C;color:#fff;font-weight:700;font-size:18px;padding:16px;margin-top:14px}
+.qr-ok{background:#e7f4ea;color:#1f6b33;border-radius:12px;padding:12px 14px;font-weight:700;margin-top:12px;font-size:16px}
+.qr-in{width:100%;border:1px solid #d9d0c6;border-radius:12px;padding:12px;font-size:16px;margin-top:10px}
+</style>
+<div class="qr-wrap">
+{% if card %}
+    <div class="qr-card">
+        <div class="qr-k">Próbka archiwalna · {{ card.code }}</div>
+        <div class="qr-lot">{{ card.lot_code }}</div>
+        <div class="qr-prod">{{ card.name }}</div>
+        <div class="qr-row"><span>Produkcja</span><b>{{ card.work_date|date('d.m.Y') }}{{ card.group_name ? ' · ' ~ card.group_name : '' }}</b></div>
+        {% if card.employee %}<div class="qr-row"><span>Operator</span><b>{{ card.employee }}</b></div>{% endif %}
+        <div class="qr-keep"><span>Przechowywać do (DLC produktu)</span><b>{{ card.keep_until ? card.keep_until|date('d.m.Y') : '—' }}</b></div>
+        {% if card.lot_rows %}<div class="qr-k" style="margin-top:6px">Partie surowców</div>
+            <ul class="qr-lots">{% for l in card.lot_rows %}<li>{{ l.name }} — <b>{{ l.lot_number ?: (l.missing_reason ? 'brak : ' ~ l.missing_reason : '—') }}</b></li>{% endfor %}</ul>{% endif %}
+        {% if card.status == 'stored' %}
+            <div class="qr-ok">✓ Odłożona {{ card.stored_at|date('d.m.Y H:i') }}{{ card.location ? ' · ' ~ card.location : '' }}</div>
+        {% else %}
+            <form method="post" action="{{ root }}/q/{{ card.code }}">
+                <input class="qr-in" name="location" maxlength="80" placeholder="Miejsce (np. zamrażarka próbek, półka 2)" aria-label="Miejsce">
+                <button class="qr-btn" type="submit">✓ Próbka odłożona</button>
+            </form>
+        {% endif %}
+        {% if logged %}<p style="margin:14px 0 0"><a href="{{ root }}/workshop/traceability?q={{ card.lot_code|url_encode }}&from={{ card.work_date }}&to={{ card.work_date }}">Partia w ERP : składniki i klienci →</a></p>{% endif %}
+    </div>
+{% else %}
+    <div class="qr-card"><b>Nie znaleziono próbki o tym kodzie.</b><p style="margin:6px 0 0;color:#7a716a">Sprawdź, czy arkusz jest aktualny (Próbki produkcji › krok 2).</p></div>
+{% endif %}
+</div>
+{% endblock %}

@@ -38,7 +38,7 @@ return [
         'bic'              => null,
     ],
 
-    // Dashboard › Mon catalogue (src/catalogues_magasin.php) : l'adresse de l'API du portail Marketing, quand la clé
+    // Dashboard › Mon catalogue (src/franchise/catalogues_magasin.php) : l'adresse de l'API du portail Marketing, quand la clé
     // commune « mar_api_url » d'erp_cles n'est pas posée (elle prime). Ex. : https://<hôte>/marketing/api
     'marketingApi' => null,
 

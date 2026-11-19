@@ -161,15 +161,16 @@
                         <input class="form-control form-control-sm" type="file" name="file" accept="application/pdf,image/jpeg,image/png,.docx" required>
                         <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-upload"></i> Dodaj</button><span class="hr-msg" data-upmsg></span></form>
                     <p class="tm-sub">PDF, zdjęcie albo DOCX, do 8 MB — plik jest zaszyfrowany na serwerze.</p></div>
-            </div><div class="hr-sec"><h5>Notatki <button type="button" class="btn btn-light btn-sm hr-quick-in" data-quick-card>＋ Szybka notatka</button></h5>
+            </div><div>${c.clock ? clockHtml(c.clock) : ''}<div class="hr-sec"><h5>Notatki <button type="button" class="btn btn-light btn-sm hr-quick-in" data-quick-card>＋ Szybka notatka</button></h5>
                 <form class="hr-compose" data-note><textarea class="form-control" name="body" rows="3" maxlength="2000" placeholder="Nowa notatka…" required></textarea>
                     <div class="hr-compose-bar"><span class="hr-seg"><button type="button" class="is-on" data-vis="private">Prywatna</button><button type="button" data-vis="public">Publiczna</button></span>
                     <label class="tm-sub"><input type="checkbox" class="form-check-input" name="to_admin"> Wyślij do administratora</label><span class="tm-spacer"></span>
                     <button type="submit" class="btn btn-primary btn-sm">Dodaj</button></div><span class="hr-msg" data-notemsg></span></form>
                 <div class="hr-notes">${c.notes.map(n => noteHtml(n)).join('') || '<p class="at-empty">Brak notatek.</p>'}</div>
                 <p class="tm-sub"><b>Publiczna</b> : widzi ją kierownik produkcji i administracja (i trafia do podsumowania miesiąca). <b>Prywatna</b> : tylko autor i administrator.
-                    <b>Do administratora</b> : od razu w dzwonku administratora.</p></div></div>`;
+                    <b>Do administratora</b> : od razu w dzwonku administratora.</p></div></div></div>`;
         card.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+        if (c.clock) bindClock(card.querySelector('[data-clock]'), id, c.clock);
         card.querySelector('[data-quick-card]').addEventListener('click', () => quickNote(id, () => { openCard(id); refresh(); }));
         bindFollowups(card, () => openCard(id));
         const form = card.querySelector('[data-form]');
@@ -215,6 +216,111 @@
             if (!confirm('Usunąć notatkę ?')) return;
             try { await api('DELETE', '/ajax/hr/notes/' + b.dataset.delNote); openCard(id); refresh(); } catch (x) { alert(x.message); }
         }));
+    }
+
+    // ================================ [348] Grafik tygodnia i przypomnienie o wejściu ================================
+    // Grafik stały (taki sam co tydzień ; pusty dzień = wolne), SMS gdy brak wejścia po N min (HR › Ustawienia), treść SMS
+    // dla tej osoby (pusta = domyślna). Zapis osobny (PUT /ajax/hr/people/{id}/schedule).
+    const WK = [[1, 'Pn'], [2, 'Wt'], [3, 'Śr'], [4, 'Cz'], [5, 'Pt'], [6, 'Sb'], [7, 'Nd']];
+    // Godzina wpisana skrótem : « 7 » → 07:00, « 730 » / « 7.30 » / « 7,30 » → 07:30 ; null = nieczytelna.
+    function hhmm(v) {
+        const t = String(v || '').trim().replace(/[.,h ]/g, ':');
+        if (t === '') return '';
+        let m = t.match(/^(\d{1,2})(?::(\d{2}))?$/) || t.match(/^(\d{1,2})(\d{2})$/);
+        if (!m) return null;
+        const h = Number(m[1]), mi = Number(m[2] || 0);
+        return h > 23 || mi > 59 ? null : String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+    }
+    const mins = (v) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5));
+    const hours = (m) => (Math.round(m / 6) / 10).toString().replace('.', ',') + ' h';
+    // Długość SMS : alfabet GSM 160 znaków (153 w częściach) ; polskie litery = Unicode, 70 (67).
+    const GSM = /^[A-Za-z0-9 \n\r@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-./:;<=>?¡ÄÖÑÜ§¿äöñüà^{}\\[~\]|€]*$/;
+    function smsInfo(text) {
+        const t = text.replace(/\{godzina\}/g, '00:00');
+        const gsm = GSM.test(t);
+        const len = gsm ? [...t].reduce((n, ch) => n + ('^{}\\[~]|€'.includes(ch) ? 2 : 1), 0) : t.length;
+        const one = gsm ? 160 : 70, part = gsm ? 153 : 67;
+        return {len, one, gsm, parts: len === 0 ? 0 : (len <= one ? 1 : Math.ceil(len / part))};
+    }
+
+    function clockHtml(k) {
+        const days = k.days || {};
+        const inp = (wd, kind, v) => `<input class="form-control form-control-sm" name="${kind}_${wd}" value="${esc(v || '')}" inputmode="numeric" maxlength="5"
+            pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" placeholder="--:--" autocomplete="off" aria-label="${kind === 'start' ? 'od' : 'do'} ${WK[wd - 1][1]}" lang="pl">`;
+        const last = k.last ? `${d(k.last.at.slice(0, 10))} ${k.last.at.slice(11, 16)} — ${esc(k.last.label)}${k.last.error ? ` <span class="hr-miss">(${esc(k.last.error)})</span>` : ''}` : '—';
+        return `<form class="hr-sec" data-clock novalidate><h5>Grafik tygodnia i przypomnienie o wejściu</h5>
+            <p class="tm-sub">Stały grafik — taki sam co tydzień. Puste = dzień wolny.</p>
+            <div class="hr-wk"><span></span>${WK.map(([wd, l]) => `<span class="hr-wk-h ${wd > 5 ? 'is-we' : ''}">${l}</span>`).join('')}
+                <span class="hr-wk-l">od</span>${WK.map(([wd]) => inp(wd, 'start', (days[wd] || {}).start)).join('')}
+                <span class="hr-wk-l">do</span>${WK.map(([wd]) => inp(wd, 'end', (days[wd] || {}).end)).join('')}
+                <span></span>${WK.map(([wd]) => `<span class="hr-wk-n" data-wk-h="${wd}"></span>`).join('')}</div>
+            <div class="hr-wk-sum"><span>Razem <b data-wk-total></b> / tydzień</span><span>·</span><button type="button" class="btn btn-link" data-wk-copy>Kopiuj poniedziałek na pn–pt</button></div>
+            <label class="hr-sms-on"><input type="checkbox" class="form-check-input" name="sms" ${k.sms ? 'checked' : ''}> SMS, gdy brak wejścia
+                <span class="tm-sub">po <b>${k.delay} min</b> od początku grafiku — ustawienie wspólne : <a href="${root}/hr/settings">HR › Ustawienia</a> « Opóźnienie SMS (min) »</span></label>
+            <label class="hr-f mt-2"><span>Treść SMS (dla tej osoby)</span><textarea class="form-control form-control-sm" name="text" rows="3" maxlength="480">${esc(k.text || k.default_text)}</textarea></label>
+            <div class="hr-sms-help"><span><code>{godzina}</code> = początek grafiku tego dnia</span><span>·</span><span data-sms-len></span><span>·</span><span data-sms-parts></span><span>·</span>
+                <button type="button" class="btn btn-link" data-sms-default>Przywróć tekst domyślny</button></div>
+            <div class="hr-sms-meta">Telefon z karty : ${k.phone ? `<b>${esc(k.phone)}</b>` : '<span class="hr-miss">brak telefonu w karcie — SMS nie zostanie wysłany</span>'}
+                <br>Ostatnie przypomnienie : ${last}
+                ${k.sms_delivers ? '' : '<span class="tm-sub">Bramka SMS nie wysyła z tej kopii ERP — SMS tylko zapisany w historii.</span>'}</div>
+            <div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz grafik</button><span class="hr-msg" data-clock-msg></span></div></form>`;
+    }
+
+    function bindClock(form, id, k) {
+        if (!form) return;
+        const msg = form.querySelector('[data-clock-msg]');
+        const val = (n) => form.elements[n].value;
+        function update() {
+            let total = 0;
+            WK.forEach(([wd]) => {
+                const a = hhmm(val('start_' + wd)), b = hhmm(val('end_' + wd));
+                const cell = form.querySelector(`[data-wk-h="${wd}"]`);
+                if (a && b && a !== b) {
+                    const m = (mins(b) - mins(a) + 1440) % 1440;   // koniec < początek = nocka (koniec następnego dnia)
+                    total += m;
+                    cell.textContent = hours(m); cell.classList.remove('is-off');
+                } else if (!a && !b && a !== null && b !== null) { cell.textContent = 'wolne'; cell.classList.add('is-off'); }
+                else { cell.textContent = '?'; cell.classList.add('is-off'); }
+            });
+            form.querySelector('[data-wk-total]').textContent = hours(total);
+            const info = smsInfo(form.elements.text.value);
+            const len = form.querySelector('[data-sms-len]');
+            len.textContent = `${info.len} / ${info.one} znaków${info.gsm ? '' : ' (polskie litery)'}`;
+            len.classList.toggle('is-long', info.parts > 1);
+            form.querySelector('[data-sms-parts]').textContent = info.parts + ' SMS';
+        }
+        form.querySelectorAll('.hr-wk input').forEach(i => {
+            i.addEventListener('input', update);
+            i.addEventListener('blur', () => { const v = hhmm(i.value); if (v !== null) i.value = v; i.classList.toggle('is-invalid', v === null); update(); });
+        });
+        form.elements.text.addEventListener('input', update);
+        form.querySelector('[data-wk-copy]').addEventListener('click', () => {
+            for (let wd = 2; wd <= 5; wd++) { form.elements['start_' + wd].value = val('start_1'); form.elements['end_' + wd].value = val('end_1'); }
+            form.querySelectorAll('.hr-wk .is-invalid').forEach(x => x.classList.remove('is-invalid'));
+            update();
+        });
+        form.querySelector('[data-sms-default]').addEventListener('click', () => { form.elements.text.value = k.default_text; update(); });
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            form.querySelectorAll('.is-invalid').forEach(x => x.classList.remove('is-invalid'));
+            const days = {};
+            WK.forEach(([wd]) => {
+                const a = hhmm(val('start_' + wd)), b = hhmm(val('end_' + wd));
+                days[wd] = {start: a === null ? val('start_' + wd) : a, end: b === null ? val('end_' + wd) : b};
+            });
+            msg.textContent = 'Zapisywanie…';
+            try {
+                const r = await api('PUT', '/ajax/hr/people/' + id + '/schedule', {days, sms: form.elements.sms.checked, text: form.elements.text.value});
+                WK.forEach(([wd]) => { const x = (r.days || {})[wd] || {}; form.elements['start_' + wd].value = x.start || ''; form.elements['end_' + wd].value = x.end || ''; });
+                Object.assign(k, r);
+                update();
+                msg.textContent = r.message || 'Zapisano.';
+            } catch (x) {
+                msg.textContent = x.message;
+                Object.keys(x.fields || {}).forEach(n => { const el = form.elements[n]; if (el) { el.classList.add('is-invalid'); el.title = x.fields[n]; } });
+            }
+        });
+        update();
     }
 
     // [277] Płace i umowy w karcie : tylko administrator i finanse (dostęp « Lista płac »).
@@ -415,13 +521,20 @@
         body.innerHTML = `<form class="at-card hr-card hr-sec hr-settings" data-rules><h5>Ustawienia HR</h5><div class="hr-fields">
                 ${f('Wiek emerytalny — kobiety', 'retire_k', r.retire_k, 'lat')}${f('Wiek emerytalny — mężczyźni', 'retire_m', r.retire_m, 'lat')}
                 ${f('Przypomnienie przed końcem umowy i badań', 'alert_days', r.alert_days, 'dni')}
-                ${f('Plan sukcesji, gdy do emerytury zostaje najwyżej', 'succession_months', r.succession_months, 'mies.')}</div>
+                ${f('Plan sukcesji, gdy do emerytury zostaje najwyżej', 'succession_months', r.succession_months, 'mies.')}
+                ${f('Opóźnienie SMS (min) — gdy brak wejścia po początku grafiku', 'clock_sms_delay', r.clock_sms_delay, 'min')}
+                <label class="hr-f hr-f-wide"><span>Domyślna treść SMS (gdy brak wejścia ; {godzina} = początek grafiku) — karta pracownika może mieć własną</span>
+                    <textarea class="form-control form-control-sm" name="clock_sms_text" rows="3" maxlength="480" ${admin ? '' : 'disabled'}>${esc(r.clock_sms_text)}</textarea></label></div>
                 ${admin ? '<div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-msg></span></div>' : '<p class="tm-sub">Ustawienia zmienia administrator.</p>'}
                 <p class="tm-sub">Podsumowanie notatek : ostatniego dnia miesiąca o 18:00, e-mailem do administratora (kto, ile notatek ; treść tylko w ERP).</p></form>`;
         const form = body.querySelector('[data-rules]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            try { await api('PUT', '/ajax/hr/rules', {retire_k: form.retire_k.value, retire_m: form.retire_m.value, alert_days: form.alert_days.value, succession_months: form.succession_months.value}); form.querySelector('[data-msg]').textContent = 'Zapisano.'; }
+            try {
+                await api('PUT', '/ajax/hr/rules', {retire_k: form.retire_k.value, retire_m: form.retire_m.value, alert_days: form.alert_days.value, succession_months: form.succession_months.value,
+                    clock_sms_delay: form.clock_sms_delay.value, clock_sms_text: form.clock_sms_text.value});
+                form.querySelector('[data-msg]').textContent = 'Zapisano.';
+            }
             catch (x) { form.querySelector('[data-msg]').textContent = x.message; }
         });
     }

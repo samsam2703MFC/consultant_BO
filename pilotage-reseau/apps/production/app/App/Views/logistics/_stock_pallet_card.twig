@@ -1,0 +1,13 @@
+<a class="sp-card{{ pallet and pallet.id == p.id ? ' is-sel' }}" href="{{ root }}/logistics/stock?pallet={{ p.id }}{{ keep }}">
+    <div class="row1"><b>{{ p.code }}</b><span class="n">{{ p.cartons }} kart.</span></div>
+    <div class="sp-cust">{{ p.customer }}</div>
+    <div class="sp-sub">{% if p.status == 1 %}tablet pakowania{% if p.first_at %} · od {{ p.first_at|date(p.first_at|date('Y-m-d') == today ? 'H:i' : 'd.m H:i') }}{% endif %}{% else %}wysyłka {{ p.delivery_date|date(p.delivery_date|date('Y') == today|date('Y') ? 'd.m' : 'd.m.Y') }} · {{ p.products }} produktów{% endif %}</div>
+    {# [346] Winieta : zamówienie i dostawa (ten sam klient, ta sama data) ; klik → zamówienie #}
+    {% if p.delivery_date %}{% set dd = p.delivery_date|date('d.m.Y') %}
+        {% if p.orders is defined and p.orders|length %}
+            <span class="sp-vig" role="link" tabindex="0" data-href="{{ root }}/client-orders/{{ p.orders[0] }}/edit" title="Otwórz zamówienie"><i class="bi bi-receipt"></i> Zam. {% for o in p.orders %}#{{ o }}{{ not loop.last ? ' + ' }}{% endfor %} · dostawa {{ dd }}</span>
+        {% elseif p.orders is defined %}
+            <span class="sp-vig none"><i class="bi bi-exclamation-triangle"></i> brak zamówienia na {{ dd }}</span>
+        {% endif %}
+    {% endif %}
+</a>

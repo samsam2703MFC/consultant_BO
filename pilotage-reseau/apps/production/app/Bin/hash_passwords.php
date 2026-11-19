@@ -16,6 +16,12 @@ if (file_exists($root . '/.env')) {
     Dotenv::createImmutable($root)->safeLoad();
 }
 
+// [295] Mode cohabitation : l'ERP d'origine lit la même table user et compare les mots de passe tels quels.
+if (App\Core\Cohabitation::on()) {
+    echo "hash_passwords: mode cohabitation — mots de passe laissés dans le format de l'ERP d'origine.\n";
+    exit(0);
+}
+
 try {
     $pdo = (new App\Core\Database())->getConnection();
     $update = $pdo->prepare('UPDATE user SET password = ? WHERE id = ? AND password = ?');

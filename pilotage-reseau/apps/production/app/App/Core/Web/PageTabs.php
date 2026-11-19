@@ -154,8 +154,8 @@ final class PageTabs
         ]],
         // --- Sprzedaż
         'orders' => ['label' => 'Zamówienia', 'section' => 'Sprzedaż', 'icon' => 'bi-receipt', 'tabs' => [
+            // [312] « Do obsłużenia » usunięte z zakładek (strona dalej pod bezpośrednim adresem).
             ['/client-orders', 'Zamówienia klientów', 'bi-receipt'],
-            ['/client-orders/queue', 'Do obsłużenia', 'bi-inbox'],
         ]],
         'clients' => ['label' => 'Klienci', 'section' => 'Sprzedaż', 'icon' => 'bi-shop', 'tabs' => [
             ['/clients', 'Klienci', 'bi-shop'],
@@ -197,6 +197,11 @@ final class PageTabs
         'trucks' => ['label' => 'Ciężarówki', 'section' => 'Logistyka', 'icon' => 'bi-calendar-range', 'tabs' => [
             ['/logistics/plan', 'Plan 12 tygodni', 'bi-calendar-range'],
             ['/logistics/week', 'Tydzień : ciężarówki', 'bi-calendar-week'],
+        ]],
+        // [306] Trasy : klienci stali, pojazd i kierowca zwykle ci sami ; pojazdy (pojemność, kierowca).
+        'tours' => ['label' => 'Trasy', 'section' => 'Logistyka', 'icon' => 'bi-signpost-split', 'tabs' => [
+            ['/logistics/tours', 'Trasy', 'bi-signpost-split'],
+            ['/logistics/vehicles', 'Pojazdy i kierowcy', 'bi-truck'],
         ]],
         // Jedna lista wysyłek z filtrem rodzaju dokumentu (dawniej Wysyłki, Dokumenty transportowe i Archiwum WZ / CMR / WDT / różnic)
         // oraz archiwum list kompletacyjnych.
@@ -240,7 +245,7 @@ final class PageTabs
     ];
 
     /** [253] Liczniki na zakładkach (data-count : /ajax/rail-counters) — ta sama liczba co przy pozycji railu. */
-    public const TAB_COUNTS = ['/mail' => 'mail', '/franchise-complaints' => 'complaints', '/client-orders/queue' => 'queue'];
+    public const TAB_COUNTS = ['/mail' => 'mail', '/franchise-complaints' => 'complaints'];
 
     /** Bieżąca ścieżka trasy (jak w App::run : z parametru url). */
     public static function currentPath(): string

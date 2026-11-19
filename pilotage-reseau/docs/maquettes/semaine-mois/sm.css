@@ -1,0 +1,110 @@
+/* Maquettes « Semaine et Mois plus lisibles » (16/11/2026). Préfixe sm-. Avec ../parametres-mails/mails.css (la coque). */
+.sm-frise{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:6px;margin:0 0 14px}
+.sm-frise>div{position:relative;padding:7px 10px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:11px;color:var(--muted);overflow:hidden}
+.sm-frise>div b{display:block;font-weight:400;font-size:15px;color:var(--ink);margin-top:1px}
+.sm-frise>div small{font-size:10.5px}
+.sm-frise>div i{position:absolute;left:0;right:0;bottom:0;height:3px}
+.sm-frise>div.on{border:2px solid var(--accent);padding:6px 9px 8px}
+
+/* Tuiles identiques */
+.sm-tuiles{display:grid;gap:10px;margin-bottom:14px}
+.sm-tuiles.t4{grid-template-columns:repeat(4,minmax(0,1fr))}.sm-tuiles.t5{grid-template-columns:repeat(5,minmax(0,1fr))}.sm-tuiles.t6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.sm-tui{display:flex;flex-direction:column;gap:3px;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;min-width:0}
+.sm-tui .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm-tui .v{font-size:24px;line-height:1.2;white-space:nowrap}
+.sm-tui .s{font-size:11.5px;line-height:16px;height:32px;color:var(--muted-2);overflow:hidden}
+.sm-tui .v.ok{color:#2e7d32}.sm-tui .v.ko{color:#A32014}
+.sm-ok{color:#2e7d32}.sm-ko{color:#A32014}.sm-wa{color:#b06a00}.sm-mu{color:var(--muted)}
+
+.sm-sec{display:flex;align-items:baseline;gap:10px;margin:18px 0 8px;font-size:16px}
+.sm-sec small{font-size:12px;color:var(--muted)}
+.sm-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.sm-g2>.db-card,.sm-g3>.db-card{margin:0}
+.sm-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+.sm-pad{padding:14px 16px}
+
+/* Le chiffre : la jauge */
+.sm-heros{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:12px;margin-bottom:14px}
+.sm-jauge{padding:16px 18px}
+.sm-jauge .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sm-jauge .v{font-size:34px;margin-top:4px}
+.sm-jauge .v small{font-size:14px;color:var(--muted);margin-left:6px}
+.sm-barre{position:relative;height:12px;border-radius:6px;background:var(--chip);margin:12px 0 6px;overflow:visible}
+.sm-barre i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.sm-barre b{position:absolute;top:-4px;width:2px;height:20px;background:var(--ink)}
+.sm-jauge .l{display:flex;justify-content:space-between;font-size:12px;color:var(--muted-2)}
+
+/* Les jours : barres avec l'objectif */
+.sm-jours{display:grid;gap:6px;align-items:end;padding:16px 16px 10px;height:210px}
+.sm-jours .c{position:relative;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.sm-jours .c i{display:block;border-radius:4px 4px 0 0}
+.sm-jours .c b{position:absolute;left:-2px;right:-2px;height:2px;background:var(--ink)}
+.sm-jours .c .v{font-size:11px;text-align:center;margin-bottom:3px;color:var(--ink)}
+.sm-jl{display:grid;gap:6px;padding:0 16px 12px;font-size:11px;color:var(--muted);text-align:center}
+.sm-jl span small{display:block;font-size:10px}
+.sm-leg{display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 14px;font-size:11px;color:var(--muted)}
+.sm-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* Le résultat : la cascade compacte */
+.sm-pl{padding:8px 16px 12px}
+.sm-pl .l{display:grid;grid-template-columns:150px 1fr 82px 92px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--color-border-tertiary);font-size:12.5px}
+.sm-pl .l:first-child{border-top:0}
+.sm-pl .l.tot{font-size:13.5px}
+.sm-pl .l .b{height:8px;border-radius:4px;background:var(--chip);position:relative;overflow:hidden}
+.sm-pl .l .b i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.sm-pl .l .n{text-align:right;white-space:nowrap}
+.sm-pl .l .p{text-align:right;white-space:nowrap;font-size:12px}
+.sm-pl .l .p small{display:block;font-size:10.5px;color:var(--muted)}
+
+/* Les heures : une bande */
+.sm-h{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;padding:14px 16px 6px}
+.sm-h div{height:46px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1.2}
+.sm-h div small{font-size:9.5px;opacity:.85}
+.sm-hl{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;padding:0 16px 12px;font-size:10.5px;color:var(--muted);text-align:center}
+.sm-top{padding:4px 16px 12px}
+.sm-top div{display:grid;grid-template-columns:18px 1fr 70px 46px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--color-border-tertiary);font-size:12.5px}
+.sm-top div:first-child{border-top:0}
+
+/* Les liens vers le détail (ce qui ne s'affiche plus par défaut) */
+.sm-plus{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.sm-plus span{padding:7px 12px;border:1px solid var(--line);border-radius:18px;background:#fff;font-size:12px;color:var(--ink)}
+.sm-plus span small{color:var(--muted);margin-left:5px}
+
+/* B : les onglets */
+.sm-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:4px 0 12px}
+.sm-tabs button{border:0;background:none;padding:9px 14px;font:inherit;font-size:13px;color:var(--muted-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.sm-tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.sm-tabs button small{font-size:10.5px;color:var(--muted);margin-left:5px}
+.sm-cmp{font-size:11px;display:flex;gap:10px;margin-top:4px}
+
+/* C : le récit */
+.sm-titre{padding:18px 20px;margin-bottom:14px}
+.sm-titre .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sm-titre p{margin:6px 0 0;font-size:19px;line-height:1.4}
+.sm-titre p b{font-weight:400}
+.sm-pts{padding:6px 16px 14px}
+.sm-pts div{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:9px 0;border-top:1px solid var(--color-border-tertiary);font-size:13px;line-height:1.4}
+.sm-pts div:first-child{border-top:0}
+.sm-pts div small{display:block;font-size:11.5px;color:var(--muted)}
+.sm-pts .i{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+.sm-ct-ok{border-top:3px solid #2e7d32}.sm-ct-ko{border-top:3px solid #A32014}.sm-ct-do{border-top:3px solid var(--accent)}
+.sm-act{display:inline-block;margin-top:4px;font-size:11.5px;color:var(--accent)}
+
+/* D : le tableau */
+.sm-t{width:100%;border-collapse:collapse;font-size:13px}
+.sm-t th{text-align:right;font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:9px 14px;background:var(--color-background-secondary)}
+.sm-t th:first-child{text-align:left}
+.sm-t td{padding:10px 14px;border-top:1px solid var(--color-border-tertiary);text-align:right;white-space:nowrap}
+.sm-t td:first-child{text-align:left;white-space:normal}
+.sm-t td:first-child small{display:block;font-size:11px;color:var(--muted)}
+.sm-t td.moi{font-size:15px;background:#fcf9f5}
+.sm-t td small.e{display:block;font-size:10.5px}
+.sm-t tr.sep td{border-top:2px solid var(--line)}
+.sm-spark{display:inline-block;vertical-align:middle}
+/* Corrections du premier jet : la jauge et les tuiles à la même hauteur ; une colonne qui empile deux cartes. */
+.sm-heros{align-items:stretch}
+.sm-heros>.db-card{margin:0}
+.sm-heros>div>.sm-tuiles{height:100%;margin:0}
+.sm-pile{display:flex;flex-direction:column;gap:12px}
+.sm-pile>.db-card{margin:0}
+.sm-pile>.db-card:last-child{flex:1}

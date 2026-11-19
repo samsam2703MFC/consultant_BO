@@ -19,7 +19,7 @@ consultant_BO/
 |---|---|---|---|
 | **Recrutement & développement** | `rec_` | `recrutement-developpement/` (`atelier-espace-candidat`) | CRM candidats, espace candidat, page franchise, agences, expansion, réseau, guides, newsletters du réseau, **scouting** (dépôt `scouting`, vide, archivé) |
 | **Marketing** | `mar_` | `marketing/` (`marketing`) | **Social** (`mar_sa_`), les tables `mar_` du cockpit (newsletter clients, avis, contrôle des posts, campagnes), MétaDonnée, fidélité, **signage** (`sig_` → `mar_sig_`) |
-| **Pilotage réseau** | `pil_` | `pilotage-reseau/` (`consultant_BO`) | cockpit CEO (`ceo_`), visites (`con_`), **PWA consultant** (`mac_`), dashboard magasin, contrôles, suivi, **planogramme** (`pla_`), **app employés et primes** (`mot_`) |
+| **Pilotage réseau** | `pil_` | `pilotage-reseau/` (`consultant_BO`) | cockpit CEO (`ceo_`), visites (`con_`), **PWA consultant** (`mac_`), dashboard magasin, contrôles, suivi, **planogramme** (`pla_`), **app employés et primes** (`mot_`), **assistant IA du dashboard** (`aia_`, 17/11/2026) |
 | **Formations** | `frm_` | `formations/` (nouveau) | module Formation et livret des vendeuses du cockpit, manuel opératoire (`crm_mo_`) et formateurs (`crm_fmt_`) du CRM |
 
 Restent hors des portails : l'ERP lui-même (sa copie `/production`, tables `n_` / `tfb_`, sort du cockpit

@@ -145,20 +145,4 @@ class TodayRepository extends BaseRepository
         );
         return (int) ($rows[0]['total'] ?? 0);
     }
-
-    public function getLatestOrders(int $limit = 6): array
-    {
-        $limit = max(1, min(20, $limit));
-        return $this->query(
-            "SELECT co.id, co.reference, co.expected_shipping_date, co.create_order_date, co.status,
-                    c.company,
-                    (SELECT COALESCE(SUM(quantity_carton), 0) FROM customer_order_product WHERE id_order = co.id) AS cartons,
-                    dp.status AS proforma_status
-             FROM customer_order co
-             LEFT JOIN customer c ON c.id = co.id_customer
-             LEFT JOIN document_proforma dp ON dp.id = co.id_proforma
-             ORDER BY co.create_order_date DESC, co.id DESC
-             LIMIT {$limit}"
-        ) ?: [];
-    }
 }

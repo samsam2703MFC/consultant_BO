@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Tuiles et onglets — Dashboard magasin › Semaine et Mois</title>
+<!-- Direction B (16/11/2026) : six tuiles identiques, chacune face à la période d'avant et à N-1 ; dessous, un seul onglet ouvert à la fois (les jours, le résultat, les heures, les canaux, le réseau, les tâches). -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="sm.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="donnees.js"></script>
+<script src="blocs.js"></script>
+</head><body><script>
+const c = X.cmp, cmp = (v, a, n) => `<span class="sm-cmp"><span class="${(ecart(v, a) || 0) >= 0 ? 'sm-ok' : 'sm-ko'}">${sgn(ecart(v, a))} vs ${X.avant}</span><span class="${(ecart(v, n) || 0) >= 0 ? 'sm-ok' : 'sm-ko'}">${sgn(ecart(v, n))} vs N-1</span></span>`;
+const pts = (v, a) => { const d = Math.round((v - a) * 10) / 10; return (d > 0 ? '+' : d < 0 ? '−' : '') + Math.abs(d).toLocaleString('fr-FR') + ' pt'; };
+const t6 = `<div class="sm-tuiles t6">
+  ${tui('Chiffre d’affaires', fE(X.ca), cmp(X.ca, c.avant.ca, c.n1.ca))}
+  ${tui('Objectif', att() + ' %', `${fE(X.objectif)} · ${X.ca >= X.objectif ? '+' : '−'} ${fE(Math.abs(X.ca - X.objectif))}`, att() >= 100 ? 'ok' : 'ko')}
+  ${tui('Clients', fN(X.clients), cmp(X.clients, c.avant.clients, c.n1.clients))}
+  ${tui('Panier', X.panier.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €', cmp(X.panier, c.avant.panier, c.n1.panier))}
+  ${tui('Marge brute', fP(X.mbPct), `<span class="sm-cmp"><span>${pts(X.mbPct, c.avant.mbPct)} vs ${X.avant}</span><span>${pts(X.mbPct, c.n1.mbPct)} vs N-1</span></span>`)}
+  ${tui('Résultat', fE(X.net), `${fP(X.netPct)} des ventes · ${X.avant} ${fP(c.avant.netPct)}`, X.net < 0 ? 'ko' : 'ok')}</div>`;
+const tabs = `<div class="sm-tabs">${[['Les jours', '', true], ['Le résultat', fE(X.net)], ['Les heures', ''], ['Canaux et commandes', X.commandes + ''], ['Invendus', fE(X.invendus)], ['Le réseau', X.rang.ca], ['Tâches', X.taches.faites + ' / ' + X.taches.sur]]
+  .map(([t, n, on]) => `<button class="${on ? 'on' : ''}">${t}${n ? `<small>${n}</small>` : ''}</button>`).join('')}</div>`;
+const corps = `${frise()}${t6}${tabs}${jours()}`;
+coque({ actif: P, titre: X.titre, kicker: 'Atelier by Harmonie - Sombreffe · ' + X.lib, corps, pied: piedSM('B · Tuiles et onglets') + ' Un onglet à la fois ; l’onglet ouvert reste choisi d’une visite à l’autre.' });
+</script></body></html>

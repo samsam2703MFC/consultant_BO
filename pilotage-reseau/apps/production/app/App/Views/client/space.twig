@@ -22,6 +22,7 @@
         <div class="cs-tabs" role="tablist">
             <a role="tab" class="{{ tab == 'docs' ? 'on' }}" href="{{ root }}/clients/{{ client.id }}/space?tab=docs">Dokumenty</a>
             <a role="tab" class="{{ tab == 'goal' ? 'on' }}" href="{{ root }}/clients/{{ client.id }}/space?tab=goal">Cel obrotu</a>
+            <a role="tab" class="{{ tab == 'messages' ? 'on' }}" href="{{ root }}/clients/{{ client.id }}/space?tab=messages">Wysyłki</a>
         </div>
         <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/clients/{{ client.id }}/edit">Karta klienta</a>
     </div>
@@ -55,9 +56,67 @@
 .cs-p-pro{background:#fdf0e1;color:#9a5b00}.cs-p-wdt{background:#e8f1fb;color:#1d5a99}.cs-p-inv{background:#eef6ee;color:#2e6b2e}.cs-p-wz{background:#f1eefa;color:#5a3d99}.cs-p-diff{background:#fbeef0;color:#8D1D2C}
 .cs-note{font-size:12px;color:#777;margin-top:10px}
 .cs-coef-input{width:84px}
+.cs-ch{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:2px 9px;font-size:12px;font-weight:600}
+.cs-ch-email{background:#e8f1fb;color:#1d5a99}.cs-ch-sms{background:#f1eefa;color:#5a3d99}
+.cs-st{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.cs-st-sent{background:#E7F3EC;color:#2E7D4F}.cs-st-queued{background:#fdf0e1;color:#9a5b00}.cs-st-logged{background:#F1EBE3;color:#5f5852}.cs-st-failed{background:#FBEEF0;color:#8D1D2C}
+.cs-to{min-width:190px;max-width:240px;overflow-wrap:anywhere}
+.cs-msg summary{cursor:pointer;list-style:none}.cs-msg summary::-webkit-details-marker{display:none}
+.cs-msg summary .cs-more{color:#8D1D2C;font-size:12px;margin-left:6px}
+.cs-msg[open] summary .cs-more{display:none}
+.cs-msg pre{white-space:pre-wrap;font-family:inherit;font-size:12.5px;background:#fbf7f5;border-radius:8px;padding:10px 12px;margin:8px 0 0;max-height:320px;overflow:auto}
 </style>
 
-{% if (tab == 'docs' and not settings.docs) or (tab == 'goal' and not settings.goal) %}
+{% if tab == 'messages' %}
+{% set st = {'sent': ['wysłany', 'cs-st-sent', 'Wysłany do klienta'], 'queued': ['w kolejce', 'cs-st-queued', 'Czeka w kolejce e-maili'], 'logged': ['tylko zapis', 'cs-st-logged', 'Zapisany, nie wysłany : kopia testowa albo brak bramki'], 'failed': ['błąd', 'cs-st-failed', 'Nie dotarł']} %}
+<section class="section">
+    <div class="cs-tiles">
+        <div class="at-tile"><span class="at-tile-label">E-maile · 30 dni</span><strong class="at-tile-value">{{ messages.counts.email }}</strong><span class="at-tile-meta">automatyczne, Komunikacja, Poczta</span></div>
+        <div class="at-tile"><span class="at-tile-label">SMS · 30 dni</span><strong class="at-tile-value">{{ messages.counts.sms }}</strong><span class="at-tile-meta">dostawy, płatności</span></div>
+        <div class="at-tile"><span class="at-tile-label">Błędy · 30 dni</span><strong class="at-tile-value{{ messages.counts.failed ? ' text-danger' }}">{{ messages.counts.failed }}</strong><span class="at-tile-meta">nie dotarły</span></div>
+        <div class="at-tile"><span class="at-tile-label">Ostatnia wysyłka</span><strong class="at-tile-value" style="font-size:20px">{{ messages.counts.last ? messages.counts.last|date('d.m.Y H:i') : '—' }}</strong><span class="at-tile-meta">e-mail albo SMS</span></div>
+    </div>
+    <div class="card"><div class="card-body">
+        <form class="cs-filters" method="get" action="{{ root }}/clients/{{ client.id }}/space">
+            <input type="hidden" name="tab" value="messages">
+            <select name="channel" class="form-select" onchange="this.form.submit()" aria-label="Kanał">
+                {% for key, label in messages.channels %}<option value="{{ key }}" {{ messages.filters.channel == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            </select>
+            <select name="period" class="form-select" onchange="this.form.submit()" aria-label="Okres">
+                {% for key, label in messages.periods %}<option value="{{ key }}" {{ messages.filters.period == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            </select>
+        </form>
+        {% if messages.rows is empty %}
+            <p class="text-muted mb-0">Brak e-maili i SMS do tego klienta w wybranym okresie.</p>
+        {% else %}
+        <div class="table-responsive">
+        <table class="table cs-table align-middle mb-0">
+            <thead><tr><th>Data</th><th>Kanał</th><th>Rodzaj</th><th>Do</th><th>Treść</th><th>Kto</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for m in messages.rows %}
+                <tr>
+                    <td class="text-nowrap">{{ m.at|date('d.m.Y H:i') }}</td>
+                    <td class="text-nowrap"><span class="cs-ch cs-ch-{{ m.channel }}"><i class="bi {{ m.channel == 'sms' ? 'bi-chat-dots' : 'bi-envelope' }}"></i>{{ m.channel == 'sms' ? 'SMS' : 'E-mail' }}</span></td>
+                    <td>{{ m.label }}</td>
+                    <td class="cs-to">{{ m.recipient }}</td>
+                    <td style="min-width:260px">
+                        {% if not m.subject and m.body|length <= 90 %}{{ m.body }}{% else %}
+                        <details class="cs-msg"><summary>{{ m.subject ?: m.body|slice(0, 80) ~ '…' }}<span class="cs-more">treść</span></summary><pre>{{ m.body }}</pre></details>{% endif %}
+                    </td>
+                    <td class="text-nowrap">{{ m.author }}</td>
+                    <td><span class="cs-st {{ st[m.status][1] }}" title="{{ st[m.status][2] }}">{{ st[m.status][0] }}</span>{% if m.error %}<div class="small text-danger">{{ m.error|length > 120 ? m.error|slice(0, 120) ~ '…' : m.error }}</div>{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if messages.rows|length >= messages.limit %}<p class="cs-note">Pokazano {{ messages.limit }} najnowszych — zawęź okres albo kanał.</p>{% endif %}
+        {% endif %}
+        <p class="cs-note mb-0">E-maile : dokumenty, przypomnienia, powiadomienia (Komunikacja) i wiadomości z Poczty przypisane do klienta. SMS : bramka SMSAPI (Ustawienia › SMS). « Tylko zapis » = kopia testowa albo brak bramki — nic nie wyszło do klienta.</p>
+    </div></div>
+</section>
+
+{% elseif (tab == 'docs' and not settings.docs) or (tab == 'goal' and not settings.goal) %}
 <section class="section"><div class="card"><div class="card-body">
     <p class="mb-2"><strong>{{ tab == 'docs' ? 'Dokumenty klienta' : 'Cel obrotu' }}</strong> : opcja wyłączona dla tego klienta.</p>
     <a class="btn btn-sm btn-primary" href="{{ root }}/clients/{{ client.id }}/edit#client-options">Włącz w karcie klienta</a>

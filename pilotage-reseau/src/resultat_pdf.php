@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/cibles_reseau.php';   // la cible du food cost du réseau, la même partout
+
 require_once __DIR__ . '/doc.php';
 
 /**
@@ -76,7 +78,7 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
     $cls = static fn ($v) => $v === null ? 'mut' : ($v >= 0 ? 'ok' : 'acc');
     $feu = static fn ($v, float $s) => $v === null ? 'mut' : ($v <= $s ? 'ok' : ($v <= $s * 1.3 ? 'wa' : 'acc'));
     $feuRes = static fn ($v) => $v === null ? 'mut' : ($v >= 15 ? 'ok' : ($v >= 5 ? 'wa' : 'acc'));
-    $seuils = $p['seuils'] ?? ['food' => 32, 'labour' => 33, 'overhead' => 13.5];
+    $seuils = $p['seuils'] ?? ['food' => foodCostCible(), 'labour' => personnelCible(), 'overhead' => 13.5];
     $logo = rapLogoDataUri();
     $moisCourant = substr($p['aujourdhui'], 0, 7) === substr($p['du'], 0, 7);
     $jours = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
@@ -205,17 +207,26 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
         // Le compte de résultat du mois.
         $casc = [
             ['Ventes TTC', $m['realise'], null, '', true],
+        ];
+        // Hors TVA (16/11/2026, src/pnl_ht.php) : la TVA des tickets retirée, les % sur les ventes hors TVA, les frais
+        // généraux sans leur TVA.
+        if (isset($m['realiseHt'])) {
+            $casc[] = ['− TVA des tickets', -(float) ($m['tva'] ?? 0), null, '', false];
+            $casc[] = ['Ventes hors TVA', $m['realiseHt'], 100.0, '', true];
+        }
+        $casc = array_merge($casc, [
             ['− Coût matière', $m['coutMatiere'] === null ? null : -$m['coutMatiere'], $m['coutMatierePct'], $feu($m['coutMatierePct'], (float) $seuils['food']), false],
             ['− Main-d’œuvre', $m['labour'] === null ? null : -$m['labour'], $m['labourPct'], $feu($m['labourPct'], (float) $seuils['labour']), false],
             ['− Frais généraux', $m['overhead'] === null ? null : -$m['overhead'], $m['overheadPct'], $feu($m['overheadPct'], (float) $seuils['overhead']), false],
-            ['Résultat', $m['net'], $m['netPct'], $feuRes($m['netPct']), true],
-        ];
+            [isset($m['realiseHt']) ? 'Résultat hors TVA' : 'Résultat', $m['net'], $m['netPct'], $feuRes($m['netPct']), true],
+        ]);
+        if (isset($m['realiseHt'])) { $casc[count($casc) - 2][0] = '− Frais généraux hors TVA'; }
         $h .= '<div class="sec">Le compte de résultat du mois</div><table class="t" cellpadding="0" cellspacing="0">';
         foreach ($casc as [$lib, $v, $pc, $cl, $fort]) {
             $w = $pc === null ? 0 : (int) min(100, abs((float) $pc));
             $coul = $cl === 'ok' ? '#3f7a52' : ($cl === 'wa' ? '#7A5207' : ($cl === 'acc' ? '#8D1D2C' : '#7a736a'));
             $h .= '<tr' . ($fort ? ' style="font-weight:400"' : '') . '><td class="l" width="34%">' . $e($lib) . '</td>'
-                . '<td class="l"><span class="barre"><i style="width:' . ($lib === 'Ventes TTC' ? 100 : $w) . '%;background:' . ($lib === 'Ventes TTC' ? '#1c1a17' : $coul) . '"></i></span></td>'
+                . '<td class="l"><span class="barre"><i style="width:' . (str_starts_with($lib, 'Ventes') ? 100 : $w) . '%;background:' . (str_starts_with($lib, 'Ventes') ? '#1c1a17' : $coul) . '"></i></span></td>'
                 . '<td width="22%">' . ($v === null ? '—' : ($v < 0 ? '− ' : '') . number_format(abs((float) $v), 0, ',', ' ') . ' €') . '</td>'
                 . '<td width="12%" class="' . $cl . '">' . ($pc === null ? '' : $pct($pc)) . '</td></tr>';
         }

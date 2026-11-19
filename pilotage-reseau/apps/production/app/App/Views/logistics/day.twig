@@ -31,6 +31,88 @@
 
 {% block content %}
 <section class="section at-logi">
+<style>
+/* [329] Trasy i klienci — makieta 59 */
+.lt-legend{display:flex;flex-wrap:wrap;gap:14px;list-style:none;margin:0;padding:0;font-size:12px;color:var(--at-muted,#78716C)}
+.lt-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.lt-legend i.is-free,.lt-s.is-free{border:1.5px dashed #ddd5ca;background:transparent}
+.lt-warn{color:var(--at-danger,#C41E3A)}
+.lt-tour{border:1px solid var(--at-line,#e6e0d8);border-radius:16px;padding:16px 18px;margin-bottom:14px;display:grid;grid-template-columns:210px minmax(0,1fr) 120px;gap:12px 20px;align-items:center}
+@media (max-width:900px){.lt-tour{grid-template-columns:1fr}}
+.lt-name{display:flex;gap:10px;align-items:flex-start}.lt-name strong{font-size:15px;display:block}.lt-name .at-sub{display:block}
+.lt-dot{width:12px;height:12px;border-radius:50%;margin-top:4px;flex:none}
+.lt-truck{display:flex;align-items:flex-end;gap:4px}
+.lt-trailer{flex:1;position:relative;border:2px solid #cfc6ba;border-radius:8px 4px 4px 8px;padding:5px;display:grid;grid-template-rows:repeat(2,20px);grid-auto-flow:row;gap:3px;background:#fbf9f6}
+.lt-s{display:block;border-radius:3px;min-width:0}
+.lt-cab{width:42px;height:38px;border:2px solid #cfc6ba;border-radius:4px 14px 4px 4px;background:#fff;position:relative;flex:none}
+.lt-cab:after{content:'';position:absolute;right:5px;top:6px;width:13px;height:10px;border-radius:2px 8px 2px 2px;background:#e8eef7}
+.lt-wheels{display:flex;justify-content:space-between;padding:0 30px 0 20px;margin-top:-3px}
+.lt-wheels i{width:13px;height:13px;border-radius:50%;background:#4b4640;border:3px solid #fff;box-shadow:0 0 0 1px #cfc6ba}
+.lt-over-tag{position:absolute;right:8px;top:-13px;background:var(--at-danger,#C41E3A);color:#fff;border-radius:6px;font-size:12px;font-weight:700;padding:2px 7px}
+.lt-fill{text-align:right}.lt-fill strong{display:block;font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+.lt-bar{height:6px;border-radius:4px;background:#eee7de;margin-top:8px;overflow:hidden}.lt-bar i{display:block;height:100%;background:#2E7D4F}
+.lt-fill.is-over strong{color:var(--at-danger,#C41E3A)}.lt-fill.is-over .lt-bar i{background:var(--at-danger,#C41E3A)}
+.lt61{display:block}
+.lt61-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}
+.lt61-head .lt-fill{min-width:140px}
+.lt61-truck{display:flex;align-items:stretch;margin-top:14px}
+.lt61-door{width:28px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--at-muted,#78716C);border:2px dashed #cfc6ba;border-right:0;border-radius:6px 0 0 6px}
+.lt61-trailer{flex:1;position:relative;display:flex;gap:5px;border:2px solid #cfc6ba;padding:6px;background:#fbf9f6;min-height:96px}
+.lt61-blk{position:relative;min-width:64px;border-radius:8px;color:#fff;padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none;overflow:hidden}
+.lt61-blk b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lt61-blk span{font-size:12px;opacity:.92;white-space:nowrap}
+.lt61-blk .lt61-st{position:absolute;top:6px;right:8px;background:rgba(0,0,0,.28);border-radius:6px;font-size:11px;font-weight:700;padding:0 6px;opacity:1}
+.lt61-blk.is-drag{opacity:.45;outline:2px dashed #fff}
+.lt61-trailer.is-saving{opacity:.6;pointer-events:none}
+.lt61-free{border:1.5px dashed #ddd5ca;border-radius:8px}
+.lt61-cab{width:54px;border:2px solid #cfc6ba;border-left:0;border-radius:0 18px 8px 0;background:#fff;position:relative}
+.lt61-cab:after{content:'';position:absolute;right:8px;top:12px;width:20px;height:15px;border-radius:3px 9px 3px 3px;background:#e8eef7}
+.lt61-arrows{display:flex;justify-content:space-between;font-size:12px;color:var(--at-primary,#8D1D2C);margin:8px 0 14px;padding:0 58px 0 32px}
+.lt61-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.lt61-card{display:flex;flex-direction:column;justify-content:flex-start;text-align:left;border:1px solid #eee7de;border-radius:12px;padding:10px 12px;background:#fff;color:inherit}
+.lt61-card[aria-expanded=true]{border-color:var(--at-primary,#8D1D2C);box-shadow:0 0 0 1px var(--at-primary,#8D1D2C)}
+.lt61-ch{display:flex;align-items:center;gap:8px;margin-bottom:6px}.lt61-ch b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt61-row,.lt61-tot{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0;border-top:1px solid #f4efe8;font-variant-numeric:tabular-nums}
+.lt61-row span{color:var(--at-muted,#78716C)}
+.lt61-tot{font-weight:700;font-size:13px}
+.lt61-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+.lt61-chg{margin-left:auto;background:#fff6e5;border:1px solid #f0d9a8;color:#8a5a12;border-radius:8px;padding:5px 10px;font-size:12.5px}
+.lt-chips{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:900px){.lt-chips{grid-column:1}}
+.lt-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--at-line,#e6e0d8);border-radius:8px;padding:4px 10px 4px 6px;font-size:13px;background:#fff;color:inherit}
+.lt-chip b{font-variant-numeric:tabular-nums}.lt-chip[aria-expanded=true]{border-color:var(--at-primary,#8D1D2C);box-shadow:0 0 0 1px var(--at-primary,#8D1D2C)}
+.lt-chip.is-warn{border-color:#f0b4bf;background:#fdf3f5}
+.lt-n{min-width:20px;height:20px;border-radius:5px;color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center;padding:0 4px}
+.lt-detail{grid-column:1/-1;border-top:1px solid #eee7de;padding-top:14px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px}
+.lt-detail[hidden]{display:none}
+.lt-detail.at-logi-customer{border:0;border-top:1px solid #eee7de;border-radius:0;background:none;box-shadow:none;margin:0;padding:14px 0 0}
+@media (max-width:900px){.lt-detail{grid-template-columns:1fr}}
+.lt-detail-info{display:flex;flex-direction:column;gap:3px;align-items:flex-start}.lt-detail-name{font-size:15px}
+.lt-pals{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0 0 12px;padding:0}
+.lt-pal{width:64px;display:block;border:2px solid transparent;border-radius:8px;padding:4px;background:none;color:inherit;text-align:center;cursor:pointer}
+.lt-pal:hover{background:#faf6f1}.lt-pal[aria-expanded=true]{border-color:var(--at-primary,#8D1D2C);background:#fbf4f2}
+.lt-box{height:64px;display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;overflow:hidden;background:#faf7f3}
+.lt-box i{display:block;border-top:1px solid rgba(255,255,255,.55)}
+.lt-pal.is-over .lt-box{outline:2px solid var(--at-danger,#C41E3A)}
+.lt-base{display:block;height:6px;background:repeating-linear-gradient(90deg,#b99b74 0 8px,transparent 8px 12px);border-bottom:2px solid #b99b74}
+.lt-pn{display:block;font-size:12px;margin-top:3px}.lt-pal.is-over .lt-pn{color:var(--at-danger,#C41E3A)}
+.lt-pd{grid-column:1/-1;border-top:1px solid #eee7de;padding-top:14px;display:grid;grid-template-columns:150px minmax(0,420px) auto;gap:24px;align-items:start}
+.lt-pd[hidden]{display:none}
+@media (max-width:900px){.lt-pd{grid-template-columns:1fr}}
+.lt-side{height:150px;display:flex;flex-direction:column;justify-content:flex-end}
+.lt-side-box{flex:1;display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;overflow:hidden}
+.lt-side-box div{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 8px;color:#fff;font-size:11px;font-weight:600;border-top:2px solid rgba(255,255,255,.7);min-height:12px;overflow:hidden;white-space:nowrap}
+.lt-side-box div span:first-child{overflow:hidden;text-overflow:ellipsis}
+.lt-side .lt-base{height:10px}
+.lt-pd-table{width:100%;border-collapse:collapse;font-size:13px}
+.lt-pd-table th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted,#78716C);text-align:left;padding:5px 8px;border-bottom:1px solid var(--at-line,#e6e0d8);white-space:nowrap}
+.lt-pd-table td{white-space:nowrap;padding:6px 8px;border-bottom:1px solid #f1ebe3}.lt-pd-table .n{text-align:right;font-variant-numeric:tabular-nums}
+.lt-sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
+.lt-pd-btns{display:flex;flex-direction:column;gap:8px}
+.lt-edit{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lt-edit .form-select{width:auto;max-width:280px}
+.lt-notour{border:1px dashed #d9a05b;border-radius:16px;padding:14px 18px;margin-bottom:14px}
+.lt-notour-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.lt-notour-label{font-weight:600;color:#8a5a12;margin-right:6px}
+.lt-notour .lt-detail{margin-top:14px}
+</style>
 
     {% for w in notices %}
         <div class="alert alert-warning at-profit-warn"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>
@@ -89,86 +171,97 @@
         {% endif %}
     </div>
 
-    {# --- Rodzaje kartonów dnia --------------------------------------------------- #}
-    {% if carton_types %}
-    <div class="card">
-        <div class="card-header"><h4 class="card-title mb-0">Palety dnia według rodzaju kartonu</h4></div>
-        <div class="card-body pt-0">
-            <ul class="at-logi-ctype-sum">
-                {% for ct in carton_types %}
-                    <li>
-                        <span class="at-pallet-mini is-full" aria-hidden="true"></span>
-                        <strong>{{ ct.name ?: 'Karton nieokreślony' }}</strong>
-                        <span>{{ ct.pallets|plural_pl('paleta', 'palety', 'palet') }}</span>
-                        <span class="at-sub">{{ ct.full }} pełne + {{ ct.mixed }} {{ settings.mixed ? 'mieszane' : 'niepełne' }} · {{ ct.cartons|number_format(0, ',', ' ') }} kart. · {{ ct.customers|plural_pl('klient', 'klientów', 'klientów') }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    {% endif %}
+    {# [328] « Palety dnia według rodzaju kartonu » usunięte. #}
 
-    {# --- Klienci : palety (wizualnie) i pojazd --------------------------------------- #}
-    <div class="card">
+    {# --- [329] Trasy i klienci (makieta 59) : jedna ciężarówka = jedna linia, miejsca palet w kolorze klienta,
+         klik na klienta : jego palety narysowane + trasa / pojazd / kolejność. --------------------------------- #}
+    {% set ltColors = ['#8D1D2C', '#2c5282', '#2E7D4F', '#d9a05b', '#7c4d8a', '#c47b5a', '#3b7a8a', '#a8475a'] %}
+    {% set overTours = tours|filter(x => x.places and x.pallets > x.places)|length %}
+    <div class="card lt-card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="card-title mb-0">Trasy i klienci: palety i pojazd</h4>
-            <ul class="at-logi-legend" aria-label="Legenda">
-                <li><span class="at-pallet-mini is-full"></span> pełna paleta jednego produktu</li>
-                <li><span class="at-pallet-mini is-mixed"></span> {{ settings.mixed ? 'paleta mieszana (jeden format kartonu)' : 'paleta niepełna' }}</li>
-                {% if settings.mixed and settings.leftover_max > 0 %}<li><span class="at-pallet-mini is-formats"></span> resztki różnych formatów razem</li>{% endif %}
+            <ul class="lt-legend" aria-label="Legenda">
+                <li><i style="background:#8D1D2C"></i> pełna paleta</li>
+                <li><i style="background:repeating-linear-gradient(45deg,#c47b5a 0 4px,#e9c7b3 4px 8px)"></i> {{ settings.mixed ? 'paleta mieszana' : 'paleta niepełna' }}</li>
+                <li><i class="is-free"></i> wolne miejsce</li>
+                {% if overTours %}<li class="lt-warn">{{ overTours }} przeładowana</li>{% endif %}
             </ul>
         </div>
         <div class="card-body pt-0">
+            {# [331] Makieta 61 B : naczepa z góry, drzwi z lewej ; klient = blok szerokości jego palet ; przeciągnij → kolejność dostaw
+               na ten dzień (załadunek odwrotnie : ostatni klient pierwszy przy kabinie). Pod spodem zamówienia klientów. #}
             {% for tour in tours %}
-            <section class="at-logi-tour" style="--tour-color: {{ tour.color ?: '#8d1d2c' }}" aria-label="Trasa {{ tour.name }}">
-                <header class="at-logi-tour-head">
-                    <span class="at-tour-dot" aria-hidden="true"></span>
-                    <div class="at-logi-tour-name">
-                        <strong>{{ tour.name }}</strong>
-                        <span class="at-sub">{{ tour.days }} · wyjazd {{ tour.departure }} · {{ tour.customers|length|plural_pl('klient', 'klientów', 'klientów') }}</span>
+            {% set over = tour.places and tour.pallets > tour.places %}
+            {% set custom = tour.customers|filter(cid => by_id[cid].stop_custom ?? false)|length %}
+            <section class="lt-tour lt61" data-lt-tour data-tour="{{ tour.id }}" aria-label="Trasa {{ tour.name }}">
+                <div class="lt61-head">
+                    <div class="lt-name">
+                        <span class="lt-dot" style="background:{{ tour.color ?: '#8d1d2c' }}"></span>
+                        <div><strong>{{ tour.name }}</strong>
+                            <span class="at-sub">wyjazd {{ tour.departure }}{% for v in tour.vehicles %} · {{ v.label }}{% else %} · <a href="{{ root }}/logistics/tours">dodaj pojazd</a>{% endfor %} · {{ tour.customers|length|plural_pl('klient', 'klientów', 'klientów') }}</span></div>
                     </div>
-                    <ul class="at-logi-tour-trucks" aria-label="Pojazdy trasy">
-                        {% for v in tour.vehicles %}
-                            <li class="{{ v.over ? 'is-over' : '' }}"><strong>{{ v.label }}</strong> {{ v.pallets }}{{ v.places ? ' / ' ~ v.places : '' }} pal.
-                                {% if v.places %}<span class="at-logi-fill at-logi-fill-mini"><span style="width: {{ min(100, v.fill_pct ?? 0)|round(1) }}%"></span></span>{% endif %}</li>
-                        {% else %}
-                            <li class="is-over">brak pojazdu — <a href="{{ root }}/logistics/tours">dodaj</a></li>
-                        {% endfor %}
-                    </ul>
-                    <div class="at-logi-tour-total">
+                    <div class="lt-fill{{ over ? ' is-over' : '' }}">
                         <strong>{{ tour.pallets }}{{ tour.places ? ' / ' ~ tour.places : '' }}</strong>
                         <span class="at-sub">palet{{ tour.fill_pct is not null ? ' · ' ~ tour.fill_pct|round ~ ' %' : '' }} · {{ tour.weight_kg|number_format(0, ',', ' ') }} kg</span>
                     </div>
-                </header>
-                {% for cid in tour.customers %}
-                    {% include 'logistics/_customer_card.twig' with {c: by_id[cid]} %}
+                </div>
+                {% if tour.customers %}
+                <div class="lt61-truck">
+                    <div class="lt61-door">drzwi</div>
+                    <div class="lt61-trailer" data-lt-drop>
+                        {% for cid in tour.customers %}{% set c = by_id[cid] %}
+                            <div class="lt61-blk" draggable="true" data-cid="{{ cid }}" style="flex:{{ max(c.pallets, 1) }} 1 0;background:{{ ltColors[loop.index0 % ltColors|length] }}" title="{{ c.name }} — {{ c.pallets }} pal. · przeciągnij">
+                                <span class="lt61-st">{{ loop.index }}</span><b>{{ c.name }}</b><span>{{ c.pallets }} pal.</span>
+                            </div>
+                        {% endfor %}
+                        {% if tour.places > tour.pallets %}<div class="lt61-free" style="flex:{{ tour.places - tour.pallets }} 1 0"></div>{% endif %}
+                        {% if over %}<span class="lt-over-tag">+{{ tour.pallets - tour.places }} pal. nie mieści się</span>{% endif %}
+                    </div>
+                    <div class="lt61-cab"></div>
+                </div>
+                <div class="lt61-arrows"><span>← rozładunek : 1 → {{ tour.customers|length }}</span><span>załadunek : {{ tour.customers|length }} → 1 →</span></div>
+                <div class="lt61-cards">
+                    {% for cid in tour.customers %}{% set c = by_id[cid] %}
+                        <button type="button" class="lt61-card" data-lt-open="{{ cid }}" aria-expanded="false">
+                            <span class="lt61-ch"><span class="lt-n" style="background:{{ ltColors[loop.index0 % ltColors|length] }}">{{ loop.index }}</span><b>{{ c.name }}</b>{% if c.missing_cpp %}<i class="bi bi-exclamation-triangle lt-warn"></i>{% endif %}</span>
+                            {% for o in c.order_list %}
+                                <span class="lt61-row"><span>#{{ o.id }}</span><b>{{ o.pallets|number_format(1, ',', ' ') }} pal.</b></span>
+                            {% endfor %}
+                            <span class="lt61-tot"><span>Razem</span><span>{{ c.pallets }} pal.</span></span>
+                        </button>
+                    {% endfor %}
+                </div>
+                <div class="lt61-bar">
+                    {% for v in tour.vehicles %}<a class="btn btn-primary btn-sm" href="{{ root }}/logistics/loading-list?date={{ date }}&amp;vehicle={{ v.id }}" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Lista załadunku{{ tour.vehicles|length > 1 ? ' · ' ~ v.label : '' }} (PDF)</a>{% endfor %}
+                    {% if custom %}
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-lt-reset>Wróć do stałej trasy</button>
+                        <span class="lt61-chg">↕ inna kolejność niż stała trasa — tylko na ten dzień</span>
+                    {% endif %}
+                </div>
                 {% else %}
                     <p class="at-sub mb-0">Brak zamówień klientów tej trasy na ten dzień.</p>
+                {% endif %}
+                {% for cid in tour.customers %}
+                    {% include 'logistics/_customer_card.twig' with {c: by_id[cid], color: ltColors[loop.index0 % ltColors|length]} %}
                 {% endfor %}
             </section>
             {% endfor %}
             {% if no_tour %}
-            <section class="at-logi-tour is-none" aria-label="Bez trasy">
-                <header class="at-logi-tour-head">
-                    <span class="at-tour-dot" aria-hidden="true"></span>
-                    <div class="at-logi-tour-name"><strong>Bez trasy</strong><span class="at-sub">{{ no_tour|length|plural_pl('klient', 'klientów', 'klientów') }} · <a href="{{ root }}/logistics/tours">dodaj klientów do tras</a></span></div>
-                    <div class="at-logi-tour-total"><strong>{{ no_tour|reduce((s, cid) => s + by_id[cid].pallets, 0) }}</strong><span class="at-sub">palet</span></div>
-                </header>
+            <section class="lt-notour" data-lt-tour aria-label="Bez trasy">
+                <div class="lt-notour-row">
+                    <span class="lt-notour-label"><i class="bi bi-exclamation-triangle"></i> Bez trasy</span>
+                    {% for cid in no_tour %}{% set c = by_id[cid] %}
+                        <button type="button" class="lt-chip" data-lt-open="{{ cid }}" aria-expanded="false"><span class="lt-n" style="background:#7a736a">–</span>{{ c.name }} <b>{{ c.pallets }} pal.</b></button>
+                    {% endfor %}
+                    <button type="button" class="btn btn-primary btn-sm ms-auto" data-lt-assign="{{ no_tour|first }}">Przypisz do trasy</button>
+                </div>
                 {% for cid in no_tour %}
-                    {% include 'logistics/_customer_card.twig' with {c: by_id[cid]} %}
+                    {% include 'logistics/_customer_card.twig' with {c: by_id[cid], color: '#7a736a'} %}
                 {% endfor %}
             </section>
             {% endif %}
             {% if not customers %}
                 <p class="at-empty">Brak zamówień na ten dzień.</p>
-            {% endif %}
-            {% if customers %}
-            <p class="at-profit-note">
-                Palety = kartony ÷ kartony na paletę z karty produktu; pełne palety każdego produktu{{ settings.mixed ? ', reszty razem na paletach mieszanych — tylko w jednym formacie kartonu (karta opakowań)' : ', osobna paleta na każdą resztę' }}.
-                Waga = kartony × sztuki w kartonie × gramatura + {{ settings.tare_kg|number_format(0) }} kg na paletę.
-                Trasa: trasa klienta w ten dzień tygodnia (zakładka Trasy) albo wybrana na ten dzień; „na stałe w trasie” dopisuje klienta do trasy z tą kolejnością.
-                Pojazd „auto z trasy”: klienci trasy po kolejności rozładunku do pierwszego pojazdu trasy, w którym się mieszczą. Wyjazd: godzina trasy, pojazdu albo {{ settings.default_departure }}; załadunek {{ settings.loading_min }} min wcześniej.
-            </p>
             {% endif %}
         </div>
     </div>
@@ -224,6 +317,65 @@
         at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
         if (res.ok) window.setTimeout(() => window.location.reload(), 500);
     };
+    // [331] Przeciągnij klienta w naczepie (makieta 61 B) → kolejność dostaw na ten dzień ; załadunek odwrotnie.
+    document.querySelectorAll('[data-lt-drop]').forEach(trailer => {
+        let dragged = null;
+        const order = () => [...trailer.querySelectorAll('.lt61-blk')].map(b => Number(b.dataset.cid));
+        let before = order();
+        trailer.addEventListener('dragstart', (e) => {
+            dragged = e.target.closest('.lt61-blk');
+            if (!dragged) return;
+            before = order();
+            dragged.classList.add('is-drag');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragged.dataset.cid);
+        });
+        trailer.addEventListener('dragover', (e) => {
+            if (!dragged) return;
+            e.preventDefault();
+            const over = e.target.closest('.lt61-blk');
+            if (!over || over === dragged) return;
+            const r = over.getBoundingClientRect();
+            over.parentNode.insertBefore(dragged, e.clientX < r.left + r.width / 2 ? over : over.nextSibling);
+        });
+        trailer.addEventListener('drop', (e) => e.preventDefault());
+        trailer.addEventListener('dragend', () => {
+            if (!dragged) return;
+            dragged.classList.remove('is-drag');
+            dragged = null;
+            const now = order();
+            trailer.querySelectorAll('.lt61-blk').forEach((b, i) => { b.querySelector('.lt61-st').textContent = i + 1; });
+            if (now.join() === before.join()) return;
+            trailer.classList.add('is-saving');
+            at.send('/ajax/logistics/stops', 'PUT', {date, customers: now}).then(reload);
+        });
+    });
+    document.querySelectorAll('[data-lt-reset]').forEach(btn => btn.addEventListener('click', () => {
+        const ids = [...btn.closest('[data-lt-tour]').querySelectorAll('.lt61-blk')].map(b => Number(b.dataset.cid));
+        at.send('/ajax/logistics/stops', 'PUT', {date, customers: ids, reset: true}).then(reload);
+    }));
+    // [329] Klik na klienta (makieta 59) : jego palety i ustawienia ; drugi klik zamyka.
+    document.querySelectorAll('[data-lt-open]').forEach(chip => chip.addEventListener('click', () => {
+        const box = chip.closest('[data-lt-tour]');
+        const card = document.getElementById('lt-c-' + chip.dataset.ltOpen);
+        const open = chip.getAttribute('aria-expanded') !== 'true';
+        box.querySelectorAll('[data-lt-open]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+        box.querySelectorAll('.lt-detail').forEach(d => { d.hidden = true; });
+        if (open && card) { chip.setAttribute('aria-expanded', 'true'); card.hidden = false; }
+    }));
+    // [330] Klik na paletę (makieta 60) : jej szczegóły ; drugi klik zamyka.
+    document.querySelectorAll('[data-lt-pal]').forEach(btn => btn.addEventListener('click', () => {
+        const card = btn.closest('.lt-detail');
+        const open = btn.getAttribute('aria-expanded') !== 'true';
+        card.querySelectorAll('[data-lt-pal]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+        card.querySelectorAll('[data-lt-pd]').forEach(d => { d.hidden = true; });
+        if (open) { btn.setAttribute('aria-expanded', 'true'); card.querySelector(`[data-lt-pd="${btn.dataset.ltPal}"]`).hidden = false; }
+    }));
+    document.querySelectorAll('[data-lt-assign]').forEach(btn => btn.addEventListener('click', () => {
+        const chip = btn.closest('[data-lt-tour]').querySelector(`[data-lt-open="${btn.dataset.ltAssign}"]`);
+        if (chip && chip.getAttribute('aria-expanded') !== 'true') chip.click();
+        document.querySelector(`#lt-c-${btn.dataset.ltAssign} [data-field=tour_id]`)?.focus();
+    }));
     document.querySelectorAll('[data-customer]').forEach(row => row.addEventListener('change', (e) => {
         const field = e.target.dataset.field;
         if (!field) return;

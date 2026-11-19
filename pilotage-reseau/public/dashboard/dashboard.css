@@ -3064,6 +3064,15 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 /* L'assistant (12/11/2026, maquettes docs/maquettes/assistant-ia-magasin) : bilan, puis conversation pour creuser. */
 .db-btn-ia{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--color-primary);background:var(--color-primary);color:#fff;border-radius:8px;padding:6px 13px;font:400 12.5px var(--font-ui);cursor:pointer}
 .db-btn-ia:hover{background:#6f1622}
+.db-btn-ia.on{background:#6f1622;border-color:#6f1622}
+/* L'assistant en pleine page (17/11/2026) : la fenêtre posée dans la page, à toute la largeur. En Conversation, elle
+ * tient dans l'écran (hauteur posée par iaPageHauteur) : le fil défile, la saisie reste en bas. */
+.ia-page{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.ia-page.ma{min-height:520px}
+.ia-page .ia-b{overflow:visible;padding:18px 22px 22px}
+.ia-page .ia-corps{grid-template-columns:300px 1fr}
+.ia-page .ia-h b{font-size:15px}
+.ia-page .ia-ton{flex:1 1 0;min-width:0}
 body.ia-ouvert{overflow:hidden}
 .ia-voile{position:fixed;inset:0;z-index:60;background:rgba(24,18,20,.42)}
 .ia-modale{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 40px)}
@@ -3312,6 +3321,13 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-rech i.att{background:var(--prize)}
 .db-rech b{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink)}
 .db-rail-ext{margin-left:auto;font-size:11px;color:var(--faint)}
+/* L'assistant IA du rail (17/11/2026) : une entrée comme les autres, sous la Boîte mail, en Ruby sur l'Abricot de la
+ * marque (#F2C9A0) ; ouverte, en gras comme toute entrée active. */
+.db-rail-ia{margin-top:4px}
+.db-rail-ia button.sidebar__item{background:#F2C9A0;color:var(--accent)}
+.db-rail-ia button.sidebar__item:hover{background:#EDBA88}
+.db-rail-ia button.sidebar__item.is-active{background:#EDBA88;color:var(--accent)}
+.db-rail-ia .ia-icone{width:16px;height:16px}
 .db-retoiles{display:inline-flex;gap:1px;color:var(--prize)}
 .db-retoiles svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
 .db-retoiles svg.on{fill:currentColor}
@@ -3378,6 +3394,205 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-av.vif{border-color:rgba(141,29,44,.45);background:rgba(141,29,44,.04)}.db-av.vif .db-av__o{background:none;border:0}
 .db-av.hd{border-color:rgba(141,29,44,.45)}.db-av.hd .db-av__o,.db-av.hd .db-av__t .v{color:var(--accent)}
 
+/* La valeur du magasin, au clic sur la vignette du rail (15/11/2026) : le calcul pas à pas et la courbe des six
+ * derniers trimestres. Un panneau bordé, sans ombre (§2), ancré sous la vignette. */
+.db-avs{position:relative}
+.db-vpop{position:absolute;z-index:40;top:calc(100% + 8px);left:0;width:380px;padding:12px 14px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;cursor:default}
+.db-vpop-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.db-vpop-x{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted-2);font-size:15px;line-height:1;cursor:pointer}
+.db-vpop-calc{display:grid}
+.db-vpop-l{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--row-line);font-size:12.5px;color:var(--ink)}
+.db-vpop-l:first-child{border-top:0}
+.db-vpop-l .k{display:grid;gap:1px}
+.db-vpop-l .k small{font-size:10.5px;color:var(--muted)}
+.db-vpop-l .v{white-space:nowrap;font-variant-numeric:tabular-nums}
+.db-vpop-l .v b{font-size:16px;font-weight:400;color:var(--prize-ink)}
+.db-vpop-l:last-child{border-top:1px solid var(--line)}
+.db-vpop-t{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
+.db-vpop-t .k{display:grid;gap:1px;font-size:12px;color:var(--ink)}
+.db-vpop-t .k small{font-size:10.5px;color:var(--muted)}
+.db-vpop-c{display:block;width:100%;height:auto;margin-top:4px}
+.db-vpop-c .gr{stroke:var(--line);stroke-width:1}
+.db-vpop-c polyline{fill:none;stroke:#b8901f;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.db-vpop-c circle{fill:var(--prize-ink)}
+.db-vpop-c .lb{font-size:9.5px;fill:var(--muted)}
+.db-vpop-c .vl{font-size:10.5px;fill:var(--ink)}
+.db-vpop-c .vl.mu{fill:var(--muted)}
+.db-vpop .mu{margin:6px 0 0;font-size:11px;color:var(--muted)}
+/* « Relire » dans le format des autres vignettes (15/11/2026) ; pendant la lecture, l'icône tourne. */
+.db-vwrap{position:relative;display:flex}
+.db-av.lit .db-av__o svg{animation:db-tourne 1s linear infinite}
+@keyframes db-tourne{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.db-av.lit .db-av__o svg{animation:none}}
+/* Le bouton « API » de la barre (15/11/2026) : la même vignette, réduite à son mot — la barre tient sur une ligne
+   jusqu'à 1 280 px ; le nombre d'appels est dans l'info-bulle. */
+.db-avs{gap:5px;padding-left:10px}
+@media (max-width:1400px){.db-av{padding:0 9px 0 6px;gap:6px}.db-vign{padding:0 9px}.db-nav--rail .db-btn[data-recharger]{padding:0 10px}}
+.db-av.db-av--api{justify-content:center;min-width:42px;padding:0 10px;font-size:11px;letter-spacing:.12em;color:var(--muted-2)}
+.db-av.db-av--api:hover{color:var(--accent)}
+@media (max-width:1300px){.db-nav--rail .db-vt h1{font-size:20px}.db-nav--rail .db-vt{margin-right:8px}}
+/* Réseaux sociaux (15/11/2026) : le cadre de l'espace boutique, sous la barre, hors de #dash (il ne se recharge pas). */
+/* Réseaux sociaux (reseaux.js) : l'espace boutique du Marketing fondu dans la page — une barre d'onglets (le menu de
+   l'espace et le quota de la semaine), puis le cadre, sans bordure, qui va jusqu'au bord droit et défile seul : la page
+   ne défile plus, la barre de défilement du cadre est celle de l'écran. */
+#db-reseaux{max-width:1440px;margin:0 auto;padding:0 0 0 22px}
+body.db-rail-on #db-reseaux{max-width:none;margin:0 0 0 246px;padding:0 0 0 24px}
+body.db-vue-social #dash{padding-bottom:0}
+body.db-vue-social{overflow:hidden}
+.rx-barre{display:flex;align-items:center;gap:16px;margin:0 24px 14px 0;border-bottom:1px solid var(--line)}
+.rx-tabs{flex:1;min-width:0;margin:0;border:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.rx-tabs .page-tabs__tab{white-space:nowrap;padding:8px 9px;font-size:13px}
+.rx-tabs .rx-groupe{margin-left:4px}
+.rx-quota{display:inline-block;margin-left:2px;padding:0 5px;border-radius:4px;background:var(--chip);color:var(--muted-2);font-size:10.5px;font-variant-numeric:tabular-nums;vertical-align:1px}
+.rx-quota.plein{background:var(--prize-soft);color:var(--prize-ink)}
+.rx-attente{margin-right:24px}
+.rx-racine .db-err{margin-right:24px}
+.rx-cadre{display:block;width:100%;min-height:480px;border:0;background:transparent;color-scheme:light}
+@media print{#db-reseaux{display:none}}
+/* Barre de défilement : un fil ruby de 3 px. Chrome et Safari prennent ::-webkit-scrollbar ; Chrome l'ignore dès que
+   scrollbar-width est posé, d'où le @supports : seul Firefox, qui ne connaît pas ce sélecteur, reçoit « thin ». */
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:#8D1D2C;border-radius:3px}::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+@supports not selector(::-webkit-scrollbar){html,html *{scrollbar-width:thin;scrollbar-color:#8D1D2C transparent}}
+
+/* Les vignettes du haut (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles sous
+   le titre, autant de colonnes égales que de vignettes, toutes de 46 px de haut, l'icône à gauche, l'intitulé et la valeur. */
+.db-nav--rail{flex-wrap:wrap;row-gap:12px}
+.db-nav--rail .db-avs{order:9;flex:1 0 100%;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin-left:0;padding-left:0;border-left:0}
+.db-nav--rail .db-avs>.db-vwrap{display:block;min-width:0}
+.db-nav--rail .db-avs>.db-av,.db-nav--rail .db-avs>.db-vwrap>.db-vign{box-sizing:border-box;width:100%;height:46px;min-width:0;padding:0 12px 0 10px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:9px;letter-spacing:0;font-size:inherit;color:var(--ink)}
+.db-nav--rail .db-avs .db-av__o{width:24px;height:24px;flex:0 0 24px;display:grid;place-items:center;color:#5c5852}
+.db-nav--rail .db-avs .db-av__o svg{width:20px;height:20px}
+.db-nav--rail .db-avs .db-av__t{display:flex;flex-direction:column;min-width:0;text-align:left}
+/* Les libellés des vignettes seulement : le panneau « Valeur du magasin » (.db-vpop), ouvert dans la vignette, a ses propres .k et .v (16/11/2026, « collision, le texte dépasse »). */
+.db-nav--rail .db-avs :is(.db-av,.db-vign) .k{font-size:9.5px;line-height:1.15;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-nav--rail .db-avs :is(.db-av,.db-vign) .v{margin-top:1px;font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-nav--rail .db-avs .db-av--api:hover .v{color:var(--accent)}
+
+/* La case photo d'une tâche faite ou notée, pendant que les photos se lisent (15/11/2026) : elle palpite, la photo s'y pose. */
+.tj-ph.vide.lit{animation:tj-lit 1.1s ease-in-out infinite alternate}
+@keyframes tj-lit{from{opacity:.5}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.tj-ph.vide.lit{animation:none}}
+/* Le P&L court hors TVA (16/11/2026) : le lien « Frais ▸ » sous la ligne des frais généraux. */
+.db-cl-lien{color:var(--accent);cursor:pointer;white-space:nowrap}
+.db-cl-lien:hover{text-decoration:underline}
+/* L'onglet Frais (16/11/2026, maquette docs/maquettes/frais-tva) : les frais du mois, « TVA comprise ? » et le taux. */
+.fx-nav{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.fx-mois{display:inline-flex;align-items:center;min-width:130px;justify-content:center;font-size:14px}
+.fx-intro{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--muted);max-width:900px}
+.fx-intro b{font-weight:400;color:var(--ink)}
+.fx-tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fx-tuiles .db-tui{min-height:92px}
+.fx-tuiles .fx-warn .v{color:var(--prize-ink)}
+.fx-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.fx-t th{padding:9px 12px;text-align:left;font-weight:400;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);border-bottom:1px solid var(--color-border-tertiary);white-space:nowrap}
+.fx-t td{padding:9px 12px;border-bottom:.5px dashed var(--color-border-tertiary);vertical-align:middle}
+.fx-t td:first-child{min-width:190px}
+.fx-t .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fx-t .sub{display:block;margin-top:2px;font-size:10.5px;color:var(--color-text-muted)}
+.fx-t .mu{color:var(--color-text-muted)}
+.fx-t tr.ai td{background:rgba(176,121,42,.06)}
+.fx-t tr.enc td{opacity:.55}
+.fx-t tr.tot td{background:var(--total-line);border-bottom:none}
+.fx-t .seg{padding:2px}
+.fx-t .seg button{padding:4px 9px;font-size:11.5px;white-space:nowrap;cursor:pointer}
+.fx-t .seg.vide button{color:var(--muted)}
+.fx-g2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}
+.fx-g2>.db-card{margin-bottom:0}
+.fx-l{display:grid;grid-template-columns:minmax(0,1fr) 128px 128px;gap:10px;padding:8px 16px;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px;align-items:baseline}
+.fx-l:last-child{border-bottom:none}
+.fx-l .n{text-align:right;font-variant-numeric:tabular-nums}
+.fx-l.th{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.fx-l .sub{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px}
+.fx-leg{padding:10px 16px 14px;font-size:12px;line-height:1.55}
+.fx-leg p{margin:0 0 8px}
+.fx-leg b{font-weight:400;color:var(--accent)}
+@media (max-width:900px){.fx-tuiles{grid-template-columns:1fr 1fr}.fx-g2{grid-template-columns:1fr}}
+
+/* Semaine et Mois en quatre blocs (16/11/2026, maquette A : docs/maquettes/semaine-mois/). Préfixe qb-. */
+.qb-heros{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:12px;align-items:stretch;margin-bottom:12px}
+.qb-heros>.db-card{margin:0}
+.qb-jauge{padding:16px 18px}
+.qb-jauge .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+.qb-jauge .v{font-size:34px;line-height:1.15;margin-top:4px}
+.qb-jauge .v small{font-size:14px;color:var(--color-text-muted);margin-left:8px}
+.qb-barre{position:relative;height:12px;border-radius:6px;background:var(--color-background-secondary);margin:12px 0 6px}
+.qb-barre i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.qb-barre b{position:absolute;top:-4px;width:2px;height:20px;background:var(--color-text);margin-left:-1px}
+.qb-l{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--color-text-muted);margin-top:2px}
+.qb-l .ok{color:#2e7d32}.qb-l .ko{color:#A32014}
+.qb-tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.qb-tui{display:flex;flex-direction:column;gap:3px;padding:13px 14px;border:1px solid var(--color-border-tertiary);border-radius:11px;background:var(--color-surface);min-width:0}
+.qb-tui .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qb-tui .v{font-size:24px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qb-tui .v.ok{color:#2e7d32}.qb-tui .v.ko{color:#A32014}
+.qb-tui .s{font-size:11.5px;line-height:16px;height:32px;overflow:hidden;color:var(--color-text-muted)}
+.qb-jours-c{margin-bottom:12px}
+.qb-jours{display:grid;gap:6px;align-items:end;height:210px;padding:16px 16px 0}
+.qb-jours .c{position:relative;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.qb-jours .c i{display:block;border-radius:4px 4px 0 0;min-height:2px}
+.qb-jours .c i.obj{background:none;border:1px dashed var(--color-border-tertiary);border-bottom:0}
+.qb-jours .c b{position:absolute;left:-2px;right:-2px;height:2px;background:var(--color-text)}
+.qb-jours .c .v{font-size:11px;text-align:center;margin-bottom:3px}
+.qb-jours .c.ferme{justify-content:center;color:var(--color-text-muted);font-size:11px;text-align:center}
+.qb-jl{display:grid;gap:6px;padding:8px 16px 10px;font-size:11px;color:var(--color-text-muted);text-align:center}
+.qb-jl small{display:block;font-size:10px}
+.qb-leg{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 16px 14px;font-size:11px;color:var(--color-text-muted)}
+.qb-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.qb-leg i.tr{height:2px;background:var(--color-text);vertical-align:3px}
+.qb-leg i.hach{background:repeating-linear-gradient(135deg,#c9c1b4 0 3px,#e8e1d6 3px 6px)}
+.qb-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.qb-g2>.db-card{margin:0}
+.qb-pile{display:flex;flex-direction:column;gap:12px}
+.qb-pile>.db-card{margin:0}
+.qb-pile>.db-card:last-child{flex:1}
+.qb-h{display:grid;gap:4px;padding:14px 16px 6px}
+.qb-h div{height:46px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}
+.qb-h div small{font-size:9.5px;opacity:.85}
+.qb-hl{display:grid;gap:4px;padding:0 16px;font-size:10.5px;color:var(--color-text-muted);text-align:center}
+.qb-note{margin:8px 16px 14px;font-size:11.5px;color:var(--color-text-muted)}
+.qb-plus{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.qb-puce{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--color-border-tertiary);border-radius:18px;background:var(--color-surface);font:inherit;font-size:12.5px;color:var(--color-text);cursor:pointer}
+.qb-puce small{font-size:11px;color:var(--color-text-muted)}
+.qb-puce span{font-size:10px;color:var(--color-text-muted)}
+.qb-puce.on{border-color:var(--color-primary);color:var(--color-primary)}
+.qb-sec{margin-top:8px}
+@media (max-width:1150px){.qb-heros,.qb-g2{grid-template-columns:1fr}.qb-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qb-douze{margin-top:12px}
+
+/* L'assistant IA (17/11/2026) : les tableaux et graphiques qu'il propose, les documents du manuel lus, Mes modèles.
+   Les graphiques sont dessinés à la largeur réelle du cadre par dashboard.js (iaDessin) : rien n'est étiré ici. */
+.ia-vis{margin:12px 0 4px;padding:12px 14px 10px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:#fff}
+.ia-vis-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ia-vis-h b{display:block;font-weight:400;font-size:13.5px;color:var(--color-text)}
+.ia-vis-h span{display:block;font-size:11.5px;color:var(--color-text-muted)}
+.ia-vis-bas{display:inline-flex!important;border:1px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;flex:none}
+.ia-vis-bas button{border:0;background:none;padding:4px 11px;font:400 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.ia-vis-bas button.on{background:rgba(141,29,44,.08);color:var(--color-primary)}
+.ia-graphe{width:100%;min-height:40px}
+.ia-graphe svg{max-width:100%}
+.ia-tab{max-height:320px;overflow:auto;border:1px solid var(--color-border-tertiary);border-radius:8px}
+.ia-tab table{width:100%;border-collapse:collapse;font-size:12.5px}
+.ia-tab th{position:sticky;top:0;background:var(--color-background-secondary);font-weight:400;color:var(--color-text-muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--color-border-tertiary)}
+.ia-tab td{padding:5px 10px;border-top:1px solid #f1ece4;color:var(--color-text)}
+.ia-tab .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ia-vis figcaption{margin-top:6px;font-size:11px;color:var(--color-text-muted)}
+.ia-vis-act{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.ia-vis-act .db-btn{font-size:11.5px;padding:4px 10px}
+.ia-vis-act .ok{font-size:11.5px;color:#2e7d32}.ia-vis-act .ko{font-size:11.5px;color:#c62828}
+.ia-srcs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0;font-size:11.5px;color:var(--color-text-muted)}
+.ia-srcs b{font-weight:400;color:var(--color-text);background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:999px;padding:2px 9px}
+.ia-srcs em{font-style:normal;color:#b26a00}
+.ia-mods{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0;font-size:11px;color:var(--color-text-muted)}
+.ia-mods>span:first-child{letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
+.ia-mod{display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;background:var(--color-surface)}
+.ia-mod button{border:0;background:none;padding:4px 10px;font:400 12px var(--font-ui);color:var(--color-text);cursor:pointer}
+.ia-mod button:hover{color:var(--color-primary)}
+.ia-mod .x{padding:4px 8px;color:var(--color-text-muted);border-left:1px solid var(--color-border-tertiary)}
+/* La réponse en PDF (17/11/2026) : le bouton à côté de « Continuer en conversation », un lien discret dans la bulle. */
+.ia-pied-bt{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ia-lien{border:0;background:none;padding:0 0 0 10px;font:400 11.5px var(--font-ui);color:var(--color-primary);cursor:pointer}
+.ia-lien:hover{text-decoration:underline}.ia-lien:disabled{color:var(--color-text-muted);cursor:default}
+.ia-pdf-err{font-size:11.5px;color:#c62828;margin-left:8px}
 /* ── Les feuilles au téléphone (18/11/2026, refonte mobile, étape 5, maquette dashboard-mobile-v3) ──────────────────
    Toutes les fenêtres du dashboard s'ouvrent comme une feuille qui monte du bas, comme « Commandes du jour » et « Ventes
    B2B » : la fiche produit, la poubelle, le stock, la promotion, le détail d'un produit. Une poignée en haut, les coins

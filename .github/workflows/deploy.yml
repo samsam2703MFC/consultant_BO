@@ -89,6 +89,28 @@ jobs:
           [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
           exit $fail
 
+      # Test de fonctionnement (16/11/2026, après une panne : une fonction déclarée deux fois passait le contrôle
+      # de syntaxe, puis PHP refusait de charger l'API — le cockpit répondait 500 partout). Chaque point d'entrée de
+      # l'API est lancé pour de vrai, sans base (bin/test_chargement.php), et aucun nom global n'est en double
+      # (bin/tests_noms_globaux.php). Bloquant : rien ne part. Les tests unitaires hors ligne (bin/tests_*.php)
+      # suivent, en avertissement seulement pour l'instant.
+      - name: Test de fonctionnement avant de livrer
+        run: |
+          fail=0
+          php bin/tests_noms_globaux.php || { echo "::error title=Noms globaux::une fonction ou une constante globale est déclarée deux fois (bin/tests_noms_globaux.php)"; fail=1; }
+          php bin/test_chargement.php || { echo "::error title=Chargement de l'API::un point d'entrée de l'API ne se charge pas (bin/test_chargement.php) : en ligne, le cockpit répondrait 500 partout"; fail=1; }
+          [ "$fail" = "0" ] || exit 1
+          # Déjà en échec avant ce test (fichiers ou polices absents hors du serveur) : lancés, jamais signalés.
+          connus=" tests_noms_globaux tests_ca_net tests_cq_mail tests_documents tests_catalogue "
+          ok=0; ko=0
+          for t in bin/tests_*.php; do
+            n=$(basename "$t" .php)
+            case "$connus" in *" $n "*) continue ;; esac
+            if out=$(timeout 120 php "$t" 2>&1); then ok=$((ok+1))
+            else ko=$((ko+1)); echo "::warning title=${n}::$(echo "$out" | tail -n 3 | tr '\n' ' ' | cut -c1-300)"; fi
+          done
+          echo "Tests unitaires hors ligne : ${ok} fichiers verts, ${ko} en échec (avertissement)"
+
       # `apt-get` peut rester pendu sur un miroir qui ne répond pas : sans
       # borne, le job occupe la file jusqu'au délai du workflow entier. On
       # borne, on réessaie, et on retombe sur le paquet téléchargé directement
@@ -334,6 +356,18 @@ jobs:
           if echo "$ss" | grep -q '"prodEnabled":true'; then echo "::notice::production Dimona ouverte (HR_DIMONA_PROD_ENABLED)"
           elif echo "$ss" | grep -q '"prodEnabled":false'; then echo "OK  production Dimona fermée (simulation seule)"; fi
           echo "$ss" | grep -q '"available":false' && echo "::warning::module RH en ligne, mais la console franchisé n'identifie pas encore : $(echo "$ss" | grep -o '"message":"[^"]*"')"
+
+          # Le dashboard magasin (16/11/2026) : les Frais, la boîte mail et ses automatisations répondent — un 500 ici
+          # est une page vide pour le franchisé. La boîte non reliée ou fermée répond 409 ou 401 : c'est normal.
+          echo "== dashboard magasin =="
+          for ep in 'exploitation/frais?shop=4' 'dashboard/boite?shop=4'; do
+            rc=$(curl -H "X-Recette: ${RECETTE}" -s -o /dev/null -w '%{http_code}' --max-time 120 "${APP_BASE_S}/api/cockpit/${ep}")
+            if [ "$rc" != "200" ]; then echo "::error::/api/cockpit/${ep} répond HTTP $rc (200 attendu)"; fail=1
+            else echo "OK  /${ep} → 200"; fi
+          done
+          rc=$(curl -H "X-Recette: ${RECETTE}" -s -o /dev/null -w '%{http_code}' --max-time 120 "${APP_BASE_S}/api/cockpit/dashboard/boite/automatisations?shop=4")
+          case "$rc" in 200|401|409) echo "OK  /dashboard/boite/automatisations?shop=4 → $rc" ;;
+            *) echo "::error::/api/cockpit/dashboard/boite/automatisations répond HTTP $rc (200, 401 ou 409 attendu)"; fail=1 ;; esac
 
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail

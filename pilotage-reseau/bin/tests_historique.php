@@ -176,7 +176,8 @@ $faux = static function (array $corps, array $c) use (&$appels, $hier): array {
 $faits = ['magasin' => 'magasin 4', 'luLe' => date('Y-m-d H:i'), 'aujourdhui' => date('Y-m-d') . ' (samedi)'];
 $R = amDemander($faits, 'C’est quoi qu’ils vendent bcp au matin ? J’étais 1er jusqu’à 8 h', [], 'vente', 4, $faux);
 verifie('une réponse au deuxième appel', ($R['reponse']['titre'] ?? '') === 'Le panier' && count($appels) === 2, json_encode($R));
-verifie('les trois outils déclarés', array_column($appels[0]['tools'], 'name') === ['classement_reseau', 'ventes_par_heure', 'produits_vendus']);
+verifie('les dix outils déclarés : les ventes, le manuel, le Coach Vente, les hausses de prix', array_column($appels[0]['tools'], 'name') === ['classement_reseau', 'ventes_par_heure', 'produits_vendus',
+    'manuel_sommaire', 'manuel_chercher', 'manuel_lire', 'prix_concurrence', 'forces_faiblesses', 'promotions_en_cours', 'prix_a_monter']);
 $m = $appels[1]['messages'];
 $tourModele = json_encode($m[count($m) - 2]['content']);
 verifie('le tour du modèle rejoué tel quel, réflexion comprise, « {} » gardé', str_contains($tourModele, '"signature":"sig"') && str_contains($tourModele, '"input":{}'), $tourModele);
@@ -186,7 +187,9 @@ verifie('l’outil inconnu revient en erreur au modèle', ($res[1]['is_error'] ?
 verifie('le résultat du classement est anonyme', !str_contains($res[0]['content'], 'magasin 2') && str_contains($res[0]['content'], '"ref":"moi"'), $res[0]['content']);
 verifie('les jetons s’additionnent sur les deux appels', $R['usage']['input_tokens'] === 400 && $R['usage']['output_tokens'] === 100 && $R['usage']['cache_read_input_tokens'] === 50, json_encode($R['usage']));
 verifie('les outils appelés sont dits', $R['outils'] === ['classement_reseau', 'outil_absent']);
-verifie('le personnage du Coach Vente est passé', str_contains($appels[0]['system'][1]['text'], 'Coach Vente'));
+verifie('le personnage du Coach Vente est passé, en dernier bloc', str_contains($appels[0]['system'][2]['text'], 'Coach Vente'));
+verifie('les consignes du manuel et des visuels, mises en cache', str_contains($appels[0]['system'][1]['text'], 'manuel_chercher') && isset($appels[0]['system'][1]['cache_control']));
+verifie('Opus garde le repli côté serveur', ($appels[0]['fallbacks'] ?? null) === 'default');
 
 echo "Le dernier tour se fait sans outil\n";
 $n = 0;

@@ -15,6 +15,8 @@ ini_set('display_errors', '0');
 require_once __DIR__ . '/../App/Core/init.php';
 
 $container = require __DIR__ . '/../App/Core/bootstrap.php';
+// [295] Interrupteur des envois automatiques (Ustawienia › Parametry, system.auto_send) : à 0, ce script ne fait rien.
+if (App\Core\AutoSend::skip('hr_followups')) exit(0);
 $n = $container->get(App\Services\Hr\HrQuickNoteService::class)->reminders();
 $succession = $container->get(App\Services\Hr\HrSuccessionService::class);
 $plans = $succession->sync();

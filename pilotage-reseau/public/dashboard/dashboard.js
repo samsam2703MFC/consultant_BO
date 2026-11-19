@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'assistant'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -114,7 +114,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'm12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60, 'cqph': 300 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -135,12 +135,27 @@
   function charger(force) {
     // La revue du soir (08/11/2026) : l'état de la revue du jour, pour le bouton — une lecture légère, sans sonde.
     if (!EMBED && !EMBED_PM) { lireAux(cleRVL(), cheminRVL(), force); }
+    // Les seuils du réseau (la valeur du magasin : ses charges normatives, 15/11/2026) : lus une fois.
+    if (!EMBED && !EMBED_PM) { lireAux('meta', '/meta', false); }
     // Le rail du bureau (15/11/2026) : l'objectif du jour et la note Google, en haut du rail, sur tous les onglets.
-    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux('meta', '/meta', force); }
+    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux('meta', '/meta', force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // Mon catalogue (14/11/2026) : le module lit lui-même ses catalogues, relayés au Marketing (catalogue.js).
     if (S.vue === 'catalogue') { rendre(); return; }
+    // Vendre › Offres (15/11/2026) : le module lit et écrit lui-même (offres.js) ; « ↻ Relire » relit la liste.
+    if (S.vue === 'offres') { rendre(); if (force && window.DashOffres) { window.DashOffres.relire(); } return; }
+    // Vendre › Analyse (15/11/2026) : le module lit lui-même (analyse.js) ; « ↻ Relire » relit tout, sans le cache partagé.
+    if (S.vue === 'analyse') { rendre(); if (force && window.DashAnalyse) { window.DashAnalyse.relire(); } return; }
+    // Mon marketing (15/11/2026) : le module lit lui-même (marketing.js) ; /meta pour le lien du calendrier des posts.
+    if (S.vue === 'marketing') { lireAux('meta', '/meta', false); rendre(); if (force && window.DashMarketing) { window.DashMarketing.relire(); } return; }
+    if (S.vue === 'social') { rendre(); if (force && window.DashReseaux) { window.DashReseaux.relire(); } return; }
+    // Boîte mail (15/11/2026) : le module lit et écrit lui-même (boite.js) ; « ↻ Relire » relit la boîte.
+    if (S.vue === 'boite') { rendre(); if (force && window.DashBoite) { window.DashBoite.relire(); } return; }
+    // Paramètres › Mails et automatisations (16/11/2026) : le module lit et écrit lui-même (automatisations.js).
+    if (S.vue === 'mails') { rendre(); if (force && window.DashAuto) { window.DashAuto.relire(); } return; }
+    // L'assistant en pleine page (17/11/2026) : il lit ses questions et ses modèles ; les chiffres, il les lit à la question.
+    if (S.vue === 'assistant') { if (!IA.modeles) { iaModelesLire(); } rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
@@ -151,10 +166,12 @@
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
     if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // La trésorerie (14/11/2026) : le module lit et écrit lui-même (tresorerie.js) ; « ↻ Relire » relit ses repères.
-    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
+    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
+    // Les frais du magasin et leur TVA (16/11/2026) : les frais du mois au panel, le choix de chaque poste.
+    if (S.vue === 'frais') { S.frMois = S.frMois || AUJ.slice(0, 7); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(cleFR(), cheminFR(), force); rendre(); return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
-    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
-    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
+    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
+    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
     if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
@@ -164,7 +181,7 @@
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee') {
-      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
+      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force);
       lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
       // L'année mois par mois face à l'an passé (24/10/2026) : clients, panier, articles.
@@ -205,12 +222,14 @@
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
     // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
-    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
+    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
     // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
     // clients pro (21/10/2026).
-    if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
+    // Les douze dernières semaines face au N-1 : en Semaine, et en Mois aussi (16/11/2026, Sam : « ce graphique aussi dans le mois »).
+    // En Mois, les douze derniers mois glissants au lieu des semaines (18/11/2026, Sam) : treize lus, douze clos et le mois en cours.
+    if (S.vue === 'semaine' || S.vue === 'mois') { lireAux(cleS12(), cheminS12(), force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
       if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set((S.vue === 'semaine' ? friseSemaines().flat() : friseJours()).map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
@@ -221,7 +240,7 @@
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
     if (S.vue === 'ops') { opCharger(force); }
     else if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
-    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
+    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); if (du <= AUJ && AUJ <= au) { lireAux('taches|' + AUJ, '/pwa/tasks?date=' + AUJ, force); } }
     if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     if (S.vue === 'mois') { lireAux(cleCanM(), cheminCanM(), force); lireAux(cleLev(), cheminLev(), force); }
     if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
@@ -233,6 +252,11 @@
     lireAux(cleNC(), urlNC(ncFenetre()), force);
     rendre();
   }
+  /** Une page du dashboard, avec ce qu'elle doit faire en s'ouvrant (la boîte mail ↔ les offres, 15/11/2026). */
+  function allerVers(vue, intention) { S.vue = vue; S.intention = intention || null; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); window.scrollTo(0, 0); }
+  /** Les non-lus de la boîte mail du magasin, sur l'entrée du rail (null : boîte non reliée ou fermée sur cet appareil). */
+  function bmCompte(n) { if (S.bmN !== n) { S.bmN = n; railMaj(avecRail()); } }
+  function bmCompter() { if (window.DashBoite && !document.hidden && S.vue !== 'boite') { window.DashBoite.compter(S.shop, API, bmCompte); } }
   function urlMaj() {
     const u = new URL(location.href);
     u.searchParams.set('shop', S.shop); u.searchParams.set('vue', S.vue); u.searchParams.set('date', S.date);
@@ -240,6 +264,8 @@
     if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
     if (S.vue === 'fidelite' && S.fdClient) { u.searchParams.set('client', S.fdClient); } else { u.searchParams.delete('client'); }
+    // Vendre › Analyse garde sa période et sa page dans l'adresse (analyse.js) ; hors de l'onglet, elles s'effacent.
+    if (S.vue !== 'analyse') { ['per', 'a', 'du', 'au', 'produit', 'famille'].forEach(k => u.searchParams.delete(k)); }
     if (S.vue === 'concurrence') { u.searchParams.set('bmf', S.bmF); if (S.bmF === 'produit' && S.bmP) { u.searchParams.set('bmp', S.bmP); } else { u.searchParams.delete('bmp'); } } else { u.searchParams.delete('bmf'); u.searchParams.delete('bmp'); }
     history.replaceState(null, '', u.toString());
   }
@@ -266,8 +292,18 @@
 
   /* --- rendu -------------------------------------------------------------- */
   /* --- La valeur du magasin ------------------------------------------------
-   * La règle du réseau : le CA des 730 derniers jours, ramené au jour, puis à
-   * l'année (× 365), divisé par 6 — soit deux mois de chiffre d'affaires.
+   * La règle du réseau (15/11/2026, Sam : « Valeur = (marge brute réelle − charges normatives du réseau) × 3,5 ») :
+   *  - le CA des 730 derniers jours, ramené au jour, puis à l'année (× 365) ;
+   *  - la marge brute RÉELLE : ce CA moins son coût matière, mois par mois, au food cost que le cockpit mesure (calculé
+   *    et gardé par /stores/perf, rendu par /ventes/mensuel : `fc`). Un mois sans mesure prend la moyenne mesurée du
+   *    magasin, à défaut la norme du réseau (seuil `food`) — le panneau le dit ;
+   *  - les charges NORMATIVES du réseau, en % du CA : le modèle de Budget › Paramètres (15/11/2026, « prendre les données
+   *    de budget/parametres »), rendu par /ventes/mensuel (`normes`) — toutes ses lignes sauf la catégorie de la marge brute
+   *    (la matière, remplacée par le coût réel). Le modèle n'a pas de ligne de personnel : le personnel s'y ajoute à
+   *    20 % du CA (15/11/2026, Sam : « niveau staff on peut mettre 20 % »), sauf si le modèle en porte un jour une. Sans
+   *    modèle, les seuils du réseau (/meta) en repli ;
+   *  - la valeur : (marge brute réelle − charges normatives) × 3,5.
+   * (Avant le 15/11/2026 : le CA annuel ÷ 6.)
    * Deux ans de recul, et un compte en JOURS plutôt qu'en mois : un mois de
    * 28 jours ne pèse pas comme un mois de 31, et une fenêtre en jours ne se
    * déforme pas selon le mois où on la pose.
@@ -285,7 +321,43 @@
    * Les ventes arrivent par mois ; chaque mois est donc réparti sur ses jours
    * et seuls les jours qui tombent dans la fenêtre comptent — c'est ce qui
    * permet de couper à 730 jours au milieu d'un mois sans le fausser. */
-  const VALO_JOURS = 730, VALO_DIV = 6, VALO_AN = 365;
+  const VALO_JOURS = 730, VALO_AN = 365, VALO_MULT = 3.5, VALO_MULT_T = '3,5';
+  const VALO_REGLE = '(marge brute réelle − charges normatives du réseau) × ' + VALO_MULT_T;
+  // Les charges normatives : les seuils du réseau (GET /meta → seuils), en % du CA ; par défaut, ceux du serveur.
+  const VALO_NORMES = [['labour', 'main-d’œuvre', 17], ['overhead', 'frais généraux', 13.5], ['royalties', 'redevances', 3], ['financieres', 'charges financières', 2.2]];
+  // Le personnel de la valeur quand le modèle de Budget › Paramètres n'en a pas : la cible personnel du réseau, la même
+  // partout (18/11/2026 ; 20 % du 15 au 18/11/2026), servie par /meta dans `seuils.labour`, 17 % en repli.
+  const VALO_PERSONNEL = 17;
+  const fPc = p => nf(p, Math.abs(p - Math.round(p)) < 0.05 ? 0 : 1) + ' %';
+  function valoNormes() {
+    const s = (S.aux.meta && S.aux.meta.seuils) || {};
+    const food = s.food != null && isFinite(+s.food) ? +s.food : 40;   // repli : la cible food cost du réseau
+    // Le modèle de Budget › Paramètres : les catégories (somme de leurs postes), hors la matière.
+    const M = (S.aux['valo|' + S.shop] || {}).normes;
+    if (M && Array.isArray(M.lignes) && M.lignes.length) {
+      const cats = [];
+      M.lignes.filter(l => !l.matiere && isFinite(+l.pct)).forEach(l => { let c = cats.find(x => x.lib === l.categorie); if (!c) { c = { k: l.categorie, lib: l.categorie, pct: 0 }; cats.push(c); } c.pct += +l.pct; });
+      // La matière d'un mois sans mesure : la cible food cost du réseau, la même partout (18/11/2026), pas le budget.
+      const aPersonnel = M.lignes.some(l => !l.matiere && /personnel|salaire|r[ée]mun|main.d|staff/i.test(l.categorie + ' ' + l.poste));
+      if (!aPersonnel) { cats.push({ k: 'personnel', lib: 'Personnel', pct: s.labour != null && isFinite(+s.labour) ? +s.labour : VALO_PERSONNEL, ajoute: true }); }
+      return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food, source: 'Budget › Paramètres', personnelAjoute: !aPersonnel, reste: 'Résultat normatif' };
+    }
+    const L = VALO_NORMES.map(([k, lib, d]) => ({ k, lib, pct: s[k] != null && isFinite(+s[k]) ? +s[k] : d }));
+    return { L, total: L.reduce((t, x) => t + x.pct, 0), food, source: 'les seuils du réseau', reste: 'Résultat normatif' };
+  }
+  /** Le food cost d'un mois sans mesure : la moyenne mesurée du magasin (pondérée par le CA), sinon la norme du réseau. */
+  function valoFcRepli() {
+    let ca = 0, mat = 0;
+    (valoMois() || []).forEach(c => { if (c.ca > 0 && c.fc != null) { ca += c.ca; mat += c.ca * c.fc / 100; } });
+    return ca > 0 ? { pct: 100 * mat / ca, src: 'la moyenne mesurée du magasin' } : { pct: valoNormes().food, src: 'la norme du réseau' };
+  }
+  /** La marge brute réelle d'un CA de mois : le CA moins son coût matière (food cost mesuré, sinon le repli). */
+  const valoMb = (c, ca, R) => ca * (1 - (c.fc != null ? c.fc : R.pct) / 100);
+  /** La valeur d'une période : sa marge brute réelle moins les charges normatives, ramenée à l'année, × 3,5. */
+  function valoDe(ca, mb, jours) {
+    if (!jours) { return null; }
+    return (mb - ca * valoNormes().total / 100) / jours * VALO_AN * VALO_MULT;
+  }
   /** Les mois rendus par /ventes/mensuel — le mois en cours en est déjà exclu. */
   function valoMois() {
     const d = S.aux['valo|' + S.shop];
@@ -323,8 +395,8 @@
     const dernier = avec[avec.length - 1].mois;
     const fin = new Date(Date.UTC(+dernier.slice(0, 4), +dernier.slice(5, 7) - 1, joursDuMois(dernier)));
     const deb = new Date(fin.getTime() - (VALO_JOURS - 1) * 86400000);
-    const ouv = valoOuverture();
-    let total = 0, jours = 0, mois = 0, creux = 0, premier = null;
+    const ouv = valoOuverture(), R = valoFcRepli();
+    let total = 0, mb = 0, jours = 0, mois = 0, creux = 0, premier = null, sansFc = 0;
     l.forEach(c => {
       const A = joursActifs(c.mois, ouv);
       if (A.n <= 0) { return; }
@@ -338,23 +410,27 @@
       if (c.ca == null) { creux += cv; return; }
       // Le taux journalier du mois se calcule sur ses jours ACTIFS.
       total += c.ca * cv / A.n;
+      mb += valoMb(c, c.ca * cv / A.n, R);
+      if (c.fc == null) { sansFc++; }
       jours += cv; mois++;
       if (premier === null) { premier = c.mois; }
     });
     if (!jours) return { n: 0 };
-    const quotidien = total / jours;
+    const quotidien = total / jours, N = valoNormes();
+    const annuel = quotidien * VALO_AN, mbAnnuel = mb / jours * VALO_AN, charges = annuel * N.total / 100;
     return {
       // `jours` EST le diviseur : les jours d'activité de la fenêtre, donc au
       // plus 730. `creux` dit ce qui manque, pour qui veut la différence.
       n: mois, jours: jours, creux: creux,
       total: total, quotidien: quotidien,
-      annuel: quotidien * VALO_AN, valeur: quotidien * VALO_AN / VALO_DIV,
+      annuel, mb, mbAnnuel, normes: N, charges, resultat: mbAnnuel - charges, valeur: valoDe(total, mb, jours),
+      fc: total > 0 ? 100 * (1 - mb / total) : null, sansFc, repli: R,
       du: fD(iso(deb)) + '/' + iso(deb).slice(0, 4), au: fD(iso(fin)) + '/' + iso(fin).slice(0, 4),
       duMois: premier ? libMois(premier) : '', auMois: libMois(dernier)
     };
   }
-  /* Année par année, à la même règle : le CA de l'année ramené au jour, puis à
-   * l'année, puis divisé par six. Seules les années qui ont des ventes sont
+  /* Année par année, à la même règle : la marge brute réelle de l'année moins les
+   * charges normatives, ramenée au jour, puis à l'année, × 3,5. Seules les années qui ont des ventes sont
    * rendues — une colonne vide n'apprend rien. L'année en cours y figure : le
    * diviseur étant ses jours vécus, elle dit le rythme du moment, pas un
    * demi-exercice. */
@@ -368,15 +444,15 @@
     });
     const cles = Object.keys(par).sort();
     if (!cles.length) return null;
-    const ouv = valoOuverture();
+    const ouv = valoOuverture(), R = valoFcRepli();
     return cles.map(k => {
       const m = par[k];
-      let ca = 0, jours = 0;
-      m.forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; jours += A.n; });
+      let ca = 0, mb = 0, jours = 0;
+      m.forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; mb += valoMb(c, c.ca, R); jours += A.n; });
       const quot = jours ? ca / jours : null;
       return { lib: k, n: m.length, ca: ca, jours: jours,
         ouverte: !!(ouv && ouv.slice(0, 4) === k),
-        quotidien: quot, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
+        quotidien: quot, valeur: valoDe(ca, mb, jours) };
     });
   }
   /** La courbe des années : les trous ne sont pas reliés, ils se voient. */
@@ -417,6 +493,58 @@
     </div>`;
   }
 
+  /* La valeur, trimestre par trimestre (15/11/2026, demande : « au clic, le détail du calcul et un mini graphique
+   * linéaire des 6 derniers trimestres ») : la même règle que l'année — le CA du trimestre ramené à ses jours actifs,
+   * marge brute réelle moins charges normatives, ramenée à l'année (× 365), × 3,5. Le trimestre en cours n'a que ses mois clos (le mois en cours est exclu). */
+  function valoTrimestres(n) {
+    const l = valoMois();
+    if (!l) { return null; }
+    const ouv = valoOuverture(), R = valoFcRepli(), par = {};
+    l.filter(c => c.ca != null).forEach(c => { const k = c.mois.slice(0, 4) + '-T' + (Math.floor((+c.mois.slice(5, 7) - 1) / 3) + 1); (par[k] = par[k] || []).push(c); });
+    const cles = Object.keys(par).sort().slice(-n);
+    return cles.map(k => {
+      let ca = 0, mb = 0, jours = 0;
+      par[k].forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; mb += valoMb(c, c.ca, R); jours += A.n; });
+      return { lib: k.slice(5) + ' ' + k.slice(2, 4), n: par[k].length, ca, jours, valeur: valoDe(ca, mb, jours) };
+    });
+  }
+  /** La petite courbe des trimestres : un trait, un point par trimestre, la valeur du dernier écrite. */
+  function valoMiniCourbe(T) {
+    const vs = T.map(o => o.valeur).filter(v => v != null);
+    if (vs.length < 2) { return ''; }
+    const W = 340, H = 92, G = 26, D = 26, mn = Math.min(...vs), mx = Math.max(...vs);
+    const x = i => (G + i * (W - G - D) / Math.max(1, T.length - 1)).toFixed(1);
+    const y = v => (H - 22 - (H - 40) * (v - mn) / ((mx - mn) || 1)).toFixed(1);
+    const pts = T.map((o, i) => o.valeur == null ? null : x(i) + ',' + y(o.valeur)).filter(Boolean);
+    return `<svg class="db-vpop-c" viewBox="0 0 ${W} ${H}" role="img" aria-label="La valeur du magasin, trimestre par trimestre">
+      <line class="gr" x1="${G}" y1="${H - 16}" x2="${W - D}" y2="${H - 16}"></line>
+      <polyline points="${pts.join(' ')}"></polyline>
+      ${T.map((o, i) => o.valeur == null ? '' : `<circle cx="${x(i)}" cy="${y(o.valeur)}" r="${i === T.length - 1 ? 3.6 : 2.8}"><title>${esc(o.lib)} : ${fE(o.valeur)}${o.n < 3 ? ' (' + o.n + ' mois)' : ''}</title></circle>`).join('')}
+      ${T.map((o, i) => `<text class="lb" x="${x(i)}" y="${H - 3}" text-anchor="middle">${esc(o.lib)}</text>`).join('')}
+      <text class="vl" x="${x(T.length - 1)}" y="${Math.max(10, +y(T[T.length - 1].valeur || mn) - 8)}" text-anchor="end">${fE(T[T.length - 1].valeur)}</text>
+      <text class="vl mu" x="${x(0)}" y="${Math.max(10, +y(T[0].valeur || mn) - 8)}" text-anchor="start">${fE(T[0].valeur)}</text>
+    </svg>`;
+  }
+  /** Le panneau de la vignette, sous la barre du rail : le calcul pas à pas, puis les six derniers trimestres. */
+  function valoPanneau() {
+    if (!S.valoOuvert) { return ''; }
+    const v = valeurMagasin();
+    if (!v || !v.n) { return `<div class="db-vpop" role="dialog" aria-label="Valeur du magasin"><div class="db-vpop-h"><span>Valeur du magasin</span><button type="button" class="db-vpop-x" data-vdrop="1" aria-label="Fermer">×</button></div><p class="mu">${v ? 'Aucun mois complet de chiffre d’affaires relevé pour ce magasin.' : 'Lecture du chiffre d’affaires…'}</p></div>`; }
+    const T = valoTrimestres(6) || [];
+    const ligne = (k, val, s) => `<div class="db-vpop-l"><span class="k">${k}${s ? `<small>${s}</small>` : ''}</span><span class="v">${val}</span></div>`;
+    return `<div class="db-vpop" role="dialog" aria-label="Valeur du magasin">
+      <div class="db-vpop-h"><span>Valeur du magasin</span><button type="button" class="db-vpop-x" data-vdrop="1" aria-label="Fermer">×</button></div>
+      <div class="db-vpop-calc">
+        ${ligne('Chiffre d’affaires annuel', fE(v.annuel), fE(v.total) + ' sur ' + fN(v.jours) + ' jours d’activité' + (v.jours < VALO_JOURS ? ' (' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture)' : ' (du ' + esc(v.du) + ' au ' + esc(v.au) + ')') + ', ramenés à ' + VALO_AN + ' jours')}
+        ${ligne('Marge brute réelle', fE(v.mbAnnuel), fPc(100 - v.fc) + ' du CA · food cost ' + fPc(v.fc) + (v.sansFc ? ' · ' + v.sansFc + ' mois sans mesure : ' + esc(v.repli.src) + ' (' + fPc(v.repli.pct) + ')' : ', mesuré mois par mois'))}
+        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA : ' + v.normes.L.map(x => esc(x.lib.toLowerCase()) + ' ' + fPc(x.pct)).join(', '))}
+        ${ligne('= résultat normatif', fE(v.resultat), 'ce que le magasin gagne aux normes du réseau, sur un an')}
+        ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'la valeur du magasin')}
+      </div>
+      ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}</div>` : ''}
+    </div>`;
+  }
+
   /* La valeur tient sur la barre du haut : un mot, un chiffre, la courbe des
    * Tout le reste — la formule, la fenêtre, les six trimestres — attend dans
    * le tiroir. */
@@ -425,7 +553,7 @@
     if (!v) return '<span class="db-valoc att">Valeur du magasin…</span>';
     const dr = S.valoOuvert ? '\u25b4' : '\u25be';
     if (!v.n) return `<button class="db-valoc" data-vdrop="1"><span class="k">Valeur</span><span class="v">—</span><span class="dr">${dr}</span></button>`;
-    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}">
+    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="${VALO_REGLE}">
       <span class="k">Valeur</span><span class="v">${fE(v.valeur)}</span><span class="dr">${dr}</span></button>`;
   }
   /* Le tiroir : la formule en toutes lettres, puis les six trimestres. */
@@ -437,7 +565,7 @@
     }
     return `<div class="db-vdl seul">
       <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.total)} de chiffre d’affaires sur ${fN(v.jours)} jours,
-        soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année, ÷ ${VALO_DIV} : deux mois de chiffre d’affaires.
+        soit ${fE(v.annuel)} sur l’année ; marge brute réelle ${fE(v.mbAnnuel)} (food cost ${fPc(v.fc)}), moins les charges normatives du réseau (${fPc(v.normes.total)} du CA, ${fE(v.charges)}) : ${fE(v.resultat)}, × ${VALO_MULT_T}.
         La fenêtre va du ${esc(v.du)} au ${esc(v.au)} — ${esc(v.duMois)} à ${esc(v.auMois)}.
         ${v.jours < VALO_JOURS ? '<em class="att">' + fN(v.jours) + ' jours d’activité</em> dans la fenêtre — le diviseur est le nombre de jours vécus, pas ' + VALO_JOURS + ' : il le deviendra quand le magasin les aura.' : ''}</div>
       ${valoTiroir()}
@@ -1042,20 +1170,27 @@
   const MA = {
     ca: p => p == null ? 'n' : (p >= 100 ? 'v' : (p >= 90 ? 'o' : 'r')),             // chiffre face à l'objectif, %
     net: p => p == null ? 'n' : (p >= 15 ? 'v' : (p >= 5 ? 'o' : 'r')),               // résultat, % des ventes
-    // matière, % des ventes, face au seuil du réseau (Budget › Paramètres, rendu par l'API dans `seuils.food`) :
-    // vert jusqu'au seuil, orange jusqu'à dix points au-dessus. Sans seuil lu, l'ancien repère de 35 %.
-    mat: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 35) ? 'v' : (p <= (s != null ? s : 35) + 10 ? 'o' : 'r')),
-    mo: p => p == null ? 'n' : (p <= 20 ? 'v' : (p <= 25 ? 'o' : 'r')),               // main-d'œuvre, % des ventes
+    // matière, % des ventes, face à la cible food cost du réseau (la même partout, rendue par l'API dans `seuils.food`) :
+    // vert jusqu'au seuil, orange jusqu'à dix points au-dessus. Sans seuil lu, la même cible, 40 %.
+    mat: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 40) ? 'v' : (p <= (s != null ? s : 40) + 10 ? 'o' : 'r')),
+    // main-d'œuvre, % des ventes, face à la cible personnel du réseau (la même partout, `seuils.labour`) : vert jusqu'à
+    // la cible, orange jusqu'à cinq points au-dessus (avant le 18/11/2026 : 20 / 25 en dur). Sans cible lue, 17 %.
+    mo: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 17) ? 'v' : (p <= (s != null ? s : 17) + 5 ? 'o' : 'r')),
     poub: p => p == null ? 'n' : (p <= 1.5 ? 'v' : (p <= 3 ? 'o' : 'r')),             // poubelle, % du chiffre
     ctrl: (r, t) => !t ? 'n' : (r >= t ? 'v' : (r / t >= 0.8 ? 'o' : 'r')),           // contrôles rendus
     cli: (n, j7) => n == null || !j7 ? 'n' : (n >= 0.95 * j7 ? 'v' : (n >= 0.85 * j7 ? 'o' : 'r')),
   };
-  /** Le seuil matière du réseau tel que l'API le rend (Budget › Paramètres) ; null s'il n'est pas encore lu. */
+  /** La cible food cost du réseau telle que l'API la rend (la même partout) ; null si elle n'est pas encore lue. */
   const maSeuilMat = d => {
     const x = (d && d.seuils) || ((S.aux['jourM|' + S.date] || {}).seuils) || null;
     return x && x.food != null ? +x.food : null;
   };
   const maSeuilLib = d => { const v = maSeuilMat(d); return v != null ? 'seuil ' + fP(v) : 'seuil —'; };
+  /** La cible personnel du réseau telle que l'API la rend (la même partout) ; null si elle n'est pas encore lue. */
+  const maSeuilMo = d => {
+    const x = (d && d.seuils) || ((S.aux['jourM|' + S.date] || {}).seuils) || null;
+    return x && x.labour != null ? +x.labour : null;
+  };
   /** La poubelle du jour regardé, même depuis l'onglet Semaine (qui lit celle de la semaine). */
   function maInvJour() { const I = S.aux['inv|' + S.shop + '|' + S.date]; return I && !I.error ? I : null; }
   const maPire = L => L.includes('r') ? 'r' : (L.includes('o') ? 'o' : (L.includes('v') ? 'v' : 'n'));
@@ -1161,7 +1296,7 @@
       v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', panTxt(PM)].filter(Boolean).join(' · ') });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct, maSeuilMat(d)), v: fP(m.coutMatierePct),
       s: maSeuilLib(d) + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
-    T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct), v: m.labourPct != null ? fP(m.labourPct) : '—',
+    T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct, maSeuilMo(d)), v: m.labourPct != null ? fP(m.labourPct) : '—',
       s: m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : 'des ventes' });
     T.push({ k: 'Invendus', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true),
       pt: !I || !I.lu ? 'n' : (!I.declare ? (auj ? 'n' : 'o') : MA.poub(m.ca ? 100 * I.cout / m.ca : null)),
@@ -1282,6 +1417,8 @@
     const avecNet = passes.filter(j => NET[j.date] && NET[j.date].net != null);
     const complet = avecNet.length && passes.every(j => (NET[j.date] && NET[j.date].net != null) || j.aujourdhui);
     const netSem = m.net != null ? m.net : (complet ? avecNet.reduce((a, j) => a + NET[j.date].net, 0) : null);
+    // Le résultat se lit hors TVA (16/11/2026) : en % du réalisé hors TVA de la semaine (ou de ses jours additionnés).
+    const baseNet = m.net != null ? (m.realiseHt || realise) : (complet ? avecNet.reduce((a, j) => a + (NET[j.date].caHt || NET[j.date].ca || 0), 0) : realise);
     const dessous = passes.filter(j => j.objectif && j.ca < j.objectif && !j.aujourdhui), dessus = passes.filter(j => j.objectif && j.ca >= j.objectif);
     const jl = j => (j.court || fD(j.date)).replace(/\s+\d+$/, '');
     const rc = maRang(d, m, 'realise');
@@ -1291,8 +1428,8 @@
       v: fE(realise) + (m.attendu ? ` <small class="mu">/ ${fE(m.attendu)}</small>` : ''),
       s: (att != null ? fP(att) + ' de l’objectif à ce jour' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
       apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
-    T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
-      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
+    T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(baseNet ? 100 * netSem / baseNet : null),
+      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (baseNet ? ' · ' + fPS(100 * netSem / baseNet) + ' des ventes hors TVA' : '') : 'P&amp;L incomplet' });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct, maSeuilMat(d)), v: fP(m.coutMatierePct), s: maSeuilLib(d) + ' · la semaine' });
     T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
       v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
@@ -1309,7 +1446,7 @@
     let h = `<div class="ma-dam"><table><tr><th class="l"></th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date)).replace(' ', '<br>')}</th>`).join('')}</tr>`;
     if (!R.sansChiffre) h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
     const jmLu = !!S.aux['jourM|' + S.date];
-    h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net(x.ca ? 100 * x.net / x.ca : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
+    h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net((x.caHt || x.ca) ? 100 * x.net / (x.caHt || x.ca) : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
     h += ligne('Contrôles', j => { const c = X[j.date] && X[j.date].controles; return c ? cell(c.total ? (auj(j) && c.rendus < c.total ? 'o' : MA.ctrl(c.rendus, c.total)) : 'n', c.total ? c.rendus + '/' + c.total : '—') : cell('n', SJ ? '—' : '…'); });
     h += ligne('Notés', j => { const c = X[j.date] && X[j.date].controles; return c ? (c.nc ? cell('r', c.nc + ' NC') : (c.notes ? cell('v', String(c.notes)) : cell('n', '—'))) : cell('n', SJ ? '—' : '…'); });
     h += ligne('Poubelle', j => { const p = X[j.date] && X[j.date].poubelle; if (!p) { return cell('n', SJ ? '—' : '…'); } if (!p.pieces) { return cell('n', '0'); }
@@ -1327,7 +1464,7 @@
     let h = maHerosSem(m, R, ca);
     h += maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
-    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
+    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? 'marge brute − normes × ' + VALO_MULT_T : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     return h;
   }
@@ -3967,34 +4104,25 @@
     let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
       <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
       <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div></div>
-      <div class="pm-lecture">Lecture seule : les promotions se créent et se modifient au cockpit, dans <b>Promotions › Édition</b>.</div>`;
+      <div class="pm-lecture">Le Coach Vente prépare vos bundles avec vos prix et vos coûts : vous validez, la promotion passe en caisse le lundi qui suit et l’équipe reçoit sa fiche. Les autres promotions se créent au cockpit (<b>Promotions › Édition</b>).</div>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
     if (S.pmBonV) { h += rendPmBonCodes(); }
     if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
     if (!P) { return h + squelette(3); }
-    const L = pmLignes();
-    const parSorte = L.filter(l => S.pmSorte === 'tout' || l.sorte === S.pmSorte);
-    const q = (S.pmQ || '').trim().toLowerCase();
-    const f = PM_FILTRES.find(x => x[0] === S.pmF) || PM_FILTRES[0];
-    const vues = parSorte.filter(l => f[2](l.etat) && (!q || (l.nom + ' ' + l.texte).toLowerCase().includes(q)));
     h += rendPmCanaux();
-    h += `<div class="db-card pm-liste"><div class="pm-filtres">
-      <div class="db-ong">${PM_FILTRES.map(x => { const n = parSorte.filter(l => x[2](l.etat)).length; return `<button data-pmf-st="${x[0]}" class="${x[0] === f[0] ? 'on' : ''}">${x[1]} <small>${n}</small></button>`; }).join('')}</div>
-      <select class="pm-in" data-pmsorte="1">${[['tout', 'Toutes les sortes'], ['xy', 'X achetés + Y'], ['bundle', 'Bundles']].map(o => `<option value="${o[0]}"${S.pmSorte === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
-      <input class="pm-in pm-cherche" type="search" placeholder="Chercher une promotion…" value="${esc(S.pmQ || '')}" data-pmq="1">
-      <span class="pm-colsw"><button class="db-btn" data-pmcols="1" aria-expanded="${!!S.pmColsOuv}">Colonnes ▾</button>${S.pmColsOuv ? `<div class="pm-menu pm-cols"><div class="db-lab">Colonnes affichées</div>${PM_COLS.map(c => `<label><input type="checkbox" data-pmcol="${c[0]}"${pmColsVues().includes(c[0]) ? ' checked' : ''}${c[0] === 'nom' ? ' disabled' : ''}> ${c[1]}</label>`).join('')}<button class="pm-lien" data-pmcolsraz="1">Revenir aux colonnes par défaut</button></div>` : ''}</span></div>`;
-    if (!vues.length) {
-      h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'}</div>`;
-    } else {
-      const cols = PM_COLS.filter(c => pmColsVues().includes(c[0]));
-      h += `<div class="pm-large"><table class="pm-tab pm-tab2"><thead><tr>${cols.map(c => `<th class="${c[2]}"${c[4] ? ` title="${esc(c[4])}"` : ''}>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${vues.map(l => {
-        const v = pmValeurs(l), cle = l.src + ':' + l.id, ouvert = S.pmMenu === cle;
-        return `<tr>${cols.map(c => `<td class="${c[2]}">${v[c[0]]}</td>`).join('')}<td class="pm-act">${v.actions ? `<button class="pm-dots${ouvert ? ' on' : ''}" data-pmmenu="${esc(cle)}" aria-label="actions" aria-expanded="${ouvert}">${PM_ICO_DOTS}</button>${ouvert ? `<div class="pm-menu">${v.actions}</div>` : ''}` : ''}</td></tr>`;
-      }).join('')}</tbody></table></div>`;
-    }
-    // Le paragraphe d'explication sous la liste est retiré (23/10/2026, Sam) ; reste l'erreur du panel, s'il y en a une.
-    h += `${P.erreurPanel ? `<div class="pm-pied db-mini"><b>${esc(P.erreurPanel)}</b></div>` : ''}</div>`;
+    // Les bundles du Coach Vente (17/11/2026, Sam : « enlever le tableau, mettre là un assistant venant de l'Assistant IA
+    // avec une promotion pré-encodée », puis « créer des bundles qui montent la marge » ; maquette docs/maquettes/promo-coach) :
+    // la liste des promotions laisse la place au module (bundles.js), monté après le rendu (bndMonter).
+    h += '<div id="db-bundles"></div>';
+    if (P.erreurPanel) { h += `<div class="pm-pied db-mini"><b>${esc(P.erreurPanel)}</b></div>`; }
     return h;
+  }
+  /** Le module des bundles, gardé d'un rendu à l'autre (son état, sa phase). */
+  function bndMonter() {
+    const p = document.getElementById('db-bundles');
+    if (!p) { return; }
+    if (!window.DashBundles) { p.innerHTML = '<div class="db-err">Le module des bundles n’a pas été chargé.</div>'; return; }
+    p.replaceWith(window.DashBundles.racine(S.shop, { apiBase: API, aller: allerVers, coach: () => { IA.ton = 'vente'; try { localStorage.setItem('dbIaTon', 'vente'); } catch (e) { /* stockage refusé */ } iaPage('a'); } }));
   }
 
   /* --- Où les promotions sont utilisées (18/10/2026, maquette C, le coefficient en plus) ---------------------------
@@ -5718,7 +5846,7 @@
    * des réponses ; la liste vient de GET /assistant/magasin/questions (tons). */
   let tonGarde = '';
   try { tonGarde = localStorage.getItem('dbIaTon') || ''; } catch (e) { /* stockage refusé */ }
-  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde };
+  const IA = { ouvert: false, mode: 'b', pm: 'b', fil: [], questions: null, saisie: '', ton: tonGarde, conv: '', reg: {}, vues: {}, modMsg: {}, modeles: null, pdf: {} };
   const iaTons = () => (IA.questions && IA.questions.tons) || [];
   const iaTonCle = () => (iaTons().some(t => t.cle === IA.ton) ? IA.ton : ((IA.questions && IA.questions.tonDefaut) || ''));
   const iaNomTon = k => { const t = iaTons().find(x => x.cle === k); return t ? t.nom : ''; };
@@ -5728,9 +5856,9 @@
   function iaChoixTon() {
     const T = iaTons();
     if (!T.length) { return ''; }
-    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, 96)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
+    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, T.length > 3 ? 64 : 96)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
   }
-  const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
+  const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions', concurrence: 'Voir la concurrence' };
   /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
    * étincelle dedans. Sur le bouton, dans l'entête, à côté de chaque réponse ; quand l'assistant lit, l'étincelle pulse. */
   const iaIcone = (taille, cls) => `<svg class="ia-icone${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" width="${taille || 16}" height="${taille || 16}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11A2.5 2.5 0 0 1 20 6v7.5a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5V6a2.5 2.5 0 0 1 2.5-2.5z"/><path class="etin" d="M12 6.4l.95 2.35 2.35.95-2.35.95L12 13l-.95-2.35-2.35-.95 2.35-.95z" fill="currentColor" stroke-width="1"/></svg>`;
@@ -5743,21 +5871,57 @@
     IA.ouvert = true;
     if (mode === 'd') { IA.mode = 'd'; hdLire(false); } else if (IA.mode === 'd' && !(IA.questions && IA.questions.actif)) { IA.mode = 'd'; }
     if (!IA.questions) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; iaRendre(); }).catch(() => { IA.questions = { tuiles: [], groupes: [] }; iaRendre(); }); }
+    if (!IA.modeles) { iaModelesLire(); }
     iaRendre();
     setTimeout(() => { const i = document.querySelector('#db-ia input'); if (i) { i.focus(); } }, 30);
   }
   function iaFermer() { IA.ouvert = false; iaRendre(); }
+  /** La clé de la conversation (aia_conversation) : une par fil, tirée ici, jamais un nom. */
+  function iaConv() {
+    if (!IA.conv) { const a = new Uint8Array(16); (window.crypto || window.msCrypto).getRandomValues(a); IA.conv = Array.from(a, x => x.toString(16).padStart(2, '0')).join(''); }
+    return IA.conv;
+  }
   function iaDemander(q, mode, origine) {
     q = String(q || '').trim();
     if (!q || IA.fil.some(t => t.attente)) { return; }
-    if (mode) { IA.mode = mode; }
-    const fil = IA.fil.filter(t => t.r).map(t => ({ q: t.q, r: t.r }));
+    if (mode) { if (IA.ouvert) { IA.mode = mode; } else { IA.pm = mode; } }
+    const fil = IA.fil.filter(t => t.r && !t.modele).map(t => ({ q: t.q, r: t.r }));
     const t = { q, attente: true, ton: iaTonCle() };
     IA.fil.push(t); IA.saisie = '';
     iaRendre();
-    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton, origine: origine || 'libre' })
-      .then(d => { t.r = d.reponse; t.luLe = d.luLe; }).catch(e => { t.err = e.message; })
+    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton, origine: origine || 'libre', conversation: iaConv() })
+      .then(d => { t.r = d.reponse; t.luLe = d.luLe; t.qid = d.question; }).catch(e => { t.err = e.message; })
       .finally(() => { t.attente = false; iaRendre(); });
+  }
+  /* La réponse en PDF (17/11/2026, Sam : « output pdf ») : le serveur compose la page A4 (gabarit du cockpit) depuis la
+   * réponse gardée ; l'écran lui envoie ses graphiques en PNG, dessinés à 900 px, pour qu'ils sortent tels qu'à l'écran. */
+  function iaPngData(v) {
+    return new Promise(ok => {
+      const img = new Image(), w = 900, svg = iaDessin(v, w), h = +((svg.match(/height="(\d+)"/) || [])[1] || 260);
+      img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); ok(c.toDataURL('image/png')); };
+      img.onerror = () => ok(null);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+  function iaPdf(i) {
+    const t = IA.fil[+i];
+    if (!t || !t.r || (IA.pdf[i] && IA.pdf[i].encours)) { return; }
+    IA.pdf[i] = { encours: true }; iaRendre();
+    const V = (t.r.visuels || []).filter(v => v.id && (v.series || []).length && v.forme !== 'tableau');
+    Promise.all(V.map(v => iaPngData(v).then(d => [v.id, d]))).then(L => {
+      const images = {}; L.forEach(([id, d]) => { if (d) { images[id] = d; } });
+      return fetch(API + '/assistant/magasin/pdf', { method: 'POST', headers: { Accept: 'application/pdf, application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ shop: S.shop, question: t.qid || null, visuels: t.qid ? [] : (t.r.visuels || []).map(v => v.id).filter(Boolean), titre: t.r.titre || '', images }) });
+    }).then(r => {
+      const ty = r.headers.get('Content-Type') || '';
+      if (r.ok && ty.includes('pdf')) { return r.blob().then(b => { iaTelecharger('assistant-' + iaFichier(t.r) + '.pdf', b); IA.pdf[i] = null; }); }
+      return r.json().catch(() => ({})).then(j => { throw new Error((j && j.error) || ('HTTP ' + r.status)); });
+    }).catch(e => { IA.pdf[i] = { err: 'PDF impossible : ' + e.message }; }).finally(() => { if (IA.pdf[i]) { IA.pdf[i].encours = false; } iaRendre(); });
+  }
+  function iaBoutonPdf(i, classe) {
+    const t = IA.fil[i], x = IA.pdf[i];
+    if (!t || !t.r || (!t.qid && !(t.r.visuels || []).some(v => v.id))) { return ''; }
+    return `<button class="${classe}" data-iapdf="${i}"${x && x.encours ? ' disabled' : ''}>${x && x.encours ? 'PDF en cours…' : '⤓ PDF'}</button>${x && x.err ? `<span class="ia-pdf-err">${esc(x.err)}</span>` : ''}`;
   }
   function iaAller(ecran) { iaFermer(); S.vue = ecran; S.fdClient = null; urlMaj(); charger(false); window.scrollTo(0, 0); }
   function iaChiffres(r) { return (r.chiffres || []).length ? `<div class="ia-k">${r.chiffres.slice(0, 4).map(c => `<div><b>${esc(c.valeur)}</b><span>${esc(c.libelle)}</span></div>`).join('')}</div>` : ''; }
@@ -5769,36 +5933,252 @@
   /** La phrase de finition (12/11/2026, Sam : « une phrase d'introduction, des puces, une phrase de finition »). */
   function iaFin(r) { return r.conclusion ? `<p class="ia-fin">${esc(r.conclusion)}</p>` : ''; }
   function iaSuites(r) { return (r.suites || []).length ? `<div class="ia-suites"><span>Creuser :</span>${r.suites.slice(0, 3).map(s => `<button data-iaq="${esc(s)}" data-iamode="a">${esc(s)}</button>`).join('')}</div>` : ''; }
+  /** Les documents du manuel que la réponse a lus (17/11/2026). */
+  function iaSources(r) {
+    const S2 = r.sources || [];
+    return S2.length ? `<p class="ia-srcs"><span>Lu dans le manuel :</span>${S2.map(s => `<b title="${esc(s.type + ' · version ' + s.version + ' · ' + s.statut)}">${s.code ? esc(s.code) + ' · ' : ''}${esc(s.titre)}${/brouillon|valider/.test(s.statut) ? ` <em>${esc(s.statut.replace(' (pas encore relu)', ''))}</em>` : ''}</b>`).join('')}</p>` : '';
+  }
+  /* --- Les tableaux et graphiques (17/11/2026, Sam : « en fonction de la question du franchisé, l'agent lui propose
+   * tableau et/ou graphique ») ---------------------------------------------------------------------------------------
+   * Le modèle décrit la demande ; le serveur relit les chiffres (src/franchise/assistant_ia.php) et rend libellés,
+   * séries et tableau. Ici on les dessine à la largeur réelle du cadre (les textes restent à 11 px), selon les règles des
+   * graphiques du cockpit : Ruby #A82E40 pour le magasin, gris pour la comparaison, colonnes de 24 px au plus arrondies en
+   * haut, lignes de 2 px, grille discrète, graduations rondes, étiquettes choisies sur un halo blanc, la valeur au survol.
+   * Chaque visuel bascule en tableau, se télécharge (CSV, image) et se garde comme modèle (aia_modele). */
+  const IA_C = { moi: '#A82E40', ref: '#8a847c', autre: '#cfc8bd', grille: '#ece6dc', axe: '#9a948b', encre: '#2b2724' };
+  function iaFmt(v, x) { return String(iaFmt0(v, x)).replace(/\u202f/g, '\u00a0'); }   // l'espace fine ne s'affiche pas dans un SVG
+  function iaFmt0(v, x) {
+    if (x == null || x === '') { return '—'; }
+    if (typeof x !== 'number') { return String(x); }
+    switch (v.mesure) {
+      case 'panier': case 'prix': return nf(x, 2) + ' €';
+      case 'part': case 'marge': return nf(x, 1) + ' %';
+      case 'tickets': return nf(x, x < 20 && x % 1 ? 1 : 0);
+      case 'quantite': return nf(x, x % 1 ? 1 : 0) + ' pcs';
+      default: return fE(x);
+    }
+  }
+  /** Des graduations rondes de 0 au maximum : 1, 2, 2,5 ou 5 × 10ⁿ, quatre ou cinq traits. */
+  function iaGrad(max) {
+    if (!(max > 0)) { return [0, 1]; }
+    const brut = max / 4, p = Math.pow(10, Math.floor(Math.log10(brut))), m = brut / p;
+    const pas = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p, T = [];
+    for (let x = 0; x <= max + pas * 0.999; x += pas) { T.push(+x.toFixed(6)); }
+    return T;
+  }
+  const iaHalo = (x, y, t, anc) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="11.5" font-weight="600" text-anchor="${anc || 'middle'}" fill="${IA_C.encre}" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`;
+  /** La légende, dans l'image (pour qu'un téléchargement la garde). */
+  function iaLegende(v, w, y) {
+    if ((v.series || []).length < 2) { return ''; }
+    let x = 0; const items = v.series.map(s => { const lg = 26 + s.nom.length * 6.3; const r = { s, x }; x += lg + 16; return r; });
+    const x0 = Math.max(4, (w - x + 16) / 2);
+    return items.map(({ s, x: dx }) => {
+      const cx = x0 + dx, sw = s.role === 'moi' && v.forme !== 'courbe' && v.forme !== 'radar' ? `<rect x="${cx}" y="${y - 9}" width="10" height="10" rx="2" fill="${IA_C.moi}"/>` : `<line x1="${cx}" x2="${cx + 16}" y1="${y - 4}" y2="${y - 4}" stroke="${s.role === 'moi' ? IA_C.moi : IA_C.ref}" stroke-width="2.5" stroke-linecap="round"/>`;
+      return sw + `<text x="${cx + (s.role === 'moi' && v.forme !== 'courbe' && v.forme !== 'radar' ? 15 : 22)}" y="${y}" font-size="11.5" fill="#5b5650">${esc(s.nom)}</text>`;
+    }).join('');
+  }
+  function iaDessin(v, w) {
+    const ff = getComputedStyle(document.body).fontFamily.replace(/"/g, "'");
+    const svg = (h, s) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;font-family:${ff}" font-family="${ff}" role="img" aria-label="${esc(v.titre)}"><rect width="${w}" height="${h}" fill="#fff"/>${s}</svg>`;
+    const L = v.libelles || [], M = (v.series || [])[0] || { valeurs: [] }, R = (v.series || [])[1] || null, n = L.length;
+    const leg = (v.series || []).length > 1;
+    if (v.forme === 'radar' && n >= 3) { return iaRadar(v, w, svg); }
+    if (v.forme === 'barres' || v.forme === 'radar') {
+      const rowH = R ? 30 : 24, lab = Math.min(Math.round(w * 0.42), Math.max(...L.map(l => String(l).length)) * 6.6 + 10), val = 72;
+      const W = w - lab - val - 8, top = 6, h = top + n * rowH + (leg ? 30 : 8);
+      const mx = Math.max(...M.valeurs.concat(R ? R.valeurs : []).map(x => x || 0)) || 1;
+      let s = '';
+      L.forEach((l, i) => {
+        const y = top + i * rowH, x = M.valeurs[i] || 0, bw = Math.max(1, W * x / mx), moiLigne = v.surligne === i;
+        const coul = v.surligne != null && !moiLigne ? IA_C.autre : IA_C.moi;
+        const lib = String(l).length > lab / 6.6 ? String(l).slice(0, Math.floor(lab / 6.6) - 1) + '…' : String(l);
+        s += `<text x="${lab - 8}" y="${y + 14}" font-size="12" text-anchor="end" fill="${IA_C.encre}"${moiLigne ? ' font-weight="700"' : ''}>${esc(lib)}<title>${esc(l)}</title></text>`;
+        s += `<path d="M${lab},${y + 5}h${(bw - 4).toFixed(1)}q4,0 4,4v4q0,4 -4,4h-${(bw - 4).toFixed(1)}z" fill="${coul}"><title>${esc(l)} : ${esc(iaFmt(v, M.valeurs[i]))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}</title></path>`;
+        if (R && R.valeurs[i] != null) { s += `<rect x="${lab}" y="${y + 20}" width="${Math.max(1, W * R.valeurs[i] / mx).toFixed(1)}" height="4" rx="2" fill="${IA_C.ref}"/>`; }
+        s += `<text x="${(lab + bw + 6).toFixed(1)}" y="${y + 14}" font-size="11.5" font-weight="600" fill="${IA_C.encre}" style="font-variant-numeric:tabular-nums">${esc(iaFmt(v, M.valeurs[i]))}</text>`;
+      });
+      return svg(h, s + iaLegende(v, w, h - 8));
+    }
+    const h = 230 + (leg ? 24 : 0), pad = [24, 18, 30, 54], W = w - pad[1] - pad[3], H = 230 - pad[0] - pad[2];
+    const tous = M.valeurs.concat(R ? R.valeurs : []).filter(x => x != null);
+    const T = iaGrad(Math.max(...tous, 0) * 1.05), hi = T[T.length - 1] || 1;
+    const y = x => pad[0] + H - (x / hi) * H;
+    let s = '';
+    T.forEach(t => { s += `<line x1="${pad[3]}" x2="${w - pad[1]}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="${t === 0 ? '#d9d2c7' : IA_C.grille}"/><text x="${pad[3] - 8}" y="${(y(t) + 4).toFixed(1)}" font-size="11" text-anchor="end" fill="${IA_C.axe}" style="font-variant-numeric:tabular-nums">${esc(iaFmt(v, t).replace(' €', '').replace(' pcs', '').replace(' %', ''))}</text>`; });
+    const col = v.forme !== 'courbe', bw = W / Math.max(1, n), cx = i => col ? pad[3] + i * bw + bw / 2 : pad[3] + (n === 1 ? W / 2 : i * W / (n - 1));
+    // Un libellé sur k, pour qu'ils ne se touchent pas ; le dernier toujours.
+    const lgMax = Math.max(...L.map(l => String(l).length)) * 6.2 + 10, pasL = Math.max(1, Math.ceil(lgMax / (col ? bw : W / Math.max(1, n - 1))));
+    L.forEach((l, i) => { if (i % pasL === 0 || i === n - 1) { if (i !== n - 1 && n - 1 - i < pasL) { return; } s += `<text x="${cx(i).toFixed(1)}" y="${230 - 9}" font-size="11" text-anchor="middle" fill="${IA_C.axe}">${esc(l)}</text>`; } });
+    const vals = M.valeurs;
+    if (col) {
+      const lg = Math.min(24, Math.max(3, bw - (bw > 12 ? 6 : 2)));
+      vals.forEach((x, i) => {
+        if (x == null) { return; }
+        const yy = y(x), x0 = cx(i) - lg / 2, r = Math.min(4, lg / 2, y(0) - yy);
+        s += `<path d="M${x0.toFixed(1)},${y(0).toFixed(1)}V${(yy + r).toFixed(1)}Q${x0.toFixed(1)},${yy.toFixed(1)} ${(x0 + r).toFixed(1)},${yy.toFixed(1)}H${(x0 + lg - r).toFixed(1)}Q${(x0 + lg).toFixed(1)},${yy.toFixed(1)} ${(x0 + lg).toFixed(1)},${(yy + r).toFixed(1)}V${y(0).toFixed(1)}Z" fill="${IA_C.moi}"><title>${esc(L[i])} : ${esc(iaFmt(v, x))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}</title></path>`;
+      });
+    } else {
+      let d = '', aire = '', run = [];
+      const fermer = () => { if (run.length > 1) { aire += `M${run[0][0]},${y(0).toFixed(1)}L${run.map(p => p.join(',')).join('L')}L${run[run.length - 1][0]},${y(0).toFixed(1)}Z`; } run = []; };
+      vals.forEach((x, i) => { if (x == null) { fermer(); return; } const p = [cx(i).toFixed(1), y(x).toFixed(1)]; d += (run.length ? 'L' : 'M') + p.join(','); run.push(p); });
+      fermer();
+      s += `<path d="${aire}" fill="${IA_C.moi}" fill-opacity=".10"/><path d="${d}" fill="none" stroke="${IA_C.moi}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      vals.forEach((x, i) => { if (x != null) { s += `<circle cx="${cx(i).toFixed(1)}" cy="${y(x).toFixed(1)}" r="${n > 40 ? 6 : 4}" fill="${n > 40 ? 'transparent' : IA_C.moi}" stroke="${n > 40 ? 'none' : '#fff'}" stroke-width="2"><title>${esc(L[i])} : ${esc(iaFmt(v, x))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}</title></circle>`; } });
+    }
+    if (R) {
+      let d = '', en = false;
+      R.valeurs.forEach((x, i) => { if (x == null) { en = false; return; } d += (en ? 'L' : 'M') + cx(i).toFixed(1) + ',' + y(x).toFixed(1); en = true; });
+      s += `<path d="${d}" fill="none" stroke="${IA_C.ref}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      if (n <= 40) { R.valeurs.forEach((x, i) => { if (x != null) { s += `<circle cx="${cx(i).toFixed(1)}" cy="${y(x).toFixed(1)}" r="3.5" fill="${IA_C.ref}" stroke="#fff" stroke-width="2"><title>${esc(L[i])} · ${esc(R.nom)} : ${esc(iaFmt(v, x))}</title></circle>`; } }); }
+    }
+    // Les étiquettes choisies : le plus haut et le dernier point du magasin.
+    const idx = vals.map((x, i) => [x, i]).filter(p => p[0] != null);
+    if (idx.length) {
+      const imax = idx.reduce((a, b) => b[0] > a[0] ? b : a)[1], ider = idx[idx.length - 1][1];
+      [...new Set([imax, ider])].forEach(i => { s += iaHalo(cx(i), y(vals[i]) - 9, iaFmt(v, vals[i]), i === ider && !col ? 'end' : 'middle'); });
+    }
+    return svg(h, s + iaLegende(v, w, h - 6));
+  }
+  /* Le radar (17/11/2026, Sam : « un spider sur les marges et les catégories ») : une branche par catégorie, le magasin en
+   * Ruby, le réseau en gris ; au bout de chaque branche, la catégorie et ses valeurs. La part des ventes part de zéro ; la
+   * marge part d'un plancher, écrit au centre, pour que les écarts entre catégories se voient. */
+  function iaRadar(v, w, svg) {
+    const L = v.libelles || [], S = v.series || [], M = S[0] || { valeurs: [] }, R = S[1] || null, n = L.length, leg = S.length > 1;
+    const tous = M.valeurs.concat(R ? R.valeurs : []).filter(x => x != null);
+    const mx = Math.max(...tous, 0), mn = Math.min(...tous, mx);
+    const lo = v.mesure === 'marge' ? Math.max(0, Math.floor((mn - (mx - mn) * 0.6 - 5) / 10) * 10) : 0;
+    const T = iaGrad(Math.max(1, mx * (v.mesure === 'marge' ? 1.02 : 1.05) - lo)).map(t => lo + t), hi = T[T.length - 1] || lo + 1;
+    const etroit = w < 560, l2 = (m, r) => iaFmt(v, m) + (R && !etroit ? ' · réseau ' + (r == null ? '—' : nf(r, 1)) : '');
+    const lab = Math.min(etroit ? 92 : 150, Math.max(...L.map((l, i) => Math.max(String(l).length * 6.8, l2(M.valeurs[i], R ? R.valeurs[i] : null).length * 6.1))) + 6);
+    const RR = Math.max(56, Math.min(150, w / 2 - lab - 16)), haut = 48, cx = w / 2, cy = haut + RR, h = cy + RR + 50 + (leg ? 26 : 0);
+    const ang = i => -Math.PI / 2 + 2 * Math.PI * i / n;
+    const ray = x => RR * (Math.min(hi, Math.max(lo, x == null ? lo : x)) - lo) / (hi - lo);
+    const pt = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
+    const poly = r => L.map((l, i) => pt(i, r).map(z => z.toFixed(1)).join(',')).join(' ');
+    let s = '';
+    T.forEach((t, k) => { if (t > lo) { s += `<polygon points="${poly(ray(t))}" fill="none" stroke="${k === T.length - 1 ? '#d9d2c7' : IA_C.grille}"/>`; } });
+    L.forEach((l, i) => { const [x, y] = pt(i, RR); s += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${IA_C.grille}"/>`; });
+    // Les graduations, le long de la branche du haut (le plancher au centre, s'il n'est pas zéro).
+    T.forEach(t => { if (t > lo || lo > 0) { s += `<text x="${(cx + 5).toFixed(1)}" y="${(cy - ray(t) + (t > lo ? -3 : 12)).toFixed(1)}" font-size="10.5" fill="${IA_C.axe}" stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke" style="font-variant-numeric:tabular-nums">${esc(['part', 'marge'].includes(v.mesure) ? nf(t, t % 1 ? 1 : 0) + '\u00a0%' : iaFmt(v, t))}</text>`; } });
+    const forme = (ser, c, fond) => `<polygon points="${ser.valeurs.map((x, i) => pt(i, ray(x)).map(z => z.toFixed(1)).join(',')).join(' ')}" fill="${c}" fill-opacity="${fond}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`;
+    const bulle = i => `${esc(L[i])} : ${esc(iaFmt(v, M.valeurs[i]))}${R ? ' · ' + esc(R.nom) + ' : ' + esc(iaFmt(v, R.valeurs[i])) : ''}`;
+    if (R) { s += forme(R, IA_C.ref, 0.06); }
+    s += forme(M, IA_C.moi, 0.14);
+    if (R) { R.valeurs.forEach((x, i) => { if (x != null) { const [a, b] = pt(i, ray(x)); s += `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="3" fill="${IA_C.ref}" stroke="#fff" stroke-width="1.5"><title>${bulle(i)}</title></circle>`; } }); }
+    M.valeurs.forEach((x, i) => { if (x != null) { const [a, b] = pt(i, ray(x)); s += `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="4" fill="${IA_C.moi}" stroke="#fff" stroke-width="2"><title>${bulle(i)}</title></circle>`; } });
+    // Au bout de chaque branche : la catégorie, puis la valeur du magasin (et celle du réseau, si la place le permet).
+    L.forEach((l, i) => {
+      const a = ang(i), co = Math.cos(a), si = Math.sin(a), [x, y] = pt(i, RR + 12);
+      const anc = Math.abs(co) < 0.3 ? 'middle' : (co > 0 ? 'start' : 'end');
+      const y1 = si < -0.6 ? y - 17 : (si > 0.6 ? y + 11 : y - 3);
+      const max = Math.floor(lab / 6.8), nom = String(l).length > max ? String(l).slice(0, max - 1) + '…' : String(l);
+      s += `<text x="${x.toFixed(1)}" y="${y1.toFixed(1)}" font-size="12" text-anchor="${anc}" fill="${IA_C.encre}">${esc(nom)}<title>${bulle(i)}</title></text>`;
+      s += `<text x="${x.toFixed(1)}" y="${(y1 + 14).toFixed(1)}" font-size="11" text-anchor="${anc}" fill="#5b5650" style="font-variant-numeric:tabular-nums">${esc(l2(M.valeurs[i], R ? R.valeurs[i] : null))}</text>`;
+    });
+    return svg(h, s + iaLegende(v, w, h - 8));
+  }
+  function iaTableau(v) {
+    const T = v.tableau || { entetes: [], lignes: [] };
+    // La mesure de chaque colonne, quand elles diffèrent (les marges en %, les ventes en €).
+    const mc = i => (T.mesures && T.mesures[i] ? { mesure: T.mesures[i] } : v);
+    const num = T.entetes.map((e, i) => i > 0 && T.lignes.some(l => typeof l[i] === 'number'));
+    return `<div class="ia-tab"><table><thead><tr>${T.entetes.map((e, i) => `<th${num[i] ? ' class="n"' : ''}>${esc(e)}</th>`).join('')}</tr></thead>
+      <tbody>${T.lignes.map(l => `<tr>${l.map((c, i) => `<td${i && typeof c === 'number' ? ' class="n"' : ''}>${esc(i ? iaFmt(mc(i), c) : c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  /** Les visuels d'une réponse ; `cle` : le rang de la réponse dans le fil (la vue choisie et les messages s'y rangent). */
+  function iaVisuels(r, cle) {
+    return (r.visuels || []).map((v, i) => {
+      const k = cle + ':' + i; IA.reg[k] = v;
+      const graphe = v.forme !== 'tableau' && (v.series || []).length > 0, vue = graphe && IA.vues[k] !== 'tableau' ? 'graphe' : 'tableau', msg = IA.modMsg[k];
+      return `<figure class="ia-vis">
+        <div class="ia-vis-h"><div><b>${esc(v.titre)}</b>${v.periode ? `<span>${esc(v.periode)}${v.mesureNom && v.donnees !== 'manuel' ? ' · ' + esc(v.mesureNom) : ''}</span>` : ''}</div>
+          ${graphe ? `<span class="ia-vis-bas"><button class="${vue === 'graphe' ? 'on' : ''}" data-iavue="${k}" data-v="graphe">Graphique</button><button class="${vue === 'tableau' ? 'on' : ''}" data-iavue="${k}" data-v="tableau">Tableau</button></span>` : ''}</div>
+        ${vue === 'graphe' ? `<div class="ia-graphe" data-iagraphe="${k}"></div>` : iaTableau(v)}
+        <figcaption>Source : ${esc(v.source || '')}${v.note ? ' · ' + esc(v.note) : ''}</figcaption>
+        <div class="ia-vis-act"><button class="db-btn" data-iacsv="${k}">⤓ Tableau (CSV)</button>${vue === 'graphe' ? `<button class="db-btn" data-iapng="${k}">⤓ Image</button>` : ''}${v.id && v.donnees !== 'manuel' ? `<button class="db-btn" data-iamod="${k}"${msg && msg.ok ? ' disabled' : ''}>★ Garder comme modèle</button>` : ''}${msg ? `<span class="${msg.ok ? 'ok' : 'ko'}">${esc(msg.t)}</span>` : ''}</div>
+      </figure>`;
+    }).join('');
+  }
+  const iaFichier = v => (String(v.titre || 'graphique').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'graphique');
+  function iaTelecharger(nom, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+  function iaCsv(v) {
+    const T = v.tableau || { entetes: [], lignes: [] };
+    const cel = c => { const s = typeof c === 'number' ? String(c).replace('.', ',') : String(c == null ? '' : c); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    iaTelecharger(iaFichier(v) + '.csv', new Blob(['﻿' + [T.entetes].concat(T.lignes).map(l => l.map(cel).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  }
+  function iaPng(v, el) {
+    const s = el && el.querySelector('svg');
+    if (!s) { return; }
+    const w = +s.getAttribute('width'), h = +s.getAttribute('height'), img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); c.toBlob(b => { if (b) { iaTelecharger(iaFichier(v) + '.png', b); } }, 'image/png'); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(s));
+  }
+  /* Mes modèles (aia_modele) : la demande d'un visuel gardée ; l'ouvrir la refait avec les chiffres du jour. */
+  function iaModelesLire() {
+    lire('/assistant/magasin/modeles?shop=' + encodeURIComponent(S.shop)).then(d => { IA.modeles = (d && d.modeles) || []; if (IA.ouvert || iaSurPage()) { iaRendre(); } }).catch(() => { IA.modeles = []; });
+  }
+  function iaModeleGarder(k) {
+    const v = IA.reg[k];
+    if (!v || !v.id) { return; }
+    ecrire('/assistant/magasin/modeles', { shop: S.shop, visuel: v.id, nom: v.titre })
+      .then(d => { IA.modMsg[k] = { ok: true, t: d && d.deja ? 'déjà dans Mes modèles' : '✓ gardé dans Mes modèles' }; iaModelesLire(); })
+      .catch(e => { IA.modMsg[k] = { ok: false, t: e.message }; }).finally(() => iaRendre());
+  }
+  function iaModeleOuvrir(id) {
+    const m = (IA.modeles || []).find(x => String(x.id) === String(id));
+    if (!m || IA.fil.some(t => t.attente)) { return; }
+    const t = { q: '★ ' + m.nom, attente: true, ton: iaTonCle(), modele: true };
+    IA.fil.push(t); iaRendre();
+    lire('/assistant/magasin/modeles/' + encodeURIComponent(id) + '?shop=' + encodeURIComponent(S.shop))
+      .then(d => { t.r = { titre: m.nom, resume: 'Votre modèle, refait avec les chiffres du jour.', chiffres: [], points: [], priorites: [], suites: [], sources: [], visuels: [d.visuel] }; t.visIds = [d.visuel.id]; })
+      .catch(e => { t.err = e.message; }).finally(() => { t.attente = false; iaRendre(); });
+  }
+  function iaModeleRetirer(id) {
+    ecrire('/assistant/magasin/modeles/' + encodeURIComponent(id) + '/supprimer', { shop: S.shop }).then(iaModelesLire).catch(() => {});
+  }
+  function iaMesModeles() {
+    const L = IA.modeles || [];
+    return L.length ? `<div class="ia-mods"><span>Mes modèles</span>${L.map(m => `<span class="ia-mod"><button data-iamodo="${esc(m.id)}" title="Refaire avec les chiffres du jour">★ ${esc(m.nom)}</button><button class="x" data-iamodx="${esc(m.id)}" aria-label="Retirer ${esc(m.nom)}">×</button></span>`).join('')}</div>` : '';
+  }
+  /** Les questions toutes prêtes de l'assistant choisi : celles du Professeur viennent du manuel. */
+  const iaProf = () => iaTonCle() === 'professeur';
+  const iaQ = () => { const Q = IA.questions || {}, k = iaTonCle(); return (Q.parTon && Q.parTon[k]) || (k === 'professeur' && Q.professeur) || Q; };
+  const iaLit = k => (k === 'professeur' ? 'ouvre le manuel opératoire…' : 'lit les chiffres du magasin…');
   function iaSaisie(haut) {
-    const occupe = IA.fil.some(t => t.attente);
-    return `<form class="ia-saisie${haut ? ' haut' : ''}" data-iaform="1"><input type="text" maxlength="500" placeholder="${haut ? 'Posez votre question : « quel est mon jour le plus faible ? », « que mettre en avant samedi ? »…' : 'Posez votre question sur votre magasin…'}" value="${esc(IA.saisie)}"${occupe ? ' disabled' : ''}>
+    const occupe = IA.fil.some(t => t.attente), p = iaProf();
+    const v = iaTonCle() === 'vente';
+    const ph = p ? (haut ? 'Posez votre question sur le manuel : « comment fermer la caisse ? », « à quelle température cuire les croissants ? »…' : 'Posez votre question sur le manuel…')
+      : v ? (haut ? 'Posez votre question : « mon croissant est-il bien placé face aux concurrents ? », « quel bundle pour le matin ? »…' : 'Vos prix, vos bundles, vos ventes…')
+        : (haut ? 'Posez votre question : « quel est mon jour le plus faible ? », « que mettre en avant samedi ? »…' : 'Posez votre question sur votre magasin…');
+    return `<form class="ia-saisie${haut ? ' haut' : ''}" data-iaform="1"><input type="text" maxlength="500" placeholder="${ph}" value="${esc(IA.saisie)}"${occupe ? ' disabled' : ''}>
       <button class="db-btn ia-envoi" type="submit"${occupe ? ' disabled' : ''}>${haut ? 'Demander' : '→'}</button></form>`;
   }
   function iaBilan() {
-    const Q = IA.questions || {}, dern = IA.fil[IA.fil.length - 1];
+    const Q = iaQ(), dern = IA.fil[IA.fil.length - 1], k = IA.fil.length - 1;
     let h = iaSaisie(true);
-    h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
-    if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 64, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t).replace(/ ([?!:;»])/g, '\u00a0$1')}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
+    h += iaMesModeles();
+    if (!dern) { return h + `<p class="ia-vide">Choisissez une question, ou posez la vôtre. ${iaProf() ? 'Le Professeur lit le manuel opératoire du réseau, document par document.' : 'L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question, et le manuel opératoire.'} Il propose un tableau ou un graphique quand il aide.</p>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 64, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} ${iaLit(dern.ton)} « ${esc(dern.q)} »</p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
-    h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
-      <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, false)}${iaFin(r)}
+    h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[dern.modele ? 'Mes modèles' : iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
+      <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + k)}${iaPrios(r, false)}${iaSources(r)}${iaFin(r)}
       ${iaSuites(r)}
-      <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</span><button class="db-btn" data-iamode="a">Continuer en conversation ›</button></div></section>`;
+      <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin et du manuel. Vérifiez avant d’agir.</span><span class="ia-pied-bt">${iaBoutonPdf(k, 'db-btn')}<button class="db-btn" data-iamode="a">Continuer en conversation ›</button></span></div></section>`;
     return h;
   }
   function iaConversation() {
-    const Q = IA.questions || {};
-    const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
+    const Q = iaQ();
+    const gauche = `<aside class="ia-q"><p class="ia-q-t">${iaProf() ? 'Le manuel, famille par famille' : 'Questions toutes prêtes'}</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}${(IA.modeles || []).length ? `<p class="ia-q-g">Mes modèles</p>${IA.modeles.map(m => `<button class="ia-qb" data-iamodo="${esc(m.id)}">★ ${esc(m.nom)}</button>`).join('')}` : ''}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 64, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
+      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 64, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} ${iaLit(t.ton)}</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 72)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
-    }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
-    return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 72)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) && !t.modele ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaVisuels(r, 'f' + i)}${iaPrios(r, true)}${iaSources(r)}${iaFin(r)}<p class="ia-src">${t.luLe ? `Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}` : ''}${iaBoutonPdf(i, 'ia-lien')}</p></div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+    }).join('') || `<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>`;
+    return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin et du manuel opératoire. Vérifiez avant d’agir.</p></section></div>`;
   }
   /* --- Le helpdesk (15/11/2026, maquette C de docs/maquettes/helpdesk-franchises, « intégrer dans un avatar ») ---------
    * La demande au bureau vit dans la fenêtre de l'assistant, troisième mode : l'avatar choisi (Pierre ou le Coach) la
@@ -5890,24 +6270,76 @@
         .then(() => { HLP.envoi = false; iaRendre(); });
     }));
   }
+  /* L'assistant en pleine page (17/11/2026, Sam : « le mettre sous Boîte mail et l'ouvrir en pleine page ») : l'onglet
+   * « assistant » du rail. Le même assistant que la fenêtre (le même fil, les mêmes modèles), en Bilan ou en Conversation ;
+   * la fenêtre reste pour la demande au bureau et pour le téléphone, qui n'a pas la page. */
+  const iaSurPage = () => S.vue === 'assistant' && !EMBED && !EMBED_PM && !estMobile();
+  function iaPage(mode) {
+    if (mode === 'a' || mode === 'b') { IA.pm = mode; }
+    if (IA.ouvert) { IA.ouvert = false; iaRendre(); }
+    if (!IA.modeles) { iaModelesLire(); }
+    if (S.vue === 'assistant') { iaRendre(); return; }
+    S.vue = 'assistant'; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); window.scrollTo(0, 0);
+  }
+  function iaCorps(m) { return m === 'd' ? `<div class="ia-b">${hdVue()}</div>` : (m === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`); }
+  /** Les graphiques se dessinent à la largeur réelle de leur cadre : les textes gardent leur taille (17/11/2026). */
+  function iaDessiner(b) { b.querySelectorAll('[data-iagraphe]').forEach(el => { const v = IA.reg[el.dataset.iagraphe]; if (v) { el.innerHTML = iaDessin(v, Math.max(260, Math.floor(el.clientWidth))); } }); }
+  /** La conversation tient dans l'écran : le fil défile, la saisie reste en bas. */
+  function iaPageHauteur(p) {
+    if (!p.classList.contains('ma')) { p.style.height = ''; return; }
+    const haut = p.getBoundingClientRect().top + window.scrollY;
+    p.style.height = Math.max(520, window.innerHeight - haut - 24) + 'px';
+  }
   function iaRendre() {
     const b = iaBoite();
-    if (!IA.ouvert) { b.innerHTML = ''; document.body.classList.remove('ia-ouvert'); return; }
-    document.body.classList.add('ia-ouvert');
-    const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
-    b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
-      <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
+    if (!IA.ouvert) { b.innerHTML = ''; document.body.classList.remove('ia-ouvert'); }
+    else {
+      document.body.classList.add('ia-ouvert');
+      const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
+      b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
+      <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · ${iaProf() && IA.mode !== 'd' ? 'le Professeur lit le manuel opératoire du réseau' : 'il lit les chiffres de votre magasin et le manuel opératoire'}</span></div>
         <span class="ia-modes">${(IA.questions && IA.questions.actif ? [['b', 'Bilan'], ['a', 'Conversation'], ['d', 'Demande au bureau']] : [['d', 'Demande au bureau']]).map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
       ${IA.mode === 'd' ? '' : iaChoixTon()}
-      ${IA.mode === 'd' ? `<div class="ia-b">${hdVue()}</div>` : (IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`)}</div>`;
-    const f = b.querySelector('.ia-fil');
+      ${iaCorps(IA.mode)}</div>`;
+      iaDessiner(b);
+      const f = b.querySelector('.ia-fil');
+      if (f && basAvant) { f.scrollTop = f.scrollHeight; }
+      iaLier(b, false);
+    }
+    const p = document.getElementById('db-ia-page');
+    if (p && iaSurPage()) { iaPageRendre(p); }
+  }
+  function iaPageRendre(p) {
+    const m = IA.pm === 'a' ? 'a' : 'b';
+    if (!IA.questions) { p.className = 'ia-page'; p.innerHTML = IA.qErr ? `<div class="db-err">L’assistant ne répond pas : ${esc(IA.qErr)}</div>` : '<div class="db-attente">Lecture de l’assistant…</div>'; return; }
+    if (!IA.questions.actif) { p.className = 'ia-page'; p.innerHTML = '<div class="db-card"><p class="ia-vide">L’assistant n’est pas encore ouvert pour ce magasin. La demande au bureau reste dans sa vignette, en haut de la page.</p></div>'; return; }
+    const filEl = p.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
+    const enCours = IA.fil.some(t => t.attente);
+    p.className = 'ia-page ' + (m === 'a' ? 'ma' : 'mb');
+    p.innerHTML = `<header class="ia-h"><span class="ia-ic">${iaIcone(20, enCours ? 'lit' : '')}</span><div><b>${iaProf() ? 'Le Professeur lit le manuel opératoire du réseau' : 'Il lit les chiffres de votre magasin dans l’ERP et le manuel opératoire'}</b><span>${m === 'a' ? 'Les questions toutes prêtes à gauche, le fil à droite' : 'Une question, sa réponse : résumé, chiffres, tableau ou graphique, priorités'}</span></div>
+        <span class="ia-modes">${[['b', 'Bilan'], ['a', 'Conversation']].map(([k, l]) => `<button class="${m === k ? 'on' : ''}" data-iamode="${k}">${l}</button>`).join('')}</span></header>
+      ${iaChoixTon()}${iaCorps(m)}`;
+    iaPageHauteur(p);
+    iaDessiner(p);
+    const f = p.querySelector('.ia-fil');
     if (f && basAvant) { f.scrollTop = f.scrollHeight; }
+    iaLier(p, true);
+    // Le rail suit : l'icône du bouton pulse pendant que l'assistant lit.
+    const r = document.querySelector('#db-rail .db-rail-ia .ia-icone');
+    if (r) { r.classList.toggle('lit', enCours); }
+  }
+  /** Les gestes de l'assistant, dans la fenêtre (page = false) ou dans la page. */
+  function iaLier(b, page) {
     b.querySelectorAll('[data-iafermer]').forEach(e => e.addEventListener('click', iaFermer));
     b.querySelectorAll('[data-iamode]').forEach(e => e.addEventListener('click', ev => {
       ev.stopPropagation();
-      const q = e.dataset.iaq;
-      if (q) { iaDemander(q, e.dataset.iamode, 'suite'); } else { IA.mode = e.dataset.iamode; if (IA.mode === 'd') { hdLire(false); } iaRendre(); }
+      const q = e.dataset.iaq, m = e.dataset.iamode;
+      if (q) { iaDemander(q, m, 'suite'); return; }
+      if (page) { IA.pm = m; iaRendre(); return; }
+      // Au bureau, le Bilan et la Conversation de la fenêtre mènent à la page ; au téléphone, ils restent dans la fenêtre.
+      if (m !== 'd' && !estMobile() && IA.questions && IA.questions.actif) { iaPage(m); return; }
+      IA.mode = m; if (m === 'd') { hdLire(false); } iaRendre();
     }));
     // L'origine de la question part avec elle (gardée au cockpit, pour décider des agents spécialisés).
     b.querySelectorAll('[data-iaq]:not([data-iamode])').forEach(e => e.addEventListener('click', () => iaDemander(e.dataset.iaq, null, e.classList.contains('ia-tq') ? 'tuile' : 'liste')));
@@ -5917,15 +6349,26 @@
       iaRendre();
     }));
     b.querySelectorAll('[data-iaaller]').forEach(e => e.addEventListener('click', () => iaAller(e.dataset.iaaller)));
-    hdLier(b);
+    b.querySelectorAll('[data-iavue]').forEach(e => e.addEventListener('click', () => { IA.vues[e.dataset.iavue] = e.dataset.v; iaRendre(); }));
+    b.querySelectorAll('[data-iacsv]').forEach(e => e.addEventListener('click', () => { const v = IA.reg[e.dataset.iacsv]; if (v) { iaCsv(v); } }));
+    b.querySelectorAll('[data-iapng]').forEach(e => e.addEventListener('click', () => { const v = IA.reg[e.dataset.iapng]; if (v) { iaPng(v, e.closest('.ia-vis').querySelector('.ia-graphe')); } }));
+    b.querySelectorAll('[data-iamod]').forEach(e => e.addEventListener('click', () => iaModeleGarder(e.dataset.iamod)));
+    b.querySelectorAll('[data-iapdf]').forEach(e => e.addEventListener('click', () => iaPdf(e.dataset.iapdf)));
+    b.querySelectorAll('[data-iamodo]').forEach(e => e.addEventListener('click', () => iaModeleOuvrir(e.dataset.iamodo)));
+    b.querySelectorAll('[data-iamodx]').forEach(e => e.addEventListener('click', () => iaModeleRetirer(e.dataset.iamodx)));
+    if (!page) { hdLier(b); }
     b.querySelectorAll('[data-iaform]').forEach(fm => {
       const i = fm.querySelector('input');
       i.addEventListener('input', () => { IA.saisie = i.value; });
       fm.addEventListener('submit', ev => { ev.preventDefault(); iaDemander(i.value, null, 'libre'); });
     });
   }
+  window.addEventListener('resize', () => { const p = document.getElementById('db-ia-page'); if (p && iaSurPage()) { iaPageHauteur(p); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && IA.ouvert) { iaFermer(); } });
-  if (!EMBED && !EMBED_PM) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; if (q && q.actif) { rendre(); } }).catch(() => {}); }
+  if (!EMBED && !EMBED_PM) {
+    lire('/assistant/magasin/questions').then(q => { IA.questions = q; if ((q && q.actif) || S.vue === 'assistant') { rendre(); } })
+      .catch(e => { IA.qErr = e.message; if (S.vue === 'assistant') { rendre(); } });
+  }
   /* --- Fidélité (12/11/2026, maquettes B et C de docs/maquettes/fidelite-v3) --------------------------------------
    * Les profils de fréquence du magasin, réglés au cockpit (ERP franchisé › Fidélité › Profils clients) : la part des
    * clients scannés de chaque profil et, sous chaque vignette, sa condition ; les radars du profil choisi face à la
@@ -6503,8 +6946,11 @@
     const meta = ok ? (t.faitLe ? 'faite à ' + quand(t.faitLe) + qui : 'faite' + qui)
       : (sp ? 'cochée sans photo' + (t.faitLe ? ' à ' + quand(t.faitLe) : '') + qui : (S.date === AUJ ? 'pas encore faite' : 'pas faite') + (t.heure ? ' · prévue à ' + esc(t.heure) : ''));
     const com = t.note != null && t.comment && !/^auto/i.test(t.comment) ? `<q>${esc(t.comment)}</q>` : '';
+    // La photo reste à sa place, notée ou non (15/11/2026, « même après notation, laisse la photo ») : une tâche faite ou
+    // notée garde sa case photo pendant que les photos se lisent (elle palpite), puis la photo s'y pose.
+    const lit = !S.aux[cleCQ()] && !S.err[cleCQ()], aPhoto = t.photoRequise || !!t.photo || t.note != null;
     const ph = x && x.ph ? `<button type="button" class="tj-ph" data-cqvoir="${esc(t.taskId)}" title="voir la photo${x.reperes.length ? ' et les remarques du contrôleur' : ''}">${cqPhoto(x, { mini: true, heure: false, badge: false })}${x.reperes.length ? `<em>${x.reperes.length}</em>` : ''}</button>`
-      : (t.photoRequise ? `<span class="tj-ph vide" title="${ok ? 'photo pas encore lue' : 'pas de photo'}">${TJ_CAM}</span>` : '<span class="tj-ph rien"></span>');
+      : (aPhoto ? `<span class="tj-ph vide${lit && (ok || t.note != null) ? ' lit' : ''}" title="${lit && (ok || t.note != null) ? 'photo en lecture…' : (ok || t.note != null ? 'photo pas encore lue' : 'pas de photo')}">${TJ_CAM}</span>` : '<span class="tj-ph rien"></span>');
     return `<div class="tj-t${ok ? '' : (sp ? ' sp' : ' non')}"><span class="tj-ok">${ok ? '✓' : (sp ? '!' : '✗')}</span>
       <span class="tj-n">${esc(t.tache)}${t.photoRequise ? ` <span class="tj-cam" title="photo demandée">${TJ_CAM}</span>` : ''}<small>${meta}</small>${com}</span>${ph}<span class="tj-c">${tjCtl(t, niveaux)}</span></div>`;
   }
@@ -6855,6 +7301,96 @@
   }
   document.addEventListener('keydown', e => { if (S.rv && e.key === 'Escape') { rvFermer(); } });
 
+  /* --- Frais (16/11/2026, maquette docs/maquettes/frais-tva) -----------------------------------------------------------
+   * Les frais du magasin du mois, tels que saisis au panel (GET /exploitation/frais) ; pour chaque poste, « TVA comprise ? »
+   * (oui, non) et le taux. Le P&L court s'en sert pour ramener les frais généraux hors TVA (src/pnl_ht.php). Le choix se
+   * garde pour le poste, d'un mois à l'autre (POST /exploitation/frais/tva). Cliquer à nouveau le choix fait le défait. */
+  const FR_EC = {};
+  function cleFR() { return 'frais|' + S.shop + '|' + S.frMois; }
+  function cheminFR() { return '/exploitation/frais?shop=' + encodeURIComponent(S.shop) + '&mois=' + S.frMois; }
+  const frMoisLib = ym => MOIS[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
+  function frMoisPas(n) { const t = new Date(+S.frMois.slice(0, 4), +S.frMois.slice(5, 7) - 1 + n, 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); }
+  function rendFrais() {
+    S.frMois = S.frMois || AUJ.slice(0, 7);
+    const k = cleFR(), D = S.aux[k], ceMois = AUJ.slice(0, 7);
+    const nav = `<div class="fx-nav"><span class="db-lab">Mois</span><button class="db-btn" data-frm="-1" aria-label="mois précédent">‹</button><span class="fx-mois">${esc(frMoisLib(S.frMois))}</span><button class="db-btn" data-frm="1" aria-label="mois suivant"${S.frMois >= ceMois ? ' disabled' : ''}>›</button>${S.frMois !== ceMois ? '<button class="db-btn" data-frm="0">Ce mois-ci</button>' : ''}</div>`;
+    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre.</p>`;
+    if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])}</div></div>`; }
+    if (!D) { return h + squelette(6) + '</div>'; }
+    if (D.indispo) { return h + `<div class="db-alerte">${esc(D.motif || 'frais indisponibles')}</div></div>`; }
+    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div></div>`; }
+    if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div></div>`; }
+    const TAUX = D.taux || [0, 6, 12, 21];
+    const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
+    const lignes = D.lignes.map((l, i) => {
+      const ai = l.aIndiquer;
+      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}${l.majLe ? `<span class="sub">indiqué le ${esc(fD(l.majLe.slice(0, 10)))}${l.majPar ? ' · ' + esc(l.majPar) : ''}</span>` : ''}</td>
+        <td class="n">${fU(l.montant)}</td>
+        <td>${seg([[true, 'Oui'], [false, 'Non']], l.tva, v => `data-frt="${i}" data-v="${v}" title="${v ? 'le montant saisi contient la TVA' : 'le montant est hors TVA, ou sans TVA'}"`)}</td>
+        <td>${seg(TAUX.map(t => [+t, nf(+t, 0) + ' %']), l.taux == null ? null : +l.taux, v => `data-frx="${i}" data-v="${v}"`)}</td>
+        <td class="n">${ai ? `<span class="mu">${fU(l.montant)}</span>` : fU(l.ht)}</td>
+        <td class="n">${ai ? '<span class="tag-warn">à indiquer</span>' : (l.tvaMontant > 0.004 ? fU(l.tvaMontant) : '<span class="mu">—</span>')}</td></tr>`;
+    }).join('');
+    const ai = D.aIndiquer || 0;
+    h += `<div class="db-tuiles fx-tuiles">
+      ${tuile('Frais saisis au panel', fU(D.saisi), D.postes + ' poste' + (D.postes > 1 ? 's' : '') + ' · ' + esc(frMoisLib(S.frMois)))}
+      ${tuile('Frais hors TVA', fU(D.ht), 'ce que le P&amp;L compte' + (D.part != null ? ' · ' + fP(100 * D.part) + ' du saisi' : ''))}
+      ${tuile('TVA comprise dans les frais', fU(D.tva), 'récupérable : retirée des frais généraux')}
+      ${tuile('À indiquer', ai ? ai + ' poste' + (ai > 1 ? 's' : '') : 'aucun', ai ? fU(D.aIndiquerEur) + ' comptés tels que saisis, en attendant' : 'chaque poste est indiqué', ai ? 'fx-warn' : '')}
+    </div>`;
+    if (S.err.frEcr) { h += `<div class="db-err">Enregistrement : ${esc(S.err.frEcr)}</div>`; }
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Les frais du mois</span><span class="db-mini">source : le panel, frais du magasin · ${D.postes} poste${D.postes > 1 ? 's' : ''}${D.luLe ? ' · lus à ' + esc(D.luLe.slice(11, 16)) : ''}</span></div>
+      <div class="table-scroll"><table class="fx-t"><thead><tr><th>Poste</th><th class="n">Saisi au panel</th><th>TVA comprise ?</th><th>Taux de TVA</th><th class="n">Hors TVA</th><th class="n">TVA</th></tr></thead>
+      <tbody>${lignes}
+        <tr class="tot"><td>Total du mois<span class="sub">${D.postes - ai} poste${D.postes - ai > 1 ? 's' : ''} indiqué${D.postes - ai > 1 ? 's' : ''} sur ${D.postes}</span></td><td class="n">${fU(D.saisi)}</td><td></td><td></td><td class="n">${fU(D.ht)}</td><td class="n">${fU(D.tva)}</td></tr>
+      </tbody></table></div></div>`;
+    // Ce que ça change dans le P&L court : les frais du jour (le panel les alloue à aujourd'hui), ceux du mois, et leur
+    // part dans le CA du jour si le Résultat d'aujourd'hui est lu (le rail le lit).
+    const JM = S.frMois === ceMois && S.date === AUJ ? magasin(S.aux['jourM|' + AUJ]) : null;
+    const L = (lib, a, b, sous) => `<div class="fx-l"><span>${lib}${sous ? `<span class="sub">${sous}</span>` : ''}</span><span class="n">${a}</span><span class="n">${b}</span></div>`;
+    h += `<div class="fx-g2"><div class="db-card"><div class="ct"><span class="db-lab">Ce que ça change dans le P&amp;L court</span></div>
+        <div class="fx-l th"><span></span><span class="n">saisi</span><span class="n">hors TVA</span></div>
+        ${D.jour ? L('Frais généraux du jour', fE(D.jour.saisi), fE(D.jour.ht), 'les frais du mois que le panel alloue à aujourd’hui') : ''}
+        ${L('Frais généraux du mois', fE(D.saisi), fE(D.ht))}
+        ${JM && JM.caHt != null && JM.overheadSaisi != null && JM.ca ? L('Part des frais dans le CA du jour', fP(100 * JM.overheadSaisi / JM.ca) + '<span class="sub">sur le CA TTC</span>', fP(JM.overheadPct) + '<span class="sub">sur le CA hors TVA</span>', (S.aux['jourM|' + AUJ].seuils || {}).overhead != null ? 'seuil du réseau ' + fP(S.aux['jourM|' + AUJ].seuils.overhead) : '') : ''}
+      </div>
+      <div class="db-card"><div class="ct"><span class="db-lab">Comment remplir</span></div><div class="fx-leg">
+        <p><b>Oui</b> : le montant saisi au panel est celui de la facture, TVA comprise. Le P&amp;L en retire la TVA au taux indiqué (21 % l’énergie et les services, 6 % l’eau).</p>
+        <p><b>Non</b> : le montant est déjà hors TVA (un contrat saisi hors TVA), ou le frais n’en a pas — loyer non soumis, assurances, frais bancaires : taux 0 %.</p>
+        <p style="margin:0">Un poste pas encore indiqué compte tel que saisi et reste en orange, ici et sous la ligne « Frais généraux » du P&amp;L. Recliquer le choix le remet à indiquer.</p>
+      </div></div></div></div>`;
+    return h;
+  }
+  function frBrancher() {
+    $.querySelectorAll('[data-frm]').forEach(b => b.addEventListener('click', () => {
+      const n = +b.dataset.frm, ce = AUJ.slice(0, 7);
+      S.frMois = n === 0 ? ce : frMoisPas(n); if (S.frMois > ce) { S.frMois = ce; }
+      delete S.err.frEcr; charger(false);
+    }));
+    const D = S.aux[cleFR()];
+    if (!D || !Array.isArray(D.lignes)) { return; }
+    const choisir = (i, tva, taux) => {
+      const l = D.lignes[i]; if (!l || FR_EC[l.cle]) { return; }
+      FR_EC[l.cle] = true; delete S.err.frEcr; rendre();
+      ecrire('/exploitation/frais/tva', { shop: S.shop, poste: l.poste, tva: tva, taux: taux })
+        .then(() => {
+          // Le Résultat se refait au serveur avec les nouveaux frais hors TVA : on le relira.
+          Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+          lireAux(cleFR(), cheminFR(), true);
+        })
+        .catch(e => { S.err.frEcr = e.message; })
+        .finally(() => { delete FR_EC[l.cle]; rendre(); });
+    };
+    $.querySelectorAll('[data-frt]').forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.frt, l = D.lignes[i], v = b.dataset.v === 'true';
+      if (l.tva === v) { choisir(i, null, null); return; }
+      choisir(i, v, v ? (l.taux > 0 ? +l.taux : (D.tauxOui || 21)) : (l.tva === false && l.taux != null ? +l.taux : 0));
+    }));
+    $.querySelectorAll('[data-frx]').forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.frx, l = D.lignes[i], t = +b.dataset.v;
+      choisir(i, l.tva == null ? t > 0 : l.tva, t);
+    }));
+  }
   /* --- Le rail (15/11/2026, maquette docs/maquettes/rail-franchise, « le vrai dashboard avec un rail à côté ») ------------
    * Au bureau (1 024 px et plus), hors cadre : l'en-tête et la rangée d'onglets cèdent la place à un rail à gauche (le §8
    * du design system commun, global.css) et à une barre du haut. Le contenu des onglets ne change pas.
@@ -6877,22 +7413,43 @@
     bundles: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
     offres: 'M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0',
     analyse: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+    // Analyse (15/11/2026) : des axes et une courbe.
+    loupe: 'M3 3v18h18M7 15l4-5 3 3 5-7',
     etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
     brochures: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16',
     personnes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
+    // Offres (15/11/2026) : le tracé « Modèles » du §8.4, une pièce.
+    offre: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
+    // Mon marketing (15/11/2026) : le tracé « Publicités » du §8.4.
+    pub: 'M4 4h16v12H4zM2 20h20M9 8l4 2-4 2z',
+    // Réseaux sociaux (15/11/2026) : le tracé « Grille Instagram » du §8.4.
+    reseaux: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+    // Boîte mail (15/11/2026) : l'enveloppe du §8.4.
+    mail: 'M3 5h18v14H3zM3 6l9 7 9-7',
+    frais: 'M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4',
+    // Mails et automatisations : l'enveloppe et l'engrenage (16/11/2026).
+    auto: 'M3 5h12v10H3zM3 6l6 5 6-5M18.5 14.5a2.5 2.5 0 1 0 .01 0M18.5 10.5v1.5M18.5 17v1.5M22 14.5h-1.5M16.5 14.5H15',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
-    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
-    ['Vendre', [['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
+    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds'], ['frais', 'Frais', 'frais']]],
+    // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
+    // Analyse (15/11/2026, « go E et F, A en entrée ») : le magasin, ses familles et ses produits, question par question (analyse.js).
+    ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
     // Le Marketing du magasin (15/11/2026, maquette docs/maquettes/rail-franchise/marketing.png) : le calendrier des posts
     // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
     // le catalogue, qui relèvent du Marketing.
-    ['Marketing', [['posts', 'Calendrier des posts', 'calEd'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
+    // Mon marketing (15/11/2026, « faire le total du marketing ») : tout le marketing du magasin sur une page (marketing.js).
+    // Plus de lien vers l'espace boutique (15/11/2026, « pas de liens dans le rail, tout doit se faire dans le cockpit
+    // franchisé ») : le calendrier des posts est un onglet de Mon marketing.
+    // Réseaux sociaux (15/11/2026) : l'espace boutique du Marketing, dans le cockpit (reseaux.js).
+    ['Marketing', [['marketing', 'Mon marketing', 'pub'], ['social', 'Réseaux sociaux', 'reseaux'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
+    // Paramètres (16/11/2026, maquette docs/maquettes/parametres-mails/) : ce que le magasin envoie tout seul.
+    ['Paramètres', [['mails', 'Mails et automatisations', 'auto']]],
   ];
-  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : 'Dashboard'; };
+  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : 'Dashboard'; };
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
   function postsUrl() {
     const b = String((S.aux.meta || {}).espaceBoutiqueUrl || '');
@@ -6934,40 +7491,70 @@
     const a = n.querySelector('.sidebar__item.is-active');
     if (a && n.dataset.vu !== S.vue) { n.dataset.vu = S.vue; a.scrollIntoView({ block: 'nearest' }); }
   }
+  /** L'assistant IA (17/11/2026, Sam : « la majorité des tableaux sont dans l'assistant : le mettre sous Boîte mail et
+   * l'ouvrir en pleine page » ; puis « une entrée normale du rail, texte Ruby, en surbrillance abricot ») : une entrée du
+   * rail comme les autres, sous la Boîte mail, en Ruby sur fond Abricot. */
+  function railIa() {
+    if (!(IA.questions && IA.questions.actif)) { return ''; }
+    const on = S.vue === 'assistant';
+    return `<div class="db-rail-ia"><button type="button" class="sidebar__item${on ? ' is-active' : ''}" data-vue="assistant"${on ? ' aria-current="page"' : ''}>${iaIcone(16, IA.fil.some(t => t.attente) ? 'lit' : '')}<span class="sidebar__item-label">Assistant IA</span></button></div>`;
+  }
   function railHtml() {
     return `
       <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
-      <div class="sidebar__groups">${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
+      <div class="sidebar__groups"><div class="sidebar__group db-rail-boite"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button></div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
-        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span></button>`).join('')}</div>`).join('')}</div>`;
+        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}</button>`).join('')}</div>`).join('')}</div>`;
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
+  /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
+  /** Les icônes des vignettes qui n'en avaient pas (15/11/2026) : la valeur du magasin (une boutique), l'API (le code). */
+  const VIGN_ICO = {
+    valeur: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>',
+    api: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14"/></svg>',
+  };
+  const RELIRE_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4.5v4.2h-4.2"/></svg>';
   function railBarre() {
     const v = valeurMagasin(), val = !v ? '…' : (!v.n ? '—' : fE(v.valeur));
     const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
     const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
-    const ia = IA.questions && IA.questions.actif;
     const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
     // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
     const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
-    return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
-      ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
-      <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
-      ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
+    // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
+    // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
+    const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
+    return `<div class="db-nav db-nav--rail">${haut.trim() ? haut + '<span style="flex:1"></span>' : ''}
+      <span class="db-avs">${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
+      <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="db-av__o">${VIGN_ICO.valeur}</span><span class="db-av__t"><span class="k">Valeur du magasin</span><span class="v">${val}</span></span></button></span>
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
-      ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
+      ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}
+      ${window.DashApi ? av('data-apiouvrir="1" title="Les appels de cette page à l’API et l’index de l’API du cockpit franchisé"', ' db-av--api', VIGN_ICO.api, 'API', window.DashApi.n() + ' appel' + (window.DashApi.n() > 1 ? 's' : '')) : ''}</span></div>`;
+  }
+  /** Réseaux sociaux (15/11/2026) : le cadre de l'espace boutique vit HORS de #dash, comme le rail — un cadre réinséré se
+   * recharge, et le dashboard se redessine souvent : le post en cours d'écriture se perdrait. */
+  function reseauxMaj(on) {
+    let n = document.getElementById('db-reseaux');
+    if (!on) { if (n) { n.hidden = true; } return; }
+    if (!window.DashReseaux) { return; }
+    if (!n) { n = document.createElement('div'); n.id = 'db-reseaux'; $.insertAdjacentElement('afterend', n); n.appendChild(window.DashReseaux.racine(S.shop, { apiBase: API })); }
+    n.hidden = false;
+    window.DashReseaux.racine(S.shop, { apiBase: API });
   }
   function rendre() {
     const surRail = avecRail();
+    // Le cadre des réseaux sociaux se cache hors de son onglet (il garde son état, le post en cours compris).
+    if (S.vue !== 'social' || estMobile()) { reseauxMaj(false); }
+    document.body.classList.toggle('db-vue-social', S.vue === 'social' && !estMobile());
     document.body.classList.toggle('db-rail-on', surRail);
     railMaj(surRail);
     const kr = cleRes(), ks = cleSt();
@@ -7017,15 +7604,16 @@
     else {
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
+      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia${S.vue === 'assistant' ? ' on' : ''}" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['frais', 'Frais'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
+    if (S.vue === 'assistant') { h += '<div id="db-ia-page" class="ia-page"></div>'; $.innerHTML = h; brancher(); iaRendre(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
@@ -7033,12 +7621,24 @@
     // Mon catalogue : l'élément du module, gardé d'un rendu à l'autre (son état et ses champs ne se perdent pas).
     if (S.vue === 'catalogue') { h += '<div id="db-cat"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-cat'); if (p && window.DbCatalogue) { p.replaceWith(window.DbCatalogue.racine(S.shop, nomShop())); } else if (p) { p.innerHTML = '<div class="db-err">Le module du catalogue n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'tresorerie') { h += '<div id="db-tresorerie"></div>'; $.innerHTML = h; brancher(); monterTresorerie(); return; }
+    // Offres : l'élément du module, gardé d'un rendu à l'autre comme Mon catalogue.
+    if (S.vue === 'offres') { h += '<div id="db-offres"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-offres'); if (p && window.DashOffres) { p.replaceWith(window.DashOffres.racine(S.shop, { apiBase: API, nomShop: nomShop(), aller: allerVers, onCompte: n => { if (S.ofN !== n) { S.ofN = n; railMaj(avecRail()); } } })); if (S.intention) { const i = S.intention; S.intention = null; if (i.offre && window.DashOffres.nouvelle) { window.DashOffres.nouvelle(i.offre); } if (i.voir && window.DashOffres.voir) { window.DashOffres.voir(i.voir); } } } else if (p) { p.innerHTML = '<div class="db-err">Le module des offres n’a pas été chargé.</div>'; } return; }
+    // Boîte mail : l'élément du module, gardé d'un rendu à l'autre ; ses allers-retours avec les Offres passent par allerVers.
+    if (S.vue === 'boite') { h += '<div id="db-boite"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-boite'); if (p && window.DashBoite) { const i = S.intention; S.intention = null; p.replaceWith(window.DashBoite.racine(S.shop, { apiBase: API, nomShop: nomShop(), onNonLus: bmCompte, aller: allerVers, intention: i })); } else if (p) { p.innerHTML = '<div class="db-err">Le module de la boîte mail n’a pas été chargé.</div>'; } return; }
+    // Réseaux sociaux : la barre seule dans #dash ; le cadre de l'espace boutique vit à côté (reseauxMaj).
+    if (S.vue === 'social') { h += window.DashReseaux ? '' : '<div class="db-err">Le module des réseaux sociaux n’a pas été chargé.</div>'; $.innerHTML = h; brancher(); reseauxMaj(true); return; }
+    if (S.vue === 'analyse') { h += '<div id="db-analyse-p"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-analyse-p'); if (p && window.DashAnalyse) { p.replaceWith(window.DashAnalyse.racine(S.shop, { apiBase: API })); if (S.intention) { const i = S.intention; S.intention = null; window.DashAnalyse.ouvrir(i); } } else if (p) { p.innerHTML = '<div class="db-err">Le module d’analyse n’a pas été chargé.</div>'; } return; }
+    if (S.vue === 'marketing') { h += '<div id="db-marketing"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-marketing'); if (p && window.DashMarketing) { p.replaceWith(window.DashMarketing.racine(S.shop, { apiBase: API, aller: v => { S.vue = v; urlMaj(); charger(false); } })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du marketing n’a pas été chargé.</div>'; } return; }
+    // Mails et automatisations : l'élément du module, gardé d'un rendu à l'autre.
+    if (S.vue === 'mails') { h += '<div id="db-mails"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-mails'); if (p && window.DashAuto) { p.replaceWith(window.DashAuto.racine(S.shop, { apiBase: API, aller: allerVers })); } else if (p) { p.innerHTML = '<div class="db-err">Le module des automatisations n’a pas été chargé.</div>'; } return; }
+    if (S.vue === 'frais') { h += rendFrais(); $.innerHTML = h; brancher(); frBrancher(); return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
-    if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
+    if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); bndMonter(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
-    h += rendValeur();
+    // Sur le rail, le détail de la valeur est le panneau de la vignette (15/11/2026) ; sans rail, le tiroir d'avant.
+    if (!surRail) { h += rendValeur(); }
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'jour') {
       if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
@@ -7050,6 +7650,21 @@
       noteRestaurer(garde);
       cqRestaurer(cqPos);
       a4Viser();
+      return;
+    }
+    // Semaine et Mois (16/11/2026, maquette A « quatre blocs ») : le chiffre, les jours, le résultat, les heures ; le reste
+    // replié sous la page (qbPage). La note du jour, les tâches, le réseau, les leviers… s'y ouvrent à la demande.
+    if (S.vue === 'semaine' || S.vue === 'mois') {
+      if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
+      if (!d && !S.err[kr]) { h += squelette(3); }
+      else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
+      else if (m) { h += qbPage(m, d, st, ks); }
+      h += cqLoupe(false);
+      $.innerHTML = h;
+      brancher();
+      qbBrancher();
+      noteRestaurer(garde);
+      cqRestaurer(cqPos);
       return;
     }
     h += rendNC();
@@ -7101,23 +7716,37 @@
     const titre = cmp ? `${cmp.titre} : ${fmt(dern)}` : `dernier même jour : ${fmt(dern)}`;
     return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="${titre}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} ${lib}</span>`}</div>`;
   }
+  /* Le P&L court hors TVA (16/11/2026, src/pnl_ht.php, maquette docs/maquettes/frais-tva) : le CA encaissé (TTC) en tête,
+   * la TVA des tickets retirée, puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA (onglet Frais).
+   * Une réponse d'avant (sans `caHt`) garde l'ancienne cascade. */
   function cascade(m, d) {
     const se = (d && d.seuils) || {};
     const ca = m.ca != null ? m.ca : m.realise;
+    const ht = m.caHt != null;
+    const base = ht ? m.caHt : ca;
     const feu = (v, s) => v == null || s == null ? 'var(--color-text-muted)' : (v <= s ? '#3f7a52' : (v <= s * 1.3 ? '#B0792A' : '#A32014'));
     const feuRes = p => p == null ? 'var(--color-text-muted)' : (p >= 15 ? '#3f7a52' : (p >= 5 ? '#B0792A' : '#A32014'));
-    const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (ca ? 100 * m.margeBrute / ca : null);
+    const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (base ? 100 * m.margeBrute / base : null);
     const barre = p => Math.min(Math.abs(p || 0), 100).toFixed(1);
     const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
+    const clients = m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '';
+    const gris = '#c9c4bc', barreCa = v => base ? Math.min(100, 100 * v / base).toFixed(1) : '0';
+    const tete = ht
+      ? `${ligne('Chiffre d’affaires encaissé', [clients, 'TVA comprise'].filter(Boolean).join(' · '), fE(ca), '', gris, barreCa(ca), false, 'ce que la caisse a encaissé')}
+      ${ligne('− TVA des tickets', fP(m.tvaPart) + ' du TTC · ' + esc(m.tvaSource || ''), fE(-m.tva), '', gris, barreCa(m.tva), false, 'reversée à l’État')}
+      ${ligne('= Chiffre d’affaires hors TVA', '', fE(m.caHt), '100 %', 'var(--color-text)', 100, true, '')}`
+      : ligne('Chiffre d’affaires', clients, fE(ca), '100 %', 'var(--color-text)', 100, true, '');
+    const noteFrais = ht && m.overheadSaisi != null
+      ? `${fE(m.overheadSaisi)} saisis, ${fE(m.overheadTva || 0)} de TVA retirée${m.fraisAIndiquer ? ' · ' + m.fraisAIndiquer + ' poste' + (m.fraisAIndiquer > 1 ? 's' : '') + ' à indiquer' : ''} <span class="db-cl-lien" data-vue="frais" role="button" tabindex="0" title="${esc(m.fraisSource || '')}">Frais ▸</span>` : '';
     return `<div class="db-cascade">
-      ${ligne('Chiffre d’affaires', m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
+      ${tete}
       ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
       ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#A32014' : '#B0792A') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
       ${ligne('− Main-d’œuvre', se.labour != null ? 'seuil ' + fP(se.labour) : '', m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
-      ${ligne('− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
-      ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
+      ${ligne(ht ? '− Frais généraux hors TVA' : '− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false, noteFrais)}
+      ${ligne(ht ? '= Résultat hors TVA' : '= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
     </div>`;
   }
   function cascadeVieille(m) {
@@ -7228,7 +7857,12 @@
     const plan = Array.isArray(m.planning) ? m.planning : [];
     // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
     // c'est elle qui colore le treemap. Sans tickets lus, repli sur l'écart à la référence du panel.
-    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs, q: c.q, vC: c.vChiffre, nSans: c.nSans || 0, vSans: c.vSans || 0, produits: Array.isArray(c.produits) ? c.produits : [] })) : [];
+    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs, q: c.q, vC: c.vChiffre, nSans: c.nSans || 0, vSans: c.vSans || 0, produits: Array.isArray(c.produits) ? c.produits : [],
+      ht: c.vHt != null ? { ca: c.vHt, m: c.mHt, taux: c.tauxHt, vC: c.vChiffreHt, vSans: c.vSansHt || 0 } : null })) : [];
+    // Hors TVA (16/11/2026, « le coefficient doit être calculé sur le net, pas le brut ») : la liste et le treemap lisent le
+    // CA, la marge, le taux et le coefficient hors TVA ; les onglets Promotions et Portions gardent les prix de caisse (TTC).
+    const catsH = catsM.map(c => c.ht ? Object.assign({}, c, c.ht, { ttc: true }) : c);
+    const enHt = catsH.some(c => c.ttc);
     const parMarge = catsM.length > 0;
     const lc = parMarge ? MARGES : ECARTS;
     // Les tickets ne sont pas encore lus : le squelette, plutôt qu'un premier
@@ -7237,12 +7871,12 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
-      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie${enHt && parMarge && !['promo', 'portion'].includes(S.cVue) ? ' · hors TVA' : ''}</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsH : cats)}</div>` : accordeon(parMarge ? catsH : cats, parMarge, m && m.ca != null && m.margeBrute != null ? (enHt && m.caHt != null ? { ca: m.caHt, m: m.margeBrute, A: st && st.aCompleter ? Object.assign({}, st.aCompleter, { caLignes: (st.aCompleter.caLignes || 0) * (1 - (m.tvaPart || 0) / 100), caTickets: (st.aCompleter.caTickets || 0) * (1 - (m.tvaPart || 0) / 100) }) : null } : { ca: m.ca, m: m.coutMatiere != null ? m.ca - m.coutMatiere : m.margeBrute, A: st && st.aCompleter }) : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
-    const seuilLab = (d.seuils && d.seuils.labour) || 33;
+    const seuilLab = (d.seuils && d.seuils.labour) || 17;   // la cible personnel du réseau
     const LH2 = st && Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0 || x.poste > 0) : [];
     const budgetJour = m.ca ? m.ca * seuilLab / 100 : null;
     const hRouges = LH2.filter(x => x.trav > x.ca * seuilLab / 100).map(x => x.h + ' h');
@@ -7503,7 +8137,7 @@
     })(), corpsHeures);
 
     ajoute('equipe', 'journee', 'Qui est en poste', resume(() => {
-      const seuil = (d.seuils && d.seuils.labour) || 33, plan = Array.isArray(m.planning) ? m.planning : [];
+      const seuil = (d.seuils && d.seuils.labour) || 17, plan = Array.isArray(m.planning) ? m.planning : [];
       if (m.labourPct == null && !plan.length) { return { v: '—', s: 'pas de planning dans le panel', vd: 'neutre', mini: '' }; }
       const rouges = LH.filter(x => x.trav > x.ca * seuil / 100).map(x => x.h + ' h');
       return { v: m.labourPct != null ? fP(m.labourPct) : '—',
@@ -7842,8 +8476,8 @@
     // à défaut, celui gravé avec les tickets du jour.
     const matA = R && R.api && R.total > 0 ? R.total : null, mat = matA != null ? matA : matT;
     const mb = prix != null && mat != null ? prix - mat : null, taux = mb != null && prix > 0 ? 100 * mb / prix : null, coef = prix != null && mat > 0 ? prix / mat : null;
-    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 32, labour: 33, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
-    const obj = 100 / (se.food || 32);
+    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 40, labour: 17, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
+    const obj = 100 / (se.food || 40);
     const niv = c => c == null ? 'mu' : (c < FI_ZONES.ko ? 'ko' : (c < FI_ZONES.att ? 'att' : 'ok'));
     const NIV = { ko: 'sous le coût acceptable', att: 'à surveiller', ok: 'dans le vert', mu: 'coût matière inconnu' };
     const ST = S.st[cleSt()], cats = ST && Array.isArray(ST.categories) ? ST.categories : [];
@@ -8075,14 +8709,15 @@
         <span class="n mg ${clM(x.taux)}">${parMarge ? (x.m == null ? '<span class="mu" title="coût matière inconnu">?</span>' : fE(x.m)) : (x.delta != null ? (x.delta >= 0 ? '+' : '') + fP(x.delta) : '<span class="mu">—</span>')}</span>
         <span class="n ${clM(x.taux)}">${parMarge ? (x.taux != null ? fP0(x.taux) : '') : ''}</span>
         <span class="n coef ${clM(x.taux)}">${parMarge ? (x.m == null ? '<span class="mu" title="coût matière inconnu">?</span>' : coefTxt(coef(x.ca, x.m))) : ''}</span></div>`;
-    const entete = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Poids dans le CA</span><span class="n">CA</span><span class="n">Part</span><span class="n">${parMarge ? 'Marge brute' : 'vs réf.'}</span><span class="n">${parMarge ? 'Taux' : ''}</span><span class="n">${parMarge ? 'Coef' : ''}</span></div>`;
+    const entete = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Poids dans le CA</span><span class="n">${cats.some(c => c.ttc) ? 'CA HT' : 'CA'}</span><span class="n">Part</span><span class="n">${parMarge ? 'Marge brute' : 'vs réf.'}</span><span class="n">${parMarge ? 'Taux' : ''}</span><span class="n">${parMarge ? 'Coef' : ''}</span></div>`;
     const produits = c => {
       const L = c.produits || [];
       if (!L.length) { return `<div class="db-autres">Le détail par produit se lit sur les tickets : pas encore disponible pour cette catégorie.</div>`; }
       // A (10/10/2026) : un bundle rangé dans la catégorie de son produit porte son étiquette, son prix et sa part.
       const subP = p => p.bundle ? fN(p.bundle.n) + ' bundle' + (p.bundle.n > 1 ? 's' : '') + (p.bundle.prix != null ? ' à ' + fU(p.bundle.prix) : '') + (p.bundle.part < 100 ? ' · ' + p.bundle.part + ' % du bundle dans cette catégorie' : '')
         : (p.q != null ? p.q + ' vendu' + (p.q > 1 ? 's' : '') : '');
-      return L.map(p => ligne('p', null, { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux, bundle: !!p.bundle }, c.ca, subP(p), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
+      // Hors TVA quand la catégorie l'est (catsH) ; la fiche produit garde le CA de caisse (data-fv, TTC).
+      return L.map(p => ligne('p', null, c.ttc && p.vHt != null ? { nom: p.nom, ca: p.vHt, part: p.part, m: p.mHt, taux: p.tauxHt, bundle: !!p.bundle } : { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux, bundle: !!p.bundle }, c.ca, subP(p), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
     };
     const rows = fams.map(f => {
       const kg = 'g:' + f.nom;
@@ -8318,7 +8953,7 @@
       ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
       ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')))}
       ${tuile('Par jour ouvert', fE(m.realise / nJ), [fN(m.tickets / nJ) + ' clients', panTxt(panDe(m)).replace(' €', '\u00a0€')].filter(Boolean).join(' · '))}
-      ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 32) + ')')}
+      ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 40) + ')')}
       ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
       ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
     </div>`;
@@ -8329,7 +8964,153 @@
     // couleur, la jauge vers l'objectif, le titre et la légende. Le CA se juge face à l'objectif CA
     // du jour, les clients face à l'objectif clients (objectif CA ÷ panier moyen de la période).
     // La journée en cours n'est pas jugée (hachurée) ; un jour futur montre son objectif.
-    if (jours.length) {
+    h += periodeCalendrier(m);
+    // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
+    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span></div>${cascade(m, d)}</div>`;
+    const prof = sem ? '' : periodeProfil(m);
+    h += prof ? `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">${pl}${prof}</div>` : pl;
+    if (S.vue === 'mois') { h += rendRentab(); }
+    if (S.vue === 'semaine') { h += rendSemaines(); }
+    return h;
+  }
+
+  /* --- Semaine et Mois en quatre blocs (16/11/2026, maquette A choisie par Sam : docs/maquettes/semaine-mois/) ---------
+   * « Plus lisible, moins de données » : le chiffre (une jauge et quatre tuiles), les jours, le résultat, les heures et
+   * ce qui rapporte — chaque chiffre une seule fois. Le reste se replie sous la page (qbPlus) : il ne se dessine qu'ouvert.
+   * Bureau seulement : le téléphone garde sa vue (rendMobile). */
+  const QB_PAL = [[110, '#3f7a52'], [100, '#6aa84f'], [90, '#d8c79f'], [75, '#F5B26B'], [-Infinity, '#F08A2C']];
+  const qbTeinte = p => (QB_PAL.find(x => p >= x[0]) || QB_PAL[4])[1];
+  function qbChiffre(m, d) {
+    const sem = S.vue === 'semaine', se = (d && d.seuils) || {}, R = (d && d.reseau) || {};
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca), nJ = Math.max(1, passes.length);
+    const restants = jours.filter(j => !j.passe && !j.ferme && !j.aujourdhui);
+    const sansO = m.objectif == null, enCours = !sansO && m.attendu != null && m.attendu < m.objectif - 0.5;
+    const att = sansO || !m.attendu ? null : 100 * m.realise / m.attendu;
+    const proj = sansO || !m.attendu ? null : m.realise / m.attendu * m.objectif;
+    const base = Math.max(m.realise || 0, m.objectif || 0, 1);
+    const repere = enCours ? m.attendu : m.objectif;
+    const jauge = sansO ? '<p class="qb-l mu">Pas de budget pour cette période : pas d’objectif.</p>'
+      : `<div class="qb-barre"><i style="width:${Math.min(100, 100 * m.realise / base).toFixed(1)}%;background:${qbTeinte(att)}"></i><b style="left:${Math.min(100, 100 * repere / base).toFixed(1)}%" title="${enCours ? 'attendu à ce jour' : 'objectif'}"></b></div>
+        <div class="qb-l"><span>${enCours ? 'attendu à ce jour ' + fE(m.attendu) + ' · objectif ' + fE(m.objectif) : 'objectif ' + fE(m.objectif)}</span><span class="${m.realise >= repere ? 'ok' : 'ko'}">${fS(m.realise - repere)}</span></div>
+        ${enCours && proj != null ? `<div class="qb-l mu"><span>au rythme actuel : ${fK(proj)} en fin de ${sem ? 'semaine' : 'mois'}</span><span>${restants.length ? 'reste ' + fE(Math.max(0, m.reste)) + ' en ' + restants.length + ' jour' + (restants.length > 1 ? 's' : '') : ''}</span></div>` : ''}`;
+    const P = panDe(m);
+    const t = (k, v, sous, cl) => `<div class="qb-tui"><span class="k">${k}</span><span class="v${cl ? ' ' + cl : ''}">${v}</span><span class="s">${sous}</span></div>`;
+    return `<div class="qb-heros">
+      <div class="db-card qb-jauge"><span class="k">Chiffre d’affaires · ${esc(libPeriode())}</span>
+        <div class="v">${fE(m.realise)}${att != null ? `<small>${fN(att)} % de l’objectif${enCours ? ' à ce jour' : ''}</small>` : ''}</div>${jauge}</div>
+      <div class="qb-tuiles">
+        ${t('Clients', fN(m.tickets), fN(m.tickets / nJ) + ' par jour ouvert')}
+        ${t('Panier moyen', P.v == null ? '—' : fU(P.v), [panSous(P.base), R.panier != null ? 'réseau ' + fU(R.panier) : ''].filter(Boolean).join(' · '), R.panier != null && P.v != null && P.v < R.panier ? 'ko' : '')}
+        ${t('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + (se.food != null ? ' (seuil ' + fP(se.food) + ')' : ''))}
+        ${t(m.caHt != null ? 'Résultat hors TVA' : 'Résultat', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes' + (R.netPct != null ? ' · réseau ' + fP(R.netPct) : ''), m.net == null ? '' : (m.net >= 0 ? 'ok' : 'ko'))}
+      </div></div>`;
+  }
+  /** Les jours : la barre du CA, le trait de l'objectif du jour, la couleur de l'atteinte ; la journée en cours hachurée. */
+  function qbJours(m) {
+    const J = Array.isArray(m.jours) ? m.jours : [];
+    // Une première réponse rapide peut arriver sans le détail des jours : la place est gardée, le graphique suit.
+    if (!J.length) { return `<div class="db-card qb-jours-c"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">lecture des jours…</span></div><div class="db-sk" style="height:200px;margin:14px 16px"></div></div>`; }
+    const peu = J.length <= 7;
+    const mx = Math.max(1, ...J.map(j => Math.max(j.ca || 0, j.objectif || 0))) * 1.1;
+    const pj = j => j.objectif ? 100 * (j.ca || 0) / j.objectif : null;
+    const jug = J.filter(j => j.passe && !j.aujourdhui && !j.ferme && j.ca != null && j.objectif);
+    const fort = jug.length ? jug.reduce((a, b) => pj(b) > pj(a) ? b : a) : null, faible = jug.length ? jug.reduce((a, b) => pj(b) < pj(a) ? b : a) : null;
+    const cols = `grid-template-columns:repeat(${J.length},minmax(0,1fr))`;
+    const barres = J.map(j => {
+      const ob = j.objectif ? `<b style="bottom:${(100 * j.objectif / mx).toFixed(1)}%"></b>` : '';
+      if (j.ferme) { return `<div class="c ferme" title="${esc(j.court)} : fermé"><span class="v">fermé</span></div>`; }
+      if (!j.passe && !j.aujourdhui) { return `<div class="c fut" title="${esc(j.court)} : objectif ${fE(j.objectif)}">${j.objectif ? `<i class="obj" style="height:${(100 * j.objectif / mx).toFixed(1)}%"></i>` : ''}</div>`; }
+      const p = pj(j), coul = j.aujourdhui ? 'repeating-linear-gradient(135deg,#c9c1b4 0 5px,#e8e1d6 5px 10px)' : (p == null ? '#c9c4bc' : qbTeinte(p));
+      return `<div class="c" title="${esc(j.court)} : ${fE(j.ca)}${j.objectif ? ' · ' + fN(p) + ' % de ' + fE(j.objectif) : ''} · ${fN(j.tickets || 0)} clients">${peu ? `<span class="v">${fN(j.ca || 0)}</span>` : ''}<i style="height:${(100 * (j.ca || 0) / mx).toFixed(1)}%;background:${coul}"></i>${ob}</div>`;
+    }).join('');
+    const libs = J.map(j => `<span>${esc(peu ? j.court : String(+j.date.slice(8, 10)))}${peu ? `<small>${j.ferme ? '' : (j.passe || j.aujourdhui ? fN(j.tickets || 0) + ' clients' + (pj(j) != null && !j.aujourdhui ? ' · ' + fN(pj(j)) + ' %' : ' · en cours') : 'objectif ' + fK(j.objectif))}</small>` : ''}</span>`).join('');
+    const mini = fort && faible && fort !== faible ? esc(fort.court) + ' au plus haut (' + fN(pj(fort)) + ' %) · ' + esc(faible.court) + ' au plus bas (' + fN(pj(faible)) + ' %)' : '';
+    const leg = QB_PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + QB_PAL[i - 1][0] + ' %')}</span>`).join('');
+    return `<div class="db-card qb-jours-c"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">${mini}</span></div>
+      <div class="qb-jours" style="${cols}">${barres}</div><div class="qb-jl" style="${cols}">${libs}</div>
+      <div class="qb-leg">${leg}<span><i class="tr"></i>objectif du jour</span><span><i class="hach"></i>en cours</span></div></div>`;
+  }
+  /** Les heures : une bande — la couleur dit la marge nette de l'heure, le chiffre ses ventes (moyenne par jour ouvert). */
+  function qbHeures(st, ks) {
+    const tete = `<div class="ct"><span class="db-lab">Les heures — une journée type</span>`;
+    if (S.err[ks]) { return `<div class="db-card">${tete}</div><div class="db-err" style="margin:12px">Heures : ${esc(S.err[ks])}</div></div>`; }
+    if (!st) { return `<div class="db-card">${tete}</div><div class="db-sk" style="height:110px;margin:14px"></div></div>`; }
+    const L = (st.heures || []).filter(l => l.ca > 0);
+    if (!L.length) { return `<div class="db-card">${tete}</div><p class="db-note" style="padding:14px 16px">Aucune heure vendue sur cette période.</p></div>`; }
+    const teinte = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : (pct < 40 ? '#A8B545' : '#3f7a52')));
+    const best = L.reduce((a, b) => b.moy.res > a.moy.res ? b : a), worst = L.reduce((a, b) => b.moy.res < a.moy.res ? b : a);
+    const cols = `grid-template-columns:repeat(${L.length},minmax(0,1fr))`;
+    return `<div class="db-card">${tete}<span class="db-mini">${best.h}–${best.h + 1} h rapporte le plus (${fS(best.moy.res)} par jour) · ${worst.h}–${worst.h + 1} h ${worst.moy.res < 0 ? 'perd' : 'rapporte le moins'} (${fS(worst.moy.res)})</span></div>
+      <div class="qb-h" style="${cols}">${L.map(l => { const pct = l.moy.ca > 0 ? 100 * l.moy.res / l.moy.ca : null;
+        return `<div style="background:${teinte(pct)}" title="${l.h} – ${l.h + 1} h · ventes ${fE(l.moy.ca)} · marge nette ${fS(l.moy.res)} par jour ouvert">${fN(l.moy.ca)} €<small>${fS(l.moy.res).replace(' €', '')}</small></div>`; }).join('')}</div>
+      <div class="qb-hl" style="${cols}">${L.map(l => `<span>${l.h} h</span>`).join('')}</div>
+      <p class="qb-note">ventes de l’heure en moyenne par jour ouvert · dessous : sa marge nette (ventes − matière − rémunération)</p></div>`;
+  }
+  // « Ce qui rapporte » (les 3 produits à la plus forte marge brute hors TVA) : retiré du dashboard, Semaine puis Mois
+  // (16/11/2026, Sam : « take off »).
+  /** Le reste, replié : une rangée de puces ; une puce ouverte dessine sa section dessous (gardé d'une visite à l'autre). */
+  const QB_PLUS_CLE = 'dbQbPlus';
+  function qbOuverts() { try { const o = JSON.parse(localStorage.getItem(QB_PLUS_CLE) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  function qbPlus(m, d, st) {
+    const sem = S.vue === 'semaine', O = qbOuverts();
+    const L = [
+      ['reseau', 'Ma place dans le réseau', () => rendBench(m, d)],
+      ['taches', 'Tâches et contrôles', () => rendNC() + rendTaches() + rendCQ(false)],
+      sem ? null : ['leviers', 'Les six leviers', () => rendLeviers()],
+      ['canaux', 'Canaux, commandes et promotions', () => splitCarte(m) + offresCarte()],
+      ['invendus', 'Invendus', () => invCarte(false), m.invendusPieces ? fN(m.invendusPieces) + ' pièces · ' + fE(m.invendus || 0) : ''],
+      ['calendrier', sem ? 'Le calendrier de la semaine' : 'Le calendrier du mois', () => periodeCalendrier(m) + (sem ? '' : periodeProfil(m))],
+      // Les douze dernières semaines restent visibles en Semaine, les douze derniers mois en Mois (16 et 18/11/2026, Sam) : voir qbPage.
+      sem || S.date.slice(0, 7) !== AUJ.slice(0, 7) ? null : ['tendance', 'Le résultat jour par jour', () => rendRentab()],
+      ['heures', 'Le détail heure par heure', () => st ? rendHeures(st) : squelette(2)],
+    ].filter(Boolean);
+    const puces = L.map(([k, t, , n]) => `<button type="button" class="qb-puce${O[k] ? ' on' : ''}" data-qbplus="${k}" aria-expanded="${O[k] ? 'true' : 'false'}">${esc(t)}${n ? `<small>${esc(n)}</small>` : ''}<span>${O[k] ? '▴' : '▾'}</span></button>`).join('');
+    const ouvertes = L.filter(([k]) => O[k]).map(([k, t, f]) => `<div class="qb-sec" data-qbsec="${k}"><div class="db-sec">${esc(t)}</div>${f()}</div>`).join('');
+    return `<div class="qb-plus">${puces}</div>${ouvertes}`;
+  }
+  function qbBrancher() {
+    $.querySelectorAll('[data-qbplus]').forEach(b => b.addEventListener('click', () => {
+      const O = qbOuverts(), k = b.dataset.qbplus;
+      if (O[k]) { delete O[k]; } else { O[k] = true; }
+      try { localStorage.setItem(QB_PLUS_CLE, JSON.stringify(O)); } catch (e) { /* stockage plein ou fermé : l'état ne se garde pas */ }
+      rendre();
+    }));
+  }
+  /** La page Semaine ou Mois du bureau, en quatre blocs. */
+  function qbPage(m, d, st, ks) {
+    return `${qbChiffre(m, d)}${qbJours(m)}
+      <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
+        <div class="qb-pile">${qbHeures(st, ks)}</div></div>
+      <div class="qb-douze">${rendSemaines()}</div>
+      ${qbPlus(m, d, st)}`;
+  }
+  /** Le profil des jours du mois (moyenne par jour de la semaine) : sorti de rendPeriode le 16/11/2026. */
+  function periodeProfil(m) {
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca);
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    if (!passes.length) { return ''; }
+    {
+      const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      const par = {}; passes.forEach(j => { (par[j.jour] = par[j.jour] || []).push(j); });
+      const profil = Object.keys(par).map(Number).sort().map(w => { const l = par[w]; return { nom: NOMJ[w], ca: l.reduce((a, j) => a + j.ca, 0) / l.length, o: l.reduce((a, j) => a + (j.objectif || 0), 0) / l.length }; });
+      const mx = Math.max(1, ...profil.map(p => Math.max(p.ca, p.o)));
+      const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
+      return `<div class="db-card"><div class="ct"><span class="db-lab">Le profil des jours</span><span class="db-mini">moyenne par jour de la semaine · le trait noir = objectif du jour${pire ? ' · le ' + pire.nom.toLowerCase() + ' est le point faible du mois' : ''}</span></div>
+        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o && p.ca >= p.o ? '#8D1D2C' : '#B8B2A8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : (p.ca >= p.o ? '#3f7a52' : '#A32014')}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div></div>`;
+    }
+  }
+  /** Le calendrier de la période (maquette A du 10/10/2026) : sorti de rendPeriode le 16/11/2026 pour la mise en page
+   * « quatre blocs », où il se replie sous la page. */
+  function periodeCalendrier(m) {
+    const sem = S.vue === 'semaine';
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca);
+    const record = passes.length ? passes.reduce((a, b) => b.ca > a.ca ? b : a) : null;
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    if (!jours.length) { return ''; }
+    {
       const cv = ['ca', 'att', 'cli'].includes(S.calVal) ? S.calVal : 'ca';
       // Le panier total, clients pro compris (21/10/2026) : l'objectif clients se compare aux clients du jour, pro compris.
       const pan = m.panier || null;
@@ -8370,29 +9151,12 @@
       const totA = m.attendu ? 100 * m.realise / m.attendu : null;
       const SEG = [['ca', 'CA', fE(m.realise), m.attendu ? 'sur ' + fE(m.attendu) + ' attendus' : 'pas d’objectif'], ['att', 'Atteinte', totA != null ? fN(totA) + ' %' : '—', 'de l’objectif à date'], ['cli', 'Clients', fN(m.tickets), totObjCli ? 'sur ' + fN(totObjCli) + ' attendus' : '']];
       const leg = PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + PAL[i - 1][0] + ' %')}</span>`).join('');
-      h += `<div class="db-card cal-a"><div class="cal-hd"><div class="cal-t">${X.t}<small>${X.s}</small></div>
+      return `<div class="db-card cal-a"><div class="cal-hd"><div class="cal-t">${X.t}<small>${X.s}</small></div>
         <div class="cal-seg" title="ce que montre le calendrier">${SEG.map(o => `<button data-calval="${o[0]}" class="${cv === o[0] ? 'on' : ''}"><span>${o[1]}</span><b>${o[2]}</b><small>${o[3]}</small></button>`).join('')}</div></div>
         <div class="db-cal cal-a-g">${cases}</div>
         <div class="db-perleg"><span class="cal-q">Couleur et jauge = ${X.leg}</span>${leg}<span><i class="cal-tr"></i>le trait : 100 % de l’objectif</span><span>hachuré : la journée en cours, pas encore jugée</span></div></div>`;
     }
-    // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
-    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span></div>${cascade(m, d)}</div>`;
-    let prof = '';
-    if (!sem && passes.length) {
-      const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-      const par = {}; passes.forEach(j => { (par[j.jour] = par[j.jour] || []).push(j); });
-      const profil = Object.keys(par).map(Number).sort().map(w => { const l = par[w]; return { nom: NOMJ[w], ca: l.reduce((a, j) => a + j.ca, 0) / l.length, o: l.reduce((a, j) => a + (j.objectif || 0), 0) / l.length }; });
-      const mx = Math.max(1, ...profil.map(p => Math.max(p.ca, p.o)));
-      const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
-      prof = `<div class="db-card"><div class="ct"><span class="db-lab">Le profil des jours</span><span class="db-mini">moyenne par jour de la semaine · le trait noir = objectif du jour${pire ? ' · le ' + pire.nom.toLowerCase() + ' est le point faible du mois' : ''}</span></div>
-        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o && p.ca >= p.o ? '#8D1D2C' : '#B8B2A8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : (p.ca >= p.o ? '#3f7a52' : '#A32014')}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div></div>`;
-    }
-    h += prof ? `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">${pl}${prof}</div>` : pl;
-    if (S.vue === 'mois') { h += rendRentab(); }
-    if (S.vue === 'semaine') { h += rendSemaines(); }
-    return h;
   }
-
   /**
    * Les douze dernières semaines, face au N-1 (19/10/2026, la courbe de Résultat › Trafic clients, demande de Sam) : une
    * mesure de chaque semaine close sur celle de la même semaine un an plus tôt en pointillé, la bande entre les deux —
@@ -8401,28 +9165,44 @@
    * vendues ÷ tickets). La semaine en cours, servie un jour ou deux, reste hors de la courbe (elle la ferait plonger) :
    * sa tuile la compare au N-1 aux mêmes jours. Sans N-1 (magasin trop jeune), la courbe reste seule et le motif se lit
    * à la place de la tuile.
+   *
+   * En vue Mois, la même carte sur les douze derniers mois glissants (18/11/2026, Sam : « les 12 derniers mois glissants,
+   * et pas les semaines ») : chaque mois clos face au même mois un an plus tôt, le mois en cours dans sa tuile, face au
+   * N-1 aux mêmes jours.
    */
+  function cleS12() { return (S.vue === 'mois' ? 'm12|' : 's12|') + S.shop + '|' + bornes()[0]; }
+  function cheminS12() { return '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + (S.vue === 'mois' ? '&vue=mois' : '') + '&date=' + S.date + '&n=13&articles=1&pro=1'; }
   function rendSemaines() {
+    const pm = S.vue === 'mois';
+    // Les mots de la carte : la semaine ou le mois.
+    const PER = pm
+      ? { titre: 'Les douze derniers mois', de: ' du mois', lect: 'Lecture des douze mois…', aucune: 'Aucun mois clos lu pour ce magasin.', ces: 'ces mois',
+        n1: 'même mois en N-1 (pointillé)', cours: 'Mois en cours', douze: 'Douze mois', best: 'Meilleur mois', haut: 'Mois le plus haut' }
+      : { titre: 'Les douze dernières semaines', de: ' de la semaine', lect: 'Lecture des douze semaines…', aucune: 'Aucune semaine close lue pour ce magasin.', ces: 'ces semaines',
+        n1: 'même semaine en N-1 (pointillé)', cours: 'Semaine en cours', douze: 'Douze semaines', best: 'Meilleure semaine', haut: 'Semaine la plus haute' };
+    // Le nom d'une période : « S46 », ou « nov. 2025 » (« nov. » sur l'axe, l'année au premier point et en janvier).
+    const nom = w => pm ? w.lab + ' ' + w.du.slice(0, 4) : 'S' + w.iso;
+    const axe = (w, i) => pm ? w.lab + (i === 0 || w.iso === 1 ? ' ' + w.du.slice(2, 4) : '') : 'S' + w.iso;
     // Le panier hors clients pro (21/10/2026) : la courbe l'est quand chacune de ses semaines closes a ses tickets pro lus
     // (`caComptoir` du serveur), et le N-1 ne s'y montre alors que hors pro lui aussi — sans relevé pro un an plus tôt,
     // il se tait plutôt que de comparer un panier pro compris. Sinon toute la carte reste pro compris, et le dit.
     let pCpt = false;
     const S12_MESURES = {
-      clients: { nom: 'Clients', titre: 'clients', unite: 'clients de la semaine',
+      clients: { nom: 'Clients', titre: 'clients', unite: 'clients' + PER.de,
         v: x => x && x.tickets > 0 ? x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.tickets, 0), b: 1 }), f: v => fN(v) },
-      panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen de la semaine',
+      panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen' + PER.de,
         v: x => !x ? null : (pCpt ? (x.caComptoir != null && x.ticketsComptoir > 0 ? x.caComptoir / x.ticketsComptoir : null) : (x.tickets > 0 ? x.ca / x.tickets : null)),
         cumul: L => pCpt ? { a: L.reduce((t, x) => t + x.caComptoir, 0), b: L.reduce((t, x) => t + x.ticketsComptoir, 0) } : { a: L.reduce((t, x) => t + x.ca, 0), b: L.reduce((t, x) => t + x.tickets, 0) }, f: v => fU(v) },
-      articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client de la semaine',
+      articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client' + PER.de,
         v: x => x && x.tickets > 0 && x.articles != null ? x.articles / x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.articles, 0), b: L.reduce((t, x) => t + x.tickets, 0) }), f: v => nf(v, 2) }
     };
     if (!S12_MESURES[S.s12m]) { let m = null; try { m = localStorage.getItem('db.s12m'); } catch (e) { /* navigation privée */ } S.s12m = S12_MESURES[m] ? m : 'clients'; }
-    const cle = 's12|' + S.shop + '|' + bornes()[0];
+    const cle = cleS12();
     const D = S.aux[cle];
     const mk = S.s12m, M = S12_MESURES[mk];
     const bascule = `<span class="db-ong db-ong-p">${Object.entries(S12_MESURES).map(([k, x]) => `<button type="button" data-s12m="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
-    const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">Les douze dernières semaines — ${M.titre}, face au N-1</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
-    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des douze semaines…'}</div>`); }
+    const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">${PER.titre} — ${M.titre}, face au N-1</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
+    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : PER.lect}</div>`); }
     const pc = (a, b) => b ? 100 * a / b : 0;
     // Le signe se lit sur la valeur arrondie : −0,3 % s'écrit « 0 % », pas « −0 % ».
     const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
@@ -8432,7 +9212,7 @@
     const lues = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
     const enCours = lues.length && lues[lues.length - 1].enCours ? lues[lues.length - 1] : null;
     const W = lues.filter(w => !w.enCours).slice(-12);
-    if (!W.length) { return carte(`<div class="db-note">Aucune semaine close lue pour ce magasin.</div>`); }
+    if (!W.length) { return carte(`<div class="db-note">${PER.aucune}</div>`); }
     const pLu = mk === 'panier' && W.some(w => 'caComptoir' in w);   // une réponse d'avant le 21/10/2026 n'en dit rien
     pCpt = pLu && W.filter(w => w.source).every(w => w.caComptoir != null);
     const n1Motif = pCpt && W.some(w => w.n1 && w.n1.source) && !W.some(w => w.n1 && w.n1.caComptoir != null)
@@ -8440,7 +9220,7 @@
     const unite = M.unite + (pCpt ? ' hors clients pro' : (pLu ? ' (pro compris : tickets pro pas encore lus)' : ''));
     const v = w => w.source ? M.v(w) : null, v1 = w => w.n1 ? M.v(w.n1) : null;
     if (!W.some(w => v(w) != null)) {
-      return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ces semaines.' : 'Aucune semaine close lue pour ce magasin.'}</div>`);
+      return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ' + PER.ces + '.' : PER.aucune}</div>`);
     }
     const avecN1 = W.some(w => v1(w) != null);
     const vals = [];
@@ -8454,7 +9234,7 @@
     const ft = 'font-family:var(--font-ui)';
     let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
     [1, 2].forEach(k => { const y = Y(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
-    // La bande entre les deux courbes, semaine par semaine.
+    // La bande entre les deux courbes, période par période.
     for (let i = 0; i < W.length - 1; i++) {
       const a = v(W[i]), b = v(W[i + 1]), a1 = v1(W[i]), b1 = v1(W[i + 1]);
       if (a == null || b == null || a1 == null || b1 == null) { continue; }
@@ -8468,17 +9248,17 @@
       const n = v(w), n1 = v1(w), up = n1 == null || n == null || n >= n1;
       if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Y(n1)}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${X(i)}" y="${(+Y(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${M.f(n1)}</text>`; }
       if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`; }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1c1a17" style="${ft}">S${w.iso}</text>`;
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1c1a17" style="${ft}">${esc(axe(w, i))}</text>`;
     });
     svg += '</svg>';
     const chips = W.map(w => {
       const n = v(w), n1 = v1(w), e = n != null && n1 ? pc(n - n1, n1) : null;
-      const dates = (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
+      const dates = pm ? w.du.slice(0, 4) : (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
       const titre = (n != null ? M.f(n) + ' · ' + fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (n1 != null ? ' · N-1 : ' + M.f(n1) : ' · pas de N-1');
-      return `<div class="ch" title="${esc(titre)}"><span><b>S${w.iso}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
+      return `<div class="ch" title="${esc(titre)}"><span><b>${esc(pm ? w.lab.charAt(0).toUpperCase() + w.lab.slice(1) : 'S' + w.iso)}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
     }).join('');
-    // Les douze semaines : la mesure cumulée (clients : la somme ; panier et articles : le rapport des sommes), face au
-    // N-1 sur les seules semaines qui en ont un.
+    // Les douze périodes : la mesure cumulée (clients : la somme ; panier et articles : le rapport des sommes), face au
+    // N-1 sur les seules périodes qui en ont un.
     const comp = W.filter(w => v(w) != null && v1(w) != null);
     const cN = M.cumul(comp), c1 = M.cumul(comp.map(w => w.n1));
     const gN = cN.b ? cN.a / cN.b : null, g1 = c1.b ? c1.a / c1.b : null;
@@ -8490,25 +9270,25 @@
     if (enCours) {
       const n = v(enCours), n1 = v1(enCours), eC = n != null && n1 ? pc(n - n1, n1) : null;
       const j = enCours.joursServis || 0;
-      tCur = tuile('Semaine en cours', n != null ? M.f(n) : '—',
+      tCur = tuile(PER.cours, n != null ? M.f(n) : '—',
         (eC != null ? sg(eC) + ' % vs N-1 aux mêmes jours · ' : '') + j + ' jour' + (j > 1 ? 's' : '') + ' servi' + (j > 1 ? 's' : ''), eC == null ? '' : (eC >= 0 ? 'bon' : 'vif'));
     } else {
       const n = v(der), n1 = v1(der), eD = n != null && n1 ? pc(n - n1, n1) : null;
-      tCur = tuile('Semaine S' + der.iso, n != null ? M.f(n) : '—', eD != null ? sg(eD) + ' % vs N-1' : (prev && v(prev) && n != null ? sg(pc(n - v(prev), v(prev))) + ' % vs S' + prev.iso : ''),
+      tCur = tuile(pm ? nom(der) : 'Semaine S' + der.iso, n != null ? M.f(n) : '—', eD != null ? sg(eD) + ' % vs N-1' : (prev && v(prev) && n != null ? sg(pc(n - v(prev), v(prev))) + ' % vs ' + nom(prev) : ''),
         eD == null ? '' : (eD >= 0 ? 'bon' : 'vif'));
     }
-    const lib12 = 'Douze semaines';
+    const lib12 = PER.douze;
     const tuiles = [
       eT != null ? tuile(lib12 + ' vs N-1', sg(eT) + ' %', M.f(gN) + ' contre ' + M.f(g1), eT >= 0 ? 'bon' : 'vif')
         : tuile(lib12, gT != null ? M.f(gT) : '—', esc(n1Motif || 'pas de N-1')),
       tCur,
-      tuile(mk === 'clients' ? 'Meilleure semaine' : 'Semaine la plus haute', meilleure ? M.f(v(meilleure)) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
+      tuile(mk === 'clients' ? PER.best : PER.haut, meilleure ? M.f(v(meilleure)) : '—', meilleure ? (pm ? nom(meilleure) : 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au)) : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>même semaine en N-1 (pointillé)</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>${PER.n1}</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
-    return carte(corps, 'S' + W[0].iso + ' → S' + der.iso + ' · ' + (D.source || ''));
+    return carte(corps, nom(W[0]) + ' → ' + nom(der) + ' · ' + (D.source || ''));
   }
 
   /** L'année, mois par mois, face à l'an passé : la carte partagée avec la tablette (assets/js/cartes-magasin.js). */
@@ -8929,11 +9709,18 @@
     } else {
       const li = (d.lignes || []).find(x => String(x.shopId) === String(S.shop));
       const J = li ? (li.jours || []).filter(j => j.releve && j.j <= AUJ) : [];
+      // La journée en cours n'est relevée qu'une fois close (con_tache_jour, le cron) : elle se compte en direct, sur
+      // les tâches obligatoires du jour (16/11/2026 : un lundi, la semaine disait « pas de relevé » avec sept photos notées).
+      const [duP, auP] = bornes();
+      if (duP <= AUJ && AUJ <= auP && !J.some(j => j.j === AUJ)) {
+        const TA = tachesJour(S.aux['taches|' + AUJ]);
+        if (TA.length) { const fA = TA.filter(tacheFaite).length; J.push({ j: AUJ, releve: true, enCours: true, faites: fA, pasFaites: TA.length - fA, part: Math.round(100 * fA / TA.length) }); }
+      }
       if (!J.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches de la période</div><div class="s">pas de relevé pour ce magasin sur la période</div></div></div>`; }
       const nF = J.reduce((a, j) => a + (j.faites || 0), 0), nN = J.reduce((a, j) => a + (j.pasFaites || 0), 0), tot = nF + nN;
       const teinte = p => p == null ? '' : (p >= 80 ? 'f' : (p >= 40 ? 'm' : (p > 0 ? 'n' : 'b')));
       const mauvais = J.filter(j => (j.part || 0) < 40).length;
-      corps = `<div class="db-bt tit"><div class="k">Les tâches ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</div><div class="s">${J.length} jour(s) relevé(s) · ${tot ? Math.round(100 * nF / tot) : 0} % faites · bloquantes : voir le jour</div></div>
+      corps = `<div class="db-bt tit"><div class="k">Les tâches ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</div><div class="s">${J.length} jour(s) relevé(s)${J.some(j => j.enCours) ? ', dont aujourd’hui en cours' : ''} · ${tot ? Math.round(100 * nF / tot) : 0} % faites · bloquantes : voir le jour</div></div>
         ${tuileT('Faites', nF + '<small>/ ' + tot + '</small>', Math.round(nF / Math.max(1, J.length)) + ' par jour en moyenne', 'ok')}
         ${tuileT('Non faites', nN + '<small>/ ' + tot + '</small>', Math.round(nN / Math.max(1, J.length)) + ' par jour en moyenne', 'wa')}
         ${tuileT('Jours sous 40 %', String(mauvais), mauvais ? 'jour(s) où moins de 40 % des tâches sont faites' : 'aucun jour en dessous', mauvais ? 'ko' : '')}
@@ -8969,7 +9756,8 @@
     const k = cleCQ();
     if (S.enCours[k] || Date.now() - (S.cqTente[k] || 0) < 60000) { return; }
     S.cqTente[k] = Date.now();
-    lireAux(k, cheminCQ(), true);
+    // Des URL neuves : sans le cache partagé (rafraichir), qui les servirait déjà vieilles.
+    lireAux(k, cheminCQ() + '&rafraichir=1', true);
   }
   const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*(?:après-midi\s*)?-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
   const cqCl = c => String(c || '').replace(/\.$/, '');
@@ -10196,7 +10984,8 @@
     cmdmRendre();
     eqmRendre();
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
-    $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => iaOuvrir(b.dataset.iaouvrir === 'd' ? 'd' : null)));
+    // L'assistant s'ouvre en pleine page au bureau (17/11/2026) ; la fenêtre reste pour la demande au bureau et au téléphone.
+    $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => { if (b.dataset.iaouvrir === 'd') { iaOuvrir('d'); } else if (estMobile()) { iaOuvrir(null); } else { iaPage(null); } }));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
@@ -10216,7 +11005,8 @@
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
-    $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
+    $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => { S.luA = Date.now(); charger(true); }));
+    $.querySelectorAll('[data-apiouvrir]').forEach(b => b.addEventListener('click', () => { if (window.DashApi) { window.DashApi.ouvrir(); } }));
     $.querySelectorAll('[data-tmseuil]').forEach(b => b.addEventListener('click', () => { S.tmSeuil = +b.dataset.tmseuil; try { localStorage.setItem('db.tmSeuil', String(S.tmSeuil)); } catch (e) { /* navigation privée */ } charger(false); }));
     $.querySelectorAll('[data-tmjour]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.tmjour; if (!d || d > AUJ || d === S.date) { return; } S.date = d; urlMaj(); charger(false); }));
     // Primes : le filtre, le mois ou l'année, le pas de période, le tri — de la lecture, rien ne s'écrit.
@@ -10374,7 +11164,10 @@
   if (!EMBED_PM) { pushEtatLire().then(() => rendre()).catch(() => {}); }
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
+  S.luA = Date.now();
   charger(false);
+  // La boîte mail : ses non-lus sur le rail, à l'ouverture puis toutes les deux minutes.
+  setTimeout(bmCompter, 1500); setInterval(bmCompter, 120000);
   // La journée en cours se relit toutes les dix minutes.
   setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts' || S.vue === 'taches') && S.date === AUJ) { charger(true); } }, 600000);
   // L'onglet Opérationnel suit la journée de plus près : toutes les deux minutes.

@@ -51,6 +51,45 @@ final class OfficeClockService
             + $this->kiosk->personalQr($context, $employeeId, (string) $c['base']);
     }
 
+    /**
+     * [364] RODO : plus de liste de tout le personnel sur la tablette de bureau. Une personne sans PIN tape son nom (au
+     * moins 3 lettres) et se choisit parmi au plus 8 résultats : nom seul, sans service ni présence.
+     */
+    public function search(string $q, ApiContext $context): array
+    {
+        $this->officeDevice($context);
+        $q = trim(preg_replace('/\s+/u', ' ', $q));
+        if (mb_strlen($q) < 3) return [];
+        return array_map(fn($p) => ['id' => (int) $p['person_id'], 'employee_id' => $p['employee_id'] !== null ? (int) $p['employee_id'] : null,
+            'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'phones' => (int) $p['phones']], $this->repo->officeSearch(mb_substr($q, 0, 60)));
+    }
+
+    /** [361] Accueil de la tablette de bureau : le PIN seul ouvre le profil (session + la personne, comme dans la liste). */
+    public function login(array $body, ApiContext $context): array
+    {
+        $this->officeDevice($context);
+        $v = (new Validator($body))->only(['pin'])->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
+        $v->throwIfInvalid();
+        $r = $this->kiosk->loginByPin((string) $v->clean()['pin'], $context);
+        $row = null;
+        foreach ($this->repo->officePeople(date('Y-m-d')) as $p) {
+            if ($p['employee_id'] !== null && (int) $p['employee_id'] === (int) $r['employee']['id']) { $row = $p; break; }
+        }
+        return $r + ['person' => $row !== null ? $this->person($row) : null];
+    }
+
+    /** [360] Premier PIN de la personne (person_id = production_employee.id) ; son profil de production est créé au besoin. */
+    public function firstPin(array $body, ApiContext $context): array
+    {
+        $this->officeDevice($context);
+        $v = (new Validator($body))->only(['person_id', 'pin'])->integer('person_id', true, 1)->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
+        $v->throwIfInvalid();
+        $c = $v->clean();
+        $row = $this->row((int) $c['person_id']) ?? throw ApiException::notFound('person', (int) $c['person_id']);
+        $employeeId = $row['employee_id'] !== null ? (int) $row['employee_id'] : $this->employees->ensureProfile((int) $c['person_id']);
+        return $this->kiosk->firstPin($employeeId, (string) $c['pin'], $context);
+    }
+
     /** Pointage enregistré depuis l'affichage du QR (la tablette confirme et revient à l'accueil). */
     public function status(int $employeeId, string $since, ApiContext $context): array
     {

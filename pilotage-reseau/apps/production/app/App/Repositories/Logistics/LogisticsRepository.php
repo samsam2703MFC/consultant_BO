@@ -63,6 +63,13 @@ final class LogisticsRepository extends WorkshopRepository
         $this->db->prepare($sql)->execute(['id' => $vehicleId] + $data);
     }
 
+    /** Nazwisko (i telefon) kierowcy na pojeździe — CMR i tablet kierowcy [306]. */
+    public function setVehicleDriverName(int $vehicleId, string $name, string $surname, ?string $phone): void
+    {
+        $this->db->prepare('UPDATE carrier_vehicle SET driver_name = ?, driver_surname = ?, driver_phone = COALESCE(?, driver_phone) WHERE id = ?')
+            ->execute([$name, $surname, $phone, $vehicleId]);
+    }
+
     /** Kierowca pojazdu spośród pracowników (n_prod_employee) ; wiersz n_vehicle już istnieje (addVehicle). */
     public function setVehicleDriver(int $vehicleId, ?int $driverId, ?int $userId): void
     {
@@ -157,12 +164,57 @@ final class LogisticsRepository extends WorkshopRepository
 
     public function tours(): array
     {
-        return $this->all('SELECT id, name, weekdays, TIME_FORMAT(departure_time, "%H:%i") AS departure_time, color, active, notes FROM n_tour ORDER BY active DESC, name');
+        return $this->all('SELECT id, name, weekdays, TIME_FORMAT(departure_time, "%H:%i") AS departure_time, id_driver, color, active, notes FROM n_tour ORDER BY active DESC, name');
     }
 
     public function tour(int $id): ?array
     {
-        return $this->all('SELECT id, name, weekdays, TIME_FORMAT(departure_time, "%H:%i") AS departure_time, color, active, notes FROM n_tour WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT id, name, weekdays, TIME_FORMAT(departure_time, "%H:%i") AS departure_time, id_driver, color, active, notes FROM n_tour WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    /** [306] Kierowcy do wyboru (trasa, pojazd) : aktywni pracownicy, najpierw stanowisko Kierowca-dostawca. */
+    public function driverChoices(): array
+    {
+        return array_map(fn($r) => ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'is_driver' => (bool) (int) $r['is_driver']], $this->all(
+            "SELECT e.id, TRIM(CONCAT(COALESCE(pe.name, ''), ' ', COALESCE(pe.surname, ''))) AS name, COALESCE(p.code = 'KIEROWCA', 0) AS is_driver
+             FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee LEFT JOIN n_position p ON p.id = e.id_position
+             WHERE e.active = 1 ORDER BY is_driver DESC, pe.surname, pe.name"));
+    }
+
+    /**
+     * [309] Kierowcy : stanowisko Kierowca-dostawca, kierowca pojazdu albo trasy, albo dane transportowe. Współpraca z karty
+     * HR (contract_type), pojazdy i trasy (rozdzielone « | »), ostatnia umowa zlecenia na przewóz w dokumentach.
+     */
+    public function driversOverview(): array
+    {
+        return $this->all(
+            "SELECT e.id, TRIM(CONCAT(COALESCE(pe.name, ''), ' ', COALESCE(pe.surname, ''))) AS name, h.contract_type, h.hire_date, h.contract_end,
+                    d.licence, d.pay_basis, d.pay_amount,
+                    (SELECT GROUP_CONCAT(COALESCE(NULLIF(TRIM(cv.regis_num), ''), '?') ORDER BY cv.regis_num SEPARATOR '|') FROM n_vehicle v
+                        JOIN carrier_vehicle cv ON cv.id = v.id_carrier_vehicle WHERE v.id_driver = e.id) AS vehicles,
+                    (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR '|') FROM n_tour t WHERE t.id_driver = e.id AND t.active = 1) AS tours,
+                    (SELECT GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR '|') FROM n_tour t JOIN n_tour_vehicle tv ON tv.id_tour = t.id
+                        JOIN n_vehicle v ON v.id_carrier_vehicle = tv.id_carrier_vehicle WHERE v.id_driver = e.id AND t.active = 1) AS vehicle_tours,
+                    (SELECT MAX(hd.doc_date) FROM n_hr_document hd WHERE hd.id_employee = e.id AND hd.filename LIKE 'zlecenie\\_transport\\_%') AS contract_doc
+             FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee
+             LEFT JOIN n_position p ON p.id = e.id_position
+             LEFT JOIN n_hr_employee h ON h.id_employee = e.id
+             LEFT JOIN n_log_driver d ON d.id_employee = e.id
+             WHERE e.active = 1 AND (p.code = 'KIEROWCA' OR d.id_employee IS NOT NULL
+                OR e.id IN (SELECT id_driver FROM n_vehicle WHERE id_driver IS NOT NULL) OR e.id IN (SELECT id_driver FROM n_tour WHERE id_driver IS NOT NULL))
+             ORDER BY pe.surname, pe.name");
+    }
+
+    public function saveDriverData(int $employeeId, ?string $licence, ?string $basis, ?float $amount, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO n_log_driver (id_employee, licence, pay_basis, pay_amount, updated_by) VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE licence = VALUES(licence), pay_basis = VALUES(pay_basis), pay_amount = VALUES(pay_amount), updated_by = VALUES(updated_by)')
+            ->execute([$employeeId, $licence, $basis, $amount, $userId]);
+    }
+
+    public function activeEmployeeExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM n_prod_employee WHERE id = ? AND active = 1', [$id]);
     }
 
     /** Pojazdy tras w kolejności wypełniania. */

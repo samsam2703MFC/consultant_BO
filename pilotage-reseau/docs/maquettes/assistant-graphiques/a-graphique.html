@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A · Le graphique — L'assistant fait des graphiques</title>
+<!-- Écran A (17/11/2026) : l'assistant répond par un graphique (barres, courbe ou tableau), avec ses chiffres et sa source ; Télécharger (PNG, PDF, Excel), Enregistrer comme modèle, Épingler au dashboard. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../parametres-mails/mails.css">
+<link rel="stylesheet" href="gr.css">
+<script src="../parametres-mails/coque.js"></script>
+<script src="gr.js"></script>
+</head><body><script>
+coque({ actif: 'mois', titre: 'Mois', kicker: 'Atelier by Harmonie - Sombreffe', corps: fond(), pied: '' });
+const tot = CLI.reduce((a, b) => a + b, 0), totN1 = N1.reduce((a, b) => a + b, 0), ec = Math.round(1000 * (tot - totN1) / totN1) / 10;
+const sous = CLI.filter((v, i) => v < N1[i]).length;
+const reponse = `<div class="gr-moi">Montre-moi mes clients par semaine depuis septembre, face à l’an passé</div>
+  <div class="gr-rep"><p>Sur ces douze semaines, vous avez reçu <b style="font-weight:400">${fN(tot)} clients</b>, ${Math.abs(ec).toLocaleString('fr-FR')} % de moins qu’un an plus tôt. Les deux dernières semaines repartent : S45 et S46 sont au-dessus de 1 100 clients.</p>
+    <div class="gr-types"><span class="on">▥ Barres</span><span>⟋ Courbe</span><span>☰ Tableau</span><span style="margin-left:auto">Mesure : <b style="font-weight:400;color:var(--ink)">clients ▾</b></span></div>
+    <div class="gr-graph">${graphe(730, 270, false, null, undefined, null, { titre: 'Clients par semaine, 2026 face à 2025' })}${legende([['Clients de la semaine, 2026', 'col', COUL.moi], ['Même semaine en 2025', 'trait', COUL.ref]])}</div>
+    <div class="gr-k"><div><b>${fN(tot)}</b><span>clients sur 12 semaines</span></div><div><b>${ec.toLocaleString('fr-FR')} %</b><span>face à l’an passé (${fN(totN1)})</span></div><div><b>${sous} / 12</b><span>semaines sous l’an passé</span></div></div>
+    <p style="margin:0">Le creux de S43–S44 (vacances d’automne) pèse le plus : − 59 et − 60 clients face à 2025.</p>
+    <div class="gr-src">Source : les tickets du panel, semaine par semaine (Historique des ventes, 18 mois) · même semaine décalée de 364 jours</div>
+    __ACTIONS__
+  </div>`;
+const actions = `<div class="gr-act"><span class="gr-btn on">⤓ Télécharger ▴</span><span class="gr-btn">★ Enregistrer comme modèle</span><span class="gr-btn">📌 Épingler au dashboard</span><span style="flex:1"></span><span class="gr-suites"><span>Et en panier moyen ?</span><span>Comparer au réseau</span></span>
+  <div class="gr-menu"><div><i style="background:#8D1D2C">PNG</i><span><b>Image</b><small>le graphique seul, pour un message ou un post</small></span></div>
+    <div><i style="background:#5b5650">PDF</i><span><b>PDF A4</b><small>le graphique, les chiffres et le commentaire</small></span></div>
+    <div><i style="background:#2f7a4a">XLS</i><span><b>Excel</b><small>les données, semaine par semaine</small></span></div></div></div>`;
+document.body.insertAdjacentHTML('beforeend', `<div class="gr-fond"></div><div class="gr-mod">${tete('conv')}<div class="gr-corps">${gauche()}<div class="gr-fil">${reponse.replace('__ACTIONS__', actions)}</div></div></div>`);
+</script></body></html>

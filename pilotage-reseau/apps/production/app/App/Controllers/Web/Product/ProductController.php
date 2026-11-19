@@ -8,6 +8,7 @@ use App\Services\Document\WDTService;
 use App\Services\Employee\ProductionEmployeeService;
 use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Finances\ClientProductPriceService;
+use App\Services\Organization\PageAccessService;
 use App\Services\Product\Category\ProductCategoryService;
 use App\Services\Product\ProductService;
 use App\Services\Recipe\RecipeService;
@@ -27,7 +28,8 @@ class ProductController extends BaseController
         private RecipeService $recipeService,
         private ProductionEmployeeService $productionEmployeeService,
         private WDTService $wdtService,
-        private ClientProductPriceService $clientProductPriceService
+        private ClientProductPriceService $clientProductPriceService,
+        private PageAccessService $access
     )
     {
     }
@@ -74,6 +76,11 @@ class ProductController extends BaseController
 
         if (empty($data)) {
             return $this->json(['message' => 'Brak danych wejściowych'], 400);
+        }
+
+        // [339] Aktywny / nieaktywny w ERP : administrator i produkcja (Kierownik produkcji, rola modułu).
+        if (array_key_exists('active', $data) && !$this->access->canToggleProducts(user('id') ? (int) user('id') : null)) {
+            return $this->json(['message' => 'Włączać i wyłączać produkty może administrator albo produkcja.'], 403);
         }
 
         $result = $this->productService->update($id, $data);

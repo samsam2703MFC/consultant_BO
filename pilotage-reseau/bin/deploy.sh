@@ -33,6 +33,9 @@ COCKPIT_URL="${COCKPIT_URL:-${ALIAS_PATH}/}"
 # L'espace boutique du Marketing (dépôt marketing, servi à /marketing/franchise/ sur le même serveur) : l'entrée
 # « Calendrier des posts ↗ » du rail du dashboard franchisé, écrite dans config.php (espaceBoutiqueUrl), rendue par GET /meta.
 COCKPIT_ESPACE_BOUTIQUE_URL="${COCKPIT_ESPACE_BOUTIQUE_URL:-/marketing/franchise/}"
+# L'API du Marketing, appelée de serveur à serveur (Mon catalogue, Réseaux sociaux du dashboard franchisé, 15/11/2026) :
+# même serveur, donc en local par défaut. Écrite dans config.php (marketingApi) ; la clé mar_api_url d'erp_cles prime.
+COCKPIT_MARKETING_API="${COCKPIT_MARKETING_API:-http://127.0.0.1/marketing/api}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -161,7 +164,7 @@ if command -v node >/dev/null 2>&1; then
 else
   warn "node absent : syntaxe JS non vérifiée avant livraison."
 fi
-for f in "$REPO_SRC"/src/*.php "$REPO_SRC"/public/api/*.php; do
+for f in "$REPO_SRC"/src/*.php "$REPO_SRC"/src/franchise/*.php "$REPO_SRC"/public/api/*.php; do
   php -l "$f" >/dev/null || { warn "SYNTAXE PHP : $f"; exit 1; }
 done
 
@@ -279,7 +282,7 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
   COCKPIT_DB_HOST="$COCKPIT_DB_HOST" COCKPIT_DB_PORT="$COCKPIT_DB_PORT" \
   COCKPIT_DB_NAME="$COCKPIT_DB_NAME" COCKPIT_DB_USER="$COCKPIT_DB_USER" \
   COCKPIT_DB_PASSWORD="$COCKPIT_DB_PASSWORD" COCKPIT_PWA_BASE="$COCKPIT_PWA_BASE" \
-  COCKPIT_URL="$COCKPIT_URL" COCKPIT_ESPACE_BOUTIQUE_URL="$COCKPIT_ESPACE_BOUTIQUE_URL" \
+  COCKPIT_URL="$COCKPIT_URL" COCKPIT_ESPACE_BOUTIQUE_URL="$COCKPIT_ESPACE_BOUTIQUE_URL" COCKPIT_MARKETING_API="$COCKPIT_MARKETING_API" \
   php -r '
     $cfg = [
       "db" => [
@@ -295,6 +298,8 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "cockpitUrl" => getenv("COCKPIT_URL") ?: null,
       // Dashboard franchisé : l’espace boutique du Marketing, pour le « Calendrier des posts ↗ » du rail (GET /meta).
       "espaceBoutiqueUrl" => getenv("COCKPIT_ESPACE_BOUTIQUE_URL") ?: null,
+      // L’API du Marketing (Mon catalogue, Réseaux sociaux du dashboard franchisé), quand mar_api_url n’est pas dans erp_cles.
+      "marketingApi" => getenv("COCKPIT_MARKETING_API") ?: null,
       // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
       "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,
@@ -672,6 +677,7 @@ chmod +x "$TARGET_DIR/bin/visites_cron.sh"
 chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
 chmod +x "$TARGET_DIR/bin/stock_cron.sh"
 chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
+chmod +x "$TARGET_DIR/bin/boite_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -691,6 +697,9 @@ chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
   # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
   # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"
+  # La boîte mail des magasins : les messages automatiques (accusé, relance d'une offre, rappel la veille), toutes les
+  # 10 minutes ; rien tant qu'aucun magasin n'en a allumé un (src/franchise/boite_mail.php).
+  echo "*/10 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/boite_cron.sh >/dev/null 2>&1"
   # Module RH / Dimona : chaque minute, la relecture des déclarations en attente (5 s, 15 s, 30 s… : le
   # script tourne 55 s) et l'alerte des certificats à moins de 60 jours. Sous www-data : c'est lui qui
   # possède le dossier privé et la clé maître du module.

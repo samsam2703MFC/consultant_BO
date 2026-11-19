@@ -180,6 +180,7 @@ final class WorkshopApiRoutes
             ['PUT', '/supply/buy/materials/{id:\d+}/suppliers', BuyController::class, 'saveSuppliers', 'prod.supply.write'],
             ['GET', '/supply/invoices', InvoiceController::class, 'list', 'prod.supply.read'],
             ['GET', '/supply/invoices/wizard', InvoiceController::class, 'wizard', 'prod.supply.read'],
+            ['GET', '/supply/invoices/assistant-status', InvoiceController::class, 'assistantStatus', 'prod.supply.read'],
             ['POST', '/supply/invoices/wizard/check-safe', InvoiceController::class, 'checkSafe', 'prod.supply.write'],
             ['POST', '/supply/invoices/wizard/process', InvoiceController::class, 'processChecked', 'prod.supply.write'],
             ['POST', '/supply/invoices/{id:\d+}/lines/{lineId:\d+}/check', InvoiceController::class, 'checkLine', 'prod.supply.write'],
@@ -221,6 +222,7 @@ final class WorkshopApiRoutes
             ['DELETE', '/supply/mappings/{id:\d+}', InvoiceController::class, 'deleteMapping', 'prod.supply.write'],
             ['GET', '/supply/prices', InvoiceController::class, 'prices', 'prod.supply.read'],
             ['GET', '/supply/materials/{id:\d+}/prices', InvoiceController::class, 'materialPrices', 'prod.supply.read'],
+            ['GET', '/supply/materials/{id:\d+}/price-impact', InvoiceController::class, 'priceImpact', 'prod.supply.read'],
             // Jednostka surowca z formularza przypisania faktury (kg / g / szt / l / ml) — od razu na karcie surowca.
             ['PATCH', '/supply/materials/{id:\d+}/unit', InvoiceController::class, 'changeMaterialUnit', 'prod.supply.write'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
@@ -255,6 +257,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/groups', ExecutionController::class, 'groups', 'kiosk'],
             ['POST', '/kiosk/identify', ExecutionController::class, 'identify', 'kiosk'],
             ['GET', '/kiosk/me', ExecutionController::class, 'me', 'kiosk_employee'],
+            ['PUT', '/kiosk/me/pin', ExecutionController::class, 'changePin', 'kiosk_employee'],
             ['POST', '/kiosk/refresh', ExecutionController::class, 'refresh', 'kiosk_employee'],
             ['POST', '/kiosk/clock', ExecutionController::class, 'clock', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/start', ExecutionController::class, 'start', 'kiosk_employee'],
@@ -308,6 +311,9 @@ final class WorkshopApiRoutes
             // Tablette de bureau (mode office) : section → nom → QR personnel (personne + jour) validé au téléphone.
             ['GET', '/kiosk/office/sections', ExecutionController::class, 'officeSections', 'kiosk'],
             ['POST', '/kiosk/office/qr', ExecutionController::class, 'officeQr', 'kiosk'],
+            ['POST', '/kiosk/office/pin', ExecutionController::class, 'officeFirstPin', 'kiosk'],
+            ['POST', '/kiosk/office/login', ExecutionController::class, 'officeLogin', 'kiosk'],
+            ['GET', '/kiosk/office/search', ExecutionController::class, 'officeSearch', 'kiosk'],
             ['GET', '/kiosk/office/status', ExecutionController::class, 'officeStatus', 'kiosk'],
             // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty — po wybraniu
             // kierowcy z listy i jego PIN-ie (/kiosk/people, /kiosk/identify), jak na tablecie pracowni.
@@ -332,6 +338,9 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/messages/{id:\d+}/read', TaskMessageController::class, 'read', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
             ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
+            ['POST', '/driver/pallets', DriverController::class, 'palletScan', 'kiosk_employee'],
+            ['POST', '/driver/incidents', DriverController::class, 'incident', 'kiosk_employee'],
+            ['GET', '/driver/stop-document', DriverController::class, 'stopDocument', 'kiosk_employee'],
             ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],
             ['GET', '/driver/documents', DriverController::class, 'documents', 'kiosk_employee'],
             ['GET', '/kiosk/phone/people', ExecutionController::class, 'phonePeople', 'qr'],
@@ -341,6 +350,9 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/phone/signatures', ExecutionController::class, 'sign', 'phone'],
             ['POST', '/kiosk/phone/comps/{id:\d+}/sign', ExecutionController::class, 'signComp', 'phone'],
             // [288] Urlop z telefonu (makieta 49) : saldo, wniosek od–do, « Moje urlopy », anulowanie wniosku do zatwierdzenia.
+            // [300] Logowanie do ERP kodem QR ze strony logowania : podgląd i zatwierdzenie (po odbiciu wejścia).
+            ['GET', '/kiosk/phone/erp-login', ExecutionController::class, 'erpLoginPreview', 'phone'],
+            ['POST', '/kiosk/phone/erp-login', ExecutionController::class, 'erpLogin', 'phone'],
             ['GET', '/kiosk/phone/leave', ExecutionController::class, 'phoneLeave', 'phone'],
             ['POST', '/kiosk/phone/leave', ExecutionController::class, 'requestLeave', 'phone'],
             ['DELETE', '/kiosk/phone/leave/{id:\d+}', ExecutionController::class, 'cancelLeave', 'phone'],

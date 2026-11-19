@@ -59,7 +59,6 @@ class TodayService
                 'not_sent' => (int) ($proformas['not_sent'] ?? 0),
             ],
             'todo' => array_merge($this->todo($days, $complaints, $proformas, $readyPallets, $belowMinimum, $withoutRecipe, $complaintAgeDays, $this->queueCounts()), $this->alertTodo()),
-            'latest' => $this->repository->getLatestOrders(),
         ];
     }
 

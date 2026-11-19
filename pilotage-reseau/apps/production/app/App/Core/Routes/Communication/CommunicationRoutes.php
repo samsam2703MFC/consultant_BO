@@ -20,6 +20,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/communication/email-settings', ['controller' => $controller, 'method' => 'emailSettings']);
     $r->addRoute('POST', '/communication/email-settings', ['controller' => $controller, 'method' => 'saveEmailSettings']);
     $r->addRoute('POST', '/ajax/communication/email-settings/test', ['controller' => $controller, 'method' => 'testEmailSettings']);
+    $r->addRoute('POST', '/ajax/communication/email-settings/sync', ['controller' => $controller, 'method' => 'syncEmailAccounts']);
     $r->addRoute('POST', '/communication/templates', ['controller' => $controller, 'method' => 'saveTemplate']);
     $r->addRoute('POST', '/communication/templates/{id:\\d+}', ['controller' => $controller, 'method' => 'saveTemplate']);
     $r->addRoute('GET', '/communication/compose/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'composeProforma']);

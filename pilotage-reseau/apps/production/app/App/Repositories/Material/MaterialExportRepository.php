@@ -33,7 +33,7 @@ class MaterialExportRepository extends BaseRepository
                     rm.fiber_100g,
                     rm.proteins_100g,
                     rm.salt_100g,
-                    rm.waste_perc,
+                    " . \App\Services\Material\MaterialLoss::column('rm') . " AS waste_perc,
                     GROUP_CONCAT(
                         DISTINCT COALESCE(aa.alias, a.code)
                         ORDER BY a.code

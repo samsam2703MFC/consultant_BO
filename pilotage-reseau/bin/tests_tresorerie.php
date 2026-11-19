@@ -58,7 +58,7 @@ $REGLAGES = ['budgetCharges' => ['categories' => [
 ], 'paliers' => [['nom' => 'Marge brute', 'droite' => 'cat:Matière']]]];
 function setting(string $k, mixed $d = null): mixed { global $REGLAGES; return $REGLAGES[$k] ?? $d; }
 
-require __DIR__ . '/../src/tresorerie.php';
+require __DIR__ . '/../src/franchise/tresorerie.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void

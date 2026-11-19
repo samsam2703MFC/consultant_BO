@@ -169,8 +169,13 @@ class MaterialService
             $data[$field] = self::nutritionValue($data[$field] ?? null) ?? 0;
         }
         if(!isset($data['is_part_of_package'])) $data['is_part_of_package'] = 0;
-        // Odpad z formularza : zapis karty potwierdza wartość (koniec « do sprawdzenia » po przeniesieniu z migracji 158).
-        if (array_key_exists('waste_perc', $data)) { $data['waste_perc'] = self::lossValue($data['waste_perc']); $data['waste_review'] = 0; }
+        // Odpad z formularza : zapis karty potwierdza wartość (koniec « do sprawdzenia »). [295] Źródło tej wersji :
+        // n_raw_material_loss (_loss, zapis po insert / update) ; raw_material.waste_perc dostaje wartość w znaczeniu bazy
+        // (ERP d'origine w trybie cohabitation : « wykorzystanie »), żeby ERP d'origine widział tę samą kartę.
+        if (array_key_exists('waste_perc', $data)) {
+            $data['_loss'] = self::lossValue($data['waste_perc']);
+            $data['waste_perc'] = MaterialLoss::legacyValue($data['_loss']);
+        }
         foreach (self::PACKAGING_FIELDS as $field)
         {
             if (array_key_exists($field, $data) && trim((string) $data[$field]) === '') $data[$field] = null;
@@ -188,7 +193,9 @@ class MaterialService
         $data['price_per_unit'] = $data['pack_price'] / $data['package_size_in_base_unit'];
         $data = $this->adjustData($data);
 
-        return $this->materialRepository->insert($data);
+        $id = $this->materialRepository->insert($data);
+        if ($id && is_numeric($id) && isset($data['_loss'])) $this->materialRepository->saveLoss((int) $id, (float) $data['_loss']);
+        return $id;
     }
 
     /** Pełny formularz surowca. Zmienione wartości odżywcze = wpisane ręcznie : znika źródło z internetu. */
@@ -197,6 +204,7 @@ class MaterialService
         $data = $this->adjustData($data);
         $before = $this->materialRepository->getById($id);
         $result = $this->materialRepository->update($id, $data);
+        if ($result !== false && isset($data['_loss'])) $this->materialRepository->saveLoss((int) $id, (float) $data['_loss']);
         if ($result !== false && is_array($before)) {
             foreach (array_keys(self::NUTRITION_ERRORS) as $field) {
                 if (abs((float) ($before[$field] ?? 0) - (float) $data[$field]) > 0.0001) {

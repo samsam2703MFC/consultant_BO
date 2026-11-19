@@ -189,7 +189,7 @@
       });
       if (!d.paiements.some(p => p.cat === 'Personnel') && T.personnel > 0) {
         d.paiements.unshift({ id: uid(), libelle: 'Paie du personnel', cat: 'Personnel', montant: Math.round(T.personnel / 100 * moisCA / 100) * 100, freq: 'Chaque mois', sem: 1, debut: '', fin: '',
-          note: `Taux personnel du budget : ${String(T.personnel).replace('.', ',')} % du CA (${eur(moisCA)} par mois en moyenne). Remplace-le par ta paie réelle.` });
+          note: `Cible personnel du réseau : ${String(T.personnel).replace('.', ',')} % du CA (${eur(moisCA)} par mois en moyenne). Remplace-le par ta paie réelle.` });
       }
     }
     d.paiements.unshift({ id: uid(), libelle: 'Rémunération du gérant', cat: 'Gérant', montant: 0, freq: 'Chaque mois', sem: 1, debut: '', fin: '',
@@ -439,7 +439,7 @@
       { l: 'Semaines sous le coussin', v: C.sous + ' / ' + N, s: 'Coussin : ' + eur(C.coussin), c: C.sous ? 'bas' : '' },
       { l: `Ventes prévues ${C.anT}`, v: eur(vA), s: (C.budA ? 'budget ' + pctS(C.vBud / C.budA - 1) + (C.budK < C.nbA ? ` (${C.budK} sem.)` : '') : 'pas de budget') + ' · ' + (C.n1A ? 'N-1 ' + pctS(C.vN1 / C.n1A - 1) + (C.n1K < C.nbA ? ` (${C.n1K} sem.)` : '') : 'pas de N-1'), c: '', t: 'Les ventes du plan sur l’année, face au budget validé et à l’année passée, sur les semaines qui ont l’un ou l’autre.' },
       { l: `Marchandises en % des ventes (${C.anT})`, v: pct(C.matPct), s: 'Plafond : ' + pct(plaf), c: audela(C.matPct, plaf) ? 'neg-t' : '' },
-      { l: `Personnel + gérant en % des ventes (${C.anT})`, v: pct(C.persPct), s: tauxP ? 'Budget : ' + pct(tauxP) : 'Paie + rémunération du gérant', c: tauxP && audela(C.persPct, tauxP) ? 'bas-t' : '' }
+      { l: `Personnel + gérant en % des ventes (${C.anT})`, v: pct(C.persPct), s: tauxP ? 'Cible : ' + pct(tauxP) : 'Paie + rémunération du gérant', c: tauxP && audela(C.persPct, tauxP) ? 'bas-t' : '' }
     ];
     h += `<div class="tr-kpis">${kpis.map(k => `<div class="tr-kpi"${k.t ? ` title="${esc(k.t)}"` : ''}><span>${esc(k.l)}</span><b class="${k.c}">${esc(k.v)}</b><small>${esc(k.s)}</small></div>`).join('')}</div>`;
     if (!liste(R.sources).length) { h += `<div class="db-alerte">Aucune vente lue pour ce magasin, ni au panel ni dans la copie de caisse : ni réalisé, ni année passée.${R.budgets && R.budgets.some(b => b.moisBudget + b.moisTheorique) ? ' Les ventes prévues partent du budget.' : ' Pas de budget non plus : tape tes ventes prévues dans le plan.'}</div>`; }
@@ -558,7 +558,7 @@
     h += `</div></div><div class="tr-pied"><button type="button" class="tr-btn" data-tra="addF"${d.fournisseurs.length >= 15 ? ' disabled' : ''}>+ Ajouter un fournisseur</button>
       <label title="Le maximum d’achats que tu t’autorises par rapport à tes ventes. Dépassé plusieurs semaines de suite : tu commandes trop ou tu jettes trop."><span>Plafond à ne pas dépasser (% des ventes)</span>${champ('plafond', d.plafond, { cls: 'tr-in-p tr-in-pct', edit: v => String(+((+v || 0) * 100).toFixed(1)).replace('.', ','), aff: v => pct(+v || 0) })}</label></div></div>`;
     const T = E.R.taux || {};
-    h += `<p class="tr-mu tr-p">Plafond et estimation proposés : le taux matière ${T.matiereDuBudget ? 'du budget (Budget › Paramètres)' : 'du réseau'}, ${String(T.matiere || 40).replace('.', ',')} % du CA. Les factures réellement payées ne sont pas encore lues : tape-les dans les cases.</p>`;
+    h += `<p class="tr-mu tr-p">Plafond et estimation proposés : la cible food cost du réseau, ${String(T.matiere || 40).replace('.', ',')} % du CA. Les factures réellement payées ne sont pas encore lues : tape-les dans les cases.</p>`;
     return h;
   }
 
@@ -665,8 +665,8 @@
     sec('Le réel du P&amp;L (panel), mois clos · face aux taux du budget');
     const pnl = (k, i) => clos(i) && reel[ymI(i)] && reel[ymI(i)][k] != null ? +reel[ymI(i)][k] : null;
     const ligneP = (lab, k, seuil, haut) => { const v = M.map((m, i) => pnl(k, i)); L(lab, v.map(x => x == null ? '–' : p1(x)), '', i => v[i] == null || seuil == null ? '' : (haut ? (v[i] > seuil + 0.05 ? 'k' : 'g') : (v[i] < seuil ? 'k' : ''))); };
-    ligneP(`Matière <small class="tr-mu">budget ${p1(T.matiere)}</small>`, 'matiere', T.matiere, true);
-    ligneP(`Personnel <small class="tr-mu">repère ${p1(T.personnel)}</small>`, 'personnel', T.personnel, true);
+    ligneP(`Matière <small class="tr-mu">cible ${p1(T.matiere)}</small>`, 'matiere', T.matiere, true);
+    ligneP(`Personnel <small class="tr-mu">cible ${p1(T.personnel)}</small>`, 'personnel', T.personnel, true);
     ligneP(`Frais généraux <small class="tr-mu">repère ${p1(T.fraisGeneraux)}</small>`, 'fraisGeneraux', T.fraisGeneraux, true);
     ligneP('Marge nette', 'marge', 0, false);
     // Ni budget, ni étude, ni vente, ni année passée : une phrase plutôt qu'un mur de tirets.

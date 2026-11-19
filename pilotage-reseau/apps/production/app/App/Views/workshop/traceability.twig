@@ -14,6 +14,7 @@
 
 {% block content %}
 <section class="section at-trace">
+    {% include 'workshop/_trace_tabs.twig' with {trace_tab: 'product'} %}
     <form class="card" method="get" action="{{ root }}/workshop/traceability">
         <div class="card-body row g-2 align-items-end">
             <div class="col-6 col-md-2"><label class="form-label small">Od</label><input type="date" class="form-control" name="from" value="{{ from }}"></div>
@@ -29,6 +30,9 @@
     </form>
 
     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+    {# [350] Śledzenie partii (wcześniej Logistyka › Stany i palety) : produkt + dzień produkcji → palety, klienci, magazyn. #}
+    {% include 'workshop/_lot_trace.twig' %}
 
     {% if q and totals.material_hits %}
         <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>

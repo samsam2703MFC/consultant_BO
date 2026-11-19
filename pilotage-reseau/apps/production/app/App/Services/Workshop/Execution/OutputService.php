@@ -13,6 +13,7 @@ use App\Repositories\Workshop\GroupRepository;
 use App\Repositories\Workshop\OutputRepository;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Workshop\Referentiel\AuditTrail;
+use App\Services\Workshop\Production\MaterialLotService;
 
 /**
  * Tablet grupy : produkcja dnia i identyfikowalność.
@@ -39,6 +40,7 @@ final class OutputService
         private CompositionCut $cut,
         private GroupOrderRepository $orders,
         private GroupOrderService $groupOrders,
+        private MaterialLotService $materialLots,
     ) {
     }
 
@@ -404,36 +406,53 @@ final class OutputService
     /** Partia z recepturą : surowce i opakowania, potrzebna ilość, wpisane partie, podpowiedź « jak ostatnio ». */
     public function batch(int $id, ApiContext $context): array
     {
-        $o = $this->output($id, $context);
+        return $this->batchData($this->output($id, $context), $context->translator->lang() === 'fr');
+    }
+
+    /** [352] Szczegół partii bez tabletu (Kontrola wejść produkcji w ERP). */
+    public function batchFor(int $id, string $lang = 'pl'): ?array
+    {
+        $o = $this->repo->output($id);
+        return $o === null ? null : $this->batchData($o, $lang === 'fr');
+    }
+
+    private function batchData(array $o, bool $fr): array
+    {
+        $id = (int) $o['id'];
         $item = $this->repo->item((int) $o['id_item']);
         $lots = $this->repo->lots($id);
         // Kompozycje robione przez inną grupę : jedna linia z partią tej grupy, bez ich surowców (makieta 1).
         $cut = $item && $item['id_recipe'] ? $this->cut->of((int) $item['id_recipe'], (int) $o['id_group']) : ['cuts' => [], 'minus' => []];
         $recipe = $item && $item['id_recipe'] ? CompositionCut::apply($this->repo->recipe((int) $item['id_recipe']), $cut['minus']) : [];
         $last = $this->repo->lastLots((int) $o['id_group'], array_map(fn($r) => (int) $r['material_id'], $recipe), $id);
-        $received = $this->repo->receivedLots(array_map(fn($r) => (int) $r['material_id'], $recipe));
+        // [352] Lista partii : rejestr « Partie surowców » (faktury KSeF i przyjęcia, aktywne, FEFO).
+        $received = $this->materialLots->forTablet(array_map(fn($r) => (int) $r['material_id'], $recipe));
         $factor = $this->factor($item, (float) $o['quantity']);
-        $fr = $context->translator->lang() === 'fr';
         $ingredients = array_map(function ($r) use ($lots, $last, $received, $factor, $fr) {
             $m = (int) $r['material_id'];
             $l = $lots[$m] ?? null;
             return [
+                'tracked' => (int) ($r['tracked'] ?? 1) === 1,
+                'material_lot_id' => $l !== null && $l['id_material_lot'] !== null ? (int) $l['id_material_lot'] : null,
+                'missing_reason' => $l['missing_reason'] ?? null,
                 'material_id' => $m, 'name' => $fr && $r['name_fr'] ? $r['name_fr'] : $r['name'], 'unit' => $r['unit'],
                 'packaging' => (bool) $r['packaging'], 'per_unit' => (float) $r['quantity'],
                 'quantity' => $factor === null ? null : round((float) $r['quantity'] * $factor, 3),
                 'lot_number' => $l['lot_number'] ?? null, 'best_before' => $l['best_before'] ?? null,
                 'photo' => $l !== null && $l['id_photo'] !== null,
                 'last' => isset($last[$m]) ? ['lot_number' => $last[$m]['lot_number'], 'best_before' => $last[$m]['best_before']] : null,
-                // Partie z dostaw (FEFO) : przyjęte z partią i datą ważności, najkrótsza data najpierw.
+                // Partie aktywne z rejestru (FEFO) : numer, DLC, dostawca, faktura — lista wyboru na tablecie.
                 'received' => $received[$m] ?? [],
             ];
         }, $recipe);
         $components = $this->components($o, $cut['cuts'], $factor, $fr);
         $row = $this->batchRow($o);
-        $row['lots_done'] = count(array_filter($ingredients, fn($i) => $i['lot_number'] !== null && $i['lot_number'] !== ''))
+        // [352] Uzupełnione = surowiec śledzony z numerem partii albo z powodem braku (ze zdjęciem).
+        $tracked = array_filter($ingredients, fn($i) => $i['tracked']);
+        $row['lots_done'] = count(array_filter($tracked, fn($i) => ($i['lot_number'] !== null && $i['lot_number'] !== '') || ($i['missing_reason'] ?? null) !== null))
             + count(array_filter($components, fn($c) => $c['source'] !== null));
         return $row + [
-            'lots_total' => count($ingredients) + count($components),
+            'lots_total' => count($tracked) + count($components),
             'components' => $components,
             'item' => $item ? $this->itemRow($item) : null,
             'basis' => $factor === null ? 'recipe' : 'batch',
@@ -474,7 +493,8 @@ final class OutputService
     private function lotsTotal(int $recipeId, int $groupId): int
     {
         $cut = $this->cut->of($recipeId, $groupId);
-        return count(CompositionCut::apply($this->repo->recipe($recipeId), $cut['minus'])) + count($cut['cuts']);
+        // [352] Surowiec nieśledzony (Partie surowców) : poza licznikiem.
+        return count(array_filter(CompositionCut::apply($this->repo->recipe($recipeId), $cut['minus']), fn($r) => (int) ($r['tracked'] ?? 1) === 1)) + count($cut['cuts']);
     }
 
     /** Kompozycje innych grup w partii : potrzebna ilość, wybrana partia, partie grupy robiącej z ostatnich dni. */
@@ -536,12 +556,18 @@ final class OutputService
         return $this->batch($id, $context);
     }
 
-    /** Partia surowca / opakowania w partii wyrobu : numer, data przydatności, zdjęcie etykiety, tekst OCR. */
+    /**
+     * Partia surowca / opakowania w partii wyrobu : numer, data przydatności, zdjęcie etykiety, tekst OCR.
+     * [352] material_lot_id : partia wybrana z listy (rejestr « Partie surowców » — numer i DLC z rejestru) ; numer wpisany
+     * ręcznie, którego nie ma w rejestrze, trafia do rejestru (do sprawdzenia) ; missing_reason : brak partii z powodem —
+     * zdjęcie obowiązkowe (nowe albo już zapisane).
+     */
     public function setLot(int $id, int $materialId, array $body, ApiContext $context): array
     {
         $o = $this->output($id, $context);
-        $v = (new Validator($body))->only(['lot_number', 'best_before', 'photo', 'ocr_text'])
-            ->string('lot_number', 64, false, true)->date('best_before', false)->string('ocr_text', 4000, false, true);
+        $v = (new Validator($body))->only(['lot_number', 'best_before', 'photo', 'ocr_text', 'material_lot_id', 'missing_reason'])
+            ->string('lot_number', 64, false, true)->date('best_before', false)->string('ocr_text', 4000, false, true)
+            ->integer('material_lot_id', false, 1, null, true)->string('missing_reason', 255, false, true);
         $v->throwIfInvalid();
         $c = $v->clean();
         $this->assertEditable($o);
@@ -550,13 +576,29 @@ final class OutputService
         foreach ($item && $item['id_recipe'] ? $this->repo->recipe((int) $item['id_recipe']) : [] as $r) if ((int) $r['material_id'] === $materialId) $line = $r;
         if ($line === null) throw ApiException::validation([['field' => 'material_id', 'code' => 'MATERIAL_NOT_IN_RECIPE']]);
         $photo = isset($body['photo']) && $body['photo'] !== null && $body['photo'] !== '' ? $this->decodePhoto($body['photo']) : null;
-        $lot = isset($c['lot_number']) ? (preg_replace('/\s+/u', ' ', mb_strtoupper(trim((string) $c['lot_number']))) ?: null) : null;
+        $lot = isset($c['lot_number']) ? MaterialLotService::normalize((string) $c['lot_number']) : null;
+        $bestBefore = $c['best_before'] ?? null;
+        $picked = null;
+        if (!empty($c['material_lot_id'])) {
+            $picked = $this->materialLots->pick((int) $c['material_lot_id'], $materialId)
+                ?? throw ApiException::validation([['field' => 'material_lot_id', 'code' => 'MATERIAL_LOT_UNAVAILABLE']]);
+            $lot = (string) $picked['lot_number'];
+            $bestBefore = $picked['best_before'];
+        }
+        $reason = isset($c['missing_reason']) && trim((string) $c['missing_reason']) !== '' ? trim((string) $c['missing_reason']) : null;
+        if ($lot !== null) $reason = null;
+        if ($reason !== null && $photo === null && (($this->repo->lots($id)[$materialId]['id_photo'] ?? null) === null)) {
+            throw ApiException::validation([['field' => 'photo', 'code' => 'MISSING_LOT_PHOTO_REQUIRED']]);
+        }
+        if ($lot === null && $reason === null && $photo === null) throw ApiException::validation([['field' => 'lot_number', 'code' => 'REQUIRED']]);
         $factor = $this->factor($item, (float) $o['quantity']);
-        $this->tx->execute(function () use ($id, $materialId, $line, $factor, $lot, $c, $photo, $context) {
+        $this->tx->execute(function () use ($id, $o, $materialId, $line, $factor, $lot, $bestBefore, $picked, $reason, $c, $photo, $context) {
             $photoId = $photo ? $this->repo->insertPhoto($photo[0], $photo[1], $context->deviceId, $context->employeeId) : null;
+            $lotId = $picked !== null ? (int) $picked['id'] : ($lot !== null ? $this->materialLots->rememberManual($materialId, $lot, $bestBefore, (string) $o['work_date']) : null);
             $this->repo->saveLot($id, $materialId, $factor === null ? null : round((float) $line['quantity'] * $factor, 3), $lot,
-                $c['best_before'] ?? null, $photoId, isset($c['ocr_text']) ? trim((string) $c['ocr_text']) : null, $context->employeeId);
-            $this->audit->record($context, 'lot', 'output', $id, null, ['material_id' => $materialId, 'lot_number' => $lot, 'best_before' => $c['best_before'] ?? null, 'photo' => $photoId]);
+                $bestBefore, $photoId, isset($c['ocr_text']) ? trim((string) $c['ocr_text']) : null, $context->employeeId, $lotId ?: null, $reason);
+            $this->audit->record($context, 'lot', 'output', $id, null, ['material_id' => $materialId, 'lot_number' => $lot, 'best_before' => $bestBefore,
+                'material_lot_id' => $lotId ?: null, 'missing_reason' => $reason, 'photo' => $photoId]);
         });
         return $this->batch($id, $context);
     }

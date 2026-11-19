@@ -67,6 +67,8 @@ final class OpenApiSupply
                 'description' => "Toutes les factures ouvertes (matières et emballages) avec leurs lignes dans un seul tableau [217]. État de ligne : auto (reliée, sans remarque), checked (vérifiée : qui, quand), "
                     . "disputed (litigieuse), todo avec reason = new (nom inconnu, suggestions), price (hausse sans décision, saut de prix, au-dessus de la commande), qty (quantité / hors commande), other (prix plus bas). "
                     . "wizard_ready : toutes les lignes auto ou vérifiées, aucune litigieuse, fournisseur ERP connu ; plan : prix vers les fiches matières, réception (order | invoice)."],
+            'GET /supply/invoices/assistant-status' => ['tag' => $t, 'id' => 'getInvoicePriceAssistantStatus', 'summary' => 'Stan asystenta « Ceny z faktur zakupu » / État de l\'assistant des prix d\'achat', 'response' => 'InvoiceAssistantStatus',
+                'description' => '[349] Bouton rouge / vert : lignes à vérifier (todo), factures prêtes à valider (ready, prix pas encore dans les fiches), litigieuses, plus ancienne date en attente, dernière validation (last_done). done = rien à vérifier ni à valider.'],
             'POST /supply/invoices/wizard/check-safe' => ['tag' => $t, 'id' => 'checkSafePurchaseInvoiceLines', 'summary' => 'Zatwierdź wszystkie bez ryzyka / Valider les lignes sans risque', 'response' => 'InvoiceWizard',
                 'description' => 'Vérifie d\'un coup les lignes « safe » : reliées, sans hausse de prix ni écart de quantité (seulement un prix plus bas). Réponse : assistant + checked (nombre).'],
             'POST /supply/invoices/wizard/process' => ['tag' => $t, 'id' => 'processCheckedPurchaseInvoices', 'summary' => 'Zatwierdź sprawdzone faktury / Valider les factures vérifiées', 'body' => 'InvoiceWizardProcessInput', 'response' => 'InvoiceWizard', 'errors' => [400],
@@ -117,6 +119,8 @@ final class OpenApiSupply
                 'description' => "Formulaire d'affectation d'une facture (« 1 OP = … »). kg et g = même unité de base (g), l et ml aussi (ml) : changed = false. Masse / volume / pièces : "
                     . "fiche matière mise à jour tout de suite ; conditionnement et prix convertis avec le poids d'une pièce (packaging_unit_weight_g) quand il est connu (converted, ratio), "
                     . "sinon nombres gardés (converted = false : prix à vérifier). Convertisseurs mémorisés et lignes de factures ouvertes convertis ; recettes : quantités gardées (recipes = nombre)."],
+            'GET /supply/materials/{id:\d+}/price-impact' => ['tag' => $t, 'id' => 'getMaterialPriceImpact', 'summary' => 'Efekt nowej ceny surowca / Effet d\'un nouveau prix matière', 'response' => 'MaterialPriceImpact', 'errors' => [422],
+                'description' => '[349] Query : price (zł / unité de base, obligatoire), old (prix de base, sinon fiche), invoice (facture exclue de « dernière facture »), supplier (exclu des « autres fournisseurs »). Produits avec la matière dans la recette (coût / pièce, marge sur matières avant / après, effet / mois sur 3 mois de commandes), dernière facture, meilleur autre fournisseur 90 jours.'],
             'GET /supply/materials/{id:\d+}/prices' => ['tag' => $t, 'id' => 'getMaterialPriceHistory', 'summary' => 'Historia cen surowca według dostawcy / Historique des prix d\'une matière par fournisseur', 'response' => 'MaterialPriceHistory', 'errors' => [404, 422],
                 'query' => ['months' => ['type' => 'integer', 'enum' => PriceHistoryService::MONTHS, 'description' => 'défaut : 24']],
                 'description' => "Points (date, fournisseur, prix, quantité, facture / commande / source) pour le graphique, résumé par fournisseur (dernier, min., max., moyenne pondérée par la quantité, variation), fournisseur le moins cher sur 12 mois."],
@@ -331,6 +335,12 @@ final class OpenApiSupply
                 'prices' => ['type' => 'boolean', 'description' => 'prix vers les fiches matières (défaut true)'], 'stock' => ['type' => 'boolean', 'description' => 'quantités en stock (défaut true)'],
                 'accept' => ['type' => 'boolean', 'description' => 'accepter la facture (défaut true)'], 'force' => ['type' => 'boolean', 'description' => 'valider malgré les avertissements (facture seule)'],
             ]],
+            'InvoiceAssistantStatus' => ['type' => 'object', 'additionalProperties' => true, 'properties' => [
+                'invoices' => ['type' => 'integer'], 'todo' => ['type' => 'integer'], 'ready' => ['type' => 'integer'], 'disputed' => ['type' => 'integer'],
+                'oldest' => ['type' => 'string', 'nullable' => true], 'done' => ['type' => 'boolean'], 'last_done' => ['type' => 'string', 'nullable' => true]]],
+            'MaterialPriceImpact' => ['type' => 'object', 'additionalProperties' => true, 'properties' => [
+                'new_price' => ['type' => 'number'], 'old_price' => ['type' => 'number', 'nullable' => true], 'change_pct' => ['type' => 'number', 'nullable' => true],
+                'products' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'effect_month' => ['type' => 'number'], 'use_month' => ['type' => 'number']]],
             'InvoiceWizard' => ['type' => 'object', 'additionalProperties' => true, 'properties' => [
                 'invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true, 'description' => 'facture (résumé) + lines[] (state, reason, safe, check, up, suggestions), counts, warnings, wizard_ready, supplier_choices, plan']],
                 'totals' => ['type' => 'object', 'additionalProperties' => true, 'description' => 'invoices, net, lines, auto, checked, todo, disputed, safe, ready, ready_net, reasons {new, price, qty, other}'],

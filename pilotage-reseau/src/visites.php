@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/visites_evaluation.php';
 // L'équipe en poste, lue au planning et notée pendant la visite.
 require_once __DIR__ . '/visites_equipe.php';
+// L'audit des outils de gestion : la liste, le contrôle de ce qu'envoie la tablette, ce que le cockpit en lit tout seul.
+require_once __DIR__ . '/visites_outils.php';
 
 /**
  * Visites terrain — l'application du consultant (PWA `visites/`).
@@ -234,6 +236,10 @@ function ensureVisites(): void
     $sansPers = true;
     try { $sansPers = Db::row("SHOW COLUMNS FROM con_visite LIKE 'personnel'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($sansPers) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN personnel TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
+    // L'audit des outils de gestion (17/11/2026) : le verdict de chaque outil, sa remarque, le rappel lu, en JSON (viOutils).
+    $sansOutils = true;
+    try { $sansOutils = Db::row("SHOW COLUMNS FROM con_visite LIKE 'outils'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansOutils) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN outils TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -493,7 +499,9 @@ function viVisiteLigne(array $v): array
         // L'évaluation rapide de fin de visite : six notes de 1 à 5, leur commentaire (viEvaluation).
         'evaluation' => !empty($v['evaluation']) ? (json_decode((string) $v['evaluation'], true) ?: null) : null,
         // L'équipe en poste, notée pendant la visite (viPersonnel) : interne au bureau.
-        'personnel' => !empty($v['personnel']) ? (json_decode((string) $v['personnel'], true) ?: null) : null];
+        'personnel' => !empty($v['personnel']) ? (json_decode((string) $v['personnel'], true) ?: null) : null,
+        // L'audit des outils de gestion (viOutils) : il part dans le rapport, avec le rappel.
+        'outils' => !empty($v['outils']) ? (json_decode((string) $v['outils'], true) ?: null) : null];
 }
 
 /**
@@ -881,7 +889,7 @@ function viPourFranchise(array $e, array $visites, array $points, array $photos,
         if (in_array($v['statut'], ['planifiee', 'confirmee', 'en_cours'], true) && $v['prevu_le'] >= $auj && empty($v['annoncee'])) { $caches[] = $v['id']; return null; }
         $v['prep'] = null; $v['notes'] = null; $v['meteo'] = null; $v['personnel'] = null;
         if (($v['rapportStatut'] ?? null) === 'brouillon') {
-            foreach (['positif', 'diagnostic', 'reco', 'execution', 'clients', 'sentiment', 'evaluation'] as $k) { $v[$k] = null; }
+            foreach (['positif', 'diagnostic', 'reco', 'execution', 'clients', 'sentiment', 'evaluation', 'outils'] as $k) { $v[$k] = null; }
             $v['causes'] = [];
         }
         return $v;
@@ -1022,6 +1030,7 @@ function wr_visites_put(string $id): array
     if (array_key_exists('budgetCa', $b)) { $bc = viBudgetCa($b['budgetCa'], viQui($b)); $set[] = 'budget_ca = ?'; $args[] = $bc !== null ? json_encode($bc, JSON_UNESCAPED_UNICODE) : null; }
     if (array_key_exists('personnel', $b)) { $pe = viPersonnel($b['personnel'], viQui($b)); $set[] = 'personnel = ?'; $args[] = $pe !== null ? json_encode($pe, JSON_UNESCAPED_UNICODE) : null; }
     if (array_key_exists('evaluation', $b)) { $ev = viEvaluation($b['evaluation'], viQui($b)); $set[] = 'evaluation = ?'; $args[] = $ev !== null ? json_encode($ev, JSON_UNESCAPED_UNICODE) : null; }
+    if (array_key_exists('outils', $b)) { $og = viOutils($b['outils'], viQui($b)); $set[] = 'outils = ?'; $args[] = $og !== null ? json_encode($og, JSON_UNESCAPED_UNICODE) : null; }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
     Db::exec('UPDATE con_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);

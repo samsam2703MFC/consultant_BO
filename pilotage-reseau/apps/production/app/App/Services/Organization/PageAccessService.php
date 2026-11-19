@@ -39,6 +39,12 @@ final class PageAccessService
         'ZAKUPY' => ['Zakupy', 'bi-cart3'],
     ];
 
+    /** [300] Nom de la session d'un poste (liste sous l'avatar, connexion par QR). */
+    public static function areaName(string $code, string $name): string
+    {
+        return self::SESSION_AREAS[$code][0] ?? $name;
+    }
+
     public function __construct(private PageAccessRepository $repo)
     {
     }
@@ -47,6 +53,16 @@ final class PageAccessService
     {
         if (!$userId) return false;
         return $this->profile($userId)['admin'];
+    }
+
+    /**
+     * [339] Activer / désactiver les produits et les catégories de l'ERP : administrateur et production
+     * (Kierownik produkcji, rôle prod_admin / prod_manager du module).
+     */
+    public function canToggleProducts(?int $userId): bool
+    {
+        if (!$userId) return false;
+        return $this->isAdmin($userId) || $this->repo->isProductionManager($userId);
     }
 
     /**
@@ -81,6 +97,39 @@ final class PageAccessService
         if (!$userId) return false;
         $p = $this->profile($userId);
         return $p['ceo'] || ($p['admin'] && ViewSession::ceo());
+    }
+
+    /** [312] Stanowisko Finanse (« Administracja i fakturowanie ») : wartości zamówień i płatności. */
+    public const FINANCE_POSITION = 'ADMINISTRACJA';
+
+    /**
+     * [312] Wartości zamówień klientów : tylko profil Finanse i profil CEO — konto CEO, administrator z profilem CEO albo
+     * w sesji Finanse, osoba ze stanowiskiem Finanse. Administrator w pełnym widoku ich nie widzi (wybiera profil).
+     */
+    public function seesOrderValues(?int $userId): bool
+    {
+        if (!$userId) return false;
+        if ($this->ceoView($userId)) return true;
+        $p = $this->profile($userId);
+        $positionId = $p['admin'] ? $this->viewPosition($userId) : $this->repo->userPosition($userId);
+        if ($positionId === null) return false;
+        $codes = array_column($this->repo->positions(), 'code', 'id');
+        return ($codes[$positionId] ?? null) === self::FINANCE_POSITION;
+    }
+
+    /**
+     * [314] Profil do licznika stron : « ceo » (konto CEO albo administrator w profilu CEO), kod stanowiska sesji
+     * administratora, « admin » (pełny widok), kod stanowiska osoby albo « none ».
+     */
+    public function trackingProfile(?int $userId): string
+    {
+        if (!$userId) return 'none';
+        if ($this->ceoView($userId)) return 'ceo';
+        $p = $this->profile($userId);
+        $positionId = $p['admin'] ? $this->viewPosition($userId) : $this->repo->userPosition($userId);
+        if ($positionId === null) return 'admin';
+        $codes = array_column($this->repo->positions(), 'code', 'id');
+        return (string) ($codes[$positionId] ?? 'none');
     }
 
     /** [281] Konta CEO (powiadomienia o prośbach o odblokowanie). @return list<int> */

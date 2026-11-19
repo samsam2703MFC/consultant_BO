@@ -44,7 +44,7 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['final_product', 'final_product_customer_price', 'n_product_price_change', 'cost_month', 'document_wdt', 'document_wdt_product',
-                 'n_wdt_superseded', 'carton_stock', 'raw_material', 'unit', 'supplier', 'n_material_nutrition_source', 'production_sections',
+                 'n_wdt_superseded', 'carton_stock', 'raw_material', 'n_raw_material_loss', 'unit', 'supplier', 'n_material_nutrition_source', 'production_sections',
                  'category_product', 'erp_company_other_settings'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }

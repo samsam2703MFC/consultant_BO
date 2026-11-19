@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Mails et automatisations › Dossier comptable du mois</title>
+<!-- v3 (16/11/2026, « le dossier compta, ce sont les revenus mensuels et le fichier PDF, disponible parce que les factures
+     ont été faites ») : le dossier part quand les factures du mois sont faites ; il porte les revenus du mois et les
+     factures du mois en PDF. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="mails.css">
+<script src="coque.js"></script>
+</head><body><script>
+const sw = (on, txt) => `<span class="px-sw${on ? ' on' : ''}"><i></i>${txt}</span>`;
+const v = t => `<span class="px-var">{{${t}}}</span>`;
+const casee = (on, t) => `<span>${on ? '<span class="px-ok">✓</span>' : '<span class="px-no"></span>'}${t}</span>`;
+const gauche = `
+  <div class="db-card"><div class="ct"><span class="db-lab">Quand</span></div><div class="px-f">
+    <div class="row"><span class="px-in">Chaque mois ▾</span><span class="px-in">dès que les factures du mois sont faites ▾</span><span class="px-in">au plus tard le 5 · 07:00</span></div>
+    <div class="row" style="margin:0">${sw(true, 'Au plus tard le 5 : partir même s’il reste des factures à faire, et le dire dans l’e-mail')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">À qui</span></div><div class="px-f">
+    <div class="row"><span class="px-chip">Comptable <b>· compta@fiduciaire-exemple.be</b> ✕</span><span class="px-chip ajout">+ une adresse</span></div>
+    <div class="row" style="margin:0">${sw(true, 'Une copie à moi')}<span style="width:16px"></span>${sw(false, 'Copie au consultant du réseau')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">L’e-mail</span><span class="db-mini">modèle « Au comptable »</span></div><div class="px-f">
+    <span class="lab">Objet</span>
+    <div class="row"><span class="px-in w">${v('société')}&nbsp;· Dossier comptable ${v('mois')}</span></div>
+    <span class="lab">Message</span>
+    <div class="row"><div class="px-ta">Bonjour,<br>vous trouverez ci-joint le dossier comptable de ${v('mois')} de ${v('magasin')} : les revenus du mois (${v('total_ht')} hors TVA) et les ${v('nb_factures')} factures du mois en PDF.<br>Bonne journée,<br>${v('signature')}</div></div>
+    <div class="row" style="margin:0"><span class="lab" style="margin:0 8px 0 0">Variables</span>${['société', 'magasin', 'mois', 'total_ttc', 'total_ht', 'tva', 'nb_factures', 'signature'].map(v).join(' ')}</div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les fichiers joints</span></div><div class="px-f">
+    <div class="row">${sw(true, 'Les revenus du mois')}<span class="px-in" style="flex:1">Revenus_${v('magasin')}_${v('mois')}.pdf</span></div>
+    <div class="px-cases" style="margin:0 0 12px 40px">${casee(true, 'le total TTC, hors TVA et la TVA')}${casee(true, 'la TVA par taux (6, 12, 21 %)')}${casee(true, 'jour par jour')}${casee(true, 'comptoir et clients pro séparés')}</div>
+    <div class="row">${sw(true, 'Les factures du mois')}<span class="px-in" style="flex:1">Factures_${v('magasin')}_${v('mois')}.pdf</span></div>
+    <div class="row" style="margin:0 0 4px 40px"><span class="seg"><button class="is-on">un seul PDF qui les rassemble</button><button>un PDF par facture</button></span></div>
+  </div></div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Les factures de novembre</span><span class="db-mini">le dossier part quand elles sont toutes faites</span></div>
+    <table class="px-t px-j"><thead><tr><th>Client pro</th><th>Achats du mois</th><th>Facture</th></tr></thead><tbody>
+      <tr><td>Café du Parc</td><td>14 tickets · 1 180 €</td><td><span class="ok">✓ F-2026-0112 · PDF</span></td></tr>
+      <tr><td>Résidence Les Tilleuls</td><td>8 tickets · 960 €</td><td><span class="ok">✓ F-2026-0113 · PDF</span></td></tr>
+      <tr><td>Bureau Notaire Exemple</td><td>4 tickets · 310 €</td><td><span class="ok">✓ F-2026-0114 · PDF</span></td></tr>
+      <tr><td>Crèche Les Petits Pas</td><td>6 tickets · 540 €</td><td><span class="ko">à faire dans le panel</span></td></tr>
+    </tbody></table></div>`;
+const droite = `
+  <div class="db-card"><div class="ct"><span class="db-lab">Aperçu</span><span class="db-mini">l’e-mail du 01/12 · données d’octobre pour l’exemple</span></div>
+    <div class="px-mail">
+      <div class="tete">De <b>Atelier by Halle</b> · À <b>compta@fiduciaire-exemple.be</b> · Cc <b>moi</b><br>Objet <b>SRL Exemple · Dossier comptable octobre 2026</b></div>
+      <div class="corps">
+        <div class="logo">L’ATELIER</div>
+        <div class="k">Dossier comptable · octobre 2026</div>
+        <h3>48 210 € hors TVA</h3>
+        Bonjour,<br>vous trouverez ci-joint le dossier comptable d’octobre 2026 d’Atelier by Halle : les revenus du mois (48 210 € hors TVA) et les 12 factures du mois en PDF.
+        <table class="px-cmd"><tr><td>Revenus TTC</td><td class="n">51 103 €</td></tr><tr><td>TVA 6 %</td><td class="n">2 731 €</td></tr><tr><td>TVA 21 %</td><td class="n">162 €</td></tr><tr><td>dont clients pro, facturés · 12 factures</td><td class="n">3 480 €</td></tr></table>
+        <div class="px-pjs"><div class="px-pj" style="margin:0"><span class="px-pdf"></span><span>Revenus_Halle_2026-10.pdf<br><span style="color:var(--muted);font-size:11px">2 pages · A4 · 0,2 Mo</span></span></div>
+          <div class="px-pj" style="margin:0"><span class="px-pdf"></span><span>Factures_Halle_2026-10.pdf<br><span style="color:var(--muted);font-size:11px">12 factures · 14 pages · 1,1 Mo</span></span></div></div>
+      </div>
+    </div>
+    <div class="px-btns"><span class="px-btn">Voir les PDF</span><span class="px-btn">Envoyer un essai à moi</span><span class="px-btn">Envoyer maintenant (octobre)</span><span class="px-btn p">Enregistrer</span></div>
+  </div>
+  <div class="db-card"><div class="ct"><span class="db-lab">Journal des envois</span></div>
+    <table class="px-t px-j"><thead><tr><th>Quand</th><th>Mois</th><th>Résultat</th></tr></thead><tbody>
+      <tr><td>lun. 02/11 · 07:00</td><td>octobre 2026</td><td><span class="ok">✓ envoyé</span> · revenus + 12 factures</td></tr>
+      <tr><td>lun. 05/10 · 07:00</td><td>septembre 2026</td><td><span class="vide">le 5 : 1 facture encore à faire</span> · <span class="ok">✓ envoyé</span>, l’e-mail le dit</td></tr>
+      <tr><td>mer. 02/09 · 07:00</td><td>août 2026</td><td><span class="ok">✓ envoyé</span> · revenus + 9 factures</td></tr>
+    </tbody></table></div>`;
+const corps = `
+  <div class="px-tabs"><button class="on">Automatisations<span class="n">8</span></button><button>Modèles d’e-mail<span class="n">8</span></button><button>Destinataires<span class="n">3</span></button><button>Journal des envois</button><button>Reçus du réseau<span class="n">7</span></button></div>
+  <p class="px-intro" style="margin-bottom:14px"><span style="color:var(--accent)">‹ Les automatisations</span> · <span class="px-qui"><i style="background:#6B4FBB"></i>Comptable</span> · <b style="font-weight:400;color:var(--ink)">Dossier comptable du mois</b> — les revenus du mois et les factures en PDF, au comptable, dès que les factures sont faites. ${sw(true, 'actif')}</p>
+  <div class="px-b"><div>${gauche}</div><div>${droite}</div></div>`;
+coque({ titre: 'Mails et automatisations', kicker: 'Atelier by - Halle · Paramètres', corps,
+  pied: 'Maquette v3 du 16/11/2026 · société, adresses et chiffres d’exemple. Les revenus viennent de ce que le cockpit calcule déjà (CA hors TVA et TVA ticket par ticket, TVA par taux du catalogue) ; les factures sont celles du panel (/shops/{id}/invoices), en PDF une fois faites.' });
+</script></body></html>

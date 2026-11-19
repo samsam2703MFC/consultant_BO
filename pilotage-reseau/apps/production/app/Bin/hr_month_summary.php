@@ -13,5 +13,7 @@ ini_set('display_errors', '0');
 require_once __DIR__ . '/../App/Core/init.php';
 
 $container = require __DIR__ . '/../App/Core/bootstrap.php';
+// [295] Interrupteur des envois automatiques (Ustawienia › Parametry, system.auto_send) : à 0, ce script ne fait rien.
+if (App\Core\AutoSend::skip('hr_month_summary')) exit(0);
 $r = $container->get(App\Services\Hr\HrService::class)->autoSummary();
 echo json_encode(['hr_month_summary' => $r ?? 'nothing today', 'at' => date('Y-m-d H:i:s')]) . PHP_EOL;

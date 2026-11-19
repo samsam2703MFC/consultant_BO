@@ -267,7 +267,7 @@ function pmProduitsLus(int $shop): ?array
 /**
  * GET /exploitation/promos-magasin/produits?shop=4 — ce que l'assistant chiffre : les produits du magasin, leur prix
  * et leur coût de recette (du magasin, sinon du réseau). Le navigateur calcule le coefficient avec la même liste que
- * le serveur à l'envoi.
+ * le serveur à l'envoi. Vendre › Offres en tire la marge de l'offre, avec les seuils de « Recette & marge » (`seuils`).
  */
 function ep_promos_magasin_produits(): array
 {
@@ -276,8 +276,10 @@ function ep_promos_magasin_produits(): array
     $l = pmProduits($shop);
     if ($l === null) { http_response_code(502); return ['error' => 'les produits du magasin ne se lisent pas au panel']; }
     $n = static fn (string $src) => count(array_filter($l, static fn ($p) => $p['source'] === $src));
+    // Les seuils de « Recette & marge » (src/produits_coef.php) : la marge d'une offre se lit avec les mêmes couleurs.
+    $seuils = defined('PC_ZONES') && function_exists('foodCostCible') ? ['ko' => round(PC_ZONES['ko'], 2), 'att' => PC_ZONES['att'], 'food' => foodCostCible()] : null;
     return ['shop' => (string) $shop, 'produits' => $l, 'nMagasin' => $n('magasin'), 'nReseau' => $n('reseau'),
-        'nSansCout' => count(array_filter($l, static fn ($p) => $p['cout'] === null))];
+        'nSansCout' => count(array_filter($l, static fn ($p) => $p['cout'] === null)), 'seuils' => $seuils];
 }
 
 /* --- les promotions par canal (18/10/2026, maquette C) ------------------------------------------------------------ */
@@ -1248,7 +1250,12 @@ function ep_promos_magasin_demandes(): array
  */
 function wr_promos_magasin(): array
 {
-    $b = body();
+    return pmEnregistrer(body());
+}
+
+/** L'enregistrement lui-même, depuis un corps de requête (17/11/2026 : aussi appelé par les bundles du Coach Vente). */
+function pmEnregistrer(array $b): array
+{
     $shop = (int) ($b['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $action = ($b['action'] ?? 'brouillon') === 'envoyer' ? 'envoyer' : 'brouillon';

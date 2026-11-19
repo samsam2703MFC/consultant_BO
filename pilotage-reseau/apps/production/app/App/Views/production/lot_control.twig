@@ -1,0 +1,129 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Partie i identyfikowalność{% endblock %}
+
+{# [352] Partie i identyfikowalność (makiety 68 i 68 B) : App\Controllers\Web\Production\LotControlController.
+   tab : lots (rejestr partii surowców), check (kontrola wejść produkcji dnia), samples (asystent próbek). Próbka z QR : production/sample_qr.twig (/q/KOD). #}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Partie i identyfikowalność</h3>
+            <p class="text-subtitle text-muted">{% if tab == 'lots' %}Partie surowców z faktur KSeF i przyjęć dostaw — lista wyboru na tabletach grup.
+                {% elseif tab == 'check' %}Partie produkcji dnia : czy każdy surowiec ma partię (z listy, wpisaną albo brak z powodem i zdjęciem).
+                {% else %}Próbki produkcji : wybór partii, arkusz A4 z kodami QR, skan przy odłożeniu — zadanie dnia.{% endif %}</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{{ root }}/tablet/production" target="_blank" rel="noopener"><i class="bi bi-tablet me-1"></i> Ekran tabletu</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.lc-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.lc-bar .form-control{max-width:280px}.lc-sp{flex:1}
+.lc-table{width:100%;border-collapse:collapse;font-size:13px}
+.lc-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 7px;text-align:left;white-space:nowrap}
+.lc-table td{border-bottom:1px solid var(--at-line);padding:7px;vertical-align:middle}
+.lc-table .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lc-mat td{background:var(--at-surface-2,#F8F4EE);font-weight:700}
+.lc-mat.off td,.lc-lot.off td{color:#a39a92}.lc-lot.off .lc-num{text-decoration:line-through}
+.lc-lot td:first-child{padding-left:26px}
+.lc-pill{display:inline-block;font-size:11px;border-radius:6px;padding:1px 7px;font-weight:600;white-space:nowrap}
+.lc-k{background:#eef3ff;color:#2d4a8a}.lc-r{background:#e7f4ea;color:#1f6b33}.lc-w{background:#fff3d6;color:#7a5a00}.lc-x{background:#fde8e8;color:#9b1c1c}.lc-g{background:#efe9e3;color:#5d554f}
+.lc-sw{position:relative;display:inline-block;width:34px;height:19px;vertical-align:middle;margin:0}
+.lc-sw input{opacity:0;width:0;height:0}.lc-sw span{position:absolute;inset:0;border-radius:10px;background:#cfc6bd;cursor:pointer;transition:.15s}
+.lc-sw span::after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
+.lc-sw input:checked+span{background:#2E7D4F}.lc-sw input:checked+span::after{left:17px}.lc-sw input:disabled+span{opacity:.5;cursor:not-allowed}
+.lc-swl{font-size:12px;color:var(--at-muted);margin-left:6px}
+.lc-in{display:flex;gap:6px;align-items:center}.lc-in input{max-width:150px;height:30px;font-size:12.5px}
+.lc-bar2{display:inline-block;width:110px;height:8px;border-radius:5px;background:#eee7de;overflow:hidden;vertical-align:middle;margin-right:6px}.lc-bar2 i{display:block;height:100%}
+.lc-click{cursor:pointer}.lc-click:hover td{background:#fbf8f4}
+.lc-det td{background:#fcfbf9;padding:10px 14px 12px 26px}
+.lc-det ul{margin:0;padding:0;list-style:none;columns:2;column-gap:28px}.lc-det li{padding:2px 0;break-inside:avoid}
+.lc-card{max-width:560px}
+</style>
+<section class="section">
+{% include 'workshop/_trace_tabs.twig' with {trace_tab: tab} %}
+
+{% if tab == 'lots' %}
+    {% set R = register %}
+    <form class="lc-bar" method="get" action="{{ root }}/workshop/traceability/lots">
+        <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Surowiec albo numer partii…" aria-label="Szukaj surowca albo partii">
+        <label class="lc-swl d-inline-flex align-items-center gap-2"><input type="checkbox" class="form-check-input" name="active" value="1" {{ active_only ? 'checked' }} onchange="this.form.submit()"> tylko aktywne</label>
+        <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> Szukaj</button>
+        <span class="lc-sp"></span>
+        {% if R.no_number %}<span class="lc-pill lc-w">Bez numeru partii : {{ R.no_number }}</span>{% endif %}
+        <span class="lc-pill lc-g">{{ R.materials|length }} surowców · {{ R.days }} dni</span>
+    </form>
+    <div class="card"><div class="card-body p-2"><div class="table-responsive">
+    <table class="lc-table">
+        <thead><tr><th>Surowiec / partia</th><th>Źródło</th><th>Dostawca</th><th>Data</th><th>DLC</th><th class="n">Ilość</th><th class="n">Użyto w produkcji</th><th>Na liście tabletu</th></tr></thead>
+        <tbody>
+        {% for m in R.materials %}
+            <tr class="lc-mat {{ m.tracked ? '' : 'off' }}"><td>{{ m.name }} {% if m.tracked %}<span class="lc-pill lc-r">partia wymagana</span>{% endif %}</td><td></td><td></td><td></td><td></td>
+                <td class="n">{{ m.quantity ? m.quantity|number_format(m.quantity == m.quantity|round ? 0 : 1, ',', ' ') ~ ' ' ~ m.unit : '' }}</td><td class="n">{{ m.used ?: '—' }}</td>
+                <td><label class="lc-sw"><input type="checkbox" data-lc-track="{{ m.id }}" {{ m.tracked ? 'checked' }}><span></span></label><span class="lc-swl">{{ m.tracked ? 'surowiec śledzony' : 'nieśledzony — bez listy na tablecie' }}</span></td></tr>
+            {% for l in m.lots %}
+                <tr class="lc-lot {{ l.active and m.tracked ? '' : 'off' }}" data-lot="{{ l.id }}">
+                    <td>{% if l.lot_number %}<span class="lc-num">{{ l.lot_number }}</span>
+                        {% else %}<span class="lc-in"><input class="form-control" data-lc-num placeholder="numer partii" maxlength="64"><input class="form-control" type="date" data-lc-bb aria-label="DLC"><button type="button" class="btn btn-sm btn-primary" data-lc-save>Zapisz</button></span>{% endif %}</td>
+                    <td>{% if l.invoice %}<span class="lc-pill lc-k">{{ l.ksef ? 'KSeF ' : 'Faktura ' }}{{ l.invoice }}</span>{% endif %}
+                        {% if l.receipt_on %} <span class="lc-pill lc-r">przyjęcie {{ l.receipt_on|date('d.m') }}</span>{% elseif l.source == 'ksef' %} <span class="lc-pill lc-w">bez przyjęcia</span>{% endif %}
+                        {% if l.source == 'manual' %}<span class="lc-pill lc-w">wpisana na tablecie — sprawdź</span>{% endif %}</td>
+                    <td>{{ l.supplier ?: '—' }}</td><td>{{ l.received_on|date('d.m.Y') }}</td>
+                    <td>{% if l.best_before %}{% if l.expired %}<span class="lc-pill lc-x">po DLC {{ l.best_before|date('d.m.Y') }}</span>{% else %}{{ l.best_before|date('d.m.Y') }}{% endif %}{% else %}—{% endif %}</td>
+                    <td class="n">{{ l.quantity is not null ? l.quantity|number_format(l.quantity == l.quantity|round ? 0 : 1, ',', ' ') ~ ' ' ~ m.unit : '—' }}</td>
+                    <td class="n">{{ l.used ?: '—' }}</td>
+                    <td><label class="lc-sw"><input type="checkbox" data-lc-active="{{ l.id }}" {{ l.active ? 'checked' }} {{ not l.lot_number or l.expired ? 'disabled' }}><span></span></label>
+                        <span class="lc-swl">{% if l.active %}aktywna{% elseif not l.lot_number %}czeka na numer{% elseif l.off_reason == 'expired' or l.expired %}wyłączona (DLC){% else %}wyłączona{% endif %}</span></td></tr>
+            {% endfor %}
+        {% else %}
+            <tr><td colspan="8" class="text-muted">Brak partii : faktury KSeF z surowcami i przyjęcia dostaw z ostatnich {{ R.days }} dni pojawią się tu same.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div></div></div>
+    <p class="text-muted small mt-2">Każda pozycja faktury przypisana do surowca tworzy partię ; numer i DLC przychodzą z przyjęcia dostawy (zdjęcie etykiety) albo wpisuje się je tu raz. Partia po DLC wyłącza się sama. Surowiec nieśledzony (np. sól) : bez listy partii na tablecie i poza licznikiem « uzupełnione ».</p>
+
+{% elseif tab == 'check' %}
+    {% set C = check %}
+    <form class="lc-bar" method="get" action="{{ root }}/workshop/traceability/check">
+        <input class="form-control" type="date" name="date" value="{{ date }}" onchange="this.form.submit()" aria-label="Dzień produkcji">
+        <span class="lc-sp"></span>
+        <span class="lc-pill lc-r">{{ C.complete }} kompletne</span> <span class="lc-pill {{ C.incomplete ? 'lc-x' : 'lc-g' }}">{{ C.incomplete }} do uzupełnienia</span>
+    </form>
+    <div class="card"><div class="card-body p-2"><div class="table-responsive">
+    <table class="lc-table">
+        <thead><tr><th>Partia produkcji</th><th>Produkt</th><th>Grupa · operator</th><th>Surowce z partią</th><th></th></tr></thead>
+        <tbody>
+        {% for r in C.rows %}
+            <tr class="lc-click" data-lc-batch="{{ r.id }}" tabindex="0"><td><b>{{ r.lot_code }}</b></td><td>{{ r.product }}</td><td>{{ r.group }}{{ r.employee ? ' · ' ~ r.employee : '' }}</td>
+                <td>{% if r.total %}<span class="lc-bar2"><i style="width:{{ (r.done / r.total * 100)|round }}%;background:{{ r.complete ? '#2E7D4F' : '#d9a05b' }}"></i></span>{{ r.done }} / {{ r.total }}{% else %}<span class="text-muted">bez receptury</span>{% endif %}</td>
+                <td>{% if r.complete %}<span class="lc-pill lc-r">✓</span>{% else %}<span class="lc-pill lc-x" title="{{ r.missing|join(', ') }}">brak : {{ r.missing|slice(0, 3)|join(', ') }}{{ r.missing|length > 3 ? ' +' ~ (r.missing|length - 3) : '' }}</span>{% endif %}</td></tr>
+        {% else %}
+            <tr><td colspan="5" class="text-muted">Brak partii produkcji tego dnia.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div></div></div>
+    <p class="text-muted small mt-2">Liczone jak na tablecie : surowiec śledzony z partią z listy, wpisaną albo z powodem braku (ze zdjęciem). Na tablecie « Zakończ » jest zablokowany, dopóki czegoś brakuje. Klik na wiersz : składniki i partie.</p>
+
+{% elseif tab == 'samples' %}
+    <details class="card mb-3"><summary class="card-body py-2" style="cursor:pointer"><b>Częstotliwość próbek wg kategorii</b> <span class="text-muted small">— domyślnie : {{ {lot: 'każda partia', day: 'raz dziennie', week: 'raz w tygodniu', month: 'raz w miesiącu', none: 'bez próbek'}[page.rules.default] }} (parametr samples.default_frequency)</span></summary>
+        <div class="card-body pt-0"><div class="table-responsive"><table class="lc-table" style="max-width:640px">
+            <thead><tr><th>Kategoria produktu</th><th>Próbka</th></tr></thead><tbody>
+            {% for c in page.rules.categories %}<tr><td>{{ c.name }}</td><td><select class="form-select form-select-sm" data-lc-rule="{{ c.id }}" style="max-width:220px">
+                <option value="" {{ c.frequency is null ? 'selected' }}>jak domyślna</option>
+                {% for f in frequencies %}<option value="{{ f }}" {{ c.frequency == f ? 'selected' }}>{{ {lot: 'każda partia', day: 'raz dziennie (produkt)', week: 'raz w tygodniu (produkt)', month: 'raz w miesiącu (produkt)', none: 'bez próbek'}[f] }}</option>{% endfor %}
+            </select></td></tr>{% endfor %}
+            </tbody></table></div></div></details>
+    <div id="lcSamples"><p class="at-empty">Ładowanie…</p></div>
+    <script type="application/json" id="lcBoot">{{ page|json_encode|raw }}</script>
+
+{% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+{% if tab == 'samples' %}<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>{% endif %}
+<script src="{{ root }}/assets/js/production/lot-control.js?v={{ asset_v() }}"></script>
+{% endblock %}

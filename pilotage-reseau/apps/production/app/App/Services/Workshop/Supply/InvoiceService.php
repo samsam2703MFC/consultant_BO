@@ -57,6 +57,7 @@ final class InvoiceService
         private PriceHistoryService $history,
         private CostCategories $categories,
         private FinanceRepository $finance,
+        private InvoicePriceImpactService $impact,
     ) {
     }
 
@@ -1285,6 +1286,7 @@ final class InvoiceService
         $suppliers = null;
         $invoices = [];
         $this->wizardCats = $this->categories->all();
+        $effectChanges = [];
         $t = ['invoices' => 0, 'net' => 0.0, 'lines' => 0, 'auto' => 0, 'checked' => 0, 'todo' => 0, 'disputed' => 0, 'safe' => 0, 'ready' => 0, 'ready_net' => 0.0, 'services' => 0,
             'reasons' => ['new' => 0, 'price' => 0, 'qty' => 0, 'other' => 0]];
         foreach ($this->repo->invoices('open') as $inv) {
@@ -1293,6 +1295,7 @@ final class InvoiceService
             if ($needSuggest) $materials ??= $this->repo->materials();
             if ($inv['id_supplier'] === null) $suppliers ??= $this->repo->suppliers();
             $w = $this->wizardInvoice($inv, $lines, $lang, $materials ?? [], $suppliers ?? []);
+            $effectChanges += $this->priceChanges($w);
             $invoices[] = $w;
             $t['invoices']++;
             $t['net'] += (float) ($w['total_net'] ?? 0);
@@ -1305,15 +1308,56 @@ final class InvoiceService
         usort($invoices, fn($a, $b) => [$a['wizard_ready'], -$a['counts']['todo'], $a['issue_date'] ?? '', $a['id']] <=> [$b['wizard_ready'], -$b['counts']['todo'], $b['issue_date'] ?? '', $b['id']]);
         $t['net'] = round($t['net'], 2);
         $t['ready_net'] = round($t['ready_net'], 2);
+        // [349] Efekt miesięczny nowych cen (zużycie × zmiana) przy cenach do kartoteki — krok 3 i podsumowanie.
+        $effects = $this->impact->monthlyEffects($effectChanges);
+        foreach ($invoices as &$w) {
+            foreach ($w['plan']['prices'] as &$pr) $pr['effect_month'] = $pr['kept'] ? 0.0 : ($effects[$pr['raw_material_id']] ?? null);
+            unset($pr);
+        }
+        unset($w);
         return ['invoices' => $invoices, 'totals' => $t, 'last_ksef' => $this->repo->lastKsefImport(), 'auto' => $this->autoMode(),
             'can_write' => $context->can('prod.supply.write'), 'can_finance' => $context->can('prod.finance.read')];
+    }
+
+    /** [349] Zmiany cen faktury do zapisania w kartotece : surowiec → {new, old} (zł / jednostka bazowa). */
+    private function priceChanges(array $w): array
+    {
+        $out = [];
+        if ($w['plan']['prices_done']) return $out;
+        foreach ($w['plan']['prices'] as $p) {
+            if (!$p['kept'] && $p['old'] !== null && $p['new'] !== null) $out[$p['raw_material_id']] ??= ['new' => (float) $p['new'], 'old' => (float) $p['old']];
+        }
+        return $out;
+    }
+
+    /**
+     * [349] Stan asystenta « Ceny z faktur zakupu » (przycisk czerwony / zielony) : otwarte faktury towarowe — pozycje do
+     * sprawdzenia (bez surowca, podwyżka bez decyzji, skok ceny, ilość), faktury gotowe do zatwierdzenia (ceny jeszcze nie w
+     * kartotece), sporne ; ostatnie zatwierdzenie. Czerwony, gdy jest cokolwiek do sprawdzenia albo do zatwierdzenia.
+     */
+    public function assistantStatus(string $lang = 'pl'): array
+    {
+        $this->wizardCats = [];
+        $s = ['invoices' => 0, 'todo' => 0, 'ready' => 0, 'disputed' => 0, 'oldest' => null];
+        foreach ($this->repo->invoices('open') as $inv) {
+            $w = $this->wizardInvoice($inv, $this->repo->lines((int) $inv['id']), $lang, [], [], true);
+            $s['invoices']++;
+            $s['todo'] += $w['counts']['todo'];
+            $s['disputed'] += $w['counts']['disputed'];
+            if ($w['wizard_ready']) $s['ready']++;
+            $d = $inv['issue_date'] ?? substr((string) $inv['created_at'], 0, 10);
+            if (($w['counts']['todo'] || $w['wizard_ready']) && ($s['oldest'] === null || $d < $s['oldest'])) $s['oldest'] = $d;
+        }
+        $s['done'] = $s['todo'] === 0 && $s['ready'] === 0;
+        $s['last_done'] = $this->impact->lastDone();
+        return $s;
     }
 
     /** Kategorie kalkulatora kosztów (podpowiedź « wygląda na usługę » w kreatorze), raz na zapytanie. */
     private ?array $wizardCats = null;
 
     /** Faktura kreatora : linie ze stanem i powodem, podwyżki, liczby, gotowość i co zrobi « Zatwierdź » (ceny, przyjęcie). */
-    private function wizardInvoice(array $inv, array $lines, string $lang, array $materials, array $suppliers): array
+    private function wizardInvoice(array $inv, array $lines, string $lang, array $materials, array $suppliers, bool $light = false): array
     {
         $control = $this->control($inv, $lines);
         $ups = [];
@@ -1331,11 +1375,12 @@ final class InvoiceService
             $row = $this->presentLine($l, $lang) + ['control' => $c, 'state' => $state, 'reason' => $reason, 'safe' => $safe,
                 'check' => $l['check_status'] !== null ? ['status' => $l['check_status'], 'by' => $l['checked_name'] ?? null, 'at' => $l['checked_at'], 'note' => $l['check_note']] : null,
                 'up' => $mid !== null ? ($ups[$mid] ?? null) : null];
-            if ($mid === null) $row['suggestions'] = $this->suggest($l, $inv, $materials, $orderMaterials, $lang);
+            if ($mid === null && !$light) $row['suggestions'] = $this->suggest($l, $inv, $materials, $orderMaterials, $lang);
             $out[] = $row;
             // Ceny do kartoteki przy « Zatwierdź » : zmiana wobec ceny bazowej (podwyżka « bez zmian » — pominięta).
             if ($mid !== null && $c['catalog_gap_pct'] !== null && abs($c['catalog_gap_pct']) >= 0.5 && !isset($prices[$mid])) {
-                $prices[$mid] = ['name' => $row['material']['name'], 'pct' => $c['catalog_gap_pct'], 'kept' => ($ups[$mid]['decision'] ?? null) === 'keep'];
+                $prices[$mid] = ['raw_material_id' => $mid, 'name' => $row['material']['name'], 'pct' => $c['catalog_gap_pct'], 'kept' => ($ups[$mid]['decision'] ?? null) === 'keep',
+                    'old' => $c['catalog_price'], 'new' => $c['price_base']];
             }
         }
         $ready = $this->readiness($inv, $control);
@@ -1348,7 +1393,7 @@ final class InvoiceService
         }
         // « Usługa → Finanse » : faktura jeszcze nieprzetworzona (bez cen w kartotece, bez zamówienia) ; podpowiedź kategorii (sprzedawca, linie).
         $movable = $inv['prices_imported_at'] === null && $inv['id_po'] === null;
-        $guess = $movable && empty($inv['is_correction']) && $this->wizardCats ? CostCategories::guess($inv, $lines, $this->wizardCats) : null;
+        $guess = !$light && $movable && empty($inv['is_correction']) && $this->wizardCats ? CostCategories::guess($inv, $lines, $this->wizardCats) : null;
         return $this->summary($inv) + ['lines' => $out, 'counts' => $counts, 'control' => $control['summary'], 'warnings' => $ready['warnings'],
             'wizard_ready' => $wizardReady, 'supplier_choices' => $choices, 'movable' => $movable, 'service_guess' => $guess,
             'plan' => ['prices' => $inv['prices_imported_at'] === null ? array_values($prices) : [], 'prices_done' => $inv['prices_imported_at'] !== null,
