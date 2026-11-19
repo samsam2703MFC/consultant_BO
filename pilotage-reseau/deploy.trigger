@@ -171,3 +171,4 @@
 2026-11-19T16:03:25Z Fil : glisser ou coller une photo partout, étiquettes communication ; code mort retiré (écrans, routes sans appelant, paquet de l'assistant)
 2026-11-19T16:07:02Z Catalogue des manuels : couvertures aux couleurs de la marque, avec illustration
 2026-11-19T16:14:57Z Catalogue des manuels : boutons des cartes dans leur carte (le bouton QR débordait)
+2026-11-19T16:27:00Z Checklists : 5.6.02 « Une franchise bien tenue » dans la nomenclature (checklist #64 du panel)
