@@ -6172,8 +6172,9 @@
    * La demande au bureau vit dans la fenêtre de l'assistant, troisième mode : l'avatar choisi (Pierre ou le Coach) la
    * transmet. Le sujet (les six domaines du helpdesk), le titre, la demande, jusqu'à quatre photos, et « un passage du
    * consultant ? » ; en dessous, « Mes demandes » : le statut de chacune et la réponse du bureau.
-   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases). */
-  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'toutes' };
+   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases).
+   * « Mes demandes » s'ouvre sur le filtre « Ouvertes » (20/11/2026). */
+  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'ouvertes' };
   function hdLire(force) {
     if (HLP.chargement || (HLP.d && !force && HLP.shop === S.shop)) { return; }
     HLP.chargement = true; HLP.shop = S.shop;
@@ -6187,10 +6188,12 @@
   function hdCarte(x) {
     const e = HD_ETAT[x.statut] || ['att', x.statutNom];
     const j = x.cree ? Math.max(0, Math.round((Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5)) : null;
+    // La date limite que le consultant a fixée à la réception (20/11/2026).
+    const ech = x.echeance && x.ouverte && !x.reponse ? ' · réponse prévue d’ici le ' + esc(fD(x.echeance)) : '';
     const rep = x.reponse ? `<div class="rep ok"><b>Le bureau${x.reponseLe ? ' · ' + esc(fD(String(x.reponseLe).slice(0, 10))) : ''} :</b> ${esc(x.reponse)}</div>`
       : (x.visite ? `<div class="rep att">Reprise dans la visite${x.visite.consultant ? ' de ' + esc(x.visite.consultant) : ''}${x.visite.le ? ' du ' + esc(fD(x.visite.le)) : ''} — réponse après la visite</div>`
-        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — pas encore lue par le bureau</div>`
-          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}</div>` : '')));
+        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — ${ech ? 'reçue par le bureau' + ech : 'pas encore lue par le bureau'}</div>`
+          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}${ech}</div>` : '')));
     return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e[0]}">${esc(e[1])}</span><span class="d">${esc(fD(x.cree.slice(0, 10)))} · ${esc(x.ref.replace('CASE-', ''))}</span></div>
       <b class="ref">${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
   }
@@ -6218,7 +6221,7 @@
     else {
       const sans = L.filter(x => x.ouverte && !x.reponse && x.cree && (Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5 > 30).length;
       h += `<div class="rc-resume"><b>${n('ouvertes')}</b> ouverte${n('ouvertes') > 1 ? 's' : ''}${sans ? ' · ' + sans + ' sans réponse depuis plus de 30 jours' : ''}</div>
-        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.map(hdCarte).join('')}`;
+        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.length ? vis.map(hdCarte).join('') : `<div class="rc-pt">${HLP.filtre === 'ouvertes' ? 'Aucune demande ouverte.' : 'Aucune demande répondue pour l’instant.'}</div>`}`;
     }
     return h + '</div></div>';
   }
