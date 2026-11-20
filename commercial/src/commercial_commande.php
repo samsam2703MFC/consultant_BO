@@ -16,8 +16,15 @@ declare(strict_types=1);
  *    « ÉCHANTILLON COMMERCIAL », chaque ligne est offerte (remise égale à sa valeur, total 0 €), sans client de caisse ;
  *    elle arrive « nouvelle » (statut 1) dans les commandes du magasin, à préparer pour la date dite.
  *  - Le numéro de la commande TF Buddy est gardé sur l'échantillon (sm_echantillon.commande_id) ; une erreur aussi
- *    (commande_erreur), et la commande se relance d'ici.
+ *    (commande_erreur), et la commande se relance d'ici, ou s'annule (DELETE /client-orders/{id}).
+ *  - TF Buddy refuse une commande sans client ni « employé qui accepte » (FAILED_INSERT_ORDER, essai du 20/11/2026 ;
+ *    les 1 731 commandes de Corbais portent les deux). Décision de Sam, le 20/11/2026 : un client « ÉCHANTILLONS
+ *    COMMERCIAL » par magasin, créé une fois (POST /clients, gardé dans le réglage smClientsEchantillons), et l'employé
+ *    choisi à la commande dans l'équipe du magasin (GET /shops/{id}/employees), retenu par magasin
+ *    (smEmployesEchantillons) et sur l'échantillon (sm_echantillon.employe_id).
  */
+
+const SM_CLIENT_ECHANTILLONS = 'ÉCHANTILLONS COMMERCIAL';
 
 const SM_CMD_MARQUE = 'ÉCHANTILLON COMMERCIAL';
 const SM_CMD_STATUT_NOUVELLE = 1;   // id_order_status : 1 new, 2 completed, 3 picked_up, 4 unpicked, 5 in_production
@@ -99,9 +106,10 @@ function smCoutLignes(array $lignes): ?float
 
 /**
  * Le corps de la commande TF Buddy (POST /client-orders) pour un échantillon (la vue smEchVue) : la commande
- * spécifique « ÉCHANTILLON COMMERCIAL », offerte, nouvelle, pour la date de l'échantillon (ou demain 10 h). Fonction pure.
+ * spécifique « ÉCHANTILLON COMMERCIAL », offerte, nouvelle, pour la date de l'échantillon (ou demain 10 h), sur le
+ * client des échantillons du magasin, acceptée par l'employé choisi. Fonction pure.
  */
-function smCommandeCorps(array $e, string $maintenant): array
+function smCommandeCorps(array $e, string $maintenant, ?int $client = null, ?int $employe = null): array
 {
     $quand = $e['le'] ? date('Y-m-d H:i:00', (int) strtotime((string) $e['le'])) : date('Y-m-d 10:00:00', (int) strtotime($maintenant . ' +1 day'));
     $produits = [];
@@ -114,8 +122,53 @@ function smCommandeCorps(array $e, string $maintenant): array
     $qui = $e['prospect'] . ($e['contact'] !== '' ? ' (' . $e['contact'] . ')' : '');
     $ou = $e['mode'] === 'retrait' ? 'retrait au magasin par le commercial' : 'livraison' . ($e['adresse'] !== '' ? ' : ' . $e['adresse'] : '');
     $comment = SM_CMD_MARQUE . ' — ' . $qui . ' — ' . $ou . ($e['note'] !== '' ? ' — ' . $e['note'] : '') . ' — offert, portail Commercial n° ' . $e['id'];
-    return ['id_shop' => (int) $e['shopId'], 'comment' => mb_substr($comment, 0, 1000), 'pick_up_datetime' => $quand,
+    $corps = ['id_shop' => (int) $e['shopId'], 'comment' => mb_substr($comment, 0, 1000), 'pick_up_datetime' => $quand,
         'id_order_status' => SM_CMD_STATUT_NOUVELLE, 'products' => $produits];
+    if ($client !== null && $client > 0) { $corps['id_client'] = $client; }
+    if ($employe !== null && $employe > 0) { $corps['id_accepting_employee'] = $employe; }
+    return $corps;
+}
+
+/** L'équipe du magasin (TF Buddy, GET /shops/{id}/employees, par la lecture du cockpit) : [id => nom court]. */
+function smEquipeMagasin(string $shop): array
+{
+    if (!ctype_digit($shop)) { return []; }
+    if (function_exists('invOperateurs')) { return invOperateurs((int) $shop); }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return []; }
+    $out = [];
+    $r = PanelApi::get('/shops/' . $shop . '/employees');
+    foreach ((array) (is_array($r) && isset($r['data']) ? $r['data'] : $r) as $em) {
+        if (is_array($em) && (int) ($em['id'] ?? 0) > 0) { $out[(string) $em['id']] = trim((string) ($em['display_name'] ?? $em['name'] ?? ('n° ' . $em['id']))); }
+    }
+    return $out;
+}
+
+/** GET /commercial/equipe-magasin?shop=2 — qui peut recevoir la commande d'échantillon, et le dernier choisi. */
+function ep_sm_equipe_magasin(): array
+{
+    $shop = (string) ($_GET['shop'] ?? '');
+    if (!isset(smMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin inconnu']; }
+    $eq = smEquipeMagasin($shop);
+    $derniers = (array) setting('smEmployesEchantillons', []);
+    $dernier = (string) ($derniers[$shop] ?? '');
+    return ['shop' => $shop, 'employes' => array_map(static fn ($id, $nom) => ['id' => (int) $id, 'nom' => $nom], array_keys($eq), $eq),
+        'dernier' => isset($eq[$dernier]) ? (int) $dernier : null];
+}
+
+/** Le client « ÉCHANTILLONS COMMERCIAL » du magasin dans TF Buddy : créé la première fois, puis gardé. [id, erreur]. */
+function smClientEchantillons(string $shop): array
+{
+    $l = (array) setting('smClientsEchantillons', []);
+    if ((int) ($l[$shop] ?? 0) > 0) { return [(int) $l[$shop], null]; }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return [null, 'le compte admin de l’ERP n’est pas configuré']; }
+    $w = ErpApi::ecrire('POST', '/clients', ['id_main_shop' => (int) $shop, 'company_name' => SM_CLIENT_ECHANTILLONS, 'surname' => SM_CLIENT_ECHANTILLONS,
+        'comment' => 'Client des commandes d’échantillon du portail Commercial (offertes, 0 €). Ne pas supprimer.']);
+    $id = is_array($w['corps']) ? (int) ($w['corps']['inserted_id'] ?? $w['corps']['id'] ?? $w['corps']['data']['id'] ?? 0) : 0;
+    if ($w['erreur'] !== null || $id <= 0) { return [null, 'client des échantillons non créé dans TF Buddy : ' . ($w['erreur'] ?? 'pas de numéro rendu')]; }
+    $l[$shop] = $id;
+    settingEcrire('smClientsEchantillons', $l);
+    journalAdd('Commercial', 'Commercial', null, 'Client « ' . SM_CLIENT_ECHANTILLONS . ' » créé dans TF Buddy pour le magasin ' . $shop . ' : n° ' . $id);
+    return [$id, null];
 }
 
 /** Un POST à l'API de TF Buddy en formulaire (comme son contrat le documente), avec le compte admin du cockpit. */
@@ -141,29 +194,56 @@ function smErpPostFormulaire(string $chemin, array $donnees): array
 }
 
 /** Passe la commande d'un échantillon dans le système de commande du magasin ; garde son numéro ou l'erreur. */
-function smEchCommander(int $id): array
+function smEchCommander(int $id, ?int $employe = null): array
 {
     $r = Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]);
     if ($r === null) { return ['ok' => false, 'erreur' => 'échantillon introuvable']; }
     if ($r['commande_id'] !== null) { return ['ok' => true, 'commande' => (int) $r['commande_id'], 'deja' => true]; }
     $e = smEchVue($r, smMagasins());
-    $corps = smCommandeCorps($e, date('Y-m-d H:i:s'));
-    if ($corps['products'] === []) { return ['ok' => false, 'erreur' => 'aucun produit du catalogue du magasin : la commande ne part pas dans TF Buddy']; }
-    $w = smErpPostFormulaire('/client-orders', $corps);
-    $num = is_array($w['corps']) ? (int) ($w['corps']['inserted_id'] ?? $w['corps']['id'] ?? $w['corps']['data']['id'] ?? 0) : 0;
-    if ($w['erreur'] !== null || $num <= 0) {
-        $err = $w['erreur'] ?? 'TF Buddy n’a pas rendu de numéro de commande';
+    $echec = static function (string $err) use ($id): array {
         Db::exec('UPDATE sm_echantillon SET commande_erreur = ? WHERE id = ?', [mb_substr($err, 0, 255), $id]);
         return ['ok' => false, 'erreur' => $err];
-    }
+    };
+    // L'employé qui accepte : celui choisi, sinon celui de l'échantillon, sinon le dernier choisi pour ce magasin.
+    $derniers = (array) setting('smEmployesEchantillons', []);
+    $employe = $employe ?: ((int) ($r['employe_id'] ?? 0) ?: (int) ($derniers[$e['shopId']] ?? 0));
+    if ($employe <= 0) { return $echec('choisissez qui reçoit la commande, dans l’équipe du magasin'); }
+    [$client, $err] = smClientEchantillons($e['shopId']);
+    if ($client === null) { return $echec($err); }
+    $corps = smCommandeCorps($e, date('Y-m-d H:i:s'), $client, $employe);
+    if ($corps['products'] === []) { return ['ok' => false, 'erreur' => 'aucun produit du catalogue du magasin : la commande ne part pas dans TF Buddy']; }
+    Db::exec('UPDATE sm_echantillon SET employe_id = ? WHERE id = ?', [$employe, $id]);
+    $w = smErpPostFormulaire('/client-orders', $corps);
+    $num = is_array($w['corps']) ? (int) ($w['corps']['inserted_id'] ?? $w['corps']['id'] ?? $w['corps']['data']['id'] ?? 0) : 0;
+    if ($w['erreur'] !== null || $num <= 0) { return $echec($w['erreur'] ?? 'TF Buddy n’a pas rendu de numéro de commande'); }
     Db::exec('UPDATE sm_echantillon SET commande_id = ?, commande_erreur = "", statut = IF(statut = "a_envoyer", "commande", statut), envoye_le = COALESCE(envoye_le, NOW()) WHERE id = ?', [$num, $id]);
+    $derniers[$e['shopId']] = $employe;
+    settingEcrire('smEmployesEchantillons', $derniers);
     journalAdd('Commercial', 'Commercial', null, 'Échantillon ' . $id . ' commandé au magasin ' . $e['magasin'] . ' : commande TF Buddy n° ' . $num);
     return ['ok' => true, 'commande' => $num];
 }
 
-/** Les routes du catalogue du magasin ; null pour une autre adresse. */
+/** DELETE /commercial/echantillons/{id}/commande — annule la commande TF Buddy de l'échantillon (DELETE /client-orders/{n}). */
+function wr_sm_echantillon_commande_annuler(int $id): array
+{
+    smTables();
+    $r = Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]);
+    if ($r === null) { http_response_code(404); return ['error' => 'échantillon introuvable']; }
+    $num = (int) ($r['commande_id'] ?? 0);
+    if ($num <= 0) { http_response_code(409); return ['error' => 'pas de commande TF Buddy à annuler']; }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { http_response_code(503); return ['error' => 'le compte admin de l’ERP n’est pas configuré']; }
+    $w = ErpApi::ecrire('DELETE', '/client-orders/' . $num);
+    if ($w['erreur'] !== null) { http_response_code(502); return ['error' => 'TF Buddy refuse l’annulation : ' . $w['erreur']]; }
+    Db::exec('UPDATE sm_echantillon SET commande_id = NULL, commande_erreur = ?, statut = IF(statut = "commande", "a_envoyer", statut) WHERE id = ?', ['commande TF Buddy n° ' . $num . ' annulée', $id]);
+    journalAdd('Commercial', 'Commercial', null, 'Échantillon ' . $id . ' : commande TF Buddy n° ' . $num . ' annulée');
+    return ['ok' => true, 'annulee' => $num, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins())];
+}
+
+/** Les routes du catalogue, de l'équipe du magasin et de l'annulation ; null pour une autre adresse. */
 function smRouteCommande(string $method, string $p): mixed
 {
     if ($method === 'GET' && $p === '/catalogue-magasin') { return ep_sm_catalogue_magasin(); }
+    if ($method === 'GET' && $p === '/equipe-magasin') { return ep_sm_equipe_magasin(); }
+    if ($method === 'DELETE' && preg_match('#^/echantillons/(\d+)/commande$#', $p, $m)) { return wr_sm_echantillon_commande_annuler((int) $m[1]); }
     return null;
 }

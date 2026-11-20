@@ -57,11 +57,14 @@ function smTables(): void
         . 'id INT AUTO_INCREMENT PRIMARY KEY, client_id INT NULL, prospect VARCHAR(200) NOT NULL, contact VARCHAR(160) NOT NULL DEFAULT "",'
         . 'secteur VARCHAR(16) NOT NULL DEFAULT "", shop_id VARCHAR(16) NOT NULL, contenu TEXT NOT NULL, le DATETIME NULL, mode VARCHAR(10) NOT NULL DEFAULT "livraison",'
         . 'adresse VARCHAR(255) NOT NULL DEFAULT "", cout DECIMAL(8,2) NULL, statut VARCHAR(12) NOT NULL DEFAULT "a_envoyer", envoye_le DATETIME NULL,'
-        . 'note VARCHAR(255) NOT NULL DEFAULT "", cree_le DATETIME NOT NULL, commande_id INT NULL, commande_erreur VARCHAR(255) NOT NULL DEFAULT "",'
+        . 'note VARCHAR(255) NOT NULL DEFAULT "", cree_le DATETIME NOT NULL, commande_id INT NULL, commande_erreur VARCHAR(255) NOT NULL DEFAULT "", employe_id INT NULL,'
         . 'KEY (shop_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // La commande passée dans le système de commande du magasin (TF Buddy, src/commercial_commande.php) : son numéro.
     try { $sansCmd = Db::row("SHOW COLUMNS FROM sm_echantillon LIKE 'commande_id'") === null; } catch (Throwable $e) { $sansCmd = false; }
     if ($sansCmd) { Db::exec('ALTER TABLE sm_echantillon ADD commande_id INT NULL, ADD commande_erreur VARCHAR(255) NOT NULL DEFAULT ""'); }
+    // L'employé du magasin qui accepte la commande (exigé par TF Buddy, 20/11/2026).
+    try { $sansEmp = Db::row("SHOW COLUMNS FROM sm_echantillon LIKE 'employe_id'") === null; } catch (Throwable $e) { $sansEmp = false; }
+    if ($sansEmp) { Db::exec('ALTER TABLE sm_echantillon ADD employe_id INT NULL'); }
     Db::exec('CREATE TABLE IF NOT EXISTS sm_envoi ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY, modele VARCHAR(16) NOT NULL, langue CHAR(2) NOT NULL DEFAULT "fr", client_id INT NULL, shop_id VARCHAR(16) NOT NULL DEFAULT "",'
         . 'secteur VARCHAR(16) NOT NULL DEFAULT "", offre_id VARCHAR(16) NOT NULL DEFAULT "", bon_code VARCHAR(40) NOT NULL DEFAULT "", destinataire VARCHAR(190) NOT NULL,'
@@ -826,6 +829,7 @@ function smEchVue(array $r, array $mags, ?array $photos = null): array
         'le' => $r['le'], 'mode' => $r['mode'], 'adresse' => $r['adresse'], 'cout' => $r['cout'] !== null ? (float) $r['cout'] : null, 'statut' => $r['statut'],
         'envoyeLe' => $r['envoye_le'], 'note' => $r['note'], 'creeLe' => $r['cree_le'],
         'commande' => isset($r['commande_id']) ? (int) $r['commande_id'] : null, 'commandeErreur' => (string) ($r['commande_erreur'] ?? ''),
+        'employe' => isset($r['employe_id']) ? (int) $r['employe_id'] : null,
         'photos' => $photos !== null ? ($photos[(int) $r['id']] ?? []) : (smPhotosDe([(int) $r['id']])[(int) $r['id']] ?? [])];
 }
 
@@ -881,7 +885,7 @@ function smEchEnvoyerMagasin(int $id): array
 /**
  * POST /commercial/echantillons — { prospect, contact?, clientId?, secteur?, shopId, contenu: [{id, q}] (produits du
  * catalogue du magasin) ou [{produit, q}] (à la main, quand le catalogue ne se lit pas), le?, mode, adresse?, cout?,
- * note?, commander? (la commande dans TF Buddy), envoyer? (l'e-mail au magasin) }
+ * note?, commander? (la commande dans TF Buddy), employe? (qui la reçoit au magasin), envoyer? (l'e-mail au magasin) }
  */
 function wr_sm_echantillon_creer(): array
 {
@@ -912,12 +916,12 @@ function wr_sm_echantillon_creer(): array
             $shop, json_encode($contenu, JSON_UNESCAPED_UNICODE), $le, ($b['mode'] ?? '') === 'retrait' ? 'retrait' : 'livraison', smTexte($b['adresse'] ?? '', 255),
             $cout, smTexte($b['note'] ?? '', 255)]);
     $id = (int) Db::pdo()->lastInsertId();
-    $commande = !empty($b['commander']) ? smEchCommander($id) : null;
+    $commande = !empty($b['commander']) ? smEchCommander($id, (int) ($b['employe'] ?? 0) ?: null) : null;
     $envoi = !empty($b['envoyer']) ? smEchEnvoyerMagasin($id) : null;
     return ['ok' => true, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins()), 'commande' => $commande, 'envoi' => $envoi];
 }
 
-/** PUT /commercial/echantillons/{id} — { statut?, note?, commander? (la commande dans TF Buddy), envoyer? } */
+/** PUT /commercial/echantillons/{id} — { statut?, note?, commander? (la commande dans TF Buddy), employe?, envoyer? } */
 function wr_sm_echantillon_put(int $id): array
 {
     smTables();
@@ -925,7 +929,7 @@ function wr_sm_echantillon_put(int $id): array
     $b = body();
     if (isset($b['statut']) && in_array($b['statut'], SM_ECH_STATUTS, true)) { Db::exec('UPDATE sm_echantillon SET statut = ? WHERE id = ?', [$b['statut'], $id]); }
     if (array_key_exists('note', $b)) { Db::exec('UPDATE sm_echantillon SET note = ? WHERE id = ?', [smTexte($b['note'], 255), $id]); }
-    $commande = !empty($b['commander']) ? smEchCommander($id) : null;
+    $commande = !empty($b['commander']) ? smEchCommander($id, (int) ($b['employe'] ?? 0) ?: null) : null;
     $envoi = !empty($b['envoyer']) ? smEchEnvoyerMagasin($id) : null;
     return ['ok' => true, 'echantillon' => smEchVue(Db::row('SELECT * FROM sm_echantillon WHERE id = ?', [$id]), smMagasins()), 'commande' => $commande, 'envoi' => $envoi];
 }

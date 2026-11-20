@@ -207,6 +207,9 @@ $corps = smCommandeCorps($ech, '2026-11-19 20:00:00');
 verifie('la commande TF Buddy : magasin, date de retrait, statut « nouvelle »', $corps['id_shop'] === 2 && $corps['pick_up_datetime'] === '2026-11-24 10:30:00' && $corps['id_order_status'] === 1);
 verifie('la commande est marquée « ÉCHANTILLON COMMERCIAL » et nomme le prospect', str_starts_with($corps['comment'], 'ÉCHANTILLON COMMERCIAL — Bureau Test (Anne)'));
 verifie('chaque ligne est offerte : remise égale à sa valeur, total 0', $corps['products'][0]['item_discount_value'] === 7.8 && $corps['products'][0]['total_gross_value_after_discount'] === 0 && $corps['products'][1]['id_product'] === 21);
+$corpsC = smCommandeCorps($ech, '2026-11-19 20:00:00', 4321, 27);
+verifie('la commande porte le client des échantillons du magasin et l’employé qui l’accepte (exigés par TF Buddy)', $corpsC['id_client'] === 4321 && $corpsC['id_accepting_employee'] === 27);
+verifie('sans client ni employé, le corps ne les invente pas', !isset($corps['id_client']) && !isset($corps['id_accepting_employee']));
 verifie('sans date, la commande est pour le lendemain 10 h', smCommandeCorps(['le' => null] + $ech, '2026-11-19 20:00:00')['pick_up_datetime'] === '2026-11-20 10:00:00');
 verifie('des lignes notées à la main ne partent pas dans TF Buddy', smCommandeCorps(['contenu' => [['produit' => 'Croissant', 'q' => '6']]] + $ech, '2026-11-19 20:00:00')['products'] === []);
 
