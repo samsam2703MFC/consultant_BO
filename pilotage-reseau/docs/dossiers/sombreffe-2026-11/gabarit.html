@@ -144,6 +144,8 @@ body { margin: 0; background: var(--paper); }
 #reseau-points, #structure-points { columns: 1 !important; display: grid; margin-top: 6px; }
 #structure-radar svg { display: block; width: 100%; height: auto; }
 .rp-table td.moi-col { background: var(--total-line); }
+.rp-liste50 td:first-child { color: var(--muted); width: 22px; }
+.rp-liste50 td.nom { white-space: nowrap; }
 .rp-dev-tete { display: grid; gap: 8px; margin-bottom: 14px; }
 #fin-schema svg { max-width: 820px; margin: 0 auto; }
 #fin-table td.num, #fin-table th.num { width: 20%; }
@@ -184,7 +186,9 @@ body { margin: 0; background: var(--paper); }
   .rp-h3 { font-size: 13px; } .rp-partie-n { font-size: 28px; } .rp-partie-titre { font-size: 19px; }
   .rp-partie { padding-top: 0; break-after: avoid; }
   #page-2, #page-3, #page-4, #annexes { break-before: page; }
-  #pieces, #page-fin { break-before: page; }
+  #pieces, #page-fin, #annexe-prix, #annexe-volumes { break-before: page; }
+  #prix-table, #volumes-table { font-size: 10px; line-height: 1.25; }   /* 50 lignes sur une page */
+  #prix-table td, #volumes-table td { padding: 1px 4px; } #prix-table th, #volumes-table th { padding: 2px 4px; font-size: 9.5px; }
   .mode-dev #page-3, .mode-dev #pieces { break-before: auto; }   /* la version « Développement » : la tête et les trois axes sur la même page, le plan et les pièces ensemble */   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
   #evolution-tuiles { grid-template-columns: repeat(4, 1fr); }   /* l’annexe simplifiée : les tuiles du cockpit, quatre de front */
 }
@@ -466,6 +470,20 @@ body { margin: 0; background: var(--paper); }
       </div>
       <div class="rp-table-zone"><table class="rp-table rp-serre" id="reseau-table"></table></div>
     </div>
+  </section>
+  <section class="rp-page" id="annexe-prix" hidden>   <!-- les prix des 50 produits les plus vendus, 20/11/2026 (Sam) -->
+    <header class="rp-annexes"><h2 class="rp-annexe-titre">Annexe · les prix des 50 produits les plus vendus</h2></header>
+    <section class="rp-carte">
+      <ul class="rp-points" id="prix-points"></ul>
+      <div class="rp-table-zone"><table class="rp-table rp-serre rp-liste50" id="prix-table"></table></div>
+    </section>
+  </section>
+  <section class="rp-page" id="annexe-volumes" hidden>   <!-- le volume mensuel de Sombreffe sur ces 50 produits, 20/11/2026 (Sam) -->
+    <header class="rp-annexes"><h2 class="rp-annexe-titre">Annexe · le volume mensuel de Sombreffe, sur ces 50 produits</h2></header>
+    <section class="rp-carte">
+      <ul class="rp-points" id="volumes-points"></ul>
+      <div class="rp-table-zone"><table class="rp-table rp-serre rp-liste50" id="volumes-table"></table></div>
+    </section>
   </section>
   <section class="rp-page" id="page-fin" hidden>   <!-- la dernière page : les trois axes ensemble, 14/11/2026 (Sam) -->
     <header class="rp-annexes"><div class="rp-kicker">Sombreffe, comptoir et B2B</div>
@@ -1409,6 +1427,45 @@ if (D.structure && D.structure.magasins[SHOP_ID]) {
   $('structure-zone').hidden = false;
 }
 
+/* --- Les prix des 50 produits les plus vendus, et le volume mensuel de Sombreffe (20/11/2026, Sam) : le tarif HTVA de
+   chaque magasin (sa caisse), la médiane des magasins qui l'ont, l'écart de Sombreffe ; puis ses pièces mois par mois. --- */
+if (D.prixProduits) {
+  const PP = D.prixProduits, ordre = ['2', '3', '4', '5'], NOM = PP.magasins;
+  const med = v => { const s = v.filter(x => x != null).sort((a, b) => a - b), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
+  const ht = (p, s) => p.prix[s] ? p.prix[s].ht : null;
+  const court = (n, k = 30) => n.length > k ? n.slice(0, k - 1).trimEnd() + '…' : n;
+  let sous = 0, dessus = 0, egal = 0;
+  $('prix-table').innerHTML = `<thead><tr><th>#</th><th>Produit</th><th class="num">Pièces · réseau, 12 mois</th>${ordre.map(s => `<th class="num">${esc(NOM[s])}</th>`).join('')}<th class="num">Médiane</th><th class="num">Sombreffe vs médiane</th></tr></thead><tbody>`
+    + PP.produits.map((p, i) => {
+      const m = med(ordre.map(s => ht(p, s))), me = ht(p, '5'), e = me != null && m ? (me / m - 1) * 100 : null;
+      if (e != null) { if (e < -0.5) { sous++; } else if (e > 0.5) { dessus++; } else { egal++; } }
+      return `<tr><td>${i + 1}</td><td class="nom" title="${esc(p.nom)}">${esc(court(p.nom))}</td><td class="num">${grp(p.total)}</td>`
+        + ordre.map(s => `<td class="num${s === '5' ? ' moi-col' : ''}">${ht(p, s) != null ? eur2(ht(p, s)) : '—'}</td>`).join('')
+        + `<td class="num">${m != null ? eur2(m) : '—'}</td><td class="num ${e != null && e < -0.5 ? 'down' : ''}">${e != null ? pct(e) : '—'}</td></tr>`;
+    }).join('') + '</tbody>';
+  $('prix-points').innerHTML = [
+    `Les 50 produits qui se vendent le plus dans le réseau, en pièces, de ${PP.tranches[0].toLowerCase()} à ${PP.tranches[PP.tranches.length - 1].toLowerCase()} (au ${dateC(PP.bornes[PP.bornes.length - 1][1])}).`,
+    `Prix de vente HTVA : le tarif de la caisse de chaque magasin, hors TVA. « — » : pas à la carte du magasin. Médiane : celle des magasins qui ont le produit.`,
+    `Sombreffe est sous la médiane sur ${sous} produits, au-dessus sur ${dessus}, au même prix sur ${egal}.`,
+  ].map(x => `<li>${esc(insec(x))}</li>`).join('');
+  $('annexe-prix').hidden = false;
+  // Le volume mensuel de Sombreffe : les mois clos, puis le mois en cours (*), et la moyenne des mois clos où il s'est vendu.
+  const nT = PP.tranches.length, enCours = PP.jours[nT - 1] < new Date(PP.bornes[nT - 1][1].slice(0, 7) + '-01T12:00:00').getDate() || true;
+  const clos = PP.tranches.slice(0, nT - 1), labT = t => t.replace(/ 20(\d\d)$/, ' $1').toLowerCase();
+  $('volumes-table').innerHTML = `<thead><tr><th>#</th><th>Produit</th>${clos.map(t => `<th class="num">${esc(labT(t))}</th>`).join('')}<th class="num">${esc(labT(PP.tranches[nT - 1]))}*</th><th class="num">Moy. / mois</th></tr></thead><tbody>`
+    + PP.produits.map((p, i) => {
+      const v = p.volume5, vc = v.slice(0, nT - 1), vendus = vc.filter(x => x > 0), moy = vendus.length ? vendus.reduce((a, x) => a + x, 0) / vendus.length : null;
+      return `<tr><td>${i + 1}</td><td class="nom" title="${esc(p.nom)}">${esc(court(p.nom, 24))}</td>${vc.map(x => `<td class="num${x ? '' : ' dim'}">${x ? grp(x) : '—'}</td>`).join('')}`
+        + `<td class="num dim">${v[nT - 1] ? grp(v[nT - 1]) : '—'}</td><td class="num moi-col">${moy != null ? grp(moy) : '—'}</td></tr>`;
+    }).join('') + '</tbody>';
+  const totMois = clos.map((_, j) => PP.produits.reduce((a, p) => a + (p.volume5[j] || 0), 0));
+  $('volumes-points').innerHTML = [
+    `Les pièces vendues par Sombreffe, mois par mois, sur les 50 produits de la page précédente, dans le même ordre. * ${labT(PP.tranches[nT - 1])} : ${PP.jours[nT - 1]} jours.`,
+    `Moyenne par mois : celle des mois clos où le produit s’est vendu. Ces 50 produits : ${grp(Math.min(...totMois))} à ${grp(Math.max(...totMois))} pièces par mois.`,
+  ].map(x => `<li>${esc(insec(x))}</li>`).join('');
+  $('annexe-volumes').hidden = false;
+}
+
 /* --- Le personnel des quatre magasins --- */
 if (D.personnelReseau && D.personnelReseau.length) {
   $('pe-reseau').innerHTML = '<thead><tr><th>Magasin</th><th class="num">CA mai → oct. 26</th><th class="num">Personnel</th><th class="num">% du CA</th><th class="num">Tous les mois lus</th></tr></thead><tbody>'
@@ -1595,7 +1652,7 @@ document.querySelectorAll('p.rp-p').forEach(p => {
 if (D.mode === 'developpement') {
   document.body.classList.add('mode-dev');
   document.title = 'Sombreffe, le développement des ventes';
-  ['page-1', 'page-2', 'annexes', 'annexe-a', 'cout-relance', 'gestion'].forEach(id => { const e = $(id); if (e) { e.hidden = true; } });
+  ['page-1', 'page-2', 'annexes', 'annexe-a', 'annexe-prix', 'annexe-volumes', 'cout-relance', 'gestion'].forEach(id => { const e = $(id); if (e) { e.hidden = true; } });
   $('dev-kicker').textContent = `Pilotage réseau · réunion du jeudi ${dateL(D.reunion)}` + (D.htva ? ' · montants hors TVA' : '');
   $('dev-soins').innerHTML = $('soins-intensifs').innerHTML;
   $('partie-3').querySelector('.rp-partie-n').textContent = '1';
