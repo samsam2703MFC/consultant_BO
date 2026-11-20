@@ -379,7 +379,26 @@ MdSms::$transport = static function (string $url, ?array $champs, string $jeton)
 };
 [$okP, $infoP] = MdSms::profil();
 verifie('profil SMSAPI lu sans envoyer de SMS', $okP && $infoP === 'atelierby · 412.5 points', $infoP);
-$CLES = []; $REGLAGES = [];
+// La clé SMSAPI commune de l'ERP (20/11/2026) : erp_cles « smsapi_token », quand MétaDonnée n'a pas de jeton ; un jeton
+// refusé (101) sur .com essaie .pl, et la plateforme qui répond est retenue.
+$CLES = ['smsapi_token' => ['valeur' => 'jeton-erp', 'portail' => 'commun']]; $REGLAGES = []; erpCle('');
+$c = MdSms::config();
+verifie('sans jeton MétaDonnée : la clé commune de l’ERP (smsapi_token)', $c['jeton'] === 'jeton-erp' && $c['source'] === 'erp_cles (smsapi_token)' && MdSms::configured(), json_encode($c));
+$urls = [];
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$urls): array {
+    $urls[] = $url;
+    return str_starts_with($url, 'https://api.smsapi.pl') && $jeton === 'jeton-erp' ? [200, ['count' => 1, 'list' => [['id' => 'PL1']]]] : [401, ['error' => 101, 'message' => 'Authorization failed']];
+};
+[$okS, $id] = MdSms::envoyer('+48 725 038 049', 'Essai');
+verifie('jeton refusé sur .com : .pl essayé, le SMS part', $okS && $id === 'PL1' && $urls === ['https://api.smsapi.com/sms.do', 'https://api.smsapi.pl/sms.do'], json_encode($urls));
+verifie('.pl est retenue pour la suite', ($REGLAGES['mdSmsBaseAuto'] ?? '') === 'https://api.smsapi.pl' && MdSms::config()['base'] === 'https://api.smsapi.pl', json_encode($REGLAGES));
+$urls = [];
+[$okS] = MdSms::envoyer('+48 725 038 049', 'Encore');
+verifie('l’envoi suivant va droit sur .pl', $okS && $urls === ['https://api.smsapi.pl/sms.do'], json_encode($urls));
+$REGLAGES['mdSmsJeton'] = 'jeton-md'; erpCle('');
+verifie('le jeton de MétaDonnée garde la priorité', MdSms::config()['jeton'] === 'jeton-md');
+MdSms::$transport = null;
+$CLES = []; $REGLAGES = []; erpCle('');
 [$okS, $err] = MdSms::envoyer('0476000012', 'x');
 verifie('sans jeton : rien ne part', !$okS && str_contains($err, 'jeton'));
 

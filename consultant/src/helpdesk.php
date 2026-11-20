@@ -1024,7 +1024,7 @@ function wr_helpdesk_relances(int $id): array
         return ['ok' => true];
     }
     if ($action !== 'maintenant') { http_response_code(422); return ['ok' => false, 'error' => 'Action inconnue : suspendre, reprendre ou maintenant.']; }
-    if (!function_exists('smsFournisseur') || smsFournisseur() === null) { return ['ok' => false, 'error' => 'Aucun fournisseur SMS réglé (MétaDonnée › Alertes SMS).']; }
+    if (!function_exists('smsFournisseur') || smsFournisseur() === null) { return ['ok' => false, 'error' => 'Aucun fournisseur SMS réglé (ni jeton dans MétaDonnée › Alertes SMS, ni clé « smsapi_token » dans erp_cles).']; }
     $D = hdkLireDemandes();
     $d = null;
     foreach ($D ?? [] as $x) { if ($x['id'] === $id) { $d = $x; break; } }

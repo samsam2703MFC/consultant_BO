@@ -67,7 +67,8 @@ function smsEnvoyer(string $numero, string $texte): array
 
 /**
  * Le fournisseur en place (11/11/2026) : SMSAPI s'il est réglé (MétaDonnée › Alertes SMS, src/metadonnee.php, celui des
- * alertes de leads), sinon Twilio (config.php › sms). null : aucun, rien ne part.
+ * alertes de leads ; ou, depuis le 20/11/2026, la clé SMSAPI commune de l'ERP, erp_cles « smsapi_token »), sinon Twilio
+ * (config.php › sms). null : aucun, rien ne part.
  */
 function smsFournisseur(): ?string
 {
@@ -99,7 +100,7 @@ function smsPartir(string $brut, string $texte): array
     $num = smsNorme($brut);
     if ($num === null) { return ['ok' => false, 'a' => null, 'erreur' => 'numéro illisible : ' . $brut, 'via' => null]; }
     $via = smsFournisseur();
-    if ($via === null) { return ['ok' => false, 'a' => $num, 'erreur' => 'aucun fournisseur SMS réglé (MétaDonnée › Alertes SMS)', 'via' => null]; }
+    if ($via === null) { return ['ok' => false, 'a' => $num, 'erreur' => 'aucun fournisseur SMS réglé (ni jeton dans MétaDonnée › Alertes SMS, ni clé « smsapi_token » dans erp_cles)', 'via' => null]; }
     try {
         if ($via === 'smsapi') {
             $from = function_exists('mdReglages') ? (string) (mdReglages()['sms']['from'] ?? '') : '';
