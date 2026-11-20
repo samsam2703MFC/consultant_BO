@@ -215,3 +215,15 @@ Destination choisie : le dépôt `marketing` (dossier `signage/`, historique gar
 `marketing/.github/workflows/deploy-signage.yml`, adresses inchangées. Ici : le diagnostic et le câblage de
 `shared/bin/deploy.sh` lisent `mar_sig_products` / `mar_sig_product_categories`. `landing` lit `mar_sig_seasons`
 (ancien nom en repli). `landing` (`lp_`) et `atelier-espace-candidat` (`crm_`) restent tels quels.
+
+**Purge des anciennes copies `sig_` (20/11/2026, 06:08, après « PURGE des anciennes tables sig_ »).** Par
+`reorg/purger_sig.php` (workflow `purge-sig.yml`), contrôle d'abord (run 44678717009) puis purge (run 44678870746).
+Contrôles bloquants passés sur le serveur (127.0.0.1:3306, `atelierby_db`, MySQL 8.0) : 33 tables et 3 617 lignes
+exactement comme mesurées avant la bascule (plus personne n'y écrivait), chacune avec son double `mar_sig_` (une
+seule ligne de réglage différente, mise à jour par la régie depuis), aucune vue, clé étrangère, déclencheur, routine
+ni événement, aucun code déployé qui les nomme. Sauvegarde : `/var/lib/consulant_bo/prive/reorg/
+purge_20261120_050825_sig_33_tables.sql` (543 734 octets, root 0600), vérifiée en restaurant chaque table dans une
+table temporaire (3 617 lignes identiques). Résultat : **960 tables avant, 927 après**, seules les 33 `sig_*`
+disparues, aucune apparue, aucune ligne changée ailleurs. Régie, `/film`, saisons de la landing et cockpit
+inchangés. Code mort retiré à part : le repli de la landing vers `sig_seasons` (samsam2703MFC/landing#26). La base
+SQLite d'avant le renommage reste dans `/var/backups/signage/`.
