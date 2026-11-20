@@ -73,6 +73,9 @@ GUEST_NOV = ICI / 'guest-novembre.json'
 # par ticket) : ≈ 94 %, la TVA à 6 %. Tout montant de vente est ramené hors TVA à la lecture, à la part de son magasin et
 # de son mois (à défaut, la moyenne du magasin). Les frais (personnel, frais généraux) restent ceux du P&L, HTVA.
 CA_NET = ICI / 'ca-net.json'
+# Les quatre magasins, mai → octobre 2026 (20/11/2026, le radar de l'annexe) : GET /api/cockpit/ventes/reseau?vue=mois
+# &date=2026-10-31&n=6&articles=1 — clients, CA et pièces de chaque magasin, mois par mois.
+RESEAU_MOIS = ICI / 'reseau-mois.json'
 
 
 def lirePartsHt():
@@ -378,6 +381,7 @@ def main():
             s6 = [x for x in L if '2026-05' <= x['mois'] <= '2026-10']
             ca6 = sum(x['ca'] for x in s6); lab6 = sum(x['labour'] for x in s6)
             personnelReseau.append({'shop': str(m['id']), 'nom': m.get('court') or m['nom'], 'ca6': ca6, 'lab6': lab6,
+                                    'fg6': sum(x.get('overhead') or 0 for x in s6),
                                     'pct6': lab6 / ca6 * 100 if ca6 else None,
                                     'pctTout': sum(x['labour'] for x in L) / sum(x['ca'] for x in L) * 100 if L else None, 'nMois': len(L)})
         personnelReseau.sort(key=lambda x: (x['shop'] == SHOP, x['pct6'] or 0))
@@ -436,8 +440,29 @@ def main():
         heuresEquipe = {'du': J[0]['date'], 'au': J[-1]['date'], 'jours': len(J), 'heures': h_, 'personnel': c_,
                         'coutHeure': c_ / h_, 'heuresJour': h_ / len(J), 'pct': c_ / sum(j['ca'] for j in J) * 100}
 
+    # Le radar de l'annexe (20/11/2026, Sam) : chaque magasin sur mai → octobre 2026 — clients par jour, panier HTVA, pièces
+    # par client (ventes du cockpit), personnel et frais fixes en % du CA HTVA (P&L), temps sans client (8 semaines).
+    reseauKpi = None
+    if RESEAU_MOIS.exists() and personnelReseau:
+        rm = json.loads(RESEAU_MOIS.read_text(encoding='utf-8'))
+        yms = [x['du'][:7] for x in rm['periodes']]
+        pr_ = {x['shop']: x for x in personnelReseau}
+        tmr = {str(x['shop']): x['pct'] for x in tempsMorts['reseau']}
+        reseauKpi = {'du': yms[0], 'au': yms[-1], 'magasins': []}
+        for m in rm['magasins']:
+            sid = str(m['id']); P = m['periodes']
+            tk = sum(x['tickets'] for x in P); j = sum(x['jours'] for x in P); art = sum(x.get('articles') or 0 for x in P)
+            caHt = sum(x['ca'] * HT(sid, yms[i]) for i, x in enumerate(P))
+            pe = pr_.get(sid)
+            reseauKpi['magasins'].append({'shop': sid, 'nom': m['nom'].split(' - ')[-1], 'moi': sid == SHOP,
+                                          'cliJour': tk / j, 'panier': caHt / tk, 'articles': art / tk if art else None,
+                                          'personnel': pe['pct6'] if pe else None,
+                                          'fixes': pe['fg6'] / pe['ca6'] * 100 if pe and pe['ca6'] else None,
+                                          'tempsMorts': tmr.get(sid)})
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
+        'reseauKpi': reseauKpi,
         'heuresEquipe': heuresEquipe, 'coutHeure': COUT_HEURE,
         'htva': EN_HTVA,
         'pieces': ([{'k': w['du'][:7], 'jours': w['jours'], 'clients': w['tickets'], 'ca': w['ca'] * HT(SHOP, w['du'][:7]), 'pieces': w['articles'],
