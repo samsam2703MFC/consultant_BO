@@ -549,7 +549,7 @@ const B2BX = (() => {
 })();
 
 /* --- En-tête et bandeau --- */
-$('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026';
+$('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026' + (D.htva ? ' · montants hors TVA' : '');
 // 6 semaines de suivi intensif (14/11/2026, Sam) : du lundi d'entrée au dimanche de la sixième semaine.
 const finSoins = (() => { const d = new Date(D.soinsIntensifs + 'T12:00:00'); d.setDate(d.getDate() + 6 * 7 - 1); return d.toISOString().slice(0, 10); })();
 $('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</span><span>' + esc(insec(
@@ -576,7 +576,7 @@ $('essentiel-points').innerHTML = [
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Évolution magasin (le bloc du cockpit) --- */
-$('evolution-releve').textContent = 'relevé au cockpit le ' + D.cockpit.releve;
+$('evolution-releve').textContent = 'relevé au cockpit le ' + D.cockpit.releve + (D.htva ? ', ramené hors TVA' : '');
 $('evolution-faits').textContent = D.cockpit.faits;
 $('evolution-tuiles').innerHTML = D.cockpit.tuiles.map(t => kpi(t.k, t.v, t.s, t.cls)).join('');
 
@@ -1458,15 +1458,15 @@ if (D.mode === 'developpement') {
   document.body.classList.add('mode-dev');
   document.title = 'Sombreffe, le développement des ventes';
   ['page-1', 'page-2', 'annexes', 'annexe-a', 'cout-relance', 'gestion'].forEach(id => { const e = $(id); if (e) { e.hidden = true; } });
-  $('dev-kicker').textContent = `Pilotage réseau · réunion du jeudi ${dateL(D.reunion)}`;
+  $('dev-kicker').textContent = `Pilotage réseau · réunion du jeudi ${dateL(D.reunion)}` + (D.htva ? ' · montants hors TVA' : '');
   $('dev-soins').innerHTML = $('soins-intensifs').innerHTML;
   $('partie-3').querySelector('.rp-partie-n').textContent = '1';
   $('partie-4').querySelector('.rp-partie-n').textContent = '2';
   $('page-fin').querySelector('.rp-kicker').textContent = 'Sombreffe, le développement des ventes';
   // CA, frais fixes (les frais généraux du P&L) et personnel, de janvier à octobre 2026 (20/11/2026, Sam).
   // Le CA hors TVA (20/11/2026) : le CA TVAC du P&L × la part hors TVA des tickets du mois ; sans elle, le CA TVAC.
-  const CN = D.caNet || {}, ht = m => CN[m.mois] ? m.ca * CN[m.mois].part : m.ca, enHt = D.personnel && D.personnel.mois.some(m => CN[m.mois]);
-  const CM = D.personnel ? D.personnel.mois.filter(m => !m.indispo && m.mois >= '2026-01' && m.mois <= '2026-10').map(m => Object.assign({}, m, { ca: ht(m), caTtc: m.ca })) : [];
+  const enHt = !!D.htva;   // le CA des données est déjà hors TVA (20/11/2026)
+  const CM = D.personnel ? D.personnel.mois.filter(m => !m.indispo && m.mois >= '2026-01' && m.mois <= '2026-10').map(m => Object.assign({}, m, { caTtc: m.caTtc || m.ca })) : [];
   if (CM.length) {
     const pc_ = (a, b) => dec(a / b * 100) + INS + '%', lab = ym => (L.find(l => l.k === ym) || { lab: ym }).lab;
     const S = CM.reduce((a, m) => ({ ca: a.ca + m.ca, fg: a.fg + m.overhead, pe: a.pe + m.labour }), { ca: 0, fg: 0, pe: 0 });

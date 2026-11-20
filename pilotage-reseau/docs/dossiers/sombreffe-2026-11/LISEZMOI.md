@@ -18,7 +18,7 @@ python3 pilotage-reseau/docs/dossiers/sombreffe-2026-11/generer.py && node pilot
 La version « Développement » :
 
 ```bash
-node pilotage-reseau/docs/dossiers/sombreffe-2026-11/pdf.js developpement.html Sombreffe-developpement-2026-11.pdf "Sombreffe, le développement des ventes · réunion du 19/11/2026"
+node pilotage-reseau/docs/dossiers/sombreffe-2026-11/pdf.js developpement.html Sombreffe-developpement-2026-11.pdf "Sombreffe, le développement des ventes · réunion du 19/11/2026 · montants hors TVA"
 ```
 
 ## Les données à déposer ici

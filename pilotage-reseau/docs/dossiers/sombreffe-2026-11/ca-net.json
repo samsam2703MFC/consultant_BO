@@ -1,0 +1,675 @@
+{
+ "source": "cockpit, GET /rapports/ca-net?mois=AAAA-MM : TTC après remise − TVA, ticket par ticket, clients pro compris, les quatre magasins ; lu le 20/11/2026. Octobre 2025 et octobre 2026 : 30 jours sur 31 (le panel ne rend pas le dimanche du changement d’heure) ; novembre 2026 : jusqu’au 19.",
+ "mois": {
+  "2025-04": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 151039.26,
+    "tva": 9063.58,
+    "net": 141975.68,
+    "tickets": 8839,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 4664.75,
+    "tva": 279.41,
+    "net": 4385.34,
+    "tickets": 495,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 52027.18,
+    "tva": 2938.55,
+    "net": 49088.63,
+    "tickets": 3443,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2025-05": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 148802.03,
+    "tva": 8936.73,
+    "net": 139865.3,
+    "tickets": 9145,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 53979.29,
+    "tva": 3224.8,
+    "net": 50754.49,
+    "tickets": 4668,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 55943.75,
+    "tva": 3160.62,
+    "net": 52783.13,
+    "tickets": 3699,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2025-06": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 149486.72,
+    "tva": 8961.47,
+    "net": 140525.25,
+    "tickets": 8981,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 55060.7,
+    "tva": 3288.76,
+    "net": 51771.94,
+    "tickets": 4686,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 52028.05,
+    "tva": 4362.75,
+    "net": 47665.3,
+    "tickets": 3667,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2025-07": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 128298.94,
+    "tva": 7739.92,
+    "net": 120559.02,
+    "tickets": 8365,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 49577.5,
+    "tva": 2979.12,
+    "net": 46598.38,
+    "tickets": 4269,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 32900.15,
+    "tva": 1858.43,
+    "net": 31041.72,
+    "tickets": 2501,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2025-08": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 140188.14,
+    "tva": 8416.38,
+    "net": 131771.76,
+    "tickets": 9145,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 57613.1,
+    "tva": 3442.56,
+    "net": 54170.54,
+    "tickets": 4815,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 45645.65,
+    "tva": 2726.59,
+    "net": 42919.06,
+    "tickets": 3464,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2025-09": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 150525.14,
+    "tva": 9026.07,
+    "net": 141499.07,
+    "tickets": 9042,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 48262.3,
+    "tva": 2892.68,
+    "net": 45369.62,
+    "tickets": 4298,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 63036.25,
+    "tva": 3768.44,
+    "net": 59267.81,
+    "tickets": 3906,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2025-10": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 148045.23,
+    "tva": 8881.98,
+    "net": 139163.25,
+    "tickets": 9189,
+    "jours": 31,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 49431.9,
+    "tva": 2960.16,
+    "net": 46471.74,
+    "tickets": 4440,
+    "jours": 31,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 51090.3,
+    "tva": 3079.29,
+    "net": 48011.01,
+    "tickets": 3952,
+    "jours": 31,
+    "joursLus": 30
+   }
+  },
+  "2025-11": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 154748.32,
+    "tva": 9291.57,
+    "net": 145456.75,
+    "tickets": 8975,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 59100.45,
+    "tva": 3540.68,
+    "net": 55559.77,
+    "tickets": 5051,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 66115.62,
+    "tva": 4030.36,
+    "net": 62085.26,
+    "tickets": 4435,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2025-12": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 181061.57,
+    "tva": 10875.19,
+    "net": 170186.38,
+    "tickets": 9790,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 62373.22,
+    "tva": 3739.28,
+    "net": 58633.94,
+    "tickets": 5224,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 75737.2,
+    "tva": 4558.56,
+    "net": 71178.64,
+    "tickets": 4683,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2026-01": {
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 167353.4,
+    "tva": 10055.09,
+    "net": 157298.31,
+    "tickets": 9453,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 56279.27,
+    "tva": 3371.75,
+    "net": 52907.52,
+    "tickets": 4574,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 68791,
+    "tva": 4171.64,
+    "net": 64619.36,
+    "tickets": 4336,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2026-02": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 6506.85,
+    "tva": 388.95,
+    "net": 6117.9,
+    "tickets": 612,
+    "jours": 28,
+    "joursLus": 28
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 135682.17,
+    "tva": 8154.05,
+    "net": 127528.12,
+    "tickets": 8055,
+    "jours": 28,
+    "joursLus": 28
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 43794.79,
+    "tva": 2642.66,
+    "net": 41152.13,
+    "tickets": 3986,
+    "jours": 28,
+    "joursLus": 28
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 49632.55,
+    "tva": 3005.1,
+    "net": 46627.45,
+    "tickets": 3653,
+    "jours": 28,
+    "joursLus": 28
+   }
+  },
+  "2026-03": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 47639.85,
+    "tva": 2843.63,
+    "net": 44796.22,
+    "tickets": 4213,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 151022.97,
+    "tva": 9055.66,
+    "net": 141967.31,
+    "tickets": 8617,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 48733.87,
+    "tva": 2937.07,
+    "net": 45796.8,
+    "tickets": 4371,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 54707.6,
+    "tva": 3312.36,
+    "net": 51395.24,
+    "tickets": 4096,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2026-04": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 55831.57,
+    "tva": 3330.5,
+    "net": 52501.07,
+    "tickets": 4486,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 159863.3,
+    "tva": 9574.31,
+    "net": 150288.99,
+    "tickets": 8713,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 51570.45,
+    "tva": 3093.49,
+    "net": 48476.96,
+    "tickets": 4635,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 57877.85,
+    "tva": 3520.2,
+    "net": 54357.65,
+    "tickets": 4100,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2026-05": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 60278.02,
+    "tva": 3597.95,
+    "net": 56680.07,
+    "tickets": 4756,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 154258.69,
+    "tva": 9243.13,
+    "net": 145015.56,
+    "tickets": 8898,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 50096.35,
+    "tva": 3006.57,
+    "net": 47089.78,
+    "tickets": 4186,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 59471.8,
+    "tva": 3614.8,
+    "net": 55857,
+    "tickets": 4027,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2026-06": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 46950.55,
+    "tva": 2807.3,
+    "net": 44143.25,
+    "tickets": 3812,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 159310.46,
+    "tva": 9549.64,
+    "net": 149760.82,
+    "tickets": 8783,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 56811.15,
+    "tva": 3454.48,
+    "net": 53356.67,
+    "tickets": 4453,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 51911.33,
+    "tva": 3139.94,
+    "net": 48771.39,
+    "tickets": 4021,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2026-07": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 46239.03,
+    "tva": 2764.87,
+    "net": 43474.16,
+    "tickets": 3776,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 129022.07,
+    "tva": 7731.83,
+    "net": 121290.24,
+    "tickets": 8339,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 45161.1,
+    "tva": 2708.87,
+    "net": 42452.23,
+    "tickets": 4190,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 45564.84,
+    "tva": 2754.25,
+    "net": 42810.59,
+    "tickets": 3693,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2026-08": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 52350.95,
+    "tva": 3131.32,
+    "net": 49219.63,
+    "tickets": 4323,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 142900.9,
+    "tva": 8563.29,
+    "net": 134337.61,
+    "tickets": 8794,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 47874.4,
+    "tva": 2877.64,
+    "net": 44996.76,
+    "tickets": 4333,
+    "jours": 31,
+    "joursLus": 31
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 49084.85,
+    "tva": 2959.25,
+    "net": 46125.6,
+    "tickets": 3856,
+    "jours": 31,
+    "joursLus": 31
+   }
+  },
+  "2026-09": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 50849.75,
+    "tva": 3043.48,
+    "net": 47806.27,
+    "tickets": 4156,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 142530.81,
+    "tva": 8541.05,
+    "net": 133989.76,
+    "tickets": 8382,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 55747.1,
+    "tva": 3400.2,
+    "net": 52346.9,
+    "tickets": 4394,
+    "jours": 30,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 52020,
+    "tva": 3148.56,
+    "net": 48871.44,
+    "tickets": 3866,
+    "jours": 30,
+    "joursLus": 30
+   }
+  },
+  "2026-10": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 56219.01,
+    "tva": 3345.08,
+    "net": 52873.93,
+    "tickets": 4524,
+    "jours": 31,
+    "joursLus": 30
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 149713.07,
+    "tva": 8970.99,
+    "net": 140742.08,
+    "tickets": 9066,
+    "jours": 31,
+    "joursLus": 30
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 55277.3,
+    "tva": 3382.87,
+    "net": 51894.43,
+    "tickets": 4245,
+    "jours": 31,
+    "joursLus": 30
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 59230.05,
+    "tva": 3592.14,
+    "net": 55637.91,
+    "tickets": 4045,
+    "jours": 31,
+    "joursLus": 30
+   }
+  },
+  "2026-11": {
+   "4": {
+    "nom": "Atelier by - Halle",
+    "brut": 38837.05,
+    "tva": 2296.22,
+    "net": 36540.83,
+    "tickets": 2948,
+    "jours": 19,
+    "joursLus": 19
+   },
+   "2": {
+    "nom": "Atelier by Berlo - Corbais",
+    "brut": 101141.83,
+    "tva": 6057.43,
+    "net": 95084.4,
+    "tickets": 5713,
+    "jours": 19,
+    "joursLus": 19
+   },
+   "5": {
+    "nom": "Atelier by Harmonie - Sombreffe",
+    "brut": 41856.57,
+    "tva": 2519.05,
+    "net": 39337.52,
+    "tickets": 3047,
+    "jours": 19,
+    "joursLus": 19
+   },
+   "3": {
+    "nom": "Atelier by Max & Sandra - Gosselies",
+    "brut": 42581.3,
+    "tva": 2566.67,
+    "net": 40014.63,
+    "tickets": 2783,
+    "jours": 19,
+    "joursLus": 19
+   }
+  }
+ }
+}

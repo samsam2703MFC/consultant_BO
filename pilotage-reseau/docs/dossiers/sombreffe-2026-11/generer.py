@@ -68,9 +68,39 @@ SEMAINES_HALLE = ICI / 'semaines-halle.json'
 HEURES_EQUIPE = ICI / 'heures-equipe.json'
 # GUEST en novembre 2026, du 1er au 14 (14/11/2026) : ses tickets relus jour par jour (/exploitation/pro/detail).
 GUEST_NOV = ICI / 'guest-novembre.json'
-# Le CA hors TVA (20/11/2026, Sam : « le CA HTVA ») : /rapports/ca-net, TTC − TVA ticket par ticket. Le P&L du panel est
-# TVAC ; son CA passe hors TVA à la part hors TVA des tickets du même mois (≈ 94 %, la TVA à 6 %).
-CA_NET = ICI / 'ca-net-2026.json'
+# TOUT LE RAPPORT EN HTVA (20/11/2026, Sam). Les sources du cockpit et du panel sont TVAC (le CA des tickets, le
+# `revenue` du P&L). La part hors TVA de chaque magasin et de chaque mois se lit à /rapports/ca-net (TTC − TVA, ticket
+# par ticket) : ≈ 94 %, la TVA à 6 %. Tout montant de vente est ramené hors TVA à la lecture, à la part de son magasin et
+# de son mois (à défaut, la moyenne du magasin). Les frais (personnel, frais généraux) restent ceux du P&L, HTVA.
+CA_NET = ICI / 'ca-net.json'
+
+
+def lirePartsHt():
+    if not CA_NET.exists():
+        return lambda sid, ym: 1.0, False
+    P = {(sid, ym): v['net'] / v['brut'] for ym, ms in json.loads(CA_NET.read_text(encoding='utf-8'))['mois'].items()
+         for sid, v in ms.items() if v.get('brut')}
+    parMag = {}
+    for (sid, _), x in P.items():
+        parMag.setdefault(sid, []).append(x)
+    moy = {sid: sum(v) / len(v) for sid, v in parMag.items()}
+    tout = sum(P.values()) / len(P)
+    return (lambda sid, ym: P.get((str(sid), ym), moy.get(str(sid), tout))), True
+
+
+HT, EN_HTVA = lirePartsHt()
+
+
+def anMoinsUn(ym):
+    return f'{int(ym[:4]) - 1}{ym[4:]}'
+
+
+def kEurHt(texte, k):
+    """Les montants d'un texte du cockpit (« 313,2 k€ », « 11,73 € ») ramenés hors TVA."""
+    def f(m):
+        v = float(m.group(1).replace(' ', '').replace('\u202f', '').replace(',', '.')) * k
+        return (f'{v:.1f}'.replace('.', ',') + ' k€') if m.group(2) else (f'{v:.2f}'.replace('.', ',') + ' €')
+    return re.sub(r'(\d[\d  ]*,\d+)\s?(k)?€', f, texte)
 # Les pièces vendues par mois (14/11/2026, Sam) : GET /api/cockpit/ventes/semaines?shop=5&vue=mois&date=2026-10-31&n=6
 # &articles=1 — chaque mois et son N-1 portent `articles`, les pièces vendues.
 PIECES_MOIS = ICI / 'pieces-mois.json'
@@ -94,6 +124,16 @@ def pc(a, b):
 
 def main():
     d = json.loads(SOURCE.read_text(encoding='utf-8'))
+    for x in d['magasins']:   # HTVA (20/11/2026)
+        for m in x['mois']:
+            m['ca'] *= HT(x['id'], m['mois'])
+            for c in ('n1', 'n1Mois'):
+                if m.get(c):
+                    m[c]['ca'] *= HT(x['id'], anMoinsUn(m['mois']))
+        for w in x.get('semaines', []):
+            w['ca'] *= HT(x['id'], w['du'][:7])
+            if w.get('n1'):
+                w['n1']['ca'] *= HT(x['id'], anMoinsUn(w['du'][:7]))
     mag = next(x for x in d['magasins'] if x['id'] == SHOP)
     mois = {x['mois']: x for x in mag['mois']}
 
@@ -104,11 +144,21 @@ def main():
         ev = json.loads(EVOLUTION_PRO.read_text(encoding='utf-8'))
         m5 = next((x for x in ev.get('magasins', []) if str(x.get('id')) == SHOP), None)
         for x in (m5 or {}).get('mois', []):
-            def lu(p, jours):
-                return {'ca': p['ca'], 'clients': p['clients'], 'complet': int(p.get('joursLus') or 0) >= int(jours or 0)} if p else None
+            def lu(p, jours, k):
+                return {'ca': p['ca'] * k, 'clients': p['clients'], 'complet': int(p.get('joursLus') or 0) >= int(jours or 0)} if p else None
             n1 = x.get('n1') or {}
-            pro[x['mois']] = {'n': lu(x.get('pro'), x.get('jours')), 'n1': lu(n1.get('pro'), n1.get('jours')) if n1 else None}
+            pro[x['mois']] = {'n': lu(x.get('pro'), x.get('jours'), HT(SHOP, x['mois'])),
+                              'n1': lu(n1.get('pro'), n1.get('jours'), HT(SHOP, anMoinsUn(x['mois']))) if n1 else None}
     detail = json.loads(B2B_DETAIL.read_text(encoding='utf-8')) if B2B_DETAIL.exists() else None
+    if detail:   # HTVA (20/11/2026)
+        for ym, m in detail['mois'].items():
+            for c in ('ca', 'caApresRemise', 'caJour', 'sansTvaCa'):
+                if c in m:
+                    m[c] *= HT(SHOP, ym)
+        for s in detail['societes']:
+            for ym, v in s['mois'].items():
+                v['ca'] *= HT(SHOP, ym)
+            s['total'] = sum(v['ca'] for v in s['mois'].values())
     if detail:
         for ym, m in detail['mois'].items():
             if m['jours'] >= m['joursMois']:
@@ -210,7 +260,7 @@ def main():
         t = j['seuils'][TM_SEUIL]
         return {'nb': t['nb'], 'min': t['min'], 'pct': t['pct'], 'minBords': t['minBords'], 'tickets': j['tickets'],
                 'ouvert': j['ouvert'], 'plusLong': j['plusLong'], 'plusLongHeure': j.get('plusLongHeure'), 'bords': bords,
-                'heures': {h: {'pct': v['pct'], 'min': v['min'], 'nb': v['nb'], 'tk': j['heures'][h]['tk'], 'ca': j['heures'][h]['ca'],
+                'heures': {h: {'pct': v['pct'], 'min': v['min'], 'nb': v['nb'], 'tk': j['heures'][h]['tk'], 'ca': j['heures'][h]['ca'] * HT(SHOP, tmD['meta']['au'][:7]),
                                'ouvert': j['heures'][h]['ouvert']} for h, v in t['heures'].items()}}
     tempsMorts = {
         'du': tmD['meta']['du'], 'au': tmD['meta']['au'], 'semaines': tmD['meta']['semaines'], 'seuil': int(TM_SEUIL),
@@ -253,8 +303,9 @@ def main():
             for x in m5['mois']:
                 if x.get('indispo') or not x.get('ca'):
                     lignesP.append({'mois': x['mois'], 'indispo': True}); continue
-                lignesP.append({'mois': x['mois'], 'ca': x['ca'], 'labour': x['labour'], 'labourPct': x.get('labourPct'),
-                                'overhead': x.get('overhead'), 'overheadPct': x.get('overheadPct'),
+                caHt = x['ca'] * HT(SHOP, x['mois'])   # HTVA (20/11/2026) ; caTtc : le revenue du panel
+                lignesP.append({'mois': x['mois'], 'ca': caHt, 'caTtc': x['ca'], 'labour': x['labour'], 'labourPct': x['labour'] / caHt * 100,
+                                'overhead': x.get('overhead'), 'overheadPct': (x.get('overhead') or 0) / caHt * 100,
                                 'sansValeur': (x.get('sansValeur') or {}).get('labour', 0)})
             lus = [l for l in lignesP if not l.get('indispo')]
             ca_p = sum(l['ca'] for l in lus); lab_p = sum(l['labour'] for l in lus)
@@ -323,11 +374,12 @@ def main():
         pr = json.loads(PNL_RESEAU.read_text(encoding='utf-8'))
         personnelReseau = []
         for m in pr.get('magasins', []):
-            L = [x for x in m['mois'] if not x.get('indispo') and x.get('ca')]
+            L = [dict(x, ca=x['ca'] * HT(m['id'], x['mois'])) for x in m['mois'] if not x.get('indispo') and x.get('ca')]   # HTVA
             s6 = [x for x in L if '2026-05' <= x['mois'] <= '2026-10']
             ca6 = sum(x['ca'] for x in s6); lab6 = sum(x['labour'] for x in s6)
             personnelReseau.append({'shop': str(m['id']), 'nom': m.get('court') or m['nom'], 'ca6': ca6, 'lab6': lab6,
-                                    'pct6': lab6 / ca6 * 100 if ca6 else None, 'pctTout': (m.get('cumul') or {}).get('labourPct'), 'nMois': len(L)})
+                                    'pct6': lab6 / ca6 * 100 if ca6 else None,
+                                    'pctTout': sum(x['labour'] for x in L) / sum(x['ca'] for x in L) * 100 if L else None, 'nMois': len(L)})
         personnelReseau.sort(key=lambda x: (x['shop'] == SHOP, x['pct6'] or 0))
 
     # Le résultat théorique (13/11/2026) : même trafic, panier au plus bas des autres magasins, personnel au seuil du
@@ -378,7 +430,7 @@ def main():
     # Le coût d'une heure de planning : la somme du personnel mesuré au P&L ÷ la somme des heures du planning (hors franchisé).
     heuresEquipe = None
     if HEURES_EQUIPE.exists():
-        J = [j for j in json.loads(HEURES_EQUIPE.read_text(encoding='utf-8'))['jours']
+        J = [dict(j, ca=j['ca'] * HT(SHOP, j['date'][:7])) for j in json.loads(HEURES_EQUIPE.read_text(encoding='utf-8'))['jours']
              if j['heures'] and j['personnel'] and j['personnelSource'] == 'mesure']
         h_ = sum(j['heures'] - j['heuresFranchise'] for j in J); c_ = sum(j['personnel'] for j in J)
         heuresEquipe = {'du': J[0]['date'], 'au': J[-1]['date'], 'jours': len(J), 'heures': h_, 'personnel': c_,
@@ -387,9 +439,8 @@ def main():
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'heuresEquipe': heuresEquipe, 'coutHeure': COUT_HEURE,
-        'caNet': ({x['mois']: {'part': x['net'] / x['brut'], 'joursLus': x['joursLus'], 'jours': x['jours']}
-                   for x in json.loads(CA_NET.read_text(encoding='utf-8'))['mois'] if x['brut']} if CA_NET.exists() else None),
-        'pieces': ([{'k': w['du'][:7], 'jours': w['jours'], 'clients': w['tickets'], 'ca': w['ca'], 'pieces': w['articles'],
+        'htva': EN_HTVA,
+        'pieces': ([{'k': w['du'][:7], 'jours': w['jours'], 'clients': w['tickets'], 'ca': w['ca'] * HT(SHOP, w['du'][:7]), 'pieces': w['articles'],
                      'n1': ({'jours': w['n1']['jours'], 'clients': w['n1']['tickets'], 'pieces': w['n1']['articles']} if w.get('n1') else None)}
                     for w in json.loads(PIECES_MOIS.read_text(encoding='utf-8'))['semaines']] if PIECES_MOIS.exists() else None),
         'repere': repere,
@@ -457,10 +508,14 @@ def main():
                                    'Est-ce que ± 300 € de marge brute par jour livrable couvrent le personnel et les frais de livraison impliqués ?',
                                    'Que me coûte exactement le financement de ce client ?',
                                    'Qu’est-ce qu’on va faire pour transformer ce client en bon client ?'],
-                     'novembre': json.loads(GUEST_NOV.read_text(encoding='utf-8')) if GUEST_NOV.exists() else None},
+                     'novembre': (lambda g: dict(g, ca=g['ca'] * HT(SHOP, '2026-11'),
+                                                 jours=[dict(j, ca=j['ca'] * HT(SHOP, '2026-11')) for j in g['jours']]))(
+                                     json.loads(GUEST_NOV.read_text(encoding='utf-8'))) if GUEST_NOV.exists() else None},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
-        'cockpit': COCKPIT, 'plafond': PLAFOND_B2B, 'plafondClient': PLAFOND_CLIENT_B2B,
+        'cockpit': dict(COCKPIT, faits=kEurHt(COCKPIT['faits'], HT(SHOP, '')),
+                        tuiles=[dict(x, s=kEurHt(x['s'], HT(SHOP, '')), v=kEurHt(x['v'], HT(SHOP, ''))) for x in COCKPIT['tuiles']]),
+        'plafond': PLAFOND_B2B, 'plafondClient': PLAFOND_CLIENT_B2B,
         'b2b': {'part': partB2b, 'partCockpit': COCKPIT['partB2b'], 'corrige': b2bCorrige, 'ca12': ca12, 'b2b12': b2b12, 'comptoir12': ca12 - b2b12, 'parMois': b2b12 / 12,
                 'ecart': ecart, 'ecartSept': ecarts[0], 'ecartOct': ecarts[1], 'partDeLAnnee': ecart / b2b12 * 100,
                 'unPoint': ca12 / 100, 'panier12': panier12, 'unClientJour': panier12 * 365},

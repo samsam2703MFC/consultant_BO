@@ -10,10 +10,10 @@ const path = require('path');
 
 const ICI = __dirname;
 // node pdf.js [entrée.html] [sortie.pdf] [texte du pied] — par défaut le rapport ; la version « Développement » :
-//   node pdf.js developpement.html Sombreffe-developpement-2026-11.pdf "Sombreffe, le développement des ventes · réunion du 19/11/2026"
+//   node pdf.js developpement.html Sombreffe-developpement-2026-11.pdf "Sombreffe, le développement des ventes · réunion du 19/11/2026 · montants hors TVA"
 const ENTREE = path.join(ICI, process.argv[2] || 'rapport.html');
 const SORTIE = path.join(ICI, process.argv[3] || 'Sombreffe-rapport-2026-11.pdf');
-const PIED = process.argv[4] || 'Sombreffe, comptoir et B2B · rapport du 13/11/2026';
+const PIED = process.argv[4] || 'Sombreffe, comptoir et B2B · rapport du 13/11/2026 · montants hors TVA';
 const POLICES = path.join(ICI, '..', '..', '..', 'public', 'assets', 'ds', 'fonts');
 const ECHELLE = 0.8;           // 186 mm utiles ÷ 0,8 ≈ 880 px : l’état des lieux tient sans couper un graphique (13/11/2026)
 const LARGEUR = 880;
