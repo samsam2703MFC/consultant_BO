@@ -6172,8 +6172,9 @@
    * La demande au bureau vit dans la fenêtre de l'assistant, troisième mode : l'avatar choisi (Pierre ou le Coach) la
    * transmet. Le sujet (les six domaines du helpdesk), le titre, la demande, jusqu'à quatre photos, et « un passage du
    * consultant ? » ; en dessous, « Mes demandes » : le statut de chacune et la réponse du bureau.
-   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases). */
-  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'toutes' };
+   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases).
+   * « Mes demandes » s'ouvre sur le filtre « Ouvertes » (20/11/2026). */
+  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'ouvertes' };
   function hdLire(force) {
     if (HLP.chargement || (HLP.d && !force && HLP.shop === S.shop)) { return; }
     HLP.chargement = true; HLP.shop = S.shop;
@@ -6218,7 +6219,7 @@
     else {
       const sans = L.filter(x => x.ouverte && !x.reponse && x.cree && (Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5 > 30).length;
       h += `<div class="rc-resume"><b>${n('ouvertes')}</b> ouverte${n('ouvertes') > 1 ? 's' : ''}${sans ? ' · ' + sans + ' sans réponse depuis plus de 30 jours' : ''}</div>
-        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.map(hdCarte).join('')}`;
+        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.length ? vis.map(hdCarte).join('') : `<div class="rc-pt">${HLP.filtre === 'ouvertes' ? 'Aucune demande ouverte.' : 'Aucune demande répondue pour l’instant.'}</div>`}`;
     }
     return h + '</div></div>';
   }
