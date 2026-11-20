@@ -5,7 +5,7 @@
 <!-- La vidéo de la publicité « Lunch au bureau » (portail Commercial, 19/11/2026) : 15 secondes, rendues image par image
      par rendre.cjs (Chromium, puis ffmpeg). ?format=9x16 (Stories, Reels : 1080 × 1920) ou 4x5 (fil : 1080 × 1350),
      ?langue=fr|nl ; window.poser(t) place chaque élément à l'instant t (secondes). Photos : le site de la marque
-     (atelierby.be). Design system : Gotham, rubis #8D1D2C, papier #faf7f2, rectangles aux coins arrondis, pas de gras. -->
+     (atelierby.be). La version néerlandaise est celle de Halle. Design system : Gotham, rubis #8D1D2C, papier #faf7f2, rectangles aux coins arrondis, pas de gras. -->
 <style>
   /* Les deux fichiers du portail : « Gotham_Medium » est le trait normal, « Gotham_Regular » le plus appuyé (même
      répartition que commercial.css). Pas de gras : tout en trait normal. */
@@ -66,10 +66,10 @@
       k3: 'Plats du jour', t3: 'Des plats chauds, en barquettes individuelles.', s3: 'Commande jusqu’à la veille 16 h.',
       t4: 'Demandez votre dégustation offerte.', s4: 'Le magasin de votre zone vous rappelle sous 24 h.', b4: 'Je laisse mes coordonnées', p4: 'Livraison au bureau · L’Atelier By' },
     nl: { k0: 'Geleverd op kantoor', t0: 'De lunch van jullie team, geleverd op kantoor.',
-      k1: 'Lunch', t1: 'Broodjesschotels, salades, quiches.', s1: '’s Ochtends bereid door de L’Atelier By-winkel van jullie regio.',
+      k1: 'Lunch', t1: 'Broodjesschotels, salades, quiches.', s1: '’s Ochtends bereid door L’Atelier By Halle.',
       k2: 'Ontbijt', t2: 'Verse koffiekoeken voor het hele team.', s2: 'Van 5 tot 50 personen.',
       k3: 'Dagschotels', t3: 'Warme gerechten, in individuele bakjes.', s3: 'Bestellen tot 16 u de dag voordien.',
-      t4: 'Vraag jullie gratis proeverij aan.', s4: 'De winkel van jullie regio belt jullie binnen 24 uur terug.', b4: 'Ik laat mijn gegevens achter', p4: 'Levering op kantoor · L’Atelier By' },
+      t4: 'Vraag jullie gratis proeverij aan.', s4: 'L’Atelier By Halle belt jullie binnen 24 uur terug.', b4: 'Ik laat mijn gegevens achter', p4: 'Levering op kantoor · Halle en omgeving' },
   };
   const T = TEXTES[q.get('langue') === 'nl' ? 'nl' : 'fr'];
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = T[el.dataset.t] || ''; });

@@ -38,8 +38,10 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des domaines, clés, migration
 - **Le formulaire Meta des bureaux** (`src/commercial_meta.php`) : « Lunch au bureau » créé sur la Page par l'API Graph, avec
   le jeton de MétaDonnée ; ses fonctions seulement, jamais ses tables. Il se met en inactif (archivé chez Meta) et se
   réactive d'ici (`POST /commercial/formulaires/{id}/actif`) ; seuls les formulaires « Lunch au bureau » se touchent.
-  La publicité qui va avec : la vidéo (15 s, 9:16 et 4:5, `tools/video-lunch/`, rendue dans `public/commercial/meta/`)
-  et le texte du post (`smPubLunch`, `GET /commercial/formulaires/pub?langue=`), montrés dans Leads Meta.
+  La publicité qui va avec : la vidéo (15 s, 9:16 et 4:5, `tools/video-lunch/`, rendue dans `public/commercial/meta/`),
+  le texte du post (`smPubLunch`) et l'aperçu du formulaire (`smApercuFormulaire` : accueil, champs, remerciement),
+  `GET /commercial/formulaires/pub?langue=`, montrés dans Leads Meta. La version NL est celle de Halle (formulaire
+  « LUNCH OP KANTOOR - NL », vidéo et post qui nomment L’Atelier By Halle).
 - **La commande d'échantillon** (`src/commercial_commande.php`) : comme une commande du magasin, avec ses produits et ses
   catégories (TF Buddy, `GET /shops/{id}/products/available`), postée dans son système de commande (`POST /client-orders`,
   en formulaire) : commentaire « ÉCHANTILLON COMMERCIAL », lignes offertes (total 0 €), statut « nouvelle ». Le numéro de
