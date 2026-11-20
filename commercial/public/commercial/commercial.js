@@ -333,8 +333,8 @@
       page.innerHTML = `<div class="grid" style="grid-template-columns:repeat(${Math.max(1, d.parMagasin.length)},1fr);margin-bottom:16px">${cartes}</div>
         <div class="toolbar">${filtres}</div>
         <div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Reçu</th><th></th><th>Lead</th><th>Magasin</th><th>Statut dans l’ERP</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
-        <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">Formulaires Meta <span class="aside" style="float:none;margin-left:8px">un lead n’arrive que d’un formulaire suivi</span></h2><span style="display:flex;gap:8px">${btn('Créer « Lunch au bureau » (FR)', 'creerForm', 'btn--sm btn--primary', 'fr')}${btn('(NL)', 'creerForm', 'btn--sm', 'nl')}</span></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
-        <div class="card" style="margin-top:16px" id="pub"><div class="vide">Lecture de la publicité…</div></div>
+        <div class="card" style="margin-top:16px" id="campagne"><div class="vide">Lecture des formulaires et de la publicité…</div></div>
+        <details class="card autres-form" id="autres" hidden></details>
         <p class="pied">${esc(d.source)}. Un lead sans magasin prend celui de son code postal.</p>`;
       // L'aperçu du formulaire tel que Meta le montre : l'accueil, les champs (préremplis ou à choix), la confidentialité, le merci.
       const apercuForm = (a, langue) => !a ? '' : `<div class="pub-form"><div class="pub-form__tete">${esc(a.page)} · <span>${esc(a.nom)}</span></div>
@@ -344,36 +344,60 @@
           ${q.choix.length ? `<div class="pub-form__choix">${q.choix.map(c => `<span>${esc(c)}</span>`).join('')}</div>` : '<div class="pub-form__saisie"></div>'}</div>`).join('')}</div>
         <div class="pub-form__etape">3 · ${langue === 'nl' ? 'Privacy' : 'Confidentialité'}</div><div class="pub-form__bloc small">${esc(a.confidentialite)}</div>
         <div class="pub-form__etape">4 · ${langue === 'nl' ? 'Bedankt' : 'Remerciement'}</div><div class="pub-form__bloc"><div class="pub-form__titre">${esc(a.merci.titre)}</div><div class="small">${esc(a.merci.texte)}</div><div class="pub-form__bouton">${esc(a.merci.bouton)}</div></div></div>`;
-      // La publicité « Lunch au bureau » : la vidéo et le post qui va avec (commercial_meta.php, smPubLunch).
-      const pub = langue => api('GET', '/formulaires/pub?langue=' + langue).then(x => {
-        const el = document.getElementById('pub'); if (!el) return;
-        const champ = (k, l, v) => `<div style="margin-top:12px"><div class="field-label" style="display:flex;justify-content:space-between;align-items:center">${l}${btn('Copier', 'copier', 'btn--sm btn--ghost', k)}</div><div class="pub-texte" data-pub="${k}">${esc(v)}</div></div>`;
-        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">La publicité « Lunch au bureau » <span class="aside" style="float:none;margin-left:8px">le formulaire, la vidéo et le post${x.magasin ? ' · ' + esc(x.magasin) : ''}</span></h2>
-            <span style="display:flex;gap:6px">${btn('FR', 'pubLangue', 'btn--sm ' + (langue === 'fr' ? 'btn--primary' : ''), 'fr')}${btn('NL', 'pubLangue', 'btn--sm ' + (langue === 'nl' ? 'btn--primary' : ''), 'nl')}</span></div>
+      /* La campagne « Lunch au bureau » (20/11/2026 : « use all the page, no collision, understandable UX ») : un onglet par
+       * langue — FR pour tous les magasins (magasin par code postal), NL pour Halle — et, dans chacun, où en est le
+       * formulaire (sur la Page, actif, suivi, publicité), l'action qui fait avancer, puis l'aperçu, les vidéos et le post. */
+      let FO = null; const PUB = {}; let onglet = q.get('langue') === 'nl' ? 'nl' : 'fr';
+      const halle = () => CFG.magasins.find(m => /halle/i.test(m.nom));
+      function campagne() {
+        const el = document.getElementById('campagne'); const x = PUB[onglet]; if (!el || !FO || !x) return;
+        const f = FO.formulaires.find(y => y.nom === x.formulaire);
+        const pourHalle = onglet === 'nl' && halle();
+        const cible = pourHalle ? 'leads attribués à ' + halle().nom : 'magasin du lead par son code postal';
+        const sur = !!f, actif = sur && f.statutMeta !== 'ARCHIVED', suivi = actif && f.suivi;
+        const etapes = [['Sur la Page Meta', sur], ['Actif', actif], ['Suivi ici', suivi], ['Publicité lancée chez Meta', null]];
+        const action = !sur ? btn('Créer sur la Page', 'creerForm', 'btn--sm btn--primary', onglet + (pourHalle ? '|' + halle().id : ''))
+          : !actif ? btn('Réactiver', 'actif', 'btn--sm btn--primary', f.id + '|1')
+          : (!suivi ? btn('Suivre (' + cible + ')', 'suivre', 'btn--sm btn--primary', f.id + '|1' + (pourHalle ? '|' + halle().id : ''))
+            : btn('Récupérer 90 jours', 'histo', 'btn--sm', f.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', f.id + '|0'))
+            + btn('Mettre en inactif', 'actif', 'btn--sm btn--ghost', f.id + '|0');
+        const etat = !sur ? 'Pas encore créé sur la Page.' : !actif ? 'Inactif : archivé chez Meta, aucune publicité ne peut l’utiliser.'
+          : !suivi ? 'Actif, mais pas suivi : ses leads n’arrivent pas ici.' : 'Actif et suivi : ' + cible + (f.dernierLead ? ' · dernier lead le ' + fDc(String(f.dernierLead).slice(0, 10)) : ' · aucun lead pour l’instant') + '.';
+        const champ = (k, l, v) => `<div class="pub-champ"><div class="field-label">${l}${btn('Copier', 'copier', 'btn--sm btn--ghost', k)}</div><div class="pub-texte" data-pub="${k}">${esc(v)}</div></div>`;
+        el.innerHTML = `<div class="campagne-tete"><div><h2 style="margin:0">Campagne « Lunch au bureau »</h2><div class="small muted" style="margin-top:4px">Le formulaire Meta, la vidéo et le post. Un lead n’arrive ici que d’un formulaire actif et suivi.</div></div>
+            <div class="campagne-onglets">${[['fr', 'FR · tous les magasins'], ['nl', 'NL · ' + (halle() ? halle().nom : 'Halle')]].map(([k, l]) => `<button type="button" class="filter ${onglet === k ? 'is-on' : ''}" data-a="onglet" data-v="${k}">${esc(l)}</button>`).join('')}</div></div>
+          <div class="campagne-etat">
+            <ol class="campagne-etapes">${etapes.map(([l, ok], i) => `<li class="${ok ? 'fait' : ok === null ? 'dehors' : i === etapes.findIndex(e => e[1] === false) ? 'a-faire' : 'plus-tard'}"><span>${ok ? '✓' : i + 1}</span>${esc(l)}</li>`).join('')}</ol>
+            <div class="campagne-action"><div><div>${esc(x.formulaire)}</div><div class="small muted">${esc(etat)}</div></div><div class="campagne-boutons">${action}</div></div></div>
           <div class="pub">
-            ${apercuForm(x.apercu, langue)}
-            <div class="pub-videos">${x.videos.length ? x.videos.map(v => `<figure><video src="${esc(v.mp4)}" poster="${esc(v.affiche)}" controls muted playsinline preload="none"></video>
-              <figcaption>${esc(v.placement)} · ${v.duree} s · ${Math.round(v.octets / 1048576 * 10) / 10} Mo <a href="${esc(v.mp4)}" download>Télécharger</a></figcaption></figure>`).join('')
-              : `<div class="info">Vidéo pas encore rendue dans cette langue : <code>${esc(x.aRendre || '')}</code></div>`}</div>
-            <div class="pub-post">${champ('texte', 'Texte principal', x.texte)}${champ('titre', 'Titre', x.titre)}${champ('description', 'Description', x.description)}
-              <div style="margin-top:12px"><div class="field-label">Bouton</div><div class="pub-texte">${esc(x.bouton)}</div></div>
-              <p class="small muted" style="margin-top:14px">Dans le Gestionnaire de publicités : objectif Prospects, formulaire instantané « ${esc(x.formulaire)} » (le réactiver d’abord ci-dessus s’il est inactif), la vidéo 9:16 pour les Stories et Reels, la 4:5 pour le fil. Sans son : une musique s’ajoute chez Meta.</p></div>
+            <section><div class="pub-titre">Le formulaire</div>${apercuForm(x.apercu, onglet)}</section>
+            <section><div class="pub-titre">Les vidéos</div><div class="pub-videos">${x.videos.length ? x.videos.map(v => `<figure style="flex:${v.format === '4x5' ? 0.8 : 0.5625} 1 0"><video src="${esc(v.mp4)}" poster="${esc(v.affiche)}" controls muted playsinline preload="none"></video>
+              <figcaption>${esc(v.placement)} · ${v.duree} s · ${Math.round(v.octets / 1048576 * 10) / 10} Mo · <a href="${esc(v.mp4)}" download>Télécharger</a></figcaption></figure>`).join('')
+              : `<div class="info">Vidéo pas encore rendue dans cette langue : <code>${esc(x.aRendre || '')}</code></div>`}</div></section>
+            <section class="pub-post"><div class="pub-titre">Le post</div>${champ('texte', 'Texte principal', x.texte)}${champ('titre', 'Titre', x.titre)}${champ('description', 'Description', x.description)}
+              <div class="pub-champ"><div class="field-label">Bouton</div><div class="pub-texte">${esc(x.bouton)}</div></div>
+              <p class="small muted" style="margin-top:12px">Dans le Gestionnaire de publicités : objectif Prospects, formulaire instantané « ${esc(x.formulaire)} », la vidéo 9:16 pour les Stories et Reels, la 4:5 pour le fil. Sans son : une musique s’ajoute chez Meta.</p></section>
           </div>`;
         ACT.copier = b => { const t = el.querySelector(`[data-pub="${b.dataset.v}"]`).textContent; navigator.clipboard.writeText(t).then(() => toast('Copié')).catch(() => toast('Copie impossible : sélectionnez le texte', true)); };
-        ACT.pubLangue = b => pub(b.dataset.v);
-      }).catch(e => { const el = document.getElementById('pub'); if (el) el.innerHTML = `<div class="erreur">${esc(e.message)}</div>`; });
-      pub('fr');
-      api('GET', '/formulaires').then(fo => {
-        const el = document.getElementById('formulaires'); if (!el) return;
-        el.outerHTML = fo.formulaires.length ? `<table><tbody>${fo.formulaires.map(x => `<tr><td>${esc(x.nom)}<span class="sub">${esc(x.page)}${x.dernierLead ? ' · dernier lead ' + esc(String(x.dernierLead).slice(0, 10)) : ''}</span></td>
-          <td>${x.statutMeta === 'ARCHIVED' ? '<span class="badge badge--n">inactif (archivé chez Meta)</span>' : x.recrutement ? '<span class="badge badge--n">recrutement, pas un bureau</span>' : x.suivi ? '<span class="badge badge--ok">suivi</span>' : '<span class="tag-warn">pas suivi</span>'}</td>
-          <td class="num" style="white-space:nowrap">${x.statutMeta === 'ARCHIVED' ? (x.lunch ? btn('Réactiver', 'actif', 'btn--sm', x.id + '|1') : '')
-            : (x.recrutement ? '' : x.suivi ? btn('Récupérer 90 jours', 'histo', 'btn--sm', x.id) + btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm btn--primary', x.id + '|1'))
-              + (x.lunch ? btn('Mettre en inactif', 'actif', 'btn--sm btn--ghost', x.id + '|0') : '')}</td></tr>`).join('')}</tbody></table>`
-          : '<div class="vide">Aucun formulaire lu sur la Page Meta.</div>';
-      }).catch(e => { const el = document.getElementById('formulaires'); if (el) el.textContent = e.message; });
+        ACT.onglet = b => { onglet = b.dataset.v; campagne(); };
+      }
+      // Les autres formulaires de la Page (recrutement surtout) : repliés, ils ne se suivent pas d'ici.
+      function autres() {
+        const el = document.getElementById('autres'); if (!el || !FO) return;
+        const noms = Object.values(PUB).map(x => x.formulaire);
+        const l = FO.formulaires.filter(x => !x.lunch && !noms.includes(x.nom));
+        el.hidden = !l.length; if (!l.length) return;
+        const rec = l.filter(x => x.recrutement).length;
+        el.innerHTML = `<summary>Les autres formulaires de la Page · ${l.length}<span class="small muted">${rec ? rec + ' de recrutement (candidats, franchisés) : pas des bureaux, ils ne se suivent pas d’ici' : ''}</span></summary>
+          <table><tbody>${l.map(x => `<tr><td>${esc(x.nom)}<span class="sub">${esc(x.page)}${x.dernierLead ? ' · dernier lead ' + esc(String(x.dernierLead).slice(0, 10)) : ''}</span></td>
+            <td>${x.statutMeta === 'ARCHIVED' ? '<span class="badge badge--n">inactif chez Meta</span>' : x.recrutement ? '<span class="badge badge--n">recrutement</span>' : x.suivi ? '<span class="badge badge--ok">suivi</span>' : '<span class="tag-warn">pas suivi</span>'}</td>
+            <td class="num" style="white-space:nowrap">${x.recrutement || x.statutMeta === 'ARCHIVED' ? '' : x.suivi ? btn('Ne plus suivre', 'suivre', 'btn--sm btn--ghost', x.id + '|0') : btn('Suivre (magasin par code postal)', 'suivre', 'btn--sm', x.id + '|1')}</td></tr>`).join('')}</tbody></table>`;
+      }
+      Promise.all([api('GET', '/formulaires'), api('GET', '/formulaires/pub?langue=fr'), api('GET', '/formulaires/pub?langue=nl')])
+        .then(([fo, fr, nl]) => { FO = fo; PUB.fr = fr; PUB.nl = nl; campagne(); autres(); })
+        .catch(e => { const el = document.getElementById('campagne'); if (el) el.innerHTML = `<div class="erreur">${esc(e.message)}</div>`; });
       ACT.creerForm = el => {
-        const langue = el.dataset.v;
+        const [langue, shopSuivi] = el.dataset.v.split('|');
         api('GET', '/formulaires/modele?langue=' + langue).then(m => {
           const f = m.formulaire; const md = document.createElement('div'); md.className = 'modal';
           const libQ = x => x.label || ({ COMPANY_NAME: 'Nom de l’entreprise', FULL_NAME: 'Nom complet', JOB_TITLE: 'Fonction', EMAIL: 'E-mail', PHONE: 'Téléphone', POST_CODE: 'Code postal' })[x.type] || x.type;
@@ -381,25 +405,28 @@
             <p class="small muted">${esc(f.context_card.title)} — ${esc(f.context_card.content[0])}</p>
             <table class="mini"><tbody>${f.questions.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(libQ(x))}${x.options ? `<span class="sub">${esc(x.options.map(o => o.value).join(' · '))}</span>` : ''}</td></tr>`).join('')}</tbody></table>
             <p class="small" style="margin-top:12px">Remerciement : ${esc(f.thank_you_page.title)}<br>Politique de confidentialité : ${m.politique ? `<a href="${esc(m.politique)}" target="_blank" rel="noopener">${esc(m.politique)}</a>` : '<span class="erreur">introuvable sur les formulaires existants</span>'}<br>Langue : ${esc(m.locale)} · site : ${esc(m.site)}</p>
-            <p class="small muted">Le formulaire est créé dans la bibliothèque de la Page, sans publicité : il sert quand une publicité l’utilise. Il est ensuite suivi ici, le magasin de chaque lead pris d’après son code postal.</p>
+            <p class="small muted">Le formulaire est créé dans la bibliothèque de la Page, sans publicité : il sert quand une publicité l’utilise. Il est ensuite suivi ici${shopSuivi ? ', ses leads attribués à ' + esc(nomMag(shopSuivi)) : ', le magasin de chaque lead pris d’après son code postal'}.</p>
             <p class="erreur" data-err></p>
             <div class="modal__actions"><button class="btn btn--ghost" data-m="0">Annuler</button><button class="btn btn--primary" data-m="1" ${m.politique ? '' : 'disabled'}>Créer sur la Page</button></div></div>`;
           document.body.appendChild(md);
           md.addEventListener('click', ev => { const b = ev.target.closest('[data-m]'); if (!b) return; if (b.dataset.m === '0') { md.remove(); return; }
             b.disabled = true;
-            api('POST', '/formulaires/creer', { langue }).then(r => (r.id ? api('PUT', '/formulaires/' + r.id, { suivi: true, affectation: 'cp' }).then(() => r) : r))
+            api('POST', '/formulaires/creer', { langue }).then(r => (r.id ? api('PUT', '/formulaires/' + r.id, shopSuivi ? { suivi: true, affectation: 'magasin', shopId: shopSuivi } : { suivi: true, affectation: 'cp' }).then(() => r) : r))
               .then(r => { md.remove(); toast((r.deja ? 'Déjà sur la Page : ' : 'Créé et suivi : ') + r.nom); vueLeads(q); })
               .catch(e => { b.disabled = false; md.querySelector('[data-err]').textContent = e.message; }); });
         }).catch(e => toast(e.message, true));
       };
-      ACT.suivre = el => { const [id, on] = el.dataset.v.split('|'); el.disabled = true; api('PUT', '/formulaires/' + id, { suivi: on === '1', affectation: 'cp' }).then(() => { toast(on === '1' ? 'Formulaire suivi : ses leads arrivent' : 'Formulaire plus suivi'); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
+      ACT.suivre = el => { const [id, on, shopSuivi] = el.dataset.v.split('|'); el.disabled = true;
+        api('PUT', '/formulaires/' + id, on === '1' && shopSuivi ? { suivi: true, affectation: 'magasin', shopId: shopSuivi } : { suivi: on === '1', affectation: 'cp' })
+          .then(() => { toast(on === '1' ? 'Formulaire suivi : ses leads arrivent' + (shopSuivi ? ' à ' + nomMag(shopSuivi) : '') : 'Formulaire plus suivi'); vueLeads(new URLSearchParams({ ...Object.fromEntries(q), langue: onglet })); })
+          .catch(e => { toast(e.message, true); el.disabled = false; }); };
       ACT.actif = el => {
         const [id, on] = el.dataset.v.split('|');
         if (on !== '1' && !confirm('Mettre ce formulaire en inactif ? Il est archivé chez Meta : aucune publicité ne peut plus s’en servir, et il n’est plus suivi. Il se réactive d’ici.')) return;
         el.disabled = true;
         api('POST', '/formulaires/' + id + '/actif', { actif: on === '1' })
           .then(() => on === '1' ? null : api('PUT', '/formulaires/' + id, { suivi: false }))
-          .then(() => { toast(on === '1' ? 'Formulaire réactivé chez Meta : suivez-le pour recevoir ses leads' : 'Formulaire inactif'); vueLeads(q); })
+          .then(() => { toast(on === '1' ? 'Formulaire réactivé chez Meta : suivez-le pour recevoir ses leads' : 'Formulaire inactif'); vueLeads(new URLSearchParams({ ...Object.fromEntries(q), langue: onglet })); })
           .catch(e => { toast(e.message, true); el.disabled = false; });
       };
       ACT.histo = el => { el.disabled = true; api('POST', '/formulaires/' + el.dataset.v + '/historique', { jours: 90 }).then(r => { toast('Historique relu' + (r && r.nouveaux != null ? ' : ' + r.nouveaux + ' lead(s)' : '')); vueLeads(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); };
@@ -913,7 +940,6 @@
     const vue = VUES[v] ? v : 'semaine';
     rail(vue);
     ACT = {};
-    page.style.maxWidth = vue === 'prospection' ? 'none' : '1180px';
     window.scrollTo(0, 0);
     VUES[vue](new URLSearchParams(qs || ''));
   }
