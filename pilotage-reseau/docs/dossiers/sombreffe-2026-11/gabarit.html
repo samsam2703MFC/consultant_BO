@@ -141,7 +141,9 @@ body { margin: 0; background: var(--paper); }
 .plan-radar svg, #reseau-radar svg { display: block; width: 100%; height: auto; }
 .plan-legende { font-size: 11px; color: var(--muted); text-align: center; }
 .reseau-cote { display: grid; grid-template-columns: 480px minmax(0, 1fr); gap: 18px; align-items: center; break-inside: avoid; }
-#reseau-points { columns: 1 !important; display: grid; margin-top: 6px; }
+#reseau-points, #structure-points { columns: 1 !important; display: grid; margin-top: 6px; }
+#structure-radar svg { display: block; width: 100%; height: auto; }
+.rp-table td.moi-col { background: var(--total-line); }
 .rp-dev-tete { display: grid; gap: 8px; margin-bottom: 14px; }
 #fin-schema svg { max-width: 820px; margin: 0 auto; }
 #fin-table td.num, #fin-table th.num { width: 20%; }
@@ -447,6 +449,14 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-deux" id="annexe-bas">
       <div class="rp-part" hidden><h3 class="rp-h3">Trimestre par trimestre</h3><div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div></div>
       <div class="rp-part"><h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3><div class="rp-kpis" id="evolution-tuiles"></div></div>
+    </div>
+    <div class="rp-part" id="structure-zone" hidden>   <!-- la structure des ventes en radar, 20/11/2026 (Sam) -->
+      <h3 class="rp-h3" id="structure-titre"></h3>
+      <div class="reseau-cote">
+        <figure class="rp-schema" id="structure-radar"></figure>
+        <ul class="rp-points" id="structure-points"></ul>
+      </div>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="structure-table"></table></div>
     </div>
     <div class="rp-part" id="reseau-radar-zone" hidden>   <!-- le radar face au réseau, 20/11/2026 (Sam) -->
       <h3 class="rp-h3" id="reseau-radar-titre"></h3>
@@ -1363,6 +1373,40 @@ if (D.reseauKpi) {
     `↓ : moins, c’est mieux (le radar le lit à l’envers). Personnel et frais fixes : % du CA HTVA ; temps sans client : trous de ${D.tempsMorts.seuil} min et plus, ${dateC(D.tempsMorts.du)} → ${dateC(D.tempsMorts.au)}.`,
   ].map(x => `<li>${esc(insec(x))}</li>`).join('');
   $('reseau-radar-zone').hidden = false;
+}
+
+/* --- La structure des ventes (20/11/2026, Sam) : la part de chaque catégorie dans le CA de Sombreffe face au reste du
+   réseau (les trois autres magasins ensemble), août → octobre 2026 ; le tableau des quatre magasins ; les canaux. --- */
+const SHOP_ID = '5';   // Sombreffe
+if (D.structure && D.structure.magasins[SHOP_ID]) {
+  const ST = D.structure, me = ST.magasins[SHOP_ID], autres = Object.keys(ST.magasins).filter(s => s !== SHOP_ID);
+  const part = (s, cat) => ((ST.magasins[s].categories.find(c => c.categorie === cat) || {}).part) || 0;
+  // Les catégories qui comptent : 1 % du CA au moins, ici ou dans le reste du réseau ; les plus fortes d'abord.
+  const CAT = me.categories.filter(c => (c.part || 0) >= 1 || (c.partReste || 0) >= 1)
+    .sort((a, b) => (b.part + b.partReste) - (a.part + a.partReste));
+  const CR = CAT.filter(c => c.part >= 3 || c.partReste >= 3);   // le radar : les catégories de 3 % au moins, ici ou ailleurs
+  const lab = ym => MOIS_L[+ym.slice(5, 7) - 1];
+  $('structure-titre').textContent = `La structure des ventes, ${lab(ST.du)} → ${lab(ST.au)} ${ST.au.slice(0, 4)} : la part de chaque catégorie dans le CA`;
+  const mx = Math.ceil(Math.max(...CR.map(c => Math.max(c.part, c.partReste))) / 10) * 10;
+  $('structure-radar').innerHTML = radarSvg({ l: 500, h: 330, cy: 166, r: 102, max: mx, police: 12, ecartLab: 1.1,
+    aria: 'La structure des ventes de Sombreffe face au reste du réseau : ' + CR.map(c => `${c.categorie} ${dec(c.part)} % contre ${dec(c.partReste)} %`).join(', '),
+    axes: CR.map(c => ({ nom: c.categorie, sous: `${dec(c.part)} % · réseau ${dec(c.partReste)} %` })),
+    anneaux: Array.from({ length: mx / 10 }, (_, i) => ({ v: (i + 1) * 10 })),
+    series: [{ vals: CR.map(c => c.partReste), couleur: '#5c5852', ep: 1.6, tirets: true },
+             { vals: CR.map(c => c.part), couleur: '#8D1D2C', plein: 'rgba(141,29,44,.14)' }] });
+  const ecarts = CAT.map(c => ({ c, e: c.part - c.partReste })).sort((a, b) => b.e - a.e);
+  const plus = ecarts.filter(x => x.e >= 3), moins = ecarts.filter(x => x.e <= -3).reverse();
+  const ca = me.canaux;
+  $('structure-points').innerHTML = [
+    'Sombreffe (bordeaux) face au reste du réseau (pointillé), en % du CA ; anneaux tous les 10 % ; le radar garde les catégories de 3 % et plus, le tableau les montre toutes.',
+    plus.length ? `Plus qu’ailleurs : ${plus.map(x => `${x.c.categorie} ${dec(x.c.part)} % (réseau ${dec(x.c.partReste)} %)`).join(' ; ')}.` : null,
+    moins.length ? `Moins qu’ailleurs : ${moins.map(x => `${x.c.categorie} ${dec(x.c.part)} % (réseau ${dec(x.c.partReste)} %)`).join(' ; ')}.` : null,
+    ca ? `Par canal : comptoir ${dec(ca.parts.comptoir)} %, B2B ${dec(ca.parts.b2b)} % (réseau : ${dec(ca.partsReste.comptoir)} % et ${dec(ca.partsReste.b2b)} %).` : null,
+  ].filter(Boolean).map(x => `<li>${esc(insec(x))}</li>`).join('');
+  const ordre = [SHOP_ID].concat(autres);
+  $('structure-table').innerHTML = `<thead><tr><th>Catégorie</th>${ordre.map(s => `<th class="num">${esc(ST.magasins[s].nom)}</th>`).join('')}<th class="num">Reste du réseau</th></tr></thead><tbody>`
+    + CAT.map(c => `<tr><td>${esc(c.categorie)}</td>${ordre.map(s => `<td class="num${s === SHOP_ID ? ' moi-col' : ''}">${dec(part(s, c.categorie))} %</td>`).join('')}<td class="num">${dec(c.partReste)} %</td></tr>`).join('') + '</tbody>';
+  $('structure-zone').hidden = false;
 }
 
 /* --- Le personnel des quatre magasins --- */

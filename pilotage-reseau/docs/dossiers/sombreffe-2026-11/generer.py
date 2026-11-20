@@ -76,6 +76,9 @@ CA_NET = ICI / 'ca-net.json'
 # Les quatre magasins, mai → octobre 2026 (20/11/2026, le radar de l'annexe) : GET /api/cockpit/ventes/reseau?vue=mois
 # &date=2026-10-31&n=6&articles=1 — clients, CA et pièces de chaque magasin, mois par mois.
 RESEAU_MOIS = ICI / 'reseau-mois.json'
+# La structure des ventes par catégorie, et du CA par canal, des quatre magasins (20/11/2026, Sam : « sur la structure
+# des ventes ») : GET /api/cockpit/visites/kpi/{magasin}, les trois derniers mois clos. Des parts : la TVA n'y change rien.
+STRUCTURE = ICI / 'structure-ventes.json'
 
 
 def lirePartsHt():
@@ -463,6 +466,7 @@ def main():
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'reseauKpi': reseauKpi,
+        'structure': json.loads(STRUCTURE.read_text(encoding='utf-8')) if STRUCTURE.exists() else None,
         'heuresEquipe': heuresEquipe, 'coutHeure': COUT_HEURE,
         'htva': EN_HTVA,
         'pieces': ([{'k': w['du'][:7], 'jours': w['jours'], 'clients': w['tickets'], 'ca': w['ca'] * HT(SHOP, w['du'][:7]), 'pieces': w['articles'],

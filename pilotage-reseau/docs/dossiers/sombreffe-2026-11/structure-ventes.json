@@ -1,0 +1,379 @@
+{
+ "source": "cockpit, GET /visites/kpi/{magasin} : la structure des ventes par catégorie (/consultant/shops/category-sales, les trois derniers mois clos) et la structure du CA par canal ; lu le 20/11/2026",
+ "magasins": {
+  "5": {
+   "nom": "Sombreffe",
+   "ca": 160755,
+   "caReste": 770846,
+   "categories": [
+    {
+     "categorie": "Boulangerie",
+     "ca": 35624,
+     "part": 22.2,
+     "partReste": 15.8
+    },
+    {
+     "categorie": "Bundle & Promotion",
+     "ca": 31145,
+     "part": 19.4,
+     "partReste": 0.6
+    },
+    {
+     "categorie": "Viennoiserie",
+     "ca": 23304,
+     "part": 14.5,
+     "partReste": 17.5
+    },
+    {
+     "categorie": "Tartes",
+     "ca": 22358,
+     "part": 13.9,
+     "partReste": 23.8
+    },
+    {
+     "categorie": "Traiteur",
+     "ca": 19565,
+     "part": 12.2,
+     "partReste": 23.1
+    },
+    {
+     "categorie": "Pâtisserie",
+     "ca": 11822,
+     "part": 7.4,
+     "partReste": 6.3
+    },
+    {
+     "categorie": "Quiches",
+     "ca": 7481,
+     "part": 4.7,
+     "partReste": 6.6
+    },
+    {
+     "categorie": "Boissons",
+     "ca": 3880,
+     "part": 2.4,
+     "partReste": 2
+    },
+    {
+     "categorie": "Biscuiterie",
+     "ca": 3655,
+     "part": 2.3,
+     "partReste": 2.5
+    },
+    {
+     "categorie": "Épicerie",
+     "ca": 1921,
+     "part": 1.2,
+     "partReste": 1.2
+    },
+    {
+     "categorie": "Fêtes & Occasions",
+     "ca": 0,
+     "part": 0,
+     "partReste": 0.3
+    },
+    {
+     "categorie": "B. 2 B.",
+     "ca": 0,
+     "part": 0,
+     "partReste": 0.2
+    }
+   ],
+   "canaux": {
+    "parts": {
+     "comptoir": 85.4,
+     "b2b": 14.6,
+     "cc": 0,
+     "liv": 0
+    },
+    "partsReste": {
+     "comptoir": 96.5,
+     "b2b": 3.2,
+     "cc": 0.2,
+     "liv": 0.1
+    }
+   }
+  },
+  "4": {
+   "nom": "Halle",
+   "ca": 164122,
+   "caReste": 767479,
+   "categories": [
+    {
+     "categorie": "Viennoiserie",
+     "ca": 48585,
+     "part": 29.6,
+     "partReste": 14.3
+    },
+    {
+     "categorie": "Tartes",
+     "ca": 38846,
+     "part": 23.7,
+     "partReste": 21.7
+    },
+    {
+     "categorie": "Boulangerie",
+     "ca": 36626,
+     "part": 22.3,
+     "partReste": 15.8
+    },
+    {
+     "categorie": "Quiches",
+     "ca": 11926,
+     "part": 7.3,
+     "partReste": 6.1
+    },
+    {
+     "categorie": "Pâtisserie",
+     "ca": 11267,
+     "part": 6.9,
+     "partReste": 6.4
+    },
+    {
+     "categorie": "Traiteur",
+     "ca": 6306,
+     "part": 3.8,
+     "partReste": 24.9
+    },
+    {
+     "categorie": "Biscuiterie",
+     "ca": 5553,
+     "part": 3.4,
+     "partReste": 2.2
+    },
+    {
+     "categorie": "Boissons",
+     "ca": 3358,
+     "part": 2,
+     "partReste": 2.1
+    },
+    {
+     "categorie": "Épicerie",
+     "ca": 1624,
+     "part": 1,
+     "partReste": 1.3
+    },
+    {
+     "categorie": "Fêtes & Occasions",
+     "ca": 32,
+     "part": 0,
+     "partReste": 0.3
+    },
+    {
+     "categorie": "Bundle & Promotion",
+     "ca": 0,
+     "part": 0,
+     "partReste": 4.6
+    },
+    {
+     "categorie": "B. 2 B.",
+     "ca": 0,
+     "part": 0,
+     "partReste": 0.2
+    }
+   ],
+   "canaux": {
+    "parts": {
+     "comptoir": 97.6,
+     "b2b": 1.7,
+     "cc": 0.6,
+     "liv": 0
+    },
+    "partsReste": {
+     "comptoir": 93.9,
+     "b2b": 5.9,
+     "cc": 0.1,
+     "liv": 0.1
+    }
+   }
+  },
+  "3": {
+   "nom": "Gosselies",
+   "ca": 162555,
+   "caReste": 769046,
+   "categories": [
+    {
+     "categorie": "Traiteur",
+     "ca": 36235,
+     "part": 22.3,
+     "partReste": 21
+    },
+    {
+     "categorie": "Boulangerie",
+     "ca": 35688,
+     "part": 22,
+     "partReste": 15.9
+    },
+    {
+     "categorie": "Tartes",
+     "ca": 28818,
+     "part": 17.7,
+     "partReste": 23
+    },
+    {
+     "categorie": "Viennoiserie",
+     "ca": 26837,
+     "part": 16.5,
+     "partReste": 17.1
+    },
+    {
+     "categorie": "Pâtisserie",
+     "ca": 8705,
+     "part": 5.4,
+     "partReste": 6.7
+    },
+    {
+     "categorie": "Boissons",
+     "ca": 6795,
+     "part": 4.2,
+     "partReste": 1.6
+    },
+    {
+     "categorie": "Quiches",
+     "ca": 6467,
+     "part": 4,
+     "partReste": 6.8
+    },
+    {
+     "categorie": "Biscuiterie",
+     "ca": 6393,
+     "part": 3.9,
+     "partReste": 2.1
+    },
+    {
+     "categorie": "Épicerie",
+     "ca": 4587,
+     "part": 2.8,
+     "partReste": 0.9
+    },
+    {
+     "categorie": "Fêtes & Occasions",
+     "ca": 2030,
+     "part": 1.2,
+     "partReste": 0
+    },
+    {
+     "categorie": "Bundle & Promotion",
+     "ca": 0,
+     "part": 0,
+     "partReste": 4.6
+    },
+    {
+     "categorie": "B. 2 B.",
+     "ca": 0,
+     "part": 0,
+     "partReste": 0.2
+    }
+   ],
+   "canaux": {
+    "parts": {
+     "comptoir": 93.7,
+     "b2b": 6.3,
+     "cc": 0,
+     "liv": 0
+    },
+    "partsReste": {
+     "comptoir": 94.7,
+     "b2b": 4.9,
+     "cc": 0.2,
+     "liv": 0.1
+    }
+   }
+  },
+  "2": {
+   "nom": "Corbais",
+   "ca": 444169,
+   "caReste": 487432,
+   "categories": [
+    {
+     "categorie": "Traiteur",
+     "ca": 135680,
+     "part": 30.5,
+     "partReste": 12.7
+    },
+    {
+     "categorie": "Tartes",
+     "ca": 115623,
+     "part": 26,
+     "partReste": 18.5
+    },
+    {
+     "categorie": "Viennoiserie",
+     "ca": 59642,
+     "part": 13.4,
+     "partReste": 20.3
+    },
+    {
+     "categorie": "Boulangerie",
+     "ca": 49695,
+     "part": 11.2,
+     "partReste": 22.1
+    },
+    {
+     "categorie": "Quiches",
+     "ca": 32787,
+     "part": 7.4,
+     "partReste": 5.3
+    },
+    {
+     "categorie": "Pâtisserie",
+     "ca": 28733,
+     "part": 6.5,
+     "partReste": 6.5
+    },
+    {
+     "categorie": "Biscuiterie",
+     "ca": 6964,
+     "part": 1.6,
+     "partReste": 3.2
+    },
+    {
+     "categorie": "Boissons",
+     "ca": 5416,
+     "part": 1.2,
+     "partReste": 2.9
+    },
+    {
+     "categorie": "Bundle & Promotion",
+     "ca": 4320,
+     "part": 1,
+     "partReste": 6.4
+    },
+    {
+     "categorie": "Épicerie",
+     "ca": 3217,
+     "part": 0.7,
+     "partReste": 1.7
+    },
+    {
+     "categorie": "B. 2 B.",
+     "ca": 1901,
+     "part": 0.4,
+     "partReste": 0
+    },
+    {
+     "categorie": "Fêtes & Occasions",
+     "ca": 191,
+     "part": 0,
+     "partReste": 0.4
+    }
+   ],
+   "canaux": {
+    "parts": {
+     "comptoir": 97.1,
+     "b2b": 2.6,
+     "cc": 0.2,
+     "liv": 0.2
+    },
+    "partsReste": {
+     "comptoir": 92.3,
+     "b2b": 7.5,
+     "cc": 0.2,
+     "liv": 0
+    }
+   }
+  }
+ },
+ "du": "2026-08-01",
+ "au": "2026-10-31"
+}
