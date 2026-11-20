@@ -506,9 +506,9 @@ function hdkResume(string $t, int $max = HDK_SMS_RESUME): string
 
 /**
  * Le SMS d'une demande : le magasin, le sujet, qui l'envoie, le titre, le début de la demande, le passage souhaité, les
- * photos, la référence, le lien du cockpit. Fonction pure.
+ * photos, la référence. Sans lien (Sam, 20/11/2026 : « ne pas mettre le lien dans le SMS »). Fonction pure.
  *
- * @param array{magasin: string, domaine: string, titre: string, description: string, passage?: bool, photos?: int, ref?: string, demandeur?: string, lien?: string} $d
+ * @param array{magasin: string, domaine: string, titre: string, description: string, passage?: bool, photos?: int, ref?: string, demandeur?: string} $d
  */
 function hdkSmsTexte(array $d): string
 {
@@ -521,7 +521,6 @@ function hdkSmsTexte(array $d): string
     $l = ['Demande au bureau - ' . $d['magasin'] . ' (' . $d['domaine'] . ')' . (trim((string) ($d['demandeur'] ?? '')) !== '' ? ', de ' . trim((string) $d['demandeur']) : ''),
         $d['titre'], hdkResume($d['description'])];
     if ($suite !== []) { $l[] = implode(' ', $suite); }
-    if (trim((string) ($d['lien'] ?? '')) !== '') { $l[] = trim((string) $d['lien']); }
     return hdkGsm(implode("\n", array_filter($l, static fn ($x) => trim((string) $x) !== '')));
 }
 
@@ -539,8 +538,6 @@ function hdkSmsBureau(array $d): array
         try { $d['magasin'] = function_exists('viMagasins') ? (viMagasins()[(string) ($d['shop'] ?? '')]['court'] ?? '') : ''; } catch (Throwable $e) { $d['magasin'] = ''; }
     }
     $d['magasin'] = preg_replace('/^.* - /', '', trim((string) $d['magasin'])) ?: ('magasin ' . ($d['shop'] ?? '?'));
-    $base = function_exists('rapBaseUrl') ? rtrim(rapBaseUrl(), '/') : '';
-    $d['lien'] = $base !== '' ? $base . '/#/franchises/demandes' : '';
     $out['texte'] = $texte = hdkSmsTexte($d);
     $vus = [];
     foreach ($R['destinataires'] as $x) {

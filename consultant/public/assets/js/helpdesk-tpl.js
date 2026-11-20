@@ -37,7 +37,7 @@ function sms(M, x){
   if (!M.ouvert) { return `<div class="hd-sms">${tete}${M.actif ? sansFournisseur : ''}<div class="vr-mu">${esc(M.dernier)}</div></div>`; }
   const lignes = M.lignes.map(l => `<div class="hd-sms-l"><input class="mko-inp" placeholder="Nom" value="${esc(l.nom)}" ${x.C(l.setNom)}><input class="mko-inp${l.ko ? ' hd-sms-vide' : ''}" type="tel" placeholder="+32 470 12 34 56" value="${esc(l.tel)}" ${x.C(l.setTel)}><button class="mko-pied-btn" ${x.A(l.retirer)}>Retirer</button></div>`).join('');
   return `<div class="hd-sms on">${tete}
-    <p class="vr-mu">À chaque demande envoyée depuis le dashboard d’un franchisé, un SMS part à ces numéros : le magasin, le sujet, le titre, le début de la demande, le passage souhaité, les photos, la référence et le lien de cet écran. Le franchisé ne voit pas ces numéros.</p>
+    <p class="vr-mu">À chaque demande envoyée depuis le dashboard d’un franchisé, un SMS part à ces numéros : le magasin, le sujet, le titre, le début de la demande, le passage souhaité, les photos et la référence. Le franchisé ne voit pas ces numéros.</p>
     <div class="hd-seg"><span>SMS</span><button class="${M.fActif ? 'on' : ''}" ${x.A(M.allumer)}>envoyés</button><button class="${M.fActif ? '' : 'on'}" ${x.A(M.couper)}>coupés</button></div>
     ${lignes || '<div class="vr-mu">Aucun numéro.</div>'}
     <div class="hd-act">${M.ajouter ? `<button class="mko-pied-btn" ${x.A(M.ajouter)}>+ Ajouter un numéro</button>` : ''}<span class="vr-sp"></span>${M.msg ? `<span class="${M.msgOk ? 'hd-okmsg' : 'hd-sms-ko'}">${esc(M.msg)}</span>` : ''}<button class="rc-btn ok" ${x.A(M.enregistrer)}${M.enregistrer ? '' : ' disabled'}>${M.enCours ? 'Enregistrement…' : 'Enregistrer'}</button></div>

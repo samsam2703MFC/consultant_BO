@@ -9,7 +9,7 @@ declare(strict_types=1);
  *   php consultant/bin/tests_helpdesk.php
  *
  * Ce qui doit rester vrai : une demande envoyée du dashboard fait partir un SMS (magasin, sujet, titre, début de la
- * demande, référence, lien du cockpit) à chaque numéro du réglage, une seule fois par numéro, en alphabet SMS ; un
+ * demande, référence ; sans lien) à chaque numéro du réglage, une seule fois par numéro, en alphabet SMS ; un
  * destinataire sans numéro ou un SMS refusé n'empêche jamais la demande ; SMS coupés, rien ne part. La date limite
  * n'accepte que 2, 5, 10, 30 ou 90 jours, se retire avec 0, fait passer « En cours » une demande « Nouvelle », et une
  * demande ouverte au-delà est en retard ; le franchisé voit la date, pas qui l'a fixée.
@@ -112,9 +112,9 @@ verifie('alphabet SMS : apostrophes et guillemets droits, accents hors alphabet 
     hdkGsm("L’été « fête » — crème brûlée 🙂 ça"));
 verifie('le résumé coupe entre deux mots, avec « ... »', hdkResume(str_repeat('mot ', 100), 30) === 'mot mot mot mot mot mot mot...', hdkResume(str_repeat('mot ', 100), 30));
 verifie('une demande courte reste entière, sur une ligne', hdkResume("Une ligne\n\net  une autre") === 'Une ligne et une autre');
-$t = hdkSmsTexte(['magasin' => 'Sombreffe', 'domaine' => 'Ventes', 'titre' => 'Titre', 'description' => 'Texte', 'passage' => true, 'photos' => 2, 'ref' => 'CASE-20261120-AB12C', 'demandeur' => 'Marie', 'lien' => 'https://x/#/franchises/demandes']);
-verifie('le SMS : magasin, sujet, demandeur, titre, demande, passage, photos, référence sans CASE-, lien',
-    $t === "Demande au bureau - Sombreffe (Ventes), de Marie\nTitre\nTexte\nPassage du consultant souhaité. 2 photos. Réf. 20261120-AB12C\nhttps://x/#/franchises/demandes", $t);
+$t = hdkSmsTexte(['magasin' => 'Sombreffe', 'domaine' => 'Ventes', 'titre' => 'Titre', 'description' => 'Texte', 'passage' => true, 'photos' => 2, 'ref' => 'CASE-20261120-AB12C', 'demandeur' => 'Marie']);
+verifie('le SMS : magasin, sujet, demandeur, titre, demande, passage, photos, référence sans CASE-',
+    $t === "Demande au bureau - Sombreffe (Ventes), de Marie\nTitre\nTexte\nPassage du consultant souhaité. 2 photos. Réf. 20261120-AB12C", $t);
 
 echo "Le réglage\n";
 $R = hdkSmsReglage();
@@ -135,7 +135,8 @@ verifie('réglage par défaut : un SMS, à Sam seulement (Pierre n’a pas de nu
 $sms = MdSms::$partis[0]['texte'] ?? '';
 verifie('le SMS dit le magasin, le sujet, qui, le titre', str_starts_with($sms, "Demande au bureau - Sombreffe (Ventes), de Marie\nDémarchage sur Nivelles Sud\n"), $sms);
 verifie('le SMS reprend le début de la demande, coupé', str_contains($sms, 'En livraison chez GUEST Nivelles') && str_contains($sms, '...') && !str_contains($sms, 'Merci'), $sms);
-verifie('le SMS dit le passage souhaité, la référence et le lien du cockpit', str_contains($sms, 'Passage du consultant souhaité. Réf. 20261120-AB12C') && str_ends_with($sms, 'https://cockpit.exemple/consulant_bo/#/franchises/demandes'), $sms);
+verifie('le SMS dit le passage souhaité et la référence, et finit par elle', str_ends_with($sms, 'Passage du consultant souhaité. Réf. 20261120-AB12C'), $sms);
+verifie('le SMS ne porte aucun lien', !preg_match('~https?://|/#/~', $sms), $sms);
 verifie('le SMS est en alphabet SMS (aucun ’, «, émoji)', !preg_match('/[’«»🙂]/u', $sms), $sms);
 verifie('le SMS tient en trois SMS', mb_strlen($sms) <= 459, (string) mb_strlen($sms));
 $der = $REGLAGES['helpdeskSmsDernier'] ?? null;

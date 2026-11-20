@@ -41,6 +41,7 @@ celles de la capture du 20/11 ; celles de Gosselies et de Halle sont inventées.
 - Une table `con_hdk_relance` (`case_id`, `le`, `a`, `ok`, `motif`) pour le journal et les « déjà envoyées », et une colonne
   `relance_suspendue` sur `con_hdk_demande`.
 - Le réglage `helpdeskSms` enrichi d'un bloc `relances` et du champ `consultant` de chaque numéro.
-- Le texte, en alphabet SMS (`hdkGsm`), le lien du cockpit et la référence, comme le SMS de la nouvelle demande.
+- Le texte, en alphabet SMS (`hdkGsm`), avec la référence et **sans lien** (Sam, 20/11/2026 : « ne pas mettre le lien dans le
+  SMS »), comme le SMS de la nouvelle demande.
 
 Captures : depuis la racine du dépôt, `php -S 127.0.0.1:8099 -t .`, puis `node consultant/docs/maquettes/helpdesk-relances/capturer.cjs`.

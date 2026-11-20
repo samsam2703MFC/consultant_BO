@@ -41,7 +41,7 @@ n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode «
 - **Le SMS au bureau** (« fais en sorte que je reçoive un SMS et Pierre Boseret avec un résumé de la demande quand un
   franchisé en fait une ») : à chaque demande envoyée depuis le dashboard, un SMS part à chaque numéro du réglage
   `helpdeskSms`. Il contient le magasin, le sujet, le demandeur, le titre, les 220 premiers caractères de la demande, le
-  passage souhaité, le nombre de photos, la référence et le lien `#/franchises/demandes`. Le texte est ramené à
+  passage souhaité, le nombre de photos et la référence, sans lien (« ne pas mettre le lien dans le SMS »). Le texte est ramené à
   l'alphabet SMS (160 caractères par SMS, pas 70). L'envoi passe par le fournisseur en place (`shared/src/sms.php`).
   Les numéros se règlent au cockpit, bloc « SMS au bureau » sous la liste (`GET` / `PUT /helpdesk/sms`). Au départ :
   Sam (+48725038049), et Pierre Boseret, dont le numéro reste à compléter. Un SMS qui ne part pas n'empêche jamais
