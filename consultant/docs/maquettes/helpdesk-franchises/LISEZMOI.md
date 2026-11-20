@@ -35,3 +35,25 @@ Le dashboard franchisé tel qu'il est codé, avec les demandes de Sombreffe lues
 n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode « Demande au bureau », Mr. Pierre),
 `code-dashboard-tel-controle.png` (l'onglet Contrôle et son bouton), `code-dashboard-tel-formulaire.png`,
 `code-dashboard-tel-mes-demandes.png`.
+
+## Suites du 20/11/2026 (demandes de Sam)
+
+- **Le SMS au bureau** (« fais en sorte que je reçoive un SMS et Pierre Boseret avec un résumé de la demande quand un
+  franchisé en fait une ») : à chaque demande envoyée depuis le dashboard, un SMS part à chaque numéro du réglage
+  `helpdeskSms`. Il contient le magasin, le sujet, le demandeur, le titre, les 220 premiers caractères de la demande, le
+  passage souhaité, le nombre de photos, la référence et le lien `#/franchises/demandes`. Le texte est ramené à
+  l'alphabet SMS (160 caractères par SMS, pas 70). L'envoi passe par le fournisseur en place (`shared/src/sms.php`).
+  Les numéros se règlent au cockpit, bloc « SMS au bureau » sous la liste (`GET` / `PUT /helpdesk/sms`). Au départ :
+  Sam (+48725038049), et Pierre Boseret, dont le numéro reste à compléter. Un SMS qui ne part pas n'empêche jamais
+  la demande : le journal et `helpdeskSmsDernier` disent à qui il est parti.
+- **La date limite** (« lors de la réception, le consultant met une date limite 2, 5, 10, 30 j, +90 qu'il est censé
+  respecter ») : sur la fiche d'une demande, 2, 5, 10, 30 ou 90 jours à partir du jour même
+  (`POST /helpdesk/demandes/{id}/delai`, `con_hdk_demande.echeance`). Une demande « Nouvelle » passe alors « En cours ».
+  Le cockpit montre la colonne Date limite, l'indicateur « En retard » et les filtres « En retard » et « Sans date
+  limite ». Le franchisé voit « réponse prévue d'ici le … ».
+- **Les réclamations fournisseur de tous les magasins** (« dans le cockpit consultant, mettre la vue sur toutes les
+  réclamations de tous les magasins », ici) : second onglet de l'écran, en lecture seule (`GET /fournisseurs/reclamations?mois=`).
+  On y trouve les indicateurs (ouvertes, montant ouvert, plus ancienne, réglées, refusées), les filtres (état, magasin,
+  fournisseur, période, recherche) et la fiche de chaque réclamation.
+
+Banc : `php consultant/bin/tests_helpdesk.php` (SMS et date limite, SQLite en mémoire, doublures du panel et de SMSAPI).

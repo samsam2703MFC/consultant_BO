@@ -29,31 +29,157 @@ function envoyer(app, path, corps, apres){
   });
 }
 
+/* Le SMS au bureau (20/11/2026, src/helpdesk.php › hdkSmsBureau) : à chaque demande d'un franchisé, un SMS avec son
+ * résumé part aux numéros réglés ici (Sam, Pierre Boseret). Lecture GET /helpdesk/sms, écriture PUT /helpdesk/sms. */
+function chargerSms(app, frais){
+  const M = app.state.hdSms;
+  if (!frais && M && (M.d || M.chargement)) { return; }
+  app.setState({ hdSms: { chargement: true, d: M ? M.d : null } });
+  readOne('/helpdesk/sms').then(d => app.setState({ hdSms: { chargement: false, d: d || { error: 'réglage illisible' } } }));
+}
+const dhm = iso => { const t = iso ? new Date(iso) : null; return t && !isNaN(t) ? String(t.getDate()).padStart(2, '0') + '/' + String(t.getMonth() + 1).padStart(2, '0') + ' à ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') : ''; };
+function valsSms(app){
+  chargerSms(app, false);
+  const S = app.state, M = S.hdSms || {}, D = M.d && !M.d.error ? M.d : null;
+  const ouvert = !!S.hdSmsOuvert;
+  const v = { ouvert, basculer: () => app.setState({ hdSmsOuvert: !ouvert, hdSmsForm: null, hdSmsMsg: null }), chargement: !!M.chargement && !D, erreur: M.d && M.d.error ? M.d.error : null };
+  if (!D) { return v; }
+  const sans = l => l.filter(x => !String(x.tel || '').trim()).map(x => x.nom || '—');
+  v.actif = !!D.actif; v.fournisseur = !!D.fournisseur;
+  v.resume = !D.actif ? 'coupés' : (D.destinataires.length ? D.destinataires.map(x => (x.nom || x.lisible || x.tel) + (x.tel ? '' : ' (numéro à compléter)')).join(' · ') : 'aucun destinataire');
+  v.alerte = D.actif && (!D.fournisseur || sans(D.destinataires).length > 0);
+  const Dn = D.dernier;
+  v.dernier = Dn ? 'Dernier envoi le ' + dhm(Dn.le) + ' (' + (Dn.magasin || '') + (Dn.titre ? ', « ' + Dn.titre + ' »' : '') + ') : '
+    + ((Dn.destinataires || []).map(x => x.nom + (x.ok ? ' ✓' : ' ✕ ' + (x.motif || ''))).join(' · ') || 'aucun destinataire') : 'Aucun SMS envoyé pour l’instant.';
+  if (!ouvert) { return v; }
+  const F = S.hdSmsForm || { actif: !!D.actif, destinataires: (D.destinataires || []).map(x => ({ nom: x.nom || '', tel: x.tel || '' })) };
+  const maj = p => app.setState({ hdSmsForm: Object.assign({}, F, p), hdSmsMsg: null });
+  const majL = (i, p) => { const l = F.destinataires.slice(); l[i] = Object.assign({}, l[i], p); maj({ destinataires: l }); };
+  const E = S.hdSmsMsg || {};
+  Object.assign(v, {
+    fActif: !!F.actif, allumer: () => maj({ actif: true }), couper: () => maj({ actif: false }),
+    lignes: F.destinataires.map((x, i) => ({ nom: x.nom, tel: x.tel, ko: !String(x.tel || '').trim(), setNom: e => majL(i, { nom: e.target.value }), setTel: e => majL(i, { tel: e.target.value }),
+      retirer: () => maj({ destinataires: F.destinataires.filter((_, j) => j !== i) }) })),
+    ajouter: F.destinataires.length < 10 ? () => maj({ destinataires: F.destinataires.concat([{ nom: '', tel: '' }]) }) : null,
+    enCours: !!E.enCours, msg: E.msg || null, msgOk: !!E.ok,
+    enregistrer: E.enCours ? null : () => {
+      app.setState({ hdSmsMsg: { enCours: true } });
+      write(app.source || 'api', 'PUT', '/helpdesk/sms', { actif: !!F.actif, destinataires: F.destinataires.filter(x => String(x.nom || '').trim() || String(x.tel || '').trim()) }).then(r => {
+        const echec = !r || r.ok === false || r.error;
+        if (echec) { app.setState({ hdSmsMsg: { ok: false, msg: (r && r.error) || 'refusé' } }); return; }
+        app.setState({ hdSms: { chargement: false, d: r }, hdSmsForm: null, hdSmsMsg: { ok: true, msg: 'Enregistré.' } });
+      });
+    },
+  });
+  return v;
+}
+
+/* Les réclamations fournisseur de tous les magasins (20/11/2026, demande de Sam : « dans le cockpit, mettre la vue sur
+ * toutes les réclamations de tous les magasins », ici). Lecture seule : GET /fournisseurs/reclamations?mois= (le panel,
+ * /consultant/shops/material-complaints, src/mesure.php) ; répondre passe par le fournisseur, pas par le cockpit. */
+const RC_STATUTS = { ACCEPTED: 'Acceptée', REJECTED: 'Refusée', PENDING: 'En attente', NEW: 'Nouvelle', OPEN: 'Ouverte', IN_PROGRESS: 'En cours', RESOLVED: 'Réglée', CLOSED: 'Close' };
+const eur = n => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const nb = n => n == null ? '' : Number(n).toLocaleString('fr-BE', { maximumFractionDigits: 2 });
+function chargerRc(app, frais, mois){
+  const R = app.state.hdRc;
+  const m = mois != null ? mois : (R && R.mois != null ? R.mois : 3);
+  if (!frais && R && R.mois === m && (R.d || R.chargement)) { return; }
+  app.setState({ hdRc: { chargement: true, d: R && R.mois === m ? R.d : null, mois: m } });
+  readOne('/fournisseurs/reclamations?mois=' + m).then(d => { if ((app.state.hdRc || {}).mois === m) { app.setState({ hdRc: { chargement: false, d: d || { indispo: true, motif: 'le cockpit n’a pas répondu' }, mois: m } }); } });
+}
+const rcEtat = l => l.statut === 'REJECTED' ? 'refusee' : (l.ouverte ? 'ouverte' : 'reglee');
+function valsReclamations(app){
+  chargerRc(app, false);
+  const S = app.state, R = S.hdRc || {}, D = R.d && !R.d.indispo && !R.d.error ? R.d : null;
+  const mois = R.mois != null ? R.mois : 3;
+  const v = { chargement: !!R.chargement && !D, erreur: R.d && (R.d.indispo || R.d.error) ? 'Les réclamations n’ont pas pu être lues : ' + (R.d.motif || R.d.error) + '.' : null,
+    relire: () => chargerRc(app, true), relecture: !!R.chargement && !!D,
+    periodes: [[3, '3 derniers mois'], [12, '12 derniers mois'], [0, 'tout l’historique']].map(([m, nom]) => ({ id: String(m), nom, on: mois === m })),
+    poserPeriode: e => chargerRc(app, false, Number(e.target.value)) };
+  if (!D) { return v; }
+  const tous = D.lignes || [];
+  const f = S.hdRcFiltre || 'toutes', q = String(S.hdRcQ || '').trim().toLowerCase(), fm = S.hdRcMag || '', ff = S.hdRcFour || '';
+  const passe = l => (f === 'toutes' || rcEtat(l) === f) && (!fm || l.shopId === fm) && (!ff || (l.fournisseur || 'Fournisseur inconnu') === ff)
+    && (!q || [l.reference, l.sku, l.fournisseur, l.magasin, l.motif, l.texte, l.reponse, l.cle].join(' ').toLowerCase().indexOf(q) >= 0);
+  const L = tous.filter(passe);
+  const ouvertes = tous.filter(l => l.ouverte && l.statut !== 'REJECTED');
+  const vieille = ouvertes.filter(l => l.age != null).sort((a, b) => b.age - a.age)[0];
+  v.kpis = [['Ouvertes', ouvertes.length, 'sans réponse du fournisseur', ouvertes.length ? 'att' : 'ok'],
+    ['Montant ouvert', eur(D.montantOuvert), 'au prix d’achat' + (D.montantComplet === false ? ' (prix incomplets)' : ''), 'ko'],
+    ['Plus ancienne', vieille ? vieille.age + ' j' : '—', vieille ? court(vieille.magasin) + ', le ' + dm(vieille.le) : 'aucune ouverte', 'ko'],
+    ['Réglées', tous.filter(l => rcEtat(l) === 'reglee').length, 'réponse du fournisseur', 'ok'], ['Refusées', tous.filter(l => rcEtat(l) === 'refusee').length, 'par le fournisseur', 'mu'],
+    ['Magasins', new Set(tous.map(l => l.shopId)).size, tous.length + ' réclamation' + (tous.length > 1 ? 's' : '') + ' · ' + (D.fenetre || ''), '']];
+  v.chips = [['toutes', 'Toutes', tous.length], ['ouverte', 'Ouvertes', ouvertes.length], ['reglee', 'Réglées', tous.filter(l => rcEtat(l) === 'reglee').length], ['refusee', 'Refusées', tous.filter(l => rcEtat(l) === 'refusee').length]]
+    .map(([k, n, c]) => ({ nom: n, n: c, on: f === k, choisir: () => app.setState({ hdRcFiltre: k }) }));
+  const mags = {}; tous.forEach(l => { mags[l.shopId] = court(l.magasin); });
+  v.magasins = [{ id: '', nom: 'Tous les magasins' }].concat(Object.entries(mags).sort((a, b) => a[1].localeCompare(b[1])).map(([id, nom]) => ({ id, nom: nom + ' (' + tous.filter(l => l.shopId === id).length + ')' }))).map(o => Object.assign(o, { on: o.id === fm }));
+  v.poserMag = e => app.setState({ hdRcMag: e.target.value });
+  const fours = {}; tous.forEach(l => { const k = l.fournisseur || 'Fournisseur inconnu'; fours[k] = (fours[k] || 0) + 1; });
+  v.fournisseurs = [{ id: '', nom: 'Tous les fournisseurs' }].concat(Object.keys(fours).sort().map(k => ({ id: k, nom: k + ' (' + fours[k] + ')' }))).map(o => Object.assign(o, { on: o.id === ff }));
+  v.poserFour = e => app.setState({ hdRcFour: e.target.value });
+  v.q = S.hdRcQ || ''; v.poserQ = e => app.setState({ hdRcQ: e.target.value });
+  const ton = l => ({ ouverte: 'att', reglee: 'ok', refusee: 'mu' })[rcEtat(l)];
+  const sel = L.some(l => l.id === S.hdRcSel) ? S.hdRcSel : (L[0] || {}).id;
+  v.lignes = L.map(l => ({ le: dm(l.le), age: l.age != null ? l.age + ' j' : '', vieux: l.ouverte && l.age > 30, magasin: court(l.magasin), fournisseur: l.fournisseur || '—', reference: l.reference || '—', sku: l.sku,
+    qte: l.qte != null ? nb(l.qte) + (l.unite ? ' ' + l.unite : '') : '—', motif: l.motif || '—', extrait: l.texte.length > 90 ? l.texte.slice(0, 90) + '…' : l.texte,
+    statut: rcEtat(l) === 'ouverte' ? 'Ouverte' : (RC_STATUTS[l.statut] || l.statut || '—'), sousStatut: rcEtat(l) === 'ouverte' && RC_STATUTS[l.statut] ? RC_STATUTS[l.statut].toLowerCase() : '',
+    ton: ton(l), reponse: !!l.reponse, reponseLe: dm(l.reponseLe), montant: eur(l.montant),
+    on: l.id === sel, choisir: () => app.setState({ hdRcSel: l.id }) }));
+  v.n = L.length; v.total = tous.length; v.source = D.source; v.lecture = D.lecture; v.ecartees = D.ecartees || 0;
+  const X = tous.find(l => l.id === sel);
+  v.fiche = X ? { ref: X.cle || ('#' + X.id), titre: (X.reference || 'Réclamation') + (X.fournisseur ? ' · ' + X.fournisseur : ''), sous: court(X.magasin) + ' · le ' + dm(X.le) + (X.age != null ? ' (' + X.age + ' j)' : ''),
+    statut: v.lignes.find(l => l.on).statut, ton: ton(X), texte: X.texte, reponse: X.reponse, reponseLe: dm(X.reponseLe),
+    champs: [['Référence', X.reference + (X.sku ? ' · SKU ' + X.sku : '')], ['Quantité', X.qte != null ? nb(X.qte) + (X.unite ? ' ' + X.unite : '') : ''], ['Motif', X.motif],
+      ['Ce qui est demandé', X.action], ['Commande', X.commande], ['Montant', X.montant != null ? eur(X.montant) + (X.prixUnitaire != null ? ' (' + eur(X.prixUnitaire) + ' / unité)' : '') : ''],
+      ['Quantité acceptée', X.qteAcceptee != null ? nb(X.qteAcceptee) : ''], ['Compensation', X.compensation], ['Pièces jointes', X.pj ? String(X.pj) : '']].filter(([, val]) => val) } : null;
+  return v;
+}
+
 export function nbDemandesOuvertes(app){
   const d = ((app.state.hdData || {}).d || {}).demandes || [];
   return d.filter(x => x.ouverte && !x.reponse).length;
 }
 
+/* La date limite (20/11/2026) : fixée par le consultant à la réception (2, 5, 10, 30 ou 90 jours), à respecter. */
+function echeance(x){
+  if (!x.echeance) { return { ech: x.ouverte ? 'à fixer' : '', echSous: '', echTon: x.ouverte ? 'att' : '' }; }
+  const r = x.joursRestants;
+  if (!x.ouverte) { return { ech: dm(x.echeance), echSous: 'date limite', echTon: '' }; }
+  return { ech: x.enRetard ? 'en retard de ' + (-r) + ' j' : (r === 0 ? 'aujourd’hui' : 'dans ' + r + ' j'), echSous: 'avant le ' + dm(x.echeance), echTon: x.enRetard ? 'ko' : (r <= 1 ? 'att' : '') };
+}
+
 export function valsHelpdesk(app, c){
   const S = app.state;
   charger(app, false);
+  chargerRc(app, false);   // le compte de l'onglet des réclamations
   const H = S.hdData || {};
   const D = H.d && !H.d.error && !H.d.indispo ? H.d : null;
-  const v = { chargement: !!H.chargement && !D, erreur: H.d && (H.d.error || H.d.indispo) ? (H.d.motif || H.d.error) : null, relire: () => charger(app, true), relecture: !!H.chargement && !!D };
+  const vue = S.hdVue === 'reclamations' ? 'reclamations' : 'demandes';
+  const v = { vue, chargement: !!H.chargement && !D, erreur: H.d && (H.d.error || H.d.indispo) ? (H.d.motif || H.d.error) : null, relire: () => charger(app, true), relecture: !!H.chargement && !!D };
   c.hd = v;
+  // Deux onglets (20/11/2026) : les demandes au bureau, les réclamations fournisseur de tous les magasins.
+  const RcD = (S.hdRc || {}).d;
+  v.onglets = [['demandes', 'Demandes au bureau', D ? (D.demandes || []).filter(x => x.ouverte).length + ' ouvertes' : ''],
+    ['reclamations', 'Réclamations fournisseur', RcD && !RcD.indispo && !RcD.error ? (RcD.ouvertes || 0) + ' ouvertes · tous les magasins' : '']]
+    .map(([k, nom, sous]) => ({ nom, sous, on: vue === k, choisir: () => app.setState({ hdVue: k }) }));
+  if (vue === 'reclamations') { v.rc = valsReclamations(app); return; }
   if (!D) { return; }
+  v.sms = valsSms(app);
   const tous = D.demandes || [];
   const f = S.hdFiltre || 'ouvertes', q = String(S.hdQ || '').trim().toLowerCase(), fd = S.hdDom || '', fm = S.hdMag || '';
   const ouvertes = tous.filter(x => x.ouverte);
-  const passe = x => (f === 'toutes' || (f === 'ouvertes' && x.ouverte) || (f === 'sansrep' && x.ouverte && !x.reponse) || (f === 'mission' && (x.missions || []).length) || x.statut === f)
+  const passe = x => (f === 'toutes' || (f === 'ouvertes' && x.ouverte) || (f === 'sansrep' && x.ouverte && !x.reponse) || (f === 'mission' && (x.missions || []).length)
+      || (f === 'retard' && x.enRetard) || (f === 'sansdelai' && x.ouverte && !x.echeance) || x.statut === f)
     && (!fd || x.domaine === fd) && (!fm || x.shop === fm) && (!q || (x.titre + ' ' + x.description + ' ' + x.ref + ' ' + x.magasin).toLowerCase().indexOf(q) >= 0);
   const L = tous.filter(passe);
   const plusVieille = ouvertes.slice().sort((a, b) => a.cree.localeCompare(b.cree))[0];
+  const retard = ouvertes.filter(x => x.enRetard).length, sansDelai = ouvertes.filter(x => !x.echeance).length;
   v.kpis = [['Ouvertes', ouvertes.length, 'nouvelles ou en cours', 'att'], ['Sans réponse', ouvertes.filter(x => !x.reponse).length, 'aucune réponse du bureau', 'ko'],
+    ['En retard', retard, 'date limite dépassée' + (sansDelai ? ' · ' + sansDelai + ' sans date' : ''), retard ? 'ko' : 'ok'],
     ['Plus ancienne', plusVieille ? jours(plusVieille.cree) + ' j' : '—', plusVieille ? 'ouverte depuis le ' + dm(plusVieille.cree) : 'aucune ouverte', 'ko'],
     ['Résolues', tous.filter(x => x.statut === 'RESOLVED').length, 'sur ' + tous.length + ' demandes', 'ok'], ['Dans une visite', tous.filter(x => (x.missions || []).some(m => !m.cloture)).length, 'missions en cours', '']];
   v.chips = [['ouvertes', 'Ouvertes', ouvertes.length], ['NEW', 'Nouvelles', tous.filter(x => x.statut === 'NEW').length], ['IN_PROGRESS', 'En cours', tous.filter(x => x.statut === 'IN_PROGRESS').length],
-    ['sansrep', 'Sans réponse', ouvertes.filter(x => !x.reponse).length], ['mission', 'En visite', tous.filter(x => (x.missions || []).length).length], ['RESOLVED', 'Résolues', tous.filter(x => x.statut === 'RESOLVED').length], ['toutes', 'Toutes', tous.length]]
+    ['sansrep', 'Sans réponse', ouvertes.filter(x => !x.reponse).length], ['retard', 'En retard', retard], ['sansdelai', 'Sans date limite', sansDelai], ['mission', 'En visite', tous.filter(x => (x.missions || []).length).length], ['RESOLVED', 'Résolues', tous.filter(x => x.statut === 'RESOLVED').length], ['toutes', 'Toutes', tous.length]]
     .map(([k, n, nb]) => ({ nom: n, n: nb, on: f === k, choisir: () => app.setState({ hdFiltre: k }) }));
   v.domaines = [{ id: '', nom: 'Tous les domaines' }].concat(Object.entries(D.domaines || {}).map(([id, nom]) => ({ id, nom: nom + ' (' + tous.filter(x => x.domaine === id).length + ')' }))).map(o => Object.assign(o, { on: o.id === fd }));
   v.poserDom = e => app.setState({ hdDom: e.target.value });
@@ -64,7 +190,7 @@ export function valsHelpdesk(app, c){
   const sel = L.some(x => x.id === S.hdSel) ? S.hdSel : (L[0] || {}).id;
   v.lignes = L.map(x => ({ id: x.id, ref: x.ref.replace('CASE-', ''), le: dm(x.cree), magasin: court(x.magasin), domaine: x.domaineNom, titre: x.titre, extrait: x.description.length > 110 ? x.description.slice(0, 110) + '…' : x.description,
     consultant: x.consultant || '—', statut: x.statutNom, ton: TONS[x.statut] || '', rep: x.reponse ? 'répondue' : (x.ouverte ? 'sans réponse' : ''), repKo: !x.reponse && x.ouverte,
-    age: jours(x.cree) + ' j', vieux: x.ouverte && jours(x.cree) > 60, visite: (x.missions || []).filter(m => !m.cloture).map(m => 'visite ' + dm(m.visiteLe))[0] || '',
+    age: jours(x.cree) + ' j', vieux: x.ouverte && jours(x.cree) > 60, ...echeance(x), visite: (x.missions || []).filter(m => !m.cloture).map(m => 'visite ' + dm(m.visiteLe))[0] || '',
     on: x.id === sel, choisir: () => app.setState({ hdSel: x.id, hdEnvoi: null }) }));
   v.n = L.length; v.total = tous.length; v.compte = D.compte; v.source = D.source;
   const X = tous.find(x => x.id === sel);
@@ -84,6 +210,14 @@ export function valsHelpdesk(app, c){
     id: X.id, ref: X.ref, titre: X.titre, sous: court(X.magasin) + ' · ' + X.domaineNom + ' · créée le ' + dm(X.cree) + ' (' + jours(X.cree) + ' j)' + (X.demandeur ? ' · ' + X.demandeur : ''),
     statut: X.statutNom, ton: TONS[X.statut] || '', description: X.description, reponse: X.reponse, reponseLe: dm(X.reponseLe),
     statuts: Object.entries(D.statuts || {}).map(([id, nom]) => ({ id, nom, on: id === X.statut })),
+    // La date limite : un délai à la réception ; une demande « Nouvelle » passe alors « En cours ».
+    delais: (D.delais || [2, 5, 10, 30, 90]).map(j => ({ nom: j + ' j', on: X.delai === j && !!X.echeance,
+      choisir: E.enCours ? null : () => envoyer(app, '/helpdesk/demandes/' + X.id + '/delai', { jours: j, statut: X.statut, shop: X.shop, ref: X.ref }) })),
+    retirerDelai: X.echeance && !E.enCours ? () => envoyer(app, '/helpdesk/demandes/' + X.id + '/delai', { jours: 0, ref: X.ref }) : null,
+    delaiTon: X.enRetard ? 'ko' : (X.echeance ? '' : (X.ouverte ? 'att' : '')),
+    delaiNote: X.echeance ? (X.ouverte ? (X.enRetard ? 'Dépassée de ' + (-X.joursRestants) + ' j' : (X.joursRestants === 0 ? 'Aujourd’hui' : 'Dans ' + X.joursRestants + ' j')) + ' : à respecter avant le ' : 'Était fixée au ') + dm(X.echeance)
+        + (X.echeancePar ? ' · fixée par ' + X.echeancePar + (X.echeanceLe ? ' le ' + dm(X.echeanceLe) : '') : '') + '. Le franchisé voit « réponse prévue d’ici le ' + dm(X.echeance) + ' ».'
+      : (X.ouverte ? 'À fixer à la réception : le délai que vous tiendrez' + (X.statut === 'NEW' ? ' (la demande passe « En cours »)' : '') + '.' : 'Aucune date limite.'),
     poserStatut: e => { if (e.target.value !== X.statut) { envoyer(app, '/helpdesk/demandes/' + X.id + '/statut', { statut: e.target.value }); } },
     consultants: cons && cons.consultants ? [{ id: '', nom: X.consultant ? X.consultant + ' (actuel)' : '— choisir —' }].concat(cons.consultants.map(k => ({ id: String(k.id), nom: k.nom }))) : [{ id: '', nom: cons && cons.chargement ? 'lecture…' : (X.consultant || '—') }],
     poserConsultant: e => { if (e.target.value) { envoyer(app, '/helpdesk/demandes/' + X.id + '/consultant', { consultant: Number(e.target.value) }); } },

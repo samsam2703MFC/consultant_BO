@@ -6188,10 +6188,12 @@
   function hdCarte(x) {
     const e = HD_ETAT[x.statut] || ['att', x.statutNom];
     const j = x.cree ? Math.max(0, Math.round((Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5)) : null;
+    // La date limite que le consultant a fixée à la réception (20/11/2026).
+    const ech = x.echeance && x.ouverte && !x.reponse ? ' · réponse prévue d’ici le ' + esc(fD(x.echeance)) : '';
     const rep = x.reponse ? `<div class="rep ok"><b>Le bureau${x.reponseLe ? ' · ' + esc(fD(String(x.reponseLe).slice(0, 10))) : ''} :</b> ${esc(x.reponse)}</div>`
       : (x.visite ? `<div class="rep att">Reprise dans la visite${x.visite.consultant ? ' de ' + esc(x.visite.consultant) : ''}${x.visite.le ? ' du ' + esc(fD(x.visite.le)) : ''} — réponse après la visite</div>`
-        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — pas encore lue par le bureau</div>`
-          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}</div>` : '')));
+        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — ${ech ? 'reçue par le bureau' + ech : 'pas encore lue par le bureau'}</div>`
+          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}${ech}</div>` : '')));
     return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e[0]}">${esc(e[1])}</span><span class="d">${esc(fD(x.cree.slice(0, 10)))} · ${esc(x.ref.replace('CASE-', ''))}</span></div>
       <b class="ref">${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
   }

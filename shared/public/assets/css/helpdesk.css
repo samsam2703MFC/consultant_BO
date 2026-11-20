@@ -66,4 +66,27 @@ textarea.pp-in{resize:vertical;line-height:1.45}
 .hd-ok3 button.on.a_suivre{background:var(--prize-soft);border-color:#E8A33D;color:var(--vr-att)}.hd-ok3 button.on.conforme{background:#e3f1e6;color:var(--vr-ok);border-color:var(--vr-ok)}
 .hd-rep{white-space:pre-wrap;font:400 11.5px/1.5 var(--font-ui);background:#fff;border-radius:6px;padding:8px 10px;margin:8px 0 0}
 .hd-bloc label small{font-size:10px}
+/* La date limite (20/11/2026) */
+.hd .vm-kpis{grid-template-columns:repeat(6,1fr)}
+.hd-ech span{white-space:nowrap}.hd-ech small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.hd-ech.ko span{color:var(--vr-ko)}.hd-ech.att span{color:var(--vr-att)}
+.hd-delai{border:1px solid var(--vr-trait);border-radius:8px;padding:8px 10px;margin:-4px 0 12px}
+.hd-delai .hd-seg{margin:0 0 4px;flex-wrap:wrap}.hd-delai small{display:block;font-size:11px;color:var(--color-text-muted);line-height:1.45}
+.hd-delai.ko{border-color:var(--vr-ko);background:var(--stop-soft)}.hd-delai.ko small{color:var(--vr-ko)}
+.hd-delai.att{border-color:#E8A33D;background:var(--prize-soft)}
+.hd-seg button.hd-delai-x{border:none;background:none;color:var(--color-text-muted);padding:3px 6px}
+/* Les onglets et les réclamations fournisseur (20/11/2026) */
+.hd-onglets{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.hd-onglets button{border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:9px;padding:8px 16px;font:400 13px var(--font-ui);color:var(--color-text);cursor:pointer;text-align:left}
+.hd-onglets button small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.hd-onglets button.on{background:var(--color-text);border-color:var(--color-text);color:#fff}.hd-onglets button.on small{color:rgba(255,255,255,.75)}
+.hd-rc-kv{display:grid;grid-template-columns:max-content 1fr;gap:5px 14px;font-size:12px;margin:4px 0 0}.hd-rc-kv span{color:var(--color-text-muted)}.hd-rc-kv b{font-weight:400}
+/* Le SMS au bureau (20/11/2026) */
+.hd-sms{border-top:1px solid var(--vr-trait);padding:10px 18px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.hd-sms .vr-mu{font-size:11px}.hd-sms p{margin:0;line-height:1.5}
+.hd-sms-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.hd-sms-t b{font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)}
+.hd-sms-ko{color:var(--vr-ko)}
+.hd-sms-l{display:grid;grid-template-columns:minmax(120px,200px) minmax(150px,240px) auto;gap:8px;align-items:center;justify-content:start}
+.hd-sms-l .mko-inp{height:30px}.hd-sms-l .mko-inp.hd-sms-vide{border-color:var(--vr-ko)}
+.hd-sms .hd-seg{margin:2px 0}.hd-sms .hd-okmsg{margin:0}
 @media (max-width:1300px){.hd-cols{grid-template-columns:1fr}.hd-fiche{margin:0 14px 14px;position:static;max-height:none}}
