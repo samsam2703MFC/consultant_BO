@@ -5971,7 +5971,7 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `GET /commercial/simulation?secteur=&personnes=&depense=&commandes=&ht=` | ce que rapporte un client sur un an à la règle de son secteur : CA HT par mois (estimé comme Prospection, ou donné), gains mois par mois, part du franchisé et de la marque |
 | `GET /commercial/formulaires/modele?langue=`, `POST /commercial/formulaires/creer` | le formulaire Meta « Lunch au bureau » (FR) ou « Lunch op kantoor » (NL) : l'aperçu, puis la création sur la Page (`POST /{page}/leadgen_forms`, jeton de MétaDonnée), relu par MétaDonnée |
 | `POST /commercial/formulaires/{id}/actif` | `{ actif }` : un formulaire « Lunch au bureau » archivé chez Meta (inactif) ou réactivé ; les autres formulaires : 403 |
-| `GET /commercial/formulaires/pub?langue=fr\|nl` | la publicité « Lunch au bureau » : `texte`, `titre`, `description`, `bouton`, `videos[]` (`mp4`, `affiche`, 9:16 et 4:5, servies à `/commercial/meta/`) |
+| `GET /commercial/formulaires/pub?langue=fr\|nl` | la publicité « Lunch au bureau » : `texte`, `titre`, `description`, `bouton`, `videos[]` (`mp4`, `affiche`, 9:16 et 4:5, servies à `/commercial/meta/`), `apercu` (le formulaire tel que Meta le montre : `accueil`, `questions[]` avec `choix` et `prerempli`, `confidentialite`, `merci`) ; NL : Halle (`magasin`) |
 | `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
 
 **Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée

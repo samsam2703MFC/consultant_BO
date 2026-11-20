@@ -7,7 +7,7 @@ H.264, sans son, dans `commercial/public/commercial/meta/` (servi à `/commercia
 
 ```
 node commercial/tools/video-lunch/rendre.cjs                  # fr, 9:16 et 4:5
-node commercial/tools/video-lunch/rendre.cjs --langue nl      # la version néerlandaise (Halle)
+node commercial/tools/video-lunch/rendre.cjs --langue nl      # la version néerlandaise, celle de Halle (rendue le 20/11/2026)
 ```
 
 Le portail montre la vidéo et le texte du post (Leads Meta, « La publicité ») : `smPubLunch` dans

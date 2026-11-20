@@ -221,7 +221,15 @@ verifie('« reçu » est un statut d’échantillon, entre commandé et livré',
 $pub = smPubLunch('fr');
 verifie('la publicité « Lunch au bureau » : texte, titre, bouton, pour le formulaire FR', $pub['formulaire'] === 'LUNCH AU BUREAU - FR' && str_contains($pub['texte'], 'dégustation offerte') && mb_strlen($pub['titre']) <= 40 && $pub['bouton'] !== '');
 verifie('les deux vidéos rendues (9:16 et 4:5) sont servies avec leur affiche', array_column($pub['videos'], 'format') === ['9x16', '4x5'] && str_ends_with($pub['videos'][0]['affiche'], '.jpg'));
-verifie('la publicité en néerlandais a son texte (la vidéo se rend à part)', str_contains(smPubLunch('nl')['texte'], 'proeverij'));
+$pubNl = smPubLunch('nl');
+verifie('la publicité en néerlandais est celle de Halle, avec ses deux vidéos', str_contains($pubNl['texte'], 'proeverij') && str_contains($pubNl['texte'], 'Halle') && $pubNl['magasin'] === 'Halle' && array_column($pubNl['videos'], 'format') === ['9x16', '4x5']);
+$ap = smApercuFormulaire('fr');
+verifie('l’aperçu du formulaire : accueil, huit champs (nom, e-mail, téléphone préremplis ; personnes et besoin à choix), remerciement', count($ap['questions']) === 8
+    && $ap['questions'][0]['label'] === 'Nom de l’entreprise' && count($ap['questions'][1]['choix']) === 4 && $ap['questions'][5]['prerempli'] && !$ap['questions'][7]['prerempli'] && $ap['merci']['bouton'] === 'Notre site');
+verifie('l’aperçu NL : champs en néerlandais, Halle au remerciement', smApercuFormulaire('nl')['questions'][7]['label'] === 'Postcode' && str_contains(smApercuFormulaire('nl')['merci']['titre'], 'Halle'));
+$flNl = smFormulaireLunch('nl', 'https://atelierby.be/');
+verifie('le formulaire NL : tranches de personnes en néerlandais, Halle dans l’accueil et le remerciement', array_column($flNl['questions'][1]['options'], 'value') === ['1 tot 9', '10 tot 24', '25 tot 49', '50 of meer']
+    && str_contains($flNl['context_card']['content'][0], 'Halle') && str_contains($flNl['thank_you_page']['title'], 'Halle') && $flNl['name'] === 'LUNCH OP KANTOOR - NL');
 verifie('les formulaires que le portail peut mettre en inactif : « Lunch au bureau » FR et NL, rien d’autre', smFormulairesLunchNoms() === ['LUNCH AU BUREAU - FR', 'LUNCH OP KANTOOR - NL']);
 $fl = smFormulaireLunch('fr', 'https://atelierby.be/');
 verifie('le formulaire « Lunch au bureau » demande le code postal (le magasin) et l’entreprise', in_array('POST_CODE', array_column($fl['questions'], 'type'), true) && in_array('COMPANY_NAME', array_column($fl['questions'], 'type'), true));
