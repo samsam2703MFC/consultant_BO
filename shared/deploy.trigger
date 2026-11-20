@@ -208,3 +208,4 @@
 2026-11-20T05:51:30Z Commercial : la commande d'échantillon porte le client « ÉCHANTILLONS COMMERCIAL » du magasin et l'employé qui l'accepte ; elle s'annule depuis le portail
 2026-11-20T05:55:33Z Commercial : l'équipe du magasin pour la commande d'échantillon, tirée de ses commandes quand la lecture de l'équipe revient vide
 2026-11-20T06:02:14Z Commercial : le portail en pleine largeur ; Leads Meta : la campagne « Lunch au bureau » en onglets FR / NL · Halle (étapes, action, aperçu, vidéos, post), les formulaires de recrutement repliés
+2026-11-20T20:56:08Z Consultant : la page du food cost de Sombreffe (prix, volumes, marges), seule à /consulant_bo/food-cost/
