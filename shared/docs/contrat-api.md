@@ -5956,6 +5956,8 @@ La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (al
 | `POST /commercial/apercu`, `POST /commercial/envoyer`, `GET /commercial/envois` | l'e-mail rendu (§13.6) ; l'envoi depuis l'expéditeur réglé (hello@atelierby.be), noté dans `sm_envoi` |
 | `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons (`contenu` : `[{id, q}]` du catalogue du magasin, ou `[{produit, q}]` à la main) ; `commander` : la commande dans le système du magasin (TF Buddy `POST /client-orders`, « ÉCHANTILLON COMMERCIAL », offerte, `commande` = son numéro) ; `envoyer` : l'e-mail au magasin (adresse de sa fiche au panel) |
 | `GET /commercial/catalogue-magasin?shop=` | les catégories et les produits du magasin (TF Buddy `GET /shops/{id}/products/available`) : nom, prix, coût de la recette, livrable au bureau |
+| `GET /commercial/equipe-magasin?shop=` | l'équipe du magasin (qui accepte la commande d'échantillon dans TF Buddy) : `employes[]`, `dernier` (le dernier choisi pour ce magasin) |
+| `DELETE /commercial/echantillons/{id}/commande` | annule la commande TF Buddy de l'échantillon (`DELETE /client-orders/{n}`) |
 | `POST /commercial/echantillons/{id}/photos`, `GET\|DELETE /commercial/echantillons/photos/{id}` | la photo de l'échantillon reçu (`photos: [{data}]`, data-URL JPEG, PNG ou WebP, 6 Mo) ; l'échantillon passe à « reçu » ; le fichier sort tel quel (dossier privé) |
 | `GET /commercial/suivi?du=` | par secteur et par magasin : offres et catalogues envoyés, échantillons, convertis, clients ; listes de démarchage de Prospection |
 | `GET /commercial/gains?mois=AAAA-MM` | les gains : par client (1re commande, règle, commandes, HT, gain), par secteur, plancher et complément, historique de 6 mois |

@@ -227,7 +227,7 @@
             if (!v || !v.lignes.length) return;
             el.disabled = true;
             api('POST', '/echantillons', { prospect: r.prospect, contact: r.contact, clientId: r.clientId, secteur: r.secteur, shopId: r.shopId, contenu: v.manuel ? v.lignes : v.lignes.map(l => ({ id: l.id, q: l.q })),
-              le: r.le.slice(0, 16), mode: 'livraison', adresse: r.adresse, commander: !v.manuel, envoyer: !!v.manuel, note: 'Pour la dégustation du ' + fDc(r.le) + ' à ' + hm(r.le) })
+              le: r.le.slice(0, 16), mode: 'livraison', adresse: r.adresse, commander: !v.manuel, employe: v.employe || null, envoyer: !!v.manuel, note: 'Pour la dégustation du ' + fDc(r.le) + ' à ' + hm(r.le) })
               .then(x => api('PUT', '/rdv/' + r.id, { echantillonId: x.echantillon.id }).then(() => {
                 const ko = (x.commande && !x.commande.ok) || (x.envoi && !x.envoi.ok);
                 toast(x.commande ? (x.commande.ok ? 'Commande TF Buddy n° ' + x.commande.commande + ' passée au magasin' : 'Échantillon noté, commande pas passée : ' + x.commande.erreur) : x.envoi && x.envoi.ok ? 'Demande envoyée au magasin par e-mail' : 'Échantillon noté, pas envoyé : ' + (x.envoi ? x.envoi.erreur : ''), ko); vueSemaine(q); }))
@@ -610,8 +610,8 @@
       md.innerHTML = `<div class="modal__box cmd-box"><h3>Commander un échantillon · ${esc(nomMag(shopId))}</h3><div class="vide">Lecture du catalogue du magasin…</div></div>`;
       document.body.appendChild(md);
       const sel = new Map((depart || []).filter(l => l.id).map(l => [l.id, Number(l.q) || 1]));
-      let cat = '', cherche = '', bureau = true, C = null, IDX = {};
-      const fermer = v => { md.remove(); fin(v); };
+      let cat = '', cherche = '', bureau = true, C = null, IDX = {}, EQ = null, employe = null;
+      const fermer = v => { if (v && employe) { try { localStorage.setItem('smEmploye:' + shopId, String(employe)); } catch (e) { /* navigation privée */ } } md.remove(); fin(v); };
       const lignes = () => [...sel.entries()].filter(([, q]) => q > 0).map(([id, q]) => ({ id, q, nom: IDX[id].nom, prix: IDX[id].prix, cout: IDX[id].cout, cat: IDX[id].cat }));
       function rendre() {
         const vis = p => (!bureau || p.bureau) && (!cherche || p.nom.toLowerCase().includes(cherche));
@@ -627,20 +627,27 @@
             <div class="cmd__prods">${prods.map(p => { const q = sel.get(p.id) || 0; return `<div class="cmd__prod ${q ? 'is-on' : ''}"><div>${esc(p.nom)}<span class="sub">${p.prix != null ? fE2(p.prix) : 'prix non renseigné'}${cherche ? ' · ' + esc(IDX[p.id].cat) : ''}</span></div>
               <div class="cmd__q"><button type="button" data-q="${p.id}|-1" ${q ? '' : 'disabled'}>−</button><span>${q || ''}</span><button type="button" data-q="${p.id}|1">+</button></div></div>`; }).join('') || '<div class="vide">Aucun produit.</div>'}</div>
             <div class="cmd__panier"><div class="field-label">L’échantillon</div>${L.length ? `<table class="mini"><tbody>${L.map(l => `<tr><td>${l.q} ×</td><td>${esc(l.nom)}</td></tr>`).join('')}</tbody></table>
-              <div class="small" style="margin-top:10px">Valeur de vente ${fE2(valeur)} · offert<br><span class="muted">Coût matière ${cout ? fE2(cout) : '—'}</span></div>` : '<div class="small muted">Choisissez les produits avec +.</div>'}</div>
+              <div class="small" style="margin-top:10px">Valeur de vente ${fE2(valeur)} · offert<br><span class="muted">Coût matière ${cout ? fE2(cout) : '—'}</span></div>` : '<div class="small muted">Choisissez les produits avec +.</div>'}
+              <div class="field-label" style="margin-top:16px">Reçue au magasin par</div>${EQ && EQ.length ? `<select class="select-native" data-k="employe" style="width:100%"><option value="">— l’équipe du magasin —</option>${EQ.map(x => `<option value="${x.id}" ${employe === x.id ? 'selected' : ''}>${esc(x.nom)}</option>`).join('')}</select>
+              <div class="small muted" style="margin-top:4px">TF Buddy l’exige : la personne qui accepte la commande.</div>` : `<div class="small muted">${EQ ? 'Équipe du magasin illisible : le dernier choix pour ce magasin servira.' : 'Lecture de l’équipe…'}</div>`}</div>
           </div>
-          <div class="modal__actions"><button class="btn btn--ghost" data-m="0">Annuler</button><button class="btn btn--primary" data-m="1" ${L.length ? '' : 'disabled'}>Valider ${L.length ? L.length + ' produit' + (L.length > 1 ? 's' : '') : ''}</button></div>`;
+          <div class="modal__actions"><button class="btn btn--ghost" data-m="0">Annuler</button><button class="btn btn--primary" data-m="1" ${L.length && (employe || (EQ && !EQ.length)) ? '' : 'disabled'}>Valider ${L.length ? L.length + ' produit' + (L.length > 1 ? 's' : '') : ''}</button></div>`;
         const s = md.querySelector('[data-k=cherche]'); if (cherche) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
       }
       md.addEventListener('click', ev => {
         const b = ev.target.closest('[data-m],[data-cat],[data-q]'); if (!b) { if (ev.target === md) fermer(null); return; }
         if (b.dataset.m === '0') return fermer(null);
-        if (b.dataset.m === '1') return fermer(C ? { lignes: lignes() } : { manuel: true, lignes: md.querySelector('textarea').value.split(/[,\n]/).map(x => x.trim()).filter(Boolean).map(x => { const m = x.match(/^(\d+)\s*(?:×|x)?\s*(.+)$/); return m ? { q: m[1], produit: m[2] } : { q: '1', produit: x }; }) });
+        if (b.dataset.m === '1') return fermer(C ? { lignes: lignes(), employe } : { manuel: true, lignes: md.querySelector('textarea').value.split(/[,\n]/).map(x => x.trim()).filter(Boolean).map(x => { const m = x.match(/^(\d+)\s*(?:×|x)?\s*(.+)$/); return m ? { q: m[1], produit: m[2] } : { q: '1', produit: x }; }) });
         if (b.dataset.cat != null) { cat = b.dataset.cat; cherche = ''; rendre(); return; }
         if (b.dataset.q) { const [id, d] = b.dataset.q.split('|').map(Number); sel.set(id, Math.max(0, (sel.get(id) || 0) + d)); rendre(); }
       });
       md.addEventListener('input', ev => { if (ev.target.dataset.k === 'cherche') { cherche = ev.target.value.trim().toLowerCase(); rendre(); } });
-      md.addEventListener('change', ev => { if (ev.target.dataset.k === 'bureau') { bureau = ev.target.checked; rendre(); } });
+      md.addEventListener('change', ev => { if (ev.target.dataset.k === 'bureau') { bureau = ev.target.checked; rendre(); } if (ev.target.dataset.k === 'employe') { employe = Number(ev.target.value) || null; rendre(); } });
+      // L'équipe du magasin (qui accepte la commande dans TF Buddy) : le dernier choix de ce poste, sinon celui du serveur.
+      api('GET', '/equipe-magasin?shop=' + encodeURIComponent(shopId)).then(e => {
+        EQ = e.employes; let m = null; try { m = Number(localStorage.getItem('smEmploye:' + shopId)) || null; } catch (x) { /* navigation privée */ }
+        employe = EQ.some(x => x.id === m) ? m : (EQ.some(x => x.id === e.dernier) ? e.dernier : null); if (C) rendre();
+      }).catch(() => { EQ = []; if (C) rendre(); });
       catalogueMag(shopId).then(c => { C = c; c.categories.forEach(x => x.produits.forEach(p => { IDX[p.id] = { ...p, cat: x.nom }; })); rendre(); })
         .catch(e => { md.querySelector('.modal__box').innerHTML = `<h3>Commander un échantillon · ${esc(nomMag(shopId))}</h3><p class="erreur">${esc(e.message)}</p>
           <label><span class="field-label">Noter les produits à la main (la demande part alors par e-mail au magasin)</span><textarea rows="3" placeholder="6 Croissant, 6 Pain au chocolat, 1 Tarte du jour"></textarea></label>
@@ -663,11 +670,12 @@
   function vueEchantillons(q) {
     entete('Bureaux · webshop', 'Échantillons', '');
     Promise.all([api('GET', '/echantillons'), charger()]).then(([d]) => {
+      DECH = d.echantillons;
       const cli = q.get('client') ? CLIENTS.find(c => c.id === Number(q.get('client'))) : null;
       const liste = d.echantillons.length ? d.echantillons.map(e => `<tr><td class="ink2">${fDc((e.creeLe || '').slice(0, 10))}</td><td>${esc(e.prospect)}<span class="sub">${esc(e.contenu.map(x => x.q + ' × ' + x.produit).join(', '))}</span></td><td>${esc(e.magasin)}<span class="sub">${e.le ? esc(fDc(e.le.slice(0, 10)) + ' ' + e.le.slice(11, 16)) + ' · ' + esc(e.mode) : ''}</span></td>
         <td><select class="select-native" data-c="statutEch" data-v="${e.id}" style="height:30px;font-size:12px">${Object.entries(ECH).map(([k, [l]]) => `<option value="${k}" ${e.statut === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${e.commande ? `<span class="sub">commande TF Buddy n° ${e.commande}</span>` : e.commandeErreur ? `<span class="sub erreur">${esc(e.commandeErreur)}</span>` : e.envoyeLe ? `<span class="sub">e-mail au magasin ${fDc(e.envoyeLe.slice(0, 10))}</span>` : ''}</td>
         <td>${photosEch(e)}</td>
-        <td class="num" style="white-space:nowrap">${!e.commande && e.contenu.some(x => x.id) ? btn('Commander dans TF Buddy', 'commanderEch', 'btn--sm btn--primary', e.id) : ''}${btn(e.envoyeLe && !e.commande ? 'Renvoyer l’e-mail' : 'E-mail au magasin', 'envoyerEch', 'btn--sm btn--ghost', e.id)}</td></tr>`).join('')
+        <td class="num" style="white-space:nowrap">${!e.commande && e.contenu.some(x => x.id) ? btn('Commander dans TF Buddy', 'commanderEch', 'btn--sm btn--primary', e.id) : ''}${e.commande ? btn('Annuler la commande', 'annulerCmd', 'btn--sm btn--ghost', e.id) : ''}${btn(e.envoyeLe && !e.commande ? 'Renvoyer l’e-mail' : 'E-mail au magasin', 'envoyerEch', 'btn--sm btn--ghost', e.id)}</td></tr>`).join('')
         : '<tr><td class="vide" colspan="6">Aucun échantillon sur 60 jours.</td></tr>';
       page.innerHTML = `
         <div class="kpi-row"><div class="kpi"><div class="kpi__value">${d.mois.n}</div><div class="kpi__label">Échantillons ce mois</div></div>
@@ -697,7 +705,8 @@
       f.clientId.addEventListener('change', () => { const c = CLIENTS.find(x => x.id === Number(f.clientId.value)); if (c) { f.prospect.value = c.entreprise; f.contact.value = c.contact; if (String(f.shopId.value) !== String(c.shopId)) { f.shopId.value = c.shopId; PANIER = null; panier(); } f.secteur.value = c.secteur; f.adresse.value = [c.adresse, c.cp].filter(Boolean).join(', '); } });
       f.shopId.addEventListener('change', () => { PANIER = null; panier(); });
     }).catch(erreur);
-    let PANIER = null;   // { lignes, manuel } : ce que « Choisir les produits du magasin » a rendu
+    let PANIER = null;   // { lignes, employe, manuel } : ce que « Choisir les produits du magasin » a rendu
+    let DECH = null;     // les échantillons affichés (relancer une commande : son magasin, ses produits, son employé)
     const panier = () => { const el = document.getElementById('panier'); if (!el) return;
       el.innerHTML = PANIER && PANIER.lignes.length ? PANIER.lignes.map(l => esc(l.q + ' × ' + (l.nom || l.produit))).join(' · ') + (PANIER.manuel ? ' <span class="tag-warn">à la main : par e-mail seulement</span>' : '') : 'Aucun produit choisi.'; };
     const resultat = r => [r.commande ? (r.commande.ok ? 'Commande TF Buddy n° ' + r.commande.commande + ' passée au magasin' : 'Commande pas passée : ' + r.commande.erreur) : '',
@@ -710,11 +719,21 @@
         if (!PANIER || !PANIER.lignes.length) { toast('Choisissez les produits du magasin', true); return; }
         const contenu = PANIER.manuel ? PANIER.lignes : PANIER.lignes.map(l => ({ id: l.id, q: l.q }));
         el.disabled = true;
-        api('POST', '/echantillons', { ...x, clientId: x.clientId ? Number(x.clientId) : null, contenu, commander: !PANIER.manuel && f.commander.checked, envoyer: f.envoyer.checked || !!PANIER.manuel }).then(r => {
+        api('POST', '/echantillons', { ...x, clientId: x.clientId ? Number(x.clientId) : null, contenu, commander: !PANIER.manuel && f.commander.checked, employe: PANIER.employe || null, envoyer: f.envoyer.checked || !!PANIER.manuel }).then(r => {
           toast(resultat(r), rate(r)); vueEchantillons(new URLSearchParams());
         }).catch(e => { toast(e.message, true); el.disabled = false; });
       },
-      commanderEch: el => { el.disabled = true; api('PUT', '/echantillons/' + el.dataset.v, { commander: true }).then(r => { toast(resultat(r), rate(r)); vueEchantillons(q); }).catch(e => { toast(e.message, true); el.disabled = false; }); },
+      commanderEch: el => {
+        const e = (DECH || []).find(x => x.id === Number(el.dataset.v));
+        const envoyer = employe => { el.disabled = true; api('PUT', '/echantillons/' + el.dataset.v, { commander: true, employe }).then(r => { toast(resultat(r), rate(r)); vueEchantillons(q); }).catch(x => { toast(x.message, true); el.disabled = false; }); };
+        if (e && e.employe) return envoyer(e.employe);
+        // L'employé qui accepte la commande manque : on le choisit, dans le même écran que la commande.
+        choisirProduits(e ? e.shopId : '', e ? e.contenu.filter(x => x.id).map(x => ({ id: x.id, q: Number(x.q) || 1 })) : []).then(v => { if (v && !v.manuel) envoyer(v.employe || null); });
+      },
+      annulerCmd: el => {
+        if (!confirm('Annuler la commande TF Buddy de cet échantillon ? Elle est supprimée des commandes du magasin.')) return;
+        el.disabled = true; api('DELETE', '/echantillons/' + el.dataset.v + '/commande').then(r => { toast('Commande TF Buddy n° ' + r.annulee + ' annulée'); vueEchantillons(q); }).catch(x => { toast(x.message, true); el.disabled = false; });
+      },
       envoyerEch: el => api('PUT', '/echantillons/' + el.dataset.v, { envoyer: true }).then(r => { toast(r.envoi.ok ? 'Envoyé au magasin (' + r.envoi.a + ')' : 'Pas envoyé : ' + r.envoi.erreur, !r.envoi.ok); vueEchantillons(q); }).catch(e => toast(e.message, true)),
       statutEch: el => api('PUT', '/echantillons/' + el.dataset.v, { statut: el.value }).then(() => toast('Enregistré')).catch(e => toast(e.message, true)),
       photoEch: el => {

@@ -44,8 +44,12 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des domaines, clés, migration
   « LUNCH OP KANTOOR - NL », vidéo et post qui nomment L’Atelier By Halle).
 - **La commande d'échantillon** (`src/commercial_commande.php`) : comme une commande du magasin, avec ses produits et ses
   catégories (TF Buddy, `GET /shops/{id}/products/available`), postée dans son système de commande (`POST /client-orders`,
-  en formulaire) : commentaire « ÉCHANTILLON COMMERCIAL », lignes offertes (total 0 €), statut « nouvelle ». Le numéro de
-  la commande TF Buddy est gardé (`sm_echantillon.commande_id`) ; l'e-mail au magasin reste possible en plus.
+  en formulaire) : commentaire « ÉCHANTILLON COMMERCIAL », lignes offertes (total 0 €), statut « nouvelle ». TF Buddy exige
+  un client et un employé qui accepte (20/11/2026, décision de Sam) : le client « ÉCHANTILLONS COMMERCIAL » du magasin,
+  créé une fois (`POST /clients`, réglage `smClientsEchantillons`), et l'employé choisi à la commande dans l'équipe du
+  magasin (`GET /commercial/equipe-magasin`), retenu (`smEmployesEchantillons`, `sm_echantillon.employe_id`). Le numéro de
+  la commande TF Buddy est gardé (`sm_echantillon.commande_id`) ; elle s'annule d'ici (`DELETE
+  /commercial/echantillons/{id}/commande`) ; l'e-mail au magasin reste possible en plus.
 - **La photo des échantillons reçus** (`src/commercial_photos.php`) : prise à la réception (app mobile ou version bureau),
   réduite par le navigateur, rangée dans le dossier privé (`…/prive/commercial_echantillons`), lue par l'API seulement ;
   l'échantillon passe à « reçu ».
