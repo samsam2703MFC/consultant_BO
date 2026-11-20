@@ -1,0 +1,96 @@
+{
+ "source": "cockpit, GET /rapports/ca-net?mois=AAAA-MM (Sombreffe) : TTC après remise − TVA, ticket par ticket, clients pro compris ; lu le 20/11/2026 (octobre : 30 jours sur 31, le panel ne rend pas le dernier)",
+ "shop": "5",
+ "mois": [
+  {
+   "mois": "2026-01",
+   "brut": 56279.27,
+   "tva": 3371.75,
+   "net": 52907.52,
+   "tickets": 4574,
+   "jours": 31,
+   "joursLus": 31
+  },
+  {
+   "mois": "2026-02",
+   "brut": 43794.79,
+   "tva": 2642.66,
+   "net": 41152.13,
+   "tickets": 3986,
+   "jours": 28,
+   "joursLus": 28
+  },
+  {
+   "mois": "2026-03",
+   "brut": 48733.87,
+   "tva": 2937.07,
+   "net": 45796.8,
+   "tickets": 4371,
+   "jours": 30,
+   "joursLus": 30
+  },
+  {
+   "mois": "2026-04",
+   "brut": 51570.45,
+   "tva": 3093.49,
+   "net": 48476.96,
+   "tickets": 4635,
+   "jours": 30,
+   "joursLus": 30
+  },
+  {
+   "mois": "2026-05",
+   "brut": 50096.35,
+   "tva": 3006.57,
+   "net": 47089.78,
+   "tickets": 4186,
+   "jours": 31,
+   "joursLus": 31
+  },
+  {
+   "mois": "2026-06",
+   "brut": 56811.15,
+   "tva": 3454.48,
+   "net": 53356.67,
+   "tickets": 4453,
+   "jours": 30,
+   "joursLus": 30
+  },
+  {
+   "mois": "2026-07",
+   "brut": 45161.1,
+   "tva": 2708.87,
+   "net": 42452.23,
+   "tickets": 4190,
+   "jours": 31,
+   "joursLus": 31
+  },
+  {
+   "mois": "2026-08",
+   "brut": 47874.4,
+   "tva": 2877.64,
+   "net": 44996.76,
+   "tickets": 4333,
+   "jours": 31,
+   "joursLus": 31
+  },
+  {
+   "mois": "2026-09",
+   "brut": 55747.1,
+   "tva": 3400.2,
+   "net": 52346.9,
+   "tickets": 4394,
+   "jours": 30,
+   "joursLus": 30
+  },
+  {
+   "mois": "2026-10",
+   "brut": 55277.3,
+   "tva": 3382.87,
+   "net": 51894.43,
+   "tickets": 4245,
+   "jours": 31,
+   "joursLus": 30
+  }
+ ]
+}

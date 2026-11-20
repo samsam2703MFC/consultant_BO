@@ -451,7 +451,7 @@ body { margin: 0; background: var(--paper); }
       <ul class="rp-points" id="fin-points"></ul>
     </section>
     <section class="rp-carte" id="couts" hidden>   <!-- le PDF « Développement » seul, 20/11/2026 (Sam) -->
-      <h3 class="rp-h3">CA, frais fixes et personnel, janvier → octobre 2026</h3>
+      <h3 class="rp-h3" id="couts-titre">CA, frais fixes et personnel, janvier → octobre 2026</h3>
       <div class="rp-table-zone"><table class="rp-table rp-serre" id="couts-table"></table></div>
       <ul class="rp-points" id="couts-points"></ul>
     </section>
@@ -1464,13 +1464,16 @@ if (D.mode === 'developpement') {
   $('partie-4').querySelector('.rp-partie-n').textContent = '2';
   $('page-fin').querySelector('.rp-kicker').textContent = 'Sombreffe, le développement des ventes';
   // CA, frais fixes (les frais généraux du P&L) et personnel, de janvier à octobre 2026 (20/11/2026, Sam).
-  const CM = D.personnel ? D.personnel.mois.filter(m => !m.indispo && m.mois >= '2026-01' && m.mois <= '2026-10') : [];
+  // Le CA hors TVA (20/11/2026) : le CA TVAC du P&L × la part hors TVA des tickets du mois ; sans elle, le CA TVAC.
+  const CN = D.caNet || {}, ht = m => CN[m.mois] ? m.ca * CN[m.mois].part : m.ca, enHt = D.personnel && D.personnel.mois.some(m => CN[m.mois]);
+  const CM = D.personnel ? D.personnel.mois.filter(m => !m.indispo && m.mois >= '2026-01' && m.mois <= '2026-10').map(m => Object.assign({}, m, { ca: ht(m), caTtc: m.ca })) : [];
   if (CM.length) {
     const pc_ = (a, b) => dec(a / b * 100) + INS + '%', lab = ym => (L.find(l => l.k === ym) || { lab: ym }).lab;
     const S = CM.reduce((a, m) => ({ ca: a.ca + m.ca, fg: a.fg + m.overhead, pe: a.pe + m.labour }), { ca: 0, fg: 0, pe: 0 });
     const ligne = (nom, ca, fg, pe, cls_) => `<tr class="${cls_ || ''}"><td>${esc(nom)}</td><td class="num">${eur(ca)}</td><td class="num">${eur(fg)}</td><td class="num">${pc_(fg, ca)}</td>`
       + `<td class="num">${eur(pe)}</td><td class="num">${pc_(pe, ca)}</td><td class="num">${eur(fg + pe)}</td><td class="num">${pc_(fg + pe, ca)}</td></tr>`;
-    $('couts-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">CA</th><th class="num">Frais fixes</th><th class="num">% du CA</th><th class="num">Personnel</th><th class="num">% du CA</th><th class="num">Fixes + personnel</th><th class="num">% du CA</th></tr></thead><tbody>'
+    if (enHt) { $('couts-titre').textContent = 'CA hors TVA, frais fixes et personnel (HTVA), janvier → octobre 2026'; }
+    $('couts-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">' + (enHt ? 'CA HTVA' : 'CA') + '</th><th class="num">Frais fixes</th><th class="num">% du CA</th><th class="num">Personnel</th><th class="num">% du CA</th><th class="num">Fixes + personnel</th><th class="num">% du CA</th></tr></thead><tbody>'
       + CM.map(m => ligne(lab(m.mois), m.ca, m.overhead, m.labour)).join('') + '</tbody><tfoot>'
       + ligne('Janv. → oct. 26', S.ca, S.fg, S.pe) + '</tfoot>';
     const a = CM[0], z = CM[CM.length - 1];
@@ -1478,8 +1481,9 @@ if (D.mode === 'developpement') {
       `Par mois en moyenne : ${eur(S.ca / CM.length)} de CA, ${eur(S.fg / CM.length)} de frais fixes, ${eur(S.pe / CM.length)} de personnel.`,
       `Frais fixes : de ${eur(a.overhead)} en ${lab(a.mois)} à ${eur(z.overhead)} en ${lab(z.mois)}, ${sgn(z.overhead - a.overhead)}${eur(Math.abs(z.overhead - a.overhead))} par mois.`,
       `Fixes + personnel : de ${pc_(a.overhead + a.labour, a.ca)} du CA en ${lab(a.mois)} à ${pc_(z.overhead + z.labour, z.ca)} en ${lab(z.mois)}, pour le même CA.`,
-      'Frais fixes : les frais généraux du P&L du panel. Personnel : hors rémunération de la franchisée.',
-    ].map(x => `<li>${esc(insec(x))}</li>`).join('');
+      enHt ? `CA HTVA : le CA TVAC du P&L × la part hors TVA des tickets du mois (≈ ${dec(CM.reduce((a, m) => a + m.ca, 0) / CM.reduce((a, m) => a + m.caTtc, 0) * 100, 0)} %) ; octobre lu sur 30 jours sur 31.` : null,
+      'Frais fixes : les frais généraux du P&L du panel, HTVA. Personnel : hors rémunération de la franchisée.',
+    ].filter(Boolean).map(x => `<li>${esc(insec(x))}</li>`).join('');
     $('couts').hidden = false;
   }
   $('dev-tete').hidden = false;

@@ -68,6 +68,9 @@ SEMAINES_HALLE = ICI / 'semaines-halle.json'
 HEURES_EQUIPE = ICI / 'heures-equipe.json'
 # GUEST en novembre 2026, du 1er au 14 (14/11/2026) : ses tickets relus jour par jour (/exploitation/pro/detail).
 GUEST_NOV = ICI / 'guest-novembre.json'
+# Le CA hors TVA (20/11/2026, Sam : « le CA HTVA ») : /rapports/ca-net, TTC − TVA ticket par ticket. Le P&L du panel est
+# TVAC ; son CA passe hors TVA à la part hors TVA des tickets du même mois (≈ 94 %, la TVA à 6 %).
+CA_NET = ICI / 'ca-net-2026.json'
 # Les pièces vendues par mois (14/11/2026, Sam) : GET /api/cockpit/ventes/semaines?shop=5&vue=mois&date=2026-10-31&n=6
 # &articles=1 — chaque mois et son N-1 portent `articles`, les pièces vendues.
 PIECES_MOIS = ICI / 'pieces-mois.json'
@@ -384,6 +387,8 @@ def main():
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'heuresEquipe': heuresEquipe, 'coutHeure': COUT_HEURE,
+        'caNet': ({x['mois']: {'part': x['net'] / x['brut'], 'joursLus': x['joursLus'], 'jours': x['jours']}
+                   for x in json.loads(CA_NET.read_text(encoding='utf-8'))['mois'] if x['brut']} if CA_NET.exists() else None),
         'pieces': ([{'k': w['du'][:7], 'jours': w['jours'], 'clients': w['tickets'], 'ca': w['ca'], 'pieces': w['articles'],
                      'n1': ({'jours': w['n1']['jours'], 'clients': w['n1']['tickets'], 'pieces': w['n1']['articles']} if w.get('n1') else None)}
                     for w in json.loads(PIECES_MOIS.read_text(encoding='utf-8'))['semaines']] if PIECES_MOIS.exists() else None),
