@@ -129,18 +129,46 @@ function smCommandeCorps(array $e, string $maintenant, ?int $client = null, ?int
     return $corps;
 }
 
-/** L'équipe du magasin (TF Buddy, GET /shops/{id}/employees, par la lecture du cockpit) : [id => nom court]. */
+/**
+ * Ceux qui acceptent les commandes du magasin, tirés de ses commandes (chacune porte id_accepting_employee et son nom
+ * court) : [id => nom], du plus fréquent au moins fréquent. Fonction pure.
+ */
+function smEquipeDesCommandes(array $commandes): array
+{
+    $n = []; $noms = [];
+    foreach ($commandes as $c) {
+        $id = is_array($c) ? (int) ($c['id_accepting_employee'] ?? 0) : 0;
+        if ($id <= 0) { continue; }
+        $n[$id] = ($n[$id] ?? 0) + 1;
+        $nom = trim((string) ($c['accepting_employee_display_name'] ?? ''));
+        if ($nom !== '') { $noms[$id] = $nom; }
+    }
+    arsort($n);
+    $out = [];
+    foreach ($n as $id => $k) { $out[(string) $id] = $noms[$id] ?? ('employé n° ' . $id); }
+    return $out;
+}
+
+/**
+ * L'équipe du magasin, pour choisir qui accepte la commande d'échantillon : [id => nom court]. D'abord la lecture du
+ * cockpit (invOperateurs, GET /shops/{id}/employees) ; vide (20/11/2026 : le compte du panel ne reçoit pas l'équipe de
+ * Corbais), ceux qui ont accepté des commandes du magasin ces 60 derniers jours, gardés six heures.
+ */
 function smEquipeMagasin(string $shop): array
 {
     if (!ctype_digit($shop)) { return []; }
-    if (function_exists('invOperateurs')) { return invOperateurs((int) $shop); }
+    $eq = function_exists('invOperateurs') ? invOperateurs((int) $shop) : [];
+    if ($eq !== []) { return $eq; }
+    $cle = 'smEquipeCommandes:' . $shop;
+    $c = setting($cle);
+    if (is_array($c) && is_array($c['v'] ?? null) && $c['v'] !== [] && (int) ($c['le'] ?? 0) > time() - 6 * 3600) { return $c['v']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return []; }
-    $out = [];
-    $r = PanelApi::get('/shops/' . $shop . '/employees');
-    foreach ((array) (is_array($r) && isset($r['data']) ? $r['data'] : $r) as $em) {
-        if (is_array($em) && (int) ($em['id'] ?? 0) > 0) { $out[(string) $em['id']] = trim((string) ($em['display_name'] ?? $em['name'] ?? ('n° ' . $em['id']))); }
-    }
-    return $out;
+    $r = PanelApi::sondeGet('/shops/' . $shop . '/client-orders?date_from=' . date('Y-m-d', strtotime('-60 days')), 25);
+    if ((int) ($r['code'] ?? 0) !== 200 || !is_array($r['corps'])) { return is_array($c['v'] ?? null) ? $c['v'] : []; }
+    $liste = function_exists('analyseListe') ? analyseListe($r['corps']) : (array_is_list($r['corps']) ? $r['corps'] : (array) ($r['corps']['data'] ?? []));
+    $eq = smEquipeDesCommandes($liste);
+    if ($eq !== []) { settingEcrire($cle, ['le' => time(), 'v' => $eq]); }
+    return $eq;
 }
 
 /** GET /commercial/equipe-magasin?shop=2 — qui peut recevoir la commande d'échantillon, et le dernier choisi. */
