@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sombreffe · le food cost, produit par produit</title>
+<style>
+/*__POLICES__*/
+:root {
+  --ink: #1c1a17; --muted-2: #5c5852; --muted: #7a736a; --faint: #B8B2A8;
+  --paper: #faf7f2; --table-head: #FBF9F5; --total-line: #F8F4EE; --chip: #EDE7DE; --line: #e6e0d8;
+  --row-line: rgba(34, 34, 34, 0.06); --accent: #8D1D2C; --danger: #b3261e; --green: #3f7a52;
+  --prize: #B0792A; --prize-soft: #F6E7CE; --prize-ink: #7A5207; --stop: #A32014; --stop-soft: #F7E0DC;
+  --chart-goal: #1B6FA8; --chart-goal-soft: #DEEAF3;
+  color-scheme: light; font-family: 'Gotham', system-ui, sans-serif; color: var(--ink); background: var(--paper);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; font-size: 13px; }
+h1, h2, h3, th, b, strong { font-weight: 400; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 18px 24px; border-bottom: 1px solid var(--line); background: #fff; }
+.topbar__kicker { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.topbar h1 { font-size: 26px; letter-spacing: -0.01em; margin: 0; }
+.topbar__aside { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.5; }
+main { padding: 20px 24px 40px; max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; min-width: 0; }
+h2 { font-size: 0.95rem; margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.aide { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 6px 0 0; }
+.haut { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+/* Les leviers */
+.levier { padding: 12px 0; border-top: 1px solid var(--row-line); display: grid; gap: 8px; }
+.levier:first-of-type { border-top: 0; padding-top: 0; }
+.levier-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.levier-nom { font-size: 13px; color: var(--ink); }
+.levier-val { font-size: 13px; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.coche { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
+.coche input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--chip); }
+.seg button { margin: 0; padding: 6px 11px; border: 0; border-radius: 7px; background: transparent; color: var(--muted-2); font: 400 12.5px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.seg button.is-on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; margin: 0; padding: 7px 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: 400 13px/1.2 'Gotham', system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: var(--muted-2); }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: #6f1622; border-color: #6f1622; }
+.btn--ghost { background: transparent; border-color: transparent; color: var(--muted-2); }
+.btn--ghost:hover:not(:disabled) { text-decoration: underline; color: var(--ink); }
+.btn--sm { min-height: 30px; padding: 5px 11px; font-size: 12px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.message { font-size: 12.5px; margin-top: 10px; line-height: 1.5; }
+.message.ok { color: var(--green); } .message.ko { color: var(--prize-ink); }
+/* Les chiffres clés */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.kpi { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; display: grid; gap: 4px; align-content: start; }
+.kpi-k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.kpi-v { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.kpi-v small { font-size: 13px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.kpi-s { font-size: 12px; color: var(--muted); }
+.up { color: var(--green); } .down { color: var(--stop); }
+/* La jauge du food cost */
+.jauge { margin-top: 14px; }
+.jauge-piste { position: relative; height: 14px; border-radius: 999px; background: var(--chip); }
+.jauge-plein { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: rgba(141, 29, 44, 0.25); }
+.jauge-sim { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--accent); }
+.jauge-obj { position: absolute; top: -5px; bottom: -5px; border-left: 2px dashed var(--chart-goal); }
+.jauge-leg { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 6px; gap: 10px; flex-wrap: wrap; }
+.jauge-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+/* La matrice */
+.matrice-zone { position: relative; }
+.matrice-zone svg { display: block; width: 100%; height: auto; }
+.bulle { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08); display: none; max-width: 260px; z-index: 2; }
+.bulle .t { color: var(--ink); margin-bottom: 2px; }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.legende i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+/* Les catégories */
+.cats { display: grid; gap: 7px; }
+.cat { display: grid; grid-template-columns: 170px minmax(0, 1fr) 128px; align-items: center; gap: 10px; font-size: 12.5px; }
+.cat-nom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-barre { position: relative; height: 10px; border-radius: 999px; background: var(--chip); }
+.cat-barre .a { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: rgba(141, 29, 44, 0.25); }
+.cat-barre .b { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 999px; background: var(--accent); }
+.cat-barre .o { position: absolute; top: -3px; bottom: -3px; border-left: 2px dashed var(--chart-goal); }
+.cat-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted-2); white-space: nowrap; }
+/* Le tableau */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.toolbar input[type=search] { flex: 1 1 240px; min-width: 180px; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; font: 13px 'Gotham', system-ui, sans-serif; }
+.toolbar select { height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: 13px 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.table-scroll { overflow-x: auto; max-height: 640px; overflow-y: auto; border-radius: 8px; }
+table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 13px; }
+thead th { position: sticky; top: 0; z-index: 1; text-align: left; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--table-head); padding: 10px 12px; white-space: nowrap; cursor: pointer; user-select: none; }
+thead th.num { text-align: right; }
+thead th .tri { color: var(--accent); }
+tbody td { padding: 9px 12px; border-top: 1px solid var(--row-line); vertical-align: middle; }
+tbody tr:hover td { background: var(--table-head); }
+tfoot td { padding: 10px 12px; background: var(--total-line); border-top: 1px solid var(--line); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sub { display: block; margin-top: 2px; font-size: 10.5px; color: var(--muted); }
+.prix-in { width: 78px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 8px; font: 13px 'Gotham', system-ui, sans-serif; text-align: right; color: var(--ink); background: #fff; }
+.prix-in.change { border-color: var(--accent); background: rgba(141, 29, 44, 0.05); color: var(--accent); }
+.prix-in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; font-size: 11px; white-space: nowrap; background: var(--chip); color: var(--muted-2); }
+.chip--top { background: rgba(141, 29, 44, 0.07); color: var(--accent); }
+.chip--main { background: rgba(141, 29, 44, 0.12); color: var(--accent); }
+.tag-warn { display: inline-flex; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--prize-soft); color: var(--prize-ink); white-space: nowrap; }
+.dim { color: var(--faint); }
+.pied { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+@media (max-width: 1100px) { .haut { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .topbar { flex-direction: column; align-items: flex-start; padding: 14px 16px; } .topbar h1 { font-size: 21px; } .topbar__aside { text-align: left; }
+  main { padding: 12px 12px 30px; } .card { padding: 1rem; } .kpi-v { font-size: 21px; }
+  .cat { grid-template-columns: 110px minmax(0, 1fr) 96px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <p class="topbar__kicker">Vue Franchisé · Atelier by Harmonie, Sombreffe</p>
+    <h1>Le food cost : les prix, les volumes, les marges</h1>
+  </div>
+  <div class="topbar__aside" id="periode"></div>
+</header>
+<main>
+  <div class="haut">
+    <!-- Les leviers -->
+    <section class="card" id="leviers">
+      <h2>Les leviers</h2>
+      <div class="levier">
+        <div class="levier-tete"><span class="levier-nom">Objectif de food cost</span><span class="levier-val" id="v-objectif"></span></div>
+        <input type="range" id="objectif" min="34" max="48" step="0.5">
+        <p class="aide">Le coût d’achat des produits vendus, en % du CA hors TVA. Le budget du réseau : 40 %.</p>
+      </div>
+      <div class="levier">
+        <div class="levier-tete"><span class="levier-nom">Ne pas toucher aux plus vendus</span></div>
+        <div class="seg" id="protege"><button data-v="0">Aucun</button><button data-v="10">Top 10</button><button data-v="20">Top 20</button><button data-v="50">Top 50</button></div>
+      </div>
+      <div class="levier">
+        <div class="levier-tete"><label class="coche"><input type="checkbox" id="l-aligne"> 1 · Aligner sur le prix du réseau</label><span class="levier-val" id="v-aligne"></span></div>
+        <input type="range" id="cap-aligne" min="5" max="30" step="1">
+        <p class="aide">Ce que Sombreffe vend moins cher que la médiane des quatre magasins remonte vers elle, au plus de ce pourcentage.</p>
+      </div>
+      <div class="levier">
+        <div class="levier-tete"><label class="coche"><input type="checkbox" id="l-marge"> 2 · Remonter les petites marges</label><span class="levier-val" id="v-marge"></span></div>
+        <input type="range" id="cible-marge" min="40" max="70" step="1">
+        <p class="aide">Les produits sous cette marge remontent jusqu’à elle, au plus de <span id="v-cap-marge"></span> %.</p>
+      </div>
+      <div class="levier">
+        <div class="levier-tete"><span class="levier-nom">3 · Hausse sur le reste</span><span class="levier-val" id="v-hausse"></span></div>
+        <input type="range" id="hausse" min="0" max="30" step="0.5">
+      </div>
+      <div class="levier">
+        <div class="levier-tete"><span class="levier-nom">Effet sur les volumes</span><span class="levier-val" id="v-elast"></span></div>
+        <input type="range" id="elast" min="0" max="10" step="0.5">
+        <p class="aide">Quand un prix monte de 10 %, les ventes du produit baissent de ce pourcentage.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn--primary" id="atteindre">Atteindre l’objectif</button>
+        <button class="btn btn--ghost" id="remise">Tout remettre</button>
+      </div>
+      <div class="message" id="message"></div>
+    </section>
+
+    <div style="display:grid;gap:16px;min-width:0">
+      <!-- Les chiffres clés et la jauge -->
+      <section class="card">
+        <div class="kpis" id="kpis"></div>
+        <div class="jauge">
+          <div class="jauge-piste" id="jauge"></div>
+          <div class="jauge-leg" id="jauge-leg"></div>
+        </div>
+      </section>
+      <!-- La matrice volume × marge -->
+      <section class="card">
+        <h2>Les produits : volume × marge</h2>
+        <div class="matrice-zone" id="matrice"><div class="bulle" id="bulle"></div></div>
+        <div class="legende" id="legende"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Les catégories -->
+  <section class="card">
+    <h2>Le food cost par catégorie</h2>
+    <div class="cats" id="cats"></div>
+    <p class="aide" id="cats-aide"></p>
+  </section>
+
+  <!-- Les produits -->
+  <section class="card">
+    <h2>Produit par produit</h2>
+    <div class="toolbar">
+      <input type="search" id="cherche" placeholder="Chercher un produit">
+      <select id="filtre-cat"><option value="">Toutes les catégories</option></select>
+      <div class="seg" id="filtre-vue"><button data-v="tous">Tous</button><button data-v="touches">Prix changés</button><button data-v="verifier">À vérifier</button></div>
+    </div>
+    <div class="table-scroll"><table id="tableau"></table></div>
+    <p class="aide">Un prix se change à la main dans sa case (prix TVAC, celui du ticket) : il prime sur les leviers. Vide : le prix des leviers revient.</p>
+  </section>
+
+  <p class="pied" id="pied"></p>
+</main>
+
+<script>
+const D = /*__DONNEES__*/null;
+const $ = id => document.getElementById(id);
+const FINE = ' ', INS = ' ';
+const grp = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, FINE);
+const eur = n => (n < 0 ? '−' : '') + grp(Math.abs(n)) + INS + '€';
+const eur2 = n => n.toFixed(2).replace('.', ',') + INS + '€';
+const pc = (n, d = 1) => n.toFixed(d).replace('.', ',') + INS + '%';
+const sgn = n => n > 0.5 ? '+' : n < -0.5 ? '−' : '';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const haut10 = x => Math.ceil(Math.round(x * 1000) / 100 - 1e-9) / 10;   // arrondi aux 10 centimes au-dessus
+
+// Les produits : le prix HTVA, le coût, le volume ; « verifier » quand le coût dépasse le prix (erreur de prix ou de recette).
+const P = D.produits.map(p => {
+  const ht = p.ttc != null ? p.ttc / (1 + p.tva) : null;
+  return Object.assign({}, p, { ht, verifier: ht != null && p.cout != null && p.cout >= ht, calcule: ht != null && p.cout != null && p.cout < ht });
+});
+const CALC = P.filter(p => p.calcule);
+const DEFAUT = { objectif: 40, protege: 20, aligne: true, capAligne: 15, marge: true, cibleMarge: 50, capMarge: 10, hausse: 0, elast: 3 };
+let S = Object.assign({}, DEFAUT), MAIN = {}, TRI = { k: 'gain', sens: -1 }, VUE = 'tous';
+
+// Le calcul : pour chaque produit, le nouveau prix et le nouveau volume.
+function simuler(s) {
+  const lignes = P.map(p => {
+    const l = { p, ht1: p.ht, ttc1: p.ttc, vol1: p.vol, motif: null, main: false };
+    if (!p.calcule) { return l; }
+    if (MAIN[p.pid] != null) {
+      l.ttc1 = MAIN[p.pid]; l.ht1 = l.ttc1 / (1 + p.tva); l.main = true; l.motif = 'à la main';
+    } else if (p.rang > s.protege) {
+      let nv = p.ht, m = null;
+      if (s.aligne && p.med && p.ht < p.med * 0.995) { nv = Math.min(p.med, p.ht * (1 + s.capAligne / 100)); m = 'aligner sur le réseau'; }
+      const cm = s.cibleMarge / 100;
+      if (s.marge && (nv - p.cout) / nv < cm) {
+        const n2 = Math.min(p.cout / (1 - cm), p.ht * (1 + s.capMarge / 100));
+        if (n2 > nv) { nv = n2; m = m ? m + ' + marge' : 'petite marge'; }
+      }
+      if (!m && s.hausse > 0) { nv = p.ht * (1 + s.hausse / 100); m = '+' + pc(s.hausse, s.hausse % 1 ? 1 : 0) + ' sur le reste'; }
+      if (m) {
+        const t = haut10(nv * (1 + p.tva));
+        if (t > p.ttc + 0.001) { l.ttc1 = t; l.ht1 = t / (1 + p.tva); l.motif = m; }
+      }
+    }
+    // Le volume : ε = (baisse en % pour +10 % de prix) ÷ 10.
+    const hausse = l.ht1 / p.ht - 1;
+    l.vol1 = hausse > 0 ? Math.max(0, p.vol * (1 - s.elast / 10 * hausse)) : p.vol;
+    return l;
+  });
+  const tot = { ca0: 0, co0: 0, ca1: 0, co1: 0, v0: 0, v1: 0, n: 0 };
+  lignes.forEach(l => { if (!l.p.calcule) { return; }
+    tot.ca0 += l.p.ht * l.p.vol; tot.co0 += l.p.cout * l.p.vol; tot.ca1 += l.ht1 * l.vol1; tot.co1 += l.p.cout * l.vol1;
+    tot.v0 += l.p.vol; tot.v1 += l.vol1; if (l.ttc1 !== l.p.ttc) { tot.n++; } });
+  tot.fc0 = tot.co0 / tot.ca0 * 100; tot.fc1 = tot.co1 / tot.ca1 * 100;
+  tot.mb0 = tot.ca0 - tot.co0; tot.mb1 = tot.ca1 - tot.co1;
+  return { lignes, tot };
+}
+
+// Atteindre l'objectif : la hausse sur le reste qu'il faut (par dichotomie), les autres leviers tels quels.
+function atteindre() {
+  const essai = h => simuler(Object.assign({}, S, { hausse: h })).tot.fc1;
+  if (essai(0) <= S.objectif) { return { ok: true, h: 0, deja: true }; }   // toujours la plus petite hausse qui suffit
+  if (essai(30) > S.objectif) { return { ok: false, h: 30, fc: essai(30) }; }
+  let a = 0, b = 30;
+  for (let i = 0; i < 40; i++) { const m = (a + b) / 2; if (essai(m) <= S.objectif) { b = m; } else { a = m; } }
+  return { ok: true, h: Math.ceil(b * 2) / 2 };
+}
+
+// --- Le rendu ---
+function rendre() {
+  const R = simuler(S), T = R.tot;
+  $('v-objectif').textContent = pc(S.objectif, S.objectif % 1 ? 1 : 0);
+  $('v-aligne').textContent = S.aligne ? '+' + S.capAligne + ' % au plus' : 'non';
+  $('v-marge').textContent = S.marge ? S.cibleMarge + ' % de marge' : 'non';
+  $('v-cap-marge').textContent = S.capMarge;
+  $('v-hausse').textContent = '+' + pc(S.hausse, S.hausse % 1 ? 1 : 0);
+  $('v-elast').textContent = S.elast ? '−' + pc(S.elast, S.elast % 1 ? 1 : 0) + ' de ventes' : 'aucun';
+  document.querySelectorAll('#protege button').forEach(b => b.classList.toggle('is-on', +b.dataset.v === S.protege));
+  ['cap-aligne'].forEach(id => { $(id).disabled = !S.aligne; }); $('cible-marge').disabled = !S.marge;
+
+  // Les chiffres clés.
+  const ecart = T.fc1 - S.objectif, dMb = T.mb1 - T.mb0;
+  $('kpis').innerHTML = [
+    ['Food cost', `${pc(T.fc1)}`, `aujourd’hui ${pc(T.fc0)} · objectif ${pc(S.objectif, S.objectif % 1 ? 1 : 0)}`, T.fc1 <= S.objectif + 1e-9 ? 'up' : ''],
+    ['Marge brute / mois', eur(T.mb1), `${sgn(dMb)}${eur(Math.abs(dMb))} · ${sgn(dMb)}${pc(Math.abs(dMb / T.mb0 * 100))} · ${sgn(dMb)}${eur(Math.abs(dMb * 12))} par an`, dMb > 0.5 ? 'up' : ''],
+    ['CA HTVA / mois', eur(T.ca1), `aujourd’hui ${eur(T.ca0)}`, ''],
+    ['Pièces / mois', grp(T.v1), `aujourd’hui ${grp(T.v0)} · ${T.n} prix changés`, ''],   // une baisse de volume n'est pas une valeur négative : pas de rouge
+  ].map(([k, v, s, c]) => `<div class="kpi"><div class="kpi-k">${k}</div><div class="kpi-v ${c}">${v}</div><div class="kpi-s">${s}</div></div>`).join('');
+  // La jauge : de 30 à 50 %.
+  const x = v => Math.max(0, Math.min(100, (v - 30) / 20 * 100));
+  $('jauge').innerHTML = `<div class="jauge-plein" style="width:${x(T.fc0)}%"></div><div class="jauge-sim" style="width:${x(T.fc1)}%"></div><div class="jauge-obj" style="left:${x(S.objectif)}%"></div>`;
+  $('jauge-leg').innerHTML = `<span><i style="background:rgba(141,29,44,.25)"></i>Aujourd’hui ${pc(T.fc0)}</span><span><i style="background:var(--accent)"></i>Simulé ${pc(T.fc1)}</span>`
+    + `<span><i style="background:var(--chart-goal)"></i>Objectif ${pc(S.objectif, S.objectif % 1 ? 1 : 0)}</span><span>${ecart > 0.05 ? 'encore ' + pc(ecart) + ' à trouver' : 'objectif atteint'}</span>`;
+  matrice(R); categories(R); tableau(R);
+}
+
+// La matrice : volume par mois (échelle log) × marge % ; la taille du point = la marge brute par mois.
+function matrice(R) {
+  const zone = $('matrice'), W = Math.max(320, zone.clientWidth), H = W < 600 ? 300 : 360, ml = 46, mr = 14, mt = 16, mb = 38;
+  const L = R.lignes.filter(l => l.p.calcule && l.vol1 > 0);
+  const vmin = 1, vmax = Math.max(...L.map(l => l.p.vol)) * 1.3, lx = v => Math.log10(Math.max(vmin, v));
+  const X = v => ml + (lx(v) - lx(vmin)) / (lx(vmax) - lx(vmin)) * (W - ml - mr), Y = m => mt + (90 - Math.max(-10, Math.min(90, m))) / 100 * (H - mt - mb);
+  const vMed = [...L.map(l => l.p.vol)].sort((a, b) => a - b)[Math.floor(L.length / 2)], mObj = 100 - S.objectif;
+  const mbMax = Math.max(...L.map(l => (l.ht1 - l.p.cout) * l.vol1));
+  const r = l => 3 + 13 * Math.sqrt(Math.max(0, (l.ht1 - l.p.cout) * l.vol1) / mbMax);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Les produits de Sombreffe : volume par mois face à la marge">`;
+  // Les quatre quarts.
+  s += `<rect x="${X(vMed)}" y="${mt}" width="${W - mr - X(vMed)}" height="${Y(mObj) - mt}" fill="rgba(63,122,82,.05)"/>`
+    + `<rect x="${X(vMed)}" y="${Y(mObj)}" width="${W - mr - X(vMed)}" height="${H - mb - Y(mObj)}" fill="rgba(176,121,42,.07)"/>`;
+  [0, 20, 40, 60, 80].forEach(m => { s += `<line x1="${ml}" x2="${W - mr}" y1="${Y(m)}" y2="${Y(m)}" stroke="rgba(34,34,34,.07)"/><text x="${ml - 6}" y="${Y(m) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378">${m} %</text>`; });
+  [1, 10, 100, 1000].filter(v => v < vmax).forEach(v => { s += `<line x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${H - mb}" stroke="rgba(34,34,34,.07)"/><text x="${X(v)}" y="${H - mb + 14}" font-size="10" text-anchor="middle" fill="#8a8378">${grp(v)}</text>`; });
+  s += `<text x="${(ml + W - mr) / 2}" y="${H - 6}" font-size="10.5" text-anchor="middle" fill="#7a736a">pièces vendues par mois (échelle log)</text>`;
+  s += `<line x1="${ml}" x2="${W - mr}" y1="${Y(mObj)}" y2="${Y(mObj)}" stroke="#1B6FA8" stroke-dasharray="5 4" stroke-width="1.4"/><text x="${W - mr - 4}" y="${Y(mObj) - 5}" font-size="10.5" text-anchor="end" fill="#1B6FA8">marge visée ${pc(mObj, mObj % 1 ? 1 : 0)}</text>`;
+  s += `<line x1="${X(vMed)}" x2="${X(vMed)}" y1="${mt}" y2="${H - mb}" stroke="rgba(34,34,34,.25)" stroke-dasharray="2 3"/>`;
+  const q = (x, y, t, a) => `<text x="${x}" y="${y}" font-size="10.5" text-anchor="${a}" fill="#7a736a" style="paint-order:stroke;stroke:#fff;stroke-width:3px">${t}</text>`;
+  const court = W < 700;   // au téléphone : le verbe seul
+  const quarts = q(W - mr - 6, mt + 12, court ? 'à garder' : 'gros volume · bonne marge : à garder', 'end') + q(W - mr - 6, H - mb - 6, court ? 'à surveiller' : 'gros volume · marge faible : à surveiller', 'end')
+    + q(ml + 6, mt + 12, court ? 'à pousser' : 'petit volume · bonne marge : à pousser', 'start') + q(ml + 6, H - mb - 6, court ? 'à remonter' : 'petit volume · marge faible : à remonter', 'start');
+  // Les produits : le point d'aujourd'hui en gris quand le prix change, relié au point simulé.
+  L.sort((a, b) => r(b) - r(a)).forEach((l, i) => {
+    const m0 = (l.p.ht - l.p.cout) / l.p.ht * 100, m1 = (l.ht1 - l.p.cout) / l.ht1 * 100, top = l.p.rang <= S.protege;
+    const c = top ? '#8D1D2C' : l.ttc1 !== l.p.ttc ? '#B0792A' : '#5c5852';
+    if (l.ttc1 !== l.p.ttc) { s += `<line x1="${X(l.p.vol)}" y1="${Y(m0)}" x2="${X(l.vol1)}" y2="${Y(m1)}" stroke="#B0792A" stroke-opacity=".5"/>`; }
+    s += `<circle class="pt" data-i="${P.indexOf(l.p)}" cx="${X(l.vol1).toFixed(1)}" cy="${Y(m1).toFixed(1)}" r="${r(l).toFixed(1)}" fill="${c}" fill-opacity="${top ? .55 : .35}" stroke="${c}" stroke-width="1"/>`;
+  });
+  s += quarts + '</svg>';
+  zone.querySelector('svg')?.remove(); zone.insertAdjacentHTML('afterbegin', s);
+  $('legende').innerHTML = `<span><i style="background:#8D1D2C"></i>top ${S.protege || 0} : prix inchangé</span><span><i style="background:#B0792A"></i>prix changé (le trait part d’aujourd’hui)</span>`
+    + `<span><i style="background:#5c5852"></i>prix inchangé</span><span>taille : la marge brute par mois</span>`;
+  const bulle = $('bulle');
+  zone.querySelectorAll('.pt').forEach(c => {
+    c.addEventListener('pointerenter', () => {
+      const l = R.lignes[+c.dataset.i], m0 = (l.p.ht - l.p.cout) / l.p.ht * 100, m1 = (l.ht1 - l.p.cout) / l.ht1 * 100;
+      bulle.innerHTML = `<div class="t">${esc(l.p.nom)}</div>${esc(l.p.cat)} · rang ${l.p.rang}<br>${grp(l.p.vol)} pièces / mois${l.vol1 !== l.p.vol ? ' → ' + grp(l.vol1) : ''}<br>`
+        + `prix ${eur2(l.p.ttc)}${l.ttc1 !== l.p.ttc ? ' → ' + eur2(l.ttc1) : ''} TVAC · marge ${pc(m0, 0)}${l.ttc1 !== l.p.ttc ? ' → ' + pc(m1, 0) : ''}`;
+      const k = W / zone.querySelector('svg').getBoundingClientRect().width, bx = +c.getAttribute('cx') / k, by = +c.getAttribute('cy') / k;
+      bulle.style.display = 'block'; bulle.style.left = Math.min(bx + 12, zone.clientWidth - 270) + 'px'; bulle.style.top = (by + 12) + 'px';
+    });
+    c.addEventListener('pointerleave', () => { bulle.style.display = 'none'; });
+  });
+}
+
+// Le food cost par catégorie : aujourd'hui (clair) et simulé (plein), face à l'objectif.
+function categories(R) {
+  const C = {};
+  R.lignes.filter(l => l.p.calcule).forEach(l => { const c = C[l.p.cat] || (C[l.p.cat] = { ca0: 0, co0: 0, ca1: 0, co1: 0 });
+    c.ca0 += l.p.ht * l.p.vol; c.co0 += l.p.cout * l.p.vol; c.ca1 += l.ht1 * l.vol1; c.co1 += l.p.cout * l.vol1; });
+  const L = Object.entries(C).filter(([, c]) => c.ca0 >= 300).sort((a, b) => b[1].ca0 - a[1].ca0);
+  const x = v => Math.max(0, Math.min(100, v / 80 * 100));
+  $('cats').innerHTML = L.map(([n, c]) => { const a = c.co0 / c.ca0 * 100, b = c.co1 / c.ca1 * 100;
+    return `<div class="cat"><span class="cat-nom" title="${esc(n)}">${esc(n)}</span><div class="cat-barre"><div class="a" style="width:${x(a)}%"></div><div class="b" style="width:${x(b)}%"></div><div class="o" style="left:${x(S.objectif)}%"></div></div>`
+      + `<span class="cat-val">${Math.abs(a - b) > 0.05 ? pc(a, 0) + ' → ' : ''}${pc(b, 0)} · ${eur(c.ca1)}</span></div>`; }).join('');
+  $('cats-aide').textContent = `Les catégories de 300 € de CA par mois et plus ; à droite, le food cost (aujourd’hui → simulé) et le CA HTVA par mois. Trait bleu : l’objectif de ${pc(S.objectif, S.objectif % 1 ? 1 : 0)}.`;
+}
+
+// Le tableau des produits.
+function tableau(R) {
+  const q = $('cherche').value.trim().toLowerCase(), cat = $('filtre-cat').value;
+  let L = R.lignes.filter(l => (!q || l.p.nom.toLowerCase().includes(q)) && (!cat || l.p.cat === cat));
+  if (VUE === 'touches') { L = L.filter(l => l.ttc1 !== l.p.ttc); }
+  if (VUE === 'verifier') { L = L.filter(l => l.p.verifier || !l.p.calcule); }
+  const val = { rang: l => l.p.rang, nom: l => l.p.nom, vol: l => l.vol1, prix: l => l.ttc1 || 0, fc: l => l.p.calcule ? l.p.cout / l.ht1 : 9,
+                mb: l => l.p.calcule ? (l.ht1 - l.p.cout) * l.vol1 : -1e9, gain: l => l.p.calcule ? (l.ht1 - l.p.cout) * l.vol1 - (l.p.ht - l.p.cout) * l.p.vol : -1e9 };
+  L.sort((a, b) => { const va = val[TRI.k](a), vb = val[TRI.k](b); return (va < vb ? -1 : va > vb ? 1 : a.p.rang - b.p.rang) * TRI.sens; });
+  const th = (k, t, num) => `<th class="${num ? 'num' : ''}" data-k="${k}">${t}${TRI.k === k ? ` <span class="tri">${TRI.sens > 0 ? '↑' : '↓'}</span>` : ''}</th>`;
+  let tg = 0;
+  const corps = L.map(l => {
+    const p = l.p, ch = l.ttc1 !== p.ttc, top = p.rang <= S.protege;
+    if (!p.calcule) {
+      return `<tr><td class="num dim">${p.rang}</td><td>${esc(p.nom)}<span class="sub">${esc(p.cat)}</span></td><td class="num">${grp(p.vol)}</td><td class="num">${p.ttc != null ? eur2(p.ttc) : '—'}</td>`
+        + `<td class="num">${p.cout != null ? eur2(p.cout) : '—'}</td><td colspan="3"><span class="tag-warn">${p.verifier ? 'À vérifier : le prix d’achat dépasse le prix de vente' : 'Pas de prix d’achat au panel'}</span></td><td></td></tr>`;
+    }
+    const fc0 = p.cout / p.ht * 100, fc1 = p.cout / l.ht1 * 100, mb0 = (p.ht - p.cout) * p.vol, mb1 = (l.ht1 - p.cout) * l.vol1, g = mb1 - mb0; tg += g;
+    return `<tr><td class="num dim">${p.rang}</td><td>${esc(p.nom)}<span class="sub">${esc(p.cat)}</span></td>`
+      + `<td class="num">${grp(l.vol1)}${l.vol1 !== p.vol ? `<span class="sub">au lieu de ${grp(p.vol)}</span>` : ''}</td>`
+      + `<td class="num"><input class="prix-in${ch ? ' change' : ''}" data-pid="${p.pid}" value="${l.ttc1.toFixed(2).replace('.', ',')}" aria-label="Prix TVAC de ${esc(p.nom)}"><span class="sub">${ch ? 'au lieu de ' + eur2(p.ttc) : p.med ? 'réseau ' + eur2(p.med * (1 + p.tva)) : ''}</span></td>`
+      + `<td class="num">${eur2(p.cout)}<span class="sub">HT</span></td>`
+      + `<td class="num">${ch ? pc(fc0, 0) + ' → ' : ''}${pc(fc1, 0)}</td>`
+      + `<td class="num">${eur(mb1)}${ch ? `<span class="sub">au lieu de ${eur(mb0)}</span>` : ''}</td>`
+      + `<td class="num ${g > 0.5 ? 'up' : g < -0.5 ? 'down' : 'dim'}">${Math.abs(g) > 0.5 ? sgn(g) + eur(Math.abs(g)) : '—'}</td>`
+      + `<td>${top ? `<span class="chip chip--top">top ${S.protege} : protégé</span>` : l.main ? '<span class="chip chip--main">à la main</span>' : l.motif ? `<span class="chip">${esc(l.motif)}</span>` : ''}</td></tr>`;
+  }).join('');
+  $('tableau').innerHTML = `<thead><tr>${th('rang', 'Rang', 1)}${th('nom', 'Produit')}${th('vol', 'Pièces / mois', 1)}${th('prix', 'Prix TVAC', 1)}<th class="num">Prix d’achat</th>${th('fc', 'Food cost', 1)}${th('mb', 'Marge / mois', 1)}${th('gain', 'Gain / mois', 1)}<th>Ce qu’on fait</th></tr></thead>`
+    + `<tbody>${corps}</tbody><tfoot><tr><td></td><td>${L.length} produits</td><td colspan="5"></td><td class="num ${tg > 0.5 ? 'up' : ''}">${Math.abs(tg) > 0.5 ? sgn(tg) + eur(Math.abs(tg)) : '—'}</td><td></td></tr></tfoot>`;
+  $('tableau').querySelectorAll('th[data-k]').forEach(t => t.addEventListener('click', () => { const k = t.dataset.k; TRI = { k, sens: TRI.k === k ? -TRI.sens : (k === 'nom' || k === 'rang' ? 1 : -1) }; rendre(); }));
+  $('tableau').querySelectorAll('.prix-in').forEach(inp => inp.addEventListener('change', () => {
+    const v = parseFloat(inp.value.replace(',', '.')), p = P.find(x => String(x.pid) === inp.dataset.pid);
+    if (!inp.value.trim() || !(v > 0)) { delete MAIN[p.pid]; } else { MAIN[p.pid] = Math.round(v * 100) / 100; }
+    rendre();
+  }));
+}
+
+// --- Les commandes ---
+function lier() {
+  const nb = (id, k) => $(id).addEventListener('input', () => { S[k] = +$(id).value; $('message').textContent = ''; rendre(); });
+  nb('objectif', 'objectif'); nb('cap-aligne', 'capAligne'); nb('cible-marge', 'cibleMarge'); nb('hausse', 'hausse'); nb('elast', 'elast');
+  $('l-aligne').addEventListener('change', () => { S.aligne = $('l-aligne').checked; rendre(); });
+  $('l-marge').addEventListener('change', () => { S.marge = $('l-marge').checked; rendre(); });
+  document.querySelectorAll('#protege button').forEach(b => b.addEventListener('click', () => { S.protege = +b.dataset.v; rendre(); }));
+  document.querySelectorAll('#filtre-vue button').forEach(b => b.addEventListener('click', () => { VUE = b.dataset.v; document.querySelectorAll('#filtre-vue button').forEach(x => x.classList.toggle('is-on', x === b)); rendre(); }));
+  $('cherche').addEventListener('input', rendre); $('filtre-cat').addEventListener('change', rendre);
+  $('atteindre').addEventListener('click', () => {
+    const r = atteindre(), m = $('message');
+    if (r.deja) { S.hausse = 0; $('hausse').value = 0; m.className = 'message ok'; m.textContent = 'L’objectif est atteint sans hausse sur le reste : les leviers 1 et 2 suffisent.'; rendre(); return; }
+    if (!r.ok) { m.className = 'message ko'; m.textContent = `Même +30 % sur le reste ne suffit pas (${pc(r.fc)}) : protégez moins de produits ou relevez les autres leviers.`; S.hausse = 30; }
+    else { S.hausse = r.h; m.className = r.h > 10 ? 'message ko' : 'message ok'; m.textContent = `Il faut +${pc(r.h, r.h % 1 ? 1 : 0)} sur le reste de la carte, avec les autres leviers.` + (r.h > 10 ? ' C’est beaucoup : protéger moins de produits allège la hausse.' : ''); }
+    $('hausse').value = S.hausse; rendre();
+  });
+  $('remise').addEventListener('click', () => { S = Object.assign({}, DEFAUT); MAIN = {}; $('message').textContent = ''; poser(); rendre(); });
+  let att; window.addEventListener('resize', () => { clearTimeout(att); att = setTimeout(rendre, 120); });
+}
+function poser() {
+  $('objectif').value = S.objectif; $('cap-aligne').value = S.capAligne; $('cible-marge').value = S.cibleMarge;
+  $('hausse').value = S.hausse; $('elast').value = S.elast; $('l-aligne').checked = S.aligne; $('l-marge').checked = S.marge;
+}
+$('periode').innerHTML = `${esc(D.mois[0])} → ${esc(D.mois[D.mois.length - 1])} · ${P.length} produits vendus<br>montants hors TVA · relevé du ${esc(D.lu)}`;
+[...new Set(P.map(p => p.cat))].sort((a, b) => a.localeCompare(b, 'fr')).forEach(c => $('filtre-cat').insertAdjacentHTML('beforeend', `<option>${esc(c)}</option>`));
+document.querySelector('#filtre-vue button[data-v="tous"]').classList.add('is-on');
+$('pied').textContent = `Sources : ${D.source}. Food cost : le prix d’achat (coût de recette HT du panel : matière et emballage) des pièces vendues ÷ le CA hors TVA, sur les ${CALC.length} produits qui ont un prix et un prix d’achat. `
+  + `Volumes : la moyenne des ${D.mois.length} mois clos. Les produits dont le prix d’achat dépasse le prix de vente sont mis à part (« À vérifier »). Un nouveau prix TVAC s’arrondit aux 10 centimes au-dessus.`;
+poser(); lier(); rendre();
+</script>
+</body>
+</html>
