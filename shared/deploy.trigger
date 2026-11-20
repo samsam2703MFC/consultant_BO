@@ -205,3 +205,4 @@
 2026-11-19T21:10:36Z Commercial : la publicité « Lunch au bureau » — la vidéo (15 s, 9:16 et 4:5) et le texte du post, dans Leads Meta
 2026-11-19T23:13:04Z Signage dans le Marketing : diagnostic et câblage du déploiement sur mar_sig_products / mar_sig_product_categories
 2026-11-20T05:05:06Z Commercial : la publicité « Lunch op kantoor » pour Halle (vidéo NL, post, formulaire NL) et l'aperçu du formulaire (champs, choix, remerciement) dans Leads Meta
+2026-11-20T05:51:30Z Commercial : la commande d'échantillon porte le client « ÉCHANTILLONS COMMERCIAL » du magasin et l'employé qui l'accepte ; elle s'annule depuis le portail
