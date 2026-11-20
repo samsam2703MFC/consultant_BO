@@ -1,0 +1,258 @@
+<!doctype html>
+<!-- Maquette « Relances SMS des demandes au bureau » (20/11/2026). Demande de Sam : « renvoyer un SMS à Sam ou Pierre tous
+     les 7 jours (faire une maquette pour gérer ?) ». Dans le cockpit : Franchisés › Demandes des franchisés (#/franchises/demandes),
+     le bloc « SMS au bureau » codé le 20/11/2026. Les styles sont ceux du cockpit (shared/public/assets) : la maquette se lit
+     comme l'écran. Demandes de Sombreffe : celles de la capture du 20/11 ; Gosselies et Halle : inventées. Projection au
+     lundi 07/12/2026, trois semaines après une mise en route le lundi 23/11. Écrans : #a, #b, #c. Captures : capturer.cjs. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relances SMS des demandes au bureau — maquette</title>
+<link rel="stylesheet" href="../../../../shared/public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../../shared/public/assets/css/app.css">
+<link rel="stylesheet" href="../../../../shared/public/assets/css/verification.css">
+<link rel="stylesheet" href="../../../../shared/public/assets/css/helpdesk.css">
+<style>
+/* Ce qui n'est qu'à la maquette : la page, les numéros des questions, les téléphones. */
+body{margin:0;background:var(--paper,#F4EFE8);font-family:var(--font-ui);color:var(--color-text)}
+.mq{max-width:1500px;margin:0 auto;padding:22px 26px 40px}
+.mq-ecran{margin:0 0 34px}
+.mq-tete{display:flex;align-items:baseline;gap:14px;margin:0 0 4px}
+.mq-tete h1{font:400 26px var(--font-display);margin:0}
+.mq-tete span{font-size:12px;color:var(--color-text-muted)}
+.mq-intro{font-size:12.5px;line-height:1.55;color:var(--color-text-muted);margin:0 0 14px;max-width:1100px}
+.mq-intro b{color:var(--color-text);font-weight:400}
+.mq-fil{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 10px}
+.mq-q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#2F5D8A;color:#fff;font:400 10.5px var(--font-ui);margin-right:6px;flex:0 0 18px;vertical-align:1px}
+.mq-neuf{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#2F5D8A;color:#fff;border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:2px}
+.mq-code{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:var(--chip,#ece5dc);color:var(--color-text-muted);border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:2px}
+.mq-questions{background:#fff;border:1px solid #2F5D8A;border-radius:12px;padding:14px 18px;margin:0 0 22px;font-size:12.5px;line-height:1.55}
+.mq-questions h2{font:400 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#2F5D8A;margin:0 0 8px}
+.mq-questions ol{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 26px}
+.mq-questions li{display:flex;gap:4px}.mq-questions li b{font-weight:400}.mq-questions em{font-style:normal;color:var(--color-text-muted)}
+/* A · le bloc « SMS au bureau » ouvert */
+.mq-sms{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:0}
+.mq-col{padding:16px 20px}.mq-col+.mq-col{border-left:1px solid var(--vr-trait)}
+.mq-col h3{font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary);margin:0 0 4px}
+.mq-col>p{font-size:11.5px;color:var(--color-text-muted);margin:0 0 12px;line-height:1.5}
+.mq-dest{display:grid;grid-template-columns:110px 150px 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.mq-dest .mko-inp,.mq-dest select{height:30px}
+.mq-r{display:grid;grid-template-columns:200px 1fr;gap:4px 16px;align-items:start;padding:9px 0;border-top:1px solid var(--vr-trait);font-size:12px}
+.mq-r:first-of-type{border-top:none}
+.mq-r>div:first-child b{font-weight:400;display:flex;align-items:center}.mq-r>div:first-child small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px;line-height:1.4}
+.mq-r .hd-seg{margin:0;flex-wrap:wrap}.mq-r .note{font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45}
+.mq-heure{display:flex;align-items:center;gap:10px;font-size:12px}.mq-heure .mko-inp{width:72px;height:28px;text-align:center}
+.mq-ck{display:inline-flex;align-items:center;gap:6px}.mq-ck i{width:14px;height:14px;border-radius:4px;background:var(--vr-ok);display:inline-block;position:relative}
+.mq-ck i:after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.mq-apercu{font:400 11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;background:var(--paper,#F4EFE8);border-radius:8px;padding:10px 12px;margin:0}
+.mq-prochaines{font-size:12px;line-height:1.7}.mq-prochaines b{font-weight:400}
+.mq-prochaines small{color:var(--color-text-muted)}
+/* B · la colonne Relance, le bloc de la fiche */
+.mq-rel span{white-space:nowrap}.mq-rel small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.mq-rel.att span{color:var(--vr-att)}.mq-rel.mu span{color:var(--color-text-muted)}.mq-rel.ok span{color:var(--vr-ok)}
+.mq-relances{border:1px solid #2F5D8A;border-radius:10px;padding:11px 13px;background:#fbfcfe;margin:0 0 12px}
+.mq-relances h4{margin:0 0 8px;font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#2F5D8A}
+.mq-relances h4 span{text-transform:none;letter-spacing:0;color:var(--color-text-muted)}
+.mq-envoi{display:flex;gap:10px;font-size:12px;padding:5px 0;border-top:1px solid var(--vr-trait)}.mq-envoi:first-of-type{border-top:none}
+.mq-envoi b{font-weight:400;min-width:118px}.mq-envoi .ok{color:var(--vr-ok)}
+.mq-proch{font-size:12px;margin:8px 0 10px;line-height:1.5}.mq-proch b{font-weight:400}
+/* C · les téléphones, le journal */
+.mq-tels{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;padding:18px 20px}
+.mq-tel{width:300px;background:#1D1D1F;border-radius:34px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.mq-ecr{background:#fff;border-radius:24px;min-height:380px;padding:14px 12px 16px;display:flex;flex-direction:column;gap:8px}
+.mq-ecr .qui{text-align:center;font-size:11px;color:#666;margin-bottom:4px}.mq-ecr .qui b{display:block;font:400 13px var(--font-ui);color:#222}
+.mq-ecr .heure{text-align:center;font-size:10px;color:#999}
+.mq-bulle{background:#E9E9EB;border-radius:16px;padding:9px 12px;font:400 12px/1.45 -apple-system,'Helvetica Neue',Arial,sans-serif;white-space:pre-wrap;color:#111;max-width:92%;word-break:break-word}
+.mq-bulle a{color:#0B63CE;text-decoration:underline}
+.mq-legende{font-size:11px;color:var(--color-text-muted);text-align:center;margin-top:9px;line-height:1.45;max-width:300px}
+.mq-journal{padding:0 0 4px}
+.mq-journal td.g small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.mq-evt td{color:var(--color-text-muted);font-size:11.5px}
+.mq-autre{margin:14px 20px 18px;border:1px dashed var(--color-border-secondary);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.55;display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
+.mq-autre h4{margin:0 0 6px;font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+</style>
+</head>
+<body>
+<div class="mq">
+
+<div class="mq-tete"><h1>Relances SMS des demandes au bureau</h1><span>maquette v1 du 20/11/2026 · à valider · rien n’est codé</span></div>
+<p class="mq-intro">Demande de Sam : « renvoyer un SMS à Sam ou Pierre <b>tous les 7 jours</b> ». Une demande d’un franchisé qui attend une réponse du bureau
+  revient par SMS <b>7 jours après son envoi, puis tous les 7 jours</b>, à celui qui l’a (le consultant de la demande), sinon à Sam et à Pierre.
+  Le réglage vit dans le bloc « SMS au bureau » de l’écran Demandes des franchisés (le SMS de chaque nouvelle demande, codé le 20/11). Projection au
+  <b>lundi 07/12/2026</b>, trois semaines après une mise en route le lundi 23/11 ; Sombreffe : les demandes réelles de la capture du 20/11 ; Gosselies et Halle : inventées.</p>
+
+<div class="mq-questions"><h2>À valider : chaque choix proposé est marqué ●</h2><ol>
+  <li><span class="mq-q">1</span><span><b>Quelles demandes</b> : celles <b>sans réponse du bureau</b> ● <em>— ou toutes les ouvertes, ou seulement celles dont la date limite est dépassée.</em></span></li>
+  <li><span class="mq-q">2</span><span><b>À qui</b> : <b>le consultant de la demande</b> (Sam V. → Sam, Pierre B. → Pierre) ; sans consultant, ou consultant sans numéro (Loïc V.), <b>Sam et Pierre</b> ● <em>— ou toujours les deux.</em></span></li>
+  <li><span class="mq-q">3</span><span><b>Le rythme</b> : <b>7 jours après l’envoi, puis tous les 7 jours</b>, à 08:30, jours ouvrés (samedi, dimanche → lundi) ● <em>— ou un récapitulatif chaque lundi (écran C, en bas).</em></span></li>
+  <li><span class="mq-q">4</span><span><b>Plusieurs le même jour</b> : <b>un seul SMS qui les liste</b> ● <em>— ou un SMS par demande.</em></span></li>
+  <li><span class="mq-q">5</span><span><b>Jusqu’à quand</b> : la réponse du bureau, Résolue, Fermée ou Annulée, ou « Suspendre » sur la fiche ; <b>sans plafond</b> ● <em>— ou 6 relances au plus.</em></span></li>
+  <li><span class="mq-q">6</span><span><b>À la mise en route</b>, les demandes déjà en attente (Sombreffe : 44, 66 et 185 jours) sont relancées <b>le premier lundi</b>, puis tous les 7 jours ●. <b>Et le numéro de Pierre Boseret ?</b></span></li>
+</ol></div>
+
+<!-- A · Réglages -------------------------------------------------------------------------------------------------- -->
+<section class="mq-ecran" id="a">
+  <div class="mq-fil">A · Franchisés › Demandes des franchisés › bloc « SMS au bureau », ouvert (« Régler »)</div>
+  <div class="vr hd"><div class="vr-card">
+    <div class="hd-sms on" style="border-top:none;padding-bottom:4px"><div class="hd-sms-t"><b>SMS au bureau</b><span>Sam · Pierre Boseret · relances tous les 7 jours</span><span class="vr-sp"></span><button class="mko-pied-btn">Fermer</button></div></div>
+    <div class="mq-sms">
+      <div class="mq-col">
+        <h3>Les numéros<span class="mq-code">codé le 20/11</span></h3>
+        <p>À chaque nouvelle demande, le SMS de la demande part à ces numéros. <b style="font-weight:400;color:var(--color-text)">Nouveau : le consultant du panel</b> de chaque numéro, pour qu’une relance aille à celui qui a la demande.</p>
+        <div class="mq-dest" style="font-size:10px;color:var(--color-text-muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px"><span>Nom</span><span>Numéro</span><span>Consultant du panel<span class="mq-neuf">nouveau</span></span><span></span></div>
+        <div class="mq-dest"><input class="mko-inp" value="Sam"><input class="mko-inp" value="+48725038049"><select class="mko-inp"><option>Sam V.</option></select><button class="mko-pied-btn">Retirer</button></div>
+        <div class="mq-dest"><input class="mko-inp" value="Pierre Boseret"><input class="mko-inp" value="+32 4•• •• •• ••"><select class="mko-inp"><option>Pierre B.</option></select><button class="mko-pied-btn">Retirer</button></div>
+        <div class="hd-act" style="margin-top:4px"><button class="mko-pied-btn">+ Ajouter un numéro</button></div>
+        <div class="vr-mu" style="font-size:11px;margin-top:10px">Projection : le numéro de Pierre Boseret est complété (masqué ici). Aujourd’hui, il manque : rien ne lui parvient.</div>
+        <div class="mq-prochaines" style="margin-top:16px"><h3 style="font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary);margin:0 0 4px">Les prochaines relances</h3>
+          <div><b>jeu. 10/12 · 08:30</b> → Pierre Boseret : Halle · Commande de fin d’année <small>(1re relance)</small></div>
+          <div><b>lun. 14/12 · 08:30</b> → Sam et Pierre Boseret : Sombreffe · Démarchage sur Nivelles Sud <small>(4e relance, pas de consultant)</small></div>
+          <div class="vr-mu" style="font-size:11px">Suspendue : Sombreffe · verrière cuisine (par Sam le 24/11, reprise dans la visite du 15/12).</div>
+        </div>
+      </div>
+      <div class="mq-col">
+        <h3>Les relances<span class="mq-neuf">nouveau</span></h3>
+        <p>Une demande qui attend une réponse du bureau revient par SMS tant qu’elle attend.</p>
+        <div class="mq-r"><div><b>Relances</b></div><div class="hd-seg"><button class="on">envoyées</button><button>coupées</button></div></div>
+        <div class="mq-r"><div><b><span class="mq-q">3</span>Tous les</b><small>après l’envoi de la demande, puis à nouveau</small></div>
+          <div><div class="hd-seg"><button>3 j</button><button class="on">7 j</button><button>14 j</button></div>
+            <div class="mq-heure" style="margin-top:7px">à <input class="mko-inp" value="08:30"><span class="mq-ck"><i></i>jours ouvrés seulement</span></div>
+            <div class="note">Une relance qui tombe un samedi ou un dimanche part le lundi.</div></div></div>
+        <div class="mq-r"><div><b><span class="mq-q">1</span>Quelles demandes</b></div>
+          <div><div class="hd-seg"><button class="on">sans réponse du bureau</button><button>toutes les ouvertes</button><button>date limite dépassée</button></div>
+            <div class="note">Nouvelles ou en cours, et le bureau n’a encore rien répondu au franchisé.</div></div></div>
+        <div class="mq-r"><div><b><span class="mq-q">2</span>À qui</b></div>
+          <div><div class="hd-seg"><button class="on">le consultant de la demande</button><button>tous les numéros</button></div>
+            <div class="note">Sam V. → Sam ; Pierre B. → Pierre Boseret. Sans consultant, ou un consultant sans numéro ici (Loïc V.) : tous les numéros.</div></div></div>
+        <div class="mq-r"><div><b><span class="mq-q">4</span>Le même jour</b><small>plusieurs demandes à relancer</small></div>
+          <div class="hd-seg"><button class="on">un SMS qui les liste</button><button>un SMS par demande</button></div></div>
+        <div class="mq-r"><div><b><span class="mq-q">5</span>Jusqu’à</b></div>
+          <div><div class="hd-seg"><button class="on">la réponse</button><button>6 relances au plus</button></div>
+            <div class="note">S’arrête à la réponse du bureau, au statut Résolue, Fermée ou Annulée, ou à « Suspendre les relances » sur la fiche.</div></div></div>
+        <div class="mq-r"><div><b>Aperçu</b><small>la relance de Sam, lundi 23/11</small></div>
+          <pre class="mq-apercu">Relance - 3 demandes sans réponse
+1. Sombreffe (Stratégie) : Démarchage sur Nivelles Sud - 47 j, pas de consultant
+2. Sombreffe (Réseaux sociaux) : Campagne de démarchage pour les lunchs en entreprise - 69 j
+3. Sombreffe (Activités opérationnelles) : verrière cuisine, réagencement étalement... - 188 j, Loïc V.
+https://185.180.206.46/consulant_bo/#/franchises/demandes</pre></div>
+        <div class="hd-act" style="justify-content:flex-end;margin-top:6px"><button class="mko-pied-btn">M’envoyer un essai</button><button class="rc-btn ok">Enregistrer</button></div>
+      </div>
+    </div>
+    <div class="hd-sms" style="padding-top:8px"><div class="vr-mu">Dernière relance le 07/12 à 08:30 : Sam ✓ · Pierre Boseret ✓ (Démarchage sur Nivelles Sud). 8 relances depuis le 23/11.</div></div>
+  </div></div>
+</section>
+
+<!-- B · La liste et la fiche ------------------------------------------------------------------------------------------ -->
+<section class="mq-ecran" id="b">
+  <div class="mq-fil">B · Franchisés › Demandes des franchisés · la colonne « Relance » et la fiche d’une demande relancée</div>
+  <div class="vr hd">
+    <div class="hd-onglets"><button class="on">Demandes au bureau<small>5 ouvertes</small></button><button>Réclamations fournisseur<small>2 ouvertes · tous les magasins</small></button></div>
+    <div class="vr-card">
+      <div class="vm-kpis">
+        <div class="vm-kpi att"><div class="k">Ouvertes</div><div class="v">5</div><div class="s">nouvelles ou en cours</div></div>
+        <div class="vm-kpi ko"><div class="k">Sans réponse</div><div class="v">3</div><div class="s">aucune réponse du bureau</div></div>
+        <div class="vm-kpi ok"><div class="k">En retard</div><div class="v">0</div><div class="s">date limite dépassée · 2 sans date</div></div>
+        <div class="vm-kpi ko"><div class="k">Plus ancienne</div><div class="v">202 j</div><div class="s">ouverte depuis le 19/05</div></div>
+        <div class="vm-kpi"><div class="k">Relances<span class="mq-neuf">nouveau</span></div><div class="v">8</div><div class="s">SMS depuis le 23/11 · 2 arrêtées par une réponse</div></div>
+        <div class="vm-kpi"><div class="k">Dans une visite</div><div class="v">1</div><div class="s">missions en cours</div></div>
+      </div>
+      <div class="vt-fil"><div class="vr-chips hd-chips"><button class="on">Ouvertes <b>5</b></button><button>Nouvelles <b>1</b></button><button>En cours <b>4</b></button><button>Sans réponse <b>3</b></button><button>En retard <b>0</b></button><button>Sans date limite <b>2</b></button><button>Toutes <b>9</b></button></div>
+        <select class="vr-sel"><option>Tous les domaines</option></select><select class="vr-sel"><option>Tous les magasins</option></select><span class="vr-sp"></span><button class="vr-btn">Relire</button></div>
+      <div class="hd-cols">
+        <div class="vr-tw"><table class="vr-t hd-t"><thead><tr><th></th><th class="g">Réf.</th><th class="g">Magasin</th><th class="g">Demande</th><th class="g">Consultant</th><th>Statut</th><th>Date limite</th><th>Relance <span class="mq-neuf">nouveau</span></th><th>Âge</th></tr></thead><tbody>
+          <tr class="hd-on"><td class="hd-lis ko"></td><td class="g"><span class="hd-ref">20261007-9E319</span><small>07/10</small></td><td class="g">Sombreffe</td>
+            <td class="g hd-titre"><b>Démarchage sur Nivelles Sud</b><small>En livraison chez GUEST Nivelles (sur Nivelles Sud), je souhaite développer les livraisons…</small></td><td class="g">—</td>
+            <td><span class="hd-st ko">Nouvelle</span><small class="ko">sans réponse</small></td><td class="hd-ech att"><span>à fixer</span></td>
+            <td class="mq-rel att"><span>lun. 14/12</span><small>3 envoyées · Sam, Pierre</small></td><td class="hd-vieux">61 j</td></tr>
+          <tr><td class="hd-lis att"></td><td class="g"><span class="hd-ref">20261203-7C3E0</span><small>03/12</small></td><td class="g">Halle</td>
+            <td class="g hd-titre"><b>Commande de fin d’année pour une entreprise</b><small>120 boîtes de pralines pour le 18/12, livrées au bureau.</small></td><td class="g">Pierre B.</td>
+            <td><span class="hd-st att">En cours</span><small class="ko">sans réponse</small></td><td class="hd-ech att"><span>dans 1 j</span><small>avant le 08/12</small></td>
+            <td class="mq-rel"><span>jeu. 10/12</span><small>1re · Pierre</small></td><td>4 j</td></tr>
+          <tr><td class="hd-lis att"></td><td class="g"><span class="hd-ref">20260519-8B90A</span><small>19/05</small></td><td class="g">Sombreffe</td>
+            <td class="g hd-titre"><b>Sombreffe : verrière cuisine, réagencement étalement &amp; cadrage affichage</b><small>Mission de suivi suite à la visite d’audit du 17/05…</small></td><td class="g">Loïc V.</td>
+            <td><span class="hd-st att">En cours</span><small class="ko">sans réponse</small></td><td class="hd-ech att"><span>à fixer</span></td>
+            <td class="mq-rel mu"><span>suspendue</span><small>par Sam le 24/11</small></td><td class="hd-vieux">202 j</td></tr>
+          <tr><td class="hd-lis att"></td><td class="g"><span class="hd-ref">20260915-23CC8</span><small>15/09</small></td><td class="g">Sombreffe</td>
+            <td class="g hd-titre"><b>Campagne de démarchage pour les lunchs en entreprise</b><small>Je souhaite réaliser un reportage photos/vidéos pour cibler les entreprises…</small></td><td class="g">Sam V.</td>
+            <td><span class="hd-st att">En cours</span><small>répondue</small></td><td class="hd-ech"><span>dans 23 j</span><small>avant le 30/12</small></td>
+            <td class="mq-rel ok"><span>arrêtée</span><small>réponse le 01/12</small></td><td class="hd-vieux">83 j</td></tr>
+          <tr><td class="hd-lis att"></td><td class="g"><span class="hd-ref">20261118-4F2D1</span><small>18/11</small></td><td class="g">Gosselies</td>
+            <td class="g hd-titre"><b>Nouvelle tarte du mois : la pâte se rétracte</b><small>À la cuisson, la pâte se rétracte de 1 cm sur les bords.</small></td><td class="g">Pierre B.</td>
+            <td><span class="hd-st att">En cours</span><small>répondue</small></td><td class="hd-ech"><span>dans 11 j</span><small>avant le 18/12</small></td>
+            <td class="mq-rel ok"><span>arrêtée</span><small>réponse le 26/11</small></td><td>19 j</td></tr>
+        </tbody></table></div>
+        <aside class="vr-card hd-fiche">
+          <div class="hd-ft"><div><span class="hd-ref">CASE-20261007-9E319</span><h3>Démarchage sur Nivelles Sud</h3><small>Sombreffe · Stratégie · créée le 07/10 (61 j)</small></div><span class="hd-st ko">Nouvelle</span></div>
+          <div class="hd-desc">En livraison chez GUEST Nivelles (sur Nivelles Sud), je souhaite développer les livraisons (et services traiteurs et boulangerie) sur ce secteur…</div>
+          <div class="hd-delai att"><div class="hd-seg"><span>Date limite</span><button>2 j</button><button>5 j</button><button>10 j</button><button>30 j</button><button>90 j</button></div><small>À fixer à la réception : le délai que vous tiendrez (la demande passe « En cours »).</small></div>
+          <div class="mq-relances"><h4>Relances par SMS <span>— tous les 7 jours tant que le bureau n’a pas répondu</span></h4>
+            <div class="mq-envoi"><b>lun. 23/11 · 08:30</b><span>Sam <span class="ok">✓</span> · Pierre Boseret <span class="ok">✓</span></span></div>
+            <div class="mq-envoi"><b>lun. 30/11 · 08:30</b><span>Sam <span class="ok">✓</span> · Pierre Boseret <span class="ok">✓</span></span></div>
+            <div class="mq-envoi"><b>lun. 07/12 · 08:30</b><span>Sam <span class="ok">✓</span> · Pierre Boseret <span class="ok">✓</span></span></div>
+            <div class="mq-proch">Prochaine : <b>lun. 14/12 à 08:30</b>, à Sam et Pierre Boseret — aucun consultant attribué. Attribuer un consultant envoie les suivantes à lui seul.</div>
+            <div class="hd-act"><button class="mko-pied-btn">Suspendre les relances</button><button class="mko-pied-btn">Relancer maintenant</button></div>
+          </div>
+          <div class="hd-grille"><label>Statut<select class="pp-in"><option>Nouvelle</option></select></label><label>Consultant<select class="pp-in"><option>— choisir —</option></select><small>ceux du domaine « Stratégie »</small></label></div>
+          <div class="hd-bloc"><h4>Répondre au franchisé <span>— il la lit dans son dashboard ; les relances s’arrêtent</span></h4><textarea class="pp-in" rows="2" placeholder="La réponse du bureau…"></textarea></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- C · Les SMS et le journal ----------------------------------------------------------------------------------------- -->
+<section class="mq-ecran" id="c">
+  <div class="mq-fil">C · Ce que reçoivent Sam et Pierre, et le journal des trois premières semaines</div>
+  <div class="vr hd"><div class="vr-card">
+    <div class="mq-tels">
+      <div><div class="mq-tel"><div class="mq-ecr"><div class="qui"><b>Atelier By</b>SMS</div><div class="heure">lun. 23/11 · 08:30</div>
+        <div class="mq-bulle">Relance - 3 demandes sans réponse
+1. Sombreffe (Stratégie) : Démarchage sur Nivelles Sud - 47 j, pas de consultant
+2. Sombreffe (Réseaux sociaux) : Campagne de démarchage pour les lunchs en entreprise - 69 j
+3. Sombreffe (Activités opérationnelles) : verrière cuisine, réagencement étalement... - 188 j, Loïc V.
+<a>https://185.180.206.46/consulant_bo/#/franchises/demandes</a></div>
+        <div class="heure">lun. 07/12 · 08:30</div>
+        <div class="mq-bulle">Relance (3e) - 1 demande sans réponse
+Sombreffe (Stratégie) : Démarchage sur Nivelles Sud - 61 j, pas de consultant, pas de date limite. Réf. 20261007-9E319
+<a>https://185.180.206.46/consulant_bo/#/franchises/demandes</a></div></div></div>
+        <div class="mq-legende"><b style="font-weight:400;color:var(--color-text)">Sam</b> : la mise en route (ses 3 demandes de Sombreffe, dont celle de Loïc, sans numéro), puis la 3e relance de la seule qui attend encore.</div></div>
+      <div><div class="mq-tel"><div class="mq-ecr"><div class="qui"><b>Atelier By</b>SMS</div><div class="heure">mer. 25/11 · 08:30</div>
+        <div class="mq-bulle">Relance - 1 demande sans réponse
+Gosselies (Produit) : Nouvelle tarte du mois : la pâte se rétracte - envoyée le 18/11, il y a 7 j. Date limite : 18/12. Réf. 20261118-4F2D1
+<a>https://185.180.206.46/consulant_bo/#/franchises/demandes</a></div>
+        <div class="heure">lun. 30/11 · 08:30</div>
+        <div class="mq-bulle">Relance (2e) - 1 demande sans réponse
+Sombreffe (Stratégie) : Démarchage sur Nivelles Sud - 54 j, pas de consultant, pas de date limite. Réf. 20261007-9E319
+<a>https://185.180.206.46/consulant_bo/#/franchises/demandes</a></div></div></div>
+        <div class="mq-legende"><b style="font-weight:400;color:var(--color-text)">Pierre</b> : la demande de Gosselies qui lui est attribuée (7 jours après son envoi), puis celle de Sombreffe qui n’a pas de consultant.</div></div>
+      <div style="flex:1;min-width:420px">
+        <div class="mq-journal vr-tw"><table class="vr-t hd-t"><thead><tr><th class="g">Quand</th><th class="g">À qui</th><th class="g">Ce qui part ou se passe</th><th>SMS</th></tr></thead><tbody>
+          <tr><td class="g">lun. 23/11 · 08:30</td><td class="g">Sam</td><td class="g">3 demandes de Sombreffe<small>mise en route : les demandes déjà en attente</small></td><td>1 ✓</td></tr>
+          <tr><td class="g">lun. 23/11 · 08:30</td><td class="g">Pierre Boseret</td><td class="g">Démarchage sur Nivelles Sud, verrière cuisine<small>sans consultant ; Loïc V. sans numéro</small></td><td>1 ✓</td></tr>
+          <tr class="mq-evt"><td class="g">mar. 24/11</td><td class="g">—</td><td class="g">verrière cuisine : relances suspendues par Sam (reprise dans la visite du 15/12)</td><td></td></tr>
+          <tr><td class="g">mer. 25/11 · 08:30</td><td class="g">Pierre Boseret</td><td class="g">Gosselies · Nouvelle tarte du mois<small>7 jours après son envoi</small></td><td>1 ✓</td></tr>
+          <tr class="mq-evt"><td class="g">jeu. 26/11</td><td class="g">—</td><td class="g">Nouvelle tarte du mois : réponse du bureau → relances arrêtées</td><td></td></tr>
+          <tr><td class="g">lun. 30/11 · 08:30</td><td class="g">Sam</td><td class="g">Démarchage sur Nivelles Sud, Campagne lunchs</td><td>1 ✓</td></tr>
+          <tr><td class="g">lun. 30/11 · 08:30</td><td class="g">Pierre Boseret</td><td class="g">Démarchage sur Nivelles Sud</td><td>1 ✓</td></tr>
+          <tr class="mq-evt"><td class="g">mar. 01/12</td><td class="g">—</td><td class="g">Campagne lunchs : réponse de Sam → relances arrêtées</td><td></td></tr>
+          <tr><td class="g">lun. 07/12 · 08:30</td><td class="g">Sam</td><td class="g">Démarchage sur Nivelles Sud (3e)</td><td>1 ✓</td></tr>
+          <tr><td class="g">lun. 07/12 · 08:30</td><td class="g">Pierre Boseret</td><td class="g">Démarchage sur Nivelles Sud (3e)</td><td>1 ✓</td></tr>
+        </tbody></table></div>
+        <div class="vr-mu" style="font-size:11.5px;margin-top:8px">8 SMS en trois semaines : 4 chez Sam, 4 chez Pierre. Aucun le week-end. Une demande répondue ou suspendue ne revient plus.</div>
+      </div>
+    </div>
+    <div class="mq-autre"><div><h4><span class="mq-q">3</span>L’autre choix : un récapitulatif chaque lundi</h4>
+      Un seul SMS par personne, chaque lundi à 08:30, qui liste toutes les demandes qui attendent, quel que soit leur âge (les 5 plus anciennes, puis « et 2 autres »).
+      Plus simple à lire d’un coup d’œil, mais une demande envoyée un mardi attend 6 jours avant d’être rappelée, et une demande d’une semaine se mêle à celles de six mois.
+      Le choix proposé (7 jours après chaque demande, regroupées le même jour) relance chacune à son rythme, et la mise en route les regroupe déjà le lundi.</div>
+      <div class="mq-bulle" style="max-width:none">Demandes sans réponse au lundi 07/12 : 2
+Sombreffe (Stratégie) : Démarchage sur Nivelles Sud - 61 j
+Halle (Ventes) : Commande de fin d'année - 4 j
+<a>https://185.180.206.46/consulant_bo/#/franchises/demandes</a></div></div>
+  </div></div>
+</section>
+
+</div>
+</body>
+</html>
