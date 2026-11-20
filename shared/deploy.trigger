@@ -203,4 +203,5 @@
 2026-11-19T21:01:42Z Commercial : l'échantillon se commande comme une commande du magasin (produits et catégories de TF Buddy, commande « ÉCHANTILLON COMMERCIAL ») et se photographie à la réception ; la Prospection s'affiche à côté du rail
 2026-11-19T21:04:32Z Commercial : une seule vue Prospection (titre et magasin dans la barre du portail, plus d'en-tête en double ; l'entrée « Prospection ↗ » du cockpit retirée, ses anciens liens ouvrent le portail)
 2026-11-19T21:10:36Z Commercial : la publicité « Lunch au bureau » — la vidéo (15 s, 9:16 et 4:5) et le texte du post, dans Leads Meta
+2026-11-19T23:13:04Z Signage dans le Marketing : diagnostic et câblage du déploiement sur mar_sig_products / mar_sig_product_categories
 2026-11-20T05:05:06Z Commercial : la publicité « Lunch op kantoor » pour Halle (vidéo NL, post, formulaire NL) et l'aperçu du formulaire (champs, choix, remerciement) dans Leads Meta

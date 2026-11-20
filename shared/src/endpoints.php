@@ -6654,7 +6654,7 @@ function ep_products(): array
         foreach (catalogueCouts() as $pid => $c) { $cout[$pid] = $c['mat']; }
 
         // Catégorie : le vrai catalogue (product ⨝ product_category), indexé
-        // par identifiant de caisse. La table miroir sig_products porte des
+        // par identifiant de caisse. La table miroir mar_sig_products porte des
         // identifiants d'un autre format (« pwp1000001 ») : la recherche par
         // id numérique n'y trouvait jamais rien, et la catégorie retombait
         // silencieusement sur « Non catégorisé » dès que l'API était muette.

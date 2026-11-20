@@ -575,8 +575,8 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
     done
     echo "-- mac_shop_monthly_pnl (5 lignes) --"; q -e "SELECT * FROM mac_shop_monthly_pnl ORDER BY year DESC, month DESC LIMIT 5;" 2>&1
     echo "-- shops (5 lignes) --"; q -e "SELECT * FROM shops LIMIT 5;" 2>&1
-    echo "-- sig_products (3 lignes) --"; q -e "SELECT * FROM sig_products LIMIT 3;" 2>&1
-    echo "-- sig_product_categories (10) --"; q -e "SELECT * FROM sig_product_categories LIMIT 10;" 2>&1
+    echo "-- mar_sig_products (3 lignes) --"; q -e "SELECT * FROM mar_sig_products LIMIT 3;" 2>&1
+    echo "-- mar_sig_product_categories (10) --"; q -e "SELECT * FROM mar_sig_product_categories LIMIT 10;" 2>&1
     echo "-- consultants : user_membership(app=CONSULTANT) ⨝ user_profile --"
     q -e "SELECT m.id, m.app, m.scope_type, m.scope_id, m.is_active, p.display_name, p.email
           FROM user_membership m LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
@@ -1032,8 +1032,8 @@ if [[ -n "$WIRE_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; t
         SELECT 'mac_shop_monthly_pnl' nom, 'partagée' role UNION ALL
         SELECT 'transaction',           'partagée' UNION ALL
         SELECT 'transaction_product',   'partagée' UNION ALL
-        SELECT 'sig_products',          'partagée' UNION ALL
-        SELECT 'sig_product_categories','partagée' UNION ALL
+        SELECT 'mar_sig_products',          'partagée' UNION ALL
+        SELECT 'mar_sig_product_categories','partagée' UNION ALL
         SELECT 'user_membership',       'partagée' UNION ALL
         SELECT 'user_profile',          'partagée' UNION ALL
         SELECT 'of_tag',                'partagée' UNION ALL

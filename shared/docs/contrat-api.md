@@ -3643,7 +3643,7 @@ d'installation autonome**, vide sur une base réelle.
 | Destinataires des rapports | `user_membership` ⨝ `user_profile` (actifs, avec e-mail) | `con_person` |
 | CA / marge mensuels | `mac_shop_monthly_pnl` | `con_shop_month_perf` |
 | Tickets, panier moyen | `transaction` | — |
-| Catalogue produits | `sig_products`, `transaction_product` | `con_product` |
+| Catalogue produits | `mar_sig_products`, `transaction_product` | `con_product` |
 | Leviers, KPI, positions | `of_tag`, `kpi`, `position` | créées si absentes |
 | **Budget encodé** | **`con_shop_month_perf`** | — (donnée propre au cockpit) |
 | **Validation des tâches** | **`con_project_task`, `con_task_issue`** | — (donnée propre au cockpit) |
