@@ -38,36 +38,64 @@ function chargerSms(app, frais){
   readOne('/helpdesk/sms').then(d => app.setState({ hdSms: { chargement: false, d: d || { error: 'réglage illisible' } } }));
 }
 const dhm = iso => { const t = iso ? new Date(iso) : null; return t && !isNaN(t) ? String(t.getDate()).padStart(2, '0') + '/' + String(t.getMonth() + 1).padStart(2, '0') + ' à ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') : ''; };
-function valsSms(app){
+function valsSms(app, Dd){
   chargerSms(app, false);
   const S = app.state, M = S.hdSms || {}, D = M.d && !M.d.error ? M.d : null;
   const ouvert = !!S.hdSmsOuvert;
   const v = { ouvert, basculer: () => app.setState({ hdSmsOuvert: !ouvert, hdSmsForm: null, hdSmsMsg: null }), chargement: !!M.chargement && !D, erreur: M.d && M.d.error ? M.d.error : null };
   if (!D) { return v; }
   const sans = l => l.filter(x => !String(x.tel || '').trim()).map(x => x.nom || '—');
+  const Rl = D.relances || {};
   v.actif = !!D.actif; v.fournisseur = !!D.fournisseur;
-  v.resume = !D.actif ? 'coupés' : (D.destinataires.length ? D.destinataires.map(x => (x.nom || x.lisible || x.tel) + (x.tel ? '' : ' (numéro à compléter)')).join(' · ') : 'aucun destinataire');
-  v.alerte = D.actif && (!D.fournisseur || sans(D.destinataires).length > 0);
-  const Dn = D.dernier;
-  v.dernier = Dn ? 'Dernier envoi le ' + dhm(Dn.le) + ' (' + (Dn.magasin || '') + (Dn.titre ? ', « ' + Dn.titre + ' »' : '') + ') : '
-    + ((Dn.destinataires || []).map(x => x.nom + (x.ok ? ' ✓' : ' ✕ ' + (x.motif || ''))).join(' · ') || 'aucun destinataire') : 'Aucun SMS envoyé pour l’instant.';
+  v.resume = (!D.actif ? 'nouvelles demandes : coupés' : (D.destinataires.length ? D.destinataires.map(x => (x.nom || x.lisible || x.tel) + (x.tel ? '' : ' (numéro à compléter)')).join(' · ') : 'aucun destinataire'))
+    + ' · ' + (Rl.actif ? 'relances tous les ' + Rl.jours + ' jours' : 'relances coupées');
+  v.alerte = (D.actif || Rl.actif) && (!D.fournisseur || sans(D.destinataires).length > 0);
+  const Dn = D.dernier, Dr = D.derniereRelance;
+  v.dernier = (Dn ? 'Dernière nouvelle demande le ' + dhm(Dn.le) + ' (' + (Dn.magasin || '') + (Dn.titre ? ', « ' + Dn.titre + ' »' : '') + ') : '
+    + ((Dn.destinataires || []).map(x => x.nom + (x.ok ? ' ✓' : ' ✕ ' + (x.motif || ''))).join(' · ') || 'aucun destinataire') + '.' : 'Aucun SMS de nouvelle demande pour l’instant.')
+    + (Dr ? ' Dernière relance le ' + dhm(Dr.le.replace(' ', 'T')) + ' (' + Dr.demandes + ' demande' + (Dr.demandes > 1 ? 's' : '') + ') : ' + Dr.a.map(x => x.nom + (x.ok ? ' ✓' : ' ✕')).join(' · ') + ' ; ' + Dr.sms + ' SMS de relance' + (D.relancesDepuis ? ' depuis le ' + dm(D.relancesDepuis) : '') + '.' : '');
   if (!ouvert) { return v; }
-  const F = S.hdSmsForm || { actif: !!D.actif, destinataires: (D.destinataires || []).map(x => ({ nom: x.nom || '', tel: x.tel || '' })) };
+  const F = S.hdSmsForm || { actif: !!D.actif, destinataires: (D.destinataires || []).map(x => ({ nom: x.nom || '', tel: x.tel || '', consultant: x.consultant || '' })), relances: Object.assign({}, Rl) };
   const maj = p => app.setState({ hdSmsForm: Object.assign({}, F, p), hdSmsMsg: null });
   const majL = (i, p) => { const l = F.destinataires.slice(); l[i] = Object.assign({}, l[i], p); maj({ destinataires: l }); };
+  const majR = p => maj({ relances: Object.assign({}, F.relances, p) });
   const E = S.hdSmsMsg || {};
+  // Les consultants du panel, tels que les demandes les nomment : le numéro de chacun reçoit les relances des siennes.
+  const noms = Array.from(new Set((((Dd || {}).demandes) || []).map(x => x.consultant).filter(Boolean).concat(F.destinataires.map(x => x.consultant).filter(Boolean)))).sort();
+  const seg = (cle, opts) => opts.map(([val, nom]) => ({ nom, on: F.relances[cle] === val, choisir: () => majR({ [cle]: val }) }));
+  const AV = (((Dd || {}).relances) || {}).aVenir || [];
+  const jourCourt = j => ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'][new Date(j + 'T12:00').getDay()] + ' ' + dm(j);
   Object.assign(v, {
     fActif: !!F.actif, allumer: () => maj({ actif: true }), couper: () => maj({ actif: false }),
     lignes: F.destinataires.map((x, i) => ({ nom: x.nom, tel: x.tel, ko: !String(x.tel || '').trim(), setNom: e => majL(i, { nom: e.target.value }), setTel: e => majL(i, { tel: e.target.value }),
+      consultants: [{ id: '', nom: 'par le nom' }].concat(noms.map(n => ({ id: n, nom: n }))).map(o => Object.assign(o, { on: o.id === (x.consultant || '') })),
+      setConsultant: e => majL(i, { consultant: e.target.value }),
+      essai: String(x.tel || '').trim() && !E.enCours ? () => {
+        app.setState({ hdSmsMsg: { enCours: true } });
+        write(app.source || 'api', 'POST', '/helpdesk/sms/essai', { tel: x.tel }).then(r => app.setState({ hdSmsMsg: !r || r.ok === false || r.error
+          ? { ok: false, msg: (r && r.error) || 'refusé' } : { ok: true, msg: 'Essai parti à ' + (x.nom || r.a) + ' (' + r.a + ').' } }));
+      } : null,
       retirer: () => maj({ destinataires: F.destinataires.filter((_, j) => j !== i) }) })),
-    ajouter: F.destinataires.length < 10 ? () => maj({ destinataires: F.destinataires.concat([{ nom: '', tel: '' }]) }) : null,
+    ajouter: F.destinataires.length < 10 ? () => maj({ destinataires: F.destinataires.concat([{ nom: '', tel: '', consultant: '' }]) }) : null,
+    // Les relances (20/11/2026, maquette docs/maquettes/helpdesk-relances, validée).
+    rActif: seg('actif', [[true, 'envoyées'], [false, 'coupées']]), rJours: seg('jours', [[3, '3 j'], [7, '7 j'], [14, '14 j']]),
+    rHeure: F.relances.heure || '08:30', setHeure: e => majR({ heure: e.target.value }), rOuvres: !!F.relances.ouvres, basculerOuvres: () => majR({ ouvres: !F.relances.ouvres }),
+    rQuelles: seg('quelles', [['sans_reponse', 'sans réponse du bureau'], ['ouvertes', 'toutes les ouvertes'], ['retard', 'date limite dépassée']]),
+    rAQui: seg('aQui', [['consultant', 'le consultant de la demande'], ['tous', 'tous les numéros']]),
+    rRegrouper: seg('regrouper', [[true, 'un SMS qui les liste'], [false, 'un SMS par demande']]),
+    rPlafond: seg('plafond', [[0, 'la réponse'], [6, '6 relances au plus']]),
+    apercu: AV.length ? { titre: 'la relance de ' + AV[0].a + ', ' + jourCourt(AV[0].jour), texte: AV[0].texte } : null,
+    prochaines: AV.map(x => ({ quand: jourCourt(x.jour) + ' · ' + x.heure, a: x.a, quoi: x.demandes.map(d => d.magasin + ' · ' + d.titre).join(' ; '),
+      sous: x.demandes.length === 1 ? (x.demandes[0].rang === 1 ? '1re relance' : x.demandes[0].rang + 'e relance') + (x.demandes[0].consultant ? '' : ', pas de consultant') : x.demandes.length + ' demandes en un SMS' })),
+    sansProchaine: !(((Dd || {}).relances) || {}).actif ? 'Relances coupées.' : 'Aucune relance prévue : aucune demande n’attend.',
     enCours: !!E.enCours, msg: E.msg || null, msgOk: !!E.ok,
     enregistrer: E.enCours ? null : () => {
       app.setState({ hdSmsMsg: { enCours: true } });
-      write(app.source || 'api', 'PUT', '/helpdesk/sms', { actif: !!F.actif, destinataires: F.destinataires.filter(x => String(x.nom || '').trim() || String(x.tel || '').trim()) }).then(r => {
+      write(app.source || 'api', 'PUT', '/helpdesk/sms', { actif: !!F.actif, destinataires: F.destinataires.filter(x => String(x.nom || '').trim() || String(x.tel || '').trim()), relances: F.relances }).then(r => {
         const echec = !r || r.ok === false || r.error;
         if (echec) { app.setState({ hdSmsMsg: { ok: false, msg: (r && r.error) || 'refusé' } }); return; }
         app.setState({ hdSms: { chargement: false, d: r }, hdSmsForm: null, hdSmsMsg: { ok: true, msg: 'Enregistré.' } });
+        charger(app, true);   // les prochaines relances suivent le réglage
       });
     },
   });
@@ -148,6 +176,19 @@ function echeance(x){
   return { ech: x.enRetard ? 'en retard de ' + (-r) + ' j' : (r === 0 ? 'aujourd’hui' : 'dans ' + r + ' j'), echSous: 'avant le ' + dm(x.echeance), echTon: x.enRetard ? 'ko' : (r <= 1 ? 'att' : '') };
 }
 
+/* Les relances par SMS d'une demande (20/11/2026) : la colonne « Relance » et le bloc de la fiche. */
+const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+const jourCourt = j => j ? JOURS[new Date(String(j).slice(0, 10) + 'T12:00').getDay()] + ' ' + dm(String(j).slice(0, 10)) : '';
+function relance(x){
+  const R = x.relances;
+  if (!R) { return { rel: '', relSous: '', relTon: '' }; }
+  const env = R.n ? R.n + ' envoyée' + (R.n > 1 ? 's' : '') : '';
+  if (R.suspendue) { return { rel: 'suspendue', relSous: 'par ' + (R.suspendue.par || '—') + ' le ' + dm(String(R.suspendue.le).slice(0, 10)), relTon: 'mu' }; }
+  if (R.arret) { return R.n ? { rel: 'arrêtée', relSous: R.arret, relTon: /^réponse/.test(R.arret) ? 'ok' : 'mu' } : { rel: '', relSous: '', relTon: '' }; }
+  if (!R.prochaine) { return { rel: '', relSous: '', relTon: '' }; }
+  return { rel: jourCourt(R.prochaine), relSous: (env ? env : '1re') + (R.a.length ? ' · ' + R.a.map(n => n.split(' ')[0]).join(', ') : ' · aucun numéro'), relTon: R.n ? 'att' : '' };
+}
+
 export function valsHelpdesk(app, c){
   const S = app.state;
   charger(app, false);
@@ -164,7 +205,7 @@ export function valsHelpdesk(app, c){
     .map(([k, nom, sous]) => ({ nom, sous, on: vue === k, choisir: () => app.setState({ hdVue: k }) }));
   if (vue === 'reclamations') { v.rc = valsReclamations(app); return; }
   if (!D) { return; }
-  v.sms = valsSms(app);
+  v.sms = valsSms(app, D);
   const tous = D.demandes || [];
   const f = S.hdFiltre || 'ouvertes', q = String(S.hdQ || '').trim().toLowerCase(), fd = S.hdDom || '', fm = S.hdMag || '';
   const ouvertes = tous.filter(x => x.ouverte);
@@ -177,7 +218,8 @@ export function valsHelpdesk(app, c){
   v.kpis = [['Ouvertes', ouvertes.length, 'nouvelles ou en cours', 'att'], ['Sans réponse', ouvertes.filter(x => !x.reponse).length, 'aucune réponse du bureau', 'ko'],
     ['En retard', retard, 'date limite dépassée' + (sansDelai ? ' · ' + sansDelai + ' sans date' : ''), retard ? 'ko' : 'ok'],
     ['Plus ancienne', plusVieille ? jours(plusVieille.cree) + ' j' : '—', plusVieille ? 'ouverte depuis le ' + dm(plusVieille.cree) : 'aucune ouverte', 'ko'],
-    ['Résolues', tous.filter(x => x.statut === 'RESOLVED').length, 'sur ' + tous.length + ' demandes', 'ok'], ['Dans une visite', tous.filter(x => (x.missions || []).some(m => !m.cloture)).length, 'missions en cours', '']];
+    D.relances && !D.relances.erreur ? ['Relances', D.relances.actif ? D.relances.sms : 'coupées', D.relances.actif ? 'SMS depuis le ' + dm(D.relances.depuis) + (D.relances.arretees ? ' · ' + D.relances.arretees + ' arrêtée' + (D.relances.arretees > 1 ? 's' : '') + ' par une réponse' : '') : 'à rallumer dans « SMS au bureau »', '']
+      : ['Résolues', tous.filter(x => x.statut === 'RESOLVED').length, 'sur ' + tous.length + ' demandes', 'ok'], ['Dans une visite', tous.filter(x => (x.missions || []).some(m => !m.cloture)).length, 'missions en cours', '']];
   v.chips = [['ouvertes', 'Ouvertes', ouvertes.length], ['NEW', 'Nouvelles', tous.filter(x => x.statut === 'NEW').length], ['IN_PROGRESS', 'En cours', tous.filter(x => x.statut === 'IN_PROGRESS').length],
     ['sansrep', 'Sans réponse', ouvertes.filter(x => !x.reponse).length], ['retard', 'En retard', retard], ['sansdelai', 'Sans date limite', sansDelai], ['mission', 'En visite', tous.filter(x => (x.missions || []).length).length], ['RESOLVED', 'Résolues', tous.filter(x => x.statut === 'RESOLVED').length], ['toutes', 'Toutes', tous.length]]
     .map(([k, n, nb]) => ({ nom: n, n: nb, on: f === k, choisir: () => app.setState({ hdFiltre: k }) }));
@@ -190,7 +232,7 @@ export function valsHelpdesk(app, c){
   const sel = L.some(x => x.id === S.hdSel) ? S.hdSel : (L[0] || {}).id;
   v.lignes = L.map(x => ({ id: x.id, ref: x.ref.replace('CASE-', ''), le: dm(x.cree), magasin: court(x.magasin), domaine: x.domaineNom, titre: x.titre, extrait: x.description.length > 110 ? x.description.slice(0, 110) + '…' : x.description,
     consultant: x.consultant || '—', statut: x.statutNom, ton: TONS[x.statut] || '', rep: x.reponse ? 'répondue' : (x.ouverte ? 'sans réponse' : ''), repKo: !x.reponse && x.ouverte,
-    age: jours(x.cree) + ' j', vieux: x.ouverte && jours(x.cree) > 60, ...echeance(x), visite: (x.missions || []).filter(m => !m.cloture).map(m => 'visite ' + dm(m.visiteLe))[0] || '',
+    age: jours(x.cree) + ' j', vieux: x.ouverte && jours(x.cree) > 60, ...echeance(x), ...relance(x), visite: (x.missions || []).filter(m => !m.cloture).map(m => 'visite ' + dm(m.visiteLe))[0] || '',
     on: x.id === sel, choisir: () => app.setState({ hdSel: x.id, hdEnvoi: null }) }));
   v.n = L.length; v.total = tous.length; v.compte = D.compte; v.source = D.source;
   const X = tous.find(x => x.id === sel);
@@ -215,6 +257,17 @@ export function valsHelpdesk(app, c){
       choisir: E.enCours ? null : () => envoyer(app, '/helpdesk/demandes/' + X.id + '/delai', { jours: j, statut: X.statut, shop: X.shop, ref: X.ref }) })),
     retirerDelai: X.echeance && !E.enCours ? () => envoyer(app, '/helpdesk/demandes/' + X.id + '/delai', { jours: 0, ref: X.ref }) : null,
     delaiTon: X.enRetard ? 'ko' : (X.echeance ? '' : (X.ouverte ? 'att' : '')),
+    // Les relances par SMS : les envois, la prochaine, suspendre, reprendre, relancer maintenant.
+    relances: X.relances ? (() => {
+      const R = X.relances;
+      const act = action => () => envoyer(app, '/helpdesk/demandes/' + X.id + '/relances', { action, shop: X.shop, ref: X.ref });
+      return { envois: R.envois.map(e => ({ quand: jourCourt(e.le) + ' · ' + String(e.le).slice(11, 16) + (e.manuel ? ' (à la main)' : ''), a: e.a.map(a => ({ nom: a.nom, ok: a.ok, motif: a.motif || '' })) })),
+        etat: R.suspendue ? 'Suspendues par ' + (R.suspendue.par || '—') + ' le ' + dm(String(R.suspendue.le).slice(0, 10)) + '.'
+          : (R.arret ? (R.arret === 'relances coupées' ? 'Relances coupées dans « SMS au bureau ».' : 'Arrêtées : ' + R.arret + '.')
+            : (R.prochaine ? 'Prochaine : ' + jourCourt(R.prochaine) + ' à ' + R.heure + ', à ' + (R.a.length ? R.a.join(' et ') : 'personne (aucun numéro valable)') + (!X.consultant ? ' — aucun consultant attribué ; attribuer un consultant envoie les suivantes à lui seul.' : '.') : '')),
+        suspendre: !R.suspendue && X.ouverte && !E.enCours ? act('suspendre') : null, reprendre: R.suspendue && !E.enCours ? act('reprendre') : null,
+        maintenant: X.ouverte && !E.enCours ? act('maintenant') : null };
+    })() : null,
     delaiNote: X.echeance ? (X.ouverte ? (X.enRetard ? 'Dépassée de ' + (-X.joursRestants) + ' j' : (X.joursRestants === 0 ? 'Aujourd’hui' : 'Dans ' + X.joursRestants + ' j')) + ' : à respecter avant le ' : 'Était fixée au ') + dm(X.echeance)
         + (X.echeancePar ? ' · fixée par ' + X.echeancePar + (X.echeanceLe ? ' le ' + dm(X.echeanceLe) : '') : '') + '. Le franchisé voit « réponse prévue d’ici le ' + dm(X.echeance) + ' ».'
       : (X.ouverte ? 'À fixer à la réception : le délai que vous tiendrez' + (X.statut === 'NEW' ? ' (la demande passe « En cours »)' : '') + '.' : 'Aucune date limite.'),

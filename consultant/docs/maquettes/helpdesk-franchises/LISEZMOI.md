@@ -56,4 +56,7 @@ n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode «
   On y trouve les indicateurs (ouvertes, montant ouvert, plus ancienne, réglées, refusées), les filtres (état, magasin,
   fournisseur, période, recherche) et la fiche de chaque réclamation.
 
-Banc : `php consultant/bin/tests_helpdesk.php` (SMS et date limite, SQLite en mémoire, doublures du panel et de SMSAPI).
+- **Les relances** (« renvoyer un SMS à Sam ou Pierre tous les 7 jours ») : maquette `../helpdesk-relances`, validée et
+  codée le 20/11/2026. Ce dossier en décrit la règle.
+
+Banc : `php consultant/bin/tests_helpdesk.php` (SMS, date limite, relances ; SQLite en mémoire, doublures du panel et de SMSAPI).

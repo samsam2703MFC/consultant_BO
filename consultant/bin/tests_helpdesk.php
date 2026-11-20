@@ -86,7 +86,8 @@ final class MdSms
 {
     public static array $partis = [];
     public static array $refuse = [];
-    public static function configured(): bool { return true; }
+    public static bool $regle = true;
+    public static function configured(): bool { return self::$regle; }
     public static function envoyer(string $tel, string $texte, string $from = ''): array
     {
         if (in_array($tel, self::$refuse, true)) { return [false, '(13) numéro refusé']; }
@@ -118,13 +119,13 @@ verifie('le SMS : magasin, sujet, demandeur, titre, demande, passage, photos, r�
 
 echo "Le réglage\n";
 $R = hdkSmsReglage();
-verifie('par défaut : Sam (+48725038049) et Pierre Boseret, numéro à compléter', $R['actif'] === true && $R['destinataires'] === [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre Boseret', 'tel' => '']], json_encode($R));
+verifie('par défaut : Sam (+48725038049) et Pierre Boseret, numéro à compléter', $R['actif'] === true && $R['destinataires'] === [['nom' => 'Sam', 'tel' => '+48725038049', 'consultant' => ''], ['nom' => 'Pierre Boseret', 'tel' => '', 'consultant' => '']], json_encode($R));
 $GLOBALS['corps'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre', 'tel' => '12']]];
 $r = wr_helpdesk_sms();
 verifie('un numéro illisible est refusé, rien n’est enregistré', $r['ok'] === false && !isset($REGLAGES['helpdeskSms']), json_encode($r));
 $GLOBALS['corps'] = ['actif' => true, 'destinataires' => [['nom' => ' Sam ', 'tel' => '+48 725 038 049'], ['nom' => '', 'tel' => ''], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56']]];
 $r = wr_helpdesk_sms();
-verifie('enregistré : lignes vides retirées, noms nettoyés', $r['ok'] === true && $REGLAGES['helpdeskSms']['destinataires'] === [['nom' => 'Sam', 'tel' => '+48 725 038 049'], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56']], json_encode($REGLAGES['helpdeskSms'] ?? null));
+verifie('enregistré : lignes vides retirées, noms nettoyés', $r['ok'] === true && $REGLAGES['helpdeskSms']['destinataires'] === [['nom' => 'Sam', 'tel' => '+48 725 038 049', 'consultant' => ''], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56', 'consultant' => '']], json_encode($REGLAGES['helpdeskSms'] ?? null));
 verifie('la lecture rend le fournisseur et le numéro lisible', $r['fournisseur'] === 'smsapi' && $r['destinataires'][1]['lisible'] === '+32470123456', json_encode($r['destinataires']));
 
 echo "La demande et ses SMS\n";
@@ -193,6 +194,118 @@ $m = ep_helpdesk_magasin();
 verifie('le franchisé voit la date limite, ni qui l’a fixée ni le demandeur', ($m['demandes'][0]['echeance'] ?? null) === $attendu && !isset($m['demandes'][0]['echeancePar']) && !isset($m['demandes'][0]['demandeur']), json_encode($m['demandes'][0] ?? null));
 $c = ep_helpdesk_demandes();
 verifie('le cockpit voit la date limite, les jours restants et les délais possibles', ($c['demandes'][0]['echeance'] ?? null) === $attendu && $c['demandes'][0]['joursRestants'] === 5 && $c['demandes'][0]['enRetard'] === false && $c['delais'] === [2, 5, 10, 30, 90], json_encode($c['demandes'][0] ?? null));
+
+echo "Les relances\n";
+$rel = hdkRelancesReglage([]);
+verifie('par défaut, les choix validés : 7 j, 08:30, jours ouvrés, sans réponse, au consultant, regroupées, sans plafond',
+    $rel === ['actif' => true, 'jours' => 7, 'heure' => '08:30', 'ouvres' => true, 'quelles' => 'sans_reponse', 'aQui' => 'consultant', 'regrouper' => true, 'plafond' => 0], json_encode($rel));
+verifie('un réglage hors des choix revient aux choix validés', hdkRelancesReglage(['jours' => 5, 'heure' => '25:00', 'quelles' => 'x', 'plafond' => 3]) === $rel);
+verifie('consultant par le nom : « Sam » ~ « Sam V. », « Pierre Boseret » ~ « Pierre B. »', hdkEstConsultant(['nom' => 'Sam'], 'Sam V.') && hdkEstConsultant(['nom' => 'Pierre Boseret'], 'Pierre B.'));
+verifie('… mais pas « Pierre M. » ni « Loïc V. »', !hdkEstConsultant(['nom' => 'Pierre Boseret'], 'Pierre M.') && !hdkEstConsultant(['nom' => 'Sam'], 'Loïc V.'));
+verifie('consultant réglé : il prime, accents et points ignorés', hdkEstConsultant(['nom' => 'Loïc', 'consultant' => 'Loïc V.'], 'Loic V') && !hdkEstConsultant(['nom' => 'Sam', 'consultant' => 'Pierre B.'], 'Sam V.'));
+verifie('jours ouvrés : samedi et dimanche passent au lundi', hdkOuvre('2026-11-28') === '2026-11-30' && hdkOuvre('2026-11-29') === '2026-11-30' && hdkOuvre('2026-11-27') === '2026-11-27');
+verifie('le premier lundi', hdkLundi('2026-11-20') === '2026-11-23' && hdkLundi('2026-11-23') === '2026-11-23');
+$dem = static fn (array $c): array => hdkDemande($c + ['area_key' => 'strategy', 'status' => 'IN_PROGRESS', 'description' => '', 'shop_id' => 4, 'shop_name' => 'Atelier by Harmonie - Sombreffe', 'admin_reply' => '', 'consultant_name' => '']);
+verifie('en attente avant la mise en route (20/11) : le premier lundi, 23/11', hdkProchaineRelance($dem(['id' => 1, 'created_at' => '2026-10-07 09:00:00']), $rel, null, '2026-11-20') === '2026-11-23');
+verifie('7 jours après l’envoi : envoyée le 18/11, relancée le 25/11', hdkProchaineRelance($dem(['id' => 2, 'created_at' => '2026-11-18 09:00:00']), $rel, null, '2026-11-20') === '2026-11-25');
+verifie('envoyée un samedi : 7 jours après tombe un samedi, la relance part le lundi', hdkProchaineRelance($dem(['id' => 3, 'created_at' => '2026-11-21 09:00:00']), $rel, null, '2026-11-20') === '2026-11-30');
+verifie('puis 7 jours après la dernière relance', hdkProchaineRelance($dem(['id' => 1, 'created_at' => '2026-10-07 09:00:00']), $rel, '2026-11-23 08:30:00', '2026-11-20') === '2026-11-30');
+verifie('l’heure : pas avant 08:30, pas après 20:00, pas le week-end ; un retard part le jour même',
+    !hdkRelanceDue('2026-11-23', $rel, '2026-11-23 08:29') && hdkRelanceDue('2026-11-23', $rel, '2026-11-23 08:30') && !hdkRelanceDue('2026-11-23', $rel, '2026-11-23 20:00')
+    && !hdkRelanceDue('2026-11-23', $rel, '2026-11-28 09:00') && hdkRelanceDue('2026-11-23', $rel, '2026-11-24 09:00') && !hdkRelanceDue('2026-11-25', $rel, '2026-11-24 09:00'));
+verifie('fin : fermée, répondue, suspendue, plafond',
+    hdkRelanceArret($dem(['id' => 1, 'status' => 'RESOLVED']), $rel, 0, null) === 'Résolue' && hdkRelanceArret($dem(['id' => 1, 'admin_reply' => 'ok', 'admin_reply_at' => '2026-12-01 10:00:00']), $rel, 2, null) === 'réponse le 01/12'
+    && hdkRelanceArret($dem(['id' => 1]), $rel, 0, ['le' => 'x', 'par' => 'Sam']) === 'suspendue' && hdkRelanceArret($dem(['id' => 1]), ['plafond' => 6] + $rel, 6, null) === '6 relances faites' && hdkRelanceArret($dem(['id' => 1]), $rel, 9, null) === null);
+
+// La maquette, rejouée : Sombreffe (trois demandes réelles), Gosselies (Pierre B.), mise en route le vendredi 20/11.
+$CASES = [
+    ['id' => 11, 'ref' => 'CASE-20261007-9E319', 'area_key' => 'strategy', 'status' => 'NEW', 'title' => 'Démarchage sur Nivelles Sud', 'created_at' => '2026-10-07 09:00:00'],
+    ['id' => 12, 'ref' => 'CASE-20260915-23CC8', 'area_key' => 'social_media', 'status' => 'IN_PROGRESS', 'title' => 'Campagne de démarchage pour les lunchs en entreprise', 'consultant_name' => 'Sam V.', 'created_at' => '2026-09-15 09:00:00'],
+    ['id' => 13, 'ref' => 'CASE-20260519-8B90A', 'area_key' => 'operational_activities', 'status' => 'IN_PROGRESS', 'title' => 'Sombreffe : verrière cuisine, réagencement étalement & cadrage affichage', 'consultant_name' => 'Loic V.', 'created_at' => '2026-05-19 09:00:00'],
+    ['id' => 14, 'ref' => 'CASE-20261118-4F2D1', 'area_key' => 'product', 'status' => 'IN_PROGRESS', 'title' => 'Nouvelle tarte du mois : la pâte se rétracte', 'consultant_name' => 'Pierre B.', 'shop_id' => 6, 'shop_name' => 'Atelier by - Gosselies', 'created_at' => '2026-11-18 09:00:00'],
+];
+$D = static fn (): array => array_map($dem, $GLOBALS['CASES']);
+$REGLAGES['helpdeskSms'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56']]];
+$REGLAGES['helpdeskRelancesDepuis'] = '2026-11-20';
+MdSms::$partis = [];
+$r = hdkRelancesHorloge('2026-11-23 08:20', $D());
+verifie('lundi 23/11 à 08:20 : trop tôt, rien n’est lu', ($r['rien'] ?? '') === 'hors des heures des relances' && MdSms::$partis === [], json_encode($r));
+$r = hdkRelancesHorloge('2026-11-23 08:30', $D());
+$a = array_column(MdSms::$partis, 'texte', 'a');
+verifie('lundi 23/11 à 08:30 : un SMS à Sam, un à Pierre', count(MdSms::$partis) === 2 && isset($a['+48725038049'], $a['+32470123456']) && $r['demandes'] === 3, json_encode($r));
+verifie('Sam : ses 3 demandes de Sombreffe en une liste (sa demande sans son nom, Loïc nommé, celle sans consultant dite)',
+    str_starts_with($a['+48725038049'], "Relance - 3 demandes sans réponse\n1. Sombreffe (Stratégie) : Démarchage sur Nivelles Sud - 47 j, pas de consultant\n")
+    && str_contains($a['+48725038049'], "2. Sombreffe (Réseaux sociaux) : Campagne de démarchage pour les lunchs en entreprise - 69 j\n")
+    && str_contains($a['+48725038049'], ' - 188 j, Loic V.'), $a['+48725038049']);
+verifie('Pierre : la demande sans consultant et celle de Loïc (sans numéro), pas celle de Sam', str_starts_with($a['+32470123456'], 'Relance - 2 demandes sans réponse') && !str_contains($a['+32470123456'], 'lunchs'), $a['+32470123456']);
+verifie('ni lien ni caractère hors alphabet SMS', !preg_match('~https?://|/#/|[’«»]~u', implode(' ', $a)));
+verifie('le journal : une ligne par demande et par personne, à la même heure', (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance')['n'] === 5 && (int) Db::row('SELECT COUNT(DISTINCT le) AS n FROM con_hdk_relance')['n'] === 1);
+MdSms::$partis = [];
+verifie('08:40 le même jour : rien ne repart', (hdkRelancesHorloge('2026-11-23 08:40', $D())['rien'] ?? '') === 'aucune relance due' && MdSms::$partis === []);
+
+$GLOBALS['corps'] = ['action' => 'suspendre', 'shop' => '4', 'ref' => 'CASE-20260519-8B90A'];
+verifie('la verrière : relances suspendues', wr_helpdesk_relances(13)['ok'] === true && isset(hdkRelancesSuspendues([13])[13]));
+$r = hdkRelancesHorloge('2026-11-25 08:30', $D());
+verifie('mercredi 25/11 : la tarte de Gosselies, 7 jours après son envoi, à Pierre seul, en un SMS',
+    count(MdSms::$partis) === 1 && MdSms::$partis[0]['a'] === '+32470123456' && str_starts_with(MdSms::$partis[0]['texte'], "Relance - 1 demande sans réponse\nGosselies (Produit) : Nouvelle tarte du mois : la pate se rétracte - 7 j, pas de date limite. Réf. 20261118-4F2D1"), json_encode(MdSms::$partis));
+MdSms::$partis = [];
+verifie('samedi 28/11 : rien', (hdkRelancesHorloge('2026-11-28 09:00', $D())['rien'] ?? '') === 'hors des heures des relances' && MdSms::$partis === []);
+$CASES[3]['admin_reply'] = 'Baisser le four de 10 degrés.'; $CASES[3]['admin_reply_at'] = '2026-11-26 10:00:00';
+hdkRelancesHorloge('2026-11-30 08:30', $D());
+$a = array_column(MdSms::$partis, 'texte', 'a');
+verifie('lundi 30/11 : Sam, la demande sans consultant et la sienne ; Pierre, la demande sans consultant ; ni la verrière (suspendue) ni la tarte (répondue)',
+    count(MdSms::$partis) === 2 && str_starts_with($a['+48725038049'], 'Relance - 2 demandes') && str_contains($a['+48725038049'], 'lunchs') && !str_contains(implode(' ', $a), 'verri') && !str_contains(implode(' ', $a), 'tarte')
+    && str_starts_with($a['+32470123456'], "Relance (2e) - 1 demande sans réponse\nSombreffe (Stratégie) : Démarchage sur Nivelles Sud - 54 j, pas de consultant, pas de date limite."), json_encode($a));
+MdSms::$partis = [];
+$CASES[1]['admin_reply'] = 'Oui : un photographe passe le 10/12.'; $CASES[1]['admin_reply_at'] = '2026-12-01 10:00:00';
+hdkRelancesHorloge('2026-12-07 08:30', $D());
+verifie('lundi 07/12 : la 3e relance de la seule demande qui attend, à Sam et à Pierre',
+    count(MdSms::$partis) === 2 && MdSms::$partis[0]['texte'] === MdSms::$partis[1]['texte'] && str_starts_with(MdSms::$partis[0]['texte'], 'Relance (3e) - 1 demande sans réponse'), json_encode(MdSms::$partis));
+$J = hdkRelancesJournal([11, 12, 13, 14]);
+verifie('le journal par demande : 3, 2, 1 et 1 relances', $J[11]['n'] === 3 && $J[12]['n'] === 2 && $J[13]['n'] === 1 && $J[14]['n'] === 1 && $J[11]['envois'][0]['a'] === [['nom' => 'Sam', 'ok' => true, 'motif' => null], ['nom' => 'Pierre Boseret', 'ok' => true, 'motif' => null]], json_encode($J[11]['envois'][0] ?? null));
+$Rg = hdkSmsReglage();
+$v = hdkRelanceVue(hdkDemande($CASES[0] + ['shop_id' => 4]) + hdkEcheanceVue(null, true), $J[11], null, $Rg, '2026-11-20');
+verifie('la fiche : 3 envoyées, prochaine le lundi 14/12, à Sam et Pierre Boseret', $v['n'] === 3 && $v['prochaine'] === '2026-12-14' && $v['a'] === ['Sam', 'Pierre Boseret'] && $v['arret'] === null, json_encode($v));
+$v = hdkRelanceVue(hdkDemande($CASES[1] + ['shop_id' => 4]) + hdkEcheanceVue(null, true), $J[12], null, $Rg, '2026-11-20');
+verifie('la fiche d’une demande répondue : arrêtée, réponse le 01/12', $v['arret'] === 'réponse le 01/12' && $v['prochaine'] === null, json_encode($v));
+$GLOBALS['corps'] = ['action' => 'reprendre'];
+wr_helpdesk_relances(13);
+verifie('reprendre la verrière', !isset(hdkRelancesSuspendues([13])[13]));
+$REGLAGES['helpdeskSms']['relances'] = ['regrouper' => false];
+MdSms::$partis = [];
+$CASES[1]['admin_reply'] = ''; $CASES[2]['consultant_name'] = 'Sam V.';
+hdkRelancesHorloge('2026-12-14 08:30', $D());
+verifie('« un SMS par demande » : chacune son SMS', count(MdSms::$partis) === 4 && count(array_filter(MdSms::$partis, static fn ($x) => str_contains($x['texte'], '1 demande'))) === 4, json_encode(array_column(MdSms::$partis, 'a')));
+$REGLAGES['helpdeskSms']['relances'] = ['actif' => false];
+verifie('relances coupées : rien', (hdkRelancesHorloge('2026-12-21 08:30', $D())['rien'] ?? '') === 'relances coupées');
+$REGLAGES['helpdeskSms']['relances'] = [];
+MdSms::$regle = false;
+verifie('sans fournisseur SMS : rien n’est lu', (hdkRelancesHorloge('2026-12-21 08:30', $D())['rien'] ?? '') === 'aucun fournisseur SMS réglé');
+MdSms::$regle = true;
+
+echo "Le réglage, l'essai, la relance tout de suite\n";
+$REGLAGES['helpdeskSms'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049']], 'relances' => ['actif' => false]];
+$GLOBALS['corps'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049', 'consultant' => 'Sam V.']], 'relances' => ['actif' => true, 'jours' => 14, 'heure' => '9h']];
+verifie('une heure illisible est refusée', wr_helpdesk_sms()['ok'] === false);
+$REGLAGES['helpdeskRelancesDepuis'] = '2026-11-20';
+$GLOBALS['corps']['relances']['heure'] = '09:15';
+$r = wr_helpdesk_sms();
+verifie('enregistré : 14 j à 09:15, le consultant du numéro gardé', $r['ok'] === true && $r['relances']['jours'] === 14 && $r['relances']['heure'] === '09:15' && $r['destinataires'][0]['consultant'] === 'Sam V.', json_encode($r));
+verifie('des relances rallumées repartent d’aujourd’hui', $REGLAGES['helpdeskRelancesDepuis'] === date('Y-m-d'));
+MdSms::$partis = [];
+$GLOBALS['corps'] = ['tel' => '+32 470 99 99 99'];
+verifie('l’essai à un numéro hors du réglage est refusé', wr_helpdesk_sms_essai()['ok'] === false && MdSms::$partis === []);
+$GLOBALS['corps'] = ['tel' => '0048 725 038 049'];
+$r = wr_helpdesk_sms_essai();
+verifie('l’essai part au numéro du réglage, sans lien', $r['ok'] === true && count(MdSms::$partis) === 1 && str_starts_with(MdSms::$partis[0]['texte'], 'Essai du cockpit (SMS au bureau)') && !str_contains(MdSms::$partis[0]['texte'], 'http'), json_encode($r));
+MdSms::$partis = [];
+PanelApi::$cases = $CASES;
+$GLOBALS['corps'] = ['action' => 'maintenant'];
+$n0 = (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance WHERE case_id = 11')['n'];
+$r = wr_helpdesk_relances(11);
+verifie('« Relancer maintenant » : le SMS part, noté comme relance manuelle', $r['ok'] === true && count(MdSms::$partis) === 1 && (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance WHERE case_id = 11 AND manuel = 1')['n'] === 1 && (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance WHERE case_id = 11')['n'] === $n0 + 1, json_encode($r));
+$c = ep_helpdesk_demandes();
+verifie('la liste du cockpit porte les relances de chaque demande et celles à venir', isset($c['demandes'][0]['relances']['n'], $c['relances']['aVenir'], $c['relances']['sms']) && $c['relances']['sms'] >= 8, json_encode($c['relances'] ?? null));
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

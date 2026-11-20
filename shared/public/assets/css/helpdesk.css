@@ -67,6 +67,8 @@ textarea.pp-in{resize:vertical;line-height:1.45}
 .hd-rep{white-space:pre-wrap;font:400 11.5px/1.5 var(--font-ui);background:#fff;border-radius:6px;padding:8px 10px;margin:8px 0 0}
 .hd-bloc label small{font-size:10px}
 /* La date limite (20/11/2026) */
+.hd-t td.g small .hd-dom,.hd-t td.g small .hd-vis{display:inline-block;margin-top:3px}
+.hd .hd-titre{min-width:200px}
 .hd .vm-kpis{grid-template-columns:repeat(6,1fr)}
 .hd-ech span{white-space:nowrap}.hd-ech small{display:block;font-size:10.5px;color:var(--color-text-muted)}
 .hd-ech.ko span{color:var(--vr-ko)}.hd-ech.att span{color:var(--vr-att)}
@@ -89,4 +91,29 @@ textarea.pp-in{resize:vertical;line-height:1.45}
 .hd-sms-l{display:grid;grid-template-columns:minmax(120px,200px) minmax(150px,240px) auto;gap:8px;align-items:center;justify-content:start}
 .hd-sms-l .mko-inp{height:30px}.hd-sms-l .mko-inp.hd-sms-vide{border-color:var(--vr-ko)}
 .hd-sms .hd-seg{margin:2px 0}.hd-sms .hd-okmsg{margin:0}
+.hd-sms-l{grid-template-columns:minmax(100px,150px) minmax(130px,170px) minmax(120px,1fr) auto auto}
+/* Les relances par SMS (20/11/2026, maquette docs/maquettes/helpdesk-relances) */
+.hd-sms2{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.2fr);border:1px solid var(--vr-trait);border-radius:10px;background:#fff}
+.hd-col{padding:14px 16px;display:flex;flex-direction:column;gap:8px}.hd-col+.hd-col{border-left:1px solid var(--vr-trait)}
+.hd-col h3{font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary);margin:0}
+.hd-col>p{font-size:11.5px;color:var(--color-text-muted);margin:0;line-height:1.5}
+.hd-sms-th{font-size:10px;color:var(--color-text-muted);letter-spacing:.05em;text-transform:uppercase}
+.hd-prochaines{margin-top:8px;font-size:12px;line-height:1.7}.hd-prochaines b{font-weight:400}.hd-prochaines small{color:var(--color-text-muted)}.hd-prochaines h3{margin-bottom:2px}
+.hd-r{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;padding:8px 0;border-top:1px solid var(--vr-trait);font-size:12px}
+.hd-col>p+.hd-r{border-top:none}
+.hd-r b{font-weight:400}.hd-r small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px;line-height:1.4}.hd-r .note{font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45}
+.hd-r .hd-seg{margin:0;flex-wrap:wrap}
+.hd-heure{display:flex;align-items:center;gap:10px;margin-top:7px}.hd-heure .mko-inp{width:70px;height:28px;text-align:center}
+.hd-ck{display:inline-flex;align-items:center;gap:6px;border:none;background:none;font:400 12px var(--font-ui);color:var(--color-text);cursor:pointer;padding:0}
+.hd-ck i{width:14px;height:14px;border-radius:4px;border:1.5px solid #b9aea3;box-sizing:border-box;position:relative}
+.hd-ck.on i{background:var(--vr-ok);border-color:var(--vr-ok)}.hd-ck.on i:after{content:'';position:absolute;left:3px;top:0;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.hd-apercu{font:400 11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;background:var(--paper);border-radius:8px;padding:9px 11px;margin:0}
+.hd-rel span{white-space:nowrap}.hd-rel small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.hd-rel.att span{color:var(--vr-att)}.hd-rel.mu span{color:var(--color-text-muted)}.hd-rel.ok span{color:var(--vr-ok)}
+.hd-relances{border:1px solid #2F5D8A;border-radius:10px;padding:10px 12px;background:#fbfcfe;margin:0 0 12px}
+.hd-relances h4{margin:0 0 6px;font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#2F5D8A}.hd-relances h4 span{text-transform:none;letter-spacing:0;color:var(--color-text-muted)}
+.hd-envoi{display:flex;gap:10px;font-size:12px;padding:4px 0;border-top:1px solid var(--vr-trait)}.hd-envoi:first-of-type{border-top:none}.hd-envoi b{font-weight:400;min-width:120px}
+.hd-envoi i{font-style:normal}.hd-envoi i.ok{color:var(--vr-ok)}.hd-envoi i.ko{color:var(--vr-ko)}
+.hd-proch{font-size:12px;margin:6px 0 8px;line-height:1.5}
+@media (max-width:1100px){.hd-sms2{grid-template-columns:1fr}.hd-col+.hd-col{border-left:none;border-top:1px solid var(--vr-trait)}}
 @media (max-width:1300px){.hd-cols{grid-template-columns:1fr}.hd-fiche{margin:0 14px 14px;position:static;max-height:none}}

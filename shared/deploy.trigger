@@ -209,3 +209,4 @@
 2026-11-20T05:55:33Z Commercial : l'équipe du magasin pour la commande d'échantillon, tirée de ses commandes quand la lecture de l'équipe revient vide
 2026-11-20T06:02:14Z Commercial : le portail en pleine largeur ; Leads Meta : la campagne « Lunch au bureau » en onglets FR / NL · Halle (étapes, action, aperçu, vidéos, post), les formulaires de recrutement repliés
 2026-11-20T20:55:16Z Helpdesk : « Mes demandes » ouvre sur « Ouvertes » ; SMS au bureau (Sam, Pierre Boseret) à chaque nouvelle demande ; date limite du consultant (2, 5, 10, 30, 90 j) ; onglet des réclamations fournisseur de tous les magasins
+2026-11-20T21:12:24Z Helpdesk : relances SMS des demandes sans réponse tous les 7 jours (maquette helpdesk-relances validée), horloge consultant/bin/helpdesk_cron.sh, SMS d'essai, plus de lien dans les SMS

@@ -649,6 +649,7 @@ function route(string $method, string $path): mixed
             $path === '/helpdesk/demandes'            => ep_helpdesk_demandes(),
             $path === '/helpdesk/magasin'             => ep_helpdesk_magasin(),
             $path === '/helpdesk/sms'                 => ep_helpdesk_sms(),   // le SMS au bureau à chaque demande (20/11/2026)
+            $path === '/helpdesk/relances/cron'       => ep_helpdesk_relances_cron(),   // l'horloge des relances SMS (20/11/2026)
             (bool) preg_match('#^/helpdesk/demandes/(\d+)/consultants$#', $path, $mh) => ep_helpdesk_consultants((int) $mh[1]),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
@@ -989,9 +990,10 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
     if ($method === 'POST' && $path === '/helpdesk/magasin') { return wr_helpdesk_magasin(); }
     if ($method === 'PUT' && $path === '/helpdesk/sms') { return wr_helpdesk_sms(); }
-    if ($method === 'POST' && preg_match('#^/helpdesk/demandes/(\d+)/(repondre|statut|consultant|visite|delai)$#', $path, $m)) {
+    if ($method === 'POST' && $path === '/helpdesk/sms/essai') { return wr_helpdesk_sms_essai(); }
+    if ($method === 'POST' && preg_match('#^/helpdesk/demandes/(\d+)/(repondre|statut|consultant|visite|delai|relances)$#', $path, $m)) {
         return match ($m[2]) { 'repondre' => wr_helpdesk_repondre((int) $m[1]), 'statut' => wr_helpdesk_statut((int) $m[1]), 'consultant' => wr_helpdesk_consultant((int) $m[1]),
-            'delai' => wr_helpdesk_delai((int) $m[1]), default => wr_helpdesk_visite((int) $m[1]) };
+            'delai' => wr_helpdesk_delai((int) $m[1]), 'relances' => wr_helpdesk_relances((int) $m[1]), default => wr_helpdesk_visite((int) $m[1]) };
     }
     if ($method === 'POST' && preg_match('#^/helpdesk/missions/(\d+)$#', $path, $m)) { return wr_helpdesk_mission((int) $m[1]); }
     if ($method === 'PUT' && $path === '/verification/recettes/liens') { return wr_verification_liens(); }
