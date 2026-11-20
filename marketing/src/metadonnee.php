@@ -733,26 +733,81 @@ final class MdSms
     /** Les deux plateformes SMSAPI : un jeton de l'une est refusé (101) par l'autre. */
     public const PLATEFORMES = ['https://api.smsapi.com', 'https://api.smsapi.pl'];
 
+    /** @var null|list<array{origine: string, jeton: string}> les jetons connus, lus une fois par requête */
+    private static ?array $candidats = null;
+
+    /** Oublie les jetons lus (un réglage vient de changer ; les tests). */
+    public static function oublier(): void
+    {
+        self::$candidats = null;
+    }
+
+    /** Un jeton dans une valeur : la chaîne elle-même, ou le champ « token » / « oauth » d'un JSON. Sans « Bearer ». */
+    private static function jetonDe(mixed $v): string
+    {
+        if (is_string($v) && ($j = json_decode($v, true)) !== null && is_array($j)) { $v = $j; }
+        if (is_array($v)) {
+            foreach ($v as $k => $x) { if (is_string($x) && preg_match('/token|oauth|jeton|key|secret/i', (string) $k)) { return self::jetonDe($x); } }
+            return '';
+        }
+        $t = trim((string) preg_replace('/^\s*(authorization:\s*)?bearer\s+/i', '', (string) $v), " \t\n\r\0\x0B\"'");
+        return strlen($t) >= 10 && !preg_match('/\s/', $t) ? $t : '';
+    }
+
     /**
-     * Le jeton : celui de MétaDonnée (mdSmsJeton → erp_cles « mar_smsapi_token »), sinon la clé SMSAPI commune de l'ERP
-     * (erp_cles « smsapi_token », portail commun : celle de Ustawienia › SMS de l'ERP ; Sam, 20/11/2026 : « récupérer
-     * les SMS API de erp_cles »), sinon config.php, sinon SMSAPI_TOKEN. La plateforme : celle réglée dans MétaDonnée,
-     * sinon erp_cles « smsapi_base », sinon celle qu'un envoi a trouvée (mdSmsBaseAuto), sinon config.php ou .com.
+     * Les jetons SMSAPI connus, sans doublon, dans l'ordre où on les essaie : celui qui a déjà marché (mdSmsOrigine) ;
+     * celui de MétaDonnée (mdSmsJeton → erp_cles « mar_smsapi_token ») ; celui du CRM (Sam, 20/11/2026 : « prendre le
+     * oauth du CRM » — ses réglages crm_settings, même base : lecture directe d'une table d'une autre application, écart
+     * connu, REORG_PLAN.md §8) ; les autres clés « sms » d'erp_cles (dont « smsapi_token », celle de l'ERP) ;
+     * config.php ; SMSAPI_TOKEN. Rien n'est jamais écrit ni journalisé de leurs valeurs.
+     *
+     * @return list<array{origine: string, jeton: string}>
+     */
+    public static function candidats(): array
+    {
+        if (self::$candidats !== null) { return self::$candidats; }
+        $out = [];
+        $ajoute = static function (string $origine, mixed $valeur) use (&$out): void {
+            $j = self::jetonDe($valeur);
+            if ($j === '') { return; }
+            foreach ($out as $c) { if ($c['jeton'] === $j) { return; } }
+            $out[] = ['origine' => $origine, 'jeton' => $j];
+        };
+        $cleJeton = static fn (string $nom): bool => (bool) preg_match('/token|oauth|jeton|key|cle|secret/i', $nom) && !preg_match('/base|url|from|sender|exp|tel|phone/i', $nom);
+        $ajoute('MétaDonnée', (string) setting('mdSmsJeton', ''));
+        try {
+            foreach (Db::rows("SELECT skey, svalue FROM crm_settings WHERE skey LIKE '%sms%'") as $r) {
+                if ($cleJeton((string) $r['skey']) || is_array(json_decode((string) $r['svalue'], true))) { $ajoute('CRM (crm_settings ' . $r['skey'] . ')', (string) $r['svalue']); }
+            }
+        } catch (Throwable $e) { /* pas de CRM dans cette base */ }
+        if (function_exists('erpClesCherche')) {
+            foreach (erpClesCherche('sms') as $k) { if ($cleJeton($k['cle'])) { $ajoute('erp_cles ' . $k['cle'] . ' (' . $k['portail'] . ')', $k['valeur']); } }
+        }
+        $cfg = [];
+        try { $cfg = (array) ((Db::config()['smsapi'] ?? []) ?: []); } catch (Throwable $e) { $cfg = []; }
+        $ajoute('config.php', (string) ($cfg['token'] ?? ''));
+        $ajoute('SMSAPI_TOKEN', (string) (getenv('SMSAPI_TOKEN') ?: ''));
+        // Celui qui a déjà marché passe devant.
+        $retenu = (string) setting('mdSmsOrigine', '');
+        usort($out, static fn ($a, $b) => ($b['origine'] === $retenu) <=> ($a['origine'] === $retenu));
+        return self::$candidats = $out;
+    }
+
+    /**
+     * Le jeton et la plateforme du prochain envoi : le premier des candidats ; la plateforme réglée dans MétaDonnée, sinon
+     * erp_cles « smsapi_base », sinon celle qu'un envoi a trouvée (mdSmsBaseAuto), sinon config.php ou .com.
      */
     public static function config(): array
     {
         $cfg = [];
         try { $cfg = (array) ((Db::config()['smsapi'] ?? []) ?: []); } catch (Throwable $e) { $cfg = []; }
-        $jeton = (string) setting('mdSmsJeton', ''); $source = 'MétaDonnée';
-        if ($jeton === '' && function_exists('erpCle')) { $jeton = erpCle('smsapi_token'); $source = 'erp_cles (smsapi_token)'; }
-        if ($jeton === '') { $jeton = (string) ($cfg['token'] ?? ''); $source = 'config.php'; }
-        if ($jeton === '') { $jeton = (string) (getenv('SMSAPI_TOKEN') ?: ''); $source = 'SMSAPI_TOKEN'; }
+        $C = self::candidats();
         $base = trim((string) (mdReglages()['sms']['base'] ?? '')); $impose = $base !== '';
         if ($base === '' && function_exists('erpCle')) { $base = erpCle('smsapi_base'); $impose = $base !== ''; }
         if ($base === '') { $base = trim((string) setting('mdSmsBaseAuto', '')); }
         if ($base === '') { $base = (string) ($cfg['base'] ?? ''); }
         if ($base === '') { $base = (string) (getenv('SMSAPI_BASE') ?: 'https://api.smsapi.com'); }
-        return ['jeton' => trim($jeton), 'base' => rtrim(trim($base), '/'), 'source' => trim($jeton) !== '' ? $source : null, 'impose' => $impose];
+        return ['jeton' => $C[0]['jeton'] ?? '', 'base' => rtrim(trim($base), '/'), 'source' => $C[0]['origine'] ?? null, 'impose' => $impose, 'candidats' => $C];
     }
 
     public static function configured(): bool
@@ -760,7 +815,11 @@ final class MdSms
         return self::config()['jeton'] !== '';
     }
 
-    /** Un SMS. Rend [ok, identifiant SMSAPI ou message d'erreur]. */
+    /**
+     * Un SMS. Rend [ok, identifiant SMSAPI ou message d'erreur]. Un jeton refusé (101) : le suivant des candidats, et
+     * sur l'autre plateforme quand personne n'en a imposé une ; celui qui passe est retenu (mdSmsOrigine,
+     * mdSmsBaseAuto). Une autre erreur (numéro, pays, crédit) s'arrête là : changer de jeton n'y ferait rien.
+     */
     public static function envoyer(string $tel, string $texte, string $from = ''): array
     {
         $c = self::config();
@@ -769,22 +828,27 @@ final class MdSms
         if ($to === '') { return [false, 'numéro illisible : ' . $tel]; }
         $champs = ['to' => $to, 'message' => $texte, 'encoding' => 'utf-8', 'format' => 'json'];
         if (trim($from) !== '') { $champs['from'] = trim($from); }
-        $url = $c['base'] . '/sms.do';
-        [$code, $res] = self::$transport ? (self::$transport)($url, $champs, $c['jeton']) : self::curl($url, $champs, $c['jeton']);
-        if ($code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])) {
-            return [true, (string) ($res['list'][0]['id'] ?? '')];
-        }
-        // Jeton refusé (101) sur une plateforme que personne n'a imposée : l'autre (.com ↔ .pl), comme l'ERP ; celle qui
-        // répond est retenue (mdSmsBaseAuto) pour les envois suivants.
-        $autre = array_values(array_diff(self::PLATEFORMES, [$c['base']]))[0] ?? null;
-        if (!$c['impose'] && $autre !== null && count(array_diff(self::PLATEFORMES, [$c['base']])) === 1 && is_array($res) && (int) ($res['error'] ?? 0) === 101) {
-            [$code2, $res2] = self::$transport ? (self::$transport)($autre . '/sms.do', $champs, $c['jeton']) : self::curl($autre . '/sms.do', $champs, $c['jeton']);
-            if ($code2 >= 200 && $code2 < 300 && is_array($res2) && !isset($res2['error'])) {
-                try { if (function_exists('settingEcrire')) { settingEcrire('mdSmsBaseAuto', $autre); } } catch (Throwable $e) { /* retrouvée au prochain envoi */ }
-                return [true, (string) ($res2['list'][0]['id'] ?? '')];
+        $bases = $c['impose'] ? [$c['base']] : array_values(array_unique(array_merge([$c['base']], self::PLATEFORMES)));
+        $premier = null; $essais = [];
+        foreach ($c['candidats'] as $i => $cand) {
+            foreach ($bases as $b) {
+                [$code, $res] = self::$transport ? (self::$transport)($b . '/sms.do', $champs, $cand['jeton']) : self::curl($b . '/sms.do', $champs, $cand['jeton']);
+                if ($code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])) {
+                    if ($i > 0 || $b !== $c['base']) {
+                        try {
+                            if (function_exists('settingEcrire')) { settingEcrire('mdSmsOrigine', $cand['origine']); if (!$c['impose']) { settingEcrire('mdSmsBaseAuto', $b); } }
+                        } catch (Throwable $e) { /* retrouvés au prochain envoi */ }
+                        self::oublier();
+                    }
+                    return [true, (string) ($res['list'][0]['id'] ?? '')];
+                }
+                $premier ??= [$code, $res, $b];
+                $refus = (is_array($res) && (int) ($res['error'] ?? 0) === 101) || ($code === 401 && !(is_array($res) && isset($res['error'])));
+                if (!$refus) { return [false, self::erreur($code, $res, $b)]; }
+                $essais[] = $cand['origine'] . ' sur ' . (string) parse_url($b, PHP_URL_HOST);
             }
         }
-        return [false, self::erreur($code, $res, $c['base'])];
+        return [false, self::erreur($premier[0], $premier[1], $premier[2]) . (count($essais) > 1 ? ' — jetons essayés : ' . implode(', ', $essais) : '')];
     }
 
     /** Le compte SMSAPI (GET /profile) : le jeton est-il bon ? Sans envoyer de SMS. Rend [ok, message]. */

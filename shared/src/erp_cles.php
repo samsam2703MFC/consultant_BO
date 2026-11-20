@@ -164,6 +164,18 @@ function erpClesLire(array $noms, string $portail = 'commun'): ?array
     return $out;
 }
 
+/**
+ * Les clés dont le nom contient `$mot`, tous portails confondus, AVEC leurs valeurs : [{cle, portail, valeur}]. Pour
+ * retrouver la clé d'une intégration rangée sous un nom qu'on ne connaît pas (le jeton SMSAPI du CRM, 20/11/2026).
+ */
+function erpClesCherche(string $mot): array
+{
+    try {
+        return array_map(static fn ($r) => ['cle' => (string) $r['cle'], 'portail' => (string) $r['portail'], 'valeur' => trim((string) $r['valeur'])],
+            Db::rows('SELECT cle, portail, valeur FROM erp_cles WHERE cle LIKE ? ORDER BY portail, cle', ['%' . $mot . '%']));
+    } catch (Throwable $e) { return []; }
+}
+
 /** L'inventaire des clés SANS leurs valeurs : nom, portail, intégration, secret, indice, longueur, date de mise à jour. */
 function erpClesInventaire(): array
 {
