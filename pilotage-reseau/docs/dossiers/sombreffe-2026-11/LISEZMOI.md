@@ -12,7 +12,7 @@ Le rapport d'entrée en soins intensifs de Sombreffe (magasin 5), mai 2025 → o
 | `Sombreffe-developpement-2026-11.pdf` | son PDF, 3 pages |
 | `prix.html`, `Sombreffe-prix-50-produits-2026-11.pdf` | le fichier des prix (20/11/2026) : les 50 produits les plus vendus du réseau, le tarif HTVA des quatre magasins, la médiane, l'écart et les pièces par mois de Sombreffe ; 1 page |
 | `Sombreffe-prix-marges-50-produits-2026-11.xlsx` | le classeur (20/11/2026) : prix HTVA des quatre magasins, prix d'achat HT (coût de recette), marge brute, ventes moyennes par mois ; tout en formules. `outils/excel_prix.py` le refait depuis les réponses du cockpit (/analyse/produits?mois=12, /exploitation/promos-magasin/produits) |
-| `Sombreffe-prix-marges-tous-produits-2026-11.xlsx` | le même classeur pour tous les produits (558) : les 400 de la grille du cockpit par volume, puis le reste des tarifs sans ventes mois par mois ; `python3 -I outils/excel_prix.py <réponses> prix-produits.json <sortie> tous` |
+| `Sombreffe-prix-marges-tous-produits-2026-11.xlsx` | le même classeur pour tous les produits (558) : les 400 de la grille du cockpit par volume, puis le reste des tarifs sans ventes mois par mois ; l'onglet « Proposition +5 % » chiffre la hausse de marge brute sans toucher au top 20 de Sombreffe (nouveaux prix modifiables) ; `python3 -I outils/excel_prix.py <réponses> prix-produits.json <sortie> tous` |
 
 ```bash
 python3 pilotage-reseau/docs/dossiers/sombreffe-2026-11/generer.py && node pilotage-reseau/docs/dossiers/sombreffe-2026-11/pdf.js

@@ -161,7 +161,7 @@ for r, p in enumerate(P, N0):
 rt = N1 + 1
 ws3.cell(row=rt, column=2, value=('Total des ' + str(len(P)) + ' produits') if TOUS else 'Total des 50 produits').font = f_bold
 for col, form, fmt in ((15, f'=SUM(O{N0}:O{N1})', '#,##0'), (16, f'=SUM(P{N0}:P{N1})', EUR0), (17, f'=SUM(Q{N0}:Q{N1})', EUR0), (18, f'=SUM(R{N0}:R{N1})', EUR0),
-                       (13, f'=IF(SUMIFS(P{N0}:P{N1},Q{N0}:Q{N1},"<>")=0,"",SUM(Q{N0}:Q{N1})/SUMIFS(P{N0}:P{N1},Q{N0}:Q{N1},"<>"))', PCT)):
+                       (13, f'=IF(SUMPRODUCT(--(Q{N0}:Q{N1}<>""),P{N0}:P{N1})=0,"",SUM(Q{N0}:Q{N1})/SUMPRODUCT(--(Q{N0}:Q{N1}<>""),P{N0}:P{N1}))', PCT)):
     x = ws3.cell(row=rt, column=col, value=form); x.font = f_bold; x.number_format = fmt
 for col in range(1, 19): ws3.cell(row=rt, column=col).fill = fill_tot
 ws3.cell(row=rt, column=13).comment = Comment('Marge brute moyenne pondérée par le CA, sur les produits qui ont un prix d’achat.', 'Cockpit')
@@ -218,6 +218,114 @@ for k, n in enumerate([
     'Magasins : Corbais (Atelier by Berlo), Gosselies (Atelier by Max & Sandra), Halle, Sombreffe (Atelier by Harmonie).']):
     wn.cell(row=3 + k, column=1, value=n).font = f_norm
 wn.column_dimensions['A'].width = 140
+
+# --- 6. La proposition +5 % de marge brute (20/11/2026, Sam : « gagner +5 % en marge brute sans toucher aux produits les
+#     plus vendus »). Le top 20 de Sombreffe (ventes des 11 mois clos) ne bouge pas. Sur les autres, dans l'ordre :
+#     1. aligner sur la médiane du réseau ce que Sombreffe vend moins cher (+15 % au plus) ;
+#     2. remonter à 50 % de marge ce qui est en dessous (+10 % au plus) ;
+#     3. +3 % sur le reste de la carte.
+#     Le nouveau prix TVAC s'arrondit aux 10 centimes au-dessus. Volume égal. Coût plus haut que le prix : à vérifier, à part.
+if TOUS:
+    import math
+    up = lambda x: math.ceil(round(x / 0.10, 6)) * 0.10
+    CAP_ALIGNE, CIBLE, CAP_MARGE, GEN, NTOP = 0.15, 0.50, 0.10, 0.03, 20
+    EXCLUS = {'Sandwich du Jour'}            # pas le même produit d'un magasin à l'autre
+    lignesP = []
+    for idx, p in enumerate(P):
+        r = N0 + idx
+        t5 = T['5'].get(p['pid'])
+        v = (GP[p['pid']]['parShop'].get('5') or [0] * NM)[:NM - 1] if p['pid'] in GP else None
+        vol = sum(v) / len(v) if v else 0
+        ht = {s: (T[s][p['pid']]['prixTtc'] / (1 + (T[s][p['pid']]['tva'] or 0) / 100)) for s, _ in MAG
+              if p['pid'] in T[s] and T[s][p['pid']].get('prixTtc') is not None}
+        lignesP.append({'r': r, 'p': p, 't5': t5, 'vol': vol, 'ht': ht})
+    vendus = sorted([x for x in lignesP if x['vol'] > 0], key=lambda x: -x['vol'])
+    top = vendus[:NTOP]; topR = {x['r'] for x in top}
+    rangS = {x['r']: k + 1 for k, x in enumerate(vendus)}
+    prop, anomalies = [], []
+    for x in vendus:
+        t5, p = x['t5'], x['p']
+        if x['r'] in topR or p['nom'] in EXCLUS or not t5 or t5.get('prixTtc') is None or t5.get('cout') is None:
+            continue
+        tva = (t5['tva'] or 0) / 100; pr = t5['prixTtc'] / (1 + tva); c = t5['cout']
+        if c >= pr:
+            anomalies.append(x); continue
+        meds = sorted(x['ht'].values()); n = len(meds)
+        med = (meds[(n - 1) // 2] + meds[n // 2]) / 2 if n else None
+        nv, motif = pr, None
+        if med and pr < med * 0.995:
+            nv, motif = min(med, pr * (1 + CAP_ALIGNE)), 'aligner sur le réseau'
+        if (nv - c) / nv < CIBLE:
+            n2 = min(c / (1 - CIBLE), pr * (1 + CAP_MARGE))
+            if n2 > nv:
+                nv, motif = n2, (motif + ' + marge' if motif else f'marge sous {CIBLE * 100:.0f} %')
+        if motif is None:
+            nv, motif = pr * (1 + GEN), f'+{GEN * 100:.0f} % sur le reste'
+        nttc = round(up(nv * (1 + tva)), 2)
+        if nttc > t5['prixTtc'] + 0.001:
+            prop.append((x, motif, nttc))
+    prop.sort(key=lambda z: -((z[2] / (1 + (z[0]['t5']['tva'] or 0) / 100)) - z[0]['t5']['prixTtc'] / (1 + (z[0]['t5']['tva'] or 0) / 100)) * z[0]['vol'])
+
+    wq = wb.create_sheet('Proposition +5 %', 1)
+    tete(wq, 'Sombreffe — gagner +5 % de marge brute sans toucher aux produits les plus vendus',
+         f'Le top {NTOP} de Sombreffe ne bouge pas. Sur les autres : 1. aligner sur la médiane du réseau (+{CAP_ALIGNE*100:.0f} % au plus) ; 2. remonter à {CIBLE*100:.0f} % de marge (+{CAP_MARGE*100:.0f} % au plus) ; 3. +{GEN*100:.0f} % sur le reste. Prix TVAC arrondis aux 10 centimes. Volume égal. En bleu : les nouveaux prix, modifiables.')
+    n0, n1 = 15, 15 + len(prop) - 1
+    R_TOT = N1 + 1
+    resume = [
+        ('Marge brute actuelle / mois (produits avec prix d’achat)', f"='Prix et marges'!Q{R_TOT}", EUR0),
+        ('CA HTVA actuel / mois (mêmes produits)', f"=SUMPRODUCT(--('Prix et marges'!Q{N0}:Q{N1}<>\"\"),'Prix et marges'!P{N0}:P{N1})", EUR0),
+        ('Gain de marge brute / mois', f'=SUM(N{n0}:N{n1})', EUR0),
+        ('Gain de marge brute, en % de la marge actuelle', '=IF(B4=0,"",B6/B4)', PCT),
+        ('Gain de marge brute / an', '=B6*12', EUR0),
+        ('Marge brute % avant', '=IF(B5=0,"",B4/B5)', PCT),
+        ('Marge brute % après', '=IF(B5=0,"",(B4+B6)/(B5+B6))', PCT),
+        ('Objectif : +5 % de marge brute / mois', '=B4*0.05', EUR0),
+    ]
+    for k, (lab, form, fmt) in enumerate(resume):
+        a = wq.cell(row=4 + k, column=1, value=lab); a.font = f_bold if k in (2, 3) else f_norm
+        b = wq.cell(row=4 + k, column=2, value=form); b.font = f_bold if k in (2, 3) else f_norm; b.number_format = fmt
+        b.fill = fill_tot
+    wq.merge_cells('A4:A4')
+    HQ = ['Rang Sombreffe', 'Produit', 'Catégorie', 'Ce qu’on fait', 'Prix TVAC actuel', 'Nouveau prix TVAC', 'Hausse', 'TVA',
+          'Nouveau prix HTVA', 'Prix d’achat HT', 'Marge % avant', 'Marge % après', 'Ventes / mois (11 mois)', 'Gain de marge / mois']
+    for k, h in enumerate(HQ): entete(wq, 14, k + 1, h)
+    for i, (x, motif, nttc) in enumerate(prop):
+        rr, r = n0 + i, x['r']
+        tt, tv = L(TCOL['5']['ttc']), L(TCOL['5']['tva'])
+        vals = [(1, rangS[r], '0', f_norm), (2, x['p']['nom'], None, f_norm), (3, x['p']['cat'], None, f_norm), (4, motif, None, f_norm),
+                (5, f'=Tarifs!{tt}{r}', EUR, f_link), (6, nttc, EUR, f_in), (7, f'=IF(E{rr}=0,"",F{rr}/E{rr}-1)', PCT, f_norm),
+                (8, f'=Tarifs!{tv}{r}', '0%', f_link), (9, f'=F{rr}/(1+H{rr})', EUR, f_norm), (10, f"='Prix et marges'!K{r}", EUR, f_link),
+                (11, f"='Prix et marges'!M{r}", PCT, f_link), (12, f'=IF(I{rr}=0,"",(I{rr}-J{rr})/I{rr})', PCT, f_norm),
+                (13, f"='Prix et marges'!O{r}", '#,##0', f_link), (14, f"=(I{rr}-'Prix et marges'!H{r})*M{rr}", EUR0, f_norm)]
+        for col, v, fmt, font in vals:
+            c = wq.cell(row=rr, column=col, value=v); c.font = font
+            if fmt: c.number_format = fmt
+        wq.cell(row=rr, column=6).fill = PatternFill('solid', fgColor='FFF9DB')
+    # Le top 20, qui ne bouge pas, et les prix à vérifier.
+    rr = n1 + 3
+    wq.cell(row=rr, column=1, value=f'Le top {NTOP} de Sombreffe : inchangé').font = f_bold
+    for k, h in enumerate(('Rang Sombreffe', 'Produit', 'Catégorie', 'Ventes / mois (11 mois)', 'Prix TVAC', 'Marge %')): entete(wq, rr + 1, k + 1, h)
+    for k, x in enumerate(top):
+        r, ro = x['r'], rr + 2 + k
+        for col, v, fmt, font in ((1, k + 1, '0', f_norm), (2, x['p']['nom'], None, f_norm), (3, x['p']['cat'], None, f_norm),
+                                  (4, f"='Prix et marges'!O{r}", '#,##0', f_link), (5, f"=IF(Tarifs!{L(TCOL['5']['ttc'])}{r}=\"\",\"\",Tarifs!{L(TCOL['5']['ttc'])}{r})", EUR, f_link),
+                                  (6, f"='Prix et marges'!M{r}", PCT, f_link)):
+            c = wq.cell(row=ro, column=col, value=v); c.font = font
+            if fmt: c.number_format = fmt
+    ra = rr + 2 + len(top) + 2
+    wq.cell(row=ra, column=1, value='À vérifier : le prix d’achat est plus haut que le prix de vente (erreur de prix en caisse, ou de recette au panel) — hors du calcul').font = f_bold
+    for k, h in enumerate(('Rang Sombreffe', 'Produit', 'Catégorie', 'Ventes / mois (11 mois)', 'Prix HTVA', 'Prix d’achat HT', 'Médiane réseau HTVA')): entete(wq, ra + 1, k + 1, h)
+    for k, x in enumerate(anomalies):
+        r, ro = x['r'], ra + 2 + k
+        for col, v, fmt, font in ((1, rangS[r], '0', f_norm), (2, x['p']['nom'], None, f_norm), (3, x['p']['cat'], None, f_norm),
+                                  (4, f"='Prix et marges'!O{r}", '#,##0', f_link), (5, f"='Prix et marges'!H{r}", EUR, f_link),
+                                  (6, f"='Prix et marges'!K{r}", EUR, f_link), (7, f"='Prix et marges'!I{r}", EUR, f_link)):
+            c = wq.cell(row=ro, column=col, value=v); c.font = font
+            if fmt: c.number_format = fmt
+    for k, w in enumerate([46, 34, 20, 26, 11, 11, 8, 6, 11, 11, 10, 10, 11, 12]): wq.column_dimensions[L(k + 1)].width = w
+    wq.row_dimensions[14].height = 30
+    wq.freeze_panes = 'C15'
+    wq.auto_filter.ref = f'A14:N{n1}'
 
 for w in wb.worksheets:
     w.sheet_properties.pageSetUpPr.fitToPage = True
