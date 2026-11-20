@@ -26,6 +26,16 @@ final class Db
      */
     public static function rows(string $sql, array $a = []): array
     {
+        // Les réglages du CRM (crm_settings, même base) : $CRMREG [skey => svalue].
+        if (str_contains($sql, 'FROM crm_settings')) {
+            return array_map(static fn ($k, $v) => ['skey' => $k, 'svalue' => $v], array_keys($GLOBALS['CRMREG'] ?? []), array_values($GLOBALS['CRMREG'] ?? []));
+        }
+        if (str_contains($sql, 'FROM erp_cles') && str_contains($sql, 'LIKE')) {   // erpClesCherche()
+            $mot = trim((string) ($a[0] ?? ''), '%');
+            $out = [];
+            foreach ($GLOBALS['CLES'] as $n => $c) { if (str_contains($n, $mot)) { $out[] = ['cle' => $n, 'portail' => $c['portail'] ?? 'commun', 'valeur' => $c['valeur']]; } }
+            return $out;
+        }
         if (str_contains($sql, 'FROM erp_cles')) {
             if (str_contains($sql, 'portail IN')) {   // erpCle() : toutes les clés lisibles
                 $l = array_map(static fn ($c, $n) => ['cle' => $n, 'valeur' => $c['valeur']], $GLOBALS['CLES'], array_keys($GLOBALS['CLES']));
@@ -361,7 +371,7 @@ verifie('sans entreprise ni personnes : « un bureau », « ? »', str_contains(
 
 // --- 8. SMSAPI ----------------------------------------------------------------------------------------------
 echo "SMSAPI (simulé)\n";
-$REGLAGES['mdSmsJeton'] = 'jeton-test';
+$REGLAGES['mdSmsJeton'] = 'jeton-test'; MdSms::oublier();
 $vu = null;
 MdSms::$transport = static function (string $url, array $champs, string $jeton) use (&$vu): array {
     $vu = [$url, $champs, $jeton];
@@ -379,15 +389,17 @@ MdSms::$transport = static function (string $url, ?array $champs, string $jeton)
 };
 [$okP, $infoP] = MdSms::profil();
 verifie('profil SMSAPI lu sans envoyer de SMS', $okP && $infoP === 'atelierby · 412.5 points', $infoP);
-// La clé SMSAPI commune de l'ERP (20/11/2026) : erp_cles « smsapi_token », quand MétaDonnée n'a pas de jeton ; un jeton
-// refusé (101) sur .com essaie .pl, et la plateforme qui répond est retenue.
-$CLES = ['smsapi_token' => ['valeur' => 'jeton-erp', 'portail' => 'commun']]; $REGLAGES = []; erpCle('');
+// Les jetons SMSAPI connus (20/11/2026) : celui de MétaDonnée, celui du CRM (crm_settings), les clés « sms » d'erp_cles
+// (dont « smsapi_token », celle de l'ERP) ; un jeton refusé (101) passe au suivant et à l'autre plateforme ; celui qui
+// passe est retenu.
+$CLES = ['smsapi_token' => ['valeur' => 'jeton-erp-0001', 'portail' => 'commun'], 'smsapi_base' => ['valeur' => '', 'portail' => 'commun']];
+$REGLAGES = []; $CRMREG = []; erpCle(''); MdSms::oublier();
 $c = MdSms::config();
-verifie('sans jeton MétaDonnée : la clé commune de l’ERP (smsapi_token)', $c['jeton'] === 'jeton-erp' && $c['source'] === 'erp_cles (smsapi_token)' && MdSms::configured(), json_encode($c));
+verifie('sans jeton MétaDonnée : la clé commune de l’ERP (smsapi_token)', $c['jeton'] === 'jeton-erp-0001' && $c['source'] === 'erp_cles smsapi_token (commun)' && MdSms::configured(), json_encode($c));
 $urls = [];
 MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$urls): array {
     $urls[] = $url;
-    return str_starts_with($url, 'https://api.smsapi.pl') && $jeton === 'jeton-erp' ? [200, ['count' => 1, 'list' => [['id' => 'PL1']]]] : [401, ['error' => 101, 'message' => 'Authorization failed']];
+    return str_starts_with($url, 'https://api.smsapi.pl') && $jeton === 'jeton-erp-0001' ? [200, ['count' => 1, 'list' => [['id' => 'PL1']]]] : [401, ['error' => 101, 'message' => 'Authorization failed']];
 };
 [$okS, $id] = MdSms::envoyer('+48 725 038 049', 'Essai');
 verifie('jeton refusé sur .com : .pl essayé, le SMS part', $okS && $id === 'PL1' && $urls === ['https://api.smsapi.com/sms.do', 'https://api.smsapi.pl/sms.do'], json_encode($urls));
@@ -395,10 +407,40 @@ verifie('.pl est retenue pour la suite', ($REGLAGES['mdSmsBaseAuto'] ?? '') === 
 $urls = [];
 [$okS] = MdSms::envoyer('+48 725 038 049', 'Encore');
 verifie('l’envoi suivant va droit sur .pl', $okS && $urls === ['https://api.smsapi.pl/sms.do'], json_encode($urls));
-$REGLAGES['mdSmsJeton'] = 'jeton-md'; erpCle('');
-verifie('le jeton de MétaDonnée garde la priorité', MdSms::config()['jeton'] === 'jeton-md');
+
+// Le jeton OAuth du CRM : l'ERP est refusé partout, le CRM passe sur .com ; il est retenu et passe devant.
+$CLES = ['smsapi_token' => ['valeur' => 'jeton-erp-0001', 'portail' => 'commun']];
+$REGLAGES = []; $CRMREG = ['smsapi_oauth_token' => 'Bearer jeton-crm-0002', 'sms_from' => 'AtelierBy']; erpCle(''); MdSms::oublier();
+verifie('les candidats : le CRM (sans « Bearer »), puis l’ERP ; pas l’expéditeur', array_column(MdSms::candidats(), 'origine') === ['CRM (crm_settings smsapi_oauth_token)', 'erp_cles smsapi_token (commun)']
+    && MdSms::candidats()[0]['jeton'] === 'jeton-crm-0002', json_encode(array_column(MdSms::candidats(), 'origine')));
+$CRMREG = ['sms' => '{"provider":"smsapi","oauth_token":"jeton-crm-0002","from":"AtelierBy"}']; MdSms::oublier();
+verifie('un réglage JSON du CRM : son champ « oauth_token »', (MdSms::candidats()[0]['jeton'] ?? '') === 'jeton-crm-0002', json_encode(array_column(MdSms::candidats(), 'origine')));
+$CRMREG = ['smsapi_oauth_token' => 'jeton-crm-0002']; MdSms::oublier();
+$REGLAGES['mdSmsJeton'] = 'jeton-md-mauvais'; MdSms::oublier();
+$urls = [];
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$urls): array {
+    $urls[] = parse_url($url, PHP_URL_HOST) . ':' . $jeton;
+    return $jeton === 'jeton-crm-0002' && str_starts_with($url, 'https://api.smsapi.com') ? [200, ['count' => 1, 'list' => [['id' => 'CRM1']]]] : [401, ['error' => 101, 'message' => 'Authorization failed']];
+};
+[$okS, $id] = MdSms::envoyer('+48 725 038 049', 'Essai');
+verifie('MétaDonnée refusé (.com, .pl), le CRM passe sur .com', $okS && $id === 'CRM1' && $urls === ['api.smsapi.com:jeton-md-mauvais', 'api.smsapi.pl:jeton-md-mauvais', 'api.smsapi.com:jeton-crm-0002'], json_encode($urls));
+verifie('le CRM est retenu et passe devant', ($REGLAGES['mdSmsOrigine'] ?? '') === 'CRM (crm_settings smsapi_oauth_token)' && MdSms::config()['source'] === 'CRM (crm_settings smsapi_oauth_token)', json_encode($REGLAGES));
+$urls = [];
+[$okS] = MdSms::envoyer('+48 725 038 049', 'Encore');
+verifie('l’envoi suivant va droit au CRM', $okS && $urls === ['api.smsapi.com:jeton-crm-0002'], json_encode($urls));
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton): array { return [401, ['error' => 101, 'message' => 'Authorization failed']]; };
+$REGLAGES = []; MdSms::oublier();
+[$okS, $err] = MdSms::envoyer('+48 725 038 049', 'x');
+verifie('tous refusés : l’erreur dit les jetons essayés, sans leurs valeurs', !$okS && str_contains($err, '(101)') && str_contains($err, 'jetons essayés : CRM (crm_settings smsapi_oauth_token) sur api.smsapi.com')
+    && !str_contains($err, 'jeton-crm'), $err);
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$urls): array { $urls[] = $url; return [200, ['error' => 13, 'message' => 'Invalid phone number']]; };
+$urls = [];
+[$okS, $err] = MdSms::envoyer('+48 725 038 049', 'x');
+verifie('une autre erreur (numéro) : un seul essai', !$okS && count($urls) === 1 && str_contains($err, '(13)'), json_encode($urls));
+$REGLAGES['mdSmsJeton'] = 'jeton-md-0003'; MdSms::oublier();
+verifie('le jeton de MétaDonnée passe devant tant que rien n’a été retenu', MdSms::config()['jeton'] === 'jeton-md-0003', json_encode([array_column(MdSms::candidats(), 'origine'), $REGLAGES]));
 MdSms::$transport = null;
-$CLES = []; $REGLAGES = []; erpCle('');
+$CLES = []; $REGLAGES = []; $CRMREG = []; erpCle(''); MdSms::oublier();
 [$okS, $err] = MdSms::envoyer('0476000012', 'x');
 verifie('sans jeton : rien ne part', !$okS && str_contains($err, 'jeton'));
 
