@@ -43,7 +43,7 @@ function sms(M, x){
   if (M.chargement) { return '<div class="hd-sms"><span class="vr-mu">Lecture du réglage des SMS…</span></div>'; }
   if (M.erreur) { return `<div class="hd-sms"><span class="hd-sms-ko">SMS au bureau : ${esc(M.erreur)}</span></div>`; }
   const tete = `<div class="hd-sms-t"><b>SMS au bureau</b><span class="${M.alerte ? 'hd-sms-ko' : ''}">${esc(M.resume)}</span><span class="vr-sp"></span><button class="mko-pied-btn" ${x.A(M.basculer)}>${M.ouvert ? 'Fermer' : 'Régler'}</button></div>`;
-  const sansFournisseur = M.fournisseur ? '' : '<div class="hd-sms-ko">Aucun fournisseur SMS réglé : réglez SMSAPI dans MétaDonnée › Alertes SMS. Rien ne part en attendant.</div>';
+  const sansFournisseur = M.fournisseur ? '' : '<div class="hd-sms-ko">Aucun fournisseur SMS réglé : ni jeton SMSAPI dans MétaDonnée › Alertes SMS, ni clé « smsapi_token » dans erp_cles. Rien ne part en attendant.</div>';
   if (!M.ouvert) { return `<div class="hd-sms">${tete}${sansFournisseur}<div class="vr-mu">${esc(M.dernier)}</div></div>`; }
   const segs = l => `<div class="hd-seg">${l.map(o => `<button class="${o.on ? 'on' : ''}" ${x.A(o.choisir)}>${esc(o.nom)}</button>`).join('')}</div>`;
   const regle = (titre, sous, corps, note) => `<div class="hd-r"><div><b>${esc(titre)}</b>${sous ? `<small>${esc(sous)}</small>` : ''}</div><div>${corps}${note ? `<div class="note">${esc(note)}</div>` : ''}</div></div>`;
