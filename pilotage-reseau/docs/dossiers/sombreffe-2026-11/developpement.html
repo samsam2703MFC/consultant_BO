@@ -188,8 +188,9 @@ body { margin: 0; background: var(--paper); }
   #page-2, #page-3, #page-4, #annexes { break-before: page; }
   #pieces, #page-fin, #annexe-prix, #annexe-volumes { break-before: page; }
   #prix-table, #volumes-table { font-size: 10px; line-height: 1.25; }   /* 50 lignes sur une page */
-  #prix-table td, #volumes-table td { padding: 1px 4px; } #prix-table th, #volumes-table th { padding: 2px 4px; font-size: 9.5px; }
-  .mode-dev #page-3, .mode-dev #pieces { break-before: auto; }   /* la version « Développement » : la tête et les trois axes sur la même page, le plan et les pièces ensemble */   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
+  #prix-table td, #volumes-table td { padding: 1px 3px; } #prix-table th, #volumes-table th { padding: 2px 3px; font-size: 9px; letter-spacing: 0; }
+  .mode-dev #page-3, .mode-dev #pieces { break-before: auto; }
+  .mode-prix #annexe-prix { break-before: auto; }   /* le fichier des prix : une seule page */   /* la version « Développement » : la tête et les trois axes sur la même page, le plan et les pièces ensemble */   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
   #evolution-tuiles { grid-template-columns: repeat(4, 1fr); }   /* l’annexe simplifiée : les tuiles du cockpit, quatre de front */
 }
 /* Lisible imprimé (13/11/2026, Sam : « trop petit, illisible ») : au PDF (échelle 0,8), le texte courant fait environ
@@ -1435,20 +1436,21 @@ if (D.prixProduits) {
   const ht = (p, s) => p.prix[s] ? p.prix[s].ht : null;
   const court = (n, k = 30) => n.length > k ? n.slice(0, k - 1).trimEnd() + '…' : n;
   let sous = 0, dessus = 0, egal = 0;
-  $('prix-table').innerHTML = `<thead><tr><th>#</th><th>Produit</th><th class="num">Pièces · réseau, 12 mois</th>${ordre.map(s => `<th class="num">${esc(NOM[s])}</th>`).join('')}<th class="num">Médiane</th><th class="num">Sombreffe vs médiane</th></tr></thead><tbody>`
+  $('prix-table').innerHTML = `<thead><tr><th>#</th><th>Produit</th><th class="num">Pièces réseau, 12 mois</th>${ordre.map(s => `<th class="num">${esc(NOM[s])}</th>`).join('')}<th class="num">Médiane</th><th class="num">Écart Sombreffe</th><th class="num">Sombreffe pièces / mois</th></tr></thead><tbody>`
     + PP.produits.map((p, i) => {
       const m = med(ordre.map(s => ht(p, s))), me = ht(p, '5'), e = me != null && m ? (me / m - 1) * 100 : null;
       if (e != null) { if (e < -0.5) { sous++; } else if (e > 0.5) { dessus++; } else { egal++; } }
-      return `<tr><td>${i + 1}</td><td class="nom" title="${esc(p.nom)}">${esc(court(p.nom))}</td><td class="num">${grp(p.total)}</td>`
+      return `<tr><td>${i + 1}</td><td class="nom" title="${esc(p.nom)}">${esc(court(p.nom, 26))}</td><td class="num">${grp(p.total)}</td>`
         + ordre.map(s => `<td class="num${s === '5' ? ' moi-col' : ''}">${ht(p, s) != null ? eur2(ht(p, s)) : '—'}</td>`).join('')
-        + `<td class="num">${m != null ? eur2(m) : '—'}</td><td class="num ${e != null && e < -0.5 ? 'down' : ''}">${e != null ? pct(e) : '—'}</td></tr>`;
+        + `<td class="num">${m != null ? eur2(m) : '—'}</td><td class="num ${e != null && e < -0.5 ? 'down' : ''}">${e != null ? pct(e) : '—'}</td>`
+        + `<td class="num">${(() => { const v = p.volume5.slice(0, -1).filter(x => x > 0); return v.length ? grp(v.reduce((a, x) => a + x, 0) / v.length) : '—'; })()}</td></tr>`;
     }).join('') + '</tbody>';
   $('prix-points').innerHTML = [
     `Les 50 produits qui se vendent le plus dans le réseau, en pièces, de ${PP.tranches[0].toLowerCase()} à ${PP.tranches[PP.tranches.length - 1].toLowerCase()} (au ${dateC(PP.bornes[PP.bornes.length - 1][1])}).`,
     `Prix de vente HTVA : le tarif de la caisse de chaque magasin, hors TVA. « — » : pas à la carte du magasin. Médiane : celle des magasins qui ont le produit.`,
-    `Sombreffe est sous la médiane sur ${sous} produits, au-dessus sur ${dessus}, au même prix sur ${egal}.`,
+    `Sombreffe est sous la médiane sur ${sous} produits, au-dessus sur ${dessus}, au même prix sur ${egal}. Pièces / mois : la moyenne des mois clos où Sombreffe l’a vendu.`,
   ].map(x => `<li>${esc(insec(x))}</li>`).join('');
-  $('annexe-prix').hidden = false;
+  $('annexe-prix').hidden = D.mode !== 'prix';   // un fichier à part (20/11/2026)
   // Le volume mensuel de Sombreffe : les mois clos, puis le mois en cours (*), et la moyenne des mois clos où il s'est vendu.
   const nT = PP.tranches.length, enCours = PP.jours[nT - 1] < new Date(PP.bornes[nT - 1][1].slice(0, 7) + '-01T12:00:00').getDate() || true;
   const clos = PP.tranches.slice(0, nT - 1), labT = t => t.replace(/ 20(\d\d)$/, ' $1').toLowerCase();
@@ -1463,7 +1465,7 @@ if (D.prixProduits) {
     `Les pièces vendues par Sombreffe, mois par mois, sur les 50 produits de la page précédente, dans le même ordre. * ${labT(PP.tranches[nT - 1])} : ${PP.jours[nT - 1]} jours.`,
     `Moyenne par mois : celle des mois clos où le produit s’est vendu. Ces 50 produits : ${grp(Math.min(...totMois))} à ${grp(Math.max(...totMois))} pièces par mois.`,
   ].map(x => `<li>${esc(insec(x))}</li>`).join('');
-  $('annexe-volumes').hidden = false;
+  $('annexe-volumes').hidden = true;   // retiré du rapport le 20/11/2026 : la moyenne par mois est dans le fichier des prix
 }
 
 /* --- Le personnel des quatre magasins --- */
@@ -1682,6 +1684,16 @@ if (D.mode === 'developpement') {
     $('couts').hidden = false;
   }
   $('dev-tete').hidden = false;
+}
+
+/* --- Le fichier des prix (20/11/2026, Sam) : le tableau des 50 produits, seul, avec sa tête. --- */
+if (D.mode === 'prix') {
+  document.title = 'Les prix des 50 produits les plus vendus du réseau';
+  ['page-1', 'page-2', 'page-3', 'page-4', 'annexes', 'annexe-a', 'annexe-volumes', 'page-fin'].forEach(id => { const e = $(id); if (e) { e.hidden = true; } });
+  document.body.classList.add('mode-prix');
+  const h = $('annexe-prix').querySelector('.rp-annexe-titre');
+  h.textContent = 'Les prix de vente des 50 produits les plus vendus du réseau';
+  h.insertAdjacentHTML('beforebegin', `<div class="rp-kicker">Pilotage réseau · les quatre magasins · prix HTVA · relevé du ${(D.prixProduits.source.match(/lu le ([\d/]+)/) || [, ''])[1]}</div>`);
 }
 
 /* --- Dessins, redessinés à la largeur --- */

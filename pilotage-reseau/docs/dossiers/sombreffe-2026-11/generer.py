@@ -564,6 +564,8 @@ def main():
     # Le PDF « Développement » (17/11/2026, Sam) : le même gabarit, les seules parties du développement des ventes,
     # pour la réunion du jeudi 19/11/2026.
     dev = dict(donnees, mode='developpement', reunion='2026-11-19')
+    # Le fichier des prix (20/11/2026, Sam : « seulement un fichier avec les prix ») : le tableau des 50 produits, seul.
+    (ICI / 'prix.html').write_text(gabarit.replace('/*__DONNEES__*/null', json.dumps(dict(donnees, mode='prix'), ensure_ascii=False)), encoding='utf-8')
     (ICI / 'developpement.html').write_text(gabarit.replace('/*__DONNEES__*/null', json.dumps(dev, ensure_ascii=False)), encoding='utf-8')
 
     # Contrôles à l'écran (pas dans le rapport).
