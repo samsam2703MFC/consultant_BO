@@ -11,6 +11,7 @@ Le rapport d'entrée en soins intensifs de Sombreffe (magasin 5), mai 2025 → o
 | `developpement.html` | la version « Développement » (réunion du 19/11/2026) : les trois axes et la grille, le plan, les pièces, la simulation du prix, les paires, les trois axes ensemble |
 | `Sombreffe-developpement-2026-11.pdf` | son PDF, 3 pages |
 | `prix.html`, `Sombreffe-prix-50-produits-2026-11.pdf` | le fichier des prix (20/11/2026) : les 50 produits les plus vendus du réseau, le tarif HTVA des quatre magasins, la médiane, l'écart et les pièces par mois de Sombreffe ; 1 page |
+| `Sombreffe-prix-marges-50-produits-2026-11.xlsx` | le classeur (20/11/2026) : prix HTVA des quatre magasins, prix d'achat HT (coût de recette), marge brute, ventes moyennes par mois ; tout en formules. `outils/excel_prix.py` le refait depuis les réponses du cockpit (/analyse/produits?mois=12, /exploitation/promos-magasin/produits) |
 
 ```bash
 python3 pilotage-reseau/docs/dossiers/sombreffe-2026-11/generer.py && node pilotage-reseau/docs/dossiers/sombreffe-2026-11/pdf.js
