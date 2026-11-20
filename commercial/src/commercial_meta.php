@@ -14,7 +14,10 @@ declare(strict_types=1);
  * MétaDonnée. Aucune lecture ni écriture dans les tables de MétaDonnée : ses fonctions seulement.
  */
 
-/** La définition du formulaire, sans appel : nom, questions, carte d'accueil, page de remerciement. */
+/**
+ * La définition du formulaire, sans appel : nom, questions, carte d'accueil, page de remerciement. La version
+ * néerlandaise est celle de Halle (le magasin néerlandophone du réseau, 20/11/2026 : « fais la version NL pour Halle »).
+ */
 function smFormulaireLunch(string $langue, string $site): array
 {
     $nl = $langue === 'nl';
@@ -24,7 +27,8 @@ function smFormulaireLunch(string $langue, string $site): array
         'name' => $nl ? 'LUNCH OP KANTOOR - NL' : 'LUNCH AU BUREAU - FR',
         'questions' => [
             ['type' => 'COMPANY_NAME'],
-            $q('nombre_de_personnes', $nl ? 'Met hoeveel personen zijn jullie op kantoor?' : 'Combien de personnes dans votre équipe ?', ['1 à 9', '10 à 24', '25 à 49', '50 et plus']),
+            $q('nombre_de_personnes', $nl ? 'Met hoeveel personen zijn jullie op kantoor?' : 'Combien de personnes dans votre équipe ?',
+                $nl ? ['1 tot 9', '10 tot 24', '25 tot 49', '50 of meer'] : ['1 à 9', '10 à 24', '25 à 49', '50 et plus']),
             $q('votre_besoin', $nl ? 'Wat is jullie behoefte?' : 'Quel est votre besoin ?',
                 $nl ? ['Lunch elke dag', 'Schotels voor vergaderingen', 'Ontbijt voor het team', 'Evenement of receptie']
                     : ['Lunch tous les jours', 'Plateaux réunion', 'Petit-déjeuner d’équipe', 'Événement']),
@@ -35,9 +39,9 @@ function smFormulaireLunch(string $langue, string $site): array
             ['type' => 'POST_CODE'],
         ],
         'context_card' => ['title' => $nl ? 'De lunch, geleverd op kantoor' : 'Le lunch livré au bureau', 'style' => 'PARAGRAPH_STYLE',
-            'content' => [$nl ? 'Broodjesschotels, koffiekoeken en taarten, geleverd door de L’Atelier By-winkel van jullie regio. Bestellen tot 16 u de dag voordien.'
+            'content' => [$nl ? 'Broodjesschotels, koffiekoeken en taarten, geleverd door L’Atelier By Halle. Bestellen tot 16 u de dag voordien.'
                 : 'Plateaux de sandwiches, viennoiseries et tartes, livrés par le magasin L’Atelier By de votre zone. Commande jusqu’à la veille 16 h.']],
-        'thank_you_page' => ['title' => $nl ? 'Bedankt! De winkel van jullie regio belt jullie terug.' : 'Merci ! Le magasin de votre zone vous rappelle.',
+        'thank_you_page' => ['title' => $nl ? 'Bedankt! L’Atelier By Halle belt jullie terug.' : 'Merci ! Le magasin de votre zone vous rappelle.',
             'body' => $nl ? 'We nemen binnen 24 uur contact op om een proeverij en jullie levering op kantoor te regelen.'
                 : 'Nous vous contactons sous 24 h pour organiser une dégustation et votre livraison au bureau.',
             'button_type' => 'VIEW_WEBSITE', 'button_text' => $nl ? 'Onze website' : 'Notre site', 'website_url' => $site],
@@ -129,12 +133,12 @@ function smPubLunch(string $langue): array
     }
     return $nl ? [
         'langue' => 'nl', 'formulaire' => 'LUNCH OP KANTOOR - NL',
-        'texte' => "De lunch van jullie team, geleverd op kantoor.
+        'texte' => "De lunch van jullie team, geleverd op kantoor in Halle en omgeving.
 
-Broodjesschotels, salades, quiches, koffiekoeken en dagschotels, ’s ochtends bereid door de L’Atelier By-winkel van jullie regio. Voor een vergadering, de dagelijkse lunch of een teamontbijt, van 5 tot 50 personen.
+Broodjesschotels, salades, quiches, koffiekoeken en dagschotels, ’s ochtends bereid door L’Atelier By Halle. Voor een vergadering, de dagelijkse lunch of een teamontbijt, van 5 tot 50 personen.
 
-Bestellen tot 16 u de dag voordien. Laat jullie gegevens achter: de winkel belt jullie binnen 24 uur terug om een gratis proeverij te regelen.",
-        'titre' => 'Lunch geleverd op kantoor', 'description' => 'Gratis proeverij · teruggebeld binnen 24 u', 'bouton' => 'Inschrijven',
+Bestellen tot 16 u de dag voordien. Laat jullie gegevens achter: L’Atelier By Halle belt jullie binnen 24 uur terug om een gratis proeverij te regelen.",
+        'titre' => 'Lunch geleverd op kantoor', 'description' => 'Gratis proeverij · teruggebeld binnen 24 u', 'bouton' => 'Inschrijven', 'magasin' => 'Halle',
         'videos' => $videos, 'aRendre' => $videos === [] ? 'node commercial/tools/video-lunch/rendre.cjs --langue nl' : null,
     ] : [
         'langue' => 'fr', 'formulaire' => 'LUNCH AU BUREAU - FR',
@@ -148,10 +152,32 @@ Commande jusqu’à la veille 16 h. Laissez vos coordonnées : le magasin vous r
     ];
 }
 
-/** GET /commercial/formulaires/pub?langue=fr — la vidéo et le post de la publicité « Lunch au bureau ». */
+/**
+ * L'aperçu du formulaire tel que Meta le montre (20/11/2026, demande : « rajouter la visualisation du formulaire
+ * (champs, …) ») : l'accueil, les questions (les champs que Meta préremplit, les choix), la confidentialité, le
+ * remerciement. Tiré de la définition (smFormulaireLunch), sans appel. Fonction pure.
+ */
+function smApercuFormulaire(string $langue): array
+{
+    $nl = $langue === 'nl';
+    $f = smFormulaireLunch($langue, 'https://www.atelierby.be');
+    $std = $nl ? ['COMPANY_NAME' => 'Bedrijfsnaam', 'FULL_NAME' => 'Volledige naam', 'JOB_TITLE' => 'Functie', 'EMAIL' => 'E-mail', 'PHONE' => 'Telefoonnummer', 'POST_CODE' => 'Postcode']
+        : ['COMPANY_NAME' => 'Nom de l’entreprise', 'FULL_NAME' => 'Nom complet', 'JOB_TITLE' => 'Fonction', 'EMAIL' => 'E-mail', 'PHONE' => 'Numéro de téléphone', 'POST_CODE' => 'Code postal'];
+    $questions = array_map(static fn ($q) => ($q['type'] ?? '') === 'CUSTOM'
+        ? ['label' => (string) $q['label'], 'choix' => array_column($q['options'] ?? [], 'value'), 'prerempli' => false]
+        : ['label' => $std[$q['type']] ?? (string) $q['type'], 'choix' => [], 'prerempli' => in_array($q['type'], ['FULL_NAME', 'EMAIL', 'PHONE'], true)], $f['questions']);
+    return ['nom' => $f['name'], 'page' => 'L’Atelier by',
+        'accueil' => ['titre' => $f['context_card']['title'], 'texte' => implode("\n", $f['context_card']['content'])],
+        'questions' => $questions,
+        'confidentialite' => $nl ? 'Privacybeleid · atelierby.be' : 'Politique de confidentialité · atelierby.be',
+        'merci' => ['titre' => $f['thank_you_page']['title'], 'texte' => $f['thank_you_page']['body'], 'bouton' => $f['thank_you_page']['button_text']]];
+}
+
+/** GET /commercial/formulaires/pub?langue=fr — la vidéo et le post de la publicité « Lunch au bureau », et l'aperçu du formulaire. */
 function ep_sm_formulaire_pub(): array
 {
-    return smPubLunch(($_GET['langue'] ?? '') === 'nl' ? 'nl' : 'fr');
+    $langue = ($_GET['langue'] ?? '') === 'nl' ? 'nl' : 'fr';
+    return smPubLunch($langue) + ['apercu' => smApercuFormulaire($langue)];
 }
 
 /** Les noms des formulaires que ce module crée : les seuls que le portail met en inactif ou réactive. */

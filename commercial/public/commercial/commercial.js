@@ -336,13 +336,22 @@
         <div class="card" style="padding:0;overflow:hidden;margin-top:16px"><div style="padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">Formulaires Meta <span class="aside" style="float:none;margin-left:8px">un lead n’arrive que d’un formulaire suivi</span></h2><span style="display:flex;gap:8px">${btn('Créer « Lunch au bureau » (FR)', 'creerForm', 'btn--sm btn--primary', 'fr')}${btn('(NL)', 'creerForm', 'btn--sm', 'nl')}</span></div><div id="formulaires" class="vide">Lecture des formulaires…</div></div>
         <div class="card" style="margin-top:16px" id="pub"><div class="vide">Lecture de la publicité…</div></div>
         <p class="pied">${esc(d.source)}. Un lead sans magasin prend celui de son code postal.</p>`;
+      // L'aperçu du formulaire tel que Meta le montre : l'accueil, les champs (préremplis ou à choix), la confidentialité, le merci.
+      const apercuForm = (a, langue) => !a ? '' : `<div class="pub-form"><div class="pub-form__tete">${esc(a.page)} · <span>${esc(a.nom)}</span></div>
+        <div class="pub-form__etape">1 · ${langue === 'nl' ? 'Intro' : 'Accueil'}</div><div class="pub-form__bloc"><div class="pub-form__titre">${esc(a.accueil.titre)}</div><div class="small">${esc(a.accueil.texte)}</div></div>
+        <div class="pub-form__etape">2 · ${langue === 'nl' ? 'Vragen' : 'Questions'} (${a.questions.length})</div>
+        <div class="pub-form__bloc">${a.questions.map(q => `<div class="pub-form__champ"><div class="pub-form__label">${esc(q.label)}${q.prerempli ? `<em>${langue === 'nl' ? 'vooraf ingevuld' : 'prérempli par Meta'}</em>` : ''}</div>
+          ${q.choix.length ? `<div class="pub-form__choix">${q.choix.map(c => `<span>${esc(c)}</span>`).join('')}</div>` : '<div class="pub-form__saisie"></div>'}</div>`).join('')}</div>
+        <div class="pub-form__etape">3 · ${langue === 'nl' ? 'Privacy' : 'Confidentialité'}</div><div class="pub-form__bloc small">${esc(a.confidentialite)}</div>
+        <div class="pub-form__etape">4 · ${langue === 'nl' ? 'Bedankt' : 'Remerciement'}</div><div class="pub-form__bloc"><div class="pub-form__titre">${esc(a.merci.titre)}</div><div class="small">${esc(a.merci.texte)}</div><div class="pub-form__bouton">${esc(a.merci.bouton)}</div></div></div>`;
       // La publicité « Lunch au bureau » : la vidéo et le post qui va avec (commercial_meta.php, smPubLunch).
       const pub = langue => api('GET', '/formulaires/pub?langue=' + langue).then(x => {
         const el = document.getElementById('pub'); if (!el) return;
         const champ = (k, l, v) => `<div style="margin-top:12px"><div class="field-label" style="display:flex;justify-content:space-between;align-items:center">${l}${btn('Copier', 'copier', 'btn--sm btn--ghost', k)}</div><div class="pub-texte" data-pub="${k}">${esc(v)}</div></div>`;
-        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">La publicité « Lunch au bureau » <span class="aside" style="float:none;margin-left:8px">la vidéo et le post, pour le formulaire ${esc(x.formulaire)}</span></h2>
+        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">La publicité « Lunch au bureau » <span class="aside" style="float:none;margin-left:8px">le formulaire, la vidéo et le post${x.magasin ? ' · ' + esc(x.magasin) : ''}</span></h2>
             <span style="display:flex;gap:6px">${btn('FR', 'pubLangue', 'btn--sm ' + (langue === 'fr' ? 'btn--primary' : ''), 'fr')}${btn('NL', 'pubLangue', 'btn--sm ' + (langue === 'nl' ? 'btn--primary' : ''), 'nl')}</span></div>
           <div class="pub">
+            ${apercuForm(x.apercu, langue)}
             <div class="pub-videos">${x.videos.length ? x.videos.map(v => `<figure><video src="${esc(v.mp4)}" poster="${esc(v.affiche)}" controls muted playsinline preload="none"></video>
               <figcaption>${esc(v.placement)} · ${v.duree} s · ${Math.round(v.octets / 1048576 * 10) / 10} Mo <a href="${esc(v.mp4)}" download>Télécharger</a></figcaption></figure>`).join('')
               : `<div class="info">Vidéo pas encore rendue dans cette langue : <code>${esc(x.aRendre || '')}</code></div>`}</div>
