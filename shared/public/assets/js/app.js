@@ -12,7 +12,7 @@ import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
-import { valsHelpdesk, nbDemandesOuvertes } from './helpdesk-vals.js';
+import { valsHelpdesk, nbDemandesOuvertes, valsATraiter } from './helpdesk-vals.js';
 import { valsFil, nbFilsOuverts } from './fil-vals.js';
 import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
@@ -1966,6 +1966,8 @@ class App {
     if (common.isVerifR) { valsVerification(this, common); common.large = true; }
     if (common.isParamProd) { valsParamProduits(this, common); common.large = true; }
     if (common.isHelpdesk) { valsHelpdesk(this, common); common.large = true; }
+    // L'accueil (Résultat) porte la carte « Demandes à traiter » : les demandes pas encore en cours, chaque jour (21/11/2026).
+    if (common.isRJour) { valsATraiter(this, common); }
     if (common.isFil) { valsFil(this, common); common.large = true; }
     if (common.isBench) { valsBenchmark(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }

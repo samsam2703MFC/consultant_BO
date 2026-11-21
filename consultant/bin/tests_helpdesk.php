@@ -197,8 +197,10 @@ verifie('le cockpit voit la date limite, les jours restants et les délais possi
 
 echo "Les relances\n";
 $rel = hdkRelancesReglage([]);
-verifie('par défaut, les choix validés : 7 j, 08:30, jours ouvrés, sans réponse, au consultant, regroupées, sans plafond',
-    $rel === ['actif' => true, 'jours' => 7, 'heure' => '08:30', 'ouvres' => true, 'quelles' => 'sans_reponse', 'aQui' => 'consultant', 'regrouper' => true, 'plafond' => 0], json_encode($rel));
+verifie('par défaut : 7 j, 08:30, jours ouvrés, tant que pas en cours (21/11), au consultant, regroupées, sans plafond',
+    $rel === ['actif' => true, 'jours' => 7, 'heure' => '08:30', 'ouvres' => true, 'quelles' => 'nouvelles', 'aQui' => 'consultant', 'regrouper' => true, 'plafond' => 0, 'v' => 2], json_encode($rel));
+verifie('un réglage d’avant le 21/11 (« sans réponse », sans version) prend « pas encore en cours » ; un choix enregistré depuis reste',
+    hdkRelancesReglage(['quelles' => 'sans_reponse'])['quelles'] === 'nouvelles' && hdkRelancesReglage(['quelles' => 'sans_reponse', 'v' => 2])['quelles'] === 'sans_reponse');
 verifie('un réglage hors des choix revient aux choix validés', hdkRelancesReglage(['jours' => 5, 'heure' => '25:00', 'quelles' => 'x', 'plafond' => 3]) === $rel);
 verifie('consultant par le nom : « Sam » ~ « Sam V. », « Pierre Boseret » ~ « Pierre B. »', hdkEstConsultant(['nom' => 'Sam'], 'Sam V.') && hdkEstConsultant(['nom' => 'Pierre Boseret'], 'Pierre B.'));
 verifie('… mais pas « Pierre M. » ni « Loïc V. »', !hdkEstConsultant(['nom' => 'Pierre Boseret'], 'Pierre M.') && !hdkEstConsultant(['nom' => 'Sam'], 'Loïc V.'));
@@ -213,9 +215,12 @@ verifie('puis 7 jours après la dernière relance', hdkProchaineRelance($dem(['i
 verifie('l’heure : pas avant 08:30, pas après 20:00, pas le week-end ; un retard part le jour même',
     !hdkRelanceDue('2026-11-23', $rel, '2026-11-23 08:29') && hdkRelanceDue('2026-11-23', $rel, '2026-11-23 08:30') && !hdkRelanceDue('2026-11-23', $rel, '2026-11-23 20:00')
     && !hdkRelanceDue('2026-11-23', $rel, '2026-11-28 09:00') && hdkRelanceDue('2026-11-23', $rel, '2026-11-24 09:00') && !hdkRelanceDue('2026-11-25', $rel, '2026-11-24 09:00'));
+$relSR = ['quelles' => 'sans_reponse'] + $rel;
 verifie('fin : fermée, répondue, suspendue, plafond',
-    hdkRelanceArret($dem(['id' => 1, 'status' => 'RESOLVED']), $rel, 0, null) === 'Résolue' && hdkRelanceArret($dem(['id' => 1, 'admin_reply' => 'ok', 'admin_reply_at' => '2026-12-01 10:00:00']), $rel, 2, null) === 'réponse le 01/12'
-    && hdkRelanceArret($dem(['id' => 1]), $rel, 0, ['le' => 'x', 'par' => 'Sam']) === 'suspendue' && hdkRelanceArret($dem(['id' => 1]), ['plafond' => 6] + $rel, 6, null) === '6 relances faites' && hdkRelanceArret($dem(['id' => 1]), $rel, 9, null) === null);
+    hdkRelanceArret($dem(['id' => 1, 'status' => 'RESOLVED']), $rel, 0, null) === 'Résolue' && hdkRelanceArret($dem(['id' => 1, 'admin_reply' => 'ok', 'admin_reply_at' => '2026-12-01 10:00:00']), $relSR, 2, null) === 'réponse le 01/12'
+    && hdkRelanceArret($dem(['id' => 1, 'status' => 'NEW']), $rel, 0, ['le' => 'x', 'par' => 'Sam']) === 'suspendue' && hdkRelanceArret($dem(['id' => 1, 'status' => 'NEW']), ['plafond' => 6] + $rel, 6, null) === '6 relances faites' && hdkRelanceArret($dem(['id' => 1, 'status' => 'NEW']), $rel, 9, null) === null);
+verifie('tant que pas en cours : « Nouvelle » se relance, même répondue ; « En cours » s’arrête',
+    hdkRelanceArret($dem(['id' => 1, 'status' => 'NEW', 'admin_reply' => 'ok']), $rel, 3, null) === null && hdkRelanceArret($dem(['id' => 1, 'status' => 'IN_PROGRESS']), $rel, 0, null) === 'passée en cours');
 
 // La maquette, rejouée : Sombreffe (trois demandes réelles), Gosselies (Pierre B.), mise en route le vendredi 20/11.
 $CASES = [
@@ -225,7 +230,8 @@ $CASES = [
     ['id' => 14, 'ref' => 'CASE-20261118-4F2D1', 'area_key' => 'product', 'status' => 'IN_PROGRESS', 'title' => 'Nouvelle tarte du mois : la pâte se rétracte', 'consultant_name' => 'Pierre B.', 'shop_id' => 6, 'shop_name' => 'Atelier by - Gosselies', 'created_at' => '2026-11-18 09:00:00'],
 ];
 $D = static fn (): array => array_map($dem, $GLOBALS['CASES']);
-$REGLAGES['helpdeskSms'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56']]];
+// La maquette a été validée avec la règle « sans réponse du bureau » : son scénario la garde (choix enregistré, v2).
+$REGLAGES['helpdeskSms'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56']], 'relances' => ['quelles' => 'sans_reponse', 'v' => 2]];
 $REGLAGES['helpdeskRelancesDepuis'] = '2026-11-20';
 MdSms::$partis = [];
 $r = hdkRelancesHorloge('2026-11-23 08:20', $D());
@@ -271,7 +277,7 @@ verifie('la fiche d’une demande répondue : arrêtée, réponse le 01/12', $v[
 $GLOBALS['corps'] = ['action' => 'reprendre'];
 wr_helpdesk_relances(13);
 verifie('reprendre la verrière', !isset(hdkRelancesSuspendues([13])[13]));
-$REGLAGES['helpdeskSms']['relances'] = ['regrouper' => false];
+$REGLAGES['helpdeskSms']['relances'] = ['regrouper' => false, 'quelles' => 'sans_reponse', 'v' => 2];
 MdSms::$partis = [];
 $CASES[1]['admin_reply'] = ''; $CASES[2]['consultant_name'] = 'Sam V.';
 hdkRelancesHorloge('2026-12-14 08:30', $D());
@@ -304,6 +310,25 @@ $GLOBALS['corps'] = ['action' => 'maintenant'];
 $n0 = (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance WHERE case_id = 11')['n'];
 $r = wr_helpdesk_relances(11);
 verifie('« Relancer maintenant » : le SMS part, noté comme relance manuelle', $r['ok'] === true && count(MdSms::$partis) === 1 && (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance WHERE case_id = 11 AND manuel = 1')['n'] === 1 && (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance WHERE case_id = 11')['n'] === $n0 + 1, json_encode($r));
+// La règle du 21/11 : tant que pas en cours. Seule la demande « Nouvelle » (Démarchage) se relance.
+$REGLAGES['helpdeskSms']['relances'] = [];
+$J0 = (int) Db::row('SELECT COUNT(*) AS n FROM con_hdk_relance')['n'];
+MdSms::$partis = [];
+$CASES[1]['admin_reply'] = ''; $CASES[3]['admin_reply'] = '';
+hdkRelancesHorloge('2026-12-28 08:30', $D());
+$cases = array_map('intval', array_column(Db::rows('SELECT case_id FROM con_hdk_relance WHERE id > ?', [$J0]), 'case_id'));
+verifie('tant que pas en cours : seule la demande « Nouvelle » est relancée (les « En cours » ne le sont plus, même sans réponse)',
+    $cases !== [] && array_values(array_unique($cases)) === [11] && str_contains(MdSms::$partis[0]['texte'] ?? '', 'pas encore en cours'), json_encode([$cases, MdSms::$partis[0]['texte'] ?? null]));
+
+echo "L'accueil : les demandes à traiter\n";
+$avecMagasin = static fn (array $l): array => array_map(static fn ($c) => $c + ['shop_id' => 4, 'shop_name' => 'Atelier by Harmonie - Sombreffe'], $l);
+$CASES2 = $avecMagasin($CASES); $CASES2[] = ['id' => 15, 'ref' => 'CASE-20261203-7C3E0', 'area_key' => 'sales', 'status' => 'NEW', 'title' => 'Commande de fin d’année', 'shop_id' => 7, 'shop_name' => 'Atelier by - Halle', 'created_at' => date('Y-m-d', strtotime('-2 days')) . ' 09:00:00'];
+PanelApi::$cases = $CASES2;
+$a = ep_helpdesk_a_traiter();
+verifie('les demandes pas encore en cours, la plus ancienne d’abord, avec leurs relances', $a['n'] === 2 && $a['demandes'][0]['id'] === 11 && $a['demandes'][0]['magasin'] === 'Sombreffe'
+    && $a['demandes'][0]['relances'] >= 4 && $a['demandes'][1]['id'] === 15 && $a['demandes'][1]['magasin'] === 'Halle' && $a['demandes'][1]['age'] === 2 && $a['demandes'][1]['relances'] === 0, json_encode($a));
+PanelApi::$cases = $CASES;
+
 $c = ep_helpdesk_demandes();
 verifie('la liste du cockpit porte les relances de chaque demande et celles à venir', isset($c['demandes'][0]['relances']['n'], $c['relances']['aVenir'], $c['relances']['sms']) && $c['relances']['sms'] >= 8, json_encode($c['relances'] ?? null));
 

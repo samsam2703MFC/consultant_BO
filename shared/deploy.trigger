@@ -214,3 +214,4 @@
 2026-11-20T21:27:17Z SMS : la clé SMSAPI commune de l'ERP (erp_cles smsapi_token) quand MétaDonnée n'a pas de jeton ; un jeton refusé sur .com essaie .pl
 2026-11-20T21:38:55Z SMS : le jeton OAuth SMSAPI du CRM (crm_settings) et toutes les clés « sms » d'erp_cles essayés tour à tour, sur .com et .pl ; celui qui passe est retenu
 2026-11-21T05:28:54Z SMS : un expéditeur refusé par SMSAPI (14) est remplacé par celui du CRM, puis par aucun ; celui qui passe est retenu
+2026-11-21T05:39:01Z Helpdesk : relances tant que la demande n'est pas en cours ; la carte « Demandes à traiter » sur l'accueil du cockpit (Résultat)

@@ -23,6 +23,7 @@ declare(strict_types=1);
  *   POST /helpdesk/sms/essai {tel} — un SMS d'essai à un numéro du réglage
  *   POST /helpdesk/demandes/{id}/relances {action: suspendre | reprendre | maintenant}
  *   GET  /helpdesk/relances/cron?jeton= — l'horloge des relances (bin/helpdesk_cron.sh)
+ *   GET  /helpdesk/a-traiter — les demandes pas encore en cours, pour la carte de l'accueil (21/11/2026)
  *   POST /helpdesk/missions/{id} {points[{etat, constat}], cloturer?, repondre?}
  *        — le constat de chaque point ; à la clôture, le constat repart en réponse et le statut suit (Résolue si tout
  *          est conforme, sinon En cours), les tâches de la mission sont faites
@@ -634,16 +635,22 @@ function wr_helpdesk_sms_essai(): array
  * L'horloge : GET /helpdesk/relances/cron?jeton= (bin/helpdesk_cron.sh, toutes les 10 minutes).
  * ------------------------------------------------------------------------------------------- */
 
-const HDK_RELANCES_DEFAUT = ['actif' => true, 'jours' => 7, 'heure' => '08:30', 'ouvres' => true, 'quelles' => 'sans_reponse', 'aQui' => 'consultant', 'regrouper' => true, 'plafond' => 0];
+// La règle (Sam, 21/11/2026) : « les relances se font tous les 7 jours tant que pas en cours » — une demande encore
+// « Nouvelle » ; elle s'arrête quand la demande passe « En cours » (une date limite fixée l'y fait passer).
+const HDK_RELANCES_DEFAUT = ['actif' => true, 'jours' => 7, 'heure' => '08:30', 'ouvres' => true, 'quelles' => 'nouvelles', 'aQui' => 'consultant', 'regrouper' => true, 'plafond' => 0];
 const HDK_RELANCES_JOURS = [3, 7, 14];
-const HDK_RELANCES_QUELLES = ['sans_reponse' => 'sans réponse', 'ouvertes' => 'en attente', 'retard' => 'en retard'];
+const HDK_RELANCES_QUELLES = ['nouvelles' => 'pas encore en cours', 'sans_reponse' => 'sans réponse', 'ouvertes' => 'en attente', 'retard' => 'en retard'];
 const HDK_RELANCES_FIN = '20:00';   // rien ne part après 20:00 : une relance en retard attend le lendemain matin
 const HDK_RELANCES_LISTE = 5;       // demandes citées dans un SMS qui les regroupe ; au-delà, « + N autres »
 
-/** Le réglage des relances, nettoyé sur les choix de la maquette. */
+/**
+ * Le réglage des relances, nettoyé sur les choix de la maquette. Un réglage enregistré avant la règle du 21/11/2026
+ * (sans `v`) avec l'ancien choix par défaut « sans réponse du bureau » prend la nouvelle règle « pas encore en cours ».
+ */
 function hdkRelancesReglage(array $r): array
 {
     $d = HDK_RELANCES_DEFAUT;
+    if ((int) ($r['v'] ?? 1) < 2 && ($r['quelles'] ?? '') === 'sans_reponse') { $r['quelles'] = 'nouvelles'; }
     $h = (string) ($r['heure'] ?? $d['heure']);
     return ['actif' => array_key_exists('actif', $r) ? (bool) $r['actif'] : $d['actif'],
         'jours' => in_array((int) ($r['jours'] ?? 0), HDK_RELANCES_JOURS, true) ? (int) $r['jours'] : $d['jours'],
@@ -652,7 +659,7 @@ function hdkRelancesReglage(array $r): array
         'quelles' => isset(HDK_RELANCES_QUELLES[$r['quelles'] ?? '']) ? (string) $r['quelles'] : $d['quelles'],
         'aQui' => in_array($r['aQui'] ?? '', ['consultant', 'tous'], true) ? (string) $r['aQui'] : $d['aQui'],
         'regrouper' => array_key_exists('regrouper', $r) ? (bool) $r['regrouper'] : $d['regrouper'],
-        'plafond' => in_array((int) ($r['plafond'] ?? 0), [0, 6], true) ? (int) ($r['plafond'] ?? 0) : $d['plafond']];
+        'plafond' => in_array((int) ($r['plafond'] ?? 0), [0, 6], true) ? (int) ($r['plafond'] ?? 0) : $d['plafond'], 'v' => 2];
 }
 
 function hdkRelancesTables(): void
@@ -744,6 +751,7 @@ function hdkRelanceDestinataires(array $d, array $R): array
 function hdkRelanceArret(array $d, array $rel, int $n, ?array $suspendue): ?string
 {
     if (!$d['ouverte']) { return HDK_STATUTS[$d['statut']] ?? 'fermée'; }
+    if ($rel['quelles'] === 'nouvelles' && $d['statut'] !== 'NEW') { return 'passée en cours'; }
     if ($rel['quelles'] === 'sans_reponse' && trim((string) $d['reponse']) !== '') {
         $le = substr((string) ($d['reponseLe'] ?? ''), 0, 10);
         return 'réponse' . ($le !== '' ? ' le ' . date('d/m', strtotime($le)) : '');
@@ -785,7 +793,7 @@ function hdkCourt(array $d): string
 {
     $m = preg_replace('/^.* - /', '', trim((string) ($d['magasin'] ?? ''))) ?: '';
     if ($m === '' && function_exists('viMagasins')) { try { $m = viMagasins()[(string) ($d['shop'] ?? '')]['court'] ?? ''; } catch (Throwable $e) { $m = ''; } }
-    return $m !== '' ? $m : 'magasin ' . ($d['shop'] ?? '?');
+    return $m !== '' ? $m : 'magasin ' . ((string) ($d['shop'] ?? '') !== '' ? $d['shop'] : '?');
 }
 
 /** Un texte coupé à `$max` caractères entre deux mots. Fonction pure. */
@@ -1036,4 +1044,27 @@ function wr_helpdesk_relances(int $id): array
     $r = hdkRelancesEnvoyer([['d' => $d, 'rang' => $n + 1]], $R, date('Y-m-d H:i'), true);
     hdkJournal('Demande ' . $d['ref'] . ' relancée maintenant (' . $qui . ') : ' . ($r['ok'] ? 'SMS à ' . implode(', ', $r['a']) : 'non partie') . ($r['ko'] ? ' ; ' . implode(', ', $r['ko']) : ''));
     return $r['ok'] > 0 ? ['ok' => true, 'a' => $r['a'], 'avertissement' => $r['ko'] ? 'Non parti : ' . implode(', ', $r['ko']) : null] : ['ok' => false, 'error' => 'SMS non parti : ' . implode(', ', $r['ko'])];
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * L'accueil du cockpit (21/11/2026, demande de Sam : les demandes « se mettent dans la liste de suivi tous les jours »,
+ * choix : « Accueil du cockpit ») : la carte « Demandes à traiter » de l'écran Résultat, relue à chaque ouverture.
+ * ------------------------------------------------------------------------------------------- */
+
+/** GET /helpdesk/a-traiter — les demandes pas encore en cours, de la plus ancienne à la plus récente. */
+function ep_helpdesk_a_traiter(): array
+{
+    $D = hdkLireDemandes();
+    if ($D === null) { return ['indispo' => true, 'motif' => 'le helpdesk du panel n’a pas répondu (' . (PanelApi::$lastError ?? 'pas de réponse') . ')']; }
+    $auj = date('Y-m-d');
+    $N = array_values(array_filter($D, static fn ($d) => $d['statut'] === 'NEW'));
+    usort($N, static fn ($a, $b) => strcmp($a['cree'], $b['cree']));
+    $relances = [];
+    try {
+        $J = hdkRelancesJournal(array_column($N, 'id'));
+        foreach ($J as $id => $x) { $relances[$id] = $x['n']; }
+    } catch (Throwable $e) { /* sans journal des relances */ }
+    $age = static fn (array $d): int => max(0, (int) round((strtotime($auj . ' 12:00') - strtotime(substr($d['cree'], 0, 10) . ' 12:00')) / 86400));
+    return ['n' => count($N), 'lu' => date('c'), 'demandes' => array_map(static fn ($d) => ['id' => $d['id'], 'ref' => $d['ref'], 'titre' => $d['titre'], 'magasin' => hdkCourt($d),
+        'domaine' => $d['domaineNom'], 'cree' => substr($d['cree'], 0, 10), 'age' => $age($d), 'consultant' => $d['consultant'], 'relances' => $relances[$d['id']] ?? 0], $N)];
 }

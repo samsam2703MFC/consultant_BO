@@ -80,7 +80,7 @@ function valsSms(app, Dd){
     // Les relances (20/11/2026, maquette docs/maquettes/helpdesk-relances, validée).
     rActif: seg('actif', [[true, 'envoyées'], [false, 'coupées']]), rJours: seg('jours', [[3, '3 j'], [7, '7 j'], [14, '14 j']]),
     rHeure: F.relances.heure || '08:30', setHeure: e => majR({ heure: e.target.value }), rOuvres: !!F.relances.ouvres, basculerOuvres: () => majR({ ouvres: !F.relances.ouvres }),
-    rQuelles: seg('quelles', [['sans_reponse', 'sans réponse du bureau'], ['ouvertes', 'toutes les ouvertes'], ['retard', 'date limite dépassée']]),
+    rQuelles: seg('quelles', [['nouvelles', 'pas encore en cours'], ['sans_reponse', 'sans réponse du bureau'], ['retard', 'date limite dépassée']]),
     rAQui: seg('aQui', [['consultant', 'le consultant de la demande'], ['tous', 'tous les numéros']]),
     rRegrouper: seg('regrouper', [[true, 'un SMS qui les liste'], [false, 'un SMS par demande']]),
     rPlafond: seg('plafond', [[0, 'la réponse'], [6, '6 relances au plus']]),
@@ -161,6 +161,27 @@ function valsReclamations(app){
       ['Ce qui est demandé', X.action], ['Commande', X.commande], ['Montant', X.montant != null ? eur(X.montant) + (X.prixUnitaire != null ? ' (' + eur(X.prixUnitaire) + ' / unité)' : '') : ''],
       ['Quantité acceptée', X.qteAcceptee != null ? nb(X.qteAcceptee) : ''], ['Compensation', X.compensation], ['Pièces jointes', X.pj ? String(X.pj) : '']].filter(([, val]) => val) } : null;
   return v;
+}
+
+/* La carte « Demandes à traiter » de l'accueil (21/11/2026, demande de Sam : les demandes pas encore en cours « se
+ * mettent dans la liste de suivi tous les jours » — choix : l'accueil du cockpit, l'écran Résultat). Relue à chaque
+ * ouverture du cockpit et chaque nouveau jour. Serveur : GET /helpdesk/a-traiter. */
+function chargerAT(app, frais){
+  const A = app.state.hdAT, jour = AUJ();
+  if (!frais && A && A.jour === jour && (A.d || A.chargement)) { return; }
+  app.setState({ hdAT: { chargement: true, d: A ? A.d : null, jour } });
+  readOne('/helpdesk/a-traiter').then(d => app.setState({ hdAT: { chargement: false, d: d || { indispo: true, motif: 'le cockpit n’a pas répondu' }, jour } }));
+}
+export function valsATraiter(app, c){
+  chargerAT(app, false);
+  const A = app.state.hdAT || {}, D = A.d && !A.d.indispo && !A.d.error ? A.d : null;
+  const ouvrir = () => app.setState({ screen: 'demandesFranchises', hdVue: 'demandes', hdFiltre: 'NEW' });
+  c.hdAT = { chargement: !!A.chargement && !D, erreur: A.d && (A.d.indispo || A.d.error) ? (A.d.motif || A.d.error) : null, ouvrir, relire: () => chargerAT(app, true) };
+  if (!D) { return; }
+  const L = D.demandes || [];
+  Object.assign(c.hdAT, { n: D.n, plus: Math.max(0, L.length - 5), lignes: L.slice(0, 5).map(d => ({ age: d.age + ' j', vieux: d.age > 7, magasin: d.magasin, titre: d.titre,
+    sous: d.domaine + ' · envoyée le ' + dm(d.cree) + (d.consultant ? ' · ' + d.consultant : ' · sans consultant') + (d.relances ? ' · ' + d.relances + ' relance' + (d.relances > 1 ? 's' : '') + ' SMS' : ''),
+    ouvrir: () => app.setState({ screen: 'demandesFranchises', hdVue: 'demandes', hdFiltre: 'NEW', hdSel: d.id }) })) });
 }
 
 export function nbDemandesOuvertes(app){

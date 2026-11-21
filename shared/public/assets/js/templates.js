@@ -10,7 +10,7 @@ import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
-import { tplHelpdesk } from './helpdesk-tpl.js';
+import { tplHelpdesk, tplATraiter } from './helpdesk-tpl.js';
 import { tplFil } from './fil-tpl.js';
 import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
@@ -3135,6 +3135,7 @@ function tplResultat(c, x){
       <div></div>
       <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px">${c.rjOnglets.map(ong).join('')}</div>
     </div>
+    ${c.hdAT ? tplATraiter(c.hdAT, x) : ''}
     ${c.rjChargeEnCours ? `
     <div style="margin:-6px 0 -4px">
       <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>

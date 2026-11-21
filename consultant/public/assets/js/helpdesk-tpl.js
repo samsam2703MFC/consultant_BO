@@ -60,7 +60,7 @@ function sms(M, x){
     ${regle('Relances', '', segs(M.rActif))}
     ${regle('Tous les', 'après l’envoi de la demande, puis à nouveau', segs(M.rJours) + `<div class="hd-heure">à <input class="mko-inp" value="${esc(M.rHeure)}" ${x.C(M.setHeure)}><button class="hd-ck${M.rOuvres ? ' on' : ''}" ${x.A(M.basculerOuvres)}><i></i>jours ouvrés seulement</button></div>`,
       'Une relance qui tombe un samedi ou un dimanche part le lundi. Rien ne part après 20:00. À la mise en route, ce qui attendait déjà part le premier lundi.')}
-    ${regle('Quelles demandes', '', segs(M.rQuelles), 'Nouvelles ou en cours, et le bureau n’a encore rien répondu au franchisé.')}
+    ${regle('Quelles demandes', '', segs(M.rQuelles), 'Pas encore en cours : tant que la demande est « Nouvelle » ; elle s’arrête quand elle passe « En cours » (une date limite fixée l’y fait passer). Sans réponse : tant que le bureau n’a rien répondu au franchisé.')}
     ${regle('À qui', '', segs(M.rAQui), 'Le numéro dont le consultant du panel est celui de la demande. Sans consultant, ou un consultant sans numéro ici : tous les numéros.')}
     ${regle('Le même jour', 'plusieurs demandes à relancer', segs(M.rRegrouper))}
     ${regle('Jusqu’à', '', segs(M.rPlafond), 'S’arrête à la réponse du bureau, au statut Résolue, Fermée ou Annulée, ou à « Suspendre les relances » sur la fiche.')}
@@ -126,4 +126,15 @@ function tplReclamations(R, x){
     : '<aside class="vr-card hd-fiche"><div class="vr-mu">Choisissez une réclamation.</div></aside>';
   const pied = `<div class="vr-pied"><b>Les réclamations fournisseur de tous les magasins</b>, déposées depuis le dashboard des franchisés (contrôle, invendus) ou au panel. Une réclamation est <b>ouverte</b> tant que le fournisseur n’a pas répondu (et ne l’a pas refusée). ${esc(R.lecture || '')}${R.ecartees ? ' ' + R.ecartees + ' plus ancienne' + (R.ecartees > 1 ? 's' : '') + ' hors période.' : ''} <span class="vr-mu">${esc(R.source || '')}</span></div>`;
   return `<div class="vr-card">${kpis}${fil}<div class="hd-cols">${table}${fiche}</div>${pied}</div>`;
+}
+
+/** La carte « Demandes à traiter » de l'accueil (écran Résultat, 21/11/2026) : les demandes pas encore en cours, chaque jour. */
+export function tplATraiter(A, x){
+  const { esc } = x;
+  if (A.chargement) { return '<div class="hd-at mu">Demandes à traiter : lecture du helpdesk…</div>'; }
+  if (A.erreur) { return `<div class="hd-at mu">Demandes à traiter : illisibles (${esc(A.erreur)}). <button class="hd-at-lien" ${x.A(A.relire)}>Relire</button></div>`; }
+  if (!A.n) { return `<div class="hd-at ok"><b>Demandes à traiter</b> Aucune : toutes les demandes des franchisés sont prises en charge. <button class="hd-at-lien" ${x.A(A.ouvrir)}>Voir les demandes</button></div>`; }
+  return `<div class="hd-at"><div class="hd-at-t"><b>Demandes à traiter</b><span class="hd-at-n">${A.n}</span><span class="vr-mu">pas encore en cours · relancées par SMS tous les 7 jours</span><span class="vr-sp"></span><button class="mko-pied-btn" ${x.A(A.ouvrir)}>Ouvrir les demandes</button></div>
+    ${A.lignes.map(l => `<button class="hd-at-l" ${x.A(l.ouvrir)}><span class="hd-at-age${l.vieux ? ' ko' : ''}">${esc(l.age)}</span><span><b>${esc(l.magasin)}</b> · ${esc(l.titre)}<small>${esc(l.sous)}</small></span></button>`).join('')}
+    ${A.plus ? `<div class="vr-mu" style="font-size:11px">et ${A.plus} autre${A.plus > 1 ? 's' : ''}, plus récente${A.plus > 1 ? 's' : ''}.</div>` : ''}</div>`;
 }
