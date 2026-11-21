@@ -88,6 +88,15 @@ $L2 = phLignesPanel([['label' => 'Eau ', 'value' => 60], ['label' => 'eau', 'val
 verifie('liste à la racine : deux lignes du même poste s’additionnent', count($L2) === 2 && proche($L2[0]['montant'], 120.5));
 verifie('sans libellé : le type sert de poste', $L2[1]['poste'] === 'Assurances');
 verifie('une réponse sans liste : aucun frais', phLignesPanel(['total' => 12]) === []);
+// La forme lue au panel le 21/11/2026 (panel/tools/sonde_frais.php) : la catégorie dans cost_name, le libellé dans description.
+$L3 = phLignesPanel(['period' => '2026-11', 'total' => 19400, 'items' => [
+    ['id' => 240, 'date' => '2026-11-01', 'amount' => '16200.00', 'description' => '', 'cost_name' => 'Charges financières'],
+    ['id' => 241, 'date' => '2026-11-01', 'amount' => '2500.00', 'description' => 'royalties', 'cost_name' => 'Rémunérations de tiers'],
+    ['id' => 253, 'date' => '2026-11-01', 'amount' => '700.00', 'description' => 'Comptable', 'cost_name' => "Autres charges d'exploitation"],
+    ['id' => 260, 'date' => '2026-11-01', 'amount' => '90.00', 'description' => 'Banque', 'cost_name' => "Autres charges d'exploitation"]]]);
+verifie('le poste est la description, la catégorie reste en type', count($L3) === 4 && $L3[2]['poste'] === 'Comptable' && $L3[2]['cle'] === 'comptable' && $L3[2]['type'] === "Autres charges d'exploitation", json_encode($L3, JSON_UNESCAPED_UNICODE));
+verifie('sans description : la catégorie sert de poste', $L3[0]['poste'] === 'Charges financières' && $L3[0]['type'] === '');
+verifie('deux frais de la même catégorie restent deux postes', $L3[3]['poste'] === 'Banque' && proche($L3[2]['montant'], 700));
 
 echo "Le choix de chaque poste et la part hors TVA du mois\n";
 $GLOBALS['corps'] = ['shop' => 4, 'poste' => 'Électricité et gaz', 'tva' => true, 'taux' => 21];
@@ -111,12 +120,27 @@ $GLOBALS['corps'] = ['shop' => 4, 'poste' => 'Électricité et gaz', 'tva' => nu
 wr_exploitation_frais_tva();
 $Cn = phChoix([4])[4]['électricité et gaz'] ?? [];
 verifie('recliquer le choix le remet à indiquer', array_key_exists('tva', $Cn) && $Cn['tva'] === null && $Cn['taux'] === null);
+// Un choix fait sur la catégorie (avant le 21/11/2026, le poste était la catégorie) vaut pour ses postes sans choix propre.
+$GLOBALS['corps'] = ['shop' => 7, 'poste' => "Autres charges d'exploitation", 'tva' => true, 'taux' => 21];
+wr_exploitation_frais_tva();
+$GLOBALS['corps'] = ['shop' => 7, 'poste' => 'Banque', 'tva' => false];
+wr_exploitation_frais_tva();
+$F7 = phFraisMois($L3, phChoix([7])[7] ?? []);
+$F7l = array_column($F7['lignes'], null, 'cle');
+verifie('le choix de la catégorie vaut pour « Comptable »', $F7l['comptable']['tva'] === true && proche($F7l['comptable']['ht'], 700 / 1.21), json_encode($F7l['comptable'], JSON_UNESCAPED_UNICODE));
+verifie('un choix propre au poste l’emporte sur celui de la catégorie', $F7l['banque']['tva'] === false && proche($F7l['banque']['ht'], 90));
+verifie('une catégorie sans choix reste à indiquer', $F7l['charges financières']['aIndiquer'] === true);
 
 echo "Les frais du panel gardés une heure\n";
 PanelApi::$reponse = ['items' => [['name' => 'Loyer', 'amount' => 4800]]];
 PanelApi::$appels = 0;
 $P1 = phFraisPanel([4], '2026-11'); $P2 = phFraisPanel([4], '2026-11');
 verifie('une seule lecture du panel pour deux appels', PanelApi::$appels === 1 && $P2[4]['lu'] && count($P2[4]['lignes']) === 1);
+// Une garde écrite avec l'ancienne règle (sans version : le poste était la catégorie) se relit.
+Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['phF:4:2026-10', json_encode(['q' => time(), 'l' => [['poste' => 'Vieux', 'cle' => 'vieux', 'type' => '', 'montant' => 1]]])]);
+PanelApi::$appels = 0;
+$P4 = phFraisPanel([4], '2026-10');
+verifie('une garde d’avant la règle du 21/11 se relit au panel', PanelApi::$appels === 1 && $P4[4]['lignes'][0]['poste'] === 'Loyer');
 PanelApi::$reponse = null;
 $P3 = phFraisPanel([5], '2026-11');
 verifie('panel muet sans lecture gardée : non lus', $P3[5]['lu'] === false);
@@ -158,31 +182,42 @@ verifie('un total réparti au centime, le dernier mois prend l’arrondi', $R3 =
 $G = ['id' => 9, 'id_shop' => 5, 'id_cost' => 3, 'amount' => '120.00', 'name' => 'Eau', 'period' => '2026-10', 'created_at' => '2026-10-02 10:00:00', 'cost' => ['id' => 3, 'name' => 'Énergie'], 'note' => 'x'];
 $C1 = phCorpsFrais($G, ['shop' => 5, 'type' => '4', 'nom' => 'Assurance incendie', 'montant' => 50.0, 'mois' => '2026-11']);
 verifie('le corps reprend les champs du gabarit, remplis', $C1 === ['id_shop' => 5, 'id_cost' => 4, 'amount' => 50.0, 'name' => 'Assurance incendie', 'period' => '2026-11'], json_encode($C1, JSON_UNESCAPED_UNICODE));
-$C2 = phCorpsFrais(null, ['shop' => 5, 'type' => null, 'nom' => 'Loyer', 'montant' => 1200.0, 'mois' => '2026-12']);
-verifie('sans gabarit : les noms usuels', $C2 === ['amount' => 1200.0, 'name' => 'Loyer', 'period' => '2026-12'], json_encode($C2));
+$C2 = phCorpsFrais(null, ['shop' => 5, 'type' => '8', 'nom' => 'Loyer', 'montant' => 1200.0, 'mois' => '2026-12']);
+verifie('sans gabarit : la forme lue au panel', $C2 === ['id_shop' => 5, 'id_cost' => 8, 'date' => '2026-12-01', 'amount' => 1200.0, 'description' => 'Loyer'], json_encode($C2, JSON_UNESCAPED_UNICODE));
+$C5 = phCorpsFrais(['id' => 253, 'id_shop' => 5, 'id_cost' => 9, 'date' => '2026-11-01', 'amount' => '16200.00', 'description' => '', 'cost_name' => 'Charges financières'],
+    ['shop' => 5, 'type' => '8', 'nom' => 'Comptable', 'montant' => 700.0, 'mois' => '2026-03']);
+verifie('le gabarit du panel : la description porte le libellé, la catégorie ne part pas', $C5 === ['id_shop' => 5, 'id_cost' => 8, 'date' => '2026-03-01', 'amount' => 700.0, 'description' => 'Comptable'], json_encode($C5, JSON_UNESCAPED_UNICODE));
+$C6 = phCorpsFrais(['cost_name' => 'x', 'name' => 'y', 'description' => 'z', 'amount' => 1], ['shop' => 5, 'type' => null, 'nom' => 'Eau', 'montant' => 5.0, 'mois' => '2026-03']);
+verifie('le libellé va dans description avant name', $C6['description'] === 'Eau' && !isset($C6['name']) && !isset($C6['cost_name']), json_encode($C6));
 $C3 = phCorpsFrais(['shop_id' => 5, 'cost_type_id' => 2, 'value' => 10, 'label' => 'a', 'date_from' => '2026-10-01 00:00:00', 'date_to' => '2026-10-31 23:59:59'], ['shop' => 5, 'type' => '2', 'nom' => 'Leasing', 'montant' => 300.0, 'mois' => '2026-02']);
 verifie('des dates avec l’heure : la ligne couvre son mois, février compris', $C3['date_from'] === '2026-02-01 00:00:00' && $C3['date_to'] === '2026-02-28 23:59:59' && $C3['value'] === 300.0 && $C3['label'] === 'Leasing' && !isset($C3['period']), json_encode($C3));
 $C4 = phCorpsFrais(['amount' => 1, 'name' => 'b', 'month' => 10, 'year' => 2026], ['shop' => 5, 'type' => null, 'nom' => 'Eau', 'montant' => 60.0, 'mois' => '2027-03']);
 verifie('un mois en nombre et une année', $C4['month'] === 3 && $C4['year'] === 2027, json_encode($C4));
 verifie('l’identifiant créé : à la racine, sous data, sous data.item', phIdCree(['id' => 77]) === '77' && phIdCree(['data' => ['id' => 'a1']]) === 'a1' && phIdCree(['data' => ['item' => ['id' => 5]]]) === '5' && phIdCree(['status' => 'ok']) === null && phIdCree(['data' => 12]) === '12');
 
-/** Un panel en doublure : les lignes de frais par mois ; `$reporte` : une ligne créée vaut aussi pour les mois suivants. */
-function fauxPanel(bool $reporte = false, ?string $refuseMois = null): array
+/**
+ * Un panel en doublure, à la forme lue le 21/11/2026 : les lignes {id, id_shop, id_cost, date, amount, description,
+ * cost_name} ; /shops/5/costs en liste, /owner/costs sous items. La création ne rend pas d'identifiant (`$avecId` : si).
+ * `$reporte` : une ligne créée vaut aussi pour les mois suivants.
+ */
+function fauxPanel(bool $reporte = false, ?string $refuseMois = null, bool $avecId = false): array
 {
     $etat = ['lignes' => [], 'n' => 100, 'posts' => [], 'deletes' => []];
     $GLOBALS['panel'] = &$etat;
-    PanelApi::$faux = static function (string $m, string $c, ?array $b) use (&$etat, $reporte, $refuseMois): array {
-        if ($m === 'GET' && $c === '/costs') { return ['code' => 200, 'data' => [['id' => 3, 'name' => 'Énergie'], ['id' => 4, 'name' => 'Assurances']]]; }
+    $types = [3 => 'Frais de Bureau', 4 => 'Frais de Vente', 8 => "Autres charges d'exploitation"];
+    PanelApi::$faux = static function (string $m, string $c, ?array $b) use (&$etat, $reporte, $refuseMois, $avecId, $types): array {
+        if ($m === 'GET' && $c === '/costs') { return ['code' => 200, 'data' => array_map(static fn ($k, $v) => ['id' => $k, 'name' => $v], array_keys($types), $types)]; }
         if ($m === 'GET' && preg_match('#^/shops/5/(owner/)?costs\?period=(\d{4}-\d{2})$#', $c, $x)) {
-            $l = array_values(array_filter($etat['lignes'], static fn ($r) => $r['period'] === $x[2] || ($reporte && $r['period'] < $x[2])));
-            return ['code' => 200, 'data' => ['items' => $l, 'total' => array_sum(array_column($l, 'amount'))]];
+            $l = array_values(array_filter($etat['lignes'], static fn ($r) => substr($r['date'], 0, 7) === $x[2] || ($reporte && substr($r['date'], 0, 7) < $x[2])));
+            return ['code' => 200, 'data' => $x[1] === '' ? $l : ['period' => $x[2], 'total' => array_sum(array_column($l, 'amount')), 'items' => $l]];
         }
         if ($m === 'POST' && $c === '/shops/5/costs') {
             $etat['posts'][] = $b;
-            if ($refuseMois !== null && ($b['period'] ?? '') === $refuseMois) { return ['code' => 422, 'data' => ['status' => 'error', 'description' => 'Pole amount jest wymagane']]; }
+            if ($refuseMois !== null && substr((string) ($b['date'] ?? ''), 0, 7) === $refuseMois) { return ['code' => 422, 'data' => ['status' => 'error', 'description' => 'Pole amount jest wymagane']]; }
             $id = $etat['n']++;
-            $etat['lignes'][$id] = ['id' => $id, 'name' => $b['name'], 'amount' => $b['amount'], 'id_cost' => $b['id_cost'] ?? null, 'period' => $b['period']];
-            return ['code' => 201, 'data' => ['status' => 'success', 'data' => ['id' => $id]]];
+            $etat['lignes'][$id] = ['id' => $id, 'id_shop' => 5, 'id_cost' => $b['id_cost'] ?? null, 'date' => $b['date'], 'amount' => number_format((float) $b['amount'], 2, '.', ''),
+                'description' => $b['description'] ?? '', 'cost_name' => $types[$b['id_cost'] ?? 0] ?? ''];
+            return ['code' => 200, 'data' => $avecId ? ['status' => 'success', 'data' => ['id' => $id]] : ['status' => 'success']];
         }
         if ($m === 'DELETE' && preg_match('#^/shops/costs/(\d+)$#', $c, $x)) { $etat['deletes'][] = (int) $x[1]; unset($etat['lignes'][(int) $x[1]]); return ['code' => 200, 'data' => ['status' => 'success']]; }
         return ['code' => 404, 'data' => null];
@@ -195,8 +230,14 @@ $e = fauxPanel();
 Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?)', ['phF:5:2026-11', json_encode(['q' => time(), 'l' => []])]);
 $GLOBALS['corps'] = ['shop' => 5, 'nom' => 'Assurance incendie', 'type' => '4', 'montant' => 1200, 'base' => 'total', 'mois' => '2026-11', 'repeter' => 'annee', 'tva' => false, 'taux' => null];
 $r = wr_exploitation_frais_ajout();
-verifie('douze lignes créées au panel, de janvier à décembre', ($r['ok'] ?? false) && $r['crees'] === 12 && count($GLOBALS['panel']['posts']) === 12 && $GLOBALS['panel']['posts'][0]['period'] === '2026-01', json_encode($r, JSON_UNESCAPED_UNICODE));
-verifie('100 € par mois, le type au panel', $GLOBALS['panel']['posts'][5] === ['amount' => 100.0, 'name' => 'Assurance incendie', 'period' => '2026-06', 'id_cost' => 4], json_encode($GLOBALS['panel']['posts'][5], JSON_UNESCAPED_UNICODE));
+verifie('douze lignes créées au panel, de janvier à décembre', ($r['ok'] ?? false) && $r['crees'] === 12 && count($GLOBALS['panel']['posts']) === 12 && $GLOBALS['panel']['posts'][0]['date'] === '2026-01-01', json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('100 € par mois, le type au panel', $GLOBALS['panel']['posts'][5] === ['id_shop' => 5, 'id_cost' => 4, 'date' => '2026-06-01', 'amount' => 100.0, 'description' => 'Assurance incendie'], json_encode($GLOBALS['panel']['posts'][5], JSON_UNESCAPED_UNICODE));
+verifie('à partir du 2e mois, le corps suit la ligne du 1er (le gabarit)', $GLOBALS['panel']['posts'][11] === ['id_shop' => 5, 'id_cost' => 4, 'date' => '2026-12-01', 'amount' => 100.0, 'description' => 'Assurance incendie'], json_encode($GLOBALS['panel']['posts'][11], JSON_UNESCAPED_UNICODE));
+verifie('le panel ne rend pas l’identifiant : la relecture le retrouve', count(array_filter($r['mois'], static fn ($x) => $x['id'] !== null)) === 12 && $r['mois'][0]['id'] === '100' && $r['mois'][11]['id'] === '111', json_encode(array_column($r['mois'], 'id')));
+$L5 = phLignesPanel(PanelApi::get('/shops/5/owner/costs?period=2026-11'));
+verifie('l’onglet montre le libellé saisi, la catégorie dessous', ($L5[0]['poste'] ?? '') === 'Assurance incendie' && $L5[0]['type'] === 'Frais de Vente', json_encode($L5, JSON_UNESCAPED_UNICODE));
+$F5 = phFraisMois($L5, phChoix([5])[5] ?? []);
+verifie('la TVA choisie dans le formulaire s’applique au poste', $F5['lignes'][0]['tva'] === false && $F5['lignes'][0]['aIndiquer'] === false, json_encode($F5['lignes'][0], JSON_UNESCAPED_UNICODE));
 verifie('chaque mois relu : le panel le montre', count(array_filter($r['mois'], static fn ($x) => $x['vu'] === true)) === 12 && !$r['reporteParLePanel']);
 verifie('annulable : le panel a rendu chaque identifiant', $r['annulable'] === true && preg_match('/^[a-f0-9]{16}$/', (string) $r['lot']));
 verifie('les frais gardés du mois se relisent', setting('phF:5:2026-11') === null);
@@ -211,8 +252,20 @@ $a = wr_exploitation_frais_annuler();
 verifie('annuler : les douze lignes supprimées au panel', ($a['ok'] ?? false) && count($a['annules']) === 12 && count($GLOBALS['panel']['lignes']) === 0, json_encode($a));
 verifie('annulé : il ne se relit plus, et ne s’annule pas deux fois', phAjoutsRecents(5) === [] && isset(wr_exploitation_frais_annuler()['error']));
 
+echo "Annuler un ajout dont l'identifiant n'a pas été relu (l'essai du 21/11/2026)\n";
+fauxPanel();
+// Une ligne saisie à la main au panel, même catégorie, autre libellé : elle ne doit pas partir.
+PanelApi::requete('POST', '/shops/5/costs', ['id_shop' => 5, 'id_cost' => 8, 'date' => '2026-11-01', 'amount' => 700.0, 'description' => 'Loyer du dépôt']);
+$GLOBALS['corps'] = ['shop' => 5, 'nom' => 'Comptable', 'type' => '8', 'montant' => 700, 'mois' => '2026-11', 'repeter' => 'fin', 'tva' => true, 'taux' => 21];
+$r = wr_exploitation_frais_ajout();
+Db::exec('UPDATE panel_frais_ajout SET panel_id = NULL WHERE lot = ?', [$r['lot']]);
+$GLOBALS['corps'] = ['shop' => 5, 'lot' => $r['lot']];
+$a = wr_exploitation_frais_annuler();
+verifie('les lignes retrouvées au panel par libellé et montant, puis supprimées', ($a['ok'] ?? false) && $a['annules'] === ['2026-11', '2026-12'] && $GLOBALS['panel']['deletes'] === [101, 102], json_encode([$a, $GLOBALS['panel']['deletes']], JSON_UNESCAPED_UNICODE));
+verifie('la ligne saisie à la main reste', isset($GLOBALS['panel']['lignes'][100]) && count($GLOBALS['panel']['lignes']) === 1);
+
 echo "Ajouter un frais : le panel le reporte de lui-même\n";
-fauxPanel(true);
+fauxPanel(true, null, true);
 $GLOBALS['corps'] = ['shop' => 5, 'nom' => 'Loyer', 'type' => '3', 'montant' => 900, 'base' => 'mois', 'mois' => '2026-11', 'repeter' => 'fin'];
 $r = wr_exploitation_frais_ajout();
 verifie('une seule ligne créée : décembre la porte déjà', ($r['ok'] ?? false) && $r['reporteParLePanel'] && count($GLOBALS['panel']['posts']) === 1, json_encode($r, JSON_UNESCAPED_UNICODE));
@@ -233,7 +286,7 @@ foreach ([['repeter' => 'toujours'], ['mois' => '2030-01'], ['montant' => -4], [
     $GLOBALS['corps'] = $mauvais + ['shop' => 5, 'nom' => 'Eau', 'type' => '3', 'montant' => 60, 'mois' => '2026-11', 'repeter' => 'mois'];
     verifie('refusé : ' . json_encode($mauvais, JSON_UNESCAPED_UNICODE), isset(wr_exploitation_frais_ajout()['error']));
 }
-verifie('les types de frais du panel, gardés un jour', phTypesFrais() === [['id' => '3', 'nom' => 'Énergie'], ['id' => '4', 'nom' => 'Assurances']] && is_array(setting('phTypes')));
+verifie('les types de frais du panel, gardés un jour', phTypesFrais() === [['id' => '3', 'nom' => 'Frais de Bureau'], ['id' => '4', 'nom' => 'Frais de Vente'], ['id' => '8', 'nom' => "Autres charges d'exploitation"]] && is_array(setting('phTypes')), json_encode(phTypesFrais(), JSON_UNESCAPED_UNICODE));
 PanelApi::$faux = null;
 
 echo "\n$ok ok, $ko KO\n";

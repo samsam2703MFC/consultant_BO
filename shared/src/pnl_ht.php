@@ -33,6 +33,7 @@ const PH_TAUX = [0.0, 6.0, 12.0, 21.0];   // les taux belges, proposés à l'éc
 const PH_TAUX_OUI = 21.0;            // « TVA comprise : oui » sans taux : le taux normal
 const PH_FRAIS_TTL = 3600;           // les frais du mois en cours au panel : relus passée l'heure
 const PH_FRAIS_TTL_CLOS = 21600;     // un mois passé : six heures
+const PH_FRAIS_V = 2;                // la règle de lecture des lignes (2 : le poste est la description, 21/11/2026)
 // Les noms du montant d'une ligne de frais au panel, dans l'ordre où ils se cherchent (la forme n'est pas documentée).
 const PH_CLES_MONTANT = ['amount', 'value', 'total', 'total_amount', 'monthly_amount', 'amount_gross', 'gross_amount', 'price', 'cost', 'sum'];
 
@@ -213,8 +214,11 @@ function phListePanel(mixed $r): array
 
 /**
  * Les lignes de frais d'une réponse du panel (/shops/{id}/owner/costs?period=AAAA-MM) : [['poste', 'cle', 'type',
- * 'montant']], un poste par libellé (deux lignes du même libellé s'additionnent). La forme de la réponse n'est pas
- * documentée : liste à la racine ou sous items, costs, lines, data, rows ; libellé, type et montant sous leurs noms usuels.
+ * 'montant']], un poste par libellé (deux lignes du même libellé s'additionnent). Forme lue au panel le 21/11/2026
+ * (panel/tools/sonde_frais.php) : {period, total, items: [{id, date, amount, description, cost_name}]} — `cost_name`
+ * est la catégorie (l'un des 9 types de /costs), `description` le libellé saisi (« Comptable », « royalties »), souvent
+ * vide. Le poste est donc la description, sinon la catégorie ; la catégorie reste en `type`. D'autres formes restent
+ * lues : liste à la racine ou sous items, costs, lines, data, rows ; libellé, type et montant sous leurs noms usuels.
  */
 function phLignesPanel(mixed $r): array
 {
@@ -235,8 +239,8 @@ function phLignesPanel(mixed $r): array
             if (isset($x[$c]) && is_numeric($x[$c])) { $m = (float) $x[$c]; break; }
         }
         if ($m === null) { continue; }
-        $type = $txt($x, ['type_name', 'cost_type_name', 'type.name', 'cost_type.name', 'category_name', 'category.name', 'category', 'cost_type', 'type']);
-        $nom = $txt($x, ['name', 'label', 'title', 'cost_name', 'description', 'cost.name']);
+        $type = $txt($x, ['cost_name', 'type_name', 'cost_type_name', 'type.name', 'cost_type.name', 'category_name', 'category.name', 'cost.name', 'category', 'cost_type', 'type']);
+        $nom = $txt($x, ['description', 'name', 'label', 'title']);
         if ($nom === '') { $nom = $type !== '' ? $type : 'Frais ' . (string) ($x['id'] ?? (count($out) + 1)); }
         $cle = phCle($nom);
         if (isset($out[$cle])) { $out[$cle]['montant'] += $m; continue; }
@@ -259,7 +263,7 @@ function phFraisPanel(array $sids, string $ym, bool $relire = false): array
         $sid = (int) $sid;
         $g = null;
         try { $g = setting('phF:' . $sid . ':' . $ym); } catch (Throwable $e) { /* sans réglages */ }
-        if (is_array($g) && isset($g['l']) && is_array($g['l'])) {
+        if (is_array($g) && isset($g['l']) && is_array($g['l']) && (int) ($g['v'] ?? 1) === PH_FRAIS_V) {
             $vieux[$sid] = $g;
             if (!$relire && (int) ($g['q'] ?? 0) > time() - $ttl) { $out[$sid] = ['lu' => true, 'le' => (int) $g['q'], 'lignes' => $g['l']]; continue; }
         }
@@ -271,7 +275,7 @@ function phFraisPanel(array $sids, string $ym, bool $relire = false): array
         $r = $res[$k] ?? null;
         if (is_array($r)) {
             $l = phLignesPanel($r);
-            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['phF:' . $sid . ':' . $ym, json_encode(['q' => time(), 'l' => $l], JSON_UNESCAPED_UNICODE)]); }
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['phF:' . $sid . ':' . $ym, json_encode(['v' => PH_FRAIS_V, 'q' => time(), 'l' => $l], JSON_UNESCAPED_UNICODE)]); }
             catch (Throwable $e) { /* relu la prochaine fois */ }
             $out[$sid] = ['lu' => true, 'le' => time(), 'lignes' => $l];
         } elseif (isset($vieux[$sid])) {
@@ -316,7 +320,8 @@ function phFraisMois(array $lignes, array $choix): array
 {
     $L = []; $saisi = 0.0; $ht = 0.0; $ai = 0; $aiEur = 0.0;
     foreach ($lignes as $l) {
-        $c = $choix[$l['cle']] ?? null;
+        // Le choix du poste, sinon celui de sa catégorie (un choix fait avant le 21/11/2026, quand le poste était la catégorie).
+        $c = $choix[$l['cle']] ?? (($l['type'] ?? '') !== '' ? ($choix[phCle((string) $l['type'])] ?? null) : null);
         $tva = $c['tva'] ?? null;
         $taux = $c['taux'] ?? null;
         $m = (float) $l['montant'];

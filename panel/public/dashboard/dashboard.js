@@ -7481,7 +7481,7 @@
     }
     const AR = S.frAnnR && S.frAnnR.shop === S.shop ? S.frAnnR : null;
     if (AR) {
-      h += `<div class="fx-aj-res${(AR.refus || []).length || (AR.sansId || []).length ? ' ko' : ''}">Ajout annulé : ${(AR.annules || []).length} mois supprimé${(AR.annules || []).length > 1 ? 's' : ''} au panel.${(AR.refus || []).length ? ' Refusé pour ' + esc(frMoisLib(AR.refus[0].mois)) + ' : ' + esc(AR.refus[0].erreur || '') + '.' : ''}${(AR.sansId || []).length ? ' ' + AR.sansId.length + ' mois à supprimer au panel (identifiant non rendu).' : ''}</div>`;
+      h += `<div class="fx-aj-res${(AR.refus || []).length || (AR.sansId || []).length ? ' ko' : ''}">Ajout annulé : ${(AR.annules || []).length} mois supprimé${(AR.annules || []).length > 1 ? 's' : ''} au panel.${(AR.refus || []).length ? ' Refusé pour ' + esc(frMoisLib(AR.refus[0].mois)) + ' : ' + esc(AR.refus[0].erreur || '') + '.' : ''}${(AR.sansId || []).length ? ' ' + AR.sansId.length + ' mois introuvable' + (AR.sansId.length > 1 ? 's' : '') + ' au panel (déjà supprimé' + (AR.sansId.length > 1 ? 's' : '') + ' ?).' : ''}</div>`;
     }
     const A = (D.ajouts || []).filter(a => !R || a.lot !== R.lot);
     if (A.length) {

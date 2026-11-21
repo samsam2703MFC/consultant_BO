@@ -105,9 +105,13 @@ function phPerimerResultat(): void
  * l'onglet Frais crée la ligne au panel (POST /shops/{id}/costs) pour chaque mois choisi : ce mois seulement, de ce mois
  * à décembre, ou toute l'année (janvier → décembre). Le montant se saisit par mois, ou en total réparti sur les mois.
  *
- * La forme du corps n'est pas documentée (le Swagger du panel ne décrit ni corps ni réponse des routes de frais) : le
- * corps reprend les noms des champs d'une ligne déjà saisie au magasin (/shops/{id}/costs?period=, le gabarit), sinon
- * des noms usuels ; un refus du panel remonte tel quel, avec son message, et les mois suivants ne partent pas.
+ * Le Swagger du panel ne décrit ni corps ni réponse des routes de frais. Forme lue au panel le 21/11/2026
+ * (panel/tools/sonde_frais.php) : une ligne du magasin est {id, id_shop, id_cost, date: AAAA-MM-01, amount,
+ * description, cost_name} — `id_cost` l'un des 9 types de /costs, `cost_name` son nom, `description` le libellé saisi ;
+ * aucun champ de TVA (la TVA du poste reste au cockpit, panel_frais_tva). Le corps reprend les champs d'une ligne déjà
+ * saisie au magasin (le gabarit), sinon cette forme ; un refus du panel remonte tel quel, avec son message, et les mois
+ * suivants ne partent pas. Le panel ne rend pas l'identifiant de la ligne créée : il se retrouve à la relecture (la
+ * ligne de même libellé et de même montant, la plus récente), sinon au moment d'annuler.
  *
  * Le panel reporte peut-être lui-même un frais d'un mois à l'autre : le mois qui suit le premier est relu avant et après
  * sa création (/shops/{id}/owner/costs?period=, la lecture de l'onglet). S'il porte le frais une fois de plus, rien
@@ -118,7 +122,8 @@ function phPerimerResultat(): void
 const PH_REPETER = ['mois', 'fin', 'annee'];   // ce mois seulement · de ce mois à décembre · janvier → décembre
 const PH_TYPES_TTL = 86400;                    // les types de frais du panel (/costs) : relus chaque jour
 const PH_MONTANT_MAX = 1000000.0;
-const PH_CLES_LIBELLE = ['name', 'label', 'title', 'cost_name', 'description'];
+// Le libellé saisi d'une ligne de frais, par ordre de préférence (`cost_name` est la catégorie, pas un libellé).
+const PH_CLES_LIBELLE = ['description', 'name', 'label', 'title'];
 
 function ensureFraisAjout(): void
 {
@@ -214,10 +219,11 @@ function phGabarit(int $shop, string $ym): ?array
 }
 
 /**
- * Le corps de la ligne au panel. Avec un gabarit : ses champs, remplis — magasin, type, montant, libellé, mois ou dates
- * au format de la ligne lue (AAAA-MM, AAAA-MM-JJ, avec l'heure) ; l'identifiant, les horodatages, les objets imbriqués
- * et les champs inconnus ne se reprennent pas. Ce que le gabarit ne dit pas prend un nom usuel : amount, name, period,
- * id_cost. Chaque ligne couvre son mois, jamais plus : deux lignes ne se chevauchent pas.
+ * Le corps de la ligne au panel. Avec un gabarit : ses champs, remplis — magasin, type, montant, libellé (le premier
+ * champ de PH_CLES_LIBELLE présent), mois ou dates au format de la ligne lue (AAAA-MM, AAAA-MM-JJ, avec l'heure) ;
+ * l'identifiant, les horodatages, le nom de la catégorie (`cost_name`), les objets imbriqués et les champs inconnus ne se
+ * reprennent pas. Sans gabarit : la forme lue au panel, {id_shop, id_cost, date, amount, description}. Chaque ligne
+ * couvre son mois, jamais plus : deux lignes ne se chevauchent pas.
  * @param array{shop: int, type: ?string, nom: string, montant: float, mois: string} $v
  */
 function phCorpsFrais(?array $g, array $v): array
@@ -229,23 +235,29 @@ function phCorpsFrais(?array $g, array $v): array
         if (is_string($modele) && preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', $modele)) { return $jour . ' ' . $heure; }
         return $jour;
     };
-    $c = []; $montant = false; $nom = false; $periode = false; $type = false;
-    foreach ($g ?? [] as $k => $x) {
+    if ($g === null || $g === []) {
+        return ['id_shop' => $v['shop']] + ($v['type'] !== null ? ['id_cost' => is_numeric($v['type']) ? (int) $v['type'] : $v['type']] : [])
+            + ['date' => $du, 'amount' => $v['montant'], 'description' => $v['nom']];
+    }
+    $cleNom = null;
+    foreach (PH_CLES_LIBELLE as $l) { foreach (array_keys($g) as $k) { if (is_string($k) && strtolower($k) === $l) { $cleNom = $k; break 2; } } }
+    $c = []; $montant = false; $periode = false; $type = false;
+    foreach ($g as $k => $x) {
         if (!is_string($k) || is_array($x)) { continue; }
         $lk = strtolower($k);
-        if ($lk === 'id' || preg_match('/created|updated|deleted|insert|modif|timestamp/', $lk)) { continue; }
+        if ($lk === 'id' || $lk === 'cost_name' || preg_match('/created|updated|deleted|insert|modif|timestamp/', $lk)) { continue; }
         if (preg_match('/^(id_?shop|shop_?id|shop)$/', $lk)) { $c[$k] = $v['shop']; }
         elseif (phCleType($lk)) { $type = true; if ($v['type'] !== null) { $c[$k] = is_numeric($v['type']) ? (int) $v['type'] : $v['type']; } }
         elseif (!$montant && in_array($lk, PH_CLES_MONTANT, true)) { $c[$k] = $v['montant']; $montant = true; }
-        elseif (!$nom && in_array($lk, PH_CLES_LIBELLE, true)) { $c[$k] = $v['nom']; $nom = true; }
+        elseif ($k === $cleNom) { $c[$k] = $v['nom']; }
         elseif (in_array($lk, ['period', 'month'], true)) { $c[$k] = $date($x, $du, '00:00:00'); $periode = true; }
         elseif (in_array($lk, ['date', 'date_from', 'from_date', 'start_date', 'valid_from', 'from', 'start'], true)) { $c[$k] = $date($x, $du, '00:00:00'); $periode = true; }
         elseif (in_array($lk, ['date_to', 'to_date', 'end_date', 'valid_to', 'to', 'end'], true)) { $c[$k] = $date($x, $au, '23:59:59'); }
         elseif ($lk === 'year') { $c[$k] = (int) substr($ym, 0, 4); }
     }
     if (!$montant) { $c['amount'] = $v['montant']; }
-    if (!$nom) { $c['name'] = $v['nom']; }
-    if (!$periode) { $c['period'] = $ym; }
+    if ($cleNom === null) { $c['description'] = $v['nom']; }
+    if (!$periode) { $c['date'] = $du; }
     if (!$type && $v['type'] !== null) { $c['id_cost'] = is_numeric($v['type']) ? (int) $v['type'] : $v['type']; }
     return $c;
 }
@@ -277,6 +289,32 @@ function phCompterFrais(mixed $r, string $nom, float $montant, ?string $type, ?s
         if ($ok) { $n++; }
     }
     return $n;
+}
+
+/**
+ * L'identifiant d'une ligne de frais retrouvée dans une lecture du panel : même libellé, même montant ; la plus récente
+ * (l'identifiant le plus grand) parmi celles qui ne sont pas déjà dans $pris. Null sinon.
+ */
+function phIdLigne(mixed $r, string $nom, float $montant, array $pris = []): ?string
+{
+    $cle = phCle($nom); $id = null;
+    foreach (phListePanel($r) as $x) {
+        if (!is_array($x) || !isset($x['id']) || !is_scalar($x['id']) || in_array((string) $x['id'], $pris, true)) { continue; }
+        $m = null;
+        foreach (PH_CLES_MONTANT as $c) { if (isset($x[$c]) && is_numeric($x[$c])) { $m = (float) $x[$c]; break; } }
+        if ($m === null || abs($m - $montant) > 0.005) { continue; }
+        $ok = false;
+        foreach (PH_CLES_LIBELLE as $c) { if (is_string($x[$c] ?? null) && phCle($x[$c]) === $cle) { $ok = true; break; } }
+        if ($ok && ($id === null || (is_numeric($x['id']) && is_numeric($id) ? (int) $x['id'] > (int) $id : strcmp((string) $x['id'], $id) > 0))) { $id = (string) $x['id']; }
+    }
+    return $id;
+}
+
+/** Les identifiants de lignes du panel déjà rattachés à un ajout du magasin encore en place (non annulé). */
+function phIdsPris(int $shop): array
+{
+    try { return array_map('strval', array_column(Db::rows('SELECT panel_id FROM panel_frais_ajout WHERE shop_id = ? AND panel_id IS NOT NULL AND annule_le IS NULL', [(string) $shop]), 'panel_id')); }
+    catch (Throwable $e) { return []; }
 }
 
 /** Ce que le panel a dit d'un refus : le code, son message, et le détail des champs s'il le donne. */
@@ -361,7 +399,15 @@ function wr_exploitation_frais_ajout(): array
         $ch = [];
         foreach ($mois as $m) { $ch[$m] = '/shops/' . $shop . '/owner/costs?period=' . $m; }
         $vus = PanelApi::getParallele($ch, 4, 15);
-        foreach ($res as $k => $x) { $res[$k]['vu'] = $x['ok'] ? phCompterFrais($vus[$x['mois']] ?? null, $nom, $x['montant'], $type, $x['id']) > 0 : false; }
+        $pris = phIdsPris($shop);
+        foreach ($res as $k => $x) {
+            $res[$k]['vu'] = $x['ok'] ? phCompterFrais($vus[$x['mois']] ?? null, $nom, $x['montant'], $type, $x['id']) > 0 : false;
+            // Le panel ne rend pas l'identifiant de la ligne créée : la relecture le donne, pour pouvoir annuler.
+            if ($x['ok'] && $x['id'] === null && ($id = phIdLigne($vus[$x['mois']] ?? null, $nom, $x['montant'], $pris)) !== null) {
+                $res[$k]['id'] = $id; $pris[] = $id;
+                Db::exec('UPDATE panel_frais_ajout SET panel_id = ? WHERE shop_id = ? AND lot = ? AND mois = ?', [$id, (string) $shop, $lot, $x['mois']]);
+            }
+        }
         if ($reporte) {
             foreach (array_slice($mois, 1) as $m) { $res[] = ['mois' => $m, 'montant' => $montants[0], 'ok' => true, 'id' => null, 'erreur' => null, 'parLePanel' => true, 'vu' => phCompterFrais($vus[$m] ?? null, $nom, $montants[0], $type) > 0]; }
         }
@@ -371,7 +417,7 @@ function wr_exploitation_frais_ajout(): array
     $refus = array_values(array_filter($res, static fn ($x) => !$x['ok']));
     if ($crees === []) { http_response_code(502); }
     return ['ok' => $crees !== [] && $refus === [], 'lot' => $crees !== [] ? $lot : null, 'poste' => $nom, 'mois' => $res,
-        'crees' => count($crees), 'reporteParLePanel' => $reporte, 'annulable' => count(array_filter($crees, static fn ($x) => $x['id'] !== null)) === count($crees),
+        'crees' => count($crees), 'reporteParLePanel' => $reporte, 'annulable' => true,
         'champs' => $champs, 'gabarit' => $g !== null,
         'error' => $crees === [] ? 'le panel a refusé le frais : ' . (string) ($refus[0]['erreur'] ?? 'sans réponse') : null];
 }
@@ -384,16 +430,22 @@ function wr_exploitation_frais_annuler(): array
     $lot = is_string($b['lot'] ?? null) ? $b['lot'] : '';
     if ($shop <= 0 || !preg_match('/^[a-f0-9]{16}$/', $lot)) { http_response_code(400); return ['error' => 'magasin et ajout attendus']; }
     ensureFraisAjout();
-    $rows = Db::rows('SELECT mois, panel_id FROM panel_frais_ajout WHERE shop_id = ? AND lot = ? AND annule_le IS NULL ORDER BY mois', [(string) $shop, $lot]);
+    $rows = Db::rows('SELECT mois, poste, montant, panel_id FROM panel_frais_ajout WHERE shop_id = ? AND lot = ? AND annule_le IS NULL ORDER BY mois', [(string) $shop, $lot]);
     if ($rows === []) { http_response_code(404); return ['error' => 'ajout inconnu pour ce magasin, ou déjà annulé']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'compte du panel non configuré']; }
+    // Les lignes dont le panel n'a pas rendu l'identifiant : retrouvées dans les frais du mois (même libellé, même montant).
+    $manque = [];
+    foreach ($rows as $r) { if ((string) ($r['panel_id'] ?? '') === '') { $manque[(string) $r['mois']] = '/shops/' . $shop . '/costs?period=' . $r['mois']; } }
+    $lus = $manque !== [] ? PanelApi::getParallele($manque, 4, 15) : [];
+    $pris = phIdsPris($shop);
     $faits = []; $sansId = []; $refus = [];
     foreach ($rows as $r) {
         $id = (string) ($r['panel_id'] ?? '');
+        if ($id === '') { $id = (string) phIdLigne($lus[(string) $r['mois']] ?? null, (string) $r['poste'], (float) $r['montant'], $pris); if ($id !== '') { $pris[] = $id; } }
         if ($id === '') { $sansId[] = (string) $r['mois']; continue; }
         $x = PanelApi::requete('DELETE', '/shops/costs/' . rawurlencode($id));
         if ($x['code'] >= 200 && $x['code'] < 300) {
-            Db::exec('UPDATE panel_frais_ajout SET annule_le = ? WHERE shop_id = ? AND lot = ? AND mois = ?', [date('Y-m-d H:i:s'), (string) $shop, $lot, (string) $r['mois']]);
+            Db::exec('UPDATE panel_frais_ajout SET annule_le = ?, panel_id = ? WHERE shop_id = ? AND lot = ? AND mois = ?', [date('Y-m-d H:i:s'), $id, (string) $shop, $lot, (string) $r['mois']]);
             $faits[] = (string) $r['mois'];
         } else {
             $refus[] = ['mois' => (string) $r['mois'], 'erreur' => phMotifPanel($x)];
@@ -402,7 +454,7 @@ function wr_exploitation_frais_annuler(): array
     if ($faits !== []) { phOublierFrais($shop, $faits); }
     if ($faits === []) { http_response_code(502); }
     return ['ok' => $sansId === [] && $refus === [], 'annules' => $faits, 'sansId' => $sansId, 'refus' => $refus,
-        'error' => $faits === [] ? ($refus !== [] ? 'le panel a refusé la suppression : ' . $refus[0]['erreur'] : 'le panel n’a pas rendu l’identifiant des lignes : à supprimer au panel') : null];
+        'error' => $faits === [] ? ($refus !== [] ? 'le panel a refusé la suppression : ' . $refus[0]['erreur'] : 'lignes introuvables au panel (déjà supprimées ?) : à vérifier au panel') : null];
 }
 
 /** Les ajouts du magasin des 90 derniers jours, non annulés, du plus récent : [{lot, poste, du, au, n, montant, le, par, annulable}]. */
@@ -424,7 +476,6 @@ function phAjoutsRecents(int $shop): array
         $o = &$out[$l];
         $o['du'] = min($o['du'], (string) $r['mois']); $o['au'] = max($o['au'], (string) $r['mois']);
         $o['n']++; $o['montant'] = round($o['montant'] + (float) $r['montant'], 2);
-        if ($r['panel_id'] === null || (string) $r['panel_id'] === '') { $o['annulable'] = false; }
         unset($o);
     }
     return array_values($out);
