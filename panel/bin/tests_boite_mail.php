@@ -86,10 +86,13 @@ echo "Les dossiers : rôles au nom, ensembles d'UID\n";
 verifie('ensemble d’UID compact', BmImap::ensemble([9, 1, 2, 3, 7, 10, 3]) === '1:3,7,9:10');
 verifie('ensemble d’un seul UID', BmImap::ensemble([42]) === '42');
 $roles = ['INBOX.Prullenbak' => 'trash', 'Verzonden items' => 'sent', 'Archief' => 'archive', 'Concepten' => 'drafts', 'Ongewenste e-mail' => 'junk',
-    'Éléments supprimés' => 'trash', 'Messages envoyés' => 'sent', 'Papierkorb' => 'trash', 'Binnenkomend' => null, 'Bin' => 'trash', 'Fournisseurs' => null];
+    'Éléments supprimés' => 'trash', 'Messages envoyés' => 'sent', 'Papierkorb' => 'trash', 'Binnenkomend' => null, 'Bin' => 'trash', 'Fournisseurs' => null,
+    // Corbais (21/11/2026) : le préfixe en double qu'une messagerie mal réglée a créé.
+    'INBOX.INBOX.Drafts' => 'drafts', 'INBOX.INBOX.Junk' => 'junk', 'INBOX.INBOX.Sent' => 'sent', 'INBOX.INBOX.Trash' => 'trash', 'INBOX.INBOX.Fournisseurs' => null];
 $faux = [];
 foreach ($roles as $nom => $r) { if (BmImap::roleDe($nom, $nom, []) !== $r) { $faux[] = $nom . ' → ' . var_export(BmImap::roleDe($nom, $nom, []), true); } }
 verifie('rôles reconnus au nom (français, néerlandais, allemand ; « Binnenkomend » n’est pas une corbeille)', !$faux, implode(', ', $faux));
+verifie('le nom court retire tous les préfixes « INBOX. »', BmImap::nomCourt(' INBOX.INBOX.Fournisseurs') === 'Fournisseurs' && BmImap::nomCourt('INBOX') === 'INBOX');
 verifie('l’attribut SPECIAL-USE prime sur le nom', BmImap::roleDe('Divers', 'Divers', ['\\trash']) === 'trash');
 
 // --- contre de vrais serveurs (tests) ---------------------------------------------------------------------------
