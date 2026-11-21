@@ -13,7 +13,7 @@ name: Sonde — étiquettes NL, essai à blanc de l'envoi à TF Buddy (lecture s
 on:
   push:
     branches: [claude/dreamy-pascal-cd6566]
-    paths: ['consultant/tools/sonde_etiquettes_nl.php', '.github/workflows/sonde-etiquettes-nl.yml']
+    paths: ['consultant/bin/envoi_etiquettes_nl.php', 'consultant/tools/sonde_etiquettes_nl.php', '.github/workflows/sonde-etiquettes-nl.yml']
   workflow_dispatch:
 
 concurrency:
@@ -35,8 +35,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Contrôler la syntaxe de la sonde
-        run: php -l consultant/tools/sonde_etiquettes_nl.php
+      - name: Contrôler la syntaxe de la sonde et du script
+        run: |
+          php -l consultant/tools/sonde_etiquettes_nl.php
+          php -l consultant/bin/envoi_etiquettes_nl.php
 
       - name: Installer sshpass
         timeout-minutes: 4
@@ -57,15 +59,15 @@ jobs:
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "php -- '${TARGET_DIR}'" < consultant/tools/sonde_etiquettes_nl.php
 
-      # Essai à blanc : la commande ne porte PAS l'option d'écriture. Sortie 1 (introuvables, noms en double) = un
-      # constat à lire, pas un échec de la sonde ; sortie 2 (compte admin, plan, allergènes non reconnus) = échec.
+      # Essai à blanc : le script de la branche part par l'entrée standard de `php` (comme sonde-frais), avec la racine du
+      # cockpit déployé pour ses modules et le plan ; la commande ne porte PAS l'option d'écriture. Sortie 1
+      # (introuvables, noms en double) = un constat à lire ; sortie 2 (compte admin, plan, allergènes non reconnus) = échec.
       - name: Essai à blanc sur le serveur du cockpit
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "mkdir -p /var/lib/consulant_bo/prive/etiquettes-nl && chmod 700 /var/lib/consulant_bo/prive/etiquettes-nl && \
-             cd '${TARGET_DIR}' && git -C '${TARGET_DIR}' log -1 --format='code déployé : %h %s' 2>/dev/null; \
-             timeout 600 php consultant/bin/envoi_etiquettes_nl.php \
+             cd '${TARGET_DIR}' && timeout 600 php -- --racine='${TARGET_DIR}' \
                --rapport=/var/lib/consulant_bo/prive/etiquettes-nl/essai_\$(date +%Y%m%d_%H%M).json; \
-             rc=\$?; echo \"sortie du script : \$rc\"; [ \$rc -le 1 ]"
+             rc=\$?; echo \"sortie du script : \$rc\"; [ \$rc -le 1 ]" < consultant/bin/envoi_etiquettes_nl.php

@@ -12,8 +12,12 @@ cockpit (Paramètres › ERP, `ErpApi`). Périmètre validé le 21/11/2026 :
 
 - **81 corrections d'allergènes sur 75 ingrédients** des fiches techniques (`GET /products/technical-sheets`), chacune
   évidente d'après le nom de l'ingrédient : « Oeufs » sans œufs, « Mozzarella base » sans lait, « Saumon fumé tranché »
-  sans poisson, « Cookie Caramel & Noix de Pecan » avec un poisson à retirer… Elles s'écrivent sur les matières
-  premières des fournisseurs : `POST` / `DELETE /material-suppliers/{fournisseur}/raw-materials/{id}/allergens`.
+  sans poisson, « Cookie Caramel & Noix de Pecan » avec un poisson à retirer… Elles s'écrivent sur les **matières**
+  (les ingrédients des fiches) : `PATCH /materials/{id}` `{allergens: [ids]}`, qui remplace la liste — le script relit
+  l'actuelle et n'y change que ce que le plan ajoute ou retire. Les allergènes de l'API se reconnaissent à leur `code`
+  (`eggs`, `milk`, `nuts`…). Sonde du 21/11 : 68 des 75 ingrédients sont des matières du même nom ; les 7 autres
+  (crème Chibouste, crème pâtissière, ganache, crème fraîche sucrée, mayonnaise maison, salade de thon maison, sauce
+  yaourt) sont des sous-recettes, à corriger à la main.
   Les allergènes proposés d'après les produits similaires en ligne ne sont **pas** envoyés : ils restent une
   proposition à valider avec les fiches techniques.
 - **100 traductions FR / NL** des produits sans aucun point à vérifier : `PATCH /products/{id}/aliases` pour les 11
@@ -36,16 +40,18 @@ php consultant/bin/envoi_etiquettes_nl.php --appliquer --rapport=/tmp/etiquettes
 ```
 
 Options : `--seulement=allergenes` ou `--seulement=traductions` ; `--sans-matieres` (traductions des produits du panel
-seulement) ; `--plan=…` pour un autre plan.
+seulement) ; `--plan=…` pour un autre plan ; `--racine=…` quand le script arrive par l'entrée standard (c'est ainsi que
+`.github/workflows/sonde-etiquettes-nl.yml` lance l'essai à blanc sur le serveur, sans option d'écriture).
 
 Garde-fous : un nom introuvable ou présent plusieurs fois n'est jamais deviné (signalé, sauté ; un retrait d'allergène
-sur un nom présent chez plusieurs fournisseurs est sauté) ; un allergène déjà en place n'est pas renvoyé ; chaque
+sur un nom porté par plusieurs matières est sauté) ; un allergène déjà en place n'est pas renvoyé ; chaque
 écriture est relue ; si les 14 allergènes de l'API ne sont pas reconnus avec certitude, rien n'est envoyé (sortie 2).
 Relancer le script ne réécrit rien de ce qui est déjà en place.
 
 Sortie : 0 tout bon ; 1 au moins un refus, un introuvable, un nom ambigu ou une relecture qui ne montre pas
 l'écriture (détail dans le rapport) ; 2 compte admin indisponible, plan illisible ou allergènes non reconnus.
 
-Le contrat des réponses de l'API (listes de fournisseurs, de matières, de produits) n'est pas documenté au swagger : le
-script lit les clés usuelles (`id`, `name`, `material.name`, `id_allergen`…). Si l'essai à blanc annonce beaucoup
-d'introuvables, c'est le premier point à regarder, avant d'appliquer.
+Le contrat des réponses de l'API n'est pas documenté au swagger : il a été relevé par la sonde du 21/11
+(`consultant/tools/sonde_etiquettes_nl.php`) — `/allergens` est un objet indexé par id, les listes sont à la racine, une
+fiche matière porte `allergens`, les traductions se lisent `{fk_id, lang_code, alias_value}`. Les identifiants de l'ERP ne
+sont pas ceux des produits de l'API : les traductions passent par le nom exact (27 matières et 9 produits sur 100).
