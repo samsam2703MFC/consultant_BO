@@ -18,5 +18,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   elles vivent dans le dépôt `marketing`.
 - **Crons** : `marketing/bin/metadonnee_cron.sh`, `marketing/bin/newsletter_cron.sh`, `marketing/bin/social_cron.sh` (posés par `shared/bin/deploy.sh`).
 - **Clés** : Meta, SMSAPI, LinkedIn… par `shared/src/erp_cles.php` (portail `mar` ou `commun`), jamais en SQL direct.
-- **Tests** : `php marketing/bin/tests_metadonnee.php`, `tests_newsletter.php`, `tests_promos*.php`, `tests_bons.php`,
+- **Fonds et types de campagne** (21/11/2026) : le cockpit n'écrit plus `mar_fund_*` ni `mar_campaign_type` ; ses
+  écritures (`shared/src/writes.php`) passent par l'API du module (`marketingAppel`, jeton de service). Ne pas
+  revenir à des écritures SQL directes : `marketing/bin/tests_fonds_relais.php` le vérifie.
+- **Tests** : `php marketing/bin/tests_fonds_relais.php`, `tests_metadonnee.php`, `tests_newsletter.php`, `tests_promos*.php`, `tests_bons.php`,
   `tests_canaux.php`, `tests_catalogue.php` ; `php marketing/tests/visibilite/run.php`.
