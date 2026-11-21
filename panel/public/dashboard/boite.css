@@ -20,12 +20,42 @@
 .bx-porte-c label { display: grid; gap: 4px; font-size: 12px; color: var(--ink); }
 .bx-porte-c .db-btn { justify-content: center; }
 
-/* La barre : dossiers, recherche, écrire, modèles, messages automatiques. */
-.bx-barre { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.bx-tabs { flex: 1; min-width: 0; margin: 0; border: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-items: center; }
-.bx-tabs .page-tabs__tab { white-space: nowrap; }
-.bx-autres { min-height: 30px; margin-left: 6px; font-size: 12px; }
-.bx-q { display: flex; align-items: center; gap: 6px; width: 240px; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
+/* La barre : recherche, écrire, modèles, messages automatiques ; puis les dossiers, en boutons. */
+.bx-barre { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: wrap; }
+.bx-q { display: flex; align-items: center; gap: 6px; width: 320px; max-width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
+
+/* Un dossier = un rectangle à coins arrondis, sa micro-icône, son compteur (21/11/2026 : « au lieu de la liste
+ * déroulante, des boutons rectangle coin arrondi avec micro-icône »). La barre des dossiers, « Déplacer vers », l'IA. */
+.bx-dossiers { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.bx-dos { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font: inherit; font-size: 12.5px; color: var(--ink); white-space: nowrap; cursor: pointer; transition: border-color 0.12s, background 0.12s, color 0.12s; }
+.bx-dos .ico { width: 14px; height: 14px; color: var(--muted-2); }
+.bx-dos:hover:not(:disabled) { border-color: rgba(141, 29, 44, 0.45); }
+.bx-dos:hover:not(:disabled) .ico { color: var(--accent); }
+.bx-dos.is-on { border-color: var(--accent); background: rgba(141, 29, 44, 0.06); color: var(--accent); }
+.bx-dos.is-on .ico { color: var(--accent); }
+.bx-dos:disabled { opacity: 0.55; cursor: default; }
+.bx-dos-n { min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 400; line-height: 17px; text-align: center; }
+.bx-dos-sep { width: 1px; height: 20px; margin: 0 4px; background: var(--line); }
+.bx-dos--plus { border-style: dashed; color: var(--muted-2); }
+.bx-dos--saisie { gap: 6px; padding: 0 4px 0 10px; border-color: var(--accent); cursor: default; }
+.bx-dos--saisie .ico { color: var(--accent); }
+.bx-dos--saisie input { width: 170px; border: 0; outline: 0; background: transparent; font: inherit; font-size: 12.5px; color: var(--ink); }
+.bx-dossiers--vers, .bx-dossiers--palette { margin: 0; padding: 0; border: 0; }
+.bx-dossiers--vers { margin-bottom: 18px; }
+.bx-dossiers--palette { padding: 2px 12px 10px 37px; }
+.bx-dossiers--palette .bx-dos { height: 28px; font-size: 12px; }
+
+/* Les cases à cocher (la liste, « tout sélectionner », la proposition de l'IA). */
+.bx-coche { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: none; cursor: pointer; }
+.bx-coche input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+.bx-coche i { position: relative; display: grid; place-items: center; width: 15px; height: 15px; flex: none; box-sizing: border-box; border: 1.5px solid #c9c2b8; border-radius: 4px; background: #fff; transition: background 0.12s, border-color 0.12s; }
+.bx-coche:hover i { border-color: var(--accent); }
+.bx-coche input:checked + i, .bx-coche input:indeterminate + i { border-color: var(--accent); background: var(--accent); }
+.bx-coche input:checked + i::after { content: ''; width: 4px; height: 8px; margin-top: -2px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.bx-coche input:indeterminate + i::after { content: ''; width: 7px; height: 0; border-top: 2px solid #fff; }
+.bx-coche input:focus-visible + i { outline: 2px solid rgba(141, 29, 44, 0.35); outline-offset: 1px; }
+.bx-coche input:disabled + i { opacity: 0.4; }
+.bx-coche--tout { font-size: 12px; color: var(--muted-2); margin-right: 4px; }
 .bx-q input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 13px; color: var(--ink); }
 
 .bx { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); gap: 14px; align-items: start; }
@@ -33,15 +63,22 @@
 
 /* La liste. */
 .bx-liste { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
-.bx-filtres { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; border-bottom: 1px solid var(--row-line); background: var(--table-head); }
+.bx-filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 30px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--row-line); background: var(--table-head); }
+.bx-rapides { display: flex; gap: 4px; margin-left: auto; }
+.bx-rapide { display: grid; place-items: center; width: 30px; height: 28px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted-2); cursor: pointer; }
+.bx-rapide:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.bx-rapide--stop, .bx-rapide--stop:hover:not(:disabled) { color: #A61E1E; }
 .bx-chip { padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-size: 11.5px; color: var(--muted-2); cursor: pointer; }
 .bx-chip.on { border-color: var(--accent); color: var(--accent); }
 .bx-items { max-height: calc(100vh - 290px); min-height: 280px; overflow-y: auto; }
-.bx-it { display: grid; gap: 2px; width: 100%; padding: 10px 12px 10px 18px; border: 0; border-top: 1px solid var(--row-line); background: #fff; text-align: left; font: inherit; cursor: pointer; position: relative; }
+.bx-it { display: flex; align-items: flex-start; border-top: 1px solid var(--row-line); background: #fff; position: relative; }
 .bx-it:first-child { border-top: 0; }
 .bx-it:hover { background: var(--table-head); }
+.bx-it.coche { background: rgba(141, 29, 44, 0.035); }
 .bx-it.on { background: rgba(141, 29, 44, 0.05); box-shadow: inset 3px 0 0 var(--accent); }
-.bx-it.nonlu::before { content: ''; position: absolute; left: 7px; top: 15px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.bx-it.nonlu::before { content: ''; position: absolute; left: 5px; top: 17px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.bx-it > .bx-coche { padding: 12px 10px 10px 14px; }
+.bx-it-b { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 10px 12px 10px 0; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .bx-it-h { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink); }
 .bx-it-de { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bx-it-q { flex: none; font-size: 11px; color: var(--muted); }
@@ -65,7 +102,7 @@
 .bx-av { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--chip); color: var(--muted-2); font-size: 14px; }
 .bx-gestes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 0; border-top: 1px solid var(--row-line); border-bottom: 1px solid var(--row-line); margin-bottom: 12px; }
 .bx-sep { flex: 1; }
-.bx-ic { padding: 0 9px; }
+.bx-ic { padding: 6px 9px; }   /* la hauteur des autres boutons : une icône seule ne les écrase plus */
 .bx-vendre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; padding: 9px 12px; border: 1px solid rgba(141, 29, 44, 0.18); border-radius: 10px; background: rgba(141, 29, 44, 0.04); font-size: 12.5px; color: var(--ink); }
 .bx-vendre > span { flex: 1; min-width: 200px; }
 .bx-corps { font-size: 14px; }
@@ -122,3 +159,51 @@
 .bx-t-j tr:first-child td { border-top: 0; }
 .bx-t-j small { display: block; color: var(--muted); font-size: 11px; }
 .bx-bas { margin: 10px 0 0; font-size: 11px; color: var(--muted); }
+
+/* La sélection, dans le volet de droite (21/11/2026 : « tout sélectionner, effacer, tout archiver, mettre en dossier »). */
+.bx-sel-h { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--row-line); }
+.bx-sel-h > div { flex: 1; min-width: 0; }
+.bx-sel-h h2 { margin: 0 0 2px; font-size: 19px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.bx-sel-n { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 17px; }
+.bx-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin-bottom: 18px; }
+.bx-tuile { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-size: 12.5px; color: var(--ink); text-align: left; cursor: pointer; transition: border-color 0.12s, background 0.12s; }
+.bx-tuile .ico { width: 18px; height: 18px; color: var(--accent); }
+.bx-tuile:hover:not(:disabled) { border-color: var(--accent); background: rgba(141, 29, 44, 0.03); }
+.bx-tuile:disabled { opacity: 0.55; cursor: default; }
+.bx-tuile--stop, .bx-tuile--stop .ico { color: #A61E1E; }
+.bx-tuile--stop:hover:not(:disabled) { border-color: #A61E1E; background: rgba(166, 30, 30, 0.04); }
+.bx-sel-note { margin: -8px 0 16px; }
+
+/* Ranger avec l'IA : l'appel, puis la proposition par dossier d'arrivée. */
+.bx-ia { padding: 14px 16px; border: 1px solid rgba(141, 29, 44, 0.2); border-radius: 14px; background: linear-gradient(180deg, rgba(141, 29, 44, 0.05), rgba(141, 29, 44, 0) 120px), #fff; }
+.bx-ia-h { display: flex; gap: 12px; align-items: flex-start; }
+.bx-ia-h b { font-size: 14px; font-weight: 400; color: var(--ink); }
+.bx-ia-h p { margin: 3px 0 0; line-height: 1.5; }
+.bx-ia-ico { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 10px; background: var(--accent); color: #fff; box-shadow: 0 0 0 4px rgba(141, 29, 44, 0.08); }
+.bx-ia-ico .ico { width: 16px; height: 16px; }
+.bx-ia .bx-actions { margin-top: 14px; }
+.bx-ia-lit { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 12.5px; color: var(--muted-2); }
+.bx-ia-onde { display: inline-flex; gap: 3px; }
+.bx-ia-onde i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: bx-onde 1s ease-in-out infinite; }
+.bx-ia-onde i:nth-child(2) { animation-delay: 0.15s; }
+.bx-ia-onde i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bx-onde { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+.bx-rg-tete { display: flex; align-items: baseline; gap: 10px; margin: 16px 0 8px; font-size: 13px; color: var(--ink); }
+.bx-rg-tete b { font-weight: 400; }
+.bx-rg { margin-bottom: 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+.bx-rg-h { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--row-line); background: var(--table-head); font-size: 12.5px; color: var(--ink); }
+.bx-rg-h b { font-weight: 400; }
+.bx-rg-h .ico { color: var(--accent); }
+.bx-rg--laisser .bx-rg-h .ico { color: var(--muted-2); }
+.bx-rg-n { margin-left: auto; font-size: 11px; color: var(--muted); }
+.bx-badge--neuf { margin: 0; background: rgba(141, 29, 44, 0.1); color: var(--accent); }
+.bx-rg-l { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--row-line); }
+.bx-rg-h + .bx-rg-l { border-top: 0; }
+.bx-rg-l.off .bx-rg-t { opacity: 0.45; }
+.bx-rg-place { width: 15px; flex: none; }
+.bx-rg-t { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.bx-rg-de, .bx-rg-o { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bx-rg-de { font-size: 12.5px; color: var(--ink); }
+.bx-rg-o { font-size: 12px; color: var(--muted-2); }
+.bx-rg-r { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--accent); }
+.bx-rg-r .ico { width: 11px; height: 11px; }

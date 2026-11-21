@@ -16,6 +16,12 @@ declare(strict_types=1);
  */
 
 require __DIR__ . '/../src/boite_protocole.php';
+// Les gestes du dashboard (src/boite_mail.php) et l'IA (shared/src/anthropic.php), sans base : les réglages et les clés
+// lus par ces modules répondent « vide », sauf une clé Anthropic factice (le modèle est remplacé, plus bas, par un faux).
+if (!function_exists('setting')) { function setting(string $k, $d = null) { return $d; } }
+if (!function_exists('erpCle')) { function erpCle(string $k): string { return $k === 'anthropic_api_key' ? 'cle-de-test' : ''; } }
+require __DIR__ . '/../src/boite_mail.php';
+require __DIR__ . '/../../shared/src/anthropic.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -76,6 +82,16 @@ verifie('la citation en bloc de citation dans le HTML', str_contains((string) $r
 verifie('la pièce jointe relue, nom UTF-8 compris', count($rc['pieces']) === 1 && $rc['pieces'][0]['nom'] === 'Offre n° 412.pdf', json_encode($rc['pieces']));
 verifie('expéditeur avec apostrophe typographique encodé', (bmAdresses($r['entetes']['from'] ?? '')[0]['nom'] ?? '') === 'L’Atelier By Halle');
 
+echo "Les dossiers : rôles au nom, ensembles d'UID\n";
+verifie('ensemble d’UID compact', BmImap::ensemble([9, 1, 2, 3, 7, 10, 3]) === '1:3,7,9:10');
+verifie('ensemble d’un seul UID', BmImap::ensemble([42]) === '42');
+$roles = ['INBOX.Prullenbak' => 'trash', 'Verzonden items' => 'sent', 'Archief' => 'archive', 'Concepten' => 'drafts', 'Ongewenste e-mail' => 'junk',
+    'Éléments supprimés' => 'trash', 'Messages envoyés' => 'sent', 'Papierkorb' => 'trash', 'Binnenkomend' => null, 'Bin' => 'trash', 'Fournisseurs' => null];
+$faux = [];
+foreach ($roles as $nom => $r) { if (BmImap::roleDe($nom, $nom, []) !== $r) { $faux[] = $nom . ' → ' . var_export(BmImap::roleDe($nom, $nom, []), true); } }
+verifie('rôles reconnus au nom (français, néerlandais, allemand ; « Binnenkomend » n’est pas une corbeille)', !$faux, implode(', ', $faux));
+verifie('l’attribut SPECIAL-USE prime sur le nom', BmImap::roleDe('Divers', 'Divers', ['\\trash']) === 'trash');
+
 // --- contre de vrais serveurs (tests) ---------------------------------------------------------------------------
 $imap = getenv('BM_TEST_IMAP'); $smtp = getenv('BM_TEST_SMTP'); $u = (string) getenv('BM_TEST_USER'); $pw = (string) getenv('BM_TEST_PASS');
 if ($imap && $u !== '') {
@@ -83,7 +99,59 @@ if ($imap && $u !== '') {
     $srv = bmServeur($imap, '');
     try { BmImap::ouvrir($srv, $u, 'mauvais-mot-de-passe'); verifie('un mauvais mot de passe est refusé', false); }
     catch (BmRefus $e) { verifie('un mauvais mot de passe est refusé (BmRefus)', true); }
-    $s = BmImap::ouvrir($srv, $u, $pw);
+    // Une boîte neuve n'a souvent que sa réception (21/11/2026) : les gestes du dashboard créent ce qui manque.
+    $c = ['adresse' => $u, 'utilisateur' => $u, 'motDePasse' => $pw, 'nom' => 'Test', 'imap' => $srv];
+    $s = bmImap($c);
+    $neuve = !array_filter($s->dossiers(), static fn ($x) => $x['role'] === 'archive' || $x['role'] === 'trash');
+    $s->ouvrirDossier('INBOX');
+    $n0 = count($s->chercher(['ALL']));
+    foreach (['Facture 2026-1182', 'Votre colis est en route', 'Nouveautés de Noël', 'Gâteau pour 20 personnes'] as $o) {
+        $s->deposer('INBOX', "From: Expéditeur <x@exemple.be>\r\nSubject: " . $o . "\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nBonjour, " . $o . ".\r\n", '');
+    }
+    $s->ouvrirDossier('INBOX', true); $s->ouvrirDossier('INBOX');
+    $quatre = array_slice($s->chercher(['ALL']), -4);
+    verifie('quatre e-mails déposés en réception', count($quatre) === 4 && count($s->chercher(['ALL'])) === $n0 + 4);
+    $r = bmGeste($c, ['dossier' => 'INBOX', 'uids' => [$quatre[0]], 'action' => 'archiver']);
+    $arch = bmDossierRole($s, 'archive');
+    verifie('archiver : les archives existent ensuite' . ($neuve ? ', créées par le geste' : ''), ($r['ok'] ?? false) && $arch !== null && (!$neuve || ($r['cree'] ?? null) === 'Archive'), json_encode($r));
+    $r = bmGeste($c, ['dossier' => 'INBOX', 'uids' => [$quatre[1], $quatre[2]], 'action' => 'corbeille']);
+    $corb = bmDossierRole($s, 'trash');
+    verifie('corbeille groupée : deux e-mails, la corbeille existe ensuite', ($r['n'] ?? 0) === 2 && $corb !== null && (int) $s->etat($corb)['total'] >= 2, json_encode($r));
+    verifie('le préfixe des dossiers personnels est respecté (NAMESPACE)', $s->prefixe($s->dossiers()) === '' || str_starts_with((string) $arch, $s->prefixe($s->dossiers())), (string) $arch);
+    $r = @bmGeste($c, ['dossier' => 'INBOX', 'uids' => [$quatre[3]], 'action' => 'effacer']);   // @ : le code HTTP, hors serveur web
+    verifie('effacer depuis la réception est refusé', isset($r['error']));
+    $r = bmGeste($c, ['dossier' => (string) $corb, 'tout' => ['q' => '', 'filtre' => ''], 'action' => 'effacer']);
+    $s->ouvrirDossier((string) $corb, true);
+    verifie('effacer tout le dossier de la corbeille', ($r['n'] ?? 0) >= 2 && (int) $s->etat((string) $corb)['total'] === 0, json_encode($r));
+    $dejaLa = (bool) array_filter($s->dossiers(), static fn ($x) => str_ends_with($x['nom'], 'Commandes clients'));
+    $r = bmGeste($c, ['dossier' => 'INBOX', 'uids' => [$quatre[3]], 'action' => 'deplacer', 'nouveau' => 'Commandes clients']);
+    $cc = null; foreach ($s->dossiers() as $x) { if (str_ends_with($x['nom'], 'Commandes clients')) { $cc = $x['brut']; } }
+    verifie('déplacer vers un nouveau dossier : créé (repris s’il existe), l’e-mail y est', ($r['cree'] ?? null) === ($dejaLa ? null : 'Commandes clients') && $cc !== null && (int) $s->etat($cc)['total'] === 1, json_encode($r));
+    $r = bmGeste($c, ['dossier' => (string) $cc, 'tout' => ['q' => '', 'filtre' => ''], 'action' => 'deplacer', 'vers' => 'INBOX']);
+    verifie('tout le dossier remis en réception', ($r['n'] ?? 0) === 1 && (int) $s->etat($cc)['total'] === 0, json_encode($r));
+
+    // Ranger avec l'IA : le modèle (un faux, ici) propose ; rien ne bouge.
+    foreach (['Facture Proximus de novembre', 'Commande de 2 tartes au riz'] as $o) {
+        $s->deposer('INBOX', "From: Client <c@exemple.be>\r\nSubject: " . $o . "\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nBonjour, " . $o . ".\r\n", '');
+    }
+    $s->ouvrirDossier('INBOX', true); $s->ouvrirDossier('INBOX');
+    $deux = array_slice($s->chercher(['ALL']), -2);
+    $vu = null;
+    Anthropic::$transport = static function (array $corps) use (&$vu): array {
+        $vu = $corps;
+        return [200, ['stop_reason' => 'end_turn', 'model' => 'faux', 'content' => [['type' => 'text', 'text' => json_encode(['rangement' => [
+            ['repere' => 'E1', 'action' => 'nouveau', 'dossier' => 'factures', 'raison' => 'facture'],
+            ['repere' => 'E2', 'action' => 'dossier', 'dossier' => 'commandes CLIENTS', 'raison' => 'commande']]])]]]];
+    };
+    $avant = count($s->chercher(['ALL']));
+    $r = bmRanger($c, ['dossier' => 'INBOX', 'uids' => $deux]);
+    $P = array_column($r['propositions'] ?? [], 'cible', 'uid');
+    verifie('ranger : un nouveau dossier proposé (« Factures »), un dossier existant reconnu malgré la casse', ($P[$deux[0]] ?? '') === 'n:Factures' && ($P[$deux[1]] ?? '') === 'd:' . $cc, json_encode($r));
+    verifie('ranger : le modèle a lu l’objet et le début du texte, et les dossiers de la boîte', is_array($vu) && str_contains(json_encode($vu, JSON_UNESCAPED_UNICODE), 'Commandes clients') && str_contains(json_encode($vu, JSON_UNESCAPED_UNICODE), 'Début : « Bonjour'));
+    verifie('ranger ne déplace rien', count($s->chercher(['ALL'])) === $avant);
+    Anthropic::$transport = null;
+
+    bmDossierRole($s, 'sent', true);   // comme le premier envoi depuis le dashboard
     $d = $s->dossiers();
     $roles = array_column($d, 'role', 'brut');
     verifie('les dossiers et leurs rôles (réception, envoyés, archives, corbeille)', ($roles['INBOX'] ?? '') === 'inbox' && in_array('sent', $roles, true) && in_array('archive', $roles, true) && in_array('trash', $roles, true), json_encode($d));

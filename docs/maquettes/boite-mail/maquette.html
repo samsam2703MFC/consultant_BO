@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- Maquette de la boîte mail (21/11/2026) : le VRAI module (panel/public/dashboard/boite.js et ses feuilles de style),
+     branché sur une fausse API (ci-dessous) et des e-mails illustrés. capturer.cjs l'ouvre et clique comme un magasin. -->
+<title>Boîte mail — maquette</title>
+<link rel="stylesheet" href="../../../shared/public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../panel/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="../../../panel/public/dashboard/boite.css">
+<!-- La capture se prend en page entière : le rail suit toute la hauteur de la page, pas seulement l'écran. -->
+<style>body{position:relative;min-height:100vh}.db-rail{position:absolute;bottom:auto;height:100%}</style>
+</head>
+<body class="db-rail-on">
+<nav class="sidebar db-rail" aria-label="Navigation du dashboard" id="rail"></nav>
+<div id="dash"><div class="db-nav db-nav--rail"><div class="db-vt"><div class="kk">L’Atelier By Halle</div><h1>Boîte mail</h1></div></div><div id="db-boite"></div></div>
+<script>
+/* Le rail du dashboard, recopié (dashboard.js, railHtml) pour le cadre de la capture. */
+(function () {
+  const ic = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
+  const G = [['La journée', [['Opérationnel', 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'], ['Tâches', 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'], ['Temps morts', 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9']]],
+    ['Les chiffres', [['Semaine', 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'], ['Mois', 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'], ['Année', 'M3 17l6-6 4 4 8-8M15 7h6v6'], ['Trésorerie', 'M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5']]],
+    ['Vendre', [['Analyse', 'M3 3v18h18M7 15l4-5 3 3 5-7'], ['Produits', 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8'], ['Promotions', 'M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0'], ['Offres', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5']]],
+    ['Marketing', [['Mon marketing', 'M4 4h16v12H4zM2 20h20M9 8l4 2-4 2z'], ['Réseaux sociaux', 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18']]]];
+  document.getElementById('rail').innerHTML = `<div class="sidebar__head"><img class="sidebar__logo" src="../../../shared/public/assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
+    <div class="sidebar__groups"><div class="sidebar__group db-rail-boite"><button type="button" class="sidebar__item is-active">${ic('M3 5h18v14H3zM3 6l9 7 9-7')}<span class="sidebar__item-label">Boîte mail</span><span class="sidebar__count" id="rail-n">7</span></button></div>
+    <div class="db-rail-ia"><button type="button" class="sidebar__item">${ic('M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z')}<span class="sidebar__item-label">Assistant IA</span></button></div>
+    ${G.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.map(([l, d]) => `<button type="button" class="sidebar__item">${ic(d)}<span class="sidebar__item-label">${l}</span></button>`).join('')}</div>`).join('')}</div>`;
+})();
+
+/* La fausse API : la boîte d'un magasin (dossiers, e-mails), les gestes qui la changent vraiment, l'IA qui propose. */
+(function () {
+  const scene = new URLSearchParams(location.search).get('scene') || 'selection';
+  const auj = '2026-11-21';
+  const h = (j, hh) => `${j}T${hh}:00+01:00`;
+  const sansArchives = scene === 'creation';
+  const D = [
+    { nom: 'INBOX', brut: 'INBOX', role: 'inbox' }, { nom: 'Drafts', brut: 'Drafts', role: 'drafts' }, { nom: 'Sent', brut: 'Sent', role: 'sent' },
+    ...(sansArchives ? [] : [{ nom: 'Archive', brut: 'Archive', role: 'archive' }]),
+    { nom: 'Junk', brut: 'Junk', role: 'junk' }, { nom: 'Trash', brut: 'Trash', role: 'trash' },
+    { nom: 'Fournisseurs', brut: 'Fournisseurs', role: null }, { nom: 'Réseau Atelier By', brut: 'R&AOk-seau Atelier By', role: null },
+  ];
+  const de = (nom, adresse) => ({ nom, adresse });
+  let uid = 1300;
+  const M = { INBOX: [], Drafts: [], Sent: [], Archive: [], Junk: [], Trash: [], Fournisseurs: [], 'R&AOk-seau Atelier By': [] };
+  const L = [
+    [de('Marie Van den Broeck', 'marie.vandenbroeck@telenet.be'), 'Gâteau d’anniversaire pour 20 personnes le 28/11', h(auj, '09:42'), { lu: false }, ['laisser', 'demande de client sans réponse']],
+    [de('Moulins Dewitte', 'facturation@moulins-dewitte.be'), 'Facture 2026-1182 — farine T55 et T65', h(auj, '08:15'), { pj: true }, ['n:Factures', 'facture d’un fournisseur']],
+    [de('Sodexo Belgium', 'achats.halle@sodexo.example'), 'Demande d’offre : plateaux petits-déjeuners, 45 pers.', h(auj, '07:58'), { lu: false }, ['laisser', 'demande d’offre B2B à traiter']],
+    [de('bpost', 'noreply@bpost.be'), 'Votre colis est en route', h(auj, '07:30'), {}, ['archive', 'notification de livraison']],
+    [de('Callebaut', 'news@callebaut.example'), 'Nouveautés chocolat de Noël 2026', h('2026-11-20', '18:02'), {}, ['n:Newsletters', 'lettre d’information d’un fournisseur']],
+    [de('Jonas Peeters', 'jonas.peeters@gmail.com'), 'Candidature — vendeuse / vendeur temps partiel', h('2026-11-20', '16:41'), { pj: true, lu: false }, ['n:Candidatures', 'candidature spontanée, CV joint']],
+    [de('L’Atelier By — Réseau', 'reseau@atelierby.be'), 'Planning des promotions de décembre', h('2026-11-20', '14:10'), { pj: true }, ['d:R&AOk-seau Atelier By', 'communication du réseau']],
+    [de('Vandemoortele', 'logistique@vandemoortele.example'), 'Confirmation de livraison — mardi 24/11', h('2026-11-20', '11:23'), {}, ['d:Fournisseurs', 'livraison d’un fournisseur']],
+    [de('Proximus', 'facture@proximus.example'), 'Votre facture de novembre est disponible', h('2026-11-20', '09:05'), {}, ['n:Factures', 'facture télécom']],
+    [de('Hanne De Smet', 'hanne.desmet@skynet.be'), 'Re: Commande de 2 tartes au riz', h('2026-11-19', '17:48'), { repondu: true }, ['archive', 'commande déjà confirmée']],
+    [de('Google Business Profile', 'businessprofile-noreply@google.com'), '3 nouveaux avis sur L’Atelier By Halle', h('2026-11-19', '12:30'), {}, ['archive', 'notification automatique']],
+    [de('Ville de Halle', 'evenementen@halle.example'), 'Marché de Noël : inscription des exposants avant le 30/11', h('2026-11-19', '10:12'), { lu: false }, ['laisser', 'demande une réponse avant le 30/11']],
+    [de('Puratos', 'promo@puratos.example'), 'Améliorants : offre de fin d’année', h('2026-11-18', '15:00'), {}, ['n:Newsletters', 'publicité d’un fournisseur']],
+    [de('Sophie Lambert', 'sophie.lambert@hotmail.com'), 'Allergènes du cramique aux raisins ?', h('2026-11-18', '08:44'), { lu: false, suivi: true }, ['laisser', 'question de cliente, marquée à suivre']],
+  ];
+  const PROP = {};
+  L.forEach(([d, objet, date, f, p]) => { uid--; M.INBOX.push(Object.assign({ uid, de: d, a: [de('L’Atelier By Halle', 'halle@atelierby.be')], objet, date, lu: true, suivi: false, repondu: false, pj: false, taille: 18000, offres: [] }, f)); PROP[uid] = p; });
+  M.INBOX[2].offres = [];
+  const totalInbox = 248;
+  const CORB = [[de('Delhaize Pro', 'pro@delhaize.example'), 'Vos promotions de la semaine'], [de('LinkedIn', 'notifications@linkedin.example'), 'Vous avez 4 nouvelles notifications'], [de('Uber Eats', 'restaurants@ubereats.example'), 'Rejoignez Uber Eats : 0 % de commission le premier mois'],
+    [de('Thomas Claes', 'thomas.claes@gmail.com'), 'Re: Pain sans gluten ?'], [de('Facebook', 'notification@facebookmail.example'), 'Votre page a 12 nouvelles mentions J’aime'], [de('Metro', 'info@metro.example'), 'Catalogue de décembre'],
+    [de('Brico', 'news@brico.example'), 'Black Friday : -30 % sur tout'], [de('Ikea Business', 'business@ikea.example'), 'Aménagez votre commerce'], [de('Mollie', 'info@mollie.example'), 'Nouvelles fonctionnalités de paiement']];
+  CORB.forEach(([d, o], i) => M.Trash.push({ uid: 400 + i, de: d, a: [], objet: o, date: h('2026-11-' + String(17 - Math.floor(i / 2)).padStart(2, '0'), '1' + (i % 10) + ':0' + (i % 6)), lu: true, suivi: false, repondu: false, pj: false, taille: 9000, offres: [] }));
+  M.Fournisseurs = [1, 2, 3].map(i => ({ uid: 900 + i, de: de('Vandemoortele', 'logistique@vandemoortele.example'), a: [], objet: 'Livraison ' + i, date: h('2026-11-1' + i, '09:00'), lu: true }));
+
+  const json = (o, code) => Promise.resolve(new Response(JSON.stringify(o), { status: code || 200, headers: { 'Content-Type': 'application/json' } }));
+  const etat = () => ({ shop: '4', reliee: true, ouverte: true, adresse: 'halle@atelierby.be', nom: 'L’Atelier By Halle', serveur: 'ssl0.ovh.net',
+    dossiers: D.map(d => Object.assign({}, d, { total: d.role === 'inbox' ? totalInbox - (14 - M.INBOX.length) : d.role === 'drafts' ? 2 : (M[d.brut] || []).length, nonLus: d.role === 'inbox' ? M.INBOX.filter(m => !m.lu).length : d.role ? null : 0 })),
+    nonLus: M.INBOX.filter(m => !m.lu).length });
+  window.fetch = function (u, o) {
+    const url = new URL(u, location.href), p = url.pathname.replace(/^.*\/api\/cockpit/, ''), q = url.searchParams;
+    const b = o && o.body ? JSON.parse(o.body) : {};
+    if (p === '/dashboard/boite') { return json(etat()); }
+    if (p === '/dashboard/boite/messages') {
+      const d = q.get('dossier') || 'INBOX', L = M[d] || [];
+      return json({ dossier: d, page: 1, parPage: 50, total: d === 'INBOX' ? totalInbox - (14 - L.length) : L.length, messages: L });
+    }
+    if (p === '/dashboard/boite/message') {
+      const m = (M[q.get('dossier')] || []).find(x => x.uid === +q.get('uid'));
+      return json(Object.assign({}, m, { dossier: q.get('dossier'), cc: [], texte: 'Bonjour,\n\nNous voudrions commander un gâteau pour l’anniversaire de notre fille, 20 personnes, le samedi 28/11 vers 15 h.\nUn fraisier si possible, avec « Joyeux anniversaire Lina ».\n\nMerci d’avance,\nMarie Van den Broeck', html: null, pieces: [], moi: 'halle@atelierby.be', repondreA: m.de }));
+    }
+    if (p === '/dashboard/boite/geste') {
+      const d = b.dossier, src = M[d] || [];
+      const uids = b.tout ? src.map(m => m.uid) : b.uids;
+      let cree = null, vers = b.vers;
+      if (b.action === 'archiver') { if (!D.some(x => x.role === 'archive')) { D.splice(3, 0, { nom: 'Archive', brut: 'Archive', role: 'archive' }); cree = 'Archive'; } vers = 'Archive'; }
+      if (b.action === 'corbeille') { vers = 'Trash'; }
+      if (b.action === 'deplacer' && b.nouveau) { vers = b.nouveau; if (!D.some(x => x.brut === vers)) { D.push({ nom: vers, brut: vers, role: null }); M[vers] = []; cree = vers; } }
+      if (['archiver', 'corbeille', 'deplacer', 'effacer'].includes(b.action)) {
+        const part = src.filter(m => uids.includes(m.uid)); M[d] = src.filter(m => !uids.includes(m.uid));
+        if (vers && b.action !== 'effacer') { M[vers] = (M[vers] || []).concat(part); }
+      } else { src.forEach(m => { if (uids.includes(m.uid)) { if (b.action === 'lu') { m.lu = true; } if (b.action === 'nonlu') { m.lu = false; } if (b.action === 'suivi') { m.suivi = true; } } }); }
+      return json({ ok: true, action: b.action, n: uids.length, cree });
+    }
+    if (p === '/dashboard/boite/ranger') {
+      const props = b.uids.map(u => { const m = M.INBOX.find(x => x.uid === u), [c, r] = PROP[u] || ['laisser', '']; return { uid: u, de: m.de, objet: m.objet, date: m.date, cible: c, nom: c.replace(/^[dn]:/, ''), raison: r }; });
+      return new Promise(ok => setTimeout(() => ok(json({ dossier: 'INBOX', propositions: props, modele: 'claude-sonnet-5' })), 300));
+    }
+    if (p === '/dashboard/boite/modeles') { return json({ reseau: [], magasin: [], variables: {} }); }
+    return json({});
+  };
+  window.SCENE = scene;
+})();
+</script>
+<script src="../../../panel/public/dashboard/boite.js"></script>
+<script>
+  const p = document.getElementById('db-boite');
+  p.replaceWith(window.DashBoite.racine('4', { apiBase: '../api/cockpit', nomShop: 'L’Atelier By Halle', onNonLus: n => { document.getElementById('rail-n').textContent = n || ''; } }));
+</script>
+</body>
+</html>
