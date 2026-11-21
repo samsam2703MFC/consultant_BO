@@ -33,6 +33,8 @@ const PH_TAUX = [0.0, 6.0, 12.0, 21.0];   // les taux belges, proposés à l'éc
 const PH_TAUX_OUI = 21.0;            // « TVA comprise : oui » sans taux : le taux normal
 const PH_FRAIS_TTL = 3600;           // les frais du mois en cours au panel : relus passée l'heure
 const PH_FRAIS_TTL_CLOS = 21600;     // un mois passé : six heures
+// Les noms du montant d'une ligne de frais au panel, dans l'ordre où ils se cherchent (la forme n'est pas documentée).
+const PH_CLES_MONTANT = ['amount', 'value', 'total', 'total_amount', 'monthly_amount', 'amount_gross', 'gross_amount', 'price', 'cost', 'sum'];
 
 /* --- la TVA du chiffre d'affaires --------------------------------------------------------------------------------- */
 
@@ -192,25 +194,31 @@ function phCle(string $libelle): string
 }
 
 /**
+ * La liste brute d'une réponse de frais du panel : à la racine, ou sous items, costs, lines, data, rows, results,
+ * details (un niveau de plus au besoin). Une réponse sans liste : [].
+ */
+function phListePanel(mixed $r): array
+{
+    if (!is_array($r)) { return []; }
+    if (array_is_list($r)) { return $r; }
+    foreach (['items', 'costs', 'lines', 'data', 'rows', 'results', 'details'] as $k) {
+        if (isset($r[$k]) && is_array($r[$k])) {
+            $v = $r[$k];
+            if (!array_is_list($v)) { foreach (['items', 'costs', 'lines', 'data'] as $k2) { if (isset($v[$k2]) && is_array($v[$k2]) && array_is_list($v[$k2])) { $v = $v[$k2]; break; } } }
+            if (array_is_list($v)) { return $v; }
+        }
+    }
+    return [];
+}
+
+/**
  * Les lignes de frais d'une réponse du panel (/shops/{id}/owner/costs?period=AAAA-MM) : [['poste', 'cle', 'type',
  * 'montant']], un poste par libellé (deux lignes du même libellé s'additionnent). La forme de la réponse n'est pas
  * documentée : liste à la racine ou sous items, costs, lines, data, rows ; libellé, type et montant sous leurs noms usuels.
  */
 function phLignesPanel(mixed $r): array
 {
-    $liste = [];
-    if (is_array($r)) {
-        if (array_is_list($r)) { $liste = $r; }
-        else {
-            foreach (['items', 'costs', 'lines', 'data', 'rows', 'results', 'details'] as $k) {
-                if (isset($r[$k]) && is_array($r[$k])) {
-                    $v = $r[$k];
-                    if (!array_is_list($v)) { foreach (['items', 'costs', 'lines', 'data'] as $k2) { if (isset($v[$k2]) && is_array($v[$k2]) && array_is_list($v[$k2])) { $v = $v[$k2]; break; } } }
-                    if (array_is_list($v)) { $liste = $v; break; }
-                }
-            }
-        }
-    }
+    $liste = phListePanel($r);
     $txt = static function (array $x, array $cles): string {
         foreach ($cles as $c) {
             $v = $x;
@@ -223,7 +231,7 @@ function phLignesPanel(mixed $r): array
     foreach ($liste as $x) {
         if (!is_array($x)) { continue; }
         $m = null;
-        foreach (['amount', 'value', 'total', 'total_amount', 'monthly_amount', 'amount_gross', 'gross_amount', 'price', 'cost', 'sum'] as $c) {
+        foreach (PH_CLES_MONTANT as $c) {
             if (isset($x[$c]) && is_numeric($x[$c])) { $m = (float) $x[$c]; break; }
         }
         if ($m === null) { continue; }
