@@ -237,3 +237,4 @@
 2026-11-21T11:10:29Z Marketing : l'ancienne copie de l'API du module (marketing/public/api/marketing) est retirée, avec sa règle /api/v1/marketing, sql/mar-referentiels.sql et POST /admin/marketing-restaure (410)
 2026-11-21T15:37:31Z Diagnostic : GET /diagnostic/marketing-service dit si le canal du cockpit vers le module Marketing (jeton de service) répond, par une lecture sans effet
 2026-11-21T15:39:24Z Fonds et types de campagne : le cockpit n'écrit plus les tables du module Marketing, il passe par son API (jeton de service) ; écritures de campagnes sans écran retirées (410)
+2026-11-21T16:45:17Z Boîte mail : archives, corbeille et Envoyés créés quand la boîte n'en a pas (« la boîte n'a pas de dossier d'archives ») ; sélection multiple, tout sélectionner, archiver, effacer, déplacer ; dossiers en boutons à micro-icône ; « Ranger avec l'IA » (POST /dashboard/boite/ranger)
