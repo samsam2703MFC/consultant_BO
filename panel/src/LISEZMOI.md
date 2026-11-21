@@ -28,6 +28,7 @@ base et le même déploiement.
 | `catalogues_magasin.php` | Marketing › Mon catalogue | `/dashboard/catalogues/*` — relais vers l'API d'intégration du Marketing |
 | `tresorerie.php` | Les chiffres › Trésorerie | `/tresorerie/*` — table `panel_tresorerie_plan` |
 | `frais.php` | Les chiffres › Frais | `GET /exploitation/frais`, `POST /exploitation/frais/tva` — les frais du mois au panel, « TVA comprise ? » et le taux de chaque poste (table `panel_frais_tva`). Le calcul est dans `shared/src/pnl_ht.php`, partagé avec le siège : le P&L hors TVA de Résultat (jour, semaine, mois). **Ajouter un frais** (21/11/2026) : `POST /exploitation/frais/ajout` crée le frais au panel (`/shops/{id}/costs`) pour le mois, jusqu'en décembre ou toute l'année, montant par mois ou total réparti ; une seule ligne si le panel le reporte de lui-même ; `POST /exploitation/frais/annuler` le défait (table `panel_frais_ajout`). Tests : `php bin/tests_pnl_ht.php` |
+| `prix_produit.php` | la fiche produit › Recette & marge, bouton « Adapter mon prix de vente » | `POST /analyse/produits/prix` (21/11/2026) — le prix testé hors TVA devient le prix de vente TTC du magasin au panel (`PATCH /shops/{s}/products/{p}/price`), après un aperçu ; plafonné au maximum du réseau ; journal `panel_prix_modif`. Tests : `php panel/bin/tests_prix_produit.php` |
 | `dashboard_semaine.php` | la semaine jour par jour (téléphone) | `/exploitation/semaine-jours` |
 | `temps_morts.php` | La journée › Temps morts | `/exploitation/temps-morts` |
 

@@ -2875,6 +2875,30 @@ frais de la catégorie, et la TVA choisie pour « Comptable » ne s'y appliquait
 de sa catégorie (les choix faits avant restent valables). La garde `phF:` porte une version (`v`) : une lecture faite avec
 l'ancienne règle se refait.
 
+### `POST /analyse/produits/prix` — « Adapter mon prix de vente » (21/11/2026)
+
+Demande : « rajouter un bouton (adapter mon prix de vente) », « post dans erp ». Code : `panel/src/prix_produit.php` ;
+écran : la fiche produit du dashboard magasin, onglet Recette & marge, sous le verdict du prix testé (`ficheAdapter`) ;
+tests : `php panel/bin/tests_prix_produit.php`.
+
+`POST /analyse/produits/prix {shop, pid, prixHt[, apercu]}` : le prix testé (hors TVA, la pièce entière) devient le
+prix de vente du magasin au panel. Le serveur lit la ligne du produit (`/shops/{id}/products/available` : TVA,
+`portion_price`, `max_portion_price`, `portion_size`), calcule le prix TTC arrondi aux 5 centimes les plus proches
+(celui de la portion pour un produit divisible) et l'écrit par `PATCH /shops/{s}/products/{p}/price {portion_price}`
+(ou le format réglé `ppmFormat_prix`), puis le relit (`/shops/{s}/products/{p}`).
+
+- `apercu: true` : rien n'est écrit ; rend `{ok, apercu, tva, part, avant, avantPiece, ecrit, pieceTtc, pieceHt, max,
+  change, erreur}` — l'écran montre ce plan avant « Confirmer ce prix ».
+- Écriture : `{ok, resultat: ok|sans_effet, message, relu, …le plan}` ; 422 au-dessus du maximum du réseau, sans TVA
+  ou sans changement ; 404 si le produit n'est pas dans la liste du magasin ; 400 pour une portion
+  (« produit:portion ») ; 502 avec le motif quand le panel refuse.
+- Au-dessus du maximum du réseau (`bloque: max`), l'écran propose « Demander au réseau de relever le maximum » :
+  une demande au bureau par la route du helpdesk déjà en place (`POST /helpdesk/magasin`, domaine `sales`, titre
+  « Prix maximum à relever : … », le prix demandé, le maximum, le prix en caisse, le coefficient) — le dossier au
+  panel (`POST /cases`), le SMS au bureau et la liste « Demandes des franchisés » du cockpit. Le prix ne change pas.
+- Chaque envoi est gardé dans `panel_prix_modif` (`shop_id`, `produit_id`, `produit`, `avant_ttc`, `apres_ttc`,
+  `prix_ht`, `tva`, `http`, `resultat`, `message`, `cree_le`, `cree_par`).
+
 ### `POST /exploitation/frais/ajout` et `POST /exploitation/frais/annuler` — ajouter un frais au panel (21/11/2026)
 
 Demande : « rajouter un frais (faire un formulaire) et que ce frais se reporte sur toute l'année ». Code :
