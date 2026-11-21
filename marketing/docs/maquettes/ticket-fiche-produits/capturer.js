@@ -64,13 +64,14 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.evaluate(() => { document.getElementById('track').style.scrollSnapType = ''; window.carrousel.aller(3); });
     await attendre(900); await versFiches(p); await attendre(300);
     await p.screenshot({ path: cadre('_glisser-2.png') });
-    // La fiche de la soupe, entière (barres collantes rendues statiques pour la capture d'un seul élément).
+    // La fiche de la cannelloni, entière (barres collantes rendues statiques pour la capture d'un seul élément).
+    await p.evaluate(() => window.carrousel.aller(0)); await attendre(900);
     await p.addStyleTag({ content: '.nav,.pick{position:static}' });
     await attendre(200);
-    await p.locator('#p-2120004').screenshot({ path: path.join(ICI, '4-telephone-fiche-soupe.png') });
+    await p.locator('#p-2110005').screenshot({ path: path.join(ICI, '4-telephone-fiche-cannelloni.png') });
     await p.close();
     await planche(['_glisser-0.png', '_glisser-1.png', '_glisser-2.png'],
-      ['Fiche 1 : le croissant', 'On glisse vers la gauche…', '…ou on touche « Soupe » dans la barre'], '3-telephone-glisser.png');
+      ['Fiche 1 : la cannelloni', 'On glisse vers la gauche…', '…ou on touche « Croissant » dans la barre'], '3-telephone-glisser.png');
 
     // Bureau, Corbais : le haut de la page et la grille des fiches.
     p = await ouvrir('corbais-fr.html', 1440, 900);

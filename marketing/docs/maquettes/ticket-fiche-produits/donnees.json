@@ -1,6 +1,6 @@
 {
- "_lu": "21/11/2026, en lecture seule : catalogue public du webshop de Corbais (boutique 2, lang_code=fr) et de Halle (boutique 4, lang_code=nl) — GET /api/v1/shops/{id}/products/available?include=webshop — et fiches techniques de l'ERP (GET /products/technical-sheets).",
- "_sources": "Chaque produit sépare « panel » (champs relus tels quels ; noms et ingrédients néerlandais : alias du panel, lang_code=nl) et « fiche » / « fiche_nl » (textes pour le client). Dans une fiche, « _exemples » liste les textes proposés pour la maquette, à saisir au panel avant la mise en ligne. « {ville} » est remplacé par la ville de la boutique du ticket.",
+ "_lu": "21/11/2026, en lecture seule : fiche technique du panel (GET /products/{id}/technical-sheet/raw : produit, recette, étapes de préparation, compétences) et catalogue public du webshop de Corbais (boutique 2, lang_code=fr) et de Halle (boutique 4, lang_code=nl : noms et ingrédients néerlandais) — GET /api/v1/shops/{id}/products/available?include=webshop.",
+ "_sources": "Tout le texte de la page vient de ces deux lectures, recopiées ici sans retouche (« fiche_technique » : panel ; « catalogue » : webshop, par langue). Seul le ticket est composé pour la maquette (numéro de transaction, heure, quantités). Les coûts, marges et stocks que ces routes rendent aussi ne sont pas gardés.",
  "boutiques": {
   "2": {
    "id": 2,
@@ -29,20 +29,20 @@
  },
  "tickets": [
   {
-   "_exemple": "ticket composé pour la maquette (numéro, heure, quantités) : produits et prix du catalogue de Corbais",
+   "_exemple": "ticket composé pour la maquette (numéro de transaction, heure, quantités) : produits et prix du panel et du catalogue de Corbais",
    "page": "corbais",
    "boutique": 2,
-   "numero": "104583",
-   "date": "2026-11-21T08:47",
+   "transaction": "104583",
+   "date": "2026-11-21T11:52",
    "caisse": "Caisse 1",
    "adresse_qr": "https://atelierby.be/t/2-104583-7KQ2",
    "lignes": [
     {
-     "id": 1610006,
-     "qte": 4
+     "id": 2110005,
+     "qte": 1
     },
     {
-     "id": 1300003,
+     "id": 1410005,
      "qte": 1
     },
     {
@@ -50,8 +50,8 @@
      "qte": 1
     },
     {
-     "id": 2120004,
-     "qte": 1
+     "id": 1610006,
+     "qte": 4
     },
     {
      "id": 1540001,
@@ -60,10 +60,10 @@
    ]
   },
   {
-   "_exemple": "ticket composé pour la maquette (numéro, heure, quantités) : produits et prix du catalogue de Halle",
+   "_exemple": "ticket composé pour la maquette (numéro de transaction, heure, quantités) : produits et prix du catalogue de Halle",
    "page": "halle",
    "boutique": 4,
-   "numero": "88214",
+   "transaction": "88214",
    "date": "2026-11-21T09:12",
    "caisse": "Kassa 1",
    "adresse_qr": "https://atelierby.be/t/4-88214-M3PX",
@@ -92,429 +92,481 @@
   }
  ],
  "produits": {
-  "1610006": {
-   "prix": {
-    "2": "1.70",
-    "4": "1.80"
-   },
-   "panel": {
-    "name": "Croissant",
-    "category_name": "Viennoiserie Ind.",
-    "portion_price_gross": "1.70",
-    "tax_val_perc": 6,
-    "single_weight": 0,
+  "2110005": {
+   "fiche_technique": {
+    "name": "Cannelloni - poulet & estragon ",
+    "category_name": "Plat Prepare - Chaud",
+    "single_weight": 400,
     "is_vegetarian": 0,
-    "shelf_life_minutes": 1444,
-    "storage_temperature": 4,
-    "allergen_codes": [
-     "cereals_gluten",
-     "eggs",
-     "milk"
-    ],
-    "label_ingredients": "Ingrédients: Croissant.",
-    "reheating_time_minutes": 0,
-    "reheating_temperature_celsius": 0,
-    "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp"
-   },
-   "panel_nl": {
-    "name": "Croissant",
-    "label_ingredients": "Ingrediënten: Croissant.",
-    "grouped_allergens": "Glutenhoudende granen, Eieren, Melk"
-   },
-   "fiche": {
-    "famille": "Viennoiserie",
-    "nom": "Croissant",
-    "accroche": "Feuilleté au beurre, cuit dans notre four de {ville} le matin même.",
-    "origine": "Cuit sur place, à {ville}",
-    "composition": "Farine de **blé**, beurre (**lait**), eau, sucre, **œufs**, levure, sel.",
-    "conserver": "À température ambiante, dans son sachet en papier.",
-    "cuire": [
+    "shelf_life_minutes": 4320,
+    "storage_description": "2°C – 4°C",
+    "reheating_time_minutes": 10,
+    "reheating_temperature_celsius": 180,
+    "webshop_active": 0,
+    "suggested_sale_price": "12.90",
+    "recette": [
      {
-      "mode": "four",
-      "titre": "Au four",
-      "valeur": "180 °C",
-      "duree": "3 à 4 min",
-      "detail": "Préchauffé, sur la grille : il retrouve son croustillant le lendemain."
+      "nom": "Béchamel",
+      "quantite": 100,
+      "unite": "g",
+      "allergenes": [],
+      "source": "CENTRAL"
+     },
+     {
+      "nom": "Cannelloni - Poulet Estragon",
+      "quantite": 3,
+      "unite": "pcs",
+      "allergenes": [
+       "cereals_gluten"
+      ],
+      "source": "CENTRAL"
+     },
+     {
+      "nom": "Crème debic 40 %",
+      "quantite": 5,
+      "unite": "g",
+      "allergenes": [
+       "milk"
+      ],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Parmesan",
+      "quantite": 20,
+      "unite": "g",
+      "allergenes": [
+       "milk"
+      ],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Poche Sauce Arrabiata",
+      "quantite": 175,
+      "unite": "pcs",
+      "allergenes": [],
+      "source": "CENTRAL"
      }
     ],
-    "eviter": "Évitez le micro-ondes : le feuilletage ramollit.",
-    "finir": [
-     "Laissez-le tiédir deux minutes hors du four : le feuilletage se raffermit."
+    "etapes": [
+     "Préparer la base : Verser uniformément la sauce tomate et la crème dans le fond de la barquette.",
+     "Disposer les pièces : Placer soigneusement les 3 cannelloni côte à côte sur la sauce.",
+     "Napper : Recouvrir les cannelloni d’une couche régulière de béchamel.",
+     "Finition : Saupoudrer généreusement le dessus de parmesan râpé."
     ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "composition",
-     "conserver",
-     "cuire",
-     "eviter",
-     "finir"
+    "competences": [
+     {
+      "nom": "Composition Traiteur",
+      "description": ""
+     },
+     {
+      "nom": "Réaliser une béchamel",
+      "description": "Réaliser une béchamel"
+     }
     ]
    },
-   "fiche_nl": {
-    "famille": "Koffiekoek",
-    "nom": "Croissant",
-    "accroche": "Boterdeeg, ’s ochtends gebakken in onze oven in {ville}.",
-    "origine": "Ter plaatse gebakken, in {ville}",
-    "composition": "**Tarwe**bloem, boter (**melk**), water, suiker, **eieren**, gist, zout.",
-    "conserver": "Op kamertemperatuur, in het papieren zakje.",
-    "cuire": [
-     {
-      "mode": "four",
-      "titre": "In de oven",
-      "valeur": "180 °C",
-      "duree": "3 tot 4 min",
-      "detail": "Voorverwarmd, op het rooster: de volgende dag wordt hij weer knapperig."
-     }
-    ],
-    "eviter": "Liever niet in de microgolfoven: het bladerdeeg wordt slap.",
-    "finir": [
-     "Laat hem twee minuten rusten buiten de oven: het bladerdeeg wordt weer stevig."
-    ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "composition",
-     "conserver",
-     "cuire",
-     "eviter",
-     "finir"
-    ]
-   }
+   "catalogue": {},
+   "image_locale": "img/2110005.jpg"
   },
-  "1300003": {
-   "prix": {
-    "2": "2.50",
-    "4": "2.20"
-   },
-   "panel": {
-    "name": "Baguette Tradition",
-    "category_name": "Petite Boulangerie",
-    "portion_price_gross": "2.50",
-    "tax_val_perc": 6,
-    "single_weight": 350,
-    "is_vegetarian": 0,
+  "1410005": {
+   "fiche_technique": {
+    "name": "Quiche Grecque",
+    "category_name": "Quiches",
+    "single_weight": 900,
+    "is_vegetarian": 1,
     "shelf_life_minutes": 1444,
-    "storage_temperature": 4,
-    "allergen_codes": [
-     "cereals_gluten"
-    ],
-    "label_ingredients": "Ingrédients: Baguette Tradition.",
+    "storage_description": "2°C – 4°C",
     "reheating_time_minutes": 0,
     "reheating_temperature_celsius": 0,
-    "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1300003/5e7b63aa6e4f4a6b451d58d53e7516e1.webp"
-   },
-   "panel_nl": {
-    "name": "Traditioneel Stokbrood 500 g.",
-    "label_ingredients": "Ingrediënten: Stokbrood Traditie - 500g..",
-    "grouped_allergens": "Glutenhoudende granen"
-   },
-   "fiche": {
-    "famille": "Boulangerie",
-    "nom": "Baguette Tradition",
-    "accroche": "Croûte craquante, mie alvéolée : la baguette de tous les jours.",
-    "origine": "Cuite sur place, à {ville}",
-    "composition": "Farine de **blé**, eau, levain, sel, levure.",
-    "conserver": "Dans un sac en papier ou un torchon, jamais au frigo. Elle se congèle très bien : un mois, bien emballée.",
-    "cuire": [
+    "webshop_active": 1,
+    "suggested_sale_price": "16.90",
+    "recette": [
      {
-      "mode": "four",
-      "titre": "La raviver",
-      "valeur": "200 °C",
-      "duree": "5 min",
-      "detail": "Passez-la rapidement sous l’eau avant : la croûte redevient craquante."
-     },
-     {
-      "mode": "froid",
-      "titre": "Congelée",
-      "valeur": "200 °C",
-      "duree": "10 min",
-      "detail": "Directement du congélateur au four, sans la décongeler."
+      "nom": "Quiche Greque",
+      "quantite": 1,
+      "unite": "pcs",
+      "allergenes": [
+       "eggs",
+       "milk",
+       "cereals_gluten"
+      ],
+      "source": "CENTRAL"
      }
     ],
-    "finir": [
-     "Coupez-la au dernier moment : la mie reste moelleuse.",
-     "En tranches grillées, avec votre soupe Potiron & Citron."
-    ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "composition",
-     "conserver",
-     "cuire",
-     "finir"
+    "etapes": [],
+    "competences": [
+     {
+      "nom": "Cuisson des Quiches",
+      "description": "Contrairement aux tartes sans cuisson, ces tartes sont préparées avec une base de pâte et garnies avant d’être mises directement crues au four, comme pour les cookies. Cette méthode permet de cuire la pâte et la garniture en même temps, offrant une texture plus homogène. Préchauffez le four à 180 °C et faites cuire entre 25 et 35 minutes, jusqu’à ce que la pâte soit dorée et la garniture bien cuite."
+     }
     ]
    },
-   "fiche_nl": {
-    "famille": "Brood",
-    "nom": "Traditioneel stokbrood",
-    "accroche": "Krokante korst, luchtig kruim: het stokbrood voor elke dag.",
-    "origine": "Ter plaatse gebakken, in {ville}",
-    "composition": "**Tarwe**bloem, water, desem, zout, gist.",
-    "conserver": "In een papieren zak of een doek, nooit in de koelkast. Het laat zich heel goed invriezen: een maand, goed verpakt.",
-    "cuire": [
-     {
-      "mode": "four",
-      "titre": "Opfrissen",
-      "valeur": "200 °C",
-      "duree": "5 min",
-      "detail": "Hou het even onder de kraan: de korst wordt weer krokant."
-     },
-     {
-      "mode": "froid",
-      "titre": "Diepgevroren",
-      "valeur": "200 °C",
-      "duree": "10 min",
-      "detail": "Rechtstreeks uit de diepvries in de oven, zonder te ontdooien."
-     }
-    ],
-    "finir": [
-     "Snij het pas op het laatste moment: zo blijft het kruim zacht.",
-     "Geroosterd, in sneetjes, bij uw soep pompoen & citroen."
-    ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "composition",
-     "conserver",
-     "cuire",
-     "finir"
-    ]
+   "catalogue": {
+    "fr": {
+     "boutique": 2,
+     "name": "Quiche Grecque",
+     "groupe": "Quiches",
+     "label_ingredients": "Ingrédients: Quiche Greque.",
+     "allergen_codes": [
+      "cereals_gluten",
+      "eggs",
+      "milk"
+     ],
+     "portion_price_gross": "24.90",
+     "image": null
+    },
+    "nl": {
+     "boutique": 4,
+     "name": "Griekse Quiche",
+     "groupe": "Quiches",
+     "label_ingredients": "Ingrediënten: Griekse quiche.",
+     "allergen_codes": [
+      "cereals_gluten",
+      "eggs",
+      "milk"
+     ],
+     "portion_price_gross": "24.90",
+     "image": null
+    }
    }
   },
   "2300013": {
-   "prix": {
-    "2": "6.10",
-    "4": "5.80"
-   },
-   "panel": {
+   "fiche_technique": {
     "name": "Brie, Pommes & Miel",
     "category_name": "Sandwiches garnis",
-    "portion_price_gross": "6.10",
-    "tax_val_perc": 6,
     "single_weight": 350,
     "is_vegetarian": 1,
     "shelf_life_minutes": 720,
-    "storage_temperature": 4,
-    "allergen_codes": [
-     "cereals_gluten",
-     "milk"
-    ],
-    "label_ingredients": "Ingrédients: Brie de Meaux, Roquette, Tomates grappe, Miel liquide, Pommes Granny, Raisins secs golden, Thym, Baguette Tradition.",
+    "storage_description": null,
     "reheating_time_minutes": 0,
     "reheating_temperature_celsius": 0,
-    "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp"
-   },
-   "panel_nl": {
-    "name": "Brie, Appelen & Honing",
-    "label_ingredients": "Ingrediënten: Brie de Meaux, Rucola, Trostomaten, Granny Smith-appelen, Vloeibare honing, Gouden rozijnen, Tijm, Stokbrood Traditie - 500g..",
-    "grouped_allergens": "Glutenhoudende granen, Melk"
-   },
-   "fiche": {
-    "famille": "Sandwich garni",
-    "nom": "Brie, Pommes & Miel",
-    "accroche": "Le sucré-salé de la maison : brie de Meaux, pomme acidulée et un filet de miel.",
-    "origine": "Garni ce matin, à {ville}",
-    "composition": "Baguette Tradition (farine de **blé**), brie de Meaux (**lait**), pommes Granny Smith, roquette, tomates grappe, raisins secs golden, miel liquide, thym.",
-    "conserver": "Au frigo, entre 2 et 4 °C.",
-    "cuire": [],
-    "sans_cuisson": "Il se déguste froid, tel quel.",
-    "finir": [
-     "Sortez-le du frigo dix minutes avant : le brie de Meaux y gagne en goût.",
-     "Un tour de poivre du moulin sur le brie, si vous aimez."
-    ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "sans_cuisson",
-     "finir"
-    ]
-   },
-   "fiche_nl": {
-    "famille": "Belegd broodje",
-    "nom": "Brie, Appelen & Honing",
-    "accroche": "De zoet-zoute klassieker van het huis: brie de Meaux, frisse appel en een scheutje honing.",
-    "origine": "Vanochtend belegd, in {ville}",
-    "composition": "Traditioneel stokbrood (**tarwe**bloem), brie de Meaux (**melk**), Granny Smith-appelen, rucola, trostomaten, gouden rozijnen, vloeibare honing, tijm.",
-    "conserver": "In de koelkast, tussen 2 en 4 °C.",
-    "cuire": [],
-    "sans_cuisson": "Koud te eten, zoals het is.",
-    "finir": [
-     "Haal het tien minuten vooraf uit de koelkast: de brie de Meaux komt zo beter tot zijn recht.",
-     "Een draai van de pepermolen over de brie, als u dat lekker vindt."
-    ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "sans_cuisson",
-     "finir"
-    ]
-   }
-  },
-  "2120004": {
-   "prix": {
-    "2": "5.50",
-    "4": "5.50"
-   },
-   "panel": {
-    "name": "Soupe Potiron & Citron",
-    "category_name": "Soupes",
-    "portion_price_gross": "5.50",
-    "tax_val_perc": 6,
-    "single_weight": 800,
-    "is_vegetarian": 1,
-    "shelf_life_minutes": 14440,
-    "storage_temperature": 4,
-    "allergen_codes": null,
-    "label_ingredients": "Ingrédients: Soupe Potiron & Citron (6 x 1l.).",
-    "reheating_time_minutes": 0,
-    "reheating_temperature_celsius": 0,
-    "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2120004/38fbf5f87b755715e6cc88d6c53bc6db.webp"
-   },
-   "panel_nl": {
-    "name": "Soep - Pompoen & Citroen ",
-    "label_ingredients": "Ingrediënten: Soep pompoen & citroen (6 x 1 l).",
-    "grouped_allergens": ""
-   },
-   "fiche": {
-    "famille": "Soupe",
-    "nom": "Soupe Potiron & Citron",
-    "accroche": "Douce et acidulée, prête en cinq minutes.",
-    "origine": "",
-    "composition": "Potiron, eau, oignons, citron, huile d’olive, sel, poivre.",
-    "conserver": "Au frigo, entre 2 et 4 °C, pot fermé. Une fois ouvert : 48 heures.",
-    "cuire": [
+    "webshop_active": 1,
+    "suggested_sale_price": "5.90",
+    "recette": [
      {
-      "mode": "casserole",
-      "titre": "À la casserole",
-      "valeur": "Feu moyen",
-      "duree": "5 à 7 min",
-      "detail": "En remuant, sans la faire bouillir."
+      "nom": "Baguette Tradition 500 g.",
+      "quantite": 0.5,
+      "unite": "pcs",
+      "allergenes": [
+       "cereals_gluten"
+      ],
+      "source": "CENTRAL"
      },
      {
-      "mode": "micro",
-      "titre": "Au micro-ondes",
-      "valeur": "800 W",
-      "duree": "2 à 3 min",
-      "detail": "Dans un bol couvert ; remuez à mi-temps."
-     }
-    ],
-    "finir": [
-     "Un trait d’huile d’olive et un tour de poivre du moulin.",
-     "Quelques graines de courge grillées pour le croquant.",
-     "Avec des tranches de Baguette Tradition grillées."
-    ],
-    "_exemples": [
-     "accroche",
-     "composition",
-     "conserver",
-     "cuire",
-     "finir"
-    ]
-   },
-   "fiche_nl": {
-    "famille": "Soep",
-    "nom": "Soep Pompoen & Citroen",
-    "accroche": "Zacht en fris, klaar in vijf minuten.",
-    "origine": "",
-    "composition": "Pompoen, water, ui, citroen, olijfolie, zout, peper.",
-    "conserver": "In de koelkast, tussen 2 en 4 °C, pot gesloten. Eenmaal geopend: 48 uur.",
-    "cuire": [
-     {
-      "mode": "casserole",
-      "titre": "In de kookpot",
-      "valeur": "Middelhoog vuur",
-      "duree": "5 tot 7 min",
-      "detail": "Al roerend, zonder te laten koken."
+      "nom": "Brie de Meaux",
+      "quantite": 70,
+      "unite": "g",
+      "allergenes": [
+       "milk"
+      ],
+      "source": "OPEN"
      },
      {
-      "mode": "micro",
-      "titre": "In de microgolfoven",
-      "valeur": "800 W",
-      "duree": "2 tot 3 min",
-      "detail": "In een afgedekte kom; halverwege even roeren."
+      "nom": "Miel liquide",
+      "quantite": 10,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Pommes Granny",
+      "quantite": 10,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Raisins secs golden",
+      "quantite": 8,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Roquette",
+      "quantite": 15,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Thym",
+      "quantite": 2,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
+     },
+     {
+      "nom": "Tomates grappe",
+      "quantite": 15,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
      }
     ],
-    "finir": [
-     "Een scheutje olijfolie en een draai van de pepermolen.",
-     "Wat geroosterde pompoenpitten voor de crunch.",
-     "Met sneetjes geroosterd traditioneel stokbrood."
+    "etapes": [
+     "Déposer la roquette de manière uniforme sur toute la longueur de la plaquette FlipFlap.",
+     "Répartir les tomates grappe tranchées régulièrement sur la roquette afin d’assurer une base homogène.",
+     "Disposer les tranches de Brie de Meaux de façon alternée sur la plaquette",
+     "Ajouter les Pommes Granny coupées en bâtonnets par-dessus le fromage",
+     "Parsemer les raisins secs golden de manière régulière",
+     "napper de miel liquide en filet contrôlé et terminer par une pincée de thym répartie uniformément."
     ],
-    "_exemples": [
-     "accroche",
-     "composition",
-     "conserver",
-     "cuire",
-     "finir"
-    ]
+    "competences": []
+   },
+   "catalogue": {
+    "fr": {
+     "boutique": 2,
+     "name": "Brie, Pommes & Miel",
+     "groupe": "Traiteur",
+     "label_ingredients": "Ingrédients: Brie de Meaux, Roquette, Tomates grappe, Miel liquide, Pommes Granny, Raisins secs golden, Thym, Baguette Tradition.",
+     "allergen_codes": [
+      "cereals_gluten",
+      "milk"
+     ],
+     "portion_price_gross": "6.10",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp"
+    },
+    "nl": {
+     "boutique": 4,
+     "name": "Brie, Appelen & Honing",
+     "groupe": "Traiteur",
+     "label_ingredients": "Ingrediënten: Brie de Meaux, Rucola, Trostomaten, Granny Smith-appelen, Vloeibare honing, Gouden rozijnen, Tijm, Stokbrood Traditie - 500g..",
+     "allergen_codes": [
+      "cereals_gluten",
+      "milk"
+     ],
+     "portion_price_gross": "5.80",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp"
+    }
    }
   },
-  "1540001": {
-   "prix": {
-    "2": "3.00",
-    "4": "3.00"
-   },
-   "panel": {
-    "name": "éclair chocolat",
-    "category_name": "Pâtisserie individuelle",
-    "portion_price_gross": "3.00",
-    "tax_val_perc": 6,
+  "1610006": {
+   "fiche_technique": {
+    "name": "Croissant",
+    "category_name": "Viennoiserie Ind.",
     "single_weight": 0,
     "is_vegetarian": 0,
     "shelf_life_minutes": 1444,
-    "storage_temperature": 4,
-    "allergen_codes": [
-     "cereals_gluten",
-     "eggs",
-     "milk"
-    ],
-    "label_ingredients": "Ingrédients: Fondant chocolat, Eclair, Crème pâtissière (Crème pâtissière (Poche)).",
+    "storage_description": "2°C – 4°C",
     "reheating_time_minutes": 0,
     "reheating_temperature_celsius": 0,
-    "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp"
-   },
-   "panel_nl": {
-    "name": "Chocolade Éclair",
-    "label_ingredients": "Ingrediënten: Chocoladefondant, Eclair, Crème pâtissière (Banketbakkersroom (Spuitzak)).",
-    "grouped_allergens": "Glutenhoudende granen, Eieren, Melk"
-   },
-   "fiche": {
-    "famille": "Pâtisserie",
-    "nom": "Éclair au chocolat",
-    "accroche": "Pâte à choux, crème pâtissière et glaçage au chocolat.",
-    "origine": "Garni et glacé à {ville}",
-    "composition": "Pâte à choux (farine de **blé**, **lait**), crème pâtissière (**œufs**), fondant au chocolat.",
-    "conserver": "Au frigo, entre 2 et 4 °C.",
-    "cuire": [],
-    "sans_cuisson": "Pas de cuisson : il se déguste frais.",
-    "finir": [
-     "Sortez-le du frigo dix minutes avant : la crème révèle tout son goût."
+    "webshop_active": 1,
+    "suggested_sale_price": "1.90",
+    "recette": [
+     {
+      "nom": "Croissant",
+      "quantite": 1,
+      "unite": "pcs",
+      "allergenes": [
+       "eggs",
+       "milk",
+       "cereals_gluten"
+      ],
+      "source": "CENTRAL"
+     }
     ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "sans_cuisson",
-     "finir"
+    "etapes": [],
+    "competences": [
+     {
+      "nom": "Cuisson Viennoiserie",
+      "description": "1. Préchauffage du four Température : Entre 170°C et 180°C (chaleur tournante) ou 190°C à 200°C (chaleur statique). Pourquoi ? Une chaleur bien répartie permet une cuisson homogène et un bon développement du feuilletage. 2. Préparation avant cuisson Dorure : Appliquer une fine couche de dorure (œuf battu) à l’aide d’un pinceau. Repos (facultatif) : Laisser sécher la dorure 5-10 min avant d’enfourner. 3. Cuisson Temps de cuisson : Croissants & pains au chocolat : 15 à 20 min Brioches : 25 à 30 min Astuce : Tourner la plaque à mi-cuisson pour une coloration uniforme. 4. Vérification & Finition Couleur : Les viennoiseries doivent être bien dorées sur le dessus. Fond : Vérifier que le dessous est légèrement coloré et non trop pâle. Refroidissement : Laisser tiédir sur une grille pour éviter la condensation et préserver le croustillant."
+     }
     ]
    },
-   "fiche_nl": {
-    "famille": "Patisserie",
-    "nom": "Chocolade-éclair",
-    "accroche": "Soezendeeg, banketbakkersroom en chocoladeglazuur.",
-    "origine": "Gevuld en geglazuurd in {ville}",
-    "composition": "Soezendeeg (**tarwe**bloem, **melk**), banketbakkersroom (**eieren**), chocoladefondant.",
-    "conserver": "In de koelkast, tussen 2 en 4 °C.",
-    "cuire": [],
-    "sans_cuisson": "Niet opwarmen: vers te eten.",
-    "finir": [
-     "Haal hem tien minuten vooraf uit de koelkast: de room komt dan pas echt tot zijn recht."
+   "catalogue": {
+    "fr": {
+     "boutique": 2,
+     "name": "Croissant",
+     "groupe": "Viennoiserie",
+     "label_ingredients": "Ingrédients: Croissant.",
+     "allergen_codes": [
+      "cereals_gluten",
+      "eggs",
+      "milk"
+     ],
+     "portion_price_gross": "1.70",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp"
+    },
+    "nl": {
+     "boutique": 4,
+     "name": "Croissant",
+     "groupe": "Koffiekoeken",
+     "label_ingredients": "Ingrediënten: Croissant.",
+     "allergen_codes": [
+      "cereals_gluten",
+      "eggs",
+      "milk"
+     ],
+     "portion_price_gross": "1.80",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp"
+    }
+   }
+  },
+  "1540001": {
+   "fiche_technique": {
+    "name": "éclair chocolat",
+    "category_name": "Pâtisserie individuelle",
+    "single_weight": 0,
+    "is_vegetarian": 0,
+    "shelf_life_minutes": 1444,
+    "storage_description": "2°C – 4°C",
+    "reheating_time_minutes": 0,
+    "reheating_temperature_celsius": 0,
+    "webshop_active": 1,
+    "suggested_sale_price": "3.30",
+    "recette": [
+     {
+      "nom": "Crème pâtissière",
+      "quantite": 40,
+      "unite": "g",
+      "allergenes": [],
+      "source": null
+     },
+     {
+      "nom": "Eclair",
+      "quantite": 1,
+      "unite": "pcs",
+      "allergenes": [
+       "eggs",
+       "milk",
+       "cereals_gluten"
+      ],
+      "source": "CENTRAL"
+     },
+     {
+      "nom": "Fondant chocolat",
+      "quantite": 20,
+      "unite": "g",
+      "allergenes": [],
+      "source": "OPEN"
+     }
     ],
-    "_exemples": [
-     "accroche",
-     "origine",
-     "sans_cuisson",
-     "finir"
-    ]
+    "etapes": [],
+    "competences": []
+   },
+   "catalogue": {
+    "fr": {
+     "boutique": 2,
+     "name": "éclair chocolat",
+     "groupe": "Pâtisserie",
+     "label_ingredients": "Ingrédients: Fondant chocolat, Eclair, Crème pâtissière (Crème pâtissière (Poche)).",
+     "allergen_codes": [
+      "cereals_gluten",
+      "eggs",
+      "milk"
+     ],
+     "portion_price_gross": "3.00",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp"
+    },
+    "nl": {
+     "boutique": 4,
+     "name": "Chocolade Éclair",
+     "groupe": "Patisserie",
+     "label_ingredients": "Ingrediënten: Chocoladefondant, Eclair, Crème pâtissière (Banketbakkersroom (Spuitzak)).",
+     "allergen_codes": [
+      "cereals_gluten",
+      "eggs",
+      "milk"
+     ],
+     "portion_price_gross": "3.00",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp"
+    }
+   }
+  },
+  "1300003": {
+   "fiche_technique": {
+    "name": "Baguette Tradition 500 g.",
+    "category_name": "Petite Boulangerie",
+    "single_weight": 350,
+    "is_vegetarian": 0,
+    "shelf_life_minutes": 1444,
+    "storage_description": null,
+    "reheating_time_minutes": 0,
+    "reheating_temperature_celsius": 0,
+    "webshop_active": 1,
+    "suggested_sale_price": "1.00",
+    "recette": [
+     {
+      "nom": "Baguette Tradition 500 g.",
+      "quantite": 1,
+      "unite": "pcs",
+      "allergenes": [
+       "cereals_gluten"
+      ],
+      "source": "CENTRAL"
+     }
+    ],
+    "etapes": [],
+    "competences": []
+   },
+   "catalogue": {
+    "fr": {
+     "boutique": 2,
+     "name": "Baguette Tradition",
+     "groupe": "Boulangerie",
+     "label_ingredients": "Ingrédients: Baguette Tradition.",
+     "allergen_codes": [
+      "cereals_gluten"
+     ],
+     "portion_price_gross": "2.50",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1300003/5e7b63aa6e4f4a6b451d58d53e7516e1.webp"
+    },
+    "nl": {
+     "boutique": 4,
+     "name": "Traditioneel Stokbrood 500 g.",
+     "groupe": "Bakkerij",
+     "label_ingredients": "Ingrediënten: Stokbrood Traditie - 500g..",
+     "allergen_codes": [
+      "cereals_gluten"
+     ],
+     "portion_price_gross": "2.20",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1300003/5e7b63aa6e4f4a6b451d58d53e7516e1.webp"
+    }
+   }
+  },
+  "2120004": {
+   "fiche_technique": {
+    "name": "Soupe Potiron & Citron",
+    "category_name": "Soupes",
+    "single_weight": 800,
+    "is_vegetarian": 1,
+    "shelf_life_minutes": 14440,
+    "storage_description": null,
+    "reheating_time_minutes": 0,
+    "reheating_temperature_celsius": 0,
+    "webshop_active": 1,
+    "suggested_sale_price": "1.00",
+    "recette": [
+     {
+      "nom": "Soupe Potiron & Citron (6 x 1l.)",
+      "quantite": 1,
+      "unite": "pcs",
+      "allergenes": [],
+      "source": "CENTRAL"
+     }
+    ],
+    "etapes": [],
+    "competences": []
+   },
+   "catalogue": {
+    "fr": {
+     "boutique": 2,
+     "name": "Soupe Potiron & Citron",
+     "groupe": "Traiteur",
+     "label_ingredients": "Ingrédients: Soupe Potiron & Citron (6 x 1l.).",
+     "allergen_codes": [],
+     "portion_price_gross": "5.50",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2120004/38fbf5f87b755715e6cc88d6c53bc6db.webp"
+    },
+    "nl": {
+     "boutique": 4,
+     "name": "Soep - Pompoen & Citroen",
+     "groupe": "Traiteur",
+     "label_ingredients": "Ingrediënten: Soep pompoen & citroen (6 x 1 l).",
+     "allergen_codes": [],
+     "portion_price_gross": "5.50",
+     "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2120004/38fbf5f87b755715e6cc88d6c53bc6db.webp"
+    }
    }
   }
  }

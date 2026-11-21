@@ -6,8 +6,10 @@
                             sélecteur FR / NL), et le ticket de caisse avec son QR (ticket-{page}.html).
 
 La langue vient de la boutique du ticket (boutiques.{id}.langue : Corbais en français, Halle en néerlandais) ; le
-client peut toujours basculer. Données : donnees.json (catalogues publics du webshop en fr et en nl, fiches techniques
-de l'ERP, relus le 21/11/2026, et les textes proposés pour la maquette, listés produit par produit dans « _exemples »).
+client peut toujours basculer. Tout le texte produit vient de l'API, sans retouche : donnees.json recopie la fiche
+technique du panel (GET /products/{id}/technical-sheet/raw) et le catalogue de chaque boutique (noms et ingrédients
+traduits), relus le 21/11/2026 ; seul le ticket est composé. Un bloc sans donnée n'est pas affiché.
+Le QR porte le numéro de transaction : {adresse}/t/{boutique}-{transaction}-{clé}.
 Sans dépendance ; le QR d'un ticket est lu dans qr-{page}.svg, produit une fois avec le module Python « qrcode ».
 Style : les jetons de la page d'accueil d'atelierby.be (papier, lin, sable, rubis, abricot), Gotham comme le site
 (400 Regular New, 500 Medium, 600 Regular, 700 Black) et la police d'accent Playwrite DEVA (décision de Sam,
@@ -53,7 +55,7 @@ T = {
         'titre': 'Vos produits en détail · L’Atelier By', 'logo': 'L’Atelier By — sucré, salé, à emporter',
         'sur_titre': 'Votre ticket · {ville}', 'h1': 'Vos produits,', 'h1_script': 'en détail.',
         'chapeau': 'Composition, allergènes, cuisson, finition et conservation : tout sur les produits de votre ticket.',
-        'articles': '{n} articles', 'ticket': 'Votre ticket · n° {num}', 'ticket_t': '{p} produits, {n} articles',
+        'articles': '{n} articles', 'ticket': 'Votre ticket · transaction n° {num}', 'ticket_t': '{p} produits, {n} articles',
         'total': 'Total payé, TVA comprise',
         'alg': 'Allergènes', 'alg_t': 'Ce que contient votre ticket',
         'sans': '<b>Aucun de vos produits</b> ne contient, d’après nos fiches : {liste}.',
@@ -65,9 +67,10 @@ T = {
         'fiches_p_bureau': 'Touchez un produit dans la barre pour aller à sa fiche.',
         'barre': 'Produits du ticket', 'prec': 'Produit précédent', 'suiv': 'Produit suivant',
         'carrousel': 'Fiches des produits', 'sur': 'sur',
-        'composition': 'Composition', 'allergenes': 'Allergènes', 'cuisson': 'Cuisson', 'finition': 'Finition',
+        'composition': 'Composition', 'allergenes': 'Allergènes', 'cuisson': 'Cuisson', 'finition': 'Préparation et finition',
         'conservation': 'Conservation', 'aucun': 'Aucun des 14 allergènes réglementaires, d’après nos fiches.',
-        'g14': 'Les 14 allergènes, un par un', 'contient': 'Contient', 'sans_cuisson': 'Sans cuisson',
+        'g14': 'Les 14 allergènes, un par un', 'contient': 'Contient', 'rechauffer': 'Réchauffer au four', 'nous_cuisons': 'Comment nous le cuisons',
+        'entre': 'À conserver entre {a} et {b}.', 'lire': 'Lire la suite',
         'vege': 'Végétarien', 'a_deguster': 'À déguster {quand}', 'recommander': 'Le recommander',
         'avis': 'Votre avis', 'avis_t': 'Comment était votre passage à {ville} ?',
         'avis_p': 'Un mot sur Google aide l’équipe de la boutique, et les clients qui hésitent encore.',
@@ -83,7 +86,7 @@ T = {
         'pied2': '© {an} L’Atelier By · Mentions légales · Confidentialité',
         'auj': 'aujourd’hui, avant {h}', 'dem_matin': 'demain matin', 'dem': 'demain',
         'jusqua': 'jusqu’à {m}', 'jusquau': 'jusqu’au {d}',
-        'r_total': 'TOTAL EUR', 'r_tva': 'dont TVA 6 %', 'r_tel': 'Tél.', 'r_merci': 'Merci et à bientôt !',
+        'r_trans': 'Transaction', 'r_total': 'TOTAL EUR', 'r_tva': 'dont TVA 6 %', 'r_tel': 'Tél.', 'r_merci': 'Merci et à bientôt !',
         'r_scan': 'Allergènes, cuisson, conservation :<br>scannez, tout est là.',
     },
     'nl': {
@@ -91,7 +94,7 @@ T = {
         'sur_titre': 'Uw kasticket · {ville}', 'h1': 'Uw producten,', 'h1_script': 'in detail.',
         'chapeau': 'Samenstelling, allergenen, bereiding, afwerking en bewaren: alles over de producten op uw '
                    'kasticket.',
-        'articles': '{n} artikelen', 'ticket': 'Uw kasticket · nr. {num}', 'ticket_t': '{p} producten, {n} artikelen',
+        'articles': '{n} artikelen', 'ticket': 'Uw kasticket · transactie nr. {num}', 'ticket_t': '{p} producten, {n} artikelen',
         'total': 'Totaal betaald, incl. btw',
         'alg': 'Allergenen', 'alg_t': 'Wat uw kasticket bevat',
         'sans': '<b>Geen enkel product</b> op uw kasticket bevat, volgens onze fiches: {liste}.',
@@ -103,9 +106,10 @@ T = {
         'fiches_p_bureau': 'Klik op een product in de balk om naar de fiche te gaan.',
         'barre': 'Producten op het kasticket', 'prec': 'Vorig product', 'suiv': 'Volgend product',
         'carrousel': 'Productfiches', 'sur': 'van',
-        'composition': 'Samenstelling', 'allergenes': 'Allergenen', 'cuisson': 'Bereiding', 'finition': 'Afwerking',
+        'composition': 'Samenstelling', 'allergenes': 'Allergenen', 'cuisson': 'Bakken en opwarmen', 'finition': 'Bereiding en afwerking',
         'conservation': 'Bewaren', 'aucun': 'Geen van de 14 wettelijke allergenen, volgens onze fiches.',
-        'g14': 'De 14 allergenen, een voor een', 'contient': 'Bevat', 'sans_cuisson': 'Niet opwarmen',
+        'g14': 'De 14 allergenen, een voor een', 'contient': 'Bevat', 'rechauffer': 'Opwarmen in de oven', 'nous_cuisons': 'Hoe wij het bakken',
+        'entre': 'Bewaren tussen {a} en {b}.', 'lire': 'Meer lezen',
         'vege': 'Vegetarisch', 'a_deguster': 'Te eten {quand}', 'recommander': 'Opnieuw bestellen',
         'avis': 'Uw mening', 'avis_t': 'Hoe was uw bezoek in {ville}?',
         'avis_p': 'Een woordje op Google helpt het winkelteam, en klanten die nog twijfelen.',
@@ -121,7 +125,7 @@ T = {
         'pied2': '© {an} L’Atelier By · Wettelijke vermeldingen · Privacy',
         'auj': 'vandaag, vóór {h}', 'dem_matin': 'morgenochtend', 'dem': 'morgen',
         'jusqua': 'tot {m}', 'jusquau': 'tot {d}',
-        'r_total': 'TOTAAL EUR', 'r_tva': 'waarvan btw 6 %', 'r_tel': 'Tel.', 'r_merci': 'Bedankt en tot ziens!',
+        'r_trans': 'Transactie', 'r_total': 'TOTAAL EUR', 'r_tva': 'waarvan btw 6 %', 'r_tel': 'Tel.', 'r_merci': 'Bedankt en tot ziens!',
         'r_scan': 'Allergenen, bereiding, bewaren:<br>scan, alles staat erop.',
     },
 }
@@ -164,11 +168,6 @@ def limite(vente: datetime, minutes: int, lg: str) -> tuple[datetime, bool, str,
             t['jusquau'].format(d=jour_long(fin, lg)))
 
 
-def gras(t: str) -> str:
-    """**allergène** → <b>, comme sur une étiquette : les allergènes ressortent dans la composition."""
-    return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', e(t))
-
-
 def liste(mots: list[str], lg: str) -> str:
     return f'{", ".join(mots[:-1])} {T[lg]["et"]} {mots[-1]}' if len(mots) > 1 else ''.join(mots)
 
@@ -196,6 +195,47 @@ def ic(nom: str, cls: str = 'ic') -> str:
     return f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden="true">{ICONES[nom]}</svg>'
 
 
+def prefixe_ingredients(t: str) -> str:
+    """« Ingrédients: A, B. » → « A, B » (l'étiquette du panel commence par le mot, dans sa langue)."""
+    t = re.sub(r'^\s*(Ingrédients|Ingrediënten|Ingredients)\s*:\s*', '', t or '', flags=re.I).strip()
+    return t[:-1].strip() if t.endswith('.') else t
+
+
+def morceaux(t: str) -> list[str]:
+    """Les ingrédients d'une étiquette, séparés aux virgules hors parenthèses."""
+    out, prof, cur = [], 0, ''
+    for ch in t:
+        prof += (ch == '(') - (ch == ')')
+        if ch == ',' and prof == 0:
+            out.append(cur.strip()); cur = ''
+        else:
+            cur += ch
+    return [x for x in out + [cur.strip()] if x]
+
+
+def composition(p: dict, lg: str) -> tuple[list[tuple[str, list[str]]], bool]:
+    """La composition dite au client : [(ingrédient, codes d'allergènes)], et vrai si le texte est dans la langue.
+
+    Source : l'étiquette du catalogue (label_ingredients, traduite par les alias du panel) ; ses ingrédients sont ceux
+    de la recette de la fiche technique, dans le même ordre d'une langue à l'autre : les allergènes de chaque
+    ingrédient se lisent sur la recette (nom français), puis se reportent par position. Sans étiquette au catalogue,
+    les ingrédients de la recette de la fiche technique.
+    """
+    ft, cat = p['fiche_technique'], p['catalogue']
+    allerg = {e['nom'].lower(): e['allergenes'] for e in ft['recette']}
+    fr = morceaux(prefixe_ingredients((cat.get('fr') or {}).get('label_ingredients', '')))
+    if not fr:
+        items = [(e['nom'], e['allergenes']) for e in ft['recette']]
+        return items, lg == 'fr'
+    codes = [allerg.get(x.lower(), []) for x in fr]
+    if lg == 'fr':
+        return list(zip(fr, codes)), True
+    autre = morceaux(prefixe_ingredients((cat.get(lg) or {}).get('label_ingredients', '')))
+    if len(autre) == len(fr):
+        return list(zip(autre, codes)), True
+    return list(zip(fr, codes)), False
+
+
 def charger() -> tuple[dict, list[dict]]:
     """Les tickets, chacun avec sa boutique et ses lignes prêtes à écrire (dans les deux langues)."""
     with open(os.path.join(ICI, 'donnees.json'), encoding='utf-8') as f:
@@ -207,13 +247,23 @@ def charger() -> tuple[dict, list[dict]]:
         lignes = []
         for l in t['lignes']:
             p = d['produits'][str(l['id'])]
-            prix = float(p['prix'][str(b['id'])])
+            ft, cat = p['fiche_technique'], p['catalogue']
+            # Le prix : celui du catalogue de la boutique du ticket, sinon le prix conseillé de la fiche technique.
+            prix = next((float(c['portion_price_gross']) for c in cat.values() if c['boutique'] == b['id']),
+                        float(ft['suggested_sale_price']))
+            nom = {lg: ((cat.get(lg) or cat.get('fr') or {}).get('name') or ft['name']).strip() for lg in ('fr', 'nl')}
+            nom = {lg: maj(n) for lg, n in nom.items()}
+            codes = {a for e in ft['recette'] for a in e['allergenes']}
+            for c in cat.values():
+                codes |= set(c.get('allergen_codes') or [])
             lignes.append({
-                'id': l['id'], 'qte': l['qte'], 'prix': prix, 'total': prix * l['qte'], 'panel': p['panel'],
-                'fiche': {'fr': p['fiche'], 'nl': p['fiche_nl']},
-                'caisse': {'fr': p['panel']['name'], 'nl': p['panel_nl']['name']},
-                'allergenes': [a for a in (p['panel']['allergen_codes'] or []) if a in CODES],
-                'limite': {lg: limite(vente, int(p['panel']['shelf_life_minutes']), lg) for lg in ('fr', 'nl')},
+                'id': l['id'], 'qte': l['qte'], 'prix': prix, 'total': prix * l['qte'], 'ft': ft,
+                'nom': nom,
+                'famille': {lg: (cat.get(lg) or cat.get('fr') or {}).get('groupe') or ft['category_name'] for lg in ('fr', 'nl')},
+                'image': next((c['image'] for c in cat.values() if c.get('image')), None) or p.get('image_locale'),
+                'composition': {lg: composition(p, lg) for lg in ('fr', 'nl')},
+                'allergenes': [a for a in CODES if a in codes],
+                'limite': {lg: limite(vente, int(ft['shelf_life_minutes']), lg) for lg in ('fr', 'nl')},
             })
         tickets.append({**t, 'b': b, 'vente': vente, 'L': lignes})
     return d, tickets
@@ -388,7 +438,17 @@ details.g14[open] summary::after{content:"–"}
 .how__big{margin-top:4px;font-size:22px;line-height:1.05;letter-spacing:-.02em;font-weight:700}
 .how__big span{font-size:14px;letter-spacing:0;font-weight:600;color:var(--ruby);margin-left:4px;white-space:nowrap}
 .how__d{margin-top:6px;font-size:13px;line-height:1.5;color:#5d574f;font-weight:500}
-.how__d--seul{margin-top:4px;font-size:14px;color:var(--ink)}
+.how__d p{margin:0}
+.num{margin:0;padding-left:18px;display:grid;gap:6px}
+details.long summary{list-style:none;cursor:pointer;display:block}
+details.long summary::-webkit-details-marker{display:none}
+details.long:not([open]) .how__d{max-height:7.6em;overflow:hidden;-webkit-mask:linear-gradient(#000 55%%,transparent);mask:linear-gradient(#000 55%%,transparent)}
+.plus{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:600;color:var(--ruby)}
+details.long[open] .plus{display:none}
+.steps{counter-reset:s;display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{position:relative;padding-left:34px;font-size:14px;line-height:1.5;font-weight:500;color:#3a3631;counter-increment:s}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:6px;background:rgba(141,29,44,.08);color:var(--ruby);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.th[data-vide]{background:var(--lin)}
 .avoid{margin-top:10px;font-size:12.5px;color:var(--muted);font-weight:500;display:flex;gap:8px;align-items:flex-start}
 .avoid .ic{width:14px;height:14px;color:var(--ruby);margin-top:1px}
 .tips{display:grid;gap:8px}
@@ -500,6 +560,14 @@ def nom_allergene(code: str, lg: str) -> str:
     return next(a[1] if lg == 'fr' else a[2] for a in ALLERGENES if a[0] == code)
 
 
+def bloc_composition(l: dict, lg: str) -> str:
+    items, traduit = l['composition'][lg]
+    txt = ', '.join(e(n) + (' (' + ', '.join(f'<b>{e(nom_allergene(a, lg).lower())}</b>' for a in al) + ')' if al else '')
+                    for n, al in items)
+    attr = '' if traduit else ' lang="fr"'
+    return f'<div class="blk"><span class="eyebrow">{e(T[lg]["composition"])}</span><p class="blk__txt"{attr}>{txt}.</p></div>'
+
+
 def bloc_allergenes(l: dict, lg: str) -> str:
     t, al = T[lg], l['allergenes']
     if al:
@@ -513,50 +581,85 @@ def bloc_allergenes(l: dict, lg: str) -> str:
             f'<details class="g14"><summary>{e(t["g14"])}</summary><ul>{g}</ul></details></div>')
 
 
-def bloc_cuisson(fi: dict, lg: str) -> str:
-    t = T[lg]
-    if not fi.get('cuire'):
-        return (f'<div class="blk"><span class="eyebrow">{e(t["cuisson"])}</span><div class="how"><div class="how__i">'
-                f'<span class="how__ic">{ic("frais")}</span><div><p class="how__t">{e(t["sans_cuisson"])}</p>'
-                f'<p class="how__d how__d--seul">{e(fi.get("sans_cuisson", ""))}</p></div></div></div></div>')
-    items = ''.join(
-        f'<div class="how__i"><span class="how__ic">{ic(c["mode"])}</span><div>'
-        f'<p class="how__t">{e(c["titre"])}</p><p class="how__big">{e(c["valeur"])}<span>· {e(c["duree"])}</span></p>'
-        f'<p class="how__d">{e(c["detail"])}</p></div></div>' for c in fi['cuire'])
-    evite = f'<p class="avoid">{ic("alerte")}<span>{e(fi["eviter"])}</span></p>' if fi.get('eviter') else ''
-    return f'<div class="blk"><span class="eyebrow">{e(t["cuisson"])}</span><div class="how">{items}</div>{evite}</div>'
+def texte_long(s: str, lg: str) -> str:
+    """Un texte de la fiche technique, tel quel : en liste s'il est numéroté (« 1. … 2. … »), replié au-delà de
+    quatre lignes (« Lire la suite »). Les textes du panel ne sont qu'en français : en néerlandais, lang="fr"."""
+    parts = [x.strip() for x in re.split(r'\s(?=\d{1,2}\.\s)', s) if x.strip()]
+    corps = ('<ol class="num">' + ''.join(f'<li>{e(re.sub(r"^\d{1,2}\.\s*", "", x))}</li>' for x in parts) + '</ol>'
+             if len(parts) > 1 else f'<p>{e(s)}</p>')
+    attr = ' lang="fr"' if lg != 'fr' else ''
+    if len(s) < 260:
+        return f'<div class="how__d"{attr}>{corps}</div>'
+    return (f'<details class="long"{attr}><summary><div class="how__d">{corps}</div>'
+            f'<span class="plus">{e(T[lg]["lire"])}</span></summary></details>')
+
+
+def bloc_cuisson(l: dict, lg: str) -> str:
+    """Le réchauffage (reheating_* du produit) et les compétences de cuisson de la fiche technique."""
+    t, ft = T[lg], l['ft']
+    items = ''
+    if ft.get('reheating_temperature_celsius') or ft.get('reheating_time_minutes'):
+        val = f'{ft["reheating_temperature_celsius"]}{NBSP}°C' if ft.get('reheating_temperature_celsius') else ''
+        duree = f'{ft["reheating_time_minutes"]}{NBSP}min' if ft.get('reheating_time_minutes') else ''
+        items += (f'<div class="how__i"><span class="how__ic">{ic("four")}</span><div><p class="how__t">{e(t["rechauffer"])}</p>'
+                  f'<p class="how__big">{val}<span>· {duree}</span></p></div></div>')
+    for c in ft['competences']:
+        if 'cuisson' in c['nom'].lower() and c['description']:
+            items += (f'<div class="how__i"><span class="how__ic">{ic("four")}</span><div><p class="how__t">{e(t["nous_cuisons"])}</p>'
+                      f'{texte_long(c["description"], lg)}</div></div>')
+    if not items:
+        return ''
+    return f'<div class="blk"><span class="eyebrow">{e(t["cuisson"])}</span><div class="how">{items}</div></div>'
+
+
+def bloc_finition(l: dict, lg: str) -> str:
+    """Les étapes de préparation de la fiche technique, telles quelles."""
+    etapes = l['ft']['etapes']
+    if not etapes:
+        return ''
+    attr = ' lang="fr"' if lg != 'fr' else ''
+    li = ''.join(f'<li>{e(s)}</li>' for s in etapes)
+    return f'<div class="blk"><span class="eyebrow">{e(T[lg]["finition"])}</span><ol class="steps"{attr}>{li}</ol></div>'
+
+
+def bloc_conservation(l: dict, lg: str) -> str:
+    t, ft = T[lg], l['ft']
+    _, _, _, long_ = l['limite'][lg]
+    m = re.match(r'\s*(-?\d+)\s*°C\s*[–-]\s*(-?\d+)\s*°C', ft.get('storage_description') or '')
+    temp = (f'<p class="blk__txt">{e(t["entre"].format(a=f"{m.group(1)}{NBSP}°C", b=f"{m.group(2)}{NBSP}°C"))}</p>'
+            if m else '')
+    return (f'<div class="blk"><span class="eyebrow">{e(t["conservation"])}</span><div class="keep">{temp}'
+            f'<p class="until">{ic("horloge")}<span>{e(t["a_deguster"].format(quand=long_))}</span></p></div></div>')
 
 
 def fiche(k: int, tk: dict, l: dict, lg: str) -> str:
-    t, b, pa, fi = T[lg], tk['b'], l['panel'], l['fiche'][lg]
-    ville = lambda s: s.replace('{ville}', b['ville'])  # noqa: E731
-    _, urgent, court, long_ = l['limite'][lg]
+    t, b, ft = T[lg], tk['b'], l['ft']
+    _, urgent, court, _ = l['limite'][lg]
     tags = [f'<li class="tag{" tag--now" if urgent else ""}">{ic("horloge")}{e(court)}</li>']
-    if pa.get('is_vegetarian'):
+    if ft.get('is_vegetarian'):
         tags.append(f'<li class="tag tag--abr">{ic("feuille")}{e(t["vege"])}</li>')
-    if pa.get('single_weight'):
-        tags.append(f'<li class="tag">{ic("poids")}{pa["single_weight"]}{NBSP}g</li>')
-    if fi.get('origine'):
-        tags.append(f'<li class="tag">{ic("repere")}{e(ville(fi["origine"]))}</li>')
+    if ft.get('single_weight'):
+        tags.append(f'<li class="tag">{ic("poids")}{ft["single_weight"]}{NBSP}g</li>')
     qte = (f'{l["qte"]} × {euros(l["prix"], lg)} · {euros(l["total"], lg)}' if l['qte'] > 1
            else euros(l['prix'], lg))
-    finir = ''.join(f'<li>{e(x)}</li>' for x in fi.get('finir', []))
-    lien = f'{b["webshop"]}&product={l["id"]}&open=product&lang={lg}'
+    vignette = (f'style="background-image:url(\'{e(l["image"])}\')"' if l['image'] else 'data-vide="1"')
+    cta = ''
+    if ft.get('webshop_active'):
+        lien = f'{b["webshop"]}&product={l["id"]}&open=product&lang={lg}'
+        cta = f'<div class="prod__cta"><a class="btn" href="{e(lien)}">{e(t["recommander"])} {ic("fleche")}</a></div>'
     return f"""
-<article class="prod" id="p-{l['id']}" aria-roledescription="fiche" aria-label="{k + 1} {t['sur']} {len(tk['L'])} : {e(fi['nom'])}">
+<article class="prod" id="p-{l['id']}" aria-roledescription="fiche" aria-label="{k + 1} {t['sur']} {len(tk['L'])} : {e(l['nom'][lg])}">
   <header class="prod__head">
-    <span class="th prod__th" role="img" aria-label="{e(fi['nom'])}" style="background-image:url('{e(pa['image'])}')"><span class="prod__qty">×{l['qte']}</span></span>
-    <div><p class="eyebrow eyebrow--ruby">{e(fi['famille'])}</p><h3 class="prod__name">{e(fi['nom'])}</h3><p class="prod__px">{qte}</p></div>
+    <span class="th prod__th" role="img" aria-label="{e(l['nom'][lg])}" {vignette}><span class="prod__qty">×{l['qte']}</span></span>
+    <div><p class="eyebrow eyebrow--ruby">{e(l['famille'][lg])}</p><h3 class="prod__name">{e(l['nom'][lg])}</h3><p class="prod__px">{qte}</p></div>
   </header>
-  <p class="prod__hook">{e(ville(fi['accroche']))}</p>
   <ul class="tags">{''.join(tags)}</ul>
-  <div class="blk"><span class="eyebrow">{e(t['composition'])}</span><p class="blk__txt">{gras(fi['composition'])}</p></div>
+  {bloc_composition(l, lg)}
   {bloc_allergenes(l, lg)}
-  {bloc_cuisson(fi, lg)}
-  <div class="blk"><span class="eyebrow">{e(t['finition'])}</span><ul class="tips">{finir}</ul></div>
-  <div class="blk"><span class="eyebrow">{e(t['conservation'])}</span><div class="keep"><p class="blk__txt">{e(fi['conserver'])}</p>
-    <p class="until">{ic('horloge')}<span>{e(t['a_deguster'].format(quand=long_))}</span></p></div></div>
-  <div class="prod__cta"><a class="btn" href="{e(lien)}">{e(t['recommander'])} {ic('fleche')}</a></div>
+  {bloc_cuisson(l, lg)}
+  {bloc_finition(l, lg)}
+  {bloc_conservation(l, lg)}
+  {cta}
 </article>"""
 
 
@@ -566,15 +669,16 @@ def fichier_page(tk: dict, lg: str) -> str:
 
 def page(tk: dict, lg: str) -> str:
     t, b, L, vente = T[lg], tk['b'], tk['L'], tk['vente']
-    nom = lambda l: l['fiche'][lg]['nom']  # noqa: E731
+    nom = lambda l: l['nom'][lg]  # noqa: E731
+    vign = lambda l: f'style="background-image:url(\'{e(l["image"])}\')"' if l['image'] else 'data-vide="1"'  # noqa: E731
     n_art = sum(l['qte'] for l in L)
     total = sum(l['total'] for l in L)
-    num = f'{int(tk["numero"]):,}'.replace(',', NBSP)
+    num = f'{int(tk["transaction"]):,}'.replace(',', NBSP)
     jour = f'{maj(jour_long(vente, lg))} {vente.year}'
     quand = f'{jour} · {heure(vente, lg)}'
 
     rows = ''.join(
-        f'<a class="row" href="#p-{l["id"]}"><span class="th" style="background-image:url(\'{e(l["panel"]["image"])}\')"></span>'
+        f'<a class="row" href="#p-{l["id"]}"><span class="th" {vign(l)}></span>'
         f'<span><b>{e(nom(l))}</b><small>{l["qte"]} × {euros(l["prix"], lg)}</small></span>'
         f'<em>{euros(l["total"], lg)}</em>{ic("fleche")}</a>' for l in L)
 
@@ -598,7 +702,7 @@ def page(tk: dict, lg: str) -> str:
 
     picks = ''.join(
         f'<button type="button" class="pick__b{" on" if k == 0 else ""}" aria-controls="p-{l["id"]}">'
-        f'<span class="th" style="background-image:url(\'{e(l["panel"]["image"])}\')"></span>{e(nom(l))}'
+        f'<span class="th" {vign(l)}></span>{e(nom(l))}'
         f'{"<em>×" + str(l["qte"]) + "</em>" if l["qte"] > 1 else ""}</button>' for k, l in enumerate(L))
     points = ''.join(f'<i class="{"on" if k == 0 else ""}"></i>' for k in range(len(L)))
     fiches = ''.join(fiche(k, tk, l, lg) for k, l in enumerate(L))
@@ -730,11 +834,11 @@ def ticket(tk: dict) -> str:
     tva = total - total / 1.06
     mt = lambda x: f'{x:.2f}'.replace('.', ',')  # noqa: E731
     lignes = ''.join(
-        f'<tr><td>{l["qte"]} x {e(l["caisse"][lg])}</td><td>{mt(l["prix"]) if l["qte"] > 1 else ""}</td>'
+        f'<tr><td>{l["qte"]} x {e(l["nom"][lg])}</td><td>{mt(l["prix"]) if l["qte"] > 1 else ""}</td>'
         f'<td>{mt(l["total"])}</td></tr>' for l in L)
     court = tk['adresse_qr'].replace('https://', '')
     return f"""<!DOCTYPE html>
-<html lang="{lg}"><head><meta charset="utf-8"><title>Ticket {e(tk['numero'])} — QR</title>
+<html lang="{lg}"><head><meta charset="utf-8"><title>Transaction {e(tk['transaction'])} — QR</title>
 <style>
 @font-face{{font-family:'Gotham';src:url('{POLICES}Gotham_Regular.otf') format('opentype');font-weight:600}}
 body{{margin:0;background:#EAE4DC;display:flex;justify-content:center;padding:36px 0;font-family:ui-monospace,'DejaVu Sans Mono',Menlo,monospace;color:#1d1c1a}}
@@ -754,7 +858,7 @@ table{{width:100%;border-collapse:collapse}}td{{padding:1px 0;vertical-align:top
   <div class="c"><img class="logo" src="{SITE}img/brand/logo.png" alt="L’Atelier By">
   {e(b['nom'])} – {e(b['ville'])}<br>{e(b['rue'])} · {e(b['cp'])} {e(b['ville'])}<br>{t['r_tel']} {e(b['tel'])}</div>
   <hr>
-  <table><tr><td>Ticket {e(tk['numero'])}</td><td></td><td>{vente:%d/%m/%Y %H:%M}</td></tr><tr><td>{e(tk['caisse'])}</td><td></td><td></td></tr></table>
+  <table><tr><td>{t['r_trans']} {e(tk['transaction'])}</td><td></td><td>{vente:%d/%m/%Y %H:%M}</td></tr><tr><td>{e(tk['caisse'])}</td><td></td><td></td></tr></table>
   <hr>
   <table>{lignes}</table>
   <hr>
