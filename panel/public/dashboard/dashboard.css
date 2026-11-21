@@ -3642,3 +3642,10 @@ body.db-vue-social{overflow:hidden}
 /* La demande urgente (21/11/2026) : le choix du formulaire et l'étiquette de la carte. */
 .rc-puces button.on.hd-urg{background:#C0182B;border-color:#C0182B;color:#fff}
 .hd-urg-tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:#C0182B;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:1px}
+/* La photo obligatoire de la réclamation depuis les invendus (21/11/2026) */
+.im-actf .im-lab small{text-transform:none;letter-spacing:0;font-size:10.5px}
+.im-photos{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.im-photos .ph{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;background:var(--paper,#f3efe9);display:flex;align-items:center;justify-content:center}
+.im-photos .ph img{width:100%;height:100%;object-fit:cover}
+.im-photos .ph button{position:absolute;top:3px;right:3px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:11px;line-height:20px;padding:0;cursor:pointer}
+.im-actf .im-photos label.plus{width:72px;height:72px;border:1.5px dashed var(--color-border-secondary,#cbbfb0);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-direction:row;cursor:pointer;font:400 12px var(--font-ui);letter-spacing:0;text-transform:none;color:var(--color-text,#222)}
