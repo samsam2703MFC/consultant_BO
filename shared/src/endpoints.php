@@ -8085,106 +8085,7 @@ function ep_ia_statut(): array
     return Anthropic::statut();
 }
 
-/**
- * GET /marketing — campagnes, calendrier et types, lus dans les tables mar_*.
- *
- * Le module marketing autonome va disparaître : le cockpit reprend Pilotage →
- * Calendrier / Campagnes / Types de campagne en lisant DIRECTEMENT ses tables,
- * comme il le fait pour pla_* — il n'y a plus d'API à appeler quand le module
- * n'existe plus. Les tables restent les mêmes : rien à migrer, l'historique
- * des campagnes survit à la suppression du module.
- */
-function ep_mkt(): array
-{
-    try {
-        $marques = Db::rows('SELECT id, name FROM mar_brand ORDER BY id');
-    } catch (PDOException $e) {
-        return ['indispo' => true,
-            'raison' => 'Les tables mar_* sont absentes de la base partagée : le module marketing n’a jamais été installé ici.'];
-    }
-    $statuts = array_map(fn ($s) => ['code' => $s['code'], 'nom' => $s['label'],
-        'texte' => $s['text_hex'], 'fond' => $s['bg_rgba'], 'ordre' => (int) $s['sort_order']],
-        Db::rows('SELECT * FROM mar_campaign_status ORDER BY sort_order, id'));
-
-    // Les types, avec TOUT ce que le module en connaissait : description, couleur,
-    // icône et levier lié. N'en lire qu'une partie donnait une fiche à moitié
-    // vide dès qu'un type venait de l'assistant — et la réécrivait à moitié
-    // vide au premier enregistrement.
-    //
-    // `lever_label` : le badge du type s'il en porte un, sinon le nom du levier
-    // lié. Même COALESCE que le module, pour que les deux affichent le même mot.
-    // `default_lever_code` reste lu en dernier recours : les types d'avant la
-    // liaison ne portent que ça.
-    $colLevier = mktTypeAColonne('lever_id');
-    $sqlTypes = $colLevier
-        ? 'SELECT t.*, COALESCE(t.lever_badge_label, l.label) AS lever_label, l.color_hex AS lever_color
-             FROM mar_campaign_type t LEFT JOIN mar_lever l ON l.id = t.lever_id
-            ORDER BY t.sort_order, t.id'
-        : 'SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id';
-    $compte = static fn (string $sql): string => str_replace('SELECT t.*',
-        'SELECT t.*, (SELECT COUNT(*) FROM mar_campaign c WHERE c.type_id = t.id) AS campagnes', $sql);
-    // La liste des colonnes n'est qu'une lecture d'`information_schema` : si
-    // elle se trompe, l'écran des campagnes entier tombait en 500 sur une
-    // jointure. Le repli sans levier reste lisible — badge du type d'un côté,
-    // couleur du levier en moins — et se voit tout de suite.
-    try { $lignesTypes = Db::rows($compte($sqlTypes)); }
-    catch (PDOException $e) {
-        $lignesTypes = Db::rows($compte('SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id'));
-    }
-    $types = array_map(fn ($t) => [
-        'id' => (int) $t['id'], 'code' => $t['code'], 'nom' => $t['label'],
-        'description' => $t['description'] ?? null,
-        'levier' => $t['lever_label'] ?? $t['default_lever_code'] ?? null,
-        'levierId' => isset($t['lever_id']) && $t['lever_id'] !== null ? (int) $t['lever_id'] : null,
-        'levierBadge' => $t['lever_badge_label'] ?? null,
-        'levierCouleur' => $t['lever_color'] ?? null,
-        'kpi' => $t['default_kpi_label'],
-        'couleur' => $t['color_hex'] ?? null,
-        'icone' => $t['icon_key'] ?? null, 'iconePath' => $t['icon_path'] ?? null,
-        'ordre' => (int) $t['sort_order'],
-        'actif' => (bool) $t['is_active'],
-        // Compté en base, pas sur les campagnes chargées : c'est lui qui décide
-        // si « Supprimer » a un sens, et une liste tronquée le rendrait faux.
-        'nCampagnes' => (int) ($t['campagnes'] ?? 0)],
-        $lignesTypes);
-    $nShops = [];
-    foreach (Db::rows('SELECT campaign_id, COUNT(*) n FROM mar_campaign_shop GROUP BY campaign_id') as $r) {
-        $nShops[(int) $r['campaign_id']] = (int) $r['n'];
-    }
-    $campagnes = [];
-    foreach (Db::rows('SELECT c.*, t.label AS type_label, t.color_hex AS type_color,
-                              s.label AS status_label, s.text_hex, s.bg_rgba
-                       FROM mar_campaign c
-                       LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                       LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                       ORDER BY c.starts_on IS NULL, c.starts_on DESC, c.id DESC') as $c) {
-        $tid = $c['type_id'] !== null ? (int) $c['type_id'] : null;
-        $campagnes[] = [
-            'id' => (int) $c['id'], 'nom' => (string) $c['name'],
-            'typeId' => $tid, 'type' => $c['type_label'], 'typeCouleur' => $c['type_color'],
-            'scope' => (string) $c['scope'],
-            'statut' => (string) $c['status_code'], 'statutNom' => $c['status_label'] ?? $c['status_code'],
-            'statutTexte' => $c['text_hex'] ?? '#666666', 'statutFond' => $c['bg_rgba'] ?? 'rgba(120,116,110,.12)',
-            'debut' => $c['starts_on'], 'fin' => $c['ends_on'],
-            'budget' => (float) $c['budget_amount'], 'depense' => (float) $c['spent_amount'],
-            'nBoutiques' => $nShops[(int) $c['id']] ?? 0,
-            'image' => $c['image_url'] ?: null,
-        ];
-    }
-    // Les leviers et la bibliothèque d'icônes accompagnent les types : l'écran
-    // ne redéclare ni les uns ni les autres, il affiche ce que le serveur sert.
-    $leviers = [];
-    try {
-        $leviers = array_map(fn ($l) => ['id' => (int) $l['id'], 'code' => $l['code'],
-            'nom' => $l['label'], 'couleur' => $l['color_hex']],
-            Db::rows('SELECT id, code, label, color_hex FROM mar_lever WHERE is_active = 1 ORDER BY sort_order, id'));
-    } catch (PDOException $e) { /* mar_lever absente : le choix de levier se réduit à « aucun » */ }
-
-    return ['campagnes' => $campagnes, 'types' => $types, 'statuts' => $statuts,
-        'leviers' => $leviers, 'icones' => mktIcones(),
-        'marqueId' => $marques ? (int) $marques[0]['id'] : null,
-        'marque' => $marques ? (string) $marques[0]['name'] : ''];
-}
+// GET /marketing (ep_mkt) : marketing/src/campagnes.php, lu au module Marketing par son API (21/11/2026).
 
 /**
  * GET /reputation — la réputation digitale du réseau, magasin par magasin.
@@ -8496,18 +8397,12 @@ function ep_budget_campagnes(): array
 {
     ensureCampagneObjectifs();
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
-    try {
-        // Le TYPE voyage avec la campagne : les bandes se rangent par type,
-        // une ligne chacun — sinon deux campagnes qui se chevauchent se
-        // marchent dessus et aucune ne se lit.
-        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut,
-                                  t.label AS type_label, t.color_hex AS type_color
-                             FROM mar_campaign c LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                            WHERE (c.starts_on IS NOT NULL AND c.starts_on <= ? AND (c.ends_on IS NULL OR c.ends_on >= ?))
-                            ORDER BY c.starts_on', [$exercice . '-12-31', $exercice . '-01-01']);
-    } catch (PDOException $e) {
-        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    // Les campagnes de l'exercice, lues au module Marketing (marketing/src/campagnes.php, 21/11/2026). Le TYPE voyage
+    // avec la campagne : les bandes se rangent par type, une ligne chacun — sinon deux campagnes qui se chevauchent se
+    // marchent dessus et aucune ne se lit.
+    [$camps, $errC] = campagnesDeLExercice($exercice);
+    if ($camps === null) {
+        return ['indispo' => true, 'raison' => 'Le module Marketing ne rend pas les campagnes : ' . $errC . '.'];
     }
     $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
     $nomDe = [];
@@ -8563,8 +8458,11 @@ function ep_budget_campagnes(): array
     if ($camp !== null) {
         // Le périmètre de la campagne : ses magasins, ou tout le réseau.
         $perim = [];
-        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
-            $sid = (string) $r['shop_id'];
+        [$ids, $errB] = campagneBoutiques((int) $camp['id']);   // au module Marketing
+        if ($ids === null) {
+            return ['indispo' => true, 'raison' => 'Le module Marketing ne rend pas les boutiques de la campagne : ' . $errB . '.'];
+        }
+        foreach ($ids as $sid) {
             if (isset($nomDe[$sid])) { $perim[] = $sid; }
         }
         if ($perim === []) { $perim = array_keys($nomDe); }

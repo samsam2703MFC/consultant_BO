@@ -239,3 +239,4 @@
 2026-11-21T15:39:24Z Fonds et types de campagne : le cockpit n'écrit plus les tables du module Marketing, il passe par son API (jeton de service) ; écritures de campagnes sans écran retirées (410)
 2026-11-21T16:45:17Z Boîte mail : archives, corbeille et Envoyés créés quand la boîte n'en a pas (« la boîte n'a pas de dossier d'archives ») ; sélection multiple, tout sélectionner, archiver, effacer, déplacer ; dossiers en boutons à micro-icône ; « Ranger avec l'IA » (POST /dashboard/boite/ranger)
 2026-11-21T16:58:47Z Fonds : le grand livre, ses leviers, ses frais récurrents, les boutiques et les campagnes se lisent au module Marketing par son API (GET /fonds, marketing/src/fonds.php) ; plus aucune lecture SQL de mar_fund_* ni de mar_shop
+2026-11-21T17:04:54Z Campagnes : le calendrier, les campagnes et les types (GET /marketing) et les campagnes du budget des campagnes se lisent au module Marketing par son API (marketing/src/campagnes.php)
