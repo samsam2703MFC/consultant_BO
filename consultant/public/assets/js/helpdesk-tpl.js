@@ -168,21 +168,24 @@ function tplRcPart(P, x){
     <small class="vr-mu">${esc(P.reseau)}</small></div>`;
 }
 
-/** Le tableau annuel (21/11/2026, maquette B) : magasins × mois, réclamé et part du livré, ligne Réseau. */
+/** Le tableau annuel des produits réclamés (21/11/2026, maquettes B, D, E) : par magasin, catégorie, produit ou motif ;
+ * réclamé et % du livré mois par mois ; produit ou livraison. */
 function tplAnnuel(A, x){
   const { esc } = x;
-  if (A.chargement) { return '<div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des réclamations et des livraisons de l’année…</div>'; }
-  if (A.erreur) { return `<div class="vr-card vr-etat ko">${esc(A.erreur)}</div>`; }
+  const puces = (L, cls) => `<div class="vr-chips hd-chips ${cls || ''}">${L.map(o => `<button class="${[o.on ? 'on' : '', o.ko ? 'rc-chip-ko' : ''].join(' ').trim()}" ${x.A(o.choisir)}>${esc(o.nom)}</button>`).join('')}</div>`;
   const sel = (opts, fn) => `<select class="vr-sel" ${x.C(fn)}>${opts.map(o => `<option value="${esc(o.id)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`;
-  const fil = `<div class="vt-fil">${sel(A.annees, A.poserAnnee)}${sel(A.fournisseurs || [], A.poserFour)}<span class="vr-sp"></span>
-    <button class="vr-btn" ${x.A(A.exporter)}>Exporter (Excel, CSV)</button><button class="vr-btn" ${x.A(A.relire)}${A.relecture ? ' disabled' : ''}>${A.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
-  const kpis = `<div class="vm-kpis">${A.kpis.map(k => `<div class="vm-kpi ${k[3]}"><div class="k">${esc(k[0])}</div><div class="v">${esc(String(k[1]))}</div><div class="s">${esc(k[2])}</div></div>`).join('')}</div>`;
+  const fil = `<div class="vt-fil">${puces(A.vues)}${puces(A.types)}${sel(A.annees, A.poserAnnee)}${A.fournisseurs ? sel(A.fournisseurs, A.poserFour) : ''}${A.magasins ? sel(A.magasins, A.poserMag) : ''}
+    ${A.unites ? puces(A.unites) : ''}<span class="vr-sp"></span>${A.exporter ? `<button class="vr-btn" ${x.A(A.exporter)}>Exporter (Excel, CSV)</button>` : ''}<button class="vr-btn" ${x.A(A.relire)}${A.relecture ? ' disabled' : ''}>${A.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
+  if (A.chargement) { return `<div class="vr-card">${fil}<div class="vr-etat"><span class="vr-roue"></span>Lecture des réclamations et des factures de l’année…</div></div>`; }
+  if (A.erreur) { return `<div class="vr-card">${fil}<div class="vr-etat ko">${esc(A.erreur)}</div></div>`; }
+  const kpis = `<div class="vm-kpis" style="grid-template-columns:repeat(${A.kpis.length},1fr)">${A.kpis.map(k => `<div class="vm-kpi ${k[3]}"><div class="k">${esc(k[0])}</div><div class="v">${esc(String(k[1]))}</div><div class="s">${esc(k[2])}</div></div>`).join('')}</div>`;
   const cas = c => c.futur ? '<td class="rc-c rc-fut">—</td>' : `<td class="rc-c ${c.cls}" title="${esc(c.titre)}">${c.montant ? `<b>${esc(c.montant)}</b><small>${esc(c.part)}</small>` : ''}</td>`;
-  const corps = A.lignes.length ? A.lignes.map(l => `<tr class="${l.fort ? 'rc-tot' : ''}"><td class="g"><b>${esc(l.nom)}</b><small>${esc(l.sous)}</small></td>${l.cases.map(cas).join('')}${cas(l.total)}
-    <td class="r">${esc(l.livre)}</td><td class="r">${esc(l.accepte)}<small>${esc(l.accepteSous)}</small></td></tr>`).join('')
-    : `<tr><td colspan="16" class="vr-vide">Aucune réclamation ni livraison pour ce fournisseur cette année.</td></tr>`;
-  const table = `<div class="vr-tw"><table class="vr-t rc-an"><thead><tr><th class="g">Magasin</th>${A.mois.map(m => `<th>${esc(m)}</th>`).join('')}<th>Année</th><th class="r">Livré</th><th class="r">Accepté</th></tr></thead><tbody>${corps}</tbody></table></div>`;
-  const leg = '<div class="rc-leg"><span>Taux réclamé ÷ livré :</span><i class="h0"></i>&lt; 0,75 %<i class="h1"></i>0,75 – 1,5 %<i class="h2"></i>1,5 – 3 %<i class="h3"></i>≥ 3 %</div>';
-  const pied = `<div class="vr-pied"><b>Chaque case :</b> le montant réclamé au fournisseur ce mois-là (quantité × prix d’achat), et sa part dans ce qui a été livré au magasin le même mois, au même prix. « Accepté » : la quantité acceptée par le fournisseur, hors réclamations refusées. <span class="vr-mu">${esc(A.source || '')}</span></div>`;
+  const ligne = l => l.titre ? `<tr class="rc-sect${l.ko ? ' ko' : ''}"><td class="g" colspan="17"><b>${esc(l.titre)}</b></td></tr>`
+    : `<tr class="${[l.fort ? 'rc-tot' : '', l.cat ? 'rc-cat' : ''].join(' ').trim()}"><td class="g${l.ind ? ' rc-ind' : ''}">${l.cat || l.fort ? `<b>${esc(l.nom)}</b>` : esc(l.nom)}<small>${esc(l.sous)}</small></td>${l.cases.map(cas).join('')}${cas(l.total)}
+    <td class="r">${esc(l.livre)}<small>${esc(l.livreSous)}</small></td><td class="r">${l.pc ? `<span class="rc-pc ${l.pcCls}">${esc(l.pc)}</span>` : ''}</td></tr>`;
+  const corps = A.lignes.length ? A.lignes.map(ligne).join('') : `<tr><td colspan="17" class="vr-vide">Aucune réclamation pour ce choix cette année.</td></tr>`;
+  const table = `<div class="vr-tw"><table class="vr-t rc-an"><thead><tr><th class="g">${esc(A.premier)}</th>${A.mois.map(m => `<th>${esc(m)}</th>`).join('')}<th>Année</th><th class="r">Livré</th><th class="r">% réclamé</th></tr></thead><tbody>${corps}</tbody></table></div>`;
+  const leg = '<div class="rc-leg"><span>% réclamé ÷ livré :</span><i class="h0"></i>&lt; 0,75 %<i class="h1"></i>0,75 – 1,5 %<i class="h2"></i>1,5 – 3 %<i class="h3"></i>≥ 3 %</div>';
+  const pied = `<div class="vr-pied">${A.sourceKo ? `<b class="rc-ko">${esc(A.sourceKo)}</b> ` : ''}<b>Livré ne compte que les produits réclamés</b> dans l’année, d’après les factures du fournisseur : le % compare chaque produit à ses propres livraisons, chaque catégorie à ses produits réclamés, l’ensemble à tous les produits réclamés (en pièces pour un produit seul, en euros au-dessus). <b>Livraison</b> : les motifs liés à la commande ou à l’acheminement (non-conformité avec la commande, quantité incorrecte, manquant, casse, retard) ; <b>Produit</b> : qualité, taille ou poids. <span class="vr-mu">${esc(A.source || '')}</span></div>`;
   return `<div class="vr-card">${fil}${kpis}${table}${leg}${pied}</div>`;
 }

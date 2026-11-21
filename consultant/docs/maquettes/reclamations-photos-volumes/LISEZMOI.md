@@ -67,3 +67,13 @@ fournisseur) » ; demande : « tous les produits réclamés, et on toggle catég
 l'ensemble / la catégorie / le produit ». Livré ne compte plus que les produits réclamés au moins une fois dans l'année.
 Constat en ligne : le grand livre matière du panel ne porte plus aucune livraison après juillet 2026 (« livré inconnu »
 d'août à novembre) — la source du livré reste à trancher avant de coder D et E.
+
+**Codé le 21/11/2026 (« code D et E avec les factures de l'ERP ») :** le livré se lit sur les FACTURES du fournisseur,
+que l'ERP de production pousse au panel à chaque expédition (webhook `material-orders/shipment/sent` : produit, cartons,
+pièces par carton, prix net du carton, rangés sur la commande du magasin `material_order` / `material_order_item`) ;
+les colonnes sont reconnues à la lecture (`rcSourceFactures`), et le grand livre ne sert plus qu'à défaut (l'écran le
+dit). Demande ajoutée en cours de route : « rajouter s'il y a des problèmes et réclamations de livraison » — filtre
+Toutes / Produit / Livraison (d'après le motif), indicateur Livraison, vue Motifs. Captures du code : `code-d.png`
+(catégories), `code-e.png` (produits), `code-f.png` (motifs), API simulée.
+À vérifier en ligne : que `material_order_item` porte bien les quantités et prix facturés (le pied du tableau dit
+quelles colonnes ont été lues).
