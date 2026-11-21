@@ -194,6 +194,20 @@ function tclSpecificationsParMatiere(array $correspondances, array $produits): a
     return $out;
 }
 
+/**
+ * Un texte de la spécification du fournisseur, s'il est vraiment dans la langue demandée ; sinon ''. Mesuré le
+ * 21/11/2026 : les compositions « fr » et « nl » de SLFood sont le texte polonais (les alias d'étiquette des matières ne
+ * sont pas remplis) — identiques au « pl », ou avec des lettres polonaises. Un tel texte n'est pas montré au client.
+ */
+function tclTexteDansLaLangue(array $spec, string $lg, string $champ): string
+{
+    $t = trim((string) ($spec[$lg][$champ] ?? ''));
+    if ($t === '' || $lg === 'pl') { return $t; }
+    $pl = trim((string) ($spec['pl'][$champ] ?? ''));
+    if ($pl !== '' && $t === $pl) { return ''; }
+    return preg_match('/[ąęłńśźżćĄĘŁŃŚŹŻĆ]/u', $t) === 1 ? '' : $t;
+}
+
 /** Le premier nombre trouvé sous une des clés. */
 function tclNombre(array $a, array $cles): ?float
 {
@@ -478,17 +492,10 @@ function ep_tcl_client(string $code, string $lang): array
         // La spécification du fournisseur complète chaque ingrédient de la centrale (composition par langue).
         foreach ($recette as $k => $e) {
             $sp = $specs[(string) ($e['id'] ?? '')] ?? null;
-            if ($sp !== null) { $recette[$k]['detail'] = ['fr' => $sp['fr']['composition'] ?? '', 'nl' => $sp['nl']['composition'] ?? '']; }
+            if ($sp !== null) { $recette[$k]['detail'] = ['fr' => tclTexteDansLaLangue($sp, 'fr', 'composition'), 'nl' => tclTexteDansLaLangue($sp, 'nl', 'composition')]; }
         }
-        // Un produit acheté fini (une seule matière, de la centrale) : ses conseils de conservation et de préparation.
-        $conseils = null;
-        if (count($recette) === 1 && ($sp = $specs[(string) ($recette[0]['id'] ?? '')] ?? null) !== null) {
-            foreach (['fr', 'nl'] as $lg) {
-                $x = $sp[$lg] ?? $sp['fr'] ?? [];
-                $conseils[$lg] = ['conservation' => (string) ($x['conservation'] ?? ''), 'preparation' => (string) ($x['preparation'] ?? ''),
-                    'traduit' => isset($sp[$lg])];
-            }
-        }
+        // La conservation et la préparation de la spécification ne sont pas reprises : elles décrivent le produit surgelé
+        // livré à la boutique (« −18 °C », « laisser décongeler »), pas ce que le client emporte.
         $codes = [];
         foreach ($recette as $e) { foreach ($e['allergenes'] as $a) { $codes[$a] = true; } }
         foreach ($c as $x) { foreach ($x['allergenes'] ?? [] as $a) { $codes[$a] = true; } }
@@ -507,7 +514,6 @@ function ep_tcl_client(string $code, string $lang): array
             'stockage' => $f['stockage'] ?? '',
             'rechauffe' => $f['rechauffe'] ?? null,
             'cuisson' => $f['cuisson'] ?? [],
-            'conseils' => $conseils,
             'etapes' => $f['etapes'] ?? [],
             'webshop' => $f['webshop'] ?? false,
             'fiche' => $f !== null,
@@ -570,5 +576,8 @@ function ep_tcl_essai_specifications(int $matiere): array
 {
     $etat = null;
     $s = tclSpecifications($etat);
-    return ['etat' => $etat, 'matieres' => count($s), 'exemple' => $matiere > 0 ? ($s[(string) $matiere] ?? null) : (array_slice($s, 0, 1, true) ?: null)];
+    $traduites = ['fr' => 0, 'nl' => 0];
+    foreach ($s as $sp) { foreach ($traduites as $lg => $_) { if (tclTexteDansLaLangue($sp, $lg, 'composition') !== '') { $traduites[$lg]++; } } }
+    return ['etat' => $etat, 'matieres' => count($s), 'compositionsTraduites' => $traduites,
+        'exemple' => $matiere > 0 ? ($s[(string) $matiere] ?? null) : (array_slice($s, 0, 1, true) ?: null)];
 }

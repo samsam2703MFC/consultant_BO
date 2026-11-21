@@ -229,3 +229,4 @@
 2026-11-21T10:08:08Z Fiche du ticket : heure de la vente lue dans occurred_at_utc (heure belge), numéro du ticket (ticket_key), total et portions du panel, nom public de la boutique (ceo_shop) au lieu de la raison sociale
 2026-11-21T10:17:06Z Fiche du ticket : composition, conservation et préparation lues dans la spécification du fournisseur (catalogue SLFood, par langue) ; retirés : chapeau, phrase « Aucun de vos produits ne contient », indication de la barre sur ordinateur, dépliant des 14 allergènes
 2026-11-21T09:40:13Z Étiquettes NL : noms sans « ⌀ 22 cm » ni « ⌀ 26 cm » (plan et tableau), relecture des traductions langue par langue ; rien n'est envoyé au déploiement
+2026-11-21T10:21:46Z Fiche du ticket : la composition du fournisseur n'est montrée que dans la langue de la page (les textes SLFood sont en polonais) ; conservation et préparation du surgelé retirées
