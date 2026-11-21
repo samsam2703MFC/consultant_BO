@@ -151,6 +151,7 @@ require __DIR__ . '/../../../formation/src/formation_postes.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../../marketing/src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
+require __DIR__ . '/../../../marketing/src/ticket_client.php';       // La fiche produits du ticket de caisse : la page du QR (21/11/2026)
 require __DIR__ . '/../../../consultant/src/task_cadre.php';
 require __DIR__ . '/../../../shared/src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../../panel/src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
@@ -274,6 +275,14 @@ try {
         exit;
     }
 
+    // La fiche produits du ticket de caisse (ticket/) : le client n'a pas de session ; la clé signée du QR ouvre ce
+    // ticket et lui seul (marketing/src/ticket_client.php).
+    if (($pub = tclRoutePublique($method, $path)) !== null) {
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($pub, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     // La page du franchisé (suivi/) n'a pas de session du cockpit : le jeton du magasin est sa clé (src/suivi.php).
     if (str_starts_with($path, '/suivi/franchise') && ($pub = suRoutePublique($method, $path)) !== null) {
         tempsServeur($tCharge, $tInstall);
@@ -367,6 +376,8 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // L'essai de la fiche du ticket (siège) : les tickets d'un jour et leurs liens signés (marketing/src/ticket_client.php).
+    if (($c = tclRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
     if (($c = cmRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Mon marketing (15/11/2026) : le hub du marketing, pour le magasin de la requête (src/dashboard_marketing.php).
