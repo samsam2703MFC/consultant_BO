@@ -2925,13 +2925,13 @@ function wr_shop_saisonnalite(string $shopId): array
 function wr_campagne_objectifs(int $id): array
 {
     ensureCampagneObjectifs();
-    try {
-        $camp = Db::row('SELECT id, name FROM mar_campaign WHERE id = ?', [$id]);
-    } catch (PDOException $e) {
-        http_response_code(503);
-        return ['error' => 'les tables du module marketing sont absentes de cette base'];
+    $lu = campagneFiche($id);   // au module Marketing (marketing/src/campagnes.php)
+    if ($lu['erreur'] !== null) {
+        http_response_code(502);
+        return ['error' => 'le module Marketing ne rend pas la campagne : ' . $lu['erreur']];
     }
-    if ($camp === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    if ($lu['fiche'] === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    $camp = ['id' => (int) $lu['fiche']['id'], 'name' => (string) ($lu['fiche']['name'] ?? '')];
     $b = body();
     $ecrits = 0; $effaces = 0;
     foreach ((array) ($b['objectifs'] ?? []) as $shopId => $montant) {

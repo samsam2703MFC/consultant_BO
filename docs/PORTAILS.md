@@ -33,8 +33,10 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   du budget des campagnes aussi (`marketing/src/campagnes.php`), et la mesure des campagnes (`marketing/src/mesure.php` :
   campagnes datées, boutiques, produits de l'offre, coefficient d'objectif et levier du type, à la fiche de la campagne).
   La note de campagne aussi (`marketing/src/mkt_brief.php`, à la fiche de la campagne : type et levier, boutiques,
-  cibles par levier, canaux et agences, visuel maître, formats, rétroplanning). Restent en SQL direct : agences,
-  annexes, objectifs produits, hub, visites (lot 5).
+  cibles par levier, canaux et agences, visuel maître, formats, rétroplanning). Le hub du marketing et « Mon marketing »
+  du dashboard, les campagnes des visites, les objectifs produits, l'existence d'une campagne pour ses annexes et ses
+  objectifs, les KPI par levier aussi (lot 5a : liste des campagnes avec leurs boutiques, `allLevers`). Restent en SQL
+  direct : les agences (`marketing/src/mkt_agences.php`, lot 5b).
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;

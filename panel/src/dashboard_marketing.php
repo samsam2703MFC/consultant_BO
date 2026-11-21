@@ -202,10 +202,15 @@ function dmRoute(string $method, string $path): ?array
 {
     if ($path !== '/dashboard/marketing' && !str_starts_with($path, '/dashboard/marketing/')) { return null; }
     if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
-    if ($method === 'GET' && $path === '/dashboard/marketing/campagnes') { return ep_dashboard_marketing_campagnes(); }
-    if ($method === 'GET' && $path === '/dashboard/marketing/annee') { return ep_dashboard_marketing_annee(); }
+    // Les campagnes viennent du module Marketing (mhCampagnes, 21/11/2026) : muet, il le dit en 502, pas en 500.
+    $campagnes = static function (callable $ep): array {
+        try { return $ep(); }
+        catch (RuntimeException $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
+    };
+    if ($method === 'GET' && $path === '/dashboard/marketing/campagnes') { return $campagnes('ep_dashboard_marketing_campagnes'); }
+    if ($method === 'GET' && $path === '/dashboard/marketing/annee') { return $campagnes('ep_dashboard_marketing_annee'); }
     if ($method === 'GET' && $path === '/dashboard/marketing/ventes-periode') { return ep_dashboard_marketing_ventes_periode(); }
-    if ($method === 'GET' && $path === '/dashboard/marketing/campagnes/annexe') { return ep_dashboard_marketing_annexe(); }
+    if ($method === 'GET' && $path === '/dashboard/marketing/campagnes/annexe') { return $campagnes('ep_dashboard_marketing_annexe'); }
     // Vendre › Offres › Newsletter : le module newsletter du cockpit, au rôle du magasin (src/franchise/offres_newsletter.php).
     if (($n = dnRoute($method, $path)) !== null) { return $n; }
     http_response_code(404);

@@ -59,16 +59,9 @@ function opMagasins(): array
 /** Les campagnes datées, de la plus récente à la plus ancienne. Vide si le module marketing manque. */
 function opCampagnes(): array
 {
-    try {
-        $rows = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut
-                            FROM mar_campaign c LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                           WHERE c.starts_on IS NOT NULL ORDER BY c.starts_on DESC, c.id DESC');
-    } catch (PDOException $e) {
-        try {
-            $rows = Db::rows('SELECT id, name, starts_on, ends_on, status_code, NULL AS statut FROM mar_campaign
-                               WHERE starts_on IS NOT NULL ORDER BY starts_on DESC, id DESC');
-        } catch (PDOException $e2) { return []; }
-    }
+    // Au module Marketing (marketing/src/campagnes.php, 21/11/2026) ; muet : aucune campagne, comme avant sans tables.
+    [$rows] = campagnesDatees();
+    if ($rows === null) { return []; }
     return array_map(static fn ($c) => ['id' => (int) $c['id'], 'nom' => (string) $c['name'],
         'debut' => substr((string) $c['starts_on'], 0, 10), 'fin' => substr((string) ($c['ends_on'] ?: $c['starts_on']), 0, 10),
         'statut' => (string) ($c['statut'] ?? $c['status_code'] ?? '')], $rows);
@@ -78,12 +71,11 @@ function opCampagnes(): array
 function opPerimetre(int $cid, array $nomDe): array
 {
     $ids = [];
-    try {
-        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$cid]) as $r) {
-            $s = (string) $r['shop_id'];
-            if (isset($nomDe[$s])) { $ids[] = $s; }
-        }
-    } catch (PDOException $e) { /* sans table : tout le réseau */ }
+    // Les boutiques de la campagne, à sa fiche du module ; illisibles : tout le réseau, comme avant.
+    [$lues] = campagneBoutiques($cid);
+    foreach ($lues ?? [] as $s) {
+        if (isset($nomDe[$s])) { $ids[] = $s; }
+    }
     // Les clés numériques d'un tableau PHP redeviennent des entiers : on les
     // remet en chaînes, sinon `in_array(…, true)` ne retrouve plus « 5 ».
     return $ids === [] ? array_map('strval', array_keys($nomDe)) : $ids;
@@ -382,9 +374,10 @@ function ep_catalogue_produits(): array
 function wr_objectifs_produits(int $id): array
 {
     ensureObjectifsProduits();
-    try { $camp = Db::row('SELECT id, name FROM mar_campaign WHERE id = ?', [$id]); }
-    catch (PDOException $e) { http_response_code(503); return ['error' => 'les tables du module marketing sont absentes de cette base']; }
-    if ($camp === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    $lu = campagneFiche($id);   // au module Marketing
+    if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'le module Marketing ne rend pas la campagne : ' . $lu['erreur']]; }
+    if ($lu['fiche'] === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    $camp = ['id' => (int) $lu['fiche']['id'], 'name' => (string) ($lu['fiche']['name'] ?? '')];
     $b = body();
     $nomDe = opMagasins();
     $nP = null; $nO = 0; $nE = 0;
