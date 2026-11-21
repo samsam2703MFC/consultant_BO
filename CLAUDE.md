@@ -14,6 +14,9 @@ Le portail Commercial (`commercial/`, `sm_`, servi à `/commercial/`) s'y est aj
 | Partagé | `shared/` | noms conservés (`ceo_shop`, `ceo_app_setting`, `ceo_journal_entry`, `erp_cles`…) |
 | Hors périmètre | `pilotage-reseau/` | copie de l'ERP (`pilotage-reseau/apps/production`, base `erp`), module RH (`hr_dimona_*`) |
 
+- **L'application Marketing** (campagnes, catalogues imprimés, Social, signage) vit dans le dépôt `marketing`
+  (samsam2703MFC/marketing), qui reste séparé (décision du 21/11/2026) : `marketing/` d'ici n'est que le marketing du
+  cockpit, il parle au module par son API (`mar_api_url`). Détail : `docs/PORTAILS.md`.
 - **Tables** : une table, un domaine, `{préfixe}_{entité}` en snake_case. Ce qui sert à plusieurs domaines va dans
   `shared/` (code) et garde son nom (tables). Renommer une table : une migration `shared/db/migrations/NNN_*.php`
   (`up` / `down`, un `RENAME TABLE`, jamais de `DROP`), le registre `shared/src/reorg_tables.php`, et
