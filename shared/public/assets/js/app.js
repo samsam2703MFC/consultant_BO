@@ -13564,6 +13564,8 @@ class App {
                 idFournisseur: m.fournisseur, idUnite: m.idUnite,
                 quantite: +c2.quantite, idLivraison: c2.livraison, motif: c2.motif,
                 action: c2.action || 'REPLACEMENT',
+                // La photo est obligatoire (21/11/2026) : celle de la tâche contrôlée, relue au panel par le serveur.
+                photoTache: { taskId: dt.taskId, date: dt.date },
                 texte: (c2.texte !== undefined ? c2.texte : (dt.comment || '')) +
                   ((dt.rep || []).length ? '\n\nRepères posés au contrôle : '
                     + (dt.rep || []).map(r2 => (r2.n + '. ' + (r2.txt || ''))).join(' · ') : ''),

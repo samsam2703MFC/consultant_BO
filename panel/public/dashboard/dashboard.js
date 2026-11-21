@@ -2213,6 +2213,25 @@
     box.querySelectorAll('[data-iamotif]').forEach(b => b.addEventListener('click', () => { if (S.invAct && S.invAct.f) { S.invAct.f.motif = b.dataset.iamotif; invModaleRendre(); } }));
     box.querySelectorAll('[data-iaenvoyer]').forEach(b => b.addEventListener('click', invActEnvoyer));
     box.querySelectorAll('[data-iaphoto]').forEach(b => b.addEventListener('click', invActPhoto));
+    // Les photos de la réclamation (obligatoires depuis le 21/11/2026), réduites comme celles du formulaire complet.
+    box.querySelectorAll('[data-iaphfile]').forEach(el => el.addEventListener('change', () => { invActPhotos(el.files); el.value = ''; }));
+    box.querySelectorAll('[data-iaphx]').forEach(b => b.addEventListener('click', () => {
+      const A = S.invAct; if (!A || !A.photos) { return; }
+      const p = A.photos.splice(+b.dataset.iaphx, 1)[0]; if (p) { URL.revokeObjectURL(p.url); }
+      invModaleRendre();
+    }));
+  }
+  function invActPhotos(files) {
+    const A = S.invAct; if (!A) { return; }
+    A.photos = A.photos || []; A.traite = A.traite || 0; A.err = null;
+    Array.from(files || []).slice(0, Math.max(0, RC_MAX - A.photos.length - A.traite)).forEach(f => {
+      A.traite++;
+      rcReduire(f)
+        .then(b => { if (S.invAct === A) { A.photos.push({ blob: b, url: URL.createObjectURL(b) }); } })
+        .catch(() => { if (S.invAct === A) { A.err = 'La photo n’a pas pu être lue — reprenez-la.'; } })
+        .finally(() => { if (S.invAct === A) { A.traite--; invModaleRendre(); } });
+    });
+    invModaleRendre();
   }
   /* --- agir sur une pièce jetée pour un problème de qualité : la réclamation au fournisseur (la matière du
    * produit dans sa recette, une livraison, un motif ; envoyée au panel par la même route que le téléphone),
@@ -2248,7 +2267,8 @@
         <label>Combien${m && m.unite ? ' · en ' + esc(m.unite) : ''}<input data-ia="qte" inputmode="decimal" autocomplete="off" value="${esc(f.qte)}"></label>
         <div class="large"><div class="im-lab">Le problème</div><div class="im-puces">${motifs.map(x => `<button type="button" data-iamotif="${esc(x.code)}" class="${f.motif === x.code ? 'on' : ''}">${esc(RC_MOTIFS[x.code] || x.nom)}</button>`).join('')}</div></div>
         <label class="large">Un mot pour le fournisseur<textarea data-ia="note" rows="3" maxlength="1500">${esc(f.note)}</textarea></label>
-      </div>${A.err ? `<div class="rc-err">${esc(A.err)}</div>` : ''}<div class="im-actbtn"><button type="button" class="im-btn" data-iaenvoyer="1"${A.envoi ? ' disabled' : ''}>${A.envoi ? 'Envoi…' : 'Envoyer la réclamation'}</button>${estMobile() ? '<button type="button" class="im-lien" data-iaphoto="1">Avec une photo : ouvrir la réclamation ›</button>' : ''}<span class="db-mini">part au panel comme une réclamation matière, sans photo</span></div>`;
+        <div class="large"><div class="im-lab">La photo <small>obligatoire : le produit en entier et l’étiquette du carton</small></div><div class="im-photos">${(A.photos || []).map((p, i) => `<div class="ph"><img src="${p.url}" alt=""><button type="button" data-iaphx="${i}" aria-label="Retirer la photo">✕</button></div>`).join('')}${A.traite ? '<div class="ph att">…</div>' : ''}${(A.photos || []).length + (A.traite || 0) < RC_MAX ? '<label class="plus">＋ Photo<input type="file" accept="image/*" capture="environment" data-iaphfile="1" hidden></label>' : ''}</div></div>
+      </div>${A.err ? `<div class="rc-err">${esc(A.err)}</div>` : ''}<div class="im-actbtn"><button type="button" class="im-btn" data-iaenvoyer="1"${A.envoi || A.traite || !(A.photos || []).length ? ' disabled' : ''}>${A.envoi ? 'Envoi…' : ((A.photos || []).length ? 'Envoyer la réclamation' : 'Ajoutez d’abord une photo')}</button>${estMobile() ? '<button type="button" class="im-lien" data-iaphoto="1">Ouvrir le formulaire complet (scan de l’étiquette) ›</button>' : ''}<span class="db-mini">part au panel comme une réclamation matière, avec ${(A.photos || []).length > 1 ? 'ses photos' : 'sa photo'}</span></div>`;
     }
     const prod = X.producteur || null, ops = X.operateurs || [];
     if (!A.f) { A.f = { employe: prod ? String(prod.id) : '', employeNom: '', texte: invActTexte(A) }; }
@@ -2271,9 +2291,11 @@
       if (!(q > 0)) { A.err = 'La quantité doit être supérieure à zéro.'; return invModaleRendre(); }
       if (!f.motif) { A.err = 'Dites le problème.'; return invModaleRendre(); }
       if (!m.idUnite) { A.err = 'L’unité de « ' + m.nom + ' » est inconnue du panel : la réclamation ne peut pas partir d’ici.'; return invModaleRendre(); }
+      if (!(A.photos || []).length) { A.err = 'Ajoutez au moins une photo : sans photo, le fournisseur refuse la réclamation.'; return invModaleRendre(); }
       A.envoi = true; invModaleRendre();
-      ecrire('/fournisseurs/reclamation', { shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite, quantite: Math.round(q * 100) / 100, idLivraison: liv.id, motif: f.motif, action: 'REPLACEMENT', texte: String(f.note || '').trim(), auteur: notePar(), photos: [] })
-        .then(r => { A.envoi = false; A.fait = { type: 'recl', id: r && r.id, fournisseur: rcFournNom(R, m.fournisseur), nom: m.nom }; S.invFaits[A.k] = Object.assign({}, S.invFaits[A.k] || {}, { recl: A.fait }); if (S.aux[cleRC()]) { lireAux(cleRC(), cheminRC(), true); } invModaleRendre(); })
+      Promise.all(A.photos.map(p => rcDataUrl(p.blob)))
+        .then(photos => ecrire('/fournisseurs/reclamation', { shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite, quantite: Math.round(q * 100) / 100, idLivraison: liv.id, motif: f.motif, action: 'REPLACEMENT', texte: String(f.note || '').trim(), auteur: notePar(), photos: photos }))
+        .then(r => { (A.photos || []).forEach(p => URL.revokeObjectURL(p.url)); A.photos = []; A.envoi = false; A.fait = { type: 'recl', id: r && r.id, fournisseur: rcFournNom(R, m.fournisseur), nom: m.nom }; S.invFaits[A.k] = Object.assign({}, S.invFaits[A.k] || {}, { recl: A.fait }); if (S.aux[cleRC()]) { lireAux(cleRC(), cheminRC(), true); } invModaleRendre(); })
         .catch(e => { A.envoi = false; A.err = e.message; invModaleRendre(); });
       return;
     }
@@ -10215,6 +10237,8 @@
   }
   /** Ce qui manque pour envoyer, dans l'ordre de l'écran. */
   function rcManque(F, R) {
+    // La photo est obligatoire (21/11/2026) : sans photo, le fournisseur refuse la réclamation.
+    if (!R.photos.length) { return R.traite ? 'Photo en cours…' : 'Prendre la photo d’abord'; }
     const m = rcMatiere(F, R);
     if (!m) { return 'Choisir le produit'; }
     if (!rcLivraison(F, R)) { return 'Aucune livraison de ' + rcFournNom(F, m.fournisseur); }
@@ -10243,7 +10267,7 @@
     }
     // 1. La photo : un seul bouton, l'appareil s'ouvre.
     const P = R.photos, plein = P.length + R.traite >= RC_MAX;
-    h += '<div class="rc-champ"><label>La photo</label>';
+    h += '<div class="rc-champ"><label>La photo <em>obligatoire</em></label>';
     if (P.length || R.traite) {
       h += `<div class="rc-photos">${P.map((p, i) => `<div class="ph"><img src="${p.url}" alt=""><button data-rcsuppr="${i}" aria-label="Retirer la photo">✕</button></div>`).join('')}`
         + (R.traite ? '<div class="ph att"><span>…</span></div>' : '')
