@@ -3116,6 +3116,14 @@ Halle : le panel la laisse « new ».
 (`id_transaction` posé) ; une commande payée en ligne s'ajoute au CA du jour.
 Les clients pro restent dans le comptoir (le dashboard les dit « dont »).
 
+Depuis le 21/11/2026, un magasin à la journée retire d'un jour **le webshop payé dans la caisse de ce jour-là**, quel
+que soit le jour du retrait (`coCaisseCommandes`) : un click & collect payé en ligne le vendredi pour le samedi est dans
+la caisse du vendredi, pas dans celle du samedi. La liste des tickets de chacun des 14 jours
+(`/shops/{id}/transactions?date=`) se lit une fois ; seuls les tickets qui paient une commande lue sont gardés
+(`ceo_app_setting`, `coTxJ1:{shop}:{jour}`), un jour lu après sa fin ne se relit plus, la journée en cours toutes les
+dix minutes. Un jour dont les tickets ne se lisent pas, la semaine, le mois et le réseau gardent la règle d'avant :
+le webshop encaissé dont le retrait tombe ce jour-là.
+
 Un magasin :
 
     { shop, date,
@@ -3123,7 +3131,8 @@ Un magasin :
       serie:    [ { j, lu, caisse, tickets, comptoir, cc, liv, ccN, livN } × 14 ],
       quatorze: { webshop, total, cc: {n, ca}, liv: {n, ca} },
       liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut, encaissee, differe, pro } ],   toutes les commandes du jour, précommandes au comptoir comprises
-      j7:       { date, liste: [ { heure, canal, montant, statut, encaissee, pro } ] },   le même jour la semaine d'avant (18/11/2026)
+      caisseCmd: [ { heure, canal, montant, pro, retrait } ] | null,   les commandes payées dans la caisse du jour (21/11/2026)
+      j7:       { date, liste: [ { heure, canal, montant, statut, encaissee, pro } ], caisseCmd },   le même jour la semaine d'avant (18/11/2026)
       nWebshop, aPreparer, demain: { n, ca }, indispo, source }
 
 Une période (`du`, `au`, 62 jours au plus) rend `periode` à la place de
@@ -3162,9 +3171,18 @@ Le dashboard en tire, sous la jauge du comptoir (`opRuban`), trois colonnes face
 Les règles du calcul :
 - une commande compte quand elle est vendue, c'est-à-dire encaissée ou remise ;
 - une commande `pro` reste à la jauge B2B ;
-- à J−7, ne comptent que les commandes dont l'heure de retrait tombe avant l'heure de la jauge de J−7 ;
-- une commande encaissée un autre jour que son retrait est retirée du comptoir du jour de son retrait, comme dans
-  `jour.comptoir`.
+- aujourd'hui comme à J−7, ne comptent que les commandes dont l'heure de retrait est passée à l'heure de la jauge ;
+  celles d'après se disent « à venir » sous leur colonne (21/11/2026) ;
+- la vente directe retire de la jauge les commandes **payées dans la caisse du jour** (`caisseCmd`, hors `pro`), à
+  l'heure de leur ticket, celles qui se retirent un autre jour comprises. Une commande payée d'avance (en ligne, au
+  comptoir la veille) n'est plus retirée de la caisse de son retrait, qui ne la contient pas.
+
+Le 21/11/2026 à Halle, samedi à 07:59 : la jauge du comptoir faisait 332 € ; une précommande de 8,30 € et quatre
+click & collect (335,40 €, à retirer de 09:30 à 16:30), tous payés les jours d'avant, en étaient retirés : « Comptoir
+0 € · 0,0 % », − 100 % face à samedi dernier. Avec `caisseCmd` : comptoir 332 €, − 20,2 % ; webshop « 4 à venir ».
+
+`caisseCmd` vaut `null` quand les tickets du jour ne se lisent pas : le dashboard retire alors les commandes vendues et
+encaissées dont le retrait est passé, la règle d'avant.
 
 Tests : `php bin/tests_canaux.php`.
 
