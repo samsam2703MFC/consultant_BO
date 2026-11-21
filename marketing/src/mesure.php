@@ -1364,7 +1364,8 @@ function ep_fournisseurs_reclamations(): array
     $lignes = [];
     // ?shop= : le dashboard d'un magasin ne lit que les siennes.
     $seul = (int) ($_GET['shop'] ?? 0);
-    $photos = $seul > 0 ? rcPhotosDe($seul) : [];
+    // Les photos prises depuis le dashboard (gardées ici) : pour un magasin, ou pour tout le réseau (21/11/2026).
+    $photos = $seul > 0 ? rcPhotosDe($seul) : rcPhotosDe(0);
     foreach ((array) ($r['shops'] ?? []) as $s) {
         $sid = (int) ($s['shop_id'] ?? 0);
         if ($seul > 0 && $sid !== $seul) { continue; }
@@ -1408,6 +1409,9 @@ function ep_fournisseurs_reclamations(): array
                 'pj' => count((array) ($c['attachments'] ?? [])),
                 // Les photos prises depuis le dashboard, gardées par le cockpit.
                 'photos' => $photos[(int) ($c['id'] ?? 0)] ?? [],
+                // Toutes les photos : pièces jointes du panel + photos du dashboard (la fiche les ouvre, 21/11/2026).
+                'nbPhotos' => count((array) ($c['attachments'] ?? [])) + count($photos[(int) ($c['id'] ?? 0)] ?? []),
+                'idMatiere' => (int) ($c['id_material'] ?? 0),
                 'ouverte' => $ouverte,
             ];
         }
@@ -1659,13 +1663,16 @@ function ensureReclamationPhotos(): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
-/** reclamation_id → [url relative, …] pour un magasin. */
+/** reclamation_id → [url relative, …] pour un magasin ($shop = 0 : tout le réseau). */
 function rcPhotosDe(int $shop): array
 {
     $out = [];
     try {
         ensureReclamationPhotos();
-        foreach (Db::rows('SELECT reclamation_id, chemin FROM panel_reclamation_photo WHERE shop_id = ? ORDER BY id', [$shop]) as $r) {
+        $rows = $shop > 0
+            ? Db::rows('SELECT reclamation_id, chemin FROM panel_reclamation_photo WHERE shop_id = ? ORDER BY id', [$shop])
+            : Db::rows('SELECT reclamation_id, chemin FROM panel_reclamation_photo WHERE reclamation_id > 0 ORDER BY id');
+        foreach ($rows as $r) {
             $out[(int) $r['reclamation_id']][] = (string) $r['chemin'];
         }
     } catch (PDOException $e) { /* table absente : pas de photo locale */ }
@@ -1682,7 +1689,14 @@ function rcPhotoEnregistrer(string $data, int $shop): array
 {
     if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $data, $m)) { return ['code' => 422, 'error' => 'photo illisible (data-URL attendue)']; }
     $bin = base64_decode($m[2], true);
-    if ($bin === false || strlen($bin) < 64) { return ['code' => 422, 'error' => 'photo illisible']; }
+    if ($bin === false) { return ['code' => 422, 'error' => 'photo illisible']; }
+    return rcPhotoPoser($bin, $shop);
+}
+
+/** Les octets d'une photo (JPEG, PNG ou WebP, 6 Mo au plus) posés sous public/uploads/reclamations, nom aléatoire. */
+function rcPhotoPoser(string $bin, int $shop): array
+{
+    if (strlen($bin) < 64) { return ['code' => 422, 'error' => 'photo illisible']; }
     if (strlen($bin) > 6 * 1024 * 1024) { return ['code' => 413, 'error' => 'photo trop lourde — 6 Mo au maximum']; }
     $info = @getimagesizefromstring($bin);
     $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime'] ?? ''] ?? null;
@@ -1727,6 +1741,21 @@ function wr_reclamation_creer(): array
             http_response_code($f['code']); return ['error' => $f['error']];
         }
         $poses[] = $f['chemin'];
+    }
+    // Depuis le contrôle du cockpit : la photo de la tâche contrôlée devient celle de la réclamation. Le lien est
+    // relu au panel (src/reclamations.php), jamais pris dans le corps de la requête.
+    $pt = is_array($b['photoTache'] ?? null) ? $b['photoTache'] : null;
+    if ($poses === [] && $pt !== null && function_exists('rcPhotoTache')) {
+        $bin = rcPhotoTache($shopId, (int) ($pt['taskId'] ?? 0), (string) ($pt['date'] ?? ''));
+        $f = $bin !== null ? rcPhotoPoser($bin, $shopId) : null;
+        if ($f !== null && isset($f['chemin'])) { $poses[] = $f['chemin']; }
+    }
+    // LA PHOTO EST OBLIGATOIRE (21/11/2026, Sam) : sans photo, le fournisseur refuse — on ne l'envoie plus.
+    if ($poses === []) {
+        http_response_code(422);
+        return ['error' => $pt !== null
+            ? 'la photo du contrôle n’a pas pu être reprise du panel : sans photo, la réclamation ne part pas'
+            : 'ajoutez au moins une photo : sans photo, le fournisseur ne peut pas traiter la réclamation'];
     }
     $texte = trim((string) ($b['texte'] ?? ''));
     $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 60);
