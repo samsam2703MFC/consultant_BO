@@ -3169,28 +3169,42 @@
    * même heure. Une commande compte quand elle est vendue : encaissée ou remise. Celle d'un client des tickets pro
    * (`pro`, lu par le serveur) reste à la jauge B2B. J−7 : les commandes de /exploitation/canaux (`j7.liste`) dont le
    * retrait tombe avant l'heure de la jauge de J−7. Un appui sur une colonne ouvre la feuille « Commandes du jour » sur
-   * son canal. Sans commande ni aujourd'hui ni à J−7, ou sans commandes lues : la ligne « Commandes du jour » seule. */
+   * son canal. Sans commande ni aujourd'hui ni à J−7, ou sans commandes lues : la ligne « Commandes du jour » seule.
+   *
+   * Le 21/11/2026 (Halle, samedi à 07:59 : « Comptoir 0 € · 0,0 % », − 100 % face à samedi dernier) : quatre click &
+   * collect payés en ligne les jours d'avant, à retirer l'après-midi, étaient retirés de la caisse du matin, qui ne les
+   * contenait pas. La vente directe = la jauge moins les commandes payées dans la caisse du jour, à l'heure de leur ticket
+   * (`caisseCmd` du serveur, celles qui se retirent un autre jour comprises) ; sans elle, l'ancienne règle. Et une commande
+   * ne compte qu'une fois l'heure de son retrait passée, aujourd'hui comme à J−7 : celles d'après sont « à venir ». */
   function opRuban(D, T, j7, jourNom, cpt) {
     const CA = D && D.CA;
     if (!CA || CA.error || CA.indispo || !Array.isArray(CA.liste) || T == null) { return opCmdLigne(D); }
     const vendue = c => !c.pro && !c.differe && (c.encaissee || bmRemise(c));
     const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0);
-    const parts = (L, total) => { const C = L.filter(c => c.canal === 'compt'), W = L.filter(c => c.canal !== 'compt');
-      return { C, W, direct: Math.max(0, total - somme(L.filter(c => c.encaissee))), cmd: somme(C), web: somme(W) }; };
-    const A = parts(CA.liste.filter(vendue), T);
-    const L7 = j7 && CA.j7 && Array.isArray(CA.j7.liste) && CA.j7.date === j7.date ? CA.j7.liste.filter(c => vendue(c) && (!j7.moment || String(c.heure || '') <= j7.moment)) : null;
-    const P = L7 && j7.ca != null ? parts(L7, j7.ca) : null;
-    if (!A.C.length && !A.W.length && !(P && (P.C.length || P.W.length))) { return opCmdLigne(D); }
+    // h : l'heure de la jauge (null : la journée entière). X : les commandes payées dans la caisse du jour (null : pas lues).
+    const avant = (x, h) => !h || String(x || '') <= h;
+    const parts = (L, total, X, h) => { const C = L.filter(c => c.canal === 'compt'), W = L.filter(c => c.canal !== 'compt');
+      const enc = Array.isArray(X) ? somme(X.filter(c => !c.pro && avant(c.heure, h))) : somme(L.filter(c => c.encaissee));
+      return { C, W, direct: Math.max(0, total - enc), cmd: somme(C), web: somme(W) }; };
+    const maint = D.now == null || S.date < AUJ ? null : opHM(D.now);
+    const A = parts(CA.liste.filter(c => vendue(c) && avant(c.heure, maint)), T, CA.caisseCmd, maint);
+    // À venir : les commandes du jour dont le retrait n'est pas encore passé (hors B2B et paiement différé).
+    const aVenir = maint ? CA.liste.filter(c => !c.pro && !c.differe && !avant(c.heure, maint)) : [];
+    const nAvC = aVenir.filter(c => c.canal === 'compt').length, nAvW = aVenir.length - nAvC;
+    const J7 = j7 && CA.j7 && Array.isArray(CA.j7.liste) && CA.j7.date === j7.date ? CA.j7 : null;
+    const L7 = J7 ? J7.liste.filter(c => vendue(c) && avant(c.heure, j7.moment)) : null;
+    const P = L7 && j7.ca != null ? parts(L7, j7.ca, J7.caisseCmd, j7.moment) : null;
+    if (!A.C.length && !A.W.length && !aVenir.length && !(P && (P.C.length || P.W.length))) { return opCmdLigne(D); }
     const tot = A.direct + A.cmd + A.web, pc = v => tot > 0 ? (100 * v / tot >= 10 ? fP0(100 * v / tot) : fP(100 * v / tot)) : '—';
     const jn = esc(String(jourNom || '').slice(0, 3)) + '. ' + (j7 ? fD(j7.date) : '');
     const ecart = (a, b) => b > 0 ? ` · <em class="${a >= b ? 'ok' : 'ko'}">${fSP(100 * (a - b) / b)}</em>` : '';
     const nCC = A.W.filter(c => c.canal === 'cc').length, nLiv = A.W.length - nCC;
     const col = (f, k, nom, v, s, j) => `<div${f ? ` data-cmdm="${f}" role="button" tabindex="0"` : ''}><div class="k"><i class="pt ${k}"></i>${nom}${f ? '<span class="ch">›</span>' : ''}</div><div class="v">${v}</div><div class="s">${s}</div>${P ? `<div class="j">${j}</div>` : ''}</div>`;
     const cols = col('', 'c', 'Comptoir', fE(A.direct), pc(A.direct) + (cpt ? ' · vente directe' : ' · pro compris'), `${jn}${j7 && j7.moment ? ' à ' + esc(j7.moment) : ''}<br>${P ? fE(P.direct) + ecart(A.direct, P.direct) : ''}`)
-      + col('compt', 'k', 'Commandes', fU(A.cmd), A.C.length ? plu(A.C.length, 'prise') + ' au comptoir' : 'aucune', `${jn}<br>${P ? fU(P.cmd) + ' · ' + P.C.length : ''}`)
-      + col('web', 'w', 'Webshop', fU(A.web), A.W.length ? [nCC ? nCC + ' click & collect' : '', nLiv ? plu(nLiv, 'livraison') : ''].filter(Boolean).join(' · ') : 'aucune commande', `${jn}<br>${P ? fU(P.web) + ' · ' + P.W.length : ''}`);
+      + col('compt', 'k', 'Commandes', fU(A.cmd), [A.C.length ? plu(A.C.length, 'prise') + ' au comptoir' : (nAvC ? '' : 'aucune'), nAvC ? nAvC + ' à venir' : ''].filter(Boolean).join(' · '), `${jn}<br>${P ? fU(P.cmd) + ' · ' + P.C.length : ''}`)
+      + col('web', 'w', 'Webshop', fU(A.web), [A.W.length ? [nCC ? nCC + ' click & collect' : '', nLiv ? plu(nLiv, 'livraison') : ''].filter(Boolean).join(' · ') : (nAvW ? '' : 'aucune commande'), nAvW ? nAvW + ' à venir' : ''].filter(Boolean).join(' · '), `${jn}<br>${P ? fU(P.web) + ' · ' + P.W.length : ''}`);
     const mix = [[A.direct, 'c'], [A.cmd, 'k'], [A.web, 'w']].filter(x => x[0] > 0).map(([v, k]) => `<i class="${k}" style="flex:${v.toFixed(2)} 0 0"></i>`).join('');
-    const V = opCmdVerif(D), maint = D.now == null || S.date < AUJ ? null : opHM(D.now);
+    const V = opCmdVerif(D);
     return `<div class="op-rb"><div class="t"><span>Par canal${maint ? ' · à ' + maint : ''}</span><span>la part de chaque canal</span></div>
       <div class="mix" title="comptoir ${pc(A.direct)} · commandes ${pc(A.cmd)} · webshop ${pc(A.web)}">${mix}</div><div class="col">${cols}</div>
       <div class="bas" data-cmdm="tous" role="button" tabindex="0"><span>toucher un canal : ses commandes${V.v ? ` · <em>${V.v} à vérifier</em>` : ''}</span><span class="ch">›</span></div></div>`;
