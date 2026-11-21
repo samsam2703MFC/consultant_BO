@@ -1783,6 +1783,13 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-raxe{display:flex;justify-content:space-between;margin-top:44px;font-size:10.5px;color:var(--muted)}
 .fi-rverdict{margin-top:14px;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.5}
 .fi-rverdict.ko{background:#f8e0e3;color:#6e0c1a}.fi-rverdict.att{background:#fbecd8;color:#7a4402}.fi-rverdict.ok{background:rgba(63, 122, 82, 0.12);color:var(--green)}
+.fi-radapt{margin-top:10px;display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;font-size:12.5px;line-height:1.5}
+.fi-radapt small{font-size:10.5px;color:#8a8278}
+.fi-radapt .db-btn{min-height:36px;padding:0 16px;font-size:12.5px}
+.fi-radapt.conf,.fi-radapt.fait{border-radius:10px;padding:10px 14px;justify-content:space-between}
+.fi-radapt.conf{background:#f4f0ea;color:var(--ink)}
+.fi-radapt.fait.ok{background:rgba(63, 122, 82, 0.12);color:var(--green)}.fi-radapt.fait.ko{background:#f8e0e3;color:#6e0c1a}
+.fi-radapt .b{display:inline-flex;gap:8px;flex-wrap:wrap}
 .fi-rtab{width:100%;border-collapse:collapse;font-size:12px}
 .fi-rtab th{font:400 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278;text-align:right;padding:0 6px 6px;border-bottom:1px solid var(--line)}
 .fi-rtab th:first-child{text-align:left}.fi-rtab th.p{text-align:left;padding-left:10px}

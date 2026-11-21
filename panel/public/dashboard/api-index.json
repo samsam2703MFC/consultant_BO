@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-21T07:11:00Z",
+ "genere": "2026-11-21T09:59:01Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -154,6 +154,27 @@
      "handler": "ep_analyse_produit_magasin",
      "source": "consultant/src/analyse_produits.php:335",
      "resume": "la fiche d'un produit pour le dashboard d'UN magasin (demande du 06/10/2026, maquette B, « seulement le magasin actif ») : semaines : les ventes du magasin semaine par semaine (12 semaines closes + l'en cours), et des repères réseau anonymes — la moyenne par m"
+    }
+   ]
+  },
+  {
+   "chemin": "/analyse/produits/prix",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:8687"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/analyse/produits/prix",
+     "handler": "wr_analyse_produit_prix",
+     "source": "panel/src/prix_produit.php:130",
+     "resume": "le prix testé devient le prix de vente du magasin au panel (voir plus haut)."
     }
    ]
   },
@@ -1740,7 +1761,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10710"
+    "dashboard.js:10770"
    ],
    "magasin": true,
    "routes": [
@@ -1761,7 +1782,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10740",
+    "dashboard.js:10800",
     "dashboard.js:2297"
    ],
    "magasin": true,
@@ -1783,7 +1804,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10157"
+    "dashboard.js:10217"
    ],
    "magasin": true,
    "routes": [
@@ -1804,7 +1825,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10155"
+    "dashboard.js:10215"
    ],
    "magasin": true,
    "routes": [
@@ -1827,7 +1848,8 @@
    ],
    "fichiers": [
     "dashboard.js:6217",
-    "dashboard.js:6295"
+    "dashboard.js:6295",
+    "dashboard.js:8678"
    ],
    "magasin": true,
    "routes": [
@@ -2267,7 +2289,7 @@
     "dashboard.js:243",
     "dashboard.js:2574",
     "dashboard.js:6834",
-    "dashboard.js:9908"
+    "dashboard.js:9968"
    ],
    "magasin": true,
    "routes": [
@@ -2288,7 +2310,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9699"
+    "dashboard.js:9759"
    ],
    "magasin": true,
    "routes": [
@@ -2331,8 +2353,8 @@
    ],
    "fichiers": [
     "dashboard.js:6837",
-    "dashboard.js:9616",
-    "dashboard.js:9630"
+    "dashboard.js:9676",
+    "dashboard.js:9690"
    ],
    "magasin": true,
    "routes": [
@@ -2354,8 +2376,8 @@
    ],
    "fichiers": [
     "dashboard.js:7005",
-    "dashboard.js:9909",
-    "dashboard.js:9918"
+    "dashboard.js:9969",
+    "dashboard.js:9978"
    ],
    "magasin": true,
    "routes": [
@@ -2401,7 +2423,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:11332"
+    "dashboard.js:11392"
    ],
    "magasin": true,
    "routes": [
@@ -2640,8 +2662,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9339",
-    "dashboard.js:9461"
+    "dashboard.js:9399",
+    "dashboard.js:9521"
    ],
    "magasin": true,
    "routes": [
