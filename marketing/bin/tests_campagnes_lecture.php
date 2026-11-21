@@ -32,6 +32,8 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
 require __DIR__ . '/../src/mkt_types.php';   // mktIcones : la bibliothèque d'icônes du cockpit (une constante, pas une table)
 require __DIR__ . '/../src/campagnes.php';
 require __DIR__ . '/../src/mesure.php';    // la mesure des campagnes (lot 3) : rien ne s'y exécute au chargement
+require __DIR__ . '/../src/marketing_hub.php';        // le hub (lot 5)
+require __DIR__ . '/../src/objectifs_produits.php';   // les objectifs produits (lot 5)
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -136,6 +138,48 @@ verifie('une campagne que le module ne connaît pas : ni fiche ni erreur (404)',
 poser(['/campaigns/9' => ['code' => 0, 'j' => ['description' => 'module injoignable']]]);
 verifie('module injoignable : la raison', campagneFiche(9) === ['fiche' => null, 'erreur' => 'module injoignable']
     && mesProduitsCampagne(9, 'A1') === [['sku' => 'A1', 'nom' => 'A1', 'source' => 'saisie']]);
+
+echo "Le hub, les objectifs produits, les KPI par levier (lot 5)\n";
+verifie('les boutiques de la liste (shop_ids) : en chaînes, par identifiant', campagneShopIds(['shop_ids' => [12, 3, '5']]) === ['3', '5', '12']);
+verifie('shop_ids absent : null, et non « tout le réseau »', campagneShopIds(['id' => 1]) === null && campagneShopIds(['shop_ids' => []]) === []);
+$hub = [['id' => 9, 'name' => 'Noël', 'scope' => 'RESEAU', 'status_code' => 'active', 'status_label' => 'En cours', 'status_text_hex' => '#0a0', 'status_bg_rgba' => 'rgba(0,1,0,.1)',
+        'starts_on' => '2026-11-01', 'ends_on' => '2026-12-31', 'budget_amount' => 100.0, 'spent_amount' => 10.0, 'image_url' => '', 'type_id' => 4, 'type_label' => 'Fêtes',
+        'type_color_hex' => '#AA3344', 'shop_ids' => []],
+    ['id' => 8, 'name' => 'Locale', 'scope' => 'LOCALE', 'status_code' => 'active', 'starts_on' => '2026-11-10', 'ends_on' => '2026-11-30', 'type_id' => null,
+        'type_label' => null, 'type_color_hex' => null, 'shop_ids' => [5, 3]],
+    ['id' => 7, 'name' => 'Brouillon', 'scope' => 'RESEAU', 'status_code' => 'draft', 'starts_on' => '2026-12-01', 'ends_on' => '2026-12-31', 'type_id' => null,
+        'type_label' => null, 'type_color_hex' => null, 'shop_ids' => []]];
+poser(['/campaigns' => $ok200($hub)]);
+$h3 = mhCampagnes('3', '2026-11-21'); $h4 = mhCampagnes('4', '2026-11-21'); $hr = mhCampagnes(null, '2026-11-21');
+verifie('hub : une boutique voit les campagnes du réseau et les siennes, pas les brouillons', array_column($h3['liste'], 'id') === [9, 8]
+    && array_column($h4['liste'], 'id') === [9] && array_column($hr['liste'], 'id') === [9, 8, 7] && Db::$sql === [], json_encode([array_column($h3['liste'], 'id'), array_column($h4['liste'], 'id')]));
+verifie('hub : couleurs du type et du statut, nombre de boutiques, sous les clés d’avant',
+    $h3['liste'][0]['typeCouleur'] === '#AA3344' && $h3['liste'][0]['statutTexte'] === '#0a0' && $h3['liste'][0]['statutFond'] === 'rgba(0,1,0,.1)'
+        && $h3['liste'][1]['nBoutiques'] === 2 && $h3['liste'][1]['statutTexte'] === '#666666' && $h3['chiffres']['enCours'] === 2, json_encode($h3['liste']));
+$hub[1] = array_diff_key($hub[1], ['shop_ids' => 1]);
+poser(['/campaigns' => $ok200($hub)]);
+$e = null; try { mhCampagnes('4', '2026-11-21'); } catch (RuntimeException $x) { $e = $x->getMessage(); }
+verifie('hub : une liste sans shop_ids est une erreur, pas des campagnes du réseau', $e !== null && str_contains($e, 'boutiques'), (string) $e);
+poser(['/campaigns' => ['code' => 0, 'j' => ['description' => 'module injoignable']]]);
+$e = null; try { mhCampagnes('4', '2026-11-21'); } catch (RuntimeException $x) { $e = $x->getMessage(); }
+verifie('hub : module injoignable, la raison (le canal la montre)', $e !== null && str_contains($e, 'module injoignable'), (string) $e);
+poser($jeu);
+$o = opCampagnes();
+verifie('objectifs produits : les campagnes datées, les plus récentes d’abord, statut lisible',
+    array_column($o, 'id') === [9, 7, 6, 3, 2] && $o[0] === ['id' => 9, 'nom' => 'Noël', 'debut' => '2026-12-01', 'fin' => '2026-12-31', 'statut' => 'En cours']
+        && $o[1]['fin'] === '2026-09-01' && $o[1]['statut'] === 'draft' && Db::$sql === [], json_encode($o[1]));
+poser(['/campaigns/9' => $ok200(['id' => 9, 'shops' => [['shop_id' => 5], ['shop_id' => 3], ['shop_id' => 8]]])]);
+verifie('objectifs produits : le périmètre, les boutiques connues de la campagne', opPerimetre(9, ['3' => 'Gosselies', '5' => 'Namur', '6' => 'Halle']) === ['3', '5']);
+poser(['/campaigns/9' => $ok200(['id' => 9, 'shops' => []])]);
+verifie('objectifs produits : une campagne sans boutiques vaut pour le réseau', opPerimetre(9, [3 => 'Gosselies', 5 => 'Namur']) === ['3', '5']);
+poser(['/references' => ['code' => 0, 'j' => ['description' => 'module injoignable']]]);
+verifie('KPI par levier : module muet, aucun levier (comme sans table), et le prochain appel réessaie', mktKpiParLevier() === []);
+poser(['/references' => $ok200(['levers' => [['id' => 2, 'code' => 'TRAFIC', 'label' => 'Trafic', 'color_hex' => '#123456']],
+    'allLevers' => [['id' => 2, 'code' => 'TRAFIC', 'label' => 'Trafic', 'color_hex' => '#123456', 'is_active' => true],
+        ['id' => 1, 'code' => 'panier', 'label' => 'Panier', 'color_hex' => null, 'is_active' => false]]])]);
+$k = mktKpiParLevier(); mktKpiParLevier();
+verifie('KPI par levier : tous les leviers (allLevers), inactifs compris, dans l’ordre du module, lus une fois',
+    array_column($k, 'code') === ['TRAFIC', 'PANIER'] && $k[1]['couleur'] === '' && $k[1]['id'] === 1 && count($GLOBALS['appels']) === 1 && Db::$sql === [], json_encode($k));
 
 echo "\n$ok ok, $ko KO\n";
 ob_end_flush();

@@ -138,8 +138,10 @@ function mktKpiCatalogue(): array
  */
 function mktKpiParLevier(): array
 {
-    try { $leviers = Db::rows('SELECT id, code, label, color_hex FROM mar_lever ORDER BY sort_order, id'); }
-    catch (PDOException $e) { return []; }
+    // Tous les leviers, dans l'ordre du réseau, au module Marketing (marketing/src/campagnes.php, 21/11/2026) ; muet :
+    // aucun KPI par levier, comme avant sans table.
+    [$leviers] = function_exists('leviersTous') ? leviersTous() : [null];
+    if ($leviers === null) { return []; }
 
     $out = [];
     foreach ($leviers as $l) {

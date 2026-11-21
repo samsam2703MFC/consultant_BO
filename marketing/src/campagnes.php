@@ -164,3 +164,30 @@ function ep_mkt(): array
         'marqueId' => $liste ? (int) $liste[0]['id'] : null,
         'marque' => $liste ? (string) $liste[0]['name'] : ''];
 }
+
+/**
+ * Tous les leviers du réseau, inactifs compris, dans l'ordre du réseau (GET /references → allLevers) : [liste, null], ou
+ * [null, raison]. Lu une fois par requête : les KPI par levier servent à plusieurs blocs d'un même écran.
+ */
+function leviersTous(): array
+{
+    static $lu = null;
+    if ($lu !== null) { return $lu; }
+    $r = marketingAppel('GET', '/references');
+    if ($r['erreur'] !== null || !is_array($r['corps'])) { return [null, $r['erreur'] ?? 'réponse du module illisible']; }
+    // allLevers : tous les leviers (marketing#79) ; levers (actifs seuls) tant que le module ne le rend pas.
+    $l = is_array($r['corps']['allLevers'] ?? null) ? $r['corps']['allLevers'] : (array) ($r['corps']['levers'] ?? []);
+    return $lu = [array_values(array_filter($l, 'is_array')), null];
+}
+
+/**
+ * Les boutiques d'une campagne de la liste du module (`shop_ids`, marketing#79), en chaînes, par identifiant. Null si la
+ * liste ne les porte pas : une campagne sans boutiques vaut pour le réseau, on ne le conclut donc pas d'une clé absente.
+ */
+function campagneShopIds(array $c): ?array
+{
+    if (!array_key_exists('shop_ids', $c) || !is_array($c['shop_ids'])) { return null; }
+    $ids = array_map('intval', array_values(array_filter($c['shop_ids'], 'is_numeric')));
+    sort($ids);
+    return array_map('strval', $ids);
+}

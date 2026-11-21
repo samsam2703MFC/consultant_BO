@@ -123,7 +123,9 @@ function annexeOctets(array $a): ?string
 /** GET /marketing/campagne/{id}/annexes. */
 function ep_mkt_annexes(int $id): array
 {
-    if (Db::row('SELECT 1 FROM mar_campaign WHERE id = ?', [$id]) === null) {
+    $lu = campagneFiche($id);   // la campagne existe-t-elle ? au module Marketing
+    if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'le module Marketing ne rend pas la campagne : ' . $lu['erreur']]; }
+    if ($lu['fiche'] === null) {
         http_response_code(404); return ['error' => 'campagne inconnue'];
     }
     return ['annexes' => annexeListe($id), 'types' => annexeTypes(),
@@ -139,7 +141,9 @@ function ep_mkt_annexes(int $id): array
  */
 function wr_mkt_annexe(int $id): array
 {
-    if (Db::row('SELECT 1 FROM mar_campaign WHERE id = ?', [$id]) === null) {
+    $lu = campagneFiche($id);   // la campagne existe-t-elle ? au module Marketing
+    if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'le module Marketing ne rend pas la campagne : ' . $lu['erreur']]; }
+    if ($lu['fiche'] === null) {
         http_response_code(404); return ['error' => 'campagne inconnue'];
     }
     annexeTables();
