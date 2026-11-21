@@ -12,9 +12,10 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
 - **Tables** : `mar_*` uniquement. Les tables du module Marketing autonome (`mar_campaign`, `mar_lever`, `mar_shop`…)
   appartiennent aussi au dépôt `marketing` (migration 045) : n'en changer ni le nom ni la structure ici.
 - **Code** : `src/` (registre historique `marketing_tables.php`), écrans `public/` (`marketing/`, `newsletter/`,
-  `fidelite-app/`, `fidelite-test/`, `assistant/` — un simple renvoi vers l'assistant du Marketing — et la copie de
-  l'API du module `marketing/public/api/marketing/`), sondes et essais dans `tools/`. Les sources de l'ancien assistant
-  (`tools/assistant-src`) sont retirées le 21/11/2026 : elles vivent dans le dépôt `marketing`.
+  `fidelite-app/`, `fidelite-test/`, `assistant/` — un simple renvoi vers l'assistant du Marketing), sondes et essais
+  dans `tools/`. Retirées le 21/11/2026 : les sources de l'ancien assistant (`tools/assistant-src`) et la copie de
+  l'API du module (`public/api/marketing/`, avec `sql/mar-referentiels.sql` et `POST /admin/marketing-restaure`) —
+  elles vivent dans le dépôt `marketing`.
 - **Crons** : `marketing/bin/metadonnee_cron.sh`, `marketing/bin/newsletter_cron.sh`, `marketing/bin/social_cron.sh` (posés par `shared/bin/deploy.sh`).
 - **Clés** : Meta, SMSAPI, LinkedIn… par `shared/src/erp_cles.php` (portail `mar` ou `commun`), jamais en SQL direct.
 - **Tests** : `php marketing/bin/tests_metadonnee.php`, `tests_newsletter.php`, `tests_promos*.php`, `tests_bons.php`,

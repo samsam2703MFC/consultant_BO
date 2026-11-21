@@ -299,7 +299,7 @@ verifie('réorganisation : chaque nouveau nom porte le préfixe de son domaine',
 verifie('réorganisation : aucun nouveau nom n’est pris deux fois', count(array_unique(reorgTables())) === count(reorgTables()));
 $restes = [];
 foreach (array_merge(msSources(dirname(__DIR__, 2)), glob(dirname(__DIR__, 2) . '/*/bin/*.php') ?: [], glob(dirname(__DIR__, 2) . '/*/bin/*.sh') ?: [],
-    glob(dirname(__DIR__, 2) . '/*/public/api/marketing/src/*/*.php') ?: [], [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql', dirname(__DIR__) . '/sql/grants.sql']) as $f) {
+    [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql', dirname(__DIR__) . '/sql/grants.sql']) as $f) {
     if (str_ends_with($f, '/tests.php') || str_ends_with($f, 'reorg_tables.php')) { continue; }
     $t = (string) file_get_contents($f);
     foreach (array_keys(reorgTables()) as $a) { if (preg_match('/(?<![A-Za-z0-9_])' . $a . '(?![A-Za-z0-9_])/', $t)) { $restes[] = basename($f) . ':' . $a; } }

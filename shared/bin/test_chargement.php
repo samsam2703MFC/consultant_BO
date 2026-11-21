@@ -17,11 +17,11 @@ declare(strict_types=1);
  * Sans effet de bord : aucune base n'est jointe (127.0.0.1:1, port fermé), aucune requête ne part.
  */
 
-// Chemins depuis la racine du dépôt (réorganisation du 19/11/2026) : le routeur partagé, la copie Marketing, le RH.
+// Chemins depuis la racine du dépôt (réorganisation du 19/11/2026) : le routeur partagé et le RH (la copie de l'API
+// du module Marketing, marketing/public/api/marketing/, est retirée le 21/11/2026).
 const ENTREES = [
     'shared/public/api/index.php' => '/consulant_bo/api/cockpit/__test_chargement__',
     'pilotage-reseau/public/api/hr/index.php' => '/hr/api/v1/__test_chargement__',
-    'marketing/public/api/marketing/index.php' => '/consulant_bo/api/marketing/__test_chargement__',
 ];
 // Ce qui dit qu'un fichier n'a pas pu se charger (et non que la base manque).
 const ARRETS = '/Cannot redeclare|Cannot declare (class|interface|trait|enum)|Parse error|syntax error|Call to undefined (function|method)'
