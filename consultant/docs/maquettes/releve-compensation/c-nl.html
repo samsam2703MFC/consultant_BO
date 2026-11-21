@@ -1,0 +1,101 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Relevé de compensation — version C (NL)</title><style>
+@font-face { font-family: 'Gotham'; src: url('../../../../shared/public/assets/ds/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Gotham'; src: url('../../../../shared/public/assets/ds/fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: block; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #dad6cf; font-family: 'Gotham', Helvetica, Arial, sans-serif; color: #1c1a17; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3, h4, th, b, strong { font-weight: 400; }
+.cadre { padding: 40px 48px 48px; }
+.cadre__k { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #8D1D2C; margin-bottom: 26px; }
+.cadre__rangee { display: flex; gap: 40px; align-items: flex-start; }
+.cadre__t { font-size: 18px; margin: 0 0 4px; }
+.cadre__d { font-size: 12.5px; color: #5c5852; margin: 0 0 14px; max-width: 794px; line-height: 1.5; }
+.cadre__note { margin-top: 26px; font-size: 12px; color: #5c5852; line-height: 1.6; max-width: 1640px; }
+.doc { font: 400 11px/1.5 'Gotham', Helvetica, Arial, sans-serif; color: #1c1a17; }
+.doc__page { position: relative; width: 794px; height: 1123px; background: #fff; padding: 52px 54px 40px; overflow: hidden; }
+.doc__head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #8D1D2C; padding-bottom: 12px; margin-bottom: 22px; }
+.doc__logo { height: 34px; display: block; }
+.doc__type { text-align: right; font-size: 10px; color: #7a736a; line-height: 1.5; }
+.doc__type b { display: block; font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #1c1a17; }
+.doc__label { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; margin-bottom: 5px; }
+.doc__parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 18px; }
+.doc__parties p { margin: 0; }
+.doc__parties p b { font-weight: 700; }
+.doc__refs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid #e6e0d8; border-bottom: 1px solid #e6e0d8; margin-bottom: 18px; }
+.doc__refs .v { font-size: 11px; font-weight: 700; }
+.doc table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.doc th { padding: 6px 8px; border-bottom: 1px solid #e6e0d8; font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: #7a736a; font-weight: 400; text-align: left; }
+.doc th.num { text-align: right; }
+.doc td { padding: 8px; border-bottom: 1px solid rgba(34, 34, 34, .06); vertical-align: top; }
+.doc td b { font-weight: 700; }
+.doc .sub { display: block; font-size: 9.5px; color: #7a736a; margin-top: 1px; }
+.doc .num { text-align: right; white-space: nowrap; }
+.doc .gris { color: #7a736a; }
+.doc tr { break-inside: avoid; }
+.doc tr.st td { color: #7a736a; border-bottom: 1px solid #e6e0d8; }
+.doc tr.sec td { padding: 14px 8px 4px; font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; border-bottom: 0; }
+.doc__sec { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; margin: 18px 0 2px; }
+.doc__sec:first-child { margin-top: 0; }
+.doc__totals { width: 46%; margin: 14px 0 0 auto; }
+.doc__totals td { border: 0; padding: 4px 8px; }
+.doc__totals .is-due td { padding-top: 9px; border-top: 1px solid #e6e0d8; font-size: 13px; font-weight: 700; color: #8D1D2C; }
+.doc__box { border-left: 3px solid #8D1D2C; padding: 2px 0 2px 12px; margin: 24px 0 0; }
+.doc__box table { width: auto; }
+.doc__box td { border: 0; padding: 2px 16px 2px 0; }
+.doc__box .k { color: #7a736a; width: 130px; }
+.doc__texte { margin: 14px 0 0; color: #5c5852; font-size: 10px; line-height: 1.6; }
+.doc__illu { position: absolute; left: 54px; right: 54px; bottom: 74px; font-size: 8.5px; color: #7a736a; }
+.doc__foot { position: absolute; left: 54px; right: 54px; bottom: 34px; padding-top: 9px; border-top: 1px solid #e6e0d8; font-size: 8.5px; color: #7a736a; line-height: 1.6; display: flex; justify-content: space-between; gap: 24px; }
+.doc__foot span:last-child { white-space: nowrap; }
+.op { width: 18px; color: #7a736a; text-align: center; padding-left: 0 !important; padding-right: 0 !important; }
+.doc tr.reste td { border-top: 1px solid #e6e0d8; border-bottom: 0; padding-top: 10px; }
+.barre { display: flex; height: 10px; margin: 16px 0 6px; border-radius: 2px; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.barre i { display: block; height: 100%; }
+.barre__leg { display: flex; justify-content: space-between; font-size: 9.5px; color: #7a736a; }
+</style></head>
+<body><div class="cadre">
+  <div class="cadre__k">Version C — Cascade · néerlandais · maquette, Halle, septembre 2026</div>
+  <div class="cadre__rangee">
+    <div><h3 class="cadre__t">Page 1 — la compensation</h3><p class="cadre__d">Des recettes du mois à ce qui reste après la compensation, et la part de la centrale en barre : le relevé lu comme chez Żabka, en partant des recettes.</p><div class="doc doc__page"><div class="doc__head"><img class="doc__logo" src="../../../../shared/public/assets/img/logo.png" alt="L’Atelier"><div class="doc__type"><b>Verrekeningsoverzicht</b>Nr. RC-2026-09-04 · 05/10/2026</div></div><div class="doc__parties">
+    <div><div class="doc__label">Afzender</div><p>L’Atelier By — [handelsnaam]<br>[Straat en nummer]<br>[Postcode] [Gemeente]<br>btw BE 0XXX.XXX.XXX</p></div>
+    <div><div class="doc__label">Bestemmeling</div><p><b>Neutralle SRL</b><br>L’Atelier by Halle, winkel nr. 4<br>[Straat en nummer]<br>1500 Halle<br>btw BE 0XXX.XXX.XXX</p></div>
+  </div>
+  <div class="doc__refs"><div><div class="doc__label">Periode</div><div class="v">01/09 → 30/09/2026</div></div><div><div class="doc__label">Uitgegeven op</div><div class="v">05/10/2026</div></div><div><div class="doc__label">Domiciliëring op</div><div class="v">10/10/2026</div></div><div><div class="doc__label">Basis van de vergoedingen</div><div class="v">50 849,75 € excl. btw</div></div></div>
+    <div class="doc__sec">Uw ontvangsten en de verrekening</div>
+    <table><thead><tr><th class="op"></th><th>Omschrijving</th><th class="num">Bedrag</th><th class="num" style="width:120px">Aandeel ontvangsten</th></tr></thead><tbody>
+    <tr><td class="op"></td><td><b>Ontvangsten van de maand, incl. btw<span class="gris">*</span></b><span class="sub">gelezen in de kassa (TFBuddy): 30 dagen, 4 156 tickets</span></td><td class="num">53 900,74 €</td><td class="num gris">100 %</td></tr><tr><td class="op">−</td><td><b>Vergoedingen, incl. btw</b><span class="sub">5 % van 50 849,75 € excl. btw: merk 2 %, bijstand 1,5 %, marketing 1,5 %</span></td><td class="num">3 076,43 €</td><td class="num gris">5,7 %</td></tr><tr><td class="op">−</td><td><b>Leveringen van de aankoopcentrale, incl. btw<span class="gris">*</span></b><span class="sub">4 leveringsbonnen, weken 36 tot 39</span></td><td class="num">3 617,57 €</td><td class="num gris">6,7 %</td></tr><tr><td class="op">−</td><td><b>Abonnement TFBuddy, incl. btw<span class="gris">*</span></b></td><td class="num">119,79 €</td><td class="num gris">0,2 %</td></tr><tr><td class="op">+</td><td><b>Creditnota — klacht van 17/09<span class="gris">*</span></b><span class="sub">niet-conforme levering, foto en barcode</span></td><td class="num">48,97 €</td><td class="num gris">0,1 %</td></tr><tr><td class="op">+</td><td><b>Premie standaarden, K3 2026</b><span class="sub">score 12,09 / 20, rang 2 van 4; premie vanaf 14 / 20</span></td><td class="num">0,00 €</td><td class="num gris"></td></tr>
+    <tr class="reste"><td class="op">=</td><td><b>Ontvangsten na verrekening</b></td><td class="num">47 135,92 €</td><td class="num gris">87,4 %</td></tr>
+    </tbody></table>
+    <div class="barre"><i style="width:12.55%;background:#5c5852"></i><i style="flex:1;background:#EDE7DE"></i></div>
+    <div class="barre__leg"><span>Voor de centrale · 6 764,82 € · 12,6 %</span><span>Voor u · 47 135,92 € · 87,4 %</span></div>
+    <table class="doc__totals">
+      <tr class="is-due"><td>Te domiciliëren op 10/10/2026</td><td class="num">6 764,82 €</td></tr>
+    </table>
+    <p class="doc__texte" style="margin-left:auto;max-width:46%;text-align:right;margin-top:6px">Als de centrale uw ontvangsten zou innen (doorstortingsmodel), zou ze u op 10/10/2026 47 135,92 € storten.</p>
+    <div class="doc__box"><div class="doc__label">Domiciliëring</div><table><tr><td class="k">Wijze</td><td>SEPA B2B-domiciliëring, mandaat [mandaatnummer]</td></tr><tr><td class="k">Rekening</td><td>BEXX XXXX XXXX XXXX — Neutralle SRL, ontvangstrekening</td></tr><tr><td class="k">Datum</td><td>10/10/2026</td></tr><tr><td class="k">Mededeling</td><td>+++XXX/XXXX/XXXXX+++</td></tr></table></div>
+  <p class="doc__texte">Uw ontvangsten blijven op uw ontvangstrekening. Op de 10e van elke maand domicilieert de centrale wat u haar verschuldigd bent, verminderd met wat zij u verschuldigd is; een saldo in uw voordeel wordt u dezelfde dag gestort. Een opmerking over dit overzicht: vóór 8/10, aan [adres van de centrale].</p><div class="doc__illu">* Maquette: illustratief bedrag.</div><div class="doc__foot"><span>L’Atelier By — [handelsnaam] · [adres van de zetel] · Ondernemingsnr. BE 0XXX.XXX.XXX · RPR [stad] · IBAN BEXX XXXX XXXX XXXX</span><span>Pagina 1 / 2</span></div></div></div>
+    <div><h3 class="cadre__t">Page 2 — les recettes et les espèces</h3><p class="cadre__d">Commune aux trois versions : les recettes du mois par moyen de paiement, ce qui arrive sur le compte de recettes, et les espèces encaissées face aux dépôts, semaine par semaine.</p><div class="doc doc__page"><div class="doc__head"><img class="doc__logo" src="../../../../shared/public/assets/img/logo.png" alt="L’Atelier"><div class="doc__type"><b>Verrekeningsoverzicht</b>Nr. RC-2026-09-04 · vervolg</div></div>
+    <div class="doc__sec">De ontvangsten van de maand</div>
+    <p class="doc__texte" style="margin:0 0 6px">30 verkoopdagen, 4 156 tickets, gelezen in de kassa (TFBuddy)</p>
+    <table><thead><tr><th>Betaalmiddel</th><th>Komt op uw ontvangstrekening</th><th class="num">Ontvangen incl. btw</th><th class="num" style="width:70px">Aandeel</th></tr></thead><tbody>
+    <tr><td><b>Kaarten (Bancontact, Visa, Mastercard)</b><span class="gris">*</span></td><td class="gris">via de betaalterminal</td><td class="num">46 583,69 €</td><td class="num gris">86,4 %</td></tr><tr><td><b>Pluxee, maaltijdcheques</b><span class="gris">*</span></td><td class="gris">via Pluxee</td><td class="num">2 633,60 €</td><td class="num gris">4,9 %</td></tr><tr><td><b>Monizze, maaltijdcheques</b><span class="gris">*</span></td><td class="gris">via Monizze</td><td class="num">771,68 €</td><td class="num gris">1,4 %</td></tr><tr><td><b>Payconiq</b><span class="gris">*</span></td><td class="gris">via Payconiq</td><td class="num">53,42 €</td><td class="num gris">0,1 %</td></tr><tr><td><b>Contanten</b><span class="gris">*</span></td><td class="gris">via storting, zie hieronder</td><td class="num">3 858,35 €</td><td class="num gris">7,2 %</td></tr>
+    </tbody></table>
+    <table class="doc__totals" style="width:58%">
+      <tr><td>Ontvangsten incl. btw</td><td class="num">53 900,74 €</td></tr>
+      <tr><td>Btw 6 %<span class="gris">*</span></td><td class="num">3 050,99 €</td></tr>
+      <tr><td style="border-top:1px solid #e6e0d8;padding-top:8px"><b>Omzet excl. btw, basis van de vergoedingen</b></td><td class="num" style="border-top:1px solid #e6e0d8;padding-top:8px"><b>50 849,75 €</b></td></tr>
+    </table>
+    <div class="doc__sec" style="margin-top:30px">De contanten: ontvangen en gestort</div>
+    <table><thead><tr><th>Week</th><th class="num">Dagen</th><th class="num">Ontvangen</th><th class="num">Gestort</th><th class="num">Stortingen</th><th class="num">Verschil</th></tr></thead><tbody>
+    <tr><td><b>van 01/09 tot 06/09</b></td>
+      <td class="num gris">6</td><td class="num">818,73 €</td><td class="num">810,00 €<span class="gris">*</span></td><td class="num gris">2</td><td class="num"><span class="gris">8,73 €</span></td></tr><tr><td><b>van 07/09 tot 13/09</b></td>
+      <td class="num gris">7</td><td class="num">914,29 €</td><td class="num">910,00 €<span class="gris">*</span></td><td class="num gris">2</td><td class="num"><span class="gris">4,29 €</span></td></tr><tr><td><b>van 14/09 tot 20/09</b><span class="sub">geen opname aangegeven: te verantwoorden vóór 10/10</span></td>
+      <td class="num gris">7</td><td class="num">914,29 €</td><td class="num">760,00 €<span class="gris">*</span></td><td class="num gris">2</td><td class="num"><b>154,29 €</b></td></tr><tr><td><b>van 21/09 tot 27/09</b></td>
+      <td class="num gris">7</td><td class="num">914,29 €</td><td class="num">910,00 €<span class="gris">*</span></td><td class="num gris">2</td><td class="num"><span class="gris">4,29 €</span></td></tr><tr><td><b>van 28/09 tot 30/09</b><span class="sub">gestort op 01/10</span></td>
+      <td class="num gris">3</td><td class="num">296,75 €</td><td class="num">290,00 €<span class="gris">*</span></td><td class="num gris">1</td><td class="num"><span class="gris">6,75 €</span></td></tr>
+    <tr class="st"><td>September</td><td class="num">30</td><td class="num">3 858,35 €</td><td class="num">3 680,00 €</td><td class="num">9</td><td class="num">178,35 €</td></tr>
+    </tbody></table>
+    <p class="doc__texte">Het ontvangen bedrag komt uit de kassa, ticket per ticket; het gestorte bedrag uit de aangegeven stortingen op uw ontvangstrekening. Een verschil van minder dan 10 € is het wisselgeld dat in de kassa blijft.</p>
+    <div class="doc__illu">* Maquette: illustratief bedrag.</div><div class="doc__foot"><span>L’Atelier By — [handelsnaam] · [adres van de zetel] · Ondernemingsnr. BE 0XXX.XXX.XXX · RPR [stad] · IBAN BEXX XXXX XXXX XXXX</span><span>Pagina 2 / 2</span></div></div></div>
+  </div>
+  <p class="cadre__note">Ce qui est mesuré : le chiffre d’affaires HT (50 849,75 €), les jours et les tickets de Halle en septembre 2026 (dossier investisseur, lu le 09/10/2026), le score du T3 (12,09 / 20). Ce qui est calculé : les redevances, avec la grille du budget 2026 de Halle (2 % marque, 1,5 % assistance, 1,5 % marketing, sur le HT). Ce qui est d’illustration (*) : le TTC (6 % sur tout le chiffre), la répartition par moyen de paiement (celle de Corbais du 2 au 8/11/2026), les livraisons de la centrale, l’abonnement, l’avoir, les dépôts d’espèces et les numéros de pièce. Entre crochets : les mentions qui se lisent dans l’ERP (raison sociale, adresses, numéros, IBAN, mandat). Le seuil de la prime (14 / 20) est une hypothèse à décider.</p>
+</div></body></html>

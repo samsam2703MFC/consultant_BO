@@ -1,0 +1,126 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Relevé de compensation — trois versions</title><style>
+@font-face { font-family: 'Gotham'; src: url('../../../../shared/public/assets/ds/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Gotham'; src: url('../../../../shared/public/assets/ds/fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: block; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #dad6cf; font-family: 'Gotham', Helvetica, Arial, sans-serif; color: #1c1a17; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3, h4, th, b, strong { font-weight: 400; }
+.cadre { padding: 40px 48px 48px; }
+.cadre__k { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #8D1D2C; margin-bottom: 26px; }
+.cadre__rangee { display: flex; gap: 40px; align-items: flex-start; }
+.cadre__t { font-size: 18px; margin: 0 0 4px; }
+.cadre__d { font-size: 12.5px; color: #5c5852; margin: 0 0 14px; max-width: 794px; line-height: 1.5; }
+.cadre__note { margin-top: 26px; font-size: 12px; color: #5c5852; line-height: 1.6; max-width: 1640px; }
+.doc { font: 400 11px/1.5 'Gotham', Helvetica, Arial, sans-serif; color: #1c1a17; }
+.doc__page { position: relative; width: 794px; height: 1123px; background: #fff; padding: 52px 54px 40px; overflow: hidden; }
+.doc__head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #8D1D2C; padding-bottom: 12px; margin-bottom: 22px; }
+.doc__logo { height: 34px; display: block; }
+.doc__type { text-align: right; font-size: 10px; color: #7a736a; line-height: 1.5; }
+.doc__type b { display: block; font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #1c1a17; }
+.doc__label { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; margin-bottom: 5px; }
+.doc__parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 18px; }
+.doc__parties p { margin: 0; }
+.doc__parties p b { font-weight: 700; }
+.doc__refs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid #e6e0d8; border-bottom: 1px solid #e6e0d8; margin-bottom: 18px; }
+.doc__refs .v { font-size: 11px; font-weight: 700; }
+.doc table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.doc th { padding: 6px 8px; border-bottom: 1px solid #e6e0d8; font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: #7a736a; font-weight: 400; text-align: left; }
+.doc th.num { text-align: right; }
+.doc td { padding: 8px; border-bottom: 1px solid rgba(34, 34, 34, .06); vertical-align: top; }
+.doc td b { font-weight: 700; }
+.doc .sub { display: block; font-size: 9.5px; color: #7a736a; margin-top: 1px; }
+.doc .num { text-align: right; white-space: nowrap; }
+.doc .gris { color: #7a736a; }
+.doc tr { break-inside: avoid; }
+.doc tr.st td { color: #7a736a; border-bottom: 1px solid #e6e0d8; }
+.doc tr.sec td { padding: 14px 8px 4px; font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; border-bottom: 0; }
+.doc__sec { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; margin: 18px 0 2px; }
+.doc__sec:first-child { margin-top: 0; }
+.doc__totals { width: 46%; margin: 14px 0 0 auto; }
+.doc__totals td { border: 0; padding: 4px 8px; }
+.doc__totals .is-due td { padding-top: 9px; border-top: 1px solid #e6e0d8; font-size: 13px; font-weight: 700; color: #8D1D2C; }
+.doc__box { border-left: 3px solid #8D1D2C; padding: 2px 0 2px 12px; margin: 24px 0 0; }
+.doc__box table { width: auto; }
+.doc__box td { border: 0; padding: 2px 16px 2px 0; }
+.doc__box .k { color: #7a736a; width: 130px; }
+.doc__texte { margin: 14px 0 0; color: #5c5852; font-size: 10px; line-height: 1.6; }
+.doc__illu { position: absolute; left: 54px; right: 54px; bottom: 74px; font-size: 8.5px; color: #7a736a; }
+.doc__foot { position: absolute; left: 54px; right: 54px; bottom: 34px; padding-top: 9px; border-top: 1px solid #e6e0d8; font-size: 8.5px; color: #7a736a; line-height: 1.6; display: flex; justify-content: space-between; gap: 24px; }
+.doc__foot span:last-child { white-space: nowrap; }
+.op { width: 18px; color: #7a736a; text-align: center; padding-left: 0 !important; padding-right: 0 !important; }
+.doc tr.reste td { border-top: 1px solid #e6e0d8; border-bottom: 0; padding-top: 10px; }
+.barre { display: flex; height: 10px; margin: 16px 0 6px; border-radius: 2px; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.barre i { display: block; height: 100%; }
+.barre__leg { display: flex; justify-content: space-between; font-size: 9.5px; color: #7a736a; }
+</style></head>
+<body><div class="cadre">
+  <div class="cadre__k">Relevé de compensation mensuel · Halle, septembre 2026 · trois versions de la page 1 · maquette</div>
+  <div class="cadre__rangee"><div><h3 class="cadre__t">A — Pièces</h3><p class="cadre__d">Le relevé de compte : chaque pièce sur une ligne, sa date, son numéro, au débit ou au crédit, puis le solde à prélever. Le plus proche d’un extrait bancaire.</p><div class="doc doc__page"><div class="doc__head"><img class="doc__logo" src="../../../../shared/public/assets/img/logo.png" alt="L’Atelier"><div class="doc__type"><b>Relevé de compensation</b>N° RC-2026-09-04 · 05/10/2026</div></div><div class="doc__parties">
+    <div><div class="doc__label">Émetteur</div><p>L’Atelier By — [raison sociale]<br>[Rue et numéro]<br>[Code postal] [Ville]<br>TVA BE 0XXX.XXX.XXX</p></div>
+    <div><div class="doc__label">Destinataire</div><p><b>Neutralle SRL</b><br>L’Atelier by Halle, magasin n° 4<br>[Rue et numéro]<br>1500 Halle<br>TVA BE 0XXX.XXX.XXX</p></div>
+  </div>
+  <div class="doc__refs"><div><div class="doc__label">Période</div><div class="v">01/09 → 30/09/2026</div></div><div><div class="doc__label">Émis le</div><div class="v">05/10/2026</div></div><div><div class="doc__label">Prélèvement le</div><div class="v">10/10/2026</div></div><div><div class="doc__label">Base des redevances</div><div class="v">50 849,75 € HT</div></div></div>
+    <table><thead><tr><th style="width:80px">Date</th><th style="width:104px">Pièce</th><th>Désignation</th><th class="num">Débit</th><th class="num">Crédit</th></tr></thead><tbody>
+    <tr><td class="gris" style="white-space:nowrap">30/09/2026</td><td class="gris" style="white-space:nowrap">RD-2026-412<span class="gris">*</span></td><td><b>Redevance de marque</b><span class="sub">2 % de 50 849,75 € HT · 1 017,00 € HT + TVA 21 %</span></td>
+      <td class="num">1 230,57 €</td><td class="num"></td></tr><tr><td class="gris" style="white-space:nowrap">30/09/2026</td><td class="gris" style="white-space:nowrap">RD-2026-413<span class="gris">*</span></td><td><b>Redevance d’assistance</b><span class="sub">1,5 % de 50 849,75 € HT · 762,75 € HT + TVA 21 %</span></td>
+      <td class="num">922,93 €</td><td class="num"></td></tr><tr><td class="gris" style="white-space:nowrap">30/09/2026</td><td class="gris" style="white-space:nowrap">RD-2026-414<span class="gris">*</span></td><td><b>Redevance marketing</b><span class="sub">1,5 % de 50 849,75 € HT · 762,75 € HT + TVA 21 %</span></td>
+      <td class="num">922,93 €</td><td class="num"></td></tr><tr><td class="gris" style="white-space:nowrap">01/09/2026</td><td class="gris" style="white-space:nowrap">AB-2026-0904<span class="gris">*</span></td><td><b>Abonnement TFBuddy, septembre<span class="gris">*</span></b><span class="sub">99,00 € HT + TVA 21 %</span></td>
+      <td class="num">119,79 €</td><td class="num"></td></tr><tr><td class="gris" style="white-space:nowrap">04 → 25/09</td><td class="gris" style="white-space:nowrap">CA-2026-0388<span class="gris">*</span><span class="sub">→ 0391</span></td><td><b>Livraisons de la centrale d’achat<span class="gris">*</span></b><span class="sub">4 bons, semaines 36 à 39 · 3 412,80 € HT + TVA 6 %</span></td>
+      <td class="num">3 617,57 €</td><td class="num"></td></tr><tr><td class="gris" style="white-space:nowrap">19/09/2026</td><td class="gris" style="white-space:nowrap">NC-2026-0057<span class="gris">*</span></td><td><b>Avoir — réclamation du 17/09<span class="gris">*</span></b><span class="sub">livraison non conforme, photo et code-barres · 46,20 € HT + TVA 6 %</span></td>
+      <td class="num"></td><td class="num">48,97 €</td></tr><tr><td class="gris" style="white-space:nowrap">30/09/2026</td><td class="gris" style="white-space:nowrap">—</td><td><b>Prime standards, T3 2026</b><span class="sub">score 12,09 / 20, rang 2 sur 4 ; prime dès 14 / 20</span></td>
+      <td class="num"></td><td class="num">0,00 €</td></tr>
+    </tbody></table>
+    <table class="doc__totals">
+      <tr><td>Total des débits</td><td class="num">6 813,79 €</td></tr>
+      <tr><td>Total des crédits</td><td class="num">48,97 €</td></tr>
+      <tr class="is-due"><td>À prélever le 10/10/2026</td><td class="num">6 764,82 €</td></tr>
+    </table>
+    <div class="doc__box"><div class="doc__label">Prélèvement</div><table><tr><td class="k">Mode</td><td>Domiciliation SEPA B2B, mandat [n° de mandat]</td></tr><tr><td class="k">Compte débité</td><td>BEXX XXXX XXXX XXXX — Neutralle SRL, compte de recettes</td></tr><tr><td class="k">Date</td><td>10/10/2026</td></tr><tr><td class="k">Communication</td><td>+++XXX/XXXX/XXXXX+++</td></tr></table></div>
+  <p class="doc__texte">Vos recettes restent sur votre compte de recettes. Le 10 de chaque mois, la centrale prélève ce que vous lui devez, diminué de ce qu’elle vous doit ; un solde en votre faveur vous est versé le même jour. Une remarque sur ce relevé : avant le 8/10, à [adresse de la centrale].</p><div class="doc__illu">* Maquette : montant d’illustration.</div><div class="doc__foot"><span>L’Atelier By — [raison sociale] · [adresse du siège] · N° d’entreprise BE 0XXX.XXX.XXX · RPM [ville] · IBAN BEXX XXXX XXXX XXXX</span><span>Page 1 / 2</span></div></div></div><div><h3 class="cadre__t">B — Facture</h3><p class="cadre__d">Ce que le magasin doit, puis ce que la centrale lui doit, avec HT, TVA et TTC par ligne et le récapitulatif de TVA : ce que demandera le comptable du franchisé.</p><div class="doc doc__page"><div class="doc__head"><img class="doc__logo" src="../../../../shared/public/assets/img/logo.png" alt="L’Atelier"><div class="doc__type"><b>Relevé de compensation</b>N° RC-2026-09-04 · 05/10/2026</div></div><div class="doc__parties">
+    <div><div class="doc__label">Émetteur</div><p>L’Atelier By — [raison sociale]<br>[Rue et numéro]<br>[Code postal] [Ville]<br>TVA BE 0XXX.XXX.XXX</p></div>
+    <div><div class="doc__label">Destinataire</div><p><b>Neutralle SRL</b><br>L’Atelier by Halle, magasin n° 4<br>[Rue et numéro]<br>1500 Halle<br>TVA BE 0XXX.XXX.XXX</p></div>
+  </div>
+  <div class="doc__refs"><div><div class="doc__label">Période</div><div class="v">01/09 → 30/09/2026</div></div><div><div class="doc__label">Émis le</div><div class="v">05/10/2026</div></div><div><div class="doc__label">Prélèvement le</div><div class="v">10/10/2026</div></div><div><div class="doc__label">Base des redevances</div><div class="v">50 849,75 € HT</div></div></div>
+    <table><thead><tr><th>Désignation</th><th class="num">Base</th><th class="num">Taux</th><th class="num">HT</th><th class="num">TVA</th><th class="num">TTC</th></tr></thead><tbody>
+      <tr class="sec"><td colspan="6">Ce que vous devez à la centrale</td></tr>
+      <tr><td><b>Redevance de marque</b></td>
+    <td class="num gris">50 849,75 €</td><td class="num gris">2 %</td><td class="num">1 017,00 €</td><td class="num gris">21 %</td><td class="num">1 230,57 €</td></tr><tr><td><b>Redevance d’assistance</b></td>
+    <td class="num gris">50 849,75 €</td><td class="num gris">1,5 %</td><td class="num">762,75 €</td><td class="num gris">21 %</td><td class="num">922,93 €</td></tr><tr><td><b>Redevance marketing</b></td>
+    <td class="num gris">50 849,75 €</td><td class="num gris">1,5 %</td><td class="num">762,75 €</td><td class="num gris">21 %</td><td class="num">922,93 €</td></tr>
+      <tr><td><b>Abonnement TFBuddy, septembre<span class="gris">*</span></b></td>
+    <td class="num gris">—</td><td class="num gris">—</td><td class="num">99,00 €</td><td class="num gris">21 %</td><td class="num">119,79 €</td></tr>
+      <tr><td><b>Livraisons de la centrale d’achat<span class="gris">*</span></b><span class="sub">4 bons, semaines 36 à 39</span></td>
+    <td class="num gris">—</td><td class="num gris">—</td><td class="num">3 412,80 €</td><td class="num gris">6 %</td><td class="num">3 617,57 €</td></tr>
+      <tr class="st"><td>Sous-total</td><td></td><td></td><td class="num">6 054,30 €</td><td></td><td class="num">6 813,79 €</td></tr>
+      <tr class="sec"><td colspan="6">Ce que la centrale vous doit</td></tr>
+      <tr><td><b>Avoir — réclamation du 17/09<span class="gris">*</span></b><span class="sub">livraison non conforme, photo et code-barres</span></td>
+    <td class="num gris">—</td><td class="num gris">—</td><td class="num">46,20 €</td><td class="num gris">6 %</td><td class="num">48,97 €</td></tr>
+      <tr><td><b>Prime standards, T3 2026</b></td>
+    <td class="num gris">12,09 / 20</td><td class="num gris">≥ 14 / 20</td><td class="num">0,00 €</td><td class="num gris">—</td><td class="num">0,00 €</td></tr>
+    </tbody></table>
+    <table class="doc__totals">
+      <tr><td>Total HT</td><td class="num">6 008,10 €</td></tr>
+      <tr><td>TVA 21 % sur 2 641,50 €</td><td class="num">554,72 €</td></tr>
+      <tr><td>TVA 6 % sur 3 366,60 €</td><td class="num">202,00 €</td></tr>
+      <tr class="is-due"><td>À prélever le 10/10/2026</td><td class="num">6 764,82 €</td></tr>
+    </table>
+    <div class="doc__box"><div class="doc__label">Prélèvement</div><table><tr><td class="k">Mode</td><td>Domiciliation SEPA B2B, mandat [n° de mandat]</td></tr><tr><td class="k">Compte débité</td><td>BEXX XXXX XXXX XXXX — Neutralle SRL, compte de recettes</td></tr><tr><td class="k">Date</td><td>10/10/2026</td></tr><tr><td class="k">Communication</td><td>+++XXX/XXXX/XXXXX+++</td></tr></table></div>
+  <p class="doc__texte">Vos recettes restent sur votre compte de recettes. Le 10 de chaque mois, la centrale prélève ce que vous lui devez, diminué de ce qu’elle vous doit ; un solde en votre faveur vous est versé le même jour. Une remarque sur ce relevé : avant le 8/10, à [adresse de la centrale].</p><div class="doc__illu">* Maquette : montant d’illustration.</div><div class="doc__foot"><span>L’Atelier By — [raison sociale] · [adresse du siège] · N° d’entreprise BE 0XXX.XXX.XXX · RPM [ville] · IBAN BEXX XXXX XXXX XXXX</span><span>Page 1 / 2</span></div></div></div><div><h3 class="cadre__t">C — Cascade</h3><p class="cadre__d">Des recettes du mois à ce qui reste après la compensation, et la part de la centrale en barre : le relevé lu comme chez Żabka, en partant des recettes.</p><div class="doc doc__page"><div class="doc__head"><img class="doc__logo" src="../../../../shared/public/assets/img/logo.png" alt="L’Atelier"><div class="doc__type"><b>Relevé de compensation</b>N° RC-2026-09-04 · 05/10/2026</div></div><div class="doc__parties">
+    <div><div class="doc__label">Émetteur</div><p>L’Atelier By — [raison sociale]<br>[Rue et numéro]<br>[Code postal] [Ville]<br>TVA BE 0XXX.XXX.XXX</p></div>
+    <div><div class="doc__label">Destinataire</div><p><b>Neutralle SRL</b><br>L’Atelier by Halle, magasin n° 4<br>[Rue et numéro]<br>1500 Halle<br>TVA BE 0XXX.XXX.XXX</p></div>
+  </div>
+  <div class="doc__refs"><div><div class="doc__label">Période</div><div class="v">01/09 → 30/09/2026</div></div><div><div class="doc__label">Émis le</div><div class="v">05/10/2026</div></div><div><div class="doc__label">Prélèvement le</div><div class="v">10/10/2026</div></div><div><div class="doc__label">Base des redevances</div><div class="v">50 849,75 € HT</div></div></div>
+    <div class="doc__sec">Vos recettes et la compensation</div>
+    <table><thead><tr><th class="op"></th><th>Désignation</th><th class="num">Montant</th><th class="num" style="width:120px">Part des recettes</th></tr></thead><tbody>
+    <tr><td class="op"></td><td><b>Recettes du mois, TVA comprise<span class="gris">*</span></b><span class="sub">lues dans la caisse (TFBuddy) : 30 jours, 4 156 tickets</span></td><td class="num">53 900,74 €</td><td class="num gris">100 %</td></tr><tr><td class="op">−</td><td><b>Redevances, TVA comprise</b><span class="sub">5 % de 50 849,75 € HT : marque 2 %, assistance 1,5 %, marketing 1,5 %</span></td><td class="num">3 076,43 €</td><td class="num gris">5,7 %</td></tr><tr><td class="op">−</td><td><b>Livraisons de la centrale d’achat, TVA comprise<span class="gris">*</span></b><span class="sub">4 bons, semaines 36 à 39</span></td><td class="num">3 617,57 €</td><td class="num gris">6,7 %</td></tr><tr><td class="op">−</td><td><b>Abonnement TFBuddy, TVA comprise<span class="gris">*</span></b></td><td class="num">119,79 €</td><td class="num gris">0,2 %</td></tr><tr><td class="op">+</td><td><b>Avoir — réclamation du 17/09<span class="gris">*</span></b><span class="sub">livraison non conforme, photo et code-barres</span></td><td class="num">48,97 €</td><td class="num gris">0,1 %</td></tr><tr><td class="op">+</td><td><b>Prime standards, T3 2026</b><span class="sub">score 12,09 / 20, rang 2 sur 4 ; prime dès 14 / 20</span></td><td class="num">0,00 €</td><td class="num gris"></td></tr>
+    <tr class="reste"><td class="op">=</td><td><b>Recettes après compensation</b></td><td class="num">47 135,92 €</td><td class="num gris">87,4 %</td></tr>
+    </tbody></table>
+    <div class="barre"><i style="width:12.55%;background:#5c5852"></i><i style="flex:1;background:#EDE7DE"></i></div>
+    <div class="barre__leg"><span>Pour la centrale · 6 764,82 € · 12,6 %</span><span>Pour vous · 47 135,92 € · 87,4 %</span></div>
+    <table class="doc__totals">
+      <tr class="is-due"><td>À prélever le 10/10/2026</td><td class="num">6 764,82 €</td></tr>
+    </table>
+    <p class="doc__texte" style="margin-left:auto;max-width:46%;text-align:right;margin-top:6px">Si la centrale encaissait vos recettes (modèle de reversement), elle vous verserait 47 135,92 € le 10/10/2026.</p>
+    <div class="doc__box"><div class="doc__label">Prélèvement</div><table><tr><td class="k">Mode</td><td>Domiciliation SEPA B2B, mandat [n° de mandat]</td></tr><tr><td class="k">Compte débité</td><td>BEXX XXXX XXXX XXXX — Neutralle SRL, compte de recettes</td></tr><tr><td class="k">Date</td><td>10/10/2026</td></tr><tr><td class="k">Communication</td><td>+++XXX/XXXX/XXXXX+++</td></tr></table></div>
+  <p class="doc__texte">Vos recettes restent sur votre compte de recettes. Le 10 de chaque mois, la centrale prélève ce que vous lui devez, diminué de ce qu’elle vous doit ; un solde en votre faveur vous est versé le même jour. Une remarque sur ce relevé : avant le 8/10, à [adresse de la centrale].</p><div class="doc__illu">* Maquette : montant d’illustration.</div><div class="doc__foot"><span>L’Atelier By — [raison sociale] · [adresse du siège] · N° d’entreprise BE 0XXX.XXX.XXX · RPM [ville] · IBAN BEXX XXXX XXXX XXXX</span><span>Page 1 / 2</span></div></div></div></div>
+  <p class="cadre__note">Ce qui est mesuré : le chiffre d’affaires HT (50 849,75 €), les jours et les tickets de Halle en septembre 2026 (dossier investisseur, lu le 09/10/2026), le score du T3 (12,09 / 20). Ce qui est calculé : les redevances, avec la grille du budget 2026 de Halle (2 % marque, 1,5 % assistance, 1,5 % marketing, sur le HT). Ce qui est d’illustration (*) : le TTC (6 % sur tout le chiffre), la répartition par moyen de paiement (celle de Corbais du 2 au 8/11/2026), les livraisons de la centrale, l’abonnement, l’avoir, les dépôts d’espèces et les numéros de pièce. Entre crochets : les mentions qui se lisent dans l’ERP (raison sociale, adresses, numéros, IBAN, mandat). Le seuil de la prime (14 / 20) est une hypothèse à décider.</p>
+</div></body></html>
