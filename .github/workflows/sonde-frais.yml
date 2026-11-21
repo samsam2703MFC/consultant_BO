@@ -1,0 +1,61 @@
+name: Sonde — les frais d'un magasin au panel (lecture seule)
+
+# La forme réelle des lignes de frais du panel (types, lignes du magasin, lignes de l'onglet Frais) et ce que « Ajouter
+# un frais » du dashboard a créé, pour le magasin 5 (21/11/2026 : le libellé saisi s'affiche sous sa catégorie, la TVA
+# choisie ne s'applique pas). Le script part sur le serveur par l'entrée standard de `php` : des GET au panel et des
+# SELECT, rien d'écrit.
+#
+# Déclenchement : pousser un changement sur le script ou ce fichier dans la branche ci-dessous.
+# Ne déploie rien : le déploiement du cockpit reste dans deploy.yml.
+
+on:
+  push:
+    branches: [claude/hopeful-euler-er2co6]
+    paths: ['panel/tools/sonde_frais.php', '.github/workflows/sonde-frais.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: sonde-frais
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+  SHOP: "5"
+
+defaults:
+  run:
+    working-directory: panel
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script
+        run: php -l tools/sonde_frais.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Lire les frais du magasin depuis le serveur du cockpit
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}' '${SHOP}'" < tools/sonde_frais.php
