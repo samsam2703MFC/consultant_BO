@@ -7341,7 +7341,7 @@
     const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
     const lignes = D.lignes.map((l, i) => {
       const ai = l.aIndiquer;
-      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}${l.majLe ? `<span class="sub">indiqué le ${esc(fD(l.majLe.slice(0, 10)))}${l.majPar ? ' · ' + esc(l.majPar) : ''}</span>` : ''}</td>
+      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}</td>
         <td class="n">${fU(l.montant)}</td>
         <td>${seg([[true, 'Oui'], [false, 'Non']], l.tva, v => `data-frt="${i}" data-v="${v}" title="${v ? 'le montant saisi contient la TVA' : 'le montant est hors TVA, ou sans TVA'}"`)}</td>
         <td>${seg(TAUX.map(t => [+t, nf(+t, 0) + ' %']), l.taux == null ? null : +l.taux, v => `data-frx="${i}" data-v="${v}"`)}</td>
