@@ -103,9 +103,80 @@
       return new Promise(ok => setTimeout(() => ok(json({ dossier: 'INBOX', propositions: props, modele: 'claude-sonnet-5' })), 300));
     }
     if (p === '/dashboard/boite/modeles') { return json({ reseau: [], magasin: [], variables: {} }); }
+    // Les modes IA : les lectures (illustrées), le pilote, le catalogue (pour estimer les demandes).
+    if (p === '/dashboard/boite/lectures') {
+      const recents = q.get('quoi') === 'recents';
+      const L = recents ? M.INBOX.concat(ANCIENS) : M.INBOX.filter(m => !m.lu);
+      return json({ quoi: q.get('quoi'), elements: L.map(m => ({ uid: m.uid, de: m.de, repondreA: m.de, objet: m.objet, date: m.date, lu: m.lu, repondu: !!m.repondu, suivi: !!m.suivi, lecture: LECT[m.uid] || null })),
+        aLire: recents ? [1101, 1102, 1103] : [], ia: true, lot: 8 });
+    }
+    if (p === '/dashboard/boite/lire') { return new Promise(ok => setTimeout(() => ok(json({ lectures: {} })), 200)); }
+    if (p === '/dashboard/boite/pilote') { return json(PILOTE); }
+    if (p === '/exploitation/promos-magasin/produits') { return json({ produits: CATALOGUE }); }
     return json({});
   };
   window.SCENE = scene;
+
+  /* Les lectures de l'IA (illustrées) : ce que src/boite_ia.php garde pour chaque e-mail. */
+  ['1298', '1291', '1295', '1296'].forEach(u => { const m = M.INBOX.find(x => x.uid === +u); if (m) { m.lu = false; } });
+  const lec = (o) => Object.assign({ resume: '', categorie: 'autre', ton: 'neutre', urgence: 'normale', action: 'lire', reponse: '', dossier: '', simple: false, confiance: 90, garde: '', jour: '', produits: [], personnes: 0, b2b: false, robot: false }, o);
+  const LECT = {
+    1299: lec({ resume: 'Veut un fraisier pour 20 personnes avec « Joyeux anniversaire Lina », samedi 28/11 vers 15 h.', categorie: 'commande', ton: 'chaleureux', urgence: 'haute', action: 'offre', confiance: 92, garde: 'commande', jour: '2026-11-28', produits: [{ nom: 'fraisier', quantite: 1 }], personnes: 20,
+      reponse: 'Bonjour Marie,\n\nMerci pour votre message, et bon anniversaire à Lina ! Nous vous préparons avec plaisir un fraisier pour 20 personnes, avec « Joyeux anniversaire Lina », pour le samedi 28/11 à 15 h.\n\nSon prix : [à compléter : prix du fraisier 20 personnes]. Pour le confirmer, il suffit de répondre à cet e-mail.\n\nBelle journée,\nL’équipe de L’Atelier By Halle' }),
+    1298: lec({ resume: 'Facture 2026-1182 de farine T55 et T65, à payer sous 30 jours.', categorie: 'facture', action: 'ranger', dossier: 'Factures', confiance: 97 }),
+    1297: lec({ resume: 'Sodexo demande une offre pour 45 plateaux petits-déjeuners, vendredi 4/12 à 8 h, livrés.', categorie: 'offre', urgence: 'normale', action: 'offre', garde: 'b2b', b2b: true, jour: '2026-12-04', produits: [{ nom: 'plateaux petit-déjeuner', quantite: 45 }], personnes: 45, confiance: 90,
+      reponse: 'Bonjour,\n\nMerci pour votre demande. Nous préparons notre offre pour 45 plateaux petits-déjeuners livrés le vendredi 4/12 à 8 h, et vous l’envoyons [à compléter : quand].\n\nBien à vous,\nL’équipe de L’Atelier By Halle' }),
+    1296: lec({ resume: 'Notification bpost : un colis est en route.', categorie: 'notification', action: 'archiver', robot: true, confiance: 99 }),
+    1295: lec({ resume: 'Callebaut présente ses nouveautés chocolat de Noël.', categorie: 'newsletter', action: 'ranger', dossier: 'Newsletters', robot: true, confiance: 98 }),
+    1294: lec({ resume: 'Jonas Peeters postule comme vendeur à temps partiel ; CV joint.', categorie: 'candidature', action: 'repondre', simple: true, confiance: 94,
+      reponse: 'Bonjour Jonas,\n\nMerci pour votre candidature, que nous avons bien reçue. Nous la lisons avec attention et revenons vers vous dans les prochains jours.\n\nBelle journée,\nL’équipe de L’Atelier By Halle' }),
+    1293: lec({ resume: 'Le réseau envoie le planning des promotions de décembre.', categorie: 'reseau', action: 'ranger', dossier: 'Réseau Atelier By', confiance: 96 }),
+    1292: lec({ resume: 'Vandemoortele confirme la livraison de mardi 24/11.', categorie: 'fournisseur', action: 'ranger', dossier: 'Fournisseurs', confiance: 95 }),
+    1291: lec({ resume: 'La facture Proximus de novembre est disponible.', categorie: 'facture', action: 'ranger', dossier: 'Factures', robot: true, confiance: 97 }),
+    1290: lec({ resume: 'Hanne De Smet confirme 2 tartes au riz pour mardi 24/11.', categorie: 'commande', ton: 'chaleureux', action: 'lire', jour: '2026-11-24', produits: [{ nom: 'tartes au riz', quantite: 2 }], confiance: 93 }),
+    1289: lec({ resume: 'Google : 3 nouveaux avis sur la fiche du magasin.', categorie: 'notification', action: 'archiver', robot: true, confiance: 99 }),
+    1288: lec({ resume: 'La Ville de Halle ouvre les inscriptions des exposants du marché de Noël, avant le 30/11.', categorie: 'administratif', urgence: 'haute', action: 'repondre', confiance: 80,
+      reponse: 'Bonjour,\n\nMerci pour votre message. L’Atelier By Halle souhaite participer au marché de Noël. Pourriez-vous nous dire [à compléter : ce qu’il faut fournir pour l’inscription] ?\n\nBien à vous,\nL’équipe de L’Atelier By Halle' }),
+    1287: lec({ resume: 'Puratos propose ses améliorants en promotion de fin d’année.', categorie: 'newsletter', action: 'ranger', dossier: 'Newsletters', robot: true }),
+    1286: lec({ resume: 'Sophie Lambert demande si le cramique aux raisins contient des fruits à coque.', categorie: 'question', action: 'repondre', garde: 'allergenes', confiance: 70,
+      reponse: 'Bonjour Sophie,\n\nMerci pour votre question. [à compléter : allergènes du cramique aux raisins, selon la fiche produit]\n\nBelle journée,\nL’équipe de L’Atelier By Halle' }),
+    1101: lec({ resume: 'L’école Sint-Rochus commande 120 spéculoos individuels et 6 cramiques pour la Saint-Nicolas, dimanche 6/12, livrés à 8 h 30.', categorie: 'commande', ton: 'chaleureux', action: 'offre', garde: 'b2b', b2b: true, jour: '2026-12-06', produits: [{ nom: 'spéculoos individuels', quantite: 120 }, { nom: 'cramiques', quantite: 6 }] }),
+    1102: lec({ resume: 'La famille Dubois veut 12 sujets Saint-Nicolas en chocolat pour le 6/12.', categorie: 'commande', ton: 'chaleureux', action: 'offre', jour: '2026-12-06', produits: [{ nom: 'sujets saint-nicolas en chocolat', quantite: 12 }] }),
+    1103: lec({ resume: 'Le Chiro Halle demande 80 spéculoos pour la fête des membres du 6/12.', categorie: 'commande', action: 'offre', jour: '2026-12-06', produits: [{ nom: 'spéculoos individuels', quantite: 80 }], b2b: true }),
+    1104: lec({ resume: 'Kevin Janssens se plaint : gâteau d’anniversaire abîmé à la livraison, deuxième fois.', categorie: 'reclamation', ton: 'mecontent', urgence: 'haute', action: 'repondre', garde: 'reclamation' }),
+    1105: lec({ resume: 'Brasserie De Kroon : 60 plateaux petits-déjeuners vendredi 4/12.', categorie: 'offre', action: 'offre', b2b: true, jour: '2026-12-04', produits: [{ nom: 'plateaux petit-déjeuner', quantite: 60 }] }),
+    1106: lec({ resume: 'Lucas Martens : 30 croissants et 2 cramiques pour dimanche 29/11.', categorie: 'commande', ton: 'chaleureux', action: 'lire', jour: '2026-11-29', produits: [{ nom: 'croissants', quantite: 30 }, { nom: 'cramiques', quantite: 2 }] }),
+    1107: lec({ resume: 'Nathalie Lambert : une bûche pour 8 personnes le samedi 5/12.', categorie: 'commande', ton: 'chaleureux', action: 'offre', jour: '2026-12-05', produits: [{ nom: 'bûche', quantite: 1 }], personnes: 8 }),
+    1108: lec({ resume: 'Julie Wouters annule sa tarte au riz de mercredi 25/11.', categorie: 'commande', ton: 'neutre', action: 'repondre', jour: '2026-11-25', produits: [{ nom: 'tarte au riz', quantite: 1 }] }),
+  };
+  const ANCIENS = [[1101, 'Els Vermeulen', 'els.vermeulen@sint-rochus.example', 'Saint-Nicolas : spéculoos pour l’école', '2026-11-19', false], [1102, 'Famille Dubois', 'dubois.famille@gmail.com', 'Sujets Saint-Nicolas', '2026-11-20', false],
+    [1103, 'Chiro Halle', 'leiding@chirohalle.example', 'Speculaas voor 6/12', '2026-11-21', false], [1104, 'Kevin Janssens', 'kevin.janssens@telenet.be', 'Gâteau abîmé — encore !', '2026-11-20', false],
+    [1105, 'Brasserie De Kroon', 'info@dekroon.example', 'Ontbijtplateaus 4/12', '2026-11-18', true], [1106, 'Lucas Martens', 'lucas.martens@gmail.com', 'Commande dimanche', '2026-11-17', true],
+    [1107, 'Nathalie Lambert', 'nathalie.l@skynet.be', 'Bûche pour 8', '2026-11-16', false], [1108, 'Julie Wouters', 'julie.wouters@gmail.com', 'Annulation tarte au riz', '2026-11-15', true]]
+    .map(([uid, nom, adresse, objet, j, rep]) => ({ uid, de: de(nom, adresse), objet, date: h(j, '10:00'), lu: true, repondu: rep }));
+  const CATALOGUE = [['Fraisier 20 personnes', 64], ['Plateau petit-déjeuner', 12.5], ['Tarte au riz', 14.5], ['Spéculoos individuel', 1.9], ['Sujet Saint-Nicolas en chocolat', 7.5], ['Cramique', 9.5], ['Croissant', 1.35], ['Bûche', 32]]
+    .map(([nom, prixTtc], i) => ({ id: i + 1, nom, prixTtc }));
+  const ilya = m => new Date(Date.now() - m * 60000).toISOString(), dans = m => new Date(Date.now() + m * 60000).toISOString();
+  const PILOTE = { niveau: 2, niveaux: { 0: 'Éteint', 1: 'Brouillons', 2: 'Simples' }, seuil: 85, delai: 10, horloge: ilya(4), ia: true,
+    stats: { envoyes: 23, brouillons: 9, annules: 1, planifies: 1, attente: 3 },
+    gardes: ['parle de prix', 'demande une remise ou un geste', 'réclamation', 'question d’allergènes ou de santé', 'commande ou demande d’offre à confirmer', 'client professionnel', 'personnel ou RH', 'l’IA n’est pas sûre'],
+    fil: [
+      { id: 41, uid: 1294, de_nom: 'Jonas Peeters', de_adresse: 'jonas.peeters@gmail.com', objet: 'Candidature — vendeuse / vendeur temps partiel', categorie: 'candidature', confiance: 94, etat: 'planifie', envoi_le: dans(7), cree_le: ilya(3),
+        reponse: 'Bonjour Jonas,\n\nMerci pour votre candidature, que nous avons bien reçue. Nous la lisons avec attention et revenons vers vous dans les prochains jours.\n\nBelle journée,\nL’équipe de L’Atelier By Halle' },
+      { id: 40, uid: 1260, de_nom: 'Bureau Wauters & fils', de_adresse: 'compta@wauters.example', objet: 'Facture n° 7731 bien reçue ?', categorie: 'facture', confiance: 96, etat: 'envoye', envoi_le: ilya(95), cree_le: ilya(105),
+        reponse: 'Bonjour,\n\nOui, nous avons bien reçu votre paiement de la facture n° 7731. Merci !\n\nBien à vous,\nL’équipe de L’Atelier By Halle' },
+      { id: 39, uid: 1255, de_nom: 'Annelies De Smet', de_adresse: 'annelies.desmet@telenet.be', objet: 'Bedankt voor de taart!', categorie: 'question', confiance: 97, etat: 'envoye', envoi_le: ilya(180), cree_le: ilya(190),
+        reponse: 'Beste Annelies,\n\nHartelijk dank voor uw lieve bericht, dat doet ons veel plezier! Tot binnenkort in de winkel.\n\nMet vriendelijke groeten,\nHet team van L’Atelier By Halle' },
+      { id: 38, uid: 1250, de_nom: 'Pieter Goossens', de_adresse: 'pieter.goossens@gmail.com', objet: 'Ouvert le dimanche 29/11 ?', categorie: 'question', confiance: 88, etat: 'brouillon', cree_le: ilya(400), raison: 'il manque une information (à compléter)',
+        reponse: 'Bonjour Pieter,\n\nMerci pour votre message. Le dimanche 29/11, nous sommes ouverts [à compléter : horaires du dimanche].\n\nÀ bientôt,\nL’équipe de L’Atelier By Halle' },
+      { id: 37, uid: 1248, de_nom: 'Lotte Willems', de_adresse: 'lotte.willems@gmail.com', objet: 'Merci pour la confirmation', categorie: 'commande', confiance: 91, etat: 'annule', cree_le: ilya(1300), raison: 'le magasin a déjà répondu', reponse: 'Bonjour Lotte,\n\nAvec plaisir, à samedi !\n\nL’équipe de L’Atelier By Halle' },
+    ],
+    attente: [
+      { id: 36, uid: 1286, de_nom: 'Sophie Lambert', de_adresse: 'sophie.lambert@hotmail.com', objet: 'Allergènes du cramique aux raisins ?', categorie: 'question', confiance: 70, etat: 'attente', cree_le: ilya(60), raison: 'question d’allergènes ou de santé' },
+      { id: 35, uid: 1297, de_nom: 'Sodexo Belgium', de_adresse: 'achats.halle@sodexo.example', objet: 'Demande d’offre : plateaux petits-déjeuners, 45 pers.', categorie: 'offre', confiance: 90, etat: 'attente', cree_le: ilya(120), raison: 'client professionnel' },
+      { id: 34, uid: 1288, de_nom: 'Ville de Halle', de_adresse: 'evenementen@halle.example', objet: 'Marché de Noël : inscription des exposants', categorie: 'administratif', confiance: 80, etat: 'attente', cree_le: ilya(200), raison: 'pas assez sûre (80 %)' },
+    ] };
+  if (scene === 'briefing' || scene === 'pilote' || scene === 'radar') { localStorage.setItem('bx-mode-4', scene); } else { localStorage.removeItem('bx-mode-4'); }
 })();
 </script>
 <script src="../../../panel/public/dashboard/boite.js"></script>

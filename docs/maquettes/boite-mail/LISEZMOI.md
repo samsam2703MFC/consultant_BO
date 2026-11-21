@@ -13,6 +13,20 @@ sur une fausse API et des e-mails illustrés. `capturer.cjs` clique comme le fer
 | `2-selection` | Six e-mails cochés : à droite, les gestes (archiver, corbeille, lu, non lu, suivre) et « Déplacer vers » en boutons, avec « Nouveau dossier ». |
 | `3-ranger-avec-ia` | « Tout sélectionner », puis « Proposer un rangement » : l'IA propose un dossier par e-mail (dossiers existants, nouveaux dossiers, archives, ou laisser en place ce qui attend une réponse). Chaque ligne se corrige (« Changer » ouvre les dossiers en boutons). Rien ne bouge avant « Ranger ». |
 | `4-corbeille-tout-effacer` | La corbeille entière sélectionnée : « Effacer pour de bon », « Remettre en Réception ». |
+| `5-mode-briefing` | La bascule « IA » (Classique · Briefing · Pilote · Radar) ; le briefing : les non-lus en cartes, la réponse rédigée (modifiable sur place, « [à compléter] » bloque l'envoi), Valider → / Plus tard ←, « Mains dans la farine » (le navigateur lit la carte et écoute « oui », « plus tard », « ouvre », « stop »), la file. |
+| `6-mode-pilote` | Le pilote : trois crans (Éteint, Brouillons, Simples), le fil de ce qu'il a fait (« Annuler l'envoi » tant que la réponse n'est pas partie), ce qui vous attend et pourquoi, les garde-fous fixes. |
+| `7-mode-radar` | Le radar : les demandes lues dans les e-mails des trois dernières semaines, sur les trois semaines à venir ; les montants estimés aux prix du catalogue ; les alertes ; l'humeur des clients. |
+
+## Les modes IA (21/11/2026, « les 3 options futuristes en toggle, avec un bouton type futuriste »)
+
+`panel/src/boite_ia.php`. Chaque e-mail de la réception est lu une fois par l'IA et la lecture est gardée
+(`panel_boite_lecture`) : résumé, catégorie, ton, urgence, action, brouillon de réponse, demande repérée, et ce qui
+interdit de répondre seul. Le pilote (`panel_boite_pilote`, `panel_boite_pilote_etat`) tourne avec l'horloge de la
+boîte (10 min), éteint par défaut, et ne lit que ce qui arrive après son allumage. Il ne répond seul qu'à une réponse
+« simple », sans « [à compléter] », à 85 % de confiance au moins, une fois par expéditeur et par jour, 30 par jour au
+plus, jamais aux prix, remises, réclamations, allergènes, commandes, professionnels ni au personnel ; l'envoi part au
+plus tôt 10 minutes après, annulable. Le reste devient un brouillon dans « Brouillons » ou attend le magasin.
+Testé de bout en bout (vraie base, Dovecot, faux SMTP, faux modèle) : `panel/bin/tests_boite_pilote.php`.
 
 **Réel** : le magasin et son adresse, les dossiers d'une boîte OVH. **Illustré** : expéditeurs, objets, propositions de l'IA.
 
