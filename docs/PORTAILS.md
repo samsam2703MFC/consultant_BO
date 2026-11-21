@@ -27,8 +27,10 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   est retirée le 21/11/2026. Depuis le même jour, le cockpit n'écrit plus aucune table du module : le fonds
   (mouvements, frais récurrents, redevances) et les types de campagne passent par son API (`marketingAppel`, jeton de
   service `X-Marketing-Service`, migration 053 du module pour `is_investment`), et les écritures de campagnes, sans
-  écran, sont retirées (410). Écart connu, restant : des **lectures** SQL directes de ces tables (grand livre du
-  fonds, calendrier et budget des campagnes) dans `shared/src/endpoints.php`.
+  écran, sont retirées (410). Les **lectures** suivent, par lots (décision du 21/11/2026) : le grand livre du fonds,
+  ses leviers, ses frais récurrents, les boutiques et les campagnes se lisent au module depuis le 21/11/2026
+  (`marketing/src/fonds.php`, GET /fonds). Restent en SQL direct : calendrier et budget des campagnes, mesure, note
+  de campagne, agences, annexes, objectifs produits, hub, visites (lots 2 à 5).
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
