@@ -219,3 +219,4 @@
 2026-11-21T06:10:59Z Frais : « Ajouter un frais » dans l'onglet Frais du dashboard, créé au panel pour le mois, jusqu'en décembre ou toute l'année (montant par mois ou total réparti), annulable
 2026-11-21T06:32:58Z Frais : le poste est le libellé saisi au panel (description), la catégorie dessous ; la TVA du formulaire s'applique ; « Annuler » retrouve les lignes créées au panel
 2026-11-21T06:38:58Z Réclamations fournisseur : photos à chaque réclamation (liste et fiche), part du produit dans le livré, onglet Tableau annuel réclamé / livré ; la photo est obligatoire pour déposer une réclamation
+2026-11-21T06:45:33Z Frais : plus de « indiqué le … » sous le poste dans le tableau des frais

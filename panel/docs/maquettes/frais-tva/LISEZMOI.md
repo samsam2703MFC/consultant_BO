@@ -53,7 +53,8 @@ des frais est réel (Halle, septembre 2026, 13 042,65 €), les lignes de frais 
   recette), comme le recalcul depuis les tickets. Si elle l'est sur le hors TVA, le « coût matière » d'aujourd'hui
   contient la TVA ; à vérifier sur un jour avec le compte consultant.
 - Qui remplit l'onglet Frais : le franchisé dans son dashboard, et le siège (qui ouvre tous les dashboards) ; le nom
-  de qui a indiqué s'affiche sous le poste.
+  de qui a indiqué s'affiche sous le poste (retiré de l'écran le 21/11/2026 : « take off indiqué le 21/11 dans le
+  tableau » ; l'API rend toujours `majLe` et `majPar`).
 - La vraie liste des frais : celle du panel (`/shops/{id}/owner/costs?period=AAAA-MM`), postes et types à relire.
 
 ## Fichiers
