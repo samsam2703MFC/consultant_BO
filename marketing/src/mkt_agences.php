@@ -9,71 +9,35 @@ declare(strict_types=1);
  * une adresse — ne pouvait en porter qu'une, et la note signait toujours la
  * même quelle que soit la campagne.
  *
- * Le référentiel vit dans `mar_agency`, la table du module marketing : c'est
- * elle que les canaux d'une campagne désignent déjà (`mar_campaign_channel
- * .agency_id`). En créer une seconde aurait donné deux listes d'agences, et un
- * canal pointant vers l'une pendant que la note signe l'autre.
- *
- * Les colonnes qui manquaient — adresse, site, logo, agence par défaut — sont
- * ajoutées à la table existante, jamais supposées : le module les ignore, et
- * il continue de fonctionner sans elles.
+ * Le référentiel est celui du module Marketing (`mar_agency`) : c'est lui que
+ * les canaux d'une campagne désignent déjà. Depuis le 21/11/2026 (lot 5b de la
+ * correction des lectures et écritures SQL directes), le cockpit le lit et
+ * l'écrit par l'API du module (marketingAppel, jeton de service) :
+ * GET …/agencies, POST …/agencies, PATCH et DELETE …/agencies/{id}
+ * (marketing#81). Il n'ajoute plus de colonnes à la table (la migration 045 du
+ * module les porte) et ne reprend plus l'agence de l'ancien réglage unique : la
+ * note retombe d'elle-même sur ce réglage quand le référentiel est vide.
  */
-
-/** Les colonnes réellement présentes sur `mar_agency`. */
-function agenceColonnes(): array
-{
-    static $cols = null;
-    if ($cols !== null) { return $cols; }
-    $cols = [];
-    try {
-        foreach (Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
-                            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mar_agency'") as $r) {
-            $v = is_array($r) ? (string) reset($r) : (string) $r;
-            if ($v !== '') { $cols[] = strtolower($v); }
-        }
-    } catch (Throwable $e) { /* introspection muette : on tentera l'ALTER */ }
-    return $cols;
-}
 
 /**
- * Ajoute ce qui manque à `mar_agency`, une fois par requête.
- *
- * Tolérant et idempotent : une colonne déjà là fait échouer l'ALTER, ce qui
- * n'est pas une erreur — deux requêtes concurrentes peuvent la créer en même
- * temps.
+ * Le référentiel au module, dans l'ordre de l'écran (l'agence par défaut d'abord, puis par nom, comme le rend le
+ * module) : [lignes du module, null], ou [null, raison]. Lu une fois par requête, sauf `$frais` (après une écriture).
  */
-function agenceTable(): void
+function agencesModule(bool $frais = false): array
 {
-    static $fait = false;
-    if ($fait) { return; }
-    $fait = true;
-    $cols = agenceColonnes();
-    foreach (['email' => 'VARCHAR(190) NULL',
-              'site' => 'VARCHAR(190) NULL',
-              'logo_uri' => 'MEDIUMTEXT NULL',
-              'is_default' => 'TINYINT(1) NOT NULL DEFAULT 0'] as $col => $type) {
-        if ($cols !== [] && in_array($col, $cols, true)) { continue; }
-        try { Db::exec("ALTER TABLE mar_agency ADD COLUMN `$col` $type"); }
-        catch (Throwable $e) { /* déjà ajoutée, ou table absente */ }
+    static $lu = null;
+    if ($lu !== null && !$frais) { return $lu; }
+    $r = marketingAppel('GET', '/agencies');
+    if ($r['erreur'] !== null || !is_array($r['corps']) || !array_is_list($r['corps'])) {
+        $lu = null;   // une relecture ratée ne laisse pas servir l'ancienne liste
+        return [null, $r['erreur'] ?? 'réponse du module illisible'];
     }
-
-    // Reprise du réglage unique : l'agence saisie avant ce référentiel entre
-    // dans la table plutôt que de disparaître de l'écran.
-    try {
-        $n = Db::row('SELECT COUNT(*) n FROM mar_agency');
-        if ((int) ($n['n'] ?? 0) === 0) {
-            $c = mktBriefConfig();
-            $ag = $c['agence'] ?? [];
-            if (trim((string) ($ag['nom'] ?? '')) !== '') {
-                Db::exec('INSERT INTO mar_agency (name, email, site, logo_uri, is_default)
-                          VALUES (?,?,?,?,1)',
-                    [mb_substr(trim((string) $ag['nom']), 0, 160),
-                     mktBriefAdresse($ag['email'] ?? ''),
-                     mb_substr(trim((string) ($ag['site'] ?? '')), 0, 190),
-                     (string) ($ag['logo'] ?? '')]);
-            }
-        }
-    } catch (Throwable $e) { /* table absente : l'écran le dira */ }
+    $lignes = array_values(array_filter($r['corps'], 'is_array'));
+    // Tri stable : l'agence par défaut d'abord, les autres dans l'ordre du module (par nom).
+    $rang = array_flip(array_keys($lignes));
+    $cles = array_keys($lignes);
+    usort($cles, static fn ($a, $b) => [empty($lignes[$a]['is_default']) ? 1 : 0, $rang[$a]] <=> [empty($lignes[$b]['is_default']) ? 1 : 0, $rang[$b]]);
+    return $lu = [array_map(static fn ($k) => $lignes[$k], $cles), null];
 }
 
 /** Une agence, telle que les écrans la lisent. */
@@ -86,50 +50,60 @@ function agenceLigne(array $a): array
         'site' => (string) ($a['site'] ?? ''),
         'logo' => (string) ($a['logo_uri'] ?? ''),
         'defaut' => (bool) ($a['is_default'] ?? false),
-        'campagnes' => (int) ($a['campagnes'] ?? 0),
+        'campagnes' => (int) ($a['channel_campaigns'] ?? $a['campagnes'] ?? 0),
     ];
 }
 
-/** @return list<array<string,mixed>> */
-function agenceListe(): array
+/** @return list<array<string,mixed>> Vide si le module ne répond pas (la note retombe alors sur le réglage). */
+function agenceListe(bool $frais = false): array
 {
-    agenceTable();
-    try {
-        return array_map('agenceLigne', Db::rows(
-            'SELECT a.*, (SELECT COUNT(DISTINCT cc.campaign_id) FROM mar_campaign_channel cc
-                            WHERE cc.agency_id = a.id) AS campagnes
-               FROM mar_agency a ORDER BY a.is_default DESC, a.name'));
-    } catch (PDOException $e) { return []; }
+    [$lignes] = agencesModule($frais);
+    return array_map('agenceLigne', $lignes ?? []);
 }
 
-/** L'agence qui signe : celle de la campagne, sinon celle par défaut. */
+/** L'agence qui signe : celle du canal le mieux doté de la campagne, sinon celle par défaut. */
 function agenceDeCampagne(int $campagne): ?array
 {
-    agenceTable();
-    try {
-        $a = Db::row('SELECT a.*, 0 AS campagnes
-                        FROM mar_campaign_channel cc
-                        JOIN mar_agency a ON a.id = cc.agency_id
-                       WHERE cc.campaign_id = ?
-                       ORDER BY cc.budget_amount DESC
-                       LIMIT 1', [$campagne]);
-        if ($a !== null) { return agenceLigne($a); }
-        $d = Db::row('SELECT a.*, 0 AS campagnes FROM mar_agency a WHERE a.is_default = 1 LIMIT 1');
-        if ($d !== null) { return agenceLigne($d); }
-    } catch (PDOException $e) { /* pas de référentiel : le réglage fera foi */ }
+    [$lignes] = agencesModule();
+    if ($lignes === null) { return null; }   // module muet : le réglage fera foi
+    $parId = [];
+    foreach ($lignes as $a) { $parId[(int) $a['id']] = $a; }
+
+    $f = function_exists('campagneFiche') ? campagneFiche($campagne) : ['fiche' => null];
+    $choisie = null; $budget = null;
+    foreach ((array) ($f['fiche']['channels'] ?? []) as $c) {
+        $id = is_array($c) && isset($c['agency_id']) ? (int) $c['agency_id'] : 0;
+        if ($id <= 0 || !isset($parId[$id])) { continue; }
+        $b = (float) ($c['budget_amount'] ?? 0);
+        if ($budget === null || $b > $budget) { $choisie = $id; $budget = $b; }
+    }
+    if ($choisie !== null) { return agenceLigne(['channel_campaigns' => 0] + $parId[$choisie]); }
+    foreach ($lignes as $a) {
+        if (!empty($a['is_default'])) { return agenceLigne(['channel_campaigns' => 0] + $a); }
+    }
     return null;
 }
 
 /** GET /marketing/agences. */
 function ep_mkt_agences(): array
 {
-    return ['agences' => agenceListe()];
+    [$lignes, $err] = agencesModule();
+    if ($lignes === null) { http_response_code(502); return ['error' => 'le module Marketing ne rend pas les agences : ' . $err]; }
+    return ['agences' => array_map('agenceLigne', $lignes)];
+}
+
+/** Ce que le module a répondu à une écriture, en réponse de l'écran (404, 409 et 422 gardent leur code). */
+function agenceRefus(array $r): array
+{
+    $code = in_array($r['code'], [404, 409, 422], true) ? $r['code'] : 502;
+    http_response_code($code);
+    if ($code === 404) { return ['error' => 'agence inconnue']; }
+    return ['error' => $code === 502 ? 'le référentiel des agences est indisponible : ' . $r['erreur'] : (string) $r['erreur']];
 }
 
 /** POST /marketing/agence — ou PATCH /marketing/agence/{id}. */
 function wr_mkt_agence(?int $id): array
 {
-    agenceTable();
     $b = body();
 
     $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 160);
@@ -143,57 +117,31 @@ function wr_mkt_agence(?int $id): array
     if ($logo !== '' && !preg_match('#^data:image/(png|jpeg|gif|webp|svg\+xml);base64,#', $logo)) { $logo = ''; }
     if (strlen($logo) > 700000) { $logo = ''; }
 
-    try {
-        if ($id === null) {
-            Db::exec('INSERT INTO mar_agency (name, email, site, logo_uri, is_default) VALUES (?,?,?,?,?)',
-                [$nom, mktBriefAdresse($b['email'] ?? ''),
-                 mb_substr(trim((string) ($b['site'] ?? '')), 0, 190), $logo,
-                 empty($b['defaut']) ? 0 : 1]);
-            $id = (int) Db::pdo()->lastInsertId();
-            journalAdd('CEO', 'Paramètre', $nom, 'Agence ajoutée');
-        } else {
-            $dej = Db::row('SELECT * FROM mar_agency WHERE id = ?', [$id]);
-            if ($dej === null) { http_response_code(404); return ['error' => 'agence inconnue']; }
-            Db::exec('UPDATE mar_agency SET name = ?, email = ?, site = ?, logo_uri = ?, is_default = ? WHERE id = ?',
-                [$nom !== '' ? $nom : (string) $dej['name'],
-                 array_key_exists('email', $b) ? mktBriefAdresse($b['email']) : mktBriefAdresse($dej['email'] ?? ''),
-                 array_key_exists('site', $b) ? mb_substr(trim((string) $b['site']), 0, 190) : (string) ($dej['site'] ?? ''),
-                 array_key_exists('logo', $b) ? $logo : (string) ($dej['logo_uri'] ?? ''),
-                 array_key_exists('defaut', $b) ? (empty($b['defaut']) ? 0 : 1) : (int) ($dej['is_default'] ?? 0),
-                 $id]);
-        }
-        // Une seule agence par défaut : c'est elle qui signe quand la campagne
-        // n'en désigne aucune, et deux « par défaut » ne veut rien dire.
-        if (!empty($b['defaut'])) {
-            Db::exec('UPDATE mar_agency SET is_default = 0 WHERE id <> ?', [$id]);
-        }
-    } catch (PDOException $e) {
-        http_response_code(503);
-        return ['error' => 'le référentiel des agences est indisponible : ' . $e->getMessage()];
-    }
+    // Ce que l'écran envoie, et cela seul : une modification ne touche que les champs reçus (un nom vide garde
+    // l'ancien), une adresse qui n'en est pas une est vidée, comme avant.
+    $champs = [];
+    if ($nom !== '') { $champs['name'] = $nom; }
+    if ($id === null || array_key_exists('email', $b)) { $champs['email'] = mktBriefAdresse($b['email'] ?? ''); }
+    if ($id === null || array_key_exists('site', $b)) { $champs['site'] = mb_substr(trim((string) ($b['site'] ?? '')), 0, 190); }
+    if ($id === null || array_key_exists('logo', $b)) { $champs['logoUri'] = $logo; }
+    if ($id === null || array_key_exists('defaut', $b)) { $champs['isDefault'] = !empty($b['defaut']); }
 
-    return ['ok' => true, 'agences' => agenceListe()];
+    $r = $id === null ? marketingAppel('POST', '/agencies', $champs) : marketingAppel('PATCH', '/agencies/' . $id, $champs);
+    if ($r['erreur'] !== null) { return agenceRefus($r); }
+    if ($id === null) { journalAdd('CEO', 'Paramètre', $nom, 'Agence ajoutée'); }
+
+    return ['ok' => true, 'agences' => agenceListe(true)];
 }
 
 /** DELETE /marketing/agence/{id}. */
 function wr_mkt_agence_suppr(int $id): array
 {
-    agenceTable();
-    try {
-        $dej = Db::row('SELECT name FROM mar_agency WHERE id = ?', [$id]);
-        if ($dej === null) { http_response_code(404); return ['error' => 'agence inconnue']; }
-        // Une agence qui porte des canaux ne s'efface pas : les campagnes
-        // passées perdraient qui les a faites.
-        $n = Db::row('SELECT COUNT(*) n FROM mar_campaign_channel WHERE agency_id = ?', [$id]);
-        if ((int) ($n['n'] ?? 0) > 0) {
-            http_response_code(409);
-            return ['error' => (int) $n['n'] . ' canal(aux) de campagne la désignent — elle ne peut pas être retirée'];
-        }
-        Db::exec('DELETE FROM mar_agency WHERE id = ?', [$id]);
-        journalAdd('CEO', 'Paramètre', (string) $dej['name'], 'Agence retirée');
-    } catch (PDOException $e) {
-        http_response_code(503);
-        return ['error' => 'le référentiel des agences est indisponible'];
-    }
-    return ['ok' => true, 'agences' => agenceListe()];
+    $nom = null;
+    foreach (agenceListe() as $a) { if ($a['id'] === $id) { $nom = $a['nom']; } }
+    // Une agence qui porte des canaux (ou des interventions) ne s'efface pas : le module répond 409 et dit pourquoi
+    // — les campagnes passées perdraient qui les a faites.
+    $r = marketingAppel('DELETE', '/agencies/' . $id);
+    if ($r['erreur'] !== null) { return agenceRefus($r); }
+    journalAdd('CEO', 'Paramètre', (string) ($nom ?? ('agence ' . $id)), 'Agence retirée');
+    return ['ok' => true, 'agences' => agenceListe(true)];
 }
