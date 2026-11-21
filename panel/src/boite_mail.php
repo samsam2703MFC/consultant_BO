@@ -33,6 +33,7 @@ declare(strict_types=1);
  *   POST /dashboard/boite/geste    {shop, dossier, uids | tout: {q, filtre}, action: lu|nonlu|suivi|nonsuivi|archiver|corbeille|
  *                                   effacer|deplacer, vers | nouveau}   (les archives, la corbeille créées si la boîte n'en a pas)
  *   POST /dashboard/boite/ranger   {shop, dossier, uids}       l'IA propose un dossier pour chaque e-mail (rien ne bouge)
+ *   GET  /dashboard/boite/lectures, POST …/lire, GET|POST …/pilote    les modes IA (src/boite_ia.php : briefing, pilote, radar)
  *   POST /dashboard/boite/envoyer  {shop, a, cc, objet, texte, reponse?, transfert?, offre?, pieces?}
  *   GET  /dashboard/boite/modeles?shop=        POST {shop, action: creer|modifier|supprimer, id, nom, objet, corps}
  *   GET  /dashboard/boite/automatiques?shop=   POST {shop, regle, actif, objet, corps, jours}
@@ -43,7 +44,8 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/boite_protocole.php';
-require_once __DIR__ . '/automatisations.php';   // Paramètres › Mails et automatisations (16/11/2026) : ses routes sont celles de la boîte
+require_once __DIR__ . '/automatisations.php';
+require_once __DIR__ . '/boite_ia.php';         // les modes IA : briefing, pilote automatique, radar (21/11/2026)   // Paramètres › Mails et automatisations (16/11/2026) : ses routes sont celles de la boîte
 
 const BM_PREFIXE = '/dashboard/boite';
 const BM_IMAP_OVH = 'ssl0.ovh.net:993:ssl';
@@ -55,7 +57,7 @@ const BM_TAILLE_MAX = 25000000;  // un e-mail plus lourd ne s'ouvre pas en entie
 const BM_ENVOI_MAX = 15000000;   // pièces jointes d'un envoi
 const BM_RANGER_MAX = 50;          // e-mails proposés à l'IA d'un coup (une page de la liste)
 /** Les dossiers que le dashboard crée quand la boîte ne les a pas : [nom, attribut SPECIAL-USE]. */
-const BM_ROLES_CREES = ['archive' => ['Archive', '\\Archive'], 'trash' => ['Trash', '\\Trash'], 'sent' => ['Sent', '\\Sent']];
+const BM_ROLES_CREES = ['archive' => ['Archive', '\\Archive'], 'trash' => ['Trash', '\\Trash'], 'sent' => ['Sent', '\\Sent'], 'drafts' => ['Drafts', '\\Drafts']];
 
 /** Les modèles du réseau, proposés à chaque magasin (lecture seule ; « Dupliquer » en fait un modèle du magasin). */
 const BM_MODELES_BASE = [
@@ -102,6 +104,7 @@ function bmTables(): void
         . ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     Db::exec('CREATE TABLE IF NOT EXISTS panel_boite_etat (shop_id VARCHAR(16) NOT NULL PRIMARY KEY, uidvalidity BIGINT UNSIGNED NOT NULL,'
         . ' dernier_uid BIGINT UNSIGNED NOT NULL, maj_le DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    bmIaTables();
 }
 
 /* --- le compte et le verrou ------------------------------------------------------------------------------------- */
@@ -197,6 +200,9 @@ function bmRoute(string $method, string $path): ?array
         if ($method === 'GET' && $sous === '/piece') { bmPiece($c); }
         if ($method === 'POST' && $sous === '/geste') { return bmGeste($c, $b); }
         if ($method === 'POST' && $sous === '/ranger') { return bmRanger($c, $b); }
+        if ($method === 'GET' && $sous === '/lectures') { return bmLecturesRoute($shop, $c); }
+        if ($method === 'POST' && $sous === '/lire') { return bmLireRoute($shop, $c, $b); }
+        if ($sous === '/pilote') { return $method === 'POST' ? bmPiloteEcrire($shop, $c, $b) : bmPiloteLire($shop); }
         if ($method === 'POST' && $sous === '/envoyer') { return bmEnvoyerRoute($shop, $c, $b); }
         if ($sous === '/modeles') { return $method === 'POST' ? bmModelesEcrire($shop, $b) : bmModeles($shop); }
         if ($sous === '/automatiques') { return $method === 'POST' ? bmAutoEcrire($shop, $b) : bmAuto($shop); }
@@ -585,9 +591,9 @@ const BM_RANGER_CONSIGNE = "Tu ranges la boîte e-mail d'un magasin de L'Atelier
  * L'aperçu d'e-mails du dossier ouvert, pour l'IA : expéditeur, objet, date, drapeaux, envoi de masse (List-Unsubscribe),
  * et le début du texte (les e-mails de moins de 120 Ko seulement, les citations retirées).
  */
-function bmApercus(BmImap $s, array $uids): array
+function bmApercus(BmImap $s, array $uids, int $longueur = 300): array
 {
-    $lus = $s->lire($uids, 'UID FLAGS RFC822.SIZE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE LIST-UNSUBSCRIBE LIST-ID)]');
+    $lus = $s->lire($uids, 'UID FLAGS INTERNALDATE RFC822.SIZE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (' . BM_ENTETES_ROBOT . ')]');
     $legers = array_values(array_filter($uids, static fn ($u) => isset($lus[$u]) && (int) ($lus[$u]['RFC822.SIZE'] ?? 0) <= 120000));
     $corps = $legers ? $s->lire($legers, 'UID BODY.PEEK[]') : [];
     $out = [];
@@ -600,12 +606,13 @@ function bmApercus(BmImap $s, array $uids): array
         if (isset($corps[$u]['BODY[]'])) {
             try { $t = bmMimeContenu(bmMimeLire((string) $corps[$u]['BODY[]']))['texte']; } catch (Throwable $x) { $t = ''; }
             $t = implode(' ', array_filter(array_map('trim', explode("\n", (string) $t)), static fn ($l) => $l !== '' && !str_starts_with($l, '>')));
-            $debut = mb_substr(trim((string) preg_replace('/\s+/u', ' ', $t)), 0, 300);
+            $debut = mb_substr(trim((string) preg_replace('/\s+/u', ' ', $t)), 0, $longueur);
         }
-        $out[$u] = ['uid' => $u, 'de' => bmAdresses($e['from'] ?? '')[0] ?? null, 'objet' => bmEntete($e['subject'] ?? ''),
-            'date' => bmDate($e['date'] ?? null, null), 'pj' => bmStructurePj($m['BODYSTRUCTURE'] ?? null),
-            'liste' => isset($e['list-unsubscribe']) || isset($e['list-id']), 'repondu' => in_array('\\answered', $fl, true),
-            'suivi' => in_array('\\flagged', $fl, true), 'debut' => $debut];
+        $de = bmAdresses($e['from'] ?? '')[0] ?? null;
+        $out[$u] = ['uid' => $u, 'de' => $de, 'repondreA' => bmAdresses($e['reply-to'] ?? '')[0] ?? $de, 'objet' => bmEntete($e['subject'] ?? ''),
+            'date' => bmDate($e['date'] ?? null, isset($m['INTERNALDATE']) ? (string) $m['INTERNALDATE'] : null), 'pj' => bmStructurePj($m['BODYSTRUCTURE'] ?? null),
+            'liste' => isset($e['list-unsubscribe']) || isset($e['list-id']), 'lu' => in_array('\\seen', $fl, true), 'repondu' => in_array('\\answered', $fl, true),
+            'suivi' => in_array('\\flagged', $fl, true), 'debut' => $debut, 'entetes' => $e];
     }
     return $out;
 }
@@ -803,6 +810,14 @@ function bmCron(): array
         try { $rapport[$shop] = bmTourner($shop, $c); }
         catch (Throwable $e) { $rapport[$shop] = 'erreur : ' . $e->getMessage(); }
     }
+    // Le pilote automatique (src/boite_ia.php) : chaque magasin qui l'a allumé.
+    foreach (Db::rows('SELECT shop_id FROM panel_boite_pilote_etat WHERE niveau > 0') as $r) {
+        $shop = (string) $r['shop_id'];
+        $c = bmCompte($shop);
+        if ($c === null) { $rapport['pilote:' . $shop] = 'boîte non reliée'; continue; }
+        try { $rapport['pilote:' . $shop] = bmPiloteTourner($shop, $c); }
+        catch (Throwable $e) { $rapport['pilote:' . $shop] = 'erreur : ' . $e->getMessage(); }
+    }
     // Les automatisations du magasin (Paramètres › Mails et automatisations) : le rappel la veille du retrait.
     try { $rapport['automatisations'] = amCron(); } catch (Throwable $e) { $rapport['automatisations'] = 'erreur : ' . $e->getMessage(); }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['boiteHorloge', json_encode(['le' => date('c'), 'rapport' => $rapport], JSON_UNESCAPED_UNICODE)]);
@@ -874,6 +889,22 @@ function bmOffres(int $shop): ?array
     return is_array($r['offres'] ?? null) ? $r['offres'] : null;
 }
 
+/** Les en-têtes qui disent qu'un e-mail vient d'un robot (bmRobot). */
+const BM_ENTETES_ROBOT = 'FROM REPLY-TO SUBJECT DATE MESSAGE-ID REFERENCES AUTO-SUBMITTED PRECEDENCE LIST-ID LIST-UNSUBSCRIBE X-AUTO-RESPONSE-SUPPRESS RETURN-PATH X-LOOP';
+
+/**
+ * Un envoi automatique, une liste, un « ne pas répondre », la boîte elle-même : à qui on ne répond jamais tout seul
+ * (l'accusé de réception, le pilote automatique). $e : les en-têtes (bmMimeCouper) ; $de : à qui répondre.
+ */
+function bmRobot(array $e, ?array $de, array $c): bool
+{
+    return $de === null || $de['adresse'] === $c['adresse']
+        || (bool) preg_match('/^(no-?reply|ne-?pas-?repondre|mailer-daemon|postmaster|bounce|notifications?)\b/i', $de['adresse'])
+        || (isset($e['auto-submitted']) && strtolower($e['auto-submitted']) !== 'no')
+        || (bool) preg_match('/bulk|list|junk/i', $e['precedence'] ?? '') || isset($e['list-id']) || isset($e['list-unsubscribe'])
+        || isset($e['x-auto-response-suppress']) || trim($e['return-path'] ?? 'x') === '<>' || isset($e['x-loop']);
+}
+
 /**
  * L'accusé de réception : les e-mails arrivés depuis le dernier passage (UID au-delà du dernier vu), un accusé par
  * expéditeur sur la période ; jamais aux envois automatiques, listes, « ne pas répondre », ni à la boîte elle-même.
@@ -895,16 +926,11 @@ function bmTournerAccuse(string $shop, array $c, array $regle, array $vars): arr
     $nouveaux = array_slice(array_values(array_filter($s->chercher(['UID ' . ($dernier + 1) . ':*']), static fn ($u) => $u > $dernier)), 0, 30);
     $out = [];
     if ($nouveaux) {
-        $l = $s->lire($nouveaux, 'UID BODY.PEEK[HEADER.FIELDS (FROM REPLY-TO SUBJECT MESSAGE-ID AUTO-SUBMITTED PRECEDENCE LIST-ID LIST-UNSUBSCRIBE X-AUTO-RESPONSE-SUPPRESS RETURN-PATH X-LOOP)]');
+        $l = $s->lire($nouveaux, 'UID BODY.PEEK[HEADER.FIELDS (' . BM_ENTETES_ROBOT . ')]');
         foreach ($nouveaux as $uid) {
             [$e] = bmMimeCouper((string) ($l[$uid]['BODY[HEADER]'] ?? ''));
             $de = bmAdresses($e['reply-to'] ?? '')[0] ?? (bmAdresses($e['from'] ?? '')[0] ?? null);
-            $robot = $de === null || $de['adresse'] === $c['adresse']
-                || preg_match('/^(no-?reply|ne-?pas-?repondre|mailer-daemon|postmaster|bounce|notifications?)\b/i', $de['adresse'])
-                || (isset($e['auto-submitted']) && strtolower($e['auto-submitted']) !== 'no')
-                || preg_match('/bulk|list|junk/i', $e['precedence'] ?? '') || isset($e['list-id']) || isset($e['list-unsubscribe'])
-                || isset($e['x-auto-response-suppress']) || trim($e['return-path'] ?? 'x') === '<>' || isset($e['x-loop']);
-            if (!$robot) {
+            if (!bmRobot($e, $de, $c)) {
                 $recent = Db::row('SELECT id FROM panel_boite_journal WHERE shop_id = ? AND regle = ? AND destinataire = ? AND envoye_le > ? AND erreur IS NULL',
                     [$shop, 'accuse', $de['adresse'], date('Y-m-d H:i:s', strtotime('-' . $regle['jours'] . ' days'))]);
                 if ($recent === null) {

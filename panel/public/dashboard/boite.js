@@ -6,7 +6,10 @@
  * de TF Buddy en PDF ; archiver, corbeille, suivre, non lu. La sélection (21/11/2026) : une case par e-mail, « tout
  * sélectionner » (la page, puis tout le dossier), archiver, corbeille, effacer pour de bon depuis la corbeille, déplacer
  * vers un dossier — des boutons à micro-icône, pas de liste déroulante — et « Ranger avec l'IA » : l'IA propose un dossier
- * par e-mail, le magasin corrige, puis range. Les archives et la corbeille sont créées si la boîte n'en a pas. Pour vendre : « Créer une offre » transforme l'e-mail en offre
+ * par e-mail, le magasin corrige, puis range. Les archives et la corbeille sont créées si la boîte n'en a pas.
+ * Les modes IA (21/11/2026, « les 3 options futuristes en toggle, avec un bouton type futuriste ») : Classique · Briefing
+ * (les non-lus en cartes, l'action prête, à voix haute) · Pilote (l'IA répond seule aux e-mails simples, dans des
+ * garde-fous) · Radar (les demandes des e-mails sur les quatorze prochains jours). Serveur : src/boite_ia.php. Pour vendre : « Créer une offre » transforme l'e-mail en offre
  * (Vendre › Offres, le client retrouvé dans TF Buddy, le jour, le retrait ou la livraison et les produits repérés dans
  * le texte, à vérifier) ; une offre citée s'ouvre ; une fois l'offre créée, la réponse part avec son PDF. Les messages
  * automatiques (accusé de réception, relance d'une offre, rappel la veille) se règlent ici.
@@ -36,7 +39,16 @@
     ia: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z',
     effacer: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10.5l4 5M14 10.5l-4 5', remettre: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
     laisser: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', fermer: 'M6 6l12 12M18 6L6 18',
+    classique: 'M4 6h16M4 12h16M4 18h10', briefing: 'M7 4h11a2 2 0 0 1 2 2v12M4 8h11a2 2 0 0 1 2 2v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z',
+    pilote: 'M12 2l2.4 6.9L21 9.3l-5.4 4.2L17.5 21 12 16.8 6.5 21l1.9-7.5L3 9.3l6.6-.4z', radar: 'M12 12l7-7M19.1 4.9A10 10 0 1 0 22 12M16 8a6 6 0 1 0 2 4.5',
+    micro: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', valider: 'M5 12l5 5L20 7',
+    plusTard: 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5', ecoute: 'M3 14v-2a9 9 0 0 1 18 0v2M3 14h3v6H4a1 1 0 0 1-1-1zM21 14h-3v6h2a1 1 0 0 0 1-1z',
   };
+  const MODES = [['classique', 'Classique'], ['briefing', 'Briefing'], ['pilote', 'Pilote'], ['radar', 'Radar']];
+  const CAT = { commande: 'Commande', offre: 'Demande d’offre', question: 'Question', reclamation: 'Réclamation', fournisseur: 'Fournisseur', facture: 'Facture',
+    reseau: 'Réseau', administratif: 'Administratif', candidature: 'Candidature', newsletter: 'Newsletter', notification: 'Notification', personnel: 'Personnel', autre: 'Autre' };
+  const JOURS = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
+  const isoJour = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const ICO_ROLE = { inbox: 'inbox', drafts: 'brouillons', sent: 'envoyes', archive: 'archiver', junk: 'indesirables', trash: 'corbeille' };
   const nomDossier = d => d ? (d.role ? ROLES[d.role] : String(d.nom || d.brut).replace(/^INBOX[./]/i, '')) : '';
   const icoDossier = d => ico(I[(d && ICO_ROLE[d.role]) || 'dossier']);
@@ -66,6 +78,9 @@
     coches: new Set(), tout: false, derniere: null,   // la sélection : les UID cochés ; tout : tout le dossier (recherche et filtre compris)
     rang: null,                                       // le rangement proposé par l'IA : {lecture, err, props, choix: {uid: cible}, garde: Set, palette}
     nouveauNom: null,                                 // le nom tapé pour « Nouveau dossier » (null : champ fermé)
+    mode: 'classique',                                // les modes IA : classique, briefing, pilote, radar (gardé par appareil)
+    br: null, pi: null, ra: null,                     // briefing : {elements, lectureEnCours, fait, plusTard, actuel, err} ; pilote : GET /pilote ; radar : {elements, aLire, lecture}
+    voix: { on: false, parle: false, ecoute: false, fil: [] },
     porte: { adr: '', mdp: '' },   // ce qui est tapé pour relier ou ouvrir la boîte (un redessin ne le perd pas ; vidé à l'envoi)
   };
 
@@ -91,7 +106,10 @@
       if (d.ouverte) {
         if (!d.dossiers.some(x => x.brut === st.dossier)) { st.dossier = 'INBOX'; }
         if (!st.liste) { chargerListe(); }
-        if (st.intention) { const i = st.intention; st.intention = null; suivreIntention(i); }
+        if (st.intention) { const i = st.intention; st.intention = null; st.mode = 'classique'; suivreIntention(i); }
+        if (st.mode === 'briefing' && !st.br) { chargerBriefing(); }
+        if (st.mode === 'pilote' && !st.pi) { chargerPilote(); }
+        if (st.mode === 'radar' && !st.ra) { chargerRadar(); Promise.resolve(chargerProduits()).then(rendre); }
       }
     }).catch(e => { st.err = e.message; }).finally(rendre);
   }
@@ -321,6 +339,141 @@
   function chargerModeles() { return lire('/dashboard/boite/modeles').then(d => { st.modeles = d; }).catch(e => { st.modeles = { reseau: [], magasin: [], err: e.message }; }).finally(rendre); }
   function chargerAuto() { return lire('/dashboard/boite/automatiques').then(d => { st.auto = d; }).catch(e => { st.auto = { err: e.message }; }).finally(rendre); }
 
+  /* --- les modes IA (21/11/2026) : la lecture commune, le briefing, le pilote, le radar ---------------------------- */
+  const cleMode = () => 'bx-mode-' + st.shop;
+  function changerMode(m) {
+    if (!MODES.some(x => x[0] === m)) { return; }
+    st.mode = m; st.flash = null; arreterVoix();
+    try { localStorage.setItem(cleMode(), m); } catch (e) { /* navigation privée */ }
+    rendre();
+    if (m === 'briefing' && !st.br) { chargerBriefing(); }
+    if (m === 'pilote') { chargerPilote(); }
+    if (m === 'radar' && !st.ra) { chargerRadar(); }
+    if (m === 'radar') { Promise.resolve(chargerProduits()).then(rendre); }
+  }
+  /** Lire au modèle, par lots, ce qui ne l'est pas encore ; X : l'état du mode (elements, aLire, lecture : {fait, total}). */
+  function lireLots(X) {
+    const reste = X.aLire.slice(), total = reste.length;
+    if (!total) { return Promise.resolve(); }
+    X.lecture = { fait: 0, total }; rendre();
+    const lot = () => {
+      if (!reste.length || st.mode === 'classique') { X.lecture = null; rendre(); return Promise.resolve(); }
+      const uids = reste.splice(0, X.lot || 8);
+      return ecrire('/dashboard/boite/lire', { uids }).then(r => {
+        Object.entries(r.lectures || {}).forEach(([u, l]) => { const e = X.elements.find(x => x.uid === +u); if (e) { e.lecture = l; } });
+        X.aLire = X.aLire.filter(u => !uids.includes(u)); X.lecture.fait += uids.length; rendre();
+        return lot();
+      });
+    };
+    return lot().catch(e => { X.err = e.message; X.lecture = null; rendre(); });
+  }
+
+  /* Le briefing : les non-lus, une carte chacun, l'action prête. */
+  function chargerBriefing() {
+    st.br = { elements: null, aLire: [], fait: {}, plusTard: new Set(), actuel: null, err: null };
+    rendre();
+    return lire('/dashboard/boite/lectures', { quoi: 'nonlus' }).then(d => {
+      Object.assign(st.br, { elements: d.elements, aLire: d.aLire, ia: d.ia, lot: d.lot });
+      rendre();
+      if (d.ia && d.aLire.length) { return lireLots(st.br); }
+    }).catch(e => { st.br.err = e.message; rendre(); });
+  }
+  const ORDRE_URG = { haute: 0, normale: 1, basse: 2 };
+  /** La file : les e-mails lus par l'IA, pas encore traités ; l'urgent d'abord, « plus tard » à la fin. */
+  function fileBriefing() {
+    const B = st.br; if (!B || !B.elements) { return []; }
+    return B.elements.filter(e => e.lecture && !B.fait[e.uid]).sort((a, b) => (B.plusTard.has(a.uid) - B.plusTard.has(b.uid))
+      || (ORDRE_URG[a.lecture.urgence] - ORDRE_URG[b.lecture.urgence]) || String(b.date).localeCompare(String(a.date)));
+  }
+  function carteActuelle() { const F = fileBriefing(), B = st.br; return F.find(e => e.uid === B.actuel) || F[0] || null; }
+  /** Ce que « Valider » fait pour une lecture, en mots. */
+  function libelleAction(e) {
+    const l = e.lecture;
+    if (l.action === 'repondre' || (l.action === 'offre' && l.reponse)) { return 'Envoyer la réponse'; }
+    if (l.action === 'offre') { return 'Créer l’offre'; }
+    if (l.action === 'ranger' && l.dossier) { return 'Ranger dans « ' + l.dossier + ' »'; }
+    if (l.action === 'archiver') { return 'Archiver'; }
+    return 'Marquer lu';
+  }
+  function validerCarte() {
+    const e = carteActuelle(); if (!e || st.occupe) { return; }
+    const l = e.lecture, ta = st.el.querySelector('#bx-br-rep'), texte = ta ? ta.value : l.reponse;
+    let fait;
+    if (l.action === 'repondre' || (l.action === 'offre' && l.reponse)) {
+      if (/\[à compléter/i.test(texte)) { return flash(false, 'La réponse a encore des « [à compléter …] » : complétez-les, puis validez.'); }
+      const qui = e.repondreA || e.de;
+      fait = ecrire('/dashboard/boite/envoyer', { a: adr(qui), objet: 'Re: ' + sansPrefixe(e.objet), texte, reponse: { dossier: 'INBOX', uid: e.uid } }).then(() => 'Réponse envoyée à ' + nomDe(qui) + '.');
+    } else if (l.action === 'offre') {
+      return lire('/dashboard/boite/message', { dossier: 'INBOX', uid: e.uid, garder: 1 }).then(m => { st.msg = m; st.br.fait[e.uid] = 'offre'; creerOffre(); }).catch(x => flash(false, x.message));
+    } else if (l.action === 'ranger' && l.dossier) {
+      const d = ((st.etat && st.etat.dossiers) || []).find(x => !x.role && norm(nomDossier(x)) === norm(l.dossier));
+      fait = ecrire('/dashboard/boite/geste', Object.assign({ dossier: 'INBOX', uids: [e.uid], action: 'deplacer' }, d ? { vers: d.brut } : { nouveau: l.dossier })).then(() => 'Rangé dans « ' + l.dossier + ' ».');
+    } else {
+      fait = ecrire('/dashboard/boite/geste', { dossier: 'INBOX', uids: [e.uid], action: l.action === 'archiver' ? 'archiver' : 'lu' }).then(() => l.action === 'archiver' ? 'Archivé.' : 'Marqué lu.');
+    }
+    st.occupe = true; rendre();
+    return fait.then(t => { st.br.fait[e.uid] = l.action; st.br.actuel = null; st.flash = { ok: true, texte: t }; chargerEtat(); if (st.voix.on) { parlerCarte(); } })
+      .catch(x => flash(false, x.message)).finally(() => { st.occupe = false; rendre(); });
+  }
+  function plusTardCarte() { const e = carteActuelle(); if (!e) { return; } st.br.plusTard.add(e.uid); const F = fileBriefing(); st.br.actuel = (F.find(x => !st.br.plusTard.has(x.uid)) || F[0] || {}).uid || null; rendre(); if (st.voix.on) { parlerCarte(); } }
+  function ouvrirDansLaBoite(uid) { arreterVoix(); st.mode = 'classique'; try { localStorage.setItem(cleMode(), 'classique'); } catch (x) { /* rien */ } st.dossier = 'INBOX'; st.liste = null; viderSelection(); rendre(); chargerListe(); ouvrirMessage(uid); }
+
+  /* La voix (« mains dans la farine ») : le navigateur lit la carte, puis écoute « oui », « plus tard », « ouvre ». */
+  const Reco = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voixPossible = () => 'speechSynthesis' in window;
+  let reco = null;
+  function arreterVoix() { st.voix.on = false; st.voix.parle = false; st.voix.ecoute = false; try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* rien */ } if (reco) { try { reco.abort(); } catch (e) { /* rien */ } reco = null; } }
+  function direVoix(qui, texte) { st.voix.fil.push({ qui, texte, le: new Date() }); st.voix.fil = st.voix.fil.slice(-4); }
+  function parlerCarte() {
+    if (!voixPossible()) { return; }
+    const e = carteActuelle(), F = fileBriefing();
+    const t = !e ? 'C’est fini pour ce matin : tous les e-mails sont traités.' : `E-mail ${F.indexOf(e) + 1} sur ${F.length}. ${nomDe(e.de)}. ${e.lecture.resume} Je propose : ${libelleAction(e).replace(/[«»]/g, '')}. On valide ?`;
+    direVoix('ia', t); st.voix.parle = true; rendre();
+    const u = new SpeechSynthesisUtterance(t); u.lang = 'fr-BE'; u.rate = 1.05;
+    u.onend = () => { st.voix.parle = false; rendre(); if (e && st.voix.on) { ecouter(); } };
+    window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+  }
+  function ecouter() {
+    if (!Reco) { return; }
+    reco = new Reco(); reco.lang = 'fr-BE'; reco.interimResults = false; reco.maxAlternatives = 1;
+    st.voix.ecoute = true; rendre();
+    reco.onresult = ev => {
+      const dit = String(ev.results[0][0].transcript || ''), n = norm(dit);
+      direVoix('moi', dit); st.voix.ecoute = false;
+      if (/\b(oui|valide|envoie|ok|d'accord|vas-y)\b/.test(n)) { validerCarte(); }
+      else if (/\b(plus tard|suivant|passe|non)\b/.test(n)) { plusTardCarte(); }
+      else if (/\b(ouvre|montre|lis)\b/.test(n)) { const e = carteActuelle(); if (e) { ouvrirDansLaBoite(e.uid); } }
+      else if (/\b(stop|arrete|fini)\b/.test(n)) { arreterVoix(); rendre(); }
+      else { direVoix('ia', 'Je n’ai pas compris : dites « oui », « plus tard », « ouvre » ou « stop ».'); rendre(); setTimeout(() => { if (st.voix.on) { ecouter(); } }, 400); }
+    };
+    reco.onerror = () => { st.voix.ecoute = false; rendre(); };
+    reco.onend = () => { st.voix.ecoute = false; rendre(); };
+    try { reco.start(); } catch (e) { st.voix.ecoute = false; }
+  }
+
+  /* Le pilote automatique. */
+  function chargerPilote() { return lire('/dashboard/boite/pilote').then(d => { st.pi = d; }).catch(e => { st.pi = { err: e.message }; }).finally(rendre); }
+  function ecrirePilote(corps, ok) {
+    st.occupe = true; rendre();
+    return ecrire('/dashboard/boite/pilote', corps).then(d => { st.pi = d; if (ok) { st.flash = { ok: true, texte: ok }; } }).catch(e => flash(false, e.message)).finally(() => { st.occupe = false; rendre(); });
+  }
+
+  /* Le radar : les e-mails des trois dernières semaines. */
+  function chargerRadar() {
+    st.ra = { elements: null, aLire: [], err: null };
+    rendre();
+    return lire('/dashboard/boite/lectures', { quoi: 'recents' }).then(d => { Object.assign(st.ra, { elements: d.elements, aLire: d.aLire, ia: d.ia, lot: d.lot }); })
+      .catch(e => { st.ra.err = e.message; }).finally(rendre);
+  }
+  /** Le montant d'une demande, estimé aux prix du catalogue du magasin (null : rien de reconnu). */
+  function estimer(l) {
+    if (!st.produits || !(l.produits || []).length) { return null; }
+    const L = lignesDans(l.produits.filter(p => p.quantite > 0).map(p => p.quantite + ' ' + p.nom).join(', '), st.produits);
+    const t = L.reduce((s, x) => s + (x.qte * (+x.pu || 0)), 0);
+    return t > 0 ? t : null;
+  }
+  const estDemande = l => l && !l.robot && (['commande', 'offre'].includes(l.categorie) || l.action === 'offre' || (l.produits || []).length > 0);
+
   /* --- ce qui se voit ------------------------------------------------------------------------------------------- */
   function vueRelier() {
     const e = st.etat;
@@ -345,13 +498,14 @@
     const e = st.etat, D = e.dossiers || [], hors = st.vue === 'modeles' || st.vue === 'auto';
     const dos = d => boutonDossier(d, `data-bxd="${esc(d.brut)}"`, st.dossier === d.brut && !hors, d.role === 'inbox' ? d.nonLus : d.role === 'drafts' ? d.total : (!d.role && d.nonLus) ? d.nonLus : 0);
     const roles = D.filter(d => d.role), autres = D.filter(d => !d.role);
-    return `<div class="bx-barre">
-      <label class="bx-q">${ico(I.chercher)}<input id="bx-q" type="search" placeholder="Chercher dans ${esc(nomDossier(ici()))}…" value="${esc(st.q)}"></label>
+    const ia = st.mode !== 'classique';
+    return `<div class="bx-barre">${bascule()}
+      ${ia ? '' : `<label class="bx-q">${ico(I.chercher)}<input id="bx-q" type="search" placeholder="Chercher dans ${esc(nomDossier(ici()))}…" value="${esc(st.q)}"></label>`}
       <span class="bx-sep"></span>
       <button type="button" class="db-btn prim" data-bx="ecrire">${ico(I.ecrire)}Écrire</button>
       <button type="button" class="db-btn${st.vue === 'modeles' ? ' is-on' : ''}" data-bx="modeles" title="Les modèles de réponse">${ico(I.modele)}Modèles</button>
       <button type="button" class="db-btn${st.vue === 'auto' ? ' is-on' : ''}" data-bx="auto" title="Accusé de réception, relance d’une offre, rappel la veille">${ico(I.auto)}Messages automatiques</button></div>
-      <nav class="bx-dossiers" aria-label="Dossiers de la boîte">${roles.map(dos).join('')}${autres.length ? '<span class="bx-dos-sep"></span>' + autres.map(dos).join('') : ''}</nav>`;
+      ${ia ? '' : `<nav class="bx-dossiers" aria-label="Dossiers de la boîte">${roles.map(dos).join('')}${autres.length ? '<span class="bx-dos-sep"></span>' + autres.map(dos).join('') : ''}</nav>`}`;
   }
   function liste() {
     const L = st.liste;
@@ -515,6 +669,121 @@
       ${A.regles.map(regle).join('')}</div>
       <div><h3 class="bx-t">Ce qui est parti</h3>${J.length ? `<table class="bx-t-j"><tbody>${J.map(x => `<tr><td>${esc(quand(x.le && x.le.replace(' ', 'T')))}</td><td>${esc(x.nom)}</td><td>${esc(x.destinataire)}<small>${esc(x.objet)}</small></td><td>${x.erreur ? `<span class="bx-stop" title="${esc(x.erreur)}">échec</span>` : 'parti'}</td></tr>`).join('')}</tbody></table>` : '<p class="bx-mu">Rien encore.</p>'}</div></div></div>`;
   }
+  /* --- les vues des modes IA ------------------------------------------------------------------------------------ */
+  /** La bascule des modes : le bouton « futuriste » (une bordure qui tourne, une étincelle), quatre crans. */
+  function bascule() {
+    return `<div class="bx-modes${st.mode !== 'classique' ? ' is-ia' : ''}" role="tablist" aria-label="Mode de la boîte"><span class="bx-modes-ia">${ico(I.ia)}<b>IA</b></span>
+      ${MODES.map(([k, l]) => `<button type="button" role="tab" class="bx-mode${st.mode === k ? ' is-on' : ''}" data-bxmode="${k}" aria-selected="${st.mode === k}">${ico(I[k])}<span>${l}</span></button>`).join('')}</div>`;
+  }
+  const anneau = (n, cls) => { const v = Math.max(0, Math.min(100, +n || 0)), c = 2 * Math.PI * 15; return `<span class="bx-anneau ${cls || (v >= 85 ? 'ok' : v >= 60 ? 'moyen' : 'bas')}" title="Confiance de l’IA : ${v} %"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"></circle><circle cx="18" cy="18" r="15" style="stroke-dasharray:${(c * v / 100).toFixed(1)} ${c.toFixed(1)}"></circle></svg><b>${v}</b></span>`; };
+  const avatar = p => `<span class="bx-av">${esc(((nomDe(p) || '?').match(/\b\p{L}/gu) || ['?']).slice(0, 2).join('').toUpperCase())}</span>`;
+  const sansIa = () => '<div class="bx-ia-off">' + ico(I.ia) + '<div><b>L’assistance IA n’est pas branchée</b><p class="bx-mu">La clé Anthropic manque (Paramètres › Assistance IA). Les modes IA lisent les e-mails avec elle.</p></div></div>';
+  const lectureEnCours = X => X && X.lecture ? `<div class="bx-scan"><span class="bx-scan-barre"><i style="width:${Math.round(100 * X.lecture.fait / Math.max(1, X.lecture.total))}%"></i></span><span>${ico(I.ia)}L’IA lit les e-mails… ${X.lecture.fait} / ${X.lecture.total}</span></div>` : '';
+
+  function vueBriefing() {
+    const B = st.br;
+    if (!B || !B.elements) { return B && B.err ? `<div class="db-err">${esc(B.err)}</div>` : '<div class="db-sk" style="height:420px"></div>'; }
+    const tous = B.elements, lus = tous.filter(e => e.lecture), F = fileBriefing(), e = carteActuelle(), faits = Object.keys(B.fait).length;
+    const n = k => lus.filter(x => !B.fait[x.uid] && (k === 'repondre' ? x.lecture.reponse : k === 'offre' ? x.lecture.action === 'offre' : k === 'ranger' ? ['ranger', 'archiver'].includes(x.lecture.action) : x.lecture.ton === 'mecontent')).length;
+    const heure = new Date().getHours(), salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
+    const minutes = Math.max(1, Math.round(F.length * 0.25));
+    const tete = `<div class="bx-br-hero"><span class="bx-halo">${ico(I.ia)}</span><div class="bx-br-hero-t">
+        <h2>${salut}. ${tous.length ? `J’ai lu ${lus.length} e-mail${lus.length > 1 ? 's' : ''} non lu${lus.length > 1 ? 's' : ''}.` : 'Rien de neuf dans la réception.'}</h2>
+        <p>${F.length ? `${F.length} attende${F.length > 1 ? 'nt' : ''} votre accord : tout est préparé, comptez ~${minutes} min.` : tous.length && !B.lecture ? 'Tout est traité. Belle journée !' : B.lecture ? 'Je prépare chaque réponse…' : 'Les nouveaux e-mails arriveront ici, déjà lus.'}${faits ? ` ${faits} déjà traité${faits > 1 ? 's' : ''}.` : ''}</p>
+        <div class="bx-br-puces">${n('repondre') ? `<span>${ico(I.ecrire)}${n('repondre')} réponse${n('repondre') > 1 ? 's' : ''} rédigée${n('repondre') > 1 ? 's' : ''}</span>` : ''}${n('offre') ? `<span>${ico(I.offre)}${n('offre')} offre${n('offre') > 1 ? 's' : ''} à créer</span>` : ''}${n('ranger') ? `<span>${ico(I.dossier)}${n('ranger')} à ranger</span>` : ''}${n('mecontent') ? `<span class="rouge">${ico(I.indesirables)}${n('mecontent')} client${n('mecontent') > 1 ? 's' : ''} mécontent${n('mecontent') > 1 ? 's' : ''}</span>` : ''}</div>
+        ${tous.length ? `<div class="bx-br-traits">${tous.map(x => `<i class="${B.fait[x.uid] ? 'fait' : e && x.uid === e.uid ? 'ici' : ''}"></i>`).join('')}</div>` : ''}</div>
+      ${voixPossible() ? `<div class="bx-br-ecoute"><button type="button" class="db-btn prim bx-gros" data-bx="voix"${!e ? ' disabled' : ''}>${ico(st.voix.on ? I.fermer : I.ecoute)}${st.voix.on ? 'Arrêter la voix' : 'Écouter le briefing'}</button><span class="bx-mu">ou ← → au clavier</span></div>` : ''}</div>`;
+    let carte = '';
+    if (e) {
+      const l = e.lecture, rep = l.action === 'repondre' || (l.action === 'offre' && l.reponse);
+      const trous = (l.reponse.match(/\[à compléter[^\]]*\]/gi) || []).length;
+      carte = `<div class="bx-br-scene"><button type="button" class="bx-br-cote" data-bx="brTard" title="Plus tard (←)">${ico(I.remettre)}<span>plus tard</span></button>
+        <div class="bx-br-pile"><i></i><i></i><article class="bx-carte">
+        <div class="bx-carte-h"><span class="bx-tag${l.ton === 'mecontent' || l.categorie === 'reclamation' ? ' rouge' : ''}">${esc(CAT[l.categorie] || l.categorie)}</span>${l.urgence === 'haute' ? '<span class="bx-tag rouge">urgent</span>' : ''}<span class="bx-mu">reçu ${esc(quand(e.date))}</span><span class="bx-sep"></span>${anneau(l.confiance)}</div>
+        <div class="bx-carte-qui">${avatar(e.de)}<div><b>${esc(nomDe(e.de))}</b> <span class="bx-mu">&lt;${esc((e.de || {}).adresse || '')}&gt;</span><div class="bx-mu">${esc(e.objet || '(sans objet)')}</div></div></div>
+        <p class="bx-carte-resume">${esc(l.resume)}</p>
+        ${(l.produits || []).length || l.jour || l.personnes ? `<div class="bx-carte-faits">${l.jour ? `<span>${ico(I.auto)}${esc(dFr(l.jour))}</span>` : ''}${l.personnes ? `<span>${l.personnes} pers.</span>` : ''}${(l.produits || []).map(p => `<span>${p.quantite ? p.quantite + ' × ' : ''}${esc(p.nom)}</span>`).join('')}</div>` : ''}
+        ${rep ? `<div class="bx-carte-rep"><div class="bx-carte-rep-h">${ico(I.ia)}<b>Réponse rédigée</b>${trous ? `<span class="bx-tag rouge">${trous} à compléter</span>` : '<span class="bx-tag">prête</span>'}</div><textarea class="bx-in bx-zone" id="bx-br-rep" rows="${Math.min(16, Math.max(5, l.reponse.split('\n').length + Math.ceil(l.reponse.length / 90)))}">${esc(l.reponse)}</textarea></div>`
+          : `<div class="bx-carte-rep bx-carte-rep--court">${ico(I.ia)}<span>L’IA propose : <b>${esc(libelleAction(e))}</b>${l.garde ? ' · ' + esc(({ prix: 'parle de prix', remise: 'demande une remise', reclamation: 'réclamation', allergenes: 'allergènes', commande: 'commande à confirmer', b2b: 'client professionnel', personnel: 'personnel', incertain: 'à vérifier' })[l.garde] || '') : ''}</span></div>`}
+        <div class="bx-carte-pied"><button type="button" class="db-btn" data-bx="brTard"${st.occupe ? ' disabled' : ''}>${ico(I.plusTard)}Plus tard <kbd>←</kbd></button>
+          <button type="button" class="db-btn" data-bxbro="${e.uid}">${ico(I.nonlu)}Ouvrir l’e-mail</button>
+          ${l.action === 'offre' && l.reponse ? `<button type="button" class="db-btn" data-bx="brOffre"${st.occupe ? ' disabled' : ''}>${ico(I.offre)}Créer l’offre</button>` : ''}
+          <span class="bx-sep"></span><button type="button" class="db-btn prim bx-gros" data-bx="brValider"${st.occupe ? ' disabled' : ''}>${ico(I.valider)}${esc(libelleAction(e))} <kbd>→</kbd></button></div>
+        </article></div><button type="button" class="bx-br-cote bx-br-cote--ok" data-bx="brValider" title="Valider (→)">${ico(I.valider)}<span>valider</span></button></div>`;
+    } else if (!B.lecture) {
+      carte = `<div class="bx-br-fin">${ico(I.valider)}<b>${tous.length ? 'Tout est traité.' : 'La réception n’a pas de non-lus.'}</b><span class="bx-mu">Les e-mails qui arrivent seront lus et préparés ici.</span><button type="button" class="db-btn" data-bx="brRelire">Relire la réception</button></div>`;
+    }
+    const V = st.voix;
+    const voix = voixPossible() ? `<div class="bx-voix${V.on ? ' on' : ''}"><div class="bx-voix-h">${ico(I.micro)}<div><b>Mains dans la farine</b><p class="bx-mu">Je lis chaque carte à voix haute ; répondez « oui », « plus tard », « ouvre » ou « stop ».${Reco ? '' : ' (La réponse à la voix demande Chrome ou Edge : ici, je lis seulement.)'}</p></div>${V.on ? `<span class="bx-tag vert">${V.ecoute ? 'j’écoute' : V.parle ? 'je lis' : 'en veille'}</span>` : ''}</div>
+      <div class="bx-onde${V.parle || V.ecoute ? ' vit' : ''}">${Array.from({ length: 28 }, (x, i) => `<i style="--h:${(Math.sin(i * 1.7) * 0.5 + 0.6).toFixed(2)};--d:${(i % 7) * 0.09}s"></i>`).join('')}</div>
+      <button type="button" class="bx-micro${V.ecoute ? ' vit' : ''}" data-bx="voix" aria-label="${V.on ? 'Arrêter la voix' : 'Écouter le briefing'}"${!e && !V.on ? ' disabled' : ''}>${ico(I.micro)}</button>
+      ${V.fil.length ? `<div class="bx-voix-fil">${V.fil.map(x => `<p class="${x.qui}">${esc(x.texte)}</p>`).join('')}</div>` : ''}</div>` : '';
+    const file = tous.length ? `<div class="bx-br-file"><h3 class="bx-t">La file du matin <span>${faits} fait${faits > 1 ? 's' : ''} · ${F.length} à venir</span></h3>${tous.map(x => `<button type="button" class="bx-br-f${e && x.uid === e.uid ? ' on' : ''}${B.fait[x.uid] ? ' fait' : ''}" data-bxbr="${x.uid}"${B.fait[x.uid] ? ' disabled' : ''}>
+        <span class="bx-br-f-o">${B.fait[x.uid] ? ico(I.valider) : ''}</span><span class="bx-br-f-t"><b>${esc(nomDe(x.de))}</b> — ${esc(x.lecture ? x.lecture.resume : x.objet)}</span>${x.lecture ? `<span class="bx-tag${x.lecture.ton === 'mecontent' ? ' rouge' : ''}">${esc(B.fait[x.uid] ? 'fait' : CAT[x.lecture.categorie] || '')}</span>` : '<span class="bx-tag">à lire</span>'}</button>`).join('')}</div>` : '';
+    return `${B.ia === false && B.aLire.length ? sansIa() : ''}${tete}${lectureEnCours(B)}${B.err ? `<div class="db-err">${esc(B.err)}</div>` : ''}<div class="bx-br">${'<div>' + carte + '</div>'}<div class="bx-br-droite">${voix}${file}</div></div>`;
+  }
+
+  function vuePilote() {
+    const P = st.pi;
+    if (!P) { return '<div class="db-sk" style="height:420px"></div>'; }
+    if (P.err) { return `<div class="db-err">${esc(P.err)}</div>`; }
+    const niv = P.niveau, dis = st.occupe ? ' disabled' : '';
+    const NIV = [[0, 'Éteint', 'Je ne réponds à rien.'], [1, 'Brouillons', 'Je rédige dans « Brouillons », vous envoyez.'], [2, 'Simples', `J’envoie seul les réponses simples, ${P.delai} min après les avoir lues, annulables.`]];
+    const gagne = P.stats.envoyes * 4 + P.stats.brouillons * 2;
+    const etatTag = r => ({ planifie: `<span class="bx-tag or">part dans ${Math.max(0, Math.ceil((new Date(r.envoi_le) - Date.now()) / 60000))} min</span>`, envoye: '<span class="bx-tag vert">envoyé</span>', envoi: '<span class="bx-tag or">en cours</span>',
+      brouillon: '<span class="bx-tag">brouillon déposé</span>', annule: '<span class="bx-tag">annulé</span>', echec: '<span class="bx-tag rouge">échec</span>', vu: '<span class="bx-tag">traité</span>' })[r.etat] || '';
+    const fil = P.fil.map(r => `<div class="bx-pi-l"><span class="bx-pi-h">${esc(quand(r.cree_le))}</span><div class="bx-pi-c">
+        <div class="bx-pi-q"><span class="bx-tag">${esc(CAT[r.categorie] || r.categorie || '—')}</span><b>${esc(r.de_nom || r.de_adresse)}</b><span class="bx-mu">${esc(r.objet)}</span></div>
+        ${r.reponse ? `<p class="bx-pi-rep">${esc(r.reponse.length > 360 ? r.reponse.slice(0, 360) + '…' : r.reponse)}</p>` : ''}
+        <div class="bx-pi-pied">${etatTag(r)}${r.raison && r.etat !== 'envoye' ? `<span class="bx-mu">${esc(r.raison)}</span>` : ''}${r.etat === 'planifie' ? `<button type="button" class="db-btn bx-stop" data-bxpia="${r.id}"${dis}>${ico(I.fermer)}Annuler l’envoi</button>` : ''}</div></div>${anneau(r.confiance)}</div>`).join('');
+    const attente = P.attente.map(r => `<div class="bx-pi-a">${avatar({ nom: r.de_nom, adresse: r.de_adresse })}<div><b>${esc(r.de_nom || r.de_adresse)}</b><div class="bx-mu">${esc(r.objet)}</div>
+        <div class="bx-pi-pourquoi${/sûre|compléter|simple|Brouillons/.test(r.raison || '') ? ' or' : ''}">${ico(I.indesirables)}${esc(String(r.raison || '').replace(/ · brouillon déposé$/, ''))}</div>
+        ${r.etat === 'brouillon' ? `<div class="bx-mu bx-pi-br">${ico(I.brouillons)}Sa réponse est prête dans « Brouillons » : relisez, complétez, envoyez.</div>` : ''}
+        <div class="bx-pi-a-b"><button type="button" class="db-btn prim" data-bxbro="${r.uid}">Ouvrir l’e-mail</button><button type="button" class="db-btn" data-bxpiv="${r.id}"${dis}>C’est traité</button></div></div></div>`).join('');
+    return `${P.ia ? '' : sansIa()}<div class="bx-pi-hero"><span class="bx-halo">${ico(I.pilote)}</span><div class="bx-pi-hero-t"><span class="bx-t">Autonomie du pilote</span><h2>${esc(NIV[niv][2])}</h2>
+        <div class="bx-crans">${NIV.map(([k, l, t]) => `<button type="button" class="bx-cran${k === niv ? ' is-on' : ''}${k < niv ? ' passe' : ''}" data-bxpin="${k}"${dis}><i></i><b>${l}</b><span>${esc(t)}</span></button>`).join('')}</div></div>
+        <div class="bx-pi-gain"><span class="bx-t">Temps gagné · 7 jours</span><b>${gagne >= 60 ? Math.floor(gagne / 60) + ' h ' + String(gagne % 60).padStart(2, '0') : gagne + ' min'}</b><span class="bx-mu">${P.horloge ? 'dernier passage ' + esc(quand(P.horloge)) : 'l’horloge n’est pas encore passée'}</span></div></div>
+      <div class="bx-pi-chiffres"><div><b>${P.stats.envoyes}</b><span>réponses envoyées seules</span></div><div><b>${P.stats.brouillons}</b><span>brouillons déposés</span></div><div><b>${P.stats.planifies}</b><span>en partance</span></div><div><b>${P.stats.annules}</b><span>annulées</span></div><div class="rouge"><b>${P.stats.attente}</b><span>pour vous</span></div></div>
+      <div class="bx-pi"><div class="bx-pi-fil"><h3 class="bx-t">Ce que le pilote a fait <span>7 derniers jours</span></h3>${fil || `<p class="bx-vide">${niv ? 'Rien encore : le pilote lit les e-mails qui arrivent à partir de maintenant, à chaque passage de l’horloge (10 min).' : 'Le pilote est éteint. Choisissez un cran pour l’allumer.'}</p>`}</div>
+      <div><h3 class="bx-t">Ce qui vous attend <span>${P.attente.length}</span></h3>${attente || '<p class="bx-vide">Rien : le pilote n’a rien laissé de côté.</p>'}
+        <div class="bx-gardes"><h3 class="bx-t">Les garde-fous <span>fixes</span></h3><b class="bx-gardes-t rouge">Jamais seul</b>${P.gardes.map(g => `<div>${ico(I.cadenas)}${esc(g.charAt(0).toUpperCase() + g.slice(1))}</div>`).join('')}
+          <b class="bx-gardes-t vert">Toujours</b><div>${ico(I.valider)}S’arrêter sous ${P.seuil} % de confiance</div><div>${ico(I.valider)}${P.delai} min pour annuler chaque envoi</div><div>${ico(I.valider)}Une réponse par expéditeur et par jour, 30 par jour au plus</div><div>${ico(I.valider)}Jamais aux robots, aux listes, ni à l’arriéré</div><div>${ico(I.valider)}Rien d’inventé : un « [à compléter] » reste au magasin</div></div></div></div>`;
+  }
+
+  function vueRadar() {
+    const R = st.ra;
+    if (!R || !R.elements) { return R && R.err ? `<div class="db-err">${esc(R.err)}</div>` : '<div class="db-sk" style="height:420px"></div>'; }
+    const lus = R.elements.filter(e => e.lecture && !e.lecture.robot), auj = new Date(); auj.setHours(0, 0, 0, 0);
+    const jours = Array.from({ length: 21 }, (x, i) => { const d = new Date(auj); d.setDate(d.getDate() + i); return d; });
+    const fin = isoJour(jours[20]), debut = isoJour(auj);
+    const D = lus.filter(e => estDemande(e.lecture)).map(e => Object.assign({}, e, { montant: estimer(e.lecture) }));
+    const aVenir = D.filter(e => e.lecture.jour >= debut && e.lecture.jour <= fin).sort((a, b) => a.lecture.jour.localeCompare(b.lecture.jour));
+    const sansJour = D.filter(e => !e.lecture.jour), autres = D.filter(e => e.lecture.jour && (e.lecture.jour < debut || e.lecture.jour > fin));
+    const parJour = jours.map(d => { const k = isoJour(d), L = aVenir.filter(e => e.lecture.jour === k); return { d, k, L, ok: L.filter(e => e.repondu).length, ko: L.filter(e => !e.repondu).length, eur: L.reduce((s, e) => s + (e.montant || 0), 0) }; });
+    const max = Math.max(3, ...parJour.map(j => j.L.length));
+    const sansRep = aVenir.filter(e => !e.repondu), enJeu = sansRep.reduce((s, e) => s + (e.montant || 0), 0);
+    const plein = parJour.reduce((m, j) => j.L.length > (m ? m.L.length : 0) ? j : m, null);
+    const fache = lus.filter(e => e.lecture.ton === 'mecontent' && !e.repondu);
+    const ton = k => lus.filter(e => e.lecture.ton === k).length, tot = Math.max(1, lus.length), pc = k => Math.round(100 * ton(k) / tot);
+    const jl = d => JOURS[d.getDay()] + ' ' + d.getDate();
+    const scan = R.aLire.length ? `<div class="bx-ra-scan">${ico(I.radar)}<div><b>${R.aLire.length} e-mail${R.aLire.length > 1 ? 's' : ''} des trois dernières semaines pas encore lu${R.aLire.length > 1 ? 's' : ''} par l’IA</b><span class="bx-mu">Une seule fois : la lecture est gardée.</span></div><button type="button" class="db-btn prim" data-bx="raLire"${R.lecture || R.ia === false ? ' disabled' : ''}>${ico(I.ia)}Lire et mettre sur le radar</button></div>` : '';
+    const alertes = `<div class="bx-ra-alertes">
+      <div class="bx-ra-al${sansRep.length ? ' or' : ''}">${ico(I.indesirables)}<div><b>${sansRep.length ? `${sansRep.length} demande${sansRep.length > 1 ? 's' : ''} sans réponse pour les trois prochaines semaines` : 'Aucune demande sans réponse'}</b><span>${sansRep.length ? (enJeu ? `≈ ${eur(enJeu)} en jeu. ` : '') + 'La plus proche : ' + esc(dFr(sansRep[0].lecture.jour)) + ', ' + esc(nomDe(sansRep[0].de)) + '.' : 'Tout ce qui est demandé a reçu une réponse.'}</span>${sansRep.length ? `<button type="button" class="db-btn prim" data-bxbro="${sansRep[0].uid}">Répondre à ${esc(nomDe(sansRep[0].de))}</button>` : ''}</div></div>
+      <div class="bx-ra-al">${ico(I.auto)}<div><b>${plein && plein.L.length ? `Le jour le plus chargé : ${esc(jl(plein.d))} (${plein.L.length} demande${plein.L.length > 1 ? 's' : ''})` : 'Pas de jour chargé en vue'}</b><span>${plein && plein.L.length ? (plein.eur ? `≈ ${eur(plein.eur)} estimés aux prix du catalogue. ` : '') + 'À prévoir à la production.' : 'Les demandes datées apparaîtront ici.'}</span></div></div>
+      <div class="bx-ra-al${fache.length ? ' rouge' : ''}">${ico(I.indesirables)}<div><b>${fache.length ? `${fache.length} client${fache.length > 1 ? 's' : ''} mécontent${fache.length > 1 ? 's' : ''} sans réponse` : 'Personne de mécontent en attente'}</b><span>${fache.length ? esc(fache.map(e => nomDe(e.de)).slice(0, 3).join(', ')) + ' — ' + esc(fache[0].lecture.resume.length > 90 ? fache[0].lecture.resume.slice(0, 88) + '…' : fache[0].lecture.resume) : 'Le ton des e-mails est bon.'}</span>${fache.length ? `<button type="button" class="db-btn" data-bxbro="${fache[0].uid}">Ouvrir</button>` : ''}</div></div></div>`;
+    const frise = `<div class="bx-ra-frise"><h3 class="bx-t">La demande des trois prochaines semaines <span>lue dans les e-mails · ${aVenir.length} demande${aVenir.length > 1 ? 's' : ''}</span></h3>
+      <div class="bx-ra-leg"><span><i class="ok"></i>répondu</span><span><i class="ko"></i>sans réponse</span></div>
+      <div class="bx-ra-cols">${parJour.map(j => `<div class="bx-ra-col${[0, 6].includes(j.d.getDay()) ? ' we' : ''}${plein && j.k === plein.k && j.L.length ? ' pic' : ''}" title="${esc(j.L.map(e => nomDe(e.de) + ' : ' + e.lecture.resume).join('\n'))}">
+        <span class="bx-ra-v">${j.L.length ? j.L.length + (j.eur ? '<small>' + new Intl.NumberFormat('fr-BE', { maximumFractionDigits: 0 }).format(j.eur).replace(/[  ]/g, ' ') + ' €</small>' : '') : ''}</span>
+        <span class="bx-ra-b">${j.ko ? `<i class="ko" style="height:${(100 * j.ko / max).toFixed(1)}%"></i>` : ''}${j.ok ? `<i class="ok" style="height:${(100 * j.ok / max).toFixed(1)}%"></i>` : ''}</span><b>${esc(jl(j.d))}</b></div>`).join('')}</div></div>`;
+    const attend = e => { const j = Math.max(0, Math.round((Date.now() - new Date(e.date)) / 864e5)); return j ? 'depuis ' + j + ' j' : 'reçu aujourd’hui'; };
+    const ligne = e => `<tr data-bxbro="${e.uid}"${e.lecture.jour && e.lecture.jour < debut ? ' class="passe"' : ''}><td>${e.lecture.jour ? esc(JOURS[new Date(e.lecture.jour + 'T12:00').getDay()] + ' ' + dFr(e.lecture.jour).slice(0, 5)) : '—'}</td><td><b>${esc(nomDe(e.de))}</b>${e.lecture.b2b ? ' <span class="bx-tag">B2B</span>' : ''}<small>${esc(e.lecture.resume)}</small></td><td class="num">${e.lecture.personnes ? e.lecture.personnes + ' pers.' : ''}</td><td class="num">${e.montant ? '≈ ' + eur(e.montant) : '—'}</td><td>${e.repondu ? '<span class="bx-tag vert">répondu</span>' : `<span class="bx-tag rouge">sans réponse · ${attend(e)}</span>`}</td></tr>`;
+    const table = `<div class="bx-ra-tab"><h3 class="bx-t">Les demandes repérées <span>${D.length} en trois semaines · ${D.filter(e => !e.repondu).length} sans réponse</span></h3>${D.length ? `<table><thead><tr><th>Pour le</th><th>Client · demande</th><th class="num">Pers.</th><th class="num">Estimé</th><th>État</th></tr></thead><tbody>${aVenir.map(ligne).join('')}${sansJour.map(ligne).join('')}${autres.sort((a, b) => b.lecture.jour.localeCompare(a.lecture.jour)).map(ligne).join('')}</tbody></table>` : '<p class="bx-vide">Aucune demande repérée pour l’instant.</p>'}<p class="bx-mu">Estimé aux prix TVAC du catalogue du magasin, pour les produits reconnus ; à vérifier.</p></div>`;
+    const humeur = `<div class="bx-ra-humeur"><h3 class="bx-t">Le thermomètre d’humeur <span>${lus.length} e-mails lus</span></h3><div class="bx-ra-thermo"><i style="left:${Math.max(2, Math.min(98, pc('chaleureux') + pc('neutre') / 2))}%"></i></div><div class="bx-ra-thermo-l"><span>mécontent</span><span>neutre</span><span>chaleureux</span></div>
+      <div class="bx-ra-pc"><div><b>${pc('chaleureux')} %</b><span>chaleureux</span></div><div><b>${pc('neutre')} %</b><span>neutres</span></div><div class="rouge"><b>${pc('mecontent')} %</b><span>mécontents</span></div></div></div>`;
+    return `${R.ia === false && R.aLire.length ? sansIa() : ''}${scan}${lectureEnCours(R)}${R.err ? `<div class="db-err">${esc(R.err)}</div>` : ''}${alertes}<div class="bx-ra"><div>${frise}${table}</div><div>${humeur}</div></div>`;
+  }
+
   function html() {
     if (st.err && !st.etat) { return `<div class="db-err">La boîte ne se lit pas : ${esc(st.err)} <button type="button" class="db-btn" data-bx="relireEtat">Réessayer</button></div>`; }
     if (!st.etat) { return '<div class="db-sk" style="height:48px;margin-bottom:12px"></div><div class="db-sk" style="height:420px"></div>'; }
@@ -522,6 +791,7 @@
     if (!st.etat.reliee) { return f + vueRelier(); }
     if (!st.etat.ouverte) { return f + vueOuvrir(); }
     const pied = `<p class="bx-bas">${esc(st.etat.adresse)}${st.etat.erreur ? ' · ' + esc(st.etat.erreur) : ''} · <button type="button" class="bx-lien" data-bx="fermer">fermer sur cet appareil</button></p>`;
+    if (st.mode !== 'classique') { return barre() + f + `<div class="bx-mode-vue bx-mode-vue--${st.mode}">${st.mode === 'briefing' ? vueBriefing() : st.mode === 'pilote' ? vuePilote() : vueRadar()}</div>` + pied; }
     if (st.vue === 'modeles') { return barre() + f + vueModeles() + pied; }
     if (st.vue === 'auto') { return barre() + f + vueAuto() + pied; }
     return barre() + f + `<div class="bx">${liste()}${st.vue === 'ecrire' && st.ecr ? vueEcrire() : st.coches.size || st.tout ? vueSelection() : lecture()}</div>` + pied;
@@ -556,6 +826,18 @@
       tt.addEventListener('change', () => { if (tt.checked && !st.tout && k < M.length) { M.forEach(m => st.coches.add(m.uid)); } else { viderSelection(); } st.rang = null; rendre(); });
     }
     on('[data-bxs]', 'click', e => gesteSelection(e.currentTarget.dataset.bxs));
+    // Les modes IA.
+    on('[data-bxmode]', 'click', e => changerMode(e.currentTarget.dataset.bxmode));
+    on('[data-bxbr]', 'click', e => { st.br.actuel = +e.currentTarget.dataset.bxbr; rendre(); if (st.voix.on) { parlerCarte(); } });
+    on('[data-bxbro]', 'click', e => ouvrirDansLaBoite(+e.currentTarget.dataset.bxbro));
+    const brr = el.querySelector('#bx-br-rep'); if (brr) { brr.addEventListener('input', () => { const c = carteActuelle(); if (c) { c.lecture.reponse = brr.value; } }); }
+    on('[data-bxpin]', 'click', e => {
+      const n = +e.currentTarget.dataset.bxpin; if (!st.pi || n === st.pi.niveau) { return; }
+      if (n === 2 && !window.confirm(`Le pilote répondra seul, depuis ${st.etat.adresse}, aux e-mails simples qui arrivent à partir de maintenant : ${st.pi.delai} minutes après les avoir lus, annulables jusque-là. Jamais aux prix, remises, réclamations, allergènes, commandes ni aux professionnels. On l’allume ?`)) { return; }
+      ecrirePilote({ niveau: n }, n === 0 ? 'Pilote éteint : les envois prévus sont annulés.' : n === 1 ? 'Pilote en « Brouillons » : il rédige, vous envoyez.' : 'Pilote en « Simples » : il répond seul aux e-mails simples.');
+    });
+    on('[data-bxpia]', 'click', e => ecrirePilote({ action: 'annuler', id: +e.currentTarget.dataset.bxpia }, 'Envoi annulé : la réponse ne partira pas.'));
+    on('[data-bxpiv]', 'click', e => ecrirePilote({ action: 'vu', id: +e.currentTarget.dataset.bxpiv }));
     on('[data-bxv]', 'click', e => gesteSelection('deplacer', e.currentTarget.dataset.bxv));
     const nv = el.querySelector('#bx-nouveau');
     if (nv) { nv.addEventListener('input', () => { st.nouveauNom = nv.value; }); nv.addEventListener('keydown', ev => { if (ev.key === 'Enter') { const b = el.querySelector('[data-bx="creerDeplacer"]'); if (b) { b.click(); } } if (ev.key === 'Escape') { st.nouveauNom = null; rendre(); } }); }
@@ -588,10 +870,16 @@
       if (a === 'nouveauDossier') { st.nouveauNom = ''; rendre(); const n = el.querySelector('#bx-nouveau'); if (n) { n.focus(); } return; }
       if (a === 'creerDeplacer') { const nom = String(st.nouveauNom || '').trim(); if (!nom) { return flash(false, 'Le nom du nouveau dossier, d’abord.'); } return gesteSelection('deplacer', null, { nouveau: nom }); }
       if (a === 'ranger') { return proposerRangement(); }
+      if (a === 'voix') { if (st.voix.on) { arreterVoix(); return rendre(); } st.voix.on = true; return parlerCarte(); }
+      if (a === 'brValider') { return validerCarte(); }
+      if (a === 'brTard') { return plusTardCarte(); }
+      if (a === 'brRelire') { return chargerBriefing(); }
+      if (a === 'brOffre') { const c = carteActuelle(); if (c) { return lire('/dashboard/boite/message', { dossier: 'INBOX', uid: c.uid, garder: 1 }).then(m => { st.msg = m; creerOffre(); }).catch(x => flash(false, x.message)); } return; }
+      if (a === 'raLire') { return lireLots(st.ra); }
       if (a === 'rangAnnuler') { st.rang = null; return rendre(); }
       if (a === 'rangAppliquer') { return appliquerRangement(); }
       if (a === 'relire') { chargerListe(); return chargerEtat(); }
-      if (a === 'ecrire') { chargerModeles(); chargerOffres(); return nouvelEcrit({}); }
+      if (a === 'ecrire') { st.mode = 'classique'; arreterVoix(); chargerModeles(); chargerOffres(); return nouvelEcrit({}); }
       if (a === 'repondre' || a === 'tous') { chargerModeles(); chargerOffres(); return ecrireReponse(a === 'tous'); }
       if (a === 'transferer') { chargerModeles(); return transferer(); }
       if (a === 'annuler') { st.ecr = null; st.vue = 'lire'; return rendre(); }
@@ -599,8 +887,8 @@
       if (a === 'cc') { st.ecr.ccOuvert = true; return rendre(); }
       if (a === 'images') { st.images = true; return rendre(); }
       if (a === 'offre') { return creerOffre(); }
-      if (a === 'modeles') { st.vue = st.vue === 'modeles' ? 'lire' : 'modeles'; st.modEd = null; st.flash = null; rendre(); return chargerModeles(); }
-      if (a === 'auto') { st.vue = st.vue === 'auto' ? 'lire' : 'auto'; st.flash = null; rendre(); return chargerAuto(); }
+      if (a === 'modeles') { st.mode = 'classique'; st.vue = st.vue === 'modeles' ? 'lire' : 'modeles'; st.modEd = null; st.flash = null; rendre(); return chargerModeles(); }
+      if (a === 'auto') { st.mode = 'classique'; st.vue = st.vue === 'auto' ? 'lire' : 'auto'; st.flash = null; rendre(); return chargerAuto(); }
       if (a === 'modAnnuler') { st.modEd = null; return rendre(); }
       if (a === 'modEnregistrer') {
         const ed = st.modEd;
@@ -636,6 +924,23 @@
     if (dans) { const b = st.el.querySelector('#' + dans); if (b) { b.focus(); if (pos != null && b.setSelectionRange) { try { b.setSelectionRange(pos, pos); } catch (e) { /* sans curseur */ } } } }
   }
 
+  /** Une fois : ← et → au clavier dans le briefing ; le fil du pilote se relit tant qu'un envoi est en partance. */
+  let global = false;
+  function brancherGlobal() {
+    if (global) { return; }
+    global = true;
+    document.addEventListener('keydown', ev => {
+      if (st.mode !== 'briefing' || !st.el || !document.body.contains(st.el) || ev.altKey || ev.ctrlKey || ev.metaKey) { return; }
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((ev.target && ev.target.tagName) || '') || (ev.target && ev.target.isContentEditable)) { return; }
+      if (ev.key === 'ArrowRight') { ev.preventDefault(); validerCarte(); }
+      if (ev.key === 'ArrowLeft') { ev.preventDefault(); plusTardCarte(); }
+    });
+    setInterval(() => {
+      if (st.mode !== 'pilote' || !st.el || !document.body.contains(st.el) || document.hidden || !st.pi || !st.pi.fil) { return; }
+      if (st.pi.fil.some(r => r.etat === 'planifie' || r.etat === 'envoi')) { chargerPilote(); }
+    }, 30000);
+  }
+
   window.DashBoite = {
     racine(shop, o) {
       o = o || {};
@@ -645,7 +950,9 @@
       if (o.aller) { st.aller = o.aller; }
       if (!st.el || String(st.shop) !== String(shop)) {
         st.shop = String(shop); st.el = document.createElement('div'); st.el.className = 'bx-racine';
-        Object.assign(st, { etat: null, err: null, liste: null, sel: null, msg: null, vue: 'lire', ecr: null, modeles: null, auto: null, produits: null, offres: null, flash: null });
+        Object.assign(st, { etat: null, err: null, liste: null, sel: null, msg: null, vue: 'lire', ecr: null, modeles: null, auto: null, produits: null, offres: null, flash: null, br: null, pi: null, ra: null });
+        try { const m = localStorage.getItem(cleMode()); st.mode = MODES.some(x => x[0] === m) ? m : 'classique'; } catch (e) { st.mode = 'classique'; }
+        brancherGlobal();
         st.intention = o.intention || null;
         chargerEtat();
       } else if (o.intention) {
