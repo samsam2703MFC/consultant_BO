@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-21T17:00:51Z",
+ "genere": "2026-11-21T17:02:25Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -2004,7 +2004,7 @@
      ],
      "chemin": "/marketing/avis",
      "handler": "ep_reputation",
-     "source": "shared/src/endpoints.php:8386",
+     "source": "shared/src/endpoints.php:8207",
      "resume": "la réputation digitale du réseau, magasin par magasin."
     }
    ]
@@ -2213,7 +2213,7 @@
      ],
      "chemin": "/produits/analyse/sonde",
      "handler": "ep_produits_analyse_sonde",
-     "source": "shared/src/endpoints.php:6794",
+     "source": "shared/src/endpoints.php:6615",
      "resume": "Sonde : existe-t-il une source de ventes PAR MAGASIN sous le niveau groupe ? Diagnostic en lecture seule."
     },
     {
@@ -2548,7 +2548,7 @@
      ],
      "chemin": "/stores/perf",
      "handler": "ep_perf",
-     "source": "shared/src/endpoints.php:5637",
+     "source": "shared/src/endpoints.php:5458",
      "resume": ""
     }
    ]
