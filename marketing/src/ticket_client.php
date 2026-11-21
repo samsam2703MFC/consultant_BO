@@ -16,13 +16,17 @@ declare(strict_types=1);
  *   GET /marketing/ticket/essai/boutiques        (siège) les boutiques du panel, pour l'écran d'essai
  *   GET /marketing/ticket/essai/jour?shop=&date= (siège) les transactions d'un jour, chacune avec son lien signé
  *   GET /marketing/ticket/essai/lien?shop=&transaction= (siège) le lien signé d'une transaction
+ *   GET /marketing/ticket/essai/specifications[?matiere=] (siège) ce que les catalogues des fournisseurs ont rendu
  *
  * Sources, toutes lues avec le compte du cockpit (PanelApi) :
  *   - la transaction : GET /shops/{s}/transactions/{t} (repli : /transactions/{t}?include=products) ;
  *   - la fiche technique de chaque produit : GET /products/{id}/technical-sheet/raw (comme le manuel Formation) ;
  *   - le catalogue de la boutique, en français et en néerlandais : GET /shops/{s}/products/available?include=webshop
  *     (noms et ingrédients traduits par les alias du panel, prix, photo, allergènes) ;
- *   - la boutique : GET /shops (nom, adresse, téléphone ; la langue se déduit du code postal, réglage ticketLangues).
+ *   - la boutique : GET /shops (nom, adresse, téléphone ; la langue se déduit du code postal, réglage ticketLangues) ;
+ *   - la spécification des produits de la centrale (composition, conservation, préparation, par langue — l'étiquette de
+ *     SLFood) : GET /material-suppliers, puis par fournisseur /catalog-mappings (produit du catalogue → matière) et
+ *     /catalog/products?include=specification_multilingual.
  * Fiches et catalogues sont gardés TCL_DUREE dans le dossier privé du cockpit.
  */
 
@@ -51,6 +55,7 @@ function tclRoute(string $method, string $path): ?array
         '/marketing/ticket/essai/boutiques' => ep_tcl_essai_boutiques(),
         '/marketing/ticket/essai/jour'      => ep_tcl_essai_jour((int) ($_GET['shop'] ?? 0), (string) ($_GET['date'] ?? '')),
         '/marketing/ticket/essai/lien'      => ep_tcl_essai_lien((int) ($_GET['shop'] ?? 0), (int) ($_GET['transaction'] ?? 0)),
+        '/marketing/ticket/essai/specifications' => ep_tcl_essai_specifications((int) ($_GET['matiere'] ?? 0)),
         default => (static function (): array { http_response_code(404); return ['error' => 'route inconnue']; })(),
     };
 }
@@ -118,31 +123,74 @@ function tclCodesAllergenes(array $noms): array
 }
 
 /**
- * La composition dite au client, dans chaque langue : [[ingrédient, [codes]], …] et `traduit`.
+ * La composition dite au client, dans chaque langue : ['items' => [[texte, [codes], détail, fournisseur], …], 'traduit'].
  * Source : l'étiquette du catalogue (label_ingredients, traduite par les alias du panel) ; les allergènes de chaque
  * ingrédient se lisent sur la recette de la fiche technique (nom français) puis se reportent par position, l'ordre étant
  * le même d'une langue à l'autre. Sans étiquette, les ingrédients de la recette.
+ * La spécification du fournisseur (composition par langue, 'detail' d'un ingrédient de la recette) complète un ingrédient
+ * de la centrale : « Béchamel (lait, farine de blé…) » ; un produit acheté fini (une seule matière) prend la composition
+ * du fournisseur à la place de son nom (`fournisseur` = vrai).
  *
- * @param array $recette [['nom' => …, 'allergenes' => [codes]], …]
+ * @param array $recette [['nom' => …, 'allergenes' => [codes], 'detail' => ['fr' => …, 'nl' => …]], …]
  * @param array $etiquettes ['fr' => label_ingredients, 'nl' => …]
  */
 function tclComposition(array $recette, array $etiquettes): array
 {
-    $allerg = [];
-    foreach ($recette as $e) { $allerg[mb_strtolower(trim((string) $e['nom']))] = $e['allergenes']; }
+    $parNom = [];
+    foreach ($recette as $e) { $parNom[mb_strtolower(trim((string) $e['nom']))] = $e; }
     $fr = tclMorceaux(tclSansPrefixe((string) ($etiquettes['fr'] ?? '')));
-    $out = [];
-    if ($fr === []) {
-        $items = array_map(static fn ($e) => [trim((string) $e['nom']), $e['allergenes']], $recette);
-        foreach (['fr', 'nl'] as $lg) { $out[$lg] = ['items' => $items, 'traduit' => $lg === 'fr']; }
-        return $out;
-    }
-    $codes = array_map(static fn ($x) => $allerg[mb_strtolower($x)] ?? [], $fr);
-    $out['fr'] = ['items' => array_map(null, $fr, $codes), 'traduit' => true];
+    $base = $fr !== []
+        ? array_map(static fn ($x) => [$x, $parNom[mb_strtolower($x)] ?? null], $fr)
+        : array_map(static fn ($e) => [trim((string) $e['nom']), $e], $recette);
     $nl = tclMorceaux(tclSansPrefixe((string) ($etiquettes['nl'] ?? '')));
-    $out['nl'] = count($nl) === count($fr)
-        ? ['items' => array_map(null, $nl, $codes), 'traduit' => true]
-        : ['items' => $out['fr']['items'], 'traduit' => false];
+    $out = [];
+    foreach (['fr', 'nl'] as $lg) {
+        $noms = array_column($base, 0);
+        $traduit = $lg === 'fr';
+        if ($lg === 'nl' && $fr !== [] && count($nl) === count($fr)) { $noms = $nl; $traduit = true; }
+        $items = []; $detailsTraduits = true;
+        foreach ($base as $k => [$x, $e]) {
+            $det = trim((string) ($e['detail'][$lg] ?? ''));
+            if ($det === '' && $lg !== 'fr' && trim((string) ($e['detail']['fr'] ?? '')) !== '') { $det = trim((string) $e['detail']['fr']); $detailsTraduits = false; }
+            $items[] = [$noms[$k], $e['allergenes'] ?? [], $det, false];
+        }
+        if (count($items) === 1 && $items[0][2] !== '') {
+            $items = [[$items[0][2], $items[0][1], '', true]];
+            $traduit = $detailsTraduits;
+        } elseif (!$detailsTraduits) {
+            $traduit = false;
+        }
+        $out[$lg] = ['items' => $items, 'traduit' => $traduit];
+    }
+    return $out;
+}
+
+/**
+ * Les spécifications d'un catalogue de fournisseur, par matière du panel : [material_id => ['fr' => ['composition',
+ * 'conservation', 'preparation'], 'nl' => …]]. Entrées : les correspondances catalogue → matière
+ * (/material-suppliers/{s}/catalog-mappings) et le catalogue avec ses spécifications
+ * (/material-suppliers/{s}/catalog/products?include=specification_multilingual : SaSpecification par langue).
+ */
+function tclSpecificationsParMatiere(array $correspondances, array $produits): array
+{
+    $spec = [];
+    foreach ($produits as $p) {
+        if (!is_array($p) || empty($p['id'])) { continue; }
+        $liste = $p['specification'] ?? $p['specifications'] ?? [];
+        if (is_array($liste) && !array_is_list($liste)) { $liste = [$liste]; }
+        foreach (is_array($liste) ? $liste : [] as $x) {
+            if (!is_array($x) || array_is_list($x)) { continue; }
+            $lg = strtolower(substr((string) ($x['lang_code'] ?? 'fr'), 0, 2));
+            $v = ['composition' => trim((string) ($x['composition'] ?? '')), 'conservation' => trim((string) ($x['storage_info'] ?? '')),
+                'preparation' => trim((string) ($x['preparation_info'] ?? ''))];
+            if (implode('', $v) !== '') { $spec[(string) $p['id']][$lg] = $v; }
+        }
+    }
+    $out = [];
+    foreach ($correspondances as $c) {
+        $m = (string) ($c['material_id'] ?? ''); $cp = (string) ($c['catalog_product_id'] ?? '');
+        if ($m !== '' && $cp !== '' && isset($spec[$cp])) { $out[$m] = $spec[$cp]; }
+    }
     return $out;
 }
 
@@ -209,7 +257,8 @@ function tclResumeFiche(array $d): array
     $recette = [];
     foreach (is_array($r['elements'] ?? null) ? $r['elements'] : [] as $e) {
         if (!is_array($e) || !empty($e['is_part_of_package'])) { continue; }
-        $recette[] = ['nom' => trim((string) ($e['name'] ?? '')), 'allergenes' => tclCodesAllergenes(is_array($e['allergens'] ?? null) ? $e['allergens'] : [])];
+        $recette[] = ['id' => (int) ($e['ingredient_id'] ?? $e['id_material'] ?? $e['material_id'] ?? 0), 'nom' => trim((string) ($e['name'] ?? '')),
+            'allergenes' => tclCodesAllergenes(is_array($e['allergens'] ?? null) ? $e['allergens'] : []), 'source' => (string) ($e['source_type'] ?? '')];
     }
     $etapes = [];
     foreach (is_array($d['preparation']['steps'] ?? null) ? $d['preparation']['steps'] : [] as $s) {
@@ -326,6 +375,32 @@ function tclFiches(array $ids): array
     return $out;
 }
 
+/**
+ * Les spécifications de tous les fournisseurs, par matière du panel (tclSpecificationsParMatiere), gardées six heures.
+ * Un fournisseur sans catalogue ou sans correspondance ne compte pas. `$etat` dit ce qui a été lu (diagnostic d'essai).
+ */
+function tclSpecifications(?array &$etat = null): array
+{
+    if (($c = tclCacheLire('specifications')) !== null) { $etat = ['cache' => true]; return $c; }
+    $fours = [];
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) { if (!empty($f['id'])) { $fours[] = (int) $f['id']; } }
+    $chemins = [];
+    foreach ($fours as $f) {
+        $chemins['m' . $f] = '/material-suppliers/' . $f . '/catalog-mappings';
+        $chemins['p' . $f] = '/material-suppliers/' . $f . '/catalog/products?include=specification_multilingual';
+    }
+    $res = $chemins === [] ? [] : PanelApi::getParallele($chemins, 6, 30);
+    $out = []; $etat = ['fournisseurs' => count($fours), 'correspondances' => 0, 'produits' => 0, 'matieres' => 0];
+    foreach ($fours as $f) {
+        $m = analyseListe($res['m' . $f] ?? []); $pr = analyseListe($res['p' . $f] ?? []);
+        $etat['correspondances'] += count($m); $etat['produits'] += count($pr);
+        $out += tclSpecificationsParMatiere($m, $pr);
+    }
+    $etat['matieres'] = count($out);
+    if ($out !== []) { tclCacheEcrire('specifications', $out); }
+    return $out;
+}
+
 /** Les boutiques du panel : nom, adresse, téléphone, langue. */
 function tclBoutiques(): array
 {
@@ -390,6 +465,7 @@ function ep_tcl_client(string $code, string $lang): array
     $lignes = tclLignesTransaction($t);
     $fiches = tclFiches(array_column($lignes, 'id'));
     $cat = ['fr' => tclCatalogue($shop, 'fr'), 'nl' => tclCatalogue($shop, 'nl')];
+    $specs = tclSpecifications();
     $travailles = [];
     foreach ($cat['fr'] as $p) { foreach ($p['allergenes'] as $a) { $travailles[$a] = true; } }
 
@@ -399,6 +475,20 @@ function ep_tcl_client(string $code, string $lang): array
         $f = $fiches[$l['id']] ?? null;
         $c = ['fr' => $cat['fr'][$id] ?? null, 'nl' => $cat['nl'][$id] ?? null];
         $recette = $f['recette'] ?? [];
+        // La spécification du fournisseur complète chaque ingrédient de la centrale (composition par langue).
+        foreach ($recette as $k => $e) {
+            $sp = $specs[(string) ($e['id'] ?? '')] ?? null;
+            if ($sp !== null) { $recette[$k]['detail'] = ['fr' => $sp['fr']['composition'] ?? '', 'nl' => $sp['nl']['composition'] ?? '']; }
+        }
+        // Un produit acheté fini (une seule matière, de la centrale) : ses conseils de conservation et de préparation.
+        $conseils = null;
+        if (count($recette) === 1 && ($sp = $specs[(string) ($recette[0]['id'] ?? '')] ?? null) !== null) {
+            foreach (['fr', 'nl'] as $lg) {
+                $x = $sp[$lg] ?? $sp['fr'] ?? [];
+                $conseils[$lg] = ['conservation' => (string) ($x['conservation'] ?? ''), 'preparation' => (string) ($x['preparation'] ?? ''),
+                    'traduit' => isset($sp[$lg])];
+            }
+        }
         $codes = [];
         foreach ($recette as $e) { foreach ($e['allergenes'] as $a) { $codes[$a] = true; } }
         foreach ($c as $x) { foreach ($x['allergenes'] ?? [] as $a) { $codes[$a] = true; } }
@@ -417,6 +507,7 @@ function ep_tcl_client(string $code, string $lang): array
             'stockage' => $f['stockage'] ?? '',
             'rechauffe' => $f['rechauffe'] ?? null,
             'cuisson' => $f['cuisson'] ?? [],
+            'conseils' => $conseils,
             'etapes' => $f['etapes'] ?? [],
             'webshop' => $f['webshop'] ?? false,
             'fiche' => $f !== null,
@@ -472,4 +563,12 @@ function ep_tcl_essai_lien(int $shop, int $transaction): array
         }
     }
     return ['code' => tclCode($shop, $transaction, authSecret()), 'trouvee' => $t !== null, 'lignes' => is_array($t) ? count(tclLignesTransaction($t)) : 0, 'cles' => $cles];
+}
+
+/** Le diagnostic des spécifications des fournisseurs : ce qui a été lu, et celle d'une matière (?matiere=). */
+function ep_tcl_essai_specifications(int $matiere): array
+{
+    $etat = null;
+    $s = tclSpecifications($etat);
+    return ['etat' => $etat, 'matieres' => count($s), 'exemple' => $matiere > 0 ? ($s[(string) $matiere] ?? null) : (array_slice($s, 0, 1, true) ?: null)];
 }

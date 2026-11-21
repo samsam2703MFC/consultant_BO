@@ -40,7 +40,7 @@
       barre: 'Produits du ticket', prec: 'Produit précédent', suiv: 'Produit suivant', sur: 'sur',
       composition: 'Composition', allergenes: 'Allergènes', cuisson: 'Cuisson', finition: 'Préparation et finition', conservation: 'Conservation',
       aucun: 'Aucun des 14 allergènes réglementaires, d’après nos fiches.', g14: 'Les 14 allergènes, un par un', contient: 'Contient',
-      rechauffer: 'Réchauffer au four', nousCuisons: 'Comment nous le cuisons', entre: 'À conserver entre {a} et {b}.', lire: 'Lire la suite',
+      rechauffer: 'Réchauffer au four', preparer: 'Conseil de préparation', nousCuisons: 'Comment nous le cuisons', entre: 'À conserver entre {a} et {b}.', lire: 'Lire la suite',
       vege: 'Végétarien', aDeguster: 'À déguster {quand}', recommander: 'Le recommander',
       avis: 'Votre avis', avisT: 'Comment était votre passage à {ville} ?', avisP: 'Un mot sur Google aide l’équipe de la boutique, et les clients qui hésitent encore.', avisB: 'Laisser un avis',
       app: 'Mobile', appT: 'Tous vos tickets, au même endroit', appP: 'Dans l’application : vos fiches produits, le programme de fidélité et vos commandes.', appB: 'Télécharger l’application',
@@ -62,7 +62,7 @@
       barre: 'Producten op het kasticket', prec: 'Vorig product', suiv: 'Volgend product', sur: 'van',
       composition: 'Samenstelling', allergenes: 'Allergenen', cuisson: 'Bakken en opwarmen', finition: 'Bereiding en afwerking', conservation: 'Bewaren',
       aucun: 'Geen van de 14 wettelijke allergenen, volgens onze fiches.', g14: 'De 14 allergenen, een voor een', contient: 'Bevat',
-      rechauffer: 'Opwarmen in de oven', nousCuisons: 'Hoe wij het bakken', entre: 'Bewaren tussen {a} en {b}.', lire: 'Meer lezen',
+      rechauffer: 'Opwarmen in de oven', preparer: 'Bereidingstip', nousCuisons: 'Hoe wij het bakken', entre: 'Bewaren tussen {a} en {b}.', lire: 'Meer lezen',
       vege: 'Vegetarisch', aDeguster: 'Te eten {quand}', recommander: 'Opnieuw bestellen',
       avis: 'Uw mening', avisT: 'Hoe was uw bezoek in {ville}?', avisP: 'Een woordje op Google helpt het winkelteam, en klanten die nog twijfelen.', avisB: 'Laat een review achter',
       app: 'Mobiel', appT: 'Al uw kastickets op één plek', appP: 'In de app: uw productfiches, het getrouwheidsprogramma en uw bestellingen.', appB: 'Download de app',
@@ -131,21 +131,26 @@
   }
 
   // ---- les blocs d'une fiche ----------------------------------------------------------------------------------------
+  // Un texte du fournisseur (étiquette SLFood) : ses mots en capitales sont les allergènes, mis en gras.
+  function grasCapitales(s) { return e(s).replace(/([A-ZÀ-ÖØ-ÞŒ][A-ZÀ-ÖØ-ÞŒ'’-]{2,})/g, '<b>$1</b>'); }
   function blocComposition(l, lg) {
     var c = (l.composition || {})[lg] || { items: [], traduit: true };
     if (!c.items.length) { return ''; }
+    var codes = function (al) { return al.length ? ' (' + al.map(function (a) { return '<b>' + e(nomAllergene(a, lg).toLowerCase()) + '</b>'; }).join(', ') + ')' : ''; };
     var txt = c.items.map(function (it) {
-      var al = it[1] || [];
-      return e(it[0]) + (al.length ? ' (' + al.map(function (a) { return '<b>' + e(nomAllergene(a, lg).toLowerCase()) + '</b>'; }).join(', ') + ')' : '');
+      var al = it[1] || [], det = it[2] || '', fournisseur = !!it[3];
+      if (fournisseur) { return grasCapitales(it[0]); }                       // produit acheté fini : la composition du fournisseur
+      if (det) { return e(it[0]) + ' (' + grasCapitales(det) + ')'; }        // ingrédient de la centrale, détaillé
+      return e(it[0]) + codes(al);
     }).join(', ');
+    txt = txt.replace(/\.\s*$/, '');
     return '<div class="blk"><span class="eyebrow">' + e(T[lg].composition) + '</span><p class="blk__txt"' + (c.traduit ? '' : ' lang="fr"') + '>' + txt + '.</p></div>';
   }
   function blocAllergenes(l, lg) {
     var t = T[lg]; var al = l.allergenes || [];
     var tete = al.length ? '<div class="chips">' + al.map(function (a) { return '<span class="chip">' + e(nomAllergene(a, lg)) + '</span>'; }).join('') + '</div>'
       : '<p class="none">' + e(t.aucun) + '</p>';
-    var g = ALLERGENES.map(function (a) { var oui = al.indexOf(a[0]) >= 0; return '<li class="' + (oui ? 'oui' : '') + '">' + e(nomAllergene(a[0], lg)) + '<span>' + (oui ? e(t.contient) : '—') + '</span></li>'; }).join('');
-    return '<div class="blk"><span class="eyebrow">' + e(t.allergenes) + '</span>' + tete + '<details class="g14"><summary>' + e(t.g14) + '</summary><ul>' + g + '</ul></details></div>';
+    return '<div class="blk"><span class="eyebrow">' + e(t.allergenes) + '</span>' + tete + '</div>';
   }
   function texteLong(s, lg) {
     var parts = s.split(/\s(?=\d{1,2}\.\s)/).map(function (x) { return x.trim(); }).filter(Boolean);
@@ -160,6 +165,11 @@
       items += '<div class="how__i"><span class="how__ic">' + ic('four') + '</span><div><p class="how__t">' + e(t.rechauffer) + '</p><p class="how__big">'
         + (r.degres ? r.degres + NBSP + '°C' : '') + (r.minutes ? '<span>· ' + r.minutes + NBSP + 'min</span>' : '') + '</p></div></div>';
     }
+    var cs = (l.conseils || {})[lg];
+    if (cs && cs.preparation) {
+      items += '<div class="how__i"><span class="how__ic">' + ic('four') + '</span><div><p class="how__t">' + e(t.preparer) + '</p>'
+        + '<div class="how__d how__d--seul"' + (cs.traduit ? '' : ' lang="fr"') + '><p>' + e(cs.preparation) + '</p></div></div></div>';
+    }
     (l.cuisson || []).forEach(function (x) {
       items += '<div class="how__i"><span class="how__ic">' + ic('four') + '</span><div><p class="how__t">' + e(t.nousCuisons) + '</p>' + texteLong(x, lg) + '</div></div>';
     });
@@ -173,6 +183,9 @@
   function blocConservation(l, lg, lim) {
     var t = T[lg]; var m = /(-?\d+)\s*°C\s*[–-]\s*(-?\d+)\s*°C/.exec(l.stockage || '');
     var temp = m ? '<p class="blk__txt">' + e(f(t.entre, { a: m[1] + NBSP + '°C', b: m[2] + NBSP + '°C' })) + '</p>' : '';
+    var cs = (l.conseils || {})[lg];
+    // Le conseil du fournisseur (produit acheté fini) prime sur la température du comptoir de la boutique.
+    if (cs && cs.conservation) { temp = '<p class="blk__txt"' + (cs.traduit ? '' : ' lang="fr"') + '>' + e(cs.conservation) + '</p>'; }
     var date = lim ? '<p class="until">' + ic('horloge') + '<span>' + e(f(t.aDeguster, { quand: lim.long })) + '</span></p>' : '';
     return temp || date ? '<div class="blk"><span class="eyebrow">' + e(t.conservation) + '</span><div class="keep">' + temp + date + '</div></div>' : '';
   }
@@ -212,7 +225,6 @@
     var presents = ALLERGENES.map(function (a) { return [a[0], L.filter(function (l) { return (l.allergenes || []).indexOf(a[0]) >= 0; })]; }).filter(function (x) { return x[1].length; });
     var codesPresents = presents.map(function (x) { return x[0]; });
     var alg = presents.map(function (x) { return '<div class="alg-r"><span class="chip">' + e(nomAllergene(x[0], lg)) + '</span><p>' + e(x[1].map(function (l) { return l.nom[lg]; }).join(', ')) + '</p></div>'; }).join('');
-    var absents = ALLERGENES.filter(function (a) { return codesPresents.indexOf(a[0]) < 0; }).map(function (a) { return nomAllergene(a[0], lg).toLowerCase(); }).sort(function (a, b) { return a.localeCompare(b, lg); });
     var travailles = (d.travailles || []).filter(function (a) { return codesPresents.indexOf(a) < 0; }).map(function (a) { return nomAllergene(a, lg).toLowerCase(); });
     var groupes = []; var vus = {};
     L.filter(function (l) { return l._lim; }).sort(function (a, b) { return a._lim.fin - b._lim.fin; }).forEach(function (l) {
@@ -239,15 +251,14 @@
     document.title = t.titre;
     racine.innerHTML = '<header class="nav wrap"><a class="nav__logo" href="#"><img src="../assets/img/logo.png" alt="L’Atelier By"></a><div class="lang" aria-label="Langue · Taal">' + langues + '</div></header>'
       + '<main><section class="head wrap"><p class="eyebrow eyebrow--ruby">' + e(f(t.surTitre, { ville: b.ville || b.nom })) + '</p><h1>' + e(t.h1) + '<span class="script">' + e(t.h1s) + '</span></h1>'
-      + '<p class="head__lede">' + e(t.chapeau) + '</p><div class="meta">' + (quand ? '<span>' + ic('horloge') + e(quand) + '</span>' : '') + '<span>' + e(f(t.articles, { n: nArt })) + ' · ' + euros(total, lg) + '</span></div></section>'
+      + '<div class="meta">' + (quand ? '<span>' + ic('horloge') + e(quand) + '</span>' : '') + '<span>' + e(f(t.articles, { n: nArt })) + ' · ' + euros(total, lg) + '</span></div></section>'
       + '<div class="sand"><div class="wrap top"><section class="card"><p class="eyebrow">' + e(d.transaction.ticket ? f(t.ticketN, { num: d.transaction.ticket }) : f(t.ticket, { num: num })) + '</p><h2 class="card__t">' + e(f(t.ticketT, { p: L.length, n: nArt })) + '</h2>'
       + '<div class="rows">' + rows + '</div><div class="total"><span>' + e(t.total) + '</span><b>' + euros(total, lg) + '</b></div><p class="fine">' + e([b.nom, quand].filter(Boolean).join(' · ')) + '</p></section>'
       + '<div class="stack"><section class="card"><p class="eyebrow eyebrow--ruby">' + e(t.alg) + '</p><h2 class="card__t">' + e(t.algT) + '</h2><div class="alg-l">' + alg + '</div>'
-      + (absents.length ? '<p class="sans">' + f(t.sans, { liste: e(absents.join(', ')) }) + '</p>' : '')
       + (travailles.length ? '<p class="note">' + ic('alerte') + '<span>' + e(f(t.traces, { liste: liste(travailles, lg) })) + '</span></p>' : '') + '</section>'
       + (tl ? '<section class="card"><p class="eyebrow">' + e(t.fraich) + '</p><h2 class="card__t">' + e(t.fraichT) + '</h2><ul class="tl">' + tl + '</ul></section>' : '') + '</div></div>'
       + '<section id="fiches" class="fiches"><div class="wrap chap"><p class="eyebrow">' + e(t.fiches) + '</p><h2 class="h2">' + e(t.h2) + '<span class="script">' + e(t.h2s) + '</span></h2>'
-      + '<p class="chap__lede"><span class="mobile">' + e(t.fichesP) + '</span><span class="bureau">' + e(t.fichesPB) + '</span></p></div>'
+      + '<p class="chap__lede"><span class="mobile">' + e(t.fichesP) + '</span></p></div>'
       + '<nav class="pick" aria-label="' + e(t.barre) + '"><div class="pick__in">' + picks + '</div></nav>'
       + '<div class="ctrl"><p class="ctrl__n"><b>1</b><span> / ' + L.length + '</span></p><div class="ctrl__dots" aria-hidden="true">' + points + '</div>'
       + '<button type="button" class="arr arr--prev" aria-label="' + e(t.prec) + '" disabled>' + ic('gauche') + '</button><button type="button" class="arr arr--next" aria-label="' + e(t.suiv) + '">' + ic('fleche') + '</button></div>'
