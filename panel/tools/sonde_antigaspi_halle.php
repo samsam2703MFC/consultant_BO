@@ -7,6 +7,8 @@ declare(strict_types=1);
  *   1. les produits du catalogue que la règle actuelle (fpFamilleDe) range en anti-gaspi, avec leur catégorie ;
  *   2. les tickets gardés dont les familles contiennent de l'anti-gaspi : leurs lignes d'articles telles que l'ERP les
  *      rend (produit, catégorie, quantité, prix, remise) et les noms des champs d'une ligne.
+ * Sonde terminée : son workflow (.github/workflows/sonde-antigaspi-halle.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée par .github/workflows/sonde-antigaspi-halle.yml : php -- /var/www/consulant_bo < tools/sonde_antigaspi_halle.php
  */
 $dir = rtrim((string) ($argv[1] ?? '/var/www/consulant_bo'), '/');

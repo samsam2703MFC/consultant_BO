@@ -182,7 +182,7 @@ existe, mais sa réponse n'est pas décrite.
 
 - **Fonctions** : `ep_consultants`, `ep_people`, `ep_roles`,
   `consultantAuthId`, `consultantNom`.
-- **Routes** : `/panel/consultants` (déjà lue par `mesure.php`),
+- **Routes** : `/panel/consultants` (déjà lue par `consultant/src/sonde_consultant.php`),
   `/consultant/responsibility-areas` et
   `/consultant-memberships/{id}/area-descriptions`.
 - **Verdict : Partiel.** Les consultants, oui. Les destinataires de rapports

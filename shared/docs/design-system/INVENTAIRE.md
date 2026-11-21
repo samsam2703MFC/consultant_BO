@@ -219,8 +219,8 @@ hors les libellés listés ci-dessus.
 - **Italique** : aucun fichier Gotham italique n'est déclaré (§4.1) ; les
   rares italiques sont synthétisés par le navigateur.
 - **Hors périmètre** : `panel/public/tablette/` (compilation du dépôt
-  `pwa_sales_tablet`), `marketing/public/assistant/` (compilation de
-  `marketing/tools/assistant-src`, copie ancienne du Marketing), `panel/public/employee/` (app
+  `pwa_sales_tablet`), `marketing/public/assistant/` (un renvoi vers
+  l'assistant du Marketing ; les sources de l'ancienne copie, `marketing/tools/assistant-src`, retirées le 21/11/2026), `panel/public/employee/` (app
   des employés, Bootstrap / Mazer) — à aligner dans leurs sources.
 
 ## 5. Checklist d'acceptation (§12)

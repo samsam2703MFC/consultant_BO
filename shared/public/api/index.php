@@ -115,6 +115,12 @@ require __DIR__ . '/../../../consultant/src/kpis.php';
 require __DIR__ . '/../../../consultant/src/cadence.php';
 require __DIR__ . '/../../../shared/src/connecteurs.php';
 require __DIR__ . '/../../../marketing/src/mesure.php';
+// Sortis de mesure.php le 21/11/2026, chacun dans son domaine :
+require __DIR__ . '/../../../shared/src/magasins.php';              // magasinNom (réclamations, primes, invendus)
+require __DIR__ . '/../../../panel/src/reclamations_magasin.php';   // Réclamations matière : lecture, références, codes-barres, photos, dépôt
+require __DIR__ . '/../../../consultant/src/taches_classement.php'; // Le classement des tâches du réseau
+require __DIR__ . '/../../../consultant/src/profil_jour.php';       // Le profil de semaine des magasins (con_shop_profil_jour)
+require __DIR__ . '/../../../consultant/src/sonde_consultant.php';  // Diagnostic des routes « consultant » du panel
 require __DIR__ . '/../../../consultant/src/taches_suivi.php';
 require __DIR__ . '/../../../consultant/src/cq_mail.php';
 require __DIR__ . '/../../../panel/src/pointages_mail.php';
