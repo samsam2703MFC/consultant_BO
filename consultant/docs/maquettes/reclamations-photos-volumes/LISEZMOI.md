@@ -9,6 +9,8 @@ Réclamations fournisseur (`avant.png`) : « est-ce que je peux avoir à chaque 
 | `avant.png` | l'écran tel qu'il est aujourd'hui (capture du 21/11) : « Pièces jointes 1 », mais aucune photo visible |
 | `a.png` | **A · les photos à chaque réclamation** : une colonne Photos (vignette + nombre, « sans photo » en rouge), un filtre et un indicateur « Sans photo », et dans la fiche les photos en grand (vignettes, « Tout télécharger ») ; en plus, la part du produit dans ce qui a été livré au magasin (semaine, mois, année) et la même part pour le réseau |
 | `b.png` | **B · tableau annuel par magasin** : un 3e onglet « Tableau annuel » ; magasins × mois, chaque case = montant réclamé et sa part du livré (au prix d'achat), carte de chaleur, ligne Réseau, colonnes Livré et Accepté ; export Excel et PDF |
+| `d.png` | **D · tableau annuel par catégorie** (21/11, après la mise en ligne de B) : « Livré » ne compte que les produits réclamés ; le % sur l'ensemble (indicateur et ligne Ensemble) et par catégorie, mois par mois |
+| `e.png` | **E · tableau annuel par produit**, rangé par catégorie (ligne de catégorie, puis ses produits en pièces) : le % de chaque produit, de sa catégorie et de l'ensemble |
 | `c.png` | **C · tableau annuel par produit, le client face au réseau** : pour chaque produit, pièces livrées, pièces réclamées, taux sur l'année, pire mois, pire semaine, montant, courbe mois par mois ; Gosselies à gauche, le réseau à droite |
 
 B et C sont les deux vues du même onglet (« Par magasin » / « Par produit ») : on peut garder les deux.
@@ -57,3 +59,11 @@ B et C sont les deux vues du même onglet (« Par magasin » / « Par produit »
 - `code-a.png`, `code-b.png` : l'écran codé, API simulée avec les réclamations de la capture (volumes simulés).
 - À vérifier en ligne : que les entrées du grand livre liées à une commande (`material_inventory_log.id_order`) sont bien
   les livraisons, et la forme d'un élément de `attachments`.
+
+## D et E (21/11/2026, après la mise en ligne)
+
+Retour sur B en ligne : « le champ Livré n'est pas bon (c'est l'ensemble du chiffre d'affaires du client pour le
+fournisseur) » ; demande : « tous les produits réclamés, et on toggle catégories et produits — je dois avoir le % sur
+l'ensemble / la catégorie / le produit ». Livré ne compte plus que les produits réclamés au moins une fois dans l'année.
+Constat en ligne : le grand livre matière du panel ne porte plus aucune livraison après juillet 2026 (« livré inconnu »
+d'août à novembre) — la source du livré reste à trancher avant de coder D et E.

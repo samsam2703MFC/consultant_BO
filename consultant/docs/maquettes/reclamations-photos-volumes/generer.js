@@ -136,3 +136,44 @@ fs.writeFileSync(path.join(D, 'a.html'), A);
 fs.writeFileSync(path.join(D, 'b.html'), B);
 fs.writeFileSync(path.join(D, 'c.html'), C);
 console.log('a.html, b.html, c.html écrits');
+
+/* ── D et E (21/11/2026, après la mise en ligne de B) : « Livré » ne compte que les produits réclamés ; bascule
+ * Catégories / Produits ; le % sur l'ensemble, la catégorie et le produit (« tous les produits réclamés, et on toggle
+ * catégories et produits — je dois avoir le % sur l'ensemble / la catégorie / le produit »). ── */
+// Les produits réclamés de la capture, rangés par catégorie ; prix d'achat unitaire de la capture ; livrés : illustration.
+const CATS = [
+  ['Viennoiserie', [['Croissant', '1001958', 0.70, 41800, [0, 0, 0, 0, 0, 0, 0, 0, 0, 220, 25, null]], ['Pain au Chocolat', '1002343', 0.80, 29400, [0, 0, 0, 0, 0, 0, 0, 0, 0, 56, 0, null]], ['Cougnou Sucre 200 g. - Cru', '1003088', 0.98, 3780, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 126, null]]]],
+  ['Pâtisserie', [['Riz Croustillant - 28 Ø', '2580116', 9.18, 1092, [0, 0, 0, 0, 0, 0, 0, 0, 10, 8, 0, null]], ['Tendresse au Chocolat', '1008248', 1.10, 11426, [0, 0, 0, 0, 0, 0, 0, 0, 40, 40, 0, null]]]],
+  ['Bases et fonds', [['Fond de pâte - 28 Ø', '2580106', 3.86, 1344, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, null]]]],
+  ['Pains', [['Blanc (Pauvre en Gluten) 600 g.', '1002518', 2.21, 2100, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, null]]]],
+  ['Traiteur', [['Soupe Potiron & Citron (6 x 1l.)', '1003985', 5.23, 588, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, null]]]]];
+// Livré par mois : réparti sur janvier → novembre (illustration), décembre à venir.
+const repart = tot => MOIS.map((_, i) => i > 10 ? null : Math.round(tot / 11 * (0.85 + ((i * 7) % 5) * 0.075)));
+const prods = CATS.flatMap(([c, L]) => L.map(([n, sku, pu, liv, rec]) => ({ c, n, sku, pu, liv: repart(liv), rec })));
+const somme = a => a.reduce((s, x) => s + (x || 0), 0);
+const moisDe = (P, i) => ({ r: somme(P.map(p => (p.rec[i] || 0) * p.pu)), l: somme(P.map(p => (p.liv[i] || 0) * p.pu)), rq: somme(P.map(p => p.rec[i] || 0)), lq: somme(P.map(p => p.liv[i] || 0)) });
+const anDe = P => ({ r: somme(P.map(p => somme(p.rec) * p.pu)), l: somme(P.map(p => somme(p.liv) * p.pu)), rq: somme(P.map(p => somme(p.rec))), lq: somme(P.map(p => somme(p.liv))) });
+const caseDE = (x, futur, pieces) => futur ? '<td class="rp-c rp-fut">—</td>' : !x.r ? '<td class="rp-c"></td>'
+  : `<td class="rp-c ${chaleur(100 * x.r / x.l)}"><b>${pieces ? nf(x.rq) + ' pcs' : nf(x.r, 0) + ' €'}</b><small>${pct(100 * x.r / x.l)}</small></td>`;
+const ligneDE = (nom, sous, P, cls, pieces) => { const A = anDe(P); return `<tr class="${cls}"><td class="g">${nom}<small>${sous}</small></td>${MOIS.map((_, i) => caseDE(moisDe(P, i), i > 10, pieces)).join('')}
+  ${caseDE(A, false, pieces)}<td class="r">${pieces ? nf(A.lq) + ' pcs' : nf(A.l, 0) + ' €'}<small>${pieces ? nf(A.rq) + ' pcs réclamés' : nf(A.r, 2) + ' € réclamés'}</small></td><td class="r"><b class="rp-pc ${chaleur(100 * A.r / A.l)}">${pct(100 * A.r / A.l)}</b></td></tr>`; };
+const TOT = anDe(prods);
+const enteteDE = (vue, magasin) => `<div class="vt-fil"><div class="vr-chips hd-chips"><button>Par magasin</button><button class="${vue === 'cat' ? 'on' : ''}">Catégories</button><button class="${vue === 'prod' ? 'on' : ''}">Produits</button></div>
+  <select class="vr-sel"><option>2026</option></select><select class="vr-sel"><option>SLFood</option></select><select class="vr-sel rp-on"><option>${magasin}</option></select>
+  <div class="rp-seg"><span>Afficher</span><button class="on">€ et %</button><button>Pièces et %</button></div><span class="vr-sp"></span>${illu('livrés : illustration')}<button class="vr-btn">Exporter (Excel, CSV)</button></div>`;
+const kpisDE = cats => kpis([['Ensemble · produits réclamés', `<span class="rp-att">${pct(100 * TOT.r / TOT.l)}</span>`, nf(TOT.r, 0) + ' € réclamés ÷ ' + nf(TOT.l, 0) + ' € livrés', ''],
+  ...cats.map(([c, L]) => { const A = anDe(prods.filter(p => p.c === c)); return [c, `<span class="${chaleur(100 * A.r / A.l) === 'h3' ? 'rp-ko' : ''}">${pct(100 * A.r / A.l)}</span>`, nf(A.r, 0) + ' € / ' + nf(A.l, 0) + ' € · ' + L.length + ' produit' + (L.length > 1 ? 's' : ''), '']; })]);
+const theadDE = premier => `<thead><tr><th class="g">${premier}</th>${MOIS.map(m => `<th>${m}</th>`).join('')}<th>Année</th><th class="r">Livré</th><th class="r">% réclamé</th></tr></thead>`;
+const piedDE = `<div class="rp-leg"><span>% réclamé ÷ livré :</span><i class="h0"></i>&lt; 0,75 %<i class="h1"></i>0,75 – 1,5 %<i class="h2"></i>1,5 – 3 %<i class="h3"></i>≥ 3 %</div>
+  <div class="vr-pied"><b>Livré ne compte que les produits réclamés</b> au moins une fois dans l’année (pas tout le chiffre du fournisseur) : le % compare chaque produit à ses propres livraisons, chaque catégorie à la somme de ses produits réclamés, et l’ensemble à tous les produits réclamés. Montants au prix d’achat. <span class="vr-mu">Maquette : produits, catégories proposées et prix unitaires repris de la capture du 21/11/2026 ; quantités livrées d’illustration.</span></div>`;
+const D2 = page(`${onglets('an')}<div class="vr-card">${enteteDE('cat', 'Tous les magasins (réseau)')}${kpisDE(CATS)}
+  <div class="vr-tw"><table class="vr-t rp-an">${theadDE('Catégorie')}<tbody>
+  ${CATS.map(([c, L]) => ligneDE('<b>' + c + '</b>', L.length + ' produit' + (L.length > 1 ? 's' : '') + ' réclamé' + (L.length > 1 ? 's' : ''), prods.filter(p => p.c === c), '')).join('')}
+  ${ligneDE('<b>Ensemble</b>', prods.length + ' produits réclamés', prods, 'rp-tot')}</tbody></table></div>${piedDE}</div>`, 'D · tableau annuel par catégorie (produits réclamés)');
+const E2 = page(`${onglets('an')}<div class="vr-card">${enteteDE('prod', 'Tous les magasins (réseau)')}${kpisDE(CATS)}
+  <div class="vr-tw"><table class="vr-t rp-an">${theadDE('Produit')}<tbody>
+  ${CATS.map(([c, L]) => ligneDE('<b>▾ ' + c + '</b>', 'catégorie', prods.filter(p => p.c === c), 'rp-cat') + L.map(([n, sku]) => ligneDE('<span class="rp-ind">' + esc(n) + '</span>', '<span class="rp-ind">SKU ' + sku + '</span>', prods.filter(p => p.n === n), '', true)).join('')).join('')}
+  ${ligneDE('<b>Ensemble</b>', prods.length + ' produits réclamés', prods, 'rp-tot')}</tbody></table></div>${piedDE}</div>`, 'E · tableau annuel par produit, rangé par catégorie');
+fs.writeFileSync(path.join(D, 'd.html'), D2);
+fs.writeFileSync(path.join(D, 'e.html'), E2);
+console.log('d.html, e.html écrits');
