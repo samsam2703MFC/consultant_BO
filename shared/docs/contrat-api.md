@@ -2868,6 +2868,13 @@ chaque poste : `lignes[]` {`poste`, `cle`, `type`, `montant`, `tva` (true, false
 Résultat gardé d'aujourd'hui part périmé (servi, refait en arrière-plan). Le panel n'est pas modifié. Routes sous
 `/exploitation` : un franchisé n'y lit et n'y écrit que ses magasins.
 
+**Le poste d'une ligne (21/11/2026).** Le poste est la `description` de la ligne au panel (le libellé saisi :
+« Comptable », « royalties »), sinon sa catégorie (`cost_name`) ; la catégorie reste en `type`, sous le poste. Avant, le
+poste était la catégorie : un frais « Comptable » s'affichait « Autres charges d'exploitation », s'additionnait aux autres
+frais de la catégorie, et la TVA choisie pour « Comptable » ne s'y appliquait pas. Un poste sans choix propre prend celui
+de sa catégorie (les choix faits avant restent valables). La garde `phF:` porte une version (`v`) : une lecture faite avec
+l'ancienne règle se refait.
+
 ### `POST /exploitation/frais/ajout` et `POST /exploitation/frais/annuler` — ajouter un frais au panel (21/11/2026)
 
 Demande : « rajouter un frais (faire un formulaire) et que ce frais se reporte sur toute l'année ». Code :
@@ -2880,10 +2887,16 @@ centime, le dernier mois prend l'arrondi. `type` : l'identifiant d'un type de fr
 `GET /exploitation/frais` sous `types`, gardé un jour dans `phTypes`). `mois` : de l'année passée à l'année prochaine.
 `tva`/`taux` (facultatifs) : le choix « TVA comprise » du nouveau poste, comme `/exploitation/frais/tva`.
 
-- **Le corps.** Le Swagger du panel ne décrit ni corps ni réponse des routes de frais : le corps reprend les noms des
-  champs d'une ligne déjà saisie au magasin (`/shops/{id}/costs?period=`, sinon `/owner/costs`, le mois de l'ajout puis
-  les trois d'avant), remplis (magasin, type, montant, libellé, mois ou dates au format lu) ; sinon `amount`, `name`,
-  `period` (AAAA-MM), `id_cost`. Chaque ligne couvre son mois, jamais plus.
+- **La forme des frais au panel** (lue le 21/11/2026 par `panel/tools/sonde_frais.php`, workflow `sonde-frais.yml`,
+  lecture seule) : `/costs` rend les 9 catégories `{id, name}` ; une ligne du magasin (`/shops/{id}/costs?period=`, liste)
+  est `{id, id_shop, id_cost, date: AAAA-MM-01, amount: "700.00", description, cost_name}` ; `/owner/costs?period=`
+  rend `{period, total, items: [{id, date, amount, description, cost_name}]}`. `cost_name` est la catégorie,
+  `description` le libellé saisi. **Aucun champ de TVA** : la TVA d'un poste reste au cockpit (`panel_frais_tva`).
+- **Le corps** reprend les champs d'une ligne déjà saisie au magasin (le mois de l'ajout puis les trois d'avant) : le
+  libellé dans `description` (sinon `name`, `label`, `title`), jamais `cost_name` ; sans ligne lue, la forme ci-dessus
+  `{id_shop, id_cost, date, amount, description}`. Chaque ligne couvre son mois, jamais plus.
+- **L'identifiant.** La création ne rend pas l'identifiant de la ligne : la relecture le retrouve (même libellé, même
+  montant, la plus récente des lignes qu'aucun autre ajout ne tient) ; à défaut, l'annulation le cherche au même moment.
 - **Le report par le panel.** Le mois qui suit le premier est relu (`/owner/costs?period=`) avant et après la première
   création : s'il porte le frais une fois de plus, le panel le reporte de lui-même et rien d'autre n'est créé
   (`reporteParLePanel`, les mois suivants marqués `parLePanel`).

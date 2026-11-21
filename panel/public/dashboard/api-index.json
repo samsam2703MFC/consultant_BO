@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-21T06:14:58Z",
+ "genere": "2026-11-21T06:32:58Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -999,7 +999,7 @@
      ],
      "chemin": "/exploitation/frais/ajout",
      "handler": "wr_exploitation_frais_ajout",
-     "source": "panel/src/frais.php:311",
+     "source": "panel/src/frais.php:349",
      "resume": "un frais ajouté au panel, pour un mois ou mois après mois (voir plus haut)."
     }
    ]
@@ -1020,7 +1020,7 @@
      ],
      "chemin": "/exploitation/frais/annuler",
      "handler": "wr_exploitation_frais_annuler",
-     "source": "panel/src/frais.php:380",
+     "source": "panel/src/frais.php:426",
      "resume": "shop, lot} — un ajout défait : chaque ligne créée au panel supprimée (DELETE /shops/costs/{id})."
     }
    ]
