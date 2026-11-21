@@ -1959,11 +1959,13 @@ function wr_fonds_mouvement(?int $id): array
     catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
 
     if ($id !== null) {
-        // Lecture seule (écart connu : le cockpit lit encore le grand livre en base) : une échéance née d'un frais
-        // récurrent se corrige sur son modèle — la corriger ici la ferait diverger des autres sans que rien ne le dise.
-        $dej = Db::row('SELECT label, recurrence_id FROM mar_fund_movement WHERE id = ?', [$id]);
+        // La ligne se lit au grand livre du module (marketing/src/fonds.php) : une échéance née d'un frais récurrent se
+        // corrige sur son modèle — la corriger ici la ferait diverger des autres sans que rien ne le dise.
+        $lu = fondsLigne($id);
+        if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'grand livre illisible au module Marketing : ' . $lu['erreur']]; }
+        $dej = $lu['ligne'];
         if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
-        if ($dej['recurrence_id'] !== null) {
+        if (($dej['recurrence_id'] ?? null) !== null) {
             http_response_code(409);
             return ['error' => 'cette écriture vient d’un frais récurrent — corrigez le frais, pas l’échéance'];
         }
@@ -1982,7 +1984,9 @@ function wr_fonds_mouvement(?int $id): array
 
 function wr_fonds_mouvement_suppr(int $id): array
 {
-    $dej = Db::row('SELECT label FROM mar_fund_movement WHERE id = ?', [$id]);   // lecture : le libellé du journal
+    $lu = fondsLigne($id);   // le libellé du journal, lu au grand livre du module
+    if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'grand livre illisible au module Marketing : ' . $lu['erreur']]; }
+    $dej = $lu['ligne'];
     if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
     $r = fondsRendu(marketingAppel('DELETE', '/funds/movements/' . $id), 'mouvement');
     if (isset($r['error'])) { return $r; }
@@ -2029,7 +2033,10 @@ function wr_fonds_recurrence(): array
 
 function wr_fonds_recurrence_suppr(int $id): array
 {
-    $dej = Db::row('SELECT label FROM mar_fund_recurrence WHERE id = ?', [$id]);   // lecture : le libellé du journal
+    [$recs, $err] = fondsRecurrencesModule();   // le libellé du journal, lu au module
+    if ($recs === null) { http_response_code(502); return ['error' => 'frais récurrents illisibles au module Marketing : ' . $err]; }
+    $dej = null;
+    foreach ($recs as $r0) { if ((int) ($r0['id'] ?? 0) === $id) { $dej = $r0; break; } }
     if ($dej === null) { http_response_code(404); return ['error' => 'frais récurrent introuvable']; }
     // Le module supprime le modèle ; la FK en CASCADE emporte les échéances écrites.
     $r = fondsRendu(marketingAppel('DELETE', '/funds/recurrences/' . $id), 'recurrence');
@@ -2084,18 +2091,29 @@ function fondsRoyaltiesEcrire(string $mois, bool $apercu, ?int $seulShop = null)
         http_response_code(502);
         return ['error' => 'grille des taux ou chiffres d’affaires illisibles — configurez le compte consultant (Mon compte)'];
     }
-    // Ce que le mois porte déjà, rapproché par la pièce canonique —
-    // l'index (source, period_from, shop_id) est taillé pour cette lecture.
-    $deja = [];
-    foreach (Db::rows("SELECT document_ref FROM mar_fund_movement
-                       WHERE source = 'ROYALTY' AND period_from = ?", [$don['du']]) as $m) {
-        if (($m['document_ref'] ?? '') !== '') { $deja[(string) $m['document_ref']] = true; }
+    // Ce que le mois porte déjà, rapproché par la pièce canonique, lu au
+    // grand livre du module (marketing/src/fonds.php).
+    [$ledger, $err] = fondsLivreModule();
+    if ($ledger === null) {
+        http_response_code(502);
+        return ['error' => 'grand livre illisible au module Marketing : ' . $err];
     }
-    // Le FK n'accepte que les magasins présents dans mar_shop : un magasin du
+    $deja = [];
+    foreach (fondsLignes($ledger) as $m) {
+        if (($m['source'] ?? '') === 'ROYALTY' && (string) ($m['period_from'] ?? '') === $don['du'] && ($m['document_ref'] ?? '') !== '') {
+            $deja[(string) $m['document_ref']] = true;
+        }
+    }
+    // Le module n'accepte que les magasins qu'il connaît : un magasin du
     // panel qui n'y serait pas s'écrit sans rattachement — le libellé et la
     // pièce le nomment, la ligne le signale.
+    [$boutiques, $errB] = fondsBoutiquesModule();
+    if ($boutiques === null) {
+        http_response_code(502);
+        return ['error' => 'boutiques illisibles au module Marketing : ' . $errB];
+    }
     $refShops = [];
-    foreach (Db::rows('SELECT id FROM mar_shop') as $r) { $refShops[(int) $r['id']] = true; }
+    foreach ($boutiques as $r) { $refShops[(int) ($r['id'] ?? 0)] = true; }
 
     $lignes = []; $ecrites = 0; $dejaN = 0; $aEcrire = 0.0;
     foreach ($don['shops'] as $s) {
