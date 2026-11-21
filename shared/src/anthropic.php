@@ -486,6 +486,38 @@ final class Anthropic
         return ['releve' => null, 'erreur' => 'le modèle n’a pas rendu de relevé', 'modele' => $modele, 'usage' => $usage];
     }
 
+    /**
+     * Une demande en texte seul, une réponse JSON contrainte par un schéma (sorties structurées) : pour les modules
+     * qui font PROPOSER au modèle (la boîte mail range, le magasin valide). Le modèle : $modele, sinon celui du réglage.
+     *
+     * @return array{json:?array, erreur:?string, modele:string, usage:?array}
+     */
+    public static function json(string $system, string $texte, array $schema, int $maxTokens = 4000, ?string $modele = null, int $delai = 90): array
+    {
+        $c = self::config();
+        $modele = $modele ?: $c['modele'];
+        if ($c['cle'] === '') { return ['json' => null, 'erreur' => 'clé Anthropic absente (Paramètres › Assistance IA)', 'modele' => $modele, 'usage' => null]; }
+        $corps = [
+            'model' => $modele,
+            'max_tokens' => $maxTokens,
+            'system' => $system,
+            'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
+            'messages' => [['role' => 'user', 'content' => [['type' => 'text', 'text' => $texte]]]],
+        ];
+        [$code, $rep] = self::http($corps, $c['cle'], [], $delai);
+        $usage = is_array($rep) ? ($rep['usage'] ?? null) : null;
+        if ($code >= 200 && $code < 300 && is_array($rep) && ($rep['stop_reason'] ?? '') === 'max_tokens') {
+            return ['json' => null, 'erreur' => 'réponse coupée par la limite de jetons', 'modele' => $modele, 'usage' => $usage];
+        }
+        if (($err = self::erreurReponse($code, $rep)) !== null) { return ['json' => null, 'erreur' => $err, 'modele' => $modele, 'usage' => $usage]; }
+        $txt = '';
+        foreach ((array) ($rep['content'] ?? []) as $b) { if (($b['type'] ?? '') === 'text') { $txt .= (string) ($b['text'] ?? ''); } }
+        $j = json_decode($txt, true);
+        if (!is_array($j) && preg_match('/\{.*\}/s', $txt, $m)) { $j = json_decode($m[0], true); }
+        return is_array($j) ? ['json' => $j, 'erreur' => null, 'modele' => (string) ($rep['model'] ?? $modele), 'usage' => $usage]
+            : ['json' => null, 'erreur' => 'réponse non exploitable du modèle', 'modele' => $modele, 'usage' => $usage];
+    }
+
     /** Une réponse en échec, un refus ou une coupure : le message à afficher ; null si la réponse est bonne. */
     private static function erreurReponse(int $code, mixed $rep): ?string
     {

@@ -30,7 +30,9 @@ declare(strict_types=1);
  *   GET  /dashboard/boite/messages?shop=&dossier=&page=&q=&filtre= la liste (50 par page, la plus récente d'abord)
  *   GET  /dashboard/boite/message?shop=&dossier=&uid=           un e-mail (marqué lu)
  *   GET  /dashboard/boite/piece?shop=&dossier=&uid=&partie=     une pièce jointe ou une image intégrée
- *   POST /dashboard/boite/geste    {shop, dossier, uids, action: lu|nonlu|suivi|nonsuivi|archiver|corbeille|deplacer, vers}
+ *   POST /dashboard/boite/geste    {shop, dossier, uids | tout: {q, filtre}, action: lu|nonlu|suivi|nonsuivi|archiver|corbeille|
+ *                                   effacer|deplacer, vers | nouveau}   (les archives, la corbeille créées si la boîte n'en a pas)
+ *   POST /dashboard/boite/ranger   {shop, dossier, uids}       l'IA propose un dossier pour chaque e-mail (rien ne bouge)
  *   POST /dashboard/boite/envoyer  {shop, a, cc, objet, texte, reponse?, transfert?, offre?, pieces?}
  *   GET  /dashboard/boite/modeles?shop=        POST {shop, action: creer|modifier|supprimer, id, nom, objet, corps}
  *   GET  /dashboard/boite/automatiques?shop=   POST {shop, regle, actif, objet, corps, jours}
@@ -51,6 +53,9 @@ const BM_TTL = 2592000;          // 30 jours
 const BM_PAGE = 50;
 const BM_TAILLE_MAX = 25000000;  // un e-mail plus lourd ne s'ouvre pas en entier (ses en-têtes, si)
 const BM_ENVOI_MAX = 15000000;   // pièces jointes d'un envoi
+const BM_RANGER_MAX = 50;          // e-mails proposés à l'IA d'un coup (une page de la liste)
+/** Les dossiers que le dashboard crée quand la boîte ne les a pas : [nom, attribut SPECIAL-USE]. */
+const BM_ROLES_CREES = ['archive' => ['Archive', '\\Archive'], 'trash' => ['Trash', '\\Trash'], 'sent' => ['Sent', '\\Sent']];
 
 /** Les modèles du réseau, proposés à chaque magasin (lecture seule ; « Dupliquer » en fait un modèle du magasin). */
 const BM_MODELES_BASE = [
@@ -191,6 +196,7 @@ function bmRoute(string $method, string $path): ?array
         if ($method === 'GET' && $sous === '/message') { return bmMessage($shop, $c); }
         if ($method === 'GET' && $sous === '/piece') { bmPiece($c); }
         if ($method === 'POST' && $sous === '/geste') { return bmGeste($c, $b); }
+        if ($method === 'POST' && $sous === '/ranger') { return bmRanger($c, $b); }
         if ($method === 'POST' && $sous === '/envoyer') { return bmEnvoyerRoute($shop, $c, $b); }
         if ($sous === '/modeles') { return $method === 'POST' ? bmModelesEcrire($shop, $b) : bmModeles($shop); }
         if ($sous === '/automatiques') { return $method === 'POST' ? bmAutoEcrire($shop, $b) : bmAuto($shop); }
@@ -290,10 +296,18 @@ function bmDossierDemande(BmImap $s, string $brut): string
     throw new RuntimeException('dossier inconnu');
 }
 
-function bmDossierRole(BmImap $s, string $role): ?string
+/**
+ * Le dossier qui tient un rôle (archive, trash, sent…). $creer : s'il manque, il est créé dans la boîte — une boîte
+ * neuve chez OVH n'a souvent que sa réception, tant qu'aucun webmail n'y a créé ses dossiers (21/11/2026, « la boîte
+ * n'a pas de dossier d'archives, ni de corbeille »). Il prend le nom que posent les webmails d'OVH (Roundcube) : le
+ * webmail, le téléphone et le dashboard rangent alors au même endroit.
+ */
+function bmDossierRole(BmImap $s, string $role, bool $creer = false): ?string
 {
     foreach ($s->dossiers() as $d) { if ($d['role'] === $role) { return $d['brut']; } }
-    return null;
+    if (!$creer || !isset(BM_ROLES_CREES[$role])) { return null; }
+    [$nom, $usage] = BM_ROLES_CREES[$role];
+    return $s->creerDossier($nom, $usage);
 }
 
 /** Une pièce jointe dans la structure IMAP (un nom de fichier, une disposition « attachment ») ? */
@@ -324,23 +338,28 @@ function bmOffresCitees(string $t): array
     return array_values(array_unique(array_map('intval', $m[1])));
 }
 
-function bmMessages(array $c): array
+/** Les critères de UID SEARCH d'un filtre (nonlus, suivis, pj) et d'une recherche : ceux de la liste, et de « tout le dossier ». */
+function bmCriteres(string $filtre, string $q): array
 {
-    $s = bmImap($c);
-    $dossier = bmDossierDemande($s, (string) ($_GET['dossier'] ?? 'INBOX'));
-    $s->ouvrirDossier($dossier);
     $crit = [];
-    $filtre = (string) ($_GET['filtre'] ?? '');
     if ($filtre === 'nonlus') { $crit[] = 'UNSEEN'; }
     if ($filtre === 'suivis') { $crit[] = 'FLAGGED'; }
     if ($filtre === 'pj') { $crit[] = 'HEADER Content-Type "multipart/mixed"'; }
-    $q = trim(mb_substr((string) ($_GET['q'] ?? ''), 0, 120));
+    $q = trim(mb_substr($q, 0, 120));
     if ($q !== '') { $crit[] = 'TEXT'; $crit[] = ['ch' => $q]; }
     if (!$crit) { $crit[] = 'ALL'; }
     // Les critères séparés d'une espace, sans espace en trop à la fin (un serveur strict répondrait BAD).
     $parts = [];
     foreach ($crit as $i => $x) { if ($i > 0) { $parts[] = ' '; } $parts[] = $x; }
-    $uids = array_reverse($s->chercher($parts));
+    return $parts;
+}
+
+function bmMessages(array $c): array
+{
+    $s = bmImap($c);
+    $dossier = bmDossierDemande($s, (string) ($_GET['dossier'] ?? 'INBOX'));
+    $s->ouvrirDossier($dossier);
+    $uids = array_reverse($s->chercher(bmCriteres((string) ($_GET['filtre'] ?? ''), (string) ($_GET['q'] ?? ''))));
     $page = max(1, (int) ($_GET['page'] ?? 1));
     $tranche = array_slice($uids, ($page - 1) * BM_PAGE, BM_PAGE);
     $lus = $s->lire($tranche, 'UID FLAGS INTERNALDATE RFC822.SIZE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID)]');
@@ -412,14 +431,30 @@ function bmPiece(array $c): never
 
 /* --- gestes ----------------------------------------------------------------------------------------------------- */
 
+/**
+ * Un geste sur des e-mails du dossier : `uids`, ou `tout: {q, filtre}` — tous ceux du dossier qui répondent à la
+ * recherche et au filtre de la liste (« Sélectionner les 248 e-mails du dossier »), relus ici, pas envoyés par l'écran.
+ *   lu | nonlu | suivi | nonsuivi       les drapeaux
+ *   archiver | corbeille                vers les archives, la corbeille — créées dans la boîte si elle n'en a pas
+ *   effacer                             pour de bon, depuis la corbeille ou les indésirables seulement
+ *   deplacer {vers | nouveau}           vers un dossier de la boîte, ou un nouveau dossier créé pour l'occasion
+ * Rend n (le nombre d'e-mails) et `cree` : le dossier créé, s'il y en a un.
+ */
 function bmGeste(array $c, array $b): array
 {
     $s = bmImap($c);
     $dossier = bmDossierDemande($s, (string) ($b['dossier'] ?? 'INBOX'));
-    $uids = array_values(array_filter(array_map('intval', (array) ($b['uids'] ?? [])), static fn ($u) => $u > 0));
-    if (!$uids) { return bmErreur(422, 'Aucun e-mail désigné.'); }
     $s->ouvrirDossier($dossier);
+    if (is_array($b['tout'] ?? null)) {
+        $uids = $s->chercher(bmCriteres((string) ($b['tout']['filtre'] ?? ''), (string) ($b['tout']['q'] ?? '')));
+        if (!$uids) { return bmErreur(422, 'Aucun e-mail dans ce dossier.'); }
+    } else {
+        $uids = array_values(array_unique(array_filter(array_map('intval', (array) ($b['uids'] ?? [])), static fn ($u) => $u > 0)));
+        if (!$uids) { return bmErreur(422, 'Aucun e-mail désigné.'); }
+    }
     $a = (string) ($b['action'] ?? '');
+    $cree = null;
+    $avant = array_column($s->dossiers(), 'brut');
     switch ($a) {
         case 'lu': $s->drapeaux($uids, '+', '\\Seen'); break;
         case 'nonlu': $s->drapeaux($uids, '-', '\\Seen'); break;
@@ -427,19 +462,152 @@ function bmGeste(array $c, array $b): array
         case 'nonsuivi': $s->drapeaux($uids, '-', '\\Flagged'); break;
         case 'archiver':
         case 'corbeille':
-            $vers = bmDossierRole($s, $a === 'archiver' ? 'archive' : 'trash');
-            if ($vers === null) { return bmErreur(409, $a === 'archiver' ? 'La boîte n’a pas de dossier d’archives.' : 'La boîte n’a pas de corbeille.'); }
+            $vers = bmDossierRole($s, $a === 'archiver' ? 'archive' : 'trash', true);
             if ($vers === $dossier) { return bmErreur(409, 'Ces e-mails y sont déjà.'); }
+            $s->ouvrirDossier($dossier);
             $s->deplacer($uids, $vers);
             break;
+        case 'effacer':
+            $role = null;
+            foreach ($s->dossiers() as $d) { if ($d['brut'] === $dossier) { $role = $d['role']; } }
+            if (!in_array($role, ['trash', 'junk'], true)) { return bmErreur(409, 'On n’efface pour de bon que depuis la corbeille ou les indésirables : mettez d’abord ces e-mails à la corbeille.'); }
+            $s->ouvrirDossier($dossier);
+            $s->effacer($uids);
+            break;
         case 'deplacer':
-            $vers = bmDossierDemande($s, (string) ($b['vers'] ?? ''));
+            $nouveau = trim((string) ($b['nouveau'] ?? ''));
+            $vers = $nouveau !== '' ? $s->creerDossier($nouveau) : bmDossierDemande($s, (string) ($b['vers'] ?? ''));
             if ($vers === $dossier) { return bmErreur(409, 'Ces e-mails y sont déjà.'); }
+            $s->ouvrirDossier($dossier);
             $s->deplacer($uids, $vers);
             break;
         default: return bmErreur(422, 'geste inconnu');
     }
-    return ['ok' => true, 'action' => $a, 'n' => count($uids)];
+    if (in_array($a, ['archiver', 'corbeille', 'deplacer'], true) && !in_array($vers, $avant, true)) {
+        $cree = (string) preg_replace('/^INBOX[.\/]/i', '', @mb_convert_encoding((string) $vers, 'UTF-8', 'UTF7-IMAP') ?: (string) $vers);
+    }
+    return ['ok' => true, 'action' => $a, 'n' => count($uids), 'cree' => $cree];
+}
+
+/* --- ranger avec l'IA ------------------------------------------------------------------------------------------- */
+
+/**
+ * Ranger avec l'IA (21/11/2026, « mettre en dossier assisté par IA ») : pour les e-mails choisis (50 au plus), le
+ * modèle propose où les ranger — un dossier de la boîte, les archives, un nouveau dossier au nom court, ou les laisser
+ * là quand ils attendent encore une réponse. Il ne range rien : la proposition revient à l'écran, le magasin la
+ * corrige, puis « Ranger » fait les gestes (un « deplacer » ou un « archiver » par dossier d'arrivée).
+ * Ce qui part au modèle : l'expéditeur, l'objet, la date, les drapeaux et les 300 premiers caractères du texte.
+ *
+ * Rend {dossier, propositions: [{uid, de, objet, date, cible, nom, raison}], modele}. `cible` : « d:<brut> » (un
+ * dossier de la boîte), « n:<nom> » (un dossier à créer), « archive », « laisser ».
+ */
+function bmRanger(array $c, array $b): array
+{
+    if (!class_exists('Anthropic') || !Anthropic::configured()) { return bmErreur(503, 'L’assistance IA n’est pas branchée : la clé Anthropic manque (Paramètres › Assistance IA).'); }
+    $uids = array_values(array_unique(array_filter(array_map('intval', (array) ($b['uids'] ?? [])), static fn ($u) => $u > 0)));
+    if (!$uids) { return bmErreur(422, 'Aucun e-mail désigné.'); }
+    if (count($uids) > BM_RANGER_MAX) { return bmErreur(422, 'L’IA range ' . BM_RANGER_MAX . ' e-mails à la fois au plus : choisissez-les dans la page.'); }
+    $s = bmImap($c);
+    $dossier = bmDossierDemande($s, (string) ($b['dossier'] ?? 'INBOX'));
+    $D = $s->dossiers();
+    $court = static fn (array $d) => (string) preg_replace('/^INBOX[.\/]/i', '', $d['nom']);
+    // Où ranger : les dossiers du magasin (pas la réception, les brouillons, les envoyés, les indésirables, la corbeille).
+    $cibles = [];
+    foreach ($D as $d) { if ($d['brut'] !== $dossier && $d['role'] === null) { $cibles[$d['brut']] = $court($d); } }
+    $s->ouvrirDossier($dossier);
+    $emails = bmApercus($s, $uids);
+    if (!$emails) { return bmErreur(404, 'Ces e-mails ne sont plus dans le dossier.'); }
+
+    $ici = '';
+    foreach ($D as $d) { if ($d['brut'] === $dossier) { $ici = $d['role'] === 'inbox' ? 'Réception' : $court($d); } }
+    $lignes = [];
+    foreach (array_values($emails) as $i => $e) {
+        $lignes[] = '[E' . ($i + 1) . '] De : ' . ($e['de'] ? trim(($e['de']['nom'] ?? '') . ' <' . $e['de']['adresse'] . '>') : '(inconnu)')
+            . ' · Objet : ' . ($e['objet'] !== '' ? $e['objet'] : '(sans objet)') . ($e['date'] ? ' · Le ' . date('d/m/Y', strtotime($e['date'])) : '')
+            . ($e['pj'] ? ' · pièce jointe' : '') . ($e['liste'] ? ' · envoi de masse (désinscription proposée)' : '')
+            . ($e['repondu'] ? ' · déjà répondu' : '') . ($e['suivi'] ? ' · marqué à suivre' : '')
+            . ($e['debut'] !== '' ? "\n     Début : « " . $e['debut'] . ' »' : '');
+    }
+    $texte = 'Dossier actuel : ' . $ici . ".\n"
+        . 'Dossiers de la boîte où ranger : ' . ($cibles ? implode(' · ', $cibles) : 'aucun pour l’instant') . ".\n\n"
+        . "E-mails :\n" . implode("\n", $lignes);
+    $schema = ['type' => 'object', 'additionalProperties' => false, 'required' => ['rangement'], 'properties' => [
+        'rangement' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['repere', 'action', 'dossier', 'raison'], 'properties' => [
+            'repere' => ['type' => 'string', 'description' => 'E1, E2…'],
+            'action' => ['type' => 'string', 'enum' => ['dossier', 'nouveau', 'archives', 'laisser']],
+            'dossier' => ['type' => 'string', 'description' => 'le nom exact du dossier existant, ou le nom du nouveau dossier ; vide pour archives et laisser'],
+            'raison' => ['type' => 'string', 'description' => 'quelques mots'],
+        ]]]]];
+    $r = Anthropic::json(BM_RANGER_CONSIGNE, $texte, $schema, 6000);
+    if ($r['erreur'] !== null) { return bmErreur(502, 'L’IA ne propose pas de rangement : ' . $r['erreur'] . '.'); }
+
+    $parRepere = [];
+    foreach ((array) ($r['json']['rangement'] ?? []) as $x) { if (is_array($x)) { $parRepere[strtoupper(trim((string) ($x['repere'] ?? '')))] = $x; } }
+    $cle = static fn (string $n) => mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $n)));
+    $existants = [];
+    foreach ($cibles as $brut => $nom) { $existants[$cle($nom)] = $brut; }
+    $props = []; $nouveaux = [];
+    foreach (array_values($emails) as $i => $e) {
+        $x = $parRepere['E' . ($i + 1)] ?? null;
+        $action = (string) ($x['action'] ?? 'laisser');
+        $nom = trim(mb_substr((string) ($x['dossier'] ?? ''), 0, 40));
+        $cible = 'laisser'; $aff = 'Laisser en ' . $ici;
+        if ($action === 'archives') { $cible = 'archive'; $aff = 'Archives'; }
+        elseif (($action === 'dossier' || $action === 'nouveau') && $nom !== '') {
+            if (isset($existants[$cle($nom)])) { $cible = 'd:' . $existants[$cle($nom)]; $aff = $cibles[$existants[$cle($nom)]]; }
+            elseif (preg_match('/^archiv/iu', $nom)) { $cible = 'archive'; $aff = 'Archives'; }
+            else {
+                $n = mb_strtoupper(mb_substr($nom, 0, 1)) . mb_substr($nom, 1);
+                $nouveaux[$cle($n)] ??= $n;     // le même nouveau dossier, quelle que soit la casse rendue
+                $cible = 'n:' . $nouveaux[$cle($n)]; $aff = $nouveaux[$cle($n)];
+            }
+        }
+        $props[] = ['uid' => $e['uid'], 'de' => $e['de'], 'objet' => $e['objet'], 'date' => $e['date'], 'cible' => $cible, 'nom' => $aff,
+            'raison' => trim(mb_substr((string) ($x['raison'] ?? ($x === null ? 'pas de proposition' : '')), 0, 140))];
+    }
+    return ['dossier' => $dossier, 'propositions' => $props, 'modele' => $r['modele']];
+}
+
+/** Ce que le modèle sait de la boîte et de la règle (le magasin relit tout avant que rien ne bouge). */
+const BM_RANGER_CONSIGNE = "Tu ranges la boîte e-mail d'un magasin de L'Atelier By, un réseau belge de boulangeries-pâtisseries en franchise."
+    . " Pour chaque e-mail, tu proposes où le ranger ; le magasin relit ta proposition avant que rien ne bouge.\n"
+    . "1. Un dossier existant de la liste quand il convient : action « dossier », son nom exact.\n"
+    . "2. Sinon un nouveau dossier : action « nouveau », un nom court en français (un à trois mots, sans date ni nom de personne),"
+    . " par exemple « Fournisseurs », « Factures », « Commandes clients », « Candidatures », « Newsletters », « Administration »,"
+    . " « Réseau Atelier By ». Les e-mails qui vont ensemble vont dans le même dossier : cinq nouveaux dossiers au plus pour tout le lot.\n"
+    . "3. « archives » pour ce qui est traité ou sans suite et n'appelle aucun dossier : notification, confirmation automatique, publicité passée.\n"
+    . "4. « laisser » quand l'e-mail attend encore le magasin : une demande de client ou de prospect sans réponse (offre, commande,"
+    . " question), une réclamation, un e-mail marqué à suivre. Dans le doute pour une demande de client, laisse.\n"
+    . "5. « raison » : quelques mots qui disent pourquoi (« facture d'un fournisseur », « demande d'offre sans réponse »).\n"
+    . "Réponds pour chaque repère donné, une fois, et pour aucun autre.";
+
+/**
+ * L'aperçu d'e-mails du dossier ouvert, pour l'IA : expéditeur, objet, date, drapeaux, envoi de masse (List-Unsubscribe),
+ * et le début du texte (les e-mails de moins de 120 Ko seulement, les citations retirées).
+ */
+function bmApercus(BmImap $s, array $uids): array
+{
+    $lus = $s->lire($uids, 'UID FLAGS RFC822.SIZE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE LIST-UNSUBSCRIBE LIST-ID)]');
+    $legers = array_values(array_filter($uids, static fn ($u) => isset($lus[$u]) && (int) ($lus[$u]['RFC822.SIZE'] ?? 0) <= 120000));
+    $corps = $legers ? $s->lire($legers, 'UID BODY.PEEK[]') : [];
+    $out = [];
+    foreach ($uids as $u) {
+        $m = $lus[$u] ?? null;
+        if ($m === null) { continue; }
+        [$e] = bmMimeCouper((string) ($m['BODY[HEADER]'] ?? ''));
+        $fl = array_map('strtolower', array_map('strval', (array) ($m['FLAGS'] ?? [])));
+        $debut = '';
+        if (isset($corps[$u]['BODY[]'])) {
+            try { $t = bmMimeContenu(bmMimeLire((string) $corps[$u]['BODY[]']))['texte']; } catch (Throwable $x) { $t = ''; }
+            $t = implode(' ', array_filter(array_map('trim', explode("\n", (string) $t)), static fn ($l) => $l !== '' && !str_starts_with($l, '>')));
+            $debut = mb_substr(trim((string) preg_replace('/\s+/u', ' ', $t)), 0, 300);
+        }
+        $out[$u] = ['uid' => $u, 'de' => bmAdresses($e['from'] ?? '')[0] ?? null, 'objet' => bmEntete($e['subject'] ?? ''),
+            'date' => bmDate($e['date'] ?? null, null), 'pj' => bmStructurePj($m['BODYSTRUCTURE'] ?? null),
+            'liste' => isset($e['list-unsubscribe']) || isset($e['list-id']), 'repondu' => in_array('\\answered', $fl, true),
+            'suivi' => in_array('\\flagged', $fl, true), 'debut' => $debut];
+    }
+    return $out;
 }
 
 /* --- envoyer ---------------------------------------------------------------------------------------------------- */
@@ -482,8 +650,8 @@ function bmEnvoyer(string $shop, array $c, array $a, array $cc, string $objet, s
     // La copie dans « Envoyés » ; l'original marqué « répondu ». Un échec ici ne défait pas l'envoi : il est dit.
     try {
         $s = $s ?? bmImap($c);
-        $env = bmDossierRole($s, 'sent');
-        if ($env !== null) { $s->deposer($env, $message); } else { $avert = trim(($avert ?? '') . ' Pas de dossier « Envoyés » : la copie n’est pas rangée.'); }
+        $env = bmDossierRole($s, 'sent', true);   // une boîte sans « Envoyés » en reçoit un (21/11/2026)
+        if ($env !== null) { $s->deposer($env, $message); }
         if ($reponse !== null && empty($opts['sansDrapeau'])) {
             $d = bmDossierDemande($s, (string) ($opts['reponse']['dossier'] ?? 'INBOX'));
             $s->ouvrirDossier($d);
