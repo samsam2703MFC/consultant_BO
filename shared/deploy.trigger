@@ -228,3 +228,4 @@
 2026-11-21T10:02:54Z Fiche produits du ticket de caisse : page client /ticket/?t={boutique}-{transaction}-{clé} (lien signé, langue de la boutique, fiches à glisser, tout le texte lu dans le panel) et écran d'essai du siège /ticket/essai/ (tickets d'un jour, numéro de transaction, QR)
 2026-11-21T10:08:08Z Fiche du ticket : heure de la vente lue dans occurred_at_utc (heure belge), numéro du ticket (ticket_key), total et portions du panel, nom public de la boutique (ceo_shop) au lieu de la raison sociale
 2026-11-21T10:17:06Z Fiche du ticket : composition, conservation et préparation lues dans la spécification du fournisseur (catalogue SLFood, par langue) ; retirés : chapeau, phrase « Aucun de vos produits ne contient », indication de la barre sur ordinateur, dépliant des 14 allergènes
+2026-11-21T09:40:13Z Étiquettes NL : noms sans « ⌀ 22 cm » ni « ⌀ 26 cm » (plan et tableau), relecture des traductions langue par langue ; rien n'est envoyé au déploiement
