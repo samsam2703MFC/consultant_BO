@@ -224,3 +224,4 @@
 2026-11-21T07:11:34Z Opérationnel, ruban des canaux : le comptoir ne perd plus les commandes payées un autre jour (Halle, « Comptoir 0 € · − 100 % ») ; commandes coupées à l'heure du retrait, « à venir » au-delà
 2026-11-21T07:26:22Z Réclamations fournisseur, Tableau annuel : produits réclamés seulement, livré lu sur les factures du fournisseur, vues Catégories / Produits / Motifs, % sur l'ensemble, la catégorie et le produit, réclamations de livraison
 2026-11-21T07:51:11Z Étiquettes NL : envoi_etiquettes_nl.php adapté à la forme réelle de l'API (allergènes des matières par PATCH /materials/{id}, codes d'allergènes, traductions relues) et workflow d'envoi déclenché à la main ; rien n'est envoyé au déploiement
+2026-11-21T10:00:37Z Fiche produit, Recette & marge : bouton « Adapter mon prix de vente » (le prix testé s'écrit au panel, TTC, après aperçu, plafonné au maximum du réseau) et « Demander au réseau de relever le maximum » (demande au bureau par le helpdesk)
