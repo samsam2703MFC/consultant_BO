@@ -1,5 +1,9 @@
 # Cockpit CEO — Apache (fonctionne à la racine d'un vhost comme en sous-répertoire)
 DirectoryIndex index.html
+# Un dossier sans page d'accueil (api/, assets/, tablette/img/…) répond 403, jamais la liste
+# de ses fichiers (21/11/2026). Relatif (« - ») : FollowSymLinks, posé par bin/deploy.sh pour
+# le site assemblé fait de liens, reste en place.
+Options -Indexes
 RewriteEngine On
 
 # Le shell et les modules JS/CSS sont REVALIDÉS à chaque visite. Sans en-tête
