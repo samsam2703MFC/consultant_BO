@@ -304,17 +304,16 @@ function mesVolumes(int $shopRef, string $du, string $au): array
 function mesProduitsCampagne(int $campagneId, ?string $libre): array
 {
     $out = [];
-    try {
-        foreach (Db::rows('SELECT oi.sku_ref, COALESCE(ci.label, oi.name) nom
-                             FROM mar_campaign_offer co
-                             JOIN mar_campaign_offer_item ci ON ci.campaign_offer_id = co.id
-                             LEFT JOIN mar_offer_item oi ON oi.id = ci.offer_item_id
-                            WHERE co.campaign_id = ?', [$campagneId]) as $r) {
-            $sku = trim((string) ($r['sku_ref'] ?? ''));
-            if ($sku === '') { continue; }
-            $out[$sku] = ['sku' => $sku, 'nom' => (string) ($r['nom'] ?? $sku), 'source' => 'offre'];
-        }
-    } catch (PDOException $e) { /* offre absente : la saisie libre prend le relais */ }
+    // L'offre se lit à la fiche de la campagne, au module Marketing (marketing/src/campagnes.php, 21/11/2026). Module
+    // muet ou offre absente : la saisie libre prend le relais.
+    $f = campagneFiche($campagneId);
+    foreach ((array) ($f['fiche']['offer']['items'] ?? []) as $r) {
+        if (!is_array($r)) { continue; }
+        $sku = trim((string) ($r['sku_ref'] ?? ''));
+        if ($sku === '') { continue; }
+        $nom = ($r['label'] ?? null) !== null ? $r['label'] : ($r['catalog_name'] ?? null);   // le libellé de l'offre, sinon le catalogue
+        $out[$sku] = ['sku' => $sku, 'nom' => (string) ($nom ?? $sku), 'source' => 'offre'];
+    }
 
     foreach (preg_split('/[\r\n]+/', (string) $libre) as $ligne) {
         $ligne = trim($ligne);
@@ -349,15 +348,9 @@ function mesProduitsCampagne(int $campagneId, ?string $libre): array
 function ep_mesure_comparaison(): array
 {
     $motifs = [];
-    try {
-        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.scope,
-                                  t.label AS type_label
-                             FROM mar_campaign c
-                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                            WHERE c.starts_on IS NOT NULL
-                            ORDER BY c.starts_on DESC');
-    } catch (PDOException $e) {
-        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    [$camps, $errC] = campagnesDatees();   // au module Marketing (marketing/src/campagnes.php)
+    if ($camps === null) {
+        return ['indispo' => true, 'raison' => 'Le module Marketing ne rend pas les campagnes : ' . $errC . '.'];
     }
     $liste = [];
     foreach ($camps as $c) {
@@ -441,12 +434,11 @@ function ep_mesure_comparaison(): array
         || str_starts_with((string) ($camp['scope'] ?? ''), 'NETWORK');
     $perim = [];
     if (!$reseau) {
-        try {
-            foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
-                $sid = (string) $r['shop_id'];
-                if (isset($nomDe[$sid])) { $perim[] = $sid; }
-            }
-        } catch (PDOException $e) { /* périmètre absent : réseau entier */ }
+        // Les boutiques de la campagne, à sa fiche du module ; illisibles : réseau entier, comme avant.
+        [$ids] = campagneBoutiques((int) $camp['id']);
+        foreach ($ids ?? [] as $sid) {
+            if (isset($nomDe[$sid])) { $perim[] = $sid; }
+        }
     }
     if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
     $hors = array_values(array_diff(array_map('strval', array_keys($nomDe)), $perim));
@@ -570,16 +562,9 @@ function ep_mesure(): array
     ensureMesureTables();
     $motifs = [];
 
-    try {
-        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code,
-                                  s.label AS statut, t.label AS type_label
-                             FROM mar_campaign c
-                             LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                            WHERE c.starts_on IS NOT NULL
-                            ORDER BY c.starts_on DESC');
-    } catch (PDOException $e) {
-        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    [$camps, $errC] = campagnesDatees();   // au module Marketing (marketing/src/campagnes.php)
+    if ($camps === null) {
+        return ['indispo' => true, 'raison' => 'Le module Marketing ne rend pas les campagnes : ' . $errC . '.'];
     }
 
     $liste = [];
@@ -625,12 +610,11 @@ function ep_mesure(): array
     foreach ($shops as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
 
     $perim = [];
-    try {
-        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
-            $sid = (string) $r['shop_id'];
-            if (isset($nomDe[$sid])) { $perim[] = $sid; }
-        }
-    } catch (PDOException $e) { /* périmètre absent : réseau entier */ }
+    // Les boutiques de la campagne, à sa fiche du module ; illisibles : réseau entier, comme avant.
+    [$ids] = campagneBoutiques((int) $camp['id']);
+    foreach ($ids ?? [] as $sid) {
+        if (isset($nomDe[$sid])) { $perim[] = $sid; }
+    }
     // PHP retransforme « 3 » en 3 dès qu'il sert de clé : sans ce passage par
     // la chaîne, la comparaison stricte avec les identifiants de magasins
     // échoue en silence et le périmètre paraît vide.
@@ -947,13 +931,13 @@ function ep_mesure(): array
 function wr_mesure_param(int $id): array
 {
     ensureMesureTables();
-    try {
-        $camp = Db::row('SELECT id, name FROM mar_campaign WHERE id = ?', [$id]);
-    } catch (PDOException $e) {
-        http_response_code(503);
-        return ['error' => 'les tables du module marketing sont absentes de cette base'];
+    $f = campagneFiche($id);   // au module Marketing
+    if ($f['erreur'] !== null) {
+        http_response_code(502);
+        return ['error' => 'le module Marketing ne rend pas la campagne : ' . $f['erreur']];
     }
-    if ($camp === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    if ($f['fiche'] === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    $camp = ['id' => (int) $f['fiche']['id'], 'name' => (string) ($f['fiche']['name'] ?? '')];
     $b = body();
 
     $date = static function ($v): ?string {
@@ -1347,11 +1331,10 @@ function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim, 
         'panierDu' => '', 'panierAu' => '', 'jours' => 0, 'motifs' => $motifs], 'magasins' => []];
     if ($du === '' || $au === '' || $au < $du || $perim === []) { return $vide; }
 
-    $camp = Db::row('SELECT c.objective_coef_pct, l.code AS lever_code
-                       FROM mar_campaign c
-                       LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                       LEFT JOIN mar_lever l ON l.id = t.lever_id
-                      WHERE c.id = ?', [$campagneId]);
+    // Le coefficient d'objectif et le levier du type, à la fiche de la campagne au module Marketing (21/11/2026).
+    $fiche = campagneFiche($campagneId)['fiche'];
+    $camp = $fiche === null ? null
+        : ['objective_coef_pct' => $fiche['objective_coef_pct'] ?? null, 'lever_code' => $fiche['type_lever_code'] ?? null];
     $pct = ($camp !== null && $camp['objective_coef_pct'] !== null) ? (float) $camp['objective_coef_pct'] : null;
 
     // Le trafic : la même mécanique que l'assistant et que la note, appelée et

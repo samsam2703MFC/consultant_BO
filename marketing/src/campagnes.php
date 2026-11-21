@@ -39,13 +39,44 @@ function campagnesDeLExercice(int $exercice): array
     return [$out, null];
 }
 
-/** Les boutiques d'une campagne (GET /campaigns/{id} → shops) : [identifiants, null], ou [null, raison]. */
-function campagneBoutiques(int $id): array
+/**
+ * Les campagnes datées (commencées ou à venir, avec une date de début), les plus récentes d'abord, dans la forme que
+ * lisait la mesure des campagnes (marketing/src/mesure.php) : [lignes, null], ou [null, raison].
+ */
+function campagnesDatees(): array
+{
+    [$toutes, $err] = campagnesModule();
+    if ($toutes === null) { return [null, $err]; }
+    $out = [];
+    foreach ($toutes as $c) {
+        if (!is_array($c) || ($c['starts_on'] ?? null) === null) { continue; }
+        $out[] = ['id' => (int) $c['id'], 'name' => (string) $c['name'], 'starts_on' => $c['starts_on'], 'ends_on' => $c['ends_on'] ?? null,
+            'scope' => $c['scope'] ?? null, 'status_code' => $c['status_code'] ?? null, 'statut' => $c['status_label'] ?? null,
+            'type_label' => $c['type_label'] ?? null];
+    }
+    return [$out, null];
+}
+
+/**
+ * La fiche d'une campagne au module (GET /campaigns/{id}) : ['fiche' => ?array, 'erreur' => ?string]. Fiche null et
+ * erreur null : le module ne connaît pas cette campagne.
+ */
+function campagneFiche(int $id): array
 {
     $r = marketingAppel('GET', '/campaigns/' . $id);
-    if ($r['erreur'] !== null) { return [null, $r['erreur']]; }
+    if ($r['code'] === 404) { return ['fiche' => null, 'erreur' => null]; }
+    if ($r['erreur'] !== null) { return ['fiche' => null, 'erreur' => $r['erreur']]; }
+    return ['fiche' => is_array($r['corps']) ? $r['corps'] : null, 'erreur' => is_array($r['corps']) ? null : 'réponse du module illisible'];
+}
+
+/** Les boutiques d'une campagne (sa fiche → shops) : [identifiants, null], ou [null, raison]. */
+function campagneBoutiques(int $id): array
+{
+    $f = campagneFiche($id);
+    if ($f['erreur'] !== null) { return [null, $f['erreur']]; }
+    if ($f['fiche'] === null) { return [null, 'campagne inconnue du module']; }
     $ids = [];
-    foreach ((array) ($r['corps']['shops'] ?? []) as $s) {
+    foreach ((array) ($f['fiche']['shops'] ?? []) as $s) {
         if (is_array($s) && isset($s['shop_id'])) { $ids[] = (string) $s['shop_id']; }
     }
     return [$ids, null];

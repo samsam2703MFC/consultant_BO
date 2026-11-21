@@ -31,6 +31,7 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
 }
 require __DIR__ . '/../src/mkt_types.php';   // mktIcones : la bibliothèque d'icônes du cockpit (une constante, pas une table)
 require __DIR__ . '/../src/campagnes.php';
+require __DIR__ . '/../src/mesure.php';    // la mesure des campagnes (lot 3) : rien ne s'y exécute au chargement
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -39,7 +40,7 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
     if ($cond) { $ok++; echo "  ok  $nom\n"; }
     else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
 }
-function poser(array $fixes): void { Db::$sql = []; $GLOBALS['appels'] = []; $GLOBALS['fixes'] = $fixes; }
+function poser(array $routes): void { Db::$sql = []; $GLOBALS['appels'] = []; $GLOBALS['fixes'] = $routes; }
 $ok200 = static fn ($j): array => ['code' => 200, 'j' => $j];
 
 $campagnes = [
@@ -54,7 +55,7 @@ $campagnes = [
     ['id' => 2, 'name' => 'Future', 'status_code' => 'draft', 'starts_on' => '2027-01-05', 'ends_on' => '2027-02-01'],
     ['id' => 1, 'name' => 'Sans date', 'status_code' => 'draft', 'starts_on' => null, 'ends_on' => null],
 ];
-$fixes = [
+$jeu = [
     '/brands' => $ok200([['id' => 2, 'name' => 'Seconde'], ['id' => 1, 'name' => 'L’Atelier by']]),
     '/references' => $ok200([
         'campaignStatuses' => [['code' => 'draft', 'label' => 'Brouillon', 'text_hex' => '#666', 'bg_rgba' => 'rgba(1,1,1,.1)', 'sort_order' => '1'],
@@ -72,7 +73,7 @@ $fixes = [
 ];
 
 echo "GET /marketing — calendrier, campagnes et types\n";
-poser($fixes);
+poser($jeu);
 $m = ep_mkt();
 verifie('aucune requête en base : tout vient du module', Db::$sql === [], json_encode(Db::$sql));
 verifie('quatre lectures au module : marques, référentiels, types, campagnes',
@@ -91,12 +92,12 @@ verifie('une campagne garde ses clés : type (identifiant, couleur), statut, bud
 verifie('sans type ni libellé de statut : les replis d’avant', $c7['typeId'] === null && $c7['statutNom'] === 'draft' && $c7['statutTexte'] === '#666666'
     && $c7['statutFond'] === 'rgba(120,116,110,.12)' && $c7['image'] === '/img/r.jpg' && count($m['campagnes']) === 6, json_encode($c7));
 verifie('les leviers et les icônes accompagnent les types', $m['leviers'][0] === ['id' => 2, 'code' => 'TRAFIC', 'nom' => 'Trafic', 'couleur' => '#123456'] && count($m['icones']) > 0);
-poser(['/campaign-types' => ['code' => 0, 'j' => ['description' => 'module injoignable']]] + $fixes);
+poser(['/campaign-types' => ['code' => 0, 'j' => ['description' => 'module injoignable']]] + $jeu);
 $m = ep_mkt();
 verifie('module injoignable : l’écran le dit (indispo), rien d’inventé', ($m['indispo'] ?? false) === true && str_contains((string) $m['raison'], 'module injoignable') && Db::$sql === [], json_encode($m));
 
 echo "Le budget des campagnes : campagnes de l'exercice et boutiques\n";
-poser($fixes);
+poser($jeu);
 [$l, $err] = campagnesDeLExercice(2026);
 verifie('les campagnes qui touchent l’exercice, de la plus ancienne à la plus récente (même jour : par identifiant)',
     $err === null && array_column($l, 'id') === [6, 7, 9], json_encode(array_column((array) $l, 'id')));
@@ -109,7 +110,31 @@ poser(['/campaigns/9' => $ok200(['id' => 9, 'shops' => [['shop_id' => 3, 'shop_n
 verifie('les boutiques d’une campagne, lues à sa fiche', $ids === ['3', '5'] && $err === null && Db::$sql === []);
 poser([]);
 [$ids, $err] = campagneBoutiques(9);
-verifie('campagne inconnue du module : la raison, pas une liste vide', $ids === null && $err === 'Route inconnue.');
+verifie('campagne inconnue du module : la raison, pas une liste vide', $ids === null && $err === 'campagne inconnue du module');
+
+echo "La mesure des campagnes (lot 3)\n";
+poser($jeu);
+[$d, $err] = campagnesDatees();
+verifie('les campagnes datées, les plus récentes d’abord, sans celle qui n’a pas de date',
+    $err === null && array_column($d, 'id') === [9, 7, 6, 3, 2] && $d[0]['scope'] === 'RESEAU' && $d[0]['statut'] === 'En cours' && $d[0]['type_label'] === 'Fêtes'
+        && Db::$sql === [], json_encode(array_column((array) $d, 'id')));
+poser(['/campaigns/9' => $ok200(['id' => 9, 'name' => 'Noël', 'objective_coef_pct' => 12.5, 'type_lever_code' => 'TRAFIC', 'offer' => ['items' => [
+    ['label' => 'Tarte', 'sku_ref' => 'S1', 'catalog_name' => 'Tarte du jour'],
+    ['label' => null, 'sku_ref' => 'S2', 'catalog_name' => 'Croissant'],
+    ['label' => 'Produit libre', 'sku_ref' => null, 'catalog_name' => null],
+]]])]);
+$p = mesProduitsCampagne(9, "S2 Croissant au beurre\nX9");
+verifie('les produits promus : l’offre lue à la fiche (libellé, sinon nom du catalogue), puis la saisie libre',
+    $p === [['sku' => 'S1', 'nom' => 'Tarte', 'source' => 'offre'], ['sku' => 'S2', 'nom' => 'Croissant au beurre', 'source' => 'saisie'], ['sku' => 'X9', 'nom' => 'X9', 'source' => 'saisie']]
+        && Db::$sql === [] && $GLOBALS['appels'] === [['GET', '/campaigns/9']], json_encode($p));
+$f = campagneFiche(9);
+verifie('la fiche d’une campagne : coefficient d’objectif et levier du type', $f['erreur'] === null && $f['fiche']['objective_coef_pct'] === 12.5 && $f['fiche']['type_lever_code'] === 'TRAFIC');
+poser([]);
+$f = campagneFiche(9);
+verifie('une campagne que le module ne connaît pas : ni fiche ni erreur (404)', $f === ['fiche' => null, 'erreur' => null]);
+poser(['/campaigns/9' => ['code' => 0, 'j' => ['description' => 'module injoignable']]]);
+verifie('module injoignable : la raison', campagneFiche(9) === ['fiche' => null, 'erreur' => 'module injoignable']
+    && mesProduitsCampagne(9, 'A1') === [['sku' => 'A1', 'nom' => 'A1', 'source' => 'saisie']]);
 
 echo "\n$ok ok, $ko KO\n";
 ob_end_flush();

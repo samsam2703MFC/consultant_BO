@@ -30,8 +30,9 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   écran, sont retirées (410). Les **lectures** suivent, par lots (décision du 21/11/2026) : le grand livre du fonds,
   ses leviers, ses frais récurrents, les boutiques et les campagnes se lisent au module depuis le 21/11/2026
   (`marketing/src/fonds.php`, GET /fonds), le calendrier, les campagnes et les types (GET /marketing) et les campagnes
-  du budget des campagnes aussi (`marketing/src/campagnes.php`). Restent en SQL direct : mesure, note de campagne,
-  agences, annexes, objectifs produits, hub, visites (lots 3 à 5).
+  du budget des campagnes aussi (`marketing/src/campagnes.php`), et la mesure des campagnes (`marketing/src/mesure.php` :
+  campagnes datées, boutiques, produits de l'offre, coefficient d'objectif et levier du type, à la fiche de la campagne).
+  Restent en SQL direct : note de campagne, agences, annexes, objectifs produits, hub, visites (lots 4 et 5).
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
