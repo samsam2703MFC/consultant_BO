@@ -31,7 +31,10 @@ final class Db
     public static ?PDO $p = null;
     public static function pdo(): PDO
     {
-        if (!self::$p) { self::$p = new PDO('sqlite::memory:'); self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); }
+        if (!self::$p) {
+            self::$p = new PDO('sqlite::memory:'); self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            self::$p->sqliteCreateFunction('DATE_FORMAT', fn ($d, $f) => $d === null ? null : date(str_replace(['%Y', '%m', '%d'], ['Y', 'm', 'd'], $f), strtotime((string) $d)), 2);
+        }
         return self::$p;
     }
     public static function fx(string $q): string
@@ -39,10 +42,17 @@ final class Db
         $q = str_replace('INT AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT', $q);
         $q = (string) preg_replace('/,\s*(UNIQUE )?KEY \w+ \([^)]*\)/', '', $q);
         $q = str_replace(') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4', ')', $q);
-        return str_replace("DATE_FORMAT(created_at, '%Y-%m')", "strftime('%Y-%m', created_at)", $q);
+        return $q;
     }
     public static function exec(string $q, array $a = []): int { $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->rowCount(); }
-    public static function rows(string $q, array $a = []): array { $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->fetchAll(PDO::FETCH_ASSOC); }
+    public static function rows(string $q, array $a = []): array
+    {
+        // information_schema → PRAGMA (SQLite) : les colonnes d'une table.
+        if (str_contains($q, 'information_schema.COLUMNS')) {
+            return array_map(fn ($c) => ['COLUMN_NAME' => $c['name']], self::pdo()->query('PRAGMA table_info(' . preg_replace('/\W/', '', (string) $a[0]) . ')')->fetchAll(PDO::FETCH_ASSOC));
+        }
+        $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->fetchAll(PDO::FETCH_ASSOC);
+    }
     public static function row(string $q, array $a = []): ?array { $r = self::rows($q, $a); return $r[0] ?? null; }
 }
 function body(): array { return $GLOBALS['corps'] ?? []; }
@@ -62,7 +72,9 @@ final class PanelApi
     {
         self::$gets[] = $path;
         if ($path === '/consultant/shops/material-complaints') { return ['shops' => self::$complaints]; }
-        if (preg_match('#^/shops/\d+/materials$#', $path)) { return [['id' => 10, 'base_unit_price_net' => 0.8], ['id' => 11, 'base_unit_price_net' => 2.0], ['id' => 99, 'base_unit_price_net' => 5.0]]; }
+        if (preg_match('#^/shops/\d+/materials$#', $path)) { return [['id' => 10, 'base_unit_price_net' => 0.8, 'material_category_name' => 'Viennoiserie'],
+            ['id' => 11, 'base_unit_price_net' => 2.0, 'id_material_category' => 7], ['id' => 99, 'base_unit_price_net' => 5.0], ['id' => 12, 'base_unit_price_net' => 1.0, 'material_category_name' => 'Viennoiserie']]; }
+        if ($path === '/material-categories') { return [['id' => 7, 'name' => 'Pâtisserie']]; }
         if ($path === '/material-suppliers/1/connected-materials') { return [['id' => 10], ['id' => 11]]; }
         return null;
     }
@@ -99,13 +111,27 @@ $liv(3, 10, 4, -50, '2026-10-07 06:00:00');       // sortie : pas du livré
 $liv(4, 10, 5, 1880, '2026-06-01 06:00:00');      // Halle
 $liv(4, 99, 6, 100, '2026-06-01 06:00:00');       // une matière d'un autre fournisseur : hors du livré SLFood
 
+// Les FACTURES (lignes poussées par l'ERP sur les commandes du panel) : packs × pièces par pack, prix net du pack.
+Db::exec('CREATE TABLE material_order (id INTEGER PRIMARY KEY, id_shop INT, id_supplier INT, status TEXT, order_date TEXT, delivered_on TEXT)');
+Db::exec('CREATE TABLE material_order_item (id INTEGER PRIMARY KEY AUTOINCREMENT, id_order INT, id_material INT, pack_quantity REAL, package_size_in_base_unit REAL, pack_price_net REAL)');
+$fac = static function (int $id, int $shop, int $fourn, string $le, array $lignes, string $statut = 'DELIVERED') {
+    Db::exec('INSERT INTO material_order VALUES (?,?,?,?,?,?)', [$id, $shop, $fourn, $statut, $le, $le]);
+    foreach ($lignes as [$m, $packs, $taille, $prix]) { Db::exec('INSERT INTO material_order_item (id_order, id_material, pack_quantity, package_size_in_base_unit, pack_price_net) VALUES (?,?,?,?,?)', [$id, $m, $packs, $taille, $prix]); }
+};
+$fac(1, 3, 1, '2026-10-06', [[10, 5, 56, 42.0], [12, 10, 10, 9.0]]);    // semaine 41 : 280 pains au chocolat (et 100 d'un produit jamais réclamé)
+$fac(2, 3, 1, '2026-10-21', [[10, 15, 56, 42.0]]);                     // octobre : + 840
+$fac(3, 3, 1, '2026-03-11', [[11, 50, 10, 18.0], [10, 1, 56, 42.0]]);   // mars : 500 riz, 56 pains au chocolat
+$fac(4, 3, 1, '2026-10-22', [[10, 99, 56, 42.0]], 'CANCELLED');        // annulée : ne compte pas
+$fac(5, 4, 1, '2026-06-02', [[10, 20, 56, 42.0], [99, 10, 10, 50.0]]); // Halle : 1 120 pains au chocolat ; la matière 99 est d'un autre fournisseur
+$fac(6, 3, 2, '2026-04-02', [[99, 4, 10, 50.0]]);                      // l'autre fournisseur : 40 pièces
+
 PanelApi::$complaints = [
     ['shop_id' => 3, 'complaints' => [
-        ['id' => 1, 'id_material' => 10, 'qty' => 56, 'reported_at' => '2026-10-05 08:00:00', 'supplier_name' => 'SLFood', 'id_supplier' => 1,
-         'status' => 'REJECTED', 'accepted_qty' => 0, 'attachments' => [['id' => 12], ['attachment_id' => 13]]],
+        ['id' => 1, 'id_material' => 10, 'material_name' => 'Pain au Chocolat', 'supplier_sku' => '1002343', 'unit_name' => 'pcs', 'qty' => 56, 'reported_at' => '2026-10-05 08:00:00', 'supplier_name' => 'SLFood', 'id_supplier' => 1,
+         'status' => 'REJECTED', 'accepted_qty' => 0, 'reason_code' => 'wrong_quantity_in_package', 'reason_name' => 'Quantité incorrecte de produits dans l’emballage', 'attachments' => [['id' => 12], ['attachment_id' => 13]]],
         ['id' => 2, 'id_material' => 10, 'qty' => 4, 'reported_at' => '2026-10-28 08:00:00', 'supplier_name' => 'SLFood', 'id_supplier' => 1,
-         'status' => 'ACCEPTED', 'accepted_qty' => 4, 'attachments' => []],
-        ['id' => 3, 'id_material' => 11, 'qty' => 10, 'reported_at' => '2026-03-12 08:00:00', 'supplier_name' => 'SLFood', 'id_supplier' => 1,
+         'status' => 'ACCEPTED', 'accepted_qty' => 4, 'reason_code' => 'product_quality', 'reason_name' => 'Problème de qualité du produit', 'attachments' => []],
+        ['id' => 3, 'id_material' => 11, 'material_name' => 'Riz Croustillant', 'qty' => 10, 'reported_at' => '2026-03-12 08:00:00', 'supplier_name' => 'SLFood', 'id_supplier' => 1,
          'status' => 'ACCEPTED', 'accepted_qty' => 5, 'attachments' => [14]],
         ['id' => 4, 'id_material' => 99, 'qty' => 1, 'reported_at' => '2026-04-01 08:00:00', 'supplier_name' => 'Autre', 'id_supplier' => 2, 'attachments' => []],
         ['id' => 5, 'id_material' => 10, 'qty' => 9, 'reported_at' => '2025-12-01 08:00:00', 'supplier_name' => 'SLFood', 'id_supplier' => 1, 'attachments' => []],
@@ -130,31 +156,62 @@ verifie('les liens signés du panel', in_array('https://s3.exemple/pj-12.jpg?sig
 verifie('un lien non rendu est signalé, pas inventé', count(array_filter($f['photos'], fn ($p) => $p['url'] === null)) === 1);
 verifie('la photo du dashboard, en adresse complète', in_array('https://cockpit.exemple/consulant_bo/uploads/reclamations/3-a.jpg', $urls, true));
 $P = $f['part'];
+verifie('la part se lit sur les factures', $P['source'] === 'factures', (string) $P['source']);
 verifie('semaine : 56 réclamés / 280 livrés = 20 %', $P['periodes']['semaine']['reclame'] == 56 && $P['periodes']['semaine']['livre'] == 280 && $P['periodes']['semaine']['part'] == 20.0, json_encode($P['periodes']['semaine']));
-verifie('mois : 60 réclamés (deux réclamations) / 1 120 livrés', $P['periodes']['mois']['reclame'] == 60 && $P['periodes']['mois']['livre'] == 1120, json_encode($P['periodes']['mois']));
-verifie('année : 2 120 livrés (sans inventaire ni sortie)', $P['periodes']['annee']['livre'] == 2120, json_encode($P['periodes']['annee']));
-verifie('réseau, année : 85 / 4 000', $P['reseau']['reclame'] == 85 && $P['reseau']['livre'] == 4000, json_encode($P['reseau']));
+verifie('mois : 60 réclamés (deux réclamations) / 1 120 livrés, sans la commande annulée', $P['periodes']['mois']['reclame'] == 60 && $P['periodes']['mois']['livre'] == 1120, json_encode($P['periodes']['mois']));
+verifie('année : 1 176 livrés', $P['periodes']['annee']['livre'] == 1176, json_encode($P['periodes']['annee']));
+verifie('réseau, année : 85 / 2 296', $P['reseau']['reclame'] == 85 && $P['reseau']['livre'] == 2296, json_encode($P['reseau']));
 $_GET = ['shop' => '4', 'id' => '1'];
 verifie('une réclamation d’un autre magasin : introuvable', isset(ep_reclamation_fiche()['error']));
 
-echo "Le tableau annuel\n";
+echo "Le tableau annuel (produits réclamés, d'après les factures)\n";
 $_GET = ['annee' => '2026'];
 $A = ep_reclamations_annuel();
 verifie('le fournisseur par défaut : le plus réclamé (SLFood)', $A['fournisseur'] === 'SLFood', (string) $A['fournisseur']);
+verifie('le livré vient des factures', $A['livreSource'] === 'factures', (string) $A['livreSource'] . ' ' . $A['livreDetail']);
+$E = $A['ensemble']['total'];
+verifie('ensemble : 4 réclamations, 95 pièces réclamées', $E['n'] === 4 && $E['rq'] == 95, json_encode($E));
+verifie('ensemble : livré = produits réclamés seulement (2 296 pains au chocolat + 500 riz), pas le produit jamais réclamé', $E['lq'] == 2796, json_encode($E));
+verifie('ensemble : montant livré au prix facturé (packs × prix du pack)', abs($E['livre'] - (41 * 42.0 + 50 * 18.0)) < 0.01, json_encode($E));
 $G = array_column($A['magasins'], null, 'nom')['Gosselies'];
-verifie('Gosselies, octobre : 60 × 0,80 € = 48 € réclamés', abs($G['mois'][9]['reclame'] - 48.0) < 0.001, json_encode($G['mois'][9]));
-verifie('Gosselies, octobre : livré 1 120 × 0,80 € = 896 €, taux 5,36 %', abs($G['mois'][9]['livre'] - 896.0) < 0.001 && $G['mois'][9]['part'] == 5.36, json_encode($G['mois'][9]));
+verifie('Gosselies, octobre : 48 € réclamés / 840 € facturés (5,71 %)', abs($G['mois'][9]['reclame'] - 48.0) < 0.001 && abs($G['mois'][9]['livre'] - 840.0) < 0.001 && $G['mois'][9]['part'] == 5.71, json_encode($G['mois'][9]));
 verifie('l’accepté ne compte pas la réclamation refusée', abs($G['mois'][9]['accepte'] - 3.2) < 0.001, json_encode($G['mois'][9]));
-verifie('mars : 10 × 2 € réclamés, 1 000 × 0,80 € livrés', abs($G['mois'][2]['reclame'] - 20.0) < 0.001 && abs($G['mois'][2]['livre'] - 800.0) < 0.001);
 verifie('la réclamation de 2025 n’entre pas', $G['total']['n'] === 3, (string) $G['total']['n']);
-$H = array_column($A['magasins'], null, 'nom')['Halle'];
-verifie('Halle : la matière d’un autre fournisseur n’entre pas dans le livré', abs($H['mois'][5]['livre'] - 1504.0) < 0.001, json_encode($H['mois'][5]));
-verifie('la ligne Réseau additionne les magasins', $A['reseau']['total']['n'] === 4 && abs($A['reseau']['total']['reclame'] - 88.0) < 0.001, json_encode($A['reseau']['total']));
+$C = array_column($A['categories'], null, 'nom');
+verifie('les catégories : Viennoiserie (nom) et Pâtisserie (identifiant)', isset($C['Viennoiserie'], $C['Pâtisserie']), implode(', ', array_keys($C)));
+verifie('Viennoiserie : 85 / 2 296 pièces = 3,7 %', $C['Viennoiserie']['total']['rq'] == 85 && $C['Viennoiserie']['total']['lq'] == 2296 && $C['Viennoiserie']['total']['partQ'] == 3.7, json_encode($C['Viennoiserie']['total']));
+$Pr = $C['Pâtisserie']['produits'][0] ?? [];
+verifie('le produit : Riz Croustillant, 10 / 500 = 2 % en mars', ($Pr['nom'] ?? '') === 'Riz Croustillant' && $Pr['mois'][2]['partQ'] == 2.0, json_encode($Pr['mois'][2] ?? null));
 $moisCourant = (int) date('n');
-verifie('pas de mois à venir', date('Y') !== '2026' || ($moisCourant === 12 || $G['mois'][$moisCourant] === null));
+verifie('pas de mois à venir', date('Y') !== '2026' || $moisCourant === 12 || $G['mois'][$moisCourant] === null);
+$_GET = ['annee' => '2026', 'shop' => '4'];
+$H = ep_reclamations_annuel();
+verifie('un magasin : ses seules réclamations et ses seules factures', $H['ensemble']['total']['n'] === 1 && $H['ensemble']['total']['lq'] == 1120, json_encode($H['ensemble']['total']));
 $_GET = ['annee' => '2026', 'fournisseur' => 'Autre'];
 $A2 = ep_reclamations_annuel();
-verifie('un autre fournisseur : ses seules réclamations', $A2['reseau']['total']['n'] === 1 && $A2['fournisseur'] === 'Autre');
+verifie('un autre fournisseur : ses réclamations, ses factures', $A2['ensemble']['total']['n'] === 1 && $A2['ensemble']['total']['lq'] == 40, json_encode($A2['ensemble']['total']));
+
+echo "Produit ou livraison\n";
+verifie('le motif « quantité incorrecte » est un problème de livraison', rcTypeReclamation(['reason_code' => 'wrong_quantity_in_package']) === 'livraison');
+verifie('« non-conformité avec la commande » : livraison', rcTypeReclamation(['reason_name' => 'Non-conformité avec la commande']) === 'livraison');
+verifie('« qualité » et « taille ou poids » : produit', rcTypeReclamation(['reason_name' => 'Problème de qualité du produit']) === 'produit' && rcTypeReclamation(['reason_name' => 'Problème de taille ou de poids']) === 'produit');
+$_GET = ['annee' => '2026'];
+$T = ep_reclamations_annuel()['types'];
+verifie('les deux comptes : 1 de livraison, 3 de produit', $T['livraison']['n'] === 1 && $T['produit']['n'] === 3, json_encode($T));
+$_GET = ['annee' => '2026', 'type' => 'livraison'];
+$L = ep_reclamations_annuel();
+verifie('le filtre livraison : la seule réclamation de livraison', $L['ensemble']['total']['n'] === 1 && $L['type'] === 'livraison', json_encode($L['ensemble']['total']));
+$M = array_column($L['motifs'], null, 'nom');
+verifie('la vue Motifs : le motif, son type, son % sur le livré de l’année', isset($M['Quantité incorrecte de produits dans l’emballage']) && $M['Quantité incorrecte de produits dans l’emballage']['type'] === 'livraison'
+    && $M['Quantité incorrecte de produits dans l’emballage']['total']['lq'] == $L['ensemble']['total']['lq'], json_encode($L['motifs']));
+
+echo "Sans factures lisibles : le grand livre\n";
+Db::exec('ALTER TABLE material_order_item RENAME TO material_order_item_x');
+$_GET = ['annee' => '2026'];
+$A3 = ep_reclamations_annuel();
+verifie('la source le dit', $A3['livreSource'] === 'grand livre', (string) $A3['livreSource']);
+verifie('le grand livre : entrées liées à une commande, produits réclamés', $A3['ensemble']['total']['lq'] == 4000, json_encode($A3['ensemble']['total']));
+Db::exec('ALTER TABLE material_order_item_x RENAME TO material_order_item');
 
 echo "La photo obligatoire\n";
 $base = ['shopId' => 3, 'idMatiere' => 10, 'sku' => '1002343', 'quantite' => 5, 'idLivraison' => 33, 'idUnite' => 1, 'motif' => 'product_quality', 'texte' => 'pâte crue'];
