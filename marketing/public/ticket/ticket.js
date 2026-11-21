@@ -29,7 +29,7 @@
   // Les textes de l'interface. Le néerlandais suit le ton du site (« uw »).
   var T = {
     fr: {
-      titre: 'Vos produits en détail · L’Atelier By', surTitre: 'Votre ticket · {ville}', h1: 'Vos produits,', h1s: 'en détail.',
+      titre: 'Vos achats en détail · L’Atelier By', surTitre: 'Votre ticket · {ville}', h1: 'Vos achats,', h1s: 'en détail.',
       chapeau: 'Composition, allergènes, cuisson, finition et conservation : tout sur les produits de votre ticket.',
       articles: '{n} articles', ticket: 'Votre ticket · transaction n° {num}', ticketT: '{p} produits, {n} articles',
       total: 'Total payé, TVA comprise', alg: 'Allergènes', algT: 'Ce que contient votre ticket',
@@ -51,7 +51,7 @@
       reseau: 'Le serveur ne répond pas. Réessayez dans un instant.'
     },
     nl: {
-      titre: 'Uw producten in detail · L’Atelier By', surTitre: 'Uw kasticket · {ville}', h1: 'Uw producten,', h1s: 'in detail.',
+      titre: 'Uw aankopen in detail · L’Atelier By', surTitre: 'Uw kasticket · {ville}', h1: 'Uw aankopen,', h1s: 'in detail.',
       chapeau: 'Samenstelling, allergenen, bereiding, afwerking en bewaren: alles over de producten op uw kasticket.',
       articles: '{n} artikelen', ticket: 'Uw kasticket · transactie nr. {num}', ticketT: '{p} producten, {n} artikelen',
       total: 'Totaal betaald, incl. btw', alg: 'Allergenen', algT: 'Wat uw kasticket bevat',
@@ -324,6 +324,10 @@
 
   var lgNav = (navigator.language || 'fr').slice(0, 2) === 'nl' ? 'nl' : 'fr';
   etat('', T[lgNav].charge);
+  // Les données déjà dans la page (fichier autonome, ou page préparée par le serveur) : pas de lecture.
+  if (window.TICKET_DONNEES && window.TICKET_DONNEES.lignes) {
+    donnees = window.TICKET_DONNEES; page(donnees, params.get('lang') === 'nl' || (!params.get('lang') && donnees.langue === 'nl') ? 'nl' : 'fr'); return;
+  }
   if (!/^\d{1,6}-\d{1,12}-[A-Za-z0-9]{6}$/.test(CODE)) { etat(T[lgNav].introuvable, T[lgNav].introuvableP); return; }
   fetch(API + '/marketing/ticket/client?t=' + encodeURIComponent(CODE) + (params.get('lang') ? '&lang=' + encodeURIComponent(params.get('lang')) : ''), { headers: { Accept: 'application/json' } })
     .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })

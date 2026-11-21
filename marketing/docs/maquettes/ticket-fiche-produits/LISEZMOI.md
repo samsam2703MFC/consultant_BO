@@ -145,6 +145,12 @@ Les routes rendent aussi le coût, la marge et le stock : la page n'en garde rie
 - Réglages facultatifs (`ceo_app_setting`) : `ticketWebshopUrl`, `ticketAvisUrls` (`{boutique: adresse}`),
   `ticketApplicationUrl`, `ticketLangues` (`{boutique: "fr"|"nl"}`, sinon le code postal).
 
+- Titre « Vos achats, *en détail.* » / « Uw aankopen, *in detail.* » (Sam, 21/11/2026 ; la maquette dit encore
+  « Vos produits »).
+- **Dossier pour un agent de code** : `marketing/docs/agent-fiche-ticket/` — `PROMPT_AGENT.md` (le prompt), `fiche-ticket.html`
+  (la page en ligne, autonome, avec un ticket d'exemple), `donnees-exemple.json`, `fiche-ticket-agent.zip` (les trois) ;
+  refaits par `python3 construire.py` à partir des fichiers servis.
+
 ## Pour la réaliser (proposition, à décider)
 
 - Domaine **Marketing** (la relation client) : la page `marketing/public/ticket/`, l'API
