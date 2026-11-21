@@ -65,6 +65,19 @@ $l = tclLignesTransaction(['products' => [
 tcl_ok(count($l) === 2 && $l[0]['qte'] === 4.0 && $l[0]['prix'] === 1.7 && $l[0]['nom'] === 'Croissant', 'lignes regroupées, prix unitaire');
 tcl_ok($l[1]['prix'] === 6.1, 'prix déduit du total de la ligne');
 tcl_ok(tclDateTransaction(['created_at' => '2026-11-21 11:52:07']) === '2026-11-21T11:52:07', 'date de la transaction');
+// La forme du contrat (swagger, DocumentTransactionProduct) : unit_gross_price, total_gross_value_after_discount, portions.
+$l = tclLignesTransaction(['id' => 9, 'ticket_key' => 'A-12', 'total_gross_amount_after_discount' => 9.6, 'products' => [
+    ['id_product' => 6700228, 'quantity' => 1, 'unit_gross_price' => 3.2, 'total_gross_value_after_discount' => 3.2, 'product_portion_label' => '1/8'],
+    ['id_product' => 6700228, 'quantity' => 1, 'unit_gross_price' => 3.2, 'product_portion_label' => '1/8'],
+    ['id_product' => 1610006, 'quantity' => 2, 'total_gross_value_after_discount' => 3.2],
+]]);
+tcl_ok(count($l) === 2 && $l[0]['portion'] === '1/8' && $l[0]['qte'] === 2.0 && $l[0]['prix'] === 3.2, 'portions regroupées, prix unitaire du contrat');
+tcl_ok($l[1]['prix'] === 1.6, 'prix unitaire déduit du total après remise');
+tcl_ok(tclNombre(['total_gross_amount_after_discount' => '9.60'], ['total_gross_amount_after_discount']) === 9.6, 'total du contrat');
+tcl_ok(tclDateTransaction(['id' => 9]) === null, 'sans date : null (la page compte depuis l’achat)');
+tcl_ok(tclDateTransaction(['occurred_at_utc' => '2026-11-21 10:52:00', 'insert_timestamp' => '2026-11-21 11:52:03']) === '2026-11-21T11:52:00', 'occurred_at_utc converti à l’heure belge (hiver : +1)');
+tcl_ok(tclDateTransaction(['occurred_at_utc' => '2026-07-01T09:00:00Z']) === '2026-07-01T11:00:00', 'heure d’été : +2');
+tcl_ok(tclDateTransaction(['insert_timestamp' => '2026-11-21 11:52:03']) === '2026-11-21T11:52:03', 'repli : insert_timestamp');
 
 // Le résumé d'une fiche technique : les champs affichés, pas les coûts.
 $f = tclResumeFiche(['object' => ['name' => 'Cannelloni - poulet & estragon ', 'shelf_life_minutes' => 4320, 'storage_description' => "2°C – 4°C\t",

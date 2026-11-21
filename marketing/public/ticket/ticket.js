@@ -46,7 +46,7 @@
       app: 'Mobile', appT: 'Tous vos tickets, au même endroit', appP: 'Dans l’application : vos fiches produits, le programme de fidélité et vos commandes.', appB: 'Télécharger l’application',
       shop: 'Votre boutique', adresse: 'Adresse', tel: 'Téléphone', commander: 'Commander pour demain',
       pied: 'Les informations de cette page viennent des fiches techniques de nos produits, à la date de votre achat. Une recette peut évoluer : en cas d’allergie ou d’intolérance, <b>demandez conseil en boutique</b>.',
-      pied2: '© {an} L’Atelier By', auj: 'aujourd’hui, avant {h}', demMatin: 'demain matin', dem: 'demain', jusqua: 'jusqu’à {m}', jusquau: 'jusqu’au {d}',
+      pied2: '© {an} L’Atelier By', relH: 'dans les {n} heures après l’achat', relJ: 'dans les {n} jours après l’achat', relHc: 'Dans les {n} h', relJc: 'Dans les {n} jours', ticketN: 'Votre ticket n° {num}', auj: 'aujourd’hui, avant {h}', demMatin: 'demain matin', dem: 'demain', jusqua: 'jusqu’à {m}', jusquau: 'jusqu’au {d}',
       charge: 'Un instant…', introuvable: 'Ticket introuvable', introuvableP: 'Le lien de ce ticket n’est pas valable. Scannez de nouveau le QR de votre ticket, ou demandez en boutique.',
       reseau: 'Le serveur ne répond pas. Réessayez dans un instant.'
     },
@@ -68,7 +68,7 @@
       app: 'Mobiel', appT: 'Al uw kastickets op één plek', appP: 'In de app: uw productfiches, het getrouwheidsprogramma en uw bestellingen.', appB: 'Download de app',
       shop: 'Uw winkel', adresse: 'Adres', tel: 'Telefoon', commander: 'Bestel voor morgen',
       pied: 'De informatie op deze pagina komt uit de technische fiches van onze producten, op de datum van uw aankoop. Een recept kan wijzigen: bij een allergie of intolerantie, <b>vraag raad in de winkel</b>.',
-      pied2: '© {an} L’Atelier By', auj: 'vandaag, vóór {h}', demMatin: 'morgenochtend', dem: 'morgen', jusqua: 'tot {m}', jusquau: 'tot {d}',
+      pied2: '© {an} L’Atelier By', relH: 'binnen {n} uur na aankoop', relJ: 'binnen {n} dagen na aankoop', relHc: 'Binnen {n} uur', relJc: 'Binnen {n} dagen', ticketN: 'Uw kasticket nr. {num}', auj: 'vandaag, vóór {h}', demMatin: 'morgenochtend', dem: 'morgen', jusqua: 'tot {m}', jusquau: 'tot {d}',
       charge: 'Even geduld…', introuvable: 'Kasticket niet gevonden', introuvableP: 'De link van dit kasticket is niet geldig. Scan de QR-code op uw kasticket opnieuw, of vraag het in de winkel.',
       reseau: 'De server antwoordt niet. Probeer het zo meteen opnieuw.'
     }
@@ -102,7 +102,14 @@
   function memeJour(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
   // La date limite (vente + durée de conservation du produit) dite au client : {fin, urgent, court, long}.
   function limite(vente, minutes, lg) {
-    var t = T[lg]; var fin = new Date(vente.getTime() + minutes * 60000);
+    var t = T[lg];
+    // Sans l'heure de la vente (le contrat de la transaction n'en donne pas), la durée, comptée depuis l'achat.
+    if (!vente) {
+      var h = Math.round(minutes / 60), j = Math.round(minutes / 1440);
+      var parH = minutes <= 1500;
+      return { fin: new Date(minutes * 60000), urgent: minutes <= 720, court: f(parH ? t.relHc : t.relJc, { n: parH ? h : j }), long: f(parH ? t.relH : t.relJ, { n: parH ? h : j }) };
+    }
+    var fin = new Date(vente.getTime() + minutes * 60000);
     if (memeJour(fin, vente)) {
       var q = new Date(fin.getTime()); q.setMinutes(q.getMinutes() - q.getMinutes() % 15);
       var x = f(t.auj, { h: heure(q, lg) }); return { fin: fin, urgent: true, court: maj(x), long: x };
@@ -120,7 +127,7 @@
   function vignette(l) { return l.image ? 'style="background-image:url(\'' + e(l.image) + '\')"' : 'data-vide="1"'; }
   function dateVente(s) {
     var m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(s || '');
-    return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : new Date();
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null;
   }
 
   // ---- les blocs d'une fiche ----------------------------------------------------------------------------------------
@@ -175,7 +182,7 @@
     if (lim) { tags.push('<li class="tag' + (lim.urgent ? ' tag--now' : '') + '">' + ic('horloge') + e(lim.court) + '</li>'); }
     if (l.vegetarien) { tags.push('<li class="tag tag--abr">' + ic('feuille') + e(t.vege) + '</li>'); }
     if (l.poids) { tags.push('<li class="tag">' + ic('poids') + Math.round(l.poids) + NBSP + 'g</li>'); }
-    var qte = l.prix != null ? (l.qte > 1 ? l.qte + ' × ' + euros(l.prix, lg) + ' · ' + euros(l.prix * l.qte, lg) : euros(l.prix, lg)) : '';
+    var qte = (l.portion ? l.portion + ' · ' : '') + (l.prix != null ? (l.qte > 1 ? l.qte + ' × ' + euros(l.prix, lg) + ' · ' + euros(l.prix * l.qte, lg) : euros(l.prix, lg)) : '');
     var cta = '';
     if (l.webshop && d.liens.webshop) {
       var u = d.liens.webshop + (d.liens.webshop.indexOf('?') >= 0 ? '&' : '?') + 'shop=' + d.boutique.id + '&product=' + l.id + '&open=product&lang=' + lg;
@@ -191,15 +198,15 @@
   // ---- la page ------------------------------------------------------------------------------------------------------
   function page(d, lg) {
     var t = T[lg]; var b = d.boutique; var L = d.lignes;
-    var vente = dateVente(d.transaction.date);
+    var vente = dateVente(d.transaction.date);   // null si le panel ne donne pas l'heure
     L.forEach(function (l) { l.nom[lg] = maj(l.nom[lg]); l._lim = l.vieMinutes ? limite(vente, l.vieMinutes, lg) : null; });
     var nArt = L.reduce(function (s, l) { return s + l.qte; }, 0);
     var total = d.transaction.total != null ? d.transaction.total : L.reduce(function (s, l) { return s + (l.prix || 0) * l.qte; }, 0);
     var num = String(d.transaction.id).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
-    var jour = maj(jourLong(vente, lg)) + ' ' + vente.getFullYear();
-    var quand = jour + ' · ' + heure(vente, lg);
+    var quand = vente ? maj(jourLong(vente, lg)) + ' ' + vente.getFullYear() + ' · ' + heure(vente, lg) : '';
+    var portion = function (l) { return l.portion ? ' (' + l.portion + ')' : ''; };
     var rows = L.map(function (l) {
-      return '<a class="row" href="#p-' + l.id + '"><span class="th" ' + vignette(l) + '></span><span><b>' + e(l.nom[lg]) + '</b><small>' + l.qte + (l.prix != null ? ' × ' + euros(l.prix, lg) : '') + '</small></span>'
+      return '<a class="row" href="#p-' + l.id + '"><span class="th" ' + vignette(l) + '></span><span><b>' + e(l.nom[lg]) + '</b><small>' + l.qte + portion(l) + (l.prix != null ? ' × ' + euros(l.prix, lg) : '') + '</small></span>'
         + '<em>' + (l.prix != null ? euros(l.prix * l.qte, lg) : '') + '</em>' + ic('fleche') + '</a>';
     }).join('');
     var presents = ALLERGENES.map(function (a) { return [a[0], L.filter(function (l) { return (l.allergenes || []).indexOf(a[0]) >= 0; })]; }).filter(function (x) { return x[1].length; });
@@ -232,9 +239,9 @@
     document.title = t.titre;
     racine.innerHTML = '<header class="nav wrap"><a class="nav__logo" href="#"><img src="../assets/img/logo.png" alt="L’Atelier By"></a><div class="lang" aria-label="Langue · Taal">' + langues + '</div></header>'
       + '<main><section class="head wrap"><p class="eyebrow eyebrow--ruby">' + e(f(t.surTitre, { ville: b.ville || b.nom })) + '</p><h1>' + e(t.h1) + '<span class="script">' + e(t.h1s) + '</span></h1>'
-      + '<p class="head__lede">' + e(t.chapeau) + '</p><div class="meta"><span>' + ic('horloge') + e(quand) + '</span><span>' + e(f(t.articles, { n: nArt })) + ' · ' + euros(total, lg) + '</span></div></section>'
-      + '<div class="sand"><div class="wrap top"><section class="card"><p class="eyebrow">' + e(f(t.ticket, { num: num })) + '</p><h2 class="card__t">' + e(f(t.ticketT, { p: L.length, n: nArt })) + '</h2>'
-      + '<div class="rows">' + rows + '</div><div class="total"><span>' + e(t.total) + '</span><b>' + euros(total, lg) + '</b></div><p class="fine">' + e(b.nom) + ' · ' + e(quand) + '</p></section>'
+      + '<p class="head__lede">' + e(t.chapeau) + '</p><div class="meta">' + (quand ? '<span>' + ic('horloge') + e(quand) + '</span>' : '') + '<span>' + e(f(t.articles, { n: nArt })) + ' · ' + euros(total, lg) + '</span></div></section>'
+      + '<div class="sand"><div class="wrap top"><section class="card"><p class="eyebrow">' + e(d.transaction.ticket ? f(t.ticketN, { num: d.transaction.ticket }) : f(t.ticket, { num: num })) + '</p><h2 class="card__t">' + e(f(t.ticketT, { p: L.length, n: nArt })) + '</h2>'
+      + '<div class="rows">' + rows + '</div><div class="total"><span>' + e(t.total) + '</span><b>' + euros(total, lg) + '</b></div><p class="fine">' + e([b.nom, quand].filter(Boolean).join(' · ')) + '</p></section>'
       + '<div class="stack"><section class="card"><p class="eyebrow eyebrow--ruby">' + e(t.alg) + '</p><h2 class="card__t">' + e(t.algT) + '</h2><div class="alg-l">' + alg + '</div>'
       + (absents.length ? '<p class="sans">' + f(t.sans, { liste: e(absents.join(', ')) }) + '</p>' : '')
       + (travailles.length ? '<p class="note">' + ic('alerte') + '<span>' + e(f(t.traces, { liste: liste(travailles, lg) })) + '</span></p>' : '') + '</section>'
@@ -246,7 +253,7 @@
       + '<button type="button" class="arr arr--prev" aria-label="' + e(t.prec) + '" disabled>' + ic('gauche') + '</button><button type="button" class="arr arr--next" aria-label="' + e(t.suiv) + '">' + ic('fleche') + '</button></div>'
       + '<div class="track" id="track" tabindex="0" aria-roledescription="carrousel">' + fiches + '</div></section>'
       + '<div class="wrap end">' + avis + app + shop + '</div></div>'
-      + '<footer class="foot wrap"><p>' + t.pied + '</p><p>' + e(f(t.pied2, { an: vente.getFullYear() })) + '</p></footer></main>';
+      + '<footer class="foot wrap"><p>' + t.pied + '</p><p>' + e(f(t.pied2, { an: (vente || new Date()).getFullYear() })) + '</p></footer></main>';
     racine.querySelectorAll('.lang a[data-lang]').forEach(function (a) {
       a.addEventListener('click', function (ev) { ev.preventDefault(); var x = a.getAttribute('data-lang'); params.set('lang', x); history.replaceState(null, '', '?' + params.toString()); page(donnees, x); });
     });

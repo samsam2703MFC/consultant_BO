@@ -72,7 +72,8 @@
   }
   function ligne(t) {
     var h = t.date ? t.date.slice(11, 16) : '';
-    return '<div class="tx"><b>' + e(h) + '</b><span>Transaction ' + e(t.id) + (t.total != null ? ' <small>· ' + Number(t.total).toFixed(2).replace('.', ',') + ' €</small>' : '') + '</span>'
+    return '<div class="tx"><b>' + e(h || ('n° ' + (t.ticket || t.id))) + '</b><span>Transaction ' + e(t.id) + (t.ticket ? ' <small>· ticket ' + e(t.ticket) + '</small>' : '')
+      + (t.lignes != null ? ' <small>· ' + t.lignes + ' ligne(s)</small>' : '') + (t.total != null ? ' <small>· ' + Number(t.total).toFixed(2).replace('.', ',') + ' €</small>' : '') + '</span>'
       + '<a href="' + e(lien(t.code)) + '" target="_blank" rel="noopener">Page client</a><button type="button" data-code="' + e(t.code) + '">QR</button></div>';
   }
   $('date').value = new Date().toISOString().slice(0, 10);
