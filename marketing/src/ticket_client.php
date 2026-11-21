@@ -153,10 +153,19 @@ function tclNombre(array $a, array $cles): ?float
     return null;
 }
 
-/** La date d'une transaction, sous la première clé qui en porte une. */
+/**
+ * L'heure de la vente, à l'heure belge. Mesuré sur le serveur le 21/11/2026 (le swagger ne la décrit pas) : la
+ * transaction porte `occurred_at_utc` (en UTC) et `insert_timestamp` ; sinon, la première clé usuelle qui en porte une.
+ */
 function tclDateTransaction(array $t): ?string
 {
-    foreach (['created_at', 'date', 'transaction_date', 'datetime', 'sold_at', 'paid_at', 'closed_at', 'timestamp'] as $k) {
+    if (!empty($t['occurred_at_utc']) && is_string($t['occurred_at_utc'])) {
+        try {
+            $d = new DateTimeImmutable($t['occurred_at_utc'], new DateTimeZone('UTC'));
+            return $d->setTimezone(new DateTimeZone('Europe/Brussels'))->format('Y-m-d\TH:i:s');
+        } catch (Throwable $e) { /* illisible : les autres clés */ }
+    }
+    foreach (['insert_timestamp', 'created_at', 'date', 'transaction_date', 'datetime', 'sold_at', 'paid_at', 'closed_at', 'timestamp'] as $k) {
         if (!empty($t[$k]) && is_string($t[$k]) && strtotime($t[$k]) !== false) { return date('Y-m-d\TH:i:s', (int) strtotime($t[$k])); }
     }
     return null;
@@ -176,14 +185,18 @@ function tclLignesTransaction(array $t): array
         if (!is_array($l)) { continue; }
         $id = (int) ($l['id_product'] ?? $l['product_id'] ?? ($l['product']['id'] ?? 0));
         if ($id <= 0) { continue; }
+        // Les noms du contrat (swagger, DocumentTransactionProduct) d'abord : unit_gross_price, total_gross_value_after_discount.
         $qte = tclNombre($l, ['quantity', 'qty', 'amount']) ?? 1.0;
-        $total = tclNombre($l, ['total_gross', 'total_price_gross', 'value_gross', 'total', 'value']);
-        $unit = tclNombre($l, ['price_gross', 'portion_price_gross', 'unit_price_gross', 'price', 'unit_price', 'portion_price']);
+        $total = tclNombre($l, ['total_gross_value_after_discount', 'total_gross', 'total_price_gross', 'value_gross', 'total', 'value']);
+        $unit = tclNombre($l, ['unit_gross_price', 'price_gross', 'portion_price_gross', 'unit_price_gross', 'price', 'unit_price', 'portion_price']);
         if ($unit === null && $total !== null && $qte > 0) { $unit = $total / $qte; }
-        $nom = (string) ($l['name'] ?? $l['product_name'] ?? ($l['product']['name'] ?? ''));
+        $nom = (string) ($l['product_display_name'] ?? $l['product_name'] ?? $l['name'] ?? ($l['product']['name'] ?? ''));
+        $portion = (string) ($l['product_portion_label'] ?? '');
         // Deux lignes du même produit (deux passages en caisse) ne font qu'une fiche.
-        if (isset($out[$id])) { $out[$id]['qte'] += $qte; continue; }
-        $out[$id] = ['id' => $id, 'qte' => $qte, 'prix' => $unit, 'nom' => trim($nom)];
+        // Une portion (1/8 d'une tarte…) reste une ligne à part : son prix n'est pas celui du produit entier.
+        $cle = $id . ($portion !== '' ? '/' . $portion : '');
+        if (isset($out[$cle])) { $out[$cle]['qte'] += $qte; continue; }
+        $out[$cle] = ['id' => $id, 'qte' => $qte, 'prix' => $unit, 'nom' => trim($nom), 'portion' => $portion];
     }
     return array_values($out);
 }
@@ -316,9 +329,17 @@ function tclFiches(array $ids): array
 /** Les boutiques du panel : nom, adresse, téléphone, langue. */
 function tclBoutiques(): array
 {
-    if (($c = tclCacheLire('boutiques')) !== null) { return $c; }
+    if (($c = tclCacheLire('boutiques-noms')) !== null) { return $c; }
     $r = PanelApi::get('/shops');
     $langues = setting('ticketLangues', []);
+    // Le nom public de la boutique est celui du cockpit (ceo_shop : « Atelier by - Halle ») : le panel rend la raison
+    // sociale de la société (« Neutralles SRL »), que le client n'a pas à voir.
+    $publics = [];
+    try {
+        foreach (Db::rows('SELECT name, zone, pwa_shop_id FROM ceo_shop WHERE pwa_shop_id IS NOT NULL') as $x) {
+            $publics[(string) $x['pwa_shop_id']] = ['nom' => (string) $x['name'], 'zone' => (string) $x['zone']];
+        }
+    } catch (Throwable $e) { $publics = []; }
     $out = [];
     foreach (is_array($r) ? analyseListe($r) : [] as $s) {
         $id = (int) ($s['id'] ?? 0);
@@ -326,15 +347,15 @@ function tclBoutiques(): array
         $cp = trim((string) ($s['zip'] ?? $s['postal_code'] ?? ''));
         $out[(string) $id] = [
             'id' => $id,
-            'nom' => trim((string) ($s['name'] ?? '')),
+            'nom' => trim(($publics[(string) $id]['nom'] ?? '') ?: (string) ($s['name'] ?? '')),
             'rue' => trim(implode(' ', array_filter([trim((string) ($s['street'] ?? '')), trim((string) ($s['street_number'] ?? ''))]))),
             'cp' => $cp,
-            'ville' => trim((string) ($s['city'] ?? '')),
+            'ville' => trim((string) ($s['city'] ?? '') ?: ($publics[(string) $id]['zone'] ?? '')),
             'tel' => trim((string) ($s['phone'] ?? '')),
             'langue' => is_array($langues) && in_array($langues[(string) $id] ?? '', ['fr', 'nl'], true) ? $langues[(string) $id] : tclLangueCp($cp),
         ];
     }
-    if ($out !== []) { tclCacheEcrire('boutiques', $out); }
+    if ($out !== []) { tclCacheEcrire('boutiques-noms', $out); }
     return $out;
 }
 
@@ -384,7 +405,7 @@ function ep_tcl_client(string $code, string $lang): array
         $prix = $l['prix'] ?? $c['fr']['prix'] ?? $c['nl']['prix'] ?? ($f['prixConseille'] ?? null);
         $nomBase = $f['nom'] ?? $l['nom'];
         $out[] = [
-            'id' => $l['id'], 'qte' => $l['qte'], 'prix' => $prix,
+            'id' => $l['id'], 'qte' => $l['qte'], 'prix' => $prix, 'portion' => $l['portion'] ?? '',
             'nom' => ['fr' => ($c['fr']['nom'] ?? '') ?: $nomBase, 'nl' => ($c['nl']['nom'] ?? '') ?: (($c['fr']['nom'] ?? '') ?: $nomBase)],
             'famille' => ['fr' => ($c['fr']['groupe'] ?? '') ?: ($f['categorie'] ?? ''), 'nl' => ($c['nl']['groupe'] ?? '') ?: (($c['fr']['groupe'] ?? '') ?: ($f['categorie'] ?? ''))],
             'image' => ($c['fr']['image'] ?? '') ?: (($c['nl']['image'] ?? '') ?: ($f['photo'] ?? '')),
@@ -405,7 +426,7 @@ function ep_tcl_client(string $code, string $lang): array
     return [
         'boutique' => $boutique,
         'langue' => in_array($lang, ['fr', 'nl'], true) ? $lang : $boutique['langue'],
-        'transaction' => ['id' => $tx, 'date' => tclDateTransaction($t), 'total' => tclNombre($t, ['total_gross', 'total_price_gross', 'value_gross', 'total', 'value'])],
+        'transaction' => ['id' => $tx, 'ticket' => (string) ($t['ticket_key'] ?? ''), 'date' => tclDateTransaction($t), 'total' => tclNombre($t, ['total_gross_amount_after_discount', 'total_gross', 'total_price_gross', 'value_gross', 'total', 'value'])],
         'lignes' => $out,
         'travailles' => array_values(array_filter(TCL_ALLERGENES, static fn ($a) => isset($travailles[$a]))),
         'liens' => ['webshop' => (string) setting('ticketWebshopUrl', ''), 'avis' => is_array($avis) ? (string) ($avis[(string) $shop] ?? '') : '',
@@ -430,10 +451,11 @@ function ep_tcl_essai_jour(int $shop, string $date): array
     foreach ($liste as $t) {
         $id = (int) ($t['id'] ?? 0);
         if ($id <= 0) { continue; }
-        $out[] = ['id' => $id, 'date' => tclDateTransaction($t), 'total' => tclNombre($t, ['total_gross', 'total_price_gross', 'value_gross', 'total', 'value']),
-            'code' => tclCode($shop, $id, $secret)];
+        $out[] = ['id' => $id, 'ticket' => (string) ($t['ticket_key'] ?? ''), 'date' => tclDateTransaction($t),
+            'total' => tclNombre($t, ['total_gross_amount_after_discount', 'total_gross', 'total_price_gross', 'value_gross', 'total', 'value']),
+            'lignes' => isset($t['products']) ? count(tclLignesTransaction($t)) : null, 'code' => tclCode($shop, $id, $secret)];
     }
-    usort($out, static fn ($a, $b) => strcmp((string) $b['date'], (string) $a['date']));
+    usort($out, static fn ($a, $b) => $b['id'] <=> $a['id']);   // la plus récente d'abord (le contrat ne donne pas l'heure)
     // Les clés d'une transaction de la liste : pour ajuster la lecture si le panel nomme autrement ses champs.
     return ['date' => $date, 'transactions' => $out, 'cles' => isset($liste[0]) && is_array($liste[0]) ? array_keys($liste[0]) : []];
 }

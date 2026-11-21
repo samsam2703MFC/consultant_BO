@@ -111,6 +111,21 @@ Les routes rendent aussi le coût, la marge et le stock : la page n'en garde rie
   `expected_margin`) et le stock (`in_stock`) de chaque produit, sans compte. La fiche technique « raw » rend aussi le
   coût. La page ne rend que les champs du tableau ci-dessus ; la fuite est à signaler à TF Buddy.
 
+## En ligne (21/11/2026)
+
+- Page client : `/consulant_bo/ticket/?t={boutique}-{transaction}-{clé}` (`marketing/public/ticket/`), API
+  `marketing/src/ticket_client.php` (route publique `/marketing/ticket/client`, gardée par la clé signée).
+- Écran d'essai du siège : `/consulant_bo/ticket/essai/` — boutique et jour (les transactions du panel, chacune avec sa
+  page et son QR), ou un numéro de transaction.
+- Mesuré sur le serveur : la transaction porte `occurred_at_utc` (heure de la vente en UTC, convertie à l'heure belge),
+  `insert_timestamp`, `ticket_key` (affiché comme numéro du ticket) et `total_gross_amount_after_discount` ; ses lignes
+  `id_product`, `quantity`, `unit_gross_price`, `total_gross_value_after_discount`, `product_display_name`,
+  `product_portion_label`. Le swagger ne décrit pas l'heure. Elle porte aussi le nom du client et le coût de fabrication
+  des lignes : la page n'en rend rien.
+- Le nom de la boutique vient du cockpit (`ceo_shop`) : le panel rend la raison sociale (« Neutralles SRL »).
+- Réglages facultatifs (`ceo_app_setting`) : `ticketWebshopUrl`, `ticketAvisUrls` (`{boutique: adresse}`),
+  `ticketApplicationUrl`, `ticketLangues` (`{boutique: "fr"|"nl"}`, sinon le code postal).
+
 ## Pour la réaliser (proposition, à décider)
 
 - Domaine **Marketing** (la relation client) : la page `marketing/public/ticket/`, l'API
