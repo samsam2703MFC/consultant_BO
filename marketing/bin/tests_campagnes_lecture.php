@@ -105,9 +105,10 @@ verifie('dans la forme que lisait le budget (statut et type, couleur comprise)',
     $l[2] === ['id' => 9, 'name' => 'Noël', 'starts_on' => '2026-12-01', 'ends_on' => '2026-12-31', 'status_code' => 'active', 'statut' => 'En cours', 'type_label' => 'Fêtes', 'type_color' => '#AA3344'], json_encode($l[2]));
 [$l, $err] = campagnesDeLExercice(2025);
 verifie('un autre exercice : la campagne finie le 31 décembre en fait partie', $err === null && array_column($l, 'id') === [3]);
-poser(['/campaigns/9' => $ok200(['id' => 9, 'shops' => [['shop_id' => 3, 'shop_name' => 'Gosselies'], ['shop_id' => 5, 'shop_name' => 'Namur']]])]);
+poser(['/campaigns/9' => $ok200(['id' => 9, 'shops' => [['shop_id' => 5, 'shop_name' => 'Gosselies'], ['shop_id' => 12, 'shop_name' => 'Halle'], ['shop_id' => 3, 'shop_name' => 'Namur']]])]);
 [$ids, $err] = campagneBoutiques(9);
-verifie('les boutiques d’une campagne, lues à sa fiche', $ids === ['3', '5'] && $err === null && Db::$sql === []);
+verifie('les boutiques d’une campagne, lues à sa fiche, par identifiant (la fiche les range par nom)',
+    $ids === ['3', '5', '12'] && $err === null && Db::$sql === [], json_encode($ids));
 poser([]);
 [$ids, $err] = campagneBoutiques(9);
 verifie('campagne inconnue du module : la raison, pas une liste vide', $ids === null && $err === 'campagne inconnue du module');

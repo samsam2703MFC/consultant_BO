@@ -133,8 +133,7 @@ function mktBriefDonnees(int $id): ?array
     foreach ($shops as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
     $perim = [];
     if (!$reseau) {
-        foreach ((array) ($fiche['shops'] ?? []) as $r) {   // les boutiques de la fiche
-            $sid = (string) ($r['shop_id'] ?? '');
+        foreach (campagneFicheBoutiques($fiche) as $sid) {   // les boutiques de la fiche, par identifiant
             if (isset($nomDe[$sid])) { $perim[] = $sid; }
         }
     }
