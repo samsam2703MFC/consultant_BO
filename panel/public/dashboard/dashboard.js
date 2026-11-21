@@ -7297,7 +7297,9 @@
   /* --- Frais (16/11/2026, maquette docs/maquettes/frais-tva) -----------------------------------------------------------
    * Les frais du magasin du mois, tels que saisis au panel (GET /exploitation/frais) ; pour chaque poste, « TVA comprise ? »
    * (oui, non) et le taux. Le P&L court s'en sert pour ramener les frais généraux hors TVA (src/pnl_ht.php). Le choix se
-   * garde pour le poste, d'un mois à l'autre (POST /exploitation/frais/tva). Cliquer à nouveau le choix fait le défait. */
+   * garde pour le poste, d'un mois à l'autre (POST /exploitation/frais/tva). Cliquer à nouveau le choix fait le défait.
+   * « Ajouter un frais » (21/11/2026) : le frais est créé au panel pour le mois, jusqu'en décembre ou toute l'année
+   * (POST /exploitation/frais/ajout) ; un ajout se défait (POST /exploitation/frais/annuler). */
   const FR_EC = {};
   function cleFR() { return 'frais|' + S.shop + '|' + S.frMois; }
   function cheminFR() { return '/exploitation/frais?shop=' + encodeURIComponent(S.shop) + '&mois=' + S.frMois; }
@@ -7307,12 +7309,12 @@
     S.frMois = S.frMois || AUJ.slice(0, 7);
     const k = cleFR(), D = S.aux[k], ceMois = AUJ.slice(0, 7);
     const nav = `<div class="fx-nav"><span class="db-lab">Mois</span><button class="db-btn" data-frm="-1" aria-label="mois précédent">‹</button><span class="fx-mois">${esc(frMoisLib(S.frMois))}</span><button class="db-btn" data-frm="1" aria-label="mois suivant"${S.frMois >= ceMois ? ' disabled' : ''}>›</button>${S.frMois !== ceMois ? '<button class="db-btn" data-frm="0">Ce mois-ci</button>' : ''}</div>`;
-    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre.</p>`;
+    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre. Un frais qui manque s’<b>ajoute au panel</b> plus bas, pour le mois ou toute l’année.</p>`;
     if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])}</div></div>`; }
     if (!D) { return h + squelette(6) + '</div>'; }
     if (D.indispo) { return h + `<div class="db-alerte">${esc(D.motif || 'frais indisponibles')}</div></div>`; }
-    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div></div>`; }
-    if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div></div>`; }
+    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div>${frRendAjout(D)}</div>`; }
+    if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div>${frRendAjout(D)}</div>`; }
     const TAUX = D.taux || [0, 6, 12, 21];
     const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
     const lignes = D.lignes.map((l, i) => {
@@ -7337,6 +7339,7 @@
       <tbody>${lignes}
         <tr class="tot"><td>Total du mois<span class="sub">${D.postes - ai} poste${D.postes - ai > 1 ? 's' : ''} indiqué${D.postes - ai > 1 ? 's' : ''} sur ${D.postes}</span></td><td class="n">${fU(D.saisi)}</td><td></td><td></td><td class="n">${fU(D.ht)}</td><td class="n">${fU(D.tva)}</td></tr>
       </tbody></table></div></div>`;
+    h += frRendAjout(D);
     // Ce que ça change dans le P&L court : les frais du jour (le panel les alloue à aujourd'hui), ceux du mois, et leur
     // part dans le CA du jour si le Résultat d'aujourd'hui est lu (le rail le lit).
     const JM = S.frMois === ceMois && S.date === AUJ ? magasin(S.aux['jourM|' + AUJ]) : null;
@@ -7360,6 +7363,7 @@
       S.frMois = n === 0 ? ce : frMoisPas(n); if (S.frMois > ce) { S.frMois = ce; }
       delete S.err.frEcr; charger(false);
     }));
+    frBrancherAjout();
     const D = S.aux[cleFR()];
     if (!D || !Array.isArray(D.lignes)) { return; }
     const choisir = (i, tva, taux) => {
@@ -7383,6 +7387,138 @@
       const i = +b.dataset.frx, l = D.lignes[i], t = +b.dataset.v;
       choisir(i, l.tva == null ? t > 0 : l.tva, t);
     }));
+  }
+  /* Ajouter un frais (21/11/2026, « rajouter un frais (faire un formulaire) et que ce frais se reporte sur toute
+   * l'année ») : libellé, type au panel, montant (par mois, ou un total réparti), le mois, et la répétition — ce mois
+   * seulement, jusqu'en décembre, toute l'année (janvier → décembre). Le serveur crée une ligne au panel par mois (ou une
+   * seule si le panel reporte le frais de lui-même) et le dit mois par mois ; « Annuler » supprime au panel ce qu'il a
+   * créé. La TVA du nouveau poste peut s'indiquer d'emblée. */
+  function frForm() {
+    if (!S.frF) { S.frF = { nom: '', type: '', montant: '', base: 'mois', mois: S.frMois || AUJ.slice(0, 7), repeter: 'annee', tva: null, taux: null }; }
+    return S.frF;
+  }
+  /** Les mois d'un ajout, comme le serveur (phMoisCibles). */
+  function frMoisAjout(F) {
+    const y = F.mois.slice(0, 4), m = +F.mois.slice(5, 7), de = F.repeter === 'annee' ? 1 : m, a = F.repeter === 'mois' ? m : 12, o = [];
+    for (let i = de; i <= a; i++) { o.push(y + '-' + String(i).padStart(2, '0')); }
+    return o;
+  }
+  const frPlage = (du, au) => du === au ? frMoisLib(du) : (du.slice(0, 4) === au.slice(0, 4) ? MOIS[+du.slice(5, 7) - 1] : frMoisLib(du)) + ' → ' + frMoisLib(au);
+  const frMontant = F => parseFloat(String(F.montant).replace(/\s/g, '').replace(',', '.'));
+  /** Ce qui manque au formulaire, sinon '' : le libellé, le montant, le type (quand le panel en propose). */
+  function frManque(F, D) {
+    const m = [];
+    if (!F.nom.trim()) { m.push('le libellé'); }
+    if (!(frMontant(F) > 0)) { m.push('le montant'); }
+    if (((D || {}).types || []).length && !F.type) { m.push('le type'); }
+    return m.join(', ');
+  }
+  /** L'aperçu, en texte : combien de mois, de quand à quand, combien par mois et en tout (réparti au centime, comme phMontants). */
+  function frApercu(F, D) {
+    const manque = frManque(F, D);
+    if (manque) { return 'À indiquer : ' + manque + '.'; }
+    const M = frMoisAjout(F), n = M.length, v = frMontant(F), c = Math.round(v * 100);
+    const pm = F.base === 'total' ? Math.floor(c / n) / 100 : Math.round(v * 100) / 100, der = F.base === 'total' ? (c - Math.floor(c / n) * (n - 1)) / 100 : pm;
+    return `${n} mois au panel (${frPlage(M[0], M[n - 1])}) : ${fU(pm)} par mois${der !== pm ? ', le dernier ' + fU(der) : ''} · ${fU(F.base === 'total' ? v : pm * n)} en tout.`;
+  }
+  const frBouton = F => { const n = frMoisAjout(F).length; return n > 1 ? 'Ajouter les ' + n + ' mois au panel' : 'Ajouter au panel'; };
+  function frRendAjout(D) {
+    const F = frForm(), types = D.types || [], TAUX = D.taux || [0, 6, 12, 21];
+    const segF = (k, opts) => `<span class="seg">${opts.map(([v, l]) => `<button type="button" class="${F[k] === v ? 'is-on' : ''}" data-frf="${k}" data-v="${esc(String(v))}">${l}</button>`).join('')}</span>`;
+    const an = +AUJ.slice(0, 4), ans = [...new Set([+S.frMois.slice(0, 4), an, an + 1])].filter(y => Math.abs(y - an) <= 1).sort();
+    // Toute l'année : on choisit l'année (le mois reste, pour revenir à « jusqu'en décembre ») ; sinon le mois de départ.
+    const moisOpts = F.repeter === 'annee'
+      ? ans.map(y => `<option value="${y}${F.mois.slice(4)}"${+F.mois.slice(0, 4) === y ? ' selected' : ''}>${y}</option>`).join('')
+      : ans.map(y => `<optgroup label="${y}">${MOIS.map((nm, i) => { const v = y + '-' + String(i + 1).padStart(2, '0'); return `<option value="${v}"${v === F.mois ? ' selected' : ''}>${nm} ${y}</option>`; }).join('')}</optgroup>`).join('');
+    const manque = frManque(F, D);
+    let h = `<div class="db-card fx-aj"><div class="ct"><span class="db-lab">Ajouter un frais</span><span class="db-mini">créé au panel, une ligne par mois · il compte ensuite dans les frais généraux du P&amp;L</span></div>
+      <div class="fx-aj-f">
+        <div class="pm-row fx-aj-r1">
+          <div class="pm-f"><label>Libellé</label><input class="pm-in" data-frin="nom" maxlength="120" autocomplete="off" placeholder="ex. Assurance incendie" value="${esc(F.nom)}"></div>
+          ${types.length ? `<div class="pm-f"><label>Type de frais au panel</label><select class="pm-in" data-frin="type"><option value="">— choisir —</option>${types.map(t => `<option value="${esc(t.id)}"${String(t.id) === String(F.type) ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select></div>` : ''}
+          <div class="pm-f"><label>Montant</label><span class="pm-eur"><input class="pm-in" data-frin="montant" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(F.montant)}"><i>€</i></span></div>
+          <div class="pm-f"><label>Le montant est</label>${segF('base', [['mois', 'par mois'], ['total', 'un total à répartir']])}</div>
+        </div>
+        <div class="pm-row fx-aj-r2">
+          <div class="pm-f"><label>${F.repeter === 'annee' ? 'Année' : (F.repeter === 'mois' ? 'Mois' : 'À partir de')}</label><select class="pm-in" data-frin="mois">${moisOpts}</select></div>
+          <div class="pm-f"><label>Répéter</label>${segF('repeter', [['mois', 'ce mois seulement'], ['fin', 'jusqu’en décembre'], ['annee', 'toute l’année']])}</div>
+          <div class="pm-f"><label>TVA comprise dans le montant ?</label><span>${segF('tva', [[true, 'Oui'], [false, 'Non']])}${F.tva !== null ? segF('taux', TAUX.map(t => [+t, nf(+t, 0) + ' %'])) : ''}</span></div>
+        </div>
+        <div class="fx-aj-pied"><span class="fx-aj-ap" id="fx-aj-ap">${esc(frApercu(F, D))}</span><button type="button" class="db-btn fx-aj-ok" data-fraj="1"${S.frEnv || manque ? ' disabled' : ''}>${S.frEnv ? 'Envoi au panel…' : esc(frBouton(F))}</button></div>
+      </div>`;
+    if (S.err.frAj) { h += `<div class="db-err fx-aj-msg">Ajout : ${esc(S.err.frAj)}</div>`; }
+    const R = S.frR && S.frR.shop === S.shop ? S.frR : null;
+    if (R) {
+      const ok = (R.mois || []).filter(x => x.ok), ko = (R.mois || []).filter(x => !x.ok), cree = ok.filter(x => !x.parLePanel), absents = ok.filter(x => x.vu === false);
+      h += `<div class="fx-aj-res${ko.length ? ' ko' : ''}"><b>${esc(R.poste)}</b> : ${R.reporteParLePanel
+        ? `créé au panel pour ${esc(frMoisLib(cree[0].mois))} ; le panel le reporte de lui-même sur les mois suivants, rien d’autre n’a été créé.`
+        : (cree.length ? `créé au panel pour ${cree.length} mois (${esc(frPlage(cree[0].mois, cree[cree.length - 1].mois))}).` : 'rien n’a été créé.')}
+        ${ko.length ? `<br>Refusé par le panel pour ${esc(frMoisLib(ko[0].mois))} : ${esc(ko[0].erreur || 'sans réponse')}. Les mois suivants n’ont pas été envoyés.` : ''}
+        ${absents.length ? `<br><span class="wa">Pas encore visible au panel : ${absents.map(x => esc(MOIS[+x.mois.slice(5, 7) - 1])).join(', ')}.</span>` : ''}
+        ${R.lot && R.annulable ? `<button type="button" class="db-btn" data-fran="${esc(R.lot)}"${S.frAnn ? ' disabled' : ''}>${S.frAnn === R.lot ? 'Annulation…' : 'Annuler cet ajout'}</button>` : ''}</div>`;
+    }
+    const AR = S.frAnnR && S.frAnnR.shop === S.shop ? S.frAnnR : null;
+    if (AR) {
+      h += `<div class="fx-aj-res${(AR.refus || []).length || (AR.sansId || []).length ? ' ko' : ''}">Ajout annulé : ${(AR.annules || []).length} mois supprimé${(AR.annules || []).length > 1 ? 's' : ''} au panel.${(AR.refus || []).length ? ' Refusé pour ' + esc(frMoisLib(AR.refus[0].mois)) + ' : ' + esc(AR.refus[0].erreur || '') + '.' : ''}${(AR.sansId || []).length ? ' ' + AR.sansId.length + ' mois à supprimer au panel (identifiant non rendu).' : ''}</div>`;
+    }
+    const A = (D.ajouts || []).filter(a => !R || a.lot !== R.lot);
+    if (A.length) {
+      h += `<div class="fx-aj-l"><span class="db-lab">Ajoutés d’ici</span>${A.map(a => `<div class="fx-aj-i"><span>${esc(a.poste)}<span class="sub">${a.n} mois · ${esc(frPlage(a.du, a.au))} · le ${esc(fD(a.le.slice(0, 10)))}${a.par ? ' · ' + esc(a.par) : ''}</span></span><span class="n">${fU(a.montant)}</span>${a.annulable
+        ? `<button type="button" class="db-btn" data-fran="${esc(a.lot)}"${S.frAnn ? ' disabled' : ''}>${S.frAnn === a.lot ? 'Annulation…' : 'Annuler'}</button>`
+        : '<span class="mu">à défaire au panel</span>'}</div>`).join('')}</div>`;
+    }
+    return h + '</div>';
+  }
+  /** Après un ajout ou une annulation : les frais des mois touchés se relisent (le mois regardé tout de suite), et le Résultat. */
+  function frRelire(mois) {
+    (mois || []).forEach(m => { if (m !== S.frMois) { delete S.aux['frais|' + S.shop + '|' + m]; } });
+    Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+    lireAux(cleFR(), cheminFR(), true);
+  }
+  function frEnvoyer() {
+    const F = frForm(), D = S.aux[cleFR()] || {};
+    if (S.frEnv || frManque(F, D)) { return; }
+    const M = frMoisAjout(F);
+    if (M.length > 1 && !window.confirm(`Créer « ${F.nom.trim()} » au panel pour ${M.length} mois (${frPlage(M[0], M[M.length - 1])}) ?`)) { return; }
+    S.frEnv = true; delete S.err.frAj; S.frR = null; S.frAnnR = null; rendre();
+    ecrire('/exploitation/frais/ajout', { shop: S.shop, nom: F.nom.trim(), type: F.type || null, montant: frMontant(F), base: F.base, mois: F.mois, repeter: F.repeter, tva: F.tva, taux: F.tva === null ? null : F.taux })
+      .then(r => { S.frR = Object.assign({ shop: S.shop }, r); if (r.crees) { S.frF = null; frRelire(M); } })
+      .catch(e => { S.err.frAj = e.message; })
+      .finally(() => { S.frEnv = false; rendre(); });
+  }
+  function frAnnuler(lot) {
+    if (S.frAnn || !window.confirm('Supprimer au panel les lignes créées par cet ajout ?')) { return; }
+    S.frAnn = lot; delete S.err.frAj; S.frAnnR = null; rendre();
+    ecrire('/exploitation/frais/annuler', { shop: S.shop, lot: lot })
+      .then(r => { if (S.frR && S.frR.lot === lot) { S.frR = null; } S.frAnnR = Object.assign({ shop: S.shop }, r); frRelire(r.annules); })
+      .catch(e => { S.err.frAj = e.message; })
+      .finally(() => { S.frAnn = null; rendre(); });
+  }
+  function frBrancherAjout() {
+    if (!$.querySelector('.fx-aj')) { return; }
+    const F = frForm();
+    // La saisie ne refait pas l'écran (le curseur reste où il est) : l'aperçu et le bouton suivent.
+    const maj = () => {
+      const D = S.aux[cleFR()] || {}, ap = document.getElementById('fx-aj-ap'), b = $.querySelector('[data-fraj]');
+      if (ap) { ap.textContent = frApercu(F, D); }
+      if (b && !S.frEnv) { b.disabled = !!frManque(F, D); b.textContent = frBouton(F); }
+    };
+    $.querySelectorAll('[data-frin]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const k = el.dataset.frin;
+      F[k] = el.value;
+      // Un type choisi sans libellé : le libellé prend son nom.
+      if (k === 'type' && !F.nom.trim()) { const t = ((S.aux[cleFR()] || {}).types || []).find(x => String(x.id) === el.value); const i = $.querySelector('[data-frin="nom"]'); if (t && i) { F.nom = t.nom; i.value = t.nom; } }
+      maj();
+    }));
+    $.querySelectorAll('[data-frf]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.frf, v = b.dataset.v, D = S.aux[cleFR()] || {};
+      if (k === 'tva') { const t = v === 'true'; F.tva = F.tva === t ? null : t; F.taux = F.tva === null ? null : (F.tva ? (F.taux > 0 ? F.taux : (D.tauxOui || 21)) : 0); }
+      else if (k === 'taux') { F.taux = +v; }
+      else { F[k] = v; }
+      rendre();
+    }));
+    $.querySelectorAll('[data-fraj]').forEach(b => b.addEventListener('click', frEnvoyer));
+    $.querySelectorAll('[data-fran]').forEach(b => b.addEventListener('click', () => frAnnuler(b.dataset.fran)));
   }
   /* --- Le rail (15/11/2026, maquette docs/maquettes/rail-franchise, « le vrai dashboard avec un rail à côté ») ------------
    * Au bureau (1 024 px et plus), hors cadre : l'en-tête et la rangée d'onglets cèdent la place à un rail à gauche (le §8

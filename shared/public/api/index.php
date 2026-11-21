@@ -819,6 +819,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
     if ($method === 'POST' && $path === '/exploitation/frais/tva') { return wr_exploitation_frais_tva(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/ajout') { return wr_exploitation_frais_ajout(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/annuler') { return wr_exploitation_frais_annuler(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }

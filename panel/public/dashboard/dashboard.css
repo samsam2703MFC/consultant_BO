@@ -3506,7 +3506,29 @@ body.db-vue-social{overflow:hidden}
 .fx-leg{padding:10px 16px 14px;font-size:12px;line-height:1.55}
 .fx-leg p{margin:0 0 8px}
 .fx-leg b{font-weight:400;color:var(--accent)}
-@media (max-width:900px){.fx-tuiles{grid-template-columns:1fr 1fr}.fx-g2{grid-template-columns:1fr}}
+/* Ajouter un frais (21/11/2026) : le formulaire de l'onglet Frais, son résultat et les ajouts faits d'ici. */
+.fx-aj-f{padding:12px 16px 14px;display:flex;flex-direction:column;gap:12px}
+.fx-aj-r1{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 150px auto}
+.fx-aj-r2{grid-template-columns:190px auto minmax(0,1fr)}
+.fx-aj .seg button{cursor:pointer;white-space:nowrap;font-size:12px}
+.fx-aj .seg+.seg{margin-left:6px}
+.fx-aj .pm-f>.seg{align-self:flex-start}
+.fx-aj-pied{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:.5px dashed var(--color-border-tertiary);padding-top:10px}
+.fx-aj-ap{font-size:12.5px;color:var(--color-text-muted)}
+.fx-aj .fx-aj-ok,.fx-aj .fx-aj-ok:disabled{background:var(--accent);border-color:var(--accent);color:#fff}
+.fx-aj .fx-aj-ok:disabled{opacity:.4;cursor:default}
+.fx-aj-msg{margin:0 16px 12px}
+.fx-aj-res{margin:0 16px 12px;padding:9px 12px;border-radius:9px;background:rgba(63,122,82,.08);border:1px solid rgba(63,122,82,.35);font-size:12.5px;line-height:1.55}
+.fx-aj-res.ko{background:var(--prize-soft);border-color:var(--prize-soft)}
+.fx-aj-res b{font-weight:500}
+.fx-aj-res .db-btn{margin-left:10px}
+.fx-aj-l{padding:4px 16px 12px}
+.fx-aj-i{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:10px;align-items:center;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px}
+.fx-aj-i:last-child{border-bottom:none}
+.fx-aj-i .sub{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px}
+.fx-aj-i .n{text-align:right;font-variant-numeric:tabular-nums}
+.fx-aj-i .mu{font-size:11px;color:var(--color-text-muted)}
+@media (max-width:900px){.fx-tuiles{grid-template-columns:1fr 1fr}.fx-g2{grid-template-columns:1fr}.fx-aj-r1,.fx-aj-r2{grid-template-columns:1fr}}
 
 /* Semaine et Mois en quatre blocs (16/11/2026, maquette A : docs/maquettes/semaine-mois/). Préfixe qb-. */
 .qb-heros{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:12px;align-items:stretch;margin-bottom:12px}
