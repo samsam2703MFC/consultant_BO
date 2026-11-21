@@ -205,12 +205,22 @@ final class BmImap
         'junk' => '/^(junk|spam|courrier indésirable|indésirable|ongewenst|bulk)/u',
     ];
 
-    /** Le rôle d'un dossier : ses attributs SPECIAL-USE, sinon son nom (sans le préfixe « INBOX. »). */
+    /**
+     * Le nom d'un dossier sans ses préfixes « INBOX. » : tous, pas seulement le premier (21/11/2026, Corbais : une boîte
+     * dont les dossiers s'appellent « INBOX.INBOX.Drafts », « INBOX.INBOX.Trash »… — une messagerie réglée avec le
+     * préfixe « INBOX » les a créés sous le préfixe que le serveur ajoute déjà). Les espaces autour sont retirés.
+     */
+    public static function nomCourt(string $nom): string
+    {
+        return trim((string) preg_replace('/^(\s*INBOX\s*[.\/])+/iu', '', trim($nom)));
+    }
+
+    /** Le rôle d'un dossier : ses attributs SPECIAL-USE, sinon son nom (sans les préfixes « INBOX. »). */
     public static function roleDe(string $brut, string $nom, array $drapeaux): ?string
     {
-        if (strtoupper($brut) === 'INBOX') { return 'inbox'; }
+        if (strtoupper(trim($brut)) === 'INBOX') { return 'inbox'; }
         foreach (['\\sent' => 'sent', '\\archive' => 'archive', '\\trash' => 'trash', '\\drafts' => 'drafts', '\\junk' => 'junk'] as $f => $r) { if (in_array($f, $drapeaux, true)) { return $r; } }
-        $court = mb_strtolower(trim((string) preg_replace('/^INBOX[.\/]/i', '', $nom)));
+        $court = mb_strtolower(self::nomCourt($nom));
         foreach (self::ROLES_NOMS as $r => $re) { if (preg_match($re, $court)) { return $r; } }
         return null;
     }
@@ -265,16 +275,17 @@ final class BmImap
     /**
      * Crée un dossier (son nom UTF-8 sous le préfixe des dossiers personnels) et s'y abonne, pour que les webmails et
      * les téléphones le montrent. $usage : \Archive, \Trash, \Sent… annoncé quand le serveur sait CREATE-SPECIAL-USE.
+     * $parent : le chemin brut sous lequel le créer (« INBOX.INBOX. »), à la place du préfixe des dossiers personnels.
      * Rend le nom brut (UTF-7 IMAP). Un dossier qui existe déjà est repris tel quel.
      */
-    public function creerDossier(string $nom, ?string $usage = null): string
+    public function creerDossier(string $nom, ?string $usage = null, ?string $parent = null): string
     {
         $nom = trim((string) preg_replace('/[\x00-\x1F\x7F*%"\\\\]+/u', ' ', $nom));
         $nom = trim(str_replace($this->separateur, ' ', $nom));
         $nom = mb_substr((string) preg_replace('/\s{2,}/u', ' ', $nom), 0, 60);
         if ($nom === '' || strtoupper($nom) === 'INBOX') { throw new RuntimeException('ce nom de dossier n’est pas admis'); }
         $dossiers = $this->dossiers();
-        $brut = $this->prefixe($dossiers) . mb_convert_encoding($nom, 'UTF7-IMAP', 'UTF-8');
+        $brut = ($parent ?? $this->prefixe($dossiers)) . mb_convert_encoding($nom, 'UTF7-IMAP', 'UTF-8');
         foreach ($dossiers as $d) { if (strcasecmp($d['brut'], $brut) === 0) { return $d['brut']; } }
         $use = $usage !== null && in_array('CREATE-SPECIAL-USE', $this->caps, true) ? ' (USE (' . $usage . '))' : '';
         [$st, $txt] = $this->cmdParts(['CREATE ', ['ch' => $brut], $use]);
