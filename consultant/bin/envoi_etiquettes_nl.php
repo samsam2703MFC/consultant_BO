@@ -234,11 +234,16 @@ if ($seulement === null || $seulement === 'traductions') {
     $matieres = $sansMatieres ? [] : $parNom($liste('/materials'));
     $dire('  ' . count($produits) . ' noms de produits du panel' . ($sansMatieres ? '' : ', ' . count($matieres) . ' noms de matières') . ' indexés');
     $envoyes = ['products' => [], 'materials' => []];
-    // Les traductions déjà en place (/…/aliases : [{fk_id, lang_code, alias_value, …}]) : une valeur identique n'est pas renvoyée.
+    // Les traductions déjà en place. GET /…/aliases ne rend qu'UNE langue par appel (?lang_code=…, « en » par défaut ;
+    // une traduction absente retombe sur le nom de base, avec alias_value null) : on lit le français puis le néerlandais
+    // (envoi du 21/11 : la relecture sans lang_code lisait l'anglais et ne trouvait rien). [{fk_id, alias_value, …}]
     $lireAlias = static function (string $type) use ($enListe): array {
         $vus = [];
-        foreach ($enListe(ErpApi::get('/' . $type . '/aliases')) as $al) {
-            $vus[(int) ($al['fk_id'] ?? $al['id'] ?? 0) . '|' . (string) ($al['lang_code'] ?? '')] = (string) ($al['alias_value'] ?? $al['alias'] ?? '');
+        foreach (['fr', 'nl'] as $langue) {
+            foreach ($enListe(ErpApi::get('/' . $type . '/aliases?lang_code=' . $langue . '&alias_type=default')) as $al) {
+                if (($al['alias_value'] ?? null) === null) { continue; }
+                $vus[(int) ($al['fk_id'] ?? $al['id'] ?? 0) . '|' . $langue] = (string) $al['alias_value'];
+            }
         }
         return $vus;
     };

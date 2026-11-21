@@ -123,13 +123,22 @@ Les routes rendent aussi le coût, la marge et le stock : la page n'en garde rie
   `product_portion_label`. Le swagger ne décrit pas l'heure. Elle porte aussi le nom du client et le coût de fabrication
   des lignes : la page n'en rend rien.
 - Le nom de la boutique vient du cockpit (`ceo_shop`) : le panel rend la raison sociale (« Neutralles SRL »).
-- **Spécification du fournisseur** (21/11/2026) : la composition, la conservation et la préparation de l'étiquette
-  SLFood, par langue, lues par fournisseur (`GET /material-suppliers`, puis `/{id}/catalog-mappings` : produit du
-  catalogue → matière, et `/{id}/catalog/products?include=specification_multilingual`), gardées six heures. Un produit
-  acheté fini (une seule matière) prend la composition du fournisseur à la place de son nom, et ses conseils de
-  conservation (à la place de la température du comptoir) et de préparation ; dans un plat composé, la composition
-  détaille l'ingrédient de la centrale : « Béchamel (…) ». Les mots en capitales du fournisseur (les allergènes de
-  l'étiquette) sont en gras. Diagnostic : `GET /marketing/ticket/essai/specifications[?matiere=]`.
+- **Spécification du fournisseur** (21/11/2026) : lue par fournisseur (`GET /material-suppliers`, puis
+  `/{id}/catalog-mappings` : produit du catalogue → matière, et `/{id}/catalog/products?include=specification_multilingual`),
+  gardée six heures. Mesuré sur le serveur : 7 fournisseurs, 368 correspondances, 246 matières avec une spécification —
+  mais **leurs compositions « fr » et « nl » sont le texte polonais** (« Mąka pszenna - T45, Woda, Masło… » : les alias
+  d'étiquette des matières de SLFood ne sont pas remplis), et leurs conservation et préparation décrivent le surgelé livré
+  à la boutique (« −18 °C », « laisser décongeler »). La page ne prend donc une composition que si elle est vraiment dans
+  la langue (`tclTexteDansLaLangue` : ni identique au polonais, ni en lettres polonaises) et ne reprend ni la conservation
+  ni la préparation. Elle s'affichera d'elle-même quand SLFood remplira les noms d'étiquette FR / NL de ses matières : un
+  produit acheté fini prend alors la composition du fournisseur à la place de son nom, et un plat composé détaille
+  l'ingrédient de la centrale (« Béchamel (…) »). Diagnostic, avec le nombre de compositions vraiment traduites :
+  `GET /marketing/ticket/essai/specifications[?matiere=]`.
+- **Allergènes à vérifier**, d'après les compositions polonaises de SLFood (matière → ce que le panel déclare) :
+  « Cannelloni - Poulet Estragon » (165) contient *Masa jajowa* (œufs), *Mleko* (lait) et *Orzech pistacje* (pistaches,
+  fruits à coque) — le panel ne déclare que le gluten ; « Quiche Greque » (76) : œufs, lait, gluten (déclarés) ;
+  « Soupe Potiron & Citron » (178) : *vegeta* (un assaisonnement qui contient d'ordinaire du céleri) — le panel ne déclare
+  aucun allergène.
 - Retirés à la demande de Sam (21/11/2026) : le chapeau sous le titre, la phrase « Aucun de vos produits ne
   contient… », l'indication « Touchez un produit dans la barre… » sur ordinateur et le dépliant « Les 14 allergènes,
   un par un ». La maquette (captures) les montre encore.

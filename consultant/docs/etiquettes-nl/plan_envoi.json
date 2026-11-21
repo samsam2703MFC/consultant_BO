@@ -1,5 +1,5 @@
 {
- "version": "2026-11-21",
+ "version": "2026-11-21b",
  "source": "Recherche du 21/11/2026 (étiquettes NL) — tableau complet : consultant/docs/etiquettes-nl/etiquettes_nl_allergenes.xlsx",
  "allergenes": [
   {
@@ -994,8 +994,8 @@
     "Fromage – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte au fromage – ⌀ 22 cm",
-   "nl": "Kaastaart – ⌀ 22 cm"
+   "fr": "Tarte au fromage",
+   "nl": "Kaastaart"
   },
   {
    "ids_erp": [
@@ -1030,8 +1030,8 @@
     "Abricot – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte aux abricots – ⌀ 22 cm",
-   "nl": "Abrikozentaart – ⌀ 22 cm"
+   "fr": "Tarte aux abricots",
+   "nl": "Abrikozentaart"
   },
   {
    "ids_erp": [
@@ -1042,8 +1042,8 @@
     "Rhubarbe – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte à la rhubarbe – ⌀ 22 cm",
-   "nl": "Rabarbertaart – ⌀ 22 cm"
+   "fr": "Tarte à la rhubarbe",
+   "nl": "Rabarbertaart"
   },
   {
    "ids_erp": [
@@ -1054,8 +1054,8 @@
     "Riz – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte au riz – ⌀ 22 cm",
-   "nl": "Rijsttaart – ⌀ 22 cm"
+   "fr": "Tarte au riz",
+   "nl": "Rijsttaart"
   },
   {
    "ids_erp": [
@@ -1066,8 +1066,8 @@
     "Pommes tranches – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte aux pommes – ⌀ 22 cm",
-   "nl": "Appeltaart – ⌀ 22 cm"
+   "fr": "Tarte aux pommes",
+   "nl": "Appeltaart"
   },
   {
    "ids_erp": [
@@ -1366,8 +1366,8 @@
     "Brownies – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Brownie – ⌀ 22 cm",
-   "nl": "Brownie – ⌀ 22 cm"
+   "fr": "Brownie",
+   "nl": "Brownie"
   },
   {
    "ids_erp": [
@@ -1582,8 +1582,8 @@
     "Frangipane – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte frangipane – ⌀ 22 cm",
-   "nl": "Frangipanetaart – ⌀ 22 cm"
+   "fr": "Tarte frangipane",
+   "nl": "Frangipanetaart"
   },
   {
    "ids_erp": [
@@ -1594,8 +1594,8 @@
     "Frangipane & abricot – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte frangipane-abricots – ⌀ 22 cm",
-   "nl": "Abrikoos-frangipanetaart – ⌀ 22 cm"
+   "fr": "Tarte frangipane-abricots",
+   "nl": "Abrikoos-frangipanetaart"
   },
   {
    "ids_erp": [
@@ -1678,8 +1678,8 @@
     "Quiche veggie tian – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche légumes du soleil – ⌀ 26 cm",
-   "nl": "Quiche zuiderse groenten – ⌀ 26 cm"
+   "fr": "Quiche légumes du soleil",
+   "nl": "Quiche zuiderse groenten"
   },
   {
    "ids_erp": [
@@ -1690,8 +1690,8 @@
     "Quiche lorraine – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche lorraine – ⌀ 26 cm",
-   "nl": "Quiche lorraine – ⌀ 26 cm"
+   "fr": "Quiche lorraine",
+   "nl": "Quiche lorraine"
   },
   {
    "ids_erp": [
@@ -1702,8 +1702,8 @@
     "Quiche saumon & épinard – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche saumon-épinards – ⌀ 26 cm",
-   "nl": "Quiche zalm-spinazie – ⌀ 26 cm"
+   "fr": "Quiche saumon-épinards",
+   "nl": "Quiche zalm-spinazie"
   },
   {
    "ids_erp": [
@@ -1714,8 +1714,8 @@
     "Quiche champignon – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche aux champignons – ⌀ 26 cm",
-   "nl": "Quiche champignons – ⌀ 26 cm"
+   "fr": "Quiche aux champignons",
+   "nl": "Quiche champignons"
   },
   {
    "ids_erp": [
@@ -1834,8 +1834,8 @@
     "Frangipane & pomme – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte frangipane-pommes – ⌀ 22 cm",
-   "nl": "Appel-frangipanetaart – ⌀ 22 cm"
+   "fr": "Tarte frangipane-pommes",
+   "nl": "Appel-frangipanetaart"
   },
   {
    "ids_erp": [
@@ -1846,8 +1846,8 @@
     "Frangipane & poire – ⌀ 22 cm"
    ],
    "produit_panel": null,
-   "fr": "Tarte frangipane-poires – ⌀ 22 cm",
-   "nl": "Peer-frangipanetaart – ⌀ 22 cm"
+   "fr": "Tarte frangipane-poires",
+   "nl": "Peer-frangipanetaart"
   },
   {
    "ids_erp": [
@@ -2002,8 +2002,8 @@
     "Quiche greco feta – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche grecque à la feta – ⌀ 26 cm",
-   "nl": "Griekse quiche met feta – ⌀ 26 cm"
+   "fr": "Quiche grecque à la feta",
+   "nl": "Griekse quiche met feta"
   },
   {
    "ids_erp": [
@@ -2014,8 +2014,8 @@
     "Quiche poulet & gorgonzola – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche poulet-gorgonzola – ⌀ 26 cm",
-   "nl": "Quiche kip-gorgonzola – ⌀ 26 cm"
+   "fr": "Quiche poulet-gorgonzola",
+   "nl": "Quiche kip-gorgonzola"
   },
   {
    "ids_erp": [
@@ -2038,8 +2038,8 @@
     "Quiche roquette-chèvre & miel – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche chèvre, roquette & miel – ⌀ 26 cm",
-   "nl": "Quiche geitenkaas, rucola & honing – ⌀ 26 cm"
+   "fr": "Quiche chèvre, roquette & miel",
+   "nl": "Quiche geitenkaas, rucola & honing"
   },
   {
    "ids_erp": [
@@ -2050,8 +2050,8 @@
     "Quiche jambon & chicon – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche jambon-chicons – ⌀ 26 cm",
-   "nl": "Quiche hesp-witloof – ⌀ 26 cm"
+   "fr": "Quiche jambon-chicons",
+   "nl": "Quiche hesp-witloof"
   },
   {
    "ids_erp": [
@@ -2062,8 +2062,8 @@
     "Quiche feta, aubergines & citron – ⌀ 26 cm"
    ],
    "produit_panel": null,
-   "fr": "Quiche feta, aubergines & citron – ⌀ 26 cm",
-   "nl": "Quiche feta, aubergine & citroen – ⌀ 26 cm"
+   "fr": "Quiche feta, aubergines & citron",
+   "nl": "Quiche feta, aubergine & citroen"
   },
   {
    "ids_erp": [
