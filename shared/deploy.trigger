@@ -241,3 +241,4 @@
 2026-11-21T16:58:47Z Fonds : le grand livre, ses leviers, ses frais récurrents, les boutiques et les campagnes se lisent au module Marketing par son API (GET /fonds, marketing/src/fonds.php) ; plus aucune lecture SQL de mar_fund_* ni de mar_shop
 2026-11-21T17:01:44Z Boîte mail : les modes IA en bascule (Briefing, Pilote, Radar) ; lecture IA gardée (panel_boite_lecture), pilote automatique éteint par défaut, garde-fous (panel_boite_pilote, panel_boite_pilote_etat) ; GET /dashboard/boite/lectures, POST /lire, GET|POST /pilote
 2026-11-21T17:09:07Z Boîte mail : les dossiers « INBOX.INBOX.Drafts/Junk/Sent/Trash » reconnus (Brouillons, Indésirables, Envoyés, Corbeille), Archives créées à côté ; la boîte mail sans les vignettes du dashboard
+2026-11-21T17:04:54Z Campagnes : le calendrier, les campagnes et les types (GET /marketing) et les campagnes du budget des campagnes se lisent au module Marketing par son API (marketing/src/campagnes.php)

@@ -22,5 +22,6 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   écritures (`shared/src/writes.php`) passent par l'API du module (`marketingAppel`, jeton de service). Ne pas
   revenir à des écritures SQL directes : `marketing/bin/tests_fonds_relais.php` le vérifie. Le grand livre se LIT aussi
   au module (`src/fonds.php`, GET /fonds) : ne pas y remettre de requête sur `mar_fund_*`, `mar_shop`, `mar_lever`, `mar_campaign`.
-- **Tests** : `php marketing/bin/tests_fonds_relais.php`, `tests_metadonnee.php`, `tests_newsletter.php`, `tests_promos*.php`, `tests_bons.php`,
+  Les campagnes, les types et les statuts aussi (`src/campagnes.php` : GET /marketing, budget des campagnes).
+- **Tests** : `php marketing/bin/tests_fonds_relais.php`, `tests_campagnes_lecture.php`, `tests_metadonnee.php`, `tests_newsletter.php`, `tests_promos*.php`, `tests_bons.php`,
   `tests_canaux.php`, `tests_catalogue.php` ; `php marketing/tests/visibilite/run.php`.

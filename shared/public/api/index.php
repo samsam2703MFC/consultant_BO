@@ -115,6 +115,7 @@ require __DIR__ . '/../../../consultant/src/kpis.php';
 require __DIR__ . '/../../../consultant/src/cadence.php';
 require __DIR__ . '/../../../shared/src/connecteurs.php';
 require __DIR__ . '/../../../marketing/src/mesure.php';
+require __DIR__ . '/../../../marketing/src/campagnes.php';        // GET /marketing et le budget des campagnes : lus au module Marketing (21/11/2026)
 require __DIR__ . '/../../../marketing/src/fonds.php';            // GET /fonds : le grand livre, lu au module Marketing (21/11/2026)
 // Sortis de mesure.php le 21/11/2026, chacun dans son domaine :
 require __DIR__ . '/../../../shared/src/magasins.php';              // magasinNom (réclamations, primes, invendus)
