@@ -11,7 +11,8 @@ declare(strict_types=1);
  * mar_social_post : rien ne disait qu'une campagne en cours n'avait ni post ni
  * mail. Le module les pose côte à côte, sans rien recalculer à sa façon :
  *
- *  - campagnes : mar_campaign, mêmes lignes que GET /marketing ;
+ *  - campagnes : la liste du module Marketing et leurs boutiques (son API, depuis le 21/11/2026), mêmes lignes
+ *    que GET /marketing ;
  *  - emailing : mar_nl_campagne, mêmes statistiques que GET /newsletter
  *    (nlStatsReelles d'abord, stats_json en repli) ;
  *  - réseaux sociaux : mar_social_post, le cycle brouillon → contrôle → décision → publication ;

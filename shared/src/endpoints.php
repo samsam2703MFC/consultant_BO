@@ -4836,6 +4836,10 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
 
     if ($rep === false) { return ['code' => 0, 'corps' => null, 'erreur' => $err !== '' ? $err : 'module injoignable']; }
     $j = json_decode((string) $rep, true);
+    // Un 204 (un retrait, au standard) n'a pas de corps : c'est une réussite, pas une réponse illisible.
+    if (!is_array($j) && $code >= 200 && $code < 300 && trim((string) $rep) === '') {
+        return ['code' => $code, 'corps' => null, 'erreur' => null, 'brut' => null];
+    }
     if (!is_array($j)) {
         return ['code' => $code, 'corps' => null,
             'erreur' => $code >= 400 ? 'HTTP ' . $code : 'réponse illisible'];
@@ -4845,7 +4849,9 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
     $donnees = array_key_exists('data', $j) ? $j['data'] : $j;
     $msg = null;
     if ($code >= 400) {
-        $msg = (string) ($j['description'] ?? $j['message'] ?? ('HTTP ' . $code));
+        // Routes d'avant : `description` (ou `message`) ; routes au standard : `error.message`.
+        $std = is_array($j['error'] ?? null) ? ($j['error']['message'] ?? null) : null;
+        $msg = (string) ($j['description'] ?? $j['message'] ?? $std ?? ('HTTP ' . $code));
     }
     return ['code' => $code, 'corps' => $donnees, 'erreur' => $msg, 'brut' => $j];
 }
