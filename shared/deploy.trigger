@@ -223,3 +223,4 @@
 2026-11-21T06:48:57Z Étiquettes NL : script consultant/bin/envoi_etiquettes_nl.php (essai à blanc par défaut) et son plan — 81 corrections d'allergènes des matières premières, 100 traductions FR/NL ; rien n'est envoyé au déploiement
 2026-11-21T07:11:34Z Opérationnel, ruban des canaux : le comptoir ne perd plus les commandes payées un autre jour (Halle, « Comptoir 0 € · − 100 % ») ; commandes coupées à l'heure du retrait, « à venir » au-delà
 2026-11-21T07:26:22Z Réclamations fournisseur, Tableau annuel : produits réclamés seulement, livré lu sur les factures du fournisseur, vues Catégories / Produits / Motifs, % sur l'ensemble, la catégorie et le produit, réclamations de livraison
+2026-11-21T07:51:11Z Étiquettes NL : envoi_etiquettes_nl.php adapté à la forme réelle de l'API (allergènes des matières par PATCH /materials/{id}, codes d'allergènes, traductions relues) et workflow d'envoi déclenché à la main ; rien n'est envoyé au déploiement
