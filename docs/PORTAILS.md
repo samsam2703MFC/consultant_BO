@@ -24,8 +24,11 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   l'étape « 0b » du plan du 06/11 est abandonnée pour lui. Le dossier `marketing/` d'ici est le marketing du cockpit
   (newsletter, avis, Brand Guard, MétaDonnée, fidélité, promotions, visibilité Google) ; il parle au module par son API
   d'intégration (`…/v1/integration/marketing/…`). L'ancienne copie de l'API du module (`marketing/public/api/marketing/`)
-  est retirée le 21/11/2026. Écart connu, restant : `shared/src/writes.php` écrit encore lui-même `mar_campaign`,
-  `mar_campaign_type` et `mar_fund_*` (budget et calendrier des campagnes du cockpit) — deux propriétaires.
+  est retirée le 21/11/2026. Depuis le même jour, le cockpit n'écrit plus aucune table du module : le fonds
+  (mouvements, frais récurrents, redevances) et les types de campagne passent par son API (`marketingAppel`, jeton de
+  service `X-Marketing-Service`, migration 053 du module pour `is_investment`), et les écritures de campagnes, sans
+  écran, sont retirées (410). Écart connu, restant : des **lectures** SQL directes de ces tables (grand livre du
+  fonds, calendrier et budget des campagnes) dans `shared/src/endpoints.php`.
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
@@ -150,7 +153,8 @@ Le cockpit lit et écrit des tables `mar_` dans ~40 000 lignes : une ancienne co
 module (`public/api/marketing/`, retirée le 21/11/2026), la mesure des campagnes (`src/mesure.php`), le contrôle des posts
 (`src/brand_guard.php`, `src/fbcontrole.php`), les posts sociaux (`src/social_publication.php`), la
 newsletter clients (`src/newsletter*.php`), les objectifs produits, le brief (`src/mkt_brief.php`) et
-des lectures dans `src/endpoints.php` / `src/writes.php`. Chaque bloc passe dans le Marketing (écran +
+des lectures dans `src/endpoints.php` / `src/writes.php` (les écritures du fonds et des types de campagne passent
+par l'API du module depuis le 21/11/2026). Chaque bloc passe dans le Marketing (écran +
 API) ; le cockpit garde, au besoin, une lecture par `/api/v1/integration/marketing/…`. Jusque-là, le
 cockpit ne crée plus ces tables : c'est la migration 045 du Marketing qui les définit.
 

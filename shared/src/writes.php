@@ -1958,52 +1958,44 @@ function wr_fonds_mouvement(?int $id): array
     try { $v = fondsMouvementLit($b); }
     catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
 
+    if ($id !== null) {
+        // Lecture seule (écart connu : le cockpit lit encore le grand livre en base) : une échéance née d'un frais
+        // récurrent se corrige sur son modèle — la corriger ici la ferait diverger des autres sans que rien ne le dise.
+        $dej = Db::row('SELECT label, recurrence_id FROM mar_fund_movement WHERE id = ?', [$id]);
+        if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
+        if ($dej['recurrence_id'] !== null) {
+            http_response_code(409);
+            return ['error' => 'cette écriture vient d’un frais récurrent — corrigez le frais, pas l’échéance'];
+        }
+    }
+    // L'écriture, elle, passe par le module (21/11/2026) : c'est lui qui tient le grand livre.
+    $r = fondsRendu(marketingAppel($id === null ? 'POST' : 'PATCH', '/funds/movements' . ($id === null ? '' : '/' . $id), $v), 'mouvement');
+    if (isset($r['error'])) { return $r; }
     if ($id === null) {
-        Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, campaign_id, lever_id, movement_date, label, amount, source, supplier_name, document_ref, is_investment)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?)', [
-            $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['movement_date'],
-            $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'],
-            $v['is_investment'],
-        ]);
-        $nid = (int) Db::pdo()->lastInsertId();
         journalAdd('CEO', 'Fonds', $v['label'], ($v['direction'] === 'IN' ? 'Alimentation' : 'Dépense')
             . ' de ' . number_format($v['amount'], 2, ',', ' ') . ' € écrite au fonds');
-        return ['ok' => true, 'id' => $nid, 'inserted_id' => $nid];
+        return $r + ['inserted_id' => $r['id']];
     }
-    $dej = Db::row('SELECT label, recurrence_id FROM mar_fund_movement WHERE id = ?', [$id]);
-    if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
-    // Une échéance née d'un frais récurrent se corrige sur son modèle : la
-    // corriger ici la ferait diverger des autres sans que rien ne le dise.
-    if ($dej['recurrence_id'] !== null) {
-        http_response_code(409);
-        return ['error' => 'cette écriture vient d’un frais récurrent — corrigez le frais, pas l’échéance'];
-    }
-    Db::exec('UPDATE mar_fund_movement SET direction = ?, shop_id = ?, campaign_id = ?, lever_id = ?,
-              movement_date = ?, label = ?, amount = ?, source = ?, supplier_name = ?, document_ref = ?,
-              is_investment = ?
-              WHERE id = ?', [
-        $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['movement_date'],
-        $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'],
-        $v['is_investment'], $id,
-    ]);
     journalAdd('CEO', 'Fonds', $v['label'], 'Écriture ' . $id . ' corrigée');
-    return ['ok' => true, 'id' => $id];
+    return ['id' => $id] + $r;
 }
 
 function wr_fonds_mouvement_suppr(int $id): array
 {
-    $dej = Db::row('SELECT label FROM mar_fund_movement WHERE id = ?', [$id]);
+    $dej = Db::row('SELECT label FROM mar_fund_movement WHERE id = ?', [$id]);   // lecture : le libellé du journal
     if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
-    Db::exec('DELETE FROM mar_fund_movement WHERE id = ?', [$id]);
+    $r = fondsRendu(marketingAppel('DELETE', '/funds/movements/' . $id), 'mouvement');
+    if (isset($r['error'])) { return $r; }
     journalAdd('CEO', 'Fonds', $dej['label'], 'Écriture ' . $id . ' supprimée du grand livre');
-    return ['ok' => true];
+    return $r;
 }
 
 /**
  * POST /fonds/recurrence — un frais qui revient, écrit en autant d'échéances.
  *
- * Le modèle ET ses échéances s'écrivent d'un coup, comme le module le
- * faisait ; la suppression du modèle emporte les échéances (FK en CASCADE).
+ * Le module écrit le modèle ET ses échéances d'un coup, dans une transaction
+ * (21/11/2026 : par son API, plus dans ses tables) ; la suppression du modèle
+ * emporte les échéances (FK en CASCADE).
  */
 function wr_fonds_recurrence(): array
 {
@@ -2020,39 +2012,30 @@ function wr_fonds_recurrence(): array
         http_response_code(422); return ['error' => 'un frais récurrent est borné : donnez une fin postérieure au début'];
     }
 
-    Db::exec('INSERT INTO mar_fund_recurrence (direction, frequency, label, amount, starts_on, ends_on, shop_id, campaign_id, lever_id, source, supplier_name, document_ref)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [
-        $v['direction'], $freq, $v['label'], $v['amount'], $v['movement_date'], $fin,
-        $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['source'], $v['supplier_name'], $v['document_ref'],
-    ]);
-    $rid = (int) Db::pdo()->lastInsertId();
-
-    $pas = ['month' => '+1 month', 'quarter' => '+3 months', 'year' => '+1 year'][$freq];
-    $d = new DateTimeImmutable($v['movement_date']);
-    $limite = new DateTimeImmutable($fin);
-    $n = 0;
-    while ($d <= $limite && $n < 120) {
-        Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, campaign_id, lever_id, movement_date, label, amount, source, supplier_name, document_ref, recurrence_id)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?)', [
-            $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $d->format('Y-m-d'),
-            $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'], $rid,
-        ]);
-        $n++;
-        $d = $d->modify($pas);
-    }
+    $r = fondsRendu(marketingAppel('POST', '/funds/recurrences', [
+        'direction' => $v['direction'], 'frequency' => $freq, 'label' => $v['label'], 'amount' => $v['amount'],
+        'starts_on' => $v['movement_date'], 'ends_on' => $fin, 'shop_id' => $v['shop_id'],
+        'campaign_id' => $v['campaign_id'], 'lever_id' => $v['lever_id'], 'source' => $v['source'],
+        'supplier_name' => $v['supplier_name'], 'document_ref' => $v['document_ref'],
+    ]), 'recurrence');
+    if (isset($r['error'])) { return $r; }
+    $rep = is_array($r['reponse'] ?? null) ? $r['reponse'] : [];
+    $n = (int) ($rep['occurrences'] ?? 0);
     journalAdd('CEO', 'Fonds', $v['label'], 'Frais récurrent créé — ' . $n . ' échéance(s), '
-        . number_format($v['amount'] * $n, 2, ',', ' ') . ' € au total');
-    return ['ok' => true, 'inserted_id' => $rid, 'occurrences' => $n, 'total_amount' => $v['amount'] * $n];
+        . number_format((float) ($rep['total_amount'] ?? $v['amount'] * $n), 2, ',', ' ') . ' € au total');
+    // Les champs d'avant (inserted_id, occurrences, total_amount) restent au premier niveau ; l'écran lit `reponse`.
+    return $r + array_intersect_key($rep, ['inserted_id' => 1, 'occurrences' => 1, 'total_amount' => 1]);
 }
 
 function wr_fonds_recurrence_suppr(int $id): array
 {
-    $dej = Db::row('SELECT label FROM mar_fund_recurrence WHERE id = ?', [$id]);
+    $dej = Db::row('SELECT label FROM mar_fund_recurrence WHERE id = ?', [$id]);   // lecture : le libellé du journal
     if ($dej === null) { http_response_code(404); return ['error' => 'frais récurrent introuvable']; }
-    // La FK est en CASCADE : les échéances écrites partent avec le modèle.
-    Db::exec('DELETE FROM mar_fund_recurrence WHERE id = ?', [$id]);
+    // Le module supprime le modèle ; la FK en CASCADE emporte les échéances écrites.
+    $r = fondsRendu(marketingAppel('DELETE', '/funds/recurrences/' . $id), 'recurrence');
+    if (isset($r['error'])) { return $r; }
     journalAdd('CEO', 'Fonds', $dej['label'], 'Frais récurrent supprimé, échéances comprises');
-    return ['ok' => true];
+    return $r;
 }
 
 /** PUT /fonds/royalties — taux et chiffres d'affaires du mois, ensemble. */
@@ -2071,9 +2054,8 @@ function wr_fonds_royalties(): array
  * UNE écriture par magasin, pour la SEULE sorte Marketing : c'est le fonds
  * MARKETING qu'on alimente ici. Les autres sortes (Marque, Assistance)
  * restent des revenus de la marque — les verser au fonds gonflerait
- * un solde que le réseau croirait disponible pour ses campagnes. Le module
- * marketing autonome a disparu : on écrit ses tables en direct, comme le
- * reste du grand livre.
+ * un solde que le réseau croirait disponible pour ses campagnes. Chaque
+ * écriture passe par l'API du module (21/11/2026), qui tient le grand livre.
  */
 function wr_fonds_royalties_generer(): array
 {
@@ -2133,12 +2115,23 @@ function fondsRoyaltiesEcrire(string $mois, bool $apercu, ?int $seulShop = null)
             if ($estLa) { $dejaN++; continue; }
             $aEcrire += $k['du'];
             if ($apercu) { continue; }
-            Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, movement_date, period_from, period_to, label, amount, source, document_ref)
-                      VALUES (?,?,?,?,?,?,?,?,?)', [
-                'IN', $horsRef ? null : $s['shop_id'], $don['au'], $don['du'], $don['fin'],
-                'Redevance ' . $k['label'] . ' ' . $mois . ' — ' . $s['shop_name'],
-                $k['du'], 'ROYALTY', $piece,
+            $r = marketingAppel('POST', '/funds/movements', [
+                'direction' => 'IN', 'shop_id' => $horsRef ? null : $s['shop_id'], 'movement_date' => $don['au'],
+                'period_from' => $don['du'], 'period_to' => $don['fin'],
+                'label' => 'Redevance ' . $k['label'] . ' ' . $mois . ' — ' . $s['shop_name'],
+                'amount' => $k['du'], 'source' => 'ROYALTY', 'document_ref' => $piece,
             ]);
+            if ($r['erreur'] !== null) {
+                // On s'arrête au premier refus, en disant ce qui est déjà parti : regénérer le mois n'écrira que le
+                // reste (la pièce canonique rend la génération idempotente).
+                if ($ecrites > 0) {
+                    journalAdd('CEO', 'Fonds', 'Redevances ' . $mois, $ecrites . ' écriture(s) au fonds avant un refus du module');
+                }
+                http_response_code($r['code'] >= 400 ? $r['code'] : 502);
+                return ['error' => 'redevance de ' . $s['shop_name'] . ' refusée par le module : ' . $r['erreur']
+                    . ($ecrites > 0 ? ' — ' . $ecrites . ' déjà écrite(s)' : ''),
+                    'ecrites' => $ecrites, 'month' => $mois];
+            }
             $ecrites++;
         }
     }
@@ -2418,194 +2411,82 @@ function wr_consultant_note(): array
 /** POST /marketing/campagne — ou PATCH /marketing/campagne/{id}. */
 function wr_mkt_campagne(?int $id): array
 {
-    $b = body();
-    $statuts = array_column(Db::rows('SELECT code FROM mar_campaign_status'), 'code');
-    $lit = static function (array $b) use ($statuts): array {
-        $out = [];
-        if (array_key_exists('nom', $b)) {
-            $nom = mb_substr(trim((string) $b['nom']), 0, 200);
-            if ($nom === '') { throw new RuntimeException('le nom de la campagne est requis'); }
-            $out['name'] = $nom;
-        }
-        if (array_key_exists('typeId', $b)) { $out['type_id'] = $b['typeId'] ? (int) $b['typeId'] : null; }
-        if (array_key_exists('scope', $b)) { $out['scope'] = $b['scope'] === 'LOCALE' ? 'LOCALE' : 'RESEAU'; }
-        if (array_key_exists('statut', $b)) {
-            if (!in_array($b['statut'], $statuts, true)) { throw new RuntimeException('statut inconnu : ' . $b['statut']); }
-            $out['status_code'] = $b['statut'];
-        }
-        foreach (['debut' => 'starts_on', 'fin' => 'ends_on'] as $k => $col) {
-            if (!array_key_exists($k, $b)) { continue; }
-            $v = trim((string) $b[$k]);
-            if ($v !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) { throw new RuntimeException($k . ' : date attendue au format AAAA-MM-JJ'); }
-            $out[$col] = $v === '' ? null : $v;
-        }
-        if (array_key_exists('budget', $b)) { $out['budget_amount'] = max(0, (float) $b['budget']); }
-        return $out;
-    };
-
-    try { $vals = $lit($b); }
-    catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
-
-    if ($id === null) {
-        if (!isset($vals['name'])) { http_response_code(422); return ['error' => 'le nom de la campagne est requis']; }
-        $marque = Db::row('SELECT id FROM mar_brand ORDER BY id LIMIT 1');
-        if ($marque === null) { http_response_code(422); return ['error' => 'aucune marque dans mar_brand']; }
-        Db::exec('INSERT INTO mar_campaign (brand_id, type_id, name, scope, status_code, starts_on, ends_on, budget_amount)
-                  VALUES (?,?,?,?,?,?,?,?)', [
-            (int) $marque['id'], $vals['type_id'] ?? null, $vals['name'],
-            $vals['scope'] ?? 'RESEAU', $vals['status_code'] ?? 'draft',
-            $vals['starts_on'] ?? null, $vals['ends_on'] ?? null, $vals['budget_amount'] ?? 0,
-        ]);
-        $nid = (int) Db::pdo()->lastInsertId();
-        journalAdd('CEO', 'Campagne', $vals['name'], 'Campagne créée depuis le pilotage réseau');
-        return ['ok' => true, 'id' => $nid];
-    }
-
-    $dej = Db::row('SELECT name FROM mar_campaign WHERE id = ?', [$id]);
-    if ($dej === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
-    if ($vals === []) { return ['ok' => true, 'id' => $id]; }
-    $set = []; $args = [];
-    foreach ($vals as $col => $v) { $set[] = $col . ' = ?'; $args[] = $v; }
-    $args[] = $id;
-    Db::exec('UPDATE mar_campaign SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
-    journalAdd('CEO', 'Campagne', $dej['name'], 'Campagne modifiée — ' . implode(', ', array_keys($vals)));
-    return ['ok' => true, 'id' => $id];
+    // Retiré le 21/11/2026 : aucun écran ne l'appelait, et il écrivait mar_campaign, une table du module Marketing.
+    // Une campagne se crée et se modifie dans le Marketing (/marketing/), qui tient ses tables.
+    unset($id);
+    http_response_code(410);
+    return ['error' => 'retiré : les campagnes se créent et se modifient dans le Marketing (/marketing/)'];
 }
 
 /** DELETE /marketing/campagne/{id}. */
 function wr_mkt_campagne_suppr(int $id): array
 {
-    $dej = Db::row('SELECT name FROM mar_campaign WHERE id = ?', [$id]);
-    if ($dej === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
-    // Les campagnes locales greffées dessus seraient orphelines : on refuse,
-    // en le disant, plutôt que de les détacher en silence.
-    $filles = Db::row('SELECT COUNT(*) n FROM mar_campaign WHERE parent_campaign_id = ?', [$id]);
-    if ((int) $filles['n'] > 0) {
-        http_response_code(409);
-        return ['error' => $filles['n'] . ' campagne(s) locale(s) sont greffées sur celle-ci — supprimez-les d’abord'];
-    }
-    Db::exec('DELETE FROM mar_campaign_shop WHERE campaign_id = ?', [$id]);
-    Db::exec('DELETE FROM mar_campaign WHERE id = ?', [$id]);
-    journalAdd('CEO', 'Campagne', $dej['name'], 'Campagne supprimée');
-    return ['ok' => true];
+    unset($id);
+    http_response_code(410);
+    return ['error' => 'retiré : les campagnes se suppriment dans le Marketing (/marketing/)'];
 }
 
 /** POST /marketing/type — ou PATCH /marketing/type/{id}, DELETE. */
 function wr_mkt_type(?int $id): array
 {
-    $b = body();
-    $cols = mktTypeColonnes();
-    // On n'écrit que les colonnes que la base porte réellement : le schéma des
-    // tables mar_* vient des migrations du module, et une base restée en
-    // arrière ferait échouer l'UPDATE entier sur une colonne absente.
-    $gardeCols = static function (array $champs) use ($cols): array {
-        return array_filter($champs, fn ($k) => in_array($k, $cols, true), ARRAY_FILTER_USE_KEY);
-    };
-
-    // Le corps de l'écran parle français, la table parle le schéma du module.
-    // Une seule traduction, ici, pour la création comme pour la modification.
-    $duCorps = static function (array $b): array {
-        $out = [];
-        foreach ([['nom', 'label'], ['description', 'description'], ['couleur', 'color_hex'],
-                  ['icone', 'icon_key'], ['badge', 'lever_badge_label'], ['kpi', 'default_kpi_label']] as [$k, $col]) {
-            if (array_key_exists($k, $b)) { $out[$col] = $b[$k]; }
-        }
-        if (array_key_exists('levierId', $b)) { $out['lever_id'] = $b['levierId']; }
-        return $out;
-    };
-
+    // Les types de campagne sont au module Marketing (21/11/2026) : le cockpit traduit le corps de son écran et
+    // relaie à l'API du module, qui valide (nom, icône de la bibliothèque, levier, code unique) et écrit. Ses règles
+    // sont celles que ce fichier appliquait : il les avait recopiées.
+    $champs = mktTypeVersModule(body());
     if ($id === null) {
-        try { $champs = mktTypeValide($duCorps($b)); }
-        catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
-
-        // Le code se dérive du nom quand il n'est pas donné : il n'est ni
-        // affiché ni traduit, et le faire saisir n'apporte qu'une occasion de
-        // se tromper. Il reste modifiable à la création, jamais après.
-        $code = mktSlug(trim((string) ($b['code'] ?? '')) !== '' ? (string) $b['code'] : $champs['label']);
-        if ($code === '') { http_response_code(422); return ['error' => 'Le nom ne donne aucun code exploitable : ajoutez des lettres.']; }
-        if (Db::row('SELECT 1 FROM mar_campaign_type WHERE code = ?', [$code]) !== null) {
-            http_response_code(422); return ['error' => 'Un type porte déjà le code « ' . $code . ' ».'];
-        }
-
-        // En fin de liste : un type nouveau n'a pas à s'insérer avant ceux que
-        // l'équipe a l'habitude de voir en premier.
-        $rang = (int) Db::row('SELECT COALESCE(MAX(sort_order), 0) + 1 r FROM mar_campaign_type')['r'];
-        $ins = $gardeCols($champs) + ['code' => $code, 'sort_order' => $rang, 'is_active' => 1];
-        $noms = array_keys($ins);
-        Db::exec('INSERT INTO mar_campaign_type (' . implode(', ', $noms) . ') VALUES ('
-            . implode(', ', array_fill(0, count($noms), '?')) . ')', array_values($ins));
-        // L'id se lit AVANT le journal : `lastInsertId()` porte le dernier
-        // AUTO_INCREMENT de la connexion, et journalAdd() en insère un autre.
-        // L'écran recevait jusqu'ici l'identifiant de la ligne de journal.
-        $nid = (int) Db::pdo()->lastInsertId();
-        journalAdd('CEO', 'Paramètre', $champs['label'], 'Type de campagne créé');
-        return ['ok' => true, 'id' => $nid];
+        unset($champs['is_active']);
+        $r = fondsRendu(marketingAppel('POST', '/campaign-types', $champs), 'type');
+        if (isset($r['error'])) { return $r; }
+        journalAdd('CEO', 'Paramètre', (string) ($champs['label'] ?? ''), 'Type de campagne créé');
+        return ['ok' => true, 'id' => $r['id'] !== null ? (int) $r['id'] : null];
     }
-
-    $lecture = 'SELECT ' . implode(', ', array_intersect(
-        ['label', 'description', 'color_hex', 'icon_key', 'icon_path', 'lever_id',
-         'lever_badge_label', 'default_kpi_label', 'is_active'], $cols)) . ' FROM mar_campaign_type WHERE id = ?';
-    $dej = Db::row($lecture, [$id]);
-    if ($dej === null) { http_response_code(404); return ['error' => 'type inconnu']; }
-
-    // Fusion, pas remplacement. Un appel qui ne porte que le nom ne doit pas
-    // effacer l'icône, la couleur et le levier au passage : c'est ce que fait
-    // une mise à jour partielle interprétée comme une réécriture, et rien ne le
-    // signale — la carte se vide, simplement.
-    $recu = $duCorps($b);
-    $fusion = [];
-    foreach (['label', 'description', 'color_hex', 'icon_key', 'lever_id', 'lever_badge_label', 'default_kpi_label'] as $col) {
-        $fusion[$col] = array_key_exists($col, $recu) ? $recu[$col] : ($dej[$col] ?? null);
-        // Vider un champ reste possible : c'est la chaîne vide qui l'exprime,
-        // explicitement, là où l'absence de clé ne dit rien.
-        if (array_key_exists($col, $recu) && ($recu[$col] === '' || $recu[$col] === null)) { $fusion[$col] = null; }
-    }
-
-    try { $champs = mktTypeValide($fusion); }
-    catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
-
-    // Les types livrés portent un tracé sans clé : ils sont antérieurs à la
-    // bibliothèque. Redériver le tracé depuis la clé les effacerait au premier
-    // changement de nom — l'icône disparaîtrait de la carte sans qu'on y ait
-    // touché. Tant que l'appel ne parle pas d'icône, on laisse la sienne.
-    if (!array_key_exists('icone', $b)) {
-        $champs['icon_key'] = $dej['icon_key'] ?? null;
-        $champs['icon_path'] = $dej['icon_path'] ?? null;
-    }
-    // Absent du corps = inchangé : l'éditeur n'envoie pas toujours l'activation,
-    // et la ramener à 1 par défaut réactiverait un type qu'on venait de retirer.
-    $champs['is_active'] = array_key_exists('actif', $b)
-        ? (filter_var($b['actif'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0)
-        : (int) ($dej['is_active'] ?? 1);
-
-    $maj = $gardeCols($champs);
-    if ($maj !== []) {
-        $set = implode(', ', array_map(fn ($c) => $c . ' = ?', array_keys($maj)));
-        Db::exec('UPDATE mar_campaign_type SET ' . $set . ' WHERE id = ?', [...array_values($maj), $id]);
-    }
-    journalAdd('CEO', 'Paramètre', $champs['label'], 'Type de campagne modifié');
+    unset($champs['code']);   // le code se choisit à la création, jamais après
+    $r = fondsRendu(marketingAppel('PATCH', '/campaign-types/' . $id, $champs), 'type');
+    if (isset($r['error'])) { return $r; }
+    journalAdd('CEO', 'Paramètre', (string) ($champs['label'] ?? mktTypeLibelle($id) ?? ('#' . $id)), 'Type de campagne modifié');
     return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * Le corps de l'écran (français) dans le contrat du module (`…/campaign-types`). Seules les clés présentes partent :
+ * le module fusionne, une clé absente laisse la valeur en place, une chaîne vide la vide.
+ */
+function mktTypeVersModule(array $b): array
+{
+    $out = [];
+    foreach ([['code', 'code'], ['nom', 'label'], ['description', 'description'], ['couleur', 'color_hex'],
+              ['icone', 'icon_key'], ['badge', 'lever_badge_label'], ['kpi', 'default_kpi_label'], ['levierId', 'lever_id']] as [$k, $col]) {
+        if (array_key_exists($k, $b)) { $out[$col] = $b[$k]; }
+    }
+    if (array_key_exists('actif', $b)) { $out['is_active'] = filter_var($b['actif'], FILTER_VALIDATE_BOOLEAN); }
+    return $out;
+}
+
+/** Le nom d'un type, lu au module (pour le journal) ; null s'il ne répond pas ou ne le connaît pas. */
+function mktTypeLibelle(int $id): ?string
+{
+    $r = marketingAppel('GET', '/campaign-types');
+    // Le module rend {types: [...], icons: [...]} (une liste nue est acceptée aussi).
+    $corps = is_array($r['corps'] ?? null) ? $r['corps'] : [];
+    foreach (is_array($corps['types'] ?? null) ? $corps['types'] : (array_is_list($corps) ? $corps : []) as $t) {
+        if (is_array($t) && (int) ($t['id'] ?? 0) === $id) { return (string) ($t['label'] ?? ''); }
+    }
+    return null;
 }
 
 function wr_mkt_type_suppr(int $id): array
 {
-    $dej = Db::row('SELECT label FROM mar_campaign_type WHERE id = ?', [$id]);
-    if ($dej === null) { http_response_code(404); return ['error' => 'type inconnu']; }
-
-    // Refuser plutôt que délier ou désactiver d'office : les campagnes passées
-    // portent cet identifiant, et l'effacer rendrait muet le pilotage par type,
-    // les couleurs du calendrier et les briefs déjà imprimés. Le nombre part
-    // avec le refus pour que l'écran propose la désactivation en connaissance
-    // de cause — c'est le contrat du module, et deux comportements différents
-    // pour un même geste finissent par surprendre quelqu'un.
-    $n = (int) Db::row('SELECT COUNT(*) n FROM mar_campaign WHERE type_id = ?', [$id])['n'];
-    if ($n > 0) {
-        http_response_code(409);
-        return ['error' => $n . ' campagne(s) portent ce type : désactivez-le plutôt que de le supprimer.',
-            'campagnes' => $n];
+    $nom = mktTypeLibelle($id);
+    // Le module refuse (409) de supprimer un type que des campagnes portent, en disant combien : l'écran propose
+    // alors la désactivation (`campagnes`), comme avant.
+    $r = marketingAppel('DELETE', '/campaign-types/' . $id);
+    if ($r['erreur'] !== null) {
+        http_response_code($r['code'] >= 400 ? $r['code'] : 502);
+        $out = ['error' => $r['erreur']];
+        if ($r['code'] === 409) { $out['campagnes'] = preg_match('/^(\d+)/', $r['erreur'], $m) === 1 ? (int) $m[1] : 1; }
+        return $out;
     }
-    Db::exec('DELETE FROM mar_campaign_type WHERE id = ?', [$id]);
-    journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne supprimé');
+    journalAdd('CEO', 'Paramètre', $nom ?? ('#' . $id), 'Type de campagne supprimé');
     return ['ok' => true];
 }
 
@@ -2619,19 +2500,10 @@ function wr_mkt_types_ordre(): array
     $b = body();
     $ids = array_values(array_filter(array_map('intval', (array) ($b['ids'] ?? []))));
     if ($ids === []) { http_response_code(422); return ['error' => 'liste d\'identifiants vide']; }
-
-    $pdo = Db::pdo();
-    $pdo->beginTransaction();
-    try {
-        $rang = 0;
-        foreach ($ids as $tid) { Db::exec('UPDATE mar_campaign_type SET sort_order = ? WHERE id = ?', [++$rang, $tid]); }
-        $pdo->commit();
-    } catch (Throwable $e) {
-        $pdo->rollBack();
-        throw $e;
-    }
+    $r = fondsRendu(marketingAppel('PUT', '/campaign-types/order', ['ids' => $ids]), 'ordre');
+    if (isset($r['error'])) { return $r; }
     journalAdd('CEO', 'Paramètre', '—', 'Ordre des types de campagne modifié (' . count($ids) . ' types)');
-    return ['ok' => true, 'n' => count($ids)];
+    return ['ok' => true, 'n' => (int) ($r['reponse']['reordered'] ?? count($ids))];
 }
 
 /* --- nettoyage du module marketing : RETIRÉ (22/10/2026) -----------------------
