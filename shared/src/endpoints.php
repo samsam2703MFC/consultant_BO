@@ -4874,7 +4874,8 @@ function ep_diagnostic_marketing_service(): array
     $jeton = is_readable($fichier) && strlen(trim((string) @file_get_contents($fichier))) >= 32;
     $r = marketingAppel('GET', '/campaign-types');
     return ['jetonLisible' => $jeton, 'code' => $r['code'], 'erreur' => $r['erreur'],
-        'types' => is_array($r['corps']) && array_is_list($r['corps']) ? count($r['corps']) : null,
+        'types' => is_array($r['corps']['types'] ?? null) ? count($r['corps']['types'])
+            : (is_array($r['corps']) && array_is_list($r['corps']) ? count($r['corps']) : null),
         'ok' => $r['code'] === 200 && $r['erreur'] === null];
 }
 

@@ -2466,7 +2466,9 @@ function mktTypeVersModule(array $b): array
 function mktTypeLibelle(int $id): ?string
 {
     $r = marketingAppel('GET', '/campaign-types');
-    foreach (is_array($r['corps'] ?? null) ? $r['corps'] : [] as $t) {
+    // Le module rend {types: [...], icons: [...]} (une liste nue est acceptée aussi).
+    $corps = is_array($r['corps'] ?? null) ? $r['corps'] : [];
+    foreach (is_array($corps['types'] ?? null) ? $corps['types'] : (array_is_list($corps) ? $corps : []) as $t) {
         if (is_array($t) && (int) ($t['id'] ?? 0) === $id) { return (string) ($t['label'] ?? ''); }
     }
     return null;

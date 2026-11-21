@@ -181,13 +181,14 @@ verifie('un type nouveau part au module, dans son vocabulaire : POST /campaign-t
     $a[0] === 'POST' && $a[1] === '/campaign-types' && $a[2] === ['label' => 'Fêtes de fin d’année', 'description' => '', 'color_hex' => '#AA3344',
         'icon_key' => 'cadeau', 'lever_badge_label' => 'Trafic', 'default_kpi_label' => 'Tickets', 'lever_id' => 2], json_encode($a));
 verifie('l’écran reçoit l’identifiant du module', ($r['ok'] ?? false) === true && ($r['id'] ?? null) === 41 && ecrituresModule() === [], json_encode($r));
-remettre(['actif' => false], [['code' => 200, 'j' => ['status' => 'success']], ['code' => 200, 'j' => [['id' => 6, 'label' => 'Ouverture']]]]);
+remettre(['actif' => false], [['code' => 200, 'j' => ['status' => 'success']], ['code' => 200, 'j' => ['types' => [['id' => 6, 'label' => 'Ouverture']], 'icons' => []]]]);
 $r = wr_mkt_type(6);
 verifie('désactiver un type : PATCH /campaign-types/6 {is_active: false}, et rien d’autre',
     $GLOBALS['appels'][0] === ['PATCH', '/campaign-types/6', ['is_active' => false]] && ($r['ok'] ?? false) === true, json_encode($GLOBALS['appels']));
-remettre([], [['code' => 200, 'j' => [['id' => 6, 'label' => 'Ouverture']]],
+remettre([], [['code' => 200, 'j' => ['types' => [['id' => 6, 'label' => 'Ouverture']], 'icons' => []]],
     ['code' => 409, 'j' => ['status' => 'error', 'description' => '3 campagnes utilisent ce type : désactivez-le pour le retirer des choix sans toucher à leur historique.']]]);
 $r = wr_mkt_type_suppr(6);
+verifie('le nom d’un type se lit au module ({types: […]}) pour le journal', mktTypeLibelle(6) === null && ($GLOBALS['reponses'] = [['code' => 200, 'j' => ['types' => [['id' => 6, 'label' => 'Ouverture']], 'icons' => []]]]) && mktTypeLibelle(6) === 'Ouverture');
 verifie('un type porté par des campagnes : 409, le message du module et leur nombre (l’écran propose de désactiver)',
     http_response_code() === 409 && ($r['campagnes'] ?? null) === 3 && str_starts_with((string) ($r['error'] ?? ''), '3 campagnes'), json_encode($r));
 remettre(['ids' => ['4', 2, 'x', 7]], [['code' => 200, 'j' => ['reordered' => 3]]]);
