@@ -5226,8 +5226,8 @@ Réponse : `{genere, base, baseLue, apis, routes, tables, liees, limites}`.
   base partagée TFBuddy (`shops`…). `existe` et `lignes` (estimées par InnoDB) viennent d'`information_schema`,
   `null` si la base ne répond pas.
 - `registre` : `[{nom, famille, quoi, ancien}]` — les tables du portail et leur nom d'avant le 13/10/2026.
-- `liees` : l'assistant de campagne (`/api/v1/marketing`, copie de l'API du module autonome, catalogue repris de
-  l'ERP TFBuddy) et les écrans du cockpit.
+- `liees` : l'assistant de campagne (dans le module Marketing autonome, `/marketing/`, API `mar_api_url` ; la copie
+  de son API dans le cockpit, `/api/v1/marketing`, est retirée le 21/11/2026) et les écrans du cockpit.
 
 **Avis Google dans `/marketing/hub` (13/10/2026).** Nouveau canal `avis` : `{cible, reseau, magasins, connecteur:
 {configure, raccordes, derniereSynchro, etat, erreur}}`, c'est `GET /reputation` tel quel (en vue magasin, sa seule

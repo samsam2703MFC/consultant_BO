@@ -23,8 +23,9 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   (`mar_api_url` d'`erp_cles`) — vit dans le dépôt `marketing` (samsam2703MFC/marketing), qui ne sera pas versé ici :
   l'étape « 0b » du plan du 06/11 est abandonnée pour lui. Le dossier `marketing/` d'ici est le marketing du cockpit
   (newsletter, avis, Brand Guard, MétaDonnée, fidélité, promotions, visibilité Google) ; il parle au module par son API
-  d'intégration (`…/v1/integration/marketing/…`). Écart connu : `marketing/public/api/marketing/`, ancienne copie de
-  l'API du module, écrit encore les tables `mar_campaign*` (deux propriétaires, REORG_PLAN.md §8).
+  d'intégration (`…/v1/integration/marketing/…`). L'ancienne copie de l'API du module (`marketing/public/api/marketing/`)
+  est retirée le 21/11/2026. Écart connu, restant : `shared/src/writes.php` écrit encore lui-même `mar_campaign`,
+  `mar_campaign_type` et `mar_fund_*` (budget et calendrier des campagnes du cockpit) — deux propriétaires.
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
@@ -146,7 +147,7 @@ Chaque étape est mise en ligne séparément, après accord.
 ### Écart ouvert : le cockpit écrit encore dans les tables du Marketing
 
 Le cockpit lit et écrit des tables `mar_` dans ~40 000 lignes : une ancienne copie de l'API du
-module (`public/api/marketing/`), la mesure des campagnes (`src/mesure.php`), le contrôle des posts
+module (`public/api/marketing/`, retirée le 21/11/2026), la mesure des campagnes (`src/mesure.php`), le contrôle des posts
 (`src/brand_guard.php`, `src/fbcontrole.php`), les posts sociaux (`src/social_publication.php`), la
 newsletter clients (`src/newsletter*.php`), les objectifs produits, le brief (`src/mkt_brief.php`) et
 des lectures dans `src/endpoints.php` / `src/writes.php`. Chaque bloc passe dans le Marketing (écran +

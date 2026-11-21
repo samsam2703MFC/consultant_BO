@@ -234,3 +234,4 @@
 2026-11-21T10:29:06Z Fiche du ticket : filtre du polonais durci (mots d'étiquette courants, ó) et liste des compositions retenues dans le diagnostic
 2026-11-21T10:40:47Z Fiche du ticket : titre « Vos achats, en détail. » / « Uw aankopen, in detail. » ; la page accepte ses données intégrées (dossier pour un agent de code)
 2026-11-21T11:10:50Z App employés : /employee/ (QR des fiches du personnel, app installée) sert l'écran de connexion au lieu de la liste des fichiers ; plus aucune liste de dossier sur le site (api/, assets/, tablette/img/ → 403)
+2026-11-21T11:10:29Z Marketing : l'ancienne copie de l'API du module (marketing/public/api/marketing) est retirée, avec sa règle /api/v1/marketing, sql/mar-referentiels.sql et POST /admin/marketing-restaure (410)
