@@ -1,6 +1,6 @@
 # Réclamations fournisseur : les photos à chaque fois, et un tableau annuel réclamé / livré
 
-**Statut : maquettes à décider (21/11/2026).** Demande du 21/11/2026, sur l'écran Franchisés › Demandes des franchisés ›
+**Statut : A et B retenues et codées le 21/11/2026 (« code A et B, photo obligatoire ») ; C non retenue.** Demande du 21/11/2026, sur l'écran Franchisés › Demandes des franchisés ›
 Réclamations fournisseur (`avant.png`) : « est-ce que je peux avoir à chaque fois les photos ? et aussi un tableau annuel
 (volume réclamé / volume vendu, sur le client et en général) — faire les maquettes en screenshot et ensuite décider ».
 
@@ -40,3 +40,20 @@ B et C sont les deux vues du même onglet (« Par magasin » / « Par produit »
 ## Générer
 
 `node generer.js` (a.html, b.html, c.html), puis `node capturer.js` (a.png, b.png, c.png), depuis ce dossier.
+
+## Le code (21/11/2026)
+
+- **Serveur** : `consultant/src/reclamations.php` — `GET /fournisseurs/reclamation-fiche?shop=&id=` (photos : liens signés
+  des pièces jointes + photos du dashboard ; part du livré semaine / mois / année et réseau) et
+  `GET /reclamations/annuel?annee=&fournisseur=` (réservée au siège). La liste (`GET /fournisseurs/reclamations`) rend
+  `nbPhotos` pour tout le réseau.
+- **Cockpit** : `helpdesk-vals.js`, `helpdesk-tpl.js`, `helpdesk.css` — colonne Photos, filtre et indicateur « Sans photo »,
+  photos dans la fiche, part du livré ; 3e onglet « Tableau annuel » avec export CSV (Excel).
+- **Photo obligatoire** : `wr_reclamation_creer` refuse une réclamation sans photo (422, rien ne part au panel). Le
+  formulaire de la tablette et la fenêtre des invendus du dashboard demandent la photo avant d'envoyer ; depuis le
+  contrôle du cockpit, la photo de la tâche contrôlée est reprise (relue au panel par le serveur). Une réclamation
+  créée directement dans l'application TF Buddy n'est pas concernée : ce n'est pas notre code.
+- **Banc** : `php consultant/bin/tests_reclamations.php`.
+- `code-a.png`, `code-b.png` : l'écran codé, API simulée avec les réclamations de la capture (volumes simulés).
+- À vérifier en ligne : que les entrées du grand livre liées à une commande (`material_inventory_log.id_order`) sont bien
+  les livraisons, et la forme d'un élément de `attachments`.
