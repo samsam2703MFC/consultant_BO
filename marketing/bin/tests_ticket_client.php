@@ -71,6 +71,12 @@ tcl_ok($c['fr']['items'] === [['Farine de BLÉ, beurre (LAIT), ŒUFS', ['cereals
 $c = tclComposition([['id' => 77, 'nom' => 'Béchamel', 'allergenes' => [], 'detail' => ['fr' => 'Lait entier, farine de BLÉ, beurre', 'nl' => '']], ['id' => 9, 'nom' => 'Parmesan', 'allergenes' => ['milk']]], []);
 tcl_ok($c['fr']['items'][0] === ['Béchamel', [], 'Lait entier, farine de BLÉ, beurre', false] && $c['fr']['items'][1][2] === '' && $c['fr']['traduit'], 'plat composé : détail de l’ingrédient de la centrale');
 tcl_ok($c['nl']['items'][0][2] === 'Lait entier, farine de BLÉ, beurre' && !$c['nl']['traduit'], 'détail sans néerlandais : le français, non traduit');
+// Les textes du fournisseur restés en polonais ne sont pas montrés (mesuré sur le serveur le 21/11/2026).
+$pl = ['fr' => ['composition' => 'Mąka pszenna - T45, Woda, Masło'], 'nl' => ['composition' => 'Mąka pszenna - T45, Woda, Masło'], 'pl' => ['composition' => 'Mąka pszenna - T45, Woda, Masło']];
+tcl_ok(tclTexteDansLaLangue($pl, 'fr', 'composition') === '' && tclTexteDansLaLangue($pl, 'nl', 'composition') === '', 'composition identique au polonais : écartée');
+tcl_ok(tclTexteDansLaLangue(['fr' => ['composition' => 'jajka, Mąka pszenna']], 'fr', 'composition') === '', 'lettres polonaises : écartée');
+tcl_ok(tclTexteDansLaLangue(['fr' => ['composition' => 'Farine de BLÉ, beurre, sel'], 'pl' => ['composition' => 'Mąka']], 'fr', 'composition') === 'Farine de BLÉ, beurre, sel', 'vraie composition française : gardée');
+tcl_ok(tclTexteDansLaLangue(['nl' => ['composition' => 'TARWEbloem, boter, zout']], 'nl', 'composition') === 'TARWEbloem, boter, zout', 'vraie composition néerlandaise : gardée');
 tcl_ok(tclCodesAllergenes(['Œufs', 'Lait', 'Céréales contenant du gluten', 'inconnu']) === ['cereals_gluten', 'eggs', 'milk'], 'noms d’allergènes → codes, dans l’ordre réglementaire');
 
 // Les lignes d'une transaction, quelle que soit la clé du prix ; deux lignes du même produit n'en font qu'une.
