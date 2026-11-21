@@ -117,3 +117,13 @@ textarea.pp-in{resize:vertical;line-height:1.45}
 .hd-proch{font-size:12px;margin:6px 0 8px;line-height:1.5}
 @media (max-width:1100px){.hd-sms2{grid-template-columns:1fr}.hd-col+.hd-col{border-left:none;border-top:1px solid var(--vr-trait)}}
 @media (max-width:1300px){.hd-cols{grid-template-columns:1fr}.hd-fiche{margin:0 14px 14px;position:static;max-height:none}}
+/* La carte « Demandes à traiter » de l'accueil (écran Résultat, 21/11/2026) */
+.hd-at{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-left:4px solid #C0182B;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.hd-at.ok{border-left-color:#2d7a3e;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 16px}.hd-at.ok b,.hd-at.mu b{font-weight:400}
+.hd-at.mu{border-left-color:var(--color-border-secondary);color:var(--color-text-muted);flex-direction:row;align-items:center;gap:8px;padding:9px 16px}
+.hd-at-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}.hd-at-t b{font:400 18px var(--font-display)}
+.hd-at-n{background:#C0182B;color:#fff;border-radius:10px;font-size:12px;padding:1px 9px}
+.hd-at-l{display:flex;gap:12px;align-items:flex-start;text-align:left;border:none;border-top:1px solid rgba(34,34,34,.08);background:none;padding:7px 2px;font:400 12.5px var(--font-ui);color:var(--color-text);cursor:pointer;width:100%}
+.hd-at-l:hover{background:var(--paper)}.hd-at-l b{font-weight:400}.hd-at-l small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.hd-at-age{min-width:44px;font-size:12px;color:#B26A00;white-space:nowrap}.hd-at-age.ko{color:#C0182B}
+.hd-at-lien{border:none;background:none;color:var(--color-primary);font:400 12px var(--font-ui);cursor:pointer;text-decoration:underline;padding:0}

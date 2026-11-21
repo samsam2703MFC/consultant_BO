@@ -57,6 +57,7 @@ n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode «
   fournisseur, période, recherche) et la fiche de chaque réclamation.
 
 - **Les relances** (« renvoyer un SMS à Sam ou Pierre tous les 7 jours ») : maquette `../helpdesk-relances`, validée et
-  codée le 20/11/2026. Ce dossier en décrit la règle.
+  codée le 20/11/2026. Ce dossier en décrit la règle. Le 21/11 : relance tant que la demande n'est pas en cours, et la
+  carte « Demandes à traiter » sur l'accueil du cockpit (écran Résultat).
 
 Banc : `php consultant/bin/tests_helpdesk.php` (SMS, date limite, relances ; SQLite en mémoire, doublures du panel et de SMSAPI).
