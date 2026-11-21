@@ -17,7 +17,7 @@ export function tplHelpdesk(c, x){
     <button class="vr-btn" ${x.A(V.relire)}${V.relecture ? ' disabled' : ''}>${V.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
   const ligne = l => `<tr class="${l.on ? 'hd-on' : ''}" ${x.A(l.choisir)}><td class="hd-lis ${l.ton}"></td>
     <td class="g"><span class="hd-ref">${esc(l.ref)}</span><small>${esc(l.le)}</small></td><td class="g">${esc(l.magasin)}<small><span class="hd-dom">${esc(l.domaine)}</span></small></td>
-    <td class="g hd-titre"><b>${esc(l.titre)}</b><small>${esc(l.extrait)}</small>${l.visite ? `<small><span class="hd-vis">${esc(l.visite)}</span></small>` : ''}</td><td class="g">${esc(l.consultant)}</td>
+    <td class="g hd-titre"><b>${l.urgent ? '<span class="hd-urg">URGENT</span> ' : ''}${esc(l.titre)}</b><small>${esc(l.extrait)}</small>${l.visite ? `<small><span class="hd-vis">${esc(l.visite)}</span></small>` : ''}</td><td class="g">${esc(l.consultant)}</td>
     <td><span class="hd-st ${l.ton}">${esc(l.statut)}</span>${l.rep ? `<small class="${l.repKo ? 'ko' : ''}">${esc(l.rep)}</small>` : ''}</td>
     <td class="hd-ech ${l.echTon}">${l.ech ? `<span>${esc(l.ech)}</span>${l.echSous ? `<small>${esc(l.echSous)}</small>` : ''}` : ''}</td>
     <td class="hd-rel ${l.relTon}">${l.rel ? `<span>${esc(l.rel)}</span>${l.relSous ? `<small>${esc(l.relSous)}</small>` : ''}` : ''}</td><td class="${l.vieux ? 'hd-vieux' : ''}">${esc(l.age)}</td></tr>`;
@@ -52,6 +52,7 @@ function sms(M, x){
     <button class="mko-pied-btn" ${x.A(l.essai)}${l.essai ? '' : ' disabled'} title="Un SMS d’essai à ce numéro (enregistré)">Essai</button><button class="mko-pied-btn" ${x.A(l.retirer)}>Retirer</button></div>`).join('');
   const gauche = `<div class="hd-col"><h3>Les numéros</h3><p>À chaque nouvelle demande, un SMS part à ces numéros : le magasin, le sujet, le titre, le début de la demande, le passage souhaité, les photos et la référence. Le consultant du panel de chaque numéro reçoit les relances de ses demandes. Le franchisé ne voit pas ces numéros.</p>
     <div class="hd-seg"><span>Nouvelles demandes</span><button class="${M.fActif ? 'on' : ''}" ${x.A(M.allumer)}>envoyées</button><button class="${M.fActif ? '' : 'on'}" ${x.A(M.couper)}>coupées</button></div>
+    <div class="hd-seg"><span>Le franchisé, à la réponse du bureau</span><button class="${M.fFranchise ? 'on' : ''}" ${x.A(M.franchiseOui)}>prévenu par SMS</button><button class="${M.fFranchise ? '' : 'on'}" ${x.A(M.franchiseNon)}>non</button></div>
     <div class="hd-sms-l hd-sms-th"><span>Nom</span><span>Numéro</span><span>Consultant du panel</span><span></span></div>
     ${lignes || '<div class="vr-mu">Aucun numéro.</div>'}
     ${M.ajouter ? `<div><button class="mko-pied-btn" ${x.A(M.ajouter)}>+ Ajouter un numéro</button></div>` : ''}
@@ -79,7 +80,7 @@ function fiche(F, x){
       <input id="${esc(p.id)}" class="pp-in" placeholder="Constat…" value="${esc(p.constat)}" ${x.I(p.poser)}${m.cloture ? ' disabled' : ''}></div>`).join('')}
     ${m.cloture ? (m.reponse ? `<pre class="hd-rep">${esc(m.reponse)}</pre>` : '') : `<div class="hd-act"><button class="vx-tog${m.repondre ? ' on' : ''}" ${x.A(m.basculerRepondre)}><i></i>à la clôture, envoyer le constat en réponse au franchisé</button><span class="vr-sp"></span>
       <button class="rc-btn gris" ${x.A(m.enregistrer)}>Enregistrer</button><button class="rc-btn ok" ${x.A(m.cloturer)}${m.cloturer ? '' : ' disabled'} title="${m.manque ? m.manque + ' point(s) à voir' : ''}">Clôturer la mission</button></div>`}</div>`;
-  return `<aside class="vr-card hd-fiche"><div class="hd-ft"><div><span class="hd-ref">${esc(F.ref)}</span><h3>${esc(F.titre)}</h3><small>${esc(F.sous)}</small></div><span class="hd-st ${F.ton}">${esc(F.statut)}</span></div>
+  return `<aside class="vr-card hd-fiche"><div class="hd-ft"><div><span class="hd-ref">${esc(F.ref)}</span>${F.urgent ? ' <span class="hd-urg">URGENT</span>' : ''}<h3>${esc(F.titre)}</h3><small>${esc(F.sous)}</small></div><span class="hd-st ${F.ton}">${esc(F.statut)}</span></div>
     <div class="hd-desc">${esc(F.description)}</div>
     <div class="hd-delai ${F.delaiTon}"><div class="hd-seg"><span>Date limite</span>${F.delais.map(d => `<button class="${d.on ? 'on' : ''}" ${x.A(d.choisir)}${d.choisir ? '' : ' disabled'}>${esc(d.nom)}</button>`).join('')}${F.retirerDelai ? `<button class="hd-delai-x" ${x.A(F.retirerDelai)} title="Retirer la date limite">✕</button>` : ''}</div><small>${esc(F.delaiNote)}</small></div>
     ${F.reponse ? `<div class="hd-dejarep"><b>Réponse du bureau${F.reponseLe ? ' · ' + esc(F.reponseLe) : ''}</b>${esc(F.reponse)}</div>` : ''}
@@ -134,7 +135,7 @@ export function tplATraiter(A, x){
   if (A.chargement) { return '<div class="hd-at mu">Demandes à traiter : lecture du helpdesk…</div>'; }
   if (A.erreur) { return `<div class="hd-at mu">Demandes à traiter : illisibles (${esc(A.erreur)}). <button class="hd-at-lien" ${x.A(A.relire)}>Relire</button></div>`; }
   if (!A.n) { return `<div class="hd-at ok"><b>Demandes à traiter</b> Aucune : toutes les demandes des franchisés sont prises en charge. <button class="hd-at-lien" ${x.A(A.ouvrir)}>Voir les demandes</button></div>`; }
-  return `<div class="hd-at"><div class="hd-at-t"><b>Demandes à traiter</b><span class="hd-at-n">${A.n}</span><span class="vr-mu">pas encore en cours · relancées par SMS tous les 7 jours</span><span class="vr-sp"></span><button class="mko-pied-btn" ${x.A(A.ouvrir)}>Ouvrir les demandes</button></div>
-    ${A.lignes.map(l => `<button class="hd-at-l" ${x.A(l.ouvrir)}><span class="hd-at-age${l.vieux ? ' ko' : ''}">${esc(l.age)}</span><span><b>${esc(l.magasin)}</b> · ${esc(l.titre)}<small>${esc(l.sous)}</small></span></button>`).join('')}
+  return `<div class="hd-at"><div class="hd-at-t"><b>Demandes à traiter</b><span class="hd-at-n">${A.n}</span>${A.urgentes ? `<span class="hd-urg">${A.urgentes} URGENTE${A.urgentes > 1 ? 'S' : ''}</span>` : ''}<span class="vr-mu">pas encore en cours · relancées par SMS tous les 7 jours</span><span class="vr-sp"></span><button class="mko-pied-btn" ${x.A(A.ouvrir)}>Ouvrir les demandes</button></div>
+    ${A.lignes.map(l => `<button class="hd-at-l" ${x.A(l.ouvrir)}><span class="hd-at-age${l.vieux ? ' ko' : ''}">${esc(l.age)}</span><span>${l.urgent ? '<span class="hd-urg">URGENT</span> ' : ''}<b>${esc(l.magasin)}</b> · ${esc(l.titre)}<small>${esc(l.sous)}</small></span></button>`).join('')}
     ${A.plus ? `<div class="vr-mu" style="font-size:11px">et ${A.plus} autre${A.plus > 1 ? 's' : ''}, plus récente${A.plus > 1 ? 's' : ''}.</div>` : ''}</div>`;
 }

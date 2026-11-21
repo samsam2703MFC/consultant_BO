@@ -736,6 +736,12 @@ final class MdSms
     /** @var null|list<array{origine: string, jeton: string}> les jetons connus, lus une fois par requête */
     private static ?array $candidats = null;
 
+    /**
+     * Le dernier SMS accepté : {id, origine (du jeton), base, from, statut, points} — pour dire, à l'essai, d'où il est
+     * parti (21/11/2026 : « SMS parti » au cockpit, rien reçu). Jamais le jeton.
+     */
+    public static ?array $dernier = null;
+
     /** Oublie les jetons lus (un réglage vient de changer ; les tests). */
     public static function oublier(): void
     {
@@ -863,6 +869,9 @@ final class MdSms
                     $champs = $base + ($f !== '' ? ['from' => $f] : []);
                     [$code, $res] = self::$transport ? (self::$transport)($b . '/sms.do', $champs, $cand['jeton']) : self::curl($b . '/sms.do', $champs, $cand['jeton']);
                     if ($code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])) {
+                        $l0 = is_array($res['list'][0] ?? null) ? $res['list'][0] : [];
+                        self::$dernier = ['id' => (string) ($l0['id'] ?? ''), 'origine' => $cand['origine'], 'base' => $b, 'from' => $f,
+                            'statut' => isset($l0['status']) ? (string) $l0['status'] : null, 'points' => isset($l0['points']) ? (float) $l0['points'] : null];
                         try {
                             if (function_exists('settingEcrire')) {
                                 if ($i > 0 || $b !== $c['base']) { settingEcrire('mdSmsOrigine', $cand['origine']); if (!$c['impose']) { settingEcrire('mdSmsBaseAuto', $b); } }
@@ -883,6 +892,31 @@ final class MdSms
             }
         }
         return [false, self::erreur($premier[0], $premier[1], $premier[2]) . (count($essais) > 1 ? ' — jetons essayés : ' . implode(', ', $essais) : '')];
+    }
+
+    /** Les statuts de remise de SMSAPI, dits simplement. */
+    public const STATUTS = ['DELIVERED' => 'remis au téléphone', 'UNDELIVERED' => 'non remis : l’opérateur l’a refusé', 'FAILED' => 'échec de l’envoi',
+        'EXPIRED' => 'expiré : téléphone injoignable pendant la durée de validité', 'SENT' => 'envoyé à l’opérateur, accusé de réception attendu',
+        'QUEUE' => 'en file d’attente chez SMSAPI', 'ACCEPTED' => 'accepté par l’opérateur', 'REJECTED' => 'rejeté', 'UNKNOWN' => 'statut inconnu de l’opérateur',
+        'NOT_FOUND' => 'introuvable chez SMSAPI', 'STOP' => 'numéro sur liste noire (STOP) du compte', 'RENEWAL' => 'en cours de renvoi', 'SCHEDULED' => 'programmé'];
+    /** Les statuts définitifs : il n'y a plus rien à attendre. */
+    public const STATUTS_FINAUX = ['DELIVERED', 'UNDELIVERED', 'FAILED', 'EXPIRED', 'REJECTED', 'NOT_FOUND', 'STOP'];
+
+    /**
+     * Le statut de remise d'un SMS (GET {base}/sms.do?status={id}&format=json), avec le jeton et la plateforme retenus.
+     * Rend {ok, statut, libelle, numero, points, erreur}.
+     */
+    public static function statut(string $id): array
+    {
+        $c = self::config();
+        if ($c['jeton'] === '') { return ['ok' => false, 'erreur' => 'jeton SMSAPI absent']; }
+        $url = $c['base'] . '/sms.do?' . http_build_query(['status' => $id, 'format' => 'json']);
+        [$code, $res] = self::$transport ? (self::$transport)($url, null, $c['jeton']) : self::curl($url, null, $c['jeton']);
+        $l0 = is_array($res) && is_array($res['list'][0] ?? null) ? $res['list'][0] : null;
+        if ($code < 200 || $code >= 300 || $l0 === null) { return ['ok' => false, 'erreur' => self::erreur($code, $res, $c['base'])]; }
+        $st = strtoupper((string) ($l0['status'] ?? 'UNKNOWN'));
+        return ['ok' => true, 'statut' => $st, 'libelle' => self::STATUTS[$st] ?? strtolower($st), 'final' => in_array($st, self::STATUTS_FINAUX, true),
+            'numero' => (string) ($l0['number'] ?? ''), 'points' => isset($l0['points']) ? (float) $l0['points'] : null, 'erreur' => isset($l0['error']) && $l0['error'] !== null ? (string) $l0['error'] : null];
     }
 
     /** Le compte SMSAPI (GET /profile) : le jeton est-il bon ? Sans envoyer de SMS. Rend [ok, message]. */
