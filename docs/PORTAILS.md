@@ -18,6 +18,13 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   `docs/maquettes/portail-commercial/`. La **Prospection** y est passée le 19/11/2026 (Sam : « transvaser tout le
   /prospection/ dans le /commercial ») : page `/commercial/prospection/`, code `commercial/src/prospection.php` et
   `scouting_osm.php`, table `sm_prospect` (migration 006) ; l'ancienne adresse `/consulant_bo/prospection/` y renvoie.
+- **L'application Marketing reste dans son dépôt** (décision du 21/11/2026) : le module Marketing autonome — campagnes,
+  catalogues imprimés, Social, signage, ses migrations `0xx` (dont la 045 des tables reprises du cockpit) et son API
+  (`mar_api_url` d'`erp_cles`) — vit dans le dépôt `marketing` (samsam2703MFC/marketing), qui ne sera pas versé ici :
+  l'étape « 0b » du plan du 06/11 est abandonnée pour lui. Le dossier `marketing/` d'ici est le marketing du cockpit
+  (newsletter, avis, Brand Guard, MétaDonnée, fidélité, promotions, visibilité Google) ; il parle au module par son API
+  d'intégration (`…/v1/integration/marketing/…`). Écart connu : `marketing/public/api/marketing/`, ancienne copie de
+  l'API du module, écrit encore les tables `mar_campaign*` (deux propriétaires, REORG_PLAN.md §8).
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
@@ -132,7 +139,7 @@ Chaque étape est mise en ligne séparément, après accord.
 | 2c. Tables `mar_` du cockpit | **définitions** reprises par la migration `045_tables_reprises_du_cockpit.sql` (23 tables, sans clé étrangère vers `ceo_shop`). **Reste** : le code du cockpit qui les lit et les écrit (voir l'écart ci-dessous) |
 | 2d. Signage | à faire |
 | 0. Dépôt unique : le cockpit dans `pilotage-reseau/` | en cours |
-| 0b. `marketing/`, `recrutement-developpement/`, `formations/` versés dans le dépôt | à faire |
+| 0b. `marketing/`, `recrutement-developpement/`, `formations/` versés dans le dépôt | remplacée : `formation/` fait le 19/11/2026 ; le Recrutement n'est plus un domaine (19/11) ; le dépôt `marketing` reste séparé (21/11/2026) |
 | 0c. Table commune des clés : `erp_cles` (remplace `master_variable_keys`) | fait le 7 nov. 2026 — Recrutement, Marketing (Social compris) et Pilotage y lisent et écrivent leurs clés ; plus aucune lecture croisée de tables (Scouting du Recrutement dans `crm_scouting_*`, réglages dans `crm_settings`, boutiques par l'API du Cockpit) |
 | 3 à 7 | à faire |
 
@@ -149,8 +156,8 @@ cockpit ne crée plus ces tables : c'est la migration 045 du Marketing qui les d
 ## À faire hors du code
 
 - Copier dans les secrets de `consultant_BO` ceux des dépôts versés (noms donnés à chaque étape, jamais les
-  valeurs), puis archiver `marketing`, `social`, `signage`, `atelier-espace-candidat`, `scouting`,
-  `pwa_consultant` une fois versés.
+  valeurs), puis archiver `social`, `signage`, `atelier-espace-candidat`, `scouting`, `pwa_consultant` une fois
+  versés. Le dépôt `marketing` n'est pas archivé : il reste le dépôt de l'application Marketing (21/11/2026).
 
 ## Registre des tables
 

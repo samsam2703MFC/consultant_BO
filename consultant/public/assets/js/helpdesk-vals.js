@@ -119,7 +119,7 @@ function valsSms(app, Dd){
 
 /* Les réclamations fournisseur de tous les magasins (20/11/2026, demande de Sam : « dans le cockpit, mettre la vue sur
  * toutes les réclamations de tous les magasins », ici). Lecture seule : GET /fournisseurs/reclamations?mois= (le panel,
- * /consultant/shops/material-complaints, src/mesure.php) ; répondre passe par le fournisseur, pas par le cockpit. */
+ * /consultant/shops/material-complaints, panel/src/reclamations_magasin.php) ; répondre passe par le fournisseur, pas par le cockpit. */
 const RC_STATUTS = { ACCEPTED: 'Acceptée', REJECTED: 'Refusée', PENDING: 'En attente', NEW: 'Nouvelle', OPEN: 'Ouverte', IN_PROGRESS: 'En cours', RESOLVED: 'Réglée', CLOSED: 'Close' };
 const eur = n => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 const nb = n => n == null ? '' : Number(n).toLocaleString('fr-BE', { maximumFractionDigits: 2 });

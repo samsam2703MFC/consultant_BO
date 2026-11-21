@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-21T09:59:01Z",
+ "genere": "2026-11-21T10:14:23Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1771,7 +1771,7 @@
      ],
      "chemin": "/fournisseurs/matiere-code",
      "handler": "wr_matiere_code",
-     "source": "marketing/src/mesure.php:1634",
+     "source": "panel/src/reclamations_magasin.php:329",
      "resume": "retenir qu'un code-barres désigne une matière."
     }
    ]
@@ -1793,7 +1793,7 @@
      ],
      "chemin": "/fournisseurs/reclamation",
      "handler": "wr_reclamation_creer",
-     "source": "marketing/src/mesure.php:1719",
+     "source": "panel/src/reclamations_magasin.php:414",
      "resume": "déposer une réclamation dans le panel."
     }
    ]
@@ -1814,7 +1814,7 @@
      ],
      "chemin": "/fournisseurs/reclamation-refs",
      "handler": "ep_reclamation_refs",
-     "source": "marketing/src/mesure.php:1511",
+     "source": "panel/src/reclamations_magasin.php:206",
      "resume": "Ce qu'il faut pour ÉCRIRE une réclamation : motifs, matières du fournisseur (avec leur SKU), unités, et les livraisons du magasin."
     }
    ]
@@ -1835,7 +1835,7 @@
      ],
      "chemin": "/fournisseurs/reclamations",
      "handler": "ep_fournisseurs_reclamations",
-     "source": "marketing/src/mesure.php:1331",
+     "source": "panel/src/reclamations_magasin.php:26",
      "resume": ""
     }
    ]
