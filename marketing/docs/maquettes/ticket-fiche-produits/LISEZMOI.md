@@ -123,6 +123,16 @@ Les routes rendent aussi le coût, la marge et le stock : la page n'en garde rie
   `product_portion_label`. Le swagger ne décrit pas l'heure. Elle porte aussi le nom du client et le coût de fabrication
   des lignes : la page n'en rend rien.
 - Le nom de la boutique vient du cockpit (`ceo_shop`) : le panel rend la raison sociale (« Neutralles SRL »).
+- **Spécification du fournisseur** (21/11/2026) : la composition, la conservation et la préparation de l'étiquette
+  SLFood, par langue, lues par fournisseur (`GET /material-suppliers`, puis `/{id}/catalog-mappings` : produit du
+  catalogue → matière, et `/{id}/catalog/products?include=specification_multilingual`), gardées six heures. Un produit
+  acheté fini (une seule matière) prend la composition du fournisseur à la place de son nom, et ses conseils de
+  conservation (à la place de la température du comptoir) et de préparation ; dans un plat composé, la composition
+  détaille l'ingrédient de la centrale : « Béchamel (…) ». Les mots en capitales du fournisseur (les allergènes de
+  l'étiquette) sont en gras. Diagnostic : `GET /marketing/ticket/essai/specifications[?matiere=]`.
+- Retirés à la demande de Sam (21/11/2026) : le chapeau sous le titre, la phrase « Aucun de vos produits ne
+  contient… », l'indication « Touchez un produit dans la barre… » sur ordinateur et le dépliant « Les 14 allergènes,
+  un par un ». La maquette (captures) les montre encore.
 - Réglages facultatifs (`ceo_app_setting`) : `ticketWebshopUrl`, `ticketAvisUrls` (`{boutique: adresse}`),
   `ticketApplicationUrl`, `ticketLangues` (`{boutique: "fr"|"nl"}`, sinon le code postal).
 

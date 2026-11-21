@@ -47,12 +47,30 @@ tcl_ok(tclMorceaux('Fondant chocolat, Eclair, Crème pâtissière (Crème pâtis
 // La composition : allergènes de la recette reportés par position sur l'étiquette traduite.
 $recette = [['nom' => 'Baguette Tradition', 'allergenes' => ['cereals_gluten']], ['nom' => 'Brie de Meaux', 'allergenes' => ['milk']], ['nom' => 'Roquette', 'allergenes' => []]];
 $c = tclComposition($recette, ['fr' => 'Ingrédients: Brie de Meaux, Roquette, Baguette Tradition.', 'nl' => 'Ingrediënten: Brie de Meaux, Rucola, Stokbrood Traditie.']);
-tcl_ok($c['fr']['items'] === [['Brie de Meaux', ['milk']], ['Roquette', []], ['Baguette Tradition', ['cereals_gluten']]], 'composition française et ses allergènes');
-tcl_ok($c['nl']['items'][1] === ['Rucola', []] && $c['nl']['items'][2] === ['Stokbrood Traditie', ['cereals_gluten']] && $c['nl']['traduit'], 'composition néerlandaise par position');
+tcl_ok($c['fr']['items'] === [['Brie de Meaux', ['milk'], '', false], ['Roquette', [], '', false], ['Baguette Tradition', ['cereals_gluten'], '', false]], 'composition française et ses allergènes');
+tcl_ok($c['nl']['items'][1] === ['Rucola', [], '', false] && $c['nl']['items'][2] === ['Stokbrood Traditie', ['cereals_gluten'], '', false] && $c['nl']['traduit'], 'composition néerlandaise par position');
 $c = tclComposition($recette, ['fr' => 'Ingrédients: Brie de Meaux, Roquette, Baguette Tradition.', 'nl' => 'Ingrediënten: Brie.']);
 tcl_ok(!$c['nl']['traduit'] && $c['nl']['items'][0][0] === 'Brie de Meaux', 'traduction incomplète : le français, marqué non traduit');
 $c = tclComposition($recette, []);
-tcl_ok($c['fr']['items'][0] === ['Baguette Tradition', ['cereals_gluten']] && !$c['nl']['traduit'], 'sans étiquette : la recette');
+tcl_ok($c['fr']['items'][0] === ['Baguette Tradition', ['cereals_gluten'], '', false] && !$c['nl']['traduit'], 'sans étiquette : la recette');
+
+// La spécification du fournisseur : par matière, par langue.
+$specs = tclSpecificationsParMatiere(
+    [['catalog_product_id' => 31, 'material_id' => 150], ['catalog_product_id' => 32, 'material_id' => 77], ['catalog_product_id' => 99, 'material_id' => 5]],
+    [['id' => 31, 'specification' => [['lang_code' => 'fr', 'composition' => 'Farine de BLÉ, beurre (LAIT), ŒUFS', 'storage_info' => 'À conserver au sec', 'preparation_info' => '3 min à 180 °C'],
+        ['lang_code' => 'nl', 'composition' => 'TARWEbloem, boter (MELK), EIEREN', 'storage_info' => 'Droog bewaren', 'preparation_info' => '3 min op 180 °C']]],
+     ['id' => 32, 'specification' => ['lang_code' => 'fr', 'composition' => 'Lait entier, farine de BLÉ, beurre']],
+     ['id' => 33, 'specification' => []]]);
+tcl_ok(array_keys($specs) === [150, 77] || array_keys($specs) === ['150', '77'], 'spécifications rattachées aux matières (sans correspondance : rien)');
+tcl_ok($specs['150']['nl']['preparation'] === '3 min op 180 °C' && $specs['77']['fr']['composition'] === 'Lait entier, farine de BLÉ, beurre', 'champs de la spécification par langue');
+// Un produit acheté fini : la composition du fournisseur remplace son nom.
+$c = tclComposition([['id' => 150, 'nom' => 'Croissant', 'allergenes' => ['cereals_gluten', 'eggs', 'milk'], 'detail' => ['fr' => $specs['150']['fr']['composition'], 'nl' => $specs['150']['nl']['composition']]]],
+    ['fr' => 'Ingrédients: Croissant.', 'nl' => 'Ingrediënten: Croissant.']);
+tcl_ok($c['fr']['items'] === [['Farine de BLÉ, beurre (LAIT), ŒUFS', ['cereals_gluten', 'eggs', 'milk'], '', true]] && $c['nl']['items'][0][0] === 'TARWEbloem, boter (MELK), EIEREN' && $c['nl']['traduit'], 'produit fini : composition du fournisseur, dans la langue');
+// Un plat composé : la composition du fournisseur détaille l'ingrédient de la centrale ; sans néerlandais, le français, marqué non traduit.
+$c = tclComposition([['id' => 77, 'nom' => 'Béchamel', 'allergenes' => [], 'detail' => ['fr' => 'Lait entier, farine de BLÉ, beurre', 'nl' => '']], ['id' => 9, 'nom' => 'Parmesan', 'allergenes' => ['milk']]], []);
+tcl_ok($c['fr']['items'][0] === ['Béchamel', [], 'Lait entier, farine de BLÉ, beurre', false] && $c['fr']['items'][1][2] === '' && $c['fr']['traduit'], 'plat composé : détail de l’ingrédient de la centrale');
+tcl_ok($c['nl']['items'][0][2] === 'Lait entier, farine de BLÉ, beurre' && !$c['nl']['traduit'], 'détail sans néerlandais : le français, non traduit');
 tcl_ok(tclCodesAllergenes(['Œufs', 'Lait', 'Céréales contenant du gluten', 'inconnu']) === ['cereals_gluten', 'eggs', 'milk'], 'noms d’allergènes → codes, dans l’ordre réglementaire');
 
 // Les lignes d'une transaction, quelle que soit la clé du prix ; deux lignes du même produit n'en font qu'une.
@@ -87,7 +105,7 @@ $f = tclResumeFiche(['object' => ['name' => 'Cannelloni - poulet & estragon ', '
     'competences' => [['name' => 'Cuisson des Quiches', 'description' => 'Préchauffez le four à 180 °C.'], ['name' => 'Composition Traiteur', 'description' => '']]]);
 tcl_ok($f['nom'] === 'Cannelloni - poulet & estragon' && $f['stockage'] === '2°C – 4°C', 'nom et stockage nettoyés');
 tcl_ok($f['rechauffe'] === ['minutes' => 10.0, 'degres' => 180.0], 'réchauffage');
-tcl_ok($f['recette'] === [['nom' => 'Parmesan', 'allergenes' => ['milk']]], 'recette sans emballage, allergènes en codes');
+tcl_ok($f['recette'] === [['id' => 0, 'nom' => 'Parmesan', 'allergenes' => ['milk'], 'source' => '']], 'recette sans emballage, allergènes en codes');
 tcl_ok($f['etapes'] === ['Finition : Saupoudrer de parmesan.'] && $f['cuisson'] === ['Préchauffez le four à 180 °C.'], 'étapes et cuisson');
 $json = json_encode($f);
 tcl_ok(!str_contains($json, 'margin') && !str_contains($json, 'price_net') && !str_contains($json, '70.00'), 'ni marge ni coût dans le résumé');
