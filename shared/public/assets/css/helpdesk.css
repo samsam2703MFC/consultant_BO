@@ -157,3 +157,9 @@ textarea.pp-in{resize:vertical;line-height:1.45}
 .rc-leg i.h0{background:#f3f7f3}.rc-leg i.h1{background:#fdf3dc}.rc-leg i.h2{background:#fbe0c4}.rc-leg i.h3{background:#f6c9ca}
 .hd-cols{grid-template-columns:minmax(0,1fr) 470px}.hd-cols>.vr-tw{min-width:0;overflow-x:auto}
 .rc-t .hd-titre{min-width:150px;max-width:260px}.rc-t td,.rc-t th{padding-left:7px;padding-right:7px}
+/* Le tableau annuel des produits réclamés (21/11/2026, maquettes D et E) : catégories, produits, motifs, livraison */
+.rc-cat td{background:var(--paper)!important;border-top:1px solid rgba(34,34,34,.15)}
+.rc-ind{padding-left:22px!important}
+.rc-pc{display:inline-block;border-radius:5px;padding:2px 7px}.rc-pc.h0{background:#f3f7f3}.rc-pc.h1{background:#fdf3dc}.rc-pc.h2{background:#fbe0c4}.rc-pc.h3{background:#f6c9ca;color:var(--vr-ko)}
+.rc-sect td{background:#eef2f6;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}.rc-sect.ko td{background:var(--stop-soft);color:var(--vr-ko)}
+.rc-ko{color:var(--vr-ko);font-weight:400}

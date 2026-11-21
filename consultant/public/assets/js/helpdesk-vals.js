@@ -217,55 +217,104 @@ function ficheRc(app, X){
 /* Le tableau annuel (21/11/2026, maquette B) : magasins × mois, le montant réclamé et sa part dans ce qui a été livré
  * au magasin le même mois, l'accepté, et la ligne Réseau. Serveur : GET /reclamations/annuel (src/reclamations.php). */
 const MOIS_C = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-function chargerAn(app, frais, annee, four){
+function chargerAn(app, frais, annee, four, shop, type){
   const A = app.state.hdAn || {};
   const an = annee != null ? annee : (A.annee || new Date().getFullYear());
   const f = four != null ? four : (A.fournisseur != null ? A.fournisseur : '');
-  if (!frais && A.annee === an && A.fournisseur === f && (A.d || A.chargement)) { return; }
-  app.setState({ hdAn: { chargement: true, d: A.annee === an && A.fournisseur === f ? A.d : null, annee: an, fournisseur: f } });
-  readOne('/reclamations/annuel?annee=' + an + '&fournisseur=' + encodeURIComponent(f)).then(d => {
-    const B = app.state.hdAn || {};
-    if (B.annee === an && B.fournisseur === f) { app.setState({ hdAn: { chargement: false, d: d || { indispo: true, motif: 'le cockpit n’a pas répondu' }, annee: an, fournisseur: f } }); }
+  const sh = shop != null ? shop : (A.shop != null ? A.shop : '');
+  const ty = type != null ? type : (A.type != null ? A.type : '');
+  const cle = [an, f, sh, ty].join('|');
+  if (!frais && A.cle === cle && (A.d || A.chargement)) { return; }
+  app.setState({ hdAn: { chargement: true, d: A.cle === cle ? A.d : null, annee: an, fournisseur: f, shop: sh, type: ty, cle } });
+  readOne('/reclamations/annuel?annee=' + an + '&fournisseur=' + encodeURIComponent(f) + (sh ? '&shop=' + encodeURIComponent(sh) : '') + (ty ? '&type=' + ty : '')).then(d => {
+    if ((app.state.hdAn || {}).cle === cle) { app.setState({ hdAn: { chargement: false, d: d || { indispo: true, motif: 'le cockpit n’a pas répondu' }, annee: an, fournisseur: f, shop: sh, type: ty, cle } }); }
   });
 }
 const chaleur = p => p == null ? '' : (p >= 3 ? 'h3' : p >= 1.5 ? 'h2' : p >= 0.75 ? 'h1' : 'h0');
 const eur0 = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €';
+const pcs = (n, u) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { maximumFractionDigits: n % 1 ? 1 : 0 }) + ' ' + (u || 'pcs');
+/* Le tableau annuel des PRODUITS RÉCLAMÉS (21/11/2026, maquettes B, D et E) : « Livré » ne compte que les produits
+ * réclamés dans l'année (d'après les factures du fournisseur), et le % se lit sur l'ensemble, la catégorie et le
+ * produit. Trois vues : par magasin, par catégorie, par produit (rangé par catégorie). Serveur : GET /reclamations/annuel. */
 function valsAnnuel(app){
   chargerAn(app, false);
-  const A = app.state.hdAn || {}, D = A.d && !A.d.indispo && !A.d.error ? A.d : null;
+  const S = app.state, A = S.hdAn || {}, D = A.d && !A.d.indispo && !A.d.error ? A.d : null;
   const anCourant = new Date().getFullYear();
+  const vue = ['mag', 'cat', 'prod', 'motif'].includes(S.hdAnVue) ? S.hdAnVue : 'cat';
+  const enPieces = S.hdAnUnite === 'pcs' && vue === 'prod';
   const v = { chargement: !!A.chargement && !D, relecture: !!A.chargement && !!D, relire: () => chargerAn(app, true),
     erreur: A.d && (A.d.indispo || A.d.error) ? 'Le tableau annuel n’a pas pu être lu : ' + (A.d.motif || A.d.error) + '.' : null,
+    vues: [['mag', 'Par magasin'], ['cat', 'Catégories'], ['prod', 'Produits'], ['motif', 'Motifs']].map(([k, nom]) => ({ nom, on: vue === k, choisir: () => app.setState({ hdAnVue: k }) })),
+    // Produit ou livraison (21/11/2026) : « rajouter s'il y a des problèmes et réclamations de livraison ».
+    types: [['', 'Toutes'], ['produit', 'Produit'], ['livraison', 'Livraison']].map(([k, nom]) => ({ nom, on: (A.type || '') === k, ko: k === 'livraison', choisir: () => chargerAn(app, false, null, null, null, k) })),
+    unites: vue === 'prod' ? [['eur', '€ et %'], ['pcs', 'Pièces et %']].map(([k, nom]) => ({ nom, on: (k === 'pcs') === enPieces, choisir: () => app.setState({ hdAnUnite: k }) })) : null,
     annees: [anCourant, anCourant - 1, anCourant - 2].map(a => ({ id: String(a), nom: String(a), on: a === A.annee })),
     poserAnnee: e => chargerAn(app, false, Number(e.target.value)),
-    mois: MOIS_C };
+    mois: MOIS_C, vue };
   if (!D) { return v; }
   v.fournisseurs = (D.fournisseurs || []).map(f => ({ id: f.nom, nom: f.nom + ' (' + f.n + ')', on: f.nom === D.fournisseur }))
     .concat([{ id: '*', nom: 'Tous les fournisseurs', on: D.fournisseur === '*' }]);
   v.poserFour = e => chargerAn(app, false, null, e.target.value);
-  const cellule = c => c == null ? { futur: true } : { montant: c.n ? eur0(c.reclame) : '', part: c.n && c.part != null ? pct(c.part) : (c.n ? 'livré inconnu' : ''),
-    cls: c.n ? chaleur(c.part) : '', titre: c.n + ' réclamation' + (c.n > 1 ? 's' : '') + (c.nonChiffrees ? ' (' + c.nonChiffrees + ' sans prix)' : '') + ' · livré ' + eur0(c.livre) };
-  const ligne = (nom, sous, mois, t, fort) => ({ nom, sous, fort, cases: mois.map(cellule), total: cellule(t),
-    livre: eur0(t.livre), accepte: eur0(t.accepte), accepteSous: t.reclame > 0 ? pct(100 * t.accepte / t.reclame) + ' du réclamé' : '' });
-  const R = D.reseau || { mois: [], total: {} }, T = R.total || {};
-  v.lignes = (D.magasins || []).map(m => ligne(court(m.nom), m.total.n + ' réclamation' + (m.total.n > 1 ? 's' : ''), m.mois, m.total, false));
-  if (v.lignes.length) { v.lignes.push(ligne('Réseau', (T.n || 0) + ' réclamations', R.mois, T, true)); }
-  const pire = (D.magasins || []).filter(m => m.total.part != null).sort((a, b) => b.total.part - a.total.part)[0];
-  v.kpis = [['Réclamé ' + D.annee, eur0(T.reclame), (T.n || 0) + ' réclamations · ' + (D.magasins || []).length + ' magasins' + (T.nonChiffrees ? ' · ' + T.nonChiffrees + ' sans prix' : ''), ''],
-    ['Livré ' + D.annee, D.livreLu ? eur0(T.livre) : '—', D.livreLu ? 'au prix d’achat · ' + (D.fournisseur === '*' ? 'tous les fournisseurs' : D.fournisseur) : 'livraisons non lisibles', ''],
-    ['Taux de réclamation', pct(T.part), 'réclamé ÷ livré', T.part >= 1.5 ? 'att' : ''],
-    ['Accepté', eur0(T.accepte), T.reclame > 0 ? pct(100 * T.accepte / T.reclame) + ' du réclamé' : '', 'ok'],
-    ['Le plus haut', pire ? court(pire.nom) : '—', pire && T.part ? pct(pire.total.part) + ' du livré · ' + (pire.total.part / T.part).toLocaleString('fr-BE', { maximumFractionDigits: 1 }) + ' × le réseau' : '', pire && pire.total.part >= 3 ? 'ko' : '']];
+  v.magasins = [{ id: '', nom: 'Tous les magasins (réseau)', on: !D.shop }].concat((D.magasinsListe || []).map(m => ({ id: m.id, nom: court(m.nom), on: m.id === D.shop })));
+  v.poserMag = e => chargerAn(app, false, null, null, e.target.value);
+  // Une case : réclamé (€ ou pièces) et le % réclamé ÷ livré (€ pour un regroupement, pièces pour un produit seul).
+  const cellule = (c, pieces, unite) => {
+    if (c == null) { return { futur: true }; }
+    const part = pieces ? c.partQ : c.part;
+    return { montant: c.n ? (pieces ? pcs(c.rq, unite) : eur0(c.reclame)) : '', part: c.n ? (part != null ? pct(part) : 'livré inconnu') : '',
+      cls: c.n ? chaleur(part) : '', titre: c.n + ' réclamation' + (c.n > 1 ? 's' : '') + (c.nonChiffrees ? ' (' + c.nonChiffrees + ' sans prix)' : '') + ' · livré ' + (pieces ? pcs(c.lq, unite) : eur0(c.livre)) };
+  };
+  const ligne = (nom, sous, L, opts) => {
+    const o = opts || {}, t = L.total || {}, pieces = !!o.pieces, part = pieces ? t.partQ : t.part;
+    return { nom, sous, fort: !!o.fort, cat: !!o.cat, ind: !!o.ind, cases: (L.mois || []).map(c => cellule(c, pieces, o.unite)), total: cellule(t, pieces, o.unite),
+      livre: pieces ? pcs(t.lq, o.unite) : eur0(t.livre), livreSous: pieces ? pcs(t.rq, o.unite) + ' réclamés' : eur0(t.reclame) + ' réclamés',
+      pc: t.n && part != null ? pct(part) : (t.n ? '—' : ''), pcCls: chaleur(part) };
+  };
+  const E = D.ensemble || { mois: [], total: {} }, T = E.total || {};
+  const npr = n => n + ' produit' + (n > 1 ? 's' : '') + ' réclamé' + (n > 1 ? 's' : '');
+  if (vue === 'mag') {
+    v.premier = 'Magasin';
+    v.lignes = (D.magasins || []).map(m => ligne(court(m.nom), m.total.n + ' réclamation' + (m.total.n > 1 ? 's' : ''), m));
+  } else if (vue === 'cat') {
+    v.premier = 'Catégorie';
+    v.lignes = (D.categories || []).map(c => ligne(c.nom, npr((c.produits || []).length), c));
+  } else if (vue === 'motif') {
+    v.premier = 'Motif';
+    v.lignes = [];
+    ['livraison', 'produit'].forEach(ty => {
+      const M = (D.motifs || []).filter(m => m.type === ty);
+      if (!M.length) { return; }
+      v.lignes.push({ titre: ty === 'livraison' ? 'Problèmes de livraison' : 'Problèmes de produit', ko: ty === 'livraison' });
+      M.forEach(m => v.lignes.push(ligne(m.nom, m.total.n + ' réclamation' + (m.total.n > 1 ? 's' : '') + ' · % sur le livré des produits réclamés', m, { ind: true })));
+    });
+  } else {
+    v.premier = 'Produit';
+    v.lignes = [];
+    (D.categories || []).forEach(c => {
+      v.lignes.push(ligne('▾ ' + c.nom, 'catégorie · ' + npr((c.produits || []).length), c, { cat: true }));
+      (c.produits || []).forEach(p => v.lignes.push(ligne(p.nom, p.sku ? 'SKU ' + p.sku : '', p, { ind: true, pieces: enPieces, unite: p.unite })));
+    });
+  }
+  if (v.lignes.length) { v.lignes.push(ligne('Ensemble', npr(D.produits || 0), E, { fort: true })); }
+  // En tête : l'ensemble, puis les catégories (les cinq plus réclamées).
+  const cats = (D.categories || []).filter(c => c.total.n).slice(0, 4);
+  const TY = D.types || {}, Li = TY.livraison || {}, Pr = TY.produit || {};
+  v.kpis = [['Livraison', String(Li.n || 0), (Li.n ? 'réclamations de livraison · ' + eur0(Li.reclame) + ' · ' + (Li.ouvertes || 0) + ' sans réponse' : 'aucune réclamation de livraison') + ' (produit : ' + (Pr.n || 0) + ')', Li.n ? 'ko' : 'ok'],
+    ['Ensemble · produits réclamés', pct(T.part), eur0(T.reclame) + ' réclamés ÷ ' + eur0(T.livre) + ' livrés' + (T.nonChiffrees ? ' · ' + T.nonChiffrees + ' sans prix' : ''), T.part >= 1.5 ? 'att' : '']]
+    .concat(cats.map(c => [c.nom, pct(c.total.part), eur0(c.total.reclame) + ' / ' + eur0(c.total.livre) + ' · ' + (c.produits || []).length + ' produit' + ((c.produits || []).length > 1 ? 's' : ''), c.total.part >= 3 ? 'ko' : '']));
   v.source = D.source;
+  v.sourceKo = D.livreSource !== 'factures' ? (D.livreSource ? 'Livré lu sur le grand livre du panel : les factures du fournisseur ne sont pas lisibles.' : 'Aucune source du livré lisible.') : '';
   v.exporter = () => {
-    const sep = ';', l = [['Magasin'].concat(MOIS_C.map(m => m + ' réclamé (€)'), MOIS_C.map(m => m + ' taux (%)'), ['Année réclamé (€)', 'Année taux (%)', 'Livré (€)', 'Accepté (€)', 'Réclamations']).join(sep)];
-    const num = n => n == null ? '' : String(Math.round(n * 100) / 100).replace('.', ',');
-    const ajoute = (nom, mois, t) => l.push([nom].concat(mois.map(c => c ? num(c.reclame) : ''), mois.map(c => c ? num(c.part) : ''), [num(t.reclame), num(t.part), num(t.livre), num(t.accepte), String(t.n || 0)]).join(sep));
-    (D.magasins || []).forEach(m => ajoute(court(m.nom), m.mois, m.total));
-    ajoute('Réseau', R.mois, T);
+    const sep = ';', num = n => n == null ? '' : String(Math.round(n * 100) / 100).replace('.', ',');
+    const l = [[v.premier, 'Ligne'].concat(MOIS_C.map(m => m + ' réclamé (€)'), MOIS_C.map(m => m + ' % du livré'), ['Année réclamé (€)', 'Année réclamé (pcs)', 'Livré (€)', 'Livré (pcs)', '% (€)', '% (pcs)', 'Accepté (€)', 'Réclamations']).join(sep)];
+    const ajoute = (nom, type, L) => { const t = L.total || {}; l.push([nom, type].concat((L.mois || []).map(c => c ? num(c.reclame) : ''), (L.mois || []).map(c => c ? num(c.part) : ''), [num(t.reclame), num(t.rq), num(t.livre), num(t.lq), num(t.part), num(t.partQ), num(t.accepte), String(t.n || 0)]).join(sep)); };
+    if (vue === 'mag') { (D.magasins || []).forEach(m => ajoute(court(m.nom), 'magasin', m)); }
+    else if (vue === 'motif') { (D.motifs || []).forEach(m => ajoute(m.nom, m.type, m)); }
+    else { (D.categories || []).forEach(c => { ajoute(c.nom, 'catégorie', c); if (vue === 'prod') { (c.produits || []).forEach(p => ajoute(p.nom, 'produit', p)); } }); }
+    ajoute('Ensemble', 'ensemble', E);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['\ufeff' + l.join('\n')], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'reclamations-' + D.annee + '-' + (D.fournisseur === '*' ? 'tous' : D.fournisseur).replace(/[^\w-]+/g, '_') + '.csv';
+    a.href = URL.createObjectURL(new Blob(['﻿' + l.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'reclamations-' + D.annee + '-' + vue + '-' + (D.fournisseur === '*' ? 'tous' : D.fournisseur).replace(/[^\w-]+/g, '_') + '.csv';
     document.body.appendChild(a); a.click(); a.remove();
   };
   return v;
@@ -331,7 +380,7 @@ export function valsHelpdesk(app, c){
   const RcD = (S.hdRc || {}).d;
   v.onglets = [['demandes', 'Demandes au bureau', D ? (D.demandes || []).filter(x => x.ouverte).length + ' ouvertes' : ''],
     ['reclamations', 'Réclamations fournisseur', RcD && !RcD.indispo && !RcD.error ? (RcD.ouvertes || 0) + ' ouvertes · tous les magasins' : ''],
-    ['annuel', 'Tableau annuel', 'réclamé / livré · par magasin et par mois']]
+    ['annuel', 'Tableau annuel', 'produits réclamés / livrés · catégories et produits']]
     .map(([k, nom, sous]) => ({ nom, sous, on: vue === k, choisir: () => app.setState({ hdVue: k }) }));
   if (vue === 'reclamations') { v.rc = valsReclamations(app); return; }
   if (vue === 'annuel') { v.an = valsAnnuel(app); return; }
