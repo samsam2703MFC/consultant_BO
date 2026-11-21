@@ -105,7 +105,9 @@ function smsPartir(string $brut, string $texte): array
         if ($via === 'smsapi') {
             $from = function_exists('mdReglages') ? (string) (mdReglages()['sms']['from'] ?? '') : '';
             [$ok, $info] = MdSms::envoyer($num, $texte, $from);
-            return ['ok' => (bool) $ok, 'a' => $num, 'erreur' => $ok ? null : (string) $info, 'via' => $via];
+            // L'identifiant SMSAPI et d'où le SMS est parti (21/11/2026) : de quoi vérifier sa remise.
+            $det = $ok && property_exists('MdSms', 'dernier') ? MdSms::$dernier : null;
+            return ['ok' => (bool) $ok, 'a' => $num, 'erreur' => $ok ? null : (string) $info, 'via' => $via, 'id' => $ok ? (string) $info : null, 'details' => $det];
         }
         $r = smsEnvoyer($num, $texte);
         return ['ok' => $r['ok'], 'a' => $num, 'erreur' => $r['erreur'], 'via' => $via];

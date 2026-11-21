@@ -464,6 +464,20 @@ MdSms::$transport = static function (string $url, ?array $champs, string $jeton)
 $REGLAGES = []; MdSms::oublier();
 [$okS, $err] = MdSms::envoyer('+48 725 038 049', 'x', 'AtelierBy');
 verifie('tous les expéditeurs refusés : l’erreur 14 les nomme', !$okS && str_contains($err, '(14)') && str_contains($err, 'expéditeurs essayés : « AtelierBy », « AtelierBy B », aucun'), $err);
+// Le dernier envoi et sa remise (21/11/2026 : « SMS parti » au cockpit, rien reçu).
+$REGLAGES = []; $CRMREG = ['smsapi_oauth_token' => 'jeton-crm-0002']; MdSms::oublier(); MdSms::$dernier = null;
+$vus = [];
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$vus): array {
+    $vus[] = $url;
+    if ($champs === null && str_contains($url, 'status=ID77')) { return [200, ['count' => 1, 'list' => [['id' => 'ID77', 'number' => '48725038049', 'status' => 'UNDELIVERED', 'points' => 0.16, 'error' => '12']]]]; }
+    return [200, ['count' => 1, 'list' => [['id' => 'ID77', 'status' => 'QUEUE', 'points' => 0.16]]]];
+};
+[$okS, $id] = MdSms::envoyer('+48 725 038 049', 'Essai', '');
+verifie('le dernier envoi est gardé : id, jeton (son nom), plateforme, expéditeur, statut, points ; jamais le jeton', $okS && MdSms::$dernier === ['id' => 'ID77', 'origine' => 'CRM (crm_settings smsapi_oauth_token)', 'base' => 'https://api.smsapi.com', 'from' => '', 'statut' => 'QUEUE', 'points' => 0.16]
+    && !str_contains(json_encode(MdSms::$dernier), 'jeton-crm'), json_encode(MdSms::$dernier));
+$st = MdSms::statut('ID77');
+verifie('la remise lue chez SMSAPI : non remis, dit simplement', $st['ok'] && $st['statut'] === 'UNDELIVERED' && $st['final'] === true && str_contains($st['libelle'], 'non remis') && $st['erreur'] === '12'
+    && str_contains(end($vus), '/sms.do?status=ID77&format=json'), json_encode([$st, end($vus)]));
 MdSms::$transport = null;
 $CLES = []; $REGLAGES = []; $CRMREG = []; erpCle(''); MdSms::oublier();
 [$okS, $err] = MdSms::envoyer('0476000012', 'x');
