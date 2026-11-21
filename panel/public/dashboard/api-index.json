@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-21T06:10:25Z",
+ "genere": "2026-11-21T06:14:58Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -36,7 +36,7 @@
    ],
    "fichiers": [
     "analyse.js:148",
-    "dashboard.js:8409"
+    "dashboard.js:8411"
    ],
    "magasin": true,
    "routes": [
@@ -57,7 +57,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8398"
+    "dashboard.js:8400"
    ],
    "magasin": true,
    "routes": [
@@ -99,7 +99,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8380"
+    "dashboard.js:8382"
    ],
    "magasin": true,
    "routes": [
@@ -142,7 +142,7 @@
    ],
    "fichiers": [
     "analyse.js:140",
-    "dashboard.js:8377"
+    "dashboard.js:8379"
    ],
    "magasin": true,
    "routes": [
@@ -163,7 +163,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8386"
+    "dashboard.js:8388"
    ],
    "magasin": true,
    "routes": [
@@ -311,7 +311,7 @@
    ],
    "fichiers": [
     "dashboard.js:5861",
-    "dashboard.js:6360"
+    "dashboard.js:6362"
    ],
    "magasin": true,
    "routes": [
@@ -968,7 +968,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7303"
+    "dashboard.js:7305"
    ],
    "magasin": true,
    "routes": [
@@ -989,7 +989,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7482"
+    "dashboard.js:7484"
    ],
    "magasin": true,
    "routes": [
@@ -1010,7 +1010,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7490"
+    "dashboard.js:7492"
    ],
    "magasin": true,
    "routes": [
@@ -1031,7 +1031,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7370"
+    "dashboard.js:7372"
    ],
    "magasin": true,
    "routes": [
@@ -1593,7 +1593,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6373"
+    "dashboard.js:6375"
    ],
    "magasin": true,
    "routes": [
@@ -1614,7 +1614,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6375"
+    "dashboard.js:6377"
    ],
    "magasin": true,
    "routes": [
@@ -1635,7 +1635,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6371"
+    "dashboard.js:6373"
    ],
    "magasin": true,
    "routes": [
@@ -1656,7 +1656,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6381"
+    "dashboard.js:6383"
    ],
    "magasin": true,
    "routes": [
@@ -1677,7 +1677,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6369"
+    "dashboard.js:6371"
    ],
    "magasin": true,
    "routes": [
@@ -1698,7 +1698,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6379"
+    "dashboard.js:6381"
    ],
    "magasin": true,
    "routes": [
@@ -1719,7 +1719,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6377"
+    "dashboard.js:6379"
    ],
    "magasin": true,
    "routes": [
@@ -1740,7 +1740,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10670"
+    "dashboard.js:10672"
    ],
    "magasin": true,
    "routes": [
@@ -1761,7 +1761,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10700",
+    "dashboard.js:10702",
     "dashboard.js:2275"
    ],
    "magasin": true,
@@ -1783,7 +1783,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10119"
+    "dashboard.js:10121"
    ],
    "magasin": true,
    "routes": [
@@ -1804,7 +1804,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10117"
+    "dashboard.js:10119"
    ],
    "magasin": true,
    "routes": [
@@ -1827,7 +1827,7 @@
    ],
    "fichiers": [
     "dashboard.js:6181",
-    "dashboard.js:6257"
+    "dashboard.js:6259"
    ],
    "magasin": true,
    "routes": [
@@ -1837,7 +1837,7 @@
      ],
      "chemin": "/helpdesk/magasin",
      "handler": "ep_helpdesk_magasin",
-     "source": "consultant/src/helpdesk.php:383",
+     "source": "consultant/src/helpdesk.php:440",
      "resume": "les domaines et les demandes du magasin."
     },
     {
@@ -1846,7 +1846,7 @@
      ],
      "chemin": "/helpdesk/magasin",
      "handler": "wr_helpdesk_magasin",
-     "source": "consultant/src/helpdesk.php:421",
+     "source": "consultant/src/helpdesk.php:480",
      "resume": "shop, domaine, titre, description, passage, photos[]} — la demande part au bureau."
     }
    ]
@@ -1857,7 +1857,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7823"
+    "dashboard.js:7825"
    ],
    "magasin": true,
    "routes": [
@@ -2266,8 +2266,8 @@
     "dashboard.js:242",
     "dashboard.js:243",
     "dashboard.js:2552",
-    "dashboard.js:6796",
-    "dashboard.js:9870"
+    "dashboard.js:6798",
+    "dashboard.js:9872"
    ],
    "magasin": true,
    "routes": [
@@ -2288,7 +2288,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9661"
+    "dashboard.js:9663"
    ],
    "magasin": true,
    "routes": [
@@ -2330,9 +2330,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6799",
-    "dashboard.js:9578",
-    "dashboard.js:9592"
+    "dashboard.js:6801",
+    "dashboard.js:9580",
+    "dashboard.js:9594"
    ],
    "magasin": true,
    "routes": [
@@ -2353,9 +2353,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6967",
-    "dashboard.js:9871",
-    "dashboard.js:9880"
+    "dashboard.js:6969",
+    "dashboard.js:9873",
+    "dashboard.js:9882"
    ],
    "magasin": true,
    "routes": [
@@ -2377,9 +2377,9 @@
     "PUT"
    ],
    "fichiers": [
-    "dashboard.js:7090",
-    "dashboard.js:7113",
-    "dashboard.js:7137"
+    "dashboard.js:7092",
+    "dashboard.js:7115",
+    "dashboard.js:7139"
    ],
    "magasin": true,
    "routes": [
@@ -2401,7 +2401,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:11292"
+    "dashboard.js:11294"
    ],
    "magasin": true,
    "routes": [
@@ -2640,8 +2640,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9301",
-    "dashboard.js:9423"
+    "dashboard.js:9303",
+    "dashboard.js:9425"
    ],
    "magasin": true,
    "routes": [

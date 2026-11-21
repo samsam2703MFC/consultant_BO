@@ -3639,3 +3639,6 @@ body.db-vue-social{overflow:hidden}
 #db-eqm .eqm-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--chip);color:var(--muted-2);font:400 12px var(--font-ui)}
 .op-mob .op-eqm{margin:4px 14px 0;padding-bottom:12px;cursor:pointer}
 .op-mob .jm-l i[data-eqm]{cursor:pointer}
+/* La demande urgente (21/11/2026) : le choix du formulaire et l'étiquette de la carte. */
+.rc-puces button.on.hd-urg{background:#C0182B;border-color:#C0182B;color:#fff}
+.hd-urg-tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:#C0182B;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:1px}

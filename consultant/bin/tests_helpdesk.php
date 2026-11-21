@@ -96,6 +96,10 @@ final class MdSms
     }
 }
 
+// Le GSM et la langue du franchisé (consultant/src/suivi.php › suTel, suLangue) : Sombreffe (4) en français, Halle (7)
+// en néerlandais, Corbais (2) sans GSM.
+function suTel(string $shop, ?array $regle = null): array { return ['4' => ['tel' => '+32470999888', 'source' => 'Qui fait quoi'], '7' => ['tel' => '+32470777666', 'source' => 'Qui fait quoi']][$shop] ?? ['tel' => null, 'source' => null]; }
+function suLangue(string $shop, ?array $regle = null): string { return $shop === '7' ? 'nl' : 'fr'; }
 require __DIR__ . '/../../shared/src/sms.php';
 require __DIR__ . '/../src/helpdesk.php';
 
@@ -328,6 +332,46 @@ $a = ep_helpdesk_a_traiter();
 verifie('les demandes pas encore en cours, la plus ancienne d’abord, avec leurs relances', $a['n'] === 2 && $a['demandes'][0]['id'] === 11 && $a['demandes'][0]['magasin'] === 'Sombreffe'
     && $a['demandes'][0]['relances'] >= 4 && $a['demandes'][1]['id'] === 15 && $a['demandes'][1]['magasin'] === 'Halle' && $a['demandes'][1]['age'] === 2 && $a['demandes'][1]['relances'] === 0, json_encode($a));
 PanelApi::$cases = $CASES;
+
+echo "La demande urgente\n";
+$REGLAGES['helpdeskSms'] = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre Boseret', 'tel' => '0470 12 34 56']]];
+MdSms::$partis = []; PanelApi::$envois = [];
+$r = nouvelle(['urgent' => true, 'passage' => false]);
+verifie('urgente : le SMS commence par « URGENT », à tout le monde', $r['ok'] === true && count(MdSms::$partis) === 2 && str_starts_with(MdSms::$partis[0]['texte'], 'URGENT - Demande au bureau - Sombreffe (Ventes)')
+    && str_starts_with(MdSms::$partis[1]['texte'], 'URGENT - '), json_encode(array_column(MdSms::$partis, 'texte')));
+$post = array_values(array_filter(PanelApi::$envois, static fn ($e) => $e[1] === '/cases'))[0] ?? null;
+verifie('… le panel le lit dans la demande, le cockpit la garde urgente', $post !== null && str_contains($post[2]['description'], 'URGENT') && isset(hdkUrgentes([501])[501]), json_encode($post[2]['description'] ?? null));
+MdSms::$partis = [];
+nouvelle(['passage' => false]);
+verifie('une demande normale garde son SMS, sans « URGENT »', count(MdSms::$partis) === 2 && str_starts_with(MdSms::$partis[0]['texte'], 'Demande au bureau - '), json_encode(array_column(MdSms::$partis, 'texte')));
+Db::exec('UPDATE con_hdk_demande SET urgent = 0 WHERE case_id = 501');
+Db::exec('INSERT INTO con_hdk_demande (case_id, shop_id, passage, photos, cree_le, urgent) VALUES (15, \'7\', 0, NULL, \'2026-11-21 08:00:00\', 1)');
+$CASES3 = $avecMagasin($CASES); $CASES3[] = ['id' => 15, 'ref' => 'CASE-20261121-URG01', 'area_key' => 'operational_activities', 'status' => 'NEW', 'title' => 'Four en panne', 'shop_id' => 7, 'shop_name' => 'Atelier by - Halle', 'created_at' => date('Y-m-d') . ' 07:00:00'];
+PanelApi::$cases = $CASES3;
+$a = ep_helpdesk_a_traiter();
+verifie('l’accueil : l’urgente en tête, même la plus récente', $a['demandes'][0]['id'] === 15 && $a['demandes'][0]['urgent'] === true && $a['urgentes'] === 1 && $a['demandes'][1]['id'] === 11, json_encode(array_map(static fn ($d) => [$d['id'], $d['urgent']], $a['demandes'])));
+$c = ep_helpdesk_demandes();
+verifie('le cockpit : l’urgente ouverte en tête de la liste', $c['demandes'][0]['id'] === 15 && $c['demandes'][0]['urgent'] === true, json_encode(array_column($c['demandes'], 'id')));
+PanelApi::$cases = $CASES;
+
+echo "Le SMS au franchisé à la réponse\n";
+MdSms::$partis = []; PanelApi::$envois = [];
+$GLOBALS['corps'] = ['reponse' => "Oui, on passe mardi à 10 h avec le devis des livraisons. Préparez la liste des bureaux du zoning.", 'statut' => 'IN_PROGRESS', 'shop' => '4', 'titre' => 'Démarchage sur Nivelles Sud', 'ref' => 'CASE-20261007-9E319'];
+$r = wr_helpdesk_repondre(11);
+verifie('la réponse part au panel, puis un SMS au GSM du franchisé', $r['ok'] === true && count(MdSms::$partis) === 1 && MdSms::$partis[0]['a'] === '+32470999888' && $r['sms']['envoye'] === true, json_encode($r));
+verifie('le SMS : le titre, le début de la réponse, où lire la suite ; sans lien', str_starts_with(MdSms::$partis[0]['texte'], "L'Atelier By - Le bureau a répondu à votre demande \"Démarchage sur Nivelles Sud\" : Oui, on passe mardi")
+    && str_contains(MdSms::$partis[0]['texte'], 'dans votre dashboard, Demande au bureau') && !str_contains(MdSms::$partis[0]['texte'], 'http'), MdSms::$partis[0]['texte'] ?? '');
+verifie('le cockpit le dit', str_contains((string) $r['avertissement'], 'SMS au franchisé (+32470999888)'), (string) $r['avertissement']);
+verifie('en néerlandais pour Halle', str_starts_with(hdkSmsFranchiseTexte('Oven kapot', 'We komen morgen.', 'nl'), "L'Atelier By - Het kantoor heeft uw aanvraag \"Oven kapot\" beantwoord: We komen morgen."));
+MdSms::$partis = [];
+$GLOBALS['corps'] = ['reponse' => 'Vu.', 'shop' => '2', 'titre' => 'Nouvelle caisse'];
+$r = wr_helpdesk_repondre(12);
+verifie('un magasin sans GSM : la réponse part, pas de SMS, le cockpit le dit', $r['ok'] === true && MdSms::$partis === [] && str_contains((string) $r['avertissement'], 'aucun GSM'), (string) $r['avertissement']);
+$REGLAGES['helpdeskSms']['franchise'] = false;
+$GLOBALS['corps'] = ['reponse' => 'Vu.', 'shop' => '4', 'titre' => 'X'];
+$r = wr_helpdesk_repondre(11);
+verifie('coupé dans « SMS au bureau » : pas de SMS', $r['ok'] === true && MdSms::$partis === [] && str_contains((string) $r['avertissement'], 'coupé'), (string) $r['avertissement']);
+unset($REGLAGES['helpdeskSms']['franchise']);
 
 $c = ep_helpdesk_demandes();
 verifie('la liste du cockpit porte les relances de chaque demande et celles à venir', isset($c['demandes'][0]['relances']['n'], $c['relances']['aVenir'], $c['relances']['sms']) && $c['relances']['sms'] >= 8, json_encode($c['relances'] ?? null));

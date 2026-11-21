@@ -651,6 +651,7 @@ function route(string $method, string $path): mixed
             $path === '/helpdesk/sms'                 => ep_helpdesk_sms(),   // le SMS au bureau à chaque demande (20/11/2026)
             $path === '/helpdesk/relances/cron'       => ep_helpdesk_relances_cron(),   // l'horloge des relances SMS (20/11/2026)
             $path === '/helpdesk/a-traiter'           => ep_helpdesk_a_traiter(),   // la carte « Demandes à traiter » de l'accueil (21/11/2026)
+            $path === '/helpdesk/sms/remise'          => ep_helpdesk_sms_remise(),   // le statut de remise d'un SMS d'essai (21/11/2026)
             (bool) preg_match('#^/helpdesk/demandes/(\d+)/consultants$#', $path, $mh) => ep_helpdesk_consultants((int) $mh[1]),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),

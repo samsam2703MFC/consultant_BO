@@ -6174,7 +6174,7 @@
    * consultant ? » ; en dessous, « Mes demandes » : le statut de chacune et la réponse du bureau.
    * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases).
    * « Mes demandes » s'ouvre sur le filtre « Ouvertes » (20/11/2026). */
-  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'ouvertes' };
+  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, urgent: false, photos: [] }, envoi: false, msg: null, filtre: 'ouvertes' };
   function hdLire(force) {
     if (HLP.chargement || (HLP.d && !force && HLP.shop === S.shop)) { return; }
     HLP.chargement = true; HLP.shop = S.shop;
@@ -6195,7 +6195,7 @@
         : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — ${ech ? 'reçue par le bureau' + ech : 'pas encore lue par le bureau'}</div>`
           : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}${ech}</div>` : '')));
     return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e[0]}">${esc(e[1])}</span><span class="d">${esc(fD(x.cree.slice(0, 10)))} · ${esc(x.ref.replace('CASE-', ''))}</span></div>
-      <b class="ref">${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
+      <b class="ref">${x.urgent ? '<span class="hd-urg-tag">Urgente</span> ' : ''}${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
   }
   function hdVue() {
     const t = iaTons().length ? iaTonCle() : '';
@@ -6210,6 +6210,7 @@
       <div class="rc-champ"><label for="hd-desc">La demande</label><textarea id="hd-desc" class="rc-in" data-hd="desc" rows="4" maxlength="8000" placeholder="Ce dont vous avez besoin, le plus précisément possible…">${esc(F.desc)}</textarea></div>
       <div class="rc-champ"><label>Photos <em>facultatif · 4 au plus</em></label><div class="rc-photos">${F.photos.map((p, i) => `<div class="ph"><img src="${esc(p)}" alt=""><button type="button" data-hdphotox="${i}" aria-label="Retirer">✕</button></div>`).join('')}${F.photos.length < 4 ? '<button type="button" class="plus" data-hdphoto="1"><b>＋</b>Ajouter</button>' : ''}</div></div>
       <div class="rc-champ"><label>Un passage du consultant ?</label><div class="rc-puces"><button type="button" data-hdpass="1" class="${F.passage ? 'on' : ''}">Oui, à la prochaine visite</button><button type="button" data-hdpass="0" class="${F.passage ? '' : 'on'}">Non, une réponse suffit</button></div></div>
+      <div class="rc-champ"><label>Urgent ? <em>le bureau est prévenu tout de suite par SMS, en « URGENT »</em></label><div class="rc-puces"><button type="button" data-hdurg="1" class="${F.urgent ? 'on hd-urg' : ''}">Oui, urgent</button><button type="button" data-hdurg="0" class="${F.urgent ? '' : 'on'}">Non</button></div></div>
       <button type="button" class="rc-prise hd-envoi" data-hdenvoyer="1"${HLP.envoi ? ' disabled' : ''}><span>${HLP.envoi ? 'Envoi…' : 'Envoyer au bureau'}</span></button></div>`;
     const L = (HLP.d && HLP.d.demandes) || [];
     const n = k => L.filter(x => (k === 'ouvertes' ? x.ouverte : !!x.reponse)).length;
@@ -6240,6 +6241,7 @@
   function hdLier(b) {
     b.querySelectorAll('[data-hddom]').forEach(e => e.addEventListener('click', () => { HLP.f.domaine = e.dataset.hddom; HLP.msg = null; iaRendre(); }));
     b.querySelectorAll('[data-hdpass]').forEach(e => e.addEventListener('click', () => { HLP.f.passage = e.dataset.hdpass === '1'; iaRendre(); }));
+    b.querySelectorAll('[data-hdurg]').forEach(e => e.addEventListener('click', () => { HLP.f.urgent = e.dataset.hdurg === '1'; iaRendre(); }));
     b.querySelectorAll('[data-hdfiltre]').forEach(e => e.addEventListener('click', () => { HLP.filtre = e.dataset.hdfiltre; iaRendre(); }));
     b.querySelectorAll('[data-hd]').forEach(e => e.addEventListener('input', () => { HLP.f[e.dataset.hd] = e.value; }));
     b.querySelectorAll('[data-hdphotox]').forEach(e => e.addEventListener('click', () => { HLP.f.photos.splice(+e.dataset.hdphotox, 1); iaRendre(); }));
@@ -6254,9 +6256,9 @@
       if (!F.domaine) { HLP.msg = { ok: false, t: 'Choisissez le sujet de la demande.' }; iaRendre(); return; }
       if (!F.titre.trim() || !F.desc.trim()) { HLP.msg = { ok: false, t: 'Le titre et la demande sont requis.' }; iaRendre(); return; }
       HLP.envoi = true; HLP.msg = null; iaRendre();
-      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: F.domaine, titre: F.titre.trim(), description: F.desc.trim(), passage: F.passage, photos: F.photos })
+      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: F.domaine, titre: F.titre.trim(), description: F.desc.trim(), passage: F.passage, urgent: F.urgent, photos: F.photos })
         .then(r => { if (r && r.ok === false) { throw new Error(r.error || 'refusée'); }
-          HLP.f = { domaine: '', titre: '', desc: '', passage: false, photos: [] }; HLP.msg = { ok: true, t: '✓ Demande envoyée au bureau' + (r && r.ref ? ' (' + r.ref + ')' : '') + '. La réponse s’affichera ici.' }; HLP.d = null; hdLire(true); })
+          HLP.f = { domaine: '', titre: '', desc: '', passage: false, urgent: false, photos: [] }; HLP.msg = { ok: true, t: '✓ Demande envoyée au bureau' + (r && r.ref ? ' (' + r.ref + ')' : '') + '. La réponse s’affichera ici.' }; HLP.d = null; hdLire(true); })
         .catch(er => { HLP.msg = { ok: false, t: 'La demande n’est pas partie : ' + er.message }; })
         .then(() => { HLP.envoi = false; iaRendre(); });
     }));
