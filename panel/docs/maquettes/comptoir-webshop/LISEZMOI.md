@@ -19,6 +19,12 @@ Captures de la version codée, avec une API simulée qui reprend les chiffres de
 - une commande d'un client des tickets pro n'entre pas dans le ruban : elle est déjà à la jauge B2B ;
 - sans commande, ni aujourd'hui ni le même jour la semaine d'avant, la ligne « Commandes du jour » reste seule.
 
+Corrigé le 21/11/2026 (Halle, samedi à 07:59, « Comptoir 0 € · 0,0 % », − 100 %) : la vente directe retirait de la
+caisse du jour toutes les commandes encaissées à retirer ce jour-là, même payées les jours d'avant (le webshop en
+ligne, une précommande réglée au comptoir) — leurs tickets ne sont pas dans cette caisse. Le serveur dit maintenant
+quelles commandes la caisse du jour a payées (`caisseCmd`, `coCaisseCommandes`), et le ruban coupe les commandes à
+l'heure du retrait aujourd'hui comme à J−7 (« 4 à venir »). Détail dans `shared/docs/contrat-api.md`.
+
 Demande du 18/11/2026, sur la capture de Halle à 17:43 (onglet Opérationnel, au téléphone) : « rajouter une façon
 de différencier les ventes comptoir et les ventes webshop, fais 2-3 maquettes en screenshots ».
 
