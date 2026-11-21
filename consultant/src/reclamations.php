@@ -8,7 +8,7 @@ declare(strict_types=1);
  *
  * D'où viennent les chiffres :
  *  - les réclamations : le panel, GET /consultant/shops/material-complaints (la même lecture que
- *    ep_fournisseurs_reclamations, marketing/src/mesure.php) ;
+ *    ep_fournisseurs_reclamations, panel/src/reclamations_magasin.php) ;
  *  - les photos : les pièces jointes de la réclamation au panel, ouvertes par un lien signé à durée limitée
  *    (/attachments/{id}/presigned-url, demandé à l'ouverture de la fiche, jamais pour toute la liste), et celles prises
  *    depuis le dashboard, gardées ici (panel_reclamation_photo) ;

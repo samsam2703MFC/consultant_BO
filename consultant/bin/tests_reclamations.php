@@ -90,7 +90,8 @@ final class PanelApi
     public static function attachmentUrl(int $id): ?string { return 'https://s3.exemple/tache-' . $id . '.jpg'; }
 }
 
-require __DIR__ . '/../../marketing/src/mesure.php';
+require __DIR__ . '/../../shared/src/magasins.php';
+require __DIR__ . '/../../panel/src/reclamations_magasin.php';
 require __DIR__ . '/../src/reclamations.php';
 
 // La photo de la tâche : la doublure rend une vraie image (le téléchargement réseau est remplacé).
