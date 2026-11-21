@@ -8632,6 +8632,63 @@
    * La pièce : prix encaissé, coût de recette et marge viennent de la ligne cliquée (ce que les tickets ont
    * gravé) ; la recette ligne par ligne vient de /analyse/produits/recette (copie locale du panel) ; la
    * catégorie et le magasin du jour des stats déjà lues ; le prix réseau de la fiche ; les seuils du P&L. */
+  /* « Adapter mon prix de vente » (21/11/2026) : le prix testé devient le prix de vente du magasin au panel.
+   * Un clic lit le plan (POST /analyse/produits/prix, apercu) : le prix testé est hors TVA, le panel porte le prix TTC ;
+   * la ligne de confirmation montre ce qui sera écrit, puis « Confirmer » l'écrit. F.adapt = {etat, plan, r, err, pour, demande}.
+   * Au-dessus du prix maximum du réseau, rien ne s'écrit : « Demander au réseau de relever le maximum » envoie la demande
+   * au bureau par le helpdesk (POST /helpdesk/magasin, domaine Ventes) — F.adapt.demande = {etat, ref, err}. */
+  function ficheAdapter(F, sim) {
+    if (!/^\d+$/.test(String(F.pid || ''))) { return ''; }   // une portion (« produit:portion ») ne se règle pas d'ici
+    const A = F.adapt && F.adapt.pour === sim ? F.adapt : null, fPt = n => n == null ? '—' : nf(n, 2) + ' €';
+    const bouton = (lib, off) => `<button type="button" class="db-btn prim" data-fadapt="lire"${off ? ' disabled' : ''}>${lib}</button>`;
+    if (!A) { return `<div class="fi-radapt">${bouton('Adapter mon prix de vente')}<small>enregistre ${fPt(sim)} hors TVA comme prix de vente du magasin dans l’ERP</small></div>`; }
+    if (A.etat === 'lecture') { return `<div class="fi-radapt">${bouton('Lecture du prix dans l’ERP…', true)}</div>`; }
+    if (A.etat === 'envoi') { return `<div class="fi-radapt">${bouton('Envoi à l’ERP…', true)}</div>`; }
+    if (A.etat === 'fait') {
+      const r = A.r || {};
+      return `<div class="fi-radapt fait ${r.ok ? 'ok' : 'ko'}"><span>${r.ok ? `<b>Prix enregistré dans l’ERP : ${fPt(r.ecrit)} TTC</b>${r.avant != null ? ' au lieu de ' + fPt(r.avant) : ''}${r.part < 1 ? ' la portion' : ''}.${r.message ? ' ' + esc(r.message) : ''} Le prix encaissé de cette fiche suivra avec les prochains tickets.` : esc(r.message || 'Le prix n’a pas changé.')}</span></div>`;
+    }
+    if (A.etat === 'erreur') { return `<div class="fi-radapt fait ko"><span>${esc(A.err || 'Le prix n’a pas pu être enregistré.')}</span>${bouton('Réessayer')}</div>`; }
+    // L'aperçu : ce que le panel porte, ce qui sera écrit.
+    const p = A.plan || {};
+    if (p.erreur) {
+      // Au-dessus du maximum du réseau : la demande de le relever part au bureau (le helpdesk), d'un clic.
+      const D = A.demande, dem = p.bloque !== 'max' ? '' : (D && D.etat === 'fait' ? '' : `<button type="button" class="db-btn prim" data-fadapt="demander"${D && D.etat === 'envoi' ? ' disabled' : ''}>${D && D.etat === 'envoi' ? 'Envoi de la demande…' : (D && D.etat === 'erreur' ? 'Renvoyer la demande' : 'Demander au réseau de relever le maximum')}</button>`);
+      if (D && D.etat === 'fait') { return `<div class="fi-radapt fait ok"><span><b>Demande envoyée au réseau${D.ref ? ' (réf. ' + esc(D.ref) + ')' : ''}.</b> Votre consultant la reçoit ; la réponse arrive dans vos demandes. En attendant, le prix en caisse ne change pas.</span></div>`; }
+      return `<div class="fi-radapt fait ko"><span>${esc(p.erreur)}${D && D.etat === 'erreur' ? ' La demande n’est pas partie : ' + esc(D.err || 'pas de réponse') + '.' : ''}</span>${dem}</div>`;
+    }
+    return `<div class="fi-radapt conf"><span>En caisse, TVA ${nf(p.tva, p.tva % 1 ? 1 : 0)} % comprise : <b>${p.avant != null ? fPt(p.avant) + ' → ' : ''}${fPt(p.ecrit)} TTC</b>${p.part < 1 ? ' la portion (' + fPt(p.pieceTtc) + ' la pièce entière)' : ''}, soit ${fPt(p.pieceHt)} hors TVA${p.max != null ? ' · maximum du réseau ' + fPt(p.max) : ''}.</span>
+      <span class="b"><button type="button" class="db-btn prim" data-fadapt="confirmer">Confirmer ce prix</button><button type="button" class="db-btn" data-fadapt="annuler">Annuler</button></span></div>`;
+  }
+  function ficheAdapterAgir(quoi) {
+    const F = S.fiche; if (!F || F.simPrix == null) { return; }
+    const sim = F.simPrix, pid = F.pid, encore = () => S.fiche === F && F.simPrix === sim;
+    if (quoi === 'annuler') { delete F.adapt; ficheRendre(); return; }
+    if (quoi === 'demander') {
+      const A = F.adapt, p = A && A.plan;
+      if (!A || A.pour !== sim || !p || p.bloque !== 'max' || (A.demande && (A.demande.etat === 'envoi' || A.demande.etat === 'fait'))) { return; }
+      const e = n => nf(n, 2) + ' €', I = F.simInfo || {}, court = nomShop().replace(/^.* - /, '');
+      const desc = [`Le magasin ${court} demande de relever le prix maximum du réseau pour « ${F.nom} » (produit ${pid}).`,
+        `Prix de vente demandé : ${e(p.ecrit)} TTC${p.part < 1 ? ' la portion (' + e(p.pieceTtc) + ' la pièce entière)' : ''}, soit ${e(p.pieceHt)} hors TVA (TVA ${nf(p.tva, p.tva % 1 ? 1 : 0)} %).`,
+        `Prix maximum du réseau aujourd’hui : ${e(p.max)} TTC.`,
+        p.avant != null ? `Prix en caisse aujourd’hui : ${e(p.avant)} TTC.` : '',
+        I.coef != null && I.taux != null ? `Au prix demandé : coefficient × ${nf(I.coef, 2)}, marge brute ${nf(I.taux, 0)} %.` : '',
+        'Demande envoyée depuis la fiche produit du dashboard (Recette & marge).'].filter(Boolean).join('\n');
+      A.demande = { etat: 'envoi' }; ficheRendre();
+      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: 'sales', titre: ('Prix maximum à relever : ' + F.nom).slice(0, 190), description: desc })
+        .then(r => { if (F.adapt !== A) { return; } A.demande = r && r.ok ? { etat: 'fait', ref: r.ref || '' } : { etat: 'erreur', err: (r && (r.error || r.erreur)) || 'refusée' }; })
+        .catch(x => { if (F.adapt === A) { A.demande = { etat: 'erreur', err: x.message }; } })
+        .finally(() => { if (S.fiche === F) { ficheRendre(); } });
+      return;
+    }
+    const confirmer = quoi === 'confirmer';
+    if (F.adapt && (F.adapt.etat === 'lecture' || F.adapt.etat === 'envoi')) { return; }
+    F.adapt = { pour: sim, etat: confirmer ? 'envoi' : 'lecture', plan: F.adapt && F.adapt.plan }; ficheRendre();
+    ecrire('/analyse/produits/prix', Object.assign({ shop: S.shop, pid: pid, prixHt: sim }, confirmer ? {} : { apercu: true }))
+      .then(r => { if (!encore()) { return; } F.adapt = confirmer ? { pour: sim, etat: 'fait', r: r } : { pour: sim, etat: 'apercu', plan: r }; })
+      .catch(e => { if (encore()) { F.adapt = { pour: sim, etat: 'erreur', err: e.message }; } })
+      .finally(() => { if (S.fiche === F) { ficheRendre(); } });
+  }
   const FI_ZONES = { ko: 100 / 60, att: 2.5 };   // marge < 40 % ⇔ coef < 1,67 ; < 60 % ⇔ < 2,5 (échelle MARGES)
   function ficheRecette(F, d, R, errR) {
     const fX = n => n == null ? '—' : '× ' + nf(n, 2), fPt = n => n == null ? '—' : nf(n, 2) + ' €';
@@ -8683,6 +8740,8 @@
     if (simOn) {
       const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
       h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
+      F.simInfo = { coef: sCoef, taux: sTaux };
+      h += ficheAdapter(F, sim);
     } else if (coef != null) {
       h += `<div class="fi-rverdict ${niv(coef)}"><b>${niv(coef) === 'ok' ? 'Dans le vert.' : 'Sous l’objectif.'}</b> La matière prend ${fP0(100 - taux)} du prix.${niv(coef) !== 'ok' ? ` Pour entrer dans le vert (× 2,5), il faudrait vendre la pièce <b>${fPt(mat * 2.5)}</b> au lieu de ${fPt(prix)}, ou ramener la matière à <b>${fPt(prix / 2.5)}</b> au lieu de ${fPt(mat)}.` : ''}${top && topPart != null ? ` ${esc(top.nom)} pèse <b>${fP0(topPart)}</b> du coût${niv(coef) !== 'ok' ? ' : c’est là que ça se joue' : ''}.` : ''}</div>`;
     }
@@ -8759,7 +8818,7 @@
     // L'élément qui a le focus dans la modale (le champ du prix, un onglet, un bouton) le retrouve après le redessin,
     // que le redessin vienne d'un clic ou du rafraîchissement périodique de la page.
     const act = document.activeElement, focSel = (() => { if (!act || !box.contains(act)) { return null; }
-      for (const k of ['fsiminput', 'fsimpas', 'fong', 'fsim', 'fmois', 'fmat']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
+      for (const k of ['fsiminput', 'fsimpas', 'fadapt', 'fong', 'fsim', 'fmois', 'fmat']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
       return act.classList.contains('fi-x') ? '.fi-x' : null; })(), focPos = focSel === '[data-fsiminput="1"]' ? act.selectionStart : null;
     ficheEnRendu = true;
     let corps;
@@ -8816,6 +8875,7 @@
     });
     box.querySelectorAll('[data-fmatrelire]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ficheLireMatiere(b.dataset.fmatrelire, true); ficheRendre(); }));
     box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
+    box.querySelectorAll('[data-fadapt]').forEach(b => b.addEventListener('click', () => ficheAdapterAgir(b.dataset.fadapt)));
     box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix != null ? S.fiche.simPrix : (prixEnc || 0)) + +b.dataset.fsimpas)); refocus(`[data-fsimpas="${b.dataset.fsimpas}"]`); }));
     const inp = box.querySelector('[data-fsiminput]');
     if (inp) {

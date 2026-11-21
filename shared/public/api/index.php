@@ -92,6 +92,7 @@ require __DIR__ . '/../../../panel/src/matiere_fiche.php';
 require __DIR__ . '/../../../consultant/src/pnl_mois.php';
 require __DIR__ . '/../../../consultant/src/dossiers_fichiers.php';
 require __DIR__ . '/../../../panel/src/produits_coef.php';
+require __DIR__ . '/../../../panel/src/prix_produit.php';              // Dashboard magasin › fiche produit › « Adapter mon prix de vente » (21/11/2026)
 require __DIR__ . '/../../../consultant/src/dossier.php';
 require __DIR__ . '/../../../consultant/src/ca_mail.php';
 require __DIR__ . '/../../../marketing/src/mkt_brief.php';
@@ -838,6 +839,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/frais/tva') { return wr_exploitation_frais_tva(); }
     if ($method === 'POST' && $path === '/exploitation/frais/ajout') { return wr_exploitation_frais_ajout(); }
     if ($method === 'POST' && $path === '/exploitation/frais/annuler') { return wr_exploitation_frais_annuler(); }
+    if ($method === 'POST' && $path === '/analyse/produits/prix') { return wr_analyse_produit_prix(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
