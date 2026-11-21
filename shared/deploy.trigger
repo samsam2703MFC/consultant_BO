@@ -243,3 +243,4 @@
 2026-11-21T17:09:07Z Boîte mail : les dossiers « INBOX.INBOX.Drafts/Junk/Sent/Trash » reconnus (Brouillons, Indésirables, Envoyés, Corbeille), Archives créées à côté ; la boîte mail sans les vignettes du dashboard
 2026-11-21T17:04:54Z Campagnes : le calendrier, les campagnes et les types (GET /marketing) et les campagnes du budget des campagnes se lisent au module Marketing par son API (marketing/src/campagnes.php)
 2026-11-21T17:13:41Z Mesure des campagnes : campagnes, boutiques, produits de l'offre, coefficient et levier du type lus au module Marketing par son API (marketing/src/mesure.php)
+2026-11-21T17:24:59Z Note de campagne : la campagne, son type et son levier, ses boutiques, cibles, canaux et agences, visuel, formats et rétroplanning lus au module Marketing par sa fiche (marketing/src/mkt_brief.php)

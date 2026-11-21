@@ -69,17 +69,27 @@ function campagneFiche(int $id): array
     return ['fiche' => is_array($r['corps']) ? $r['corps'] : null, 'erreur' => is_array($r['corps']) ? null : 'réponse du module illisible'];
 }
 
-/** Les boutiques d'une campagne (sa fiche → shops) : [identifiants, null], ou [null, raison]. */
+/**
+ * Les boutiques d'une fiche de campagne (shops), par identifiant croissant : la fiche les range par nom, la table de
+ * liaison que lisaient la mesure et la note les rendait par identifiant, et c'est l'ordre de leurs lignes.
+ */
+function campagneFicheBoutiques(array $fiche): array
+{
+    $ids = [];
+    foreach ((array) ($fiche['shops'] ?? []) as $s) {
+        if (is_array($s) && isset($s['shop_id'])) { $ids[] = (int) $s['shop_id']; }
+    }
+    sort($ids);
+    return array_map('strval', array_values(array_unique($ids)));
+}
+
+/** Les boutiques d'une campagne (sa fiche → shops, par identifiant) : [identifiants, null], ou [null, raison]. */
 function campagneBoutiques(int $id): array
 {
     $f = campagneFiche($id);
     if ($f['erreur'] !== null) { return [null, $f['erreur']]; }
     if ($f['fiche'] === null) { return [null, 'campagne inconnue du module']; }
-    $ids = [];
-    foreach ((array) ($f['fiche']['shops'] ?? []) as $s) {
-        if (is_array($s) && isset($s['shop_id'])) { $ids[] = (string) $s['shop_id']; }
-    }
-    return [$ids, null];
+    return [campagneFicheBoutiques($f['fiche']), null];
 }
 
 /**
