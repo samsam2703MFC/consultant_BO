@@ -31,6 +31,10 @@ const ecrans = [
     await p.click("#bx-tout + i");
     await p.waitForSelector('.bx-sel');
   }],
+  // Les modes IA (la bascule futuriste en haut à gauche) : le mode est gardé par appareil.
+  ['5-mode-briefing', 'briefing', async p => { await p.waitForSelector('.bx-carte'); }],
+  ['6-mode-pilote', 'pilote', async p => { await p.waitForSelector('.bx-crans'); }],
+  ['7-mode-radar', 'radar', async p => { await p.waitForSelector('.bx-ra-cols'); await p.waitForTimeout(300); }],
 ];
 
 (async () => {
@@ -39,9 +43,10 @@ const ecrans = [
     const p = await b.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 2 });
     p.on('pageerror', e => console.error(nom, 'erreur de page :', e.message));
     await p.goto('file://' + path.join(__dirname, 'maquette.html') + '?scene=' + scene);
-    await p.waitForSelector('.bx-it');
+    await p.waitForSelector(scene === 'briefing' || scene === 'pilote' || scene === 'radar' ? '.bx-modes' : '.bx-it');
     await jouer(p);
     await p.mouse.move(0, 0);
+    await p.addStyleTag({ content: '*{animation-play-state:paused!important}' });   // l'animation figée, la capture nette
     await p.evaluate(() => document.fonts.ready);
     await p.waitForTimeout(200);
     await p.screenshot({ path: path.join(__dirname, nom + '.png'), fullPage: true });
