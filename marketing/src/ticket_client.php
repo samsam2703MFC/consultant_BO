@@ -205,7 +205,11 @@ function tclTexteDansLaLangue(array $spec, string $lg, string $champ): string
     if ($t === '' || $lg === 'pl') { return $t; }
     $pl = trim((string) ($spec['pl'][$champ] ?? ''));
     if ($pl !== '' && $t === $pl) { return ''; }
-    return preg_match('/[ąęłńśźżćĄĘŁŃŚŹŻĆ]/u', $t) === 1 ? '' : $t;
+    if (preg_match('/[ąęłńśźżćóĄĘŁŃŚŹŻĆÓ]/u', $t) === 1) { return ''; }
+    // Du polonais sans lettre accentuée (« jajka, Woda, Cukier ») : les mots d'étiquette polonais les plus courants.
+    $mots = 'woda|cukier|mleko|jajka|jaja|cebula|kurczak|pomidor|pomidory|ser|olej|czosnek|pieprz|przyprawa|przyprawy|marchew'
+        . '|ziemniaki|kakao|czekolada|orzech|orzechy|migdaly|szynka|boczek|maka|maslo|drozdze|smietana|szpinak|dynia|vegeta';
+    return preg_match('/\\b(' . $mots . ')\\b/iu', $t) === 1 ? '' : $t;
 }
 
 /** Le premier nombre trouvé sous une des clés. */
@@ -576,8 +580,13 @@ function ep_tcl_essai_specifications(int $matiere): array
 {
     $etat = null;
     $s = tclSpecifications($etat);
-    $traduites = ['fr' => 0, 'nl' => 0];
-    foreach ($s as $sp) { foreach ($traduites as $lg => $_) { if (tclTexteDansLaLangue($sp, $lg, 'composition') !== '') { $traduites[$lg]++; } } }
-    return ['etat' => $etat, 'matieres' => count($s), 'compositionsTraduites' => $traduites,
+    $traduites = ['fr' => 0, 'nl' => 0]; $liste = [];
+    foreach ($s as $m => $sp) {
+        foreach ($traduites as $lg => $_) {
+            $t = tclTexteDansLaLangue($sp, $lg, 'composition');
+            if ($t !== '') { $traduites[$lg]++; if (count($liste) < 40) { $liste[] = ['matiere' => $m, 'langue' => $lg, 'composition' => $t]; } }
+        }
+    }
+    return ['etat' => $etat, 'matieres' => count($s), 'compositionsTraduites' => $traduites, 'traduitesListe' => $liste,
         'exemple' => $matiere > 0 ? ($s[(string) $matiere] ?? null) : (array_slice($s, 0, 1, true) ?: null)];
 }
