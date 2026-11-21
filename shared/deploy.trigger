@@ -220,3 +220,4 @@
 2026-11-21T06:32:58Z Frais : le poste est le libellé saisi au panel (description), la catégorie dessous ; la TVA du formulaire s'applique ; « Annuler » retrouve les lignes créées au panel
 2026-11-21T06:38:58Z Réclamations fournisseur : photos à chaque réclamation (liste et fiche), part du produit dans le livré, onglet Tableau annuel réclamé / livré ; la photo est obligatoire pour déposer une réclamation
 2026-11-21T06:45:33Z Frais : plus de « indiqué le … » sous le poste dans le tableau des frais
+2026-11-21T06:48:57Z Étiquettes NL : script consultant/bin/envoi_etiquettes_nl.php (essai à blanc par défaut) et son plan — 81 corrections d'allergènes des matières premières, 100 traductions FR/NL ; rien n'est envoyé au déploiement

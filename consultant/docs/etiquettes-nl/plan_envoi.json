@@ -1,0 +1,2131 @@
+{
+ "version": "2026-11-21",
+ "source": "Recherche du 21/11/2026 (étiquettes NL) — tableau complet : consultant/docs/etiquettes-nl/etiquettes_nl_allergenes.xlsx",
+ "allergenes": [
+  {
+   "ingredient": "Amandes grillées & salées - enrobées Choc Lait",
+   "ajouter": [
+    "lait",
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Amandes grillées & salées - Lait"
+   ]
+  },
+  {
+   "ingredient": "Amandes grillées & salées - enrobées Choc Noir",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Amandes grillées & salées - Noir"
+   ]
+  },
+  {
+   "ingredient": "Baguette Poivre & Sel",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Petite Boulangerie › Baguette Poivre & Sel"
+   ]
+  },
+  {
+   "ingredient": "Bavarois Chocolat - Mignardise (emb)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Mignardise › Bavarois Chocolat - Mignardise"
+   ]
+  },
+  {
+   "ingredient": "Bavarois Framboise - Mignardise (emb)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Mignardise › Bavarois Framboise - Mignardise",
+    "Mignardise › Bavarois Passion - Mignardise"
+   ]
+  },
+  {
+   "ingredient": "Beurre 90",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Viennoiserie Ind. › Couque au Beurre"
+   ]
+  },
+  {
+   "ingredient": "Brie de Meaux",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Sandwiches garnis › Brie, Pommes & Miel"
+   ]
+  },
+  {
+   "ingredient": "Brioche tressée au raisin (cru)",
+   "ajouter": [
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "gluten"
+   ],
+   "fiches": [
+    "Petite Boulangerie › Brioche tressée Raisin"
+   ]
+  },
+  {
+   "ingredient": "Brookie - 28⌀",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Brookie"
+   ]
+  },
+  {
+   "ingredient": "Brownies & Framboise - Mignardise (emb)",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Mignardise › Brownies & Framboise - Mignardise"
+   ]
+  },
+  {
+   "ingredient": "Brownies - 28⌀",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Dessert › Brownies",
+    "Tartes – Ø 28 cm › Brownies"
+   ]
+  },
+  {
+   "ingredient": "Brésilienne noisettes 30%",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Entremets - 4/6 personnes › Entremet 120Ø - Bombe Chocolat",
+    "Pâtisserie › Gâteaux Anniversaire | Fruits 10 personnes",
+    "Tartes – Ø 28 cm › Bréslienne"
+   ]
+  },
+  {
+   "ingredient": "Cacahuètes salées",
+   "ajouter": [
+    "arachides"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plat Prepare - Chaud › Poulet Cacahuète & Riz",
+    "Salades féculentes › Taboulé Petits Pois & Poulet"
+   ]
+  },
+  {
+   "ingredient": "Cannelloni - Pancetta, Chêvre & Courgette",
+   "ajouter": [
+    "gluten",
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plat Prepare - Chaud › Cannelloni - tomates séchées, chèvre & courgettes"
+   ]
+  },
+  {
+   "ingredient": "Cannelloni - Poulet Estragon",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plat Prepare - Chaud › Cannelloni - poulet & estragon"
+   ]
+  },
+  {
+   "ingredient": "Cannelloni - Ricotta & Epinard",
+   "ajouter": [
+    "gluten",
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plat Prepare - Chaud › Cannelloni - ricotta & épinards"
+   ]
+  },
+  {
+   "ingredient": "Chapelure",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Sandwiches garnis › Boulette Liégoise"
+   ]
+  },
+  {
+   "ingredient": "Choco & Noisette Ind.",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Entremets - Individuel › Choco & Noisette Ind."
+   ]
+  },
+  {
+   "ingredient": "Chèvre",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Salades › Salade Chèvre"
+   ]
+  },
+  {
+   "ingredient": "Coeur Brookie Individuel",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Saint-Valentin › Coeur Crookie"
+   ]
+  },
+  {
+   "ingredient": "Cookie Avoine Raisins et Noisette (cru)",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "fruits_a_coque",
+    "sesame"
+   ],
+   "fiches": [
+    "Cookies › Cookie Avoine Raisins et Noisette"
+   ]
+  },
+  {
+   "ingredient": "Cookie Caramel & Noix de Pecan - 100g.",
+   "ajouter": [],
+   "retirer": [
+    "poisson"
+   ],
+   "declares_le_21_11": [
+    "fruits_a_coque",
+    "gluten",
+    "lait",
+    "oeufs",
+    "poisson"
+   ],
+   "fiches": [
+    "Cookies › Cookie Noix & Caramel"
+   ]
+  },
+  {
+   "ingredient": "Cougnou - Nature 400 g. - Cru",
+   "ajouter": [
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "gluten"
+   ],
+   "fiches": [
+    "Cougnou › Cougnou Nature - 400 g."
+   ]
+  },
+  {
+   "ingredient": "Crème Chibouste",
+   "ajouter": [
+    "lait",
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Croutes Fruits Frais › Croûte Banane",
+    "Croutes Fruits Frais › Croûte Framboise",
+    "Croutes Fruits Frais › Croûte aux fraises",
+    "Croutes Fruits Frais › Croûte aux fruits",
+    "Croutes Fruits Frais › Croûtes aux fraises individuelle",
+    "Entremets - 190Ø › Saint-Honoré - Classique"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Chocolat 200 ml (Pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Chocolat 200ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Chocolat 600 ml (Pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Chocolat 600 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Spéculoos 200 ml (pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Spéculoos - 200 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Spéculoos 600 ml (pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Spéculoos - 600 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Stratiatella 200 ml (Pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Stratiatella - 200 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Stratiatella 600 ml (Pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Stratiatella - 600 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Vanille - 200 ml (Pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Vanille - 200 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème Glacée Vanille - 600 ml (Pot)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Glace by Rawette › Crème Glacée Vanille 600 ml"
+   ]
+  },
+  {
+   "ingredient": "Crème fraiche sucrée (15%)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Pâtisserie › Gâteaux Anniversaire | Chocolat 10 personnes",
+    "Pâtisserie › Gâteaux Anniversaire | Fruits 10 personnes",
+    "Tarte Fruits Frais › Tarte Banane",
+    "Tarte Fruits Frais › Tarte Fraises",
+    "Tarte Fruits Frais › Tarte TuttiFrutti",
+    "Tartes – Ø 28 cm › Bréslienne"
+   ]
+  },
+  {
+   "ingredient": "Crème pâtissière",
+   "ajouter": [
+    "lait",
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Pâtisserie individuelle › éclair chocolat",
+    "Viennoiserie Ind. › Pain au chocolat nappé & crème"
+   ]
+  },
+  {
+   "ingredient": "Entremet 120Ø - Caramel & Noisette",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "arachides",
+    "gluten",
+    "lait"
+   ],
+   "fiches": [
+    "Entremets - 4/6 personnes › Entremet 120Ø - Caramel & Noisette"
+   ]
+  },
+  {
+   "ingredient": "Feta AOP de Lemnos saumure",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Salade de pâtes › Salade de pâtes - Pesto & Pin"
+   ]
+  },
+  {
+   "ingredient": "Fond Cremeux Chocolat - (280 ml)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Pâtisserie individuelle › Mousse café liégeois"
+   ]
+  },
+  {
+   "ingredient": "Frangipane & Abricots – 28 Ø",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Frangipane & Abricots"
+   ]
+  },
+  {
+   "ingredient": "Frangipane & Poire – 28 Ø",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Frangipane & Poire"
+   ]
+  },
+  {
+   "ingredient": "Frangipane & Pommes – 28 Ø",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Frangipane & Pommes"
+   ]
+  },
+  {
+   "ingredient": "Frangipane – 28 Ø",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Frangipane"
+   ]
+  },
+  {
+   "ingredient": "Fromage - 28⌀",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Fromage"
+   ]
+  },
+  {
+   "ingredient": "Ganache",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chandeleur › Nutella - Portion",
+    "Entremets - 4/6 personnes › Entremet 120Ø - Bombe Chocolat",
+    "Pâtisserie individuelle › Ravier de chouquette - 15 pièces",
+    "Pâtisserie › Gâteaux Anniversaire | Chocolat 10 personnes"
+   ]
+  },
+  {
+   "ingredient": "Gouda Jeune",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Salé",
+    "Plateau Sandwich › Plateau demies-baguettes 10 pcs",
+    "Plateau Sandwich › Plateau mini sandwiches - 20 pièces",
+    "Plateau Sandwich › Plateau mini sandwiches - 30 pièces",
+    "Plateau Sandwich › Plateau sandwiches individuels - 10 pièces",
+    "Salades › Salade Campagnarde"
+   ]
+  },
+  {
+   "ingredient": "Gouda vieux",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Fromages & Salaisons › Plateau apéritif"
+   ]
+  },
+  {
+   "ingredient": "Granola - Noisette & Chocolat",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "gluten"
+   ],
+   "fiches": [
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Salé",
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Sucré",
+    "Épicerie › Granola - Noisette & Chocolat"
+   ]
+  },
+  {
+   "ingredient": "Granola - Noisette & Miel",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "gluten"
+   ],
+   "fiches": [
+    "Épicerie › Granola - Noisette & Miel"
+   ]
+  },
+  {
+   "ingredient": "Lasagne Jambon & Bolognaise",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plat Prepare - Chaud › Lasagne Jambon & Bolognaise"
+   ]
+  },
+  {
+   "ingredient": "Mayonnaise",
+   "ajouter": [
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plateau Sandwich › Plateau Mini Poké - 10 pièces",
+    "Plateau Sandwich › Plateau demies-baguettes 10 pcs",
+    "Plateau Sandwich › Plateau mini sandwiches - 20 pièces",
+    "Plateau Sandwich › Plateau mini sandwiches - 30 pièces",
+    "Plateau Sandwich › Plateau sandwiches individuels - 10 pièces"
+   ]
+  },
+  {
+   "ingredient": "Mayonnaise maison",
+   "ajouter": [
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Sandwiches garnis › Club",
+    "Sandwiches garnis › SuperClub (Comté & Jambon de Pays)",
+    "Wrapps › Wrapps - Poulet & Parmesan"
+   ]
+  },
+  {
+   "ingredient": "Melocake Caramel Beurre Salé – Boîte de 3 (b)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Melocake Caramel Salé – Boîte de 3"
+   ]
+  },
+  {
+   "ingredient": "Melocake Lait – Boîte de 3 (b)",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Melocake Lait – Boîte de 3"
+   ]
+  },
+  {
+   "ingredient": "Melocake Pistache – Boîte de 3 (b)",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Melocake Pistache – Boîte de 3"
+   ]
+  },
+  {
+   "ingredient": "Melocake Spéculoos – Boîte de 3 (b)",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Melocake Spéculoos – Boîte de 3"
+   ]
+  },
+  {
+   "ingredient": "Mozzarella base",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plateau Sandwich › Plateau demies-baguettes 10 pcs",
+    "Plateau Sandwich › Plateau mini sandwiches - 20 pièces",
+    "Plateau Sandwich › Plateau mini sandwiches - 30 pièces",
+    "Plateau Sandwich › Plateau sandwiches individuels - 10 pièces",
+    "Salades › Salade Italienne",
+    "Sandwiches garnis › Italien"
+   ]
+  },
+  {
+   "ingredient": "Noisettes du Piémont IGP – Chocolat Noir",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Noisettes du Piémont IGP – Noir"
+   ]
+  },
+  {
+   "ingredient": "Noisettes du Piémont IGP – Chocolat au Lait",
+   "ajouter": [
+    "lait",
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Noisettes du Piémont IGP – Lait"
+   ]
+  },
+  {
+   "ingredient": "Noix - Mignardise (emb)",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Mignardise › Noix - Mignardise"
+   ]
+  },
+  {
+   "ingredient": "Nounours Guimauve Chocolat Lait",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Chocolaterie › Nounours Guimauve Chocolat Lait"
+   ]
+  },
+  {
+   "ingredient": "Oeufs",
+   "ajouter": [
+    "oeufs"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Salé",
+    "Plat Prepare - Chaud › Riz cantonnais",
+    "Salades féculentes › Ebly à la niçoise",
+    "Sandwiches garnis › Boulette Liégoise",
+    "Sandwiches garnis › Omelette & Lardons",
+    "Sandwiches garnis › Omelette & Saumons"
+   ]
+  },
+  {
+   "ingredient": "Pain Demi-Gris 600 g.",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Pain › Pain Demi-Gris"
+   ]
+  },
+  {
+   "ingredient": "Poche Sauce Cacahuète",
+   "ajouter": [
+    "arachides"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Plat Prepare - Chaud › Poulet Cacahuète & Riz"
+   ]
+  },
+  {
+   "ingredient": "Pomme Amandes 28 Ø",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Tartes – Ø 28 cm › Pommes Amandes"
+   ]
+  },
+  {
+   "ingredient": "Raclette Française",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Fromages & Salaisons › Raclette à la personne"
+   ]
+  },
+  {
+   "ingredient": "Sablé breton",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Croutes Fruits Frais › Croûte Banane",
+    "Croutes Fruits Frais › Croûte Framboise",
+    "Croutes Fruits Frais › Croûte aux fraises",
+    "Croutes Fruits Frais › Croûte aux fruits"
+   ]
+  },
+  {
+   "ingredient": "Salade de Thon - Maison",
+   "ajouter": [
+    "poisson"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Sandwiches garnis › Thon"
+   ]
+  },
+  {
+   "ingredient": "Sauce Yahourt & Fines Herbes",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Extra - Traiteur › Sauce pour Salade - Sauce Yahourt et Fines Herbes"
+   ]
+  },
+  {
+   "ingredient": "Saumon fumé tranché",
+   "ajouter": [
+    "poisson"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Salé",
+    "Plateau Sandwich › Plateau demies-baguettes 10 pcs",
+    "Plateau Sandwich › Plateau mini sandwiches - 20 pièces",
+    "Plateau Sandwich › Plateau mini sandwiches - 30 pièces",
+    "Plateau Sandwich › Plateau sandwiches individuels - 10 pièces",
+    "Salades › Salade Saumon fumé"
+   ]
+  },
+  {
+   "ingredient": "St Nicolas 150 mm Chocolat Blanc",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Noël › Saint Nicolas - Blanc"
+   ]
+  },
+  {
+   "ingredient": "St Nicolas 150 mm Chocolat Lait",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Noël › Saint Nicolas - Lait"
+   ]
+  },
+  {
+   "ingredient": "Sésame graine",
+   "ajouter": [
+    "sesame"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Salades › Poke Poulet Effiloché"
+   ]
+  },
+  {
+   "ingredient": "Tartissiere Mix - Gourmandises",
+   "ajouter": [
+    "gluten"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Mignardise › Fromage & Framboise - Mignardise",
+    "Mignardise › Pommes Caramel - Miganrdises"
+   ]
+  },
+  {
+   "ingredient": "TartoCake - Cerise & Pistache",
+   "ajouter": [
+    "fruits_a_coque"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [
+    "gluten",
+    "lait"
+   ],
+   "fiches": [
+    "Tartocake - 22Ø › TartoCake - Cerise & Pistache"
+   ]
+  },
+  {
+   "ingredient": "Yaourt nature",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Salades féculentes › Taboulé Petits Pois & Poulet",
+    "Sandwiches garnis › Fromage Gouda Jeune",
+    "Sandwiches garnis › Jambon alle erbe"
+   ]
+  },
+  {
+   "ingredient": "Yaourt nature bio",
+   "ajouter": [
+    "lait"
+   ],
+   "retirer": [],
+   "declares_le_21_11": [],
+   "fiches": [
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Salé",
+    "Anti-Gaspi › Plateau Brunch Déjeuner – Sucré"
+   ]
+  }
+ ],
+ "traductions": [
+  {
+   "ids_erp": [
+    1001958
+   ],
+   "noms_erp": [
+    "Croissant 75",
+    "Croissant – 75 g"
+   ],
+   "produit_panel": null,
+   "fr": "Croissant",
+   "nl": "Croissant"
+  },
+  {
+   "ids_erp": [
+    1001960
+   ],
+   "noms_erp": [
+    "Mini - Frangipanne",
+    "Mini – frangipane"
+   ],
+   "produit_panel": "Mini - Frangipane",
+   "fr": "Mini couque frangipane",
+   "nl": "Mini frangipanekoek"
+  },
+  {
+   "ids_erp": [
+    1001965
+   ],
+   "noms_erp": [
+    "Gosette Pomme 60",
+    "Gosette pomme – 60 g"
+   ],
+   "produit_panel": null,
+   "fr": "Gosette aux pommes – 60 g",
+   "nl": "Appelflap – 60 g"
+  },
+  {
+   "ids_erp": [
+    1001966
+   ],
+   "noms_erp": [
+    "Gosette Pomme 85",
+    "Gosette pomme – 85 g"
+   ],
+   "produit_panel": null,
+   "fr": "Gosette aux pommes – 85 g",
+   "nl": "Appelflap – 85 g"
+  },
+  {
+   "ids_erp": [
+    1001985
+   ],
+   "noms_erp": [
+    "Mini - Huit",
+    "Mini – huit"
+   ],
+   "produit_panel": "Mini - Huit",
+   "fr": "Mini huit",
+   "nl": "Mini achtje"
+  },
+  {
+   "ids_erp": [
+    1002020
+   ],
+   "noms_erp": [
+    "Pain Tradition Olives",
+    "Pain tradition olives"
+   ],
+   "produit_panel": "Pain Tradition - Olives",
+   "fr": "Pain aux olives",
+   "nl": "Olijvenbrood"
+  },
+  {
+   "ids_erp": [
+    1002041
+   ],
+   "noms_erp": [
+    "Fromage - 22⌀",
+    "Fromage – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au fromage – ⌀ 22 cm",
+   "nl": "Kaastaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1002086
+   ],
+   "noms_erp": [
+    "Mini - Croissant",
+    "Mini – croissant"
+   ],
+   "produit_panel": "Mini - Croissant",
+   "fr": "Mini croissant",
+   "nl": "Mini croissant"
+  },
+  {
+   "ids_erp": [
+    1002089
+   ],
+   "noms_erp": [
+    "Huit 75",
+    "Huit – 75 g"
+   ],
+   "produit_panel": null,
+   "fr": "Huit",
+   "nl": "Achtje"
+  },
+  {
+   "ids_erp": [
+    1002120
+   ],
+   "noms_erp": [
+    "Abricot - 22⌀",
+    "Abricot – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte aux abricots – ⌀ 22 cm",
+   "nl": "Abrikozentaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1002127
+   ],
+   "noms_erp": [
+    "Rhubarbe - 22⌀",
+    "Rhubarbe – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte à la rhubarbe – ⌀ 22 cm",
+   "nl": "Rabarbertaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1002160
+   ],
+   "noms_erp": [
+    "Riz - 22⌀",
+    "Riz – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au riz – ⌀ 22 cm",
+   "nl": "Rijsttaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1002168
+   ],
+   "noms_erp": [
+    "Pommes Tranches - 22⌀",
+    "Pommes tranches – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte aux pommes – ⌀ 22 cm",
+   "nl": "Appeltaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1002201
+   ],
+   "noms_erp": [
+    "Lorraine - 19⌀",
+    "Lorraine – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche lorraine – ⌀ 19 cm",
+   "nl": "Quiche lorraine – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1002212
+   ],
+   "noms_erp": [
+    "Champignons - 19⌀",
+    "Champignons – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche aux champignons – ⌀ 19 cm",
+   "nl": "Quiche champignons – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1002213
+   ],
+   "noms_erp": [
+    "Roquette-Chevre & Miel - 19⌀",
+    "Roquette-chèvre & miel – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche chèvre, roquette & miel – ⌀ 19 cm",
+   "nl": "Quiche geitenkaas, rucola & honing – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1002214
+   ],
+   "noms_erp": [
+    "Greco Feta - 19⌀",
+    "Greco feta – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche grecque à la feta – ⌀ 19 cm",
+   "nl": "Griekse quiche met feta – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1002220
+   ],
+   "noms_erp": [
+    "Sandwich 70 g.",
+    "Sandwich – 70 g"
+   ],
+   "produit_panel": null,
+   "fr": "Sandwich",
+   "nl": "Sandwich"
+  },
+  {
+   "ids_erp": [
+    1002253
+   ],
+   "noms_erp": [
+    "Sandwich 35 g.",
+    "Sandwich – 35 g"
+   ],
+   "produit_panel": "Mini-Sandwich",
+   "fr": "Mini sandwich",
+   "nl": "Mini sandwich"
+  },
+  {
+   "ids_erp": [
+    1002279
+   ],
+   "noms_erp": [
+    "Pain Oignons et Lardons Tradition",
+    "Pain oignons et lardons tradition"
+   ],
+   "produit_panel": null,
+   "fr": "Pain oignons-lardons",
+   "nl": "Brood met ui en spek"
+  },
+  {
+   "ids_erp": [
+    1002281
+   ],
+   "noms_erp": [
+    "Pain Noix-Raisin Tradition350 g.",
+    "Pain noix-raisin tradition – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Pain noix-raisins",
+   "nl": "Noten-rozijnenbrood"
+  },
+  {
+   "ids_erp": [
+    1002364
+   ],
+   "noms_erp": [
+    "Pistolet Céréales",
+    "Pistolet céréales"
+   ],
+   "produit_panel": null,
+   "fr": "Pistolet aux céréales",
+   "nl": "Meergranenpistolet"
+  },
+  {
+   "ids_erp": [
+    1002392
+   ],
+   "noms_erp": [
+    "Fromage & Fruits Rouges - 27Ø",
+    "Fromage & fruits rouges – ⌀ 27 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au fromage et fruits rouges",
+   "nl": "Kaastaart rode vruchten"
+  },
+  {
+   "ids_erp": [
+    1002393
+   ],
+   "noms_erp": [
+    "Quiche Poulet & Gorgonzola - 19⌀",
+    "Quiche poulet & gorgonzola – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche poulet-gorgonzola – ⌀ 19 cm",
+   "nl": "Quiche kip-gorgonzola – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1002978
+   ],
+   "noms_erp": [
+    "Saumon & Epinard - 19⌀",
+    "Saumon & épinard – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche saumon-épinards – ⌀ 19 cm",
+   "nl": "Quiche zalm-spinazie – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1002979
+   ],
+   "noms_erp": [
+    "Jambon & Chicon - 19⌀",
+    "Jambon & chicon – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche jambon-chicons – ⌀ 19 cm",
+   "nl": "Quiche hesp-witloof – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1003133
+   ],
+   "noms_erp": [
+    "Duo Chocolat - 12⌀",
+    "Duo chocolat – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Duo chocolat – ⌀ 12 cm",
+   "nl": "Duo chocolade – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1003134
+   ],
+   "noms_erp": [
+    "Duo Chocolat - 19⌀",
+    "Duo chocolat – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Duo chocolat – ⌀ 19 cm",
+   "nl": "Duo chocolade – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1003147
+   ],
+   "noms_erp": [
+    "Framboise & Chocolat Ind.",
+    "Framboise & chocolat ind."
+   ],
+   "produit_panel": null,
+   "fr": "Gâteau framboise-chocolat – 1 pers.",
+   "nl": "Framboos-chocoladetaart – 1 pers."
+  },
+  {
+   "ids_erp": [
+    1003258
+   ],
+   "noms_erp": [
+    "Entremet 120Ø - Cheesecake Citron & Fruits de Bois",
+    "Entremets cheesecake citron & fruits des bois – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Cheesecake citron & fruits des bois",
+   "nl": "Cheesecake citroen & bosvruchten"
+  },
+  {
+   "ids_erp": [
+    1003275
+   ],
+   "noms_erp": [
+    "Fermier Seigle & Levain 600 g.",
+    "Fermier seigle & levain – 600 g"
+   ],
+   "produit_panel": "Fermier Seigle & Levain",
+   "fr": "Pain fermier seigle & levain",
+   "nl": "Boerenbrood rogge & desem"
+  },
+  {
+   "ids_erp": [
+    1003356
+   ],
+   "noms_erp": [
+    "Tian de Legumes - 19⌀",
+    "Tian de légumes – ⌀ 19 cm"
+   ],
+   "produit_panel": "Tian de Legumes",
+   "fr": "Quiche légumes du soleil – ⌀ 19 cm",
+   "nl": "Quiche zuiderse groenten – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1003477
+   ],
+   "noms_erp": [
+    "Entremet 120 ⌀ - Bombe Chocolat",
+    "Entremets bombe chocolat – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Bombe au chocolat – ⌀ 12 cm",
+   "nl": "Bombe chocolade – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1003478
+   ],
+   "noms_erp": [
+    "Bombe Chocolat - 180⌀",
+    "Bombe chocolat – ⌀ 18 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Bombe au chocolat – ⌀ 18 cm",
+   "nl": "Bombe chocolade – ⌀ 18 cm"
+  },
+  {
+   "ids_erp": [
+    1003859
+   ],
+   "noms_erp": [
+    "Citron Meringué - 27Ø",
+    "Citron meringué – ⌀ 27 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au citron meringuée – ⌀ 27 cm",
+   "nl": "Citroentaart met meringue – ⌀ 27 cm"
+  },
+  {
+   "ids_erp": [
+    1003992
+   ],
+   "noms_erp": [
+    "Buche Crème Fraiche Chocolat - 16 cm",
+    "Bûche crème fraîche chocolat – 16 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Bûche crème fraîche chocolat – 16 cm",
+   "nl": "Kerststronk slagroom chocolade – 16 cm"
+  },
+  {
+   "ids_erp": [
+    1003993
+   ],
+   "noms_erp": [
+    "Bombe Crème Fraiche Chocolat - 4/6",
+    "Bombe crème fraîche chocolat – 4/6"
+   ],
+   "produit_panel": null,
+   "fr": "Bombe crème fraîche chocolat – 4-6 pers.",
+   "nl": "Bombe slagroom chocolade – 4-6 pers."
+  },
+  {
+   "ids_erp": [
+    1004184
+   ],
+   "noms_erp": [
+    "Brownies - 22⌀",
+    "Brownies – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Brownie – ⌀ 22 cm",
+   "nl": "Brownie – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1004895
+   ],
+   "noms_erp": [
+    "Citron Meringué - 19⌀",
+    "Citron meringué – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au citron meringuée – ⌀ 19 cm",
+   "nl": "Citroentaart met meringue – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1004913
+   ],
+   "noms_erp": [
+    "Quiche Champignon - 12⌀",
+    "Quiche champignon – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche aux champignons – ⌀ 12 cm",
+   "nl": "Quiche champignons – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1004914
+   ],
+   "noms_erp": [
+    "Quiche Greco Feta - 12⌀",
+    "Quiche greco feta – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche grecque à la feta – ⌀ 12 cm",
+   "nl": "Griekse quiche met feta – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1004915
+   ],
+   "noms_erp": [
+    "Quiche Jambon & Chicon - 12⌀",
+    "Quiche jambon & chicon – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche jambon-chicons – ⌀ 12 cm",
+   "nl": "Quiche hesp-witloof – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1004916
+   ],
+   "noms_erp": [
+    "Quiche Lorraine - 12⌀",
+    "Quiche lorraine – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche lorraine – ⌀ 12 cm",
+   "nl": "Quiche lorraine – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1004917
+   ],
+   "noms_erp": [
+    "Quiche Poulet & Gorgonzola - 12⌀",
+    "Quiche poulet & gorgonzola – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche poulet-gorgonzola – ⌀ 12 cm",
+   "nl": "Quiche kip-gorgonzola – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1004918
+   ],
+   "noms_erp": [
+    "Quiche Saumons & Epinard - 12⌀",
+    "Quiche saumon & épinard – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche saumon-épinards – ⌀ 12 cm",
+   "nl": "Quiche zalm-spinazie – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1004921
+   ],
+   "noms_erp": [
+    "Fromage Fumé, Tomate & Basilic - 19⌀",
+    "Fromage fumé, tomate & basilic – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche fromage fumé, tomate & basilic – ⌀ 19 cm",
+   "nl": "Quiche gerookte kaas, tomaat & basilicum – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1007158
+   ],
+   "noms_erp": [
+    "Quiche Fromage Fumé, Tomate & Basilic - 12⌀",
+    "Quiche fromage fumé, tomate & basilic – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche fromage fumé, tomate & basilic – ⌀ 12 cm",
+   "nl": "Quiche gerookte kaas, tomaat & basilicum – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007500
+   ],
+   "noms_erp": [
+    "Fromage - 12⌀",
+    "Fromage – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au fromage – ⌀ 12 cm",
+   "nl": "Kaastaart – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007503
+   ],
+   "noms_erp": [
+    "Abricot - 12⌀",
+    "Abricot – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte aux abricots – ⌀ 12 cm",
+   "nl": "Abrikozentaart – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007505
+   ],
+   "noms_erp": [
+    "Brownies - 12⌀",
+    "Brownies – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Brownie – ⌀ 12 cm",
+   "nl": "Brownie – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007508
+   ],
+   "noms_erp": [
+    "Pomme Tranches - 12⌀",
+    "Pomme tranches – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte aux pommes – ⌀ 12 cm",
+   "nl": "Appeltaart – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007510
+   ],
+   "noms_erp": [
+    "Rhubarbe - 12⌀",
+    "Rhubarbe – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte à la rhubarbe – ⌀ 12 cm",
+   "nl": "Rabarbertaart – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007511
+   ],
+   "noms_erp": [
+    "Riz - 12⌀",
+    "Riz – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au riz – ⌀ 12 cm",
+   "nl": "Rijsttaart – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007519
+   ],
+   "noms_erp": [
+    "Citron Meringué - 12⌀",
+    "Citron meringué – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au citron meringuée – ⌀ 12 cm",
+   "nl": "Citroentaart met meringue – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1007521
+   ],
+   "noms_erp": [
+    "Fromage & Fruits Rouges Meringués - 12⌀",
+    "Fromage & fruits rouges meringués – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au fromage et fruits rouges meringuée",
+   "nl": "Kaastaart rode vruchten met meringue"
+  },
+  {
+   "ids_erp": [
+    1007573
+   ],
+   "noms_erp": [
+    "Frangipane - 22⌀",
+    "Frangipane – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte frangipane – ⌀ 22 cm",
+   "nl": "Frangipanetaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1007577
+   ],
+   "noms_erp": [
+    "Frangipane & Abricot- 22⌀",
+    "Frangipane & abricot – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte frangipane-abricots – ⌀ 22 cm",
+   "nl": "Abrikoos-frangipanetaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1008012
+   ],
+   "noms_erp": [
+    "Feta, Aubergines & Citron - 19⌀",
+    "Feta, aubergines & citron – ⌀ 19 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche feta, aubergines & citron – ⌀ 19 cm",
+   "nl": "Quiche feta, aubergine & citroen – ⌀ 19 cm"
+  },
+  {
+   "ids_erp": [
+    1008041
+   ],
+   "noms_erp": [
+    "Quiche Tian - 12⌀",
+    "Quiche tian – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche légumes du soleil – ⌀ 12 cm",
+   "nl": "Quiche zuiderse groenten – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1008043
+   ],
+   "noms_erp": [
+    "Carton Quiche Aubergines, Feta & Citron - 12⌀",
+    "Carton quiche aubergines, feta & citron – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche feta, aubergines & citron – ⌀ 12 cm",
+   "nl": "Quiche feta, aubergine & citroen – ⌀ 12 cm"
+  },
+  {
+   "ids_erp": [
+    1008239
+   ],
+   "noms_erp": [
+    "Buche Cheesecake & Fruits des bois - 16 cm",
+    "Bûche cheesecake & fruits des bois – 16 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Bûche cheesecake fruits des bois – 16 cm",
+   "nl": "Kerststronk cheesecake bosvruchten – 16 cm"
+  },
+  {
+   "ids_erp": [
+    1008240
+   ],
+   "noms_erp": [
+    "Bombe Cheesecake & Fruits des bois - 4/6",
+    "Bombe cheesecake & fruits des bois – 4/6"
+   ],
+   "produit_panel": null,
+   "fr": "Bombe cheesecake fruits des bois – 4-6 pers.",
+   "nl": "Bombe cheesecake bosvruchten – 4-6 pers."
+  },
+  {
+   "ids_erp": [
+    1008354
+   ],
+   "noms_erp": [
+    "Crèpe Artisanale",
+    "Crêpe artisanale"
+   ],
+   "produit_panel": null,
+   "fr": "Crêpe",
+   "nl": "Pannenkoek"
+  },
+  {
+   "ids_erp": [
+    1008755
+   ],
+   "noms_erp": [
+    "Quiche Veggie Tian 26ø",
+    "Quiche veggie tian – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche légumes du soleil – ⌀ 26 cm",
+   "nl": "Quiche zuiderse groenten – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    1008756
+   ],
+   "noms_erp": [
+    "Quiche Lorraine 26ø",
+    "Quiche lorraine – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche lorraine – ⌀ 26 cm",
+   "nl": "Quiche lorraine – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    1008757
+   ],
+   "noms_erp": [
+    "Quiche Saumon & Epinard 26ø",
+    "Quiche saumon & épinard – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche saumon-épinards – ⌀ 26 cm",
+   "nl": "Quiche zalm-spinazie – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    1008758
+   ],
+   "noms_erp": [
+    "Quiche Champignon 26ø",
+    "Quiche champignon – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche aux champignons – ⌀ 26 cm",
+   "nl": "Quiche champignons – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    1009034
+   ],
+   "noms_erp": [
+    "Entremet 120 ⌀ - Chocolat",
+    "Entremets chocolat – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Gâteau au chocolat",
+   "nl": "Chocoladetaart"
+  },
+  {
+   "ids_erp": [
+    1009039
+   ],
+   "noms_erp": [
+    "Passion & Chocolat - 12⌀",
+    "Passion & chocolat – ⌀ 12 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Gâteau passion-chocolat",
+   "nl": "Passievrucht-chocoladetaart"
+  },
+  {
+   "ids_erp": [
+    1009483
+   ],
+   "noms_erp": [
+    "Cake Citron - 350 g.",
+    "Cake citron – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Cake au citron",
+   "nl": "Citroencake"
+  },
+  {
+   "ids_erp": [
+    1009608
+   ],
+   "noms_erp": [
+    "Cake Marbré - 350 g.",
+    "Cake marbré – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Cake marbré",
+   "nl": "Marmercake"
+  },
+  {
+   "ids_erp": [
+    1009609
+   ],
+   "noms_erp": [
+    "Cake Chocolat & Orange - 350 g.",
+    "Cake chocolat & orange – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Cake chocolat-orange",
+   "nl": "Chocolade-sinaasappelcake"
+  },
+  {
+   "ids_erp": [
+    1009610
+   ],
+   "noms_erp": [
+    "Cake Nature - 350 g.",
+    "Cake nature – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Cake nature",
+   "nl": "Natuurcake"
+  },
+  {
+   "ids_erp": [
+    1009612
+   ],
+   "noms_erp": [
+    "Cake Pomme - 350 g.",
+    "Cake pomme – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Cake aux pommes",
+   "nl": "Appelcake"
+  },
+  {
+   "ids_erp": [
+    1009618
+   ],
+   "noms_erp": [
+    "Pain d`épices 100 g.",
+    "Pain d'épices – 100 g"
+   ],
+   "produit_panel": null,
+   "fr": "Pain d'épices",
+   "nl": "Peperkoek"
+  },
+  {
+   "ids_erp": [
+    1009871
+   ],
+   "noms_erp": [
+    "Moelleux au Chocolat - 22⌀",
+    "Moelleux au chocolat – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Moelleux au chocolat",
+   "nl": "Chocolademoelleux"
+  },
+  {
+   "ids_erp": [
+    1010129
+   ],
+   "noms_erp": [
+    "Frangipane & Pomme - 22⌀",
+    "Frangipane & pomme – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte frangipane-pommes – ⌀ 22 cm",
+   "nl": "Appel-frangipanetaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1010131
+   ],
+   "noms_erp": [
+    "Frangipane & Poire - 22⌀",
+    "Frangipane & poire – ⌀ 22 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte frangipane-poires – ⌀ 22 cm",
+   "nl": "Peer-frangipanetaart – ⌀ 22 cm"
+  },
+  {
+   "ids_erp": [
+    1010210
+   ],
+   "noms_erp": [
+    "Cookie Chocolat Blanc",
+    "Cookie chocolat blanc"
+   ],
+   "produit_panel": "Cookie Chocolat Blanc",
+   "fr": "Cookie chocolat blanc",
+   "nl": "Cookie witte chocolade"
+  },
+  {
+   "ids_erp": [
+    1010212
+   ],
+   "noms_erp": [
+    "Cookie Chocolat Noir",
+    "Cookie chocolat noir"
+   ],
+   "produit_panel": "Cookie Chocolat Noir",
+   "fr": "Cookie chocolat noir",
+   "nl": "Cookie pure chocolade"
+  },
+  {
+   "ids_erp": [
+    1010213
+   ],
+   "noms_erp": [
+    "Cookie Double Chocolat",
+    "Cookie double chocolat"
+   ],
+   "produit_panel": "Cookie Double Chocolat",
+   "fr": "Cookie double chocolat",
+   "nl": "Cookie dubbele chocolade"
+  },
+  {
+   "ids_erp": [
+    1010214
+   ],
+   "noms_erp": [
+    "Cookie Chocolat Lait",
+    "Cookie chocolat lait"
+   ],
+   "produit_panel": "Cookie Chocolat Lait",
+   "fr": "Cookie chocolat au lait",
+   "nl": "Cookie melkchocolade"
+  },
+  {
+   "ids_erp": [
+    1010503
+   ],
+   "noms_erp": [
+    "Cake Chocolat - 350 g.",
+    "Cake chocolat – 350 g"
+   ],
+   "produit_panel": null,
+   "fr": "Cake au chocolat",
+   "nl": "Chocoladecake"
+  },
+  {
+   "ids_erp": [
+    2580022
+   ],
+   "noms_erp": [
+    "Cœur de St-Valentin - Cheesecake citronné & framboise",
+    "Cœur de St-Valentin – cheesecake citronné & framboise"
+   ],
+   "produit_panel": null,
+   "fr": "Cœur de Saint-Valentin cheesecake citron-framboise",
+   "nl": "Valentijnshart cheesecake citroen-framboos"
+  },
+  {
+   "ids_erp": [
+    2580027
+   ],
+   "noms_erp": [
+    "Miel - Toute Fleur",
+    "Miel – toutes fleurs"
+   ],
+   "produit_panel": null,
+   "fr": "Miel toutes fleurs",
+   "nl": "Bloemenhoning"
+  },
+  {
+   "ids_erp": [
+    2580070
+   ],
+   "noms_erp": [
+    "Sandwich Rond - 140g.",
+    "Sandwich rond – 140 g"
+   ],
+   "produit_panel": null,
+   "fr": "Sandwich rond",
+   "nl": "Ronde sandwich"
+  },
+  {
+   "ids_erp": [
+    2580090
+   ],
+   "noms_erp": [
+    "Buche Crème Fraiche Chocolat - Ind",
+    "Bûche crème fraîche chocolat – ind."
+   ],
+   "produit_panel": null,
+   "fr": "Bûche crème fraîche chocolat – 1 pers.",
+   "nl": "Kerststronk slagroom chocolade – 1 pers."
+  },
+  {
+   "ids_erp": [
+    2580098
+   ],
+   "noms_erp": [
+    "Fromage – 28 Ø",
+    "Fromage – ⌀ 28 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte au fromage – ⌀ 28 cm",
+   "nl": "Kaastaart – ⌀ 28 cm"
+  },
+  {
+   "ids_erp": [
+    2580101
+   ],
+   "noms_erp": [
+    "Pomme Tranchée 28 Ø",
+    "Pomme tranchée – ⌀ 28 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte aux pommes – ⌀ 28 cm",
+   "nl": "Appeltaart – ⌀ 28 cm"
+  },
+  {
+   "ids_erp": [
+    2580104
+   ],
+   "noms_erp": [
+    "Rhubarbe 28 Ø",
+    "Rhubarbe – ⌀ 28 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte à la rhubarbe – ⌀ 28 cm",
+   "nl": "Rabarbertaart – ⌀ 28 cm"
+  },
+  {
+   "ids_erp": [
+    2580117
+   ],
+   "noms_erp": [
+    "Quiche Greco Feta 26ø",
+    "Quiche greco feta – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche grecque à la feta – ⌀ 26 cm",
+   "nl": "Griekse quiche met feta – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    2580119
+   ],
+   "noms_erp": [
+    "Quiche Poulet & Gorgonzola - 26⌀",
+    "Quiche poulet & gorgonzola – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche poulet-gorgonzola – ⌀ 26 cm",
+   "nl": "Quiche kip-gorgonzola – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    2580120
+   ],
+   "noms_erp": [
+    "Quiche à la citrouille, à la ricotta et au poivre vert 26⌀",
+    "Quiche à la citrouille, à la ricotta et au poivre vert – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche potiron, ricotta & poivre vert",
+   "nl": "Quiche pompoen, ricotta & groene peper"
+  },
+  {
+   "ids_erp": [
+    2580121
+   ],
+   "noms_erp": [
+    "Quiche Roquette-Chevre & Miel - 26⌀",
+    "Quiche roquette-chèvre & miel – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche chèvre, roquette & miel – ⌀ 26 cm",
+   "nl": "Quiche geitenkaas, rucola & honing – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    2580122
+   ],
+   "noms_erp": [
+    "Quiche Jambon & Chicon - 26⌀",
+    "Quiche jambon & chicon – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche jambon-chicons – ⌀ 26 cm",
+   "nl": "Quiche hesp-witloof – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    2580124
+   ],
+   "noms_erp": [
+    "Quiche Feta, Aubergines & Citron - 26⌀",
+    "Quiche feta, aubergines & citron – ⌀ 26 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Quiche feta, aubergines & citron – ⌀ 26 cm",
+   "nl": "Quiche feta, aubergine & citroen – ⌀ 26 cm"
+  },
+  {
+   "ids_erp": [
+    2580130
+   ],
+   "noms_erp": [
+    "Frangipane & Pomme - 28⌀",
+    "Frangipane & pomme – ⌀ 28 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte frangipane-pommes – ⌀ 28 cm",
+   "nl": "Appel-frangipanetaart – ⌀ 28 cm"
+  },
+  {
+   "ids_erp": [
+    2580131
+   ],
+   "noms_erp": [
+    "Frangipane & Abritoc - 28⌀",
+    "Frangipane & abricot – ⌀ 28 cm"
+   ],
+   "produit_panel": null,
+   "fr": "Tarte frangipane-abricots – ⌀ 28 cm",
+   "nl": "Abrikoos-frangipanetaart – ⌀ 28 cm"
+  },
+  {
+   "ids_erp": [
+    2580132
+   ],
+   "noms_erp": [
+    "Mini Cookies - Chocolat 50g. Blanc",
+    "Mini cookies chocolat blanc – 50 g"
+   ],
+   "produit_panel": null,
+   "fr": "Mini cookies chocolat blanc",
+   "nl": "Mini cookies witte chocolade"
+  },
+  {
+   "ids_erp": [
+    2580133
+   ],
+   "noms_erp": [
+    "Mini Cookies - Chocolat 50g. Lait",
+    "Mini cookies chocolat lait – 50 g"
+   ],
+   "produit_panel": null,
+   "fr": "Mini cookies chocolat au lait",
+   "nl": "Mini cookies melkchocolade"
+  }
+ ],
+ "soupe_courgettes": {
+  "garde": 1002223,
+  "fusionne": [
+   2580062
+  ],
+  "alias_fr": "Soupe aux courgettes",
+  "nl": "Courgettesoep",
+  "ingredients_fr": "eau, courgettes, sel, poivre",
+  "ingredients_nl": "water, courgette, zout, peper",
+  "constants": [],
+  "variables": [],
+  "doute": "Ordre des ingrédients à confirmer : par poids décroissant (eau ou courgettes en premier ?).",
+  "decision": "Fusion demandée le 21/11 : « Soupe courgette (6 × 1 L) » (1002223) et « Soupe courgettes (6 × 1 L) (base) » (2580062) deviennent un seul produit, recette eau, courgettes, sel, poivre. Aucun des 14 allergènes réglementaires dans cette recette : plus de céleri ni de lait possibles. Dans l'ERP : recette et fiche à mettre à jour, 2580062 à désactiver."
+ }
+}
