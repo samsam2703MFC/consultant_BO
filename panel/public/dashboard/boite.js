@@ -50,7 +50,8 @@
   const JOURS = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
   const isoJour = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const ICO_ROLE = { inbox: 'inbox', drafts: 'brouillons', sent: 'envoyes', archive: 'archiver', junk: 'indesirables', trash: 'corbeille' };
-  const nomDossier = d => d ? (d.role ? ROLES[d.role] : String(d.nom || d.brut).replace(/^INBOX[./]/i, '')) : '';
+  /** Le nom d'un dossier : son rôle en français, sinon son nom sans les préfixes « INBOX. » (tous : « INBOX.INBOX.Drafts »). */
+  const nomDossier = d => d ? (d.role ? ROLES[d.role] : String(d.nom || d.brut).trim().replace(/^(\s*INBOX\s*[./])+/i, '')) : '';
   const icoDossier = d => ico(I[(d && ICO_ROLE[d.role]) || 'dossier']);
   const ROLES = { inbox: 'Réception', drafts: 'Brouillons', sent: 'Envoyés', archive: 'Archives', junk: 'Indésirables', trash: 'Corbeille' };
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];

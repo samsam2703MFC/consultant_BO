@@ -313,7 +313,16 @@ function bmDossierRole(BmImap $s, string $role, bool $creer = false): ?string
     foreach ($s->dossiers() as $d) { if ($d['role'] === $role) { return $d['brut']; } }
     if (!$creer || !isset(BM_ROLES_CREES[$role])) { return null; }
     [$nom, $usage] = BM_ROLES_CREES[$role];
-    return $s->creerDossier($nom, $usage);
+    // À côté des dossiers de rôle que la boîte a déjà (« INBOX.INBOX.Trash » → « INBOX.INBOX.Archive ») : le webmail
+    // les range au même endroit. Sinon, sous le préfixe des dossiers personnels.
+    $parent = null;
+    foreach ($s->dossiers() as $d) {
+        if ($d['role'] === null || $d['role'] === 'inbox') { continue; }
+        $i = strrpos($d['brut'], $s->separateur);
+        $parent = $i === false ? '' : substr($d['brut'], 0, $i + 1);
+        break;
+    }
+    return $s->creerDossier($nom, $usage, $parent);
 }
 
 /** Une pièce jointe dans la structure IMAP (un nom de fichier, une disposition « attachment ») ? */
@@ -490,7 +499,7 @@ function bmGeste(array $c, array $b): array
         default: return bmErreur(422, 'geste inconnu');
     }
     if (in_array($a, ['archiver', 'corbeille', 'deplacer'], true) && !in_array($vers, $avant, true)) {
-        $cree = (string) preg_replace('/^INBOX[.\/]/i', '', @mb_convert_encoding((string) $vers, 'UTF-8', 'UTF7-IMAP') ?: (string) $vers);
+        $cree = BmImap::nomCourt(@mb_convert_encoding((string) $vers, 'UTF-8', 'UTF7-IMAP') ?: (string) $vers);
     }
     return ['ok' => true, 'action' => $a, 'n' => count($uids), 'cree' => $cree];
 }
@@ -516,7 +525,7 @@ function bmRanger(array $c, array $b): array
     $s = bmImap($c);
     $dossier = bmDossierDemande($s, (string) ($b['dossier'] ?? 'INBOX'));
     $D = $s->dossiers();
-    $court = static fn (array $d) => (string) preg_replace('/^INBOX[.\/]/i', '', $d['nom']);
+    $court = static fn (array $d) => BmImap::nomCourt($d['nom']);
     // Où ranger : les dossiers du magasin (pas la réception, les brouillons, les envoyés, les indésirables, la corbeille).
     $cibles = [];
     foreach ($D as $d) { if ($d['brut'] !== $dossier && $d['role'] === null) { $cibles[$d['brut']] = $court($d); } }
