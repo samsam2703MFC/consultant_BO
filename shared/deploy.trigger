@@ -213,3 +213,4 @@
 2026-11-20T21:12:24Z Helpdesk : relances SMS des demandes sans réponse tous les 7 jours (maquette helpdesk-relances validée), horloge consultant/bin/helpdesk_cron.sh, SMS d'essai, plus de lien dans les SMS
 2026-11-20T21:27:17Z SMS : la clé SMSAPI commune de l'ERP (erp_cles smsapi_token) quand MétaDonnée n'a pas de jeton ; un jeton refusé sur .com essaie .pl
 2026-11-20T21:38:55Z SMS : le jeton OAuth SMSAPI du CRM (crm_settings) et toutes les clés « sms » d'erp_cles essayés tour à tour, sur .com et .pl ; celui qui passe est retenu
+2026-11-21T05:28:54Z SMS : un expéditeur refusé par SMSAPI (14) est remplacé par celui du CRM, puis par aucun ; celui qui passe est retenu

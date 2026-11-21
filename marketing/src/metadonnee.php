@@ -816,9 +816,35 @@ final class MdSms
     }
 
     /**
+     * Les expéditeurs à essayer, dans l'ordre : celui qui a déjà remplacé `$from` (mdSmsExpediteur), `$from` lui-même,
+     * celui du CRM (crm_settings, clé « sms » de l'expéditeur), puis aucun (SMSAPI met celui du compte). Essai du
+     * 20/11/2026 : « (14) Invalid from field » — « AtelierBy » n'était pas validé sur le compte.
+     *
+     * @return list<string>
+     */
+    public static function expediteurs(string $from): array
+    {
+        $out = [];
+        $m = setting('mdSmsExpediteur', null);
+        if (is_array($m) && (string) ($m['pour'] ?? '') === $from) { $out[] = (string) ($m['utilise'] ?? ''); }
+        $out[] = $from;
+        try {
+            foreach (Db::rows("SELECT skey, svalue FROM crm_settings WHERE skey LIKE '%sms%'") as $r) {
+                $v = (string) $r['svalue']; $j = json_decode($v, true);
+                if (is_array($j)) { foreach ($j as $k => $x) { if (is_string($x) && preg_match('/from|sender|exp|nadawca/i', (string) $k)) { $out[] = $x; } } }
+                elseif (preg_match('/from|sender|exp|nadawca/i', (string) $r['skey'])) { $out[] = $v; }
+            }
+        } catch (Throwable $e) { /* pas de CRM dans cette base */ }
+        $out[] = '';
+        $out = array_map(static fn ($f) => mb_substr(trim((string) $f), 0, 20), $out);
+        return array_values(array_unique($out));
+    }
+
+    /**
      * Un SMS. Rend [ok, identifiant SMSAPI ou message d'erreur]. Un jeton refusé (101) : le suivant des candidats, et
      * sur l'autre plateforme quand personne n'en a imposé une ; celui qui passe est retenu (mdSmsOrigine,
-     * mdSmsBaseAuto). Une autre erreur (numéro, pays, crédit) s'arrête là : changer de jeton n'y ferait rien.
+     * mdSmsBaseAuto). Un expéditeur refusé (14) : le suivant (celui du CRM, puis aucun), retenu de même
+     * (mdSmsExpediteur). Une autre erreur (numéro, pays, crédit) s'arrête là : changer de jeton n'y ferait rien.
      */
     public static function envoyer(string $tel, string $texte, string $from = ''): array
     {
@@ -826,22 +852,30 @@ final class MdSms
         if ($c['jeton'] === '') { return [false, 'jeton SMSAPI absent']; }
         $to = ltrim((string) mdTelE164($tel), '+');
         if ($to === '') { return [false, 'numéro illisible : ' . $tel]; }
-        $champs = ['to' => $to, 'message' => $texte, 'encoding' => 'utf-8', 'format' => 'json'];
-        if (trim($from) !== '') { $champs['from'] = trim($from); }
+        $from = trim($from);
+        $froms = self::expediteurs($from);
+        $base = ['to' => $to, 'message' => $texte, 'encoding' => 'utf-8', 'format' => 'json'];
         $bases = $c['impose'] ? [$c['base']] : array_values(array_unique(array_merge([$c['base']], self::PLATEFORMES)));
         $premier = null; $essais = [];
         foreach ($c['candidats'] as $i => $cand) {
             foreach ($bases as $b) {
-                [$code, $res] = self::$transport ? (self::$transport)($b . '/sms.do', $champs, $cand['jeton']) : self::curl($b . '/sms.do', $champs, $cand['jeton']);
-                if ($code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])) {
-                    if ($i > 0 || $b !== $c['base']) {
+                foreach ($froms as $fi => $f) {
+                    $champs = $base + ($f !== '' ? ['from' => $f] : []);
+                    [$code, $res] = self::$transport ? (self::$transport)($b . '/sms.do', $champs, $cand['jeton']) : self::curl($b . '/sms.do', $champs, $cand['jeton']);
+                    if ($code >= 200 && $code < 300 && is_array($res) && !isset($res['error'])) {
                         try {
-                            if (function_exists('settingEcrire')) { settingEcrire('mdSmsOrigine', $cand['origine']); if (!$c['impose']) { settingEcrire('mdSmsBaseAuto', $b); } }
+                            if (function_exists('settingEcrire')) {
+                                if ($i > 0 || $b !== $c['base']) { settingEcrire('mdSmsOrigine', $cand['origine']); if (!$c['impose']) { settingEcrire('mdSmsBaseAuto', $b); } }
+                                if ($f !== $from || $fi > 0) { settingEcrire('mdSmsExpediteur', ['pour' => $from, 'utilise' => $f]); }
+                            }
                         } catch (Throwable $e) { /* retrouvés au prochain envoi */ }
-                        self::oublier();
+                        if ($i > 0 || $b !== $c['base']) { self::oublier(); }
+                        return [true, (string) ($res['list'][0]['id'] ?? '')];
                     }
-                    return [true, (string) ($res['list'][0]['id'] ?? '')];
+                    if (is_array($res) && (int) ($res['error'] ?? 0) === 14) { $premier = [$code, $res, $b]; continue; }   // expéditeur refusé : le suivant
+                    break;
                 }
+                if (is_array($res) && (int) ($res['error'] ?? 0) === 14) { return [false, self::erreur($code, $res, $b) . ' (expéditeurs essayés : ' . implode(', ', array_map(static fn ($f) => $f !== '' ? '« ' . $f . ' »' : 'aucun', $froms)) . ')']; }
                 $premier ??= [$code, $res, $b];
                 $refus = (is_array($res) && (int) ($res['error'] ?? 0) === 101) || ($code === 401 && !(is_array($res) && isset($res['error'])));
                 if (!$refus) { return [false, self::erreur($code, $res, $b)]; }

@@ -439,6 +439,31 @@ $urls = [];
 verifie('une autre erreur (numéro) : un seul essai', !$okS && count($urls) === 1 && str_contains($err, '(13)'), json_encode($urls));
 $REGLAGES['mdSmsJeton'] = 'jeton-md-0003'; MdSms::oublier();
 verifie('le jeton de MétaDonnée passe devant tant que rien n’a été retenu', MdSms::config()['jeton'] === 'jeton-md-0003', json_encode([array_column(MdSms::candidats(), 'origine'), $REGLAGES]));
+// L'expéditeur (20/11/2026, essai : « (14) Invalid from field ») : « AtelierBy » refusé, celui du CRM essayé, puis aucun.
+$REGLAGES = []; $CRMREG = ['smsapi_oauth_token' => 'jeton-crm-0002']; MdSms::oublier();
+$froms = [];
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$froms): array {
+    $froms[] = $champs['from'] ?? '(aucun)';
+    return isset($champs['from']) ? [200, ['error' => 14, 'message' => 'Invalid from field']] : [200, ['count' => 1, 'list' => [['id' => 'SANS1']]]];
+};
+[$okS, $id] = MdSms::envoyer('+48 725 038 049', 'Essai', 'AtelierBy');
+verifie('expéditeur refusé (14) : le SMS part sans expéditeur', $okS && $id === 'SANS1' && $froms === ['AtelierBy', '(aucun)'], json_encode($froms));
+verifie('… et c’est retenu pour « AtelierBy »', ($REGLAGES['mdSmsExpediteur'] ?? null) === ['pour' => 'AtelierBy', 'utilise' => ''], json_encode($REGLAGES));
+$froms = [];
+[$okS] = MdSms::envoyer('+48 725 038 049', 'Encore', 'AtelierBy');
+verifie('l’envoi suivant part sans expéditeur du premier coup', $okS && $froms === ['(aucun)'], json_encode($froms));
+$REGLAGES = []; $CRMREG = ['smsapi_oauth_token' => 'jeton-crm-0002', 'sms_sender' => 'AtelierBy B']; MdSms::oublier();
+$froms = [];
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton) use (&$froms): array {
+    $froms[] = $champs['from'] ?? '(aucun)';
+    return ($champs['from'] ?? '') === 'AtelierBy B' ? [200, ['count' => 1, 'list' => [['id' => 'CRMF']]]] : [200, ['error' => 14, 'message' => 'Invalid from field']];
+};
+[$okS, $id] = MdSms::envoyer('+48 725 038 049', 'Essai', 'AtelierBy');
+verifie('l’expéditeur du CRM est essayé avant « aucun »', $okS && $id === 'CRMF' && $froms === ['AtelierBy', 'AtelierBy B'], json_encode($froms));
+MdSms::$transport = static function (string $url, ?array $champs, string $jeton): array { return [200, ['error' => 14, 'message' => 'Invalid from field']]; };
+$REGLAGES = []; MdSms::oublier();
+[$okS, $err] = MdSms::envoyer('+48 725 038 049', 'x', 'AtelierBy');
+verifie('tous les expéditeurs refusés : l’erreur 14 les nomme', !$okS && str_contains($err, '(14)') && str_contains($err, 'expéditeurs essayés : « AtelierBy », « AtelierBy B », aucun'), $err);
 MdSms::$transport = null;
 $CLES = []; $REGLAGES = []; $CRMREG = []; erpCle(''); MdSms::oublier();
 [$okS, $err] = MdSms::envoyer('0476000012', 'x');
