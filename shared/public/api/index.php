@@ -63,6 +63,7 @@ require __DIR__ . '/../../../consultant/src/verification_matieres_prix.php';   /
 require __DIR__ . '/../../../consultant/src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
 require __DIR__ . '/../../../consultant/src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
 require __DIR__ . '/../../../consultant/src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
+require __DIR__ . '/../../../consultant/src/reclamations.php';              // Réclamations fournisseur : photos, part du livré, tableau annuel (21/11/2026)
 require __DIR__ . '/../../../consultant/src/fil_franchise.php';             // Le fil du franchisé : notes, photos, captures, étiquettes, fils (19/11/2026)
 require __DIR__ . '/../../../consultant/src/verification_flux.php';
 require __DIR__ . '/../../../consultant/src/verification_base.php';
@@ -544,6 +545,11 @@ function route(string $method, string $path): mixed
             $path === '/fournisseurs/reclamations'     => ep_fournisseurs_reclamations(),
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
+            // La fiche d'une réclamation (photos, part du livré) et le tableau annuel réclamé / livré (21/11/2026,
+            // consultant/src/reclamations.php). Le tableau annuel couvre tout le réseau : hors des préfixes d'un
+            // magasin (ACCES_FRANCHISE), il est réservé au siège.
+            $path === '/fournisseurs/reclamation-fiche' => ep_reclamation_fiche(),
+            $path === '/reclamations/annuel'           => ep_reclamations_annuel(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
@@ -650,6 +656,8 @@ function route(string $method, string $path): mixed
             $path === '/helpdesk/magasin'             => ep_helpdesk_magasin(),
             $path === '/helpdesk/sms'                 => ep_helpdesk_sms(),   // le SMS au bureau à chaque demande (20/11/2026)
             $path === '/helpdesk/relances/cron'       => ep_helpdesk_relances_cron(),   // l'horloge des relances SMS (20/11/2026)
+            $path === '/helpdesk/a-traiter'           => ep_helpdesk_a_traiter(),   // la carte « Demandes à traiter » de l'accueil (21/11/2026)
+            $path === '/helpdesk/sms/remise'          => ep_helpdesk_sms_remise(),   // le statut de remise d'un SMS d'essai (21/11/2026)
             (bool) preg_match('#^/helpdesk/demandes/(\d+)/consultants$#', $path, $mh) => ep_helpdesk_consultants((int) $mh[1]),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
@@ -817,6 +825,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
     if ($method === 'POST' && $path === '/exploitation/frais/tva') { return wr_exploitation_frais_tva(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/ajout') { return wr_exploitation_frais_ajout(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/annuler') { return wr_exploitation_frais_annuler(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }

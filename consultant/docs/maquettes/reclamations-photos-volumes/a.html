@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../../shared/public/assets/img/logo.png">
+<title>A · les photos à chaque réclamation — Cockpit CEO (maquette)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../../shared/public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../../shared/public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../../shared/public/assets/css/app.css">
+<link rel="stylesheet" href="../../../../shared/public/assets/css/verification.css">
+<link rel="stylesheet" href="../../../../shared/public/assets/css/helpdesk.css">
+<link rel="stylesheet" href="rp.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../../shared/public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4zM8 9h8M8 12h5"></path></svg><span class="sidebar__item-label">Demandes des franchisés</span><span class="hd-badge">9</span></button>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Demandes des franchisés</h1>
+      </div>
+      <div class="topbar__actions"><span class="hd-pill">Maquette · A · les photos à chaque réclamation</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="vr hd"><div class="hd-onglets"><button class="">Demandes au bureau<small>9 ouvertes</small></button><button class="on">Réclamations fournisseur<small>7 ouvertes · tous les magasins</small></button><button class="">Tableau annuel<small>réclamé / livré · nouveau</small></button></div><div class="vr-card"><div class="vm-kpis" style="grid-template-columns:repeat(6,1fr)"><div class="vm-kpi "><div class="k">Ouvertes</div><div class="v"><span class="rp-att">7</span></div><div class="s">sans réponse du fournisseur</div></div><div class="vm-kpi "><div class="k">Montant ouvert</div><div class="v"><span class="rp-ko">126,73 €</span></div><div class="s">au prix d’achat (prix incomplets)</div></div><div class="vm-kpi "><div class="k">Plus ancienne</div><div class="v"><span class="rp-ko">89 j</span></div><div class="s">Gosselies, le 24/08</div></div><div class="vm-kpi "><div class="k">Réglées</div><div class="v"><span class="rp-ok">12</span></div><div class="s">réponse du fournisseur</div></div><div class="vm-kpi "><div class="k">Refusées</div><div class="v">6</div><div class="s">par le fournisseur</div></div><div class="vm-kpi "><div class="k">Avec photo</div><div class="v">16 / 25</div><div class="s">9 sans photo · nouveau</div></div></div>
+  <div class="vt-fil"><div class="vr-chips hd-chips"><button class="on">Toutes <b>25</b></button><button>Ouvertes <b>7</b></button><button>Réglées <b>12</b></button><button>Refusées <b>6</b></button><button class="rp-chip-ko">Sans photo <b>9</b></button></div>
+  <select class="vr-sel"><option>Tous les magasins</option></select><select class="vr-sel"><option>Tous les fournisseurs</option></select><select class="vr-sel"><option>3 derniers mois</option></select>
+  <input class="vm-q" type="search" placeholder="Chercher une référence, un motif…"><span class="vr-sp"></span><button class="vr-btn">Relire</button></div><div class="hd-cols rp-cols"><div class="vr-tw"><table class="vr-t hd-t"><thead><tr><th></th><th class="g">Date</th><th class="g">Magasin</th><th class="g">Fournisseur</th><th class="g">Référence</th><th class="g">Motif</th><th>Photos</th><th>Statut</th><th>Montant</th></tr></thead>
+  <tbody><tr class=""><td class="hd-lis att"></td>
+    <td class="g">20/11<small class="">1 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Soupe Potiron &amp; Citron (6 x 1l.)</b><small>1 pcs · SKU 1003985</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de qualité du produit</span><small>Pomme de terre noire</small></td>
+    <td><span class="rp-vign"><img src="photos/viennoiseries.jpg" alt=""><b>2</b></span></td>
+    <td><span class="hd-st att">Ouverte</span><small>nouvelle</small></td><td>5,23 €</td></tr><tr class=""><td class="hd-lis att"></td>
+    <td class="g">20/11<small class="">1 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Soupe Potiron &amp; Citron (6 x 1l.)</b><small>6 pcs · SKU 1003985</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de taille ou de poids</span><small>Pomme de terre noire</small></td>
+    <td><span class="rp-sansph">sans photo</span></td>
+    <td><span class="hd-st att">Ouverte</span><small>nouvelle</small></td><td>31,37 €</td></tr><tr class=""><td class="hd-lis mu"></td>
+    <td class="g">19/11<small class="">2 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Cougnou Sucre 200 g. - Cru</b><small>126 pcs · SKU 1003088</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de taille ou de poids</span><small>Probleme de pousse, 5h00 a 30°. Cougnous pale et non développer</small></td>
+    <td><span class="rp-sansph">sans photo</span></td>
+    <td><span class="hd-st mu">Refusée</span><small>répondue le 20/11</small></td><td>123,87 €</td></tr><tr class=""><td class="hd-lis mu"></td>
+    <td class="g">10/11<small class="">11 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Fond de pâte - 28 Ø</b><small>10 pcs · SKU 2580106</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Non-conformité avec la commande</span><small>2x boite complete renvoyée chauffeur , non conforme , merci de rembourser</small></td>
+    <td><span class="rp-vign"><img src="photos/vitrine.jpg" alt=""><b>1</b></span></td>
+    <td><span class="hd-st mu">Refusée</span><small>répondue le 12/11</small></td><td>38,61 €</td></tr><tr class=""><td class="hd-lis mu"></td>
+    <td class="g">10/11<small class="">11 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Fond de pâte - 28 Ø</b><small>10 pcs · SKU 2580106</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Non-conformité avec la commande</span><small>merci d’effectuer le remboursement, car non conforme à ma commande et renv…</small></td>
+    <td><span class="rp-sansph">sans photo</span></td>
+    <td><span class="hd-st mu">Refusée</span><small>répondue le 12/11</small></td><td>38,61 €</td></tr><tr class=""><td class="hd-lis ok"></td>
+    <td class="g">05/11<small class="">16 j</small></td><td class="g">Halle</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Croissant</b><small>25 pcs · SKU 1001958</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de qualité du produit</span><small>Pièces jetées en caisse le 05/11 : 25 × Croissant, motif « qualité ». Pas …</small></td>
+    <td><span class="rp-vign"><img src="photos/vitrine.jpg" alt=""><b>3</b></span></td>
+    <td><span class="hd-st ok">Acceptée</span><small>répondue le 09/11</small></td><td>17,47 €</td></tr><tr class=""><td class="hd-lis ok"></td>
+    <td class="g">09/10<small class="">43 j</small></td><td class="g">Halle</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Croissant</b><small>110 pcs · SKU 1001958</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de qualité du produit</span><small>Pièces jetées en caisse le 09/10 : 110 × Croissant, motif « qualité ».</small></td>
+    <td><span class="rp-vign"><img src="photos/viennoiseries.jpg" alt=""><b>2</b></span></td>
+    <td><span class="hd-st ok">Acceptée</span><small>répondue le 12/10</small></td><td>76,88 €</td></tr><tr class=""><td class="hd-lis ok"></td>
+    <td class="g">09/10<small class="">43 j</small></td><td class="g">Halle</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Croissant</b><small>110 pcs · SKU 1001958</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de qualité du produit</span><small>Ne poussent pas correctement</small></td>
+    <td><span class="rp-vign"><img src="photos/vitrine.jpg" alt=""><b>1</b></span></td>
+    <td><span class="hd-st ok">Acceptée</span><small>répondue le 12/10</small></td><td>76,88 €</td></tr><tr class="hd-on"><td class="hd-lis mu"></td>
+    <td class="g">05/10<small class="">47 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Pain au Chocolat</b><small>56 pcs · SKU 1002343</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Quantité incorrecte de produits dans l’emballage</span><small>dans une boite de 56, j’ai des sachets incomplet , des pains au chocolat d…</small></td>
+    <td><span class="rp-vign"><img src="photos/viennoiseries.jpg" alt=""><b>2</b></span></td>
+    <td><span class="hd-st mu">Refusée</span><small>répondue le 13/10</small></td><td>45,06 €</td></tr><tr class=""><td class="hd-lis mu"></td>
+    <td class="g">02/10<small class="">50 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Riz Croustillant - 28 Ø</b><small>8 pcs · SKU 2580116</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de taille ou de poids</span><small>Non conforme à la qualité prévue</small></td>
+    <td><span class="rp-sansph">sans photo</span></td>
+    <td><span class="hd-st mu">Refusée</span><small>répondue le 13/10</small></td><td>73,46 €</td></tr><tr class=""><td class="hd-lis att"></td>
+    <td class="g">01/10<small class="ko">51 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Tendresse au Chocolat</b><small>40 pcs · SKU 1008248</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de taille ou de poids</span><small>pas reçu lors de la précédente livraison</small></td>
+    <td><span class="rp-sansph">sans photo</span></td>
+    <td><span class="hd-st att">Ouverte</span><small>nouvelle</small></td><td>43,96 €</td></tr><tr class=""><td class="hd-lis att"></td>
+    <td class="g">01/10<small class="ko">51 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Blanc (Pauvre en Gluten) 600 g.</b><small>1 pcs · SKU 1002518</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Non-conformité avec la commande</span><small>Test — signalé par Sam Photos (1) : https://185.180.206.46/consulant_bo/up…</small></td>
+    <td><span class="rp-vign"><img src="photos/vitrine.jpg" alt=""><b>1</b></span></td>
+    <td><span class="hd-st att">Ouverte</span><small>nouvelle</small></td><td>2,21 €</td></tr><tr class=""><td class="hd-lis mu"></td>
+    <td class="g">30/09<small class="">52 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Riz Croustillant - 28 Ø</b><small>10 pcs · SKU 2580116</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Problème de qualité du produit</span><small>problème de recette, le temps de cuisson est doublée mais la composition r…</small></td>
+    <td><span class="rp-vign"><img src="photos/viennoiseries.jpg" alt=""><b>1</b></span></td>
+    <td><span class="hd-st mu">Refusée</span><small>répondue le 01/10</small></td><td>91,83 €</td></tr><tr class=""><td class="hd-lis att"></td>
+    <td class="g">30/09<small class="ko">52 j</small></td><td class="g">Gosselies</td><td class="g">SLFood</td>
+    <td class="g hd-titre"><b>Tendresse au Chocolat</b><small>40 pcs · SKU 1008248</small></td>
+    <td class="g hd-titre"><span class="hd-dom">Autre raison</span><small>Commande… Facturé, lors de la réception marchandise, inventaire de vérif f…</small></td>
+    <td><span class="rp-sansph">sans photo</span></td>
+    <td><span class="hd-st att">Ouverte</span><small>nouvelle</small></td><td>43,96 €</td></tr></tbody></table></div><aside class="vr-card hd-fiche rp-fiche"><div class="hd-ft"><div><span class="hd-ref">CMP-3-2D0AB6898DA0924A</span><h3>Pain au Chocolat · SLFood</h3><small>Gosselies · le 05/10 (47 j)</small></div><span class="hd-st mu">Refusée</span></div>
+  <div class="hd-desc">dans une boite de 56, j’ai des sachets incomplet , des pains au chocolat de 50g et d’autre de 100gr... Merci de veillez à votre régularité</div>
+  <div class="rp-gal"><div class="rp-gal-h"><b>Photos du franchisé · 2</b><span>tablette de Gosselies · 05/10 à 07:42</span></div>
+    <div class="rp-gal-g"><figure class="rp-big"><img src="photos/viennoiseries.jpg" alt=""><figcaption>1 / 2 · cliquer pour agrandir</figcaption></figure>
+    <div class="rp-th"><img class="on" src="photos/viennoiseries.jpg" alt=""><img src="photos/vitrine.jpg" alt=""><button>Tout télécharger</button></div></div></div>
+  <div class="hd-rc-kv"><span>Référence</span><b>Pain au Chocolat · SKU 1002343</b><span>Quantité</span><b>56 pcs</b><span>Motif</span><b>Quantité incorrecte de produits dans l’emballage</b><span>Ce qui est demandé</span><b>REPLACEMENT</b><span>Commande</span><b>ORD-3-AF56438EF5731FB4</b><span>Montant</span><b>45,06 € (0,80 € / unité)</b><span>Quantité acceptée</span><b>0</b></div>
+  <div class="rp-part"><div class="rp-part-h"><b>Part de ce produit dans ce qui a été livré à Gosselies</b><span class="rp-illu">chiffres d’illustration</span></div>
+    <div class="rp-part-g"><div><span>Semaine 40</span><b>20,0 %</b><small>56 réclamés / 280 livrés</small><i style="width:80%"></i></div><div><span>Octobre</span><b>5,0 %</b><small>56 réclamés / 1 120 livrés</small><i style="width:20%"></i></div><div><span>2026</span><b>0,57 %</b><small>56 réclamés / 9 800 livrés</small><i style="width:2.2857142857142856%"></i></div></div>
+    <small class="rp-mu">Réseau, 2026 : 0,31 % des pains au chocolat livrés réclamés · Gosselies : 0,57 %</small></div>
+  <div class="hd-dejarep"><b>Réponse du fournisseur · 13/10</b>Vous déposez une réclamation. Il ne s’agit pas d’un problème de quantité, mais plutôt de la quantité des 60 chocolats que vous prétendiez avoir reçus le 22 septembre 2026. Vous avez reçu 7 sachets de 8 chocolats et 1 sachet de 4 chocolats.</div></aside></div>
+  <div class="vr-pied"><b>Nouveau :</b> la colonne <b>Photos</b> (vignette et nombre), le filtre <b>Sans photo</b>, et dans la fiche les photos en grand avec « Tout télécharger » et la part du produit dans ce qui a été livré (semaine, mois, année ; magasin et réseau). Les photos viennent des pièces jointes de la réclamation au panel (lien signé, relu à l’ouverture de la fiche) et de celles prises depuis le dashboard. <span class="vr-mu">Réclamations : capture du 21/11/2026 · nombres de photos et volumes livrés : illustration.</span></div></div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>

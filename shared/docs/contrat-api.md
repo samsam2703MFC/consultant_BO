@@ -2868,6 +2868,54 @@ chaque poste : `lignes[]` {`poste`, `cle`, `type`, `montant`, `tva` (true, false
 Résultat gardé d'aujourd'hui part périmé (servi, refait en arrière-plan). Le panel n'est pas modifié. Routes sous
 `/exploitation` : un franchisé n'y lit et n'y écrit que ses magasins.
 
+**Le poste d'une ligne (21/11/2026).** Le poste est la `description` de la ligne au panel (le libellé saisi :
+« Comptable », « royalties »), sinon sa catégorie (`cost_name`) ; la catégorie reste en `type`, sous le poste. Avant, le
+poste était la catégorie : un frais « Comptable » s'affichait « Autres charges d'exploitation », s'additionnait aux autres
+frais de la catégorie, et la TVA choisie pour « Comptable » ne s'y appliquait pas. Un poste sans choix propre prend celui
+de sa catégorie (les choix faits avant restent valables). La garde `phF:` porte une version (`v`) : une lecture faite avec
+l'ancienne règle se refait.
+
+### `POST /exploitation/frais/ajout` et `POST /exploitation/frais/annuler` — ajouter un frais au panel (21/11/2026)
+
+Demande : « rajouter un frais (faire un formulaire) et que ce frais se reporte sur toute l'année ». Code :
+`panel/src/frais.php` ; écran : l'onglet Frais (`rendFrais`, carte « Ajouter un frais ») ; tests : `php panel/bin/tests_pnl_ht.php`.
+
+`POST /exploitation/frais/ajout {shop, nom, type, montant, base, mois, repeter, tva, taux}` crée le frais au panel
+(`POST /shops/{id}/costs`), une ligne par mois : `repeter` `mois` (le mois seulement), `fin` (de ce mois à décembre),
+`annee` (janvier → décembre de l'année de `mois`). `base` `mois` : `montant` chaque mois ; `total` : `montant` réparti au
+centime, le dernier mois prend l'arrondi. `type` : l'identifiant d'un type de frais du panel (`/costs`, rendu par
+`GET /exploitation/frais` sous `types`, gardé un jour dans `phTypes`). `mois` : de l'année passée à l'année prochaine.
+`tva`/`taux` (facultatifs) : le choix « TVA comprise » du nouveau poste, comme `/exploitation/frais/tva`.
+
+- **La forme des frais au panel** (lue le 21/11/2026 par `panel/tools/sonde_frais.php`, workflow `sonde-frais.yml`,
+  lecture seule) : `/costs` rend les 9 catégories `{id, name}` ; une ligne du magasin (`/shops/{id}/costs?period=`, liste)
+  est `{id, id_shop, id_cost, date: AAAA-MM-01, amount: "700.00", description, cost_name}` ; `/owner/costs?period=`
+  rend `{period, total, items: [{id, date, amount, description, cost_name}]}`. `cost_name` est la catégorie,
+  `description` le libellé saisi. **Aucun champ de TVA** : la TVA d'un poste reste au cockpit (`panel_frais_tva`).
+- **Le corps** reprend les champs d'une ligne déjà saisie au magasin (le mois de l'ajout puis les trois d'avant) : le
+  libellé dans `description` (sinon `name`, `label`, `title`), jamais `cost_name` ; sans ligne lue, la forme ci-dessus
+  `{id_shop, id_cost, date, amount, description}`. Chaque ligne couvre son mois, jamais plus.
+- **L'identifiant.** La création ne rend pas l'identifiant de la ligne : la relecture le retrouve (même libellé, même
+  montant, la plus récente des lignes qu'aucun autre ajout ne tient) ; à défaut, l'annulation le cherche au même moment.
+- **Le report par le panel.** Le mois qui suit le premier est relu (`/owner/costs?period=`) avant et après la première
+  création : s'il porte le frais une fois de plus, le panel le reporte de lui-même et rien d'autre n'est créé
+  (`reporteParLePanel`, les mois suivants marqués `parLePanel`).
+- **Un refus** du panel (code, message, `errors`) remonte mois par mois (`mois[].erreur`) ; les mois suivants ne partent
+  pas. Rien de créé : HTTP 502 et `error`.
+- **La réponse** : `ok`, `lot`, `poste`, `crees`, `mois[]` {`mois`, `montant`, `ok`, `id` (la ligne au panel, si rendue),
+  `erreur`, `vu` (le panel la montre à la relecture), `parLePanel`}, `reporteParLePanel`, `annulable`, `champs` (les noms
+  des champs envoyés), `gabarit` (une ligne lue a servi de modèle).
+- Les frais gardés des mois touchés (`phF:`), et pour les mois passés les frais du jour gravés (`dsJ:`, `dsM:`) et le P&L
+  mensuel (`pnlM:`), se relisent ; le Résultat d'aujourd'hui part périmé.
+
+Chaque ligne créée est gardée dans `panel_frais_ajout` (`shop_id`, `lot`, `mois`, `poste`, `montant`, `panel_id`,
+`cree_le`, `cree_par`, `annule_le`). `GET /exploitation/frais` rend sous `ajouts` les ajouts des 90 derniers jours, non
+annulés (huit au plus : `lot`, `poste`, `du`, `au`, `n`, `montant`, `le`, `par`, `annulable`).
+
+`POST /exploitation/frais/annuler {shop, lot}` supprime au panel les lignes de l'ajout (`DELETE /shops/costs/{id}`) et les
+marque annulées ; seulement celles du magasin de la requête. Une ligne dont le panel n'a pas rendu l'identifiant est à
+supprimer au panel (`sansId`). Réponse : `ok`, `annules`, `sansId`, `refus[]` {`mois`, `erreur`}.
+
 **Main-d'œuvre de la semaine et du mois (10/10/2026).** `/exploitation/periode` additionne le coût du personnel de chaque jour tel que le panel l'alloue (`/shops/{id}/statistics/daily-summary` : `employee_cost`, et `shop_cost` pour les frais). `/pnl?period=month` rend le personnel cumulé du 1er à aujourd'hui, pas le mois entier. Le répartir sur les 31 jours d'octobre donnait 1 257,69 € pour Halle au 10/10 au lieu d'environ 3 900 €. Ce cumul ne sert plus qu'en repli, divisé par les jours ouverts écoulés. Un jour lu deux jours plus tard est gardé (`dsJ:{magasin}:{jour}`). `labourSource` dit d'où vient le chiffre. Le tableau « Le duel, chiffre par chiffre » de l'onglet Opérationnel ne garde que CA, clients et panier.
 
 **Dashboard magasin, Semaine et Mois (10/10/2026).** Plus de barre du stock (elle reste dans Opérationnel). « Ta place dans le réseau » classe le B2B (`caPro`, la part `partPro` dessous) à la place des messages du panel, qui ne sont plus lus.

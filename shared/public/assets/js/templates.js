@@ -10,7 +10,7 @@ import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
-import { tplHelpdesk } from './helpdesk-tpl.js';
+import { tplHelpdesk, tplATraiter } from './helpdesk-tpl.js';
 import { tplFil } from './fil-tpl.js';
 import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
@@ -3135,6 +3135,7 @@ function tplResultat(c, x){
       <div></div>
       <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px">${c.rjOnglets.map(ong).join('')}</div>
     </div>
+    ${c.hdAT ? tplATraiter(c.hdAT, x) : ''}
     ${c.rjChargeEnCours ? `
     <div style="margin:-6px 0 -4px">
       <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
@@ -5948,7 +5949,7 @@ function tplCtrlDetail(c, x){
             <span style="font-size:10.5px;color:var(--color-text-muted);flex:1;min-width:220px;line-height:1.45">${esc(d.rc.note)}</span>
             <button ${x.A(d.rc.envoyer)} style="border:none;background:${d.rc.peut ? 'var(--color-primary)' : '#c9beb4'};color:#fff;border-radius:8px;height:31px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:${d.rc.busy ? 'wait' : 'pointer'}">${d.rc.busy ? 'Envoi…' : 'Déposer la réclamation'}</button>
           </div>
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">La réclamation part chez le fournisseur et apparaît dans Suivi fournisseurs. Les repères posés sur la photo sont recopiés dans le texte — la pièce jointe, elle, attend l'identifiant que l'API ne rend pas encore.</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">La réclamation part chez le fournisseur et apparaît dans Suivi fournisseurs. <b style="font-weight:600">La photo du contrôle part avec elle</b> (la photo est obligatoire depuis le 21/11/2026 : une tâche sans photo ne peut pas donner de réclamation) ; les repères posés sur la photo sont recopiés dans le texte.</div>
           `)}` : ''}
       </div>
 

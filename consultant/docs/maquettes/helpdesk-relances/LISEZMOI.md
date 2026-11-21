@@ -19,6 +19,17 @@ celles de la capture du 20/11 ; celles de Gosselies et de Halle sont inventées.
 | B · Liste et fiche | `b-liste-fiche.png` | la colonne « Relance » (prochaine, envoyées, arrêtée, suspendue), l'indicateur « Relances », la fiche d'une demande relancée trois fois : ses envois, la prochaine, « Suspendre les relances », « Relancer maintenant » |
 | C · Les SMS | `c-sms-journal.png` | ce que reçoivent Sam et Pierre ; le journal des trois semaines (8 SMS) ; l'autre choix : un récapitulatif chaque lundi |
 
+## Le 21/11/2026 : tant que pas en cours, et l'accueil
+
+Sam : « les relances se font tous les 7 jours tant que pas en cours, et se mettent dans la liste de suivi tous les
+jours » ; la liste de suivi : l'accueil du cockpit.
+- **Quelles demandes** : désormais celles qui ne sont **pas encore en cours** (statut « Nouvelle ») ; la relance s'arrête
+  quand la demande passe « En cours » (une date limite fixée l'y fait passer), même sans réponse. Un réglage enregistré
+  avant (« sans réponse du bureau », sans version) prend la nouvelle règle ; « sans réponse » reste un choix.
+- **L'accueil** (écran Résultat) : la carte « Demandes à traiter » — les demandes pas encore en cours, de la plus
+  ancienne à la plus récente (5, puis « et N autres »), leur âge, le consultant, les relances SMS déjà parties ; un clic
+  ouvre la demande. Relue à chaque ouverture du cockpit et chaque nouveau jour (`GET /helpdesk/a-traiter`).
+
 ## La règle proposée (● dans la maquette)
 
 1. **Quelles demandes** : celles qui attendent une réponse du bureau (nouvelles ou en cours, sans `admin_reply`).

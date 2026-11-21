@@ -57,6 +57,18 @@ n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode «
   fournisseur, période, recherche) et la fiche de chaque réclamation.
 
 - **Les relances** (« renvoyer un SMS à Sam ou Pierre tous les 7 jours ») : maquette `../helpdesk-relances`, validée et
-  codée le 20/11/2026. Ce dossier en décrit la règle.
+  codée le 20/11/2026. Ce dossier en décrit la règle. Le 21/11 : relance tant que la demande n'est pas en cours, et la
+  carte « Demandes à traiter » sur l'accueil du cockpit (écran Résultat).
+
+- **Le 21/11/2026** :
+  - **Urgent** dans le formulaire du franchisé (« Urgent ? Oui / Non »). Toutes les demandes gardent leur SMS au bureau ;
+    une urgente l'envoie en commençant par « URGENT - », le panel le lit dans la demande, et elle ressort en rouge, en
+    tête de la liste du cockpit (puce « Urgentes ») et de la carte « Demandes à traiter » de l'accueil.
+  - **Le franchisé prévenu par SMS quand le bureau répond** (réponse de la fiche, ou constat d'une mission renvoyé en
+    réponse) : au GSM du magasin (Qui fait quoi, sinon les alertes SMS des leads), en français ou en néerlandais, le
+    titre et le début de la réponse ; la réponse entière se lit dans son dashboard. Coupé dans « SMS au bureau ».
+  - **L'essai du SMS dit ce qui s'est passé** : le jeton retenu (son nom), la plateforme, l'expéditeur, l'identifiant
+    SMSAPI, le compte et ses points, puis le statut de remise (`GET /helpdesk/sms/remise?id=`) — remis, non remis,
+    expiré… Un SMS « accepté » par SMSAPI n'est pas encore un SMS reçu.
 
 Banc : `php consultant/bin/tests_helpdesk.php` (SMS, date limite, relances ; SQLite en mémoire, doublures du panel et de SMSAPI).

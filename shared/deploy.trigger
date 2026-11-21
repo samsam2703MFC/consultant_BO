@@ -214,4 +214,10 @@
 2026-11-20T21:27:17Z SMS : la clé SMSAPI commune de l'ERP (erp_cles smsapi_token) quand MétaDonnée n'a pas de jeton ; un jeton refusé sur .com essaie .pl
 2026-11-20T21:38:55Z SMS : le jeton OAuth SMSAPI du CRM (crm_settings) et toutes les clés « sms » d'erp_cles essayés tour à tour, sur .com et .pl ; celui qui passe est retenu
 2026-11-21T05:28:54Z SMS : un expéditeur refusé par SMSAPI (14) est remplacé par celui du CRM, puis par aucun ; celui qui passe est retenu
+2026-11-21T05:39:01Z Helpdesk : relances tant que la demande n'est pas en cours ; la carte « Demandes à traiter » sur l'accueil du cockpit (Résultat)
+2026-11-21T05:56:30Z Helpdesk : « Urgent » dans le formulaire du franchisé (SMS « URGENT », en tête du cockpit et de l'accueil) ; SMS au franchisé quand le bureau répond ; l'essai du SMS dit le jeton, le compte et la remise
+2026-11-21T06:10:59Z Frais : « Ajouter un frais » dans l'onglet Frais du dashboard, créé au panel pour le mois, jusqu'en décembre ou toute l'année (montant par mois ou total réparti), annulable
+2026-11-21T06:32:58Z Frais : le poste est le libellé saisi au panel (description), la catégorie dessous ; la TVA du formulaire s'applique ; « Annuler » retrouve les lignes créées au panel
+2026-11-21T06:38:58Z Réclamations fournisseur : photos à chaque réclamation (liste et fiche), part du produit dans le livré, onglet Tableau annuel réclamé / livré ; la photo est obligatoire pour déposer une réclamation
+2026-11-21T06:45:33Z Frais : plus de « indiqué le … » sous le poste dans le tableau des frais
 2026-11-21T06:48:57Z Étiquettes NL : script consultant/bin/envoi_etiquettes_nl.php (essai à blanc par défaut) et son plan — 81 corrections d'allergènes des matières premières, 100 traductions FR/NL ; rien n'est envoyé au déploiement
