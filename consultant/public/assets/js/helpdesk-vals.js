@@ -142,18 +142,20 @@ function valsReclamations(app){
   if (!D) { return v; }
   const tous = D.lignes || [];
   const f = S.hdRcFiltre || 'toutes', q = String(S.hdRcQ || '').trim().toLowerCase(), fm = S.hdRcMag || '', ff = S.hdRcFour || '';
-  const passe = l => (f === 'toutes' || rcEtat(l) === f) && (!fm || l.shopId === fm) && (!ff || (l.fournisseur || 'Fournisseur inconnu') === ff)
+  const passe = l => (f === 'toutes' || rcEtat(l) === f || (f === 'sansphoto' && !l.nbPhotos)) && (!fm || l.shopId === fm) && (!ff || (l.fournisseur || 'Fournisseur inconnu') === ff)
     && (!q || [l.reference, l.sku, l.fournisseur, l.magasin, l.motif, l.texte, l.reponse, l.cle].join(' ').toLowerCase().indexOf(q) >= 0);
   const L = tous.filter(passe);
   const ouvertes = tous.filter(l => l.ouverte && l.statut !== 'REJECTED');
   const vieille = ouvertes.filter(l => l.age != null).sort((a, b) => b.age - a.age)[0];
+  const sansPhoto = tous.filter(l => !l.nbPhotos).length;
   v.kpis = [['Ouvertes', ouvertes.length, 'sans réponse du fournisseur', ouvertes.length ? 'att' : 'ok'],
     ['Montant ouvert', eur(D.montantOuvert), 'au prix d’achat' + (D.montantComplet === false ? ' (prix incomplets)' : ''), 'ko'],
     ['Plus ancienne', vieille ? vieille.age + ' j' : '—', vieille ? court(vieille.magasin) + ', le ' + dm(vieille.le) : 'aucune ouverte', 'ko'],
     ['Réglées', tous.filter(l => rcEtat(l) === 'reglee').length, 'réponse du fournisseur', 'ok'], ['Refusées', tous.filter(l => rcEtat(l) === 'refusee').length, 'par le fournisseur', 'mu'],
-    ['Magasins', new Set(tous.map(l => l.shopId)).size, tous.length + ' réclamation' + (tous.length > 1 ? 's' : '') + ' · ' + (D.fenetre || ''), '']];
-  v.chips = [['toutes', 'Toutes', tous.length], ['ouverte', 'Ouvertes', ouvertes.length], ['reglee', 'Réglées', tous.filter(l => rcEtat(l) === 'reglee').length], ['refusee', 'Refusées', tous.filter(l => rcEtat(l) === 'refusee').length]]
-    .map(([k, n, c]) => ({ nom: n, n: c, on: f === k, choisir: () => app.setState({ hdRcFiltre: k }) }));
+    // Les photos (21/11/2026) : sans photo, le fournisseur refuse — la part des réclamations qui en ont une.
+    ['Avec photo', tous.filter(l => l.nbPhotos).length + ' / ' + tous.length, sansPhoto + ' sans photo · ' + new Set(tous.map(l => l.shopId)).size + ' magasin' + (new Set(tous.map(l => l.shopId)).size > 1 ? 's' : ''), sansPhoto ? 'att' : 'ok']];
+  v.chips = [['toutes', 'Toutes', tous.length], ['ouverte', 'Ouvertes', ouvertes.length], ['reglee', 'Réglées', tous.filter(l => rcEtat(l) === 'reglee').length], ['refusee', 'Refusées', tous.filter(l => rcEtat(l) === 'refusee').length], ['sansphoto', 'Sans photo', sansPhoto]]
+    .map(([k, n, c]) => ({ nom: n, n: c, on: f === k, ko: k === 'sansphoto', choisir: () => app.setState({ hdRcFiltre: k }) }));
   const mags = {}; tous.forEach(l => { mags[l.shopId] = court(l.magasin); });
   v.magasins = [{ id: '', nom: 'Tous les magasins' }].concat(Object.entries(mags).sort((a, b) => a[1].localeCompare(b[1])).map(([id, nom]) => ({ id, nom: nom + ' (' + tous.filter(l => l.shopId === id).length + ')' }))).map(o => Object.assign(o, { on: o.id === fm }));
   v.poserMag = e => app.setState({ hdRcMag: e.target.value });
@@ -166,7 +168,7 @@ function valsReclamations(app){
   v.lignes = L.map(l => ({ le: dm(l.le), age: l.age != null ? l.age + ' j' : '', vieux: l.ouverte && l.age > 30, magasin: court(l.magasin), fournisseur: l.fournisseur || '—', reference: l.reference || '—', sku: l.sku,
     qte: l.qte != null ? nb(l.qte) + (l.unite ? ' ' + l.unite : '') : '—', motif: l.motif || '—', extrait: l.texte.length > 90 ? l.texte.slice(0, 90) + '…' : l.texte,
     statut: rcEtat(l) === 'ouverte' ? 'Ouverte' : (RC_STATUTS[l.statut] || l.statut || '—'), sousStatut: rcEtat(l) === 'ouverte' && RC_STATUTS[l.statut] ? RC_STATUTS[l.statut].toLowerCase() : '',
-    ton: ton(l), reponse: !!l.reponse, reponseLe: dm(l.reponseLe), montant: eur(l.montant),
+    ton: ton(l), reponse: !!l.reponse, reponseLe: dm(l.reponseLe), montant: eur(l.montant), photos: l.nbPhotos || 0,
     on: l.id === sel, choisir: () => app.setState({ hdRcSel: l.id }) }));
   v.n = L.length; v.total = tous.length; v.source = D.source; v.lecture = D.lecture; v.ecartees = D.ecartees || 0;
   const X = tous.find(l => l.id === sel);
@@ -174,7 +176,98 @@ function valsReclamations(app){
     statut: v.lignes.find(l => l.on).statut, ton: ton(X), texte: X.texte, reponse: X.reponse, reponseLe: dm(X.reponseLe),
     champs: [['Référence', X.reference + (X.sku ? ' · SKU ' + X.sku : '')], ['Quantité', X.qte != null ? nb(X.qte) + (X.unite ? ' ' + X.unite : '') : ''], ['Motif', X.motif],
       ['Ce qui est demandé', X.action], ['Commande', X.commande], ['Montant', X.montant != null ? eur(X.montant) + (X.prixUnitaire != null ? ' (' + eur(X.prixUnitaire) + ' / unité)' : '') : ''],
-      ['Quantité acceptée', X.qteAcceptee != null ? nb(X.qteAcceptee) : ''], ['Compensation', X.compensation], ['Pièces jointes', X.pj ? String(X.pj) : '']].filter(([, val]) => val) } : null;
+      ['Quantité acceptée', X.qteAcceptee != null ? nb(X.qteAcceptee) : ''], ['Compensation', X.compensation]].filter(([, val]) => val) } : null;
+  if (X) { Object.assign(v.fiche, ficheRc(app, X)); }
+  return v;
+}
+
+/* La fiche d'une réclamation (21/11/2026, maquette A) : ses photos — liens signés du panel, redemandés à chaque
+ * ouverture — et la part du produit dans ce qui a été livré au magasin (semaine, mois, année ; réseau sur l'année).
+ * Serveur : GET /fournisseurs/reclamation-fiche (src/reclamations.php). */
+function chargerFiche(app, X){
+  const cle = X.shopId + '|' + X.id, F = app.state.hdRcFiche;
+  if (F && F.cle === cle) { return; }
+  app.setState({ hdRcFiche: { cle, chargement: true, d: null }, hdRcPhoto: 0 });
+  readOne('/fournisseurs/reclamation-fiche?shop=' + encodeURIComponent(X.shopId) + '&id=' + encodeURIComponent(X.id))
+    .then(d => { if ((app.state.hdRcFiche || {}).cle === cle) { app.setState({ hdRcFiche: { cle, chargement: false, d: d || { error: 'le cockpit n’a pas répondu' } } }); } });
+}
+const pct = n => n == null ? '—' : Number(n).toLocaleString('fr-BE', { maximumFractionDigits: n < 1 ? 2 : 1 }) + ' %';
+function ficheRc(app, X){
+  chargerFiche(app, X);
+  const F = app.state.hdRcFiche || {}, d = F.d && !F.d.error ? F.d : null;
+  const liste = d ? (d.photos || []).filter(p => p.url) : [];
+  const i = Math.min(Math.max(0, app.state.hdRcPhoto || 0), Math.max(0, liste.length - 1));
+  const photos = { chargement: !!F.chargement, erreur: F.d && F.d.error ? F.d.error : null, n: X.nbPhotos || 0,
+    perdues: d ? (d.photos || []).filter(p => !p.url).length : 0,
+    grande: liste[i] ? liste[i].url : null, rang: liste.length ? (i + 1) + ' / ' + liste.length : '',
+    vignettes: liste.map((p, k) => ({ url: p.url, on: k === i, choisir: () => app.setState({ hdRcPhoto: k }) })),
+    source: liste.length ? (liste.some(p => p.source === 'dashboard') && liste.some(p => p.source === 'panel') ? 'panel et dashboard' : (liste[0].source === 'dashboard' ? 'prises depuis le dashboard' : 'jointes au panel')) : '',
+    toutOuvrir: liste.length > 1 ? () => liste.forEach(p => window.open(p.url, '_blank', 'noopener')) : null };
+  const P = d && d.part ? d.part : null;
+  const unite = X.unite ? ' ' + X.unite : '';
+  const part = !P ? null : !P.lu ? { indispo: 'Les livraisons de ce magasin ne sont pas lisibles : la part du livré ne peut pas être calculée.' } : {
+    titre: 'Part de ' + (X.reference || 'ce produit') + ' dans ce qui a été livré à ' + court(X.magasin),
+    cases: ['semaine', 'mois', 'annee'].map(k => { const p = P.periodes[k] || {}; return { nom: p.nom, part: pct(p.part), barre: p.part == null ? 0 : Math.min(100, p.part * 4),
+      sous: nb(p.reclame) + unite + ' réclamés / ' + (p.livre == null ? '—' : nb(p.livre) + unite + ' livrés'), haut: p.part != null && p.part >= 3 }; }),
+    reseau: 'Réseau, ' + (P.reseau || {}).nom + ' : ' + pct((P.reseau || {}).part) + ' (' + nb((P.reseau || {}).reclame) + ' / ' + nb((P.reseau || {}).livre) + unite + ')'
+      + ' · ' + court(X.magasin) + ' : ' + pct(((P.periodes || {}).annee || {}).part) };
+  return { photos, part };
+}
+
+/* Le tableau annuel (21/11/2026, maquette B) : magasins × mois, le montant réclamé et sa part dans ce qui a été livré
+ * au magasin le même mois, l'accepté, et la ligne Réseau. Serveur : GET /reclamations/annuel (src/reclamations.php). */
+const MOIS_C = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+function chargerAn(app, frais, annee, four){
+  const A = app.state.hdAn || {};
+  const an = annee != null ? annee : (A.annee || new Date().getFullYear());
+  const f = four != null ? four : (A.fournisseur != null ? A.fournisseur : '');
+  if (!frais && A.annee === an && A.fournisseur === f && (A.d || A.chargement)) { return; }
+  app.setState({ hdAn: { chargement: true, d: A.annee === an && A.fournisseur === f ? A.d : null, annee: an, fournisseur: f } });
+  readOne('/reclamations/annuel?annee=' + an + '&fournisseur=' + encodeURIComponent(f)).then(d => {
+    const B = app.state.hdAn || {};
+    if (B.annee === an && B.fournisseur === f) { app.setState({ hdAn: { chargement: false, d: d || { indispo: true, motif: 'le cockpit n’a pas répondu' }, annee: an, fournisseur: f } }); }
+  });
+}
+const chaleur = p => p == null ? '' : (p >= 3 ? 'h3' : p >= 1.5 ? 'h2' : p >= 0.75 ? 'h1' : 'h0');
+const eur0 = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €';
+function valsAnnuel(app){
+  chargerAn(app, false);
+  const A = app.state.hdAn || {}, D = A.d && !A.d.indispo && !A.d.error ? A.d : null;
+  const anCourant = new Date().getFullYear();
+  const v = { chargement: !!A.chargement && !D, relecture: !!A.chargement && !!D, relire: () => chargerAn(app, true),
+    erreur: A.d && (A.d.indispo || A.d.error) ? 'Le tableau annuel n’a pas pu être lu : ' + (A.d.motif || A.d.error) + '.' : null,
+    annees: [anCourant, anCourant - 1, anCourant - 2].map(a => ({ id: String(a), nom: String(a), on: a === A.annee })),
+    poserAnnee: e => chargerAn(app, false, Number(e.target.value)),
+    mois: MOIS_C };
+  if (!D) { return v; }
+  v.fournisseurs = (D.fournisseurs || []).map(f => ({ id: f.nom, nom: f.nom + ' (' + f.n + ')', on: f.nom === D.fournisseur }))
+    .concat([{ id: '*', nom: 'Tous les fournisseurs', on: D.fournisseur === '*' }]);
+  v.poserFour = e => chargerAn(app, false, null, e.target.value);
+  const cellule = c => c == null ? { futur: true } : { montant: c.n ? eur0(c.reclame) : '', part: c.n && c.part != null ? pct(c.part) : (c.n ? 'livré inconnu' : ''),
+    cls: c.n ? chaleur(c.part) : '', titre: c.n + ' réclamation' + (c.n > 1 ? 's' : '') + (c.nonChiffrees ? ' (' + c.nonChiffrees + ' sans prix)' : '') + ' · livré ' + eur0(c.livre) };
+  const ligne = (nom, sous, mois, t, fort) => ({ nom, sous, fort, cases: mois.map(cellule), total: cellule(t),
+    livre: eur0(t.livre), accepte: eur0(t.accepte), accepteSous: t.reclame > 0 ? pct(100 * t.accepte / t.reclame) + ' du réclamé' : '' });
+  const R = D.reseau || { mois: [], total: {} }, T = R.total || {};
+  v.lignes = (D.magasins || []).map(m => ligne(court(m.nom), m.total.n + ' réclamation' + (m.total.n > 1 ? 's' : ''), m.mois, m.total, false));
+  if (v.lignes.length) { v.lignes.push(ligne('Réseau', (T.n || 0) + ' réclamations', R.mois, T, true)); }
+  const pire = (D.magasins || []).filter(m => m.total.part != null).sort((a, b) => b.total.part - a.total.part)[0];
+  v.kpis = [['Réclamé ' + D.annee, eur0(T.reclame), (T.n || 0) + ' réclamations · ' + (D.magasins || []).length + ' magasins' + (T.nonChiffrees ? ' · ' + T.nonChiffrees + ' sans prix' : ''), ''],
+    ['Livré ' + D.annee, D.livreLu ? eur0(T.livre) : '—', D.livreLu ? 'au prix d’achat · ' + (D.fournisseur === '*' ? 'tous les fournisseurs' : D.fournisseur) : 'livraisons non lisibles', ''],
+    ['Taux de réclamation', pct(T.part), 'réclamé ÷ livré', T.part >= 1.5 ? 'att' : ''],
+    ['Accepté', eur0(T.accepte), T.reclame > 0 ? pct(100 * T.accepte / T.reclame) + ' du réclamé' : '', 'ok'],
+    ['Le plus haut', pire ? court(pire.nom) : '—', pire && T.part ? pct(pire.total.part) + ' du livré · ' + (pire.total.part / T.part).toLocaleString('fr-BE', { maximumFractionDigits: 1 }) + ' × le réseau' : '', pire && pire.total.part >= 3 ? 'ko' : '']];
+  v.source = D.source;
+  v.exporter = () => {
+    const sep = ';', l = [['Magasin'].concat(MOIS_C.map(m => m + ' réclamé (€)'), MOIS_C.map(m => m + ' taux (%)'), ['Année réclamé (€)', 'Année taux (%)', 'Livré (€)', 'Accepté (€)', 'Réclamations']).join(sep)];
+    const num = n => n == null ? '' : String(Math.round(n * 100) / 100).replace('.', ',');
+    const ajoute = (nom, mois, t) => l.push([nom].concat(mois.map(c => c ? num(c.reclame) : ''), mois.map(c => c ? num(c.part) : ''), [num(t.reclame), num(t.part), num(t.livre), num(t.accepte), String(t.n || 0)]).join(sep));
+    (D.magasins || []).forEach(m => ajoute(court(m.nom), m.mois, m.total));
+    ajoute('Réseau', R.mois, T);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + l.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'reclamations-' + D.annee + '-' + (D.fournisseur === '*' ? 'tous' : D.fournisseur).replace(/[^\w-]+/g, '_') + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
   return v;
 }
 
@@ -231,15 +324,17 @@ export function valsHelpdesk(app, c){
   chargerRc(app, false);   // le compte de l'onglet des réclamations
   const H = S.hdData || {};
   const D = H.d && !H.d.error && !H.d.indispo ? H.d : null;
-  const vue = S.hdVue === 'reclamations' ? 'reclamations' : 'demandes';
+  const vue = ['reclamations', 'annuel'].includes(S.hdVue) ? S.hdVue : 'demandes';
   const v = { vue, chargement: !!H.chargement && !D, erreur: H.d && (H.d.error || H.d.indispo) ? (H.d.motif || H.d.error) : null, relire: () => charger(app, true), relecture: !!H.chargement && !!D };
   c.hd = v;
   // Deux onglets (20/11/2026) : les demandes au bureau, les réclamations fournisseur de tous les magasins.
   const RcD = (S.hdRc || {}).d;
   v.onglets = [['demandes', 'Demandes au bureau', D ? (D.demandes || []).filter(x => x.ouverte).length + ' ouvertes' : ''],
-    ['reclamations', 'Réclamations fournisseur', RcD && !RcD.indispo && !RcD.error ? (RcD.ouvertes || 0) + ' ouvertes · tous les magasins' : '']]
+    ['reclamations', 'Réclamations fournisseur', RcD && !RcD.indispo && !RcD.error ? (RcD.ouvertes || 0) + ' ouvertes · tous les magasins' : ''],
+    ['annuel', 'Tableau annuel', 'réclamé / livré · par magasin et par mois']]
     .map(([k, nom, sous]) => ({ nom, sous, on: vue === k, choisir: () => app.setState({ hdVue: k }) }));
   if (vue === 'reclamations') { v.rc = valsReclamations(app); return; }
+  if (vue === 'annuel') { v.an = valsAnnuel(app); return; }
   if (!D) { return; }
   v.sms = valsSms(app, D);
   const tous = D.demandes || [];

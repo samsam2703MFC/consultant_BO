@@ -7,6 +7,7 @@ export function tplHelpdesk(c, x){
   if (!V) { return ''; }
   const onglets = `<div class="hd-onglets">${V.onglets.map(o => `<button class="${o.on ? 'on' : ''}" ${x.A(o.choisir)}>${esc(o.nom)}${o.sous ? `<small>${esc(o.sous)}</small>` : ''}</button>`).join('')}</div>`;
   if (V.vue === 'reclamations') { return `<div data-screen="helpdesk" class="vr hd">${onglets}${tplReclamations(V.rc, x)}</div>`; }
+  if (V.vue === 'annuel') { return `<div data-screen="helpdesk" class="vr hd">${onglets}${tplAnnuel(V.an, x)}</div>`; }
   if (V.chargement) { return `<div data-screen="helpdesk" class="vr hd">${onglets}<div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des demandes du helpdesk au panel…</div></div>`; }
   if (V.erreur) { return `<div data-screen="helpdesk" class="vr hd">${onglets}<div class="vr-card vr-etat ko">${esc(V.erreur)}</div></div>`; }
   const kpis = `<div class="vm-kpis">${V.kpis.map(k => `<div class="vm-kpi ${k[3]}"><div class="k">${esc(k[0])}</div><div class="v">${esc(String(k[1]))}</div><div class="s">${esc(k[2])}</div></div>`).join('')}</div>`;
@@ -108,7 +109,7 @@ function tplReclamations(R, x){
   if (R.erreur) { return `<div class="vr-card vr-etat ko">${esc(R.erreur)}</div>`; }
   const kpis = `<div class="vm-kpis">${R.kpis.map(k => `<div class="vm-kpi ${k[3]}"><div class="k">${esc(k[0])}</div><div class="v">${esc(String(k[1]))}</div><div class="s">${esc(k[2])}</div></div>`).join('')}</div>`;
   const sel = (opts, fn) => `<select class="vr-sel" ${x.C(fn)}>${opts.map(o => `<option value="${esc(o.id)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`;
-  const fil = `<div class="vt-fil"><div class="vr-chips hd-chips">${R.chips.map(ch => `<button class="${ch.on ? 'on' : ''}" ${x.A(ch.choisir)}>${esc(ch.nom)} <b>${ch.n}</b></button>`).join('')}</div>
+  const fil = `<div class="vt-fil"><div class="vr-chips hd-chips">${R.chips.map(ch => `<button class="${[ch.on ? 'on' : '', ch.ko && ch.n ? 'rc-chip-ko' : ''].join(' ').trim()}" ${x.A(ch.choisir)}>${esc(ch.nom)} <b>${ch.n}</b></button>`).join('')}</div>
     ${sel(R.magasins, R.poserMag)}${sel(R.fournisseurs, R.poserFour)}${sel(R.periodes, R.poserPeriode)}
     <input id="hd-rc-q" class="vm-q" type="search" placeholder="Chercher une référence, un motif…" value="${esc(R.q)}" ${x.I(R.poserQ)}><span class="vr-sp"></span>
     <button class="vr-btn" ${x.A(R.relire)}${R.relecture ? ' disabled' : ''}>${R.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
@@ -116,13 +117,16 @@ function tplReclamations(R, x){
     <td class="g">${esc(l.le)}<small class="${l.vieux ? 'ko' : ''}">${esc(l.age)}</small></td><td class="g">${esc(l.magasin)}</td><td class="g">${esc(l.fournisseur)}</td>
     <td class="g hd-titre"><b>${esc(l.reference)}</b><small>${esc(l.qte)}${l.sku ? ' · SKU ' + esc(l.sku) : ''}</small></td>
     <td class="g hd-titre"><span class="hd-dom">${esc(l.motif)}</span>${l.extrait ? `<small>${esc(l.extrait)}</small>` : ''}</td>
+    <td>${l.photos ? `<span class="rc-ph" title="${l.photos} photo${l.photos > 1 ? 's' : ''}">📷 ${l.photos}</span>` : '<span class="rc-sansph">sans photo</span>'}</td>
     <td><span class="hd-st ${l.ton}">${esc(l.statut)}</span>${l.sousStatut ? `<small>${esc(l.sousStatut)}</small>` : ''}${l.reponse ? `<small>répondue${l.reponseLe ? ' le ' + esc(l.reponseLe) : ''}</small>` : ''}</td><td>${esc(l.montant)}</td></tr>`;
-  const table = R.lignes.length ? `<div class="vr-tw"><table class="vr-t hd-t"><thead><tr><th></th><th class="g">Date</th><th class="g">Magasin</th><th class="g">Fournisseur</th><th class="g">Référence</th><th class="g">Motif</th><th>Statut</th><th>Montant</th></tr></thead>
+  const table = R.lignes.length ? `<div class="vr-tw"><table class="vr-t hd-t rc-t"><thead><tr><th></th><th class="g">Date</th><th class="g">Magasin</th><th class="g">Fournisseur</th><th class="g">Référence</th><th class="g">Motif</th><th>Photos</th><th>Statut</th><th>Montant</th></tr></thead>
     <tbody>${R.lignes.map(ligne).join('')}</tbody></table></div>` : '<div class="vr-vide">Aucune réclamation pour ce filtre.</div>';
   const F = R.fiche;
   const fiche = F ? `<aside class="vr-card hd-fiche"><div class="hd-ft"><div><span class="hd-ref">${esc(F.ref)}</span><h3>${esc(F.titre)}</h3><small>${esc(F.sous)}</small></div><span class="hd-st ${F.ton}">${esc(F.statut)}</span></div>
     ${F.texte ? `<div class="hd-desc">${esc(F.texte)}</div>` : ''}
+    ${tplRcPhotos(F.photos, x)}
     <div class="hd-rc-kv">${F.champs.map(([k, val]) => `<span>${esc(k)}</span><b>${esc(val)}</b>`).join('')}</div>
+    ${tplRcPart(F.part, x)}
     ${F.reponse ? `<div class="hd-dejarep"><b>Réponse du fournisseur${F.reponseLe ? ' · ' + esc(F.reponseLe) : ''}</b>${esc(F.reponse)}</div>` : '<div class="vr-mu" style="margin-top:10px">Pas encore de réponse du fournisseur.</div>'}</aside>`
     : '<aside class="vr-card hd-fiche"><div class="vr-mu">Choisissez une réclamation.</div></aside>';
   const pied = `<div class="vr-pied"><b>Les réclamations fournisseur de tous les magasins</b>, déposées depuis le dashboard des franchisés (contrôle, invendus) ou au panel. Une réclamation est <b>ouverte</b> tant que le fournisseur n’a pas répondu (et ne l’a pas refusée). ${esc(R.lecture || '')}${R.ecartees ? ' ' + R.ecartees + ' plus ancienne' + (R.ecartees > 1 ? 's' : '') + ' hors période.' : ''} <span class="vr-mu">${esc(R.source || '')}</span></div>`;
@@ -138,4 +142,47 @@ export function tplATraiter(A, x){
   return `<div class="hd-at"><div class="hd-at-t"><b>Demandes à traiter</b><span class="hd-at-n">${A.n}</span>${A.urgentes ? `<span class="hd-urg">${A.urgentes} URGENTE${A.urgentes > 1 ? 'S' : ''}</span>` : ''}<span class="vr-mu">pas encore en cours · relancées par SMS tous les 7 jours</span><span class="vr-sp"></span><button class="mko-pied-btn" ${x.A(A.ouvrir)}>Ouvrir les demandes</button></div>
     ${A.lignes.map(l => `<button class="hd-at-l" ${x.A(l.ouvrir)}><span class="hd-at-age${l.vieux ? ' ko' : ''}">${esc(l.age)}</span><span>${l.urgent ? '<span class="hd-urg">URGENT</span> ' : ''}<b>${esc(l.magasin)}</b> · ${esc(l.titre)}<small>${esc(l.sous)}</small></span></button>`).join('')}
     ${A.plus ? `<div class="vr-mu" style="font-size:11px">et ${A.plus} autre${A.plus > 1 ? 's' : ''}, plus récente${A.plus > 1 ? 's' : ''}.</div>` : ''}</div>`;
+}
+
+/** Les photos d'une réclamation (21/11/2026, maquette A) : la grande, les vignettes, l'ouverture en grand. */
+function tplRcPhotos(P, x){
+  const { esc } = x;
+  if (!P) { return ''; }
+  const tete = n => `<div class="rc-gal-h"><b>Photos${n ? ' · ' + n : ''}</b><span>${esc(P.source || '')}</span></div>`;
+  if (!P.n) { return '<div class="rc-gal rc-gal-vide"><b>Aucune photo</b> — le fournisseur refuse une réclamation sans photo ; depuis le 21/11/2026, le dashboard ne l’envoie plus sans.</div>'; }
+  if (P.chargement) { return `<div class="rc-gal">${tete(P.n)}<div class="vr-mu"><span class="vr-roue"></span>Lecture des photos au panel…</div></div>`; }
+  if (P.erreur) { return `<div class="rc-gal">${tete(P.n)}<div class="vr-mu">Photos illisibles : ${esc(P.erreur)}</div></div>`; }
+  if (!P.grande) { return `<div class="rc-gal">${tete(P.n)}<div class="vr-mu">Le panel n’a rendu aucun lien pour ${P.n > 1 ? 'ces photos' : 'cette photo'}.</div></div>`; }
+  return `<div class="rc-gal">${tete(P.vignettes.length)}<div class="rc-gal-g${P.vignettes.length > 1 ? '' : ' seule'}">
+    <a class="rc-big" href="${esc(P.grande)}" target="_blank" rel="noopener"><img src="${esc(P.grande)}" alt="Photo de la réclamation"><small>${esc(P.rang)} · ouvrir en grand</small></a>
+    ${P.vignettes.length > 1 ? `<div class="rc-th">${P.vignettes.map(v => `<img class="${v.on ? 'on' : ''}" src="${esc(v.url)}" alt="" ${x.A(v.choisir)}>`).join('')}${P.toutOuvrir ? `<button type="button" ${x.A(P.toutOuvrir)}>Tout ouvrir</button>` : ''}</div>` : ''}</div>
+    ${P.perdues ? `<div class="vr-mu">${P.perdues} lien${P.perdues > 1 ? 's' : ''} non rendu${P.perdues > 1 ? 's' : ''} par le panel.</div>` : ''}</div>`;
+}
+
+/** La part du produit dans ce qui a été livré (semaine, mois, année ; le réseau sur l'année). */
+function tplRcPart(P, x){
+  const { esc } = x;
+  if (!P) { return ''; }
+  if (P.indispo) { return `<div class="rc-part vr-mu">${esc(P.indispo)}</div>`; }
+  return `<div class="rc-part"><div class="rc-part-h">${esc(P.titre)}</div><div class="rc-part-g">${P.cases.map(c => `<div class="${c.haut ? 'haut' : ''}"><span>${esc(c.nom)}</span><b>${esc(c.part)}</b><small>${esc(c.sous)}</small><i style="width:${c.barre}%"></i></div>`).join('')}</div>
+    <small class="vr-mu">${esc(P.reseau)}</small></div>`;
+}
+
+/** Le tableau annuel (21/11/2026, maquette B) : magasins × mois, réclamé et part du livré, ligne Réseau. */
+function tplAnnuel(A, x){
+  const { esc } = x;
+  if (A.chargement) { return '<div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des réclamations et des livraisons de l’année…</div>'; }
+  if (A.erreur) { return `<div class="vr-card vr-etat ko">${esc(A.erreur)}</div>`; }
+  const sel = (opts, fn) => `<select class="vr-sel" ${x.C(fn)}>${opts.map(o => `<option value="${esc(o.id)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`;
+  const fil = `<div class="vt-fil">${sel(A.annees, A.poserAnnee)}${sel(A.fournisseurs || [], A.poserFour)}<span class="vr-sp"></span>
+    <button class="vr-btn" ${x.A(A.exporter)}>Exporter (Excel, CSV)</button><button class="vr-btn" ${x.A(A.relire)}${A.relecture ? ' disabled' : ''}>${A.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
+  const kpis = `<div class="vm-kpis">${A.kpis.map(k => `<div class="vm-kpi ${k[3]}"><div class="k">${esc(k[0])}</div><div class="v">${esc(String(k[1]))}</div><div class="s">${esc(k[2])}</div></div>`).join('')}</div>`;
+  const cas = c => c.futur ? '<td class="rc-c rc-fut">—</td>' : `<td class="rc-c ${c.cls}" title="${esc(c.titre)}">${c.montant ? `<b>${esc(c.montant)}</b><small>${esc(c.part)}</small>` : ''}</td>`;
+  const corps = A.lignes.length ? A.lignes.map(l => `<tr class="${l.fort ? 'rc-tot' : ''}"><td class="g"><b>${esc(l.nom)}</b><small>${esc(l.sous)}</small></td>${l.cases.map(cas).join('')}${cas(l.total)}
+    <td class="r">${esc(l.livre)}</td><td class="r">${esc(l.accepte)}<small>${esc(l.accepteSous)}</small></td></tr>`).join('')
+    : `<tr><td colspan="16" class="vr-vide">Aucune réclamation ni livraison pour ce fournisseur cette année.</td></tr>`;
+  const table = `<div class="vr-tw"><table class="vr-t rc-an"><thead><tr><th class="g">Magasin</th>${A.mois.map(m => `<th>${esc(m)}</th>`).join('')}<th>Année</th><th class="r">Livré</th><th class="r">Accepté</th></tr></thead><tbody>${corps}</tbody></table></div>`;
+  const leg = '<div class="rc-leg"><span>Taux réclamé ÷ livré :</span><i class="h0"></i>&lt; 0,75 %<i class="h1"></i>0,75 – 1,5 %<i class="h2"></i>1,5 – 3 %<i class="h3"></i>≥ 3 %</div>';
+  const pied = `<div class="vr-pied"><b>Chaque case :</b> le montant réclamé au fournisseur ce mois-là (quantité × prix d’achat), et sa part dans ce qui a été livré au magasin le même mois, au même prix. « Accepté » : la quantité acceptée par le fournisseur, hors réclamations refusées. <span class="vr-mu">${esc(A.source || '')}</span></div>`;
+  return `<div class="vr-card">${fil}${kpis}${table}${leg}${pied}</div>`;
 }
