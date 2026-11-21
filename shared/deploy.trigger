@@ -231,3 +231,4 @@
 2026-11-21T09:40:13Z Étiquettes NL : noms sans « ⌀ 22 cm » ni « ⌀ 26 cm » (plan et tableau), relecture des traductions langue par langue ; rien n'est envoyé au déploiement
 2026-11-21T10:21:46Z Fiche du ticket : la composition du fournisseur n'est montrée que dans la langue de la page (les textes SLFood sont en polonais) ; conservation et préparation du surgelé retirées
 2026-11-21T10:18:37Z Rangement des domaines : le code non marketing de mesure.php (réclamations, classement des tâches, profil de semaine, sonde) et for_sop_tache rejoignent leur domaine ; sources de l'ancien assistant et workflows des sondes terminées retirés
+2026-11-21T10:29:06Z Fiche du ticket : filtre du polonais durci (mots d'étiquette courants, ó) et liste des compositions retenues dans le diagnostic

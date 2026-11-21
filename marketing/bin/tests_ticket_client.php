@@ -76,6 +76,8 @@ $pl = ['fr' => ['composition' => 'Mąka pszenna - T45, Woda, Masło'], 'nl' => [
 tcl_ok(tclTexteDansLaLangue($pl, 'fr', 'composition') === '' && tclTexteDansLaLangue($pl, 'nl', 'composition') === '', 'composition identique au polonais : écartée');
 tcl_ok(tclTexteDansLaLangue(['fr' => ['composition' => 'jajka, Mąka pszenna']], 'fr', 'composition') === '', 'lettres polonaises : écartée');
 tcl_ok(tclTexteDansLaLangue(['fr' => ['composition' => 'Farine de BLÉ, beurre, sel'], 'pl' => ['composition' => 'Mąka']], 'fr', 'composition') === 'Farine de BLÉ, beurre, sel', 'vraie composition française : gardée');
+tcl_ok(tclTexteDansLaLangue(['fr' => ['composition' => 'jajka, Woda, Cukier biały']], 'fr', 'composition') === '' && tclTexteDansLaLangue(['fr' => ['composition' => 'dynia, vegeta, Sól']], 'fr', 'composition') === '', 'polonais sans lettre accentuée : écarté');
+tcl_ok(tclTexteDansLaLangue(['fr' => ['composition' => 'Fromage de chèvre, sérum, sel']], 'fr', 'composition') === 'Fromage de chèvre, sérum, sel', '« ser » dans un mot français ne compte pas');
 tcl_ok(tclTexteDansLaLangue(['nl' => ['composition' => 'TARWEbloem, boter, zout']], 'nl', 'composition') === 'TARWEbloem, boter, zout', 'vraie composition néerlandaise : gardée');
 tcl_ok(tclCodesAllergenes(['Œufs', 'Lait', 'Céréales contenant du gluten', 'inconnu']) === ['cereals_gluten', 'eggs', 'milk'], 'noms d’allergènes → codes, dans l’ordre réglementaire');
 
