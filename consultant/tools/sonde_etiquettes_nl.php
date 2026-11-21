@@ -68,7 +68,42 @@ foreach (array_slice($ids, 0, 2) as $i => $fid) {
     $m = $decrire("/material-suppliers/$fid/raw-materials", 1500);
     if ($i === 0 && is_array($m) && isset($m[0]['id'])) { $decrire("/material-suppliers/$fid/raw-materials/" . (int) $m[0]['id'] . '/allergens', 1200); }
 }
-$decrire('/materials', 1200);
-$decrire('/products', 900);
+$mats = $decrire('/materials', 1200);
+$prods = $decrire('/products', 900);
 $decrire('/products/aliases', 900);
+
+// 2e passage (21/11) : les allergènes d'une matière s'écrivent par PATCH /materials/{id} {allergens: [ids]} — forme
+// d'une fiche matière, et correspondance entre le plan d'envoi et les matières / produits de l'API.
+$plan = json_decode((string) @file_get_contents("$dir/consultant/docs/etiquettes-nl/plan_envoi.json"), true);
+$norm = static function (string $s): string {
+    $s = mb_strtolower(strtr(trim($s), ['Ø' => '⌀', 'ø' => '⌀', '–' => '-', '—' => '-', '’' => "'"]));
+    if (class_exists('Normalizer')) { $d = Normalizer::normalize($s, Normalizer::FORM_D); if (is_string($d)) { $s = preg_replace('/\p{Mn}+/u', '', $d) ?? $s; } }
+    return trim(preg_replace('/[\s.]+/u', ' ', $s) ?? $s);
+};
+$parNom = static function ($l) use ($norm): array { $i = []; foreach ((array) $l as $o) { if (is_array($o) && isset($o['id'], $o['name'])) { $i[$norm((string) $o['name'])][] = (int) $o['id']; } } return $i; };
+$iMat = $parNom($mats); $iProd = $parNom($prods);
+$idsProd = []; foreach ((array) $prods as $o) { if (isset($o['id'])) { $idsProd[(int) $o['id']] = (string) ($o['name'] ?? ''); } }
+if (!is_array($plan)) { echo "\nplan d'envoi illisible sur le serveur\n"; exit(0); }
+
+echo "\n=== Allergènes du plan : ingrédient → matière du même nom\n";
+$trouve = 0; $absents = []; $exemple = null;
+foreach ($plan['allergenes'] as $l) {
+    $ids = $iMat[$norm($l['ingredient'])] ?? [];
+    if (count($ids) >= 1) { $trouve++; $exemple ??= $ids[0]; if (count($ids) > 1) { echo '  en double : « ' . $l['ingredient'] . ' » → ' . implode(', ', $ids) . "\n"; } }
+    else { $absents[] = $l['ingredient']; }
+}
+echo '  ' . $trouve . ' / ' . count($plan['allergenes']) . " retrouvés\n  absents : " . implode(' | ', array_slice($absents, 0, 40)) . "\n";
+if ($exemple !== null) { $decrire("/materials/$exemple", 2500); }
+
+echo "\n=== Traductions du plan : ID ERP = ID produit de l'API ? et noms\n";
+$memeId = 0; $memeNom = 0; $matNom = 0; $ex = [];
+foreach ($plan['traductions'] as $t) {
+    foreach ($t['ids_erp'] as $id) { if (isset($idsProd[$id])) { $memeId++; if (count($ex) < 12) { $ex[] = $id . ' : ERP « ' . $t['noms_erp'][0] . ' » / API « ' . $idsProd[$id] . ' »'; } } }
+    foreach ($t['noms_erp'] as $n) { if (isset($iProd[$norm($n)])) { $memeNom++; break; } }
+    foreach ($t['noms_erp'] as $n) { if (isset($iMat[$norm($n)])) { $matNom++; break; } }
+}
+echo "  ID ERP présents parmi les produits de l'API : $memeId / " . count($plan['traductions']) . "\n  " . implode("\n  ", $ex) . "\n";
+echo "  nom ERP = nom d'un produit de l'API : $memeNom ; = nom d'une matière : $matNom (sur " . count($plan['traductions']) . ")\n";
+$idsPlanTous = []; foreach ($plan['traductions'] as $t) { foreach ($t['ids_erp'] as $id) { $idsPlanTous[] = $id; } }
+echo '  fourchette des ID produits API : ' . min(array_keys($idsProd)) . ' – ' . max(array_keys($idsProd)) . "\n";
 echo "\nfin de la sonde (lecture seule)\n";
