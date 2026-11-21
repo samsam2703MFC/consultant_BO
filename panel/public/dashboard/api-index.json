@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-21T16:41:23Z",
+ "genere": "2026-11-21T17:02:25Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -482,8 +482,8 @@
    ],
    "fichiers": [
     "automatisations.js:38",
-    "boite.js:659",
-    "boite.js:88"
+    "boite.js:103",
+    "boite.js:966"
    ],
    "magasin": true,
    "routes": [
@@ -505,9 +505,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:322",
-    "boite.js:615",
-    "boite.js:617"
+    "boite.js:340",
+    "boite.js:903",
+    "boite.js:905"
    ],
    "magasin": true,
    "routes": [
@@ -574,7 +574,8 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:241"
+    "boite.js:259",
+    "boite.js:405"
    ],
    "magasin": true,
    "routes": [
@@ -616,7 +617,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:583"
+    "boite.js:865"
    ],
    "magasin": true,
    "routes": [
@@ -637,8 +638,53 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:129",
-    "boite.js:178"
+    "boite.js:147",
+    "boite.js:196",
+    "boite.js:410",
+    "boite.js:412"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/lectures",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "boite.js:375",
+    "boite.js:465"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/lire",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:362"
    ],
    "magasin": true,
    "routes": [
@@ -659,8 +705,10 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:115",
-    "boite.js:255"
+    "boite.js:133",
+    "boite.js:273",
+    "boite.js:407",
+    "boite.js:877"
    ],
    "magasin": true,
    "routes": [
@@ -681,7 +729,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:104"
+    "boite.js:122"
    ],
    "magasin": true,
    "routes": [
@@ -703,9 +751,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:321",
-    "boite.js:608",
-    "boite.js:614"
+    "boite.js:339",
+    "boite.js:896",
+    "boite.js:902"
    ],
    "magasin": true,
    "routes": [
@@ -727,7 +775,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:580"
+    "boite.js:862"
    ],
    "magasin": true,
    "routes": [
@@ -743,12 +791,36 @@
    ]
   },
   {
+   "chemin": "/dashboard/boite/pilote",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:455",
+    "boite.js:458"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
    "chemin": "/dashboard/boite/ranger",
    "methodes": [
     "POST"
    ],
    "fichiers": [
-    "boite.js:157"
+    "boite.js:175"
    ],
    "magasin": true,
    "routes": [
@@ -769,7 +841,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:574"
+    "boite.js:856"
    ],
    "magasin": true,
    "routes": [
@@ -1269,7 +1341,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:188",
+    "boite.js:206",
     "offres.js:68",
     "offres.js:73"
    ],
@@ -1526,7 +1598,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:307",
+    "boite.js:325",
     "dashboard.js:4681",
     "dashboard.js:4701",
     "offres.js:100"
@@ -1550,7 +1622,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:187",
+    "boite.js:205",
     "dashboard.js:3853",
     "offres.js:83"
    ],
@@ -1932,7 +2004,7 @@
      ],
      "chemin": "/marketing/avis",
      "handler": "ep_reputation",
-     "source": "shared/src/endpoints.php:8386",
+     "source": "shared/src/endpoints.php:8207",
      "resume": "la réputation digitale du réseau, magasin par magasin."
     }
    ]
@@ -2141,7 +2213,7 @@
      ],
      "chemin": "/produits/analyse/sonde",
      "handler": "ep_produits_analyse_sonde",
-     "source": "shared/src/endpoints.php:6794",
+     "source": "shared/src/endpoints.php:6615",
      "resume": "Sonde : existe-t-il une source de ventes PAR MAGASIN sous le niveau groupe ? Diagnostic en lecture seule."
     },
     {
@@ -2476,7 +2548,7 @@
      ],
      "chemin": "/stores/perf",
      "handler": "ep_perf",
-     "source": "shared/src/endpoints.php:5637",
+     "source": "shared/src/endpoints.php:5458",
      "resume": ""
     }
    ]
