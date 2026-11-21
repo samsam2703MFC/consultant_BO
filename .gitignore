@@ -7,8 +7,6 @@ config/config.php
 
 node_modules/
 .DS_Store
-marketing/tools/assistant-src/tsconfig.tsbuildinfo
-marketing/tools/assistant-src/dist-assistant/
 
 # Le site assemblé (shared/bin/assembler_public.php : des liens vers le public/ de chaque domaine) et ses fichiers
 # déposés (uploads/, assistant/uploads/) : construits sur place, jamais commis.

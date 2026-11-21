@@ -9,6 +9,8 @@ declare(strict_types=1);
  * Hier (la dernière journée complète), la semaine et le mois jusqu'à hier : ventes, objectifs, P&L, marge, catégories,
  * pertes, commandes clients, contrôles du jour, planning.
  *
+ * Sonde terminée : son workflow (.github/workflows/sonde-dashboard-halle.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-dashboard-halle.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_dashboard_halle.php
  *

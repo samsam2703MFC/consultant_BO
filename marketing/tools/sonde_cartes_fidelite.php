@@ -10,6 +10,8 @@ declare(strict_types=1);
  *      reconnaissances, activité) ;
  *   2. par magasin, /loyalty/customers (toutes les pages) : combien de clients par carte, progression des timbres,
  *      récompenses prêtes, soldes de points, actifs dans le magasin sur la période.
+ * Sonde terminée : son workflow (.github/workflows/sonde-cartes-fidelite.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée par .github/workflows/sonde-cartes-fidelite.yml : php -- /var/www/consulant_bo < tools/sonde_cartes_fidelite.php
  */
 $dir = rtrim((string) ($argv[1] ?? '/var/www/consulant_bo'), '/');

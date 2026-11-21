@@ -19,6 +19,8 @@ declare(strict_types=1);
  *
  * Tout passe par l'API du panel : aucune table locale n'est lue.
  *
+ * Sonde terminée : son workflow (.github/workflows/sonde-fidelite-halle.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-fidelite-halle.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_fidelite_halle.php
  *
