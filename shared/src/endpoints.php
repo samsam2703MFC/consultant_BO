@@ -4862,6 +4862,23 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
 }
 
 /**
+ * GET /diagnostic/marketing-service — le canal du cockpit vers le module Marketing répond-il ? (21/11/2026)
+ *
+ * Une lecture sans effet (les types de campagne) par marketingAppel, avec le jeton de service : c'est le chemin par
+ * lequel le fonds et les types de campagne s'écrivent. Rend le code HTTP du module et si le fichier du jeton est
+ * lisible — jamais le jeton, jamais les données.
+ */
+function ep_diagnostic_marketing_service(): array
+{
+    $fichier = (string) (setting('marketingServiceTokenFile') ?: '/var/www/private/marketing/service-token');
+    $jeton = is_readable($fichier) && strlen(trim((string) @file_get_contents($fichier))) >= 32;
+    $r = marketingAppel('GET', '/campaign-types');
+    return ['jetonLisible' => $jeton, 'code' => $r['code'], 'erreur' => $r['erreur'],
+        'types' => is_array($r['corps']) && array_is_list($r['corps']) ? count($r['corps']) : null,
+        'ok' => $r['code'] === 200 && $r['erreur'] === null];
+}
+
+/**
  * Les redevances d'un mois : magasin par magasin, SORTE par sorte.
  *
  * La grille des taux vit sur la FICHE boutique du panel (royalty_*_percentage,

@@ -569,6 +569,8 @@ function route(string $method, string $path): mixed
             $path === '/fournisseurs/reclamation-fiche' => ep_reclamation_fiche(),
             $path === '/reclamations/annuel'           => ep_reclamations_annuel(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
+            // Le canal vers le module Marketing (jeton de service), par une lecture sans effet (21/11/2026).
+            $path === '/diagnostic/marketing-service'  => ep_diagnostic_marketing_service(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             // Et, dans chaque écran gardé, quels boutons servent vraiment.
