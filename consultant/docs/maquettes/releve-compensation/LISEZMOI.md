@@ -1,79 +1,97 @@
 # Relevé de compensation mensuel — Halle (maquette)
 
-**Statut : maquette du 21/11/2026, à valider. Rien n'est codé.**
+**Statut : maquette du 21/11/2026, version C retenue, à valider. Rien n'est codé.**
 
-Demande du 21/11/2026 : adapter au magasin de Halle le règlement de Żabka (les recettes du jour vont à la centrale,
-une compensation mensuelle déduit achats et redevances, la centrale verse le solde vers le 10), puis « fais la
-maquette du relevé mensuel de Halle ».
+Demandes du 21/11/2026 :
+1. adapter au magasin de Halle le règlement de Żabka : les recettes du jour vont à la centrale, une compensation
+   mensuelle déduit les achats et les redevances, la centrale verse le solde vers le 10 ;
+2. « fais la maquette du relevé mensuel de Halle » : trois mises en page montrées (A Pièces, B Facture, C Cascade) ;
+3. « la version C, mettre une facture de marchandises de la centrale à 40 %, reverser au franchisé le 10 la marge,
+   et faire ensuite une page avec le détail approximatif du franchisé : marge, personnel, loyer ».
 
-## Le modèle maquetté : la compensation « à la belge »
+Les versions A et B, et la première version de C (recettes gardées par le franchisé, prélèvement par domiciliation
+B2B), sont dans l'historique Git (commit `7dcbc2f`).
 
-Le reversement intégral de Żabka ne se transpose pas tel quel à Halle. Ce que la centrale facture au magasin pèse
-entre 6 % (redevances seules) et 42 % (toute la matière en plus) de ses recettes. Encaisser 100 % des recettes
-reviendrait surtout à garder l'argent du franchisé, jusqu'à 40 jours. La maquette suit donc la variante proposée
-le même jour :
+## Le modèle maquetté
 
-- les recettes (cartes, titres-repas, Payconiq, espèces déposées) restent sur un **compte de recettes au nom du
-  franchisé** ;
-- la centrale émet le **relevé le 5** : ce que le magasin lui doit (redevances, livraisons de la centrale d'achat,
-  abonnement TFBuddy), moins ce qu'elle lui doit (avoirs, prime aux standards) ;
-- elle **prélève le solde le 10** par domiciliation SEPA B2B ; un solde en faveur du magasin lui est versé le même jour ;
-- la page 2 contrôle les **espèces** : l'encaissé de la caisse face aux dépôts déclarés, semaine par semaine.
+- La centrale **encaisse les recettes** du magasin. Les cartes, les titres-repas et Payconiq lui sont versés
+  directement. Les espèces lui sont versées chaque jour.
+- Le **5 du mois suivant**, elle émet le relevé. Elle déduit la **facture de marchandises** (les livraisons du mois
+  au tarif de la centrale, posées à 40 % du CA HT), les **redevances** (5 %) et l'**abonnement** TFBuddy. Elle
+  ajoute ce qu'elle doit au magasin : avoirs, prime aux standards.
+- Le **10**, elle **verse le solde** : la marge du franchisé. Un solde négatif fait l'objet d'une facture de
+  régularisation.
 
-La version C chiffre aussi le modèle de reversement intégral : « si la centrale encaissait vos recettes, elle vous
-verserait 47 135,92 € le 10/10/2026 ».
+## Les pages
 
-## Les captures
+`releve.png` (français) et `releve-nl.png` (néerlandais) : les trois pages dans le cadre de présentation.
+`releve-halle-2026-09.pdf` et `releve-halle-2026-09-nl.pdf` : le document seul, en A4, tel qu'il partirait.
 
-Gabarit des documents de gestion, **version A** (`docs/DESIGN_SYSTEM.md` §13.4). Les mises en page nouvelles se
-montrent en trois versions (§13) : les trois versions diffèrent par la page 1, la page 2 est commune.
-
-| Fichier | Version | Ce qu'elle montre |
+| Page | Ce qu'elle montre | Septembre 2026 |
 |---|---|---|
-| `planche.jpg` | les trois pages 1 côte à côte | pour choisir |
-| `a.png`, `a-nl.png` | **A — Pièces** | le relevé de compte : une pièce par ligne (date, numéro, désignation), débit ou crédit, puis le solde à prélever |
-| `b.png`, `b-nl.png` | **B — Facture** | ce que le magasin doit, puis ce que la centrale lui doit, HT / TVA / TTC par ligne, le récapitulatif de TVA (21 % et 6 %) |
-| `c.png`, `c-nl.png` | **C — Cascade** | des recettes du mois (TTC) à ce qui reste après la compensation, la part de la centrale en barre (12,6 %) |
+| 1. La compensation | des recettes du mois (TTC) à la marge versée le 10, la part de la centrale en barre | recettes 53 900,74 € ; marchandises 21 560,29 € ; redevances 3 076,43 € ; abonnement 119,79 € ; avoir 48,97 € ; **versé le 10/10 : 29 193,20 €** (54,2 % des recettes) |
+| 2. Votre mois, en approximation | versé − TVA à reverser = marge HT − personnel − loyer = reste − autres frais = résultat estimé ; « sur 100 € de ventes HT » | TVA nette 1 278,65 € ; marge HT 27 914,55 € (54,9 %) ; personnel 9 477,50 € ; loyer 3 559,48 € ; reste 14 877,57 € (29,3 %) ; autres frais 6 864,73 € ; **résultat estimé 8 012,84 €** (15,8 %) |
+| 3. Les recettes et les espèces | les recettes par moyen de paiement, versées à la centrale ; les espèces encaissées face aux versements, semaine par semaine | cartes 86,4 %, titres-repas 6,3 %, espèces 7,2 %, Payconiq 0,1 % |
 
-Septembre 2026 : 6 813,79 € dus à la centrale (redevances 3 076,43 €, livraisons 3 617,57 €, abonnement 119,79 €),
-48,97 € dus par elle (un avoir), **6 764,82 € à prélever le 10/10/2026**.
+Gabarit des documents de gestion, version A (`docs/DESIGN_SYSTEM.md` §13.4). Le Ruby n'apparaît qu'au filet
+d'en-tête, au montant versé et au filet de l'encadré.
 
 ## Les chiffres
 
 - **Mesurés** (dossier investisseur `consultant/docs/dossiers/halle-2026-10`, lu le 09/10/2026) : chiffre
-  d'affaires HT 50 849,75 €, 30 jours de vente, 4 156 tickets ; score du T3 12,09 / 20, rang 2 sur 4.
-- **Calculés** : les redevances, avec la grille du budget 2026 de Halle (marque 2 %, assistance 1,5 %, marketing
-  1,5 %, sur le HT, TVA 21 %) : 2 542,50 € HT.
+  d'affaires HT 50 849,75 €, 30 jours, 4 156 tickets, personnel 9 477,50 €, score du T3 12,09 / 20.
+- **Posés** :
+  - la facture de marchandises à 40 % du CA HT. Le panel mesurait la matière de Halle à 36,2 % du CA en septembre :
+    si toute la matière passe par la centrale, elle y prend environ 3,8 points ;
+  - les redevances, le loyer (7 %) et les autres frais (énergie 5 %, amortissements 5 %, comptabilité 1,5 %,
+    entretien 1 %, assurances 1 %), selon le budget 2026 de Halle ;
+  - le seuil de la prime aux standards (14 / 20), une hypothèse à décider.
 - **Illustratifs**, marqués d'un astérisque sur les pages :
   - le TTC, à 6 % sur tout le chiffre ;
-  - la répartition par moyen de paiement : celle de Corbais du 2 au 8/11/2026 (`panel/docs/maquettes/caisse-reports/donnees.json`),
-    car l'API TFBuddy refusait le jeton de la session de travail ;
-  - les espèces de chaque semaine, réparties selon la semaine type de Halle, et les dépôts ;
-  - les livraisons de la centrale, l'abonnement, l'avoir et les numéros de pièce.
-- **Entre crochets** : les mentions de l'émetteur et du destinataire qui se lisent dans l'ERP (raison sociale,
-  adresses, numéros d'entreprise et de TVA, RPM, IBAN, n° de mandat, communication structurée).
+  - la répartition par moyen de paiement, celle de Corbais du 2 au 8/11/2026 (l'API TFBuddy refusait le jeton de
+    la session de travail) ;
+  - les espèces de chaque semaine, réparties selon la semaine type de Halle, et leurs versements ;
+  - l'abonnement, l'avoir et les numéros de pièce.
+- **Entre crochets** : les mentions qui se lisent dans l'ERP (raison sociale, adresses, numéros, IBAN).
 
-## Avant de coder : les sources, ce qui manque, ce qui est à décider
+Le dossier investisseur donnait 9 921,84 € de résultat opérationnel pour septembre. L'écart avec les 8 012,84 €
+d'ici vient de la matière à 40 % au lieu de 36,2 %, des redevances, et des frais pris au modèle du budget plutôt
+qu'aux 13 042,80 € encodés au panel.
+
+## Avant de coder
 
 | Ligne du relevé | Source | État |
 |---|---|---|
 | Recettes par moyen de paiement | export comptable du jour TFBuddy (`/shops/{id}/reports/sales/daily/cash-flow/csv`), lu par `consultant/src/caisse.php` | existe |
-| Chiffre d'affaires HT, base des redevances | ventes du panel ; calcul des redevances `fondsRoyaltiesCalcul()` (`shared/src/endpoints.php`) | existe ; les taux de la fiche boutique (`royalty_*_percentage`) ne sont remplis pour aucun magasin (lu le 16/11/2026, voir `../royalties/`) |
-| Factures de redevances, abonnement TFBuddy | réalm admin de l'ERP, `/admin/royalties/invoices` et `/admin/billing/invoices` (`ep_ca_facturation`) | existe en lecture |
-| Livraisons de la centrale d'achat | aucune API de commandes ni de factures fournisseurs (`shared/src/endpoints.php`, `ep_ca_cockpit`, « manquants ») | **manque** |
-| Avoirs (réclamations fournisseur) | les réclamations avec photo et code-barres du dashboard | à relier à une pièce de l'ERP |
-| Prime aux standards | le scoring trimestriel du cockpit | **à décider** : la règle (seuil de 14 / 20 posé pour la maquette) et le montant |
-| Dépôts d'espèces | les lignes « Versement espèces » et « Dépôts » de l'export comptable, vides aujourd'hui (Corbais, semaine du 2 au 8/11) | **manque** : une saisie, ou les extraits CODA du compte de recettes |
-| Mentions de l'émetteur, mandat B2B | configuration de l'émetteur dans l'ERP | **manque** : à lister avec leur source avant d'émettre (§13.4) |
+| Recettes reçues par la centrale | les relevés bancaires de son compte (CODA) | **manque** |
+| Facture de marchandises | aucune API de commandes ni de factures fournisseurs (`ep_ca_cockpit`, « manquants ») | **manque** |
+| Redevances | `fondsRoyaltiesCalcul()` (`shared/src/endpoints.php`) ; les taux de la fiche boutique ne sont remplis pour aucun magasin (voir `../royalties/`) | existe, taux à remplir |
+| Factures de redevances, abonnement | réalm admin de l'ERP (`ep_ca_facturation`) | existe en lecture |
+| Avoirs | les réclamations fournisseur du dashboard (photo, code-barres) | à relier à une pièce de l'ERP |
+| Prime aux standards | le scoring trimestriel du cockpit | **règle à décider** |
+| Personnel (page 2) | P&L du panel (`/consultant/shops/{id}/pnl/monthly`) | existe |
+| Loyer et autres frais (page 2) | le budget du magasin ; le réel dans les frais du panel (`/shops/{id}/owner/costs`) | existe |
 
-Décisions à prendre :
+## La légalité en Belgique : à faire valider avant de signer
 
-- la version (A, B ou C), avant de généraliser le gabarit ;
-- les dates : relevé le 5, prélèvement le 10, remarques avant le 8 ;
-- la langue : FR ou NL selon la fiche du destinataire (§13.1) ;
-- la clause de compensation dans le contrat de franchise et le mandat de domiciliation B2B du magasin. Si le
-  reversement intégral était retenu, le faire valider par un avocat : un encaissement pour le compte du franchisé
-  peut relever des services de paiement (loi du 11 mars 2018).
+Le principe (une compensation conventionnelle entre ce que chacun doit) est courant. Le reversement intégral pose
+en revanche des questions à faire trancher par un avocat (droit de la franchise et des paiements) et par le
+comptable :
+
+- **Encaisser pour le compte du franchisé**, puis lui reverser l'excédent, peut relever des services de paiement
+  (loi du 11 mars 2018) et d'un agrément de la BNB. Si la centrale fait faillite, l'argent du franchisé tombe dans
+  sa masse.
+- **Espèces** : les paiements en espèces de plus de 3 000 € sont interdits (loi du 18 septembre 2017, art. 67).
+  Halle encaisse environ 3 900 € d'espèces par mois. Plus sûr : déposer sur le compte du franchisé, puis virer.
+- **Cartes et titres-repas** : les contrats sont au nom du franchisé. Les faire payer à la centrale suppose l'accord
+  de l'acquéreur et des émetteurs, ou une cession ou un gage des créances.
+- **La facture de marchandises** doit correspondre aux livraisons (prix × quantités). Calculée en pourcentage du CA,
+  elle ressemble à une redevance (TVA 21 % et non 6 %).
+- **Le contrat** : Halle a déjà signé ; il faut un avenant accepté par le franchisé, et pour les futurs franchisés,
+  l'information précontractuelle (Code de droit économique, livre X). Les clauses déséquilibrées entre entreprises
+  et l'abus de dépendance économique sont interdits.
+- **Factures électroniques** : depuis le 1er janvier 2026, les factures entre entreprises passent par Peppol. Le
+  relevé n'est pas une facture ; les factures de marchandises, de redevances et d'abonnement doivent exister à part.
 
 ## Régénérer
 
@@ -83,5 +101,5 @@ node consultant/docs/maquettes/releve-compensation/capturer.js
 ```
 
 Les pages lisent la police Gotham et le logo dans `shared/public/assets/` par un chemin relatif : elles s'ouvrent
-telles quelles dans un navigateur, sans serveur. `capturer.js` vérifie aussi que le contenu de chaque page A4
-s'arrête avant le pied.
+telles quelles dans un navigateur, sans serveur. `capturer.js` vérifie que le contenu de chaque page A4 s'arrête
+avant le pied, et imprime les deux PDF.
