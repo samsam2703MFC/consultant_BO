@@ -198,6 +198,7 @@ final class TeamTasksService
             'lots_qc_day_checked' => 'dni grup i braki → wynik → zatwierdź',
             'invoices_ksef_checked' => 'wysyłki, WDT i KSeF → wynik → zatwierdź',
             'complaints_reviewed' => 'reklamacje otwarte i tygodnia → decyzja → zakończ',
+            'haccp_month_reviewed' => 'HACCP, SOP i temperatura miesiąca → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

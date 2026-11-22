@@ -228,6 +228,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_complaint_review WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
     }
 
+    /** [380] HACCP miesiąca : décisions enregistrées pour le mois examiné (premier jour, n_haccp_month_review). */
+    public function haccpMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_haccp_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);
