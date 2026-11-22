@@ -12,7 +12,7 @@ use App\Services\Translation\DeepLTranslator;
 /**
  * Tablet grupy, « Reklamacje » (informacyjnie) : reklamacje klientów przyjęte przez biuro na produkty grupy — produkt, sklep,
  * powód, ilość, komentarz klienta i odpowiedź biura (przetłumaczone na język tabletu, gdy DeepL jest włączony ; tłumaczenie
- * raz na reklamację i język), zdjęcia na żądanie (link czasowy z systemu franczyzy). Nic się tu nie zmienia.
+ * raz na reklamację i język), zdjęcia (link czasowy z systemu franczyzy). [367] Osoba zalogowana potwierdza « Widziane » (grupa widziała).
  */
 final class KioskComplaintService
 {
@@ -55,6 +55,7 @@ final class KioskComplaintService
         $rows = $this->repo->accepted($groupId, date('Y-m-d', strtotime('-' . ($days - 1) . ' days')));
         $lang = $context->translator->lang() === 'fr' ? 'fr' : 'pl';
         $translations = $this->translations($rows, $lang);
+        $seen = $this->repo->seen(array_column($rows, 'id'), $groupId);
         $weekFrom = date('Y-m-d', strtotime('-' . (self::WEEK_DAYS - 1) . ' days'));
         $items = [];
         $products = [];
@@ -71,6 +72,7 @@ final class KioskComplaintService
                 'comment' => $this->text($r['client_comment']), 'comment_tr' => $tr['comment'] ?? null,
                 'response' => $this->text($r['production_response']), 'response_tr' => $tr['response'] ?? null,
                 'source_lang' => $tr['source'] ?? null, 'photos' => (int) $r['photos'],
+                'seen' => isset($seen[$id]) ? ['at' => substr((string) $seen[$id]['seen_at'], 0, 16), 'by' => $seen[$id]['name']] : null,
             ];
             $pid = (int) $r['product_id'];
             $products[$pid] ??= ['id' => $pid, 'name' => $r['product'], 'count' => 0, 'pieces' => 0.0];
@@ -88,6 +90,16 @@ final class KioskComplaintService
             'reasons' => array_map(fn($code, $n) => ['code' => $code, 'count' => $n], array_keys($reasons), array_values($reasons)),
             'items' => $items,
         ];
+    }
+
+    /** [367] « Widziane » : osoba zalogowana na tablecie grupy potwierdza, że grupa widziała reklamację (raz na grupę). */
+    public function seen(int $complaintId, ApiContext $context): array
+    {
+        $groupId = $this->groupId($context);
+        if ($this->repo->acceptedOne($groupId, $complaintId) === null) throw ApiException::notFound('complaint', $complaintId);
+        $this->repo->markSeen($complaintId, $groupId, (int) $context->employeeId);
+        $s = $this->repo->seen([$complaintId], $groupId)[$complaintId] ?? null;
+        return ['id' => $complaintId, 'seen' => $s ? ['at' => substr((string) $s['seen_at'], 0, 16), 'by' => $s['name']] : null];
     }
 
     /** Zdjęcia reklamacji : linki czasowe z systemu franczyzy (url null, gdy niedostępne). */
