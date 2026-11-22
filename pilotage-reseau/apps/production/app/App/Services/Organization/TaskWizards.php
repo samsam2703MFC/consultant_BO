@@ -52,6 +52,8 @@ final class TaskWizards
         'liquidity_checked' => ['Płynność i gotówka', '/finances/liquidity', 'płynność 4 tygodni sprawdzona, decyzje zapisane', 3],
         // [374] Opóźnienia dostaw (Kierownik operacyjny) : livraisons du jour, en retard ou en transport trop long, décision par livraison.
         'deliveries_delays_checked' => ['Opóźnienia dostaw', '/logistics/delays', 'opóźnienia i ryzyka dostaw wyjaśnione', 3],
+        // [375] Terminowość tygodnia (OTIF) (Kierownik operacyjny, co tydzień) : OTIF de la semaine écoulée, tendance, une action par cause principale.
+        'otif_week_reviewed' => ['Terminowość tygodnia (OTIF)', '/client-orders/otif', 'OTIF tygodnia oceniony, działanie dla każdej przyczyny', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -96,6 +98,7 @@ final class TaskWizards
         'supplements_day_checked' => 'gdy każde domówienie z sygnałem (nie w produkcji, po godzinie granicznej, data, produkt nieaktywny) ma wynik — asystent « Domówienia dnia », krok 3',
         'deliveries_delays_checked' => 'gdy każda dostawa z sygnałem (po terminie, nie wyjechała, nic gotowego, bez pojazdu lub kierowcy, przeładowany pojazd, za długo w transporcie, problem przy dostawie, data zmieniana wiele razy) ma decyzję — asystent « Opóźnienia dostaw », krok 3',
         'liquidity_checked' => 'gdy saldo tygodnia jest wpisane i każdy sygnał (zaległości klienta, duża płatność dostawcy, tydzień poniżej poduszki) ma decyzję — asystent « Płynność i gotówka », krok 3',
+        'otif_week_reviewed' => 'gdy OTIF poprzedniego tygodnia (na czas, w całości) jest oceniony i każda główna przyczyna zamówień nie-OTIF ma działanie (akceptowane, korygujące, do obserwacji) — asystent « Terminowość tygodnia (OTIF) », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -250,6 +253,13 @@ final class TaskWizards
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($p = $this->repo->liquidityProgress(\App\Services\Organization\Wizards\LiquidityCheckService::monday(substr($from, 0, 10))))['balance'] || $p['decisions'] > 0) {
                     $out = ['step' => 2, 'step_label' => ($p['balance'] ? 'saldo wpisane' : 'saldo niewpisane') . ' · ' . $p['decisions'] . ' ' . self::pl($p['decisions'], 'decyzja', 'decyzje', 'decyzji')] + $out;
+                }
+                break;
+            case 'otif_week_reviewed':
+                // [375] Co tydzień : zakończenie w okresie zadania ; w toku = działania zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->otifActions(\App\Services\Organization\Wizards\OtifWeekService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'przyczyna z działaniem', 'przyczyny z działaniem', 'przyczyn z działaniem')] + $out;
                 }
                 break;
             case 'sop_daily':

@@ -204,6 +204,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return ['balance' => $b > 0, 'decisions' => $d];
     }
 
+    /** [375] Terminowość tygodnia (OTIF) : actions enregistrées pour la semaine examinée (lundi, n_otif_week_action). */
+    public function otifActions(string $weekStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_otif_week_action WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);

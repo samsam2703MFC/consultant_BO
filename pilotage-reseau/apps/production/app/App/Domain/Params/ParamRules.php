@@ -62,6 +62,9 @@ final class ParamRules
         'deliveries.transit_max_days' => [1, 30, true],
         'deliveries.date_changes_max' => [1, 10, true],
         'deliveries.departure_grace_min' => [0, 600, true],
+        // [375] Terminowość tygodnia (OTIF) : objectif en %, jours admis entre la date d'expédition et la livraison confirmée
+        'otif.target_pct' => [50, 100, false],
+        'otif.delivery_days' => [0, 7, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
