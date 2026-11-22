@@ -1,0 +1,136 @@
+/* Dashboard magasin › Formations et suivi (22/11/2026) : formation.js. Préfixe fs-. Sur les jetons du design system ;
+   l'Abricot de la marque (#F2C9A0, texte Ruby) pour le bouton « Mon dossier de formation » et la photo du jour, comme
+   l'entrée « Assistant IA » du rail. */
+.fs-racine{display:block}
+.fs-flash{margin:0 0 12px;padding:9px 12px;border-radius:9px;font-size:12.5px}
+.fs-flash.ok{background:rgba(63,122,82,.1);color:#2f5e3e}.fs-flash.ko{background:rgba(163,32,20,.08);color:#A32014}
+.fs-carte{background:#fff;border:1px solid var(--line);border-radius:12px;min-width:0}
+.fs-lay{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+.fs-k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center;margin:0 0 8px}
+.fs-k>i{margin-left:auto;font-style:normal;color:var(--faint);text-transform:none;letter-spacing:0;font-size:11px}
+.fs-n{font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.45}.fs-n.ko{color:var(--stop)}
+.fs-vide{padding:18px 16px;color:var(--muted);font-size:12.5px}
+.fs-abr{background:#F2C9A0 !important;border-color:#F2C9A0 !important;color:var(--accent) !important;font-weight:700}
+.fs-lien{border:0;background:none;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;padding:0;text-decoration:none;margin-left:6px}
+/* Les étiquettes : catégorie, statut */
+.fs-tag{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:1px 7px;font-size:11px;background:var(--chip);color:var(--muted-2);white-space:nowrap;vertical-align:1px}
+.fs-tag i{width:7px;height:7px;border-radius:2px;background:currentColor}
+.fs-tag.tech{background:#F6EDEE;color:var(--accent)}.fs-tag.conn{background:#E7EEF4;color:#2D5D80}
+.fs-tag.prod{background:#F2C9A0;color:#7A3E12}.fs-tag.ntech{background:#E3EEE6;color:var(--green)}
+.fs-tag.adapt{background:#FFF1E4;color:#7A3E12}
+.fs-st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.fs-st::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+.fs-st.brou{background:var(--chip);color:var(--muted-2)}.fs-st.aval{background:var(--prize-soft);color:var(--prize-ink)}
+.fs-st.val{background:#E3EEE6;color:var(--green)}.fs-st.ret{background:var(--stop-soft);color:var(--stop)}
+.fs-av{display:inline-flex;align-items:center;gap:8px;width:150px;flex:0 0 auto}
+.fs-av .b{flex:1;height:6px;border-radius:3px;background:var(--chip);position:relative;overflow:hidden}
+.fs-av .b i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--green)}.fs-av .b i.o{background:var(--prize)}
+.fs-av>span:last-child{font-size:11.5px;color:var(--muted-2);width:38px;text-align:right;white-space:nowrap}
+.fs-nv{font-style:normal;font-size:9.5px;background:#F2C9A0;color:var(--accent);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+/* Nouveautés */
+.fs-nouv{background:#fff;border:1px solid var(--line);border-left:4px solid #F2C9A0;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.fs-nouv-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}.fs-nouv-h b{font-size:17px;font-weight:400}.fs-nouv-h span{color:var(--muted);font-size:12px}
+.fs-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.fs-nc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;padding:0;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.fs-nc:hover{border-color:#E8C9CD}
+.fs-nc-b{height:72px;display:flex;align-items:flex-end;padding:8px 10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#fff;position:relative;background:linear-gradient(135deg,#B9A99A,#7a736a)}
+.fs-nc-b.prod{background:linear-gradient(135deg,#C9803F,#8D1D2C)}.fs-nc-b.ntech{background:linear-gradient(135deg,#6E9A7C,#2F5E40)}
+.fs-nc-b.conn{background:linear-gradient(135deg,#7FA2C0,#2D5D80)}.fs-nc-b.tech{background:linear-gradient(135deg,#C97A86,#8D1D2C)}
+.fs-nc-b em{position:absolute;top:8px;right:8px;background:#F2C9A0;color:var(--accent);border-radius:6px;padding:2px 7px;font-size:10px;letter-spacing:.06em;font-weight:700;font-style:normal}
+.fs-nc-c{display:flex;flex-direction:column;gap:5px;padding:10px 12px 12px;flex:1}
+.fs-nc-c .fs-tag{align-self:flex-start}.fs-nc-c b{font-weight:400;font-size:14px;line-height:1.3}
+.fs-nc-c .d{font-size:11.5px;color:var(--muted)}.fs-nc-c .go{margin-top:auto;color:var(--accent);font-size:12.5px}
+/* Repères */
+.fs-kpis{display:flex;background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:14px}
+.fs-kpi{flex:1;padding:12px 16px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:2px;min-width:0}.fs-kpi:first-child{border-left:0}
+.fs-kpi .l{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fs-kpi b{font-size:24px;font-weight:700;letter-spacing:-.02em}.fs-kpi .s{font-size:11.5px;color:var(--muted)}
+.fs-kpi.ac b{color:var(--accent)}.fs-kpi.or b{color:var(--prize)}.fs-kpi.ok b{color:var(--green)}
+/* Le dossier */
+.fs-tete-c{display:flex;align-items:baseline;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line)}.fs-tete-c b{font-weight:400;font-size:15px}.fs-tete-c span{color:var(--muted);font-size:12px}
+.fs-th,.fs-l{display:flex;align-items:center;gap:12px;padding:0 14px}
+.fs-th{height:32px;background:var(--table-head);color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.fs-l{width:100%;min-height:54px;border:0;border-bottom:1px solid var(--row-line);background:#fff;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.fs-l:hover{background:var(--paper)}.fs-l:last-child{border-bottom:0}
+.fs-th .c,.fs-l .c{flex:1;min-width:0;padding:7px 0}.fs-l .c b{display:block;font-weight:400;font-size:13.5px}.fs-l .c small{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
+.fs-th .s,.fs-l .s{width:96px;flex:0 0 auto}.fs-th .e,.fs-l .e{width:64px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}.fs-l .e.ret{color:var(--stop)}
+.fs-th .o,.fs-l .o{width:54px;flex:0 0 auto;color:var(--accent);font-size:12px;text-align:right}
+/* L'équipe */
+.fs-eq{padding:14px 16px;margin-top:14px}
+.fs-eq table{width:100%;min-width:0;border-collapse:collapse;font-size:12px}
+.fs-eq th{font-weight:400;font-size:10.5px;color:var(--muted);text-align:center;padding:4px;white-space:nowrap}
+.fs-eq td{padding:6px 4px;border-top:1px solid var(--row-line);text-align:center}.fs-eq td:first-child{text-align:left;white-space:nowrap}
+.pt{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--chip);vertical-align:-1px}
+.pt.v{background:var(--green)}.pt.q{background:#9CC3A8}.pt.l{background:var(--prize-soft);border:1px solid #E8C98E}.pt.x{background:#fff;border:1px dashed var(--line)}
+.fs-coffre{display:flex;align-items:center;gap:10px;width:100%;margin-top:14px;padding:12px 14px;border:1px solid #F2C9A0;border-radius:12px;background:#FFF8F1;font:inherit;font-size:12.5px;color:var(--muted-2);text-align:left;cursor:pointer}
+.fs-coffre b{font-weight:400;color:var(--ink)}.fs-coffre .go{margin-left:auto;color:var(--accent);white-space:nowrap}
+/* Le Professeur */
+.fs-prof{padding:14px 16px;position:sticky;top:12px}
+.fs-prof-t{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.fs-prof-t img{width:56px;height:56px;border-radius:12px;background:#F4EEE6;flex:0 0 auto}
+.fs-prof-t b{font-weight:400;font-size:15px;display:block}.fs-prof-t span{font-size:12px;color:var(--muted);line-height:1.45}.fs-prof-t span b{display:inline;font-size:inherit;color:var(--ink)}
+.fs-qp{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font:inherit;font-size:12.5px;color:var(--ink);background:#fff;margin-top:6px;cursor:pointer}
+.fs-qp:hover{border-color:#E8C9CD}.fs-qp small{display:block;color:var(--muted);font-size:10.5px}
+.fs-q{display:flex;gap:6px;margin-top:10px}.fs-q .db-sel{flex:1;min-width:0}
+/* Une formation */
+.fs-fh{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.fs-fh h2{margin:2px 0 0;font-size:21px;font-weight:400;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
+.fs-kk{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.fs-cont{padding:6px 18px 16px}
+.fs-adapt{margin:12px 0 4px;border-left:3px solid #F2C9A0;background:#FFF8F1;border-radius:0 8px 8px 0;padding:8px 10px;font-size:12.5px;color:#7A3E12}
+.fs-obj{font-size:13px;color:var(--muted-2);line-height:1.55;margin:12px 0 4px}
+.fs-sec{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
+.fs-et{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--row-line)}.fs-et:last-of-type{border-bottom:0}
+.fs-et .n{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);color:var(--muted-2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+.fs-et.crit .n{border-color:var(--accent);color:var(--accent)}
+.fs-et .x{flex:1;font-size:12.5px;line-height:1.55;min-width:0}.fs-et .x b{font-weight:400;font-size:14px;display:block;margin-bottom:2px}
+.fs-et .x em{display:inline-block;margin-left:6px;font-style:normal;font-size:10.5px;color:var(--accent);background:#F6EDEE;border-radius:6px;padding:0 6px}
+.fs-et img{width:120px;height:84px;object-fit:cover;border-radius:8px;flex:0 0 auto}
+.fs-crit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.fs-crit div{border:1px solid #E8C9CD;background:#FBF3F4;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+.fs-crit b{display:block;color:var(--accent);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.fs-droite{display:flex;flex-direction:column;gap:14px;min-width:0}.fs-droite .fs-prof{position:static}
+.fs-bloc{padding:14px 16px;border-top:1px solid var(--line)}.fs-bloc:first-child,.fs-ok+.fs-bloc,.fs-att+.fs-bloc{border-top:0}
+.fs-ok{margin:12px 16px 0;padding:9px 12px;border-radius:9px;background:#E3EEE6;color:var(--green);font-size:12.5px}
+.fs-att{margin:12px 16px 0;padding:9px 12px;border-radius:9px;background:var(--prize-soft);color:var(--prize-ink);font-size:12.5px}
+.fs-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.fs-j{position:relative;height:40px;border-radius:6px;background:var(--chip);overflow:hidden;border:1px solid transparent}
+.fs-j img{width:100%;height:100%;object-fit:cover;display:block}
+.fs-j small{position:absolute;left:3px;bottom:1px;font-size:8.5px;color:var(--muted-2)}.fs-j img+small{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.fs-j.ok{border-color:var(--green)}.fs-j.ok::after{content:'✓';position:absolute;top:1px;right:2px;font-size:9px;color:#fff;background:var(--green);border-radius:50%;width:12px;height:12px;line-height:12px;text-align:center}
+.fs-j.ko{border-color:var(--stop)}.fs-j.att{border-color:var(--prize)}
+.fs-j.manq{background:var(--stop-soft)}.fs-j.faire{background:#FFF1E4;border:1px dashed #E0A56E}.fs-j.venir{background:#fff;border:1px dashed var(--line)}
+.fs-photo{margin-top:10px;width:100%;justify-content:center;display:flex;cursor:pointer}.fs-photo.occ{opacity:.6}
+.fs-pers{display:grid;grid-template-columns:1fr 46px 46px 56px;align-items:center;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--row-line)}
+.fs-pers label{text-align:center}.fs-pers-h{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line)}.fs-pers-h span{text-align:center}.fs-pers-h span:first-child{text-align:left}
+.fs-mep{margin-top:12px;font-size:12.5px;color:var(--green)}
+/* Le bouton abricot : la vignette de la barre du rail, le bouton de l'en-tête sans rail, l'icône du téléphone. */
+.db-av.db-av--fc{background:#F2C9A0;border-color:#F2C9A0;color:var(--accent)}
+.db-av.db-av--fc .k{color:var(--accent);opacity:.85}.db-av.db-av--fc .v{color:var(--accent);font-weight:700}
+.db-btn.db-btn-fc{background:#F2C9A0;border-color:#F2C9A0;color:var(--accent);font-weight:700}
+.db-btn-fc .n,.mb-ic-fc .n{display:inline-block;margin-left:6px;background:var(--accent);color:#fff;border-radius:9px;font-size:10px;padding:0 6px;font-weight:400}
+.mb-ic.mb-ic-fc{background:#F2C9A0;border-color:#F2C9A0;position:relative}
+.mb-ic-fc .n{position:absolute;top:-4px;right:-4px;margin:0}
+@media (max-width:1023px){
+  .fs-lay{grid-template-columns:1fr}.fs-prof{position:static}
+  .fs-kpis{flex-wrap:wrap}.fs-kpi{flex:1 0 45%}.fs-kpi:nth-child(3){border-left:0}
+  .fs-th .s,.fs-th .fs-av,.fs-th .e,.fs-th .o,.fs-l .fs-av,.fs-l .o{display:none}
+  .fs-crit{grid-template-columns:1fr}.fs-et img{width:84px;height:64px}
+  .fs-nouv{padding:12px}.fs-nouv-h{flex-direction:column;gap:2px}.fs-nc-b{height:34px}.fs-cartes{grid-template-columns:1fr}
+}
+
+/* v2 (22/11/2026) : l'accueil — le dossier en quatre nombres et le Professeur, au-dessus de la méga-barre (seformer.css). */
+.fs-acc-h{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:0 0 12px}
+.fs-mini{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:7px 12px;font:inherit;font-size:12.5px;color:var(--muted-2);cursor:pointer;text-align:left}
+.fs-mini:hover{border-color:#E8C9CD}
+.fs-mini .t b{font-weight:400;color:var(--ink)}
+.fs-mini .k{display:flex;flex-direction:column;align-items:center;padding:0 10px;border-left:1px solid var(--line)}
+.fs-mini .k b{font-size:16px;font-weight:700;color:var(--ink)}.fs-mini .k small{font-size:10px;color:var(--muted)}
+.fs-mini .k.ac b{color:var(--accent)}
+.fs-mini .o{color:var(--accent)}
+.fs-mini .fs-nv{margin-left:6px}
+.db-btn.fs-prof-b{height:42px}
+.fs-retour{display:flex;align-items:center;gap:12px;margin:0 0 12px;font-size:12px;color:var(--muted)}
+@media (max-width:1023px){
+  .fs-acc-h{flex-wrap:wrap;justify-content:stretch}.fs-mini{flex:1;flex-wrap:wrap;justify-content:space-between;row-gap:6px}.fs-mini .t{flex-basis:100%}.fs-mini .k{padding:0 6px}.fs-mini .k:first-of-type{border-left:0}.db-btn.fs-prof-b{flex:1 0 100%;height:38px}
+}

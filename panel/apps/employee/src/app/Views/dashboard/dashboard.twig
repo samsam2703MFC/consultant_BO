@@ -1,0 +1,89 @@
+{# dashboard/dashboard.twig — l'Accueil, centré sur la performance de la personne (06/10/2026) ; ce qui est encore en jeu et le plan en tête, en forme sobre (23/10/2026). #}
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'dashboard' %}
+{% set T = translations %}
+{% block title %}{{ T.home ?? 'Accueil' }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">{% endblock %}
+{% block page_title %}{{ T.hello ?? 'Bonjour' }}{% if prenom %} {{ prenom }}{% endif %}{% endblock %}
+{% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {% endif %}{{ dateLib }}{% endblock %}
+
+{% block content %}
+{% set p = primes %}
+{% set eur = '€' %}
+
+{# ── 1. Mes primes : ce qui est encore en jeu, en tête (23/10/2026, forme sobre) ── #}
+{% if p %}
+{% set encore = max(0, (p.enJeu ?? p.aPortee ?? 0) - p.acquis) %}
+{% set enJeu = p.enJeu ?? p.aPortee ?? 0 %}
+<a class="sb-groupe sb-heros-carte" href="{{ ROOT }}/primes">
+  {% if p.enCours and encore > 0 %}
+  <span class="sb-sur">{{ T.still_in_play ?? 'Encore en jeu ce mois-ci' }}</span>
+  <span class="sb-chiffre">+{{ encore|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span>
+  <span class="sb-barre grande"><i style="width:{{ enJeu > 0 ? (100 * p.acquis / enJeu)|round(1) : 0 }}%"></i></span>
+  <span class="sb-sous"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b> {{ T.earned ?? 'acquis' }} · {{ enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.in_play ?? 'en jeu' }}</span>
+  {% else %}
+  <span class="sb-sur">{{ T.my_bonuses ?? 'Mes primes' }} · {{ mois(p.m) }}</span>
+  <span class="sb-chiffre">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span>
+  <span class="sb-sous">{{ p.enCours ? (T.earned_so_far ?? 'acquis si le mois finit comme ça') : (T.month_closed ?? 'mois clos') }}</span>
+  {% endif %}
+  <i class="bi bi-chevron-right sb-fleche"></i>
+</a>
+{% else %}
+<div class="pr-card"><div class="pr-h"><h2>{{ T.my_bonuses ?? 'Mes primes' }}</h2></div>
+  <div class="note">{{ T.unavailable ?? 'Les primes ne peuvent pas être lues pour le moment.' }}{% if primesErreur %}<br><span class="mu" style="font-size:11px">{{ primesErreur }}</span>{% endif %}</div></div>
+{% endif %}
+
+{# ── Le bilan du service, quand il se termine ── #}
+{% if bilan %}
+<div class="pr-card acc-bilan {{ bilan.ok ? 'ok' : 'att' }}" data-bilan="{{ bilan.ok ? 'ok' : 'att' }}">
+  <i class="bi {{ bilan.ok ? 'bi-emoji-smile' : 'bi-lightning-charge' }}"></i>
+  <div><b>{{ bilan.fini ? (T.shift_over ?? 'Service terminé') : (T.shift_ending ?? 'Fin de service dans moins d’une heure') }}</b>
+    <div class="s">{% if bilan.ok %}{{ T.well_done ?? 'Bravo :' }} {{ bilan.taux }}&nbsp;% {{ T.today_vs_target ?? 'de ventes croisées aujourd’hui, la cible est à' }} {{ bilan.cible|number_format(0, ',', ' ') }}&nbsp;%.{% else %}{{ T.still_needed ?? 'Encore' }} <b>{{ bilan.manque }}</b> {{ bilan.manque == 1 ? (T.cross_sale_for_target_one ?? 'vente croisée pour la cible du jour') : (T.cross_sales_for_target ?? 'ventes croisées pour la cible du jour') }} ({{ bilan.taux }}&nbsp;% {{ T.vs ?? 'face à' }} {{ bilan.cible|number_format(0, ',', ' ') }}&nbsp;%).{% endif %}</div></div>
+</div>
+{% endif %}
+
+{# ── 2. Aujourd'hui : le compteur, le service, les tâches ── #}
+<div class="pr-card">
+  <div class="pr-h"><h2>{{ T.today ?? 'Aujourd’hui' }}</h2><small>{{ heure }}</small></div>
+  {% if p and p.enCours and p.aujourdhui %}{% set a = p.aujourdhui %}{% set c = p.briques.croisees %}
+  <div class="auj"><div class="cercle" style="--p:{{ a.tickets > 0 ? (100 * a.croisees / a.tickets)|round : 0 }}%"><b>{{ a.croisees }}</b><small>{{ T.out_of ?? 'sur' }} {{ a.tickets }}</small></div>
+    <div class="tx"><div class="q">{{ a.croisees }} {{ T.cross_sales_today ?? 'ventes croisées aujourd’hui' }}</div>
+      {% if a.tickets > 0 %}{{ a.taux|number_format(0, ',', ' ') }}&nbsp;% {{ T.of_your_tickets ?? 'de tes tickets ont 2 articles ou plus' }} · {{ T.target ?? 'cible' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%{% else %}{{ T.no_ticket_yet ?? 'Pas encore de ticket à ton nom.' }}{% endif %}
+      <div class="mu" style="font-size:11.5px;margin-top:3px">« {{ T.anything_else ?? 'Et avec ça ?' }} »</div></div></div>
+  {% elseif p and p.enCours %}<div class="note" style="margin-top:0">{{ T.today_unavailable ?? 'Le compteur du jour n’a pas pu être lu.' }}</div>{% endif %}
+  <div class="acc-grille">
+    <a class="acc-tuile" href="{{ ROOT }}/schedule"><i class="bi bi-calendar3"></i><div><b>{% if service %}{{ service.debut }} – {{ service.fin }}{% else %}{{ T.no_shift ?? 'Pas de service' }}{% endif %}</b><small>{{ T.my_shift ?? 'mon service du jour' }}</small></div></a>
+    <a class="acc-tuile {{ taches and taches.restantes > 0 ? 'att' }}" href="{{ ROOT }}/tasks"><i class="bi bi-check2-square"></i><div><b>{% if taches %}{{ taches.restantes }} / {{ taches.total }}{% else %}—{% endif %}</b><small>{{ T.tasks_left ?? 'tâches à faire' }}</small></div></a>
+  </div>
+</div>
+
+{# ── 3. Comment y arriver : les trois primes les plus proches, comme sur l'écran Primes (23/10/2026) ── #}
+{% if p and p.enCours and etapes|length %}
+<h2 class="sb-titre">{{ T.how_to_get_there ?? 'Comment y arriver' }}<a href="{{ ROOT }}/primes">{{ T.see_all ?? 'tout voir' }}</a></h2>
+<div class="sb-groupe">
+  {% for e in etapes %}{% include "components/primes_etape.twig" with { e: e, T: T, ib: p.iconesBase ?? (ROOT ~ '/..'), lien: ROOT ~ '/primes#prime-' ~ e.cle } only %}{% endfor %}
+</div>
+{% endif %}
+
+{# ── 4. Ma semaine ── #}
+{% if semaine and (semaine.tickets > 0 or semaine.caHeure is not null) %}
+<div class="pr-card">
+  <div class="pr-h"><h2>{{ T.my_week ?? 'Ma semaine' }}</h2><small>{{ semaine.lib }}</small></div>
+  <div class="acc-kpis">
+    <div><b>{% if semaine.rang %}{{ semaine.rang }}<span class="mu" style="font-size:12px">e</span>{% else %}—{% endif %}</b><small>{{ T.rank_network ?? 'dans le réseau' }}{% if semaine.sur %} · {{ semaine.sur }}{% endif %}</small></div>
+    <div><b>{% if semaine.taux is not null %}{{ semaine.taux|number_format(0, ',', ' ') }}&nbsp;%{% else %}—{% endif %}</b><small>{{ T.cross_sales ?? 'ventes croisées' }}</small></div>
+    <div><b>{% if semaine.caHeure is not null %}{{ semaine.caHeure|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% else %}—{% endif %}</b><small>{{ T.per_hour ?? 'par heure' }}</small></div>
+    <div><b>{% if semaine.pieces is not null %}{{ semaine.pieces|number_format(0, ',', ' ') }}{% if semaine.rangPieces %} <span class="mu" style="font-size:12px">{{ semaine.rangPieces }}e</span>{% endif %}{% else %}—{% endif %}</b><small>{{ T.contest_pieces ?? 'tartes & quiches' }}</small></div>
+  </div>
+</div>
+{% endif %}
+
+{# ── 5. Ma collection, en une ligne ── #}
+{% if collection %}
+<a class="pr-card acc-lien acc-mag" href="{{ ROOT }}/primes#collection">
+  <div><div class="k">{{ T.my_collection ?? 'Ma collection' }}</div>
+    <div class="s"><b>{{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }}{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ (dt.cle starts with 'concours:' or dt.cle starts with 'promo:' or dt.cle starts with 'cible:') ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (dt.cle == 'google' ? (T.google_rating ?? 'Note Google') : (T.shop_bonus_title ?? 'Prime magasin'))))) }}{% endif %}</div></div>
+  <i class="bi bi-chevron-right mu"></i>
+</a>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,203 @@
+/* Maquettes « Mon coffre-fort » v2 (22/11/2026) — sur ds.css, fc.css et dash.css (cadre du dashboard des maquettes).
+   Préfixe v-. Deux graisses (400, 700), les jetons du design system, l'abricot pour les assistants. */
+
+/* L'en-tête de la page */
+.v-tete{display:flex;align-items:flex-end;gap:10px;padding:22px 0 16px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.v-tete .kk{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.v-tete h1{font-size:27px;font-weight:400;margin:4px 0 4px;letter-spacing:-.01em}
+.v-tete p{margin:0;font-size:12.5px;color:var(--muted)}
+.v-tete .sp{flex:1}
+.v-q{display:flex;align-items:center;gap:8px;width:250px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--muted);font-size:12.5px}
+.v-b{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:13px;white-space:nowrap}
+.v-b.prim{background:var(--accent);border-color:var(--accent);color:#fff}
+.v-b.abr{background:#FFF8F1;border-color:#F2C9A0;color:#7A3E12}
+.v-b i{font-style:normal;font-size:10.5px;min-width:18px;line-height:18px;text-align:center;border-radius:9px;background:var(--accent);color:#fff;padding:0 5px}
+.v-b.sm{height:28px;padding:0 10px;font-size:12px;border-radius:7px}
+
+/* L'état du coffre : complétude, à traiter, prochaine grande date */
+.v-etat{display:grid;grid-template-columns:330px minmax(0,1fr) 290px;background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+.v-etat>div{padding:18px 20px;border-left:1px solid var(--line);min-width:0}
+.v-etat>div:first-child{border-left:0}
+.v-k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.v-k i{margin-left:auto;font-style:normal;text-transform:none;letter-spacing:0;color:var(--faint);font-size:11px}
+.v-compl{display:flex;gap:16px;align-items:center}
+.v-ring{width:92px;height:92px;flex:0 0 auto;position:relative}
+.v-ring svg{width:92px;height:92px;transform:rotate(-90deg)}
+.v-ring b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.v-ring b small{font-size:10.5px;font-weight:400;color:var(--muted);letter-spacing:0}
+.v-compl h3{font-size:15px;font-weight:400;margin:0 0 4px}
+.v-compl p{margin:0;font-size:12px;color:var(--muted);line-height:1.5}
+.v-compl a{color:var(--accent);font-size:12px;text-decoration:none;display:inline-block;margin-top:6px}
+.v-af{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--row-line);font-size:13px}
+.v-af:first-of-type{border-top:0;padding-top:0}
+.v-af .pt{width:30px;height:30px;flex:0 0 auto;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.v-af .pt.or{background:var(--prize-soft);color:var(--prize-ink)}.v-af .pt.ac{background:#F6EDEE;color:var(--accent)}.v-af .pt.ab{background:#FFF8F1;color:#7A3E12}
+.v-af .tx{flex:1;min-width:0}.v-af .tx small{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
+.v-af .go{font-size:12px;color:var(--accent);white-space:nowrap}
+.v-af.rien{color:var(--muted);font-size:12.5px}
+.v-proch{background:#FFF8F1}
+.v-proch .k2{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#9a6a45}
+.v-proch .dt{display:flex;align-items:baseline;gap:10px;margin:8px 0 4px}
+.v-proch .dt b{font-size:40px;font-weight:700;letter-spacing:-.03em;color:#7A3E12;line-height:1}
+.v-proch .dt span{font-size:14px;color:#7A3E12}
+.v-proch p{margin:0 0 4px;font-size:13px;color:var(--ink);line-height:1.35}
+.v-proch .u{display:inline-block;font-size:11px;font-weight:700;background:var(--prize-soft);color:var(--prize-ink);border-radius:6px;padding:2px 7px;margin:4px 0 10px}
+
+/* La frise des grandes dates (12 mois) */
+.v-frise{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 20px 12px;margin-bottom:14px}
+.v-fr{position:relative;height:96px;margin:6px 0 0}
+.v-fr .axe{position:absolute;left:0;right:0;top:38px;height:4px;border-radius:2px;background:var(--chip)}
+.v-fr .m{position:absolute;top:80px;font-size:10.5px;color:var(--muted);transform:translateX(-50%)}
+.v-fr .auj{position:absolute;top:26px;width:2px;height:28px;background:var(--accent)}
+.v-fr .auj::after{content:'aujourd’hui';position:absolute;top:30px;font-weight:700;left:50%;transform:translateX(-50%);font-size:10px;color:var(--accent);white-space:nowrap}
+.v-fr .ev{position:absolute;top:31px;transform:translateX(-50%)}
+.v-fr .ev i{display:block;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);background:var(--accent)}
+.v-fr .ev.or i{background:var(--prize)}.v-fr .ev.ab i{background:#E0A56E}
+.v-fr .ev span{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:11px;white-space:nowrap;background:#fff;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:var(--ink);box-shadow:0 1px 3px rgba(28,26,23,.05)}
+.v-fr .ev.bas span{bottom:auto;top:24px}
+.v-fr .fen{position:absolute;top:36px;height:8px;border-radius:4px;background:rgba(224,165,110,.45)}
+
+/* Le corps : les dossiers à gauche, le contenu au centre */
+.v-corps{display:grid;grid-template-columns:250px minmax(0,1fr);gap:14px;align-items:start}
+.v-dos{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;position:sticky;top:12px}
+.v-d{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13px;color:var(--muted-2)}
+.v-d .ico{width:30px;height:30px;flex:0 0 auto;border-radius:8px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:14px}
+.v-d .nm{flex:1;min-width:0}.v-d .nm small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.v-d .n{font-size:11px;color:var(--muted)}
+.v-d.on{background:#F6EDEE;color:var(--accent)}.v-d.on .ico{background:#fff}.v-d.on .nm{font-weight:700}
+.v-d .bar{display:block;height:3px;border-radius:2px;background:var(--chip);margin-top:4px;overflow:hidden}.v-d .bar b{display:block;height:100%;background:var(--green)}
+.v-d.gd{margin-top:6px;border-top:1px solid var(--row-line);border-radius:0 0 10px 10px;padding-top:12px}
+.v-d.gd .ico{background:#FFF8F1}
+.v-sep{height:1px;background:var(--row-line);margin:6px 8px}
+
+.v-carte{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+.v-ch{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.v-ch h2{font-size:15px;font-weight:400;margin:0;text-transform:none;letter-spacing:0;color:var(--ink)}.v-ch small{font-size:12px;color:var(--muted)}.v-ch .sp{flex:1}
+.v-chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--line);border-radius:13px;font-size:12px;color:var(--muted-2);background:#fff}
+.v-chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.v-grp{padding:10px 16px 4px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* Une ligne de document */
+.v-l{display:flex;align-items:center;gap:14px;padding:10px 16px;border-top:1px solid var(--row-line)}
+.v-l.sel{background:#F6EDEE;box-shadow:inset 3px 0 0 var(--accent)}
+.v-ty{width:34px;height:40px;flex:0 0 auto;border-radius:6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:8.5px;font-weight:700;letter-spacing:.04em;position:relative;color:#fff}
+.v-ty::after{content:'';position:absolute;top:0;right:0;width:10px;height:10px;background:linear-gradient(225deg,#fff 50%,rgba(0,0,0,.12) 50%);border-radius:0 6px 0 0}
+.v-ty.pdf{background:#B5452F}.v-ty.xls{background:#2E7D4F}.v-ty.doc{background:#2D5D80}.v-ty.img{background:#8C6BB1}.v-ty.web{background:var(--accent)}
+.v-l .tt{flex:1;min-width:0}
+.v-l .tt b{display:block;font-weight:400;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-l .tt small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.v-l .dos{width:130px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}
+.v-l .qd{width:96px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}
+.v-l .et{width:150px;flex:0 0 auto}
+.v-l .ac{width:72px;flex:0 0 auto;text-align:right;font-size:12px;color:var(--accent)}
+.v-nv{font-style:normal;font-size:9.5px;background:#F2C9A0;color:var(--accent);border-radius:6px;padding:1px 6px;margin-left:7px;vertical-align:2px;font-weight:700}
+.v-st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.v-st::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+.v-st.ok{background:#E3EEE6;color:var(--green)}.v-st.or{background:var(--prize-soft);color:var(--prize-ink)}.v-st.gr{background:var(--chip);color:var(--muted-2)}.v-st.ko{background:var(--stop-soft);color:var(--stop)}
+.v-pied{padding:10px 16px;border-top:1px solid var(--row-line);font-size:12px;color:var(--muted)}
+
+/* Les pièces attendues (une liste de contrôle par dossier) */
+.v-att{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px 16px}
+.v-p{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;min-height:74px}
+.v-p .ck{width:24px;height:24px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.v-p.ok .ck{background:#E3EEE6;color:var(--green)}
+.v-p.or .ck{background:var(--prize-soft);color:var(--prize-ink)}
+.v-p.man{border-style:dashed;background:var(--paper)}.v-p.man .ck{border:1.5px dashed var(--faint);color:var(--faint)}
+.v-p .tt{flex:1;min-width:0}.v-p .tt b{display:block;font-weight:400;font-size:13px}
+.v-p .tt small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.v-p .tt .gdm{display:inline-block;margin-top:6px;font-size:10.5px;background:#FFF8F1;border:1px solid #F2C9A0;color:#7A3E12;border-radius:6px;padding:1px 6px}
+.v-p .bt{margin-top:8px}
+.v-p.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.v-qui{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+
+/* Le coffre vide : ce qu'il doit contenir */
+.v-vide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.v-vc{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.v-vc .h{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.v-vc .h .ico{width:32px;height:32px;border-radius:9px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:15px}
+.v-vc .h b{font-weight:400;font-size:14px;display:block}.v-vc .h small{font-size:11px;color:var(--muted)}
+.v-vc .h .n{margin-left:auto;font-size:12px;color:var(--muted)}
+.v-vi{display:flex;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--row-line);font-size:12.5px}
+.v-vi:first-of-type{border-top:0}
+.v-vi .o{width:18px;height:18px;flex:0 0 auto;border-radius:50%;border:1.5px dashed var(--faint)}
+.v-vi span{flex:1}
+.v-vi em{font-style:normal;font-size:11.5px;color:var(--accent)}
+.v-vi em.gris{color:var(--muted)}
+.v-vc .auto{padding:12px 16px;font-size:12px;color:var(--muted);line-height:1.5}
+
+/* L'aperçu : un tiroir à droite, seulement quand un document est choisi */
+.v-ombre{position:fixed;inset:0;background:rgba(28,26,23,.18)}
+.v-tir{position:fixed;top:0;right:0;bottom:0;width:440px;background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 30px rgba(28,26,23,.12);display:flex;flex-direction:column}
+.v-tir .h{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.v-tir .h b{display:block;font-size:17px;font-weight:400;line-height:1.3}.v-tir .h small{font-size:11.5px;color:var(--muted)}
+.v-tir .h .x{margin-left:auto;font-size:20px;color:var(--muted)}
+.v-tir .c{padding:16px 20px;overflow:hidden;flex:1}
+.v-page{height:220px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:16px 40px;margin-bottom:14px}
+.v-page div{height:100%;background:#fff;box-shadow:0 2px 10px rgba(28,26,23,.08);padding:16px 18px}
+.v-page i{display:block;height:6px;border-radius:2px;background:var(--chip);margin:7px 0}
+.v-page i.t{height:10px;width:60%;background:var(--ink);opacity:.7;margin-bottom:12px}.v-page i.c{width:70%}
+.v-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.v-acts .v-b{justify-content:center}
+.v-kv{display:grid;grid-template-columns:92px 1fr;gap:6px 10px;font-size:12.5px;margin:4px 0 14px}.v-kv span:nth-child(odd){color:var(--muted)}
+.v-gdl{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--row-line);font-size:12.5px}
+.v-gdl .d{width:46px;flex:0 0 auto;text-align:center;border-radius:7px;background:#F6EDEE;color:var(--accent);padding:3px 0;font-size:10px}.v-gdl .d b{display:block;font-size:15px;line-height:1.1}
+.v-gdl .d.or{background:var(--prize-soft);color:var(--prize-ink)}
+.v-gdl .t{flex:1}.v-gdl small{display:block;color:var(--muted);font-size:11px}
+.v-tr{display:flex;gap:10px;font-size:12px;padding:5px 0}.v-tr span:first-child{width:86px;color:var(--muted);font-size:11px;flex:0 0 auto}
+
+/* Le dépôt : une fenêtre, l'assistant dedans */
+.v-mod{position:fixed;top:60px;left:50%;transform:translateX(-50%);width:880px;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(28,26,23,.25);overflow:hidden}
+.v-mod .h{display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--line)}
+.v-mod .h b{font-size:17px;font-weight:400}.v-mod .h .x{margin-left:auto;font-size:20px;color:var(--muted)}
+.v-mod .c{display:grid;grid-template-columns:330px minmax(0,1fr)}
+.v-mod .g{padding:18px 22px;border-right:1px solid var(--line)}
+.v-mod .d{padding:18px 22px;background:#FFFCF8}
+.v-drop{border:1.5px dashed #E0A56E;border-radius:12px;background:#FFF8F1;padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.v-drop small{display:block;font-size:11.5px;color:var(--muted)}
+.v-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.v-chips span{font-size:12px;border:1px solid var(--line);border-radius:14px;padding:4px 10px;color:var(--muted-2)}
+.v-chips span.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.v-chips span.sug{border-color:#F2C9A0;background:#FFF8F1;color:#7A3E12}
+.v-lab{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.v-in{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px;margin-bottom:12px;background:#fff}
+.v-as-h{display:flex;align-items:center;gap:8px;color:#7A3E12;margin-bottom:10px}
+.v-as-h .o{width:24px;height:24px;border-radius:50%;background:#F2C9A0;display:flex;align-items:center;justify-content:center;font-size:11px}
+.v-as-r{font-size:13px;line-height:1.5;margin:0 0 12px}
+.v-ex{font-size:11.5px;line-height:1.45;color:var(--muted-2);border-left:3px solid #F2C9A0;background:#FFF8F1;padding:7px 10px;border-radius:0 8px 8px 0;margin:0 0 12px;font-style:italic}
+.v-pp{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--row-line);font-size:13px}
+.v-pp .cb{width:16px;height:16px;border-radius:4px;background:var(--accent);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.v-pp .cb.no{background:#fff;border:1.5px solid var(--faint)}
+.v-pp .t{flex:1}.v-pp small{display:block;font-size:11px;color:var(--muted)}
+.v-pp em{font-style:normal;font-size:10.5px;font-weight:700;background:var(--prize-soft);color:var(--prize-ink);border-radius:6px;padding:1px 6px;margin-left:6px}
+.v-pp .dt{font-size:12.5px;border:1px solid var(--line);border-radius:7px;padding:4px 8px;background:#fff}
+.v-mod .f{display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid var(--line);background:#fff}
+.v-mod .f .n{font-size:12px;color:var(--muted);flex:1}
+
+/* La légende sous chaque maquette */
+.legende{margin-top:18px}
+
+/* Le téléphone */
+body.tel{background:#E9E4DC;display:flex;justify-content:center;padding:24px 0}
+.tel-f{width:390px;background:var(--paper);border-radius:28px;overflow:hidden;box-shadow:0 10px 40px rgba(28,26,23,.18);border:1px solid var(--line)}
+.tel-h{display:flex;align-items:center;gap:10px;padding:16px 16px 12px;background:#fff;border-bottom:1px solid var(--line)}
+.tel-h b{font-size:17px;font-weight:400;display:block}.tel-h small{font-size:11.5px;color:var(--muted)}
+.tel-h .sp{flex:1}
+.tel-h .r{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;background:#fff}
+.tel-c{padding:12px}
+.tel-c .v-etat{grid-template-columns:1fr;border-radius:14px}
+.tel-c .v-etat>div{border-left:0;border-top:1px solid var(--line);padding:14px 16px}.tel-c .v-etat>div:first-child{border-top:0}
+.tel-c .v-ring,.tel-c .v-ring svg{width:70px;height:70px}.tel-c .v-ring b{font-size:18px}
+.tel-dos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tel-dos div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.tel-dos b{display:block;font-weight:400;font-size:13px;margin-top:6px}.tel-dos small{font-size:11px;color:var(--muted)}
+.tel-dos .ico{font-size:17px}
+.tel-dos .bar{display:block;height:3px;border-radius:2px;background:var(--chip);margin-top:7px;overflow:hidden}.tel-dos .bar i{display:block;height:100%;background:var(--green)}
+.tel-c .v-l{padding:10px 12px}.tel-c .v-l .tt b{white-space:normal}
+.tel-btn{display:flex;gap:8px;margin-bottom:12px}.tel-btn .v-b{flex:1;justify-content:center}
+.tel-tab{display:flex;justify-content:space-around;padding:10px 0 14px;background:#fff;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted)}
+.tel-tab span{display:flex;flex-direction:column;align-items:center;gap:3px}.tel-tab span i{font-style:normal;font-size:16px}
+.tel-leg{width:390px;margin-left:24px;font-size:12.5px;line-height:1.55;color:var(--muted-2)}
+.tel-leg b{color:var(--ink);font-weight:400}
+
+.v-fr .tick{position:absolute;top:36px;width:1px;height:8px;background:var(--line)}
+.v-sug{font-size:11.5px;color:#7A3E12;margin:-6px 0 14px}

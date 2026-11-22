@@ -1,0 +1,93 @@
+/* Maquettes « Formations et suivi » v2 (22/11/2026) : l'accueil du module Formation dans le dashboard, sans son rail,
+   et la méga-barre de recherche sur tout le catalogue. Sur ds.css, dash.css et portail.css (les styles réels de l'accueil).
+   Les étiquettes : des rectangles aux coins arrondis, à la couleur de leur catalogue (catalogue/catalogue.js). */
+.fs-tete{display:flex;align-items:flex-end;gap:12px;padding:20px 0 14px}
+.fs-tete .kk{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.fs-tete h1{font-size:27px;font-weight:400;margin:4px 0 0;letter-spacing:-.01em}
+.fs-tete .sp{flex:1}
+.fs-mini{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:12.5px;color:var(--muted-2)}
+.fs-mini b{font-weight:400;color:var(--ink)}
+.fs-mini .k{display:flex;flex-direction:column;align-items:center;padding:0 8px;border-left:1px solid var(--line)}
+.fs-mini .k:first-of-type{border-left:0}
+.fs-mini .k b{font-size:16px;font-weight:700}.fs-mini .k small{font-size:10px;color:var(--muted)}
+.fs-mini .o{color:var(--accent)}
+.fs-prof{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:10px;background:#F2C9A0;color:#7A3E12;font-size:13px}
+
+/* Les étiquettes des catalogues : un rectangle aux coins arrondis, le nom, la couleur du catalogue */
+.tg{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;white-space:nowrap;line-height:1}
+.tg.c-man{background:#8D1D2C;color:#F5EFE4}
+.tg.c-std{background:#222222;color:#F5EFE4}
+.tg.c-chk{background:#78554B;color:#F5EFE4}
+.tg.c-res{background:#F2C9A0;color:#222222}
+.tg.c-fo{background:#fff;color:#8D1D2C;box-shadow:inset 0 0 0 1.5px #8D1D2C}
+.tg.c-fc{background:#FFF8F1;color:#7A3E12;box-shadow:inset 0 0 0 1.5px #E0A56E}
+.tg i{font-style:normal;opacity:.75}
+
+/* La méga-barre */
+.ms{position:relative;margin-bottom:16px;z-index:5}
+.ms-in{display:flex;align-items:center;gap:14px;height:60px;padding:0 20px;background:#fff;border:1.5px solid var(--line);border-radius:16px;box-shadow:0 2px 10px rgba(28,26,23,.05)}
+.ms.ouv .ms-in{border-color:var(--accent);border-radius:16px 16px 0 0;box-shadow:0 0 0 4px rgba(141,29,44,.08)}
+.ms-in svg{flex:0 0 auto;color:var(--muted)}
+.ms-in .ph{flex:1;font-size:16px;color:var(--muted)}
+.ms-in .v{flex:1;font-size:17px;color:var(--ink)}
+.ms-in .v::after{content:'';display:inline-block;width:1.5px;height:20px;background:var(--accent);margin-left:2px;vertical-align:-4px}
+.ms-in kbd{font:inherit;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 7px;background:var(--paper)}
+.ms-in .n{font-size:12px;color:var(--muted)}
+.ms-cats{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
+.ms-cats .tg{height:26px;padding:0 10px;font-size:12px}
+
+/* Le panneau des résultats, sous la barre */
+.ms-pan{position:absolute;left:0;right:0;top:60px;background:#fff;border:1.5px solid var(--accent);border-top:1px solid var(--line);border-radius:0 0 16px 16px;box-shadow:0 24px 50px rgba(28,26,23,.16);display:grid;grid-template-columns:210px minmax(0,1fr) 380px;max-height:760px;overflow:hidden}
+.ms-f{padding:14px 10px;border-right:1px solid var(--line);background:var(--paper)}
+.ms-f .h{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:2px 8px 8px}
+.ms-f .it{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;font-size:12.5px;color:var(--muted-2)}
+.ms-f .it .tg{flex:0 0 auto}
+.ms-f .it .nb{margin-left:auto;font-size:11px;color:var(--muted)}
+.ms-f .it.on{background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink)}
+.ms-f .sep{height:1px;background:var(--line);margin:10px 8px}
+.ms-f .pq{margin:6px 8px 0;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.ms-r{overflow:hidden;padding:4px 0}
+.ms-g{padding:12px 18px 4px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ms-l{display:flex;gap:14px;align-items:flex-start;padding:11px 18px;border-top:1px solid var(--row-line)}
+.ms-l.sel{background:#F6EDEE;box-shadow:inset 3px 0 0 var(--accent)}
+.ms-l .c{flex:1;min-width:0}
+.ms-l .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ms-l .t code{font:inherit;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ms-l .t b{font-weight:400;font-size:14px;color:var(--ink)}
+.ms-l mark{background:#FBE6A9;color:inherit;border-radius:3px;padding:0}
+.ms-l .x{display:block;font-size:12px;color:var(--muted-2);margin-top:3px;line-height:1.45}
+.ms-l .go{display:inline-flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;color:var(--accent)}
+.ms-l .go small{color:var(--muted);font-size:11px}
+.ms-l .ph{width:64px;height:48px;flex:0 0 auto;border-radius:8px;object-fit:cover;border:1px solid var(--line)}
+.ms-l .ph.vide{background:var(--chip)}
+.ms-ap{border-left:1px solid var(--line);padding:16px 18px;overflow:hidden;background:#FFFCF8}
+.ms-ap img{width:100%;height:190px;object-fit:cover;border-radius:12px;border:1px solid var(--line);margin-bottom:12px}
+.ms-ap h3{font-size:17px;font-weight:400;margin:8px 0 4px;line-height:1.3}
+.ms-ap .m{font-size:12px;color:var(--muted);margin-bottom:10px}
+.ms-ap ol{margin:0 0 12px;padding-left:18px;font-size:12.5px;line-height:1.5}
+.ms-ap ol li{padding:3px 0}
+.ms-ap ol li.crit::marker{color:var(--accent)}
+.ms-ap .bts{display:flex;flex-direction:column;gap:7px}
+.ms-ap .bt{display:flex;align-items:center;justify-content:center;gap:8px;height:36px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--ink)}
+.ms-ap .bt.prim{background:var(--accent);border-color:var(--accent);color:#fff}
+.ms-ap .bt.abr{background:#F2C9A0;border-color:#F2C9A0;color:#7A3E12}
+.ms-pied{grid-column:1 / -1;display:flex;align-items:center;gap:16px;padding:10px 18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);background:#fff}
+.ms-pied kbd{font:inherit;font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--paper);margin-right:4px}
+.voile{opacity:.35;filter:grayscale(.2)}
+
+/* Le téléphone */
+body.tel{background:#E9E4DC;display:flex;justify-content:center;gap:24px;padding:24px 0}
+.tel-f{width:390px;background:var(--paper);border-radius:28px;overflow:hidden;box-shadow:0 10px 40px rgba(28,26,23,.18);border:1px solid var(--line)}
+.tel-h{display:flex;align-items:center;gap:10px;padding:16px 16px 10px;background:#fff}
+.tel-h b{font-size:17px;font-weight:400;display:block}.tel-h small{font-size:11.5px;color:var(--muted)}
+.tel-c{padding:0 12px 12px;background:#fff}
+.tel-c .ms-in{height:50px;border-radius:12px;padding:0 14px;gap:10px}
+.tel-c .ms-in .v{font-size:15px}
+.tel-c .ms-cats{flex-wrap:nowrap;overflow:hidden}
+.tel-r{background:#fff}
+.tel-r .ms-l{padding:11px 14px}
+.tel-r .ms-l .ph{width:54px;height:42px}
+.tel-tab{display:flex;justify-content:space-around;padding:10px 0 14px;background:#fff;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted)}
+.tel-tab span{display:flex;flex-direction:column;align-items:center;gap:3px}.tel-tab span i{font-style:normal;font-size:16px}
+.tel-leg{width:380px;font-size:12.5px;line-height:1.55;color:var(--muted-2)}
+.tel-leg b{color:var(--ink);font-weight:400}

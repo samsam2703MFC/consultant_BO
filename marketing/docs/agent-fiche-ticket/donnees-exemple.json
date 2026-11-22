@@ -1,0 +1,515 @@
+{
+ "boutique": {
+  "id": 2,
+  "nom": "Atelier by Berlo - Corbais",
+  "rue": "Grand Route 20",
+  "cp": "1435",
+  "ville": "Corbais",
+  "tel": "010.65.83.83",
+  "langue": "fr"
+ },
+ "langue": "fr",
+ "transaction": {
+  "id": 104583,
+  "ticket": "1020112611210045",
+  "date": "2026-11-21T11:52:00",
+  "total": 56.7
+ },
+ "lignes": [
+  {
+   "id": 2110005,
+   "qte": 1,
+   "prix": 12.9,
+   "portion": "",
+   "nom": {
+    "fr": "Cannelloni - poulet & estragon",
+    "nl": "Cannelloni - poulet & estragon"
+   },
+   "famille": {
+    "fr": "Plat Prepare - Chaud",
+    "nl": "Plat Prepare - Chaud"
+   },
+   "image": "../maquettes/ticket-fiche-produits/img/2110005.jpg",
+   "composition": {
+    "fr": {
+     "items": [
+      [
+       "Béchamel",
+       [],
+       "",
+       false
+      ],
+      [
+       "Cannelloni - Poulet Estragon",
+       [
+        "cereals_gluten"
+       ],
+       "",
+       false
+      ],
+      [
+       "Crème debic 40 %",
+       [
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Parmesan",
+       [
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Poche Sauce Arrabiata",
+       [],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    },
+    "nl": {
+     "items": [
+      [
+       "Béchamel",
+       [],
+       "",
+       false
+      ],
+      [
+       "Cannelloni - Poulet Estragon",
+       [
+        "cereals_gluten"
+       ],
+       "",
+       false
+      ],
+      [
+       "Crème debic 40 %",
+       [
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Parmesan",
+       [
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Poche Sauce Arrabiata",
+       [],
+       "",
+       false
+      ]
+     ],
+     "traduit": false
+    }
+   },
+   "allergenes": [
+    "cereals_gluten",
+    "milk"
+   ],
+   "vegetarien": false,
+   "poids": 400,
+   "vieMinutes": 4320,
+   "stockage": "2°C – 4°C",
+   "rechauffe": {
+    "minutes": 10,
+    "degres": 180
+   },
+   "cuisson": [],
+   "etapes": [
+    "Préparer la base : Verser uniformément la sauce tomate et la crème dans le fond de la barquette.",
+    "Disposer les pièces : Placer soigneusement les 3 cannelloni côte à côte sur la sauce.",
+    "Napper : Recouvrir les cannelloni d’une couche régulière de béchamel.",
+    "Finition : Saupoudrer généreusement le dessus de parmesan râpé."
+   ],
+   "webshop": false,
+   "fiche": true
+  },
+  {
+   "id": 1410005,
+   "qte": 1,
+   "prix": 24.9,
+   "portion": "",
+   "nom": {
+    "fr": "Quiche Grecque",
+    "nl": "Griekse Quiche"
+   },
+   "famille": {
+    "fr": "Quiches",
+    "nl": "Quiches"
+   },
+   "image": "",
+   "composition": {
+    "fr": {
+     "items": [
+      [
+       "Quiche Greque",
+       [
+        "cereals_gluten",
+        "eggs",
+        "milk"
+       ],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    },
+    "nl": {
+     "items": [
+      [
+       "Griekse quiche",
+       [
+        "cereals_gluten",
+        "eggs",
+        "milk"
+       ],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    }
+   },
+   "allergenes": [
+    "cereals_gluten",
+    "eggs",
+    "milk"
+   ],
+   "vegetarien": true,
+   "poids": 900,
+   "vieMinutes": 1444,
+   "stockage": "2°C – 4°C",
+   "rechauffe": null,
+   "cuisson": [
+    "Contrairement aux tartes sans cuisson, ces tartes sont préparées avec une base de pâte et garnies avant d’être mises directement crues au four, comme pour les cookies. Cette méthode permet de cuire la pâte et la garniture en même temps, offrant une texture plus homogène. Préchauffez le four à 180 °C et faites cuire entre 25 et 35 minutes, jusqu’à ce que la pâte soit dorée et la garniture bien cuite."
+   ],
+   "etapes": [],
+   "webshop": true,
+   "fiche": true
+  },
+  {
+   "id": 2300013,
+   "qte": 1,
+   "prix": 6.1,
+   "portion": "",
+   "nom": {
+    "fr": "Brie, Pommes & Miel",
+    "nl": "Brie, Appelen & Honing"
+   },
+   "famille": {
+    "fr": "Traiteur",
+    "nl": "Traiteur"
+   },
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp",
+   "composition": {
+    "fr": {
+     "items": [
+      [
+       "Brie de Meaux",
+       [
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Roquette",
+       [],
+       "",
+       false
+      ],
+      [
+       "Tomates grappe",
+       [],
+       "",
+       false
+      ],
+      [
+       "Miel liquide",
+       [],
+       "",
+       false
+      ],
+      [
+       "Pommes Granny",
+       [],
+       "",
+       false
+      ],
+      [
+       "Raisins secs golden",
+       [],
+       "",
+       false
+      ],
+      [
+       "Thym",
+       [],
+       "",
+       false
+      ],
+      [
+       "Baguette Tradition",
+       [],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    },
+    "nl": {
+     "items": [
+      [
+       "Brie de Meaux",
+       [
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Rucola",
+       [],
+       "",
+       false
+      ],
+      [
+       "Trostomaten",
+       [],
+       "",
+       false
+      ],
+      [
+       "Granny Smith-appelen",
+       [],
+       "",
+       false
+      ],
+      [
+       "Vloeibare honing",
+       [],
+       "",
+       false
+      ],
+      [
+       "Gouden rozijnen",
+       [],
+       "",
+       false
+      ],
+      [
+       "Tijm",
+       [],
+       "",
+       false
+      ],
+      [
+       "Stokbrood Traditie - 500g.",
+       [],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    }
+   },
+   "allergenes": [
+    "cereals_gluten",
+    "milk"
+   ],
+   "vegetarien": true,
+   "poids": 350,
+   "vieMinutes": 720,
+   "stockage": "",
+   "rechauffe": null,
+   "cuisson": [],
+   "etapes": [
+    "Déposer la roquette de manière uniforme sur toute la longueur de la plaquette FlipFlap.",
+    "Répartir les tomates grappe tranchées régulièrement sur la roquette afin d’assurer une base homogène.",
+    "Disposer les tranches de Brie de Meaux de façon alternée sur la plaquette",
+    "Ajouter les Pommes Granny coupées en bâtonnets par-dessus le fromage",
+    "Parsemer les raisins secs golden de manière régulière",
+    "napper de miel liquide en filet contrôlé et terminer par une pincée de thym répartie uniformément."
+   ],
+   "webshop": true,
+   "fiche": true
+  },
+  {
+   "id": 1610006,
+   "qte": 4,
+   "prix": 1.7,
+   "portion": "",
+   "nom": {
+    "fr": "Croissant",
+    "nl": "Croissant"
+   },
+   "famille": {
+    "fr": "Viennoiserie",
+    "nl": "Koffiekoeken"
+   },
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp",
+   "composition": {
+    "fr": {
+     "items": [
+      [
+       "Croissant",
+       [
+        "cereals_gluten",
+        "eggs",
+        "milk"
+       ],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    },
+    "nl": {
+     "items": [
+      [
+       "Croissant",
+       [
+        "cereals_gluten",
+        "eggs",
+        "milk"
+       ],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    }
+   },
+   "allergenes": [
+    "cereals_gluten",
+    "eggs",
+    "milk"
+   ],
+   "vegetarien": false,
+   "poids": null,
+   "vieMinutes": 1444,
+   "stockage": "2°C – 4°C",
+   "rechauffe": null,
+   "cuisson": [
+    "1. Préchauffage du four Température : Entre 170°C et 180°C (chaleur tournante) ou 190°C à 200°C (chaleur statique). Pourquoi ? Une chaleur bien répartie permet une cuisson homogène et un bon développement du feuilletage. 2. Préparation avant cuisson Dorure : Appliquer une fine couche de dorure (œuf battu) à l’aide d’un pinceau. Repos (facultatif) : Laisser sécher la dorure 5-10 min avant d’enfourner. 3. Cuisson Temps de cuisson : Croissants & pains au chocolat : 15 à 20 min Brioches : 25 à 30 min Astuce : Tourner la plaque à mi-cuisson pour une coloration uniforme. 4. Vérification & Finition Couleur : Les viennoiseries doivent être bien dorées sur le dessus. Fond : Vérifier que le dessous est légèrement coloré et non trop pâle. Refroidissement : Laisser tiédir sur une grille pour éviter la condensation et préserver le croustillant."
+   ],
+   "etapes": [],
+   "webshop": true,
+   "fiche": true
+  },
+  {
+   "id": 1540001,
+   "qte": 2,
+   "prix": 3,
+   "portion": "",
+   "nom": {
+    "fr": "éclair chocolat",
+    "nl": "Chocolade Éclair"
+   },
+   "famille": {
+    "fr": "Pâtisserie",
+    "nl": "Patisserie"
+   },
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp",
+   "composition": {
+    "fr": {
+     "items": [
+      [
+       "Fondant chocolat",
+       [],
+       "",
+       false
+      ],
+      [
+       "Eclair",
+       [
+        "cereals_gluten",
+        "eggs",
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Crème pâtissière (Crème pâtissière (Poche))",
+       [],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    },
+    "nl": {
+     "items": [
+      [
+       "Chocoladefondant",
+       [],
+       "",
+       false
+      ],
+      [
+       "Eclair",
+       [
+        "cereals_gluten",
+        "eggs",
+        "milk"
+       ],
+       "",
+       false
+      ],
+      [
+       "Crème pâtissière (Banketbakkersroom (Spuitzak))",
+       [],
+       "",
+       false
+      ]
+     ],
+     "traduit": true
+    }
+   },
+   "allergenes": [
+    "cereals_gluten",
+    "eggs",
+    "milk"
+   ],
+   "vegetarien": false,
+   "poids": null,
+   "vieMinutes": 1444,
+   "stockage": "2°C – 4°C",
+   "rechauffe": null,
+   "cuisson": [],
+   "etapes": [],
+   "webshop": true,
+   "fiche": true
+  }
+ ],
+ "travailles": [
+  "cereals_gluten",
+  "eggs",
+  "fish",
+  "peanuts",
+  "soybeans",
+  "milk",
+  "nuts",
+  "mustard",
+  "sesame_seeds"
+ ],
+ "liens": {
+  "webshop": "https://webshop.atelierby.be/",
+  "avis": "#avis",
+  "application": "#application"
+ },
+ "_exemple": "Réponse de GET /marketing/ticket/client (marketing/src/ticket_client.php) pour un ticket composé de Corbais, calculée le 21/11/2026 sur les fiches techniques et le catalogue réels ; transaction, heure et liens « avis » / « application » d'exemple."
+}

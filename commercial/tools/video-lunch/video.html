@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- La vidéo de la publicité « Lunch au bureau » (portail Commercial, 19/11/2026) : 15 secondes, rendues image par image
+     par rendre.cjs (Chromium, puis ffmpeg). ?format=9x16 (Stories, Reels : 1080 × 1920) ou 4x5 (fil : 1080 × 1350),
+     ?langue=fr|nl ; window.poser(t) place chaque élément à l'instant t (secondes). Photos : le site de la marque
+     (atelierby.be). La version néerlandaise est celle de Halle. Design system : Gotham, rubis #8D1D2C, papier #faf7f2, rectangles aux coins arrondis, pas de gras. -->
+<style>
+  /* Les deux fichiers du portail : « Gotham_Medium » est le trait normal, « Gotham_Regular » le plus appuyé (même
+     répartition que commercial.css). Pas de gras : tout en trait normal. */
+  @font-face { font-family: 'Gotham'; src: url('../../public/commercial/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 400 500; }
+  :root { --ink: #1c1a17; --muted: #5c5852; --paper: #faf7f2; --line: #e6e0d8; --accent: #8D1D2C; }
+  html, body { margin: 0; background: #000; }
+  #v { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); font-family: 'Gotham', sans-serif; color: var(--ink); }
+  .f4x5 #v { height: 1350px; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .scene img.photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 45%; }
+  .logo { position: absolute; left: 56px; top: 250px; background: var(--paper); border-radius: 18px; padding: 22px 30px; }
+  .f4x5 .logo { top: 56px; }
+  .logo img { height: 46px; display: block; }
+  .carte { position: absolute; left: 56px; right: 56px; bottom: 560px; background: var(--paper); border-radius: 28px; padding: 50px 56px 56px; }
+  .f4x5 .carte { bottom: 56px; }
+  .kicker { font-size: 26px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; }
+  .titre { font-weight: 500; font-size: 70px; line-height: 1.08; letter-spacing: -.01em; }
+  .sous { font-size: 34px; line-height: 1.35; color: var(--muted); margin-top: 22px; }
+  .fin { background: var(--paper); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 260px 90px 560px; box-sizing: border-box; }
+  .f4x5 .fin { padding: 70px 90px; }
+  .fin .grand-logo { height: 92px; margin-bottom: 70px; }
+  .fin .trait { width: 300px; height: 300px; margin-bottom: 30px; filter: invert(13%) sepia(60%) saturate(3500%) hue-rotate(338deg) brightness(80%); }
+  .f4x5 .fin .trait { width: 230px; height: 230px; margin-bottom: 10px; }
+  .fin .titre { font-size: 76px; }
+  .fin .sous { max-width: 820px; }
+  .bouton { margin-top: 56px; background: var(--accent); color: #fff; font-size: 36px; border-radius: 18px; padding: 30px 54px; }
+  .pied { margin-top: 40px; font-size: 26px; color: var(--muted); letter-spacing: .02em; }
+</style>
+</head>
+<body>
+<div id="v">
+  <div class="scene" data-scene="0"><img class="photo" src="photos/buffet-bureau.webp" alt="">
+    <div class="logo"><img src="../../public/commercial/img/logo.png" alt="L’Atelier By"></div>
+    <div class="carte"><div class="kicker" data-t="k0"></div><div class="titre" data-t="t0"></div></div></div>
+  <div class="scene" data-scene="1"><img class="photo" src="photos/plateaux-sandwiches.webp" alt="">
+    <div class="logo"><img src="../../public/commercial/img/logo.png" alt=""></div>
+    <div class="carte"><div class="kicker" data-t="k1"></div><div class="titre" data-t="t1"></div><div class="sous" data-t="s1"></div></div></div>
+  <div class="scene" data-scene="2"><img class="photo" src="photos/viennoiseries.webp" alt="">
+    <div class="logo"><img src="../../public/commercial/img/logo.png" alt=""></div>
+    <div class="carte"><div class="kicker" data-t="k2"></div><div class="titre" data-t="t2"></div><div class="sous" data-t="s2"></div></div></div>
+  <div class="scene" data-scene="3"><img class="photo" src="photos/plats-du-jour.webp" alt="">
+    <div class="logo"><img src="../../public/commercial/img/logo.png" alt=""></div>
+    <div class="carte"><div class="kicker" data-t="k3"></div><div class="titre" data-t="t3"></div><div class="sous" data-t="s3"></div></div></div>
+  <div class="scene fin" data-scene="4">
+    <img class="grand-logo" src="../../public/commercial/img/logo.png" alt="L’Atelier By">
+    <img class="trait" src="photos/livraison-trait.png" alt="">
+    <div class="titre" data-t="t4"></div><div class="sous" data-t="s4"></div>
+    <div class="bouton" data-t="b4"></div><div class="pied" data-t="p4"></div></div>
+</div>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  if (q.get('format') === '4x5') document.documentElement.classList.add('f4x5');
+  const TEXTES = {
+    fr: { k0: 'Livré au bureau', t0: 'Le lunch de votre équipe, livré au bureau.',
+      k1: 'Lunch', t1: 'Plateaux sandwiches, salades, quiches.', s1: 'Préparés le matin par le magasin L’Atelier By de votre zone.',
+      k2: 'Petit-déjeuner', t2: 'Viennoiseries du jour pour toute l’équipe.', s2: 'De 5 à 50 personnes.',
+      k3: 'Plats du jour', t3: 'Des plats chauds, en barquettes individuelles.', s3: 'Commande jusqu’à la veille 16 h.',
+      t4: 'Demandez votre dégustation offerte.', s4: 'Le magasin de votre zone vous rappelle sous 24 h.', b4: 'Je laisse mes coordonnées', p4: 'Livraison au bureau · L’Atelier By' },
+    nl: { k0: 'Geleverd op kantoor', t0: 'De lunch van jullie team, geleverd op kantoor.',
+      k1: 'Lunch', t1: 'Broodjesschotels, salades, quiches.', s1: '’s Ochtends bereid door L’Atelier By Halle.',
+      k2: 'Ontbijt', t2: 'Verse koffiekoeken voor het hele team.', s2: 'Van 5 tot 50 personen.',
+      k3: 'Dagschotels', t3: 'Warme gerechten, in individuele bakjes.', s3: 'Bestellen tot 16 u de dag voordien.',
+      t4: 'Vraag jullie gratis proeverij aan.', s4: 'L’Atelier By Halle belt jullie binnen 24 uur terug.', b4: 'Ik laat mijn gegevens achter', p4: 'Levering op kantoor · Halle en omgeving' },
+  };
+  const T = TEXTES[q.get('langue') === 'nl' ? 'nl' : 'fr'];
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = T[el.dataset.t] || ''; });
+
+  // La ligne du temps : quatre photos de 3 s, puis la carte de fin (12 → 15 s) ; fondus de 0,4 s.
+  const DEBUTS = [0, 3, 6, 9, 12], FIN = 15, FONDU = 0.4;
+  const borne = (x, a, b) => Math.min(b, Math.max(a, x));
+  const doux = x => { x = borne(x, 0, 1); return x * x * (3 - 2 * x); };
+  const scenes = [...document.querySelectorAll('.scene')];
+  window.DUREE = FIN;
+  window.poser = function (t) {
+    scenes.forEach((s, i) => {
+      const d = DEBUTS[i], f = i < 4 ? DEBUTS[i + 1] + FONDU : FIN + 1;
+      // La scène entre en fondu (sauf la première, déjà là), et reste sous la suivante pendant son fondu.
+      const entree = i === 0 ? 1 : doux((t - d) / FONDU);
+      s.style.opacity = t < d || t >= f ? 0 : entree;
+      s.style.zIndex = i;
+      const p = (t - d) / ((i < 4 ? DEBUTS[i + 1] : FIN) - d);   // 0 → 1 pendant la scène
+      const photo = s.querySelector('.photo');
+      if (photo) photo.style.transform = `scale(${1.1 - 0.08 * borne(p, 0, 1.15)}) translateY(${-12 + 24 * borne(p, 0, 1.15)}px)`;
+      // La carte monte et apparaît ; le titre, puis la ligne du dessous.
+      const c = s.querySelector('.carte');
+      if (c) {
+        const a = doux((t - d - (i === 0 ? 0.25 : 0.2)) / 0.5);
+        c.style.opacity = a; c.style.transform = `translateY(${(1 - a) * 46}px)`;
+        const sous = c.querySelector('.sous'); if (sous) sous.style.opacity = doux((t - d - 0.75) / 0.45);
+      }
+      if (i === 4) {
+        const el = (sel, delai) => { const x = s.querySelector(sel); const a = doux((t - d - delai) / 0.45); x.style.opacity = a; x.style.transform = `translateY(${(1 - a) * 30}px)`; };
+        el('.grand-logo', 0.15); el('.trait', 0.3); el('.titre', 0.45); el('.sous', 0.7); el('.pied', 1.1);
+        const b = s.querySelector('.bouton'); const a = doux((t - d - 0.95) / 0.45);
+        const battement = t > d + 1.6 ? 1 + 0.025 * Math.sin((t - d - 1.6) * Math.PI * 2 / 1.1) : 1;
+        b.style.opacity = a; b.style.transform = `translateY(${(1 - a) * 30}px) scale(${battement})`;
+      }
+    });
+  };
+  window.pret = Promise.all([document.fonts.ready, ...[...document.images].map(im => im.decode().catch(() => null))]);
+  window.poser(Number(q.get('t') || 0));
+})();
+</script>
+</body>
+</html>

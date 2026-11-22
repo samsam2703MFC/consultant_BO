@@ -1,0 +1,51 @@
+/* L'app de terrain du commercial (téléphone) — sur les jetons et composants de ../commercial.css. */
+html, body { background: var(--paper); }
+body { padding-bottom: env(safe-area-inset-bottom); }
+.m-tete { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+.m-logo { height: 18px; }
+.m-module { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); flex: 1; }
+.m-bureau { font-size: 12px; color: var(--muted-2); }
+#m { padding: 14px 14px 110px; max-width: 640px; margin: 0 auto; }
+.m-jour { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 14px; }
+.m-jour h1 { font-size: 22px; margin: 0; }
+.m-sec { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 2px 8px; }
+.m-carte { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.m-carte.fait { opacity: .62; }
+.m-ligne { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.m-heure { font-size: 15px; color: var(--accent); }
+.m-nom { font-size: 16px; margin: 4px 0 2px; }
+.m-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.m-actions .btn { flex: 1; min-height: 42px; }
+.m-flottant { position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 6; max-width: 612px; margin: 0 auto; }
+.m-flottant .btn { width: 100%; min-height: 48px; font-size: 14px; }
+/* l'assistant : une étape à la fois, la progression en haut, les gestes en bas */
+.w { position: fixed; inset: 0; z-index: 20; background: var(--paper); display: flex; flex-direction: column; }
+.w-tete { background: #fff; border-bottom: 1px solid var(--line); padding: 12px 16px 10px; }
+.w-tete .m-ligne { align-items: center; }
+.w-qui { font-size: 15px; }
+.w-prog { display: flex; gap: 4px; margin-top: 10px; }
+.w-prog i { flex: 1; height: 4px; border-radius: 2px; background: var(--chip); }
+.w-prog i.on { background: var(--accent); }
+.w-prog i.fait { background: #c9a3a9; }
+.w-etape { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+.w-corps { flex: 1; overflow-y: auto; padding: 16px; max-width: 640px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+.w-corps h2 { text-transform: none; letter-spacing: 0; color: var(--ink); font-size: 19px; margin: 2px 0 14px; }
+.w-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-choix.un { grid-template-columns: 1fr; }
+.w-choix button { margin: 0; min-height: 52px; padding: 10px 12px; text-align: left; background: #fff; border: 1px solid rgba(34,34,34,.14); border-radius: 10px; font: 400 14px 'Gotham', system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.w-choix button small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.w-choix button.is-on { border: 2px solid var(--accent); background: rgba(141,29,44,.05); color: var(--accent); padding: 9px 11px; }
+.w-choix button.propose:not(.is-on) { border-color: var(--prize); }
+.w-propose { font-size: 12px; color: var(--prize-ink); background: var(--prize-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
+.w-pied { background: #fff; border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; }
+.w-pied .btn { flex: 1; min-height: 48px; font-size: 14px; }
+.w-corps label { display: block; margin-top: 14px; }
+.w-corps input, .w-corps select, .w-corps textarea { width: 100%; box-sizing: border-box; font: 15px 'Gotham', system-ui, sans-serif; }
+.w-corps textarea { min-height: 120px; }
+.w-recap td { padding: 8px 0; border-top: 1px solid var(--row-line); vertical-align: top; }
+.w-recap td:first-child { color: var(--muted); width: 38%; padding-right: 10px; }
+
+/* La photo des échantillons reçus (19/11/2026) */
+.m-photos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.m-photos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+.m-carte.recu { border-color: var(--line); }

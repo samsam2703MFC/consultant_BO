@@ -1,0 +1,1161 @@
+!TITRE Règlement de travail
+!SOUSTITRE Ouvriers et employés · Magasin L’Atelier By
+!SOUSTITRE [[Société franchisée]] · [[Adresse du magasin]]
+!ESPACE
+!PETIT Modèle standard du réseau L’Atelier By · version 1.0 du 19 novembre 2026.
+!PAGE
+!NOTETITRE Note au franchisé : mode d’emploi du modèle (à retirer avant l’affichage)
+> Ce modèle donne à chaque magasin du réseau le même règlement de travail. Il part du règlement du magasin pilote (modèle Go HR, juin 2026), mis en cohérence et complété pour la franchise. Le tronc commun est fixé : les articles sur les standards du réseau, l’hygiène alimentaire, la caisse, les outils du magasin, le savoir-faire et la formation au poste. Ce qui dépend de votre société et de votre magasin est surligné en jaune : à compléter, ou à choisir entre deux options.
+>
+> Les encadrés gris comme celui-ci sont des notes pour vous. Retirez-les avant l’affichage, comme les surlignages, une fois le texte complété.
+>
+> Les points marqués « À valider » dépendent de votre commission paritaire, de votre taille ou d’une réforme en cours. Faites-les valider par votre secrétariat social avant l’affichage, et par un avocat pour les points liés à la franchise (le franchiseur n’est pas l’employeur, les données partagées avec le réseau).
+!SOUS Les cinq étapes pour être en règle
+- **Compléter** : remplir les champs en jaune, choisir les options, retirer les notes.
+- **Afficher pendant 15 jours** le projet, avec le registre des observations accessible à tous les travailleurs. Si la société a un conseil d’entreprise, une procédure particulière s’applique.
+- **Clôturer l’affichage** : noter la période d’affichage, puis dater et signer le texte définitif.
+- **Enregistrer** le règlement auprès du Contrôle des lois sociales dans les 8 jours de son entrée en vigueur, via reglementdetravail.belgique.be.
+- **Remettre un exemplaire** à chaque travailleur, contre accusé de réception, et à chaque nouvel engagé.
+!PAGE
+!NOTETITRE Accusé de réception
+Je, soussigné(e) [[nom et prénom]], travailleur de [[Société franchisée]], reconnais avoir reçu ce jour un exemplaire du règlement de travail du magasin L’Atelier By de [[ville]].
+
+J’accepte les clauses et les dispositions reprises dans ce règlement.
+
+Fait à [[lieu]], le [[date]].
+
+Signature du travailleur :
+!ESPACE
+!NOTETITRE Registre des observations
+!TABLE
+Nom de l’entreprise | [[Société franchisée]]
+Adresse du siège social | [[adresse]]
+Numéro d’entreprise | [[BE0…]]
+Numéro de téléphone | [[téléphone]]
+Adresse e-mail | [[e-mail]]
+!ENDTABLE
+Ce registre est à la disposition des travailleurs pendant 15 jours, du [[date]] au [[date]], afin qu’ils puissent formuler leurs remarques sur le projet de règlement de travail.
+
+Signature de l’employeur :
+!ESPACE
+!PAGE
+!NOTETITRE Identification
+!TABLE
+Nom de l’entreprise | [[Société franchisée]] (SRL / SA…)
+Enseigne | L’Atelier By, exploitée en franchise
+Siège social | [[adresse du siège social]]
+Siège d’exploitation (le magasin) | [[adresse du magasin]]
+Numéro d’entreprise | [[BE0…]]
+Téléphone · e-mail | [[téléphone]] · [[e-mail]]
+Activité principale | Boulangerie-pâtisserie artisanale, traiteur et vente au détail
+⚠ Commission paritaire des ouvriers | CP n° [[118.03 — à confirmer]]
+⚠ Commission paritaire des employés | CP n° [[à confirmer par le secrétariat social]]
+⚠ ONSS | Place Victor Horta 11, 1060 Bruxelles · 02 509 59 59 · numéro ONSS [[…]]
+⚠ Caisse de vacances annuelles | [[caisse compétente, adresse, téléphone]]
+Assureur accidents du travail | [[compagnie, numéro de police, téléphone]]
+Secrétariat social | [[nom, adresse, téléphone, e-mail]]
+Service externe de prévention et de protection (SEPPT) | [[nom, téléphone, numéro d’affiliation]]
+Conseiller en prévention aspects psychosociaux | [[nom et coordonnées (SEPPT)]]
+⚠ Conseiller en prévention (service interne) | [[nom, téléphone]]
+Personne de confiance | [[nom, téléphone]] ou : pas de personne de confiance désignée
+Premiers secours | Boîte de secours : [[emplacement dans le magasin]] · secouriste : [[nom]] · urgences : 112
+⚠ Comité pour la prévention et la protection au travail (CPPT) | [[membres]] ou : non applicable
+⚠ Conseil d’entreprise | [[membres]] ou : non applicable
+⚠ Délégation syndicale | [[membres]] ou : non applicable
+⚠ Contrôle des lois sociales | [[direction régionale compétente pour le magasin, adresse, téléphone, e-mail]]
+⚠ Contrôle de l’ONSS | [[bureau régional compétent, adresse, téléphone]]
+⚠ Contrôle du bien-être au travail | [[direction régionale compétente, adresse, téléphone, e-mail]]
+Dépôt au Contrôle des lois sociales | Règlement enregistré sous le n° [[…]]
+⚠ Banque-Carrefour de la sécurité sociale | La loi et ses arrêtés d’exécution sont consultables sur www.ksz-bcss.fgov.be
+!ENDTABLE
+> Les services d’inspection compétents dépendent de l’adresse du magasin : leurs coordonnées sont sur emploi.belgique.be (Contrôle des lois sociales, Contrôle du bien-être au travail) et sur onss.be.
+!PAGE
+!TOC
+!PAGE
+# [champ] Champ d’application
+Le présent règlement de travail s’applique à toute personne qui travaille pour l’entreprise dans les liens d’un contrat de travail d’employé ou d’ouvrier, et également aux personnes qui, autrement qu’en vertu d’un contrat de travail, fournissent des prestations de travail sous l’autorité de cette même entreprise, et ce, sans distinction de sexe, d’âge, de fonction ou de nationalité.
+
+Dans des cas individuels, il pourra être dérogé aux dispositions du présent règlement de travail, soit de manière définitive, soit de manière temporaire, sans toutefois contrevenir aux dispositions légales, réglementaires ou sectorielles existantes.
+
+En cas de dérogations, un écrit devra obligatoirement être établi en double exemplaire, l’un destiné à l’employeur, l’autre au travailleur.
+
+Le fait qu’une obligation ne se trouve pas énoncée de façon expresse dans le règlement alors qu’elle découle de son contrat de travail ou de ses fonctions, ne peut justifier la faute ou le manquement du travailleur.
+
+Tout travailleur engagé au service de l’entreprise est censé connaître et accepter le présent règlement et s’engage à en observer toutes les dispositions.
+
+Chaque travailleur reçoit une copie du présent règlement de travail ainsi qu’une copie de chaque modification qui y est apportée.
+
+**Employeur et réseau.** Le présent règlement est établi par [[Société franchisée]], qui exploite le magasin sous l’enseigne L’Atelier By en vertu d’un contrat de franchise. [[Société franchisée]] est le seul employeur du personnel du magasin. Le franchiseur et ses intervenants (consultants, formateurs, contrôleurs qualité) ne sont pas l’employeur : ils n’exercent aucune autorité sur le personnel, ne donnent pas d’ordres et ne prennent aucune sanction. Leurs constats sont adressés à l’employeur, qui décide des suites (voir l’{{art:reseau}}).
+> À valider par un avocat : cette clause protège contre le risque de requalification (le franchiseur vu comme co-employeur). Elle doit correspondre à ce que font réellement les intervenants du réseau dans le magasin.
+
+# [donnees] Données personnelles du travailleur
+Au moment de son engagement, le travailleur fournira à l’employeur tous les renseignements relatifs à son identité, à sa situation personnelle (par ex : domicile, numéro de compte, état civil, ...) et à la composition de son ménage. Ces renseignements sont nécessaires à la bonne application de la législation sociale et fiscale par l’employeur, ainsi qu’à l’éventuel calcul d’avantages sociaux et fiscaux découlant de ladite législation.
+
+A cet effet, le travailleur présentera sa carte d’identité et s’il s’agit d’un étranger (hors EEE), le permis de travail et/ou la carte de séjour dont il est titulaire.
+
+Le travailleur s’engage en outre à signaler, sans délai, toutes les modifications qui surviendraient, notamment un changement d’état civil, de domicile, de résidence, une perte d’autorisation de séjour.
+
+# [droits] Droits, devoirs et obligations du travailleur
+## [execution] Exécution du travail et standards du réseau
+Le travailleur exécute son travail avec soin, probité et conscience, au temps, au lieu et dans les conditions convenus.
+
+Le travail s’exécute selon les instructions de l’employeur. Elles comprennent les standards du réseau L’Atelier By, tels qu’ils sont communiqués au travailleur et consultables sur la tablette du magasin :
+- le manuel opératoire et les procédures (SOP) du poste ;
+- les checklists du magasin, avec leurs tâches et leurs heures ;
+- les fiches techniques et les recettes ;
+- les règles d’hygiène et de sécurité alimentaire de l’AFSCA et du plan d’autocontrôle du magasin.
+
+Une tâche de checklist se coche au moment où elle est faite, par la personne qui l’a faite. Une tâche qui demande une photo n’est faite qu’avec sa photo, prise sur place, au moment de la tâche.
+> Les standards du réseau sont des instructions de travail : ils ne font pas partie du règlement. Ils peuvent donc évoluer sans refaire la procédure d’affichage, tant qu’ils ne touchent pas aux mentions obligatoires du règlement (horaires, rémunération, sanctions…).
+
+## [hygiene] Hygiène et sécurité alimentaire
+Le travailleur respecte les règles d’hygiène et de sécurité alimentaire dans lesquelles il a été formé, en particulier :
+- se laver les mains en prenant son poste, après une pause, après être passé aux toilettes, après avoir manipulé des déchets, de l’argent ou des produits crus ;
+- respecter la chaîne du froid, les températures, les dates limites (DLC) et la traçabilité des produits ;
+- remplir les relevés d’autocontrôle (températures, nettoyage, réception…) de manière exacte, au moment où le contrôle est fait ;
+- appliquer les règles du magasin sur les allergènes : ne jamais improviser une réponse à un client, se référer aux fiches produits et, en cas de doute, appeler le responsable ;
+- signaler sans délai à son responsable tout symptôme ou toute affection qui peut contaminer les aliments (diarrhée, vomissements, fièvre, plaie infectée aux mains…), avant de prendre son poste.
+
+## [tenue] Tenue de travail et présentation
+L’employeur fournit les vêtements de travail nécessaires : [[tablier, veste ou t-shirt aux couleurs de l’enseigne, toque ou charlotte en production — à préciser]]. Ils restent sa propriété. Leur entretien est assuré [[par l’employeur / selon les règles sectorielles — à préciser]]. Le travailleur en fait un usage correct et les rend à la fin du contrat.
+
+Pour des raisons d’hygiène et de sécurité, et pour l’image de l’enseigne :
+- la tenue fournie est portée propre, pendant tout le service ;
+- les chaussures sont fermées et antidérapantes ;
+- en production et pour toute manipulation de denrées nues : cheveux attachés et couverts, pas de bijoux aux mains ni aux poignets [[(alliance tolérée : à préciser)]], ongles courts sans vernis ni faux ongles ;
+- les effets personnels restent au vestiaire.
+
+> Le modèle BERDIFF imposait « couleur neutre, dessus sobre, pas de marque, pas de mini-jupe ». La dernière règle ne visait qu’une partie du personnel : elle est remplacée par des règles d’hygiène qui valent pour tous.
+
+## [outils] Téléphone, tablette et outils numériques du magasin
+Pendant le service, le téléphone privé reste au vestiaire. Il ne sert ni à des fins privées, ni pour les réseaux sociaux[[, sauf pour l’application employé de L’Atelier By, quand le responsable le demande — à adapter]].
+
+Les outils numériques du magasin (tablette, caisse, application employé, planning) sont réservés à l’usage professionnel :
+- chaque travailleur a son code personnel (PIN). Il ne le communique à personne et n’utilise jamais celui d’un collègue ;
+- un « lu », un « vu faire », une tâche cochée ou une vente encaissée avec son code l’engagent : ils doivent correspondre à ce qu’il a réellement fait ;
+- les photos de contrôle se prennent uniquement avec les outils du magasin, sur le produit ou le poste demandé, sans client ni collègue dans le cadre ;
+- aucune photo ni vidéo du laboratoire, des recettes, des documents internes ou des écrans de gestion n’est prise avec un appareil privé.
+
+## [caisse] Caisse, ventes et paiements
+- Toute vente est encaissée et enregistrée en caisse ; le ticket est proposé au client.
+- Les remises, gratuités, échanges et retours suivent les instructions du magasin ; aucune remise n’est accordée en dehors de ces instructions.
+- Le fond de caisse est compté à l’ouverture et à la fermeture, selon la procédure du magasin ; tout écart est signalé au responsable le jour même.
+- Il est interdit de prélever de l’argent en caisse, d’y faire des prêts ou des échanges personnels, et d’encaisser sous le code d’un collègue.
+
+## [produits] Produits, invendus et consommation du personnel
+- Les invendus suivent la procédure du magasin (revente en fin de journée, Too Good To Go, don ou destruction) ; ils ne sont jamais emportés sans l’accord du responsable.
+- La consommation du personnel sur place : [[règle du magasin à préciser : produits et quantités autorisés, prix ou gratuité, moment]].
+> À valider par le secrétariat social : une consommation gratuite ou une remise régulière peut constituer un avantage en nature, soumis aux cotisations.
+
+## [secret] Secret professionnel, savoir-faire du réseau et concurrence déloyale
+Le travailleur a l’obligation, en vertu de l’article 17 de la loi du 3 juillet 1978, de s’abstenir, tant au cours du contrat qu’après la cessation de celui-ci, de divulguer à qui que ce soit ou d’utiliser à son profit personnel, directement ou indirectement, les inventions, méthodes, listes de clients, listes de fournisseurs, particularités, secrets de fabrication ou d’affaires de l’entreprise.
+
+Ce secret couvre en particulier le savoir-faire du réseau L’Atelier By dont le travailleur a connaissance : le manuel opératoire, les procédures, les recettes et fiches techniques, les prix d’achat et les fournisseurs, les chiffres du magasin et les données des outils de gestion. Cette liste est non exhaustive.
+
+Tant au cours du contrat qu’après la cessation des relations de travail, le travailleur s’abstient de se livrer ou de coopérer à tout acte de concurrence déloyale.
+
+## [image] Image de l’enseigne et réseaux sociaux
+Le travailleur ne s’exprime pas au nom de L’Atelier By ni du magasin, sauf mission confiée par l’employeur. Il ne publie pas de photo ni de vidéo du laboratoire, des procédés de fabrication, des clients ou de ses collègues sans leur accord et celui de l’employeur. Sa liberté d’expression reste entière, dans le respect de la loyauté due à l’employeur et sans dénigrement public.
+
+## [materiel] Responsabilité du matériel
+Chaque travailleur est responsable de la bonne utilisation et de l’entretien des biens, des outils et des documents mis à sa disposition. Il restitue en bon état le matériel qui lui a été confié pour exécuter son travail.
+
+Conformément à l’article 18 de la loi du 3 juillet 1978, le travailleur ne répond des dommages causés à l’employeur ou à des tiers dans l’exécution de son contrat qu’en cas de dol, de faute lourde ou de faute légère présentant un caractère habituel plutôt qu’accidentel.
+
+## [interdictions] Interdictions
+Le travailleur agit conformément aux ordres et aux instructions qui lui sont donnés par l’employeur en vue de l’exécution de la relation de travail. Il lui est notamment défendu :
+- d’exécuter un travail différent de celui qui lui a été confié ;
+- d’apporter et de consommer des boissons alcoolisées sur les lieux de travail, sauf lors d’événements festifs organisés par l’employeur et dans les limites qu’il fixe ;
+- de se trouver en état d’ivresse ou sous l’influence de drogues dans le cadre de ses activités professionnelles ;
+- de fumer ou de vapoter en dehors des pauses et des zones prévues : la façade et l’entrée du magasin ne sont pas une zone fumeur ;
+- d’introduire des personnes extérieures dans les zones de production, de stockage ou de caisse sans autorisation ;
+- de s’absenter sans autorisation pendant les heures de service ;
+- d’emporter des produits, des invendus ou du matériel sans l’accord du responsable ;
+- de faire un usage abusif de l’internet ou de la messagerie ;
+- [[à compléter si besoin]].
+
+# [surveillance] Personnel de direction et de surveillance ⚠
+Les personnes chargées de la direction ou de la surveillance sont tenues d’observer vis-à-vis des travailleurs les règles de justice, de moralité et de civilité.
+
+Ils sont notamment responsables de la bonne exécution du travail, de l’observation des conditions de travail en vigueur, et du respect du Règlement de travail.
+
+Lorsqu’un travailleur qui se présente au travail est manifestement inapte au travail, les personnes chargées de la direction ou de la surveillance ont le droit de constater l’inaptitude de celui-ci au travail et dès lors de lui interdire de commencer le travail.
+
+Lorsque le personnel de surveillance doit s’absenter, il est remplacé. Le remplaçant reçoit de ce fait les mêmes droits et obligations.
+
+## [hierarchie] Organisation du magasin
+Dans le magasin, la direction et la surveillance sont exercées par : [[le gérant ou le franchisé]], [[le manager]], [[l’adjoint du manager]] et, pour leur équipe, [[les responsables d’équipe (chefs de section vente, boulangerie-pâtisserie, traiteur)]]. Ils organisent le travail, répartissent les tâches et les checklists, valident les formations au poste (« vu faire ») et veillent au respect du présent règlement.
+> À adapter : la liste suit les postes du référentiel du réseau (opérateurs, responsables d’équipe, adjoint du manager, manager, franchisé). Ne garder que ceux du magasin.
+
+## [reseau] Les intervenants du réseau L’Atelier By
+Le franchiseur organise des visites, des audits de conformité, des formations, des contrôles qualité (notamment la notation des photos de contrôle) et des visites de clients mystères, dans le cadre du contrat de franchise. Ces intervenants ne sont pas des supérieurs hiérarchiques du personnel. Ils ne donnent pas d’ordres et ne prennent aucune mesure à l’égard d’un travailleur. Leurs constats et recommandations sont transmis à l’employeur, qui seul décide des consignes et des suites.
+
+# [temps] Durée du travail et horaires ⚠
+## [duree] Durée hebdomadaire du travail
+### Ouvriers
+La durée du travail d’un ouvrier à temps plein, fixée par la commission paritaire [[118.03]], est de [[38]] heures par semaine. Elle est respectée en moyenne sur la période de référence suivante : l’année civile.
+
+Deux modes d’application sont possibles dans l’entreprise ; le contrat de travail précise lequel s’applique :
+- une durée hebdomadaire effective de 40 heures, avec 12 jours de réduction du temps de travail (RTT) rémunérés par an ;
+- une durée hebdomadaire effective de 38 heures.
+
+### Employés
+La durée du travail d’un employé à temps plein, fixée par la commission paritaire [[n° à confirmer]], est de [[38]] heures par semaine, en moyenne sur l’année civile, selon les mêmes deux modes d’application, précisés dans le contrat de travail.
+> Le modèle BERDIFF citait la CP 201 dans son en-tête et la CP 200 dans le titre de l’article sur les employés. Faites confirmer la commission paritaire des employés par votre secrétariat social, et la même partout.
+
+### Modalités des jours de RTT
+[[Choisir une option et supprimer l’autre.]] Option 1 : les jours de RTT ne peuvent pas être pris avant que le travailleur en ait constitué le droit. Option 2 : les jours de RTT peuvent être pris avant d’être acquis ; lors d’une demande de congé, le solde de RTT est utilisé en premier, les vacances annuelles ensuite.
+Pour déterminer le nombre de jours de réduction du temps de travail, les prestations effectives sont prises en compte, toutes les absences rémunérées étant assimilées à des prestations effectives.
+
+Les jours de réduction du temps de travail peuvent être pris librement par le travailleur en concertation avec l’employeur.
+
+Tous les jours de réduction du temps de travail doivent être pris avant la fin de la période de référence. Les jours de réduction du temps de travail ne peuvent pas être reportés à la période de référence suivante.
+
+L’employeur peut fixer lui-même les jours de réduction du temps de travail s’ils ne sont pas planifiés à temps selon la procédure ordinaire.
+
+À la résiliation du contrat de travail par l’une des parties, le travailleur n’a droit qu’à la part des jours/heures de RTT qu’il a acquis prorata temporis et qu’il n’a pas encore pris de manière effective.
+
+Le principe du prorata temporis s’applique également aux travailleurs qui entrent en service en cours d’année.
+
+[[Choisir une option et supprimer l’autre.]] Option 1 : aucun jour de RTT n’est accordé aux travailleurs à temps partiel. Option 2 : les travailleurs à temps partiel reçoivent des jours de RTT au prorata de leur fraction d’occupation.
+
+## [cadre] Cadre des horaires à temps plein, régime fixe
+Les horaires individuels des travailleurs à temps plein et des travailleurs à temps partiel à horaire fixe s’inscrivent dans le cadre général suivant. L’horaire de chacun figure dans son contrat de travail ou dans un avenant. Le tableau des horaires du magasin est repris à l’annexe 3.
+- Jours de prestation possibles : [[lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche — rayer les jours de fermeture]].
+- Durée hebdomadaire normale : 38 heures, ou 40 heures avec 12 jours de RTT.
+- Production (boulangerie, pâtisserie, traiteur) : la journée commence au plus tôt à [[04:00]] et se termine au plus tard à [[20:00]].
+- Vente : la journée commence au plus tôt à [[06:00]] et se termine au plus tard à [[20:30]].
+- Pauses : [[une pause de midi de 30 minutes non rémunérée au-delà de 6 heures de prestation ; une pause de 15 minutes… — à préciser]].
+- Durée journalière minimale : 3 heures ; durée journalière maximale : 9 heures.
+> À valider : le réseau fait commencer la production à 4:00 (checklist 2.1.01) et ouvre le magasin vers 6:30. Le modèle BERDIFF limitait la journée à 6:00–23:00, ce qui ne couvre pas la production. Le travail avant 6:00 relève du travail de nuit (loi du 16 mars 1971) : vérifier avec le secrétariat social le régime de la boulangerie et de la CP du magasin.
+
+## [partiel] Horaires à temps partiel
+### Horaire à temps partiel fixe
+Les horaires à temps partiel fixes s’inscrivent dans le cadre général de l’{{art:cadre}} et sont repris dans le contrat de travail du travailleur.
+
+### Horaire variable, régime fixe
+Le travailleur preste une durée hebdomadaire fixe, indiquée dans son contrat, selon un horaire qui varie d’une semaine à l’autre.
+
+### Horaire variable, régime variable
+Le contrat prévoit une durée hebdomadaire moyenne, respectée sur une période de référence de [[un trimestre / l’année civile — à préciser]]. Une semaine compte au moins [[…]] heures et au plus [[…]] heures.
+
+### Communication des horaires variables
+Les horaires journaliers sont communiqués au moins [[7]] jours ouvrables à l’avance, par un avis daté et signé par l’employeur, affiché à l’endroit où le règlement de travail peut être consulté[[ et publié dans le planning électronique accessible à chaque travailleur (outil à préciser)]]. L’avis est conservé un an. Les prestations variables s’inscrivent dans les jours et les plages de l’{{art:cadre}}. Durée journalière minimale : 3 heures ; maximale : 9 heures.
+> À valider : le délai de communication peut être fixé par une CCT sectorielle ; une communication électronique est admise si chaque travailleur y a accès et si elle laisse une trace datée.
+
+### Heures complémentaires
+Le travailleur à temps partiel peut être amené à prester plus d’heures que prévu dans son horaire. Les heures qui dépassent sa durée contractuelle sont des heures complémentaires ; celles qui dépassent aussi la durée normale de travail dans l’entreprise sont des heures supplémentaires. Les heures complémentaires sont payées à 100 % à chaque période de paie ; certaines peuvent donner lieu à un sursalaire, selon la réglementation et la CP.
+
+## [etudiants] Étudiants et flexi-jobs
+Les étudiants sont occupés sous contrat d’occupation d’étudiant ; leur horaire figure dans leur contrat. Les travailleurs en flexi-job sont occupés sous contrat-cadre et contrat de travail flexi. Aucune prestation ne commence avant que le responsable ait confirmé qu’elle est déclarée (Dimona).
+> À valider avec le secrétariat social : conditions des flexi-jobs dans la CP du magasin et contingent d’heures des étudiants.
+
+## [supp] Heures supplémentaires, repos compensatoire et sursalaire
+Il est interdit aux travailleurs de prester des heures en dehors de leur horaire de travail.
+
+Cela étant dit, dans les limites légales et à tout moment, l’employeur peut -conformément à la loi sur le travail du 16 mars 1971 - rappeler des travailleurs pour travailler en dehors des horaires fixés ci-dessus afin de prester certains travaux, parmi lesquels :
+
+- travaux d’inventaire et de bilan ;
+
+- travaux entrepris en vue de faire face à un accident survenu ou imminent ;
+
+- travaux urgents aux machines ou au matériel dans la mesure où ceux-ci sont nécessaires pour éviter une entrave importante au fonctionnement normal de l’entreprise ;
+
+- travaux justifiés par une nécessité imprévue ;
+
+- travaux occasionnés par un surcroît extraordinaire de travail.
+
+En cas de dépassement dans les cas et conditions prévus par la loi, la durée hebdomadaire moyenne du travail doit être respectée sur la période de référence fixée au {{ch:temps}} du présent règlement.
+
+En dehors de ces situations, des heures supplémentaires volontaires peuvent aussi être prestées si le travailleur y consent par écrit.
+
+### Repos compensatoire
+
+Le repos compensatoire pour dépassement des limites normales de travail est pris de commun accord entre l’employeur et le travailleur.
+
+Les deux parties doivent veiller à ce que le repos compensatoire soit pris avant la fin de la période de référence. Si cela ne semble pas possible d’ici la fin de la période de référence, l’employeur fixera lui-même le repos compensatoire.
+
+Le paiement de la rémunération normale (à 100%) afférente au repos compensatoire sera effectué au moment où ces heures de repos compensatoires seront effectivement octroyées.
+
+### Octroi d’un sursalaire
+
+Indépendamment des règles relatives à l’octroi d’un repos compensatoire, certaines heures de dépassement des limites normales de la durée du travail peuvent donner droit au paiement d’un sursalaire.
+
+## [controle] Contrôle du travail ⚠
+Le contrôle de la présence du travailleur et des heures qu’il preste, en vue de déterminer sa rémunération, se fait de la façon suivante : [[relevé des prestations tenu par le responsable / pointage électronique (outil à préciser) / horaires du planning confirmés chaque semaine — à choisir]].
+
+## [direction] Personnel de direction ou de confiance
+Les travailleurs qui occupent un poste de direction et de confiance ou même de représentant commercial, comme prévu dans l’arrêté royal du 10 février 1965, n’est pas soumis à la règlementation relative au temps de travail.
+
+Le personnel investi d’une telle fonction est tenu de consacrer à sa fonction tout le temps nécessaire pour son bon fonctionnement et le salaire convenu couvre toutes les prestations de travail effectuées.
+
+# [remuneration] Rémunération ⚠
+La rémunération est calculée mensuellement. Elle est payée :
+- aux ouvriers : un acompte le [[date]] et le solde au plus tard le 7e jour ouvrable du mois qui suit celui des prestations ;
+- aux employés : au plus tard le 7e jour ouvrable du mois qui suit celui des prestations.
+
+Le paiement se fait par virement sur le compte bancaire que le travailleur a communiqué par écrit lors de son engagement.
+
+# [egalite] Égalité de rémunération ⚠
+## [cct25] CCT n° 25
+L’employeur ne fait aucune discrimination fondée sur la nationalité, l’âge, le sexe, l’état civil ou la condition physique en matière de rémunération, de formation, de promotion, de mutation et d’emploi. Pour l’égalité de rémunération, les dispositions de la CCT n° 25, reproduite à l’annexe 2, sont appliquées.
+
+## [transparence] Transparence salariale
+Les travailleurs ont le droit de demander, chaque année, des informations sur leur niveau de rémunération individuel ainsi que sur les niveaux de rémunération moyens, ventilés par sexe pour les travailleurs effectuant le même travail ou un travail de valeur équivalente. Cette demande devra être satisfaite dans un délai de 2 mois.
+> À valider : la directive européenne 2023/970 sur la transparence des rémunérations devait être transposée en droit belge au plus tard le 7 juin 2026. Mettre l’article à jour selon la loi belge en vigueur.
+
+# [repos] Jours de repos, dimanche, jours fériés et vacances annuelles
+## [jours_repos] Jours de repos
+Les jours habituels d’inactivité sont :
+
+- les jours fériés ou les jours qui remplacent un jour férié légal
+
+- les jours de vacances annuelles
+
+## [dimanche] Travail du dimanche ⚠
+Le magasin est ouvert le dimanche [[oui, de … à … / non]]. Les travailleurs qui travaillent le dimanche, conformément à la loi sur le travail, ont droit à un repos compensatoire [[selon le régime de la commission paritaire : à préciser]], accordé dans les 6 jours qui suivent le dimanche travaillé.
+> À valider : le délai et la forme du repos compensatoire peuvent être fixés par la commission paritaire.
+
+## [feries] Jours fériés ⚠
+Sans préjudice des dispositions légales en vigueur pour les travailleurs occupés à temps partiel, la rémunération normale est garantie aux travailleurs pour les 10 jours fériés légaux suivants :
+
+- 1er janvier (Nouvel an),
+
+- lundi de Pâques,
+
+- 1er mai (Fête du travail),
+
+- Ascension,
+
+- lundi de Pentecôte,
+
+- 21 juillet (Fête nationale),
+
+- 15 août (Assomption),
+
+- 1er novembre (Toussaint),
+
+- 11 novembre (Armistice),
+
+- 25 décembre (Noël).
+
+Si l’un des jours fériés coïncide avec un dimanche ou un jour habituel d’inactivité, il est remplacé par un jour habituel d’activité, suivant les modalités prévues par les dispositions légales.
+
+Ces jours de remplacement doivent être communiqués par un avis affiché dans les locaux de l’entreprise au plus tard le 15 décembre de l’année qui précède celle où tombent les jours fériés à remplacer. Une copie de cet avis est annexée au règlement de travail.
+
+Quand le magasin est ouvert un jour férié, les travailleurs qui y travaillent ont droit à un repos compensatoire rémunéré, conformément à la loi du 4 janvier 1974 relative aux jours fériés.
+
+## [vacances] Vacances annuelles ⚠
+Lorsque les vacances sont prises **individuellement,** celles-ci sont fixées de commun accord entre le travailleur et l’employeur.
+
+A cet effet, les travailleurs devront introduire une demande écrite à l’avance et l’adresser à leur responsable hiérarchique par mail.
+
+Les vacances principales (plus de 2 semaines consécutives) doivent être demandées le plus vite possible càd 8 semaines à l’avance à l’employeur.
+
+Une période de congé d’une durée de maximum 3 semaines consécutives peuvent être pris par année civile.
+
+Les jours libres, c’est-à-dire une période de congé de moins de 5 jours consécutifs, doivent être demandés au moins 7 jours ouvrables à l’avance par écrit.
+
+L’employeur se réserve le droit, lorsque les demandes concernent une même période et perturbent considérablement l’organisation de travail, de refuser certains congés et de proposer d’autres dates.
+
+Les périodes de forte activité du magasin sont : [[les fêtes de fin d’année (décembre), la semaine de Pâques, la fête des mères… — à préciser]]. Pendant ces périodes, les congés peuvent être limités ou refusés.
+
+Si, pendant la même période, trop de travailleurs ont demandé congé, il sera tenu compte des critères suivants lors de l’octroi :
+
+- Les travailleurs qui ont des enfants scolarisés auront la priorité pendant la période des congés scolaires
+
+- Les parents liés par une convention judiciaire quant aux gardes d’enfants
+
+- Le travailleur dont le conjoint travaille dans une entreprise qui fixe des vacances collectives
+
+- Les travailleurs qui bénéficient d’une plus grande ancienneté
+
+En principe, les vacances annuelles doivent être prises dans les douze mois qui suivent l’exercice de vacances, elles ne pourront pas être reportées à l’année suivante.
+
+Cela dit, si le travailleur a été dans l’impossibilité de prendre tout ou partie de ses congés avant le 31 décembre à la suite de certaines causes de suspension limitativement énumérées dans l’AR du 30 mars 1967 (accident du travail ou maladie professionnelle, accident ou maladie non professionnelle, congé de maternité,..), il pourra reporter ces jours de vacances au-delà du 31 décembre.
+
+## [vac_euro] Vacances européennes
+Les travailleurs qui n’ont pas droit à des vacances peuvent prétendre aux vacances européennes dans la mesure où ils commencent ou reprennent le travail.
+
+Un travailleur qui commence à travailler est un travailleur qui n’a pas constitué de droit aux vacances annuelles. Un travailleur qui reprend le travail est un travailleur qui revient, soit après une période de maladie supérieure à un an, soit après une période de chômage, soit après une période de crédit-temps complet, soit une période de congé sans solde. Après une occupation d’au moins 3 mois, le travailleur peut prétendre à des vacances européennes à la fin de ces 3 mois.
+
+Après ces 3 mois, le nombre de jours de vacances européennes augmente par mois presté par le travailleur. Le travailleur ne peut prétendre aux vacances européennes que dans la mesure où il a déjà épuisé ses jours de vacances légales. Un travailleur peut prendre des vacances européennes, mais n’y est pas obligé.
+
+Le salaire versé lors des vacances européennes sera déduit de son double pécule de vacances.
+
+## [vac_supp] Jours de vacances supplémentaires
+[[Selon la CP : par exemple, pour les ouvriers de la CP 118.03 ayant 5 ans d’ancienneté, 3 jours de fin de carrière par année civile à partir de 59 ans et 4 jours à partir de 62 ans, non cumulables, au prorata pour le temps partiel et en cas de fin de contrat en cours d’année — à vérifier et à compléter.]]
+
+## [sans_solde] Congé sans solde
+Le travailleur qui désire prendre un congé sans solde doit demander et obtenir l’accord de l’employeur. Le congé sans solde ne constitue pas un droit dans le chef du travailleur. L’octroi du congé sans solde est laissé à l’appréciation de l’employeur. Durant cette période, l’exécution du contrat de travail est suspendue sans maintien de la rémunération.
+
+# [incapacite] Incapacité de travail
+## Avertissement
+
+### Maladie ou accident de la vie privée
+
+En cas d’absence pour raison de **maladie ou d’accident (autre qu’un accident de travail)**, le travailleur doit avertir, le jour même, par tous les moyens possibles son responsable hiérarchique.
+
+Dans les 2 jours ouvrables, le travailleur doit fournir à l’entreprise un certificat médical renseignant la date de début de l’incapacité et la durée probable de celle-ci et spécifiant si le travailleur peut ou non se déplacer. Si le travailleur remet le certificat médical par voie postale, le respect des délais est vérifié à l’aide de la date du cachet de la poste.
+
+[[Choisir une option et supprimer l’autre.]] Option 1 (entreprises de moins de 50 travailleurs) : le travailleur justifie tous les jours d’incapacité par un certificat médical, dès le premier jour ; la dispense de certificat pour un jour d’incapacité, prévue par la loi, n’est pas appliquée dans l’entreprise. Option 2 : la dispense légale de certificat médical pour un jour d’incapacité s’applique, dans les limites de la loi (nombre de fois par année civile).
+> À valider avec le secrétariat social : le nombre de dispenses par an et le seuil de 50 travailleurs, selon la loi en vigueur.
+
+Le travailleur qui réside pendant son incapacité de travail à une autre adresse ou qui change d’adresse, est tenu de la communiquer immédiatement à son employeur. ⚠
+
+### Accident de travail ou sur le chemin du travail
+
+En cas **d’accident de travail** ou **d’un accident sur le chemin du travail**, le travailleur doit en avertir l’employeur dans les plus brefs délais et lui fournir tous les renseignements nécessaires pour remplir la déclaration d’accident.
+
+⚠ En cas d’accident sur le lieu de travail, une boîte de secours est tenue à la disposition du travailleur à l’endroit suivant : [[emplacement dans le magasin]].
+
+⚠ Les premiers soins sont donnés par [[le secouriste du magasin]] ; en cas d’urgence, appeler le 112.
+
+⚠ Le travailleur, victime d’un accident de travail, dispose du libre choix du médecin, du pharmacien et de l’institution de soins.
+
+## Mentions obligatoires sur le certificat médical
+
+Le certificat médical doit contenir les mentions suivantes :
+
+- le nom, le prénom et l’adresse du travailleur ;
+
+- le nom, le prénom, l’adresse, le numéro de téléphone et le numéro d’ordre du médecin traitant qui délivre le certificat ;
+
+- la date et la signature du médecin qui délivre le certificat ;
+
+- la raison pour laquelle le travailleur ne peut pas travailler, la nature même de la maladie ne doit pas être mentionnée.
+
+- le début et la durée présumée de l’incapacité ;
+
+- si le travailleur est autorisé ou non à quitter son domicile  ;
+
+- la mention indiquant s’il s’agit d’un premier certificat ou d’une prolongation ;
+
+- en cas de prolongation, si elle est due ou non à une autre cause.
+
+## Prolongation
+
+Si l’incapacité de travail dure plus longtemps que prévu initialement, le travailleur doit en avertir l’employeur suivant les mêmes modalités qu’au début de l’incapacité.
+
+En outre, le travailleur doit présenter un nouveau certificat médical à l’employeur dans un délai de deux jours ouvrables à compter de la prolongation.
+
+## Prise de contact régulière
+
+A partir de 4 semaines d’incapacité, l’Employeur prendra régulièrement contact avec l’Employé, à raison d’une fois tous les mois, afin de maintenir le contact avec le travailleur en incapacité de travail. Il prendra contact, dans la mesure du possible, par téléphone afin d’avoir un échange oral avec le travailleur.
+> À valider : depuis 2026, le règlement de travail doit contenir une politique d’absentéisme. Compléter cet article selon la loi et la CCT en vigueur.
+
+## Conséquences de la non-présentation d’un certificat médical (à temps)
+
+Si le travailleur ne remet pas à temps un certificat médical à l’employeur en violation du présent chapitre, il perd tout droit à une rémunération pour les jours d’incapacité précédant le jour de la remise ou de l’envoi du certificat, sauf si le travailleur prouve que le retard est dû à un cas de force majeure.
+
+Toute absence sans avertissement et/ou non couverte par un certificat médical est considérée comme une absence injustifiée et non rémunérée.
+
+## Rechute
+> À valider : délai de rechute (8 semaines) selon la loi en vigueur en 2026.
+Lors d’une nouvelle incapacité de travail dans les 8 semaines qui suivent la fin d’une incapacité de travail précédente, le travailleur est prié de faire mentionner sur le certificat médical si la nouvelle incapacité de travail est due ou non à une autre cause. Si cette mention fait défaut, il sera supposé que les deux incapacités sont dues à la même maladie ou au même accident. Dans ce cas, le salaire garanti ne sera pas à nouveau dû sauf si celui-ci n’avait pas été épuisé lors de la première période d’incapacité.
+
+## Contrôle
+
+Tout travailleur inapte au travail est tenu de se soumettre au contrôle d’un médecin habilité et payé par l’employeur. Le travailleur doit tout mettre en œuvre pour permettre cet examen.
+
+Si, pendant la période d’incapacité, le travailleur se trouve dans un autre lieu de résidence que son domicile (p. ex. en cas d’hospitalisation, de résidence temporaire, etc.), il doit en informer immédiatement l’employeur afin de permettre l’examen par le médecin-contrôle.
+
+Lorsque le certificat médical mentionne que le travailleur en incapacité de travail ne peut pas quitter le domicile, le médecin-contrôle doit toujours pouvoir le trouver à son domicile ou à l’autre lieu de résidence communiqué par ses soins. Si ce n’est pas le cas, le travailleur perd le droit au salaire garanti à partir du premier jour de l’incapacité de travail, sauf cas de force majeure dont il doit, le cas échéant, fournir la preuve.
+
+Lorsque le certificat médical mentionne que le travailleur en incapacité de travail est autorisé à quitter le domicile, et que le travailleur est absent au moment du contrôle, le médecin-contrôle laissera un avis mentionnant le jour et la période pendant lesquels le travailleur doit se tenir à disposition au domicile en vue du contrôle ou convoquera le travailleur pour qu’il se présente au lieu et à l’heure mentionnés dans la convocation. Les frais de déplacement du travailleur sont à la charge de l’employeur.
+
+Ne pas se présenter ou se présenter tardivement auprès du médecin-contrôle équivaut à empêcher le contrôle médical avec, pour conséquence, la perte du droit au salaire garanti à partir du premier jour d’incapacité de travail, sauf cas de force majeure dont le travailleur doit, le cas échéant, fournir la preuve.
+
+## Expertise
+
+Si les constatations du médecin traitant et du médecin-contrôle concernant la même période sont contradictoires, l’employeur et le travailleur acceptent qu’un jugement définitif soit rendu par un médecin indépendant-médecin arbitre.
+
+L’employeur et le travailleur désignent un médecin arbitre d’un commun accord, dans les deux jours ouvrables suivant la remise des conclusions du médecin-contrôle. Si aucun accord n’est trouvé, la partie la plus diligente doit désigner un médecin-arbitre dans le même délai de deux jours ouvrables après la remise des conclusions du médecin-contrôle. Le choix qu’il fait doit obligatoirement être suivi par l’autre partie.
+
+Si l’employeur est la partie la plus diligente, il peut désigner lui-même un médecin-arbitre, mais il peut aussi autoriser expressément le médecin-contrôle à le faire. Le travailleur peut également autoriser explicitement son médecin traitant à le faire.
+
+Le médecin-arbitre procède à un examen médical et règle le litige médical dans les 3 jours ouvrables suivant sa désignation. Le médecin-arbitre communique sa décision au médecin traitant et au médecin-contrôle. L’employeur et le travailleur sont informés par écrit, par lettre recommandée.
+
+La décision résultant de la procédure d’arbitrage est définitive et contraignante pour les parties.
+
+Les frais de la procédure d’arbitrage sont supportés par la partie succombant.
+
+Le présent article ne porte pas atteinte au droit des parties de faire trancher le litige par le tribunal du travail.
+
+## Examen de reprise du travail
+
+Après une absence d’au moins 4 semaines consécutives due à une maladie, une affection ou un accident quelconque, ou après un accouchement, le travailleur occupé à un poste de sécurité, à un poste de vigilance ou à une activité à risque défini (il s’agit des fonctions définies à l’article I 4-1 du Code du bien-être au travail) est obligatoirement soumis à un examen de reprise du travail par le médecin du travail.
+
+À la demande du travailleur ou lorsque le médecin du travail l’estime utile en raison de la nature de la maladie, de l’affection ou de l’accident, cet examen peut avoir lieu après une absence de plus courte durée. Il a lieu au plus tôt le jour de la reprise du travail ou du service et au plus tard le dixième jour ouvrable suivant la reprise. Moyennant le consentement du travailleur, le médecin du travail peut se concerter avec le médecin traitant et/ou le médecin-conseil de la mutuelle.
+
+L’examen de reprise du travail doit permettre au conseiller en prévention-médecin du travail de vérifier si le travailleur est toujours apte pour le poste de travail qu’il occupait précédemment ou l’activité qu’il exécutait précédemment et, en cas d’inaptitude, de prendre les mesures de prévention ou de protection appropriées.
+
+En outre, tout travailleur inapte au travail a droit à une visite chez le médecin du travail avant la reprise du travail et ce, quelle que soit la durée de son incapacité de travail. Lors de cette visite, une adaptation du poste ou des conditions de travail du travailleur peut être envisagée. Le travailleur (ou après accord son médecin traitant) qui souhaite faire usage de ce droit doit demander sa visite directement au médecin du travail. Le médecin du travail informe l’employeur de la demande, sauf lorsque le travailleur s’y oppose. Moyennant le consentement du travailleur, le médecin du travail peut se concerter avec le médecin traitant et/ou le médecin-conseil. La visite préalable à la reprise du travail a lieu dans les dix jours ouvrables suivant la réception de la demande. Le conseiller en prévention-médecin du travail se rend sur place pour examiner le poste de travail du travailleur dans les meilleurs délais en vue de trouver les solutions d’adaptation possibles. L’employeur prend en charge les frais de déplacement.
+
+## Trajet de réintégration
+> À valider : le trajet de réintégration a été réformé à partir du 1er janvier 2026. Revoir cet article avec le secrétariat social.
+### Introduction d’une demande
+
+L’employeur met en place une procédure de **prise de contact obligatoire** avec le travailleur en incapacité de travail **depuis 4 semaines** pour l’informer des possibilités de reprise du travail et des adaptations possibles. Cette prise de contact est réalisée par le **conseiller en prévention-médecin du travail** (CP-MT).
+
+En cas de prolongation de l’incapacité de travail, **le travailleur ou son médecin traitant** si le travailleur y consent, peuvent à tout moment introduire une demande au CP-MT aux fins de sa réintégration, sur base des capacités de travail du travailleur ou le cas échéant avec une adaptation du poste de travail, temporaire ou définitive.
+
+**Lorsque l’incapacité de travail a duré trois mois ou plus**, l’employeur peut adresser une demande de réintégration auprès du CP-MT, lequel en avertit le médecin conseil de la mutuelle.
+
+L’employeur peut également démarrer un trajet de réintégration à partir du moment où le travailleur lui remet une attestation de son médecin traitant dont il ressort une **incapacité définitive** à exercer le travail convenu.
+
+### Evaluation de la demande
+
+Dans les 49 jours calendrier de la demande, le conseiller en prévention-médecin du travail, après examen du travailleur et détermine s’il pourra à nouveau exercer le travail convenu à terme ou non, ou le cas échéant, s’il pourra reprendre le travail avec une adaptation du poste de travail temporaire ou définitive.
+
+L’employeur et le travailleur collaborent au bon déroulement du trajet de réintégration. Le travailleur ne peut pas se soustraire sans justification ou manière systématique à une évaluation de réintégration ou la rendre impossible.
+
+### Etablissement plan de réintégration
+
+En cas d’**inaptitude temporaire** pour le travail convenu, mais avec possibilité d’effectuer entretemps un travail adapté ou un autre travail qui suit l’examen du conseiller en prévention-médecin du travail, l’employeur établit un plan de réintégration dans les 63 jours calendrier qu’il soumet au travailleur. Ce plan contient notamment une description des adaptations du poste de travail et/ou une description du travail adapté ou d’un autre travail, la nature de la formation proposée et la durée de validité du plan. Il est présenté au médecin-conseil de la mutuelle.
+
+En cas d’**inaptitude définitive** pour le travail convenu, mais avec possibilité d’effectuer un travail adapté ou un autre travail qui suit l’examen du conseiller en prévention-médecin du travail, l’employeur établit un plan de réintégration maximum dans les 6 mois qu’il soumet au travailleur. Ce plan contient notamment une description des adaptations du poste de travail et/ou une description du travail adapté ou d’un autre travail, la nature de la formation proposée et la durée de validité du plan. Il est présenté au médecin-conseil de la mutuelle.
+
+### Décision du travailleur
+
+Le travailleur doit accepter ou refuser le plan (pour des raisons dûment motivées) dans un délai de 14 jours calendriers.
+
+### Fin du trajet de réintégration
+
+Le trajet de réintégration est terminé dans l’hypothèse où l’Employeur invoque l’impossibilité de fournir un travail adapté ou un autre travail et qu’il aura remis au CP-MT un rapport selon lequel l’établissement d’un plan est techniquement ou objectivement impossible ou que cela ne peut être exigé pour des motifs dûment justifiés. L’employeur doit justifier ses motifs dans un rapport. Ce rapport devra également démontrer que l’employeur a envisagé sérieusement les possibilités d’adaptation du poste de travail, d’un travail adapté ou d’un autre travail.
+
+S’il échet, ce plan sera traduit par un avenant au contrat de travail organisant la reprise partielle du travail et portant notamment sur le volume de travail, les horaires de travail, la nature du travail, la rémunération et la durée de validité de l’avenant.
+
+Le trajet de réintégration prend également fin lorsque le travailleur refuse le plan de réintégration.
+
+## Incapacité de travail pendant les vacances légales ⚠
+
+En cas d’incapacité de travail pour cause de maladie ou d’accident pendant une période de vacances annuelles légales, le travailleur doit toujours fournir à l’employeur un certificat médical dans les 2 jours, à compter du jour de l’incapacité (en cas d’envoi par courrier, le cachet de la poste fait foi). En cas de force majeure, le travailleur doit remettre le certificat médical à l’employeur dans un délai raisonnable.
+
+Le certificat médical d’incapacité de travail mentionne :
+
+- La date de délivrance du certificat médical
+
+- La date de début et la durée probable de l’incapacité de travail
+
+- La cause de l’incapacité de travail (maladie ou accident de la vie privée)
+
+- S’il s’agit d’un premier certificat, d’une prolongation ou d’une rechute
+
+- Si la sortie est autorisée ou non
+
+- Le nom, l’adresse et la signature du médecin traitant
+
+Pour les jours d’incapacité de travail qui coïncident avec une période de vacances annuelles, le travailleur a droit à sa rémunération normale.
+
+Si le travailleur souhaite reporter immédiatement après la fin de son incapacité les jours de vacances qu’il n’a pas pu prendre en raison de cette même incapacité, il doit en informer expressément l’employeur, par téléphone, mail ou autre message, au plus tard lorsqu’il lui remet le certificat médical. Ce n’est qu’avec l’accord de l’employeur que le travailleur pourra prendre congé immédiatement après la fin de sa période d’incapacité. A défaut, le travailleur conserve le droit de prendre plus tard dans l’année de vacances les jours de vacances dont il n’a pas pu bénéficier en raison de son incapacité, conformément à la législation applicable.
+
+Le travailleur qui n’informe pas l’employeur au sujet de sa volonté de garder ses jours de vacances et/ou de son lieu de résidence et/ou qui ne remet pas de certificat médical dans le délai imparti ne pourra pas maintenir les jours de vacances qui ont coïncidé avec les jours d’incapacité de travail. En d’autres mots, il ne pourra pas reporter ces jours de vacances à un moment ultérieur. Les jours concernés seront par conséquent considérés comme des jours de vacances, et non comme des jours d’incapacité de travail.
+
+# [fin] Fin du contrat
+## Rupture moyennant préavis ⚠
+
+Les délais de préavis à respecter sont ceux prévus dans la loi du 3 juillet 1978 relative aux contrats de travail ainsi que par la loi du 26 décembre 2013 relative à l’introduction d’un statut unique entre ouvriers et employés.
+
+Lorsque la rupture avec notification d’un préavis émane de l’employeur, celle-ci doit obligatoirement se faire soit par lettre recommandée, soit par exploit d’huissier.
+
+Lorsque le préavis est remis par le travailleur, ceci peut se faire soit de la main à la main, soit par recommandé, soit par exploit d’huissier.
+
+Le préavis notifié par lettre recommandée est censé être reçu le 3ème jour ouvrable qui suit la date de son envoi ; le préavis ainsi notifié pourra débuter au plus tôt le lendemain de ce 3ème jour ouvrable pour autant qu’il s’agisse d’un lundi. Si le préavis est notifié par exploit d’huissier, il est notifié immédiatement et pourra prendre cours au plus tôt le lendemain de la notification.
+
+En tous les cas, le préavis ne peut commencer à courir que le lundi de la semaine qui suit celle au cours de laquelle le préavis a été notifié.
+
+## Recours contre le licenciement ⚠
+
+S’il souhaite contester son licenciement auprès des cours et tribunaux compétents, le travailleur dispose d’un délai d’un an à compter de la fin de son contrat de travail pour introduire un tel recours. Le législateur a également prévu des recours spécifiques :
+
+- loi du 19 mars 1991 portant sur le régime de licenciement particulier pour les délégués du personnel aux conseils d’entreprise et aux comités de sécurité, d’hygiène et d’embellissement des lieux de travail, ainsi que pour les candidats délégués du personnel ;
+
+- la réglementation relative à la violence ou le harcèlement moral ou sexuel au travail : article 32 terdecies de la loi du 4 août 1996 relative au bien-être des travailleurs lors de l’exécution de leur travail;
+
+- article 15 de la loi du 30 juillet 1981 tendant à réprimer certains actes inspirés par le racisme ou la xénophobie ;
+
+- Articles 17 et 22 de la loi du 10 mai 2007 tendant à lutter contre certaines formes de discrimination;
+
+- CCT 109 relative au licenciement manifestement déraisonnable
+
+## Rupture pour faute grave ⚠
+
+Chaque partie peut rompre le contrat sans délai de préavis ou avant l’expiration du terme pour un (ou plusieurs) motif(s) grave(s).
+
+Les fautes qui ébranlent la confiance mutuelle entre l’employeur et le travailleur de façon telle que toute collaboration professionnelle soit rendue impossible, sont des motifs graves justifiant la rupture immédiate du contrat.
+
+Sans préjudice du pouvoir d’appréciation du juge, les faits suivants sont considérés comme un motif grave justifiant la rupture du contrat, de part et d’autre, sans préavis ni indemnité :
+
+- l’absence non justifiée de longue durée ou répétitive ;
+
+- le refus d’exécuter le travail confié et tout acte manifeste d’insubordination ;
+
+- le non-respect des règles élémentaires de sécurité (ex.: le fait de fumer dans un endroit dangereux malgré une interdiction) mettant en péril la vie ou l’intégrité physique des autres travailleurs ;
+
+- l’ivresse ou la consommation d’alcool et/ou de drogues sur le lieu de travail ;
+
+- la négligence grave et volontaire;
+
+- le fait de dévoiler à des tiers tout renseignement couvert par le secret professionnel ;
+
+- la participation à la constitution ou à l’activité d’une firme concurrente ;
+
+- la dissimulation d’erreurs ;
+
+- le vol quelle que soit la valeur du bien volé  ;
+
+- le refus persistant de se soumettre à un examen de contrôle médical ;
+
+- la remise à l’employeur dans le but de tromper de certificats, attestations, cartes de présence, relevés de frais, etc. sciemment falsifiés ou inexacts ;
+
+- les actes de violence, de harcèlement moral ou de harcèlement sexuel vis-à-vis de tiers (collègues, supérieurs, clients, fournisseurs, patients...) ;
+
+- la diffusion, par quelque moyen que ce soit, au sein de l’entreprise, d’images ou de textes à caractère raciste ou pornographique ;
+
+- les actes de « criminalité informatique » (ex.: l’introduction ou la distribution consciente de virus sur le serveur informatique de l’entreprise, la tentative d’enfreindre les systèmes de sécurité informatique mis en place) ;
+
+- l’utilisation non autorisée et répétée du courrier électronique à des fins privées après avertissement;
+
+- le fait d’utiliser à des fins privées et de manière abusive le courrier électronique et l’accès Internet mis à sa disposition par l’employeur;
+
+- le fait de dénigrer publiquement son employeur ;
+
+- le fait de causer intentionnellement un préjudice matériel pendant ou à l’occasion de l’exécution du contrat;
+
+- Le fait de ne pas se conformer à plusieurs reprises aux demandes fondées et justifiées de l’employeur.
+
+- d’une manière générale, le non-respect des dispositions contenues dans le contrat individuel ou dans le présent règlement.
+
+Cette liste ne peut en aucun cas être considérée comme exhaustive.
+
+Peuvent seuls être invoqués comme justification, les motifs graves notifiés par lettre recommandée, par la remise d’un écrit ou par exploit d’huissier dans un délai de trois jours ouvrables suivant le congé.
+
+# [bienetre] Bien-être des travailleurs : généralités
+L’employeur est responsable du bien-être des travailleurs lors de l’exécution de leur travail.
+
+Il doit veiller à ce que l’exécution du travail n’occasionne pas de dommages à la santé physique ou mentale du travailleur.
+
+Le travailleur peut demander au conseiller en prévention l’examen de son poste de travail.
+
+Il incombe à chaque travailleur de prendre soin, selon les possibilités, de sa sécurité et de sa santé ainsi que de celles des autres personnes concernées du fait de ses actes ou des omissions au travail, conformément à sa formation et aux instructions de leur employeur.
+
+A cet effet, les travailleurs doivent en particulier, conformément à leur formation et aux instructions de leur employeur :
+
+- utiliser correctement les machines, appareils, outils, substances dangereuses, équipements de transport et autres moyens ;
+
+- utiliser correctement les équipements de protection individuelle mis à leur disposition et, après utilisation, les ranger à leur place ;
+
+- ne pas mettre hors service, changer ou déplacer arbitrairement les dispositifs de sécurité spécifiques notamment des machines, appareils, outils, installations et bâtiments, et utiliser pareils dispositifs de sécurité correctement ;
+
+- signaler immédiatement à l’employeur et au service interne de prévention et de protection au travail, toute situation de travail dont ils ont un motif raisonnable de penser qu’elle présente un danger grave et immédiat pour la sécurité et la santé ainsi que toute défectuosité constatée dans les systèmes de protection ;
+
+- coopérer avec l’employeur et le service interne de prévention et de protection au travail, aussi longtemps que nécessaire, pour permettre l’accomplissement de toutes les tâches ou exigences imposées, en vue du bien-être des travailleurs lors de l’exécution de leur travail ;
+
+- coopérer avec l’employeur et le service interne de prévention et de protection au travail, aussi longtemps que nécessaire, pour permettre à l’employeur d’assurer que le milieu et les conditions de travail sont sûrs et sans risque pour la sécurité et la santé à l’intérieur de leur champ d’activité ;
+
+- se soumettre à tous les examens médicaux, chaque fois que ceux-ci sont organisés en vertu des dispositions légales ou réglementaires.
+
+## [risques] Risques propres au magasin
+Les travailleurs respectent les consignes de sécurité propres au magasin, notamment :
+- fours, plaques et friteuses : gants anti-chaleur, défournement selon la procédure ;
+- trancheuses, laminoirs, batteurs et couteaux : protections en place, machine arrêtée et débranchée pour le nettoyage ;
+- farine et poudres : limiter la poussière (pas de soufflage, pas de balayage à sec) ;
+- chambres froides et surgélateurs : porte ouverte de l’intérieur, durée de séjour limitée ;
+- charges lourdes : techniques de manutention apprises, chariots et aide d’un collègue ;
+- sols mouillés ou farinés : nettoyés et signalés immédiatement ;
+- produits de nettoyage : utilisés selon leur fiche, jamais mélangés.
+> À valider avec le SEPPT, d’après l’analyse des risques du magasin, avec les équipements de protection fournis (gants, chaussures…).
+
+# [psy] Bien-être : protection contre les risques psychosociaux, dont le stress, la violence et le harcèlement moral ou sexuel au travail ⚠
+Employeur et travailleurs sont tenus de se témoigner réciproquement estime et respect, et de s’abstenir de tout acte de violence ou de harcèlement moral ou sexuel au travail.
+
+Chacun participe positivement à la politique de prévention mise en œuvre dans le cadre des risques psychosociaux au travail.
+
+## Définitions
+
+On entend par :
+
+- **Charge psychosociale occasionnée par le travail :** toute charge, de nature psychosociale, qui trouve son origine dans l’exécution du travail ou qui survient à l’occasion de l’exécution du travail, qui a des conséquences dommageables sur la santé physique ou mentale de la personne.
+
+- **Violence :** chaque situation de fait où un travailleur ou une autre personne à laquelle la loi du Bien-être est d’application, est menacé ou agressé psychiquement ou physiquement lors de l’exécution du travail.
+
+- **Harcèlement moral :** plusieurs conduites abusives similaires ou différentes, externes ou internes à l’entreprise ou l’institution, qui se produisent pendant un certain temps, qui ont pour objet ou pour effet de porter atteinte à la personnalité, la dignité ou l’intégrité physique ou psychique d’un travailleur ou d’une personne à laquelle la loi du Bien-être est d’application lors de l’exécution de son travail, de mettre en péril son emploi ou de créer un environnement intimidant, hostile, dégradant, humiliant ou offensant et qui se manifestent notamment par des paroles, des intimidations, des actes, de gestes ou des écrits unilatéraux. Ces conduites peuvent être liées à la religion ou aux convictions, au handicap, à l’âge, à l’orientation sexuelle, au sexe, à la race ou à l’origine ethnique.
+
+- **Harcèlement sexuel au travail :** tout comportement non désiré verbal, non verbal ou corporel à connotation sexuelle ayant pour objet ou pour effet de porter atteinte à la dignité d’une personne ou de créer un environnement intimidant, hostile, dégradant, humiliant ou offensant.
+
+## Intervenants spécifiques
+
+Le travailleur qui estime subir un dommage psychique, qui peut également s’accompagner d’un dommage physique, découlant de risques psychosociaux au travail, dont le stress, la violence et le harcèlement moral ou sexuel au travail peut s’adresser à son **employeur** ou à son **supérieur hiérarchique**, ces personnes étant directement compétentes pour offrir une solution au problème qui se pose.
+
+Si cette intervention n’a pas abouti au résultat souhaité ou si le travailleur ne souhaite pas avoir recours aux relations sociales ordinaires au sein de l’entreprise, il peut utiliser une procédure interne spécifique en faisant appel à des **intervenants spécifiques**. Dans le cadre de cette procédure interne spécifique, il a le choix de contacter :
+
+- Le conseiller en prévention « aspects psychosociaux »(CP Psy): [[conseiller en prévention aspects psychosociaux (SEPPT)]]
+
+- Le conseiller en prévention chargé de diriger le service interne pour la prévention et la protection au travail (SIPPT) : [[conseiller en prévention interne]]
+
+## La procédure interne à l’entreprise
+
+### Déroulement
+
+La personne de confiance (ou, à défaut, le conseiller en prévention chargé de la direction du service interne de prévention et de protection au travail) ou le conseiller en prévention aspects psychosociaux accueillent, écoutent et informent les travailleurs sur les possibilités d’intervention.
+
+Après avoir reçu les informations nécessaires, le travailleur choisit le type d’intervention qu’il souhaite utiliser.
+
+Les possibilités d’intervention sont les suivantes :
+
+#### Demande d’intervention psychosociale informelle
+
+L’intervention psychosociale informelle vise le cas où le travailleur, qui a introduit la demande, recherche une solution de manière informelle avec la personne de confiance ou le conseiller en prévention aspects psychosociaux.
+
+La personne de confiance ou le conseiller en prévention aspects psychosociaux peuvent, notamment, sur demande du travailleur:
+
+- Mener des entretiens avec le travailleur (ce qui comprend l’accueil du travailleur, l’écoute active de sa problématique et éventuellement le conseiller)
+
+- Intervenir auprès d’une autre personne de l’entreprise (par exemple, un membre de la ligne hiérarchique)
+
+- Organiser une conciliation avec la ou les personne(s) vis-à-vis desquelles le travailleur rencontre une difficulté (s’il s’agit d’un problème relationnel).
+
+Le type d’intervention psychosociale informelle choisi par le travailleur est acté dans un document daté et signé, par le travailleur et la personne de confiance ou le conseiller en prévention et le travailleur en reçoit une copie.
+
+#### Demande d’intervention psychosociale formelle
+
+Si le travailleur ne désire pas une intervention psychosociale informelle ou si cette intervention n’aboutit pas à un résultat, il peut seulement introduire une demande d’intervention psychosociale formelle auprès du CP Psy.
+
+Une fois que le travailleur a exprimé sa volonté au CP Psy de demander un intervention psychosociale formelle, il doit obligatoirement avoir eu un entretien personnel avec le conseiller en prévention avant d’introduire sa demande. L’entretien obligatoire doit avoir lieu dans un délai maximum de 10 jours calendriers suivant le jour où il a exprimé sa volonté d’introduire un demande.
+
+Le travailleur reçoit une copie du document qui atteste de cet entretien.
+
+Pour être valable, la demande formelle du travailleur doit être actée dans un document daté et signé par lui. Le travailleur doit inclure dans sa demande:
+
+- la description de la situation de travail problématique
+
+- le fait qu’il demande à l’employeur de prendre des mesures appropriées
+
+Le travailleur transmet son document de demande au CP psy (ou au service externe pour la prévention et la protection au travail auquel le conseiller en prévention aspects psychosociaux appartient).
+
+Avant d’examiner la situation du travailleur, le CP psy décide s’il va accepter ou refuser l’introduction de la demande. Il refusera l’introduction de la demande lorsque la situation décrite dans la demande ne contient manifestement pas de risques psychosociaux au travail. Il prendra cette décision dans un délai de 10 jours calendriers maximum et en informera le travailleur dans ce même délai.
+
+Si, après le dixième jour, il n’y a pas de notification d’acceptation ou de refus de la demande d’intervention psychosociale formelle, le travailleur peut considérer sa demande comme acceptée.
+
+Lorsque le CP psy a accepté la demande, il va réaliser une deuxième analyse : il va examiner si la situation décrite dans la demande a principalement trait à des risques qui présentent un caractère collectif ou à des risques qui présentent un caractère individuel. La procédure diffère en fonction du caractère individuel ou principalement collectif de la demande.
+
+- **Lorsque la demande a un caractère principalement COLLECTIF**
+
+Le CP psy informe l’employeur par écrit du fait qu’une telle demande a été introduite sans mentionner l’identité du travailleur qui a introduit la demande. Il informe le travailleur du caractère collectif de sa demande.
+
+La demande à caractère principalement collectif est traitée par l’employeur. Il analyse la situation à risques et prend les mesures nécessaires au niveau collectif pour résoudre cette situation. Pour ce faire, il peut réaliser une analyse des risques, éventuellement avec l’assistance du CP psy.
+
+S’il existe un CPPT ou une délégation syndicale dans l’entreprise, l’employeur devra se concerter avec ces organes.
+
+L’employeur décide des suites qu’il va donner à la demande dans un délai de 3 mois maximum après qu’il ait été mis au courant de l’introduction de la demande. Lorsqu’il réalise une analyse des risques en respectant les exigences légales, ce délai peut être prolongé jusqu’à 6 mois maximum. Le travailleur est informé de la décision de l’employeur par le CP psy.
+
+L’employeur communique en suite sa décision motivée par écrit aux personnes concernées (le CP psy qui informe à son tour le demandeur, le CP chargé de la direction du SIPPT, le CPPT ou la DS). L’employeur exécute ensuite au plus vite les mesures qu’il a décidé de prendre.
+
+Si l’employeur décide de ne pas prendre de mesures ou omet de prendre une décision dans les délais, ou si le travailleur considère que les mesures de l’employeur ne sont pas appropriées à sa situation individuelle, le travailleur peut demander par écrit au conseiller en prévention de traiter sa demande comme une demande à caractère principalement individuel (voir ci-dessous) à la condition que le CP psy ne soit pas intervenu lors de l’analyse des risques de la situation.
+
+- Lorsque la demande a un caractère principalement INDIVIDUEL
+
+Le CP psy informe par écrit l’employeur du fait qu’une telle demande a été introduite. Il lui communique l’identité du travailleur qui a introduit la demande.
+
+Le conseiller en prévention examine ensuite la demande en toute indépendance et impartialité. Il transmet un avis écrit à l’employeur dans un délai de 3 mois maximum à partir de l’acceptation de la demande. Ce délai peut être prolongé une fois de 3 mois maximum. Cet avis analyse les causes du problème et suggère des mesures à l’employeur. Le conseiller en prévention avertit les parties de la date de remise de son avis à l’employeur et leur communique les propositions de mesures qu’il a faite à l’employeur pour la situation spécifique.
+
+L’employeur, en tant que responsable du bien-être des travailleurs, décide lui-même des mesures qu’il prend (ou ne prend pas). Si il décide de prendre des mesures individuelles vis-à-vis d’un travailleur, il informe la personne visée par ces mesures dans le mois de la réception de l’avis du CP psy. Si ces mesures peuvent modifier les conditions de travail du travailleur, l’employeur transmet au travailleur une copie de l’avis du conseiller en prévention et entend ce travailleur qui peut se faire assister lors de cet entretien. Au plus tard deux mois après avoir reçu l’avis du CP psy, l’employeur informe les parties de sa décision finale càd des suites qu’il donne à la demande d’intervention. L’employeur exécute au plus vite les mesures qu’il a décidé de prendre.
+
+### Spécificités en cas de violence, harcèlement moral ou sexuel au travail
+
+Un travailleur qui estime être l’objet de violence, harcèlement moral ou sexuel au travail peut introduire auprès du CP psy une demande d’intervention psychosociale formelle pour faits de violence ou de harcèlement moral ou sexuel au travail. Cette demande est traitée de la même manière que la demande d’intervention psychosociale formelle à caractère principalement individuel (voir ci-dessus) avec un certain nombre de particularités :
+
+- Les éléments suivants doivent être mentionnés dans la demande : une description précise des faits constitutifs, selon le travailleur, de violence ou de harcèlement moral ou sexuel au travail, le moment et l’endroit où chacun des faits se sont déroulés, l’identité de la personne mise en cause et la demande à l’employeur de prendre des mesures appropriées pour mettre fin aux faits.
+
+- La demande doit être remise en mains propres ou envoyée par recommandé au CP psy (ou au service externe pour la prévention et la protection au travail).
+
+- Le travailleur qui introduit la demande et les témoins directs bénéficient de la protection contre les représailles. Cela signifie que l’employeur ne peut pas mettre fin à la relation de travail, ni prendre des mesures préjudiciables vis-à-vis de ce travailleur, en représailles des démarches du travailleur. Si l’employeur prend des mesures vis-à-vis de ce travailleur protégé pour régler la situation, ces mesures doivent avoir un caractère proportionnel et raisonnable.
+
+- Le CP psy communique à la personne mise en cause les faits qui lui sont reprochés.
+
+- Si la gravité des faits le justifie, le conseiller en prévention doit proposer des mesures conservatoires à l’employeur avant de lui rendre son avis.
+
+- Si le travailleur qui a introduit la demande ou la personne mise en cause envisagent d’agir en justice, l’employeur leur transmet à leur demande une copie de l’avis du CP psy.
+
+- Le CP ne communique pas l’identité de la personne mise en cause.
+
+### Heures de consultation de la personne de confiance et du conseiller en prévention aspects psychosociaux
+
+La personne de confiance et le conseiller en prévention aspects psychosociaux peuvent être consultés pendant les heures de travail. Le temps consacré à la consultation de la personne de confiance ou du conseiller en prévention aspects psychosociaux est dans ce cas considéré comme du temps de travail.
+
+Les frais de déplacement sont à charge de l’employeur quel que soit le moment de la consultation.
+
+### Confidentialité
+
+La personne de confiance et le conseiller en prévention aspects psychosociaux sont tenus au secret professionnel. Ils ne peuvent pas communiquer à des tiers les informations qu’ils reçoivent dans le cadre de leur fonction sauf si la législation le leur permet.
+
+L’employeur, les membres de la ligne hiérarchique et les personnes entendues par le conseiller en prévention s’engagent à faire preuve d’une discrétion absolue en ce qui concerne les personnes impliquées, les faits éventuels et les circonstances dans lesquelles les faits se sont déroulés.
+
+### Sanctions disciplinaires
+
+Sans préjudice des règles applicables en matière de licenciement et des sanctions pouvant résulter d’une action judiciaire, la personne qui se sera rendue coupable de violence ou de harcèlement moral ou sexuel au travail ou la personne qui a abusé de la procédure interne pourra se voir appliquer l’une des pénalités énumérées au {{ch:sanctions}} du présent règlement.
+
+### Registre des faits de tiers
+
+Le travailleur qui estime être l’objet de violence ou de harcèlement de la part d’un tiers (non travailleur de l’entreprise) peut faire une déclaration dans un registre qui est tenu par le conseiller en prévention.
+
+Le travailleur ne doit pas obligatoirement y indiquer son identité. Cette déclaration n’équivaut pas au dépôt d’une demande d’intervention psychosociale formelle pour faits de violence ou de harcèlement moral ou sexuel au travail. Elle sert uniquement à améliorer la prévention de ces faits dans l’entreprise.
+
+## Les procédures externes à l’entreprise.
+
+Si la situation problématique persiste malgré les mesures prises par l’employeur dans le cadre de la procédure interne ou si elle persiste parce que l’employeur n’a pas pris de mesures, le travailleur peut faire appel à l’inspection du Contrôle du bien-être au travail.
+
+Dans le cadre d’une demande d’intervention psychosociale formelle pour faits de violence ou de harcèlement moral ou sexuel au travail, le conseiller en prévention aspects psychosociaux est obligé de saisir l’inspection dans certaines hypothèses:
+
+- lorsqu’il constate que l’employeur n’a pas pris des mesures conservatoires (appropriées) ;
+
+- lorsqu’après avoir remis son avis à l’employeur, il constate que l’employeur n’a pas pris de mesures (appropriées) et
+
+- soit il existe un danger grave et immédiat pour le travailleur;
+
+- soit, la personne mise en cause est l’employeur ou fait partie du personnel de direction.
+
+Cette obligation du conseiller en prévention aspects psychosociaux n’empêche pas le travailleur de faire appel lui-même à l’inspection.
+
+Le travailleur peut à tout moment introduire une action en justice auprès du tribunal du travail ou devant les instances judiciaires compétentes.
+
+# [deconnexion] Droit à la déconnexion
+> Chapitre obligatoire si l’entreprise compte au moins 20 travailleurs et qu’aucune CCT sectorielle ou d’entreprise ne règle la question. En dessous, il peut être gardé comme bonne pratique.
+## Principe général
+
+En dehors des heures normales de travail, les travailleurs ont le droit de ne pas être connectés à leurs outils digitaux professionnels et ne sont donc pas tenus de consulter ni de répondre à leurs courriels, messages ou appels professionnels sauf cas de circonstances exceptionnelles liées à la continuité du service ou à des situations d’urgence dûment justifiées.
+
+Cette mesure est prise afin de garantir au travailleur un équilibre vie privée-familiale.
+
+Cela s’applique à tous les membres du personnel, quel que soit leur statut (employé, ouvrier), à l’exception des cas où la nature de la fonction implique une disponibilité en dehors des heures de travail.
+
+## Modalités pratiques
+
+- Les plages horaires normales de travail sont celles des horaires du magasin (annexe 3).
+
+- Le travailleur a le droit de ne pas répondre aux e-mails ou aux appels mobiles en dehors de ses heures normales de travail, sauf dans des circonstances exceptionnelles.
+
+- Par « heures normales de travail », on entend toutes les périodes pendant lesquelles le travailleur est à la disposition de son employeur.
+
+- Par « en dehors des heures de travail normales », on entend donc :
+
+- Les heures qui ne sont pas comprises dans l’horaire de travail (à l’exception des heures supplémentaires)
+
+- Les jours de repos, par exemple le week-end
+
+- Les autres absences, telles que les vacances, la maladie, les interruptions de carrière et autres suspensions du contrat de travail
+
+- Les pauses et les temps de repos
+
+- Sauf situation d’urgence, les travailleurs s’abstiennent de contacter pour motifs professionnels leurs collègues en dehors des heures de travail, pendant les périodes de repos, congés et suspension du contrat de travail.
+
+Une urgence est une situation dans laquelle le fonctionnement de l’organisation, du service ou des personnes est (ou est susceptible d’être) gravement perturbé, causant potentiellement des dommages et nécessitant une action immédiate ou rapide.
+
+## Formation et sensibilisation
+
+Des actions d’information et de sensibilisation sont organisées au sein de la société en vue d’informer les travailleurs au sujet des risques et des bonnes pratiques en lien avec l’utilisation des outils numériques et de l’importance de se déconnecter. Les membres du personnel de direction dialoguent au sein de leur équipe/département au sujet de l’équilibre travail-vie privée et veillent à ce que le cadre de travail permette d’éviter la connexion excessive.
+
+Les groupes de messagerie du magasin (planning, remplacements) suivent la même règle : un message envoyé en dehors des heures de travail n’attend pas de réponse avant la prochaine prestation, sauf urgence.
+
+# [alcool] Politique préventive en matière d’alcool et de drogues ⚠
+## Déclaration de politique :
+
+En ce qui concerne la C.C.T. 100 du C.N.T. relative à la politique préventive en matière d’alcool et de drogues dans l’entreprise, l’Employeur fait la déclaration de politique suivante :
+
+La mise en œuvre d’une politique visant à promouvoir le bien-être des travailleurs lors de l’exécution de leur travail est un élément intégré de la politique générale de l’entreprise. Une politique préventive en matière d’alcool et de drogues en fait partie.
+
+En effet, la consommation d’alcool ou de drogues liée au travail est l’un des facteurs qui peuvent influencer négativement la sécurité, la santé et le bien-être des travailleurs et de leur entourage. En outre, cela peut également avoir un impact négatif sur la productivité et la qualité du travail et détériorer notre image de marque.
+
+En ce qui concerne la politique préventive en matière de consommation d’alcool et de drogues liée au travail, l’employeur fait appel au bon sens et au comportement responsable de tous ses collaborateurs et des éventuelles autres personnes présentes sur le lieu de travail.
+
+L’employeur attend de ses travailleurs et des éventuelles autres personnes présentes sur le lieu de travail qu’ils se comportent de manière raisonnable en ce qui concerne la consommation d’alcool, afin d’éviter que cette consommation entraîne des situations problématiques pour eux-mêmes ou pour leurs collègues.
+
+L’employeur attend à cet égard de ses dirigeants qu’ils aient un comportement exemplaire et qu’ils interviennent de manière adéquate à l’égard de leurs collaborateurs dans des situations problématiques.
+
+L’employeur est d’avis que, dans l’état actuel de la situation et des relations mutuelles, il n’y a pas lieu d’élaborer des règles et prescriptions détaillées. Nous estimons que les accords existants concernant le fonctionnement des collaborateurs et des dirigeants offrent des possibilités suffisantes pour intervenir de manière adéquate, pour autant que cela s’avère nécessaire.
+
+# [formation] Formation ⚠
+## [dif] Droit individuel à la formation
+Le travailleur bénéficie d’un droit à la formation conformément à la loi du 03/10/2022 portant des dispositions diverses relatives au travail et, plus particulièrement, son Chapitre 12 « Investir dans la formation ».
+
+Le droit individuel de formation se concrétise, en l’absence de convention collective de travail ou de compte individuel de formation, au moyen d’un droit individuel de formation dans l’entreprise pour un travailleur occupé à temps plein : à concurrence d’au moins 5 jours de formation par an à partir de 2024.
+
+Le travailleur peut être invité par l’employeur à participer à des formations dispensées en dehors de son lieu habituel de travail. Dans ce cadre, le travailleur est tenu de s’y rendre, selon les modalités de tenue de la formation.
+
+Le temps de formation est considéré comme du temps de travail et ce, pour toute la durée de la formation, déplacement non-compris.
+> À valider : ce droit ne s’applique pas aux employeurs de moins de 10 travailleurs ; de 10 à 19 travailleurs, au moins un jour par an.
+
+## [formation_poste] Formation au poste et standards du réseau
+Chaque travailleur est formé à son poste selon le référentiel du réseau L’Atelier By :
+- un accueil et une prise de poste accompagnés ;
+- un parcours par niveau (débutant, équipier confirmé, responsable d’équipe) avec les compétences à valider ;
+- les formations obligatoires pour son poste, notamment l’hygiène et la sécurité alimentaire (HACCP) et les allergènes, avec leurs recyclages ;
+- la lecture des fiches du poste sur la tablette du magasin, signée « lu », leur quiz, puis la validation « vu faire » par le responsable, qui atteste que le geste est maîtrisé.
+
+Le temps de formation, y compris la lecture des fiches et les quiz demandés par l’employeur, est du temps de travail. Les formations peuvent être données dans le magasin, dans un autre magasin du réseau ou par les formateurs du réseau ; le travailleur s’y rend selon les modalités communiquées.
+
+# [cameras] Surveillance par caméras ⚠
+> Chapitre à garder si le magasin a des caméras. Il doit indiquer la finalité, le nombre et l’emplacement des caméras, les plages de fonctionnement et la durée de conservation des images. Finalités possibles : santé et sécurité, protection des biens, contrôle du processus de production (machines). Le contrôle du travail des travailleurs ne peut être que temporaire.
+Un système de caméras est utilisé dans l’enceinte de l’entreprise.
+
+Il faut entendre par surveillance par caméras, tout système de surveillance comportant une ou plusieurs caméras et visant à surveiller certains endroits ou certaines activités sur le lieu de travail à partir d’un point qui s’en trouve géographiquement éloigné, dans le but ou non de conserver les images dont il assure la collecte et la transmission.
+
+Les travailleurs reconnaissent que les modalités relatives à l’introduction de la surveillance par caméras sont adéquates, pertinentes et non excessives au regard des finalités poursuivies.
+
+Le système de caméras est [[permanent / temporaire]]. Il poursuit la finalité suivante : [[sécurité des personnes et protection des biens de l’entreprise — à préciser]].
+- Nombre de caméras : [[…]]
+- Emplacements : [[…]]
+- Fonctionnement : [[permanent / plages horaires]]
+- Durée de conservation des images : [[…]]
+
+L’employeur traite les images collectées de bonne foi, en conformité avec la (les) finalité(s) décrite(s) et conformément au GDPR. Si les images collectées sont utilisées à des finalités autres que celle pour laquelle la surveillance par caméra a été introduite, l’employeur s’assure que cet usage est compatible avec la finalité initiale et prend toutes les mesures pour éviter, vu le contexte, les erreurs d’interprétation.
+
+En outre, conformément au GDPR (Règlement général sur la protection des données), l’employeur renseigne ce traitement dans le registre des activités de traitements.
+
+Le personnel reconnaît avoir été parfaitement informé de tout ce qui précède.
+
+# [archivage] Archivage électronique des documents sociaux
+Les documents sociaux (fiches de paie, comptes individuels…) sont mis à disposition des travailleurs sous forme électronique par [[le secrétariat social]], sur la plateforme [[nom de la plateforme et numéro d’entreprise du prestataire]]. Le travailleur y accède par un compte sécurisé pendant la durée de son contrat et jusqu’à [[7]] ans après sa fin.
+> À adapter selon le secrétariat social du magasin. Le modèle BERDIFF nommait Go HR et Doccle.
+
+# [sanctions] Sanctions ⚠
+Les manquements du travailleur aux obligations de son contrat et au présent règlement qui ne constituent pas des motifs graves de rupture, peuvent être sanctionnés de la façon suivante :
+
+- un avertissement verbal ou écrit,
+
+- une mise en demeure écrite,
+
+- un licenciement
+
+Si un travailleur estime non-fondée la sanction qui lui est appliquée, le travailleur dispose d’un délai de 3 jours ouvrables à compter de la notification de la sanction pour se manifester par écrit auprès du responsable du personnel.
+
+En cas de licenciement, si le travailleur souhaite contester son licenciement auprès des cours et tribunaux compétents, celui-ci dispose d’un délai d’un an à compter de la fin de son contrat de travail pour introduire un recours à cet effet.
+> Le modèle ne prévoit pas d’amende. Si le magasin veut en prévoir, le règlement doit en fixer le montant et l’affectation : à valider avec le secrétariat social.
+
+# [rgpd] Protection des données personnelles (RGPD)
+L’entreprise respecte aussi bien la loi belge relative à la protection des personnes physiques à l’égard des traitements de données à caractère personnel de 30/07/2018 que le règlement européen général sur la protection des données 2016/679.
+
+L’**Annexe 1** du présent Règlement de travail reprend les grandes lignes relatives au traitement des données à caractère personnel pour les parties concernées.
+
+Les données traitées par les outils du magasin et du réseau, leurs destinataires et la durée de leur conservation sont décrits à l’annexe 1.
+
+# [final] Dispositions finales
+Le présent règlement a été affiché pendant une période de 15 jours, du [[date]] au [[date]].
+
+Date d’entrée en vigueur : [[date]].
+
+Signature de l’employeur :
+!PAGE
+!ANNEXE Annexe 1 · Protection des données personnelles (RGPD)
+L’entreprise respecte aussi bien la loi belge relative à la protection des personnes physiques à l’égard des traitements de données à caractère personnel de 30/07/2018 que le règlement européen général sur la protection des données 2016/679.
+
+Cette annexe reprend les grandes lignes relatives au traitement des données à caractère personnel pour les parties concernées.
+
+#### Traitement des données à caractère personnel : définitions pertinentes
+
+Le Règlement général sur la protection des données prévoit une définition détaillée des notions de données à caractère personnel et du traitement de celles-ci. Les définitions pertinentes peuvent être consultées à l’article 4 du Règlement européen 2016/679.
+
+#### Objectif et fondements juridiques relatifs au traitement des données à caractère personnel
+
+Les données à caractère personnel que le travailleur communique à l’employeur sont destinées à être traitées.
+
+Ces traitements servent à respecter les obligations légales en la matière ainsi qu’à apporter exécution aux droits et obligations en tant que partie de la politique du personnel au sens large du terme.
+
+Compte tenu de ce qui précède, le traitement des données à caractère personnel se base sur un ou plusieurs des fondements juridiques suivants :
+
+- Le contrat (de travail) entre l’employeur et le travailleur ;
+
+- Les obligations légales ;
+
+- L’intérêt légitime de l’entreprise.
+
+#### Transmission des données à caractère personnel à des tiers
+
+Le traitement des données à caractère personnel implique également que, dans certains cas, ces données soient transmises à des tiers.
+
+L’employeur transmettra uniquement les données indispensables que ce soit au sein de son organisation ou à des tiers (y compris d’autres instances autorisées légalement) avec lesquels l’employeur entretient une relation contractuelle.
+
+#### Droit d’accès et de rectification des données à caractère personnel
+
+Le travailleur a le droit d’accéder aux données le concernant traitées par l’employeur. Le travailleur a également le droit de faire rectifier toute donnée à caractère personnel incorrecte le concernant.
+
+Dans le mois qui suit l’introduction d’une telle demande écrite, l’employeur doit communiquer son point de vue ou, le cas échéant, communiquer les rectifications apportées aux données concernant le travailleur.
+
+Chaque travailleur a en outre le droit d’obtenir l’effacement de toute donnée à caractère personnel le concernant qui est incomplète ou non pertinente, ou dont l’enregistrement, la communication ou la conservation sont interdits ou encore qui a été conservée au-delà de la durée autorisée. Dans le mois qui suit l’introduction de la requête, l’employeur doit signaler s’il a donné suite à la demande d’effacement et si oui, dans quelle mesure.
+
+Vous pouvez retrouver une description détaillée des droits au chapitre III du Règlement européen 2016/679.
+#### Données traitées par les outils du magasin et du réseau
+Pour l’organisation du travail et le respect des standards du réseau, l’employeur traite aussi les données suivantes :
+- la tablette du magasin : l’identité du travailleur, son code personnel, les fiches lues (« lu »), les résultats des quiz et les validations « vu faire » ;
+- les checklists : les tâches faites, leur heure, la personne qui les a faites et les photos de contrôle ;
+- la caisse : le code vendeur et les opérations enregistrées ;
+- le planning et, le cas échéant, l’enregistrement du temps de travail ;
+- les déclarations Dimona et les données transmises au secrétariat social ;
+- les images des caméras, le cas échéant ({{ch:cameras}}).
+
+Ces données sont accessibles à l’employeur et aux responsables du magasin. Elles sont aussi traitées par le franchiseur et ses prestataires techniques, qui fournissent les outils du réseau (tablette, checklists, gestion du magasin), dans les limites prévues par le contrat de franchise : [[rôle du franchiseur à préciser : sous-traitant ou responsable conjoint du traitement]]. Elles sont conservées [[durées à préciser par catégorie]].
+> À valider par un avocat ou un délégué à la protection des données : le rôle du franchiseur (sous-traitant ou responsable conjoint), le contrat qui encadre ce partage et les durées de conservation.
+
+
+Si une situation venait à se produire dans laquelle le travailleur souhaite exercer ses droits, ce dernier peut alors s’adresser à :
+
+Le travailleur peut, à défaut de solution, s’adresser à l’Autorité de protection des données (www.autoriteprotectiondonnees.be).
+
+#### Mesures de sécurité et durée de conservation
+
+L’entreprise prend les mesures de protection et de sécurité nécessaires tant sur le plan organisationnel que technique en vue de protéger les données à caractère personnel.
+
+Celles-ci sont traitées pendant le temps indispensable au respect des dispositions décrites ci-dessus et ne sont pas conservées plus longtemps que le temps strictement nécessaire aux fins pour lesquelles elles ont été récoltées.
+!PAGE
+!ANNEXE Annexe 2 · Convention collective de travail n° 25 du 15 octobre 1975 sur l’égalité des rémunérations entre travailleurs masculins et féminins, modifiée par les CCT n° 25 bis du 19 décembre 2001 et n° 25 ter du 9 juillet 2008
+#### Objet et champ d’application
+
+**Article 1.** (La présente convention collective de travail a pour objet de réaliser le principe de l’égalité des rémunérations entre travailleurs masculins et féminins, qui figure à l’article 141, § 1er et § 2 du Traité instituant la Communauté européenne.)
+
+L’égalité des rémunérations implique, pour un même travail ou pour un travail de valeur égale, l’élimination de toute discrimination fondée sur le sexe.
+
+**Commentaire**
+
+L’égalité des rémunérations doit être réalisée au niveau où se forment les salaires.
+
+**Article 2.** La présente convention collective de travail s’applique aux travailleurs et aux employeurs visés par l’article 2 de la loi du 5 décembre 1968 sur les conventions collectives de travail et les commissions paritaires.
+
+#### Mise en œuvre
+
+**Article 3.** L’égalité des rémunérations entre les travailleurs masculins et les travailleurs féminins doit être assurée dans tous les éléments et conditions de rémunération, y compris les systèmes d’évaluation des fonctions.
+
+Les systèmes d’évaluation des fonctions doivent assurer l’égalité de traitement dans le choix des critères, dans leur pondération et dans le système de transposition des valeurs d’évaluation en composantes de la rémunération.
+
+Les secteurs et entreprises qui ne l’ont pas encore fait évaluent leurs systèmes d’évaluation des fonctions et leurs classifications salariales en fonction de l’obligation de neutralité de genre et y apportent, le cas échéant, les corrections nécessaires.
+
+**Article 4.** On entend par rémunération :
+
+- le salaire en espèces auquel le travailleur a droit à charge de l’employeur en raison de son engagement;
+
+- le pourboire ou service auquel le travailleur a droit en raison de son engagement ou en vertu de l’usage;
+
+- les avantages évaluables en argent auxquels le travailleur a droit à charge de l’employeur en raison de son engagement;
+
+- les indemnités payées par l’employeur comme pécule de vacances conventionnel et complémentaire au pécule légal de vacances;
+
+- les indemnités résultant des régimes complémentaires non légaux de sécurité sociale.
+
+**Commentaire**
+
+La notion de rémunération doit être interprétée dans le sens large, conformément à l’esprit des travaux préparatoires de la loi du 12 avril 1965 concernant la protection de la rémunération des travailleurs (cf. Rapport de M. L.E. TROCLET à la Commission de l’Emploi, du Travail et de la Prévoyance sociale, Doc. Parl., Sénat, n° 115, session 1964-1965, 9.2.1965, pages 9 et 18) et à la jurisprudence de la Cour de justice des Communautés européennes.
+
+Conformément à l’article 12 de la loi du 10 mai 2007 tendant à lutter contre la discrimination entre les hommes et les femmes, en ce qui concerne les régimes complémentaires de sécurité sociale, une distinction directe fondée sur le sexe constitue une discrimination directe.
+
+Par dérogation à ce qui précède, seules les distinctions fondées sur les espérances de vie respectives des hommes et des femmes sont admises.
+
+Toutefois, les engagements de pension n’établissent aucune distinction entre les hommes et les femmes pour définir le niveau des contributions personnelles.
+
+En outre, les engagements de pension de type contributions définies n’établissent pas de distinction entre les hommes et les femmes pour définir le niveau des contributions.
+
+Les distinctions fondées sur les espérances de vie respectives des hommes et des femmes sont admises tant dans le chef de l’organisateur du régime complémentaire de sécurité sociale que dans celui de l’organisme de pension ou d’assurance qui met ce régime en œuvre.
+
+Par ailleurs, concernant les années de service prestées après le 17 mai 1990, l’engagement de pension, tel que visé dans la loi du 28 avril 2003 relative aux pensions complémentaires et au régime fiscal de celles-ci et de certains avantages complémentaires en matière de sécurité sociale, ne peut contenir aucune autre distinction directe fondée sur le sexe que celles fondées sur les espérances de vie respectives des hommes et des femmes.
+
+La distinction directe opérée sur la base du sexe dans les engagements de pension comme visés par la loi du 28 avril 2003 précitée concernant les années de service prestées jusqu’au 17 mai 1990 inclus n’entraînent aucune distinction illicite contraire à l’article 45 de la loi du 27 juin 1969 révisant l’arrêté-loi du 28 décembre 1944 concernant la sécurité sociale des travailleurs. Cet article 45 prévoit en effet que tout employeur qui accorde volontairement à son personnel des avantages d’ordre social complémentaire de sécurité sociale doit les accorder sans distinction à tous les travailleurs de son entreprise appartenant à une même catégorie.
+
+L’article 12 de la loi du 10 mai 2007 précitée transpose l’article 6, h) de la Directive 86/378/CEE du Conseil du 24 juillet 1986 relative à la mise en œuvre du principe de l’égalité de traitement entre hommes et femmes dans les régimes professionnels de sécurité sociale tel qu’il à été remplacé par la Directive 96/97/CE du Conseil du 20 décembre 1996.
+
+Cet article 6, h) est libellé comme suit : "Sont à classer au nombre des dispositions contraires au principe de l’égalité de traitement celles qui se fondent sur le sexe, soit directement, soit indirectement, notamment par référence à l’état matrimonial ou familial pour : (Y) fixer des niveaux différents pour les prestations, sauf dans la mesure nécessaire pour tenir compte d’éléments de calcul actuariel qui sont différents pour les deux sexes dans le cas de régimes à cotisations définies.
+
+Dans le cas de régimes à prestations définies, financées par capitalisation, certains éléments peuvent être inégaux dans la mesure où l’inégalité des montants est due aux conséquences de l’utilisation de facteurs actuariels différents selon le sexe lors de la mise en œuvre du financement du régime.
+
+**Article 5.** Tout travailleur qui s’estime lésé ou l’organisation représentative de travailleurs à laquelle il est affilié, peut intenter auprès de la juridiction compétente une action tendant à faire appliquer le principe de l’égalité des rémunérations entre les travailleurs masculins et les travailleurs féminins.
+
+**Commentaire**
+
+Conformément à l’article 4 de la loi du 5 décembre 1968 sur les conventions collectives de travail et les commissions paritaires, les organisations représentatives des travailleurs peuvent ester en justice pour la défense des droits que leurs membres puisent dans les conventions conclues par elles ; ce pouvoir ne porte cependant pas atteinte au droit des membres d’agir personnellement.
+
+**Article 6.** Une commission spécialisée, de composition paritaire, sera créée à l’initiative des organisations signataires de la présente convention collective de travail.
+
+Elle aura pour mission de donner des avis à la juridiction compétente, si cette dernière le demande, sur les litiges portant sur l’application du principe de l’égalité des rémunérations.
+
+(En outre, elle informera et sensibilisera les partenaires sociaux au sujet des initiatives en matière de systèmes d’évaluation des fonctions, neutres sur le plan du sexe, et, à la demande des commissions paritaires, elle donnera des avis et prêtera son assistance.)
+
+**Commentaire**
+
+En raison du caractère très technique de nombre de litiges pouvant être soumis aux juridictions compétentes, dans l’application du principe de l’égalité des rémunérations, les organisations signataires se sont prononcées en faveur de la création d’une commission composée de personnes spécialisées en matière d’évaluation des fonctions et de détermination des rémunérations. Elle comptera trois membres représentant les organisations d’employeurs et trois membres représentant les organisations de travailleurs; il y aura autant de membres suppléants.
+
+Les membres de la Commission pourront se faire assister d’experts selon les cas.
+
+La Commission du travail des femmes sera informée des travaux de cette commission.
+
+(Afin de développer une dynamique visant à la réalisation de systèmes d’évaluation des fonctions, neutres sur le plan du sexe, la commission spécialisée de composition paritaire rassemblera toutes les informations utiles relatives aux initiatives en matière de systèmes d’évaluation des fonctions, neutres sur le plan du sexe, et elle en informera les partenaires sociaux et les y sensibilisera.
+
+En outre, les commissions paritaires peuvent, si elles le souhaitent, solliciter à cet égard l’avis et l’assistance de la commission spécialisée de composition paritaire.)
+
+**Article 7.** 
+
+§ 1. L’employeur qui occupe un travailleur qui a déposé une plainte motivée soit au niveau de l’entreprise, selon les procédures conventionnelles en vigueur dans celle-ci, soit à l’Inspection sociale, ou qui intente ou pour lequel est intentée une action en justice tendant à revoir la rémunération sur la base de la présente convention collective de travail, ne peut mettre fin à a relation de travail ni modifier unilatéralement les conditions de travail, sauf pour des motifs étrangers à cette plainte ou à cette action.
+
+La charge de la preuve de ces motifs incombe à l’employeur lorsque le travailleur est licencié ou lorsque ses conditions de travail ont été modifiées unilatéralement dans les douze mois qui suivent le dépôt d’une plainte telle que visée au précédent alinéa. Cette charge incombe également à l’employeur en cas de licenciement ou en cas de modification unilatérale des conditions de travail intervenus après l’intentement d’une action en justice telle que visée au précédent alinéa et ce, jusqu’à trois mois après que le jugement est coulé en force de chose jugée.
+
+§ 2. Lorsque l’employeur rompt le contrat de louage de travail ou modifie unilatéralement les conditions de travail, en violation des dispositions du § 1er, alinéa 1er du présent article, le travailleur ou l’organisation de travailleurs à laquelle il est affilié demande la réintégration dans l’entreprise ou la reprise du poste de travail aux conditions fixées dans le contrat. La demande est faite par lettre recommandée à la poste, dans les trente jours qui suivent la date de la notification du préavis, de la rupture sans préavis ou de la modification unilatérale des conditions de travail. L’employeur doit prendre position sur cette demande dans le délai de trente jours suivant sa notification.
+
+L’employeur qui réintègre dans l’entreprise le travailleur ou le remet dans son poste de travail initial est tenu de payer la rémunération perdue du fait du licenciement ou de la modification des conditions de travail et de verser les cotisations des employeurs et des travailleurs afférentes à cette rémunération.
+
+§ 3. A défaut de réintégration ou de reprise au poste de travail suivant la demande, visée au § 2, alinéa 1er, du travailleur dont le licenciement ou la modification unilatérale des conditions de travail ont été jugés contraires aux dispositions du § 1er, alinéa 1er, l’employeur payera au travailleur une indemnité égale, selon le choix du travailleur, soit à un montant forfaitaire correspondant à la rémunération brute de six mois, soit au préjudice réellement subi par le travailleur, à charge pour celui-ci de prouver l’étendue de ce préjudice, dans ce dernier cas.
+
+§ 4. L’employeur est tenu de payer la même indemnité, sans que le travailleur soit tenu d’introduire la demande de réintégration ou de reprise au poste de travail visée au § 2, alinéa 1er :
+
+1° lorsque le travailleur rompt le contrat en raison de comportements de l’employeur contraires aux dispositions du § 1er, alinéa 1er, qui dans le chef du travailleur constituent un motif grave pour rompre le contrat;
+
+2° lorsque l’employeur a licencié le travailleur pour un motif grave, à condition que la juridiction compétente ait jugé le licenciement non fondé et contraire aux dispositions du § 1er, alinéa 1er.
+
+**Commentaire**
+
+Le présent article prévoit une protection contre le licenciement en ce sens que l’employeur ne peut pas mettre fin à la relation de travail pour des motifs inhérents à l’intentement d’une action en justice ou le dépôt d’une plainte.
+
+La procédure concernant le dépôt de la plainte doit être appliquée avec souplesse; cette plainte peut être introduite selon une procédure conventionnelle au niveau de l’entreprise ou auprès de l’inspection sociale, mais on pourrait également considérer comme valable la plainte écrite déposée par un travailleur affilié à une organisation syndicale non représentée dans l’entreprise.
+
+Cette protection est également prévue en cas de modification unilatérale des conditions de travail intervenue en raison d’une plainte ou d’une action et ce en vue d’éviter, par exemple, des mutations d’emploi injustifiées dans l’entreprise, c’est-à-dire celles qui ne sont pas rendues nécessaires par l’organisation normale du travail dans l’entreprise. Il y a lieu, d’autre part, d’attirer l’attention sur le fait que la modification unilatérale d’une condition essentielle du contrat est considérée par la jurisprudence comme pouvant entraîner la rupture du contrat.
+
+En cas de licenciement ou de modification unilatérale des conditions de travail, pour les motifs injustifiés précités, le travailleur ou l’organisation syndicale à laquelle il est affilié demande la réintégration dans l’entreprise ou la reprise au poste de travail. En cas de refus, l’employeur doit payer une indemnité au travailleur lorsque le licenciement ou la modification unilatérale des conditions de travail ont été jugés contraires aux dispositions du § 1er, alinéa 1er du présent article. Cette indemnité est, selon le choix du travailleur, égale soit à un montant forfaitaire équivalent à la rémunération brute de six mois, soit à un montant égal au préjudice réellement subi, à condition que le travailleur puisse en prouver l’étendue.
+
+#### Publicité
+
+**Article 8.** Le texte de la présente convention collective de travail est annexé au règlement de travail de l’entreprise.
+
+#### Dispositions finales
+
+**Article 9.** (La présente convention est conclue pour une durée indéterminée. Elle entre en vigueur à la date de sa conclusion.)
+
+Elle pourra être révisée ou dénoncée à la demande de la partie signataire la plus diligente, moyennant un préavis de six mois.
+
+L’organisation qui prend l’initiative de la révision ou de la dénonciation doit en indiquer les motifs et déposer des propositions d’amendements que les autres organisations s’engagent à discuter au sein du Conseil national du travail dans le délai d’un mois de leur réception.
+
+#### Dispositions obligatoires
+
+**Article 10.** Les parties signataires s’engagent à prendre les dispositions nécessaires afin que les juges et conseillers sociaux nommés au titre de travailleurs ou d’employeurs au sein des tribunaux et des Cours du travail, soient informés de l’existence de la commission spécialisée prévue à l’article 6 de la présente convention. Elles s’engagent en outre à recommander à leurs organisations qui resteront en justice pour la défense des droits résultant de la présente convention, de demander à la juridiction compétente de consulter la commission précitée.
+
+(Les parties signataires s’engagent de surcroît à prendre les dispositions nécessaires afin que les commissions paritaires soient informées du rôle de la commission spécialisée de composition paritaire, prévu à l’article 6, troisième alinéa de la présente convention, en matière de systèmes d’évaluation des fonctions, neutres sur le plan du sexe.)
+
+**Commentaire**
+
+En exécution de l’article 10, deuxième alinéa, les parties signataires ont transmis aux commissions paritaires la communication n° 8 du 19 décembre 2001 sur le rôle de la commission spécialisée de composition paritaire, créée dans le cadre de l’article 6 de la convention collective de travail n° 25 du 15 octobre 1975 sur l’égalité des rémunérations entre les travailleurs masculins et les travailleurs féminins, en matière de systèmes neutres d’évaluation des fonctions.)
+
+**Article 11.** Les parties signataires s’engagent à examiner les résultats de l’application de la présente convention au plus tard 12 mois après sa date d’entrée en vigueur.
+!PAGE
+!ANNEXE Annexe 3 · Horaires du magasin
+> À compléter par le magasin : les plages réelles de chaque poste, dans le cadre de l’{{art:cadre}}. Les horaires individuels figurent dans les contrats.
+!TABLE
+Poste | Lundi | Mardi | Mercredi | Jeudi | Vendredi | Samedi | Dimanche
+Production boulangerie-pâtisserie | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]]
+Production traiteur | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]]
+Vente : ouverture | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]]
+Vente : fermeture | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]]
+Pauses | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]] | [[…]]
+!ENDTABLE
+!ESPACE
+!ANNEXE Annexe 4 · Avis de remplacement des jours fériés
+> À afficher au plus tard le 15 décembre de l’année qui précède, et à joindre au règlement.
+!TABLE
+Jour férié | Tombe le | Remplacé par
+[[…]] | [[…]] | [[…]]
+[[…]] | [[…]] | [[…]]
+!ENDTABLE

@@ -28,4 +28,4 @@ if ($uri === '/hr') {
     header('Location: /hr/', true, 301);
     return true;
 }
-return require __DIR__ . '/../../public/router.php';
+return require __DIR__ . '/../../../shared/public/router.php';

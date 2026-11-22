@@ -168,7 +168,7 @@ MYSQL="$(command -v mysql || command -v mariadb || true)"
 [[ -n "$MYSQL" ]] || fail "Client mysql introuvable sur le serveur."
 # Compte d'administration : root par socket, sinon le compte de maintenance
 # d'Ubuntu, sinon le compte MySQL du cockpit (config.php écrit par bin/deploy.sh).
-COCKPIT_CFG="${COCKPIT_CFG:-/var/www/consulant_bo/config/config.php}"
+COCKPIT_CFG="${COCKPIT_CFG:-/var/www/consulant_bo/shared/config/config.php}"   # disposition en domaines (19/11/2026) ; config/config.php y renvoie aussi
 C_USER=""; C_PASS=""
 if "$MYSQL" -e 'SELECT 1' >/dev/null 2>&1; then
   ADMIN=("$MYSQL"); ADMIN_KIND="root (socket)"

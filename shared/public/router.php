@@ -1,0 +1,62 @@
+<?php
+/**
+ * Routeur pour le serveur de développement PHP :
+ *   php -S 0.0.0.0:8080 -t public public/router.php
+ *
+ * /api/cockpit/*  → API REST
+ * /api/v1/erp/dimona/* et /hr/api/v1/erp/dimona/* → API du module RH (public/api/hr)
+ * fichiers réels  → servis tels quels
+ * dossier avec son index.html (tablette/, planogramme/…) → cet index.html
+ * fichier absent sous tablette/, formation/ ou uploads/ → 404, comme le .htaccess
+ * tout le reste   → index.html (SPA)
+ */
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+// Le module Formation appelle l'API à côté de lui (formation/api/cockpit), comme sur le serveur.
+// Le portail Commercial aussi (commercial/api/cockpit, 19/11/2026).
+if (str_starts_with($uri, '/api/cockpit') || str_starts_with($uri, '/formation/api/cockpit') || str_starts_with($uri, '/commercial/api/cockpit')) {
+    require __DIR__ . '/api/index.php';
+    return true;
+}
+// Le module RH (/hr) appelle son API à côté de lui, comme derrière l'alias Apache.
+if (str_contains($uri, '/api/v1/erp/dimona')) {
+    require __DIR__ . '/../../pilotage-reseau/public/api/hr/index.php';
+    return true;
+}
+// Le site assemblé (réorganisation du 19/11/2026) : -t public, des liens vers le public/ de chaque domaine
+// (php shared/bin/assembler_public.php public). Sans lui, le dossier de ce routeur.
+$site = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? '') ?: __DIR__, '/');
+// Les fichiers communs du cockpit sous /commercial/assets/ (la Prospection du portail Commercial, 19/11/2026), comme
+// l'alias Apache de shared/bin/deploy.sh.
+if (str_starts_with($uri, '/commercial/assets/') && is_file($site . substr($uri, 11))) {
+    $types = ['css' => 'text/css', 'js' => 'text/javascript', 'png' => 'image/png', 'svg' => 'image/svg+xml', 'otf' => 'font/otf', 'ttf' => 'font/ttf', 'woff2' => 'font/woff2'];
+    header('Content-Type: ' . ($types[strtolower(pathinfo($uri, PATHINFO_EXTENSION))] ?? 'application/octet-stream'));
+    readfile($site . substr($uri, 11));
+    return true;
+}
+if ($uri !== '/' && is_file($site . $uri)) {
+    // Le serveur intégré ne connaît pas le type du manifeste d'une PWA.
+    if (str_ends_with($uri, '.webmanifest')) {
+        header('Content-Type: application/manifest+json');
+        readfile($site . $uri);
+        return true;
+    }
+    return false; // fichier statique
+}
+if ($uri !== '/' && is_dir($site . $uri) && is_file(rtrim($site . $uri, '/') . '/index.html')) {
+    // Sans la barre finale, les chemins relatifs de la page (./assets/…) partiraient du dossier parent.
+    if (!str_ends_with($uri, '/')) {
+        $q = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+        header('Location: ' . $uri . '/' . ($q ? '?' . $q : ''), true, 301);
+        return true;
+    }
+    return false; // le serveur intégré sert l'index.html du dossier
+}
+if (preg_match('#^/(tablette|formation|uploads|assistant/uploads)(/|$)#', $uri)) {
+    http_response_code(404);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Fichier absent';
+    return true;
+}
+require __DIR__ . '/index.html';
+return true;

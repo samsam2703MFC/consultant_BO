@@ -1,0 +1,216 @@
+{
+ "id": "chk-bien-tenue",
+ "code": "5.6.02",
+ "type": "Checklist",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "statut": "publiee",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": null,
+ "titre": {
+  "fr": "Une franchise bien tenue",
+  "nl": "Een goed geleide franchise"
+ },
+ "objectif": {
+  "fr": "Huit questions à se poser chaque mois : chaque « non » est un point de valeur à aller chercher. Le pourquoi de chaque question : article 0.0.56.",
+  "nl": "Acht vragen om uzelf elke maand te stellen: elk « nee » is een waardepunt om te verwerven. Het waarom van elke vraag: artikel 0.0.56."
+ },
+ "pour": {
+  "fr": "Exécutant : franchisé ; contrôle : autocontrôle ; fréquence : chaque mois",
+  "nl": "Uitvoerder: franchisenemer; controle: zelfcontrole; frequentie: elke maand"
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Les tâches",
+    "nl": "De taken"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Deux semaines sans le dirigeant",
+      "nl": "Twee weken zonder de leidinggevende"
+     },
+     "texte": {
+      "fr": "Le magasin peut-il tourner deux semaines sans vous, sans baisse de résultat ?\nPourquoi : si tout le monde attend le dirigeant pour décider, on possède un emploi, pas une entreprise (article 0.0.56).",
+      "nl": "Kan de winkel twee weken zonder u draaien, zonder daling van het resultaat?\nWaarom: als iedereen op de leidinggevende wacht om te beslissen, bezit men een job, geen onderneming (artikel 0.0.56)."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Une journée tenue sans le dirigeant",
+      "nl": "Een dag geleid zonder de leidinggevende"
+     },
+     "texte": {
+      "fr": "Quelqu’un d’autre que vous sait-il ouvrir, fermer, commander et gérer une journée complète ?\nPourquoi : un magasin qui dépend d’une seule personne ne se transmet pas.",
+      "nl": "Kan iemand anders dan u een volledige dag openen, sluiten, bestellen en beheren?\nWaarom: een winkel die van één persoon afhangt, kan niet worden overgedragen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Chaque poste tenu par deux personnes formées",
+      "nl": "Elke functie door twee opgeleide personen ingevuld"
+     },
+     "texte": {
+      "fr": "Chaque poste peut-il être tenu par au moins deux personnes formées ?\nPourquoi : un départ, une maladie ou des vacances ne doivent pas faire baisser le niveau.",
+      "nl": "Kan elke functie door minstens twee opgeleide personen worden ingevuld?\nWaarom: een vertrek, een ziekte of vakantie mag het niveau niet doen dalen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Niveaux de compétence à jour",
+      "nl": "Competentieniveaus bijgewerkt"
+     },
+     "texte": {
+      "fr": "Les niveaux de compétence de l’équipe sont-ils à jour dans le référentiel ?\nPourquoi : une équipe formée et validée selon le référentiel est une équipe qu’on peut reprendre.",
+      "nl": "Zijn de competentieniveaus van het team bijgewerkt in het referentiekader?\nWaarom: een team dat volgens het referentiekader is opgeleid en gevalideerd, is een team dat men kan overnemen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Douze mois de chiffres sans trou",
+      "nl": "Twaalf maanden cijfers zonder gaten"
+     },
+     "texte": {
+      "fr": "Les douze derniers mois de chiffres sont-ils tous dans le système, sans trou ?\nPourquoi : un repreneur ou une banque lit un trou dans les chiffres comme un risque.",
+      "nl": "Staan alle cijfers van de voorbije twaalf maanden in het systeem, zonder gaten?\nWaarom: een overnemer of een bank leest een gat in de cijfers als een risico."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Ratios dans les normes du réseau",
+      "nl": "Ratio’s binnen de normen van het netwerk"
+     },
+     "texte": {
+      "fr": "Food cost, masse salariale, frais généraux : êtes-vous dans les normes du réseau, et savez-vous expliquer les écarts ?\nPourquoi : ce sont les premiers chiffres qu’un repreneur compare.",
+      "nl": "Food cost, loonkost, algemene kosten: zit u binnen de normen van het netwerk, en kunt u de afwijkingen verklaren?\nWaarom: dat zijn de eerste cijfers die een overnemer vergelijkt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Standards du réseau appliqués",
+      "nl": "Standaarden van het netwerk toegepast"
+     },
+     "texte": {
+      "fr": "Appliquez-vous les standards du réseau, sans version maison des procédures ?\nPourquoi : chaque écart à la procédure retire de la valeur au fonds, même quand il paraît anodin.",
+      "nl": "Past u de standaarden van het netwerk toe, zonder eigen versie van de procedures?\nWaarom: elke afwijking van de procedure haalt waarde van de handelszaak af, ook als ze onschuldig lijkt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Activité lisible en une heure",
+      "nl": "Activiteit leesbaar in één uur"
+     },
+     "texte": {
+      "fr": "Un repreneur comprendrait-il l’activité en une heure, avec le système seul ?\nPourquoi : c’est ce qui rend la boutique vendable demain.",
+      "nl": "Zou een overnemer de activiteit in één uur begrijpen, enkel met het systeem?\nWaarom: dat maakt de winkel morgen verkoopbaar."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Un trou dans les chiffres se lit comme un risque : encoder chaque jour est la condition de la valeur.",
+   "nl": "Een gat in de cijfers wordt gelezen als een risico: elke dag invoeren is de voorwaarde voor de waarde."
+  },
+  {
+   "fr": "Chaque écart à la procédure retire de la valeur au fonds, même quand il paraît anodin.",
+   "nl": "Elke afwijking van de procedure haalt waarde weg van de zaak, ook al lijkt ze onschuldig."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Que révèle le test des deux semaines sans le dirigeant ?",
+    "nl": "Wat toont de test van twee weken zonder de leidinggevende?"
+   },
+   "choix": {
+    "fr": [
+     "Si les chiffres et les standards ont tenu, on possède une entreprise ; si tout le monde attendait pour décider, on possède un emploi",
+     "Si l’équipe mérite des congés",
+     "Rien : c’est une question de confiance"
+    ],
+    "nl": [
+     "Als de cijfers en de standaarden standhielden, bezit men een onderneming; als iedereen wachtte om te beslissen, bezit men een job",
+     "Of het team verlof verdient",
+     "Niets: het is een kwestie van vertrouwen"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Une réponse « non » à l’une des huit questions, c’est…",
+    "nl": "Een « nee » op een van de acht vragen is…"
+   },
+   "choix": {
+    "fr": [
+     "Une faute à sanctionner",
+     "Un point de valeur à aller chercher",
+     "Sans importance si les ventes montent"
+    ],
+    "nl": [
+     "Een fout die bestraft moet worden",
+     "Een waardepunt om te verwerven",
+     "Zonder belang als de verkoop stijgt"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "classement": {
+  "souscat": "D7.5",
+  "phases": [
+   "operationnel"
+  ],
+  "postes": [
+   "P11"
+  ],
+  "competences": [
+   "C-PILOTAGE.Franchise"
+  ],
+  "formations": [
+   "FO-32",
+   "FO-41"
+  ],
+  "checklists": [
+   "5.6.02"
+  ]
+ }
+}

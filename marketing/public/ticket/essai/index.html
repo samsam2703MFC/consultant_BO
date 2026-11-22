@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Essai · fiche produits du ticket</title>
+<!-- L'essai de la fiche produits du ticket (21/11/2026), réservé au siège (session du cockpit) : choisir une boutique et
+     un jour, voir ses transactions, ou taper un numéro de transaction ; ouvrir la page client et son QR.
+     API : ../../api/cockpit/marketing/ticket/essai/{boutiques,jour,lien} (marketing/src/ticket_client.php). -->
+<script src="../../assets/js/garde.js" data-api="../../api/cockpit" data-siege="1"></script>
+<script src="../../assets/vendor/qrcode/qrcode.js"></script>
+<link rel="stylesheet" href="../ticket.css">
+<style>
+  .essai{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  .essai h1{font-size:34px;line-height:1;letter-spacing:-.03em;font-weight:700;margin-top:10px}
+  .essai .p{margin-top:10px;color:var(--muted);font-size:14.5px;line-height:1.55;font-weight:500}
+  .form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:20px}
+  .form label{display:grid;gap:6px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .form select,.form input{font:inherit;font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink);padding:12px;border:1px solid var(--hair-2);border-radius:10px;background:var(--paper)}
+  .form .btn{border:0;cursor:pointer;padding:13px 20px}
+  .liste{display:grid;gap:8px;margin-top:18px}
+  .tx{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--paper);font-size:14px;font-weight:500}
+  .tx b{font-weight:700}.tx small{color:var(--muted)}
+  .tx a{font-weight:600;color:var(--ruby)}
+  .tx button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--hair-2);background:transparent;border-radius:8px;padding:7px 10px;cursor:pointer}
+  .msg{margin-top:14px;font-size:13px;color:var(--muted);font-weight:500}
+  .msg code{font-size:12px}
+  .qr{display:none;margin-top:18px;padding:18px;border-radius:14px;background:var(--paper);text-align:center}
+  .qr.on{display:block}
+  .qr img{width:200px;height:200px;margin:0 auto}
+  .qr p{margin-top:8px;font-size:12.5px;color:var(--muted);word-break:break-all}
+  @media (max-width:620px){.form{grid-template-columns:1fr}.tx{grid-template-columns:1fr auto}}
+</style>
+</head>
+<body>
+<div class="sand" style="min-height:100vh;padding-top:0">
+  <main class="essai">
+    <p class="eyebrow eyebrow--ruby">Essai · réservé au siège</p>
+    <h1>La fiche produits du ticket</h1>
+    <p class="p">Choisissez une boutique et un jour : les transactions du panel s’affichent, chacune avec la page que verra le client et son QR. Ou tapez directement un numéro de transaction.</p>
+
+    <form class="form" id="jour">
+      <label>Boutique<select id="shop" required></select></label>
+      <label>Jour<input type="date" id="date" required></label>
+      <button class="btn" type="submit">Voir les tickets</button>
+    </form>
+    <form class="form" id="num">
+      <label style="grid-column:1/3">Numéro de transaction<input type="number" id="tx" min="1" placeholder="ex. 104583" required></label>
+      <button class="btn" type="submit">Ouvrir</button>
+    </form>
+
+    <div class="qr" id="qr"><img alt="QR de la page client"><p></p></div>
+    <p class="msg" id="msg"></p>
+    <div class="liste" id="liste"></div>
+  </main>
+</div>
+<script>
+(function () {
+  'use strict';
+  var API = '../../api/cockpit/marketing/ticket/essai';
+  var $ = function (id) { return document.getElementById(id); };
+  function e(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function lire(chemin) { return fetch(API + chemin, { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(function (r) { return r.json(); }); }
+  function lien(code) { return new URL('../?t=' + encodeURIComponent(code), location.href).href; }
+  // Le QR de la page client, dessiné ici (assets/vendor/qrcode, la bibliothèque du cockpit) : l'adresse ne part nulle part.
+  function montrerQr(code) {
+    var u = lien(code); var box = $('qr'); box.classList.add('on'); box.querySelector('p').textContent = u;
+    var img = box.querySelector('img');
+    if (typeof window.qrcode === 'function') { var q = window.qrcode(0, 'M'); q.addData(u); q.make(); img.src = q.createDataURL(8, 2); img.style.display = ''; }
+    else { img.style.display = 'none'; }
+  }
+  function ligne(t) {
+    var h = t.date ? t.date.slice(11, 16) : '';
+    return '<div class="tx"><b>' + e(h || ('n° ' + (t.ticket || t.id))) + '</b><span>Transaction ' + e(t.id) + (t.ticket ? ' <small>· ticket ' + e(t.ticket) + '</small>' : '')
+      + (t.lignes != null ? ' <small>· ' + t.lignes + ' ligne(s)</small>' : '') + (t.total != null ? ' <small>· ' + Number(t.total).toFixed(2).replace('.', ',') + ' €</small>' : '') + '</span>'
+      + '<a href="' + e(lien(t.code)) + '" target="_blank" rel="noopener">Page client</a><button type="button" data-code="' + e(t.code) + '">QR</button></div>';
+  }
+  $('date').value = new Date().toISOString().slice(0, 10);
+  lire('/boutiques').then(function (j) {
+    $('shop').innerHTML = (j.boutiques || []).map(function (b) { return '<option value="' + b.id + '">' + e(b.nom + (b.ville ? ' – ' + b.ville : '')) + ' (' + b.langue.toUpperCase() + ')</option>'; }).join('');
+    if (!(j.boutiques || []).length) { $('msg').textContent = 'Le panel n’a rendu aucune boutique.'; }
+  });
+  $('jour').addEventListener('submit', function (ev) {
+    ev.preventDefault(); $('msg').textContent = 'Lecture des transactions…'; $('liste').innerHTML = '';
+    lire('/jour?shop=' + $('shop').value + '&date=' + $('date').value).then(function (j) {
+      var l = j.transactions || [];
+      $('msg').innerHTML = l.length ? l.length + ' transaction(s) le ' + e(j.date) + '.' : e(j.erreur || 'Aucune transaction ce jour-là.') + (j.cles && j.cles.length ? ' Clés reçues : <code>' + e(j.cles.join(', ')) + '</code>' : '');
+      $('liste').innerHTML = l.map(ligne).join('');
+    }).catch(function () { $('msg').textContent = 'Le cockpit ne répond pas.'; });
+  });
+  $('num').addEventListener('submit', function (ev) {
+    ev.preventDefault(); $('msg').textContent = 'Lecture de la transaction…';
+    lire('/lien?shop=' + $('shop').value + '&transaction=' + $('tx').value).then(function (j) {
+      if (!j.code) { $('msg').textContent = j.error || 'Erreur.'; return; }
+      $('msg').innerHTML = (j.trouvee ? 'Transaction trouvée, ' + j.lignes + ' ligne(s).' : 'Transaction introuvable dans cette boutique.')
+        + (j.cles && j.cles.length ? ' Clés reçues : <code>' + e(j.cles.join(' · ')) + '</code>' : '');
+      $('liste').innerHTML = j.trouvee ? ligne({ id: $('tx').value, code: j.code }) : '';
+      if (j.trouvee) { montrerQr(j.code); }
+    }).catch(function () { $('msg').textContent = 'Le cockpit ne répond pas.'; });
+  });
+  $('liste').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-code]'); if (b) { montrerQr(b.getAttribute('data-code')); } });
+})();
+</script>
+</body>
+</html>

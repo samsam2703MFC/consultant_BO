@@ -20,7 +20,7 @@ use Hr\Support\CurlHttpClient;
 use Hr\Support\Database;
 
 require_once __DIR__ . '/autoload.php';
-require_once dirname(__DIR__) . '/Db.php';
+require_once dirname(__DIR__, 3) . '/shared/src/Db.php';   // le partagé (réorganisation du 19/11/2026)
 
 // PanelApi lit ses réglages par setting() (défini par l'API du cockpit, absent ici) : la même lecture,
 // sans le reste du cockpit.
@@ -35,9 +35,9 @@ if (!function_exists('setting')) {
         return $r === null ? $default : json_decode((string) $r['value'], true);
     }
 }
-foreach (['panel_api.php', 'profil_employe.php'] as $f) {
-    if (is_file(dirname(__DIR__) . '/' . $f)) {
-        require_once dirname(__DIR__) . '/' . $f;
+foreach (['shared/src/panel_api.php', 'panel/src/profil_employe.php'] as $f) {
+    if (is_file(dirname(__DIR__, 3) . '/' . $f)) {
+        require_once dirname(__DIR__, 3) . '/' . $f;
     }
 }
 
