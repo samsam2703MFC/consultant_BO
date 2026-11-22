@@ -196,6 +196,9 @@ function fcMagasinNom(int $shop): string
 /** Les jours de photo par défaut d'une catégorie : 14 pour un nouveau produit, 0 sinon (réglable sur la fiche). */
 function fcPhotosDefaut(string $categorie): int { return $categorie === 'nouveau_produit' ? FC_PHOTOS_JOURS : 0; }
 
+/** « 2026-11-26 » → « 26/11/2026 » (le journal se lit en français). */
+function fcDateFr(?string $iso): string { return $iso !== null && preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $iso, $m) ? $m[3] . '/' . $m[2] . '/' . $m[1] : (string) $iso; }
+
 function fcCategorie(mixed $v): ?string { return is_string($v) && isset(FC_CATEGORIES[$v]) ? $v : null; }
 
 /** Trace un geste (et le journal du cockpit). */
@@ -504,7 +507,7 @@ function wr_fc_diffuser(string $id): array
         Db::exec("INSERT INTO for_fc_dossier (shop_id, sop_id, statut, echeance, photos_du, diffuse_le, diffuse_par, maj_le) VALUES (?, ?, 'en_cours', ?, ?, ?, ?, ?)",
             [(int) $s, $id, $ech, (int) ($sop['photos_jours'] ?? 0) > 0 ? $du : null, $now, $qui['nom'], $now]);
         $faits[] = (int) $s;
-        fcTracer($id, (int) Db::pdo()->lastInsertId(), (int) $s, 'diffusee', 'reçue dans le dossier de ' . fcMagasinNom((int) $s) . ($ech ? ', à faire avant le ' . $ech : ''), $qui);
+        fcTracer($id, (int) Db::pdo()->lastInsertId(), (int) $s, 'diffusee', 'reçue dans le dossier de ' . fcMagasinNom((int) $s) . ($ech ? ', à faire avant le ' . fcDateFr($ech) : ''), $qui);
     }
     return ['ok' => true, 'diffusees' => $faits, 'deja' => count($shops) - count($faits)];
 }
@@ -640,7 +643,7 @@ function wr_fc_adapter(): array
     if (array_key_exists('echeance', $b)) {
         $e = $b['echeance'] === null ? '' : trim((string) $b['echeance']);
         if ($e !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $e)) { return fcRefus(422, 'échéance : AAAA-MM-JJ'); }
-        $set[] = 'echeance = ?'; $p[] = $e !== '' ? $e : null; $dit[] = $e !== '' ? 'échéance ' . $e : 'sans échéance';
+        $set[] = 'echeance = ?'; $p[] = $e !== '' ? $e : null; $dit[] = $e !== '' ? 'échéance ' . fcDateFr($e) : 'sans échéance';
     }
     if (array_key_exists('note', $b)) { $n = trim(mb_substr((string) ($b['note'] ?? ''), 0, 500)); $set[] = 'adaptation_note = ?'; $p[] = $n !== '' ? $n : null; if ($n !== '') { $dit[] = '« ' . $n . ' »'; } }
     if ($set === []) { return fcRefus(422, 'rien à adapter'); }
@@ -668,7 +671,7 @@ function wr_fc_avis(): array
     $com = trim(mb_substr((string) ($b['commentaire'] ?? ''), 0, 300));
     $qui = fcQui('siege', 0, isset($b['par']) ? (string) $b['par'] : null);
     Db::exec('UPDATE for_fc_photo SET avis = ?, avis_par = ?, avis_le = ?, commentaire = ? WHERE id = ?', [$avis, $qui['nom'], date('Y-m-d H:i:s'), $com !== '' ? $com : null, (int) $ph['id']]);
-    fcTracer((string) $sop['id'], (int) $d['id'], (int) $d['shop_id'], 'avis', 'photo du ' . $ph['jour'] . ' : ' . ($avis === 'conforme' ? 'conforme' : 'à refaire') . ($com !== '' ? ' (« ' . $com . ' »)' : ''), $qui);
+    fcTracer((string) $sop['id'], (int) $d['id'], (int) $d['shop_id'], 'avis', 'photo du ' . fcDateFr((string) $ph['jour']) . ' : ' . ($avis === 'conforme' ? 'conforme' : 'à refaire') . ($com !== '' ? ' (« ' . $com . ' »)' : ''), $qui);
     $d = fcEvaluer($d, $sop, date('Y-m-d'));
     return ['ok' => true, 'dossier' => fcDossierVue($d, $sop, date('Y-m-d'), false)];
 }

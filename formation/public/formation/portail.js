@@ -633,11 +633,11 @@
   window.FormationPortail = {
     defaut: 'accueil',
     relire: () => charger(true),
-    titres: { accueil: 'Accueil', rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
+    titres: { accueil: 'Accueil', rfformations: 'Formations', rfcontinue: 'Formation continue', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
     // Deux menus (06/11/2026, client : « tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les
     // deux menus du rail »). Une entrée = [écran, libellé, écrans où elle reste allumée, sous-adresse facultative].
     rail: [
-      ['Formation', [['accueil', 'Accueil', []], ['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', []], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
+      ['Formation', [['accueil', 'Accueil', []], ['rfformations', 'Formations', ['rfpre']], ['rfcontinue', 'Formation continue', []], ['rfmetiers', 'Postes', []], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
         ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
       ['Opérationnel', [['operationnel', 'Ouverture', [], 'ouverture'], ['operationnel', 'Journée de travail', [], 'journee'], ['operationnel', 'Fermeture', [], 'fermeture'],
         ['operationnel', 'La tablette', [], 'tablette'],
