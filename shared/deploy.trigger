@@ -255,3 +255,4 @@
 2026-11-22T16:14:44Z [369] organigram widoczny w całości
 2026-11-22T16:27:35Z [369] organigram przeciaganie pointer
 2026-11-22T16:31:43Z [369] asystent zamowienia dnia
+2026-11-22T16:37:48Z [370] asystent klienci bez zamowienia
