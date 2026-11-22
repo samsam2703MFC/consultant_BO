@@ -72,6 +72,9 @@ final class TaskWizards
         // [382] Powiadomienia o dostawie (Logistyka — codziennie) : klienci dnia wysyłki z powiadomieniem, błędem e-mail / SMS albo bez kontaktu, decyzja dla klienta.
         // Libellé distinct du nom proposé dans la matrice (« Powiadomienia o dostawie ») : les UPDATE des migrations ne prennent que celui-ci.
         'delivery_notices_checked' => ['Powiadomienia o dostawie (dzień)', '/logistics/notices-check', 'powiadomienia klientów dnia wysyłki sprawdzone, decyzja dla każdego z sygnałem', 3],
+        // [383] Poczta od klientów (Administracja — codziennie) : e-maile od klientów bez odpowiedzi po customer_mail.reply_hours h, stan synchronizacji skrzynki, decyzja dla e-maila.
+        // Libellé distinct du nom proposé dans la matrice (« Poczta od klientów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'customer_mail_checked' => ['Poczta od klientów (bez odpowiedzi)', '/mail/customer-check', 'e-maile od klientów bez odpowiedzi po terminie wyjaśnione, decyzja dla każdego', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -122,6 +125,7 @@ final class TaskWizards
         'complaints_reviewed' => 'gdy każda reklamacja z sygnałem (bez decyzji od complaints_review.open_days dni, przyjęta bez odpowiedzi do magazynu, przyjęta i niewidziana przez grupę produktu, produkt bez grupy) ma decyzję (odpowiedź / zamknięta — sprawdzone, niezgodność NC, do obserwacji) — asystent « Reklamacje klientów », krok 3',
         'haccp_month_reviewed' => 'gdy każdy element z sygnałem poprzedniego miesiąca (i bieżącego do dziś) — nieobsłużone przerwanie łańcucha chłodniczego, zdarzenie HACCP z wynikiem negatywnym albo audyt poniżej progu, procedura SOP po terminie przeglądu, odchylenie przy wykonaniu SOP, problem z temperaturą w dostawie — ma decyzję (wyjaśnione / zamknięte, działanie korygujące, NC) — asystent « HACCP miesiąca », krok 3',
         'delivery_notices_checked' => 'gdy każdy klient dnia wysyłki (i następnego dnia roboczego, gdy automat wysyła dzień wcześniej) z sygnałem — błąd e-mail albo SMS, brak powiadomienia, brak e-maila i telefonu — ma decyzję (wysłane ponownie — sprawdzone, kontakt telefoniczny, bez powiadomienia — uzasadnione) — asystent « Powiadomienia o dostawie », krok 3',
+        'customer_mail_checked' => 'gdy każdy e-mail od klienta (skrzynka z Poczty) bez odpowiedzi po customer_mail.reply_hours h liczonych w dniach roboczych albo z odpowiedzią po terminie wysłaną dziś ma decyzję (odpowiedziane — sprawdzone w skrzynce, bez odpowiedzi — nie wymaga, przekazane), przy działającej skrzynce — asystent « Poczta od klientów », krok 3',
         'pallets_returns_reviewed' => 'gdy każdy klient z sygnałem poprzedniego tygodnia — saldo palet EUR (dostarczone − zwrócone z tabletu kierowcy) powyżej pallets_returns.threshold, brakujące palety bez uzasadnienia, uszkodzona paleta — ma decyzję (przypomnienie / odbiór zaplanowany, OK — saldo uzgodnione, spisane / do faktury) — asystent « Palety zwrotne », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
@@ -314,6 +318,11 @@ final class TaskWizards
                 // [382] Codziennie : zakończenie dnia ; w toku = decyzje zapisane dziś.
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->deliveryNoticeChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klienci wyjaśnieni', 'klientów wyjaśnionych')] + $out;
+                break;
+            case 'customer_mail_checked':
+                // [383] Codziennie : zakończenie dnia ; w toku = decyzje zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->customerMailChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'e-mail wyjaśniony', 'e-maile wyjaśnione', 'e-maili wyjaśnionych')] + $out;
                 break;
             case 'pallets_returns_reviewed':
                 // [381] Co tydzień : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego tygodnia (poprzedni tydzień).

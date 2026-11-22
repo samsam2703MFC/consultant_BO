@@ -201,6 +201,7 @@ final class TeamTasksService
             'haccp_month_reviewed' => 'HACCP, SOP i temperatura miesiąca → decyzja → zakończ',
             'pallets_returns_reviewed' => 'saldo palet EUR klientów → decyzja → zakończ',
             'delivery_notices_checked' => 'klienci dnia i powiadomienia → decyzja → zakończ',
+            'customer_mail_checked' => 'e-maile klientów bez odpowiedzi → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

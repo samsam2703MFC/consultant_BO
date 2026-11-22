@@ -97,6 +97,8 @@ final class PageAccess
         'hr' => ['HR (pracownicy : kontakt, staż, umowy, emerytura ; dokumenty ; notatki i podsumowanie miesiąca)', 'Administracja', ['/hr'], false],
         // [277] Lista płac (makieta 41) : wynagrodzenia miesiąca, paski, plik XML do banku ; dane płacowe w karcie HR i szablony umów.
         'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
+        // [383] Asystent « Poczta od klientów » : page /mail/customer-check et ajax /ajax/mail/customer-check, hors catalogue comme
+        // Poczta (/mail : page commune, chacun n'y lit que sa boîte) — même règle, aucun droit nouveau.
         'mail_admin' => ['Skrzynki pocztowe użytkowników (ustawienia skrzynki za użytkownika, « tylko administrator », wstrzymanie poczty)', 'Administracja', ['/mail/admin'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
         // [285] Raport stanowisk (makieta 39) : minuty zadań, wypełnienie stanowisk — tylko administrator (i profil CEO).
