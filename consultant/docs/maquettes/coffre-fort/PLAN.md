@@ -82,5 +82,26 @@ Essayé dans le vrai dashboard (site assemblé, API simulée) : bureau (onglet T
 (le lien en bas, au-dessus des onglets fixes). Non essayé en vrai : l'aperçu d'un PDF (Chromium sans tête n'affiche pas
 les PDF), l'envoi d'un mail avec une pièce du coffre (il faut une boîte reliée).
 
+## Les grandes dates et l'assistant (22/11/2026, demande de Sam)
+
+« Rajouter dans le coffre-fort un bouton avec les grandes dates (triennats des contrats de bail et autres) ; faire un
+assistant lorsque j'importe un document. »
+
+- Le bouton **📅 Grandes dates** de la barre du coffre (le nombre de dates dans les 4 mois, la prochaine) ouvre leur
+  frise : par année, la prochaine en tête, les passées repliées, le document d'origine en lien, l'ajout à la main.
+- À chaque dépôt (le magasin dans Légal, le consultant dans l'onglet Documents), **l'assistant** lit le premier document
+  lisible (PDF, photo, Word) et propose : le genre, un résumé, ses grandes dates avec l'extrait qui les justifie (cochées
+  si elles sont à venir, l'urgence dite, les passées repliées), l'échéance et un titre lisible du document. Rien ne se
+  range sans « Ranger ». « ✦ Relever les grandes dates » (aperçu du dashboard) et « ✦ Dates » (cockpit) le relancent.
+- Bail commercial : le modèle relève la prise de cours, la durée et le préavis ; les **triennats, le dernier jour du
+  congé, la fenêtre du renouvellement et la fin sont calculés** au serveur (règle générale des baux commerciaux, à
+  vérifier dans le bail : la note de chaque date le dit).
+- Fichiers : `consultant/src/coffre_dates.php`, `shared/src/anthropic.php` (`documentJson`), `coffre.js` / `coffre.css`,
+  `franchises-vals.js` / `franchises-tpl.js` / `app.css`. Tests : `php consultant/bin/tests_coffre_dates.php`.
+- Captures (vrai dashboard et vrai cockpit, réponses produites par les fonctions PHP, le modèle simulé) :
+  `code-grandes-dates-bouton.png`, `code-grandes-dates-assistant.png`, `code-grandes-dates-frise.png`,
+  `code-grandes-dates-telephone.png`, `code-grandes-dates-cockpit.png`.
+- Non essayé en vrai : une lecture par le modèle (il faut la clé et un vrai bail).
+
 À la mise en ligne, rien n'entre au coffre tout seul : les documents déjà déposés y restent hors (`visible_franchise` =
 0), le consultant les y met d'un clic (colonne Coffre de l'onglet Documents).
