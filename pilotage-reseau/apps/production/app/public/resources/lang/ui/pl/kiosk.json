@@ -887,5 +887,8 @@
   "lot_reason_help": "Zrób zdjęcie opakowania (przycisk « Zdjęcie etykiety »), potem « Zapisz ».",
   "lot_reason_photo": "Brak partii : najpierw zrób zdjęcie opakowania.",
   "lot_progress": "{done} / {total} uzupełnione",
-  "kf_finish_locked": "Brakuje partii ({n})"
+  "kf_finish_locked": "Brakuje partii ({n})",
+  "kc_seen_btn": "Widzieliśmy — potwierdzam",
+  "kc_seen": "Widziane {at} — {by}",
+  "kc_not_seen": "Grupa jeszcze nie potwierdziła"
 }
