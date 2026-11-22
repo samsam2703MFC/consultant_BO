@@ -291,6 +291,40 @@ vérifié au panel ou un jeton signé de 4 h, valable seulement sur une tablette
 | `POST /formation/sop/tablette/vu` | `{sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
 | `PUT /formation/sop/tablette/langue` | `{jeton, langue}` |
 
+## Formation · La formation continue — `formation/src/formation_continue.php` (22/11/2026)
+
+Une FC = une ligne de `for_sop` (type `FC`, `categorie`, `statut` brouillon | a_valider | publiee, `photos_jours`) ; un
+dossier par boutique (`for_fc_dossier`). Détail : `formation/docs/formation.md` § « La formation continue ».
+
+| Route | Corps / paramètres | Réponse |
+|---|---|---|
+| `GET /formation/continue` | — | `{formations:[{id, code, titre, categorie, categorieLib, statut, statutLib, version, produit, photosJours, etapes, boutiques, validees, avancementMoyen, diffuseLe}], categories, statuts, types:{initiale, recyclages, lesDeux, continue, contenus}, magasins}` |
+| `GET /formation/continue/{id}` | — | la ligne + `contenu`, `formations`, `postes`, `dossiers:[vue]`, `journal` |
+| `POST /formation/continue` | `{titre:{fr, nl?}, categorie, objectif?, contenu?, produit?, photosJours?, formations?, postes?, aValider?}` | 201 `{ok, id, code, statut}` · 400 |
+| `PATCH /formation/continue/{id}` | `{categorie?, statut?, produit?, photosJours?}` | `{ok, formation}` · 404 · 422 |
+| `POST /formation/continue/{id}/diffuser` | `{shops?, echeance?, photosDu?}` | `{ok, diffusees:[shop], deja}` · 409 si pas validée |
+| `GET /formation/continue/franchises?consultant=` | — | `{franchises:[{shop, nom, court, consultants, formations, aValider, enRetard, avancement, valideesMois}], consultants, consultant, reperes}` |
+| `GET /formation/continue/franchise?shop=` | — | `{shop, nom, dossiers:[vue], aVenir, categories}` |
+| `GET /formation/continue/dossier?id=` | — | la vue + `contenu` (version de la boutique), `modele`, `journal` |
+| `PUT /formation/continue/dossier` | `{id, contenu?: {…}\|null, assignes?, echeance?, note?}` | `{ok, dossier}` · 409 si validée |
+| `POST /formation/continue/dossier/avis` | `{photo, avis: conforme\|a_refaire, commentaire?}` | `{ok, dossier}` |
+| `POST /formation/continue/dossier/valider` | `{id, mot?, forcer?}` | `{ok, archive:{id, titre}\|null, dossier}` · 409 pas terminée (sans `forcer`) ou déjà validée |
+| `POST /formation/continue/dossier/renvoyer` | `{id, motif?}` | `{ok, dossier}` |
+| `GET /formation/continue/photo?id=` | — | la photo (cockpit) |
+| `GET /formation/continue/magasin?shop=` | — | `{nouveautes:[{id, code, titre, categorie, categorieLib, date, nouveau, lien}], nouveautesTotal, dossiers:[vue], reperes:{enRetard, enCours, aValider, validees, photoDuJour}, equipe}` · 403 magasin hors session |
+| `GET /formation/continue/magasin/formation?shop=&id=` | — | la vue + `contenu` (version de la boutique) ; la première lecture pose `ouvert_le` · 404 hors de la boutique |
+| `POST /formation/continue/magasin/avancement` | `{shop, id, personne, lu?, quiz?, vu?}` | `{ok, dossier}` (une personne nouvelle s'ajoute) |
+| `POST /formation/continue/magasin/mise-en-place` | `{shop, id, annuler?}` | `{ok, dossier}` |
+| `POST /formation/continue/magasin/photo` | multipart `shop, id, photo` (jpg, png, webp, heic ; 12 Mo) | `{ok, dossier}` · 409 sans photo demandée, déjà conforme ou validée |
+| `GET /formation/continue/magasin/photo?shop=&id=` | — | une photo du dossier de cette boutique |
+
+La vue d'un dossier : `{id, shop, magasin, fc, code, titre, categorie, categorieLib, statut, statutLib, retard, echeance,
+assignes, adapte, adaptation:{note, par, le, contenu}, avancement:{pct, equipe, photos, complet}, photos:{jours,
+conformes, refusees, manquantes, enAttente, du, fin, grille:[{jour, etat, photo, commentaire}], complet}, equipe,
+miseEnPlace, termineLe, validation:{par, le, mot, archive}, diffuseLe, nouveau, version}`. `/formation/continue/magasin`
+est dans `ACCES_FRANCHISE`. Le Professeur : outils `dossier_formation`, `formation_lire` (fcProfesseurDossier,
+fcProfesseurLire). Tests : `php formation/bin/tests_formation_continue.php`.
+
 ## Formation · Tablettes des magasins — une seule tablette, PIN du magasin (`formation/src/tablettes.php`, lot 5, 06/11/2026)
 
 Le PIN du MAGASIN ouvre l'appareil (session gardée : jeton envoyé en en-tête `X-Tablette`, ou cookie `ceo_tablette`

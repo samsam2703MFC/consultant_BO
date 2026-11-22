@@ -207,3 +207,27 @@ chemin. Seul le swagger, public, a été lu.
    - photos pour « nouveau produit » toujours, pour « technique » et « nouvelle technique » quand un produit est relié,
      jamais pour « connaissance » (proposé) ;
    - un jour sans photo ou une photo refusée ajoute un jour (proposé), ou bien la période est fixe.
+
+## Où on en est (22/11/2026) — codé sur la branche, pas encore en ligne
+
+Sam : « Let's go code it ». Les décisions restées ouvertes sont prises par défaut, comme le plan le recommandait :
+1. « Formations et suivi » = la page Formation du franchisé (`?vue=formation`) ;
+2. pas de connexion imposée (comme le coffre-fort) ; « mes franchisés » = le cadre de visite ;
+3. l'avancement de l'équipe est déclaré par le franchisé ;
+4. l'écran du consultant est sous Franchisés › Formations continues ;
+5. les routes suivent la forme du module (`/formation/continue/…`) ;
+6. la photo du jour est déposée par le magasin dans son dossier et relue par le consultant (pas de tâche du panel :
+   l'API n'en a pas par boutique et par période ; à demander à TF Buddy pour la suite) ;
+7. 14 photos conformes ; un jour manqué ou refusé ajoute un jour ; pas de photo pour une connaissance.
+
+| Pièce | Fichiers | Essayé |
+|---|---|---|
+| Serveur | `formation/src/formation_continue.php`, `formation/src/sop.php` (filtre du Manuel), `consultant/src/coffre.php` (`cofDeposer`), `panel/src/assistant_ia.php` et `assistant_magasin.php` (Professeur) | `tests_formation_continue.php` (37 points), tests de l'assistant et des coachs |
+| Siège | `formation/public/formation/continue.js`, `continue.css` | dans le vrai module (API simulée) : `code/module-*.png` |
+| Consultant | `consultant/public/assets/js/formation-continue-vals.js`, `-tpl.js`, `shared/public/assets/css/formation-continue.css` | dans le vrai cockpit : `code/cockpit-formations-continues.png` |
+| Franchisé | `panel/public/dashboard/formation.js`, `formation.css`, `dashboard.js` (bouton abricot, rail, téléphone) | dans le vrai dashboard : `code/dashboard-*.png`, téléphone |
+| Manuel | `formation/data/formation/continue/` (deux articles, à encoder sur demande) | JSON relu, simulation de l'encodeur |
+
+Pas encore essayé en vrai : l'envoi d'une photo depuis un téléphone, le PDF de l'archive (wkhtmltopdf du serveur ; à
+défaut la page HTML est rangée), une réponse réelle du Professeur. L'éditeur du Manuel exige le néerlandais pour publier
+une nouvelle version : le contenu d'une FC s'y écrit en FR et en NL.
