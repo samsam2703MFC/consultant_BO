@@ -79,12 +79,12 @@ verifie('échue, valide, sans échéance', cofEtat($dans(-3), $auj)['cle'] === '
 verifie('les repères : l’assurance à renouveler, l’échéance du contrat', count($C['reperes']['aRenouveler']) === 1 && $C['reperes']['aRenouveler'][0]['titre'] === 'Assurance RC' && ($C['reperes']['contrat']['echeance'] ?? '') === '2033-10-14');
 
 // 3. « Nouveau » tant que le magasin ne l'a pas ouvert ; une ouverture du siège n'y change rien.
-verifie('trois nouveaux au départ', $C['reperes']['nouveaux'] === 3);
+verifie('quatre nouveaux au départ : trois documents et le rapport pas encore lu', $C['reperes']['nouveaux'] === 4);
 cofNoter((int) $dip['id'], $shop, 'ouvert', ['nom' => 'Siège', 'role' => 'siege']);
 cofNoter((int) $ctr['id'], $shop, 'ouvert', ['nom' => 'M. Lambert', 'role' => 'franchise']);
 $_GET = ['shop' => (string) $shop]; $C = ep_coffre_magasin();
 $nouv = array_column($C['documents'], 'nouveau', 'titre');
-verifie('ouvert par le magasin : plus nouveau ; ouvert par le siège : toujours nouveau', $nouv['Contrat de franchise'] === false && $nouv['DIP v29'] === true && $C['reperes']['nouveaux'] === 2, json_encode($nouv, JSON_UNESCAPED_UNICODE));
+verifie('ouvert par le magasin : plus nouveau ; ouvert par le siège : toujours nouveau', $nouv['Contrat de franchise'] === false && $nouv['DIP v29'] === true && $C['reperes']['nouveaux'] === 3, json_encode($nouv, JSON_UNESCAPED_UNICODE));
 $tr = array_column($C['documents'], 'traces', 'titre')['Contrat de franchise'];
 verifie('qui l’a ouvert : le nom, le rôle, comment', ($tr[0]['qui'] ?? '') === 'M. Lambert' && ($tr[0]['comment'] ?? '') === 'ouvert');
 $o = cofOuverturesMagasin($shop);

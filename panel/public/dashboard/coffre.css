@@ -1,0 +1,92 @@
+/* Dashboard magasin › Mon coffre-fort (22/11/2026) : coffre.js. Préfixe cf-. Sur les jetons du design system. */
+.cf-racine{display:block}
+.cf-flash{margin:0 0 12px;padding:9px 12px;border-radius:9px;font-size:12.5px}
+.cf-flash.ok{background:rgba(63,122,82,.1);color:#2f5e3e}.cf-flash.ko{background:rgba(163,32,20,.08);color:#A32014}
+.cf-tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-bottom:12px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.cf-tui{display:flex;flex-direction:column;gap:2px;padding:12px 16px;border-left:1px solid var(--line);min-width:0}
+.cf-tui:first-child{border-left:0}
+.cf-tui .k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cf-tui b{font-size:22px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-tui .s{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-tui.ac b{color:var(--accent)}.cf-tui.or b{color:var(--prize)}.cf-tui.ok b{color:var(--green)}
+.cf-lay{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}
+.cf-carte{background:#fff;border:1px solid var(--line);border-radius:12px;min-width:0;overflow:hidden}
+.cf-onglets{display:flex;align-items:center;gap:2px;padding:0 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+.cf-onglets button{border:0;background:none;font:inherit;font-size:13px;padding:12px 10px 10px;color:var(--muted-2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;cursor:pointer}
+.cf-onglets button i{font-style:normal;font-size:10.5px;margin-left:6px;background:var(--chip);color:var(--muted-2);border-radius:9px;padding:1px 6px}
+.cf-onglets button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.cf-onglets button.on i{background:var(--accent);color:#fff}
+.cf-barre{display:flex;align-items:center;gap:12px;margin:0 0 10px;font-size:11.5px;color:var(--muted)}
+.cf-barre span{flex:1}
+.cf-q{width:240px}
+.cf-sous{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.cf-sous span{flex:1}
+.db-btn.cf-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.cf-depot{padding:12px 14px;border-bottom:1px solid var(--line);background:var(--table-head)}
+.cf-dg{display:grid;grid-template-columns:2fr 1fr 1fr 2fr;gap:10px}
+.cf-dg label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cf-dg .db-sel{width:100%;text-transform:none;letter-spacing:0}
+.cf-db{display:flex;align-items:center;gap:8px;margin-top:10px}
+.cf-tete,.cf-l{display:flex;align-items:center;gap:12px;padding:0 14px}
+.cf-tete{height:32px;background:var(--table-head);color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.cf-l{width:100%;min-height:52px;border:0;border-bottom:1px solid var(--row-line);background:#fff;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.cf-l:hover{background:var(--paper)}
+.cf-l.sel{background:#F6EDEE;box-shadow:inset 3px 0 0 var(--accent)}
+.cf-ic{width:30px;flex:0 0 auto}
+.cf-l .cf-ic b{display:flex;align-items:flex-end;justify-content:center;width:30px;height:36px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:8px;font-weight:400;color:var(--accent);padding-bottom:3px}
+.cf-c{flex:1;min-width:0;padding:7px 0}
+.cf-c b{display:block;font-weight:400;font-size:13px}
+.cf-c small{display:block;color:var(--muted);font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-nv{font-style:normal;font-size:9.5px;background:#F2C9A0;color:var(--accent);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.cf-o{width:130px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}
+.cf-d{width:84px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}
+.cf-e{width:150px;flex:0 0 auto}
+.cf-p2{width:110px;flex:0 0 auto;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-ta{width:56px;flex:0 0 auto;font-size:12px;color:var(--muted)}
+.cf-st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.cf-st::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+.cf-st.brou{background:var(--chip);color:var(--muted-2)}
+.cf-st.aval{background:var(--prize-soft);color:var(--prize-ink)}
+.cf-st.val{background:#E3EEE6;color:var(--green)}
+.cf-st.ret{background:var(--stop-soft);color:var(--stop)}
+.cf-vide{padding:22px 16px;color:var(--muted);font-size:12.5px}
+.cf-ap{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:12px}
+.cf-ap-f{display:block;width:100%;height:260px;border:0;border-bottom:1px solid var(--line);background:var(--paper)}
+.cf-ap-i{display:block;width:100%;max-height:260px;object-fit:contain;background:var(--paper);border-bottom:1px solid var(--line)}
+.cf-ap-x{height:120px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent);background:var(--paper);border-bottom:1px solid var(--line)}
+.cf-ap-c{padding:14px 16px}
+.cf-k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px}
+.cf-k i{margin-left:auto;font-style:normal;color:var(--faint);text-transform:none;letter-spacing:0}
+.cf-ap-t{font-size:16px;line-height:1.3;margin:4px 0 6px}
+.cf-n{font-size:12px;color:var(--muted);margin:4px 0 8px}
+.cf-kv{display:grid;grid-template-columns:82px 1fr;gap:6px 10px;font-size:12px;margin:8px 0 0}
+.cf-kv dt{color:var(--muted)}.cf-kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.cf-bts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.cf-bts a{text-decoration:none}
+.cf-tr{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--row-line);font-size:12px}
+.cf-tr:last-child{border-bottom:0}
+.cf-tr>span:first-child{width:82px;flex:0 0 auto;color:var(--muted);font-size:11px}
+.cf-tr small{display:block;color:var(--muted);font-size:11px}
+/* Au téléphone : une colonne, l'aperçu sous le tableau, les colonnes secondaires repliées. */
+@media (max-width:1023px){
+  .cf-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cf-tui:nth-child(3){border-left:0}.cf-tui:nth-child(n+3){border-top:1px solid var(--line)}
+  .cf-lay{grid-template-columns:1fr}
+  .cf-o,.cf-p2,.cf-ta,.cf-tete .cf-o,.cf-tete .cf-p2,.cf-tete .cf-ta{display:none}
+  .cf-barre{flex-wrap:wrap}.cf-q{width:100%}
+  .cf-dg{grid-template-columns:1fr 1fr}
+  .cf-ap{position:static}
+}
+/* Le lien du coffre, tout en bas (22/11/2026, Sam : « un lien direct, tout en dessous »). Au bureau : épinglé au bas
+   du rail (le rail devient une colonne, le lien prend la place qui reste au-dessus de lui). Sans rail : un bloc après
+   la page, que dashboard.js pose et retire (coffreBasMaj). */
+.db-rail{display:flex;flex-direction:column}
+.db-rail>*{flex:0 0 auto}
+.db-rail-coffre{margin:auto 0 0;padding:12px 12px 4px;border-top:1px solid var(--line);position:sticky;bottom:-24px;background:#fff}
+.db-rail-coffre .sidebar__item{width:100%;border:1px solid var(--line);background:var(--table-head)}
+.db-rail-coffre .sidebar__item.is-active{background:#F6EDEE;border-color:#E8C9CD}
+.db-coffre-bas{display:flex;align-items:center;gap:10px;margin:18px 12px 18px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font:inherit;width:calc(100% - 24px);text-align:left;cursor:pointer}
+.db-coffre-bas b{display:block;font-weight:400;font-size:13.5px}
+.db-coffre-bas small{display:block;font-size:11px;color:var(--muted)}
+.db-coffre-bas.mob{margin-bottom:calc(84px + env(safe-area-inset-bottom, 0px))}   /* au-dessus des onglets fixes du téléphone (.mb-tabs) */
+.db-coffre-bas .n{margin-left:auto;font-size:10px;background:#F2C9A0;color:var(--accent);border-radius:9px;padding:1px 7px}

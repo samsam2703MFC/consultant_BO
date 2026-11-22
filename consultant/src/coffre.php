@@ -23,7 +23,8 @@ declare(strict_types=1);
  *
  * Routes (le préfixe /coffre/magasin est un écran de magasin : ACCES_FRANCHISE, le `shop` vérifié contre la session) :
  *   GET  /coffre/magasin?shop=                                 les onglets, les documents, les rapports, les repères
- *   GET  /coffre/magasin/fichier?shop=&id=[&telecharger=1]     le fichier, s'il est de ce magasin et dans le coffre
+ *   GET  /coffre/magasin/fichier?shop=&id=[&telecharger=1][&apercu=1]   le fichier, s'il est de ce magasin et dans le
+ *        coffre ; l'ouverture est notée (pas l'aperçu)
  *   POST /coffre/magasin/document (multipart : shop, titre?, date?, echeance?, note?, fichiers[]) : une pièce légale
  *        déposée par le magasin
  * La Boîte mail joint un document du coffre par cofPiecesMail (panel/src/boite_mail.php, champ `coffre` de l'envoi).
@@ -159,7 +160,8 @@ function ep_coffre_magasin(): array
     $contrat = null;
     foreach ($docs as $d) { if ($d['sorte'] === 'contrat_franchise') { $contrat = ['titre' => $d['titre'], 'echeance' => $d['echeance'], 'date' => $d['date']]; break; } }
     return ['shop' => (string) $shop, 'nom' => docMagasinNom($shop), 'onglets' => $onglets, 'documents' => $docs, 'visites' => $visites,
-        'reperes' => ['nouveaux' => count(array_filter($docs, static fn ($d) => $d['nouveau'])),
+        // Nouveaux : les documents pas encore ouverts par le magasin et les rapports de visite pas encore lus.
+        'reperes' => ['nouveaux' => count(array_filter($docs, static fn ($d) => $d['nouveau'])) + count(array_filter($visites, static fn ($v) => $v['luLe'] === null)),
             'aRenouveler' => array_values(array_map(static fn ($d) => ['id' => $d['id'], 'titre' => $d['titre'], 'echeance' => $d['echeance'], 'etat' => $d['etat']],
                 array_filter($docs, static fn ($d) => in_array($d['etat']['cle'], ['renouveler', 'expiree'], true)))),
             'contrat' => $contrat],
@@ -198,7 +200,8 @@ function ep_coffre_fichier(): void
     $shop = (int) ($_GET['shop'] ?? 0);
     $id = (int) ($_GET['id'] ?? 0);
     $r = cofShopOk($shop) ? cofDocDuCoffre($shop, $id) : null;
-    if ($r !== null) { cofNoter($id, $shop, empty($_GET['telecharger']) ? 'ouvert' : 'telecharge', cofQui('franchise', $shop)); }
+    // L'aperçu de la page (&apercu=1, le document choisi d'office) n'est pas une ouverture : « Ouvrir » et « Télécharger » le sont.
+    if ($r !== null && empty($_GET['apercu'])) { cofNoter($id, $shop, empty($_GET['telecharger']) ? 'ouvert' : 'telecharge', cofQui('franchise', $shop)); }
     docSortir($r);   // un document d'une autre boutique, ou hors du coffre : le même 404
 }
 
