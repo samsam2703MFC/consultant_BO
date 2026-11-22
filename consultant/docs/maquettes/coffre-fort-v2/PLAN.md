@@ -27,3 +27,19 @@ codé : ces écrans montrent ce que la page deviendrait.
 - Le reste existe déjà : documents, dépôt, ouvertures, grandes dates, assistant, pièce jointe des mails.
 
 Captures : `node consultant/docs/maquettes/coffre-fort-v2/capturer.cjs` (serveur `php -S 127.0.0.1:8099 -t .` à la racine).
+
+## Où on en est (22/11/2026) — codé sur la branche
+
+Sam a validé la liste des 16 pièces et demandé le code (« code la v2 ») ; puis « pas de badges, des rectangles aux coins
+arrondis » : les nombres, les états et « nouveau » sont des rectangles (6 px), les ✓ dans des carrés arrondis.
+
+| Pièce | Fichiers |
+|---|---|
+| Serveur : les pièces attendues, « pas concernée », la pièce au dépôt et à l'assistant | `consultant/src/coffre.php` (`COF_PIECES`, `cofPieces`, `wr_coffre_piece`), `documents.php` (`piece`), `coffre_dates.php` (`pieceDoc`, `pieceSuggeree`), `formation/src/formation_continue.php` (l'archive) |
+| Dashboard : la page v2 | `panel/public/dashboard/coffre.js`, `coffre.css` (réécrits), `dashboard.js` (`aller`), `boite.js` (la pièce jointe venue du coffre) |
+| Cockpit : la pièce au dépôt du consultant | `franchises-vals.js`, `franchises-tpl.js`, `app.css` |
+| Tests | `php consultant/bin/tests_coffre.php` (39), `tests_coffre_dates.php` (48) |
+
+Essayé dans le vrai dashboard (réponses des vraies fonctions PHP) : coffre vide, Halle aujourd'hui (les 4 fichiers des
+Finances), coffre rempli, un dossier, le tiroir, le dépôt, l'assistant et le rangement, les grandes dates, le téléphone.
+Captures : `code-v2-*.png`. Non essayé en vrai : une lecture par le modèle, le glisser-déposer d'un vrai fichier.
