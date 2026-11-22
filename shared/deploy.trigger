@@ -261,3 +261,4 @@
 2026-11-22T16:51:25Z [372] sms klienci + [371] asystent domowienia dnia
 2026-11-22T17:28:23Z [372] fix OrderSmsService::delivers
 2026-11-22T18:33:12Z [373] plynnosc + [374] opoznienia dostaw + [375] OTIF + [372] sms nowy termin
+2026-11-22T18:38:19Z [373] kwoty plynnosc dla KO
