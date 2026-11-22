@@ -1,9 +1,288 @@
 {
   "brancheEnLigne": "claude/deploiement-application-serveur-lmz1bm",
-  "dernierCommitLu": "9a997ce2be7dd2bff2da0e77d5e6d682aa54940a",
-  "dernierCommitLuLe": "2026-11-16T20:49:20+00:00",
-  "passeLe": null,
-  "prochainNumero": 1,
-  "themes": [],
-  "ecartes": []
+  "dernierCommitLu": "24c7345f1aecf0cc0f89b3e537dd491bb4bd6b3b",
+  "dernierCommitLuLe": "2026-11-21T18:52:59+01:00",
+  "passeLe": "2026-11-22",
+  "prochainNumero": 4,
+  "themes": [
+    {
+      "n": 1,
+      "theme": "Le dashboard : la Boîte mail et ses modes IA",
+      "id": "art-boite-mail",
+      "fichier": "data/formation/nouveautes/art-boite-mail.json",
+      "sources": [
+        "a07c91d4 Mise en ligne : la boîte mail (archives créées, sélection multiple, rangement par l'IA)",
+        "d1908a48 Mise en ligne : les modes IA de la boîte mail (briefing, pilote, radar)",
+        "6088239b Mise en ligne : les dossiers de Corbais reconnus, la boîte sans vignettes"
+      ],
+      "etat": "propose",
+      "proposeLe": "2026-11-22"
+    },
+    {
+      "n": 2,
+      "theme": "Le dashboard : la demande au bureau",
+      "id": "art-demandes-bureau",
+      "fichier": "data/formation/nouveautes/art-demandes-bureau.json",
+      "sources": [
+        "c888e5ad Helpdesk : SMS au bureau, date limite du consultant, réclamations fournisseur (20/11)",
+        "e4023a3c Panel : « Mes demandes » s'ouvre sur le filtre « Ouvertes » (20/11)",
+        "a413eb0a Helpdesk : relances tant que pas en cours (21/11)",
+        "44802262 Helpdesk : demande urgente, SMS au franchisé à la réponse (21/11)"
+      ],
+      "etat": "propose",
+      "proposeLe": "2026-11-22"
+    },
+    {
+      "n": 3,
+      "theme": "Le dashboard : l'onglet Frais",
+      "id": "art-dash-frais",
+      "fichier": "data/formation/nouveautes/art-dash-frais.json",
+      "sources": [
+        "5acb3420 Frais : ajouter un frais au panel, pour le mois ou toute l'année (21/11)",
+        "af4ddd2e Frais : le libellé saisi au panel comme poste, la TVA du formulaire appliquée (21/11)",
+        "4f851e8f Frais : retirer « indiqué le … » sous le poste du tableau (21/11)"
+      ],
+      "etat": "propose",
+      "proposeLe": "2026-11-22"
+    }
+  ],
+  "ecartes": [
+    {
+      "sujet": "Atelier de production : demandes [338]–[366] (commandes, proforma, Poczta, palettes, Śledzenie partii, Ścieżka cen, Stan ogólny, prévision 13 semaines, lots matières KSeF, échantillons QR, procédures SOP [353], tablette de bureau, kiosque atelier, réclamations au carton, heures de nuit)",
+      "sources": [
+        "17/11 → 19/11"
+      ],
+      "raison": "atelier de production (apps/production, écrans en polonais)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Réorganisation du dépôt en domaines, module Marketing lu par son API (lots 1 à 5b), nettoyage du code mort",
+      "sources": [
+        "19/11 → 21/11"
+      ],
+      "raison": "changement interne, rien ne change à l'écran",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Boîte mail : dossiers « INBOX.INBOX.* » reconnus",
+      "sources": [
+        "6088239b"
+      ],
+      "raison": "correctif, repris dans le thème 1",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Réclamations fournisseur : tableau annuel des produits réclamés (cockpit)",
+      "sources": [
+        "83ec1b96",
+        "ba36c9e6"
+      ],
+      "raison": "écran du siège (la photo obligatoire côté magasin est signalée en mise à jour de 0.0.37)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Helpdesk côté cockpit : carte « Demandes à traiter », réglage des SMS, essai de remise",
+      "sources": [
+        "a413eb0a",
+        "44802262"
+      ],
+      "raison": "écran du siège (le côté magasin est le thème 2)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Fil du franchisé (cockpit seulement)",
+      "sources": [
+        "7623e748",
+        "17aea5e9"
+      ],
+      "raison": "écran du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Rail du cockpit réorganisé ; Chiffre d'affaires et Fidélité retirés ; MétaDonnée › Formulaires ; onglet KPI des coachs (réglage)",
+      "sources": [
+        "70e7d724",
+        "796d74a2"
+      ],
+      "raison": "écrans du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Catalogue des manuels (feuilleter, PDF, QR, dépliant), manuel de pré-ouverture, manuel « Fiches techniques », couvertures, typographie",
+      "sources": [
+        "fdac7b23",
+        "38d290b4",
+        "f6e3d757",
+        "eca96d54",
+        "df223508",
+        "fc932b2e"
+      ],
+      "raison": "outil du siège pour diffuser les manuels (cockpit › Formation)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Fidélité : la page « app client en direct »",
+      "sources": [
+        "7e2b727c",
+        "a9c3b135"
+      ],
+      "raison": "page à part du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Contrôles qualité : consigne générale pour l'IA ; entraînement de l'IA (photos 5/5)",
+      "sources": [
+        "c24ba39f",
+        "488d75a0",
+        "eeb7ff4f~"
+      ],
+      "raison": "réglages du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Cibles du réseau : food cost 40 %, personnel 17 %, panier et articles par ticket",
+      "sources": [
+        "291994b9",
+        "0dbc58db",
+        "f1cd3590"
+      ],
+      "raison": "déjà dans 0.0.53 « Les chiffres clés du réseau 2026 », écrit après",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Checklist 5.6.02 « Une franchise bien tenue », nomenclature et code des checklists en couleurs",
+      "sources": [
+        "cbe74457",
+        "88a4bb8d",
+        "a4ae6b5c"
+      ],
+      "raison": "déjà au Manuel (5.6.02, publiée)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Inventaire (un seul pourcentage), produit (le panel fait foi), PDF 20/80 (Structure de gamme)",
+      "sources": [
+        "deeaf5fd"
+      ],
+      "raison": "écrans du cockpit (siège)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Consultant : la page du food cost de Sombreffe",
+      "sources": [
+        "f67f0cb5"
+      ],
+      "raison": "page ponctuelle d'un magasin, données figées du 20/11",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Portail Commercial (prospection, Leads Meta, échantillons, Ma semaine)",
+      "sources": [
+        "19/11 → 20/11"
+      ],
+      "raison": "portail du commercial B2B du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Étiquettes NL (script, sonde, envoi à TF Buddy)",
+      "sources": [
+        "21/11"
+      ],
+      "raison": "outil du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Fiche du ticket « Vos achats » (page client du QR du ticket)",
+      "sources": [
+        "fd4476ec",
+        "d245fb7e"
+      ],
+      "raison": "page vue par le client ; aucun geste du magasin dans le code livré",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Pointage retiré partout (app employé, borne, caisse)",
+      "sources": [
+        "eeb7ff4f"
+      ],
+      "raison": "retrait ; aucun document du Manuel n'en parle",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Visites : remettre toutes les visites à zéro",
+      "sources": [
+        "af527407"
+      ],
+      "raison": "geste du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Correctifs : ruban des canaux, seuil de main-d'œuvre des rapports, photos des tâches sans drapeau, SMS (clé, expéditeur), app employés /employee/",
+      "sources": [
+        "662c67ad",
+        "4653d50e",
+        "d77cd27e",
+        "2bc690db",
+        "1e456945"
+      ],
+      "raison": "correctifs sans changement de geste",
+      "le": "2026-11-22"
+    }
+  ],
+  "misesAJourSignalees": [
+    {
+      "code": "0.0.36",
+      "titre": "Le dashboard : l'Assistant",
+      "change": "assistant IA en pleine page (rail « Assistant IA »), le Professeur (manuel entier), le Coach Vente (portrait, objectifs 2026, prix face à la concurrence, bundles, radar catégories et marges), tableaux et graphiques, « Mes modèles », réponse en PDF, coachs qui citent le manuel et reprennent les contrôles photos (17–19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.43",
+      "titre": "Le dashboard : l'onglet Produits",
+      "change": "fiche produit › Recette & marge : « Adapter mon prix de vente » et « Demander au réseau de relever le maximum » (21/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.37",
+      "titre": "Le dashboard : l'onglet Opérationnel",
+      "change": "« Réclamer au fournisseur » : photo obligatoire (21/11) ; La journée : lignes Four, Vitrine et Commandes retirées (19/11) ; comptoir et webshop dans la jauge (18/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.35",
+      "titre": "Le dashboard : la revue du soir",
+      "change": "tuile des tâches pas faites (« 8 / 11 »), caisse sans écart quand le magasin a un monnayeur (19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.38",
+      "titre": "Le dashboard : l'onglet Tâches",
+      "change": "résultats du jour dans la bande de la semaine, vue téléphone refaite (18/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.40",
+      "titre": "Le dashboard : l'onglet Mois",
+      "change": "trafic sur les douze derniers mois glissants (18/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.49",
+      "titre": "Le dashboard : au téléphone",
+      "change": "refonte du téléphone, feuille « L'équipe du jour », Contrôle : carte du jour en tête, cuissons retirées de la frise (18–19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.52",
+      "titre": "Le dashboard : l'onglet Mon catalogue",
+      "change": "pleine page, assistant de mise en page, produits montrés/cachés, feuilleter avant d'imprimer, couverture et dernière page (17/11, après la v1.1)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.32",
+      "titre": "La visite du consultant en magasin",
+      "change": "audit des sept outils de gestion (score sur 100, rapport et courriel), assistant en barre horizontale, onglet « Non signées » (18–19/11)",
+      "le": "2026-11-22"
+    }
+  ]
 }
