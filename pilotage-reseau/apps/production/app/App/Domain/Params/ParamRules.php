@@ -82,6 +82,9 @@ final class ParamRules
         // [381] Palety zwrotne : semaines du solde des palettes EUR par client, solde au-dessus duquel le client est à expliquer
         'pallets_returns.balance_weeks' => [1, 52, true],
         'pallets_returns.threshold' => [1, 200, true],
+        // [383] Poczta od klientów : heures (jours ouvrés) sans réponse avant signalement, jours en arrière contrôlés
+        'customer_mail.reply_hours' => [1, 240, true],
+        'customer_mail.lookback_days' => [1, 90, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
