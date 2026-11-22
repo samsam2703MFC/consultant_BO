@@ -259,3 +259,4 @@
 2026-11-22T16:43:30Z Dashboard : les Frais deviennent un onglet de la Trésorerie, le rail perd l'entrée Frais (vue=frais et le lien « Frais ▸ » du P&L ouvrent l'onglet)
 2026-11-22T16:46:59Z [369] struktura userId fix
 2026-11-22T16:51:25Z [372] sms klienci + [371] asystent domowienia dnia
+2026-11-22T17:28:23Z [372] fix OrderSmsService::delivers
