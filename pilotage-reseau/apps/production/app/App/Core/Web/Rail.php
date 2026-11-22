@@ -58,6 +58,8 @@ final class Rail
             '/settings/mail-footers', '/settings/sms', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
             '/organization/positions', '/product-carriers', '/task-forms'], null],
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
+        // [368] Struktura i obowiązki : organigram stanowisk (przeciągnij i upuść) i matryca obowiązek → stanowisko → asystent kontroli.
+        'structure' => ['Struktura i obowiązki', 'bi-diagram-3', 'Administracja', '/organization/structure', [], null],
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
         // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.
         'bonuses' => ['Płace i premie', 'bi-wallet2', 'Administracja', '/staff/team-bonus', [], null],
