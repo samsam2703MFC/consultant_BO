@@ -12,6 +12,9 @@
     const RES_CLS = {ok: 'ok', contact: 'warn', changed: ''};
     const link = (o) => `<a href="${at.root}/client-orders/${o.id}/edit" target="_blank" rel="noopener">#${o.id}</a>`;
     const ref = (o) => `${link(o)}${o.reference ? ' · ' + esc(o.reference) : ''}${o.description ? `<small>${esc(o.description)}</small>` : ''}`;
+    // [372] SMS au client (confirmation ou modification), un clic, texte relu dans la fenêtre.
+    const sms = (o) => window.orderSms ? `<span style="display:inline-flex;gap:6px;align-items:center;margin-left:6px">${orderSms.badge(o.sms)}${orderSms.button(`data-od-sms="${o.id}"`)}</span>` : '';
+    async function reload() { const r = await at.send('/ajax/client-orders/day-check', 'GET'); if (r.ok) { D = r.data; render(); } }
     const ship = (o) => o.shipping_date ? `${esc(dayLabel(o.shipping_date))}` : '<span class="tw-red">brak</span>';
     const type = (o) => (o.type === 'SUPPLEMENT' ? tw.pill('domówienie', 'warn') : 'zwykłe') + (o.freebie ? ' ' + tw.pill('gratis') : '');
     const flagged = () => D.orders.filter(o => o.flags.length);
@@ -33,7 +36,7 @@
         const t = D.totals;
         const rows = D.orders.map(o => ({cls: o.flags.length && !o.check ? 'hl' : '', cells: [
             `<b>${esc(o.customer)}</b>`, ref(o), ship(o), nf(o.lines), nf(o.cartons, o.cartons % 1 ? 1 : 0), type(o), what(o),
-            o.flags.length ? (o.check ? tw.pill('wyjaśnione', 'ok') : tw.pill('do wyjaśnienia' + (o.flags.length > 1 ? ' (' + o.flags.length + ')' : ''), 'bad')) : (o.open ? '' : tw.pill(o.status_label))]}));
+            `<span style="display:inline-flex;align-items:center;white-space:nowrap">${o.flags.length ? (o.check ? tw.pill('wyjaśnione', 'ok') : tw.pill('do wyjaśnienia' + (o.flags.length > 1 ? ' (' + o.flags.length + ')' : ''), 'bad')) : (o.open ? '' : tw.pill(o.status_label))}${sms(o)}</span>`]}));
         return `<p class="tw-lead">Zamówienia złożone i zmienione <b>${esc(D.since.label)}</b>. Sprawdź listę ; zamówienia z sygnałem trafiają do kroku 2.</p>
             ${tw.tiles([{label: 'Nowe', value: String(t.new), sub: t.supplements ? `w tym ${t.supplements} ${tw.plural(t.supplements, 'domówienie', 'domówienia', 'domówień')}` : 'zamówienia złożone'},
                 {label: 'Zmienione', value: String(t.changed), sub: 'data, pozycje albo opis'},
@@ -60,7 +63,7 @@
         const list = flagged(), t = D.totals;
         if (!list.length) return tw.alert('Nic do wyjaśnienia : żadne nowe ani zmienione zamówienie nie ma sygnału.', 'ok', 'bi-check-circle');
         const rows = list.map(o => ({cls: o.check ? '' : 'hl', cells: [
-            `<b>${esc(o.customer)}</b><small>${link(o)}${o.reference ? ' · ' + esc(o.reference) : ''} · ${o.kind === 'new' ? 'nowe' : 'zmienione'}</small>`,
+            `<b>${esc(o.customer)}</b><small>${link(o)}${o.reference ? ' · ' + esc(o.reference) : ''} · ${o.kind === 'new' ? 'nowe' : 'zmienione'}</small><div style="margin-top:4px;margin-left:-6px">${sms(o)}</div>`,
             ship(o), nf(o.cartons, o.cartons % 1 ? 1 : 0),
             o.flags.map(f => `<div style="display:flex;gap:6px;align-items:baseline;margin:2px 0"><i class="bi bi-exclamation-circle tw-red"></i><span>${esc(f.reason)}</span></div>`).join(''),
             resultCell(o)]}));
@@ -107,6 +110,13 @@
     });
     app.addEventListener('click', async (e) => {
         if (e.target.closest('[data-od-next]')) { step = Math.min(3, step + 1); reached = Math.max(reached, step); render(); return; }
+        const m = e.target.closest('[data-od-sms]');
+        if (m && window.orderSms) {
+            const o = D.orders.find(x => x.id === Number(m.dataset.odSms));
+            if (o) orderSms.open({kinds: o.kind === 'new' ? ['order_confirm', 'order_changed'] : ['order_changed', 'order_confirm'], id: o.id,
+                hints: {detail: o.check && o.check.result === 'changed' ? o.check.note : ''}, onSent: reload});
+            return;
+        }
         const r = e.target.closest('[data-od-res]');
         if (r) { const id = Number(r.dataset.odRes); (draft[id] ??= {result: '', note: ''}).result = r.dataset.v; render(); app.querySelector(`[data-od-note="${id}"]`)?.focus(); return; }
         const s = e.target.closest('[data-od-save]');
