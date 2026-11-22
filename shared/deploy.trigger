@@ -264,3 +264,4 @@
 2026-11-22T18:38:19Z [373] kwoty plynnosc dla KO
 2026-11-22T18:41:48Z [373] prawo liquidity
 2026-11-22T18:59:17Z Dashboard : les paramètres dans une roue à gauche de Mon coffre-fort (fenêtre qui monte : recherche, boîte mail, rappel la veille du retrait, équipe, alertes de stock, ton de l'assistant) ; le groupe Paramètres quitte le rail
+2026-11-22T19:27:41Z [376] matryca wszystkich stanowisk + [377] partie i kontrola dnia
