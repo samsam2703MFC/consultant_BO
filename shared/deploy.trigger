@@ -257,3 +257,4 @@
 2026-11-22T16:31:43Z [369] asystent zamowienia dnia
 2026-11-22T16:37:48Z [370] asystent klienci bez zamowienia
 2026-11-22T16:43:30Z Dashboard : les Frais deviennent un onglet de la Trésorerie, le rail perd l'entrée Frais (vue=frais et le lien « Frais ▸ » du P&L ouvrent l'onglet)
+2026-11-22T16:46:59Z [369] struktura userId fix
