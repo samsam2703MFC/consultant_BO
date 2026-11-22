@@ -108,13 +108,16 @@ verifie('le résumé : la prochaine date (la fenêtre en cours), combien bientô
 $_GET = ['shop' => (string) $shop]; $C = ep_coffre_magasin();
 verifie('les repères du coffre portent le résumé des grandes dates', ($C['reperes']['dates']['bientot'] ?? null) === 2);
 
+$GLOBALS['corps'] = ['shop' => $shop, 'depuis' => 'cockpit', 'dates' => [['sorte' => 'autre', 'titre' => 'Rangée au cockpit', 'le' => $dans(700)]]];
+$x = wr_coffre_dates();
+verifie('sans session, le cockpit range au nom du siège', (array_values(array_filter($x['dates'], fn ($d) => $d['titre'] === 'Rangée au cockpit'))[0]['role'] ?? '') === 'siege');
 echo "Les droits\n";
 $GLOBALS['mode'] = 'console';
 $GLOBALS['identite'] = ['role' => 'franchise', 'shops' => [(string) $shop], 'nom' => 'Gosselies'];
-$GLOBALS['corps'] = ['shop' => $shop, 'dates' => [['sorte' => 'autorisation', 'titre' => 'Contrôle AFSCA', 'le' => $dans(60), 'docId' => (int) $cache['id']]]];
+$GLOBALS['corps'] = ['shop' => $shop, 'depuis' => 'cockpit', 'dates' => [['sorte' => 'autorisation', 'titre' => 'Contrôle AFSCA', 'le' => $dans(60), 'docId' => (int) $cache['id']]]];
 $R = wr_coffre_dates();
 $afsca = array_values(array_filter($R['dates'], fn ($d) => $d['titre'] === 'Contrôle AFSCA'))[0];
-verifie('le magasin range ; un document hors de son coffre n’est pas relié', $R['ajoutees'] === 1 && $afsca['docId'] === null && $afsca['role'] === 'franchise' && $afsca['modifiable']);
+verifie('le magasin connecté range à son nom (le « cockpit » du corps ne compte pas) ; un document hors de son coffre n’est pas relié', $R['ajoutees'] === 1 && $afsca['docId'] === null && $afsca['role'] === 'franchise' && $afsca['modifiable']);
 $siegeDate = array_values(array_filter($R['dates'], fn ($d) => $d['titre'] === 'Échéance RC'))[0];
 verifie('une date du siège : pas modifiable par le magasin', $siegeDate['modifiable'] === false);
 $_GET = ['shop' => (string) $shop, 'id' => (string) $siegeDate['id']]; $x = @wr_coffre_date_suppr();

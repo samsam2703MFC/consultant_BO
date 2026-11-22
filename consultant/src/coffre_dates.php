@@ -25,7 +25,8 @@ declare(strict_types=1);
  * Routes (préfixe /coffre/magasin : écran de magasin, ACCES_FRANCHISE ; le siège y passe avec ?shop=) :
  *   GET    /coffre/magasin/dates?shop=                    les grandes dates (rangées, et les échéances des documents)
  *   POST   /coffre/magasin/dates {shop, dates:[{sorte, titre, le, fin?, note?, docId?, source?}],
- *                                 echeanceDoc?:{docId, le}, titreDoc?:{docId, titre}}   ranger (après l'assistant, ou à la main)
+ *                                 echeanceDoc?:{docId, le}, titreDoc?:{docId, titre}, depuis?:'cockpit'}   ranger (après
+ *                                 l'assistant, ou à la main) ; `depuis` ne compte que sans session (accès ouvert)
  *   DELETE /coffre/magasin/dates?shop=&id=                retirer une date rangée
  *   POST   /coffre/magasin/assistant {shop, id}           l'assistant lit le document n° id et propose ses grandes dates
  */
@@ -221,7 +222,8 @@ function wr_coffre_dates(): array
     $shop = (int) ($b['shop'] ?? 0);
     if (!cofShopOk($shop)) { http_response_code($shop > 0 ? 403 : 400); return ['error' => $shop > 0 ? 'ce magasin n’est pas sur votre session' : 'shop requis']; }
     cofDatesTable();
-    $qui = cofQui('franchise', $shop);
+    // Qui range : la session d'abord ; sans session (accès ouvert), le cockpit le dit (`depuis: cockpit`), sinon le magasin.
+    $qui = cofQui(($b['depuis'] ?? '') === 'cockpit' ? 'siege' : 'franchise', $shop);
     $n = 0; $refus = [];
     foreach (array_slice((array) ($b['dates'] ?? []), 0, 30) as $i => $d) {
         if (!is_array($d)) { continue; }
