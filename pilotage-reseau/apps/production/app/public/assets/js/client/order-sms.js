@@ -1,5 +1,5 @@
 // [372] SMS de commande au client (un clic, texte relu) : fenêtre commune aux assistants « Zamówienia dnia » et
-// « Klienci bez zamówienia ». orderSms.open({kinds: ['order_confirm', 'order_changed'], id, hints: {expected, detail}, onSent})
+// « Klienci bez zamówienia ». orderSms.open({kinds: ['order_confirm', 'order_changed'], id, hints: {expected, detail, date}, onSent})
 (() => {
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const LABEL = {order_missing: 'Przypomnienie : brak zamówienia', order_confirm: 'Potwierdzenie zamówienia', order_changed: 'Zmiana zamówienia'};
@@ -20,7 +20,7 @@
         async open({kinds, id, hints = {}, onSent}) {
             let kind = kinds[0], d = null;
             const load = async () => {
-                const r = await at.send(`/ajax/client-orders/sms/draft?${q({kind, id, expected: hints.expected, detail: hints.detail})}`, 'GET');
+                const r = await at.send(`/ajax/client-orders/sms/draft?${q({kind, id, expected: hints.expected, detail: hints.detail, date: hints.date})}`, 'GET');
                 if (!r.ok) { at.notify(false, r.message || 'Nie udało się przygotować SMS.'); return false; }
                 d = r.data;
                 return true;

@@ -45,13 +45,17 @@ final class OrderSmsService
         ],
     ];
 
+    /** Modification = nouvelle date d'expédition (« Opóźnienia dostaw ») : mention dans la langue du client. */
+    private const NEW_DATE = ['pl' => 'nowy termin wysyłki', 'fr' => "nouvelle date d'expédition", 'nl' => 'nieuwe verzenddatum', 'en' => 'new shipping date'];
+
     public function __construct(private OrderSmsRepository $repo, private SmsTransport $sms)
     {
     }
 
     /**
      * Brouillon : destinataire, langue et texte prérempli.
-     * @param array{expected?: ?string, detail?: ?string} $hints date attendue (order_missing), détail de la modification (order_changed)
+     * @param array{expected?: ?string, detail?: ?string, date?: ?string} $hints date attendue (order_missing), détail de la
+     *   modification (order_changed), nouvelle date d'expédition (Y-m-d : remplace celle de la commande dans le texte)
      */
     public function draft(string $kind, int $id, array $hints = []): array
     {
@@ -60,10 +64,13 @@ final class OrderSmsService
         $num = $t['order'] ? ($t['order']['reference'] !== null && trim((string) $t['order']['reference']) !== '' ? trim((string) $t['order']['reference']) . ' (nr ' . $t['order']['id'] . ')' : 'nr ' . $t['order']['id']) : '';
         $cartons = $t['order'] ? (float) $t['order']['cartons'] : 0.0;
         $detail = trim((string) ($hints['detail'] ?? ''));
+        $newDate = isset($hints['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $hints['date']) ? (string) $hints['date'] : null;
+        if ($newDate !== null && $detail === '' && $kind === 'order_changed') $detail = self::NEW_DATE[$lang];
+        $ship = $newDate ?? ($t['order'] ? $t['order']['shipping_date'] : null);
         $text = strtr(self::TEXT[$kind][$lang], [
             '{company}' => $this->repo->companyName() ?: '—',
             '{num}' => $num,
-            '{date}' => $t['order'] && $t['order']['shipping_date'] ? date('d.m.Y', strtotime((string) $t['order']['shipping_date'])) : '—',
+            '{date}' => $ship ? date('d.m.Y', strtotime((string) $ship)) : '—',
             '{cartons}' => rtrim(rtrim(number_format($cartons, 1, ',', ' '), '0'), ','),
             '{expected}' => self::day($hints['expected'] ?? null) ?? '—',
             '{detail}' => $detail !== '' ? mb_substr($detail, 0, 200) : '…',

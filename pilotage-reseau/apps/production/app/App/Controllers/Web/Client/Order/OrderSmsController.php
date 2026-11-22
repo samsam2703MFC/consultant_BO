@@ -25,13 +25,14 @@ final class OrderSmsController extends BaseController
     {
     }
 
-    /** GET ?kind=order_missing|order_confirm|order_changed&id=…&expected=Y-m-d&detail=… */
+    /** GET ?kind=order_missing|order_confirm|order_changed&id=…&expected=Y-m-d&detail=…&date=Y-m-d */
     public function draft()
     {
         try {
             $this->guard();
             return $this->json(['data' => $this->sms->draft((string) ($_GET['kind'] ?? ''), (int) ($_GET['id'] ?? 0),
-                ['expected' => isset($_GET['expected']) ? (string) $_GET['expected'] : null, 'detail' => isset($_GET['detail']) ? (string) $_GET['detail'] : null])]);
+                ['expected' => isset($_GET['expected']) ? (string) $_GET['expected'] : null, 'detail' => isset($_GET['detail']) ? (string) $_GET['detail'] : null,
+                'date' => isset($_GET['date']) ? (string) $_GET['date'] : null])]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
