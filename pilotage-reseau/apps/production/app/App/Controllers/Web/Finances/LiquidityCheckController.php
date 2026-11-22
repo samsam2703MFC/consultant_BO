@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Asystent « Płynność i gotówka » [373] : sytuacja 4 tygodni, plan (saldo, decyzje dla sygnałów), podsumowanie.
  * La page est sous /finances (droit « margins » : Finanse — faktury i koszty) ; les appels ajax vérifient le même droit
- * (App ne contrôle que les pages). Montants : seulement profil Finanse et CEO (PageAccessService::seesOrderValues, [312]).
+ * (App ne contrôle que les pages). Montants : profil Finanse et CEO, et Kierownik operacyjny (PageAccessService::seesLiquidityValues, [312] [373]).
  * Lecture seule hors de n_liquidity_balance et n_liquidity_decision ; aucun e-mail ni SMS.
  */
 final class LiquidityCheckController extends BaseController
@@ -82,10 +82,10 @@ final class LiquidityCheckController extends BaseController
         if (!$this->access->canSee($this->userId(), self::PATH)) throw new CustomException('Brak dostępu do finansów.', 'errors', 403);
     }
 
-    /** [312] Kwoty : profil Finanse i CEO. */
+    /** [312] [373] Kwoty : profil Finanse i CEO oraz Kierownik operacyjny (jego zadanie). */
     private function values(): bool
     {
-        return $this->access->seesOrderValues($this->userId());
+        return $this->access->seesLiquidityValues($this->userId());
     }
 
     private function userId(): ?int
