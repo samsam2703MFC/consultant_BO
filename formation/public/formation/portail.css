@@ -217,7 +217,13 @@ a.pt-fo:hover span:last-child { color: var(--accent); }
 .ac-tab .ac-c0 { width: 13%; }
 .ac-tab thead th { text-align: left; vertical-align: top; padding: 16px 14px 12px; border-bottom: 3px solid var(--c, var(--line)); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); background: #fff; }
 .ac-ic { display: flex; width: 38px; height: 38px; border-radius: 11px; align-items: center; justify-content: center; margin-bottom: 8px;
-  background: color-mix(in srgb, var(--c) 12%, #fff); color: var(--c); }
+  background: var(--fd, color-mix(in srgb, var(--c) 12%, #fff)); color: var(--en, var(--c)); }
+/* Les couleurs des couvertures du catalogue (22/11/2026) : une étiquette rectangle aux coins arrondis ; les formations, hors
+   catalogue, en contour (et un trait pointillé sous leur colonne). */
+.ac-ic.ct { box-shadow: inset 0 0 0 1.5px var(--en); }
+.ac-tab thead th.ct { border-bottom-style: dashed; }
+.ac-tg { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--fd); color: var(--en); line-height: 1.35; }
+.ac-tg.ct { box-shadow: inset 0 0 0 1.5px var(--en); }
 .ac-mot { display: block; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
 .ac-tab thead .ac-nom { display: block; font: 400 19px var(--font-display); color: var(--ink); text-decoration: none; }
 .ac-nom:hover { color: var(--c); text-decoration: underline; text-underline-offset: 3px; }

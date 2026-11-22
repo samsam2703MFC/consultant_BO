@@ -25,3 +25,24 @@ Titres et codes : ceux du module en ligne (lus le 22/11/2026 : 59 articles, 31 S
 - La page « Formations et suivi » du dashboard monte l'accueil du module (sans rail) sous la méga-barre ; un résultat
   ouvre la SOP (tablette), la formation, ou le feuilletage du catalogue au bon endroit.
 - À décider : la recherche cherche-t-elle aussi en néerlandais ? un résultat réservé (cadenas or) se montre-t-il ?
+
+## Où on en est (22/11/2026) — codé sur la branche
+
+Sam : « code la formation ». Choix par défaut, en attendant sa réponse : la recherche est en français (les textes
+néerlandais n'y sont pas) ; les documents « responsable » y figurent (ils s'ouvrent sans PIN depuis le 12/11/2026),
+marqués d'un cadenas.
+
+| Pièce | Fichiers |
+|---|---|
+| Serveur : l'index du catalogue | `formation/src/formation_recherche.php` (`GET /formation/recherche`), `shared/src/acces.php`, `shared/public/api/index.php` |
+| Dashboard : l'accueil, la méga-barre, l'aperçu, le lecteur | `panel/public/dashboard/seformer.js`, `seformer.css` (nouveaux), `formation.js` (l'accueil par défaut, le dossier à un clic), `formation.css`, `index.html` |
+| Tests | `php formation/bin/tests_formation_recherche.php` (14) |
+| Les couleurs des catalogues sur l'accueil | `seformer.js` et, dans le module, `formation/public/formation/portail.js`, `portail.css` |
+
+Essayé dans le vrai dashboard avec l'index bâti sur le catalogue en ligne (105 documents, 54 formations, 8 domaines,
+lus le 22/11/2026) et ses vraies fiches : l'accueil, « cuisson » (25 résultats), « creme patissiere » sans accents,
+le lecteur (33 étapes), le filtre SOP, le raccourci « / », le téléphone. Captures : `code-*.png`.
+
+Sam : « gardons les codes couleur des catalogues ». Le tableau de l'accueil (dashboard et module) et la phrase
+« la formation apprend… » prennent les couvertures du catalogue : Manuel opératoire Ruby, SOP Noir, Checklists
+Brun #78554B ; Formations, hors catalogue, en blanc au contour Ruby, le trait du tableau en pointillés.

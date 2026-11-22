@@ -162,6 +162,8 @@ require __DIR__ . '/../../../formation/src/fiches_techniques.php';
 require __DIR__ . '/../../../formation/src/formation_postes.php';
 // La formation continue (22/11/2026) : un type de formation, ses dossiers par boutique, la validation du consultant.
 require __DIR__ . '/../../../formation/src/formation_continue.php';
+// La recherche de la formation (22/11/2026) : l'index de tout le catalogue pour la méga-barre de « Formations et suivi ».
+require __DIR__ . '/../../../formation/src/formation_recherche.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../../marketing/src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
@@ -824,6 +826,7 @@ function route(string $method, string $path): mixed
             $path === '/franchises/documents'          => ep_franchises_documents(),
             $path === '/coffre/magasin'                => ep_coffre_magasin(),
             $path === '/coffre/magasin/dates'          => ep_coffre_dates(),
+            $path === '/formation/recherche'           => ep_formation_recherche(),
             $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),

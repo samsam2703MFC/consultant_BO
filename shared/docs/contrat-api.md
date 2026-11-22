@@ -6144,3 +6144,21 @@ secteur au besoin ; sous le `plancher` mensuel, le complément est payé. Le tau
 (`departFranchise`), prélevé avec ses royalties ; le reste, à la charge de la marque. L'objectif (`objectif`, 5 000 € HT par
 mois apportés), le coût mensuel du commercial (`cout`) et le ROI de la marque ((retour − coût) ÷ coût, le retour étant le CA HT
 ou la marge `marge` %). Tests : `php commercial/bin/tests_commercial.php`.
+
+
+## Formation · La recherche de « Formations et suivi » (22/11/2026)
+
+Sam : « tomber sur l'accueil de la formation, sans le rail, et une méga search bar sur tout le catalogue » (maquettes
+`formation/docs/maquettes/formations-et-suivi-v2/`). La page « Formations et suivi » du dashboard s'ouvre sur l'accueil du
+module Formation (la phrase et le tableau Formation · Manuel · SOP · Checklist), sous une barre de recherche sur tout le
+catalogue ; le dossier de formation (formation continue) reste à un clic. `formation/src/formation_recherche.php`.
+
+| Route | Corps | Réponse |
+|---|---|---|
+| `GET /formation/recherche` | — | `{genere, catalogues:[{cle: fo\|man\|std\|chk\|res\|fc, nom, couleur, encre, contour, manuel, n}], types:{Article, SOP, …}, docs:[{id, cat, type, code, titre, objectif, pour, texte, etapes:[{titre, critique}] (4 au plus), nbEtapes, photo, poste, moment, acces, statut, categorie}], formations:[{code, titre, famille, postes, phases, competences}], domaines:[{code, titre, souscats}]}` |
+
+`docs` : les documents du Manuel publiés et à valider (jamais les brouillons) et les formations continues publiées ;
+`texte` : le texte des étapes et des points critiques (6 000 caractères au plus), pour chercher dedans. `/formation/recherche`
+est dans `ACCES_FRANCHISE`. La page cherche dans le navigateur (sans accents ni capitales : titres, codes, objectifs,
+étapes) ; un document s'ouvre en tiroir par la route publique de la tablette (`GET /formation/sop/tablette/sop/{id}`).
+Tests : `php formation/bin/tests_formation_recherche.php`.
