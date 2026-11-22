@@ -247,3 +247,4 @@
 2026-11-21T17:36:55Z Hub du marketing, Mon marketing, campagnes des visites, objectifs produits, annexes et KPI par levier : campagnes, boutiques et leviers lus au module Marketing (lot 5a)
 2026-11-21T17:48:32Z Agences : liste, agence qui signe la note, création, modification et retrait par l'API du module Marketing (lot 5b, marketing/src/mkt_agences.php) ; marketingAppel lit les 204 et les erreurs au standard
 2026-11-22T14:10:19Z Formation continue (module, cockpit, dashboard, Professeur), coffre-fort du franchisé et ses grandes dates avec l'assistant à l'import, pièces jointes de la Boîte mail (importer, coffre-fort, catalogues)
+2026-11-22T14:55:32Z Coffre-fort v2 : l'état du coffre, les pièces attendues (16), le tiroir d'aperçu, le dépôt avec l'assistant ; la pièce au dépôt du consultant
