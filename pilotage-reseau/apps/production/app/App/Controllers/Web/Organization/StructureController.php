@@ -81,6 +81,13 @@ class StructureController extends BaseController
         return $this->act(fn() => ['count' => $this->service->importItems($this->body(), $this->userId())], 'Zapisano obowiązki z pliku.');
     }
 
+    /** Utilisateur connecté (auteur des changements) ; manquait : chaque écriture finissait en « Błąd serwera ». */
+    private function userId(): ?int
+    {
+        $id = user('id');
+        return $id ? (int) $id : null;
+    }
+
     private function body(): array
     {
         return $this->getJson(Request::createFromGlobals());
