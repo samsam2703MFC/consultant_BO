@@ -1166,8 +1166,12 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .ffd-mail{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:16px;margin-top:6px}@media (max-width:900px){.ffd-mail{grid-template-columns:1fr}}
 .ffd-mail-f{display:flex;flex-direction:column;gap:10px;min-width:0}.ffd-ta{height:84px;padding:8px 10px;resize:vertical;line-height:1.45}
 .ffd-ap{width:100%;height:760px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:#EFE9DF;display:block}.ffd-ap.maj{opacity:.55}
-.ffd-tab{table-layout:fixed;min-width:640px}.ffd-tab th:nth-child(1){width:36%}.ffd-tab th:nth-child(2){width:30%}.ffd-tab th:nth-child(3){width:12%}.ffd-tab td{overflow-wrap:anywhere}
-.ffd-tab td small{font-size:11.5px;margin-top:2px}.ffd-act{white-space:nowrap;text-align:right}.ffd-act .mko-pied-btn{margin-left:6px;text-decoration:none;display:inline-block}
+.ffd-tab{table-layout:fixed;min-width:760px}.ffd-tab th:nth-child(1){width:30%}.ffd-tab th:nth-child(2){width:24%}.ffd-tab th:nth-child(3){width:12%}.ffd-tab th:nth-child(4){width:15%}.ffd-tab td{overflow-wrap:anywhere}
+.ffd-tab td small{font-size:11.5px;margin-top:2px}
+/* Le coffre-fort du franchisé (22/11/2026) : la case du dépôt, et dans la liste, dedans ou pas (un clic bascule). */
+.ffd-case{display:flex;align-items:center;gap:8px;height:34px;font-size:12.5px;color:var(--color-text)}
+.ffd-cf{border:1px solid var(--color-border-tertiary);background:#fff;border-radius:7px;padding:3px 8px;font:inherit;font-size:11.5px;color:var(--color-text-muted);cursor:pointer;white-space:nowrap}
+.ffd-cf.on{background:#F6EDEE;border-color:#E8C9CD;color:var(--accent)}.ffd-act{white-space:nowrap;text-align:right}.ffd-act .mko-pied-btn{margin-left:6px;text-decoration:none;display:inline-block}
 /* Primes de l'app worker (23/10/2026, « optimiser pour desktop ») : la ligne d'une prime. Plus étroit, la liste en trois
    lignes (nom, ce qui compte, qui gagne · réseau) ; sur un écran large, une ligne en colonnes alignées sous un en-tête. */
 .prl{display:flex;align-items:center;gap:14px;padding-left:18px}

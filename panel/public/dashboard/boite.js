@@ -2,7 +2,8 @@
  * messages automatiques, transformer en offre… »).
  *
  * La boîte e-mail du magasin, dans le dashboard : les dossiers, la liste (1/3) et l'e-mail ouvert (2/3), la recherche ;
- * répondre, répondre à tous, transférer, écrire, avec les modèles du réseau et du magasin, des pièces jointes, une offre
+ * répondre, répondre à tous, transférer, écrire, avec les modèles du réseau et du magasin, des pièces jointes (dont les
+ * documents du coffre-fort du magasin, 22/11/2026), une offre
  * de TF Buddy en PDF ; archiver, corbeille, suivre, non lu. La sélection (21/11/2026) : une case par e-mail, « tout
  * sélectionner » (la page, puis tout le dossier), archiver, corbeille, effacer pour de bon depuis la corbeille, déplacer
  * vers un dossier — des boutons à micro-icône, pas de liste déroulante — et « Ranger avec l'IA » : l'IA propose un dossier
@@ -213,7 +214,7 @@
   }
   const sansPrefixe = s => String(s || '').replace(/^\s*((re|tr|fw|fwd|réf)\s*:\s*)+/i, '');
   function nouvelEcrit(o) {
-    st.ecr = Object.assign({ a: '', cc: '', objet: '', texte: '', reponse: null, transfert: null, offre: null, pieces: [], modele: '', ccOuvert: false }, o || {});
+    st.ecr = Object.assign({ a: '', cc: '', objet: '', texte: '', reponse: null, transfert: null, offre: null, pieces: [], coffre: [], modele: '', ccOuvert: false }, o || {});
     st.vue = 'ecrire'; rendre();
     if (st.ecr.offre) { chargerOffres(); }
     const f = st.el && st.el.querySelector(st.ecr.a ? '#bx-texte' : '#bx-a'); if (f) { f.focus(); if (f.id === 'bx-texte') { f.setSelectionRange(0, 0); } }
@@ -251,14 +252,23 @@
     const L = [...files].slice(0, 10);
     return Promise.all(L.map(f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok({ nom: f.name, type: f.type || 'application/octet-stream', taille: f.size, base64: String(r.result).split(',')[1] || '' }); r.onerror = ko; r.readAsDataURL(f); })));
   }
+  /** Le coffre-fort du magasin (22/11/2026, Sam : « dans les mails, une annexe du coffre-fort ») : ses documents, lus une
+   * fois à l'ouverture d'un e-mail à écrire, par le module du coffre (coffre.js) ; joints au serveur, 5 au plus. */
+  const coffreDoc = id => (st.coffreL || []).find(d => d.id === id);
+  function coffreLire() {
+    if (st.coffreLu || !window.DashCoffre) { return; }
+    st.coffreLu = true;
+    window.DashCoffre.liste(st.shop, st.api).then(l => { st.coffreL = l; }).catch(() => { st.coffreL = []; }).finally(rendre);
+  }
   function envoyer() {
     const e = st.ecr;
     if (!e.a.trim()) { return flash(false, 'Un destinataire, au moins.'); }
-    const poids = e.pieces.reduce((s, p) => s + (p.taille || 0), 0);
+    // Les documents du coffre-fort (22/11/2026) pèsent aussi : le serveur les lit et les joint (consultant/src/coffre.php).
+    const poids = e.pieces.reduce((s, p) => s + (p.taille || 0), 0) + (e.coffre || []).reduce((s, id) => s + ((coffreDoc(id) || {}).octets || 0), 0);
     if (poids > 15e6) { return flash(false, 'Les pièces jointes dépassent 15 Mo.'); }
     st.occupe = true; st.flash = null; rendre();
     ecrire('/dashboard/boite/envoyer', { a: e.a, cc: e.cc, objet: e.objet, texte: e.texte, reponse: e.reponse, transfert: e.transfert, offre: e.offre || null,
-      pieces: e.pieces.map(p => ({ nom: p.nom, type: p.type, base64: p.base64 })) })
+      pieces: e.pieces.map(p => ({ nom: p.nom, type: p.type, base64: p.base64 })), coffre: e.coffre || [] })
       .then(r => { st.ecr = null; st.vue = 'lire'; flash(!r.avertissement, r.avertissement || 'E-mail envoyé depuis ' + st.etat.adresse + '.'); chargerListe(); chargerEtat(); if (st.sel && st.msg) { st.msg.repondu = true; } })
       .catch(x => flash(false, 'L’e-mail n’est pas parti : ' + x.message))
       .finally(() => { st.occupe = false; rendre(); });
@@ -630,8 +640,9 @@
         <label><span>Objet</span><input class="bx-in" id="bx-objet" value="${esc(e.objet)}"></label>
         <div class="bx-outils"><select class="bx-in" id="bx-modele"><option value="">${M ? 'Insérer un modèle…' : 'lecture des modèles…'}</option>${M ? `<optgroup label="Modèles du réseau">${grp('Modèles du réseau')}</optgroup>${(M.magasin || []).length ? `<optgroup label="Modèles du magasin">${grp('Modèles du magasin')}</optgroup>` : ''}` : ''}</select>
           <select class="bx-in" id="bx-offre"><option value="">${st.offres ? 'Joindre une offre (PDF de TF Buddy)…' : 'lecture des offres…'}</option>${ofs.map(o => `<option value="${o.id}"${String(e.offre) === String(o.id) ? ' selected' : ''}>Offre n° ${o.id} · ${esc(o.nom || '')} · ${esc(o.client ? o.client.nom : 'sans client')} · ${eur(o.total)}</option>`).join('')}</select>
+          ${window.DashCoffre ? `<select class="bx-in" id="bx-coffre"><option value="">${!st.coffreL ? 'lecture du coffre-fort…' : (st.coffreL.length ? (e.coffre.length >= 5 ? 'Cinq documents du coffre au plus' : 'Joindre du coffre-fort…') : 'Coffre-fort vide')}</option>${(st.coffreL || []).filter(d => !e.coffre.includes(d.id)).map(d => `<option value="${d.id}">${esc(d.onglet)} · ${esc(d.titre)}</option>`).join('')}</select>` : ''}
           <label class="db-btn bx-fichier">${ico(I.pj)}Joindre un fichier<input type="file" id="bx-fichiers" multiple hidden></label></div>
-        ${e.offre || e.pieces.length ? `<div class="bx-pieces">${e.offre ? `<span class="bx-piece">${ico(I.offre)}<span>Offre n° ${esc(e.offre)}.pdf</span><button type="button" class="bx-x" data-bxx="offre" aria-label="Retirer">×</button></span>` : ''}${e.pieces.map((p, i) => `<span class="bx-piece">${ico(I.pj)}<span>${esc(p.nom)}</span><button type="button" class="bx-x" data-bxx="${i}" aria-label="Retirer">×</button></span>`).join('')}</div>` : ''}
+        ${e.offre || e.pieces.length || e.coffre.length ? `<div class="bx-pieces">${e.offre ? `<span class="bx-piece">${ico(I.offre)}<span>Offre n° ${esc(e.offre)}.pdf</span><button type="button" class="bx-x" data-bxx="offre" aria-label="Retirer">×</button></span>` : ''}${e.coffre.map(id => `<span class="bx-piece" title="Du coffre-fort">🔒<span>${esc((coffreDoc(id) || {}).nom || 'document ' + id)}</span><button type="button" class="bx-x" data-bxx="c${id}" aria-label="Retirer">×</button></span>`).join('')}${e.pieces.map((p, i) => `<span class="bx-piece">${ico(I.pj)}<span>${esc(p.nom)}</span><button type="button" class="bx-x" data-bxx="${i}" aria-label="Retirer">×</button></span>`).join('')}</div>` : ''}
         ${e.transfert ? '<div class="bx-note">L’e-mail d’origine part en pièce jointe (avec ses propres pièces jointes).</div>' : ''}
         <textarea class="bx-in bx-zone" id="bx-texte" rows="16">${esc(e.texte)}</textarea></div>
       <div class="bx-actions"><button type="button" class="db-btn" data-bx="annuler">Annuler</button><button type="button" class="db-btn prim" data-bx="envoyer"${st.occupe ? ' disabled' : ''}>${st.occupe ? 'Envoi…' : 'Envoyer'}</button></div></div>`;
@@ -909,8 +920,10 @@
       [['bx-a', 'a'], ['bx-cc', 'cc'], ['bx-objet', 'objet'], ['bx-texte', 'texte']].forEach(([id, k]) => { const n = el.querySelector('#' + id); if (n) { n.addEventListener('input', () => { e[k] = n.value; }); } });
       const mo = el.querySelector('#bx-modele'); if (mo) { mo.addEventListener('change', () => { if (mo.value) { appliquerModele(mo.value); } }); }
       const of = el.querySelector('#bx-offre'); if (of) { of.addEventListener('change', () => { e.offre = of.value || null; rendre(); }); }
+      coffreLire();
+      const cf = el.querySelector('#bx-coffre'); if (cf) { cf.addEventListener('change', () => { if (cf.value && e.coffre.length < 5) { e.coffre.push(+cf.value); } rendre(); }); }
       const fi = el.querySelector('#bx-fichiers'); if (fi) { fi.addEventListener('change', () => { lireFichiers(fi.files).then(L => { e.pieces.push(...L); rendre(); }).catch(() => flash(false, 'Le fichier ne se lit pas.')); }); }
-      on('[data-bxx]', 'click', x => { const k = x.currentTarget.dataset.bxx; if (k === 'offre') { e.offre = null; } else { e.pieces.splice(+k, 1); } rendre(); });
+      on('[data-bxx]', 'click', x => { const k = x.currentTarget.dataset.bxx; if (k === 'offre') { e.offre = null; } else if (k[0] === 'c') { e.coffre = e.coffre.filter(id => id !== +k.slice(1)); } else { e.pieces.splice(+k, 1); } rendre(); });
     }
     // Le corps HTML de l'e-mail prend sa hauteur (même origine, sans script : on le mesure d'ici).
     const f = el.querySelector('.bx-cadre');

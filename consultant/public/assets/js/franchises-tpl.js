@@ -24,7 +24,7 @@ export function tplFF(c, x){
   // Documents (22/10/2026) : déposer en tête, puis les documents du magasin par sorte.
   if (f.onglet === 'docs') {
     const D = f.docs || {};
-    const tete = `<div class="gc-titre"><h1>${esc(f.shopNom)}</h1><span class="ss">Documents · rapports de réunion, contrats de mise à disposition et autres pièces du magasin</span></div>`;
+    const tete = `<div class="gc-titre"><h1>${esc(f.shopNom)}</h1><span class="ss">Documents · le DIP, le contrat, les pièces légales, la formation, les réunions… ; ceux cochés « dans le coffre » se lisent dans le coffre-fort du dashboard du franchisé</span></div>`;
     if (D.erreur) { return page(tete + attente(D.erreur)); }
     if (D.chargement || !D.sortes) { return page(tete + attente('Lecture des documents…')); }
     const fm = D.form;
@@ -35,6 +35,8 @@ export function tplFF(c, x){
         ${champ('Titre', `<input class="mko-inp" value="${esc(fm.titre)}" placeholder="ex. Réunion du 21/10 — plan d’action" ${x.C(D.setTitre)}>`)}
         ${champ('Date du document', `<input class="mko-inp" type="date" value="${esc(fm.date)}" ${x.C(D.setDate)}>`)}
         ${champ('Note', `<input class="mko-inp" value="${esc(fm.note)}" placeholder="facultatif" ${x.C(D.setNote)}>`)}
+        ${champ('Échéance (facultatif)', `<input class="mko-inp" type="date" value="${esc(fm.echeance)}" ${x.C(D.setEcheance)}>`)}
+        <label class="ffd-c ffd-coffre"><span class="mko-lab">Coffre-fort du franchisé</span><span class="ffd-case"><input type="checkbox"${fm.coffre ? ' checked' : ''} ${x.C(D.setCoffre)}> le franchisé le lit dans son coffre</span></label>
       </div>
       <div class="ffd-bas"><label class="sq-drop ffd-drop"><b>${D.choisis.length ? esc(D.choisis.length > 1 ? D.choisis.length + ' fichiers choisis' : D.choisis[0]) : 'Choisir le ou les fichiers'}</b>${D.choisis.length > 1 ? esc(D.choisis.join(' · ')) : 'PDF, Word, Excel, photos… · ' + esc(D.max) + ' au plus par fichier'}<input type="file" multiple accept="${esc(D.accept)}" ${x.C(D.setFichiers)} style="display:none"></label>
         <button ${x.A(D.deposer)} class="cx-btn prim ffd-ok" ${D.peutDeposer ? '' : 'disabled'}>${D.envoi ? 'Envoi…' : 'Déposer'}</button></div>
@@ -57,8 +59,9 @@ export function tplFF(c, x){
         <div class="ffd-mail-v">${M.apErreur ? `<div class="ffd-msg ko">${esc(M.apErreur)}</div>` : (!M.html ? `<div class="mko-mu" style="padding:20px">Préparation de l’aperçu…</div>` : `<iframe class="ffd-ap${M.apChargement ? ' maj' : ''}" sandbox="" srcdoc="${esc(M.html)}" title="Aperçu du mail"></iframe>`)}</div></div>`}
     </div></div>`;
     const liste = D.groupes.length ? D.groupes.map(g => `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">${esc(g.nom)}</span><span class="mko-mini">${g.docs.length}</span></div>
-      <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th></th></tr></thead><tbody>
-      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}</td>
+      <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th>Coffre</th><th></th></tr></thead><tbody>
+      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}${d.echeance ? `<small>échéance ${esc(d.echeance)}</small>` : ''}</td>
+        <td><button ${x.A(d.basculer)} class="ffd-cf${d.coffre ? ' on' : ''}" title="${d.coffre ? 'Retirer du coffre du franchisé' : 'Mettre dans le coffre du franchisé'}">${d.coffre ? '🔒 dans le coffre' : 'hors du coffre'}</button>${d.ouvert ? `<small>${esc(d.ouvert)}</small>` : ''}</td>
         <td class="ffd-act"><a class="mko-pied-btn" href="${esc(d.ouvrir)}" target="_blank" rel="noopener">Ouvrir ↗</a><a class="mko-pied-btn" href="${esc(d.telecharger)}">Télécharger</a><button ${x.A(d.retirer)} class="mko-pied-btn">Retirer</button></td></tr>`).join('')}
       </tbody></table></div></div>`).join('')
       : attente('Aucun document pour ' + f.shopNom + ' : déposez le premier rapport de réunion ou contrat ci-dessus.');
