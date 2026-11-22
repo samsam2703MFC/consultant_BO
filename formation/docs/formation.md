@@ -1080,6 +1080,14 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   écriture au serveur : `tools/formation/apercu_tablette.js <module> <sortie> <fichiers.json…>` (partie 1, sommaire,
   parties critiques, dernière partie, NL, onglet Manuel au bon bouton).
 
+### Passe du 22/11/2026 (première passe ; réponse de Sam : « Toujours encoder avec screenshot »)
+
+- 0.0.61 « Le dashboard : la Boîte mail et ses modes IA » — à valider, v1.0 (14 parties, 1 photo).
+- 0.0.62 « Le dashboard : la demande au bureau » — à valider, v1.0 (12 parties, 3 photos, noms floutés).
+- 0.0.63 « Le dashboard : l'onglet Frais » — à valider, v1.0 (13 parties, 5 photos).
+- Règle de Sam : chaque article encodé porte des captures de l'écran en ligne ; le dashboard se capture en lecture
+  seule (`data/formation/nouveautes/captures_lecture_seule.js`, voir `LISEZMOI.md` › Captures).
+
 ## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026, encodé le 18/11/2026)
 
 - Client : « faire une mini formation pour expliquer les leviers de développement du chiffre d'affaires et l'intégrer
@@ -1483,12 +1491,3 @@ typographie dans tous les manuels ».
   - Les chiffres de la page sont lus dans `/formation/ref/fiches` : produits, catégories, saison et standard, fiches avec
     une recette, des étapes, une photo, des allergènes.
   - Un QR code ouvre le manuel.
-
-
-### Passe du 22/11/2026 (première passe ; réponse de Sam : « Toujours encoder avec screenshot »)
-
-- 0.0.61 « Le dashboard : la Boîte mail et ses modes IA » — à valider, v1.0 (14 parties, 1 photo).
-- 0.0.62 « Le dashboard : la demande au bureau » — à valider, v1.0 (12 parties, 3 photos, noms floutés).
-- 0.0.63 « Le dashboard : l'onglet Frais » — à valider, v1.0 (13 parties, 5 photos).
-- Règle de Sam : chaque article encodé porte des captures de l'écran en ligne ; le dashboard se capture en lecture
-  seule (`data/formation/nouveautes/captures_lecture_seule.js`, voir `LISEZMOI.md` › Captures).
