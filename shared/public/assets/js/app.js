@@ -7,6 +7,7 @@
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsFF, valsCQM } from './franchises-vals.js';
+import { valsFCC, fccBadge } from './formation-continue-vals.js';
 import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
 import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsAssistantCoachs } from './assistant-coachs-vals.js';
@@ -414,6 +415,8 @@ class App {
       mdFormulaires: 'metadonnee-formulaires', mdMapping: 'metadonnee-mapping', mdLeads: 'metadonnee-leads', mdSms: 'metadonnee-sms',
       // Franchisés · évaluation et suivi (09/10/2026)
       ficheFranchise: 'fiche', controlesQualite: 'qualite',
+      // La formation continue de chaque franchisé (22/11/2026) : vérifier, adapter, valider.
+      formationsContinues: 'franchises/formations',
       // Suivi des franchisés (24/10/2026) : le tableau de bord du bureau, la tablette, le client mystère, la page du franchisé, qui fait quoi.
       // Le fil du franchisé (19/11/2026) : notes, photos, captures, étiquettes, et la carte de chaque magasin ; « ?shop=5 ».
       filFranchise: 'franchises/fil',
@@ -1186,6 +1189,7 @@ class App {
       visibilite: ['Visibilité Google', 'Ce que Google affiche de chaque magasin face à ce que publie le site, et la place de chaque magasin quand on cherche ses produits autour de lui : boulangerie, sandwiches, cougnous, galettes des rois.'],
       ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
+      formationsContinues: ['Formations continues', ''],
       verifFlux: ['Audit des flux', 'Ce que chaque magasin fait de ce qui est en vitrine : gardé d’hier et produit, puis vendu, jeté, gardé — et ce qui ne s’explique pas, en % du disponible, au jour, à la semaine et au mois. Une journée n’est mesurée que si ses cuissons sont validées : sinon le produit est le plan, et l’écart un écart au plan.'],
       verifFuites: ['Fuites par magasin', 'Un tableau par magasin, tous de la même structure : gardé d’hier + produit − gardé pour demain = sorti ; sorti − ventes − poubelle = delta, par catégorie puis par produit. Pour voir où ça fuit, et si ça fuit.'],
       verifRecettes: ['Recettes à corriger', 'Chaque produit vendu doit avoir une recette complète, chiffrée et plausible : sinon l’écart de matière, la marge et le CA attendu sont faux. Dix règles, magasin par magasin, sur les ventes des trente derniers jours, classées par chiffre d’affaires concerné — et la part du CA déjà couverte, vers 100 %.'],
@@ -1439,6 +1443,8 @@ class App {
       ['Franchisés', [
         ['ficheFranchise', 'Fiche & scoring', 0],
         entree('visites', 'Visites', ['suiviTablette']),
+        // Les formations continues de ses franchisés (22/11/2026) : le chiffre, celles à valider.
+        ['formationsContinues', 'Formations continues', fccBadge(this)],
         entree('budget', 'Budget'),
         entree('ventes', 'Équipe & ventes'),
         ['audits', 'Audit fournisseurs', 0]]],
@@ -1522,8 +1528,8 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
+    ['isFCC', 'isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt', 'isFil'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', formationsContinues: 'isFCC', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', filFranchise: 'isFil', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
@@ -1976,6 +1982,7 @@ class App {
     if (common.isVerifMat) { valsVerifMatieres(this, common); }
     if (common.isVerifMouv) { valsVerifMouvements(this, common); }
     if (common.isFF) valsFF(this, common);
+    if (common.isFCC) valsFCC(this, common);
     if (common.isCQM) valsCQM(this, common);
     if (common.isSvTableau) valsSvTableau(this, common);
     if (common.isSvTablette) valsSvTablette(this, common);
