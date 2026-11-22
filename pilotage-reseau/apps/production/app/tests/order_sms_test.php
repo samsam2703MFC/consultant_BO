@@ -99,6 +99,18 @@ $check(str_contains($routes, "'GET', '/ajax/client-orders/sms/draft'") && str_co
 $ctrl = (string) file_get_contents(__DIR__ . '/../App/Controllers/Web/Client/Order/OrderSmsController.php');
 $check(substr_count($ctrl, '$this->guard();') === 2 && str_contains($ctrl, "PATH = '/client-orders'"), 'garde d\'accès « orders » sur les deux appels');
 
+// Chaque appel $this->sms->x() des contrôleurs vise une méthode publique d'OrderSmsService (sinon page en erreur).
+$fake->deliver = false;
+$check($svc->delivers() === false && ($fake->deliver = true) && $svc->delivers() === true, 'delivers() relaie la passerelle');
+$bad = [];
+foreach (glob(__DIR__ . '/../App/Controllers/Web/*/*/*.php') ?: [] as $f) {
+    $src = (string) file_get_contents($f);
+    if (!str_contains($src, 'OrderSmsService $sms')) continue;
+    preg_match_all('/\$this->sms->(\w+)\(/', $src, $m);
+    foreach (array_unique($m[1]) as $meth) if (!(new ReflectionClass(OrderSmsService::class))->hasMethod($meth) || !(new ReflectionMethod(OrderSmsService::class, $meth))->isPublic()) $bad[] = basename($f) . '::' . $meth;
+}
+$check(!$bad, 'contrôleurs : méthodes SMS existantes' . ($bad ? ' — manquantes : ' . implode(', ', $bad) : ''));
+
 $pdo->exec('DROP DATABASE erp_order_sms_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";
 exit($fail ? 1 : 0);
