@@ -174,9 +174,15 @@
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
     if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // La trésorerie (14/11/2026) : le module lit et écrit lui-même (tresorerie.js) ; « ↻ Relire » relit ses repères.
-    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
-    // Les frais du magasin et leur TVA (16/11/2026) : les frais du mois au panel, le choix de chaque poste.
-    if (S.vue === 'frais') { S.frMois = S.frMois || AUJ.slice(0, 7); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(cleFR(), cheminFR(), force); rendre(); return; }
+    // Les Frais (22/11/2026, Sam : « mettre les Frais dans la Trésorerie pour gagner de la place dans le rail ») : un onglet
+    // de la Trésorerie ; une adresse « vue=frais » ou le lien « Frais ▸ » du P&L ouvrent cet onglet.
+    if (S.vue === 'frais') { S.vue = 'tresorerie'; S.trOnglet = 'frais'; urlMaj(); }
+    if (S.vue === 'tresorerie') {
+      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force);
+      // Les frais du mois au panel et le choix de chaque poste (16/11/2026), lus quand l'onglet Frais est ouvert.
+      if (S.trOnglet === 'frais' || (window.DashTresorerie && window.DashTresorerie.onglet() === 'frais')) { S.frMois = S.frMois || AUJ.slice(0, 7); lireAux(cleFR(), cheminFR(), force); }
+      rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return;
+    }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
     if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=3', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
@@ -2559,7 +2565,15 @@
   function monterTresorerie() {
     const el = document.getElementById('db-tresorerie');
     if (!el || !window.DashTresorerie) { if (el) { el.innerHTML = '<div class="db-alerte">Le module de trésorerie n’est pas chargé.</div>'; } return; }
-    window.DashTresorerie.mount(el, { shop: S.shop, apiBase: API, nomShop: nomShop() });
+    const onglet = S.trOnglet || undefined; S.trOnglet = null;
+    window.DashTresorerie.mount(el, { shop: S.shop, apiBase: API, nomShop: nomShop(), onglet, extras: [{
+      cle: 'frais', nom: 'Frais', titre: 'Frais du magasin', sous: 'Les frais saisis au panel, mois par mois, et la TVA qu’ils contiennent',
+      // Les frais du mois : lus à la première ouverture de l'onglet (pas à chaque rendu : une erreur ne relance pas en boucle).
+      rendre: zone => {
+        S.frMois = S.frMois || AUJ.slice(0, 7);
+        const k = cleFR(); if (!S.aux[k] && !S.err[k]) { lireAux(k, cheminFR(), false); }
+        zone.innerHTML = rendFrais(); frBrancher();
+      } }] });
   }
   function monterActions() {
     const h = document.getElementById('db-actions');
@@ -7354,10 +7368,12 @@
     const k = cleFR(), D = S.aux[k], ceMois = AUJ.slice(0, 7);
     const nav = `<div class="fx-nav"><span class="db-lab">Mois</span><button class="db-btn" data-frm="-1" aria-label="mois précédent">‹</button><span class="fx-mois">${esc(frMoisLib(S.frMois))}</span><button class="db-btn" data-frm="1" aria-label="mois suivant"${S.frMois >= ceMois ? ' disabled' : ''}>›</button>${S.frMois !== ceMois ? '<button class="db-btn" data-frm="0">Ce mois-ci</button>' : ''}</div>`;
     let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre. Un frais qui manque s’<b>ajoute au panel</b> plus bas, pour le mois ou toute l’année.</p>`;
-    if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])}</div></div>`; }
+    // « Relire » dans l'onglet (22/11/2026) : la vignette Relire n'est plus que sur l'Opérationnel.
+    const relire = '<button type="button" class="db-btn" data-frrelire="1">↻ Relire</button>';
+    if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])} ${relire}</div></div>`; }
     if (!D) { return h + squelette(6) + '</div>'; }
     if (D.indispo) { return h + `<div class="db-alerte">${esc(D.motif || 'frais indisponibles')}</div></div>`; }
-    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div>${frRendAjout(D)}</div>`; }
+    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))}. ${relire}</div>${frRendAjout(D)}</div>`; }
     if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div>${frRendAjout(D)}</div>`; }
     const TAUX = D.taux || [0, 6, 12, 21];
     const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
@@ -7402,6 +7418,7 @@
     return h;
   }
   function frBrancher() {
+    $.querySelectorAll('[data-frrelire]').forEach(b => b.addEventListener('click', () => { delete S.err[cleFR()]; lireAux(cleFR(), cheminFR(), true); }));
     $.querySelectorAll('[data-frm]').forEach(b => b.addEventListener('click', () => {
       const n = +b.dataset.frm, ce = AUJ.slice(0, 7);
       S.frMois = n === 0 ? ce : frMoisPas(n); if (S.frMois > ce) { S.frMois = ce; }
@@ -7609,7 +7626,7 @@
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
-    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds'], ['frais', 'Frais', 'frais']]],
+    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
     // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
     // Analyse (15/11/2026, « go E et F, A en entrée ») : le magasin, ses familles et ses produits, question par question (analyse.js).
     ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
@@ -7824,6 +7841,7 @@
     // La réclamation fournisseur n'existe qu'au téléphone.
     // Sur ordinateur, plus d'onglet Jour (10/10/2026) : Opérationnel montre toute la journée, en plus complet.
     if (S.vue === 'reclamation' || S.vue === 'jour') { S.vue = 'ops'; urlMaj(); charger(false); return; }
+    if (S.vue === 'frais') { S.vue = 'tresorerie'; S.trOnglet = 'frais'; urlMaj(); charger(false); return; }
     if (EMBED) { const g = ppGarder(); $.classList.remove('mob'); document.body.classList.add('pp-emb'); $.innerHTML = rendProduction(); brancher(); ppRestaurer(g); return; }
     if (EMBED_PM) { const g = pmGarder(); $.classList.remove('mob'); document.body.classList.add('pm-emb'); $.innerHTML = rendPmEmbed(); brancher(); pmRestaurer(g); return; }
     $.classList.remove('mob');
@@ -7835,7 +7853,7 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button><button class="db-btn db-btn-fc" data-fcouvrir="1">🎓 Mon dossier de formation${fcAFaire() ? `<span class="n">${fcAFaire()}</span>` : ''}</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia${S.vue === 'assistant' ? ' on' : ''}" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['frais', 'Frais'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && S.vue !== 'coffre' && S.vue !== 'formation' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
@@ -7864,7 +7882,6 @@
     if (S.vue === 'formation') { h += '<div id="db-formation"></div>'; $.innerHTML = h; brancher(); fcMonter('db-formation'); return; }
     // Mon coffre-fort (22/11/2026) : l'élément du module, gardé d'un rendu à l'autre.
     if (S.vue === 'coffre') { h += '<div id="db-coffre"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-coffre'); if (p && window.DashCoffre) { p.replaceWith(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du coffre-fort n’a pas été chargé.</div>'; } return; }
-    if (S.vue === 'frais') { h += rendFrais(); $.innerHTML = h; brancher(); frBrancher(); return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); bndMonter(); pmRestaurer(g); return; }
