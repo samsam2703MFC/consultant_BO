@@ -97,6 +97,7 @@ final class PositionTaskService
         '/client-orders/supplements' => 'supplements_day_checked',
         '/finances/liquidity' => 'liquidity_checked',
         '/logistics/delays' => 'deliveries_delays_checked',
+        '/client-orders/otif' => 'otif_week_reviewed',
         '/purchasing/nc-review' => 'nc_reviewed',
         '/purchasing/cost-review' => 'material_costs_reviewed',
         '/production/yield-review' => 'yield_reviewed',
