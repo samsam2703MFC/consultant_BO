@@ -56,6 +56,12 @@ final class ParamRules
         'liquidity.min_balance' => [-10000000, 10000000, false],
         'liquidity.supplier_terms_days' => [0, 120, true],
         'liquidity.client_terms_days' => [0, 120, true],
+        // [374] Opóźnienia dostaw : jours en arrière (date d'expédition), jours « W transporcie » sans livraison confirmée,
+        // nombre de changements de la date d'expédition, minutes après l'heure de départ
+        'deliveries.delay_lookback_days' => [1, 90, true],
+        'deliveries.transit_max_days' => [1, 30, true],
+        'deliveries.date_changes_max' => [1, 10, true],
+        'deliveries.departure_grace_min' => [0, 600, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

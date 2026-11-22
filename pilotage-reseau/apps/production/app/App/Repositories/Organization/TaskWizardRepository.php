@@ -190,6 +190,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplement_check WHERE day = ?', [$day])[0]['n'] ?? 0);
     }
 
+    /** [374] Opóźnienia dostaw : décisions enregistrées pour le jour (n_delivery_delay_check). */
+    public function deliveryDelayChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_delivery_delay_check WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
     /** [373] Płynność i gotówka : saldo wpisane i decyzje zapisane w tygodniu (poniedziałek). @return array{balance:bool, decisions:int} */
     public function liquidityProgress(string $weekStart): array
     {
