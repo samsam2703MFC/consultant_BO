@@ -65,6 +65,8 @@ final class ParamRules
         // [375] Terminowość tygodnia (OTIF) : objectif en %, jours admis entre la date d'expédition et la livraison confirmée
         'otif.target_pct' => [50, 100, false],
         'otif.delivery_days' => [0, 7, true],
+        // [377] Partie i kontrola dnia : jours rattrapés au plus quand l'assistant n'a pas été validé
+        'lots_qc.catchup_days' => [1, 31, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

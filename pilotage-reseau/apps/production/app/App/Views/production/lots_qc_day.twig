@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Partie i kontrola dnia{% endblock %}
+
+{% block content %}
+{# [377] Assistant « Partie i kontrola dnia » : App\Services\Organization\Wizards\LotsQcDayService — écran dans
+   assets/js/production/lots-qc-day.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du jour du
+   poste « Specjalista ds. jakości » se valide seule après « Zakończ ». Aucune NC créée ici (lien vers le formulaire
+   existant), rien n'est modifié dans la production, aucun envoi. #}
+<section class="section">
+    <div id="lqApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="lqBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/production/lots-qc-day.js?v={{ asset_v() }}"></script>
+{% endblock %}
