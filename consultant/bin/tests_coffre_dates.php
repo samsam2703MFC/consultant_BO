@@ -26,6 +26,7 @@ final class Db {
   static function pdo(): PDO { if (!self::$p) { self::$p = new PDO('sqlite::memory:'); self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); } return self::$p; }
   static function fx(string $q): string {
     $q = str_replace('INT AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT', $q);
+    $q = (string) preg_replace('/,UNIQUE KEY \w+ (\([^)]*\))/', ',UNIQUE $1', $q);
     $q = (string) preg_replace('/,KEY \w+ \([^)]*\)/', '', $q); return (string) preg_replace('/\) ENGINE=.*$/', ')', $q);
   }
   static function exec(string $q, array $a = []): int { $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->rowCount(); }
@@ -141,7 +142,7 @@ Anthropic::$transport = function (array $corps, array $entetes) use (&$envois, &
     return [200, ['model' => 'claude-opus-5-5', 'stop_reason' => 'end_turn', 'usage' => ['input_tokens' => 3000, 'output_tokens' => 400],
         'content' => [['type' => 'text', 'text' => json_encode($reponse, JSON_UNESCAPED_UNICODE)]]]];
 };
-$reponse = ['genre' => 'bail_commercial', 'titre' => 'Bail commercial — rue de la Station 12, Gosselies',
+$reponse = ['genre' => 'bail_commercial', 'piece' => 'bail', 'titre' => 'Bail commercial — rue de la Station 12, Gosselies',
     'resume' => 'Bail commercial de 9 ans pour la boutique, loyer indexé chaque année.',
     'bail' => ['prise_de_cours' => '2022-03-01', 'duree_ans' => 9, 'preavis_mois' => null, 'extrait' => 'Le bail est consenti pour neuf années prenant cours le 1er mars 2022.'],
     'echeance' => '2031-02-28',
@@ -165,14 +166,17 @@ verifie('les dates passées sont proposées décochées, les futures cochées', 
 verifie('chaque proposition dit son état (passée pour la prise de cours)', ($P['Prise de cours du bail']['etat']['cle'] ?? '') === 'passee' && in_array($P['Fin du bail']['etat']['cle'] ?? '', ['avenir', 'bientot'], true));
 verifie('rien n’est encore rangé pour ce document : aucune « déjà »', count(array_filter($A['propositions'], fn ($p) => $p['deja'])) === 0);
 verifie('l’échéance et le titre du document sont proposés (il porte le nom du fichier)', ($A['echeanceDoc']['proposee'] ?? '') === '2031-02-28' && ($A['titreDoc']['propose'] ?? '') === 'Bail commercial — rue de la Station 12, Gosselies' && ($A['titreDoc']['actuel'] ?? '') === 'scan-bail-003');
+verifie('la pièce attendue reconnue : le bail commercial', ($A['pieceSuggeree']['cle'] ?? '') === 'bail' && ($A['pieceSuggeree']['onglet'] ?? '') === 'legal');
 verifie('le genre, le résumé et les remarques', $A['genreLib'] === 'Bail commercial' && str_contains($A['resume'], '9 ans') && str_contains($A['remarques'], 'préavis'));
 // Garder : les dates cochées, l'échéance et le titre du document.
 $gardees = array_values(array_filter($A['propositions'], fn ($p) => $p['coche']));
 $GLOBALS['corps'] = ['shop' => $shop, 'dates' => array_map(fn ($p) => ['sorte' => $p['sorte'], 'titre' => $p['titre'], 'le' => $p['le'], 'fin' => $p['fin'], 'note' => $p['note'], 'docId' => (int) $bail['id'], 'source' => $p['source']], $gardees),
-    'echeanceDoc' => ['docId' => (int) $bail['id'], 'le' => '2031-02-28'], 'titreDoc' => ['docId' => (int) $bail['id'], 'titre' => $A['titreDoc']['propose']]];
+    'echeanceDoc' => ['docId' => (int) $bail['id'], 'le' => '2031-02-28'], 'titreDoc' => ['docId' => (int) $bail['id'], 'titre' => $A['titreDoc']['propose']],
+    'pieceDoc' => ['docId' => (int) $bail['id'], 'piece' => 'bail']];
 $G = wr_coffre_dates();
 $doc = Db::row('SELECT titre, echeance FROM con_doc WHERE id = ?', [(int) $bail['id']]);
-verifie('gardées : les dates, l’échéance et le titre du document', $G['ajoutees'] === count($gardees) && $G['document'] === ['échéance', 'titre'] && $doc['echeance'] === '2031-02-28' && str_starts_with($doc['titre'], 'Bail commercial'));
+verifie('gardées : les dates, l’échéance, la pièce et le titre du document', $G['ajoutees'] === count($gardees) && $G['document'] === ['échéance', 'pièce', 'titre'] && $doc['echeance'] === '2031-02-28' && str_starts_with($doc['titre'], 'Bail commercial')
+    && Db::row('SELECT piece FROM con_doc WHERE id = ?', [(int) $bail['id']])['piece'] === 'bail', json_encode($G['document'], JSON_UNESCAPED_UNICODE));
 $A2 = wr_coffre_assistant_relire($shop, (int) $bail['id']);
 verifie('relu : les dates déjà rangées sont marquées « déjà » et décochées', count(array_filter($A2['propositions'], fn ($p) => $p['deja'] && !$p['coche'])) === count($gardees) && $A2['titreDoc'] === null && $A2['echeanceDoc'] === null);
 verifie('la fin du bail rangée ne fait pas doublon avec l’échéance du document', count(array_filter(cofDatesListe($shop), fn ($d) => $d['le'] === '2031-02-28')) === 1);

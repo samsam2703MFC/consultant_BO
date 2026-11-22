@@ -18,7 +18,7 @@
  *   Les offres : …/exploitation/offres-client ; les clients et les produits : …/exploitation/promos-magasin/clients|produits.
  *
  * `window.DashBoite.racine(shop, {apiBase, nomShop, onNonLus, aller, intention})` rend l'élément du module, gardé d'un
- * rendu à l'autre. `intention` : {ecrire: {a, nom, objet, offre}} ou {repondre: {dossier, uid, offre}}.
+ * rendu à l'autre. `intention` : {ecrire: {a, nom, objet, offre, coffre}} ou {repondre: {dossier, uid, offre}}.
  * `window.DashBoite.compter(shop, apiBase, cb)` : les non-lus de la réception, pour le rail.
  */
 (function () {
@@ -307,7 +307,8 @@
   function suivreIntention(i) {
     if (i.ecrire) {
       const w = i.ecrire;
-      const ouvrir = () => { nouvelEcrit({ a: w.a ? (w.nom ? w.nom + ' <' + w.a + '>' : w.a) : '', objet: w.objet || '', offre: w.offre || null, contexte: { nom: w.nom || '', objet: w.objet || '' } }); chargerModeles().then(() => { if (w.offre) { chargerOffres().then(() => appliquerModele('b-offre')); } }); };
+      // `coffre` (22/11/2026) : « Joindre à un e-mail » depuis le coffre-fort — le document y arrive en pièce jointe.
+      const ouvrir = () => { nouvelEcrit({ a: w.a ? (w.nom ? w.nom + ' <' + w.a + '>' : w.a) : '', objet: w.objet || '', offre: w.offre || null, coffre: Array.isArray(w.coffre) ? w.coffre.slice(0, 5) : [], contexte: { nom: w.nom || '', objet: w.objet || '' } }); if (st.ecr.coffre.length) { coffreLire(); } chargerModeles().then(() => { if (w.offre) { chargerOffres().then(() => appliquerModele('b-offre')); } }); };
       ouvrir();
     } else if (i.repondre) {
       const r = i.repondre;

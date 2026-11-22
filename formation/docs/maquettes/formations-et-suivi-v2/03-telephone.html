@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Formations et suivi v2 — téléphone</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="fs.css"></head>
+<body class="tel">
+<div class="tel-f"><div class="tel-h"><span><b>Formations et suivi</b><small>Atelier by - Halle</small></span></div>
+  <div class="tel-c"><div class="ms ouv" style="margin:0"><div class="ms-in"><span id="lp"></span><span class="v">cuisson</span><span class="n">12</span></div></div>
+    <div class="ms-cats" id="cats" style="padding:10px 0 6px"></div></div>
+  <div class="tel-r" id="res"></div>
+  <div class="tel-tab"><span><i>🏠</i>Opérationnel</span><span><i>✅</i>Tâches</span><span><i>📷</i>Contrôle</span><span><i>📅</i>Semaine</span><span style="color:var(--accent)"><i>🎓</i>Se former</span></div></div>
+<div class="tel-f"><div class="tel-h"><span><b>Formations et suivi</b><small>Atelier by - Halle</small></span></div>
+  <div class="tel-c"><div class="ms" style="margin:0"><div class="ms-in"><span id="lp2"></span><span class="ph" style="font-size:14px">Chercher dans toute la formation…</span></div></div><div class="ms-cats" id="cats2" style="padding:10px 0 12px"></div></div>
+  <div style="padding:12px"><div class="fs-mini" style="justify-content:space-between"><span>🎓 <b>Mon dossier</b></span><span class="k"><b>2</b><small>en cours</small></span><span class="k"><b>1</b><small>validée</small></span><span class="o">Ouvrir ›</span></div>
+    <div id="cartes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px"></div></div>
+  <div class="tel-tab"><span><i>🏠</i>Opérationnel</span><span><i>✅</i>Tâches</span><span><i>📷</i>Contrôle</span><span><i>📅</i>Semaine</span><span style="color:var(--accent)"><i>🎓</i>Se former</span></div></div>
+<div class="tel-leg"><b>03 · Au téléphone</b><br><br>À gauche, la recherche : les étiquettes des catalogues défilent sous la barre, les résultats prennent la largeur, avec leur photo. À droite, l’accueil : la barre en tête, le dossier de formation, puis les quatre colonnes de l’accueil (Apprendre, Comprendre, Faire, Vérifier) en cartes — un tableau ne tient pas sur un téléphone.</div>
+<script src="accueil-donnees.js"></script><script src="fs.js"></script>
+<script>
+document.getElementById('lp').outerHTML = FS.loupe(18); document.getElementById('lp2').outerHTML = FS.loupe(18);
+const chips = FS.CATS.map(c => FS.tg(c[0])).join('');
+document.getElementById('cats').innerHTML = chips; document.getElementById('cats2').innerHTML = chips;
+document.getElementById('res').innerHTML = FS.RES.slice(0, 6).map(r => FS.ligne(Object.assign({}, r, { sel: 0 }))).join('');
+document.getElementById('cartes').innerHTML = ACCUEIL.COLS.map(x => `<div style="background:#fff;border:1px solid var(--line);border-top:3px solid ${x.coul};border-radius:12px;padding:12px"><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:${x.coul}">${x.mot}</div><div style="font-size:15px;margin:4px 0">${x.nom}</div><div style="font-size:11.5px;color:var(--muted);line-height:1.4">${x.quoi}</div><div style="font-size:11px;color:var(--muted);margin-top:6px">${x.n || '&nbsp;'}</div></div>`).join('');
+</script>
+</body></html>

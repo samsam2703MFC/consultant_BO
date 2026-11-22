@@ -120,7 +120,7 @@ function valsFFDocs(app, f, shop){
   ffDocsCharge(app, shop, false);
   const B = S.ffDocs || {}, D = B.shop === shop && B.d && !B.d.error ? B.d : null;
   // Le coffre-fort du franchisé (22/11/2026) : l'échéance facultative, « dans le coffre du franchisé » coché d'office.
-  const F = Object.assign({ sorte: 'reunion', titre: '', date: auj(), note: '', echeance: '', coffre: true }, S.ffDocForm || {});
+  const F = Object.assign({ sorte: 'reunion', titre: '', date: auj(), note: '', echeance: '', coffre: true, piece: '' }, S.ffDocForm || {});
   const maj = k => e => app.setState({ ffDocForm: Object.assign({}, F, { [k]: e.target.value }) });
   const taille = o => o >= 1048576 ? nf(o / 1048576, 1) + ' Mo' : Math.max(1, Math.round(o / 1024)) + ' Ko';
   // Les fichiers choisis restent hors de l'état (des objets File) : un nouveau rendu ne les perd pas.
@@ -131,7 +131,7 @@ function valsFFDocs(app, f, shop){
     const lourds = choisis.filter(x => x.size > D.maxOctets);
     if (lourds.length) { app.setState({ ffDocMsg: { ko: true, txt: 'Trop lourd, ' + taille(D.maxOctets) + ' au plus par fichier : ' + lourds.map(x => x.name).join(', ') } }); return; }
     const fd = new FormData();
-    [['shop', shop], ['sorte', F.sorte], ['titre', F.titre], ['date', F.date], ['note', F.note], ['echeance', F.echeance], ['coffre', F.coffre ? '1' : '0']].forEach(([k, v]) => fd.append(k, v || ''));
+    [['shop', shop], ['sorte', F.sorte], ['titre', F.titre], ['date', F.date], ['note', F.note], ['echeance', F.echeance], ['coffre', F.coffre ? '1' : '0'], ['piece', F.piece]].forEach(([k, v]) => fd.append(k, v || ''));
     choisis.forEach(x => fd.append('fichiers[]', x, x.name));
     app.setState({ ffDocEnvoi: true, ffDocMsg: null });
     fetch(API_BASE + '/franchises/documents', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -139,7 +139,7 @@ function valsFFDocs(app, f, shop){
       .then(j => {
         const n = (j.ajoutes || []).length, refus = j.refuses || [];
         if (n) { app._ffDocFichiers = null; }
-        app.setState({ ffDocEnvoi: false, ffDocForm: n ? Object.assign({}, F, { titre: '', note: '', echeance: '' }) : F,
+        app.setState({ ffDocEnvoi: false, ffDocForm: n ? Object.assign({}, F, { titre: '', note: '', echeance: '', piece: '' }) : F,
           ffDocMsg: { ko: !n, txt: (n ? pl(n, 'document') + ' rangé' + (n > 1 ? 's' : '') + '.' : (j.error || 'Rien n’a été rangé.')) + (refus.length ? ' Refusé : ' + refus.map(x => x.nom + ' (' + x.motif + ')').join(', ') + '.' : '') } });
         if (n) {
           ffDocsCharge(app, shop, true);
@@ -154,14 +154,17 @@ function valsFFDocs(app, f, shop){
   f.docs = {
     chargement: !!B.chargement && !D, erreur: B.d && B.d.error ? 'Les documents ne se lisent pas : ' + B.d.error : '',
     sortes: (D ? D.sortes : []).map(o => ({ v: o.v, nom: o.nom, on: o.v === F.sorte })),
-    form: F, setSorte: maj('sorte'), setTitre: maj('titre'), setDate: maj('date'), setNote: maj('note'), setEcheance: maj('echeance'),
+    form: F, setSorte: maj('sorte'), setTitre: maj('titre'), setDate: maj('date'), setNote: maj('note'), setEcheance: maj('echeance'), setPiece: maj('piece'),
+    // Les pièces attendues du coffre (coffre v2, 22/11/2026) : le dépôt peut en remplir une ; groupées par onglet.
+    pieces: [['contrat', 'Contrat & DIP'], ['legal', 'Légal'], ['formation', 'Formation'], ['finances', 'Finances']].map(([k, nom]) => ({ nom,
+      l: (D && D.pieces ? D.pieces : []).filter(p => p.onglet === k).map(p => ({ v: p.cle, nom: p.nom, on: p.cle === F.piece })) })).filter(g => g.l.length),
     setCoffre: e => app.setState({ ffDocForm: Object.assign({}, F, { coffre: !!e.target.checked }) }),
     max: D ? taille(D.maxOctets) : '', accept: D ? D.extensions.map(e => '.' + e).join(',') : '',
     choisis: choisis.map(x => x.name + ' · ' + taille(x.size)),
     setFichiers: e => { app._ffDocFichiers = { shop, l: Array.from(e.target.files || []) }; app.setState({ ffDocMsg: null }); },
     envoi: !!S.ffDocEnvoi, peutDeposer: !!D && choisis.length > 0 && !S.ffDocEnvoi, deposer, msg: S.ffDocMsg || null, n: docs.length,
     groupes: (D ? D.sortes : []).map(o => ({ nom: o.nom, docs: docs.filter(x => x.sorte === o.v).map(x => ({
-      titre: x.titre, note: x.note || '', fichier: x.nom + ' · ' + taille(x.octets), date: x.date ? fmtD(x.date) + '/' + x.date.slice(0, 4) : '—',
+      titre: x.titre, note: x.note || '', piece: x.piece && D.pieces ? ((D.pieces.find(p => p.cle === x.piece) || {}).nom || '') : '', fichier: x.nom + ' · ' + taille(x.octets), date: x.date ? fmtD(x.date) + '/' + x.date.slice(0, 4) : '—',
       depose: 'déposé le ' + fmtD(x.deposeLe.slice(0, 10)) + '/' + x.deposeLe.slice(0, 4) + ' à ' + x.deposeLe.slice(11, 16) + (x.deposePar ? ' par ' + x.deposePar : ''),
       // Le coffre du franchisé : dedans ou pas, l'échéance, ce que le magasin en a ouvert ; un clic l'y met ou l'en retire.
       coffre: !!x.coffre, echeance: x.echeance ? fmtD(x.echeance) + '/' + x.echeance.slice(0, 4) : '',

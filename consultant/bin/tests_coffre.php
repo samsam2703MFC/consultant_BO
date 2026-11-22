@@ -24,6 +24,7 @@ final class Db {
   static function pdo(): PDO { if (!self::$p) { self::$p = new PDO('sqlite::memory:'); self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); } return self::$p; }
   static function fx(string $q): string {
     $q = str_replace('INT AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT', $q);
+    $q = (string) preg_replace('/,UNIQUE KEY \w+ (\([^)]*\))/', ',UNIQUE $1', $q);
     $q = (string) preg_replace('/,KEY \w+ \([^)]*\)/', '', $q); return (string) preg_replace('/\) ENGINE=.*$/', ')', $q);
   }
   static function exec(string $q, array $a = []): int { $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->rowCount(); }
@@ -124,7 +125,34 @@ verifie('retiré du coffre, sans échéance : le fichier reste', $m['document'][
 $GLOBALS['corps'] = ['id' => (int) $anc['id'], 'echeance' => '31/01/2027']; $m = @wr_franchises_document_maj();
 verifie('une échéance mal écrite : refusée', ($m['error'] ?? '') === 'échéance : AAAA-MM-JJ');
 $GLOBALS['corps'] = ['id' => (int) $anc['id']]; $m = @wr_franchises_document_maj();
-verifie('rien à changer : refusé', ($m['error'] ?? '') === 'rien à changer : coffre ou echeance');
+verifie('rien à changer : refusé', ($m['error'] ?? '') === 'rien à changer : coffre, echeance ou piece');
+
+// 7 bis. Les pièces attendues (coffre v2, 22/11/2026).
+$GLOBALS['mode'] = 'ouvert'; $GLOBALS['identite'] = null;
+$_GET = ['shop' => (string) $shop]; $C = ep_coffre_magasin(); $P = array_column($C['pieces']['liste'], null, 'cle');
+verifie('16 pièces attendues, le DIP et le contrat reconnus par leur sorte', count($C['pieces']['liste']) === 16 && $P['dip']['etat'] === 'recue' && $P['contrat']['etat'] === 'recue' && $P['bail']['etat'] === 'manquante', json_encode($C['pieces']['completude']));
+verifie('la complétude : 2 sur 16, Contrat & DIP 2 sur 4', $C['pieces']['completude'] === ['a' => 2, 'b' => 16] && $C['pieces']['parOnglet']['contrat'] === ['a' => 2, 'b' => 4]);
+Db::exec('UPDATE con_doc SET piece = ? WHERE id = ?', ['assurance_rc', (int) $ass['id']]);
+$_GET = ['shop' => (string) $shop]; $C = ep_coffre_magasin(); $P = array_column($C['pieces']['liste'], null, 'cle');
+verifie('une pièce rattachée prend l’état de son document : à renouveler', $P['assurance_rc']['etat'] === 'renouveler' && $P['assurance_rc']['doc']['titre'] === 'Assurance RC' && $C['pieces']['completude']['a'] === 3);
+verifie('la ligne du document dit sa pièce', array_column($C['documents'], 'pieceNom', 'titre')['Assurance RC'] === 'Attestation d’assurance RC exploitation');
+$GLOBALS['mode'] = 'console'; $GLOBALS['identite'] = ['role' => 'franchise', 'shops' => [(string) $shop], 'nom' => 'Gosselies'];
+$GLOBALS['corps'] = ['shop' => $shop, 'piece' => 'permis_env', 'exclue' => true]; $x = wr_coffre_piece();
+$P = array_column($x['pieces']['liste'], null, 'cle');
+verifie('le magasin écarte une pièce qu’il dépose : elle sort du compte', $P['permis_env']['etat'] === 'exclue' && $x['pieces']['completude']['b'] === 15 && $P['permis_env']['exclue']['par'] === 'Gosselies');
+$GLOBALS['corps'] = ['shop' => $shop, 'piece' => 'implantation', 'exclue' => true]; $x = @wr_coffre_piece();
+verifie('pas une pièce du consultant', str_contains((string) ($x['error'] ?? ''), 'consultant'));
+$GLOBALS['corps'] = ['shop' => $shop, 'piece' => 'inconnue', 'exclue' => true]; $x = @wr_coffre_piece();
+verifie('une pièce inconnue : refusée', ($x['error'] ?? '') === 'pièce inconnue');
+$GLOBALS['corps'] = ['shop' => $shop, 'piece' => 'permis_env', 'exclue' => false]; $x = wr_coffre_piece();
+verifie('réintégrée', array_column($x['pieces']['liste'], 'etat', 'cle')['permis_env'] === 'manquante' && $x['pieces']['completude']['b'] === 16);
+$GLOBALS['mode'] = 'ouvert'; $GLOBALS['identite'] = null;
+$moi = docGarder($shop, 'legal', 'Statuts', '2025-02-12', null, 'statuts.pdf', $tmp . '/autre.pdf', 12, false, ['visible' => true, 'par' => 'M. Lambert', 'role' => 'franchise', 'piece' => 'statuts']);
+$_GET = ['shop' => (string) $shop]; $C = ep_coffre_magasin();
+verifie('déposé par le magasin : pas « nouveau » pour lui ; la pièce gardée au dépôt', array_column($C['documents'], 'nouveau', 'titre')['Statuts'] === false && $moi['piece'] === 'statuts');
+$moi2 = docGarder($shop, 'legal', 'Pièce douteuse', null, null, 'x.pdf', $tmp . '/autre.pdf', 12, false, ['visible' => true, 'piece' => 'pas_une_piece']);
+verifie('une pièce inconnue au dépôt n’est pas gardée', $moi2['piece'] === null);
+verifie('la pièce de l’archive d’une formation continue', str_contains((string) file_get_contents(__DIR__ . '/../../formation/src/formation_continue.php'), "'formation_continue');"));
 
 // 8. Le préfixe est un écran de magasin.
 verifie('/coffre/magasin est ouvert aux magasins (ACCES_FRANCHISE)', str_contains((string) file_get_contents(__DIR__ . '/../../shared/src/acces.php'), "'/coffre/magasin'"));

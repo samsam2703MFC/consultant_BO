@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coffre-fort v2 — Déposer, l’assistant</title><link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="/consultant/docs/maquettes/coffre-fort/coffre.css"><link rel="stylesheet" href="v2.css"></head>
+<body data-vue="coffre"><div id="page">
+<div class="v-corps"><div id="nav"></div><div><section class="v-carte" style="height:520px"></section></div></div>
+<div class="legende"><b>04 · Déposer : une fenêtre, la pièce, puis l’assistant</b><ol>
+<li><b>Glisser le fichier</b> (ou le choisir, ou prendre une photo au téléphone). <b>« C’est quelle pièce ? »</b> : les pièces qui manquent sont proposées d’abord ; l’assistant suggère la bonne (abricot) d’après le document.</li>
+<li><b>L’assistant</b> lit le document pendant qu’on choisit : ce que c’est, un titre lisible à la place du nom du scan, l’échéance, et <b>ses grandes dates</b> avec la phrase qui les justifie (les passées repliées, l’urgence dite).</li>
+<li>Un seul bouton range tout : la pièce dans son dossier (elle passe ✓ dans la liste de contrôle), le titre, l’échéance et les dates cochées. Rien n’est rangé sans ce clic.</li></ol></div>
+</div>
+<div class="v-ombre"></div>
+<div class="v-mod"><div class="h"><b>Déposer un document</b><span class="v-qui" style="margin-left:12px">Légal</span><span class="x">×</span></div>
+<div class="c"><div class="g">
+  <div class="v-drop"><span class="v-ty pdf">PDF</span><span><b style="font-weight:400">scan-bail-halle.pdf</b><small>2,3 Mo · envoyé ✓</small></span></div>
+  <div class="v-lab">C’est quelle pièce ?</div>
+  <div class="v-chips"><span class="on">Bail commercial</span><span>Autorisation AFSCA</span><span>Permis d’environnement</span><span>Assurance incendie</span><span>Assurance RC (nouvelle)</span><span>Autre pièce légale</span></div>
+  <div class="v-sug">✦ L’assistant y reconnaît un bail commercial : la pièce est choisie pour vous.</div>
+  <div class="v-lab">Titre</div><div class="v-in">Bail commercial — Halle</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div class="v-lab">Date du document</div><div class="v-in">01/03/2019</div></div><div><div class="v-lab">Échéance</div><div class="v-in">29/02/2028</div></div></div>
+  <div style="font-size:11.5px;color:var(--muted)">Titre, dates et échéance remplis par l’assistant : vous pouvez les changer.</div>
+</div>
+<div class="d">
+  <div class="v-as-h"><span class="o">✦</span><b style="font-weight:400;font-size:14px">L’assistant a lu le document</b></div>
+  <p class="v-as-r"><b style="font-weight:400">Bail commercial</b> de neuf ans pour la boutique de Halle, prenant cours le 1er mars 2019 ; loyer indexé chaque année.</p>
+  <div class="v-ex">« Le présent bail est consenti pour une durée de neuf années prenant cours le 1er mars 2019… »</div>
+  <div class="v-lab">Grandes dates proposées · 3 cochées</div>
+  <div class="v-pp"><span class="cb">✓</span><span class="t">Demande de renouvellement du bail<em>en cours · encore 9 j</em><small>du 01/09/2026 au 01/12/2026 · calculée depuis le bail</small></span><span class="dt">01/09/2026</span></div>
+  <div class="v-pp"><span class="cb">✓</span><span class="t">Indexation annuelle du loyer<small>lue dans le document, p. 4</small></span><span class="dt">01/03/2027</span></div>
+  <div class="v-pp"><span class="cb">✓</span><span class="t">Fin du bail<small>calculée depuis le bail</small></span><span class="dt">29/02/2028</span></div>
+  <div class="v-pp" style="color:var(--muted)"><span class="cb no"></span><span class="t">▸ 5 dates déjà passées (triennats de 2022 et 2025)</span></div>
+</div></div>
+<div class="f"><span class="n">Les dates du bail suivent la règle générale des baux commerciaux : à vérifier dans votre bail.</span><span class="v-b">Annuler</span><span class="v-b prim">Ranger le bail et 3 grandes dates</span></div></div>
+<script src="cadre.js"></script><script src="v2.js"></script>
+<script>V.monter(V.tete({ gd: 3 }));document.getElementById('nav').outerHTML = V.nav('legal');</script>
+</body></html>

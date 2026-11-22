@@ -1022,6 +1022,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && $path === '/franchises/documents') { return wr_franchises_document_maj(); }
     if ($method === 'POST' && $path === '/coffre/magasin/document') { return wr_coffre_document(); }
     if ($method === 'POST' && $path === '/coffre/magasin/dates') { return wr_coffre_dates(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/piece') { return wr_coffre_piece(); }
     if ($method === 'DELETE' && $path === '/coffre/magasin/dates') { return wr_coffre_date_suppr(); }
     if ($method === 'POST' && $path === '/coffre/magasin/assistant') { return wr_coffre_assistant(); }
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
