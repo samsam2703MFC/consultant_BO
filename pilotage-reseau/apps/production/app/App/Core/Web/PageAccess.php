@@ -26,8 +26,10 @@ final class PageAccess
         // [255] Magazyn (stan, zapas MTS, prognoza zapasu) i dostawy surowców : pod prawem Produkcja (wcześniej poza katalogiem = dla wszystkich).
         // [377] Asystent « Partie i kontrola dnia » (Jakość) : page /workshop/traceability/day-check (préfixe /workshop/traceability, comme
         // la création de NC /purchasing/nc vers laquelle il renvoie), appels ajax sous le même droit.
+        // [380] Asystent « HACCP miesiąca » (Jakość, Kierownik produkcji) : page /production/haccp-month (préfixe /production), appels
+        // ajax sous le même droit (comme le registre NC vers lequel il renvoie).
         'production' => ['Produkcja i magazyn (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, dostawy surowców, magazyn : stan, zapas MTS, prognoza zapasu, ruchy magazynowe ; partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
-            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/ajax/workshop/traceability/day-check', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
+            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/ajax/workshop/traceability/day-check', '/production', '/ajax/production/haccp-month', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
         // Moce produkcyjne [234] : bez tego prawa — tylko stan obecny (tydzień bieżący, do odczytu) ; z nim — pełna wersja.
         'capacity_full' => ['Moce produkcyjne — pełna wersja (co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn, co jeśli, wartość w €) : administrator, dyrektor zakładu ; bez tego prawa — tylko stan obecny', 'Produkcja',
             ['/production/capacity/full'], false],

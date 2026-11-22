@@ -76,6 +76,9 @@ final class ParamRules
         // jours en arrière des réclamations acceptées contrôlées
         'complaints_review.open_days' => [1, 60, true],
         'complaints_review.lookback_days' => [7, 365, true],
+        // [380] HACCP miesiąca : mois en arrière des ruptures de la chaîne du froid non traitées, mois précédents de la tendance
+        'haccp_month.backlog_months' => [1, 36, true],
+        'haccp_month.trend_months' => [1, 12, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
