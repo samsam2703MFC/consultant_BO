@@ -265,6 +265,7 @@ final class ExecutionController
         return new ApiResult($this->complaints->list(is_numeric($days) ? (int) $days : null, $request->context));
     }
     public function complaintPhotos(ApiRequest $request): ApiResult { return new ApiResult($this->complaints->photos($request->id(), $request->context)); }
+    public function complaintSeen(ApiRequest $request): ApiResult { return new ApiResult($this->complaints->seen($request->id(), $request->context)); }
     // Kontrola jakości (tablet grupy)
     public function quality(ApiRequest $request): ApiResult { return new ApiResult($this->quality->day($request->context)); }
     public function qualityCheck(ApiRequest $request): ApiResult { return new ApiResult($this->quality->check($request->id(), $request->body(), $request->context)); }

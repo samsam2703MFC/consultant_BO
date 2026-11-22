@@ -145,6 +145,7 @@
         'play': '<polygon points="6 3 20 12 6 21 6 3" />',
         'triangle-alert': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />',
         'check': '<path d="M20 6 9 17l-5-5" />',
+        'eye': '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" /><circle cx="12" cy="12" r="3" />',
         'x': '<path d="M18 6 6 18" /><path d="m6 6 12 12" />',
         'circle-check': '<circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" />',
         'circle-x': '<circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" />',
@@ -1982,8 +1983,14 @@
             <div class="kc-facts"><span><strong>${esc(fmt(i.quantity))}</strong> ${esc(t('kc_pcs'))}</span>${i.compensation ? `<span>${esc(t('kc_comp_' + i.compensation))}</span>` : ''}</div>
             ${i.comment ? quote(t('kc_client_says'), i.comment, i.comment_tr) : ''}
             ${i.response ? quote(t('kc_office_says'), i.response, i.response_tr) : ''}
-            ${i.photos ? `<button type="button" class="kiosk-btn is-small" data-kc-photos="${i.id}">${icon('image', 'is-sm')} ${esc(t('kc_photos', {n: i.photos}))}</button>
-                <div class="kc-photos" data-kc-photo-box="${i.id}"></div>` : ''}</article>`;
+            ${i.photos ? `<div class="kc-photos" data-kc-photo-box="${i.id}"><p class="kiosk-muted">${esc(t('loading'))}</p></div>` : ''}
+            <div class="kc-seen" data-kc-seen-box="${i.id}">${seenHtml(i)}</div></article>`;
+        // [367] « Widziane » : grupa potwierdza, że widziała reklamację (osoba zalogowana) ; potem kto i kiedy.
+        function seenHtml(i) {
+            if (i.seen) return `<span class="kiosk-pill is-ok">${icon('check', 'is-sm')} ${esc(t('kc_seen', {at: dateFmt(i.seen.at.slice(0, 10)) + ' ' + i.seen.at.slice(11, 16), by: i.seen.by || '—'}))}</span>`;
+            return session ? `<button type="button" class="kiosk-btn is-primary kc-seen-btn" data-kc-seen="${i.id}">${icon('eye', 'is-sm')} ${esc(t('kc_seen_btn'))}</button>`
+                : `<span class="kiosk-pill is-warn">${esc(t('kc_not_seen'))}</span>`;
+        }
         const periods = `<div class="kv-switch" role="tablist">${c.periods.map(d => `<button type="button" class="${d === c.days ? 'is-on' : ''}" data-kc-days="${d}">${esc(t('kc_days', {n: d}))}</button>`).join('')}</div>`;
         const top = c.products.length > 1 ? `<section class="kiosk-card kv-tablecard"><h2>${esc(t('kc_top'))}</h2><table class="kv-table"><tbody>${c.products.map(p => `<tr><td><strong>${esc(p.name)}</strong></td>
             <td class="n">${esc(t('kc_times', {n: p.count}))}</td><td class="n">${esc(fmt(p.pieces))} ${esc(t('kc_pcs'))}</td></tr>`).join('')}</tbody></table></section>` : '';
@@ -1998,20 +2005,42 @@
         if (message) toast(message);
         el.querySelector('[data-home]')?.addEventListener('click', () => renderHome());
         el.querySelectorAll('[data-kc-days]').forEach(b => b.addEventListener('click', () => { complaintsDays = Number(b.dataset.kcDays); renderComplaints(null, home); }));
-        el.querySelectorAll('[data-kc-photos]').forEach(b => b.addEventListener('click', async () => {
-            const box = el.querySelector(`[data-kc-photo-box="${b.dataset.kcPhotos}"]`);
-            b.disabled = true;
-            box.innerHTML = `<p class="kiosk-muted">${esc(t('loading'))}</p>`;
-            try {
-                const r = await api('GET', `/kiosk/complaints/${b.dataset.kcPhotos}/photos`);
-                const shown = r.photos.filter(p => p.url);
-                box.innerHTML = shown.length ? shown.map(p => `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer"><img src="${esc(p.url)}" alt="${esc(t('kc_photo'))}" loading="lazy"></a>`).join('')
-                    : `<p class="kiosk-muted">${esc(t('kc_photos_none'))}</p>`;
-            } catch (err) {
-                box.innerHTML = `<p class="kiosk-muted">${esc(err.message)}</p>`;
-                b.disabled = false;
+        // [367] Zdjęcia od razu w karcie (bez przycisku) : linki czasowe z systemu franczyzy, po kolei, żeby nie zatkać sieci.
+        // Dotknięcie zdjęcia : powiększenie na całym ekranie (dotknij, żeby zamknąć).
+        (async () => {
+            for (const box of el.querySelectorAll('[data-kc-photo-box]')) {
+                if (!box.isConnected) return;
+                try {
+                    const r = await api('GET', `/kiosk/complaints/${box.dataset.kcPhotoBox}/photos`);
+                    const shown = r.photos.filter(p => p.url);
+                    box.innerHTML = shown.length ? shown.map(p => `<button type="button" class="kc-photo" data-kc-zoom="${esc(p.url)}"><img src="${esc(p.url)}" alt="${esc(t('kc_photo'))}" loading="lazy"></button>`).join('')
+                        : `<p class="kiosk-muted">${esc(t('kc_photos_none'))}</p>`;
+                    box.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.closest('.kc-photo')?.remove()));
+                } catch (err) {
+                    box.innerHTML = `<p class="kiosk-muted">${esc(err.message)}</p>`;
+                }
             }
-        }));
+        })();
+        el.querySelector('[data-kc-page]')?.addEventListener('click', async (e) => {
+            const z = e.target.closest('[data-kc-zoom]');
+            if (z) {
+                const o = document.createElement('div');
+                o.className = 'kc-zoom';
+                o.innerHTML = `<img src="${esc(z.dataset.kcZoom)}" alt="${esc(t('kc_photo'))}">`;
+                o.addEventListener('click', () => o.remove());
+                document.body.appendChild(o);
+                return;
+            }
+            const b = e.target.closest('[data-kc-seen]');
+            if (!b) return;
+            b.disabled = true;
+            try {
+                const r = await api('POST', `/kiosk/complaints/${b.dataset.kcSeen}/seen`, {});
+                const box = el.querySelector(`[data-kc-seen-box="${b.dataset.kcSeen}"]`);
+                if (box) box.innerHTML = seenHtml({seen: r.seen});
+                if (navigator.vibrate) navigator.vibrate(40);
+            } catch (err) { b.disabled = false; toast(err.message, true); }
+        });
         // Bez osoby : powrót na ekran startowy po 2 minutach.
         if (home && !session) window.setTimeout(() => { if (!session && el.querySelector('[data-kc-page]')) renderHome(); }, 120000);
     }
