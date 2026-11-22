@@ -36,6 +36,7 @@ export function tplFF(c, x){
         ${champ('Date du document', `<input class="mko-inp" type="date" value="${esc(fm.date)}" ${x.C(D.setDate)}>`)}
         ${champ('Note', `<input class="mko-inp" value="${esc(fm.note)}" placeholder="facultatif" ${x.C(D.setNote)}>`)}
         ${champ('Échéance (facultatif)', `<input class="mko-inp" type="date" value="${esc(fm.echeance)}" ${x.C(D.setEcheance)}>`)}
+        ${(D.pieces || []).length ? champ('Pièce attendue du coffre', `<select ${x.C(D.setPiece)} class="mko-sel"><option value="">— aucune</option>${D.pieces.map(g => `<optgroup label="${esc(g.nom)}">${g.l.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</optgroup>`).join('')}</select>`) : ''}
         <label class="ffd-c ffd-coffre"><span class="mko-lab">Coffre-fort du franchisé</span><span class="ffd-case"><input type="checkbox"${fm.coffre ? ' checked' : ''} ${x.C(D.setCoffre)}> le franchisé le lit dans son coffre</span></label>
       </div>
       <div class="ffd-bas"><label class="sq-drop ffd-drop"><b>${D.choisis.length ? esc(D.choisis.length > 1 ? D.choisis.length + ' fichiers choisis' : D.choisis[0]) : 'Choisir le ou les fichiers'}</b>${D.choisis.length > 1 ? esc(D.choisis.join(' · ')) : 'PDF, Word, Excel, photos… · ' + esc(D.max) + ' au plus par fichier'}<input type="file" multiple accept="${esc(D.accept)}" ${x.C(D.setFichiers)} style="display:none"></label>
@@ -85,7 +86,7 @@ export function tplFF(c, x){
     </div></div>`;
     const liste = D.groupes.length ? D.groupes.map(g => `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">${esc(g.nom)}</span><span class="mko-mini">${g.docs.length}</span></div>
       <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th>Coffre</th><th></th></tr></thead><tbody>
-      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}${d.echeance ? `<small>échéance ${esc(d.echeance)}</small>` : ''}</td>
+      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.piece ? `<small class="ffd-piece">pièce : ${esc(d.piece)}</small>` : ''}${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}${d.echeance ? `<small>échéance ${esc(d.echeance)}</small>` : ''}</td>
         <td><button ${x.A(d.basculer)} class="ffd-cf${d.coffre ? ' on' : ''}" title="${d.coffre ? 'Retirer du coffre du franchisé' : 'Mettre dans le coffre du franchisé'}">${d.coffre ? '🔒 dans le coffre' : 'hors du coffre'}</button>${d.ouvert ? `<small>${esc(d.ouvert)}</small>` : ''}</td>
         <td class="ffd-act">${d.dates ? `<button ${x.A(d.dates)} class="mko-pied-btn ffg-btn" title="L’assistant lit le document et propose ses grandes dates">✦ Dates</button>` : ''}<a class="mko-pied-btn" href="${esc(d.ouvrir)}" target="_blank" rel="noopener">Ouvrir ↗</a><a class="mko-pied-btn" href="${esc(d.telecharger)}">Télécharger</a><button ${x.A(d.retirer)} class="mko-pied-btn">Retirer</button></td></tr>`).join('')}
       </tbody></table></div></div>`).join('')
