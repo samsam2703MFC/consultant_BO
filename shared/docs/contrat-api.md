@@ -2888,9 +2888,9 @@ prix de vente du magasin au panel. Le serveur lit la ligne du produit (`/shops/{
 (ou le format réglé `ppmFormat_prix`), puis le relit (`/shops/{s}/products/{p}`).
 
 - `apercu: true` : rien n'est écrit ; rend `{ok, apercu, tva, part, avant, avantPiece, ecrit, pieceTtc, pieceHt, max,
-  change, erreur}` — l'écran montre ce plan avant « Confirmer ce prix ».
-- Écriture : `{ok, resultat: ok|sans_effet, message, relu, …le plan}` ; 422 au-dessus du maximum du réseau, sans TVA
-  ou sans changement ; 404 si le produit n'est pas dans la liste du magasin ; 400 pour une portion
+  change, erreur, bloque}` — l'écran montre ce plan avant « Confirmer ce prix ».
+- Écriture : `{ok, resultat: ok|sans_effet, message, relu, …le plan}` ; 422 au-dessus du maximum du réseau, sans TVA, pour un prix trop bas,
+  sans changement ou un `prixHt` hors de ]0 ; 10 000] ; 503 sans compte du panel ; 404 si le produit n'est pas dans la liste du magasin ; 400 pour une portion
   (« produit:portion ») ; 502 avec le motif quand le panel refuse.
 - Au-dessus du maximum du réseau (`bloque: max`), l'écran propose « Demander au réseau de relever le maximum » :
   une demande au bureau par la route du helpdesk déjà en place (`POST /helpdesk/magasin`, domaine `sales`, titre
@@ -4066,7 +4066,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/synthese` | admin | la synthèse du jour : `compteurs`, `boutiques[]`, `escalades[]`, `actions[]`, `consultants{}`. Envoyée par mail le matin si `seuils.mails` et `seuils.mailSynthese`. |
 | `GET /visites/reglages` | admin | checklist, seuils, fréquences, état de l'horloge, adresse du cron. |
 | `GET /visites/conformite?shop=` | tous | ce que le cockpit sait du comptoir sans rien ressaisir : `planogramme` (emplacements dessinés et tenus, %, comptoirs photographiés montés aujourd'hui, obligatoires sans place) et `assortiment` (références obligatoires vues en caisse sur la fenêtre calée sur la dernière vente, manquantes nommées). Une source absente rend son `motif`, pas un chiffre. |
-| `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » de `mar_campaign.objective_coef_pct`), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`mar_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
+| `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » du coefficient d'objectif de la campagne, `objective_coef_pct`, lu à sa fiche au module Marketing depuis le 21/11/2026), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`mar_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
 | `GET /visites/kpi/{shop}[?rafraichir=1]` | tous | **KPI et santé du magasin** (tablette du consultant, 26/10/2026) : `caEtp` (les trois derniers mois clos : `mois[]` `{mois, lab, ca, etp, caEtp, reseau, rang, sur}`, `seuil` de la Table KPI `ca-etp`, `heuresEtp`) — CA du mois (pvKpisMois) ÷ ETP planifiés (ep_stores_etp), le réseau = CA total ÷ ETP totaux des magasins qui ont les deux, un mois sans planning sans ETP deviné ; `structure` (les trois derniers mois clos : `categories[]` `{categorie, ca, part, partReste, ecart}` en % et en points, `ca`, `caReste`, `autres`, `moisLus` / `moisDemandes`) — `/consultant/shops/category-sales` un appel par mois pour tout le réseau, gravé (`vkCat:{AAAA-MM}`), le reste du réseau sans les entrées techniques. `canaux` (26/10/2026, les mêmes trois mois clos : `magasin` et `reste` `{ca{comptoir, b2b, cc, liv}, total, parts{…} en %, proSansTva, b2bAvecSansTva}` — les tickets des clients marqués pro sans TVA valide restent au comptoir, chiffrés à part avec la part B2B qu'ils donneraient, `reste.magasins`, `jours` / `joursLus`, `webshop`, `b2bMax` — le réglage `b2bMax` des visites, 40 —, `b2bStatut` ok, proche (à moins de 5 points), au-dessus, `motif`) — les jours dont la caisse est gravée (`svP{shop}:{jour}` : CA de tous les tickets, tickets des clients pro à TVA valide = B2B), le webshop (`coCommandes` : retrait = click & collect, livraison = livraison bureau), comptoir = caisse − B2B − commandes du webshop encaissées en caisse ; le reste du réseau sans les magasins au webshop muet. `manques[]` nomme un bloc incomplet (relu dans 5 min ; `canaux` quand le webshop du magasin n'a pas répondu). Gardé une heure (`vkKpi2:{shop}`), servi périmé six heures pendant le recalcul. L'année face à l'an passé et les six leviers, la tablette les lit aux routes du dashboard magasin (`/ventes/semaines?shop=&vue=annee&articles=1&_cache=900`, `/leviers/magasins?annee=&mois=&_cache=900`) et les dessine avec les cartes du dashboard, partagées dans `assets/js/cartes-magasin.js` (style tablette : `assets/css/cartes-magasin.css`). Code : `consultant/src/visites_kpi.php`, tests `consultant/bin/tests_visites_kpi.php`. |
 | `GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12]` | tous | **Les tâches du magasin mois par mois** (tablette, étape « Contrôles photo », 26/10/2026) : `mois[]` les n derniers mois (3 à 12, le plus récent d'abord) `{mois, lab, enCours, demandees, faites, jours, pct, notees, sous, moyenne}` — demandées et faites du relevé quotidien du panel (`con_tache_jour`, journées révolues : le mois en cours jusqu'à hier), notes du contrôle qualité (`mac_task_review` : notées, sous le seuil `signalement.seuil`, moyenne) ; `choisi` (d'office le mois en cours, ou le précédent s'il n'a encore rien) et `taches[]` ses tâches notées sous le seuil ou refusées `{jour, tache, note, commentaire, controleur, releveeLe, recidive, suite}` (ep_pwa_tasks_nc). Lu dans la base du cockpit seulement. |
 | `GET /visites/outils/{shop}` | tous | **Les outils de gestion** (tablette, en tête du temps « Analyse », 17/11/2026, `consultant/src/visites_outils.php`) : `lu{}` ce que le cockpit lit tout seul, par outil — `tresorerie` (`panel_tresorerie_plan` : dernière mise à jour, soldes réels des quatre derniers dimanches), `commandes` (la lecture du panel gardée par Commandes et ventes, `cmdApi:{shop}`, sinon `client_order` : commandes sur 30 jours, passées encore ouvertes), `taches` (`con_tache_jour` sur 30 jours, notes de `mac_task_review`), `soir` (`panel_revue_soir` : soirs clôturés sur 30), `fournisseurs` (`material_order` : commandes sur 30 jours — le panel n'a pas de route) — chacun `{etat: ok\|att\|ko\|null, texte}`, absent si rien n'est lisible ; `rappel` (le texte de la marque). Le verdict part avec la visite : `PUT /visites/{id}` `{ outils: { items: { outil: { v: ok\|part\|ko\|na, com, lu } }, rappelLu } }` → `con_visite.outils` (JSON, `viOutils` : score sur 100, suivi 1, en partie ½, pas suivi 0, sans objet hors calcul) ; le rapport (`suOutilsHtml`), le courriel (`{outils_titre}`, `{outils}`, `{rappel}`), l'écran du bureau et la page du franchisé (`outils`) le reprennent |
@@ -5137,16 +5137,17 @@ Le bureau et la tablette gardent leurs cartes.
 
 `GET /marketing/hub[?shop={id}]` (`marketing/src/marketing_hub.php`), lu par la page `marketing/`. Réseaux sociaux, emailing et
 campagnes vivaient dans quatre sections du rail ; la lecture les pose côte à côte **sans rien recalculer à sa façon** :
-campagnes = les lignes de `GET /marketing` (`mar_campaign`), emailing = `mar_nl_campagne` avec les statistiques de
+campagnes = la liste du module Marketing, par son API (depuis le 21/11/2026), emailing = `mar_nl_campagne` avec les statistiques de
 `GET /newsletter` (`nlStatsReelles` d'abord), réseaux sociaux = `GET /facebook/posts`, charte = `bgStatsPeriode(30)` de
 `/marketing/brand-guard/stats` plus les posts **sauvages** des 30 derniers jours (`mar_bg_controle.sauvage = 1`), qu'aucun
 écran ne listait. Sans `shop` : la vue de la marque. Avec `shop` : les posts du magasin, ses newsletters (créées par lui ou
-parties de son adresse), les campagnes RÉSEAU et celles qui le couvrent (`mar_campaign_shop`) — jamais un brouillon de la
+parties de son adresse), les campagnes RÉSEAU et celles qui le couvrent (leurs boutiques, `shop_ids` de la liste du module) — jamais un brouillon de la
 marque —, sa ligne de la charte. `shop` vaut un id de boutique (`[\w-]{1,16}`) ; `brand` ou `reseau` reviennent à la marque.
 
 Réponse : `{genere, aujourdhui, shop, magasin, magasins: [{id, nom, franchise}], campagnes, emailing, social, charte, aFaire}`.
 Chaque canal porte `dispo` : **une table absente rend `{dispo: false, raison}` pour ce canal seul**, jamais un 500 qui
-emporterait les autres.
+emporterait les autres. Module Marketing muet : le canal campagnes rend `{dispo: false, raison: "le module Marketing ne
+rend pas les campagnes : …"}`.
 
 - `campagnes` : `{liste: [{id, nom, typeId, type, typeCouleur, reseau, nBoutiques, statut, statutNom, statutTexte,
   statutFond, debut, fin, budget, depense, image, phase}], chiffres: {total, enCours, aVenir, terminees, brouillons, budget,
@@ -6027,6 +6028,23 @@ par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design sys
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).
+
+### `GET /marketing/ticket/client` — la fiche produits du ticket de caisse (21/11/2026)
+
+Code : `marketing/src/ticket_client.php` ; page : `ticket/?t={boutique}-{transaction}-{clé}` (`marketing/public/ticket/`) ;
+tests : `php marketing/bin/tests_ticket_client.php`.
+
+- `GET /marketing/ticket/client?t={boutique}-{transaction}-{clé}[&lang=fr|nl]` : **publique**, sans session. La clé
+  (6 caractères d'un HMAC de la boutique et de la transaction) ouvre ce ticket et lui seul ; sinon 404 « ticket
+  introuvable ». Rend la boutique, sa langue, la transaction et, par produit, les champs que la page affiche — jamais
+  de coût, de marge ni de stock. Sources : la transaction (`/shops/{s}/transactions/{t}`), la fiche technique, le
+  catalogue FR et NL de la boutique, la spécification des fournisseurs (composition gardée seulement si elle est dans
+  la langue de la page) ; fiches et catalogues gardés six heures. La langue suit le code postal (Flandre : nl), ou le
+  réglage `ticketLangues`.
+- Siège (session) : `GET /marketing/ticket/essai/boutiques`, `…/essai/jour?shop=&date=` (les transactions du jour et
+  leur lien signé), `…/essai/lien?shop=&transaction=`, `…/essai/specifications[?matiere=]` (ce que les catalogues des
+  fournisseurs ont rendu) ; écran : `ticket/essai/`.
+- Réglages facultatifs (`ceo_app_setting`) : `ticketWebshopUrl`, `ticketAvisUrls`, `ticketApplicationUrl`, `ticketLangues`.
 
 ## Portail Commercial — `/commercial/…` (19/11/2026, commercial/src/commercial.php, tables `sm_`)
 

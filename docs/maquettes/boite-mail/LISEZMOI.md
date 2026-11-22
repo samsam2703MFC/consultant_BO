@@ -34,10 +34,11 @@ Testé de bout en bout (vraie base, Dovecot, faux SMTP, faux modèle) : `panel/b
 
 - `panel/src/boite_protocole.php` : les rôles des dossiers reconnus aussi en néerlandais et en allemand (Prullenbak,
   Verzonden, Archief…), la création d'un dossier (`CREATE`, SPECIAL-USE si le serveur le sait, sous le préfixe
-  `INBOX.` quand la boîte l'impose, puis `SUBSCRIBE`), l'effacement définitif, les UID par lots et en plages.
+  `INBOX.` quand la boîte l'impose — ou à côté des dossiers de rôle qu'elle a déjà, « INBOX.INBOX.Trash » →
+  « INBOX.INBOX.Archive » —, puis `SUBSCRIBE`), l'effacement définitif, les UID par lots et en plages.
 - `panel/src/boite_mail.php` : `geste` accepte tout le dossier (`tout: {q, filtre}`), `effacer` (depuis la corbeille
-  ou les indésirables seulement) et `deplacer` vers un `nouveau` dossier ; les archives, la corbeille et « Envoyés »
-  sont créées quand elles manquent. `POST /dashboard/boite/ranger` : la proposition de l'IA (50 e-mails au plus ; ce
+  ou les indésirables seulement) et `deplacer` vers un `nouveau` dossier ; les archives, la corbeille, « Envoyés »
+  et « Brouillons » (pour les brouillons du pilote) sont créés quand ils manquent. `POST /dashboard/boite/ranger` : la proposition de l'IA (50 e-mails au plus ; ce
   qui part au modèle : l'expéditeur, l'objet, la date, les drapeaux et les 300 premiers caractères du texte).
 - Testé contre un vrai serveur IMAP (Dovecot), sur une boîte qui n'a que sa réception : `panel/bin/tests_boite_mail.php`.
 
