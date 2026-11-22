@@ -216,6 +216,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_lots_qc_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
     }
 
+    /** [378] Faktury i KSeF dnia : résultats enregistrés le jour du contrôle (n_invoice_ksef_check). */
+    public function invoiceKsefChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_invoice_ksef_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);
