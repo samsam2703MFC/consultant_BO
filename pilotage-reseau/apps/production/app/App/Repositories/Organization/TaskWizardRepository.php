@@ -240,6 +240,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_launch_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
     }
 
+    /** [385] Dane klientów : décisions enregistrées pour le mois du contrôle (premier jour, n_customers_data_check). */
+    public function customersDataChecks(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customers_data_check WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
     /** [381] Palety zwrotne : décisions enregistrées pour la semaine examinée (lundi, n_pallet_return_review). */
     public function palletReturnReviews(string $weekStart): int
     {

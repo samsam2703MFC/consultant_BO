@@ -78,6 +78,9 @@ final class TaskWizards
         // [384] Nowe produkty (Kierownik produkcji — co miesiąc) : wprowadzenia ostatnich miesięcy, cele (koszt, cena, marża, wolumen) wobec wyniku, decyzja dla produktu.
         // Libellé distinct du nom proposé dans la matrice (« Nowe produkty ») : les UPDATE des migrations ne prennent que celui-ci.
         'launches_reviewed' => ['Nowe produkty (przegląd miesiąca)', '/products/launches-review', 'nowe produkty przejrzane (cele vs wynik), decyzja dla każdego z sygnałem', 3],
+        // [385] Dane klientów (Administracja — co miesiąc) : aktywni klienci z brakami w karcie (e-mail, telefon, język, termin płatności, NIP / VAT UE, adres, cennik), decyzja dla klienta.
+        // Libellé distinct du nom proposé dans la matrice (« Dane klientów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'customers_data_checked' => ['Dane klientów (kompletność)', '/clients/data-check', 'karty aktywnych klientów sprawdzone, decyzja dla każdego z brakami', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -130,6 +133,7 @@ final class TaskWizards
         'delivery_notices_checked' => 'gdy każdy klient dnia wysyłki (i następnego dnia roboczego, gdy automat wysyła dzień wcześniej) z sygnałem — błąd e-mail albo SMS, brak powiadomienia, brak e-maila i telefonu — ma decyzję (wysłane ponownie — sprawdzone, kontakt telefoniczny, bez powiadomienia — uzasadnione) — asystent « Powiadomienia o dostawie », krok 3',
         'customer_mail_checked' => 'gdy każdy e-mail od klienta (skrzynka z Poczty) bez odpowiedzi po customer_mail.reply_hours h liczonych w dniach roboczych albo z odpowiedzią po terminie wysłaną dziś ma decyzję (odpowiedziane — sprawdzone w skrzynce, bez odpowiedzi — nie wymaga, przekazane), przy działającej skrzynce — asystent « Poczta od klientów », krok 3',
         'pallets_returns_reviewed' => 'gdy każdy klient z sygnałem poprzedniego tygodnia — saldo palet EUR (dostarczone − zwrócone z tabletu kierowcy) powyżej pallets_returns.threshold, brakujące palety bez uzasadnienia, uszkodzona paleta — ma decyzję (przypomnienie / odbiór zaplanowany, OK — saldo uzgodnione, spisane / do faktury) — asystent « Palety zwrotne », krok 3',
+        'customers_data_checked' => 'gdy każdy aktywny klient (zamówienie w ostatnich customers_data.active_months miesiącach) z brakiem w karcie — brak e-maila albo e-mail błędny lub z błędem wysyłki, brak lub nieczytelny telefon, brak języka komunikacji, brak terminu płatności, brak NIP albo VAT UE bez prefiksu kraju przy WDT, niepełny adres, brak cennika albo produkt zamówiony bez ceny klienta — ma decyzję (poprawione — karta już bez braków, brak danych od klienta, nie dotyczy) — asystent « Dane klientów », krok 3',
         'launches_reviewed' => 'gdy każdy nowy produkt (wprowadzony albo utworzony w ERP w ostatnich launches_review.months miesiącach) poza celem — koszt surowców powyżej celu, cena poniżej celu, marża poniżej minimum, sprzedaż na sklep / tydzień poniżej oczekiwanej albo brak sprzedaży — albo bez decyzji w module Kierownik produkcji ma decyzję (zostaje, korekta, wycofać) — asystent « Nowe produkty », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
@@ -323,6 +327,13 @@ final class TaskWizards
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->launchReviews(\App\Services\Organization\Wizards\LaunchesReviewService::reviewMonth(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'produkt wyjaśniony', 'produkty wyjaśnione', 'produktów wyjaśnionych')] + $out;
+                }
+                break;
+            case 'customers_data_checked':
+                // [385] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->customersDataChecks(\App\Services\Organization\Wizards\CustomersDataCheckService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klienci wyjaśnieni', 'klientów wyjaśnionych')] + $out;
                 }
                 break;
             case 'delivery_notices_checked':

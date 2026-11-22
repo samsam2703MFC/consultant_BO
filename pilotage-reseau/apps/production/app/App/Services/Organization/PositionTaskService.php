@@ -110,6 +110,7 @@ final class PositionTaskService
         '/logistics/notices-check' => 'delivery_notices_checked',
         '/mail/customer-check' => 'customer_mail_checked',
         '/products/launches-review' => 'launches_reviewed',
+        '/clients/data-check' => 'customers_data_checked',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',
