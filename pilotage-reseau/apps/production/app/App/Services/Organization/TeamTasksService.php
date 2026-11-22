@@ -200,6 +200,7 @@ final class TeamTasksService
             'complaints_reviewed' => 'reklamacje otwarte i tygodnia → decyzja → zakończ',
             'haccp_month_reviewed' => 'HACCP, SOP i temperatura miesiąca → decyzja → zakończ',
             'pallets_returns_reviewed' => 'saldo palet EUR klientów → decyzja → zakończ',
+            'delivery_notices_checked' => 'klienci dnia i powiadomienia → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };
