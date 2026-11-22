@@ -189,6 +189,8 @@ final class TeamTasksService
             'route_done' => 'tablet kierowcy › trasa dnia',
             'shift_day_validated' => 'wszystkie grupy zatwierdzają dzień na tabletach',
             'payments_reviewed' => 'wpłaty, przypomnienia, różnice dostaw',
+            'orders_day_checked' => 'nowe i zmienione → do wyjaśnienia → zatwierdź',
+            'customers_ordered_checked' => 'stali klienci → do kontaktu → zatwierdź',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

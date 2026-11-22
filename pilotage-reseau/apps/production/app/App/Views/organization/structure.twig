@@ -53,9 +53,30 @@
 .st-node .bar{height:5px;border-radius:3px;background:#efe9e3;margin-top:6px;overflow:hidden}.st-node .bar i{display:block;height:100%;background:#2e7d4f}
 .st-node .k{position:absolute;top:-9px;right:8px;font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe9e3;color:#5d554f}
 .st-node.is-sel{outline:3px solid var(--at-brand,#8D1D2C);outline-offset:2px}
-.st-node.is-over{border-color:#2e7d4f;background:#eef8f1}
+.st-node.is-over,.st-rootzone.is-over{border-color:#2e7d4f;background:#eef8f1;box-shadow:0 0 0 3px rgba(46,125,79,.25)}
 .st-node.is-drag{opacity:.4}
 .st-node.is-atelier{border-style:dashed}
+.st-node{touch-action:none} /* le doigt glisse le poste au lieu de faire défiler la page */
+.st-ghost{position:fixed;z-index:2000;pointer-events:none;opacity:.92;transform:rotate(-2deg);box-shadow:0 14px 30px rgba(40,30,20,.22);cursor:grabbing;margin:0}
+.st-node.is-drag{opacity:.35}
+/* [369] Organigram widoczny w całości : jedna kolumna, dopasowanie do szerokości (zoom), stanowiska bez podwładnych
+   ułożone pionowo pod przełożonym, stanowiska na samej górze bez łączącej linii, panel stanowiska jako szuflada. */
+.st-tree>li::before,.st-tree>li::after{display:none}
+.st-tree>li{padding:0 10px}
+.st-tree ul.is-stack{flex-direction:column;align-items:center;gap:6px;padding-top:18px}
+.st-tree ul.is-stack>li{padding:0}
+.st-tree ul.is-stack>li::before,.st-tree ul.is-stack>li::after{display:none}
+.st-tree ul.is-stack::before{height:100%;z-index:0}
+.st-tree ul.is-stack .st-node{z-index:1}
+.st-bar2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.st-bar2 .st-pal{flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center}
+.st-bar2 .st-node{width:auto;padding:4px 9px;box-shadow:none}
+.st-bar2 .st-node .m,.st-bar2 .st-node .bar{display:none}
+.st-zoom{display:inline-flex;gap:4px;align-items:center;margin-left:auto}
+.st-zoom button{border:1px solid var(--at-line);background:#fff;border-radius:8px;padding:3px 10px;font-weight:600;font-size:12.5px}
+.st-zoom span{font-size:12px;color:var(--at-muted);min-width:40px;text-align:center}
+.st-drawer2{position:fixed;top:84px;right:18px;width:340px;max-height:calc(100vh - 110px);overflow:auto;z-index:1040;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.st-drawer2 .st-x{position:absolute;top:10px;right:10px;border:0;background:#f3efea;border-radius:50%;width:30px;height:30px;font-size:18px;line-height:1}
 .st-side{display:flex;flex-direction:column;gap:12px}
 .st-card{background:#fff;border:1px solid var(--at-line);border-radius:14px;padding:14px}
 .st-lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--at-brand,#8D1D2C);font-weight:700;margin:0 0 8px}

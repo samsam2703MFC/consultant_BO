@@ -44,34 +44,53 @@
     const byId = () => new Map(D.chart.map(p => [p.id, p]));
     function nodeHtml(p) {
         const cov = p.duties ? Math.round(p.covered / p.duties * 100) : null;
-        return `<div class="st-node ${p.kind === 'atelier' ? 'is-atelier' : ''} ${selected === p.id ? 'is-sel' : ''}" draggable="true" data-node="${p.id}" tabindex="0">
+        return `<div class="st-node ${p.kind === 'atelier' ? 'is-atelier' : ''} ${selected === p.id ? 'is-sel' : ''}" data-node="${p.id}" tabindex="0">
             ${p.active ? '' : '<span class="k">nieaktywne</span>'}
             <h4>${esc(p.name)}</h4>
             <div class="m">${p.people} os.${p.duties ? ` · ${p.duties} obow. · ${p.covered} z asystentem` : ''}${p.tasks ? ` · ${p.tasks} zad.` : ''}</div>
             ${cov !== null ? `<div class="bar" title="obowiązki z asystentem kontroli : ${cov} %"><i style="width:${cov}%"></i></div>` : ''}</div>`;
     }
+    let zoom = null;          // null = dopasuj do szerokości
     function renderChart() {
         const map = byId();
         const active = D.chart.filter(p => p.active);
         const kids = new Map();
         active.forEach(p => { const b = p.reports_to !== null && map.get(p.reports_to)?.active ? p.reports_to : 0; if (!kids.has(b)) kids.set(b, []); kids.get(b).push(p); });
-        const tree = (pid) => (kids.get(pid) || []).map(p => `<li>${nodeHtml(p)}${kids.has(p.id) ? `<ul>${tree(p.id)}</ul>` : ''}</li>`).join('');
+        // Podwładni bez własnych podwładnych : pionowo (kolumna), żeby organigram nie rozjeżdżał się w szerokość.
+        const tree = (pid) => (kids.get(pid) || []).map(p => {
+            const ch = kids.get(p.id) || [];
+            const stack = ch.length > 1 && ch.every(c => !kids.has(c.id));
+            return `<li>${nodeHtml(p)}${ch.length ? `<ul class="${stack ? 'is-stack' : ''}">${tree(p.id)}</ul>` : ''}</li>`;
+        }).join('');
         const inactive = D.chart.filter(p => !p.active);
         const sel = selected !== null ? map.get(selected) : null;
-        body.innerHTML = `<div class="st-grid"><div>
+        body.innerHTML = `<div class="st-bar2"><span class="st-lbl mb-0">Nieaktywne</span><div class="st-pal">${inactive.length ? inactive.map(nodeHtml).join('') : '<span class="text-muted small">brak</span>'}</div>
+                <div class="st-zoom"><button type="button" data-zoom="-">−</button><span data-zoom-label></span><button type="button" data-zoom="+">+</button><button type="button" data-zoom="fit">Dopasuj</button></div></div>
             <div class="st-canvas" data-canvas><div class="st-rootzone" data-root-zone>Upuść tutaj → stanowisko bez przełożonego (góra struktury)</div>
-                <ul class="st-tree">${tree(0)}</ul></div>
-            <p class="st-help"><i class="bi bi-arrows-move"></i> Przeciągnij stanowisko na inne : będzie mu podlegać (zapis od razu). Pasek = obowiązki z asystentem kontroli. Ramka przerywana = stanowisko w pracowni. Na tablecie : wybierz stanowisko i zmień « Podlega pod ».</p></div>
-            <div class="st-side">${sel ? sideHtml(sel, map) : `<div class="st-card"><div class="st-lbl">Stanowisko</div><p class="text-muted mb-0">Dotknij stanowiska, żeby zobaczyć szczegóły.</p></div>`}
-                <div class="st-card"><div class="st-lbl">Paleta — nieaktywne</div><div class="st-pal">${inactive.length ? inactive.map(nodeHtml).join('') : '<p class="text-muted mb-0">Brak.</p>'}</div>
-                <p class="st-help">Przeciągnij na organigram, żeby włączyć stanowisko.</p></div></div></div>`;
+                <ul class="st-tree" data-tree>${tree(0)}</ul></div>
+            <p class="st-help"><i class="bi bi-arrows-move"></i> Przeciągnij stanowisko na inne : będzie mu podlegać (zapis od razu). Nieaktywne (u góry) : przeciągnij na organigram, żeby włączyć. Pasek = obowiązki z asystentem kontroli. Ramka przerywana = stanowisko w pracowni. Działa myszką i palcem ; kliknij stanowisko, żeby zobaczyć szczegóły i zmienić « Podlega pod » z listy.</p>
+            ${sel ? `<div class="st-drawer2">${sideHtml(sel, map)}</div>` : ''}`;
+        applyZoom();
         bindChart();
     }
+    // Dopasowanie : organigram mieści się w szerokości ramki (najmniej 45 %) ; − / + ręcznie.
+    function applyZoom() {
+        const canvas = body.querySelector('[data-canvas]'), t = body.querySelector('[data-tree]');
+        if (!canvas || !t) return;
+        t.style.zoom = 1;
+        const fit = Math.max(0.45, Math.min(1, (canvas.clientWidth - 24) / t.scrollWidth));
+        const z = zoom === null ? fit : zoom;
+        t.style.zoom = z;
+        const l = body.querySelector('[data-zoom-label]');
+        if (l) l.textContent = Math.round(z * 100) + ' %';
+    }
+    window.addEventListener('resize', () => { if (tab === 'chart' && D) applyZoom(); });
+
     function sideHtml(p, map) {
         const subs = D.chart.filter(x => x.reports_to === p.id && x.active);
         const cov = p.duties ? Math.round(p.covered / p.duties * 100) : 0;
         const options = D.chart.filter(x => x.id !== p.id && x.active).map(x => `<option value="${x.id}" ${p.reports_to === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-        return `<div class="st-card"><div class="st-lbl">Wybrane stanowisko</div><h4 class="mb-0">${esc(p.name)}</h4><div class="text-muted small">${esc(p.code)}${p.active ? '' : ' · nieaktywne'}</div>
+        return `<div class="st-card" style="position:relative"><button type="button" class="st-x" data-close-side aria-label="Zamknij">×</button><div class="st-lbl">Wybrane stanowisko</div><h4 class="mb-0" style="padding-right:34px">${esc(p.name)}</h4><div class="text-muted small">${esc(p.code)}${p.active ? '' : ' · nieaktywne'}</div>
             <div class="d-flex align-items-baseline gap-2 mt-2"><span class="st-big">${p.covered} / ${p.duties}</span><span class="text-muted small">obowiązków z asystentem kontroli</span></div>
             <div class="st-bar"><i style="width:${cov}%"></i></div>
             <dl class="st-kv"><dt>Podlega pod</dt><dd><select class="form-select form-select-sm" data-boss="${p.id}"><option value="">— góra struktury —</option>${options}</select></dd>
@@ -92,28 +111,80 @@
         at.notify(r.ok, r.ok ? r.message : (r.errors?.[0]?.code === 'POSITION_CYCLE' || /cycle|cykl/i.test(r.message || '') ? 'Nie można : stanowisko podlegałoby samemu sobie (pętla).' : r.message || 'Błąd'));
         if (r.ok) { selected = id; await load(); }
     }
+    // [369] Glisser-déposer en pointeur (souris, stylet, doigt) : le glisser natif HTML5 ne partait pas sur tous les
+    // navigateurs et jamais au doigt. Le geste commence après 6 px ; la cible est l'élément sous le pointeur.
+    let drag = null, noClick = false;
+    function dropTarget(x, y) {
+        const el = document.elementFromPoint(x, y);
+        return el ? el.closest('[data-canvas] [data-node], [data-root-zone]') : null;
+    }
+    function endDrag(drop) {
+        if (!drag) return;
+        const d = drag;
+        drag = null;
+        document.removeEventListener('pointermove', onDragMove);
+        document.removeEventListener('pointerup', onDragUp);
+        document.removeEventListener('pointercancel', onDragCancel);
+        document.removeEventListener('keydown', onDragKey);
+        d.ghost?.remove();
+        d.node.classList.remove('is-drag');
+        body.querySelectorAll('.is-over').forEach(x => x.classList.remove('is-over'));
+        if (!d.started) return;
+        noClick = true;
+        setTimeout(() => { noClick = false; }, 0);
+        if (!drop || !d.over) return;
+        const boss = d.over.dataset.rootZone !== undefined ? null : Number(d.over.dataset.node);
+        if (boss === d.id) return;
+        const p = byId().get(d.id);
+        if (p && p.active && (p.reports_to ?? null) === boss) return; // déjà là
+        move(d.id, boss);
+    }
+    function onDragMove(e) {
+        const d = drag;
+        if (!d) return;
+        if (!d.started) {
+            if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
+            d.started = true;
+            const r = d.node.getBoundingClientRect();
+            d.dx = -16; d.dy = -12; // la copie suit le pointeur en bas à droite : la cible surlignée reste visible
+            d.ghost = d.node.cloneNode(true);
+            d.ghost.classList.remove('is-sel');
+            d.ghost.classList.add('st-ghost');
+            d.ghost.style.width = r.width + 'px';
+            document.body.appendChild(d.ghost);
+            d.node.classList.add('is-drag');
+        }
+        e.preventDefault();
+        d.ghost.style.left = (e.clientX - d.dx) + 'px';
+        d.ghost.style.top = (e.clientY - d.dy) + 'px';
+        let t = dropTarget(e.clientX, e.clientY);
+        if (t && Number(t.dataset.node) === d.id) t = null;
+        if (t !== d.over) { d.over?.classList.remove('is-over'); t?.classList.add('is-over'); d.over = t; }
+        if (e.clientY < 50) window.scrollBy(0, -14); else if (e.clientY > window.innerHeight - 50) window.scrollBy(0, 14);
+    }
+    function onDragUp() { endDrag(true); }
+    function onDragCancel() { endDrag(false); }
+    function onDragKey(e) { if (e.key === 'Escape') endDrag(false); }
+
     function bindChart() {
-        let dragId = null;
         body.querySelectorAll('[data-node]').forEach(n => {
-            n.addEventListener('dragstart', (e) => { dragId = Number(n.dataset.node); n.classList.add('is-drag'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(dragId)); });
-            n.addEventListener('dragend', () => { n.classList.remove('is-drag'); body.querySelectorAll('.is-over').forEach(x => x.classList.remove('is-over')); });
-            n.addEventListener('click', () => { selected = Number(n.dataset.node); renderChart(); });
-        });
-        const targets = [...body.querySelectorAll('[data-canvas] [data-node]'), body.querySelector('[data-root-zone]')];
-        targets.forEach(t => {
-            t.addEventListener('dragover', (e) => { if (dragId === null || Number(t.dataset.node) === dragId) return; e.preventDefault(); t.classList.add('is-over'); });
-            t.addEventListener('dragleave', () => t.classList.remove('is-over'));
-            t.addEventListener('drop', (e) => {
-                e.preventDefault();
-                t.classList.remove('is-over');
-                const id = dragId;
-                dragId = null;
-                if (id === null) return;
-                const boss = t.dataset.rootZone !== undefined ? null : Number(t.dataset.node);
-                if (boss === id) return;
-                move(id, boss);
+            n.addEventListener('pointerdown', (e) => {
+                if (e.button !== 0 || drag) return;
+                drag = {id: Number(n.dataset.node), node: n, x: e.clientX, y: e.clientY, started: false, over: null, ghost: null};
+                document.addEventListener('pointermove', onDragMove);
+                document.addEventListener('pointerup', onDragUp);
+                document.addEventListener('pointercancel', onDragCancel);
+                document.addEventListener('keydown', onDragKey);
             });
+            n.addEventListener('dragstart', (e) => e.preventDefault()); // pas de glisser natif (image fantôme du navigateur)
+            n.addEventListener('click', () => { if (noClick) return; selected = Number(n.dataset.node); renderChart(); });
         });
+        body.querySelector('[data-close-side]')?.addEventListener('click', () => { selected = null; renderChart(); });
+        body.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => {
+            const cur = Number(body.querySelector('[data-tree]').style.zoom) || 1;
+            zoom = b.dataset.zoom === 'fit' ? null : Math.max(0.4, Math.min(1.5, cur + (b.dataset.zoom === '+' ? 0.1 : -0.1)));
+            applyZoom();
+        }));
         body.querySelector('[data-boss]')?.addEventListener('change', (e) => move(Number(e.target.dataset.boss), e.target.value === '' ? null : Number(e.target.value)));
         body.querySelector('[data-to-matrix]')?.addEventListener('click', (e) => { F.position = e.currentTarget.dataset.toMatrix; tab = 'matrix'; history.replaceState(null, '', '?tab=matrix'); render(); });
     }
