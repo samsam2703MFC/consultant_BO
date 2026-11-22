@@ -15,11 +15,20 @@ const url = vue => `${BASE}?shop=${SHOP}&date=${DATE}&vue=${vue}`;
 // Une page du cockpit (plan.cockpit = sa route, « #/budget/parametres ») : à côté du dashboard, dans le même module.
 const urlCockpit = route => new URL('../', BASE).href + route;
 
+// Ouvre une puce repliée de Semaine ou Mois (data-qbplus).
+// Le dashboard garde les puces ouvertes d'une page à l'autre : on n'en ouvre qu'une, les autres sont refermées.
+const puce = x => async p => {
+  for (const b of await p.locator('.qb-puce[aria-expanded="true"]').all()) { if (await b.getAttribute('data-qbplus') !== x) await b.click().catch(() => {}); }
+  const b = p.locator(`[data-qbplus="${x}"]`);
+  if (await b.getAttribute('aria-expanded').catch(() => null) !== 'true') await b.click().catch(e => console.log('puce', x, e.message));
+  await p.waitForTimeout(2500);
+};
+
 // nom → vue, cible(s) entourée(s), cadrage (top = cadrer depuis le haut de la page), action avant capture.
 // defile : la page défile dans un panneau intérieur (le cockpit) — la cible est amenée en haut de l'écran, et l'écran capturé.
 const PLANS = [
   { nom: 'dash-entete', vue: 'ops', cibles: ['.db-nav'], top: true },
-  { nom: 'dash-valeur', vue: 'semaine', cibles: ['.db-vdl'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
+  { nom: 'dash-valeur', vue: 'semaine', cibles: ['.db-vpop'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
   { nom: 'dash-frise', vue: 'ops', cibles: ['.db-frise'], top: true },
   { nom: 'dash-reseau', vue: 'ops', cibles: ['.db-bench'] },
   { nom: 'dash-objectif', vue: 'ops', cibles: ['.op-duel:not(.b2b)'] },
@@ -33,20 +42,23 @@ const PLANS = [
   { nom: 'dash-vitrine', vue: 'ops', cibles: ['.db-card.vt'] },
   { nom: 'dash-controles', vue: 'ops', cibles: ['.db-cq'] },
   { nom: 'dash-stock', vue: 'ops', cibles: ['.op-stock'], bas: true },
-  { nom: 'dash-taches', vue: 'semaine', cibles: ['.db-taches'] },
-  { nom: 'dash-resultat', vue: 'semaine', cibles: ['.db-tuiles.huit'] },
-  { nom: 'dash-canaux', vue: 'semaine', cibles: ['.db-split.co'] },
-  { nom: 'dash-invendus', vue: 'semaine', cibles: ['.db-inv'] },
-  { nom: 'dash-cal-semaine', vue: 'semaine', cibles: ['.cal-a'] },
-  { nom: 'dash-douze', vue: 'semaine', cibles: ['.db-card:has-text("DOUZE DERNIÈRES SEMAINES")'] },
-  { nom: 'dash-heures-semaine', vue: 'semaine', cibles: ['.db-tuiles:not(.huit)'], avecSuite: true },
-  { nom: 'dash-leviers', vue: 'mois', cibles: ['.lv-card'] },
-  { nom: 'dash-cal-mois', vue: 'mois', cibles: ['.cal-a'] },
-  { nom: 'dash-rentab', vue: 'mois', cibles: ['.db-card:has-text("RENTABILITÉ")'], avecAvant: true },
-  { nom: 'dash-trimestre', vue: 'trimestre', cibles: ['.db-tuiles'], top: true },
-  { nom: 'dash-annotations', vue: 'trimestre', cibles: ['.db-g2'] },
-  { nom: 'dash-annee', vue: 'annee', cibles: ['.db-tuiles', '.db-card >> nth=0'], top: true },
-  { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has-text("HEATMAP MENSUELLE")'] },
+  // Semaine et Mois en quatre blocs (21/11/2026) : la jauge et les tuiles, les jours, le résultat et les heures, les douze
+  // semaines (ou mois) ; le reste derrière une puce repliée (« Tâches et contrôles », « Canaux… », « Invendus »…) qu'on ouvre.
+  { nom: 'dash-resultat', vue: 'semaine', cibles: ['.qb-heros'] },
+  { nom: 'dash-cal-semaine', vue: 'semaine', cibles: ['.qb-jours-c'] },
+  { nom: 'dash-heures-semaine', vue: 'semaine', cibles: ['.qb-pile'] },
+  { nom: 'dash-douze', vue: 'semaine', cibles: ['.qb-douze'] },
+  { nom: 'dash-taches', vue: 'semaine', cibles: ['.db-taches'], avant: puce('taches'), avecAvant: true },
+  { nom: 'dash-canaux', vue: 'semaine', cibles: ['.db-split.co'], avant: puce('canaux') },
+  { nom: 'dash-invendus', vue: 'semaine', cibles: ['.db-inv'], avant: puce('invendus'), avecAvant: true },
+  { nom: 'dash-leviers', vue: 'mois', cibles: ['.lv-card'], avant: puce('leviers'), avecAvant: true },
+  { nom: 'dash-cal-mois', vue: 'mois', cibles: ['.qb-jours-c'] },
+  { nom: 'dash-rentab', vue: 'mois', cibles: ['.db-card:has-text("RENTABILITÉ")'], avant: puce('tendance'), avecAvant: true },
+  // L'onglet Trimestre rejoint l'Année (21/11/2026) : les quatre trimestres, un toucher ouvre le détail ; la bande des douze mois.
+  { nom: 'dash-trimestre', vue: 'annee', cibles: ['.db-an-q'] },
+  { nom: 'dash-annotations', vue: 'annee', cibles: ['.db-an-q', '.db-an-det'] },
+  { nom: 'dash-annee', vue: 'annee', cibles: ['.db-an-obj'], top: true },
+  { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has(.db-an-12)'] },
   { nom: 'dash-promos', vue: 'promos', cibles: ['.db-card >> nth=0'], top: true },
   // La ligne du franchisé (07/11/2026) : dans le tableau, en gris, « franchisé · hors primes ».
   { nom: 'dash-primes', vue: 'primes', cibles: ['tr:has(.pr-fr)'], avecAvant: true },
@@ -69,8 +81,12 @@ const W = 1200, H = 900;
 async function entourer(p, sel) {
   const loc = p.locator(sel).first();
   await loc.waitFor({ state: 'visible', timeout: 20000 });
-  await loc.evaluate(el => { el.style.outline = '4px solid #8D1D2C'; el.style.outlineOffset = '5px'; el.style.borderRadius = el.style.borderRadius || '10px'; });
-  return loc.boundingBox();
+  // La boîte dans la page (pas dans l'écran) : ouvrir une puce fait défiler la page.
+  return loc.evaluate(el => {
+    el.style.outline = '4px solid #8D1D2C'; el.style.outlineOffset = '5px'; el.style.borderRadius = el.style.borderRadius || '10px';
+    const r = el.getBoundingClientRect();
+    return { x: r.x + scrollX, y: r.y + scrollY, width: r.width, height: r.height };
+  });
 }
 
 (async () => {
