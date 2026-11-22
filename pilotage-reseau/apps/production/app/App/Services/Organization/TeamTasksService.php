@@ -197,6 +197,7 @@ final class TeamTasksService
             'otif_week_reviewed' => 'wynik tygodnia → przyczyny i działania → zakończ',
             'lots_qc_day_checked' => 'dni grup i braki → wynik → zatwierdź',
             'invoices_ksef_checked' => 'wysyłki, WDT i KSeF → wynik → zatwierdź',
+            'complaints_reviewed' => 'reklamacje otwarte i tygodnia → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };
