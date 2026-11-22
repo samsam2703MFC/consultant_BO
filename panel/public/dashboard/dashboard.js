@@ -7641,9 +7641,8 @@
     // Paramètres (16/11/2026, maquette docs/maquettes/parametres-mails/) : ce que le magasin envoie tout seul.
     // Se former (22/11/2026) : la page Formation du magasin, où mène aussi le bouton abricot de la barre.
     ['Se former', [['formation', 'Formations et suivi', 'formation']]],
-    ['Paramètres', [['mails', 'Mails et automatisations', 'auto']]],
   ];
-  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : v === 'coffre' ? 'Mon coffre-fort' : 'Dashboard'; };
+  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : v === 'coffre' ? 'Mon coffre-fort' : v === 'mails' ? 'Mails et automatisations' : 'Dashboard'; };
   /** Le dossier de formation (22/11/2026) : ce qu'il reste à faire (en retard, en cours) et les nouveautés pas encore ouvertes. */
   function fcAFaire() { const F = S.aux['fc|' + S.shop]; return F && F.reperes ? (F.reperes.enRetard || 0) + (F.reperes.enCours || 0) : 0; }
   function fcNouveaux() { const F = S.aux['fc|' + S.shop]; return F && F.nouveautes ? F.nouveautes.filter(n => n.nouveau).length : 0; }
@@ -7699,6 +7698,8 @@
     n.innerHTML = railHtml();
     // Le même geste que les onglets d'avant (brancher : [data-vue]).
     n.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
+    n.querySelectorAll('[data-par]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); parBasculer(); }));
+    if (PAR.ouvert) { parPlacer(); }
     // L'entrée active reste visible quand l'onglet change (le rail défile seul).
     const a = n.querySelector('.sidebar__item.is-active');
     if (a && n.dataset.vu !== S.vue) { n.dataset.vu = S.vue; a.scrollIntoView({ block: 'nearest' }); }
@@ -7719,12 +7720,185 @@
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
         : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
   }
+  /* --- Les paramètres (22/11/2026, Sam : « Mails et automatisations sont des paramètres : pour gagner de la place dans
+   * le rail, une roue dans une icône carrée à gauche du Coffre-fort ; au clic, tous les paramètres dans une fenêtre type
+   * liste qui monte vers le haut » ; retenu : la maquette C, avec la recherche de la B — panel/docs/maquettes/
+   * parametres-rail/). La fenêtre rassemble ce qui se réglait à quatre endroits : la boîte mail (la relier, ses messages
+   * automatiques, ses modèles), Mails et automatisations (le rappel la veille du retrait, l'équipe), le bouton
+   * « M'avertir » des alertes de stock et le choix du ton de l'assistant. Les petits réglages se font sur place (les
+   * alertes, le ton), le rappel s'ouvre dans la fenêtre, le reste ouvre sa page. Elle vit hors du rail (body), placée
+   * au-dessus de la roue ; Échap ou un clic à côté la ferment. */
+  const PAR = { ouvert: false, niveau: 'liste', q: '', etat: null, auto: null, errAuto: null, lecture: false, lu: 0, occupe: false, flash: null };
+  const PAR_ICO = {
+    mail: '<path d="M3 5h18v14H3zM3 6l9 7 9-7"/>',
+    auto: '<path d="M9 14l-5-5 5-5M4 9h10a6 6 0 0 1 6 6v4"/>',
+    modele: '<path d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h7"/>',
+    horloge: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    equipe: '<circle cx="9" cy="7" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6"/>',
+    cloche: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    bulle: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    loupe: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5.2-5.2"/>',
+    roue: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
+  };
+  const parSvg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${PAR_ICO[k] || ''}</svg>`;
+  const parNorm = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  /** L'état de la boîte et du rappel : lus à l'ouverture de la fenêtre (une fois par minute au plus). */
+  function parLire(force) {
+    if (PAR.lecture || (!force && PAR.lu && Date.now() - PAR.lu < 60000)) { return; }
+    PAR.lecture = true;
+    lire('/dashboard/boite?shop=' + encodeURIComponent(S.shop)).then(e => {
+      PAR.etat = e || {};
+      if (!e || !e.ouverte) { PAR.auto = null; PAR.errAuto = null; return null; }
+      return lire('/dashboard/boite/automatisations?shop=' + encodeURIComponent(S.shop)).then(d => { PAR.auto = d; PAR.errAuto = null; })
+        .catch(er => { PAR.auto = null; PAR.errAuto = er.message; });
+    }).catch(er => { PAR.etat = { erreur: er.message }; })
+      .finally(() => { PAR.lecture = false; PAR.lu = Date.now(); parRendre(); });
+  }
+  /** Les réglages, rangés : l'état de chacun (rectangle aux coins arrondis), ce qu'un clic fait. */
+  function parItems() {
+    const e = PAR.etat || {}, lu = !!PAR.etat && !e.erreur, reliee = !!e.reliee, ouverte = !!e.ouverte;
+    const apres = lu && !ouverte ? ['off', reliee ? 'boîte fermée ici' : 'après la boîte'] : null;
+    const R = PAR.auto && PAR.auto.rappel ? PAR.auto.rappel.reglage : null;
+    const eq = PAR.auto && Array.isArray(PAR.auto.equipe) ? PAR.auto.equipe.length : null;
+    const alerteKo = S.pushEtat === 'impossible' || S.pushEtat === 'refuse';
+    const G = [
+      ['Boîte mail', [
+        { k: 'boite', ic: 'mail', nom: 'La boîte du magasin', desc: e.adresse || 'l’adresse e-mail du magasin, reliée au dashboard',
+          et: !lu ? (PAR.lecture ? ['off', 'lecture…'] : null) : (!reliee ? ['a', 'à relier'] : (!ouverte ? ['a', 'à ouvrir ici'] : ['ok', 'reliée'])), aller: ['boite', null] },
+        { k: 'auto', ic: 'auto', nom: 'Messages automatiques', desc: 'accusé de réception, relance d’une offre', et: apres, aller: ['boite', { vue: 'auto' }] },
+        { k: 'modeles', ic: 'modele', nom: 'Modèles d’e-mails', desc: 'vos textes prêts à envoyer', et: apres, aller: ['boite', { vue: 'modeles' }] }]],
+      ['Automatisations', [
+        { k: 'rappel', ic: 'horloge', nom: 'Rappel la veille du retrait', desc: 'un e-mail ou un SMS au client, la veille de sa commande',
+          et: apres || (R ? (R.actif ? ['ok', 'à ' + String(R.heure).replace(':', ' h ')] : ['off', 'éteint']) : null), detail: 'rappel' },
+        { k: 'equipe', ic: 'equipe', nom: 'L’équipe', desc: 'qui reçoit les e-mails du magasin', et: eq != null ? ['', eq + ' personne' + (eq > 1 ? 's' : '')] : apres, aller: ['mails', null] }]],
+      ['Cet appareil', [
+        { k: 'alertes', ic: 'cloche', nom: 'Alertes de stock', desc: alerteKo ? (S.pushMotif || 'indisponibles sur cet appareil') : 'une notification quand une référence passe sous son minimum',
+          sw: S.pushEtat === 'abonne', swKo: alerteKo || S.pushOccupe }]]
+    ];
+    if (iaTons().length) { G.push(['Assistant IA', [{ k: 'ton', ic: 'bulle', nom: 'Ton de l’assistant', desc: 'qui vous répond quand vous l’ouvrez', ton: true }]]); }
+    return G;
+  }
+  function parRangee(x) {
+    const et = x.et && x.et[1] ? `<span class="par-et ${x.et[0]}">${esc(x.et[1])}</span>` : '';
+    let droite;
+    if (x.sw != null) { droite = `<button type="button" class="par-sw${x.sw ? ' on' : ''}" data-parsw="1" role="switch" aria-checked="${x.sw ? 'true' : 'false'}" aria-label="${esc(x.nom)}"${x.swKo ? ' disabled' : ''}></button>`; }
+    else if (x.ton) { droite = `<select class="par-ton" data-parton="1" aria-label="Ton de l’assistant">${iaTons().map(t => `<option value="${esc(t.cle)}"${t.cle === iaTonCle() ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select>`; }
+    else { droite = `${et}<span class="par-chev" aria-hidden="true">›</span>`; }
+    const actif = !!(x.aller || x.detail);
+    return `<div class="par-it${actif ? ' cl' : ''}" data-pari="${esc(x.k)}"${actif ? ' role="button" tabindex="0"' : ''}><span class="par-ic">${parSvg(x.ic)}</span><span class="t"><b>${esc(x.nom)}</b><small>${esc(x.desc)}</small></span>${droite}</div>`;
+  }
+  function parListe() {
+    const q = parNorm(PAR.q).split(/\s+/).filter(Boolean);
+    const G = parItems().map(([g, L]) => [g, L.filter(x => { const h = parNorm(g + ' ' + x.nom + ' ' + x.desc); return q.every(m => h.includes(m)); })]).filter(([, L]) => L.length);
+    return `<div class="par-hd"><b>Paramètres</b><button type="button" class="par-x" data-parx="1" aria-label="Fermer">×</button></div>
+      <label class="par-q">${parSvg('loupe')}<input type="search" data-parq="1" placeholder="Chercher un réglage…" value="${esc(PAR.q)}" autocomplete="off" aria-label="Chercher un réglage"></label>
+      <div class="par-lst">${G.length ? G.map(([g, L]) => `<div class="par-g">${esc(g)}</div>${L.map(parRangee).join('')}`).join('') : '<div class="par-vide">Aucun réglage ne correspond.</div>'}
+        ${PAR.etat && PAR.etat.erreur ? `<div class="par-vide">La boîte mail n’a pas pu être lue : ${esc(PAR.etat.erreur)}</div>` : ''}</div>`;
+  }
+  function parRappel() {
+    const e = PAR.etat || {}, A = PAR.auto && PAR.auto.rappel, R = A ? A.reglage : null, ok = !!(e.ouverte && R) && !PAR.occupe;
+    const heures = []; const [h0, h1] = A && A.heures ? A.heures : ['12:00', '21:00'];
+    for (let m = +h0.slice(0, 2) * 60; m <= +h1.slice(0, 2) * 60; m += 30) { heures.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0')); }
+    if (R && !heures.includes(R.heure)) { heures.push(R.heure); heures.sort(); }
+    const avis = !PAR.etat ? '<div class="par-attente">Lecture de la boîte…</div>'
+      : !e.reliee ? `<div class="par-avis">${parSvg('mail')}<span>La boîte du magasin n’est pas encore reliée : le rappel partira dès qu’elle le sera. <button type="button" class="par-lien" data-paraller="boite">Relier la boîte ›</button></span></div>`
+      : !e.ouverte ? `<div class="par-avis">${parSvg('mail')}<span>La boîte est fermée sur cet appareil : ouvrez-la pour régler le rappel. <button type="button" class="par-lien" data-paraller="boite">Ouvrir la boîte ›</button></span></div>`
+      : PAR.errAuto ? `<div class="db-err">${esc(PAR.errAuto)}</div>` : '';
+    const canal = R ? R.canal : 'email';
+    return `<div class="par-hd"><button type="button" class="par-ret" data-parret="1">‹ Paramètres</button><button type="button" class="par-x" data-parx="1" aria-label="Fermer">×</button></div>
+      <div class="par-det"><h4>Rappel la veille du retrait</h4>
+        <p>Chaque commande client à retirer demain : son client reçoit un e-mail (la boîte du magasin) et/ou un SMS, à l’heure choisie.</p>
+        ${avis}
+        <div class="par-ch${ok ? '' : ' dis'}"><span>Rappel actif<small>pour toutes les commandes à retirer</small></span><button type="button" class="par-sw${R && R.actif ? ' on' : ''}" data-parset="actif" role="switch" aria-checked="${R && R.actif ? 'true' : 'false'}" aria-label="Rappel actif"${ok ? '' : ' disabled'}></button></div>
+        <div class="par-ch${ok ? '' : ' dis'}"><span>Envoyer par</span><span class="par-seg">${[['email', 'E-mail'], ['sms', 'SMS'], ['les2', 'Les deux']].map(([v, l]) => `<button type="button" class="${canal === v ? 'on' : ''}" data-parset="canal" data-v="${v}"${ok ? '' : ' disabled'}>${l}</button>`).join('')}</span></div>
+        <div class="par-ch${ok ? '' : ' dis'}"><span>À quelle heure<small>la veille du retrait</small></span><select class="par-heure" data-parset="heure"${ok ? '' : ' disabled'}>${heures.map(x => `<option${R && x === R.heure ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
+        ${PAR.flash ? `<div class="par-flash ${PAR.flash.ok ? 'ok' : 'ko'}">${esc(PAR.flash.texte)}</div>` : ''}
+        <div class="par-bts"><button type="button" class="par-bt prim" data-paraller="mails">Ouvrir la page complète</button></div></div>`;
+  }
+  /** Un réglage du rappel envoyé tel quel (le serveur garde le reste) : allumé, canal ou heure. */
+  function parRappelEnvoyer(champ, v) {
+    const R = PAR.auto && PAR.auto.rappel && PAR.auto.rappel.reglage; if (!R || PAR.occupe) { return; }
+    PAR.occupe = true; PAR.flash = null; parRendre();
+    ecrire('/dashboard/boite/automatisations', { shop: S.shop, auto: 'rappel_retrait', [champ]: v }).then(d => {
+      PAR.auto = d; const g = d.rappel.reglage;
+      PAR.flash = { ok: true, texte: d.note || (champ === 'actif' ? (g.actif ? 'Rappel allumé : il part chaque jour à ' + g.heure + '.' : 'Rappel éteint.') : 'Enregistré.') };
+    }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
+  }
+  function parPlacer() {
+    const el = document.getElementById('db-par'), r = document.querySelector('#db-rail [data-par]');
+    if (!el) { return; }
+    if (!r) { parFermer(); return; }
+    const b = r.getBoundingClientRect();
+    el.style.left = Math.max(8, b.left) + 'px';
+    el.style.bottom = Math.max(8, window.innerHeight - b.top + 10) + 'px';
+    el.style.maxHeight = Math.max(240, b.top - 24) + 'px';
+  }
+  function parRendre() {
+    let el = document.getElementById('db-par');
+    if (!PAR.ouvert) { if (el) { el.remove(); } return; }
+    const f = document.activeElement, garde = f && el && el.contains(f) && f.dataset && f.dataset.parq != null ? f.selectionStart : null;
+    if (!el) { el = document.createElement('div'); el.id = 'db-par'; el.className = 'par'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Paramètres'); document.body.appendChild(el); }
+    el.innerHTML = PAR.niveau === 'rappel' ? parRappel() : parListe();
+    parPlacer(); parBrancher(el);
+    if (garde != null) { const i = el.querySelector('[data-parq]'); if (i) { i.focus(); try { i.setSelectionRange(garde, garde); } catch (x) { /* champ */ } } }
+  }
+  function parBrancher(el) {
+    const q = el.querySelector('[data-parq]');
+    if (q) {
+      q.addEventListener('input', () => { PAR.q = q.value; parRendre(); });
+      q.addEventListener('keydown', ev => { if (ev.key === 'Enter') { const p = el.querySelector('.par-it.cl'); if (p) { ev.preventDefault(); parChoisir(p.dataset.pari); } } });
+    }
+    el.querySelectorAll('[data-parx]').forEach(b => b.addEventListener('click', parFermer));
+    el.querySelectorAll('[data-parret]').forEach(b => b.addEventListener('click', () => { PAR.niveau = 'liste'; PAR.flash = null; parRendre(); }));
+    el.querySelectorAll('.par-it.cl').forEach(b => {
+      b.addEventListener('click', ev => { if (ev.target.closest('button, select')) { return; } parChoisir(b.dataset.pari); });
+      b.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); parChoisir(b.dataset.pari); } });
+    });
+    el.querySelectorAll('[data-parsw]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); Promise.resolve(pushBasculer()).finally(parRendre); parRendre(); }));
+    el.querySelectorAll('[data-parton]').forEach(s2 => s2.addEventListener('change', () => {
+      IA.ton = s2.value; try { localStorage.setItem('dbIaTon', IA.ton); } catch (er) { /* stockage refusé */ }
+      railMaj(avecRail()); parRendre();
+    }));
+    el.querySelectorAll('[data-paraller]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.paraller; parFermer(); allerVers(v); }));
+    el.querySelectorAll('[data-parset]').forEach(b => {
+      const champ = b.dataset.parset;
+      if (champ === 'heure') { b.addEventListener('change', () => parRappelEnvoyer('heure', b.value)); }
+      else if (champ === 'canal') { b.addEventListener('click', () => parRappelEnvoyer('canal', b.dataset.v)); }
+      else { b.addEventListener('click', () => { const R = PAR.auto && PAR.auto.rappel && PAR.auto.rappel.reglage; parRappelEnvoyer('actif', !(R && R.actif)); }); }
+    });
+  }
+  function parChoisir(k) {
+    let x = null; parItems().forEach(([, L]) => { L.forEach(y => { if (y.k === k) { x = y; } }); });
+    if (!x) { return; }
+    if (x.detail) { PAR.niveau = x.detail; PAR.flash = null; parRendre(); return; }
+    if (x.aller) { parFermer(); allerVers(x.aller[0], x.aller[1]); }
+  }
+  function parBasculer() { if (PAR.ouvert) { parFermer(); } else { parOuvrir(); } }
+  function parOuvrir() {
+    PAR.ouvert = true; PAR.niveau = 'liste'; PAR.q = ''; PAR.flash = null;
+    railMaj(avecRail()); parLire(false); parRendre();
+    const i = document.querySelector('#db-par [data-parq]'); if (i) { i.focus(); }
+  }
+  function parFermer() {
+    if (!PAR.ouvert) { return; }
+    PAR.ouvert = false; parRendre(); railMaj(avecRail());
+    const r = document.querySelector('#db-rail [data-par]'); if (r) { r.focus(); }
+  }
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && PAR.ouvert) { ev.preventDefault(); parFermer(); } });
+  document.addEventListener('mousedown', ev => {
+    if (!PAR.ouvert) { return; }
+    const el = document.getElementById('db-par');
+    if (el && el.contains(ev.target)) { return; }
+    if (ev.target.closest && ev.target.closest('[data-par]')) { return; }
+    parFermer();
+  });
+  window.addEventListener('resize', () => { if (PAR.ouvert) { parPlacer(); } });
   /** Les documents du coffre pas encore ouverts par le magasin (le chiffre du lien du bas). */
   function coffreNouveaux() { const C = S.aux['coffre|' + S.shop]; return C && C.reperes ? C.reperes.nouveaux || 0 : 0; }
   /** Mon coffre-fort (22/11/2026, Sam : « dans son dashboard, un lien direct, tout en dessous ») : épinglé au bas du rail. */
   function railCoffre() {
     const on = S.vue === 'coffre', n = coffreNouveaux();
-    return `<div class="db-rail-coffre"><button type="button" class="sidebar__item${on ? ' is-active' : ''}" data-vue="coffre"${on ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.coffre)}<span class="sidebar__item-label">Mon coffre-fort</span>${n ? `<span class="sidebar__count">${n}</span>` : ''}</button></div>`;
+    return `<div class="db-rail-coffre db-rail-bas"><button type="button" class="db-roue${PAR.ouvert || S.vue === 'mails' ? ' on' : ''}" data-par="1" title="Paramètres" aria-label="Paramètres" aria-haspopup="dialog" aria-expanded="${PAR.ouvert ? 'true' : 'false'}">${parSvg('roue')}</button><button type="button" class="sidebar__item${on ? ' is-active' : ''}" data-vue="coffre"${on ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.coffre)}<span class="sidebar__item-label">Mon coffre-fort</span>${n ? `<span class="sidebar__count">${n}</span>` : ''}</button></div>`;
   }
   /** Sans rail (téléphone, petit écran) : le même lien, tout en bas de chaque onglet, hors de #dash (il survit aux rendus). */
   function coffreBasMaj(on) {

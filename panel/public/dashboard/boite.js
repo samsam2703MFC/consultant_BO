@@ -310,6 +310,10 @@
       // `coffre` (22/11/2026) : « Joindre à un e-mail » depuis le coffre-fort — le document y arrive en pièce jointe.
       const ouvrir = () => { nouvelEcrit({ a: w.a ? (w.nom ? w.nom + ' <' + w.a + '>' : w.a) : '', objet: w.objet || '', offre: w.offre || null, coffre: Array.isArray(w.coffre) ? w.coffre.slice(0, 5) : [], contexte: { nom: w.nom || '', objet: w.objet || '' } }); if (st.ecr.coffre.length) { coffreLire(); } chargerModeles().then(() => { if (w.offre) { chargerOffres().then(() => appliquerModele('b-offre')); } }); };
       ouvrir();
+    } else if (i.vue === 'auto' || i.vue === 'modeles') {
+      // Depuis la fenêtre des Paramètres du dashboard (22/11/2026) : les messages automatiques ou les modèles, ouverts tout de suite.
+      st.mode = 'classique'; st.vue = i.vue; st.modEd = null; st.flash = null; rendre();
+      return i.vue === 'auto' ? chargerAuto() : chargerModeles();
     } else if (i.repondre) {
       const r = i.repondre;
       st.dossier = r.dossier || 'INBOX'; st.sel = r.uid;
