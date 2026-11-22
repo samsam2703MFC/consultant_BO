@@ -88,7 +88,9 @@ chemin. Seul le swagger, public, a été lu.
   adaptée, photo relue, terminée, validée, archivée, renvoyée. Chaque ligne porte la version, qui (nom et rôle) et
   quand. Chaque action s'écrit aussi dans `ceo_journal_entry` (`journalAdd`).
 - **Le document de formation du franchisé** (écran 08) est tiré de ces tables et rendu en PDF A4 par `rapPdfRendu`
-  (gabarit des documents de gestion). Chaque validation en ajoute une version, gardée avec la trace.
+  (gabarit des documents de gestion). Chaque validation en ajoute une version, gardée avec la trace. Il est déposé,
+  avec l'archive de la validation, dans l'onglet Formation du **coffre-fort du franchisé**
+  (`consultant/docs/maquettes/coffre-fort/`).
 - Les tables sont créées par `ensureFormationContinue()` (`CREATE TABLE IF NOT EXISTS` / `ADD COLUMN`, comme
   `ensureSop`). Aucune table existante n'est renommée ni vidée.
 
