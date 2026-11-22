@@ -1,0 +1,400 @@
+{
+ "aConfirmer": [
+  "Qui configure la boîte : le code le montre à l'écran du magasin. Au premier passage, « Relier la boîte mail du magasin » demande l'adresse e-mail et le mot de passe de la boîte chez OVH ; le magasin les pose lui-même, le mot de passe est essayé auprès du serveur puis n'est plus jamais affiché. Le code ne dit pas QUI au magasin doit le faire (franchisé ou responsable), ni qui crée la boîte OVH et fournit son mot de passe : à confirmer.",
+  "La clé de l'assistance IA (sans elle : « L'assistance IA n'est pas branchée ») se pose dans Paramètres › Assistance IA ; le code journalise ce réglage au nom du siège (« CEO ») : l'article dit « le siège » sans le citer explicitement — à confirmer.",
+  "Radar : l'en-tête de boite.js et de boite_ia.php parle des « quatorze prochains jours », mais l'écran affiche 21 jours (« La demande des trois prochaines semaines ») : l'article suit l'écran (trois semaines).",
+  "Briefing : « Envoyer la réponse » (ou « oui » à la voix) envoie tout de suite, sans le délai de 10 minutes du Pilote ni possibilité d'annuler : comportement voulu ?",
+  "Pilote : « une réponse par expéditeur et par jour » est calculé sur les 24 dernières heures ; « 30 par jour au plus » depuis minuit. L'article garde le libellé de l'écran.",
+  "« Temps gagné · 7 jours » (Pilote) est une estimation du code (4 min par réponse envoyée seule, 2 min par brouillon), non expliquée à l'écran : non chiffré dans l'article.",
+  "La réponse à la voix de « Mains dans la farine » demande Chrome ou Edge (l'écran le dit) : la tablette du magasin le permet-elle ?",
+  "Classement : aucune sous-catégorie du référentiel ne vise la messagerie du magasin ; D7.1 (Pilotage de l'activité) est repris des autres articles du dashboard. D3.2 (Communication Digitale) ou D4.2 (Accueil & Service) seraient d'autres choix possibles.",
+  "Accès « responsable » donné par la demande ; aucune photo (dashboard en ligne sous connexion)."
+ ],
+ "id": "art-boite-mail",
+ "code": "",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "35 min de lecture, puis 20 min dans la boîte mail de son magasin",
+ "titre": {
+  "fr": "Le dashboard : la Boîte mail et ses modes IA",
+  "nl": "Het dashboard: de Boîte mail en de AI-modi"
+ },
+ "objectif": {
+  "fr": "Lire, trier et répondre aux e-mails du magasin depuis le dashboard : les dossiers, la sélection multiple, le rangement proposé par l'IA, et les quatre modes de la bascule « IA » (Classique, Briefing, Pilote, Radar), en sachant ce que le Pilote n'envoie jamais seul et comment l'arrêter.",
+  "nl": "De e-mails van de winkel lezen, sorteren en beantwoorden vanuit het dashboard: de mappen, de meervoudige selectie, het opruimvoorstel van de AI, en de vier modi van de schakelaar « IA » (Classique, Briefing, Pilote, Radar), met de kennis wat de Pilote nooit alleen verstuurt en hoe je hem stopt."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12), qui tiennent la boîte e-mail du magasin. À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05, avec la Boîte mail ouverte sur son magasin.",
+  "nl": "Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12), die de mailbox van de winkel beheren. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05, met de Boîte mail open op de eigen winkel."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "ouverture",
+   "operationnel"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.Vente",
+   "C-VENTE.B2B",
+   "C-VENTE.Conflit"
+  ],
+  "formations": [
+   "FO-05",
+   "FO-36"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ouvrir la boîte et lire",
+    "nl": "De mailbox openen en lezen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Relier, puis ouvrir la boîte",
+      "nl": "De mailbox koppelen, daarna openen"
+     },
+     "texte": {
+      "fr": "Où : « Boîte mail », en tête du rail, avec le nombre de non-lus de la Réception.\nUne seule fois : « Relier la boîte mail du magasin » demande l'adresse e-mail du magasin et le mot de passe de sa boîte (chez OVH), puis « Relier la boîte ».\nLe mot de passe est essayé auprès du serveur, gardé côté serveur ; il ne s'affiche plus jamais.\nSur chaque appareil : « Ouvrir la boîte » avec ce mot de passe ; l'appareil reste ouvert 30 jours.\nTrop d'essais ratés : « Trop d'essais. Réessayez dans un quart d'heure. »\nEn bas de l'écran : « fermer sur cet appareil ». Sans le mot de passe, personne n'ouvre la boîte, le siège non plus.\nLe mot de passe de la boîte a changé : la relier à nouveau.",
+      "nl": "Waar: « Boîte mail », bovenaan de zijbalk, met het aantal ongelezen e-mails in de Réception (inbox).\nEén keer: « Relier la boîte mail du magasin » vraagt het e-mailadres van de winkel en het wachtwoord van de mailbox (bij OVH), daarna « Relier la boîte ».\nHet wachtwoord wordt bij de server getest en aan de serverkant bewaard; het wordt nooit meer getoond.\nOp elk toestel: « Ouvrir la boîte » met dat wachtwoord; het toestel blijft 30 dagen open.\nTe veel mislukte pogingen: « Trop d'essais. Réessayez dans un quart d'heure. »\nOnderaan het scherm: « fermer sur cet appareil ». Zonder het wachtwoord opent niemand de mailbox, ook het hoofdkantoor niet.\nIs het wachtwoord van de mailbox gewijzigd: koppel ze opnieuw."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Lire et répondre (mode Classique)",
+      "nl": "Lezen en antwoorden (modus Classique)"
+     },
+     "texte": {
+      "fr": "Les dossiers en boutons : « Réception », « Brouillons », « Envoyés », « Archives », « Indésirables », « Corbeille », puis ceux du magasin.\nLa liste à gauche (50 par page, le plus récent d'abord) ; filtres « Tous », « Non lus », « Suivis », « Avec pièce jointe » ; « Chercher dans … ».\nUn toucher ouvre l'e-mail à droite et le marque lu. Les images distantes sont bloquées : « Les afficher » au besoin.\n« Répondre », « Répondre à tous », « Transférer », ou « Écrire » dans la barre.\nEn écrivant : « Insérer un modèle… » (modèles du réseau et du magasin), « Joindre une offre (PDF de TF Buddy)… », « Joindre un fichier » (15 Mo au plus).\nTout part de l'adresse du magasin ; une demande se transforme en offre avec « Créer une offre ».",
+      "nl": "De mappen als knoppen: « Réception », « Brouillons », « Envoyés », « Archives », « Indésirables », « Corbeille », daarna die van de winkel.\nDe lijst links (50 per pagina, de recentste eerst); filters « Tous », « Non lus », « Suivis », « Avec pièce jointe »; « Chercher dans … ».\nEen tik opent de e-mail rechts en markeert hem als gelezen. Externe afbeeldingen zijn geblokkeerd: « Les afficher » indien nodig.\n« Répondre », « Répondre à tous », « Transférer », of « Écrire » in de balk.\nTijdens het schrijven: « Insérer un modèle… » (sjablonen van het netwerk en van de winkel), « Joindre une offre (PDF de TF Buddy)… », « Joindre un fichier » (max. 15 MB).\nAlles vertrekt vanaf het adres van de winkel; een aanvraag wordt een offerte met « Créer une offre »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Trier : la sélection, les dossiers, l'IA",
+    "nl": "Sorteren: de selectie, de mappen, de AI"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Sélectionner plusieurs e-mails",
+      "nl": "Meerdere e-mails selecteren"
+     },
+     "texte": {
+      "fr": "Une case devant chaque e-mail.\nMaj+clic sur une case : toute la plage depuis la dernière case cochée.\n« Tout sélectionner » : la page ; puis « Sélectionner les … e-mails du dossier » : tout le dossier, recherche et filtre compris (« Revenir à la page » pour revenir).\nDès qu'une case est cochée : les gestes rapides en tête de liste, le détail dans le volet de droite.\n« Tout désélectionner » vide la sélection.",
+      "nl": "Een vakje voor elke e-mail.\nShift+klik op een vakje: het hele bereik sinds het laatst aangevinkte vakje.\n« Tout sélectionner »: de pagina; daarna « Sélectionner les … e-mails du dossier »: de hele map, zoekopdracht en filter inbegrepen (« Revenir à la page » om terug te gaan).\nZodra een vakje aangevinkt is: de snelle acties bovenaan de lijst, het detail in het rechtervenster.\n« Tout désélectionner » maakt de selectie leeg."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les gestes et « Déplacer vers »",
+      "nl": "De acties en « Déplacer vers »"
+     },
+     "texte": {
+      "fr": "« Archiver », « Mettre à la corbeille », « Marquer lu », « Marquer non lu », « Suivre ».\n« Déplacer vers » : un bouton par dossier ; « Nouveau dossier », un nom, puis « Créer et déplacer ».\nDans la Corbeille ou les Indésirables : « Remettre en Réception » ou « Effacer pour de bon ».\nEffacer ne se fait que depuis la Corbeille ou les Indésirables, après une confirmation.\nCe qui est effacé ne se récupère plus, ni ici, ni dans le webmail, ni sur le téléphone.",
+      "nl": "« Archiver », « Mettre à la corbeille », « Marquer lu », « Marquer non lu », « Suivre ».\n« Déplacer vers »: één knop per map; « Nouveau dossier », een naam, daarna « Créer et déplacer ».\nIn de Corbeille (prullenbak) of de Indésirables (ongewenst): « Remettre en Réception » of « Effacer pour de bon ».\nDefinitief wissen kan alleen vanuit de Corbeille of de Indésirables, na een bevestiging.\nWat gewist is, krijg je niet meer terug: niet hier, niet in de webmail, niet op de telefoon."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Les dossiers qui manquent sont créés",
+      "nl": "Ontbrekende mappen worden aangemaakt"
+     },
+     "texte": {
+      "fr": "Une boîte neuve n'a souvent que sa réception.\nArchiver, mettre à la corbeille ou envoyer crée le dossier qui manque, avec les noms du webmail d'OVH.\nL'écran le dit : « Le dossier « Archives » a été créé dans la boîte. »\nLes dossiers sont ceux de la boîte elle-même : les noms en néerlandais ou en allemand (Prullenbak, Verzonden, Archief, Papierkorb…) sont reconnus.",
+      "nl": "Een nieuwe mailbox heeft vaak alleen een inbox.\nArchiveren, naar de prullenbak verplaatsen of verzenden maakt de ontbrekende map aan, met de namen van de webmail van OVH.\nHet scherm meldt het: « Le dossier « Archives » a été créé dans la boîte. »\nDe mappen zijn die van de mailbox zelf: Nederlandse of Duitse namen (Prullenbak, Verzonden, Archief, Papierkorb…) worden herkend."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "« Ranger avec l'IA »",
+      "nl": "« Ranger avec l'IA » (opruimen met AI)"
+     },
+     "texte": {
+      "fr": "Sélectionner les e-mails (50 à la fois au plus, choisis dans la page), puis « Proposer un rangement ».\nL'IA lit l'expéditeur, l'objet et le début de chaque e-mail ; elle propose un dossier de la boîte, un « nouveau dossier », les Archives, ou « Laisser en … ».\nCe qui attend encore une réponse (demande de client, réclamation, e-mail suivi) reste en place.\nCorriger : décocher un e-mail pour le laisser, « Changer » pour choisir un autre dossier, « Annuler » pour tout abandonner.\nRien ne bouge avant « Ranger … e-mails dans … dossiers » ; l'écran dit ensuite ce qui a été rangé et créé.",
+      "nl": "De e-mails selecteren (max. 50 tegelijk, gekozen op de pagina), daarna « Proposer un rangement ».\nDe AI leest de afzender, het onderwerp en het begin van elke e-mail; ze stelt een map van de mailbox voor, een « nouveau dossier », de Archives, of « Laisser en … » (laten staan).\nWat nog op een antwoord wacht (aanvraag van een klant, klacht, opgevolgde e-mail) blijft staan.\nCorrigeren: een e-mail uitvinken om hem te laten staan, « Changer » om een andere map te kiezen, « Annuler » om alles te laten vallen.\nNiets verschuift vóór « Ranger … e-mails dans … dossiers »; daarna zegt het scherm wat opgeruimd en aangemaakt is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La bascule « IA » et le Briefing",
+    "nl": "De schakelaar « IA » en de Briefing"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Quatre modes, une lecture",
+      "nl": "Vier modi, één lezing"
+     },
+     "texte": {
+      "fr": "En tête de la barre, la bascule « IA » : « Classique » · « Briefing » · « Pilote » · « Radar ». Chaque appareil garde son mode.\nChaque e-mail de la réception est lu une fois par l'IA, et la lecture est gardée : résumé, catégorie, ton, urgence, action proposée, brouillon de réponse, demande repérée (jour, produits, personnes).\nL'IA reçoit l'expéditeur, l'objet, la date et le début du texte.\nElle ne connaît ni les prix, ni les stocks, ni les horaires, ni les délais du magasin : là où il en faut, elle écrit « [à compléter : …] ».\nSans la clé de l'IA : « L'assistance IA n'est pas branchée » ; elle se pose dans Paramètres › Assistance IA.",
+      "nl": "Vooraan in de balk de schakelaar « IA »: « Classique » · « Briefing » · « Pilote » · « Radar ». Elk toestel onthoudt zijn modus.\nElke e-mail in de inbox wordt één keer door de AI gelezen en die lezing wordt bewaard: samenvatting, categorie, toon, urgentie, voorgestelde actie, ontwerpantwoord, herkende aanvraag (dag, producten, personen).\nDe AI krijgt de afzender, het onderwerp, de datum en het begin van de tekst.\nZe kent de prijzen, voorraden, openingsuren en termijnen van de winkel niet: waar die nodig zijn, schrijft ze « [à compléter : …] ».\nZonder de AI-sleutel: « L'assistance IA n'est pas branchée »; die wordt ingesteld in Paramètres › Assistance IA."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Briefing : les non-lus en cartes",
+      "nl": "Briefing: de ongelezen e-mails als kaarten"
+     },
+     "texte": {
+      "fr": "Les non-lus de la réception (20 au plus), une carte chacun ; l'urgent d'abord, « plus tard » à la fin.\nEn tête : « J'ai lu … e-mails non lus », le temps à compter, et les puces (réponses rédigées, offres à créer, à ranger, clients mécontents).\nLa carte : catégorie, « urgent », l'anneau de confiance de l'IA, le résumé, le jour, les personnes et les produits demandés.\n« L'IA propose : … » : le grand bouton porte l'action (« Envoyer la réponse », « Créer l'offre », « Ranger dans « … » », « Archiver », « Marquer lu »).\n« Plus tard » (←) remet la carte au bout ; « Ouvrir l'e-mail » repasse en Classique sur cet e-mail.\nLa colonne de droite : « La file du matin », ce qui est fait et ce qui vient.",
+      "nl": "De ongelezen e-mails in de inbox (max. 20), één kaart per e-mail; het dringende eerst, « plus tard » achteraan.\nBovenaan: « J'ai lu … e-mails non lus », de tijd die het vraagt, en de bolletjes (opgestelde antwoorden, te maken offertes, op te ruimen, ontevreden klanten).\nDe kaart: categorie, « urgent », de vertrouwensring van de AI, de samenvatting, de dag, de personen en de gevraagde producten.\n« L'IA propose : … »: de grote knop draagt de actie (« Envoyer la réponse », « Créer l'offre », « Ranger dans « … » », « Archiver », « Marquer lu »).\n« Plus tard » (←) zet de kaart achteraan; « Ouvrir l'e-mail » gaat terug naar Classique op die e-mail.\nDe rechterkolom: « La file du matin », wat gedaan is en wat nog komt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "La réponse se corrige, puis part tout de suite",
+      "nl": "Het antwoord wordt verbeterd en vertrekt meteen"
+     },
+     "texte": {
+      "fr": "« Réponse rédigée » : le texte se corrige sur place, dans la carte.\nLe badge dit « prête » ou « … à compléter ».\nTant qu'il reste un « [à compléter …] », l'envoi est bloqué : « La réponse a encore des « [à compléter …] » : complétez-les, puis validez. »\nValider (→ au clavier) envoie la réponse tout de suite, depuis l'adresse du magasin : relire avant, surtout les prix, les jours et les quantités.\nUn e-mail qui parle de prix, de remise, de réclamation, d'allergènes, d'une commande ou d'un client professionnel porte sa mention dans « L'IA propose ».",
+      "nl": "« Réponse rédigée »: de tekst wordt ter plaatse, in de kaart, verbeterd.\nHet label zegt « prête » (klaar) of « … à compléter » (aan te vullen).\nZolang er een « [à compléter …] » overblijft, is verzenden geblokkeerd: « La réponse a encore des « [à compléter …] » : complétez-les, puis validez. »\nValideren (→ op het toetsenbord) verstuurt het antwoord meteen, vanaf het adres van de winkel: vooraf nalezen, vooral prijzen, dagen en hoeveelheden.\nEen e-mail over prijzen, korting, een klacht, allergenen, een bestelling of een zakelijke klant draagt die vermelding in « L'IA propose »."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "« Mains dans la farine » : le briefing à voix haute",
+      "nl": "« Mains dans la farine »: de briefing hardop"
+     },
+     "texte": {
+      "fr": "« Écouter le briefing » : le navigateur lit chaque carte (« E-mail 1 sur … », l'expéditeur, le résumé, ce que l'IA propose).\nPuis il écoute : « oui » valide (et envoie la réponse), « plus tard » passe, « ouvre » ouvre l'e-mail, « stop » arrête.\nMot non compris : il redemande « oui », « plus tard », « ouvre » ou « stop ».\nLa réponse à la voix demande Chrome ou Edge ; sinon, il lit seulement.\n« Arrêter la voix » coupe tout.",
+      "nl": "« Écouter le briefing »: de browser leest elke kaart voor (« E-mail 1 sur … », de afzender, de samenvatting, wat de AI voorstelt).\nDaarna luistert hij: « oui » valideert (en verstuurt het antwoord), « plus tard » slaat over, « ouvre » opent de e-mail, « stop » stopt.\nWoord niet begrepen: hij vraagt opnieuw « oui », « plus tard », « ouvre » of « stop ».\nAntwoorden met de stem vraagt Chrome of Edge; anders leest hij alleen voor.\n« Arrêter la voix » zet alles stil."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le Pilote",
+    "nl": "De Pilote"
+   },
+   "etapes": [
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Trois crans, éteint par défaut",
+      "nl": "Drie standen, standaard uit"
+     },
+     "texte": {
+      "fr": "« Éteint » : « Je ne réponds à rien. » C'est le cran de départ.\n« Brouillons » : l'IA dépose sa réponse dans « Brouillons », en réponse à l'e-mail ; le magasin relit, complète et envoie.\n« Simples » : elle envoie seule les réponses simples, 10 min après les avoir lues, annulables ; une confirmation est demandée avant d'allumer.\nSimple : un accusé de réception (candidature, facture, document reçu), un remerciement, la réponse à une confirmation déjà donnée.\nLe Pilote ne lit que les e-mails arrivés après son allumage, jamais l'arriéré, à chaque passage de l'horloge (10 min).",
+      "nl": "« Éteint » (uit): « Je ne réponds à rien. » Dat is de beginstand.\n« Brouillons » (concepten): de AI legt haar antwoord in « Brouillons », als antwoord op de e-mail; de winkel leest na, vult aan en verstuurt.\n« Simples » (eenvoudige): ze verstuurt de eenvoudige antwoorden alleen, 10 min na het lezen, annuleerbaar; vóór het aanzetten wordt een bevestiging gevraagd.\nEenvoudig: een ontvangstbevestiging (sollicitatie, factuur, ontvangen document), een bedanking, het antwoord op een bevestiging die de klant al gaf.\nDe Pilote leest alleen de e-mails die na het aanzetten binnenkomen, nooit de achterstand, bij elke doortocht van de klok (10 min)."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Ce qui ne part jamais seul",
+      "nl": "Wat nooit alleen vertrekt"
+     },
+     "texte": {
+      "fr": "« Jamais seul » : parle de prix ; demande une remise ou un geste ; réclamation ; question d'allergènes ou de santé ; commande ou demande d'offre à confirmer ; client professionnel ; personnel ou RH ; l'IA n'est pas sûre.\nNi sous 85 % de confiance, ni avec un « [à compléter] » : ces e-mails restent au magasin.\nJamais aux robots, aux listes, aux newsletters ni à l'arriéré.\nUne réponse par expéditeur et par jour, 30 par jour au plus.\nRien ne part si le magasin a déjà répondu, ou si l'e-mail a quitté la réception.\nCes garde-fous sont fixes : ils se lisent dans « Les garde-fous » et ne se règlent pas.",
+      "nl": "« Jamais seul » (nooit alleen): over prijzen; vraagt een korting of een gebaar; klacht; vraag over allergenen of gezondheid; bestelling of offerteaanvraag te bevestigen; zakelijke klant; personeel of HR; de AI is niet zeker.\nNiet onder 85 % vertrouwen, niet met een « [à compléter] »: die e-mails blijven bij de winkel.\nNooit aan robots, mailinglijsten, nieuwsbrieven of de achterstand.\nEén antwoord per afzender per dag, maximaal 30 per dag.\nEr vertrekt niets als de winkel al geantwoord heeft, of als de e-mail niet meer in de inbox staat.\nDie vangrails zijn vast: ze staan in « Les garde-fous » en zijn niet in te stellen."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Suivre et annuler",
+      "nl": "Opvolgen en annuleren"
+     },
+     "texte": {
+      "fr": "« Ce que le pilote a fait » (7 derniers jours) : chaque réponse avec son état ; « part dans … min » tant qu'elle attend.\n« Annuler l'envoi » : « Envoi annulé : la réponse ne partira pas. » Déjà partie : « Trop tard : cette réponse est déjà partie, ou n'était plus prévue. »\nRepasser sur « Éteint » annule d'un coup tous les envois prévus.\nRépondre soi-même avant l'heure, ou sortir l'e-mail de la réception, l'empêche aussi de partir.\n« Ce qui vous attend » : ce que le Pilote a laissé, avec la raison ; « Ouvrir l'e-mail » puis « C'est traité ».\nLes compteurs : « réponses envoyées seules », « brouillons déposés », « en partance », « annulées », « pour vous ».",
+      "nl": "« Ce que le pilote a fait » (laatste 7 dagen): elk antwoord met zijn status; « part dans … min » zolang het wacht.\n« Annuler l'envoi »: « Envoi annulé : la réponse ne partira pas. » Al vertrokken: « Trop tard : cette réponse est déjà partie, ou n'était plus prévue. »\nTerugzetten op « Éteint » annuleert in één keer alle geplande verzendingen.\nZelf antwoorden vóór het uur, of de e-mail uit de inbox halen, houdt hem ook tegen.\n« Ce qui vous attend »: wat de Pilote heeft laten liggen, met de reden; « Ouvrir l'e-mail » en daarna « C'est traité ».\nDe tellers: « réponses envoyées seules », « brouillons déposés », « en partance », « annulées », « pour vous »."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le Radar",
+    "nl": "De Radar"
+   },
+   "etapes": [
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Les demandes à venir, les alertes, l'humeur",
+      "nl": "De komende aanvragen, de waarschuwingen, de stemming"
+     },
+     "texte": {
+      "fr": "Les e-mails des trois dernières semaines ; ceux que l'IA n'a pas encore lus : « Lire et mettre sur le radar » (une seule fois, la lecture est gardée).\nTrois alertes : les demandes sans réponse pour les trois prochaines semaines (avec la plus proche et « Répondre à … ») ; le jour le plus chargé (« À prévoir à la production. ») ; les clients mécontents sans réponse.\n« La demande des trois prochaines semaines » : une colonne par jour, répondu ou sans réponse.\n« Les demandes repérées » : pour le, client et demande, personnes, montant estimé, état.\nL'estimation suit les prix TVAC du catalogue du magasin, pour les produits reconnus : à vérifier.\n« Le thermomètre d'humeur » : la part d'e-mails chaleureux, neutres et mécontents.",
+      "nl": "De e-mails van de laatste drie weken; die de AI nog niet gelezen heeft: « Lire et mettre sur le radar » (één keer, de lezing wordt bewaard).\nDrie waarschuwingen: de aanvragen zonder antwoord voor de komende drie weken (met de dichtstbijzijnde en « Répondre à … »); de drukste dag (« À prévoir à la production. »); de ontevreden klanten zonder antwoord.\n« La demande des trois prochaines semaines »: één kolom per dag, beantwoord of zonder antwoord.\n« Les demandes repérées »: voor wanneer, klant en aanvraag, personen, geschat bedrag, status.\nDe schatting volgt de prijzen incl. btw van de catalogus van de winkel, voor de herkende producten: na te kijken.\n« Le thermomètre d'humeur »: het aandeel warme, neutrale en ontevreden e-mails."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Le Pilote est éteint par défaut ; en « Simples », il ne répond seul qu'aux e-mails simples, jamais aux prix, remises, réclamations, allergènes, commandes, professionnels ni au personnel.",
+   "nl": "De Pilote staat standaard uit; in « Simples » antwoordt hij alleen op eenvoudige e-mails, nooit op prijzen, kortingen, klachten, allergenen, bestellingen, zakelijke klanten of personeel."
+  },
+  {
+   "fr": "Une réponse du Pilote part 10 minutes après sa lecture : « Annuler l'envoi » l'arrête, « Éteint » annule tous les envois prévus.",
+   "nl": "Een antwoord van de Pilote vertrekt 10 minuten na het lezen: « Annuler l'envoi » houdt het tegen, « Éteint » annuleert alle geplande verzendingen."
+  },
+  {
+   "fr": "En Briefing, valider (ou dire « oui ») envoie la réponse tout de suite ; un « [à compléter] » bloque l'envoi tant qu'il reste.",
+   "nl": "In Briefing verstuurt valideren (of « oui » zeggen) het antwoord meteen; een « [à compléter] » blokkeert het verzenden zolang het blijft staan."
+  },
+  {
+   "fr": "« Ranger avec l'IA » ne fait que proposer : rien ne bouge avant « Ranger ».",
+   "nl": "« Ranger avec l'IA » doet alleen een voorstel: niets verschuift vóór « Ranger »."
+  },
+  {
+   "fr": "Effacer pour de bon ne se fait que depuis la Corbeille ou les Indésirables, et ne se récupère plus nulle part.",
+   "nl": "Definitief wissen kan alleen vanuit de Corbeille of de Indésirables, en is nergens meer terug te halen."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le Pilote est sur « Simples ». Un client demande le prix de 40 croissants pour samedi. Que fait le Pilote ?",
+    "nl": "De Pilote staat op « Simples ». Een klant vraagt de prijs van 40 croissants voor zaterdag. Wat doet de Pilote?"
+   },
+   "choix": {
+    "fr": [
+     "Il répond seul 10 minutes plus tard",
+     "Il ne répond pas seul : l'e-mail parle de prix et d'une commande, il reste au magasin",
+     "Il l'archive"
+    ],
+    "nl": [
+     "Hij antwoordt alleen 10 minuten later",
+     "Hij antwoordt niet alleen: de e-mail gaat over prijzen en een bestelling, hij blijft bij de winkel",
+     "Hij archiveert hem"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Une réponse du Pilote affiche « part dans 6 min » et ne convient pas. Que faire ?",
+    "nl": "Een antwoord van de Pilote toont « part dans 6 min » en is niet goed. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "« Annuler l'envoi » sur cette réponse (ou passer le Pilote sur « Éteint »)",
+     "Attendre qu'elle parte, puis s'excuser",
+     "Effacer l'e-mail du client"
+    ],
+    "nl": [
+     "« Annuler l'envoi » op dat antwoord (of de Pilote op « Éteint » zetten)",
+     "Wachten tot het vertrokken is en daarna excuses maken",
+     "De e-mail van de klant wissen"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "En Briefing, la réponse rédigée contient « [à compléter : heure de retrait] ». Que se passe-t-il au moment de valider ?",
+    "nl": "In Briefing bevat het opgestelde antwoord « [à compléter : heure de retrait] ». Wat gebeurt er bij het valideren?"
+   },
+   "choix": {
+    "fr": [
+     "La réponse part telle quelle",
+     "Le Pilote complète l'heure tout seul",
+     "L'envoi est bloqué : compléter le texte dans la carte, puis valider"
+    ],
+    "nl": [
+     "Het antwoord vertrekt zoals het is",
+     "De Pilote vult het uur zelf in",
+     "Het verzenden is geblokkeerd: de tekst in de kaart aanvullen, daarna valideren"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Après « Proposer un rangement », l'IA place une demande de client dans « Factures ». Que faire ?",
+    "nl": "Na « Proposer un rangement » zet de AI een klantaanvraag in « Factures ». Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Rien : c'est déjà rangé",
+     "« Changer » ou décocher cet e-mail avant « Ranger » : rien n'a encore bougé",
+     "Effacer le dossier « Factures »"
+    ],
+    "nl": [
+     "Niets: het is al opgeruimd",
+     "« Changer » of die e-mail uitvinken vóór « Ranger »: er is nog niets verschoven",
+     "De map « Factures » wissen"
+    ]
+   },
+   "bonne": 1
+  }
+ ]
+}
