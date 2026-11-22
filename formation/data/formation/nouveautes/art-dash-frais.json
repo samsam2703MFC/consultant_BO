@@ -1,0 +1,369 @@
+{
+ "aConfirmer": [
+  "Mois à venir : la flèche › s’arrête au mois en cours. Les lignes qu’un ajout « jusqu’en décembre » ou « toute l’année » crée pour les mois suivants ne se relisent donc pas dans l’onglet Frais, seulement au panel (ou par le message « Pas encore visible au panel : … » juste après l’envoi). À confirmer : est-ce voulu, et faut-il le dire autrement à l’équipe ?",
+  "« Toute l’année » crée aussi les mois déjà passés de l’année (janvier → décembre), ce qui change le P&L des mois clos. Le code relit bien ces mois. À confirmer : faut-il recommander « jusqu’en décembre » quand l’année est entamée ?",
+  "« Annuler » ne vaut que pour les ajouts faits depuis le dashboard, des 90 derniers jours (huit au plus dans « Ajoutés d’ici »). Un frais saisi directement au panel ne se défait qu’au panel. Le libellé « à défaire au panel » est prévu à l’écran mais le serveur rend toujours un ajout annulable : il ne s’affiche jamais.",
+  "« ↻ Relire » relit l’onglet sans forcer une nouvelle lecture du panel : les frais restent gardés une heure (six heures pour un mois passé), sauf juste après un ajout ou une annulation, où ils sont relus. À confirmer : faut-il un vrai « relire au panel » ?",
+  "Le report automatique par le panel n’est vérifié que sur le mois qui suit le premier mois de l’ajout (même libellé et même montant). Un report du panel fait autrement (autre montant, autre libellé) n’est pas reconnu : le frais compterait deux fois.",
+  "Accès : rien dans l’écran ne réserve l’onglet Frais ni le formulaire à un rôle ; le serveur limite un franchisé à ses magasins. L’accès « responsable » de cet article est celui du brief, à confirmer.",
+  "Classement : sous-catégorie D7.1 (Pilotage de l’activité), comme les autres articles du dashboard ; D7.3 (Obligations financières franchise) serait possible. Durée (« 20 min de lecture ») estimée, pas lue dans le code."
+ ],
+ "id": "art-dash-frais",
+ "code": "",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "20 min de lecture, avec l’onglet ouvert sur son magasin",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Frais",
+  "nl": "Het dashboard: het tabblad Frais"
+ },
+ "objectif": {
+  "fr": "Lire les frais du mois tels que le panel les rend, indiquer pour chaque poste si le montant contient la TVA et à quel taux, savoir ce que ça change dans le P&L court, et ajouter un frais au panel (pour un mois ou mois après mois) sans le compter deux fois — et défaire un ajout fait par erreur.",
+  "nl": "De kosten van de maand lezen zoals het panel ze geeft, per post aangeven of het bedrag btw bevat en aan welk tarief, weten wat dat verandert in de korte W&V, en een kost aan het panel toevoegen (voor één maand of maand na maand) zonder hem dubbel te tellen — en een foute toevoeging ongedaan maken."
+ },
+ "pour": {
+  "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et candidat franchisé. À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05, avant de saisir ou de corriger les frais du magasin.",
+  "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en kandidaat-franchisenemer. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05, voor je de kosten van de winkel invoert of corrigeert."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "operationnel"
+  ],
+  "postes": [
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Finance"
+  ],
+  "formations": [
+   "FO-05",
+   "FO-41"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Avant de commencer",
+    "nl": "Voor je begint"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Où se trouve l’onglet",
+      "nl": "Waar het tabblad staat"
+     },
+     "texte": {
+      "fr": "Au bureau, dans le rail à gauche : groupe « Les chiffres », « Frais » (après Semaine, Mois, Année, Trésorerie). Sur tablette, l’onglet « Frais » de la rangée d’onglets.\nEn haut : « Mois », ‹ et › pour changer de mois, « Ce mois-ci » pour revenir. On ne va pas après le mois en cours.\nL’onglet montre les frais du magasin tels qu’ils sont saisis au panel pour le mois.\nIl sert à deux choses : dire pour chaque poste si le montant contient la TVA, et ajouter au panel un frais qui manque.\nLe panel n’est modifié que par « Ajouter un frais » et par « Annuler cet ajout ».",
+      "nl": "Op kantoor, in de rail links: groep « Les chiffres », « Frais » (na Semaine, Mois, Année, Trésorerie). Op de tablet het tabblad « Frais » in de rij tabbladen.\nBovenaan: « Mois », ‹ en › om van maand te wisselen, « Ce mois-ci » om terug te keren. Na de lopende maand ga je niet.\nHet tabblad toont de kosten van de winkel zoals ze in het panel ingevoerd zijn voor de maand.\nHet dient voor twee dingen: per post aangeven of het bedrag btw bevat, en een ontbrekende kost aan het panel toevoegen.\nHet panel verandert alleen door « Ajouter un frais » en door « Annuler cet ajout »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Un poste, c’est le libellé saisi",
+      "nl": "Een post is het ingevoerde label"
+     },
+     "texte": {
+      "fr": "Chaque frais du panel a un libellé (« Comptable », « royalties »…) et une catégorie, l’un des types de frais du panel.\nLe poste affiché est le libellé ; sans libellé, la catégorie. La catégorie s’écrit en petit sous le poste.\nDeux lignes du même libellé dans le mois s’additionnent en un seul poste.\nLa source et l’heure de lecture se lisent en haut du tableau : « source : le panel, frais du magasin · … postes · lus à … ».\nLe panel ne répond pas : « Le panel n’a pas répondu pour les frais de … : « ↻ Relire » pour réessayer. »\nAucun frais : « Aucun frais saisi au panel pour … ». Le formulaire « Ajouter un frais » reste visible dans les deux cas.",
+      "nl": "Elke kost in het panel heeft een label (« Comptable », « royalties »…) en een categorie, een van de kostentypes van het panel.\nDe getoonde post is het label; zonder label de categorie. De categorie staat klein onder de post.\nTwee lijnen met hetzelfde label in de maand worden samengeteld tot één post.\nDe bron en het leesuur staan bovenaan de tabel: « source : le panel, frais du magasin · … postes · lus à … ».\nAntwoordt het panel niet: « Le panel n’a pas répondu pour les frais de … : « ↻ Relire » pour réessayer. »\nGeen kosten: « Aucun frais saisi au panel pour … ». Het formulier « Ajouter un frais » blijft in beide gevallen zichtbaar."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les frais du mois et leur TVA",
+    "nl": "De kosten van de maand en hun btw"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Les quatre tuiles",
+      "nl": "De vier tegels"
+     },
+     "texte": {
+      "fr": "« Frais saisis au panel » : le total du mois tel que saisi, avec le nombre de postes.\n« Frais hors TVA » : « ce que le P&L compte », et sa part du saisi en %.\n« TVA comprise dans les frais » : « récupérable : retirée des frais généraux ».\n« À indiquer » : les postes sans choix de TVA et leur montant, « comptés tels que saisis, en attendant » ; « aucun » quand chaque poste est indiqué.",
+      "nl": "« Frais saisis au panel »: het totaal van de maand zoals ingevoerd, met het aantal posten.\n« Frais hors TVA »: « ce que le P&L compte » (wat de W&V telt), en het aandeel ervan in het ingevoerde bedrag in %.\n« TVA comprise dans les frais »: « récupérable : retirée des frais généraux » (recupereerbaar, van de algemene kosten afgetrokken).\n« À indiquer »: de posten zonder btw-keuze en hun bedrag, « comptés tels que saisis, en attendant » (voorlopig geteld zoals ingevoerd); « aucun » als elke post aangegeven is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Le tableau « Les frais du mois »",
+      "nl": "De tabel « Les frais du mois »"
+     },
+     "texte": {
+      "fr": "Une ligne par poste, du plus gros au plus petit : « Poste », « Saisi au panel », « TVA comprise ? », « Taux de TVA », « Hors TVA », « TVA ».\nUn poste pas encore indiqué est teinté d’orange : son hors TVA reste le montant saisi, la colonne TVA dit « à indiquer ».\nLa dernière ligne, « Total du mois », dit combien de postes sont indiqués sur le total (« 5 postes indiqués sur 6 »).\nHors TVA = montant saisi ÷ (1 + taux) quand la TVA est comprise ; sinon le montant tel quel.",
+      "nl": "Eén lijn per post, van groot naar klein: « Poste », « Saisi au panel », « TVA comprise ? », « Taux de TVA », « Hors TVA », « TVA ».\nEen post die nog niet aangegeven is, is oranje gekleurd: zijn bedrag zonder btw blijft het ingevoerde bedrag, de kolom TVA zegt « à indiquer ».\nDe laatste lijn, « Total du mois », zegt hoeveel posten aangegeven zijn op het totaal (« 5 postes indiqués sur 6 »).\nZonder btw = ingevoerd bedrag ÷ (1 + tarief) als de btw inbegrepen is; anders het bedrag zoals het is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Indiquer la TVA d’un poste",
+      "nl": "De btw van een post aangeven"
+     },
+     "texte": {
+      "fr": "« Oui » : le montant saisi au panel est celui de la facture, TVA comprise ; le taux proposé d’office est 21 %.\n« Non » : le montant est déjà hors TVA, ou le frais n’en a pas (loyer non soumis, assurances, frais bancaires) : taux 0 %.\nLes taux proposés : 0 %, 6 %, 12 %, 21 %. Repère de l’écran : 21 % l’énergie et les services, 6 % l’eau.\nLe choix s’enregistre au toucher et se garde pour le poste, d’un mois à l’autre.\nToucher à nouveau le choix fait le remet « à indiquer ».\nUn poste sans choix propre prend celui de sa catégorie, s’il y en a un.\nLe panel n’a pas de champ TVA : ce choix reste au dashboard, il ne change rien au panel.",
+      "nl": "« Oui »: het bedrag in het panel is dat van de factuur, btw inbegrepen; het standaard voorgestelde tarief is 21 %.\n« Non »: het bedrag is al zonder btw, of de kost heeft geen btw (huur niet onderworpen, verzekeringen, bankkosten): tarief 0 %.\nDe voorgestelde tarieven: 0 %, 6 %, 12 %, 21 %. Richtpunt op het scherm: 21 % energie en diensten, 6 % water.\nDe keuze wordt bij de tik bewaard en blijft voor de post gelden, van maand tot maand.\nTik je nog eens op de keuze, dan staat de post opnieuw op « à indiquer ».\nEen post zonder eigen keuze neemt die van zijn categorie over, als die er is.\nHet panel heeft geen btw-veld: deze keuze blijft in het dashboard, ze verandert niets in het panel."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Ce que ça change dans le P&L court",
+      "nl": "Wat het verandert in de korte W&V"
+     },
+     "texte": {
+      "fr": "Le P&L court (Résultat du jour, de la semaine, du mois) se lit hors TVA : sa ligne « − Frais généraux hors TVA » reprend la part hors TVA des frais de ce mois.\nSous cette ligne : « … saisis, … de TVA retirée », le nombre de postes « à indiquer », et « Frais ▸ » qui ouvre cet onglet.\nDans l’onglet, la carte « Ce que ça change dans le P&L court » met côte à côte « saisi » et « hors TVA » : « Frais généraux du jour » (les frais du mois que le panel alloue à aujourd’hui), « Frais généraux du mois », et la part des frais dans le CA du jour face au seuil du réseau.\nAprès un choix de TVA ou un ajout, le Résultat se refait avec les nouveaux frais.",
+      "nl": "De korte W&V (Résultat van de dag, de week, de maand) leest zonder btw: de lijn « − Frais généraux hors TVA » neemt het deel zonder btw van de kosten van deze maand.\nOnder die lijn: « … saisis, … de TVA retirée », het aantal posten « à indiquer », en « Frais ▸ » dat dit tabblad opent.\nIn het tabblad zet de kaart « Ce que ça change dans le P&L court » « saisi » en « hors TVA » naast elkaar: « Frais généraux du jour » (de kosten van de maand die het panel aan vandaag toewijst), « Frais généraux du mois », en het aandeel van de kosten in de omzet van de dag tegenover de drempel van het netwerk.\nNa een btw-keuze of een toevoeging wordt het Résultat opnieuw berekend met de nieuwe kosten."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Ajouter un frais",
+    "nl": "Een kost toevoegen"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Vérifier avant d’ajouter",
+      "nl": "Nakijken voor je toevoegt"
+     },
+     "texte": {
+      "fr": "Un frais ajouté compte dans les frais généraux du P&L : ajouté deux fois, il compte deux fois.\nAvant d’ajouter, relire le tableau du mois : le poste y est-il déjà, sous son libellé ou sous sa catégorie ?\nPour un frais de toute l’année, reculer d’un mois avec ‹ : si le panel le montre déjà chaque mois, il le reporte de lui-même, ne rien ajouter.\nRegarder aussi « Ajoutés d’ici », sous le formulaire : les ajouts déjà faits depuis le dashboard.\nGarder le même libellé que celui du panel : c’est le libellé qui fait le poste et qui porte le choix de TVA.",
+      "nl": "Een toegevoegde kost telt mee in de algemene kosten van de W&V: twee keer toegevoegd, telt hij twee keer.\nLees voor je iets toevoegt de tabel van de maand: staat de post er al, onder zijn label of onder zijn categorie?\nVoor een kost voor het hele jaar: ga met ‹ een maand terug; toont het panel hem al elke maand, dan zet het panel hem zelf door, voeg niets toe.\nKijk ook naar « Ajoutés d’ici », onder het formulier: de toevoegingen die al vanuit het dashboard gebeurd zijn.\nHoud hetzelfde label als in het panel: het label maakt de post en draagt de btw-keuze."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Libellé, type et montant",
+      "nl": "Label, type en bedrag"
+     },
+     "texte": {
+      "fr": "Carte « Ajouter un frais » : « créé au panel, une ligne par mois · il compte ensuite dans les frais généraux du P&L ».\n« Libellé » : le nom du poste (ex. « Assurance incendie »), 120 caractères au plus.\n« Type de frais au panel » : l’une des catégories du panel, à choisir. Un type choisi sans libellé donne son nom au libellé.\n« Montant » en euros, plus grand que zéro.\n« Le montant est » : « par mois » (le même chaque mois) ou « un total à répartir » (partagé au centime entre les mois, le dernier prend l’arrondi).",
+      "nl": "Kaart « Ajouter un frais »: « créé au panel, une ligne par mois · il compte ensuite dans les frais généraux du P&L » (aangemaakt in het panel, één lijn per maand, telt daarna mee in de algemene kosten).\n« Libellé »: de naam van de post (bv. « Assurance incendie »), hoogstens 120 tekens.\n« Type de frais au panel »: een van de categorieën van het panel, te kiezen. Een gekozen type zonder label geeft zijn naam aan het label.\n« Montant » in euro, groter dan nul.\n« Le montant est »: « par mois » (elke maand hetzelfde) of « un total à répartir » (op de cent verdeeld over de maanden, de laatste neemt de afronding)."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Le mois et la répétition",
+      "nl": "De maand en de herhaling"
+     },
+     "texte": {
+      "fr": "« Répéter » : « ce mois seulement », « jusqu’en décembre » (de ce mois à décembre) ou « toute l’année » (janvier → décembre).\nÀ l’ouverture du formulaire, « toute l’année » est déjà choisi : le changer pour un frais d’un seul mois.\nLe champ au-dessus suit : « Mois », « À partir de » ou « Année ». On choisit de l’année passée à l’année prochaine.\nL’aperçu, à côté du bouton, dit ce qui partira : « 12 mois au panel (janvier → décembre …) : … par mois · … en tout. »\nTant qu’il manque le libellé, le montant ou le type, l’aperçu dit « À indiquer : … » et le bouton reste grisé.",
+      "nl": "« Répéter »: « ce mois seulement » (alleen deze maand), « jusqu’en décembre » (van deze maand tot december) of « toute l’année » (januari → december).\nBij het openen van het formulier staat « toute l’année » al gekozen: verander het voor een kost van één maand.\nHet veld erboven volgt: « Mois », « À partir de » of « Année ». Je kiest van vorig jaar tot volgend jaar.\nHet overzicht naast de knop zegt wat er vertrekt: « 12 mois au panel (janvier → décembre …) : … par mois · … en tout. »\nZolang het label, het bedrag of het type ontbreekt, zegt het overzicht « À indiquer : … » en blijft de knop grijs."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "La TVA du nouveau poste",
+      "nl": "De btw van de nieuwe post"
+     },
+     "texte": {
+      "fr": "« TVA comprise dans le montant ? » : « Oui » ou « Non », facultatif.\nUn choix fait apparaître les taux (0 %, 6 %, 12 %, 21 %) : « Oui » propose 21 %, « Non » 0 %.\nLe choix s’enregistre pour le poste avec l’ajout, comme dans le tableau.\nSans choix, le poste arrive « à indiquer » et compte tel que saisi jusqu’à ce qu’il soit indiqué.",
+      "nl": "« TVA comprise dans le montant ? »: « Oui » of « Non », niet verplicht.\nEen keuze doet de tarieven verschijnen (0 %, 6 %, 12 %, 21 %): « Oui » stelt 21 % voor, « Non » 0 %.\nDe keuze wordt samen met de toevoeging voor de post bewaard, zoals in de tabel.\nZonder keuze komt de post binnen als « à indiquer » en telt hij zoals ingevoerd tot hij aangegeven is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Après l’envoi",
+    "nl": "Na het versturen"
+   },
+   "etapes": [
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "L’envoi au panel",
+      "nl": "Het versturen naar het panel"
+     },
+     "texte": {
+      "fr": "Le bouton dit ce qu’il fait : « Ajouter au panel » pour un mois, « Ajouter les 12 mois au panel » pour plusieurs.\nPour plusieurs mois, une question confirme : « Créer « … » au panel pour … mois (…) ? ».\nPendant l’envoi : « Envoi au panel… ». Une ligne est créée au panel pour chaque mois.\nSi le panel reporte déjà le frais de lui-même d’un mois à l’autre, une seule ligne est créée : « le panel le reporte de lui-même sur les mois suivants, rien d’autre n’a été créé ».\nSinon : « créé au panel pour … mois (…) ».\nChaque mois est ensuite relu au panel ; un mois où la ligne n’apparaît pas encore : « Pas encore visible au panel : … ».\nLe tableau du mois se relit tout de suite.",
+      "nl": "De knop zegt wat hij doet: « Ajouter au panel » voor één maand, « Ajouter les 12 mois au panel » voor meerdere.\nVoor meerdere maanden bevestigt een vraag: « Créer « … » au panel pour … mois (…) ? ».\nTijdens het versturen: « Envoi au panel… ». Voor elke maand wordt één lijn in het panel aangemaakt.\nZet het panel de kost zelf al van maand tot maand door, dan wordt maar één lijn aangemaakt: « le panel le reporte de lui-même sur les mois suivants, rien d’autre n’a été créé ».\nAnders: « créé au panel pour … mois (…) ».\nElke maand wordt daarna opnieuw gelezen in het panel; een maand waar de lijn nog niet verschijnt: « Pas encore visible au panel : … ».\nDe tabel van de maand wordt meteen opnieuw gelezen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Quand le panel refuse",
+      "nl": "Als het panel weigert"
+     },
+     "texte": {
+      "fr": "Le refus du panel s’affiche avec son message : « Refusé par le panel pour … : … Les mois suivants n’ont pas été envoyés. »\nLes mois déjà créés avant le refus restent au panel, et se défont par « Annuler cet ajout ».\nRien n’a été créé : « rien n’a été créé », et le message du panel sous « Ajout : … ».\nLire le message, corriger (montant, type, mois) et renvoyer ; si le message n’est pas clair, le transmettre au bureau tel quel.",
+      "nl": "De weigering van het panel verschijnt met zijn bericht: « Refusé par le panel pour … : … Les mois suivants n’ont pas été envoyés. »\nDe maanden die vóór de weigering al aangemaakt zijn, blijven in het panel en worden ongedaan gemaakt met « Annuler cet ajout ».\nNiets aangemaakt: « rien n’a été créé », en het bericht van het panel onder « Ajout : … ».\nLees het bericht, corrigeer (bedrag, type, maand) en verstuur opnieuw; is het bericht niet duidelijk, geef het zoals het is door aan het kantoor."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Annuler une erreur",
+      "nl": "Een fout ongedaan maken"
+     },
+     "texte": {
+      "fr": "Juste après l’envoi : « Annuler cet ajout », sous le message du résultat.\nPlus tard : « Ajoutés d’ici » liste les ajouts des 90 derniers jours (poste, nombre de mois, de quand à quand, date, qui, montant), chacun avec « Annuler ».\nUne question confirme : « Supprimer au panel les lignes créées par cet ajout ? ». Toutes les lignes de l’ajout sont supprimées au panel, tous les mois d’un coup.\nLe résultat : « Ajout annulé : … mois supprimés au panel. » ; un mois introuvable (« déjà supprimé ? ») est à vérifier au panel.\nUn frais saisi directement au panel ne s’annule pas ici : il se corrige au panel.\nUne erreur de montant ou de libellé : annuler l’ajout, puis refaire un ajout juste.",
+      "nl": "Meteen na het versturen: « Annuler cet ajout », onder het bericht met het resultaat.\nLater: « Ajoutés d’ici » toont de toevoegingen van de laatste 90 dagen (post, aantal maanden, van wanneer tot wanneer, datum, wie, bedrag), elk met « Annuler ».\nEen vraag bevestigt: « Supprimer au panel les lignes créées par cet ajout ? ». Alle lijnen van de toevoeging worden in het panel verwijderd, alle maanden in één keer.\nHet resultaat: « Ajout annulé : … mois supprimés au panel. »; een maand die niet gevonden wordt (« déjà supprimé ? ») kijk je na in het panel.\nEen kost die rechtstreeks in het panel ingevoerd is, annuleer je hier niet: die corrigeer je in het panel.\nEen fout in bedrag of label: annuleer de toevoeging en doe daarna een juiste toevoeging."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Un frais ajouté deux fois compte deux fois dans le P&L : relire le tableau du mois et « Ajoutés d’ici » avant d’ajouter, surtout sur l’année.",
+   "nl": "Een kost die twee keer toegevoegd is, telt twee keer in de W&V: lees de tabel van de maand en « Ajoutés d’ici » voor je toevoegt, zeker voor het hele jaar."
+  },
+  {
+   "fr": "Le formulaire s’ouvre sur « toute l’année » : pour un frais d’un seul mois, choisir « ce mois seulement » avant d’envoyer.",
+   "nl": "Het formulier opent op « toute l’année »: kies voor een kost van één maand « ce mois seulement » voor je verstuurt."
+  },
+  {
+   "fr": "Un poste « à indiquer » compte tel que saisi, TVA comprise : indiquer « Oui » ou « Non » et le taux pour chaque poste.",
+   "nl": "Een post « à indiquer » telt zoals ingevoerd, btw inbegrepen: geef voor elke post « Oui » of « Non » en het tarief aan."
+  },
+  {
+   "fr": "Une erreur d’ajout se défait par « Annuler » (tous les mois de l’ajout d’un coup) ; un frais saisi directement au panel se corrige au panel.",
+   "nl": "Een foute toevoeging maak je ongedaan met « Annuler » (alle maanden van de toevoeging in één keer); een kost die rechtstreeks in het panel ingevoerd is, corrigeer je in het panel."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Un poste affiche « à indiquer » dans le tableau. Comment le P&L court le compte-t-il ?",
+    "nl": "Een post toont « à indiquer » in de tabel. Hoe telt de korte W&V hem?"
+   },
+   "choix": {
+    "fr": [
+     "Il ne le compte pas tant qu’il n’est pas indiqué",
+     "Tel que saisi au panel, TVA comprise, en attendant",
+     "Hors TVA à 21 % d’office"
+    ],
+    "nl": [
+     "Hij telt hem niet zolang hij niet aangegeven is",
+     "Zoals ingevoerd in het panel, btw inbegrepen, voorlopig",
+     "Zonder btw aan standaard 21 %"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Tu veux ajouter l’assurance de l’année. Que fais-tu avant d’envoyer ?",
+    "nl": "Je wilt de verzekering voor het hele jaar toevoegen. Wat doe je voor je verstuurt?"
+   },
+   "choix": {
+    "fr": [
+     "Vérifier que le panel ne la montre pas déjà chaque mois, et regarder « Ajoutés d’ici »",
+     "Rien : le dashboard supprime les doublons tout seul",
+     "L’ajouter aussi au panel, par sécurité"
+    ],
+    "nl": [
+     "Nakijken dat het panel ze niet al elke maand toont, en naar « Ajoutés d’ici » kijken",
+     "Niets: het dashboard verwijdert dubbels vanzelf",
+     "Ze voor de zekerheid ook in het panel toevoegen"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Tu as ajouté un frais sur 12 mois avec un montant faux. Que fais-tu ?",
+    "nl": "Je hebt een kost voor 12 maanden toegevoegd met een fout bedrag. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Ajouter un second frais négatif pour compenser",
+     "Changer le taux de TVA du poste",
+     "« Annuler » l’ajout, puis refaire un ajout avec le bon montant"
+    ],
+    "nl": [
+     "Een tweede, negatieve kost toevoegen om te compenseren",
+     "Het btw-tarief van de post veranderen",
+     "De toevoeging « Annuler », daarna een toevoeging met het juiste bedrag doen"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Tu saisis 1 200 € en « un total à répartir », « toute l’année ». Que crée le panel ?",
+    "nl": "Je voert 1 200 € in als « un total à répartir », « toute l’année ». Wat maakt het panel aan?"
+   },
+   "choix": {
+    "fr": [
+     "Une seule ligne de 1 200 € en janvier",
+     "Douze lignes de 100 €, de janvier à décembre",
+     "Douze lignes de 1 200 €"
+    ],
+    "nl": [
+     "Eén enkele lijn van 1 200 € in januari",
+     "Twaalf lijnen van 100 €, van januari tot december",
+     "Twaalf lijnen van 1 200 €"
+    ]
+   },
+   "bonne": 1
+  }
+ ]
+}
