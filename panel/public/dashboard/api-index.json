@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-22T14:08:47Z",
+ "genere": "2026-11-22T14:45:03Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -397,7 +397,7 @@
     "GET"
    ],
    "fichiers": [
-    "coffre.js:40",
+    "coffre.js:44",
     "dashboard.js:141"
    ],
    "magasin": true,
@@ -408,7 +408,7 @@
      ],
      "chemin": "/coffre/magasin",
      "handler": "ep_coffre_magasin",
-     "source": "consultant/src/coffre.php:137",
+     "source": "consultant/src/coffre.php:260",
      "resume": "le coffre d'une boutique : ses documents, ses rapports de visite, les repères du haut."
     }
    ]
@@ -419,7 +419,7 @@
     "GET"
    ],
    "fichiers": [
-    "coffre.js:62"
+    "coffre.js:145"
    ],
    "magasin": true,
    "routes": [
@@ -429,7 +429,7 @@
      ],
      "chemin": "/coffre/magasin/assistant",
      "handler": "wr_coffre_assistant",
-     "source": "consultant/src/coffre_dates.php:404",
+     "source": "consultant/src/coffre_dates.php:418",
      "resume": "shop, id} — l'assistant lit le document et propose ses grandes dates (rien n'est rangé)."
     }
    ]
@@ -440,10 +440,10 @@
     "GET"
    ],
    "fichiers": [
-    "coffre.js:54",
-    "coffre.js:75",
-    "coffre.js:85",
-    "coffre.js:92"
+    "coffre.js:102",
+    "coffre.js:109",
+    "coffre.js:168",
+    "coffre.js:54"
    ],
    "magasin": true,
    "routes": [
@@ -471,7 +471,7 @@
      ],
      "chemin": "/coffre/magasin/dates",
      "handler": "wr_coffre_date_suppr",
-     "source": "consultant/src/coffre_dates.php:264",
+     "source": "consultant/src/coffre_dates.php:272",
      "resume": "un magasin retire les dates qu'il a rangées ; le siège, toutes."
     }
    ]
@@ -482,7 +482,7 @@
     "POST"
    ],
    "fichiers": [
-    "coffre.js:107"
+    "coffre.js:128"
    ],
    "magasin": true,
    "routes": [
@@ -492,7 +492,7 @@
      ],
      "chemin": "/coffre/magasin/document",
      "handler": "wr_coffre_document",
-     "source": "consultant/src/coffre.php:215",
+     "source": "consultant/src/coffre.php:341",
      "resume": "multipart : shop, titre?, date?, echeance?, note?, fichiers[]) — le magasin dépose une pièce LÉGALE dans son coffre (décision 3 de Sam) ; les autres sortes se déposent au cockpit."
     }
    ]
@@ -503,7 +503,7 @@
     "GET"
    ],
    "fichiers": [
-    "coffre.js:38"
+    "coffre.js:42"
    ],
    "magasin": true,
    "routes": [
@@ -513,8 +513,29 @@
      ],
      "chemin": "/coffre/magasin/fichier",
      "handler": "ep_coffre_fichier",
-     "source": "consultant/src/coffre.php:201",
+     "source": "consultant/src/coffre.php:327",
      "resume": "le fichier, s'il est de cette boutique et dans le coffre."
+    }
+   ]
+  },
+  {
+   "chemin": "/coffre/magasin/piece",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "coffre.js:95"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/coffre/magasin/piece",
+     "handler": "wr_coffre_piece",
+     "source": "consultant/src/coffre.php:189",
+     "resume": "shop, piece, exclue: bool} — écarter une pièce attendue (« pas concernée » : le permis d'environnement d'une boutique qui n'en a pas besoin) ou la réintégrer."
     }
    ]
   },
@@ -611,7 +632,7 @@
    ],
    "fichiers": [
     "automatisations.js:38",
-    "boite.js:1042",
+    "boite.js:1043",
     "boite.js:106"
    ],
    "magasin": true,
@@ -634,9 +655,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:382",
-    "boite.js:974",
-    "boite.js:976"
+    "boite.js:383",
+    "boite.js:975",
+    "boite.js:977"
    ],
    "magasin": true,
    "routes": [
@@ -704,7 +725,7 @@
    ],
    "fichiers": [
     "boite.js:301",
-    "boite.js:447"
+    "boite.js:448"
    ],
    "magasin": true,
    "routes": [
@@ -746,7 +767,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:936"
+    "boite.js:937"
    ],
    "magasin": true,
    "routes": [
@@ -769,8 +790,8 @@
    "fichiers": [
     "boite.js:150",
     "boite.js:199",
-    "boite.js:452",
-    "boite.js:454"
+    "boite.js:453",
+    "boite.js:455"
    ],
    "magasin": true,
    "routes": [
@@ -791,8 +812,8 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:417",
-    "boite.js:507"
+    "boite.js:418",
+    "boite.js:508"
    ],
    "magasin": true,
    "routes": [
@@ -813,7 +834,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:404"
+    "boite.js:405"
    ],
    "magasin": true,
    "routes": [
@@ -835,9 +856,9 @@
    ],
    "fichiers": [
     "boite.js:136",
-    "boite.js:315",
-    "boite.js:449",
-    "boite.js:948"
+    "boite.js:316",
+    "boite.js:450",
+    "boite.js:949"
    ],
    "magasin": true,
    "routes": [
@@ -880,9 +901,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:381",
-    "boite.js:967",
-    "boite.js:973"
+    "boite.js:382",
+    "boite.js:968",
+    "boite.js:974"
    ],
    "magasin": true,
    "routes": [
@@ -904,7 +925,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:933"
+    "boite.js:934"
    ],
    "magasin": true,
    "routes": [
@@ -926,8 +947,8 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:497",
-    "boite.js:500"
+    "boite.js:498",
+    "boite.js:501"
    ],
    "magasin": true,
    "routes": [
@@ -970,7 +991,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:927"
+    "boite.js:928"
    ],
    "magasin": true,
    "routes": [
@@ -1770,7 +1791,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:367",
+    "boite.js:368",
     "dashboard.js:4689",
     "dashboard.js:4709",
     "offres.js:100"

@@ -7789,7 +7789,7 @@
       if (S.vue === 'coffre' || S.vue === 'formation') {
         $.innerHTML = mbEntete({ boutons: 'relire', sous: S.vue === 'coffre' ? 'Mon coffre-fort' : 'Formations et suivi' }) + '<div class="mb-sc"><div id="db-mod-mob" style="flex:1 0 auto;padding:12px"></div></div>' + mbOnglets();
         $.classList.add('mob'); brancher();
-        if (S.vue === 'formation') { fcMonter('db-mod-mob'); } else { const p = document.getElementById('db-mod-mob'); if (p && window.DashCoffre) { p.appendChild(window.DashCoffre.racine(S.shop, { apiBase: API })); } }
+        if (S.vue === 'formation') { fcMonter('db-mod-mob'); } else { const p = document.getElementById('db-mod-mob'); if (p && window.DashCoffre) { p.appendChild(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } }
         return;
       }
       // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
@@ -7860,7 +7860,7 @@
     // Formations et suivi (22/11/2026) : l'élément du module ; le Professeur s'ouvre sur la page (modale).
     if (S.vue === 'formation') { h += '<div id="db-formation"></div>'; $.innerHTML = h; brancher(); fcMonter('db-formation'); return; }
     // Mon coffre-fort (22/11/2026) : l'élément du module, gardé d'un rendu à l'autre.
-    if (S.vue === 'coffre') { h += '<div id="db-coffre"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-coffre'); if (p && window.DashCoffre) { p.replaceWith(window.DashCoffre.racine(S.shop, { apiBase: API })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du coffre-fort n’a pas été chargé.</div>'; } return; }
+    if (S.vue === 'coffre') { h += '<div id="db-coffre"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-coffre'); if (p && window.DashCoffre) { p.replaceWith(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du coffre-fort n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'frais') { h += rendFrais(); $.innerHTML = h; brancher(); frBrancher(); return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
