@@ -184,6 +184,32 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customer_no_order WHERE day = ?', [$day])[0]['n'] ?? 0);
     }
 
+    /** [371] Domówienia dnia : résultats enregistrés pour le jour (n_supplement_check). */
+    public function supplementChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplement_check WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [374] Opóźnienia dostaw : décisions enregistrées pour le jour (n_delivery_delay_check). */
+    public function deliveryDelayChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_delivery_delay_check WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [373] Płynność i gotówka : saldo wpisane i decyzje zapisane w tygodniu (poniedziałek). @return array{balance:bool, decisions:int} */
+    public function liquidityProgress(string $weekStart): array
+    {
+        $b = (int) ($this->all('SELECT COUNT(*) AS n FROM n_liquidity_balance WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+        $d = (int) ($this->all('SELECT COUNT(*) AS n FROM n_liquidity_decision WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+        return ['balance' => $b > 0, 'decisions' => $d];
+    }
+
+    /** [375] Terminowość tygodnia (OTIF) : actions enregistrées pour la semaine examinée (lundi, n_otif_week_action). */
+    public function otifActions(string $weekStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_otif_week_action WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);

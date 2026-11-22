@@ -257,3 +257,9 @@
 2026-11-22T16:31:43Z [369] asystent zamowienia dnia
 2026-11-22T16:37:48Z [370] asystent klienci bez zamowienia
 2026-11-22T16:43:30Z Dashboard : les Frais deviennent un onglet de la Trésorerie, le rail perd l'entrée Frais (vue=frais et le lien « Frais ▸ » du P&L ouvrent l'onglet)
+2026-11-22T16:46:59Z [369] struktura userId fix
+2026-11-22T16:51:25Z [372] sms klienci + [371] asystent domowienia dnia
+2026-11-22T17:28:23Z [372] fix OrderSmsService::delivers
+2026-11-22T18:33:12Z [373] plynnosc + [374] opoznienia dostaw + [375] OTIF + [372] sms nowy termin
+2026-11-22T18:38:19Z [373] kwoty plynnosc dla KO
+2026-11-22T18:41:48Z [373] prawo liquidity

@@ -1,6 +1,6 @@
 // [370] Klienci bez zamówienia (Kierownik operacyjny) : 1. przegląd stałych klientów (oczekiwani dziś, zamówili,
 // bez zamówienia), 2. do kontaktu (wynik dla każdego klienta), 3. zatwierdzenie → zadanie stanowiska zalicza się samo.
-// Rien n'est envoyé aux clients : le contact est noté, pas envoyé.
+// [372] Bouton SMS : relance du client (texte relu avant l'envoi) ; un SMS envoyé note « Kontakt z klientem ».
 (() => {
     const app = document.getElementById('cnApp');
     if (!app || !window.tw) return;
@@ -20,6 +20,9 @@
     const rhythm = (c) => `${esc(c.rhythm.label)}<small>${c.order_days} ${tw.plural(c.order_days, 'dzień', 'dni', 'dni')} z zamówieniem w ${D.settings.weeks} tyg.</small>`;
     const who = (c) => `<b>${esc(c.customer)}</b>${c.contact || c.phone || c.email ? `<small>${[c.contact ? esc(c.contact) : '', c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : '', c.email ? esc(c.email) : ''].filter(Boolean).join(' · ')}</small>` : ''}`;
 
+    const sms = (c) => window.orderSms && c.status !== 'ordered' ? `<span style="display:inline-flex;gap:6px;align-items:center;margin-left:6px">${orderSms.badge(c.sms)}${orderSms.button(`data-cn-sms="${c.id}"`, !c.phone, c.phone ? 'Wyślij SMS do klienta' : 'Brak numeru telefonu')}</span>` : '';
+    async function reload() { const r = await at.send('/ajax/client-orders/missing', 'GET'); if (r.ok) { D = r.data; render(); } }
+
     function status(c) {
         if (c.status === 'ordered') return tw.pill('zamówił', 'ok');
         if (c.status === 'waiting') return tw.pill('czekamy — w terminie', 'warn');
@@ -30,7 +33,7 @@
     function step1() {
         const t = D.totals, s = D.settings;
         const rows = D.clients.map(c => ({cls: c.status === 'late' && !c.check ? 'hl' : '', cells: [
-            who(c), rhythm(c), c.expected_label ? esc(c.expected_label) + (c.expected_on === D.today ? '<small>dziś</small>' : '') : '—', order(c), status(c)]}));
+            who(c), rhythm(c), c.expected_label ? esc(c.expected_label) + (c.expected_on === D.today ? '<small>dziś</small>' : '') : '—', order(c), `<span style="display:inline-flex;align-items:center;white-space:nowrap">${status(c)}${sms(c)}</span>`]}));
         return `<p class="tw-lead">Stali klienci i ich zwykły rytm zamówień z ostatnich ${s.weeks} tygodni. Klienci, których oczekiwane zamówienie nie przyszło, trafiają do kroku 2.</p>
             ${tw.tiles([{label: 'Stali klienci', value: String(t.regular), sub: `co najmniej ${s.min_orders} ${tw.plural(s.min_orders, 'dzień', 'dni', 'dni')} z zamówieniem w ${s.weeks} tyg.`},
                 {label: 'Oczekiwani dziś', value: String(t.expected_today), sub: t.expected_today ? `${t.ordered_today} z ${t.expected_today} już zamówiło` : 'nikt nie zamawia zwykle dziś'},
@@ -63,14 +66,14 @@
         const list = late(), t = D.totals;
         if (!list.length) return tw.alert('Nikogo do kontaktu : wszyscy stali klienci zamówili w swoim rytmie.', 'ok', 'bi-check-circle');
         const rows = list.map(c => ({cls: c.check ? '' : 'hl', cells: [
-            who(c), `${esc(c.expected_label)}<small>${esc(c.rhythm.label)} · ${days(c.days_late)} temu</small>`, order(c), resultCell(c)]}));
+            who(c) + `<div style="margin-top:4px;margin-left:-6px">${sms(c)}</div>`, `${esc(c.expected_label)}<small>${esc(c.rhythm.label)} · ${days(c.days_late)} temu</small>`, order(c), resultCell(c)]}));
         return `<p class="tw-lead">Ci stali klienci nie złożyli oczekiwanego zamówienia. Skontaktuj się i zapisz wynik : <b>Kontakt z klientem</b> (z notatką),
                 <b>Zamówienie przyszło</b> albo <b>Brak zamówienia w planie</b> (przerwa, urlop — z datą końca, jeśli znana). Krok 3 otworzy się, gdy wszyscy mają wynik.</p>
             ${tw.tiles([{label: 'Do kontaktu', value: String(t.late), sub: 'bez oczekiwanego zamówienia'}, {label: 'Z wynikiem', value: `${t.resolved} z ${t.late}`, sub: t.open ? `zostało ${t.open}` : 'wszyscy wyjaśnieni', cls: t.open ? 'warn' : 'ok'},
                 {label: 'Kontakt z klientem', value: String(t.contacted), sub: 'z notatką'}, {label: 'Przerwa / przyszło', value: `${t.paused} / ${t.arrived}`, sub: 'brak w planie / zamówienie przyszło'}])}
             ${tw.table([{label: 'Klient'}, {label: 'Oczekiwane'}, {label: 'Ostatnie zamówienie'}, {label: 'Wynik'}], rows)}
             <p class="tw-note">Wynik dotyczy oczekiwanego dnia : jutro klient nie wróci na listę, dopóki nie minie jego kolejny dzień zamówienia. Przerwa z datą obejmuje też kolejne dni do tej daty.
-                Nic nie jest wysyłane do klientów — kontakt (telefon, e-mail) prowadzisz sam, tu tylko notatka.</p>`;
+                Przycisk SMS : przypomnienie do klienta w jego języku (tekst do poprawienia przed wysłaniem) ; wysłany SMS zapisuje wynik « Kontakt z klientem ». Nic nie wychodzi bez kliknięcia.</p>`;
     }
 
     function step3() {
@@ -115,6 +118,12 @@
     });
     app.addEventListener('click', async (e) => {
         if (e.target.closest('[data-cn-next]')) { step = Math.min(3, step + 1); reached = Math.max(reached, step); render(); return; }
+        const m = e.target.closest('[data-cn-sms]');
+        if (m && window.orderSms) {
+            const c = D.clients.find(x => x.id === Number(m.dataset.cnSms));
+            if (c) orderSms.open({kinds: ['order_missing'], id: c.id, hints: {expected: c.expected_on}, onSent: async () => { delete draft[c.id]; await reload(); }});
+            return;
+        }
         const r = e.target.closest('[data-cn-res]');
         if (r) {
             const id = Number(r.dataset.cnRes), d = draft[id] ??= {result: '', note: '', until: ''};

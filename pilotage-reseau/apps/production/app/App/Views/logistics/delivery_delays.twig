@@ -1,0 +1,21 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Opóźnienia dostaw{% endblock %}
+
+{% block content %}
+{# [374] Assistant « Opóźnienia dostaw » : App\Services\Organization\Wizards\DeliveryDelaysService — écran dans
+   assets/js/logistics/delivery-delays.js, cadre commun dans assets/js/organization/task-wizard.js, fenêtre SMS commune
+   dans assets/js/client/order-sms.js. La tâche du poste « Kierownik operacyjny » se valide seule après « Zakończ ».
+   « Nowy termin » est seulement noté : la commande garde sa date ; aucun SMS ne part sans clic. #}
+<section class="section">
+    <div id="ddApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="ddBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/client/order-sms.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/logistics/delivery-delays.js?v={{ asset_v() }}"></script>
+{% endblock %}
