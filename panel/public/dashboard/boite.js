@@ -31,6 +31,7 @@
     archiver: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4', corbeille: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
     suivi: 'M4 21V4h12l-2 4 2 4H4', pj: 'M21 12l-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 8',
     offre: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5', cadenas: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
+    importer: 'M12 16V4M7 9l5-5 5 5M4 16v4h16v-4', catalogue: 'M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z',
     chercher: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2', auto: 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
     modele: 'M4 4h16v16H4zM4 9h16M9 9v11', nonlu: 'M3 5h18v14H3zM3 6l9 7 9-7',
     lu: 'M3 10l9-6 9 6v10H3zM3 10l9 6 9-6', inbox: 'M3 13h5l2 3h4l2-3h5M5.5 5h13L21 13v6H3v-6z', envoyes: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
@@ -214,7 +215,7 @@
   }
   const sansPrefixe = s => String(s || '').replace(/^\s*((re|tr|fw|fwd|réf)\s*:\s*)+/i, '');
   function nouvelEcrit(o) {
-    st.ecr = Object.assign({ a: '', cc: '', objet: '', texte: '', reponse: null, transfert: null, offre: null, pieces: [], coffre: [], modele: '', ccOuvert: false }, o || {});
+    st.ecr = Object.assign({ a: '', cc: '', objet: '', texte: '', reponse: null, transfert: null, offre: null, pieces: [], coffre: [], catalogues: [], choix: null, cfQ: '', modele: '', ccOuvert: false }, o || {});
     st.vue = 'ecrire'; rendre();
     if (st.ecr.offre) { chargerOffres(); }
     const f = st.el && st.el.querySelector(st.ecr.a ? '#bx-texte' : '#bx-a'); if (f) { f.focus(); if (f.id === 'bx-texte') { f.setSelectionRange(0, 0); } }
@@ -260,6 +261,36 @@
     st.coffreLu = true;
     window.DashCoffre.liste(st.shop, st.api).then(l => { st.coffreL = l; }).catch(() => { st.coffreL = []; }).finally(rendre);
   }
+  /** Les catalogues (22/11/2026, Sam : « pièces jointes : choix import / coffre-fort / catalogues ») : les miens et ceux
+   * de la marque, lus au Marketing par le relais du dashboard (panel/src/catalogues_magasin.php). Le Marketing ne fait
+   * pas de PDF d'un catalogue : il part en lien vers sa version en ligne (le lien permanent, créé s'il n'existe pas), que
+   * l'envoi ajoute au texte. */
+  function catalLire() {
+    if (st.catL) { return; }
+    st.catL = { lu: false, mien: [], marque: [], err: '' };
+    const prise = (p, marque) => lire(p).then(j => (j.data || []).map(c => ({ cle: (marque ? 'b' : 'm') + c.id, id: c.id, marque, titre: c.title || ('Catalogue ' + c.id), statut: c.status || '' })));
+    Promise.all([prise('/dashboard/catalogues', false).catch(x => { st.catL.err = x.message; return []; }), prise('/dashboard/catalogues/marque', true).catch(() => [])])
+      .then(([m, b]) => { st.catL.mien = m; st.catL.marque = b; }).finally(() => { st.catL.lu = true; rendre(); });
+  }
+  const catalPret = c => c.marque || c.statut === 'pret' || c.statut === 'imprime';
+  function catalJoindre(cle) {
+    const e = st.ecr, L = st.catL; if (!e || !L) { return; }
+    if (e.catalogues.some(c => c.cle === cle)) { e.catalogues = e.catalogues.filter(c => c.cle !== cle); rendre(); return; }
+    const c = [...L.mien, ...L.marque].find(x => x.cle === cle); if (!c || !catalPret(c) || st.catOcc) { return; }
+    const base = '/dashboard/catalogues' + (c.marque ? '/marque/' : '/') + c.id + '/lien';
+    st.catOcc = cle; rendre();
+    lire(base).then(j => (j.data || [])[0] || ecrire(base + '?shop=' + encodeURIComponent(st.shop), {}).then(k => k.data))
+      .then(l => { if (!l || !l.url) { throw new Error('le Marketing n’a pas rendu de lien'); } if (st.ecr === e) { e.catalogues.push({ cle, id: c.id, marque: c.marque, titre: c.titre, url: l.url }); } })
+      .catch(x => flash(false, 'Le lien du catalogue « ' + c.titre + ' » ne se lit pas : ' + x.message))
+      .finally(() => { st.catOcc = null; rendre(); });
+  }
+  /** Le texte envoyé : les liens des catalogues joints, au-dessus de la citation de l'e-mail d'origine s'il y en a une. */
+  function texteAvecCatalogues(e) {
+    if (!(e.catalogues || []).length) { return e.texte; }
+    const bloc = e.catalogues.map(c => 'Notre catalogue « ' + c.titre + ' », en ligne : ' + c.url).join('\n');
+    const i = e.texte.search(/\n\n(Le .{3,160} a écrit :|-{5,} E-mail transféré)/);
+    return i >= 0 ? e.texte.slice(0, i).replace(/\s+$/, '') + '\n\n' + bloc + e.texte.slice(i) : e.texte.replace(/\s+$/, '') + '\n\n' + bloc + '\n';
+  }
   function envoyer() {
     const e = st.ecr;
     if (!e.a.trim()) { return flash(false, 'Un destinataire, au moins.'); }
@@ -267,7 +298,7 @@
     const poids = e.pieces.reduce((s, p) => s + (p.taille || 0), 0) + (e.coffre || []).reduce((s, id) => s + ((coffreDoc(id) || {}).octets || 0), 0);
     if (poids > 15e6) { return flash(false, 'Les pièces jointes dépassent 15 Mo.'); }
     st.occupe = true; st.flash = null; rendre();
-    ecrire('/dashboard/boite/envoyer', { a: e.a, cc: e.cc, objet: e.objet, texte: e.texte, reponse: e.reponse, transfert: e.transfert, offre: e.offre || null,
+    ecrire('/dashboard/boite/envoyer', { a: e.a, cc: e.cc, objet: e.objet, texte: texteAvecCatalogues(e), reponse: e.reponse, transfert: e.transfert, offre: e.offre || null,
       pieces: e.pieces.map(p => ({ nom: p.nom, type: p.type, base64: p.base64 })), coffre: e.coffre || [] })
       .then(r => { st.ecr = null; st.vue = 'lire'; flash(!r.avertissement, r.avertissement || 'E-mail envoyé depuis ' + st.etat.adresse + '.'); chargerListe(); chargerEtat(); if (st.sel && st.msg) { st.msg.repondu = true; } })
       .catch(x => flash(false, 'L’e-mail n’est pas parti : ' + x.message))
@@ -639,13 +670,41 @@
         ${e.ccOuvert ? `<label><span>Cc</span><input class="bx-in" id="bx-cc" value="${esc(e.cc)}"></label>` : '<button type="button" class="bx-lien bx-cc" data-bx="cc">+ Cc</button>'}
         <label><span>Objet</span><input class="bx-in" id="bx-objet" value="${esc(e.objet)}"></label>
         <div class="bx-outils"><select class="bx-in" id="bx-modele"><option value="">${M ? 'Insérer un modèle…' : 'lecture des modèles…'}</option>${M ? `<optgroup label="Modèles du réseau">${grp('Modèles du réseau')}</optgroup>${(M.magasin || []).length ? `<optgroup label="Modèles du magasin">${grp('Modèles du magasin')}</optgroup>` : ''}` : ''}</select>
-          <select class="bx-in" id="bx-offre"><option value="">${st.offres ? 'Joindre une offre (PDF de TF Buddy)…' : 'lecture des offres…'}</option>${ofs.map(o => `<option value="${o.id}"${String(e.offre) === String(o.id) ? ' selected' : ''}>Offre n° ${o.id} · ${esc(o.nom || '')} · ${esc(o.client ? o.client.nom : 'sans client')} · ${eur(o.total)}</option>`).join('')}</select>
-          ${window.DashCoffre ? `<select class="bx-in" id="bx-coffre"><option value="">${!st.coffreL ? 'lecture du coffre-fort…' : (st.coffreL.length ? (e.coffre.length >= 5 ? 'Cinq documents du coffre au plus' : 'Joindre du coffre-fort…') : 'Coffre-fort vide')}</option>${(st.coffreL || []).filter(d => !e.coffre.includes(d.id)).map(d => `<option value="${d.id}">${esc(d.onglet)} · ${esc(d.titre)}</option>`).join('')}</select>` : ''}
-          <label class="db-btn bx-fichier">${ico(I.pj)}Joindre un fichier<input type="file" id="bx-fichiers" multiple hidden></label></div>
-        ${e.offre || e.pieces.length || e.coffre.length ? `<div class="bx-pieces">${e.offre ? `<span class="bx-piece">${ico(I.offre)}<span>Offre n° ${esc(e.offre)}.pdf</span><button type="button" class="bx-x" data-bxx="offre" aria-label="Retirer">×</button></span>` : ''}${e.coffre.map(id => `<span class="bx-piece" title="Du coffre-fort">🔒<span>${esc((coffreDoc(id) || {}).nom || 'document ' + id)}</span><button type="button" class="bx-x" data-bxx="c${id}" aria-label="Retirer">×</button></span>`).join('')}${e.pieces.map((p, i) => `<span class="bx-piece">${ico(I.pj)}<span>${esc(p.nom)}</span><button type="button" class="bx-x" data-bxx="${i}" aria-label="Retirer">×</button></span>`).join('')}</div>` : ''}
+          <select class="bx-in" id="bx-offre"><option value="">${st.offres ? 'Joindre une offre (PDF de TF Buddy)…' : 'lecture des offres…'}</option>${ofs.map(o => `<option value="${o.id}"${String(e.offre) === String(o.id) ? ' selected' : ''}>Offre n° ${o.id} · ${esc(o.nom || '')} · ${esc(o.client ? o.client.nom : 'sans client')} · ${eur(o.total)}</option>`).join('')}</select></div>
+        <div class="bx-pj"><span class="bx-pj-l">${ico(I.pj)}Pièce jointe</span>
+          <label class="db-btn bx-pj-b bx-fichier" title="Un fichier de l’ordinateur ou du téléphone">${ico(I.importer)}Importer<input type="file" id="bx-fichiers" multiple hidden></label>
+          ${window.DashCoffre ? `<button type="button" class="db-btn bx-pj-b${e.choix === 'coffre' ? ' on' : ''}" data-bxpj="coffre" aria-expanded="${e.choix === 'coffre'}">${ico(I.cadenas)}Coffre-fort${e.coffre.length ? `<i>${e.coffre.length}</i>` : ''}</button>` : ''}
+          <button type="button" class="db-btn bx-pj-b${e.choix === 'catalogues' ? ' on' : ''}" data-bxpj="catalogues" aria-expanded="${e.choix === 'catalogues'}">${ico(I.catalogue)}Catalogues${e.catalogues.length ? `<i>${e.catalogues.length}</i>` : ''}</button></div>
+        ${e.choix === 'coffre' ? pjCoffre(e) : e.choix === 'catalogues' ? pjCatalogues(e) : ''}
+        ${e.offre || e.pieces.length || e.coffre.length || e.catalogues.length ? `<div class="bx-pieces">${e.offre ? `<span class="bx-piece">${ico(I.offre)}<span>Offre n° ${esc(e.offre)}.pdf</span><button type="button" class="bx-x" data-bxx="offre" aria-label="Retirer">×</button></span>` : ''}${e.coffre.map(id => `<span class="bx-piece" title="Du coffre-fort">${ico(I.cadenas)}<span>${esc((coffreDoc(id) || {}).nom || 'document ' + id)}</span><button type="button" class="bx-x" data-bxx="c${id}" aria-label="Retirer">×</button></span>`).join('')}${e.catalogues.map(c => `<span class="bx-piece bx-piece-lien" title="${esc(c.url)}">${ico(I.catalogue)}<span>${esc(c.titre)}</span><small>lien en ligne</small><button type="button" class="bx-x" data-bxx="k${esc(c.cle)}" aria-label="Retirer">×</button></span>`).join('')}${e.pieces.map((p, i) => `<span class="bx-piece">${ico(I.pj)}<span>${esc(p.nom)}</span><button type="button" class="bx-x" data-bxx="${i}" aria-label="Retirer">×</button></span>`).join('')}</div>` : ''}
         ${e.transfert ? '<div class="bx-note">L’e-mail d’origine part en pièce jointe (avec ses propres pièces jointes).</div>' : ''}
         <textarea class="bx-in bx-zone" id="bx-texte" rows="16">${esc(e.texte)}</textarea></div>
       <div class="bx-actions"><button type="button" class="db-btn" data-bx="annuler">Annuler</button><button type="button" class="db-btn prim" data-bx="envoyer"${st.occupe ? ' disabled' : ''}>${st.occupe ? 'Envoi…' : 'Envoyer'}</button></div></div>`;
+  }
+  /** Le choix « Coffre-fort » : ses documents, par onglet, avec une recherche ; un clic joint ou retire (5 au plus). */
+  function pjCoffre(e) {
+    const L = st.coffreL;
+    if (!L) { return '<div class="bx-pjp"><div class="bx-pjp-v">Lecture du coffre-fort…</div></div>'; }
+    if (!L.length) { return '<div class="bx-pjp"><div class="bx-pjp-v">Votre coffre-fort est vide.</div></div>'; }
+    const q = (e.cfQ || '').trim().toLowerCase();
+    const vus = L.filter(d => !q || (d.titre + ' ' + d.nom + ' ' + d.onglet).toLowerCase().includes(q));
+    const plein = e.coffre.length >= 5;
+    return `<div class="bx-pjp"><div class="bx-pjp-h"><b>Joindre du coffre-fort</b><small>${e.coffre.length} / 5 · le document part tel qu’il est rangé</small>
+        <input class="bx-in bx-pjp-q" id="bx-cfq" value="${esc(e.cfQ || '')}" placeholder="Chercher un document…"></div>
+      <div class="bx-pjp-l">${vus.map(d => { const on = e.coffre.includes(d.id); return `<button type="button" class="bx-pjp-i${on ? ' on' : ''}" data-bxcf="${d.id}"${!on && plein ? ' disabled' : ''}>
+        <span class="bx-pjp-c">${on ? '✓' : '+'}</span><span class="bx-pjp-t"><b>${esc(d.titre)}</b><small>${esc(d.onglet)} · ${esc(d.nom)}</small></span><small>${d.octets >= 1048576 ? (d.octets / 1048576).toFixed(1).replace('.', ',') + ' Mo' : Math.max(1, Math.round((d.octets || 0) / 1024)) + ' Ko'}</small></button>`; }).join('') || '<div class="bx-pjp-v">Aucun document ne correspond.</div>'}</div></div>`;
+  }
+  /** Le choix « Catalogues » : les miens (prêts ou imprimés) et ceux de la marque ; chacun part en lien vers sa version en ligne. */
+  function pjCatalogues(e) {
+    const L = st.catL;
+    if (!L || !L.lu) { return '<div class="bx-pjp"><div class="bx-pjp-v">Lecture des catalogues…</div></div>'; }
+    const ligne = c => { const on = e.catalogues.some(x => x.cle === c.cle), ok = catalPret(c), occ = st.catOcc === c.cle;
+      return `<button type="button" class="bx-pjp-i${on ? ' on' : ''}" data-bxcat="${esc(c.cle)}"${!ok || (st.catOcc && !occ) ? ' disabled' : ''}>
+        <span class="bx-pjp-c">${occ ? '…' : on ? '✓' : '+'}</span><span class="bx-pjp-t"><b>${esc(c.titre)}</b><small>${c.marque ? 'De la marque' : ok ? (c.statut === 'imprime' ? 'Imprimé' : 'Prêt') : 'Brouillon · à valider d’abord dans Catalogues'}</small></span><small>${occ ? 'lien…' : ok ? 'lien en ligne' : ''}</small></button>`; };
+    const grp = (t, l) => l.length ? `<div class="bx-pjp-g">${t}</div>${l.map(ligne).join('')}` : '';
+    const corps = grp('Mes catalogues', L.mien) + grp('Préparés par la marque', L.marque);
+    return `<div class="bx-pjp"><div class="bx-pjp-h"><b>Joindre un catalogue</b><small>il part en lien vers sa version en ligne, ajouté au texte à l’envoi</small></div>
+      <div class="bx-pjp-l">${corps || `<div class="bx-pjp-v">${L.err ? 'Les catalogues ne se lisent pas : ' + esc(L.err) : 'Pas encore de catalogue : il se prépare dans « Catalogues ».'}</div>`}</div></div>`;
   }
   function vueModeles() {
     const M = st.modeles;
@@ -921,9 +980,12 @@
       const mo = el.querySelector('#bx-modele'); if (mo) { mo.addEventListener('change', () => { if (mo.value) { appliquerModele(mo.value); } }); }
       const of = el.querySelector('#bx-offre'); if (of) { of.addEventListener('change', () => { e.offre = of.value || null; rendre(); }); }
       coffreLire();
-      const cf = el.querySelector('#bx-coffre'); if (cf) { cf.addEventListener('change', () => { if (cf.value && e.coffre.length < 5) { e.coffre.push(+cf.value); } rendre(); }); }
+      on('[data-bxpj]', 'click', x => { const k = x.currentTarget.dataset.bxpj; e.choix = e.choix === k ? null : k; if (k === 'catalogues') { catalLire(); } rendre(); });
+      on('[data-bxcf]', 'click', x => { const id = +x.currentTarget.dataset.bxcf; if (e.coffre.includes(id)) { e.coffre = e.coffre.filter(v => v !== id); } else if (e.coffre.length < 5) { e.coffre.push(id); } rendre(); });
+      on('[data-bxcat]', 'click', x => catalJoindre(x.currentTarget.dataset.bxcat));
+      const cq = el.querySelector('#bx-cfq'); if (cq) { cq.addEventListener('input', () => { e.cfQ = cq.value; const p = cq.selectionStart; rendre(); const n = st.el.querySelector('#bx-cfq'); if (n) { n.focus(); n.setSelectionRange(p, p); } }); }
       const fi = el.querySelector('#bx-fichiers'); if (fi) { fi.addEventListener('change', () => { lireFichiers(fi.files).then(L => { e.pieces.push(...L); rendre(); }).catch(() => flash(false, 'Le fichier ne se lit pas.')); }); }
-      on('[data-bxx]', 'click', x => { const k = x.currentTarget.dataset.bxx; if (k === 'offre') { e.offre = null; } else if (k[0] === 'c') { e.coffre = e.coffre.filter(id => id !== +k.slice(1)); } else { e.pieces.splice(+k, 1); } rendre(); });
+      on('[data-bxx]', 'click', x => { const k = x.currentTarget.dataset.bxx; if (k === 'offre') { e.offre = null; } else if (k[0] === 'k') { e.catalogues = e.catalogues.filter(c => c.cle !== k.slice(1)); } else if (k[0] === 'c') { e.coffre = e.coffre.filter(id => id !== +k.slice(1)); } else { e.pieces.splice(+k, 1); } rendre(); });
     }
     // Le corps HTML de l'e-mail prend sa hauteur (même origine, sans script : on le mesure d'ici).
     const f = el.querySelector('.bx-cadre');
