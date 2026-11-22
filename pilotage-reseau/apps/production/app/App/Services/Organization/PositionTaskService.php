@@ -109,6 +109,7 @@ final class PositionTaskService
         '/logistics/pallets-returns' => 'pallets_returns_reviewed',
         '/logistics/notices-check' => 'delivery_notices_checked',
         '/mail/customer-check' => 'customer_mail_checked',
+        '/products/launches-review' => 'launches_reviewed',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',

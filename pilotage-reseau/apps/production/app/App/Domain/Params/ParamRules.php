@@ -85,6 +85,14 @@ final class ParamRules
         // [383] Poczta od klientów : heures (jours ouvrés) sans réponse avant signalement, jours en arrière contrôlés
         'customer_mail.reply_hours' => [1, 240, true],
         'customer_mail.lookback_days' => [1, 90, true],
+        // [384] Nowe produkty : mois de lancements examinés, seuils d'écart aux objectifs (coût %, prix %, marge en points,
+        // ventes %), semaines avant de juger les ventes
+        'launches_review.months' => [1, 12, true],
+        'launches_review.cost_over_pct' => [0, 100, true],
+        'launches_review.price_under_pct' => [0, 100, true],
+        'launches_review.margin_gap_pts' => [0, 50, true],
+        'launches_review.volume_under_pct' => [0, 100, true],
+        'launches_review.min_weeks' => [1, 26, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
