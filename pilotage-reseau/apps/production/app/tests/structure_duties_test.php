@@ -112,6 +112,18 @@ file_put_contents($bad, 'not a zip');
 $check($err(fn() => $svc->parseDocx($bad, 'x.docx')) === 'custom:422', 'not a Word file: clear refusal');
 unlink($bad);
 
+// [369] Garde : un contrôleur qui appelle $this->userId() doit la définir (sinon chaque écriture → « Błąd serwera »).
+$missing = [];
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/../App/Controllers', FilesystemIterator::SKIP_DOTS));
+foreach ($it as $f) {
+    if ($f->getExtension() !== 'php') continue;
+    $src = (string) file_get_contents($f->getPathname());
+    if (!str_contains($src, '$this->userId()') || !preg_match('/namespace\s+([^;]+);.*?\bclass\s+(\w+)/s', $src, $m)) continue;
+    $cls = $m[1] . '\\' . $m[2];
+    if (!class_exists($cls) || !method_exists($cls, 'userId')) $missing[] = $m[2];
+}
+$check(!$missing, 'controllers calling $this->userId() define it' . ($missing ? ' — missing : ' . implode(', ', $missing) : ''));
+
 if (getenv('ST_JSON_OUT')) file_put_contents((string) getenv('ST_JSON_OUT'), json_encode(['chart' => $svc->chart(), 'matrix' => $svc->matrix()], JSON_UNESCAPED_UNICODE));
 $pdo->exec('DROP DATABASE erp_structure_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";

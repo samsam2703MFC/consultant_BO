@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Client\Order;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
+use App\Services\Client\Order\OrderSmsService;
 use App\Services\Organization\PageAccessService;
 use App\Services\Organization\Wizards\OrdersDayCheckService;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,20 +22,20 @@ final class OrderDayCheckController extends BaseController
 
     public const PATH = '/client-orders/day-check';
 
-    public function __construct(private OrdersDayCheckService $check, private PageAccessService $access)
+    public function __construct(private OrdersDayCheckService $check, private PageAccessService $access, private OrderSmsService $sms)
     {
     }
 
     public function index()
     {
-        $this->view('client/order/day_check', ['data' => $this->check->data()]);
+        $this->view('client/order/day_check', ['data' => $this->withSms($this->check->data())]);
     }
 
     public function data()
     {
         try {
             $this->guard();
-            return $this->json(['data' => $this->check->data()]);
+            return $this->json(['data' => $this->withSms($this->check->data())]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
@@ -45,7 +46,7 @@ final class OrderDayCheckController extends BaseController
     {
         try {
             $this->guard();
-            $data = $this->check->saveResult($this->getJson(Request::createFromGlobals()), $this->userId());
+            $data = $this->withSms($this->check->saveResult($this->getJson(Request::createFromGlobals()), $this->userId()));
             return $this->json(['message' => 'Zapisano.', 'data' => $data]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
@@ -58,10 +59,20 @@ final class OrderDayCheckController extends BaseController
         try {
             $this->guard();
             $r = $this->check->finish($this->userId());
-            return $this->json(['message' => 'Zamówienia dnia sprawdzone — ' . $r['summary'] . '.', 'result' => ['summary' => $r['summary']], 'data' => $r['data']]);
+            return $this->json(['message' => 'Zamówienia dnia sprawdzone — ' . $r['summary'] . '.', 'result' => ['summary' => $r['summary']], 'data' => $this->withSms($r['data'])]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
+    }
+
+    /** [372] Dernier SMS au client sur chaque ligne (14 jours) : badge « SMS 9:14 » à côté du bouton. */
+    private function withSms(array $d): array
+    {
+        $last = $this->sms->lastFor(['order_confirm', 'order_changed'], array_column($d['orders'], 'id'), date('Y-m-d 00:00:00', strtotime('-14 days')));
+        foreach ($d['orders'] as &$row) $row['sms'] = $last[$row['id']] ?? null;
+        unset($row);
+        $d['sms_delivers'] = $this->sms->delivers();
+        return $d;
     }
 
     private function guard(): void

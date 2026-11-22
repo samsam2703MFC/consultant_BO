@@ -39,6 +39,13 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/client-orders/missing/result', ['controller' => $cno, 'method' => 'result']);
     $r->addRoute('POST', '/ajax/client-orders/missing/finish', ['controller' => $cno, 'method' => 'finish']);
 
+    // [371] Assistant « Domówienia dnia » (Kierownik operacyjny) : przegląd → do wyjaśnienia → zatwierdzenie.
+    $sdc = \App\Controllers\Web\Client\Order\SupplementsDayCheckController::class;
+    $r->addRoute('GET', '/client-orders/supplements', ['controller' => $sdc, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/client-orders/supplements', ['controller' => $sdc, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/client-orders/supplements/result', ['controller' => $sdc, 'method' => 'result']);
+    $r->addRoute('POST', '/ajax/client-orders/supplements/finish', ['controller' => $sdc, 'method' => 'finish']);
+
 
 
     $r->addRoute('GET', '/client-orders/{id:\d+}/edit', [

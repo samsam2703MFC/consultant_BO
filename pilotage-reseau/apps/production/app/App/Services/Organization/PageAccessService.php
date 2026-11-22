@@ -118,6 +118,19 @@ final class PageAccessService
     }
 
     /**
+     * [373] Kwoty w asystencie « Płynność i gotówka » : jak wartości zamówień (Finanse, CEO) oraz stanowisko Kierownik
+     * operacyjny (decyzja z 22.11.2026 — asystent jest jego zadaniem). Inne ekrany z kwotami : bez zmian.
+     */
+    public function seesLiquidityValues(?int $userId): bool
+    {
+        if (!$userId) return false;
+        if ($this->seesOrderValues($userId)) return true;
+        return $this->trackingProfile($userId) === self::OPERATIONS_POSITION;
+    }
+
+    public const OPERATIONS_POSITION = 'KIEROWNIK_OPERACYJNY';
+
+    /**
      * [314] Profil do licznika stron : « ceo » (konto CEO albo administrator w profilu CEO), kod stanowiska sesji
      * administratora, « admin » (pełny widok), kod stanowiska osoby albo « none ».
      */

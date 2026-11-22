@@ -49,6 +49,22 @@ final class ParamRules
         'orders.regular_min_orders' => [2, 40, true],
         'orders.weekday_share_pct' => [10, 100, true],
         'orders.missing_grace_days' => [0, 10, true],
+        // [373] Płynność i gotówka : créances échues d'un client (zł), paiements à un fournisseur sous 14 jours (zł),
+        // coussin minimal (zł, peut être négatif : ligne de crédit), délais de paiement fournisseur et client par défaut (jours)
+        'liquidity.overdue_min' => [0, 10000000, false],
+        'liquidity.big_purchase_min' => [0, 10000000, false],
+        'liquidity.min_balance' => [-10000000, 10000000, false],
+        'liquidity.supplier_terms_days' => [0, 120, true],
+        'liquidity.client_terms_days' => [0, 120, true],
+        // [374] Opóźnienia dostaw : jours en arrière (date d'expédition), jours « W transporcie » sans livraison confirmée,
+        // nombre de changements de la date d'expédition, minutes après l'heure de départ
+        'deliveries.delay_lookback_days' => [1, 90, true],
+        'deliveries.transit_max_days' => [1, 30, true],
+        'deliveries.date_changes_max' => [1, 10, true],
+        'deliveries.departure_grace_min' => [0, 600, true],
+        // [375] Terminowość tygodnia (OTIF) : objectif en %, jours admis entre la date d'expédition et la livraison confirmée
+        'otif.target_pct' => [50, 100, false],
+        'otif.delivery_days' => [0, 7, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
