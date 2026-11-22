@@ -25,7 +25,7 @@ declare(strict_types=1);
  * Routes (préfixe /coffre/magasin : écran de magasin, ACCES_FRANCHISE ; le siège y passe avec ?shop=) :
  *   GET    /coffre/magasin/dates?shop=                    les grandes dates (rangées, et les échéances des documents)
  *   POST   /coffre/magasin/dates {shop, dates:[{sorte, titre, le, fin?, note?, docId?, source?}],
- *                                 echeanceDoc?:{docId, le}, titreDoc?:{docId, titre}, depuis?:'cockpit'}   ranger (après
+ *                                 echeanceDoc?:{docId, le}, titreDoc?:{docId, titre}, pieceDoc?:{docId, piece}, depuis?:'cockpit'}   ranger (après
  *                                 l'assistant, ou à la main) ; `depuis` ne compte que sans session (accès ouvert)
  *   DELETE /coffre/magasin/dates?shop=&id=                retirer une date rangée
  *   POST   /coffre/magasin/assistant {shop, id}           l'assistant lit le document n° id et propose ses grandes dates
@@ -250,6 +250,14 @@ function wr_coffre_dates(): array
     if ($e !== null && ($le = cofDateOk($e['le'] ?? null)) !== null && cofDocLisible($shop, (int) ($e['docId'] ?? 0)) !== null) {
         Db::exec('UPDATE con_doc SET echeance = ? WHERE id = ? AND shop = ?', [$le, (int) $e['docId'], $shop]); $maj[] = 'échéance';
     }
+    // La pièce attendue du document (coffre v2) : un magasin ne rattache qu'à une pièce de l'onglet Légal.
+    $pd = is_array($b['pieceDoc'] ?? null) ? $b['pieceDoc'] : null;
+    if ($pd !== null && cofDocLisible($shop, (int) ($pd['docId'] ?? 0)) !== null) {
+        $pc = (string) ($pd['piece'] ?? '');
+        if ($pc === '' || (isset(COF_PIECES[$pc]) && (cofPeutTout() || COF_PIECES[$pc]['onglet'] === 'legal'))) {
+            Db::exec('UPDATE con_doc SET piece = ? WHERE id = ? AND shop = ?', [$pc !== '' ? $pc : null, (int) $pd['docId'], $shop]); $maj[] = 'pièce';
+        }
+    }
     $t = is_array($b['titreDoc'] ?? null) ? $b['titreDoc'] : null;
     if ($t !== null && ($tt = trim(mb_substr((string) ($t['titre'] ?? ''), 0, 190))) !== '' && cofDocLisible($shop, (int) ($t['docId'] ?? 0)) !== null) {
         Db::exec('UPDATE con_doc SET titre = ? WHERE id = ? AND shop = ?', [$tt, (int) $t['docId'], $shop]); $maj[] = 'titre';
@@ -286,6 +294,7 @@ const COF_ASSISTANT_CONSIGNE = "Tu lis un document rangé dans le coffre-fort d'
     . "\nPour un bail commercial, remplis `bail` (prise de cours, durée en années, préavis du preneur en mois s'il est écrit) : les fins de"
     . " triennat, les derniers jours du congé, la fenêtre du renouvellement et la fin du bail se calculent ensuite à partir de ces données,"
     . " ne les mets pas dans `dates` (une indexation, oui). Pour tout autre document, `bail` vaut null."
+    . "\n`piece` dit quelle pièce attendue du coffre ce document remplit (le bail commercial, l'attestation d'assurance RC…), autre si aucune."
     . "\nDans `remarques`, dis en une ou deux phrases ce qui n'a pas pu être lu ou ce qui demande une vérification (une clause qui"
     . " déroge à la règle générale, une page illisible) ; vide sinon.";
 
@@ -297,6 +306,8 @@ function cofAssistantSchema(): array
     return ['type' => 'object', 'additionalProperties' => false,
         'properties' => [
             'genre' => ['type' => 'string', 'enum' => array_keys(COF_GENRES)],
+            'piece' => ['type' => 'string', 'enum' => array_merge(array_keys(COF_PIECES), ['autre']),
+                'description' => 'La pièce attendue du coffre que ce document remplit : ' . implode(' ; ', array_map(static fn ($k, $p) => $k . ' = ' . $p['nom'], array_keys(COF_PIECES), COF_PIECES)) . ' ; autre sinon'],
             'titre' => $txt + ['description' => 'Un titre court pour le coffre (« Bail commercial — rue de la Station 12, Gosselies »)'],
             'resume' => $txt + ['description' => 'Ce qu’est le document et ce qu’il engage, en une ou deux phrases'],
             'bail' => ['anyOf' => [['type' => 'null'], ['type' => 'object', 'additionalProperties' => false,
@@ -320,7 +331,7 @@ function cofAssistantSchema(): array
                 'required' => ['sorte', 'titre', 'le', 'fin', 'extrait', 'page']]],
             'remarques' => $txt,
         ],
-        'required' => ['genre', 'titre', 'resume', 'bail', 'echeance', 'dates', 'remarques']];
+        'required' => ['genre', 'piece', 'titre', 'resume', 'bail', 'echeance', 'dates', 'remarques']];
 }
 
 /** Le contenu d'un document tel que le modèle le lit : [octets ou texte, mime] ; [null, motif] s'il ne se lit pas. */
@@ -392,7 +403,10 @@ function cofAssistantPropositions(array $j, array $doc, array $deja, string $auj
     $titreDoc = trim(mb_substr((string) ($j['titre'] ?? ''), 0, 190));
     $nomFichier = (string) pathinfo((string) ($doc['nom_origine'] ?? ''), PATHINFO_FILENAME);
     $genre = isset(COF_GENRES[(string) ($j['genre'] ?? '')]) ? (string) $j['genre'] : 'autre';
+    $piece = (string) ($j['piece'] ?? '');
     return ['genre' => $genre, 'genreLib' => COF_GENRES[$genre], 'titre' => $titreDoc, 'resume' => trim((string) ($j['resume'] ?? '')),
+        // La pièce attendue que l'assistant y reconnaît (coffre v2) ; null si ce n'en est pas une.
+        'pieceSuggeree' => isset(COF_PIECES[$piece]) ? ['cle' => $piece, 'nom' => COF_PIECES[$piece]['nom'], 'onglet' => COF_PIECES[$piece]['onglet']] : null,
         'remarques' => trim((string) ($j['remarques'] ?? '')), 'propositions' => array_slice($props, 0, 30),
         // L'échéance du document : proposée quand il n'en a pas (ou une autre) ; le titre : quand il porte le nom du fichier.
         'echeanceDoc' => $ech !== null && $ech !== (string) ($doc['echeance'] ?? '') ? ['actuelle' => !empty($doc['echeance']) ? (string) $doc['echeance'] : null, 'proposee' => $ech] : null,

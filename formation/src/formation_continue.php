@@ -787,7 +787,7 @@ function fcArchiver(array $d, array $sop, array $qui): ?array
         $pdf = function_exists('rapPdfRendu') ? rapPdfRendu($html, ['quoi' => 'Document de formation']) : null;
         $titre = $sop['code'] . ' · ' . $sop['titre_fr'] . ' — validée le ' . date('d/m/Y');
         $nom = strtolower((string) $sop['code']) . '-validation-' . date('Y-m-d') . ($pdf ? '.pdf' : '.html');
-        $doc = cofDeposer((int) $d['shop_id'], 'formation', $titre, $nom, $pdf ?: $html, $qui, 'validée par ' . $qui['nom'] . ($d['valide_mot'] ? ' · « ' . $d['valide_mot'] . ' »' : ''));
+        $doc = cofDeposer((int) $d['shop_id'], 'formation', $titre, $nom, $pdf ?: $html, $qui, 'validée par ' . $qui['nom'] . ($d['valide_mot'] ? ' · « ' . $d['valide_mot'] . ' »' : ''), 'formation_continue');
         if ($doc === null) { return null; }
         Db::exec('UPDATE for_fc_dossier SET archive_doc = ? WHERE id = ?', [(int) $doc['id'], (int) $d['id']]);
         fcTracer((string) $sop['id'], (int) $d['id'], (int) $d['shop_id'], 'archivee', 'archivée au coffre-fort (onglet Formation) : ' . $titre, $qui);

@@ -52,8 +52,9 @@ function docTable(): void
     // Le coffre-fort du franchisé (22/11/2026, src/coffre.php) : l'échéance d'une pièce (« à renouveler » 60 jours
     // avant), sa place dans le coffre — 0 pour tout ce qui a été déposé avant lui : le consultant l'y met —, qui l'a
     // déposée et de quel côté (siege | franchise).
+    // `piece` (22/11/2026, coffre v2) : la pièce attendue du coffre que ce document remplit (COF_PIECES, src/coffre.php).
     foreach (['echeance DATE NULL', 'visible_franchise TINYINT(1) NOT NULL DEFAULT 0', 'depose_par VARCHAR(120) NULL',
-        'depose_role VARCHAR(12) NULL'] as $col) {
+        'depose_role VARCHAR(12) NULL', 'piece VARCHAR(40) NULL'] as $col) {
         try { Db::exec('ALTER TABLE con_doc ADD COLUMN ' . $col); } catch (PDOException $e) { /* déjà là */ }
     }
 }
@@ -89,7 +90,8 @@ function docLigne(array $r): array
         'date' => $r['date_doc'] !== null ? (string) $r['date_doc'] : null, 'note' => $r['note'] !== null ? (string) $r['note'] : null,
         'deposeLe' => substr((string) $r['depose_le'], 0, 16),
         'echeance' => !empty($r['echeance']) ? (string) $r['echeance'] : null, 'coffre' => !empty($r['visible_franchise']),
-        'deposePar' => (string) ($r['depose_par'] ?? ''), 'deposeRole' => (string) ($r['depose_role'] ?? '')];
+        'deposePar' => (string) ($r['depose_par'] ?? ''), 'deposeRole' => (string) ($r['depose_role'] ?? ''),
+        'piece' => function_exists('cofPieceDe') ? cofPieceDe($r) : null];
 }
 
 /** GET /franchises/documents?shop=4 — les documents du magasin, les plus récents d'abord. */
@@ -104,7 +106,9 @@ function ep_franchises_documents(): array
     foreach ($l as &$d) { $d['ouvertures'] = $ouv[$d['id']] ?? ['n' => 0, 'dernier' => null]; }
     unset($d);
     return ['shop' => (string) $shop, 'documents' => $l, 'sortes' => array_map(static fn ($k, $v) => ['v' => $k, 'nom' => $v], array_keys(DOC_SORTES), DOC_SORTES),
-        'maxOctets' => docMaxOctets(), 'extensions' => array_keys(DOC_EXT)];
+        'maxOctets' => docMaxOctets(), 'extensions' => array_keys(DOC_EXT),
+        // Les pièces attendues du coffre (coffre v2) : le consultant rattache un dépôt à l'une d'elles.
+        'pieces' => function_exists('cofPiecesCatalogue') ? cofPiecesCatalogue() : []];
 }
 
 /** Les fichiers d'un envoi multipart, à plat : [[name, tmp_name, size, error], …] (un champ `fichiers[]` ou `fichier`). */
@@ -133,12 +137,13 @@ function docGarder(int $shop, string $sorte, string $titre, ?string $date, ?stri
     $ok = $deplacer ? @move_uploaded_file($chemin, $cible) : @copy($chemin, $cible);
     if (!$ok) { return null; }
     @chmod($cible, 0640);
-    // $coffre (22/11/2026) : {echeance, visible, par, role} — une copie rangée par le cockpit (le mail) n'en a pas.
-    Db::exec('INSERT INTO con_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, echeance, note, depose_le, visible_franchise, depose_par, depose_role)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    // $coffre (22/11/2026) : {echeance, visible, par, role, piece} — une copie rangée par le cockpit (le mail) n'en a pas.
+    Db::exec('INSERT INTO con_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, echeance, note, depose_le, visible_franchise, depose_par, depose_role, piece)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$shop, $sorte, mb_substr($titre, 0, 190), $disque, mb_substr($nom, 0, 190), DOC_EXT[$ext] ?? DOC_EXT_INTERNE[$ext] ?? 'application/octet-stream', $octets, $date,
             $coffre['echeance'] ?? null, $note, date('Y-m-d H:i:s'), !empty($coffre['visible']) ? 1 : 0,
-            isset($coffre['par']) ? mb_substr((string) $coffre['par'], 0, 120) : null, $coffre['role'] ?? null]);
+            isset($coffre['par']) ? mb_substr((string) $coffre['par'], 0, 120) : null, $coffre['role'] ?? null,
+            isset($coffre['piece']) && function_exists('cofPieceOk') && cofPieceOk((string) $coffre['piece']) ? (string) $coffre['piece'] : null]);
     $id = (int) Db::pdo()->lastInsertId();
     $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [$id]);
     return $r !== null ? docLigne($r) : null;
@@ -168,7 +173,7 @@ function wr_franchises_documents(): array
     $ech = trim((string) ($_POST['echeance'] ?? ''));
     $qui = function_exists('cofQui') ? cofQui('siege') : ['nom' => 'Siège', 'role' => 'siege'];
     $coffre = ['echeance' => preg_match('/^\d{4}-\d{2}-\d{2}$/', $ech) ? $ech : null, 'visible' => (string) ($_POST['coffre'] ?? '1') !== '0',
-        'par' => $qui['nom'], 'role' => 'siege'];
+        'par' => $qui['nom'], 'role' => 'siege', 'piece' => trim((string) ($_POST['piece'] ?? '')) ?: null];
     $recus = docFichiersRecus();
     if ($recus === []) { http_response_code(422); return ['error' => 'aucun fichier reçu']; }
     docTable();
@@ -235,7 +240,13 @@ function wr_franchises_document_maj(): array
         if ($e !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $e)) { http_response_code(422); return ['error' => 'échéance : AAAA-MM-JJ']; }
         $set[] = 'echeance = ?'; $p[] = $e !== '' ? $e : null; $dit[] = $e !== '' ? 'échéance ' . $e : 'sans échéance';
     }
-    if ($set === []) { http_response_code(422); return ['error' => 'rien à changer : coffre ou echeance']; }
+    // La pièce attendue du coffre que ce document remplit (coffre v2) ; null la détache.
+    if (array_key_exists('piece', $b)) {
+        $pc = $b['piece'] === null ? '' : trim((string) $b['piece']);
+        if ($pc !== '' && !(function_exists('cofPieceOk') && cofPieceOk($pc))) { http_response_code(422); return ['error' => 'pièce inconnue']; }
+        $set[] = 'piece = ?'; $p[] = $pc !== '' ? $pc : null; $dit[] = $pc !== '' ? 'pièce ' . $pc : 'sans pièce';
+    }
+    if ($set === []) { http_response_code(422); return ['error' => 'rien à changer : coffre, echeance ou piece']; }
     $p[] = $id;
     Db::exec('UPDATE con_doc SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
     if (function_exists('journalAdd')) { journalAdd('CEO', 'Franchisé', 'Documents', '« ' . $r['titre'] . ' » (magasin ' . $r['shop'] . ') : ' . implode(', ', $dit)); }
