@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coffre-fort v2 — Légal et aperçu</title><link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="/consultant/docs/maquettes/coffre-fort/coffre.css"><link rel="stylesheet" href="v2.css"></head>
+<body data-vue="coffre"><div id="page">
+<div class="v-corps"><div id="nav"></div>
+<div>
+<section class="v-carte"><div class="v-ch"><h2>Légal</h2><small>vos pièces légales · vous les déposez, Nadia K. aussi</small><span class="sp"></span><span class="v-b sm prim">＋ Déposer une pièce légale</span></div>
+<div style="padding:12px 16px 0" class="v-qui">Pièces attendues · 4 sur 7</div>
+<div class="v-att">
+  <div class="v-p ok"><span class="ck">✓</span><span class="tt"><b>Statuts de la société</b><small>déposés le 12/02/2025 par M. Lambert</small></span></div>
+  <div class="v-p ok"><span class="ck">✓</span><span class="tt"><b>Extrait de la BCE</b><small>du 03/01/2026 · à jour</small></span></div>
+  <div class="v-p or"><span class="ck">!</span><span class="tt"><b>Attestation d’assurance RC exploitation</b><small>échéance le 31/12/2026 · dans 39 jours</small><div class="bt"><span class="v-b sm">Déposer la nouvelle</span></div></span></div>
+  <div class="v-p ok sel"><span class="ck">✓</span><span class="tt"><b>Bail commercial</b><small>du 01/03/2019 · 9 ans, jusqu’au 29/02/2028</small><span class="gdm">📅 3 grandes dates</span></span></div>
+  <div class="v-p man"><span class="ck"></span><span class="tt"><b>Autorisation AFSCA</b><small>manquante</small><div class="bt"><span class="v-b sm">Déposer</span></div></span></div>
+  <div class="v-p man"><span class="ck"></span><span class="tt"><b>Permis d’environnement</b><small>manquant</small><div class="bt"><span class="v-b sm">Déposer</span> <span style="font-size:11.5px;color:var(--muted);margin-left:6px">pas concerné ?</span></div></span></div>
+  <div class="v-p man"><span class="ck"></span><span class="tt"><b>Assurance incendie</b><small>manquante</small><div class="bt"><span class="v-b sm">Déposer</span></div></span></div>
+</div>
+<div class="v-grp" style="margin-top:4px">Autres pièces légales · 1</div>
+<div id="l1"></div></section>
+</div></div>
+<div class="legende" style="margin-right:460px"><b>03 · Un dossier : ses pièces attendues, et l’aperçu en tiroir</b><ol>
+<li><b>Les pièces attendues</b> en cartes : reçue (✓ vert), à renouveler (! orange, avec « Déposer la nouvelle »), manquante (pointillés, « Déposer » ; « pas concerné ? » pour l’écarter). On voit d’un coup ce qui manque.</li>
+<li><b>L’aperçu s’ouvre en tiroir</b> à droite quand on choisit un document, et se referme (×) : la liste garde toute la largeur le reste du temps.</li>
+<li>Dans le tiroir : la page, <b>Ouvrir · Télécharger · Joindre à un e-mail · Remplacer</b>, les informations, <b>les grandes dates de ce document</b> et qui l’a ouvert.</li></ol></div>
+</div>
+<div class="v-ombre"></div>
+<aside class="v-tir"><div class="h"><span class="v-ty pdf">PDF</span><span><b>Bail commercial — Halle</b><small>Légal · bail-halle.pdf · 2,3 Mo</small></span><span class="x">×</span></div>
+<div class="c">
+  <div class="v-page"><div><i class="t"></i><i></i><i></i><i class="c"></i><i></i><i></i><i class="c"></i><i></i><i></i><i class="c"></i><i></i></div></div>
+  <div class="v-acts"><span class="v-b prim">Ouvrir</span><span class="v-b">Télécharger</span><span class="v-b">✉️ Joindre à un e-mail</span><span class="v-b">Remplacer</span></div>
+  <div class="v-kv"><span>Date</span><span>01/03/2019 · 9 ans</span><span>Échéance</span><span>29/02/2028 <span class="v-st ok" style="margin-left:6px">valide</span></span><span>Déposé par</span><span>M. Lambert, le 22/11/2026</span></div>
+  <div class="v-k">Ses grandes dates <i>relevées par l’assistant</i></div>
+  <div class="v-gdl"><span class="d or"><b>1</b>déc. 26</span><span class="t">Fin de la fenêtre de renouvellement<small>ouverte depuis le 01/09 · encore 9 jours</small></span></div>
+  <div class="v-gdl"><span class="d"><b>1</b>mars 27</span><span class="t">Indexation annuelle du loyer<small>« à la date anniversaire… » p. 4</small></span></div>
+  <div class="v-gdl"><span class="d"><b>29</b>févr. 28</span><span class="t">Fin du bail<small>calculée depuis la prise de cours</small></span></div>
+  <div class="v-k" style="margin-top:14px">Qui l’a ouvert</div>
+  <div class="v-tr"><span>22/11 · 14:32</span><span>Nadia K. · siège</span></div>
+  <div class="v-tr"><span>22/11 · 14:05</span><span>Déposé au coffre par M. Lambert</span></div>
+</div></aside>
+<script src="cadre.js"></script><script src="v2.js"></script>
+<script>
+V.monter(V.tete({ gd: 3 }));
+document.getElementById('nav').outerHTML = V.nav('legal');
+document.getElementById('l1').outerHTML = [
+  { ty: 'img', t: 'Rapport de contrôle des extincteurs', s: 'photo · M. Lambert · 1,2 Mo', q: '15/06/2026', et: '<span class="v-st ok">jusqu’au 15/06/2027</span>' },
+].map(V.ligne).join('');
+</script>
+</body></html>

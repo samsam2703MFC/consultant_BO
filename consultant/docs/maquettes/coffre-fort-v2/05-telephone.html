@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coffre-fort v2 — téléphone</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="v2.css"></head>
+<body class="tel"><div class="tel-f">
+<div class="tel-h"><span><b>Mon coffre-fort</b><small>Boutique de Halle · 11 pièces sur 16</small></span><span class="sp"></span><span class="r">🔍</span></div>
+<div class="tel-c">
+  <div class="tel-btn"><span class="v-b prim">＋ Déposer</span><span class="v-b abr">📅 Grandes dates <i>3</i></span></div>
+  <div id="etat"></div>
+  <div class="v-k" style="margin:4px 2px 8px">Dossiers</div>
+  <div class="tel-dos">
+    <div><span class="ico">📜</span><b>Contrat &amp; DIP</b><small>3 sur 4 pièces</small><span class="bar"><i style="width:75%"></i></span></div>
+    <div><span class="ico">⚖️</span><b>Légal</b><small>4 sur 7 · 1 à renouveler</small><span class="bar"><i style="width:57%"></i></span></div>
+    <div><span class="ico">🎓</span><b>Formation</b><small>2 sur 2</small><span class="bar"><i style="width:100%"></i></span></div>
+    <div><span class="ico">📝</span><b>Rapports de visite</b><small>6 · 1 à lire</small></div>
+    <div><span class="ico">📊</span><b>Finances</b><small>2 sur 3</small><span class="bar"><i style="width:66%"></i></span></div>
+    <div><span class="ico">✉️</span><b>Courriers</b><small>3 documents</small></div>
+  </div>
+  <section class="v-carte"><div class="v-ch"><h2>Récents</h2><span class="sp"></span><small>tout voir ›</small></div><div id="l1"></div></section>
+</div>
+<div class="tel-tab"><span><i>🏠</i>Opérationnel</span><span><i>✅</i>Tâches</span><span><i>📷</i>Contrôle</span><span><i>📅</i>Semaine</span><span style="color:var(--accent)"><i>🔒</i>Coffre</span></div>
+</div>
+<div class="tel-leg"><b>05 · Au téléphone</b><br><br>Les deux actions en tête (<b>Déposer</b> : choisir un fichier ou prendre une photo ; <b>Grandes dates</b>), l’état du coffre en une carte (complétude, à traiter, prochaine grande date), les dossiers en <b>tuiles</b> avec leur complétude, puis les documents récents. Un document s’ouvre en plein écran, avec les mêmes actions que le tiroir du bureau.</div>
+<script src="v2.js"></script>
+<script>
+document.getElementById('etat').outerHTML = V.etat({ a: 11, b: 16, titre: '11 pièces sur 16', texte: 'Il manque 3 pièces légales (à vous) et 2 de Nadia K.', lien: 'Compléter',
+  afaire: [{ c: 'or', i: '⏳', t: 'Assurance RC à renouveler', s: 'dans 39 jours', go: 'Déposer' }, { c: 'ac', i: '✨', t: '2 nouveaux documents', s: 'rapport de visite, coefficients', go: 'Voir' }],
+  proch: { j: '01', m: 'déc. 2026', t: 'Fin de la fenêtre pour demander le renouvellement du bail', u: 'encore 9 jours' } }).replace('<span class="v-b sm abr">📅 Toutes les grandes dates</span>', '');
+document.getElementById('l1').outerHTML = [
+  { ty: 'web', t: 'Rapport de visite — 18/11', s: 'Nadia K. · à lire', q: '', et: '', nv: 1, ac: '›' },
+  { ty: 'xls', t: 'Produits et coefficients', s: 'Finances · 09/10/2026', q: '', et: '', nv: 1, ac: '›' },
+  { ty: 'pdf', t: 'Bail commercial — Halle', s: 'Légal · 3 grandes dates', q: '', et: '', ac: '›' },
+].map(V.ligne).join('').replace(/<span class="qd"><\/span><span class="et"><\/span>/g, '');
+</script>
+</body></html>
