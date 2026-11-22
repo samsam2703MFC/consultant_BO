@@ -50,28 +50,47 @@
             <div class="m">${p.people} os.${p.duties ? ` · ${p.duties} obow. · ${p.covered} z asystentem` : ''}${p.tasks ? ` · ${p.tasks} zad.` : ''}</div>
             ${cov !== null ? `<div class="bar" title="obowiązki z asystentem kontroli : ${cov} %"><i style="width:${cov}%"></i></div>` : ''}</div>`;
     }
+    let zoom = null;          // null = dopasuj do szerokości
     function renderChart() {
         const map = byId();
         const active = D.chart.filter(p => p.active);
         const kids = new Map();
         active.forEach(p => { const b = p.reports_to !== null && map.get(p.reports_to)?.active ? p.reports_to : 0; if (!kids.has(b)) kids.set(b, []); kids.get(b).push(p); });
-        const tree = (pid) => (kids.get(pid) || []).map(p => `<li>${nodeHtml(p)}${kids.has(p.id) ? `<ul>${tree(p.id)}</ul>` : ''}</li>`).join('');
+        // Podwładni bez własnych podwładnych : pionowo (kolumna), żeby organigram nie rozjeżdżał się w szerokość.
+        const tree = (pid) => (kids.get(pid) || []).map(p => {
+            const ch = kids.get(p.id) || [];
+            const stack = ch.length > 1 && ch.every(c => !kids.has(c.id));
+            return `<li>${nodeHtml(p)}${ch.length ? `<ul class="${stack ? 'is-stack' : ''}">${tree(p.id)}</ul>` : ''}</li>`;
+        }).join('');
         const inactive = D.chart.filter(p => !p.active);
         const sel = selected !== null ? map.get(selected) : null;
-        body.innerHTML = `<div class="st-grid"><div>
+        body.innerHTML = `<div class="st-bar2"><span class="st-lbl mb-0">Nieaktywne</span><div class="st-pal">${inactive.length ? inactive.map(nodeHtml).join('') : '<span class="text-muted small">brak</span>'}</div>
+                <div class="st-zoom"><button type="button" data-zoom="-">−</button><span data-zoom-label></span><button type="button" data-zoom="+">+</button><button type="button" data-zoom="fit">Dopasuj</button></div></div>
             <div class="st-canvas" data-canvas><div class="st-rootzone" data-root-zone>Upuść tutaj → stanowisko bez przełożonego (góra struktury)</div>
-                <ul class="st-tree">${tree(0)}</ul></div>
-            <p class="st-help"><i class="bi bi-arrows-move"></i> Przeciągnij stanowisko na inne : będzie mu podlegać (zapis od razu). Pasek = obowiązki z asystentem kontroli. Ramka przerywana = stanowisko w pracowni. Na tablecie : wybierz stanowisko i zmień « Podlega pod ».</p></div>
-            <div class="st-side">${sel ? sideHtml(sel, map) : `<div class="st-card"><div class="st-lbl">Stanowisko</div><p class="text-muted mb-0">Dotknij stanowiska, żeby zobaczyć szczegóły.</p></div>`}
-                <div class="st-card"><div class="st-lbl">Paleta — nieaktywne</div><div class="st-pal">${inactive.length ? inactive.map(nodeHtml).join('') : '<p class="text-muted mb-0">Brak.</p>'}</div>
-                <p class="st-help">Przeciągnij na organigram, żeby włączyć stanowisko.</p></div></div></div>`;
+                <ul class="st-tree" data-tree>${tree(0)}</ul></div>
+            <p class="st-help"><i class="bi bi-arrows-move"></i> Przeciągnij stanowisko na inne : będzie mu podlegać (zapis od razu). Nieaktywne (u góry) : przeciągnij na organigram, żeby włączyć. Pasek = obowiązki z asystentem kontroli. Ramka przerywana = stanowisko w pracowni. Na tablecie : dotknij stanowiska i zmień « Podlega pod ».</p>
+            ${sel ? `<div class="st-drawer2">${sideHtml(sel, map)}</div>` : ''}`;
+        applyZoom();
         bindChart();
     }
+    // Dopasowanie : organigram mieści się w szerokości ramki (najmniej 45 %) ; − / + ręcznie.
+    function applyZoom() {
+        const canvas = body.querySelector('[data-canvas]'), t = body.querySelector('[data-tree]');
+        if (!canvas || !t) return;
+        t.style.zoom = 1;
+        const fit = Math.max(0.45, Math.min(1, (canvas.clientWidth - 24) / t.scrollWidth));
+        const z = zoom === null ? fit : zoom;
+        t.style.zoom = z;
+        const l = body.querySelector('[data-zoom-label]');
+        if (l) l.textContent = Math.round(z * 100) + ' %';
+    }
+    window.addEventListener('resize', () => { if (tab === 'chart' && D) applyZoom(); });
+
     function sideHtml(p, map) {
         const subs = D.chart.filter(x => x.reports_to === p.id && x.active);
         const cov = p.duties ? Math.round(p.covered / p.duties * 100) : 0;
         const options = D.chart.filter(x => x.id !== p.id && x.active).map(x => `<option value="${x.id}" ${p.reports_to === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-        return `<div class="st-card"><div class="st-lbl">Wybrane stanowisko</div><h4 class="mb-0">${esc(p.name)}</h4><div class="text-muted small">${esc(p.code)}${p.active ? '' : ' · nieaktywne'}</div>
+        return `<div class="st-card" style="position:relative"><button type="button" class="st-x" data-close-side aria-label="Zamknij">×</button><div class="st-lbl">Wybrane stanowisko</div><h4 class="mb-0" style="padding-right:34px">${esc(p.name)}</h4><div class="text-muted small">${esc(p.code)}${p.active ? '' : ' · nieaktywne'}</div>
             <div class="d-flex align-items-baseline gap-2 mt-2"><span class="st-big">${p.covered} / ${p.duties}</span><span class="text-muted small">obowiązków z asystentem kontroli</span></div>
             <div class="st-bar"><i style="width:${cov}%"></i></div>
             <dl class="st-kv"><dt>Podlega pod</dt><dd><select class="form-select form-select-sm" data-boss="${p.id}"><option value="">— góra struktury —</option>${options}</select></dd>
@@ -114,6 +133,12 @@
                 move(id, boss);
             });
         });
+        body.querySelector('[data-close-side]')?.addEventListener('click', () => { selected = null; renderChart(); });
+        body.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => {
+            const cur = Number(body.querySelector('[data-tree]').style.zoom) || 1;
+            zoom = b.dataset.zoom === 'fit' ? null : Math.max(0.4, Math.min(1.5, cur + (b.dataset.zoom === '+' ? 0.1 : -0.1)));
+            applyZoom();
+        }));
         body.querySelector('[data-boss]')?.addEventListener('change', (e) => move(Number(e.target.dataset.boss), e.target.value === '' ? null : Number(e.target.value)));
         body.querySelector('[data-to-matrix]')?.addEventListener('click', (e) => { F.position = e.currentTarget.dataset.toMatrix; tab = 'matrix'; history.replaceState(null, '', '?tab=matrix'); render(); });
     }
