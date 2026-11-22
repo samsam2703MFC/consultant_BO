@@ -226,8 +226,9 @@ $check($sum() === $before, 'read only: ERP tables unchanged');
 // --- Enregistrement : catalogue, lien, droits, routes
 $check(TaskWizards::info('liquidity_checked')['link'] === '/finances/liquidity' && TaskWizards::byLink('/finances/liquidity') === 'liquidity_checked'
     && isset(TaskWizards::AUTO['liquidity_checked']) && PositionTaskService::LINK_AUTO['/finances/liquidity'] === 'liquidity_checked', 'catalog, auto description and position-task link');
-$check(PageAccess::keyFor('/finances/liquidity') === 'margins' && PageAccess::keyFor('/ajax/finances/liquidity') === 'margins' && PageAccess::keyFor('/ajax/finances/liquidity/decision') === 'margins'
-    && PageAccess::keyFor('/finances/payments-day') === 'payments_day', 'page and ajax under the existing « margins » right (Finanse) ; other finance pages unchanged');
+$check(PageAccess::keyFor('/finances/liquidity') === 'liquidity' && PageAccess::keyFor('/ajax/finances/liquidity') === 'liquidity' && PageAccess::keyFor('/ajax/finances/liquidity/decision') === 'liquidity'
+    && PageAccess::keyFor('/finances/invoices') === 'margins' && PageAccess::keyFor('/finances') === 'margins' && PageAccess::keyFor('/finances/payments-day') === 'payments_day'
+    && in_array('liquidity', PageAccess::grantable(), true), '[373] own right « liquidity » (page and ajax) ; other finance pages unchanged (« margins », « payments_day »)');
 $dispatcher = FastRoute\simpleDispatcher(require __DIR__ . '/../App/Core/Routes/finances/LiquidityRoutes.php');
 $found = fn(string $m, string $u) => ($x = $dispatcher->dispatch($m, $u))[0] === FastRoute\Dispatcher::FOUND ? $x[1]['method'] : null;
 $check($found('GET', '/finances/liquidity') === 'index' && $found('GET', '/ajax/finances/liquidity') === 'data' && $found('POST', '/ajax/finances/liquidity/balance') === 'balance'
@@ -236,14 +237,18 @@ $all = FastRoute\simpleDispatcher(require __DIR__ . '/../App/Core/Routes/routes.
 $check($all->dispatch('GET', '/finances/liquidity')[0] === FastRoute\Dispatcher::FOUND, 'routes file loaded by the */*Routes.php glob');
 
 // --- [373] Contrôleur réel (PHP-DI) : montants pour Finanse et pour le Kierownik operacyjny (décision du 22.11.2026),
-// pas pour un autre poste qui a le droit « margins » ; sans le droit : 403.
+// pas pour un autre poste qui a le droit ; sans le droit : 403. Migration 223 : « liquidity » pour les postes qui
+// avaient « margins » et pour le Kierownik operacyjny, qui n'ouvre pas pour autant les autres pages finances.
 foreach (['CREATE TABLE n_position (id INT PRIMARY KEY, code VARCHAR(40), name_pl VARCHAR(120), name_fr VARCHAR(120) NULL, description TEXT NULL, kind VARCHAR(16) DEFAULT \'erp\', id_group INT NULL, id_reports_to INT NULL, sort_order INT DEFAULT 0, active TINYINT DEFAULT 1)',
     'CREATE TABLE n_prod_user_role (id INT AUTO_INCREMENT PRIMARY KEY, id_user INT, role_code VARCHAR(30), id_group INT NULL)',
     'CREATE TABLE n_user_position (id_user INT PRIMARY KEY, id_position INT)',
     'CREATE TABLE n_page_access (id_position INT, page_key VARCHAR(40), updated_by INT NULL, PRIMARY KEY (id_position, page_key))'] as $sql) $pdo->exec($sql);
 $pdo->exec("INSERT INTO n_position (id, code, name_pl) VALUES (11, 'KIEROWNIK_OPERACYJNY', 'Kierownik operacyjny'), (12, 'LOGISTYKA', 'Logistyka'), (13, 'ADMINISTRACJA', 'Administracja')");
 $pdo->exec('INSERT INTO n_user_position VALUES (21, 11), (22, 12), (23, 13), (24, 12)');
-$pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (11, 'margins'), (12, 'margins'), (13, 'margins')");
+$pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (12, 'margins'), (13, 'margins')");
+for ($k = 0; $k < 2; $k++) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/223_liquidity_access.sql')) as $sql) $pdo->exec($sql);
+$acc = $pdo->query("SELECT id_position, GROUP_CONCAT(page_key ORDER BY page_key) k FROM n_page_access GROUP BY id_position")->fetchAll(PDO::FETCH_KEY_PAIR);
+$check($acc === [11 => 'liquidity', 12 => 'liquidity,margins', 13 => 'liquidity,margins'], 'migration 223 (twice) : « liquidity » for « margins » holders and Kierownik operacyjny only');
 $b = new DI\ContainerBuilder();
 $b->addDefinitions([PDO::class => fn() => new PDO((getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock') . ';dbname=erp_liquidity_test', getenv('TFB_TEST_USER') ?: 'root',
     getenv('TFB_TEST_PASS') ?: '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC])]);
@@ -251,8 +256,11 @@ $ctl = $b->build()->get(\App\Controllers\Web\Finances\LiquidityCheckController::
 $call = function (int $user) use ($ctl) { $_SESSION['USER'] = ['id' => $user, 'login' => 'u' . $user]; $res = $ctl->data(); return [$res->getStatusCode(), json_decode((string) $res->getContent(), true)]; };
 [$cKo, $bKo] = $call(21); [$cLog, $bLog] = $call(22); [$cFin, $bFin] = $call(23);
 $check($cKo === 200 && ($bKo['data']['values'] ?? null) === true && $cFin === 200 && ($bFin['data']['values'] ?? null) === true, 'controller data() : Kierownik operacyjny and Finanse see amounts');
-$check($cLog === 200 && ($bLog['data']['values'] ?? null) === false, 'controller data() : another position with « margins » : amounts hidden');
-$pdo->exec('DELETE FROM n_page_access WHERE id_position = 12');
+$check($cLog === 200 && ($bLog['data']['values'] ?? null) === false, 'controller data() : another position with the right : amounts hidden');
+$pa = new \App\Services\Organization\PageAccessService(new \App\Repositories\Organization\PageAccessRepository($pdo));
+$check($pa->canSee(21, '/finances/liquidity') && !$pa->canSee(21, '/finances/invoices') && !$pa->canSee(21, '/finances') && $pa->canSee(23, '/finances/invoices'),
+    'Kierownik operacyjny : the assistant only, not invoices / costs (Finanse keeps them)');
+$pdo->exec("DELETE FROM n_page_access WHERE id_position = 12 AND page_key = 'liquidity'");
 $check($call(24)[0] === 403, 'controller data() : without the right → 403');
 unset($_SESSION['USER']);
 
