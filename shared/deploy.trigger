@@ -252,3 +252,4 @@
 2026-11-22T15:31:13Z [367] ERP production : réclamations, photos partout, vue par le groupe
 2026-11-22T15:44:12Z [368] ERP production : Struktura i obowiązki
 2026-11-22T15:36:19Z Tâches & contrôles : les photos se relisent quand une tâche rendue n'a pas la sienne ; dashboard : les vignettes (dossier de formation, Relire, valeur, demande au bureau, revue du soir, API) sur l'Opérationnel seulement
+2026-11-22T16:14:44Z [369] organigram widoczny w całości
