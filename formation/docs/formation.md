@@ -939,6 +939,11 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   avec l'explication des structures des checklists ») : source `formation/data/formation/checklists/` (9 parties, 3 questions,
   photos du Document du cockpit — `formation/tools/formation/captures_checklists.js` — et du dashboard), créé en v1.0 « à valider »,
   accès à tous, classé D5.1, FO-01, pré-ouverture, postes P1 à P12 (à confirmer).
+- **22/11/2026 — ART-PIL-01 v1.9, SOP-PIL-01 v1.6** (dashboard jusqu'à `77fd5176` du 21/11) : la source reprise dans
+  `formation/` depuis le serveur (v1.8 / v1.5 du matin, absentes du dépôt) ; captures refaites sur le dashboard au rail ;
+  parties 1, 2 (le rail et la barre du haut), 4, 7, 29 à 31 (l'onglet Trimestre rejoint l'Année, « Les 12 mois ») ;
+  SOP 6.1 et 6.2. La v1.5 de l'article (74 parties, écrasée le 16/11 par la v1.6) est gardée dans
+  `formation/data/formation/dashboard/archives/`. NL à relire.
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
