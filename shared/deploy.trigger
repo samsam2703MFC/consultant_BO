@@ -250,3 +250,4 @@
 2026-11-22T14:55:32Z Coffre-fort v2 : l'état du coffre, les pièces attendues (16), le tiroir d'aperçu, le dépôt avec l'assistant ; la pièce au dépôt du consultant
 2026-11-22T15:10:24Z Formations et suivi : l'accueil de la formation sans rail, la méga-barre de recherche sur tout le catalogue (GET /formation/recherche), l'aperçu et le lecteur ; les couleurs des catalogues sur l'accueil (dashboard et module)
 2026-11-22T15:31:13Z [367] ERP production : réclamations, photos partout, vue par le groupe
+2026-11-22T15:44:12Z [368] ERP production : Struktura i obowiązki
