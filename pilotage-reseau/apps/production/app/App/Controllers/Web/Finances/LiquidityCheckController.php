@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Asystent « Płynność i gotówka » [373] : sytuacja 4 tygodni, plan (saldo, decyzje dla sygnałów), podsumowanie.
- * La page est sous /finances (droit « margins » : Finanse — faktury i koszty) ; les appels ajax vérifient le même droit
+ * La page et ses appels ajax ont leur propre droit « liquidity » [373] ; les appels ajax vérifient ce droit
  * (App ne contrôle que les pages). Montants : profil Finanse et CEO, et Kierownik operacyjny (PageAccessService::seesLiquidityValues, [312] [373]).
  * Lecture seule hors de n_liquidity_balance et n_liquidity_decision ; aucun e-mail ni SMS.
  */

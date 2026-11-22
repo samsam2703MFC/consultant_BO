@@ -19,7 +19,10 @@ final class PageAccess
         'dashboard' => ['Rentowność (pulpit, wynik i produkcja grup, raport miesięczny)', 'Analiza', ['/dashboard'], false],
         'sales' => ['Analiza sprzedaży', 'Analiza', ['/finances/sales-analytics'], false],
         // [373] Asystent « Płynność i gotówka » : page /finances/liquidity (préfixe /finances), appels ajax sous le même droit.
-        'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca ; Finanse : faktury i koszty, koszty usług miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close', '/ajax/finances/liquidity'], false],
+        'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca ; Finanse : faktury i koszty, koszty usług miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
+        // [373] Asystent « Płynność i gotówka » : prawo osobne (decyzja z 22.11.2026), żeby Kierownik operacyjny miał tylko ten
+        // ekran, bez faktur i kosztów ; dłuższy prefiks wygrywa z « /finances » (keyFor).
+        'liquidity' => ['Płynność i gotówka (asystent : saldo, prognoza 4 tygodni, sygnały i decyzje)', 'Analiza', ['/finances/liquidity', '/ajax/finances/liquidity'], false],
         // [255] Magazyn (stan, zapas MTS, prognoza zapasu) i dostawy surowców : pod prawem Produkcja (wcześniej poza katalogiem = dla wszystkich).
         'production' => ['Produkcja i magazyn (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, dostawy surowców, magazyn : stan, zapas MTS, prognoza zapasu, ruchy magazynowe ; partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
