@@ -44,6 +44,11 @@ final class ParamRules
         'prices.client_cut_pct' => [0.5, 50, false],
         // [369] Zamówienia dnia : délai minimal commande → expédition (jours ; 0 = pas de contrôle du délai)
         'orders.min_lead_days' => [0, 30, true],
+        // [370] Klienci bez zamówienia : jours de commande sur 8 semaines pour être régulier, part des semaines pour un
+        // jour habituel (%), jours ouvrés de tolérance après le jour attendu
+        'orders.regular_min_orders' => [2, 40, true],
+        'orders.weekday_share_pct' => [10, 100, true],
+        'orders.missing_grace_days' => [0, 10, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

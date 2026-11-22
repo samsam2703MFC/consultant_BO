@@ -32,6 +32,13 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/client-orders/day-check/result', ['controller' => $odc, 'method' => 'result']);
     $r->addRoute('POST', '/ajax/client-orders/day-check/finish', ['controller' => $odc, 'method' => 'finish']);
 
+    // [370] Assistant « Klienci bez zamówienia » (Kierownik operacyjny) : przegląd → do kontaktu → zatwierdzenie.
+    $cno = \App\Controllers\Web\Client\Order\CustomersNoOrderController::class;
+    $r->addRoute('GET', '/client-orders/missing', ['controller' => $cno, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/client-orders/missing', ['controller' => $cno, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/client-orders/missing/result', ['controller' => $cno, 'method' => 'result']);
+    $r->addRoute('POST', '/ajax/client-orders/missing/finish', ['controller' => $cno, 'method' => 'finish']);
+
 
 
     $r->addRoute('GET', '/client-orders/{id:\d+}/edit', [
