@@ -25,6 +25,13 @@ return function(RouteCollector $r) {
     // Do obsłużenia : sprawy zamówień, proform i wysyłek czekające na działanie (jedna linia na sprawę)
     $r->addRoute('GET', '/client-orders/queue', ['controller' => \App\Controllers\Web\Client\Order\OrderQueueController::class, 'method' => 'index']);
 
+    // [369] Assistant « Zamówienia dnia » (Kierownik operacyjny) : nouvelles et modifiées → à vérifier → validation.
+    $odc = \App\Controllers\Web\Client\Order\OrderDayCheckController::class;
+    $r->addRoute('GET', '/client-orders/day-check', ['controller' => $odc, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/client-orders/day-check', ['controller' => $odc, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/client-orders/day-check/result', ['controller' => $odc, 'method' => 'result']);
+    $r->addRoute('POST', '/ajax/client-orders/day-check/finish', ['controller' => $odc, 'method' => 'finish']);
+
 
 
     $r->addRoute('GET', '/client-orders/{id:\d+}/edit', [

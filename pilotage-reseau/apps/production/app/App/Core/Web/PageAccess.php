@@ -47,7 +47,8 @@ final class PageAccess
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
-        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders'], false],
+        // [369] Assistant « Zamówienia dnia » : page sous /client-orders, appels ajax sous le même droit.
+        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check'], false],
         'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
         'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
         'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],

@@ -42,6 +42,8 @@ final class ParamRules
         'prices.cost_up_pct' => [0.5, 50, false],
         'prices.cost_down_pct' => [0.5, 50, false],
         'prices.client_cut_pct' => [0.5, 50, false],
+        // [369] Zamówienia dnia : délai minimal commande → expédition (jours ; 0 = pas de contrôle du délai)
+        'orders.min_lead_days' => [0, 30, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
