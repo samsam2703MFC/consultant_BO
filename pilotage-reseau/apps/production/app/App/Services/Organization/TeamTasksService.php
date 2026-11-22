@@ -192,6 +192,7 @@ final class TeamTasksService
             'orders_day_checked' => 'nowe i zmienione → do wyjaśnienia → zatwierdź',
             'customers_ordered_checked' => 'stali klienci → do kontaktu → zatwierdź',
             'supplements_day_checked' => 'domówienia → do wyjaśnienia → zatwierdź',
+            'liquidity_checked' => 'sytuacja 4 tygodni → saldo i decyzje → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

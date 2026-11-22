@@ -190,6 +190,14 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplement_check WHERE day = ?', [$day])[0]['n'] ?? 0);
     }
 
+    /** [373] Płynność i gotówka : saldo wpisane i decyzje zapisane w tygodniu (poniedziałek). @return array{balance:bool, decisions:int} */
+    public function liquidityProgress(string $weekStart): array
+    {
+        $b = (int) ($this->all('SELECT COUNT(*) AS n FROM n_liquidity_balance WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+        $d = (int) ($this->all('SELECT COUNT(*) AS n FROM n_liquidity_decision WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+        return ['balance' => $b > 0, 'decisions' => $d];
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);
