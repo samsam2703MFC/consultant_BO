@@ -195,6 +195,7 @@ final class TeamTasksService
             'liquidity_checked' => 'sytuacja 4 tygodni → saldo i decyzje → zakończ',
             'deliveries_delays_checked' => 'dostawy dnia i opóźnione → decyzja → zatwierdź',
             'otif_week_reviewed' => 'wynik tygodnia → przyczyny i działania → zakończ',
+            'lots_qc_day_checked' => 'dni grup i braki → wynik → zatwierdź',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

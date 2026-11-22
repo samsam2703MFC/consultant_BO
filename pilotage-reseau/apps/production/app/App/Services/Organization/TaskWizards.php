@@ -54,6 +54,9 @@ final class TaskWizards
         'deliveries_delays_checked' => ['Opóźnienia dostaw', '/logistics/delays', 'opóźnienia i ryzyka dostaw wyjaśnione', 3],
         // [375] Terminowość tygodnia (OTIF) (Kierownik operacyjny, co tydzień) : OTIF de la semaine écoulée, tendance, une action par cause principale.
         'otif_week_reviewed' => ['Terminowość tygodnia (OTIF)', '/client-orders/otif', 'OTIF tygodnia oceniony, działanie dla każdej przyczyny', 3],
+        // [377] Partie i kontrola dnia (Specjalista ds. jakości) : journées de groupe closes, trous de traçabilité, un résultat par journée.
+        // Libellé distinct du nom proposé dans la matrice (« Partie i kontrola dnia ») : les UPDATE des migrations ne prennent que celui-ci.
+        'lots_qc_day_checked' => ['Partie i kontrola dnia (identyfikowalność)', '/workshop/traceability/day-check', 'braki identyfikowalności zatwierdzonych dni grup wyjaśnione', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -99,6 +102,7 @@ final class TaskWizards
         'deliveries_delays_checked' => 'gdy każda dostawa z sygnałem (po terminie, nie wyjechała, nic gotowego, bez pojazdu lub kierowcy, przeładowany pojazd, za długo w transporcie, problem przy dostawie, data zmieniana wiele razy) ma decyzję — asystent « Opóźnienia dostaw », krok 3',
         'liquidity_checked' => 'gdy saldo tygodnia jest wpisane i każdy sygnał (zaległości klienta, duża płatność dostawcy, tydzień poniżej poduszki) ma decyzję — asystent « Płynność i gotówka », krok 3',
         'otif_week_reviewed' => 'gdy OTIF poprzedniego tygodnia (na czas, w całości) jest oceniony i każda główna przyczyna zamówień nie-OTIF ma działanie (akceptowane, korygujące, do obserwacji) — asystent « Terminowość tygodnia (OTIF) », krok 3',
+        'lots_qc_day_checked' => 'gdy każdy zatwierdzony dzień grupy z brakiem (partia surowca bez numeru albo z powodem, partia bez kontroli jakości, partia surowca po DLC lub bez numeru w rejestrze) albo z notatką z tabletu ma wynik (uzupełnione, NC, zaakceptowane) — asystent « Partie i kontrola dnia », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -261,6 +265,11 @@ final class TaskWizards
                 elseif (($n = $this->repo->otifActions(\App\Services\Organization\Wizards\OtifWeekService::reviewedWeek(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'przyczyna z działaniem', 'przyczyny z działaniem', 'przyczyn z działaniem')] + $out;
                 }
+                break;
+            case 'lots_qc_day_checked':
+                // [377] Codziennie : zakończenie dnia ; w toku = wyniki zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->lotsQcChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'dzień grupy wyjaśniony', 'dni grup wyjaśnione', 'dni grup wyjaśnionych')] + $out;
                 break;
             case 'sop_daily':
                 $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);
