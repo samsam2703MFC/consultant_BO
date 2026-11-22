@@ -16,6 +16,7 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../public/vendor/autoload.php';
+require_once __DIR__ . '/../App/Core/functions.php';
 
 use App\Core\Web\PageAccess;
 use App\Domain\Params\ParamRules;
@@ -233,6 +234,27 @@ $check($found('GET', '/finances/liquidity') === 'index' && $found('GET', '/ajax/
     && $found('POST', '/ajax/finances/liquidity/decision') === 'decision' && $found('POST', '/ajax/finances/liquidity/finish') === 'finish', 'routes');
 $all = FastRoute\simpleDispatcher(require __DIR__ . '/../App/Core/Routes/routes.php');
 $check($all->dispatch('GET', '/finances/liquidity')[0] === FastRoute\Dispatcher::FOUND, 'routes file loaded by the */*Routes.php glob');
+
+// --- [373] Contrôleur réel (PHP-DI) : montants pour Finanse et pour le Kierownik operacyjny (décision du 22.11.2026),
+// pas pour un autre poste qui a le droit « margins » ; sans le droit : 403.
+foreach (['CREATE TABLE n_position (id INT PRIMARY KEY, code VARCHAR(40), name_pl VARCHAR(120), name_fr VARCHAR(120) NULL, description TEXT NULL, kind VARCHAR(16) DEFAULT \'erp\', id_group INT NULL, id_reports_to INT NULL, sort_order INT DEFAULT 0, active TINYINT DEFAULT 1)',
+    'CREATE TABLE n_prod_user_role (id INT AUTO_INCREMENT PRIMARY KEY, id_user INT, role_code VARCHAR(30), id_group INT NULL)',
+    'CREATE TABLE n_user_position (id_user INT PRIMARY KEY, id_position INT)',
+    'CREATE TABLE n_page_access (id_position INT, page_key VARCHAR(40), updated_by INT NULL, PRIMARY KEY (id_position, page_key))'] as $sql) $pdo->exec($sql);
+$pdo->exec("INSERT INTO n_position (id, code, name_pl) VALUES (11, 'KIEROWNIK_OPERACYJNY', 'Kierownik operacyjny'), (12, 'LOGISTYKA', 'Logistyka'), (13, 'ADMINISTRACJA', 'Administracja')");
+$pdo->exec('INSERT INTO n_user_position VALUES (21, 11), (22, 12), (23, 13), (24, 12)');
+$pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (11, 'margins'), (12, 'margins'), (13, 'margins')");
+$b = new DI\ContainerBuilder();
+$b->addDefinitions([PDO::class => fn() => new PDO((getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock') . ';dbname=erp_liquidity_test', getenv('TFB_TEST_USER') ?: 'root',
+    getenv('TFB_TEST_PASS') ?: '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC])]);
+$ctl = $b->build()->get(\App\Controllers\Web\Finances\LiquidityCheckController::class);
+$call = function (int $user) use ($ctl) { $_SESSION['USER'] = ['id' => $user, 'login' => 'u' . $user]; $res = $ctl->data(); return [$res->getStatusCode(), json_decode((string) $res->getContent(), true)]; };
+[$cKo, $bKo] = $call(21); [$cLog, $bLog] = $call(22); [$cFin, $bFin] = $call(23);
+$check($cKo === 200 && ($bKo['data']['values'] ?? null) === true && $cFin === 200 && ($bFin['data']['values'] ?? null) === true, 'controller data() : Kierownik operacyjny and Finanse see amounts');
+$check($cLog === 200 && ($bLog['data']['values'] ?? null) === false, 'controller data() : another position with « margins » : amounts hidden');
+$pdo->exec('DELETE FROM n_page_access WHERE id_position = 12');
+$check($call(24)[0] === 403, 'controller data() : without the right → 403');
+unset($_SESSION['USER']);
 
 if (getenv('LQ_JSON_OUT')) file_put_contents((string) getenv('LQ_JSON_OUT'), json_encode(['before' => $boot, 'after' => $after, 'done' => $svc->data($today)], JSON_UNESCAPED_UNICODE));
 $pdo->exec('DROP DATABASE erp_liquidity_test');
