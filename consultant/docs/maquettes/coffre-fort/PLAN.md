@@ -36,8 +36,8 @@ captures : `php -S 127.0.0.1:8099 -t .` à la racine, puis `node consultant/docs
   - En tête : le nombre de documents, les nouveaux, ceux à renouveler, l'échéance du contrat.
 - **Le lien** « 🔒 Mon coffre-fort » est épinglé tout en bas du rail, sur tous les onglets. Au téléphone, il est le
   dernier bloc de chaque onglet. Son chiffre compte les documents pas encore ouverts.
-- **Le serveur**, domaine consultant (`consultant/src/coffre.php`). Il **rassemble** les sources sans les recopier,
-  sauf ce qui n'a pas de source :
+- **Le serveur**, domaine consultant (`consultant/src/coffre.php`). Il **rassemble** les sources sans les recopier
+  (les dépôts de `con_doc`, les rapports de visite envoyés) :
   - `GET /coffre/magasin?shop=` : la liste, par onglet ;
   - `GET /coffre/magasin/fichier?id=` : le fichier, après contrôle du magasin, et l'ouverture est notée.
   - `con_doc` reçoit de nouvelles sortes : `dip`, `contrat_franchise`, `avenant`, `legal`, `finances`. Deux colonnes
@@ -51,18 +51,18 @@ captures : `php -S 127.0.0.1:8099 -t .` à la racine, puis `node consultant/docs
 
 ## Droits
 
-- Ce sont des pièces légales. Le coffre **exige une session identifiée, même en accès ouvert** : la session du
-  magasin pour le franchisé, celle du siège ou du consultant au cockpit.
-- Un franchisé ne voit que son magasin. Un consultant ne voit que ses franchisés (cadre de visite).
-- Les fichiers ne sont jamais servis par une adresse directe.
+- Le coffre suit le réglage d'accès du cockpit (décision 2). Avec la connexion, un magasin ne lit que son coffre : le
+  `shop` de chaque route est vérifié contre la session, et un fichier n'est rendu que s'il appartient à ce `shop`.
+- Un document déposé par le consultant n'entre au coffre que si « dans le coffre du franchisé » est coché (coché par
+  défaut). Les documents déposés avant le coffre n'y entrent pas tant que le consultant ne les y met pas.
+- Les fichiers ne sont jamais servis par une adresse directe (`.htaccess` fermé, lecture par l'API).
 
-## Décisions à prendre
+## Décisions (Sam, 22/11/2026)
 
-1. **DIP et contrat** : les lire au CRM, s'il rend les fichiers (recommandé, une seule source), ou les déposer une fois
-   dans le coffre à la signature ?
-2. **Session obligatoire** pour le coffre, même en accès ouvert ? Recommandé : oui.
-3. **Le franchisé dépose-t-il lui-même** ses pièces légales (assurance, AFSCA, bail…) ? Proposé : oui, dans l'onglet
-   Légal seulement.
-4. **Un coffre par magasin ou par société** ? Pour un multi-boutique, proposé : un coffre par société, avec un filtre
-   par magasin.
-5. **« Envoyer à mon comptable »** : le garder ? Il faudrait l'adresse du comptable dans le profil du franchisé.
+1. **DIP, contrat, annexes, avenants, attestation de formation** : **déposés par le consultant** dans le coffre (pas lus
+   au CRM).
+2. **Pas de connexion imposée** : le coffre suit le réglage d'accès du cockpit, comme le reste du dashboard. En accès
+   ouvert, qui connaît l'adresse d'un magasin peut lire son coffre ; avec la connexion, seul ce magasin le lit.
+3. **Le franchisé dépose lui-même** ses pièces légales (onglet Légal), **le consultant aussi**.
+4. **Un coffre par boutique.**
+5. **Pas d'« Envoyer à mon comptable ».**
