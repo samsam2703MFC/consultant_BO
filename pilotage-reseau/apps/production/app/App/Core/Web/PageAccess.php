@@ -51,7 +51,10 @@ final class PageAccess
         // [256] Premie zespołów (progi, minimum, zakładka « Premia » tabletów) : decyduje administrator, nie kierownik produkcji.
         'team_bonus' => ['Premie zespołów : progi, minimum, zakładka « Premia » na tabletach', 'Administracja', ['/staff/team-bonus'], true],
         'product_cards' => ['Produkty : karty produktów (lista, kategorie, MTO / MTS, stany)', 'Produkt', ['/workshop/products'], false],
-        'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/semi-products', '/compositions'], false],
+        // [384] Asystent « Nowe produkty » (Kierownik produkcji) : page /products/launches-review (préfixe /products : produkty w rozwoju,
+        // receptury — là où naissent les lancements et se font les corrections), appels ajax sous le même droit. Le module Kierownik
+        // produkcji (objectifs de lancement) reste réservé à l'administrateur ; montants : droit « margins » (comme Marża produktów).
+        'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/ajax/products/launches-review', '/semi-products', '/compositions'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
