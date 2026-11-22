@@ -60,6 +60,9 @@ final class TaskWizards
         // [378] Faktury i KSeF dnia (Administracja i fakturowanie) : expéditions du jour, WDT et KSeF, un résultat par document signalé.
         // Libellé distinct du nom proposé dans la matrice (« Faktury i KSeF dnia ») : les UPDATE des migrations ne prennent que celui-ci.
         'invoices_ksef_checked' => ['Faktury i KSeF dnia (wysyłki)', '/shipments/ksef-day', 'faktury WDT wysyłek dnia przyjęte w KSeF albo wyjaśnione', 3],
+        // [379] Reklamacje klientów (Specjalista ds. jakości, co tydzień) : réclamations ouvertes ou mal suivies, semaine écoulée, une décision par réclamation signalée.
+        // Libellé distinct du nom proposé dans la matrice (« Reklamacje klientów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'complaints_reviewed' => ['Reklamacje klientów (przegląd tygodnia)', '/franchise-complaints/review', 'reklamacje tygodnia przejrzane, decyzja dla każdej z sygnałem', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -107,6 +110,7 @@ final class TaskWizards
         'otif_week_reviewed' => 'gdy OTIF poprzedniego tygodnia (na czas, w całości) jest oceniony i każda główna przyczyna zamówień nie-OTIF ma działanie (akceptowane, korygujące, do obserwacji) — asystent « Terminowość tygodnia (OTIF) », krok 3',
         'lots_qc_day_checked' => 'gdy każdy zatwierdzony dzień grupy z brakiem (partia surowca bez numeru albo z powodem, partia bez kontroli jakości, partia surowca po DLC lub bez numeru w rejestrze) albo z notatką z tabletu ma wynik (uzupełnione, NC, zaakceptowane) — asystent « Partie i kontrola dnia », krok 3',
         'invoices_ksef_checked' => 'gdy każda wysyłka z problemem (bez faktury WDT, WDT bez daty faktury, faktura niewysłana do KSeF albo bez odpowiedzi KSeF od ksef_day.pending_days dni, odrzucona, błąd wysyłki) ma wynik (wysłane ponownie / poprawione — sprawdzone, w toku, bez faktury — uzasadnione) — asystent « Faktury i KSeF dnia », krok 3',
+        'complaints_reviewed' => 'gdy każda reklamacja z sygnałem (bez decyzji od complaints_review.open_days dni, przyjęta bez odpowiedzi do magazynu, przyjęta i niewidziana przez grupę produktu, produkt bez grupy) ma decyzję (odpowiedź / zamknięta — sprawdzone, niezgodność NC, do obserwacji) — asystent « Reklamacje klientów », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -279,6 +283,13 @@ final class TaskWizards
                 // [378] Codziennie : zakończenie dnia ; w toku = wyniki zapisane dziś.
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->invoiceKsefChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'dokument wyjaśniony', 'dokumenty wyjaśnione', 'dokumentów wyjaśnionych')] + $out;
+                break;
+            case 'complaints_reviewed':
+                // [379] Co tydzień : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->complaintReviews(\App\Services\Organization\Wizards\ComplaintsReviewService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'reklamacja wyjaśniona', 'reklamacje wyjaśnione', 'reklamacji wyjaśnionych')] + $out;
+                }
                 break;
             case 'sop_daily':
                 $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);

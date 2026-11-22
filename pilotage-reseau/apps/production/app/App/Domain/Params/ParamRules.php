@@ -72,6 +72,10 @@ final class ParamRules
         'ksef_day.catchup_days' => [1, 31, true],
         'ksef_day.pending_days' => [1, 14, true],
         'ksef_day.lookback_days' => [7, 92, true],
+        // [379] Reklamacje klientów : jours avant qu'une réclamation sans décision ou acceptée non vue par le groupe soit à expliquer,
+        // jours en arrière des réclamations acceptées contrôlées
+        'complaints_review.open_days' => [1, 60, true],
+        'complaints_review.lookback_days' => [7, 365, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

@@ -58,7 +58,9 @@ final class PageAccess
         'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing', '/ajax/client-orders/supplements', '/ajax/client-orders/otif'], false],
         'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
         'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
-        'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
+        // [379] Asystent « Reklamacje klientów » (Jakość) : page /franchise-complaints/review (préfixe /franchise-complaints, la liste
+        // des réclamations où l'on décide et répond), appels ajax sous le même droit.
+        'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints', '/ajax/franchise-complaints/review'], false],
         'invoices' => ['Proformy i faktury', 'Sprzedaż', ['/proforma-documents', '/invoice-documents'], false],
         'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Sprzedaż', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
         'payments_day' => ['Płatności dnia (wpłaty proform, potwierdzenia przelewów z e-maila, przypomnienia, różnice dostaw)', 'Sprzedaż', ['/finances/payments-day', '/finances/payment-proofs'], false],
