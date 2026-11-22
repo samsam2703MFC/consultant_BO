@@ -1,0 +1,265 @@
+{
+ "id": "art-dash-revue",
+ "code": "0.0.35",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "8 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : la revue du soir",
+  "nl": "Het dashboard: de avondreview"
+ },
+ "objectif": {
+  "fr": "Savoir faire la revue du soir du dashboard : lire l’état du bouton, donner la raison de chaque checklist pas finie, répondre aux points de gestion, laisser un mot pour demain, clôturer, lire l’écran de fin et rouvrir une revue.",
+  "nl": "De avondreview van het dashboard kunnen doen: de toestand van de knop lezen, de reden geven van elke checklist die niet af is, de beheerpunten beantwoorden, een woord voor morgen achterlaten, afsluiten, het eindscherm lezen en een ronde heropenen."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05.",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Comprendre le dashboard magasin » (0.0.15), in opleiding FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ouvrir la revue",
+    "nl": "De ronde openen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Le bouton et son état",
+      "nl": "De knop en zijn toestand"
+     },
+     "texte": {
+      "fr": "En haut, à côté de « ↻ Relire » : « Revue du soir », suivi de son état pour la date regardée.\n« à faire » : c’est aujourd’hui et l’heure réglée au cockpit est passée (18:00 d’office) ; « en cours » : des réponses sont déjà données.\nCes deux états allument le bouton (lune dorée). « faite ✓ » : la revue est clôturée ; « pas faite » : un jour passé sans revue.\nAvant l’heure, le bouton ne dit rien. Au téléphone, c’est l’icône à côté de ↻, avec un point quand la revue est à faire ou en cours.\nUn toucher ouvre la revue de la date regardée.\nSi le bouton dit « pas faite » pour hier : ouvre hier et fais la revue, elle se fait aussi sur un jour passé.",
+      "nl": "Bovenaan, naast « ↻ Relire »: « Revue du soir », gevolgd door de toestand voor de bekeken datum.\n« à faire »: het is vandaag en het in de cockpit ingestelde uur is voorbij (standaard 18:00); « en cours »: er zijn al antwoorden gegeven.\nDie twee toestanden doen de knop oplichten (gouden maan). « faite ✓ »: de ronde is afgesloten; « pas faite »: een voorbije dag zonder ronde.\nVóór het uur zegt de knop niets. Op de telefoon is het het icoon naast ↻, met een punt als de ronde te doen of bezig is.\nEen tik opent de ronde van de bekeken datum.\nAls de knop « pas faite » zegt voor gisteren: open gisteren en doe de ronde, ze kan ook op een voorbije dag."
+     },
+     "critique": false,
+     "photo": "do-revue-bouton.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Qui fait la revue",
+      "nl": "Wie doet de ronde"
+     },
+     "texte": {
+      "fr": "Le premier écran résume la journée : « N tâches obligatoires sur N » faites, les checklists pas finies (code, nom, faites/total), les points de gestion, la durée.\n« Qui fait la revue ? » : les noms proposés, ou « Autre… » pour taper le sien. Le nom choisi est gardé sur cet appareil.\n« Commencer » lance les questions ; « Reprendre · N réponses déjà données » si la revue a été commencée ; « Plus tard » ferme.\nChaque réponse s’enregistre tout de suite : on peut fermer et reprendre où on en était. ‹ revient à l’écran d’avant, ✕ ferme.\nSi ton nom n’est pas dans la liste : « Autre… », tape-le, puis OK.",
+      "nl": "Het eerste scherm vat de dag samen: « N tâches obligatoires sur N » gedaan, de checklists die niet af zijn (code, naam, gedaan/totaal), de beheerpunten, de duur.\n« Qui fait la revue ? »: de voorgestelde namen, of « Autre… » om je eigen naam te typen. De gekozen naam blijft bewaard op dit toestel.\n« Commencer » start de vragen; « Reprendre · N réponses déjà données » als de ronde al begonnen is; « Plus tard » sluit.\nElk antwoord wordt meteen bewaard: je kan sluiten en verdergaan waar je was. ‹ gaat naar het vorige scherm, ✕ sluit.\nAls je naam niet in de lijst staat: « Autre… », typ hem, dan OK."
+     },
+     "critique": false,
+     "photo": "do-revue-qui.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les questions",
+    "nl": "De vragen"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Une checklist pas finie : pourquoi ?",
+      "nl": "Een checklist die niet af is: waarom?"
+     },
+     "texte": {
+      "fr": "Un écran par checklist pas finie : son code, son nom, « faites / total » et son heure, puis « N tâches … ne sont pas cochées. Pourquoi ? ».\n« voir les tâches ▾ » montre les tâches qui manquent.\nUne raison en un toucher (la liste vient du cockpit, par exemple « Fait, pas coché », « Pas eu le temps », « Oublié »), ou « Autre… ».\n« + commentaire » ajoute un mot, facultatif. La réponse passe à l’écran suivant.\n« Fait, pas coché » compte la checklist comme faite dans l’écran de fin : ne la choisis que si la tâche est vraiment faite.\nSi les mêmes tâches manquent chaque soir : parles-en au briefing du lendemain.",
+      "nl": "Eén scherm per checklist die niet af is: code, naam, « faites / total » en het uur, dan « N tâches … ne sont pas cochées. Pourquoi ? ».\n« voir les tâches ▾ » toont de taken die ontbreken.\nEen reden met één tik (de lijst komt uit de cockpit, bijvoorbeeld « Fait, pas coché », « Pas eu le temps », « Oublié »), of « Autre… ».\n« + commentaire » voegt een woord toe, niet verplicht. Het antwoord gaat naar het volgende scherm.\n« Fait, pas coché » telt de checklist als gedaan in het eindscherm: kies het alleen als de taak echt gedaan is.\nAls dezelfde taken elke avond ontbreken: bespreek het op de briefing van de dag erna."
+     },
+     "critique": true,
+     "photo": "do-revue-checklist.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Gestion vérifiée automatiquement",
+      "nl": "Beheer automatisch gecontroleerd"
+     },
+     "texte": {
+      "fr": "Après les checklists, « Gestion · vérifié automatiquement » : les points que le dashboard a pu vérifier lui-même et qui sont en ordre.\nChacun avec ✓, son nom et ce qui a été lu (par exemple invendus déclarés, stock compté et sa date).\n« Ces points sont en ordre : rien à expliquer. » puis « Continuer ».\nUn point vérifié dont la donnée n’est pas revenue n’est pas ici : il vient en question, avec « La donnée n’est pas revenue … : je ne peux pas le vérifier. ».\nSi un point fait ne figure pas ici : la vérification ne l’a pas trouvé en ordre ; lis ce qu’elle a trouvé et réponds à sa question.",
+      "nl": "Na de checklists « Gestion · vérifié automatiquement »: de punten die het dashboard zelf kon controleren en die in orde zijn.\nElk met ✓, zijn naam en wat er gelezen werd (bijvoorbeeld aangegeven onverkocht, geteld voorraad en de datum).\n« Ces points sont en ordre : rien à expliquer. » dan « Continuer ».\nEen gecontroleerd punt waarvan de gegevens niet zijn teruggekomen, staat hier niet: het komt als vraag, met « La donnée n’est pas revenue … : je ne peux pas le vérifier. ».\nAls een gedaan punt hier niet staat: de controle vond het niet in orde; lees wat ze vond en beantwoord zijn vraag."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Les points de gestion",
+      "nl": "De beheerpunten"
+     },
+     "texte": {
+      "fr": "Ensuite, un écran par point de gestion pas en ordre : « Gestion · » et son nom, ce que la vérification a trouvé, puis la question.\nLes réponses sont des boutons réglés au cockpit ; une réponse qui ne met pas le point en ordre comptera en rouge dans l’écran de fin.\n« Autre… » et « + commentaire » comme pour les checklists. La barre du haut dit où on en est (« n / N »).\nSi la réponse honnête est « pas encore » : choisis-la, et dis dans « Pour demain » qui le fera.",
+      "nl": "Daarna één scherm per beheerpunt dat niet in orde is: « Gestion · » en zijn naam, wat de controle vond, dan de vraag.\nDe antwoorden zijn knoppen die in de cockpit ingesteld zijn; een antwoord dat het punt niet in orde brengt, telt in het rood in het eindscherm.\n« Autre… » en « + commentaire » zoals bij de checklists. De bovenste balk zegt waar je bent (« n / N »).\nAls het eerlijke antwoord « nog niet » is: kies het, en zeg in « Pour demain » wie het zal doen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "« Pour demain »",
+      "nl": "« Pour demain »"
+     },
+     "texte": {
+      "fr": "Dernière question : « Un mot pour l’équipe de demain ? » (facultatif), une zone de texte.\n« Clôturer la journée » enregistre et clôt la revue ; « Enregistrement… » pendant l’envoi.\n« Pas enregistrée : … » en rouge : la revue n’est pas clôturée, recommence « Clôturer la journée ».\nLe mot s’affiche dans l’écran de fin, sous « Pour demain ».\nSi rien n’est à signaler : laisse vide et clôture.",
+      "nl": "Laatste vraag: « Un mot pour l’équipe de demain ? » (niet verplicht), een tekstvak.\n« Clôturer la journée » bewaart en sluit de ronde af; « Enregistrement… » tijdens het verzenden.\n« Pas enregistrée : … » in het rood: de ronde is niet afgesloten, probeer opnieuw « Clôturer la journée ».\nHet woord staat in het eindscherm, onder « Pour demain ».\nAls er niets te melden is: laat leeg en sluit af."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La fin",
+    "nl": "Het einde"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "L’écran de fin",
+      "nl": "Het eindscherm"
+     },
+     "texte": {
+      "fr": "« Journée clôturée », l’heure et qui (ou « Revue pas encore clôturée »).\nQuatre scores : tâches faites, checklists ✓, checklists ✗, gestion ✓.\nUne carte par zone, à sa couleur (Vente, Boulangerie, Traiteur, Nettoyage, Gestion) avec « faites / total » et une barre.\nDans chaque carte, chaque checklist : ✓ vert faite, ✓ pâle « Fait, pas coché », ✗ rouge avec sa raison (ou « pas de raison »).\nPuis « Gestion » en tuiles : vert = vérifié ou bonne réponse, rouge = la réponse donnée ; enfin le mot « Pour demain ».\nSi une zone a beaucoup de ✗ : c’est le premier sujet du briefing du lendemain.",
+      "nl": "« Journée clôturée », het uur en wie (of « Revue pas encore clôturée »).\nVier scores: gedane taken, checklists ✓, checklists ✗, beheer ✓.\nEén kaart per zone, in haar kleur (Vente, Boulangerie, Traiteur, Nettoyage, Gestion) met « faites / total » en een balk.\nIn elke kaart elke checklist: groen ✓ gedaan, licht ✓ « Fait, pas coché », rood ✗ met de reden (of « pas de raison »).\nDan « Gestion » in tegels: groen = gecontroleerd of goed antwoord, rood = het gegeven antwoord; tot slot het woord « Pour demain ».\nAls een zone veel ✗ heeft: dat is het eerste onderwerp van de briefing van de dag erna."
+     },
+     "critique": true,
+     "photo": "do-revue-fin.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Rouvrir la revue",
+      "nl": "De ronde heropenen"
+     },
+     "texte": {
+      "fr": "Une revue clôturée s’ouvre directement sur l’écran de fin, aussi les jours suivants.\nEn bas : « Fermer » et « Rouvrir la revue ».\n« Rouvrir la revue » revient à la première question, avec les réponses déjà données : on corrige ce qu’il faut.\nElle redevient clôturée avec « Clôturer la journée » à la fin.\nSi une raison était fausse : rouvre, corrige la réponse, clôture à nouveau.",
+      "nl": "Een afgesloten ronde opent meteen op het eindscherm, ook de volgende dagen.\nOnderaan: « Fermer » en « Rouvrir la revue ».\n« Rouvrir la revue » gaat terug naar de eerste vraag, met de al gegeven antwoorden: je verbetert wat nodig is.\nZe is weer afgesloten met « Clôturer la journée » op het einde.\nAls een reden fout was: heropen, verbeter het antwoord, sluit opnieuw af."
+     },
+     "critique": false,
+     "photo": "do-revue-rouvrir.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "« Fait, pas coché » compte la checklist comme faite : ne le choisis que si c’est vrai.",
+   "nl": "« Fait, pas coché » telt de checklist als gedaan: kies het alleen als het waar is."
+  },
+  {
+   "fr": "Un point de gestion dont la donnée n’est pas revenue n’est pas vérifié : il faut y répondre à la main.",
+   "nl": "Een beheerpunt waarvan de gegevens niet zijn teruggekomen, is niet gecontroleerd: je moet het met de hand beantwoorden."
+  },
+  {
+   "fr": "La revue n’est faite qu’une fois « Clôturer la journée » passé sans message rouge.",
+   "nl": "De ronde is pas gedaan als « Clôturer la journée » gelukt is zonder rode melding."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "À 19 h, le bouton dit « Revue du soir · à faire ». Que veut dire « à faire » ?",
+    "nl": "Om 19 u zegt de knop « Revue du soir · à faire ». Wat betekent « à faire »?"
+   },
+   "choix": {
+    "fr": [
+     "La revue d’hier n’a pas été faite",
+     "C’est aujourd’hui, l’heure de la revue est passée et rien n’est encore répondu",
+     "La revue est clôturée"
+    ],
+    "nl": [
+     "De ronde van gisteren werd niet gedaan",
+     "Het is vandaag, het uur van de ronde is voorbij en er is nog niets beantwoord",
+     "De ronde is afgesloten"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Une checklist n’est pas cochée mais tout a été fait. Quelle raison choisir ?",
+    "nl": "Een checklist is niet aangevinkt maar alles werd gedaan. Welke reden kies je?"
+   },
+   "choix": {
+    "fr": [
+     "« Fait, pas coché »",
+     "« Oublié »",
+     "Aucune, on passe"
+    ],
+    "nl": [
+     "« Fait, pas coché »",
+     "« Oublié »",
+     "Geen, je gaat verder"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Une réponse de la revue était fausse, la revue est clôturée. Que faire ?",
+    "nl": "Een antwoord in de ronde was fout, de ronde is afgesloten. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Rien, c’est trop tard",
+     "« Rouvrir la revue », corriger, puis « Clôturer la journée »",
+     "Changer le chiffre dans le dashboard"
+    ],
+    "nl": [
+     "Niets, het is te laat",
+     "« Rouvrir la revue », verbeteren, dan « Clôturer la journée »",
+     "Het cijfer in het dashboard veranderen"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Captures en lecture seule : « Commencer » et chaque réponse envoient un PUT /soir/revue. Les écrans « Gestion · vérifié automatiquement », un point de gestion et « Pour demain » n’ont pas pu être montrés sans écrire : photo null. Seule revue clôturée trouvée : Halle, 08/11/2026 (écran de fin et, après « Rouvrir la revue », le premier écran de checklist).",
+  "« Pour demain » : la revue du 08/11 porte le mot de test « s » ; pas de capture.",
+  "Les raisons des checklists, les points de gestion et leurs réponses viennent du réglage du cockpit (Checklists › Revue du soir), pas du code : le texte cite seulement des exemples vus à l’écran.",
+  "Le premier écran affiche « Bonsoir » (emoji dans l’écran lui-même)."
+ ]
+}

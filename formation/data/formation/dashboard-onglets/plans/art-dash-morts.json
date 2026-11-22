@@ -1,0 +1,7 @@
+[
+ { "nom": "do-morts-seuil", "vue": "morts", "date": "2026-11-12", "attendre": ".tm-frise", "cibles": [".db-sec"], "cadre": "haut", "mobile": false, "pause": 8000 },
+ { "nom": "do-morts-tuiles", "vue": "morts", "date": "2026-11-12", "attendre": ".tm-frise", "cibles": [".tm-tuiles"], "cadre": "haut", "mobile": false, "pause": 8000 },
+ { "nom": "do-morts-journee", "vue": "morts", "date": "2026-11-12", "attendre": ".tm-frise", "cibles": [".tm-frise"], "cadre": "centre", "mobile": false, "pause": 8000 },
+ { "nom": "do-morts-legende", "vue": "morts", "date": "2026-11-12", "attendre": ".tm-frise", "cibles": [".tm-leg"], "cadre": "bas", "mobile": false, "pause": 8000 },
+ { "nom": "do-morts-semaine", "vue": "morts", "date": "2026-11-12", "attendre": ".tm-sem", "cibles": [".tm-tuiles + .db-card + .db-card"], "cadre": "centre", "mobile": false, "pause": 8000 }
+]
