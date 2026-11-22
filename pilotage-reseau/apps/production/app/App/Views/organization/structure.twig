@@ -53,9 +53,12 @@
 .st-node .bar{height:5px;border-radius:3px;background:#efe9e3;margin-top:6px;overflow:hidden}.st-node .bar i{display:block;height:100%;background:#2e7d4f}
 .st-node .k{position:absolute;top:-9px;right:8px;font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe9e3;color:#5d554f}
 .st-node.is-sel{outline:3px solid var(--at-brand,#8D1D2C);outline-offset:2px}
-.st-node.is-over{border-color:#2e7d4f;background:#eef8f1}
+.st-node.is-over,.st-rootzone.is-over{border-color:#2e7d4f;background:#eef8f1;box-shadow:0 0 0 3px rgba(46,125,79,.25)}
 .st-node.is-drag{opacity:.4}
 .st-node.is-atelier{border-style:dashed}
+.st-node{touch-action:none} /* le doigt glisse le poste au lieu de faire défiler la page */
+.st-ghost{position:fixed;z-index:2000;pointer-events:none;opacity:.92;transform:rotate(-2deg);box-shadow:0 14px 30px rgba(40,30,20,.22);cursor:grabbing;margin:0}
+.st-node.is-drag{opacity:.35}
 /* [369] Organigram widoczny w całości : jedna kolumna, dopasowanie do szerokości (zoom), stanowiska bez podwładnych
    ułożone pionowo pod przełożonym, stanowiska na samej górze bez łączącej linii, panel stanowiska jako szuflada. */
 .st-tree>li::before,.st-tree>li::after{display:none}
