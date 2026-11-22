@@ -199,6 +199,7 @@ final class TeamTasksService
             'invoices_ksef_checked' => 'wysyłki, WDT i KSeF → wynik → zatwierdź',
             'complaints_reviewed' => 'reklamacje otwarte i tygodnia → decyzja → zakończ',
             'haccp_month_reviewed' => 'HACCP, SOP i temperatura miesiąca → decyzja → zakończ',
+            'pallets_returns_reviewed' => 'saldo palet EUR klientów → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

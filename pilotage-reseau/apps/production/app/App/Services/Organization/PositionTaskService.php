@@ -106,6 +106,7 @@ final class PositionTaskService
         '/shipments/ksef-day' => 'invoices_ksef_checked',
         '/franchise-complaints/review' => 'complaints_reviewed',
         '/production/haccp-month' => 'haccp_month_reviewed',
+        '/logistics/pallets-returns' => 'pallets_returns_reviewed',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',

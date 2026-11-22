@@ -66,6 +66,9 @@ final class TaskWizards
         // [380] HACCP miesiąca (Jakość, Kierownik produkcji, Brygadzista, Kierowca — co miesiąc) : zdarzenia HACCP, przeglądy i odchylenia SOP, temperatura w dostawach.
         // Libellé distinct du nom proposé dans la matrice (« HACCP miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
         'haccp_month_reviewed' => ['HACCP miesiąca (przegląd)', '/production/haccp-month', 'zdarzenia HACCP, SOP i temperatura miesiąca wyjaśnione', 3],
+        // [381] Palety zwrotne (Logistyka, Kierowca-dostawca — co tydzień) : saldo palet EUR klientów, brakujące i uszkodzone palety, decyzja dla klienta.
+        // Libellé distinct du nom proposé dans la matrice (« Palety zwrotne ») : les UPDATE des migrations ne prennent que celui-ci.
+        'pallets_returns_reviewed' => ['Palety zwrotne (saldo klientów)', '/logistics/pallets-returns', 'saldo palet EUR klientów przejrzane, decyzja dla każdego z sygnałem', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -115,6 +118,7 @@ final class TaskWizards
         'invoices_ksef_checked' => 'gdy każda wysyłka z problemem (bez faktury WDT, WDT bez daty faktury, faktura niewysłana do KSeF albo bez odpowiedzi KSeF od ksef_day.pending_days dni, odrzucona, błąd wysyłki) ma wynik (wysłane ponownie / poprawione — sprawdzone, w toku, bez faktury — uzasadnione) — asystent « Faktury i KSeF dnia », krok 3',
         'complaints_reviewed' => 'gdy każda reklamacja z sygnałem (bez decyzji od complaints_review.open_days dni, przyjęta bez odpowiedzi do magazynu, przyjęta i niewidziana przez grupę produktu, produkt bez grupy) ma decyzję (odpowiedź / zamknięta — sprawdzone, niezgodność NC, do obserwacji) — asystent « Reklamacje klientów », krok 3',
         'haccp_month_reviewed' => 'gdy każdy element z sygnałem poprzedniego miesiąca (i bieżącego do dziś) — nieobsłużone przerwanie łańcucha chłodniczego, zdarzenie HACCP z wynikiem negatywnym albo audyt poniżej progu, procedura SOP po terminie przeglądu, odchylenie przy wykonaniu SOP, problem z temperaturą w dostawie — ma decyzję (wyjaśnione / zamknięte, działanie korygujące, NC) — asystent « HACCP miesiąca », krok 3',
+        'pallets_returns_reviewed' => 'gdy każdy klient z sygnałem poprzedniego tygodnia — saldo palet EUR (dostarczone − zwrócone z tabletu kierowcy) powyżej pallets_returns.threshold, brakujące palety bez uzasadnienia, uszkodzona paleta — ma decyzję (przypomnienie / odbiór zaplanowany, OK — saldo uzgodnione, spisane / do faktury) — asystent « Palety zwrotne », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -300,6 +304,13 @@ final class TaskWizards
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->haccpMonthReviews(\App\Services\Organization\Wizards\HaccpMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element wyjaśniony', 'elementy wyjaśnione', 'elementów wyjaśnionych')] + $out;
+                }
+                break;
+            case 'pallets_returns_reviewed':
+                // [381] Co tydzień : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->palletReturnReviews(\App\Services\Organization\Wizards\PalletsReturnsService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klienci wyjaśnieni', 'klientów wyjaśnionych')] + $out;
                 }
                 break;
             case 'sop_daily':
