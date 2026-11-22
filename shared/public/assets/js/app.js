@@ -13020,13 +13020,29 @@ class App {
       this._cqEnCours[k] = true;
       readOne('/pwa/tasks/photos?shop=' + encodeURIComponent(shopId) + '&date=' + encodeURIComponent(date))
         .then(v => {
-          // Sans réponse, on réessaie dans une minute, pas dans quinze.
-          this._cqPhotos[k] = v ? { lu: Date.now(), val: v } : { lu: Date.now() - 14 * 60 * 1000, val: { photos: [], erreur: true } };
+          // Sans réponse, on réessaie dans une minute, pas dans quinze ; les photos déjà lues restent tant que
+          // leurs URL signées valent (20 min), au lieu de vider toutes les cartes.
+          const garde = c && c.recu && Date.now() - c.recu < 19 * 60 * 1000 && !c.val.erreur;
+          this._cqPhotos[k] = v ? { lu: Date.now(), recu: Date.now(), val: v }
+            : { lu: Date.now() - 14 * 60 * 1000, recu: garde ? c.recu : 0, val: garde ? c.val : { photos: [], erreur: true } };
           delete this._cqEnCours[k];
           this.setState({});
         });
     }
     return c ? c.val : null;
+  }
+  /* Une tâche rendue (à contrôler, notée) dont la photo n'est pas dans la lecture en mémoire : la liste des tâches
+   * est plus récente que celle des photos (22/11/2026, Halle : les quatre comptoirs de l'après-midi en « photo
+   * indisponible » sous « 9 photos rendues de 05:40 à 06:05 »). On relit les photos tout de suite, une fois par
+   * ensemble de tâches manquantes : une photo vraiment absente au panel ne relance pas la lecture à chaque rendu. */
+  ctrlPhotosRelire(shopId, date, manque){
+    const k = shopId + '|' + date;
+    this._cqManque = this._cqManque || {};
+    const c = (this._cqPhotos || {})[k];
+    if (!manque || !c || (this._cqEnCours || {})[k] || this._cqManque[k] === manque) { return; }
+    this._cqManque[k] = manque;
+    c.lu = 0;
+    this.ctrlPhotosLire(shopId, date);
   }
   /* --- Les photos types des rayons (src/rayons_photos.php) --------------------
    *
@@ -13155,6 +13171,11 @@ class App {
       .map(t => Object.assign({ e: etat(t), p: ph[String(t.taskId)] || null }, t))
       .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || nom(a).localeCompare(nom(b)));
     const nb = c => L.filter(t => t.e.c === c).length;
+    if (P && !P.erreur && !P.demo) {
+      this.ctrlPhotosRelire(s.shopId, pt.date, L.filter(t => !t.p && (t.e.c === 'ctl' || t.e.c === 'ok' || t.e.c === 'nc'))
+        .map(t => String(t.taskId)).sort().join(','));
+    }
+    const relit = !!(this._cqEnCours || {})[s.shopId + '|' + pt.date];
     const choix = (S.ctrlPuce || {})[String(s.shopId)] || 'tout';
     const puceSel = choix !== 'tout' && !nb(choix) ? 'tout' : choix;
     const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#B0792A', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#3f7a52', nb('ok')], ['ko', 'Non rendues', '#A32014', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
@@ -13196,7 +13217,7 @@ class App {
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
         constat, photo: t.p ? t.p.photo : null, reperes: rp,
         ponct: t.e.c !== 'ko' && t.e.c !== 'mu' ? this.ponctualite(t.heure, t.faitLe) : null,
-        attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
+        attente: !t.p && (!P || relit) && t.e.c !== 'ko' && t.e.c !== 'mu',
         videTxt: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible'),
         bouton: t.e.c === 'ctl' ? 'Noter…' : (t.note != null ? 'Renoter' : ''),
         envoi: !!((S.ctrlRapide || {})[s.shopId + '|' + t.taskId]),

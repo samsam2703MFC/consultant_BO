@@ -7750,7 +7750,10 @@
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
     // La boîte mail (21/11/2026, « dans la boîte mail, et uniquement là, pas les en-têtes du dashboard ») : le titre seul,
     // sans les vignettes (Relire, valeur du magasin, demande au bureau, revue du soir, API) ; la boîte a sa propre barre.
-    if (S.vue === 'boite') { return `<div class="db-nav db-nav--rail db-nav--boite">${haut}</div>`; }
+    // Puis (22/11/2026, Sam : « Dossier de formation, Relire, Valeur du magasin, Demande au bureau, Revue du soir, API :
+    // n'est visible que dans la vue opérationnelle ») : les vignettes ne restent que sur l'Opérationnel ; les autres
+    // onglets gardent leur titre et leur date, et rien du tout quand ils ont déjà leur propre titre.
+    if (S.vue !== 'ops') { return haut.trim() ? `<div class="db-nav db-nav--rail db-nav--seul${S.vue === 'boite' ? ' db-nav--boite' : ''}">${haut}</div>` : ''; }
     return `<div class="db-nav db-nav--rail">${haut.trim() ? haut + '<span style="flex:1"></span>' : ''}
       <span class="db-avs">${av('data-fcouvrir="1" title="Mon dossier de formation : les formations continues du magasin, la photo du jour, le Professeur"', ' db-av--fc', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + RAIL_ICO.formation + '"/></svg>', 'Dossier de formation', fcAFaire() ? fcAFaire() + ' à faire' : 'à jour')}${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
       <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="db-av__o">${VIGN_ICO.valeur}</span><span class="db-av__t"><span class="k">Valeur du magasin</span><span class="v">${val}</span></span></button></span>
