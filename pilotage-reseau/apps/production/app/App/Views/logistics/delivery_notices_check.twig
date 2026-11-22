@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Powiadomienia o dostawie{% endblock %}
+
+{% block content %}
+{# [382] Assistant « Powiadomienia o dostawie » : App\Services\Organization\Wizards\DeliveryNoticesCheckService — écran dans
+   assets/js/logistics/delivery-notices-check.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du jour du
+   poste Logistyka se valide seule après « Zakończ ». L'assistant n'envoie rien : l'avis se (r)envoie dans Dzień wysyłki ›
+   Powiadomienia klientów (liens par jour) ; aucun avis ni client modifié. #}
+<section class="section">
+    <div id="dnApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="dnBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/logistics/delivery-notices-check.js?v={{ asset_v() }}"></script>
+{% endblock %}

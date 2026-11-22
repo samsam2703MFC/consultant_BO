@@ -240,6 +240,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_pallet_return_review WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
     }
 
+    /** [382] Powiadomienia o dostawie : décisions enregistrées pendant le contrôle du jour (n_delivery_notice_check.checked_on). */
+    public function deliveryNoticeChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_delivery_notice_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);

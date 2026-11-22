@@ -107,6 +107,7 @@ final class PositionTaskService
         '/franchise-complaints/review' => 'complaints_reviewed',
         '/production/haccp-month' => 'haccp_month_reviewed',
         '/logistics/pallets-returns' => 'pallets_returns_reviewed',
+        '/logistics/notices-check' => 'delivery_notices_checked',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',
