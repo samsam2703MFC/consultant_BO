@@ -44,6 +44,8 @@ final class TaskWizards
         'tomorrow_sent' => ['Plan na jutro', '/production/tomorrow', 'plan jutra wysłany na tablety', 3],
         // [369] Zamówienia dnia (Kierownik operacyjny) : nouvelles et modifiées, à vérifier, validation.
         'orders_day_checked' => ['Zamówienia dnia', '/client-orders/day-check', 'zamówienia dnia sprawdzone', 3],
+        // [370] Klienci bez zamówienia (Kierownik operacyjny) : clients réguliers sans la commande attendue, résultat, validation.
+        'customers_ordered_checked' => ['Klienci bez zamówienia', '/client-orders/missing', 'stali klienci bez zamówienia wyjaśnieni', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -84,6 +86,7 @@ final class TaskWizards
         'suppliers_reviewed' => 'gdy ocena dostawców kwartału jest zatwierdzona (asystent oceny)',
         'tomorrow_sent' => 'gdy plan na jutro jest wysłany na tablety (asystent « Plan na jutro », krok 3)',
         'orders_day_checked' => 'gdy nowe i zmienione zamówienia są sprawdzone, każde do wyjaśnienia z wynikiem (asystent « Zamówienia dnia », krok 3)',
+        'customers_ordered_checked' => 'gdy każdy stały klient bez oczekiwanego zamówienia ma wynik (kontakt, zamówienie przyszło, przerwa) — asystent « Klienci bez zamówienia », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -219,6 +222,10 @@ final class TaskWizards
             case 'orders_day_checked':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->orderChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'zamówienie wyjaśnione', 'zamówienia wyjaśnione', 'zamówień wyjaśnionych')] + $out;
+                break;
+            case 'customers_ordered_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->noOrderResults($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klientów wyjaśnionych', 'klientów wyjaśnionych')] + $out;
                 break;
             case 'sop_daily':
                 $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);

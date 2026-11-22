@@ -93,6 +93,7 @@ final class PositionTaskService
         '/finances/costs' => 'services_closed',
         '/production/tomorrow' => 'tomorrow_sent',
         '/client-orders/day-check' => 'orders_day_checked',
+        '/client-orders/missing' => 'customers_ordered_checked',
         '/purchasing/nc-review' => 'nc_reviewed',
         '/purchasing/cost-review' => 'material_costs_reviewed',
         '/production/yield-review' => 'yield_reviewed',

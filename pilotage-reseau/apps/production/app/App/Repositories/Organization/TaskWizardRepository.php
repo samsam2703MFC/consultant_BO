@@ -178,6 +178,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_order_check WHERE day = ?', [$day])[0]['n'] ?? 0);
     }
 
+    /** [370] Klienci bez zamówienia : résultats enregistrés le jour donné (n_customer_no_order). */
+    public function noOrderResults(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customer_no_order WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);
