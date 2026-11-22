@@ -203,6 +203,7 @@ final class TeamTasksService
             'delivery_notices_checked' => 'klienci dnia i powiadomienia → decyzja → zakończ',
             'customer_mail_checked' => 'e-maile klientów bez odpowiedzi → decyzja → zakończ',
             'launches_reviewed' => 'nowe produkty : cele vs wynik → decyzja → zakończ',
+            'customers_data_checked' => 'braki w kartach aktywnych klientów → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

@@ -61,7 +61,9 @@ final class PageAccess
         // [369] Assistant « Zamówienia dnia », [370] « Klienci bez zamówienia », [371] « Domówienia dnia », [375] « Terminowość tygodnia (OTIF) » :
         // pages sous /client-orders, appels ajax sous le même droit.
         'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing', '/ajax/client-orders/supplements', '/ajax/client-orders/otif'], false],
-        'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
+        // [385] Asystent « Dane klientów » (Administracja) : page /clients/data-check (préfixe /clients : fiche client et cennik client,
+        // là où se font les corrections), appels ajax sous le même droit — aucun droit nouveau.
+        'clients' => ['Klienci', 'Sprzedaż', ['/clients', '/ajax/clients/data-check'], false],
         'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
         // [379] Asystent « Reklamacje klientów » (Jakość) : page /franchise-complaints/review (préfixe /franchise-complaints, la liste
         // des réclamations où l'on décide et répond), appels ajax sous le même droit.

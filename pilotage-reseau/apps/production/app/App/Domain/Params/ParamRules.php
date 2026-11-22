@@ -93,6 +93,9 @@ final class ParamRules
         'launches_review.margin_gap_pts' => [0, 50, true],
         'launches_review.volume_under_pct' => [0, 100, true],
         'launches_review.min_weeks' => [1, 26, true],
+        // [385] Dane klientów : mois sans commande au-delà desquels un client n'est plus « actif » (fenêtre des e-mails en erreur et
+        // des produits commandés sans prix)
+        'customers_data.active_months' => [1, 24, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
