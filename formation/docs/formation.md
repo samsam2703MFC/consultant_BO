@@ -1484,3 +1484,11 @@ typographie dans tous les manuels ».
     une recette, des étapes, une photo, des allergènes.
   - Un QR code ouvre le manuel.
 
+
+### Passe du 22/11/2026 (première passe ; réponse de Sam : « Toujours encoder avec screenshot »)
+
+- 0.0.61 « Le dashboard : la Boîte mail et ses modes IA » — à valider, v1.0 (14 parties, 1 photo).
+- 0.0.62 « Le dashboard : la demande au bureau » — à valider, v1.0 (12 parties, 3 photos, noms floutés).
+- 0.0.63 « Le dashboard : l'onglet Frais » — à valider, v1.0 (13 parties, 5 photos).
+- Règle de Sam : chaque article encodé porte des captures de l'écran en ligne ; le dashboard se capture en lecture
+  seule (`data/formation/nouveautes/captures_lecture_seule.js`, voir `LISEZMOI.md` › Captures).

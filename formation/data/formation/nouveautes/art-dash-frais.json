@@ -9,7 +9,7 @@
     "Classement : sous-catégorie D7.1 (Pilotage de l’activité), comme les autres articles du dashboard ; D7.3 (Obligations financières franchise) serait possible. Durée (« 20 min de lecture ») estimée, pas lue dans le code."
   ],
   "id": "art-dash-frais",
-  "code": "",
+  "code": "0.0.63",
   "type": "Article",
   "dossier": "05",
   "version": "1.0",

@@ -10,7 +10,7 @@
     "Classement : aucune sous-catégorie du référentiel ne vise la messagerie du magasin ; D7.1 (Pilotage de l'activité) est repris des autres articles du dashboard. D3.2 (Communication Digitale) ou D4.2 (Accueil & Service) seraient d'autres choix possibles."
   ],
   "id": "art-boite-mail",
-  "code": "",
+  "code": "0.0.61",
   "type": "Article",
   "dossier": "05",
   "version": "1.0",

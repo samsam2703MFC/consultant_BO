@@ -10,7 +10,7 @@
     "Classement : aucune sous-catégorie du référentiel ne vise la relation magasin-bureau ; D7.1 « Pilotage de l’activité » (celle des autres articles du dashboard) a été retenue, avec C-PILOTAGE.Franchise."
   ],
   "id": "art-demandes-bureau",
-  "code": "",
+  "code": "0.0.62",
   "type": "Article",
   "dossier": "05",
   "version": "1.0",

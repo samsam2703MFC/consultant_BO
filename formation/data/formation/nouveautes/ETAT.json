@@ -15,8 +15,15 @@
         "d1908a48 Mise en ligne : les modes IA de la boîte mail (briefing, pilote, radar)",
         "6088239b Mise en ligne : les dossiers de Corbais reconnus, la boîte sans vignettes"
       ],
-      "etat": "propose",
-      "proposeLe": "2026-11-22"
+      "etat": "encode",
+      "proposeLe": "2026-11-22",
+      "valideLe": "2026-11-22",
+      "reponse": "Toujours encoder avec screenshot",
+      "encodeLe": "2026-11-22",
+      "code": "0.0.61",
+      "version": "1.0",
+      "statut": "a_valider",
+      "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam"
     },
     {
       "n": 2,
@@ -29,8 +36,15 @@
         "a413eb0a Helpdesk : relances tant que pas en cours (21/11)",
         "44802262 Helpdesk : demande urgente, SMS au franchisé à la réponse (21/11)"
       ],
-      "etat": "propose",
-      "proposeLe": "2026-11-22"
+      "etat": "encode",
+      "proposeLe": "2026-11-22",
+      "valideLe": "2026-11-22",
+      "reponse": "Toujours encoder avec screenshot",
+      "encodeLe": "2026-11-22",
+      "code": "0.0.62",
+      "version": "1.0",
+      "statut": "a_valider",
+      "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam"
     },
     {
       "n": 3,
@@ -42,8 +56,15 @@
         "af4ddd2e Frais : le libellé saisi au panel comme poste, la TVA du formulaire appliquée (21/11)",
         "4f851e8f Frais : retirer « indiqué le … » sous le poste du tableau (21/11)"
       ],
-      "etat": "propose",
-      "proposeLe": "2026-11-22"
+      "etat": "encode",
+      "proposeLe": "2026-11-22",
+      "valideLe": "2026-11-22",
+      "reponse": "Toujours encoder avec screenshot",
+      "encodeLe": "2026-11-22",
+      "code": "0.0.63",
+      "version": "1.0",
+      "statut": "a_valider",
+      "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam"
     }
   ],
   "ecartes": [
@@ -284,5 +305,8 @@
       "change": "audit des sept outils de gestion (score sur 100, rapport et courriel), assistant en barre horizontale, onglet « Non signées » (18–19/11)",
       "le": "2026-11-22"
     }
+  ],
+  "regles": [
+    "Sam (22/11/2026) : « Toujours encoder avec screenshot » : chaque article porte des captures de l’écran en ligne (voir LISEZMOI.md › Captures)."
   ]
 }
