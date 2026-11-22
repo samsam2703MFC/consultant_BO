@@ -1484,3 +1484,45 @@ typographie dans tous les manuels ».
     une recette, des étapes, une photo, des allergènes.
   - Un QR code ouvre le manuel.
 
+
+## La formation continue (22/11/2026)
+
+Sam : « dans le module Formation, la notion de formation continue : techniques, connaissances, nouveaux produits, nouvelles
+techniques ; le consultant vérifie, adapte et valide celles de ses franchisés, chaque validation tracée ; un bouton
+abricot vers le dossier de formation du franchisé, le Professeur relié ; les Nouveautés dans « Formations et suivi » » ;
+puis « la validation passe par des tâches uniques : pendant deux semaines, une photo qualité du produit par jour ; à la
+validation, on archive dans un document de formation du franchisé ». Plan, maquettes et captures du code :
+`formation/docs/maquettes/formation-continue/` (`PLAN.md`, `code/`).
+
+- **Le type** : une formation continue est un document du Manuel (`for_sop`, type `FC`, codes `FC-001`…, partie
+  `formation`, `nature` « continue ») — étapes, photos, vidéo, quiz, FR | NL, éditeur (`#/sop/<id>/editer`), tablette,
+  PDF. Elle porte une **catégorie** (`categorie` : technique, connaissance, nouveau_produit, nouvelle_technique), un
+  **statut** réseau (`statut` : brouillon → a_valider → publiee, affiché « Validée ») et des **jours de photo**
+  (`photos_jours` : 14 pour un nouveau produit, 0 sinon, réglable). La formation initiale (les FO de pré-ouverture et
+  d'ouverture) ne change pas. Le Manuel, la tablette et le sommaire du Professeur ne montrent une FC que validée.
+- **Le siège** (`#/rfcontinue`, `continue.js`) : créer (brouillon), envoyer à la validation, valider, diffuser aux
+  boutiques (échéance ; début des photos = mise en vente).
+- **Le dossier d'une boutique** (`for_fc_dossier`) : statut en_cours → a_valider (tout est fait, automatiquement) →
+  validee (le consultant) ; l'équipe déclarée par le franchisé (`for_fc_equipe` : lu, quiz, vu faire) et la mise en
+  place ; une **photo qualité par jour** (`for_fc_photo`, fichiers privés `public/uploads/formation-continue/{shop}/`),
+  relue conforme / à refaire ; un jour manqué ou une photo refusée ajoute un jour ; le **journal** (`for_fc_trace` :
+  qui, rôle, quand, chaque geste, aussi au journal du cockpit).
+- **Le consultant** (cockpit, Franchisés › Formations continues, `formation-continue-vals.js` / `-tpl.js`) : ses
+  boutiques (cadre de visite), vérifier, adapter pour une boutique (`contenu_adapte` : le texte des étapes ; qui la
+  suit, échéance, raison), relire les photos, valider ou renvoyer. **La validation** écrit son nom et l'heure, puis
+  archive le dossier (version, équipe, photos) dans le **coffre-fort** du franchisé, onglet Formation (`cofDeposer`,
+  PDF si le serveur en fait, sinon la page HTML).
+- **Le franchisé** (dashboard, `?vue=formation`, `panel/public/dashboard/formation.js`) : le **bouton abricot**
+  « Dossier de formation » (barre du rail, en-tête sans rail, icône du téléphone), le groupe de rail « Se former » ;
+  « Formations et suivi » : les **Nouveautés** (titre, catégorie, date, lien `?fc=`), le dossier, le suivi de l'équipe,
+  la photo du jour, le lien vers le document de formation ; le **Professeur** à côté, présélectionné.
+- **Le Professeur** : outils `dossier_formation` et `formation_lire` (panel/src/assistant_ia.php) — la version de la
+  boutique (adaptations comprises), jamais celle d'une autre ; le magasin vient de la question (`$demandeur`).
+- **Le Manuel** : deux articles à encoder sur demande (`formation/data/formation/continue/` : « Un nouveau produit
+  arrive : la procédure », « Comment fonctionnent les formations », codes proposés 0.0.61 et 0.0.62).
+- **Choix faits faute de réponse** (plan § 3, modifiables) : pas de connexion imposée (comme le coffre) ; avancement
+  déclaré par le franchisé ; photos déposées au dossier — le panel n'a pas de tâche par boutique et par période
+  (swagger relu le 22/11/2026), une tâche du panel pourra prendre le relais.
+- **À savoir** : l'éditeur du Manuel exige le néerlandais pour publier une nouvelle version ; une FC créée par le
+  formulaire du siège démarre avec une étape « À rédiger » à compléter dans l'éditeur (FR et NL).
+- Tests : `php formation/bin/tests_formation_continue.php` (37 points).

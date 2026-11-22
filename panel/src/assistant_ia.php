@@ -332,7 +332,7 @@ function aiaMots(string $s): array
 /** La signature du manuel : chaque document, sa version, son statut, sa dernière modification. */
 function aiaManuelSignature(): string
 {
-    $L = Db::rows('SELECT id, version, statut, maj_le FROM for_sop ORDER BY id');
+    $L = Db::rows('SELECT id, version, statut, maj_le FROM for_sop WHERE type <> \'FC\' ORDER BY id');
     return md5(json_encode($L));
 }
 
@@ -351,7 +351,7 @@ function aiaManuelIndexer(bool $forcer = false): int
     $sig = aiaManuelSignature();
     if (!$forcer && aiaReglageBrut('manuelSignature') === $sig) { return -1; }
     $lignes = [];
-    foreach (Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop WHERE type <> \'FC\' ORDER BY dossier, ordre, id') as $r) {
         $c = aiaManuelContenu($r);
         $id = (string) $r['id']; $v = (string) $r['version']; $o = 0;
         $tete = trim(implode(' — ', array_filter([(string) $c['titre'], (string) $c['objectif'], (string) $c['pour'], (string) $c['duree']])));
@@ -393,7 +393,7 @@ function aiaManuelDocuments(): array
 {
     if (function_exists('ensureSop')) { ensureSop(); }
     $out = [];
-    foreach (Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop WHERE type <> \'FC\' ORDER BY dossier, ordre, id') as $r) {
         $out[] = ['id' => (string) $r['id'], 'code' => $r['code'] !== null ? (string) $r['code'] : null, 'type' => (string) $r['type'],
             'famille' => (string) (FO_DOSSIERS[(string) $r['dossier']]['fr'] ?? $r['dossier']), 'dossier' => (string) $r['dossier'],
             'partie' => function_exists('foPartie') ? foPartie($r) : null, 'poste' => (string) $r['poste'], 'moment' => $r['moment'],
@@ -460,6 +460,8 @@ function aiaManuelLire(string $id, int $page = 1): array
     if (function_exists('ensureSop')) { ensureSop(); }
     $r = function_exists('foSopRow') ? foSopRow($id) : null;
     if ($r === null) { return ['erreur' => 'document inconnu : prends l’id dans le sommaire ou dans manuel_chercher']; }
+    // Une formation continue (22/11/2026) se lit dans la version de la boutique : outil formation_lire.
+    if (($r['type'] ?? '') === 'FC') { return ['erreur' => 'c’est une formation continue : lis-la dans le dossier de formation du magasin (dossier_formation, puis formation_lire)']; }
     $c = aiaManuelContenu($r);
     $blocs = [];
     foreach ($c['sections'] as $sec) {
@@ -514,6 +516,37 @@ function aiaOutilsManuel(): array
     ];
 }
 
+/**
+ * Le dossier de formation du magasin (22/11/2026, formation/src/formation_continue.php) : les formations continues que
+ * la boutique a reçues, dans SA version (le consultant a pu les adapter pour elle). Le magasin vient de la question,
+ * jamais du modèle (amOutil passe `$demandeur`).
+ */
+function aiaOutilsFormation(): array
+{
+    return [
+        ['name' => 'dossier_formation',
+         'description' => 'Le dossier de formation du magasin : ses formations continues (nouveaux produits, techniques, connaissances, nouvelles techniques), '
+            . 'avec leur référence, leur catégorie, leur statut (en cours, à valider, validée), leur échéance, leur avancement, les photos qualité, et si le consultant les a adaptées. '
+            . 'À appeler pour toute question sur les formations du magasin, un nouveau produit, ce qu’il reste à faire.',
+         'input_schema' => ['type' => 'object', 'properties' => new stdClass()]],
+        ['name' => 'formation_lire',
+         'description' => 'Lit une formation continue du dossier du magasin, dans la version du magasin (adaptations du consultant comprises) : objectif, étapes, points critiques. '
+            . 'Toujours lire avant de répondre sur une formation.',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'ref' => ['type' => 'string', 'description' => 'La référence prise dans dossier_formation (« dossier-12 »).'],
+         ], 'required' => ['ref']]],
+    ];
+}
+
+/** Exécute un outil du dossier de formation pour la boutique `$shop` ; null si ce n'en est pas un. */
+function aiaOutilFormation(string $nom, array $in, int $shop): ?array
+{
+    if (!in_array($nom, ['dossier_formation', 'formation_lire'], true)) { return null; }
+    if (!function_exists('fcProfesseurDossier')) { return ['erreur' => 'le dossier de formation n’est pas joignable pour le moment']; }
+    if ($nom === 'dossier_formation') { $l = fcProfesseurDossier($shop); return ['formations' => $l, 'nombre' => count($l)]; }
+    return fcProfesseurLire($shop, (string) ($in['ref'] ?? '')) ?? ['erreur' => 'formation inconnue dans le dossier de ce magasin : prends la référence dans dossier_formation'];
+}
+
 /** Exécute un outil du manuel ; null si ce n'en est pas un. */
 function aiaOutil(string $nom, array $in): ?array
 {
@@ -551,6 +584,7 @@ Le sommaire du manuel est joint (chaque document : son id, son code, son type, s
 - Respecte le document : les étapes dans l'ordre, les points critiques tels quels, les chiffres (températures, durées, doses, poids, fréquences) recopiés exactement, avec leur unité.
 - Un document « brouillon » n'est pas encore relu par le réseau, un document « à valider » attend sa validation : dis-le en une phrase si tu t'appuies dessus.
 - Une question sur les chiffres du magasin (ventes, clients, produits) se règle avec les outils des ventes, comme le font les coachs ; le reste du temps, tu n'en as pas besoin.
+- Le dossier de formation du magasin (ses formations continues : nouveaux produits, techniques, connaissances, nouvelles techniques) se lit avec dossier_formation et formation_lire, dans la version du magasin : si le consultant a adapté une formation pour lui, c'est cette version qui compte, et tu dis en une phrase qu'elle est adaptée et par qui. Une question sur une formation, un nouveau produit ou ce qu'il reste à faire part de là ; le manuel complète.
 
 Les contrôles qualité en photo du magasin sont joints après le sommaire (`controlesPhotos`, sept derniers jours) : chaque photo de contrôle notée par le consultant au barème du réseau, conforme à partir du seuil indiqué, et chaque non-conformité avec ce que le consultant a relevé. Tu les reprends comme les coachs, et tu fais ce qu'eux ne font pas : expliquer pourquoi tout cela compte, manuel à l'appui (Sam, 18/11/2026). Règles :
 - Dès que la question touche un contrôle, une photo, la vitrine, le comptoir, un rayon, l'hygiène, l'ouverture ou la fermeture, dis en une phrase où en sont les photos de contrôle du magasin sur ce sujet. À une question sur les contrôles eux-mêmes, fais le point : ce qui est conforme, ce qui ne l'est pas, ce qui n'a pas été rendu.

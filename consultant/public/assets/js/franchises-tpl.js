@@ -24,7 +24,7 @@ export function tplFF(c, x){
   // Documents (22/10/2026) : déposer en tête, puis les documents du magasin par sorte.
   if (f.onglet === 'docs') {
     const D = f.docs || {};
-    const tete = `<div class="gc-titre"><h1>${esc(f.shopNom)}</h1><span class="ss">Documents · rapports de réunion, contrats de mise à disposition et autres pièces du magasin</span></div>`;
+    const tete = `<div class="gc-titre"><h1>${esc(f.shopNom)}</h1><span class="ss">Documents · le DIP, le contrat, les pièces légales, la formation, les réunions… ; ceux cochés « dans le coffre » se lisent dans le coffre-fort du dashboard du franchisé</span></div>`;
     if (D.erreur) { return page(tete + attente(D.erreur)); }
     if (D.chargement || !D.sortes) { return page(tete + attente('Lecture des documents…')); }
     const fm = D.form;
@@ -35,12 +35,39 @@ export function tplFF(c, x){
         ${champ('Titre', `<input class="mko-inp" value="${esc(fm.titre)}" placeholder="ex. Réunion du 21/10 — plan d’action" ${x.C(D.setTitre)}>`)}
         ${champ('Date du document', `<input class="mko-inp" type="date" value="${esc(fm.date)}" ${x.C(D.setDate)}>`)}
         ${champ('Note', `<input class="mko-inp" value="${esc(fm.note)}" placeholder="facultatif" ${x.C(D.setNote)}>`)}
+        ${champ('Échéance (facultatif)', `<input class="mko-inp" type="date" value="${esc(fm.echeance)}" ${x.C(D.setEcheance)}>`)}
+        <label class="ffd-c ffd-coffre"><span class="mko-lab">Coffre-fort du franchisé</span><span class="ffd-case"><input type="checkbox"${fm.coffre ? ' checked' : ''} ${x.C(D.setCoffre)}> le franchisé le lit dans son coffre</span></label>
       </div>
       <div class="ffd-bas"><label class="sq-drop ffd-drop"><b>${D.choisis.length ? esc(D.choisis.length > 1 ? D.choisis.length + ' fichiers choisis' : D.choisis[0]) : 'Choisir le ou les fichiers'}</b>${D.choisis.length > 1 ? esc(D.choisis.join(' · ')) : 'PDF, Word, Excel, photos… · ' + esc(D.max) + ' au plus par fichier'}<input type="file" multiple accept="${esc(D.accept)}" ${x.C(D.setFichiers)} style="display:none"></label>
         <button ${x.A(D.deposer)} class="cx-btn prim ffd-ok" ${D.peutDeposer ? '' : 'disabled'}>${D.envoi ? 'Envoi…' : 'Déposer'}</button></div>
       ${D.msg ? `<div class="ffd-msg ${D.msg.ko ? 'ko' : 'ok'}">${esc(D.msg.txt)}</div>` : ''}
     </div></div>`;
-    // Le mail « matériel mis à disposition » : relu dans l'aperçu, envoyé au franchisé, la copie rangée ici.
+    // Les grandes dates du coffre (22/11/2026) : la frise à gauche, l'assistant à droite (après un dépôt, ou sur un document choisi).
+    const G = D.gd || {}, A = G.as;
+    const gdL = l => `<div class="ffg-l ${l.cls}"><span class="ffg-d"><b>${esc(l.jour)}</b><small>${esc(l.mois)} ${esc(l.an)}</small></span><span class="ffg-c"><b>${esc(l.titre)}</b><small>${esc(l.sous)}${l.par ? ' · ' + esc(l.par) : ''}</small>${l.note ? `<i>${esc(l.note)}</i>` : ''}</span><span class="ffg-j">${esc(l.quand)}</span>${l.retirer ? `<button ${x.A(l.retirer)} class="ffg-x" title="Retirer">×</button>` : '<span class="ffg-x"></span>'}</div>`;
+    const gdFrise = G.erreur ? `<div class="mko-mu">${esc(G.erreur)}</div>` : G.chargement ? '<div class="mko-mu">Lecture des grandes dates…</div>'
+      : !G.venir.length && !G.passees.length ? '<div class="mko-mu" style="padding:8px 0">Pas encore de grande date : déposez le bail ou une police d’assurance, l’assistant relève leurs dates.</div>'
+      : (G.prochaine ? `<div class="ffg-p ${G.prochaine.cls}"><span>Prochaine</span><b>${esc(G.prochaine.titre)}</b><em>${esc(G.prochaine.jour)} ${esc(G.prochaine.mois)} ${esc(G.prochaine.an)} · ${esc(G.prochaine.quand)}</em></div>` : '')
+        + G.venir.map(gdL).join('') + (G.passees.length ? `<button ${x.A(G.basculerPassees)} class="ffg-pas">${G.voirPassees ? '▾' : '▸'} ${G.passees.length} date${G.passees.length > 1 ? 's' : ''} passée${G.passees.length > 1 ? 's' : ''}</button>${G.voirPassees ? G.passees.map(gdL).join('') : ''}` : '');
+    const asP = p => `<label class="ffg-ap${p.deja ? ' deja' : ''}"><input type="checkbox"${p.coche ? ' checked' : ''} ${x.C(p.basculer)}><span class="ffg-at"><b>${esc(p.titre)}</b>${p.urgence ? `<em>${esc(p.urgence)}</em>` : ''}<small>${esc(p.sous)}</small>${p.extrait ? `<i>« ${esc(p.extrait)} »</i>` : ''}</span><input class="mko-inp ffg-le" type="date" value="${esc(p.le)}" ${x.C(p.setLe)}></label>`;
+    const gdAs = !A ? `<div class="ffg-as"><div class="ffg-ash"><span>✦</span><b>Assistant des grandes dates</b></div><div class="ffg-asc"><p class="mko-mu" style="margin:0 0 10px">Il lit le document déposé — bail, police d’assurance, autorisation, contrat — et propose ses grandes dates. Rien n’est rangé sans votre accord.</p>
+        ${G.lisibles && G.lisibles.length ? `<select class="mko-sel" style="width:100%" ${x.C(G.lire)}><option value="">Lire un document déjà déposé…</option>${G.lisibles.map(o => `<option value="${esc(o.v)}">${esc(o.nom)}</option>`).join('')}</select>` : ''}</div></div>`
+      : `<div class="ffg-as"><div class="ffg-ash"><span>✦</span><b>Assistant des grandes dates</b></div><div class="ffg-asc">
+        ${A.etat === 'lecture' ? `<div class="ffg-lit"><span class="ffg-pt"><i></i><i></i><i></i></span>Je lis « ${esc(A.nom)} »…</div><p class="mko-mu" style="margin:6px 0 0">Quelques secondes, parfois une minute pour un long bail.</p>`
+        : A.etat === 'erreur' ? `<div class="ffd-msg ko" style="margin-top:0">${esc(A.err)}</div><div class="ffd-bas"><button ${x.A(A.relancer)} class="mko-pied-btn">Réessayer</button><button ${x.A(A.fermer)} class="mko-pied-btn">Fermer</button></div>`
+        : `<div class="mko-lab">${esc(A.genre)} · ${esc(A.nom)}</div>${A.resume ? `<p class="ffg-res">${esc(A.resume)}</p>` : ''}
+          ${A.titreDoc ? `<label class="ffg-o"><input type="checkbox"${A.titreDoc.on ? ' checked' : ''} ${x.C(A.titreDoc.basculer)}><span>Renommer le document<small>« ${esc(A.titreDoc.de)} » → « ${esc(A.titreDoc.vers)} »</small></span></label>` : ''}
+          ${A.echeanceDoc ? `<label class="ffg-o"><input type="checkbox"${A.echeanceDoc.on ? ' checked' : ''} ${x.C(A.echeanceDoc.basculer)}><span>Échéance du document : ${esc(A.echeanceDoc.le)}<small>${A.echeanceDoc.avant ? 'au lieu du ' + esc(A.echeanceDoc.avant) : 'il passera « à renouveler » 60 jours avant'}</small></span></label>` : ''}
+          ${A.extraitBail ? `<div class="ffg-ex"><span>Lu dans le bail</span>« ${esc(A.extraitBail)} »</div>` : ''}
+          <div class="mko-lab" style="margin-top:8px">Dates proposées · ${A.n} / ${A.total} cochées</div>
+          ${A.venir.map(asP).join('')}${A.passees.length ? `<button ${x.A(A.basculerPassees)} class="ffg-pas">${A.voirPassees ? '▾' : '▸'} ${A.passees.length} date${A.passees.length > 1 ? 's' : ''} déjà passée${A.passees.length > 1 ? 's' : ''}, non cochée${A.passees.length > 1 ? 's' : ''}</button>${A.voirPassees ? A.passees.map(asP).join('') : ''}` : ''}
+          ${!A.total ? '<p class="mko-mu">Aucune date à relever dans ce document.</p>' : ''}
+          ${A.remarques ? `<div class="ffg-rq">${esc(A.remarques)}</div>` : ''}
+          <div class="ffd-bas"><button ${x.A(A.ranger)} class="cx-btn prim" ${A.envoi ? 'disabled' : ''}>${A.envoi ? 'Rangement…' : A.n ? 'Ranger ' + A.n + ' date' + (A.n > 1 ? 's' : '') : 'Valider'}</button><button ${x.A(A.fermer)} class="mko-pied-btn">Ignorer</button></div>
+          <p class="mko-mu" style="margin:10px 0 0;font-size:11.5px">Les dates du bail sont calculées selon la règle générale des baux commerciaux (triennats, congé de 6 mois, renouvellement du 18e au 15e mois avant la fin) : à vérifier dans le bail.</p>`}
+      </div></div>`;
+    const gd = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps"><h2 class="ff-h2">Grandes dates du coffre <span class="mko-mu" style="font-size:12px;font-weight:400;letter-spacing:0;text-transform:none">triennats du bail, préavis, renouvellements, échéances — le franchisé les voit dans son coffre</span></h2>
+      <div class="ffg-lay"><div class="ffg-frise">${gdFrise}</div>${gdAs}</div></div></div>`;
     const M = D.mat;
     const msgM = M.msg ? `<div class="ffd-msg ${M.msg.ko ? 'ko' : 'ok'}">${esc(M.msg.txt)}</div>` : '';
     const mail = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps"><h2 class="ff-h2">Courriers au franchisé</h2>
@@ -57,12 +84,13 @@ export function tplFF(c, x){
         <div class="ffd-mail-v">${M.apErreur ? `<div class="ffd-msg ko">${esc(M.apErreur)}</div>` : (!M.html ? `<div class="mko-mu" style="padding:20px">Préparation de l’aperçu…</div>` : `<iframe class="ffd-ap${M.apChargement ? ' maj' : ''}" sandbox="" srcdoc="${esc(M.html)}" title="Aperçu du mail"></iframe>`)}</div></div>`}
     </div></div>`;
     const liste = D.groupes.length ? D.groupes.map(g => `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">${esc(g.nom)}</span><span class="mko-mini">${g.docs.length}</span></div>
-      <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th></th></tr></thead><tbody>
-      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}</td>
-        <td class="ffd-act"><a class="mko-pied-btn" href="${esc(d.ouvrir)}" target="_blank" rel="noopener">Ouvrir ↗</a><a class="mko-pied-btn" href="${esc(d.telecharger)}">Télécharger</a><button ${x.A(d.retirer)} class="mko-pied-btn">Retirer</button></td></tr>`).join('')}
+      <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th>Coffre</th><th></th></tr></thead><tbody>
+      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}${d.echeance ? `<small>échéance ${esc(d.echeance)}</small>` : ''}</td>
+        <td><button ${x.A(d.basculer)} class="ffd-cf${d.coffre ? ' on' : ''}" title="${d.coffre ? 'Retirer du coffre du franchisé' : 'Mettre dans le coffre du franchisé'}">${d.coffre ? '🔒 dans le coffre' : 'hors du coffre'}</button>${d.ouvert ? `<small>${esc(d.ouvert)}</small>` : ''}</td>
+        <td class="ffd-act">${d.dates ? `<button ${x.A(d.dates)} class="mko-pied-btn ffg-btn" title="L’assistant lit le document et propose ses grandes dates">✦ Dates</button>` : ''}<a class="mko-pied-btn" href="${esc(d.ouvrir)}" target="_blank" rel="noopener">Ouvrir ↗</a><a class="mko-pied-btn" href="${esc(d.telecharger)}">Télécharger</a><button ${x.A(d.retirer)} class="mko-pied-btn">Retirer</button></td></tr>`).join('')}
       </tbody></table></div></div>`).join('')
       : attente('Aucun document pour ' + f.shopNom + ' : déposez le premier rapport de réunion ou contrat ci-dessus.');
-    return page(tete + depot + mail + liste);
+    return page(tete + depot + gd + mail + liste);
   }
   if (f.onglet === 'reseau') {
     if (c.sqIndispo && !f.reseau) { return page(attente(c.sqIndispo)); }
