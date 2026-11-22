@@ -48,6 +48,8 @@ const ACCES_FRANCHISE = ['/exploitation', '/ventes', '/fidelite', '/analyse', '/
     '/helpdesk/magasin',
     // Le coffre-fort (22/11/2026) : les documents de SA boutique ; le dépôt (multipart) revérifie le magasin (cofShopOk).
     '/coffre/magasin',
+    // La recherche de la formation (22/11/2026) : l’index du catalogue, en lecture, pour « Formations et suivi ».
+    '/formation/recherche',
     // La formation continue (22/11/2026) : SON dossier de formation (« Formations et suivi ») ; la photo (multipart) revérifie
     // le magasin (fcShopOk).
     '/formation/continue/magasin'];

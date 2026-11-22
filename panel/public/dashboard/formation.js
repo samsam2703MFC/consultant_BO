@@ -11,6 +11,10 @@
  *   Routes (formation/src/formation_continue.php) : GET …/formation/continue/magasin, …/magasin/formation,
  *   POST …/magasin/avancement, …/magasin/mise-en-place, …/magasin/photo, GET …/magasin/photo.
  *
+ * v2 (22/11/2026, Sam : « tomber sur l'accueil de la formation, sans le rail, avec une méga search bar ») : la page
+ * s'ouvre sur l'ACCUEIL — la méga-barre et l'accueil du module Formation (seformer.js, window.DashSeFormer) — le dossier
+ * de formation (ci-dessus) reste à un clic, en haut à droite, avec ses quatre nombres.
+ *
  * `window.DashFormation.racine(shop, {apiBase, aller, professeur, fc})` rend l'élément du module, gardé d'un rendu à
  * l'autre ; `professeur(question)` ouvre l'assistant sur le Professeur (dashboard.js) ; `fc` : un dossier à ouvrir.
  */
@@ -23,7 +27,7 @@
   const ST = { en_cours: 'brou', a_valider: 'aval', validee: 'val' };
   const PH = { conforme: ['ok', 'conforme'], a_refaire: ['ko', 'à refaire'], en_attente: ['att', 'envoyée, pas encore relue'], manquante: ['manq', 'pas de photo'], a_faire: ['faire', 'à faire aujourd’hui'], a_venir: ['venir', 'à venir'] };
 
-  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, prof: null, d: null, err: null, fc: null, f: null, fErr: null, occupe: false, flash: null, personne: '', q: '' };
+  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, prof: null, d: null, err: null, fc: null, f: null, fErr: null, occupe: false, flash: null, personne: '', q: '', vue: 'accueil' };
 
   /* --- lectures et écritures ------------------------------------------------------------------------------------ */
   const json = r => r.json().catch(() => ({})).then(j => (r.ok ? j : Promise.reject(new Error((j && j.error) || ('HTTP ' + r.status)))));
@@ -74,6 +78,21 @@
   }
   let questions = [];
 
+  /* --- l'accueil (v2) : le dossier en quatre nombres, le Professeur, puis la méga-barre et l'accueil du module -------- */
+  function accueil() {
+    const R = (st.d && st.d.reperes) || {}, nv = ((st.d && st.d.nouveautes) || []).filter(n => n.nouveau).length;
+    const k = (v, l, c) => `<span class="k${c ? ' ' + c : ''}"><b>${st.d ? v || 0 : '…'}</b><small>${l}</small></span>`;
+    return `<div class="fs-acc-h"><button type="button" class="fs-mini" data-fs-vue="dossier"><span class="t">🎓 <b>Mon dossier de formation</b>${nv ? `<em class="fs-nv">${nv} nouveau${nv > 1 ? 'x' : ''}</em>` : ''}</span>
+        ${k(R.enRetard, 'en retard', R.enRetard ? 'ac' : '')}${k(R.enCours, 'en cours')}${k(R.aValider, 'à valider')}${k(R.validees, 'validée' + ((R.validees || 0) > 1 ? 's' : ''))}<span class="o">Ouvrir ›</span></button>
+        ${st.prof ? '<button type="button" class="db-btn fs-abr fs-prof-b" data-fs-prof="q">🎩 Demander au Professeur</button>' : ''}</div><div class="fs-sf"></div>`;
+  }
+  /** Une formation continue trouvée par la méga-barre : celle du dossier du magasin, s'il l'a (sinon le lecteur l'ouvre). */
+  function formationContinue(code) {
+    const x = ((st.d && st.d.dossiers) || []).find(d => d.code === code);
+    if (!x) { return false; }
+    st.vue = 'dossier'; ouvrir(x.id); return true;
+  }
+
   /* --- la page : Nouveautés, dossier, équipe ---------------------------------------------------------------------- */
   function page() {
     const D = st.d, R = D.reperes || {}, L = D.dossiers || [];
@@ -102,7 +121,7 @@
     if (enCours[0]) { questions.push(['Résume-moi la formation « ' + enCours[0].titre + ' »', enCours[0].categorieLib]); }
     if (prod) { questions.push(['Quels allergènes et quels points critiques pour « ' + prod.titre + ' » ?', 'Nouveau produit']); }
     if (enCours[1] || enCours[0]) { const x = enCours[1] || enCours[0]; questions.push(['Prépare 3 questions pour vérifier l’équipe sur « ' + x.titre + ' »', x.categorieLib]); }
-    return `${nouv}<div class="fs-lay"><div>${kpis}${dossier}${equipe}${coffre}</div>${professeur(questions)}</div>`;
+    return `<div class="fs-retour"><button type="button" class="db-btn" data-fs-vue="accueil">← Accueil de la formation</button><span>Mon dossier de formation : la formation continue de votre magasin</span></div>${nouv}<div class="fs-lay"><div>${kpis}${dossier}${equipe}${coffre}</div>${professeur(questions)}</div>`;
   }
 
   /* --- une formation : sa version, ce qu'il reste à faire --------------------------------------------------------- */
@@ -146,10 +165,15 @@
     const garde = foc && (foc.dataset.fsQ || foc.dataset.fsPersonne) ? [foc.dataset.fsQ ? 'fs-q' : 'fs-personne', foc.selectionStart] : null;
     let h = st.flash ? `<div class="fs-flash ${st.flash.ok ? 'ok' : 'ko'}">${esc(st.flash.texte)}</div>` : '';
     if (st.fc) { h += fiche(); }
+    else if (st.vue === 'accueil') { h += accueil(); }
     else if (st.err && !st.d) { h += `<div class="db-err">Le dossier de formation ne se lit pas : ${esc(st.err)}</div>`; }
     else if (!st.d) { h += '<div class="db-attente">Ouverture du dossier de formation…</div>'; }
     else { h += page(); }
     st.el.innerHTML = h;
+    // La méga-barre et l'accueil du module : un élément gardé d'un rendu à l'autre (la recherche en cours ne se perd pas).
+    const sf = st.el.querySelector('.fs-sf');
+    if (sf) { sf.appendChild(window.DashSeFormer ? window.DashSeFormer.racine(st.shop, { apiBase: st.api, professeur: st.prof ? q => st.prof(q, 'libre') : null, formationContinue })
+      : Object.assign(document.createElement('div'), { className: 'db-err', textContent: 'Le module de recherche de la formation n’a pas été chargé.' })); }
     brancher();
     if (garde) { const i = st.el.querySelector(garde[0] === 'fs-q' ? '[data-fs-q]' : '[data-fs-personne]'); if (i) { i.focus(); try { i.setSelectionRange(garde[1], garde[1]); } catch (e) { /* sans curseur */ } } }
   }
@@ -157,6 +181,7 @@
     const E = st.el, on = (sel, ev, fn) => E.querySelectorAll(sel).forEach(n => n.addEventListener(ev, fn));
     on('[data-fs-ouvrir]', 'click', e => ouvrir(+e.currentTarget.dataset.fsOuvrir));
     on('[data-fs-fermer]', 'click', fermer);
+    on('[data-fs-vue]', 'click', e => { st.vue = e.currentTarget.dataset.fsVue; st.flash = null; rendre(); window.scrollTo(0, 0); });
     on('[data-fs-coffre]', 'click', () => { if (st.aller) { st.aller('coffre'); } });
     on('[data-fs-q]', 'input', e => { st.q = e.currentTarget.value; });
     on('[data-fs-q]', 'keydown', e => { if (e.key === 'Enter' && st.q.trim() && st.prof) { st.prof(st.q.trim(), 'libre'); st.q = ''; } });
@@ -181,7 +206,7 @@
         Object.assign(st, { d: null, err: null, fc: null, f: null, flash: null });
         rendre(); charger();
       }
-      if (o.fc && +o.fc !== st.fc) { ouvrir(+o.fc); }
+      if (o.fc && +o.fc !== st.fc) { st.vue = 'dossier'; ouvrir(+o.fc); }
       return st.el;
     },
     relire() { if (!st.el) { return; } charger(); if (st.fc) { ouvrir(st.fc); } },

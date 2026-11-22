@@ -468,7 +468,7 @@
     const nb = (n, un, plus) => n == null ? '' : n + ' ' + (n > 1 ? plus : un);
     const nT = t => L ? L.filter(x => x.type === t).length : null;
     const COLS = [
-      { k: 'fo', nom: 'Formations', mot: 'Apprendre', coul: '#8D1D2C', n: nb(R ? (R.formations || []).length : null, 'formation', 'formations'), lien: '#/rfformations',
+      { k: 'fo', nom: 'Formations', mot: 'Apprendre', coul: '#8D1D2C', fd: '#FFFFFF', en: '#8D1D2C', ct: true, n: nb(R ? (R.formations || []).length : null, 'formation', 'formations'), lien: '#/rfformations',
         quoi: 'Un parcours pour acquérir les compétences d’un poste.',
         qui: 'Chaque poste, de l’opérateur au franchisé : chaque formation dit pour quel poste elle est obligatoire ou recommandée.',
         quand: 'À une phase : avant l’ouverture, pendant les 6 semaines de lancement, puis en formation continue (recyclages).',
@@ -477,7 +477,7 @@
         pourquoi: 'Pour que chacun sache faire son métier selon les standards du réseau.',
         valide: 'Quand ses compétences sont acquises, elles sont cochées au panel pour la personne.',
         code: 'FO-01, FO-02…', ex: ['FO-01 · Vendeur (initiale + recyclage)', 'href="#/rfformations/pre/FO-01"'] },
-      { k: 'man', nom: 'Manuel opératoire', mot: 'Comprendre', coul: '#B0792A', n: nb(nT('Article'), 'article', 'articles'), lien: '#/rfclasseur',
+      { k: 'man', nom: 'Manuel opératoire', mot: 'Comprendre', coul: '#8D1D2C', fd: '#8D1D2C', en: '#F5EFE4', n: nb(nT('Article'), 'article', 'articles'), lien: '#/rfclasseur',
         quoi: 'Les articles qui expliquent le pourquoi : la marque, les règles du réseau, les outils, les chiffres.',
         qui: 'Toute l’équipe ; certains articles sont réservés au franchisé et au responsable (cadenas or, PIN).',
         quand: 'Avant la première journée, puis à relire quand une règle change (nouvelle version).',
@@ -486,7 +486,7 @@
         pourquoi: 'Pour comprendre avant d’agir : on applique mieux une règle dont on connaît la raison.',
         valide: '« n sur N parties lues » ; le quiz, s’il y en a un.',
         code: '0.0.01, 0.0.02… (0 : le manuel, .0 : sans moment)', ex: ['0.0.14 · Les checklists du magasin : la structure', 'data-tbx="art-chk-01" data-tbx-titre="Les checklists du magasin : la structure"'] },
-      { k: 'sop', nom: 'SOP', mot: 'Faire', coul: '#3f7a52', n: nb(nT('SOP'), 'SOP', 'SOP'), lien: '#/operationnel/ouverture',
+      { k: 'sop', nom: 'SOP', mot: 'Faire', coul: '#222222', fd: '#222222', en: '#F5EFE4', n: nb(nT('SOP'), 'SOP', 'SOP'), lien: '#/operationnel/ouverture',
         quoi: 'Le geste exact, étape par étape : comment on fait, ici, chez L’Atelier By.',
         qui: 'La personne du poste concerné (vente, cuisson, production, nettoyage).',
         quand: 'Au moment du geste : à l’ouverture (0.1), en journée (0.2), l’après-midi (0.3), à la fermeture (0.4).',
@@ -495,7 +495,7 @@
         pourquoi: 'Pour que le geste soit le même dans chaque magasin, quel que soit celui qui le fait.',
         valide: 'Le responsable l’a « vu faire » et valide avec son PIN ; toutes les SOP d’une compétence vues → compétence cochée au panel.',
         code: '0.1.01 (0 : SOP · 1 : ouverture · 01 : numéro)', ex: ['0.1.01 · Ouverture du magasin et des comptoirs', 'data-tbx="ouv-mag" data-tbx-titre="Ouverture du magasin et des comptoirs"'] },
-      { k: 'chk', nom: 'Checklists', mot: 'Vérifier', coul: '#1f5f8b', n: '', lien: '../task/?vue=checklists',
+      { k: 'chk', nom: 'Checklists', mot: 'Vérifier', coul: '#78554B', fd: '#78554B', en: '#F5EFE4', n: '', lien: '../task/?vue=checklists',
         quoi: 'La liste des tâches à cocher chaque jour, à heure fixe.',
         qui: 'L’équipe du magasin, selon son poste (« Fait par ») ; le contrôleur note les photos.',
         quand: 'Chaque jour, ou chaque semaine, ou chaque mois, à l’heure de la checklist.',
@@ -505,12 +505,15 @@
         valide: 'Les photos sont notées de 1 à 5 ; sous 4, c’est une non-conformité à corriger.',
         code: '1.1.01 (1 : qui, de 1 Vente à 5 Gestion · 1 : quand · 01 : numéro)', ex: ['1.1.01 · Ouverture de la boutique', 'href="#/sop/chk-ac-01"'] },
     ];
-    const ic = x => `<span class="ac-ic" style="--c:${x.coul}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${AC_ICO[x.k]}"/></svg></span>`;
-    const tete = COLS.map(x => `<th style="--c:${x.coul}">${ic(x)}<span class="ac-mot">${esc(x.mot)}</span><a class="ac-nom" href="${x.lien}"${x.k === 'chk' ? ' target="_blank" rel="noopener"' : ''}>${esc(x.nom)}</a><small>${esc(x.n)}</small></th>`).join('');
+    // Les couleurs des couvertures du catalogue des manuels (22/11/2026, Sam : « gardons les codes couleur des catalogues ») :
+    // le manuel opératoire en Ruby, les standards en Noir, les checklists en brun ; les formations, hors catalogue, en contour Ruby.
+    const ic = x => `<span class="ac-ic${x.ct ? ' ct' : ''}" style="--c:${x.coul};--fd:${x.fd};--en:${x.en}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${AC_ICO[x.k]}"/></svg></span>`;
+    const tete = COLS.map(x => `<th${x.ct ? ' class="ct"' : ''} style="--c:${x.coul}">${ic(x)}<span class="ac-mot">${esc(x.mot)}</span><a class="ac-nom" href="${x.lien}"${x.k === 'chk' ? ' target="_blank" rel="noopener"' : ''}>${esc(x.nom)}</a><small>${esc(x.n)}</small></th>`).join('');
     const lignes = AC_LIGNES.map(([k, l]) => `<tr class="ac-${k}"><th scope="row">${esc(l)}</th>${COLS.map(x => k === 'ex'
       ? `<td><a class="ac-ex" ${x.ex[1]}>${esc(x.ex[0])}</a></td>` : `<td>${esc(x[k])}</td>`).join('')}</tr>`).join('');
-    const h = `<div class="ac-phrase">En une phrase : la <b style="color:#8D1D2C">formation</b> apprend le métier, le <b style="color:#B0792A">manuel</b> explique pourquoi,
-      la <b style="color:#3f7a52">SOP</b> montre comment faire, la <b style="color:#1f5f8b">checklist</b> vérifie chaque jour que c’est fait.</div>
+    const tg = (x, t) => `<span class="ac-tg${x.ct ? ' ct' : ''}" style="--fd:${x.fd};--en:${x.en}">${t}</span>`;
+    const h = `<div class="ac-phrase">En une phrase : la ${tg(COLS[0], 'formation')} apprend le métier, le ${tg(COLS[1], 'manuel')} explique pourquoi,
+      la ${tg(COLS[2], 'SOP')} montre comment faire, la ${tg(COLS[3], 'checklist')} vérifie chaque jour que c’est fait.</div>
       <div class="card ac-tab"><table><colgroup><col class="ac-c0"><col><col><col><col></colgroup><thead><tr><th></th>${tete}</tr></thead><tbody>${lignes}</tbody></table></div>`;
     return { titre: 'Bienvenue', kicker: 'Formation, manuel, SOP, checklist : la différence, noir sur blanc', corps: h, large: true };
   }
