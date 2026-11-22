@@ -34,7 +34,7 @@ declare(strict_types=1);
  *                                   effacer|deplacer, vers | nouveau}   (les archives, la corbeille créées si la boîte n'en a pas)
  *   POST /dashboard/boite/ranger   {shop, dossier, uids}       l'IA propose un dossier pour chaque e-mail (rien ne bouge)
  *   GET  /dashboard/boite/lectures, POST …/lire, GET|POST …/pilote    les modes IA (src/boite_ia.php : briefing, pilote, radar)
- *   POST /dashboard/boite/envoyer  {shop, a, cc, objet, texte, reponse?, transfert?, offre?, pieces?}
+ *   POST /dashboard/boite/envoyer  {shop, a, cc, objet, texte, reponse?, transfert?, offre?, pieces?, coffre?}
  *   GET  /dashboard/boite/modeles?shop=        POST {shop, action: creer|modifier|supprimer, id, nom, objet, corps}
  *   GET  /dashboard/boite/automatiques?shop=   POST {shop, regle, actif, objet, corps, jours}
  *   GET  /dashboard/boite/cron?jeton=          l'horloge des messages automatiques (bin/boite_cron.sh, toutes les 10 min)
@@ -631,7 +631,8 @@ function bmApercus(BmImap $s, array $uids, int $longueur = 300): array
 /**
  * Envoie depuis l'adresse du magasin, par son serveur, et en range une copie dans « Envoyés ». $opts : reponse
  * [dossier, uid] (In-Reply-To, et l'e-mail marqué « répondu ») ; transfert [dossier, uid] (l'e-mail joint en .eml) ;
- * offre (l'id : son PDF de TF Buddy joint) ; pieces [{nom, type, contenu}]. Rend [ok, avertissement|null].
+ * offre (l'id : son PDF de TF Buddy joint) ; pieces [{nom, type, contenu}] ; coffre [ids] (des documents du coffre-fort
+ * du magasin, 22/11/2026). Rend [ok, avertissement|null].
  */
 function bmEnvoyer(string $shop, array $c, array $a, array $cc, string $objet, string $texte, array $opts = []): array
 {
@@ -657,6 +658,9 @@ function bmEnvoyer(string $shop, array $c, array $a, array $cc, string $objet, s
         if ($r['code'] !== 200 || !str_starts_with((string) $r['corps'], '%PDF')) { throw new RuntimeException('TF Buddy ne rend pas le PDF de l’offre n° ' . (int) $opts['offre'] . ' (il faut un client et au moins un produit)'); }
         $pieces[] = ['nom' => 'Offre n° ' . (int) $opts['offre'] . '.pdf', 'type' => 'application/pdf', 'contenu' => (string) $r['corps']];
     }
+    // Les documents du coffre-fort du magasin (22/11/2026, Sam : « dans les mails, une annexe du coffre-fort ») : lus
+    // au serveur, de CETTE boutique et dans son coffre (consultant/src/coffre.php), chaque pièce jointe notée.
+    if (!empty($opts['coffre']) && function_exists('cofPiecesMail')) { $pieces = array_merge($pieces, cofPiecesMail($shop, (array) $opts['coffre'])); }
     if (array_sum(array_map(static fn ($p) => strlen((string) ($p['contenu'] ?? '')), $pieces)) > BM_ENVOI_MAX) { throw new RuntimeException('les pièces jointes dépassent 15 Mo'); }
     [$message, $mid] = bmComposer(['nom' => $c['nom'], 'adresse' => $c['adresse']], $a, $cc, $objet, $texte, $pieces, $reponse);
     $avert = null;
@@ -692,7 +696,8 @@ function bmEnvoyerRoute(string $shop, array $c, array $b): array
         if ($o === false) { return bmErreur(422, 'Une pièce jointe est illisible.'); }
         $pieces[] = ['nom' => mb_substr((string) ($p['nom'] ?? 'piece'), 0, 120), 'type' => (string) ($p['type'] ?? 'application/octet-stream'), 'contenu' => $o];
     }
-    $opts = ['pieces' => $pieces, 'offre' => (int) ($b['offre'] ?? 0) ?: null, 'langue' => (string) ($b['langue'] ?? 'fr')];
+    $opts = ['pieces' => $pieces, 'offre' => (int) ($b['offre'] ?? 0) ?: null, 'langue' => (string) ($b['langue'] ?? 'fr'),
+        'coffre' => array_slice(array_map('intval', (array) ($b['coffre'] ?? [])), 0, 5)];
     if (is_array($b['reponse'] ?? null) && (int) ($b['reponse']['uid'] ?? 0) > 0) { $opts['reponse'] = $b['reponse']; }
     if (is_array($b['transfert'] ?? null) && (int) ($b['transfert']['uid'] ?? 0) > 0) { $opts['transfert'] = $b['transfert']; }
     [$mid, $avert] = bmEnvoyer($shop, $c, $a, $cc, $objet, $texte, $opts);

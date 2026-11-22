@@ -11,7 +11,14 @@ declare(strict_types=1);
  * la date du document, le nom d'origine et la taille.
  */
 
-const DOC_SORTES = ['reunion' => 'Rapport de réunion', 'contrat' => 'Contrat de mise à disposition', 'courrier' => 'Courrier envoyé', 'autre' => 'Autre document'];
+// Les sortes (22/10/2026) ; celles du coffre-fort du franchisé s'ajoutent en tête (22/11/2026, src/coffre.php) : le DIP,
+// le contrat et ses avenants, le dossier d'implantation, les pièces légales, la formation, les finances. L'ordre est
+// celui du menu « Sorte » et des groupes de l'onglet Documents.
+const DOC_SORTES = ['dip' => 'DIP (document d’information précontractuelle)', 'contrat_franchise' => 'Contrat de franchise',
+    'avenant' => 'Annexe ou avenant au contrat', 'implantation' => 'Dossier d’implantation',
+    'contrat' => 'Contrat de mise à disposition', 'legal' => 'Pièce légale (statuts, BCE, assurance, AFSCA, bail…)',
+    'formation' => 'Formation (attestation, bilan, certificat…)', 'finances' => 'Finances (dossier d’analyse, budget, redevances…)',
+    'reunion' => 'Rapport de réunion', 'courrier' => 'Courrier envoyé', 'autre' => 'Autre document'];
 const DOC_EXT = ['pdf' => 'application/pdf', 'doc' => 'application/msword',
     'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'xls' => 'application/vnd.ms-excel', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -42,6 +49,13 @@ function docTable(): void
         . 'depose_le DATETIME NOT NULL,'
         . 'KEY idx_doc_shop (shop, date_doc)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Le coffre-fort du franchisé (22/11/2026, src/coffre.php) : l'échéance d'une pièce (« à renouveler » 60 jours
+    // avant), sa place dans le coffre — 0 pour tout ce qui a été déposé avant lui : le consultant l'y met —, qui l'a
+    // déposée et de quel côté (siege | franchise).
+    foreach (['echeance DATE NULL', 'visible_franchise TINYINT(1) NOT NULL DEFAULT 0', 'depose_par VARCHAR(120) NULL',
+        'depose_role VARCHAR(12) NULL'] as $col) {
+        try { Db::exec('ALTER TABLE con_doc ADD COLUMN ' . $col); } catch (PDOException $e) { /* déjà là */ }
+    }
 }
 
 /** Le dossier des documents d'un magasin, créé au besoin, l'accès direct fermé. */
@@ -73,7 +87,9 @@ function docLigne(array $r): array
     return ['id' => (int) $r['id'], 'shop' => (string) $r['shop'], 'sorte' => (string) $r['sorte'], 'sorteLib' => DOC_SORTES[(string) $r['sorte']] ?? 'Autre document',
         'titre' => (string) $r['titre'], 'nom' => (string) $r['nom_origine'], 'mime' => (string) $r['mime'], 'octets' => (int) $r['octets'],
         'date' => $r['date_doc'] !== null ? (string) $r['date_doc'] : null, 'note' => $r['note'] !== null ? (string) $r['note'] : null,
-        'deposeLe' => substr((string) $r['depose_le'], 0, 16)];
+        'deposeLe' => substr((string) $r['depose_le'], 0, 16),
+        'echeance' => !empty($r['echeance']) ? (string) $r['echeance'] : null, 'coffre' => !empty($r['visible_franchise']),
+        'deposePar' => (string) ($r['depose_par'] ?? ''), 'deposeRole' => (string) ($r['depose_role'] ?? '')];
 }
 
 /** GET /franchises/documents?shop=4 — les documents du magasin, les plus récents d'abord. */
@@ -83,6 +99,10 @@ function ep_franchises_documents(): array
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
     docTable();
     $l = array_map('docLigne', Db::rows('SELECT * FROM con_doc WHERE shop = ? ORDER BY COALESCE(date_doc, DATE(depose_le)) DESC, id DESC', [$shop]));
+    // Ce que le franchisé en a ouvert depuis son coffre (src/coffre.php) : le nombre et la dernière fois.
+    $ouv = function_exists('cofOuverturesMagasin') ? cofOuverturesMagasin($shop) : [];
+    foreach ($l as &$d) { $d['ouvertures'] = $ouv[$d['id']] ?? ['n' => 0, 'dernier' => null]; }
+    unset($d);
     return ['shop' => (string) $shop, 'documents' => $l, 'sortes' => array_map(static fn ($k, $v) => ['v' => $k, 'nom' => $v], array_keys(DOC_SORTES), DOC_SORTES),
         'maxOctets' => docMaxOctets(), 'extensions' => array_keys(DOC_EXT)];
 }
@@ -104,7 +124,8 @@ function docFichiersRecus(): array
 }
 
 /** Garde un fichier reçu (déjà vérifié) : rend la ligne enregistrée. `$deplacer` : le chemin vient d'un envoi HTTP. */
-function docGarder(int $shop, string $sorte, string $titre, ?string $date, ?string $note, string $nom, string $chemin, int $octets, bool $deplacer = true): ?array
+function docGarder(int $shop, string $sorte, string $titre, ?string $date, ?string $note, string $nom, string $chemin, int $octets, bool $deplacer = true,
+    array $coffre = []): ?array
 {
     $ext = strtolower((string) pathinfo($nom, PATHINFO_EXTENSION));
     $disque = bin2hex(random_bytes(12)) . '.' . $ext;
@@ -112,8 +133,12 @@ function docGarder(int $shop, string $sorte, string $titre, ?string $date, ?stri
     $ok = $deplacer ? @move_uploaded_file($chemin, $cible) : @copy($chemin, $cible);
     if (!$ok) { return null; }
     @chmod($cible, 0640);
-    Db::exec('INSERT INTO con_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, note, depose_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [$shop, $sorte, mb_substr($titre, 0, 190), $disque, mb_substr($nom, 0, 190), DOC_EXT[$ext] ?? DOC_EXT_INTERNE[$ext] ?? 'application/octet-stream', $octets, $date, $note, date('Y-m-d H:i:s')]);
+    // $coffre (22/11/2026) : {echeance, visible, par, role} — une copie rangée par le cockpit (le mail) n'en a pas.
+    Db::exec('INSERT INTO con_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, echeance, note, depose_le, visible_franchise, depose_par, depose_role)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$shop, $sorte, mb_substr($titre, 0, 190), $disque, mb_substr($nom, 0, 190), DOC_EXT[$ext] ?? DOC_EXT_INTERNE[$ext] ?? 'application/octet-stream', $octets, $date,
+            $coffre['echeance'] ?? null, $note, date('Y-m-d H:i:s'), !empty($coffre['visible']) ? 1 : 0,
+            isset($coffre['par']) ? mb_substr((string) $coffre['par'], 0, 120) : null, $coffre['role'] ?? null]);
     $id = (int) Db::pdo()->lastInsertId();
     $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [$id]);
     return $r !== null ? docLigne($r) : null;
@@ -139,6 +164,11 @@ function wr_franchises_documents(): array
     $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : null;
     $note = trim((string) ($_POST['note'] ?? '')) ?: null;
     if ($note !== null) { $note = mb_substr($note, 0, 500); }
+    // Le coffre-fort (22/11/2026) : l'échéance facultative, et « dans le coffre du franchisé » coché par défaut.
+    $ech = trim((string) ($_POST['echeance'] ?? ''));
+    $qui = function_exists('cofQui') ? cofQui('siege') : ['nom' => 'Siège', 'role' => 'siege'];
+    $coffre = ['echeance' => preg_match('/^\d{4}-\d{2}-\d{2}$/', $ech) ? $ech : null, 'visible' => (string) ($_POST['coffre'] ?? '1') !== '0',
+        'par' => $qui['nom'], 'role' => 'siege'];
     $recus = docFichiersRecus();
     if ($recus === []) { http_response_code(422); return ['error' => 'aucun fichier reçu']; }
     docTable();
@@ -151,7 +181,7 @@ function wr_franchises_documents(): array
         if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) { $refuses[] = ['nom' => $nom, 'motif' => 'envoi interrompu, réessayez']; continue; }
         if (!isset(DOC_EXT[$ext])) { $refuses[] = ['nom' => $nom, 'motif' => 'sorte de fichier refusée (' . ($ext ?: 'sans extension') . ')']; continue; }
         $t = $titre !== '' ? ($titre . (count($recus) > 1 ? ' — ' . pathinfo($nom, PATHINFO_FILENAME) : '')) : (string) pathinfo($nom, PATHINFO_FILENAME);
-        $l = docGarder($shop, $sorte, $t, $date, $note, $nom, $tmp, $octets);
+        $l = docGarder($shop, $sorte, $t, $date, $note, $nom, $tmp, $octets, true, $coffre);
         if ($l === null) { $refuses[] = ['nom' => $nom, 'motif' => 'le serveur n’a pas pu l’écrire']; continue; }
         $ajoutes[] = $l;
     }
@@ -166,7 +196,12 @@ function wr_franchises_documents(): array
 function ep_franchises_document_fichier(): void
 {
     docTable();
-    $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [(int) ($_GET['id'] ?? 0)]);
+    docSortir(Db::row('SELECT * FROM con_doc WHERE id = ?', [(int) ($_GET['id'] ?? 0)]));
+}
+
+/** Sort le fichier d'une ligne de `con_doc` (ou un 404 JSON), puis exit. Partagé avec le coffre-fort (src/coffre.php). */
+function docSortir(?array $r): never
+{
     $chemin = $r !== null ? docDossier((int) $r['shop']) . '/' . basename((string) $r['fichier']) : '';
     if ($r === null || !is_file($chemin)) { http_response_code(404); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['error' => 'document introuvable']); exit; }
     $mime = (string) $r['mime'];
@@ -180,6 +215,31 @@ function ep_franchises_document_fichier(): void
     header('Content-Disposition: ' . ($enLigne ? 'inline' : 'attachment') . '; filename="' . preg_replace('/[^\w.\- ]/u', '_', $nom) . '"; filename*=UTF-8\'\'' . rawurlencode($nom));
     readfile($chemin);
     exit;
+}
+
+/**
+ * PATCH /franchises/documents {id, coffre?: bool, echeance?: 'AAAA-MM-JJ'|null} — met un document dans le coffre du
+ * franchisé ou l'en retire, règle son échéance (22/11/2026). Le fichier ne bouge pas.
+ */
+function wr_franchises_document_maj(): array
+{
+    docTable();
+    $b = body();
+    $id = (int) ($b['id'] ?? 0);
+    $r = Db::row('SELECT * FROM con_doc WHERE id = ?', [$id]);
+    if ($r === null) { http_response_code(404); return ['error' => 'document introuvable']; }
+    $set = []; $p = []; $dit = [];
+    if (array_key_exists('coffre', $b)) { $set[] = 'visible_franchise = ?'; $p[] = !empty($b['coffre']) ? 1 : 0; $dit[] = !empty($b['coffre']) ? 'mis au coffre du franchisé' : 'retiré du coffre du franchisé'; }
+    if (array_key_exists('echeance', $b)) {
+        $e = $b['echeance'] === null ? '' : trim((string) $b['echeance']);
+        if ($e !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $e)) { http_response_code(422); return ['error' => 'échéance : AAAA-MM-JJ']; }
+        $set[] = 'echeance = ?'; $p[] = $e !== '' ? $e : null; $dit[] = $e !== '' ? 'échéance ' . $e : 'sans échéance';
+    }
+    if ($set === []) { http_response_code(422); return ['error' => 'rien à changer : coffre ou echeance']; }
+    $p[] = $id;
+    Db::exec('UPDATE con_doc SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
+    if (function_exists('journalAdd')) { journalAdd('CEO', 'Franchisé', 'Documents', '« ' . $r['titre'] . ' » (magasin ' . $r['shop'] . ') : ' . implode(', ', $dit)); }
+    return ['ok' => true, 'document' => docLigne((array) Db::row('SELECT * FROM con_doc WHERE id = ?', [$id]))];
 }
 
 /** DELETE /franchises/documents?id=12 — retire un document (la ligne et le fichier). */

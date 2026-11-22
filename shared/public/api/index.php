@@ -127,6 +127,8 @@ require __DIR__ . '/../../../consultant/src/taches_suivi.php';
 require __DIR__ . '/../../../consultant/src/cq_mail.php';
 require __DIR__ . '/../../../panel/src/pointages_mail.php';
 require __DIR__ . '/../../../consultant/src/documents.php';
+// Le coffre-fort du franchisé (22/11/2026) : ses documents et ses rapports, une page à onglets du dashboard.
+require __DIR__ . '/../../../consultant/src/coffre.php';
 require __DIR__ . '/../../../consultant/src/ca_net_mois.php';
 require __DIR__ . '/../../../consultant/src/controles_qualite.php';
 require __DIR__ . '/../../../consultant/src/kpi_table.php';
@@ -219,6 +221,11 @@ try {
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
+    }
+    // Un document du coffre-fort du franchisé (22/11/2026) : de CE magasin et dans son coffre ; l'ouverture est notée.
+    if ($method === 'GET' && $path === '/coffre/magasin/fichier') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
+        ep_coffre_fichier();   // sort le fichier, puis exit
     }
     // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
     if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
@@ -806,6 +813,7 @@ function route(string $method, string $path): mixed
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
             $path === '/franchises/documents'          => ep_franchises_documents(),
+            $path === '/coffre/magasin'                => ep_coffre_magasin(),
             $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
@@ -1001,6 +1009,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/franchises/documents') { return wr_franchises_documents(); }
     // Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026).
     if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
+    if ($method === 'PATCH' && $path === '/franchises/documents') { return wr_franchises_document_maj(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/document') { return wr_coffre_document(); }
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
