@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Domówienia dnia{% endblock %}
+
+{% block content %}
+{# [371] Assistant « Domówienia dnia » : App\Services\Organization\Wizards\SupplementsDayCheckService — écran dans
+   assets/js/client/supplements-day-check.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du poste
+   « Kierownik operacyjny » se valide seule après « Zakończ ». Rien n'est envoyé aux clients ; ni les commandes ni le
+   plan de production ne sont modifiés. #}
+<section class="section">
+    <div id="sdApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="sdBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/client/supplements-day-check.js?v={{ asset_v() }}"></script>
+{% endblock %}

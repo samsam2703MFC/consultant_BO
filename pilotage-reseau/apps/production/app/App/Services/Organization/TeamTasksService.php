@@ -191,6 +191,7 @@ final class TeamTasksService
             'payments_reviewed' => 'wpłaty, przypomnienia, różnice dostaw',
             'orders_day_checked' => 'nowe i zmienione → do wyjaśnienia → zatwierdź',
             'customers_ordered_checked' => 'stali klienci → do kontaktu → zatwierdź',
+            'supplements_day_checked' => 'domówienia → do wyjaśnienia → zatwierdź',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };
