@@ -64,7 +64,7 @@ final class PageAccess
         'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, plan 12 tygodni, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics'], false],
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka i pakowanie', ['/archive'], false],
-        'positions' => ['Funkcje i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
+        'positions' => ['Funkcje i zadania, protokoły, struktura i obowiązki', 'Administracja', ['/organization', '/task-forms', '/ajax/organization/structure', '/ajax/organization/duties'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, stopki e-maili i tłumacz, KSeF, licznik stron, inne)', 'Administracja',
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],
         'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],
