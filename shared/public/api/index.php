@@ -129,6 +129,8 @@ require __DIR__ . '/../../../panel/src/pointages_mail.php';
 require __DIR__ . '/../../../consultant/src/documents.php';
 // Le coffre-fort du franchisé (22/11/2026) : ses documents et ses rapports, une page à onglets du dashboard.
 require __DIR__ . '/../../../consultant/src/coffre.php';
+// Ses grandes dates (triennats du bail, échéances) et l'assistant qui les lit à l'import d'un document (22/11/2026).
+require __DIR__ . '/../../../consultant/src/coffre_dates.php';
 require __DIR__ . '/../../../consultant/src/ca_net_mois.php';
 require __DIR__ . '/../../../consultant/src/controles_qualite.php';
 require __DIR__ . '/../../../consultant/src/kpi_table.php';
@@ -821,6 +823,7 @@ function route(string $method, string $path): mixed
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
             $path === '/franchises/documents'          => ep_franchises_documents(),
             $path === '/coffre/magasin'                => ep_coffre_magasin(),
+            $path === '/coffre/magasin/dates'          => ep_coffre_dates(),
             $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
@@ -1018,6 +1021,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
     if ($method === 'PATCH' && $path === '/franchises/documents') { return wr_franchises_document_maj(); }
     if ($method === 'POST' && $path === '/coffre/magasin/document') { return wr_coffre_document(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/dates') { return wr_coffre_dates(); }
+    if ($method === 'DELETE' && $path === '/coffre/magasin/dates') { return wr_coffre_date_suppr(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/assistant') { return wr_coffre_assistant(); }
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).

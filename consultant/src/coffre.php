@@ -27,6 +27,7 @@ declare(strict_types=1);
  *        coffre ; l'ouverture est notée (pas l'aperçu)
  *   POST /coffre/magasin/document (multipart : shop, titre?, date?, echeance?, note?, fichiers[]) : une pièce légale
  *        déposée par le magasin
+ * Les grandes dates du coffre (triennats du bail, échéances) et l'assistant qui les lit à l'import : src/coffre_dates.php.
  * La Boîte mail joint un document du coffre par cofPiecesMail (panel/src/boite_mail.php, champ `coffre` de l'envoi).
  */
 
@@ -164,7 +165,9 @@ function ep_coffre_magasin(): array
         'reperes' => ['nouveaux' => count(array_filter($docs, static fn ($d) => $d['nouveau'])) + count(array_filter($visites, static fn ($v) => $v['luLe'] === null)),
             'aRenouveler' => array_values(array_map(static fn ($d) => ['id' => $d['id'], 'titre' => $d['titre'], 'echeance' => $d['echeance'], 'etat' => $d['etat']],
                 array_filter($docs, static fn ($d) => in_array($d['etat']['cle'], ['renouveler', 'expiree'], true)))),
-            'contrat' => $contrat],
+            'contrat' => $contrat,
+            // Les grandes dates (src/coffre_dates.php) : la prochaine et combien tombent bientôt, pour le bouton du haut.
+            'dates' => function_exists('cofDatesResume') ? cofDatesResume($shop) : null],
         'suivi' => function_exists('suLien') ? suLien((string) $shop) : null,
         'depot' => ['sorte' => 'legal', 'maxOctets' => docMaxOctets(), 'extensions' => array_keys(DOC_EXT)]];
 }
