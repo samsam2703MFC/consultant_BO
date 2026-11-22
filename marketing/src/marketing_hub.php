@@ -11,7 +11,8 @@ declare(strict_types=1);
  * mar_social_post : rien ne disait qu'une campagne en cours n'avait ni post ni
  * mail. Le module les pose côte à côte, sans rien recalculer à sa façon :
  *
- *  - campagnes : mar_campaign, mêmes lignes que GET /marketing ;
+ *  - campagnes : la liste du module Marketing et leurs boutiques (son API, depuis le 21/11/2026), mêmes lignes
+ *    que GET /marketing ;
  *  - emailing : mar_nl_campagne, mêmes statistiques que GET /newsletter
  *    (nlStatsReelles d'abord, stats_json en repli) ;
  *  - réseaux sociaux : mar_social_post, le cycle brouillon → contrôle → décision → publication ;
@@ -105,19 +106,18 @@ function mhMagasins(): array
 
 function mhCampagnes(?string $shop, string $auj): array
 {
-    $parCamp = [];
-    try {
-        foreach (Db::rows('SELECT campaign_id, shop_id FROM mar_campaign_shop') as $r) {
-            $parCamp[(int) $r['campaign_id']][] = (string) $r['shop_id'];
-        }
-    } catch (PDOException $e) { /* table de liaison absente : chaque campagne vaut pour le réseau */ }
-
-    $rows = Db::rows('SELECT c.*, t.label AS type_label, t.color_hex AS type_color,
-                             s.label AS status_label, s.text_hex, s.bg_rgba
-                        FROM mar_campaign c
-                        LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                        LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                       ORDER BY c.starts_on IS NULL, c.starts_on DESC, c.id DESC');
+    // Les campagnes et leurs boutiques, au module Marketing (marketing/src/campagnes.php, 21/11/2026), dans l'ordre
+    // d'avant (les plus récentes d'abord, les non datées à la fin). Muet : le canal le dit (mhCanal).
+    [$toutes, $err] = campagnesModule();
+    if ($toutes === null) { throw new RuntimeException('le module Marketing ne rend pas les campagnes : ' . $err); }
+    $parCamp = []; $rows = [];
+    foreach ($toutes as $c) {
+        if (!is_array($c)) { continue; }
+        $ids = campagneShopIds($c);
+        if ($ids === null) { throw new RuntimeException('le module Marketing ne rend pas les boutiques des campagnes'); }
+        $parCamp[(int) $c['id']] = $ids;
+        $rows[] = $c + ['type_color' => $c['type_color_hex'] ?? null, 'text_hex' => $c['status_text_hex'] ?? null, 'bg_rgba' => $c['status_bg_rgba'] ?? null];
+    }
     $liste = [];
     foreach ($rows as $c) {
         $id = (int) $c['id'];

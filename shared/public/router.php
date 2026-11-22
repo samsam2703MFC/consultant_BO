@@ -13,7 +13,8 @@
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // Le module Formation appelle l'API à côté de lui (formation/api/cockpit), comme sur le serveur.
-if (str_starts_with($uri, '/api/cockpit') || str_starts_with($uri, '/formation/api/cockpit')) {
+// Le portail Commercial aussi (commercial/api/cockpit, 19/11/2026).
+if (str_starts_with($uri, '/api/cockpit') || str_starts_with($uri, '/formation/api/cockpit') || str_starts_with($uri, '/commercial/api/cockpit')) {
     require __DIR__ . '/api/index.php';
     return true;
 }
@@ -25,6 +26,14 @@ if (str_contains($uri, '/api/v1/erp/dimona')) {
 // Le site assemblé (réorganisation du 19/11/2026) : -t public, des liens vers le public/ de chaque domaine
 // (php shared/bin/assembler_public.php public). Sans lui, le dossier de ce routeur.
 $site = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? '') ?: __DIR__, '/');
+// Les fichiers communs du cockpit sous /commercial/assets/ (la Prospection du portail Commercial, 19/11/2026), comme
+// l'alias Apache de shared/bin/deploy.sh.
+if (str_starts_with($uri, '/commercial/assets/') && is_file($site . substr($uri, 11))) {
+    $types = ['css' => 'text/css', 'js' => 'text/javascript', 'png' => 'image/png', 'svg' => 'image/svg+xml', 'otf' => 'font/otf', 'ttf' => 'font/ttf', 'woff2' => 'font/woff2'];
+    header('Content-Type: ' . ($types[strtolower(pathinfo($uri, PATHINFO_EXTENSION))] ?? 'application/octet-stream'));
+    readfile($site . substr($uri, 11));
+    return true;
+}
 if ($uri !== '/' && is_file($site . $uri)) {
     // Le serveur intégré ne connaît pas le type du manifeste d'une PWA.
     if (str_ends_with($uri, '.webmanifest')) {

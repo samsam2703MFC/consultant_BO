@@ -12,7 +12,7 @@ import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
-import { valsHelpdesk, nbDemandesOuvertes } from './helpdesk-vals.js';
+import { valsHelpdesk, nbDemandesOuvertes, valsATraiter } from './helpdesk-vals.js';
 import { valsFil, nbFilsOuverts } from './fil-vals.js';
 import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
@@ -488,7 +488,9 @@ class App {
   static get ADRESSES_SORTIES(){
     return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=plan',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
-      prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
+      // La Prospection est dans le portail Commercial (19/11/2026), à côté de son rail (#prospection) ; sur le téléphone,
+      // la page seule, en tournée.
+      prospection: '../commercial/?bureau=1#prospection', 'prospection-mobile': '../commercial/prospection/', 'developpement-commercial': '../commercial/?bureau=1#prospection',
       // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
       'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
   }
@@ -1474,7 +1476,9 @@ class App {
       // (dashboard/), et Résultat l'ouvre magasin par magasin.
       ['Applications', [
         ['ext:caisse/', 'Caisse ↗', 0],
-        ['ext:prospection/', 'Prospection ↗', 0],
+        // La Prospection n'a plus d'entrée à part (19/11/2026, « éviter les doubles vues ») : elle est dans Commercial ↗.
+        // Le portail Commercial (19/11/2026) : servi à la racine, /commercial/ ; sur un téléphone, il s'ouvre sur le suivi de terrain.
+        ['ext:/commercial/', 'Commercial ↗', 0],
         ['ext:employee/auth', 'Application employé ↗', 0],
         // Le Manuel du réseau est une page du module : une seule entrée.
         ['ext:formation/', 'Formation ↗', 0],
@@ -1962,6 +1966,8 @@ class App {
     if (common.isVerifR) { valsVerification(this, common); common.large = true; }
     if (common.isParamProd) { valsParamProduits(this, common); common.large = true; }
     if (common.isHelpdesk) { valsHelpdesk(this, common); common.large = true; }
+    // L'accueil (Résultat) porte la carte « Demandes à traiter » : les demandes pas encore en cours, chaque jour (21/11/2026).
+    if (common.isRJour) { valsATraiter(this, common); }
     if (common.isFil) { valsFil(this, common); common.large = true; }
     if (common.isBench) { valsBenchmark(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }
@@ -13558,6 +13564,8 @@ class App {
                 idFournisseur: m.fournisseur, idUnite: m.idUnite,
                 quantite: +c2.quantite, idLivraison: c2.livraison, motif: c2.motif,
                 action: c2.action || 'REPLACEMENT',
+                // La photo est obligatoire (21/11/2026) : celle de la tâche contrôlée, relue au panel par le serveur.
+                photoTache: { taskId: dt.taskId, date: dt.date },
                 texte: (c2.texte !== undefined ? c2.texte : (dt.comment || '')) +
                   ((dt.rep || []).length ? '\n\nRepères posés au contrôle : '
                     + (dt.rep || []).map(r2 => (r2.n + '. ' + (r2.txt || ''))).join(' · ') : ''),

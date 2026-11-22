@@ -19,6 +19,8 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
 }
 final class Db {
   static ?PDO $p = null;
+  // Les mentions de l'émetteur (docEmetteur, shared/src/doc.php) lisent config/config.php : rien sur ce banc.
+  static function config(): array { return []; }
   static function pdo(): PDO { if (!self::$p) { self::$p = new PDO('sqlite::memory:'); self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); } return self::$p; }
   static function fx(string $q): string {
     $q = str_replace('INT AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT', $q);

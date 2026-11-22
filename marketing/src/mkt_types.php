@@ -63,59 +63,6 @@ const MKT_ICONES = [
     'drapeau'     => ['label' => 'Ouverture',     'path' => 'M4 22V4M4 4h13l-2 4 2 4H4'],];
 
 /**
- * Les colonnes réellement présentes dans `mar_campaign_type`.
- *
- * Le schéma des tables `mar_*` vient des migrations du module, pas du cockpit :
- * sur une base restée à une version antérieure, `icon_key` ou `lever_id`
- * peuvent manquer. Lire la liste une fois évite d'écrire une colonne absente —
- * l'UPDATE entier échouerait, et l'écran répondrait 500 sur un simple
- * renommage.
- */
-const MKT_TYPE_COLONNES_MODULE = [
-    'id', 'code', 'label', 'description', 'color_hex', 'icon_key', 'icon_path',
-    'lever_id', 'lever_badge_label', 'default_kpi_label', 'default_lever_code',
-    'sort_order', 'is_active',
-];
-
-function mktTypeColonnes(): array
-{
-    static $cols = null;
-    if ($cols === null) {
-        try {
-            $lignes = Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
-                                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mar_campaign_type'");
-        } catch (Throwable $e) { $lignes = []; }
-
-        // La clé du résultat est lue SANS la nommer : selon la version et la
-        // configuration, MySQL rend la colonne `COLUMN_NAME` ou `column_name`.
-        // Ce serveur rend `COLUMN_NAME`, et la lecture nommait `column_name` :
-        // la liste revenait vide, c'est-à-dire « la table ne porte aucune
-        // colonne ». Le filtre en aval retirait alors TOUTES les colonnes de
-        // l'INSERT (« Field 'label' doesn't have a default value ») et
-        // l'UPDATE lisait « SELECT  FROM mar_campaign_type » : créer ou
-        // modifier un type répondait « base de données indisponible ».
-        $cols = [];
-        foreach ($lignes as $l) {
-            $v = is_array($l) ? (string) reset($l) : (string) $l;
-            if ($v !== '') { $cols[] = strtolower($v); }
-        }
-
-        // Introspection muette (droits refusés sur information_schema, table
-        // vue à travers une autre base…) : on retombe sur le schéma que le
-        // module publie plutôt que de conclure « aucune colonne ». Une colonne
-        // vraiment absente fera parler MySQL, avec son nom — c'est réparable,
-        // là où le filtrage silencieux écrivait une ligne vide.
-        if ($cols === []) { $cols = MKT_TYPE_COLONNES_MODULE; }
-    }
-    return $cols;
-}
-
-function mktTypeAColonne(string $nom): bool
-{
-    return in_array($nom, mktTypeColonnes(), true);
-}
-
-/**
  * Code technique dérivé d'un nom : « Fêtes (Noël) » donne « fetes_noel ».
  *
  * Les accents sont ramenés à leur lettre plutôt que supprimés — « fetes » se
@@ -129,72 +76,6 @@ function mktSlug(string $texte): string
     $sans = $sans === false ? $texte : $sans;
     $sans = strtolower(preg_replace('/[^A-Za-z0-9]+/', '_', $sans) ?? '');
     return mb_substr(trim($sans, '_'), 0, 40);
-}
-
-/** `#abc` est développé, tout le reste est refusé plutôt que corrigé. */
-function mktCouleur(mixed $valeur): ?string
-{
-    $brut = strtolower(trim((string) ($valeur ?? '')));
-    if ($brut === '') { return null; }
-    if (preg_match('/^#([0-9a-f]{3})$/', $brut, $court) === 1) {
-        return '#' . $court[1][0] . $court[1][0] . $court[1][1] . $court[1][1] . $court[1][2] . $court[1][2];
-    }
-    if (preg_match('/^#[0-9a-f]{6}$/', $brut) !== 1) {
-        throw new RuntimeException('Couleur invalide : format attendu #RRGGBB.');
-    }
-    return $brut;
-}
-
-function mktTexte(mixed $valeur, int $max): ?string
-{
-    $texte = trim((string) ($valeur ?? ''));
-    return $texte === '' ? null : mb_substr($texte, 0, $max);
-}
-
-/**
- * Contrôle des champs d'un type, communs à la création et à la modification.
- *
- * Mêmes bornes que le module : 120 pour le nom, 300 pour la description, 60
- * pour le badge de levier, 160 pour le KPI. Elles ne sont pas décoratives —
- * ce sont les tailles des colonnes, et MySQL tronquerait en silence.
- *
- * @param array<string,mixed> $data champs déjà fusionnés avec l'existant
- * @return array<string,mixed> colonnes prêtes pour l'INSERT / l'UPDATE
- */
-function mktTypeValide(array $data): array
-{
-    $label = trim((string) ($data['label'] ?? ''));
-    if ($label === '') { throw new RuntimeException('Le nom du type est obligatoire.'); }
-    if (mb_strlen($label) > 120) { throw new RuntimeException('Le nom du type dépasse 120 caractères.'); }
-
-    // L'icône est prise dans la bibliothèque, jamais dans le corps de la
-    // requête : accepter un tracé arbitraire ferait entrer du SVG écrit
-    // ailleurs dans des pages et des PDF que la marque signe.
-    $cle = trim((string) ($data['icon_key'] ?? ''));
-    if ($cle !== '' && !isset(MKT_ICONES[$cle])) {
-        throw new RuntimeException(sprintf('Icône inconnue : « %s ».', $cle));
-    }
-
-    $levier = $data['lever_id'] ?? null;
-    if (!empty($levier)) {
-        if (Db::row('SELECT 1 FROM mar_lever WHERE id = ?', [(int) $levier]) === null) {
-            throw new RuntimeException('Levier introuvable.');
-        }
-    }
-
-    return [
-        'label'             => $label,
-        'description'       => mktTexte($data['description'] ?? null, 300),
-        'color_hex'         => mktCouleur($data['color_hex'] ?? null),
-        // Le tracé est recopié depuis la bibliothèque : tout ce qui dessine
-        // aujourd'hui lit `icon_path`, l'impression comprise, et n'a pas à
-        // connaître les clés.
-        'icon_key'          => $cle === '' ? null : $cle,
-        'icon_path'         => $cle === '' ? null : MKT_ICONES[$cle]['path'],
-        'lever_id'          => empty($levier) ? null : (int) $levier,
-        'lever_badge_label' => mktTexte($data['lever_badge_label'] ?? null, 60),
-        'default_kpi_label' => mktTexte($data['default_kpi_label'] ?? null, 160),
-    ];
 }
 
 /** La bibliothèque telle que l'écran la consomme : clé, libellé, tracé. */
@@ -257,8 +138,10 @@ function mktKpiCatalogue(): array
  */
 function mktKpiParLevier(): array
 {
-    try { $leviers = Db::rows('SELECT id, code, label, color_hex FROM mar_lever ORDER BY sort_order, id'); }
-    catch (PDOException $e) { return []; }
+    // Tous les leviers, dans l'ordre du réseau, au module Marketing (marketing/src/campagnes.php, 21/11/2026) ; muet :
+    // aucun KPI par levier, comme avant sans table.
+    [$leviers] = function_exists('leviersTous') ? leviersTous() : [null];
+    if ($leviers === null) { return []; }
 
     $out = [];
     foreach ($leviers as $l) {

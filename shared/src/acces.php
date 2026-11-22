@@ -57,6 +57,21 @@ function accesMode(): string
     return $v === 'ouvert' ? 'ouvert' : 'console';
 }
 
+/**
+ * L'adresse du cockpit (config.php `cockpitUrl`, posé par bin/deploy.sh ; sinon COCKPIT_URL), rendue par /acces/moi :
+ * la garde (assets/js/garde.js) y trouve la page de connexion et le dashboard d'un franchisé, même quand elle est
+ * chargée depuis un portail servi ailleurs (/commercial/, 19/11/2026). Un chemin depuis la racine ou une adresse
+ * http(s), comme ep_formation_config ; sinon null, et la garde garde son calcul d'avant (à côté du script).
+ */
+function accesCockpit(): ?string
+{
+    $u = Db::config()['cockpitUrl'] ?? null;
+    if (!is_string($u) || trim($u) === '') { $u = (string) (getenv('COCKPIT_URL') ?: ''); }
+    $u = trim($u);
+    $ok = preg_match('#^/(?!/)[^\s"\'<>]*$#', $u) === 1 || preg_match('#^https?://[^\s"\'<>]+$#i', $u) === 1;
+    return $ok ? rtrim($u, '/') . '/' : null;
+}
+
 /** L'adresse interne de l'API de la console (serveur à serveur), celle de la page RH. */
 function accesConsoleInterne(): ?string
 {
@@ -338,7 +353,8 @@ function accesRefus(string $method, string $path, bool $service = false): ?array
 /**
  * Les routes /acces/* (ouvertes : la page de connexion les appelle avant toute session) :
  *   GET  /acces/config     ce que la page propose (mot de passe du siège créé ?, magasins, console disponible ?)
- *   GET  /acces/moi        qui est connecté (la garde des pages, assets/js/garde.js)
+ *   GET  /acces/moi        qui est connecté (la garde des pages, assets/js/garde.js) ; `cockpit` : l'adresse du
+ *                          cockpit (accesCockpit), où la garde trouve la connexion et le dashboard
  *   POST /acces/siege      {motDePasse} — la connexion du siège
  *   POST /acces/siege/creer {telephone, motDePasseErp, motDePasse} — créer ou réinitialiser le mot de passe du siège
  *   POST /acces/magasin    {shop, code} — la connexion d'un magasin
@@ -357,11 +373,11 @@ function accesRoute(string $method, string $path): ?array
             'console' => accesConsoleDispo() ? accesConsolePublique() : null];
     }
     if ($method === 'GET' && $path === '/acces/moi') {
-        if ($ouvert) { return ['mode' => 'ouvert', 'connecte' => true, 'role' => 'siege', 'nom' => 'Banc', 'shops' => null, 'source' => 'ouvert']; }
+        if ($ouvert) { return ['mode' => 'ouvert', 'connecte' => true, 'role' => 'siege', 'nom' => 'Banc', 'shops' => null, 'source' => 'ouvert', 'cockpit' => accesCockpit()]; }
         $id = accesIdentite();
-        if ($id === null) { return ['mode' => 'console', 'connecte' => false]; }
+        if ($id === null) { return ['mode' => 'console', 'connecte' => false, 'cockpit' => accesCockpit()]; }
         return ['mode' => 'console', 'connecte' => true] + array_intersect_key($id, array_flip(['role', 'source', 'nom', 'shops', 'bo', 'csrf']))
-            + ['console' => $id['source'] === 'console' ? accesConsolePublique() : null];
+            + ['console' => $id['source'] === 'console' ? accesConsolePublique() : null, 'cockpit' => accesCockpit()];
     }
     $b = $method === 'POST' ? body() : [];
     if ($method === 'POST' && $path === '/acces/siege') {

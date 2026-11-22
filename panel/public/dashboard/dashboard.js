@@ -2213,6 +2213,25 @@
     box.querySelectorAll('[data-iamotif]').forEach(b => b.addEventListener('click', () => { if (S.invAct && S.invAct.f) { S.invAct.f.motif = b.dataset.iamotif; invModaleRendre(); } }));
     box.querySelectorAll('[data-iaenvoyer]').forEach(b => b.addEventListener('click', invActEnvoyer));
     box.querySelectorAll('[data-iaphoto]').forEach(b => b.addEventListener('click', invActPhoto));
+    // Les photos de la réclamation (obligatoires depuis le 21/11/2026), réduites comme celles du formulaire complet.
+    box.querySelectorAll('[data-iaphfile]').forEach(el => el.addEventListener('change', () => { invActPhotos(el.files); el.value = ''; }));
+    box.querySelectorAll('[data-iaphx]').forEach(b => b.addEventListener('click', () => {
+      const A = S.invAct; if (!A || !A.photos) { return; }
+      const p = A.photos.splice(+b.dataset.iaphx, 1)[0]; if (p) { URL.revokeObjectURL(p.url); }
+      invModaleRendre();
+    }));
+  }
+  function invActPhotos(files) {
+    const A = S.invAct; if (!A) { return; }
+    A.photos = A.photos || []; A.traite = A.traite || 0; A.err = null;
+    Array.from(files || []).slice(0, Math.max(0, RC_MAX - A.photos.length - A.traite)).forEach(f => {
+      A.traite++;
+      rcReduire(f)
+        .then(b => { if (S.invAct === A) { A.photos.push({ blob: b, url: URL.createObjectURL(b) }); } })
+        .catch(() => { if (S.invAct === A) { A.err = 'La photo n’a pas pu être lue — reprenez-la.'; } })
+        .finally(() => { if (S.invAct === A) { A.traite--; invModaleRendre(); } });
+    });
+    invModaleRendre();
   }
   /* --- agir sur une pièce jetée pour un problème de qualité : la réclamation au fournisseur (la matière du
    * produit dans sa recette, une livraison, un motif ; envoyée au panel par la même route que le téléphone),
@@ -2248,7 +2267,8 @@
         <label>Combien${m && m.unite ? ' · en ' + esc(m.unite) : ''}<input data-ia="qte" inputmode="decimal" autocomplete="off" value="${esc(f.qte)}"></label>
         <div class="large"><div class="im-lab">Le problème</div><div class="im-puces">${motifs.map(x => `<button type="button" data-iamotif="${esc(x.code)}" class="${f.motif === x.code ? 'on' : ''}">${esc(RC_MOTIFS[x.code] || x.nom)}</button>`).join('')}</div></div>
         <label class="large">Un mot pour le fournisseur<textarea data-ia="note" rows="3" maxlength="1500">${esc(f.note)}</textarea></label>
-      </div>${A.err ? `<div class="rc-err">${esc(A.err)}</div>` : ''}<div class="im-actbtn"><button type="button" class="im-btn" data-iaenvoyer="1"${A.envoi ? ' disabled' : ''}>${A.envoi ? 'Envoi…' : 'Envoyer la réclamation'}</button>${estMobile() ? '<button type="button" class="im-lien" data-iaphoto="1">Avec une photo : ouvrir la réclamation ›</button>' : ''}<span class="db-mini">part au panel comme une réclamation matière, sans photo</span></div>`;
+        <div class="large"><div class="im-lab">La photo <small>obligatoire : le produit en entier et l’étiquette du carton</small></div><div class="im-photos">${(A.photos || []).map((p, i) => `<div class="ph"><img src="${p.url}" alt=""><button type="button" data-iaphx="${i}" aria-label="Retirer la photo">✕</button></div>`).join('')}${A.traite ? '<div class="ph att">…</div>' : ''}${(A.photos || []).length + (A.traite || 0) < RC_MAX ? '<label class="plus">＋ Photo<input type="file" accept="image/*" capture="environment" data-iaphfile="1" hidden></label>' : ''}</div></div>
+      </div>${A.err ? `<div class="rc-err">${esc(A.err)}</div>` : ''}<div class="im-actbtn"><button type="button" class="im-btn" data-iaenvoyer="1"${A.envoi || A.traite || !(A.photos || []).length ? ' disabled' : ''}>${A.envoi ? 'Envoi…' : ((A.photos || []).length ? 'Envoyer la réclamation' : 'Ajoutez d’abord une photo')}</button>${estMobile() ? '<button type="button" class="im-lien" data-iaphoto="1">Ouvrir le formulaire complet (scan de l’étiquette) ›</button>' : ''}<span class="db-mini">part au panel comme une réclamation matière, avec ${(A.photos || []).length > 1 ? 'ses photos' : 'sa photo'}</span></div>`;
     }
     const prod = X.producteur || null, ops = X.operateurs || [];
     if (!A.f) { A.f = { employe: prod ? String(prod.id) : '', employeNom: '', texte: invActTexte(A) }; }
@@ -2271,9 +2291,11 @@
       if (!(q > 0)) { A.err = 'La quantité doit être supérieure à zéro.'; return invModaleRendre(); }
       if (!f.motif) { A.err = 'Dites le problème.'; return invModaleRendre(); }
       if (!m.idUnite) { A.err = 'L’unité de « ' + m.nom + ' » est inconnue du panel : la réclamation ne peut pas partir d’ici.'; return invModaleRendre(); }
+      if (!(A.photos || []).length) { A.err = 'Ajoutez au moins une photo : sans photo, le fournisseur refuse la réclamation.'; return invModaleRendre(); }
       A.envoi = true; invModaleRendre();
-      ecrire('/fournisseurs/reclamation', { shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite, quantite: Math.round(q * 100) / 100, idLivraison: liv.id, motif: f.motif, action: 'REPLACEMENT', texte: String(f.note || '').trim(), auteur: notePar(), photos: [] })
-        .then(r => { A.envoi = false; A.fait = { type: 'recl', id: r && r.id, fournisseur: rcFournNom(R, m.fournisseur), nom: m.nom }; S.invFaits[A.k] = Object.assign({}, S.invFaits[A.k] || {}, { recl: A.fait }); if (S.aux[cleRC()]) { lireAux(cleRC(), cheminRC(), true); } invModaleRendre(); })
+      Promise.all(A.photos.map(p => rcDataUrl(p.blob)))
+        .then(photos => ecrire('/fournisseurs/reclamation', { shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite, quantite: Math.round(q * 100) / 100, idLivraison: liv.id, motif: f.motif, action: 'REPLACEMENT', texte: String(f.note || '').trim(), auteur: notePar(), photos: photos }))
+        .then(r => { (A.photos || []).forEach(p => URL.revokeObjectURL(p.url)); A.photos = []; A.envoi = false; A.fait = { type: 'recl', id: r && r.id, fournisseur: rcFournNom(R, m.fournisseur), nom: m.nom }; S.invFaits[A.k] = Object.assign({}, S.invFaits[A.k] || {}, { recl: A.fait }); if (S.aux[cleRC()]) { lireAux(cleRC(), cheminRC(), true); } invModaleRendre(); })
         .catch(e => { A.envoi = false; A.err = e.message; invModaleRendre(); });
       return;
     }
@@ -3147,28 +3169,42 @@
    * même heure. Une commande compte quand elle est vendue : encaissée ou remise. Celle d'un client des tickets pro
    * (`pro`, lu par le serveur) reste à la jauge B2B. J−7 : les commandes de /exploitation/canaux (`j7.liste`) dont le
    * retrait tombe avant l'heure de la jauge de J−7. Un appui sur une colonne ouvre la feuille « Commandes du jour » sur
-   * son canal. Sans commande ni aujourd'hui ni à J−7, ou sans commandes lues : la ligne « Commandes du jour » seule. */
+   * son canal. Sans commande ni aujourd'hui ni à J−7, ou sans commandes lues : la ligne « Commandes du jour » seule.
+   *
+   * Le 21/11/2026 (Halle, samedi à 07:59 : « Comptoir 0 € · 0,0 % », − 100 % face à samedi dernier) : quatre click &
+   * collect payés en ligne les jours d'avant, à retirer l'après-midi, étaient retirés de la caisse du matin, qui ne les
+   * contenait pas. La vente directe = la jauge moins les commandes payées dans la caisse du jour, à l'heure de leur ticket
+   * (`caisseCmd` du serveur, celles qui se retirent un autre jour comprises) ; sans elle, l'ancienne règle. Et une commande
+   * ne compte qu'une fois l'heure de son retrait passée, aujourd'hui comme à J−7 : celles d'après sont « à venir ». */
   function opRuban(D, T, j7, jourNom, cpt) {
     const CA = D && D.CA;
     if (!CA || CA.error || CA.indispo || !Array.isArray(CA.liste) || T == null) { return opCmdLigne(D); }
     const vendue = c => !c.pro && !c.differe && (c.encaissee || bmRemise(c));
     const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0);
-    const parts = (L, total) => { const C = L.filter(c => c.canal === 'compt'), W = L.filter(c => c.canal !== 'compt');
-      return { C, W, direct: Math.max(0, total - somme(L.filter(c => c.encaissee))), cmd: somme(C), web: somme(W) }; };
-    const A = parts(CA.liste.filter(vendue), T);
-    const L7 = j7 && CA.j7 && Array.isArray(CA.j7.liste) && CA.j7.date === j7.date ? CA.j7.liste.filter(c => vendue(c) && (!j7.moment || String(c.heure || '') <= j7.moment)) : null;
-    const P = L7 && j7.ca != null ? parts(L7, j7.ca) : null;
-    if (!A.C.length && !A.W.length && !(P && (P.C.length || P.W.length))) { return opCmdLigne(D); }
+    // h : l'heure de la jauge (null : la journée entière). X : les commandes payées dans la caisse du jour (null : pas lues).
+    const avant = (x, h) => !h || String(x || '') <= h;
+    const parts = (L, total, X, h) => { const C = L.filter(c => c.canal === 'compt'), W = L.filter(c => c.canal !== 'compt');
+      const enc = Array.isArray(X) ? somme(X.filter(c => !c.pro && avant(c.heure, h))) : somme(L.filter(c => c.encaissee));
+      return { C, W, direct: Math.max(0, total - enc), cmd: somme(C), web: somme(W) }; };
+    const maint = D.now == null || S.date < AUJ ? null : opHM(D.now);
+    const A = parts(CA.liste.filter(c => vendue(c) && avant(c.heure, maint)), T, CA.caisseCmd, maint);
+    // À venir : les commandes du jour dont le retrait n'est pas encore passé (hors B2B et paiement différé).
+    const aVenir = maint ? CA.liste.filter(c => !c.pro && !c.differe && !avant(c.heure, maint)) : [];
+    const nAvC = aVenir.filter(c => c.canal === 'compt').length, nAvW = aVenir.length - nAvC;
+    const J7 = j7 && CA.j7 && Array.isArray(CA.j7.liste) && CA.j7.date === j7.date ? CA.j7 : null;
+    const L7 = J7 ? J7.liste.filter(c => vendue(c) && avant(c.heure, j7.moment)) : null;
+    const P = L7 && j7.ca != null ? parts(L7, j7.ca, J7.caisseCmd, j7.moment) : null;
+    if (!A.C.length && !A.W.length && !aVenir.length && !(P && (P.C.length || P.W.length))) { return opCmdLigne(D); }
     const tot = A.direct + A.cmd + A.web, pc = v => tot > 0 ? (100 * v / tot >= 10 ? fP0(100 * v / tot) : fP(100 * v / tot)) : '—';
     const jn = esc(String(jourNom || '').slice(0, 3)) + '. ' + (j7 ? fD(j7.date) : '');
     const ecart = (a, b) => b > 0 ? ` · <em class="${a >= b ? 'ok' : 'ko'}">${fSP(100 * (a - b) / b)}</em>` : '';
     const nCC = A.W.filter(c => c.canal === 'cc').length, nLiv = A.W.length - nCC;
     const col = (f, k, nom, v, s, j) => `<div${f ? ` data-cmdm="${f}" role="button" tabindex="0"` : ''}><div class="k"><i class="pt ${k}"></i>${nom}${f ? '<span class="ch">›</span>' : ''}</div><div class="v">${v}</div><div class="s">${s}</div>${P ? `<div class="j">${j}</div>` : ''}</div>`;
     const cols = col('', 'c', 'Comptoir', fE(A.direct), pc(A.direct) + (cpt ? ' · vente directe' : ' · pro compris'), `${jn}${j7 && j7.moment ? ' à ' + esc(j7.moment) : ''}<br>${P ? fE(P.direct) + ecart(A.direct, P.direct) : ''}`)
-      + col('compt', 'k', 'Commandes', fU(A.cmd), A.C.length ? plu(A.C.length, 'prise') + ' au comptoir' : 'aucune', `${jn}<br>${P ? fU(P.cmd) + ' · ' + P.C.length : ''}`)
-      + col('web', 'w', 'Webshop', fU(A.web), A.W.length ? [nCC ? nCC + ' click & collect' : '', nLiv ? plu(nLiv, 'livraison') : ''].filter(Boolean).join(' · ') : 'aucune commande', `${jn}<br>${P ? fU(P.web) + ' · ' + P.W.length : ''}`);
+      + col('compt', 'k', 'Commandes', fU(A.cmd), [A.C.length ? plu(A.C.length, 'prise') + ' au comptoir' : (nAvC ? '' : 'aucune'), nAvC ? nAvC + ' à venir' : ''].filter(Boolean).join(' · '), `${jn}<br>${P ? fU(P.cmd) + ' · ' + P.C.length : ''}`)
+      + col('web', 'w', 'Webshop', fU(A.web), [A.W.length ? [nCC ? nCC + ' click & collect' : '', nLiv ? plu(nLiv, 'livraison') : ''].filter(Boolean).join(' · ') : (nAvW ? '' : 'aucune commande'), nAvW ? nAvW + ' à venir' : ''].filter(Boolean).join(' · '), `${jn}<br>${P ? fU(P.web) + ' · ' + P.W.length : ''}`);
     const mix = [[A.direct, 'c'], [A.cmd, 'k'], [A.web, 'w']].filter(x => x[0] > 0).map(([v, k]) => `<i class="${k}" style="flex:${v.toFixed(2)} 0 0"></i>`).join('');
-    const V = opCmdVerif(D), maint = D.now == null || S.date < AUJ ? null : opHM(D.now);
+    const V = opCmdVerif(D);
     return `<div class="op-rb"><div class="t"><span>Par canal${maint ? ' · à ' + maint : ''}</span><span>la part de chaque canal</span></div>
       <div class="mix" title="comptoir ${pc(A.direct)} · commandes ${pc(A.cmd)} · webshop ${pc(A.web)}">${mix}</div><div class="col">${cols}</div>
       <div class="bas" data-cmdm="tous" role="button" tabindex="0"><span>toucher un canal : ses commandes${V.v ? ` · <em>${V.v} à vérifier</em>` : ''}</span><span class="ch">›</span></div></div>`;
@@ -6172,8 +6208,9 @@
    * La demande au bureau vit dans la fenêtre de l'assistant, troisième mode : l'avatar choisi (Pierre ou le Coach) la
    * transmet. Le sujet (les six domaines du helpdesk), le titre, la demande, jusqu'à quatre photos, et « un passage du
    * consultant ? » ; en dessous, « Mes demandes » : le statut de chacune et la réponse du bureau.
-   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases). */
-  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, photos: [] }, envoi: false, msg: null, filtre: 'toutes' };
+   * Lecture : GET /helpdesk/magasin?shop= ; écriture : POST /helpdesk/magasin (le panel : POST /cases).
+   * « Mes demandes » s'ouvre sur le filtre « Ouvertes » (20/11/2026). */
+  const HLP = { d: null, chargement: false, err: null, f: { domaine: '', titre: '', desc: '', passage: false, urgent: false, photos: [] }, envoi: false, msg: null, filtre: 'ouvertes' };
   function hdLire(force) {
     if (HLP.chargement || (HLP.d && !force && HLP.shop === S.shop)) { return; }
     HLP.chargement = true; HLP.shop = S.shop;
@@ -6187,12 +6224,14 @@
   function hdCarte(x) {
     const e = HD_ETAT[x.statut] || ['att', x.statutNom];
     const j = x.cree ? Math.max(0, Math.round((Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5)) : null;
+    // La date limite que le consultant a fixée à la réception (20/11/2026).
+    const ech = x.echeance && x.ouverte && !x.reponse ? ' · réponse prévue d’ici le ' + esc(fD(x.echeance)) : '';
     const rep = x.reponse ? `<div class="rep ok"><b>Le bureau${x.reponseLe ? ' · ' + esc(fD(String(x.reponseLe).slice(0, 10))) : ''} :</b> ${esc(x.reponse)}</div>`
       : (x.visite ? `<div class="rep att">Reprise dans la visite${x.visite.consultant ? ' de ' + esc(x.visite.consultant) : ''}${x.visite.le ? ' du ' + esc(fD(x.visite.le)) : ''} — réponse après la visite</div>`
-        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — pas encore lue par le bureau</div>`
-          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}</div>` : '')));
+        : (x.statut === 'NEW' ? `<div class="rep att">Envoyée ${j ? 'il y a ' + j + ' jour' + (j > 1 ? 's' : '') : 'aujourd’hui'} — ${ech ? 'reçue par le bureau' + ech : 'pas encore lue par le bureau'}</div>`
+          : (x.ouverte ? `<div class="rep sans">En cours${x.consultant ? ' chez ' + esc(x.consultant) : ''}${ech}</div>` : '')));
     return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e[0]}">${esc(e[1])}</span><span class="d">${esc(fD(x.cree.slice(0, 10)))} · ${esc(x.ref.replace('CASE-', ''))}</span></div>
-      <b class="ref">${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
+      <b class="ref">${x.urgent ? '<span class="hd-urg-tag">Urgente</span> ' : ''}${esc(x.titre)}</b><div class="l2">${esc(x.domaineNom)}</div>${x.description ? `<div class="tx">${esc(x.description)}</div>` : ''}${rep}</div>`;
   }
   function hdVue() {
     const t = iaTons().length ? iaTonCle() : '';
@@ -6207,6 +6246,7 @@
       <div class="rc-champ"><label for="hd-desc">La demande</label><textarea id="hd-desc" class="rc-in" data-hd="desc" rows="4" maxlength="8000" placeholder="Ce dont vous avez besoin, le plus précisément possible…">${esc(F.desc)}</textarea></div>
       <div class="rc-champ"><label>Photos <em>facultatif · 4 au plus</em></label><div class="rc-photos">${F.photos.map((p, i) => `<div class="ph"><img src="${esc(p)}" alt=""><button type="button" data-hdphotox="${i}" aria-label="Retirer">✕</button></div>`).join('')}${F.photos.length < 4 ? '<button type="button" class="plus" data-hdphoto="1"><b>＋</b>Ajouter</button>' : ''}</div></div>
       <div class="rc-champ"><label>Un passage du consultant ?</label><div class="rc-puces"><button type="button" data-hdpass="1" class="${F.passage ? 'on' : ''}">Oui, à la prochaine visite</button><button type="button" data-hdpass="0" class="${F.passage ? '' : 'on'}">Non, une réponse suffit</button></div></div>
+      <div class="rc-champ"><label>Urgent ? <em>le bureau est prévenu tout de suite par SMS, en « URGENT »</em></label><div class="rc-puces"><button type="button" data-hdurg="1" class="${F.urgent ? 'on hd-urg' : ''}">Oui, urgent</button><button type="button" data-hdurg="0" class="${F.urgent ? '' : 'on'}">Non</button></div></div>
       <button type="button" class="rc-prise hd-envoi" data-hdenvoyer="1"${HLP.envoi ? ' disabled' : ''}><span>${HLP.envoi ? 'Envoi…' : 'Envoyer au bureau'}</span></button></div>`;
     const L = (HLP.d && HLP.d.demandes) || [];
     const n = k => L.filter(x => (k === 'ouvertes' ? x.ouverte : !!x.reponse)).length;
@@ -6218,7 +6258,7 @@
     else {
       const sans = L.filter(x => x.ouverte && !x.reponse && x.cree && (Date.parse(AUJ) - Date.parse(x.cree.slice(0, 10))) / 864e5 > 30).length;
       h += `<div class="rc-resume"><b>${n('ouvertes')}</b> ouverte${n('ouvertes') > 1 ? 's' : ''}${sans ? ' · ' + sans + ' sans réponse depuis plus de 30 jours' : ''}</div>
-        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.map(hdCarte).join('')}`;
+        <div class="rc-filtres">${[['toutes', 'Toutes', L.length], ['ouvertes', 'Ouvertes', n('ouvertes')], ['rep', 'Répondues', n('rep')]].map(([k, l, c]) => `<button type="button" data-hdfiltre="${k}" class="${HLP.filtre === k ? 'on' : ''}">${l}<b>${c}</b></button>`).join('')}</div>${vis.length ? vis.map(hdCarte).join('') : `<div class="rc-pt">${HLP.filtre === 'ouvertes' ? 'Aucune demande ouverte.' : 'Aucune demande répondue pour l’instant.'}</div>`}`;
     }
     return h + '</div></div>';
   }
@@ -6237,6 +6277,7 @@
   function hdLier(b) {
     b.querySelectorAll('[data-hddom]').forEach(e => e.addEventListener('click', () => { HLP.f.domaine = e.dataset.hddom; HLP.msg = null; iaRendre(); }));
     b.querySelectorAll('[data-hdpass]').forEach(e => e.addEventListener('click', () => { HLP.f.passage = e.dataset.hdpass === '1'; iaRendre(); }));
+    b.querySelectorAll('[data-hdurg]').forEach(e => e.addEventListener('click', () => { HLP.f.urgent = e.dataset.hdurg === '1'; iaRendre(); }));
     b.querySelectorAll('[data-hdfiltre]').forEach(e => e.addEventListener('click', () => { HLP.filtre = e.dataset.hdfiltre; iaRendre(); }));
     b.querySelectorAll('[data-hd]').forEach(e => e.addEventListener('input', () => { HLP.f[e.dataset.hd] = e.value; }));
     b.querySelectorAll('[data-hdphotox]').forEach(e => e.addEventListener('click', () => { HLP.f.photos.splice(+e.dataset.hdphotox, 1); iaRendre(); }));
@@ -6251,9 +6292,9 @@
       if (!F.domaine) { HLP.msg = { ok: false, t: 'Choisissez le sujet de la demande.' }; iaRendre(); return; }
       if (!F.titre.trim() || !F.desc.trim()) { HLP.msg = { ok: false, t: 'Le titre et la demande sont requis.' }; iaRendre(); return; }
       HLP.envoi = true; HLP.msg = null; iaRendre();
-      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: F.domaine, titre: F.titre.trim(), description: F.desc.trim(), passage: F.passage, photos: F.photos })
+      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: F.domaine, titre: F.titre.trim(), description: F.desc.trim(), passage: F.passage, urgent: F.urgent, photos: F.photos })
         .then(r => { if (r && r.ok === false) { throw new Error(r.error || 'refusée'); }
-          HLP.f = { domaine: '', titre: '', desc: '', passage: false, photos: [] }; HLP.msg = { ok: true, t: '✓ Demande envoyée au bureau' + (r && r.ref ? ' (' + r.ref + ')' : '') + '. La réponse s’affichera ici.' }; HLP.d = null; hdLire(true); })
+          HLP.f = { domaine: '', titre: '', desc: '', passage: false, urgent: false, photos: [] }; HLP.msg = { ok: true, t: '✓ Demande envoyée au bureau' + (r && r.ref ? ' (' + r.ref + ')' : '') + '. La réponse s’affichera ici.' }; HLP.d = null; hdLire(true); })
         .catch(er => { HLP.msg = { ok: false, t: 'La demande n’est pas partie : ' + er.message }; })
         .then(() => { HLP.envoi = false; iaRendre(); });
     }));
@@ -7292,7 +7333,9 @@
   /* --- Frais (16/11/2026, maquette docs/maquettes/frais-tva) -----------------------------------------------------------
    * Les frais du magasin du mois, tels que saisis au panel (GET /exploitation/frais) ; pour chaque poste, « TVA comprise ? »
    * (oui, non) et le taux. Le P&L court s'en sert pour ramener les frais généraux hors TVA (src/pnl_ht.php). Le choix se
-   * garde pour le poste, d'un mois à l'autre (POST /exploitation/frais/tva). Cliquer à nouveau le choix fait le défait. */
+   * garde pour le poste, d'un mois à l'autre (POST /exploitation/frais/tva). Cliquer à nouveau le choix fait le défait.
+   * « Ajouter un frais » (21/11/2026) : le frais est créé au panel pour le mois, jusqu'en décembre ou toute l'année
+   * (POST /exploitation/frais/ajout) ; un ajout se défait (POST /exploitation/frais/annuler). */
   const FR_EC = {};
   function cleFR() { return 'frais|' + S.shop + '|' + S.frMois; }
   function cheminFR() { return '/exploitation/frais?shop=' + encodeURIComponent(S.shop) + '&mois=' + S.frMois; }
@@ -7302,17 +7345,17 @@
     S.frMois = S.frMois || AUJ.slice(0, 7);
     const k = cleFR(), D = S.aux[k], ceMois = AUJ.slice(0, 7);
     const nav = `<div class="fx-nav"><span class="db-lab">Mois</span><button class="db-btn" data-frm="-1" aria-label="mois précédent">‹</button><span class="fx-mois">${esc(frMoisLib(S.frMois))}</span><button class="db-btn" data-frm="1" aria-label="mois suivant"${S.frMois >= ceMois ? ' disabled' : ''}>›</button>${S.frMois !== ceMois ? '<button class="db-btn" data-frm="0">Ce mois-ci</button>' : ''}</div>`;
-    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre.</p>`;
+    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre. Un frais qui manque s’<b>ajoute au panel</b> plus bas, pour le mois ou toute l’année.</p>`;
     if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])}</div></div>`; }
     if (!D) { return h + squelette(6) + '</div>'; }
     if (D.indispo) { return h + `<div class="db-alerte">${esc(D.motif || 'frais indisponibles')}</div></div>`; }
-    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div></div>`; }
-    if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div></div>`; }
+    if (!D.lu) { return h + `<div class="db-alerte">Le panel n’a pas répondu pour les frais de ${esc(frMoisLib(S.frMois))} : « ↻ Relire » pour réessayer.</div>${frRendAjout(D)}</div>`; }
+    if (!(D.lignes || []).length) { return h + `<div class="db-alerte">Aucun frais saisi au panel pour ${esc(frMoisLib(S.frMois))}.</div>${frRendAjout(D)}</div>`; }
     const TAUX = D.taux || [0, 6, 12, 21];
     const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
     const lignes = D.lignes.map((l, i) => {
       const ai = l.aIndiquer;
-      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}${l.majLe ? `<span class="sub">indiqué le ${esc(fD(l.majLe.slice(0, 10)))}${l.majPar ? ' · ' + esc(l.majPar) : ''}</span>` : ''}</td>
+      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}</td>
         <td class="n">${fU(l.montant)}</td>
         <td>${seg([[true, 'Oui'], [false, 'Non']], l.tva, v => `data-frt="${i}" data-v="${v}" title="${v ? 'le montant saisi contient la TVA' : 'le montant est hors TVA, ou sans TVA'}"`)}</td>
         <td>${seg(TAUX.map(t => [+t, nf(+t, 0) + ' %']), l.taux == null ? null : +l.taux, v => `data-frx="${i}" data-v="${v}"`)}</td>
@@ -7332,6 +7375,7 @@
       <tbody>${lignes}
         <tr class="tot"><td>Total du mois<span class="sub">${D.postes - ai} poste${D.postes - ai > 1 ? 's' : ''} indiqué${D.postes - ai > 1 ? 's' : ''} sur ${D.postes}</span></td><td class="n">${fU(D.saisi)}</td><td></td><td></td><td class="n">${fU(D.ht)}</td><td class="n">${fU(D.tva)}</td></tr>
       </tbody></table></div></div>`;
+    h += frRendAjout(D);
     // Ce que ça change dans le P&L court : les frais du jour (le panel les alloue à aujourd'hui), ceux du mois, et leur
     // part dans le CA du jour si le Résultat d'aujourd'hui est lu (le rail le lit).
     const JM = S.frMois === ceMois && S.date === AUJ ? magasin(S.aux['jourM|' + AUJ]) : null;
@@ -7355,6 +7399,7 @@
       S.frMois = n === 0 ? ce : frMoisPas(n); if (S.frMois > ce) { S.frMois = ce; }
       delete S.err.frEcr; charger(false);
     }));
+    frBrancherAjout();
     const D = S.aux[cleFR()];
     if (!D || !Array.isArray(D.lignes)) { return; }
     const choisir = (i, tva, taux) => {
@@ -7378,6 +7423,138 @@
       const i = +b.dataset.frx, l = D.lignes[i], t = +b.dataset.v;
       choisir(i, l.tva == null ? t > 0 : l.tva, t);
     }));
+  }
+  /* Ajouter un frais (21/11/2026, « rajouter un frais (faire un formulaire) et que ce frais se reporte sur toute
+   * l'année ») : libellé, type au panel, montant (par mois, ou un total réparti), le mois, et la répétition — ce mois
+   * seulement, jusqu'en décembre, toute l'année (janvier → décembre). Le serveur crée une ligne au panel par mois (ou une
+   * seule si le panel reporte le frais de lui-même) et le dit mois par mois ; « Annuler » supprime au panel ce qu'il a
+   * créé. La TVA du nouveau poste peut s'indiquer d'emblée. */
+  function frForm() {
+    if (!S.frF) { S.frF = { nom: '', type: '', montant: '', base: 'mois', mois: S.frMois || AUJ.slice(0, 7), repeter: 'annee', tva: null, taux: null }; }
+    return S.frF;
+  }
+  /** Les mois d'un ajout, comme le serveur (phMoisCibles). */
+  function frMoisAjout(F) {
+    const y = F.mois.slice(0, 4), m = +F.mois.slice(5, 7), de = F.repeter === 'annee' ? 1 : m, a = F.repeter === 'mois' ? m : 12, o = [];
+    for (let i = de; i <= a; i++) { o.push(y + '-' + String(i).padStart(2, '0')); }
+    return o;
+  }
+  const frPlage = (du, au) => du === au ? frMoisLib(du) : (du.slice(0, 4) === au.slice(0, 4) ? MOIS[+du.slice(5, 7) - 1] : frMoisLib(du)) + ' → ' + frMoisLib(au);
+  const frMontant = F => parseFloat(String(F.montant).replace(/\s/g, '').replace(',', '.'));
+  /** Ce qui manque au formulaire, sinon '' : le libellé, le montant, le type (quand le panel en propose). */
+  function frManque(F, D) {
+    const m = [];
+    if (!F.nom.trim()) { m.push('le libellé'); }
+    if (!(frMontant(F) > 0)) { m.push('le montant'); }
+    if (((D || {}).types || []).length && !F.type) { m.push('le type'); }
+    return m.join(', ');
+  }
+  /** L'aperçu, en texte : combien de mois, de quand à quand, combien par mois et en tout (réparti au centime, comme phMontants). */
+  function frApercu(F, D) {
+    const manque = frManque(F, D);
+    if (manque) { return 'À indiquer : ' + manque + '.'; }
+    const M = frMoisAjout(F), n = M.length, v = frMontant(F), c = Math.round(v * 100);
+    const pm = F.base === 'total' ? Math.floor(c / n) / 100 : Math.round(v * 100) / 100, der = F.base === 'total' ? (c - Math.floor(c / n) * (n - 1)) / 100 : pm;
+    return `${n} mois au panel (${frPlage(M[0], M[n - 1])}) : ${fU(pm)} par mois${der !== pm ? ', le dernier ' + fU(der) : ''} · ${fU(F.base === 'total' ? v : pm * n)} en tout.`;
+  }
+  const frBouton = F => { const n = frMoisAjout(F).length; return n > 1 ? 'Ajouter les ' + n + ' mois au panel' : 'Ajouter au panel'; };
+  function frRendAjout(D) {
+    const F = frForm(), types = D.types || [], TAUX = D.taux || [0, 6, 12, 21];
+    const segF = (k, opts) => `<span class="seg">${opts.map(([v, l]) => `<button type="button" class="${F[k] === v ? 'is-on' : ''}" data-frf="${k}" data-v="${esc(String(v))}">${l}</button>`).join('')}</span>`;
+    const an = +AUJ.slice(0, 4), ans = [...new Set([+S.frMois.slice(0, 4), an, an + 1])].filter(y => Math.abs(y - an) <= 1).sort();
+    // Toute l'année : on choisit l'année (le mois reste, pour revenir à « jusqu'en décembre ») ; sinon le mois de départ.
+    const moisOpts = F.repeter === 'annee'
+      ? ans.map(y => `<option value="${y}${F.mois.slice(4)}"${+F.mois.slice(0, 4) === y ? ' selected' : ''}>${y}</option>`).join('')
+      : ans.map(y => `<optgroup label="${y}">${MOIS.map((nm, i) => { const v = y + '-' + String(i + 1).padStart(2, '0'); return `<option value="${v}"${v === F.mois ? ' selected' : ''}>${nm} ${y}</option>`; }).join('')}</optgroup>`).join('');
+    const manque = frManque(F, D);
+    let h = `<div class="db-card fx-aj"><div class="ct"><span class="db-lab">Ajouter un frais</span><span class="db-mini">créé au panel, une ligne par mois · il compte ensuite dans les frais généraux du P&amp;L</span></div>
+      <div class="fx-aj-f">
+        <div class="pm-row fx-aj-r1">
+          <div class="pm-f"><label>Libellé</label><input class="pm-in" data-frin="nom" maxlength="120" autocomplete="off" placeholder="ex. Assurance incendie" value="${esc(F.nom)}"></div>
+          ${types.length ? `<div class="pm-f"><label>Type de frais au panel</label><select class="pm-in" data-frin="type"><option value="">— choisir —</option>${types.map(t => `<option value="${esc(t.id)}"${String(t.id) === String(F.type) ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select></div>` : ''}
+          <div class="pm-f"><label>Montant</label><span class="pm-eur"><input class="pm-in" data-frin="montant" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(F.montant)}"><i>€</i></span></div>
+          <div class="pm-f"><label>Le montant est</label>${segF('base', [['mois', 'par mois'], ['total', 'un total à répartir']])}</div>
+        </div>
+        <div class="pm-row fx-aj-r2">
+          <div class="pm-f"><label>${F.repeter === 'annee' ? 'Année' : (F.repeter === 'mois' ? 'Mois' : 'À partir de')}</label><select class="pm-in" data-frin="mois">${moisOpts}</select></div>
+          <div class="pm-f"><label>Répéter</label>${segF('repeter', [['mois', 'ce mois seulement'], ['fin', 'jusqu’en décembre'], ['annee', 'toute l’année']])}</div>
+          <div class="pm-f"><label>TVA comprise dans le montant ?</label><span>${segF('tva', [[true, 'Oui'], [false, 'Non']])}${F.tva !== null ? segF('taux', TAUX.map(t => [+t, nf(+t, 0) + ' %'])) : ''}</span></div>
+        </div>
+        <div class="fx-aj-pied"><span class="fx-aj-ap" id="fx-aj-ap">${esc(frApercu(F, D))}</span><button type="button" class="db-btn fx-aj-ok" data-fraj="1"${S.frEnv || manque ? ' disabled' : ''}>${S.frEnv ? 'Envoi au panel…' : esc(frBouton(F))}</button></div>
+      </div>`;
+    if (S.err.frAj) { h += `<div class="db-err fx-aj-msg">Ajout : ${esc(S.err.frAj)}</div>`; }
+    const R = S.frR && S.frR.shop === S.shop ? S.frR : null;
+    if (R) {
+      const ok = (R.mois || []).filter(x => x.ok), ko = (R.mois || []).filter(x => !x.ok), cree = ok.filter(x => !x.parLePanel), absents = ok.filter(x => x.vu === false);
+      h += `<div class="fx-aj-res${ko.length ? ' ko' : ''}"><b>${esc(R.poste)}</b> : ${R.reporteParLePanel
+        ? `créé au panel pour ${esc(frMoisLib(cree[0].mois))} ; le panel le reporte de lui-même sur les mois suivants, rien d’autre n’a été créé.`
+        : (cree.length ? `créé au panel pour ${cree.length} mois (${esc(frPlage(cree[0].mois, cree[cree.length - 1].mois))}).` : 'rien n’a été créé.')}
+        ${ko.length ? `<br>Refusé par le panel pour ${esc(frMoisLib(ko[0].mois))} : ${esc(ko[0].erreur || 'sans réponse')}. Les mois suivants n’ont pas été envoyés.` : ''}
+        ${absents.length ? `<br><span class="wa">Pas encore visible au panel : ${absents.map(x => esc(MOIS[+x.mois.slice(5, 7) - 1])).join(', ')}.</span>` : ''}
+        ${R.lot && R.annulable ? `<button type="button" class="db-btn" data-fran="${esc(R.lot)}"${S.frAnn ? ' disabled' : ''}>${S.frAnn === R.lot ? 'Annulation…' : 'Annuler cet ajout'}</button>` : ''}</div>`;
+    }
+    const AR = S.frAnnR && S.frAnnR.shop === S.shop ? S.frAnnR : null;
+    if (AR) {
+      h += `<div class="fx-aj-res${(AR.refus || []).length || (AR.sansId || []).length ? ' ko' : ''}">Ajout annulé : ${(AR.annules || []).length} mois supprimé${(AR.annules || []).length > 1 ? 's' : ''} au panel.${(AR.refus || []).length ? ' Refusé pour ' + esc(frMoisLib(AR.refus[0].mois)) + ' : ' + esc(AR.refus[0].erreur || '') + '.' : ''}${(AR.sansId || []).length ? ' ' + AR.sansId.length + ' mois introuvable' + (AR.sansId.length > 1 ? 's' : '') + ' au panel (déjà supprimé' + (AR.sansId.length > 1 ? 's' : '') + ' ?).' : ''}</div>`;
+    }
+    const A = (D.ajouts || []).filter(a => !R || a.lot !== R.lot);
+    if (A.length) {
+      h += `<div class="fx-aj-l"><span class="db-lab">Ajoutés d’ici</span>${A.map(a => `<div class="fx-aj-i"><span>${esc(a.poste)}<span class="sub">${a.n} mois · ${esc(frPlage(a.du, a.au))} · le ${esc(fD(a.le.slice(0, 10)))}${a.par ? ' · ' + esc(a.par) : ''}</span></span><span class="n">${fU(a.montant)}</span>${a.annulable
+        ? `<button type="button" class="db-btn" data-fran="${esc(a.lot)}"${S.frAnn ? ' disabled' : ''}>${S.frAnn === a.lot ? 'Annulation…' : 'Annuler'}</button>`
+        : '<span class="mu">à défaire au panel</span>'}</div>`).join('')}</div>`;
+    }
+    return h + '</div>';
+  }
+  /** Après un ajout ou une annulation : les frais des mois touchés se relisent (le mois regardé tout de suite), et le Résultat. */
+  function frRelire(mois) {
+    (mois || []).forEach(m => { if (m !== S.frMois) { delete S.aux['frais|' + S.shop + '|' + m]; } });
+    Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+    lireAux(cleFR(), cheminFR(), true);
+  }
+  function frEnvoyer() {
+    const F = frForm(), D = S.aux[cleFR()] || {};
+    if (S.frEnv || frManque(F, D)) { return; }
+    const M = frMoisAjout(F);
+    if (M.length > 1 && !window.confirm(`Créer « ${F.nom.trim()} » au panel pour ${M.length} mois (${frPlage(M[0], M[M.length - 1])}) ?`)) { return; }
+    S.frEnv = true; delete S.err.frAj; S.frR = null; S.frAnnR = null; rendre();
+    ecrire('/exploitation/frais/ajout', { shop: S.shop, nom: F.nom.trim(), type: F.type || null, montant: frMontant(F), base: F.base, mois: F.mois, repeter: F.repeter, tva: F.tva, taux: F.tva === null ? null : F.taux })
+      .then(r => { S.frR = Object.assign({ shop: S.shop }, r); if (r.crees) { S.frF = null; frRelire(M); } })
+      .catch(e => { S.err.frAj = e.message; })
+      .finally(() => { S.frEnv = false; rendre(); });
+  }
+  function frAnnuler(lot) {
+    if (S.frAnn || !window.confirm('Supprimer au panel les lignes créées par cet ajout ?')) { return; }
+    S.frAnn = lot; delete S.err.frAj; S.frAnnR = null; rendre();
+    ecrire('/exploitation/frais/annuler', { shop: S.shop, lot: lot })
+      .then(r => { if (S.frR && S.frR.lot === lot) { S.frR = null; } S.frAnnR = Object.assign({ shop: S.shop }, r); frRelire(r.annules); })
+      .catch(e => { S.err.frAj = e.message; })
+      .finally(() => { S.frAnn = null; rendre(); });
+  }
+  function frBrancherAjout() {
+    if (!$.querySelector('.fx-aj')) { return; }
+    const F = frForm();
+    // La saisie ne refait pas l'écran (le curseur reste où il est) : l'aperçu et le bouton suivent.
+    const maj = () => {
+      const D = S.aux[cleFR()] || {}, ap = document.getElementById('fx-aj-ap'), b = $.querySelector('[data-fraj]');
+      if (ap) { ap.textContent = frApercu(F, D); }
+      if (b && !S.frEnv) { b.disabled = !!frManque(F, D); b.textContent = frBouton(F); }
+    };
+    $.querySelectorAll('[data-frin]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const k = el.dataset.frin;
+      F[k] = el.value;
+      // Un type choisi sans libellé : le libellé prend son nom.
+      if (k === 'type' && !F.nom.trim()) { const t = ((S.aux[cleFR()] || {}).types || []).find(x => String(x.id) === el.value); const i = $.querySelector('[data-frin="nom"]'); if (t && i) { F.nom = t.nom; i.value = t.nom; } }
+      maj();
+    }));
+    $.querySelectorAll('[data-frf]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.frf, v = b.dataset.v, D = S.aux[cleFR()] || {};
+      if (k === 'tva') { const t = v === 'true'; F.tva = F.tva === t ? null : t; F.taux = F.tva === null ? null : (F.tva ? (F.taux > 0 ? F.taux : (D.tauxOui || 21)) : 0); }
+      else if (k === 'taux') { F.taux = +v; }
+      else { F[k] = v; }
+      rendre();
+    }));
+    $.querySelectorAll('[data-fraj]').forEach(b => b.addEventListener('click', frEnvoyer));
+    $.querySelectorAll('[data-fran]').forEach(b => b.addEventListener('click', () => frAnnuler(b.dataset.fran)));
   }
   /* --- Le rail (15/11/2026, maquette docs/maquettes/rail-franchise, « le vrai dashboard avec un rail à côté ») ------------
    * Au bureau (1 024 px et plus), hors cadre : l'en-tête et la rangée d'onglets cèdent la place à un rail à gauche (le §8
@@ -7521,6 +7698,9 @@
     // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
     // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
+    // La boîte mail (21/11/2026, « dans la boîte mail, et uniquement là, pas les en-têtes du dashboard ») : le titre seul,
+    // sans les vignettes (Relire, valeur du magasin, demande au bureau, revue du soir, API) ; la boîte a sa propre barre.
+    if (S.vue === 'boite') { return `<div class="db-nav db-nav--rail db-nav--boite">${haut}</div>`; }
     return `<div class="db-nav db-nav--rail">${haut.trim() ? haut + '<span style="flex:1"></span>' : ''}
       <span class="db-avs">${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
       <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="db-av__o">${VIGN_ICO.valeur}</span><span class="db-av__t"><span class="k">Valeur du magasin</span><span class="v">${val}</span></span></button></span>
@@ -8455,6 +8635,63 @@
    * La pièce : prix encaissé, coût de recette et marge viennent de la ligne cliquée (ce que les tickets ont
    * gravé) ; la recette ligne par ligne vient de /analyse/produits/recette (copie locale du panel) ; la
    * catégorie et le magasin du jour des stats déjà lues ; le prix réseau de la fiche ; les seuils du P&L. */
+  /* « Adapter mon prix de vente » (21/11/2026) : le prix testé devient le prix de vente du magasin au panel.
+   * Un clic lit le plan (POST /analyse/produits/prix, apercu) : le prix testé est hors TVA, le panel porte le prix TTC ;
+   * la ligne de confirmation montre ce qui sera écrit, puis « Confirmer » l'écrit. F.adapt = {etat, plan, r, err, pour, demande}.
+   * Au-dessus du prix maximum du réseau, rien ne s'écrit : « Demander au réseau de relever le maximum » envoie la demande
+   * au bureau par le helpdesk (POST /helpdesk/magasin, domaine Ventes) — F.adapt.demande = {etat, ref, err}. */
+  function ficheAdapter(F, sim) {
+    if (!/^\d+$/.test(String(F.pid || ''))) { return ''; }   // une portion (« produit:portion ») ne se règle pas d'ici
+    const A = F.adapt && F.adapt.pour === sim ? F.adapt : null, fPt = n => n == null ? '—' : nf(n, 2) + ' €';
+    const bouton = (lib, off) => `<button type="button" class="db-btn prim" data-fadapt="lire"${off ? ' disabled' : ''}>${lib}</button>`;
+    if (!A) { return `<div class="fi-radapt">${bouton('Adapter mon prix de vente')}<small>enregistre ${fPt(sim)} hors TVA comme prix de vente du magasin dans l’ERP</small></div>`; }
+    if (A.etat === 'lecture') { return `<div class="fi-radapt">${bouton('Lecture du prix dans l’ERP…', true)}</div>`; }
+    if (A.etat === 'envoi') { return `<div class="fi-radapt">${bouton('Envoi à l’ERP…', true)}</div>`; }
+    if (A.etat === 'fait') {
+      const r = A.r || {};
+      return `<div class="fi-radapt fait ${r.ok ? 'ok' : 'ko'}"><span>${r.ok ? `<b>Prix enregistré dans l’ERP : ${fPt(r.ecrit)} TTC</b>${r.avant != null ? ' au lieu de ' + fPt(r.avant) : ''}${r.part < 1 ? ' la portion' : ''}.${r.message ? ' ' + esc(r.message) : ''} Le prix encaissé de cette fiche suivra avec les prochains tickets.` : esc(r.message || 'Le prix n’a pas changé.')}</span></div>`;
+    }
+    if (A.etat === 'erreur') { return `<div class="fi-radapt fait ko"><span>${esc(A.err || 'Le prix n’a pas pu être enregistré.')}</span>${bouton('Réessayer')}</div>`; }
+    // L'aperçu : ce que le panel porte, ce qui sera écrit.
+    const p = A.plan || {};
+    if (p.erreur) {
+      // Au-dessus du maximum du réseau : la demande de le relever part au bureau (le helpdesk), d'un clic.
+      const D = A.demande, dem = p.bloque !== 'max' ? '' : (D && D.etat === 'fait' ? '' : `<button type="button" class="db-btn prim" data-fadapt="demander"${D && D.etat === 'envoi' ? ' disabled' : ''}>${D && D.etat === 'envoi' ? 'Envoi de la demande…' : (D && D.etat === 'erreur' ? 'Renvoyer la demande' : 'Demander au réseau de relever le maximum')}</button>`);
+      if (D && D.etat === 'fait') { return `<div class="fi-radapt fait ok"><span><b>Demande envoyée au réseau${D.ref ? ' (réf. ' + esc(D.ref) + ')' : ''}.</b> Votre consultant la reçoit ; la réponse arrive dans vos demandes. En attendant, le prix en caisse ne change pas.</span></div>`; }
+      return `<div class="fi-radapt fait ko"><span>${esc(p.erreur)}${D && D.etat === 'erreur' ? ' La demande n’est pas partie : ' + esc(D.err || 'pas de réponse') + '.' : ''}</span>${dem}</div>`;
+    }
+    return `<div class="fi-radapt conf"><span>En caisse, TVA ${nf(p.tva, p.tva % 1 ? 1 : 0)} % comprise : <b>${p.avant != null ? fPt(p.avant) + ' → ' : ''}${fPt(p.ecrit)} TTC</b>${p.part < 1 ? ' la portion (' + fPt(p.pieceTtc) + ' la pièce entière)' : ''}, soit ${fPt(p.pieceHt)} hors TVA${p.max != null ? ' · maximum du réseau ' + fPt(p.max) : ''}.</span>
+      <span class="b"><button type="button" class="db-btn prim" data-fadapt="confirmer">Confirmer ce prix</button><button type="button" class="db-btn" data-fadapt="annuler">Annuler</button></span></div>`;
+  }
+  function ficheAdapterAgir(quoi) {
+    const F = S.fiche; if (!F || F.simPrix == null) { return; }
+    const sim = F.simPrix, pid = F.pid, encore = () => S.fiche === F && F.simPrix === sim;
+    if (quoi === 'annuler') { delete F.adapt; ficheRendre(); return; }
+    if (quoi === 'demander') {
+      const A = F.adapt, p = A && A.plan;
+      if (!A || A.pour !== sim || !p || p.bloque !== 'max' || (A.demande && (A.demande.etat === 'envoi' || A.demande.etat === 'fait'))) { return; }
+      const e = n => nf(n, 2) + ' €', I = F.simInfo || {}, court = nomShop().replace(/^.* - /, '');
+      const desc = [`Le magasin ${court} demande de relever le prix maximum du réseau pour « ${F.nom} » (produit ${pid}).`,
+        `Prix de vente demandé : ${e(p.ecrit)} TTC${p.part < 1 ? ' la portion (' + e(p.pieceTtc) + ' la pièce entière)' : ''}, soit ${e(p.pieceHt)} hors TVA (TVA ${nf(p.tva, p.tva % 1 ? 1 : 0)} %).`,
+        `Prix maximum du réseau aujourd’hui : ${e(p.max)} TTC.`,
+        p.avant != null ? `Prix en caisse aujourd’hui : ${e(p.avant)} TTC.` : '',
+        I.coef != null && I.taux != null ? `Au prix demandé : coefficient × ${nf(I.coef, 2)}, marge brute ${nf(I.taux, 0)} %.` : '',
+        'Demande envoyée depuis la fiche produit du dashboard (Recette & marge).'].filter(Boolean).join('\n');
+      A.demande = { etat: 'envoi' }; ficheRendre();
+      ecrire('/helpdesk/magasin', { shop: S.shop, domaine: 'sales', titre: ('Prix maximum à relever : ' + F.nom).slice(0, 190), description: desc })
+        .then(r => { if (F.adapt !== A) { return; } A.demande = r && r.ok ? { etat: 'fait', ref: r.ref || '' } : { etat: 'erreur', err: (r && (r.error || r.erreur)) || 'refusée' }; })
+        .catch(x => { if (F.adapt === A) { A.demande = { etat: 'erreur', err: x.message }; } })
+        .finally(() => { if (S.fiche === F) { ficheRendre(); } });
+      return;
+    }
+    const confirmer = quoi === 'confirmer';
+    if (F.adapt && (F.adapt.etat === 'lecture' || F.adapt.etat === 'envoi')) { return; }
+    F.adapt = { pour: sim, etat: confirmer ? 'envoi' : 'lecture', plan: F.adapt && F.adapt.plan }; ficheRendre();
+    ecrire('/analyse/produits/prix', Object.assign({ shop: S.shop, pid: pid, prixHt: sim }, confirmer ? {} : { apercu: true }))
+      .then(r => { if (!encore()) { return; } F.adapt = confirmer ? { pour: sim, etat: 'fait', r: r } : { pour: sim, etat: 'apercu', plan: r }; })
+      .catch(e => { if (encore()) { F.adapt = { pour: sim, etat: 'erreur', err: e.message }; } })
+      .finally(() => { if (S.fiche === F) { ficheRendre(); } });
+  }
   const FI_ZONES = { ko: 100 / 60, att: 2.5 };   // marge < 40 % ⇔ coef < 1,67 ; < 60 % ⇔ < 2,5 (échelle MARGES)
   function ficheRecette(F, d, R, errR) {
     const fX = n => n == null ? '—' : '× ' + nf(n, 2), fPt = n => n == null ? '—' : nf(n, 2) + ' €';
@@ -8506,6 +8743,8 @@
     if (simOn) {
       const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
       h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
+      F.simInfo = { coef: sCoef, taux: sTaux };
+      h += ficheAdapter(F, sim);
     } else if (coef != null) {
       h += `<div class="fi-rverdict ${niv(coef)}"><b>${niv(coef) === 'ok' ? 'Dans le vert.' : 'Sous l’objectif.'}</b> La matière prend ${fP0(100 - taux)} du prix.${niv(coef) !== 'ok' ? ` Pour entrer dans le vert (× 2,5), il faudrait vendre la pièce <b>${fPt(mat * 2.5)}</b> au lieu de ${fPt(prix)}, ou ramener la matière à <b>${fPt(prix / 2.5)}</b> au lieu de ${fPt(mat)}.` : ''}${top && topPart != null ? ` ${esc(top.nom)} pèse <b>${fP0(topPart)}</b> du coût${niv(coef) !== 'ok' ? ' : c’est là que ça se joue' : ''}.` : ''}</div>`;
     }
@@ -8582,7 +8821,7 @@
     // L'élément qui a le focus dans la modale (le champ du prix, un onglet, un bouton) le retrouve après le redessin,
     // que le redessin vienne d'un clic ou du rafraîchissement périodique de la page.
     const act = document.activeElement, focSel = (() => { if (!act || !box.contains(act)) { return null; }
-      for (const k of ['fsiminput', 'fsimpas', 'fong', 'fsim', 'fmois', 'fmat']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
+      for (const k of ['fsiminput', 'fsimpas', 'fadapt', 'fong', 'fsim', 'fmois', 'fmat']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
       return act.classList.contains('fi-x') ? '.fi-x' : null; })(), focPos = focSel === '[data-fsiminput="1"]' ? act.selectionStart : null;
     ficheEnRendu = true;
     let corps;
@@ -8639,6 +8878,7 @@
     });
     box.querySelectorAll('[data-fmatrelire]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ficheLireMatiere(b.dataset.fmatrelire, true); ficheRendre(); }));
     box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
+    box.querySelectorAll('[data-fadapt]').forEach(b => b.addEventListener('click', () => ficheAdapterAgir(b.dataset.fadapt)));
     box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix != null ? S.fiche.simPrix : (prixEnc || 0)) + +b.dataset.fsimpas)); refocus(`[data-fsimpas="${b.dataset.fsimpas}"]`); }));
     const inp = box.querySelector('[data-fsiminput]');
     if (inp) {
@@ -10074,6 +10314,8 @@
   }
   /** Ce qui manque pour envoyer, dans l'ordre de l'écran. */
   function rcManque(F, R) {
+    // La photo est obligatoire (21/11/2026) : sans photo, le fournisseur refuse la réclamation.
+    if (!R.photos.length) { return R.traite ? 'Photo en cours…' : 'Prendre la photo d’abord'; }
     const m = rcMatiere(F, R);
     if (!m) { return 'Choisir le produit'; }
     if (!rcLivraison(F, R)) { return 'Aucune livraison de ' + rcFournNom(F, m.fournisseur); }
@@ -10102,7 +10344,7 @@
     }
     // 1. La photo : un seul bouton, l'appareil s'ouvre.
     const P = R.photos, plein = P.length + R.traite >= RC_MAX;
-    h += '<div class="rc-champ"><label>La photo</label>';
+    h += '<div class="rc-champ"><label>La photo <em>obligatoire</em></label>';
     if (P.length || R.traite) {
       h += `<div class="rc-photos">${P.map((p, i) => `<div class="ph"><img src="${p.url}" alt=""><button data-rcsuppr="${i}" aria-label="Retirer la photo">✕</button></div>`).join('')}`
         + (R.traite ? '<div class="ph att"><span>…</span></div>' : '')

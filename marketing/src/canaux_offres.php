@@ -174,6 +174,65 @@ function coClientsPro(int $sid, string $date): array
     return $out;
 }
 
+/**
+ * Les commandes payées dans la caisse de chaque jour (21/11/2026, Halle, samedi à 07:59 : « Comptoir 0 € · − 100 % ») :
+ * [jour => [id_transaction => 'HH:MM']], les tickets de ce jour-là qui encaissent l'une des commandes lues ($tx : leurs
+ * `id_transaction`), quel que soit le jour de leur retrait. Une commande se paie souvent d'avance — le webshop en ligne à
+ * la commande, une précommande réglée au comptoir — : son ticket est dans la caisse du jour du paiement, pas dans celle
+ * du retrait. Le comptoir d'un jour, c'est sa caisse moins ces tickets-là.
+ *
+ * Une liste par jour (`/shops/{id}/transactions?date=`), dont seuls les tickets des commandes sont gardés : un jour lu
+ * après sa fin ne se relit plus, la journée en cours toutes les dix minutes. Un jour que le panel ne rend pas : null
+ * (l'appelant garde alors l'ancienne règle, la caisse du jour du retrait). Sans commande payée : rien à lire.
+ */
+function coCaisseCommandes(int $sid, array $jours, array $tx): array
+{
+    $auj = date('Y-m-d');
+    $out = []; $chemins = [];
+    foreach ($jours as $j) {
+        if ($tx === [] || $j > $auj) { $out[$j] = []; continue; }
+        $memo = setting('coTxJ1:' . $sid . ':' . $j);
+        if (is_array($memo) && is_array($memo['t'] ?? null) && (!empty($memo['clos']) || (time() - (int) ($memo['le'] ?? 0)) < CO_CACHE_MIN * 60)) { $out[$j] = $memo['t']; continue; }
+        $out[$j] = null;
+        $chemins[$j] = '/shops/' . $sid . '/transactions?date=' . $j;
+    }
+    if ($chemins === [] || !PanelApi::configured()) { return $out; }
+    foreach (PanelApi::getParallele($chemins, 4) as $j => $liste) {
+        if (!is_array($liste)) { continue; }
+        $T = [];
+        foreach (analyseListe($liste) as $t) {
+            $id = (int) ($t['id'] ?? 0);
+            if ($id > 0 && isset($tx[$id])) { $T[$id] = substr((string) ($t['insert_timestamp'] ?? ''), 11, 5); }
+        }
+        $out[$j] = $T;
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['coTxJ1:' . $sid . ':' . $j, json_encode(['le' => time(), 'clos' => $j < $auj, 't' => (object) $T])]);
+        } catch (Throwable $e) { /* sans mémo */ }
+    }
+    return $out;
+}
+
+/**
+ * Les commandes payées dans la caisse d'un jour, à l'heure de leur ticket (21/11/2026) : ce que le ruban des canaux du
+ * dashboard retire de la jauge du comptoir pour dire la vente directe — toutes les commandes encaissées ce jour-là, celles
+ * qui se retirent un autre jour comprises. `pro` : un client des tickets pro de ce jour ($pro, coClientsPro) — son ticket
+ * est déjà hors de la jauge du comptoir. $T : coCaisseCommandes de ce jour ; null (tickets pas lus) → null.
+ */
+function coPayeesEnCaisse(array $cmds, ?array $T, array $pro): ?array
+{
+    if ($T === null) { return null; }
+    $out = [];
+    foreach ($cmds as $c) {
+        $tx = (int) ($c['tx'] ?? 0);
+        if ($tx <= 0 || !isset($T[$tx])) { continue; }
+        $cli = (int) ($c['cli'] ?? 0);
+        $out[] = ['heure' => (string) $T[$tx], 'canal' => $c['canal'], 'montant' => $c['montant'], 'pro' => $cli > 0 && isset($pro[$cli]), 'retrait' => substr((string) $c['quand'], 0, 10)];
+    }
+    usort($out, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    return $out;
+}
+
 /** La caisse d'un magasin jour par jour (CA, tickets) sur une liste de jours, depuis les heures gravées. */
 function coCaisse(int $sid, array $jours): array
 {
@@ -195,21 +254,37 @@ function coJours(string $date, string $periode): array
     return $jours;
 }
 
-/** Un magasin sur des jours : comptoir, click & collect, livraison, et la série jour par jour. */
-function coMagasin(int $sid, array $jours, ?array $cmds): array
+/**
+ * Un magasin sur des jours : comptoir, click & collect, livraison, et la série jour par jour.
+ *
+ * Le comptoir d'un jour = sa caisse moins le webshop qu'elle encaisse. $caisseCmd (coCaisseCommandes, 21/11/2026) : les
+ * tickets de chaque jour qui paient une commande ; un jour lu retire le webshop payé dans SA caisse, quel que soit le jour
+ * du retrait (payé en ligne la veille, il n'est pas dans la caisse du retrait). Un jour absent ou null : le webshop
+ * encaissé dont le retrait tombe ce jour-là, la règle d'avant (le réseau, la semaine, le mois).
+ */
+function coMagasin(int $sid, array $jours, ?array $cmds, array $caisseCmd = []): array
 {
     $caisse = coCaisse($sid, $jours);
     $serie = []; $tot = ['caisse' => 0.0, 'tickets' => 0, 'comptoir' => 0.0, 'cc' => ['n' => 0, 'ca' => 0.0], 'liv' => ['n' => 0, 'ca' => 0.0], 'encaisse' => 0.0];
     $parJour = [];
+    $jourDuTx = []; $encLu = [];
+    foreach ($caisseCmd as $j => $T) {
+        if (!is_array($T)) { continue; }
+        $encLu[$j] = 0.0;
+        foreach ($T as $tx => $h) { $jourDuTx[(int) $tx] = $j; }
+    }
     foreach ((array) $cmds as $c) {
         $j = substr($c['quand'], 0, 10);
         if (!isset($parJour[$j])) { $parJour[$j] = ['cc' => [0, 0.0], 'liv' => [0, 0.0], 'enc' => 0.0]; }
         if ($c['canal'] === 'compt') { continue; }
         $parJour[$j][$c['canal']][0]++; $parJour[$j][$c['canal']][1] += $c['montant'];
         if ($c['encaissee']) { $parJour[$j]['enc'] += $c['montant']; }
+        $jt = $jourDuTx[(int) ($c['tx'] ?? 0)] ?? null;
+        if ($jt !== null) { $encLu[$jt] += $c['montant']; }
     }
     foreach ($jours as $j) {
         $k = $caisse[$j] ?? null; $w = $parJour[$j] ?? ['cc' => [0, 0.0], 'liv' => [0, 0.0], 'enc' => 0.0];
+        if (array_key_exists($j, $encLu)) { $w['enc'] = $encLu[$j]; }
         $lu = $k !== null;
         $comptoir = $lu ? max(0.0, $k['ca'] - $w['enc']) : null;
         $serie[] = ['j' => $j, 'lu' => $lu, 'caisse' => $lu ? $k['ca'] : null, 'tickets' => $lu ? $k['tickets'] : null,
@@ -246,8 +321,13 @@ function ep_exploitation_canaux(): array
         // Un magasin : la journée, les 14 derniers jours, la liste du jour, demain.
         $jours14 = []; for ($i = 13; $i >= 0; $i--) { $jours14[] = date('Y-m-d', strtotime($date . ' -' . $i . ' day')); }
         $cmds = coCommandes($shop, $jours14[0]);
-        $m14 = coMagasin($shop, $jours14, $cmds);
-        $mJ = coMagasin($shop, [$date], $cmds);
+        // Les tickets de chaque jour qui paient une commande (21/11/2026) : le comptoir d'un jour ne perd que le webshop
+        // payé dans SA caisse ; une commande payée d'avance (en ligne, au comptoir) est dans la caisse du jour du paiement.
+        $txCmd = [];
+        foreach ((array) $cmds as $c) { if ((int) ($c['tx'] ?? 0) > 0) { $txCmd[(int) $c['tx']] = true; } }
+        $caisseCmd = $cmds === null ? [] : coCaisseCommandes($shop, $jours14, $txCmd);
+        $m14 = coMagasin($shop, $jours14, $cmds, $caisseCmd);
+        $mJ = coMagasin($shop, [$date], $cmds, $caisseCmd);
         $demain = date('Y-m-d', strtotime($date . ' +1 day'));
         $liste = []; $aPreparer = 0; $dem = ['n' => 0, 'ca' => 0.0];
         // Les commandes du jour réglées en paiement différé (09/11/2026) : retirées, pas « à vérifier ».
@@ -272,9 +352,12 @@ function ep_exploitation_canaux(): array
             }
         }
         $nWeb = count(array_filter($liste, static fn ($c) => $c['canal'] !== 'compt'));
+        // `caisseCmd` (21/11/2026) : les commandes payées dans la caisse du jour, à l'heure du ticket — celles qui se
+        // retirent un autre jour comprises ; null quand les tickets du jour ne se lisent pas.
         return ['shop' => (string) $shop, 'date' => $date, 'jour' => $mJ, 'serie' => $m14['serie'], 'quatorze' => ['webshop' => $m14['webshop'], 'total' => $m14['total'], 'cc' => $m14['cc'], 'liv' => $m14['liv']],
             'liste' => $liste, 'nWebshop' => $nWeb, 'aPreparer' => $aPreparer, 'demain' => ['n' => $dem['n'], 'ca' => round($dem['ca'], 2)],
-            'j7' => ['date' => $dJ7, 'liste' => $listeJ7],
+            'caisseCmd' => coPayeesEnCaisse((array) $cmds, $caisseCmd[$date] ?? null, $pro),
+            'j7' => ['date' => $dJ7, 'liste' => $listeJ7, 'caisseCmd' => coPayeesEnCaisse((array) $cmds, $caisseCmd[$dJ7] ?? null, $proJ7)],
             'indispo' => $cmds === null, 'source' => $cmds === null ? 'panel muet' : 'commandes du panel + tickets caisse'];
     }
     // Le réseau : chaque magasin sur la période.

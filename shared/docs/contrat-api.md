@@ -2868,6 +2868,78 @@ chaque poste : `lignes[]` {`poste`, `cle`, `type`, `montant`, `tva` (true, false
 Résultat gardé d'aujourd'hui part périmé (servi, refait en arrière-plan). Le panel n'est pas modifié. Routes sous
 `/exploitation` : un franchisé n'y lit et n'y écrit que ses magasins.
 
+**Le poste d'une ligne (21/11/2026).** Le poste est la `description` de la ligne au panel (le libellé saisi :
+« Comptable », « royalties »), sinon sa catégorie (`cost_name`) ; la catégorie reste en `type`, sous le poste. Avant, le
+poste était la catégorie : un frais « Comptable » s'affichait « Autres charges d'exploitation », s'additionnait aux autres
+frais de la catégorie, et la TVA choisie pour « Comptable » ne s'y appliquait pas. Un poste sans choix propre prend celui
+de sa catégorie (les choix faits avant restent valables). La garde `phF:` porte une version (`v`) : une lecture faite avec
+l'ancienne règle se refait.
+
+### `POST /analyse/produits/prix` — « Adapter mon prix de vente » (21/11/2026)
+
+Demande : « rajouter un bouton (adapter mon prix de vente) », « post dans erp ». Code : `panel/src/prix_produit.php` ;
+écran : la fiche produit du dashboard magasin, onglet Recette & marge, sous le verdict du prix testé (`ficheAdapter`) ;
+tests : `php panel/bin/tests_prix_produit.php`.
+
+`POST /analyse/produits/prix {shop, pid, prixHt[, apercu]}` : le prix testé (hors TVA, la pièce entière) devient le
+prix de vente du magasin au panel. Le serveur lit la ligne du produit (`/shops/{id}/products/available` : TVA,
+`portion_price`, `max_portion_price`, `portion_size`), calcule le prix TTC arrondi aux 5 centimes les plus proches
+(celui de la portion pour un produit divisible) et l'écrit par `PATCH /shops/{s}/products/{p}/price {portion_price}`
+(ou le format réglé `ppmFormat_prix`), puis le relit (`/shops/{s}/products/{p}`).
+
+- `apercu: true` : rien n'est écrit ; rend `{ok, apercu, tva, part, avant, avantPiece, ecrit, pieceTtc, pieceHt, max,
+  change, erreur}` — l'écran montre ce plan avant « Confirmer ce prix ».
+- Écriture : `{ok, resultat: ok|sans_effet, message, relu, …le plan}` ; 422 au-dessus du maximum du réseau, sans TVA
+  ou sans changement ; 404 si le produit n'est pas dans la liste du magasin ; 400 pour une portion
+  (« produit:portion ») ; 502 avec le motif quand le panel refuse.
+- Au-dessus du maximum du réseau (`bloque: max`), l'écran propose « Demander au réseau de relever le maximum » :
+  une demande au bureau par la route du helpdesk déjà en place (`POST /helpdesk/magasin`, domaine `sales`, titre
+  « Prix maximum à relever : … », le prix demandé, le maximum, le prix en caisse, le coefficient) — le dossier au
+  panel (`POST /cases`), le SMS au bureau et la liste « Demandes des franchisés » du cockpit. Le prix ne change pas.
+- Chaque envoi est gardé dans `panel_prix_modif` (`shop_id`, `produit_id`, `produit`, `avant_ttc`, `apres_ttc`,
+  `prix_ht`, `tva`, `http`, `resultat`, `message`, `cree_le`, `cree_par`).
+
+### `POST /exploitation/frais/ajout` et `POST /exploitation/frais/annuler` — ajouter un frais au panel (21/11/2026)
+
+Demande : « rajouter un frais (faire un formulaire) et que ce frais se reporte sur toute l'année ». Code :
+`panel/src/frais.php` ; écran : l'onglet Frais (`rendFrais`, carte « Ajouter un frais ») ; tests : `php panel/bin/tests_pnl_ht.php`.
+
+`POST /exploitation/frais/ajout {shop, nom, type, montant, base, mois, repeter, tva, taux}` crée le frais au panel
+(`POST /shops/{id}/costs`), une ligne par mois : `repeter` `mois` (le mois seulement), `fin` (de ce mois à décembre),
+`annee` (janvier → décembre de l'année de `mois`). `base` `mois` : `montant` chaque mois ; `total` : `montant` réparti au
+centime, le dernier mois prend l'arrondi. `type` : l'identifiant d'un type de frais du panel (`/costs`, rendu par
+`GET /exploitation/frais` sous `types`, gardé un jour dans `phTypes`). `mois` : de l'année passée à l'année prochaine.
+`tva`/`taux` (facultatifs) : le choix « TVA comprise » du nouveau poste, comme `/exploitation/frais/tva`.
+
+- **La forme des frais au panel** (lue le 21/11/2026 par `panel/tools/sonde_frais.php`, workflow `sonde-frais.yml`,
+  lecture seule) : `/costs` rend les 9 catégories `{id, name}` ; une ligne du magasin (`/shops/{id}/costs?period=`, liste)
+  est `{id, id_shop, id_cost, date: AAAA-MM-01, amount: "700.00", description, cost_name}` ; `/owner/costs?period=`
+  rend `{period, total, items: [{id, date, amount, description, cost_name}]}`. `cost_name` est la catégorie,
+  `description` le libellé saisi. **Aucun champ de TVA** : la TVA d'un poste reste au cockpit (`panel_frais_tva`).
+- **Le corps** reprend les champs d'une ligne déjà saisie au magasin (le mois de l'ajout puis les trois d'avant) : le
+  libellé dans `description` (sinon `name`, `label`, `title`), jamais `cost_name` ; sans ligne lue, la forme ci-dessus
+  `{id_shop, id_cost, date, amount, description}`. Chaque ligne couvre son mois, jamais plus.
+- **L'identifiant.** La création ne rend pas l'identifiant de la ligne : la relecture le retrouve (même libellé, même
+  montant, la plus récente des lignes qu'aucun autre ajout ne tient) ; à défaut, l'annulation le cherche au même moment.
+- **Le report par le panel.** Le mois qui suit le premier est relu (`/owner/costs?period=`) avant et après la première
+  création : s'il porte le frais une fois de plus, le panel le reporte de lui-même et rien d'autre n'est créé
+  (`reporteParLePanel`, les mois suivants marqués `parLePanel`).
+- **Un refus** du panel (code, message, `errors`) remonte mois par mois (`mois[].erreur`) ; les mois suivants ne partent
+  pas. Rien de créé : HTTP 502 et `error`.
+- **La réponse** : `ok`, `lot`, `poste`, `crees`, `mois[]` {`mois`, `montant`, `ok`, `id` (la ligne au panel, si rendue),
+  `erreur`, `vu` (le panel la montre à la relecture), `parLePanel`}, `reporteParLePanel`, `annulable`, `champs` (les noms
+  des champs envoyés), `gabarit` (une ligne lue a servi de modèle).
+- Les frais gardés des mois touchés (`phF:`), et pour les mois passés les frais du jour gravés (`dsJ:`, `dsM:`) et le P&L
+  mensuel (`pnlM:`), se relisent ; le Résultat d'aujourd'hui part périmé.
+
+Chaque ligne créée est gardée dans `panel_frais_ajout` (`shop_id`, `lot`, `mois`, `poste`, `montant`, `panel_id`,
+`cree_le`, `cree_par`, `annule_le`). `GET /exploitation/frais` rend sous `ajouts` les ajouts des 90 derniers jours, non
+annulés (huit au plus : `lot`, `poste`, `du`, `au`, `n`, `montant`, `le`, `par`, `annulable`).
+
+`POST /exploitation/frais/annuler {shop, lot}` supprime au panel les lignes de l'ajout (`DELETE /shops/costs/{id}`) et les
+marque annulées ; seulement celles du magasin de la requête. Une ligne dont le panel n'a pas rendu l'identifiant est à
+supprimer au panel (`sansId`). Réponse : `ok`, `annules`, `sansId`, `refus[]` {`mois`, `erreur`}.
+
 **Main-d'œuvre de la semaine et du mois (10/10/2026).** `/exploitation/periode` additionne le coût du personnel de chaque jour tel que le panel l'alloue (`/shops/{id}/statistics/daily-summary` : `employee_cost`, et `shop_cost` pour les frais). `/pnl?period=month` rend le personnel cumulé du 1er à aujourd'hui, pas le mois entier. Le répartir sur les 31 jours d'octobre donnait 1 257,69 € pour Halle au 10/10 au lieu d'environ 3 900 €. Ce cumul ne sert plus qu'en repli, divisé par les jours ouverts écoulés. Un jour lu deux jours plus tard est gardé (`dsJ:{magasin}:{jour}`). `labourSource` dit d'où vient le chiffre. Le tableau « Le duel, chiffre par chiffre » de l'onglet Opérationnel ne garde que CA, clients et panier.
 
 **Dashboard magasin, Semaine et Mois (10/10/2026).** Plus de barre du stock (elle reste dans Opérationnel). « Ta place dans le réseau » classe le B2B (`caPro`, la part `partPro` dessous) à la place des messages du panel, qui ne sont plus lus.
@@ -3068,6 +3140,14 @@ Halle : le panel la laisse « new ».
 (`id_transaction` posé) ; une commande payée en ligne s'ajoute au CA du jour.
 Les clients pro restent dans le comptoir (le dashboard les dit « dont »).
 
+Depuis le 21/11/2026, un magasin à la journée retire d'un jour **le webshop payé dans la caisse de ce jour-là**, quel
+que soit le jour du retrait (`coCaisseCommandes`) : un click & collect payé en ligne le vendredi pour le samedi est dans
+la caisse du vendredi, pas dans celle du samedi. La liste des tickets de chacun des 14 jours
+(`/shops/{id}/transactions?date=`) se lit une fois ; seuls les tickets qui paient une commande lue sont gardés
+(`ceo_app_setting`, `coTxJ1:{shop}:{jour}`), un jour lu après sa fin ne se relit plus, la journée en cours toutes les
+dix minutes. Un jour dont les tickets ne se lisent pas, la semaine, le mois et le réseau gardent la règle d'avant :
+le webshop encaissé dont le retrait tombe ce jour-là.
+
 Un magasin :
 
     { shop, date,
@@ -3075,7 +3155,8 @@ Un magasin :
       serie:    [ { j, lu, caisse, tickets, comptoir, cc, liv, ccN, livN } × 14 ],
       quatorze: { webshop, total, cc: {n, ca}, liv: {n, ca} },
       liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut, encaissee, differe, pro } ],   toutes les commandes du jour, précommandes au comptoir comprises
-      j7:       { date, liste: [ { heure, canal, montant, statut, encaissee, pro } ] },   le même jour la semaine d'avant (18/11/2026)
+      caisseCmd: [ { heure, canal, montant, pro, retrait } ] | null,   les commandes payées dans la caisse du jour (21/11/2026)
+      j7:       { date, liste: [ { heure, canal, montant, statut, encaissee, pro } ], caisseCmd },   le même jour la semaine d'avant (18/11/2026)
       nWebshop, aPreparer, demain: { n, ca }, indispo, source }
 
 Une période (`du`, `au`, 62 jours au plus) rend `periode` à la place de
@@ -3114,9 +3195,18 @@ Le dashboard en tire, sous la jauge du comptoir (`opRuban`), trois colonnes face
 Les règles du calcul :
 - une commande compte quand elle est vendue, c'est-à-dire encaissée ou remise ;
 - une commande `pro` reste à la jauge B2B ;
-- à J−7, ne comptent que les commandes dont l'heure de retrait tombe avant l'heure de la jauge de J−7 ;
-- une commande encaissée un autre jour que son retrait est retirée du comptoir du jour de son retrait, comme dans
-  `jour.comptoir`.
+- aujourd'hui comme à J−7, ne comptent que les commandes dont l'heure de retrait est passée à l'heure de la jauge ;
+  celles d'après se disent « à venir » sous leur colonne (21/11/2026) ;
+- la vente directe retire de la jauge les commandes **payées dans la caisse du jour** (`caisseCmd`, hors `pro`), à
+  l'heure de leur ticket, celles qui se retirent un autre jour comprises. Une commande payée d'avance (en ligne, au
+  comptoir la veille) n'est plus retirée de la caisse de son retrait, qui ne la contient pas.
+
+Le 21/11/2026 à Halle, samedi à 07:59 : la jauge du comptoir faisait 332 € ; une précommande de 8,30 € et quatre
+click & collect (335,40 €, à retirer de 09:30 à 16:30), tous payés les jours d'avant, en étaient retirés : « Comptoir
+0 € · 0,0 % », − 100 % face à samedi dernier. Avec `caisseCmd` : comptoir 332 €, − 20,2 % ; webshop « 4 à venir ».
+
+`caisseCmd` vaut `null` quand les tickets du jour ne se lisent pas : le dashboard retire alors les commandes vendues et
+encaissées dont le retrait est passé, la règle d'avant.
 
 Tests : `php bin/tests_canaux.php`.
 
@@ -3643,7 +3733,7 @@ d'installation autonome**, vide sur une base réelle.
 | Destinataires des rapports | `user_membership` ⨝ `user_profile` (actifs, avec e-mail) | `con_person` |
 | CA / marge mensuels | `mac_shop_monthly_pnl` | `con_shop_month_perf` |
 | Tickets, panier moyen | `transaction` | — |
-| Catalogue produits | `sig_products`, `transaction_product` | `con_product` |
+| Catalogue produits | `mar_sig_products`, `transaction_product` | `con_product` |
 | Leviers, KPI, positions | `of_tag`, `kpi`, `position` | créées si absentes |
 | **Budget encodé** | **`con_shop_month_perf`** | — (donnée propre au cockpit) |
 | **Validation des tâches** | **`con_project_task`, `con_task_issue`** | — (donnée propre au cockpit) |
@@ -3872,8 +3962,11 @@ et `GET /scouting/demarchage`, lus par Développement commercial et Prospection.
 
 Ce que le franchisé fait de chaque lieu relevé par `/scouting/demarchage` : dans ma liste, visite datée,
 retour, note (part au CRM marketing), et l'**action à suivre** décidée sur place avec sa date. Une seule
-réserve pour le cockpit (écrans Prospection et Développement commercial) et la page mobile
-`prospection/?shop={id}` (`mar_prospect`, clé magasin + id OSM).
+réserve, lue par la page de la Prospection, dans le portail Commercial depuis le 19/11/2026 :
+`/commercial/prospection/?shop={id}` (bureau et téléphone ; l'ancienne `/consulant_bo/prospection/` y renvoie), et par
+le portail lui-même (Ma semaine, Suivi des offres). Table `sm_prospect` (clé magasin + id OSM), code
+`commercial/src/prospection.php`. Les routes ne changent pas ; depuis le portail, elles passent par
+`/commercial/api/cockpit/prospection/…`.
 
 ```json
 { "shop": "2", "n": 3, "lieux": { "n123456": { "coche": true, "visite": "2026-09-19", "retour": "rdv", "note": "Devis 40 pers.",
@@ -3883,9 +3976,9 @@ réserve pour le cockpit (écrans Prospection et Développement commercial) et l
 - `retour` ∈ `''` | `rappeler` | `rdv` | `interesse` | `refus` | `client` ; `action` ∈ `''` | `mail` | `test` | `devis` | `rappel` | `passer` | `commande` ;
   `offre` = le type d'offre choisi pour ce lieu (vide = celui de son genre).
 - `GET /prospection/offres` → `{ offres: [{ id, nom, pitch, contenu, genres (regex sur le libellé du genre), familles[], depense, commandes, part }] }` :
-  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Dix offres (plateau bureau, petit-déjeuner
-  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, petit-déjeuner
-  d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
+  le **type d'offre par client** — un hôpital ne prend pas la même chose qu'une maison communale. Onze offres (plateau bureau, petit-déjeuner
+  d'équipe, collations d'école, pause soignants, réceptions communales, pause formation, café après cérémonie, après-match, fêtes et
+  locations de salle, petit-déjeuner d'hôtel, pause du personnel) avec leur argument, leur contenu et les hypothèses du calcul de CA. `PUT /prospection/offres` `{ offres: [{ id, depense?,
   commandes?, part?, nom?, pitch?, contenu? }] }` règle le catalogue pour tout le réseau (`ceo_app_setting.prospectionOffres`).
 - `PUT /prospection/{shop}` `{ lieux: { id: { coche?, visite?, retour?, note?, action?, actionLe?, nom? } } }` : fusion champ par
   champ (400 lieux par appel au plus) ; une ligne vidée disparaît. Rend les lignes relues.
@@ -3982,6 +4075,8 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`, `budgetCa` (26/10/2026 : le CA sous le budget, noté avec le franchisé — `{pourquoi, pistes[3], horizon: mois|trimestre, echeance, ecarts{étendue: %}, arrete}` ; le serveur ajoute `qui`, `le`, `complet` ; null efface ; colonne `con_visite.budget_ca`, relu dans la visite et dans le rapport, section « Le chiffre face au budget »). `{id}` est l'identifiant ou le `client_id`. |
 | `DELETE /visites/{id}` | admin | effacer une visite (11/11/2026, demande de Sam), à n'importe quelle étape : la visite, ses réponses (`con_visite_point`), ses photos (`con_visite_photo` et leurs fichiers sous `uploads/visites/`, y compris les photos de correction des points nés pendant elle), ses points et leur historique (`con_visite_action`, `con_visite_action_evt`), les tâches de son type (`con_consultant_tache`). Une photo de cette visite qui servait de preuve à un point d'une autre visite est détachée (`photo_id` à NULL), le point reste. Une visite à venir (planifiée ou confirmée, aujourd'hui ou plus tard) est d'abord annulée comme par `PUT statut annulee` : l'agenda du consultant reçoit l'annulation, le franchisé d'une visite annoncée qui avait reçu l'ordre du jour est prévenu. → `{ ok, efface {id, shop, court, reponses, photos, points, taches}, suite }` ; 404 si inconnue. Journalisé. Sans retour possible : l'écran demande confirmation. |
+| `GET /visites/remise-a-zero` | admin | (19/11/2026, Sam : « mettre à zéro, effacer toutes les visites, c'étaient des tests ») le compte de la remise à zéro, sans rien toucher : `compte` {visites, parStatut{}, magasins, du, au, rapports (déjà envoyés), reponses, photos, points, taches, missions} et `confirmer: "EFFACER"`. Écran : Qui fait quoi, carte « Remettre les visites à zéro ». |
+| `POST /visites/remise-a-zero` | admin | `{ confirmer: "EFFACER", attendu: <compte.visites>, qui }` — efface TOUTES les visites, comme `DELETE /visites/{id}` pour chacune (réponses, photos et leurs fichiers sous `uploads/visites/`, y compris les corrections de leurs points, points et historique, tâches `con_consultant_tache`, missions du helpdesk `con_hdk_mission`), en une transaction, **sans prévenir personne** : ni annulation d'agenda, ni courriel au franchisé. Restent les points nés hors visite (détachés d'une photo effacée), le client mystère, le fil, les réglages, le journal ; le compteur des numéros de visite continue. 400 sans le mot ; 409 si le nombre a changé depuis le compte (`compte` à jour rendu). → `{ ok, efface {…compte, fichiers}, reste }`. Journalisé. Banc : `consultant/bin/tests_visites_remise.php` (SQLite). |
 | Le score de la visite (26/10/2026, maquette A) | — | `viScore` (src/visites_questions.php) et `scoreDe` (visites.js), la même règle : sur 100, Σ poids × réussite / Σ poids sur les questions qui comptent et ont une réponse (conforme 1, écart 0, une note au prorata (note − 1) / 4, un pourcentage pour sa valeur ; hors score le texte libre, « ne compte pas », N/A, sans réponse ; les obligatoires `oblig_…` comptent ensemble pour une question). Pas de score pour un suivi ou une revisite. Figé dans `con_visite.score` (JSON : score, n, modules[] {id, nom, nom_nl, score, n}, le) quand la visite se termine, et recalculé si une réponse arrive ensuite ; `viVisiteLigne` le rend. Comparé à la dernière visite terminée **du même type**. `GET /suivi/rapport` rend `score` {actuel, precedent {id, le, score}} ; le rapport au franchisé (4 langues) porte le bloc « Score de la visite » sous l'en-tête. La tablette ne le montre qu'à l'étape Fin, avant les signatures (visite précédente → cette visite, module par module, FR ou NL). |
 | `PUT /visites/{id}/points` | consultant | `points[]` : `ref`, `module`, `libelle`, `etat` (ok, ko, na), `note` 1..5, `valeur` (% planogramme), `commentaire`, `causes[]`, `reponse` (26/10/2026 : le code d'un choix unique, la liste des codes d'un choix multiple, un nombre, un texte — colonne `con_visite_point.reponse`, JSON). La tablette pose aussi `etat` d'après la réponse (un choix marqué écart, un nombre hors des bornes : ko), si bien que les points faits, les écarts, les revisites et les points à travailler se lisent comme avant. Idempotent par (visite, ref). |
 | `POST /visites/photos` | tous | `client_id`, `shop` ou `visite_id`, `ref`, `plan_id`, `genre` (jour_facade, jour_interieur, jour_arriere, point, avant, apres, correction, msp, signature — le franchisé, sig_consultant — le consultant (26/10/2026) ; les deux signatures vont côte à côte dans le rapport, jamais dans ses photos), `data` (data-URL ≤ 2 Mo, JPEG/PNG/WebP), `prise_a`, `lat`, `lng`. Fichier sous `uploads/visites/{shop}/`. |
@@ -5131,8 +5226,8 @@ Réponse : `{genere, base, baseLue, apis, routes, tables, liees, limites}`.
   base partagée TFBuddy (`shops`…). `existe` et `lignes` (estimées par InnoDB) viennent d'`information_schema`,
   `null` si la base ne répond pas.
 - `registre` : `[{nom, famille, quoi, ancien}]` — les tables du portail et leur nom d'avant le 13/10/2026.
-- `liees` : l'assistant de campagne (`/api/v1/marketing`, copie de l'API du module autonome, catalogue repris de
-  l'ERP TFBuddy) et les écrans du cockpit.
+- `liees` : l'assistant de campagne (dans le module Marketing autonome, `/marketing/`, API `mar_api_url` ; la copie
+  de son API dans le cockpit, `/api/v1/marketing`, est retirée le 21/11/2026) et les écrans du cockpit.
 
 **Avis Google dans `/marketing/hub` (13/10/2026).** Nouveau canal `avis` : `{cible, reseau, magasins, connecteur:
 {configure, raccordes, derniereSynchro, etat, erreur}}`, c'est `GET /reputation` tel quel (en vue magasin, sa seule
@@ -5503,7 +5598,7 @@ courriels, par code et par langue fr, nl, en, de). Les types de visite (`visites
 
 | Route | Ce qu'elle rend ou fait |
 |---|---|
-| `GET /suivi/tableau?consultant=&semaine=` | `kpis` {visitesSemaine, aPreparer, surTablette, aAdapter, urgent, urgentTxt, envoyesMois, lusMois, points, p0, retard, corrections} ; `cartes` {preparer, tablette, adapter, envoye} — une carte par visite {id, shop, court, feu, type, typeNom, annoncee, le, h, consultant, consultantNom, statut, dossier {points, blocs}, prepDu, prepRetard, prepEnvoyeeLe, odjEnvoyeLe, nonFaite, proposes, ouverts, termineLe, delai {limite, resteH, depasse}, envoyeLe, luLe, relanceLe} ; `franchises[]` (feu, responsable, `responsableId` et `langue` / `langueNom` des courriels — proposés d'office par l'assistant Visites, derniere, rapport, points, prochaine, cadre du mois, scoring) ; `points[]` les plans ouverts ; `corrections[]` les photos à valider (avant, apres, commentaire, recuLe, attenteH, horsDelai, valide) ; `delais`, `consultants`, `semaine` {du, au, decalage}. |
+| `GET /suivi/tableau?consultant=&semaine=` | `kpis` {visitesSemaine, aPreparer, surTablette, aAdapter, urgent, urgentTxt, envoyesMois, lusMois, points, p0, retard, corrections} ; `cartes` {preparer, tablette, adapter, envoye} — une carte par visite {id, shop, court, feu, type, typeNom, annoncee, le, h, consultant, consultantNom, statut, dossier {points, blocs}, prepDu, prepRetard, prepEnvoyeeLe, odjEnvoyeLe, nonFaite, proposes, ouverts, termineLe, delai {limite, resteH, depasse}, envoyeLe, luLe, relanceLe} ; `franchises[]` (feu, responsable, `responsableId` et `langue` / `langueNom` des courriels — proposés d'office par l'assistant Visites, derniere, rapport, points, prochaine, cadre du mois, scoring) ; `points[]` les plans ouverts ; `corrections[]` les photos à valider (avant, apres, commentaire, recuLe, attenteH, horsDelai, valide) ; `delais`, `consultants`, `semaine` {du, au, decalage} ; `nonSignees[]` (19/11/2026, `suNonSignees`) les visites pas encore signées sur la tablette (aucune photo `signature` ni `sig_consultant`), 300 au plus, les plus récentes d'abord — {id, shop, court, groupe : `avenir` \| `cours` \| `passee` (date passée, jamais faite) \| `terminee` (terminée sans signature, brouillon du rapport au bureau), le, h, type, typeNom, annoncee, consultant, consultantNom, statut, commenceLe, termineLe, prepEnvoyeeLe, odjEnvoyeLe, reponses, photos} : l'onglet « Non signées » de l'assistant les ouvre ou les efface (`DELETE /visites/{id}`). |
 | `GET /suivi/preparation?visite=` | `visite`, `magasin`, `type`, `types` (avec `annoncee`), `dossier[]` {cle, titre, lignes[], motif, alerte, interne, inclus} assemblé tout seul (santé, points ouverts, tâches et contrôles photo, scoring, client mystère et comptoir, météo interne), `prep` {blocs, points[] {ref, libelle, odj, source}, note, figeLe}, `annoncee`, `roles`, `prepDu`, `tablette` {envoyeeLe}, `odj` {auto, prevuLe, envoyeLe, adresse, source, langue, langueNom, sujet, texte}. |
 | `PUT /suivi/preparation/{id}` | `{ blocs: {cle: bool}, points: [{libelle, odj}], annoncee, type, note, envoyer, odj }`. `envoyer: true` fige le dossier et le pousse sur la tablette (notification) ; `odj: true` envoie l'ordre du jour maintenant (visite annoncée seulement) → `odjEnvoi` {envoye, a, motif}. 409 si la visite est terminée ou annulée. |
 | `GET /suivi/rapport?visite=` | le brouillon de la tablette, relu au bureau : `contenu` {phrase, positif, sentiment, execution, clients, causes[], diagnostic, reco}, `checklist` {ok, total, na, ecarts[]}, `plans[]` {id, titre, detail, priorite, echeance, statut, inclus, modifiable}, `photos[]` {id, chemin, genre, inclus}, `delai`, `roles`, `envoi` {a, source, langue, copies[], envoyeLe, envoyePar, luLe, smtp, dernier, sms {actif, tel, source, copies[], fournisseur, dernier}}, `apercu` {sujet, texte}. |
@@ -5932,3 +6027,49 @@ par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design sys
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).
+
+## Portail Commercial — `/commercial/…` (19/11/2026, commercial/src/commercial.php, tables `sm_`)
+
+La page `/commercial/` appelle `api/cockpit/commercial/…` à côté d'elle (alias Apache vers ce routeur). Routes du siège.
+
+| Route | Rend / fait |
+|---|---|
+| `GET /commercial/config` | `{magasins[{id, nom, zone[]}], secteurs[{id, nom, pitch, contenu}], modeles, reglages, smtp{configure, expediteur}, cockpit, aBrancher}` |
+| `GET /commercial/tableau?jours=30` | par magasin : nouveaux et anciens clients pro (TVA valide), commandes, CA HT estimé, bureaux du portail ; `semaines[]` (clients du portail, autres) ; `aSuivre[]` |
+| `GET /commercial/leads?jours=&shop=&famille=` | les leads de MétaDonnée par magasin (`a_traiter`, `contacte`, `cree`, `connecte`, `perdu`) et la liste, avec `clientId` si le bureau existe |
+| `GET\|POST /commercial/clients`, `PUT /commercial/clients/{id}` | les bureaux et clients du portail ; le POST (assistant) crée au besoin le bon (`bonCreer {avantage, jours}`) et envoie la bienvenue (`envoyer`) |
+| `GET /commercial/clients-panel?shop=` | les clients pro vus au magasin sur 90 jours (clé `c{id}`, nom, dernière commande), pour rattacher un bureau |
+| `GET\|PUT /commercial/offres` | prix, conditions et état de chaque type d'offre par magasin (`{offre, shopId, prix, conditions, statut}` ; prix vide : retirée) |
+| `GET\|POST /commercial/bons`, `PUT /commercial/bons/{id}` | le registre des bons (code, magasin, avantage, validité, envoyés, utilisés, actif) |
+| `GET /commercial/catalogues?shop=`, `POST /commercial/catalogues/lien` | les catalogues du magasin (relais du Marketing) ; le lien public d'un catalogue pour l'e-mail |
+| `GET /commercial/modeles`, `PUT /commercial/modeles/{id}/{fr\|nl}` | les modèles d'e-mail (`bienvenue`, `offre`, `catalogue`, `echantillon`, `relance`) ; corps vide : modèle d'origine |
+| `POST /commercial/apercu`, `POST /commercial/envoyer`, `GET /commercial/envois` | l'e-mail rendu (§13.6) ; l'envoi depuis l'expéditeur réglé (hello@atelierby.be), noté dans `sm_envoi` |
+| `GET\|POST /commercial/echantillons`, `PUT /commercial/echantillons/{id}` | les échantillons (`contenu` : `[{id, q}]` du catalogue du magasin, ou `[{produit, q}]` à la main) ; `commander` : la commande dans le système du magasin (TF Buddy `POST /client-orders`, « ÉCHANTILLON COMMERCIAL », offerte, `commande` = son numéro) ; `envoyer` : l'e-mail au magasin (adresse de sa fiche au panel) |
+| `GET /commercial/catalogue-magasin?shop=` | les catégories et les produits du magasin (TF Buddy `GET /shops/{id}/products/available`) : nom, prix, coût de la recette, livrable au bureau |
+| `GET /commercial/equipe-magasin?shop=` | l'équipe du magasin (qui accepte la commande d'échantillon dans TF Buddy) : `employes[]`, `dernier` (le dernier choisi pour ce magasin) |
+| `DELETE /commercial/echantillons/{id}/commande` | annule la commande TF Buddy de l'échantillon (`DELETE /client-orders/{n}`) |
+| `POST /commercial/echantillons/{id}/photos`, `GET\|DELETE /commercial/echantillons/photos/{id}` | la photo de l'échantillon reçu (`photos: [{data}]`, data-URL JPEG, PNG ou WebP, 6 Mo) ; l'échantillon passe à « reçu » ; le fichier sort tel quel (dossier privé) |
+| `GET /commercial/suivi?du=` | par secteur et par magasin : offres et catalogues envoyés, échantillons, convertis, clients ; listes de démarchage de Prospection |
+| `GET /commercial/gains?mois=AAAA-MM` | les gains : par client (1re commande, règle, commandes, HT, gain), par secteur, plancher et complément, historique de 6 mois |
+| `GET /commercial/semaine?du=` | la semaine du lundi au samedi : `rdv[]`, `enRetard[]`, `candidats[]` (leads à traiter, bureaux et clients, lieux de Prospection à rappeler), `magasins[]` (rendez-vous, dégustations, téléphone, appel au franchisé), `echantillons{}` |
+| `POST /commercial/rdv`, `PUT /commercial/rdv/{id}`, `POST /commercial/rdv/{id}/confirmer` | un rendez-vous (visite, appel, e-mail, bon, échantillon, devis, rappel après la 1re commande, bureau) ; la confirmation part par e-mail (modèle `rdv`) ; `confirmation` ∈ `envoyee`, `confirme`, `sans_reponse`, `refuse` |
+| `PUT /commercial/semaine/franchise` | `{shopId, du, ok, note}` : l'appel au franchisé de la semaine, validé |
+| `GET /commercial/mobile?jour=` | l'app de terrain : `aujourdhui[]`, `enRetard[]`, `aVenir[]`, `listes` (issues, faits, réponses à l'offre, motifs, suites et leurs délais) |
+| `POST /commercial/cr`, `GET /commercial/cr?client=` | le compte rendu d'un contact : `{rdvId?, clientId?, prospect, shopId, issue, faits[], offre, offreStatut, motif, suite, suiteLe, note}` ; le rendez-vous passe à « fait », la suite crée le suivant |
+| `GET /commercial/trouver?q=&cp=` | le magasin d'un bureau : par son code postal (codes des zones, `cps` des réglages) ; par son nom, cherché dans Google Places (adresse, code postal) quand la clé Google est réglée |
+| `GET /commercial/alertes` | les pastilles du rail : `leads` (leads Meta à traiter), `bureaux` (bureaux dont le compte webshop n'est pas encore connecté) |
+| `GET /commercial/formulaires`, `PUT /commercial/formulaires/{id}`, `POST /commercial/formulaires/{id}/historique` | les formulaires Meta de MétaDonnée (`recrutement` : candidats ou franchisés, pas un bureau) ; les suivre (affectation par code postal) ; relire 90 jours |
+| `GET /commercial/commissions?mois=` | la commission commerciale à prélever à chaque franchisé avec ses royalties du mois (taux de départ, HT) : magasin, montant, détail par client |
+| `GET /commercial/simulation?secteur=&personnes=&depense=&commandes=&ht=` | ce que rapporte un client sur un an à la règle de son secteur : CA HT par mois (estimé comme Prospection, ou donné), gains mois par mois, part du franchisé et de la marque |
+| `GET /commercial/formulaires/modele?langue=`, `POST /commercial/formulaires/creer` | le formulaire Meta « Lunch au bureau » (FR) ou « Lunch op kantoor » (NL) : l'aperçu, puis la création sur la Page (`POST /{page}/leadgen_forms`, jeton de MétaDonnée), relu par MétaDonnée |
+| `POST /commercial/formulaires/{id}/actif` | `{ actif }` : un formulaire « Lunch au bureau » archivé chez Meta (inactif) ou réactivé ; les autres formulaires : 403 |
+| `GET /commercial/formulaires/pub?langue=fr\|nl` | la publicité « Lunch au bureau » : `texte`, `titre`, `description`, `bouton`, `videos[]` (`mp4`, `affiche`, 9:16 et 4:5, servies à `/commercial/meta/`), `apercu` (le formulaire tel que Meta le montre : `accueil`, `questions[]` avec `choix` et `prerempli`, `confidentialite`, `merci`) ; NL : Halle (`magasin`) |
+| `PUT /commercial/reglages` | `{gains{defaut, secteurs, plancher, tva}, expediteur, signature, webshop, zones}` |
+
+**Les gains** (`smGainsCalcul`) : un client du portail rattaché à son compte du panel ; ses commandes à partir de son entrée
+au portail ; trois paliers depuis sa 1re commande — `taux1` % jusqu'au mois `mois1` (20 %, 1), `taux2` % jusqu'au mois `mois2`
+(10 %, 3), `taux3` % jusqu'au mois `duree` (5 %, 12 ; 0 = sans fin) ; une commande sous `min` € HT ne rapporte rien ; une règle par
+secteur au besoin ; sous le `plancher` mensuel, le complément est payé. Le taux de départ est à la charge du franchisé
+(`departFranchise`), prélevé avec ses royalties ; le reste, à la charge de la marque. L'objectif (`objectif`, 5 000 € HT par
+mois apportés), le coût mensuel du commercial (`cout`) et le ROI de la marque ((retour − coût) ÷ coût, le retour étant le CA HT
+ou la marge `marge` %). Tests : `php commercial/bin/tests_commercial.php`.

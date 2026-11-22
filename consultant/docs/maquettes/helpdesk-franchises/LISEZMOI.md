@@ -35,3 +35,40 @@ Le dashboard franchisé tel qu'il est codé, avec les demandes de Sombreffe lues
 n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode « Demande au bureau », Mr. Pierre),
 `code-dashboard-tel-controle.png` (l'onglet Contrôle et son bouton), `code-dashboard-tel-formulaire.png`,
 `code-dashboard-tel-mes-demandes.png`.
+
+## Suites du 20/11/2026 (demandes de Sam)
+
+- **Le SMS au bureau** (« fais en sorte que je reçoive un SMS et Pierre Boseret avec un résumé de la demande quand un
+  franchisé en fait une ») : à chaque demande envoyée depuis le dashboard, un SMS part à chaque numéro du réglage
+  `helpdeskSms`. Il contient le magasin, le sujet, le demandeur, le titre, les 220 premiers caractères de la demande, le
+  passage souhaité, le nombre de photos et la référence, sans lien (« ne pas mettre le lien dans le SMS »). Le texte est ramené à
+  l'alphabet SMS (160 caractères par SMS, pas 70). L'envoi passe par le fournisseur en place (`shared/src/sms.php`).
+  Les numéros se règlent au cockpit, bloc « SMS au bureau » sous la liste (`GET` / `PUT /helpdesk/sms`). Au départ :
+  Sam (+48725038049), et Pierre Boseret, dont le numéro reste à compléter. Un SMS qui ne part pas n'empêche jamais
+  la demande : le journal et `helpdeskSmsDernier` disent à qui il est parti.
+- **La date limite** (« lors de la réception, le consultant met une date limite 2, 5, 10, 30 j, +90 qu'il est censé
+  respecter ») : sur la fiche d'une demande, 2, 5, 10, 30 ou 90 jours à partir du jour même
+  (`POST /helpdesk/demandes/{id}/delai`, `con_hdk_demande.echeance`). Une demande « Nouvelle » passe alors « En cours ».
+  Le cockpit montre la colonne Date limite, l'indicateur « En retard » et les filtres « En retard » et « Sans date
+  limite ». Le franchisé voit « réponse prévue d'ici le … ».
+- **Les réclamations fournisseur de tous les magasins** (« dans le cockpit consultant, mettre la vue sur toutes les
+  réclamations de tous les magasins », ici) : second onglet de l'écran, en lecture seule (`GET /fournisseurs/reclamations?mois=`).
+  On y trouve les indicateurs (ouvertes, montant ouvert, plus ancienne, réglées, refusées), les filtres (état, magasin,
+  fournisseur, période, recherche) et la fiche de chaque réclamation.
+
+- **Les relances** (« renvoyer un SMS à Sam ou Pierre tous les 7 jours ») : maquette `../helpdesk-relances`, validée et
+  codée le 20/11/2026. Ce dossier en décrit la règle. Le 21/11 : relance tant que la demande n'est pas en cours, et la
+  carte « Demandes à traiter » sur l'accueil du cockpit (écran Résultat).
+
+- **Le 21/11/2026** :
+  - **Urgent** dans le formulaire du franchisé (« Urgent ? Oui / Non »). Toutes les demandes gardent leur SMS au bureau ;
+    une urgente l'envoie en commençant par « URGENT - », le panel le lit dans la demande, et elle ressort en rouge, en
+    tête de la liste du cockpit (puce « Urgentes ») et de la carte « Demandes à traiter » de l'accueil.
+  - **Le franchisé prévenu par SMS quand le bureau répond** (réponse de la fiche, ou constat d'une mission renvoyé en
+    réponse) : au GSM du magasin (Qui fait quoi, sinon les alertes SMS des leads), en français ou en néerlandais, le
+    titre et le début de la réponse ; la réponse entière se lit dans son dashboard. Coupé dans « SMS au bureau ».
+  - **L'essai du SMS dit ce qui s'est passé** : le jeton retenu (son nom), la plateforme, l'expéditeur, l'identifiant
+    SMSAPI, le compte et ses points, puis le statut de remise (`GET /helpdesk/sms/remise?id=`) — remis, non remis,
+    expiré… Un SMS « accepté » par SMSAPI n'est pas encore un SMS reçu.
+
+Banc : `php consultant/bin/tests_helpdesk.php` (SMS, date limite, relances ; SQLite en mémoire, doublures du panel et de SMSAPI).

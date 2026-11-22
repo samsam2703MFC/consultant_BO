@@ -290,9 +290,11 @@ function ep_marketing_sources(): array
             'parLeModule' => isset($tables[$nom])], array_keys(defined('MAR_TABLES') ? MAR_TABLES : []), defined('MAR_TABLES') ? MAR_TABLES : []),
         // Les applications liées : ouvertes depuis le module, mais avec leur propre API.
         'liees' => [
-            ['nom' => 'Assistant de campagne', 'adresse' => 'assistant/', 'api' => '/api/v1/marketing',
-                'quoi' => 'Copie de l’API du module marketing autonome (public/api/marketing), tables mar_* ; reprend le catalogue des gammes depuis l’ERP TFBuddy.',
-                'tfbuddy' => true, 'configure' => !empty($apis['erp']['configure'])],
+            // L'assistant vit dans le module Marketing (dépôt marketing) ; assistant/ n'est qu'un renvoi, et la copie de
+            // son API ici (public/api/marketing) est retirée le 21/11/2026.
+            ['nom' => 'Assistant de campagne', 'adresse' => '/marketing/', 'api' => 'mar_api_url (module Marketing)',
+                'quoi' => 'Dans le module Marketing autonome (dépôt marketing), tables mar_* ; il reprend lui-même le catalogue des gammes depuis l’ERP TFBuddy.',
+                'tfbuddy' => true, 'configure' => function_exists('cmAdresseMarketing') && cmAdresseMarketing() !== ''],
             ['nom' => 'Écrans du cockpit', 'adresse' => '#/campagnes, #/budget-campagnes, #/brandguard…', 'api' => '/api/cockpit',
                 'quoi' => 'Calendrier, budget, mesure et note de campagne ; mêmes données que le module.', 'tfbuddy' => false, 'configure' => true],
         ],

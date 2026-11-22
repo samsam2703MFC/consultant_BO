@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-19T16:06:45Z",
+ "genere": "2026-11-21T17:02:25Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -36,7 +36,7 @@
    ],
    "fichiers": [
     "analyse.js:148",
-    "dashboard.js:8282"
+    "dashboard.js:8447"
    ],
    "magasin": true,
    "routes": [
@@ -57,7 +57,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8271"
+    "dashboard.js:8436"
    ],
    "magasin": true,
    "routes": [
@@ -78,7 +78,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:5681"
+    "dashboard.js:5705"
    ],
    "magasin": true,
    "routes": [
@@ -99,7 +99,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8253"
+    "dashboard.js:8418"
    ],
    "magasin": true,
    "routes": [
@@ -142,7 +142,7 @@
    ],
    "fichiers": [
     "analyse.js:140",
-    "dashboard.js:8250"
+    "dashboard.js:8415"
    ],
    "magasin": true,
    "routes": [
@@ -158,12 +158,33 @@
    ]
   },
   {
+   "chemin": "/analyse/produits/prix",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:8687"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/analyse/produits/prix",
+     "handler": "wr_analyse_produit_prix",
+     "source": "panel/src/prix_produit.php:130",
+     "resume": "le prix testé devient le prix de vente du magasin au panel (voir plus haut)."
+    }
+   ]
+  },
+  {
    "chemin": "/analyse/produits/recette",
    "methodes": [
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8259"
+    "dashboard.js:8424"
    ],
    "magasin": true,
    "routes": [
@@ -184,7 +205,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:5892"
+    "dashboard.js:5916"
    ],
    "magasin": true,
    "routes": [
@@ -194,7 +215,7 @@
      ],
      "chemin": "/assistant/magasin",
      "handler": "wr_assistant_magasin",
-     "source": "panel/src/assistant_magasin.php:944",
+     "source": "panel/src/assistant_magasin.php:1054",
      "resume": "shop, question, ton, fil:[{q, r}], origine, conversation} → {reponse:{titre, resume, chiffres, points, priorites, conclusion, suites, visuels, sources}, question, luLe, modele, ton}. `ton` : un coach ou « professeur » (le manuel, l'agent rapide)."
     }
    ]
@@ -310,8 +331,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:5873",
-    "dashboard.js:6369"
+    "dashboard.js:5897",
+    "dashboard.js:6398"
    ],
    "magasin": true,
    "routes": [
@@ -321,7 +342,7 @@
      ],
      "chemin": "/assistant/magasin/questions",
      "handler": "ep_assistant_questions",
-     "source": "panel/src/assistant_magasin.php:922",
+     "source": "panel/src/assistant_magasin.php:1032",
      "resume": "Les questions toutes prêtes, et si l'assistant est branché (sans clé, le dashboard ne montre pas le bouton)."
     }
    ]
@@ -332,7 +353,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:5402"
+    "dashboard.js:5426"
    ],
    "magasin": true,
    "routes": [
@@ -353,7 +374,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:5646"
+    "dashboard.js:5670"
    ],
    "magasin": true,
    "routes": [
@@ -461,8 +482,8 @@
    ],
    "fichiers": [
     "automatisations.js:38",
-    "boite.js:481",
-    "boite.js:72"
+    "boite.js:103",
+    "boite.js:966"
    ],
    "magasin": true,
    "routes": [
@@ -484,9 +505,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:242",
-    "boite.js:437",
-    "boite.js:439"
+    "boite.js:340",
+    "boite.js:903",
+    "boite.js:905"
    ],
    "magasin": true,
    "routes": [
@@ -553,7 +574,8 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:161"
+    "boite.js:259",
+    "boite.js:405"
    ],
    "magasin": true,
    "routes": [
@@ -595,7 +617,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:413"
+    "boite.js:865"
    ],
    "magasin": true,
    "routes": [
@@ -616,7 +638,53 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:102"
+    "boite.js:147",
+    "boite.js:196",
+    "boite.js:410",
+    "boite.js:412"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/lectures",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "boite.js:375",
+    "boite.js:465"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/lire",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:362"
    ],
    "magasin": true,
    "routes": [
@@ -637,8 +705,10 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:175",
-    "boite.js:93"
+    "boite.js:133",
+    "boite.js:273",
+    "boite.js:407",
+    "boite.js:877"
    ],
    "magasin": true,
    "routes": [
@@ -659,7 +729,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:88"
+    "boite.js:122"
    ],
    "magasin": true,
    "routes": [
@@ -681,9 +751,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:241",
-    "boite.js:430",
-    "boite.js:436"
+    "boite.js:339",
+    "boite.js:896",
+    "boite.js:902"
    ],
    "magasin": true,
    "routes": [
@@ -705,7 +775,52 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:410"
+    "boite.js:862"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/pilote",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:455",
+    "boite.js:458"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "POST"
+     ],
+     "chemin": "/dashboard/boite…",
+     "handler": "route",
+     "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/boite/ranger",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "boite.js:175"
    ],
    "magasin": true,
    "routes": [
@@ -726,7 +841,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:404"
+    "boite.js:856"
    ],
    "magasin": true,
    "routes": [
@@ -852,7 +967,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:2284"
+    "dashboard.js:2306"
    ],
    "magasin": true,
    "routes": [
@@ -892,7 +1007,7 @@
      ],
      "chemin": "/exploitation/canaux",
      "handler": "ep_exploitation_canaux",
-     "source": "marketing/src/canaux_offres.php:232",
+     "source": "marketing/src/canaux_offres.php:307",
      "resume": ""
     }
    ]
@@ -913,7 +1028,7 @@
      ],
      "chemin": "/exploitation/canaux-mois",
      "handler": "ep_exploitation_canaux_mois",
-     "source": "marketing/src/canaux_offres.php:372",
+     "source": "marketing/src/canaux_offres.php:455",
      "resume": "chaque canal sur les `n` derniers mois (le mois choisi compris) et, jour par jour, le mois choisi et celui d'avant : la carte « Commandes et canaux » du mois en tire une mini-courbe par canal, l'écart au mois d'avant et, au clic, le cumul du mois face au mois "
     }
    ]
@@ -924,7 +1039,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:3290"
+    "dashboard.js:3325"
    ],
    "magasin": true,
    "routes": [
@@ -934,7 +1049,7 @@
      ],
      "chemin": "/exploitation/commandes/detail",
      "handler": "ep_exploitation_commandes_detail",
-     "source": "marketing/src/canaux_offres.php:711",
+     "source": "marketing/src/canaux_offres.php:794",
      "resume": "les commandes du jour, comptoir et webshop, leur rapprochement avec la caisse et, pour celles qui sont encaissées, leurs articles."
     }
    ]
@@ -945,9 +1060,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:2550",
-    "dashboard.js:3699",
-    "dashboard.js:3703"
+    "dashboard.js:2572",
+    "dashboard.js:3724",
+    "dashboard.js:3728"
    ],
    "magasin": true,
    "routes": [
@@ -957,7 +1072,7 @@
      ],
      "chemin": "/exploitation/equipe-heures",
      "handler": "ep_exploitation_equipe_heures",
-     "source": "shared/src/endpoints.php:1957",
+     "source": "shared/src/endpoints.php:1953",
      "resume": "les ventes de chaque personne, heure par heure (dashboard magasin, l'équipe du jour, une ligne dépliée ; 20/10/2026)."
     }
    ]
@@ -968,7 +1083,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7310"
+    "dashboard.js:7341"
    ],
    "magasin": true,
    "routes": [
@@ -978,8 +1093,50 @@
      ],
      "chemin": "/exploitation/frais",
      "handler": "ep_exploitation_frais",
-     "source": "panel/src/frais.php:25",
+     "source": "panel/src/frais.php:30",
      "resume": "l'onglet Frais du dashboard."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/frais/ajout",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:7520"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/frais/ajout",
+     "handler": "wr_exploitation_frais_ajout",
+     "source": "panel/src/frais.php:349",
+     "resume": "un frais ajouté au panel, pour un mois ou mois après mois (voir plus haut)."
+    }
+   ]
+  },
+  {
+   "chemin": "/exploitation/frais/annuler",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:7528"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/exploitation/frais/annuler",
+     "handler": "wr_exploitation_frais_annuler",
+     "source": "panel/src/frais.php:426",
+     "resume": "shop, lot} — un ajout défait : chaque ligne créée au panel supprimée (DELETE /shops/costs/{id})."
     }
    ]
   },
@@ -989,7 +1146,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7375"
+    "dashboard.js:7408"
    ],
    "magasin": true,
    "routes": [
@@ -999,7 +1156,7 @@
      ],
      "chemin": "/exploitation/frais/tva",
      "handler": "wr_exploitation_frais_tva",
-     "source": "panel/src/frais.php:46",
+     "source": "panel/src/frais.php:52",
      "resume": "shop, poste, tva: true|false|null, taux} — le choix d'un poste, gardé d'un mois à l'autre."
     }
    ]
@@ -1031,7 +1188,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:2224"
+    "dashboard.js:2243"
    ],
    "magasin": true,
    "routes": [
@@ -1077,7 +1234,7 @@
     "dashboard.js:141",
     "dashboard.js:196",
     "dashboard.js:207",
-    "dashboard.js:2551"
+    "dashboard.js:2573"
    ],
    "magasin": true,
    "routes": [
@@ -1087,7 +1244,7 @@
      ],
      "chemin": "/exploitation/jour",
      "handler": "ep_exploitation_jour",
-     "source": "shared/src/endpoints.php:2033",
+     "source": "shared/src/endpoints.php:2029",
      "resume": "le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant."
     }
    ]
@@ -1098,7 +1255,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:2499"
+    "dashboard.js:2521"
    ],
    "magasin": true,
    "routes": [
@@ -1119,7 +1276,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:2444"
+    "dashboard.js:2466"
    ],
    "magasin": true,
    "routes": [
@@ -1172,7 +1329,7 @@
      ],
      "chemin": "/exploitation/offres",
      "handler": "ep_exploitation_offres",
-     "source": "marketing/src/canaux_offres.php:568",
+     "source": "marketing/src/canaux_offres.php:651",
      "resume": ""
     }
    ]
@@ -1184,7 +1341,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:108",
+    "boite.js:206",
     "offres.js:68",
     "offres.js:73"
    ],
@@ -1281,7 +1438,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:2325"
+    "dashboard.js:2347"
    ],
    "magasin": true,
    "routes": [
@@ -1302,7 +1459,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:3194"
+    "dashboard.js:3229"
    ],
    "magasin": true,
    "routes": [
@@ -1346,9 +1503,9 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:3827",
-    "dashboard.js:4874",
-    "dashboard.js:4895"
+    "dashboard.js:3851",
+    "dashboard.js:4898",
+    "dashboard.js:4919"
    ],
    "magasin": true,
    "routes": [
@@ -1388,9 +1545,9 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:4688",
-    "dashboard.js:4704",
-    "dashboard.js:4728"
+    "dashboard.js:4712",
+    "dashboard.js:4728",
+    "dashboard.js:4752"
    ],
    "magasin": true,
    "routes": [
@@ -1420,7 +1577,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:3831"
+    "dashboard.js:3855"
    ],
    "magasin": true,
    "routes": [
@@ -1441,9 +1598,9 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:227",
-    "dashboard.js:4657",
-    "dashboard.js:4677",
+    "boite.js:325",
+    "dashboard.js:4681",
+    "dashboard.js:4701",
     "offres.js:100"
    ],
    "magasin": true,
@@ -1465,8 +1622,8 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:107",
-    "dashboard.js:3829",
+    "boite.js:205",
+    "dashboard.js:3853",
     "offres.js:83"
    ],
    "magasin": true,
@@ -1498,7 +1655,7 @@
      ],
      "chemin": "/exploitation/rentabilite",
      "handler": "ep_exploitation_rentabilite",
-     "source": "shared/src/endpoints.php:1327",
+     "source": "shared/src/endpoints.php:1323",
      "resume": "le résultat net par jour et par magasin, comme l'« Analyse rentabilité » de la PWA consultant."
     }
    ]
@@ -1530,7 +1687,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:5673"
+    "dashboard.js:5697"
    ],
    "magasin": true,
    "routes": [
@@ -1551,7 +1708,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6382"
+    "dashboard.js:6411"
    ],
    "magasin": true,
    "routes": [
@@ -1572,7 +1729,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6384"
+    "dashboard.js:6413"
    ],
    "magasin": true,
    "routes": [
@@ -1593,7 +1750,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6380"
+    "dashboard.js:6409"
    ],
    "magasin": true,
    "routes": [
@@ -1614,7 +1771,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6390"
+    "dashboard.js:6419"
    ],
    "magasin": true,
    "routes": [
@@ -1635,7 +1792,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6378"
+    "dashboard.js:6407"
    ],
    "magasin": true,
    "routes": [
@@ -1656,7 +1813,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6388"
+    "dashboard.js:6417"
    ],
    "magasin": true,
    "routes": [
@@ -1677,7 +1834,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6386"
+    "dashboard.js:6415"
    ],
    "magasin": true,
    "routes": [
@@ -1698,7 +1855,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10543"
+    "dashboard.js:10770"
    ],
    "magasin": true,
    "routes": [
@@ -1708,7 +1865,7 @@
      ],
      "chemin": "/fournisseurs/matiere-code",
      "handler": "wr_matiere_code",
-     "source": "marketing/src/mesure.php:1630",
+     "source": "panel/src/reclamations_magasin.php:329",
      "resume": "retenir qu'un code-barres désigne une matière."
     }
    ]
@@ -1719,8 +1876,8 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:10573",
-    "dashboard.js:2275"
+    "dashboard.js:10800",
+    "dashboard.js:2297"
    ],
    "magasin": true,
    "routes": [
@@ -1730,7 +1887,7 @@
      ],
      "chemin": "/fournisseurs/reclamation",
      "handler": "wr_reclamation_creer",
-     "source": "marketing/src/mesure.php:1705",
+     "source": "panel/src/reclamations_magasin.php:414",
      "resume": "déposer une réclamation dans le panel."
     }
    ]
@@ -1741,7 +1898,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9992"
+    "dashboard.js:10217"
    ],
    "magasin": true,
    "routes": [
@@ -1751,7 +1908,7 @@
      ],
      "chemin": "/fournisseurs/reclamation-refs",
      "handler": "ep_reclamation_refs",
-     "source": "marketing/src/mesure.php:1507",
+     "source": "panel/src/reclamations_magasin.php:206",
      "resume": "Ce qu'il faut pour ÉCRIRE une réclamation : motifs, matières du fournisseur (avec leur SKU), unités, et les livraisons du magasin."
     }
    ]
@@ -1762,7 +1919,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9990"
+    "dashboard.js:10215"
    ],
    "magasin": true,
    "routes": [
@@ -1772,7 +1929,7 @@
      ],
      "chemin": "/fournisseurs/reclamations",
      "handler": "ep_fournisseurs_reclamations",
-     "source": "marketing/src/mesure.php:1331",
+     "source": "panel/src/reclamations_magasin.php:26",
      "resume": ""
     }
    ]
@@ -1784,8 +1941,9 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:6192",
-    "dashboard.js:6266"
+    "dashboard.js:6217",
+    "dashboard.js:6295",
+    "dashboard.js:8678"
    ],
    "magasin": true,
    "routes": [
@@ -1795,7 +1953,7 @@
      ],
      "chemin": "/helpdesk/magasin",
      "handler": "ep_helpdesk_magasin",
-     "source": "consultant/src/helpdesk.php:283",
+     "source": "consultant/src/helpdesk.php:440",
      "resume": "les domaines et les demandes du magasin."
     },
     {
@@ -1804,7 +1962,7 @@
      ],
      "chemin": "/helpdesk/magasin",
      "handler": "wr_helpdesk_magasin",
-     "source": "consultant/src/helpdesk.php:319",
+     "source": "consultant/src/helpdesk.php:480",
      "resume": "shop, domaine, titre, description, passage, photos[]} — la demande part au bureau."
     }
    ]
@@ -1815,7 +1973,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7696"
+    "dashboard.js:7861"
    ],
    "magasin": true,
    "routes": [
@@ -1846,7 +2004,7 @@
      ],
      "chemin": "/marketing/avis",
      "handler": "ep_reputation",
-     "source": "shared/src/endpoints.php:8384",
+     "source": "shared/src/endpoints.php:8207",
      "resume": "la réputation digitale du réseau, magasin par magasin."
     }
    ]
@@ -1911,7 +2069,7 @@
      ],
      "chemin": "/production/catalogue",
      "handler": "ep_prod_catalogue",
-     "source": "shared/src/endpoints.php:905",
+     "source": "shared/src/endpoints.php:901",
      "resume": "Catalogue produit du réseau."
     }
    ]
@@ -1922,7 +2080,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:2549"
+    "dashboard.js:2571"
    ],
    "magasin": true,
    "routes": [
@@ -2037,7 +2195,7 @@
      ],
      "chemin": "/produits/analyse",
      "handler": "ep_produits_analyse",
-     "source": "shared/src/endpoints.php:3024",
+     "source": "shared/src/endpoints.php:3020",
      "resume": "Analyse d'une catégorie ou d'une référence dans le temps."
     },
     {
@@ -2046,7 +2204,7 @@
      ],
      "chemin": "/produits/analyse/options",
      "handler": "ep_produits_analyse_options",
-     "source": "shared/src/endpoints.php:3366",
+     "source": "shared/src/endpoints.php:3362",
      "resume": "Vocabulaire analysable — alimenté par les routes qui portent les DONNÉES. C'est le cœur du correctif : le sélecteur était rempli avec les catégories du catalogue (81), alors que les ventes sont ventilées par groupe (12)."
     },
     {
@@ -2055,44 +2213,8 @@
      ],
      "chemin": "/produits/analyse/sonde",
      "handler": "ep_produits_analyse_sonde",
-     "source": "shared/src/endpoints.php:6792",
+     "source": "shared/src/endpoints.php:6615",
      "resume": "Sonde : existe-t-il une source de ventes PAR MAGASIN sous le niveau groupe ? Diagnostic en lecture seule."
-    },
-    {
-     "methodes": [
-      "GET"
-     ],
-     "chemin": "/produits/utilisation",
-     "handler": "ep_prod_utilisation",
-     "source": "consultant/src/prod_utilisation.php:199",
-     "resume": "Combien de références du catalogue chaque magasin a-t-il vendues, mois par mois ? Et lesquelles lui manquent que les autres vendent ?"
-    },
-    {
-     "methodes": [
-      "GET"
-     ],
-     "chemin": "/produits/utilisation/magasin",
-     "handler": "ep_prod_utilisation_magasin",
-     "source": "consultant/src/prod_utilisation.php:396",
-     "resume": "Le détail d'UN magasin, sur les TROIS niveaux de l'arbre produit : le groupe, la catégorie qu'il contient, puis les références elles-mêmes."
-    },
-    {
-     "methodes": [
-      "GET"
-     ],
-     "chemin": "/produits/utilisation/jamais.pdf",
-     "handler": "ep_prod_utilisation_jamais_pdf",
-     "source": "consultant/src/prod_utilisation.php:703",
-     "resume": "Le même chiffre que la tuile « Jamais vendues », mais nommé : la liste part en réunion catalogue, pas l'écran."
-    },
-    {
-     "methodes": [
-      "GET"
-     ],
-     "chemin": "/produits/utilisation/jamais",
-     "handler": "ep_prod_utilisation_jamais",
-     "source": "consultant/src/prod_utilisation.php:994",
-     "resume": "La même liste que le PDF, en JSON. Elle sert à AGIR dessus — retirer un bloc du catalogue — sans recopier des codes à la main : une liste retapée depuis un PDF est une liste où il manque une ligne."
     },
     {
      "methodes": [
@@ -2136,7 +2258,7 @@
      ],
      "chemin": "/produits/actif",
      "handler": "wr_prod_actif",
-     "source": "consultant/src/prod_utilisation.php:880",
+     "source": "consultant/src/prod_utilisation.php:339",
      "resume": "retirer (ou remettre) des références du catalogue."
     },
     {
@@ -2259,9 +2381,9 @@
    "fichiers": [
     "dashboard.js:242",
     "dashboard.js:243",
-    "dashboard.js:2552",
-    "dashboard.js:6805",
-    "dashboard.js:9743"
+    "dashboard.js:2574",
+    "dashboard.js:6834",
+    "dashboard.js:9968"
    ],
    "magasin": true,
    "routes": [
@@ -2282,7 +2404,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9534"
+    "dashboard.js:9759"
    ],
    "magasin": true,
    "routes": [
@@ -2292,7 +2414,7 @@
      ],
      "chemin": "/pwa/tasks/detail",
      "handler": "ep_pwa_task_detail",
-     "source": "shared/src/endpoints.php:4673",
+     "source": "shared/src/endpoints.php:4675",
      "resume": ""
     }
    ]
@@ -2324,9 +2446,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6808",
-    "dashboard.js:9451",
-    "dashboard.js:9465"
+    "dashboard.js:6837",
+    "dashboard.js:9676",
+    "dashboard.js:9690"
    ],
    "magasin": true,
    "routes": [
@@ -2336,7 +2458,7 @@
      ],
      "chemin": "/pwa/tasks/nc",
      "handler": "ep_pwa_tasks_nc",
-     "source": "shared/src/endpoints.php:4393",
+     "source": "shared/src/endpoints.php:4395",
      "resume": "les non-conformités d'une boutique, sur un jour ou une période."
     }
    ]
@@ -2347,9 +2469,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:6976",
-    "dashboard.js:9744",
-    "dashboard.js:9753"
+    "dashboard.js:7005",
+    "dashboard.js:9969",
+    "dashboard.js:9978"
    ],
    "magasin": true,
    "routes": [
@@ -2359,7 +2481,7 @@
      ],
      "chemin": "/pwa/tasks/photos",
      "handler": "ep_pwa_tasks_photos",
-     "source": "shared/src/endpoints.php:4577",
+     "source": "shared/src/endpoints.php:4579",
      "resume": "toutes les photos rendues d'un magasin sur une journée, en UNE lecture."
     }
    ]
@@ -2371,9 +2493,9 @@
     "PUT"
    ],
    "fichiers": [
-    "dashboard.js:7099",
-    "dashboard.js:7122",
-    "dashboard.js:7146"
+    "dashboard.js:7128",
+    "dashboard.js:7151",
+    "dashboard.js:7175"
    ],
    "magasin": true,
    "routes": [
@@ -2395,7 +2517,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:11165"
+    "dashboard.js:11392"
    ],
    "magasin": true,
    "routes": [
@@ -2426,7 +2548,7 @@
      ],
      "chemin": "/stores/perf",
      "handler": "ep_perf",
-     "source": "shared/src/endpoints.php:5617",
+     "source": "shared/src/endpoints.php:5458",
      "resume": ""
     }
    ]
@@ -2513,7 +2635,7 @@
    ],
    "fichiers": [
     "dashboard.js:249",
-    "dashboard.js:2553"
+    "dashboard.js:2575"
    ],
    "magasin": true,
    "routes": [
@@ -2562,7 +2684,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:5130"
+    "dashboard.js:5154"
    ],
    "magasin": true,
    "routes": [
@@ -2583,7 +2705,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:5128"
+    "dashboard.js:5152"
    ],
    "magasin": true,
    "routes": [
@@ -2634,8 +2756,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9174",
-    "dashboard.js:9296"
+    "dashboard.js:9399",
+    "dashboard.js:9521"
    ],
    "magasin": true,
    "routes": [

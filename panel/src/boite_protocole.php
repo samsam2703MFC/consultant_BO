@@ -189,29 +189,126 @@ final class BmImap
         return $lire();
     }
 
+    /** Le séparateur de la hiérarchie des dossiers (« . » ou « / »), lu au dernier LIST. */
+    public string $separateur = '.';
+
+    /**
+     * Les rôles reconnus au NOM du dossier, quand le serveur ne les annonce pas (SPECIAL-USE) : les noms que posent
+     * les webmails et les messageries en français, en néerlandais (les magasins de Flandre), en anglais et en allemand.
+     * « bin » seul, pas « binnenkomend » (la réception en néerlandais).
+     */
+    public const ROLES_NOMS = [
+        'sent' => '/^(sent|envoy|messages envoy|éléments envoy|elements envoy|verzonden|verstuurd|gesendet)/u',
+        'archive' => '/^(archiv|archief)/u',
+        'trash' => '/^(trash|corbeille|deleted|bin$|éléments supprim|elements supprim|messages supprim|prullenbak|verwijderd|papierkorb)/u',
+        'drafts' => '/^(draft|brouillon|concept|entw)/u',
+        'junk' => '/^(junk|spam|courrier indésirable|indésirable|ongewenst|bulk)/u',
+    ];
+
+    /**
+     * Le nom d'un dossier sans ses préfixes « INBOX. » : tous, pas seulement le premier (21/11/2026, Corbais : une boîte
+     * dont les dossiers s'appellent « INBOX.INBOX.Drafts », « INBOX.INBOX.Trash »… — une messagerie réglée avec le
+     * préfixe « INBOX » les a créés sous le préfixe que le serveur ajoute déjà). Les espaces autour sont retirés.
+     */
+    public static function nomCourt(string $nom): string
+    {
+        return trim((string) preg_replace('/^(\s*INBOX\s*[.\/])+/iu', '', trim($nom)));
+    }
+
+    /** Le rôle d'un dossier : ses attributs SPECIAL-USE, sinon son nom (sans les préfixes « INBOX. »). */
+    public static function roleDe(string $brut, string $nom, array $drapeaux): ?string
+    {
+        if (strtoupper(trim($brut)) === 'INBOX') { return 'inbox'; }
+        foreach (['\\sent' => 'sent', '\\archive' => 'archive', '\\trash' => 'trash', '\\drafts' => 'drafts', '\\junk' => 'junk'] as $f => $r) { if (in_array($f, $drapeaux, true)) { return $r; } }
+        $court = mb_strtolower(self::nomCourt($nom));
+        foreach (self::ROLES_NOMS as $r => $re) { if (preg_match($re, $court)) { return $r; } }
+        return null;
+    }
+
     /** Les dossiers : [{nom (UTF-8), brut, role inbox|sent|archive|trash|drafts|junk|null}]. */
     public function dossiers(): array
     {
         [$st, , $u] = $this->cmd('LIST "" "*"');
         if ($st !== 'OK') { return [['nom' => 'Réception', 'brut' => 'INBOX', 'role' => 'inbox']]; }
-        $out = [];
+        $out = []; $vus = [];
         foreach ($u as [$t, $lits]) {
             if (!preg_match('/^LIST /i', $t)) { continue; }
             $j = self::jetons(substr($t, 5), $lits);
             $drapeaux = array_map('strtolower', array_map('strval', (array) ($j[0] ?? [])));
+            if (is_string($j[1] ?? null) && strlen($j[1]) === 1) { $this->separateur = $j[1]; }
             $brut = (string) ($j[2] ?? '');
             if ($brut === '' || in_array('\\noselect', $drapeaux, true) || in_array('\\nonexistent', $drapeaux, true)) { continue; }
             $nom = @mb_convert_encoding($brut, 'UTF-8', 'UTF7-IMAP') ?: $brut;
-            $role = strtoupper($brut) === 'INBOX' ? 'inbox' : null;
-            foreach (['\\sent' => 'sent', '\\archive' => 'archive', '\\trash' => 'trash', '\\drafts' => 'drafts', '\\junk' => 'junk'] as $f => $r) { if (in_array($f, $drapeaux, true)) { $role = $r; } }
-            if ($role === null) {
-                $court = mb_strtolower((string) preg_replace('/^INBOX[.\/]/i', '', $nom));
-                foreach (['sent' => '/^(sent|envoy|éléments envoyés|sent items|sent messages)/u', 'archive' => '/^archiv/u', 'trash' => '/^(trash|corbeille|deleted|éléments supprimés|bin)/u',
-                    'drafts' => '/^(draft|brouillon)/u', 'junk' => '/^(junk|spam|courrier indésirable|indésirable)/u'] as $r => $re) { if (preg_match($re, $court)) { $role = $r; break; } }
-            }
+            $role = self::roleDe($brut, $nom, $drapeaux);
+            // Un seul dossier par rôle : le premier annoncé (deux « Corbeille » feraient deux onglets identiques).
+            if ($role !== null && $role !== 'inbox' && isset($vus[$role])) { $role = null; }
+            if ($role !== null) { $vus[$role] = true; }
             $out[] = ['nom' => $nom, 'brut' => $brut, 'role' => $role];
         }
         return $out;
+    }
+
+    /**
+     * Le préfixe des dossiers personnels : NAMESPACE quand le serveur le sait (« INBOX. » chez Courier et d'anciens
+     * hébergements), sinon déduit des dossiers présents (tous sous « INBOX. » ?), sinon rien.
+     */
+    public function prefixe(array $dossiers): string
+    {
+        if (in_array('NAMESPACE', $this->caps, true)) {
+            [$st, , $u] = $this->cmd('NAMESPACE');
+            foreach ($st === 'OK' ? $u : [] as [$t, $lits]) {
+                if (!preg_match('/^NAMESPACE /i', $t)) { continue; }
+                $j = self::jetons(substr($t, 10), $lits);
+                $perso = $j[0][0] ?? null;
+                if (is_array($perso) && is_string($perso[0] ?? null)) {
+                    if (is_string($perso[1] ?? null) && strlen($perso[1]) === 1) { $this->separateur = $perso[1]; }
+                    return $perso[0];
+                }
+            }
+        }
+        $autres = array_filter($dossiers, static fn ($d) => strtoupper($d['brut']) !== 'INBOX');
+        $pref = 'INBOX' . $this->separateur;
+        if ($autres && !array_filter($autres, static fn ($d) => stripos($d['brut'], $pref) !== 0)) { return $pref; }
+        return '';
+    }
+
+    /**
+     * Crée un dossier (son nom UTF-8 sous le préfixe des dossiers personnels) et s'y abonne, pour que les webmails et
+     * les téléphones le montrent. $usage : \Archive, \Trash, \Sent… annoncé quand le serveur sait CREATE-SPECIAL-USE.
+     * $parent : le chemin brut sous lequel le créer (« INBOX.INBOX. »), à la place du préfixe des dossiers personnels.
+     * Rend le nom brut (UTF-7 IMAP). Un dossier qui existe déjà est repris tel quel.
+     */
+    public function creerDossier(string $nom, ?string $usage = null, ?string $parent = null): string
+    {
+        $nom = trim((string) preg_replace('/[\x00-\x1F\x7F*%"\\\\]+/u', ' ', $nom));
+        $nom = trim(str_replace($this->separateur, ' ', $nom));
+        $nom = mb_substr((string) preg_replace('/\s{2,}/u', ' ', $nom), 0, 60);
+        if ($nom === '' || strtoupper($nom) === 'INBOX') { throw new RuntimeException('ce nom de dossier n’est pas admis'); }
+        $dossiers = $this->dossiers();
+        $brut = ($parent ?? $this->prefixe($dossiers)) . mb_convert_encoding($nom, 'UTF7-IMAP', 'UTF-8');
+        foreach ($dossiers as $d) { if (strcasecmp($d['brut'], $brut) === 0) { return $d['brut']; } }
+        $use = $usage !== null && in_array('CREATE-SPECIAL-USE', $this->caps, true) ? ' (USE (' . $usage . '))' : '';
+        [$st, $txt] = $this->cmdParts(['CREATE ', ['ch' => $brut], $use]);
+        if ($st !== 'OK' && $use !== '') { [$st, $txt] = $this->cmdParts(['CREATE ', ['ch' => $brut]]); }
+        if ($st !== 'OK' && !preg_match('/ALREADYEXISTS|already exists|existe/i', $txt)) {
+            throw new RuntimeException('la boîte refuse de créer le dossier « ' . $nom . ' »' . ($txt !== '' ? ' (' . $txt . ')' : ''));
+        }
+        $this->cmdParts(['SUBSCRIBE ', ['ch' => $brut]]);
+        return $brut;
+    }
+
+    /** Des UID en ensemble IMAP compact : [1,2,3,7,9,10] → « 1:3,7,9:10 » (une longue sélection reste une ligne courte). */
+    public static function ensemble(array $uids): string
+    {
+        $u = array_values(array_unique(array_filter(array_map('intval', $uids), static fn ($x) => $x > 0)));
+        sort($u);
+        $out = [];
+        for ($i = 0, $n = count($u); $i < $n; $i++) {
+            $debut = $u[$i];
+            while ($i + 1 < $n && $u[$i + 1] === $u[$i] + 1) { $i++; }
+            $out[] = $debut === $u[$i] ? (string) $debut : $debut . ':' . $u[$i];
+        }
+        return implode(',', $out);
     }
 
     /** MESSAGES et UNSEEN d'un dossier, sans l'ouvrir. */
@@ -278,27 +375,44 @@ final class BmImap
         return $out;
     }
 
+    /** Par lots de 500 UID : une sélection de tout un dossier ne fait pas une commande démesurée. */
+    private const LOT = 500;
+
     public function drapeaux(array $uids, string $op, string $drapeaux): void
     {
-        if (!$uids) { return; }
-        [$st, $txt] = $this->cmd('UID STORE ' . implode(',', array_map('intval', $uids)) . ' ' . $op . 'FLAGS.SILENT (' . $drapeaux . ')');
-        if ($st !== 'OK') { throw new RuntimeException('la boîte refuse le changement' . ($txt !== '' ? ' (' . $txt . ')' : '')); }
+        foreach (array_chunk($uids, self::LOT) as $lot) {
+            [$st, $txt] = $this->cmd('UID STORE ' . self::ensemble($lot) . ' ' . $op . 'FLAGS.SILENT (' . $drapeaux . ')');
+            if ($st !== 'OK') { throw new RuntimeException('la boîte refuse le changement' . ($txt !== '' ? ' (' . $txt . ')' : '')); }
+        }
     }
 
     /** Déplace vers un autre dossier : MOVE quand le serveur le sait, sinon COPY + \Deleted + EXPUNGE. */
     public function deplacer(array $uids, string $vers): void
     {
-        if (!$uids) { return; }
-        $liste = implode(',', array_map('intval', $uids));
-        if (in_array('MOVE', $this->caps, true)) {
-            [$st, $txt] = $this->cmdParts(['UID MOVE ' . $liste . ' ', ['ch' => $vers]]);
+        foreach (array_chunk($uids, self::LOT) as $lot) {
+            $liste = self::ensemble($lot);
+            if (in_array('MOVE', $this->caps, true)) {
+                [$st, $txt] = $this->cmdParts(['UID MOVE ' . $liste . ' ', ['ch' => $vers]]);
+                if ($st !== 'OK') { throw new RuntimeException('le déplacement a échoué' . ($txt !== '' ? ' (' . $txt . ')' : '')); }
+                continue;
+            }
+            [$st, $txt] = $this->cmdParts(['UID COPY ' . $liste . ' ', ['ch' => $vers]]);
             if ($st !== 'OK') { throw new RuntimeException('le déplacement a échoué' . ($txt !== '' ? ' (' . $txt . ')' : '')); }
-            return;
+            $this->effacer($lot);
         }
-        [$st, $txt] = $this->cmdParts(['UID COPY ' . $liste . ' ', ['ch' => $vers]]);
-        if ($st !== 'OK') { throw new RuntimeException('le déplacement a échoué' . ($txt !== '' ? ' (' . $txt . ')' : '')); }
-        $this->drapeaux($uids, '+', '\\Deleted');
-        $this->cmd(in_array('UIDPLUS', $this->caps, true) ? 'UID EXPUNGE ' . $liste : 'EXPUNGE');
+    }
+
+    /**
+     * Efface pour de bon (\Deleted puis EXPUNGE) les e-mails du dossier ouvert. Sans UIDPLUS, EXPUNGE efface aussi ce
+     * qu'une autre messagerie y avait déjà marqué \Deleted : c'est ce qu'elle aurait fait elle-même.
+     */
+    public function effacer(array $uids): void
+    {
+        foreach (array_chunk($uids, self::LOT) as $lot) {
+            $this->drapeaux($lot, '+', '\\Deleted');
+            [$st, $txt] = $this->cmd(in_array('UIDPLUS', $this->caps, true) ? 'UID EXPUNGE ' . self::ensemble($lot) : 'EXPUNGE');
+            if ($st !== 'OK') { throw new RuntimeException('la boîte n’efface pas ces e-mails' . ($txt !== '' ? ' (' . $txt . ')' : '')); }
+        }
     }
 
     /** Range un e-mail dans un dossier (la copie de ce qui part, dans « Envoyés »). */

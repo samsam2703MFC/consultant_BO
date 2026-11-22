@@ -102,16 +102,22 @@ function mktBriefEuros(?float $v): string
  */
 function mktBriefDonnees(int $id): ?array
 {
-    $c = Db::row('SELECT c.*, t.label AS type_label, t.icon_path, t.color_hex AS type_color,
-                         t.default_kpi_label, t.lever_id, t.lever_badge_label,
-                         l.label AS lever_label, l.code AS lever_code, l.color_hex AS lever_color,
-                         s.label AS statut_label
-                    FROM mar_campaign c
-                    LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                    LEFT JOIN mar_lever l ON l.id = t.lever_id
-                    LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                   WHERE c.id = ?', [$id]);
-    if ($c === null) { return null; }
+    // La campagne, son type, son levier et son statut : la fiche du module Marketing (marketing/src/campagnes.php,
+    // 21/11/2026), avec les noms de colonnes que la note lisait. Module muet : une erreur, pas « campagne inconnue ».
+    $lu = campagneFiche($id);
+    if ($lu['erreur'] !== null) { throw new RuntimeException('le module Marketing ne rend pas la campagne : ' . $lu['erreur']); }
+    $fiche = $lu['fiche'];
+    if ($fiche === null) { return null; }
+    $c = $fiche + ['type_label' => null, 'status_label' => null];
+    $c['icon_path'] = $fiche['type_icon_path'] ?? null;
+    $c['type_color'] = $fiche['type_color_hex'] ?? null;
+    $c['default_kpi_label'] = $fiche['type_default_kpi_label'] ?? null;
+    $c['lever_id'] = $fiche['type_lever_id'] ?? null;
+    $c['lever_badge_label'] = $fiche['type_lever_badge_label'] ?? null;
+    $c['lever_label'] = $fiche['type_lever_label'] ?? null;
+    $c['lever_code'] = $fiche['type_lever_code'] ?? null;
+    $c['lever_color'] = $fiche['type_lever_color_hex'] ?? null;
+    $c['statut_label'] = $fiche['status_label'] ?? null;
 
     $du = (string) ($c['starts_on'] ?? '');
     $au = (string) ($c['ends_on'] ?: $c['starts_on']);
@@ -127,12 +133,9 @@ function mktBriefDonnees(int $id): ?array
     foreach ($shops as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
     $perim = [];
     if (!$reseau) {
-        try {
-            foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$id]) as $r) {
-                $sid = (string) $r['shop_id'];
-                if (isset($nomDe[$sid])) { $perim[] = $sid; }
-            }
-        } catch (PDOException $e) { /* pas de liaison : réseau entier */ }
+        foreach (campagneFicheBoutiques($fiche) as $sid) {   // les boutiques de la fiche, par identifiant
+            if (isset($nomDe[$sid])) { $perim[] = $sid; }
+        }
     }
     if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
 
@@ -215,12 +218,11 @@ function mktBriefDonnees(int $id): ?array
     $kpiParLevier = [];
     foreach (mktKpiParLevier() as $l) { $kpiParLevier[(int) $l['id']] = $l; }
     $investis = [];
+    // Les cibles par levier, à la fiche : de la plus grosse à la plus petite, comme avant.
+    $cibles = array_values(array_filter((array) ($fiche['levers'] ?? []), 'is_array'));
+    usort($cibles, static fn ($a, $b) => (float) ($b['target_value'] ?? 0) <=> (float) ($a['target_value'] ?? 0));
     try {
-        foreach (Db::rows('SELECT t.lever_id, t.target_value, t.target_unit, l.label, l.code, l.color_hex
-                             FROM mar_campaign_lever_target t
-                             LEFT JOIN mar_lever l ON l.id = t.lever_id
-                            WHERE t.campaign_id = ?
-                            ORDER BY t.target_value DESC', [$id]) as $t) {
+        foreach ($cibles as $t) {
             $lid = (int) $t['lever_id'];
             $k = $kpiParLevier[$lid] ?? null;
             $investis[] = [
@@ -242,13 +244,8 @@ function mktBriefDonnees(int $id): ?array
     // Un canal RETENU mais pas validé compte à part : il n'est pas engagé.
     $canaux = []; $engage = 0.0; $envisage = 0.0;
     try {
-        foreach (Db::rows('SELECT ch.label, ch.family, cc.budget_amount, cc.is_enabled,
-                                  a.name AS agence
-                             FROM mar_campaign_channel cc
-                             JOIN mar_channel ch ON ch.id = cc.channel_id
-                             LEFT JOIN mar_agency a ON a.id = cc.agency_id
-                            WHERE cc.campaign_id = ?
-                            ORDER BY ch.family, ch.sort_order', [$id]) as $r) {
+        foreach (array_filter((array) ($fiche['channels'] ?? []), 'is_array') as $r) {   // les canaux de la fiche, dans son ordre
+            $r['agence'] = $r['agency_name'] ?? null;
             $montant = $r['budget_amount'] !== null ? (float) $r['budget_amount'] : 0.0;
             $valide = (bool) $r['is_enabled'];
             if ($valide) { $engage += $montant; } else { $envisage += $montant; }
@@ -263,8 +260,8 @@ function mktBriefDonnees(int $id): ?array
     // un cadre plus étroit. Il vit sur le visuel maître, pas sur la campagne.
     $cadrage = 50.0; $ajuste = 'cover';
     try {
-        $m = Db::row('SELECT focal_point_y, fit FROM mar_campaign_asset
-                       WHERE campaign_id = ? ORDER BY is_master DESC, id LIMIT 1', [$id]);
+        // Le visuel maître : le premier de la fiche (le module les range maître d'abord).
+        $m = is_array($fiche['assets'][0] ?? null) ? $fiche['assets'][0] : null;
         if ($m !== null && $m['focal_point_y'] !== null) { $cadrage = (float) $m['focal_point_y']; }
         // « contain » est un choix de l'assistant : un logo ou une affiche
         // entière ne se recadre pas — le recadrer coupait la tête du dessin.
@@ -276,12 +273,7 @@ function mktBriefDonnees(int $id): ?array
     // seulement le visuel d'origine.
     $formats = [];
     try {
-        foreach (Db::rows('SELECT DISTINCT f.id, f.name, f.width_px, f.height_px, f.note, f.sort_order
-                             FROM mar_asset_render ar
-                             JOIN mar_campaign_asset ca ON ca.id = ar.campaign_asset_id
-                             JOIN mar_format f ON f.id = ar.format_id
-                            WHERE ca.campaign_id = ?
-                            ORDER BY f.sort_order, f.id', [$id]) as $f2) {
+        foreach (array_filter((array) ($fiche['render_formats'] ?? []), 'is_array') as $f2) {   // les formats de la fiche
             $formats[] = ['nom' => (string) $f2['name'],
                 'largeur' => (int) $f2['width_px'], 'hauteur' => (int) $f2['height_px'],
                 'note' => (string) ($f2['note'] ?? '')];
@@ -290,12 +282,9 @@ function mktBriefDonnees(int $id): ?array
 
     $etapes = [];
     try {
-        // `mar_retroplanning_step` : le nom que porte la table du module. Un nom
-        // deviné rendait la note muette sur le calendrier, sans erreur — et
-        // « ce qui va se passer ce mois-ci » est précisément ce qu'elle vient
-        // dire au franchisé.
-        foreach (Db::rows('SELECT label, days_before_launch, done_at FROM mar_retroplanning_step
-                            WHERE campaign_id = ? ORDER BY sort_order, days_before_launch DESC', [$id]) as $t) {
+        // Le rétroplanning de la fiche, dans son ordre : « ce qui va se passer ce mois-ci » est précisément ce que la
+        // note vient dire au franchisé.
+        foreach (array_filter((array) ($fiche['retroplanning'] ?? []), 'is_array') as $t) {
             $jours = (int) ($t['days_before_launch'] ?? 0);
             $etapes[] = ['libelle' => (string) $t['label'],
                 'quand' => $du === '' ? '' : mktBriefJour(mesDecale($du, -$jours)),
@@ -431,7 +420,9 @@ function mktBriefMot(int $id): array
 /** PUT /marketing/campagne/{id}/note-mot. */
 function wr_mkt_brief_mot(int $id): array
 {
-    if (Db::row('SELECT 1 FROM mar_campaign WHERE id = ?', [$id]) === null) {
+    $lu = campagneFiche($id);   // au module Marketing
+    if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'le module Marketing ne rend pas la campagne : ' . $lu['erreur']]; }
+    if ($lu['fiche'] === null) {
         http_response_code(404); return ['error' => 'campagne inconnue'];
     }
     $b = body();
@@ -1135,12 +1126,12 @@ function mktBriefCopiesPossibles(int $campagne, array $c): array
     // puis les autres du référentiel : on met parfois en copie celle qui
     // prendra la suivante.
     $deLaCampagne = [];
-    try {
-        foreach (Db::rows('SELECT DISTINCT agency_id FROM mar_campaign_channel
-                            WHERE campaign_id = ? AND agency_id IS NOT NULL', [$campagne]) as $r) {
+    // Les agences des canaux de la campagne, à sa fiche du module ; module muet : le référentiel suffira.
+    foreach ((array) (campagneFiche($campagne)['fiche']['channels'] ?? []) as $r) {
+        if (is_array($r) && ($r['agency_id'] ?? null) !== null && !in_array((int) $r['agency_id'], $deLaCampagne, true)) {
             $deLaCampagne[] = (int) $r['agency_id'];
         }
-    } catch (PDOException $e) { /* pas de canaux : le référentiel suffira */ }
+    }
 
     foreach (agenceListe() as $a) {
         if (!in_array($a['id'], $deLaCampagne, true)) { continue; }
@@ -1184,7 +1175,8 @@ function mktBriefCopiesPossibles(int $campagne, array $c): array
  */
 function ep_mkt_brief(int $id): array
 {
-    $d = mktBriefDonnees($id);
+    try { $d = mktBriefDonnees($id); }
+    catch (RuntimeException $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
     if ($d === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     $c = mktBriefConfig();
 
@@ -1258,7 +1250,8 @@ function mktBriefMoteur(): bool
 /** GET /marketing/campagne/{id}/note.pdf — le fichier, tel qu'il partira. */
 function ep_mkt_brief_pdf(int $id): array
 {
-    $d = mktBriefDonnees($id);
+    try { $d = mktBriefDonnees($id); }
+    catch (RuntimeException $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
     if ($d === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     $magasin = trim((string) ($_GET['magasin'] ?? ''));
     $sid = trim((string) ($_GET['shop'] ?? ''));
@@ -1296,7 +1289,8 @@ function mktBriefJournalAdd(int $campagne, string $type, string $detail, string 
  */
 function wr_mkt_brief_envoyer(int $id): array
 {
-    $d = mktBriefDonnees($id);
+    try { $d = mktBriefDonnees($id); }
+    catch (RuntimeException $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
     if ($d === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     $b = body();
     $c = mktBriefConfig();

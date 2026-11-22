@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <!-- La garde des pages du cockpit (src/acces.php) : une page du siège. -->
+  <!-- La garde, par l'alias /commercial/assets/ (../../assets/ visait la racine du serveur, où elle n'est pas, 19/11/2026). -->
+  <script src="../assets/js/garde.js" data-api="../api/cockpit" data-siege="1"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Suivi — Commercial · L’Atelier By</title>
+  <link rel="icon" href="../img/logo.png">
+  <link rel="stylesheet" href="../commercial.css">
+  <link rel="stylesheet" href="mobile.css">
+</head>
+<body>
+  <header class="m-tete">
+    <img src="../img/logo.png" alt="L’Atelier" class="m-logo">
+    <span class="m-module">Suivi commercial</span>
+    <a class="m-bureau" href="../?bureau=1#semaine">Version bureau</a>
+  </header>
+  <main id="m"><div class="vide">Chargement…</div></main>
+  <script src="mobile.js"></script>
+</body>
+</html>

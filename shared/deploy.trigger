@@ -190,3 +190,59 @@
 2026-11-19T19:46:03Z Visites (#/franchises) : l'assistant en barre horizontale ; onglet « Non signées » pour ouvrir ou effacer une visite pas encore signée
 2026-11-19T19:54:38Z Dépliant des manuels : la page 8, les fiches techniques (8 pages, 6 manuels)
 2026-11-19T20:00:38Z Fiches techniques : photos en carré (1:1)
+2026-11-19T18:00:52Z Prospection : l'offre « Fêtes et locations de salle » (salles des fêtes), au lieu du petit-déjeuner d'hôtel
+2026-11-19T19:57:38Z Portail Commercial (tables sm_) à /commercial/ : bureaux, leads Meta, offres, bons, catalogues, échantillons, suivi B2B, gains du commercial
+2026-11-19T20:18:01Z Qui fait quoi : « Remettre les visites à zéro » (toutes les visites, sans prévenir personne ; compter, taper EFFACER, effacer)
+2026-11-19T20:12:02Z Commercial : « Ma semaine » (assistant en 6 étapes) et l'app mobile de suivi (/commercial/mobile/), lien « Commercial ↗ » dans le cockpit ; le magasin d’un bureau par son code postal ou son nom, pastilles du rail, formulaires Meta
+2026-11-19T20:34:09Z Prospection : transvasée dans le portail Commercial (/commercial/prospection/, table sm_prospect par la migration 006 ; l'ancienne adresse y renvoie)
+2026-11-19T20:38:10Z Commercial : gains en trois paliers (20/10/5 %), objectif 5 000 €, coût et ROI, commission des franchisés avec les royalties, simulation d'un client, création du formulaire Meta « Lunch au bureau »
+2026-11-19T20:41:24Z Portail Commercial : la garde chargée par /commercial/assets/ ; sans session, elle renvoie à la connexion du cockpit (/acces/moi rend son adresse)
+2026-11-19T20:46:25Z Commercial : le formulaire « Lunch au bureau » (question « Job title ») n'est plus pris pour un formulaire de recrutement
+2026-11-19T20:49:14Z Commercial : un formulaire « Lunch au bureau » se met en inactif (archivé chez Meta) et se réactive depuis le portail
+2026-11-19T19:36:21Z Assistant · coachs, onglet KPI : chaque outil à la demande ou forcé par le coach (plus de « Coupé »)
+2026-11-19T21:01:42Z Commercial : l'échantillon se commande comme une commande du magasin (produits et catégories de TF Buddy, commande « ÉCHANTILLON COMMERCIAL ») et se photographie à la réception ; la Prospection s'affiche à côté du rail
+2026-11-19T21:04:32Z Commercial : une seule vue Prospection (titre et magasin dans la barre du portail, plus d'en-tête en double ; l'entrée « Prospection ↗ » du cockpit retirée, ses anciens liens ouvrent le portail)
+2026-11-19T21:10:36Z Commercial : la publicité « Lunch au bureau » — la vidéo (15 s, 9:16 et 4:5) et le texte du post, dans Leads Meta
+2026-11-19T23:13:04Z Signage dans le Marketing : diagnostic et câblage du déploiement sur mar_sig_products / mar_sig_product_categories
+2026-11-20T05:05:06Z Commercial : la publicité « Lunch op kantoor » pour Halle (vidéo NL, post, formulaire NL) et l'aperçu du formulaire (champs, choix, remerciement) dans Leads Meta
+2026-11-20T05:51:30Z Commercial : la commande d'échantillon porte le client « ÉCHANTILLONS COMMERCIAL » du magasin et l'employé qui l'accepte ; elle s'annule depuis le portail
+2026-11-20T05:55:33Z Commercial : l'équipe du magasin pour la commande d'échantillon, tirée de ses commandes quand la lecture de l'équipe revient vide
+2026-11-20T06:02:14Z Commercial : le portail en pleine largeur ; Leads Meta : la campagne « Lunch au bureau » en onglets FR / NL · Halle (étapes, action, aperçu, vidéos, post), les formulaires de recrutement repliés
+2026-11-20T20:55:16Z Helpdesk : « Mes demandes » ouvre sur « Ouvertes » ; SMS au bureau (Sam, Pierre Boseret) à chaque nouvelle demande ; date limite du consultant (2, 5, 10, 30, 90 j) ; onglet des réclamations fournisseur de tous les magasins
+2026-11-20T20:56:08Z Consultant : la page du food cost de Sombreffe (prix, volumes, marges), seule à /consulant_bo/food-cost/
+2026-11-20T21:12:24Z Helpdesk : relances SMS des demandes sans réponse tous les 7 jours (maquette helpdesk-relances validée), horloge consultant/bin/helpdesk_cron.sh, SMS d'essai, plus de lien dans les SMS
+2026-11-20T21:27:17Z SMS : la clé SMSAPI commune de l'ERP (erp_cles smsapi_token) quand MétaDonnée n'a pas de jeton ; un jeton refusé sur .com essaie .pl
+2026-11-20T21:38:55Z SMS : le jeton OAuth SMSAPI du CRM (crm_settings) et toutes les clés « sms » d'erp_cles essayés tour à tour, sur .com et .pl ; celui qui passe est retenu
+2026-11-21T05:28:54Z SMS : un expéditeur refusé par SMSAPI (14) est remplacé par celui du CRM, puis par aucun ; celui qui passe est retenu
+2026-11-21T05:39:01Z Helpdesk : relances tant que la demande n'est pas en cours ; la carte « Demandes à traiter » sur l'accueil du cockpit (Résultat)
+2026-11-21T05:56:30Z Helpdesk : « Urgent » dans le formulaire du franchisé (SMS « URGENT », en tête du cockpit et de l'accueil) ; SMS au franchisé quand le bureau répond ; l'essai du SMS dit le jeton, le compte et la remise
+2026-11-21T06:10:59Z Frais : « Ajouter un frais » dans l'onglet Frais du dashboard, créé au panel pour le mois, jusqu'en décembre ou toute l'année (montant par mois ou total réparti), annulable
+2026-11-21T06:32:58Z Frais : le poste est le libellé saisi au panel (description), la catégorie dessous ; la TVA du formulaire s'applique ; « Annuler » retrouve les lignes créées au panel
+2026-11-21T06:38:58Z Réclamations fournisseur : photos à chaque réclamation (liste et fiche), part du produit dans le livré, onglet Tableau annuel réclamé / livré ; la photo est obligatoire pour déposer une réclamation
+2026-11-21T06:45:33Z Frais : plus de « indiqué le … » sous le poste dans le tableau des frais
+2026-11-21T06:48:57Z Étiquettes NL : script consultant/bin/envoi_etiquettes_nl.php (essai à blanc par défaut) et son plan — 81 corrections d'allergènes des matières premières, 100 traductions FR/NL ; rien n'est envoyé au déploiement
+2026-11-21T07:11:34Z Opérationnel, ruban des canaux : le comptoir ne perd plus les commandes payées un autre jour (Halle, « Comptoir 0 € · − 100 % ») ; commandes coupées à l'heure du retrait, « à venir » au-delà
+2026-11-21T07:26:22Z Réclamations fournisseur, Tableau annuel : produits réclamés seulement, livré lu sur les factures du fournisseur, vues Catégories / Produits / Motifs, % sur l'ensemble, la catégorie et le produit, réclamations de livraison
+2026-11-21T07:51:11Z Étiquettes NL : envoi_etiquettes_nl.php adapté à la forme réelle de l'API (allergènes des matières par PATCH /materials/{id}, codes d'allergènes, traductions relues) et workflow d'envoi déclenché à la main ; rien n'est envoyé au déploiement
+2026-11-21T10:00:37Z Fiche produit, Recette & marge : bouton « Adapter mon prix de vente » (le prix testé s'écrit au panel, TTC, après aperçu, plafonné au maximum du réseau) et « Demander au réseau de relever le maximum » (demande au bureau par le helpdesk)
+2026-11-21T10:02:54Z Fiche produits du ticket de caisse : page client /ticket/?t={boutique}-{transaction}-{clé} (lien signé, langue de la boutique, fiches à glisser, tout le texte lu dans le panel) et écran d'essai du siège /ticket/essai/ (tickets d'un jour, numéro de transaction, QR)
+2026-11-21T10:08:08Z Fiche du ticket : heure de la vente lue dans occurred_at_utc (heure belge), numéro du ticket (ticket_key), total et portions du panel, nom public de la boutique (ceo_shop) au lieu de la raison sociale
+2026-11-21T10:17:06Z Fiche du ticket : composition, conservation et préparation lues dans la spécification du fournisseur (catalogue SLFood, par langue) ; retirés : chapeau, phrase « Aucun de vos produits ne contient », indication de la barre sur ordinateur, dépliant des 14 allergènes
+2026-11-21T09:40:13Z Étiquettes NL : noms sans « ⌀ 22 cm » ni « ⌀ 26 cm » (plan et tableau), relecture des traductions langue par langue ; rien n'est envoyé au déploiement
+2026-11-21T10:21:46Z Fiche du ticket : la composition du fournisseur n'est montrée que dans la langue de la page (les textes SLFood sont en polonais) ; conservation et préparation du surgelé retirées
+2026-11-21T10:18:37Z Rangement des domaines : le code non marketing de mesure.php (réclamations, classement des tâches, profil de semaine, sonde) et for_sop_tache rejoignent leur domaine ; sources de l'ancien assistant et workflows des sondes terminées retirés
+2026-11-21T10:29:06Z Fiche du ticket : filtre du polonais durci (mots d'étiquette courants, ó) et liste des compositions retenues dans le diagnostic
+2026-11-21T10:40:47Z Fiche du ticket : titre « Vos achats, en détail. » / « Uw aankopen, in detail. » ; la page accepte ses données intégrées (dossier pour un agent de code)
+2026-11-21T11:10:50Z App employés : /employee/ (QR des fiches du personnel, app installée) sert l'écran de connexion au lieu de la liste des fichiers ; plus aucune liste de dossier sur le site (api/, assets/, tablette/img/ → 403)
+2026-11-21T11:10:29Z Marketing : l'ancienne copie de l'API du module (marketing/public/api/marketing) est retirée, avec sa règle /api/v1/marketing, sql/mar-referentiels.sql et POST /admin/marketing-restaure (410)
+2026-11-21T15:37:31Z Diagnostic : GET /diagnostic/marketing-service dit si le canal du cockpit vers le module Marketing (jeton de service) répond, par une lecture sans effet
+2026-11-21T15:39:24Z Fonds et types de campagne : le cockpit n'écrit plus les tables du module Marketing, il passe par son API (jeton de service) ; écritures de campagnes sans écran retirées (410)
+2026-11-21T16:45:17Z Boîte mail : archives, corbeille et Envoyés créés quand la boîte n'en a pas (« la boîte n'a pas de dossier d'archives ») ; sélection multiple, tout sélectionner, archiver, effacer, déplacer ; dossiers en boutons à micro-icône ; « Ranger avec l'IA » (POST /dashboard/boite/ranger)
+2026-11-21T16:58:47Z Fonds : le grand livre, ses leviers, ses frais récurrents, les boutiques et les campagnes se lisent au module Marketing par son API (GET /fonds, marketing/src/fonds.php) ; plus aucune lecture SQL de mar_fund_* ni de mar_shop
+2026-11-21T17:01:44Z Boîte mail : les modes IA en bascule (Briefing, Pilote, Radar) ; lecture IA gardée (panel_boite_lecture), pilote automatique éteint par défaut, garde-fous (panel_boite_pilote, panel_boite_pilote_etat) ; GET /dashboard/boite/lectures, POST /lire, GET|POST /pilote
+2026-11-21T17:09:07Z Boîte mail : les dossiers « INBOX.INBOX.Drafts/Junk/Sent/Trash » reconnus (Brouillons, Indésirables, Envoyés, Corbeille), Archives créées à côté ; la boîte mail sans les vignettes du dashboard
+2026-11-21T17:04:54Z Campagnes : le calendrier, les campagnes et les types (GET /marketing) et les campagnes du budget des campagnes se lisent au module Marketing par son API (marketing/src/campagnes.php)
+2026-11-21T17:13:41Z Mesure des campagnes : campagnes, boutiques, produits de l'offre, coefficient et levier du type lus au module Marketing par son API (marketing/src/mesure.php)
+2026-11-21T17:24:59Z Note de campagne : la campagne, son type et son levier, ses boutiques, cibles, canaux et agences, visuel, formats et rétroplanning lus au module Marketing par sa fiche (marketing/src/mkt_brief.php)
+2026-11-21T17:36:55Z Hub du marketing, Mon marketing, campagnes des visites, objectifs produits, annexes et KPI par levier : campagnes, boutiques et leviers lus au module Marketing (lot 5a)
+2026-11-21T17:48:32Z Agences : liste, agence qui signe la note, création, modification et retrait par l'API du module Marketing (lot 5b, marketing/src/mkt_agences.php) ; marketingAppel lit les 204 et les erreurs au standard

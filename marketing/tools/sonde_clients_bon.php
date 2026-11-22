@@ -10,6 +10,8 @@ declare(strict_types=1);
  * `GET /clients`, « b2b selects B2B; every other supplied value selects B2C »). La sonde du 24/10 a vu 8 626 clients
  * au magasin 2 (704 B2B) avec `limit=5`, mais 500 avec `limit=500` — et le bon n'en lit aujourd'hui que 2 000 au plus.
  *
+ * Sonde terminée : son workflow (.github/workflows/sonde-clients-bon.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-clients-bon.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_clients_bon.php
  *

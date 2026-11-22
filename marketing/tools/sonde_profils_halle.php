@@ -10,6 +10,8 @@ declare(strict_types=1);
  * ticket de Halle (`id_client`) sur les 90 derniers jours. Pour chacun : les jours de passage, les tickets, le montant,
  * la part en commande, l'heure, et les catégories achetées (lignes du ticket, `/transactions/{id}?include=products`).
  *
+ * Sonde terminée : son workflow (.github/workflows/sonde-profils-halle.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-profils-halle.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_profils_halle.php
  *
