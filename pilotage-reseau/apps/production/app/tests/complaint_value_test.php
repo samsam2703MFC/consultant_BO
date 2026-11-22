@@ -25,7 +25,10 @@ $pdo->exec("CREATE TABLE complaint (id INT AUTO_INCREMENT PRIMARY KEY, complaint
 $pdo->exec('CREATE TABLE customer (id INT PRIMARY KEY, company VARCHAR(80))');
 $pdo->exec('CREATE TABLE n_prod_item (id INT PRIMARY KEY, id_final_product INT)');
 $pdo->exec('CREATE TABLE n_prod_product_settings (id_item INT, id_primary_group INT)');
-$pdo->exec('CREATE TABLE n_prod_group (id INT PRIMARY KEY, sort_order INT)');
+$pdo->exec('CREATE TABLE n_prod_group (id INT PRIMARY KEY, sort_order INT, name_pl VARCHAR(80) NULL)');
+$pdo->exec(file_get_contents(__DIR__ . '/../migrations/tfb/215_complaint_seen.sql')); // [367] lue par la liste et le détail
+$pdo->exec('CREATE TABLE production_employee (id INT PRIMARY KEY, name VARCHAR(60), surname VARCHAR(60))');
+$pdo->exec('CREATE TABLE n_prod_employee (id INT PRIMARY KEY, id_production_employee INT)');
 // Baguette : 30 pièces par carton sur la facture (fiche : 25), carton 30 € ; Blanc : rien sur la facture, fiche 6 / carton ; Inconnu : sans ppc.
 $pdo->exec("INSERT INTO final_product VALUES (1, 'Baguette', 25), (2, 'Blanc', 6), (3, 'Inconnu', NULL), (4, 'Tarte', 6)");
 $pdo->exec("INSERT INTO document_wdt VALUES (10, 'WDT/1/2026')");
@@ -58,6 +61,22 @@ $d = $repo->detailRow($baguetteId);
 $check($d !== null && (float) $d['ppc'] === 30.0 && $d['product'] === 'Baguette' && (int) $d['wdt_id'] === 10, 'detail: invoice ppc and WDT found');
 $lines = $repo->shippedLines(10, 1);
 $check(count($lines) === 1 && (float) $lines[0]['quantity'] === 10.0 && (float) $lines[0]['price_carton'] === 30.0, 'detail: what was sent on the invoice (10 cartons × 30 €)');
+
+// [367] Grupa widziała reklamację : pierwsze « Widziane » zostaje, etykieta na liście i w oknie.
+$pdo->exec("INSERT INTO n_prod_group (id, sort_order, name_pl) VALUES (7, 1, 'Piekarnia')");
+$pdo->exec("INSERT INTO production_employee VALUES (30, 'Osoba', 'A'), (31, 'Osoba', 'B')");
+$pdo->exec('INSERT INTO n_prod_employee VALUES (3, 30), (4, 31)');
+$board = new \App\Repositories\Workshop\ComplaintBoardRepository($pdo);
+$check(($repo->detailRow($baguetteId)['seen_label'] ?? null) === null, 'not seen yet: no label');
+$board->markSeen($baguetteId, 7, 3);
+$board->markSeen($baguetteId, 7, 4);
+$seen = $board->seen([$baguetteId], 7);
+$check(($seen[$baguetteId]['name'] ?? null) === 'Osoba A', 'first « seen » of the group stays (who)');
+$label = (string) $repo->detailRow($baguetteId)['seen_label'];
+$check(str_contains($label, 'Piekarnia') && str_contains($label, 'Osoba A') && preg_match('/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}/', $label) === 1, 'detail label: date · group · person');
+$pdo->exec('ALTER TABLE complaint ADD complaint_uuid VARCHAR(40) NULL, ADD id_order INT NULL');
+$all = array_column($repo->getAll(), 'seen_label', 'id');
+$check(str_contains((string) ($all[$baguetteId] ?? ''), 'Piekarnia'), 'list label for the seen complaint');
 
 $pdo->exec('DROP DATABASE erp_complaint_value_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";

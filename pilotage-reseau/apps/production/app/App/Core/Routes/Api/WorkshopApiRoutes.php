@@ -290,6 +290,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/complaints/summary', ExecutionController::class, 'complaintsSummary', 'kiosk'],
             ['GET', '/kiosk/complaints', ExecutionController::class, 'complaints', 'kiosk'],
             ['GET', '/kiosk/complaints/{id:\d+}/photos', ExecutionController::class, 'complaintPhotos', 'kiosk'],
+            ['POST', '/kiosk/complaints/{id:\d+}/seen', ExecutionController::class, 'complaintSeen', 'kiosk_employee'],
             ['GET', '/kiosk/bonus', ExecutionController::class, 'bonus', 'kiosk_employee'],
             ['POST', '/kiosk/waste', ExecutionController::class, 'recordWaste', 'kiosk_employee'],
             ['PATCH', '/kiosk/waste/{id:\d+}', ExecutionController::class, 'updateWaste', 'kiosk_employee'],
