@@ -249,3 +249,4 @@
 2026-11-22T14:10:19Z Formation continue (module, cockpit, dashboard, Professeur), coffre-fort du franchisé et ses grandes dates avec l'assistant à l'import, pièces jointes de la Boîte mail (importer, coffre-fort, catalogues)
 2026-11-22T14:55:32Z Coffre-fort v2 : l'état du coffre, les pièces attendues (16), le tiroir d'aperçu, le dépôt avec l'assistant ; la pièce au dépôt du consultant
 2026-11-22T15:10:24Z Formations et suivi : l'accueil de la formation sans rail, la méga-barre de recherche sur tout le catalogue (GET /formation/recherche), l'aperçu et le lecteur ; les couleurs des catalogues sur l'accueil (dashboard et module)
+2026-11-22T15:36:19Z Tâches & contrôles : les photos se relisent quand une tâche rendue n'a pas la sienne ; dashboard : les vignettes (dossier de formation, Relire, valeur, demande au bureau, revue du soir, API) sur l'Opérationnel seulement
