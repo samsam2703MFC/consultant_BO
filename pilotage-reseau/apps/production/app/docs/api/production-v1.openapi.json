@@ -17242,6 +17242,78 @@
                 ]
             }
         },
+        "/kiosk/complaints/{id}/seen": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Reklamacja widziana przez grupę / Réclamation vue par le groupe",
+                "operationId": "kioskComplaintSeen",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskComplaintSeen"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[367] La personne connectée confirme que le groupe a vu la réclamation : la première confirmation du groupe reste (qui, quand). 404 : réclamation non acceptée ou d'un autre groupe.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/bonus": {
             "get": {
                 "tags": [
@@ -29843,7 +29915,41 @@
                                 },
                                 "photos": {
                                     "type": "integer"
+                                },
+                                "seen": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "at": {
+                                            "type": "string"
+                                        },
+                                        "by": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
                                 }
+                            }
+                        }
+                    }
+                }
+            },
+            "KioskComplaintSeen": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "seen": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "at": {
+                                "type": "string"
+                            },
+                            "by": {
+                                "type": "string",
+                                "nullable": true
                             }
                         }
                     }
