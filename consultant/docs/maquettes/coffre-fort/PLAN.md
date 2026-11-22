@@ -65,4 +65,22 @@ captures : `php -S 127.0.0.1:8099 -t .` à la racine, puis `node consultant/docs
    ouvert, qui connaît l'adresse d'un magasin peut lire son coffre ; avec la connexion, seul ce magasin le lit.
 3. **Le franchisé dépose lui-même** ses pièces légales (onglet Légal), **le consultant aussi**.
 4. **Un coffre par boutique.**
-5. **Pas d'« Envoyer à mon comptable ».**
+5. **Pas d'« Envoyer à mon comptable »**, mais dans les mails : un document du coffre se joint à un e-mail de la Boîte
+   mail du magasin.
+
+## Où on en est (22/11/2026) — codé sur la branche, pas encore en ligne
+
+| Pièce | Fichiers |
+|---|---|
+| Serveur : les routes du coffre, les ouvertures notées, la pièce jointe des mails | `consultant/src/coffre.php`, `consultant/src/documents.php` (sortes, `echeance`, `visible_franchise`, `depose_par`, `depose_role`, `PATCH /franchises/documents`), `shared/src/acces.php` (`/coffre/magasin`), `panel/src/boite_mail.php` (`coffre` de l'envoi) |
+| Dashboard : la page à onglets, le lien tout en bas | `panel/public/dashboard/coffre.js`, `coffre.css`, `dashboard.js` (vue `coffre`, `railCoffre`, `coffreBasMaj`), `boite.js` (« Joindre du coffre-fort… ») |
+| Cockpit : le dépôt du consultant | `consultant/public/assets/js/franchises-vals.js`, `franchises-tpl.js`, `shared/public/assets/css/app.css` |
+| Tests | `php consultant/bin/tests_coffre.php` (28 points), `tests_documents.php` (suit les 11 sortes) |
+| Contrat | `shared/docs/contrat-api.md`, § « Le coffre-fort du franchisé » |
+
+Essayé dans le vrai dashboard (site assemblé, API simulée) : bureau (onglet Tout, onglet Légal avec le dépôt), téléphone
+(le lien en bas, au-dessus des onglets fixes). Non essayé en vrai : l'aperçu d'un PDF (Chromium sans tête n'affiche pas
+les PDF), l'envoi d'un mail avec une pièce du coffre (il faut une boîte reliée).
+
+À la mise en ligne, rien n'entre au coffre tout seul : les documents déjà déposés y restent hors (`visible_franchise` =
+0), le consultant les y met d'un clic (colonne Coffre de l'onglet Documents).
