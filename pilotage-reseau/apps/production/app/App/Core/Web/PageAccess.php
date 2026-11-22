@@ -47,8 +47,8 @@ final class PageAccess
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
-        // [369] Assistant « Zamówienia dnia », [370] « Klienci bez zamówienia » : pages sous /client-orders, appels ajax sous le même droit.
-        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing'], false],
+        // [369] Assistant « Zamówienia dnia », [370] « Klienci bez zamówienia », [371] « Domówienia dnia » : pages sous /client-orders, appels ajax sous le même droit.
+        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing', '/ajax/client-orders/supplements'], false],
         'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
         'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
         'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
