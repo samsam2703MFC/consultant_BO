@@ -267,3 +267,19 @@ function cofPiecesMail(string $shop, array $ids): array
     }
     return $out;
 }
+
+/**
+ * Dépose dans le coffre d'une boutique un document produit par le serveur (l'archive d'une formation continue validée,
+ * formation/src/formation_continue.php) : rangé comme un dépôt du siège, « dans le coffre ». Rend la ligne, ou null.
+ */
+function cofDeposer(int $shop, string $sorte, string $titre, string $nom, string $contenu, array $qui, ?string $note = null): ?array
+{
+    if ($shop <= 0 || $contenu === '') { return null; }
+    cofTable();
+    $tmp = tempnam(sys_get_temp_dir(), 'cof');
+    if ($tmp === false || @file_put_contents($tmp, $contenu) === false) { return null; }
+    try {
+        return docGarder($shop, isset(DOC_SORTES[$sorte]) ? $sorte : 'autre', $titre, date('Y-m-d'), $note, $nom, $tmp, strlen($contenu), false,
+            ['visible' => true, 'par' => (string) ($qui['nom'] ?? 'Siège'), 'role' => 'siege']);
+    } finally { @unlink($tmp); }
+}
