@@ -90,6 +90,12 @@ final class OrderSmsService
             'message' => 'SMS do ' . $t['company'] . ($delivers ? ' wysłany.' : ' zapisany w historii klienta (bramka SMS nie wysyła — Ustawienia › SMS).')];
     }
 
+    /** La passerelle envoie-t-elle vraiment (sinon : SMS seulement inscrit dans l'historique) ? */
+    public function delivers(): bool
+    {
+        return $this->sms->delivers();
+    }
+
     /**
      * Dernier SMS des lignes d'un assistant (badge « SMS 9:14 »).
      * @param list<int> $refs
