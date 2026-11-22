@@ -67,6 +67,11 @@ final class ParamRules
         'otif.delivery_days' => [0, 7, true],
         // [377] Partie i kontrola dnia : jours rattrapés au plus quand l'assistant n'a pas été validé
         'lots_qc.catchup_days' => [1, 31, true],
+        // [378] Faktury i KSeF dnia : jours rattrapés, jours avant qu'une facture non envoyée / sans réponse KSeF soit à expliquer,
+        // jours pendant lesquels les problèmes ouverts des expéditions antérieures reviennent
+        'ksef_day.catchup_days' => [1, 31, true],
+        'ksef_day.pending_days' => [1, 14, true],
+        'ksef_day.lookback_days' => [7, 92, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

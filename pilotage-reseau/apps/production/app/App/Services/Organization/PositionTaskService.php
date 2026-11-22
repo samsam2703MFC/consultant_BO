@@ -103,6 +103,7 @@ final class PositionTaskService
         '/production/yield-review' => 'yield_reviewed',
         '/workshop/traceability/samples' => 'samples_done',
         '/workshop/traceability/day-check' => 'lots_qc_day_checked',
+        '/shipments/ksef-day' => 'invoices_ksef_checked',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',
