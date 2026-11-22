@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Palety zwrotne{% endblock %}
+
+{% block content %}
+{# [381] Assistant « Palety zwrotne » : App\Services\Organization\Wizards\PalletsReturnsService — écran dans
+   assets/js/logistics/pallets-returns.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche de la semaine des
+   postes Logistyka et Kierowca-dostawca se valide seule après « Zakończ ». Rien n'est changé dans les arrêts ni les
+   incidents de la tablette chauffeur (liens vers Dostawy › potwierdzenia), aucune facture créée, aucun envoi. #}
+<section class="section">
+    <div id="prApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="prBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/logistics/pallets-returns.js?v={{ asset_v() }}"></script>
+{% endblock %}

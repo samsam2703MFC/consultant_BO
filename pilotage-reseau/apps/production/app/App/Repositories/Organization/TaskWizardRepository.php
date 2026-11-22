@@ -234,6 +234,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_haccp_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
     }
 
+    /** [381] Palety zwrotne : décisions enregistrées pour la semaine examinée (lundi, n_pallet_return_review). */
+    public function palletReturnReviews(string $weekStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_pallet_return_review WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);
