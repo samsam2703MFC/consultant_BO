@@ -24,6 +24,7 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
         if (pa === '/dashboard/equipe/semaine/generer') { const n = JSON.parse(r.request().postData()).cles.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/options') { Object.assign(OPTS, JSON.parse(r.request().postData()).options); return r.fulfill({ status: 200, json: { ok: true, options: OPTS } }); }
         if (pa === '/dashboard/equipe/semaine/taches') { const n = JSON.parse(r.request().postData()).places.length; return r.fulfill({ status: 200, json: { ok: true, places: n } }); }
+        if (pa === '/dashboard/equipe/semaine/retirer') { return r.fulfill({ status: 200, json: { ok: true, retires: 4, demandes: 4, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/semaine/creer') { const n = JSON.parse(r.request().postData()).services.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
         if (pa === '/dashboard/equipe/roulement') { const b = JSON.parse(r.request().postData()), x = JSON.parse(lire('matrice.json')).roulements; if (b.lettre) { x[b.employe] = b.lettre; } else { delete x[b.employe]; } return r.fulfill({ status: 200, json: { ok: true, employe: b.employe, lettre: b.lettre, roulements: x } }); }
@@ -96,6 +97,11 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await shot('e17-fenetre-ligne-rouge', false);
   await p.click('.eqp-fo [data-eqp-ok]'); await p.waitForTimeout(900);
   console.log('nouveau', await p.textContent('.eqp-flash').catch(() => '—'));
+  // Retirer quelqu'un de l'horaire de la semaine : Marc, depuis la fenêtre de son service du mardi.
+  await p.click('tr:has-text("Marc Lefèvre") td[data-eqp-cell="2026-11-24"] [data-eqp-svc]'); await p.waitForSelector('.eqp-fo [data-eqp-retirer-semaine]');
+  await shot('e25-retirer-de-l-horaire', false);
+  await p.click('.eqp-fo [data-eqp-retirer-semaine]'); await p.waitForTimeout(900);
+  console.log('retirer de l’horaire', await p.textContent('.eqp-flash').catch(() => '—'), '| fenêtre fermée :', !(await p.$('.eqp-fo')));
   await p.click('[data-eqp-vue="jour"]');
   await p.waitForSelector('.eqp-pg', { timeout: 20000 });
   console.log('ligne des tâches', (await p.textContent('.eqp-tcl').catch(() => 'aucune')).replace(/\s+/g, ' '));

@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-23T17:25:57Z",
+ "genere": "2026-11-23T17:31:13Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1080,8 +1080,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1096",
-    "equipe.js:1132"
+    "equipe.js:1112",
+    "equipe.js:1148"
    ],
    "magasin": true,
    "routes": [
@@ -1187,7 +1187,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1139"
+    "equipe.js:1155"
    ],
    "magasin": true,
    "routes": [
@@ -1208,7 +1208,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:931"
+    "equipe.js:947"
    ],
    "magasin": true,
    "routes": [
@@ -1229,8 +1229,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1028",
-    "equipe.js:747"
+    "equipe.js:1044",
+    "equipe.js:763"
    ],
    "magasin": true,
    "routes": [
@@ -1251,8 +1251,29 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1027",
-    "equipe.js:746"
+    "equipe.js:1043",
+    "equipe.js:762"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/semaine/retirer",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:597"
    ],
    "magasin": true,
    "routes": [
@@ -1273,8 +1294,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1008",
-    "equipe.js:748"
+    "equipe.js:1024",
+    "equipe.js:764"
    ],
    "magasin": true,
    "routes": [
@@ -1295,7 +1316,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:724"
+    "equipe.js:740"
    ],
    "magasin": true,
    "routes": [

@@ -533,5 +533,27 @@ $_GET = ['shop' => '1'];
 verifie('la liste des options pour l’écran : quatre, avec leur nom', count(ep_equipe_options()['liste'] ?? []) === 4 && ep_equipe_options()['liste'][0]['nom'] === 'Assistant de la semaine');
 Db::$options = '{"assistant":true,"taches":true,"matrice":true,"recopie":true}';
 
+echo "Retirer quelqu'un de l'horaire de la semaine\n";
+$lunR = date('Y-m-d', strtotime('monday next week')); $jeuR = date('Y-m-d', strtotime($lunR . ' +3 days'));
+PanelApi::$reponses = [];
+for ($i = 0; $i < 7; $i++) { PanelApi::$reponses['/shops/1/schedule?date=' . date('Y-m-d', strtotime($lunR . ' +' . $i . ' days'))] = []; }
+PanelApi::$reponses['/shops/1/schedule?date=' . $lunR] = [['id_schedule' => 901, 'id_employee' => 10, 'work_date' => $lunR, 'start_hour' => '04:00:00', 'end_hour' => '12:00:00', 'id_shop' => 1],
+    ['id_schedule' => 902, 'id_employee' => 13, 'work_date' => $lunR, 'start_hour' => '07:00:00', 'end_hour' => '11:00:00', 'id_shop' => 1]];
+PanelApi::$reponses['/shops/1/schedule?date=' . $jeuR] = [['id_schedule' => 903, 'id_employee' => 10, 'work_date' => $jeuR, 'start_hour' => '06:00:00', 'end_hour' => '14:00:00', 'id_shop' => 1],
+    ['id_schedule' => 904, 'id_employee' => 10, 'work_date' => $jeuR, 'start_hour' => '15:00:00', 'end_hour' => '18:00:00', 'id_shop' => 2]];
+PanelApi::$ecrits = []; PanelApi::$code = 204;
+$CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => 10];
+$r = wr_equipe_semaine_retirer();
+verifie('ses services de la semaine, dans ce magasin, sont retirés ; ceux des autres et d’un autre magasin restent', ($r['retires'] ?? 0) === 2 && array_column(PanelApi::$ecrits, 1) === ['/schedule/901', '/schedule/903'], json_encode([$r, PanelApi::$ecrits]));
+PanelApi::$ecrits = []; $CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => 77];
+verifie('personne au planning de la semaine : rien n’est retiré', (wr_equipe_semaine_retirer()['retires'] ?? -1) === 0 && PanelApi::$ecrits === []);
+$CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => '10'];
+verifie('un identifiant en texte : refusé', isset(wr_equipe_semaine_retirer()['error']));
+PanelApi::$ecrits = []; PanelApi::$code = 403; $CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => 10];
+$r = wr_equipe_semaine_retirer();
+verifie('un refus de droits arrête au premier service', count(PanelApi::$ecrits) === 1 && isset($r['error']), json_encode($r));
+PanelApi::$reponses['/shops/1/schedule?date=' . $jeuR] = null; PanelApi::$ecrits = []; PanelApi::$code = 204;
+verifie('un jour muet : rien n’est retiré à l’aveugle', isset(wr_equipe_semaine_retirer()['error']) && PanelApi::$ecrits === []);
+
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

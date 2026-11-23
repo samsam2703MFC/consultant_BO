@@ -219,4 +219,5 @@ de la semaine ; éteinte, une option ne se montre pas et ses routes sont refusé
 | `ecran-22-options.png` | la fenêtre des options : quatre interrupteurs, la matrice éteinte |
 | `ecran-23-assistant-temps-morts.png` | l'étape « Les temps morts » de l'assistant : les tâches à cocher, les creux de chaque jour en cartes, les tâches posées et qui les fait, ce qui garde son heure |
 | `ecran-2-planning-jour.png` | le jour, avec la ligne « Tâches des creux » (posées en couleur, à heure fixe en pointillé) |
+| `ecran-24-retirer-de-l-horaire.png` | « Retirer de l’horaire de la semaine » dans la fenêtre d’un service (absent, en congé : tous ses services de la semaine, après confirmation) ; les badges en rectangles aux coins arrondis (« change les badges par des rectangles avec des coins arrondis ») |
 

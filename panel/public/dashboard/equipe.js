@@ -582,6 +582,22 @@
     return Object.assign(r, { P: src, pct0: r.ca ? r.c0 / r.ca * 100 : null, pct1: r.ca ? r.c1 / r.ca * 100 : null,
       repos: Js.filter(J => !r.jours.has(J.date)).map(J => JOURS[dt(J.date).getDay()]) });
   }
+  /** Les services d'une personne la semaine d'une date, d'après un planning lu qui la porte en entier ; null sinon. */
+  function servicesSemaine(emp, date) {
+    const l = lundiDe(date), src = [st.PS, st.PM, st.PJ].find(P => P && P.jours.filter(J => lundiDe(J.date) === l).length === 7);
+    return src ? src.jours.filter(J => lundiDe(J.date) === l).reduce((x, J) => x + (J.services || []).filter(s => s.employe === emp).length, 0) : null;
+  }
+  /** Retirer quelqu'un de l'horaire de la semaine (23/11/2026, « retire de l'horaire ») : tous ses services, après confirmation. */
+  function retirerSemaine(emp) {
+    const ed = st.edit; if (!ed || ed.occupe) { return; }
+    const l = lundiDe(ed.date), n = servicesSemaine(emp, ed.date), P = ctxEdition(ed)[0];
+    const nom = (((P && equipeDe(P).get(emp)) || {}).nom) || 'cette personne', pr = nom.split(' ')[0];
+    if (!window.confirm(`Retirer ${nom} de l’horaire de la semaine du ${dt(l).getDate()} ${MOIS[dt(l).getMonth()]} au ${long(plus(l, 6)).replace(/^\S+ /, '').replace(/ \d{4}$/, '')} ?\n${n != null ? n + ' service' + (n > 1 ? 's sont supprimés' : ' est supprimé') : 'Tous ses services de la semaine sont supprimés'} du planning du panel.`)) { return; }
+    ed.occupe = true; ed.err = null; rendre();
+    envoyer('POST', '/dashboard/equipe/semaine/retirer', { du: l, employe: emp })
+      .then(r => apresEcriture(`${pr} est retiré(e) de l’horaire de la semaine : ${r.retires} service${r.retires > 1 ? 's' : ''} supprimé${r.retires > 1 ? 's' : ''}.${r.echecs && r.echecs.length ? ' ' + r.echecs.length + ' refusé' + (r.echecs.length > 1 ? 's' : '') + ' par le panel.' : ''}`, null))
+      .catch(e => { ed.occupe = false; ed.err = 'Rien n’est retiré : ' + e.message + (e.j && e.j.detail ? ' (' + e.j.detail + ')' : '') + '.'; rendre(); });
+  }
   /** Le corps de la fenêtre. */
   function editeur(P, J, ed) {
     const eq = equipeDe(P), e = ed.employe ? (eq.get(ed.employe) || { nom: 'Employé ' + ed.employe, postes: [] }) : null;
@@ -661,7 +677,7 @@
         <div class="eqp-fo-pl">${file.map(x => { const L = auPl(x.id); return `<button type="button" class="eqp-fo-pc${x.id === ed.employe ? ' on' : ''}${L.length ? ' a' : ''}" data-eqp-fo-aller="${x.id}"><b>${esc(x.nom.split(' ')[0])}</b><small>${L.length ? L.map(y => hc(y.de) + '–' + hc(y.a)).join(', ') : 'repos'}</small></button>`; }).join('')}</div>
         <button type="button" class="btn btn--icon" data-eqp-fo-aller="${suivant ? suivant.id : ''}"${suivant ? '' : ' disabled'} aria-label="Personne suivante">›</button><span class="eqp-fo-pos">${iF + 1}/${file.length}</span></div></div>` : '';
     const res = `${e ? '<b>' + prenom + '</b> · ' : ''}${esc(court(ed.date))} · ${hh(ed.de)}–${hh(ed.a)} · ${fH((ed.a - ed.de) / 60)}${e ? ' · ' + signeE(dC) : ''}${hors ? `<span class="tag-r">${esc(motifDuree(P, hors))}</span>` : ''}`;
-    return `<div class="eqp-fo-tete">${e ? `<span class="eqp-av">${esc(ini(e.nom))}</span>` : ''}<div><b>${e ? esc(e.nom) + lettreChip(e) : 'Ajouter un service'}</b><span class="sub">${e ? esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste') + ' · ' : ''}${esc(long(ed.date).replace(/ \d{4}$/, ''))}${ed.id ? (orig ? ' · ' + hh(orig.de) + '–' + hh(orig.a) + ' au planning' : '') : ' · nouveau service'}</span></div><button type="button" class="eqp-fo-x" data-eqp-annuler="1" aria-label="Fermer">×</button></div>
+    return `<div class="eqp-fo-tete">${e ? `<span class="eqp-av">${esc(ini(e.nom))}</span>` : ''}<div><b>${e ? esc(e.nom) + lettreChip(e) : 'Ajouter un service'}</b><span class="sub">${e ? esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste') + ' · ' : ''}${esc(long(ed.date).replace(/ \d{4}$/, ''))}${ed.id ? (orig ? ' · ' + hh(orig.de) + '–' + hh(orig.a) + ' au planning' : '') : ' · nouveau service'}</span></div>${e && servicesSemaine(ed.employe, ed.date) ? `<button type="button" class="btn btn--sm btn--ghost eqp-fo-hor" data-eqp-retirer-semaine="${ed.employe}"${ed.occupe ? ' disabled' : ''} title="Absent·e, en congé : tous ses services de la semaine sont supprimés">Retirer de l’horaire de la semaine</button>` : ''}<button type="button" class="eqp-fo-x" data-eqp-annuler="1" aria-label="Fermer">×</button></div>
       ${nav}${choisir}${cartes}${plan}${effs}
       ${chev ? `<p class="eqp-fo-err" role="alert">Chevauche son service de ${hh(chev.de)} à ${hh(chev.a)} : adaptez les heures.</p>` : ''}${ed.err ? `<p class="eqp-fo-err" role="alert">${esc(ed.err)}</p>` : ''}
       <div class="eqp-fo-pied"><span class="eqp-fo-res">${res}</span>${ed.id ? `<button type="button" class="btn btn--danger" data-eqp-suppr="1"${ed.occupe ? ' disabled' : ''}>Retirer ${prenom} du shift</button>` : ''}<button type="button" class="btn btn--ghost" data-eqp-annuler="1"${ed.occupe ? ' disabled' : ''}>${ed.id && !change ? 'Fermer' : 'Annuler'}</button><button type="button" class="btn btn--primary${ed.occupe ? ' is-busy' : ''}" data-eqp-ok="1"${ed.occupe || !change || !ed.employe || chev ? ' disabled' : ''}>${ed.occupe ? 'Enregistrement…' : ed.id ? 'Enregistrer' : 'Ajouter le service'}</button>${suivant ? `<button type="button" class="btn btn--primary" data-eqp-ok-suivant="${suivant.id}"${ed.occupe || !ed.employe || chev ? ' disabled' : ''}>${change ? (ed.id ? 'Enregistrer' : 'Ajouter') + ' et suivant' : 'Suivant'} : ${esc(suivant.nom.split(' ')[0])} ›</button>` : ''}</div>
@@ -1212,6 +1228,7 @@
     on('[data-eqp-ajout-ok]', 'click', () => { const ed = st.edit; if (!ed.ajout) { return; } const n = ((equipeDe(ctxEdition(ed)[0]).get(ed.ajout) || {}).nom || '').split(' ')[0];
       ecrireShift('POST', { employe: ed.ajout, date: ed.date, de: hh(ed.de), a: hh(ed.a) }, n + ' est ajouté(e) au shift ' + hh(ed.de) + '–' + hh(ed.a) + '.', true); });
     on('[data-eqp-ok]', 'click', () => enregistrerService(false));
+    on('[data-eqp-retirer-semaine]', 'click', e => retirerSemaine(+e.currentTarget.dataset.eqpRetirerSemaine));
     on('[data-eqp-options]', 'click', () => { st.optMod = true; st.optErr = null; rendre(); });
     on('[data-eqp-options-fermer]', 'click', () => { st.optMod = false; rendre(); });
     on('[data-eqp-fermer-opt]', 'click', e => { if (e.target === e.currentTarget && !st.optOccupe) { st.optMod = false; rendre(); } });

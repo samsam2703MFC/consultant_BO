@@ -281,4 +281,4 @@
 2026-11-23T16:06:39Z Mon équipe : tracer un service à la souris, le planning imprimé fait par le cockpit, Semaine fondue avec le planogramme, vue Mois, « À compléter » et « au repos » retirés
 2026-11-23T16:42:06Z Mon équipe : la fenêtre d'un service (tirer sa ligne, verte de 4 h à 8 h), parcourir le jour, le CA du jour (comptoir + B2B) pour les %
 2026-11-23T17:02:38Z Mon équipe : l'assistant de la semaine (reprendre, qui adapter, les heures de trop, créer), le planning imprimé groupé par section
-2026-11-23T17:26:06Z Mon équipe : les options (éteintes par défaut : assistant, tâches dans les temps morts, matrice et shift maker, recopie), les tâches dans les temps morts
+2026-11-23T17:26:06Z Mon équipe : les options (éteintes par défaut : assistant, tâches dans les temps morts, matrice et shift maker, recopie), les tâches dans les temps morts, retirer quelqu’un de l’horaire de la semaine, badges en rectangles arrondis

@@ -162,6 +162,7 @@ function eqpRoute(string $method, string $path): ?array
         if ($method === 'POST') { return wr_equipe_recopie(); }
     }
     if ($method === 'POST' && $path === '/dashboard/equipe/semaine/creer') { return wr_equipe_semaine_creer(); }
+    if ($method === 'POST' && $path === '/dashboard/equipe/semaine/retirer') { return wr_equipe_semaine_retirer(); }
     if ($path === '/dashboard/equipe/semaine/taches') {
         if ($method === 'GET') { return ep_equipe_taches(); }
         if ($method === 'POST') { return wr_equipe_taches(); }
@@ -860,6 +861,48 @@ function wr_equipe_service_supprimer(): array
     $r = eqpEcrire('DELETE', '/schedule/' . $id);
     $nom = ($c['equipe'][$s['employe']]['nom'] ?? null) ?: 'Employé ' . $s['employe'];
     return eqpServiceRendu($r, 'la suppression', $c, 'Service retiré : ' . $nom . ', ' . $c['date'] . ' ' . $s['de'] . '–' . $s['a']);
+}
+
+/**
+ * POST /dashboard/equipe/semaine/retirer {shop, du, employe} — retirer quelqu'un de l'horaire de la semaine (23/11/2026,
+ * Sam : « retire de l'horaire » : absent, en congé) : tous ses services du $du au $du + 6, au planning de ce magasin,
+ * sont supprimés au panel, un par un ; arrêt au premier refus de droits. Le planning des sept jours est relu d'abord :
+ * sans lui, rien n'est retiré.
+ */
+function wr_equipe_semaine_retirer(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $du = is_string($b['du'] ?? null) ? $b['du'] : '';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return eqpErreur(422, 'du : AAAA-MM-JJ'); }
+    $emp = $b['employe'] ?? null;
+    if (!is_int($emp) || $emp < 1) { return eqpErreur(422, 'employe : un identifiant'); }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
+    $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $chemins = [];
+    foreach ($jours as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
+    $res = eqpGetParallele($chemins, 6);
+    $a = []; $nom = '';
+    foreach ($jours as $d) {
+        if (!is_array($res['sch' . $d] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu le planning du ' . $d . ' : rien n’est retiré'); }
+        foreach (eqpServices($res['sch' . $d], $shop, $d) as $s) { if ($s['employe'] === $emp && $s['id'] > 0) { $a[] = ['id' => $s['id'], 'date' => $d] + $s; if ($s['nom'] !== '') { $nom = $s['nom']; } } }
+    }
+    if ($a === []) { return ['ok' => true, 'du' => $du, 'retires' => 0, 'echecs' => []]; }
+    @set_time_limit(180);
+    $ok = 0; $echecs = []; $arret = null;
+    foreach ($a as $s) {
+        $r = eqpEcrire('DELETE', '/schedule/' . $s['id']);
+        if ($r['code'] >= 200 && $r['code'] < 300) { $ok++; continue; }
+        $echecs[] = ['id' => $s['id'], 'date' => $s['date'], 'de' => $s['de'], 'a' => $s['a'], 'motif' => (string) ($r['erreur'] ?? 'refusé')];
+        if (in_array($r['code'], [401, 403], true)) { $arret = 'le panel refuse les écritures du planning à ce compte (HTTP ' . $r['code'] . ')'; break; }
+    }
+    if ($ok > 0) {
+        try { journalAdd('Magasin ' . $shop, 'Planning', null, 'Semaine du ' . $du . ' : ' . ($nom ?: 'employé ' . $emp) . ' retiré(e) de l’horaire (' . $ok . ' service' . ($ok > 1 ? 's' : '') . ')'); }
+        catch (Throwable $e) { /* le journal ne bloque pas */ }
+    }
+    if ($ok === 0) { return eqpErreur($arret !== null ? 403 : 502, $arret ?? 'le panel a refusé toutes les suppressions', ['echecs' => $echecs]); }
+    return ['ok' => true, 'du' => $du, 'retires' => $ok, 'demandes' => count($a), 'echecs' => $echecs, 'arret' => $arret];
 }
 
 /* ── Recopier la semaine précédente ───────────────────────────────────────────────────────────────────────────── */
