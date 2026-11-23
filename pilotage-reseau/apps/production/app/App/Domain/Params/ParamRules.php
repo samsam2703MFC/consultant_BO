@@ -133,6 +133,9 @@ final class ParamRules
         'kiosk.waste_photo_required' => [0, 1, true],
         'kiosk.waste_photo_max' => [1, 8, true],
         'trace.label_days' => [0, 7, true],
+        // [415] Tablet jakości : sztuki ważone przy kontroli partii, tolerancja średniej wagi sztuki (± %)
+        'qc_round.pieces' => [1, 10, true],
+        'qc_round.weight_tolerance_pct' => [0, 50, false],
         'kiosk.office_qr_ttl_s' => [30, 600, true],
         'supply.invoice_price_alert_pct' => [1, 100, false],
         'kiosk.ordered_days' => [1, 28, true],

@@ -155,7 +155,16 @@ final class OutputService
     public function uploadPhoto(array $body, ApiContext $context): array
     {
         $this->groupId($context);
-        $photo = $this->decodePhoto($body['photo'] ?? null);
+        return $this->storePhoto($body['photo'] ?? null, $context);
+    }
+
+    /**
+     * [415] Zdjęcie z tabletu bez grupy (tablet jakości : wygląd partii) : te same reguły i ten sam magazyn zdjęć
+     * (n_prod_lot_photo, kiosk.lot_photo_max_kb) co zdjęcia etykiet i strat.
+     */
+    public function storePhoto(mixed $photo, ApiContext $context): array
+    {
+        $photo = $this->decodePhoto($photo);
         $id = $this->repo->insertPhoto($photo[0], $photo[1], $context->deviceId, $context->employeeId);
         return ['id' => $id, 'bytes' => strlen($photo[1])];
     }

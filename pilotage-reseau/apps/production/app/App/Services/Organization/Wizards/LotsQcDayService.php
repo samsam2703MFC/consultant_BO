@@ -156,8 +156,10 @@ final class LotsQcDayService
      * Une partie : lots attendus (recette aplatie après CompositionCut, surowce suivis + compositions d'autres groupes),
      * lots renseignés, trous. @return array{id:int, lot_code:string, product:string, quantity:float, unit:?string, qc:?string,
      *   qc_at:?string, qc_note:?string, nc_id:?int, lots_total:int, lots_ok:int, gaps: list<array{code:string, label:string, detail:string}>}
+     * [415] Publique : le tour de la tablette qualité compte les mêmes trous sur les parties du jour (LotsQcDayRepository::lots,
+     * ::components), sans exiger la journée close.
      */
-    private function batch(array $o, array $lots, array $comps): array
+    public function batch(array $o, array $lots, array $comps): array
     {
         $date = substr((string) $o['work_date'], 0, 10);
         $spec = $o['id_recipe'] !== null ? $this->spec((int) $o['id_recipe'], (int) $o['id_group']) : ['materials' => [], 'cuts' => []];
