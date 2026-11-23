@@ -416,13 +416,65 @@ function ep_equipe_planning(): array
     return eqpPlanningDonnees($shop, $du, $n);
 }
 
+/**
+ * La durée d'un service, en heures (23/11/2026, Sam : « en rouge si plus court que 4 et si plus que 8 ») : la ligne tirée
+ * dans la fenêtre d'un service est verte de `min` à `max`, rouge en dehors ; un marqueur, pas un refus. Réglage
+ * `equipeDureesService` ({min, max}), sinon 4 h et 8 h.
+ */
+function eqpDurees(): array
+{
+    $s = function_exists('setting') ? setting('equipeDureesService', null) : null;
+    if (is_array($s) && is_numeric($s['min'] ?? null) && is_numeric($s['max'] ?? null)) {
+        $min = (float) $s['min']; $max = (float) $s['max'];
+        if ($min > 0 && $max > $min && $max <= 24) { return ['min' => $min, 'max' => $max, 'source' => 'réglage']; }
+    }
+    return ['min' => 4.0, 'max' => 8.0, 'source' => 'départ'];
+}
+
+/**
+ * Le chiffre d'un jour pour les % du personnel (23/11/2026, Sam : « le chiffre du jour complet, comptoir + B2B, pour
+ * calculer les % ») : un jour passé, ce que la caisse a fait (margin-heatmap : comptoir et B2B ensemble, TTC comme
+ * l'objectif) ; aujourd'hui, la projection de fin de journée du Résultat du jour (le relevé /exploitation/jour gardé
+ * depuis moins d'une heure), sinon le fait s'il passe déjà l'objectif ; un jour à venir : rien, l'écran prend l'objectif.
+ * Rend [ca, source] : source 'reel', 'projection', 'encours' ou null.
+ */
+function eqpCaDuJour(int $shop, string $j, string $auj, ?float $caisse, ?float $objectif): array
+{
+    if ($j < $auj) { return $caisse !== null ? [round($caisse, 2), 'reel'] : [null, null]; }
+    if ($j > $auj) { return [null, null]; }
+    $c = function_exists('setting') ? setting('exJour:' . $j, null) : null;
+    if (is_array($c) && is_array($c['r'] ?? null) && time() - (int) ($c['le'] ?? 0) <= 3600) {
+        foreach ((array) ($c['r']['magasins'] ?? []) as $m) {
+            if (is_array($m) && (int) ($m['shopId'] ?? 0) === $shop && is_numeric($m['projection'] ?? null) && (float) $m['projection'] > 0) {
+                return [round(max((float) $m['projection'], (float) ($caisse ?? 0)), 2), 'projection'];
+            }
+        }
+    }
+    if ($caisse !== null && ($objectif === null || $caisse >= $objectif)) { return [round($caisse, 2), 'encours']; }
+    return [null, null];
+}
+
 /** Le planning de $n jours à partir de $du : ce que rend GET /dashboard/equipe/planning (l'écran et le PDF). */
 function eqpPlanningDonnees(int $shop, string $du, int $n): array
 {
     $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, $n - 1));
     $chemins = ['emp' => '/shops/' . $shop . '/employees?include=positions', 'ws' => '/operational-framework/workstations', 'prod' => '/shops/' . $shop . '/products/available'];
     foreach ($jours as $j) { $chemins['sch' . $j] = '/shops/' . $shop . '/schedule?date=' . $j; }
+    // Le CA des jours passés et du jour : la caisse, comptoir et B2B ensemble (margin-heatmap, un mois par lecture).
+    $auj = date('Y-m-d');
+    $passes = array_values(array_filter($jours, static fn ($j) => $j <= $auj));
+    foreach (array_unique(array_map(static fn ($j) => substr($j, 0, 7), $passes)) as $ym) {
+        $dansMois = array_values(array_filter($passes, static fn ($j) => substr($j, 0, 7) === $ym));
+        $chemins['hm' . $ym] = '/consultant/shops/' . $shop . '/margin-heatmap?' . http_build_query(['from' => $dansMois[0], 'to' => end($dansMois)]);
+    }
     $res = eqpGetParallele($chemins, 6);
+    $caCaisse = [];
+    foreach ($res as $k => $hm) {
+        if (!str_starts_with((string) $k, 'hm') || !is_array($hm)) { continue; }
+        foreach ((array) ($hm['days'] ?? []) as $d) {
+            if (is_array($d) && !empty($d['has_data']) && is_numeric($d['ca'] ?? null) && (float) $d['ca'] > 0 && !empty($d['date'])) { $caCaisse[substr((string) $d['date'], 0, 10)] = (float) $d['ca']; }
+        }
+    }
     if (!is_array($res['emp'] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu les employés', ['detail' => (class_exists('ErpApi') && ErpApi::$lastError ? ErpApi::$lastError : PanelApi::$lastError)]); }
     $postes = [];
     foreach (analyseListe($res['ws'] ?? null) as $w) {
@@ -456,8 +508,9 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
                     'actif' => false, 'taux' => null, 'franchise' => false, 'secteurs' => []];
             }
         }
-        $out[] = ['date' => $j, 'objectif' => $obj['jours'][$j] ?? null, 'lu' => is_array($rep),
-            'services' => array_map(static fn ($s) => array_diff_key($s, ['nom' => 1]), $sv)];
+        [$ca, $caSrc] = eqpCaDuJour($shop, $j, $auj, $caCaisse[$j] ?? null, $obj['jours'][$j] ?? null);
+        $out[] = ['date' => $j, 'objectif' => $obj['jours'][$j] ?? null, 'ca' => $ca, 'caSource' => $caSrc, 'caEnCours' => $j === $auj ? ($caCaisse[$j] ?? null) : null,
+            'lu' => is_array($rep), 'services' => array_map(static fn ($s) => array_diff_key($s, ['nom' => 1]), $sv)];
     }
     // Les inactifs ne restent que s'ils ont un service sur l'étendue.
     $auPlanning = [];
@@ -474,6 +527,7 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
         'jours' => $out, 'employes' => array_values($equipe), 'secteurs' => $sect,
         'objectif' => ['source' => $obj['source'], 'motif' => $obj['motif']],
         'budget' => function_exists('personnelPaliers') ? personnelPaliers() : ['cible' => 17.0, 'rouge' => 20.0, 'noir' => 22.0, 'source' => 'départ'],
+        'durees' => eqpDurees(),
         'nonLus' => $muets, 'ouvertures' => (object) eqpOuvertures($shop)];
     if ($n === 1) { $r['tempsMorts'] = eqpTempsMorts($shop, $jours[0]); }
     return $r;

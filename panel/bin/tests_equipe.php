@@ -425,5 +425,26 @@ verifie('le titre de la semaine', str_contains($h, 'Semaine du 23 au 29 novembre
 $hd = eqpPlanningPdfHtml($Ppdf, 'departements', 'Sombreffe');
 verifie('par département : une page par secteur ou poste et par semaine (Boulangerie, Comptoir)', substr_count($hd, 'class="pl-page"') === 4 && str_contains($hd, 'Boulangerie') && str_contains($hd, 'Comptoir'), (string) substr_count($hd, 'class="pl-page"'));
 
+echo "La durée d'un service\n";
+verifie('4 h et 8 h par défaut', eqpDurees() === ['min' => 4.0, 'max' => 8.0, 'source' => 'départ'], json_encode(eqpDurees()));
+$REGLAGES['equipeDureesService'] = ['min' => 3, 'max' => 9];
+verifie('le réglage', eqpDurees()['min'] === 3.0 && eqpDurees()['max'] === 9.0);
+$REGLAGES['equipeDureesService'] = ['min' => 8, 'max' => 4];
+verifie('un réglage incohérent est ignoré', eqpDurees()['source'] === 'départ');
+unset($REGLAGES['equipeDureesService']);
+
+echo "Le CA du jour pour les % (comptoir + B2B)\n";
+$auj = date('Y-m-d'); $hier = date('Y-m-d', strtotime('-1 day')); $demain = date('Y-m-d', strtotime('+1 day'));
+verifie('un jour passé : la caisse', eqpCaDuJour(1, $hier, $auj, 2247.5, 1510.68) === [2247.5, 'reel']);
+verifie('un jour passé sans caisse : rien (l’objectif)', eqpCaDuJour(1, $hier, $auj, null, 1510.68) === [null, null]);
+verifie('un jour à venir : rien (l’objectif)', eqpCaDuJour(1, $demain, $auj, null, 1663.38) === [null, null]);
+verifie('aujourd’hui sans projection, sous l’objectif : rien', eqpCaDuJour(1, $auj, $auj, 900.0, 1510.68) === [null, null]);
+verifie('aujourd’hui sans projection, au-delà de l’objectif : le fait', eqpCaDuJour(1, $auj, $auj, 2247.0, 1510.68) === [2247.0, 'encours']);
+$REGLAGES['exJour:' . $auj] = ['le' => time() - 60, 'r' => ['magasins' => [['shopId' => 2, 'projection' => 4002.77], ['shopId' => 1, 'projection' => 2274.4]]]];
+verifie('aujourd’hui : la projection de fin de journée du Résultat du jour', eqpCaDuJour(1, $auj, $auj, 2247.0, 1510.68) === [2274.4, 'projection'], json_encode(eqpCaDuJour(1, $auj, $auj, 2247.0, 1510.68)));
+$REGLAGES['exJour:' . $auj]['le'] = time() - 7200;
+verifie('une projection de plus d’une heure ne sert plus', eqpCaDuJour(1, $auj, $auj, 2247.0, 1510.68) === [2247.0, 'encours']);
+unset($REGLAGES['exJour:' . $auj]);
+
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);
