@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Serwisy i przeglądy maszyn{% endblock %}
+
+{% block content %}
+{# [405] Assistant « Serwisy i przeglądy maszyn » : App\Services\Organization\Wizards\MaintenanceService — écran dans
+   assets/js/maintenance/maintenance.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Registres de l'assistant (urządzenia, przeglądy, zgłoszenia) ;
+   machines et arrêts de l'ERP lus seulement ; rien n'est commandé ni envoyé. #}
+<section class="section">
+    <div id="mtApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="mtBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/maintenance/maintenance.js?v={{ asset_v() }}"></script>
+{% endblock %}
