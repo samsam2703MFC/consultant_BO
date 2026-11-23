@@ -115,6 +115,9 @@ la cible du réseau, 20 % et 22 %, réglables dans le réglage `personnelPaliers
 | `ecran-12-tracer-une-ligne.png` | au jour, tirer une ligne à la souris sur la ligne d'une personne au repos : la trace dit ses heures pendant le geste |
 | `ecran-13-ligne-tracee.png` | la ligne lâchée : la fenêtre du nouveau service (14:00–18:00) et son effet sur le budget du jour, avant « Ajouter le service » |
 | `ecran-14-planning-imprime.png` | le planning imprimé, fait par le cockpit (le panel ne sert pas de PDF du planning) : une page A4 paysage par semaine, les heures de chacun, le total par jour |
+| `ecran-15-fenetre-ligne-verte.png` | la fenêtre d'un service construite (la 2 bis, 23/11/2026) : la ligne tirée de 09:00 à 15:00, verte (6 h) |
+| `ecran-16-fenetre-ligne-rouge.png` | la même, le bord tiré jusqu'à 18:00 : rouge, « 9 h · plus de 8 h », marqué aussi en bas ; l'ajout reste possible |
+| `ecran-17-parcourir-le-jour.png` | parcourir le jour dans la fenêtre : les sections (Comptoir 1/2…), chacun avec ses heures, « Ajouter et suivant : Laura › » |
 
 **Comment elles sont faites.** Le vrai dashboard servi en local ; les routes `/dashboard/equipe/*` répondent avec ce que le
 vrai code de `panel/src/equipe.php` calcule sur un panel de doublure (`ecran/panel_illustratif.php`, l'équipe et les tickets

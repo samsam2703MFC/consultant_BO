@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-23T16:06:31Z",
+ "genere": "2026-11-23T16:42:06Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1059,7 +1059,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:66"
+    "equipe.js:67"
    ],
    "magasin": true,
    "routes": [
@@ -1080,8 +1080,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:631",
-    "equipe.js:667"
+    "equipe.js:774",
+    "equipe.js:810"
    ],
    "magasin": true,
    "routes": [
@@ -1102,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:72"
+    "equipe.js:73"
    ],
    "magasin": true,
    "routes": [
@@ -1123,7 +1123,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:250"
+    "equipe.js:258"
    ],
    "magasin": true,
    "routes": [
@@ -1144,7 +1144,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:213"
+    "equipe.js:221"
    ],
    "magasin": true,
    "routes": [
@@ -1165,7 +1165,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:674"
+    "equipe.js:817"
    ],
    "magasin": true,
    "routes": [
@@ -1186,7 +1186,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:563"
+    "equipe.js:706"
    ],
    "magasin": true,
    "routes": [
@@ -1207,7 +1207,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:562"
+    "equipe.js:705"
    ],
    "magasin": true,
    "routes": [
@@ -1228,7 +1228,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:552"
+    "equipe.js:695"
    ],
    "magasin": true,
    "routes": [
