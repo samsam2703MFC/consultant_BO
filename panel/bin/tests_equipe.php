@@ -62,6 +62,29 @@ final class PanelApi
     }
 }
 
+/** Le compte admin de l'ERP : éteint par défaut, allumé pour les tests de la reprise. */
+final class ErpApi
+{
+    public static ?string $lastError = null;
+    public static bool $actif = false;
+    public static array $reponses = [];
+    public static array $lus = [];
+    public static array $ecrits = [];
+    public static int $code = 204;
+    public static function disponible(): bool { return self::$actif; }
+    public static function getParallele(array $paths, int $front = 4): array
+    {
+        $o = [];
+        foreach ($paths as $k => $p) { self::$lus[] = $p; $o[$k] = self::$reponses[$p] ?? null; }
+        return $o;
+    }
+    public static function ecrire(string $m, string $p, ?array $b = null): array
+    {
+        self::$ecrits[] = [$m, $p, $b];
+        return ['code' => self::$code, 'corps' => self::$code === 201 ? ['inserted_id' => 88] : null, 'erreur' => self::$code >= 300 ? 'HTTP ' . self::$code : null];
+    }
+}
+
 require __DIR__ . '/../../shared/src/cibles_reseau.php';
 require __DIR__ . '/../../shared/src/resultat.php';
 require __DIR__ . '/../src/temps_morts.php';
@@ -360,6 +383,31 @@ verifie('une matrice invalide n’est pas enregistrée', isset(wr_equipe_matrice
 $CORPS = ['shop' => 1, 'matrice' => $md];
 $r = wr_equipe_matrice();
 verifie('une matrice valide est enregistrée', !empty($r['ok']) && str_contains(Db::$exec[count(Db::$exec) - 1][0], 'INSERT INTO panel_equipe_matrice'), json_encode($r));
+
+echo "Le compte admin quand le compte du cockpit est refusé\n";
+PanelApi::$reponses = ['/a' => [['id' => 1]]]; PanelApi::$lus = [];
+ErpApi::$actif = true; ErpApi::$reponses = ['/b' => [['id' => 2]]]; ErpApi::$lus = [];
+$r = eqpGetParallele(['a' => '/a', 'b' => '/b', 'c' => '/c']);
+verifie('ce que le cockpit obtient vient du cockpit, le reste de l’admin', $r['a'] === [['id' => 1]] && $r['b'] === [['id' => 2]] && $r['c'] === null, json_encode($r));
+verifie('l’admin ne relit que ce qui manque', ErpApi::$lus === ['/b', '/c'], json_encode(ErpApi::$lus));
+PanelApi::$ecrits = []; ErpApi::$ecrits = []; PanelApi::$code = 403; ErpApi::$code = 201;
+$w = eqpEcrire('POST', '/schedule', ['id_employee' => 10]);
+verifie('une écriture refusée au cockpit (403) repart avec l’admin', count(PanelApi::$ecrits) === 1 && ErpApi::$ecrits === [['POST', '/schedule', ['id_employee' => 10]]] && $w['code'] === 201 && ($w['data']['inserted_id'] ?? 0) === 88, json_encode([$w, ErpApi::$ecrits]));
+PanelApi::$code = 422; ErpApi::$ecrits = [];
+$w = eqpEcrire('POST', '/schedule', ['id_employee' => 10]);
+verifie('une écriture refusée pour une autre raison (422) ne repart pas', ErpApi::$ecrits === [] && $w['code'] === 422);
+ErpApi::$actif = false; ErpApi::$lus = [];
+$r = eqpGetParallele(['b' => '/b']);
+verifie('sans compte admin : pas de reprise', $r['b'] === null && ErpApi::$lus === []);
+PanelApi::$code = 204;
+
+// La carte de bout en bout : le compte du cockpit refusé sur les employés, l'admin les rend.
+PanelApi::$reponses = ['/operational-framework/workstations' => $postes, '/shops/1/products/available' => $produits];
+ErpApi::$actif = true; ErpApi::$reponses = ['/shops/1/employees?include=positions' => $employes];
+$_GET = ['shop' => '1'];
+$c = ep_equipe_carte();
+verifie('la carte se lit quand seul l’admin rend les employés', ($c['resume']['employes'] ?? 0) === 3, json_encode($c['resume'] ?? $c));
+ErpApi::$actif = false;
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);
