@@ -76,8 +76,14 @@
         "adf344b9 Mise en ligne : le coffre-fort v2",
         "7a71553e Mise en ligne : les paramètres dans une roue"
       ],
-      "etat": "propose",
-      "proposeLe": "2026-11-23"
+      "etat": "encode",
+      "proposeLe": "2026-11-23",
+      "valideLe": "2026-11-23",
+      "reponse": "Encoder",
+      "encodeLe": "2026-11-23",
+      "code": "0.0.64",
+      "version": "1.0",
+      "statut": "a_valider"
     },
     {
       "n": 5,
@@ -88,9 +94,15 @@
         "696fc94f Mise en ligne : formation continue, coffre-fort et grandes dates, pièces jointes de la Boîte mail",
         "5b07b99c Mise en ligne : Formations et suivi"
       ],
-      "etat": "propose",
+      "etat": "encode",
       "proposeLe": "2026-11-23",
-      "note": "recoupe les deux articles rédigés le 22/11 et pas encore encodés : data/formation/continue/ (art-nouveau-produit, art-fonctionnement-formations)"
+      "note": "recoupe les deux articles rédigés le 22/11 et pas encore encodés : data/formation/continue/ (art-nouveau-produit, art-fonctionnement-formations)",
+      "valideLe": "2026-11-23",
+      "reponse": "Encoder",
+      "encodeLe": "2026-11-23",
+      "code": "0.0.65",
+      "version": "1.0",
+      "statut": "a_valider"
     }
   ],
   "ecartes": [

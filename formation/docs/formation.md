@@ -1088,6 +1088,15 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - Règle de Sam : chaque article encodé porte des captures de l'écran en ligne ; le dashboard se capture en lecture
   seule (`data/formation/nouveautes/captures_lecture_seule.js`, voir `LISEZMOI.md` › Captures).
 
+### Passe du 23/11/2026 (réponse de Sam : « Encoder »)
+
+- 0.0.64 « Le dashboard : Mon coffre-fort » — à valider, v1.0 (12 parties, 6 photos ; coffre de Halle vide, pas de
+  capture du tiroir ni de l'assistant).
+- 0.0.65 « Le dashboard : Formations et suivi » — à valider, v1.0 (11 parties, 4 photos ; aucune formation continue
+  diffusée, pas de capture d'une formation ouverte). Recoupe les deux articles de `data/formation/continue/`, toujours
+  pas encodés (leurs codes proposés 0.0.61 et 0.0.62 sont pris : ils recevront le premier code libre).
+- Captures : `data/formation/nouveautes/captures_coffre_formation.js` (lecture seule).
+
 ## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026, encodé le 18/11/2026)
 
 - Client : « faire une mini formation pour expliquer les leviers de développement du chiffre d'affaires et l'intégrer
