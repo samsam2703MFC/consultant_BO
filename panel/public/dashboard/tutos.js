@@ -88,9 +88,9 @@
       const a = document.createElement('div');
       a.className = 'tu-annonce'; a.dataset.id = v.id;
       a.setAttribute('role', 'dialog'); a.setAttribute('aria-label', 'Nouvelle fonction : ' + v.titre);
-      a.innerHTML = `<div class="tu-a-h"><span class="tu-tag">Nouveau</span><button type="button" class="tu-x" data-tu="tard" data-id="${esc(v.id)}" title="Plus tard" aria-label="Plus tard">${ICO_X}</button></div>
-        <div class="tu-a-t">${esc(v.titre)}</div>${v.resume ? `<div class="tu-a-r">${esc(v.resume)}</div>` : ''}
-        <div class="tu-a-a"><button type="button" class="btn btn--primary btn--sm" data-tu="voir" data-id="${esc(v.id)}">Voir la vidéo${v.duree ? ' · ' + esc(v.duree) : ''}</button><button type="button" class="btn btn--ghost btn--sm" data-tu="tard" data-id="${esc(v.id)}">Plus tard</button></div>`;
+      // Minimaliste (23/11/2026, Sam : « fais la boîte autour du message plus minimaliste ») : « Nouveau », le titre, deux liens.
+      a.innerHTML = `<div class="tu-a-k">Nouveau</div><div class="tu-a-t">${esc(v.titre)}</div>
+        <div class="tu-a-a"><button type="button" class="tu-a-l" data-tu="voir" data-id="${esc(v.id)}">Voir la vidéo${v.duree ? ' · ' + esc(v.duree) : ''}</button><button type="button" class="tu-a-l tu-a-tard" data-tu="tard" data-id="${esc(v.id)}">Plus tard</button></div>`;
       document.body.appendChild(a);
       T.annonce = a;
       // Le rail défile, se redessine : la bulle suit son carré.
