@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Teczka do audytu i kontroli{% endblock %}
+
+{% block content %}
+{# [406] Assistant « Teczka do audytu i kontroli » : App\Services\Organization\Wizards\AuditFolderService — écran dans
+   assets/js/audit_folder/audit-folder.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du trimestre du
+   Kierownik produkcji se valide seule après « Zakończ ». État lu dans l'ERP, liste des documents de l'assistant, teczka PDF ;
+   rien n'est changé dans l'ERP ni envoyé. #}
+<section class="section">
+    <div id="afApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="afBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/audit_folder/audit-folder.js?v={{ asset_v() }}"></script>
+{% endblock %}

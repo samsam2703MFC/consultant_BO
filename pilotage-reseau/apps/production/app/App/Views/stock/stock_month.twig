@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Stany magazynowe na koniec miesiąca{% endblock %}
+
+{% block content %}
+{# [403] Assistant « Stany magazynowe na koniec miesiąca » : App\Services\Organization\Wizards\StockMonthService — écran
+   dans assets/js/stock_month/stock-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Aucun stock ni prix n'est changé ici ; PDF et CSV viennent de
+   l'instantané enregistré ; la remise à la comptabilité est faite par l'humain (aucun e-mail). #}
+<section class="section">
+    <div id="smApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="smBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/stock_month/stock-month.js?v={{ asset_v() }}"></script>
+{% endblock %}

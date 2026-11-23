@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Badania i szkolenia{% endblock %}
+
+{% block content %}
+{# [404] Assistant « Badania i szkolenia (przegląd terminów) » : App\Services\Organization\Wizards\StaffDeadlinesService —
+   écran dans assets/js/hr/staff-deadlines.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Dates de badania lues dans HR (droit « hr » exigé), registre des
+   szkolenia de l'assistant ; la fiche HR n'est pas modifiée, aucun rendez-vous pris, aucun e-mail ni SMS envoyé. #}
+<section class="section">
+    <div id="sdApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="sdBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/hr/staff-deadlines.js?v={{ asset_v() }}"></script>
+{% endblock %}

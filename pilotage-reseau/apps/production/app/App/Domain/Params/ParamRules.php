@@ -99,6 +99,9 @@ final class ParamRules
         // [398] Intrastat miesiąca : seuils annuels (milliers de zł) saisis d'après la réglementation de l'année ; 0 = non défini
         'intrastat.threshold_dispatch_kpln' => [0, 1000000, false],
         'intrastat.threshold_arrival_kpln' => [0, 1000000, false],
+        // [403] Stany magazynowe na koniec miesiąca : écart de valeur début → fin signalé au-delà des deux seuils (% et zł)
+        'stock_month.variance_pct' => [1, 1000, true],
+        'stock_month.variance_min_pln' => [0, 1000000, true],
         // [387] Rutyny poranne AI : interrupteur général et par assistant (0/1), budget mensuel (zł), taux USD → PLN du coût affiché
         'ai.routines_enabled' => [0, 1, true],
         'ai.routines_budget_pln' => [0, 10000, false],
@@ -106,6 +109,14 @@ final class ParamRules
         'ai.routines_on.orders_day_checked' => [0, 1, true],
         'ai.routines_on.deliveries_delays_checked' => [0, 1, true],
         'ai.routines_on.invoices_ksef_checked' => [0, 1, true],
+        // [404] Badania i szkolenia : 1 = « brak szkolenia BHP » signalé pour chaque salarié actif (délai d'alerte : hr.alert_days)
+        'staff_deadlines.bhp_required' => [0, 1, true],
+        // [405] Serwisy i przeglądy maszyn : jours avant le terme d'un przegląd, minutes d'un arrêt « awaria » qui demandent un zgłoszenie
+        'maintenance.alert_days' => [1, 180, true],
+        'maintenance.breakdown_min_minutes' => [0, 600, true],
+        // [406] Teczka do audytu : jours de grâce après le rythme d'un assistant de contrôle, jours avant le contrôle d'un document
+        'audit_folder.grace_days' => [0, 60, true],
+        'audit_folder.alert_days' => [0, 90, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
