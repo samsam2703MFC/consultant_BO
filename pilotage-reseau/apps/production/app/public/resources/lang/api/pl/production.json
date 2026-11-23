@@ -619,6 +619,7 @@
     "team_sheet_col_stock": "Na magazyn",
     "team_sheet_due": "wyjazd {day}",
     "team_sheet_waiting": "nierozplanowane : {qty}",
+    "team_sheet_proposed_note": "Liczby kursywą : do zrobienia, jeszcze nie zapisane w planie tygodnia — rozłożone na dni jak « Rozdziel na dni » (od dziś, w wolnych godzinach zespołu, wysyłki przed wyjazdem).",
     "team_sheet_col_date": "Dzień",
     "team_sheet_col_supplier": "Dostawca",
     "team_sheet_col_material": "Surowiec",
