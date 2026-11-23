@@ -1,5 +1,5 @@
 {
-  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
+  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
   "videos": [
     {
       "id": "equipe-horaires",
@@ -12,7 +12,15 @@
       "fichier": "02-mon-equipe.mp4",
       "affiche": "02-mon-equipe.jpg",
       "duree": "2 min 20",
-      "depuis": "2026-11-23"
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
+      "tourne_le": "2026-11-23"
     },
     {
       "id": "decouvrir",
@@ -25,7 +33,17 @@
       "fichier": "01-decouvrir.mp4",
       "affiche": "01-decouvrir.jpg",
       "duree": "2 min 11",
-      "depuis": "2026-11-23"
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/index.html",
+        "panel/public/dashboard/tutos.js",
+        "panel/public/dashboard/tutos.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
+      "tourne_le": "2026-11-23"
     },
     {
       "id": "formation-horaires",
@@ -39,7 +57,15 @@
       "fichier": "03-formation-planning.mp4",
       "affiche": "03-formation-planning.jpg",
       "duree": "5 min 17",
-      "depuis": "2026-11-23"
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
+      "tourne_le": "2026-11-23"
     }
   ]
 }

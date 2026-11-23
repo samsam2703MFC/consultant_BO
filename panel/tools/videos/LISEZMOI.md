@@ -63,3 +63,31 @@ Puis l'entrée dans `videos.json` (`id`, `genre`, `titre`, `resume`, `vues`, `fi
 routes manquantes dans `mocks/` (`capture.js` les liste), et `node tourner.js 04-ma-page`. Pour annoncer une nouvelle
 fonction : `genre: "nouveau"` et `depuis` à la date de mise en ligne ; la carte « Nouveau » s'efface après 60 jours ou
 une fois la vidéo ouverte.
+
+## La routine : adapter et faire les nouvelles vidéos
+
+```bash
+node panel/tools/videos/a_refaire.js
+```
+
+dit, sans rien modifier :
+
+1. **À adapter** : pour chaque vidéo, les commits qui ont touché ses `sources` (les fichiers dont l'écran est filmé,
+   dans `videos.json`) depuis son tournage (`tourne_sur`, écrit par `tourner.js`). On relit : l'écran filmé a-t-il
+   changé (libellés, mise en page, gestes) ? Le scénario tourne-t-il encore (un sélecteur disparu le fait échouer) ? Si
+   oui : adapter le scénario et `mocks/`, retourner, relire la planche de contrôle.
+2. **Nouveautés** : les mises en ligne (`shared/deploy.trigger`) postérieures au dernier tournage qui parlent du
+   dashboard franchisé : chacune peut demander une vidéo « nouveau » (courte, la bulle de sa page) ou un module de
+   formation (`genre: "formation"`, objectifs, chapitres, « À vous », quiz, récapitulatif).
+3. **Sans vidéo** : les pages du dashboard qu'aucune vidéo ne couvre — les prochains modules de formation.
+
+Une tâche planifiée (la « routine des vidéos ») lance cette revue chaque semaine dans une nouvelle session : elle
+adapte ce qui doit l'être, ajoute au plus deux nouvelles vidéos, vérifie les planches (une image toutes les 4 s),
+passe `php panel/bin/tests_videos.php` et ouvre une PR vers la branche par défaut. La mise en ligne reste une
+décision : la PR fusionnée, la branche de déploiement avance comme pour toute livraison (`shared/CLAUDE.md`).
+
+Planche de contrôle d'une vidéo (à relire avant toute PR) :
+
+```bash
+ffmpeg -i panel/public/dashboard/videos/02-mon-equipe.mp4 -vf "fps=1/4,scale=640:-1,tile=3x4" planche%d.png
+```

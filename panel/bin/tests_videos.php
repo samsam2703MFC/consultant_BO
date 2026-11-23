@@ -44,6 +44,11 @@ foreach ($videos as $i => $x) {
     $v("$id : le MP4 est là", preg_match('/^[a-z0-9-]+\.mp4$/', $f) === 1 && is_file("$dash/videos/$f") && filesize("$dash/videos/$f") > 10000, $f);
     $a = (string) ($x['affiche'] ?? '');
     $v("$id : l'affiche est là", $a === '' || (preg_match('/^[a-z0-9-]+\.jpg$/', $a) === 1 && is_file("$dash/videos/$a")), $a);
+    $src = $x['sources'] ?? null;
+    $racine = dirname(__DIR__, 2);
+    $v("$id : des sources qui existent", is_array($src) && $src !== [] && array_filter($src, static fn ($f) => !is_file("$racine/$f")) === [], json_encode($src));
+    $v("$id : le commit du tournage", preg_match('/^[0-9a-f]{7,40}$/', (string) ($x['tourne_sur'] ?? '')) === 1, (string) ($x['tourne_sur'] ?? ''));
+    $v("$id : le jour du tournage", preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($x['tourne_le'] ?? '')) === 1);
     $d = (string) ($x['depuis'] ?? '');
     $v("$id : une date", preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) === 1 && checkdate((int) substr($d, 5, 2), (int) substr($d, 8, 2), (int) substr($d, 0, 4)), $d);
 }

@@ -6,8 +6,8 @@
  * 1. assemble le site public dans un dossier temporaire (shared/bin/assembler_public.php) ;
  * 2. le sert en local (php -S 127.0.0.1:8099) — l'API du cockpit est remplacée par la fausse API de mocks/ ;
  * 3. lance chaque scénario (film.js : Chromium filme, ffmpeg monte) ;
- * 4. copie le MP4 dans panel/public/dashboard/videos/, en tire l'affiche (la couverture) et écrit sa durée dans
- *    videos/videos.json.
+ * 4. copie le MP4 dans panel/public/dashboard/videos/, en tire l'affiche (la couverture) et écrit dans
+ *    videos/videos.json sa durée, le commit et le jour du tournage (tourne_sur, tourne_le : a_refaire.js s'en sert).
  * Prérequis : php, ffmpeg, node et le paquet playwright avec son Chromium (voir LISEZMOI.md).
  */
 const fs = require('fs');
@@ -54,7 +54,12 @@ function dureeLisible(mp4) {
       fs.copyFileSync(mp4, path.join(VIDEOS, n + '.mp4'));
       execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '3', '-i', mp4, '-frames:v', '1', '-vf', 'scale=960:-1', '-q:v', '4', path.join(VIDEOS, n + '.jpg')]);
       const v = reg.videos.find(x => x.fichier === n + '.mp4');
-      if (v) { v.duree = dureeLisible(mp4); v.affiche = n + '.jpg'; } else { console.log('  (pas dans videos.json : à y ajouter)'); }
+      if (v) {
+        v.duree = dureeLisible(mp4); v.affiche = n + '.jpg';
+        // Le commit et le jour du tournage : a_refaire.js compare les sources de la vidéo depuis ce commit.
+        v.tourne_sur = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: DEPOT }).toString().trim();
+        v.tourne_le = new Date().toISOString().slice(0, 10);
+      } else { console.log('  (pas dans videos.json : à y ajouter)'); }
     }
   } finally {
     php.kill();
