@@ -286,3 +286,4 @@
 2026-11-23T19:06:40Z [407] plan zespolu klienci zamowienia
 2026-11-23T19:28:06Z [408] gratis w ilosciach produkcji i zaladunku
 2026-11-23T19:29:19Z Dashboard magasin : vidéos d'instruction ouvertes par une bulle (« Nouveau » pour une nouvelle fonction, « Vidéo » sinon) — Découvrir le dashboard, Mon équipe : faire ses horaires, et le module de formation « Construire le planning de la semaine »
+2026-11-23T19:30:33Z [400-406] 7 asystentow Kierownika produkcji
