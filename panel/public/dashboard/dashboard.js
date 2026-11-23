@@ -7723,15 +7723,20 @@
    * l'ouvrir en pleine page » ; puis « une entrée normale du rail, texte Ruby, en surbrillance abricot ») : une entrée du
    * rail comme les autres, sous la Boîte mail, en Ruby sur fond Abricot. */
   function railIa() {
-    if (!(IA.questions && IA.questions.actif)) { return ''; }
+    if (!railIaOuvert()) { return ''; }
     const on = S.vue === 'assistant';
-    return `<div class="db-rail-ia"><button type="button" class="sidebar__item${on ? ' is-active' : ''}" data-vue="assistant"${on ? ' aria-current="page"' : ''}>${iaIcone(16, IA.fil.some(t => t.attente) ? 'lit' : '')}<span class="sidebar__item-label">Assistant IA</span></button></div>`;
+    return `<div class="db-rail-ia db-rail-tu"><button type="button" class="sidebar__item${on ? ' is-active' : ''}" data-vue="assistant"${on ? ' aria-current="page"' : ''}>${iaIcone(16, IA.fil.some(t => t.attente) ? 'lit' : '')}<span class="sidebar__item-label">Assistant IA</span></button>${railTuto()}</div>`;
   }
+  function railIaOuvert() { return !!(IA.questions && IA.questions.actif); }
+  /** Le carré des vidéos d'instruction (23/11/2026, Sam : « le bouton vidéo dans un petit carré à côté de l'assistant
+   * IA », proposition 3) : sa place, à côté d'Assistant IA, ou de la Boîte mail quand l'assistant n'est pas ouvert au
+   * magasin. tutos.js la remplit (DashTutos.carre()) et y accroche l'annonce d'une nouvelle fonction. */
+  function railTuto() { return `<span class="db-tu-slot">${window.DashTutos ? window.DashTutos.carre() : ''}</span>`; }
   function railHtml() {
     return `
       <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
-      <div class="sidebar__groups"><div class="sidebar__group db-rail-boite"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button></div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
+      <div class="sidebar__groups"><div class="sidebar__group db-rail-boite${railIaOuvert() ? '' : ' db-rail-tu'}"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button>${railIaOuvert() ? '' : railTuto()}</div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
         : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
   }

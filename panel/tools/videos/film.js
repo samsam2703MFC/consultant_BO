@@ -184,8 +184,9 @@ class Film {
     const { ctx, nonServis } = await nouveauContexte(this.b, { viewport: { width: W, height: H }, dsf: DSF });
     this.ctx = ctx; this.nonServis = nonServis;
     await ctx.addInitScript(CALQUE);
-    // La bulle des vidéos (tutos.js) ne se filme pas, sauf quand la vidéo la montre (opts.bulle).
-    if (!this.opts.bulle) { await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.tu-bulle{display:none!important}'; document.head.appendChild(st); }); }); }
+    // L'annonce d'une nouvelle fonction (la bulle accrochée au carré des vidéos, tutos.js) ne se filme pas : elle
+    // couvrirait l'écran. Une vidéo qui l'explique la montre le temps voulu (f.annonce(true)). Le carré, lui, reste.
+    await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { document.documentElement.classList.add('film-sans-annonce'); const st = document.createElement('style'); st.textContent = 'html.film-sans-annonce .tu-annonce{display:none!important}'; document.head.appendChild(st); }); });
     this.p = await ctx.newPage();
     this.p.on('pageerror', e => console.log('  ERREUR JS', e.message));
     this.p.on('dialog', d => d.accept().catch(() => null));
@@ -349,6 +350,8 @@ class Film {
     if (ms) { await this.pause(ms); }
     return r;
   }
+  /** Montre ou cache l'annonce « Nouveau » du carré des vidéos (cachée par défaut). */
+  async annonce(oui, ms = 500) { await this.p.evaluate(o => document.documentElement.classList.toggle('film-sans-annonce', !o), !!oui); await this.pause(ms); }
   async cacher(ms = 300) { await this.p.evaluate(() => window.__film.cadre(null)); await this.pause(ms); }
 
   /* --- la souris --------------------------------------------------------- */

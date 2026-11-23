@@ -1,8 +1,8 @@
-/* Vidéo 01 — « Découvrir le dashboard » (mode d'emploi, la bulle d'Opérationnel). Environ 2 min. */
+/* Vidéo 01 — « Découvrir le dashboard » (mode d'emploi, ouverte depuis Opérationnel). Environ 2 min. */
 const { Film } = require('../film');
 
 module.exports = async function () {
-  const f = await Film.ouvrir('01-decouvrir', { vue: '', bulle: true, serie: 'Mode d’emploi', titreSerie: 'Découvrir le dashboard', duree: 'env. 2 min' });
+  const f = await Film.ouvrir('01-decouvrir', { vue: '', serie: 'Mode d’emploi', titreSerie: 'Découvrir le dashboard', duree: 'env. 2 min' });
   await f.couverture({
     kicker: 'Mode d’emploi', titre: 'Découvrir<br>le dashboard', accroche: 'Votre magasin, d’un coup d’œil',
     programme: ['Le rail', 'La barre du haut', 'La journée en cours', 'Les chiffres de la semaine et du mois'],
@@ -16,6 +16,15 @@ module.exports = async function () {
   await f.dire('En tête du rail, en direct : l’<b>objectif du jour</b> et la <b>note Google</b> du magasin.', 4200);
   await f.montrer('#db-rail .sidebar__item[data-vue=boite]', 'Boîte mail');
   await f.dire('La <b>boîte mail</b> du magasin et l’<b>assistant IA</b> sont tout en haut.', 3600);
+  await f.montrer('#db-rail .tu-carre', 'Les vidéos');
+  await f.dire('À côté de l’assistant, le <b>carré des vidéos</b> : la vidéo de la page, et toutes les autres.', 4200);
+  await f.cacher(200);
+  await f.annonce(true);
+  await f.dire('Une <b>nouvelle fonction</b> ? Le carré passe en Ruby, avec le nombre à voir, et une bulle l’annonce.', 4800);
+  if (await f.p.locator('.tu-annonce [data-tu=tard]').count()) {
+    await f.cliquer(f.p.locator('.tu-annonce .btn--ghost[data-tu=tard]').first(), { apres: 900 });
+    await f.dire('« Plus tard » la range : la vidéo reste dans le carré.', 3200);
+  }
   await f.cacher();
 
   await f.chapitre({ n: 2, total: 4, titre: 'La barre du haut', texte: 'Les raccourcis de tous les jours, sur chaque page.' });
@@ -48,11 +57,6 @@ module.exports = async function () {
   await f.montrer('#dash .db-card.vt', 'La vitrine');
   await f.dire('La <b>vitrine</b> : ce qui risque de manquer avant la fermeture.', 3600);
   await f.cacher();
-  if (await f.p.locator('.tu-bulle:not([hidden])').count()) {
-    await f.montrer('.tu-bulle', 'Les vidéos');
-    await f.dire('En bas à droite, une <b>bulle</b> ouvre la vidéo de la page ; « Nouveau » y annonce une nouvelle fonction.', 4800);
-    await f.cacher();
-  }
 
   await f.chapitre({ n: 4, total: 4, titre: 'Les chiffres', texte: 'La semaine et le mois : le chiffre, l’objectif, la rentabilité.' });
   await f.etape('4 · Les chiffres');

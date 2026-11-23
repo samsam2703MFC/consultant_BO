@@ -50,12 +50,16 @@ l'API dit, route par route, le fichier et la fonction qui la servent.
 Demande : « des vidéos d'instruction pour utiliser le dashboard », « déclenchées par une bulle (nouvelle fonction ou
 autre) », « une vidéo type formative, à utiliser en formation », les pages de titre au design system et aux logos.
 
-- **La bulle** (`panel/public/dashboard/tutos.js`, `tutos.css`) : en bas à droite des pages qui ont une vidéo. Une
-  nouvelle fonction pas encore vue s'annonce en carte « Nouveau » (affiche, « Voir la vidéo », « Plus tard ») pendant
-  60 jours ; sinon, une petite bulle « Vidéo · durée ». Le lecteur : une fenêtre, la vidéo, les autres vidéos. « Vu » et
-  « plus tard » restent sur l'appareil (localStorage `db.videos.vues`, `db.videos.plusTard`) : aucune route, aucune
-  table. La page ouverte vient de `?vue=` puis de l'évènement `dashboard:vue` (lancé par `urlMaj` de `dashboard.js`).
-  Rien en mode incorporé (`?embed=`). `window.DashTutos.ouvrir(id)` ouvre une vidéo.
+- **Le carré** (`panel/public/dashboard/tutos.js`, `tutos.css` ; « le bouton vidéo dans un petit carré à côté de
+  l'assistant IA », proposition 3 des maquettes `panel/docs/maquettes/videos-bouton/`) : dans le rail, à côté
+  d'« Assistant IA » (à côté de « Boîte mail » quand l'assistant n'est pas ouvert au magasin) ; `dashboard.js` en pose la
+  place (`railTuto()`, `.db-tu-slot`), `DashTutos.carre()` la remplit. Abricot au repos, Ruby avec le nombre de vidéos
+  « nouveau » pas encore vues. Un clic ouvre le lecteur : la vidéo de la page, sinon la nouveauté, sinon le mode
+  d'emploi ; le lecteur liste les autres vidéos. Une nouvelle fonction pas encore vue (60 jours) s'annonce dans une
+  bulle accrochée au carré (« Voir la vidéo », « Plus tard »). « Vu » et « plus tard » restent sur l'appareil
+  (localStorage `db.videos.vues`, `db.videos.plusTard`) : aucune route, aucune table. Au téléphone, pas de rail : ni
+  carré ni annonce (décision du 23/11/2026). La page ouverte vient de `?vue=` puis de l'évènement `dashboard:vue`
+  (`urlMaj`). Rien en mode incorporé (`?embed=`). `window.DashTutos.ouvrir(id)` ouvre une vidéo.
 - **Le registre** : `panel/public/dashboard/videos/videos.json` — `id`, `genre` (`nouveau` : nouvelle fonction ; `tuto` :
   mode d'emploi ; `formation` : module à suivre en session), `titre`, `resume`, `vues` (valeurs de `?vue=`, `ops` pour
   Opérationnel, `*` partout), `fichier` (MP4), `affiche` (JPG), `duree`, `depuis`. Les fichiers sont à côté.
@@ -67,7 +71,7 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
   données **fictives** (magasin « Magasin démo », prénoms inventés), l'horloge figée au jeudi 19/11/2026 à 15 h 40. Un
   écran change : on relance le scénario de sa vidéo. Couvertures, intercalaires, objectifs, « À vous » et quiz suivent
   `docs/DESIGN_SYSTEM.md` (Gotham 400/700, Ruby, Abricot, papier, filet Ruby 2 px, logos de `shared/public/assets/img/`).
-- Tests : `php panel/bin/tests_videos.php` (registre, fichiers présents, pages connues, la bulle chargée, aucune pilule).
+- Tests : `php panel/bin/tests_videos.php` (registre, fichiers présents, pages connues, le carré dans le rail, aucune pilule).
 
 ## Les règles
 
