@@ -60,6 +60,38 @@ function personnelCible(): float
     return cibleReseau('labour-pct', PERSONNEL_CIBLE);
 }
 
+/**
+ * Les paliers du budget d'heures (23/11/2026, Sam : « le budget heures semaine est de 17 % ; au-dessus un marqueur
+ * orange, rouge au-dessus de 20 %, noir au-dessus de 22 % (variables) ») : les frais de personnel du planning face au
+ * CA prévu. Jusqu'à la cible (personnelCible), dans la cible ; au-dessus, orange ; au-dessus de `rouge`, rouge ;
+ * au-dessus de `noir`, noir. Les deux paliers se règlent dans le réglage `personnelPaliers` ({rouge, noir}, en %) ;
+ * un réglage absent, illisible ou incohérent (rouge ≤ cible, noir < rouge) retombe sur les valeurs de départ.
+ */
+const PERSONNEL_ROUGE = 20.0;
+const PERSONNEL_NOIR = 22.0;
+
+/** @return array{cible: float, rouge: float, noir: float, source: string} */
+function personnelPaliers(): array
+{
+    $cible = personnelCible();
+    $r = PERSONNEL_ROUGE; $n = PERSONNEL_NOIR; $src = 'départ';
+    $s = function_exists('setting') ? setting('personnelPaliers', null) : null;
+    if (is_array($s) && is_numeric($s['rouge'] ?? null) && is_numeric($s['noir'] ?? null)) {
+        $sr = (float) $s['rouge']; $sn = (float) $s['noir'];
+        if ($sr > $cible && $sn >= $sr && $sn < 100) { $r = $sr; $n = $sn; $src = 'réglage'; }
+    }
+    // Une cible du réseau relevée au-dessus des paliers de départ les pousse : l'ordre cible < rouge ≤ noir tient toujours.
+    if ($r <= $cible) { $r = $cible + 3; $n = max($n, $r + 2); }
+    return ['cible' => $cible, 'rouge' => $r, 'noir' => $n, 'source' => $src];
+}
+
+/** Le palier d'une part du personnel (en % du CA) : ok, orange, rouge ou noir. */
+function personnelNiveau(float $pct, ?array $p = null): string
+{
+    $p ??= personnelPaliers();
+    return $pct <= $p['cible'] ? 'ok' : ($pct <= $p['rouge'] ? 'orange' : ($pct <= $p['noir'] ? 'rouge' : 'noir'));
+}
+
 /** La cible du panier moyen du réseau, en € TTC (CA ÷ tickets). */
 function panierCible(): float
 {

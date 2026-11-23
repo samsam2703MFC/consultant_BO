@@ -5,7 +5,7 @@ screenshot ». Le module est le paquet `panel-team-files.zip` (README en polonai
 c'est-à-dire la gestion de l'équipe du panel TF Buddy : `/team/manage` (onglets employés, responsabilités, horaires),
 `/team/schedule.pdf`, `PUT /ajax/team/employees/{id}/workstations`, et les routes `/employees`, `/ajax/employees`.
 
-Rien n'est encore codé : ce dossier contient la maquette, et la revue du module qui la précède.
+Ce dossier contient les maquettes (01 à 07), la revue du module, et les captures de l'écran livré à l'étape 1 (`ecran-*.png`).
 
 ## Captures
 
@@ -39,6 +39,19 @@ illustratifs** : aucune personne réelle.
     part dans le helpdesk existant (`/helpdesk/magasin`) ;
   - la fiche de la personne montre ses heures de la semaine (lien vers le planning) ; la liste montre l'accès à l'app
     employés (`/employee`).
+
+## Le planogramme des horaires et le budget d'heures (maquettes 05 à 07)
+
+Demandes du 23/11/2026 : « fais-moi un planogramme avec les linéaires pour les horaires » ; « le budget heures semaine
+est de 17 % ; au-dessus un marqueur orange, rouge au-dessus de 20 %, noir au-dessus de 22 % (variable), pour que le volume
+d'heures et le coût de l'heure arrivent à 17 % » ; « les éditions des horaires doivent pouvoir se faire sur un linéaire,
+pour voir sur la journée qui est présent et quand, avec en plus les données des temps morts : quand et combien de temps ».
+
+| Fichier | Ce que c'est |
+|---|---|
+| `05-planogramme-jour.png` | la journée : une ligne par personne, rangée par secteur, ses services en barres ; dessous, les linéaires : la présence quart d'heure par quart d'heure face aux tickets d'un jour habituel, les temps morts, une ligne par secteur et le comptoir ; le budget du jour (26,7 %, noir) |
+| `06-planogramme-semaine.png` | la semaine : un petit axe par jour, un marqueur par jour (noir, rouge, orange, dans la cible), la jauge de la semaine (20,6 %, rouge), et ce qu'il faut pour revenir à 17 % : retirer 53 h au coût moyen, ou un coût moyen de 14,32 €/h pour les mêmes heures |
+| `07-planogramme-modifier-un-service.png` | un service étiré sur sa barre : la fenêtre montre l'effet avant d'enregistrer (le trou du comptoir de midi disparaît, le budget du jour passe de 26,7 % à 27,5 %) |
 
 ## Revue du module (le paquet)
 
@@ -78,6 +91,30 @@ refusé par ces routes, 401) :
 - le PDF du planning transmet `start_date`, `days` et `layout` tels quels à l'API (le contrôleur ne vérifie que leur
   type) : la route du cockpit les validera (date, 7 ou 14, `shop` ou `departments`) ;
 - les postes sans secteur ne sont visibles que dans l'encadré d'avertissement (voir « Autres postes »).
+
+## Étape 1 : livrée (23/11/2026)
+
+`panel/src/equipe.php` (les routes `/dashboard/equipe/*`), `panel/public/dashboard/equipe.js` et `equipe.css`, l'entrée
+« Mon équipe » du rail (La journée, sous Temps morts), `resObjectifsJours` (shared/src/resultat.php : le CA prévu de chaque
+jour, la règle du Résultat, aussi pour un jour à venir), `personnelPaliers` / `personnelNiveau` (shared/src/cibles_reseau.php :
+la cible du réseau, 20 % et 22 %, réglables dans le réglage `personnelPaliers`). Tests : `php panel/bin/tests_equipe.php`.
+
+| Capture | Ce que c'est |
+|---|---|
+| `ecran-1-responsabilites.png` | l'onglet Responsabilités du module livré |
+| `ecran-2-planning-jour.png` | le planogramme du jour : présence, tickets habituels, temps morts habituels et du jour, linéaires, constats |
+| `ecran-3-modifier-un-service.png` | « Modifier les horaires » : un service étiré à la souris, la fenêtre de son effet |
+| `ecran-4-planning-semaine.png` | la semaine, les marqueurs du budget jour par jour, la jauge |
+
+**Comment elles sont faites.** Le vrai dashboard servi en local ; les routes `/dashboard/equipe/*` répondent avec ce que le
+vrai code de `panel/src/equipe.php` calcule sur un panel de doublure (`ecran/panel_illustratif.php`, l'équipe et les tickets
+illustratifs des maquettes), le reste est lu en production. `ecran/capturer.cjs` joue les gestes (choisir une personne,
+cocher un poste, enregistrer, étirer un service, enregistrer) et vérifie les écritures envoyées.
+
+**Ce qui n'est pas dans l'étape 1** : l'onglet Employés (liste et fiche : étape 3), les évaluations des services (étape 2),
+l'écran du siège pour régler les paliers (le réglage existe, son écran pas encore), les heures d'ouverture saisies (elles
+sont tirées des tickets des 4 dernières semaines). Les points de la revue restent à vérifier en production : `sector_id` des
+postes, droits d'écriture du compte du cockpit sur `/employees/{id}/workstations` et `/schedule`, la route du PDF.
 
 ## L'intégration prévue (après validation de la maquette)
 
