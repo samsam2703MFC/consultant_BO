@@ -66,6 +66,27 @@
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "catalogue",
+      "genre": "tuto",
+      "titre": "Éditer mon catalogue",
+      "resume": "L’assistant de Mon catalogue en entier : choisir le catalogue (reçu de la marque, le mien, un nouveau), les gammes et les produits, la présentation catégorie par catégorie, la validation, puis l’export PDF et sa diffusion (QR, PDF léger, affiche).",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-mon-catalogue.mp4",
+      "affiche": "19-mon-catalogue.jpg",
+      "duree": "3 min 48",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css",
+        "panel/src/catalogues_magasin.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
