@@ -208,3 +208,15 @@ les creux de la semaine et les personnes sont illustratifs.
 | `temps-morts-taches/taches-1-assistant-temps-morts.png` | une étape de l'assistant : les tâches qui peuvent bouger (1.2.01 Facing, 4.2.01 Hygiène, 1.5.01 Planogramme du lundi…), les creux de chaque jour en cartes, chaque tâche posée à quelqu'un du comptoir présent ; ce qui n'a pas de place garde son heure ; le bilan (5 h 05 sorties des heures de pointe, 2 h 30 de creux libres) |
 | `temps-morts-taches/taches-2-jour-ligne-des-taches.png` | le jour : la ligne « Tâches des creux » sous les temps morts habituels ; les tâches à heure fixe en pointillé |
 | `temps-morts-taches/taches-3-tablette-au-creux.png` | la tablette du comptoir au moment calme : « C'est calme — à faire maintenant », Commencer, ou « un client : plus tard » |
+
+**Construit le 23/11/2026, en option** (« go construit et mets en ligne, mais tous ces modules doivent être dans une
+option, pas dans le module principal » ; puis : éteintes jusqu'à ce qu'on les allume). Mon équipe › Options allume, pour
+le magasin, l'assistant de la semaine, les tâches dans les temps morts, la matrice A B C D et le shift maker, la recopie
+de la semaine ; éteinte, une option ne se montre pas et ses routes sont refusées.
+
+| Capture | L'écran construit (données illustratives) |
+|---|---|
+| `ecran-22-options.png` | la fenêtre des options : quatre interrupteurs, la matrice éteinte |
+| `ecran-23-assistant-temps-morts.png` | l'étape « Les temps morts » de l'assistant : les tâches à cocher, les creux de chaque jour en cartes, les tâches posées et qui les fait, ce qui garde son heure |
+| `ecran-2-planning-jour.png` | le jour, avec la ligne « Tâches des creux » (posées en couleur, à heure fixe en pointillé) |
+

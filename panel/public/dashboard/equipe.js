@@ -53,6 +53,7 @@
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
     PJ: null, PS: null, PM: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), mois: moisDe(AUJ), edit: null, edSection: null, as: null, glisse: null,
+    opts: { assistant: false, taches: false, matrice: false, recopie: false }, O: null, optMod: false,
     pdf: null, rec: null, M: null, mat: null, flash: null, occupe: false };
 
   /* ── L'API ──────────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -74,7 +75,13 @@
       .then(r => { if (quoi === 'jour') { st.PJ = r; } else if (quoi === 'mois') { st.PM = r; } else { st.PS = r; } rouvrirSi(); })
       .catch(e => { st.Perr = e.message; }).finally(rendre);
   }
-  function relireTout() { lireCarte(); lireMatrice(); lirePlanning('semaine'); if (st.onglet === 'planning' && (st.vue === 'jour' || st.vue === 'mois')) { lirePlanning(st.vue); } }
+  function relireTout() { lireCarte(); lireOptions(); lirePlanning('semaine'); if (st.onglet === 'planning' && (st.vue === 'jour' || st.vue === 'mois')) { lirePlanning(st.vue); } }
+  /** Les options du magasin (23/11/2026, « ces modules doivent être dans une option, pas dans le module principal ») :
+   *  éteintes par défaut ; la matrice ne se lit que si son option est allumée. */
+  function lireOptions() {
+    return lire('/dashboard/equipe/options').then(r => { st.O = r.liste || []; st.opts = Object.assign({ assistant: false, taches: false, matrice: false, recopie: false }, r.options || {}); if (st.opts.matrice) { lireMatrice(); } else { st.M = null; } })
+      .catch(() => { st.O = null; }).finally(rendre);
+  }
   /** Le planning affiché : le jour, le mois, sinon la semaine. */
   const planVue = () => st.vue === 'jour' ? st.PJ : st.vue === 'mois' ? st.PM : st.PS;
 
@@ -130,8 +137,9 @@
     if (!st.el) { return; }
     const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
     const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
-    st.el.innerHTML = `<nav class="page-tabs" aria-label="Mon équipe">${tabs}</nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
-      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant();
+    const nOpt = Object.values(st.opts).filter(Boolean).length;
+    st.el.innerHTML = `<nav class="page-tabs eqp-tabs" aria-label="Mon équipe">${tabs}<span class="eqp-sp"></span><button type="button" class="btn btn--sm btn--ghost eqp-opt-btn" data-eqp-options="1"${st.O ? '' : ' disabled'}>Options${nOpt ? ' · ' + nOpt + ' allumée' + (nOpt > 1 ? 's' : '') : ''}</button></nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
+      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant() + rendOptions();
     const g2 = st.el.querySelector('.eqp-pg-defil'); if (g2) { g2.scrollLeft = x; }
     brancher();
   }
@@ -179,7 +187,7 @@
       <h3>Ses produits · ${prods.length}</h3>
       ${prods.length ? `<ul class="eqp-prods${st.tousProduits ? ' tous' : ''}">${(st.tousProduits ? prods : prods.slice(0, 18)).map(p => `<li>${esc(p.nom)}</li>`).join('')}</ul>${prods.length > 18 ? `<button type="button" class="linklike" data-eqp-tous="1">${st.tousProduits ? 'Replier' : 'Voir les ' + prods.length + ' produits'}</button>` : ''}` : '<p class="eqp-note">Aucun produit lié dans l’assortiment du magasin.</p>'}
       ${semaine ? `<button type="button" class="eqp-sem" data-eqp-aller-planning="semaine">${SVG('M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z')}<span>Semaine : <b>${fH(semaine.h)}</b> · ${semaine.n} service${semaine.n > 1 ? 's' : ''}</span><span class="eqp-sp"></span><span aria-hidden="true">›</span></button>` : ''}
-      ${rendRoulement(e)}
+      ${st.opts.matrice ? rendRoulement(e) : ''}
       <div class="eqp-actions"><button type="button" class="btn btn--sm" data-eqp-postes="${e.id}">Modifier ses postes</button></div>
     </aside>`;
   }
@@ -234,13 +242,34 @@
       : `<button type="button" class="btn btn--icon" data-eqp-pas="-7" aria-label="Semaine précédente">‹</button><span>Semaine du ${dt(st.lundi).getDate()} au ${esc(long(plus(st.lundi, 6)).replace(/^\S+ /, ''))}</span><button type="button" class="btn btn--icon" data-eqp-pas="7" aria-label="Semaine suivante">›</button>${st.lundi !== lundiDe(AUJ) ? '<button type="button" class="btn btn--sm btn--ghost" data-eqp-auj="1">Cette semaine</button>' : ''}`;
     const barre = `<div class="eqp-pbar"><span class="eqp-nav">${nav}</span><span class="eqp-sp"></span>
       <div class="seg" role="group" aria-label="Affichage">${[['jour', 'Jour'], ['tableau', 'Semaine'], ['mois', 'Mois']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
-      ${st.vue === 'tableau' ? `<details class="eqp-menu"><summary class="btn">Préparer la semaine ▾</summary><div class="eqp-menu-l"><button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Assistant de la semaine</button><button type="button" class="btn btn--sm" data-eqp-recopier="1">Recopier la semaine précédente</button><button type="button" class="btn btn--sm" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn btn--sm" data-eqp-matrice="1"${st.M ? '' : ' disabled'}>Matrice A B C D</button></div></details>` : ''}
+      ${st.vue === 'tableau' ? menuSemaine() : ''}
       <button type="button" class="btn btn--primary" data-eqp-ajouter="1">Ajouter un service</button>
       <button type="button" class="btn" data-eqp-pdf="1" aria-expanded="${st.pdf ? 'true' : 'false'}">Imprimer le planning</button></div>${rendPdf()}`;
     if (st.Perr && !P) { return barre + `<div class="eqp-err">Impossible de lire le planning : ${esc(st.Perr)}. <button type="button" class="linklike" data-eqp-relire="1">Réessayer</button></div>`; }
     if (!P || P.du !== (st.vue === 'jour' ? st.jour : st.vue === 'mois' ? st.mois : st.lundi)) { return barre + '<div class="eqp-attente">Lecture du planning…</div>'; }
     const non = (P.nonLus || []).length ? `<div class="eqp-err">Le panel n’a pas rendu le planning de ${P.nonLus.map(court).join(', ')} : ces jours sont vides ici, pas au panel.</div>` : '';
     return barre + non + (st.vue === 'jour' ? rendJour(P) : st.vue === 'mois' ? rendMois(P) : rendTableau(P));
+  }
+  /** « Préparer la semaine » : les outils des options allumées ; aucun, pas de menu. */
+  function menuSemaine() {
+    const L = [st.opts.assistant ? '<button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Assistant de la semaine</button>' : '',
+      st.opts.recopie ? '<button type="button" class="btn btn--sm" data-eqp-recopier="1">Recopier la semaine précédente</button>' : '',
+      st.opts.matrice ? `<button type="button" class="btn btn--sm" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn btn--sm" data-eqp-matrice="1"${st.M ? '' : ' disabled'}>Matrice A B C D</button>` : ''].join('');
+    return L ? `<details class="eqp-menu"><summary class="btn">Préparer la semaine ▾</summary><div class="eqp-menu-l">${L}</div></details>` : '';
+  }
+  /** La fenêtre des options : chacune s'allume ou s'éteint pour ce magasin. */
+  function rendOptions() {
+    if (!st.optMod || !st.O) { return ''; }
+    return `<div class="eqp-voile" data-eqp-fermer-opt="1"><div class="eqp-mod eqp-opts card" role="dialog" aria-modal="true" aria-label="Options de Mon équipe" data-eqp-garde="1"><h3>Options de Mon équipe</h3><p class="qui">Le module principal : les responsabilités, le planning (jour, semaine, mois), la fenêtre d’un service, l’impression. Le reste s’allume ici, pour ce magasin ; éteint, il ne se montre pas.</p>
+      ${st.O.map(o => `<div class="eqp-opt-l"><div><b>${esc(o.nom)}</b><span>${esc(o.dit)}</span></div><button type="button" class="eqp-switch${st.opts[o.cle] ? ' on' : ''}" role="switch" aria-checked="${!!st.opts[o.cle]}" aria-label="${esc(o.nom)}" data-eqp-opt="${esc(o.cle)}"${st.optOccupe ? ' disabled' : ''}><i></i></button></div>`).join('')}
+      ${st.optErr ? `<p class="error" role="alert">${esc(st.optErr)}</p>` : ''}<div class="eqp-actions" style="justify-content:flex-end"><button type="button" class="btn btn--sm" data-eqp-options-fermer="1">Fermer</button></div></div></div>`;
+  }
+  function basculerOption(k) {
+    if (st.optOccupe) { return; }
+    st.optOccupe = true; st.optErr = null; rendre();
+    envoyer('POST', '/dashboard/equipe/options', { options: { [k]: !st.opts[k] } })
+      .then(r => { st.opts = Object.assign({}, st.opts, r.options || {}); st.optOccupe = false; st.PS = null; st.PJ = null; st.PM = null; st.R = null; relireTout(); chargerVue(); })
+      .catch(e => { st.optOccupe = false; st.optErr = 'Rien n’a changé : ' + e.message + '.'; rendre(); });
   }
   function rendPdf() {
     if (!st.pdf) { return ''; }
@@ -343,7 +372,7 @@
         <div class="eqp-l eqp-axe"><div class="eqp-n">${esc(court(J.date))} · ${C.presents} pers. au planning</div><div class="eqp-tl">${axe}</div></div>${corps}
         <div class="eqp-sep"><div class="eqp-n">Les linéaires</div><div class="eqp-leg"><span><i class="l"></i>personnes au planning</span>${tkE.length ? `<span><i class="b"></i>tickets, moyenne des ${TM.habitude.jours} ${JOURS[dt(J.date).getDay()]}s d’avant</span>` : ''}${creux.length ? '<span><i class="m"></i>temps mort (10 min et plus sans ticket)</span>' : ''}${C.ouv ? `<span><i class="o"></i>ouvert ${hh(C.ouv[0])}–${hh(C.ouv[1])} (d’après les tickets)</span>` : ''}</div></div>
         <div class="eqp-l eqp-pres"><div class="eqp-n">Présence<span class="sub">${pic ? 'pic ' + pic + ' pers.' + (picQ.length ? ' de ' + hh(picQ[0][0]) : '') : 'personne'}${pT[1] ? ' · ' + pT[0] + ' h : ' + String(pT[1]).replace('.', ',') + ' tickets' : ''}</span></div><div class="eqp-tl"><svg viewBox="0 0 1000 66" preserveAspectRatio="none" aria-hidden="true"><g class="tk">${tkB}</g><path class="ar" d="${d} V66 H0 Z"></path><path class="ln" d="${d}"></path></svg></div></div>
-        ${tmL}${jourTM}${C.lin.map(piste).join('')}
+        ${tmL}${jourTM}${ligneTaches(P, J, C, X, W, H0, H1)}${C.lin.map(piste).join('')}
       </section></div>${ins}
       <p class="eqp-note">À la souris : tirez une ligne sur la ligne d’une personne, de l’heure de début à l’heure de fin, pour lui créer un service ; glissez une barre pour la déplacer, ses bords pour changer ses heures (au quart d’heure) ; un clic ouvre le service. Rien n’est écrit au panel avant « Enregistrer » ou « Ajouter le service ». ${'Les barres sont les services du planning du panel. Les temps morts viennent de l’onglet Temps morts (10 minutes et plus sans ticket) ; les heures d’ouverture, des premiers et derniers tickets des 4 dernières semaines. Les linéaires disent qui est là d’après les postes de chacun : une présence planifiée ne garantit pas que la production est faite.'}</p>`;
   }
@@ -418,7 +447,7 @@
         return `<td class="${J.date === P.aujourdhui ? 'auj' : ''}"><span class="eqp-mini l">${ouv(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou" style="left:0;width:100%"></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</span>${x.vide ? '<span class="eqp-tr">personne</span>' : x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')}</span>` : ''}</td>`; }).join('')}<td></td><td></td></tr>`).join('') : '';
     const vide = nSv ? '' : (() => {
       const taux = (P.employes || []).filter(e => e.actif && e.taux > 0).map(e => e.taux), moy = taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : 0, bud = ca ? P.budget.cible / 100 * ca : 0;
-      return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> <button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Lancer l’assistant de la semaine</button> Il part de la semaine passée (ou de la matrice) et l’ajuste au chiffre prévu ; ou cliquez une case pour ajouter un service.${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>`;
+      return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> ${st.opts.assistant ? '<button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Lancer l’assistant de la semaine</button> Il part de la semaine passée et l’ajuste au chiffre prévu ; ou cliquez' : 'Cliquez'} une case pour ajouter un service${st.opts.recopie ? ', ou recopiez la semaine précédente (« Préparer la semaine »)' : ''}.${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>`;
     })();
     return vide + kpis + (nSv ? jauge(P, 'Budget d’heures de la semaine', hCa || h, coutCa, ca) : '') + `<section class="card eqp-tab"><div class="eqp-table"><table><thead><tr><th>Employé</th>${P.jours.map(J => `<th class="${J.date === P.aujourdhui ? 'auj' : ''}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le planogramme du jour">${esc(court(J.date))}</button>${J.date === P.aujourdhui ? '<span class="sub">aujourd’hui</span>' : ''}</th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>${lignes}${tot}${pistes}</tbody></table></div></section>
       <p class="eqp-note">Un clic sur un service l’ouvre : adapter ses heures, ajouter une personne sur le même shift, retirer une personne du shift. Un clic sur une case vide ajoute un service à cette personne ce jour-là ; un clic sur un jour l’ouvre en grand, où l’on trace les services à la souris. Paliers du budget : jusqu’à ${String(P.budget.cible).replace('.', ',')} %, la cible du réseau ; orange au-dessus ; rouge au-dessus de ${String(P.budget.rouge).replace('.', ',')} % ; noir au-dessus de ${String(P.budget.noir).replace('.', ',')} %. Le coût suit le taux horaire du panel.</p>`;
@@ -705,15 +734,18 @@
    * écrit au panel avant « Créer ». Les propositions ne touchent que ce que l'assistant crée, jamais ce qui est déjà au
    * planning ; chacune garde la section tenue (quelqu'un de la même section sur les heures retirées ; au comptoir, pendant
    * l'ouverture) et un service d'au moins la durée minimale. ────────────────────────────────────────────────────────── */
-  const AS_ETAPES = [['Partir de quoi ?', 'la semaine passée, la matrice, rien'], ['Qui adapter ?', 'absents, à revoir'], ['Le chiffre', 'le CA planifié, les heures de trop'], ['Vérifier et créer', 'le comptoir, les durées, le panel']];
+  const AS_DEF = { base: ['Partir de quoi ?', 'la semaine passée, la matrice, rien'], qui: ['Qui adapter ?', 'absents, à revoir'], chiffre: ['Le chiffre', 'le CA planifié, les heures de trop'], taches: ['Les temps morts', 'les tâches des creux'], verif: ['Vérifier et créer', 'le comptoir, les durées, le panel'] };
+  /** Les étapes de l'assistant : « Les temps morts » seulement avec son option. */
+  const asEtapes = () => ['base', 'qui', 'chiffre', ...(st.opts.taches ? ['taches'] : []), 'verif'];
   const fHn = x => { const r = Math.round(x * 2) / 2; return (Number.isInteger(r) ? String(r) : r.toFixed(1).replace('.', ',')); };
   function ouvrirAssistant() {
-    const du = st.lundi, A = { du, etape: 1, max: 1, base: null, R: null, G: null, Rerr: null, Gerr: null, chargement: true, etats: {}, props: null, coches: new Set(), sig: '', occupe: false, err: null, res: null };
+    const du = st.lundi, A = { du, etape: 1, max: 1, base: null, R: null, G: null, T: null, Rerr: null, Gerr: null, Terr: null, chargement: true, etats: {}, props: null, coches: new Set(), tOff: new Set(), sig: '', occupe: false, err: null, res: null };
     st.as = A;
     if (!st.PS || st.PS.du !== du) { st.PS = null; lirePlanning('semaine'); }
     Promise.all([
       lire('/dashboard/equipe/semaine/recopie', { du }).then(r => { A.R = r; }).catch(e => { A.Rerr = e.message; }),
-      lire('/dashboard/equipe/semaine/generer', { du }).then(r => { A.G = r; }).catch(e => { A.Gerr = e.message; }),
+      st.opts.matrice ? lire('/dashboard/equipe/semaine/generer', { du }).then(r => { A.G = r; }).catch(e => { A.Gerr = e.message; }) : null,
+      st.opts.taches ? lire('/dashboard/equipe/semaine/taches', { du }).then(r => { A.T = r; }).catch(e => { A.Terr = e.message; }) : null,
     ]).then(() => {
       if (st.as !== A) { return; }
       A.chargement = false;
@@ -797,17 +829,19 @@
   function rendAssistant() {
     const A = st.as; if (!A) { return ''; }
     const P = st.PS && st.PS.du === A.du ? st.PS : null;
-    const rail = `<aside class="eqp-as-rail"><h2>Assistant de la semaine</h2><span class="sub">du ${dt(A.du).getDate()} ${MOIS[dt(A.du).getMonth()]} au ${esc(long(plus(A.du, 6)).replace(/^\S+ /, '').replace(/ \d{4}$/, ''))}</span>${AS_ETAPES.map(([t, s], i) => {
+    const rail = `<aside class="eqp-as-rail"><h2>Assistant de la semaine</h2><span class="sub">du ${dt(A.du).getDate()} ${MOIS[dt(A.du).getMonth()]} au ${esc(long(plus(A.du, 6)).replace(/^\S+ /, '').replace(/ \d{4}$/, ''))}</span>${asEtapes().map(id => AS_DEF[id]).map(([t, s], i) => {
       const n = i + 1, cl = n < A.etape ? 'fait' : n === A.etape ? 'ici' : 'apres';
       return `<${n <= A.max && n !== A.etape ? 'button type="button" data-eqp-as-etape="' + n + '"' : 'div'} class="eqp-as-et ${cl}"><i>${n < A.etape ? '✓' : n}</i><b>${t}</b><small>${s}</small></${n <= A.max && n !== A.etape ? 'button' : 'div'}>`;
     }).join('')}</aside>`;
     let corps = '', res = '', suite = 'Continuer ›', suiteOff = false;
+    const id = asEtapes()[A.etape - 1];
     if (A.chargement || !P) { corps = '<div class="eqp-attente">Lecture de la semaine passée, de la matrice et du planning…</div>'; suiteOff = true; }
-    else if (A.etape === 1) { [corps, res] = asUne(A, P); }
-    else if (A.etape === 2) { [corps, res] = asDeux(A, P); }
-    else if (A.etape === 3) { [corps, res] = asTrois(A, P); suite = 'Vérifier ›'; }
+    else if (id === 'base') { [corps, res] = asUne(A, P); }
+    else if (id === 'qui') { [corps, res] = asDeux(A, P); }
+    else if (id === 'chiffre') { [corps, res] = asTrois(A, P); suite = st.opts.taches ? 'Continuer ›' : 'Vérifier ›'; }
+    else if (id === 'taches') { [corps, res] = asTaches(A, P); suite = 'Vérifier ›'; }
     else { [corps, res, suite, suiteOff] = asQuatre(A, P); }
-    const pied = `<div class="eqp-as-pied"><span class="res">${res}</span>${A.err ? `<span class="error" role="alert">${esc(A.err)}</span>` : ''}${A.etape > 1 ? '<button type="button" class="btn btn--ghost" data-eqp-as-retour="1"' + (A.occupe ? ' disabled' : '') + '>Retour</button>' : '<button type="button" class="btn btn--ghost" data-eqp-as-fermer="1">Fermer</button>'}<button type="button" class="btn btn--primary${A.occupe ? ' is-busy' : ''}" data-eqp-as-${A.etape === 4 ? 'creer' : 'suite'}="1"${suiteOff || A.occupe ? ' disabled' : ''}>${A.occupe ? 'Création au panel…' : suite}</button></div>`;
+    const pied = `<div class="eqp-as-pied"><span class="res">${res}</span>${A.err ? `<span class="error" role="alert">${esc(A.err)}</span>` : ''}${A.etape > 1 ? '<button type="button" class="btn btn--ghost" data-eqp-as-retour="1"' + (A.occupe ? ' disabled' : '') + '>Retour</button>' : '<button type="button" class="btn btn--ghost" data-eqp-as-fermer="1">Fermer</button>'}<button type="button" class="btn btn--primary${A.occupe ? ' is-busy' : ''}" data-eqp-as-${id === 'verif' ? 'creer' : 'suite'}="1"${suiteOff || A.occupe ? ' disabled' : ''}>${A.occupe ? 'Création au panel…' : suite}</button></div>`;
     return `<div class="eqp-voile eqp-as-voile"><div class="eqp-as" role="dialog" aria-modal="true" aria-label="Assistant de la semaine" data-eqp-garde="1">${rail}<div class="eqp-as-main"><button type="button" class="eqp-fo-x eqp-as-x" data-eqp-as-fermer="1" aria-label="Fermer"${A.occupe ? ' disabled' : ''}>×</button>${corps}</div>${pied}</div></div>`;
   }
   /** 1 — Partir de quoi ? */
@@ -821,7 +855,7 @@
       <div class="eqp-as-choix">
         ${carte('recopie', R ? `Oui, reprendre la semaine du ${dt(R.source.du).getDate()} au ${esc(long(R.source.au).replace(/^\S+ /, '').replace(/ \d{4}$/, ''))}` : 'Oui, reprendre la semaine passée', R ? `${LR.length} service${LR.length > 1 ? 's' : ''} · ${hL(LR)} h · ${new Set(LR.map(p => p.employe)).size} personnes` : '—',
           R ? `Chacun garde ses jours et ses heures, sept jours plus tard.${R.ecartes.length ? ' ' + R.ecartes.length + ' écarté' + (R.ecartes.length > 1 ? 's' : '') + ' (déjà au planning, chevauche, plus dans l’équipe).' : ''}` : 'Impossible de lire la semaine passée : ' + esc(A.Rerr || '—'), R && LR.length ? jours(LR) : '', !R || !LR.length)}
-        ${carte('matrice', 'Non, partir de la matrice A B C D', G ? `${LG.length} service${LG.length > 1 ? 's' : ''} · ${hL(LG)} h` : '—', G ? `Le shift maker : la semaine ${G.cycle || ''} du roulement, matin ou après-midi selon la lettre de chacun.${(G.sansLettre || []).length ? ' Sans lettre, à placer ensuite : ' + esc(G.sansLettre.map(x => x.nom.split(' ')[0]).join(', ')) + '.' : ''}` : 'La matrice n’est pas lisible : ' + esc(A.Gerr || '—'), '', !G || !LG.length)}
+        ${!st.opts.matrice ? '' : carte('matrice', 'Non, partir de la matrice A B C D', G ? `${LG.length} service${LG.length > 1 ? 's' : ''} · ${hL(LG)} h` : '—', G ? `Le shift maker : la semaine ${G.cycle || ''} du roulement, matin ou après-midi selon la lettre de chacun.${(G.sansLettre || []).length ? ' Sans lettre, à placer ensuite : ' + esc(G.sansLettre.map(x => x.nom.split(' ')[0]).join(', ')) + '.' : ''}` : 'La matrice n’est pas lisible : ' + esc(A.Gerr || '—'), '', !G || !LG.length)}
         ${carte('vide', 'Non, partir d’une semaine vide', '0 service', 'Vous placez chacun vous-même, jour par jour, personne par personne, en tirant sa ligne.', '', false)}
       </div>`;
     const ca = asBilan(P, []).ca;
@@ -892,15 +926,97 @@
     const L = asAppliquer(asRetenus(A), A.props, A.coches).sort((x, y) => x.date.localeCompare(y.date) || x.de - y.de);
     const rev = Object.keys(A.etats).filter(k => A.etats[k] === 'r').map(Number);
     const ouvrirRev = () => { if (rev.length) { const J = P.jours.find(x => x.objectif) || P.jours[0]; st.edSection = null; st.ouvrir = { mode: 'modal', employe: rev[0], date: J.date, suivre: true }; } };
-    if (!L.length) { st.as = null; ouvrirRev(); rouvrirSi(); rendre(); return; }
+    if (!L.length) { A.occupe = true; rendre(); asGarderTaches(A, P, L).then(nT => { st.as = null; if (nT) { st.PJ = null; st.PS = null; lirePlanning('semaine'); flash('ok', nT + ' tâche' + (nT > 1 ? 's' : '') + ' posée' + (nT > 1 ? 's' : '') + ' dans les temps morts.'); } ouvrirRev(); rouvrirSi(); rendre(); }); return; }
     A.occupe = true; A.err = null; rendre();
     envoyer('POST', '/dashboard/equipe/semaine/creer', { du: A.du, services: L.map(p => ({ employe: p.employe, date: p.date, de: hh(p.de), a: hh(p.a) })) })
       .then(r => {
         if (r.echecs && r.echecs.length) { A.occupe = false; A.res = r; st.PS = null; lirePlanning('semaine'); return; }
-        st.as = null; st.PS = null; st.PJ = null; st.PM = null; ouvrirRev(); lirePlanning('semaine');
-        flash('ok', r.crees + ' service' + (r.crees > 1 ? 's' : '') + ' créé' + (r.crees > 1 ? 's' : '') + ' au panel par l’assistant.' + (rev.length ? ' Placez maintenant ' + ((equipeDe(P).get(rev[0]) || {}).nom || '').split(' ')[0] + '.' : ''));
+        return asGarderTaches(A, P, L).then(nT => {
+          st.as = null; st.PS = null; st.PJ = null; st.PM = null; ouvrirRev(); lirePlanning('semaine');
+          flash('ok', r.crees + ' service' + (r.crees > 1 ? 's' : '') + ' créé' + (r.crees > 1 ? 's' : '') + ' au panel par l’assistant.' + (nT ? ' ' + nT + ' tâche' + (nT > 1 ? 's' : '') + ' posée' + (nT > 1 ? 's' : '') + ' dans les temps morts.' : '') + (rev.length ? ' Placez maintenant ' + ((equipeDe(P).get(rev[0]) || {}).nom || '').split(' ')[0] + '.' : ''));
+        });
       })
       .catch(e => { A.occupe = false; A.err = 'Rien n’est créé : ' + e.message + (e.j && e.j.detail ? ' (' + e.j.detail + ')' : '') + '.'; rendre(); });
+  }
+
+  /* ── Les tâches dans les temps morts (option « taches », 23/11/2026 ; maquette panel/docs/maquettes/equipe-gestion/
+   * temps-morts-taches/). Les checklists sans heure fixe (P.taches.liste, ou A.T.taches dans l'assistant) vont dans les
+   * creux habituels du comptoir, à quelqu'un du comptoir présent sur toute la durée ; les fixes gardent leur heure. ── */
+  const ZONE_C = { 1: '#8D1D2C', 2: '#B0792A', 3: '#3f7a52', 4: '#1f5f8b', 5: '#6B4FBB' };
+  const wdN = d => (dt(d).getDay() + 6) % 7 + 1;
+  /** Les creux d'un jour, ramenés à l'ouverture ; dix minutes au moins. */
+  const creuxJour = (cr, ouv) => (cr || []).map(([a, b]) => [ouv ? Math.max(a, ouv[0]) : a, ouv ? Math.min(b, ouv[1]) : b]).filter(([a, b]) => b - a >= 10);
+  /**
+   * Poser les tâches (pur) : jour par jour, les tâches du jour (les hebdomadaires d'abord, puis les plus longues) vont
+   * dans le creux le plus proche de leur heure habituelle qui a encore la place, à la personne du comptoir présente sur
+   * toute la durée qui en a le moins ce jour-là. Sans creux ni place : la tâche garde son heure.
+   */
+  function asPoser(P, L, T, off) {   // (le libre d'un creux avance après chaque tâche posée)
+    const eq = equipeDe(P), places = [], nonPlaces = [];
+    P.jours.forEach(J => {
+      const C = calculJour(P, asJour(J, L), null), w = wdN(J.date), cr = (T.creux || {})[J.date];
+      const aFaire = (T.taches || []).filter(t => t.jours.includes(w) && !off.has(t.code)).sort((x, y) => (x.jours.length === 7) - (y.jours.length === 7) || y.duree - x.duree || x.code.localeCompare(y.code));
+      if (!cr) { aFaire.forEach(t => nonPlaces.push({ date: J.date, code: t.code, motif: 'non mesuré' })); return; }
+      const creux = creuxJour(cr, C.ouv).map(([a, b]) => ({ a, b, libre: a })), cpt = C.sv.filter(s => comptoir(eq.get(s.employe) || {})), charge = new Map();
+      aFaire.forEach(t => {
+        const h = t.heure ? mn(t.heure) : null;
+        // Dans un creux, la tâche commence dès que quelqu'un du comptoir est là pour toute sa durée (par 5 minutes).
+        const k = creux.filter(c => c.b - c.libre >= t.duree).map(c => {
+          for (let de = c.libre; de + t.duree <= c.b; de += 5) {
+            const a = de + t.duree, qui = cpt.filter(s => s.de <= de && s.a >= a).sort((x, y) => (charge.get(x.employe) || 0) - (charge.get(y.employe) || 0) || x.employe - y.employe)[0];
+            if (qui) { return { c, de, a, qui: qui.employe }; }
+          }
+          return null;
+        }).filter(Boolean).sort((x, y) => (h == null ? 0 : Math.abs(x.de - h) - Math.abs(y.de - h)) || x.de - y.de)[0];
+        if (k) { k.c.libre = k.a; charge.set(k.qui, (charge.get(k.qui) || 0) + t.duree); places.push({ date: J.date, code: t.code, de: k.de, a: k.a, employe: k.qui }); }
+        else { nonPlaces.push({ date: J.date, code: t.code, motif: creux.length ? 'pas de place' : 'pas de creux' }); }
+      });
+    });
+    return { places, nonPlaces };
+  }
+  /** L'étape « Les temps morts » de l'assistant. */
+  function asTaches(A, P) {
+    if (!A.T) { return [`<p class="eqp-as-q">Les temps morts du comptoir</p><div class="eqp-err">Les temps morts ne se lisent pas : ${esc(A.Terr || '—')}. Les tâches gardent leur heure.</div>`, '']; }
+    const L = asAppliquer(asRetenus(A), A.props, A.coches), R = asPoser(P, L, A.T, A.tOff), eq = equipeDe(P), cfg = new Map((A.T.taches || []).map(t => [t.code, t]));
+    const pr = id => (((eq.get(id) || {}).nom) || '').split(' ')[0];
+    const semaine = (A.T.taches || []).filter(t => P.jours.some(J => t.jours.includes(wdN(J.date))));
+    const liste = semaine.map(t => {
+      const on = !A.tOff.has(t.code), pl = R.places.filter(x => x.code === t.code), np = R.nonPlaces.filter(x => x.code === t.code), n = pl.length + np.length;
+      const d = !on ? 'Garde son heure' + (t.heure ? ' (' + esc(t.heure) + ')' : '') + ' : décochée.'
+        : `${t.heure ? 'Habituellement à <b>' + esc(t.heure) + '</b>' : 'Sans heure'} → ${pl.length ? 'dans un creux <b>' + pl.length + (n > 1 ? ' jour' + (pl.length > 1 ? 's' : '') + ' sur ' + n : '') + '</b>' : '<span class="ko">aucun creux assez long</span>'}${np.length && pl.length ? ' ; <span class="ko">' + esc(np.map(x => court(x.date)).join(', ')) + ' : garde son heure</span>' : ''}.`;
+      return `<button type="button" class="eqp-tc-t${on ? ' on' : ''}" data-eqp-as-tache="${esc(t.code)}" aria-pressed="${on}"><span class="eqp-tc-cb"></span><span class="n"><i>${esc(t.code)}</i>${esc(t.nom)} <span class="q">· ${t.duree} min · ${t.jours.length === 7 ? 'chaque jour' : esc(t.jours.map(j => JOURS[j % 7]).join(', '))}</span></span><span class="d"><span class="eqp-tc-z" style="background:${ZONE_C[t.zone] || '#888'}"></span>${d}</span></button>`;
+    }).join('') + ((A.T.fixes || []).length ? `<div class="eqp-tc-t fixe"><span class="eqp-tc-cb"></span><span class="n">Gardent leur heure</span><span class="d">${A.T.fixes.map(f => esc(f.code + ' ' + f.nom + ' ' + f.heure)).join(' · ')} : liées à l’ouverture, à la cuisson, à la fermeture.</span></div>` : '');
+    const H0 = 6 * 60 + 30, H1 = 19 * 60, X = m => ((Math.min(H1, Math.max(H0, m)) - H0) / (H1 - H0) * 100).toFixed(2) + '%', W = (a, b) => ((Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0) * 100).toFixed(2) + '%';
+    let totC = 0, totP = 0;
+    const jours = P.jours.map(J => {
+      const C = calculJour(P, asJour(J, L), null), cr = (A.T.creux || {})[J.date], creux = cr ? creuxJour(cr, C.ouv) : null, tch = R.places.filter(x => x.date === J.date);
+      const cpt = C.sv.filter(s => comptoir(eq.get(s.employe) || {}));
+      if (creux) { totC += creux.reduce((x, [a, b]) => x + b - a, 0); totP += tch.reduce((x, y) => x + y.a - y.de, 0); }
+      const cartes = creux == null ? '<span class="eqp-tc-rien">Pas assez de jours mesurés pour dire ses creux : les tâches gardent leur heure.</span>'
+        : creux.length ? creux.map(([a, b]) => { const dans = tch.filter(x => x.de >= a && x.de < b), libre = b - a - dans.reduce((x, y) => x + y.a - y.de, 0);
+          return `<div class="eqp-tc-cr"><span class="h">${hh(a)}–${hh(b)} <i>${b - a} min</i></span>${dans.map(x => { const t = cfg.get(x.code) || { nom: x.code, zone: 1, duree: (x.a - x.de) }; return `<span class="tk" style="border-left-color:${ZONE_C[t.zone] || '#888'}"><b>${esc(x.code)}</b> ${esc(t.nom)}<i>${x.a - x.de} min · ${esc(pr(x.employe))}</i></span>`; }).join('') || `<span class="vide">${cpt.some(s => s.de <= a && s.a >= b) ? 'rien à poser' : 'personne au comptoir'}</span>`}${libre >= 5 ? `<span class="lb">${libre} min libres</span>` : ''}</div>`; }).join('')
+        : '<span class="eqp-tc-rien">Pas de creux habituel : les tâches gardent leur heure.</span>';
+      return `<div class="eqp-tc-j"><span>${esc(court(J.date))}<small>${creux == null ? 'non mesuré' : creux.length ? creux.reduce((x, [a, b]) => x + b - a, 0) + ' min de creux' : 'pas de creux'}</small></span><div><div class="eqp-tc-bd">${C.ouv ? `<span class="ouv" style="left:${X(C.ouv[0])};width:${W(C.ouv[0], C.ouv[1])}"></span>` : ''}${cpt.map(x => `<span class="cpt" style="left:${X(x.de)};width:${W(x.de, x.a)}"></span>`).join('')}${(creux || []).map(([a, b]) => `<span class="tm" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}</div><div class="eqp-tc-crs">${cartes}</div></div></div>`;
+    }).join('');
+    const corps = `<p class="eqp-as-q">Les temps morts du comptoir</p><p class="eqp-as-qs">Les creux habituels (10 minutes et plus sans ticket, les quatre mêmes jours d’avant) : on y pose les tâches qui n’ont pas besoin d’une heure fixe, chacune à quelqu’un du comptoir présent. Le panel garde l’heure de la checklist comme échéance.</p>
+      <div class="eqp-tc-cols"><div><p class="eqp-as-h">Les tâches qui peuvent bouger · à cocher</p>${liste || '<p class="eqp-note">Aucune tâche à poser cette semaine.</p>'}</div>
+        <div><p class="eqp-as-h">La semaine · le comptoir, ses creux, les tâches posées</p><div class="eqp-tc-sem">${jours}<div class="eqp-tc-leg"><span><i class="c"></i>quelqu’un au comptoir</span><span><i class="t"></i>temps mort habituel</span><span><i style="background:${ZONE_C[1]}"></i>tâche de vente</span><span><i style="background:${ZONE_C[4]}"></i>nettoyage</span></div></div>
+          <div class="eqp-as-bilan"><b>${dm(totP)}</b> de tâches passent dans les temps morts : autant de moins pendant les heures de pointe. Il reste <b>${dm(Math.max(0, totC - totP))}</b> de creux libres. Ni heure ni personne en plus : le budget ne bouge pas.</div></div></div>`;
+    return [corps, `<b>${R.places.length}</b> tâche${R.places.length > 1 ? 's' : ''} posée${R.places.length > 1 ? 's' : ''} dans les creux · ${R.nonPlaces.length} garde${R.nonPlaces.length > 1 ? 'nt' : ''} leur heure`];
+  }
+  /** Garder les tâches posées (après la création de la semaine) : leur nombre, ou null. */
+  const asGarderTaches = (A, P, L) => (st.opts.taches && A.T ? envoyer('POST', '/dashboard/equipe/semaine/taches', { du: A.du, places: asPoser(P, L, A.T, A.tOff).places }).then(r => r.places).catch(() => null) : Promise.resolve(null));
+  /** La ligne du jour : les tâches posées dans les creux ; les fixes, et celles restées à leur heure, en pointillé. */
+  function ligneTaches(P, J, C, X, W, H0, H1) {
+    const TC = P.taches; if (!TC) { return ''; }
+    const pl = (TC.places || []).filter(x => x.date === J.date), cfg = new Map((TC.liste || []).map(t => [t.code, t])), w = wdN(J.date);
+    const restes = (TC.liste || []).filter(t => t.heure && t.jours.includes(w) && !pl.some(x => x.code === t.code)).map(t => ({ de: mn(t.heure), a: mn(t.heure) + t.duree, t: t.code + ' ' + t.nom + ' · à son heure' }));
+    const fixes = (TC.fixes || []).map(f => ({ de: mn(f.heure), a: mn(f.heure) + 15, t: f.code + ' ' + f.nom + ' · heure fixe' }));
+    const pointilles = [...fixes, ...restes].filter(x => x.a > H0 && x.de < H1).map(x => `<span class="eqp-tc-ch fixe" style="left:${X(Math.max(H0, x.de))};width:${W(Math.max(H0, x.de), Math.min(H1, x.a))}" title="${esc(x.t)}"></span>`).join('');
+    const posees = pl.map((x, i) => { const t = cfg.get(x.code) || { nom: x.code, zone: 1 }, qui = (((C.eq.get(x.employe) || {}).nom) || '').split(' ')[0];
+      return `<span class="eqp-tc-ch" style="left:${X(x.de)};width:${W(x.de, x.a)};background:${ZONE_C[t.zone] || '#888'}" title="${hh(x.de)}–${hh(x.a)} · ${esc(x.code + ' ' + t.nom)}${qui ? ' · ' + esc(qui) : ''}"></span><span class="eqp-tc-lb${i % 2 ? ' bas' : ''}" style="left:${X(x.de)}"><b>${hh(x.de)} ${esc(t.nom.split(' ')[0])}</b>${qui ? ' · ' + esc(qui) : ''}</span>`; }).join('');
+    const min = pl.reduce((x, y) => x + y.a - y.de, 0);
+    return `<div class="eqp-l eqp-li eqp-tcl"><div class="eqp-n">Tâches des creux<span class="sub">${pl.length ? pl.length + ' posée' + (pl.length > 1 ? 's' : '') + ' · ' + dm(min) + ' · heure fixe en pointillé' : 'aucune posée : l’assistant de la semaine les pose'}</span></div><div class="eqp-tl">${pointilles}${posees}</div></div>`;
   }
 
   /* ── Préparer la semaine : recopier la semaine précédente, ou le shift maker (test, la matrice A B C D) ──────────
@@ -1096,6 +1212,11 @@
     on('[data-eqp-ajout-ok]', 'click', () => { const ed = st.edit; if (!ed.ajout) { return; } const n = ((equipeDe(ctxEdition(ed)[0]).get(ed.ajout) || {}).nom || '').split(' ')[0];
       ecrireShift('POST', { employe: ed.ajout, date: ed.date, de: hh(ed.de), a: hh(ed.a) }, n + ' est ajouté(e) au shift ' + hh(ed.de) + '–' + hh(ed.a) + '.', true); });
     on('[data-eqp-ok]', 'click', () => enregistrerService(false));
+    on('[data-eqp-options]', 'click', () => { st.optMod = true; st.optErr = null; rendre(); });
+    on('[data-eqp-options-fermer]', 'click', () => { st.optMod = false; rendre(); });
+    on('[data-eqp-fermer-opt]', 'click', e => { if (e.target === e.currentTarget && !st.optOccupe) { st.optMod = false; rendre(); } });
+    on('[data-eqp-opt]', 'click', e => basculerOption(e.currentTarget.dataset.eqpOpt));
+    on('[data-eqp-as-tache]', 'click', e => { const c = e.currentTarget.dataset.eqpAsTache, O = st.as.tOff; if (O.has(c)) { O.delete(c); } else { O.add(c); } rendre(); });
     on('[data-eqp-assistant]', 'click', e => { const d = e.currentTarget.closest('details'); if (d) { d.open = false; } ouvrirAssistant(); });
     on('[data-eqp-as-fermer]', 'click', () => { if (st.as && st.as.occupe) { return; } if (st.as && st.as.etape > 1 && !window.confirm('Fermer l’assistant ? Ce qui est préparé est perdu ; rien n’a été écrit au panel.')) { return; } st.as = null; rendre(); });
     on('[data-eqp-as-base]', 'click', e => { st.as.base = e.currentTarget.dataset.eqpAsBase; st.as.max = 1; rendre(); });

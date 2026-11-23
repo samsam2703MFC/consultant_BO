@@ -8,7 +8,7 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   magasin (`/production`), le résultat au téléphone, l'app employés (`/employee`), les primes et les grands prix. Le
   pointage (l'app, `/borne`, la caisse) est retiré le 19/11/2026 ; ses tables `panel_mot_pointage` et `_borne` restent.
 - **Tables** : `panel_*` (`panel_aia_*` pour l'assistant, `panel_mot_*` pour l'app employés et les primes,
-  `panel_boite_*` pour la boîte mail, `panel_equipe_*` pour Mon équipe : la matrice A B C D, les roulements, les adresses).
+  `panel_boite_*` pour la boîte mail, `panel_equipe_*` pour Mon équipe : la matrice A B C D, les roulements, les options du magasin, les tâches posées dans les temps morts).
 - **Code** : `src/` (les anciens `panel/src/*` et les modules propres au dashboard), `panel/apps/employee/` (l'app
   employés, dépendances commises dans `vendor/`), écrans `public/`. L'index de l'API du dashboard :
   `panel/public/dashboard/api-index.json`, régénéré par `python3 panel/tools/dashboard-api-index.py` après chaque route.
@@ -19,5 +19,5 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   faire ses horaires.** Sam : « le plus important est que ça aide le franchisé à faire ses horaires ». Chaque ajout s'y
   mesure : le planogramme, les linéaires (qui est là, quand ; le comptoir ; les secteurs), les temps morts et le budget
   d'heures (17 %, orange, rouge au-dessus de 20 %, noir au-dessus de 22 %) servent à construire et corriger le planning,
-  pas à le commenter. Ce qui n'aide pas à faire les horaires passe après.
+  pas à le commenter. Ce qui n'aide pas à faire les horaires passe après. Les modules ajoutés (assistant, tâches des creux, matrice et shift maker, recopie) sont des options, éteintes par défaut (Mon équipe › Options).
 - **Tests** : `php panel/bin/tests_*.php` (assistant, bundles, boîte mail, trésorerie, primes, profil…).

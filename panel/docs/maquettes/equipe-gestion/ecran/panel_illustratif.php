@@ -3,7 +3,10 @@
 declare(strict_types=1);
 $R = dirname(__DIR__, 5);
 // Les lettres du roulement : le comptoir et la responsable ; la production garde ses horaires (sans lettre).
-final class Db { public static function rows($s, $a = []) { return str_contains($s, 'panel_equipe_roulement') ? [['employe_id' => 23, 'lettre' => 'A'], ['employe_id' => 28, 'lettre' => 'B'], ['employe_id' => 26, 'lettre' => 'C'], ['employe_id' => 21, 'lettre' => 'D']] : []; } public static function row($s, $a = []) { return str_contains($s, 'panel_equipe_matrice') ? null : ['revenue_budget' => 108000, 'ca_theorique' => null]; } public static function exec($s, $a = []) {} }
+final class Db { public static function rows($s, $a = []) {
+    // Les tâches posées dans les creux du lundi 23 (la ligne du jour) : Laura et Chloé, au comptoir à ces heures-là.
+    if (str_contains($s, 'panel_equipe_taches')) { return array_values(array_filter([['jour' => '2026-11-23', 'code' => '1.2.01', 'de' => 580, 'a' => 595, 'employe_id' => 28], ['jour' => '2026-11-23', 'code' => '1.5.01', 'de' => 855, 'a' => 895, 'employe_id' => 23], ['jour' => '2026-11-23', 'code' => '4.2.01', 'de' => 935, 'a' => 955, 'employe_id' => 28], ['jour' => '2026-11-23', 'code' => '1.2.02', 'de' => 1070, 'a' => 1080, 'employe_id' => 23]], static fn ($x) => $x['jour'] >= ($a[1] ?? '') && $x['jour'] <= ($a[2] ?? ''))); }
+    return str_contains($s, 'panel_equipe_roulement') ? [['employe_id' => 23, 'lettre' => 'A'], ['employe_id' => 28, 'lettre' => 'B'], ['employe_id' => 26, 'lettre' => 'C'], ['employe_id' => 21, 'lettre' => 'D']] : []; } public static function row($s, $a = []) { if (str_contains($s, 'panel_equipe_options')) { return ['options' => '{"assistant":true,"taches":true,"matrice":true,"recopie":true}']; } return str_contains($s, 'panel_equipe_matrice') ? null : ['revenue_budget' => 108000, 'ca_theorique' => null]; } public static function exec($s, $a = []) {} }
 $REG = [];
 function setting(string $k, mixed $d = null): mixed { global $REG; if (preg_match('/^tmT5:(\S+)$/', $k, $m)) { return $m[1] <= '2026-11-23' && date('N', strtotime($m[1])) != 7 ? tickets($m[1]) : null; } return $REG[$k] ?? $d; }
 function svGrave(string $k, array $v): void {}
@@ -66,6 +69,7 @@ final class PanelApi {
 require $R . '/shared/src/cibles_reseau.php';
 require $R . '/shared/src/resultat.php';
 require $R . '/panel/src/temps_morts.php';
+require $R . '/shared/src/checklists_codes.php';
 require $R . '/panel/src/equipe.php';
 require $R . '/shared/src/doc.php';
 $out = $argv[1] ?? __DIR__;
@@ -80,6 +84,8 @@ $_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/recopie.j
 // La matrice A B C D (celle de départ, semaine 1 = la semaine du 23/11) et le shift maker sur la semaine du 30/11.
 $_GET = ['shop' => '5']; $mx = ep_equipe_matrice(); $mx['matrice']['reference'] = '2026-11-23'; file_put_contents("$out/matrice.json", json_encode($mx, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/generer.json", json_encode(ep_equipe_generer(), JSON_UNESCAPED_UNICODE));
+// Les creux habituels de la semaine du 30/11 et les tâches qui peuvent y aller (l'étape « Les temps morts » de l'assistant).
+$_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/taches.json", json_encode(ep_equipe_taches(), JSON_UNESCAPED_UNICODE));
 // Le planning imprimé (le PDF de « Imprimer ») : le même HTML que ep_equipe_planning_pdf, avant Chromium.
 $P = eqpPlanningDonnees(5, '2026-11-23', 7);
 file_put_contents("$out/planning-imprime.html", '<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>' . docCss() . eqpPdfCss() . '</style></head><body>' . eqpPlanningPdfHtml($P, 'magasin', 'Sombreffe') . '</body></html>');

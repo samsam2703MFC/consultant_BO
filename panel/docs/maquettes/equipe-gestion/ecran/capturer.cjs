@@ -6,6 +6,13 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   const b = await chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost'] });
   const ctx = await b.newContext({ viewport: { width: 1440, height: 940 }, deviceScaleFactor: 2, locale: 'fr-BE' });
   const p = await ctx.newPage(); const err = []; const ecrits = [];
+  const OPTS = { assistant: true, taches: true, matrice: true, recopie: true };   // les options du magasin (la doublure)
+  // Les options et leur description, telles que les rend panel/src/equipe.php (EQP_OPTIONS).
+  const LISTE = [['assistant', 'Assistant de la semaine', 'Reprendre la semaine passée ou la matrice, qui adapter, les heures de trop et des propositions, puis créer la semaine au panel.'],
+    ['taches', 'Tâches dans les temps morts', 'Les checklists sans heure fixe posées dans les creux habituels du comptoir, à quelqu’un du comptoir présent : une étape de l’assistant et une ligne au jour.'],
+    ['matrice', 'Matrice A B C D et shift maker', 'Quatre roulements sur deux semaines, la lettre de chacun dans sa fiche, les créneaux matin et après-midi, et le shift maker (test).'],
+    ['recopie', 'Recopier la semaine précédente', 'Dans « Préparer la semaine » : la semaine d’avant reportée de sept jours, aperçu puis création.']];
+  const optionsJson = () => ({ shop: 5, options: OPTS, liste: LISTE.map(([cle, nom, dit]) => ({ cle, nom, dit, on: OPTS[cle] })) });
   p.on('pageerror', e => err.push(e.message));
   p.on('dialog', d => d.accept());   // les confirmations (retirer quelqu'un du shift) p.on('console', m => { if (m.type() === 'error') err.push('console: ' + m.text()); });
   await p.route('**/api/cockpit/**', async r => {
@@ -15,6 +22,8 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
         ecrits.push([m, pa, r.request().postData()]);
         if (pa === '/dashboard/equipe/semaine/recopie') { const n = JSON.parse(r.request().postData()).sources.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/semaine/generer') { const n = JSON.parse(r.request().postData()).cles.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
+        if (pa === '/dashboard/equipe/options') { Object.assign(OPTS, JSON.parse(r.request().postData()).options); return r.fulfill({ status: 200, json: { ok: true, options: OPTS } }); }
+        if (pa === '/dashboard/equipe/semaine/taches') { const n = JSON.parse(r.request().postData()).places.length; return r.fulfill({ status: 200, json: { ok: true, places: n } }); }
         if (pa === '/dashboard/equipe/semaine/creer') { const n = JSON.parse(r.request().postData()).services.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
         if (pa === '/dashboard/equipe/roulement') { const b = JSON.parse(r.request().postData()), x = JSON.parse(lire('matrice.json')).roulements; if (b.lettre) { x[b.employe] = b.lettre; } else { delete x[b.employe]; } return r.fulfill({ status: 200, json: { ok: true, employe: b.employe, lettre: b.lettre, roulements: x } }); }
@@ -23,6 +32,8 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
       if (pa === '/dashboard/equipe/semaine/recopie') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('recopie.json') }); }
       if (pa === '/dashboard/equipe/semaine/generer') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('generer.json') }); }
       if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
+      if (pa === '/dashboard/equipe/options') { return r.fulfill({ status: 200, json: optionsJson() }); }
+      if (pa === '/dashboard/equipe/semaine/taches') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('taches.json') }); }
       if (pa === '/dashboard/equipe/carte') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('carte.json') }); }
       if (pa === '/dashboard/equipe/planning') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire(u.searchParams.get('jours') === '1' ? 'jour.json' : +u.searchParams.get('jours') >= 28 ? 'mois.json' : u.searchParams.get('du') === '2026-11-30' ? 'semaine2.json' : 'semaine.json') }); }
       return r.fulfill({ status: 404, json: { error: 'x' } });
@@ -36,6 +47,15 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await p.waitForSelector('.eqp .eqp-grille', { timeout: 90000 }); await p.waitForTimeout(6000);
   await p.evaluate(() => { const r = document.getElementById('db-rail'); if (r) { r.scrollTop = 0; } });
   await shot('e1-responsabilites', true);
+  await p.click('[data-eqp-options]'); await p.waitForSelector('.eqp-opts');
+  console.log('options', (await p.$$eval('.eqp-opt-l b', L => L.map(n => n.textContent))).join(' | '), '| allumées :', await p.$$eval('.eqp-switch.on', L => L.length));
+  await p.click('[data-eqp-opt="matrice"]'); await p.waitForTimeout(800);
+  console.log('matrice éteinte :', OPTS.matrice === false, '| interrupteur :', await p.$eval('[data-eqp-opt="matrice"]', n => n.getAttribute('aria-checked')));
+  await shot('e23-options', false);
+  await p.click('[data-eqp-options-fermer]'); await p.waitForTimeout(300);
+  console.log('fiche sans roulement :', !(await p.$('.eqp-fiche .eqp-seg-l')));
+  await p.click('[data-eqp-options]'); await p.click('[data-eqp-opt="matrice"]'); await p.waitForTimeout(800); await p.click('[data-eqp-options-fermer]');
+  console.log('matrice rallumée :', OPTS.matrice === true);
   // La fiche d'une autre personne, puis la fenêtre des postes : cocher Traiteur.
   await p.click('.eqp-ligne:nth-child(2)');
   await p.click('.eqp-fiche [data-eqp-postes]');
@@ -78,6 +98,7 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   console.log('nouveau', await p.textContent('.eqp-flash').catch(() => '—'));
   await p.click('[data-eqp-vue="jour"]');
   await p.waitForSelector('.eqp-pg', { timeout: 20000 });
+  console.log('ligne des tâches', (await p.textContent('.eqp-tcl').catch(() => 'aucune')).replace(/\s+/g, ' '));
   await shot('e3-planning-jour', true);
   // Tracer : sur la ligne d'une personne au repos ce jour, tirer une ligne de 14:00 à 18:00 crée un service.
   const libre = await p.$('.eqp-l.repos:not(.eqp-axe) .eqp-tl');
@@ -144,6 +165,9 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   console.log('propositions', (await p.$$eval('.eqp-as-prop .t', L => L.map(n => n.textContent))).join(' | '));
   console.log('bilan', (await p.textContent('.eqp-as-bilan').catch(() => '—')).replace(/\s+/g, ' '));
   await shot('e21-assistant-3', false);
+  await p.click('[data-eqp-as-suite]'); await p.waitForSelector('.eqp-tc-sem');
+  console.log('temps morts', (await p.textContent('.eqp-as-pied .res')).replace(/\s+/g, ' '), '|', (await p.textContent('.eqp-as-bilan')).replace(/\s+/g, ' ').slice(0, 160));
+  await shot('e24-assistant-temps-morts', false);
   await p.click('[data-eqp-as-suite]'); await p.waitForSelector('.eqp-as-tab');
   console.log('assistant 4', (await p.textContent('.eqp-as-verif')).replace(/\s+/g, ' '), '|', (await p.textContent('[data-eqp-as-creer]')).trim());
   await shot('e22-assistant-4', false);

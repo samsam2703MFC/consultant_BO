@@ -48,9 +48,104 @@ const EQP_JOURS_MAX = 31;            // un planning lu couvre un mois au plus (l
 const EQP_SEUIL_MORT = 10;           // un temps mort : 10 minutes et plus sans ticket (la valeur par défaut de l'onglet)
 const EQP_CREUX_PART = 0.5;          // un creux habituel : un quart d'heure mort au moins un jour sur deux des 4 d'avant
 
+/*
+ * LES OPTIONS (23/11/2026, Sam : « tous ces modules doivent être dans une option, pas dans le module principal » ; puis
+ * « éteintes jusqu'à ce qu'on les allume ») : le module principal garde les responsabilités, le planning (jour, semaine,
+ * mois), la fenêtre d'un service et l'impression. Le reste s'allume magasin par magasin (Mon équipe › Options), éteint
+ * par défaut ; éteinte, une option ne se montre pas et ses routes sont refusées (403, motif « option »).
+ */
+const EQP_OPTIONS = [
+    'assistant' => ['nom' => 'Assistant de la semaine', 'dit' => 'Reprendre la semaine passée ou la matrice, qui adapter, les heures de trop et des propositions, puis créer la semaine au panel.'],
+    'taches' => ['nom' => 'Tâches dans les temps morts', 'dit' => 'Les checklists sans heure fixe posées dans les creux habituels du comptoir, à quelqu’un du comptoir présent : une étape de l’assistant et une ligne au jour.'],
+    'matrice' => ['nom' => 'Matrice A B C D et shift maker', 'dit' => 'Quatre roulements sur deux semaines, la lettre de chacun dans sa fiche, les créneaux matin et après-midi, et le shift maker (test).'],
+    'recopie' => ['nom' => 'Recopier la semaine précédente', 'dit' => 'Dans « Préparer la semaine » : la semaine d’avant reportée de sept jours, aperçu puis création.'],
+];
+
+/** Les options d'un magasin : clé → allumée ; éteintes par défaut. */
+function eqpOptions(int $shop): array
+{
+    $o = array_fill_keys(array_keys(EQP_OPTIONS), false);
+    try {
+        ensureEquipeOptions();
+        $r = Db::row('SELECT options FROM panel_equipe_options WHERE shop_id = ?', [(string) $shop]);
+        $x = $r !== null ? json_decode((string) $r['options'], true) : null;
+        if (is_array($x)) { foreach ($o as $k => $_) { $o[$k] = !empty($x[$k]); } }
+    } catch (Throwable $e) { /* sans table : tout reste éteint */ }
+    return $o;
+}
+function eqpOption(int $shop, string $cle): bool { return !empty(eqpOptions($shop)[$cle]); }
+
+function ensureEquipeOptions(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_equipe_options ('
+        . 'shop_id VARCHAR(16) NOT NULL PRIMARY KEY,'
+        . 'options TEXT NOT NULL,'                  // {assistant: bool, taches: bool, matrice: bool, recopie: bool}
+        . 'maj_le DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $fait = true;
+}
+
+/** Les options qu'une route demande (l'une suffit), ou [] : la route est du module principal. */
+function eqpOptionsRoute(string $method, string $path): array
+{
+    return match (true) {
+        $path === '/dashboard/equipe/matrice', $path === '/dashboard/equipe/roulement', $path === '/dashboard/equipe/semaine/generer' && $method !== 'GET' => ['matrice'],
+        $path === '/dashboard/equipe/semaine/generer' => ['matrice', 'assistant'],      // l'aperçu sert aussi l'assistant
+        $path === '/dashboard/equipe/semaine/recopie' && $method === 'GET' => ['recopie', 'assistant'],
+        $path === '/dashboard/equipe/semaine/recopie' => ['recopie'],
+        $path === '/dashboard/equipe/semaine/creer' => ['assistant'],
+        $path === '/dashboard/equipe/semaine/taches' => ['taches'],
+        default => [],
+    };
+}
+
+/** GET /dashboard/equipe/options?shop= — les options du magasin. */
+function ep_equipe_options(): array
+{
+    $shop = eqpShop();
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $o = eqpOptions($shop);
+    return ['shop' => $shop, 'options' => $o, 'liste' => array_map(static fn ($k) => ['cle' => $k] + EQP_OPTIONS[$k] + ['on' => $o[$k]], array_keys(EQP_OPTIONS))];
+}
+
+/** POST /dashboard/equipe/options {shop, options: {cle: bool}} — allume ou éteint des options ; les autres ne bougent pas. */
+function wr_equipe_options(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $x = $b['options'] ?? null;
+    if (!is_array($x) || $x === [] || array_is_list($x)) { return eqpErreur(422, 'options : {clé: vrai ou faux}'); }
+    $o = eqpOptions($shop);
+    foreach ($x as $k => $v) {
+        if (!isset(EQP_OPTIONS[$k]) || !is_bool($v)) { return eqpErreur(422, 'option inconnue ou valeur qui n’est pas vrai ou faux : ' . $k); }
+        $o[$k] = $v;
+    }
+    try {
+        ensureEquipeOptions();
+        Db::exec('INSERT INTO panel_equipe_options (shop_id, options, maj_le) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE options = VALUES(options), maj_le = NOW()', [(string) $shop, json_encode($o)]);
+    } catch (Throwable $e) { return eqpErreur(500, 'les options n’ont pas été gardées'); }
+    try { journalAdd('Magasin ' . $shop, 'Planning', null, 'Mon équipe › Options : ' . implode(', ', array_map(static fn ($k) => EQP_OPTIONS[$k]['nom'] . ($o[$k] ? ' allumée' : ' éteinte'), array_keys($x)))); }
+    catch (Throwable $e) { /* le journal ne bloque pas */ }
+    return ['ok' => true, 'options' => $o];
+}
+
 function eqpRoute(string $method, string $path): ?array
 {
     if ($path !== '/dashboard/equipe' && !str_starts_with($path, '/dashboard/equipe/')) { return null; }
+    if ($path === '/dashboard/equipe/options') {
+        if ($method === 'GET') { return ep_equipe_options(); }
+        if ($method === 'POST') { return wr_equipe_options(); }
+    }
+    $besoin = eqpOptionsRoute($method, $path);
+    if ($besoin !== []) {
+        $shop = $method === 'GET' ? eqpShop() : eqpShop(body());
+        if ($shop > 0 && !array_filter($besoin, static fn ($k) => eqpOption($shop, $k))) {
+            return eqpErreur(403, 'option éteinte pour ce magasin : ' . EQP_OPTIONS[$besoin[0]]['nom'] . ' (Mon équipe › Options)', ['motif' => 'option', 'option' => $besoin[0]]);
+        }
+    }
     if ($method === 'GET' && $path === '/dashboard/equipe/carte') { return ep_equipe_carte(); }
     if ($method === 'POST' && $path === '/dashboard/equipe/postes') { return wr_equipe_postes(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning') { return ep_equipe_planning(); }
@@ -67,6 +162,10 @@ function eqpRoute(string $method, string $path): ?array
         if ($method === 'POST') { return wr_equipe_recopie(); }
     }
     if ($method === 'POST' && $path === '/dashboard/equipe/semaine/creer') { return wr_equipe_semaine_creer(); }
+    if ($path === '/dashboard/equipe/semaine/taches') {
+        if ($method === 'GET') { return ep_equipe_taches(); }
+        if ($method === 'POST') { return wr_equipe_taches(); }
+    }
     if ($path === '/dashboard/equipe/service') {
         if ($method === 'POST') { return wr_equipe_service_creer(); }
         if ($method === 'PATCH') { return wr_equipe_service_modifier(); }
@@ -239,10 +338,11 @@ function ep_equipe_carte(?int $shop = null): array
         if (!array_key_exists('sector_id', $w)) { return eqpErreur(502, 'les postes du panel ne portent pas leur secteur (sector_id) : la carte ne peut pas se calculer'); }
     }
     $c = eqpCarte($shop, $L['emp'], $L['ws'], $L['prod']);
-    $rl = eqpRoulements($shop);
+    $opts = eqpOptions($shop);
+    $rl = $opts['matrice'] ? eqpRoulements($shop) : [];
     foreach ($c['employes'] as &$e) { $e['lettre'] = $rl[$e['id']] ?? null; }
     unset($e);
-    return ['shop' => $shop] + $c;
+    return ['shop' => $shop, 'options' => $opts] + $c;
 }
 
 /** Une liste d'identifiants : entiers ≥ 1, sans doublon, triés ; null si la forme est mauvaise. */
@@ -521,7 +621,8 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
     foreach ($out as $j) { foreach ($j['services'] as $s) { $auPlanning[$s['employe']] = true; } }
     $equipe = array_filter($equipe, static fn ($e) => $e['actif'] || isset($auPlanning[$e['id']]));
     uasort($equipe, static fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
-    $rl = eqpRoulements($shop);
+    $opts = eqpOptions($shop);
+    $rl = $opts['matrice'] ? eqpRoulements($shop) : [];
     foreach ($equipe as &$e) { $e['lettre'] = $rl[$e['id']] ?? null; }
     unset($e);
     $sect = [];
@@ -532,6 +633,8 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
         'objectif' => ['source' => $obj['source'], 'motif' => $obj['motif']],
         'budget' => function_exists('personnelPaliers') ? personnelPaliers() : ['cible' => 17.0, 'rouge' => 20.0, 'noir' => 22.0, 'source' => 'départ'],
         'durees' => eqpDurees(),
+        'options' => $opts,
+        'taches' => $opts['taches'] ? ['liste' => eqpTachesConfig(), 'fixes' => eqpTachesFixes(), 'places' => eqpTachesPlaces($shop, $jours[0], $jours[$n - 1])] : null,
         'nonLus' => $muets, 'ouvertures' => (object) eqpOuvertures($shop)];
     if ($n === 1) { $r['tempsMorts'] = eqpTempsMorts($shop, $jours[0]); }
     return $r;
@@ -925,6 +1028,143 @@ function eqpCreerServices(int $shop, array $a, callable $journal, string $du): a
     }
     if ($crees === 0) { return eqpErreur($arret !== null ? 403 : 502, $arret ?? 'le panel a refusé tous les services', ['echecs' => $echecs]); }
     return ['ok' => true, 'du' => $du, 'crees' => $crees, 'demandes' => count($a), 'echecs' => $echecs, 'arret' => $arret];
+}
+
+/* ── Les tâches dans les temps morts (23/11/2026, Sam : « dans l'assistant aussi (pour les sections de vente) on a les
+ * temps morts, donc on pourrait adapter les tâches des checklists de contrôle ou de tâches à ces moments-là » ;
+ * maquette panel/docs/maquettes/equipe-gestion/temps-morts-taches/). Les checklists qui n'ont pas besoin d'une heure fixe
+ * vont dans les creux habituels du comptoir, chacune à quelqu'un du comptoir présent ; l'assistant de la semaine les
+ * pose (l'écran calcule, à partir de la semaine qu'il prépare) et ce fichier les garde, pour la ligne du jour. Le panel
+ * n'est pas modifié : l'heure de sa checklist reste l'échéance. ──────────────────────────────────────────────────── */
+
+// Les checklists qui peuvent aller dans un creux : durée en minutes, jours (1 = lundi). Réglage equipeTachesMobiles :
+// {code: {duree, jours}} pour en changer une, {code: null} pour la retirer.
+const EQP_TACHES_DEFAUT = [
+    '1.2.01' => [15, [1, 2, 3, 4, 5, 6, 7]],   // Facing et FIFO en service
+    '1.2.02' => [10, [1, 2, 3, 4, 5, 6, 7]],   // Moments calmes
+    '4.2.01' => [20, [1, 2, 3, 4, 5, 6, 7]],   // Hygiène quotidienne
+    '1.5.01' => [40, [1]],                     // Planogramme et merchandising (lundi)
+    '1.5.02' => [20, [2]],                     // Audit visuel de la boutique (mardi)
+    '4.5.01' => [45, [3]],                     // Nettoyage approfondi (mercredi)
+    '1.3.02' => [10, [6, 7]],                  // Photos des comptoirs (après-midi) : le samedi et le dimanche
+];
+const EQP_TACHES_FIXES = ['1.1.01', '1.1.02', '1.3.01', '1.4.01'];   // liées à l'ouverture, à la cuisson, à la fermeture
+
+/** Le nom et l'heure d'une checklist (shared/src/checklists_codes.php). */
+function eqpChecklist(string $code): array
+{
+    if (defined('CKC_LISTE')) { foreach (CKC_LISTE as $c) { if ($c['code'] === $code) { return ['nom' => (string) $c['fr'], 'heure' => $c['heure'] ?? null]; } } }
+    return ['nom' => $code, 'heure' => null];
+}
+
+/** Les tâches qui peuvent aller dans un creux : code, nom, zone (1 vente, 4 nettoyage…), heure habituelle, durée, jours. */
+function eqpTachesConfig(): array
+{
+    $cfg = EQP_TACHES_DEFAUT;
+    $s = function_exists('setting') ? setting('equipeTachesMobiles', null) : null;
+    if (is_array($s)) {
+        foreach ($s as $code => $x) {
+            if (!is_string($code) || !preg_match('/^\d\.\d\.\d{2}$/', $code)) { continue; }
+            if ($x === null || $x === false) { unset($cfg[$code]); continue; }
+            if (!is_array($x)) { continue; }
+            $d = (int) ($x['duree'] ?? 0);
+            $j = array_values(array_unique(array_filter(array_map('intval', (array) ($x['jours'] ?? [])), static fn ($v) => $v >= 1 && $v <= 7)));
+            if ($d >= 5 && $d <= 180 && $j !== []) { sort($j); $cfg[$code] = [$d, $j]; }
+        }
+    }
+    $out = [];
+    foreach ($cfg as $code => [$d, $j]) { $c = eqpChecklist((string) $code); $out[] = ['code' => (string) $code, 'nom' => $c['nom'], 'zone' => (int) substr((string) $code, 0, 1), 'heure' => $c['heure'], 'duree' => $d, 'jours' => $j]; }
+    return $out;
+}
+
+/** Les tâches de vente à heure fixe (en pointillé sur la ligne du jour). */
+function eqpTachesFixes(): array
+{
+    return array_values(array_filter(array_map(static fn ($code) => ['code' => $code] + eqpChecklist($code), EQP_TACHES_FIXES), static fn ($c) => $c['heure'] !== null));
+}
+
+function ensureEquipeTaches(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_equipe_taches ('
+        . 'shop_id VARCHAR(16) NOT NULL,'
+        . 'jour DATE NOT NULL,'
+        . 'code VARCHAR(10) NOT NULL,'               // la checklist (1.2.01)
+        . 'de SMALLINT UNSIGNED NOT NULL,'           // minutes depuis minuit
+        . 'a SMALLINT UNSIGNED NOT NULL,'
+        . 'employe_id INT UNSIGNED NULL,'            // qui la fait (l'employé au panel), quelqu'un du comptoir présent
+        . 'maj_le DATETIME NOT NULL,'
+        . 'PRIMARY KEY (shop_id, jour, code)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $fait = true;
+}
+
+/** Les tâches posées dans les creux, du $du au $au : [{date, code, de, a, employe}] (minutes). */
+function eqpTachesPlaces(int $shop, string $du, string $au): array
+{
+    try {
+        ensureEquipeTaches();
+        $r = Db::rows('SELECT jour, code, de, a, employe_id FROM panel_equipe_taches WHERE shop_id = ? AND jour BETWEEN ? AND ? ORDER BY jour, de', [(string) $shop, $du, $au]);
+    } catch (Throwable $e) { return []; }
+    return array_map(static fn ($x) => ['date' => substr((string) $x['jour'], 0, 10), 'code' => (string) $x['code'], 'de' => (int) $x['de'], 'a' => (int) $x['a'], 'employe' => $x['employe_id'] !== null ? (int) $x['employe_id'] : null], $r);
+}
+
+/** GET /dashboard/equipe/semaine/taches?shop=&du= — les creux habituels de chaque jour, les tâches qui peuvent y aller, celles posées. */
+function ep_equipe_taches(): array
+{
+    $shop = eqpShop();
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $du = (string) ($_GET['du'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return eqpErreur(422, 'du : AAAA-MM-JJ'); }
+    $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $creux = []; $lus = 0;
+    foreach ($jours as $d) {
+        $t = eqpTempsMorts($shop, $d);
+        $ok = empty($t['indispo']) && (int) ($t['habitude']['jours'] ?? 0) >= 2;
+        $creux[$d] = $ok ? array_values((array) $t['habitude']['creux']) : null;
+        if ($ok) { $lus++; }
+    }
+    return ['shop' => $shop, 'du' => $du, 'creux' => $creux, 'joursLus' => $lus, 'taches' => eqpTachesConfig(), 'fixes' => eqpTachesFixes(), 'places' => eqpTachesPlaces($shop, $jours[0], $jours[6])];
+}
+
+/**
+ * POST /dashboard/equipe/semaine/taches {shop, du, places: [{date, code, de, a, employe}]} — garde les tâches posées dans
+ * les creux de la semaine (celles d'avant sont remplacées). Une tâche : un code de la liste, un jour de la semaine, des
+ * minutes dans la journée, 3 h au plus, un employé (son identifiant au panel) ou rien.
+ */
+function wr_equipe_taches(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $du = is_string($b['du'] ?? null) ? $b['du'] : '';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return eqpErreur(422, 'du : AAAA-MM-JJ'); }
+    $L = $b['places'] ?? null;
+    if (!is_array($L) || !array_is_list($L) || count($L) > 200) { return eqpErreur(422, 'places : la liste des tâches posées'); }
+    $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $codes = array_column(eqpTachesConfig(), 'code');
+    $v = []; $vu = [];
+    foreach ($L as $i => $x) {
+        $n = 'tâche ' . ($i + 1);
+        if (!is_array($x)) { return eqpErreur(422, $n . ' : {date, code, de, a, employe}'); }
+        $d = $x['date'] ?? null; $c = $x['code'] ?? null; $de = $x['de'] ?? null; $a = $x['a'] ?? null; $e = $x['employe'] ?? null;
+        if (!is_string($d) || !in_array($d, $jours, true)) { return eqpErreur(422, $n . ' : le jour n’est pas dans la semaine du ' . $du); }
+        if (!is_string($c) || !in_array($c, $codes, true)) { return eqpErreur(422, $n . ' : une checklist qui peut aller dans un creux'); }
+        if (!is_int($de) || !is_int($a) || $de < 0 || $a > 1440 || $a <= $de || $a - $de > 180) { return eqpErreur(422, $n . ' : des minutes dans la journée, 3 h au plus'); }
+        if ($e !== null && (!is_int($e) || $e < 1)) { return eqpErreur(422, $n . ' : employe, un identifiant'); }
+        if (isset($vu[$d . $c])) { return eqpErreur(422, $n . ' : la même checklist deux fois le même jour'); }
+        $vu[$d . $c] = true;
+        $v[] = [$d, $c, $de, $a, $e];
+    }
+    try {
+        ensureEquipeTaches();
+        Db::exec('DELETE FROM panel_equipe_taches WHERE shop_id = ? AND jour BETWEEN ? AND ?', [(string) $shop, $jours[0], $jours[6]]);
+        foreach ($v as [$d, $c, $de, $a, $e]) {
+            Db::exec('INSERT INTO panel_equipe_taches (shop_id, jour, code, de, a, employe_id, maj_le) VALUES (?, ?, ?, ?, ?, ?, NOW())', [(string) $shop, $d, $c, $de, $a, $e]);
+        }
+    } catch (Throwable $e) { return eqpErreur(500, 'les tâches n’ont pas été gardées'); }
+    return ['ok' => true, 'du' => $du, 'places' => count($v)];
 }
 
 /* ── La matrice A B C D et le shift maker (test) ──────────────────────────────────────────────────────────────── */
