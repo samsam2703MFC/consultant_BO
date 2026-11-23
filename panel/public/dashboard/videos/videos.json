@@ -412,7 +412,7 @@
       ],
       "fichier": "24-parametres.mp4",
       "affiche": "24-parametres.jpg",
-      "duree": "2 min 45",
+      "duree": "2 min 29",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/automatisations.js",
@@ -422,7 +422,7 @@
         "panel/src/automatisations.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_sur": "062ad4f3fd4a087e35086e1bca334243c1fc99e9",
       "tourne_le": "2026-11-23"
     }
   ]
