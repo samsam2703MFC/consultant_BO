@@ -207,6 +207,7 @@ final class TeamTasksService
             'ppwr_month_reviewed' => 'braki PPWR i BDO, zmiany, dowody wysyłek → decyzja → zakończ',
             'intrastat_month_reviewed' => 'wywóz i przywóz UE, kody CN, kursy → deklaracje → zakończ',
             'recipes_month_reviewed' => 'produkty bez receptury, receptury i dane z brakami → decyzja → zakończ',
+            'materials_month_reviewed' => 'karty surowców z brakami, nowe surowce → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kartoteka surowców{% endblock %}
+
+{% block content %}
+{# [401] Assistant « Kartoteka surowców » : App\Services\Organization\Wizards\MaterialsMonthService — écran dans
+   assets/js/materials_month/materials-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Aucune fiche surowca n'est changée ici (liens vers les écrans
+   existants), aucun e-mail envoyé. #}
+<section class="section">
+    <div id="mmApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="mmBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/materials_month/materials-month.js?v={{ asset_v() }}"></script>
+{% endblock %}

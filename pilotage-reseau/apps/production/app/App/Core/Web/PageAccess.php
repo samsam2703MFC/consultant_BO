@@ -59,6 +59,9 @@ final class PageAccess
         // plus long l'emporte sur « /recipes » — et appels ajax), donné au Kierownik produkcji par la migration 240.
         'recipes_month' => ['Receptury i dane produktów — przegląd miesiąca (asystent : produkty bez receptury, receptury i dane produktów z brakami)', 'Produkt', ['/recipes/month', '/ajax/recipes/month'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
+        // [401] Asystent « Kartoteka surowców » (Kierownik produkcji, co miesiąc) : droit propre (page /materials/month — le préfixe le
+        // plus long l'emporte sur « /materials » — et appels ajax), donné au Kierownik produkcji par la migration 241.
+        'materials_month' => ['Kartoteka surowców — przegląd miesiąca (asystent : surowce aktywnych receptur z brakami w karcie, nowe surowce)', 'Produkt', ['/materials/month', '/ajax/materials/month'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
         // [397] Asystent « PPWR i opakowania » (Kierownik produkcji, co miesiąc) : droit propre (page /ppwr/month — le préfixe le

@@ -90,6 +90,9 @@ final class TaskWizards
         // [400] Receptury i dane produktów (Kierownik produkcji — co miesiąc) : aktywne produkty bez receptury, z niepełną recepturą albo danymi, decyzja dla produktu.
         // Libellé distinct du nom proposé dans la matrice (« Receptury i dane produktów ») : les UPDATE des migrations ne prennent que celui-ci.
         'recipes_month_reviewed' => ['Receptury i dane produktów (przegląd miesiąca)', '/recipes/month', 'receptury i dane aktywnych produktów sprawdzone, decyzja dla każdego z brakami', 3],
+        // [401] Kartoteka surowców (Kierownik produkcji — co miesiąc) : surowce aktywnych receptur z brakami w karcie i nowe surowce, decyzja dla surowca.
+        // Libellé distinct du nom proposé dans la matrice (« Kartoteka surowców (kompletność) ») : les UPDATE des migrations ne prennent que celui-ci.
+        'materials_month_reviewed' => ['Kartoteka surowców (przegląd miesiąca)', '/materials/month', 'karty surowców aktywnych receptur i nowe surowce sprawdzone, decyzja dla każdego z brakami', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -147,6 +150,7 @@ final class TaskWizards
         'ppwr_month_reviewed' => 'gdy każdy element z sygnałem — opakowanie używane w aktywnym produkcie z brakiem w Rejestrze PPWR (numer, masa, poziom, rodzaj, materiał, recyklat, recykling, minimalizacja, wymiary) albo w danych BDO, aktywny produkt bez kartonu sprzedażowego, PPC albo poprawnej masy, opakowanie lub produkt zmienione od ostatniego przeglądu, wysyłka poprzedniego miesiąca bez kompletnego dowodu opakowań — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « PPWR i opakowania », krok 3',
         'intrastat_month_reviewed' => 'gdy każdy sygnał poprzedniego miesiąca — produkt z WDT albo surowiec z faktury dostawcy z UE bez kodu CN lub masy netto, waluta bez kursu na miesiąc, odbiorca WDT bez VAT UE, faktura bez surowca albo w walucie obcej bez VAT UE sprzedawcy — ma decyzję (uzupełnione, nie dotyczy), a każda deklaracja (firma × wywóz / przywóz) jest zgłoszona w PUESC z numerem albo poniżej progu z uzasadnieniem — asystent « Intrastat miesiąca », krok 3',
         'recipes_month_reviewed' => 'gdy każdy aktywny produkt z brakiem — bez receptury, receptura nieistniejąca, bez składników albo bez kosztu kartonu, surowce receptury bez ceny, receptura na 1 sztukę zamiast kartonu, brak poprawnej masy, sztuk w kartonie, danych palety, przydatności, kategorii albo działu — ma decyzję (uzupełnione — sprawdzone, przekazane do uzupełnienia, nie dotyczy) — asystent « Receptury i dane produktów », krok 3',
+        'materials_month_reviewed' => 'gdy każdy surowiec z sygnałem — używany w aktywnej recepturze z brakiem w karcie (kategoria, jednostka bazowa, aktualna cena, wielkość opakowania, dostawca albo dostawca nieaktywny, wartości odżywcze surowca spożywczego) albo nowy od ostatniego przeglądu — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « Kartoteka surowców », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -360,6 +364,13 @@ final class TaskWizards
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->recipesMonthReviews(\App\Services\Organization\Wizards\RecipesMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'produkt z decyzją', 'produkty z decyzją', 'produktów z decyzją')] + $out;
+                }
+                break;
+            case 'materials_month_reviewed':
+                // [401] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->materialsMonthReviews(\App\Services\Organization\Wizards\MaterialsMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'surowiec z decyzją', 'surowce z decyzją', 'surowców z decyzją')] + $out;
                 }
                 break;
             case 'customers_data_checked':
