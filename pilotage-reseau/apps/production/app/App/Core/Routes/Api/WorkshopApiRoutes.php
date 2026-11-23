@@ -11,6 +11,7 @@ use App\Controllers\Api\Workshop\DriverController;
 use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\ExecutionController;
 use App\Controllers\Api\Workshop\GroupController;
+use App\Controllers\Api\Workshop\HalaController;
 use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\ManagerController;
 use App\Controllers\Api\Workshop\OpenApiController;
@@ -336,6 +337,21 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'order', 'kiosk'],
             ['POST', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'check', 'kiosk'],
             // Komunikaty kierownika produkcji [232] (tablica « Zadania zespołu ») : tablet grupy, pakowania, kierowcy ; « Przeczytane » PIN-em.
+            // [409–411] Tablet hali « Mój dzień » : ścieżka dnia grupy (makieta A–G), « Pomoc », widok « Zmiana » brygadzisty (H).
+            ['GET', '/kiosk/hala/day', HalaController::class, 'day', 'kiosk_employee'],
+            ['PUT', '/kiosk/hala/made/{id:\d+}', HalaController::class, 'made', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/steps', HalaController::class, 'step', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/bags', HalaController::class, 'scan', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/chill', HalaController::class, 'chillStart', 'kiosk_employee'],
+            ['PUT', '/kiosk/hala/chill/{id:\d+}', HalaController::class, 'chillMeasure', 'kiosk_employee'],
+            ['PUT', '/kiosk/hala/clean/{id:\d+}', HalaController::class, 'clean', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/close', HalaController::class, 'close', 'kiosk_employee'],
+            ['GET', '/kiosk/hala/help', HalaController::class, 'helpState', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/help', HalaController::class, 'help', 'kiosk_employee'],
+            ['PATCH', '/kiosk/hala/help/{id:\d+}', HalaController::class, 'helpAction', 'kiosk_employee'],
+            ['GET', '/kiosk/hala/shift', HalaController::class, 'shift', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/shift/validate', HalaController::class, 'validateShift', 'kiosk_employee'],
+            ['GET', '/kiosk/hala/photos/{id:\d+}', HalaController::class, 'photo', 'kiosk'],
             ['GET', '/kiosk/messages', TaskMessageController::class, 'list', 'kiosk'],
             ['POST', '/kiosk/messages/{id:\d+}/read', TaskMessageController::class, 'read', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],

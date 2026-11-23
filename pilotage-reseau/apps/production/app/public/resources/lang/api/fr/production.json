@@ -139,7 +139,12 @@
     "BUY_BELOW_MINIMUM": "{material} : quantité sous le minimum de commande de l'offre ({minimum}) — augmentez la quantité ou choisissez une autre offre.",
     "BUY_NO_TEMPLATE": "Modèle d'e-mail « buy_request » manquant — ajoutez-le dans Communication → Modèles.",
     "BUY_LINK_UNKNOWN": "Ce lien n'est pas valable.",
-    "BUY_LINK_EXPIRED": "Le délai de réponse est passé — le lien est fermé."
+    "BUY_LINK_EXPIRED": "Le délai de réponse est passé — le lien est fermé.",
+    "HALA_STEP_INCOMPLETE": "Cette étape n'est pas encore terminée ({step}) — terminez-la sur la tablette.",
+    "HALA_NO_BATCH": "Comptez d'abord le fait pour ce produit (« Co robię dziś »), puis scannez les sacs.",
+    "HALA_HELP_CLOSED": "Cet appel est déjà fermé.",
+    "HALA_NOT_SHIFT_LEAD": "La vue « Zmiana » est réservée au chef d'équipe.",
+    "HALA_SHIFT_NOT_READY": "Tous les groupes ne sont pas verts et validés ({groups}) ou des appels sont ouverts ({calls})."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -593,7 +598,12 @@
     "buy_round": "achats de la semaine",
     "supplier": "fournisseur",
     "complaint": "réclamation",
-    "pallet_entry": "saisie de palettisation"
+    "pallet_entry": "saisie de palettisation",
+    "step": "étape",
+    "zone": "zone de nettoyage",
+    "chill": "mesure de refroidissement",
+    "help": "appel",
+    "photo": "photo"
   },
   "documents": {
     "team_sheet_title": "Plan de l'équipe",

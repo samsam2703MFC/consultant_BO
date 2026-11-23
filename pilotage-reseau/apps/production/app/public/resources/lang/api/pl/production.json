@@ -139,7 +139,12 @@
     "BUY_BELOW_MINIMUM": "{material} : ilość poniżej minimum zamówienia oferty ({minimum}) — zwiększ ilość albo wybierz inną ofertę.",
     "BUY_NO_TEMPLATE": "Brak szablonu e-maila « buy_request » — dodaj go w Komunikacji → Szablony.",
     "BUY_LINK_UNKNOWN": "Link jest nieprawidłowy.",
-    "BUY_LINK_EXPIRED": "Termin odpowiedzi minął — link jest zamknięty."
+    "BUY_LINK_EXPIRED": "Termin odpowiedzi minął — link jest zamknięty.",
+    "HALA_STEP_INCOMPLETE": "Ten krok nie jest jeszcze skończony ({step}) — dokończ go na tablecie.",
+    "HALA_NO_BATCH": "Najpierw policz zrobione dla tego produktu (« Co robię dziś »), potem skanuj worki.",
+    "HALA_HELP_CLOSED": "To wezwanie jest już zamknięte.",
+    "HALA_NOT_SHIFT_LEAD": "Widok « Zmiana » jest tylko dla brygadzisty.",
+    "HALA_SHIFT_NOT_READY": "Nie wszystkie grupy są zielone i zatwierdzone ({groups}) albo są otwarte wezwania ({calls})."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -593,7 +598,12 @@
     "buy_round": "zakupy tygodnia",
     "supplier": "dostawca",
     "complaint": "reklamacja",
-    "pallet_entry": "wpis paletyzacji"
+    "pallet_entry": "wpis paletyzacji",
+    "step": "krok",
+    "zone": "strefa sprzątania",
+    "chill": "pomiar schładzania",
+    "help": "wezwanie",
+    "photo": "zdjęcie"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",

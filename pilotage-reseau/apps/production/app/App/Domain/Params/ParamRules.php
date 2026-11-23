@@ -117,6 +117,11 @@ final class ParamRules
         // [406] Teczka do audytu : jours de grâce après le rythme d'un assistant de contrôle, jours avant le contrôle d'un document
         'audit_folder.grace_days' => [0, 60, true],
         'audit_folder.alert_days' => [0, 90, true],
+        // [409–411] Tablet hali : schładzanie (°C au cœur, délai), retard des groupes (vue Zmiana), rafraîchissement des wezwania
+        'hala.chill_target_c' => [-10, 30, false],
+        'hala.chill_max_minutes' => [10, 720, true],
+        'hala.delay_tolerance_pct' => [0, 100, true],
+        'hala.help_poll_s' => [5, 120, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
