@@ -208,6 +208,18 @@ class PositionController extends BaseController
         ]);
     }
 
+    /** [422] Wszystkie karty aktywnych stanowisk (PL, FR albo PL + FR) — jeden plik do druku. */
+    public function allSheetsPdf()
+    {
+        $lang = (string) ($_GET['lang'] ?? 'pl');
+        $file = $this->sheets->pdfAll(in_array($lang, ['pl', 'fr', 'both'], true) ? $lang : 'pl');
+        return new Response($file['content'], 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $file['filename'] . '"',
+            'Content-Length' => strlen($file['content']),
+        ]);
+    }
+
     public function saveSheet($id)
     {
         try {

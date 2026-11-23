@@ -119,24 +119,35 @@
         </div>
     </div>
 
-    <div class="row g-3">
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header"><h4 class="card-title">Zadania cykliczne · Tâches récurrentes</h4><p class="at-sub mb-0">Z listy « Moje zadania » — edycja na stronie Stanowiska i zadania.</p></div>
-                <div class="card-body pt-0">
-                    {% for task in sheet.tasks %}
-                        <div class="d-flex justify-content-between gap-2 border-bottom py-1"><span>{{ task.title_pl }}</span><span class="at-sub text-nowrap">{{ task.frequency[0] }}</span></div>
-                    {% else %}<span class="at-sub">Brak zadań cyklicznych.</span>{% endfor %}
-                </div>
-            </div>
+    {# [422] Zadania i jak je wykonać : un bloc par tâche (App\Services\Organization\TaskSheet), lecture seule — la même chose
+       que le PDF. Les étapes des tâches manuelles s'écrivent dans Administracja › Zadania stanowisk (plan du poste). #}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between flex-wrap gap-2 align-items-start">
+            <div><h4 class="card-title mb-1">Zadania i jak je wykonać <span class="at-sub">· Tâches et comment les faire</span></h4>
+                <p class="at-sub mb-0">Kiedy, gdzie, krok po kroku, kiedy jest zrobione — te same zadania co « Moje zadania ». Kroki zadań ręcznych : Administracja › Zadania stanowisk.</p></div>
+            {% if can_see('/organization/week-plan/' ~ p.id) %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/week-plan/{{ p.id }}"><i class="bi bi-pencil-square"></i> Zadania stanowiska</a>{% endif %}
         </div>
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header"><h4 class="card-title">Strony ERP stanowiska · Pages de l’ERP</h4><p class="at-sub mb-0">Uprawnienia i menu (administrator).</p></div>
-                <div class="card-body pt-0">
-                    <div class="at-chips">{% for page in sheet.pages %}<span class="at-chip">{{ page }}</span>{% else %}<span class="at-sub">{{ p.kind == 'atelier' ? 'Stanowisko pracowni : tablet produkcji lub tablet kierowcy.' : 'Brak przypisanych stron.' }}</span>{% endfor %}</div>
+        <div class="card-body pt-0">
+            {% for task in sheet.tasks %}
+                <div class="at-howto">
+                    <div class="at-howto-head"><b>{{ loop.index }}. {{ task.title[0] }}</b>
+                        <span>{{ task.rhythm[0] }}{{ task.duration ? ' · ' ~ task.duration : '' }}{% if task.auto %} · <i class="bi bi-magic" title="Asystent — zadanie odhacza się samo"></i>{% endif %}</span></div>
+                    <dl class="at-howto-body">
+                        <dt>Kiedy</dt><dd>{{ task.when[0] }}</dd>
+                        <dt>Gdzie</dt><dd>{% if task.link and not task.auto %}<a href="{{ root }}{{ task.link }}">{{ task.where[0] }}</a>{% else %}{{ task.where[0] }}{% endif %}</dd>
+                        <dt>Jak</dt><dd>{% if task.steps.pl %}<ol class="at-howto-steps">{% for step in task.steps.pl %}<li>{{ step }}</li>{% endfor %}</ol>{% else %}<span class="at-sub fst-italic">{{ sheet.no_steps[0] }}</span>{% endif %}</dd>
+                        <dt>Gotowe, gdy</dt><dd><b>{{ task.done[0] }}</b></dd>
+                        <dt>Problem ?</dt><dd>{{ task.problem[0] }}</dd>
+                    </dl>
                 </div>
-            </div>
+            {% else %}<span class="at-sub">Brak zadań cyklicznych.</span>{% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Strony ERP stanowiska · Pages de l’ERP</h4><p class="at-sub mb-0">Uprawnienia i menu (administrator).</p></div>
+        <div class="card-body pt-0">
+            <div class="at-chips">{% for page in sheet.pages %}<span class="at-chip">{{ page }}</span>{% else %}<span class="at-sub">{{ p.kind == 'atelier' ? 'Stanowisko pracowni : tablet produkcji lub tablet kierowcy.' : 'Brak przypisanych stron.' }}</span>{% endfor %}</div>
         </div>
     </div>
 </section>
