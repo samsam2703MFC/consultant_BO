@@ -42,6 +42,8 @@
   "col_ship": "Pour l'expédition",
   "col_stock": "Pour le stock",
   "waiting": "non réparti : {qty}",
+  "proposed_note": "Chiffres en italique : à produire, pas encore enregistrés dans le plan de la semaine — répartis sur les jours comme « Répartir sur les jours » (à partir d'aujourd'hui, dans les heures libres de l'équipe, envois avant le départ).",
+  "proposed_title": "À produire — pas encore enregistré dans le plan de la semaine",
   "due": "départ {day}",
   "col_date": "Jour",
   "col_supplier": "Fournisseur",

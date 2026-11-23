@@ -38,6 +38,9 @@ final class TeamSheetService
         $week = $this->weeks->week($date, $context);
         $recipes = $this->supply->recipes();
         $deliveries = $this->deliveries($week['week_start'], $week['week_end'], $lang);
+        // [386] Ce qui reste « do rozplanowania » est inscrit dans les jours, comme le répartirait « Rozdziel na dni »
+        // (calcul seul : le plan n'est pas modifié).
+        $suggested = $this->weeks->suggested($date, $context);
         $products = [];
         foreach ($week['products'] as $p) $products[(int) ($p['group_id'] ?? 0)][] = $p;
         $lanes = array_column(array_map(fn($g) => $g + ['key' => (int) ($g['id'] ?? 0)], $week['groups']), null, 'key');
@@ -46,7 +49,7 @@ final class TeamSheetService
         foreach ($ids as $id) {
             $lane = $lanes[$id] ?? ['id' => $id ?: null, 'name' => null, 'color' => null, 'days' => []];
             $info = $known[$id] ?? ['id' => null, 'name' => null, 'color' => null];
-            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries);
+            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries, $suggested);
         }
         return [
             'week_start' => $week['week_start'], 'week_end' => $week['week_end'], 'iso_week' => $week['iso_week'], 'today' => $week['today'],
@@ -191,7 +194,7 @@ final class TeamSheetService
         return substr($iso, 8, 2) . '.' . substr($iso, 5, 2) . '.' . substr($iso, 0, 4);
     }
 
-    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries): array
+    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries, array $suggested = []): array
     {
         $days = [];
         foreach ($week['days'] as $d) $days[$d['date']] = ['date' => $d['date'], 'weekday' => $d['weekday'], 'today' => $d['today'], 'past' => $d['past'],
@@ -215,6 +218,16 @@ final class TeamSheetService
                     'unit' => $unit['label'], 'factor' => $unit['factor']];
                 $perDay[$s['day']] = ['quantity' => $s['quantity'], 'cartons' => $s['cartons'], 'time' => $s['time']];
             }
+            // [386] Reste à produire : quantité proposée par jour (en italique), en plus de ce qui est déjà au plan.
+            $proposed = 0.0;
+            foreach ($suggested[$p['item_id']] ?? [] as $day => $q) {
+                if (!isset($days[$day]) || $q <= self::EPS) continue;
+                $cur = $perDay[$day] ?? ['quantity' => 0.0, 'cartons' => 0.0, 'time' => null];
+                $perDay[$day] = ['quantity' => round($cur['quantity'] + $q, 3), 'cartons' => $p['ppc'] ? round(($cur['quantity'] + $q) / $p['ppc'], 1) : $cur['cartons'],
+                    'time' => $cur['time'], 'proposed' => round($q, 3)];
+                $proposed += $q;
+            }
+            ksort($perDay);
             $due = array_values(array_filter(array_column($p['direct_parts'], 'due_date')));
             // Do zrobienia = to, co leży na dniach (także 📌 ponad potrzebę tygodnia), plus nierozplanowana reszta.
             $total = array_sum(array_column($p['slots'], 'quantity')) + (float) $p['unassigned_qty'];
@@ -222,7 +235,9 @@ final class TeamSheetService
                 'batch' => $p['batch'], 'quantity' => round($total, 3), 'need' => $p['quantity'], 'cartons' => $p['ppc'] ? round($total / $p['ppc'], 1) : null,
                 'batches' => $p['batch'] ? round($total / $p['batch'], 2) : null, 'hours' => round(array_sum(array_column($p['slots'], 'hours')) + (float) $p['unassigned_h'], 2),
                 // Nadwyżka ponad potrzebę tygodnia idzie na magazyn.
-                'direct' => $p['direct'], 'stock' => round(max(0.0, $total - (float) $p['direct']), 3), 'due_date' => $due ? min($due) : null, 'unassigned_qty' => round((float) $p['unassigned_qty'], 3), 'days' => $perDay];
+                'direct' => $p['direct'], 'stock' => round(max(0.0, $total - (float) $p['direct']), 3), 'due_date' => $due ? min($due) : null,
+                // Reste que la répartition n'a pu poser sur aucun jour (semaine passée) : seul cas encore affiché « nierozplanowane ».
+                'unassigned_qty' => round(max(0.0, (float) $p['unassigned_qty'] - $proposed), 3), 'proposed_qty' => round($proposed, 3), 'days' => $perDay];
             if ($p['ppc'] && $total > self::EPS && isset($recipes[$p['item_id']])) {
                 foreach ($recipes[$p['item_id']] as $ing) {
                     $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $total / $p['ppc'] * $ing['quantity'];
@@ -246,6 +261,7 @@ final class TeamSheetService
         unset($d);
         usort($rows, fn($a, $b) => [array_key_first($a['days']) ?? '9', $a['name']] <=> [array_key_first($b['days']) ?? '9', $b['name']]);
         return [
+            'proposed' => count(array_filter($rows, fn($r) => $r['proposed_qty'] > self::EPS)),
             'id' => $info['id'], 'name' => $info['name'], 'color' => $info['color'],
             'people' => (int) max([0, ...array_column($days, 'people')]),
             'available_h' => round(array_sum(array_column($days, 'available_h')), 2), 'required_h' => round(array_sum(array_column($days, 'required_h')), 2),
@@ -325,8 +341,11 @@ final class TeamSheetService
                 $cols = '';
                 foreach ($team['days'] as $d) {
                     $x = $r['days'][$d['date']] ?? null;
+                    $q = $x ? $this->e($this->qty($x['quantity'], $r['unit'], $r['factor'], false)) : '';
+                    // [386] Quantité proposée (pas encore au plan) : en italique.
+                    if ($x && !empty($x['proposed'])) $q = '<i>' . $q . '</i>';
                     $cols .= '<td width="6%" align="center" style="' . $bg . self::CELL . '">' . ($x ? ($x['time'] ? '<span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($x['time']) . '</span><br>' : '')
-                        . $this->e($this->qty($x['quantity'], $r['unit'], $r['factor'], false)) : '') . '</td>';
+                        . $q : '') . '</td>';
                 }
                 $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="' . $bg . self::CELL . '"><b>' . $this->e($r['name']) . '</b>'
                     . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '')
@@ -341,6 +360,7 @@ final class TeamSheetService
                     . $cols . '</tr>';
             }
             $html .= '</tbody></table>';
+            if ($team['proposed'] ?? 0) $html .= '<p style="font-size:6.5pt;color:' . self::MUTED . '"><i>' . $this->e($tr->text('team_sheet_proposed_note')) . '</i></p>';
         }
         $sections[] = [$tr->text('team_sheet_production'), $html];
 

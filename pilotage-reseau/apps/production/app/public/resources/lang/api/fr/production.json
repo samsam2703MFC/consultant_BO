@@ -619,6 +619,7 @@
     "team_sheet_col_stock": "Pour le stock",
     "team_sheet_due": "départ {day}",
     "team_sheet_waiting": "non réparti : {qty}",
+    "team_sheet_proposed_note": "Chiffres en italique : à produire, pas encore enregistrés dans le plan de la semaine — répartis sur les jours comme « Répartir sur les jours » (à partir d'aujourd'hui, dans les heures libres de l'équipe, envois avant le départ).",
     "team_sheet_col_date": "Jour",
     "team_sheet_col_supplier": "Fournisseur",
     "team_sheet_col_material": "Matière",
