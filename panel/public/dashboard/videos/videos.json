@@ -318,6 +318,68 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "boite-mail",
+      "genre": "tuto",
+      "titre": "La boîte mail du magasin",
+      "resume": "Ouvrir la boîte, lire et répondre avec un modèle, puis les modes IA : le briefing des non-lus, le pilote et ses garde-fous, le radar des demandes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-boite-mail.mp4",
+      "affiche": "20-boite-mail.jpg",
+      "duree": "2 min 55",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/public/dashboard/boite.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "0cb9607019b96852c3d0fc8118bfca91b59987da",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "assistant-ia",
+      "genre": "tuto",
+      "titre": "L’Assistant IA",
+      "resume": "Choisir son assistant, poser une question et lire la réponse — chiffres, graphique, priorités —, creuser en conversation, le Coach Vente et le Professeur.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-assistant-ia.mp4",
+      "affiche": "21-assistant-ia.jpg",
+      "duree": "2 min 25",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "47ee70cda0ce5a08701b41899d16264f364a52e1",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "se-former",
+      "genre": "tuto",
+      "titre": "Formations et suivi",
+      "resume": "L’accueil de la formation, la méga-barre qui cherche dans tout le catalogue, le dossier de formation du magasin et une formation pas à pas, avec la photo du jour.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-se-former.mp4",
+      "affiche": "22-se-former.jpg",
+      "duree": "2 min 19",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "panel/public/dashboard/formation.css",
+        "panel/public/dashboard/seformer.js",
+        "panel/public/dashboard/seformer.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "24028fad00ac4daeb93221b46d2fb2e9ad25caec",
+      "tourne_le": "2026-11-23"
+    },
+    {
       "id": "coffre-fort",
       "genre": "tuto",
       "titre": "Mon coffre-fort",

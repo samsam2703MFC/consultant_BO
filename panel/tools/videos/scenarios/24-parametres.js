@@ -20,7 +20,12 @@ async function cliquerFixe(f, sel, apres = 900) {
 }
 
 module.exports = async function () {
-  const f = await Film.ouvrir('24-parametres', { vue: 'mails', serie: 'Mode d’emploi', titreSerie: 'Mails et automatisations', duree: 'env. 3 min' });
+  // Mails et automatisations se règlent boîte ouverte : la fausse boîte (mocks/70_boite.js) est ouverte avant de filmer.
+  const f = await Film.ouvrir('24-parametres', { vue: 'mails', serie: 'Mode d’emploi', titreSerie: 'Mails et automatisations', duree: 'env. 3 min',
+    avant: async p => {
+      await p.evaluate(() => fetch('../api/cockpit/dashboard/boite/ouvrir', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ shop: '4', motDePasse: 'demo' }) }));
+      await p.reload(); await p.waitForTimeout(2500);
+    } });
   await f.couverture({
     kicker: 'Mode d’emploi', titre: 'Mails et<br>automatisations', accroche: 'Ce que le magasin envoie tout seul',
     programme: ['La roue des paramètres', 'Les envois du magasin', 'Régler le rappel de la veille', 'L’équipe qui reçoit les fiches'],
