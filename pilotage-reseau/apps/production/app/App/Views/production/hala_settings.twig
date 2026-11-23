@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Tablet hali : kroki i strefy{% endblock %}
+
+{% block content %}
+{# [409] Produkcja › Tablet hali : App\Services\Workshop\Execution\HalaService (settingsData, saveGroup, saveZone) — écran dans
+   assets/js/production/hala-settings.js. Droit « hala » (Jakość, Kierownik produkcji). La tablette du groupe lit ces réglages
+   (GET /kiosk/hala/day) ; les limites de schładzanie et la zmiana sont dans Ustawienia › Parametry (hala.*). #}
+<section class="section">
+    <div class="page-heading"><h3>Tablet hali : kroki dnia i strefy sprzątania</h3>
+        <p class="text-muted">Każda grupa widzi na tablecie tylko swoje kroki, po kolei. Strefy sprzątania : to, co osoba dotyka na koniec zmiany.</p></div>
+    <div id="hsApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="hsBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/production/hala-settings.js?v={{ asset_v() }}"></script>
+{% endblock %}

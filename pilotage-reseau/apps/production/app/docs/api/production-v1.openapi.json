@@ -20081,6 +20081,1027 @@
                 ]
             }
         },
+        "/kiosk/hala/day": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Mój dzień : ścieżka dnia grupy / Ma journée : parcours du jour du groupe",
+                "operationId": "halaDay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Groupe de la tablette, personne identifiée (PIN). Étapes réglées pour le groupe (n_hala_group, Produkcja › Tablet hali) dans l'ordre fixe make, bags, chill, clean, pack puis end ; état done / now / later (étape terminée = « Dalej » confirmé aujourd'hui et condition remplie). Blocs : make (plan du jour de l'équipe, fait, pertes), bags (surowce suivis des parties du jour), chill (mesures, limites hala.chill_*), clean (strefy du groupe), pack (commandes emballées du jour d'expédition), end (résumé, can_close). person.lead : poste dans hala.shift_lead_positions (vue Zmiana). help : wezwanie ouvert du groupe.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/made/{id}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Licznik « zrobione » / Compteur « fait »",
+                "operationId": "halaMade",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "id = article (n_prod_item). made = quantité faite aujourd'hui (unité de la fiche) : plus → la partie la plus récente du jour grandit (sinon nouvelle partie), moins → retiré des parties récentes. Pas moins que les pertes (409 WASTE_EXCEEDS_PRODUCED). Jour validé : 409 DAY_CLOSED. La ligne n'est pas validée (« Zatwierdź dzień » valide le jour).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaMadeInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/steps": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Dalej : krok zrobiony / Suivant : étape faite",
+                "operationId": "halaStep",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "step parmi les étapes du groupe. bags : chaque partie du jour a le numéro de lot de chaque surowiec suivi ; chill : chaque sortie de four mesurée ; clean : toutes les strefy faites — sinon 409 HALA_STEP_INCOMPLETE.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaStepInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/bags": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Skanuj worek / Scanner un sac",
+                "operationId": "halaBag",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaScanResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "code = numéro lu sur le sac (registre « Partie surowców »). result ok : lot enregistré dans les parties du jour du produit (comme PUT /kiosk/production/{id}/lots/{material}) ; wrong : surowiec hors recette (STOP, rien enregistré) ; expired : date dépassée (STOP) ; unknown : code absent du registre — renvoyer avec material_id (numéro ajouté au registre « do sprawdzenia »). 409 HALA_NO_BATCH : rien de fait pour ce produit aujourd'hui.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaScanInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/chill": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Wyjście z pieca : minutnik / Sortie du four : minuteur",
+                "operationId": "halaChillStart",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Article du jour ; limites copiées au départ (hala.chill_target_c, hala.chill_max_minutes). client_uuid rejouable.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaChillInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/chill/{id}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Temperatura w środku / Température à cœur",
+                "operationId": "halaChillMeasure",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Au-dessus de la limite ou après le délai : wezwanie « chill » au brygadzista et élément du HACCP miesiąca.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaChillMeasureInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/clean/{id}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Strefa sprzątnięta / Zone nettoyée",
+                "operationId": "halaClean",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "id = strefa du groupe de la tablette ; done = false annule (erreur de toucher). Qui et quand sont enregistrés.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaCleanInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/close": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zatwierdź dzień / Valider la journée",
+                "operationId": "halaClose",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toutes les étapes terminées (sinon 409 HALA_STEP_INCOMPLETE, step). Avec production : validation du jour (comme POST /kiosk/production/close — tâche « Dzień grupy ») ; partie sans kontrola jakości (obchód du Kierownik produkcji) : notée automatiquement. Puis fin de journée du groupe (n_hala_day).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/help": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Stan wezwania grupy / État de l'appel du groupe",
+                "operationId": "halaHelpState",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaHelpState"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Pomoc : wezwij brygadzistę / Aide : appeler le chef d'équipe",
+                "operationId": "halaHelp",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaHelpState"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Un seul wezwanie ouvert par groupe : un nouvel appui le complète (motif bag / chill plus précis que help). Lu par la vue Zmiana (GET /kiosk/hala/shift).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaHelpInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/help/{id}": {
+            "patch": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Idę / załatwione — Je viens / réglé",
+                "operationId": "halaHelpAction",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaShift"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Chef de zmiana seulement (403 HALA_NOT_SHIFT_LEAD). take : open → taken ; close : → closed. 409 HALA_HELP_CLOSED.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HalaHelpAction"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/shift": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zmiana : stan grup i wezwania / Équipe : état des groupes et appels",
+                "operationId": "halaShift",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaShift"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Chef de zmiana (poste dans hala.shift_lead_positions). Par groupe actif ce jour : fait (%), statut green / gold (retard sur l'heure au-delà de hala.delay_tolerance_pct) / red (wezwanie ouvert, schładzanie hors limites), jour validé. Rafraîchir toutes les poll_s secondes.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/shift/validate": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zatwierdź zmianę / Valider la journée de l'équipe",
+                "operationId": "halaShiftValidate",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaShift"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Chaque groupe vert et validé, aucun wezwanie ouvert — sinon 409 HALA_SHIFT_NOT_READY. Enregistre qui et quand (n_hala_shift).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/hala/photos/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zdjęcie produktu / Photo du produit",
+                "operationId": "halaPhoto",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HalaPhoto"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "id = article ; photo de la fiche produit (emplacement 0), en data URL.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/messages": {
             "get": {
                 "tags": [
@@ -39046,6 +40067,569 @@
                                 }
                             }
                         }
+                    }
+                }
+            },
+            "HalaDay": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "guided": {
+                        "type": "boolean"
+                    },
+                    "settings": {
+                        "type": "object"
+                    },
+                    "group": {
+                        "type": "object"
+                    },
+                    "person": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "name": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "first_name": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "lead": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "shift": {
+                        "type": "object"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": "string",
+                                    "enum": [
+                                        "make",
+                                        "bags",
+                                        "chill",
+                                        "clean",
+                                        "pack",
+                                        "end"
+                                    ]
+                                },
+                                "state": {
+                                    "type": "string",
+                                    "enum": [
+                                        "done",
+                                        "now",
+                                        "later"
+                                    ]
+                                },
+                                "done_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "now": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "make": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "bags": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "chill": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "clean": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "pack": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "end": {
+                        "type": "object"
+                    },
+                    "waste_reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "help": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "group_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "group": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "employee": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "step": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "reason": {
+                                "type": "string",
+                                "enum": [
+                                    "help",
+                                    "bag",
+                                    "chill"
+                                ]
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "open",
+                                    "taken",
+                                    "closed"
+                                ]
+                            },
+                            "created_at": {
+                                "type": "string"
+                            },
+                            "taken_at": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "taken_by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "closed_at": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "poll_s": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "HalaMadeInput": {
+                "type": "object",
+                "required": [
+                    "made"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "made": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                }
+            },
+            "HalaStepInput": {
+                "type": "object",
+                "required": [
+                    "step"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "step": {
+                        "type": "string",
+                        "enum": [
+                            "make",
+                            "bags",
+                            "chill",
+                            "clean",
+                            "pack"
+                        ]
+                    }
+                }
+            },
+            "HalaScanInput": {
+                "type": "object",
+                "required": [
+                    "item_id",
+                    "code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "material_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "HalaScanResult": {
+                "type": "object",
+                "properties": {
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "ok",
+                            "wrong",
+                            "expired",
+                            "unknown"
+                        ]
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "material": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "material_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "best_before": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "expected": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "choices": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "batches": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "day": {
+                        "$ref": "#/components/schemas/HalaDay"
+                    }
+                }
+            },
+            "HalaChillInput": {
+                "type": "object",
+                "required": [
+                    "item_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "HalaChillMeasureInput": {
+                "type": "object",
+                "required": [
+                    "temp_c"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "temp_c": {
+                        "type": "number",
+                        "minimum": -40,
+                        "maximum": 120
+                    }
+                }
+            },
+            "HalaCleanInput": {
+                "type": "object",
+                "required": [
+                    "done"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "done": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "HalaHelpInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "step": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "reason": {
+                        "type": "string",
+                        "enum": [
+                            "help",
+                            "bag",
+                            "chill"
+                        ],
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "HalaHelpState": {
+                "type": "object",
+                "properties": {
+                    "help": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "group_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "group": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "employee": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "step": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "reason": {
+                                "type": "string",
+                                "enum": [
+                                    "help",
+                                    "bag",
+                                    "chill"
+                                ]
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "open",
+                                    "taken",
+                                    "closed"
+                                ]
+                            },
+                            "created_at": {
+                                "type": "string"
+                            },
+                            "taken_at": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "taken_by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "closed_at": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "poll_s": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "HalaHelpAction": {
+                "type": "object",
+                "required": [
+                    "action"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "take",
+                            "close"
+                        ]
+                    }
+                }
+            },
+            "HalaShift": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "person": {
+                        "type": "object"
+                    },
+                    "shift": {
+                        "type": "object"
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "make",
+                                        "pack"
+                                    ]
+                                },
+                                "pct": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "green",
+                                        "gold",
+                                        "red"
+                                    ]
+                                },
+                                "closed_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "calls": {
+                                    "type": "integer"
+                                },
+                                "chill_bad": {
+                                    "type": "integer"
+                                },
+                                "delay_min": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "calls": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "group": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "step": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                        "help",
+                                        "bag",
+                                        "chill"
+                                    ]
+                                },
+                                "note": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "open",
+                                        "taken",
+                                        "closed"
+                                    ]
+                                },
+                                "created_at": {
+                                    "type": "string"
+                                },
+                                "taken_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "taken_by": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "closed_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "calls_today": {
+                        "type": "integer"
+                    },
+                    "validated": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "can_validate": {
+                        "type": "boolean"
+                    },
+                    "poll_s": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "HalaPhoto": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "src": {
+                        "type": "string"
                     }
                 }
             },
