@@ -278,3 +278,4 @@
 2026-11-23T14:19:31Z Mon équipe : le compte admin de l'ERP relit et réécrit ce que le panel refuse au compte du cockpit (employés du magasin)
 2026-11-23T14:24:53Z Mon équipe : étiquettes des temps morts courts (infobulle)
 2026-11-23T15:29:07Z Mon équipe : le tableau de la semaine, la fenêtre d'un service au clic (adapter, ajouter, retirer une personne du shift)
+2026-11-23T16:06:39Z Mon équipe : tracer un service à la souris, le planning imprimé fait par le cockpit, Semaine fondue avec le planogramme, vue Mois, « À compléter » et « au repos » retirés

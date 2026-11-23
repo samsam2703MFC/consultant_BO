@@ -41,7 +41,7 @@ declare(strict_types=1);
  */
 
 const EQP_POSTES_MAX = 300;          // le plafond du panel pour une liste de postes
-const EQP_JOURS_MAX = 14;            // un planning lu couvre deux semaines au plus
+const EQP_JOURS_MAX = 31;            // un planning lu couvre un mois au plus (la vue Mois, 23/11/2026)
 const EQP_SEUIL_MORT = 10;           // un temps mort : 10 minutes et plus sans ticket (la valeur par défaut de l'onglet)
 const EQP_CREUX_PART = 0.5;          // un creux habituel : un quart d'heure mort au moins un jour sur deux des 4 d'avant
 
@@ -404,7 +404,7 @@ function eqpOuverturesCalcul(array $par): array
     return $out;
 }
 
-/** GET /dashboard/equipe/planning?shop=&du=AAAA-MM-JJ&jours=1..14 — les services, l'équipe, le CA prévu, le budget. */
+/** GET /dashboard/equipe/planning?shop=&du=AAAA-MM-JJ&jours=1..31 — les services, l'équipe, le CA prévu, le budget. */
 function ep_equipe_planning(): array
 {
     $shop = eqpShop();
@@ -413,6 +413,12 @@ function ep_equipe_planning(): array
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return eqpErreur(400, 'du : AAAA-MM-JJ'); }
     $n = max(1, min(EQP_JOURS_MAX, (int) ($_GET['jours'] ?? 7)));
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
+    return eqpPlanningDonnees($shop, $du, $n);
+}
+
+/** Le planning de $n jours à partir de $du : ce que rend GET /dashboard/equipe/planning (l'écran et le PDF). */
+function eqpPlanningDonnees(int $shop, string $du, int $n): array
+{
     $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, $n - 1));
     $chemins = ['emp' => '/shops/' . $shop . '/employees?include=positions', 'ws' => '/operational-framework/workstations', 'prod' => '/shops/' . $shop . '/products/available'];
     foreach ($jours as $j) { $chemins['sch' . $j] = '/shops/' . $shop . '/schedule?date=' . $j; }
@@ -473,7 +479,12 @@ function ep_equipe_planning(): array
     return $r;
 }
 
-/** GET /dashboard/equipe/planning/pdf?shop=&du=&jours=7|14&presentation=magasin|departements — le PDF du panel (sort, puis exit). */
+/**
+ * GET /dashboard/equipe/planning/pdf?shop=&du=&jours=7|14&presentation=magasin|departements — le planning imprimé, fait par
+ * le cockpit (23/11/2026 : « le panel ne sert pas le PDF du planning » ; la route /shops/{id}/schedule/document du module
+ * du panel n'est pas dans son swagger). A4 paysage au gabarit des documents (§13.4) : une page par semaine, ou par
+ * semaine et par département (le secteur du premier poste, sinon le poste). Sort, puis exit.
+ */
 function ep_equipe_planning_pdf(): void
 {
     $json = static function (int $code, string $msg): void {
@@ -486,20 +497,95 @@ function ep_equipe_planning_pdf(): void
     if (!in_array($jours, [7, 14], true)) { $json(422, 'jours : 7 ou 14'); }
     if (!in_array($pres, ['magasin', 'departements'], true)) { $json(422, 'presentation : magasin ou departements'); }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { $json(503, 'compte du panel non configuré'); }
-    $chemin = '/shops/' . $shop . '/schedule/document?' . http_build_query(['start_date' => $du, 'days' => $jours, 'layout' => $pres === 'magasin' ? 'shop' : 'departments']);
-    [$code, $pdf] = PanelApi::binaire($chemin);
-    if (in_array($code, [401, 403], true) && class_exists('ErpApi') && ErpApi::disponible()) { $x = ErpApi::brut($chemin); $code = (int) $x['code']; $pdf = $x['corps']; }
-    if ($code !== 200 || !is_string($pdf) || !str_starts_with($pdf, '%PDF')) {
-        $json($code === 404 ? 404 : 502, $code === 404 ? 'le panel ne sert pas le PDF du planning' : 'le panel n’a pas rendu le PDF du planning (HTTP ' . $code . ')');
-    }
-    $nom = 'Planning_' . $shop . '_' . $du . '.pdf';
+    if (!function_exists('rapPdfRendu')) { $json(501, 'aucun moteur PDF sur ce serveur'); }
+    $P = eqpPlanningDonnees($shop, $du, $jours);
+    if (isset($P['error'])) { $json(502, (string) $P['error']); }
+    $nom = function_exists('magasinNom') ? (magasinNom((string) $shop) ?? 'Magasin ' . $shop) : 'Magasin ' . $shop;
+    $html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Planning</title><style>'
+        . (function_exists('docCss') ? docCss() : '') . eqpPdfCss() . '</style></head><body>' . eqpPlanningPdfHtml($P, $pres, $nom) . '</body></html>';
+    $pdf = rapPdfRendu($html, ['magasin' => $nom, 'rapport' => 'Planning de l’équipe', 'genere' => date('d/m/Y à H:i'), 'envoye' => '', 'paysage' => true]);
+    if ($pdf === null || !str_starts_with($pdf, '%PDF')) { $json(501, 'le PDF ne s’est pas fait sur ce serveur'); }
+    $fichier = 'Planning_' . preg_replace('/[^\w\-]+/u', '_', $nom) . '_' . $du . '.pdf';
     header('Content-Type: application/pdf');
-    header('Content-Length: ' . strlen((string) $pdf));
+    header('Content-Length: ' . strlen($pdf));
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: private, no-store');
-    header('Content-Disposition: attachment; filename="' . $nom . '"');
+    header('Content-Disposition: attachment; filename="' . $fichier . '"');
     echo $pdf;
     exit;
+}
+
+function eqpPdfCss(): string
+{
+    return '.pl{width:100%;border-collapse:collapse;font-size:9.5px;table-layout:fixed}'
+        . '.pl th{font-weight:400;font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a;background:#FBF9F5;padding:6px 5px;text-align:left;border-bottom:1px solid #e6e0d8}'
+        . '.pl td{padding:5px;border-bottom:1px solid #eee8e0;vertical-align:top}'
+        . '.pl td.n{width:17%}.pl td.h,.pl th.h{width:6%;text-align:right}'
+        . '.pl .nm{font-size:10px}.pl .po{display:block;font-size:8px;color:#7a736a}'
+        . '.pl .sv{display:block;white-space:nowrap}.pl .vide{color:#B8B2A8}'
+        . '.pl tr.tot td{background:#F8F4EE;font-size:8.5px;color:#5c5852}'
+        . '.pl-t{margin:0 0 8px;font-size:12px}.pl-t span{color:#7a736a;font-size:9.5px}'
+        . '.pl-page{page-break-after:always}.pl-page:last-child{page-break-after:auto}';
+}
+
+/**
+ * LE PLANNING IMPRIMÉ (pur) : une page par semaine (et par département si demandé) ; une ligne par personne (les
+ * actifs, et ceux qui ont un service), une colonne par jour, les heures de la semaine ; la ligne « Par jour ».
+ */
+function eqpPlanningPdfHtml(array $P, string $presentation, string $magasin): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $jn = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+    $mois = [1 => 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    $secteurs = [];
+    foreach ((array) ($P['secteurs'] ?? []) as $s) { $secteurs[(int) $s['id']] = (string) $s['nom']; }
+    $groupe = static function (array $p) use ($secteurs): string {
+        $sid = (int) (($p['secteurs'] ?? [])[0] ?? 0);
+        if ($sid > 0) { return $secteurs[$sid] ?? 'Secteur ' . $sid; }
+        foreach ((array) ($p['postes'] ?? []) as $w) { if (empty($w['secteur']) && preg_match('/vente|vendeu|comptoir|caisse|verkoop|kassa|sprzeda|sales|counter/i', (string) ($w['nom'] ?? ''))) { return 'Comptoir'; } }
+        return (string) ((($p['postes'] ?? [])[0]['nom'] ?? '') ?: 'Sans poste');
+    };
+    $semaines = array_chunk((array) ($P['jours'] ?? []), 7);
+    $pages = [];
+    foreach ($semaines as $sem) {
+        $dates = array_column($sem, 'date');
+        $parEmp = [];
+        foreach ($sem as $J) { foreach ((array) $J['services'] as $s) { $parEmp[(int) $s['employe']][$J['date']][] = $s; } }
+        $gens = array_values(array_filter((array) ($P['employes'] ?? []), static fn ($p) => !empty($p['actif']) || isset($parEmp[(int) $p['id']])));
+        $lots = $presentation === 'departements' ? [] : ['' => $gens];
+        if ($presentation === 'departements') { foreach ($gens as $p) { $lots[$groupe($p)][] = $p; } ksort($lots, SORT_NATURAL | SORT_FLAG_CASE); }
+        $d0 = $dates[0]; $d1 = end($dates);
+        $titreSem = 'Semaine du ' . (int) substr($d0, 8, 2) . (substr($d0, 5, 2) !== substr($d1, 5, 2) ? ' ' . $mois[(int) substr($d0, 5, 2)] : '') . ' au ' . (int) substr($d1, 8, 2) . ' ' . $mois[(int) substr($d1, 5, 2)] . ' ' . substr($d1, 0, 4);
+        foreach ($lots as $dep => $L) {
+            $th = '<tr><th class="n">Employé</th>';
+            foreach ($dates as $d) { $th .= '<th>' . $jn[(int) date('N', strtotime($d)) - 1] . ' ' . (int) substr($d, 8, 2) . '</th>'; }
+            $th .= '<th class="h">Heures</th></tr>';
+            $rows = ''; $parJour = array_fill_keys($dates, [0, 0.0]); $tot = 0.0;
+            foreach ($L as $p) {
+                $id = (int) $p['id']; $h = 0.0;
+                $rows .= '<tr><td class="n"><span class="nm">' . $e($p['nom']) . '</span><span class="po">' . $e(implode(', ', array_map(static fn ($w) => (string) $w['nom'], (array) ($p['postes'] ?? []))) ?: 'aucun poste') . '</span></td>';
+                foreach ($dates as $d) {
+                    $sv = $parEmp[$id][$d] ?? [];
+                    $c = '';
+                    foreach ($sv as $s) {
+                        $m = (eqpMinutes($s['a']) - eqpMinutes($s['de'])) / 60; $h += $m;
+                        $parJour[$d][0]++; $parJour[$d][1] += $m;
+                        $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . '</span>';
+                    }
+                    $rows .= '<td>' . ($c !== '' ? $c : '<span class="vide">—</span>') . '</td>';
+                }
+                $tot += $h;
+                $rows .= '<td class="h">' . ($h > 0 ? str_replace('.', ',', (string) round($h, 1)) . ' h' : '—') . '</td></tr>';
+            }
+            $rows .= '<tr class="tot"><td class="n">Par jour</td>';
+            foreach ($dates as $d) { $rows .= '<td>' . $parJour[$d][0] . ' serv. · ' . str_replace('.', ',', (string) round($parJour[$d][1], 1)) . ' h</td>'; }
+            $rows .= '<td class="h">' . str_replace('.', ',', (string) round($tot, 1)) . ' h</td></tr>';
+            $entete = function_exists('docEntete') ? docEntete('Planning de l’équipe', $magasin . ' · ' . $titreSem) : '<h2>Planning de l’équipe · ' . $e($magasin . ' · ' . $titreSem) . '</h2>';
+            $pages[] = '<div class="pl-page">' . $entete . ($dep !== '' ? '<p class="pl-t">' . $e($dep) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . '</span></p>' : '')
+                . '<table class="pl">' . $th . $rows . '</table></div>';
+        }
+    }
+    return implode('', $pages);
 }
 
 /* ── Modifier un service ──────────────────────────────────────────────────────────────────────────────────────── */
