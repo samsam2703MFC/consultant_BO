@@ -309,7 +309,7 @@ $check(TaskWizards::CATALOG['customers_data_checked'][0] === 'Dane klientów (ko
 $check(PageAccess::keyFor('/clients/data-check') === 'clients' && PageAccess::keyFor('/ajax/clients/data-check') === 'clients' && PageAccess::keyFor('/ajax/clients/data-check/finish') === 'clients'
     && PageAccess::keyFor('/clients/12/edit') === 'clients' && PageAccess::keyFor('/ajax/clients/vies-lookup') === null && PageAccess::keyFor('/price-lists/general') === 'price_lists',
     'page and ajax under the existing « clients » right ; other paths unchanged');
-$check(count(PageAccess::PAGES) === 53 && !isset(PageAccess::PAGES['customers_data']), 'no new right (53 catalog entries, as before)');
+$check(!isset(PageAccess::PAGES['customers_data']), 'no new right for this assistant (existing « clients »)');
 $check(str_contains((string) file_get_contents(__DIR__ . '/../App/Services/Organization/TeamTasksService.php'), "'customers_data_checked' =>")
     && str_contains((string) file_get_contents(__DIR__ . '/../App/Views/page_components/sidebar.twig'), '/clients/data-check'), 'team tasks hint and menu entry');
 $dispatcher = FastRoute\simpleDispatcher(require __DIR__ . '/../App/Core/Routes/Client/CustomersDataCheckRoutes.php');

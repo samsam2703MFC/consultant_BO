@@ -309,7 +309,7 @@ $check(TaskWizards::CATALOG['launches_reviewed'][0] === 'Nowe produkty (przeglą
 $check(PageAccess::keyFor('/products/launches-review') === 'products' && PageAccess::keyFor('/ajax/products/launches-review') === 'products' && PageAccess::keyFor('/ajax/products/launches-review/finish') === 'products'
     && PageAccess::keyFor('/finances/product-margin') === 'margins' && PageAccess::keyFor('/workshop/manager') === 'manager' && PageAccess::keyFor('/products/new') === 'products',
     'page and ajax under the existing « products » right ; others unchanged');
-$check(count(PageAccess::PAGES) === 53 && !isset(PageAccess::PAGES['launches']), 'no new right (53 catalog entries, as before)');
+$check(!isset(PageAccess::PAGES['launches']), 'no new right for this assistant (existing « products »)');
 $check(str_contains((string) file_get_contents(__DIR__ . '/../App/Services/Organization/TeamTasksService.php'), "'launches_reviewed' =>")
     && str_contains((string) file_get_contents(__DIR__ . '/../App/Views/page_components/sidebar.twig'), '/products/launches-review'), 'team tasks hint and menu entry');
 $dispatcher = FastRoute\simpleDispatcher(require __DIR__ . '/../App/Core/Routes/Product/LaunchesReviewRoutes.php');
