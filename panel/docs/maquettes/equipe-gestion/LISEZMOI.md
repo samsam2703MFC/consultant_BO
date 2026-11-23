@@ -139,3 +139,16 @@ postes, droits d'écriture du compte du cockpit sur `/employees/{id}/workstation
   l'API régénéré (`python3 panel/tools/dashboard-api-index.py`).
 - **Par étapes** proposées : 1. Responsabilités (lecture + affectations) et Planning en lecture + PDF ; 2. l'édition des
   services et les évaluations ; 3. la liste et la fiche des employés.
+
+## La fenêtre d'un service : trois propositions (23/11/2026)
+
+Sam : « retravailler le formulaire, fais-moi 3 propositions ». Dossier `formulaire/` (`formulaire.js`, `formulaire.css`,
+`capturer.cjs`), posées sur le vrai écran Semaine avec les données illustratives. Le même cas pour les trois : ajouter
+Chloé Peeters (Vente, lettre A) le mercredi 25, où le comptoir est vide de 7 h à 10 h. Toutes donnent les heures en 24 h
+au quart d'heure (− / +) : le champ « heure » du navigateur affichait 07:00 AM / 02:00 PM selon la langue de l'ordinateur.
+
+| Capture | La proposition |
+|---|---|
+| `formulaire/form-1-fenetre-compacte.png` | la fenêtre d'aujourd'hui, rangée : les heures, les créneaux, la petite journée (sa barre, le comptoir), puis « Ce que ça change » en quatre lignes (comptoir, budget du jour, de la semaine, ses heures) |
+| `formulaire/form-2-creneaux-d-abord.png` | les créneaux d'abord, chacun avec son effet avant d'être choisi (comble le comptoir ou non, budget du jour, coût) ; « Sur mesure » en touchant les heures (tablette) ; à droite, qui est là ce jour-là |
+| `formulaire/form-3-panneau-a-droite.png` | un panneau à droite, le tableau reste visible et la case est cerclée : sa semaine (jours travaillés, repos), les heures, « le même horaire d'autres jours » (poser plusieurs jours d'un coup), l'effet, la journée |
