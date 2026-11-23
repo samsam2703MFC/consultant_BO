@@ -111,6 +111,9 @@ final class ParamRules
         // [405] Serwisy i przeglądy maszyn : jours avant le terme d'un przegląd, minutes d'un arrêt « awaria » qui demandent un zgłoszenie
         'maintenance.alert_days' => [1, 180, true],
         'maintenance.breakdown_min_minutes' => [0, 600, true],
+        // [406] Teczka do audytu : jours de grâce après le rythme d'un assistant de contrôle, jours avant le contrôle d'un document
+        'audit_folder.grace_days' => [0, 60, true],
+        'audit_folder.alert_days' => [0, 90, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

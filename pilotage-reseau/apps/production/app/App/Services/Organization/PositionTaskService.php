@@ -113,6 +113,7 @@ final class PositionTaskService
         '/clients/data-check' => 'customers_data_checked',
         '/hr/deadlines' => 'staff_deadlines_reviewed',
         '/maintenance' => 'maintenance_reviewed',
+        '/audit-folder' => 'audit_folder_reviewed',
         '/ppwr/month' => 'ppwr_month_reviewed',
         '/intrastat/month' => 'intrastat_month_reviewed',
         '/sop' => 'sop_daily',

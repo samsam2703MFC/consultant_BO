@@ -57,6 +57,9 @@ final class PageAccess
         'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/ajax/products/launches-review', '/semi-products', '/compositions'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
+        // [406] Asystent « Teczka do audytu i kontroli » (Kierownik produkcji, co kwartał) : droit propre (page /audit-folder, PDF et
+        // appels ajax), donné au Kierownik produkcji par la migration 246.
+        'audit_folder' => ['Teczka do audytu i kontroli (asystent : asystenci kontroli i otwarte sprawy w ERP, dokumenty do teczki, teczka PDF)', 'Produkt', ['/audit-folder', '/ajax/audit-folder'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
         // [397] Asystent « PPWR i opakowania » (Kierownik produkcji, co miesiąc) : droit propre (page /ppwr/month — le préfixe le
         // plus long l'emporte sur « /ppwr » — et appels ajax), donné au Kierownik produkcji par la migration 238.
