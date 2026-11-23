@@ -96,6 +96,9 @@ final class ParamRules
         // [385] Dane klientów : mois sans commande au-delà desquels un client n'est plus « actif » (fenêtre des e-mails en erreur et
         // des produits commandés sans prix)
         'customers_data.active_months' => [1, 24, true],
+        // [398] Intrastat miesiąca : seuils annuels (milliers de zł) saisis d'après la réglementation de l'année ; 0 = non défini
+        'intrastat.threshold_dispatch_kpln' => [0, 1000000, false],
+        'intrastat.threshold_arrival_kpln' => [0, 1000000, false],
         // [387] Rutyny poranne AI : interrupteur général et par assistant (0/1), budget mensuel (zł), taux USD → PLN du coût affiché
         'ai.routines_enabled' => [0, 1, true],
         'ai.routines_budget_pln' => [0, 10000, false],
