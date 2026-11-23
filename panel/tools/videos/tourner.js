@@ -31,8 +31,9 @@ async function serveur(site) {
 }
 
 function dureeLisible(mp4) {
-  const s = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', mp4]).toString());
-  const m = Math.floor(s / 60), r = Math.round(s - m * 60);
+  // Arrondi d'abord, puis minutes et secondes : 179,8 s donne « 3 min », jamais « 2 min 60 ».
+  const s = Math.round(parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', mp4]).toString()));
+  const m = Math.floor(s / 60), r = s - m * 60;
   return m ? m + ' min' + (r >= 10 ? ' ' + String(r).padStart(2, '0') : '') : r + ' s';
 }
 
