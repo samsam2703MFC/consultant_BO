@@ -275,3 +275,4 @@
 2026-11-23T10:32:32Z [391-396] reklamacje kwoty, poczta, plan zespolu MTS, zakupy KP, zakres KP ; [387] rutyny AI (wylaczone)
 2026-11-23T12:07:16Z [397-399] PPWR miesiaca, Intrastat miesiaca, na zapas do min
 2026-11-23T14:08:34Z Mon équipe (dashboard franchisé) : carte des responsabilités, planogramme des horaires (linéaires, temps morts, budget d'heures 17/20/22 %), modifier sur la barre, recopier la semaine précédente, matrice A B C D et shift maker (test)
+2026-11-23T14:19:31Z Mon équipe : le compte admin de l'ERP relit et réécrit ce que le panel refuse au compte du cockpit (employés du magasin)
