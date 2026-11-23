@@ -270,3 +270,4 @@
 2026-11-23T09:18:22Z [386] plan zespolu do zrobienia w dniach
 2026-11-23T09:35:43Z [388] plan zespolu stan osobno
 2026-11-23T09:49:11Z [389] plan zamowione minus stan
+2026-11-23T10:09:51Z [390] plan zespolu uklad listy produkcyjnej
