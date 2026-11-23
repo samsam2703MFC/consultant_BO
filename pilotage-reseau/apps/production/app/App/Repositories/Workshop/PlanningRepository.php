@@ -60,6 +60,28 @@ final class PlanningRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * [407] Commandes ouvertes d'un produit fini sur une période (mêmes règles que openOrderLines : OpenOrders, sans
+     * gratuits), une ligne par commande avec le client : la fenêtre « Zamówienie » de la feuille d'équipe.
+     */
+    public function productOrders(int $finalProductId, string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT co.id AS customer_order_id, co.expected_shipping_date, co.id_customer,
+                    COALESCE(NULLIF(TRIM(cu.company), ''), NULLIF(TRIM(CONCAT(COALESCE(cu.name, ''), ' ', COALESCE(cu.surname, ''))), '')) AS customer,
+                    SUM(cop.quantity_carton) AS cartons
+             FROM customer_order co
+             JOIN customer_order_product cop ON cop.id_order = co.id
+             LEFT JOIN customer cu ON cu.id = co.id_customer
+             WHERE " . OpenOrders::quantitySql('co') . "
+               AND co.expected_shipping_date BETWEEN ? AND ? AND cop.id_product = ?
+             GROUP BY co.id, co.expected_shipping_date, co.id_customer, cu.company, cu.name, cu.surname
+             HAVING cartons > 0
+             ORDER BY co.expected_shipping_date, customer IS NULL, customer, co.id",
+            [$from, $to, $finalProductId]
+        );
+    }
+
     /** @return array<int,float> produit => cartons expédiés (WDT) sur n jours */
     public function shippedCartons(int $days): array
     {

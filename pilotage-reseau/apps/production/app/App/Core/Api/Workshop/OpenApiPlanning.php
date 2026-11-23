@@ -61,6 +61,9 @@ final class OpenApiPlanning
                 'description' => "Par équipe (groupe) : calendrier (blocs du tableau de la semaine par jour, dans l'ordre des heures, effectif et heures), production de la semaine "
                     . "(total, lots, heures, pour l'expédition avec échéance / pour le stock, jours, reste non réparti) et arrivages de matières de la semaine utiles à l'équipe "
                     . "(matières des recettes de ses produits ; commandes envoyées / reçues avec date de livraison dans la semaine). Lecture seule."],
+            'GET /planning/team-sheet/orders' => ['tag' => $t, 'id' => 'getTeamSheetOrders', 'summary' => 'Zamówienia produktu w tygodniu / Commandes du produit dans la semaine', 'response' => 'TeamSheetOrders', 'errors' => [404, 422],
+                'query' => ['item_id' => ['type' => 'integer', 'description' => 'article (produit fini) de la feuille, obligatoire'], 'date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)']],
+                'description' => "Fenêtre « Zamówienie » de la feuille d'équipe : une ligne par commande ouverte (hors gratuits) du produit avec départ dans la semaine — client, départ, cartons, pièces (cartons × pièces par carton). Lecture seule."],
             'GET /planning/team-sheet/pdf' => ['tag' => $t, 'id' => 'getTeamSheetPdf', 'summary' => 'Plan zespołów — PDF do druku / Plan des équipes — PDF à imprimer', 'response' => 'DocumentFile', 'errors' => [404, 422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date'], 'group_id' => ['type' => 'integer']],
                 'description' => 'A4 paysage, une équipe par page, dans la langue de la requête. PDF en base64.'],
@@ -280,6 +283,12 @@ final class OpenApiPlanning
                 'materials' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => ['type' => 'string'], 'packaging' => ['type' => 'boolean'],
                     'quantity' => ['type' => 'number', 'description' => 'unité de base'], 'unit' => ['type' => 'string'], 'factor' => ['type' => 'number'], 'products' => ['type' => 'array', 'items' => ['type' => 'string']]]]],
                 'no_recipe' => ['type' => 'array', 'items' => ['type' => 'string']], 'generated_at' => ['type' => 'string'],
+            ]],
+            'TeamSheetOrders' => ['type' => 'object', 'properties' => [
+                'item_id' => $int, 'name' => ['type' => 'string'], 'ppc' => $int, 'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'],
+                'orders' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['order_id' => $int, 'customer_id' => ['type' => 'integer', 'nullable' => true],
+                    'customer' => ['type' => 'string', 'nullable' => true], 'due' => ['type' => 'string', 'format' => 'date', 'nullable' => true], 'cartons' => ['type' => 'number'], 'quantity' => ['type' => 'number']]]],
+                'total_cartons' => ['type' => 'number'], 'total_quantity' => ['type' => 'number'], 'customers' => $int,
             ]],
             'TeamSheet' => ['type' => 'object', 'properties' => [
                 'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int, 'today' => ['type' => 'string', 'format' => 'date'],

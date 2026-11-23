@@ -95,6 +95,26 @@ final class TeamSheetService
         ];
     }
 
+    /**
+     * [407] Okno « Zamówienie » : klienci i ilości zamówione produktu w tygodniu (te same zamówienia co kolumna
+     * Zamówienie — otwarte, bez gratisów), jeden wiersz na zamówienie. Tylko odczyt.
+     */
+    public function orders(string $date, int $itemId): array
+    {
+        $item = null;
+        foreach ($this->planning->items() as $it) if ((int) $it['id'] === $itemId) { $item = $it; break; }
+        if ($item === null || $item['item_type'] !== 'product' || !$item['id_final_product']) throw ApiException::notFound('item', $itemId);
+        $ppc = max(1, (int) $item['ppc']);
+        $w = $this->weeks->bounds($date);
+        $rows = array_map(fn($o) => ['order_id' => (int) $o['customer_order_id'], 'customer_id' => $o['id_customer'] !== null ? (int) $o['id_customer'] : null,
+            'customer' => $o['customer'], 'due' => $o['expected_shipping_date'] !== null ? substr((string) $o['expected_shipping_date'], 0, 10) : null,
+            'cartons' => round((float) $o['cartons'], 3), 'quantity' => round((float) $o['cartons'] * $ppc, 3)],
+            $this->planning->productOrders((int) $item['id_final_product'], $w['start'], $w['end']));
+        return ['item_id' => $itemId, 'name' => $item['name'], 'ppc' => $ppc, 'week_start' => $w['start'], 'week_end' => $w['end'], 'orders' => $rows,
+            'total_cartons' => round(array_sum(array_column($rows, 'cartons')), 3), 'total_quantity' => round(array_sum(array_column($rows, 'quantity')), 3),
+            'customers' => count(array_unique(array_map(fn($r) => $r['customer_id'] ?? -$r['order_id'], $rows)))];
+    }
+
     /** PDF do druku : A4 poziomo, każdy zespół od nowej strony (styl dokumentów L'Atelier, własna numeracja stron). */
     public function pdf(string $date, ?int $groupId, ApiContext $context): array
     {
