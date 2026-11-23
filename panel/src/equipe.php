@@ -72,6 +72,39 @@ function eqpRoute(string $method, string $path): ?array
     return ['error' => 'route inconnue'];
 }
 
+/* ── Le compte qui parle au panel (23/11/2026, Sam : « réessayer avec le compte admin ») ──────────────────────────
+ * Le compte du cockpit (PanelApi, royaume consultant) d'abord ; ce qu'il n'obtient pas, le compte admin de l'ERP
+ * (ErpApi) le relit ou le réécrit. Mesuré en ligne le 23/11/2026 : GET /shops/{id}/employees et /employees?shop_id=
+ * ne rendent rien au compte du cockpit (403), alors que le swagger ne les restreint pas. Le cockpit garde ses propres
+ * contrôles : le magasin de la session, l'employé et le service de ce magasin. */
+
+/** Des GET en parallèle : [clé => corps | null] ; ce que le compte du cockpit n'obtient pas, l'admin le relit. */
+function eqpGetParallele(array $chemins, int $front = 4): array
+{
+    $r = PanelApi::getParallele($chemins, $front);
+    $manque = array_filter($chemins, static fn ($p, $k) => !is_array($r[$k] ?? null), ARRAY_FILTER_USE_BOTH);
+    if ($manque !== [] && class_exists('ErpApi') && ErpApi::disponible()) {
+        foreach (ErpApi::getParallele($manque, $front) as $k => $v) { if (is_array($v)) { $r[$k] = $v; } }
+    }
+    return $r;
+}
+
+function eqpGet(string $chemin): mixed
+{
+    return eqpGetParallele(['x' => $chemin], 1)['x'] ?? null;
+}
+
+/** Une écriture : {code, data, erreur} ; refusée au compte du cockpit (401, 403), elle repart avec le compte admin. */
+function eqpEcrire(string $methode, string $chemin, ?array $corps = null): array
+{
+    $r = PanelApi::requete($methode, $chemin, $corps);
+    if (in_array($r['code'], [401, 403], true) && class_exists('ErpApi') && ErpApi::disponible()) {
+        $x = ErpApi::ecrire($methode, $chemin, $corps);
+        return ['code' => (int) $x['code'], 'data' => $x['corps'], 'erreur' => $x['erreur']];
+    }
+    return $r;
+}
+
 /* ── Lectures ─────────────────────────────────────────────────────────────────────────────────────────────────── */
 
 /** Le magasin de la requête (la requête, sinon le corps) ; l'accès a déjà vérifié qu'il est de la session. */
@@ -100,7 +133,7 @@ function eqpLire(int $shop, array $quoi): array
         };
     }
     $out = [];
-    foreach (PanelApi::getParallele($chemins, 3) as $k => $r) {
+    foreach (eqpGetParallele($chemins, 3) as $k => $r) {
         $out[$k] = is_array($r) ? array_values(array_filter(analyseListe($r), 'is_array')) : null;
     }
     return $out;
@@ -195,7 +228,7 @@ function ep_equipe_carte(?int $shop = null): array
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
     $L = eqpLire($shop, ['emp', 'ws', 'prod']);
     foreach (['emp' => 'les employés', 'ws' => 'les postes', 'prod' => 'l’assortiment'] as $k => $quoi) {
-        if ($L[$k] === null) { return eqpErreur(502, 'le panel n’a pas rendu ' . $quoi . ' : la carte est masquée pour ne pas signaler de faux manques', ['detail' => PanelApi::$lastError]); }
+        if ($L[$k] === null) { return eqpErreur(502, 'le panel n’a pas rendu ' . $quoi . ' : la carte est masquée pour ne pas signaler de faux manques', ['detail' => (class_exists('ErpApi') && ErpApi::$lastError ? ErpApi::$lastError : PanelApi::$lastError)]); }
     }
     // Sans le secteur des postes, aucune responsabilité ne se déduit (le module du panel refuse aussi).
     foreach ($L['ws'] as $w) {
@@ -241,7 +274,7 @@ function wr_equipe_postes(): array
     $connus = [];
     foreach ($L['ws'] as $w) { $connus[(int) ($w['id'] ?? 0)] = (string) ($w['name'] ?? ''); }
     foreach ($ids as $id) { if (!isset($connus[$id])) { return eqpErreur(422, 'poste inconnu du panel : ' . $id, ['motif' => 'postes_invalides']); } }
-    $r = PanelApi::requete('PUT', '/employees/' . $emp . '/workstations', ['workstation_ids' => $ids]);
+    $r = eqpEcrire('PUT', '/employees/' . $emp . '/workstations', ['workstation_ids' => $ids]);
     if ($r['code'] < 200 || $r['code'] >= 300) {
         return eqpErreur(in_array($r['code'], [403, 404, 409, 422], true) ? $r['code'] : 502, 'le panel a refusé les postes', ['detail' => $r['erreur']]);
     }
@@ -383,8 +416,8 @@ function ep_equipe_planning(): array
     $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, $n - 1));
     $chemins = ['emp' => '/shops/' . $shop . '/employees?include=positions', 'ws' => '/operational-framework/workstations', 'prod' => '/shops/' . $shop . '/products/available'];
     foreach ($jours as $j) { $chemins['sch' . $j] = '/shops/' . $shop . '/schedule?date=' . $j; }
-    $res = PanelApi::getParallele($chemins, 6);
-    if (!is_array($res['emp'] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu les employés', ['detail' => PanelApi::$lastError]); }
+    $res = eqpGetParallele($chemins, 6);
+    if (!is_array($res['emp'] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu les employés', ['detail' => (class_exists('ErpApi') && ErpApi::$lastError ? ErpApi::$lastError : PanelApi::$lastError)]); }
     $postes = [];
     foreach (analyseListe($res['ws'] ?? null) as $w) {
         if (is_array($w) && (int) ($w['id'] ?? 0) > 0) { $postes[(int) $w['id']] = isset($w['sector_id']) && (int) $w['sector_id'] > 0 ? (int) $w['sector_id'] : null; }
@@ -453,7 +486,9 @@ function ep_equipe_planning_pdf(): void
     if (!in_array($jours, [7, 14], true)) { $json(422, 'jours : 7 ou 14'); }
     if (!in_array($pres, ['magasin', 'departements'], true)) { $json(422, 'presentation : magasin ou departements'); }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { $json(503, 'compte du panel non configuré'); }
-    [$code, $pdf] = PanelApi::binaire('/shops/' . $shop . '/schedule/document?' . http_build_query(['start_date' => $du, 'days' => $jours, 'layout' => $pres === 'magasin' ? 'shop' : 'departments']));
+    $chemin = '/shops/' . $shop . '/schedule/document?' . http_build_query(['start_date' => $du, 'days' => $jours, 'layout' => $pres === 'magasin' ? 'shop' : 'departments']);
+    [$code, $pdf] = PanelApi::binaire($chemin);
+    if (in_array($code, [401, 403], true) && class_exists('ErpApi') && ErpApi::disponible()) { $x = ErpApi::brut($chemin); $code = (int) $x['code']; $pdf = $x['corps']; }
     if ($code !== 200 || !is_string($pdf) || !str_starts_with($pdf, '%PDF')) {
         $json($code === 404 ? 404 : 502, $code === 404 ? 'le panel ne sert pas le PDF du planning' : 'le panel n’a pas rendu le PDF du planning (HTTP ' . $code . ')');
     }
@@ -487,7 +522,7 @@ function eqpServiceCadre(array $b, bool $heures): array
         if ($de % 5 || $a % 5) { return [eqpErreur(422, 'heures : par pas de 5 minutes'), null]; }
     }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return [eqpErreur(503, 'compte du panel non configuré'), null]; }
-    $rep = PanelApi::getParallele(['sch' => '/shops/' . $shop . '/schedule?date=' . $date, 'emp' => '/shops/' . $shop . '/employees'], 2);
+    $rep = eqpGetParallele(['sch' => '/shops/' . $shop . '/schedule?date=' . $date, 'emp' => '/shops/' . $shop . '/employees'], 2);
     if (!is_array($rep['sch'] ?? null) || !is_array($rep['emp'] ?? null)) { return [eqpErreur(502, 'le panel ne répond pas : rien n’est enregistré'), null]; }
     $equipe = [];
     foreach (analyseListe($rep['emp']) as $r) { if (is_array($r)) { $e = eqpPersonne($r); if ($e['shop'] === $shop) { $equipe[$e['id']] = $e; } } }
@@ -527,7 +562,7 @@ function wr_equipe_service_creer(): array
     if (!$p['actif']) { return eqpErreur(422, 'cette personne est désactivée'); }
     if (($x = eqpChevauche($c['services'], $emp, $c['de'], $c['a'])) !== null) { return eqpErreur(422, 'chevauche son service de ' . $x['de'] . ' à ' . $x['a'], ['motif' => 'chevauchement']); }
     $h = static fn (int $m) => sprintf('%02d:%02d:00', intdiv($m, 60), $m % 60);
-    $r = PanelApi::requete('POST', '/schedule', ['id_employee' => $emp, 'work_date' => $c['date'], 'start_hour' => $h($c['de']), 'end_hour' => $h($c['a'])]);
+    $r = eqpEcrire('POST', '/schedule', ['id_employee' => $emp, 'work_date' => $c['date'], 'start_hour' => $h($c['de']), 'end_hour' => $h($c['a'])]);
     return eqpServiceRendu($r, 'le service', $c, 'Service ajouté : ' . $p['nom'] . ', ' . $c['date'] . ' ' . substr($h($c['de']), 0, 5) . '–' . substr($h($c['a']), 0, 5));
 }
 
@@ -543,7 +578,7 @@ function wr_equipe_service_modifier(): array
     if ($s === null) { return eqpErreur(404, 'ce service n’est pas au planning du magasin ce jour-là', ['motif' => 'service_inconnu']); }
     if (($x = eqpChevauche($c['services'], $s['employe'], $c['de'], $c['a'], $id)) !== null) { return eqpErreur(422, 'chevauche son service de ' . $x['de'] . ' à ' . $x['a'], ['motif' => 'chevauchement']); }
     $h = static fn (int $m) => sprintf('%02d:%02d:00', intdiv($m, 60), $m % 60);
-    $r = PanelApi::requete('PATCH', '/schedule/' . $id, ['start_hour' => $h($c['de']), 'end_hour' => $h($c['a'])]);
+    $r = eqpEcrire('PATCH', '/schedule/' . $id, ['start_hour' => $h($c['de']), 'end_hour' => $h($c['a'])]);
     $nom = ($c['equipe'][$s['employe']]['nom'] ?? null) ?: 'Employé ' . $s['employe'];
     return eqpServiceRendu($r, 'la modification', $c, 'Service modifié : ' . $nom . ', ' . $c['date'] . ' ' . $s['de'] . '–' . $s['a'] . ' → ' . substr($h($c['de']), 0, 5) . '–' . substr($h($c['a']), 0, 5));
 }
@@ -558,7 +593,7 @@ function wr_equipe_service_supprimer(): array
     $s = null;
     foreach ($c['services'] as $x) { if ($x['id'] === $id && $id > 0) { $s = $x; break; } }
     if ($s === null) { return eqpErreur(404, 'ce service n’est pas au planning du magasin ce jour-là', ['motif' => 'service_inconnu']); }
-    $r = PanelApi::requete('DELETE', '/schedule/' . $id);
+    $r = eqpEcrire('DELETE', '/schedule/' . $id);
     $nom = ($c['equipe'][$s['employe']]['nom'] ?? null) ?: 'Employé ' . $s['employe'];
     return eqpServiceRendu($r, 'la suppression', $c, 'Service retiré : ' . $nom . ', ' . $c['date'] . ' ' . $s['de'] . '–' . $s['a']);
 }
@@ -610,7 +645,7 @@ function eqpRecopiePlan(int $shop, string $du): array
     $source = array_map(static fn ($d) => date('Y-m-d', strtotime($d . ' -7 days')), $cible);
     $chemins = ['emp' => '/shops/' . $shop . '/employees'];
     foreach (array_merge($source, $cible) as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
-    $res = PanelApi::getParallele($chemins, 6);
+    $res = eqpGetParallele($chemins, 6);
     if (!is_array($res['emp'] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu les employés : rien n’est recopié'), null]; }
     $S = []; $C = [];
     foreach ($source as $d) {
@@ -666,7 +701,7 @@ function eqpCreerServices(int $shop, array $a, callable $journal, string $du): a
     @set_time_limit(180);
     $crees = 0; $echecs = []; $arret = null;
     foreach ($a as $p) {
-        $r = PanelApi::requete('POST', '/schedule', ['id_employee' => $p['employe'], 'work_date' => $p['date'], 'start_hour' => $p['de'] . ':00', 'end_hour' => $p['a'] . ':00']);
+        $r = eqpEcrire('POST', '/schedule', ['id_employee' => $p['employe'], 'work_date' => $p['date'], 'start_hour' => $p['de'] . ':00', 'end_hour' => $p['a'] . ':00']);
         if ($r['code'] >= 200 && $r['code'] < 300) { $crees++; continue; }
         $echecs[] = ['source' => $p['source'] ?? null, 'cle' => $p['cle'] ?? null, 'nom' => $p['nom'], 'date' => $p['date'], 'de' => $p['de'], 'a' => $p['a'], 'motif' => (string) ($r['erreur'] ?? 'refusé')];
         // Un refus de droits vaudra pour tous les suivants : on s'arrête là plutôt que d'en essuyer cent.
@@ -859,7 +894,7 @@ function wr_equipe_roulement(): array
     if ($shop <= 0 || $emp <= 0) { return eqpErreur(400, 'magasin et employé attendus'); }
     if ($l !== null && !in_array($l, EQP_LETTRES, true)) { return eqpErreur(422, 'lettre : A, B, C, D ou null'); }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
-    $emps = PanelApi::get('/shops/' . $shop . '/employees');
+    $emps = eqpGet('/shops/' . $shop . '/employees');
     if (!is_array($emps)) { return eqpErreur(502, 'le panel ne répond pas : rien n’est enregistré'); }
     $p = null;
     foreach (analyseListe($emps) as $r) { if (is_array($r) && (int) ($r['id'] ?? 0) === $emp && (int) ($r['id_shop'] ?? 0) === $shop) { $p = eqpPersonne($r); break; } }
@@ -887,7 +922,7 @@ function eqpGenererPlan(int $shop, string $du): array
     $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
     $chemins = ['emp' => '/shops/' . $shop . '/employees'];
     foreach ($jours as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
-    $res = PanelApi::getParallele($chemins, 6);
+    $res = eqpGetParallele($chemins, 6);
     if (!is_array($res['emp'] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu les employés'), null]; }
     $C = [];
     foreach ($jours as $d) {
