@@ -26,7 +26,7 @@ module.exports = function (m, p, q) {
   if (p === '/formation/continue/magasin') return { reperes: { enRetard: 0, enCours: 0 }, nouveaux: 0, formations: [] };
   if (p === '/assistant/magasin/questions') return { actif: true, tuiles: [], groupes: [] };
   if (p === '/helpdesk/magasin') return { demandes: [] };
-  if (p === '/dashboard/boite') return { reliee: true, ouverte: false, adresse: 'magasin.demo@exemple.be' };
   if (p === '/ventes/mensuel') return mensuel();
+  // /dashboard/boite (fermée tant qu’on ne l’ouvre pas) : dans 70_boite.js, avec la forme complète que lisent toutes les vues.
   return undefined;
 };
