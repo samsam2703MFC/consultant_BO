@@ -246,3 +246,21 @@
 2026-11-21T17:24:59Z Note de campagne : la campagne, son type et son levier, ses boutiques, cibles, canaux et agences, visuel, formats et rétroplanning lus au module Marketing par sa fiche (marketing/src/mkt_brief.php)
 2026-11-21T17:36:55Z Hub du marketing, Mon marketing, campagnes des visites, objectifs produits, annexes et KPI par levier : campagnes, boutiques et leviers lus au module Marketing (lot 5a)
 2026-11-21T17:48:32Z Agences : liste, agence qui signe la note, création, modification et retrait par l'API du module Marketing (lot 5b, marketing/src/mkt_agences.php) ; marketingAppel lit les 204 et les erreurs au standard
+2026-11-22T14:10:19Z Formation continue (module, cockpit, dashboard, Professeur), coffre-fort du franchisé et ses grandes dates avec l'assistant à l'import, pièces jointes de la Boîte mail (importer, coffre-fort, catalogues)
+2026-11-22T14:55:32Z Coffre-fort v2 : l'état du coffre, les pièces attendues (16), le tiroir d'aperçu, le dépôt avec l'assistant ; la pièce au dépôt du consultant
+2026-11-22T15:10:24Z Formations et suivi : l'accueil de la formation sans rail, la méga-barre de recherche sur tout le catalogue (GET /formation/recherche), l'aperçu et le lecteur ; les couleurs des catalogues sur l'accueil (dashboard et module)
+2026-11-22T15:31:13Z [367] ERP production : réclamations, photos partout, vue par le groupe
+2026-11-22T15:44:12Z [368] ERP production : Struktura i obowiązki
+2026-11-22T15:36:19Z Tâches & contrôles : les photos se relisent quand une tâche rendue n'a pas la sienne ; dashboard : les vignettes (dossier de formation, Relire, valeur, demande au bureau, revue du soir, API) sur l'Opérationnel seulement
+2026-11-22T16:14:44Z [369] organigram widoczny w całości
+2026-11-22T16:27:35Z [369] organigram przeciaganie pointer
+2026-11-22T16:31:43Z [369] asystent zamowienia dnia
+2026-11-22T16:37:48Z [370] asystent klienci bez zamowienia
+2026-11-22T16:43:30Z Dashboard : les Frais deviennent un onglet de la Trésorerie, le rail perd l'entrée Frais (vue=frais et le lien « Frais ▸ » du P&L ouvrent l'onglet)
+2026-11-22T16:46:59Z [369] struktura userId fix
+2026-11-22T16:51:25Z [372] sms klienci + [371] asystent domowienia dnia
+2026-11-22T17:28:23Z [372] fix OrderSmsService::delivers
+2026-11-22T18:33:12Z [373] plynnosc + [374] opoznienia dostaw + [375] OTIF + [372] sms nowy termin
+2026-11-22T18:38:19Z [373] kwoty plynnosc dla KO
+2026-11-22T18:41:48Z [373] prawo liquidity
+2026-11-22T18:59:17Z Dashboard : les paramètres dans une roue à gauche de Mon coffre-fort (fenêtre qui monte : recherche, boîte mail, rappel la veille du retrait, équipe, alertes de stock, ton de l'assistant) ; le groupe Paramètres quitte le rail

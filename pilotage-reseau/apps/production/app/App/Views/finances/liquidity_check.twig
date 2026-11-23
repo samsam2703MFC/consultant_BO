@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Płynność i gotówka{% endblock %}
+
+{% block content %}
+{# [373] Assistant « Płynność i gotówka » : App\Services\Organization\Wizards\LiquidityCheckService — écran dans
+   assets/js/finances/liquidity-check.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche hebdomadaire
+   du poste « Kierownik operacyjny » se valide seule après « Zakończ ». Montants : profil Finanse et CEO seulement.
+   Rien n'est envoyé ; seuls le solde saisi et les décisions sont enregistrés. #}
+<section class="section">
+    <div id="lqApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="lqBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/finances/liquidity-check.js?v={{ asset_v() }}"></script>
+{% endblock %}

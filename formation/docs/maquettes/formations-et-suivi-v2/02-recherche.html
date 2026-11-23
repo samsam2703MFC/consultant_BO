@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Formations et suivi v2 — la méga-barre</title><link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/public/formation/portail.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="/consultant/docs/maquettes/coffre-fort/coffre.css"><link rel="stylesheet" href="fs.css">
+<style>.card{padding:0}</style></head>
+<body data-vue="formation"><div id="page"><div id="haut"></div><div id="acc" class="voile"></div>
+<div class="legende" style="margin-top:420px"><b>02 · La méga-barre : « cuisson » dans tout le catalogue</b><ol>
+<li><b>À gauche, les catalogues</b> et le nombre de résultats de chacun (filtre d’un clic), puis « pour mon poste ». <b>Au centre</b>, les résultats : l’<b>étiquette du catalogue</b> (rectangle arrondi, sa couleur), le code, le titre avec le mot trouvé, <b>l’extrait</b> qui le contient, et <b>où mène le lien</b> (la SOP sur la tablette du poste, la formation, le catalogue à feuilleter). <b>La photo</b> quand le document en a une (les étapes des SOP).</li>
+<li><b>À droite, l’aperçu</b> du résultat choisi : la photo, les premières étapes (les points critiques en rouge), puis Ouvrir · Feuilleter dans le catalogue · Demander au Professeur.</li>
+<li>Le clavier : ↑ ↓ pour choisir, Entrée pour ouvrir, Échap pour fermer. Titres et codes : ceux du catalogue en ligne ; les extraits et les étapes illustrent l’endroit trouvé.</li></ol></div></div>
+<script src="cadre.js"></script><script src="accueil-donnees.js"></script><script src="fs.js"></script>
+<script>document.getElementById('haut').outerHTML = FS.tete() + FS.barre({ v: 'cuisson', n: '12 résultats · 6 catalogues' }); document.getElementById('acc').innerHTML = FS.accueil();</script>
+</body></html>

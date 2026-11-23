@@ -203,7 +203,8 @@ function foImporter(): int
 /** GET /formation/sops — les standards, rangés par famille, avec leur progression dans le réseau. */
 function ep_sop_sops(): array
 {
-    $rows = Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id');
+    // Une formation continue (type FC, 22/11/2026) n'entre au Manuel que validée : elle se rédige dans son écran.
+    $rows = Db::rows('SELECT * FROM for_sop WHERE type <> \'FC\' OR statut = \'publiee\' ORDER BY dossier, ordre, id');
     $prog = foProgressionReseau();
     $out = [];
     foreach ($rows as $r) { $out[] = foSopLigne($r) + ['progression' => $prog[(string) $r['id']] ?? ['vu' => 0, 'quiz' => 0, 'lu' => 0, 'aRevoir' => 0]]; }
@@ -312,7 +313,7 @@ function ep_sop_manuel(): array
 {
     $l = foLangueParam();
     $out = [];
-    foreach (Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' AND (type <> \'FC\' OR statut = \'publiee\') ORDER BY dossier, ordre, id') as $r) {
         $c = foContenuVersion((string) $r['id'], (string) $r['version']);
         $out[] = foSopLigne($r) + ['contenu' => foContenuLangue($c, $l, true)];
     }
@@ -324,7 +325,7 @@ function ep_sop_manuel_pdf(): array
 {
     $l = foLangueParam();
     $d = isset($_GET['dossier']) && isset(FO_DOSSIERS[(string) $_GET['dossier']]) ? (string) $_GET['dossier'] : null;
-    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\'' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
+    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' AND (type <> \'FC\' OR statut = \'publiee\')' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
     $titre = ($l === 'nl' ? 'Operationeel handboek' : 'Manuel opératoire') . ($d !== null ? ' — ' . FO_DOSSIERS[$d][$l] : '');
     foPdfSortie($rows, $l, true, $titre, 'manuel-' . $l . ($d !== null ? '-' . $d : ''));
     return [];
@@ -528,7 +529,7 @@ function ep_sop_tablette_init(): array
     $shop = function_exists('tabAppareil') && tabAppareil() !== null ? foShopTablette() : null;
     $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
     // Un brouillon (repris du CRM, pas encore relu) ne va pas sur la tablette du magasin.
-    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
+    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' AND (type <> \'FC\' OR statut = \'publiee\')' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
     $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes'],
         'postesV25' => $p['postesV25'] ?? []], $shop !== null ? foEquipe($shop) : []);
     $app = function_exists('tabAppareil') ? tabAppareil() : null;
@@ -1789,7 +1790,7 @@ function foCourt(mixed $v, int $max): ?string
 }
 
 /** Le type d'un document du manuel ; « Article » (07/11/2026) = un article du manuel opératoire (lu comme une SOP sur la tablette). */
-function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article'], true) ? (string) $v : 'SOP'; }
+function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article', 'FC'], true) ? (string) $v : 'SOP'; }   // FC : la formation continue (22/11/2026)
 function foDossier(mixed $v): string { $v = str_pad(substr((string) $v, 0, 2), 2, '0', STR_PAD_LEFT); return isset(FO_DOSSIERS[$v]) ? $v : '01'; }
 function foPoste(mixed $v): string { return in_array($v, FO_POSTES, true) ? (string) $v : 'vente'; }
 

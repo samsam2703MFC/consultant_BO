@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coffre-fort — le lien du dashboard</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="coffre.css">
+<style>
+.zone{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start}
+.mur{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tuile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;height:92px}
+.tuile .l{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tuile .v{font-size:24px;margin-top:6px}
+.grand{background:#fff;border:1px solid var(--line);border-radius:12px;height:230px;margin-top:12px}
+.tel{width:330px;border:10px solid #1c1a17;border-radius:34px;background:var(--paper);overflow:hidden;height:690px;position:relative}
+.tel .hd{background:#fff;padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.tel .hd img{height:20px}
+.tel .hd b{font-weight:400;font-size:13px}
+.tel .ct{padding:12px}
+.tel .bloc{background:#fff;border:1px solid var(--line);border-radius:10px;height:70px;margin-bottom:8px}
+.tel .pied{position:absolute;left:0;right:0;bottom:0;padding:12px;background:var(--paper);border-top:1px solid var(--line)}
+.tel .pied .coffre{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:11px 12px}
+.tel .pied .coffre b{display:block;font-weight:400;font-size:13.5px}
+.tel .pied .coffre small{display:block;font-size:10.5px;color:var(--muted)}
+.tel .pied .coffre .nv{margin-left:auto}
+.tel .fin{font-size:10.5px;color:var(--faint);text-align:center;margin-top:8px}
+</style></head>
+<body data-vue="ops">
+<div id="page">
+  <div class="dnav"><div><div class="kk">Opérationnel · dimanche 22 novembre</div><h1>L’Atelier by — Gosselies</h1></div><span class="sp"></span>
+    <span class="b">↻ Relire</span><span class="b form">🎓 Mon dossier de formation <span class="pas">2</span></span><span class="b iab">Assistant</span><span class="val">Valeur<b>104 450 €</b></span><span class="avt">ML</span></div>
+  <div class="zone">
+    <div class="flou">
+      <div class="mur"><div class="tuile"><div class="l">Comptoir à 10:42</div><div class="v">1 184 €</div></div><div class="tuile"><div class="l">Objectif du jour</div><div class="v">2 166 €</div></div><div class="tuile"><div class="l">B2B</div><div class="v">134 €</div></div></div>
+      <div class="grand"></div>
+      <div class="mur" style="margin-top:12px"><div class="tuile"></div><div class="tuile"></div><div class="tuile"></div></div>
+      <div class="grand" style="height:160px"></div>
+    </div>
+    <div class="ann"><span class="ann-n" style="left:-10px;top:-10px">2</span>
+      <div class="tel"><div class="hd"><img src="/shared/public/assets/img/logo.png" alt=""><b>Gosselies</b><span style="flex:1"></span><span class="b form" style="padding:5px 8px;font-size:11px">🎓 2</span></div>
+        <div class="ct"><div class="bloc"></div><div class="bloc"></div><div class="bloc" style="height:120px"></div><div class="bloc"></div><div class="bloc"></div><div class="bloc"></div></div>
+        <div class="pied"><div class="coffre"><span style="font-size:18px">🔒</span><span><b>Mon coffre-fort</b><small>contrat, légal, formation, visites</small></span><span class="nv">4</span></div><div class="fin">tout en bas de chaque onglet, au téléphone</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="legende"><b>Le lien direct vers le coffre-fort, tout en bas</b>
+    <ol><li><b>Au bureau</b> (★, rail) : « 🔒 Mon coffre-fort » est épinglé tout en bas du rail, sous Paramètres, sur tous les onglets. Un clic ouvre <code>?vue=coffre</code>. Le chiffre compte les documents pas encore ouverts.</li>
+    <li><b>Au téléphone</b> (pas de rail) : le même lien, en dernier, tout en bas de chaque onglet.</li></ol></div>
+</div>
+<script src="cadre.js"></script>
+</body></html>

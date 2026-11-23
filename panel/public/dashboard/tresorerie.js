@@ -316,6 +316,10 @@
     }
     E.fmt = {};
     racine.innerHTML = corps();
+    const X = extraActif(), ext = X && racine.querySelector('[data-trext]');
+    if (ext && typeof X.rendre === 'function') {
+      try { X.rendre(ext); } catch (e) { ext.innerHTML = `<div class="db-err">${esc(X.nom || X.cle)} : ${esc(e.message)}</div>`; }
+    }
     if (E.brouillon) {
       const el = racine.querySelector(`[data-trn="${CSS.escape(E.brouillon.cle)}"]`);
       if (el) { el.focus(); try { el.select(); } catch (x) { /* champ sans sélection */ } } else { E.brouillon = null; }
@@ -336,20 +340,40 @@
   }
   function rendreEtat() { const el = racine && racine.querySelector('[data-tretat]'); if (el) { el.innerHTML = bandeauEtat(); } }
 
+  /**
+   * Les onglets prêtés par la page hôte (22/11/2026, Sam : « mettre les Frais dans la Trésorerie pour gagner de la place
+   * dans le rail ») : `mount(el, {extras: [{cle, nom, titre, sous, rendre(el)}]})`. Le module dessine l'en-tête et la
+   * rangée d'onglets, la page hôte le contenu, dans `[data-trext]` ; il s'affiche même quand le plan n'est pas lu.
+   */
+  function extraActif() { return E ? (ctx.extras || []).find(x => x && x.cle === E.onglet) || null : null; }
+  function navOnglets(libPlan) {
+    const L = [['plan', libPlan || 'Plan'], ['fournisseurs', 'Fournisseurs'], ['paiements', 'Paiements'], ['budget', 'Budget & étude']];
+    (ctx.extras || []).forEach(x => { if (x && x.cle) { L.push([x.cle, x.nom || x.cle]); } });
+    L.push(['guide', 'Mode d’emploi']);
+    return `<nav class="tr-ong">${L.map(([k, l]) => `<button type="button" data-tra="onglet:${esc(k)}" class="${E.onglet === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</nav>`;
+  }
+
   function corps() {
     const S = E;
+    const X = extraActif();
+    if (X) {
+      if (!S.libPlan && S.R && S.data) { const C0 = calcul(S.data, S.R, jourUTC()), a0 = C0.W[0].annee; S.libPlan = 'Plan ' + (a0 === C0.anT ? a0 : a0 + '-' + C0.anT); }
+      return `<div class="tr"><header class="tr-hd"><div class="tr-hd-g"><div class="tr-sur">Trésorerie · ${esc(ctx.nomShop || '')}</div>
+        <h2 class="tr-h1">${esc(X.titre || X.nom || '')}</h2>${X.sous ? `<div class="tr-sous">${esc(X.sous)}</div>` : ''}</div></header>
+        ${navOnglets(S.libPlan)}<div data-tretat>${bandeauEtat()}</div><div data-trext="${esc(X.cle)}"></div></div>`;
+    }
     if (!S.R || !S.data) {
       if (S.err) { return `<div class="db-err">Trésorerie : ${esc(S.err)} <button type="button" class="tr-lien" data-tra="relire">Relire</button></div>`; }
       return '<div class="db-attente">Lecture de l’année passée, du budget et du réalisé…</div>';
     }
     const auj = jourUTC(), d = S.data, R = S.R, C = calcul(d, R, auj), W = C.W, N = C.N;
     const an0 = W[0].annee, an1 = C.anT;
-    const onglets = [['plan', 'Plan ' + (an0 === an1 ? an0 : an0 + '-' + an1)], ['fournisseurs', 'Fournisseurs'], ['paiements', 'Paiements'], ['budget', 'Budget & étude'], ['guide', 'Mode d’emploi']];
+    S.libPlan = 'Plan ' + (an0 === an1 ? an0 : an0 + '-' + an1);
     let h = `<div class="tr">`;
     h += `<header class="tr-hd"><div class="tr-hd-g"><div class="tr-sur">Trésorerie · ${esc(ctx.nomShop || '')}</div>
       <h2 class="tr-h1">Plan de trésorerie</h2>
       <div class="tr-sous">Semaine par semaine, du lundi ${esc(dLong(W[0].ms))} au dimanche ${esc(dLong(W[N - 1].dimanche))} · Montants en € TTC</div></div></header>`;
-    h += `<nav class="tr-ong">${onglets.map(([k, l]) => `<button type="button" data-tra="onglet:${k}" class="${S.onglet === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</nav>`;
+    h += navOnglets(S.libPlan);
     h += `<div data-tretat>${bandeauEtat()}</div>`;
     if (S.conflit) {
       const c = S.conflit, t = c.majLe ? new Date(String(c.majLe).replace(' ', 'T')) : null;
@@ -878,11 +902,15 @@
       const shop = String(o.shop);
       if (!ETATS[shop]) { ETATS[shop] = nouvelEtat(shop); }
       E = ETATS[shop]; racine = el;
+      // L'onglet demandé par la page hôte (une adresse « vue=frais » d'avant le 22/11/2026, le lien « Frais ▸ » du P&L).
+      if (o.onglet && (['plan', 'fournisseurs', 'paiements', 'budget', 'guide'].includes(o.onglet) || (ctx.extras || []).some(x => x && x.cle === o.onglet))) { E.onglet = o.onglet; }
       brancher(el);
       if (!E.R && !E.lecture) { charger(false); } else { rendre(); }
     },
     /** Relire les repères (le bouton « ↻ Relire » du dashboard) ; les saisies en cours sont gardées. */
     relire() { if (E) { charger(true); } },
+    /** L'onglet affiché : la page hôte relit ce qu'un onglet prêté montre. */
+    onglet() { return E ? E.onglet : null; },
     // Pour les tests : le calcul et le plan neuf, sans écran.
     _calcul: calcul, _defauts: defauts, _normaliser: normaliser
   };

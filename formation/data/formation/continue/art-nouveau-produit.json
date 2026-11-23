@@ -1,0 +1,326 @@
+{
+ "id": "art-nouveau-produit",
+ "code": "",
+ "type": "Article",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "statut": "a_valider",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": "12 min de lecture",
+ "titre": {
+  "fr": "Un nouveau produit arrive : la procédure",
+  "nl": "Een nieuw product komt eraan: de procedure"
+ },
+ "objectif": {
+  "fr": "Savoir, du jour où le siège annonce un produit au jour où il est en vitrine et bien vendu, qui fait quoi, dans quel ordre, et ce qui ne se négocie pas.",
+  "nl": "Weten wie wat doet, in welke volgorde, en waarover niet onderhandeld wordt, van de dag waarop het hoofdkantoor een product aankondigt tot de dag waarop het in de vitrine ligt en goed verkoopt."
+ },
+ "pour": {
+  "fr": "Tout le magasin (P1 à P12) : le franchisé qui prépare, le responsable qui forme, l’équipe qui produit et vend. Chaque nouveau produit arrive avec sa formation continue « nouveau produit » dans le dossier de formation du franchisé. À lire avec l’article « Comment fonctionnent les formations ».",
+  "nl": "De hele winkel (P1 tot P12): de franchisenemer die voorbereidt, de verantwoordelijke die opleidt, het team dat produceert en verkoopt. Elk nieuw product komt met zijn permanente opleiding « nieuw product » in het opleidingsdossier van de franchisenemer. Te lezen met het artikel « Hoe de opleidingen werken »."
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "L’annonce (J-21 à J-14) : le siège",
+    "nl": "De aankondiging (D-21 tot D-14): het hoofdkantoor"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Le siège crée la formation",
+      "nl": "Het hoofdkantoor maakt de opleiding"
+     },
+     "texte": {
+      "fr": "Le siège crée la formation continue « nouveau produit » (FC-…).\nElle contient la fiche technique du panel (recette, grammages, conservation, durée de vie, allergènes), les photos, le prix conseillé et la date de mise en vente.",
+      "nl": "Het hoofdkantoor maakt de permanente opleiding « nieuw product » (FC-…).\nZe bevat de technische fiche van het panel (recept, gewichten, bewaring, houdbaarheid, allergenen), de foto’s, de geadviseerde prijs en de datum van de verkoopstart."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Relue, validée, diffusée",
+      "nl": "Nagelezen, gevalideerd, verspreid"
+     },
+     "texte": {
+      "fr": "La formation est relue (contenu et traduction NL), puis validée.\nElle arrive alors dans le dossier de formation de chaque franchisé concerné, et dans le bloc Nouveautés de « Formations et suivi ».",
+      "nl": "De opleiding wordt nagelezen (inhoud en Nederlandse vertaling) en daarna gevalideerd.\nZe komt dan in het opleidingsdossier van elke betrokken franchisenemer, en in het blok Nieuwigheden van « Opleidingen en opvolging »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Préparer (J-14 à J-7) : le franchisé",
+    "nl": "Voorbereiden (D-14 tot D-7): de franchisenemer"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Lire la formation et la fiche technique",
+      "nl": "De opleiding en de technische fiche lezen"
+     },
+     "texte": {
+      "fr": "Lire la formation et la fiche technique.\nPoser ses questions au Professeur depuis le dossier de formation : il répond à partir des formations du magasin, adaptations comprises.",
+      "nl": "De opleiding en de technische fiche lezen.\nZijn vragen stellen aan de Professeur vanuit het opleidingsdossier: hij antwoordt op basis van de opleidingen van de winkel, aanpassingen inbegrepen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Caisse, commande, production d’essai",
+      "nl": "Kassa, bestelling, proefproductie"
+     },
+     "texte": {
+      "fr": "Vérifier que l’article existe en caisse et au catalogue du magasin.\nCommander les matières ou le kit.\nPrévoir la production d’essai au plan de production.",
+      "nl": "Nagaan of het artikel bestaat in de kassa en in de catalogus van de winkel.\nDe grondstoffen of de kit bestellen.\nDe proefproductie inplannen in het productieplan."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Former l’équipe (J-7 à J-2) : le responsable du magasin",
+    "nl": "Het team opleiden (D-7 tot D-2): de verantwoordelijke van de winkel"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Chacun suit la formation sur la tablette",
+      "nl": "Iedereen volgt de opleiding op de tablet"
+     },
+     "texte": {
+      "fr": "Chaque personne des postes concernés suit la formation sur la tablette : les étapes, la vidéo, le quiz.",
+      "nl": "Elke persoon van de betrokken functies volgt de opleiding op de tablet: de stappen, de video, de quiz."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Production d’essai et « vu faire »",
+      "nl": "Proefproductie en « voorgedaan »"
+     },
+     "texte": {
+      "fr": "Une production d’essai, goûtée et pesée.\nLe responsable valide « vu faire » pour chacun.",
+      "nl": "Een proefproductie, geproefd en gewogen.\nDe verantwoordelijke bevestigt « voorgedaan » voor iedereen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Mettre en vente (jour J) : l’équipe",
+    "nl": "In de verkoop brengen (dag D): het team"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Vitrine, étiquette, argumentaire",
+      "nl": "Vitrine, etiket, verkoopargument"
+     },
+     "texte": {
+      "fr": "La vitrine se monte selon la photo de la fiche technique.\nL’étiquette prix et allergènes est posée avant la première vente.\nLa vente a appris l’argumentaire du produit, en trois phrases.",
+      "nl": "De vitrine wordt opgebouwd volgens de foto van de technische fiche.\nHet etiket met prijs en allergenen wordt geplaatst vóór de eerste verkoop.\nDe verkoop heeft het verkoopargument van het product geleerd, in drie zinnen."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "La photo de contrôle de la vitrine",
+      "nl": "De controlefoto van de vitrine"
+     },
+     "texte": {
+      "fr": "Une photo de contrôle de la vitrine, comme pour les autres rayons.",
+      "nl": "Een controlefoto van de vitrine, zoals voor de andere afdelingen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Suivre et valider (J à J+14) : le consultant",
+    "nl": "Opvolgen en valideren (D tot D+14): de consultant"
+   },
+   "etapes": [
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Quatorze jours de photo qualité",
+      "nl": "Veertien dagen kwaliteitsfoto"
+     },
+     "texte": {
+      "fr": "Pendant 14 jours à partir de la mise en vente, le magasin envoie chaque jour une photo qualité du produit dans son dossier de formation (page « Formations et suivi » du dashboard). La photo est obligatoire.\nLe consultant relit chaque photo : conforme ou à refaire.\nIl faut 14 photos conformes : un jour sans photo, ou une photo refusée, ajoute un jour. Une photo refusée le jour même peut encore être refaite ce jour-là.\nLes ventes et les invendus du produit se suivent au dashboard.",
+      "nl": "Gedurende 14 dagen vanaf de verkoopstart stuurt de winkel elke dag een kwaliteitsfoto van het product in zijn opleidingsdossier (pagina « Opleidingen en opvolging » van het dashboard). De foto is verplicht.\nDe consultant bekijkt elke foto: conform of opnieuw te doen.\nEr zijn 14 conforme foto’s nodig: een dag zonder foto, of een geweigerde foto, voegt een dag toe. Een foto die dezelfde dag geweigerd wordt, kan die dag nog opnieuw gemaakt worden.\nDe verkoop en de onverkochte stuks van het product volgt men in het dashboard."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "La validation par le consultant",
+      "nl": "De validatie door de consultant"
+     },
+     "texte": {
+      "fr": "Le consultant vérifie l’avancement : chaque personne concernée a lu la formation, réussi le quiz et été vue faire ; les 14 photos sont conformes.\nUne adaptation (un magasin sans traiteur, une date décalée) se fait par le consultant, pour ce magasin seulement, et reste tracée.\nIl valide la formation pour le franchisé : son nom et la date sont enregistrés. L’archive (les 14 photos, qui, quand) entre dans le document de formation du franchisé, rangé dans son coffre-fort, onglet Formation.",
+      "nl": "De consultant controleert de voortgang: elke betrokken persoon heeft de opleiding gelezen en de quiz gehaald, en « voorgedaan » is bevestigd; de 14 foto’s zijn conform.\nEen aanpassing (een winkel zonder traiteur, een verschoven datum) gebeurt door de consultant, alleen voor deze winkel, en blijft vastgelegd.\nHij valideert de opleiding voor de franchisenemer: zijn naam en de datum worden vastgelegd. Het archief (de 14 foto’s, wie, wanneer) komt in het opleidingsdocument van de franchisenemer, opgeborgen in zijn kluis, tabblad Opleiding."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Jamais en vente sans l’étiquette allergènes du produit : la fiche technique fait foi.",
+   "nl": "Nooit in de verkoop zonder het allergenenetiket van het product: de technische fiche is bindend."
+  },
+  {
+   "fr": "La recette et les grammages ne s’adaptent pas en magasin : toute adaptation passe par le consultant, qui la trace.",
+   "nl": "Recept en gewichten worden niet in de winkel aangepast: elke aanpassing gaat via de consultant, die ze vastlegt."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Quand l’étiquette prix et allergènes du nouveau produit est-elle posée ?",
+    "nl": "Wanneer wordt het etiket met prijs en allergenen van het nieuwe product geplaatst?"
+   },
+   "choix": {
+    "fr": [
+     "Avant la première vente",
+     "Dans la semaine qui suit la mise en vente",
+     "Quand un client la demande"
+    ],
+    "nl": [
+     "Vóór de eerste verkoop",
+     "In de week na de verkoopstart",
+     "Wanneer een klant erom vraagt"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Après la mise en vente, quelle photo le magasin envoie-t-il ?",
+    "nl": "Welke foto stuurt de winkel na de verkoopstart?"
+   },
+   "choix": {
+    "fr": [
+     "Une seule photo, le jour J",
+     "Une photo qualité du produit par jour pendant 14 jours, dans son dossier de formation",
+     "Une photo par semaine pendant un mois"
+    ],
+    "nl": [
+     "Eén enkele foto, op dag D",
+     "Elke dag een kwaliteitsfoto van het product gedurende 14 dagen, in zijn opleidingsdossier",
+     "Eén foto per week gedurende een maand"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Un jour, la photo du produit n’est pas envoyée. Que se passe-t-il ?",
+    "nl": "Op een dag wordt de foto van het product niet gestuurd. Wat gebeurt er?"
+   },
+   "choix": {
+    "fr": [
+     "Rien, la période continue",
+     "La formation est annulée",
+     "Un jour s’ajoute à la période"
+    ],
+    "nl": [
+     "Niets, de periode loopt door",
+     "De opleiding wordt geannuleerd",
+     "Er komt een dag bij de periode"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Le magasin n’a pas le four prévu par la fiche technique. Que fait-on ?",
+    "nl": "De winkel heeft niet de oven die de technische fiche voorziet. Wat doet men?"
+   },
+   "choix": {
+    "fr": [
+     "On change la cuisson soi-même",
+     "On en parle au consultant : il adapte la formation pour ce magasin et trace l’adaptation",
+     "On ne vend pas le produit"
+    ],
+    "nl": [
+     "Men past het bakken zelf aan",
+     "Men spreekt erover met de consultant: hij past de opleiding voor deze winkel aan en legt de aanpassing vast",
+     "Men verkoopt het product niet"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "classement": {
+  "souscat": "D5.3",
+  "phases": [
+   "formation"
+  ],
+  "postes": [
+   "P1",
+   "P2",
+   "P3",
+   "P4",
+   "P5",
+   "P6",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PROD.Pâtisserie",
+   "C-STOCK.Réception",
+   "C-TRANS.Conformité"
+  ],
+  "formations": [
+   "FO-08",
+   "FO-26",
+   "FO-16"
+  ],
+  "checklists": []
+ }
+}

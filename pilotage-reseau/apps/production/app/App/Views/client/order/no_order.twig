@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Klienci bez zamówienia{% endblock %}
+
+{% block content %}
+{# [370] Assistant « Klienci bez zamówienia » : App\Services\Organization\Wizards\CustomersNoOrderService — écran dans
+   assets/js/client/customers-no-order.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du poste
+   « Kierownik operacyjny » se valide seule après « Zakończ ». Rien n'est envoyé aux clients. #}
+<section class="section">
+    <div id="cnApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="cnBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/client/order-sms.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/client/customers-no-order.js?v={{ asset_v() }}"></script>
+{% endblock %}

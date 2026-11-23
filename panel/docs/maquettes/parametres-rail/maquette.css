@@ -1,0 +1,75 @@
+/* Maquettes « Paramètres dans une roue » (22/11/2026, Sam : « Mails et automatisations sont des paramètres : pour gagner
+   de la place dans le rail, une roue Paramètres dans une icône carrée à gauche du bouton Coffre-fort ; au clic, tous les
+   paramètres dans une modale type liste qui monte vers le haut »). Posées sur le vrai dashboard (capturer.cjs).
+   États : des rectangles aux coins arrondis, jamais de pastilles rondes. */
+
+/* Le bas du rail : la roue (carrée) puis Mon coffre-fort */
+.pr-bas{display:flex;gap:8px;align-items:stretch}
+.pr-bas .sidebar__item{flex:1;min-width:0}
+.pr-roue{flex:0 0 40px;width:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--table-head);color:#5c5852;cursor:pointer;padding:0}
+.pr-roue svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pr-roue.on{background:#F6EDEE;border-color:#E8C9CD;color:#8D1D2C}
+
+/* Ce qui est commun : les lignes, les icônes, les états */
+.pr-ic{flex:0 0 30px;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#F3EEE6;color:#5c5852}
+.pr-ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pr-et{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:11px;white-space:nowrap;background:#F3EEE6;color:#5c5852}
+.pr-et.a{background:#FBE9D6;color:#7A3E12}
+.pr-et.ok{background:#EEF5F0;color:#2f6a43}
+.pr-et.off{background:#F1F0EE;color:#8a857e}
+.pr-chev{margin-left:auto;color:#a59d93;font-size:15px;line-height:1}
+.pr-g{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#8a857e);padding:12px 12px 6px}
+
+/* A — le menu : la largeur du rail, une ligne par réglage, qui monte au-dessus de la roue */
+.pra{position:fixed;z-index:50;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 -10px 34px rgba(28,26,23,.16);padding:4px 6px 8px}
+.pra::after{content:'';position:absolute;left:24px;bottom:-7px;width:12px;height:12px;background:#fff;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.pra .it{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;font-size:13px;color:var(--ink,#1c1a17)}
+.pra .it.sel{background:#F6EDEE}
+.pra .it .t{min-width:0}.pra .it .t small{display:block;font-size:11px;color:#8a857e;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pra .it .pr-ic{flex-basis:26px;width:26px;height:26px;border-radius:7px}
+.pra .it .pr-ic svg{width:15px;height:15px}
+.pra .sep{height:1px;background:var(--line);margin:6px 8px}
+
+/* B — la feuille : plus large que le rail, la recherche en tête, l'état de chaque réglage à droite, la page voilée */
+.prb-voile{position:fixed;inset:0;z-index:49;background:rgba(28,26,23,.22)}
+.prb{position:fixed;z-index:50;width:452px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 -14px 44px rgba(28,26,23,.22);overflow:hidden}
+.prb .hd{display:flex;align-items:flex-start;gap:10px;padding:16px 18px 10px}
+.prb .hd h3{margin:0;font-size:19px;font-weight:400}.prb .hd small{display:block;font-size:12px;color:#8a857e;margin-top:2px}
+.prb .hd .x{margin-left:auto;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;color:#5c5852;font-size:16px}
+.prb .q{margin:0 18px 6px;display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#FBF9F6;color:#8a857e;font-size:13px}
+.prb .q svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.prb .q kbd{margin-left:auto;font:inherit;font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:#fff}
+.prb .lst{padding:0 8px 6px;max-height:560px;overflow:hidden}
+.prb .it{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px}
+.prb .it.sel{background:#F6EDEE}
+.prb .it .t{flex:1;min-width:0}.prb .it .t b{display:block;font-weight:400;font-size:13.5px;color:var(--ink,#1c1a17)}
+.prb .it .t small{display:block;font-size:11.5px;color:#8a857e;margin-top:2px;line-height:1.35}
+.prb .pied{border-top:1px solid var(--line);padding:10px 18px 12px;font-size:11.5px;color:#8a857e;line-height:1.45;background:#FBF9F6}
+
+/* C — deux niveaux : la liste, et le réglage qui s'ouvre dans la même fenêtre, avec ses commandes rapides */
+.prc{position:fixed;z-index:50;width:372px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 -12px 40px rgba(28,26,23,.18);overflow:hidden}
+.prc .hd{display:flex;align-items:center;gap:8px;padding:14px 16px 8px;font-size:16px}
+.prc .hd .x{margin-left:auto;color:#8a857e;font-size:16px}
+.prc .hd .ret{color:#8D1D2C;font-size:13px}
+.prc .lst{padding:0 8px 8px}
+.prc .it{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:10px}
+.prc .it.sel{background:#F6EDEE}
+.prc .it .t{flex:1;min-width:0}.prc .it .t b{display:block;font-weight:400;font-size:13px}.prc .it .t small{display:block;font-size:11px;color:#8a857e;margin-top:1px}
+.prc .sw{flex:0 0 auto;width:36px;height:21px;border-radius:11px;background:#DDD7CE;position:relative}
+.prc .sw::after{content:'';position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.prc .sw.on{background:#3f7a52}.prc .sw.on::after{left:18px}
+.prc .sel-ton{flex:0 0 auto;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:7px;font-size:12px;display:inline-flex;align-items:center;gap:6px;color:var(--ink,#1c1a17)}
+.prc .det{padding:2px 16px 14px}
+.prc .det h4{margin:2px 0 4px;font-size:17px;font-weight:400}
+.prc .det p{margin:0 0 12px;font-size:12px;color:#6d675f;line-height:1.5}
+.prc .avis{display:flex;gap:10px;align-items:flex-start;background:#FBE9D6;color:#7A3E12;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;margin-bottom:12px}
+.prc .avis b{font-weight:400;text-decoration:underline;white-space:nowrap}
+.prc .ch{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.prc .ch small{display:block;font-size:11px;color:#8a857e}
+.prc .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px}
+.prc .seg span{padding:5px 10px}.prc .seg span.on{background:#8D1D2C;color:#fff}
+.prc .heure{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;display:inline-flex;align-items:center;font-size:13px}
+.prc .bts{display:flex;gap:8px;margin-top:12px}
+.prc .bt{flex:1;height:36px;border-radius:9px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--ink,#1c1a17)}
+.prc .bt.prim{background:#8D1D2C;border-color:#8D1D2C;color:#fff}
+.prc .dis{opacity:.45}

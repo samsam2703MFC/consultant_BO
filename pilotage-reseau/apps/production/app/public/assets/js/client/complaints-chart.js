@@ -477,7 +477,8 @@
                 <p>Zgłoszone : ${calc(d.quantity, d.cartons, d.value)}</p>
                 ${d.accepted_quantity !== null ? `<p>Przyjęte : ${calc(d.accepted_quantity, d.accepted_cartons || 0, d.accepted_value || 0)}</p>` : ''}</section>`}
             <section class="rk-msec"><h6><i class="bi bi-send"></i> Decyzja i odpowiedź wysłana do magazynu</h6>
-                <dl class="rk-mdl"><dt>Decyzja</dt><dd>${esc(d.status_label)}${d.compensation ? ' · ' + esc(d.compensation) : ''}</dd></dl>
+                <dl class="rk-mdl"><dt>Decyzja</dt><dd>${esc(d.status_label)}${d.compensation ? ' · ' + esc(d.compensation) : ''}</dd>
+                ${d.status === 'ACCEPTED' && !d.non_product ? `<dt>Grupa produkcji</dt><dd>${d.seen ? `<span class="rk-st acc"><i class="bi bi-eye"></i> widziała</span> ${esc(d.seen)}` : '<span class="rk-st open"><i class="bi bi-eye-slash"></i> jeszcze nie widziała</span>'}</dd>` : ''}</dl>
                 ${d.production_response ? `<blockquote class="rk-quote is-out">${esc(d.production_response)}</blockquote>` : '<p class="rk-muted">Brak odpowiedzi.</p>'}</section>
             <div class="rk-mfoot"><button type="button" class="btn btn-sm btn-outline-secondary" data-rk-onlist="${d.id}"><i class="bi bi-list-ul"></i> Pokaż na liście</button></div>`;
         // [366] Zdjęcia w oknie : adres podpisany z serwera magazynu, ładowany po otwarciu. Klucz pliku nie ma rozszerzenia

@@ -42,6 +42,18 @@ final class TaskWizards
         'suppliers_reviewed' => ['Ocena dostawców', '/purchasing/supplier-review', 'ocena kwartału zatwierdzona', 3],
         // Lot « lżej » [247] (makiety 19–23) : zadania, które nie miały kreatora.
         'tomorrow_sent' => ['Plan na jutro', '/production/tomorrow', 'plan jutra wysłany na tablety', 3],
+        // [369] Zamówienia dnia (Kierownik operacyjny) : nouvelles et modifiées, à vérifier, validation.
+        'orders_day_checked' => ['Zamówienia dnia', '/client-orders/day-check', 'zamówienia dnia sprawdzone', 3],
+        // [370] Klienci bez zamówienia (Kierownik operacyjny) : clients réguliers sans la commande attendue, résultat, validation.
+        'customers_ordered_checked' => ['Klienci bez zamówienia', '/client-orders/missing', 'stali klienci bez zamówienia wyjaśnieni', 3],
+        // [371] Domówienia dnia (Kierownik operacyjny) : domówienia récentes et à venir, état côté production, résultat, validation.
+        'supplements_day_checked' => ['Domówienia dnia', '/client-orders/supplements', 'domówienia dnia przekazane do produkcji', 3],
+        // [373] Płynność i gotówka (Kierownik operacyjny, co tydzień) : 4 semaines d'entrées et de sorties, solde saisi, décision par signal.
+        'liquidity_checked' => ['Płynność i gotówka', '/finances/liquidity', 'płynność 4 tygodni sprawdzona, decyzje zapisane', 3],
+        // [374] Opóźnienia dostaw (Kierownik operacyjny) : livraisons du jour, en retard ou en transport trop long, décision par livraison.
+        'deliveries_delays_checked' => ['Opóźnienia dostaw', '/logistics/delays', 'opóźnienia i ryzyka dostaw wyjaśnione', 3],
+        // [375] Terminowość tygodnia (OTIF) (Kierownik operacyjny, co tydzień) : OTIF de la semaine écoulée, tendance, une action par cause principale.
+        'otif_week_reviewed' => ['Terminowość tygodnia (OTIF)', '/client-orders/otif', 'OTIF tygodnia oceniony, działanie dla każdej przyczyny', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -81,6 +93,12 @@ final class TaskWizards
         'payments_reviewed' => 'po kroku 3 asystenta płatności (wpłaty, przypomnienia, różnice dostaw)',
         'suppliers_reviewed' => 'gdy ocena dostawców kwartału jest zatwierdzona (asystent oceny)',
         'tomorrow_sent' => 'gdy plan na jutro jest wysłany na tablety (asystent « Plan na jutro », krok 3)',
+        'orders_day_checked' => 'gdy nowe i zmienione zamówienia są sprawdzone, każde do wyjaśnienia z wynikiem (asystent « Zamówienia dnia », krok 3)',
+        'customers_ordered_checked' => 'gdy każdy stały klient bez oczekiwanego zamówienia ma wynik (kontakt, zamówienie przyszło, przerwa) — asystent « Klienci bez zamówienia », krok 3',
+        'supplements_day_checked' => 'gdy każde domówienie z sygnałem (nie w produkcji, po godzinie granicznej, data, produkt nieaktywny) ma wynik — asystent « Domówienia dnia », krok 3',
+        'deliveries_delays_checked' => 'gdy każda dostawa z sygnałem (po terminie, nie wyjechała, nic gotowego, bez pojazdu lub kierowcy, przeładowany pojazd, za długo w transporcie, problem przy dostawie, data zmieniana wiele razy) ma decyzję — asystent « Opóźnienia dostaw », krok 3',
+        'liquidity_checked' => 'gdy saldo tygodnia jest wpisane i każdy sygnał (zaległości klienta, duża płatność dostawcy, tydzień poniżej poduszki) ma decyzję — asystent « Płynność i gotówka », krok 3',
+        'otif_week_reviewed' => 'gdy OTIF poprzedniego tygodnia (na czas, w całości) jest oceniony i każda główna przyczyna zamówień nie-OTIF ma działanie (akceptowane, korygujące, do obserwacji) — asystent « Terminowość tygodnia (OTIF) », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -212,6 +230,37 @@ final class TaskWizards
                 break;
             case 'tomorrow_sent':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                break;
+            case 'orders_day_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->orderChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'zamówienie wyjaśnione', 'zamówienia wyjaśnione', 'zamówień wyjaśnionych')] + $out;
+                break;
+            case 'customers_ordered_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->noOrderResults($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klientów wyjaśnionych', 'klientów wyjaśnionych')] + $out;
+                break;
+            case 'supplements_day_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->supplementChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'domówienie wyjaśnione', 'domówienia wyjaśnione', 'domówień wyjaśnionych')] + $out;
+                break;
+            case 'deliveries_delays_checked':
+                // [374] Codziennie : zakończenie dnia ; w toku = decyzje zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->deliveryDelayChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'dostawa wyjaśniona', 'dostawy wyjaśnione', 'dostaw wyjaśnionych')] + $out;
+                break;
+            case 'liquidity_checked':
+                // [373] Co tydzień : zakończenie w okresie zadania ; w toku = saldo wpisane albo decyzje w tygodniu.
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($p = $this->repo->liquidityProgress(\App\Services\Organization\Wizards\LiquidityCheckService::monday(substr($from, 0, 10))))['balance'] || $p['decisions'] > 0) {
+                    $out = ['step' => 2, 'step_label' => ($p['balance'] ? 'saldo wpisane' : 'saldo niewpisane') . ' · ' . $p['decisions'] . ' ' . self::pl($p['decisions'], 'decyzja', 'decyzje', 'decyzji')] + $out;
+                }
+                break;
+            case 'otif_week_reviewed':
+                // [375] Co tydzień : zakończenie w okresie zadania ; w toku = działania zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->otifActions(\App\Services\Organization\Wizards\OtifWeekService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'przyczyna z działaniem', 'przyczyny z działaniem', 'przyczyn z działaniem')] + $out;
+                }
                 break;
             case 'sop_daily':
                 $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);

@@ -1,0 +1,26 @@
+/* Le cadre du dashboard magasin (rail ≥ 1 024 px, 15/11/2026) pour les maquettes 03 à 05 — sur les jetons du DS. */
+.drail{width:232px;flex:0 0 auto;background:#fff;border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:1px}
+.drail img.lg{height:34px;margin:2px 8px 14px;align-self:flex-start}
+.drail .g{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:12px 10px 4px}
+.drail a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;color:var(--muted-2);font-size:13px}
+.drail a .ic{width:16px;height:16px;border-radius:4px;border:1.5px solid currentColor;opacity:.55;flex:0 0 auto}
+.drail a.on{background:#F6EDEE;color:var(--accent);font-weight:700}
+.drail a.ia{background:#F2C9A0;color:var(--accent)}
+.drail a .n{margin-left:auto;font-size:10px;background:var(--accent);color:#fff;border-radius:9px;padding:1px 6px;font-weight:400}
+.drail a .nv{white-space:nowrap;margin-left:auto;font-size:9.5px;background:#F2C9A0;color:var(--accent);border-radius:6px;padding:1px 6px;font-weight:400}
+.dmain{flex:1;min-width:0;padding:0 26px 34px}
+.dnav{display:flex;align-items:center;gap:10px;padding:16px 0 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.dnav .kk{margin:0 0 3px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.dnav h1{margin:0;font-size:24px;font-weight:400;letter-spacing:-.01em}
+.dnav .sp{flex:1}
+.dnav .val{border:1px solid var(--line);border-radius:10px;padding:5px 10px;font-size:11px;color:var(--muted);background:#fff}
+.dnav .val b{display:block;font-size:15px;color:var(--prize);font-weight:700}
+.dnav .avt{width:32px;height:32px;border-radius:50%;background:var(--chip);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted-2)}
+.b.form{background:#F2C9A0;border-color:#F2C9A0;color:var(--accent);font-weight:700;padding:8px 14px}
+.b.form .pas{background:var(--accent);color:#fff;border-radius:9px;font-size:10.5px;padding:1px 7px;font-weight:400}
+.b.iab{background:var(--accent);border-color:var(--accent);color:#fff}
+.flou{filter:blur(.4px);opacity:.55}
+.prof{display:flex;gap:12px;align-items:flex-start}
+.prof img{width:58px;height:58px;border-radius:12px;background:#F4EEE6;flex:0 0 auto}
+.qp{display:block;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--ink);background:#fff;margin-top:6px}
+.qp small{display:block;color:var(--muted);font-size:10.5px}
