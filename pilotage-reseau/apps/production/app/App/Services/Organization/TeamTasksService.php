@@ -204,6 +204,7 @@ final class TeamTasksService
             'customer_mail_checked' => 'e-maile klientów bez odpowiedzi → decyzja → zakończ',
             'launches_reviewed' => 'nowe produkty : cele vs wynik → decyzja → zakończ',
             'customers_data_checked' => 'braki w kartach aktywnych klientów → decyzja → zakończ',
+            'ppwr_month_reviewed' => 'braki PPWR i BDO, zmiany, dowody wysyłek → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

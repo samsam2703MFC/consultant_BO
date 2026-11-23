@@ -246,6 +246,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customers_data_check WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
     }
 
+    /** [397] PPWR i opakowania : décisions enregistrées pour le mois du contrôle (premier jour, n_ppwr_month_review). */
+    public function ppwrMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_ppwr_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
     /** [381] Palety zwrotne : décisions enregistrées pour la semaine examinée (lundi, n_pallet_return_review). */
     public function palletReturnReviews(string $weekStart): int
     {

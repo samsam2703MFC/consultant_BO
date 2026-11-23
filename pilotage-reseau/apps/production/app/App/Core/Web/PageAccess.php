@@ -58,6 +58,9 @@ final class PageAccess
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
+        // [397] Asystent « PPWR i opakowania » (Kierownik produkcji, co miesiąc) : droit propre (page /ppwr/month — le préfixe le
+        // plus long l'emporte sur « /ppwr » — et appels ajax), donné au Kierownik produkcji par la migration 238.
+        'ppwr_month' => ['PPWR i opakowania — przegląd miesiąca (asystent : braki danych PPWR i BDO opakowań i produktów, zmiany, dowody wysyłek)', 'Produkt', ['/ppwr/month', '/ajax/ppwr/month'], false],
         // [369] Assistant « Zamówienia dnia », [370] « Klienci bez zamówienia », [371] « Domówienia dnia », [375] « Terminowość tygodnia (OTIF) » :
         // pages sous /client-orders, appels ajax sous le même droit.
         'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing', '/ajax/client-orders/supplements', '/ajax/client-orders/otif'], false],
