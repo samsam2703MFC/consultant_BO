@@ -22,6 +22,14 @@ final class WeekController
         return new ApiResult($this->teams->build((string) $request->query('date', date('Y-m-d')), $this->group($request), $request->context));
     }
 
+    /** [407] Klienci i ilości zamówione produktu w tygodniu (okno z kolumny « Zamówienie »). */
+    public function teamSheetOrders(ApiRequest $request): ApiResult
+    {
+        $raw = (string) $request->query('item_id', '');
+        if (!ctype_digit($raw) || (int) $raw < 1) throw ApiException::validation([['field' => 'item_id', 'code' => 'NOT_INTEGER', 'params' => []]]);
+        return new ApiResult($this->teams->orders((string) $request->query('date', date('Y-m-d')), (int) $raw));
+    }
+
     /** Ten sam plan jako PDF do druku (base64) : zespół na stronie A4. */
     public function teamSheetPdf(ApiRequest $request): ApiResult
     {

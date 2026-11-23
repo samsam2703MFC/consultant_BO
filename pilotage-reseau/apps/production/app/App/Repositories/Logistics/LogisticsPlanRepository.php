@@ -18,7 +18,7 @@ final class LogisticsPlanRepository extends WorkshopRepository
 
     /**
      * Linie zamówień w okresie (data wysyłki) z danymi paletowymi produktu — jak dzień wysyłki ; zamówienia
-     * zrealizowane, w transporcie, oczekujące i zarchiwizowane, bez gratisów.
+     * zrealizowane, w transporcie, oczekujące i zarchiwizowane, z gratisami [408] (jadą tą samą ciężarówką).
      */
     public function orderLines(string $from, string $to): array
     {
@@ -32,7 +32,7 @@ final class LogisticsPlanRepository extends WorkshopRepository
              LEFT JOIN final_product_ppwr_sales_packaging sp ON sp.id_final_product = fp.id
              LEFT JOIN category_product cat ON cat.id = fp.id_category
              WHERE co.expected_shipping_date >= ? AND co.expected_shipping_date < DATE_ADD(?, INTERVAL 1 DAY)
-               AND co.status IN (1, 2, 3, 5) AND COALESCE(co.is_freebie, 0) = 0 AND cop.quantity_carton > 0
+               AND co.status IN (1, 2, 3, 5) AND cop.quantity_carton > 0
              ORDER BY co.id_customer, ship_date',
             [$from, $to]
         );

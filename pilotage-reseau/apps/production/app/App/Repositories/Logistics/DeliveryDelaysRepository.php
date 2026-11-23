@@ -20,7 +20,8 @@ final class DeliveryDelaysRepository extends WorkshopRepository
     protected string $table = 'n_delivery_delay_check';
 
     /**
-     * Commandes (sans gratis, archivées ni statut historique 4 : OpenOrders::loadingSql) à expédier entre $today et $next,
+     * Commandes (sans archivées ni statut historique 4 : OpenOrders::loadingSql ; sans gratis — [408] le gratis part avec les
+     * commandes du client, le suivi client se fait sur celles-ci) à expédier entre $today et $next,
      * et celles des jours [$from, $today) encore ouvertes (pas de WDT) ou parties (« W transporcie », statut 3 ou WDT).
      * Départ : première date du journal d'expédition de la WDT ; « en transport depuis » : update_status_date du statut 3.
      */
@@ -37,7 +38,7 @@ final class DeliveryDelaysRepository extends WorkshopRepository
             FROM customer_order co
             INNER JOIN customer cu ON cu.id = co.id_customer
             LEFT JOIN document_wdt w ON w.id = co.id_wdt
-            WHERE " . OpenOrders::loadingSql('co') . " AND co.expected_shipping_date IS NOT NULL
+            WHERE " . OpenOrders::loadingSql('co') . " AND COALESCE(co.is_freebie, 0) = 0 AND co.expected_shipping_date IS NOT NULL
               AND (DATE(co.expected_shipping_date) BETWEEN ? AND ?
                    OR (DATE(co.expected_shipping_date) >= ? AND DATE(co.expected_shipping_date) < ? AND ({$open} OR {$effective} = " . CustomerOrderStatus::IN_TRANSIT . ")))
             ORDER BY co.expected_shipping_date, company, co.id", [$today, $next, $from, $today]);

@@ -11,7 +11,7 @@
     const draft = {};
     const STEPS = ['Przegląd', 'Do wyjaśnienia', 'Zatwierdź'];
     const RES_CLS = {sent: 'ok', contact: 'warn', moved: ''};
-    const STATE_CLS = {in_plan: 'ok', stock: 'ok', live: '', shipped: '', freebie: 'warn', unplanned: 'bad', missing: 'bad'};
+    const STATE_CLS = {in_plan: 'ok', stock: 'ok', live: '', shipped: '', unplanned: 'bad', missing: 'bad'};
     const PUSH_CLS = {sent: 'ok', pending: 'warn', failed: 'bad'};
     const flagged = () => D.orders.filter(o => o.flags.length);
     const canFinish = () => !!D.can_finish;
