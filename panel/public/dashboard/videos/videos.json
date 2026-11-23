@@ -109,6 +109,29 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "promotions",
+      "genre": "tuto",
+      "titre": "Promotions : un bundle qui monte la marge",
+      "resume": "Où les promotions sont utilisées, puis le Coach Vente : la marge de base, les couples, le prix et la fiche du bundle, prête à lancer.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-promotions.mp4",
+      "affiche": "12-promotions.jpg",
+      "duree": "2 min 55",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
