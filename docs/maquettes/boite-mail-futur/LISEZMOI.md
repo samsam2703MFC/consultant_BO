@@ -13,6 +13,10 @@ dans l'en-tête : Classique · Briefing · Pilote · Radar. À valider avant tou
 **Réel** : le magasin (L'Atelier By Halle), son adresse, le rail du dashboard. **Illustré** : clients, e-mails,
 produits, montants, capacités et compteurs.
 
+> **Livré le 21/11/2026** (`panel/src/boite_ia.php`, voir `docs/maquettes/boite-mail/LISEZMOI.md`) : la lecture IA gardée
+> (`panel_boite_lecture`), le briefing, le pilote à trois crans (Éteint, Brouillons, Simples) et le radar sur les trois
+> semaines à venir. Pas livrés : le cran « Tout sauf les prix », la capacité de production, la fiche client 360.
+
 ## Ce qui existe déjà dans le code
 
 - La boîte elle-même (`panel/src/boite_mail.php`, `panel/public/dashboard/boite.js`) : lire, répondre, ranger, les

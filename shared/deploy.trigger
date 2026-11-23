@@ -264,3 +264,4 @@
 2026-11-22T18:38:19Z [373] kwoty plynnosc dla KO
 2026-11-22T18:41:48Z [373] prawo liquidity
 2026-11-22T18:59:17Z Dashboard : les paramètres dans une roue à gauche de Mon coffre-fort (fenêtre qui monte : recherche, boîte mail, rappel la veille du retrait, équipe, alertes de stock, ton de l'assistant) ; le groupe Paramètres quitte le rail
+2026-11-23T05:08:06Z Manuels du 22/11/2026 (documentation seulement) : boîte mail, prix de vente, fiche du ticket, étiquettes NL, canal Marketing (PR #235)

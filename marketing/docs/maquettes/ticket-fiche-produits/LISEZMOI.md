@@ -1,6 +1,7 @@
 # La fiche produits du ticket de caisse : la page que le client ouvre en scannant son ticket
 
-**Statut : maquette à valider (21/11/2026).** Rien n'est codé côté serveur ni à la caisse.
+**Statut : en ligne (21/11/2026)** côté cockpit (voir « En ligne ») ; le QR à la caisse reste à faire chez TF Buddy.
+Les captures et les pages `*.html` de ce dossier sont la maquette d'origine.
 
 Demande de Sam (21/11/2026) : une page que le client ouvre en scannant le QR de son ticket de caisse (adresse du
 serveur + numéro de transaction), avec, pour **chaque produit du ticket**, tout ce qui est possible : allergènes,
@@ -34,7 +35,8 @@ dans `shared/public/assets/ds/fonts/`).
 
 ## Le QR du ticket
 
-`{adresse}/t/{boutique}-{transaction}-{clé}` (maquette : `atelierby.be/t/2-104583-7KQ2`). Le numéro est celui de la
+`{adresse}/t/{boutique}-{transaction}-{clé}` (maquette : `atelierby.be/t/2-104583-7KQ2` ; servi aujourd'hui :
+`{adresse}/ticket/?t={boutique}-{transaction}-{clé}`, clé de 6 caractères). Le numéro est celui de la
 transaction du panel : `GET /shops/{boutique}/transactions/{transaction}` (ou `/transactions/{id}?include=products`, que
 le cockpit lit déjà dans `shared/src/panel_ventes.php`) rend les lignes du ticket. L'adresse se lit dans la configuration
 (`erp_cles`), jamais en dur. La **clé** (quelques caractères d'un HMAC de la boutique et de la transaction) empêche de
@@ -43,11 +45,10 @@ parcourir les tickets des autres clients en changeant le numéro. La caisse (TF 
 
 ## La page
 
-1. **En-tête** sans photo : « Vos produits, *en détail.* » (Gotham Black, accent Playwrite DEVA en rubis), la date, le
+1. **En-tête** sans photo : « Vos achats, *en détail.* » (Gotham Black, accent Playwrite DEVA en rubis), la date, le
    nombre d'articles et le total.
 2. **Le ticket** : une ligne par produit (vignette, quantité, prix) ; toucher une ligne ouvre sa fiche dans le carrousel.
-3. **Les allergènes du ticket** : chaque allergène présent et les produits qui le portent, ceux qu'aucun produit ne
-   contient, et l'avertissement sur les traces (allergènes que déclare au moins un produit du catalogue).
+3. **Les allergènes du ticket** : chaque allergène présent et les produits qui le portent, et l'avertissement sur les traces (allergènes que déclare au moins un produit du catalogue).
 4. **Dans quel ordre les déguster** : les produits rangés par date limite (heure de la transaction + durée de
    conservation du produit).
 5. **Les fiches, à glisser** : une fiche par écran, la suivante dépasse pour inviter au geste (CSS `scroll-snap`) ;
@@ -151,7 +152,10 @@ Les routes rendent aussi le coût, la marge et le stock : la page n'en garde rie
   (la page en ligne, autonome, avec un ticket d'exemple), `donnees-exemple.json`, `fiche-ticket-agent.zip` (les trois) ;
   refaits par `python3 construire.py` à partir des fichiers servis.
 
-## Pour la réaliser (proposition, à décider)
+## Pour la réaliser (proposition d'origine)
+
+> Réalisé autrement le 21/11/2026 : page `marketing/public/ticket/`, API `GET /marketing/ticket/client?t=` (hors du
+> format `/api/v1/…` de `docs/API_STANDARD.md`) — voir « En ligne ». Reste à faire : le QR en pied de ticket (TF Buddy).
 
 - Domaine **Marketing** (la relation client) : la page `marketing/public/ticket/`, l'API
   `GET /api/v1/public/marketing/tickets/{clé}` (format de `docs/API_STANDARD.md`) qui vérifie la clé, lit la transaction,
