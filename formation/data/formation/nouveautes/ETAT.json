@@ -1,9 +1,9 @@
 {
   "brancheEnLigne": "claude/deploiement-application-serveur-lmz1bm",
-  "dernierCommitLu": "24c7345f1aecf0cc0f89b3e537dd491bb4bd6b3b",
-  "dernierCommitLuLe": "2026-11-21T18:52:59+01:00",
-  "passeLe": "2026-11-22",
-  "prochainNumero": 4,
+  "dernierCommitLu": "0ea0b39c9ef337e26a0f5001eb08506a5616c930",
+  "dernierCommitLuLe": "2026-11-22T19:34:33+00:00",
+  "passeLe": "2026-11-23",
+  "prochainNumero": 6,
   "themes": [
     {
       "n": 1,
@@ -65,6 +65,32 @@
       "version": "1.0",
       "statut": "a_valider",
       "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam"
+    },
+    {
+      "n": 4,
+      "theme": "Le dashboard : Mon coffre-fort",
+      "id": "art-dash-coffre",
+      "fichier": "data/formation/nouveautes/art-dash-coffre.json",
+      "sources": [
+        "696fc94f Mise en ligne : formation continue, coffre-fort et grandes dates, pièces jointes de la Boîte mail",
+        "adf344b9 Mise en ligne : le coffre-fort v2",
+        "7a71553e Mise en ligne : les paramètres dans une roue"
+      ],
+      "etat": "propose",
+      "proposeLe": "2026-11-23"
+    },
+    {
+      "n": 5,
+      "theme": "Le dashboard : Formations et suivi",
+      "id": "art-dash-formation",
+      "fichier": "data/formation/nouveautes/art-dash-formation.json",
+      "sources": [
+        "696fc94f Mise en ligne : formation continue, coffre-fort et grandes dates, pièces jointes de la Boîte mail",
+        "5b07b99c Mise en ligne : Formations et suivi"
+      ],
+      "etat": "propose",
+      "proposeLe": "2026-11-23",
+      "note": "recoupe les deux articles rédigés le 22/11 et pas encore encodés : data/formation/continue/ (art-nouveau-produit, art-fonctionnement-formations)"
     }
   ],
   "ecartes": [
@@ -248,6 +274,58 @@
       ],
       "raison": "correctifs sans changement de geste",
       "le": "2026-11-22"
+    },
+    {
+      "sujet": "Atelier de production : [367] réclamations (photos), [368] Struktura i obowiązki (organigramme, matrice), [376]–[378] assistants (Zamówienia dnia, Klienci bez zamówienia, Domówienia dnia, Płynność i gotówka, Opóźnienia dostaw, OTIF, Partie i kontrola dnia, Faktury i KSeF dnia), SMS aux clients",
+      "sources": [
+        "22/11"
+      ],
+      "raison": "atelier de production (apps/production, écrans en polonais)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Formation continue côté siège (module Formation › #/rfcontinue : créer, envoyer à la validation, diffuser)",
+      "sources": [
+        "d9a19422",
+        "696fc94f"
+      ],
+      "raison": "écran du siège",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Formation continue côté consultant (cockpit › Franchisés › Formations continues : vérifier, adapter, relire les photos, valider)",
+      "sources": [
+        "d1d61e86",
+        "696fc94f"
+      ],
+      "raison": "écran du cockpit (connexion requise) ; le rôle du consultant est décrit dans « Comment fonctionnent les formations » (data/formation/continue/, en attente)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Cockpit › Documents : dépôt du consultant dans le coffre, pièce attendue, grandes dates et assistant au dépôt",
+      "sources": [
+        "cf0672a3",
+        "9a7f6527",
+        "a2b3984a"
+      ],
+      "raison": "écran du cockpit (le côté magasin est le thème 4)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Trésorerie du siège : les Frais",
+      "sources": [
+        "9a5e34a9"
+      ],
+      "raison": "écran du siège (au dashboard, signalé en mise à jour de 0.0.63)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Paramètres du dashboard dans une roue",
+      "sources": [
+        "7a71553e"
+      ],
+      "raison": "repris dans le thème 4 (la roue à gauche de Mon coffre-fort) ; signalé en mise à jour de 0.0.34",
+      "le": "2026-11-23"
     }
   ],
   "misesAJourSignalees": [
@@ -304,6 +382,30 @@
       "titre": "La visite du consultant en magasin",
       "change": "audit des sept outils de gestion (score sur 100, rapport et courriel), assistant en barre horizontale, onglet « Non signées » (18–19/11)",
       "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.63",
+      "titre": "Le dashboard : l’onglet Frais",
+      "change": "les Frais deviennent un onglet de la Trésorerie ; le rail perd l’entrée « Frais » (73e483b0, 22/11) : la partie 1 « Où se trouve l’onglet » ne tient plus",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.61",
+      "titre": "Le dashboard : la Boîte mail et ses modes IA",
+      "change": "pièce jointe en trois choix : importer, coffre-fort, catalogues (b2308e0f, 22/11)",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.38",
+      "titre": "Le dashboard : l’onglet Tâches",
+      "change": "relire les photos quand une tâche rendue n’a pas la sienne ; vignettes des photos sur l’Opérationnel seulement (1ab9119a, 22/11)",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.34",
+      "titre": "Le dashboard : le haut de l’écran",
+      "change": "bouton abricot « Dossier de formation » en tête ; les paramètres dans une roue en bas du rail, à gauche de Mon coffre-fort (ef905815, 69e53f8d, 22/11)",
+      "le": "2026-11-23"
     }
   ],
   "regles": [
