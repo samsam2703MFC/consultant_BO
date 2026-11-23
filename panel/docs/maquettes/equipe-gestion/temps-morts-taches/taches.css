@@ -1,0 +1,88 @@
+/* Les tâches dans les temps morts (maquette, 23/11/2026) — posée sur le vrai écran par capturer.cjs. Préfixe eqt-. */
+.eqt-voile{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(24,18,20,.45)}
+.eqt{display:grid;grid-template-columns:230px 1fr;grid-template-rows:minmax(0,1fr) auto;width:min(1220px,100%);height:min(880px,100%);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(24,18,20,.3);overflow:hidden;color:var(--ink);font-size:13px;line-height:1.45}
+.eqt-rail{grid-row:1/3;padding:22px 18px;background:var(--paper);border-right:1px solid var(--line)}
+.eqt-rail h2{margin:0 0 2px;font-size:16px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink)}
+.eqt-rail .sub{display:block;margin-bottom:20px;font-size:12px;color:var(--muted)}
+.eqt-et{display:grid;grid-template-columns:26px 1fr;gap:2px 10px;padding:8px 0}
+.eqt-et i{grid-row:1/3;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-style:normal;font-size:12px;font-weight:600;color:var(--muted)}
+.eqt-et b{font-weight:600}.eqt-et small{font-size:11.5px;color:var(--muted)}
+.eqt-et.fait i{background:var(--green);border-color:var(--green);color:#fff}
+.eqt-et.ici i{background:var(--accent);border-color:var(--accent);color:#fff}.eqt-et.ici b{color:var(--accent)}
+.eqt-et.neuf small{color:var(--accent)}
+.eqt-et.apres b{color:var(--muted-2);font-weight:400}
+.eqt-main{padding:22px 28px;overflow:auto}
+.eqt-q{margin:0 0 4px;font-size:21px;font-weight:600;letter-spacing:-.01em}
+.eqt-qs{margin:0 0 14px;color:var(--muted-2)}
+.eqt-cols{display:grid;grid-template-columns:330px 1fr;gap:18px}
+.eqt-sem .eqt-j{align-items:start}
+.eqt-h{margin:0 0 8px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eqt-t{display:grid;grid-template-columns:18px 1fr;gap:2px 9px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px}
+.eqt-t.on{border-color:var(--green);background:rgba(63,122,82,.05)}
+.eqt-t.fixe{background:var(--paper);border-style:dashed}
+.eqt-cb{width:15px;height:15px;margin-top:2px;border:1.5px solid var(--line);border-radius:4px;background:#fff}
+.eqt-t.on .eqt-cb{border-color:var(--green);background:var(--green);box-shadow:inset 0 0 0 2px #fff}
+.eqt-t.fixe .eqt-cb{border:0;background:none}
+.eqt-t .n{font-weight:600}.eqt-t .n i{font-style:normal;font-weight:400;color:var(--muted);font-size:11.5px;margin-right:4px;font-variant-numeric:tabular-nums}
+.eqt-t .d{grid-column:2;font-size:11.5px;color:var(--muted-2)}
+.eqt-t .d b{font-weight:600;color:var(--ink)}
+.eqt-t .d .ko{color:#C0281F}
+.eqt-z{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+.eqt-sem{border:1px solid var(--line);border-radius:12px;padding:8px 14px 12px;--nom:74px}
+.eqt-axe{position:relative;height:16px;margin-left:var(--nom)}
+.eqt-axe i{position:absolute;transform:translateX(-50%);font-style:normal;font-size:10px;color:var(--muted);white-space:nowrap}
+.eqt-axe i:first-child{transform:none}.eqt-axe i:last-child{transform:translateX(-100%)}
+.eqt-j{display:grid;grid-template-columns:var(--nom) 1fr;align-items:center;padding:7px 0;border-top:1px solid var(--row-line)}
+.eqt-j:first-of-type{border-top:0}
+.eqt-j>span{font-weight:600;font-size:12.5px}.eqt-j>span small{display:block;font-weight:400;font-size:10.5px;color:var(--muted)}
+.eqt-p{position:relative;height:46px}
+.eqt-p .cpt{position:absolute;top:4px;height:8px;border-radius:3px;background:var(--muted-2);opacity:.35}
+.eqt-p .tm{position:absolute;top:0;bottom:0;border-radius:4px;background:repeating-linear-gradient(135deg,#d9d2c8 0 3px,#ebe5dc 3px 5px);opacity:.75}
+.eqt-p .ouv{position:absolute;top:0;bottom:0;border-left:1px dashed rgba(141,29,44,.35);border-right:1px dashed rgba(141,29,44,.35)}
+.eqt-ch{position:absolute;top:16px;height:26px;display:flex;align-items:center;gap:4px;padding:0 6px;overflow:hidden;white-space:nowrap;border-radius:5px;color:#fff;font-size:10.5px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.eqt-ch small{font-weight:400;opacity:.85}
+.eqt-ch.fixe{background:#fff!important;color:var(--muted-2);border:1px dashed var(--muted);box-shadow:none;font-weight:400}
+.eqt-leg{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0 var(--nom);font-size:11px;color:var(--muted)}
+.eqt-leg i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+.eqt-bilan{margin-top:12px;padding:11px 14px;border-radius:10px;background:var(--paper);font-size:13px}
+.eqt-bilan b{font-weight:600}
+.eqt-pied{display:flex;align-items:center;gap:10px;padding:14px 28px;border-top:1px solid var(--line);background:#fff}
+.eqt-pied .res{margin-right:auto;color:var(--muted-2);font-size:12.5px}.eqt-pied .res b{color:var(--ink)}
+.eqt-etiq{position:fixed;z-index:80;left:24px;bottom:18px;padding:7px 12px;border-radius:8px;background:#1c1a17;color:#fff;font-size:12.5px}
+.eqt-etiq b{color:#F2C14E;font-weight:600}
+/* Le jour : la ligne des tâches posées dans les creux, sous les temps morts habituels. */
+.eqt-lane .eqp-tl{height:54px}
+.eqt-lane .eqt-ch{top:6px;height:28px}
+.eqt-bulle{position:absolute;z-index:7;max-width:300px;padding:10px 12px;border-radius:10px;background:#1c1a17;color:#fff;font-size:12px;line-height:1.45;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+.eqt-bulle b{color:#F2C14E}
+/* La tablette du comptoir. */
+.eqt-tab{position:fixed;z-index:70;right:34px;top:90px;width:400px;border-radius:26px;background:#1c1a17;padding:14px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.eqt-tab-ecran{border-radius:16px;background:#fff;overflow:hidden;color:var(--ink);font-size:13px}
+.eqt-tab-haut{display:flex;justify-content:space-between;padding:10px 14px;background:var(--paper);font-size:11.5px;color:var(--muted)}
+.eqt-calme{padding:16px 16px 12px;background:rgba(63,122,82,.08);border-bottom:1px solid var(--row-line)}
+.eqt-calme b{display:block;font-size:17px;color:var(--green)}
+.eqt-calme span{font-size:12px;color:var(--muted-2)}
+.eqt-afaire{padding:12px 16px}
+.eqt-tache{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:9px}
+.eqt-tache .n{font-weight:600;font-size:14px}.eqt-tache .n i{font-style:normal;font-weight:400;color:var(--muted);font-size:12px;margin-right:4px}
+.eqt-tache .m{font-size:12px;color:var(--muted-2)}
+.eqt-tache .du{align-self:start;font-weight:600;font-variant-numeric:tabular-nums}
+.eqt-tache .bt{grid-column:1/3;display:flex;gap:8px;margin-top:8px}
+.eqt-tache .bt span{flex:1;padding:9px 0;border-radius:9px;text-align:center;font-weight:600;font-size:13px}
+.eqt-tache .bt .go{background:var(--accent);color:#fff}.eqt-tache .bt .plt{border:1px solid var(--line);color:var(--muted-2)}
+.eqt-tache.ensuite{opacity:.7}
+.eqt-tab-bas{padding:10px 16px 14px;font-size:11.5px;color:var(--muted)}
+.eqt-bd{position:relative;height:10px;margin:4px 0 6px;border-radius:3px;background:rgba(34,34,34,.04)}
+.eqt-bd .cpt{position:absolute;top:3px;height:4px;border-radius:2px;background:var(--muted-2);opacity:.4}
+.eqt-bd .tm{position:absolute;top:0;bottom:0;border-radius:2px;background:repeating-linear-gradient(135deg,#c9bfb2 0 3px,#e6dfd5 3px 5px)}
+.eqt-bd .ouv{position:absolute;top:-2px;bottom:-2px;border-left:1px dashed rgba(141,29,44,.35);border-right:1px dashed rgba(141,29,44,.35)}
+.eqt-crs{display:flex;gap:6px;flex-wrap:wrap}
+.eqt-cr{display:flex;flex-direction:column;gap:3px;min-width:150px;flex:1 1 150px;max-width:240px;padding:6px 8px;border-radius:8px;background:repeating-linear-gradient(135deg,#f4f0ea 0 6px,#faf8f4 6px 12px);border:1px solid #e6dfd5}
+.eqt-cr .h{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}.eqt-cr .h i{font-style:normal;font-weight:400;color:var(--muted)}
+.eqt-cr .tk{padding:3px 6px;border-left:3px solid;border-radius:4px;background:#fff;font-size:11px;line-height:1.35}
+.eqt-cr .tk b{font-weight:600;font-variant-numeric:tabular-nums}.eqt-cr .tk i{display:block;font-style:normal;color:var(--muted-2);font-size:10.5px}
+.eqt-cr .lb{font-size:10.5px;color:var(--green)}.eqt-cr .vide{font-size:11px;color:var(--muted)}
+.eqt-rien{font-size:11.5px;color:var(--muted)}
+.eqt-lane .eqt-ch{top:5px;height:12px}
+.eqt-lb{position:absolute;top:19px;white-space:nowrap;font-size:10.5px;color:var(--ink)}.eqt-lb b{font-weight:600}
+.eqt-lb.bas{top:34px}

@@ -195,3 +195,16 @@ appliquées, si bien qu'en décocher une ne découvre rien. Elles ne touchent ja
 | `ecran-20-assistant-3-le-chiffre.png` | « 17,5 h de trop » (18,3 %) ; cinq propositions qui gardent chaque section tenue ; cochées : 16,8 % |
 | `ecran-21-assistant-4-verifier.png` | le budget, les heures, les durées, jour par jour le comptoir et les secteurs ; « Créer 34 services au panel » ; la fenêtre de Chloé s'ouvre ensuite |
 
+
+## Les tâches dans les temps morts (maquette, 23/11/2026)
+
+Sam : « dans l'assistant aussi (pour les sections de vente) on a les temps morts, donc on pourrait adapter les tâches
+des checklists de contrôle ou de tâches à ces moments-là ». Dossier `temps-morts-taches/` (`taches.js`, `taches.css`,
+`capturer.cjs`), posé sur le vrai écran. Les checklists sont les vraies (`shared/src/checklists_codes.php`) ; les durées,
+les creux de la semaine et les personnes sont illustratifs.
+
+| Capture | L'idée |
+|---|---|
+| `temps-morts-taches/taches-1-assistant-temps-morts.png` | une étape de l'assistant : les tâches qui peuvent bouger (1.2.01 Facing, 4.2.01 Hygiène, 1.5.01 Planogramme du lundi…), les creux de chaque jour en cartes, chaque tâche posée à quelqu'un du comptoir présent ; ce qui n'a pas de place garde son heure ; le bilan (5 h 05 sorties des heures de pointe, 2 h 30 de creux libres) |
+| `temps-morts-taches/taches-2-jour-ligne-des-taches.png` | le jour : la ligne « Tâches des creux » sous les temps morts habituels ; les tâches à heure fixe en pointillé |
+| `temps-morts-taches/taches-3-tablette-au-creux.png` | la tablette du comptoir au moment calme : « C'est calme — à faire maintenant », Commencer, ou « un client : plus tard » |
