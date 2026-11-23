@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-23T13:20:23Z",
+ "genere": "2026-11-23T13:27:08Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1069,7 +1069,7 @@
      ],
      "chemin": "/dashboard/equipe…",
      "handler": "eqpRoute",
-     "source": "panel/src/equipe.php:34",
+     "source": "panel/src/equipe.php:40",
      "resume": ""
     }
    ]
@@ -1090,7 +1090,7 @@
      ],
      "chemin": "/dashboard/equipe…",
      "handler": "eqpRoute",
-     "source": "panel/src/equipe.php:34",
+     "source": "panel/src/equipe.php:40",
      "resume": ""
     }
    ]
@@ -1101,7 +1101,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:241"
+    "equipe.js:242"
    ],
    "magasin": true,
    "routes": [
@@ -1111,7 +1111,7 @@
      ],
      "chemin": "/dashboard/equipe…",
      "handler": "eqpRoute",
-     "source": "panel/src/equipe.php:34",
+     "source": "panel/src/equipe.php:40",
      "resume": ""
     }
    ]
@@ -1132,7 +1132,29 @@
      ],
      "chemin": "/dashboard/equipe…",
      "handler": "eqpRoute",
-     "source": "panel/src/equipe.php:34",
+     "source": "panel/src/equipe.php:40",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/semaine/recopie",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:442",
+    "equipe.js:482"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:40",
      "resume": ""
     }
    ]
@@ -1143,8 +1165,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:376",
-    "equipe.js:377"
+    "equipe.js:377",
+    "equipe.js:378"
    ],
    "magasin": true,
    "routes": [
@@ -1154,7 +1176,7 @@
      ],
      "chemin": "/dashboard/equipe…",
      "handler": "eqpRoute",
-     "source": "panel/src/equipe.php:34",
+     "source": "panel/src/equipe.php:40",
      "resume": ""
     }
    ]

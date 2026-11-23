@@ -46,7 +46,7 @@
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
     PJ: null, PS: null, Perr: null, vue: 'jour', jour: AUJ, lundi: lundiDe(AUJ), editer: false, edit: null, glisse: null,
-    pdf: null, flash: null, occupe: false };
+    pdf: null, rec: null, flash: null, occupe: false };
 
   /* ── L'API ──────────────────────────────────────────────────────────────────────────────────────────────────── */
   const json = r => r.json().catch(() => ({})).then(j => (r.ok ? j : Promise.reject(Object.assign(new Error((j && j.error) || ('HTTP ' + r.status)), { j, code: r.status }))));
@@ -115,7 +115,7 @@
     const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
     const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
     st.el.innerHTML = `<nav class="page-tabs" aria-label="Mon équipe">${tabs}</nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
-      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale();
+      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie();
     const g2 = st.el.querySelector('.eqp-pg-defil'); if (g2) { g2.scrollLeft = x; }
     brancher();
   }
@@ -219,6 +219,7 @@
     const barre = `<div class="eqp-pbar"><span class="eqp-nav">${nav}</span><span class="eqp-sp"></span>
       <div class="seg" role="group" aria-label="Affichage">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['tableau', 'Tableau']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
       ${st.vue === 'jour' ? (st.editer ? `<button type="button" class="btn btn--primary" data-eqp-editer="0">Terminer</button>` : `<button type="button" class="btn" data-eqp-editer="1">Modifier les horaires</button>`) : ''}
+      ${st.vue !== 'jour' ? '<button type="button" class="btn btn--primary" data-eqp-recopier="1">Recopier la semaine précédente</button>' : ''}
       <button type="button" class="btn" data-eqp-pdf="1" aria-expanded="${st.pdf ? 'true' : 'false'}">Imprimer le planning</button></div>${rendPdf()}`;
     if (st.Perr && !P) { return barre + `<div class="eqp-err">Impossible de lire le planning : ${esc(st.Perr)}. <button type="button" class="linklike" data-eqp-relire="1">Réessayer</button></div>`; }
     if (!P || (st.vue === 'jour' ? P.du !== st.jour : P.du !== st.lundi)) { return barre + '<div class="eqp-attente">Lecture du planning…</div>'; }
@@ -397,11 +398,19 @@
     </div></section>`;
     const col = (i, c) => `<div class="eqp-j${P.jours[i].date === P.aujourdhui ? ' auj' : ''}">${c}</div>`;
     const fondMini = i => { const o = CJ[i].ouv; return (o ? `<span class="eqp-ouv" style="left:${X(o[0])};width:${W(o[0], o[1])}"></span>` : '') + [8, 12, 16].map(x => `<span class="eqp-g f" style="left:${X(x * 60)}"></span>`).join(''); };
-    const tete = `<div class="eqp-sl eqp-st"><div class="eqp-n">Employé</div>${P.jours.map((J, i) => col(i, `<button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><b>${esc(court(J.date))}</b><span class="sub">${CJ[i].presents} pers. · ${fH(CJ[i].h)}</span>${CJ[i].pct != null ? marq(P, CJ[i].pct, 'eqp-m-j') : ''}</button><span class="eqp-ax"><i style="left:${X(480)}">8</i><i style="left:${X(720)}">12</i><i style="left:${X(960)}">16</i></span>`)).join('')}<div class="eqp-tot">Semaine</div></div>`;
+    const tete = `<div class="eqp-sl eqp-st"><div class="eqp-n">Employé</div>${P.jours.map((J, i) => col(i, `<button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><b>${esc(court(J.date))}</b><span class="sub">${CJ[i].presents} pers. · ${fH(CJ[i].h)}</span>${CJ[i].pct != null && CJ[i].h > 0 ? marq(P, CJ[i].pct, 'eqp-m-j') : ''}</button><span class="eqp-ax"><i style="left:${X(480)}">8</i><i style="left:${X(720)}">12</i><i style="left:${X(960)}">16</i></span>`)).join('')}<div class="eqp-tot">Semaine</div></div>`;
     const ligne = e => `<div class="eqp-sl"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b><span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div>${P.jours.map((J, i) => col(i, `<div class="eqp-stl">${fondMini(i)}${CJ[i].sv.filter(s => s.employe === e.id).map(s => `<span class="eqp-bar" style="left:${X(s.de)};width:${W(s.de, s.a)}"></span><span class="eqp-lab" style="left:${X(s.de)}">${hc(s.de)}–${hc(s.a)}</span>`).join('')}</div>`)).join('')}<div class="eqp-tot">${parPers.has(e.id) ? fH(parPers.get(e.id).h) + `<span class="sub">${fE(parPers.get(e.id).c)}</span>` : '<span class="eqp-tiret">—</span>'}</div></div>`;
     const corps = groupes(P, eq).map(([g, L]) => `<div class="eqp-sl eqp-sgr"><div class="eqp-n">${esc(g)}</div></div>${L.map(ligne).join('')}`).join('');
     const piste = (l, k) => `<div class="eqp-sl eqp-sli"><div class="eqp-n">${esc(l.nom)}</div>${P.jours.map((J, i) => { const x = CJ[i].lin[k]; return col(i, `<div class="eqp-stl">${fondMini(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou plein" style="left:0;width:100%"><b>vide</b></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</div>${x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')}</span>` : ''}`); }).join('')}<div class="eqp-tot"></div></div>`;
     const lin = CJ[0] ? CJ[0].lin : [];
+    if (!nSv) {
+      const taux = (P.employes || []).filter(e => e.actif && e.taux > 0).map(e => e.taux), moy = taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : 0;
+      const bud = ca ? P.budget.cible / 100 * ca : 0;
+      return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> Partez de la semaine précédente : « Recopier la semaine précédente » montre d’abord ce qui sera recopié, puis ajustez jour par jour.
+        ${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>
+        <div class="eqp-pg-defil"><section class="card eqp-sem7" aria-label="Planogramme de la semaine">${tete}${corps}</section></div>
+        <p class="eqp-note">Un clic sur un jour l’ouvre en grand : « Modifier les horaires », puis glisser sur la ligne d’une personne pour lui ajouter un service.</p>`;
+    }
     return kpis + jauge(P, 'Budget d’heures de la semaine', hAvecCa || h, coutAvecCa, ca)
       + `<div class="eqp-pg-defil"><section class="card eqp-sem7" aria-label="Planogramme de la semaine">${tete}${corps}
         <div class="eqp-sl eqp-ssep"><div class="eqp-n">Les linéaires</div><div class="eqp-leg"><span><i class="c"></i>quelqu’un du secteur est là</span><span><i class="t"></i>trou : comptoir vide pendant l’ouverture, ou secteur vide</span><span><i class="o"></i>ouverture (d’après les tickets)</span></div></div>
@@ -418,9 +427,62 @@
         return `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${L.length ? L.map(s => `<span class="eqp-sv">${hh(s.de)}–${hh(s.a)}</span>`).join('') : '<span class="eqp-tiret">—</span>'}</td>`; }).join('');
       return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b><span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${h ? fH(h) : '—'}</td><td class="num">${h ? fE(c) : '—'}</td></tr>`;
     }).join('');
-    const tot = `<tr class="tot"><td>Par jour</td>${CJ.map((C, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${C.presents} pers. · ${fH(C.h)}${C.pct != null ? '<br>' + marq(P, C.pct, 'eqp-m-j') : ''}</td>`).join('')}<td class="num">${fH(CJ.reduce((a, C) => a + C.h, 0))}</td><td class="num">${fE(CJ.reduce((a, C) => a + C.cout, 0))}</td></tr>`;
+    const tot = `<tr class="tot"><td>Par jour</td>${CJ.map((C, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${C.presents} pers. · ${fH(C.h)}${C.pct != null && C.h > 0 ? '<br>' + marq(P, C.pct, 'eqp-m-j') : ''}</td>`).join('')}<td class="num">${fH(CJ.reduce((a, C) => a + C.h, 0))}</td><td class="num">${fE(CJ.reduce((a, C) => a + C.cout, 0))}</td></tr>`;
     return `<section class="card eqp-tab"><div class="eqp-table"><table><thead><tr><th>Employé</th>${P.jours.map(J => `<th class="${J.date === P.aujourdhui ? 'auj' : ''}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}">${esc(court(J.date))}</button></th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>${lignes}${tot}</tbody></table></div></section>`;
     // (le budget de la semaine est sur la vue Semaine ; le tableau garde la grille des heures)
+  }
+
+  /* ── Recopier la semaine précédente (23/11/2026 : « le plus important est que ça aide le franchisé à faire ses
+   * horaires ») : l'aperçu d'abord — ce qui sera recopié, ce qui est écarté et pourquoi, l'effet sur le budget de la
+   * semaine — puis la création au panel des services cochés. ─────────────────────────────────────────────────────── */
+  function ouvrirRecopie() {
+    const du = st.lundi;
+    st.rec = { du, etat: 'lecture', data: null, coches: new Set(), err: null, res: null };
+    rendre();
+    lire('/dashboard/equipe/semaine/recopie', { du }).then(r => { if (!st.rec || st.rec.du !== du) { return; } st.rec.data = r; st.rec.coches = new Set(r.propositions.map(p => p.source)); st.rec.etat = 'pret'; })
+      .catch(e => { if (st.rec) { st.rec.etat = 'erreur'; st.rec.err = e.message; } }).finally(rendre);
+  }
+  function rendRecopie() {
+    const R = st.rec; if (!R) { return ''; }
+    const fin = plus(R.du, 6), titre = `<h3 id="eqp-rec-t">Recopier la semaine précédente</h3>`;
+    const cadre = (corps, actions) => `<div class="eqp-voile" data-eqp-fermer="1"><div class="eqp-mod eqp-rec card" role="dialog" aria-modal="true" aria-labelledby="eqp-rec-t" data-eqp-garde="1">${titre}${corps}<div class="confirm__actions">${actions}</div></div></div>`;
+    const fermer = l => `<button type="button" class="btn btn--ghost" data-eqp-fermer="1"${R.etat === 'envoi' ? ' disabled' : ''}>${l}</button>`;
+    if (R.etat === 'lecture') { return cadre('<p class="qui">Lecture des deux semaines au panel…</p>', fermer('Annuler')); }
+    if (R.etat === 'erreur') { return cadre(`<p class="error" role="alert">L’aperçu n’est pas venu : ${esc(R.err)}.</p>`, fermer('Fermer')); }
+    const D = R.data;
+    if (R.etat === 'fini') {
+      const x = R.res;
+      return cadre(`<p class="qui">${x.crees} service${x.crees > 1 ? 's' : ''} recopié${x.crees > 1 ? 's' : ''} sur ${x.demandes}.${x.arret ? ' Arrêt : ' + esc(x.arret) + '.' : ''}</p>${x.echecs.length ? `<div class="eqp-opt-g">Pas recopiés</div><ul class="eqp-rec-ec">${x.echecs.map(f => `<li><b>${esc(f.nom)}</b> · ${esc(court(f.date))} ${esc(f.de)}–${esc(f.a)} <span>${esc(f.motif)}</span></li>`).join('')}</ul>` : ''}`, fermer('Fermer'));
+    }
+    const P = st.PS && st.PS.du === R.du ? st.PS : null, eq = P ? equipeDe(P) : new Map();
+    const choisis = D.propositions.filter(p => R.coches.has(p.source));
+    const heures = choisis.reduce((a, p) => a + (mn(p.a) - mn(p.de)) / 60, 0);
+    const cout = choisis.reduce((a, p) => a + (mn(p.a) - mn(p.de)) / 60 * ((eq.get(p.employe) || {}).taux || 0), 0);
+    let budget = '';
+    if (P) {
+      const CJ = P.jours.map(J => calculJour(P, J, null)), ca = CJ.reduce((a, c) => a + (c.objectif || 0), 0);
+      const avant = CJ.reduce((a, c) => a + (c.objectif ? c.cout : 0), 0);
+      const ajout = choisis.filter(p => (P.jours.find(J => J.date === p.date) || {}).objectif).reduce((a, p) => a + (mn(p.a) - mn(p.de)) / 60 * ((eq.get(p.employe) || {}).taux || 0), 0);
+      if (ca) {
+        const apres = (avant + ajout) / ca * 100, moy = heures > 0 ? cout / heures : 0, trop = moy > 0 ? (avant + ajout - P.budget.cible / 100 * ca) / moy : 0;
+        budget = `<div class="eqp-rec-b">Budget de la semaine ${marq(P, avant / ca * 100)} → ${marq(P, apres)} <span>cible ${String(P.budget.cible).replace('.', ',')} % · ${fE(ca)} de CA prévu</span>${trop > 0.5 ? `<em>Pour revenir à ${String(P.budget.cible).replace('.', ',')} % : environ ${fH(trop)} de moins (au coût moyen de ${fEh(moy)}) — décochez des services ici, ou raccourcissez-les ensuite jour par jour.</em>` : ''}</div>`;
+      }
+    }
+    const parJour = new Map(); D.propositions.forEach(p => { if (!parJour.has(p.date)) { parJour.set(p.date, []); } parJour.get(p.date).push(p); });
+    const liste = [...parJour.entries()].map(([d, L]) => `<div class="eqp-opt-g">${esc(long(d).replace(/ \d{4}$/, ''))} <span>← ${esc(court(plus(d, -7)))}</span></div>${L.map(p => `<label class="eqp-opt eqp-rec-l${R.coches.has(p.source) ? ' on' : ''}"><input type="checkbox" data-eqp-rec-coche="${p.source}"${R.coches.has(p.source) ? ' checked' : ''}${R.etat === 'envoi' ? ' disabled' : ''}><span>${esc(p.nom)}</span><span class="s">${esc(p.de)}–${esc(p.a)} · ${fH((mn(p.a) - mn(p.de)) / 60)}</span></label>`).join('')}`).join('');
+    const ecartes = D.ecartes.length ? `<details class="eqp-rec-d"><summary>${D.ecartes.length} service${D.ecartes.length > 1 ? 's' : ''} écarté${D.ecartes.length > 1 ? 's' : ''}</summary><ul class="eqp-rec-ec">${D.ecartes.map(x => `<li><b>${esc(x.nom)}</b> · ${esc(court(x.date))} ${esc(x.de)}–${esc(x.a)} <span>${esc(x.motif)}</span></li>`).join('')}</ul></details>` : '';
+    const corps = `<p class="qui">Les services du ${dt(D.source.du).getDate()} au ${esc(long(D.source.au).replace(/^\S+ /, ''))}, reportés sur la semaine du ${dt(R.du).getDate()} au ${esc(long(fin).replace(/^\S+ /, ''))}. ${D.dejaPrevus ? D.dejaPrevus + ' service' + (D.dejaPrevus > 1 ? 's sont' : ' est') + ' déjà prévu' + (D.dejaPrevus > 1 ? 's' : '') + ' cette semaine : ils restent, et rien ne les chevauche.' : 'La semaine est vide.'}</p>
+      ${D.propositions.length ? `<div class="eqp-rec-r"><b>${choisis.length} service${choisis.length > 1 ? 's' : ''}</b> · ${fH(heures)} · ${fE(cout)}<span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-rec-tout="1">${R.coches.size === D.propositions.length ? 'Tout décocher' : 'Tout cocher'}</button></div>${budget}<div class="eqp-rec-liste">${liste}</div>` : '<p class="eqp-note">Rien à recopier : la semaine précédente est vide, ou tout est déjà au planning.</p>'}
+      ${ecartes}${R.err ? `<p class="error" role="alert">${esc(R.err)}</p>` : ''}`;
+    return cadre(corps, fermer('Annuler') + (D.propositions.length ? `<button type="button" class="btn btn--primary${R.etat === 'envoi' ? ' is-busy' : ''}" data-eqp-rec-ok="1"${choisis.length && R.etat !== 'envoi' ? '' : ' disabled'}>${R.etat === 'envoi' ? 'Recopie au panel…' : 'Recopier ' + choisis.length + ' service' + (choisis.length > 1 ? 's' : '')}</button>` : ''));
+  }
+  function appliquerRecopie() {
+    const R = st.rec; if (!R || R.etat !== 'pret' || !R.coches.size) { return; }
+    R.etat = 'envoi'; R.err = null; rendre();
+    envoyer('POST', '/dashboard/equipe/semaine/recopie', { du: R.du, sources: [...R.coches] })
+      .then(x => { st.PS = null; lirePlanning('semaine'); st.PJ = null;
+        if (x.echecs && x.echecs.length) { R.etat = 'fini'; R.res = x; rendre(); } else { st.rec = null; flash('ok', x.crees + ' service' + (x.crees > 1 ? 's' : '') + ' recopié' + (x.crees > 1 ? 's' : '') + ' au panel. Ajustez maintenant jour par jour.'); } })
+      .catch(e => { R.etat = 'pret'; R.err = 'Rien n’est recopié : ' + e.message + '.'; rendre(); });
   }
 
   /* ── Les gestes ──────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -436,7 +498,11 @@
     on('[data-eqp-bureau]', 'click', () => { if (st.bureau) { st.bureau(); } });
     on('[data-eqp-aller-planning]', 'click', () => { st.onglet = 'planning'; st.vue = 'semaine'; st.lundi = lundiDe(AUJ); chargerVue(); rendre(); });
     on('[data-eqp-coche]', 'change', e => { const id = +e.target.dataset.eqpCoche; if (e.target.checked) { st.mod.coches.add(id); } else { st.mod.coches.delete(id); } rendre(); });
-    on('[data-eqp-fermer]', 'click', e => { if (e.target !== e.currentTarget || (st.mod && st.mod.occupe)) { return; } st.mod = null; rendre(); });
+    on('[data-eqp-fermer]', 'click', e => { if (e.target !== e.currentTarget || (st.mod && st.mod.occupe) || (st.rec && st.rec.etat === 'envoi')) { return; } st.mod = null; st.rec = null; rendre(); });
+    on('[data-eqp-recopier]', 'click', ouvrirRecopie);
+    on('[data-eqp-rec-coche]', 'change', e => { const id = +e.target.dataset.eqpRecCoche; if (e.target.checked) { st.rec.coches.add(id); } else { st.rec.coches.delete(id); } rendre(); });
+    on('[data-eqp-rec-tout]', 'click', () => { const R = st.rec; const tous = R.coches.size === R.data.propositions.length; R.coches = new Set(tous ? [] : R.data.propositions.map(p => p.source)); rendre(); });
+    on('[data-eqp-rec-ok]', 'click', appliquerRecopie);
     on('[data-eqp-enregistrer-postes]', 'click', enregistrerPostes);
     on('[data-eqp-vue]', 'click', e => { st.vue = e.currentTarget.dataset.eqpVue; st.edit = null; if (st.vue !== 'jour') { st.editer = false; st.lundi = lundiDe(st.jour); } chargerVue(); rendre(); });
     on('[data-eqp-pas]', 'click', e => { const n = +e.currentTarget.dataset.eqpPas; st.edit = null; if (st.vue === 'jour') { st.jour = plus(st.jour, n); } else { st.lundi = plus(st.lundi, n); } chargerVue(); rendre(); });

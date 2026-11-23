@@ -105,6 +105,7 @@ la cible du réseau, 20 % et 22 %, réglables dans le réglage `personnelPaliers
 | `ecran-2-planning-jour.png` | le planogramme du jour : présence, tickets habituels, temps morts habituels et du jour, linéaires, constats |
 | `ecran-3-modifier-un-service.png` | « Modifier les horaires » : un service étiré à la souris, la fenêtre de son effet |
 | `ecran-4-planning-semaine.png` | la semaine, les marqueurs du budget jour par jour, la jauge |
+| `ecran-5-recopier-la-semaine.png` | « Recopier la semaine précédente » sur une semaine vide : l'aperçu jour par jour, un service décoché, le budget de la semaine après la recopie (20,9 %, rouge) et les heures à retirer pour revenir à 17 % |
 
 **Comment elles sont faites.** Le vrai dashboard servi en local ; les routes `/dashboard/equipe/*` répondent avec ce que le
 vrai code de `panel/src/equipe.php` calcule sur un panel de doublure (`ecran/panel_illustratif.php`, l'équipe et les tickets

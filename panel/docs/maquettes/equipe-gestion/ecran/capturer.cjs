@@ -10,9 +10,14 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await p.route('**/api/cockpit/**', async r => {
     const u = new URL(r.request().url()), pa = u.pathname.replace(/^.*\/api\/cockpit/, ''), m = r.request().method();
     if (pa.startsWith('/dashboard/equipe')) {
-      if (m !== 'GET') { ecrits.push([m, pa, r.request().postData()]); return r.fulfill({ status: 200, json: pa === '/dashboard/equipe/postes' ? Object.assign(JSON.parse(lire('carte.json')), { ok: true }) : { ok: true, id: 999 } }); }
+      if (m !== 'GET') {
+        ecrits.push([m, pa, r.request().postData()]);
+        if (pa === '/dashboard/equipe/semaine/recopie') { const n = JSON.parse(r.request().postData()).sources.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
+        return r.fulfill({ status: 200, json: pa === '/dashboard/equipe/postes' ? Object.assign(JSON.parse(lire('carte.json')), { ok: true }) : { ok: true, id: 999 } });
+      }
+      if (pa === '/dashboard/equipe/semaine/recopie') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('recopie.json') }); }
       if (pa === '/dashboard/equipe/carte') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('carte.json') }); }
-      if (pa === '/dashboard/equipe/planning') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire(u.searchParams.get('jours') === '1' ? 'jour.json' : 'semaine.json') }); }
+      if (pa === '/dashboard/equipe/planning') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire(u.searchParams.get('jours') === '1' ? 'jour.json' : u.searchParams.get('du') === '2026-11-30' ? 'semaine2.json' : 'semaine.json') }); }
       return r.fulfill({ status: 404, json: { error: 'x' } });
     }
     if (m !== 'GET') { return r.fulfill({ status: 403, json: { error: 'lecture seule' } }); }
@@ -53,6 +58,14 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await p.click('[data-eqp-vue="tableau"]'); await p.waitForSelector('.eqp-tab');
   await p.click('[data-eqp-pdf]');
   await shot('e6-tableau-pdf', true);
+  // Recopier la semaine précédente : la semaine suivante, vide ; l'aperçu ; décocher un service ; recopier.
+  await p.click('[data-eqp-vue="semaine"]'); await p.waitForSelector('.eqp-sem7');
+  await p.click('[data-eqp-pas="7"]'); await p.waitForSelector('.eqp-vide7');
+  await p.click('[data-eqp-recopier]'); await p.waitForSelector('.eqp-rec-liste');
+  await p.click('.eqp-rec-l:has-text("Jonas Willems") input');
+  await shot('e7-recopier-la-semaine', false);
+  await p.click('[data-eqp-rec-ok]'); await p.waitForTimeout(600);
+  console.log('flash', await p.textContent('.eqp-flash').catch(() => '—'));
   console.log('écritures', JSON.stringify(ecrits));
   console.log(err.length ? 'ERREURS ' + err.join(' | ') : 'sans erreur de page');
   await b.close();

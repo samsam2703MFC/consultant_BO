@@ -22,6 +22,12 @@ declare(strict_types=1);
  *   PATCH {shop, id, date, de, a} (PATCH /schedule/{id}), DELETE {shop, id, date} (DELETE /schedule/{id}). Un service
  *   désigné par son numéro doit être au planning du magasin ce jour-là ; deux services d'une personne ne se chevauchent pas.
  *
+ * - RECOPIER LA SEMAINE PRÉCÉDENTE (23/11/2026, Sam : « le plus important est que ça aide le franchisé à faire ses
+ *   horaires ») : GET /dashboard/equipe/semaine/recopie?shop=&du= — l'aperçu : les services de la semaine d'avant reportés
+ *   sept jours plus tard, et ceux qui sont écartés avec leur motif (plus dans l'équipe, déjà au planning, chevauche) ;
+ *   POST {shop, du, sources: [id…]} — crée au panel les services cochés, recalculés côté serveur (la liste du navigateur
+ *   ne choisit que parmi eux) ; s'arrête au premier refus de droits (401, 403).
+ *
  * Les écritures partent avec le compte du cockpit (PanelApi) : si le panel refuse (403), la réponse le dit telle quelle.
  * La route des employés rend aussi des secrets (hachages, jetons) : rien n'en sort que les champs listés ici.
  */
@@ -38,6 +44,10 @@ function eqpRoute(string $method, string $path): ?array
     if ($method === 'POST' && $path === '/dashboard/equipe/postes') { return wr_equipe_postes(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning') { return ep_equipe_planning(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning/pdf') { ep_equipe_planning_pdf(); return null; }
+    if ($path === '/dashboard/equipe/semaine/recopie') {
+        if ($method === 'GET') { return ep_equipe_recopie(); }
+        if ($method === 'POST') { return wr_equipe_recopie(); }
+    }
     if ($path === '/dashboard/equipe/service') {
         if ($method === 'POST') { return wr_equipe_service_creer(); }
         if ($method === 'PATCH') { return wr_equipe_service_modifier(); }
@@ -529,4 +539,112 @@ function wr_equipe_service_supprimer(): array
     $r = PanelApi::requete('DELETE', '/schedule/' . $id);
     $nom = ($c['equipe'][$s['employe']]['nom'] ?? null) ?: 'Employé ' . $s['employe'];
     return eqpServiceRendu($r, 'la suppression', $c, 'Service retiré : ' . $nom . ', ' . $c['date'] . ' ' . $s['de'] . '–' . $s['a']);
+}
+
+/* ── Recopier la semaine précédente ───────────────────────────────────────────────────────────────────────────── */
+
+const EQP_RECOPIE_MAX = 300;   // services recopiés au plus d'un coup
+
+/**
+ * LE CALCUL (pur) : chaque service de la semaine source, reporté de sept jours. Écarté s'il n'y a plus la personne
+ * (inconnue ou désactivée), s'il est déjà au planning à la même heure, ou s'il chevauche un service de la personne ce
+ * jour-là (déjà prévu, ou recopié juste avant). $source et $cible : date → services (eqpServices) ; $equipe : id → personne.
+ * @return array{propositions: list<array>, ecartes: list<array>}
+ */
+function eqpRecopieCalcul(array $source, array $cible, array $equipe): array
+{
+    $prop = []; $ecart = []; $pris = [];
+    foreach ($cible as $d => $L) { foreach ($L as $s) { $pris[$d][$s['employe']][] = [eqpMinutes($s['de']), eqpMinutes($s['a']), $s['de'], $s['a']]; } }
+    ksort($source);
+    foreach ($source as $d => $L) {
+        $t = date('Y-m-d', strtotime($d . ' +7 days'));
+        foreach ($L as $s) {
+            $x = ['source' => $s['id'], 'employe' => $s['employe'], 'date' => $t, 'de' => $s['de'], 'a' => $s['a']];
+            $p = $equipe[$s['employe']] ?? null;
+            if ($p === null) { $ecart[] = $x + ['motif' => 'plus dans l’équipe']; continue; }
+            if (empty($p['actif'])) { $ecart[] = $x + ['motif' => 'désactivé']; continue; }
+            $de = eqpMinutes($s['de']); $a = eqpMinutes($s['a']); $motif = null;
+            foreach ($pris[$t][$s['employe']] ?? [] as [$x0, $x1, $h0, $h1]) {
+                if ($x0 === $de && $x1 === $a) { $motif = 'déjà au planning'; break; }
+                if ($de < $x1 && $a > $x0) { $motif = 'chevauche ' . $h0 . '–' . $h1; break; }
+            }
+            if ($motif !== null) { $ecart[] = $x + ['motif' => $motif]; continue; }
+            $pris[$t][$s['employe']][] = [$de, $a, $s['de'], $s['a']];
+            $prop[] = $x;
+        }
+    }
+    return ['propositions' => $prop, 'ecartes' => $ecart];
+}
+
+/** Les deux semaines lues au panel et le calcul ; [erreur, contexte]. */
+function eqpRecopiePlan(int $shop, string $du): array
+{
+    if ($shop <= 0) { return [eqpErreur(400, 'shop manquant'), null]; }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return [eqpErreur(422, 'du : AAAA-MM-JJ'), null]; }
+    $ecart = (strtotime($du) - strtotime(date('Y-m-d'))) / 86400;
+    if ($ecart < -31 || $ecart > 120) { return [eqpErreur(422, 'semaine : d’un mois avant à quatre mois après aujourd’hui'), null]; }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return [eqpErreur(503, 'compte du panel non configuré'), null]; }
+    $cible = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $source = array_map(static fn ($d) => date('Y-m-d', strtotime($d . ' -7 days')), $cible);
+    $chemins = ['emp' => '/shops/' . $shop . '/employees'];
+    foreach (array_merge($source, $cible) as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
+    $res = PanelApi::getParallele($chemins, 6);
+    if (!is_array($res['emp'] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu les employés : rien n’est recopié'), null]; }
+    $S = []; $C = [];
+    foreach ($source as $d) {
+        if (!is_array($res['sch' . $d] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu le planning du ' . $d . ' : rien n’est recopié'), null]; }
+        $S[$d] = eqpServices($res['sch' . $d], $shop, $d);
+    }
+    foreach ($cible as $d) {
+        // Sans le planning cible, on ne saurait pas ce qui est déjà prévu : on ne recopie pas à l'aveugle.
+        if (!is_array($res['sch' . $d] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu le planning du ' . $d . ' : rien n’est recopié'), null]; }
+        $C[$d] = eqpServices($res['sch' . $d], $shop, $d);
+    }
+    $equipe = [];
+    foreach (analyseListe($res['emp']) as $r) { if (is_array($r)) { $e = eqpPersonne($r); if ($e['shop'] === $shop) { $equipe[$e['id']] = $e; } } }
+    $noms = [];
+    foreach ($S as $L) { foreach ($L as $s) { if ($s['nom'] !== '') { $noms[$s['employe']] = $s['nom']; } } }
+    $calc = eqpRecopieCalcul($S, $C, $equipe);
+    $nom = static fn (array $x) => ['nom' => ($equipe[$x['employe']]['nom'] ?? null) ?: ($noms[$x['employe']] ?? 'Employé ' . $x['employe'])];
+    return [null, ['du' => $du, 'source' => ['du' => $source[0], 'au' => $source[6], 'services' => array_sum(array_map('count', $S))],
+        'dejaPrevus' => array_sum(array_map('count', $C)),
+        'propositions' => array_map(static fn ($x) => $x + $nom($x), $calc['propositions']),
+        'ecartes' => array_map(static fn ($x) => $x + $nom($x), $calc['ecartes'])]];
+}
+
+/** GET /dashboard/equipe/semaine/recopie?shop=&du= — l'aperçu, rien n'est écrit. */
+function ep_equipe_recopie(): array
+{
+    [$err, $c] = eqpRecopiePlan(eqpShop(), (string) ($_GET['du'] ?? ''));
+    return $err ?? ['shop' => eqpShop()] + $c;
+}
+
+/** POST /dashboard/equipe/semaine/recopie {shop, du, sources: [id…]} — crée au panel les services cochés de l'aperçu. */
+function wr_equipe_recopie(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    $ids = $b['sources'] ?? null;
+    if (!is_array($ids) || !array_is_list($ids) || count($ids) > EQP_RECOPIE_MAX) { return eqpErreur(422, 'sources : la liste des services à recopier'); }
+    $voulus = [];
+    foreach ($ids as $x) { if (!is_int($x) || $x < 1) { return eqpErreur(422, 'sources : des numéros de services'); } $voulus[$x] = true; }
+    [$err, $c] = eqpRecopiePlan($shop, is_string($b['du'] ?? null) ? $b['du'] : '');
+    if ($err !== null) { return $err; }
+    $a = array_values(array_filter($c['propositions'], static fn ($p) => isset($voulus[$p['source']])));
+    if ($a === []) { return eqpErreur(422, 'aucun des services cochés n’est encore à recopier : relisez l’aperçu'); }
+    @set_time_limit(180);
+    $crees = 0; $echecs = []; $arret = null;
+    foreach ($a as $p) {
+        $r = PanelApi::requete('POST', '/schedule', ['id_employee' => $p['employe'], 'work_date' => $p['date'], 'start_hour' => $p['de'] . ':00', 'end_hour' => $p['a'] . ':00']);
+        if ($r['code'] >= 200 && $r['code'] < 300) { $crees++; continue; }
+        $echecs[] = ['source' => $p['source'], 'nom' => $p['nom'], 'date' => $p['date'], 'de' => $p['de'], 'a' => $p['a'], 'motif' => (string) ($r['erreur'] ?? 'refusé')];
+        // Un refus de droits vaudra pour tous les suivants : on s'arrête là plutôt que d'en essuyer cent.
+        if (in_array($r['code'], [401, 403], true)) { $arret = 'le panel refuse les écritures du planning à ce compte (HTTP ' . $r['code'] . ')'; break; }
+    }
+    if ($crees > 0) {
+        try { journalAdd('Magasin ' . $shop, 'Planning', null, 'Semaine du ' . $c['du'] . ' : ' . $crees . ' service' . ($crees > 1 ? 's' : '') . ' recopié' . ($crees > 1 ? 's' : '') . ' de la semaine du ' . $c['source']['du']); }
+        catch (Throwable $e) { /* le journal ne bloque pas */ }
+    }
+    if ($crees === 0) { return eqpErreur($arret !== null ? 403 : 502, $arret ?? 'le panel a refusé tous les services', ['echecs' => $echecs]); }
+    return ['ok' => true, 'du' => $c['du'], 'crees' => $crees, 'demandes' => count($a), 'echecs' => $echecs, 'arret' => $arret];
 }

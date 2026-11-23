@@ -226,5 +226,52 @@ verifie('lundi : 07:00 à 18:30 (médiane 07:02 et 18:25, au quart d’heure)', 
 verifie('dimanche : 08:00 à 12:15', ($o['7'] ?? null) === [8 * 60, 12 * 60 + 15], json_encode($o));
 verifie('un jour sans ticket : pas d’ouverture', !isset($o['2']));
 
+echo "Recopier la semaine précédente\n";
+$eqR = [10 => ['id' => 10, 'nom' => 'Anna', 'actif' => true], 13 => ['id' => 13, 'nom' => 'Caissière', 'actif' => true], 11 => ['id' => 11, 'nom' => 'Inactive', 'actif' => false]];
+$sv = static fn (int $id, int $e, string $de, string $a) => ['id' => $id, 'employe' => $e, 'de' => $de, 'a' => $a, 'nom' => ''];
+$src = ['2026-11-16' => [$sv(1, 10, '04:00', '12:00'), $sv(2, 13, '12:30', '18:30'), $sv(3, 11, '08:00', '16:00'), $sv(4, 99, '08:00', '12:00')],
+    '2026-11-17' => [$sv(5, 10, '04:00', '12:00'), $sv(6, 13, '07:00', '11:00'), $sv(7, 13, '10:00', '14:00')]];
+$cib = ['2026-11-23' => [$sv(50, 13, '12:30', '18:30')], '2026-11-24' => [$sv(51, 10, '06:00', '14:00')]];
+$rc = eqpRecopieCalcul($src, $cib, $eqR);
+verifie('reporté de sept jours : le lundi 16 va au lundi 23', ($rc['propositions'][0] ?? null) === ['source' => 1, 'employe' => 10, 'date' => '2026-11-23', 'de' => '04:00', 'a' => '12:00'], json_encode($rc['propositions'][0] ?? null));
+$motifs = array_column($rc['ecartes'], 'motif', 'source');
+verifie('déjà au planning à la même heure : écarté', ($motifs[2] ?? '') === 'déjà au planning', json_encode($motifs));
+verifie('une personne désactivée : écartée', ($motifs[3] ?? '') === 'désactivé');
+verifie('une personne qui n’est plus dans l’équipe : écartée', ($motifs[4] ?? '') === 'plus dans l’équipe');
+verifie('chevauche un service déjà prévu : écarté', ($motifs[5] ?? '') === 'chevauche 06:00–14:00');
+verifie('chevauche un service recopié juste avant : écarté', ($motifs[7] ?? '') === 'chevauche 07:00–11:00');
+verifie('les autres sont proposés : 1 et 6', array_column($rc['propositions'], 'source') === [1, 6], json_encode(array_column($rc['propositions'], 'source')));
+
+$lun = date('Y-m-d', strtotime('monday next week'));
+$lunAvant = date('Y-m-d', strtotime($lun . ' -7 days'));
+PanelApi::$reponses = ['/shops/1/employees' => $employes];
+for ($i = 0; $i < 7; $i++) {
+    $d0 = date('Y-m-d', strtotime($lunAvant . ' +' . $i . ' days')); $d1 = date('Y-m-d', strtotime($lun . ' +' . $i . ' days'));
+    PanelApi::$reponses['/shops/1/schedule?date=' . $d0] = $i === 0 ? [['id_schedule' => 701, 'id_employee' => 10, 'work_date' => $d0, 'start_hour' => '04:00:00', 'end_hour' => '12:00:00', 'id_shop' => 1],
+        ['id_schedule' => 702, 'id_employee' => 13, 'work_date' => $d0, 'start_hour' => '12:30:00', 'end_hour' => '18:30:00', 'id_shop' => 1],
+        ['id_schedule' => 703, 'id_employee' => 12, 'work_date' => $d0, 'start_hour' => '08:00:00', 'end_hour' => '16:00:00', 'id_shop' => 2]] : [];
+    PanelApi::$reponses['/shops/1/schedule?date=' . $d1] = [];
+}
+$_GET = ['shop' => '1', 'du' => $lun];
+$ap = ep_equipe_recopie();
+verifie('l’aperçu : deux services à recopier, celui d’un autre magasin ignoré', count($ap['propositions'] ?? []) === 2 && ($ap['source']['services'] ?? 0) === 2, json_encode($ap));
+verifie('l’aperçu porte le nom', ($ap['propositions'][0]['nom'] ?? '') === 'Anna Lambert');
+PanelApi::$ecrits = []; PanelApi::$code = 201;
+$CORPS = ['shop' => 1, 'du' => $lun, 'sources' => [702]];
+$r = wr_equipe_recopie();
+verifie('seul le service coché est créé', ($r['crees'] ?? 0) === 1 && PanelApi::$ecrits === [['POST', '/schedule', ['id_employee' => 13, 'work_date' => $lun, 'start_hour' => '12:30:00', 'end_hour' => '18:30:00']]], json_encode([$r, PanelApi::$ecrits]));
+PanelApi::$ecrits = []; PanelApi::$code = 403;
+$CORPS = ['shop' => 1, 'du' => $lun, 'sources' => [701, 702]];
+$r = wr_equipe_recopie();
+verifie('un refus de droits arrête tout au premier service', count(PanelApi::$ecrits) === 1 && isset($r['error']) && str_contains($r['error'], '403'), json_encode($r));
+$CORPS = ['shop' => 1, 'du' => $lun, 'sources' => [703]];
+verifie('un service hors de l’aperçu (autre magasin) n’est jamais créé', isset(wr_equipe_recopie()['error']));
+$CORPS = ['shop' => 1, 'du' => $lun, 'sources' => ['701']];
+verifie('des numéros en texte : refusés', isset(wr_equipe_recopie()['error']));
+PanelApi::$reponses['/shops/1/schedule?date=' . $lun] = null;
+$_GET = ['shop' => '1', 'du' => $lun];
+verifie('le planning cible muet : rien n’est recopié à l’aveugle', isset(ep_equipe_recopie()['error']));
+PanelApi::$code = 204;
+
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

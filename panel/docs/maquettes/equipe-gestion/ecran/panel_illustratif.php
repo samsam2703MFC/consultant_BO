@@ -70,4 +70,7 @@ $out = __DIR__;
 $_GET = ['shop' => '5']; file_put_contents("$out/carte.json", json_encode(ep_equipe_carte(), JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-23', 'jours' => '1']; $j = ep_equipe_planning(); $j['aujourdhui'] = '2026-11-23'; $j['maintenant'] = '10:20'; file_put_contents("$out/jour.json", json_encode($j, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-23', 'jours' => '7']; $s = ep_equipe_planning(); $s['aujourdhui'] = '2026-11-23'; file_put_contents("$out/semaine.json", json_encode($s, JSON_UNESCAPED_UNICODE));
+// Recopier la semaine précédente : la semaine du 30/11, vide, et l'aperçu de la recopie du 23 au 29.
+$_GET = ['shop' => '5', 'du' => '2026-11-30', 'jours' => '7']; $s2 = ep_equipe_planning(); $s2['aujourdhui'] = '2026-11-23'; file_put_contents("$out/semaine2.json", json_encode($s2, JSON_UNESCAPED_UNICODE));
+$_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/recopie.json", json_encode(ep_equipe_recopie(), JSON_UNESCAPED_UNICODE));
 echo "ok\n";
