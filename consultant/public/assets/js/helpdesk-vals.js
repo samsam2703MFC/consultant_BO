@@ -18,6 +18,16 @@ function charger(app, frais){
   app.setState({ hdData: { chargement: true, d: H ? H.d : null } });
   readOne('/helpdesk/demandes').then(d => app.setState({ hdData: { chargement: false, d: d || { error: 'injoignable' } } }));
 }
+/** Le statut changé ici se voit tout de suite (23/11/2026, Sam : « quand je rends une demande annulée ou résolue, elle ne
+ *  disparaît pas ») : la demande prend son nouveau statut dans la liste dès que le panel a dit OK, sans attendre la
+ *  relecture ; le serveur le garde ensuite un quart d'heure si la liste du panel est en retard (src/helpdesk.php). */
+const NOMS_STATUT = { NEW: 'Nouvelle', IN_PROGRESS: 'En cours', RESOLVED: 'Résolue', CLOSED: 'Fermée', CANCELLED: 'Annulée' };
+function statutLocal(app, id, statut){
+  const H = app.state.hdData;
+  if (!statut || !H || !H.d || !Array.isArray(H.d.demandes)) { return; }
+  const demandes = H.d.demandes.map(x => x.id === id ? Object.assign({}, x, { statut, statutNom: NOMS_STATUT[statut] || statut, ouverte: statut === 'NEW' || statut === 'IN_PROGRESS' }) : x);
+  app.setState({ hdData: Object.assign({}, H, { d: Object.assign({}, H.d, { demandes }) }) });
+}
 /** Une écriture : `write` rend ok pour tout HTTP 200, l'échec se lit dans le corps (`ok: false`, `error`). */
 function envoyer(app, path, corps, apres){
   app.setState({ hdEnvoi: { path, enCours: true } });
@@ -451,7 +461,7 @@ export function valsHelpdesk(app, c){
     delaiNote: X.echeance ? (X.ouverte ? (X.enRetard ? 'Dépassée de ' + (-X.joursRestants) + ' j' : (X.joursRestants === 0 ? 'Aujourd’hui' : 'Dans ' + X.joursRestants + ' j')) + ' : à respecter avant le ' : 'Était fixée au ') + dm(X.echeance)
         + (X.echeancePar ? ' · fixée par ' + X.echeancePar + (X.echeanceLe ? ' le ' + dm(X.echeanceLe) : '') : '') + '. Le franchisé voit « réponse prévue d’ici le ' + dm(X.echeance) + ' ».'
       : (X.ouverte ? 'À fixer à la réception : le délai que vous tiendrez' + (X.statut === 'NEW' ? ' (la demande passe « En cours »)' : '') + '.' : 'Aucune date limite.'),
-    poserStatut: e => { if (e.target.value !== X.statut) { envoyer(app, '/helpdesk/demandes/' + X.id + '/statut', { statut: e.target.value }); } },
+    poserStatut: e => { const st = e.target.value; if (st !== X.statut) { envoyer(app, '/helpdesk/demandes/' + X.id + '/statut', { statut: st }, () => statutLocal(app, X.id, st)); } },
     consultants: cons && cons.consultants ? [{ id: '', nom: X.consultant ? X.consultant + ' (actuel)' : '— choisir —' }].concat(cons.consultants.map(k => ({ id: String(k.id), nom: k.nom }))) : [{ id: '', nom: cons && cons.chargement ? 'lecture…' : (X.consultant || '—') }],
     poserConsultant: e => { if (e.target.value) { envoyer(app, '/helpdesk/demandes/' + X.id + '/consultant', { consultant: Number(e.target.value) }); } },
     consNote: cons && cons.consultants && !cons.consultants.length ? 'le panel ne rend aucun consultant éligible' + (cons.erreur ? ' (' + cons.erreur + ')' : '') : 'ceux du domaine « ' + X.domaineNom + ' »',
@@ -470,7 +480,7 @@ export function valsHelpdesk(app, c){
     rep: F.rep != null ? F.rep : '', poserRep: e => majF({ rep: e.target.value }),
     repStatuts: [['', 'statut inchangé'], ['IN_PROGRESS', 'passer « En cours »'], ['RESOLVED', 'passer « Résolue »']].map(([id, nom]) => ({ id, nom, on: (F.repStatut != null ? F.repStatut : 'IN_PROGRESS') === id })),
     poserRepStatut: e => majF({ repStatut: e.target.value }),
-    repondre: String(F.rep || '').trim() && !E.enCours ? () => envoyer(app, '/helpdesk/demandes/' + X.id + '/repondre', { reponse: F.rep, statut: F.repStatut != null ? F.repStatut : 'IN_PROGRESS', shop: X.shop, titre: X.titre, ref: X.ref }, () => majF({ rep: '' })) : null,
+    repondre: String(F.rep || '').trim() && !E.enCours ? () => { const st = F.repStatut != null ? F.repStatut : 'IN_PROGRESS'; return envoyer(app, '/helpdesk/demandes/' + X.id + '/repondre', { reponse: F.rep, statut: st, shop: X.shop, titre: X.titre, ref: X.ref }, () => { majF({ rep: '' }); statutLocal(app, X.id, st); }); } : null,
     envoi: E.path ? { enCours: !!E.enCours, ok: E.ok, msg: E.msg } : null,
     // Les missions de la demande
     missions: (X.missions || []).map(m => {
