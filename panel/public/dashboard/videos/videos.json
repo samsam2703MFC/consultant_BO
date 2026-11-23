@@ -66,6 +66,26 @@
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "semaine",
+      "genre": "tuto",
+      "titre": "La page Semaine",
+      "resume": "Choisir sa semaine, le chiffre face à l’attendu, les jours, du chiffre d’affaires au résultat, les heures et les douze dernières semaines.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-semaine.mp4",
+      "affiche": "06-semaine.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
