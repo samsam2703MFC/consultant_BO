@@ -107,6 +107,27 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mois",
+      "genre": "tuto",
+      "titre": "La page Mois",
+      "resume": "Les mois de l’année, le chiffre du mois face à l’attendu, les jours, le résultat, les douze derniers mois et les six leviers.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-mois.mp4",
+      "affiche": "07-mois.jpg",
+      "duree": "2 min 40",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
