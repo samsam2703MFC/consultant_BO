@@ -34,7 +34,7 @@ final class SupplementsDayCheckService
     public const DEFAULT_CUTOFF = '12:00';
     /** États production : du plus grave au plus sûr (l'état d'une domówienie = le plus grave de ses lignes). */
     public const STATES = [
-        'missing' => 'poza planem produkcji', 'unplanned' => 'bez karty planowania', 'freebie' => 'gratis — poza ilościami produkcji',
+        'missing' => 'poza planem produkcji', 'unplanned' => 'bez karty planowania',
         'live' => 'w propozycji planu', 'stock' => 'ze stanu (MTS)', 'in_plan' => 'w planie produkcji', 'shipped' => 'wysłane',
     ];
     /** États qui valent « transmise à la production » (prise en compte par le calcul du plan, ou déjà expédiée). */
@@ -139,9 +139,9 @@ final class SupplementsDayCheckService
 
     /**
      * État côté production, par ligne puis pour la domówienie (la ligne la plus grave). Mêmes règles que le calcul du
-     * plan (PlanningService::compute / validate, OpenOrders::quantitySql) :
+     * plan (PlanningService::compute / validate, OpenOrders::demandSql) :
      *  - shipped : domówienie fermée (WDT, « W transporcie », « Zrealizowane ») ;
-     *  - freebie : gratis — exclu des quantités du plan et du stock, à transmettre à la main ;
+     *  - [408] gratis : mêmes règles que les autres (compté dans le plan et le stock depuis le 23.11.2026) ;
      *  - unplanned : produit sans fiche de planification (n_prod_item + n_prod_product_settings), hors calcul du plan ;
      *  - stock : produit MTS, servi sur le stock (la demande réduit le disponible et déclenche le réassort) ;
      *  - in_plan : MTO relié à un zlecenie du plan (n_prod_order_demand), ou plan du jour d'expédition validé après la
@@ -172,8 +172,7 @@ final class SupplementsDayCheckService
         foreach ($lines as $l) {
             $pid = (int) $l['id_product'];
             $of = null;
-            if (!empty($o['freebie'])) $state = 'freebie';
-            elseif ($l['id_item'] === null || $l['mode'] === null) $state = 'unplanned';
+            if ($l['id_item'] === null || $l['mode'] === null) $state = 'unplanned';
             elseif ($l['mode'] === 'MTS') $state = 'stock';
             elseif (isset($ofs[$pid])) {
                 $state = 'in_plan';
@@ -191,7 +190,6 @@ final class SupplementsDayCheckService
         $detail = match ($state) {
             'missing' => !$out ? 'domówienie bez pozycji' : ($ship === null ? 'brak daty wysyłki : plan jej nie uwzględnia' : $planLabel . ' — przed domówieniem : ' . $names('missing')),
             'unplanned' => 'produkt bez karty planowania : ' . $names('unplanned'),
-            'freebie' => 'gratisy nie liczą się w planie ani w stanie — przekaż produkcji samodzielnie',
             'live' => 'plan tygodnia jeszcze niezatwierdzony : liczony na żywo z zamówień otwartych',
             'stock' => 'produkty na stan (MTS) : wydanie ze stanu, uzupełnianie stanu',
             'in_plan' => implode(' · ', array_filter([
@@ -212,7 +210,7 @@ final class SupplementsDayCheckService
     /**
      * Signaux d'une domówienie ouverte, chacun avec une raison courte (pl) :
      *  - date_missing / date_past : date d'expédition absente ou passée ;
-     *  - not_in_production : pas transmise à la production (état missing, unplanned ou freebie) et expédition dans au
+     *  - not_in_production : pas transmise à la production (état missing ou unplanned) et expédition dans au
      *    plus un jour ouvré (aujourd'hui → jour ouvré suivant) ;
      *  - late_cutoff : passée après orders.supplement_cutoff du jour ouvré précédant l'expédition (ou plus tard) ;
      *  - product_inactive : produit inactif ou absent de la kartoteka.

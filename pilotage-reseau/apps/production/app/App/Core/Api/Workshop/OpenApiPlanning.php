@@ -63,7 +63,7 @@ final class OpenApiPlanning
                     . "(matières des recettes de ses produits ; commandes envoyées / reçues avec date de livraison dans la semaine). Lecture seule."],
             'GET /planning/team-sheet/orders' => ['tag' => $t, 'id' => 'getTeamSheetOrders', 'summary' => 'Zamówienia produktu w tygodniu / Commandes du produit dans la semaine', 'response' => 'TeamSheetOrders', 'errors' => [404, 422],
                 'query' => ['item_id' => ['type' => 'integer', 'description' => 'article (produit fini) de la feuille, obligatoire'], 'date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)']],
-                'description' => "Fenêtre « Zamówienie » de la feuille d'équipe : une ligne par commande ouverte (hors gratuits) du produit avec départ dans la semaine — client, départ, cartons, pièces (cartons × pièces par carton). Lecture seule."],
+                'description' => "Fenêtre « Zamówienie » de la feuille d'équipe : une ligne par commande ouverte (gratuits compris) du produit avec départ dans la semaine — client, départ, cartons, pièces (cartons × pièces par carton). Lecture seule."],
             'GET /planning/team-sheet/pdf' => ['tag' => $t, 'id' => 'getTeamSheetPdf', 'summary' => 'Plan zespołów — PDF do druku / Plan des équipes — PDF à imprimer', 'response' => 'DocumentFile', 'errors' => [404, 422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date'], 'group_id' => ['type' => 'integer']],
                 'description' => 'A4 paysage, une équipe par page, dans la langue de la requête. PDF en base64.'],
