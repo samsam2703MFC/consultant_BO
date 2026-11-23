@@ -195,3 +195,29 @@ appliquées, si bien qu'en décocher une ne découvre rien. Elles ne touchent ja
 | `ecran-20-assistant-3-le-chiffre.png` | « 17,5 h de trop » (18,3 %) ; cinq propositions qui gardent chaque section tenue ; cochées : 16,8 % |
 | `ecran-21-assistant-4-verifier.png` | le budget, les heures, les durées, jour par jour le comptoir et les secteurs ; « Créer 34 services au panel » ; la fenêtre de Chloé s'ouvre ensuite |
 
+
+## Les tâches dans les temps morts (maquette, 23/11/2026)
+
+Sam : « dans l'assistant aussi (pour les sections de vente) on a les temps morts, donc on pourrait adapter les tâches
+des checklists de contrôle ou de tâches à ces moments-là ». Dossier `temps-morts-taches/` (`taches.js`, `taches.css`,
+`capturer.cjs`), posé sur le vrai écran. Les checklists sont les vraies (`shared/src/checklists_codes.php`) ; les durées,
+les creux de la semaine et les personnes sont illustratifs.
+
+| Capture | L'idée |
+|---|---|
+| `temps-morts-taches/taches-1-assistant-temps-morts.png` | une étape de l'assistant : les tâches qui peuvent bouger (1.2.01 Facing, 4.2.01 Hygiène, 1.5.01 Planogramme du lundi…), les creux de chaque jour en cartes, chaque tâche posée à quelqu'un du comptoir présent ; ce qui n'a pas de place garde son heure ; le bilan (5 h 05 sorties des heures de pointe, 2 h 30 de creux libres) |
+| `temps-morts-taches/taches-2-jour-ligne-des-taches.png` | le jour : la ligne « Tâches des creux » sous les temps morts habituels ; les tâches à heure fixe en pointillé |
+| `temps-morts-taches/taches-3-tablette-au-creux.png` | la tablette du comptoir au moment calme : « C'est calme — à faire maintenant », Commencer, ou « un client : plus tard » |
+
+**Construit le 23/11/2026, en option** (« go construit et mets en ligne, mais tous ces modules doivent être dans une
+option, pas dans le module principal » ; puis : éteintes jusqu'à ce qu'on les allume). Mon équipe › Options allume, pour
+le magasin, l'assistant de la semaine, les tâches dans les temps morts, la matrice A B C D et le shift maker, la recopie
+de la semaine ; éteinte, une option ne se montre pas et ses routes sont refusées.
+
+| Capture | L'écran construit (données illustratives) |
+|---|---|
+| `ecran-22-options.png` | la fenêtre des options : quatre interrupteurs, la matrice éteinte |
+| `ecran-23-assistant-temps-morts.png` | l'étape « Les temps morts » de l'assistant : les tâches à cocher, les creux de chaque jour en cartes, les tâches posées et qui les fait, ce qui garde son heure |
+| `ecran-2-planning-jour.png` | le jour, avec la ligne « Tâches des creux » (posées en couleur, à heure fixe en pointillé) |
+| `ecran-24-retirer-de-l-horaire.png` | « Retirer de l’horaire de la semaine » dans la fenêtre d’un service (absent, en congé : tous ses services de la semaine, après confirmation) ; les badges en rectangles aux coins arrondis (« change les badges par des rectangles avec des coins arrondis ») |
+

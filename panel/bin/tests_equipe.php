@@ -23,11 +23,13 @@ final class Db
     public static array $rows = [];
     public static array $roul = [];          // panel_equipe_roulement : [['employe_id' => …, 'lettre' => …]]
     public static ?string $matrice = null;   // panel_equipe_matrice : le JSON gardé
+    public static ?string $options = '{"assistant":true,"taches":true,"matrice":true,"recopie":true}';   // panel_equipe_options
     public static array $exec = [];
     public static function rows(string $sql, array $a = []): array { return str_contains($sql, 'panel_equipe_roulement') ? self::$roul : []; }
     public static function row(string $sql, array $a = []): ?array
     {
         if (str_contains($sql, 'panel_equipe_matrice')) { return self::$matrice !== null ? ['matrice' => self::$matrice] : null; }
+        if (str_contains($sql, 'panel_equipe_options')) { return self::$options !== null ? ['options' => self::$options] : null; }
         return self::$rows[($a[0] ?? '') . ':' . ($a[1] ?? '') . '-' . ($a[2] ?? '')] ?? null;
     }
     public static function exec(string $sql, array $a = []): void { self::$exec[] = [$sql, $a]; }
@@ -88,6 +90,7 @@ final class ErpApi
 require __DIR__ . '/../../shared/src/cibles_reseau.php';
 require __DIR__ . '/../../shared/src/resultat.php';
 require __DIR__ . '/../src/temps_morts.php';
+require __DIR__ . '/../../shared/src/checklists_codes.php';
 require __DIR__ . '/../src/equipe.php';
 
 $ok = 0; $ko = 0;
@@ -478,6 +481,79 @@ PanelApi::$reponses['/shops/1/schedule?date=' . $lunA] = null;
 [$x, $r] = $refus([['employe' => 10, 'date' => $marA, 'de' => '13:00', 'a' => '17:00']]);
 verifie('un jour de la semaine muet : rien n’est créé à l’aveugle', $x && str_contains($r['error'], 'rien n’est créé'), json_encode($r));
 PanelApi::$code = 204;
+
+echo "Les tâches dans les temps morts\n";
+$cfgT = array_column(eqpTachesConfig(), null, 'code');
+verifie('les tâches qui peuvent bouger : le facing chaque jour, 15 min', ($cfgT['1.2.01']['duree'] ?? 0) === 15 && ($cfgT['1.2.01']['jours'] ?? []) === [1, 2, 3, 4, 5, 6, 7] && ($cfgT['1.2.01']['zone'] ?? 0) === 1, json_encode($cfgT['1.2.01'] ?? null));
+verifie('le planogramme le lundi, le nettoyage approfondi le mercredi', ($cfgT['1.5.01']['jours'] ?? []) === [1] && ($cfgT['4.5.01']['jours'] ?? []) === [3] && ($cfgT['4.5.01']['zone'] ?? 0) === 4);
+$REGLAGES['equipeTachesMobiles'] = ['1.2.01' => ['duree' => 25, 'jours' => [5, 1, 1]], '1.2.02' => null, '9.9' => ['duree' => 5, 'jours' => [1]], '4.2.01' => ['duree' => 2, 'jours' => [1]]];
+$cfgT = array_column(eqpTachesConfig(), null, 'code');
+verifie('le réglage : une durée et des jours changés, une tâche retirée, un code faux ignoré, une durée absurde ignorée', ($cfgT['1.2.01']['duree'] ?? 0) === 25 && $cfgT['1.2.01']['jours'] === [1, 5] && !isset($cfgT['1.2.02']) && !isset($cfgT['9.9']) && ($cfgT['4.2.01']['duree'] ?? 0) === 20, json_encode($cfgT));
+unset($REGLAGES['equipeTachesMobiles']);
+$lunT = date('Y-m-d', strtotime('monday next week')); $merT = date('Y-m-d', strtotime($lunT . ' +2 days'));
+Db::$exec = [];
+$CORPS = ['shop' => 1, 'du' => $lunT, 'places' => [['date' => $lunT, 'code' => '1.2.01', 'de' => 580, 'a' => 595, 'employe' => 13], ['date' => $merT, 'code' => '4.5.01', 'de' => 855, 'a' => 900, 'employe' => null]]];
+$r = wr_equipe_taches();
+$ins = array_values(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'INSERT INTO panel_equipe_taches')));
+$del = array_values(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'DELETE FROM panel_equipe_taches')));
+verifie('la semaine est remplacée : les tâches d’avant retirées, les deux gardées', ($r['places'] ?? 0) === 2 && count($del) === 1 && $del[0][1] === ['1', $lunT, date('Y-m-d', strtotime($lunT . ' +6 days'))] && count($ins) === 2 && $ins[0][1] === ['1', $lunT, '1.2.01', 580, 595, 13], json_encode([$r, Db::$exec]));
+$refusT = static function (array $places) use ($lunT): bool { global $CORPS; Db::$exec = []; $CORPS = ['shop' => 1, 'du' => $lunT, 'places' => $places]; $r = wr_equipe_taches(); return isset($r['error']) && !array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'INSERT') || str_starts_with($x[0], 'DELETE')); };
+verifie('une checklist à heure fixe : refusée', $refusT([['date' => $lunT, 'code' => '1.1.01', 'de' => 600, 'a' => 615, 'employe' => null]]));
+verifie('un jour hors de la semaine : refusé', $refusT([['date' => date('Y-m-d', strtotime($lunT . ' +7 days')), 'code' => '1.2.01', 'de' => 600, 'a' => 615, 'employe' => null]]));
+verifie('plus de 3 h : refusé', $refusT([['date' => $lunT, 'code' => '1.2.01', 'de' => 600, 'a' => 800, 'employe' => null]]));
+verifie('la même checklist deux fois le même jour : refusée', $refusT([['date' => $lunT, 'code' => '1.2.01', 'de' => 600, 'a' => 615, 'employe' => null], ['date' => $lunT, 'code' => '1.2.01', 'de' => 900, 'a' => 915, 'employe' => null]]));
+verifie('des minutes en texte : refusées', $refusT([['date' => $lunT, 'code' => '1.2.01', 'de' => '600', 'a' => 615, 'employe' => null]]));
+$CORPS = ['shop' => 1, 'du' => $lunT, 'places' => []]; Db::$exec = [];
+verifie('une liste vide retire les tâches de la semaine', (wr_equipe_taches()['places'] ?? -1) === 0 && count(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'DELETE'))) === 1);
+verifie('les tâches à heure fixe, pour la ligne du jour', array_column(eqpTachesFixes(), 'code') === ['1.1.01', '1.1.02', '1.3.01', '1.4.01'] && eqpTachesFixes()[3]['heure'] === '18:00', json_encode(eqpTachesFixes()));
+
+echo "Les options (éteintes par défaut)\n";
+Db::$options = null;
+verifie('sans réglage, toutes éteintes', eqpOptions(1) === ['assistant' => false, 'taches' => false, 'matrice' => false, 'recopie' => false], json_encode(eqpOptions(1)));
+$_GET = ['shop' => '1', 'du' => date('Y-m-d', strtotime('monday next week'))];
+$r = eqpRoute('GET', '/dashboard/equipe/semaine/recopie');
+verifie('éteinte, la recopie est refusée (403, motif option)', ($r['motif'] ?? '') === 'option' && ($r['option'] ?? '') === 'recopie', json_encode($r));
+verifie('éteinte, la matrice est refusée', (eqpRoute('GET', '/dashboard/equipe/matrice')['motif'] ?? '') === 'option');
+verifie('éteintes, les tâches des creux sont refusées', (eqpRoute('GET', '/dashboard/equipe/semaine/taches')['motif'] ?? '') === 'option');
+$CORPS = ['shop' => 1, 'du' => $_GET['du'], 'services' => [['employe' => 10, 'date' => $_GET['du'], 'de' => '08:00', 'a' => '12:00']]]; $_GET = [];
+verifie('éteint, l’assistant ne crée rien', (eqpRoute('POST', '/dashboard/equipe/semaine/creer')['option'] ?? '') === 'assistant');
+Db::$options = '{"assistant":true}';
+$_GET = ['shop' => '1', 'du' => date('Y-m-d', strtotime('monday next week'))];
+verifie('l’assistant allumé ouvre l’aperçu de la recopie (il en a besoin), pas la recopie elle-même', !isset(eqpRoute('GET', '/dashboard/equipe/semaine/recopie')['motif']) && (eqpRoute('POST', '/dashboard/equipe/semaine/recopie')['option'] ?? '') === 'recopie');
+Db::$options = null; Db::$exec = [];
+$CORPS = ['shop' => 1, 'options' => ['taches' => true, 'assistant' => true]];
+$r = wr_equipe_options();
+$up = array_values(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'INSERT INTO panel_equipe_options')));
+verifie('allumer deux options : gardé, les autres restent éteintes', ($r['options'] ?? null) === ['assistant' => true, 'taches' => true, 'matrice' => false, 'recopie' => false] && count($up) === 1 && json_decode($up[0][1][1], true)['taches'] === true, json_encode([$r, Db::$exec]));
+$CORPS = ['shop' => 1, 'options' => ['inconnue' => true]];
+verifie('une option inconnue : refusée', isset(wr_equipe_options()['error']));
+$CORPS = ['shop' => 1, 'options' => ['taches' => 'oui']];
+verifie('une valeur qui n’est pas vrai ou faux : refusée', isset(wr_equipe_options()['error']));
+$_GET = ['shop' => '1'];
+verifie('la liste des options pour l’écran : quatre, avec leur nom', count(ep_equipe_options()['liste'] ?? []) === 4 && ep_equipe_options()['liste'][0]['nom'] === 'Assistant de la semaine');
+Db::$options = '{"assistant":true,"taches":true,"matrice":true,"recopie":true}';
+
+echo "Retirer quelqu'un de l'horaire de la semaine\n";
+$lunR = date('Y-m-d', strtotime('monday next week')); $jeuR = date('Y-m-d', strtotime($lunR . ' +3 days'));
+PanelApi::$reponses = [];
+for ($i = 0; $i < 7; $i++) { PanelApi::$reponses['/shops/1/schedule?date=' . date('Y-m-d', strtotime($lunR . ' +' . $i . ' days'))] = []; }
+PanelApi::$reponses['/shops/1/schedule?date=' . $lunR] = [['id_schedule' => 901, 'id_employee' => 10, 'work_date' => $lunR, 'start_hour' => '04:00:00', 'end_hour' => '12:00:00', 'id_shop' => 1],
+    ['id_schedule' => 902, 'id_employee' => 13, 'work_date' => $lunR, 'start_hour' => '07:00:00', 'end_hour' => '11:00:00', 'id_shop' => 1]];
+PanelApi::$reponses['/shops/1/schedule?date=' . $jeuR] = [['id_schedule' => 903, 'id_employee' => 10, 'work_date' => $jeuR, 'start_hour' => '06:00:00', 'end_hour' => '14:00:00', 'id_shop' => 1],
+    ['id_schedule' => 904, 'id_employee' => 10, 'work_date' => $jeuR, 'start_hour' => '15:00:00', 'end_hour' => '18:00:00', 'id_shop' => 2]];
+PanelApi::$ecrits = []; PanelApi::$code = 204;
+$CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => 10];
+$r = wr_equipe_semaine_retirer();
+verifie('ses services de la semaine, dans ce magasin, sont retirés ; ceux des autres et d’un autre magasin restent', ($r['retires'] ?? 0) === 2 && array_column(PanelApi::$ecrits, 1) === ['/schedule/901', '/schedule/903'], json_encode([$r, PanelApi::$ecrits]));
+PanelApi::$ecrits = []; $CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => 77];
+verifie('personne au planning de la semaine : rien n’est retiré', (wr_equipe_semaine_retirer()['retires'] ?? -1) === 0 && PanelApi::$ecrits === []);
+$CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => '10'];
+verifie('un identifiant en texte : refusé', isset(wr_equipe_semaine_retirer()['error']));
+PanelApi::$ecrits = []; PanelApi::$code = 403; $CORPS = ['shop' => 1, 'du' => $lunR, 'employe' => 10];
+$r = wr_equipe_semaine_retirer();
+verifie('un refus de droits arrête au premier service', count(PanelApi::$ecrits) === 1 && isset($r['error']), json_encode($r));
+PanelApi::$reponses['/shops/1/schedule?date=' . $jeuR] = null; PanelApi::$ecrits = []; PanelApi::$code = 204;
+verifie('un jour muet : rien n’est retiré à l’aveugle', isset(wr_equipe_semaine_retirer()['error']) && PanelApi::$ecrits === []);
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);
