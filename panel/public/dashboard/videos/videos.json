@@ -66,6 +66,26 @@
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "taches",
+      "genre": "tuto",
+      "titre": "Les tâches du magasin",
+      "resume": "La semaine des tâches, les codes des checklists, ce qui reste à faire aujourd’hui et le contrôle en photo.",
+      "vues": [
+        "taches"
+      ],
+      "fichier": "04-taches.mp4",
+      "affiche": "04-taches.jpg",
+      "duree": "2 min 46",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
