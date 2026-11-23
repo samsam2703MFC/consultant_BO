@@ -124,7 +124,7 @@
       <div class="tu-f-h"><div><div class="tu-k">${GENRES[v.genre] || GENRES.tuto}${v.duree ? ' · ' + esc(v.duree) : ''}</div><h3>${esc(v.titre)}</h3></div><button type="button" class="tu-x" data-tuf="x" aria-label="Fermer">${ICO_X}</button></div>
       <video class="tu-video" src="videos/${esc(v.fichier)}"${v.affiche ? ` poster="videos/${esc(v.affiche)}"` : ''} controls autoplay playsinline preload="metadata"></video>
       ${v.resume ? `<p class="tu-res">${esc(v.resume)}</p>` : ''}
-      ${T.videos.length > 1 ? `<div class="tu-autres"><div class="tu-k">Les autres vidéos</div><div class="tu-liste">${T.videos.filter(x => x.id !== v.id).map(x => `<button type="button" class="tu-item" data-tuf="v" data-id="${esc(x.id)}">${x.affiche ? `<img src="videos/${esc(x.affiche)}" alt="">` : ''}<span><b>${esc(x.titre)}</b><small>${aVoir(x) ? '<em class="tu-tag">Nouveau</em> ' : ''}${esc(x.duree || '')}</small></span></button>`).join('')}</div></div>` : ''}
+      ${T.videos.length > 1 ? `<div class="tu-autres"><div class="tu-k tu-k-l"><span>Les autres vidéos</span><a href="../formation/catalogue/#/videos" target="_blank" rel="noopener">Toute la vidéothèque ↗</a></div><div class="tu-liste">${T.videos.filter(x => x.id !== v.id).map(x => `<button type="button" class="tu-item" data-tuf="v" data-id="${esc(x.id)}">${x.affiche ? `<img src="videos/${esc(x.affiche)}" alt="">` : ''}<span><b>${esc(x.titre)}</b><small>${aVoir(x) ? '<em class="tu-tag">Nouveau</em> ' : ''}${esc(x.duree || '')}</small></span></button>`).join('')}</div></div>` : ''}
     </div>`;
     o.addEventListener('click', e => {
       if (e.target === o || e.target.closest('[data-tuf="x"]')) { fermer(); return; }

@@ -5,6 +5,11 @@
  *   #/                 la grille : quatre manuels, chacun avec Feuilleter, PDF et son QR code ; le dépliant 4 manuels
  *   #/m/<cle>          le feuilletage d'un manuel : couverture, sommaire, puis chaque document, en pages A5
  *   #/m/<cle>/imprimer le même, puis la fenêtre d'impression (« Enregistrer en PDF ») : une page A5 par feuille
+ *   #/videos           la VIDÉOTHÈQUE (23/11/2026, Sam : « la liste des vidéos doit aussi être dans la vidéothèque, dans le
+ *                      catalogue de formation ») : les vidéos d'instruction du dashboard magasin — modules de formation,
+ *                      nouvelles fonctions, modes d'emploi — et leur lecteur. Le registre est celui du dashboard
+ *                      (panel/public/dashboard/videos/videos.json, fichier public, lu à côté du cockpit) : une vidéo
+ *                      ajoutée au dashboard (ou par la routine des vidéos) entre ici d'elle-même.
  *
  * Les quatre manuels : le manuel opératoire (les articles), les standards (SOP, mémos, fiches), les checklists (les
  * fiches de checklist) et le manuel du réseau (les domaines D1–D8 et leurs sous-catégories, avec les standards rangés
@@ -154,6 +159,79 @@
     }).join('') + '</div>';
   }
 
+  /* ── la vidéothèque ── */
+  var VGENRES = [
+    { g: 'formation', t: { fr: 'Modules de formation', nl: 'Opleidingsmodules' }, k: { fr: 'Formation', nl: 'Opleiding' } },
+    { g: 'nouveau', t: { fr: 'Nouvelles fonctions', nl: 'Nieuwe functies' }, k: { fr: 'Nouvelle fonction', nl: 'Nieuwe functie' } },
+    { g: 'tuto', t: { fr: 'Modes d’emploi', nl: 'Handleidingen' }, k: { fr: 'Mode d’emploi', nl: 'Handleiding' } },
+  ];
+  /** Le dossier des vidéos : celui du dashboard du cockpit (l'adresse que rend /acces/moi, garde.js), sinon à côté. */
+  function dossierVideos() {
+    try { if (window.ACCES && window.ACCES.cockpit) return new URL('dashboard/videos/', new URL(window.ACCES.cockpit, location.href)).href; } catch (e) { /* adresse illisible */ }
+    return new URL('../../dashboard/videos/', location.href).href;
+  }
+  function chargerVideos() {
+    if (S.videos || S.videosLecture) return S.videosLecture;
+    var essais = [dossierVideos(), new URL('../../dashboard/videos/', location.href).href].filter(function (x, i, t) { return t.indexOf(x) === i; });
+    function essayer(i) {
+      if (i >= essais.length) return Promise.reject(new Error('registre des vidéos introuvable'));
+      return fetch(essais[i] + 'videos.json', { cache: 'no-cache', headers: { Accept: 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { S.videosDossier = essais[i]; return j; }, function () { return essayer(i + 1); });
+    }
+    S.videosLecture = essayer(0).then(function (j) { S.videos = (j && j.videos || []).filter(function (v) { return v && v.id && v.fichier; }); },
+      function (e) { S.videos = []; S.videosErreur = e.message; }).then(function () { S.videosLecture = null; });
+    return S.videosLecture;
+  }
+  function carteVideotheque() {
+    var n = S.videos ? S.videos.length : null;
+    var nf = S.videos ? S.videos.filter(function (v) { return v.genre === 'formation'; }).length : 0;
+    return '<div class="ct-carte">' +
+      '<a class="ct-couv ct-couv-vid" href="#/videos" style="text-decoration:none">' +
+        '<div class="n">' + T('Vidéothèque', 'Videotheek') + '</div>' +
+        '<svg class="ill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m10 9 5 3-5 3z"/></svg>' +
+        '<div class="bas"><div class="t">' + T('Vidéothèque', 'Videotheek') + '</div><div class="s">' + T('Le dashboard en vidéo : se former, découvrir', 'Het dashboard op video: leren, ontdekken') + '</div></div></a>' +
+      '<h3>' + T('Vidéothèque', 'Videotheek') + '</h3>' +
+      '<p><span class="ct-chip">' + (n == null ? T('Lecture…', 'Lezen…') : n + ' ' + T('vidéos', 'video’s') + (nf ? ' · ' + nf + ' ' + T('formation' + (nf > 1 ? 's' : ''), 'opleiding' + (nf > 1 ? 'en' : '')) : '')) + '</span></p>' +
+      '<div class="ct-actions"><a class="btn btn--primary" href="#/videos">' + T('Regarder', 'Bekijken') + '</a><button type="button" class="btn" data-qr="videos">QR</button></div></div>';
+  }
+  function rendreVideotheque() {
+    var V = S.videos || [];
+    var dos = S.videosDossier || dossierVideos();
+    var groupes = VGENRES.map(function (G) {
+      var L2 = V.filter(function (v) { return (v.genre || 'tuto') === G.g; });
+      if (!L2.length) return '';
+      return '<h2 class="ct-vt-h">' + esc(L(G.t)) + ' <span class="ct-chip">' + L2.length + '</span></h2><div class="ct-vt-grille">' + L2.map(function (v) {
+        return '<button type="button" class="ct-vt" data-video="' + esc(v.id) + '">' +
+          '<span class="ct-vt-aff">' + (v.affiche ? '<img src="' + esc(dos + v.affiche) + '" alt="" loading="lazy">' : '') + '<span class="ct-vt-lire" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 7 9 5-9 5z"/></svg></span>' + (v.duree ? '<span class="ct-vt-d">' + esc(v.duree) + '</span>' : '') + '</span>' +
+          '<span class="ct-vt-k">' + esc(L(G.k)) + '</span><span class="ct-vt-t">' + esc(v.titre) + '</span>' + (v.resume ? '<span class="ct-vt-r">' + esc(v.resume) + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
+    }).join('');
+    root.innerHTML = '<header class="ct-barre"><img src="../img/logo.png" alt="L’Atelier By"><div><div class="ct-titre">' + T('Vidéothèque', 'Videotheek') + '</div>' +
+      '<div class="ct-sous">' + T('Catalogue · Formation', 'Catalogus · Opleiding') + '</div></div><span class="ct-esp"></span>' + segLangue() +
+      '<a class="btn" href="#/">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</a></header>' +
+      '<div class="ct-corps"><div class="ct-kicker">' + T('Formation · Vidéos', 'Opleiding · Video’s') + '</div>' +
+      '<h1 class="ct-h1">' + T('Vidéothèque', 'Videotheek') + '</h1>' +
+      '<p class="ct-lead">' + T('Les vidéos du dashboard magasin : les modules de formation à suivre en session, les nouvelles fonctions et les modes d’emploi. Les écrans sont ceux du dashboard ; les chiffres et les noms sont fictifs.', 'De video’s van het winkeldashboard: de opleidingsmodules voor een sessie, de nieuwe functies en de handleidingen. De schermen zijn die van het dashboard; cijfers en namen zijn fictief. De video’s zijn in het Frans.') + '</p>' +
+      (S.videos == null ? '<p class="ct-msg">' + T('Lecture des vidéos…', 'Video’s lezen…') + '</p>'
+        : !V.length ? '<p class="ct-msg">' + esc(S.videosErreur ? T('Lecture impossible : ', 'Lezen onmogelijk: ') + S.videosErreur : T('Aucune vidéo pour le moment.', 'Nog geen video’s.')) + '</p>' : groupes) + '</div>';
+  }
+  function lireVideo(id) {
+    var v = (S.videos || []).filter(function (x) { return x.id === id; })[0]; if (!v) return;
+    var dos = S.videosDossier || dossierVideos();
+    var G = VGENRES.filter(function (g) { return g.g === (v.genre || 'tuto'); })[0] || VGENRES[2];
+    var o = document.createElement('div');
+    o.className = 'ct-voile';
+    o.innerHTML = '<div class="ct-fenetre ct-vt-fen" role="dialog" aria-label="' + esc(v.titre) + '"><div class="ct-vt-fh"><div><div class="ct-kicker">' + esc(L(G.k)) + (v.duree ? ' · ' + esc(v.duree) : '') + '</div><h3>' + esc(v.titre) + '</h3></div>' +
+      '<button type="button" class="btn" data-fermer="1">' + T('Fermer', 'Sluiten') + '</button></div>' +
+      '<video src="' + esc(dos + v.fichier) + '"' + (v.affiche ? ' poster="' + esc(dos + v.affiche) + '"' : '') + ' controls autoplay playsinline preload="metadata"></video>' +
+      (v.resume ? '<p>' + esc(v.resume) + '</p>' : '') + '</div>';
+    o.addEventListener('click', function (e) {
+      if (e.target === o || e.target.closest('[data-fermer]')) { var vd = o.querySelector('video'); if (vd) try { vd.pause(); } catch (x) { /* */ } o.remove(); }
+    });
+    document.body.appendChild(o);
+  }
+
   /* ── la grille ── */
   function rendreGrille() {
     var cartes = MANUELS.map(function (m) {
@@ -185,13 +263,13 @@
       '<h1 class="ct-h1">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</h1>' +
       '<p class="ct-lead">' + T('Feuilletez chaque manuel comme un catalogue, ou enregistrez-le en PDF pour l’imprimer. Chaque manuel a son QR code : le scanner ouvre ce manuel, à la même page.', 'Blader door elk handboek als door een catalogus, of sla het op als pdf om af te drukken. Elk handboek heeft zijn QR-code: wie hem scant, opent dat handboek.') + '</p>' +
       (S.erreur ? '<p class="ct-msg">' + esc(T('Lecture impossible : ', 'Lezen onmogelijk: ') + S.erreur) + '</p>' : '') +
-      '<div class="ct-grille">' + cartes + depliant + '</div></div>';
+      '<div class="ct-grille">' + cartes + carteVideotheque() + depliant + '</div></div>';
   }
 
   /* ── la fenêtre du QR code ── */
   function fenetreQr(cle) {
-    var m = manuelDe(cle); if (!m) return;
-    var url = lienManuel(cle);
+    var m = cle === 'videos' ? { titre: { fr: 'Vidéothèque', nl: 'Videotheek' } } : manuelDe(cle); if (!m) return;
+    var url = cle === 'videos' ? base() + '#/videos' : lienManuel(cle);
     var v = document.createElement('div');
     v.className = 'ct-voile';
     v.innerHTML = '<div class="ct-fenetre" role="dialog" aria-label="QR code"><h3 style="margin:0 0 10px">' + esc(L(m.titre)) + '</h3>' +
@@ -898,12 +976,19 @@
       return;
     }
     S.manuel = null; S.pages = null;
+    if (r.ecran === 'videos') {
+      rendreVideotheque();
+      if (!S.videos) chargerVideos().then(function () { if (route().ecran === 'videos') rendreVideotheque(); });
+      return;
+    }
     rendreGrille();
+    if (!S.videos) chargerVideos().then(function () { if (!route().ecran) rendreGrille(); });
   }
 
   /* ── les gestes ── */
   document.addEventListener('click', function (e) {
     var q = e.target.closest('[data-qr]'); if (q) { fenetreQr(q.getAttribute('data-qr')); return; }
+    var vd = e.target.closest('[data-video]'); if (vd) { lireVideo(vd.getAttribute('data-video')); return; }
     // Un lien direct vers le document où l'on est déjà (même adresse) : pas de « hashchange », on y retourne quand même.
     var ln = e.target.closest('a.lien-doc, a.lien-som');
     if (ln && ln.href.split('#')[0] === base() && ln.hash === location.hash) { e.preventDefault(); aller(); return; }
@@ -911,7 +996,7 @@
     if (l) {
       S.langue = l.getAttribute('data-langue');
       try { localStorage.setItem('ctLangue', S.langue); } catch (x) { /* */ }
-      if (S.manuel && S.pages) { var i = S.i; S.pages = paginer(S.manuel); rendreFeuilletage(); allerA(i); } else { rendreGrille(); }
+      if (S.manuel && S.pages) { var i = S.i; S.pages = paginer(S.manuel); rendreFeuilletage(); allerA(i); } else if (route().ecran === 'videos') { rendreVideotheque(); } else { rendreGrille(); }
       return;
     }
     var p = e.target.closest('[data-pas]'); if (p) { pas(+p.getAttribute('data-pas')); return; }
