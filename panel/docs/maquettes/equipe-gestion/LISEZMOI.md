@@ -106,6 +106,9 @@ la cible du réseau, 20 % et 22 %, réglables dans le réglage `personnelPaliers
 | `ecran-3-modifier-un-service.png` | « Modifier les horaires » : un service étiré à la souris, la fenêtre de son effet |
 | `ecran-4-planning-semaine.png` | la semaine, les marqueurs du budget jour par jour, la jauge |
 | `ecran-5-recopier-la-semaine.png` | « Recopier la semaine précédente » sur une semaine vide : l'aperçu jour par jour, un service décoché, le budget de la semaine après la recopie (20,9 %, rouge) et les heures à retirer pour revenir à 17 % |
+| `ecran-6-shift-maker.png` | le shift maker (test) sur une semaine vide : la semaine 2 du roulement tirée de la matrice, chacun avec sa lettre et son créneau ; ceux qui n'ont pas de lettre (la production) sont nommés et ne sont pas générés ; le budget après (9,0 %) |
+| `ecran-7-matrice-abcd.png` | la matrice A B C D : les deux créneaux, la semaine de référence, les deux semaines case par case (un clic : matin → après-midi → repos), qui porte quelle lettre, et la couverture matin · après-midi de chaque jour |
+| `ecran-8-fiche-roulement.png` | la fiche d'une personne : sa lettre (A B C D ou aucun), et ce qu'elle donne cette semaine et la suivante |
 
 **Comment elles sont faites.** Le vrai dashboard servi en local ; les routes `/dashboard/equipe/*` répondent avec ce que le
 vrai code de `panel/src/equipe.php` calcule sur un panel de doublure (`ecran/panel_illustratif.php`, l'équipe et les tickets

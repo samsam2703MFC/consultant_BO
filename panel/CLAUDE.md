@@ -8,7 +8,7 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   magasin (`/production`), le résultat au téléphone, l'app employés (`/employee`), les primes et les grands prix. Le
   pointage (l'app, `/borne`, la caisse) est retiré le 19/11/2026 ; ses tables `panel_mot_pointage` et `_borne` restent.
 - **Tables** : `panel_*` (`panel_aia_*` pour l'assistant, `panel_mot_*` pour l'app employés et les primes,
-  `panel_boite_*` pour la boîte mail).
+  `panel_boite_*` pour la boîte mail, `panel_equipe_*` pour Mon équipe : la matrice A B C D, les roulements, les adresses).
 - **Code** : `src/` (les anciens `panel/src/*` et les modules propres au dashboard), `panel/apps/employee/` (l'app
   employés, dépendances commises dans `vendor/`), écrans `public/`. L'index de l'API du dashboard :
   `panel/public/dashboard/api-index.json`, régénéré par `python3 panel/tools/dashboard-api-index.py` après chaque route.

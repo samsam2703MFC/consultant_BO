@@ -21,9 +21,16 @@ ob_start();
 final class Db
 {
     public static array $rows = [];
-    public static function rows(string $sql, array $a = []): array { return []; }
-    public static function row(string $sql, array $a = []): ?array { return self::$rows[$a[0] . ':' . $a[1] . '-' . $a[2]] ?? null; }
-    public static function exec(string $sql, array $a = []): void {}
+    public static array $roul = [];          // panel_equipe_roulement : [['employe_id' => …, 'lettre' => …]]
+    public static ?string $matrice = null;   // panel_equipe_matrice : le JSON gardé
+    public static array $exec = [];
+    public static function rows(string $sql, array $a = []): array { return str_contains($sql, 'panel_equipe_roulement') ? self::$roul : []; }
+    public static function row(string $sql, array $a = []): ?array
+    {
+        if (str_contains($sql, 'panel_equipe_matrice')) { return self::$matrice !== null ? ['matrice' => self::$matrice] : null; }
+        return self::$rows[($a[0] ?? '') . ':' . ($a[1] ?? '') . '-' . ($a[2] ?? '')] ?? null;
+    }
+    public static function exec(string $sql, array $a = []): void { self::$exec[] = [$sql, $a]; }
 }
 $REGLAGES = [];
 function setting(string $k, mixed $d = null): mixed { global $REGLAGES; return $REGLAGES[$k] ?? $d; }
@@ -272,6 +279,87 @@ PanelApi::$reponses['/shops/1/schedule?date=' . $lun] = null;
 $_GET = ['shop' => '1', 'du' => $lun];
 verifie('le planning cible muet : rien n’est recopié à l’aveugle', isset(ep_equipe_recopie()['error']));
 PanelApi::$code = 204;
+
+
+echo "La matrice A B C D\n";
+$md = eqpMatriceDepart('2026-11-23');
+verifie('la matrice de départ est valide', eqpMatriceValide($md) === $md, json_encode(eqpMatriceValide($md)));
+// Chaque jour des deux semaines : au moins un matin et un après-midi, avec une personne par lettre.
+$couvert = true;
+for ($w = 0; $w < 2; $w++) { for ($d = 0; $d < 7; $d++) { $col = array_map(static fn ($l) => $md['lettres'][$l][$w][$d], EQP_LETTRES); if (!in_array('M', $col, true) || !in_array('P', $col, true)) { $couvert = false; } } }
+verifie('de départ : chaque jour a un matin et un après-midi', $couvert);
+$we = static fn ($l, $w) => $md['lettres'][$l][$w][5] !== 'R';
+verifie('de départ : un week-end sur deux (A et C la semaine 1, B et D la semaine 2)', $we('A', 0) && $we('C', 0) && !$we('B', 0) && !$we('D', 0) && $we('B', 1) && $we('D', 1) && !$we('A', 1) && !$we('C', 1));
+$jt = static fn ($l, $w) => count(array_filter($md['lettres'][$l][$w], static fn ($c) => $c !== 'R'));
+verifie('de départ : cinq jours par semaine pour chacun', array_sum(array_map(static fn ($l) => $jt($l, 0) + $jt($l, 1), EQP_LETTRES)) === 40);
+$mv = $md; $mv['reference'] = '2026-11-26';
+verifie('la référence est ramenée à son lundi', eqpMatriceValide($mv)['reference'] === '2026-11-23');
+$mk = $md; $mk['lettres']['B'][1][3] = 'X';
+verifie('un code inconnu : refusée', eqpMatriceValide($mk) === null);
+$mk = $md; $mk['creneaux']['M'] = ['de' => '14:00', 'a' => '07:00'];
+verifie('un créneau à l’envers : refusée', eqpMatriceValide($mk) === null);
+$mk = $md; unset($mk['lettres']['D']);
+verifie('une lettre manquante : refusée', eqpMatriceValide($mk) === null);
+verifie('la semaine de référence est la semaine 1', eqpCycle('2026-11-23', '2026-11-23') === 0);
+verifie('la suivante, la semaine 2', eqpCycle('2026-11-23', '2026-11-30') === 1);
+verifie('dans quinze jours, la semaine 1', eqpCycle('2026-11-23', '2026-12-07') === 0);
+verifie('la semaine d’avant, la semaine 2', eqpCycle('2026-11-23', '2026-11-16') === 1);
+
+echo "Le shift maker\n";
+$eqS = [10 => ['id' => 10, 'nom' => 'Anna', 'actif' => true], 13 => ['id' => 13, 'nom' => 'Caissière', 'actif' => true], 14 => ['id' => 14, 'nom' => 'Nouveau', 'actif' => true], 11 => ['id' => 11, 'nom' => 'Inactive', 'actif' => false]];
+$cibS = ['2026-11-25' => [['id' => 9, 'employe' => 10, 'de' => '10:00', 'a' => '12:00', 'nom' => '']], '2026-11-26' => [['id' => 8, 'employe' => 10, 'de' => '07:00', 'a' => '14:00', 'nom' => '']]];
+$g = eqpShiftMaker($md, [10 => 'A', 13 => 'B', 11 => 'C'], $eqS, $cibS, '2026-11-23');
+verifie('semaine 1 du roulement', $g['cycle'] === 1);
+$deA = array_values(array_filter($g['propositions'], static fn ($p) => $p['employe'] === 10));
+verifie('A en semaine 1 : matin du mercredi au dimanche, sauf ce qui est déjà là', array_column($deA, 'date') === ['2026-11-27', '2026-11-28', '2026-11-29'] && $deA[0]['de'] === '07:00' && $deA[0]['a'] === '14:00', json_encode($deA));
+$motS = []; foreach ($g['ecartes'] as $x) { $motS[$x['employe'] . $x['date']] = $x['motif']; }
+verifie('mercredi : chevauche son service de 10:00', ($motS['102026-11-25'] ?? '') === 'chevauche 10:00–12:00', json_encode($motS));
+verifie('jeudi : déjà au planning', ($motS['102026-11-26'] ?? '') === 'déjà au planning');
+verifie('une personne désactivée : écartée', ($motS['112026-11-25'] ?? '') === 'désactivé');
+$deB = array_values(array_filter($g['propositions'], static fn ($p) => $p['employe'] === 13));
+verifie('B en semaine 1 : après-midi du lundi au vendredi', array_column($deB, 'date') === ['2026-11-23', '2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27'] && $deB[0]['de'] === '12:30', json_encode(array_column($deB, 'date')));
+verifie('sans lettre : Nouveau', $g['sansLettre'] === [14], json_encode($g['sansLettre']));
+verifie('la clé d’une proposition', $deB[0]['cle'] === 'e13-2026-11-23-12:30');
+$g2 = eqpShiftMaker($md, [10 => 'A'], $eqS, [], '2026-11-30');
+verifie('A en semaine 2 : après-midi du lundi au vendredi', $g2['cycle'] === 2 && count($g2['propositions']) === 5 && $g2['propositions'][0]['de'] === '12:30');
+
+echo "Le shift maker, de bout en bout\n";
+$lunG = date('Y-m-d', strtotime('monday next week'));
+PanelApi::$reponses = ['/shops/1/employees' => $employes];
+for ($i = 0; $i < 7; $i++) { PanelApi::$reponses['/shops/1/schedule?date=' . date('Y-m-d', strtotime($lunG . ' +' . $i . ' days'))] = []; }
+Db::$roul = [['employe_id' => 10, 'lettre' => 'D'], ['employe_id' => 12, 'lettre' => 'A']];
+Db::$matrice = json_encode(eqpMatriceDepart($lunG));
+$_GET = ['shop' => '1', 'du' => $lunG];
+$ap = ep_equipe_generer();
+verifie('l’aperçu : D en semaine 1, matin du lundi au vendredi ; la personne d’un autre magasin est écartée', ($ap['cycle'] ?? 0) === 1 && count($ap['propositions'] ?? []) === 5 && count(array_filter($ap['ecartes'], static fn ($x) => $x['motif'] === 'plus dans l’équipe')) === 5, json_encode($ap));
+verifie('les actifs sans lettre sont nommés', array_column($ap['sansLettre'], 'nom') === ['Caissière', 'Nouveau'], json_encode($ap['sansLettre']));
+PanelApi::$ecrits = []; PanelApi::$code = 201;
+$CORPS = ['shop' => 1, 'du' => $lunG, 'cles' => [$ap['propositions'][0]['cle'], $ap['propositions'][1]['cle']]];
+$r = wr_equipe_generer();
+verifie('seuls les services cochés sont créés', ($r['crees'] ?? 0) === 2 && count(PanelApi::$ecrits) === 2 && PanelApi::$ecrits[0][2] === ['id_employee' => 10, 'work_date' => $lunG, 'start_hour' => '07:00:00', 'end_hour' => '14:00:00'], json_encode([$r, PanelApi::$ecrits]));
+$CORPS = ['shop' => 1, 'du' => $lunG, 'cles' => ['e12-' . $lunG . '-07:00']];
+verifie('une clé hors de l’aperçu n’est jamais créée', isset(wr_equipe_generer()['error']));
+$CORPS = ['shop' => 1, 'du' => $lunG, 'cles' => ['n’importe quoi']];
+verifie('une clé mal formée : refusée', isset(wr_equipe_generer()['error']));
+PanelApi::$code = 204;
+
+echo "La lettre d'un employé\n";
+Db::$exec = [];
+$CORPS = ['shop' => 1, 'employe' => 13, 'lettre' => 'B'];
+$r = wr_equipe_roulement();
+verifie('enregistrée', !empty($r['ok']) && str_contains(Db::$exec[count(Db::$exec) - 1][0], 'INSERT INTO panel_equipe_roulement') && Db::$exec[count(Db::$exec) - 1][1][2] === 'B', json_encode([$r, Db::$exec]));
+$CORPS = ['shop' => 1, 'employe' => 13, 'lettre' => null];
+wr_equipe_roulement();
+verifie('retirée', str_contains(Db::$exec[count(Db::$exec) - 1][0], 'DELETE FROM panel_equipe_roulement'));
+$CORPS = ['shop' => 1, 'employe' => 12, 'lettre' => 'A'];
+verifie('refusée pour la personne d’un autre magasin', isset(wr_equipe_roulement()['error']));
+$CORPS = ['shop' => 1, 'employe' => 13, 'lettre' => 'E'];
+verifie('refusée : une lettre hors de A B C D', isset(wr_equipe_roulement()['error']));
+$CORPS = ['shop' => 1, 'matrice' => $mk];
+verifie('une matrice invalide n’est pas enregistrée', isset(wr_equipe_matrice()['error']));
+$CORPS = ['shop' => 1, 'matrice' => $md];
+$r = wr_equipe_matrice();
+verifie('une matrice valide est enregistrée', !empty($r['ok']) && str_contains(Db::$exec[count(Db::$exec) - 1][0], 'INSERT INTO panel_equipe_matrice'), json_encode($r));
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

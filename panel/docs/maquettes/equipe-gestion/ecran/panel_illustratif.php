@@ -2,7 +2,8 @@
 // Les réponses des routes Mon équipe, calculées par le vrai code (panel/src/equipe.php) sur un panel illustratif.
 declare(strict_types=1);
 $R = dirname(__DIR__, 5);
-final class Db { public static function rows($s, $a = []) { return []; } public static function row($s, $a = []) { return ['revenue_budget' => 108000, 'ca_theorique' => null]; } public static function exec($s, $a = []) {} }
+// Les lettres du roulement : le comptoir et la responsable ; la production garde ses horaires (sans lettre).
+final class Db { public static function rows($s, $a = []) { return str_contains($s, 'panel_equipe_roulement') ? [['employe_id' => 23, 'lettre' => 'A'], ['employe_id' => 28, 'lettre' => 'B'], ['employe_id' => 26, 'lettre' => 'C'], ['employe_id' => 21, 'lettre' => 'D']] : []; } public static function row($s, $a = []) { return str_contains($s, 'panel_equipe_matrice') ? null : ['revenue_budget' => 108000, 'ca_theorique' => null]; } public static function exec($s, $a = []) {} }
 $REG = [];
 function setting(string $k, mixed $d = null): mixed { global $REG; if (preg_match('/^tmT5:(\S+)$/', $k, $m)) { return $m[1] <= '2026-11-23' && date('N', strtotime($m[1])) != 7 ? tickets($m[1]) : null; } return $REG[$k] ?? $d; }
 function svGrave(string $k, array $v): void {}
@@ -73,4 +74,7 @@ $_GET = ['shop' => '5', 'du' => '2026-11-23', 'jours' => '7']; $s = ep_equipe_pl
 // Recopier la semaine précédente : la semaine du 30/11, vide, et l'aperçu de la recopie du 23 au 29.
 $_GET = ['shop' => '5', 'du' => '2026-11-30', 'jours' => '7']; $s2 = ep_equipe_planning(); $s2['aujourdhui'] = '2026-11-23'; file_put_contents("$out/semaine2.json", json_encode($s2, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/recopie.json", json_encode(ep_equipe_recopie(), JSON_UNESCAPED_UNICODE));
+// La matrice A B C D (celle de départ, semaine 1 = la semaine du 23/11) et le shift maker sur la semaine du 30/11.
+$_GET = ['shop' => '5']; $mx = ep_equipe_matrice(); $mx['matrice']['reference'] = '2026-11-23'; file_put_contents("$out/matrice.json", json_encode($mx, JSON_UNESCAPED_UNICODE));
+$_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/generer.json", json_encode(ep_equipe_generer(), JSON_UNESCAPED_UNICODE));
 echo "ok\n";

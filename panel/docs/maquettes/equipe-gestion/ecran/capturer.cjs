@@ -4,7 +4,7 @@ const D = __dirname, OUT = process.argv[2] || D, PROD = 'http://185.180.206.46/c
 const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
 (async () => {
   const b = await chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost'] });
-  const ctx = await b.newContext({ viewport: { width: 1440, height: 940 }, deviceScaleFactor: 2 });
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 940 }, deviceScaleFactor: 2, locale: 'fr-BE' });
   const p = await ctx.newPage(); const err = []; const ecrits = [];
   p.on('pageerror', e => err.push(e.message)); p.on('console', m => { if (m.type() === 'error') err.push('console: ' + m.text()); });
   await p.route('**/api/cockpit/**', async r => {
@@ -13,9 +13,14 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
       if (m !== 'GET') {
         ecrits.push([m, pa, r.request().postData()]);
         if (pa === '/dashboard/equipe/semaine/recopie') { const n = JSON.parse(r.request().postData()).sources.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
+        if (pa === '/dashboard/equipe/semaine/generer') { const n = JSON.parse(r.request().postData()).cles.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
+        if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
+        if (pa === '/dashboard/equipe/roulement') { const b = JSON.parse(r.request().postData()), x = JSON.parse(lire('matrice.json')).roulements; if (b.lettre) { x[b.employe] = b.lettre; } else { delete x[b.employe]; } return r.fulfill({ status: 200, json: { ok: true, employe: b.employe, lettre: b.lettre, roulements: x } }); }
         return r.fulfill({ status: 200, json: pa === '/dashboard/equipe/postes' ? Object.assign(JSON.parse(lire('carte.json')), { ok: true }) : { ok: true, id: 999 } });
       }
       if (pa === '/dashboard/equipe/semaine/recopie') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('recopie.json') }); }
+      if (pa === '/dashboard/equipe/semaine/generer') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('generer.json') }); }
+      if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
       if (pa === '/dashboard/equipe/carte') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('carte.json') }); }
       if (pa === '/dashboard/equipe/planning') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire(u.searchParams.get('jours') === '1' ? 'jour.json' : u.searchParams.get('du') === '2026-11-30' ? 'semaine2.json' : 'semaine.json') }); }
       return r.fulfill({ status: 404, json: { error: 'x' } });
@@ -66,6 +71,21 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await shot('e7-recopier-la-semaine', false);
   await p.click('[data-eqp-rec-ok]'); await p.waitForTimeout(600);
   console.log('flash', await p.textContent('.eqp-flash').catch(() => '—'));
+  // Le shift maker (test) sur la même semaine vide, puis la matrice A B C D.
+  await p.click('[data-eqp-fermer]').catch(() => {});
+  await p.click('[data-eqp-generer]'); await p.waitForSelector('.eqp-rec-liste');
+  await shot('e8-shift-maker', false);
+  await p.click('[data-eqp-rec-ok]'); await p.waitForTimeout(600);
+  console.log('flash', await p.textContent('.eqp-flash').catch(() => '—'));
+  await p.click('[data-eqp-matrice]'); await p.waitForSelector('.eqp-mat');
+  await shot('e9-matrice', false);
+  await p.click('.eqp-mat [data-eqp-fermer].btn');
+  // La fiche de Chloé : sa lettre, ce qu'elle donne ; puis lui donner C.
+  await p.click('[data-eqp-onglet="resp"]'); await p.waitForSelector('.eqp-grille');
+  await p.click('.eqp-ligne:has-text("Chloé Peeters")');
+  await shot('e10-fiche-roulement', false);
+  await p.click('.eqp-fiche [data-eqp-lettre="C"]'); await p.waitForTimeout(500);
+  console.log('lettre', await p.textContent('.eqp-fiche .eqp-seg-l .is-on'));
   console.log('écritures', JSON.stringify(ecrits));
   console.log(err.length ? 'ERREURS ' + err.join(' | ') : 'sans erreur de page');
   await b.close();

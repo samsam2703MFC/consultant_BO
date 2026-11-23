@@ -28,6 +28,14 @@ declare(strict_types=1);
  *   POST {shop, du, sources: [id…]} — crée au panel les services cochés, recalculés côté serveur (la liste du navigateur
  *   ne choisit que parmi eux) ; s'arrête au premier refus de droits (401, 403).
  *
+ * - LA MATRICE A B C D et le SHIFT MAKER (test, 23/11/2026, Sam : « rajouter un shift maker (test) et la matrice a b c d
+ *   (matin aprem, un week sur deux) ; rajouter dans la fiche des employés ») : quatre roulements sur deux semaines, matin
+ *   ou après-midi, un week-end sur deux ; chaque employé porte sa lettre (sa fiche). La matrice du magasin, ses deux
+ *   créneaux et sa semaine de référence : GET|POST /dashboard/equipe/matrice ; la lettre d'un employé : POST
+ *   /dashboard/equipe/roulement {shop, employe, lettre} ; le shift maker : GET /dashboard/equipe/semaine/generer?du=
+ *   (l'aperçu de la semaine tirée de la matrice) et POST {shop, du, cles} (crée les services cochés). Tables
+ *   panel_equipe_matrice, panel_equipe_roulement (le panel ne connaît pas les roulements).
+ *
  * Les écritures partent avec le compte du cockpit (PanelApi) : si le panel refuse (403), la réponse le dit telle quelle.
  * La route des employés rend aussi des secrets (hachages, jetons) : rien n'en sort que les champs listés ici.
  */
@@ -44,6 +52,13 @@ function eqpRoute(string $method, string $path): ?array
     if ($method === 'POST' && $path === '/dashboard/equipe/postes') { return wr_equipe_postes(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning') { return ep_equipe_planning(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning/pdf') { ep_equipe_planning_pdf(); return null; }
+    if ($method === 'GET' && $path === '/dashboard/equipe/matrice') { return ep_equipe_matrice(); }
+    if ($method === 'POST' && $path === '/dashboard/equipe/matrice') { return wr_equipe_matrice(); }
+    if ($method === 'POST' && $path === '/dashboard/equipe/roulement') { return wr_equipe_roulement(); }
+    if ($path === '/dashboard/equipe/semaine/generer') {
+        if ($method === 'GET') { return ep_equipe_generer(); }
+        if ($method === 'POST') { return wr_equipe_generer(); }
+    }
     if ($path === '/dashboard/equipe/semaine/recopie') {
         if ($method === 'GET') { return ep_equipe_recopie(); }
         if ($method === 'POST') { return wr_equipe_recopie(); }
@@ -186,7 +201,11 @@ function ep_equipe_carte(?int $shop = null): array
     foreach ($L['ws'] as $w) {
         if (!array_key_exists('sector_id', $w)) { return eqpErreur(502, 'les postes du panel ne portent pas leur secteur (sector_id) : la carte ne peut pas se calculer'); }
     }
-    return ['shop' => $shop] + eqpCarte($shop, $L['emp'], $L['ws'], $L['prod']);
+    $c = eqpCarte($shop, $L['emp'], $L['ws'], $L['prod']);
+    $rl = eqpRoulements($shop);
+    foreach ($c['employes'] as &$e) { $e['lettre'] = $rl[$e['id']] ?? null; }
+    unset($e);
+    return ['shop' => $shop] + $c;
 }
 
 /** Une liste d'identifiants : entiers ≥ 1, sans doublon, triés ; null si la forme est mauvaise. */
@@ -406,6 +425,9 @@ function ep_equipe_planning(): array
     foreach ($out as $j) { foreach ($j['services'] as $s) { $auPlanning[$s['employe']] = true; } }
     $equipe = array_filter($equipe, static fn ($e) => $e['actif'] || isset($auPlanning[$e['id']]));
     uasort($equipe, static fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
+    $rl = eqpRoulements($shop);
+    foreach ($equipe as &$e) { $e['lettre'] = $rl[$e['id']] ?? null; }
+    unset($e);
     $sect = [];
     foreach ($secteurs as $id => $nom) { $sect[] = ['id' => $id, 'nom' => $nom !== '' ? $nom : 'Secteur ' . $id]; }
     usort($sect, static fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
@@ -632,19 +654,276 @@ function wr_equipe_recopie(): array
     if ($err !== null) { return $err; }
     $a = array_values(array_filter($c['propositions'], static fn ($p) => isset($voulus[$p['source']])));
     if ($a === []) { return eqpErreur(422, 'aucun des services cochés n’est encore à recopier : relisez l’aperçu'); }
+    return eqpCreerServices($shop, $a, static fn (int $n) => 'Semaine du ' . $c['du'] . ' : ' . $n . ' service' . ($n > 1 ? 's' : '') . ' recopié' . ($n > 1 ? 's' : '') . ' de la semaine du ' . $c['source']['du'], $c['du']);
+}
+
+/**
+ * Crée au panel les services d'un aperçu (recopie, shift maker), un par un ; s'arrête au premier refus de droits.
+ * $journal(n) : la ligne du journal quand n services sont créés.
+ */
+function eqpCreerServices(int $shop, array $a, callable $journal, string $du): array
+{
     @set_time_limit(180);
     $crees = 0; $echecs = []; $arret = null;
     foreach ($a as $p) {
         $r = PanelApi::requete('POST', '/schedule', ['id_employee' => $p['employe'], 'work_date' => $p['date'], 'start_hour' => $p['de'] . ':00', 'end_hour' => $p['a'] . ':00']);
         if ($r['code'] >= 200 && $r['code'] < 300) { $crees++; continue; }
-        $echecs[] = ['source' => $p['source'], 'nom' => $p['nom'], 'date' => $p['date'], 'de' => $p['de'], 'a' => $p['a'], 'motif' => (string) ($r['erreur'] ?? 'refusé')];
+        $echecs[] = ['source' => $p['source'] ?? null, 'cle' => $p['cle'] ?? null, 'nom' => $p['nom'], 'date' => $p['date'], 'de' => $p['de'], 'a' => $p['a'], 'motif' => (string) ($r['erreur'] ?? 'refusé')];
         // Un refus de droits vaudra pour tous les suivants : on s'arrête là plutôt que d'en essuyer cent.
         if (in_array($r['code'], [401, 403], true)) { $arret = 'le panel refuse les écritures du planning à ce compte (HTTP ' . $r['code'] . ')'; break; }
     }
     if ($crees > 0) {
-        try { journalAdd('Magasin ' . $shop, 'Planning', null, 'Semaine du ' . $c['du'] . ' : ' . $crees . ' service' . ($crees > 1 ? 's' : '') . ' recopié' . ($crees > 1 ? 's' : '') . ' de la semaine du ' . $c['source']['du']); }
+        try { journalAdd('Magasin ' . $shop, 'Planning', null, $journal($crees)); }
         catch (Throwable $e) { /* le journal ne bloque pas */ }
     }
     if ($crees === 0) { return eqpErreur($arret !== null ? 403 : 502, $arret ?? 'le panel a refusé tous les services', ['echecs' => $echecs]); }
-    return ['ok' => true, 'du' => $c['du'], 'crees' => $crees, 'demandes' => count($a), 'echecs' => $echecs, 'arret' => $arret];
+    return ['ok' => true, 'du' => $du, 'crees' => $crees, 'demandes' => count($a), 'echecs' => $echecs, 'arret' => $arret];
+}
+
+/* ── La matrice A B C D et le shift maker (test) ──────────────────────────────────────────────────────────────── */
+
+const EQP_LETTRES = ['A', 'B', 'C', 'D'];
+const EQP_CODES = ['M', 'P', 'R'];   // matin, après-midi (« aprem »), repos
+
+function ensureEquipeMatrice(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_equipe_matrice ('
+        . 'shop_id VARCHAR(16) NOT NULL PRIMARY KEY,'
+        . 'matrice TEXT NOT NULL,'                 // {creneaux: {M, P}, reference, lettres: {A: [[7], [7]], …}}
+        . 'maj_le DATETIME NOT NULL,'
+        . 'maj_par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_equipe_roulement ('
+        . 'shop_id VARCHAR(16) NOT NULL,'
+        . 'employe_id INT UNSIGNED NOT NULL,'      // l'identifiant de l'employé au panel
+        . 'lettre CHAR(1) NOT NULL,'
+        . 'maj_le DATETIME NOT NULL,'
+        . 'maj_par VARCHAR(120) NULL,'
+        . 'PRIMARY KEY (shop_id, employe_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $fait = true;
+}
+
+/**
+ * La matrice de départ : deux semaines, un week-end sur deux, matin et après-midi qui s'échangent d'une semaine à
+ * l'autre. A et C tiennent le week-end de la semaine 1 (repos lundi et mardi), B et D celui de la semaine 2 ; chaque jour
+ * a au moins un matin et un après-midi. Créneaux : matin 07:00–14:00, après-midi 12:30–18:30 (ils se croisent à midi).
+ */
+function eqpMatriceDepart(?string $reference = null): array
+{
+    $c = static fn (string $x) => str_split($x);
+    return ['creneaux' => ['M' => ['de' => '07:00', 'a' => '14:00'], 'P' => ['de' => '12:30', 'a' => '18:30']],
+        'reference' => $reference ?? date('Y-m-d', strtotime('monday this week')),
+        'lettres' => ['A' => [$c('RRMMMMM'), $c('PPPPPRR')], 'B' => [$c('PPPPPRR'), $c('RRMMMMM')],
+            'C' => [$c('RRPPPPP'), $c('MMMMMRR')], 'D' => [$c('MMMMMRR'), $c('RRPPPPP')]]];
+}
+
+/** Une matrice reçue, vérifiée et remise en forme ; null si elle ne tient pas. La référence est ramenée à son lundi. */
+function eqpMatriceValide(mixed $m): ?array
+{
+    if (!is_array($m) || !is_array($m['creneaux'] ?? null) || !is_array($m['lettres'] ?? null)) { return null; }
+    $cr = [];
+    foreach (['M', 'P'] as $k) {
+        $x = $m['creneaux'][$k] ?? null;
+        $de = is_array($x) && is_string($x['de'] ?? null) ? eqpMinutes($x['de']) : null; $a = is_array($x) && is_string($x['a'] ?? null) ? eqpMinutes($x['a']) : null;
+        if ($de === null || $a === null || $a <= $de || $a > 24 * 60 || $de % 5 || $a % 5) { return null; }
+        $cr[$k] = ['de' => sprintf('%02d:%02d', intdiv($de, 60), $de % 60), 'a' => sprintf('%02d:%02d', intdiv($a, 60), $a % 60)];
+    }
+    $ref = is_string($m['reference'] ?? null) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $m['reference']) && strtotime($m['reference']) !== false ? $m['reference'] : null;
+    if ($ref === null) { return null; }
+    $ref = date('Y-m-d', strtotime($ref . ' -' . ((int) date('N', strtotime($ref)) - 1) . ' days'));
+    $L = [];
+    foreach (EQP_LETTRES as $l) {
+        $s = $m['lettres'][$l] ?? null;
+        if (!is_array($s) || count($s) !== 2) { return null; }
+        foreach ($s as $i => $sem) {
+            if (!is_array($sem) || count($sem) !== 7) { return null; }
+            foreach ($sem as $code) { if (!in_array($code, EQP_CODES, true)) { return null; } }
+            $L[$l][$i] = array_values($sem);
+        }
+    }
+    return ['creneaux' => $cr, 'reference' => $ref, 'lettres' => $L];
+}
+
+/** La semaine du roulement (0 : semaine 1, 1 : semaine 2) du lundi $lundi, la semaine de $reference étant la semaine 1. */
+function eqpCycle(string $reference, string $lundi): int
+{
+    $n = (int) round((strtotime($lundi . ' 12:00') - strtotime($reference . ' 12:00')) / 86400);
+    return ((intdiv($n - (($n % 7 + 7) % 7), 7) % 2) + 2) % 2;
+}
+
+/**
+ * LE SHIFT MAKER (pur) : la semaine de $du tirée de la matrice, pour chaque employé qui a une lettre. Écarté : plus
+ * dans l'équipe, désactivé, déjà au planning, chevauche un service déjà prévu. `sansLettre` : les actifs sans roulement.
+ */
+function eqpShiftMaker(array $matrice, array $roulements, array $equipe, array $cible, string $du): array
+{
+    $cycle = eqpCycle($matrice['reference'], $du);
+    $prop = []; $ecart = []; $pris = [];
+    foreach ($cible as $d => $L) { foreach ($L as $s) { $pris[$d][$s['employe']][] = [eqpMinutes($s['de']), eqpMinutes($s['a']), $s['de'], $s['a']]; } }
+    ksort($roulements);
+    foreach ($roulements as $emp => $lettre) {
+        if (!isset($matrice['lettres'][$lettre])) { continue; }
+        $p = $equipe[$emp] ?? null;
+        foreach ($matrice['lettres'][$lettre][$cycle] as $i => $code) {
+            if ($code === 'R') { continue; }
+            $cr = $matrice['creneaux'][$code];
+            $date = date('Y-m-d', strtotime($du . ' +' . $i . ' days'));
+            $x = ['cle' => 'e' . $emp . '-' . $date . '-' . $cr['de'], 'employe' => (int) $emp, 'lettre' => $lettre, 'creneau' => $code, 'date' => $date, 'de' => $cr['de'], 'a' => $cr['a']];
+            if ($p === null) { $ecart[] = $x + ['motif' => 'plus dans l’équipe']; continue; }
+            if (empty($p['actif'])) { $ecart[] = $x + ['motif' => 'désactivé']; continue; }
+            $de = eqpMinutes($cr['de']); $a = eqpMinutes($cr['a']); $motif = null;
+            foreach ($pris[$date][$emp] ?? [] as [$x0, $x1, $h0, $h1]) {
+                if ($x0 === $de && $x1 === $a) { $motif = 'déjà au planning'; break; }
+                if ($de < $x1 && $a > $x0) { $motif = 'chevauche ' . $h0 . '–' . $h1; break; }
+            }
+            if ($motif !== null) { $ecart[] = $x + ['motif' => $motif]; continue; }
+            $pris[$date][$emp][] = [$de, $a, $cr['de'], $cr['a']];
+            $prop[] = $x;
+        }
+    }
+    usort($prop, static fn ($x, $y) => strcmp($x['date'] . $x['de'], $y['date'] . $y['de']) ?: $x['employe'] <=> $y['employe']);
+    $sans = array_values(array_map(static fn ($e) => $e['id'], array_filter($equipe, static fn ($e) => !empty($e['actif']) && !isset($roulements[$e['id']]))));
+    return ['cycle' => $cycle + 1, 'propositions' => $prop, 'ecartes' => $ecart, 'sansLettre' => $sans];
+}
+
+/** La matrice du magasin (celle de départ s'il n'en a pas). @return array{0: array, 1: bool} [matrice, de départ ?] */
+function eqpMatriceLire(int $shop): array
+{
+    try {
+        ensureEquipeMatrice();
+        $r = Db::row('SELECT matrice FROM panel_equipe_matrice WHERE shop_id = ?', [(string) $shop]);
+        $m = $r !== null ? eqpMatriceValide(json_decode((string) $r['matrice'], true)) : null;
+        if ($m !== null) { return [$m, false]; }
+    } catch (Throwable $e) { /* la matrice de départ */ }
+    return [eqpMatriceDepart(), true];
+}
+
+/** Les lettres des employés du magasin : [id => 'A'…]. */
+function eqpRoulements(int $shop): array
+{
+    try {
+        ensureEquipeMatrice();
+        $o = [];
+        foreach (Db::rows('SELECT employe_id, lettre FROM panel_equipe_roulement WHERE shop_id = ?', [(string) $shop]) as $r) {
+            if (in_array($r['lettre'], EQP_LETTRES, true)) { $o[(int) $r['employe_id']] = $r['lettre']; }
+        }
+        return $o;
+    } catch (Throwable $e) { return []; }
+}
+
+function eqpQui(): ?string
+{
+    $i = function_exists('accesIdentite') ? accesIdentite() : null;
+    return is_array($i) ? mb_substr((string) ($i['nom'] ?? ''), 0, 120) : null;
+}
+
+/** GET /dashboard/equipe/matrice?shop= */
+function ep_equipe_matrice(): array
+{
+    $shop = eqpShop();
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    [$m, $depart] = eqpMatriceLire($shop);
+    return ['shop' => $shop, 'matrice' => $m, 'depart' => $depart, 'roulements' => (object) eqpRoulements($shop), 'lettres' => EQP_LETTRES];
+}
+
+/** POST /dashboard/equipe/matrice {shop, matrice} — la matrice du magasin (ou {depart: true} pour revenir à celle de départ). */
+function wr_equipe_matrice(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $m = !empty($b['depart']) ? eqpMatriceDepart() : eqpMatriceValide($b['matrice'] ?? null);
+    if ($m === null) { return eqpErreur(422, 'matrice : deux créneaux (HH:MM, par 5 minutes), une semaine de référence, et pour A, B, C, D deux semaines de sept jours en M, P ou R'); }
+    try {
+        ensureEquipeMatrice();
+        Db::exec('INSERT INTO panel_equipe_matrice (shop_id, matrice, maj_le, maj_par) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE matrice = VALUES(matrice), maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
+            [(string) $shop, json_encode($m, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), eqpQui()]);
+    } catch (Throwable $e) { return eqpErreur(503, 'la matrice ne s’enregistre pas : ' . $e->getMessage()); }
+    return ['ok' => true] + ep_equipe_matrice_de($shop);
+}
+
+function ep_equipe_matrice_de(int $shop): array
+{
+    [$m, $depart] = eqpMatriceLire($shop);
+    return ['shop' => $shop, 'matrice' => $m, 'depart' => $depart, 'roulements' => (object) eqpRoulements($shop), 'lettres' => EQP_LETTRES];
+}
+
+/** POST /dashboard/equipe/roulement {shop, employe, lettre: 'A'…'D' | null} — la lettre d'un employé (sa fiche). */
+function wr_equipe_roulement(): array
+{
+    $b = body();
+    $shop = eqpShop($b); $emp = is_int($b['employe'] ?? null) ? $b['employe'] : 0; $l = $b['lettre'] ?? null;
+    if ($shop <= 0 || $emp <= 0) { return eqpErreur(400, 'magasin et employé attendus'); }
+    if ($l !== null && !in_array($l, EQP_LETTRES, true)) { return eqpErreur(422, 'lettre : A, B, C, D ou null'); }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
+    $emps = PanelApi::get('/shops/' . $shop . '/employees');
+    if (!is_array($emps)) { return eqpErreur(502, 'le panel ne répond pas : rien n’est enregistré'); }
+    $p = null;
+    foreach (analyseListe($emps) as $r) { if (is_array($r) && (int) ($r['id'] ?? 0) === $emp && (int) ($r['id_shop'] ?? 0) === $shop) { $p = eqpPersonne($r); break; } }
+    if ($p === null) { return eqpErreur(404, 'cette personne n’est pas de l’équipe du magasin'); }
+    try {
+        ensureEquipeMatrice();
+        if ($l === null) { Db::exec('DELETE FROM panel_equipe_roulement WHERE shop_id = ? AND employe_id = ?', [(string) $shop, $emp]); }
+        else {
+            Db::exec('INSERT INTO panel_equipe_roulement (shop_id, employe_id, lettre, maj_le, maj_par) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE lettre = VALUES(lettre), maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
+                [(string) $shop, $emp, $l, date('Y-m-d H:i:s'), eqpQui()]);
+        }
+    } catch (Throwable $e) { return eqpErreur(503, 'le roulement ne s’enregistre pas : ' . $e->getMessage()); }
+    return ['ok' => true, 'employe' => $emp, 'lettre' => $l, 'roulements' => (object) eqpRoulements($shop)];
+}
+
+/** L'aperçu du shift maker pour la semaine de $du (un lundi) : [erreur, contexte]. */
+function eqpGenererPlan(int $shop, string $du): array
+{
+    if ($shop <= 0) { return [eqpErreur(400, 'shop manquant'), null]; }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return [eqpErreur(422, 'du : AAAA-MM-JJ'), null]; }
+    $du = date('Y-m-d', strtotime($du . ' -' . ((int) date('N', strtotime($du)) - 1) . ' days'));
+    $ecart = (strtotime($du) - strtotime(date('Y-m-d'))) / 86400;
+    if ($ecart < -31 || $ecart > 120) { return [eqpErreur(422, 'semaine : d’un mois avant à quatre mois après aujourd’hui'), null]; }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return [eqpErreur(503, 'compte du panel non configuré'), null]; }
+    $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $chemins = ['emp' => '/shops/' . $shop . '/employees'];
+    foreach ($jours as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
+    $res = PanelApi::getParallele($chemins, 6);
+    if (!is_array($res['emp'] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu les employés'), null]; }
+    $C = [];
+    foreach ($jours as $d) {
+        if (!is_array($res['sch' . $d] ?? null)) { return [eqpErreur(502, 'le panel n’a pas rendu le planning du ' . $d . ' : rien n’est généré'), null]; }
+        $C[$d] = eqpServices($res['sch' . $d], $shop, $d);
+    }
+    $equipe = [];
+    foreach (analyseListe($res['emp']) as $r) { if (is_array($r)) { $e = eqpPersonne($r); if ($e['shop'] === $shop) { $equipe[$e['id']] = $e; } } }
+    [$m] = eqpMatriceLire($shop);
+    $g = eqpShiftMaker($m, eqpRoulements($shop), $equipe, $C, $du);
+    $nom = static fn (array $x) => ['nom' => ($equipe[$x['employe']]['nom'] ?? null) ?: 'Employé ' . $x['employe']];
+    return [null, ['du' => $du, 'cycle' => $g['cycle'], 'matrice' => $m, 'dejaPrevus' => array_sum(array_map('count', $C)),
+        'propositions' => array_map(static fn ($x) => $x + $nom($x), $g['propositions']),
+        'ecartes' => array_map(static fn ($x) => $x + $nom($x), $g['ecartes']),
+        'sansLettre' => array_map(static fn ($id) => ['id' => $id, 'nom' => $equipe[$id]['nom']], $g['sansLettre'])]];
+}
+
+/** GET /dashboard/equipe/semaine/generer?shop=&du= — l'aperçu du shift maker, rien n'est écrit. */
+function ep_equipe_generer(): array
+{
+    [$err, $c] = eqpGenererPlan(eqpShop(), (string) ($_GET['du'] ?? ''));
+    return $err ?? ['shop' => eqpShop()] + $c;
+}
+
+/** POST /dashboard/equipe/semaine/generer {shop, du, cles: [clé…]} — crée au panel les services cochés de l'aperçu. */
+function wr_equipe_generer(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    $cles = $b['cles'] ?? null;
+    if (!is_array($cles) || !array_is_list($cles) || count($cles) > EQP_RECOPIE_MAX) { return eqpErreur(422, 'cles : la liste des services à créer'); }
+    $voulus = [];
+    foreach ($cles as $x) { if (!is_string($x) || !preg_match('/^e\d+-\d{4}-\d{2}-\d{2}-\d{2}:\d{2}$/', $x)) { return eqpErreur(422, 'cles : des clés de l’aperçu'); } $voulus[$x] = true; }
+    [$err, $c] = eqpGenererPlan($shop, is_string($b['du'] ?? null) ? $b['du'] : '');
+    if ($err !== null) { return $err; }
+    $a = array_values(array_filter($c['propositions'], static fn ($p) => isset($voulus[$p['cle']])));
+    if ($a === []) { return eqpErreur(422, 'aucun des services cochés n’est encore à créer : relisez l’aperçu'); }
+    return eqpCreerServices($shop, $a, static fn (int $n) => 'Semaine du ' . $c['du'] . ' : ' . $n . ' service' . ($n > 1 ? 's' : '') . ' créé' . ($n > 1 ? 's' : '') . ' par le shift maker (matrice A B C D, semaine ' . $c['cycle'] . ')', $c['du']);
 }

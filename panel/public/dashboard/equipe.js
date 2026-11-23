@@ -46,7 +46,7 @@
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
     PJ: null, PS: null, Perr: null, vue: 'jour', jour: AUJ, lundi: lundiDe(AUJ), editer: false, edit: null, glisse: null,
-    pdf: null, rec: null, flash: null, occupe: false };
+    pdf: null, rec: null, M: null, mat: null, flash: null, occupe: false };
 
   /* ── L'API ──────────────────────────────────────────────────────────────────────────────────────────────────── */
   const json = r => r.json().catch(() => ({})).then(j => (r.ok ? j : Promise.reject(Object.assign(new Error((j && j.error) || ('HTTP ' + r.status)), { j, code: r.status }))));
@@ -67,7 +67,7 @@
       .then(r => { if (jour) { st.PJ = r; } else { st.PS = r; } })
       .catch(e => { st.Perr = e.message; }).finally(rendre);
   }
-  function relireTout() { lireCarte(); lirePlanning('semaine'); if (st.onglet === 'planning' && st.vue === 'jour') { lirePlanning('jour'); } }
+  function relireTout() { lireCarte(); lireMatrice(); lirePlanning('semaine'); if (st.onglet === 'planning' && st.vue === 'jour') { lirePlanning('jour'); } }
 
   /* ── Le calcul d'un jour : services (avec la modification en cours), coût, présence, linéaires ──────────────── */
   function equipeDe(P) { const m = new Map(); (P.employes || []).forEach(e => m.set(e.id, e)); return m; }
@@ -115,7 +115,7 @@
     const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
     const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
     st.el.innerHTML = `<nav class="page-tabs" aria-label="Mon équipe">${tabs}</nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
-      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie();
+      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice();
     const g2 = st.el.querySelector('.eqp-pg-defil'); if (g2) { g2.scrollLeft = x; }
     brancher();
   }
@@ -138,7 +138,7 @@
     const cols = R.secteurs.filter(s => !st.secteur || String(s.id) === st.secteur);
     const lignes = R.employes.filter(visible).map(e => {
       const cell = s => { const ps = e.postes.filter(p => p.secteur === s.id); return `<td>${ps.length ? ps.map(p => `<span class="chip chip--neutral">${esc(p.nom)}</span>`).join('') + `<span class="sub">${s.produits.length} produits</span>` : '<span class="eqp-tiret" aria-label="Aucune affectation">—</span>'}</td>`; };
-      return `<tr class="eqp-ligne${e.id === st.sel ? ' is-sel' : ''}" data-eqp-sel="${e.id}"><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b><span class="sub">${esc((e.fonctions || []).join(', ') || '—')}${e.postes.length ? '' : ' · <span class="eqp-vide">aucun poste</span>'}</span></span></div></td>${cols.map(cell).join('')}<td>${e.autres.length ? e.autres.map(n => `<span class="chip chip--draft">${esc(n)}</span>`).join('') : '<span class="eqp-tiret">—</span>'}</td></tr>`;
+      return `<tr class="eqp-ligne${e.id === st.sel ? ' is-sel' : ''}" data-eqp-sel="${e.id}"><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.fonctions || []).join(', ') || '—')}${e.postes.length ? '' : ' · <span class="eqp-vide">aucun poste</span>'}</span></span></div></td>${cols.map(cell).join('')}<td>${e.autres.length ? e.autres.map(n => `<span class="chip chip--draft">${esc(n)}</span>`).join('') : '<span class="eqp-tiret">—</span>'}</td></tr>`;
     }).join('') || `<tr><td colspan="${cols.length + 2}" class="eqp-vide-l">${R.employes.length ? 'Aucun résultat pour ces filtres.' : 'Aucun employé actif dans ce magasin.'}</td></tr>`;
     const th = cols.map(s => `<th class="${s.employes.length ? '' : 'eqp-gap'}">${esc(s.nom)}<span class="sub">${s.produits.length} produits${s.employes.length ? '' : ' · vide'}</span></th>`).join('');
     const ac = R.secteursVides.map(id => sec.get(id)).filter(Boolean);
@@ -160,12 +160,13 @@
     const prods = e.secteurs.flatMap(id => (sec.get(id) || { produits: [] }).produits);
     const semaine = st.PS && st.PS.du === lundiDe(AUJ) ? st.PS.jours.reduce((a, j) => { j.services.filter(s => s.employe === e.id).forEach(s => { a.h += (mn(s.a) - mn(s.de)) / 60; a.n++; }); return a; }, { h: 0, n: 0 }) : null;
     return `<aside class="card eqp-fiche" aria-label="Responsabilités de ${esc(e.nom)}">
-      <div class="eqp-fiche-tete"><span class="eqp-av">${esc(ini(e.nom))}</span><div><div class="nm">${esc(e.nom)}</div><span class="sub">${esc((e.fonctions || []).join(', ') || '—')}</span></div></div>
+      <div class="eqp-fiche-tete"><span class="eqp-av">${esc(ini(e.nom))}</span><div><div class="nm">${esc(e.nom)}${lettreChip(e)}</div><span class="sub">${esc((e.fonctions || []).join(', ') || '—')}</span></div></div>
       <h3>Son périmètre</h3>
       ${e.postes.length ? `<div class="eqp-flux">${e.postes.map(p => { const s = p.secteur ? sec.get(p.secteur) : null; return `<div><span>${esc(p.nom)}</span><span class="fl">→</span><span>${s ? esc(s.nom) : (p.secteur ? 'aucun produit de ce secteur ici' : 'sans secteur')}</span><span class="n">${s ? s.produits.length + ' produits' : '—'}</span></div>`; }).join('')}</div>` : '<p class="eqp-note">Aucun poste n’est affecté à cette personne.</p>'}
       <h3>Ses produits · ${prods.length}</h3>
       ${prods.length ? `<ul class="eqp-prods${st.tousProduits ? ' tous' : ''}">${(st.tousProduits ? prods : prods.slice(0, 18)).map(p => `<li>${esc(p.nom)}</li>`).join('')}</ul>${prods.length > 18 ? `<button type="button" class="linklike" data-eqp-tous="1">${st.tousProduits ? 'Replier' : 'Voir les ' + prods.length + ' produits'}</button>` : ''}` : '<p class="eqp-note">Aucun produit lié dans l’assortiment du magasin.</p>'}
       ${semaine ? `<button type="button" class="eqp-sem" data-eqp-aller-planning="semaine">${SVG('M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z')}<span>Semaine : <b>${fH(semaine.h)}</b> · ${semaine.n} service${semaine.n > 1 ? 's' : ''}</span><span class="eqp-sp"></span><span aria-hidden="true">›</span></button>` : ''}
+      ${rendRoulement(e)}
       <div class="eqp-actions"><button type="button" class="btn btn--sm" data-eqp-postes="${e.id}">Modifier ses postes</button></div>
     </aside>`;
   }
@@ -219,7 +220,7 @@
     const barre = `<div class="eqp-pbar"><span class="eqp-nav">${nav}</span><span class="eqp-sp"></span>
       <div class="seg" role="group" aria-label="Affichage">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['tableau', 'Tableau']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
       ${st.vue === 'jour' ? (st.editer ? `<button type="button" class="btn btn--primary" data-eqp-editer="0">Terminer</button>` : `<button type="button" class="btn" data-eqp-editer="1">Modifier les horaires</button>`) : ''}
-      ${st.vue !== 'jour' ? '<button type="button" class="btn btn--primary" data-eqp-recopier="1">Recopier la semaine précédente</button>' : ''}
+      ${st.vue !== 'jour' ? '<button type="button" class="btn btn--primary" data-eqp-recopier="1">Recopier la semaine précédente</button><button type="button" class="btn" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn" data-eqp-matrice="1"' + (st.M ? '' : ' disabled') + '>Matrice A B C D</button>' : ''}
       <button type="button" class="btn" data-eqp-pdf="1" aria-expanded="${st.pdf ? 'true' : 'false'}">Imprimer le planning</button></div>${rendPdf()}`;
     if (st.Perr && !P) { return barre + `<div class="eqp-err">Impossible de lire le planning : ${esc(st.Perr)}. <button type="button" class="linklike" data-eqp-relire="1">Réessayer</button></div>`; }
     if (!P || (st.vue === 'jour' ? P.du !== st.jour : P.du !== st.lundi)) { return barre + '<div class="eqp-attente">Lecture du planning…</div>'; }
@@ -311,7 +312,7 @@
       const fant = orig && ed && ed.id && orig ? `<span class="eqp-fant" style="left:${X(orig.de)};width:${W(orig.de, orig.a)}"></span>` : '';
       const pop = ed && ed.employe === e.id ? rendPop(P, J, C, C0, e, ed, X) : '';
       const vide = !L.length ? `<span class="eqp-repos">${e.actif === false ? 'plus dans l’équipe' : 'repos'}${st.editer && e.actif !== false ? ' · <u>glisser sur la ligne pour ajouter un service</u>' : ''}</span>` : '';
-      return `<div class="eqp-l${L.length ? '' : ' repos'}${pop ? ' a-pop' : ''}"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b><span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}${e.taux == null && !e.franchise ? ' · <span class="eqp-vide">taux inconnu</span>' : ''}</span></span></div><div class="eqp-tl" data-eqp-tl="${e.id}">${fant}${barres}${vide}${pop}</div></div>`;
+      return `<div class="eqp-l${L.length ? '' : ' repos'}${pop ? ' a-pop' : ''}"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}${e.taux == null && !e.franchise ? ' · <span class="eqp-vide">taux inconnu</span>' : ''}</span></span></div><div class="eqp-tl" data-eqp-tl="${e.id}">${fant}${barres}${vide}${pop}</div></div>`;
     };
     const corps = groupes(P, C.eq).map(([g, L]) => `<div class="eqp-gr"><div class="eqp-n">${esc(g)} · ${L.filter(e => C.sv.some(s => s.employe === e.id)).length}/${L.length}</div><div></div></div>${L.map(ligne).join('')}`).join('');
     // Le linéaire de présence : la marche des personnes, et les tickets d'un jour habituel.
@@ -399,7 +400,7 @@
     const col = (i, c) => `<div class="eqp-j${P.jours[i].date === P.aujourdhui ? ' auj' : ''}">${c}</div>`;
     const fondMini = i => { const o = CJ[i].ouv; return (o ? `<span class="eqp-ouv" style="left:${X(o[0])};width:${W(o[0], o[1])}"></span>` : '') + [8, 12, 16].map(x => `<span class="eqp-g f" style="left:${X(x * 60)}"></span>`).join(''); };
     const tete = `<div class="eqp-sl eqp-st"><div class="eqp-n">Employé</div>${P.jours.map((J, i) => col(i, `<button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><b>${esc(court(J.date))}</b><span class="sub">${CJ[i].presents} pers. · ${fH(CJ[i].h)}</span>${CJ[i].pct != null && CJ[i].h > 0 ? marq(P, CJ[i].pct, 'eqp-m-j') : ''}</button><span class="eqp-ax"><i style="left:${X(480)}">8</i><i style="left:${X(720)}">12</i><i style="left:${X(960)}">16</i></span>`)).join('')}<div class="eqp-tot">Semaine</div></div>`;
-    const ligne = e => `<div class="eqp-sl"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b><span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div>${P.jours.map((J, i) => col(i, `<div class="eqp-stl">${fondMini(i)}${CJ[i].sv.filter(s => s.employe === e.id).map(s => `<span class="eqp-bar" style="left:${X(s.de)};width:${W(s.de, s.a)}"></span><span class="eqp-lab" style="left:${X(s.de)}">${hc(s.de)}–${hc(s.a)}</span>`).join('')}</div>`)).join('')}<div class="eqp-tot">${parPers.has(e.id) ? fH(parPers.get(e.id).h) + `<span class="sub">${fE(parPers.get(e.id).c)}</span>` : '<span class="eqp-tiret">—</span>'}</div></div>`;
+    const ligne = e => `<div class="eqp-sl"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div>${P.jours.map((J, i) => col(i, `<div class="eqp-stl">${fondMini(i)}${CJ[i].sv.filter(s => s.employe === e.id).map(s => `<span class="eqp-bar" style="left:${X(s.de)};width:${W(s.de, s.a)}"></span><span class="eqp-lab" style="left:${X(s.de)}">${hc(s.de)}–${hc(s.a)}</span>`).join('')}</div>`)).join('')}<div class="eqp-tot">${parPers.has(e.id) ? fH(parPers.get(e.id).h) + `<span class="sub">${fE(parPers.get(e.id).c)}</span>` : '<span class="eqp-tiret">—</span>'}</div></div>`;
     const corps = groupes(P, eq).map(([g, L]) => `<div class="eqp-sl eqp-sgr"><div class="eqp-n">${esc(g)}</div></div>${L.map(ligne).join('')}`).join('');
     const piste = (l, k) => `<div class="eqp-sl eqp-sli"><div class="eqp-n">${esc(l.nom)}</div>${P.jours.map((J, i) => { const x = CJ[i].lin[k]; return col(i, `<div class="eqp-stl">${fondMini(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou plein" style="left:0;width:100%"><b>vide</b></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</div>${x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')}</span>` : ''}`); }).join('')}<div class="eqp-tot"></div></div>`;
     const lin = CJ[0] ? CJ[0].lin : [];
@@ -425,37 +426,46 @@
       let h = 0, c = 0;
       const cells = CJ.map((C, i) => { const L = C.sv.filter(s => s.employe === e.id); L.forEach(s => { h += (s.a - s.de) / 60; c += (s.a - s.de) / 60 * (e.taux || 0); });
         return `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${L.length ? L.map(s => `<span class="eqp-sv">${hh(s.de)}–${hh(s.a)}</span>`).join('') : '<span class="eqp-tiret">—</span>'}</td>`; }).join('');
-      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b><span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${h ? fH(h) : '—'}</td><td class="num">${h ? fE(c) : '—'}</td></tr>`;
+      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${h ? fH(h) : '—'}</td><td class="num">${h ? fE(c) : '—'}</td></tr>`;
     }).join('');
     const tot = `<tr class="tot"><td>Par jour</td>${CJ.map((C, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${C.presents} pers. · ${fH(C.h)}${C.pct != null && C.h > 0 ? '<br>' + marq(P, C.pct, 'eqp-m-j') : ''}</td>`).join('')}<td class="num">${fH(CJ.reduce((a, C) => a + C.h, 0))}</td><td class="num">${fE(CJ.reduce((a, C) => a + C.cout, 0))}</td></tr>`;
     return `<section class="card eqp-tab"><div class="eqp-table"><table><thead><tr><th>Employé</th>${P.jours.map(J => `<th class="${J.date === P.aujourdhui ? 'auj' : ''}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}">${esc(court(J.date))}</button></th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>${lignes}${tot}</tbody></table></div></section>`;
     // (le budget de la semaine est sur la vue Semaine ; le tableau garde la grille des heures)
   }
 
-  /* ── Recopier la semaine précédente (23/11/2026 : « le plus important est que ça aide le franchisé à faire ses
-   * horaires ») : l'aperçu d'abord — ce qui sera recopié, ce qui est écarté et pourquoi, l'effet sur le budget de la
-   * semaine — puis la création au panel des services cochés. ─────────────────────────────────────────────────────── */
-  function ouvrirRecopie() {
-    const du = st.lundi;
-    st.rec = { du, etat: 'lecture', data: null, coches: new Set(), err: null, res: null };
+  /* ── Préparer la semaine : recopier la semaine précédente, ou le shift maker (test, la matrice A B C D) ──────────
+   * (23/11/2026 : « le plus important est que ça aide le franchisé à faire ses horaires »). Les deux passent par le
+   * même aperçu : ce qui sera créé, jour par jour, à cocher ; ce qui est écarté et pourquoi ; le budget de la semaine
+   * avant et après ; puis la création au panel des seuls services cochés, recalculés par le serveur. ──────────────── */
+  const PREP = {
+    recopie: { route: '/dashboard/equipe/semaine/recopie', titre: 'Recopier la semaine précédente', cle: p => p.source, corps: c => ({ sources: c }), verbe: ['Recopier', 'recopié', 'Recopie au panel…'] },
+    generer: { route: '/dashboard/equipe/semaine/generer', titre: 'Shift maker', cle: p => p.cle, corps: c => ({ cles: c }), verbe: ['Créer', 'créé', 'Création au panel…'] },
+  };
+  const CRENEAU = { M: 'Matin', P: 'Après-midi', R: 'Repos' };
+  /** La lettre du roulement d'une personne, à côté de son nom. */
+  const lettreChip = e => { const l = lettreDe(e.id) || e.lettre; return l ? ` <i class="eqp-lettre" title="Roulement ${esc(l)} (matrice A B C D)">${esc(l)}</i>` : ''; };
+  function ouvrirPrep(type) {
+    const du = st.lundi, T = PREP[type];
+    st.rec = { type, du, etat: 'lecture', data: null, coches: new Set(), err: null, res: null };
     rendre();
-    lire('/dashboard/equipe/semaine/recopie', { du }).then(r => { if (!st.rec || st.rec.du !== du) { return; } st.rec.data = r; st.rec.coches = new Set(r.propositions.map(p => p.source)); st.rec.etat = 'pret'; })
+    lire(T.route, { du }).then(r => { if (!st.rec || st.rec.du !== du || st.rec.type !== type) { return; } st.rec.data = r; st.rec.coches = new Set(r.propositions.map(T.cle)); st.rec.etat = 'pret'; })
       .catch(e => { if (st.rec) { st.rec.etat = 'erreur'; st.rec.err = e.message; } }).finally(rendre);
   }
   function rendRecopie() {
     const R = st.rec; if (!R) { return ''; }
-    const fin = plus(R.du, 6), titre = `<h3 id="eqp-rec-t">Recopier la semaine précédente</h3>`;
+    const T = PREP[R.type], fin = plus(R.du, 6), gen = R.type === 'generer';
+    const titre = `<h3 id="eqp-rec-t">${T.titre}${gen ? ' <span class="tag-warn">test</span>' : ''}</h3>`;
     const cadre = (corps, actions) => `<div class="eqp-voile" data-eqp-fermer="1"><div class="eqp-mod eqp-rec card" role="dialog" aria-modal="true" aria-labelledby="eqp-rec-t" data-eqp-garde="1">${titre}${corps}<div class="confirm__actions">${actions}</div></div></div>`;
     const fermer = l => `<button type="button" class="btn btn--ghost" data-eqp-fermer="1"${R.etat === 'envoi' ? ' disabled' : ''}>${l}</button>`;
-    if (R.etat === 'lecture') { return cadre('<p class="qui">Lecture des deux semaines au panel…</p>', fermer('Annuler')); }
+    if (R.etat === 'lecture') { return cadre(`<p class="qui">${gen ? 'La matrice, les lettres de l’équipe et la semaine au panel…' : 'Lecture des deux semaines au panel…'}</p>`, fermer('Annuler')); }
     if (R.etat === 'erreur') { return cadre(`<p class="error" role="alert">L’aperçu n’est pas venu : ${esc(R.err)}.</p>`, fermer('Fermer')); }
-    const D = R.data;
+    const D = R.data, cle = T.cle;
     if (R.etat === 'fini') {
       const x = R.res;
-      return cadre(`<p class="qui">${x.crees} service${x.crees > 1 ? 's' : ''} recopié${x.crees > 1 ? 's' : ''} sur ${x.demandes}.${x.arret ? ' Arrêt : ' + esc(x.arret) + '.' : ''}</p>${x.echecs.length ? `<div class="eqp-opt-g">Pas recopiés</div><ul class="eqp-rec-ec">${x.echecs.map(f => `<li><b>${esc(f.nom)}</b> · ${esc(court(f.date))} ${esc(f.de)}–${esc(f.a)} <span>${esc(f.motif)}</span></li>`).join('')}</ul>` : ''}`, fermer('Fermer'));
+      return cadre(`<p class="qui">${x.crees} service${x.crees > 1 ? 's' : ''} ${T.verbe[1]}${x.crees > 1 ? 's' : ''} sur ${x.demandes}.${x.arret ? ' Arrêt : ' + esc(x.arret) + '.' : ''}</p>${x.echecs.length ? `<div class="eqp-opt-g">Pas ${T.verbe[1]}s</div><ul class="eqp-rec-ec">${x.echecs.map(f => `<li><b>${esc(f.nom)}</b> · ${esc(court(f.date))} ${esc(f.de)}–${esc(f.a)} <span>${esc(f.motif)}</span></li>`).join('')}</ul>` : ''}`, fermer('Fermer'));
     }
     const P = st.PS && st.PS.du === R.du ? st.PS : null, eq = P ? equipeDe(P) : new Map();
-    const choisis = D.propositions.filter(p => R.coches.has(p.source));
+    const choisis = D.propositions.filter(p => R.coches.has(cle(p)));
     const heures = choisis.reduce((a, p) => a + (mn(p.a) - mn(p.de)) / 60, 0);
     const cout = choisis.reduce((a, p) => a + (mn(p.a) - mn(p.de)) / 60 * ((eq.get(p.employe) || {}).taux || 0), 0);
     let budget = '';
@@ -469,20 +479,88 @@
       }
     }
     const parJour = new Map(); D.propositions.forEach(p => { if (!parJour.has(p.date)) { parJour.set(p.date, []); } parJour.get(p.date).push(p); });
-    const liste = [...parJour.entries()].map(([d, L]) => `<div class="eqp-opt-g">${esc(long(d).replace(/ \d{4}$/, ''))} <span>← ${esc(court(plus(d, -7)))}</span></div>${L.map(p => `<label class="eqp-opt eqp-rec-l${R.coches.has(p.source) ? ' on' : ''}"><input type="checkbox" data-eqp-rec-coche="${p.source}"${R.coches.has(p.source) ? ' checked' : ''}${R.etat === 'envoi' ? ' disabled' : ''}><span>${esc(p.nom)}</span><span class="s">${esc(p.de)}–${esc(p.a)} · ${fH((mn(p.a) - mn(p.de)) / 60)}</span></label>`).join('')}`).join('');
+    const ligne = p => `<label class="eqp-opt eqp-rec-l${R.coches.has(cle(p)) ? ' on' : ''}"><input type="checkbox" data-eqp-rec-coche="${esc(cle(p))}"${R.coches.has(cle(p)) ? ' checked' : ''}${R.etat === 'envoi' ? ' disabled' : ''}><span>${esc(p.nom)}${p.lettre ? ` <i class="eqp-lettre">${esc(p.lettre)}</i>` : ''}</span><span class="s">${p.creneau ? esc(CRENEAU[p.creneau]) + ' · ' : ''}${esc(p.de)}–${esc(p.a)} · ${fH((mn(p.a) - mn(p.de)) / 60)}</span></label>`;
+    const liste = [...parJour.entries()].map(([d, L]) => `<div class="eqp-opt-g">${esc(long(d).replace(/ \d{4}$/, ''))}${gen ? '' : ` <span>← ${esc(court(plus(d, -7)))}</span>`}</div>${L.map(ligne).join('')}`).join('');
     const ecartes = D.ecartes.length ? `<details class="eqp-rec-d"><summary>${D.ecartes.length} service${D.ecartes.length > 1 ? 's' : ''} écarté${D.ecartes.length > 1 ? 's' : ''}</summary><ul class="eqp-rec-ec">${D.ecartes.map(x => `<li><b>${esc(x.nom)}</b> · ${esc(court(x.date))} ${esc(x.de)}–${esc(x.a)} <span>${esc(x.motif)}</span></li>`).join('')}</ul></details>` : '';
-    const corps = `<p class="qui">Les services du ${dt(D.source.du).getDate()} au ${esc(long(D.source.au).replace(/^\S+ /, ''))}, reportés sur la semaine du ${dt(R.du).getDate()} au ${esc(long(fin).replace(/^\S+ /, ''))}. ${D.dejaPrevus ? D.dejaPrevus + ' service' + (D.dejaPrevus > 1 ? 's sont' : ' est') + ' déjà prévu' + (D.dejaPrevus > 1 ? 's' : '') + ' cette semaine : ils restent, et rien ne les chevauche.' : 'La semaine est vide.'}</p>
-      ${D.propositions.length ? `<div class="eqp-rec-r"><b>${choisis.length} service${choisis.length > 1 ? 's' : ''}</b> · ${fH(heures)} · ${fE(cout)}<span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-rec-tout="1">${R.coches.size === D.propositions.length ? 'Tout décocher' : 'Tout cocher'}</button></div>${budget}<div class="eqp-rec-liste">${liste}</div>` : '<p class="eqp-note">Rien à recopier : la semaine précédente est vide, ou tout est déjà au planning.</p>'}
+    const deja = D.dejaPrevus ? D.dejaPrevus + ' service' + (D.dejaPrevus > 1 ? 's sont' : ' est') + ' déjà prévu' + (D.dejaPrevus > 1 ? 's' : '') + ' cette semaine : ils restent, et rien ne les chevauche.' : 'La semaine est vide.';
+    const intro = gen
+      ? `<p class="qui">La semaine du ${dt(R.du).getDate()} au ${esc(long(fin).replace(/^\S+ /, ''))} est la <b>semaine ${D.cycle}</b> du roulement. Matin ${esc(D.matrice.creneaux.M.de)}–${esc(D.matrice.creneaux.M.a)}, après-midi ${esc(D.matrice.creneaux.P.de)}–${esc(D.matrice.creneaux.P.a)}. ${deja}</p>
+        ${D.sansLettre.length ? `<p class="eqp-rec-sans">Sans lettre, pas générés : ${D.sansLettre.map(x => esc(x.nom)).join(', ')} — leur lettre se donne dans leur fiche (Responsabilités), ou ils se planifient à la main.</p>` : ''}`
+      : `<p class="qui">Les services du ${dt(D.source.du).getDate()} au ${esc(long(D.source.au).replace(/^\S+ /, ''))}, reportés sur la semaine du ${dt(R.du).getDate()} au ${esc(long(fin).replace(/^\S+ /, ''))}. ${deja}</p>`;
+    const rien = gen ? (D.sansLettre.length && !D.ecartes.length ? 'Personne n’a encore de lettre : donnez la sienne à chacun dans sa fiche.' : 'Rien à créer : tout est déjà au planning, ou les jours de cette semaine sont en repos.') : 'Rien à recopier : la semaine précédente est vide, ou tout est déjà au planning.';
+    const corps = `${intro}
+      ${D.propositions.length ? `<div class="eqp-rec-r"><b>${choisis.length} service${choisis.length > 1 ? 's' : ''}</b> · ${fH(heures)} · ${fE(cout)}<span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-rec-tout="1">${R.coches.size === D.propositions.length ? 'Tout décocher' : 'Tout cocher'}</button></div>${budget}<div class="eqp-rec-liste">${liste}</div>` : `<p class="eqp-note">${rien}</p>`}
       ${ecartes}${R.err ? `<p class="error" role="alert">${esc(R.err)}</p>` : ''}`;
-    return cadre(corps, fermer('Annuler') + (D.propositions.length ? `<button type="button" class="btn btn--primary${R.etat === 'envoi' ? ' is-busy' : ''}" data-eqp-rec-ok="1"${choisis.length && R.etat !== 'envoi' ? '' : ' disabled'}>${R.etat === 'envoi' ? 'Recopie au panel…' : 'Recopier ' + choisis.length + ' service' + (choisis.length > 1 ? 's' : '')}</button>` : ''));
+    return cadre(corps, fermer('Annuler') + (D.propositions.length ? `<button type="button" class="btn btn--primary${R.etat === 'envoi' ? ' is-busy' : ''}" data-eqp-rec-ok="1"${choisis.length && R.etat !== 'envoi' ? '' : ' disabled'}>${R.etat === 'envoi' ? T.verbe[2] : T.verbe[0] + ' ' + choisis.length + ' service' + (choisis.length > 1 ? 's' : '')}</button>` : ''));
   }
   function appliquerRecopie() {
     const R = st.rec; if (!R || R.etat !== 'pret' || !R.coches.size) { return; }
+    const T = PREP[R.type];
     R.etat = 'envoi'; R.err = null; rendre();
-    envoyer('POST', '/dashboard/equipe/semaine/recopie', { du: R.du, sources: [...R.coches] })
+    envoyer('POST', T.route, Object.assign({ du: R.du }, T.corps([...R.coches])))
       .then(x => { st.PS = null; lirePlanning('semaine'); st.PJ = null;
-        if (x.echecs && x.echecs.length) { R.etat = 'fini'; R.res = x; rendre(); } else { st.rec = null; flash('ok', x.crees + ' service' + (x.crees > 1 ? 's' : '') + ' recopié' + (x.crees > 1 ? 's' : '') + ' au panel. Ajustez maintenant jour par jour.'); } })
-      .catch(e => { R.etat = 'pret'; R.err = 'Rien n’est recopié : ' + e.message + '.'; rendre(); });
+        if (x.echecs && x.echecs.length) { R.etat = 'fini'; R.res = x; rendre(); } else { st.rec = null; flash('ok', x.crees + ' service' + (x.crees > 1 ? 's' : '') + ' ' + T.verbe[1] + (x.crees > 1 ? 's' : '') + ' au panel. Ajustez maintenant jour par jour.'); } })
+      .catch(e => { R.etat = 'pret'; R.err = 'Rien n’est enregistré : ' + e.message + '.'; rendre(); });
+  }
+
+  /* ── La matrice A B C D (23/11/2026) : quatre roulements sur deux semaines, matin ou après-midi, un week-end sur
+   * deux ; chaque case se change d'un clic (matin → après-midi → repos). La couverture dit, jour par jour, combien de
+   * personnes de l'équipe (selon leurs lettres) sont du matin et de l'après-midi. ──────────────────────────────── */
+  const LETTRES = ['A', 'B', 'C', 'D'], JC = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
+  function lireMatrice() { return lire('/dashboard/equipe/matrice').then(r => { st.M = r; }).catch(() => { st.M = null; }).finally(rendre); }
+  /** La lettre de chacun : la carte la porte ; la matrice relue aussi (après un changement). */
+  function lettreDe(id) { const r = st.M && st.M.roulements; return r && Object.prototype.hasOwnProperty.call(r, id) ? r[id] : null; }
+  const cycleDe = (M, lundi) => { const n = Math.round((dt(lundi) - dt(M.reference)) / 86400000 / 7); return ((n % 2) + 2) % 2; };
+  /** Ce que donne une lettre une semaine donnée : « matin du mercredi au dimanche · repos lundi, mardi ». */
+  function resumeLettre(M, l, cyc) {
+    const sem = M.lettres[l][cyc], noms = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    const parts = ['M', 'P'].map(c => { const j = sem.map((x, i) => x === c ? i : -1).filter(i => i >= 0); if (!j.length) { return ''; } const suite = j.every((x, k) => !k || x === j[k - 1] + 1);
+      return CRENEAU[c].toLowerCase() + ' ' + (suite && j.length > 2 ? 'du ' + noms[j[0]] + ' au ' + noms[j[j.length - 1]] : j.map(i => noms[i]).join(', ')); }).filter(Boolean);
+    const r = sem.map((x, i) => x === 'R' ? noms[i] : '').filter(Boolean);
+    return parts.join(' · ') + (r.length ? ' · repos ' + r.join(', ') : '');
+  }
+  function ouvrirMatrice() { if (!st.M) { return; } st.mat = { m: JSON.parse(JSON.stringify(st.M.matrice)), err: null, occupe: false }; rendre(); }
+  function rendMatrice() {
+    if (!st.mat || !st.M) { return ''; }
+    const m = st.mat.m, equipe = (st.R ? st.R.employes : []), parL = {}; LETTRES.forEach(l => { parL[l] = equipe.filter(e => (lettreDe(e.id) || e.lettre) === l); });
+    const cel = (l, w, d) => { const c = m.lettres[l][w][d]; return `<td><button type="button" class="eqp-mx ${c}" data-eqp-mx="${l}${w}${d}" title="${CRENEAU[c]} — un clic change">${c === 'M' ? 'M' : c === 'P' ? 'AP' : '·'}</button></td>`; };
+    const couv = w => JC.map((_, d) => { const nM = LETTRES.reduce((a, l) => a + (m.lettres[l][w][d] === 'M' ? parL[l].length : 0), 0), nP = LETTRES.reduce((a, l) => a + (m.lettres[l][w][d] === 'P' ? parL[l].length : 0), 0);
+      return `<td class="eqp-mx-c${(!nM || !nP) && equipe.length ? ' ko' : ''}">${nM}<i>·</i>${nP}</td>`; }).join('');
+    const cyc = cycleDe(m, lundiDe(AUJ));
+    return `<div class="eqp-voile" data-eqp-fermer="1"><div class="eqp-mod eqp-mat card" role="dialog" aria-modal="true" aria-labelledby="eqp-mat-t" data-eqp-garde="1">
+      <h3 id="eqp-mat-t">La matrice A B C D</h3><p class="qui">Quatre roulements sur deux semaines : matin ou après-midi, un week-end sur deux. Chacun porte sa lettre (sa fiche, onglet Responsabilités) ; le shift maker en tire la semaine. Un clic sur une case : matin → après-midi → repos.</p>
+      <div class="eqp-mat-cr"><span>Matin</span><label class="eqp-f">de <input type="time" step="300" value="${esc(m.creneaux.M.de)}" data-eqp-cr="M.de"></label><label class="eqp-f">à <input type="time" step="300" value="${esc(m.creneaux.M.a)}" data-eqp-cr="M.a"></label>
+        <span>Après-midi</span><label class="eqp-f">de <input type="time" step="300" value="${esc(m.creneaux.P.de)}" data-eqp-cr="P.de"></label><label class="eqp-f">à <input type="time" step="300" value="${esc(m.creneaux.P.a)}" data-eqp-cr="P.a"></label></div>
+      <div class="eqp-mat-cr"><span>La semaine 1 est la semaine du</span><label class="eqp-f"><input type="date" value="${esc(m.reference)}" data-eqp-ref="1"></label><span class="eqp-note" style="margin:0">cette semaine-ci : semaine ${cyc + 1}</span></div>
+      <div class="eqp-mat-t"><table><thead><tr><th></th><th colspan="7" class="${cyc === 0 ? 'on' : ''}">Semaine 1</th><th colspan="7" class="${cyc === 1 ? 'on' : ''}">Semaine 2</th><th>Équipe</th></tr>
+        <tr><th></th>${[0, 1].map(() => JC.map(j => `<th>${j}</th>`).join('')).join('')}<th></th></tr></thead>
+        <tbody>${LETTRES.map(l => `<tr><th><i class="eqp-lettre">${l}</i></th>${[0, 1].map(w => JC.map((_, d) => cel(l, w, d)).join('')).join('')}<td class="eqp-mx-e">${parL[l].length ? parL[l].map(e => esc(e.nom.split(' ')[0])).join(', ') : '<span class="eqp-tiret">personne</span>'}</td></tr>`).join('')}
+        <tr class="tot"><th>Matin · AP</th>${couv(0)}${couv(1)}<td class="eqp-mx-e">personnes de l’équipe</td></tr></tbody></table></div>
+      ${st.mat.err ? `<p class="error" role="alert">${esc(st.mat.err)}</p>` : ''}
+      <div class="confirm__actions"><button type="button" class="linklike" data-eqp-mat-depart="1" style="margin-right:auto">Revenir à la matrice de départ</button><button type="button" class="btn btn--ghost" data-eqp-fermer="1">Annuler</button><button type="button" class="btn btn--primary${st.mat.occupe ? ' is-busy' : ''}" data-eqp-mat-ok="1"${st.mat.occupe ? ' disabled' : ''}>Enregistrer la matrice</button></div>
+    </div></div>`;
+  }
+  function enregistrerMatrice(depart) {
+    const x = st.mat; if (!x || x.occupe) { return; }
+    x.occupe = true; x.err = null; rendre();
+    envoyer('POST', '/dashboard/equipe/matrice', depart ? { depart: true } : { matrice: x.m })
+      .then(r => { st.M = r; if (depart) { x.m = JSON.parse(JSON.stringify(r.matrice)); x.occupe = false; rendre(); } else { st.mat = null; flash('ok', 'Matrice enregistrée.'); } })
+      .catch(e => { x.occupe = false; x.err = 'La matrice n’est pas enregistrée : ' + e.message + '.'; rendre(); });
+  }
+  function choisirLettre(emp, l) {
+    if (st.occupe) { return; }
+    st.occupe = true;
+    envoyer('POST', '/dashboard/equipe/roulement', { employe: emp, lettre: l })
+      .then(r => { if (st.M) { st.M.roulements = r.roulements; } const e = st.R && st.R.employes.find(x => x.id === emp); if (e) { e.lettre = r.lettre; } [st.PS, st.PJ].forEach(P => { const x = P && (P.employes || []).find(y => y.id === emp); if (x) { x.lettre = r.lettre; } });
+        st.occupe = false; flash('ok', l ? 'Roulement ' + l + ' enregistré.' : 'Roulement retiré.'); })
+      .catch(e => { st.occupe = false; flash('ko', 'Le roulement n’est pas enregistré : ' + e.message + '.'); });
+  }
+  /** Le bloc « Roulement » de la fiche : la lettre, et ce qu'elle donne cette semaine et la suivante. */
+  function rendRoulement(e) {
+    const l = lettreDe(e.id) || e.lettre || null, M = st.M && st.M.matrice;
+    const seg = `<div class="seg eqp-seg-l" role="group" aria-label="Roulement">${LETTRES.map(x => `<button type="button" class="${l === x ? 'is-on' : ''}" data-eqp-lettre="${x}" data-emp="${e.id}">${x}</button>`).join('')}<button type="button" class="${l ? '' : 'is-on'}" data-eqp-lettre="" data-emp="${e.id}">aucun</button></div>`;
+    const c = M ? cycleDe(M, lundiDe(AUJ)) : 0;
+    return `<h3>Roulement · matrice A B C D</h3>${seg}${l && M ? `<ul class="eqp-roul"><li><b>Cette semaine</b> (semaine ${c + 1}) : ${esc(resumeLettre(M, l, c))}</li><li><b>La suivante</b> (semaine ${2 - c}) : ${esc(resumeLettre(M, l, 1 - c))}</li></ul>` : `<p class="eqp-note" style="margin-top:6px">${l ? '' : 'Sans lettre, le shift maker ne la planifie pas.'}</p>`}`;
   }
 
   /* ── Les gestes ──────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -498,10 +576,18 @@
     on('[data-eqp-bureau]', 'click', () => { if (st.bureau) { st.bureau(); } });
     on('[data-eqp-aller-planning]', 'click', () => { st.onglet = 'planning'; st.vue = 'semaine'; st.lundi = lundiDe(AUJ); chargerVue(); rendre(); });
     on('[data-eqp-coche]', 'change', e => { const id = +e.target.dataset.eqpCoche; if (e.target.checked) { st.mod.coches.add(id); } else { st.mod.coches.delete(id); } rendre(); });
-    on('[data-eqp-fermer]', 'click', e => { if (e.target !== e.currentTarget || (st.mod && st.mod.occupe) || (st.rec && st.rec.etat === 'envoi')) { return; } st.mod = null; st.rec = null; rendre(); });
-    on('[data-eqp-recopier]', 'click', ouvrirRecopie);
-    on('[data-eqp-rec-coche]', 'change', e => { const id = +e.target.dataset.eqpRecCoche; if (e.target.checked) { st.rec.coches.add(id); } else { st.rec.coches.delete(id); } rendre(); });
-    on('[data-eqp-rec-tout]', 'click', () => { const R = st.rec; const tous = R.coches.size === R.data.propositions.length; R.coches = new Set(tous ? [] : R.data.propositions.map(p => p.source)); rendre(); });
+    on('[data-eqp-fermer]', 'click', e => { if (e.target !== e.currentTarget || (st.mod && st.mod.occupe) || (st.rec && st.rec.etat === 'envoi') || (st.mat && st.mat.occupe)) { return; } st.mod = null; st.rec = null; st.mat = null; rendre(); });
+    on('[data-eqp-recopier]', 'click', () => ouvrirPrep('recopie'));
+    on('[data-eqp-generer]', 'click', () => ouvrirPrep('generer'));
+    on('[data-eqp-rec-coche]', 'change', e => { const v = e.target.dataset.eqpRecCoche, id = st.rec.type === 'recopie' ? +v : v; if (e.target.checked) { st.rec.coches.add(id); } else { st.rec.coches.delete(id); } rendre(); });
+    on('[data-eqp-rec-tout]', 'click', () => { const R = st.rec; const tous = R.coches.size === R.data.propositions.length; R.coches = new Set(tous ? [] : R.data.propositions.map(PREP[R.type].cle)); rendre(); });
+    on('[data-eqp-matrice]', 'click', ouvrirMatrice);
+    on('[data-eqp-mx]', 'click', e => { const k = e.currentTarget.dataset.eqpMx, L = st.mat.m.lettres[k[0]][+k[1]], d = +k[2]; L[d] = { M: 'P', P: 'R', R: 'M' }[L[d]]; rendre(); });
+    on('[data-eqp-cr]', 'change', e => { const [c, b] = e.target.dataset.eqpCr.split('.'); st.mat.m.creneaux[c][b] = e.target.value; });
+    on('[data-eqp-ref]', 'change', e => { if (e.target.value) { st.mat.m.reference = e.target.value; rendre(); } });
+    on('[data-eqp-mat-ok]', 'click', () => enregistrerMatrice(false));
+    on('[data-eqp-mat-depart]', 'click', () => enregistrerMatrice(true));
+    on('[data-eqp-lettre]', 'click', e => { const b = e.currentTarget; choisirLettre(+b.dataset.emp, b.dataset.eqpLettre || null); });
     on('[data-eqp-rec-ok]', 'click', appliquerRecopie);
     on('[data-eqp-enregistrer-postes]', 'click', enregistrerPostes);
     on('[data-eqp-vue]', 'click', e => { st.vue = e.currentTarget.dataset.eqpVue; st.edit = null; if (st.vue !== 'jour') { st.editer = false; st.lundi = lundiDe(st.jour); } chargerVue(); rendre(); });
