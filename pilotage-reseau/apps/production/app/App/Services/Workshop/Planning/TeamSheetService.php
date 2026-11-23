@@ -369,19 +369,20 @@ final class TeamSheetService
             // [390] Même présentation que la Lista produkcyjna (référence de l'utilisateur, 23.11.2026) : W magazynie
             // (kart. / szt.), Zamówienie (kart. / szt.), Do produkcji = plan de la semaine (commandé − en stock, plus le
             // réassort des produits de stock, qu'on signale en petit), puis les jours.
-            $productWidth = 100 - 6 * count($team['days']) - 38;
+            $productWidth = 100 - 6 * count($team['days']) - 44;
             $sub = fn(string $w, string $t, string $style = self::HEAD) => '<th width="' . $w . '%" align="right" style="' . $style . '">' . $this->e($t) . '</th>';
             $html = '<table cellpadding="2" style="font-size:7.5pt"><thead><tr>'
                 . '<th width="' . $productWidth . '%" rowspan="2" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_product')) . '</th>'
                 . '<th width="11%" colspan="2" align="center" style="' . self::HEAD_STOCK . '">' . $this->e($tr->text('team_sheet_col_on_hand')) . '</th>'
                 . '<th width="11%" colspan="2" align="center" style="' . self::HEAD_STOCK . '">' . $this->e($tr->text('team_sheet_col_ordered')) . '</th>'
                 . '<th width="7%" align="center" style="' . self::HEAD . '"><b>' . $this->e($tr->text('team_sheet_col_total')) . '</b></th>'
+                . '<th width="6%" align="center" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
                 . '<th width="5%" rowspan="2" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_batches')) . '</th>'
                 . '<th width="4%" rowspan="2" align="right" style="' . self::HEAD . '">h</th>'
                 . str_replace('<th width="6%"', '<th width="6%" rowspan="2"', $dayCols) . '</tr><tr>'
                 . $sub('5', $tr->text('team_sheet_cartons_short'), self::HEAD_STOCK) . $sub('6', $tr->text('team_sheet_pieces_short'), self::HEAD_STOCK)
                 . $sub('5', $tr->text('team_sheet_cartons_short'), self::HEAD_STOCK) . $sub('6', $tr->text('team_sheet_pieces_short'), self::HEAD_STOCK)
-                . $sub('7', $tr->text('team_sheet_pieces_short'))
+                . $sub('7', $tr->text('team_sheet_pieces_short')) . $sub('6', $tr->text('team_sheet_pieces_short'))
                 . '</tr></thead><tbody>';
             foreach ($team['products'] as $i => $r) {
                 $bg = $i % 2 === 1 ? 'background-color:#F8F9FA;' : '';
@@ -397,14 +398,15 @@ final class TeamSheetService
                 $cell = fn(string $w, string $v, string $extra = '') => '<td width="' . $w . '%" align="right" style="' . $bg . self::CELL . $extra . '">' . $v . '</td>';
                 $ctn = fn(?float $v) => $v !== null && $v > self::EPS && $r['ppc'] ? $this->n($v / $r['ppc'], ($v / $r['ppc']) == floor($v / $r['ppc']) ? 0 : 1) : '-';
                 $pcs = fn(?float $v) => $v !== null && $v > self::EPS ? $this->e($this->qty($v, $r['unit'], $r['factor'], false)) : '-';
-                $make = $r['quantity'] > self::EPS ? '<b>' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor'], false)) . '</b>'
-                    . ($r['stock'] > self::EPS && $r['direct'] > self::EPS ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_incl_stock', ['qty' => $this->qty($r['stock'], $r['unit'], $r['factor'], false)])) . '</span>'
-                        : ($r['stock'] > self::EPS ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_for_stock')) . '</span>' : '')) : '-';
+                // [393] Do produkcji = commandé − en stock (comme l'ancienne Lista produkcyjna) ; le réassort des produits de
+                // stock (min. / max.) est à part, dans « Na zapas ».
+                $make = $r['direct'] > self::EPS ? '<b>' . $this->e($this->qty($r['direct'], $r['unit'], $r['factor'], false)) . '</b>' : '-';
+                $refill = $r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'], false)) : '-';
                 $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="' . $bg . self::CELL . '"><b>' . $this->e($r['name']) . '</b>'
                     . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
                     . $cell('5', $ctn($r['on_hand']), ';color:' . self::MUTED) . $cell('6', $pcs($r['on_hand']), ';color:' . self::MUTED)
                     . $cell('5', $ctn($r['ordered'])) . $cell('6', $pcs($r['ordered']) . ($r['ordered'] > self::EPS && $r['ordered_due'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['ordered_due'])])) . '</span>' : ''))
-                    . $cell('7', $make)
+                    . $cell('7', $make) . $cell('6', $refill, ';color:' . self::MUTED)
                     . $cell('5', $r['batches'] ? $this->n($r['batches'], 2) : '—') . $cell('4', $this->n($r['hours'], 1))
                     . $cols . '</tr>';
             }

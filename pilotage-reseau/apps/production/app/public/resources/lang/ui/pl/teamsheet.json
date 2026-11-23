@@ -48,7 +48,7 @@
   "incl_stock": "w tym na zapas {qty}",
   "for_stock": "na zapas (stan min. / maks.)",
   "from_stock": "wszystko ze stanu",
-  "columns_note": "Do produkcji = zamówienie − w magazynie (ta sama liczba co na Liście produkcyjnej) ; dla produktów magazynowych dochodzi uzupełnienie stanu do min. / maks. (« na zapas »).",
+  "columns_note": "Do produkcji = zamówienie − w magazynie (jak dawna Lista produkcyjna). Na zapas : osobno, uzupełnienie stanu produktów magazynowych do min. / maks. Dni : wszystko, co jest do zrobienia (do produkcji + na zapas).",
   "waiting": "nierozplanowane : {qty}",
   "proposed_note": "Liczby kursywą : do zrobienia, jeszcze nie zapisane w planie tygodnia — rozłożone na dni jak « Rozdziel na dni » (od dziś, w wolnych godzinach zespołu, wysyłki przed wyjazdem).",
   "proposed_title": "Do zrobienia — jeszcze nie zapisane w planie tygodnia",
