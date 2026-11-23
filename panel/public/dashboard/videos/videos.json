@@ -87,6 +87,28 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "produits",
+      "genre": "tuto",
+      "titre": "Produits : est-ce que ça se développe ?",
+      "resume": "Les 6 dernières semaines face aux 6 d’avant, les catégories en tuiles, les produits d’une catégorie et la fiche d’un produit, jusqu’au nouveau prix de vente.",
+      "vues": [
+        "produits"
+      ],
+      "fichier": "11-produits.mp4",
+      "affiche": "11-produits.jpg",
+      "duree": "2 min 58",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/analyse_produits.php",
+        "panel/src/prix_produit.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
