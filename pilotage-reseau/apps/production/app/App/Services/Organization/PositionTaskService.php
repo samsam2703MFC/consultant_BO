@@ -111,6 +111,7 @@ final class PositionTaskService
         '/mail/customer-check' => 'customer_mail_checked',
         '/products/launches-review' => 'launches_reviewed',
         '/clients/data-check' => 'customers_data_checked',
+        '/hr/deadlines' => 'staff_deadlines_reviewed',
         '/ppwr/month' => 'ppwr_month_reviewed',
         '/intrastat/month' => 'intrastat_month_reviewed',
         '/sop' => 'sop_daily',

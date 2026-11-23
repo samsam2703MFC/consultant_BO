@@ -106,6 +106,10 @@ final class PageAccess
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
         // [271] HR : pracownicy, dokumenty, notatki — administrator, kierownik produkcji, administracja i fakturowanie.
         'hr' => ['HR (pracownicy : kontakt, staż, umowy, emerytura ; dokumenty ; notatki i podsumowanie miesiąca)', 'Administracja', ['/hr'], false],
+        // [404] Asystent « Badania i szkolenia » (Kierownik produkcji, co miesiąc) : droit propre (page /hr/deadlines — le préfixe le
+        // plus long l'emporte sur « /hr » — et appels ajax), donné au Kierownik produkcji par la migration 244 ; l'assistant exige
+        // aussi le droit « hr » (dates de badania du tableau HR).
+        'staff_deadlines' => ['Badania i szkolenia — przegląd terminów (asystent : badania lekarskie z HR, rejestr szkoleń BHP i innych, umówione terminy)', 'Administracja', ['/hr/deadlines', '/ajax/hr/deadlines'], false],
         // [277] Lista płac (makieta 41) : wynagrodzenia miesiąca, paski, plik XML do banku ; dane płacowe w karcie HR i szablony umów.
         'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
         // [392] Asystent « Poczta od klientów » : droit propre (décision du 23.11.2026), donné à Administracja (migration 235).

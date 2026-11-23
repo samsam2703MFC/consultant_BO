@@ -106,6 +106,8 @@ final class ParamRules
         'ai.routines_on.orders_day_checked' => [0, 1, true],
         'ai.routines_on.deliveries_delays_checked' => [0, 1, true],
         'ai.routines_on.invoices_ksef_checked' => [0, 1, true],
+        // [404] Badania i szkolenia : 1 = « brak szkolenia BHP » signalé pour chaque salarié actif (délai d'alerte : hr.alert_days)
+        'staff_deadlines.bhp_required' => [0, 1, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
