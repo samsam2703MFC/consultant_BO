@@ -115,6 +115,7 @@ final class PositionTaskService
         '/intrastat/month' => 'intrastat_month_reviewed',
         '/recipes/month' => 'recipes_month_reviewed',
         '/materials/month' => 'materials_month_reviewed',
+        '/shipments/documents-month' => 'shipping_docs_reviewed',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',
