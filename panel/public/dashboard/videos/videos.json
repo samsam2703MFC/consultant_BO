@@ -107,6 +107,26 @@
       ],
       "tourne_sur": "1e40cb22ca3b07b8628beeb88ba0863339628ba6",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "concurrence",
+      "genre": "tuto",
+      "titre": "Nos prix face à la concurrence",
+      "resume": "Le top 10 du réseau face aux concurrents du magasin, un produit en détail, un relevé terrain, les concurrents par code postal.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-concurrence.mp4",
+      "affiche": "15-concurrence.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "d50e8cdedf99f7305989f9bfc2282a5cb8248c12",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
