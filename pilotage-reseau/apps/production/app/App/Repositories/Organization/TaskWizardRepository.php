@@ -270,6 +270,13 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_shipping_docs_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
     }
 
+    /** [403] Stany magazynowe : instantané enregistré et décisions pour le mois examiné (premier jour, n_stock_month_*). */
+    public function stockMonthProgress(string $monthStart): array
+    {
+        return ['snapshot' => (bool) $this->all('SELECT 1 AS x FROM n_stock_month_statement WHERE month_start = ?', [$monthStart]),
+            'decisions' => (int) ($this->all('SELECT COUNT(*) AS n FROM n_stock_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0)];
+    }
+
     /** [398] Intrastat miesiąca : décisions enregistrées pour le mois examiné (premier jour, n_intrastat_review). */
     public function intrastatMonthReviews(string $monthStart): int
     {
