@@ -128,6 +128,26 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "fidelite",
+      "genre": "tuto",
+      "titre": "Fidélité",
+      "resume": "La part des tickets scannés, les six profils des clients et leurs radars, la fiche d’un client, puis les cartes de fidélité : du client reconnu à la récompense.",
+      "vues": [
+        "fidelite"
+      ],
+      "fichier": "18-fidelite.mp4",
+      "affiche": "18-fidelite.jpg",
+      "duree": "2 min 29",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
