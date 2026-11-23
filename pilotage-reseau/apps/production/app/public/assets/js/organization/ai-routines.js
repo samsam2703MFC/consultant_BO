@@ -21,11 +21,13 @@
     const last = (r) => r ? `<span class="ai-pill ${r.cls === 'ok' ? '' : esc(r.cls)}" title="${esc(r.model || '')}">${esc(r.when)} · ${esc(r.text)}</span>` : '<span class="ai-muted">jeszcze nie działała</span>';
 
     function render() {
-        const rows = s.assistants.map(a => `<tr><td><b>${esc(a.label)}</b></td><td>${esc(a.position)}</td>
-            <td><input type="time" class="form-control form-control-sm" data-rt-time="${esc(a.code)}" value="${esc(a.time)}" step="300" ${busy ? 'disabled' : ''}></td>
-            <td>${sw(`data-rt-on="${esc(a.code)}"`, a.on)}</td><td>${last(a.last)}</td>
-            <td class="text-nowrap"><button type="button" class="ai-run" data-rt-preview="${esc(a.code)}" ${busy ? 'disabled' : ''}>Podgląd danych</button>
-                <button type="button" class="ai-run" data-rt-run="${esc(a.code)}" ${busy ? 'disabled' : ''} title="${s.enabled && a.on ? 'Jedno wywołanie API teraz (koszt w budżecie)' : 'Rutyna wyłączona — przebieg zostanie pominięty'}">Uruchom teraz</button></td></tr>`).join('');
+        // Akcje pod nazwą asystenta : kolumna « Ostatnio » ma miejsce na opis przebiegu.
+        const rows = s.assistants.map(a => `<tr><td><b>${esc(a.label)}</b>
+                <div class="ai-acts"><button type="button" class="ai-run" data-rt-preview="${esc(a.code)}" ${busy ? 'disabled' : ''}>Podgląd danych</button>
+                <button type="button" class="ai-run" data-rt-run="${esc(a.code)}" ${busy ? 'disabled' : ''} title="${s.enabled && a.on ? 'Jedno wywołanie API teraz (koszt w budżecie)' : 'Rutyna wyłączona — przebieg zostanie pominięty'}">Uruchom teraz</button></div></td>
+            <td>${esc(a.position)}</td>
+            <td><input type="time" class="form-control form-control-sm" data-rt-time="${esc(a.code)}" value="${esc(a.time)}" step="300" lang="pl" ${busy ? 'disabled' : ''}></td>
+            <td>${sw(`data-rt-on="${esc(a.code)}"`, a.on)}</td><td>${last(a.last)}</td></tr>`).join('');
         const recent = s.recent.length ? s.recent.map(r => `<tr><td class="text-nowrap">${esc(r.when)}</td><td>${esc(r.label)}</td>
             <td>${esc(r.text)}${r.cost_label ? ' · ' + esc(r.cost_label) : ''}${r.trigger === 'manual' ? ' <span class="ai-muted">(ręcznie)</span>' : ''}</td></tr>`).join('')
             : '<tr><td colspan="3" class="ai-muted">Brak przebiegów.</td></tr>';
@@ -34,11 +36,11 @@
                 (« Przyjmij » wypełnia formularz, zapis przyciskiem « Zapisz »). AI niczego nie wysyła i nie zapisuje w ERP.</span></div>
             <div class="row g-3"><div class="col-xl-7">
                 <div class="dc-card"><div class="ai-lbl">Asystenci w pilocie</div>
-                    <table><tr><th>Asystent</th><th>Stanowisko</th><th>Godzina</th><th>Włączony</th><th>Ostatnio</th><th></th></tr>${rows}
-                    <tr><td class="ai-muted">Pozostałe asystenci (${Number(s.others)})</td><td class="ai-muted">—</td><td class="ai-muted">—</td><td>${sw('disabled', false)}</td><td class="ai-muted" colspan="2">po pilocie</td></tr></table>
+                    <table><tr><th>Asystent</th><th>Stanowisko</th><th>Godzina</th><th>Włączony</th><th>Ostatnio</th></tr>${rows}
+                    <tr><td class="ai-muted">Pozostałe asystenci (${Number(s.others)})</td><td class="ai-muted">—</td><td class="ai-muted">—</td><td>${sw('disabled', false)}</td><td class="ai-muted">po pilocie</td></tr></table>
                     <p class="dc-hint mb-0 mt-2">Cron co 10 minut (dni robocze) : asystent, którego godzina minęła i który dziś jeszcze nie działał. Bez sygnałów — bez wywołania API.</p></div>
                 <div class="dc-card"><div class="ai-lbl">Co wysyłamy do AI${p ? ` (dziś : ${esc(p.label)})` : ''}</div>
-                    ${p ? `<pre data-rt-payload>${esc(p.payload)}</pre><p class="dc-hint mb-0 mt-2">${p.items} ${p.items === 1 ? 'pozycja' : 'pozycji'} · ok. ${Number(p.est_input_tokens).toLocaleString('pl-PL')} tokenów wejścia,
+                    ${p ? `<pre data-rt-payload>${esc(p.payload)}</pre><p class="dc-hint mb-0 mt-2">${p.items} ${p.items === 1 ? 'pozycja' : ([2, 3, 4].includes(p.items % 10) && ![12, 13, 14].includes(p.items % 100) ? 'pozycje' : 'pozycji')} · ok. ${Number(p.est_input_tokens).toLocaleString('pl-PL')} tokenów wejścia,
                         ${Number(p.est_output_tokens).toLocaleString('pl-PL')} wyjścia · szacunek ${esc(p.est_cost_label)} (${esc(p.model_label)}). Podgląd bez wywołania API.</p>`
                         : '<p class="ai-muted mb-0">Wczytywanie podglądu…</p>'}
                     <p class="dc-hint mb-0 mt-1">Bez nazw klientów, osób, e-maili, telefonów, adresów i NIP. ERP zamienia « K1 » z powrotem na nazwę dopiero na ekranie asystenta.</p></div>
