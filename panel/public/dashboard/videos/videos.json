@@ -109,6 +109,89 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "semaine",
+      "genre": "tuto",
+      "titre": "La page Semaine",
+      "resume": "Choisir sa semaine, le chiffre face à l’attendu, les jours, du chiffre d’affaires au résultat, les heures et les douze dernières semaines.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-semaine.mp4",
+      "affiche": "06-semaine.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mois",
+      "genre": "tuto",
+      "titre": "La page Mois",
+      "resume": "Les mois de l’année, le chiffre du mois face à l’attendu, les jours, le résultat, les douze derniers mois et les six leviers.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-mois.mp4",
+      "affiche": "07-mois.jpg",
+      "duree": "2 min 40",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "annee",
+      "genre": "tuto",
+      "titre": "La page Année et ses trimestres",
+      "resume": "L’objectif de l’année, les quatre trimestres et le détail d’un trimestre, les douze mois face à l’an passé, le trafic et le long terme.",
+      "vues": [
+        "annee"
+      ],
+      "fichier": "08-annee.mp4",
+      "affiche": "08-annee.jpg",
+      "duree": "2 min 36",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "tresorerie",
+      "genre": "tuto",
+      "titre": "Le plan de trésorerie",
+      "resume": "La routine du dimanche soir : le solde réel, l’écart, les quatre semaines à venir ; le plan semaine par semaine, les fournisseurs, les paiements et le budget.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-tresorerie.mp4",
+      "affiche": "09-tresorerie.jpg",
+      "duree": "3 min",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/public/dashboard/tresorerie.css",
+        "panel/src/tresorerie.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
       "id": "analyse",
       "genre": "tuto",
       "titre": "Analyse : lire ses ventes",
