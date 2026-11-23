@@ -42,7 +42,7 @@ const depuis = new Date(t0).toISOString().slice(0, 16).replace('T', ' ') + ' UTC
 const MOTS = /dashboard|franchis|magasin|mon équipe|planning|trésorerie|promotion|offres?\b|boîte mail|assistant|revue du soir|primes?|tablette|coffre|formation|catalogue|fidélité|analyse|tâches|temps morts/i;
 const nouveautes = lu('shared/deploy.trigger').split('\n')
   .map(l => { const m = l.match(/^(\d{4}-\d{2}-\d{2}T\S+)\s+(.*)$/); return m ? { date: m[1], t: Date.parse(m[1]), texte: m[2] } : null; })
-  .filter(x => x && x.t > t0 && MOTS.test(x.texte))
+  .filter(x => x && x.t > t0 && MOTS.test(x.texte) && !/vidéos? d.instruction/i.test(x.texte))   // pas les livraisons des vidéos elles-mêmes
   .map(({ date, texte }) => ({ date, texte }));
 
 // 3. Les pages sans vidéo (la liste de ?vue= lue dans dashboard.js, comme le fait le dashboard).
