@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Intrastat miesiąca{% endblock %}
+
+{% block content %}
+{# [398] Assistant « Intrastat miesiąca » : App\Services\Organization\Wizards\IntrastatMonthService — écran dans
+   assets/js/shipping/intrastat-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Codes CN, masse par unité et kursy dans les tables de l'assistant ;
+   rien n'est changé dans l'ERP ; CSV à recopier dans PUESC, aucun XML officiel, aucun envoi. #}
+<section class="section">
+    <div id="imApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="imBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/shipping/intrastat-month.js?v={{ asset_v() }}"></script>
+{% endblock %}

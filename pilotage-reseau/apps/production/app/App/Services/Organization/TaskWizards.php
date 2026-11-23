@@ -84,6 +84,9 @@ final class TaskWizards
         // [397] PPWR i opakowania (Kierownik produkcji — co miesiąc) : braki PPWR / BDO opakowań i produktów, zmiany, dowody opakowań wysyłek, decyzja dla elementu.
         // Libellé distinct du nom proposé dans la matrice (« PPWR i opakowania (kompletność) ») : les UPDATE des migrations ne prennent que celui-ci.
         'ppwr_month_reviewed' => ['PPWR i opakowania (przegląd miesiąca)', '/ppwr/month', 'dane PPWR i BDO opakowań i produktów sprawdzone, decyzja dla każdego braku', 3],
+        // [398] Intrastat miesiąca (Kierownik produkcji — co miesiąc) : wywóz (WDT) i przywóz (faktury dostawców UE) poprzedniego miesiąca, kody CN, kursy, CSV, decyzja dla deklaracji.
+        // Libellé distinct du nom proposé dans la matrice (« Intrastat miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'intrastat_month_reviewed' => ['Intrastat miesiąca (deklaracje)', '/intrastat/month', 'dane Intrastat poprzedniego miesiąca kompletne, każda deklaracja zgłoszona albo poniżej progu', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -139,6 +142,7 @@ final class TaskWizards
         'customers_data_checked' => 'gdy każdy aktywny klient (zamówienie w ostatnich customers_data.active_months miesiącach) z brakiem w karcie — brak e-maila albo e-mail błędny lub z błędem wysyłki, brak lub nieczytelny telefon, brak języka komunikacji, brak terminu płatności, brak NIP albo VAT UE bez prefiksu kraju przy WDT, niepełny adres, brak cennika albo produkt zamówiony bez ceny klienta — ma decyzję (poprawione — karta już bez braków, brak danych od klienta, nie dotyczy) — asystent « Dane klientów », krok 3',
         'launches_reviewed' => 'gdy każdy nowy produkt (wprowadzony albo utworzony w ERP w ostatnich launches_review.months miesiącach) poza celem — koszt surowców powyżej celu, cena poniżej celu, marża poniżej minimum, sprzedaż na sklep / tydzień poniżej oczekiwanej albo brak sprzedaży — albo bez decyzji w module Kierownik produkcji ma decyzję (zostaje, korekta, wycofać) — asystent « Nowe produkty », krok 3',
         'ppwr_month_reviewed' => 'gdy każdy element z sygnałem — opakowanie używane w aktywnym produkcie z brakiem w Rejestrze PPWR (numer, masa, poziom, rodzaj, materiał, recyklat, recykling, minimalizacja, wymiary) albo w danych BDO, aktywny produkt bez kartonu sprzedażowego, PPC albo poprawnej masy, opakowanie lub produkt zmienione od ostatniego przeglądu, wysyłka poprzedniego miesiąca bez kompletnego dowodu opakowań — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « PPWR i opakowania », krok 3',
+        'intrastat_month_reviewed' => 'gdy każdy sygnał poprzedniego miesiąca — produkt z WDT albo surowiec z faktury dostawcy z UE bez kodu CN lub masy netto, waluta bez kursu na miesiąc, odbiorca WDT bez VAT UE, faktura bez surowca albo w walucie obcej bez VAT UE sprzedawcy — ma decyzję (uzupełnione, nie dotyczy), a każda deklaracja (firma × wywóz / przywóz) jest zgłoszona w PUESC z numerem albo poniżej progu z uzasadnieniem — asystent « Intrastat miesiąca », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -337,6 +341,13 @@ final class TaskWizards
                 // [397] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->ppwrMonthReviews(\App\Services\Organization\Wizards\PpwrMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
+                }
+                break;
+            case 'intrastat_month_reviewed':
+                // [398] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego miesiąca (poprzedni miesiąc).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->intrastatMonthReviews(\App\Services\Organization\Wizards\IntrastatMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
                 }
                 break;

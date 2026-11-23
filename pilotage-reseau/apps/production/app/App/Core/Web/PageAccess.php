@@ -90,6 +90,9 @@ final class PageAccess
         // [378] Asystent « Faktury i KSeF dnia » (Administracja) : page /shipments/ksef-day (préfixe /shipments, comme l'écran
         // « Wysyłki i dokumenty » où l'on renvoie la WDT à KSeF), appels ajax sous le même droit.
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/ajax/shipments/ksef-day', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        // [398] Asystent « Intrastat miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /intrastat/month et appels
+        // ajax), donné au Kierownik produkcji par la migration 239.
+        'intrastat' => ['Intrastat miesiąca (asystent : wywóz z WDT, przywóz z faktur dostawców UE, kody CN, kursy, CSV do PUESC)', 'Logistyka i pakowanie', ['/intrastat', '/ajax/intrastat'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka i pakowanie', ['/archive'], false],
         'positions' => ['Funkcje i zadania, protokoły, struktura i obowiązki', 'Administracja', ['/organization', '/task-forms', '/ajax/organization/structure', '/ajax/organization/duties'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, stopki e-maili i tłumacz, KSeF, licznik stron, inne)', 'Administracja',
