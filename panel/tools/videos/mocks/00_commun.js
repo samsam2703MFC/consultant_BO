@@ -24,9 +24,9 @@ module.exports = function (m, p, q) {
   if (p === '/soir/revue') return { heure: '18:00', revue: null };
   if (p === '/coffre/magasin') return { documents: [], nouveaux: 0 };
   if (p === '/formation/continue/magasin') return { reperes: { enRetard: 0, enCours: 0 }, nouveaux: 0, formations: [] };
-  if (p === '/assistant/magasin/questions') return { actif: true, tuiles: [], groupes: [] };
   if (p === '/helpdesk/magasin') return { demandes: [] };
   if (p === '/ventes/mensuel') return mensuel();
-  // /dashboard/boite (fermée tant qu’on ne l’ouvre pas) : dans 70_boite.js, avec la forme complète que lisent toutes les vues.
+  // /dashboard/boite (fermée tant qu’on ne l’ouvre pas) et /assistant/magasin/questions : dans 70_boite.js et
+  // 71_assistant.js, avec la forme complète que lisent toutes les vues.
   return undefined;
 };

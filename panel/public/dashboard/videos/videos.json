@@ -86,6 +86,26 @@
       ],
       "tourne_sur": "0cb9607019b96852c3d0fc8118bfca91b59987da",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "assistant-ia",
+      "genre": "tuto",
+      "titre": "L’Assistant IA",
+      "resume": "Choisir son assistant, poser une question et lire la réponse — chiffres, graphique, priorités —, creuser en conversation, le Coach Vente et le Professeur.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-assistant-ia.mp4",
+      "affiche": "21-assistant-ia.jpg",
+      "duree": "2 min 25",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "47ee70cda0ce5a08701b41899d16264f364a52e1",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
