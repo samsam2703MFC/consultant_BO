@@ -7,7 +7,8 @@
       "titre": "Découvrir le dashboard",
       "resume": "Le rail, la barre du haut et la journée en cours : où trouver quoi.",
       "vues": [
-        "ops"
+        "ops",
+        "jour"
       ],
       "fichier": "01-decouvrir.mp4",
       "affiche": "01-decouvrir.jpg",
@@ -155,7 +156,8 @@
       "titre": "La page Année et ses trimestres",
       "resume": "L’objectif de l’année, les quatre trimestres et le détail d’un trimestre, les douze mois face à l’an passé, le trafic et le long terme.",
       "vues": [
-        "annee"
+        "annee",
+        "trimestre"
       ],
       "fichier": "08-annee.mp4",
       "affiche": "08-annee.jpg",
@@ -176,7 +178,8 @@
       "titre": "Le plan de trésorerie",
       "resume": "La routine du dimanche soir : le solde réel, l’écart, les quatre semaines à venir ; le plan semaine par semaine, les fournisseurs, les paiements et le budget.",
       "vues": [
-        "tresorerie"
+        "tresorerie",
+        "frais"
       ],
       "fichier": "09-tresorerie.mp4",
       "affiche": "09-tresorerie.jpg",
