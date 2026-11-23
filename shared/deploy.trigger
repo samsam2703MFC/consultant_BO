@@ -280,3 +280,4 @@
 2026-11-23T15:29:07Z Mon équipe : le tableau de la semaine, la fenêtre d'un service au clic (adapter, ajouter, retirer une personne du shift)
 2026-11-23T16:06:39Z Mon équipe : tracer un service à la souris, le planning imprimé fait par le cockpit, Semaine fondue avec le planogramme, vue Mois, « À compléter » et « au repos » retirés
 2026-11-23T16:42:06Z Mon équipe : la fenêtre d'un service (tirer sa ligne, verte de 4 h à 8 h), parcourir le jour, le CA du jour (comptoir + B2B) pour les %
+2026-11-23T17:02:38Z Mon équipe : l'assistant de la semaine (reprendre, qui adapter, les heures de trop, créer), le planning imprimé groupé par section

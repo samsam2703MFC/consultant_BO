@@ -15,6 +15,7 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
         ecrits.push([m, pa, r.request().postData()]);
         if (pa === '/dashboard/equipe/semaine/recopie') { const n = JSON.parse(r.request().postData()).sources.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/semaine/generer') { const n = JSON.parse(r.request().postData()).cles.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
+        if (pa === '/dashboard/equipe/semaine/creer') { const n = JSON.parse(r.request().postData()).services.length; return r.fulfill({ status: 200, json: { ok: true, crees: n, demandes: n, echecs: [], arret: null } }); }
         if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
         if (pa === '/dashboard/equipe/roulement') { const b = JSON.parse(r.request().postData()), x = JSON.parse(lire('matrice.json')).roulements; if (b.lettre) { x[b.employe] = b.lettre; } else { delete x[b.employe]; } return r.fulfill({ status: 200, json: { ok: true, employe: b.employe, lettre: b.lettre, roulements: x } }); }
         return r.fulfill({ status: 200, json: pa === '/dashboard/equipe/postes' ? Object.assign(JSON.parse(lire('carte.json')), { ok: true }) : { ok: true, id: 999 } });
@@ -128,8 +129,29 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await p.click('.eqp-fo-x');
   await p.click('[data-eqp-pdf]');
   await shot('e6-tableau-pdf', true);
-  // Recopier la semaine précédente : la semaine suivante, vide ; l'aperçu ; décocher un service ; recopier.
+  // L'assistant de la semaine, sur la semaine suivante (vide) : reprendre la semaine passée ; Jonas absent, Chloé à
+  // revoir ; le chiffre et les propositions ; vérifier ; créer (la fenêtre de Chloé s'ouvre ensuite).
   await p.click('[data-eqp-pas="7"]'); await p.waitForSelector('.eqp-vide7');
+  await p.click('.eqp-vide7 [data-eqp-assistant]'); await p.waitForSelector('.eqp-as-c', { timeout: 20000 });
+  console.log('assistant 1', (await p.textContent('.eqp-as-choix')).replace(/\s+/g, ' ').slice(0, 200));
+  await shot('e19-assistant-1', false);
+  await p.click('[data-eqp-as-suite]'); await p.waitForSelector('.eqp-as-pers');
+  await p.click('[data-eqp-as-etat="a"][data-emp="27"]'); await p.click('[data-eqp-as-etat="r"][data-emp="23"]');
+  console.log('assistant 2', (await p.textContent('.eqp-as-pied .res')).replace(/\s+/g, ' '));
+  await shot('e20-assistant-2', false);
+  await p.click('[data-eqp-as-suite]'); await p.waitForSelector('.eqp-as-msg');
+  console.log('assistant 3', (await p.textContent('.eqp-as-msg')).replace(/\s+/g, ' '));
+  console.log('propositions', (await p.$$eval('.eqp-as-prop .t', L => L.map(n => n.textContent))).join(' | '));
+  console.log('bilan', (await p.textContent('.eqp-as-bilan').catch(() => '—')).replace(/\s+/g, ' '));
+  await shot('e21-assistant-3', false);
+  await p.click('[data-eqp-as-suite]'); await p.waitForSelector('.eqp-as-tab');
+  console.log('assistant 4', (await p.textContent('.eqp-as-verif')).replace(/\s+/g, ' '), '|', (await p.textContent('[data-eqp-as-creer]')).trim());
+  await shot('e22-assistant-4', false);
+  await p.click('[data-eqp-as-creer]'); await p.waitForTimeout(1500);
+  console.log('créé', await p.textContent('.eqp-flash').catch(() => '—'), '| fenêtre :', await p.textContent('.eqp-fo-tete b').catch(() => 'aucune'));
+  await p.click('.eqp-fo-x').catch(() => {});
+  // Recopier la semaine précédente : la semaine suivante, vide ; l'aperçu ; décocher un service ; recopier.
+  await p.waitForSelector('.eqp-vide7');
   await p.click('.eqp-menu > summary');
   await p.click('[data-eqp-recopier]'); await p.waitForSelector('.eqp-rec-liste');
   await p.click('.eqp-rec-l:has-text("Jonas Willems") input');

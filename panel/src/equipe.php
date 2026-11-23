@@ -38,6 +38,9 @@ declare(strict_types=1);
  *
  * Les écritures partent avec le compte du cockpit (PanelApi) : si le panel refuse (403), la réponse le dit telle quelle.
  * La route des employés rend aussi des secrets (hachages, jetons) : rien n'en sort que les champs listés ici.
+ * - L'ASSISTANT DE LA SEMAINE (23/11/2026, « en faire un assistant pour les horaires de la semaine ») : l'écran prépare la
+ *   semaine (la semaine passée ou la matrice, qui adapter, les heures de trop et des propositions) ; POST
+ *   /dashboard/equipe/semaine/creer {shop, du, services: [{employe, date, de, a}]} crée ce qu'il a préparé, vérifié ici.
  */
 
 const EQP_POSTES_MAX = 300;          // le plafond du panel pour une liste de postes
@@ -63,6 +66,7 @@ function eqpRoute(string $method, string $path): ?array
         if ($method === 'GET') { return ep_equipe_recopie(); }
         if ($method === 'POST') { return wr_equipe_recopie(); }
     }
+    if ($method === 'POST' && $path === '/dashboard/equipe/semaine/creer') { return wr_equipe_semaine_creer(); }
     if ($path === '/dashboard/equipe/service') {
         if ($method === 'POST') { return wr_equipe_service_creer(); }
         if ($method === 'PATCH') { return wr_equipe_service_modifier(); }
@@ -847,6 +851,57 @@ function wr_equipe_recopie(): array
     $a = array_values(array_filter($c['propositions'], static fn ($p) => isset($voulus[$p['source']])));
     if ($a === []) { return eqpErreur(422, 'aucun des services cochés n’est encore à recopier : relisez l’aperçu'); }
     return eqpCreerServices($shop, $a, static fn (int $n) => 'Semaine du ' . $c['du'] . ' : ' . $n . ' service' . ($n > 1 ? 's' : '') . ' recopié' . ($n > 1 ? 's' : '') . ' de la semaine du ' . $c['source']['du'], $c['du']);
+}
+
+/**
+ * POST /dashboard/equipe/semaine/creer {shop, du, services: [{employe, date, de, a}…]} — l'assistant de la semaine
+ * (23/11/2026, Sam : « en faire un assistant pour les horaires de la semaine ») crée au panel ce qu'il a préparé : la
+ * semaine reprise, tirée de la matrice, puis ajustée au budget. Rien n'est cru sur parole : la personne est du magasin
+ * et active, le jour est dans la semaine, les heures sont des HH:MM, la fin vient après le début (16 h au plus), et le
+ * service ne chevauche ni ce qui est déjà au planning de la personne ce jour-là, ni un autre service de la liste.
+ * Le planning des sept jours est relu d'abord : sans lui, rien n'est créé.
+ */
+function wr_equipe_semaine_creer(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    $du = is_string($b['du'] ?? null) ? $b['du'] : '';
+    $L = $b['services'] ?? null;
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return eqpErreur(422, 'du : AAAA-MM-JJ'); }
+    $ecart = (strtotime($du) - strtotime(date('Y-m-d'))) / 86400;
+    if ($ecart < -31 || $ecart > 120) { return eqpErreur(422, 'semaine : d’un mois avant à quatre mois après aujourd’hui'); }
+    if (!is_array($L) || !array_is_list($L) || $L === [] || count($L) > EQP_RECOPIE_MAX) { return eqpErreur(422, 'services : la liste des services à créer'); }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
+    $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $chemins = ['emp' => '/shops/' . $shop . '/employees'];
+    foreach ($jours as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
+    $res = eqpGetParallele($chemins, 6);
+    if (!is_array($res['emp'] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu les employés : rien n’est créé'); }
+    $C = [];
+    foreach ($jours as $d) {
+        if (!is_array($res['sch' . $d] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu le planning du ' . $d . ' : rien n’est créé'); }
+        $C[$d] = eqpServices($res['sch' . $d], $shop, $d);
+    }
+    $equipe = [];
+    foreach (analyseListe($res['emp']) as $r) { if (is_array($r)) { $e = eqpPersonne($r); if ($e['shop'] === $shop || $e['shop'] === 0) { $equipe[$e['id']] = $e; } } }
+    $hh = '/^([01]\d|2[0-3]):[0-5]\d$/';
+    $a = [];
+    foreach ($L as $i => $x) {
+        $n = 'service ' . ($i + 1);
+        if (!is_array($x)) { return eqpErreur(422, $n . ' : {employe, date, de, a}'); }
+        $emp = $x['employe'] ?? null; $d = $x['date'] ?? null; $de = $x['de'] ?? null; $fin = $x['a'] ?? null;
+        if (!is_int($emp) || !isset($equipe[$emp]) || empty($equipe[$emp]['actif'])) { return eqpErreur(422, $n . ' : la personne n’est pas de l’équipe active du magasin'); }
+        if (!is_string($d) || !in_array($d, $jours, true)) { return eqpErreur(422, $n . ' : le jour n’est pas dans la semaine du ' . $du); }
+        if (!is_string($de) || !is_string($fin) || !preg_match($hh, $de) || !preg_match($hh, $fin)) { return eqpErreur(422, $n . ' : des heures HH:MM'); }
+        $m0 = eqpMinutes($de); $m1 = eqpMinutes($fin);
+        if ($m1 <= $m0 || $m1 - $m0 > 16 * 60) { return eqpErreur(422, $n . ' : la fin vient après le début, 16 h au plus'); }
+        $ch = eqpChevauche($C[$d], $emp, $m0, $m1);
+        if ($ch !== null) { return eqpErreur(409, $n . ' : ' . $equipe[$emp]['nom'] . ' est déjà au planning le ' . $d . ' de ' . $ch['de'] . ' à ' . $ch['a'], ['motif' => 'chevauche']); }
+        $C[$d][] = ['id' => 0, 'employe' => $emp, 'de' => $de, 'a' => $fin, 'nom' => $equipe[$emp]['nom']];
+        $a[] = ['employe' => $emp, 'date' => $d, 'de' => $de, 'a' => $fin, 'nom' => $equipe[$emp]['nom']];
+    }
+    return eqpCreerServices($shop, $a, static fn (int $k) => 'Semaine du ' . $du . ' : ' . $k . ' service' . ($k > 1 ? 's' : '') . ' créé' . ($k > 1 ? 's' : '') . ' par l’assistant de la semaine', $du);
 }
 
 /**

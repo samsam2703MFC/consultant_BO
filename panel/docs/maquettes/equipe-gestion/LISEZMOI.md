@@ -182,3 +182,16 @@ pour celle du 30, 24 663 € de CA planifié. Quatre étapes : partir de quoi, q
 | `assistant/assistant-2-qui-adapter.png` | chacun avec sa semaine reprise : comme la semaine passée, absent·e (pas recopié), à revoir (à placer à la main) |
 | `assistant/assistant-3-le-chiffre.png` | « Le chiffre d'affaires planifié est de 24 663 € … il y a 45 h de trop » ; des propositions chiffrées à cocher (heures, euros), le jour par jour face au budget à 17 %, le bilan |
 
+**Construit le 23/11/2026** (« go construit l'assistant et mets en ligne ») : « Préparer la semaine › Assistant de la
+semaine », et le bouton de la semaine vide. Les propositions sont calculées : sur le jour le plus au-dessus de la cible,
+le service que l'assistant crée qui rend le plus d'euros sans découvrir sa section (quelqu'un de la même section sur les
+heures retirées ; au comptoir, pendant l'ouverture), jamais sous la durée minimale ; chacune avec les précédentes
+appliquées, si bien qu'en décocher une ne découvre rien. Elles ne touchent jamais ce qui est déjà au planning.
+
+| Capture | L'étape (l'écran construit, données illustratives) |
+|---|---|
+| `ecran-18-assistant-1-partir-de-quoi.png` | reprendre la semaine passée (42 services, 301,5 h), la matrice, ou rien |
+| `ecran-19-assistant-2-qui-adapter.png` | Jonas absent, Chloé à revoir : 34 services, 246,5 h à créer |
+| `ecran-20-assistant-3-le-chiffre.png` | « 17,5 h de trop » (18,3 %) ; cinq propositions qui gardent chaque section tenue ; cochées : 16,8 % |
+| `ecran-21-assistant-4-verifier.png` | le budget, les heures, les durées, jour par jour le comptoir et les secteurs ; « Créer 34 services au panel » ; la fenêtre de Chloé s'ouvre ensuite |
+
