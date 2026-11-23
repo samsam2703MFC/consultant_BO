@@ -626,7 +626,7 @@
     "team_sheet_incl_stock": "dont pour le stock {qty}",
     "team_sheet_for_stock": "pour le stock (min. / max.)",
     "team_sheet_from_stock": "tout depuis le stock",
-    "team_sheet_columns_note": "À produire = commande − en stock (comme l'ancienne liste de production). Pour le stock : à part, réassort des produits de stock jusqu'au min. / max. Jours : tout ce qu'il y a à faire (à produire + pour le stock).",
+    "team_sheet_columns_note": "À produire = commande − en stock (comme l'ancienne liste de production). Pour le stock : à part, réassort des produits de stock jusqu'au min. ; « max » = le plus qu'on peut produire (jusqu'au stock max.) Jours : tout ce qu'il y a à faire (à produire + pour le stock).",
     "team_sheet_due": "départ {day}",
     "team_sheet_waiting": "non réparti : {qty}",
     "team_sheet_proposed_note": "Chiffres en italique : à produire, pas encore enregistrés dans le plan de la semaine — répartis sur les jours comme « Répartir sur les jours » (à partir d'aujourd'hui, dans les heures libres de l'équipe, envois avant le départ).",

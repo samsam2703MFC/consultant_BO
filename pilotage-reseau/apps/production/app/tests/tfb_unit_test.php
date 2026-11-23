@@ -184,11 +184,11 @@ check(WeekSplit::place(3900.0, ['d1', 'd2'], 60.0, ['d1' => 5.0, 'd2' => 8.0], $
     'week without batch: whole cartons');
 check(WeekSplit::place(1300.0, ['d1', 'd2'], 1300.0, ['d1' => 1.0, 'd2' => 8.0], $perBatch) === ['d2' => 1300.0],
     'week: a batch is never cut — it goes whole to the first day with room');
-// Prosta reguła magazynu : dostępne < stan min. → uzupełnienie do stanu maks. ; inaczej nic.
+// Prosta reguła magazynu : dostępne < stan min. → uzupełnienie do stanu min. [399] ; inaczej nic.
 $r = DemandCalculator::refill(1200, 1800, 3600);
-check($r['qty'] === 2400.0 && $r['reason'] === 'below_min', 'refill: below the minimum, back up to the maximum (croissant 1200 → 3600)');
+check($r['qty'] === 600.0 && $r['reason'] === 'below_min', '[399] refill: below the minimum, back up to the minimum (croissant 1200 → 1800), not the maximum');
 check(DemandCalculator::refill(1800, 1800, 3600)['qty'] === 0.0 && DemandCalculator::refill(2500, 1800, 3600)['qty'] === 0.0, 'refill: nothing at or above the minimum');
-check(DemandCalculator::refill(-500, 1800, 3600)['qty'] === 4100.0, 'refill: orders above stock (negative available) included');
+check(DemandCalculator::refill(-500, 1800, 3600)['qty'] === 2300.0 && DemandCalculator::refill(792, 1854, 5544)['qty'] === 1062.0, 'refill: orders above stock (negative available) included');
 check(DemandCalculator::refill(100, null, 300)['qty'] === 200.0 && DemandCalculator::refill(300, null, 300)['qty'] === 0.0, 'refill without a minimum: threshold = maximum');
 // [389] MTO : à produire = commandé − en stock, le stock servant d'abord le départ le plus proche.
 $ns = DemandCalculator::netStock(['b' => ['due_date' => '2026-11-26', 'qty' => 100.0], 'a' => ['due_date' => '2026-11-24', 'qty' => 216.0]], 250.0);

@@ -50,7 +50,7 @@
   "incl_stock": "dont pour le stock {qty}",
   "for_stock": "pour le stock (min. / max.)",
   "from_stock": "tout depuis le stock",
-  "columns_note": "À produire = commande − en stock (comme l'ancienne liste de production). Pour le stock : à part, réassort des produits de stock jusqu'au min. / max. Jours : tout ce qu'il y a à faire (à produire + pour le stock).",
+  "columns_note": "À produire = commande − en stock (comme l'ancienne liste de production). Pour le stock : à part, réassort des produits de stock jusqu'au min. ; « max » = le plus qu'on peut produire (jusqu'au stock max.) Jours : tout ce qu'il y a à faire (à produire + pour le stock).",
   "waiting": "non réparti : {qty}",
   "proposed_note": "Chiffres en italique : à produire, pas encore enregistrés dans le plan de la semaine — répartis sur les jours comme « Répartir sur les jours » (à partir d'aujourd'hui, dans les heures libres de l'équipe, envois avant le départ).",
   "proposed_title": "À produire — pas encore enregistré dans le plan de la semaine",

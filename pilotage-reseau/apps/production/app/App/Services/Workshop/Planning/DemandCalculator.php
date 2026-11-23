@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Workshop\Planning;
 
 /**
- * Calcul des besoins (sans base) : arrondi au lot, réapprovisionnement MTS (sous le min. → jusqu'au max.),
+ * Calcul des besoins (sans base) : arrondi au lot, réapprovisionnement MTS (sous le min. → jusqu'au min. [399]),
  * plafond du surgélateur. Quantités dans l'unité de base de l'article.
  */
 final class DemandCalculator
@@ -20,13 +20,16 @@ final class DemandCalculator
     }
 
     /**
-     * Uzupełnienie magazynu (prosta reguła) : gdy dostępne < stan min., do stanu maks. ; inaczej nic. Bez stanu
-     * min. próg = stan maks. Partie liczy się potem dla całego tygodnia produktu (w górę do pełnych partii).
+     * Uzupełnienie magazynu (prosta reguła) : gdy dostępne < stan min., do stanu min. ; inaczej nic. Bez stanu
+     * min. próg i cel = stan maks. [399] Decyzja z 23.11.2026 : na zapas do min. jak dawna Lista produkcyjna (opcja
+     * « stan minimalny ») ; maks. to tylko górna granica tego, co wolno zrobić (feuille d'équipe : « maks. »).
+     * Partie liczy się potem dla całego tygodnia produktu (w górę do pełnych partii).
      * @return array{available:float, min:?float, max:float, qty:float, reason:string}
      */
     public static function refill(float $available, ?float $min, float $max): array
     {
-        $qty = $available < ($min ?? $max) ? max(0.0, $max - $available) : 0.0;
+        $target = min($min ?? $max, $max);
+        $qty = $available < $target ? $target - $available : 0.0;
         return ['available' => $available, 'min' => $min, 'max' => $max, 'qty' => (float) $qty, 'reason' => $qty > 0 ? 'below_min' : 'stock_sufficient'];
     }
 

@@ -54,7 +54,7 @@ final class OpenApiPlanning
             'GET /planning/sheet' => ['tag' => $t, 'id' => 'getWeekSheet', 'summary' => 'Arkusz tygodnia / Feuille de production de la semaine', 'response' => 'WeekSheet', 'errors' => [422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)']],
                 'description' => "Une ligne par fiche : produits avec une quantité dans la semaine et produits « sur stock » (toujours). "
-                    . "À produire = commandes + réassort (disponible < stock min. → jusqu'au stock max.) + lots fixes, arrondi aux lots entiers de la semaine du produit (surplus pour le stock). "
+                    . "À produire = commandes + réassort (disponible < stock min. → jusqu'au stock min.) + lots fixes, arrondi aux lots entiers de la semaine du produit (surplus pour le stock). "
                     . "Lots = à produire ÷ pièces par lot. Groupes : heures disponibles et personnes (ETP = heures ÷ fte_hours)."],
             'GET /planning/team-sheet' => ['tag' => $t, 'id' => 'getTeamSheet', 'summary' => 'Plan zespołów na tydzień / Plan des équipes de la semaine', 'response' => 'TeamSheet', 'errors' => [404, 422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)'], 'group_id' => ['type' => 'integer', 'description' => 'une équipe (défaut : toutes celles qui produisent)']],
